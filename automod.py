@@ -1,7 +1,7 @@
 from __future__ import annotations
 import discord
-from server import db
-from bot.logging_setup import send_log
+import db
+from logging_setup import send_log
 
 
 async def handle_message(message: discord.Message) -> None:

@@ -8,8 +8,8 @@ from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from server import db
-from server.discord_rest import DiscordRestClient, DiscordRestError
+import db
+from discord_rest import DiscordRestClient, DiscordRestError
 
 load_dotenv()
 
@@ -57,7 +57,7 @@ def _display_name(member: Dict[str, Any]) -> str:
 
 
 def _snapshot_to_discord(member: Dict[str, Any]) -> Dict[str, Any]:
-    return {"user": {"id": str(member.get("id")), "username": member.get("username") or str(member.get("id")), "global_name": member.get("global_name") or member.get("display_name"), "bot": bool(member.get("bot", False))}, "nick": member.get("display_name"), "roles": member.get("roles", [])}
+    return {"user": {"id": str(member.get("id")), "username": member.get("username") or str(member.get("id")), "global_name": member.get("global_name") or member.get("display_name"), "bot": bool(member.get("bot", False))}, "nick": member.get("display_name"), "permissions": member.get("permissions")}
 
 
 def _find_snapshot_member(guild_id: str, identifier: str) -> Optional[Dict[str, Any]]:
@@ -106,7 +106,7 @@ async def search_members(query: str, guildId: str = "current") -> Dict[str, Any]
         return {"ok": True, "guildId": gid, "members": []}
 
     def fmt(members: list) -> list:
-        return [{"id": str(m.get("user", {}).get("id")), "username": m.get("user", {}).get("username"), "globalName": m.get("user", {}).get("global_name"), "displayName": m.get("nick") or m.get("user", {}).get("global_name") or m.get("user", {}).get("username") or str(m.get("user", {}).get("id")), "avatar": m.get("user", {}).get("avatar")} for m in members]
+        return [{"id": str(m.get("user", {}).get("id")), "username": m.get("user", {}).get("username"), "globalName": m.get("user", {}).get("global_name"), "displayName": m.get("nick") or m.get("user", {}).get("username")} for m in members]
 
     if DEV_USE_SNAPSHOT:
         snapshot = db.get_guild_snapshot(gid)

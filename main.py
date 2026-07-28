@@ -3,9 +3,9 @@ import os
 import discord
 from discord.ext import commands
 from dotenv import load_dotenv
-from bot.modules.automod import handle_message
-from bot.private_settings_menu import register_private_settings
-from server import db
+from automod import handle_message
+from private_settings_menu import register_private_settings
+import db
 
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")

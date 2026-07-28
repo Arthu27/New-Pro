@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import Dict, Iterable, Optional
 import discord
-from server import db
+import db
 
 DEFAULT_LOG_CHANNELS = {
     "mod": "mod-logs", "message": "message-logs", "member": "member-logs",

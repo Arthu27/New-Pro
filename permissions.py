@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import Iterable
 import discord
-from server import db
+import db
 
 
 def _ids(values: Iterable[discord.abc.Snowflake]) -> set[str]:
