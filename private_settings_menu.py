@@ -3,8 +3,8 @@ from dataclasses import dataclass
 from typing import Any, Dict
 import discord
 from discord import app_commands
-from server import db
-from bot.permissions import deny_interaction, has_command_access
+import db
+from permissions import deny_interaction, has_command_access
 
 
 @dataclass(frozen=True)
@@ -13,11 +13,11 @@ class MenuScope:
 
 
 SCOPES: Dict[str, MenuScope] = {
-    "moderation_ban": MenuScope(key="moderation_ban", icon="🛡️", title="Moderation Control", short="Управление наказаниями, банами, мутами.", workspace_title="Ban Management", workspace_description="Редактирование панели банов.", fields={"default_reason": "Rule violation", "audit_channel": "missing", "staff_role": "@Moderator", "confirm_policy": "required"}),
-    "tickets_panel": MenuScope(key="tickets_panel", icon="🎫", title="Ticket Control", short="Настройка ticket-панелей, staff-доступа, SLA.", workspace_title="Ticket Panel", workspace_description="Редактирование панели тикетов.", fields={"panel_channel": "#tickets", "staff_role": "@Ticket Staff", "sla": "15m first response", "transcript_channel": "#ticket-logs"}),
-    "welcome_flow": MenuScope(key="welcome_flow", icon="👋", title="Welcome Control", short="Настройка приветствия, DM-сообщений, autorole.", workspace_title="Welcome Flow", workspace_description="Редактирование приветственного сценария.", fields={"welcome_channel": "#welcome", "member_role": "@Member", "dm_enabled": "true", "rules_required": "true"}),
-    "roles_access": MenuScope(key="roles_access", icon="🎭", title="Role Access Control", short="Настройка доступа ролей к командам.", workspace_title="Command Permissions", workspace_description="Редактирование разрешений.", fields={"command": "/settings", "allowed_roles": "@Owner, @Admin", "denied_roles": "@Member", "visibility_sync": "false"}),
-    "logs_setup": MenuScope(key="logs_setup", icon="🧾", title="Logs Setup", short="Создание log-категории и каналов.", workspace_title="Log Channels", workspace_description="Редактирование структуры логов.", fields={"category": "📁 Logs", "channels": "mod,message,member,ticket,security,bot", "visible_roles": "@Admin, @Moderator", "mode": "preview first"}),
+    "moderation_ban": MenuScope(key="moderation_ban", icon="🛡️", title="Moderation Control", short="Управление наказаниями, банами, мутами.", workspace_title="Moderation Control", workspace_description="Configure bans and moderation actions.", fields={}),
+    "tickets_panel": MenuScope(key="tickets_panel", icon="🎫", title="Ticket Control", short="Настройка ticket-панелей, staff-доступа, SLA.", workspace_title="Ticket Panel", workspace_description="Configure ticket panels and staff access.", fields={}),
+    "welcome_flow": MenuScope(key="welcome_flow", icon="👋", title="Welcome Control", short="Настройка приветствия, DM-сообщений, autorole.", workspace_title="Welcome Flow", workspace_description="Configure welcome messages and autoroles.", fields={}),
+    "roles_access": MenuScope(key="roles_access", icon="🎭", title="Role Access Control", short="Настройка доступа ролей к командам.", workspace_title="Role Access", workspace_description="Configure role access to commands.", fields={}),
+    "logs_setup": MenuScope(key="logs_setup", icon="🧾", title="Logs Setup", short="Создание log-категории и каналов.", workspace_title="Log Channels", workspace_description="Create log category and channels.", fields={}),
 }
 
 ORDERED_SCOPE_KEYS = ["moderation_ban", "tickets_panel", "welcome_flow", "roles_access", "logs_setup"]
@@ -80,7 +80,7 @@ def applied_embed(scope_key: str) -> discord.Embed:
 
 class ScopeSelect(discord.ui.Select):
     def __init__(self):
-        super().__init__(placeholder="Open: Moderation / Tickets / Welcome / Roles / Logs", options=[discord.SelectOption(label=SCOPES[k].title, value=k, description=SCOPES[k].workspace_title, emoji=SCOPES[k].icon) for k in ORDERED_SCOPE_KEYS])
+        super().__init__(placeholder="Open: Moderation / Tickets / Welcome / Roles / Logs", options=[discord.SelectOption(label=SCOPES[k].title, value=k, description=SCOPES[k].workspace_title, emoji=None) for k in ORDERED_SCOPE_KEYS])
     async def callback(self, interaction: discord.Interaction):
         await interaction.response.edit_message(embed=workspace_embed(interaction, self.values[0]), view=WorkspaceView(self.values[0]))
 
