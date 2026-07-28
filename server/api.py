@@ -7,6 +7,7 @@ from typing import Any, Dict, Optional
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from server import db
 from server.discord_rest import DiscordRestClient, DiscordRestError
@@ -20,6 +21,12 @@ DEV_USE_SNAPSHOT = os.getenv("DEV_USE_SNAPSHOT", "false").lower() == "true"
 
 app = FastAPI(title="ProBotum API", version="0.1.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
+
+@app.exception_handler(DiscordRestError)
+async def discord_rest_error_handler(_: Request, exc: DiscordRestError) -> JSONResponse:
+    """Discord tarafındaki sorunlar 500 yerine anlaşılır 502 olarak dönsün."""
+    return JSONResponse(status_code=502, content={"ok": False, "error": "discord_unavailable", "detail": str(exc)})
 
 
 def require_token(request: Request, authorization: Optional[str] = Header(default=None)) -> None:
@@ -238,6 +245,8 @@ async def overview(guild_id: str, _: None = Depends(require_token)) -> Dict[str,
 async def channels(guild_id: str, _: None = Depends(require_token)) -> Dict[str, Any]:
     gid = guild_id_from_param(guild_id)
     snapshot = db.get_guild_snapshot(gid)
+    if DEV_USE_SNAPSHOT:
+        return {"guildId": gid, "channels": snapshot.get("channels", []), "source": "snapshot"}
     try:
         return {"guildId": gid, "channels": DiscordRestClient().get_guild_channels(gid)}
     except DiscordRestError as exc:
@@ -248,6 +257,8 @@ async def channels(guild_id: str, _: None = Depends(require_token)) -> Dict[str,
 async def roles(guild_id: str, _: None = Depends(require_token)) -> Dict[str, Any]:
     gid = guild_id_from_param(guild_id)
     snapshot = db.get_guild_snapshot(gid)
+    if DEV_USE_SNAPSHOT:
+        return {"guildId": gid, "roles": snapshot.get("roles", []), "source": "snapshot"}
     try:
         return {"guildId": gid, "roles": DiscordRestClient().get_guild_roles(gid)}
     except DiscordRestError as exc:
@@ -297,10 +308,23 @@ async def get_permissions(guild_id: str, command: Optional[str] = None, _: None 
 async def put_permissions(guild_id: str, request: Request, _: None = Depends(require_token)) -> Dict[str, Any]:
     gid = guild_id_from_param(guild_id)
     payload = await request.json()
-    for rule in payload.get("rules", []):
-        db.set_permission_rule(gid, str(rule["command"]), str(rule["targetType"]), str(rule["targetId"]), str(rule.get("effect", "allow")), str(rule.get("visibility", "use")))
-    db.add_audit_log(gid, "permissions_saved", {"count": len(payload.get("rules", []))})
-    return {"ok": True, "saved": len(payload.get("rules", []))}
+    rules = payload.get("rules", [])
+    if not isinstance(rules, list):
+        raise HTTPException(status_code=400, detail="'rules' must be a list")
+
+    for index, rule in enumerate(rules):
+        if not isinstance(rule, dict):
+            raise HTTPException(status_code=400, detail=f"rules[{index}] must be an object")
+        command = rule.get("command") or rule.get("commandName")
+        target_type = rule.get("targetType") or rule.get("target_type")
+        target_id = rule.get("targetId") or rule.get("target_id")
+        missing = [k for k, v in (("command", command), ("targetType", target_type), ("targetId", target_id)) if not v]
+        if missing:
+            raise HTTPException(status_code=400, detail=f"rules[{index}] is missing required field(s): {', '.join(missing)}")
+        db.set_permission_rule(gid, str(command), str(target_type), str(target_id), str(rule.get("effect", "allow")), str(rule.get("visibility", "use")))
+
+    db.add_audit_log(gid, "permissions_saved", {"count": len(rules)})
+    return {"ok": True, "guildId": gid, "saved": len(rules)}
 
 
 @app.get("/api/guilds/{guild_id}/logs")

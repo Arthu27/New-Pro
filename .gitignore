@@ -216,3 +216,5 @@ dist/
 data/
 *.sqlite
 *.tsbuildinfo
+.venv/
+venv/

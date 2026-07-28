@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import urllib.error
+import urllib.parse
 import urllib.request
 from typing import Any, Dict, List, Optional
 
@@ -31,6 +32,12 @@ class DiscordRestClient:
         except urllib.error.HTTPError as exc:
             raw = exc.read().decode("utf-8", errors="replace")
             raise DiscordRestError(f"Discord API {exc.code}: {raw}") from exc
+        except urllib.error.URLError as exc:
+            raise DiscordRestError(f"Discord API unreachable: {exc.reason}") from exc
+        except (TimeoutError, OSError) as exc:
+            raise DiscordRestError(f"Discord API request failed: {exc}") from exc
+        except json.JSONDecodeError as exc:
+            raise DiscordRestError(f"Discord API returned invalid JSON: {exc}") from exc
 
     def get_guild(self, guild_id: str, with_counts: bool = True) -> Dict[str, Any]:
         return self._request("GET", f"/guilds/{guild_id}{'?with_counts=true' if with_counts else ''}")
@@ -45,7 +52,7 @@ class DiscordRestClient:
         return self._request("GET", f"/guilds/{guild_id}/members/{user_id}")
 
     def search_guild_members(self, guild_id: str, query: str, limit: int = 5) -> List[Dict[str, Any]]:
-        return self._request("GET", f"/guilds/{guild_id}/members/search?query={urllib.request.quote(query)}&limit={limit}")
+        return self._request("GET", f"/guilds/{guild_id}/members/search?query={urllib.parse.quote(query)}&limit={limit}")
 
     def create_dm_channel(self, user_id: str) -> Dict[str, Any]:
         return self._request("POST", "/users/@me/channels", {"recipient_id": user_id})
