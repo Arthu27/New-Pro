@@ -36,13 +36,39 @@ Discord sunucu yönetim paneli — React + Vite dashboard, FastAPI backend ve di
 │   └── modules/automod.py
 │
 └── scripts/                 # Windows yardımcı .bat dosyaları
+    ├── START_FULL.bat       # Dashboard + API + Bot (her şeyi otomatik kurar)
     ├── START.bat            # Sadece dashboard
-    ├── START_FULL.bat       # Dashboard + API + Bot
     ├── SEED_DEMO.bat        # Demo veri yükle
-    └── STOP.bat             # 5173 / 3000 portlarını kapat
+    ├── STOP.bat             # Servisleri durdur
+    └── _deps.bat            # Ortak kurulum yardımcısı (elle çalıştırılmaz)
 ```
 
-## Kurulum
+## Hızlı başlangıç (Windows)
+
+Hiçbir şey kurmana gerek yok — **`scripts\START_FULL.bat`** dosyasına çift tıkla, yeter.
+
+Script sırayla şunları yapar:
+
+1. **Node.js** yoksa indirip kurar (önce `winget`, olmazsa nodejs.org'dan)
+2. **Python** yoksa indirip kurar (Microsoft Store'un sahte `python` kısayolunu atlar)
+3. `.env` yoksa `.env.example`'dan oluşturur ve Notepad'de açar
+4. `npm install` ile Node paketlerini kurar
+5. `.venv` sanal ortamı oluşturup Python paketlerini kurar
+6. Veritabanı yoksa demo veriyi yükler
+7. API + Bot + Dashboard'u başlatır ve tarayıcıyı açar
+
+> **Not:** Node.js veya Python ilk kez kurulduysa script "pencereyi kapatıp tekrar çalıştır" diyecek.
+> Bu normaldir — Windows'un yeni programı tanıması için gereklidir. İkinci çalıştırmada
+> her şey sorunsuz devam eder.
+
+Discord token girmezsen bot başlamaz ama **dashboard ve API demo veriyle çalışır** —
+paneli incelemek için token gerekmez.
+
+Durdurmak için: `scripts\STOP.bat`
+
+## Elle kurulum (Linux / macOS / manuel tercih edenler)
+
+Gereksinimler: **Node.js 18+** ve **Python 3.10+**
 
 ```bash
 # 1) Konfigürasyon
@@ -53,6 +79,8 @@ cp .env.example .env        # Windows: copy .env.example .env
 npm install
 
 # 3) Backend
+python -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 

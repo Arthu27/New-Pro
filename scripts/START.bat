@@ -1,5 +1,5 @@
 @echo off
-setlocal
+setlocal EnableDelayedExpansion
 cd /d "%~dp0.."
 
 title ProBotum Dashboard Launcher
@@ -7,80 +7,59 @@ color 0B
 
 echo.
 echo  ============================================
-echo     ProBotum Dashboard - Full Start
+echo     ProBotum Dashboard - Sadece Panel
 echo  ============================================
 echo.
-
-:: ── Check Node.js ──
-where node >nul 2>nul
-if errorlevel 1 (
-    echo  [ERROR] Node.js bulunamadi!
-    echo.
-    echo  Node.js indirmek icin:
-    echo  https://nodejs.org/
-    echo.
-    pause
-    exit /b 1
-)
-
-for /f "tokens=*" %%v in ('node -v') do echo  [OK] Node.js: %%v
-
-:: ── Check npm ──
-where npm >nul 2>nul
-if errorlevel 1 (
-    echo  [ERROR] npm bulunamadi!
-    pause
-    exit /b 1
-)
-
-for /f "tokens=*" %%v in ('npm -v') do echo  [OK] npm: %%v
+echo  Not: Bu dosya yalnizca dashboard'u baslatir.
+echo       API + bot da isteniyorsa START_FULL.bat
+echo       kullanin.
 echo.
 
-:: ── Install dependencies ──
-if not exist "node_modules" (
-    echo  [1/3] Paketler yukleniyor...
-    echo       Bu ilk seferde 1-2 dakika surebilir.
+:: ── 1/3  Node.js (yoksa kurulur) ──
+echo  [1/3] Node.js kontrol ediliyor...
+echo.
+call "%~dp0_deps.bat" node
+if errorlevel 1 goto :fatal
+
+if "%NEED_RESTART%"=="1" (
     echo.
+    echo  ============================================
+    echo   [!] Node.js yuklendi.
+    echo.
+    echo   Windows'un taniyabilmesi icin bu pencereyi
+    echo   KAPATIN ve START.bat dosyasini tekrar
+    echo   calistirin.
+    echo  ============================================
+    echo.
+    pause
+    exit /b 0
+)
+
+:: ── 2/3  Paketler ──
+echo.
+echo  [2/3] Node paketleri...
+if not exist "node_modules" (
+    echo       Yukleniyor - ilk seferde 1-2 dakika surebilir...
     call npm install
     if errorlevel 1 (
-        echo.
-        echo  [ERROR] npm install basarisiz!
-        pause
-        exit /b 1
+        echo  [ERROR] npm install basarisiz oldu.
+        goto :fatal
     )
-    echo.
     echo  [OK] Paketler yuklendi.
 ) else (
-    echo  [1/3] Paketler zaten yuklu.
+    echo  [OK] Zaten yuklu.
 )
 
+:: ── 3/3  Dev server ──
 echo.
-
-:: ── Build project ──
-echo  [2/3] Proje derleniyor...
-call npm run build
-if errorlevel 1 (
-    echo.
-    echo  [ERROR] Build basarisiz!
-    pause
-    exit /b 1
-)
-
-echo.
-echo  [OK] Build tamamlandi.
-echo.
-
-:: ── Start dev server ──
 echo  [3/3] Dashboard baslatiliyor...
 echo.
 echo  ============================================
 echo.
 echo    Dashboard:  http://localhost:5173
-echo    API:        http://localhost:3000/api
 echo.
-echo    Dashboard acilinca login ekrani gelir.
-echo    API baglantisi yoksa simulation modunda
-echo    calisir - sorun olmaz.
+echo    API calismadigi icin panel simulation
+echo    modunda acilir - bu normaldir.
 echo.
 echo    Kapatmak icin: CTRL + C
 echo.
@@ -89,3 +68,15 @@ echo.
 
 start "" "http://localhost:5173"
 call npm run dev
+
+exit /b 0
+
+
+:fatal
+echo.
+echo  ============================================
+echo   Baslatilamadi. Yukaridaki hataya bakin.
+echo  ============================================
+echo.
+pause
+exit /b 1
