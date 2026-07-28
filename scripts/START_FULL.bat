@@ -1,6 +1,6 @@
 @echo off
 setlocal
-cd /d "%~dp0"
+cd /d "%~dp0.."
 
 title ProBotum Full System Launcher
 color 0A
@@ -72,12 +72,12 @@ echo.
 
 :: ── Start API ──
 echo  [3/5] API baslatiliyor (port 3000)...
-start "ProBotum API :3000" cmd /k "cd /d "%~dp0" && python -m uvicorn server.api:app --host 0.0.0.0 --port 3000"
+start "ProBotum API :3000" cmd /k "cd /d "%~dp0.." && python -m uvicorn server.api:app --host 0.0.0.0 --port 3000"
 timeout /t 3 /nobreak >nul
 
 :: ── Start Bot (optional) ──
 echo  [4/5] Discord bot baslatiliyor...
-start "ProBotum Bot" cmd /k "cd /d "%~dp0" && python -m bot.main"
+start "ProBotum Bot" cmd /k "cd /d "%~dp0.." && python -m bot.main"
 timeout /t 2 /nobreak >nul
 
 :: ── Start Dashboard ──

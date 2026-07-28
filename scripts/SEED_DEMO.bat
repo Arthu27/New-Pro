@@ -1,5 +1,5 @@
 @echo off
-cd /d "%~dp0"
+cd /d "%~dp0.."
 title ProBotum - Demo Data Seed
 color 0E
 
