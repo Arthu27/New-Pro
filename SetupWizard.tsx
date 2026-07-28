@@ -1,0 +1,10 @@
+import { useState } from 'react';
+import { SectionHead, Btn, ModeBanner, ExplainBox, Tag } from '../components/ui';
+interface Props{apiConnected:boolean;onOpenApply:(id:string)=>void;}
+export default function SetupWizard({apiConnected,onOpenApply}:Props){const[plan,setPlan]=useState<string[]|null>(null);
+  return(<div><ModeBanner connected={apiConnected}/><ExplainBox title="Зачем нужен Setup Wizard?" text="Он сначала создаёт понятный план: что нужно создать, выбрать и проверить." next="нажми Generate Plan"/>
+    <SectionHead title="Setup Wizard" sub="Пошаговый план первичной настройки." right={<Btn onClick={()=>onOpenApply('all')}>Apply Plan</Btn>}/>
+    <div className="wizardGrid">{['Server profile','Core modules','Channels','Roles','Messages','Preview'].map((x,i)=><div key={i} className="card wizardStep"><span>{i+1}</span><h3>{x}</h3><p>{['Выбери тип сервера.','Отметь модули.','Назначь каналы.','Выбери роли.','Embed шаблоны.','JSON preview.'][i]}</p></div>)}</div><br/>
+    <div className="grid two"><div className="card"><SectionHead title="Wizard configuration"/><div className="formGrid"><div className="field"><label>Server type</label><select><option>community</option><option>gaming</option><option>support</option></select></div><div className="field"><label>Security</label><select><option>standard</option><option>strict</option><option>maximum</option></select></div><div className="field"><label>Mode</label><select><option>dry-run preview</option><option>auto-create</option></select></div><div className="field full"><label>Modules</label><textarea defaultValue="AutoMod, Anti-Raid, Welcome, AutoRole, Tickets, Logs"/></div></div><br/><Btn onClick={()=>setPlan(['Ensure welcome channel','Ensure tickets channel','Ensure member role','Enable AutoMod','Create ticket panel','Save configs','Dry-run check'])}>Generate Plan</Btn></div>
+      <div className="card"><SectionHead title="Generated action plan"/>{plan?<div className="denseList">{plan.map((a,i)=><div key={i} className="row"><b>{i+1}. {a}</b><Tag variant="warn">dry-run</Tag></div>)}</div>:<div className="empty">Generate a plan to see actions.</div>}</div></div></div>);
+}

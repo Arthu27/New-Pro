@@ -1,0 +1,9 @@
+import { useState } from 'react';
+import { SectionHead, Btn } from '../components/ui';
+interface Rule { name:string; condition:string; action:string; escalation:string; }
+export default function AutomodRules() {
+  const [rules,setRules]=useState<Rule[]>([{name:'Invite links',condition:'message contains discord.gg',action:'delete + warn',escalation:'3 violations → mute 10m'},{name:'Caps spam',condition:'caps ratio > 70%',action:'delete',escalation:'5 violations → mute 5m'},{name:'Mention spam',condition:'mentions > 5',action:'warn',escalation:'2 violations → mute 15m'},{name:'Link whitelist',condition:'url not in whitelist',action:'delete',escalation:'log only'}]);
+  return(<div><SectionHead title="AutoMod Rule Builder" sub="Правила в формате If → Then → Escalation." right={<Btn onClick={()=>setRules([...rules,{name:'New rule',condition:'condition',action:'action',escalation:'escalation'}])}>Add rule</Btn>}/>
+    <div className="card"><table className="table"><thead><tr><th>Rule</th><th>If</th><th>Then</th><th>Escalation</th><th></th></tr></thead><tbody>{rules.map((r,i)=><tr key={i}><td><input className="input" value={r.name} onChange={e=>setRules(rules.map((x,j)=>j===i?{...x,name:e.target.value}:x))}/></td><td><input className="input" value={r.condition} onChange={e=>setRules(rules.map((x,j)=>j===i?{...x,condition:e.target.value}:x))}/></td><td><input className="input" value={r.action} onChange={e=>setRules(rules.map((x,j)=>j===i?{...x,action:e.target.value}:x))}/></td><td><input className="input" value={r.escalation} onChange={e=>setRules(rules.map((x,j)=>j===i?{...x,escalation:e.target.value}:x))}/></td><td><Btn mini secondary onClick={()=>setRules(rules.filter((_,j)=>j!==i))}>Remove</Btn></td></tr>)}</tbody></table></div>
+    <br/><div className="card"><h3>Policy JSON</h3><textarea readOnly value={JSON.stringify(rules.map(r=>({name:r.name,if:r.condition,then:r.action,escalation:r.escalation})),null,2)}/></div></div>);
+}
