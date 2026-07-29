@@ -726,31 +726,45 @@ class Ticket(commands.Cog):
                     pass
 
                 full_message = message.content
-                response, should_escalate, escalation_category, updated_history = ai_ticket_response(
+                response, should_escalate, escalation_category, updated_history, detected_category = ai_ticket_response(
                     full_message, state['history'], guild_context
                 )
                 actions = parse_ai_actions(response)
 
-                if actions['jail']:
+                # Обрабатываем действия
+                if actions.get('jail'):
                     await self._apply_jail(message.channel, actions['jail']['user_id'],
                                            actions['jail']['duration'], actions['jail']['reason'],
                                            message.author)
 
+                if actions.get('warn'):
+                    await self._apply_warn(message.channel, actions['warn']['user_id'],
+                                          actions['warn']['reason'], message.author)
+
+                if actions.get('role_assign'):
+                    await self._assign_role(message.guild, actions['role_assign']['user_id'],
+                                           actions['role_assign']['role_id'])
+
+                if actions.get('channel_redirect'):
+                    channel = message.guild.get_channel(actions['channel_redirect']['channel_id'])
+                    if channel:
+                        await message.channel.send(f"Перенаправляю в {channel.mention}")
+
+                if actions.get('delete_messages'):
+                    await self._delete_messages(message.guild, actions['delete_messages']['channel_id'],
+                                               actions['delete_messages']['count'])
+
                 state['history'] = updated_history
                 state['ai_message_count'] += 1
+                state['category'] = detected_category
 
-                if should_escalate or actions['escalate']:
-                    state['category'] = escalation_category
+                if should_escalate or actions.get('escalate'):
                     await self._escalate_ticket(message.channel, state, escalation_category)
                     self._save_ticket_state(guild_id, channel_id, state)
                     return
 
-                clean_response = response
-                for tag in ['[JAIL]', '[CHECK_HISTORY]', '[ANALYZE_IMAGE]', '[ESCALATE]',
-                            'ACTION:JAIL:', 'ACTION:CHECK:', 'ACTION:ESCALATE']:
-                    if tag in clean_response:
-                        clean_response = clean_response.split(tag)[0].strip()
-
+                # Отправляем очищенный ответ
+                clean_response = actions.get('cleaned_response', response)
                 if clean_response:
                     await message.channel.send(clean_response)
                 self._save_ticket_state(guild_id, channel_id, state)
@@ -1583,6 +1597,69 @@ YANIT FORMATI (kesinlikle bu formatta yaz):
                     pass
         except Exception as e:
             print(f'[TICKET] Unjail Ошибкаsı: {e}')
+    
+    async def _apply_warn(self, channel: discord.TextChannel, user_id: int, reason: str, moderator: discord.Member):
+        """AI выдать предупреждение"""
+        try:
+            guild = channel.guild
+            target_user = guild.get_member(user_id)
+            if not target_user:
+                try:
+                    target_user = await guild.fetch_member(user_id)
+                except:
+                    target_user = None
+            
+            if not target_user:
+                await channel.send("Пользователь не найден на сервере.")
+                return
+            
+            # Выдать предупреждение через систему warnings
+            from cogs.warnings import Warnings
+            warnings_cog = self.bot.get_cog('Warnings')
+            if warnings_cog:
+                # Создаём фейковое interaction для вызова /warn
+                await warnings_cog.add_warning(target_user, moderator, reason)
+                await channel.send(f"Предупреждение выдано {target_user.mention}: {reason}")
+            else:
+                await channel.send("Система предупреждений недоступна.")
+                
+        except Exception as e:
+            await channel.send(f"Ошибка при выдаче предупреждения: {str(e)}")
+            print(f"Warn error: {e}")
+    
+    async def _assign_role(self, guild: discord.Guild, user_id: int, role_id: int):
+        """AI выдать роль"""
+        try:
+            target_user = guild.get_member(user_id)
+            role = guild.get_role(role_id)
+            
+            if not target_user:
+                print(f"[TICKET] Role assign: пользователь {user_id} не найден")
+                return
+            
+            if not role:
+                print(f"[TICKET] Role assign: роль {role_id} не найдена")
+                return
+            
+            await target_user.add_roles(role, reason="AI Ticket Assistant")
+            print(f"[TICKET] Role {role.name} выдана {target_user}")
+            
+        except Exception as e:
+            print(f"Role assign error: {e}")
+    
+    async def _delete_messages(self, guild: discord.Guild, channel_id: int, count: int):
+        """AI удалить сообщения"""
+        try:
+            channel = guild.get_channel(channel_id)
+            if not channel:
+                print(f"[TICKET] Delete messages: канал {channel_id} не найден")
+                return
+            
+            deleted = await channel.purge(limit=min(count, 100))
+            print(f"[TICKET] Удалено {len(deleted)} сообщений в {channel.name}")
+            
+        except Exception as e:
+            print(f"Delete messages error: {e}")
     
     async def _check_message_history(self, channel: discord.TextChannel, guild: discord.Guild, user_id: int = None, target_channel_id: int = None) -> str:
         """Belirli kullanicinin messagelarini tara"""
