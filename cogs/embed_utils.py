@@ -50,54 +50,76 @@ def mod_dm_embed(action, guild, moderator, reason=None, extra_fields=None, gif_k
             "color": 0xE74C3C,
             "text": f"Вы были **навсегда** удалены с сервера **{guild.name}**.",
             "note": "Если вы считаете это решение ошибочным — свяжитесь с администрацией.",
+            "gif": "https://media.tenor.com/x8v1oNUOmg4AAAAC/ban-hammer.gif",
         },
         "kick": {
             "title": "Вы исключены",
             "color": 0xE67E22,
             "text": f"Вы были исключены с сервера **{guild.name}**.",
             "note": "Вы можете вернуться по ссылке-приглашению. Соблюдайте правила.",
+            "gif": "https://media.tenor.com/OtNpHMFHMhsAAAAC/kick-out.gif",
         },
         "timeout": {
             "title": "Вы замьючены",
             "color": 0xF39C12,
             "text": f"На сервере **{guild.name}** вам временно ограничена отправка сообщений.",
             "note": "Мут будет снят автоматически по истечении срока.",
+            "gif": "https://media.tenor.com/zjaHBJMFMIsAAAAC/shh-quiet.gif",
         },
         "untimeout": {
             "title": "Мут снят",
             "color": 0x2ECC71,
             "text": f"Ваш мут на сервере **{guild.name}** снят.",
             "note": "Вы снова можете отправлять сообщения. Соблюдайте правила.",
+            "gif": None,
         },
         "warn": {
             "title": "Предупреждение",
             "color": 0xFF6B6B,
             "text": f"На сервере **{guild.name}** вы получили предупреждение за нарушение правил.",
             "note": "При накоплении предупреждений могут быть применены более строгие наказания.",
+            "gif": "https://media.tenor.com/xTMoHBqFkFkAAAAC/warning-caution.gif",
         },
         "unban": {
             "title": "Бан снят",
             "color": 0x2ECC71,
             "text": f"Ваш бан на сервере **{guild.name}** снят.",
             "note": "Вы можете вернуться на сервер. Цените этот шанс.",
+            "gif": None,
         },
     }
     cfg = configs.get(action, configs["warn"])
 
     e = discord.Embed(color=cfg["color"], timestamp=datetime.now(timezone.utc))
-    desc = (
-        f"## {cfg['title']}\n"
-        f"{cfg['text']}\n\n"
-        f"Модератор: **{moderator.display_name}**\n"
-        f"Причина: {reason or 'Не указана'}\n"
-    )
+
+    desc = f"## {cfg['title']}\n"
+    desc += f"### {cfg['text']}\n"
+    desc += f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+    desc += f"**Сервер:** {guild.name}\n"
+    desc += f"**Модератор:** {moderator.display_name}\n"
+    desc += f"**Причина:** {reason or 'Не указана'}\n"
+
     if extra_fields:
+        desc += "\n"
         for name, value, inline in extra_fields:
-            desc += f"{name}: {value}\n"
-    desc += f"\n> {cfg['note']}"
+            desc += f"**{name}:** {value}\n"
+
+    desc += f"\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+    desc += f"> {cfg['note']}"
+
     e.description = desc
     e.set_thumbnail(url=guild.icon.url if guild.icon else None)
-    e.set_footer(text=f"{guild.name}")
+
+    # GIF для действий
+    if cfg.get("gif"):
+        e.set_image(url=cfg["gif"])
+
+    # Footer с иконкой сервера
+    if guild.icon:
+        e.set_footer(text=f"{guild.name} · Модерация", icon_url=guild.icon.url)
+    else:
+        e.set_footer(text=f"{guild.name} · Модерация")
+
     return e
 
 

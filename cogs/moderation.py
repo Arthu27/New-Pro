@@ -73,7 +73,7 @@ class Moderation(commands.Cog):
             pass
 
     def _confirm_embed(self, action, user, guild, reason, case_id, extra=""):
-        """Embed подтверждения для модератора — минимализм стиль"""
+        """Embed подтверждения для модератора — профессиональный стиль"""
         configs = {
             "ban":       ("Бан выполнен",       0xE74C3C, "забанен навсегда"),
             "kick":      ("Кик выполнен",       0xE67E22, "исключён с сервера"),
@@ -84,19 +84,30 @@ class Moderation(commands.Cog):
         title, color, action_text = configs.get(action, ("Действие выполнено", 0x2ECC71, "применено"))
 
         e = discord.Embed(color=color, timestamp=datetime.now(timezone.utc))
-        desc = (
-            f"## {title}\n"
-            f"**{user.display_name}** — {action_text}\n"
-            f"`{user.id}`\n\n"
-            f"Дело: **#{case_id}**\n"
-            f"Причина: {reason or 'Не указана'}\n"
-            f"Модератор: {user.mention}"
-        )
+
+        desc = f"## {title}\n"
+        desc += f"### **{user.display_name}** — {action_text}\n"
+        desc += f"`{user.id}`\n"
+        desc += f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        desc += f"**Дело:** #{case_id}\n"
+        desc += f"**Причина:** {reason or 'Не указана'}\n"
+        desc += f"**Модератор:** {user.mention}\n"
+
         if extra:
-            desc += f"\n{extra}"
-        desc += f"\n\n{DIVIDER}\nDM пользователю отправлен"
+            desc += f"\n{extra}\n"
+
+        desc += f"\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        desc += f"> DM пользователю отправлен"
+
         e.description = desc
-        e.set_footer(text=f"{guild.name}")
+        e.set_thumbnail(url=user.display_avatar.url)
+
+        # Footer с иконкой сервера
+        if guild.icon:
+            e.set_footer(text=f"{guild.name} · Модерация", icon_url=guild.icon.url)
+        else:
+            e.set_footer(text=f"{guild.name} · Модерация")
+
         return e
 
     # ─── /moderate ──────────────────────────────────────────────────────
