@@ -4,7 +4,7 @@ import json, os, time
 from datetime import date
 
 class VoiceTracker(commands.Cog):
-    """Голос channelı istatistiklerini voice_stats_<guild_id>.json formatında kaydeder."""
+    """Ses канал статистика voice_stats_<guild_id>.json formatında сохран."""
 
     def __init__(self, bot):
         self.bot = bot
@@ -30,7 +30,7 @@ class VoiceTracker(commands.Cog):
             json.dump(data, fp, indent=2, ensure_ascii=False)
 
     def _record(self, guild_id: str, member: discord.Member, elapsed: int):
-        """Geçen süreyi сохранить"""
+        """Geçen длительность сохранить"""
         if elapsed <= 0:
             return
         uid = str(member.id)
@@ -56,7 +56,7 @@ class VoiceTracker(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self):
-        """Бот başlayınca mevcut голос channellarındaki kişileri сохранить"""
+        """Bot başlayınca текущий ses channellarındaki kişileri сохранить"""
         now = time.time()
         for guild in self.bot.guilds:
             gid = str(guild.id)
@@ -77,13 +77,13 @@ class VoiceTracker(commands.Cog):
         gid = str(member.guild.id)
         uid = str(member.id)
 
-        # Каналa katıldı
+        # Канал присоединился
         if before.channel is None and after.channel is not None:
             if gid not in self.sessions:
                 self.sessions[gid] = {}
             self.sessions[gid][uid] = time.time()
 
-        # Каналdan ayrıldı
+        # Канал покинул
         elif before.channel is not None and after.channel is None:
             join_time = self.sessions.get(gid, {}).pop(uid, None)
             if join_time is None:
@@ -91,7 +91,7 @@ class VoiceTracker(commands.Cog):
             elapsed = int(time.time() - join_time)
             self._record(gid, member, elapsed)
 
-        # Каналdan channela geçti — süreyi сохранить, yeni oturum запустить
+        # Канал channela geçti — длительность сохранить, новый oturum запустить
         elif before.channel is not None and after.channel is not None and before.channel != after.channel:
             join_time = self.sessions.get(gid, {}).pop(uid, None)
             if join_time:

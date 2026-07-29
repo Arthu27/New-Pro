@@ -3,8 +3,8 @@ import os, re
 GUILD_ID = '1384282749317152878'
 TEMPLATES_DIR = 'web/templates'
 
-# Her dosyada kalan eski loadGuilds kalıntılarını clear
-# Pattern: loadGuilds fonksiyonu içinde kalan eski API çağrısı artıkları
+# Каждый dosyada kalan старый loadGuilds kalıntılarını clear
+# Pattern: loadGuilds fonksiyonu в kalan старый API çağrısı теперь
 
 changed = []
 for fname in os.listdir(TEMPLATES_DIR):
@@ -22,9 +22,9 @@ for fname in os.listdir(TEMPLATES_DIR):
         content
     )
 
-    # Kalan eski loadGuilds bloklarını (API çağrısı içerenler) clear
-    # Bunlar script'in ürettiği ama hâlâ eski satırlar içeren bloklar
-    # Pattern: loadGuilds fonksiyonu içinde });  if(guilds... gibi artıklar
+    # Kalan старый loadGuilds bloklarını (API çağrısı içerenler) clear
+    # Bunlar script'in ürettiği ama hâlâ старый satırlar içeren bloklar
+    # Pattern: loadGuilds fonksiyonu в });  if(guilds... gibi теперь
     content = re.sub(
         r'\}\);\s*\n\s*if\s*\(\s*guilds\.length[^\n]*\n',
         '\n',

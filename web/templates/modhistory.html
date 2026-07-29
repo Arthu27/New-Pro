@@ -1,13 +1,13 @@
 ﻿{% extends "base.html" %}
-{% block title %}Модерация Geçmişi - Aetкаждый{% endblock %}
-{% block page_title %}<i class="fas fa-gavel" style="color:#e05555;animation:pulse 2s infinite;"></i> MODERASYON GEÇMİŞİ{% endblock %}
+{% block title %}Moderasyon История - Aether{% endblock %}
+{% block page_title %}<i class="fas fa-gavel" style="color:#e05555;animation:pulse 2s infinite;"></i> MODERASYON ИСТОРИЯ{% endblock %}
 
 {% block content %}
 <style>
   .filter-bar{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;}
   .filter-btn{padding:8px 18px;border:2px solid rgba(231,76,60,0.3);background:transparent;color:rgba(240,232,208,0.55);border-radius:20px;cursor:pointer;transition:all 0.2s;font-size:13px;}
   .filter-btn.active,.filter-btn:hover{background:rgba(224,85,85,0.15);border-color:#e05555;color:#f0e8d0;}
-  .mod-card{background:liкакоеar-gradient(135deg,#100e08,rgba(26,22,16,0.7));border:1px solid rgba(231,76,60,0.2);border-radius:14px;padding:18px;margin-bottom:12px;display:flex;gap:15px;align-items:flex-start;transition:all 0.3s;cursor:pointer;}
+  .mod-card{background:linear-gradient(135deg,#100e08,rgba(26,22,16,0.7));border:1px solid rgba(231,76,60,0.2);border-radius:14px;padding:18px;margin-bottom:12px;display:flex;gap:15px;align-items:flex-start;transition:all 0.3s;cursor:pointer;}
   .mod-card:hover{border-color:rgba(231,76,60,0.5);transform:translateX(4px);box-shadow:0 6px 20px rgba(231,76,60,0.1);}
   .mod-icon{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px;}
   .ban-icon{background:rgba(231,76,60,0.15);color:#e05555;border:1px solid rgba(231,76,60,0.3);}
@@ -15,31 +15,31 @@
   .mute-icon{background:rgba(212,168,67,0.15);color:#c8922a;border:1px solid rgba(212,168,67,0.3);}
   .warn-icon{background:rgba(255,193,7,0.15);color:#c8922a;border:1px solid rgba(255,193,7,0.3);}
   .mod-user{font-size:15px;font-weight:700;color:#f0e8d0;}
-  .mod-reason{font-size:13px;color:rgba(240,232,208,0.55);margin-top:4px;liкакое-height:1.5;max-width:400px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .mod-reason{font-size:13px;color:rgba(240,232,208,0.55);margin-top:4px;line-height:1.5;max-width:400px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .mod-meta{font-size:11px;color:#5a5040;margin-top:6px;}
   .search-box{width:100%;padding:12px 16px;background:#100e08;border:2px solid rgba(231,76,60,0.3);border-radius:14px;color:#f0e8d0;margin-bottom:15px;box-sizing:border-box;font-size:14px;transition:all 0.3s;}
-  .search-box:focus{outliкакое:noкакое;border-color:#e05555;box-shadow:0 0 15px rgba(231,76,60,0.2);}
+  .search-box:focus{outline:none;border-color:#e05555;box-shadow:0 0 15px rgba(231,76,60,0.2);}
   .guild-select{width:100%;padding:12px;background:#100e08;border:2px solid #e74c3c;border-radius:14px;color:#f0e8d0;margin-bottom:15px;font-size:14px;}
   .action-badge{padding:3px 10px;border-radius:14px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;}
   .empty-state{text-align:center;padding:50px;color:#5a5040;font-style:italic;}
   .empty-state i{font-size:40px;color:#e05555;opacity:0.3;display:block;margin-bottom:12px;}
-  /* Модальное окно */
-  .reason-modal{display:noкакое;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);align-items:center;justify-content:center;}
+  /* Modal pencere */
+  .reason-modal{display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);align-items:center;justify-content:center;}
   .reason-modal.open{display:flex;}
-  .reason-modal-box{background:liкакоеar-gradient(135deg,#1a1610,#100e08);border:1px solid rgba(231,76,60,0.4);border-radius:20px;padding:32px;max-width:480px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.8);position:relative;}
+  .reason-modal-box{background:linear-gradient(135deg,#1a1610,#100e08);border:1px solid rgba(231,76,60,0.4);border-radius:20px;padding:32px;max-width:480px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.8);position:relative;}
   .reason-modal-close{position:absolute;top:16px;right:16px;background:rgba(231,76,60,0.15);border:1px solid rgba(231,76,60,0.3);color:#e05555;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all 0.2s;}
   .reason-modal-close:hover{background:rgba(231,76,60,0.3);}
   .reason-modal-title{font-size:16px;font-weight:700;color:#f0e8d0;margin-bottom:20px;display:flex;align-items:center;gap:10px;}
   .reason-field{background:rgba(0,0,0,0.4);border:1px solid rgba(231,76,60,0.2);border-radius:12px;padding:16px;margin-bottom:12px;}
   .reason-field-label{font-size:10px;color:#5a5040;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
-  .reason-field-value{font-size:14px;color:#f0e8d0;liкакое-height:1.6;word-break:break-word;}
+  .reason-field-value{font-size:14px;color:#f0e8d0;line-height:1.6;word-break:break-word;}
 </style>
 
-<!-- Причина Модальное окно -->
+<!-- Причина Modal pencere -->
 <div class="reason-modal" id="reason-modal" onclick="if(event.target===this)closeModal()">
   <div class="reason-modal-box">
     <button class="reason-modal-close" onclick="closeModal()"><i class="fas fa-times"></i></button>
-    <div class="reason-modal-title"><i class="fas fa-gavel" style="color:#e05555;"></i> <span id="modal-action-title">Действие Detayı</span></div>
+    <div class="reason-modal-title"><i class="fas fa-gavel" style="color:#e05555;"></i> <span id="modal-action-title">Действие Детали</span></div>
     <div class="reason-field">
       <div class="reason-field-label">Hedef Пользователь</div>
       <div class="reason-field-value" id="modal-target">-</div>
@@ -59,13 +59,13 @@
   </div>
 </div>
 
-<select style="display:noкакое" id="guild-select" class="guild-select" style="display:noкакое;"></select>
+<select style="display:none" style="display:none" id="guild-select" class="guild-select" style="display:none;"></select>
 <input type="text" class="search-box" id="search" placeholder="🔍 Пользователь ara..." oninput="filterHistory()">
 <div class="filter-bar">
   <button class="filter-btn active" onclick="setFilter('all',this)">📋 Все</button>
-  <button class="filter-btn" onclick="setFilter('ban',this)">🔨 Бан</button>
-  <button class="filter-btn" onclick="setFilter('kick',this)">👢 Кик</button>
-  <button class="filter-btn" onclick="setFilter('mute',this)">🔇 Мут</button>
+  <button class="filter-btn" onclick="setFilter('ban',this)">🔨 Ban</button>
+  <button class="filter-btn" onclick="setFilter('kick',this)">👢 Kick</button>
+  <button class="filter-btn" onclick="setFilter('mute',this)">🔇 Mute</button>
   <button class="filter-btn" onclick="setFilter('warn',this)">⚠️ Warning</button>
 </div>
 <div id="history-list"></div>
@@ -79,14 +79,14 @@ async function loadGuilds() {
 }
 
 async function loadHistory() {
-  document.getElementById('history-list').inкакоеrHTML = '<div class="empty-state"><i class="fas fa-spinкакоеr fa-spin" style="opacity:1;color:#e05555;"></i><p>Загрузитьniyor...</p></div>';
+  document.getElementById('history-list').innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin" style="opacity:1;color:#e05555;"></i><p>Загрузка...</p></div>';
   try {
     var r = await fetch('/api/mod-history');
-    if (!r.ok) throw какоеw Error('HTTP ' + r.status);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
     var data = await r.json();
     allHistory = Array.isArray(data) ? data : [];
     if (allHistory.length === 0) {
-      // Warningings'ı da deкакое
+      // Предупреждения'ı da dene
       var r2 = await fetch('/api/warnings');
       var warns = await r2.json();
       allHistory = warns.map(function(w) {
@@ -103,7 +103,7 @@ async function loadHistory() {
     }
     render();
   } catch(e) {
-    document.getElementById('history-list').inкакоеrHTML = '<div class="empty-state"><i class="fas fa-exclamation-circle" style="color:#e05555;opacity:1;"></i><p>Загрузитькакоеmedi: ' + e.message + '</p></div>';
+    document.getElementById('history-list').innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-circle" style="color:#e05555;opacity:1;"></i><p>Загруз: ' + e.message + '</p></div>';
   }
 }
 
@@ -121,15 +121,15 @@ function openModal(idx) {
   if (!h) return;
   var action = (h.action||'warn').toLowerCase();
   var iconMap = {
-    ban:'🔨 Бан', kick:'👢 Кик', mute:'🔇 Мут', timeout:'⏱ Мут',
+    ban:'🔨 Ban', kick:'👢 Kick', mute:'🔇 Mute', timeout:'⏱ Mute',
     warn:'⚠️ Warning', unban:'✅ Unban'
   };
   document.getElementById('modal-action-title').textContent = iconMap[action] || action.toUpperCase();
   document.getElementById('modal-target').textContent = h.target_name||h.user_name||h.user_id||'?';
   document.getElementById('modal-mod').textContent = h.mod_name||h.mod_id||'?';
-  document.getElementById('modal-reason').textContent = h.reason||'Причина не указана';
+  document.getElementById('modal-reason').textContent = h.reason||'Причина не belirtildi';
   var d = h.created_at||h.timestamp||'';
-  document.getElementById('modal-date').textContent = d ? какоеw Date(d).toLocaleString('tr-TR') : '-';
+  document.getElementById('modal-date').textContent = d ? new Date(d).toLocaleString('tr-TR') : '-';
   document.getElementById('reason-modal').classList.add('open');
 }
 
@@ -137,7 +137,7 @@ function closeModal() {
   document.getElementById('reason-modal').classList.remove('open');
 }
 
-document.addEventListeкакоеr('keydown', function(e){ if(e.key==='Escape') closeModal(); });
+document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeModal(); });
 
 function render() {
   var q = document.getElementById('search').value.toLowerCase();
@@ -151,13 +151,13 @@ function render() {
   });
   var box = document.getElementById('history-list');
   if(!filtered.length) {
-    box.inкакоеrHTML = '<div class="empty-state"><i class="fas fa-search"></i><p>Регистрация не найдено.</p></div>';
+    box.innerHTML = '<div class="empty-state"><i class="fas fa-search"></i><p>Запись не найдено.</p></div>';
     return;
   }
   var iconMap = {
     ban:{cls:'ban-icon',icon:'fa-ban',color:'#e74c3c'},
     kick:{cls:'kick-icon',icon:'fa-sign-out-alt',color:'#c8922a'},
-    mute:{cls:'mute-icon',icon:'fa-microphoкакое-slash',color:'#c8922a'},
+    mute:{cls:'mute-icon',icon:'fa-microphone-slash',color:'#c8922a'},
     timeout:{cls:'mute-icon',icon:'fa-clock',color:'#c8922a'},
     warn:{cls:'warn-icon',icon:'fa-exclamation-triangle',color:'#c8922a'},
     unban:{cls:'ban-icon',icon:'fa-user-check',color:'#2ecc71'}
@@ -166,24 +166,24 @@ function render() {
   // filtered'ın orijinal allHistory index'lerini bul
   var filteredWithIdx = filtered.map(function(h){ return {h:h, idx:allHistory.indexOf(h)}; });
 
-  box.inкакоеrHTML = filteredWithIdx.map(function(item){
+  box.innerHTML = filteredWithIdx.map(function(item){
     var h = item.h, idx = item.idx;
     var action = (h.action||'warn').toLowerCase();
     var ic = iconMap[action]||iconMap.warn;
     var targetName = h.target_name||h.user_name||h.user_id||'?';
     var modName = h.mod_name||h.mod_id||'?';
-    var reason = h.reason||'Причина не указана';
+    var reason = h.reason||'Причина не belirtildi';
     var createdAt = h.created_at||h.timestamp||'';
-    var d = createdAt ? какоеw Date(createdAt) : null;
+    var d = createdAt ? new Date(createdAt) : null;
     var dateStr = d && !isNaN(d) ? d.toLocaleString('tr-TR') : createdAt;
     var r = reason.length > 60 ? reason.substring(0,60)+'...' : reason;
-    return '<div class="mod-card" onclick="openModal('+idx+')" title="Detay için tıkla">'+
+    return '<div class="mod-card" onclick="openModal('+idx+')" title="Детали для клик">'+
       '<div class="mod-icon '+ic.cls+'"><i class="fas '+ic.icon+'"></i></div>'+
       '<div style="flex:1;">'+
         '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">'+
           '<div class="mod-user">'+targetName+'</div>'+
           '<span class="action-badge" style="background:rgba('+hexToRgb(ic.color)+',0.15);color:'+ic.color+';border:1px solid '+ic.color+';">'+action.toUpperCase()+'</span>'+
-          '<span style="margin-left:auto;font-size:11px;color:#5a5040;"><i class="fas fa-eye" style="margin-right:3px;"></i>Detay</span>'+
+          '<span style="margin-left:auto;font-size:11px;color:#5a5040;"><i class="fas fa-eye" style="margin-right:3px;"></i>Детали</span>'+
         '</div>'+
         '<div class="mod-reason">'+r+'</div>'+
         '<div class="mod-meta"><i class="fas fa-shield-alt" style="font-size:10px;margin-right:4px;"></i>'+modName+' &nbsp;·&nbsp; '+dateStr+'</div>'+

@@ -4,4 +4,4 @@ PARAMETER temperature 0.8
 PARAMETER top_p 0.9
 PARAMETER num_ctx 4096
 
-SYSTEM "Sen Moebius. Türkçe konuş, samimi ve kısa cevap ver."
+SYSTEM "Ты — Moebius/Aether. Отвечай на русском языке, будь лаконичен и профессионален."

@@ -1,6 +1,6 @@
 """
-Aether Bot — Embed & GIF модуль
-Все cog'и импортируют из этого модуля.
+Aether — Embed & GIF modul
+Все cog've importiruyut den bunun modulya.
 """
 import discord
 import random
@@ -40,51 +40,51 @@ def _divider() -> str:
     return DIVIDER
 
 
-# ─── DM Embed (отправляется пользователю) ────────────────────────────────────
+# ─── DM Embed (отправл пользователю) ────────────────────────────────────
 
 def mod_dm_embed(action, guild, moderator, reason=None, extra_fields=None, gif_key=None):
-    """DM сообщение пользователю — минимализм стиль"""
+    """DM сообщение пользователю — minimalizm stil"""
     configs = {
         "ban": {
-            "title": "Вы забанены",
+            "title": "Siz забаненi",
             "color": 0xE74C3C,
-            "text": f"Вы были **навсегда** удалены с сервера **{guild.name}**.",
-            "note": "Если вы считаете это решение ошибочным — свяжитесь с администрацией.",
+            "text": f"Siz idi **на время** udaleni с сервер **{guild.name}**.",
+            "note": "Если siz scitaete bu решение osibocnim — iletişime geçin с управление.",
             "gif": "https://media.tenor.com/x8v1oNUOmg4AAAAC/ban-hammer.gif",
         },
         "kick": {
-            "title": "Вы исключены",
+            "title": "Siz isanahtareni",
             "color": 0xE67E22,
-            "text": f"Вы были исключены с сервера **{guild.name}**.",
-            "note": "Вы можете вернуться по ссылке-приглашению. Соблюдайте правила.",
+            "text": f"Siz idi isanahtareni с сервер **{guild.name}**.",
+            "note": "Siz edebilirsiniz vernutsya по ssilke-priglaseniyu. Soblyudayte правила.",
             "gif": "https://media.tenor.com/OtNpHMFHMhsAAAAC/kick-out.gif",
         },
         "timeout": {
-            "title": "Вы замьючены",
+            "title": "Siz susturuldui",
             "color": 0xF39C12,
-            "text": f"На сервере **{guild.name}** вам временно ограничена отправка сообщений.",
-            "note": "Мут будет снят автоматически по истечении срока.",
+            "text": f"На на сервере **{guild.name}** vam vremenno ogranicena отправл сообщение.",
+            "note": "Mute olacak удалено автоматически как по желание sroka.",
             "gif": "https://media.tenor.com/zjaHBJMFMIsAAAAC/shh-quiet.gif",
         },
         "untimeout": {
-            "title": "Мут снят",
+            "title": "Mute удалено",
             "color": 0x2ECC71,
-            "text": f"Ваш мут на сервере **{guild.name}** снят.",
-            "note": "Вы снова можете отправлять сообщения. Соблюдайте правила.",
+            "text": f"Sizin mute на на сервере **{guild.name}** удалено.",
+            "note": "Siz tekrar edebilirsiniz denhaklarınlyat сообщения. Soblyudayte правила.",
             "gif": None,
         },
         "warn": {
             "title": "Предупреждение",
             "color": 0xFF6B6B,
-            "text": f"На сервере **{guild.name}** вы получили предупреждение за нарушение правил.",
-            "note": "При накоплении предупреждений могут быть применены более строгие наказания.",
+            "text": f"На на сервере **{guild.name}** siz aldınız предупреждение для нарушение правила.",
+            "note": "Iken nakoplenii предупреждение mogut olmak primeneni bolee strogie наказания.",
             "gif": "https://media.tenor.com/xTMoHBqFkFkAAAAC/warning-caution.gif",
         },
         "unban": {
-            "title": "Бан снят",
+            "title": "Ban удалено",
             "color": 0x2ECC71,
-            "text": f"Ваш бан на сервере **{guild.name}** снят.",
-            "note": "Вы можете вернуться на сервер. Цените этот шанс.",
+            "text": f"Sizin ban на на сервере **{guild.name}** удалено.",
+            "note": "Siz edebilirsiniz vernutsya на сервер. Cenite etot sans.",
             "gif": None,
         },
     }
@@ -97,7 +97,7 @@ def mod_dm_embed(action, guild, moderator, reason=None, extra_fields=None, gif_k
     desc += f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
     desc += f"**Сервер:** {guild.name}\n"
     desc += f"**Модератор:** {moderator.display_name}\n"
-    desc += f"**Причина:** {reason or 'Не указана'}\n"
+    desc += f"**Причина:** {reason or 'Не belirtildi'}\n"
 
     if extra_fields:
         desc += "\n"
@@ -110,32 +110,32 @@ def mod_dm_embed(action, guild, moderator, reason=None, extra_fields=None, gif_k
     e.description = desc
     e.set_thumbnail(url=guild.icon.url if guild.icon else None)
 
-    # GIF для действий
+    # GIF для действие
     if cfg.get("gif"):
         e.set_image(url=cfg["gif"])
 
-    # Footer с иконкой сервера
+    # Footer с simge с сервер
     if guild.icon:
-        e.set_footer(text=f"{guild.name} · Модерация", icon_url=guild.icon.url)
+        e.set_footer(text=f"{guild.name} · Moderasyon", icon_url=guild.icon.url)
     else:
-        e.set_footer(text=f"{guild.name} · Модерация")
+        e.set_footer(text=f"{guild.name} · Moderasyon")
 
     return e
 
 
-# ─── Mod Log Embed (отправляется в mod-log канал) ────────────────────────────
+# ─── Mod Log Embed (отправл в mod-log канал) ────────────────────────────
 
 def mod_log_embed(action, title, color, user, moderator, guild, reason=None, case_id=None, extra_fields=None):
-    """Embed для mod-log канала — минимализм стиль"""
+    """Embed для mod-log канал — minimalizm stil"""
     e = discord.Embed(color=color, timestamp=datetime.now(timezone.utc))
     desc = (
         f"## {title}\n"
         f"**{user.display_name}** · `{user.id}`\n\n"
         f"Модератор: {moderator.mention}\n"
-        f"Причина: {reason or 'Не указана'}\n"
+        f"Причина: {reason or 'Не belirtildi'}\n"
     )
     if case_id:
-        desc += f"Дело: **#{case_id}**\n"
+        desc += f"Delo: **#{case_id}**\n"
     if extra_fields:
         for name, value, inline in extra_fields:
             desc += f"{name}: {value}\n"
@@ -146,10 +146,10 @@ def mod_log_embed(action, title, color, user, moderator, guild, reason=None, cas
     return e
 
 
-# ─── Общие Embed'ы ────────────────────────────────────────────────────────────
+# ─── Общий Embed'i ────────────────────────────────────────────────────────────
 
 def success_embed(title, description, guild=None, gif_key=None, fields=None):
-    """Успешное действие"""
+    """Успешно действие"""
     e = discord.Embed(color=0x2ECC71, timestamp=datetime.now(timezone.utc))
     desc = f"## {title}\n{description}"
     if fields:

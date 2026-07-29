@@ -22,7 +22,7 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
-  // Sadece static asset'leri cache'le, API isteklerini her zaman network'ten al
+  // Только static asset'leri cache'le, API желание каждый время network'ten al
   if (event.request.url.includes('/api/') || event.request.method !== 'GET') {
     return;
   }

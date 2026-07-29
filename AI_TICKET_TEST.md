@@ -1,59 +1,59 @@
-# AI Ticket Sistemi - Test Senaryoları
+# AI Ticket Система - Test Senaryoları
 
 ## 🧪 Test Senaryoları
 
-### 1. Şikayet Testi
+### 1. Жалоба Testi
 
-**Senaryo:** Kullanıcı şikayet ediyor
+**Senaryo:** Пользователь жалоба ediyor
 
 ```
-Kullanıcı: "X kişisi bana hakaret etti"
-Beklenen: AI kanıt ister
+Пользователь: "X человек bana оскорбление etti"
+Beklenen: AI доказательство хочет
 ```
 
 **Adımlar:**
 1. Ticket aç
-2. "X kişisi bana hakaret etti" yaz
-3. AI'nin kanıt istediğini kontrol et
-4. Ekran görüntüsü yükle
-5. AI'nin mesaj geçmişini kontrol ettiğini gör
-6. AI'nin karar verdiğini gör (jail veya red)
+2. "X человек bana оскорбление etti" yaz
+3. AI'nin доказательство желание контроль et
+4. Ekran скриншот загрузить
+5. AI'nin сообщение историю контроль ettiğini видеть
+6. AI'nin karar данныеni видеть (jail или red)
 
 **Beklenen Cevap:**
 ```
-📋 Şikayetinizi incelemek için:
+📋 Жалоба incelemek для:
 
-1️⃣ Şikayet ettiğiniz kullanıcı: @kullanıcı veya ID
-2️⃣ Olay açıklaması: Ne oldu, ne zaman
-3️⃣ KANIT: Ekran görüntüsü yükleyiniz
+1️⃣ Жалоба ettiğiniz пользователь: @пользователь или ID
+2️⃣ Olay описание: Ne oldu, ne время
+3️⃣ ДОКАЗАТЕЛЬСТВО: Ekran скриншот загруз
 
-⚠️ Kanıtsız şikayetler işleme alınmaz.
+⚠️ Доказательство жалобы действие alınmaz.
 ```
 
 ---
 
 ### 2. Soru Testi
 
-**Senaryo:** Kullanıcı panel hakkında soru soruyor
+**Senaryo:** Пользователь panel о soru soruyor
 
 ```
-Kullanıcı: "Panel nasıl kullanılır?"
-Beklenen: AI cevap verir
+Пользователь: "Panel как использовать?"
+Beklenen: AI ответитьir
 ```
 
 **Adımlar:**
 1. Ticket aç
-2. "Panel nasıl kullanılır?" yaz
-3. AI'nin direkt cevap verdiğini kontrol et
+2. "Panel как использовать?" yaz
+3. AI'nin direkt cevap данныеni контроль et
 
 **Beklenen Cevap:**
 ```
-🌐 Panel adresi sunucu duyurularında paylaşılır.
+🌐 Panel adresi сервер duyurularında paylaşılır.
 
-Kayıt olmak için:
-• Panel'e git → "Kayıt Ol"
-• Discord ile giriş yap
-• Yetkili değilsen "Üye" paneline erişirsin
+Запись olmak для:
+• Panel'e git → "Запись Ol"
+• Discord с вход yap
+• Администратор değilsen "Участник" paneline erişirsin
 
 💡 Başka sorun var mı?
 ```
@@ -62,120 +62,120 @@ Kayıt olmak için:
 
 ### 3. Teknik Sorun Testi
 
-**Senaryo:** Kullanıcı bot çalışmıyor diyor
+**Senaryo:** Пользователь bot çalışmıyor diyor
 
 ```
-Kullanıcı: "Bot cevap vermiyor"
-Beklenen: AI çözüm sunar
+Пользователь: "Bot ответитьmiyor"
+Beklenen: AI решение sunar
 ```
 
 **Adımlar:**
 1. Ticket aç
-2. "Bot cevap vermiyor" yaz
-3. AI'nin çözüm önerdiğini kontrol et
+2. "Bot ответитьmiyor" yaz
+3. AI'nin решение önerdiğini контроль et
 
 **Beklenen Cevap:**
 ```
-🔧 Bot cevap vermiyorsa:
+🔧 Bot ответитьmiyorsa:
 
-• Slash komutları (/) kullanıyor musun?
-• Botun yetkisi var mı?
-• Doğru kanalda mısın?
+• Slash команды (/) использовать musun?
+• Botun администратор var mı?
+• Верно канал mısın?
 
-Çözüm: /help komutunu dene
-Hala çalışmazsa yetkililere bildireceğim.
+Решение: /help команду dene
+Hala работа администрации bildireceğim.
 ```
 
 ---
 
 ### 4. Karışık Soru Testi
 
-**Senaryo:** Kullanıcı belirsiz mesaj gönderiyor
+**Senaryo:** Пользователь belirsiz сообщение отправл
 
 ```
-Kullanıcı: "Yardım lazım"
+Пользователь: "Помощь lazım"
 Beklenen: AI kategori sorar
 ```
 
 **Adımlar:**
 1. Ticket aç
-2. "Yardım lazım" yaz
-3. AI'nin ne tür yardım istediğini sorduğunu kontrol et
+2. "Помощь lazım" yaz
+3. AI'nin ne tür помощь желание sorduğunu контроль et
 
 **Beklenen Cevap:**
 ```
-💡 Tabii, size yardımcı olayım!
+💡 Tabii, size помощник olayım!
 
-Ne konuda yardım istersiniz?
-• Şikayet mi var?
+Ne konuda помощь желание?
+• Жалоба mi var?
 • Soru mu sormak istiyorsunuz?
 • Teknik sorun mu yaşıyorsunuz?
 
-Lütfen detaylı açıklayınız.
+Пожалуйста детали açıklayınız.
 ```
 
 ---
 
 ### 5. Kategori Geçiş Testi
 
-**Senaryo:** Kullanıcı önce soru soruyor, sonra şikayet ediyor
+**Senaryo:** Пользователь до soru soruyor, после жалоба ediyor
 
 ```
-Kullanıcı: "Panel nasıl kullanılır?"
+Пользователь: "Panel как использовать?"
 AI: [Cevap verir]
-Kullanıcı: "Ayrıca X kişisi bana hakaret etti"
-Beklenen: AI kategoriyi değiştirir, kanıt ister
+Пользователь: "Ayrıca X человек bana оскорбление etti"
+Beklenen: AI kategoriyi değiştirir, доказательство хочет
 ```
 
 **Adımlar:**
 1. Ticket aç
-2. "Panel nasıl kullanılır?" yaz
-3. AI cevap versin
-4. "Ayrıca X kişisi bana hakaret etti" yaz
-5. AI'nin kanıt istediğini kontrol et
+2. "Panel как использовать?" yaz
+3. AI ответитьsin
+4. "Ayrıca X человек bana оскорбление etti" yaz
+5. AI'nin доказательство желание контроль et
 
 ---
 
-## 🎯 Başarı Kriterleri
+## 🎯 Успешно Kriterleri
 
-✅ AI doğru kategoriyi tespit ediyor
-✅ Her kategoride uygun cevap veriyor
-✅ Şikayetlerde kanıt istiyor
-✅ Sorularda direkt cevap veriyor
-✅ Teknik sorunlarda çözüm sunuyor
+✅ AI верно kategoriyi tespit ediyor
+✅ Каждый kategoride uygun ответитьiyor
+✅ Жалоба доказательство istiyor
+✅ Sorularda direkt ответитьiyor
+✅ Teknik sorunlarda решение sunuyor
 ✅ Kategori geçişlerinde uyum sağlıyor
-✅ Gerektiğinde yönlendiriyor
+✅ Gerektiğinde направление
 
 ---
 
-## 🐛 Hata Senaryoları
+## 🐛 Ошибка Senaryoları
 
-### Senaryo 1: AI yanlış kategori seçiyor
-**Çözüm:** `_detect_category()` fonksiyonuna anahtar kelime ekle
+### Senaryo 1: AI неверно kategori выбрать
+**Решение:** `_detect_category()` fonksiyonuna anahtar kelime добавить
 
-### Senaryo 2: AI kanıt istemiyor
-**Çözüm:** `_prompt_sikayet()` prompt'unu kontrol et
+### Senaryo 2: AI доказательство желание
+**Решение:** `_prompt_sikayet()` prompt'unu контроль et
 
-### Senaryo 3: AI çok uzun cevap veriyor
-**Çözüm:** `max_tokens` parametresini azalt (şu an 512)
+### Senaryo 3: AI очень uzun ответитьiyor
+**Решение:** `max_tokens` parametresini azalt (şu an 512)
 
-### Senaryo 4: AI Türkçe konuşmuyor
-**Çözüm:** Her prompt'ta "Türkçe konuş" kuralı var, API key'i kontrol et
+### Senaryo 4: AI Русский konuşmuyor
+**Решение:** Каждый prompt'ta "Русский konuş" правило var, API key'i контроль et
 
 ---
 
-## 📊 Test Sonuçları
+## 📊 Test В конецuçları
 
-| Test | Durum | Not |
+| Test | Состояние | Not |
 |------|-------|-----|
-| Şikayet | ⏳ | Bekliyor |
+| Жалоба | ⏳ | Bekliyor |
 | Soru | ⏳ | Bekliyor |
 | Teknik | ⏳ | Bekliyor |
 | Karışık | ⏳ | Bekliyor |
 | Geçiş | ⏳ | Bekliyor |
 
-**Durum Kodları:**
+**Состояние Kodları:**
 - ⏳ Bekliyor
-- ✅ Başarılı
-- ❌ Başarısız
-- ⚠️ Kısmi Başarı
+- ✅ Успешно
+- ❌ Неудачно
+- ⚠️ Kısmi Успешно

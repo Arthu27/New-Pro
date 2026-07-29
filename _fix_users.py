@@ -6,7 +6,7 @@ start = content.find('<script>') + 8
 end = content.find('</script>')
 js = content[start:end]
 
-# { ve } sayimini satir satir yap, kumulatif depth goster
+# { ve } число satir satir yap, kumulatif depth goster
 depth = 0
 lines = js.split('\n')
 for i, line in enumerate(lines, 1):
@@ -18,5 +18,5 @@ for i, line in enumerate(lines, 1):
     if depth != 0:
         print(f"Satir {i:3d} depth={depth:+d}: {line[:100]}")
 
-print(f"\nПоследний depth: {depth}")
+print(f"\nВ конец depth: {depth}")
 print(f"Всего satir: {len(lines)}")

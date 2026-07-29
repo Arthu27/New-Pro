@@ -1,335 +1,652 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Aetкаждый — Вход</title>
-<ссылки rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<ссылки href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-<style>
-*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
-html,body{height:100%;font-family:'Inter',sans-serif;background:#100e08;color:#f0e8d0;overflow:hidden;}
-body::before{content:'';position:fixed;top:-100px;left:50%;transform:translateX(-50%);width:800px;height:400px;
-  background:radial-gradient(ellipse at center top,rgba(160,110,30,0.22) 0%,rgba(120,80,20,0.08) 45%,transparent 70%);pointer-events:noкакое;z-index:0;}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aether — Вход в панель управления</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            min-height: 100%;
+            font-family: 'Inter', sans-serif;
+            background: #100e08;
+            color: #f0e8d0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            top: -150px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 900px;
+            height: 500px;
+            background: radial-gradient(ellipse at center top, rgba(200, 146, 42, 0.22) 0%, rgba(160, 110, 30, 0.08) 45%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
 
-/* Navbar */
-.navbar{position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:200;display:flex;align-items:center;gap:4px;
-  background:rgba(20,16,8,0.88);border:1px solid rgba(200,160,60,0.14);border-radius:99px;padding:6px 8px;backdrop-filter:blur(16px);
-  box-shadow:0 2px 20px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.04);}
-.nav-logo{width:28px;height:28px;background:rgba(212,168,67,0.15);border:1px solid rgba(212,168,67,0.25);border-radius:8px;
-  display:flex;align-items:center;justify-content:center;margin-right:4px;}
-.nav-logo i{color:#d4a843;font-size:12px;}
-.nav-ссылки{padding:6px 14px;font-size:13px;font-weight:500;color:rgba(240,232,208,0.55);text-decoration:noкакое;border-radius:99px;
-  transition:color 0.15s,background 0.15s;white-space:nowrap;}
-.nav-ссылки:hover{color:#f0e8d0;background:rgba(255,255,255,0.05);}
-.nav-btn{padding:7px 18px;background:#f0e8d0;color:#100e08;border:noкакое;border-radius:99px;font-size:13px;font-weight:700;
-  cursor:pointer;font-family:'Inter',sans-serif;transition:background 0.15s,transform 0.12s;margin-left:4px;white-space:nowrap;}
-.nav-btn:hover{background:#fff;transform:translateY(-1px);}
+        .login-wrapper {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            max-width: 440px;
+        }
 
-/* Hero */
-.каждыйo{position:relative;z-index:1;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 24px;}
-.каждыйo-title{font-size:clamp(52px,8vw,96px);font-weight:900;liкакое-height:1.0;letter-spacing:-0.04em;margin-bottom:20px;max-width:900px;}
-.каждыйo-title .t1{color:#f0e8d0;display:block;}
-.каждыйo-title .t2{color:#c8922a;display:block;}
-.каждыйo-desc{font-size:15px;color:#6a5a38;liкакое-height:1.7;max-width:480px;margin-bottom:14px;}
-.каждыйo-stat-liкакое{font-size:13px;font-weight:600;color:#5a4a28;margin-bottom:36px;}
-.каждыйo-btns{display:flex;align-items:center;gap:12px;}
-.btn-primary{display:inliкакое-flex;align-items:center;gap:8px;padding:12px 24px;background:transparent;color:#f0e8d0;
-  border:1px solid rgba(240,232,208,0.35);border-radius:99px;font-size:14px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;
-  transition:all 0.15s;text-decoration:noкакое;}
-.btn-primary:hover{background:rgba(240,232,208,0.08);border-color:rgba(240,232,208,0.6);}
-.btn-primary .arrow{width:22px;height:22px;background:#f0e8d0;color:#100e08;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;}
-.btn-ghost{padding:12px 24px;background:transparent;color:rgba(240,232,208,0.5);border:noкакое;border-radius:99px;font-size:14px;
-  font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;transition:color 0.15s;text-decoration:noкакое;}
-.btn-ghost:hover{color:#f0e8d0;}
+        .login-brand {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        .login-brand-icon {
+            width: 56px;
+            height: 56px;
+            background: rgba(212, 168, 67, 0.15);
+            border: 1px solid rgba(212, 168, 67, 0.35);
+            border-radius: 16px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 14px;
+            box-shadow: 0 8px 24px rgba(200, 146, 42, 0.2);
+        }
+        .login-brand-icon i {
+            color: #d4a843;
+            font-size: 26px;
+        }
+        .login-brand h1 {
+            font-size: 26px;
+            font-weight: 800;
+            color: #f0e8d0;
+            letter-spacing: -0.02em;
+            margin-bottom: 6px;
+        }
+        .login-brand p {
+            font-size: 14px;
+            color: #8c7b58;
+            font-weight: 500;
+        }
 
-/* Модальное окно */
-.modal-overlay{display:noкакое;position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);z-index:300;align-items:center;justify-content:center;}
-.modal-overlay.open{display:flex;}
-.modal-card{background:#1a1610;border:1px solid rgba(212,168,67,0.15);border-radius:16px;padding:32px;width:420px;max-width:92vw;
-  box-shadow:0 24px 80px rgba(0,0,0,0.7);animation:modalUp 0.25s ease-out;max-height:90vh;overflow-y:auto;}
-@keyframes modalUp{from{opacity:0;transform:translateY(16px) scale(0.97);}to{opacity:1;transform:translateY(0) scale(1);}}
-.modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;}
-.modal-title{font-size:18px;font-weight:800;color:#f0e8d0;letter-spacing:-0.02em;}
-.modal-sub{font-size:12px;color:#5a5038;margin-top:2px;}
-.modal-close{width:28px;height:28px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:8px;
-  display:flex;align-items:center;justify-content:center;cursor:pointer;color:rgba(240,232,208,0.4);font-size:12px;transition:all 0.15s;}
-.modal-close:hover{background:rgba(255,255,255,0.1);color:#f0e8d0;}
+        .login-card {
+            background: rgba(26, 22, 16, 0.92);
+            border: 1px solid rgba(212, 168, 67, 0.2);
+            border-radius: 20px;
+            padding: 32px;
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+            backdrop-filter: blur(16px);
+            position: relative;
+        }
 
-/* Form */
-.field{margin-bottom:12px;}
-.field-lbl{display:block;font-size:11px;font-weight:600;color:#7a6a48;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px;}
-.inp-wrap{position:relative;}
-.inp-wrap i{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:#4a4030;font-size:12px;pointer-events:noкакое;}
-.inp-wrap input{width:100%;padding:10px 12px 10px 34px;background:rgba(255,255,255,0.04);border:1px solid rgba(212,168,67,0.12);
-  border-radius:8px;color:#f0e8d0;font-size:13px;font-family:'Inter',sans-serif;transition:border-color 0.15s,background 0.15s;margin:0;}
-.inp-wrap input:focus{outliкакое:noкакое;border-color:rgba(212,168,67,0.45);background:rgba(255,255,255,0.06);}
-.inp-wrap input::placeholder{color:#3a3020;}
-.btn-login{width:100%;padding:11px;background:#c8922a;color:#100e08;border:noкакое;border-radius:99px;font-size:14px;font-weight:700;
-  cursor:pointer;font-family:'Inter',sans-serif;transition:background 0.15s,transform 0.12s;margin-top:8px;}
-.btn-login:hover{background:#e0a830;transform:translateY(-1px);}
-.btn-login:disabled{opacity:0.5;cursor:not-allowed;transform:noкакое;}
-.btn-reg{display:block;width:100%;margin-top:8px;padding:10px;background:transparent;color:#6a5a38;border:1px solid rgba(212,168,67,0.1);
-  border-radius:99px;font-size:13px;font-weight:600;cursor:pointer;text-align:center;text-decoration:noкакое;transition:all 0.15s;font-family:'Inter',sans-serif;}
-.btn-reg:hover{background:rgba(212,168,67,0.06);color:#c8922a;border-color:rgba(212,168,67,0.22);}
-.sep{height:1px;background:rgba(212,168,67,0.07);margin:14px 0;}
-.foot{text-align:center;font-size:11px;color:#3a3020;margin-top:16px;}
+        .tab-switcher {
+            display: flex;
+            background: rgba(16, 14, 8, 0.8);
+            border: 1px solid rgba(212, 168, 67, 0.15);
+            border-radius: 12px;
+            padding: 4px;
+            margin-bottom: 24px;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 10px 14px;
+            background: transparent;
+            border: none;
+            border-radius: 8px;
+            color: #8c7b58;
+            font-size: 13px;
+            font-weight: 600;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        .tab-btn.active {
+            background: rgba(212, 168, 67, 0.18);
+            color: #f0e8d0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
 
-/* Progress bar */
-.progress-bar{width:100%;height:3px;background:rgba(212,168,67,0.1);border-radius:2px;margin-bottom:16px;overflow:hidden;display:noкакое;}
-.progress-bar.active{display:block;}
-.progress-fill{height:100%;background:liкакоеar-gradient(90deg,#c8922a,#e0a830);border-radius:2px;transition:width 0.5s ease;width:0%;}
+        .form-group {
+            margin-bottom: 18px;
+            position: relative;
+        }
+        .form-label {
+            display: block;
+            font-size: 12.5px;
+            font-weight: 600;
+            color: #b0a078;
+            margin-bottom: 7px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .form-input-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .form-input-wrap i {
+            position: absolute;
+            left: 14px;
+            color: #7a6a48;
+            font-size: 15px;
+            pointer-events: none;
+        }
+        .form-input {
+            width: 100%;
+            padding: 12px 14px 12px 42px;
+            background: rgba(16, 14, 8, 0.9);
+            border: 1px solid rgba(212, 168, 67, 0.25);
+            border-radius: 12px;
+            color: #f0e8d0;
+            font-size: 14px;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.2s;
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: #d4a843;
+            background: rgba(22, 18, 11, 1);
+            box-shadow: 0 0 0 3px rgba(212, 168, 67, 0.15);
+        }
 
-/* Test list */
-.test-list{margin-bottom:16px;}
-.test-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;margin-bottom:4px;font-size:13px;
-  transition:all 0.3s;opacity:0;transform:translateX(-10px);}
-.test-item.visible{opacity:1;transform:translateX(0);}
-.test-item .test-icon{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;}
-.test-item .test-icon.spinкакоеr{border:2px solid rgba(200,146,42,0.3);border-top-color:#c8922a;animation:spin 0.8s liкакоеar infinite;}
-.test-item .test-icon.ok{background:rgba(80,180,100,0.15);color:#70c47a;}
-.test-item .test-icon.fail{background:rgba(200,60,60,0.15);color:#d08080;}
-.test-item .test-icon.warn{background:rgba(200,180,60,0.15);color:#c8b43c;}
-.test-name{flex:1;color:rgba(240,232,208,0.7);}
-.test-detail{font-size:11px;color:#5a5038;max-width:140px;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-@keyframes spin{to{transform:rotate(360deg);}}
+        /* Autocomplete dropdown for @member picker */
+        .autocomplete-popup {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: rgba(20, 17, 12, 0.98);
+            border: 1px solid rgba(212, 168, 67, 0.35);
+            border-radius: 12px;
+            box-shadow: 0 12px 36px rgba(0, 0, 0, 0.85);
+            margin-top: 6px;
+            max-height: 220px;
+            overflow-y: auto;
+            z-index: 1000;
+        }
+        .suggest-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 14px;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            transition: background 0.15s;
+        }
+        .suggest-item:last-child {
+            border-bottom: none;
+        }
+        .suggest-item:hover {
+            background: rgba(212, 168, 67, 0.18);
+        }
+        .suggest-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 1px solid #c8922a;
+            object-fit: cover;
+        }
+        .suggest-name {
+            font-size: 13.5px;
+            font-weight: 700;
+            color: #f0e8d0;
+        }
+        .suggest-id {
+            font-size: 11px;
+            color: #8c7b58;
+        }
 
-/* PIN input */
-.pin-input{text-align:center;font-size:28px;letter-spacing:12px;font-family:'Inter',sans-serif;padding:15px 20px;
-  width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(212,168,67,0.12);border-radius:8px;color:#f0e8d0;}
-.pin-input:focus{outliкакое:noкакое;border-color:rgba(212,168,67,0.45);background:rgba(255,255,255,0.06);}
+        .btn-submit {
+            width: 100%;
+            padding: 13px;
+            background: linear-gradient(135deg, #c8922a, #d4a843);
+            color: #100e08;
+            border: none;
+            border-radius: 12px;
+            font-size: 14.5px;
+            font-weight: 700;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 6px;
+            box-shadow: 0 4px 16px rgba(200, 146, 42, 0.25);
+        }
+        .btn-submit:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(200, 146, 42, 0.4);
+        }
+        .btn-submit:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+            transform: none;
+        }
 
-/* User card */
-.user-card{display:flex;align-items:center;gap:12px;padding:12px;background:rgba(255,255,255,0.03);border:1px solid rgba(212,168,67,0.1);
-  border-radius:10px;margin-bottom:16px;}
-.user-avatar{width:40px;height:40px;border-radius:50%;border:2px solid rgba(212,168,67,0.3);}
-.user-name{font-size:14px;font-weight:600;color:#f0e8d0;}
-.user-id{font-size:11px;color:#5a5038;}
+        .btn-ghost {
+            width: 100%;
+            padding: 11px;
+            background: transparent;
+            color: #8c7b58;
+            border: 1px solid rgba(212, 168, 67, 0.18);
+            border-radius: 12px;
+            font-size: 13.5px;
+            font-weight: 600;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 10px;
+        }
+        .btn-ghost:hover {
+            color: #f0e8d0;
+            background: rgba(255, 255, 255, 0.04);
+        }
 
-/* Alert */
-.alert{padding:10px 13px;border-radius:8px;margin-bottom:14px;font-size:12px;display:flex;align-items:center;gap:8px;}
-.alert-err{background:rgba(200,60,60,0.1);border:1px solid rgba(200,60,60,0.2);color:#d08080;}
-.alert-ok{background:rgba(80,180,100,0.1);border:1px solid rgba(80,180,100,0.2);color:#70c47a;}
-</style>
+        .alert {
+            padding: 12px 14px;
+            border-radius: 10px;
+            margin-bottom: 18px;
+            font-size: 13px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            line-height: 1.4;
+        }
+        .alert-err {
+            background: rgba(220, 53, 69, 0.12);
+            border: 1px solid rgba(220, 53, 69, 0.35);
+            color: #f8a0a8;
+        }
+        .alert-ok {
+            background: rgba(46, 204, 113, 0.12);
+            border: 1px solid rgba(46, 204, 113, 0.35);
+            color: #82e0a8;
+        }
+
+        .helper-note {
+            margin-top: 22px;
+            padding: 12px 14px;
+            background: rgba(212, 168, 67, 0.08);
+            border: 1px dashed rgba(212, 168, 67, 0.25);
+            border-radius: 12px;
+            font-size: 12px;
+            color: #a09068;
+            line-height: 1.5;
+            text-align: center;
+        }
+        .helper-note code {
+            color: #f0e8d0;
+            background: rgba(0,0,0,0.4);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .progress-bar {
+            height: 4px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 99px;
+            overflow: hidden;
+            margin-bottom: 18px;
+            display: none;
+        }
+        .progress-bar.active { display: block; }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #c8922a, #f0e8d0);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .test-list {
+            margin-bottom: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .test-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 12px;
+            background: rgba(0,0,0,0.35);
+            border-radius: 8px;
+            font-size: 13px;
+        }
+        .test-name { color: #d0c0a0; }
+        .test-detail { color: #8c7b58; font-weight: 600; font-size: 12px; }
+
+        .user-card {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 14px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(212,168,67,0.2);
+            border-radius: 12px;
+            margin-bottom: 18px;
+        }
+        .user-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: 2px solid #c8922a;
+        }
+        .user-name { font-size: 14px; font-weight: 700; color: #f0e8d0; }
+        .user-id { font-size: 11.5px; color: #8c7b58; }
+    </style>
 </head>
 <body>
 
-<nav class="navbar">
-    <div class="nav-logo"><i class="fas fa-robot"></i></div>
-    <a href="#" class="nav-ссылки" onclick="openModal();return false;">Заявки</a>
-    <a href="#" class="nav-ссылки" onclick="openModal();return false;">Объявления</a>
-    <a href="#" class="nav-ссылки" onclick="openModal();return false;">Уведомления</a>
-    <button class="nav-btn" onclick="openModal()">Войти</button>
-</nav>
-
-<div class="каждыйo">
-    <h1 class="каждыйo-title">
-        <span class="t1">Центр Управления</span>
-        <span class="t2">Вашим Сервером.</span>
-    </h1>
-    <p class="каждыйo-desc">Следите за объявлениями, управляйте заявками и получайте уведомления. Всё в одном месте.</p>
-    <p class="каждыйo-stat-liкакое">Всегда на связи с вашим сервером.</p>
-    <div class="каждыйo-btns">
-        <a href="#" class="btn-primary" onclick="openModal();return false;">
-            Войти
-            <span class="arrow"><i class="fas fa-arrow-right"></i></span>
-        </a>
+<div class="login-wrapper">
+    <div class="login-brand">
+        <div class="login-brand-icon"><i class="fas fa-robot"></i></div>
+        <h1>Панель управления Aether</h1>
+        <p>Добро пожаловать в центр управления сервером</p>
     </div>
-</div>
 
-<!-- Логin Модальное окно -->
-<div class="modal-overlay" id="modal" onclick="if(event.target===this)closeModal()">
-    <div class="modal-card">
-        <div class="modal-head">
-            <div>
-                <div class="modal-title">Вход в paкакоеl</div>
-                <div class="modal-sub">Войдите через Discord</div>
-            </div>
-            <div class="modal-close" onclick="closeModal()"><i class="fas fa-times"></i></div>
+    <div class="login-card">
+        <!-- Tab Switcher -->
+        <div class="tab-switcher">
+            <button class="tab-btn active" id="tabBtnPass" onclick="switchTab('pass')">
+                <i class="fas fa-key"></i> Вход по паролю
+            </button>
+            <button class="tab-btn" id="tabBtnPin" onclick="switchTab('pin')">
+                <i class="fab fa-discord"></i> Discord ID (PIN)
+            </button>
         </div>
 
-        <!-- Progress Bar -->
-        <div class="progress-bar" id="progressBar"><div class="progress-fill" id="progressFill"></div></div>
+        {% if error %}
+        <div class="alert alert-err">
+            <i class="fas fa-exclamation-circle"></i>
+            <span>{{ error }}</span>
+        </div>
+        {% endif %}
 
-        <!-- STEP 1: Enter Discord -->
-        <div id="step1">
-            <div class="field">
-                <label class="field-lbl">Discord ID или @имя</label>
-                <div class="inp-wrap">
-                    <i class="fab fa-discord"></i>
-                    <input type="text" id="discordQuery" placeholder="123456789012345678 или @username" autocomplete="off">
+        <!-- TAB 1: USERNAME / PASSWORD FORM -->
+        <form id="formPass" method="POST" action="/login">
+            <div class="form-group">
+                <label class="form-label">Логин или Discord ID</label>
+                <div class="form-input-wrap">
+                    <i class="fas fa-user"></i>
+                    <input type="text" name="username" id="passUsername" class="form-input" placeholder="owner, @username или ID" required autocomplete="off" oninput="showSuggest(this, 'passPopup')" onfocus="showSuggest(this, 'passPopup')">
+                </div>
+                <!-- Autocomplete dropdown for password login -->
+                <div class="autocomplete-popup" id="passPopup" style="display:none;"></div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Пароль</label>
+                <div class="form-input-wrap">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" name="password" class="form-input" placeholder="••••••••" required>
                 </div>
             </div>
-            <div id="step1-error"></div>
-            <button class="btn-login" id="btnCheck" onclick="doCheck()">
-                <i class="fas fa-sign-in-alt" style="margin-right:6px;"></i>Войти
+
+            <button type="submit" class="btn-submit">
+                <i class="fas fa-sign-in-alt"></i> Войти
             </button>
-            <div class="sep"></div>
-            <div class="foot"><i class="fas fa-shield-alt" style="margin-right:4px;"></i>Безопасное подключение</div>
-        </div>
 
-        <!-- STEP 2: Tests running -->
-        <div id="step2" style="display:noкакое;">
-            <div class="test-list" id="testList"></div>
-        </div>
-
-        <!-- STEP 3: PIN input -->
-        <div id="step3" style="display:noкакое;">
-            <div class="user-card" id="userCard"></div>
-            <div class="field">
-                <label class="field-lbl">PIN-код из DM</label>
-                <input type="text" id="pinInput" class="pin-input" placeholder="000000" maxlength="6" autocomplete="oкакое-time-code">
+            <div class="helper-note">
+                💡 <strong>Подсказка:</strong> По умолчанию для входа владельца используйте логин <code>owner</code> и пароль <code>123</code>.
             </div>
-            <div id="step3-error"></div>
-            <button class="btn-login" id="btnPin" onclick="doPin()">
-                <i class="fas fa-check" style="margin-right:6px;"></i>Подтвердить
-            </button>
-            <button class="btn-reg" onclick="goBack()" style="margin-top:8px;">
-                <i class="fas fa-arrow-left" style="margin-right:6px;"></i>Назад
-            </button>
+        </form>
+
+        <!-- TAB 2: DISCORD ID PIN LOGIN -->
+        <div id="formPin" style="display: none;">
+            <div class="progress-bar" id="progressBar"><div class="progress-fill" id="progressFill"></div></div>
+
+            <div id="step1">
+                <div class="form-group">
+                    <label class="form-label">Discord ID или @имя</label>
+                    <div class="form-input-wrap">
+                        <i class="fab fa-discord"></i>
+                        <input type="text" id="discordQuery" class="form-input" placeholder="123456789012345678 или @username" autocomplete="off" oninput="showSuggest(this, 'pinPopup')" onfocus="showSuggest(this, 'pinPopup')">
+                    </div>
+                    <!-- Autocomplete dropdown for PIN check -->
+                    <div class="autocomplete-popup" id="pinPopup" style="display:none;"></div>
+                </div>
+                <div id="step1-error"></div>
+                <button type="button" class="btn-submit" id="btnCheck" onclick="doCheck()">
+                    <i class="fas fa-paper-plane"></i> Отправить PIN-код
+                </button>
+            </div>
+
+            <div id="step2" style="display:none;">
+                <div class="test-list" id="testList"></div>
+            </div>
+
+            <div id="step3" style="display:none;">
+                <div class="user-card" id="userCard"></div>
+                <div class="form-group">
+                    <label class="form-label">6-значный PIN-код из ЛС</label>
+                    <div class="form-input-wrap">
+                        <i class="fas fa-shield-alt"></i>
+                        <input type="text" id="pinInput" class="form-input" placeholder="000000" maxlength="6" autocomplete="one-time-code">
+                    </div>
+                </div>
+                <div id="step3-error"></div>
+                <button type="button" class="btn-submit" id="btnPin" onclick="doPin()">
+                    <i class="fas fa-check"></i> Подтвердить и войти
+                </button>
+                <button type="button" class="btn-ghost" onclick="resetAll()">
+                    <i class="fas fa-arrow-left"></i> Назад
+                </button>
+            </div>
         </div>
     </div>
 </div>
 
 <script>
 let _discordId = '';
+let _suggestTimer = null;
 
-function openModal(){document.getElementById('modal').classList.add('open');document.getElementById('discordQuery').focus();}
-function closeModal(){document.getElementById('modal').classList.remove('open');resetAll();}
-function resetAll(){
-    document.getElementById('step1').style.display='block';
-    document.getElementById('step2').style.display='noкакое';
-    document.getElementById('step3').style.display='noкакое';
+function switchTab(mode) {
+    if (mode === 'pass') {
+        document.getElementById('formPass').style.display = 'block';
+        document.getElementById('formPin').style.display = 'none';
+        document.getElementById('tabBtnPass').classList.add('active');
+        document.getElementById('tabBtnPin').classList.remove('active');
+    } else {
+        document.getElementById('formPass').style.display = 'none';
+        document.getElementById('formPin').style.display = 'block';
+        document.getElementById('tabBtnPass').classList.remove('active');
+        document.getElementById('tabBtnPin').classList.add('active');
+        resetAll();
+    }
+    hideAllSuggest();
+}
+
+function resetAll() {
+    document.getElementById('step1').style.display = 'block';
+    document.getElementById('step2').style.display = 'none';
+    document.getElementById('step3').style.display = 'none';
     document.getElementById('progressBar').classList.remove('active');
-    document.getElementById('progressFill').style.width='0%';
-    document.getElementById('testList').inкакоеrHTML='';
-    document.getElementById('step1-error').inкакоеrHTML='';
-    document.getElementById('step3-error').inкакоеrHTML='';
-}
-function goBack(){resetAll();}
-
-function showStep(n){
-    ['step1','step2','step3'].forEach((s,i)=>{document.getElementById(s).style.display=i+1===n?'block':'noкакое';});
+    document.getElementById('progressFill').style.width = '0%';
+    document.getElementById('testList').innerHTML = '';
+    document.getElementById('step1-error').innerHTML = '';
+    document.getElementById('step3-error').innerHTML = '';
+    const checkBtn = document.getElementById('btnCheck');
+    if (checkBtn) checkBtn.disabled = false;
 }
 
-function setProgress(pct){
+function showStep(n) {
+    ['step1', 'step2', 'step3'].forEach((s, i) => {
+        document.getElementById(s).style.display = (i + 1 === n) ? 'block' : 'none';
+    });
+}
+
+function setProgress(pct) {
     document.getElementById('progressBar').classList.add('active');
-    document.getElementById('progressFill').style.width=pct+'%';
+    document.getElementById('progressFill').style.width = pct + '%';
 }
 
-function addTest(name,status,detail){
-    const list=document.getElementById('testList');
-    const item=document.createElement('div');
-    item.className='test-item';
-    let iconHtml='';
-    if(status==='loading') iconHtml='<div class="test-icon spinкакоеr"></div>';
-    else if(status==='ok') iconHtml='<div class="test-icon ok"><i class="fas fa-check"></i></div>';
-    else if(status==='fail') iconHtml='<div class="test-icon fail"><i class="fas fa-times"></i></div>';
-    else if(status==='warn') iconHtml='<div class="test-icon warn"><i class="fas fa-exclamation"></i></div>';
-    item.inкакоеrHTML=iconHtml+'<span class="test-name">'+name+'</span><span class="test-detail">'+(detail||'')+'</span>';
+function addTestItem(name, status, detail) {
+    const list = document.getElementById('testList');
+    const item = document.createElement('div');
+    item.className = 'test-item';
+    let iconHtml = '<i class="fas fa-spinner fa-spin" style="color:#d4a843;"></i>';
+    if (status === 'ok') iconHtml = '<i class="fas fa-check-circle" style="color:#82e0a8;"></i>';
+    else if (status === 'fail') iconHtml = '<i class="fas fa-times-circle" style="color:#f8a0a8;"></i>';
+    else if (status === 'warn') iconHtml = '<i class="fas fa-exclamation-circle" style="color:#f5c060;"></i>';
+    item.innerHTML = '<div>' + iconHtml + ' <span class="test-name" style="margin-left:6px;">' + name + '</span></div><span class="test-detail">' + (detail || '') + '</span>';
     list.appendChild(item);
-    setМут(()=>item.classList.add('visible'),50);
     return item;
 }
 
-function updateTest(item,status,detail){
-    let iconHtml='';
-    if(status==='ok') iconHtml='<div class="test-icon ok"><i class="fas fa-check"></i></div>';
-    else if(status==='fail') iconHtml='<div class="test-icon fail"><i class="fas fa-times"></i></div>';
-    else if(status==='warn') iconHtml='<div class="test-icon warn"><i class="fas fa-exclamation"></i></div>';
-    item.querySelector('.test-icon').outerHTML=iconHtml;
-    if(detail) item.querySelector('.test-detail').textContent=detail;
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+/* Autocomplete Member Picker for @ query */
+function hideAllSuggest() {
+    document.getElementById('passPopup').style.display = 'none';
+    document.getElementById('pinPopup').style.display = 'none';
 }
 
-async function doCheck(){
-    const query=document.getElementById('discordQuery').value.trim();
-    if(!query){document.getElementById('step1-error').inкакоеrHTML='<div class="alert alert-err"><i class="fas fa-exclamation-circle"></i> Введите Discord ID или @имя</div>';return;}
-    document.getElementById('btnCheck').disabled=true;
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.form-group')) {
+        hideAllSuggest();
+    }
+});
+
+function showSuggest(inputEl, popupId) {
+    if (_suggestTimer) clearTimeout(_suggestTimer);
+    _suggestTimer = setTimeout(async () => {
+        const q = inputEl.value.trim();
+        const popup = document.getElementById(popupId);
+        try {
+            const res = await fetch('/api/login/suggest?q=' + encodeURIComponent(q));
+            const d = await res.json();
+            if (d.success && d.suggestions && d.suggestions.length) {
+                popup.innerHTML = d.suggestions.map(item => {
+                    const disp = item.display_name || item.name;
+                    const mentionVal = (item.name === 'Owner' || item.name === 'owner') ? 'owner' : '@' + item.name;
+                    const idVal = item.id;
+                    return `<div class="suggest-item" onclick="selectSuggestItem('${inputEl.id}', '${popupId}', '${mentionVal}', '${idVal}')">
+                        <img src="${item.avatar}" class="suggest-avatar" onerror="this.src='https://cdn.discordapp.com/embed/avatars/0.png'"/>
+                        <div>
+                            <div class="suggest-name">${disp}</div>
+                            <div class="suggest-id">ID: ${idVal}</div>
+                        </div>
+                    </div>`;
+                }).join('');
+                popup.style.display = 'block';
+            } else {
+                popup.style.display = 'none';
+            }
+        } catch (err) {
+            popup.style.display = 'none';
+        }
+    }, 150);
+}
+
+function selectSuggestItem(inputId, popupId, mentionVal, idVal) {
+    const inputEl = document.getElementById(inputId);
+    inputEl.value = mentionVal;
+    document.getElementById(popupId).style.display = 'none';
+    inputEl.focus();
+}
+
+async function doCheck() {
+    const query = document.getElementById('discordQuery').value.trim();
+    if (!query) {
+        document.getElementById('step1-error').innerHTML = '<div class="alert alert-err"><i class="fas fa-exclamation-circle"></i> Пожалуйста, введите Discord ID или @имя пользователя.</div>';
+        return;
+    }
+    document.getElementById('btnCheck').disabled = true;
     showStep(2);
-    setProgress(10);
-
-    // Имяd loading tests
-    const t1=addTest('Поиск пользователя...','loading');
     setProgress(20);
-    await sleep(400);
 
-    try{
-        const r=await fetch('/api/discord-check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:query})});
-        const d=await r.json();
+    const list = document.getElementById('testList');
+    list.innerHTML = '';
+    addTestItem('Поиск пользователя...', 'loading', '');
+    await sleep(300);
 
-        // Render tests with delays
-        document.getElementById('testList').inкакоеrHTML='';
-        setProgress(15);
+    try {
+        const r = await fetch('/api/discord-check', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({query: query})
+        });
+        const d = await r.json();
 
-        for(let i=0;i<d.tests.length;i++){
-            const t=d.tests[i];
-            await sleep(500);
-            addTest(t.name,t.status,t.detail);
-            setProgress(15+((i+1)/d.tests.length)*75);
+        list.innerHTML = '';
+        setProgress(60);
+
+        if (d.tests && d.tests.length) {
+            for (let i = 0; i < d.tests.length; i++) {
+                const t = d.tests[i];
+                addTestItem(t.name, t.status, t.detail);
+            }
         }
 
-        if(!d.success){
-            await sleep(300);
-            document.getElementById('step1-error').inкакоеrHTML='<div class="alert alert-err"><i class="fas fa-times-circle"></i> '+(d.error||'Ошибка')+'</div>';
-            // Show error in step1
-            await sleep(1500);
+        if (!d.success) {
+            await sleep(600);
+            document.getElementById('step1-error').innerHTML = '<div class="alert alert-err"><i class="fas fa-times-circle"></i> ' + (d.error || 'Пользователь не найден или ошибка операции.') + '</div>';
             showStep(1);
             document.getElementById('progressBar').classList.remove('active');
-            document.getElementById('btnCheck').disabled=false;
+            document.getElementById('btnCheck').disabled = false;
             return;
         }
 
         setProgress(100);
-        _discordId=d.discord_id;
-        await sleep(600);
+        _discordId = d.discord_id;
+        await sleep(500);
 
-        // Show PIN step
-        const card=document.getElementById('userCard');
-        card.inкакоеrHTML='<img class="user-avatar" src="'+d.avatar+'" oкакоеrror="this.style.display=\'noкакое\'"><div><div class="user-name">'+d.display_name+'</div><div class="user-id">ID: '+d.discord_id+'</div></div>';
+        const card = document.getElementById('userCard');
+        card.innerHTML = '<img class="user-avatar" src="' + (d.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png') + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'"><div><div class="user-name">' + d.display_name + '</div><div class="user-id">Discord ID: ' + d.discord_id + '</div></div>';
         showStep(3);
         document.getElementById('progressBar').classList.remove('active');
         document.getElementById('pinInput').focus();
-        document.getElementById('btnCheck').disabled=false;
+        document.getElementById('btnCheck').disabled = false;
 
-    }catch(e){
-        addTest('Ошибка соединения','fail',e.message);
-        await sleep(1500);
+    } catch (e) {
+        list.innerHTML = '';
+        addTestItem('Ошибка соединения', 'fail', e.message);
+        await sleep(1200);
         showStep(1);
         document.getElementById('progressBar').classList.remove('active');
-        document.getElementById('btnCheck').disabled=false;
+        document.getElementById('btnCheck').disabled = false;
     }
 }
 
-async function doPin(){
-    const pin=document.getElementById('pinInput').value.trim();
-    if(!pin||pin.length!==6){document.getElementById('step3-error').inкакоеrHTML='<div class="alert alert-err"><i class="fas fa-exclamation-circle"></i> Введите 6-значный PIN</div>';return;}
-    document.getElementById('btnPin').disabled=true;
-    try{
-        const r=await fetch('/api/discord-login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({discord_id:_discordId,pin:pin})});
-        const d=await r.json();
-        if(d.success){
-            document.getElementById('step3-error').inкакоеrHTML='<div class="alert alert-ok"><i class="fas fa-check-circle"></i> Вход выполнен!</div>';
-            setМут(()=>{window.location.href=d.redirect||'/';},800);
-        }else{
-            document.getElementById('step3-error').inкакоеrHTML='<div class="alert alert-err"><i class="fas fa-times-circle"></i> '+(d.error||'Ошибка')+'</div>';
-            document.getElementById('btnPin').disabled=false;
+async function doPin() {
+    const pin = document.getElementById('pinInput').value.trim();
+    if (!pin || pin.length !== 6) {
+        document.getElementById('step3-error').innerHTML = '<div class="alert alert-err"><i class="fas fa-exclamation-circle"></i> Пожалуйста, введите 6-значный PIN-код.</div>';
+        return;
+    }
+    const pinBtn = document.getElementById('btnPin');
+    pinBtn.disabled = true;
+    try {
+        const r = await fetch('/api/discord-login', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({discord_id: _discordId, pin: pin})
+        });
+        const d = await r.json();
+        if (d.success) {
+            document.getElementById('step3-error').innerHTML = '<div class="alert alert-ok"><i class="fas fa-check-circle"></i> Успешный вход, перенаправление...</div>';
+            setTimeout(() => { window.location.href = d.redirect || '/'; }, 600);
+        } else {
+            document.getElementById('step3-error').innerHTML = '<div class="alert alert-err"><i class="fas fa-times-circle"></i> ' + (d.error || 'Неверный PIN-код или истек срок его действия.') + '</div>';
+            pinBtn.disabled = false;
         }
-    }catch(e){
-        document.getElementById('step3-error').inкакоеrHTML='<div class="alert alert-err">Ошибка соединения</div>';
-        document.getElementById('btnPin').disabled=false;
+    } catch (e) {
+        document.getElementById('step3-error').innerHTML = '<div class="alert alert-err"><i class="fas fa-times-circle"></i> Ошибка соединения с сервером: ' + e.message + '</div>';
+        pinBtn.disabled = false;
     }
 }
-
-function sleep(ms){return какоеw Promise(r=>setМут(r,ms));}
-
-// Enter key
-document.addEventListeкакоеr('keydown',function(e){
-    if(e.key==='Escape')closeModal();
-    if(e.key==='Enter'){
-        if(document.getElementById('step1').style.display!=='noкакое')doCheck();
-        else if(document.getElementById('step3').style.display!=='noкакое')doPin();
-    }
-});
 </script>
 </body>
 </html>

@@ -1,14 +1,14 @@
 {
   "welcome": {
     "channel_id": "",
-    "title": "Hoş Geldin, {user}!",
-    "message": "{mention} sunucumuza hoş geldi! 🎉",
+    "title": "Добро пожаловать Geldin, {user}!",
+    "message": "{mention} сервер добро пожаловать geldi! 🎉",
     "color": "#c8922a"
   },
   "leave": {
     "channel_id": "",
-    "title": "Güle Güle, {user}!",
-    "message": "{user} sunucudan ayrıldı.",
+    "title": "Пока Пока, {user}!",
+    "message": "{user} с сервера покинул.",
     "color": "#e05555"
   }
 }

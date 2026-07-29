@@ -6,7 +6,7 @@ backup = 'data/audit_log_backup.json'
 with open(f, 'r', encoding='utf-8') as fp:
     raw = fp.read()
 
-# Önce backup al
+# До backup al
 with open(backup, 'w', encoding='utf-8') as fp:
     fp.write(raw)
 print(f'Backup alindi: {backup}')
@@ -18,7 +18,7 @@ try:
 except json.JSONDecodeError as e:
     print(f'Ошибка: {e}')
     # Bozuk noktaya kadar olan kısmı kurtarmaya çalış
-    # Her guild_id key'ini ayrı ayrı parse et
+    # Каждый guild_id key'ini ayrı ayrı parse et
     data = {}
     # Guild ID pattern'leri bul
     guild_pattern = re.compile(r'"(\d{17,20})"\s*:\s*\[')
@@ -27,7 +27,7 @@ except json.JSONDecodeError as e:
     for i, m in enumerate(matches):
         guild_id = m.group(1)
         start = m.start()
-        # Последнийraki guild'in başına kadar al
+        # Вперед guild'in başına kadar al
         end = matches[i+1].start() - 1 if i+1 < len(matches) else len(raw)
         chunk = '{' + raw[start:end].rstrip(',\n ') + '}'
         try:
@@ -35,7 +35,7 @@ except json.JSONDecodeError as e:
             data[guild_id] = parsed[guild_id]
             print(f'Guild {guild_id}: {len(data[guild_id])} event kurtarildi')
         except Exception as ex:
-            # Последний geçerli ] bul
+            # В конец geçerli ] bul
             arr_start = m.end() - 1
             depth = 0
             pos = arr_start
@@ -51,7 +51,7 @@ except json.JSONDecodeError as e:
                             break
                     pos += 1
                 arr_str = raw[arr_start:last_valid+1]
-                # Очистить: son virgülü убрать
+                # Temizle: son virgülü удалить
                 arr_str = re.sub(r',\s*$', '', arr_str.rstrip())
                 arr_str = re.sub(r',\s*}', '}', arr_str)
                 arr_str = re.sub(r',\s*]', ']', arr_str)
@@ -62,9 +62,9 @@ except json.JSONDecodeError as e:
                 print(f'Guild {guild_id}: kurtarilamadi - {ex2}')
                 data[guild_id] = []
 
-    # Temiz dosyaya записать
+    # Temiz dosyaya yaz
     with open(f, 'w', encoding='utf-8') as fp:
         json.dump(data, fp, indent=2, ensure_ascii=False)
     
     total = sum(len(v) for v in data.values())
-    print(f'\nВсего {total} event kurtarildi, dosya clearndi.')
+    print(f'\nToplam {total} event kurtarildi, dosya clearndi.')

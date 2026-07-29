@@ -5,30 +5,30 @@ html { scroll-behavior:auto; }
 html, body { height:100%; overflow:hidden; }
 
 :root {
-    /* Login ile birebir aynı zemin */
+    /* Login с birebir одинаковый zemin */
     --bg:       #100e08;
     --bg2:      #1a1610;
     --bg3:      #221e12;
     --surface:  #2a2418;
     --surface2: #342e1e;
 
-    /* Border — login ile aynı, çok subtle */
+    /* Border — login с одинаковый, очень subtle */
     --border:   rgba(212,168,67,0.08);
     --border2:  rgba(212,168,67,0.16);
 
-    /* Accent — login ile birebir */
+    /* Accent — login с birebir */
     --accent:   #c8922a;
     --accent2:  #e0a830;
     --accent3:  #f0e8d0;
     --accent-dim: rgba(200,146,42,0.10);
     --accent-glow: rgba(200,146,42,0.20);
 
-    /* Metin — login ile aynı */
+    /* Metin — login с одинаковый */
     --text:     #f0e8d0;
     --text2:    #9a8a68;
     --text3:    #5a5040;
 
-    /* Durum renkleri */
+    /* Состояние renkleri */
     --red:      #e05555;
     --green:    #5ec47a;
     --blue:     #6ab0e0;
@@ -46,7 +46,7 @@ body {
     height: 100%;
 }
 
-/* Login ile birebir aynı üst amber glow */
+/* Login с birebir одинаковый üst amber glow */
 body::before {
     content: '';
     position: fixed;
@@ -79,7 +79,7 @@ body::before {
     left: 0; top: 0;
     width: var(--sidebar-w);
     height: 100vh;
-    /* Login ile aynı arka plan */
+    /* Login с одинаковый arka plan */
     background: rgba(26,22,16,0.92);
     border-right: 1px solid rgba(212,168,67,0.08);
     z-index: 100;
@@ -187,7 +187,7 @@ div#main-content {
     padding-bottom: 60px !important;
 }
 
-/* Page title — Scatter'ın büyük bold başlığı */
+/* Page title — Scatter'ın большой bold başlığı */
 div#main-content > h1,
 .page-title {
     font-size: 28px !important;
@@ -200,7 +200,7 @@ div#main-content > h1,
 }
 
 /* ══════════════════════════════════════════════════════
-   CARDS / SECTIONS — login modal card ile aynı his
+   CARDS / SECTIONS — login modal card с одинаковый his
 ══════════════════════════════════════════════════════ */
 .section {
     background: rgba(26,22,16,0.7);
@@ -228,7 +228,7 @@ div#main-content > h1,
 }
 
 /* ══════════════════════════════════════════════════════
-   TABLE — login modal içindeki tablo hissi
+   TABLE — login modal в tablo hissi
 ══════════════════════════════════════════════════════ */
 table { width:100%; border-collapse:collapse; }
 
@@ -296,7 +296,7 @@ tr:hover td { background: rgba(212,168,67,0.05); }
 .btn-success:hover { background: rgba(94,196,122,0.2); transform: translateY(-1px); }
 
 /* ══════════════════════════════════════════════════════
-   INPUTS — login form input ile aynı
+   INPUTS — login form input с одинаковый
 ══════════════════════════════════════════════════════ */
 input, select, textarea {
     width: 100%;
@@ -319,7 +319,7 @@ input::placeholder, textarea::placeholder { color: #3a3020; }
 select option { background: #1a1610; color: #f0e8d0; }
 
 /* ══════════════════════════════════════════════════════
-   MODAL — login modal card ile birebir aynı
+   MODAL — login modal card с birebir одинаковый
 ══════════════════════════════════════════════════════ */
 .modal {
     display: none;
@@ -378,7 +378,7 @@ select option { background: #1a1610; color: #f0e8d0; }
     letter-spacing: -0.02em;
 }
 .user-info { display:flex; align-items:center; gap:10px; }
-.role-badge {
+.roles-badge {
     background: var(--accent-dim);
     border: 1px solid var(--border2);
     color: var(--accent2);

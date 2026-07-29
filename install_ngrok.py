@@ -16,10 +16,10 @@ try:
     os.remove("ngrok.zip")
     print("✅ ngrok indirildi")
 except Exception as e:
-    print(f"❌ Скачатьme ошибкаsı: {e}")
+    print(f"❌ Indirme ошибки: {e}")
     exit(1)
 
-# Токен настроить
+# Token настройк
 result = subprocess.run(["ngrok.exe", "config", "add-authtoken", TOKEN], capture_output=True, text=True)
 print(result.stdout or result.stderr)
-print("✅ Токен настроитьndı")
+print("✅ Token настройк")

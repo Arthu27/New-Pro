@@ -1,20 +1,20 @@
-# ── Otomatik Bağımlılık Kurulumu ─────────────────────────────────────────────
+# ── Автоматически Bağımlılık Kurulumu ─────────────────────────────────────────────
 import sys
 import os
 import subprocess
 
 def _install_requirements():
-    """requirements.txt'deki eksik paketleri otomatik kur"""
+    """requirements.txt'deki eksik paketleri автоматически kur"""
     req_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'requirements.txt')
     if not os.path.exists(req_file):
-        print("[WARN] requirements.txt bulunamadi, bagimlilik kontroleu atlaniyor")
+        print("[WARN] requirements.txt не найдено, bagimlilik контроль atlaniyor")
         return
     
     # requirements.txt'yi oku
     with open(req_file, 'r', encoding='utf-8') as f:
         requirements = [line.strip() for line in f if line.strip() and not line.startswith('#')]
     
-    # Paket adi -> import adi eslesmesi
+    # Paket имя -> import имя eslesmesi
     _import_map = {
         'discord.py': 'discord',
         'python-dotenv': 'dotenv',
@@ -28,7 +28,7 @@ def _install_requirements():
         'PyNaCl': 'nacl',
     }
     
-    # Eksik paketleri tespit et
+    # Eksik paketleri определить
     missing = []
     for req in requirements:
         pkg_name = req.split('>=')[0].split('==')[0].split('<')[0].split('>')[0].split('~=')[0].strip()
@@ -48,17 +48,17 @@ def _install_requirements():
             print("[INSTALL] Tum paketler kuruldu!")
         except subprocess.CalledProcessError as e:
             print(f"[ERROR] Paket kurulumu basarisiz: {e}")
-            print(f"[INFO] Manuel kurulum: pip install -r requirements.txt")
+            print(f"[INFO] Manuel установка: pip install -r requirements.txt")
             sys.exit(1)
     else:
-        print("[OK] Tum bagimliliklar mevcut")
+        print("[OK] Tum bagimliliklar текущий")
 
-# Первый çalıştırmada otomatik kur
+# Ilk çalıştırmada автоматически kur
 _install_requirements()
 
 import discord
 import warnings
-warnings.filterwarnings('ignore', category=ResourceWarninging)
+warnings.filterwarnings('ignore', category=ResourceWarning)
 from discord.ext import commands
 from dotenv import load_dotenv
 import threading
@@ -80,27 +80,27 @@ if os.path.exists(_fix):
     _sp.run([_sys.executable, _fix], capture_output=True)
 
 intents = discord.Intents.all()
-бот = commands.Бот(command_prefix="!", intents=intents, help_command=None)
+bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
 
-ALERT_ROLE_ID = None  # Панельden настроитьnacak
+ALERT_ROLE_ID = None  # Panelden настройк
 
 # ── Cleanup functions ───────────────────────────────────────────────────────
 def cleanup_on_exit():
-    """Бот закрытьılırken temizlik действиеleri"""
+    """Bot закрыт temizlik действия"""
     try:
-        print("[CLEANUP] Бот закрытьiliyor...")
-        # Голос bağlantılarını закрыть
+        print("[CLEANUP] Bot закрыт...")
+        # Ses ссылки закрыть
         if hasattr(bot, 'voice_clients'):
             for vc in bot.voice_clients:
                 try:
                     asyncio.run_coroutine_threadsafe(vc.disconnect(), bot.loop)
                 except Exception:
                     pass
-        # Бот'u закрыть
+        # Bot'u закрыть
         if not bot.is_closed():
             asyncio.run_coroutine_threadsafe(bot.close(), bot.loop)
     except Exception as e:
-        print(f"[CLEANUP] Temizlik ошибкаsı: {e}")
+        print(f"[CLEANUP] Temizlik ошибки: {e}")
 
 def signal_handler(signum, frame):
     """Signal handler for graceful shutdown"""
@@ -113,7 +113,7 @@ signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
 atexit.register(cleanup_on_exit)
 
-# ── Панель link отправить ────────────────────────────────────────────────────────
+# ── Panel link отправить ────────────────────────────────────────────────────────
 async def send_panel_link(url):
     import json as _json
     tokens_file = os.path.join(os.path.dirname(__file__), 'data', 'tokens.json')
@@ -130,10 +130,10 @@ async def send_panel_link(url):
 
     for guild in bot.guilds:
         try:
-            # Küçük harf ile ara — Discord channel имяleri küçük harf
+            # Маленький harf с ara — Discord channel isimleri маленький harf
             panel_ch = discord.utils.get(guild.text_channels, name="aether-panel")
             if not panel_ch:
-                # Старый имяli channelları da kontrole et
+                # Старый isimli channelları da контроль et
                 for old_name in ["panel-link", "aether-panel", "Aether-panel"]:
                     panel_ch = discord.utils.get(guild.text_channels, name=old_name)
                     if panel_ch:
@@ -148,7 +148,7 @@ async def send_panel_link(url):
                     if role:
                         overwrites[role] = discord.PermissionOverwrite(read_messages=True)
                     panel_ch = await guild.create_text_channel("aether-panel", overwrites=overwrites)
-                    print(f"[INFO] aether-panel channeli olusturuldu: {guild.name}")
+                    print(f"[INFO] aether-panel канал olusturuldu: {guild.name}")
             async for msg in panel_ch.history(limit=10):
                 if msg.author == bot.user:
                     await msg.delete()
@@ -157,10 +157,10 @@ async def send_panel_link(url):
                 timestamp=discord.utils.utcnow()
             )
             embed.set_author(
-                name="Aether — Панель управления",
+                name="Aether — Panel управление",
                 icon_url=guild.icon.url if guild.icon else None
             )
-            embed.description = f"[**› Войти в panel**]({panel_url})"
+            embed.description = f"[**› Вход yap в panel**]({panel_url})"
             embed.set_image(url="https://static.klipy.com/ii/71b2873e478b9d8d0482ea3ec777ba7f/15/36/51ALUZhO.gif")
             embed.add_field(
                 name="🏰  Сервер",
@@ -173,18 +173,18 @@ async def send_panel_link(url):
                 inline=True
             )
             embed.add_field(
-                name="🔐  Доступ",
-                value="```Автоматически по роли Discord```",
+                name="🔐  Erişim",
+                value="```Автоматически как по роли Discord```",
                 inline=False
             )
             embed.set_footer(
-                text="Aether Панель • Обновляется при каждом запуске",
+                text="Aether Panel • Obnovlyaetsya iken kajdom zapuske",
                 icon_url=guild.icon.url if guild.icon else None
             )
             await panel_ch.send(embed=embed)
-            print(f"[OK] Панель linki {guild.name} serversuna gonderildi")
+            print(f"[OK] Panel linki {guild.name} сервер gonderildi")
         except Exception as e:
-            print(f"[ERR] Панель linki gonderilemedi ({guild.name}): {e}")
+            print(f"[ERR] Panel linki gonderilemedi ({guild.name}): {e}")
 
 # ── Cloudflare tüneli ────────────────────────────────────────────────────────
 def _is_tunnel_alive(url):
@@ -212,20 +212,49 @@ def _write_and_broadcast_tunnel_url(url):
     asyncio.run_coroutine_threadsafe(send_panel_link(url), bot.loop)
 
 
+def _get_cloudflared_binary():
+    import shutil, platform, urllib.request
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    for name in ["cloudflared.exe", "cloudflared_new.exe", "cloudflared"]:
+        p = os.path.join(base_dir, name)
+        if os.path.exists(p):
+            return p
+    sys_cf = shutil.which("cloudflared") or shutil.which("cloudflared.exe")
+    if sys_cf:
+        return sys_cf
+    try:
+        print("[CLOUDFLARE] Исполняемый файл cloudflared не найден. Начинаем автоматическую загрузку...")
+        is_win = platform.system().lower() == "windows"
+        url = "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe" if is_win else "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64"
+        dest_name = "cloudflared.exe" if is_win else "cloudflared"
+        dest_path = os.path.join(base_dir, dest_name)
+        urllib.request.urlretrieve(url, dest_path)
+        if not is_win:
+            os.chmod(dest_path, 0o755)
+        print(f"[CLOUDFLARE] Успешно загружен cloudflared в: {dest_path}")
+        return dest_path
+    except Exception as _e:
+        print(f"[CLOUDFLARE] Ошибка автоматической загрузки cloudflared: {_e}")
+        return None
+
 def start_tunnel():
     import time
-    base_dir = os.path.dirname(__file__)
-    cf_path = os.path.join(base_dir, "cloudflared.exe")
-    if not os.path.exists(cf_path):
-        cf_path = os.path.join(base_dir, "cloudflared_new.exe")
-    if not os.path.exists(cf_path):
-        print("⚠️ cloudflared.exe bulunamadı")
+    cf_path = _get_cloudflared_binary()
+    if not cf_path:
+        print("⚠️ Не удалось найти или загрузить cloudflared. Туннель Cloudflare отключен.")
         return
+    protocols = ["http2", "quic", "auto"]
+    proto_idx = 0
     while True:
         try:
-            print("[INFO] Cloudflare tuneli baslatiliyor...")
+            proto = protocols[proto_idx % len(protocols)]
+            print(f"[INFO] Запуск туннеля Cloudflare (протокол: {proto})...")
+            cmd = [cf_path, "tunnel", "--no-autoupdate"]
+            if proto != "auto":
+                cmd.extend(["--protocol", proto])
+            cmd.extend(["--url", "http://localhost:5001"])
             proc = subprocess.Popen(
-                [cf_path, "tunnel", "--no-autoupdate", "--protocol", "http2", "--url", "http://localhost:5001"],
+                cmd,
                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                 text=True, encoding="utf-8", errors="ignore"
             )
@@ -233,38 +262,38 @@ def start_tunnel():
                 m = re.search(r'https://[a-z0-9\-]+\.trycloudflare\.com', line)
                 if m:
                     url = m.group(0)
-                    print(f"[LINK] Herkese acik link: {url}")
-                    # URL'yi dosyaya yaz
+                    print(f"[LINK] Публичная ссылка Cloudflare: {url}")
                     _tunnel_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tunnel_url.txt")
                     with open(_tunnel_path, "w", encoding="utf-8") as f:
                         f.write(url)
-                    # Бот hazır olana kadar badd, sonra отправить
                     def _send_when_ready(u):
                         import time as _t
-                        for _ in range(30):  # max 30 saniye badd
+                        for _ in range(30):
                             try:
                                 if bot.is_ready():
                                     asyncio.run_coroutine_threadsafe(send_panel_link(u), bot.loop).result(timeout=15)
                                     return
                             except Exception as e:
-                                print(f"[ERR] Панель link отправитьilemedi: {e}")
+                                print(f"[ERR] Ошибка отправки ссылки в Discord: {e}")
                                 return
                             _t.sleep(1)
                     threading.Thread(target=_send_when_ready, args=(url,), daemon=True).start()
             proc.wait()
-            print("[WARN] Tunel dustu, 5 saniye sonra yeniden baglaniyor...")
-            time.sleep(5)
+            proto_idx += 1
+            print("[WARN] Туннель отключился. Повторный запуск через 4 секунды с другим протоколом...")
+            time.sleep(4)
         except Exception as e:
-            print(f"[ERR] Tunel ошибкаsi: {e}")
-            time.sleep(5)
+            print(f"[ERR] Ошибка работы Cloudflare Tunnel: {e}")
+            time.sleep(10)
+
 
 # ── on_ready ─────────────────────────────────────────────────────────────────
 _synced = False
-VOICE_CHANNEL_ID = None  # Панельden настроитьnacak
+VOICE_CHANNEL_ID = None  # Panelden настройк
 
 async def _monitor_voice():
-    """Голос bağlantısını canlı tut — düştüğünde bağlan, her 4 dakikada silence çal."""
-    await бот.wait_until_ready()
+    """Ses ссылка canlı tut — düştüğünde bağlan, каждый 4 dakikada удалить çal."""
+    await bot.wait_until_ready()
     await asyncio.sleep(10)
     last_ping = 0
     while not bot.is_closed():
@@ -281,20 +310,20 @@ async def _monitor_voice():
                 last_ping = time.time()
             except Exception:
                 pass
-        # Bağlıysa ve 4 dakika geçtiyse silence ping at
+        # Bağlıysa ve 4 dakika geçtiyse удалить ping at
         elif time.time() - last_ping > 240:
             try:
                 if not vc.is_playing():
-                    # 1 saniyelik голосsiz голос
+                    # 1 saniyelik sessiz ses
                     import io
-                    silence = io.BytesIO(b'\x00' * 3840)  # 20ms PCM silence
-                    source = discord.PCMAudio(silence)
+                    удалить = io.BytesIO(b'\x00' * 3840)  # 20ms PCM удалить
+                    source = discord.PCMAudio(удалить)
                     vc.play(source)
                 last_ping = time.time()
             except Exception:
                 pass
 
-@бот.event
+@bot.event
 async def on_ready():
     global _synced
     if not _synced:
@@ -302,17 +331,17 @@ async def on_ready():
         for guild in bot.guilds:
             try:
                 await bot.tree.sync(guild=guild)
-                print(f'[SYNC] Slash командаlar sync edildi: {guild.name}')
+                print(f'[SYNC] Slash команды sync edildi: {guild.name}')
             except Exception as e:
                 print(f'[SYNC] Ошибка {guild.name}: {e}')
         await bot.tree.sync()  # Global sync de yap
         _synced = True
         bot.loop.create_task(_monitor_voice())
-    print(f"[OK] {bot.user} активен | {len(bot.guilds)} server")
+    print(f"[OK] {bot.user} активен | {len(bot.guilds)} сервер")
 
-    # Бот config'den status/activity oku — HER on_ready'de çalışır
+    # Bot config'den status/activity oku — КАЖДЫЙ on_ready'de çalışır
     import json as _j
-    _cfg_file = 'data/бот_config.json'
+    _cfg_file = 'data/bot_config.json'
     _status = discord.Status.idle
     _activity_type = discord.ActivityType.listening
     _activity_text = '.gg/Aether'
@@ -334,22 +363,22 @@ async def on_ready():
     )
     print(f"[OK] Status: {_status} | Activity: {_activity_text}")
 
-    # Голос channelına bağlan (sadece ilk başlangıçta)
+    # Ses в канал bağlan (только ilk başlangıçta)
     channel = bot.get_channel(VOICE_CHANNEL_ID) if VOICE_CHANNEL_ID else None
     if channel and isinstance(channel, discord.VoiceChannel):
         vc = discord.utils.get(bot.voice_clients, guild=channel.guild)
         if not vc:
             try:
                 await channel.connect(self_deaf=False)
-                print(f"[OK] Голос channelına bağlandı: {channel.name}")
+                print(f"[OK] Ses в канал bağlandı: {channel.name}")
             except Exception as e:
-                print(f"[ERR] Голос bağlanma ошибкаsı: {e}")
+                print(f"[ERR] Ses bağlanma ошибки: {e}")
 
-    # Бот instance'ı обновить
+    # Bot instance'ı обновить
     from web.app import set_bot_instance
     set_bot_instance(bot)
 
-    # Панель channelını kontrole et — tunnel URL varsa отправить (sadece bir kez)
+    # Panel channelını контроль et — tunnel URL varsa отправить (только bir kez)
     _tunnel_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tunnel_url.txt")
     if not getattr(bot, '_panel_link_sent', False) and os.path.exists(_tunnel_path):
         try:
@@ -357,11 +386,11 @@ async def on_ready():
                 _url = _f.read().strip()
             if _url:
                 await send_panel_link(_url)
-                бот._panel_link_sent = True
+                bot._panel_link_sent = True
         except Exception as _e:
-            print(f"[ERR] Панель link отправитьilemedi: {_e}")
+            print(f"[ERR] Panel link отправл: {_e}")
 
-# ── Cog yükle ────────────────────────────────────────────────────────────────
+# ── Cog загрузить ────────────────────────────────────────────────────────────────
 async def load_cogs():
     SKIP_COGS = {"embed_utils.py", "__init__.py"}
     cog_files = sorted([f for f in os.listdir("./cogs") if f.endswith(".py") and f not in SKIP_COGS])
@@ -371,16 +400,16 @@ async def load_cogs():
         try:
             await asyncio.wait_for(bot.load_extension(ext), timeout=20)
             print(f"[LOAD] Yuklendi: {filename}")
-        except asyncio.МутError:
+        except asyncio.MuteError:
             print(f"[ERR] Cog timeout (20s): {filename}")
         except Exception as e:
             import traceback
-            print(f"[ERR] Cog yukleme ошибкаsi ({filename}): {e}")
+            print(f"[ERR] Cog yukleme ошибки ({filename}): {e}")
             traceback.print_exc()
 
 # ── Main ─────────────────────────────────────────────────────────────────────
 async def main():
-    # Web paneli запустить (bot başlamadan önce - sadece bir kez)
+    # Web paneli запустить (bot başlamadan до - только bir kez)
     from web.app import app, set_bot_instance
     set_bot_instance(bot)
     # Werkzeug terminal colorlerini закрыть
@@ -393,7 +422,7 @@ async def main():
     ).start()
     print("[WEB] Web panel: http://localhost:5001")
 
-    # Cloudflare tüneli запустить (Flask'ın ayağa kalkması için 3 sn badd)
+    # Cloudflare tüneli запустить (Flask'ın ayağa kalkması для 3 sn badd)
     def delayed_tunnel():
         import time
         time.sleep(3)
@@ -410,8 +439,9 @@ async def main():
                 await bot.start(os.getenv("TOKEN"))
             except Exception as e:
                 # Ağ/Discord erişimi anlık düşerse panel de ayakta kalsın diye
-                # ботu öldürmüyoruz; kısa baddyip tekrar deniyoruz.
-                print(f"[ERR] Бот baslatma ошибкаsi: {e}")
+                # botu öldürmüyoruz; краткий baddyip tekrar deniyoruz.
+                print(f"[ERR] Bot baslatma ошибки: {e}")
                 await asyncio.sleep(10)
 
-asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())

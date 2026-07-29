@@ -1,4 +1,4 @@
-"""Сервер sağlık skoru + channel bazlı istatistik"""
+"""Сервер sağlık skoru + channel основанный на статистика"""
 import discord
 from discord.ext import commands
 from discord import app_commands
@@ -27,19 +27,19 @@ def _calc_score(data, guild: discord.Guild):
     score = 100
     total_members = max(guild.member_count, 1)
 
-    # Бан oranı (son 7 деньde)
+    # Ban oranı (son 7 день)
     ban_rate = data.get('ban_count', 0) / total_members * 100
     score -= min(ban_rate * 5, 30)
 
-    # Кик oranı
+    # Kick oranı
     kick_rate = data.get('kick_count', 0) / total_members * 100
     score -= min(kick_rate * 3, 20)
 
-    # Spam sayısı
+    # Spam количество
     spam = data.get('spam_count', 0)
     score -= min(spam * 0.5, 20)
 
-    # Активенlik bonusu — son 7 деньde message varsa +10
+    # Активен bonusu — son 7 день message varsa +10
     daily = data.get('daily', {})
     active_days = len([v for v in daily.values() if v > 0])
     if active_days >= 5:
@@ -59,7 +59,7 @@ def _score_label(score):
 class Health(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        # Spam tespiti için son message vakitları {guild_id: {user_id: [timestamps]}}
+        # Spam tespiti для son message vakitları {guild_id: {user_id: [timestamps]}}
         self._msg_times = defaultdict(lambda: defaultdict(list))
 
     @commands.Cog.listener()
@@ -73,26 +73,26 @@ class Health(commands.Cog):
 
         data = _load_health(gid)
 
-        # Канал bazlı message sayısı
+        # Канал основанный на message количество
         if 'channel_messages' not in data:
             data['channel_messages'] = {}
         ch_data = data['channel_messages'].setdefault(cid, {'name': cname, 'total': 0})
         ch_data['total'] = ch_data.get('total', 0) + 1
         ch_data['name'] = cname
 
-        # Времяlik istatistik
+        # Время статистика
         hour_key = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:00')
         data.setdefault('hourly', {})[hour_key] = data['hourly'].get(hour_key, 0) + 1
-        # Последний 48 часi tut
+        # В конец 48 saati tut
         hourly = data['hourly']
         if len(hourly) > 48:
             oldest = sorted(hourly.keys())[0]
             del hourly[oldest]
 
-        # Günlük istatistik
+        # Ежедневный статистика
         day_key = str(date.today())
         data.setdefault('daily', {})[day_key] = data['daily'].get(day_key, 0) + 1
-        # Последний 30 деньü tut
+        # В конец 30 день tut
         daily = data['daily']
         if len(daily) > 30:
             oldest = sorted(daily.keys())[0]
@@ -117,7 +117,7 @@ class Health(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_remove(self, member):
-        # Кик mi kontrole et
+        # Kick mi контроль et
         try:
             async for entry in member.guild.audit_logs(limit=1, action=discord.AuditLogAction.kick):
                 if entry.target.id == member.id:
@@ -127,48 +127,48 @@ class Health(commands.Cog):
         except Exception:
             pass
 
-    @app_commands.command(name="health", description="Серверnun sağlık skorunu gösterir")
+    @app_commands.command(name="health", description="Сервера sağlık skorunu показ")
     async def saglik(self, interaction: discord.Interaction):
         gid = str(interaction.guild.id)
         data = _load_health(gid)
         score = _calc_score(data, interaction.guild)
         label, color = _score_label(score)
 
-        e = discord.Embed(title=f"🏥 {interaction.guild.name} — Sağlık Оценкаu", color=color)
+        e = discord.Embed(title=f"🏥 {interaction.guild.name} — Sağlık Puanlamau", color=color)
         e.set_thumbnail(url=interaction.guild.icon.url if interaction.guild.icon else None)
 
         bar_filled = round(score / 10)
         bar = "█" * bar_filled + "░" * (10 - bar_filled)
-        e.add_field(name="Оценка", value=f"`{bar}` **{score}/100** {label}", inline=False)
+        e.add_field(name="Puanlama", value=f"`{bar}` **{score}/100** {label}", inline=False)
 
-        e.add_field(name="🔨 Бан", value=str(data.get('ban_count', 0)), inline=True)
-        e.add_field(name="👢 Кик", value=str(data.get('kick_count', 0)), inline=True)
+        e.add_field(name="🔨 Ban", value=str(data.get('ban_count', 0)), inline=True)
+        e.add_field(name="👢 Kick", value=str(data.get('kick_count', 0)), inline=True)
         e.add_field(name="⚠️ Spam", value=str(data.get('spam_count', 0)), inline=True)
 
-        # En активна channellar
+        # En активен channellar
         ch_msgs = data.get('channel_messages', {})
         top = sorted(ch_msgs.values(), key=lambda x: x.get('total', 0), reverse=True)[:3]
         if top:
             ch_text = "\n".join(f"#{c['name']}: {c['total']} message" for c in top)
-            e.add_field(name="📊 En Активен Каналlar", value=ch_text, inline=False)
+            e.add_field(name="📊 En Активен Каналы", value=ch_text, inline=False)
 
-        e.set_footer(text="Оценка: ban/kick/spam oranı ve активнаliğe göre hesaplanır")
+        e.set_footer(text="Puanlama: ban/kick/spam oranı ve активен по hesaplanır")
         await interaction.response.send_message(embed=e)
 
-    @app_commands.command(name="channel-istatistik", description="Канал bazlı message istatistiklerini gösterir")
+    @app_commands.command(name="channel-статистика", description="Канал основанный на message статистика показ")
     async def channel_istatistik(self, interaction: discord.Interaction):
         gid = str(interaction.guild.id)
         data = _load_health(gid)
         ch_msgs = data.get('channel_messages', {})
 
         if not ch_msgs:
-            await interaction.response.send_message("❌ Henüz veri yok.", ephemeral=True)
+            await interaction.response.send_message("❌ Пока veri yok.", ephemeral=True)
             return
 
         top = sorted(ch_msgs.values(), key=lambda x: x.get('total', 0), reverse=True)[:10]
         max_val = top[0]['total'] if top else 1
 
-        e = discord.Embed(title="📊 Канал İstatistikleri", color=0x3498db)
+        e = discord.Embed(title="📊 Канал Статистика", color=0x3498db)
         lines = []
         for i, c in enumerate(top, 1):
             pct = round(c['total'] / max_val * 20)

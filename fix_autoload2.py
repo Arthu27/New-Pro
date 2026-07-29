@@ -1,4 +1,4 @@
-"""loadGuilds fonksiyonunda forEach sonrası otomatik ilk server выбратьimi add"""
+"""loadGuilds fonksiyonunda forEach sonrası автоматически ilk сервер выбор add"""
 import os, re
 
 templates_dir = "web/templates"
@@ -30,4 +30,4 @@ for fname in os.listdir(templates_dir):
         print(f"✅ {fname}")
         fixed += 1
 
-print(f"\nВсего {fixed} dosya.")
+print(f"\nToplam {fixed} dosya.")

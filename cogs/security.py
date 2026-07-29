@@ -1,9 +1,9 @@
 """
 Aether Security Cog
-- AI destekli spam tespiti (pattern + hız + benzerlik analizi)
-- Fake hesap tespiti (yeni hesap, avatar yok, şüpheli имя)
-- Link güvenlik tarayıcısı (zararlı domain listesi + URL shortener)
-- Otomatik backup sistemi (server настройкиı yedeği)
+- AI поддержка spam tespiti (pattern + скорость + benzerlik analizi)
+- Fake hesap tespiti (новый hesap, avatar yok, şüpheli isim)
+- Link безопасность сканироватьyıcısı (вредоносный domain listesi + URL shortener)
+- Автоматически backup система (сервер настройк yedeği)
 """
 import discord
 from discord.ext import commands, tasks
@@ -24,7 +24,7 @@ MALICIOUS_DOMAINS = {
     'mediafire.com', 'anonfiles.com', 'gofile.io',
 }
 
-# Şüpheli имя pattern'leri
+# Şüpheli isim pattern'leri
 SUSPICIOUS_NAME_PATTERNS = [
     r'discord.*nitro', r'free.*nitro', r'steam.*gift',
     r'admin.*\d{4}', r'mod.*\d{4}', r'support.*\d{4}',
@@ -54,7 +54,7 @@ def _save_cfg(guild_id, data):
         json.dump(data, fp, indent=2, ensure_ascii=False)
 
 def _similarity(a: str, b: str) -> float:
-    """İki string arasındaki benzerlik oranı (0-1). Levenshtein taзабаненные."""
+    """İki string arasındaki benzerlik oranı (0-1). Levenshtein tayasaklanmış."""
     if not a or not b:
         return 0.0
     a, b = a.lower(), b.lower()
@@ -68,7 +68,7 @@ def _similarity(a: str, b: str) -> float:
     return common / max(la, lb)
 
 def _extract_domains(text: str) -> list:
-    """Metinden domain'leri çıkar."""
+    """Metinden domain'leri удалить."""
     pattern = re.compile(
         r'(?:https?://|www\.)([a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,})',
         re.IGNORECASE
@@ -95,7 +95,7 @@ class Security(commands.Cog):
     def cog_unload(self):
         self.backup_loop.cancel()
 
-    # ── Лог helper ────────────────────────────────────────────────────────────
+    # ── Log helper ────────────────────────────────────────────────────────────
     async def _log(self, guild: discord.Guild, embed: discord.Embed, cfg: dict):
         ch_id = cfg.get('log_channel')
         ch = guild.get_channel(int(ch_id)) if ch_id else None
@@ -107,27 +107,27 @@ class Security(commands.Cog):
             except Exception:
                 pass
 
-    # ── AI Spam Analizi ───────────────────────────────────────────────────────
+    # ── AI Антиспам Analizi ───────────────────────────────────────────────────────
     def _ai_spam_score(self, uid: int, content: str) -> tuple[float, str]:
         """
-        Сообщениеı analiz et, spam skoru döndür (0.0 - 1.0) ve причина.
-        Çoklu sinyal: hız + benzerlik + tekrar + uzunluk anomalisi
+        Сообщение analiz et, spam skoru вернуть (0.0 - 1.0) ve причина.
+        Çoklu sinyal: скорость + benzerlik + tekrar + uzunluk anomalisi
         """
         now = time.time()
         window = 8  # saniye
         history = self.msg_history[uid]
 
-        # Старый регистрацияları clear
+        # Старый запись clear
         history = [(t, c) for t, c in history if now - t < 30]
         self.msg_history[uid] = history
 
         signals = []
 
-        # 1. Hız sinyali: 8 saniyede kaç message?
+        # 1. Скорость sinyali: 8 saniyede сколько message?
         recent = [t for t, _ in history if now - t < window]
         speed_score = min(len(recent) / 6, 1.0)  # 6+ message = 1.0
         if speed_score > 0.5:
-            signals.append(f"hız ({len(recent)} message/{window}s)")
+            signals.append(f"скорость ({len(recent)} message/{window}s)")
 
         # 2. Benzerlik sinyali: son messagelara ne kadar benziyor?
         if history:
@@ -139,16 +139,16 @@ class Security(commands.Cog):
         else:
             sim_score = 0.0
 
-        # 3. Tekrar sinyali: aynı içerik kaç kez?
+        # 3. Tekrar sinyali: одинаковый содержимое сколько kez?
         repeat_count = sum(1 for _, c in history if c.lower() == content.lower())
         repeat_score = min(repeat_count / 3, 1.0)
         if repeat_score > 0.5:
             signals.append(f"tekrar ({repeat_count}x)")
 
-        # 4. Uzunluk anomalisi: çok kısa + çok hızlı
+        # 4. Uzunluk anomalisi: очень краткий + очень быстрый
         length_score = 0.3 if len(content) < 5 and speed_score > 0.4 else 0.0
 
-        # Ağırlıklı skor
+        # Тяжелый skor
         final_score = (
             speed_score * 0.35 +
             sim_score * 0.35 +
@@ -156,15 +156,15 @@ class Security(commands.Cog):
             length_score * 0.10
         )
 
-        # Geçmişe add
+        # История add
         self.msg_history[uid].append((now, content))
 
         reason = " + ".join(signals) if signals else "normal"
         return final_score, reason
 
-    # ── Fake Hesap Tespiti ────────────────────────────────────────────────────
+    # ── Фейковые аккаунты Tespiti ────────────────────────────────────────────────────
     def _fake_account_score(self, member: discord.Member, cfg: dict) -> tuple[float, list]:
-        """Fake hesap risk skoru (0-1) ve предупреждений listesi döndür."""
+        """Fake hesap risk skoru (0-1) ve предупреждение listesi вернуть."""
         warnings = []
         score = 0.0
 
@@ -173,31 +173,31 @@ class Security(commands.Cog):
         threshold = cfg.get('new_account_days', 7)
         if age_days < 1:
             score += 0.5
-            warnings.append(f"⚠️ Hesap **{age_days} деньlük** (çok yeni!)")
+            warnings.append(f"⚠️ Hesap **{age_days} ежедневный** (очень новый!)")
         elif age_days < threshold:
             score += 0.3
-            warnings.append(f"⚠️ Hesap **{age_days} деньlük** ({threshold} деньden az)")
+            warnings.append(f"⚠️ Hesap **{age_days} ежедневный** ({threshold} день az)")
 
         # Default avatar
         if member.display_avatar.is_animated() is False and 'embed' in str(member.display_avatar.url):
             score += 0.2
-            warnings.append("⚠️ Естьsayılan avatar kullanıyor")
+            warnings.append("⚠️ Varчислоlan avatar использовать")
 
-        # Şüpheli имя
+        # Şüpheli isim
         if _is_suspicious_name(member.name) or _is_suspicious_name(member.display_name):
             score += 0.4
-            warnings.append(f"⚠️ Şüpheli user adı: `{member.name}`")
+            warnings.append(f"⚠️ Şüpheli user имя: `{member.name}`")
 
-        # Discriminator 0000 (eski sistem bot pattern'i)
+        # Discriminator 0000 (старый система bot pattern'i)
         if hasattr(member, 'discriminator') and member.discriminator == '0000':
             score += 0.1
-            warnings.append("ℹ️ Новый user adı sistemi")
+            warnings.append("ℹ️ Новый user имя система")
 
         return min(score, 1.0), warnings
 
-    # ── Link Tarayıcı ─────────────────────────────────────────────────────────
+    # ── Сканер ссылок ─────────────────────────────────────────────────────────
     def _scan_links(self, content: str) -> tuple[bool, list]:
-        """Zararlı link var mı? (bool, bulunan domainler)"""
+        """Zararlı link var mı? (bool, найден domainler)"""
         domains = _extract_domains(content)
         found = []
         for domain in domains:
@@ -205,7 +205,7 @@ class Security(commands.Cog):
             if domain in MALICIOUS_DOMAINS:
                 found.append(domain)
                 continue
-            # Alt domain kontroleü (örn: evil.grabify.link)
+            # Alt domain контроль (напр.: evil.grabify.link)
             for bad in MALICIOUS_DOMAINS:
                 if domain.endswith('.' + bad) or domain == bad:
                     found.append(domain)
@@ -225,7 +225,7 @@ class Security(commands.Cog):
         guild = message.guild
         member = message.author
 
-        # ── Link Tarayıcı ──────────────────────────────────────────────────
+        # ── Сканер ссылок ──────────────────────────────────────────────────
         if cfg.get('link_scanner', True):
             has_bad, bad_domains = self._scan_links(message.content)
             if has_bad:
@@ -239,28 +239,28 @@ class Security(commands.Cog):
                     timestamp=datetime.now(timezone.utc)
                 )
                 e.description = (
-                    f"{member.mention} zararlı/şüpheli link paylaştı!\n\n"
+                    f"{member.mention} вредоносный/şüpheli link paylaştı!\n\n"
                     f"**🚨 Tespit edilen domain(ler):**\n"
                     + "\n".join(f"• `{d}`" for d in bad_domains)
                 )
                 e.set_thumbnail(url=member.display_avatar.url)
-                e.set_footer(text="🛡️ Aether Link Tarayıcı")
+                e.set_footer(text="🛡️ Aether Сканер ссылок")
                 await self._log(guild, e, cfg)
                 try:
                     await message.channel.send(
-                        f"🚫 {member.mention} zararlı link engellendi!",
+                        f"🚫 {member.mention} вредоносный link engellendi!",
                         delete_after=5
                     )
                 except Exception:
                     pass
                 return
 
-        # ── AI Spam Tespiti ────────────────────────────────────────────────
+        # ── AI Антиспам Tespiti ────────────────────────────────────────────────
         if cfg.get('ai_spam', True):
             score, reason = self._ai_spam_score(member.id, message.content)
 
             if score >= 0.85:
-                # Yüksek güven → удалить + timeout
+                # Высокий доверие → удалить + timeout
                 try:
                     await message.delete()
                 except Exception:
@@ -268,16 +268,16 @@ class Security(commands.Cog):
                 try:
                     await member.timeout(
                         discord.utils.utcnow() + timedelta(minutes=5),
-                        reason=f"AI Spam Tespiti: {reason}"
+                        reason=f"AI Антиспам Tespiti: {reason}"
                     )
                 except Exception:
                     pass
                 e = discord.Embed(
-                    title="🤖 AI Spam Tespiti — Yüksek Risk",
+                    title="🤖 AI Антиспам Tespiti — Высокий Risk",
                     color=0xe74c3c,
                     timestamp=datetime.now(timezone.utc)
                 )
-                e.description = f"**Оценка:** `{score:.0%}` | **Причина:** {reason}\n**⏳ Наказание:** 5 minutes мут"
+                e.description = f"**Puanlama:** `{score:.0%}` | **Причина:** {reason}\n**⏳ Наказание:** 5 minutes mute"
                 e.set_thumbnail(url=member.display_avatar.url)
                 e.add_field(name="👤 Пользователь", value=f"{member.mention} `{member.id}`", inline=True)
                 e.add_field(name="📺 Канал", value=message.channel.mention, inline=True)
@@ -285,7 +285,7 @@ class Security(commands.Cog):
                 await self._log(guild, e, cfg)
 
             elif score >= 0.65:
-                # Orta güven → sadece удалить + uyar
+                # Orta доверие → только удалить + uyar
                 try:
                     await message.delete()
                 except Exception:
@@ -298,11 +298,11 @@ class Security(commands.Cog):
                 except Exception:
                     pass
                 e = discord.Embed(
-                    title="🤖 AI Spam Tespiti — Orta Risk",
+                    title="🤖 AI Антиспам Tespiti — Orta Risk",
                     color=0xf39c12,
                     timestamp=datetime.now(timezone.utc)
                 )
-                e.description = f"**Оценка:** `{score:.0%}` | **Причина:** {reason}"
+                e.description = f"**Puanlama:** `{score:.0%}` | **Причина:** {reason}"
                 e.set_thumbnail(url=member.display_avatar.url)
                 e.add_field(name="👤 Пользователь", value=f"{member.mention} `{member.id}`", inline=True)
                 e.set_footer(text="🤖 Aether AI Security")
@@ -329,51 +329,51 @@ class Security(commands.Cog):
         e.set_thumbnail(url=member.display_avatar.url)
         e.description = "\n".join(warnings)
         e.add_field(name="👤 Пользователь", value=f"{member.mention}\n`{member.id}`", inline=True)
-        e.add_field(name="📅 Hesap Yaşı", value=f"`{(discord.utils.utcnow() - member.created_at).days} день`", inline=True)
-        e.add_field(name="🎯 Risk Оценкаu", value=f"`{score:.0%}`", inline=True)
+        e.add_field(name="📅 Возраст аккаунта", value=f"`{(discord.utils.utcnow() - member.created_at).days} день`", inline=True)
+        e.add_field(name="🎯 Уровень риска", value=f"`{score:.0%}`", inline=True)
 
         if score >= 0.6 and action == 'kick':
             try:
                 await member.kick(reason="Fake hesap tespiti")
-                e.add_field(name="⚡ Aksiyon", value="```Кик uygulandı```", inline=False)
+                e.add_field(name="⚡ Действие", value="```Kick применено```", inline=False)
             except Exception:
                 pass
         elif score >= 0.8 and action == 'ban':
             try:
                 await member.ban(reason="Fake hesap tespiti")
-                e.add_field(name="⚡ Aksiyon", value="```Бан uygulandı```", inline=False)
+                e.add_field(name="⚡ Действие", value="```Ban применено```", inline=False)
             except Exception:
                 pass
         else:
-            e.add_field(name="⚡ Aksiyon", value="```Модератор уведомлениеi отправитьildi```", inline=False)
+            e.add_field(name="⚡ Действие", value="```Модератор уведомление отправлено```", inline=False)
 
-        e.set_footer(text="🛡️ Aether Güvenlik Sistemi")
+        e.set_footer(text="🛡️ Aether Безопасность Система")
         await self._log(guild, e, cfg)
 
-    # ── Slash Командаlar ────────────────────────────────────────────────────────
-    @app_commands.command(name="security", description="Güvenlik настройкиını görüntüle")
+    # ── Slash Команды ────────────────────────────────────────────────────────
+    @app_commands.command(name="security", description="Показать настройки безопасности")
     @app_commands.checks.has_permissions(administrator=True)
     async def security_status(self, interaction: discord.Interaction):
         cfg = _load_cfg(str(interaction.guild.id))
         e = discord.Embed(
-            title="🛡️ Güvenlik Sistemi Статусu",
+            title="🛡️ Безопасность Система Состояние",
             color=0x2ecc71,
             timestamp=datetime.now(timezone.utc)
         )
-        e.add_field(name="🤖 AI Spam", value="✅ Активен" if cfg.get('ai_spam') else "❌ Закрыт", inline=True)
-        e.add_field(name="🕵️ Fake Hesap", value="✅ Активен" if cfg.get('fake_account') else "❌ Закрыт", inline=True)
-        e.add_field(name="🔗 Link Tarayıcı", value="✅ Активен" if cfg.get('link_scanner') else "❌ Закрыт", inline=True)
-        e.add_field(name="📅 Новый Hesap Eşiği", value=f"`{cfg.get('new_account_days', 7)} день`", inline=True)
-        e.add_field(name="⚡ Новый Hesap Aksiyonu", value=f"`{cfg.get('new_account_action', 'warn')}`", inline=True)
+        e.add_field(name="🤖 AI Антиспам", value="✅ Активен" if cfg.get('ai_spam') else "❌ Закрыт", inline=True)
+        e.add_field(name="🕵️ Фейковые аккаунты", value="✅ Активен" if cfg.get('fake_account') else "❌ Закрыт", inline=True)
+        e.add_field(name="🔗 Сканер ссылок", value="✅ Активен" if cfg.get('link_scanner') else "❌ Закрыт", inline=True)
+        e.add_field(name="📅 Порог нового аккаунта", value=f"`{cfg.get('new_account_days', 7)} день`", inline=True)
+        e.add_field(name="⚡ Новый Hesap Действиеu", value=f"`{cfg.get('new_account_action', 'warn')}`", inline=True)
         e.set_footer(text="🛡️ Aether Security")
         await interaction.response.send_message(embed=e, ephemeral=True)
 
-    @app_commands.command(name="security-toggle", description="Güvenlik özelliğini aç/закрыть")
-    @app_commands.describe(feature="Özellik", enabled="Открыть/Закрыть")
+    @app_commands.command(name="security-toggle", description="Включить/отключить функцию безопасности")
+    @app_commands.describe(feature="Особенность", enabled="Aç/Закрыть")
     @app_commands.choices(feature=[
-        app_commands.Choice(name="AI Spam Tespiti", value="ai_spam"),
-        app_commands.Choice(name="Fake Hesap Tespiti", value="fake_account"),
-        app_commands.Choice(name="Link Tarayıcı", value="link_scanner"),
+        app_commands.Choice(name="AI Антиспам Tespiti", value="ai_spam"),
+        app_commands.Choice(name="Фейковые аккаунты Tespiti", value="fake_account"),
+        app_commands.Choice(name="Сканер ссылок", value="link_scanner"),
     ])
     @app_commands.checks.has_permissions(administrator=True)
     async def security_toggle(self, interaction: discord.Interaction, feature: str, enabled: bool):
@@ -385,12 +385,12 @@ class Security(commands.Cog):
             f"🛡️ **{feature}** → {status}", ephemeral=True
         )
 
-    @app_commands.command(name="security-newaccount", description="Новый hesap aksiyonunu настроить")
-    @app_commands.describe(days="Kaç деньden yeni hesap şüpheli sayılsın", action="Aksiyon")
+    @app_commands.command(name="security-newaccount", description="Настроить действие для новых аккаунтов")
+    @app_commands.describe(days="Сколько день новый hesap şüpheli число", action="Действие")
     @app_commands.choices(action=[
-        app_commands.Choice(name="Sadece Bildir", value="warn"),
-        app_commands.Choice(name="Кик", value="kick"),
-        app_commands.Choice(name="Бан", value="ban"),
+        app_commands.Choice(name="Только Bildir", value="warn"),
+        app_commands.Choice(name="Kick", value="kick"),
+        app_commands.Choice(name="Ban", value="ban"),
     ])
     @app_commands.checks.has_permissions(administrator=True)
     async def security_newaccount(self, interaction: discord.Interaction, days: int, action: str):
@@ -399,28 +399,28 @@ class Security(commands.Cog):
         cfg['new_account_action'] = action
         _save_cfg(str(interaction.guild.id), cfg)
         await interaction.response.send_message(
-            f"✅ Новый hesap eşiği: **{days} день** | Aksiyon: **{action}**", ephemeral=True
+            f"✅ Новый hesap eşiği: **{days} день** | Действие: **{action}**", ephemeral=True
         )
 
-    @app_commands.command(name="scan-link", description="Bir linki güvenlik taramasından geçir")
+    @app_commands.command(name="scan-link", description="Проверить ссылку сканером безопасности")
     @app_commands.describe(url="Taranacak URL")
     @app_commands.checks.has_permissions(moderate_members=True)
     async def scan_link(self, interaction: discord.Interaction, url: str):
         has_bad, bad_domains = self._scan_links(url)
         if has_bad:
             e = discord.Embed(title="🚨 Zararlı Link!", color=0xe74c3c)
-            e.description = "Bu link zararlı/şüpheli domain içeriyor:\n" + "\n".join(f"• `{d}`" for d in bad_domains)
+            e.description = "Bu link вредоносный/şüpheli domain содержимое:\n" + "\n".join(f"• `{d}`" for d in bad_domains)
         else:
             e = discord.Embed(title="✅ Link Temiz", color=0x2ecc71)
-            e.description = "Bu link bilinen zararlı domain listesinde bulunamadı."
+            e.description = "Bu link bilinen вредоносный domain listesinde не найдено."
         e.add_field(name="🔗 URL", value=f"`{url[:100]}`", inline=False)
-        e.set_footer(text="🛡️ Aether Link Tarayıcı")
+        e.set_footer(text="🛡️ Aether Сканер ссылок")
         await interaction.response.send_message(embed=e, ephemeral=True)
 
-    # ── Otomatik Backup ───────────────────────────────────────────────────────
+    # ── Автоматически Backup ───────────────────────────────────────────────────────
     @tasks.loop(hours=24)
     async def backup_loop(self):
-        """Her 24 часte tüm serverların настройкиını yedadd."""
+        """Каждый 24 saatte все серверов настройк yedadd."""
         for guild in self.bot.guilds:
             await self._backup_guild(guild)
 
@@ -436,7 +436,7 @@ class Security(commands.Cog):
             'guild_name': guild.name,
             'timestamp': timestamp,
             'member_count': guild.member_count,
-            'roles': [
+            'role': [
                 {
                     'id': str(r.id), 'name': r.name,
                     'color': str(r.color), 'hoist': r.hoist,
@@ -473,42 +473,42 @@ class Security(commands.Cog):
             except Exception:
                 pass
 
-    @app_commands.command(name="backup", description="Сервер настройкиını şimdi yedadd")
+    @app_commands.command(name="backup", description="Создать резервную копию настроек сервера")
     @app_commands.checks.has_permissions(administrator=True)
     async def backup_now(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
         await self._backup_guild(interaction.guild)
-        # Mevcut yedaddri listele
+        # Показать список резервных копий
         backups = sorted([
             x for x in os.listdir(BACKUP_DIR)
             if x.startswith(f'backup_{interaction.guild.id}_')
         ], reverse=True)
-        e = discord.Embed(title="💾 Резервная копияme ОКlandı", color=0x2ecc71, timestamp=datetime.now(timezone.utc))
-        e.description = f"**{interaction.guild.name}** serversu yedaddndi."
+        e = discord.Embed(title="💾 Yedek kopyame OKlandı", color=0x2ecc71, timestamp=datetime.now(timezone.utc))
+        e.description = f"**{interaction.guild.name}** сервер yedaddndi."
         e.add_field(
-            name=f"📁 Mevcut Резервная копияr ({len(backups)})",
+            name=f"📁 Текущий Yedek kopyar ({len(backups)})",
             value="\n".join(f"• `{b}`" for b in backups[:5]) or "Нет",
             inline=False
         )
-        e.set_footer(text="💾 Aether Backup Sistemi • Günlük otomatik yedek активна")
+        e.set_footer(text="💾 Aether Backup Система • Ежедневный автоматически yedek активен")
         await interaction.followup.send(embed=e, ephemeral=True)
 
-    @app_commands.command(name="backup-list", description="Mevcut yedaddri listele")
+    @app_commands.command(name="backup-list", description="Показать список резервных копий")
     @app_commands.checks.has_permissions(administrator=True)
     async def backup_list(self, interaction: discord.Interaction):
         if not os.path.exists(BACKUP_DIR):
-            await interaction.response.send_message("❌ Henüz yedek yok.", ephemeral=True)
+            await interaction.response.send_message("❌ Пока yedek yok.", ephemeral=True)
             return
         backups = sorted([
             x for x in os.listdir(BACKUP_DIR)
             if x.startswith(f'backup_{interaction.guild.id}_')
         ], reverse=True)
-        e = discord.Embed(title="📁 Сервер Резервная копияri", color=0x3498db, timestamp=datetime.now(timezone.utc))
+        e = discord.Embed(title="📁 Сервер Yedek kopyari", color=0x3498db, timestamp=datetime.now(timezone.utc))
         if not backups:
-            e.description = "Henüz yedek bulunamadı. `/backup` ile yedek создать."
+            e.description = "Пока yedek не найдено. `/backup` с yedek создать."
         else:
             e.description = "\n".join(f"• `{b}`" for b in backups)
-        e.set_footer(text="💾 Последний 7 yedek saklanır")
+        e.set_footer(text="💾 В конец 7 yedek saklanır")
         await interaction.response.send_message(embed=e, ephemeral=True)
 
 

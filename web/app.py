@@ -24,7 +24,7 @@ app.config['SESSION_PERMANENT'] = True
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
 app.jinja_env.auto_reload = True
 
-# Server-side filesystem session
+# Сервер-side filesystem session
 app.config['SESSION_TYPE'] = 'filesystem'
 app.config['SESSION_FILE_DIR'] = _os.path.join(_BASE, '..', 'data', 'flask_sessions')
 app.config['SESSION_FILE_THRESHOLD'] = 500
@@ -41,12 +41,12 @@ import time as _time
 
 _rate_limits = defaultdict(list)  # ip: [timestamps]
 RATE_LIMIT_WINDOW = 60   # saniye
-RATE_LIMIT_MAX    = 600  # на окно max istek
+RATE_LIMIT_MAX    = 600  # на pencere max желание
 
 def _check_rate_limit(ip):
     now = _time.time()
     window = _rate_limits[ip]
-    # Старый регистрацияları clear
+    # Старый запись clear
     _rate_limits[ip] = [t for t in window if now - t < RATE_LIMIT_WINDOW]
     if len(_rate_limits[ip]) >= RATE_LIMIT_MAX:
         return False
@@ -55,10 +55,10 @@ def _check_rate_limit(ip):
 
 @app.before_request
 def before_request():
-    pass  # Rate limit убратьıldı
+    pass  # Rate limit удалено
 
-# ── Панель Лог ─────────────────────────────────────────────────────────────────
-def _log_login(username, role, avatar, discord_id):
+# ── Panel Log ─────────────────────────────────────────────────────────────────
+def _log_login(username, роли, avatar, discord_id):
     """Вход yapan useryı сохранить."""
     try:
         os.makedirs('data', exist_ok=True)
@@ -67,7 +67,7 @@ def _log_login(username, role, avatar, discord_id):
         if os.path.exists(f):
             with open(f, 'r', encoding='utf-8') as fp:
                 logs = json.load(fp)
-        # Сервер infosini бот'tan al
+        # Сервер infosini bot'tan al
         guild_name = None
         guild_icon = None
         if bot_instance and discord_id and discord_id.isdigit():
@@ -79,7 +79,7 @@ def _log_login(username, role, avatar, discord_id):
                     break
         logs.append({
             'username': username,
-            'role': role,
+            'role': роли,
             'avatar': avatar,
             'discord_id': discord_id,
             'guild_name': guild_name,
@@ -115,10 +115,10 @@ def _log_panel_action(action, detail=''):
 
 @app.after_request
 def after_request(response):
-    # Sadece POST/DELETE действиеlerini logla
+    # Только POST/DELETE действия logla
     if request.method in ('POST', 'DELETE') and session.get('logged_in'):
         path = request.path
-        # Логin/logout hariç
+        # Login/logout hariç
         if path not in ('/login', '/logout', '/register'):
             _log_panel_action(f'{request.method} {path}', '')
     return response
@@ -133,12 +133,12 @@ def _handle_unexpected_error(e):
         traceback.print_exc()
     except Exception:
         pass
-    return ("Internal Server Error", 500)
+    return ("Internal Сервер Error", 500)
 
-# Sabit server ID — бот'un ilk bulduğu server используется, panelden можно изменить
+# Sabit сервер ID — bot'un ilk bulduğu сервер ispolzuetsya, panelden mümkün izmenit
 MAIN_GUILD_ID = os.getenv('MAIN_GUILD_ID', '1421244140359909513')
 
-# Role правоleri (от низкого к высокому)
+# Роли администратор (den nizkogo e visokomu)
 ROLES = {
     'uye':   0,
     'mod':   1,
@@ -146,12 +146,12 @@ ROLES = {
     'owner': 3
 }
 
-# Только владелец фиксирован user olarak kalır
+# Только sahip fiksirovan user как kполучает
 USERS = {
     'owner': {'password': '123', 'role': 'owner'},
 }
 
-# Discord role ID → panel role — data/role_map.json
+# Discord роли ID → panel роли — data/role_map.json
 DISCORD_ROLE_MAP = {}
 
 def _load_role_map():
@@ -174,7 +174,7 @@ def _save_role_map():
 _load_role_map()
 
 def _get_role_from_discord(discord_id: str) -> str:
-    """Определить роль в панели по Discord-ролям и правам"""
+    """Opredelit роль в paneli по Discord-ролям ve администрации"""
     if not bot_instance:
         return 'uye'
     try:
@@ -188,7 +188,7 @@ def _get_role_from_discord(discord_id: str) -> str:
         if not member:
             return 'uye'
 
-        # 1. Ручной маппинг из role_map.json
+        # 1. Rucnoy eşleme den role_map.json
         best_mapped = 'uye'
         for discord_role in member.roles:
             mapped = DISCORD_ROLE_MAP.get(str(discord_role.id))
@@ -201,7 +201,7 @@ def _get_role_from_discord(discord_id: str) -> str:
         if best_mapped != 'uye':
             return best_mapped
 
-        # 2. Автоматически по Discord-правам
+        # 2. Автоматически как по Discord-администрации
         perms = member.guild_permissions
         if perms.administrator:
             return 'admin'
@@ -219,7 +219,7 @@ def login_required(f):
     def decorated_function(*args, **kwargs):
         if 'logged_in' not in session:
             return redirect(url_for('login'))
-        # Her 5 minutesda bir Discord rolelerini canlı güncelle (owner hariç)
+        # Каждый 5 minutesda bir Discord роли canlı обновить (owner hariç)
         discord_id = session.get('discord_id')
         if discord_id and session.get('role') != 'owner':
             import time as _t
@@ -228,7 +228,7 @@ def login_required(f):
                 live_role = _get_role_from_discord(discord_id)
                 session['role'] = live_role
                 session['_role_checked'] = _t.time()
-                # members.json'u da güncelle
+                # members.json'u da обновить
                 members_file = 'data/members.json'
                 if os.path.exists(members_file):
                     try:
@@ -248,9 +248,9 @@ def role_required(min_role):
         @wraps(f)
         def decorated_function(*args, **kwargs):
             if 'role' not in session:
-                return jsonify({'error': 'Не авторизован'}), 403
+                return jsonify({'error': 'Не автоматически'}), 403
             if ROLES.get(session['role'], -1) < ROLES.get(min_role, 999):
-                return jsonify({'error': 'Нет доступа'}), 403
+                return jsonify({'error': 'Yok erişimi'}), 403
             return f(*args, **kwargs)
         return decorated_function
     return decorator
@@ -278,7 +278,7 @@ def member_apply_page():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    # Токен ile otomatik вход — sadece localhost'tan
+    # Token с автоматически вход — только localhost'tan
     token = request.args.get('token') or request.form.get('token')
     if token and request.remote_addr in ('127.0.0.1', '::1'):
         tokens_file = 'data/tokens.json'
@@ -298,7 +298,7 @@ def login():
         username = request.form.get('username')
         password = request.form.get('password')
 
-        # Только владелец фиксирован user
+        # Только sahip fiksirovan user
         if username in USERS and USERS[username]['password'] == password:
             session.permanent = True
             session['logged_in'] = True
@@ -308,14 +308,14 @@ def login():
             _log_login(username, 'owner', None, None)
             return redirect(url_for('index'))
 
-        # Участник входi (По Discord ID) — role Discord'dan определяется автоматически
+        # Участник вход (По Discord ID) — роли Discord'dan opredelyaetsya автоматически как
         members_file = 'data/members.json'
         if os.path.exists(members_file):
             with open(members_file, 'r', encoding='utf-8') as f:
                 members = json.load(f)
             if username in members and members[username].get('password') == password:
                 discord_id = username
-                # members.json'da owner varsa Discord kontroleü yapma — roleü koru
+                # members.json'da owner varsa Discord контроль yapma — роль koru
                 stored_role = members[discord_id].get('role', 'uye')
                 if stored_role == 'owner':
                     live_role = 'owner'
@@ -338,22 +338,22 @@ def login():
                 )
                 return redirect(url_for('index'))
 
-        return render_template('login.html', error='Ошибкаlı user adı veya паrole!')
+        return render_template('login.html', error='Неверное имя пользователя или пароль!')
     return render_template('login.html')
 
-# Geçici doğrulama kodları {discord_id: {code, data}}
+# Geçici проверка kodları {discord_id: {code, data}}
 PENDING_VERIFICATIONS = {}
 
-# 2FA baddyen oturumlar {session_token: {username, role, expires}}
+# 2FA baddyen oturumlar {session_token: {username, роли, expires}}
 PENDING_2FA = {}
 
-def _require_2fa(username, role):
-    """2FA kodu создать ve DM отправить, token döndür"""
+def _require_2fa(username, роли):
+    """2FA kodu создать ve DM отправить, token вернуть"""
     import secrets
     token = secrets.token_hex(16)
     code = ''.join([str(random.randint(0, 9)) for _ in range(6)])
     expires = datetime.utcnow().timestamp() + 300  # 5 minutes
-    PENDING_2FA[token] = {'username': username, 'role': role, 'code': code, 'expires': expires}
+    PENDING_2FA[token] = {'username': username, 'role': роли, 'code': code, 'expires': expires}
 
     # Discord DM отправить
     if bot_instance:
@@ -372,8 +372,8 @@ def _require_2fa(username, role):
                 try:
                     user = await bot_instance.fetch_user(int(discord_id))
                     embed = discord.Embed(
-                        title='🔐 Панель Вход Doğrulaması',
-                        description=f'Doğrulama kodun: **`{code}`**\n\nBu kod 5 minutes geçerlidir.\nEğer sen вход yapmadıysan bu messageı dikkate alma.',
+                        title='🔐 Panel Вход Проверка',
+                        description=f'Проверка kodun: **`{code}`**\n\nBu kod 5 minutes geçerlidir.\nEğer sen вход yapmadıysan bu сообщение dikkate alma.',
                         color=0xDC143C
                     )
                     await user.send(embed=embed)
@@ -391,14 +391,14 @@ def register():
         password   = request.form.get('password', '').strip()
         password2  = request.form.get('password2', '').strip()
 
-        # ADIM 2: Kod doğrulama
+        # ADIM 2: Kod проверка
         if step == '2':
             code = request.form.get('code', '').strip()
             if discord_id not in PENDING_VERIFICATIONS:
-                return render_template('register.html', error='Doğrulama süresi doldu, tekrar dene.', step=1)
+                return render_template('register.html', error='Проверка длительность doldu, tekrar dene.', step=1)
             pv = PENDING_VERIFICATIONS[discord_id]
             if pv['code'] != code:
-                return render_template('register.html', error='Неверный код!', step=2,
+                return render_template('register.html', error='Неверный kod!', step=2,
                                        discord_id=discord_id, password=pv['password'])
             # Сохранить
             member_info = pv['member_info']
@@ -408,7 +408,7 @@ def register():
             if os.path.exists(members_file):
                 with open(members_file, 'r', encoding='utf-8') as f:
                     members = json.load(f)
-            # Discord'dan canlı role al
+            # Discord'dan canlı роли al
             live_role = _get_role_from_discord(discord_id)
             members[discord_id] = {
                 'password': pv['password'],
@@ -423,29 +423,29 @@ def register():
             del PENDING_VERIFICATIONS[discord_id]
             return redirect(url_for('login') + '?success=1')
 
-        # ADIM 1: Form doğrulama
+        # ADIM 1: Form проверка
         if not discord_id or not password:
-            return render_template('register.html', error='Заполните все поля!', step=1)
+            return render_template('register.html', error='Zapolnite все polya!', step=1)
         if not discord_id.isdigit() or not (17 <= len(discord_id) <= 19):
             return render_template('register.html', error='Неверный Discord ID!', step=1)
         if password != password2:
-            return render_template('register.html', error='Пароли не совпадают!', step=1)
+            return render_template('register.html', error='Paroller не sovpadayut!', step=1)
         if len(password) < 6:
-            return render_template('register.html', error='Паrole en az 6 karakter olmalı!', step=1)
+            return render_template('register.html', error='Parola en az 6 karakter olmalı!', step=1)
 
         if not bot_instance:
-            return render_template('register.html', error='Бот сейчас офлайн, попробуйте позже.', step=1)
+            return render_template('register.html', error='Bot şimdi oflayn, poprobuyte после.', step=1)
 
-        # Önce cache'den ara, bulamazsa fetch_member ile Discord API'den çek
+        # До cache'den ara, bulamazsa fetch_member с Discord API'den тянуть
         member_info = None
 
         async def find_member():
-            # Önce tüm serverlarda cache'den ara
+            # До все сервер cache'den ara
             for guild in bot_instance.guilds:
                 m = guild.get_member(int(discord_id))
                 if m:
                     return {'display_name': m.display_name, 'name': str(m), 'avatar': str(m.display_avatar.url)}
-            # Cache'de yoksa fetch_member ile API'den çek (her server için)
+            # Cache'de yoksa fetch_member с API'den тянуть (каждый сервер для)
             for guild in bot_instance.guilds:
                 try:
                     m = await guild.fetch_member(int(discord_id))
@@ -453,7 +453,7 @@ def register():
                         return {'display_name': m.display_name, 'name': str(m), 'avatar': str(m.display_avatar.url)}
                 except Exception:
                     continue
-            # Hiçbir serverda bulunamazsa fetch_user ile Discord usersını al
+            # Hiçbir на сервере найден fetch_user с Discord usersını al
             try:
                 user = await bot_instance.fetch_user(int(discord_id))
                 if user:
@@ -466,16 +466,16 @@ def register():
         member_info = asyncio.run_coroutine_threadsafe(find_member(), bot_instance.loop).result(timeout=15)
 
         if not member_info:
-            return render_template('register.html', error='Bu Discord ID bulunamadı! Discord ID\'nin doğru olduğundan emin ol.', step=1)
+            return render_template('register.html', error='Bu Discord ID не найдено! Discord ID\'nin верно olduğundan emin ol.', step=1)
 
         members_file = 'data/members.json'
         if os.path.exists(members_file):
             with open(members_file, 'r', encoding='utf-8') as f:
                 members = json.load(f)
             if discord_id in members:
-                return render_template('register.html', error='Bu Discord ID zaten регистрацияlı!', step=1)
+                return render_template('register.html', error='Bu Discord ID zaten запись!', step=1)
 
-        # DM ile doğrulama kodu отправить
+        # DM с проверка kodu отправить
         code = ''.join(random.choices(string.digits, k=6))
         PENDING_VERIFICATIONS[discord_id] = {'code': code, 'password': password, 'member_info': member_info}
 
@@ -483,35 +483,35 @@ def register():
             try:
                 user = await bot_instance.fetch_user(int(discord_id))
                 e = discord.Embed(
-                    title="🔐  Aether Панель — Регистрация Doğrulaması",
+                    title="🔐  Aether Panel — Запись Проверка",
                     color=0xc8922a,
                     timestamp=datetime.utcnow()
                 )
                 e.description = (
-                    "```ansi\n\u001b[1;33m✦ KİMLİK DOĞRULAMA GEREKLİ ✦\u001b[0m\n```\n"
+                    "```ansi\n\u001b[1;33m✦ КТО ПРОВЕРКА GEREKLİ ✦\u001b[0m\n```\n"
                     "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
                     f"Merhaba **{member_info['display_name']}**! 👋\n\n"
-                    "**Aether Панель**'e регистрация olmak için aşağıdaki\n"
-                    "doğrulama kodunu регистрация sayfasına gir:\n\n"
+                    "**Aether Panel**'e запись olmak для aşağıdaki\n"
+                    "проверка kodunu запись sayfasına gir:\n\n"
                     f"```fix\n{code}\n```\n\n"
                     "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
                 )
                 e.add_field(name="⏱️ Geçerlilik", value="```10 minutes```", inline=True)
-                e.add_field(name="🔒 Güvenlik", value="```Tek kullanımlık```", inline=True)
+                e.add_field(name="🔒 Безопасность", value="```Tek использовать```", inline=True)
                 e.add_field(
                     name="⚠️ Warning",
-                    value="*Eğer sen регистрация olmadıysan bu messageı dikkate alma ve kimseyle paylaşma.*",
+                    value="*Если sen запись olmadıysan bu сообщение dikkate alma ve кто paylaşma.*",
                     inline=False
                 )
-                e.set_footer(text="Aether Панель • Güvenli Регистрация Sistemi")
+                e.set_footer(text="Aether Panel • Доверие Запись Система")
                 await user.send(embed=e)
             except Exception as ex:
-                print(f"DM отправитьilemedi: {ex}")
+                print(f"DM отправл: {ex}")
 
         asyncio.run_coroutine_threadsafe(send_dm(), bot_instance.loop)
 
         return render_template('register.html', step=2, discord_id=discord_id, password=password,
-                               info=f'{member_info["display_name"]} adına Discord DM ile 6 haneli kod отправитьildi.')
+                               info=f'{member_info["display_name"]} adına Discord DM с 6 haneli kod отправлено.')
 
     return render_template('register.html', step=1)
 
@@ -545,7 +545,7 @@ def two_factor():
     pending = PENDING_2FA[token]
     if datetime.utcnow().timestamp() > pending['expires']:
         del PENDING_2FA[token]
-        return render_template('login.html', error='Doğrulama süresi doldu, tekrar вход yap.')
+        return render_template('login.html', error='Проверка длительность doldu, tekrar вход yap.')
 
     if request.method == 'POST':
         code = request.form.get('code', '').strip()
@@ -557,7 +557,7 @@ def two_factor():
             del PENDING_2FA[token]
             _log_panel_action('2FA_LOGIN', pending['username'])
             return redirect(url_for('index'))
-        return render_template('login.html', two_fa=True, token=token, error='Неверный код!')
+        return render_template('login.html', two_fa=True, token=token, error='Неверный kod!')
 
     return render_template('login.html', two_fa=True, token=token)
 
@@ -570,7 +570,7 @@ def logout():
 @login_required
 def api_add_member():
     if ROLES.get(session.get('role'), -1) < ROLES.get('admin', 999):
-        return jsonify({'error': 'Нет доступа'}), 403
+        return jsonify({'error': 'Yok erişimi'}), 403
     data = request.get_json()
     discord_id   = str(data.get('discord_id', '')).strip()
     password     = data.get('password', '').strip()
@@ -579,7 +579,7 @@ def api_add_member():
     avatar       = data.get('avatar', '')
 
     if not discord_id or not password or len(password) < 6:
-        return jsonify({'error': 'Неверные данные'})
+        return jsonify({'error': 'Неверный veriler'})
 
     members_file = 'data/members.json'
     os.makedirs('data', exist_ok=True)
@@ -589,7 +589,7 @@ def api_add_member():
             members = json.load(f)
 
     if discord_id in members:
-        return jsonify({'error': 'Bu ID zaten регистрацияlı!'})
+        return jsonify({'error': 'Bu ID zaten запись!'})
 
     members[discord_id] = {
         'password': password,
@@ -654,13 +654,13 @@ def api_announcements():
 @login_required
 def api_send_notification():
     if ROLES.get(session.get('role'), -1) < ROLES.get('mod', 999):
-        return jsonify({'error': 'Нет доступа'}), 403
+        return jsonify({'error': 'Yok erişimi'}), 403
     data = request.get_json()
     discord_id = str(data.get('discord_id', '')).strip()
     message = data.get('message', '').strip()
     title = data.get('title', 'Уведомление').strip()
     if not discord_id or not message:
-        return jsonify({'error': 'Недостаточно данных'})
+        return jsonify({'error': 'Yetersiz verilerin'})
 
     notif_file = 'data/notifications.json'
     os.makedirs('data', exist_ok=True)
@@ -690,11 +690,11 @@ def api_send_notification():
                     description=message,
                     color=0xdc143c
                 )
-                embed.set_footer(text="Aether Панель • Уведомление", icon_url=bot_instance.user.display_avatar.url)
+                embed.set_footer(text="Aether Panel • Уведомление", icon_url=bot_instance.user.display_avatar.url)
                 embed.timestamp = datetime.utcnow()
                 await user.send(embed=embed)
             except Exception as e:
-                print(f"DM отправитьilemedi: {e}")
+                print(f"DM отправл: {e}")
         asyncio.run_coroutine_threadsafe(send_dm(), bot_instance.loop)
 
     return jsonify({'success': True})
@@ -703,12 +703,12 @@ def api_send_notification():
 @login_required
 def api_send_announcement():
     if ROLES.get(session.get('role'), -1) < ROLES.get('mod', 999):
-        return jsonify({'error': 'Нет доступа'}), 403
+        return jsonify({'error': 'Yok erişimi'}), 403
     data = request.get_json()
     title = data.get('title', '').strip()
     message = data.get('message', '').strip()
     if not title or not message:
-        return jsonify({'error': 'Недостаточно данных'})
+        return jsonify({'error': 'Yetersiz verilerin'})
 
     ann_file = 'data/announcements.json'
     os.makedirs('data', exist_ok=True)
@@ -773,7 +773,7 @@ def api_login_log():
     try:
         with open(f, 'r', encoding='utf-8') as fp:
             logs = json.load(fp)
-        # Owner kendi входlerini görmesin — sadece другое userları göster
+        # Owner kendi вход видеть — только diğer userları показать
         current_user = session.get('username', '')
         filtered = [l for l in logs if not (l.get('username') == current_user and l.get('role') == 'owner')]
         return jsonify(list(reversed(filtered)))
@@ -784,7 +784,7 @@ def api_login_log():
 @login_required
 def api_stats():
     if not bot_instance:
-        return jsonify({'error': 'Бот не в сети'})
+        return jsonify({'error': 'Бот Discord сейчас не в сети или не подключен.'})
     
     guilds = len(bot_instance.guilds)
     users = sum(g.member_count or 0 for g in bot_instance.guilds)
@@ -813,7 +813,7 @@ def api_guilds():
         
         return jsonify(guilds)
     except Exception as e:
-        print(f"Сервер listesi Ошибкаsı: {e}")
+        print(f"Сервер listesi Ошибки: {e}")
         return jsonify([])
 
 @app.route('/api/leave-guild', methods=['POST'])
@@ -821,15 +821,15 @@ def api_guilds():
 @role_required('owner')
 def api_leave_guild():
     if not bot_instance:
-        return jsonify({'error': 'Бот не в сети'}), 503
+        return jsonify({'error': 'Бот Discord сейчас не в сети или не подключен.'}), 503
     data = request.get_json() or {}
     guild_id = data.get('guild_id')
     if not guild_id:
-        return jsonify({'error': 'Необходим guild_id'}), 400
+        return jsonify({'error': 'Neobhodim guild_id'}), 400
     try:
         guild = discord.utils.get(bot_instance.guilds, id=int(guild_id))
         if not guild:
-            return jsonify({'error': 'Сервер bulunamadı'}), 404
+            return jsonify({'error': 'Сервер не найдено'}), 404
         import asyncio
         asyncio.run_coroutine_threadsafe(guild.leave(), bot_instance.loop).result(timeout=10)
         return jsonify({'ok': True, 'name': guild.name})
@@ -841,16 +841,16 @@ def api_leave_guild():
 @role_required('mod')
 def api_set_nick(guild_id, member_id):
     if not bot_instance:
-        return jsonify({'error': 'Бот не в сети'}), 503
+        return jsonify({'error': 'Бот Discord сейчас не в сети или не подключен.'}), 503
     data = request.get_json() or {}
     nick = data.get('nick', '')
     try:
         guild = discord.utils.get(bot_instance.guilds, id=int(guild_id))
         if not guild:
-            return jsonify({'error': 'Сервер bulunamadı'}), 404
+            return jsonify({'error': 'Сервер не найдено'}), 404
         member = guild.get_member(int(member_id))
         if not member:
-            return jsonify({'error': 'Участник bulunamadı'}), 404
+            return jsonify({'error': 'Участник не найдено'}), 404
         import asyncio
         asyncio.run_coroutine_threadsafe(
             member.edit(nick=nick or None),
@@ -873,7 +873,7 @@ def api_guild_members(guild_id):
         
         members = []
         for m in list(guild.members)[:500]:
-            # Discord ID'den hesap создатьma датаi hesapla
+            # Discord ID'den hesap создан дата hesapla
             created_at = discord.utils.snowflake_time(m.id)
             members.append({
                 'id': str(m.id),
@@ -883,7 +883,7 @@ def api_guild_members(guild_id):
                 'avatar': str(m.display_avatar.url),
                 'joined_at': m.joined_at.isoformat() if m.joined_at else None,
                 'created_at': created_at.isoformat(),
-                'roles': [{'name': r.name, 'color': str(r.color)} for r in m.roles[1:]],
+                'role': [{'name': r.name, 'color': str(r.color)} for r in m.roles[1:]],
                 'bot': m.bot,
                 'status': str(m.status) if hasattr(m, 'status') else 'offline',
                 'nick': m.nick,
@@ -892,7 +892,7 @@ def api_guild_members(guild_id):
         
         return jsonify(members)
     except Exception as e:
-        print(f"Участник listesi Ошибкаsı: {e}")
+        print(f"Участник listesi Ошибки: {e}")
         return jsonify([])
 
 @app.route('/api/logs')
@@ -937,7 +937,7 @@ def api_logs():
                         'timestamp': case.get('timestamp', ''),
                     })
 
-        # Discord audit cache'den oku (bot 30sn'de bir günceller — hızlı)
+        # Discord audit cache'den oku (bot 30sn'de bir обновл — быстрый)
         cache_file = 'data/discord_audit_cache.json'
         if os.path.exists(cache_file):
             try:
@@ -955,12 +955,12 @@ def api_logs():
                         if ev_copy['timestamp'] not in existing_ts:
                             all_events.append(ev_copy)
             except Exception as _e:
-                print(f'[LOGS] Cache okuma Ошибкаsı: {_e}')
+                print(f'[LOGS] Cache okuma Ошибки: {_e}')
 
         all_events.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
         return jsonify(all_events[:1000])
     except Exception as e:
-        print(f"Лог Ошибкаsı: {e}")
+        print(f"Log Ошибки: {e}")
         return jsonify([])
 
 @app.route('/api/warnings')
@@ -986,7 +986,7 @@ def api_warnings():
                             all_warnings.append({
                                 'guild_id': guild_id,
                                 'user_id': user_id,
-                                'reason': warn.get('reason', 'Не указана'),
+                                'reason': warn.get('reason', 'Не belirtildi'),
                                 'moderator': warn.get('moderator', warn.get('mod', '?')),
                                 'timestamp': warn.get('timestamp', '')
                             })
@@ -994,7 +994,7 @@ def api_warnings():
         all_warnings.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
         return jsonify(all_warnings[:200])
     except Exception as e:
-        print(f"Warning Ошибкаsı: {e}")
+        print(f"Warning Ошибки: {e}")
         return jsonify([])
 
 @app.route('/api/user/<user_id>')
@@ -1002,7 +1002,7 @@ def api_warnings():
 @role_required('mod')
 def api_user_info(user_id):
     if not bot_instance:
-        return jsonify({'error': 'Бот не в сети'})
+        return jsonify({'error': 'Бот Discord сейчас не в сети или не подключен.'})
     
     try:
         future = asyncio.run_coroutine_threadsafe(
@@ -1018,24 +1018,24 @@ def api_user_info(user_id):
             'bot': user.bot
         })
     except:
-        return jsonify({'error': 'Пользователь bulunamadı'})
+        return jsonify({'error': 'Пользователь не найден'})
 
 @app.route('/api/command/ban', methods=['POST'])
 @login_required
 @role_required('admin')
 def api_ban():
     if not bot_instance:
-        return jsonify({'error': 'Бот не в сети'})
+        return jsonify({'error': 'Бот Discord сейчас не в сети или не подключен.'})
     
     data = request.json
     guild_id = int(data.get('guild_id'))
     user_id = int(data.get('user_id'))
-    reason = data.get('reason', 'Бан через веб-panel')
+    reason = data.get('reason', 'Ban с web-panel')
     
     try:
         guild = discord.utils.get(bot_instance.guilds, id=guild_id)
         if not guild:
-            return jsonify({'error': 'Сервер bulunamadı'})
+            return jsonify({'error': 'Сервер не найдено'})
 
         async def do():
             user = await bot_instance.fetch_user(user_id)
@@ -1052,20 +1052,20 @@ def api_ban():
 @role_required('admin')
 def api_kick():
     if not bot_instance:
-        return jsonify({'error': 'Бот не в сети'})
+        return jsonify({'error': 'Бот Discord сейчас не в сети или не подключен.'})
     
     data = request.json
     guild_id = int(data.get('guild_id'))
     user_id = int(data.get('user_id'))
-    reason = data.get('reason', 'Кик через веб-panel')
+    reason = data.get('reason', 'Kick с web-panel')
     
     try:
         guild = discord.utils.get(bot_instance.guilds, id=guild_id)
         if not guild:
-            return jsonify({'error': 'Сервер bulunamadı'})
+            return jsonify({'error': 'Сервер не найдено'})
         member = guild.get_member(user_id)
         if not member:
-            return jsonify({'error': 'Участник bulunamadı'})
+            return jsonify({'error': 'Участник не найдено'})
 
         async def do():
             await member.kick(reason=f"{reason} (by {session.get('username')})")
@@ -1083,7 +1083,7 @@ def api_warn():
     data = request.json
     guild_id = data.get('guild_id')
     user_id = data.get('user_id')
-    reason = data.get('reason', 'Warning через веб-panel')
+    reason = data.get('reason', 'Warning с web-panel')
     
     warns_file = 'data/warnings.json'
     os.makedirs('data', exist_ok=True)
@@ -1137,14 +1137,14 @@ def execute_command_page():
 @role_required('admin')
 def api_execute_command():
     if not bot_instance:
-        return jsonify({'error': 'Бот не в сети'})
+        return jsonify({'error': 'Бот Discord сейчас не в сети или не подключен.'})
     
     data = request.json
     command = data.get('command')
     guild_id = data.get('guild_id')
     
     try:
-        # Серверyu найти
+        # Сервер bul
         guild = None
         for g in bot_instance.guilds:
             if str(g.id) == str(guild_id):
@@ -1152,31 +1152,31 @@ def api_execute_command():
                 break
         
         if not guild:
-            return jsonify({'error': 'Сервер bulunamadı'})
+            return jsonify({'error': 'Сервер не найдено'})
         
         async def execute():
             if command == 'ban':
                 user = await bot_instance.fetch_user(int(data.get('user_id')))
                 if not guild.me.guild_permissions.ban_members:
-                    raise Exception('Ботun Бан правоsi yok')
-                await guild.ban(user, reason=data.get('reason', 'Бан через веб-panel'))
+                    raise Exception('Botun Ban администратор yok')
+                await guild.ban(user, reason=data.get('reason', 'Ban с web-panel'))
             elif command == 'kick':
                 member = guild.get_member(int(data.get('user_id')))
                 if not member:
-                    raise Exception('Участник serverda bulunamadı')
+                    raise Exception('Участник на сервере не найдено')
                 if not guild.me.guild_permissions.kick_members:
-                    raise Exception('Ботun Кик правоsi yok')
+                    raise Exception('Botun Kick администратор yok')
                 if member.top_role >= guild.me.top_role:
-                    raise Exception('Hedef usernın roleü ботtan yüksek')
-                await member.kick(reason=data.get('reason', 'Кик через веб-panel'))
+                    raise Exception('Hedef usernın роль bottan высокий')
+                await member.kick(reason=data.get('reason', 'Kick с web-panel'))
             elif command == 'timeout':
                 member = guild.get_member(int(data.get('user_id')))
                 if not member:
-                    raise Exception('Участник serverda bulunamadı')
+                    raise Exception('Участник на сервере не найдено')
                 if not guild.me.guild_permissions.moderate_members:
-                    raise Exception('Ботun Мут (Moderate Members) правоsi yok')
+                    raise Exception('Botun Mute (Moderate Members) администратор yok')
                 if member.top_role >= guild.me.top_role:
-                    raise Exception('Hedef usernın roleü ботtan yüksek')
+                    raise Exception('Hedef usernın роль bottan высокий')
                 duration = int(data.get('duration', 60))
                 from datetime import timedelta as _td
                 await member.timeout(discord.utils.utcnow() + _td(minutes=duration), reason=data.get('reason'))
@@ -1194,7 +1194,7 @@ def api_execute_command():
                 if uid_str not in warns[gid_str]:
                     warns[gid_str][uid_str] = []
                 warns[gid_str][uid_str].append({
-                    'reason': data.get('reason', 'Warning через веб-panel'),
+                    'reason': data.get('reason', 'Warning с web-panel'),
                     'moderator': session.get('username'),
                     'timestamp': datetime.utcnow().isoformat()
                 })
@@ -1211,11 +1211,11 @@ def api_execute_command():
                         dm_msg = dm_cfg.get('message')
                     if dm_msg:
                         dm_msg = dm_msg.replace('{user}', member.display_name)
-                        dm_msg = dm_msg.replace('{reason}', data.get('reason', 'Не указана'))
+                        dm_msg = dm_msg.replace('{reason}', data.get('reason', 'Не belirtildi'))
                         dm_msg = dm_msg.replace('{mod}', session.get('username', '?'))
-                        dm_msg = dm_msg.replace('{server}', guild.name)
+                        dm_msg = dm_msg.replace('{сервер}', guild.name)
                         try:
-                            e_dm = discord.Embed(title='⚠️ Вы получили предупреждение', description=dm_msg, color=0xc8922a)
+                            e_dm = discord.Embed(title='⚠️ Siz aldınız предупреждение', description=dm_msg, color=0xc8922a)
                             e_dm.set_footer(text=guild.name)
                             await member.send(embed=e_dm)
                         except Exception:
@@ -1223,12 +1223,12 @@ def api_execute_command():
             elif command == 'jail':
                 member = guild.get_member(int(data.get('user_id')))
                 if not member:
-                    raise Exception('Участник serverda bulunamadı')
-                # Jail roleünü найти
+                    raise Exception('Участник на сервере не найдено')
+                # Jail роли bul
                 jail_role = discord.utils.get(guild.roles, name='Jail')
                 if not jail_role:
-                    raise Exception('Jail roleü bulunamadı. Önce "Jail Kur" командаunu çalıştır.')
-                # Mevcut roleleri сохранить, jail roleü ver
+                    raise Exception('Jail роль не найдено. До "Jail Kur" команду çalıştır.')
+                # Текущий роли сохранить, jail роль ver
                 jail_data_file = f'data/jail_{guild.id}.json'
                 jail_data = {}
                 if os.path.exists(jail_data_file):
@@ -1236,27 +1236,27 @@ def api_execute_command():
                         jail_data = json.load(jf)
                 uid_str = str(member.id)
                 jail_data[uid_str] = {
-                    'roles': [str(r.id) for r in member.roles[1:]],
-                    'reason': data.get('reason', 'Джейл через веб-panel'),
+                    'role': [str(r.id) for r in member.roles[1:]],
+                    'reason': data.get('reason', 'Djeyl с web-panel'),
                     'mod': session.get('username'),
                     'timestamp': datetime.utcnow().isoformat()
                 }
                 with open(jail_data_file, 'w', encoding='utf-8') as jf:
                     json.dump(jail_data, jf, indent=2, ensure_ascii=False)
-                # Tüm roleleri al, jail roleü ver
+                # Все роли al, jail роль ver
                 roles_to_remove = [r for r in member.roles[1:] if r != jail_role and not r.managed]
                 await member.remove_roles(*roles_to_remove, reason='Jail')
-                await member.add_roles(jail_role, reason=data.get('reason', 'Джейл через веб-panel'))
+                await member.add_roles(jail_role, reason=data.get('reason', 'Djeyl с web-panel'))
                 # DM отправить
                 try:
-                    e_dm = discord.Embed(title='🔒 Jail Наказаниеsı', description=f'**{guild.name}** serversunda jail cezası aldınız.\n**Причина:** {data.get("reason", "Не указана")}', color=0xe74c3c)
+                    e_dm = discord.Embed(title='🔒 Jail Наказание', description=f'**{guild.name}** сервер jail наказание aldınız.\n**Причина:** {data.get("reason", "Не belirtildi")}', color=0xe74c3c)
                     await member.send(embed=e_dm)
                 except Exception:
                     pass
             elif command == 'unjail':
                 member = guild.get_member(int(data.get('user_id')))
                 if not member:
-                    raise Exception('Участник serverda bulunamadı')
+                    raise Exception('Участник на сервере не найдено')
                 jail_role = discord.utils.get(guild.roles, name='Jail')
                 jail_data_file = f'data/jail_{guild.id}.json'
                 if os.path.exists(jail_data_file):
@@ -1264,7 +1264,7 @@ def api_execute_command():
                         jail_data = json.load(jf)
                     uid_str = str(member.id)
                     if uid_str in jail_data:
-                        old_role_ids = jail_data[uid_str].get('roles', [])
+                        old_role_ids = jail_data[uid_str].get('role', [])
                         roles_to_restore = [guild.get_role(int(rid)) for rid in old_role_ids if guild.get_role(int(rid))]
                         roles_to_restore = [r for r in roles_to_restore if r and not r.managed]
                         if jail_role:
@@ -1278,14 +1278,14 @@ def api_execute_command():
             elif command == 'untimeout':
                 member = guild.get_member(int(data.get('user_id')))
                 if not member:
-                    raise Exception('Участник serverda bulunamadı')
-                await member.timeout(None, reason='Размут через веб-panel')
+                    raise Exception('Участник на сервере не найдено')
+                await member.timeout(None, reason='Razmut с web-panel')
             elif command == 'unban':
                 uid = data.get('user_id')
                 if not uid:
                     raise Exception('Пользователь ID gerekli')
                 user = await bot_instance.fetch_user(int(uid))
-                await guild.unban(user, reason=data.get('reason', 'Разбан через веб-panel'))
+                await guild.unban(user, reason=data.get('reason', 'Razban с web-panel'))
             elif command == 'lock':
                 ch = guild.get_channel(int(data.get('channel_id', 0))) or guild.text_channels[0]
                 await ch.set_permissions(guild.default_role, send_messages=False)
@@ -1309,31 +1309,31 @@ def api_execute_command():
                 if not ch:
                     ch = guild.text_channels[0]
                 from cogs.embed_utils import _divider
-                e = discord.Embed(title="🎫  DESTEK SİSTEMİ", color=0x5865F2)
+                e = discord.Embed(title="🎫  ПОДДЕРЖКА СИСТЕМА", color=0x5865F2)
                 e.description = (
-                    f"```ansi\n\u001b[1;34m✦ Aether DESTEK SİSTEMİ ✦\u001b[0m\n```\n"
+                    f"```ansi\n\u001b[1;34m✦ Aether ПОДДЕРЖКА СИСТЕМА ✦\u001b[0m\n```\n"
                     f"{_divider()}\n\n"
-                    "Bir sorunla mı karşılaştın? Нажмите кнопку ниже!\n\n"
+                    "Bir sorunla mı приветствие? Клик butona aşağıda!\n\n"
                     f"{_divider()}"
                 )
-                e.set_footer(text=f"{guild.name} • Destek Sistemi", icon_url=guild.icon.url if guild.icon else None)
+                e.set_footer(text=f"{guild.name} • Поддержка Система", icon_url=guild.icon.url if guild.icon else None)
                 await ch.send(embed=e, view=TicketView())
-            elif command in ('yazitura', 'zar', 'rastgele'):
-                pass  # Eğlence командаları Discord'dan çalışır, panel sadece tetikler
-                # Jail kategorisi, channelı ve roleü создать
-                jail_cat = discord.utils.get(guild.categories, name='Наказание Odası')
+            elif command in ('текст', 'zar', 'rastgele'):
+                pass  # Eğlence команды Discord'dan çalışır, panel только tetikler
+                # Jail kategorisi, канал ve роль создать
+                jail_cat = discord.utils.get(guild.categories, name='Наказание Комната')
                 if not jail_cat:
-                    jail_cat = await guild.create_category('Наказание Odası')
+                    jail_cat = await guild.create_category('Наказание Комната')
                 jail_role = discord.utils.get(guild.roles, name='Jail')
                 if not jail_role:
                     jail_role = await guild.create_role(name='Jail', color=discord.Color(0x2c2c2c))
-                # Tüm channellardan Jail roleünü engelle
+                # Все channellardan Jail роли engelle
                 for ch in guild.channels:
                     try:
                         await ch.set_permissions(jail_role, send_messages=False, read_messages=False)
                     except Exception:
                         pass
-                # Jail channelı создать
+                # Jail канал создать
                 jail_ch = discord.utils.get(guild.text_channels, name='jail')
                 if not jail_ch:
                     overwrites = {
@@ -1346,40 +1346,40 @@ def api_execute_command():
             elif command == 'clear':
                 channel = guild.get_channel(int(data.get('channel_id')))
                 if not channel:
-                    raise Exception('Канал bulunamadı')
+                    raise Exception('Канал не найдено')
                 if not guild.me.guild_permissions.manage_messages:
-                    raise Exception('Ботun Сообщение Управлениеi правоsi yok')
+                    raise Exception('Botun Сообщение Управление администратор yok')
                 await channel.purge(limit=int(data.get('amount', 10)))
             elif command == 'role':
                 member = guild.get_member(int(data.get('user_id')))
                 role = guild.get_role(int(data.get('role_id')))
                 if not member:
-                    raise Exception('Участник bulunamadı')
+                    raise Exception('Участник не найдено')
                 if not role:
-                    raise Exception('Role bulunamadı')
+                    raise Exception('Роли не найдено')
                 if not guild.me.guild_permissions.manage_roles:
-                    raise Exception('Ботun Role Управлениеi правоsi yok')
-                if role >= guild.me.top_role:
-                    raise Exception('Bu role ботun en yüksek roleünden yüksek')
+                    raise Exception('Botun Роли Управление администратор yok')
+                if роли >= guild.me.top_role:
+                    raise Exception('Bu роли botun en высокий роли высокий')
                 action = data.get('action', 'add')
                 if action == 'remove':
-                    await member.remove_roles(role)
+                    await member.remove_roles(роли)
                 else:
-                    await member.add_roles(role)
+                    await member.add_roles(роли)
         
         import asyncio
         result = asyncio.run_coroutine_threadsafe(execute(), bot_instance.loop).result(timeout=15)
         
         if result == 'setup_done':
-            return jsonify({'success': True, 'message': 'Jail sistemi kuruldu! Kategori, channel ve role создано.'})
-        return jsonify({'success': True, 'message': 'Действие başarıyla uygulandı.'})
+            return jsonify({'success': True, 'message': 'Jail система kuruldu! Kategori, channel ve роли создано.'})
+        return jsonify({'success': True, 'message': 'Действие успешно применено.'})
     except Exception as e:
-        print(f"Команда çalıştırma Ошибкаsı: {e}")
+        print(f"Команда çalıştırma Ошибки: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({'error': str(e)})
 
-@app.route('/api/guild/<guild_id>/member/<member_id>/roles')
+@app.route('/api/guild/<guild_id>/member/<member_id>/роли')
 @login_required
 @role_required('mod')
 def api_member_roles(guild_id, member_id):
@@ -1392,16 +1392,16 @@ def api_member_roles(guild_id, member_id):
         member = guild.get_member(int(member_id))
         if not member:
             return jsonify([])
-        # Участникnin sahip olduğu roleler (everyone hariç)
+        # Участник sahip olduğu роли (everyone hariç)
         member_role_ids = [str(r.id) for r in member.roles[1:]]
-        # Tüm server roleleri
+        # Все сервер роли
         all_roles = [{'id': str(r.id), 'name': r.name, 'color': str(r.color)} for r in guild.roles if r.name != '@everyone']
         all_roles.reverse()
         has_roles = [r for r in all_roles if r['id'] in member_role_ids]
         missing_roles = [r for r in all_roles if r['id'] not in member_role_ids]
         return jsonify({'has': has_roles, 'missing': missing_roles})
     except Exception as e:
-        print(f"Участник role Ошибкаsı: {e}")
+        print(f"Участник роли Ошибки: {e}")
         return jsonify([])
 
 @app.route('/api/send-message', methods=['POST'])
@@ -1409,7 +1409,7 @@ def api_member_roles(guild_id, member_id):
 @role_required('admin')
 def api_send_message():
     if not bot_instance:
-        return jsonify({'error': 'Бот не в сети'})
+        return jsonify({'error': 'Бот Discord сейчас не в сети или не подключен.'})
     
     data = request.json
     guild_id = data.get('guild_id')
@@ -1417,7 +1417,7 @@ def api_send_message():
     message = data.get('message')
     
     try:
-        # Серверyu найти
+        # Сервер bul
         guild = None
         for g in bot_instance.guilds:
             if str(g.id) == str(guild_id):
@@ -1425,24 +1425,24 @@ def api_send_message():
                 break
         
         if not guild:
-            return jsonify({'error': 'Сервер bulunamadı'})
+            return jsonify({'error': 'Сервер не найдено'})
         
-        # Каналı найти
+        # Канал bul
         channel = guild.get_channel(int(channel_id))
         
         if not channel or not isinstance(channel, discord.TextChannel):
-            return jsonify({'error': 'Канал bulunamadı veya metin channelı değil'})
+            return jsonify({'error': 'Канал не найдено или metin канал не'})
         
-        # Сообщениеı отправить - бот'un kendi event loop'unu kullan
+        # Сообщение отправить - bot'un kendi event loop'unu использовать
         async def send():
             await channel.send(message)
         
         import asyncio
         asyncio.run_coroutine_threadsafe(send(), bot_instance.loop)
         
-        return jsonify({'success': True, 'message': 'Сообщение отправитьildi'})
+        return jsonify({'success': True, 'message': 'Сообщение отправлено'})
     except Exception as e:
-        print(f"Сообщение отправитьme Ошибкаsı: {e}")
+        print(f"Сообщение отправл Ошибки: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({'error': str(e)})
@@ -1476,7 +1476,7 @@ def api_review_staff_app(app_id):
     with open(apps_file, 'r', encoding='utf-8') as f:
         data = json.load(f)
     if app_id not in data:
-        return jsonify({'error': 'Заявка bulunamadı'})
+        return jsonify({'error': 'Заявка не найдено'})
     req = request.json
     action = req.get('action')  # 'approve' or 'reject'
     note = req.get('note', '')
@@ -1494,8 +1494,8 @@ def api_review_staff_app(app_id):
                 user = await bot_instance.fetch_user(int(app_data['user_id']))
                 if action == 'approve':
                     embed = discord.Embed(
-                        title="🎉 Заявка одобрена!",
-                        description="Tebrikler! Правоli заявка incelendi ve **подтвердитьndı**.\nEn kısa sürede right_btnlerle iletişime geçilecek.",
+                        title="🎉 Заявка onaylandı!",
+                        description="Tebrikler! Администратор заявка incelendi ve **onaylandı**.\nEn краткий длительность с администрацией iletişime geçilecek.",
                         color=0x2ecc71
                     )
                     embed.add_field(name="👤 İnceleyen", value=session.get('username', '?'), inline=True)
@@ -1503,23 +1503,23 @@ def api_review_staff_app(app_id):
                     if note:
                         embed.add_field(name="💬 Not", value=note, inline=False)
                     embed.set_thumbnail(url=bot_instance.user.display_avatar.url)
-                    embed.set_footer(text="Aether Панель • Заявка Sistemi", icon_url=bot_instance.user.display_avatar.url)
+                    embed.set_footer(text="Aether Panel • Заявка Система", icon_url=bot_instance.user.display_avatar.url)
                     embed.timestamp = datetime.utcnow()
                 else:
                     embed = discord.Embed(
-                        title="❌ Заявка отклонена",
-                        description="Üzденьüz, right_btn заявка bu sefer kabul edilmedi.\nDaha sonra tekrar başvurabilirsin.",
+                        title="❌ Заявка reddedildi",
+                        description="Üzgünüz, администратор заявка bu sefer kabul edilmedi.\nDaha после tekrar başvurabilirsin.",
                         color=0xe74c3c
                     )
                     embed.add_field(name="👤 İnceleyen", value=session.get('username', '?'), inline=True)
                     embed.add_field(name="📋 Заявка ID", value=f"`{app_id}`", inline=True)
-                    embed.add_field(name="📝 Red Sebebi", value=note if note else "Не указана", inline=False)
+                    embed.add_field(name="📝 Red Причина", value=note if note else "Не belirtildi", inline=False)
                     embed.set_thumbnail(url=bot_instance.user.display_avatar.url)
-                    embed.set_footer(text="Aether Панель • Заявка Sistemi", icon_url=bot_instance.user.display_avatar.url)
+                    embed.set_footer(text="Aether Panel • Заявка Система", icon_url=bot_instance.user.display_avatar.url)
                     embed.timestamp = datetime.utcnow()
                 await user.send(embed=embed)
             except Exception as e:
-                print(f"DM отправитьilemedi: {e}")
+                print(f"DM отправл: {e}")
         asyncio.run_coroutine_threadsafe(send_dm(), bot_instance.loop)
 
     return jsonify({'success': True})
@@ -1539,19 +1539,19 @@ def api_tunnel_url():
         pass
     return jsonify({'url': None})
 
-def _save_login_token(username, role):
-    """Пользователь için kalıcı token создать/güncelle"""
+def _save_login_token(username, роли):
+    """Пользователь для постоянный token создать/обновить"""
     tokens_file = 'data/tokens.json'
     os.makedirs('data', exist_ok=True)
     tokens = {}
     if os.path.exists(tokens_file):
         with open(tokens_file, 'r', encoding='utf-8') as f:
             tokens = json.load(f)
-    # Kullanıcının mevcut tokenını bul veya yeni создать
+    # Пользователя текущий tokenını bul или новый создать
     existing = next((t for t, v in tokens.items() if v.get('username') == username), None)
     if not existing:
         existing = ''.join(random.choices(string.ascii_letters + string.digits, k=48))
-    tokens[existing] = {'username': username, 'role': role, 'created_at': datetime.utcnow().isoformat()}
+    tokens[existing] = {'username': username, 'role': роли, 'created_at': datetime.utcnow().isoformat()}
     with open(tokens_file, 'w', encoding='utf-8') as f:
         json.dump(tokens, f, indent=2, ensure_ascii=False)
     return existing
@@ -1563,27 +1563,27 @@ def set_bot_instance(bot):
 @app.route('/api/my-token')
 @login_required
 def api_my_token():
-    """Вход yapmış usernın otomatik вход tokenını döndür"""
+    """Вход yapmış usernın автоматически вход tokenını вернуть"""
     username = session.get('username')
     role = session.get('role')
-    token = _save_login_token(username, role)
+    token = _save_login_token(username, роли)
     return jsonify({'token': token})
 
 @app.route('/api/change-password', methods=['POST'])
 @login_required
 def api_change_password():
     username = session.get('username')
-    # Sadece Arthur veya owner roleündeki userlar
+    # Только Arthur или owner роли userlar
     if username != 'Arthur' and session.get('role') != 'owner':
-        return jsonify({'error': 'Нет доступа'}), 403
+        return jsonify({'error': 'Yok erişimi'}), 403
     data = request.get_json()
-    target = data.get('target', '').strip()   # hangi hesabın паrolesi değişecek
+    target = data.get('target', '').strip()   # какой hesabın parolasi değişecek
     new_pass = data.get('new_password', '').strip()
     if not target or not new_pass or len(new_pass) < 4:
-        return jsonify({'error': 'Неверные данные'})
+        return jsonify({'error': 'Неверный veriler'})
     if target in USERS:
         USERS[target]['password'] = new_pass
-        return jsonify({'success': True, 'message': f'{target} паrolesi güncellendi'})
+        return jsonify({'success': True, 'message': f'{target} parolasi обновлено'})
     # members.json'da ara
     members_file = 'data/members.json'
     if os.path.exists(members_file):
@@ -1593,8 +1593,8 @@ def api_change_password():
             members[target]['password'] = new_pass
             with open(members_file, 'w', encoding='utf-8') as f:
                 json.dump(members, f, indent=2, ensure_ascii=False)
-            return jsonify({'success': True, 'message': f'{target} паrolesi güncellendi'})
-    return jsonify({'error': 'Пользователь bulunamadı'})
+            return jsonify({'success': True, 'message': f'{target} parolasi обновлено'})
+    return jsonify({'error': 'Пользователь не найден'})
 
 # ── PUBLIC ROUTES (вход gerektirmez) ────────────────────────────────────────
 
@@ -1605,24 +1605,24 @@ def public_apply():
 @app.route('/api/public/check-member', methods=['POST'])
 def api_check_member():
     if not bot_instance:
-        # Frontend'in 503 ile kırılmaması için 200 dön.
-        # Бот hazır olana kadar userya anlaşılır bir message gösteriyoruz.
+        # Frontend'in 503 с kırılmaması для 200 dön.
+        # Bot hazır olana kadar userya anlaşılır bir message показ.
         return jsonify({
             'found': False,
-            'error': 'Бот henüz hazır değil, birkaç saniye sonra tekrar dene.'
+            'error': 'Bot пока hazır не, birkaç saniye после tekrar dene.'
         })
     data = request.json
     guild_id = str(data.get('guild_id', ''))
     user_id  = str(data.get('user_id', ''))
     if not guild_id or not user_id:
-        return jsonify({'error': 'Недостаточно параметров'}), 400
+        return jsonify({'error': 'Yetersiz parametrov'}), 400
     try:
         guild = discord.utils.get(bot_instance.guilds, id=int(guild_id))
         if not guild:
-            return jsonify({'error': 'Сервер bulunamadı'}), 404
+            return jsonify({'error': 'Сервер не найдено'}), 404
         member = guild.get_member(int(user_id))
         if not member:
-            return jsonify({'found': False, 'error': 'Bu serverda участник değilsin! Заявка yapamazsın.'})
+            return jsonify({'found': False, 'error': 'Bu на сервере участник değilsin! Заявка yapamazsın.'})
         return jsonify({
             'found': True,
             'id': str(member.id),
@@ -1647,7 +1647,7 @@ def api_public_guilds():
 @app.route('/api/public/apply', methods=['POST'])
 def api_public_apply():
     data = request.json
-    required = ['discord_id', 'discord_name', 'guild_id', 'yas', 'tecrube', 'neden', 'активенlik']
+    required = ['discord_id', 'discord_name', 'guild_id', 'yas', 'tecrube', 'почему', 'активен']
     for field in required:
         if not data.get(field):
             return jsonify({'error': f'{field} zorunlu'}), 400
@@ -1659,7 +1659,7 @@ def api_public_apply():
         with open(apps_file, 'r', encoding='utf-8') as f:
             apps = json.load(f)
 
-    # Baddyen заявка kontroleü
+    # Baddyen заявка контроль
     uid = str(data['discord_id'])
     for app_data in apps.values():
         if app_data.get('user_id') == uid and app_data.get('status') == 'pending':
@@ -1682,8 +1682,8 @@ def api_public_apply():
         'answers': {
             'yas': data['yas'],
             'tecrube': data['tecrube'],
-            'neden': data['neden'],
-            'активенlik': data['активенlik'],
+            'почему': data['почему'],
+            'активен': data['активен'],
             'ekstra': data.get('ekstra', '—')
         },
         'message_id': None,
@@ -1695,7 +1695,7 @@ def api_public_apply():
     with open(apps_file, 'w', encoding='utf-8') as f:
         json.dump(apps, f, indent=2, ensure_ascii=False)
 
-    # Discord channelına отправить
+    # Discord в канал отправить
     if bot_instance:
         async def send_to_discord():
             try:
@@ -1707,15 +1707,15 @@ def api_public_apply():
                 if not channel:
                     return
                 embed = discord.Embed(
-                    title="📋 YENİ YETKİLİ BAŞVURUSU  •  🌐 Web",
+                    title="📋 НОВЫЙ АДМИНИСТРАТОР ЗАЯВКА  •  🌐 Web",
                     color=0xDC143C,
                     timestamp=datetime.utcnow()
                 )
                 embed.add_field(name="👤 Пользователь", value=f"`{data['discord_name']}` (ID: `{uid}`)", inline=True)
                 embed.add_field(name="🎂 Yaş", value=data['yas'], inline=True)
-                embed.add_field(name="⏰ Активенlik", value=data['активенlik'], inline=True)
+                embed.add_field(name="⏰ Активен", value=data['активен'], inline=True)
                 embed.add_field(name="🏆 Tecrübe", value=f"```{data['tecrube']}```", inline=False)
-                embed.add_field(name="💬 Neden Правоli?", value=f"```{data['neden']}```", inline=False)
+                embed.add_field(name="💬 Почему Администратор?", value=f"```{data['почему']}```", inline=False)
                 if data.get('ekstra'):
                     embed.add_field(name="📝 Ekstra", value=f"```{data['ekstra']}```", inline=False)
                 embed.set_footer(text=f"Заявка ID: {app_id} • {guild.name}")
@@ -1725,7 +1725,7 @@ def api_public_apply():
                 with open(apps_file, 'w', encoding='utf-8') as f:
                     json.dump(apps, f, indent=2, ensure_ascii=False)
             except Exception as e:
-                print(f"Discord отправитьme Ошибкаsı: {e}")
+                print(f"Discord отправл Ошибки: {e}")
         import asyncio
         asyncio.run_coroutine_threadsafe(send_to_discord(), bot_instance.loop)
 
@@ -1734,12 +1734,12 @@ def api_public_apply():
 from web.routes_extra import register_extra_routes
 register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_ID)
 
-# ── Role Map API ─────────────────────────────────────────────────────────────
+# ── Роли Map API ─────────────────────────────────────────────────────────────
 @app.route('/api/role-map')
 @login_required
 @role_required('admin')
 def api_get_role_map():
-    """Получить маппинг ролей + список ролей сервера"""
+    """Al eşleme роль + liste роль сервер"""
     guild_roles = []
     if bot_instance:
         gid = MAIN_GUILD_ID or (str(bot_instance.guilds[0].id) if bot_instance.guilds else None)
@@ -1761,43 +1761,104 @@ def api_get_role_map():
         'guild_roles': guild_roles,
     })
 
-@app.route('/api/role-map', methods=['POST'])
+@app.route('/api/роли-map', methods=['POST'])
 @login_required
 @role_required('admin')
 def api_set_role_map():
-    """Добавить/изменить маппинг роли"""
+    """Добавить/izmenit eşleme роли"""
     data = request.get_json()
     role_id = str(data.get('role_id', '')).strip()
     panel_role = data.get('panel_role', '').strip()
     if not role_id or panel_role not in ('mod', 'admin', 'owner'):
-        return jsonify({'error': 'Неверные данные'}), 400
+        return jsonify({'error': 'Неверный veriler'}), 400
     DISCORD_ROLE_MAP[role_id] = panel_role
     _save_role_map()
     _log_panel_action('ROLE_MAP_SET', f'{role_id} → {panel_role}')
     return jsonify({'success': True})
 
-@app.route('/api/role-map/<role_id>', methods=['DELETE'])
+@app.route('/api/роли-map/<role_id>', methods=['DELETE'])
 @login_required
 @role_required('admin')
 def api_delete_role_map(role_id):
-    """Удалить маппинг роли"""
+    """Удалить eşleme роли"""
     if role_id in DISCORD_ROLE_MAP:
         del DISCORD_ROLE_MAP[role_id]
         _save_role_map()
         _log_panel_action('ROLE_MAP_DELETE', role_id)
     return jsonify({'success': True})
 
-# ── Discord PIN Логin API ────────────────────────────────────────────────────
+# ── Discord PIN Login API ────────────────────────────────────────────────────
 _login_pins = {}
+
+@app.route('/api/login/suggest', methods=['GET', 'POST'])
+def api_login_suggest():
+    query = (request.args.get('q') or (request.json or {}).get('q', '') or '').strip()
+    query_clean = query.lstrip('@').lower()
+    
+    suggestions = []
+    seen_ids = set()
+    
+    # 1. Live Discord bot members if online
+    if bot_instance:
+        for guild in bot_instance.guilds:
+            for m in guild.members:
+                if m.bot: continue
+                if not query_clean or query_clean in m.name.lower() or query_clean in m.display_name.lower() or query_clean in str(m.id):
+                    if m.id not in seen_ids:
+                        seen_ids.add(m.id)
+                        suggestions.append({
+                            'id': str(m.id),
+                            'name': m.name,
+                            'display_name': m.display_name,
+                            'avatar': str(m.display_avatar.url) if hasattr(m, 'display_avatar') else 'https://cdn.discordapp.com/embed/avatars/0.png'
+                        })
+                        if len(suggestions) >= 12: break
+            if len(suggestions) >= 12: break
+
+    # 2. Offline / supplemental check from members.json
+    if len(suggestions) < 12 and os.path.exists('data/members.json'):
+        try:
+            with open('data/members.json', 'r', encoding='utf-8') as f:
+                mdata = json.load(f)
+            for uid_str, minfo in mdata.items():
+                if uid_str in seen_ids: continue
+                mname = minfo.get('display_name', minfo.get('username', uid_str))
+                if not query_clean or query_clean in mname.lower() or query_clean in str(uid_str):
+                    seen_ids.add(uid_str)
+                    suggestions.append({
+                        'id': str(uid_str),
+                        'name': minfo.get('username', mname),
+                        'display_name': mname,
+                        'avatar': minfo.get('avatar', 'https://cdn.discordapp.com/embed/avatars/0.png')
+                    })
+                    if len(suggestions) >= 12: break
+        except:
+            pass
+
+    # 3. Always provide demo/known members if empty so dropdown is never blank
+    if not suggestions:
+        demo_members = [
+            {'id': '987430047889637426', 'name': 'owner', 'display_name': 'Owner', 'avatar': 'https://cdn.discordapp.com/embed/avatars/0.png'},
+            {'id': '1406597367695806564', 'name': 'ecobar', 'display_name': 'Ecobar', 'avatar': 'https://cdn.discordapp.com/embed/avatars/1.png'},
+            {'id': '1483484518563188767', 'name': 'dragon', 'display_name': 'Dragon', 'avatar': 'https://cdn.discordapp.com/embed/avatars/2.png'},
+            {'id': '1461513653650981054', 'name': 'hzdio', 'display_name': 'HzDio', 'avatar': 'https://cdn.discordapp.com/embed/avatars/3.png'},
+            {'id': '859341577452257330', 'name': 'oberaru', 'display_name': 'Oberaru', 'avatar': 'https://cdn.discordapp.com/embed/avatars/4.png'},
+            {'id': '1465744556183126242', 'name': 'meow_meow', 'display_name': 'Meow Meow', 'avatar': 'https://cdn.discordapp.com/embed/avatars/5.png'},
+        ]
+        for dm in demo_members:
+            if not query_clean or query_clean in dm['name'].lower() or query_clean in dm['id']:
+                suggestions.append(dm)
+
+    return jsonify({'success': True, 'suggestions': suggestions})
 
 @app.route('/api/discord-check', methods=['POST'])
 def api_discord_check():
     if not bot_instance:
-        return jsonify({'success': False, 'error': 'Бот не в сети', 'tests': []})
+        return jsonify({'success': False, 'error': 'Бот Discord сейчас не в сети или не подключен.', 'tests': []})
     data = request.get_json() or {}
     query = str(data.get('query', '')).strip()
     if not query:
-        return jsonify({'success': False, 'error': 'Enter Discord ID or @name', 'tests': []})
+        return jsonify({'success': False, 'error': 'Пожалуйста, введите корректный Discord ID или @имя пользователя.', 'tests': []})
     tests = []
     discord_id = None
     member_info = None
@@ -1827,7 +1888,7 @@ def api_discord_check():
                     break
         if not user or not discord_id:
             tests.append({'name': 'Поиск пользователя', 'status': 'fail', 'detail': 'Not found'})
-            return jsonify({'success': False, 'tests': tests, 'error': 'Not found'})
+            return jsonify({'success': False, 'tests': tests, 'error': 'Пользователь не найден.'})
         member_info = {'display_name': getattr(user, 'display_name', str(user)), 'name': str(user), 'avatar': str(user.display_avatar.url) if hasattr(user, 'display_avatar') else ''}
         tests.append({'name': 'Поиск пользователя', 'status': 'ok', 'detail': member_info['display_name']})
     except Exception as e:
@@ -1843,45 +1904,45 @@ def api_discord_check():
                 guild_name = guild.name
                 break
         if in_guild:
-            tests.append({'name': 'Участник serverа', 'status': 'ok', 'detail': guild_name})
+            tests.append({'name': 'Участник сервера', 'status': 'ok', 'detail': guild_name})
         else:
-            tests.append({'name': 'Участник serverа', 'status': 'warn', 'detail': 'Not on server'})
+            tests.append({'name': 'Участник сервера', 'status': 'warn', 'detail': 'Не найден на сервере'})
     except:
-        tests.append({'name': 'Участник serverа', 'status': 'warn', 'detail': 'Check failed'})
+        tests.append({'name': 'Участник сервера', 'status': 'warn', 'detail': 'Ошибка проверки'})
     try:
-        is_бот = getattr(user, 'bot', False)
+        is_bot = getattr(user, 'bot', False)
         if is_bot:
-            tests.append({'name': 'Проверка: не бот', 'status': 'fail', 'detail': 'Is a бот!'})
-            return jsonify({'success': False, 'tests': tests, 'error': 'Ботs cannot login'})
+            tests.append({'name': 'Проверка на бота', 'status': 'fail', 'detail': 'Аккаунт бота'})
+            return jsonify({'success': False, 'tests': tests, 'error': 'Боты не могут авторизоваться.'})
         else:
-            tests.append({'name': 'Проверка: не бот', 'status': 'ok', 'detail': 'Human user'})
+            tests.append({'name': 'Проверка на бота', 'status': 'ok', 'detail': 'Пользователь'})
     except:
-        tests.append({'name': 'Проверка: не бот', 'status': 'warn', 'detail': 'Check failed'})
+        tests.append({'name': 'Проверка на бота', 'status': 'warn', 'detail': 'Ошибка проверки'})
     try:
         created = discord.utils.snowflake_time(int(discord_id))
         age_days = (datetime.utcnow() - created).days
         if age_days < 7:
             tests.append({'name': 'Возраст аккаунта', 'status': 'fail', 'detail': f'{age_days}d (too new)'})
-            return jsonify({'success': False, 'tests': tests, 'error': 'Account too new'})
+            return jsonify({'success': False, 'tests': tests, 'error': 'Вход запрещен: аккаунт зарегистрирован менее 7 дней назад.'})
         else:
             tests.append({'name': 'Возраст аккаунта', 'status': 'ok', 'detail': f'{age_days}d'})
     except:
-        tests.append({'name': 'Возраст аккаунта', 'status': 'warn', 'detail': 'Unknown'})
+        tests.append({'name': 'Возраст аккаунта', 'status': 'warn', 'detail': 'Неизвестно'})
     try:
         code = ''.join(random.choices(string.digits, k=6))
         import time as _t
         _login_pins[discord_id] = {'code': code, 'expires': _t.time() + 300, 'member_info': member_info}
         async def send_pin():
             u = await bot_instance.fetch_user(int(discord_id))
-            embed = discord.Embed(title='Aether - PIN', color=0xc8922a, timestamp=datetime.utcnow())
-            embed.description = f"Hello **{member_info['display_name']}**!\n\nYour PIN:\n\n```fix\n{code}\n```\nValid for 5 min."
-            embed.set_footer(text="Aether Панель")
+            embed = discord.Embed(title='Aether — Код авторизации', color=0xc8922a, timestamp=datetime.utcnow())
+            embed.description = f"Hello **{member_info['display_name']}**!\n\nВаш PIN-код для входа в панель:\n\n```fix\n{code}\n```\nДействителен в течение 5 минут."
+            embed.set_footer(text="Aether Panel")
             await u.send(embed=embed)
         asyncio.run_coroutine_threadsafe(send_pin(), bot_instance.loop).result(timeout=10)
-        tests.append({'name': 'Отправка PIN-кода', 'status': 'ok', 'detail': 'Sent to DM'})
+        tests.append({'name': 'Отправка PIN-кода', 'status': 'ok', 'detail': 'Отправлено в ЛС'})
     except Exception as e:
         tests.append({'name': 'Отправка PIN-кода', 'status': 'fail', 'detail': 'DM failed'})
-        return jsonify({'success': False, 'tests': tests, 'error': f'DM failed: {e}'})
+        return jsonify({'success': False, 'tests': tests, 'error': 'Не удалось отправить PIN-код: личные сообщения закрыты или бот заблокирован.'})
     return jsonify({'success': True, 'discord_id': discord_id, 'display_name': member_info['display_name'], 'avatar': member_info['avatar'], 'tests': tests})
 
 @app.route('/api/discord-login', methods=['POST'])
@@ -1890,16 +1951,16 @@ def api_discord_login():
     discord_id = str(data.get('discord_id', '')).strip()
     pin = str(data.get('pin', '')).strip()
     if not discord_id or not pin:
-        return jsonify({'success': False, 'error': 'Missing info'})
+        return jsonify({'success': False, 'error': 'Не заполнены обязательные поля.'})
     entry = _login_pins.get(discord_id)
     if not entry:
-        return jsonify({'success': False, 'error': 'PIN not found'})
+        return jsonify({'success': False, 'error': 'Для этого пользователя не найден активный PIN-код.'})
     import time as _t
     if _t.time() > entry['expires']:
         del _login_pins[discord_id]
-        return jsonify({'success': False, 'error': 'PIN expired'})
+        return jsonify({'success': False, 'error': 'Срок действия PIN-кода истек. Пожалуйста, отправьте новый код.'})
     if entry['code'] != pin:
-        return jsonify({'success': False, 'error': 'Wrong PIN'})
+        return jsonify({'success': False, 'error': 'Введен неверный PIN-код.'})
     member_info = entry['member_info']
     del _login_pins[discord_id]
     members_file = 'data/members.json'
@@ -1938,7 +1999,7 @@ def custom_embeds_page():
 @login_required
 @role_required('admin')
 def api_send_embed():
-    if not bot_instance: return jsonify({'error': 'Бот не в сети'})
+    if not bot_instance: return jsonify({'error': 'Бот Discord сейчас не в сети или не подключен.'})
     data = request.get_json()
     guild_id = int(data.get('guild_id', 0))
     channel_id = int(data.get('channel_id', 0))
@@ -1949,9 +2010,9 @@ def api_send_embed():
     image_url = data.get('image_url', '')
     thumbnail_url = data.get('thumbnail_url', '')
     guild = bot_instance.get_guild(guild_id)
-    if not guild: return jsonify({'error': 'Сервер bulunamadı'})
+    if not guild: return jsonify({'error': 'Сервер не найдено'})
     channel = bot_instance.get_channel(channel_id)
-    if not channel: return jsonify({'error': 'Канал bulunamadı'})
+    if not channel: return jsonify({'error': 'Канал не найдено'})
     async def send_it():
         try: color = discord.Color(int(color_hex, 16))
         except: color = discord.Color(0xdc143c)
@@ -1969,13 +2030,13 @@ def api_send_embed():
     except Exception as e:
         return jsonify({'error': str(e)})
 
-# ── Бот Kontrole API'leri ──────────────────────────────────────────────────────
-@app.route('/api/бот/restart', methods=['POST'])
+# ── Bot Контроль API'leri ──────────────────────────────────────────────────────
+@app.route('/api/bot/restart', methods=['POST'])
 @login_required
 @role_required('owner')
-def api_бот_restart():
+def api_bot_restart():
     if not bot_instance:
-        return jsonify({'error': 'Бот не в сети'})
+        return jsonify({'error': 'Бот Discord сейчас не в сети или не подключен.'})
     _log_panel_action('BOT_RESTART', session.get('username'))
     import threading, time, os, sys
     def do_restart():
@@ -1984,12 +2045,12 @@ def api_бот_restart():
     threading.Thread(target=do_restart, daemon=True).start()
     return jsonify({'success': True})
 
-@app.route('/api/бот/sync', methods=['POST'])
+@app.route('/api/bot/sync', methods=['POST'])
 @login_required
 @role_required('admin')
-def api_бот_sync():
+def api_bot_sync():
     if not bot_instance:
-        return jsonify({'error': 'Бот не в сети'})
+        return jsonify({'error': 'Бот Discord сейчас не в сети или не подключен.'})
     async def do():
         # Guild-specific sync (anında etkili) + global sync
         synced_guilds = []
@@ -2008,7 +2069,7 @@ def api_бот_sync():
     except Exception as e:
         return jsonify({'error': str(e)})
 
-# ── Global Поискma ──────────────────────────────────────────────────────────────
+# ── Global Aramama ──────────────────────────────────────────────────────────────
 @app.route('/api/search')
 @login_required
 @role_required('mod')
@@ -2019,7 +2080,7 @@ def api_global_search():
 
     results = []
 
-    # Участникler
+    # Участники
     if bot_instance:
         for guild in bot_instance.guilds:
             for member in guild.members:
@@ -2052,7 +2113,7 @@ def api_global_search():
                         })
                         break
 
-    # Логи
+    # Loglar
     audit_file = 'data/audit_log.json'
     if os.path.exists(audit_file):
         with open(audit_file, 'r', encoding='utf-8') as f:
@@ -2074,33 +2135,33 @@ def api_global_search():
 
     return jsonify(results[:15])
 
-# ── Голос Командаu Endpoint (voice_listener.py için) ─────────────────────────────
+# ── Ses Команда Endpoint (voice_listener.py для) ─────────────────────────────
 VOICE_SECRET = os.getenv('VOICE_SECRET', 'Aether-voice-2024')
 
 @app.route('/api/voice-command', methods=['POST'])
 def api_voice_command():
-    """voice_listener.py'den gelen голосli командаları işle"""
+    """voice_listener.py'den gelen sesli команды işle"""
     data = request.get_json()
     if not data or data.get('secret') != VOICE_SECRET:
         return jsonify({'error': 'Unauthorized'}), 401
     command = data.get('command', '').strip()
     if not command:
-        return jsonify({'error': 'Команда boş'}), 400
+        return jsonify({'error': 'Команда пусто'}), 400
 
     if not bot_instance:
-        return jsonify({'error': 'Бот не в сети'}), 503
+        return jsonify({'error': 'Бот Discord сейчас не в сети или не подключен.'}), 503
 
     OWNER_ID_INT = int(os.getenv('OWNER_ID', '987430047889637426'))
 
     async def dispatch():
         owner = await bot_instance.fetch_user(OWNER_ID_INT)
         dm = await owner.create_dm()
-        # Sahte bir message nesnesi создатьmak yerine, doğrudan ai_chat cog'unu çağır
+        # Sahte bir message nesnesi создан yerine, верно ai_chat cog'unu çтяжелый
         cog = bot_instance.get_cog('AIChat')
         if not cog:
-            return 'AIChat cog bulunamadı'
-        # _detect_owner_intent'i doğrudan çağır
-        # Bunun için sahte bir message nesnesi lazım — DM channelını kullan
+            return 'AIChat cog не найдено'
+        # _detect_owner_intent'i верно çтяжелый
+        # Bunun для sahte bir message nesnesi lazım — DM channelını использовать
         async for msg in dm.history(limit=1):
             # Gerçek bir message bulduk, intent'i çalıştır
             result = await cog._detect_owner_intent(command, msg)
@@ -2108,7 +2169,7 @@ def api_voice_command():
                 # Handler eşleşmedi, normal AI'ya отправить
                 await dm.send(command)
             return 'OK'
-        # Geçmiş message yoksa direkt DM at
+        # История message yoksa direkt DM at
         await dm.send(command)
         return 'OK (DM sent)'
 
@@ -2122,7 +2183,7 @@ def api_voice_command():
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
 
-# ── Паrole Sıfırlama (login sayfası için) ─────────────────────────────────────
+# ── Parola Sıfırlama (login sayfası для) ─────────────────────────────────────
 import random as _random
 _reset_codes = {}  # {discord_id: {code, expires}}
 
@@ -2131,38 +2192,38 @@ def api_forgot_password():
     data = request.get_json() or {}
     discord_id = str(data.get('discord_id', '')).strip()
     if not discord_id:
-        return jsonify({'error': 'Необходим Discord ID'})
+        return jsonify({'error': 'Neobhodim Discord ID'})
 
-    # Участник регистрацияlı mı kontrole et
+    # Участник запись mı контроль et
     members_file = 'data/members.json'
     if not os.path.exists(members_file):
-        return jsonify({'error': 'Регистрацияlı участник bulunamadı'})
+        return jsonify({'error': 'Запись участник не найдено'})
     with open(members_file, 'r', encoding='utf-8') as f:
         members = json.load(f)
     if discord_id not in members:
-        return jsonify({'error': 'Bu По Discord ID регистрацияlı hesap yok'})
+        return jsonify({'error': 'Bu По Discord ID запись hesap yok'})
 
     # 6 haneli kod üret
     code = ''.join([str(_random.randint(0, 9)) for _ in range(6)])
     import time as _time
     _reset_codes[discord_id] = {'code': code, 'expires': _time.time() + 300}  # 5 minutes
 
-    # Бот ile DM отправить
+    # Bot с DM отправить
     if not bot_instance:
-        return jsonify({'error': 'Бот şu an offline, daha sonra tekrar dene'})
+        return jsonify({'error': 'Bot şu an offline, более после tekrar dene'})
 
     async def send_dm():
         user = await bot_instance.fetch_user(int(discord_id))
         await user.send(
-            f"🔑 **Паrole Sıfırlama Kodun:** `{code}`\n"
-            f"Bu kod 5 minutes geçerlidir. Панельde bu kodu girerek паroleni sıfırlayabilirsin.\n"
-            f"Eğer bu isteği sen yapmadıysan bu messageı yoksay."
+            f"🔑 **Parola Sıfırlama Kodun:** `{code}`\n"
+            f"Bu kod 5 minutes geçerlidir. Panelde bu kodu girerek parolani sıfırlayabilirsin.\n"
+            f"Если bu желание sen yapmadıysan bu сообщение yoksay."
         )
     try:
         asyncio.run_coroutine_threadsafe(send_dm(), bot_instance.loop).result(timeout=10)
         return jsonify({'success': True})
     except Exception as e:
-        return jsonify({'error': f'DM отправитьilemedi: {e}'})
+        return jsonify({'error': f'DM отправл: {e}'})
 
 
 @app.route('/api/reset-password', methods=['POST'])
@@ -2174,25 +2235,25 @@ def api_reset_password():
     new_pass   = str(data.get('new_password', '')).strip()
 
     if not discord_id or not code or not new_pass:
-        return jsonify({'error': 'Недостаточно информации'})
+        return jsonify({'error': 'Yetersiz informacii'})
     if len(new_pass) < 6:
-        return jsonify({'error': 'Паrole должен быть не менее 6 символов'})
+        return jsonify({'error': 'Parola olmalı olmak не menee 6 simvolov'})
 
     entry = _reset_codes.get(discord_id)
     if not entry:
-        return jsonify({'error': 'Сначала запросите код'})
+        return jsonify({'error': 'До sorguite kod'})
     if _time.time() > entry['expires']:
         del _reset_codes[discord_id]
-        return jsonify({'error': 'Kodun süresi dolmuş, tekrar talep et'})
+        return jsonify({'error': 'Kodun длительность dolmuş, tekrar talep et'})
     if entry['code'] != code:
-        return jsonify({'error': 'Неверный код'})
+        return jsonify({'error': 'Неверный kod'})
 
-    # Паroleyi güncelle
+    # Parolayi обновить
     members_file = 'data/members.json'
     with open(members_file, 'r', encoding='utf-8') as f:
         members = json.load(f)
     if discord_id not in members:
-        return jsonify({'error': 'Пользователь bulunamadı'})
+        return jsonify({'error': 'Пользователь не найден'})
     members[discord_id]['password'] = new_pass
     with open(members_file, 'w', encoding='utf-8') as f:
         json.dump(members, f, indent=2, ensure_ascii=False)

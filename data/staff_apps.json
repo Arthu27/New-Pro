@@ -13,8 +13,8 @@
     "answers": {
       "yas": "18",
       "tecrube": "hic bir sru",
-      "neden": "oyle canim cekti",
-      "aktiflik": "5",
+      "почему": "oyle canim cekti",
+      "активен": "5",
       "ekstra": "yoo"
     },
     "message_id": "1484469496486822029",
@@ -35,8 +35,8 @@
     "answers": {
       "yas": "15115",
       "tecrube": "Olmadim",
-      "neden": "Kedi ozelden tehdit etti",
-      "aktiflik": "Allah ne verirse",
+      "почему": "Kedi ozelden tehdit etti",
+      "активен": "Allah ne verirse",
       "ekstra": "Arturh babadir gerisi yalandir"
     },
     "message_id": "1484652605257814168",

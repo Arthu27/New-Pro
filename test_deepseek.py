@@ -1,4 +1,4 @@
-"""DeepSeek login test - ne görüyor контrole et"""
+"""DeepSeek login test - ne видеть контроль et"""
 import asyncio
 import os
 from dotenv import load_dotenv
@@ -11,7 +11,7 @@ async def test():
     from playwright.async_api import async_playwright
 
     async with async_playwright() as pw:
-        browser = await pw.chromium.launch(headless=False)  # Görünür açılsın
+        browser = await pw.chromium.launch(headless=False)  # Видеть açılsın
         page = await browser.new_page()
 
         print("Siteye gidiliyor...")
@@ -21,9 +21,9 @@ async def test():
         print(f"URL: {page.url}")
         print(f"Title: {await page.title()}")
 
-        # Tüm input'ları listele
+        # Все input'ları listele
         inputs = await page.locator('input').all()
-        print(f"\nInput sayısı: {len(inputs)}")
+        print(f"\nInput количество: {len(inputs)}")
         for i, inp in enumerate(inputs):
             try:
                 t = await inp.get_attribute('type')
@@ -33,9 +33,9 @@ async def test():
             except:
                 pass
 
-        # Tüm butonları listele
+        # Все кнопки listele
         buttons = await page.locator('button').all()
-        print(f"\nButton sayısı: {len(buttons)}")
+        print(f"\nButton количество: {len(buttons)}")
         for i, btn in enumerate(buttons[:10]):
             try:
                 txt = await btn.inner_text()

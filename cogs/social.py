@@ -1,8 +1,8 @@
 """
 Aether Social Cog
-- Gelişmiş опрос sistemi (çoklu выбратьenek, vakitlı, anonim, grafik)
+- Gelişmiş anket система (çoklu выбрать, vakitlı, anonim, grafik)
 - Event planlayıcısı (etkinlik takvimi, katılımcı listesi, hatırlatmalar)
-- Matchmaking sistemi (oyun arkadaşı bulma, takım создатьma)
+- Matchmaking система (oyun arkadaşı bulma, команда создан)
 """
 import discord
 from discord.ext import commands, tasks
@@ -15,7 +15,7 @@ POLL_FILE   = 'data/polls_{guild_id}.json'
 EVENT_FILE  = 'data/events_{guild_id}.json'
 MATCH_FILE  = 'data/matchmaking_{guild_id}.json'
 
-# Emoji bar için
+# Emoji bar для
 BAR_FULL  = '█'
 BAR_EMPTY = '░'
 
@@ -58,29 +58,29 @@ class PollView(discord.ui.View):
             data = _load(path)
             poll = data.get(self.poll_id)
             if not poll:
-                await interaction.response.send_message("❌ Опрос bulunamadı.", ephemeral=True)
+                await interaction.response.send_message("❌ Anket не найдено.", ephemeral=True)
                 return
             if poll.get('ended'):
-                await interaction.response.send_message("❌ Bu опрос sona erdi.", ephemeral=True)
+                await interaction.response.send_message("❌ Bu anket sona erdi.", ephemeral=True)
                 return
 
             uid = str(interaction.user.id)
             votes = poll.setdefault('votes', {})
 
-            # Aynı выбратьeneğe tekrar tıklarsa oyu geri al
+            # Одинаковый выбрать tekrar клик oyu geri al
             if votes.get(uid) == idx:
                 del votes[uid]
-                await interaction.response.send_message("🗑️ Oyun geri alındı.", ephemeral=True)
+                await interaction.response.send_message("🗑️ Игра отменена.", ephemeral=True)
             else:
                 votes[uid] = idx
                 opt_name = poll['options'][idx]
                 await interaction.response.send_message(
-                    f"✅ **{opt_name}** выбратьeneğine oy verdin!" + (" (anonim)" if self.anonymous else ""),
+                    f"✅ **{opt_name}** выбрать oy verdin!" + (" (anonim)" if self.anonymous else ""),
                     ephemeral=True
                 )
 
             _save(path, data)
-            # Embed'i güncelle
+            # Embed'i обновить
             await _update_poll_embed(interaction.message, poll)
         return callback
 
@@ -103,7 +103,7 @@ async def _update_poll_embed(message: discord.Message, poll: dict):
             value=f"`{bar}` **{pct}** ({cnt} oy)",
             inline=False
         )
-    e.set_footer(text=f"📊 Всего {total} oy • Aynı butona tıklayarak oyunu geri alabilirsin")
+    e.set_footer(text=f"📊 Всего {total} oy • Одинаковый butona клик oyunu geri alabilirsin")
     try:
         await message.edit(embed=e)
     except Exception:
@@ -125,33 +125,33 @@ class EventJoinView(discord.ui.View):
         data = _load(path)
         event = data.get(self.event_id)
         if not event:
-            await interaction.response.send_message("❌ Etkinlik bulunamadı.", ephemeral=True)
+            await interaction.response.send_message("❌ Etkinlik не найдено.", ephemeral=True)
             return
         uid = str(interaction.user.id)
         participants = event.setdefault('participants', [])
         if uid in participants:
             participants.remove(uid)
-            msg = "❌ Etkinlikten ayrıldın."
+            msg = "❌ Etkinlikten покинул."
         else:
             participants.append(uid)
-            msg = f"✅ **{event['title']}** etkinliğine katıldın!"
+            msg = f"✅ **{event['title']}** etkinliğine присоединился!"
         _save(path, data)
         await interaction.response.send_message(msg, ephemeral=True)
-        # Embed güncelle
+        # Embed обновить
         await _update_event_embed(interaction.message, event)
 
-    @discord.ui.button(label="Katılımcılar", emoji="👥", style=discord.ButtonStyle.secondary, custom_id="event_list")
+    @discord.ui.button(label="Участники", emoji="👥", style=discord.ButtonStyle.secondary, custom_id="event_list")
     async def list_participants(self, interaction: discord.Interaction, button: discord.ui.Button):
         path = EVENT_FILE.format(guild_id=self.guild_id)
         data = _load(path)
         event = data.get(self.event_id, {})
         participants = event.get('participants', [])
         if not participants:
-            await interaction.response.send_message("Henüz katılımcı yok.", ephemeral=True)
+            await interaction.response.send_message("Пока нет участников.", ephemeral=True)
             return
         mentions = [f"<@{uid}>" for uid in participants[:20]]
         await interaction.response.send_message(
-            f"**👥 Katılımcılar ({len(participants)}):**\n" + ", ".join(mentions),
+            f"**👥 Участники ({len(participants)}):**\n" + ", ".join(mentions),
             ephemeral=True
         )
 
@@ -159,10 +159,10 @@ class EventJoinView(discord.ui.View):
 async def _update_event_embed(message: discord.Message, event: dict):
     participants = event.get('participants', [])
     e = message.embeds[0] if message.embeds else discord.Embed()
-    # Katılımcı sayısını güncelle
+    # Katılımcı число обновить
     for i, field in enumerate(e.fields):
         if '👥' in field.name:
-            e.set_field_at(i, name=field.name, value=f"`{len(participants)} kişi`", inline=field.inline)
+            e.set_field_at(i, name=field.name, value=f"`{len(participants)} человек`", inline=field.inline)
             break
     try:
         await message.edit(embed=e)
@@ -186,26 +186,26 @@ class MatchView(discord.ui.View):
         data = _load(path)
         match = data.get(self.match_id)
         if not match:
-            await interaction.response.send_message("❌ Eşleşme bulunamadı.", ephemeral=True)
+            await interaction.response.send_message("❌ Матч не найден.", ephemeral=True)
             return
         uid = str(interaction.user.id)
         players = match.setdefault('players', [])
         if uid in players:
             players.remove(uid)
-            await interaction.response.send_message("❌ Eşleşmeden ayrıldın.", ephemeral=True)
+            await interaction.response.send_message("❌ Вы покинули матч.", ephemeral=True)
         elif len(players) >= self.max_players:
-            await interaction.response.send_message("❌ Eşleşme dolu!", ephemeral=True)
+            await interaction.response.send_message("❌ Матч заполнен!", ephemeral=True)
             return
         else:
             players.append(uid)
-            await interaction.response.send_message(f"✅ **{match['game']}** eşleşmesine katıldın!", ephemeral=True)
+            await interaction.response.send_message(f"✅ **{match['game']}** — вы присоединились к матчу!", ephemeral=True)
         _save(path, data)
         await _update_match_embed(interaction.message, match, self.max_players)
 
         # Takım doldu mu?
         if len(players) >= self.max_players:
             await interaction.channel.send(
-                f"🎮 **{match['game']}** takımı doldu! "
+                f"🎮 **{match['game']}** командаı doldu! "
                 + " ".join(f"<@{p}>" for p in players)
                 + "\nHaydi oynayın! 🚀"
             )
@@ -238,11 +238,11 @@ class Social(commands.Cog):
         self.event_reminder.cancel()
 
     # ── ANKET ─────────────────────────────────────────────────────────────────
-    @app_commands.command(name="опрос", description="Новый опрос создать")
+    @app_commands.command(name="anket", description="Создать новый опрос")
     @app_commands.describe(
-        soru="Опрос sorusu",
-        secenaddr="Выбратьenaddr (virgülle ayır, max 10)",
-        sure="Süre minutes cinsinden (0 = süresiz)",
+        soru="Anket sorusu",
+        secenaddr="Выбрать (virgülle ayır, max 10)",
+        sure="Длительность minutes cinsinden (0 = длительностьz)",
         anonim="Anonim oylama?"
     )
     @app_commands.checks.has_permissions(moderate_members=True)
@@ -251,7 +251,7 @@ class Social(commands.Cog):
                           sure: int = 0, anonim: bool = False):
         options = [o.strip() for o in secenaddr.split(',') if o.strip()][:10]
         if len(options) < 2:
-            await interaction.response.send_message("❌ En az 2 выбратьenek gir!", ephemeral=True)
+            await interaction.response.send_message("❌ En az 2 выбрать gir!", ephemeral=True)
             return
 
         guild_id = str(interaction.guild.id)
@@ -286,8 +286,8 @@ class Social(commands.Cog):
         for i, opt in enumerate(options):
             e.add_field(name=f"{emojis[i]} {opt}", value=f"`{'░'*12}` **0%** (0 oy)", inline=False)
         if ends_at:
-            e.add_field(name="⏰ Bitiş", value=f"<t:{int(datetime.fromisoformat(ends_at).timestamp())}:R>", inline=True)
-        e.set_footer(text=f"📊 Всего 0 oy • Aynı butona tıklayarak oyunu geri alabilirsin")
+            e.add_field(name="⏰ Окончание", value=f"<t:{int(datetime.fromisoformat(ends_at).timestamp())}:R>", inline=True)
+        e.set_footer(text=f"📊 Всего 0 oy • Одинаковый butona клик oyunu geri alabilirsin")
         e.set_author(name=interaction.user.display_name, icon_url=interaction.user.display_avatar.url)
 
         view = PollView(poll_id, options, anonim, guild_id)
@@ -298,24 +298,24 @@ class Social(commands.Cog):
         data[poll_id]['message_id'] = str(msg.id)
         _save(path, data)
 
-    @app_commands.command(name="опрос-bitir", description="Опросi завершить")
-    @app_commands.describe(опрос_id="Опрос ID")
+    @app_commands.command(name="anket-bitir", description="Завершить опрос")
+    @app_commands.describe(anket_id="Anket ID")
     @app_commands.checks.has_permissions(moderate_members=True)
-    async def poll_end(self, interaction: discord.Interaction, опрос_id: str):
+    async def poll_end(self, interaction: discord.Interaction, anket_id: str):
         guild_id = str(interaction.guild.id)
         path = POLL_FILE.format(guild_id=guild_id)
         data = _load(path)
-        poll = data.get(опрос_id)
+        poll = data.get(anket_id)
         if not poll:
-            await interaction.response.send_message("❌ Опрос bulunamadı.", ephemeral=True)
+            await interaction.response.send_message("❌ Anket не найдено.", ephemeral=True)
             return
         poll['ended'] = True
         _save(path, data)
-        await interaction.response.send_message(f"✅ Опрос `{опрос_id}` завершитьıldı.", ephemeral=True)
+        await interaction.response.send_message(f"✅ Anket `{anket_id}` заверш.", ephemeral=True)
 
     @tasks.loop(minutes=1)
     async def poll_checker(self):
-        """Süresi dolan опросleri otomatik закрыть."""
+        """Длительность dolan anketleri автоматически закрыть."""
         now = datetime.now(timezone.utc)
         for guild in self.bot.guilds:
             path = POLL_FILE.format(guild_id=str(guild.id))
@@ -328,7 +328,7 @@ class Social(commands.Cog):
                 if now >= ends_at:
                     poll['ended'] = True
                     changed = True
-                    # sonuç messageı отправить
+                    # результат сообщение отправить
                     try:
                         ch = guild.get_channel(int(poll['channel_id']))
                         if ch:
@@ -338,7 +338,7 @@ class Social(commands.Cog):
                             counts = [sum(1 for v in votes.values() if v == i) for i in range(len(options))]
                             winner_idx = counts.index(max(counts)) if counts else 0
                             e = discord.Embed(
-                                title=f"📊 Опрос sonuçlandı: {poll['question']}",
+                                title=f"📊 Anket результат: {poll['question']}",
                                 color=0x2ecc71
                             )
                             emojis = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟']
@@ -362,12 +362,12 @@ class Social(commands.Cog):
         await self.bot.wait_until_ready()
 
     # ── ETKİNLİK ─────────────────────────────────────────────────────────────
-    @app_commands.command(name="etkinlik", description="Новый etkinlik создать")
+    @app_commands.command(name="etkinlik", description="Создать новое событие")
     @app_commands.describe(
         baslik="Etkinlik başlığı",
-        aciklama="Etkinlik описаниеsı",
+        aciklama="Etkinlik описание",
         дата="Дата (GG.AA.YYYY SS:DD formatında)",
-        max_katilimci="Maksimum katılımcı sayısı (0 = sınırsız)"
+        max_katilimci="Maksimum katılımcı количество (0 = лимит)"
     )
     @app_commands.checks.has_permissions(moderate_members=True)
     async def event_create(self, interaction: discord.Interaction,
@@ -377,7 +377,7 @@ class Social(commands.Cog):
             event_dt = datetime.strptime(дата, '%d.%m.%Y %H:%M').replace(tzinfo=timezone.utc)
         except ValueError:
             await interaction.response.send_message(
-                "❌ Дата formatı yanlış! Örnek: `25.12.2025 20:00`", ephemeral=True
+                "❌ Неверный формат даты! Пример: `25.12.2025 20:00`", ephemeral=True
             )
             return
 
@@ -408,10 +408,10 @@ class Social(commands.Cog):
             timestamp=datetime.now(timezone.utc)
         )
         e.add_field(name="📅 Дата", value=f"<t:{int(event_dt.timestamp())}:F>", inline=True)
-        e.add_field(name="⏰ Ne Время", value=f"<t:{int(event_dt.timestamp())}:R>", inline=True)
-        e.add_field(name="👥 Katılımcılar", value="`0 kişi`" + (f" / {max_katilimci}" if max_katilimci else ""), inline=True)
+        e.add_field(name="⏰ Когда", value=f"<t:{int(event_dt.timestamp())}:R>", inline=True)
+        e.add_field(name="👥 Участники", value="`0 человек`" + (f" / {max_katilimci}" if max_katilimci else ""), inline=True)
         e.set_author(name=interaction.user.display_name, icon_url=interaction.user.display_avatar.url)
-        e.set_footer(text=f"🎉 Aether Event Sistemi • ID: {event_id}")
+        e.set_footer(text=f"🎉 Aether Event Система • ID: {event_id}")
 
         view = EventJoinView(event_id, guild_id)
         await interaction.response.send_message(embed=e, view=view)
@@ -419,7 +419,7 @@ class Social(commands.Cog):
         data[event_id]['message_id'] = str(msg.id)
         _save(path, data)
 
-    @app_commands.command(name="etkinlik-listesi", description="Yaklaşan etkinlikleri listele")
+    @app_commands.command(name="etkinlik-listesi", description="Показать предстоящие события")
     async def event_list(self, interaction: discord.Interaction):
         guild_id = str(interaction.guild.id)
         path = EVENT_FILE.format(guild_id=guild_id)
@@ -446,7 +446,7 @@ class Social(commands.Cog):
 
     @tasks.loop(minutes=10)
     async def event_reminder(self):
-        """Etkinlikten 30 minutes önce hatırlatma отправить."""
+        """Etkinlikten 30 minutes до hatırlatma отправить."""
         now = datetime.now(timezone.utc)
         for guild in self.bot.guilds:
             path = EVENT_FILE.format(guild_id=str(guild.id))
@@ -464,9 +464,9 @@ class Social(commands.Cog):
                         ch = guild.get_channel(int(event['channel_id']))
                         if ch:
                             participants = event.get('participants', [])
-                            mentions = " ".join(f"<@{uid}>" for uid in participants) if participants else "@here"
+                            mentions = " ".join(f"<@{uid}>" for uid in participants) if participants else "@каждый"
                             await ch.send(
-                                f"⏰ **{event['title']}** etkinliği **30 minutes** sonra başlıyor!\n{mentions}"
+                                f"⏰ **{event['title']}** etkinliği **30 minutes** после başlıyor!\n{mentions}"
                             )
                     except Exception:
                         pass
@@ -478,17 +478,17 @@ class Social(commands.Cog):
         await self.bot.wait_until_ready()
 
     # ── MATCHMAKING ───────────────────────────────────────────────────────────
-    @app_commands.command(name="oyun-ara", description="Oyun arkadaşı ara")
+    @app_commands.command(name="oyun-ara", description="Поиск напарников для игры")
     @app_commands.describe(
-        oyun="Oyun adı",
-        max_oyuncu="Kaç kişilik takım?",
+        oyun="Игра имя",
+        max_oyuncu="Сколько kişilik команда?",
         not_="Ek not (rank, mod, vb.)"
     )
     async def matchmaking_create(self, interaction: discord.Interaction,
                                   oyun: str, max_oyuncu: int = 5,
                                   not_: Optional[str] = None):
         if max_oyuncu < 2 or max_oyuncu > 20:
-            await interaction.response.send_message("❌ Oyuncu sayısı 2-20 arasında olmalı!", ephemeral=True)
+            await interaction.response.send_message("❌ Количество игроков должно быть от 2 до 20!", ephemeral=True)
             return
 
         guild_id = str(interaction.guild.id)
@@ -509,28 +509,28 @@ class Social(commands.Cog):
         _save(path, data)
 
         e = discord.Embed(
-            title=f"🎮 {oyun} — Oyuncu Поискnıyor",
+            title=f"🎮 {oyun} — Играcu Aramanıyor",
             color=0x1abc9c,
             timestamp=datetime.now(timezone.utc)
         )
-        e.add_field(name="👥 Oyuncular", value=f"`1/{max_oyuncu}`", inline=True)
-        e.add_field(name="🎯 Oyun", value=f"`{oyun}`", inline=True)
+        e.add_field(name="👥 Игроки", value=f"`1/{max_oyuncu}`", inline=True)
+        e.add_field(name="🎯 Игра", value=f"`{oyun}`", inline=True)
         if not_:
             e.add_field(name="📝 Not", value=f"`{not_}`", inline=True)
-        e.add_field(name="👤 Создатьan", value=interaction.user.mention, inline=True)
+        e.add_field(name="👤 Создал", value=interaction.user.mention, inline=True)
         e.set_footer(text=f"🎮 Aether Matchmaking • Takım dolunca уведомление gelir")
         e.set_thumbnail(url=interaction.user.display_avatar.url)
 
         view = MatchView(match_id, guild_id, max_oyuncu)
         await interaction.response.send_message(embed=e, view=view)
 
-    @app_commands.command(name="oyun-listesi", description="Активен oyun aramalarını listele")
+    @app_commands.command(name="oyun-listesi", description="Показать активные поиски игроков")
     async def matchmaking_list(self, interaction: discord.Interaction):
         guild_id = str(interaction.guild.id)
         path = MATCH_FILE.format(guild_id=guild_id)
         data = _load(path)
 
-        # Последний 2 часteki активна aramalar
+        # В конец 2 saatteki активен aramalar
         now = datetime.now(timezone.utc)
         active = [
             m for m in data.values()
@@ -538,9 +538,9 @@ class Social(commands.Cog):
             and len(m.get('players', [])) < m['max_players']
         ]
 
-        e = discord.Embed(title="🎮 Активен Oyun Поискmaları", color=0x1abc9c, timestamp=now)
+        e = discord.Embed(title="🎮 Активен Игра Aramamaları", color=0x1abc9c, timestamp=now)
         if not active:
-            e.description = "Şu an активна oyun araması yok.\n`/oyun-ara` ile yeni arama запустить!"
+            e.description = "Şu an активен oyun araması yok.\n`/oyun-ara` с новый arama запустить!"
         else:
             for m in active[:8]:
                 players = m.get('players', [])

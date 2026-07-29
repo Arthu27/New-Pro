@@ -1,4 +1,4 @@
-"""Бота прошлые DM разговоры загрузить и dm_log.json'a сохранить"""
+"""Botun proslie DM разговор загрузить ve dm_log.json'a сохранить"""
 import asyncio
 import json
 import os
@@ -14,10 +14,10 @@ client = discord.Client(intents=intents)
 
 @client.event
 async def on_ready():
-    print(f'Подключено: {client.user}')
+    print(f'Bağlandı: {client.user}')
     dm_log = {}
     
-    # Mevcut dm_log varsa yükle (üzerine add)
+    # Текущий dm_log varsa загрузить (üzerine add)
     if os.path.exists('data/dm_log.json'):
         try:
             with open('data/dm_log.json', encoding='utf-8') as f:
@@ -36,12 +36,12 @@ async def on_ready():
                     known_users.add(int(uid))
         except: pass
 
-    # Mevcut dm_log'daki userları da add
+    # Текущий dm_log'daki userları da add
     for uid in dm_log.keys():
         if uid.isdigit():
             known_users.add(int(uid))
 
-    print(f'Всего {len(known_users)} user taranacak...')
+    print(f'Всего {len(known_users)} user сканироватьnacak...')
 
     for uid in known_users:
         try:
@@ -53,7 +53,7 @@ async def on_ready():
                     'author': msg.author.display_name,
                     'content': msg.content or '[Ek/Embed]',
                     'timestamp': msg.created_at.isoformat(),
-                    'from_бот': msg.author.bot,
+                    'from_bot': msg.author.bot,
                 })
             if msgs:
                 dm_log[str(uid)] = msgs
@@ -67,7 +67,7 @@ async def on_ready():
         json.dump(dm_log, f, ensure_ascii=False, indent=2)
     
     total = sum(len(v) for v in dm_log.values())
-    print(f'\nВсего {len(dm_log)} user, {total} message сохранено.')
+    print(f'\nToplam {len(dm_log)} user, {total} message сохранено.')
     await client.close()
 
 client.run(TOKEN)

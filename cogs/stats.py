@@ -50,7 +50,7 @@ class Stats(commands.Cog):
                 self.add_action(member.guild.id, entry.user.id, "kick")
                 break
 
-    @app_commands.command(name="modstats", description="Модератор istatistiklerini gösterir")
+    @app_commands.command(name="modstats", description="Показать статистику модераторов")
     @app_commands.checks.has_permissions(moderate_members=True)
     async def modstats(self, interaction: discord.Interaction, moderator: discord.Member = None):
         guild_id = str(interaction.guild.id)
@@ -60,10 +60,10 @@ class Stats(commands.Cog):
             stats = self.stats.get(guild_id, {}).get(mod_id, {})
             
             if not stats:
-                await interaction.response.send_message(f"{moderator.mention} hiç mod действиеi yapmamış.", ephemeral=True)
+                await interaction.response.send_message(f"{moderator.mention} еще не выполнял действий модерации.", ephemeral=True)
                 return
             
-            e = discord.Embed(title=f"📊 {moderator.name} - İstatistikler", color=discord.Color.blue())
+            e = discord.Embed(title=f"📊 {moderator.name} - Статистика", color=discord.Color.blue())
             e.set_thumbnail(url=moderator.display_avatar.url)
             
             total = sum(stats.values())
@@ -73,14 +73,14 @@ class Stats(commands.Cog):
             
             await interaction.response.send_message(embed=e, ephemeral=True)
         else:
-            # Tüm модераторler
+            # Все модераторы
             guild_stats = self.stats.get(guild_id, {})
             
             if not guild_stats:
-                await interaction.response.send_message("Henüz istatistik yok.", ephemeral=True)
+                await interaction.response.send_message("Пока статистика yok.", ephemeral=True)
                 return
             
-            e = discord.Embed(title="📊 Модератор İstatistikleri", color=discord.Color.blue())
+            e = discord.Embed(title="📊 Модератор Статистика", color=discord.Color.blue())
             
             sorted_mods = sorted(
                 guild_stats.items(),
@@ -102,18 +102,18 @@ class Stats(commands.Cog):
             
             await interaction.response.send_message(embed=e, ephemeral=True)
 
-    @app_commands.command(name="activemods", description="En активна модераторleri gösterir")
+    @app_commands.command(name="activemods", description="Показать самых активных модераторов")
     @app_commands.checks.has_permissions(moderate_members=True)
     async def activemods(self, interaction: discord.Interaction):
         guild_id = str(interaction.guild.id)
         guild_stats = self.stats.get(guild_id, {})
         
         if not guild_stats:
-            await interaction.response.send_message("Henüz istatistik yok.", ephemeral=True)
+            await interaction.response.send_message("Пока статистика yok.", ephemeral=True)
             return
         
         e = discord.Embed(
-            title="🏆 EN AKTİF MODERATÖRLER",
+            title="🏆 EN АКТИВЕН МОДЕРАТОРЫ",
             description="╔═══════════════════════════╗\n║  Liderlik Tablosu  ║\n╚═══════════════════════════╝",
             color=0xF1C40F
         )
@@ -134,13 +134,13 @@ class Stats(commands.Cog):
                 actions = ", ".join([f"{k}: {v}" for k, v in stats.items()])
                 e.add_field(
                     name=f"{medal} {mod.name}",
-                    value=f"```yaml\nВсего: {total} действие\n{actions}\n```",
+                    value=f"```yaml\nToplam: {total} действие\n{actions}\n```",
                     inline=False
                 )
             except:
                 pass
         
-        e.set_footer(text="Moderasyon İstatistikleri", icon_url=interaction.guild.icon.url if interaction.guild.icon else None)
+        e.set_footer(text="Moderasyon Статистика", icon_url=interaction.guild.icon.url if interaction.guild.icon else None)
         await interaction.response.send_message(embed=e, ephemeral=True)
 
 async def setup(bot):

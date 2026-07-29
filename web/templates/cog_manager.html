@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% block title %}Modül Управлениеi{% endblock %}
-{% block page_title %}🧩 Modül Управлениеi{% endblock %}
+{% block title %}Modül Управление{% endblock %}
+{% block page_title %}🧩 Modül Управление{% endblock %}
 {% block content %}
 <style>
 .cog-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;}
@@ -12,7 +12,7 @@
 .cog-status{font-size:10px;margin-top:2px;}
 .cog-status.ok{color:#2ed573;}
 .cog-status.err{color:#e05555;}
-.toggle-btn{padding:5px 14px;border-radius:99px;font-size:11px;font-weight:700;cursor:pointer;border:noкакое;font-family:Inter,sans-serif;transition:all 0.15s;}
+.toggle-btn{padding:5px 14px;border-radius:99px;font-size:11px;font-weight:700;cursor:pointer;border:none;font-family:Inter,sans-serif;transition:all 0.15s;}
 .toggle-btn.unload{background:rgba(224,85,85,0.12);color:#e05555;border:1px solid rgba(224,85,85,0.25);}
 .toggle-btn.unload:hover{background:rgba(224,85,85,0.22);}
 .toggle-btn.load{background:rgba(46,213,115,0.12);color:#2ed573;border:1px solid rgba(46,213,115,0.25);}
@@ -23,12 +23,12 @@
 </style>
 
 <div class="top-bar">
-  <div style="font-size:12px;color:rgba(240,232,208,0.4);" id="cog-summary">Загрузитьniyor...</div>
-  <button class="btn btn-primary" onclick="reloadAll()" style="font-size:12px;padding:7px 16px;">🔄 Всеni Обновить</button>
+  <div style="font-size:12px;color:rgba(240,232,208,0.4);" id="cog-summary">Загрузка...</div>
+  <button class="btn btn-primary" onclick="reloadAll()" style="font-size:12px;padding:7px 16px;">🔄 Все Обновить</button>
 </div>
 
 <div class="cog-grid" id="cog-grid">
-  <div style="color:rgba(240,232,208,0.3);font-size:13px;">Загрузитьniyor...</div>
+  <div style="color:rgba(240,232,208,0.3);font-size:13px;">Загрузка...</div>
 </div>
 
 <script>
@@ -39,23 +39,23 @@ async function loadCogs() {
     var d = await fetch('/api/cogs').then(r => r.json());
     _cogs = d;
     var loaded = d.filter(c => c.loaded).length;
-    document.getElementById('cog-summary').textContent = loaded + ' / ' + d.length + ' modül yüklü';
-    document.getElementById('cog-grid').inкакоеrHTML = d.map(function(c) {
+    document.getElementById('cog-summary').textContent = loaded + ' / ' + d.length + ' modül загруз';
+    document.getElementById('cog-grid').innerHTML = d.map(function(c) {
       return '<div class="cog-card ' + (c.loaded ? 'loaded' : 'unloaded') + '" id="cog-' + c.name + '">' +
         '<div>' +
           '<div class="cog-name">📦 ' + c.name + '</div>' +
-          '<div class="cog-status ' + (c.loaded ? 'ok' : 'err') + '">' + (c.loaded ? '● Yüklü' : '○ Yüklü Değil') + '</div>' +
+          '<div class="cog-status ' + (c.loaded ? 'ok' : 'err') + '">' + (c.loaded ? '● Загруз' : '○ Загруз Не') + '</div>' +
         '</div>' +
         '<div style="display:flex;align-items:center;">' +
           (c.loaded ? '<button class="reload-btn" onclick="reloadCog(\'' + c.name + '\')">↺</button>' : '') +
           '<button class="toggle-btn ' + (c.loaded ? 'unload' : 'load') + '" onclick="toggleCog(\'' + c.name + '\',' + c.loaded + ')">' +
-            (c.loaded ? 'Закрыть' : 'Открыть') +
+            (c.loaded ? 'Закрыть' : 'Aç') +
           '</button>' +
         '</div>' +
       '</div>';
     }).join('');
   } catch(e) {
-    document.getElementById('cog-grid').inкакоеrHTML = '<div style="color:#e05555;">Загрузитькакоеmedi: ' + e.message + '</div>';
+    document.getElementById('cog-grid').innerHTML = '<div style="color:#e05555;">Загруз: ' + e.message + '</div>';
   }
 }
 
@@ -69,7 +69,7 @@ async function toggleCog(name, isLoaded) {
     }).then(r => r.json());
     if (r.ok) loadCogs();
     else alert('Ошибка: ' + (r.error || 'Bilinmeyen'));
-  } catch(e) { alert('Соединение ошибкаsı'); }
+  } catch(e) { alert('Ссылка ошибки'); }
 }
 
 async function reloadCog(name) {
@@ -81,7 +81,7 @@ async function reloadCog(name) {
     }).then(r => r.json());
     if (r.ok) loadCogs();
     else alert('Ошибка: ' + (r.error || 'Bilinmeyen'));
-  } catch(e) { alert('Соединение ошибкаsı'); }
+  } catch(e) { alert('Ссылка ошибки'); }
 }
 
 async function reloadAll() {

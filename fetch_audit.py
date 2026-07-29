@@ -1,4 +1,4 @@
-"""Журнал аудита Discord'u ручная загрузка и кэш'e записать"""
+"""Ежедневный audita Discord'u rucnaya загруз ve önbellek'e yaz"""
 import asyncio
 import json
 import os
@@ -14,32 +14,32 @@ TOKEN = os.getenv('TOKEN')
 
 intents = discord.Intents.default()
 intents.members = True
-бот = discord.Client(intents=intents)
+bot = discord.Client(intents=intents)
 
 ACTION_MAP = {
-    discord.AuditLogAction.ban:              ('mod',     'Бан'),
-    discord.AuditLogAction.unban:            ('mod',     'Бан Снят'),
-    discord.AuditLogAction.kick:             ('mod',     'Кик'),
-    discord.AuditLogAction.member_update:    ('mod',     'Участник Обновитьndi'),
-    discord.AuditLogAction.channel_create:   ('channel', 'Канал Создатьuldu'),
+    discord.AuditLogAction.ban:              ('mod',     'Ban'),
+    discord.AuditLogAction.unban:            ('mod',     'Ban Удалено'),
+    discord.AuditLogAction.kick:             ('mod',     'Kick'),
+    discord.AuditLogAction.member_update:    ('mod',     'Участник Обновлено'),
+    discord.AuditLogAction.channel_create:   ('channel', 'Канал Создано'),
     discord.AuditLogAction.channel_delete:   ('channel', 'Канал Удалено'),
-    discord.AuditLogAction.role_create:      ('role',    'Role Создатьuldu'),
-    discord.AuditLogAction.role_delete:      ('role',    'Role Удалено'),
-    discord.AuditLogAction.member_role_update: ('role',  'Role Değişikliği'),
+    discord.AuditLogAction.role_create:      ('role',    'Роли Создано'),
+    discord.AuditLogAction.role_delete:      ('role',    'Роли Удалено'),
+    discord.AuditLogAction.member_role_update: ('role',  'Роли Изменение'),
     discord.AuditLogAction.message_delete:   ('message', 'Сообщение Удалено'),
-    discord.AuditLogAction.invite_create:    ('invite',  'Davet Создатьuldu'),
+    discord.AuditLogAction.invite_create:    ('invite',  'Davet Создано'),
     discord.AuditLogAction.invite_delete:    ('invite',  'Davet Удалено'),
-    discord.AuditLogAction.guild_update:     ('server',  'Сервер Обновитьndi'),
+    discord.AuditLogAction.guild_update:     ('сервер',  'Сервер Обновлено'),
 }
 
-@бот.event
+@bot.event
 async def on_ready():
-    print(f'Подключено: {bot.user}')
+    print(f'Bağlandı: {bot.user}')
     cache = {}
     cutoff = datetime.datetime.utcnow() - datetime.timedelta(days=7)
 
     for guild in bot.guilds:
-        print(f'  {guild.name} загрузитьiliyor...')
+        print(f'  {guild.name} загруз...')
         gid = str(guild.id)
         cache[gid] = []
         count = 0
@@ -47,15 +47,15 @@ async def on_ready():
             async for entry in guild.audit_logs(limit=None, oldest_first=False):
                 if entry.created_at.replace(tzinfo=None) < cutoff:
                     break
-                cat, action_name = ACTION_MAP.get(entry.action, ('server', str(entry.action).split('.')[-1]))
+                cat, action_name = ACTION_MAP.get(entry.action, ('сервер', str(entry.action).split('.')[-1]))
                 target = entry.target
                 user = entry.user
 
-                # Мут tespiti
+                # Mute tespiti
                 if entry.action == discord.AuditLogAction.member_update:
                     after = entry.changes.after
                     if hasattr(after, 'timed_out_until'):
-                        action_name = 'Мут' if getattr(after, 'timed_out_until', None) else 'Мут Снят'
+                        action_name = 'Mute' if getattr(after, 'timed_out_until', None) else 'Mute Удалено'
                     else:
                         continue
 
@@ -79,16 +79,16 @@ async def on_ready():
                 })
                 count += 1
         except Exception as e:
-            print(f'  HATA: {e}')
+            print(f'  ОШИБКА: {e}')
 
-        print(f'  {guild.name}: {count} записей загружено')
+        print(f'  {guild.name}: {count} запись загружено')
 
     os.makedirs('data', exist_ok=True)
     with open('data/discord_audit_cache.json', 'w', encoding='utf-8') as f:
         json.dump(cache, f, ensure_ascii=False, indent=2)
 
     total = sum(len(v) for v in cache.values())
-    print(f'\nВсего {total} записей cache\'e записано.')
+    print(f'\nToplam {total} запись cache\'e написано.')
     await bot.close()
 
-бот.run(TOKEN)
+bot.run(TOKEN)

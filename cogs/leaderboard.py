@@ -1,4 +1,4 @@
-"""Liderlik Tablosu — message, голос, davet sıralaması"""
+"""Liderlik Tablosu — message, ses, davet очередь"""
 import discord
 from discord.ext import commands
 from discord import app_commands
@@ -50,7 +50,7 @@ class Leaderboard(commands.Cog):
         data['messages'][uid] = data['messages'].get(uid, 0) + 1
         _save(message.guild.id, data)
 
-    # ── Голос süresi takibi ─────────────────────────────────────────────────────
+    # ── Ses длительность takibi ─────────────────────────────────────────────────────
     @commands.Cog.listener()
     async def on_voice_state_update(self, member: discord.Member, before, after):
         if member.bot:
@@ -58,11 +58,11 @@ class Leaderboard(commands.Cog):
         uid = member.id
         now = datetime.datetime.utcnow()
 
-        # Каналa girdi
+        # Канал girdi
         if not before.channel and after.channel:
             self._voice_join[uid] = now
 
-        # Каналdan çıktı
+        # Канал вышел
         elif before.channel and not after.channel:
             if uid in self._voice_join:
                 minutes = int((now - self._voice_join.pop(uid)).total_seconds() / 60)
@@ -72,13 +72,13 @@ class Leaderboard(commands.Cog):
                     data['voice_minutes'][suid] = data['voice_minutes'].get(suid, 0) + minutes
                     _save(member.guild.id, data)
 
-    # ── /sıralama командаu ──────────────────────────────────────────────────────
-    @commands.command(name='голос-sıralama', aliases=['sssıralama', 'голосliler', 'голосstat'])
+    # ── /очередь команда ──────────────────────────────────────────────────────
+    @commands.command(name='ses-очередь', aliases=['sssıralama', 'sesliler', 'sesstat'])
     async def voice_leaderboard(self, ctx):
-        """Всего голос süresi sıralaması: !голос-sıralama"""
+        """Всего ses длительность очередь: !ses-очередь"""
         vs_path = f'data/voice_stats_{ctx.guild.id}.json'
         if not os.path.exists(vs_path):
-            await ctx.send('❌ Henüz голос verisi yok.')
+            await ctx.send('❌ Пока ses verisi yok.')
             return
 
         import json as _json
@@ -104,14 +104,14 @@ class Leaderboard(commands.Cog):
             lines.append(f'{medal} **{name}**\n╰ {bar} `{h}s {m}dk`')
 
         embed = discord.Embed(
-            title='🎙️  Голос Süresi Сортировкаması',
+            title='🎙️  Ses Длительность Очередь',
             description='\n\n'.join(lines) or 'Veri yok.',
             color=0x57F287
         )
-        embed.set_footer(text=f'{ctx.guild.name} • Всего голос süresi')
+        embed.set_footer(text=f'{ctx.guild.name} • Всего ses длительность')
         await ctx.send(embed=embed)
     async def leaderboard(self, ctx, kategori: str = 'overall'):
-        """Сервер liderlik tablosunu göster: !sıralama [message/голос/davet/overall]"""
+        """Сервер liderlik tablosunu показать: !очередь [message/ses/davet/overall]"""
         data = _load(ctx.guild.id)
         class FakeInteraction:
             guild = ctx.guild
@@ -122,7 +122,7 @@ class Leaderboard(commands.Cog):
 
         if kategori in ('message', 'messages', 'msg'):
             await self._show_messages_ctx(ctx, data)
-        elif kategori in ('голос', 'voice'):
+        elif kategori in ('ses', 'voice'):
             await self._show_voice_ctx(ctx, data)
         elif kategori in ('davet', 'invites', 'invite'):
             await self._show_invites_ctx(ctx, data)
@@ -131,26 +131,26 @@ class Leaderboard(commands.Cog):
 
     async def _show_messages_ctx(self, ctx, data):
         sorted_users = sorted(data['messages'].items(), key=lambda x: x[1], reverse=True)[:10]
-        embed = discord.Embed(title='💬 Сообщение Сортировкаması', color=0x5865F2)
+        embed = discord.Embed(title='💬 Сообщение Очередь', color=0x5865F2)
         lines = []
         for i, (uid, count) in enumerate(sorted_users, 1):
             member = ctx.guild.get_member(int(uid))
             name = member.display_name if member else f'<@{uid}>'
             lines.append(f'{_medal(i)} **{name}** — {count:,} message')
-        embed.description = '\n'.join(lines) or 'Henüz veri yok.'
+        embed.description = '\n'.join(lines) or 'Пока veri yok.'
         embed.set_footer(text=f'{ctx.guild.name} • Liderlik Tablosu')
         await ctx.send(embed=embed)
 
     async def _show_voice_ctx(self, ctx, data):
         sorted_users = sorted(data['voice_minutes'].items(), key=lambda x: x[1], reverse=True)[:10]
-        embed = discord.Embed(title='🎙️ Голос Süresi Сортировкаması', color=0x57F287)
+        embed = discord.Embed(title='🎙️ Ses Длительность Очередь', color=0x57F287)
         lines = []
         for i, (uid, mins) in enumerate(sorted_users, 1):
             member = ctx.guild.get_member(int(uid))
             name = member.display_name if member else f'<@{uid}>'
             h, m = divmod(mins, 60)
             lines.append(f'{_medal(i)} **{name}** — {h}s {m}dk')
-        embed.description = '\n'.join(lines) or 'Henüz veri yok.'
+        embed.description = '\n'.join(lines) or 'Пока veri yok.'
         embed.set_footer(text=f'{ctx.guild.name} • Liderlik Tablosu')
         await ctx.send(embed=embed)
 
@@ -161,7 +161,7 @@ class Leaderboard(commands.Cog):
             try:
                 with open(invite_file, 'r', encoding='utf-8') as f:
                     raw = json.load(f)
-                # Değerler dict olabilir — int'e çevir
+                # Значение dict olabilir — int'e преобразовать
                 for uid, val in raw.items():
                     if isinstance(val, dict):
                         invite_data[uid] = val.get('total', val.get('count', val.get('uses', 0)))
@@ -170,13 +170,13 @@ class Leaderboard(commands.Cog):
             except:
                 pass
         sorted_users = sorted(invite_data.items(), key=lambda x: x[1], reverse=True)[:10]
-        embed = discord.Embed(title='📨 Davet Сортировкаması', color=0xFEE75C)
+        embed = discord.Embed(title='📨 Davet Очередь', color=0xFEE75C)
         lines = []
         for i, (uid, count) in enumerate(sorted_users, 1):
             member = ctx.guild.get_member(int(uid))
             name = member.display_name if member else f'<@{uid}>'
             lines.append(f'{_medal(i)} **{name}** — {count} davet')
-        embed.description = '\n'.join(lines) or 'Henüz veri yok.'
+        embed.description = '\n'.join(lines) or 'Пока veri yok.'
         embed.set_footer(text=f'{ctx.guild.name} • Liderlik Tablosu')
         await ctx.send(embed=embed)
 
@@ -188,8 +188,8 @@ class Leaderboard(commands.Cog):
             scores[uid] += mins * 2
         sorted_users = sorted(scores.items(), key=lambda x: x[1], reverse=True)[:10]
         embed = discord.Embed(
-            title='🏆 Genel Liderlik Tablosu',
-            description='Сообщение (×1) + Голос minutessı (×2)',
+            title='🏆 Общий Liderlik Tablosu',
+            description='Сообщение (×1) + Ses minutessı (×2)',
             color=0xF1C40F
         )
         lines = []
@@ -203,11 +203,11 @@ class Leaderboard(commands.Cog):
                 f'{_medal(i)} **{name}** — {score:,} puan\n'
                 f'╰ 💬 {msgs:,} message • 🎙️ {h}s {m}dk'
             )
-        embed.description = (embed.description or '') + '\n\n' + ('\n'.join(lines) or 'Henüz veri yok.')
+        embed.description = (embed.description or '') + '\n\n' + ('\n'.join(lines) or 'Пока veri yok.')
         embed.set_footer(text=f'{ctx.guild.name} • Liderlik Tablosu')
         await ctx.send(embed=embed)
 
-    @app_commands.command(name='profile', description='Kendi istatistiklerini gör')
+    @app_commands.command(name='profile', description='Kendi статистика видеть')
     async def my_stats(self, interaction: discord.Interaction):
         data = _load(interaction.guild.id)
         uid = str(interaction.user.id)
@@ -217,21 +217,21 @@ class Leaderboard(commands.Cog):
         h, m = divmod(mins, 60)
         score = msgs * 1 + mins * 2
 
-        # Сортировкаma найти
+        # Очередь bul
         all_scores = {u: data['messages'].get(u, 0) + data['voice_minutes'].get(u, 0) * 2
                       for u in set(list(data['messages'].keys()) + list(data['voice_minutes'].keys()))}
         sorted_all = sorted(all_scores.items(), key=lambda x: x[1], reverse=True)
         rank = next((i + 1 for i, (u, _) in enumerate(sorted_all) if u == uid), '?')
 
         embed = discord.Embed(
-            title=f'📊 {interaction.user.display_name} — İstatistikler',
+            title=f'📊 {interaction.user.display_name} — Статистика',
             color=interaction.user.accent_color or 0x5865F2
         )
         embed.set_thumbnail(url=interaction.user.display_avatar.url)
         embed.add_field(name='💬 Сообщение', value=f'{msgs:,}', inline=True)
-        embed.add_field(name='🎙️ Голос', value=f'{h}s {m}dk', inline=True)
+        embed.add_field(name='🎙️ Ses', value=f'{h}s {m}dk', inline=True)
         embed.add_field(name='⭐ Puan', value=f'{score:,}', inline=True)
-        embed.add_field(name='🏆 Сортировкаma', value=f'#{rank}', inline=True)
+        embed.add_field(name='🏆 Очередь', value=f'#{rank}', inline=True)
         await interaction.response.send_message(embed=embed)
 
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 GitHub Webhook Auto-Update Script
-GitHub'a push edildiğinde VDS'deki ботu otomatik обновитьr
+GitHub'a push edildiğinde VDS'deki botu автоматически обновл
 """
 import os
 import subprocess
@@ -16,16 +16,16 @@ app = Flask(__name__)
 
 # Konfigürasyon
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
-REPO_URL = "https://github.com/Arthu27/Aether-бот"
-BOT_DIR = "C:/Users/Имяministrator/Aether-бот-main"
-BACKUP_DIR = "C:/Users/Имяministrator/Aether-бот-backup"
+REPO_URL = "https://github.com/Arthu27/Aether-bot"
+BOT_DIR = "C:/Users/İsmininistrator/Aether-bot-main"
+BACKUP_DIR = "C:/Users/İsmininistrator/Aether-bot-backup"
 
-def update_бот():
-    """Ботu обновить"""
+def update_bot():
+    """Botu обновить"""
     try:
-        print("[UPDATE] Обновитьme başlıyor...")
+        print("[UPDATE] Обновл başlıyor...")
         
-        # Mevcut ботu остановить (process kill)
+        # Текущий botu durdur (process kill)
         subprocess.run("taskkill /f /im python.exe", shell=True, capture_output=True)
         time.sleep(3)
         
@@ -34,7 +34,7 @@ def update_бот():
             if os.path.exists(BACKUP_DIR):
                 shutil.rmtree(BACKUP_DIR)
             shutil.copytree(BOT_DIR, BACKUP_DIR)
-            print("[UPDATE] Backup создатьuldu")
+            print("[UPDATE] Backup создано")
         
         # Новый versiyonu indir
         zip_url = f"{REPO_URL}/archive/refs/heads/main.zip"
@@ -42,22 +42,22 @@ def update_бот():
         
         response = requests.get(zip_url, headers=headers)
         if response.status_code != 200:
-            raise Exception(f"Скачатьme ошибкаsı: {response.status_code}")
+            raise Exception(f"Indirme ошибки: {response.status_code}")
         
         # ZIP'i сохранить ve aç
-        zip_path = "C:/Users/Имяministrator/Aether-update.zip"
+        zip_path = "C:/Users/İsmininistrator/Aether-update.zip"
         with open(zip_path, "wb") as f:
             f.write(response.content)
         
-        # Старый klasörü sil
+        # Старый klasörü удалить
         if os.path.exists(BOT_DIR):
             shutil.rmtree(BOT_DIR)
         
         # ZIP'i aç
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-            zip_ref.extractall("C:/Users/Имяministrator/")
+            zip_ref.extractall("C:/Users/İsmininistrator/")
         
-        # .env dosyasını geri kopyala (backup'tan veya template'ten)
+        # .env dosyasını geri kopyala (backup'tan или template'ten)
         env_template = """TOKEN=YOUR_BOT_TOKEN_HERE
 GROQ_API_KEY=YOUR_GROQ_API_KEY
 MISTRAL_API_KEY=YOUR_MISTRAL_API_KEY
@@ -69,39 +69,39 @@ OWNER_ID=987430047889637426"""
         # Cleanup
         os.remove(zip_path)
         
-        print("[UPDATE] Dosyalar обновитьndi")
+        print("[UPDATE] Dosyalar обновлено")
         
-        # Ботu yeniden запустить
+        # Botu yeniden запустить
         time.sleep(2)
         subprocess.Popen(["python", "main.py"], cwd=BOT_DIR, shell=True)
-        print("[UPDATE] Бот yeniden запуститьıldı")
+        print("[UPDATE] Bot yeniden запущено")
         
         return True
         
     except Exception as e:
         print(f"[UPDATE] Ошибка: {e}")
-        # Backup'tan geri yükle
+        # Backup'tan geri загрузить
         if os.path.exists(BACKUP_DIR):
             if os.path.exists(BOT_DIR):
                 shutil.rmtree(BOT_DIR)
             shutil.copytree(BACKUP_DIR, BOT_DIR)
             subprocess.Popen(["python", "main.py"], cwd=BOT_DIR, shell=True)
-            print("[UPDATE] Backup'tan geri yüklendi")
+            print("[UPDATE] Backup'tan geri загружено")
         return False
 
 @app.route('/webhook', methods=['POST'])
 def github_webhook():
     """GitHub webhook endpoint"""
     try:
-        # GitHub signature doğrulama (basit)
+        # GitHub signature проверка (basit)
         if request.headers.get('X-GitHub-Event') == 'push':
             payload = request.get_json()
             
-            # main branch'e push контroleü
+            # main branch'e push контроль
             if payload.get('ref') == 'refs/heads/main':
-                print("[WEBHOOK] Push algılandı, обновитьme запуститьılıyor...")
+                print("[WEBHOOK] Push algılandı, обновл запуск...")
                 
-                # Обновитьmeyi ayrı thread'de çalıştır
+                # Обновл ayrı thread'de çalıştır
                 threading.Thread(target=update_bot, daemon=True).start()
                 
                 return jsonify({"status": "success", "message": "Update started"}), 200
@@ -116,20 +116,20 @@ def github_webhook():
 
 @app.route('/status')
 def status():
-    """Статус контroleü"""
+    """Состояние контроль"""
     return jsonify({
         "status": "running",
-        "бот_running": os.path.exists(f"{BOT_DIR}/main.py")
+        "bot_running": os.path.exists(f"{BOT_DIR}/main.py")
     })
 
 @app.route('/manual-update', methods=['POST'])
 def manual_update():
-    """Manuel обновитьme"""
+    """Manuel обновл"""
     threading.Thread(target=update_bot, daemon=True).start()
     return jsonify({"status": "success", "message": "Manual update started"})
 
 if __name__ == '__main__':
-    print("[WEBHOOK] GitHub Auto-Update servisi запуститьılıyor...")
+    print("[WEBHOOK] GitHub Auto-Update servisi запуск...")
     print("[WEBHOOK] Webhook URL: http://localhost:5002/webhook")
-    print("[WEBHOOK] Manuel обновитьme: http://localhost:5002/manual-update")
+    print("[WEBHOOK] Manuel обновл: http://localhost:5002/manual-update")
     app.run(host='0.0.0.0', port=5002, debug=False)

@@ -1,91 +1,91 @@
-﻿# 🤖 AI Destek Ticket Sistemi
+﻿# 🤖 AI Поддержка Ticket Система
 
-## Genel Bakış
+## Обзор сервера
 
-Aether Discord botu artık **AI-powered destek ticket sistemi** ile donatıldı. Kullanıcılar ticket açtığında, önce AI asistan yardımcı olur. AI çözemediği durumlarda otomatik olarak yetkililere yönlendirir.
+Aether Discord botu теперь **AI-powered поддержка ticket система** с donatıldı. Пользователи ticket açtığında, до AI asistan помощник olur. AI çözemediği состояние автоматически как администрации направление.
 
 ---
 
-## 🎯 Özellikler
+## 🎯 Особенности
 
-### 1. **Otomatik AI Karşılama**
-- Kullanıcı ticket açtığında AI asistan otomatik karşılar
-- Sorun kategorisine göre özelleştirilmiş karşılama mesajları
-- Kullanıcıya ne yapması gerektiğini açıklar
+### 1. **Автоматически AI Приветствие**
+- Пользователь ticket açtığında AI asistan автоматически приветствие
+- Sorun kategorisine по особый приветствие сообщения
+- Пользователю ne yapması gerektiğini açıklar
 
-### 2. **Akıllı Konuşma**
-- AI kullanıcının mesajlarını anlar ve Türkçe cevap verir
-- Konuşma geçmişini hatırlar (son 20 mesaj)
+### 2. **Akıllı Разговор**
+- AI пользователя сообщение anlar ve Русский ответитьir
+- Разговор историю hatırlar (son 20 сообщение)
 - Profesyonel ama samimi ton
 
-### 3. **Otomatik Yönlendirme**
-AI aşağıdaki durumlarda otomatik yönlendirir:
-- Ban/kick/timeout gibi ceza işlemleri
-- Rol verme/alma işlemleri
-- Kanal/sunucu ayarları değişiklikleri
-- Ciddi şikayet ve anlaşmazlıklar
+### 3. **Автоматически Направление**
+AI aşağıdaki состояние автоматически направление:
+- Ban/kick/timeout gibi наказание действия
+- Роль verme/alma действия
+- Канал/сервер настройк изменение
+- Ciddi жалоба ve anlaşmazlıklar
 - Ödeme/ekonomi sorunları
-- Güvenlik ve gizlilik konuları
-- 10 mesaj limitine ulaşıldığında
-- AI hata verdiğinde
+- Безопасность ve gizlilik konuları
+- 10 сообщение limitine ulaşıldığında
+- AI ошибка данныеnde
 
-### 4. **Staff Kontrolü**
-- Yetkili mesaj attığında AI otomatik durur
-- Staff istediği zaman manuel yönlendirme yapabilir
-- AI'yi tamamen kapatma seçeneği
+### 4. **Staff Контроль**
+- Администратор сообщение attığında AI автоматически durur
+- Staff желание время manuel направление yapabilir
+- AI'yi tamamen закрыт выбрать
 
 ### 5. **Web Panel Entegrasyonu**
-- Tüm AI konuşmalarını görüntüleme
-- İstatistikler (toplam ticket, AI işliyor, yönlendirildi)
-- Konuşma geçmişini detaylı inceleme
+- Все AI разговор скриншот
+- Статистика (собратьm ticket, AI işliyor, направление)
+- Разговор историю детали inceleme
 
 ---
 
-## 📋 Komutlar
+## 📋 Команды
 
-### Kullanıcı Komutları
-- **Ticket Aç**: Panel butonuna tıkla → AI otomatik karşılar
+### Пользователь Командыı
+- **Ticket Aç**: Panel butonuna клик → AI автоматически приветствие
 
-### Yetkili Komutları
+### Администратор Командыı
 
 #### `/ticket-panel`
-Ticket panelini gönderir (AI destekli)
-- **Yetki**: Administrator
+Ticket panelini отправл (AI поддержка)
+- **Администратор**: Administrator
 
 #### `/ticket-ai-stats`
-AI destek istatistiklerini gösterir
-- **Yetki**: Manage Server
-- **Gösterir**: Toplam ticket, AI işliyor, yönlendirildi, ortalama mesaj
+AI поддержка статистика показ
+- **Администратор**: Manage Сервер
+- **Показ**: Всего ticket, AI işliyor, направление, ortalama сообщение
 
 #### `/ticket-ai-toggle`
-AI destek sistemini aç/kapat
-- **Yetki**: Administrator
-- **Kullanım**: Toggle switch (tekrar çalıştır = tersine çevir)
+AI поддержка sistemini aç/закрыть
+- **Администратор**: Administrator
+- **Использование**: Toggle switch (tekrar çalıştır = tersine преобразовать)
 
 #### `/ticket-force-escalate`
-Mevcut ticket'i hemen yetkililere yönlendir
-- **Yetki**: Manage Channels
-- **Kullanım**: Ticket kanalında çalıştır
+Текущий ticket'i hemen администрации направление
+- **Администратор**: Manage Channels
+- **Использование**: Ticket в канале çalıştır
 
-#### `/ticket-ekle <user>`
-Ticket'e kullanıcı ekle
-- **Yetki**: Manage Channels
+#### `/ticket-добавить <user>`
+Ticket'e пользователь добавить
+- **Администратор**: Manage Channels
 
 #### `/ticket-cikar <user>`
-Ticket'ten kullanıcı çıkar
-- **Yetki**: Manage Channels
+Ticket'ten пользователь удалить
+- **Администратор**: Manage Channels
 
 ---
 
-## 🔧 Teknik Detaylar
+## 🔧 Teknik Детали
 
 ### Dosya Yapısı
 
 ```
-cogs/ticket.py          # Ana ticket sistemi + AI entegrasyonu
+cogs/ticket.py          # Ana ticket система + AI entegrasyonu
 web/ai_helper.py        # AI fonksiyonları (OpenRouter Gemini 2.0 Flash)
 web/routes_extra.py     # Web panel route'ları
-web/templates/ai_tickets.html  # AI ticket görüntüleme sayfası
+web/templates/ai_tickets.html  # AI ticket скриншот sayfası
 data/ai_tickets_<guild_id>.json  # AI ticket verileri
 ```
 
@@ -111,159 +111,159 @@ data/ai_tickets_<guild_id>.json  # AI ticket verileri
 ### AI Model
 - **Provider**: OpenRouter
 - **Model**: Google Gemini 2.0 Flash
-- **Max Tokens**: 512 (hızlı yanıt için)
+- **Max Tokens**: 512 (быстрый yanıt для)
 - **Temperature**: 0.7 (dengeli yaratıcılık)
 
 ### Limitler
-- **Max AI Mesaj**: 10 (sonra otomatik yönlendirir)
-- **History**: Son 20 mesaj tutulur
-- **Timeout**: 30 saniye (AI yanıt süresi)
+- **Max AI Сообщение**: 10 (после автоматически направление)
+- **History**: В конец 20 сообщение tutulur
+- **Timeout**: 30 saniye (AI yanıt длительность)
 
 ---
 
 ## 🎨 Web Panel
 
-### AI Destek Ticketları Sayfası
+### AI Поддержка Ticketları Sayfası
 **URL**: `/ai-tickets`  
-**Yetki**: Mod+
+**Администратор**: Mod+
 
-**Özellikler**:
-- Tüm aktif AI ticket'ları görüntüleme
-- İstatistik kartları (toplam, AI işliyor, yönlendirildi, staff)
-- Her ticket için:
-  - Kanal adı
-  - Kullanıcı adı
+**Особенности**:
+- Все активен AI ticket'ları скриншот
+- Статистика kartları (собратьm, AI işliyor, направление, staff)
+- Каждый ticket для:
+  - Канал имя
+  - Пользователь имя
   - Kategori
-  - AI mesaj sayısı
-  - Yönlendirilme zamanı
-  - Konuşma geçmişini görüntüleme butonu
+  - AI сообщение количество
+  - Направление время
+  - Разговор историю скриншот butonu
 
-**Konuşma Modal**:
-- Kullanıcı ve AI mesajlarını ayrı renklerde gösterir
-- Zaman damgası yok (sadece içerik)
-- ESC tuşu veya dışarı tıklayarak kapatılır
+**Разговор Modal**:
+- Пользователь ve AI сообщение ayrı renklerde показ
+- Время damgası yok (только содержимое)
+- ESC tuşu или dışarı клик закрыт
 
 ---
 
-## 🚀 Kullanım Senaryoları
+## 🚀 Использование Senaryoları
 
 ### Senaryo 1: Basit Soru
-1. Kullanıcı ticket açar
-2. AI karşılar: "Merhaba! Sana nasıl yardımcı olabilirim?"
-3. Kullanıcı: "Bot komutları nasıl kullanılır?"
-4. AI: "/help komutunu kullanarak tüm komutları görebilirsin..."
-5. Kullanıcı memnun, ticket'i kapatır
+1. Пользователь ticket açar
+2. AI приветствие: "Merhaba! Sana как помощник olabilirim?"
+3. Пользователь: "Bot команды как использовать?"
+4. AI: "/help команду использовать все команды видеть..."
+5. Пользователь memnun, ticket'i закрыт
 
-### Senaryo 2: Şikayet (Yönlendirme)
-1. Kullanıcı ticket açar
-2. AI karşılar
-3. Kullanıcı: "X kişisi bana hakaret etti, ban atın"
-4. AI: "Bu konuda yetkililere yönlendiriyorum..."
-5. AI otomatik yönlendirir, destek rolünü ping atar
-6. Yetkili gelir, konuyu ele alır
+### Senaryo 2: Жалоба (Направление)
+1. Пользователь ticket açar
+2. AI приветствие
+3. Пользователь: "X человек bana оскорбление etti, ban atın"
+4. AI: "Bu konuda администрации направление..."
+5. AI автоматически направление, поддержка роль ping atar
+6. Администратор gelir, konuyu ele получает
 
 ### Senaryo 3: Staff Müdahalesi
-1. Kullanıcı ticket açar
+1. Пользователь ticket açar
 2. AI konuşuyor
-3. Yetkili mesaj atar
-4. AI otomatik durur
-5. Yetkili konuyu ele alır
+3. Администратор сообщение atar
+4. AI автоматически durur
+5. Администратор konuyu ele получает
 
-### Senaryo 4: Max Mesaj Limiti
-1. Kullanıcı ticket açar
-2. AI 10 mesaj cevap verir
-3. Hala çözüm yok
-4. AI otomatik yönlendirir: "Konuşma limiti aşıldı, yetkililer devralıyor"
+### Senaryo 4: Max Сообщение Limiti
+1. Пользователь ticket açar
+2. AI 10 сообщение ответитьir
+3. Hala решение yok
+4. AI автоматически направление: "Разговор limiti aşıldı, администраторы devralıyor"
 
 ---
 
-## ⚙️ Ayarlar
+## ⚙️ Настройки
 
-### `cogs/ticket.py` içinde:
+### `cogs/ticket.py` в:
 
 ```python
-AI_ENABLED = True  # AI sistemini aktif/pasif yap
-MAX_AI_MESSAGES = 10  # AI'nin max kaç mesaj cevaplayacağı
+AI_ENABLED = True  # AI sistemini активен/pasif yap
+MAX_AI_MESSAGES = 10  # AI'nin max сколько сообщение cevaplayacağı
 ```
 
-### AI System Prompt Düzenleme
+### AI System Prompt Редактироватьme
 `web/ai_helper.py` → `_ticket_system_prompt()` fonksiyonu
 
 ---
 
-## 🐛 Hata Durumları
+## 🐛 Ошибка Состояние
 
-### AI Hata Verirse
-- Otomatik yönlendirme yapılır
-- Kullanıcıya: "Sistem hatası, yetkililer devralıyor"
-- Destek rolü ping atılır
+### AI Ошибка Verirse
+- Автоматически направление yapılır
+- Пользователю: "Система ошибка, администраторы devralıyor"
+- Поддержка роль ping atılır
 
 ### Ollama/OpenRouter Erişilemezse
 - Graceful fallback
 - Ticket normal şekilde açılır (AI olmadan)
-- Destek rolü hemen ping atılır
+- Поддержка роль hemen ping atılır
 
-### Ticket Kapatıldığında
-- AI state otomatik temizlenir
-- Transcript kaydedilir (AI mesajları dahil)
+### Ticket Закрыт
+- AI state автоматически temizlenir
+- Transcript сохран (AI сообщения dahil)
 
 ---
 
-## 📊 İstatistikler
+## 📊 Статистика
 
-### Komut ile: `/ticket-ai-stats`
-- Toplam ticket sayısı
-- AI işliyor (kaç tane)
-- Yönlendirildi (kaç tane)
-- Staff işliyor (kaç tane)
-- Toplam AI mesaj sayısı
-- Ortalama mesaj/ticket
+### Команда с: `/ticket-ai-stats`
+- Всего ticket количество
+- AI işliyor (сколько tane)
+- Направление (сколько tane)
+- Staff işliyor (сколько tane)
+- Всего AI сообщение количество
+- Ortalama сообщение/ticket
 
 ### Web Panel: `/ai-tickets`
-- Görsel kartlar
+- Видеть kartlar
 - Filtreleme (yakında)
 - Arama (yakında)
 
 ---
 
-## 🔮 Gelecek Özellikler
+## 🔮 Gelecek Особенности
 
-- [ ] Kategori seçimi (ticket açarken dropdown)
-- [ ] AI öğrenme (başarılı çözümlerden)
+- [ ] Kategori выбор (ticket açarken dropdown)
+- [ ] AI öğrenme (успешно решение)
 - [ ] Çoklu dil desteği
-- [ ] Sentiment analizi (kullanıcı memnuniyeti)
-- [ ] Otomatik ticket kapatma (AI çözdüyse)
+- [ ] Sentiment analizi (пользователь memnuniyeti)
+- [ ] Автоматически ticket закрыт (AI çözdüyse)
 - [ ] AI performans metrikleri
-- [ ] Custom AI promptları (sunucu bazlı)
+- [ ] Custom AI promptları (сервер основанный на)
 
 ---
 
 ## 📝 Notlar
 
-- AI sadece Türkçe konuşur
-- AI asla yetki gerektiren işlem yapmaz
-- Tüm AI konuşmaları loglanır
-- Staff her zaman AI'yi override edebilir
-- AI ticket sistemi tamamen opsiyonel (kapatılabilir)
+- AI только Русский konuşur
+- AI никогда администратор gerektiren действие yapmaz
+- Все AI разговор loglanır
+- Staff каждый время AI'yi override edebilir
+- AI ticket система tamamen opsiyonel (закрыт)
 
 ---
 
 ## 🎓 Eğitim
 
-### Yetkililer İçin
-1. `/ticket-ai-stats` ile durumu kontrol edin
-2. `/ai-tickets` sayfasından konuşmaları inceleyin
-3. Gerekirse `/ticket-force-escalate` ile manuel yönlendirin
-4. AI'yi kapatmak için `/ticket-ai-toggle`
+### Администраторы Для
+1. `/ticket-ai-stats` с состояние контроль edin
+2. `/ai-tickets` sayfasından разговор inceleyin
+3. Gerekirse `/ticket-force-escalate` с manuel направление
+4. AI'yi закрыт для `/ticket-ai-toggle`
 
-### Kullanıcılar İçin
-- Ticket açın, AI size yardımcı olacak
-- Detaylı açıklama yapın
-- AI çözemezse otomatik yönlendirileceksiniz
+### Пользователи Для
+- Ticket açın, AI size помощник olacak
+- Детали описание yapın
+- AI çözemezse автоматически направление
 - Sabırlı olun, AI öğreniyor 🤖
 
 ---
 
 **Geliştirici**: Kiro AI  
-**Tarih**: 11 Nisan 2026  
+**Дата**: 11 Nisan 2026  
 **Versiyon**: 1.0.0

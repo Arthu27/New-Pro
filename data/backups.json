@@ -4,7 +4,7 @@
     "guild_id": "1107038411895881788",
     "created_at": "2026-03-20 15:26",
     "size": "14.9 KB",
-    "roles": [
+    "role": [
       {
         "name": "Fibo",
         "color": "#000000",
@@ -76,7 +76,7 @@
         "mentionable": false
       },
       {
-        "name": "゛👋﹕Karşılama Ping",
+        "name": "゛👋﹕Приветствие Ping",
         "color": "#000000",
         "permissions": 0,
         "hoist": false,
@@ -167,14 +167,14 @@
         "mentionable": false
       },
       {
-        "name": "゛🚯﹕Cezalı",
+        "name": "゛🚯﹕Наказание",
         "color": "#ff0000",
         "permissions": 0,
         "hoist": false,
         "mentionable": false
       },
       {
-        "name": "゛﹕Destekçi",
+        "name": "゛﹕Поддержка",
         "color": "#e638e0",
         "permissions": 2248473465835073,
         "hoist": true,
@@ -195,14 +195,14 @@
         "mentionable": false
       },
       {
-        "name": "゛⏾ ﹕Yeşil",
+        "name": "゛⏾ ﹕Зеленый",
         "color": "#1abc9c",
         "permissions": 0,
         "hoist": false,
         "mentionable": false
       },
       {
-        "name": "゛⏾ ﹕Mavi",
+        "name": "゛⏾ ﹕Синий",
         "color": "#3498db",
         "permissions": 0,
         "hoist": false,
@@ -216,7 +216,7 @@
         "mentionable": false
       },
       {
-        "name": "゛⏾ ﹕Kırmızı",
+        "name": "゛⏾ ﹕Красный",
         "color": "#ff0000",
         "permissions": 0,
         "hoist": false,
@@ -265,14 +265,14 @@
         "mentionable": false
       },
       {
-        "name": "゛🏹﹕Destek ekibi",
+        "name": "゛🏹﹕Поддержка ekibi",
         "color": "#616161",
         "permissions": 0,
         "hoist": false,
         "mentionable": false
       },
       {
-        "name": "゛🗡️ Yetkili﹒Ekibi",
+        "name": "゛🗡️ Администратор﹒Ekibi",
         "color": "#020202",
         "permissions": 0,
         "hoist": false,
@@ -314,7 +314,7 @@
         "mentionable": false
       },
       {
-        "name": "゛🏹 Yönetim﹒Ekibi",
+        "name": "゛🏹 Управление﹒Ekibi",
         "color": "#020202",
         "permissions": 0,
         "hoist": false,
@@ -413,13 +413,13 @@
         "topic": null
       },
       {
-        "name": "﹒🔴﹕Log Kanalları・──────────",
+        "name": "﹒🔴﹕Log Каналы・──────────",
         "type": "category",
         "position": 10,
         "topic": null
       },
       {
-        "name": "゛🚯﹕cezalı﹒sohbet",
+        "name": "゛🚯﹕наказание﹒sohbet",
         "type": "text",
         "position": 36,
         "topic": null
@@ -437,7 +437,7 @@
         "topic": null
       },
       {
-        "name": "゛🏹﹕Yönetim Toplantı",
+        "name": "゛🏹﹕Управление Собрание",
         "type": "voice",
         "position": 1,
         "topic": null
@@ -449,7 +449,7 @@
         "topic": null
       },
       {
-        "name": "゛🌈﹕renk﹒seçim",
+        "name": "゛🌈﹕renk﹒выбор",
         "type": "text",
         "position": 17,
         "topic": null
@@ -461,37 +461,37 @@
         "topic": null
       },
       {
-        "name": "゛🪄﹕ses﹒komut",
+        "name": "゛🪄﹕ses﹒команда",
         "type": "text",
         "position": 34,
         "topic": null
       },
       {
-        "name": "゛📕﹕kurallar",
+        "name": "゛📕﹕правила",
         "type": "text",
         "position": 12,
         "topic": null
       },
       {
-        "name": "゛🗞️﹕yönetim-bilgi",
+        "name": "゛🗞️﹕управление-информация",
         "type": "text",
         "position": 2,
         "topic": null
       },
       {
-        "name": "﹒🔕﹕Ceza Kanalları・──────────",
+        "name": "﹒🔕﹕Наказание Каналы・──────────",
         "type": "category",
         "position": 8,
         "topic": null
       },
       {
-        "name": "゛🔵﹕kanal﹒log",
+        "name": "゛🔵﹕канал﹒log",
         "type": "text",
         "position": 46,
         "topic": null
       },
       {
-        "name": "゛🎉﹕çekiliş",
+        "name": "゛🎉﹕розыгрыш",
         "type": "text",
         "position": 14,
         "topic": null
@@ -503,7 +503,7 @@
         "topic": null
       },
       {
-        "name": "﹒🤝﹕Partner Kanalları・──────────",
+        "name": "﹒🤝﹕Partner Каналы・──────────",
         "type": "category",
         "position": 9,
         "topic": null
@@ -521,43 +521,43 @@
         "topic": null
       },
       {
-        "name": "゛🎭﹕yetkili-giriş",
+        "name": "゛🎭﹕администратор-вход",
         "type": "text",
         "position": 7,
         "topic": null
       },
       {
-        "name": "゛🌙﹕yönetim-duyuru",
+        "name": "゛🌙﹕управление-duyuru",
         "type": "text",
         "position": 3,
         "topic": null
       },
       {
-        "name": "゛📌﹕bilgilendirme",
+        "name": "゛📌﹕информация",
         "type": "text",
         "position": 13,
         "topic": null
       },
       {
-        "name": "﹒🌈 ﹕Eğlence Kanalları・──────────",
+        "name": "﹒🌈 ﹕Eğlence Каналы・──────────",
         "type": "category",
         "position": 6,
         "topic": null
       },
       {
-        "name": "゛🍢﹕rol﹒alım",
+        "name": "゛🍢﹕роль﹒alım",
         "type": "text",
         "position": 16,
         "topic": null
       },
       {
-        "name": "゛🌙メ﹕Yönetim Kanalları・──────────",
+        "name": "゛🌙メ﹕Управление Каналы・──────────",
         "type": "category",
         "position": 0,
         "topic": null
       },
       {
-        "name": "゛📝﹕yetkili﹒alım",
+        "name": "゛📝﹕администратор﹒alım",
         "type": "text",
         "position": 21,
         "topic": null
@@ -569,19 +569,19 @@
         "topic": null
       },
       {
-        "name": "﹒🌙 ﹕Sunucu hakkında・──────────",
+        "name": "﹒🌙 ﹕Сервер о・──────────",
         "type": "category",
         "position": 2,
         "topic": null
       },
       {
-        "name": "゛📎﹕bot﹒komut",
+        "name": "゛📎﹕bot﹒команда",
         "type": "text",
         "position": 27,
         "topic": null
       },
       {
-        "name": "゛🟣﹕rol﹒log",
+        "name": "゛🟣﹕роль﹒log",
         "type": "text",
         "position": 45,
         "topic": null
@@ -605,7 +605,7 @@
         "topic": null
       },
       {
-        "name": "゛🎫﹕destek﹒talebi",
+        "name": "゛🎫﹕поддержка﹒talebi",
         "type": "text",
         "position": 22,
         "topic": null
@@ -617,7 +617,7 @@
         "topic": null
       },
       {
-        "name": "゛🍨﹕seviye﹒bildirimi",
+        "name": "゛🍨﹕seviye﹒уведомление",
         "type": "text",
         "position": 20,
         "topic": null
@@ -629,7 +629,7 @@
         "topic": null
       },
       {
-        "name": "゛🟤﹕mesaj﹒log",
+        "name": "゛🟤﹕сообщение﹒log",
         "type": "text",
         "position": 43,
         "topic": null
@@ -647,13 +647,13 @@
         "topic": null
       },
       {
-        "name": "゛🍘﹕öneri﹒istek",
+        "name": "゛🍘﹕предложение﹒желание",
         "type": "text",
         "position": 18,
         "topic": null
       },
       {
-        "name": "゛💬﹕yönetim-sohbet",
+        "name": "゛💬﹕управление-sohbet",
         "type": "text",
         "position": 4,
         "topic": null
@@ -671,7 +671,7 @@
         "topic": null
       },
       {
-        "name": "゛💌﹕partner﹒görme",
+        "name": "゛💌﹕partner﹒видеть",
         "type": "text",
         "position": 37,
         "topic": null
@@ -683,25 +683,25 @@
         "topic": null
       },
       {
-        "name": "゛🗡️﹕Yetkili Toplantı",
+        "name": "゛🗡️﹕Администратор Собрание",
         "type": "voice",
         "position": 2,
         "topic": null
       },
       {
-        "name": "゛🔨メ﹕Yetkili Kanalları・──────────",
+        "name": "゛🔨メ﹕Администратор Каналы・──────────",
         "type": "category",
         "position": 1,
         "topic": null
       },
       {
-        "name": "﹒🔉﹕Ses kanalları・──────────",
+        "name": "﹒🔉﹕Ses каналы・──────────",
         "type": "category",
         "position": 7,
         "topic": null
       },
       {
-        "name": "゛🔕﹕cezalı﹒bilgi",
+        "name": "゛🔕﹕наказание﹒информация",
         "type": "text",
         "position": 35,
         "topic": null
@@ -713,7 +713,7 @@
         "topic": null
       },
       {
-        "name": "゛🚨﹕ceza﹒takip",
+        "name": "゛🚨﹕наказание﹒takip",
         "type": "text",
         "position": 15,
         "topic": null
@@ -731,7 +731,7 @@
         "topic": null
       },
       {
-        "name": "゛🌙﹕yetkili-duyuru",
+        "name": "゛🌙﹕администратор-duyuru",
         "type": "text",
         "position": 8,
         "topic": null
@@ -743,7 +743,7 @@
         "topic": null
       },
       {
-        "name": "゛🪡﹕yetkili-komut",
+        "name": "゛🪡﹕администратор-команда",
         "type": "text",
         "position": 10,
         "topic": null
@@ -773,37 +773,37 @@
         "topic": null
       },
       {
-        "name": "゛🪡﹕yönetim-komut",
+        "name": "゛🪡﹕управление-команда",
         "type": "text",
         "position": 5,
         "topic": null
       },
       {
-        "name": "゛💬﹕yetkili-sohbet",
+        "name": "゛💬﹕администратор-sohbet",
         "type": "text",
         "position": 9,
         "topic": null
       },
       {
-        "name": "゛🗞️﹕yetkili-bilgi",
+        "name": "゛🗞️﹕администратор-информация",
         "type": "text",
         "position": 6,
         "topic": null
       },
       {
-        "name": "゛⚖️﹕Destek & İletişim・──────────",
+        "name": "゛⚖️﹕Поддержка & İletişim・──────────",
         "type": "category",
         "position": 4,
         "topic": null
       },
       {
-        "name": "﹒🀄﹕Bireysel Kanallar・──────────",
+        "name": "﹒🀄﹕Bireysel Каналы・──────────",
         "type": "category",
         "position": 3,
         "topic": null
       },
       {
-        "name": "゛💬﹕genel﹒sohbet",
+        "name": "゛💬﹕общий﹒sohbet",
         "type": "text",
         "position": 25,
         "topic": null
@@ -823,7 +823,7 @@
     ],
     "settings": {
       "name": "🍁Rakuzan ⸺ Anime & Manga #BAKIM",
-      "description": "Rakuzan; insanların birlikte eğlenmesini, oyunlar oynamasını, yeni dostluklar ve arkadaşlıklar edinmesini ve en önemlisi bizlerle birlikte bolca anı biriktirmenizi sağlayacak bir sunucudur.",
+      "description": "Rakuzan; insanların birlikte eğlenmesini, oyunlar oynamasını, новый dostluklar ve arkadaşlıklar edinmesini ve en önemlisi bizlerle birlikte bolca anı biriktirmenizi sağlayacak bir сервер.",
       "verification_level": "low"
     },
     "id": "1774005966"

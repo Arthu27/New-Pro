@@ -1,4 +1,4 @@
-"""Proактивна AI — Бот kendi kendine düşünür ve Arthur'a DM atar"""
+"""Proaktif AI — Bot kendi kendine düşünür ve Arthur'a DM atar"""
 import discord
 from discord.ext import commands, tasks
 import datetime
@@ -8,10 +8,10 @@ import json
 OWNER_ID = int(os.getenv('OWNER_ID') or '0')
 DATA_FILE = 'data/proactive_ai.json'
 
-# Warning eşikleri
-LEAVE_ALERT_THRESHOLD = 3    # 1 часte bu kadar kişi ayrılırsa uyar
-JOIN_ALERT_THRESHOLD  = 10   # 1 часte bu kadar kişi katılırsa uyar (raid?)
-WARN_ALERT_THRESHOLD  = 3    # 1 часte bu kadar предупреждений verilirse uyar
+# Предупреждение eşikleri
+LEAVE_ALERT_THRESHOLD = 3    # 1 saatte bu kadar человек ayrılırsa uyar
+JOIN_ALERT_THRESHOLD  = 10   # 1 saatte bu kadar человек katılırsa uyar (raid?)
+WARN_ALERT_THRESHOLD  = 3    # 1 saatte bu kadar предупреждение verilirse uyar
 
 
 def _load() -> dict:
@@ -47,10 +47,10 @@ class ProactiveAI(commands.Cog):
             owner = await self.bot.fetch_user(OWNER_ID)
             await owner.send(message)
         except Exception as e:
-            print(f'[ProactiveAI] DM Ошибкаsı: {e}')
+            print(f'[ProactiveAI] DM Ошибки: {e}')
 
     async def _think_and_ask(self):
-        """Бот düşünür ve gerekirse Arthur'a soru sorar"""
+        """Bot düşünür ve gerekirse Arthur'a soru sorar"""
         if not OWNER_ID:
             return
 
@@ -59,13 +59,13 @@ class ProactiveAI(commands.Cog):
         today = now.strftime('%Y-%m-%d')
         asked_today = data.get('asked_today', [])
 
-        # Günlük sıfırla
+        # Ежедневный sıfırla
         if data.get('last_date') != today:
             data['asked_today'] = []
             data['last_date'] = today
             asked_today = []
 
-        # Sabah messageı (09:00-09:30) - DEVRE DIŞI
+        # Sabah сообщение (09:00-09:30) - отключено
         # if now.hour == 9 and now.minute < 30 and 'morning' not in asked_today:
         #     from web.ai_helper import _call_text
         #     # Сервер statusunu al
@@ -75,12 +75,12 @@ class ProactiveAI(commands.Cog):
 
         #     morning_msg = _call_text([
         #         {'role': 'system', 'content': (
-        #             'Sen Aether, Arthur\'ın Discord ботusun. '
-        #             'Sabah Arthur\'a kısa, samimi bir деньaydın messageı yaz. '
-        #             'Сервер statusunu belirt, buдень için bir şey sormak istiyorsan sor. '
-        #             'Maksimum 3 cümle. Emoji kullan.'
+        #             'Sen Aether, Arthur\'ın Discord botusun. '
+        #             'Sabah Arthur\'a краткий, samimi bir день сообщение yaz. '
+        #             'Сервер statusunu belirt, сегодня для bir что-то sormak istiyorsan sor. '
+        #             'Maksimum 3 cümle. Emoji использовать.'
         #         )},
-        #         {'role': 'user', 'content': f'Серверlar: {", ".join(guild_info)}. Buдень {now.strftime("%A, %d %B")}. Sabah messageı yaz.'}
+        #         {'role': 'user', 'content': f'Сервера: {", ".join(guild_info)}. Сегодня {now.strftime("%A, %d %B")}. Sabah сообщение yaz.'}
         #     ], max_tokens=150)
 
         #     await self._send_to_owner(morning_msg)
@@ -89,23 +89,23 @@ class ProactiveAI(commands.Cog):
         #     _save(data)
         #     return
 
-        # Akşam özeti (21:00-21:30)
+        # Akşam сводка (21:00-21:30)
         if now.hour == 21 and now.minute < 30 and 'evening' not in asked_today:
             from web.ai_helper import _call_text
 
-            # Сервер aktivitesini topla
+            # Сервер aktivitesini собрать
             stats = []
             for guild in self.bot.guilds:
                 stats.append(f"{guild.name}: {guild.member_count} участник")
 
             evening_msg = _call_text([
                 {'role': 'system', 'content': (
-                    'Sen Aether, Arthur\'ın Discord ботusun. '
-                    'Akşam Arthur\'a kısa bir özet messageı yaz. '
-                    'Buдень nasıl geçti diye sor, yarın için bir şey var mı diye merak et. '
+                    'Sen Aether, Arthur\'ın Discord botusun. '
+                    'Akşam Arthur\'a краткий bir сводка сообщение yaz. '
+                    'Сегодня как geçti diye sor, завтра для bir что-то var mı diye merak et. '
                     'Maksimum 3 cümle. Samimi ve doğal ol.'
                 )},
-                {'role': 'user', 'content': f'Серверlar: {", ".join(stats)}. Akşam özeti yaz.'}
+                {'role': 'user', 'content': f'Сервера: {", ".join(stats)}. Akşam сводка yaz.'}
             ], max_tokens=150)
 
             await self._send_to_owner(evening_msg)
@@ -114,13 +114,13 @@ class ProactiveAI(commands.Cog):
             _save(data)
             return
 
-        # Rastgele merak sorusu — devre dışı (gereksiz API çağrısı)
+        # Rastgele merak sorusu — отключено (gereksiz API çağrısı)
         # if 12 <= now.hour <= 20 and 'random' not in asked_today:
         #     pass
 
     @tasks.loop(minutes=15)
     async def proactive_loop(self):
-        """Her 15 minutesda server analiz et, gerekirse uyar"""
+        """Каждый 15 minutesda сервер analiz et, gerekirse uyar"""
         await self._think_and_ask()
         await self._check_anomalies()
 
@@ -129,7 +129,7 @@ class ProactiveAI(commands.Cog):
         await self.bot.wait_until_ready()
 
     async def _check_anomalies(self):
-        """Сервер anomalilerini tespit et ve Arthur'a bildir"""
+        """Сервер anomalilerini определить ve Arthur'a bildir"""
         if not OWNER_ID:
             return
         data = _load()
@@ -138,20 +138,20 @@ class ProactiveAI(commands.Cog):
         one_hour_ago = now_ts - 3600
         alerts = []
 
-        # Последний 1 часteki ayrılmaları kontrole et
+        # В конец 1 saatteki ayrılmaları контроль et
         leave_log = [t for t in data.get('leave_log', []) if t > one_hour_ago]
         if len(leave_log) >= LEAVE_ALERT_THRESHOLD:
-            alerts.append(f'⚠️ Последний 1 часte **{len(leave_log)} kişi** serverdan ayrıldı!')
+            alerts.append(f'⚠️ В конец 1 saatte **{len(leave_log)} человек** с сервера покинул!')
             data['leave_log'] = []  # Sıfırla, tekrar uyarma
 
-        # Последний 1 часteki katılımları kontrole et
+        # В конец 1 saatteki katılımları контроль et
         join_log = [t for t in data.get('join_log', []) if t > one_hour_ago]
         if len(join_log) >= JOIN_ALERT_THRESHOLD:
-            alerts.append(f'🚨 Последний 1 часte **{len(join_log)} yeni участник** katıldı — olası raid!')
+            alerts.append(f'🚨 В конец 1 saatte **{len(join_log)} новый участник** присоединился — olası raid!')
             data['join_log'] = []
 
         if alerts:
-            msg = '**🤖 J.A.R.V.I.S. Warningsı**\n' + '\n'.join(alerts)
+            msg = '**🤖 J.A.R.V.I.S. Предупреждениеsı**\n' + '\n'.join(alerts)
             await self._send_to_owner(msg)
 
         data['leave_log'] = [t for t in data.get('leave_log', []) if t > one_hour_ago]
@@ -178,7 +178,7 @@ class ProactiveAI(commands.Cog):
             try:
                 owner = await self.bot.fetch_user(OWNER_ID)
                 await owner.send(
-                    f'📤 **{member.display_name}** `{member.guild.name}` serversundan ayrıldı.'
+                    f'📤 **{member.display_name}** `{member.guild.name}` сервер покинул.'
                 )
             except:
                 pass

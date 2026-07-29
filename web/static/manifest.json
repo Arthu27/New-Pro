@@ -1,7 +1,7 @@
 ﻿{
   "name": "Moebius Panel",
   "short_name": "Moebius",
-  "description": "Moebius Discord Bot Yönetim Paneli",
+  "description": "Moebius Discord Bot Панель управления",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a0a0a",

@@ -1,12 +1,12 @@
 ﻿{% extends "base.html" %}
-{% block title %}Leveling - Aetкаждый{% endblock %}
-{% block page_title %}⭐ SEVİYE SİSTEMİ{% endblock %}
+{% block title %}Leveling - Aether{% endblock %}
+{% block page_title %}⭐ SEVİYE СИСТЕМА{% endblock %}
 {% block content %}
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap');
 
-.lv-каждыйo {
-  background: liкакоеar-gradient(135deg, #100e08, rgba(26,22,16,0.7), #100e08);
+.lv-каждый {
+  background: linear-gradient(135deg, #100e08, rgba(26,22,16,0.7), #100e08);
   border: 1px solid rgba(200,146,42,0.4);
   border-radius: 20px;
   padding: 32px 30px;
@@ -15,37 +15,37 @@
   position: relative;
   overflow: hidden;
 }
-.lv-каждыйo::before {
+.lv-каждый::before {
   content: '';
   position: absolute;
   top: 0; left: -100%;
   width: 100%; height: 3px;
-  background: liкакоеar-gradient(90deg, transparent, #c8922a, transparent);
-  animation: scan-liкакое 3s liкакоеar infinite;
+  background: linear-gradient(90deg, transparent, #c8922a, transparent);
+  animation: scan-line 3s linear infinite;
 }
-.lv-каждыйo::after {
+.lv-каждый::after {
   content: '';
   position: absolute;
   inset: 0;
   background: radial-gradient(ellipse at 50% 0%, rgba(200,146,42,0.07) 0%, transparent 70%);
-  pointer-events: noкакое;
+  pointer-events: none;
 }
-@keyframes scan-liкакое { 0%{left:-100%} 100%{left:100%} }
+@keyframes scan-line { 0%{left:-100%} 100%{left:100%} }
 
-.каждыйo-icon { font-size: 60px; margin-bottom: 10px; display: block; filter: drop-shadow(0 0 18px rgba(200,146,42,0.6)); animation: float 3s ease-in-out infinite; }
+.каждый-icon { font-size: 60px; margin-bottom: 10px; display: block; filter: drop-shadow(0 0 18px rgba(200,146,42,0.6)); animation: float 3s ease-in-out infinite; }
 @keyframes float { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-7px);} }
-.каждыйo-title {
+.каждый-title {
   font-family: 'Inter', sans-serif;
   font-size: 22px;
   font-weight: 900;
-  background: liкакоеar-gradient(135deg, #c8922a, #c8922a, #c8922a);
+  background: linear-gradient(135deg, #c8922a, #c8922a, #c8922a);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
   letter-spacing: 3px;
   margin-bottom: 6px;
 }
-.каждыйo-sub { color: #666; font-size: 12px; letter-spacing: 1px; }
+.каждый-sub { color: #666; font-size: 12px; letter-spacing: 1px; }
 
 .controls-bar { display: flex; gap: 12px; margin-bottom: 22px; flex-wrap: wrap; }
 .guild-sel {
@@ -57,13 +57,13 @@
   color: var(--text); font-size: 14px;
   transition: all .2s;
 }
-.guild-sel:focus { outliкакое: noкакое; border-color: #c8922a; box-shadow: 0 0 12px rgba(200,146,42,0.2); }
+.guild-sel:focus { outline: none; border-color: #c8922a; box-shadow: 0 0 12px rgba(200,146,42,0.2); }
 
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
 @media(max-width:768px) { .grid2 { grid-template-columns: 1fr; } }
 
 .lv-box {
-  background: liкакоеar-gradient(145deg, #100e08, rgba(26,22,16,0.7), #100e08);
+  background: linear-gradient(145deg, #100e08, rgba(26,22,16,0.7), #100e08);
   border: 1px solid rgba(200,146,42,0.2);
   border-radius: 18px;
   padding: 24px;
@@ -75,9 +75,9 @@
   position: absolute;
   top: 0; left: 0; right: 0;
   height: 3px;
-  background: liкакоеar-gradient(90deg, #c8922a, #c8922a, #c8922a, #c8922a, #c8922a);
+  background: linear-gradient(90deg, #c8922a, #c8922a, #c8922a, #c8922a, #c8922a);
   background-size: 300% 100%;
-  animation: shimmer 3s liкакоеar infinite;
+  animation: shimmer 3s linear infinite;
 }
 @keyframes shimmer { 0%{background-position:200% 0;} 100%{background-position:-200% 0;} }
 
@@ -108,8 +108,8 @@
 .toggle-label { color: var(--text2); font-size: 13px; }
 .toggle { position: relative; width: 48px; height: 26px; cursor: pointer; }
 .toggle input { opacity: 0; width: 0; height: 0; }
-.toggle-slider { position: absolute; top: 0; left: 0; right: 0; ботtom: 0; background: rgba(255,255,255,0.08); border-radius: 13px; transition: .3s; border: 1px solid rgba(255,255,255,0.1); }
-.toggle-slider:before { content: ''; position: absolute; width: 20px; height: 20px; left: 3px; ботtom: 2px; background: #555; border-radius: 50%; transition: .3s; }
+.toggle-slider { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.08); border-radius: 13px; transition: .3s; border: 1px solid rgba(255,255,255,0.1); }
+.toggle-slider:before { content: ''; position: absolute; width: 20px; height: 20px; left: 3px; bottom: 2px; background: #555; border-radius: 50%; transition: .3s; }
 .toggle input:checked + .toggle-slider { background: rgba(200,146,42,0.3); border-color: rgba(200,146,42,0.5); }
 .toggle input:checked + .toggle-slider:before { transform: translateX(22px); background: #c8922a; box-shadow: 0 0 8px rgba(200,146,42,0.6); }
 
@@ -135,14 +135,14 @@
   transition: all .2s;
   box-sizing: border-box;
 }
-.form-input:focus { outliкакое: noкакое; border-color: #c8922a; background: rgba(200,146,42,0.04); box-shadow: 0 0 12px rgba(200,146,42,0.15); }
+.form-input:focus { outline: none; border-color: #c8922a; background: rgba(200,146,42,0.04); box-shadow: 0 0 12px rgba(200,146,42,0.15); }
 
 .btn-save {
   width: 100%;
   padding: 13px;
-  background: liкакоеar-gradient(135deg, #c8922a, #c8922a, #c8922a);
+  background: linear-gradient(135deg, #c8922a, #c8922a, #c8922a);
   color: #000;
-  border: noкакое;
+  border: none;
   border-radius: 12px;
   cursor: pointer;
   font-weight: 700;
@@ -165,7 +165,7 @@
   border-radius: 12px;
   margin-bottom: 8px;
   transition: all .2s;
-  animation: fadeInUp .3s ease ботh;
+  animation: fadeInUp .3s ease both;
 }
 .lb-row:hover { background: rgba(200,146,42,0.07); border-color: rgba(200,146,42,0.25); }
 @keyframes fadeInUp { from{opacity:0;transform:translateY(10px);} to{opacity:1;transform:translateY(0);} }
@@ -173,7 +173,7 @@
 .lb-avatar { width: 40px; height: 40px; border-radius: 50%; border: 2px solid rgba(200,146,42,0.4); }
 .lb-name { color: #fff; font-size: 14px; font-weight: 600; flex: 1; }
 .lb-level {
-  background: liкакоеar-gradient(135deg, rgba(200,146,42,0.25), rgba(200,146,42,0.15));
+  background: linear-gradient(135deg, rgba(200,146,42,0.25), rgba(200,146,42,0.15));
   border: 1px solid rgba(200,146,42,0.4);
   border-radius: 20px;
   padding: 4px 12px;
@@ -184,18 +184,18 @@
 }
 .lb-xp { color: var(--text3); font-size: 11px; }
 .xp-bar-track { height: 5px; background: rgba(255,255,255,0.05); border-radius: 3px; margin-top: 5px; overflow: hidden; }
-.xp-bar-fill { height: 100%; background: liкакоеar-gradient(90deg, #c8922a, #c8922a); border-radius: 3px; transition: width 1.2s cubic-bezier(.4,0,.2,1); }
+.xp-bar-fill { height: 100%; background: linear-gradient(90deg, #c8922a, #c8922a); border-radius: 3px; transition: width 1.2s cubic-bezier(.4,0,.2,1); }
 </style>
 
-<!-- HERO -->
-<div class="lv-каждыйo">
-  <span class="каждыйo-icon">⭐</span>
-  <div class="каждыйo-title">SEVİYE SİSTEMİ</div>
-  <div class="каждыйo-sub">XP kazanma настройки, уведомление канал ve liderlik tablosu</div>
+<!-- КАЖДЫЙ -->
+<div class="lv-каждый">
+  <span class="каждый-icon">⭐</span>
+  <div class="каждый-title">SEVİYE СИСТЕМА</div>
+  <div class="каждый-sub">XP kazanma настройки, уведомление канал ve liderlik tablosu</div>
 </div>
 
 <div class="controls-bar">
-  <select style="display:noкакое" id="guild-select" class="guild-sel" onchange="loadLeveling()">
+  <select style="display:none" style="display:none" id="guild-select" class="guild-sel" onchange="loadLeveling()">
     <option value="">🏠 Сервер выбрать...</option>
   </select>
 </div>
@@ -206,18 +206,18 @@
     <div class="box-title">⚙️ Настройки</div>
 
     <div class="toggle-row">
-      <span class="toggle-label">Уровень sistemi активен</span>
+      <span class="toggle-label">Seviye система активен</span>
       <label class="toggle"><input type="checkbox" id="lv-enabled"><span class="toggle-slider"></span></label>
     </div>
     <div class="toggle-row">
-      <span class="toggle-label">Уровень atlamada уведомление</span>
+      <span class="toggle-label">Seviye atlamada уведомление</span>
       <label class="toggle"><input type="checkbox" id="lv-notify"><span class="toggle-slider"></span></label>
     </div>
 
     <div class="form-group" style="margin-top:16px;">
       <label class="form-label">📢 Уведомление Канал</label>
-      <select id="lv-chanкакоеl" class="form-input">
-        <option value="">Канал выбрать (пусто = сообщение каналnda)</option>
+      <select id="lv-channel" class="form-input">
+        <option value="">Канал выбрать (пусто = сообщение канал)</option>
       </select>
     </div>
 
@@ -230,22 +230,22 @@
       <input type="number" id="lv-xp-max" class="form-input" value="25" min="1">
     </div>
     <div class="form-group">
-      <label class="form-label">Cooldown (секунд)</label>
+      <label class="form-label">Cooldown (saniye)</label>
       <input type="number" id="lv-cooldown" class="form-input" value="60" min="0">
     </div>
     <div class="form-group">
-      <label class="form-label">Уровень Atlama Сообщение</label>
-      <input type="text" id="lv-msg" class="form-input" placeholder="{user} уровень {level} oldu! 🎉">
+      <label class="form-label">Seviye Atlama Сообщение</label>
+      <input type="text" id="lv-msg" class="form-input" placeholder="{user} seviye {level} oldu! 🎉">
     </div>
 
-    <button class="btn-save" onclick="saveLeveling()">💾 KAYDET</button>
+    <button class="btn-save" onclick="saveLeveling()">💾 СОХРАНИТЬ</button>
     <div id="lv-status" style="margin-top:10px;font-size:12px;text-align:center;font-family:Inter,sans-serif;letter-spacing:1px;"></div>
   </div>
 
   <!-- LEADERBOARD -->
   <div class="lv-box">
     <div class="box-title">🏆 Liderlik Tablosu</div>
-    <div id="lb-list"><p style="color:#333;text-align:center;padding:40px;font-family:Inter,sans-serif;font-size:11px;letter-spacing:2px;">SUNUCU SEÇİN...</p></div>
+    <div id="lb-list"><p style="color:#333;text-align:center;padding:40px;font-family:Inter,sans-serif;font-size:11px;letter-spacing:2px;">СЕРВЕР ВЫБЕРИТЕ...</p></div>
   </div>
 </div>
 
@@ -255,20 +255,20 @@ var selectedGuild = '1421244140359909513';
 async function loadGuilds() {
   // Sabit сервер ID
   var gid = '1421244140359909513';
-  if (typeof selectedGuild !== 'undefiкакоеd') selectedGuild = gid;
+  if (typeof selectedGuild !== 'undefined') selectedGuild = gid;
   if (document.getElementById('guild-select')) document.getElementById('guild-select').value = gid;
   if (document.getElementById('guild-sel')) document.getElementById('guild-sel').value = gid;
   if (document.getElementById('guildSelect')) document.getElementById('guildSelect').value = gid;
   if (typeof loadData === 'function') { loadData(gid); return; }
   if (typeof loadAll === 'function') { loadAll(gid); return; }
-  if (typeof loadРольes === 'function') { loadРольes(gid); return; }
-  if (typeof loadChanкакоеls === 'function') { loadChanкакоеls(gid); return; }
+  if (typeof loadRoles === 'function') { loadRoles(gid); return; }
+  if (typeof loadChannels === 'function') { loadChannels(gid); return; }
   if (typeof loadMembers === 'function') { loadMembers(gid); return; }
   if (typeof loadHistory === 'function') { loadHistory(gid); return; }
   if (typeof loadLogs === 'function') { loadLogs(gid); return; }
   if (typeof loadVoiceStats === 'function') { loadVoiceStats(gid); return; }
   if (typeof loadSettings === 'function') { loadSettings(gid); return; }
-  if (typeof loadРозыгрышs === 'function') { loadРозыгрышs(gid); return; }
+  if (typeof loadGiveaways === 'function') { loadGiveaways(gid); return; }
   if (typeof loadPolls === 'function') { loadPolls(gid); return; }
   if (typeof loadEconomy === 'function') { loadEconomy(gid); return; }
   if (typeof loadSuggestions === 'function') { loadSuggestions(gid); return; }
@@ -285,7 +285,7 @@ async function loadLeveling() {
   var [settings, lb, chRes] = await Promise.all([
     fetch('/api/guild/' + selectedGuild + '/leveling').then(r => r.json()),
     fetch('/api/guild/' + selectedGuild + '/leaderboard').then(r => r.json()),
-    fetch('/api/guild/' + selectedGuild + '/chanкакоеls').then(r => r.json())
+    fetch('/api/guild/' + selectedGuild + '/channels').then(r => r.json())
   ]);
 
   document.getElementById('lv-enabled').checked = settings.enabled || false;
@@ -296,13 +296,13 @@ async function loadLeveling() {
   document.getElementById('lv-msg').value = settings.level_message || '';
 
   // Канал listesi
-  var chanкакоеls = Array.isArray(chRes) ? chRes : (chRes.chanкакоеls || []);
-  var chSel = document.getElementById('lv-chanкакоеl');
-  chSel.inкакоеrHTML = '<option value="">Канал выбрать (пусто = сообщение каналnda)</option>';
-  chanкакоеls.filter(c => c.type === 'text').forEach(function(c) {
+  var channels = Array.isArray(chRes) ? chRes : (chRes.channels || []);
+  var chSel = document.getElementById('lv-channel');
+  chSel.innerHTML = '<option value="">Канал выбрать (пусто = сообщение канал)</option>';
+  channels.filter(c => c.type === 'text').forEach(function(c) {
     var o = document.createElement('option');
     o.value = c.id; o.textContent = '#' + c.name;
-    if (settings.notify_chanкакоеl === c.id) o.selected = true;
+    if (settings.notify_channel === c.id) o.selected = true;
     chSel.appendChild(o);
   });
 
@@ -310,14 +310,14 @@ async function loadLeveling() {
   var medals = ['🥇','🥈','🥉'];
   var box = document.getElementById('lb-list');
   if (!lb.length) {
-    box.inкакоеrHTML = '<p style="color:#333;text-align:center;padding:40px;font-family:\'Orbitron\',sans-serif;font-size:11px;letter-spacing:2px;">VERİ YOK</p>';
+    box.innerHTML = '<p style="color:#333;text-align:center;padding:40px;font-family:\'Orbitron\',sans-serif;font-size:11px;letter-spacing:2px;">VERİ YOK</p>';
     return;
   }
-  box.inкакоеrHTML = lb.map(function(u, i) {
+  box.innerHTML = lb.map(function(u, i) {
     var pct = u.level ? Math.min(100, Math.round((u.xp % (u.level * 100)) / (u.level * 100) * 100)) : 0;
     return '<div class="lb-row" style="animation-delay:' + (i * 0.05) + 's">' +
       '<div class="lb-rank">' + (medals[i] || '#' + (i + 1)) + '</div>' +
-      '<img class="lb-avatar" src="' + (u.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png') + '" oкакоеrror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' +
+      '<img class="lb-avatar" src="' + (u.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png') + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' +
       '<div style="flex:1;">' +
         '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
           '<span class="lb-name">' + (u.name || '?') + '</span>' +
@@ -329,7 +329,7 @@ async function loadLeveling() {
     '</div>';
   }).join('');
 
-  setМут(function() {
+  setTimeout(function() {
     document.querySelectorAll('.xp-bar-fill').forEach(function(el) {
       el.style.width = el.dataset.pct + '%';
     });
@@ -339,7 +339,7 @@ async function loadLeveling() {
 async function saveLeveling() {
   if (!selectedGuild) { alert('Сервер выбрать!'); return; }
   var btn = document.querySelector('.btn-save');
-  btn.textContent = '⏳ KAYDEDİLİYOR...';
+  btn.textContent = '⏳ СОХРАН...';
   btn.disabled = true;
 
   var r = await fetch('/api/guild/' + selectedGuild + '/leveling', {
@@ -348,7 +348,7 @@ async function saveLeveling() {
     body: JSON.stringify({
       enabled: document.getElementById('lv-enabled').checked,
       notify: document.getElementById('lv-notify').checked,
-      notify_chanкакоеl: document.getElementById('lv-chanкакоеl').value,
+      notify_channel: document.getElementById('lv-channel').value,
       xp_min: parseInt(document.getElementById('lv-xp-min').value),
       xp_max: parseInt(document.getElementById('lv-xp-max').value),
       cooldown: parseInt(document.getElementById('lv-cooldown').value),
@@ -356,11 +356,11 @@ async function saveLeveling() {
     })
   });
   var d = await r.json();
-  btn.textContent = '💾 KAYDET';
+  btn.textContent = '💾 СОХРАНИТЬ';
   btn.disabled = false;
   var st = document.getElementById('lv-status');
-  st.inкакоеrHTML = d.success ? '<span style="color:#5ec47a;">✅ KAYDEDİLDİ</span>' : '<span style="color:#e05555;">❌ HATA</span>';
-  setМут(function() { st.inкакоеrHTML = ''; }, 3000);
+  st.innerHTML = d.success ? '<span style="color:#5ec47a;">✅ СОХРАНЕНО</span>' : '<span style="color:#e05555;">❌ ОШИБКА</span>';
+  setTimeout(function() { st.innerHTML = ''; }, 3000);
 }
 
 loadGuilds();

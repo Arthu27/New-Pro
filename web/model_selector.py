@@ -1,5 +1,5 @@
 """
-Мульти-модельная система — автоматический выбор лучшей модели для каждой задачи
+Multi-modelnaya система — автоматически выбор lucsey modelleri для каждый задачи
 """
 import os
 import json
@@ -9,9 +9,9 @@ from datetime import datetime, timedelta
 
 
 class ModelSelector:
-    """Умный выбор модели для каждой задачи"""
+    """Umniy выбор modelleri для каждый задачи"""
     
-    # Модели по приоритету (от лучшей к худшей)
+    # Modelleri по prioritetu (den lucsey e hudsey)
     MODELS = {
         'powerful': {
             'name': 'mistral-large-latest',
@@ -36,21 +36,21 @@ class ModelSelector:
         },
     }
     
-    # Какой тип модели использовать для разных задач
+    # Какой tür modelleri ispolzovat для raznih zadac
     TASK_MODEL_MAP = {
-        # Простые задачи — быстрая модель
+        # Prostie задачи — быстрый model
         'greeting': 'fast',
         'simple_question': 'fast',
         'category_detection': 'fast',
         'sentiment_analysis': 'fast',
         
-        # Средние задачи — сбалансированная модель
+        # Srednie задачи — ilebakiyeirovannaya model
         'technical_support': 'balanced',
         'general_chat': 'balanced',
         'faq_answer': 'balanced',
         'function_calling': 'balanced',
         
-        # Сложные задачи — мощная модель
+        # Slojnie задачи — mosnaya model
         'complaint_analysis': 'powerful',
         'moderation_decision': 'powerful',
         'complex_reasoning': 'powerful',
@@ -58,33 +58,33 @@ class ModelSelector:
     }
     
     def __init__(self):
-        self.model_stats = {}  # Статистика по каждой модели
-        self.task_history = []  # История задач
+        self.model_stats = {}  # Статистика по каждый modelleri
+        self.task_history = []  # История zadac
         
-        # Загружаем статистику если есть
+        # Загруз istatistiği если var
         self._load_stats()
     
     def select_model(self, task_type: str, context: Dict = None) -> str:
-        """Выбирает лучшую модель для задачи"""
+        """Vibiraet lucsuyu model для задачи"""
         
-        # Получаем рекомендуемый тип модели
+        # Alıyoruz rekomenduemiy tür modelleri
         recommended_type = self.TASK_MODEL_MAP.get(task_type, 'balanced')
         recommended_model = self.MODELS[recommended_type]
         
-        # Проверяем статистику — если модель часто падает, используем запасную
+        # Контроль ediyoruz istatistiği — если model sık sık padaet, ispolzuem yedek
         model_name = recommended_model['name']
         stats = self.model_stats.get(model_name, {})
         
         failure_rate = stats.get('failures', 0) / max(stats.get('total', 1), 1)
         
-        # Если failure rate > 20%, переключаемся на запасную модель
+        # Если failure rate > 20%, pereanahсканироватьemsya на yedek model
         if failure_rate > 0.2:
             if recommended_type == 'powerful':
                 model_name = self.MODELS['balanced']['name']
             elif recommended_type == 'balanced':
                 model_name = self.MODELS['fast']['name']
         
-        # Логируем выбор
+        # Loglarruem выбор
         self.task_history.append({
             'task_type': task_type,
             'recommended_type': recommended_type,
@@ -92,21 +92,21 @@ class ModelSelector:
             'timestamp': datetime.utcnow().isoformat()
         })
         
-        # Ограничиваем историю
+        # Ограничиваем история
         if len(self.task_history) > 1000:
             self.task_history = self.task_history[-1000:]
         
         return model_name
     
     def record_success(self, model_name: str, response_time: float = None):
-        """Записывает успешное использование модели"""
+        """Сохран успешно использование modelleri"""
         if model_name not in self.model_stats:
             self.model_stats[model_name] = {'total': 0, 'successes': 0, 'failures': 0, 'avg_time': 0}
         
         self.model_stats[model_name]['total'] += 1
         self.model_stats[model_name]['successes'] += 1
         
-        # Обновляем среднее время
+        # Обновл ortalama время
         if response_time:
             current_avg = self.model_stats[model_name]['avg_time']
             total = self.model_stats[model_name]['total']
@@ -117,7 +117,7 @@ class ModelSelector:
         self._save_stats()
     
     def record_failure(self, model_name: str):
-        """Записывает неудачное использование модели"""
+        """Сохран неудачно использование modelleri"""
         if model_name not in self.model_stats:
             self.model_stats[model_name] = {'total': 0, 'successes': 0, 'failures': 0, 'avg_time': 0}
         
@@ -127,7 +127,7 @@ class ModelSelector:
         self._save_stats()
     
     def get_model_info(self, model_name: str) -> Dict:
-        """Получает информацию о модели"""
+        """Alıyor информация о modelleri"""
         for model_type, model_data in self.MODELS.items():
             if model_data['name'] == model_name:
                 stats = self.model_stats.get(model_name, {})
@@ -143,7 +143,7 @@ class ModelSelector:
         return {}
     
     def _load_stats(self):
-        """Загружает статистику из файла"""
+        """Загруз istatistiği den dosyaya"""
         stats_file = 'data/model_stats.json'
         if os.path.exists(stats_file):
             try:
@@ -155,24 +155,24 @@ class ModelSelector:
                 pass
     
     def _save_stats(self):
-        """Сохраняет статистику в файл"""
+        """Сохран istatistiği в dosya"""
         try:
             os.makedirs('data', exist_ok=True)
             stats_file = 'data/model_stats.json'
             with open(stats_file, 'w', encoding='utf-8') as f:
                 json.dump({
                     'model_stats': self.model_stats,
-                    'task_history': self.task_history[-100:]  # Сохраняем только последние 100
+                    'task_history': self.task_history[-100:]  # Сохран только son 100
                 }, f, indent=2)
         except:
             pass
 
 
-# Глобальный экземпляр
+# Küresel пример
 _model_selector = None
 
 def get_model_selector() -> ModelSelector:
-    """Получает глобальный экземпляр ModelSelector"""
+    """Alıyor küresel пример ModelSelector"""
     global _model_selector
     if _model_selector is None:
         _model_selector = ModelSelector()
@@ -181,13 +181,13 @@ def get_model_selector() -> ModelSelector:
 
 def smart_call(messages: List[Dict], task_type: str, max_tokens: int = 2048, temperature: float = 0.7) -> Tuple[str, str, Dict]:
     """
-    Умный вызов AI с автоматическим выбором модели
+    Umniy vizov AI с автоматически olarakm выбор modelleri
     
     Args:
-        messages: Список сообщений
-        task_type: Тип задачи (greeting, complaint_analysis, etc.)
-        max_tokens: Максимум токенов
-        temperature: Температура
+        messages: Liste сообщение
+        task_type: Tür задачи (greeting, complaint_analysis, etc.)
+        max_tokens: Maksimum tokenov
+        temperature: Temperatura
     
     Returns:
         (response, model_name, info)
@@ -200,7 +200,7 @@ def smart_call(messages: List[Dict], task_type: str, max_tokens: int = 2048, tem
     start_time = time.time()
     
     try:
-        # Вызываем AI с выбранной моделью
+        # Çтяжелыйıyoruz AI с vibrannoy modelyu
         response, used_model, rate_info = _call(
             messages,
             max_tokens=max_tokens,
@@ -209,7 +209,7 @@ def smart_call(messages: List[Dict], task_type: str, max_tokens: int = 2048, tem
         
         response_time = time.time() - start_time
         
-        # Записываем успех
+        # Сохран uspeh
         selector.record_success(model_name, response_time)
         
         info = {
@@ -222,10 +222,10 @@ def smart_call(messages: List[Dict], task_type: str, max_tokens: int = 2048, tem
         return response, model_name, info
         
     except Exception as e:
-        # Записываем неудачу
+        # Сохран neudacu
         selector.record_failure(model_name)
         
-        # Пробуем запасную модель
+        # Probuem yedek model
         if task_type in ['complaint_analysis', 'moderation_decision', 'complex_reasoning']:
             fallback_model = ModelSelector.MODELS['balanced']['name']
         else:
@@ -252,4 +252,4 @@ def smart_call(messages: List[Dict], task_type: str, max_tokens: int = 2048, tem
             return response, fallback_model, info
             
         except Exception as e2:
-            raise Exception(f"Обе модели упали: {model_name}, {fallback_model}")
+            raise Exception(f"Obe modelleri upali: {model_name}, {fallback_model}")

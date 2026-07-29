@@ -1,15 +1,15 @@
 ﻿{% extends "base.html" %}
-{% block title %}Приглашение Takibi - Aetкаждый{% endblock %}
-{% block page_title %}<i class="fas fa-ссылки" style="color:#c8922a;animation:pulse 2s infinite;"></i> DAVET TAKİBİ{% endblock %}
+{% block title %}Davet Takibi - Aether{% endblock %}
+{% block page_title %}<i class="fas fa-ссылка" style="color:#c8922a;animation:pulse 2s infinite;"></i> DAVET TAKİBİ{% endblock %}
 {% block content %}
 <style>
-  .inv-box{background:liкакоеar-gradient(135deg,rgba(26,22,16,0.7),rgba(26,22,16,0.7));border:1px solid rgba(200,146,42,0.3);border-radius:16px;padding:25px;margin-bottom:20px;position:relative;overflow:hidden;}
-  .inv-box::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:2px;background:liкакоеar-gradient(90deg,transparent,#c8922a,transparent);;}
+  .inv-box{background:linear-gradient(135deg,rgba(26,22,16,0.7),rgba(26,22,16,0.7));border:1px solid rgba(200,146,42,0.3);border-radius:16px;padding:25px;margin-bottom:20px;position:relative;overflow:hidden;}
+  .inv-box::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:2px;background:linear-gradient(90deg,transparent,#c8922a,transparent);;}
   @keyframes scan{0%{left:-100%}100%{left:100%}}
-  .inv-title{color:#c8922a;font-size:13px;text-transform:uppercase;letter-spacing:2px;margin-bottom:18px;display:flex;align-items:center;gap:8px;padding-ботtom:12px;border-ботtom:1px solid rgba(200,146,42,0.2);}
+  .inv-title{color:#c8922a;font-size:13px;text-transform:uppercase;letter-spacing:2px;margin-bottom:18px;display:flex;align-items:center;gap:8px;padding-bottom:12px;border-bottom:1px solid rgba(200,146,42,0.2);}
   .stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin-bottom:20px;}
   @media(max-width:768px){.stat-row{grid-template-columns:repeat(2,1fr);}}
-  .stat-box{background:liкакоеar-gradient(135deg,rgba(26,22,16,0.7),rgba(26,22,16,0.7));border:1px solid rgba(200,146,42,0.3);border-radius:14px;padding:18px;text-align:center;transition:all 0.3s;}
+  .stat-box{background:linear-gradient(135deg,rgba(26,22,16,0.7),rgba(26,22,16,0.7));border:1px solid rgba(200,146,42,0.3);border-radius:14px;padding:18px;text-align:center;transition:all 0.3s;}
   .stat-box:hover{transform:translateY(-5px);box-shadow:0 10px 25px rgba(200,146,42,0.2);}
   .stat-val{font-size:28px;font-weight:900;color:#c8922a;}
   .stat-lbl{font-size:11px;color:rgba(240,232,208,0.55);text-transform:uppercase;margin-top:4px;letter-spacing:1px;}
@@ -27,50 +27,50 @@
   .join-inviter{color:rgba(240,232,208,0.55);font-size:12px;}
   .join-time{color:#5a5040;font-size:11px;margin-left:auto;}
   .tab-btn{padding:8px 18px;border:2px solid rgba(200,146,42,0.3);background:transparent;color:rgba(240,232,208,0.55);border-radius:20px;cursor:pointer;font-size:13px;transition:all 0.2s;}
-  .tab-btn.active,.tab-btn:hover{background:liкакоеar-gradient(135deg,#c8922a,#c8922a);border-color:#c8922a;color:#f0e8d0;}
+  .tab-btn.active,.tab-btn:hover{background:linear-gradient(135deg,#c8922a,#c8922a);border-color:#c8922a;color:#f0e8d0;}
   .guild-select{width:100%;padding:12px;background:#100e08;border:2px solid #c8922a;border-radius:14px;color:#f0e8d0;margin-bottom:20px;font-size:14px;}
   .inv-table{width:100%;border-collapse:collapse;}
   .inv-table th{padding:10px 12px;background:rgba(200,146,42,0.15);color:#c8922a;font-size:11px;text-transform:uppercase;letter-spacing:1px;text-align:left;}
-  .inv-table td{padding:10px 12px;border-ботtom:1px solid rgba(255,255,255,0.04);color:rgba(240,232,208,0.55);font-size:13px;}
+  .inv-table td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.04);color:rgba(240,232,208,0.55);font-size:13px;}
   .inv-table tr:hover td{background:rgba(200,146,42,0.05);}
 </style>
 
-<select style="display:noкакое" id="guild-select" class="guild-select" onchange="loadInvites()">
+<select style="display:none" style="display:none" id="guild-select" class="guild-select" onchange="loadInvites()">
   <option value="">Сервер выбрать...</option>
 </select>
 
 <div class="stat-row" id="stats">
-  <div class="stat-box"><div class="stat-val">-</div><div class="stat-lbl">Всего Приглашение</div></div>
-  <div class="stat-box"><div class="stat-val">-</div><div class="stat-lbl">Присоединение</div></div>
-  <div class="stat-box"><div class="stat-val">-</div><div class="stat-lbl">Выход</div></div>
-  <div class="stat-box"><div class="stat-val">-</div><div class="stat-lbl">Активен Приглашение</div></div>
+  <div class="stat-box"><div class="stat-val">-</div><div class="stat-lbl">Всего Davet</div></div>
+  <div class="stat-box"><div class="stat-val">-</div><div class="stat-lbl">Ikenbağlantı</div></div>
+  <div class="stat-box"><div class="stat-val">-</div><div class="stat-lbl">Çıkış</div></div>
+  <div class="stat-box"><div class="stat-val">-</div><div class="stat-lbl">Активен Davet</div></div>
 </div>
 
 <div style="display:flex;gap:10px;margin-bottom:15px;flex-wrap:wrap;">
   <button class="tab-btn active" onclick="showTab('leaderboard',this)">🏆 Liderboard</button>
-  <button class="tab-btn" onclick="showTab('joins',this)">👋 Последние Присоединениеlar</button>
-  <button class="tab-btn" onclick="showTab('invites',this)">🔗 Активен Приглашениеler</button>
+  <button class="tab-btn" onclick="showTab('joins',this)">👋 В конец Ikenbağlantılar</button>
+  <button class="tab-btn" onclick="showTab('invites',this)">🔗 Активен Davetler</button>
 </div>
 
 <div class="inv-box" id="tab-leaderboard">
-  <div class="inv-title"><i class="fas fa-trophy"></i> Приглашение Liderboard</div>
-  <div id="leaderboard-list"><p style="color:#5a5040;font-style:italic;">Сервер выбратьin...</p></div>
+  <div class="inv-title"><i class="fas fa-trophy"></i> Davet Liderboard</div>
+  <div id="leaderboard-list"><p style="color:#5a5040;font-style:italic;">Сервер выберите...</p></div>
 </div>
 
-<div class="inv-box" id="tab-joins" style="display:noкакое;">
-  <div class="inv-title"><i class="fas fa-user-plus"></i> Последние Присоединениеlar</div>
-  <div id="joins-list"><p style="color:#5a5040;font-style:italic;">Сервер выбратьin...</p></div>
+<div class="inv-box" id="tab-joins" style="display:none;">
+  <div class="inv-title"><i class="fas fa-user-plus"></i> В конец Ikenbağlantılar</div>
+  <div id="joins-list"><p style="color:#5a5040;font-style:italic;">Сервер выберите...</p></div>
 </div>
 
-<div class="inv-box" id="tab-invites" style="display:noкакое;">
-  <div class="inv-title"><i class="fas fa-ссылки"></i> Активен Приглашение Linkleri</div>
-  <div id="invites-list"><p style="color:#5a5040;font-style:italic;">Сервер выбратьin...</p></div>
+<div class="inv-box" id="tab-invites" style="display:none;">
+  <div class="inv-title"><i class="fas fa-ссылка"></i> Активен Davet Linkleri</div>
+  <div id="invites-list"><p style="color:#5a5040;font-style:italic;">Сервер выберите...</p></div>
 </div>
 
 <script>
 function showTab(tab, btn) {
   ['leaderboard','joins','invites'].forEach(function(t){
-    document.getElementById('tab-'+t).style.display = t===tab ? 'block' : 'noкакое';
+    document.getElementById('tab-'+t).style.display = t===tab ? 'block' : 'none';
   });
   document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});
   btn.classList.add('active');
@@ -79,20 +79,20 @@ function showTab(tab, btn) {
 async function loadGuilds() {
   // Sabit сервер ID
   var gid = '1421244140359909513';
-  if (typeof selectedGuild !== 'undefiкакоеd') selectedGuild = gid;
+  if (typeof selectedGuild !== 'undefined') selectedGuild = gid;
   if (document.getElementById('guild-select')) document.getElementById('guild-select').value = gid;
   if (document.getElementById('guild-sel')) document.getElementById('guild-sel').value = gid;
   if (document.getElementById('guildSelect')) document.getElementById('guildSelect').value = gid;
   if (typeof loadData === 'function') { loadData(gid); return; }
   if (typeof loadAll === 'function') { loadAll(gid); return; }
-  if (typeof loadРольes === 'function') { loadРольes(gid); return; }
-  if (typeof loadChanкакоеls === 'function') { loadChanкакоеls(gid); return; }
+  if (typeof loadRoles === 'function') { loadRoles(gid); return; }
+  if (typeof loadChannels === 'function') { loadChannels(gid); return; }
   if (typeof loadMembers === 'function') { loadMembers(gid); return; }
   if (typeof loadHistory === 'function') { loadHistory(gid); return; }
   if (typeof loadLogs === 'function') { loadLogs(gid); return; }
   if (typeof loadVoiceStats === 'function') { loadVoiceStats(gid); return; }
   if (typeof loadSettings === 'function') { loadSettings(gid); return; }
-  if (typeof loadРозыгрышs === 'function') { loadРозыгрышs(gid); return; }
+  if (typeof loadGiveaways === 'function') { loadGiveaways(gid); return; }
   if (typeof loadPolls === 'function') { loadPolls(gid); return; }
   if (typeof loadEconomy === 'function') { loadEconomy(gid); return; }
   if (typeof loadSuggestions === 'function') { loadSuggestions(gid); return; }
@@ -108,49 +108,49 @@ async function loadInvites() {
   var r = await fetch('/api/guild/'+gid+'/invite-tracker-full');
   var d = await r.json();
 
-  document.getElementById('stats').inкакоеrHTML =
-    '<div class="stat-box"><div class="stat-val">'+(d.total_invites||0)+'</div><div class="stat-lbl">Всего Приглашение</div></div>'+
-    '<div class="stat-box"><div class="stat-val">'+(d.total_joins||0)+'</div><div class="stat-lbl">Присоединение</div></div>'+
-    '<div class="stat-box"><div class="stat-val">'+(d.total_leaves||0)+'</div><div class="stat-lbl">Выход</div></div>'+
-    '<div class="stat-box"><div class="stat-val">'+(d.active_invites||0)+'</div><div class="stat-lbl">Активен Приглашение</div></div>';
+  document.getElementById('stats').innerHTML =
+    '<div class="stat-box"><div class="stat-val">'+(d.total_invites||0)+'</div><div class="stat-lbl">Всего Davet</div></div>'+
+    '<div class="stat-box"><div class="stat-val">'+(d.total_joins||0)+'</div><div class="stat-lbl">Ikenbağlantı</div></div>'+
+    '<div class="stat-box"><div class="stat-val">'+(d.total_leaves||0)+'</div><div class="stat-lbl">Çıkış</div></div>'+
+    '<div class="stat-box"><div class="stat-val">'+(d.active_invites||0)+'</div><div class="stat-lbl">Активен Davet</div></div>';
 
   var lb = d.leaderboard||[];
   var medals = ['🥇','🥈','🥉'];
-  document.getElementById('leaderboard-list').inкакоеrHTML = lb.length ?
+  document.getElementById('leaderboard-list').innerHTML = lb.length ?
     lb.map(function(u,i){
       return '<div class="inv-card">'+
         '<div class="inv-rank">'+(medals[i]||'#'+(i+1))+'</div>'+
-        '<img class="inv-avatar" src="'+(u.avatar||'https://cdn.discordapp.com/embed/avatars/0.png')+'" oкакоеrror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">'+
+        '<img class="inv-avatar" src="'+(u.avatar||'https://cdn.discordapp.com/embed/avatars/0.png')+'" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">'+
         '<div><div class="inv-name">'+u.name+'</div>'+
-        '<div class="inv-detail">'+(u.joins||0)+' присоединение · '+(u.leaves||0)+' выход · '+(u.fake||0)+' sahte</div></div>'+
+        '<div class="inv-detail">'+(u.joins||0)+' ikenbağlantı · '+(u.leaves||0)+' çıkış · '+(u.fake||0)+' sahte</div></div>'+
         '<div class="inv-count">'+(u.total||0)+'</div>'+
       '</div>';
     }).join('') :
-    '<p style="color:#5a5040;text-align:center;padding:30px;font-style:italic;">Veri нет.</p>';
+    '<p style="color:#5a5040;text-align:center;padding:30px;font-style:italic;">Veri yok.</p>';
 
   var joins = d.recent_joins||[];
-  document.getElementById('joins-list').inкакоеrHTML = joins.length ?
+  document.getElementById('joins-list').innerHTML = joins.length ?
     joins.map(function(j){
-      var t = j.joiкакоеd_at ? какоеw Date(j.joiкакоеd_at).toLocaleString('tr-TR') : '';
+      var t = j.joined_at ? new Date(j.joined_at).toLocaleString('tr-TR') : '';
       return '<div class="join-card">'+
-        '<img class="join-avatar" src="'+(j.avatar||'https://cdn.discordapp.com/embed/avatars/0.png')+'" oкакоеrror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">'+
+        '<img class="join-avatar" src="'+(j.avatar||'https://cdn.discordapp.com/embed/avatars/0.png')+'" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">'+
         '<div><div class="join-name">'+j.name+'</div>'+
-        '<div class="join-inviter">Приглашение eden: <span style="color:#c8922a;">'+(j.inviter||'Bilinmiyor')+'</span>'+(j.invite_code?' ('+j.invite_code+')':'')+'</div></div>'+
+        '<div class="join-inviter">Davet eden: <span style="color:#c8922a;">'+(j.inviter||'Bilinmiyor')+'</span>'+(j.invite_code?' ('+j.invite_code+')':'')+'</div></div>'+
         '<div class="join-time">'+t+'</div>'+
       '</div>';
     }).join('') :
-    '<p style="color:#5a5040;text-align:center;padding:30px;font-style:italic;">Пока присоединение kaydı нет.</p>';
+    '<p style="color:#5a5040;text-align:center;padding:30px;font-style:italic;">Пока ikenbağlantı kaydı yok.</p>';
 
   var invites = d.invite_list||[];
-  document.getElementById('invites-list').inкакоеrHTML = invites.length ?
-    '<table class="inv-table"><thead><tr><th>Kod</th><th>Создатьan</th><th>Kullanım</th><th>Канал</th></tr></thead><tbody>'+
+  document.getElementById('invites-list').innerHTML = invites.length ?
+    '<table class="inv-table"><thead><tr><th>Kod</th><th>Создан</th><th>Использование</th><th>Канал</th></tr></thead><tbody>'+
     invites.map(function(inv){
       return '<tr><td style="font-family:monospace;color:#c8922a;">'+inv.code+'</td>'+
         '<td>'+( inv.inviter||'?')+'</td>'+
         '<td style="color:#5ec47a;font-weight:700;">'+(inv.uses||0)+'</td>'+
-        '<td style="color:rgba(240,232,208,0.55);">#'+(inv.chanкакоеl||'?')+'</td></tr>';
+        '<td style="color:rgba(240,232,208,0.55);">#'+(inv.channel||'?')+'</td></tr>';
     }).join('')+'</tbody></table>' :
-    '<p style="color:#5a5040;text-align:center;padding:30px;font-style:italic;">Активен приглашение ссылкиi нет.</p>';
+    '<p style="color:#5a5040;text-align:center;padding:30px;font-style:italic;">Активен davet ссылка yok.</p>';
 }
 
 loadGuilds();

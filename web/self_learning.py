@@ -1,6 +1,6 @@
 """
-Самообучение — AI учится на своих ошибках и успехах
-Анализ обратной связи, корректировка поведения
+Samoobucenie — AI ucitsya на svoih ошибка ve uspehah
+Analiz geri ссылки, korrektirovka povedeniya
 """
 import json
 import os
@@ -10,15 +10,15 @@ from collections import defaultdict
 
 
 class SelfLearning:
-    """Система самообучения AI"""
+    """Система samoeğitimi AI"""
     
     def __init__(self):
-        self.feedback_log = []  # Логи обратной связи
-        self.learned_patterns = {}  # Выученные паттерны
+        self.feedback_log = []  # Loglar geri ссылки
+        self.learned_patterns = {}  # Viucennie kalıplar
         self.mistakes = []  # Ошибки AI
-        self.successes = []  # Успешные ответы
+        self.successes = []  # Uspesnie cevaplar
         
-        # Загружаем данные
+        # Загруз veriler
         self._load_data()
     
     def record_feedback(
@@ -28,7 +28,7 @@ class SelfLearning:
         feedback_type: str,
         feedback_details: Dict = None
     ):
-        """Записывает обратную связь"""
+        """Сохран obratnuyu ссылка"""
         entry = {
             'timestamp': datetime.utcnow().isoformat(),
             'user_message': user_message,
@@ -39,14 +39,14 @@ class SelfLearning:
         
         self.feedback_log.append(entry)
         
-        # Ограничиваем лог
+        # Ограничиваем log
         if len(self.feedback_log) > 1000:
             self.feedback_log = self.feedback_log[-1000:]
         
-        # Анализируем и обучаемся
+        # Analiz ediyoruz ve obucaemsya
         self._analyze_and_learn(entry)
         
-        # Сохраняем
+        # Сохран
         self._save_data()
     
     def record_mistake(
@@ -56,7 +56,7 @@ class SelfLearning:
         correct_response: str,
         mistake_type: str
     ):
-        """Записывает ошибку AI"""
+        """Сохран ошибка AI"""
         mistake = {
             'timestamp': datetime.utcnow().isoformat(),
             'user_message': user_message,
@@ -71,10 +71,10 @@ class SelfLearning:
         if len(self.mistakes) > 500:
             self.mistakes = self.mistakes[-500:]
         
-        # Учимся на ошибке
+        # Ucimsya на osibke
         self._learn_from_mistake(mistake)
         
-        # Сохраняем
+        # Сохран
         self._save_data()
     
     def record_success(
@@ -83,7 +83,7 @@ class SelfLearning:
         ai_response: str,
         success_type: str
     ):
-        """Записывает успешный ответ"""
+        """Сохран uspesniy cevap"""
         success = {
             'timestamp': datetime.utcnow().isoformat(),
             'user_message': user_message,
@@ -97,18 +97,18 @@ class SelfLearning:
         if len(self.successes) > 500:
             self.successes = self.successes[-500:]
         
-        # Учимся на успехе
+        # Ucimsya на uspehe
         self._learn_from_success(success)
         
-        # Сохраняем
+        # Сохран
         self._save_data()
     
     def _analyze_and_learn(self, feedback: Dict):
-        """Анализирует обратную связь и обучается"""
+        """Analiz ediyor obratnuyu ссылка ve obucaetsya"""
         feedback_type = feedback['feedback_type']
         
         if feedback_type == 'negative':
-            # Негативная обратная связь — учимся избегать
+            # Negativnaya obratnaya ссылка — ucimsya izbegat
             self._learn_from_mistake({
                 'user_message': feedback['user_message'],
                 'wrong_response': feedback['ai_response'],
@@ -117,7 +117,7 @@ class SelfLearning:
             })
         
         elif feedback_type == 'positive':
-            # Позитивная обратная связь — запоминаем что работает
+            # Pozitivnaya obratnaya ссылка — zapominaem ne работает
             self._learn_from_success({
                 'user_message': feedback['user_message'],
                 'ai_response': feedback['ai_response'],
@@ -125,7 +125,7 @@ class SelfLearning:
             })
         
         elif feedback_type == 'correction':
-            # Корректировка — запоминаем правильный ответ
+            # Korrektirovka — zapominaem правил cevap
             correct_response = feedback.get('details', {}).get('correction', '')
             if correct_response:
                 self._learn_from_mistake({
@@ -136,76 +136,76 @@ class SelfLearning:
                 })
     
     def _learn_from_mistake(self, mistake: Dict):
-        """Учится на ошибке"""
+        """Ucitsya на osibke"""
         user_msg = mistake['user_message'].lower()
         wrong_resp = mistake['wrong_response']
         correct_resp = mistake.get('correct_response', '')
         mistake_type = mistake['mistake_type']
         
-        # Извлекаем ключевые слова
+        # Удалить anahtar kelimeler
         keywords = self._extract_keywords(user_msg)
         
-        # Запоминаем паттерн
+        # Zapominaem pattern
         pattern_key = f"avoid_{mistake_type}"
         if pattern_key not in self.learned_patterns:
             self.learned_patterns[pattern_key] = []
         
         self.learned_patterns[pattern_key].append({
             'keywords': keywords,
-            'wrong_response': wrong_resp[:200],  # Ограничиваем длину
+            'wrong_response': wrong_resp[:200],  # Ограничиваем uzunluğu
             'correct_response': correct_resp[:200] if correct_resp else '',
             'timestamp': mistake['timestamp']
         })
         
-        # Ограничиваем паттерны
+        # Ограничиваем kalıplar
         if len(self.learned_patterns[pattern_key]) > 100:
             self.learned_patterns[pattern_key] = self.learned_patterns[pattern_key][-100:]
     
     def _learn_from_success(self, success: Dict):
-        """Учится на успехе"""
+        """Ucitsya на uspehe"""
         user_msg = success['user_message'].lower()
         ai_resp = success['ai_response']
         success_type = success['success_type']
         
-        # Извлекаем ключевые слова
+        # Удалить anahtar kelimeler
         keywords = self._extract_keywords(user_msg)
         
-        # Запоминаем паттерн
+        # Zapominaem pattern
         pattern_key = f"repeat_{success_type}"
         if pattern_key not in self.learned_patterns:
             self.learned_patterns[pattern_key] = []
         
         self.learned_patterns[pattern_key].append({
             'keywords': keywords,
-            'response': ai_resp[:200],  # Ограничиваем длину
+            'response': ai_resp[:200],  # Ограничиваем uzunluğu
             'timestamp': success['timestamp']
         })
         
-        # Ограничиваем паттерны
+        # Ограничиваем kalıplar
         if len(self.learned_patterns[pattern_key]) > 100:
             self.learned_patterns[pattern_key] = self.learned_patterns[pattern_key][-100:]
     
     def _extract_keywords(self, text: str) -> List[str]:
-        """Извлекает ключевые слова из текста"""
+        """Izvlekaet anahtar kelimeler den metina"""
         import re
         
-        # Убираем стоп-слова
+        # Удален stop-kelimeler
         stop_words = {
-            'и', 'в', 'на', 'с', 'по', 'для', 'от', 'до', 'из', 'к', 'у',
+            've', 'в', 'на', 'с', 'по', 'для', 'den', 'do', 'den', 'e', 'u',
             'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for'
         }
         
-        # Извлекаем слова
+        # Удалить kelimeler
         words = re.findall(r'\b\w+\b', text.lower())
         
-        # Фильтруем
+        # Filtreliyoruz
         keywords = [w for w in words if len(w) > 2 and w not in stop_words]
         
-        # Убираем дубликаты
+        # Удален dublikati
         return list(set(keywords))
     
     def get_learning_context(self, user_message: str) -> str:
-        """Получает контекст обучения для промпта"""
+        """Alıyor bağlam eğitimi для prompta"""
         user_msg_lower = user_message.lower()
         keywords = self._extract_keywords(user_msg_lower)
         
@@ -214,44 +214,44 @@ class SelfLearning:
         
         context_parts = []
         
-        # Ищем похожие паттерны
+        # Arıyoruz pohojie kalıplar
         for pattern_type, patterns in self.learned_patterns.items():
             matching_patterns = []
             
-            for pattern in patterns[-20:]:  # Последние 20
-                # Проверяем пересечение ключевых слов
+            for pattern in patterns[-20:]:  # В конец 20
+                # Контроль ediyoruz peresecenie anahtarevih slov
                 pattern_keywords = set(pattern['keywords'])
                 message_keywords = set(keywords)
                 intersection = pattern_keywords & message_keywords
                 
-                if len(intersection) >= 2:  # Минимум 2 общих слова
+                if len(intersection) >= 2:  # Minimum 2 obsih kelimeler
                     matching_patterns.append(pattern)
             
             if matching_patterns:
                 if pattern_type.startswith('avoid_'):
-                    # Паттерны которых нужно избегать
+                    # Kalıplar kotorih gerekli izbegat
                     context_parts.append(
-                        f"\n⚠️ ИЗБЕГАЙ подобных ответов (были ошибки):\n"
+                        f"\n⚠️ IZBEGAY podobnih cevapların (idi ошибки):\n"
                     )
-                    for p in matching_patterns[:3]:  # Максимум 3
+                    for p in matching_patterns[:3]:  # Maksimum 3
                         if p.get('wrong_response'):
                             context_parts.append(f"- {p['wrong_response']}\n")
                         if p.get('correct_response'):
-                            context_parts.append(f"+ Вместо: {p['correct_response']}\n")
+                            context_parts.append(f"+ Vmesto: {p['correct_response']}\n")
                 
                 elif pattern_type.startswith('repeat_'):
-                    # Паттерны которые нужно повторять
+                    # Kalıplar kotorie gerekli povtoryat
                     context_parts.append(
-                        f"\n✅ ИСПОЛЬЗУЙ подобные ответы (были успешны):\n"
+                        f"\n✅ ISPOLZUY podobnie cevaplar (idi uspesni):\n"
                     )
-                    for p in matching_patterns[:3]:  # Максимум 3
+                    for p in matching_patterns[:3]:  # Maksimum 3
                         if p.get('response'):
                             context_parts.append(f"- {p['response']}\n")
         
         return ''.join(context_parts)
     
     def get_learning_stats(self) -> Dict:
-        """Получает статистику обучения"""
+        """Alıyor istatistiği eğitimi"""
         return {
             'total_feedback': len(self.feedback_log),
             'total_mistakes': len(self.mistakes),
@@ -263,7 +263,7 @@ class SelfLearning:
         }
     
     def _load_data(self):
-        """Загружает данные из файла"""
+        """Загруз veriler den dosyaya"""
         data_file = 'data/ai_learning.json'
         if os.path.exists(data_file):
             try:
@@ -277,26 +277,26 @@ class SelfLearning:
                 pass
     
     def _save_data(self):
-        """Сохраняет данные в файл"""
+        """Сохран veriler в dosya"""
         try:
             os.makedirs('data', exist_ok=True)
             data_file = 'data/ai_learning.json'
             with open(data_file, 'w', encoding='utf-8') as f:
                 json.dump({
-                    'feedback_log': self.feedback_log[-200:],  # Сохраняем только последние 200
+                    'feedback_log': self.feedback_log[-200:],  # Сохран только son 200
                     'learned_patterns': self.learned_patterns,
-                    'mistakes': self.mistakes[-100:],  # Последние 100
-                    'successes': self.successes[-100:],  # Последние 100
+                    'mistakes': self.mistakes[-100:],  # В конец 100
+                    'successes': self.successes[-100:],  # В конец 100
                 }, f, indent=2, ensure_ascii=False)
         except Exception as e:
-            print(f"[SELF LEARNING] Ошибка сохранения: {e}")
+            print(f"[SELF LEARNING] Ошибка sohraneniya: {e}")
 
 
-# Глобальный экземпляр
+# Küresel пример
 _self_learning = None
 
 def get_self_learning() -> SelfLearning:
-    """Получает глобальный экземпляр SelfLearning"""
+    """Alıyor küresel пример SelfLearning"""
     global _self_learning
     if _self_learning is None:
         _self_learning = SelfLearning()

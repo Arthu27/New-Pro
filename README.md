@@ -1,21 +1,21 @@
 ﻿# Aether Discord Bot
 
-Türkçe Discord botu - moderation, AI chat, web panel
+Русский Discord botu - moderation, AI chat, web panel
 
-## Özellikler
-- AI sohbet sistemi
-- Moderation komutları
-- Web yönetim paneli
-- Otomatik güncelleme sistemi
+## Особенности
+- AI sohbet система
+- Moderation команды
+- Web управление paneli
+- Автоматически обновл система
 
 ## Test
-Webhook test - otomatik güncelleme çalışıyor mu?
+Webhook test - автоматически обновл работает mu?
 
-## Güncelleme 2
-İkinci test - webhook servisi aktif!
+## Обновл 2
+İkinci test - webhook servisi активен!
 
-## Güncelleme 3
+## Обновл 3
 Firewall açıldı - GitHub webhook testi!
 
-## Güncelleme 4
+## Обновл 4
 Auto-update polling testi - 5 saniye!

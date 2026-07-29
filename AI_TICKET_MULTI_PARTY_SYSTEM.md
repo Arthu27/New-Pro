@@ -1,146 +1,146 @@
-# AI Ticket Çok Taraflı Ceza Sistemi
+# AI Ticket Очень Taraflı Наказание Система
 
-## Genel Bakış
+## Обзор сервера
 
-Ticket AI moderasyon sistemi artık **karşılıklı kural ihlallerini** tespit edip **her iki tarafa da ceza** uygulayabilir. Sistem silinen mesajları da analiz ederek daha adil kararlar verir.
+Ticket AI moderasyon система теперь **взаимный правило нарушение** tespit edip **каждый iki сканироватьfa da наказание** примен. Система удален сообщения da analiz ederek более adil kararlar verir.
 
 ---
 
-## Yeni Özellikler
+## Новый Особенности
 
-### 1. **Karşılıklı İhlal Tespiti**
-- AI artık sadece şikayet edileni değil, **şikayet edeni de** analiz eder
-- Her iki taraf da küfür/hakaret kullandıysa → **ikisine de ceza**
-- Tek taraflı ihlal varsa → sadece suçluya ceza
-- Sahte şikayet (sadece şikayetçi küfür etmiş) → şikayetçiye ceza
+### 1. **Взаимный Нарушение Tespiti**
+- AI теперь только жалоба edileni не, **жалоба edeni de** analiz eder
+- Каждый iki сканироватьf da мат/оскорбление использовать → **ikisine de наказание**
+- Tek сканироватьflı нарушение varsa → только suçluya наказание
+- Sahte жалоба (только жалоба мат etmiş) → жалоба наказание
 
-### 2. **Silinen Mesaj Analizi**
-- Sistem artık `_msg_cache` üzerinden **silinen mesajları** da inceliyor
-- Kullanıcılar mesajlarını silse bile kanıt kaybolmuyor
-- Silinen mesajlar `🗑️ SİLİNMİŞ MESAJ` etiketi ile gösteriliyor
+### 2. **Удален Сообщение Analizi**
+- Система теперь `_msg_cache` через **удален сообщения** da inceliyor
+- Пользователи сообщение удалить bile доказательство kaybolmuyor
+- Удален сообщения `🗑️ УДАЛЕН СООБЩЕНИЕ` etiketi с показ
 
-### 3. **Adil Ceza Dağılımı**
-- **Karşılıklı küfür**: Her iki tarafa 30-60 dakika mute
-- **Tek taraflı ihlal**: Sadece suçluya ceza
-- **Sahte şikayet**: Şikayetçiye ceza + uyarı
-- **Belirsiz durum**: Yetkililere escalate (AI karar veremiyor)
+### 3. **Adil Наказание Dağılımı**
+- **Взаимный мат**: Каждый iki сканироватьfa 30-60 dakika mute
+- **Tek сканироватьflı нарушение**: Только suçluya наказание
+- **Sahte жалоба**: Жалоба наказание + предупреждение
+- **Belirsiz состояние**: Администрации escalate (AI karar veremiyor)
 
 ---
 
 ## Karar Matrisi
 
-| Durum | Şikayet Edilen | Şikayet Eden | Sonuç |
+| Состояние | Жалоба Edilen | Жалоба Eden | В конецuç |
 |-------|----------------|--------------|-------|
-| Karşılıklı küfür | Küfür etti | Küfür etti | **İkisine de mute** |
-| Tek taraflı saldırı | Küfür etti | Temiz | Sadece şikayet edilene mute |
-| Sahte şikayet | Temiz | Küfür etti | **Şikayetçiye mute** |
-| Belirsiz | ? | ? | Yetkililere ilet |
+| Взаимный мат | Мат etti | Мат etti | **İkisine de mute** |
+| Tek сканироватьflı saldırı | Мат etti | Temiz | Только жалоба edilene mute |
+| Sahte жалоба | Temiz | Мат etti | **Жалоба mute** |
+| Belirsiz | ? | ? | Администрации ilet |
 
 ---
 
-## Teknik Detaylar
+## Teknik Детали
 
-### AI Prompt Güncellemeleri
+### AI Prompt Обновл
 
-**Eski Prompt:**
-- Sadece şikayet edileni analiz ediyordu
-- Karşılıklı küfürde "BELİRSİZ" diyordu
-- Silinen mesajları görmüyordu
+**Старый Prompt:**
+- Только жалоба edileni analiz ediyordu
+- Взаимный мат "BELİRSİZ" diyordu
+- Удален сообщения видеть
 
-**Yeni Prompt:**
+**Новый Prompt:**
 ```
-=== ANALİZ GÖREVİN ===
-HER İKİ TARAFI DA İNCELE. Sadece şikayet edileni değil, şikayet edeni de analiz et.
+=== ANALİZ ЗАДАЧА ===
+КАЖДЫЙ İKİ TARAFI DA İNCELE. Только жалоба edileni не, жалоба edeni de analiz et.
 
-KONTROL ET:
-1. SİLİNEN MESAJLARI DİKKATE AL
-2. ŞİKAYET EDİLEN kişi kural ihlali yaptı mı?
-3. ŞİKAYET EDEN kişi de kural ihlali yaptı mı?
+КОНТРОЛЬ ET:
+1. УДАЛЕН СООБЩЕНИЯ DİKKATE AL
+2. ЖАЛОБА EDİLEN человек правило нарушение yaptı mı?
+3. ЖАЛОБА EDEN человек de правило нарушение yaptı mı?
 
-KRİTİK KURALLAR:
-- HER İKİ TARAF DA küfür ettiyse → KARŞILIKLI_IHLAL (ikisine de ceza)
-- Sadece şikayet edilen küfür ettiyse → IHLAL_VAR
-- Sadece şikayet eden küfür ettiyse → SAHTE_SIKAYET
+KRİTİK ПРАВИЛА:
+- КАЖДЫЙ İKİ TARAF DA мат ettiyse → KARŞILIKLI_IHLAL (ikisine de наказание)
+- Только жалоба edilen мат ettiyse → IHLAL_VAR
+- Только жалоба eden мат ettiyse → SAHTE_SIKAYET
 ```
 
-### Yeni Karar Türleri
+### Новый Karar Türleri
 
-1. **KARŞILIKLI_IHLAL**: Her iki taraf da ceza alır
-2. **SAHTE_SIKAYET**: Şikayetçi ceza alır
-3. **IHLAL_VAR**: Sadece şikayet edilen ceza alır
-4. **IHLAL_YOK**: Kimse ceza almaz
-5. **BELIRSIZ**: Yetkililere iletilir
+1. **KARŞILIKLI_IHLAL**: Каждый iki сканироватьf da наказание получает
+2. **SAHTE_SIKAYET**: Жалоба наказание получает
+3. **IHLAL_VAR**: Только жалоба edilen наказание получает
+4. **IHLAL_YOK**: Кто наказание almaz
+5. **BELIRSIZ**: Администрации iletilir
 
-### Kod Değişiklikleri
+### Kod Изменение
 
-#### 1. Yeni Helper Method
+#### 1. Новый Helper Method
 ```python
 def _record_penalty(self, guild_id, user_id, user_name, reason, duration):
-    """Ceza kaydını global penalty dosyasına yaz"""
-    # data/ticket_penalties.json dosyasına kayıt
+    """Наказание kaydını global penalty dosyasına yaz"""
+    # data/ticket_penalties.json dosyasına запись
 ```
 
-#### 2. Karşılıklı İhlal İşleme
+#### 2. Взаимный Нарушение Действие
 ```python
 if 'KARŞILIKLI_IHLAL' in verdict_upper:
-    # Her iki tarafa da mute at
+    # Каждый iki сканироватьfa da mute at
     await target.timeout(...)
     await complainant.timeout(...)
     self._record_penalty(guild_id, accused_id, ...)
     self._record_penalty(guild_id, complainant_id, ...)
 ```
 
-#### 3. Sahte Şikayet İşleme
+#### 3. Sahte Жалоба Действие
 ```python
 if 'SAHTE_SIKAYET' in verdict_upper:
-    # Sadece şikayetçiye ceza
+    # Только жалоба наказание
     await complainant.timeout(...)
     self._record_penalty(guild_id, complainant_id, ...)
 ```
 
 ---
 
-## Kullanım Senaryoları
+## Использование Senaryoları
 
-### Senaryo 1: Karşılıklı Küfür
+### Senaryo 1: Взаимный Мат
 ```
-Kullanıcı A: "sen salaksın"
-Kullanıcı B: "sen daha salaksın amk"
-Kullanıcı A: "siktir git"
+Пользователь A: "sen salaksın"
+Пользователь B: "sen более salaksın amk"
+Пользователь A: "siktir git"
 
 → AI Kararı: KARŞILIKLI_IHLAL
-→ Sonuç: Her ikisi de 30 dakika mute
+→ В конецuç: Каждый ikisi de 30 dakika mute
 ```
 
 ### Senaryo 2: Tek Taraflı Saldırı
 ```
-Kullanıcı A: "merhaba"
-Kullanıcı B: "siktir git amk"
-Kullanıcı A: "neden böyle davranıyorsun?"
+Пользователь A: "merhaba"
+Пользователь B: "siktir git amk"
+Пользователь A: "почему böyle davranıyorsun?"
 
 → AI Kararı: IHLAL_VAR
-→ Sonuç: Sadece B mute alır
+→ В конецuç: Только B mute получает
 ```
 
-### Senaryo 3: Sahte Şikayet
+### Senaryo 3: Sahte Жалоба
 ```
-Kullanıcı A: "sen gerizekalısın"
-Kullanıcı B: "lütfen sakin ol"
-A, B'yi şikayet ediyor
+Пользователь A: "sen gerizekalısın"
+Пользователь B: "пожалуйста sakin ol"
+A, B'yi жалоба ediyor
 
 → AI Kararı: SAHTE_SIKAYET
-→ Sonuç: A mute alır (sahte şikayet + küfür)
+→ В конецuç: A mute получает (sahte жалоба + мат)
 ```
 
-### Senaryo 4: Silinen Mesaj Kanıtı
+### Senaryo 4: Удален Сообщение Доказательство
 ```
-Kullanıcı A: "seni öldürcem" [SİLDİ]
-Kullanıcı B: "ne diyorsun sen?"
-A, B'yi şikayet ediyor
+Пользователь A: "seni öldürcem" [УДАЛИТЬ]
+Пользователь B: "ne diyorsun sen?"
+A, B'yi жалоба ediyor
 
-→ AI: Silinen mesajı görüyor
+→ AI: Удален сообщение видеть
 → AI Kararı: SAHTE_SIKAYET
-→ Sonuç: A mute alır
+→ В конецuç: A mute получает
 ```
 
 ---
@@ -148,78 +148,78 @@ A, B'yi şikayet ediyor
 ## Avantajlar
 
 ### 1. **Adalet**
-- Karşılıklı küfürde her iki taraf da sorumlu tutulur
-- Tek taraflı saldırılarda sadece suçlu ceza alır
-- Sahte şikayetler cezalandırılır
+- Взаимный мат каждый iki сканироватьf da sorumlu tutulur
+- Tek сканироватьflı saldırılarda только suçlu наказание получает
+- Sahte жалобы наказание
 
-### 2. **Kanıt Bütünlüğü**
-- Silinen mesajlar kaybolmaz
-- Kullanıcılar kanıt karartamaz
-- Tam konuşma geçmişi analiz edilir
+### 2. **Доказательство Bütünlüğü**
+- Удален сообщения kaybolmaz
+- Пользователи доказательство karartamaz
+- Tam разговор история analiz edilir
 
-### 3. **Otomatik Moderasyon**
-- Yetkililer basit karşılıklı küfür vakalarıyla uğraşmaz
-- AI %90+ doğrulukla karar verir
-- Belirsiz durumlarda yetkililere iletir
+### 3. **Автомодерация**
+- Администраторы basit взаимный мат vakalarıyla uğraşmaz
+- AI %90+ верно karar verir
+- Belirsiz состояние администрации iletir
 
-### 4. **Kötüye Kullanım Önleme**
-- Sahte şikayet yapanlar ceza alır
-- Provokasyon sonrası şikayet taktiği işlemez
-- Sistem her iki tarafı da eşit inceler
+### 4. **Kötüye Использование Önleme**
+- Sahte жалоба yapanlar наказание получает
+- Provokasyon sonrası жалоба taktiği действие
+- Система каждый iki сканироватьfı da eşit inceler
 
 ---
 
-## Sınırlamalar
+## Лимит
 
-1. **Cache Sınırı**: `_msg_cache` max 10,000 mesaj tutar (eski mesajlar silinir)
-2. **Zaman Penceresi**: Çok eski silinen mesajlar cache'de olmayabilir
-3. **Bağlam Analizi**: AI bazen karmaşık sarkastik/ironik dili yanlış anlayabilir
-4. **Manuel Doğrulama**: Mesajlar kullanıcı tarafından kopyalandıysa → belirsiz (yetkililere ilet)
+1. **Cache Лимит**: `_msg_cache` max 10,000 сообщение tutar (старый сообщения удален)
+2. **Время Penceresi**: Очень старый удален сообщения cache'de olmayabilir
+3. **Bağlam Analizi**: AI bazen karmaşık sarkastik/ironik dili неверно anlayabilir
+4. **Manuel Проверка**: Сообщения пользователь сканироватьfından kopyalandıysa → belirsiz (администрации ilet)
 
 ---
 
 ## Gelecek Geliştirmeler
 
-- [ ] Audit log'dan silinen mesajları çekme (cache yedeği)
-- [ ] Ceza şiddeti gradasyonu (ilk ihlal 15dk, ikinci 30dk, üçüncü 60dk)
-- [ ] Kullanıcı itiraz sistemi (AI kararına itiraz et)
-- [ ] Detaylı istatistikler (kaç karşılıklı ihlal, kaç sahte şikayet)
-- [ ] Öğrenen AI (yanlış kararlardan feedback)
+- [ ] Audit log'dan удален сообщения тянуть (cache yedeği)
+- [ ] Наказание şiddeti gradasyonu (ilk нарушение 15dk, ikinci 30dk, üçüncü 60dk)
+- [ ] Пользователь апелляция система (AI kararına апелляция et)
+- [ ] Детали статистика (сколько взаимный нарушение, сколько sahte жалоба)
+- [ ] Öğrenen AI (неверно kararlardan feedback)
 
 ---
 
-## Test Önerileri
+## Test Предложение
 
-### Test 1: Karşılıklı Küfür
-1. İki kullanıcı birbirine küfretsin
-2. Biri diğerini şikayet etsin
-3. Beklenen: Her ikisi de mute alsın
+### Test 1: Взаимный Мат
+1. İki пользователь birbirine küfretsin
+2. Biri diğerini жалоба etsin
+3. Beklenen: Каждый ikisi de mute alsın
 
-### Test 2: Silinen Mesaj
-1. Kullanıcı A küfür etsin
-2. A mesajı silsin
-3. B, A'yı şikayet etsin
-4. Beklenen: AI silinen mesajı görsün, A mute alsın
+### Test 2: Удален Сообщение
+1. Пользователь A мат etsin
+2. A сообщение удалить
+3. B, A'yı жалоба etsin
+4. Beklenen: AI удален сообщение видеть, A mute alsın
 
-### Test 3: Sahte Şikayet
-1. Kullanıcı A küfür etsin
+### Test 3: Sahte Жалоба
+1. Пользователь A мат etsin
 2. B temiz kalsın
-3. A, B'yi şikayet etsin
-4. Beklenen: A mute alsın (sahte şikayet)
+3. A, B'yi жалоба etsin
+4. Beklenen: A mute alsın (sahte жалоба)
 
-### Test 4: Belirsiz Durum
-1. Mesajlar manuel kopyalansın (doğrulanamaz)
-2. Beklenen: Yetkililere escalate edilsin
+### Test 4: Belirsiz Состояние
+1. Сообщения manuel kopyalansın (проверка)
+2. Beklenen: Администрации escalate edilsin
 
 ---
 
-## Sonuç
+## В конецuç
 
-Bu güncelleme ile ticket AI sistemi artık:
-- ✅ Karşılıklı ihlalleri tespit ediyor
-- ✅ Her iki tarafa da adil ceza veriyor
-- ✅ Silinen mesajları analiz ediyor
-- ✅ Sahte şikayetleri engelliyor
-- ✅ Daha az yetkiliye escalate ediyor
+Bu обновл с ticket AI система теперь:
+- ✅ Взаимный нарушение tespit ediyor
+- ✅ Каждый iki сканироватьfa da adil наказание veriyor
+- ✅ Удален сообщения analiz ediyor
+- ✅ Sahte жалоба engelliyor
+- ✅ Более az администратору escalate ediyor
 
-**Sonuç**: Daha adil, daha akıllı, daha otomatik moderasyon sistemi.
+**В конецuç**: Более adil, более akıllı, более автоматически moderasyon система.

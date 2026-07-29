@@ -1,170 +1,170 @@
-# 🛡️ AI Moderator - Hızlı Özet
+# 🛡️ AI Moderator - Быстрый Сводка
 
-## Ne Değişti?
+## Ne Изменено?
 
-AI artık **sadece sohbet botu değil**, **tam yetkili moderatör** gibi çalışıyor:
+AI теперь **только sohbet botu не**, **tam администратор модератор** gibi работает:
 
-### Önceki Sistem ❌
+### Назад Система ❌
 ```
-Kullanıcı: "X kişisi bana hakaret etti"
-AI: "Yetkililere yönlendiriyorum..."
-[Destek rolü ping atılır]
+Пользователь: "X человек bana оскорбление etti"
+AI: "Администрации направление..."
+[Поддержка роль ping atılır]
 ```
 
-### Yeni Sistem ✅
+### Новый Система ✅
 ```
-Kullanıcı: "X kişisi bana hakaret etti"
-AI: "Kanıt yükleyiniz (ekran görüntüsü)"
-Kullanıcı: [Ekran görüntüsü yükler]
-AI: [Analiz eder, mesaj geçmişini kontrol eder]
-AI: "✅ Jail cezası verildi: 30 dakika"
-[Otomatik jail rolü verilir]
-[30 dakika sonra otomatik kaldırılır]
+Пользователь: "X человек bana оскорбление etti"
+AI: "Доказательство загруз (ekran скриншот)"
+Пользователь: [Ekran скриншот загруз]
+AI: [Analiz eder, сообщение историю контроль eder]
+AI: "✅ Jail наказание verildi: 30 dakika"
+[Автоматически jail роль verilir]
+[30 dakika после автоматически удален]
 ```
 
 ---
 
-## 🎯 Yeni Yetenekler
+## 🎯 Новый Yetenekler
 
-### 1. Kanıt İsteme
-- Ekran görüntüsü talep eder
-- Kullanıcı ID ister
-- Olay detaylarını sorar
+### 1. Доказательство Желание
+- Ekran скриншот talep eder
+- Пользователь ID хочет
+- Olay детали sorar
 
 ### 2. Analiz
-- Ekran görüntüsünü inceler
-- Mesaj geçmişini kontrol eder
-- Zaman farkını hesaplar
+- Ekran скриншот inceler
+- Сообщение историю контроль eder
+- Время разница hesaplar
 
 ### 3. Karar Verme
-- **Hafif**: Sadece uyarı
+- **Hafif**: Только предупреждение
 - **Orta**: Jail 30-60 dakika
-- **Ağır**: Jail 120 dakika + yönlendirme
+- **Тяжелый**: Jail 120 dakika + направление
 
-### 4. Ceza Uygulama
-- Jail rolü verir (otomatik)
-- Kullanıcıya DM gönderir
-- Süre bitince otomatik kaldırır
+### 4. Наказание Применитьma
+- Jail роль verir (автоматически)
+- Пользователю DM отправл
+- Длительность bitince автоматически удален
 
 ---
 
-## 📋 Çalışma Akışı
+## 📋 Работа Akışı
 
 ```
-1. Kullanıcı şikayet eder
+1. Пользователь жалоба eder
    ↓
-2. AI kanıt ister
+2. AI доказательство хочет
    ↓
-3. Kullanıcı ekran görüntüsü yükler
+3. Пользователь ekran скриншот загруз
    ↓
 4. AI analiz eder:
-   • Ekran görüntüsü gerçek mi?
-   • Mesaj geçmişi uyuşuyor mu?
-   • Zaman farkı 30 dakikadan az mı?
+   • Ekran скриншот gerçek mi?
+   • Сообщение история uyuşuyor mu?
+   • Время разница 30 dakikadan az mı?
    ↓
 5. AI karar verir:
-   ├─ Hafif → Uyarı
+   ├─ Hafif → Предупреждение
    ├─ Orta → Jail 30-60 dk
-   └─ Ağır → Jail 120 dk + Yönlendirme
+   └─ Тяжелый → Jail 120 dk + Направление
    ↓
-6. Ceza uygulanır (otomatik)
+6. Наказание примен (автоматически)
 ```
 
 ---
 
-## 🛡️ Güvenlik Önlemleri
+## 🛡️ Безопасность Önlemleri
 
-### Sahte Şikayet Koruması
-✅ Mesaj geçmişi kontrolü  
-✅ Zaman farkı kontrolü (30+ dakika = red)  
-✅ Sahte şikayet yapana uyarı  
+### Sahte Жалоба Koruması
+✅ Сообщение история контроль  
+✅ Время разница контроль (30+ dakika = red)  
+✅ Sahte жалоба yapana предупреждение  
 
 ### Jail Koruması
 ✅ Max jail: 120 dakika  
-✅ Tüm işlemler loglanır  
-✅ Yetkililer override edebilir  
+✅ Все действия loglanır  
+✅ Администраторы override edebilir  
 
 ---
 
-## 🎮 Örnek Senaryo
+## 🎮 Пример Senaryo
 
-### Başarılı Jail
+### Успешно Jail
 
 ```
-👤 Kullanıcı: "X kişisi bana hakaret etti"
+👤 Пользователь: "X человек bana оскорбление etti"
 
-🤖 AI: "Şikayetinizi incelemek için:
-       1️⃣ Kullanıcı ID
-       2️⃣ Olay açıklaması
-       3️⃣ KANIT: Ekran görüntüsü"
+🤖 AI: "Жалоба incelemek для:
+       1️⃣ Пользователь ID
+       2️⃣ Olay описание
+       3️⃣ ДОКАЗАТЕЛЬСТВО: Ekran скриншот"
 
-👤 Kullanıcı: [Ekran görüntüsü yükler]
-              "@user123 bana 'aptal' dedi, 5 dakika önce"
+👤 Пользователь: [Ekran скриншот загруз]
+              "@user123 bana 'aptal' dedi, 5 dakika до"
 
 🤖 AI: [Analiz ediyor...]
-       [Mesaj geçmişini kontrol ediyor...]
+       [Сообщение историю контроль ediyor...]
        
-       ✅ İnceleme tamamlandı.
+       ✅ İnceleme завершено.
        
-       📋 KARAR: Jail cezası verildi
-       👤 Kullanıcı: @user123
-       ⏱️ Süre: 30 dakika
-       📝 Sebep: Tekrarlayan hakaret
+       📋 KARAR: Jail наказание verildi
+       👤 Пользователь: @user123
+       ⏱️ Длительность: 30 dakika
+       📝 Причина: Tekrarlayan оскорбление
        
-       Olayı çözmekte size yetkili ekibimiz
-       yardımcı olacaktır.
+       Olayı çözmekte size администратор ekibimiz
+       помощник olacaktır.
 
-[user123'e otomatik jail rolü verilir]
-[30 dakika sonra otomatik kaldırılır]
+[user123'e автоматически jail роль verilir]
+[30 dakika после автоматически удален]
 ```
 
 ---
 
-## ⚙️ Ayarlar
+## ⚙️ Настройки
 
 ```python
 # cogs/ticket.py
-AI_ENABLED = True  # AI moderator aktif/pasif
-MAX_AI_MESSAGES = 10  # Max mesaj sayısı
+AI_ENABLED = True  # AI moderator активен/pasif
+MAX_AI_MESSAGES = 10  # Max сообщение количество
 ```
 
 ---
 
 ## 📊 Ciddiyet Seviyeleri
 
-| Seviye | Örnekler | AI Aksiyonu |
+| Seviye | Пример | AI Aksiyonu |
 |--------|----------|-------------|
-| 🟢 Hafif | Tek küfür, küçük tartışma | Sadece uyarı |
-| 🟡 Orta | Tekrarlayan hakaret, spam | Jail 30-60 dk |
-| 🔴 Ağır | Tehdit, nefret söylemi | Jail 120 dk + Yönlendirme |
+| 🟢 Hafif | Tek мат, маленький tartışma | Только предупреждение |
+| 🟡 Orta | Tekrarlayan оскорбление, spam | Jail 30-60 dk |
+| 🔴 Тяжелый | Tehdit, nefret сказатьmi | Jail 120 dk + Направление |
 
 ---
 
 ## ✅ Avantajlar
 
-**Kullanıcılar:**
+**Пользователи:**
 - ⚡ Anında moderasyon (7/24)
 - 📋 Adil ve tutarlı kararlar
 
-**Yetkililer:**
-- 🎯 Sadece ciddi durumlarla ilgilenirler
-- 📊 Tüm işlemler loglanır
+**Администраторы:**
+- 🎯 Только ciddi состояние ilgilenirler
+- 📊 Все действия loglanır
 
-**Sunucu:**
-- 🛡️ Daha hızlı moderasyon
-- 📉 Daha az toksik ortam
+**Сервер:**
+- 🛡️ Более быстрый moderasyon
+- 📉 Более az toksik ortam
 
 ---
 
 ## 🚀 Test Et
 
 1. Ticket aç
-2. "X kişisi bana hakaret etti" yaz
-3. Sahte ekran görüntüsü yükle
-4. AI'nin jail verdiğini gör
+2. "X человек bana оскорбление etti" yaz
+3. Sahte ekran скриншот загрузить
+4. AI'nin jail данныеni видеть
 
 ---
 
-**Sistem Hazır! 🛡️**
+**Система Hazır! 🛡️**
 
-AI artık tam yetkili moderatör gibi çalışıyor!
+AI теперь tam администратор модератор gibi работает!

@@ -1,6 +1,6 @@
 """
-Внешние API — интеграция с сервисами проверки
-Репутация, NSFW, вредоносные ссылки, аватары
+Vnesnie API — integraciya с servisami контроль
+Reputaciya, NSFW, vredonosnie ссылка, avatari
 """
 import aiohttp
 import json
@@ -11,14 +11,14 @@ from datetime import datetime
 
 
 class ExternalAPIs:
-    """Интеграция с внешними API"""
+    """Integraciya с vnesnimi API"""
     
     def __init__(self):
         self.session = None
         self.api_keys = self._load_api_keys()
     
     def _load_api_keys(self) -> Dict:
-        """Загружает API ключи из конфига"""
+        """Загруз API anahtarve den konfiga"""
         config_file = 'data/external_apis.json'
         if os.path.exists(config_file):
             try:
@@ -29,20 +29,20 @@ class ExternalAPIs:
         return {}
     
     async def _get_session(self) -> aiohttp.ClientSession:
-        """Получает aiohttp сессию"""
+        """Alıyor aiohttp sessiyu"""
         if self.session is None or self.session.closed:
             self.session = aiohttp.ClientSession()
         return self.session
     
     async def close(self):
-        """Закрывает сессию"""
+        """Zakrivaet sessiyu"""
         if self.session and not self.session.closed:
             await self.session.close()
     
-    # ─── ПРОВЕРКА РЕПУТАЦИИ ─────────────────────────────────────────────
+    # ─── КОНТРОЛЬ REPUTACII ─────────────────────────────────────────────
     
     async def check_user_reputation(self, user_id: int, username: str) -> Dict:
-        """Проверяет репутацию пользователя через внешние сервисы"""
+        """Контроль ediyor itibarı пользователь с vnesnie servisi"""
         results = {
             'user_id': user_id,
             'username': username,
@@ -51,7 +51,7 @@ class ExternalAPIs:
             'sources': []
         }
         
-        # 1. Проверка через DiscordRep (если есть API ключ)
+        # 1. Контроль с DiscordRep (если var API anahtar)
         if 'discordrep_key' in self.api_keys:
             rep_data = await self._check_discordrep(user_id)
             if rep_data:
@@ -59,7 +59,7 @@ class ExternalAPIs:
                 results['flags'].extend(rep_data.get('flags', []))
                 results['sources'].append('DiscordRep')
         
-        # 2. Проверка через AntiFish (фишинг/скам)
+        # 2. Контроль с AntiFish (fising/skam)
         antifish_data = await self._check_antifish(username)
         if antifish_data:
             if antifish_data.get('match'):
@@ -70,7 +70,7 @@ class ExternalAPIs:
         return results
     
     async def _check_discordrep(self, user_id: int) -> Optional[Dict]:
-        """Проверяет репутацию через DiscordRep API"""
+        """Контроль ediyor itibarı с DiscordRep API"""
         try:
             session = await self._get_session()
             url = f"https://discordrep.com/api/v4/user/{user_id}"
@@ -89,7 +89,7 @@ class ExternalAPIs:
         return None
     
     async def _check_antifish(self, username: str) -> Optional[Dict]:
-        """Проверяет через AntiFish API"""
+        """Контроль ediyor с AntiFish API"""
         try:
             session = await self._get_session()
             url = "https://phish.sinking.yachts/v2/check"
@@ -105,10 +105,10 @@ class ExternalAPIs:
         
         return None
     
-    # ─── NSFW ДЕТЕКЦИЯ ───────────────────────────────────────────────────
+    # ─── NSFW DETEKCIYa ───────────────────────────────────────────────────
     
     async def check_nsfw(self, image_url: str) -> Dict:
-        """Проверяет изображение на NSFW контент"""
+        """Контроль ediyor izobrajenie на NSFW kontent"""
         results = {
             'image_url': image_url,
             'is_nsfw': False,
@@ -116,7 +116,7 @@ class ExternalAPIs:
             'categories': []
         }
         
-        # 1. Проверка через SightEngine (если есть API ключ)
+        # 1. Контроль с SightEngine (если var API anahtar)
         if 'sightengine_user' in self.api_keys and 'sightengine_secret' in self.api_keys:
             nsfw_data = await self._check_sightengine(image_url)
             if nsfw_data:
@@ -124,7 +124,7 @@ class ExternalAPIs:
                 results['confidence'] = nsfw_data.get('confidence', 0.0)
                 results['categories'] = nsfw_data.get('categories', [])
         
-        # 2. Fallback — проверка по хешу (если есть база)
+        # 2. Fallback — контроль по hesu (если var veritabanı)
         if not results['is_nsfw']:
             hash_check = await self._check_image_hash(image_url)
             if hash_check:
@@ -135,7 +135,7 @@ class ExternalAPIs:
         return results
     
     async def _check_sightengine(self, image_url: str) -> Optional[Dict]:
-        """Проверяет через SightEngine API"""
+        """Контроль ediyor с SightEngine API"""
         try:
             session = await self._get_session()
             url = "https://api.sightengine.com/1.0/check.json"
@@ -150,7 +150,7 @@ class ExternalAPIs:
                 if resp.status == 200:
                     data = await resp.json()
                     
-                    # Анализируем результаты
+                    # Analiz ediyoruz результат
                     nudity = data.get('nudity', {})
                     sexual = data.get('sexual_activity', {})
                     offensive = data.get('offensive', {})
@@ -188,16 +188,16 @@ class ExternalAPIs:
         return None
     
     async def _check_image_hash(self, image_url: str) -> bool:
-        """Проверяет хеш изображения в базе"""
+        """Контроль ediyor hes izobrajeniya в tabanda"""
         try:
-            # Загружаем изображение
+            # Загруз izobrajenie
             session = await self._get_session()
             async with session.get(image_url, timeout=10) as resp:
                 if resp.status == 200:
                     image_data = await resp.read()
                     image_hash = hashlib.md5(image_data).hexdigest()
                     
-                    # Проверяем в базе
+                    # Контроль ediyoruz в tabanda
                     hash_db_file = 'data/nsfw_hashes.json'
                     if os.path.exists(hash_db_file):
                         with open(hash_db_file, 'r', encoding='utf-8') as f:
@@ -208,10 +208,10 @@ class ExternalAPIs:
         
         return False
     
-    # ─── АНАЛИЗ ССЫЛОК ──────────────────────────────────────────────────
+    # ─── ANALIZ SSILOK ──────────────────────────────────────────────────
     
     async def check_url_safety(self, url: str) -> Dict:
-        """Проверяет безопасность ссылки"""
+        """Контроль ediyor bezopasnost ссылка"""
         results = {
             'url': url,
             'is_safe': True,
@@ -220,7 +220,7 @@ class ExternalAPIs:
             'sources': []
         }
         
-        # 1. Проверка через Google Safe Browsing (если есть API ключ)
+        # 1. Контроль с Google Safe Browsing (если var API anahtar)
         if 'google_safebrowsing_key' in self.api_keys:
             gsb_data = await self._check_google_safebrowsing(url)
             if gsb_data:
@@ -229,7 +229,7 @@ class ExternalAPIs:
                     results['threats'] = gsb_data['threats']
                 results['sources'].append('Google Safe Browsing')
         
-        # 2. Проверка через VirusTotal (если есть API ключ)
+        # 2. Контроль с VirusTotal (если var API anahtar)
         if 'virustotal_key' in self.api_keys:
             vt_data = await self._check_virustotal(url)
             if vt_data:
@@ -239,7 +239,7 @@ class ExternalAPIs:
                 results['reputation'] = vt_data.get('reputation', 'unknown')
                 results['sources'].append('VirusTotal')
         
-        # 3. Проверка через URLhaus
+        # 3. Контроль с URLhaus
         urlhaus_data = await self._check_urlhaus(url)
         if urlhaus_data:
             if urlhaus_data.get('query_status') == 'ok':
@@ -250,7 +250,7 @@ class ExternalAPIs:
         return results
     
     async def _check_google_safebrowsing(self, url: str) -> Optional[Dict]:
-        """Проверяет через Google Safe Browsing API"""
+        """Контроль ediyor с Google Safe Browsing API"""
         try:
             session = await self._get_session()
             api_url = f"https://safebrowsing.googleapis.com/v4/threatMatches:find?key={self.api_keys['google_safebrowsing_key']}"
@@ -284,11 +284,11 @@ class ExternalAPIs:
         return None
     
     async def _check_virustotal(self, url: str) -> Optional[Dict]:
-        """Проверяет через VirusTotal API"""
+        """Контроль ediyor с VirusTotal API"""
         try:
             session = await self._get_session()
             
-            # Сначала получаем отчёт
+            # До alıyoruz rapor
             url_id = hashlib.sha256(url.encode()).hexdigest()
             api_url = f"https://www.virustotal.com/api/v3/urls/{url_id}"
             headers = {'x-apikey': self.api_keys['virustotal_key']}
@@ -309,7 +309,7 @@ class ExternalAPIs:
         return None
     
     async def _check_urlhaus(self, url: str) -> Optional[Dict]:
-        """Проверяет через URLhaus API"""
+        """Контроль ediyor с URLhaus API"""
         try:
             session = await self._get_session()
             api_url = "https://urlhaus-api.abuse.ch/v1/url/"
@@ -325,11 +325,11 @@ class ExternalAPIs:
         return None
 
 
-# Глобальный экземпляр
+# Küresel пример
 _external_apis = None
 
 async def get_external_apis() -> ExternalAPIs:
-    """Получает глобальный экземпляр ExternalAPIs"""
+    """Alıyor küresel пример ExternalAPIs"""
     global _external_apis
     if _external_apis is None:
         _external_apis = ExternalAPIs()

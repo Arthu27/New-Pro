@@ -1,108 +1,108 @@
-# YENİ SİSTEMLER EKLENDİ! 🚀
+# НОВЫЙ SİSTEMLER ДОБАВЛЕНО! 🚀
 
-## 1. Leveling Sistemi 📊
+## 1. Leveling Система 📊
 - ✅ `cogs/leveling.py` - XP kazanma, level atlama
-- ✅ Otomatik XP verme (mesaj başına)
-- ✅ Level atlama bildirimleri
-- ✅ Seviye kartı ve sıralama
-- ✅ Admin komutları (XP ver/sıfırla)
+- ✅ Автоматически XP verme (сообщение başına)
+- ✅ Level atlama уведомление
+- ✅ Seviye kartı ve очередь
+- ✅ Admin команды (XP ver/sıfırla)
 
-**Komutlar:**
-- `/seviye [@üye]` - Seviye kartını göster
-- `/sıralama` - Sunucu sıralaması
-- `!xp-ver @üye [miktar]` - XP ver (admin)
-- `!xp-sıfırla @üye` - XP sıfırla (admin)
+**Команды:**
+- `/seviye [@участник]` - Seviye kartını показать
+- `/очередь` - Сервер очередь
+- `!xp-ver @участник [miktar]` - XP ver (admin)
+- `!xp-sıfırla @участник` - XP sıfırla (admin)
 
-## 2. Anket Sistemi 📊
-- ✅ `cogs/polls.py` - Anket oluşturma, oylama
-- ✅ Slash command ile anket oluşturma
-- ✅ Otomatik reaction ekleme
-- ✅ Sonuç gösterme ve kapatma
+## 2. Anket Система 📊
+- ✅ `cogs/polls.py` - Anket создан, oylama
+- ✅ Slash command с anket создан
+- ✅ Автоматически reaction добавить
+- ✅ В конецuç показ ve закрыт
 
-**Komutlar:**
-- `/anket [soru] [seçenekler]` - Anket oluştur
-- `!anket-sonuç [id]` - Sonuçları göster
-- `!anket-kapat [id]` - Anketi kapat
+**Команды:**
+- `/anket [soru] [выбрать]` - Anket создать
+- `!anket-результат [id]` - В конецuçları показать
+- `!anket-закрыть [id]` - Anketi закрыть
 
-## 3. Reaction Roles 🎭
-- ✅ `cogs/reaction_roles.py` - Reaction ile rol verme
-- ✅ Otomatik rol verme/alma
+## 3. Reaction Роли 🎭
+- ✅ `cogs/reaction_roles.py` - Reaction с роль verme
+- ✅ Автоматически роль verme/alma
 - ✅ Web panel entegrasyonu
-- ✅ Çoklu reaction role desteği
+- ✅ Çoklu reaction роли desteği
 
-**Komutlar:**
-- `!rr-yenile` - Reaction role'leri yenile
-- `!rr-test` - Test mesajı oluştur
+**Команды:**
+- `!rr-yenile` - Reaction роли'leri yenile
+- `!rr-test` - Test сообщение создать
 
-## 4. Welcome/Goodbye Sistemi 👋
-- ✅ `cogs/welcome.py` - Hoş geldin/görüşürüz mesajları
+## 4. Welcome/Goodbye Система 👋
+- ✅ `cogs/welcome.py` - Добро пожаловать geldin/видеть сообщения
 - ✅ Embed ve text desteği
-- ✅ DM bildirimleri
-- ✅ Placeholder desteği ({user}, {server}, vb.)
-- ✅ Özelleştirilebilir renkler ve görseller
+- ✅ DM уведомление
+- ✅ Placeholder desteği ({user}, {сервер}, vb.)
+- ✅ Особый renkler ve видеть
 
-**Komutlar:**
-- `!hoşgeldin-test` - Hoş geldin mesajını test et
-- `!görüşürüz-test` - Görüşürüz mesajını test et
+**Команды:**
+- `!добро пожаловать-test` - Добро пожаловать geldin сообщение test et
+- `!видеть-test` - Видеть сообщение test et
 
 ## 5. Custom Commands 📝
-- ✅ `cogs/custom_commands.py` - Özel komut sistemi
+- ✅ `cogs/custom_commands.py` - Особый команда система
 - ✅ Prefix desteği (! ve /)
 - ✅ Placeholder desteği
-- ✅ Kullanım istatistikleri
+- ✅ Использование статистика
 - ✅ Embed ve text desteği
 
-**Komutlar:**
-- `!komut-ekle [trigger] [yanıt]` - Özel komut ekle
-- `!komut-sil [trigger]` - Özel komutu sil
-- `!komutlar` - Tüm özel komutları listele
-- `!komut-yenile` - Komutları yenile
+**Команды:**
+- `!команда-добавить [trigger] [yanıt]` - Особый команда добавить
+- `!команда-удалить [trigger]` - Особый команда удалить
+- `!команды` - Все особый команды listele
+- `!команда-yenile` - Командыı yenile
 
 ---
 
-## Starboard Sistemi ⭐
+## Starboard Система ⭐
 - ✅ `cogs/starboard.py` - Reaction tracking, auto-post
 - ✅ `web/routes_extra.py` - API endpoints geliştirildi
 - ✅ `web/templates/starboard.html` - Modern UI
-- ✅ Otomatik yıldız sayma
+- ✅ Автоматически yıldız sayma
 - ✅ Minimum yıldız eşiği
-- ✅ Özel emoji desteği
+- ✅ Особый emoji desteği
 
-**Komutlar:**
-- `!starboard #kanal 3` - Starboard kur
-- `!starboard-disable` - Starboard kapat
+**Команды:**
+- `!starboard #канал 3` - Starboard kur
+- `!starboard-disable` - Starboard закрыть
 
-## Öneri Sistemi 💡
-- ✅ `cogs/suggestions.py` - Öneri gönderme, oylama, değerlendirme
-- ✅ `/öneri` slash komutu
-- ✅ Otomatik oylama (👍👎)
-- ✅ Onaylama/reddetme sistemi
-- ✅ DM bildirimleri
+## Предложение Система 💡
+- ✅ `cogs/suggestions.py` - Предложение отправл, oylama, значение
+- ✅ `/предложение` slash команда
+- ✅ Автоматически oylama (👍👎)
+- ✅ Onaylama/reddetme система
+- ✅ DM уведомление
 
-**Komutlar:**
-- `/öneri [metin]` - Öneri gönder
-- `!öneri-kur #kanal` - Öneri sistemini kur
-- `!öneri-onayla [id] [sebep]` - Öneriyi onayla
-- `!öneri-reddet [id] [sebep]` - Öneriyi reddet
+**Команды:**
+- `/предложение [metin]` - Предложение отправить
+- `!предложение-kur #канал` - Предложение sistemini kur
+- `!предложение-onayla [id] [причина]` - Предложение onayla
+- `!предложение-reddet [id] [причина]` - Предложение reddet
 
 ---
 
-# Giveaway Sistemi - TAMAMLANDI ✅
+# Giveaway Система - ЗАВЕРШЕНО ✅
 
-## Tamamlanan Adımlar:
-1. ✅ `cogs/giveaway.py` - Reaction/button/timer sistemi
-2. ✅ `web/routes_extra.py` - API entegrasyonu mevcut
+## Заверш Adımlar:
+1. ✅ `cogs/giveaway.py` - Reaction/button/timer система
+2. ✅ `web/routes_extra.py` - API entegrasyonu текущий
 3. ✅ `web/templates/giveaway.html` - Modern UI hazır
 4. ✅ Bot cog auto-load edilmiş
 
-**Durum: %100 tamamlandı**
+**Состояние: %100 завершено**
 
-## Özellikler:
-- Çekiliş oluşturma (web panel + bot)
-- Button ile katılım
-- Otomatik kazanan seçimi
-- Reroll komutu
-- DM bildirimleri
+## Особенности:
+- Розыгрыш создан (web panel + bot)
+- Button с katılım
+- Автоматически kazanan выбор
+- Reroll команда
+- DM уведомление
 - Modern altın temalı UI
 
 

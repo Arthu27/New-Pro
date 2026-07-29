@@ -1,119 +1,119 @@
-﻿# 🤖 AI Destek Ticket Sistemi - Hızlı Özet
+﻿# 🤖 AI Поддержка Ticket Система - Быстрый Сводка
 
 ## Ne Yaptık?
 
-Aether botuna **AI-powered destek sistemi** ekledik. Artık kullanıcılar ticket açtığında:
+Aether botuna **AI-powered поддержка система** добавить. Теперь пользователи ticket açtığında:
 
-1. **AI otomatik karşılar** ve yardımcı olmaya çalışır
-2. **Basit soruları çözer** (bot komutları, genel bilgiler)
-3. **Çözemediği durumlarda yetkililere yönlendirir** (şikayet, ban talebi, vb.)
+1. **AI автоматически приветствие** ve помощник olmaya çalışır
+2. **Basit вопросы çözer** (bot команды, общий информация)
+3. **Çözemediği состояние администрации направление** (жалоба, ban talebi, vb.)
 
 ---
 
-## Nasıl Çalışıyor?
+## Как Работает?
 
-### Kullanıcı Tarafı
+### Пользователь Tarafı
 ```
-Kullanıcı ticket açar
+Пользователь ticket açar
     ↓
-AI: "Merhaba! Sana nasıl yardımcı olabilirim?"
+AI: "Merhaba! Sana как помощник olabilirim?"
     ↓
-Kullanıcı sorusunu sorar
+Пользователь sorusunu sorar
     ↓
-AI cevap verir VEYA yetkililere yönlendirir
+AI ответитьir ИЛИ администрации направление
 ```
 
-### Yönlendirme Durumları
-AI şunlarda otomatik yönlendirir:
+### Направление Состояние
+AI şunlarda автоматически направление:
 - ❌ Ban/kick/timeout talepleri
-- ❌ Rol verme/alma
-- ❌ Sunucu ayarları
-- ❌ Ciddi şikayetler
-- ❌ 10 mesaj limitine ulaşıldığında
-- ❌ AI hata verdiğinde
+- ❌ Роль verme/alma
+- ❌ Сервер настройк
+- ❌ Ciddi жалобы
+- ❌ 10 сообщение limitine ulaşıldığında
+- ❌ AI ошибка данныеnde
 
 ---
 
-## Yeni Komutlar
+## Новый Команды
 
 ### `/ticket-ai-stats`
-AI istatistiklerini gösterir (kaç ticket, kaç yönlendirildi, vb.)
+AI статистика показ (сколько ticket, сколько направление, vb.)
 
 ### `/ticket-ai-toggle`
-AI sistemini aç/kapat
+AI sistemini aç/закрыть
 
 ### `/ticket-force-escalate`
-Mevcut ticket'i hemen yetkililere yönlendir
+Текущий ticket'i hemen администрации направление
 
 ---
 
 ## Web Panel
 
-**Yeni Sayfa**: `/ai-tickets`
+**Новый Sayfa**: `/ai-tickets`
 
-- Tüm AI konuşmalarını görüntüle
-- İstatistikler (toplam, AI işliyor, yönlendirildi)
-- Her ticket'in konuşma geçmişini incele
+- Все AI разговор скриншот
+- Статистика (собратьm, AI işliyor, направление)
+- Каждый ticket'in разговор историю incele
 
-**Menüde**: İstatistik → 🤖 AI Destek Ticketları
+**Menüde**: Статистика → 🤖 AI Поддержка Ticketları
 
 ---
 
-## Ayarlar
+## Настройки
 
 `cogs/ticket.py` dosyasında:
 
 ```python
-AI_ENABLED = True  # AI'yi kapat/aç
-MAX_AI_MESSAGES = 10  # AI max kaç mesaj cevaplasın
+AI_ENABLED = True  # AI'yi закрыть/aç
+MAX_AI_MESSAGES = 10  # AI max сколько сообщение cevaplasın
 ```
 
 ---
 
-## Örnek Kullanım
+## Пример Использование
 
 ### ✅ AI Çözebilir
-**Kullanıcı**: "Bot komutları nasıl kullanılır?"  
-**AI**: "/help komutunu kullanarak tüm komutları görebilirsin..."
+**Пользователь**: "Bot команды как использовать?"  
+**AI**: "/help команду использовать все команды видеть..."
 
-### 🔄 AI Yönlendirir
-**Kullanıcı**: "X kişisi bana hakaret etti, ban atın"  
-**AI**: "Bu konuda yetkililere yönlendiriyorum..."  
-*[Destek rolü ping atılır]*
+### 🔄 AI Направление
+**Пользователь**: "X человек bana оскорбление etti, ban atın"  
+**AI**: "Bu konuda администрации направление..."  
+*[Поддержка роль ping atılır]*
 
 ---
 
-## Teknik Detaylar
+## Teknik Детали
 
 - **AI Model**: OpenRouter Gemini 2.0 Flash
-- **Dil**: Sadece Türkçe
+- **Dil**: Только Русский
 - **Veri**: `data/ai_tickets_<guild_id>.json`
-- **Max Mesaj**: 10 (sonra otomatik yönlendirir)
-- **History**: Son 20 mesaj tutulur
+- **Max Сообщение**: 10 (после автоматически направление)
+- **History**: В конец 20 сообщение tutulur
 
 ---
 
 ## Önemli Notlar
 
-✅ AI asla yetki gerektiren işlem yapmaz  
-✅ Staff mesaj attığında AI otomatik durur  
-✅ Tüm konuşmalar loglanır  
-✅ AI kapatılabilir (`/ticket-ai-toggle`)  
-✅ Staff her zaman manuel yönlendirme yapabilir  
+✅ AI никогда администратор gerektiren действие yapmaz  
+✅ Staff сообщение attığında AI автоматически durur  
+✅ Все разговор loglanır  
+✅ AI закрыт (`/ticket-ai-toggle`)  
+✅ Staff каждый время manuel направление yapabilir  
 
 ---
 
-## Test Etmek İçin
+## Test Etmek Для
 
 1. Ticket aç (panel butonu)
-2. AI'nin karşılama mesajını gör
-3. Basit bir soru sor (örn: "bot komutları nedir?")
-4. AI'nin cevabını gör
-5. Şimdi şikayet et (örn: "X kişisi spam yapıyor")
-6. AI'nin yönlendirme yaptığını gör
+2. AI'nin приветствие сообщение видеть
+3. Basit bir soru sor (напр.: "bot команды nedir?")
+4. AI'nin cevabını видеть
+5. Şimdi жалоба et (напр.: "X человек spam yapıyor")
+6. AI'nin направление yaptığını видеть
 
 ---
 
 **Hazır! 🚀**
 
-Artık botun AI destekli ticket sistemi var. Kullanıcılar daha hızlı yardım alacak, yetkililer daha az basit soruyla uğraşacak.
+Теперь botun AI поддержка ticket система var. Пользователи более быстрый помощь alacak, администраторы более az basit soruyla uğraşacak.

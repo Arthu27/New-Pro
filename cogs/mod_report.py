@@ -1,4 +1,4 @@
-"""Модератор Отчёт Sistemi — haftalık toplantı отчётu"""
+"""Модератор Rapor Система — haftalık собрание raporu"""
 import discord
 from discord.ext import commands, tasks
 from discord import app_commands
@@ -29,7 +29,7 @@ def _load_cfg(guild_id: int) -> dict:
         'day': 0,
         'hour': 9,
         'staff_roles': [],
-        'last_meeting': None  # Последний toplantı датаi (ISO format)
+        'last_meeting': None  # В конец собрание дата (ISO format)
     }
 
 
@@ -66,7 +66,7 @@ def _load_lb(guild_id: int) -> dict:
         except:
             pass
 
-    # Голос verisi — voice_stats_GUILDID.json (saniye cinsinden)
+    # Ses verisi — voice_stats_GUILDID.json (saniye cinsinden)
     vs_path = f'{DATA_DIR}/voice_stats_{guild_id}.json'
     if os.path.exists(vs_path):
         try:
@@ -91,7 +91,7 @@ def _load_invites(guild_id: int) -> dict:
             result = {}
             for uid, val in data.items():
                 if isinstance(val, dict):
-                    # {'name': '...', 'total': 25} veya {'count': 5}
+                    # {'name': '...', 'total': 25} или {'count': 5}
                     result[uid] = val.get('total', val.get('count', val.get('uses', 0)))
                 elif isinstance(val, (int, float)):
                     result[uid] = int(val)
@@ -123,26 +123,26 @@ def _bar(value: int, max_val: int, length: int = 12) -> str:
 
 
 async def _build_weekly_report(guild: discord.Guild, days: int = 7, force_cutoff: datetime.datetime = None) -> list[discord.Embed]:
-    """Haftalık toplantı отчётu — tüm embed'ler"""
+    """Haftalık собрание raporu — все embed'ler"""
     now = datetime.datetime.now(datetime.timezone.utc)
     cfg = _load_cfg(guild.id)
 
     if force_cutoff:
         cutoff = force_cutoff
-        period = f'Последний {days} Gün'
+        period = f'В конец {days} День'
     elif cfg.get('last_meeting'):
         try:
             cutoff = datetime.datetime.fromisoformat(cfg['last_meeting'])
             if cutoff.tzinfo is None:
                 cutoff = cutoff.replace(tzinfo=datetime.timezone.utc)
             days_since = (now - cutoff).days
-            period = f'Последний Toplantıdan Bu Yana ({days_since} день)'
+            period = f'В конец Собрание Bu Yana ({days_since} день)'
         except:
             cutoff = now - datetime.timedelta(days=days)
-            period = f'Последний {days} Gün'
+            period = f'В конец {days} День'
     else:
         cutoff = now - datetime.timedelta(days=days)
-        period = f'Последний {days} Gün'
+        period = f'В конец {days} День'
 
     ts_cutoff = int(cutoff.timestamp())
     ts_now = int(now.timestamp())
@@ -177,7 +177,7 @@ async def _build_weekly_report(guild: discord.Guild, days: int = 7, force_cutoff
         timestamp=now
     )
     cover.set_author(
-        name=f'{guild.name}  ·  Haftalık Toplantı Отчётu',
+        name=f'{guild.name}  ·  Haftalık Собрание Raporu',
         icon_url=guild.icon.url if guild.icon else None
     )
     cover.description = (
@@ -188,14 +188,14 @@ async def _build_weekly_report(guild: discord.Guild, days: int = 7, force_cutoff
         f'```\n'
         f'> 📅 Dönem: **{period}**\n'
         f'> 🗓️ <t:{ts_cutoff}:D> → <t:{ts_now}:D>\n'
-        f'> 👥 Всего Участник: **{guild.member_count}**\n'
-        f'> 📊 Mod Действиеi: **{len(period_case)}**'
+        f'> 👥 Всего участников: **{guild.member_count}**\n'
+        f'> 📊 Mod Действие: **{len(period_case)}**'
     )
     cover.set_image(url='https://media.tenor.com/ZBDpMFBMFpkAAAAC/celebration-party.gif')
     embeds.append(cover)
 
     # ══════════════════════════════════════════════════════════════════════════
-    # 2. GENEL SUNUCU SIRALAMASI (Top 5 — message + голос + davet)
+    # 2. ОБЩИЙ СЕРВЕР ОЧЕРЕДЬ (Top 5 — message + ses + davet)
     # ══════════════════════════════════════════════════════════════════════════
     scores = defaultdict(lambda: {'msg': 0, 'voice': 0, 'inv': 0, 'score': 0})
     for uid, cnt in lb.get('messages', {}).items():
@@ -212,7 +212,7 @@ async def _build_weekly_report(guild: discord.Guild, days: int = 7, force_cutoff
     max_score = top_overall[0][1]['score'] if top_overall else 1
 
     overall_embed = discord.Embed(
-        title='🏆  Genel Сортировкаma — Top 5',
+        title='🏆  Общий Очередь — Top 5',
         color=0xF1C40F,
         timestamp=now
     )
@@ -229,15 +229,15 @@ async def _build_weekly_report(guild: discord.Guild, days: int = 7, force_cutoff
             f'╰ 💬 {s["msg"]:,} message  🎙️ {h}s{mn}dk  📨 {s["inv"]} davet'
         )
     overall_embed.description = '\n\n'.join(lines) or 'Veri yok.'
-    overall_embed.set_footer(text=f'Puan: Сообщение×1 + Голос dk×2 + Davet×5')
+    overall_embed.set_footer(text=f'Puan: Сообщение×1 + Ses dk×2 + Davet×5')
     embeds.append(overall_embed)
 
     # ══════════════════════════════════════════════════════════════════════════
-    # 3. ROL BAZLI TOP 4 (Правоli roleler için)
+    # 3. РОЛЬ BAZLI TOP 4 (Администратор роли для)
     # ══════════════════════════════════════════════════════════════════════════
     staff_role_ids = cfg.get('staff_roles', [])
 
-    # Eğer role настроитьnmamışsa, serverdaki tüm roleleri tara (admin/mod içerenler)
+    # Если роли настройк, сервер все роли сканировать (admin/mod içerenler)
     if not staff_role_ids:
         staff_role_ids = [
             r.id for r in guild.roles
@@ -245,13 +245,13 @@ async def _build_weekly_report(guild: discord.Guild, days: int = 7, force_cutoff
             and not r.is_default()
         ]
 
-    for role_id in staff_role_ids[:8]:  # Max 8 role
+    for role_id in staff_role_ids[:8]:  # Max 8 роли
         role = guild.get_role(role_id)
-        if not role or role.is_default():
+        if not роли or роли.is_default():
             continue
 
-        # Bu roledeki участникlerin skorları
-        role_members = [m for m in role.members if not m.bot]
+        # Bu роли участников skorları
+        role_members = [m for m in роли.members if not m.bot]
         if not role_members:
             continue
 
@@ -294,7 +294,7 @@ async def _build_weekly_report(guild: discord.Guild, days: int = 7, force_cutoff
         embeds.append(role_embed)
 
     # ══════════════════════════════════════════════════════════════════════════
-    # 4. MOD İSTATİSTİKLERİ
+    # 4. MOD СТАТИСТИКА
     # ══════════════════════════════════════════════════════════════════════════
     if period_case:
         action_counts = defaultdict(int)
@@ -304,24 +304,24 @@ async def _build_weekly_report(guild: discord.Guild, days: int = 7, force_cutoff
             mod_counts[c['mod_id']] += 1
 
         mod_embed = discord.Embed(
-            title='⚔️  Moderasyon Özeti',
+            title='⚔️  Moderasyon Сводка',
             color=0xED4245,
             timestamp=now
         )
 
-        # Aksiyon dağılımı
+        # Действие dağılımı
         action_lines = []
         for action, count in sorted(action_counts.items(), key=lambda x: x[1], reverse=True):
             bar = _bar(count, max(action_counts.values()))
             action_lines.append(f'{_action_emoji(action)} `{action.upper():<8}` {bar} **{count}**')
 
         mod_embed.add_field(
-            name=f'📋 Действие Dağılımı ({len(period_case)} всего)',
+            name=f'📋 Действие Dağılımı ({len(period_case)} собратьm)',
             value='\n'.join(action_lines) or 'Нет',
             inline=False
         )
 
-        # Top модераторler
+        # Top модераторы
         top_mods = sorted(mod_counts.items(), key=lambda x: x[1], reverse=True)[:5]
         mod_lines = []
         for i, (mid, cnt) in enumerate(top_mods):
@@ -329,11 +329,11 @@ async def _build_weekly_report(guild: discord.Guild, days: int = 7, force_cutoff
             name = m.display_name if m else f'<@{mid}>'
             mod_lines.append(f'`#{i+1}` **{name}** — {cnt} действие')
         mod_embed.add_field(
-            name='🏅 En Активен Модераторler',
+            name='🏅 En Активен Модераторы',
             value='\n'.join(mod_lines) or 'Нет',
             inline=False
         )
-        mod_embed.set_footer(text=f'Aether Mod Отчётu • {period}')
+        mod_embed.set_footer(text=f'Aether Mod Raporu • {period}')
         embeds.append(mod_embed)
 
     # ══════════════════════════════════════════════════════════════════════════
@@ -344,10 +344,10 @@ async def _build_weekly_report(guild: discord.Guild, days: int = 7, force_cutoff
         timestamp=now
     )
     close.description = (
-        f'```ansi\n\u001b[1;32m✦ Отчёт Последнийu ✦\u001b[0m\n```\n'
-        f'> Bu отчёт **{period}** verilerini kapsamaktadır.\n'
-        f'> Bir следующий отчёт: <t:{ts_now + (7 - datetime.datetime.utcnow().weekday()) * 86400}:D>\n\n'
-        f'-# Aether Бот • Otomatik Haftalık Отчёт'
+        f'```ansi\n\u001b[1;32m✦ Rapor В конецu ✦\u001b[0m\n```\n'
+        f'> Bu rapor **{period}** verilerini kapsamaktadır.\n'
+        f'> Bir sonraki rapor: <t:{ts_now + (7 - datetime.datetime.utcnow().weekday()) * 86400}:D>\n\n'
+        f'-# Aether Bot • Автоматически Haftalık Rapor'
     )
     embeds.append(close)
 
@@ -355,25 +355,25 @@ async def _build_weekly_report(guild: discord.Guild, days: int = 7, force_cutoff
 
 
 class ModReportView(discord.ui.View):
-    """Mod отчёт paneli butonları"""
+    """Mod rapor paneli кнопки"""
 
     def __init__(self):
         super().__init__(timeout=None)
 
-    @discord.ui.button(label='📊  Haftalık Отчёт', style=discord.ButtonStyle.primary, custom_id='modreport_weekly', row=0)
+    @discord.ui.button(label='📊  Haftalık Rapor', style=discord.ButtonStyle.primary, custom_id='modreport_weekly', row=0)
     async def weekly(self, interaction: discord.Interaction, button: discord.ui.Button):
         if not interaction.user.guild_permissions.manage_messages:
-            await interaction.response.send_message('❌ Правоn yok.', ephemeral=True)
+            await interaction.response.send_message('❌ Администратор yok.', ephemeral=True)
             return
         await interaction.response.defer()
         embeds = await _build_weekly_report(interaction.guild, days=7)
         for i in range(0, len(embeds), 10):
             await interaction.followup.send(embeds=embeds[i:i+10])
 
-    @discord.ui.button(label='📅  Последний 30 Gün', style=discord.ButtonStyle.secondary, custom_id='modreport_30', row=0)
+    @discord.ui.button(label='📅  В конец 30 День', style=discord.ButtonStyle.secondary, custom_id='modreport_30', row=0)
     async def monthly(self, interaction: discord.Interaction, button: discord.ui.Button):
         if not interaction.user.guild_permissions.manage_messages:
-            await interaction.response.send_message('❌ Правоn yok.', ephemeral=True)
+            await interaction.response.send_message('❌ Администратор yok.', ephemeral=True)
             return
         await interaction.response.defer()
         cutoff = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=30)
@@ -381,12 +381,12 @@ class ModReportView(discord.ui.View):
         for i in range(0, len(embeds), 10):
             await interaction.followup.send(embeds=embeds[i:i+10])
 
-    @discord.ui.button(label='👤  Mod İstatistik', style=discord.ButtonStyle.secondary, custom_id='modreport_modstats', row=0)
+    @discord.ui.button(label='👤  Mod Статистика', style=discord.ButtonStyle.secondary, custom_id='modreport_modstats', row=0)
     async def modstats(self, interaction: discord.Interaction, button: discord.ui.Button):
         if not interaction.user.guild_permissions.manage_messages:
-            await interaction.response.send_message('❌ Правоn yok.', ephemeral=True)
+            await interaction.response.send_message('❌ Администратор yok.', ephemeral=True)
             return
-        # Kendi istatistiklerini göster
+        # Kendi статистика показать
         data = _load_mod_data()
         gid = str(interaction.guild.id)
         case = data.get('case', {}).get(gid, [])
@@ -410,7 +410,7 @@ class ModReportView(discord.ui.View):
             embed.set_footer(text=interaction.guild.name, icon_url=interaction.guild.icon.url)
         embed.add_field(
             name='📈 Aktivite',
-            value=f'```yaml\nСообщение  : {msg:,}\nГолос    : {h}s {mn}dk\nDavet  : {inv.get(uid, 0)}\n```',
+            value=f'```yaml\nMesaj  : {msg:,}\nSes    : {h}s {mn}dk\nDavet  : {inv.get(uid, 0)}\n```',
             inline=True
         )
         embed.add_field(
@@ -418,17 +418,17 @@ class ModReportView(discord.ui.View):
             value=(
                 f'```yaml\n'
                 f'Всего : {len(mod_case)}\n'
-                f'Бан    : {action_counts.get("ban", 0)}\n'
-                f'Кик   : {action_counts.get("kick", 0)}\n'
-                f'Мут: {action_counts.get("timeout", 0)}\n'
-                f'Warning  : {action_counts.get("warn", 0)}\n'
+                f'Ban    : {action_counts.get("ban", 0)}\n'
+                f'Kick   : {action_counts.get("kick", 0)}\n'
+                f'Mute: {action_counts.get("timeout", 0)}\n'
+                f'Предупреждение  : {action_counts.get("warn", 0)}\n'
                 f'```'
             ),
             inline=True
         )
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
-    @discord.ui.button(label='🏆  Сортировкаma', style=discord.ButtonStyle.success, custom_id='modreport_lb', row=1)
+    @discord.ui.button(label='🏆  Очередь', style=discord.ButtonStyle.success, custom_id='modreport_lb', row=1)
     async def leaderboard(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer()
         lb = _load_lb(interaction.guild.id)
@@ -447,7 +447,7 @@ class ModReportView(discord.ui.View):
             name = m.display_name if m else f'<@{uid}>'
             medal = medals[i] if i < 3 else f'`#{i+1}`'
             lines.append(f'{medal} **{name}** — {score:,} puan')
-        embed = discord.Embed(title='🏆 Genel Сортировкаma', description='\n'.join(lines) or 'Veri yok.', color=0xF1C40F)
+        embed = discord.Embed(title='🏆 Общий Очередь', description='\n'.join(lines) or 'Veri yok.', color=0xF1C40F)
         if interaction.guild.icon:
             embed.set_thumbnail(url=interaction.guild.icon.url)
         await interaction.followup.send(embed=embed)
@@ -455,20 +455,20 @@ class ModReportView(discord.ui.View):
     @discord.ui.button(label='⚙️  Настройки', style=discord.ButtonStyle.grey, custom_id='modreport_settings', row=1)
     async def settings(self, interaction: discord.Interaction, button: discord.ui.Button):
         if not interaction.user.guild_permissions.administrator:
-            await interaction.response.send_message('❌ Правоn yok.', ephemeral=True)
+            await interaction.response.send_message('❌ Администратор yok.', ephemeral=True)
             return
         cfg = _load_cfg(interaction.guild.id)
         gun_names = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar']
         ch = interaction.guild.get_channel(cfg.get('channel_id', 0))
-        embed = discord.Embed(title='⚙️ Отчёт Настройкиı', color=0x5865F2)
-        embed.add_field(name='Статус', value='✅ Активен' if cfg.get('enabled') else '❌ Закрыт', inline=True)
-        embed.add_field(name='Канал', value=ch.mention if ch else 'Настроитьnmamış', inline=True)
-        embed.add_field(name='Gün/Время', value=f'{gun_names[cfg.get("day", 0)]} {cfg.get("hour", 9):02d}:00', inline=True)
+        embed = discord.Embed(title='⚙️ Rapor Настройкиı', color=0x5865F2)
+        embed.add_field(name='Состояние', value='✅ Активен' if cfg.get('enabled') else '❌ Закрыт', inline=True)
+        embed.add_field(name='Канал', value=ch.mention if ch else 'Настройк', inline=True)
+        embed.add_field(name='День/Время', value=f'{gun_names[cfg.get("day", 0)]} {cfg.get("hour", 9):02d}:00', inline=True)
         embed.description = (
-            '**Командаlar:**\n'
-            '`!отчёт-настроить #channel [день] [час]`\n'
-            '`!отчёт-role-add @Роль`\n'
-            '`!отчёт-role-cikar @Роль`'
+            '**Команды:**\n'
+            '`!rapor-настройк #channel [день] [saat]`\n'
+            '`!rapor-роли-add @Роль`\n'
+            '`!rapor-роли-cikar @Роль`'
         )
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
@@ -501,7 +501,7 @@ class ModReport(commands.Cog):
                             await channel.send(embeds=embeds[i:i+10])
                         cfg['last_sent'] = week_str
                         _save_cfg(guild.id, cfg)
-                        print(f'[ModReport] Отчёт отправитьildi: {guild.name}')
+                        print(f'[ModReport] Rapor отправлено: {guild.name}')
                     except Exception as e:
                         print(f'[ModReport] Ошибка: {e}')
 
@@ -512,9 +512,9 @@ class ModReport(commands.Cog):
     @commands.command(name='mod-panel')
     @commands.has_permissions(manage_messages=True)
     async def mod_panel(self, ctx):
-        """Mod отчёт panelini отправить: !mod-panel"""
+        """Mod rapor panelini отправить: !mod-panel"""
         embed = discord.Embed(
-            title='📊  Moderasyon & Отчёт Панельi',
+            title='📊  Moderasyon & Rapor Paneli',
             color=0x5865F2
         )
         if ctx.guild.icon:
@@ -522,70 +522,70 @@ class ModReport(commands.Cog):
         if ctx.guild.banner:
             embed.set_image(url=ctx.guild.banner.url)
         embed.description = (
-            '> Bu panel ile server отчётlarını ve istatistikleri görüntüleyebilirsin.\n\n'
-            '**📊 Haftalık Отчёт** — Последний 7 деньün moderasyon ve aktivite özeti\n'
-            '**📅 Последний 30 Gün** — Aylık отчёт\n'
-            '**👤 Mod İstatistik** — Kendi moderasyon istatistiklerin\n'
-            '**🏆 Сортировкаma** — Genel aktivite sıralaması\n'
-            '**⚙️ Настройки** — Otomatik отчёт настройкиı'
+            '> Bu panel с сервер raporlarını ve статистика скриншот.\n\n'
+            '**📊 Haftalık Rapor** — В конец 7 день moderasyon ve aktivite сводка\n'
+            '**📅 В конец 30 День** — Aylık rapor\n'
+            '**👤 Mod Статистика** — Kendi moderasyon статистика\n'
+            '**🏆 Очередь** — Общий aktivite очередь\n'
+            '**⚙️ Настройки** — Автоматически rapor настройк'
         )
         embed.set_footer(
-            text=f'{ctx.guild.name}  ·  Mod Панельi',
+            text=f'{ctx.guild.name}  ·  Mod Paneli',
             icon_url=ctx.guild.icon.url if ctx.guild.icon else None
         )
         await ctx.send(embed=embed, view=ModReportView())
 
-    @commands.command(name='haftalik-отчёт', aliases=['отчёт', 'report'])
+    @commands.command(name='haftalik-rapor', aliases=['rapor', 'report'])
     @commands.has_permissions(manage_messages=True)
     async def weekly_report(self, ctx, gun: int = 7):
-        """Haftalık toplantı отчётunu göster: !haftalik-отчёт [день]"""
+        """Haftalık собрание raporunu показать: !haftalik-rapor [день]"""
         async with ctx.typing():
             embeds = await _build_weekly_report(ctx.guild, days=gun)
             for i in range(0, len(embeds), 10):
                 await ctx.send(embeds=embeds[i:i+10])
 
-    @commands.command(name='отчёт-настроить')
+    @commands.command(name='rapor-настройк')
     @commands.has_permissions(administrator=True)
-    async def setup_report(self, ctx, channel: discord.TextChannel, gun: int = 0, час: int = 9):
-        """Otomatik haftalık отчётu настроить: !отчёт-настроить #channel [день] [час]"""
+    async def setup_report(self, ctx, channel: discord.TextChannel, gun: int = 0, saat: int = 9):
+        """Автоматически haftalık raporu настройк: !rapor-настройк #channel [день] [saat]"""
         cfg = _load_cfg(ctx.guild.id)
-        cfg.update({'enabled': True, 'channel_id': channel.id, 'day': gun, 'hour': час})
+        cfg.update({'enabled': True, 'channel_id': channel.id, 'day': gun, 'hour': saat})
         _save_cfg(ctx.guild.id, cfg)
         gun_names = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar']
         embed = discord.Embed(
-            title='✅ Haftalık Отчёт Настроитьndı',
+            title='✅ Haftalık Rapor Настройк',
             color=0x57F287,
             description=(
-                f'Her **{gun_names[gun]}** час **{час:02d}:00**\'de\n'
-                f'{channel.mention} channelına otomatik отправитьilecek.'
+                f'Каждый **{gun_names[gun]}** saat **{saat:02d}:00**\'de\n'
+                f'{channel.mention} в канал автоматически отправл.'
             )
         )
         await ctx.send(embed=embed)
 
-    @commands.command(name='отчёт-role-add')
+    @commands.command(name='rapor-роли-add')
     @commands.has_permissions(administrator=True)
     async def add_staff_role(self, ctx, role: discord.Role):
-        """Отчётa right_btn roleü add: !отчёт-role-add @Роль"""
+        """Rapora администратор роль add: !rapor-роли-add @Роль"""
         cfg = _load_cfg(ctx.guild.id)
         if role.id not in cfg.get('staff_roles', []):
             cfg.setdefault('staff_roles', []).append(role.id)
             _save_cfg(ctx.guild.id, cfg)
-        await ctx.send(f'✅ **{role.name}** roleü отчётa addndi.')
+        await ctx.send(f'✅ **{role.name}** роль rapora addndi.')
 
-    @commands.command(name='отчёт-role-cikar')
+    @commands.command(name='rapor-роли-cikar')
     @commands.has_permissions(administrator=True)
     async def remove_staff_role(self, ctx, role: discord.Role):
-        """Рольü отчётdan çıkar: !отчёт-role-cikar @Роль"""
+        """Роль rapordan удалить: !rapor-роли-cikar @Роль"""
         cfg = _load_cfg(ctx.guild.id)
         if role.id in cfg.get('staff_roles', []):
             cfg['staff_roles'].remove(role.id)
             _save_cfg(ctx.guild.id, cfg)
-        await ctx.send(f'✅ **{role.name}** roleü отчётdan çıkarıldı.')
+        await ctx.send(f'✅ **{role.name}** роль rapordan удалить.')
 
-    @commands.command(name='toplanti-baslat')
+    @commands.command(name='собрание-baslat')
     @commands.has_permissions(administrator=True)
     async def start_meeting(self, ctx, дата: str = None):
-        """Toplantı запустить: !toplanti-baslat [GG.AA.YYYY]"""
+        """Собрание запустить: !собрание-baslat [GG.AA.YYYY]"""
         cfg = _load_cfg(ctx.guild.id)
 
         # Дата parse et
@@ -594,7 +594,7 @@ class ModReport(commands.Cog):
                 dt = datetime.datetime.strptime(дата, '%d.%m.%Y')
                 meeting_time = dt.replace(tzinfo=datetime.timezone.utc)
             except ValueError:
-                await ctx.send('❌ Дата formatı yanlış! Örn: `!toplanti-baslat 12.04.2026`')
+                await ctx.send('❌ Неверный формат даты! Напр.: `!собрание-baslat 12.04.2026`')
                 return
         else:
             meeting_time = datetime.datetime.now(datetime.timezone.utc)
@@ -606,19 +606,19 @@ class ModReport(commands.Cog):
                     for i in range(0, len(embeds), 10):
                         await ctx.send(embeds=embeds[i:i+10])
                 except Exception as e:
-                    await ctx.send(f'⚠️ Отчёт создатьulurken Ошибка: {e}')
+                    await ctx.send(f'⚠️ Rapor создан Ошибка: {e}')
 
         cfg['last_meeting'] = meeting_time.isoformat()
         _save_cfg(ctx.guild.id, cfg)
         ts = int(meeting_time.timestamp())
-        await ctx.send(f'✅ Toplantı датаi настроитьndı: <t:{ts}:F>\nBir следующий отчёт bu датаten itibaren sayacak.')
+        await ctx.send(f'✅ Собрание дата настройк: <t:{ts}:F>\nBir sonraki rapor bu дата itibaren sayacak.')
 
-    @commands.command(name='toplanti-sayac')
+    @commands.command(name='собрание-sayac')
     async def meeting_counter(self, ctx):
-        """Последний toplantıdan kaç день geçti: !toplanti-sayac"""
+        """В конец собрание сколько день geçti: !собрание-sayac"""
         cfg = _load_cfg(ctx.guild.id)
         if not cfg.get('last_meeting'):
-            await ctx.send('❌ Henüz toplantı запуститьılmadı. `!toplanti-baslat` kullan.')
+            await ctx.send('❌ Пока собрание запуск. `!собрание-baslat` использовать.')
             return
         try:
             last = datetime.datetime.fromisoformat(cfg['last_meeting'])
@@ -628,21 +628,21 @@ class ModReport(commands.Cog):
             days = (now - last).days
             ts = int(last.timestamp())
             embed = discord.Embed(
-                title='📅 Toplantı Sayacı',
+                title='📅 Собрание Sayacı',
                 color=0x5865F2,
                 description=(
-                    f'Последний toplantı: <t:{ts}:F>\n'
-                    f'Geçen süre: **{days} день**'
+                    f'В конец собрание: <t:{ts}:F>\n'
+                    f'Geçen длительность: **{days} день**'
                 )
             )
             await ctx.send(embed=embed)
         except Exception as e:
             await ctx.send(f'❌ Ошибка: {e}')
 
-    @commands.command(name='mod-istatistik', aliases=['modstats'])
+    @commands.command(name='mod-статистика', aliases=['modstats'])
     @commands.has_permissions(manage_messages=True)
     async def mod_stats(self, ctx, moderator: discord.Member = None):
-        """Модератор istatistikleri: !mod-istatistik [@kişi]"""
+        """Модератор статистика: !mod-статистика [@человек]"""
         target = moderator or ctx.author
         data = _load_mod_data()
         gid = str(ctx.guild.id)
@@ -666,7 +666,7 @@ class ModReport(commands.Cog):
         embed.set_thumbnail(url=target.display_avatar.url)
         embed.add_field(
             name='📈 Aktivite',
-            value=f'```yaml\nСообщение  : {msg:,}\nГолос    : {h}s {mn}dk\nDavet  : {invites_cnt}\n```',
+            value=f'```yaml\nMesaj  : {msg:,}\nSes    : {h}s {mn}dk\nDavet  : {invites_cnt}\n```',
             inline=True
         )
         embed.add_field(
@@ -674,10 +674,10 @@ class ModReport(commands.Cog):
             value=(
                 f'```yaml\n'
                 f'Всего : {len(mod_case)}\n'
-                f'Бан    : {action_counts.get("ban", 0)}\n'
-                f'Кик   : {action_counts.get("kick", 0)}\n'
-                f'Мут: {action_counts.get("timeout", 0)}\n'
-                f'Warning  : {action_counts.get("warn", 0)}\n'
+                f'Ban    : {action_counts.get("ban", 0)}\n'
+                f'Kick   : {action_counts.get("kick", 0)}\n'
+                f'Mute: {action_counts.get("timeout", 0)}\n'
+                f'Предупреждение  : {action_counts.get("warn", 0)}\n'
                 f'```'
             ),
             inline=True

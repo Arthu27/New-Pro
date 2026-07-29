@@ -1,5 +1,5 @@
 """
-AI Function Calling — AI может вызывать функции для получения данных и выполнения действий
+AI Function Calling — AI olabilir vizivat fonksiyonlar для poluceniya verilerin ve заверш действие
 """
 import json
 import os
@@ -9,7 +9,7 @@ from typing import Dict, List, Optional, Any
 
 
 class AIFunctions:
-    """Набор функций доступных AI"""
+    """Nabor fonksiyonların erişisimlerin AI"""
     
     def __init__(self, bot: discord.Client):
         self.bot = bot
@@ -19,7 +19,7 @@ class AIFunctions:
             'get_user_roles': self.get_user_roles,
             'check_message_history': self.check_message_history,
             'search_rules': self.search_rules,
-            'get_server_stats': self.get_server_stats,
+            'get_sunucu_stats': self.get_sunucu_stats,
             'get_ticket_history': self.get_ticket_history,
             'remember_fact': self.remember_fact,
             'recall_facts': self.recall_facts,
@@ -28,55 +28,55 @@ class AIFunctions:
         }
     
     def get_available_functions(self) -> str:
-        """Возвращает описание доступных функций для AI"""
+        """Vozvrasaet описание erişisimlerin fonksiyonların для AI"""
         return """
-ДОСТУПНЫЕ ФУНКЦИИ (вызывай когда нужно):
+ERIŞIMNIE FONKSIYONLAR (vizivay ne время gerekli):
 
 1. get_user_warnings(user_id: int)
-   Получить историю предупреждений пользователя
+   Al история предупреждение пользователь
    Пример: get_user_warnings(123456789)
 
 2. get_user_info(user_id: int)
-   Получить информацию о пользователе (имя, дата регистрации, время на сервере)
+   Al информация о у пользователя (isim, дата registracii, время на на сервере)
    Пример: get_user_info(123456789)
 
 3. get_user_roles(user_id: int)
-   Получить список ролей пользователя
+   Al liste роль пользователь
    Пример: get_user_roles(123456789)
 
 4. check_message_history(user_id: int, limit: int = 10)
-   Проверить последние сообщения пользователя
+   Контроль et son сообщения пользователь
    Пример: check_message_history(123456789, 20)
 
 5. search_rules(query: str)
-   Поиск по правилам сервера
-   Пример: search_rules("спам")
+   Arama по правил сервер
+   Пример: search_rules("spam")
 
-6. get_server_stats()
-   Получить статистику сервера (участники, онлайн, каналы)
-   Пример: get_server_stats()
+6. get_sunucu_stats()
+   Al istatistiği сервер (участники, onlayn, каналы)
+   Пример: get_sunucu_stats()
 
 7. get_ticket_history(user_id: int)
-   Получить историю тикетов пользователя
+   Al история ticketların пользователь
    Пример: get_ticket_history(123456789)
 
 8. remember_fact(user_id: int, fact: str)
-   Запомнить важный факт о пользователе
-   Пример: remember_fact(123456789, "Предпочитает краткие ответы")
+   Zapomnit vajniy fakt о у пользователя
+   Пример: remember_fact(123456789, "Predpocitaet kratkie cevaplar")
 
 9. recall_facts(user_id: int)
-   Вспомнить все факты о пользователе
+   Vspomnit все fakti о у пользователя
    Пример: recall_facts(123456789)
 
 10. check_user_reputation(user_id: int)
-    Проверить репутацию пользователя (предупреждения, муты, баны)
+    Контроль et itibarı пользователь (предупреждения, muti, bani)
     Пример: check_user_reputation(123456789)
 
 11. search_knowledge_base(query: str)
-    Поиск по базе знаний сервера (правила, FAQ, тикеты, заметки)
-    Пример: search_knowledge_base("спам")
+    Arama по tabanda информация сервер (правила, FAQ, ticketlar, notlar)
+    Пример: search_knowledge_base("spam")
 
-ФОРМАТ ВЫЗОВА:
+FORMAT VIZOVA:
 [FUNC:function_name(param1=value1, param2=value2)]
 
 ПРИМЕР:
@@ -84,22 +84,22 @@ class AIFunctions:
 """
     
     async def execute_function(self, func_call: str, guild: discord.Guild) -> Optional[str]:
-        """Выполняет функцию из вызова AI"""
+        """Vipolnyaet funkciyu den vizova AI"""
         try:
-            # Парсим вызов: [FUNC:name(param1=value1, param2=value2)]
+            # Ayrıştırıyoruz vizov: [FUNC:name(param1=value1, param2=value2)]
             if not func_call.startswith('[FUNC:') or not func_call.endswith(']'):
                 return None
             
-            func_call = func_call[6:-1]  # Убираем [FUNC: и ]
+            func_call = func_call[6:-1]  # Удален [FUNC: ve ]
             
-            # Парсим имя функции и параметры
+            # Ayrıştırıyoruz isim fonksiyonlar ve parametri
             if '(' not in func_call or ')' not in func_call:
                 return None
             
             func_name = func_call.split('(')[0].strip()
             params_str = func_call.split('(')[1].rsplit(')', 1)[0].strip()
             
-            # Парсим параметры
+            # Ayrıştırıyoruz parametri
             params = {}
             if params_str:
                 for param in params_str.split(','):
@@ -108,7 +108,7 @@ class AIFunctions:
                         key = key.strip()
                         value = value.strip()
                         
-                        # Конвертируем типы
+                        # Konvertiruem tipi
                         if value.isdigit():
                             value = int(value)
                         elif value.replace('.', '').isdigit():
@@ -118,18 +118,18 @@ class AIFunctions:
                         
                         params[key] = value
             
-            # Вызываем функцию
+            # Çтяжелыйıyoruz funkciyu
             if func_name not in self.functions:
-                return f"Ошибка: функция {func_name} не найдена"
+                return f"Ошибка: funkciya {func_name} не найден"
             
             result = await self.functions[func_name](guild=guild, **params)
             return str(result)
             
         except Exception as e:
-            return f"Ошибка выполнения функции: {str(e)}"
+            return f"Ошибка заверш fonksiyonlar: {str(e)}"
     
     async def get_user_warnings(self, guild: discord.Guild, user_id: int) -> str:
-        """Получить историю предупреждений"""
+        """Al история предупреждение"""
         try:
             from cogs.warnings import load_warnings
             warnings_data = load_warnings()
@@ -139,55 +139,55 @@ class AIFunctions:
             user_warnings = warnings_data.get(gid, {}).get(uid, [])
             
             if not user_warnings:
-                return f"У пользователя <@{user_id}> нет предупреждений."
+                return f"U пользователь <@{user_id}> yok предупреждение."
             
             result = f"Предупреждения <@{user_id}> ({len(user_warnings)}):\n"
-            for i, warn in enumerate(user_warnings[-5:], 1):  # Последние 5
-                result += f"{i}. {warn.get('reason', 'Без причины')} — {warn.get('mod', '?')} ({warn.get('timestamp', '?')[:10]})\n"
+            for i, warn in enumerate(user_warnings[-5:], 1):  # В конец 5
+                result += f"{i}. {warn.get('reason', 'Bez причина')} — {warn.get('mod', '?')} ({warn.get('timestamp', '?')[:10]})\n"
             
             return result
         except Exception as e:
             return f"Ошибка: {str(e)}"
     
     async def get_user_info(self, guild: discord.Guild, user_id: int) -> str:
-        """Получить информацию о пользователе"""
+        """Al информация о у пользователя"""
         try:
             member = guild.get_member(user_id)
             if not member:
-                return f"Пользователь <@{user_id}> не найден на сервере."
+                return f"Пользователь <@{user_id}> не найдено на на сервере."
             
             created = member.created_at.strftime("%d.%m.%Y")
             joined = member.joined_at.strftime("%d.%m.%Y") if member.joined_at else "?"
-            days_on_server = (datetime.utcnow() - member.joined_at).days if member.joined_at else 0
+            days_on_sunucu = (datetime.utcnow() - member.joined_at).days if member.joined_at else 0
             
             return (
                 f"Информация о <@{user_id}>:\n"
-                f"Имя: {member.display_name}\n"
+                f"Isim: {member.display_name}\n"
                 f"ID: {user_id}\n"
-                f"Зарегистрирован: {created}\n"
-                f"На сервере: {joined} ({days_on_server} дней)\n"
-                f"Ролей: {len(member.roles)}"
+                f"Zaregistrirovan: {created}\n"
+                f"На на сервере: {joined} ({days_on_sunucu} день)\n"
+                f"Роль: {len(member.roles)}"
             )
         except Exception as e:
             return f"Ошибка: {str(e)}"
     
     async def get_user_roles(self, guild: discord.Guild, user_id: int) -> str:
-        """Получить роли пользователя"""
+        """Al роли пользователь"""
         try:
             member = guild.get_member(user_id)
             if not member:
-                return f"Пользователь <@{user_id}> не найден."
+                return f"Пользователь <@{user_id}> не найдено."
             
-            roles = [role.name for role in member.roles if role.name != "@everyone"]
-            if not roles:
-                return f"У <@{user_id}> нет ролей."
+            role = [role.name for role in member.roles if role.name != "@everyone"]
+            if not role:
+                return f"U <@{user_id}> yok роль."
             
-            return f"Роли <@{user_id}>: {', '.join(roles)}"
+            return f"Роли <@{user_id}>: {', '.join(роли)}"
         except Exception as e:
             return f"Ошибка: {str(e)}"
     
     async def check_message_history(self, guild: discord.Guild, user_id: int, limit: int = 10) -> str:
-        """Проверить последние сообщения пользователя"""
+        """Контроль et son сообщения пользователь"""
         try:
             from cogs.logs import _msg_cache
             
@@ -197,9 +197,9 @@ class AIFunctions:
             ][:limit]
             
             if not user_messages:
-                return f"Нет недавних сообщений от <@{user_id}> в кэше."
+                return f"Yok nedavnih сообщение den <@{user_id}> в kese."
             
-            result = f"Последние {len(user_messages)} сообщений <@{user_id}>:\n"
+            result = f"В конец {len(user_messages)} сообщение <@{user_id}>:\n"
             for msg in reversed(user_messages):
                 content = msg.get('content', '')[:100]
                 channel = msg.get('channel_name', '?')
@@ -210,11 +210,11 @@ class AIFunctions:
             return f"Ошибка: {str(e)}"
     
     async def search_rules(self, guild: discord.Guild, query: str) -> str:
-        """Поиск по правилам сервера"""
+        """Arama по правил сервер"""
         try:
             rules_file = f"data/rules_{guild.id}.json"
             if not os.path.exists(rules_file):
-                return "Правила сервера не найдены."
+                return "Правила сервер не найден."
             
             with open(rules_file, 'r', encoding='utf-8') as f:
                 rules_data = json.load(f)
@@ -228,9 +228,9 @@ class AIFunctions:
             ]
             
             if not matches:
-                return f"Не найдено правил по запросу '{query}'."
+                return f"Не найдено правила по sorguyu '{query}'."
             
-            result = f"Найдено {len(matches)} правил:\n"
+            result = f"Найдено {len(matches)} правила:\n"
             for i, rule in enumerate(matches[:5], 1):
                 result += f"{i}. {rule.get('text', '')}\n"
             
@@ -238,31 +238,31 @@ class AIFunctions:
         except Exception as e:
             return f"Ошибка: {str(e)}"
     
-    async def get_server_stats(self, guild: discord.Guild) -> str:
-        """Получить статистику сервера"""
+    async def get_sunucu_stats(self, guild: discord.Guild) -> str:
+        """Al istatistiği сервер"""
         try:
             total_members = guild.member_count
             online_members = len([m for m in guild.members if m.status == discord.Status.online])
             text_channels = len(guild.text_channels)
             voice_channels = len(guild.voice_channels)
-            roles = len(guild.roles)
+            role = len(guild.roles)
             
             return (
-                f"Статистика сервера {guild.name}:\n"
-                f"Участников: {total_members} (онлайн: {online_members})\n"
-                f"Текстовых каналов: {text_channels}\n"
-                f"Голосовых каналов: {voice_channels}\n"
-                f"Ролей: {roles}"
+                f"Статистика сервер {guild.name}:\n"
+                f"Участников: {total_members} (onlayn: {online_members})\n"
+                f"Metin каналы: {text_channels}\n"
+                f"Ses каналы: {voice_channels}\n"
+                f"Роль: {роли}"
             )
         except Exception as e:
             return f"Ошибка: {str(e)}"
     
     async def get_ticket_history(self, guild: discord.Guild, user_id: int) -> str:
-        """Получить историю тикетов"""
+        """Al история ticketların"""
         try:
             ticket_file = f"data/tickets_{guild.id}.json"
             if not os.path.exists(ticket_file):
-                return f"У <@{user_id}> нет истории тикетов."
+                return f"U <@{user_id}> yok istorii ticketların."
             
             with open(ticket_file, 'r', encoding='utf-8') as f:
                 tickets_data = json.load(f)
@@ -273,10 +273,10 @@ class AIFunctions:
             ]
             
             if not user_tickets:
-                return f"У <@{user_id}> нет тикетов."
+                return f"U <@{user_id}> yok ticketların."
             
-            result = f"Тикеты <@{user_id}> ({len(user_tickets)}):\n"
-            for ticket in user_tickets[-5:]:  # Последние 5
+            result = f"Ticketlar <@{user_id}> ({len(user_tickets)}):\n"
+            for ticket in user_tickets[-5:]:  # В конец 5
                 status = ticket.get('status', '?')
                 category = ticket.get('category', '?')
                 created = ticket.get('created_at', '?')[:10]
@@ -287,7 +287,7 @@ class AIFunctions:
             return f"Ошибка: {str(e)}"
     
     async def remember_fact(self, guild: discord.Guild, user_id: int, fact: str) -> str:
-        """Запомнить факт о пользователе"""
+        """Zapomnit fakt о у пользователя"""
         try:
             memory_file = 'data/ai_memory.json'
             memory = {}
@@ -305,23 +305,23 @@ class AIFunctions:
                 'timestamp': datetime.utcnow().isoformat()
             })
             
-            # Ограничиваем 50 фактами
+            # Ограничиваем 50 faktami
             if len(memory[user_key]) > 50:
                 memory[user_key] = memory[user_key][-50:]
             
             with open(memory_file, 'w', encoding='utf-8') as f:
                 json.dump(memory, f, ensure_ascii=False, indent=2)
             
-            return f"Запомнил: {fact}"
+            return f"Zapomnil: {fact}"
         except Exception as e:
             return f"Ошибка: {str(e)}"
     
     async def recall_facts(self, guild: discord.Guild, user_id: int) -> str:
-        """Вспомнить факты о пользователе"""
+        """Vspomnit fakti о у пользователя"""
         try:
             memory_file = 'data/ai_memory.json'
             if not os.path.exists(memory_file):
-                return f"Нет сохранённых фактов о <@{user_id}>."
+                return f"Yok sohranennih gerçekler о <@{user_id}>."
             
             with open(memory_file, 'r', encoding='utf-8') as f:
                 memory = json.load(f)
@@ -330,10 +330,10 @@ class AIFunctions:
             facts = memory.get(user_key, [])
             
             if not facts:
-                return f"Нет сохранённых фактов о <@{user_id}>."
+                return f"Yok sohranennih gerçekler о <@{user_id}>."
             
-            result = f"Факты о <@{user_id}> ({len(facts)}):\n"
-            for fact_data in facts[-10:]:  # Последние 10
+            result = f"Fakti о <@{user_id}> ({len(facts)}):\n"
+            for fact_data in facts[-10:]:  # В конец 10
                 fact = fact_data.get('fact', '')
                 result += f"- {fact}\n"
             
@@ -342,14 +342,14 @@ class AIFunctions:
             return f"Ошибка: {str(e)}"
     
     async def check_user_reputation(self, guild: discord.Guild, user_id: int) -> str:
-        """Проверить репутацию пользователя"""
+        """Контроль et itibarı пользователь"""
         try:
             warnings_text = await self.get_user_warnings(guild, user_id)
             info_text = await self.get_user_info(guild, user_id)
             tickets_text = await self.get_ticket_history(guild, user_id)
             
             return (
-                f"=== РЕПУТАЦИЯ <@{user_id}> ===\n\n"
+                f"=== REPUTACIYa <@{user_id}> ===\n\n"
                 f"{info_text}\n\n"
                 f"{warnings_text}\n\n"
                 f"{tickets_text}"
@@ -358,7 +358,7 @@ class AIFunctions:
             return f"Ошибка: {str(e)}"
     
     async def search_knowledge_base(self, guild: discord.Guild, query: str) -> str:
-        """Поиск по базе знаний сервера (правила, FAQ, тикеты, заметки)"""
+        """Arama по tabanda информация сервер (правила, FAQ, ticketlar, notlar)"""
         try:
             from web.ai_rag import get_knowledge_base
             
@@ -366,8 +366,8 @@ class AIFunctions:
             context = kb.get_context_for_query(query)
             
             if not context:
-                return f"Не найдено информации в базе знаний по запросу: {query}"
+                return f"Не найдено informacii в tabanda информация по sorguyu: {query}"
             
             return context
         except Exception as e:
-            return f"Ошибка поиска в базе знаний: {str(e)}"
+            return f"Ошибка aramaa в tabanda информация: {str(e)}"

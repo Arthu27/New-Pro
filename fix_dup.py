@@ -1,13 +1,13 @@
 import re, os
 
-path = 'C:/Users/Имяministrator/moebius-бот-main/web/routes_extra.py'
+path = 'C:/Users/İsmininistrator/moebius-bot-main/web/routes_extra.py'
 
 with open(path, encoding='utf-8') as f:
     content = f.read()
 
 original_len = len(content)
 
-# api_guild_channels endpoint'ini bul ve kaldir
+# api_guild_channels endpoint'ini bul ve удалить
 # Indented version (inside register_extra_routes function)
 lines = content.split('\n')
 new_lines = []
@@ -40,10 +40,10 @@ new_content = '\n'.join(new_lines)
 if removed_blocks > 0:
     with open(path, 'w', encoding='utf-8') as f:
         f.write(new_content)
-    print(f"Duzeltildi! {removed_blocks} blok kaldirildi. ({original_len} -> {len(new_content)} karakter)")
+    print(f"Duzeltildi! {removed_blocks} blok удалено. ({original_len} -> {len(new_content)} karakter)")
 else:
-    print("Blok bulunamadi, farkli yontem deneniyor...")
-    # Daha basit: satir satir tara
+    print("Blok не найдено, разница yontem deneniyor...")
+    # Более basit: satir satir сканировать
     lines = content.split('\n')
     new_lines = []
     skip_until_empty = False
@@ -63,11 +63,11 @@ else:
         new_content = '\n'.join(new_lines)
         with open(path, 'w', encoding='utf-8') as f:
             f.write(new_content)
-        print(f"Yontem 2 ile duzeltildi! {removed_blocks} blok kaldirildi.")
+        print(f"Yontem 2 с duzeltildi! {removed_blocks} blok удалено.")
     else:
-        print("Hic blok bulunamadi!")
-        # Manuel контrole
+        print("Hic blok не найдено!")
+        # Manuel контроль
         count = content.count("api_guild_channels")
-        print(f"'api_guild_channels' gecis sayisi: {count}")
+        print(f"'api_guild_channels' gecis количество: {count}")
         count2 = content.count("/api/guild/<guild_id>/channels")
-        print(f"Route gecis sayisi: {count2}")
+        print(f"Route gecis количество: {count2}")

@@ -1,65 +1,65 @@
 #!/usr/bin/env python3
 """
-Temiz bot запуститьma scripti - Старый process'leri clearr ve yeni bot запуститьır
+Temiz bot запуск scripti - Старый process'leri clearr ve новый bot запуск
 """
 import subprocess
 import time
 import os
 import sys
 
-def kill_existing_procesголос():
-    """Mevcut bot process'lerini завершить"""
-    print("[CLEANUP] Mevcut bot process'leri завершаются...")
+def kill_existing_processes():
+    """Текущий bot process'lerini заверш"""
+    print("[CLEANUP] Текущий bot process'leri заверш...")
     
     try:
-        # Python main.py process'lerini завершить
+        # Python main.py process'lerini заверш
         subprocess.run('taskkill /f /im python.exe', shell=True, capture_output=True)
         
-        # Cloudflared process'lerini завершить  
+        # Cloudflared process'lerini заверш  
         subprocess.run('taskkill /f /im cloudflared.exe', shell=True, capture_output=True)
         
-        # WMIC ile spesifik команда satırı olan process'leri завершить
+        # WMIC с spesifik команда satırı olan process'leri заверш
         subprocess.run('wmic process where "commandline like \'%main.py%\'" delete', shell=True, capture_output=True)
         
-        print("[CLEANUP] Process'ler завершены")
+        print("[CLEANUP] Process'ler завершено")
         
     except Exception as e:
-        print(f"[ERROR] Ошибка завершения процесса: {e}")
+        print(f"[ERROR] Ошибка заверш действие: {e}")
 
 def wait_for_cleanup():
     """Process'lerin tamamen kapanmasını badd"""
-    print("[WAIT] Process'lerin kapanması ожидается...")
+    print("[WAIT] Process'lerin kapanması ojidaetsya...")
     time.sleep(5)
 
-def start_бот():
-    """Бот'u запустить"""
-    print("[START] Бот запуститьılıyor...")
+def start_bot():
+    """Bot'u запустить"""
+    print("[START] Bot запуск...")
     
     try:
-        # Бот'u yeni console'da запустить
+        # Bot'u новый console'da запустить
         subprocess.Popen(
             "python main.py",
             shell=True,
             creationflags=subprocess.CREATE_NEW_CONSOLE
         )
-        print("[OK] Бот запуститьıldı!")
+        print("[OK] Bot запущено!")
         
     except Exception as e:
-        print(f"[ERROR] Бот запуститьma ошибкаsı: {e}")
+        print(f"[ERROR] Bot запуск ошибки: {e}")
 
 def main():
     print("=" * 50)
-    print("Aether Бот - Temiz Запуститьma")
+    print("Aether Bot - Temiz Запуск")
     print("=" * 50)
     
-    # 1. Mevcut process'leri завершить
-    kill_existing_procesголос()
+    # 1. Текущий process'leri заверш
+    kill_existing_processes()
     
-    # 2. Temizlik için badd
+    # 2. Temizlik для badd
     wait_for_cleanup()
     
-    # 3. Бот'u запустить
-    start_бот()
+    # 3. Bot'u запустить
+    start_bot()
     
     print("[INFO] Действие завершено!")
 

@@ -8,7 +8,7 @@ class Archive(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @app_commands.command(name="archive", description="Архивировать сообщения (HTML)")
+    @app_commands.command(name="archive", description="Архивировать сообщения канала (HTML)")
     @app_commands.checks.has_permissions(manage_messages=True)
     async def archive(self, interaction: discord.Interaction, limit: int = 100):
         await interaction.response.defer(ephemeral=True)
@@ -24,7 +24,7 @@ class Archive(commands.Cog):
             filename=f"archive_{interaction.channel.name}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.html"
         )
         
-        await interaction.followup.send(f"✅ {len(messages)} message arşivlendi.", file=file, ephemeral=True)
+        await interaction.followup.send(f"✅ {len(messages)} сообщений заархивировано.", file=file, ephemeral=True)
 
     def generate_html(self, messages, channel):
         html = f"""
@@ -73,7 +73,7 @@ class Archive(commands.Cog):
 """
         return html
 
-    @app_commands.command(name="backup-channel", description="Резервное копирование сообщений channelа (TXT)")
+    @app_commands.command(name="backup-channel", description="Резервное копирование сообщений канала (TXT)")
     @app_commands.checks.has_permissions(administrator=True)
     async def backup_channel(self, interaction: discord.Interaction, limit: int = 500):
         await interaction.response.defer(ephemeral=True)

@@ -103,11 +103,11 @@ class InviteTracker(commands.Cog):
         with open(f, 'w', encoding='utf-8') as fp:
             json.dump(counts, fp, indent=2, ensure_ascii=False)
 
-    @app_commands.command(name='invites', description='Kaç kişi davet ettiğini göster')
+    @app_commands.command(name='invites', description='Сколько человек davet ettiğini показать')
     async def my_invites(self, interaction: discord.Interaction):
         f = f'data/invite_counts_{interaction.guild_id}.json'
         if not os.path.exists(f):
-            await interaction.response.send_message('❌ Henüz davet verisi yok!', ephemeral=True)
+            await interaction.response.send_message('❌ Пока davet verisi yok!', ephemeral=True)
             return
         with open(f, 'r', encoding='utf-8') as fp:
             counts = json.load(fp)
@@ -115,37 +115,37 @@ class InviteTracker(commands.Cog):
         info = counts.get(uid, {'total': 0})
         total = info.get('total', 0)
 
-        e = discord.Embed(title="📨  Davet İstatistiklerin", color=0x3498DB, timestamp=datetime.utcnow())
+        e = discord.Embed(title="📨  Davet Статистика", color=0x3498DB, timestamp=datetime.utcnow())
         e.description = (
             f"```ansi\n\u001b[1;34m📊 DAVET RAPORU\u001b[0m\n```\n{_divider()}"
         )
         e.set_thumbnail(url=interaction.user.display_avatar.url)
         e.add_field(name="👤 Пользователь", value=interaction.user.mention, inline=True)
-        e.add_field(name="📨 Всего Davet", value=f"```{total} kişi```", inline=True)
+        e.add_field(name="📨 Всего Davet", value=f"```{total} человек```", inline=True)
         if total >= 10:
-            rank = "🌟 Büyükelçi"
+            rank = "🌟 Большой"
         elif total >= 5:
             rank = "⭐ Davetçi"
         elif total >= 1:
             rank = "📨 Новый Davetçi"
         else:
-            rank = "👤 Henüz Davet Нет"
+            rank = "👤 Пока Davet Нет"
         e.add_field(name="🏆 Unvan", value=f"```{rank}```", inline=True)
-        e.add_field(name="💡 İpucu", value="*Daha fazla kişi davet ederek sıralamada yüksel!*", inline=False)
+        e.add_field(name="💡 Подсказка", value="*Более fazla человек davet ederek очередь yüksel!*", inline=False)
         e.set_footer(text=f"Aether • {interaction.guild.name}", icon_url=interaction.guild.icon.url if interaction.guild.icon else None)
         await interaction.response.send_message(embed=e)
 
-    @app_commands.command(name='invite-ranking', description='Davet sıralamasını göster')
+    @app_commands.command(name='invite-ranking', description='Davet очередь показать')
     async def invite_leaderboard(self, interaction: discord.Interaction):
         f = f'data/invite_counts_{interaction.guild_id}.json'
         if not os.path.exists(f):
-            await interaction.response.send_message('❌ Henüz davet verisi yok!', ephemeral=True)
+            await interaction.response.send_message('❌ Пока davet verisi yok!', ephemeral=True)
             return
         with open(f, 'r', encoding='utf-8') as fp:
             counts = json.load(fp)
         sorted_counts = sorted(counts.items(), key=lambda x: x[1].get('total', 0), reverse=True)[:10]
 
-        e = discord.Embed(title="📨  Davet Сортировкаması", color=0x3498DB, timestamp=datetime.utcnow())
+        e = discord.Embed(title="📨  Davet Очередь", color=0x3498DB, timestamp=datetime.utcnow())
         e.description = (
             f"```ansi\n\u001b[1;34m👑 EN İYİ DAVETÇİLER\u001b[0m\n```\n{_divider()}"
         )

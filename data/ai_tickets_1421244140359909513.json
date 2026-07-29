@@ -15,11 +15,11 @@
     "history": [
       {
         "role": "user",
-        "content": "Roller hakkında bilgi versene"
+        "content": "Роли о информация versene"
       },
       {
         "role": "assistant",
-        "content": "Roller hakkında kısa bilgi:\n\n- **Doğrulanmış rolü**: Sunucuya kayıt olduğunda otomatik alınır, yetkililerden biri onaylayınca kalıcı olur.\n- **Jail rolü**: Cezalı üyelerin aldığı geçici rol.\n- **Renk seçimi rolleri**: <#1484575449295228999> kanalından alabilirsin.\n- **Partner rolleri**: <#1484575453049257984> kanalında partnerlik sistemine katılabilirsin."
+        "content": "Роли о краткий информация:\n\n- **Проверка роль**: На сервер запись olduğunda автоматически alınır, администратор biri onaylayınca постоянный olur.\n- **Jail роль**: Наказание участников aldığı geçici роль.\n- **Renk выбор роли**: <#1484575449295228999> из канала alabilirsin.\n- **Partner роли**: <#1484575453049257984> в канале partnerlik sistemine katılabilirsin."
       }
     ],
     "status": "ai_handling",

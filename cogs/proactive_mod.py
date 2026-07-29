@@ -1,7 +1,7 @@
 from typing import Dict
 """
-Проактивная модерация — AI сам замечает проблемы в чате
-Токсичность, спам, подозрительные ссылки, повторяющиеся вопросы
+Proaktifya moderasyon — AI kendi zamecaet problemi в sohbette
+Toksisite, spam, şüpheli ссылка, povtoryayusiesya sorular
 """
 import discord
 from discord.ext import commands, tasks
@@ -14,18 +14,18 @@ import asyncio
 
 
 class ProactiveModeration(commands.Cog):
-    """AI который сам следит за чатом"""
+    """AI kotoriy kendi sledit для catom"""
     
     def __init__(self, bot):
         self.bot = bot
         self.message_buffer: Dict[int, List[Dict]] = {}  # channel_id -> messages
         self.toxicity_patterns = [
-            r'\b(тварь|ублюдок|мразь|сволочь|идиот|дебил|тупой|тупая)\b',
-            r'\b(пошел|иди)\s*(на|в)\s*(хуй|хер|пизду|жопу)\b',
-            r'\b(сука|блять|бля|нахуй|пиздец|ебать)\b',
+            r'\b(tvar|ublyudok|mraz|svoloc|aptal|aptal|aptal|aptal)\b',
+            r'\b(posel|idi)\s*(на|в)\s*(aptal|каждый|pizdu|jopu)\b',
+            r'\b(suka|blyat|blya|nahuy|pizdec|ebat)\b',
         ]
-        self.spam_threshold = 5  # Сообщений за 10 секунд
-        self.spam_window = 10  # секунд
+        self.spam_threshold = 5  # Сообщение для 10 saniye
+        self.spam_window = 10  # saniye
         self.link_patterns = [
             r'https?://[^\s]+',
             r'www\.[^\s]+',
@@ -34,18 +34,18 @@ class ProactiveModeration(commands.Cog):
     
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
-        """Анализирует каждое сообщение"""
+        """Analiz ediyor каждый сообщение"""
         if message.author.bot or not message.guild:
             return
         
         channel_id = message.channel.id
         
-        # Анализ настроений
+        # Analiz duygu
         from web.sentiment_analyzer import get_sentiment_analyzer
         sentiment_analyzer = get_sentiment_analyzer()
         sentiment_result = sentiment_analyzer.analyze_message(message)
         
-        # Добавляем в буфер
+        # Ekliyoruz в pano
         if channel_id not in self.message_buffer:
             self.message_buffer[channel_id] = []
         
@@ -57,29 +57,29 @@ class ProactiveModeration(commands.Cog):
             'message_id': message.id,
         })
         
-        # Ограничиваем буфер 50 сообщениями
+        # Ограничиваем pano 50 сообщениями
         if len(self.message_buffer[channel_id]) > 50:
             self.message_buffer[channel_id] = self.message_buffer[channel_id][-50:]
         
-        # Проверяем на проблемы
+        # Контроль ediyoruz на problemi
         await self._check_toxicity(message)
         await self._check_spam(message)
         await self._check_suspicious_links(message)
         
-        # Проверяем алерты настроений
+        # Контроль ediyoruz предупреждение duygu
         alerts = await sentiment_analyzer.check_for_alerts(message.guild)
         for alert in alerts:
             await self._send_sentiment_alert(message.guild, alert)
     
     async def _send_sentiment_alert(self, guild: discord.Guild, alert: Dict):
-        """Отправляет алерт о настроении"""
+        """Denhaklarınlyaet предупреждение о nastroenii"""
         try:
-            # Ищем канал для уведомлений
+            # Arıyoruz канал для uvedomleniy
             alert_channel = discord.utils.get(guild.text_channels, name="ai-alerts")
             if not alert_channel:
                 return
             
-            # Создаём embed
+            # Создал embed
             color_map = {
                 'negative_sentiment': 0xFFA500,
                 'potential_conflict': 0xFF0000,
@@ -97,43 +97,43 @@ class ProactiveModeration(commands.Cog):
             
             if alert['type'] == 'negative_sentiment':
                 e.description += (
-                    f"**Настроение:** {alert['sentiment']}\n"
-                    f"**Сообщений:** {alert['message_count']}\n"
+                    f"**Duygu:** {alert['sentiment']}\n"
+                    f"**Сообщение:** {alert['message_count']}\n"
                 )
             elif alert['type'] == 'potential_conflict':
                 e.description += (
-                    f"**Негативных сообщений:** {alert['negative_messages']}\n"
-                    f"**Рекомендация:** Проверить канал на конфликт\n"
+                    f"**Negativnih сообщение:** {alert['negative_messages']}\n"
+                    f"**Rekomendaciya:** Контроль et канал на çakışma\n"
                 )
             
-            e.set_footer(text=f"{guild.name} · Анализ настроений")
+            e.set_footer(text=f"{guild.name} · Analiz duygu")
             
             await alert_channel.send(embed=e)
             
         except Exception as e:
-            print(f"[SENTIMENT] Ошибка отправки алерта: {e}")
+            print(f"[SENTIMENT] Ошибка denhaklarınki предупреждение: {e}")
     
     async def _check_toxicity(self, message: discord.Message):
-        """Проверяет на токсичность"""
+        """Контроль ediyor на toksisite"""
         content_lower = message.content.lower()
         
         for pattern in self.toxicity_patterns:
             if re.search(pattern, content_lower, re.IGNORECASE):
-                # Нашли токсичность
+                # Nasli toksisite
                 await self._alert_moderators(
                     message.guild,
                     'toxicity',
-                    f"Обнаружена токсичность от {message.author.mention}",
+                    f"Obnarujena toksisite den {message.author.mention}",
                     message
                 )
                 break
     
     async def _check_spam(self, message: discord.Message):
-        """Проверяет на спам"""
+        """Контроль ediyor на spam"""
         channel_id = message.channel.id
         author_id = message.author.id
         
-        # Считаем сообщения от этого автора за последние N секунд
+        # Scitaem сообщения den bunun yazarın для son N saniye
         now = datetime.utcnow()
         recent_messages = [
             msg for msg in self.message_buffer.get(channel_id, [])
@@ -142,59 +142,59 @@ class ProactiveModeration(commands.Cog):
         ]
         
         if len(recent_messages) >= self.spam_threshold:
-            # Спам обнаружен
+            # Spam obnarujen
             await self._alert_moderators(
                 message.guild,
                 'spam',
-                f"Обнаружен спам от {message.author.mention} ({len(recent_messages)} сообщений за {self.spam_window}с)",
+                f"Obnarujen spam den {message.author.mention} ({len(recent_messages)} сообщение для {self.spam_window}с)",
                 message
             )
     
     async def _check_suspicious_links(self, message: discord.Message):
-        """Проверяет подозрительные ссылки"""
-        # Пропускаем модераторов
+        """Контроль ediyor şüpheli ссылка"""
+        # Propuskaem модератор
         if message.author.guild_permissions.kick_members:
             return
         
         for pattern in self.link_patterns:
             links = re.findall(pattern, message.content)
             if links:
-                # Проверяем на подозрительные домены
+                # Контроль ediyoruz на şüpheli domeni
                 suspicious_domains = ['bit.ly', 'tinyurl.com', 'discord.gg']
                 for link in links:
                     if any(domain in link.lower() for domain in suspicious_domains):
                         await self._alert_moderators(
                             message.guild,
                             'suspicious_link',
-                            f"Подозрительная ссылка от {message.author.mention}: {link}",
+                            f"Podozritelnaya ссылка den {message.author.mention}: {link}",
                             message
                         )
                         break
     
     async def _alert_moderators(self, guild: discord.Guild, alert_type: str, description: str, message: discord.Message):
-        """Отправляет уведомление модераторам"""
+        """Denhaklarınlyaet уведомление модератор"""
         try:
-            # Ищем канал для уведомлений
+            # Arıyoruz канал для uvedomleniy
             alert_channel = discord.utils.get(guild.text_channels, name="ai-alerts")
             if not alert_channel:
-                # Создаём канал если нет
+                # Создал канал если yok
                 overwrites = {
                     guild.default_role: discord.PermissionOverwrite(read_messages=False),
                     guild.me: discord.PermissionOverwrite(read_messages=True, send_messages=True),
                 }
                 
-                # Даём доступ модераторам
+                # Daem erişim модератор
                 for role in guild.roles:
-                    if role.permissions.kick_members or role.permissions.ban_members:
-                        overwrites[role] = discord.PermissionOverwrite(read_messages=True)
+                    if роли.permissions.kick_members or роли.permissions.ban_members:
+                        overwrites[роли] = discord.PermissionOverwrite(read_messages=True)
                 
                 alert_channel = await guild.create_text_channel(
                     'ai-alerts',
                     overwrites=overwrites,
-                    reason="AI проактивная модерация"
+                    reason="AI proaktifya moderasyon"
                 )
             
-            # Создаём embed
+            # Создал embed
             color_map = {
                 'toxicity': 0xFF6B6B,
                 'spam': 0xFFA500,
@@ -211,10 +211,10 @@ class ProactiveModeration(commands.Cog):
                 f"{description}\n\n"
                 f"**Канал:** {message.channel.mention}\n"
                 f"**Сообщение:** {message.content[:200]}\n"
-                f"**Ссылка:** [Перейти]({message.jump_url})"
+                f"**Ссылка:** [Pereyti]({message.jump_url})"
             )
             
-            e.set_footer(text=f"{guild.name} · Проактивная модерация")
+            e.set_footer(text=f"{guild.name} · Proaktifya moderasyon")
             
             await alert_channel.send(embed=e)
             
@@ -224,18 +224,18 @@ class ProactiveModeration(commands.Cog):
     @commands.command(name="proactive-stats")
     @commands.has_permissions(kick_members=True)
     async def proactive_stats(self, ctx):
-        """Статистика проактивной модерации"""
+        """Статистика proaktify moderasyonu"""
         total_messages = sum(len(msgs) for msgs in self.message_buffer.values())
         channels_monitored = len(self.message_buffer)
         
         e = discord.Embed(
-            title="Статистика проактивной модерации",
+            title="Статистика proaktify moderasyonu",
             color=0x5865F2
         )
         e.description = (
-            f"**Каналов под наблюдением:** {channels_monitored}\n"
-            f"**Сообщений в буфере:** {total_messages}\n"
-            f"**Порог спама:** {self.spam_threshold} сообщений за {self.spam_window}с"
+            f"**Каналы pod nablyudeniem:** {channels_monitored}\n"
+            f"**Сообщение в panoda:** {total_messages}\n"
+            f"**Eşik spama:** {self.spam_threshold} сообщение для {self.spam_window}с"
         )
         e.set_footer(text=f"{ctx.guild.name}")
         

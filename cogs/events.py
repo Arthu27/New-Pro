@@ -1,4 +1,4 @@
-"""Etkinlik/Event sistemi - дата belirle, hatırlatma отправить"""
+"""Etkinlik/Event система - дата belirle, hatırlatma отправить"""
 import discord
 from discord.ext import commands, tasks
 from discord import app_commands
@@ -42,7 +42,7 @@ class Events(commands.Cog):
 
                 # 60 minutes öncesi hatırlatma
                 if 55 <= diff_min <= 65 and not ev.get('reminded_1h'):
-                    await self._send_reminder(guild, ev, '1 час')
+                    await self._send_reminder(guild, ev, '1 saat')
                     events[eid]['reminded_1h'] = True
                     changed = True
 
@@ -88,27 +88,27 @@ class Events(commands.Cog):
         mention = f'<@&{ev["role_id"]}>' if ev.get('role_id') else '@everyone'
         await ch.send(content=mention, embed=embed)
 
-    @app_commands.command(name='etkinlik-создать', description='Новый etkinlik создать')
+    @app_commands.command(name='etkinlik-создать', description='Создать новое событие')
     @app_commands.describe(
         baslik='Etkinlik başlığı',
-        aciklama='Etkinlik описаниеsı',
+        aciklama='Etkinlik описание',
         дата='Дата (GG/AA/YYYY)',
-        час='Время (SS:DD)',
-        channel='Объявление channelı'
+        saat='Время (SS:DD)',
+        channel='Duyuru канал'
     )
     @app_commands.checks.has_permissions(manage_events=True)
     async def create_event(self, interaction: discord.Interaction,
                            baslik: str, aciklama: str,
-                           дата: str, час: str,
+                           дата: str, saat: str,
                            channel: discord.TextChannel):
         try:
-            dt = datetime.strptime(f'{дата} {час}', '%d/%m/%Y %H:%M')
+            dt = datetime.strptime(f'{дата} {saat}', '%d/%m/%Y %H:%M')
         except ValueError:
-            await interaction.response.send_message('❌ Geçersiz дата/час formatı! Örnek: 25/12/2025 20:00', ephemeral=True)
+            await interaction.response.send_message('❌ Неверный формат даты/времени! Пример: 25/12/2025 20:00', ephemeral=True)
             return
 
         if dt < datetime.utcnow():
-            await interaction.response.send_message('❌ Geçmiş bir дата giremezsin!', ephemeral=True)
+            await interaction.response.send_message('❌ История bir дата giremezsin!', ephemeral=True)
             return
 
         events = self._load(interaction.guild_id)
@@ -127,7 +127,7 @@ class Events(commands.Cog):
         embed.set_footer(text=f'Etkinlik ID: {eid}')
         await interaction.response.send_message(embed=embed)
 
-    @app_commands.command(name='events', description='Yaklaşan etkinlikleri listele')
+    @app_commands.command(name='events', description='Показать предстоящие события')
     async def list_events(self, interaction: discord.Interaction):
         events = self._load(interaction.guild_id)
         upcoming = [(eid, ev) for eid, ev in events.items()
@@ -136,7 +136,7 @@ class Events(commands.Cog):
         upcoming.sort(key=lambda x: x[1]['time'])
 
         if not upcoming:
-            await interaction.response.send_message('📅 Yaklaşan etkinlik yok.', ephemeral=True)
+            await interaction.response.send_message('📅 Нет предстоящих событий.', ephemeral=True)
             return
 
         embed = discord.Embed(title='📅 Yaklaşan Etkinlikler', color=0x3498DB)
@@ -154,12 +154,12 @@ class Events(commands.Cog):
     async def cancel_event(self, interaction: discord.Interaction, etkinlik_id: str):
         events = self._load(interaction.guild_id)
         if etkinlik_id not in events:
-            await interaction.response.send_message('❌ Etkinlik bulunamadı!', ephemeral=True)
+            await interaction.response.send_message('❌ Etkinlik не найден!', ephemeral=True)
             return
         title = events[etkinlik_id]['title']
         del events[etkinlik_id]
         self._save(interaction.guild_id, events)
-        await interaction.response.send_message(f'✅ **{title}** etkinliği отмена edildi.')
+        await interaction.response.send_message(f'✅ **{title}** событие отменено.')
 
 async def setup(bot):
     await bot.add_cog(Events(bot), guilds=[discord.Object(id=1421244140359909513), discord.Object(id=1107038411895881788)])

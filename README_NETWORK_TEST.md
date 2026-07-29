@@ -1,30 +1,30 @@
-# Ağ Güvenlik Test Araçları
+# Ağ Безопасность Test Araçları
 
-Bu araçlar **sadece kendi ağınızı ve sistemlerinizi test etmek** için geliştirilmiştir. White hat (etik hacker) perspektifiyle güvenlik testleri yapmayı öğrenmenize yardımcı olur.
+Bu araçlar **только kendi ağınızı ve sistemlerinizi test etmek** для geliştirilmiştir. White hat (etik hacker) perspektifiyle безопасность testleri yapmayı öğrenmenize помощник olur.
 
-## ⚠️ ÖNEMLİ UYARI
+## ⚠️ ÖNEMLİ ПРЕДУПРЕЖДЕНИЕ
 
-- **Başkalarının ağlarına izinsiz erişim YASA DIŞIDIR**
-- **Sadece kendi bilgisayarınızı ve ağınızı test edin**
-- **İzinsiz testler ağır cezalara sebep olabilir**
+- **Başkalarının ağlarına без разрешения erişim YASA DIŞIDIR**
+- **Только kendi информация ve ağınızı test edin**
+- **İzinsiz testler тяжелый наказание причина olabilir**
 
 ## 📁 DOSYALAR
 
 1. **`network_security_tester.py`** - Ana ağ test aracı
-2. **`pratik_network_test.py`** - Pratik test örnekleri
-3. **`white_hack_rehberi.md`** - White hat hacking rehberi
+2. **`pratik_network_test.py`** - Pratik test пример
+3. **`white_hack_rehberi.md`** - White hat hacking руководство
 4. **`README_NETWORK_TEST.md`** - Bu dosya
 
-## 🚀 KURULUM VE ÇALIŞTIRMA
+## 🚀 УСТАНОВКА VE ÇALIŞTIRMA
 
 ### Gereksinimler
 - Python 3.6+
 - Windows/Linux/Mac
-- Yönetici/root yetkileri (bazı testler için)
+- Yönetici/root администратор (bazı testler для)
 
 ### Windows'ta Çalıştırma
 ```cmd
-# Komut istemini yönetici olarak açın
+# Команда желание yönetici как açın
 cd "d:\BACK\Documents\discord_bot"
 
 # Ana test aracını çalıştırın
@@ -39,52 +39,52 @@ python pratik_network_test.py
 # Terminali açın
 cd /path/to/discord_bot
 
-# Python3 kullanın
+# Python3 использовать
 python3 network_security_tester.py
 
-# Veya
-sudo python3 pratik_network_test.py  # Bazı testler için root gerekir
+# Или
+sudo python3 pratik_network_test.py  # Bazı testler для root gerekir
 ```
 
-## 🛠️ ARAÇLARIN ÖZELLİKLERİ
+## 🛠️ ARAÇLARIN ОСОБЫЙ
 
 ### 1. network_security_tester.py
-- **Ağ keşfi**: Yerel ağdaki aktif cihazları bulma
-- **Port tarama**: Kendi bilgisayarınızdaki açık portları tespit etme
-- **WiFi güvenliği**: Kayıtlı WiFi şifrelerini görüntüleme (sadece kendi ağlarınız)
-- **DoS simülasyonu**: Eğitim amaçlı localhost testi
-- **Rapor oluşturma**: Test sonuçlarını JSON formatında kaydetme
+- **Ağ keşfi**: Yerel ağdaki активен cihazları bulma
+- **Port сканироватьma**: Kendi информация открыт portları определитьme
+- **WiFi доверие**: Запись WiFi пароль скриншот (только kendi ağlarınız)
+- **DoS simülasyonu**: Eğitim aматчlı localhost testi
+- **Rapor создан**: Test результат JSON formatında сохран
 
 ### 2. pratik_network_test.py
-- **6 pratik test** içerir:
+- **6 pratik test** содержимое:
   1. Yerel ağ keşfi
-  2. Açık port kontrolü
-  3. WiFi güvenlik kontrolü
-  4. DNS güvenlik testi
-  5. Firewall durumu
-  6. Sistem sertleştirme önerileri
-- **Otomatik rapor** oluşturur
+  2. Открыт port контроль
+  3. WiFi безопасность контроль
+  4. DNS безопасность testi
+  5. Firewall состояние
+  6. Система sertleştirme предложение
+- **Автоматически rapor** создан
 
 ### 3. white_hack_rehberi.md
-- **Kapsamlı rehber**: 2000+ kelime
-- **Etik kurallar**: Neler yapılıp yapılamaz
+- **Kapsamlı руководство**: 2000+ kelime
+- **Etik правила**: Neler yapılıp yapılamaz
 - **Öğrenme yolları**: Sertifikalar, platformlar, kitaplar
-- **Pratik örnekler**: Lab kurulumu, test teknikleri
-- **Yasal uyarılar**: Olası sonuçlar
+- **Pratik пример**: Lab kurulumu, test teknikleri
+- **Yasal предупреждения**: Olası результат
 
 ## 🎯 NE ÖĞRENECEKSİNİZ?
 
 ### Temel Kavramlar
 - Ağ protokolleri (TCP/IP, UDP)
 - Portlar ve servisler
-- Firewall ve güvenlik duvarları
+- Firewall ve безопасность duvarları
 - DNS ve ağ yapılandırması
 
 ### Test Teknikleri
 - Pasif keşif (information gathering)
-- Aktif tarama (port scanning)
+- Активен сканироватьma (port scanning)
 - Zafiyet tespiti (vulnerability assessment)
-- Güvenlik sertleştirme (hardening)
+- Безопасность sertleştirme (hardening)
 
 ### Savunma Stratejileri
 - Saldırı tespit sistemleri (IDS)
@@ -92,35 +92,35 @@ sudo python3 pratik_network_test.py  # Bazı testler için root gerekir
 - Incident response (olay müdahalesi)
 - Yedekleme ve kurtarma
 
-## 🔒 GÜVENLİK ÖNLEMLERİ
+## 🔒 БЕЗОПАСНОСТЬ ÖNLEMLERİ
 
 ### Yapılması Gerekenler
-- [x] Sadece kendi ağınızı test edin
+- [x] Только kendi ağınızı test edin
 - [x] Sanal lab ortamı kurun (VirtualBox + Kali Linux)
-- [x] İzinli test platformlarını kullanın (HackTheBox, TryHackMe)
+- [x] İzinli test platformlarını использовать (HackTheBox, TryHackMe)
 - [x] Sertifika programlarına katılın (CEH, OSCP)
-- [x] Etik kurallara uyun
+- [x] Etik правил uyun
 
 ### Yapılmaması Gerekenler
-- [ ] Başkalarının WiFi'sini kırmaya çalışmayın
-- [ ] İzinsiz port taraması yapmayın
-- [ ] Sosyal medya hesaplarını hacklemeye çalışmayın
-- [ ] Fidye yazılımı yazmayın/test etmeyin
+- [ ] Başkalarının WiFi'sini kırmaya работа
+- [ ] İzinsiz port сканироватьması yapmayın
+- [ ] Sosyal medya hesaplarını hacklemeye работа
+- [ ] Fidye написано yazmayın/test etmeyin
 - [ ] DDoS saldırısı yapmayın
 
 ## 📚 ÖĞRENME KAYNAKLARI
 
 ### Ücretsiz Platformlar
-- **TryHackMe**: Başlangıç seviyesi, eğitim odaklı
+- **TryHackMe**: Başlangıç seviyesi, eğitim комната
 - **HackTheBox**: Orta-ileri seviye, pratik
-- **OverTheWire**: War games, temel Linux komutları
+- **OverTheWire**: War games, temel Linux команды
 - **VulnHub**: Zafiyetli sanal makineler
 
 ### Sertifikalar
-- **CEH** (Certified Ethical Hacker): Giriş seviyesi
-- **eJPT** (eLearnSecurity Junior Penetration Tester): Pratik odaklı
+- **CEH** (Certified Ethical Hacker): Вход seviyesi
+- **eJPT** (eLearnSecurity Junior Penetration Tester): Pratik комната
 - **OSCP** (Offensive Security Certified Professional): Zorlu, pratik sınav
-- **CompTIA Security+**: Temel güvenlik bilgisi
+- **CompTIA Security+**: Temel безопасность информация
 
 ### Kitaplar
 - "The Web Application Hacker's Handbook"
@@ -129,50 +129,50 @@ sudo python3 pratik_network_test.py  # Bazı testler için root gerekir
 
 ## 🆘 SIK SORULAN SORULAR
 
-### Q: Bu araçları başkalarının ağını test etmek için kullanabilir miyim?
-**A: HAYIR!** Bu kesinlikle yasa dışıdır. Sadece kendi ağınızı test edin.
+### Q: Bu araçları başkalarının ağını test etmek для использовать miyim?
+**A: HAYIR!** Bu строго yasa dışıdır. Только kendi ağınızı test edin.
 
-### Q: WiFi şifrelerini görüntülemek yasal mı?
-**A:** Sadece kendi kayıtlı WiFi ağlarınızın şifrelerini görüntüleyebilirsiniz. Başkalarının WiFi şifrelerini almaya çalışmak yasa dışıdır.
+### Q: WiFi пароль скриншот yasal mı?
+**A:** Только kendi запись WiFi ağlarınızın пароль скриншот. Başkalarının WiFi пароль almaya работать yasa dışıdır.
 
-### Q: Port taraması yapmak suç mu?
-**A:** Kendi bilgisayarınızın portlarını taramak suç değildir. Ancak başkalarının sistemlerini izinsiz taramak "yetkisiz erişim" suçudur.
+### Q: Port сканироватьması yapmak suç mu?
+**A:** Kendi информация portlarını сканироватьmak suç değildir. Ancak başkalarının sistemlerini без разрешения сканироватьmak "администратор erişim" suçudur.
 
-### Q: Nasıl yasal şekilde pratik yapabilirim?
+### Q: Как yasal şekilde pratik yapabilirim?
 **A:** 
 1. Sanal lab kurun (VirtualBox + Metasploitable)
-2. İzinli platformları kullanın (HackTheBox, TryHackMe)
+2. İzinli platformları использовать (HackTheBox, TryHackMe)
 3. CTF yarışmalarına katılın
 4. Sertifika programları alın
 
-### Q: Bir güvenlik açığı bulursam ne yapmalıyım?
+### Q: Bir безопасность açığı bulursam ne yapmalıyım?
 **A:**
-1. Açığı detaylı dokümante edin
-2. Sistem sahibine sorumlu şekilde bildirin
+1. Açığı детали dokümante edin
+2. Система sahibine sorumlu şekilde bildirin
 3. Proof of concept hazırlayın
-4. Düzeltme önerileri sunun
-5. Halka açıklamadan önce süre tanıyın (genelde 90 gün)
+4. Düzeltme предложение sunun
+5. Halka описание до длительность tanıyın (genelde 90 день)
 
-## 📞 ACİL DURUM
+## 📞 ACİL СОСТОЯНИЕ
 
-Eğer:
+Если:
 - Bir siber saldırıya uğradıysanız
 - Kişisel verileriniz çalındıysa
-- Fidye yazılımı bulaştıysa
+- Fidye написано bulaştıysa
 
 **Hemen:**
 1. İnterneti kesin
-2. Antivirüs taraması yapın
-3. Şifrelerinizi değiştirin
-4. Bankanızı bilgilendirin
-5. Polise/EGM Siber Suçlarla Mücadele'ye başvurun
+2. Antivirüs сканироватьması yapın
+3. Пароль değiştirin
+4. Bankanızı информация
+5. Polise/EGM Siber Suçlarla Mücadele'ye заявка
 
 ## 📝 LİSANS VE SORUMLULUK
 
-Bu araçlar **eğitim amaçlıdır**. Kullanıcı tüm sorumluluğu kabul eder. Geliştirici hiçbir yasadışı kullanımdan sorumlu değildir.
+Bu araçlar **eğitim aматчlıdır**. Пользователь все sorumluluğu kabul eder. Geliştirici hiçbir yasadışı использовать sorumlu değildir.
 
-**Unutmayın:** Bilgi güçtür, bu gücü sorumlulukla kullanın. İyi bir white hat hacker olmak zaman alır, sabırlı olun ve her zaman etik kalın.
+**Unutmayın:** Информация güçtür, bu gücü sorumlulukla использовать. İyi bir white hat hacker olmak время получает, sabırlı olun ve каждый время etik kalın.
 
 ---
-*Son güncelleme: Mayıs 2026*  
+*В конец обновл: Mayıs 2026*  
 *Geliştirici: White Hat Security Eğitim Projesi*

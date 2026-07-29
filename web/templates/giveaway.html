@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% block title %}Розыгрыш Управлениеi{% endblock %}
-{% block page_title %}🎉 Розыгрыш Управлениеi{% endblock %}
+{% block title %}Розыгрыш Управление{% endblock %}
+{% block page_title %}🎉 Розыгрыш Управление{% endblock %}
 {% block content %}
 <style>
 .gw-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;margin-bottom:28px;}
@@ -8,14 +8,14 @@
 .gw-card:hover{border-color:rgba(212,168,67,0.25);}
 .gw-card.active{border-color:rgba(46,213,115,0.3);}
 .gw-card.ended{opacity:0.6;}
-.gw-badge{display:inliкакое-block;padding:2px 10px;border-radius:99px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;}
+.gw-badge{display:inline-block;padding:2px 10px;border-radius:99px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;}
 .gw-badge.active{background:rgba(46,213,115,0.15);color:#2ed573;border:1px solid rgba(46,213,115,0.3);}
 .gw-badge.ended{background:rgba(224,85,85,0.12);color:#e05555;border:1px solid rgba(224,85,85,0.2);}
 .gw-prize{font-size:16px;font-weight:700;color:#f0e8d0;margin-bottom:8px;}
 .gw-meta{font-size:11px;color:rgba(240,232,208,0.4);display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px;}
 .gw-actions{display:flex;gap:8px;}
 .create-form{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.12);border-radius:14px;padding:24px;margin-bottom:28px;}
-.create-form h2{font-size:13px;font-weight:600;color:rgba(240,232,208,0.5);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:18px;padding-ботtom:12px;border-ботtom:1px solid rgba(212,168,67,0.08);}
+.create-form h2{font-size:13px;font-weight:600;color:rgba(240,232,208,0.5);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid rgba(212,168,67,0.08);}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
 .form-row.full{grid-template-columns:1fr;}
 label{font-size:11px;color:rgba(240,232,208,0.45);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.06em;}
@@ -31,105 +31,105 @@ label{font-size:11px;color:rgba(240,232,208,0.45);display:block;margin-bottom:4p
     </div>
     <div>
       <label>Канал</label>
-      <select id="gw-chanкакоеl"><option value="">Канал загрузка...</option></select>
+      <select id="gw-channel"><option value="">Канал загруз...</option></select>
     </div>
   </div>
   <div class="form-row">
     <div>
-      <label>Победитель Количество</label>
-      <input type="number" id="gw-winкакоеrs" value="1" min="1" max="20">
+      <label>Pobeditel Число</label>
+      <input type="number" id="gw-winners" value="1" min="1" max="20">
     </div>
     <div>
       <label>Длительность (min)</label>
       <input type="number" id="gw-minutes" value="60" min="1" max="10080">
     </div>
   </div>
-  <button class="btn btn-primary" onclick="createРозыгрыш()">🎉 Розыгрыш Запустить</button>
+  <button class="btn btn-primary" onclick="createÇekiliş()">🎉 Розыгрыш Запустить</button>
   <span id="create-msg" style="margin-left:12px;font-size:12px;color:rgba(240,232,208,0.4);"></span>
 </div>
 
-<!-- Активен Розыгрышler -->
-<div style="font-size:11px;font-weight:700;color:rgba(240,232,208,0.35);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px;">Розыгрышler</div>
-<div class="gw-grid" id="gw-list"><div style="color:rgba(240,232,208,0.3);font-size:13px;">Загрузитьniyor...</div></div>
+<!-- Активен Розыгрыши -->
+<div style="font-size:11px;font-weight:700;color:rgba(240,232,208,0.35);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px;">Розыгрыши</div>
+<div class="gw-grid" id="gw-list"><div style="color:rgba(240,232,208,0.3);font-size:13px;">Загрузка...</div></div>
 
 <script>
 var _guildId = '{{ guild_id }}';
 
-window.addEventListeкакоеr('load', function() {
-  loadChanкакоеls(_guildId);
-  loadРозыгрышs(_guildId);
+window.addEventListener('load', function() {
+  loadChannels(_guildId);
+  loadGiveaways(_guildId);
 });
 
-async function loadChanкакоеls(gid) {
+async function loadChannels(gid) {
   if (!gid) return;
   try {
-    var res = await fetch('/api/guild/' + gid + '/chanкакоеls').then(r => r.json());
-    var sel = document.getElementById('gw-chanкакоеl');
-    sel.inкакоеrHTML = '<option value="">Канал выбрать...</option>' +
+    var res = await fetch('/api/guild/' + gid + '/channels').then(r => r.json());
+    var sel = document.getElementById('gw-channel');
+    sel.innerHTML = '<option value="">Канал выбрать...</option>' +
       res.filter(c => c.type === 'text').map(c => '<option value="' + c.id + '">#' + c.name + '</option>').join('');
   } catch(e) {}
 }
 
-async function loadРозыгрышs(gid) {
+async function loadGiveaways(gid) {
   if (!gid) return;
   try {
     var list = await fetch('/api/giveaway/' + gid).then(r => r.json());
     var el = document.getElementById('gw-list');
-    if (!list.length) { el.inкакоеrHTML = '<div style="color:rgba(240,232,208,0.3);font-size:13px;">Пока получитьiliş нет.</div>'; return; }
-    el.inкакоеrHTML = list.map(function(gw) {
+    if (!list.length) { el.innerHTML = '<div style="color:rgba(240,232,208,0.3);font-size:13px;">Пока aliliş yok.</div>'; return; }
+    el.innerHTML = list.map(function(gw) {
       var isActive = gw.status === 'active';
-      var endsAt = gw.ends_at ? какоеw Date(gw.ends_at).toLocaleString('tr-TR') : '?';
+      var endsAt = gw.ends_at ? new Date(gw.ends_at).toLocaleString('tr-TR') : '?';
       return '<div class="gw-card ' + gw.status + '">' +
         '<span class="gw-badge ' + gw.status + '">' + (isActive ? '🟢 Активен' : '🔴 Bitti') + '</span>' +
         '<div class="gw-prize">🏆 ' + gw.prize + '</div>' +
         '<div class="gw-meta">' +
-          '<span>👥 ' + gw.participants + ' присоединениеcı</span>' +
-          '<span>🏆 ' + gw.winкакоеrs + ' kazanan</span>' +
+          '<span>👥 ' + gw.participants + ' ikenbağlantıcı</span>' +
+          '<span>🏆 ' + gw.winners + ' kazanan</span>' +
           '<span>⏰ ' + endsAt + '</span>' +
         '</div>' +
         '<div class="gw-actions">' +
-          (isActive ? '<button class="btn btn-danger" style="font-size:11px;padding:6px 12px;" onclick="endРозыгрыш(\'' + gw.id + '\')">⏹ Bitir</button>' : '') +
-          '<button class="btn" style="font-size:11px;padding:6px 12px;background:rgba(224,85,85,0.1);color:#e05555;border:1px solid rgba(224,85,85,0.2);" onclick="deleteРозыгрыш(\'' + gw.id + '\')">🗑 Удалить</button>' +
+          (isActive ? '<button class="btn btn-danger" style="font-size:11px;padding:6px 12px;" onclick="endÇekiliş(\'' + gw.id + '\')">⏹ Bitir</button>' : '') +
+          '<button class="btn" style="font-size:11px;padding:6px 12px;background:rgba(224,85,85,0.1);color:#e05555;border:1px solid rgba(224,85,85,0.2);" onclick="deleteÇekiliş(\'' + gw.id + '\')">🗑 Удалить</button>' +
         '</div>' +
       '</div>';
     }).join('');
   } catch(e) {}
 }
 
-async function createРозыгрыш() {
+async function createÇekiliş() {
   var prize   = document.getElementById('gw-prize').value.trim();
-  var chanкакоеl = document.getElementById('gw-chanкакоеl').value;
-  var winкакоеrs = parseInt(document.getElementById('gw-winкакоеrs').value) || 1;
+  var channel = document.getElementById('gw-channel').value;
+  var winners = parseInt(document.getElementById('gw-winners').value) || 1;
   var minutes = parseInt(document.getElementById('gw-minutes').value) || 60;
   var msg     = document.getElementById('create-msg');
-  if (!prize || !chanкакоеl || !_guildId) { msg.textContent = '❌ Tüm alanları doldur.'; return; }
-  msg.textContent = 'Создатьuluyor...';
+  if (!prize || !channel || !_guildId) { msg.textContent = '❌ Все alanları doldur.'; return; }
+  msg.textContent = 'Создан...';
   try {
     var res = await fetch('/api/giveaway/' + _guildId + '/create', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({prize, chanкакоеl_id: chanкакоеl, winкакоеrs, minutes})
+      body: JSON.stringify({prize, channel_id: channel, winners, minutes})
     }).then(r => r.json());
     if (res.ok) {
-      msg.textContent = '✅ Розыгрыш başlatıldı!';
+      msg.textContent = '✅ Розыгрыш запущено!';
       document.getElementById('gw-prize').value = '';
-      loadРозыгрышs(_guildId);
+      loadGiveaways(_guildId);
     } else {
       msg.textContent = '❌ ' + (res.error || 'Ошибка');
     }
-  } catch(e) { msg.textContent = '❌ Соединение ошибкаsı'; }
+  } catch(e) { msg.textContent = '❌ Ссылка ошибки'; }
 }
 
-async function endРозыгрыш(gwId) {
-  if (!confirm('Розыгрышi bitirmek хотите уверены ли вы?')) return;
+async function endÇekiliş(gwId) {
+  if (!confirm('Розыгрыш bitirmek если хотите emin misiniz mı siz?')) return;
   await fetch('/api/giveaway/' + _guildId + '/' + gwId + '/end', {method:'POST'});
-  loadРозыгрышs(_guildId);
+  loadGiveaways(_guildId);
 }
 
-async function deleteРозыгрыш(gwId) {
-  if (!confirm('Розыгрышi удалить хотите уверены ли вы?')) return;
+async function deleteÇekiliş(gwId) {
+  if (!confirm('Розыгрыш удалить если хотите emin misiniz mı siz?')) return;
   await fetch('/api/giveaway/' + _guildId + '/' + gwId + '/delete', {method:'POST'});
-  loadРозыгрышs(_guildId);
+  loadGiveaways(_guildId);
 }
 </script>
 {% endblock %}

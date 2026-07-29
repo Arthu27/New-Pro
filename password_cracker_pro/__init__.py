@@ -1,2 +1,2 @@
 # Password Cracker Pro
-# Sadece kendi паrolelerini test etmek için!
+# Только kendi parolalarını test etmek для!

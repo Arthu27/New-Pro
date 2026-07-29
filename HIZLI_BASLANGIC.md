@@ -1,28 +1,28 @@
-# 🚀 AI Ticket Sistemi - Hızlı Başlangıç
+# 🚀 AI Ticket Система - Быстрый Başlangıç
 
-## 1️⃣ Sistem Hazır mı Kontrol Et
+## 1️⃣ Система Hazır mı Контроль Et
 
 ```bash
 # Bot'u çalıştır
 python main.py
 ```
 
-Bot başladığında şu mesajı göreceksin:
+Bot başladığında şu сообщение видеть:
 ```
 ✅ Ticket cog loaded (AI enabled)
 ```
 
 ---
 
-## 2️⃣ İlk Ticket Panelini Gönder
+## 2️⃣ В начало Ticket Panelini Отправить
 
-Discord'da bir kanala git ve:
+Discord'da bir канал git ve:
 
 ```
 /ticket-panel
 ```
 
-Panel gönderildi! Artık kullanıcılar "🎫 Destek Talebi Oluştur" butonuna tıklayabilir.
+Panel отправлено! Теперь пользователи "🎫 Создать тикет поддержки" butonuna клик.
 
 ---
 
@@ -30,18 +30,18 @@ Panel gönderildi! Artık kullanıcılar "🎫 Destek Talebi Oluştur" butonuna 
 
 ### Test 1: Basit Soru
 1. Ticket aç
-2. AI'nin karşılama mesajını gör
-3. Yaz: "bot komutları nedir?"
-4. AI cevap verecek
+2. AI'nin приветствие сообщение видеть
+3. Yaz: "bot команды nedir?"
+4. AI ответитьecek
 
-### Test 2: Yönlendirme
+### Test 2: Направление
 1. Ticket aç
-2. Yaz: "X kişisi spam yapıyor, ban atın"
-3. AI yönlendirecek ve destek rolünü ping atacak
+2. Yaz: "X человек spam yapıyor, ban atın"
+3. AI направление ve поддержка роль ping atacak
 
 ---
 
-## 4️⃣ İstatistikleri Gör
+## 4️⃣ Статистика Видеть
 
 ### Discord'da:
 ```
@@ -49,80 +49,80 @@ Panel gönderildi! Artık kullanıcılar "🎫 Destek Talebi Oluştur" butonuna 
 ```
 
 ### Web Panel'de:
-1. Panel'e giriş yap
-2. İstatistik → 🤖 AI Destek Ticketları
-3. Tüm konuşmaları gör
+1. Panel'e вход yap
+2. Статистика → 🤖 AI Поддержка Ticketları
+3. Все разговор видеть
 
 ---
 
-## 5️⃣ AI'yi Kapat/Aç
+## 5️⃣ AI'yi Закрыть/Aç
 
 ```
 /ticket-ai-toggle
 ```
 
-Her çalıştırdığında tersine çevrilir (açık → kapalı, kapalı → açık)
+Каждый çalıştırdığında tersine çevrilir (открыт → закрыт, закрыт → открыт)
 
 ---
 
-## 6️⃣ Manuel Yönlendirme
+## 6️⃣ Manuel Направление
 
-Bir ticket kanalında:
+Bir ticket в канале:
 
 ```
 /ticket-force-escalate
 ```
 
-AI durur, destek rolü ping atılır.
+AI durur, поддержка роль ping atılır.
 
 ---
 
-## ⚙️ Ayarları Değiştir
+## ⚙️ Настройкиı Değiştir
 
 `cogs/ticket.py` dosyasını aç:
 
 ```python
-AI_ENABLED = True  # False yap = AI tamamen kapalı
-MAX_AI_MESSAGES = 10  # 5 yap = daha hızlı yönlendirir
+AI_ENABLED = True  # False yap = AI tamamen закрыт
+MAX_AI_MESSAGES = 10  # 5 yap = более быстрый направление
 ```
 
-Değiştirdikten sonra botu yeniden başlat.
+Değiştirdikten после botu yeniden запустить.
 
 ---
 
 ## 🐛 Sorun Giderme
 
-### AI cevap vermiyor
+### AI ответитьmiyor
 - `AI_ENABLED = True` olduğundan emin ol
-- OpenRouter API key'in geçerli olduğunu kontrol et
-- Bot loglarına bak (hata var mı?)
+- OpenRouter API key'in geçerli olduğunu контроль et
+- Bot loglarına bak (ошибка var mı?)
 
-### Destek rolü ping atılmıyor
-- "Destek" adında bir rol olduğundan emin ol
-- Rolün mention edilebilir olduğunu kontrol et
+### Поддержка роль ping atılmıyor
+- "Поддержка" adında bir роль olduğundan emin ol
+- Роль mention edilebilir olduğunu контроль et
 
-### Web panel'de ticket görünmüyor
-- Ticket açıldıktan sonra en az 1 mesaj yazıldığından emin ol
-- `data/ai_tickets_<guild_id>.json` dosyasının var olduğunu kontrol et
+### Web panel'de ticket видеть
+- Ticket açıldıktan после en az 1 сообщение написано emin ol
+- `data/ai_tickets_<guild_id>.json` dosyasının var olduğunu контроль et
 
 ---
 
-## 📚 Daha Fazla Bilgi
+## 📚 Более Fazla Информация
 
-- **Detaylı Dokümantasyon**: `AI_TICKET_SYSTEM.md`
+- **Детали Dokümantasyon**: `AI_TICKET_SYSTEM.md`
 - **Akış Diyagramı**: `AI_TICKET_FLOW.txt`
-- **Kısa Özet**: `AI_TICKET_OZET.md`
+- **Краткий Сводка**: `AI_TICKET_OZET.md`
 
 ---
 
 ## ✅ Checklist
 
-- [ ] Bot çalışıyor
-- [ ] `/ticket-panel` gönderildi
+- [ ] Bot работает
+- [ ] `/ticket-panel` отправлено
 - [ ] Test ticket açıldı
-- [ ] AI cevap verdi
-- [ ] Yönlendirme test edildi
-- [ ] Web panel'de görüntülendi
-- [ ] İstatistikler kontrol edildi
+- [ ] AI ответитьdi
+- [ ] Направление test edildi
+- [ ] Web panel'de скриншот
+- [ ] Статистика контроль edildi
 
-**Hepsi tamamsa, sistem hazır! 🎉**
+**Hepsi tamamsa, система hazır! 🎉**

@@ -4,8 +4,8 @@
 {% block content %}
 <style>
 .wl-table{width:100%;border-collapse:collapse;}
-.wl-table th{padding:10px 14px;text-align:left;font-size:10px;font-weight:700;color:rgba(240,232,208,0.3);text-transform:uppercase;letter-spacing:0.08em;border-ботtom:1px solid rgba(212,168,67,0.08);background:rgba(212,168,67,0.04);}
-.wl-table td{padding:12px 14px;font-size:12px;border-ботtom:1px solid rgba(212,168,67,0.05);}
+.wl-table th{padding:10px 14px;text-align:left;font-size:10px;font-weight:700;color:rgba(240,232,208,0.3);text-transform:uppercase;letter-spacing:0.08em;border-bottom:1px solid rgba(212,168,67,0.08);background:rgba(212,168,67,0.04);}
+.wl-table td{padding:12px 14px;font-size:12px;border-bottom:1px solid rgba(212,168,67,0.05);}
 .wl-table tr:hover td{background:rgba(212,168,67,0.04);}
 .wl-wrap{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.1);border-radius:14px;overflow:hidden;}
 .empty{text-align:center;padding:40px;color:rgba(240,232,208,0.25);font-size:13px;}
@@ -24,7 +24,7 @@
       <th>Дата</th>
     </tr></thead>
     <tbody id="wl-body">
-      <tr><td colspan="4" class="empty">Загрузитьniyor...</td></tr>
+      <tr><td colspan="4" class="empty">Загрузка...</td></tr>
     </tbody>
   </table>
 </div>
@@ -38,10 +38,10 @@ async function loadWatchlist(gid) {
     var tbody = document.getElementById('wl-body');
     document.getElementById('wl-count').textContent = d.length + ' пользователь izleniyor';
     if (!d.length) {
-      tbody.inкакоеrHTML = '<tr><td colspan="4" class="empty">İzleme listesi пусто ✅</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="4" class="empty">İzleme listesi пусто ✅</td></tr>';
       return;
     }
-    tbody.inкакоеrHTML = d.map(function(u) {
+    tbody.innerHTML = d.map(function(u) {
       return '<tr>' +
         '<td><span style="font-weight:600;color:#f0e8d0;">👤 ' + u.name + '</span><br><span style="font-size:10px;color:rgba(240,232,208,0.3);font-family:monospace;">' + u.id + '</span></td>' +
         '<td style="color:rgba(240,232,208,0.6);">' + (u.reason||'—') + '</td>' +
@@ -50,7 +50,7 @@ async function loadWatchlist(gid) {
       '</tr>';
     }).join('');
   } catch(e) {
-    document.getElementById('wl-body').inкакоеrHTML = '<tr><td colspan="4" style="color:#e05555;padding:20px;">Загрузитькакоеmedi.</td></tr>';
+    document.getElementById('wl-body').innerHTML = '<tr><td colspan="4" style="color:#e05555;padding:20px;">Загруз.</td></tr>';
   }
 }
 

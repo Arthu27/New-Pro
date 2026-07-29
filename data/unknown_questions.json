@@ -11,7 +11,7 @@
       },
       {
         "role": "assistant",
-        "content": "Selam! Nasıl yardımcı olabilirim?"
+        "content": "Selam! Как помощник olabilirim?"
       },
       {
         "role": "user",
@@ -19,15 +19,15 @@
       },
       {
         "role": "assistant",
-        "content": "Şikayet ettiğin kullanıcı kim? Ne oldu? Ekran görüntüsü var mı?"
+        "content": "Жалоба ettiğin пользователь кто? Ne oldu? Ekran скриншот var mı?"
       },
       {
         "role": "user",
-        "content": "neyse tamam bos gecelim bunu panele nasil ulasa bilirim"
+        "content": "neyse tamam bos gecelim bunu panele как ulasa bilirim"
       },
       {
         "role": "assistant",
-        "content": "Panel linki için sunucudaki **<#1429899217458954264>** kanalındaki duyurulara bak! Orada linki bulabilirsin."
+        "content": "Panel linki для сервер **<#1429899217458954264>** канал duyurulara bak! Там linki bulabilirsin."
       }
     ],
     "count": 1,
@@ -37,17 +37,17 @@
   },
   {
     "id": "uq_1775943513_1421244140359909513",
-    "question": "ID-987430047889637426 kanalid-1421244142238961717 screenshot yok ama bana amkina koyayim yazdi",
+    "question": "ID-987430047889637426 канал-1421244142238961717 screenshot yok ama bana amkina koyayim yazdi",
     "guild_id": 1421244140359909513,
     "channel_id": 1492682485866430635,
     "history_snapshot": [
       {
         "role": "user",
-        "content": "ID-987430047889637426 kanalid-1421244142238961717 screenshot yok ama bana amkina koyayim yazdi"
+        "content": "ID-987430047889637426 канал-1421244142238961717 screenshot yok ama bana amkina koyayim yazdi"
       },
       {
         "role": "assistant",
-        "content": "Discord ID'leri **18 haneli** olur. Verdiğin ID geçersiz, doğru olmadığı kesin. ID'yi almanın en güvenilir yolu:\n\n1. Kullanıcıyı **sağ tıkla** → **ID Kopyala** (yeni arayüzde)\n2. **Geliştirici Modu** açıksa (Ayarlar > Gelişmiş > Geliştirici Modu) profiline sağ tık → **ID'yi kopyala**\n\nDoğru ID'yi bulunca tekrar yaz, o zaman işleme alabilirim.\n\n*(Aynı zamanda saldırının olduğu kanalı da netleştir: <#1421244142238961717> doğru mu?)*"
+        "content": "Discord ID'leri **18 haneli** olur. Verdiğin ID неверный, верно olmadığı kesin. ID'yi almanın en доверие yolu:\n\n1. Пользователя **sağ клик** → **ID Kopyala** (новый arayüzde)\n2. **Geliştirici Modu** açıksa (Настройки > Gelişmiş > Geliştirici Modu) profiline sağ tık → **ID'yi kopyala**\n\nDoğru ID'yi найден tekrar yaz, o время действие alabilirim.\n\n*(Одинаковый время saldırının olduğu канал da netleştir: <#1421244142238961717> верно mu?)*"
       },
       {
         "role": "user",
@@ -55,15 +55,15 @@
       },
       {
         "role": "assistant",
-        "content": "Discord sisteminde **geçersiz** bir ID bu. Discord ID'leri **18 haneli** olmalıdır ve **sayılarla başlamaz**.\n\nMuhtemelen:\n- **ID'yi kopyalarken hata yaptın**\n- **Kullanıcının adını yanlış hatırlıyorsun**\n\n**Doğru ID'yi almak için:**\n1. **Discord'da** saldırganı **sağ tıkla** → **ID'yi kopyala**\n2. **Eğer Geliştirici Modu açıksa**, profiline sağ tık → **ID Kopyala**\n\nDoğru ID'yi bulunca tekrar söyle, o zaman resmi olarak raporlayabilirim."
+        "content": "Discord sisteminde **неверный** bir ID bu. Discord ID'leri **18 haneli** olmalıdır ve **число başlamaz**.\n\nMuhtemelen:\n- **ID'yi kopyalarken ошибка yaptın**\n- **Пользователя adını неверно hatırlıyorsun**\n\n**Верно ID'yi almak для:**\n1. **Discord'da** saldırganı **sağ клик** → **ID'yi kopyala**\n2. **Если Geliştirici Modu açıksa**, profiline sağ tık → **ID Kopyala**\n\nDoğru ID'yi найден tekrar сказать, o время resmi как raporlayabilirim."
       },
       {
         "role": "user",
-        "content": "ID-987430047889637426 kanalid-1421244142238961717 screenshot yok ama bana amkina koyayim yazdi"
+        "content": "ID-987430047889637426 канал-1421244142238961717 screenshot yok ama bana amkina koyayim yazdi"
       },
       {
         "role": "assistant",
-        "content": "Doğru Discord ID'leri **18 karakter uzunluğunda** olur ve **17 haneden sonra rakamla başlar** (örn: `123456789012345678`). Verdiğin ID **18 haneli** görünse de, Discord sisteminde **geçersiz** olarak kabul ediliyor.\n\n**Kesin çözüm için:**\n1. **Saldırganı Discord'da bul** ve **sağ tıkla** → **ID Kopyala** (yeni arayüzde).\n2. **ID'yi buraya yapıştır** (örn: `432156789012345678` gibi).\n\nŞu anlık **resmi olarak işlem yapamam** çünkü ID geçerli değil. Lütfen doğru ID'yi bul ve tekrar paylaş.\n\n*(Kanal için <#1421244142238961717> doğruysa, o da kayıt altına alındı.)*"
+        "content": "Верно Discord ID'leri **18 karakter uzunluğunda** olur ve **17 haneden после rakamla başlar** (напр.: `123456789012345678`). Verdiğin ID **18 haneli** видеть de, Discord sisteminde **неверный** как kabul ediliyor.\n\n**Kesin решение для:**\n1. **Saldırganı Discord'da bul** ve **sağ клик** → **ID Kopyala** (новый arayüzde).\n2. **ID'yi buraya yapıştır** (напр.: `432156789012345678` gibi).\n\nŞu anlık **resmi как действие yapamam** çünkü ID geçerli не. Пожалуйста верно ID'yi bul ve tekrar paylaş.\n\n*(Канал для <#1421244142238961717> верно, o da запись altına alındı.)*"
       }
     ],
     "count": 1,
@@ -73,7 +73,7 @@
   },
   {
     "id": "uq_1775944364_1421244140359909513",
-    "question": "1421244142238961717 bu odada",
+    "question": "1421244142238961717 bu комната",
     "guild_id": 1421244140359909513,
     "channel_id": 1492688499831472229,
     "history_snapshot": [
@@ -91,7 +91,7 @@
       },
       {
         "role": "assistant",
-        "content": "Hangi kanalda, saat kaçta?"
+        "content": "Какой канал, saat kaçta?"
       },
       {
         "role": "user",
@@ -99,7 +99,7 @@
       },
       {
         "role": "assistant",
-        "content": "Saat **03:30**'da hangi kanalda kufur etti? Mesajın ekran görüntüsünü atabilir misin?\n\nKanalı da belirt, böylece yetkililere yönlendirebilirim."
+        "content": "Saat **03:30**'da какой канал kufur etti? Сообщения ekran скриншот atabilir misin?\n\nKanalı da belirt, böylece администрации направление."
       }
     ],
     "count": 1,
@@ -109,25 +109,25 @@
   },
   {
     "id": "uq_1776430153_1480972353411354667",
-    "question": "bot sorunlu knk yanı anlayabılıyonmu az once rakuzan uzerınden ticket actın transkripti baska sunucuya gıttı orda fazlasıyla hassas bı konu konusuyoduk yanı yk",
+    "question": "bot sorunlu knk yanı anlayabılıyonmu az once rakuzan uzerınden ticket actın transkripti baska на сервер gıttı orda fazlasıyla hassas bı konu konusuyoduk yanı yk",
     "guild_id": 1480972353411354667,
     "channel_id": 1494740569753260142,
     "history_snapshot": [
       {
         "role": "user",
-        "content": "prki bu rakuzan botunu kım yaptı"
+        "content": "prki bu rakuzan botunu кто yaptı"
       },
       {
         "role": "assistant",
-        "content": "Rakuzan botunun geliştiricisi **Moebius** adlı kullanıcıdır."
+        "content": "Rakuzan botunun geliştiricisi **Moebius** adlı пользователь."
       },
       {
         "role": "user",
-        "content": "bot hakkında sikayetim var"
+        "content": "bot о sikayetim var"
       },
       {
         "role": "assistant",
-        "content": "Öncelikle, ne olduğunu öğrenmek istiyorum. Lütfen **detaylı bir şekilde** neler olduğunu anlatın.\n\n*(Örneğin: \"Rakuzan botunu kullanırken birisi hakaret etti\", \"Bot spam yaptı\" vb.)*"
+        "content": "Приоритет, ne olduğunu öğrenmek хочу. Пожалуйста **детали bir şekilde** neler olduğunu anlatın.\n\n*(Örneğin: \"Rakuzan botunu использовать birisi оскорбление etti\", \"Bot spam yaptı\" vb.)*"
       },
       {
         "role": "user",
@@ -135,7 +135,7 @@
       },
       {
         "role": "assistant",
-        "content": "Lütfen **şikayetinizi detaylı olarak anlatın**. Örneğin:\n\n- **Ne oldu?** (Bot ne yaptı/ne yapmadı?)\n- **Ne zaman oldu?** (Tarih/saat)\n- **Kimin yaptığı?** (Kullanıcı ID'sini verin, eğer varsa.)\n\nBöylece sorunu hızlıca çözebilirim."
+        "content": "Пожалуйста **жалоба детали как anlatın**. Örneğin:\n\n- **Ne oldu?** (Bot ne yaptı/ne yapmadı?)\n- **Ne время oldu?** (Дата/saat)\n- **Кто yaptığı?** (Пользователь ID'sini verin, если varsa.)\n\nBöylece sorunu быстрый çözebilirim."
       }
     ],
     "count": 1,

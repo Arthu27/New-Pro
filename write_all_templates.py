@@ -7,8 +7,8 @@ os.makedirs(templates_dir, exist_ok=True)
 # commands.html
 # ============================================================
 commands_html = '''{% extends "base.html" %}
-{% block title %}Командаlar - Aether{% endblock %}
-{% block page_title %}KOMUT MERKEZİ{% endblock %}
+{% block title %}Команды - Aether{% endblock %}
+{% block page_title %}КОМАНДА MERKEZİ{% endblock %}
 {% block content %}
 <style>
 .cmd-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:20px; margin-top:20px; }
@@ -16,14 +16,14 @@ commands_html = '''{% extends "base.html" %}
 .cmd-card:hover { transform:translateY(-8px); border-color:#dc143c; box-shadow:0 15px 40px rgba(220,20,60,0.4); }
 .cmd-card::before { content:''; position:absolute; top:-50%; left:-50%; width:200%; height:200%; background:linear-gradient(45deg,transparent,rgba(220,20,60,0.05),transparent); transform:rotate(45deg); transition:0.5s; }
 .cmd-card:hover::before { left:100%; }
-.cmd-card h3 { color:#dc143c; margin-ботtom:8px; font-size:18px; }
+.cmd-card h3 { color:#dc143c; margin-bottom:8px; font-size:18px; }
 .cmd-card p { color:#aaa; font-size:13px; }
-.cmd-icon { font-size:36px; margin-ботtom:15px; }
+.cmd-icon { font-size:36px; margin-bottom:15px; }
 .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; justify-content:center; align-items:center; }
 .modal-box { background:linear-gradient(135deg,#1a1a1a,#2a2a2a); border:2px solid #dc143c; border-radius:20px; padding:35px; max-width:500px; width:90%; position:relative; box-shadow:0 20px 60px rgba(220,20,60,0.5); }
-.modal-box h2 { color:#dc143c; margin-ботtom:20px; }
-.form-group { margin-ботtom:15px; }
-.form-group label { display:block; color:#ccc; margin-ботtom:6px; font-size:13px; text-transform:uppercase; letter-spacing:1px; }
+.modal-box h2 { color:#dc143c; margin-bottom:20px; }
+.form-group { margin-bottom:15px; }
+.form-group label { display:block; color:#ccc; margin-bottom:6px; font-size:13px; text-transform:uppercase; letter-spacing:1px; }
 .form-group input, .form-group select, .form-group textarea { width:100%; padding:10px 14px; background:#0a0a0a; border:2px solid rgba(220,20,60,0.3); border-radius:8px; color:#eee; font-size:14px; transition:border-color 0.3s; box-sizing:border-box; }
 .form-group input:focus, .form-group select:focus { outline:none; border-color:#dc143c; }
 .btn-exec { background:linear-gradient(135deg,#dc143c,#ff1744); color:white; padding:12px 28px; border:none; border-radius:8px; cursor:pointer; font-size:15px; font-weight:700; margin-right:10px; transition:all 0.3s; }
@@ -35,33 +35,33 @@ commands_html = '''{% extends "base.html" %}
 <div class="cmd-grid">
   <div class="cmd-card" onclick="openCmd(\'ban\')">
     <div class="cmd-icon">🔨</div>
-    <h3><i class="fas fa-ban"></i> Бан</h3>
-    <p>Пользовательyı serverdan kalıcı olarak yasakla</p>
+    <h3><i class="fas fa-ban"></i> Ban</h3>
+    <p>Пользователя с сервера постоянный как yasakla</p>
   </div>
   <div class="cmd-card" onclick="openCmd(\'kick\')">
     <div class="cmd-icon">👢</div>
-    <h3><i class="fas fa-user-slash"></i> Кик</h3>
-    <p>Пользовательyı serverdan at</p>
+    <h3><i class="fas fa-user-slash"></i> Kick</h3>
+    <p>Исключить (кикнуть) пользователя с сервера</p>
   </div>
   <div class="cmd-card" onclick="openCmd(\'timeout\')">
     <div class="cmd-icon">⏱️</div>
-    <h3><i class="fas fa-clock"></i> Мут</h3>
-    <p>Пользовательyı geçici olarak sustur</p>
+    <h3><i class="fas fa-clock"></i> Mute</h3>
+    <p>Пользователя geçici как sustur</p>
   </div>
   <div class="cmd-card" onclick="openCmd(\'warn\')">
     <div class="cmd-icon">⚠️</div>
     <h3><i class="fas fa-exclamation-triangle"></i> Warning</h3>
-    <p>Пользовательya предупреждение ver</p>
+    <p>Выдать предупреждение пользователю</p>
   </div>
   <div class="cmd-card" onclick="openCmd(\'clear\')">
     <div class="cmd-icon">🗑️</div>
-    <h3><i class="fas fa-trash"></i> Сообщение Очистить</h3>
-    <p>Каналdan toplu message sil</p>
+    <h3><i class="fas fa-trash"></i> Сообщение Temizle</h3>
+    <p>Канал toplu message удалить</p>
   </div>
-  <div class="cmd-card" onclick="openCmd(\'role\')">
+  <div class="cmd-card" onclick="openCmd(\'роли\')">
     <div class="cmd-icon">🏷️</div>
-    <h3><i class="fas fa-user-tag"></i> Role Ver/Al</h3>
-    <p>Пользовательya role add veya çıkar</p>
+    <h3><i class="fas fa-user-tag"></i> Роли Ver/Al</h3>
+    <p>Пользователю роли add или удалить</p>
   </div>
 </div>
 
@@ -100,11 +100,11 @@ async function loadChannels(selId) {
 async function loadRoles(selId) {
   var gid = document.getElementById('guild-sel').value;
   if (!gid) return;
-  var r = await fetch('/api/guild/'+gid+'/roles');
-  var roles = await r.json();
-  if (!Array.isArray(roles)) roles = [];
+  var r = await fetch('/api/guild/'+gid+'/роли');
+  var role = await r.json();
+  if (!Array.isArray(роли)) role = [];
   var sel = document.getElementById(selId);
-  sel.innerHTML = roles.map(function(ro){return '<option value="'+ro.id+'">'+ro.name+'</option>';}).join('');
+  sel.innerHTML = роли.map(function(ro){return '<option value="'+ro.id+'">'+ro.name+'</option>';}).join('');
 }
 
 function openCmd(cmd) {
@@ -112,12 +112,12 @@ function openCmd(cmd) {
   document.getElementById('cmdTitle').textContent = cmd.toUpperCase();
   document.getElementById('result-msg').style.display = 'none';
   var forms = {
-    ban: '<div class="form-group"><label>Сервер</label><select id="guild-sel" class="form-controle">'+guildOptions()+'</select></div><div class="form-group"><label>Kullanici ID</label><input type="text" id="user_id" placeholder="123456789"></div><div class="form-group"><label>Причина</label><input type="text" id="reason" placeholder="Бан sebebi"></div><button class="btn-exec" onclick="execCmd()">BAN</button><button class="btn-cancel" onclick="closeCmd()">Iptal</button>',
-    kick: '<div class="form-group"><label>Сервер</label><select id="guild-sel" class="form-controle">'+guildOptions()+'</select></div><div class="form-group"><label>Kullanici ID</label><input type="text" id="user_id" placeholder="123456789"></div><div class="form-group"><label>Причина</label><input type="text" id="reason" placeholder="Кик sebebi"></div><button class="btn-exec" onclick="execCmd()">KICK</button><button class="btn-cancel" onclick="closeCmd()">Iptal</button>',
-    timeout: '<div class="form-group"><label>Сервер</label><select id="guild-sel" class="form-controle">'+guildOptions()+'</select></div><div class="form-group"><label>Kullanici ID</label><input type="text" id="user_id" placeholder="123456789"></div><div class="form-group"><label>Sure (dakika)</label><input type="number" id="duration" value="60"></div><div class="form-group"><label>Причина</label><input type="text" id="reason" placeholder="Мут sebebi"></div><button class="btn-exec" onclick="execCmd()">TIMEOUT</button><button class="btn-cancel" onclick="closeCmd()">Iptal</button>',
-    warn: '<div class="form-group"><label>Сервер</label><select id="guild-sel" class="form-controle">'+guildOptions()+'</select></div><div class="form-group"><label>Kullanici ID</label><input type="text" id="user_id" placeholder="123456789"></div><div class="form-group"><label>Причина</label><input type="text" id="reason" placeholder="Uyari sebebi"></div><button class="btn-exec" onclick="execCmd()">WARN</button><button class="btn-cancel" onclick="closeCmd()">Iptal</button>',
-    clear: '<div class="form-group"><label>Сервер</label><select id="guild-sel" class="form-controle" onchange="loadChannels(\'channel-sel\')">'+guildOptions()+'</select></div><div class="form-group"><label>Канал</label><select id="channel-sel" class="form-controle"><option>Once server secin</option></select></div><div class="form-group"><label>Сообщение Sayisi</label><input type="number" id="amount" value="10"></div><button class="btn-exec" onclick="execCmd()">TEMİZLE</button><button class="btn-cancel" onclick="closeCmd()">Iptal</button>',
-    role: '<div class="form-group"><label>Сервер</label><select id="guild-sel" class="form-controle" onchange="loadRoles(\'role-sel\')">'+guildOptions()+'</select></div><div class="form-group"><label>Kullanici ID</label><input type="text" id="user_id" placeholder="123456789"></div><div class="form-group"><label>Роль</label><select id="role-sel" class="form-controle"><option>Once server secin</option></select></div><button class="btn-exec" onclick="execCmd()">UYGULA</button><button class="btn-cancel" onclick="closeCmd()">Iptal</button>'
+    ban: '<div class="form-group"><label>Сервер</label><select id="guild-sel" class="form-controle">'+guildOptions()+'</select></div><div class="form-group"><label>Пользователь ID</label><input type="text" id="user_id" placeholder="123456789"></div><div class="form-group"><label>Причина</label><input type="text" id="reason" placeholder="Ban причина"></div><button class="btn-exec" onclick="execCmd()">BAN</button><button class="btn-cancel" onclick="closeCmd()">Отмена</button>',
+    kick: '<div class="form-group"><label>Сервер</label><select id="guild-sel" class="form-controle">'+guildOptions()+'</select></div><div class="form-group"><label>Пользователь ID</label><input type="text" id="user_id" placeholder="123456789"></div><div class="form-group"><label>Причина</label><input type="text" id="reason" placeholder="Kick причина"></div><button class="btn-exec" onclick="execCmd()">KICK</button><button class="btn-cancel" onclick="closeCmd()">Отмена</button>',
+    timeout: '<div class="form-group"><label>Сервер</label><select id="guild-sel" class="form-controle">'+guildOptions()+'</select></div><div class="form-group"><label>Пользователь ID</label><input type="text" id="user_id" placeholder="123456789"></div><div class="form-group"><label>Sure (dakika)</label><input type="number" id="duration" value="60"></div><div class="form-group"><label>Причина</label><input type="text" id="reason" placeholder="Mute причина"></div><button class="btn-exec" onclick="execCmd()">TIMEOUT</button><button class="btn-cancel" onclick="closeCmd()">Отмена</button>',
+    warn: '<div class="form-group"><label>Сервер</label><select id="guild-sel" class="form-controle">'+guildOptions()+'</select></div><div class="form-group"><label>Пользователь ID</label><input type="text" id="user_id" placeholder="123456789"></div><div class="form-group"><label>Причина</label><input type="text" id="reason" placeholder="Предупреждение причина"></div><button class="btn-exec" onclick="execCmd()">WARN</button><button class="btn-cancel" onclick="closeCmd()">Отмена</button>',
+    clear: '<div class="form-group"><label>Сервер</label><select id="guild-sel" class="form-controle" onchange="loadChannels(\'channel-sel\')">'+guildOptions()+'</select></div><div class="form-group"><label>Канал</label><select id="channel-sel" class="form-controle"><option>Once сервер secin</option></select></div><div class="form-group"><label>Сообщение Количество</label><input type="number" id="amount" value="10"></div><button class="btn-exec" onclick="execCmd()">TEMİZLE</button><button class="btn-cancel" onclick="closeCmd()">Отмена</button>',
+    роли: '<div class="form-group"><label>Сервер</label><select id="guild-sel" class="form-controle" onchange="loadRoles(\'роли-sel\')">'+guildOptions()+'</select></div><div class="form-group"><label>Пользователь ID</label><input type="text" id="user_id" placeholder="123456789"></div><div class="form-group"><label>Роль</label><select id="роли-sel" class="form-controle"><option>Once сервер secin</option></select></div><button class="btn-exec" onclick="execCmd()">ПРИМЕН</button><button class="btn-cancel" onclick="closeCmd()">Отмена</button>'
   };
   document.getElementById('cmdForm').innerHTML = forms[cmd];
   document.getElementById('cmdModal').style.display = 'flex';
@@ -134,7 +134,7 @@ async function execCmd() {
   var dur = document.getElementById('duration'); if (dur) data.duration = dur.value;
   var amt = document.getElementById('amount'); if (amt) data.amount = amt.value;
   var chs = document.getElementById('channel-sel'); if (chs) data.channel_id = chs.value;
-  var rls = document.getElementById('role-sel'); if (rls) data.role_id = rls.value;
+  var rls = document.getElementById('роли-sel'); if (rls) data.role_id = rls.value;
 
   var r = await fetch('/api/execute-command', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
   var res = await r.json();
@@ -143,7 +143,7 @@ async function execCmd() {
   if (res.success) {
     msg.style.background = 'rgba(46,204,113,0.2)'; msg.style.border = '1px solid #2ecc71'; msg.style.color = '#2ecc71';
     msg.textContent = '✅ Команда успешно calistirildi!';
-    setМут(closeCmd, 2000);
+    setTimeout(closeCmd, 2000);
   } else {
     msg.style.background = 'rgba(220,20,60,0.2)'; msg.style.border = '1px solid #dc143c'; msg.style.color = '#ff6b6b';
     msg.textContent = '❌ Ошибка: ' + res.error;
@@ -158,27 +158,27 @@ loadGuilds();
 
 with open(os.path.join(templates_dir, 'commands.html'), 'w', encoding='utf-8') as f:
     f.write(commands_html)
-print("commands.html записатьildi")
+print("commands.html написано")
 
 # ============================================================
 # execute_command.html - base.html extend eden versiyon
 # ============================================================
 execute_html = '''{% extends "base.html" %}
 {% block title %}Команда Calistir - Aether{% endblock %}
-{% block page_title %}KOMUT ÇALIŞTIR{% endblock %}
+{% block page_title %}КОМАНДА ÇALIŞTIR{% endblock %}
 {% block content %}
 <style>
 .cmd-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:20px; margin-top:20px; }
 .cmd-card { background:linear-gradient(135deg,#1a0a0a,#2a1010); border:1px solid rgba(220,20,60,0.4); border-radius:15px; padding:25px; cursor:pointer; transition:all 0.3s; position:relative; overflow:hidden; }
 .cmd-card:hover { transform:translateY(-8px); border-color:#dc143c; box-shadow:0 15px 40px rgba(220,20,60,0.4); }
-.cmd-icon { font-size:36px; margin-ботtom:15px; }
-.cmd-card h3 { color:#dc143c; margin-ботtom:8px; font-size:18px; }
+.cmd-icon { font-size:36px; margin-bottom:15px; }
+.cmd-card h3 { color:#dc143c; margin-bottom:8px; font-size:18px; }
 .cmd-card p { color:#aaa; font-size:13px; }
 .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; justify-content:center; align-items:center; }
 .modal-box { background:linear-gradient(135deg,#1a1a1a,#2a2a2a); border:2px solid #dc143c; border-radius:20px; padding:35px; max-width:500px; width:90%; position:relative; box-shadow:0 20px 60px rgba(220,20,60,0.5); }
-.modal-box h2 { color:#dc143c; margin-ботtom:20px; }
-.form-group { margin-ботtom:15px; }
-.form-group label { display:block; color:#ccc; margin-ботtom:6px; font-size:13px; text-transform:uppercase; letter-spacing:1px; }
+.modal-box h2 { color:#dc143c; margin-bottom:20px; }
+.form-group { margin-bottom:15px; }
+.form-group label { display:block; color:#ccc; margin-bottom:6px; font-size:13px; text-transform:uppercase; letter-spacing:1px; }
 .form-group input, .form-group select { width:100%; padding:10px 14px; background:#0a0a0a; border:2px solid rgba(220,20,60,0.3); border-radius:8px; color:#eee; font-size:14px; box-sizing:border-box; transition:border-color 0.3s; }
 .form-group input:focus, .form-group select:focus { outline:none; border-color:#dc143c; }
 .btn-exec { background:linear-gradient(135deg,#dc143c,#ff1744); color:white; padding:12px 28px; border:none; border-radius:8px; cursor:pointer; font-size:15px; font-weight:700; margin-right:10px; transition:all 0.3s; }
@@ -188,12 +188,12 @@ execute_html = '''{% extends "base.html" %}
 </style>
 
 <div class="cmd-grid">
-  <div class="cmd-card" onclick="openCmd(\'ban\')"><div class="cmd-icon">🔨</div><h3><i class="fas fa-ban"></i> Бан</h3><p>Kullanicıyı kalıcı yasakla</p></div>
-  <div class="cmd-card" onclick="openCmd(\'kick\')"><div class="cmd-icon">👢</div><h3><i class="fas fa-user-slash"></i> Кик</h3><p>Kullanicıyı serverdan at</p></div>
-  <div class="cmd-card" onclick="openCmd(\'timeout\')"><div class="cmd-icon">⏱️</div><h3><i class="fas fa-clock"></i> Мут</h3><p>Gecici sustur</p></div>
+  <div class="cmd-card" onclick="openCmd(\'ban\')"><div class="cmd-icon">🔨</div><h3><i class="fas fa-ban"></i> Ban</h3><p>Пользователя постоянный yasakla</p></div>
+  <div class="cmd-card" onclick="openCmd(\'kick\')"><div class="cmd-icon">👢</div><h3><i class="fas fa-user-slash"></i> Kick</h3><p>Пользователя с сервера at</p></div>
+  <div class="cmd-card" onclick="openCmd(\'timeout\')"><div class="cmd-icon">⏱️</div><h3><i class="fas fa-clock"></i> Mute</h3><p>Gecici sustur</p></div>
   <div class="cmd-card" onclick="openCmd(\'warn\')"><div class="cmd-icon">⚠️</div><h3><i class="fas fa-exclamation-triangle"></i> Warning</h3><p>Warning ver</p></div>
-  <div class="cmd-card" onclick="openCmd(\'clear\')"><div class="cmd-icon">🗑️</div><h3><i class="fas fa-trash"></i> Очистить</h3><p>Toplu message sil</p></div>
-  <div class="cmd-card" onclick="openCmd(\'role\')"><div class="cmd-icon">🏷️</div><h3><i class="fas fa-user-tag"></i> Role Ver/Al</h3><p>Role add veya cıkar</p></div>
+  <div class="cmd-card" onclick="openCmd(\'clear\')"><div class="cmd-icon">🗑️</div><h3><i class="fas fa-trash"></i> Temizle</h3><p>Toplu message удалить</p></div>
+  <div class="cmd-card" onclick="openCmd(\'роли\')"><div class="cmd-icon">🏷️</div><h3><i class="fas fa-user-tag"></i> Роли Ver/Al</h3><p>Роли add или cıkar</p></div>
 </div>
 
 <div id="execModal" class="modal-overlay">
@@ -231,11 +231,11 @@ async function loadChannels(selId) {
 async function loadRoles(selId) {
   var gid = document.getElementById('guild-sel').value;
   if (!gid) return;
-  var r = await fetch('/api/guild/'+gid+'/roles');
-  var roles = await r.json();
-  if (!Array.isArray(roles)) roles = [];
+  var r = await fetch('/api/guild/'+gid+'/роли');
+  var role = await r.json();
+  if (!Array.isArray(роли)) role = [];
   var sel = document.getElementById(selId);
-  sel.innerHTML = roles.map(function(ro){return '<option value="'+ro.id+'">'+ro.name+'</option>';}).join('');
+  sel.innerHTML = роли.map(function(ro){return '<option value="'+ro.id+'">'+ro.name+'</option>';}).join('');
 }
 
 function openCmd(cmd) {
@@ -243,12 +243,12 @@ function openCmd(cmd) {
   document.getElementById('execTitle').textContent = cmd.toUpperCase();
   document.getElementById('exec-result').style.display = 'none';
   var forms = {
-    ban: '<div class="form-group"><label>Сервер</label><select id="guild-sel">'+guildOptions()+'</select></div><div class="form-group"><label>Kullanici ID</label><input type="text" id="user_id" placeholder="123456789"></div><div class="form-group"><label>Причина</label><input type="text" id="reason" placeholder="Бан sebebi"></div><button class="btn-exec" onclick="execCmd()">BAN</button><button class="btn-cancel" onclick="closeCmd()">Iptal</button>',
-    kick: '<div class="form-group"><label>Сервер</label><select id="guild-sel">'+guildOptions()+'</select></div><div class="form-group"><label>Kullanici ID</label><input type="text" id="user_id" placeholder="123456789"></div><div class="form-group"><label>Причина</label><input type="text" id="reason" placeholder="Кик sebebi"></div><button class="btn-exec" onclick="execCmd()">KICK</button><button class="btn-cancel" onclick="closeCmd()">Iptal</button>',
-    timeout: '<div class="form-group"><label>Сервер</label><select id="guild-sel">'+guildOptions()+'</select></div><div class="form-group"><label>Kullanici ID</label><input type="text" id="user_id" placeholder="123456789"></div><div class="form-group"><label>Sure (dakika)</label><input type="number" id="duration" value="60"></div><div class="form-group"><label>Причина</label><input type="text" id="reason" placeholder="Мут sebebi"></div><button class="btn-exec" onclick="execCmd()">TIMEOUT</button><button class="btn-cancel" onclick="closeCmd()">Iptal</button>',
-    warn: '<div class="form-group"><label>Сервер</label><select id="guild-sel">'+guildOptions()+'</select></div><div class="form-group"><label>Kullanici ID</label><input type="text" id="user_id" placeholder="123456789"></div><div class="form-group"><label>Причина</label><input type="text" id="reason" placeholder="Uyari sebebi"></div><button class="btn-exec" onclick="execCmd()">WARN</button><button class="btn-cancel" onclick="closeCmd()">Iptal</button>',
-    clear: '<div class="form-group"><label>Сервер</label><select id="guild-sel" onchange="loadChannels(\'channel-sel\')">'+guildOptions()+'</select></div><div class="form-group"><label>Канал</label><select id="channel-sel"><option>Once server secin</option></select></div><div class="form-group"><label>Сообщение Sayisi</label><input type="number" id="amount" value="10"></div><button class="btn-exec" onclick="execCmd()">TEMİZLE</button><button class="btn-cancel" onclick="closeCmd()">Iptal</button>',
-    role: '<div class="form-group"><label>Сервер</label><select id="guild-sel" onchange="loadRoles(\'role-sel\')">'+guildOptions()+'</select></div><div class="form-group"><label>Kullanici ID</label><input type="text" id="user_id" placeholder="123456789"></div><div class="form-group"><label>Роль</label><select id="role-sel"><option>Once server secin</option></select></div><button class="btn-exec" onclick="execCmd()">UYGULA</button><button class="btn-cancel" onclick="closeCmd()">Iptal</button>'
+    ban: '<div class="form-group"><label>Сервер</label><select id="guild-sel">'+guildOptions()+'</select></div><div class="form-group"><label>Пользователь ID</label><input type="text" id="user_id" placeholder="123456789"></div><div class="form-group"><label>Причина</label><input type="text" id="reason" placeholder="Ban причина"></div><button class="btn-exec" onclick="execCmd()">BAN</button><button class="btn-cancel" onclick="closeCmd()">Отмена</button>',
+    kick: '<div class="form-group"><label>Сервер</label><select id="guild-sel">'+guildOptions()+'</select></div><div class="form-group"><label>Пользователь ID</label><input type="text" id="user_id" placeholder="123456789"></div><div class="form-group"><label>Причина</label><input type="text" id="reason" placeholder="Kick причина"></div><button class="btn-exec" onclick="execCmd()">KICK</button><button class="btn-cancel" onclick="closeCmd()">Отмена</button>',
+    timeout: '<div class="form-group"><label>Сервер</label><select id="guild-sel">'+guildOptions()+'</select></div><div class="form-group"><label>Пользователь ID</label><input type="text" id="user_id" placeholder="123456789"></div><div class="form-group"><label>Sure (dakika)</label><input type="number" id="duration" value="60"></div><div class="form-group"><label>Причина</label><input type="text" id="reason" placeholder="Mute причина"></div><button class="btn-exec" onclick="execCmd()">TIMEOUT</button><button class="btn-cancel" onclick="closeCmd()">Отмена</button>',
+    warn: '<div class="form-group"><label>Сервер</label><select id="guild-sel">'+guildOptions()+'</select></div><div class="form-group"><label>Пользователь ID</label><input type="text" id="user_id" placeholder="123456789"></div><div class="form-group"><label>Причина</label><input type="text" id="reason" placeholder="Предупреждение причина"></div><button class="btn-exec" onclick="execCmd()">WARN</button><button class="btn-cancel" onclick="closeCmd()">Отмена</button>',
+    clear: '<div class="form-group"><label>Сервер</label><select id="guild-sel" onchange="loadChannels(\'channel-sel\')">'+guildOptions()+'</select></div><div class="form-group"><label>Канал</label><select id="channel-sel"><option>Once сервер secin</option></select></div><div class="form-group"><label>Сообщение Количество</label><input type="number" id="amount" value="10"></div><button class="btn-exec" onclick="execCmd()">TEMİZLE</button><button class="btn-cancel" onclick="closeCmd()">Отмена</button>',
+    роли: '<div class="form-group"><label>Сервер</label><select id="guild-sel" onchange="loadRoles(\'роли-sel\')">'+guildOptions()+'</select></div><div class="form-group"><label>Пользователь ID</label><input type="text" id="user_id" placeholder="123456789"></div><div class="form-group"><label>Роль</label><select id="роли-sel"><option>Once сервер secin</option></select></div><button class="btn-exec" onclick="execCmd()">ПРИМЕН</button><button class="btn-cancel" onclick="closeCmd()">Отмена</button>'
   };
   document.getElementById('execForm').innerHTML = forms[cmd];
   document.getElementById('execModal').style.display = 'flex';
@@ -265,7 +265,7 @@ async function execCmd() {
   var dur = document.getElementById('duration'); if (dur) data.duration = dur.value;
   var amt = document.getElementById('amount'); if (amt) data.amount = amt.value;
   var chs = document.getElementById('channel-sel'); if (chs) data.channel_id = chs.value;
-  var rls = document.getElementById('role-sel'); if (rls) data.role_id = rls.value;
+  var rls = document.getElementById('роли-sel'); if (rls) data.role_id = rls.value;
 
   var r = await fetch('/api/execute-command', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
   var res = await r.json();
@@ -274,7 +274,7 @@ async function execCmd() {
   if (res.success) {
     msg.style.cssText = 'display:block;background:rgba(46,204,113,0.2);border:1px solid #2ecc71;color:#2ecc71;padding:12px;border-radius:8px;margin-top:15px;';
     msg.textContent = '✅ Команда успешно calistirildi!';
-    setМут(closeCmd, 2000);
+    setTimeout(closeCmd, 2000);
   } else {
     msg.style.cssText = 'display:block;background:rgba(220,20,60,0.2);border:1px solid #dc143c;color:#ff6b6b;padding:12px;border-radius:8px;margin-top:15px;';
     msg.textContent = '❌ Ошибка: ' + res.error;
@@ -289,19 +289,19 @@ loadGuilds();
 
 with open(os.path.join(templates_dir, 'execute_command.html'), 'w', encoding='utf-8') as f:
     f.write(execute_html)
-print("execute_command.html записатьildi")
+print("execute_command.html написано")
 
 # ============================================================
 # logs.html
 # ============================================================
 logs_html = '''{% extends "base.html" %}
-{% block title %}Mod Логиi - Aether{% endblock %}
+{% block title %}Логи модерации - Aether{% endblock %}
 {% block page_title %}MOD LOGLARI{% endblock %}
 {% block content %}
 <div class="section">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-ботtom:20px;flex-wrap:wrap;gap:10px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
     <h2><i class="fas fa-clipboard-list" style="color:#dc143c;"></i> Tum Mod Islemleri</h2>
-    <input type="text" id="log-filter" placeholder="Filtrele (kullanici ID, причина, islem...)" style="padding:10px 15px;background:#0a0a0a;border:2px solid rgba(220,20,60,0.3);border-radius:8px;color:#eee;width:300px;" oninput="filterLogs()">
+    <input type="text" id="log-filter" placeholder="Filtrele (пользователь ID, причина, islem...)" style="padding:10px 15px;background:#0a0a0a;border:2px solid rgba(220,20,60,0.3);border-radius:8px;color:#eee;width:300px;" oninput="filterLogs()">
   </div>
   <div id="logs-list" style="color:#aaa;text-align:center;padding:40px;"><i class="fas fa-spinner fa-spin" style="font-size:30px;color:#dc143c;"></i><br><br>Yukleniyor...</div>
 </div>
@@ -314,16 +314,16 @@ async function loadLogs() {
 }
 function displayLogs(logs) {
   if (!logs.length) {
-    document.getElementById('logs-list').innerHTML = '<p style="color:#aaa;text-align:center;padding:40px;">Hic log bulunamadi</p>';
+    document.getElementById('logs-list').innerHTML = '<p style="color:#aaa;text-align:center;padding:40px;">Hic log не найдено</p>';
     return;
   }
   var colors = { ban:'#e74c3c', kick:'#e67e22', timeout:'#f39c12', warn:'#f1c40f', mute:'#9b59b6' };
   var html = '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;">';
-  html += '<tr style="border-ботtom:2px solid rgba(220,20,60,0.3);"><th style="padding:12px;text-align:left;color:#dc143c;">Case</th><th style="padding:12px;text-align:left;color:#dc143c;">Islem</th><th style="padding:12px;text-align:left;color:#dc143c;">Kullanici</th><th style="padding:12px;text-align:left;color:#dc143c;">Moderator</th><th style="padding:12px;text-align:left;color:#dc143c;">Причина</th><th style="padding:12px;text-align:left;color:#dc143c;">Дата</th></tr>';
+  html += '<tr style="border-bottom:2px solid rgba(220,20,60,0.3);"><th style="padding:12px;text-align:left;color:#dc143c;">Case</th><th style="padding:12px;text-align:left;color:#dc143c;">Islem</th><th style="padding:12px;text-align:left;color:#dc143c;">Пользователь</th><th style="padding:12px;text-align:left;color:#dc143c;">Moderator</th><th style="padding:12px;text-align:left;color:#dc143c;">Причина</th><th style="padding:12px;text-align:left;color:#dc143c;">Дата</th></tr>';
   logs.slice(0,100).forEach(function(log, i) {
     var bg = i%2===0 ? 'rgba(220,20,60,0.03)' : 'transparent';
     var ac = colors[log.action] || '#667eea';
-    html += '<tr style="border-ботtom:1px solid rgba(255,255,255,0.05);background:'+bg+';transition:background 0.2s;" onmouseover="this.style.background=\'rgba(220,20,60,0.08)\'" onmouseout="this.style.background=\''+bg+'\'">';
+    html += '<tr style="border-bottom:1px solid rgba(255,255,255,0.05);background:'+bg+';transition:background 0.2s;" onmouseover="this.style.background=\'rgba(220,20,60,0.08)\'" onmouseout="this.style.background=\''+bg+'\'">';
     html += '<td style="padding:12px;color:#ffd700;font-weight:700;">#'+log.case_id+'</td>';
     html += '<td style="padding:12px;"><span style="background:'+ac+';padding:4px 10px;border-radius:4px;font-size:11px;font-weight:700;color:white;">'+log.action.toUpperCase()+'</span></td>';
     html += '<td style="padding:12px;"><code style="color:#dc143c;font-size:12px;">'+log.user_id+'</code></td>';
@@ -349,19 +349,19 @@ setInterval(loadLogs, 15000);
 
 with open(os.path.join(templates_dir, 'logs.html'), 'w', encoding='utf-8') as f:
     f.write(logs_html)
-print("logs.html записатьildi")
+print("logs.html написано")
 
 # ============================================================
 # warnings.html
 # ============================================================
 warnings_html = '''{% extends "base.html" %}
-{% block title %}Uyarilar - Aether{% endblock %}
-{% block page_title %}UYARI SİSTEMİ{% endblock %}
+{% block title %}Предупреждения - Aether{% endblock %}
+{% block page_title %}ПРЕДУПРЕЖДЕНИЕ СИСТЕМА{% endblock %}
 {% block content %}
 <div class="section">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-ботtom:20px;flex-wrap:wrap;gap:10px;">
-    <h2><i class="fas fa-exclamation-triangle" style="color:#dc143c;"></i> Tum Uyarilar</h2>
-    <input type="text" id="warn-filter" placeholder="Filtrele (kullanici ID, moderator, причина...)" style="padding:10px 15px;background:#0a0a0a;border:2px solid rgba(220,20,60,0.3);border-radius:8px;color:#eee;width:300px;" oninput="filterWarnings()">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+    <h2><i class="fas fa-exclamation-triangle" style="color:#dc143c;"></i> Tum Предупреждения</h2>
+    <input type="text" id="warn-filter" placeholder="Filtrele (пользователь ID, moderator, причина...)" style="padding:10px 15px;background:#0a0a0a;border:2px solid rgba(220,20,60,0.3);border-radius:8px;color:#eee;width:300px;" oninput="filterWarnings()">
   </div>
   <div id="warnings-list" style="color:#aaa;text-align:center;padding:40px;"><i class="fas fa-spinner fa-spin" style="font-size:30px;color:#dc143c;"></i><br><br>Yukleniyor...</div>
 </div>
@@ -374,14 +374,14 @@ async function loadWarnings() {
 }
 function displayWarnings(warns) {
   if (!warns.length) {
-    document.getElementById('warnings-list').innerHTML = '<p style="color:#aaa;text-align:center;padding:40px;">Hic uyari bulunamadi</p>';
+    document.getElementById('warnings-list').innerHTML = '<p style="color:#aaa;text-align:center;padding:40px;">Hic предупреждение не найдено</p>';
     return;
   }
   var html = '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;">';
-  html += '<tr style="border-ботtom:2px solid rgba(220,20,60,0.3);"><th style="padding:12px;text-align:left;color:#dc143c;">Kullanici ID</th><th style="padding:12px;text-align:left;color:#dc143c;">Moderator</th><th style="padding:12px;text-align:left;color:#dc143c;">Причина</th><th style="padding:12px;text-align:left;color:#dc143c;">Дата</th><th style="padding:12px;text-align:left;color:#dc143c;">Сервер</th></tr>';
+  html += '<tr style="border-bottom:2px solid rgba(220,20,60,0.3);"><th style="padding:12px;text-align:left;color:#dc143c;">Пользователь ID</th><th style="padding:12px;text-align:left;color:#dc143c;">Moderator</th><th style="padding:12px;text-align:left;color:#dc143c;">Причина</th><th style="padding:12px;text-align:left;color:#dc143c;">Дата</th><th style="padding:12px;text-align:left;color:#dc143c;">Сервер</th></tr>';
   warns.slice(0,100).forEach(function(w, i) {
     var bg = i%2===0 ? 'rgba(220,20,60,0.03)' : 'transparent';
-    html += '<tr style="border-ботtom:1px solid rgba(255,255,255,0.05);background:'+bg+';transition:background 0.2s;" onmouseover="this.style.background=\'rgba(220,20,60,0.08)\'" onmouseout="this.style.background=\''+bg+'\'">';
+    html += '<tr style="border-bottom:1px solid rgba(255,255,255,0.05);background:'+bg+';transition:background 0.2s;" onmouseover="this.style.background=\'rgba(220,20,60,0.08)\'" onmouseout="this.style.background=\''+bg+'\'">';
     html += '<td style="padding:12px;"><code style="color:#dc143c;font-size:12px;">'+w.user_id+'</code></td>';
     html += '<td style="padding:12px;color:#ffd700;">'+w.moderator+'</td>';
     html += '<td style="padding:12px;color:#ccc;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+w.reason+'</td>';
@@ -389,7 +389,7 @@ function displayWarnings(warns) {
     html += '<td style="padding:12px;"><code style="color:#aaa;font-size:11px;">'+w.guild_id+'</code></td>';
     html += '</tr>';
   });
-  html += '</table></div><p style="margin-top:15px;color:#666;font-size:13px;">Всего '+warns.length+' uyari</p>';
+  html += '</table></div><p style="margin-top:15px;color:#666;font-size:13px;">Всего '+warns.length+' предупреждение</p>';
   document.getElementById('warnings-list').innerHTML = html;
 }
 function filterWarnings() {
@@ -406,35 +406,35 @@ setInterval(loadWarnings, 15000);
 
 with open(os.path.join(templates_dir, 'warnings.html'), 'w', encoding='utf-8') as f:
     f.write(warnings_html)
-print("warnings.html записатьildi")
+print("warnings.html написано")
 
 # ============================================================
 # settings.html
 # ============================================================
 settings_html = '''{% extends "base.html" %}
 {% block title %}Настройки - Aether{% endblock %}
-{% block page_title %}PANEL AYARLARI{% endblock %}
+{% block page_title %}PANEL НАСТРОЙК{% endblock %}
 {% block content %}
 <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(400px,1fr));gap:20px;">
   <div class="section">
-    <h2><i class="fas fa-shield-alt" style="color:#dc143c;"></i> Role Правоleri</h2>
+    <h2><i class="fas fa-shield-alt" style="color:#dc143c;"></i> Роли Администратор</h2>
     <table style="width:100%;border-collapse:collapse;">
-      <tr style="border-ботtom:2px solid rgba(220,20,60,0.3);"><th style="padding:10px;text-align:left;color:#dc143c;">Роль</th><th style="padding:10px;text-align:left;color:#dc143c;">Уровень</th><th style="padding:10px;text-align:left;color:#dc143c;">Правоler</th></tr>
-      <tr style="border-ботtom:1px solid rgba(255,255,255,0.05);"><td style="padding:10px;color:#ffd700;font-weight:700;">Owner</td><td style="padding:10px;color:#dc143c;">3</td><td style="padding:10px;color:#ccc;">Tum правоler</td></tr>
-      <tr style="border-ботtom:1px solid rgba(255,255,255,0.05);"><td style="padding:10px;color:#e67e22;font-weight:700;">Имяmin</td><td style="padding:10px;color:#dc143c;">2</td><td style="padding:10px;color:#ccc;">Командаlar, kullanicilar, логи</td></tr>
-      <tr><td style="padding:10px;color:#3498db;font-weight:700;">Mod</td><td style="padding:10px;color:#dc143c;">1</td><td style="padding:10px;color:#ccc;">Серверlar, логи, uyarilar</td></tr>
+      <tr style="border-bottom:2px solid rgba(220,20,60,0.3);"><th style="padding:10px;text-align:left;color:#dc143c;">Роль</th><th style="padding:10px;text-align:left;color:#dc143c;">Seviye</th><th style="padding:10px;text-align:left;color:#dc143c;">Администратор</th></tr>
+      <tr style="border-bottom:1px solid rgba(255,255,255,0.05);"><td style="padding:10px;color:#ffd700;font-weight:700;">Owner</td><td style="padding:10px;color:#dc143c;">3</td><td style="padding:10px;color:#ccc;">Tum администратор</td></tr>
+      <tr style="border-bottom:1px solid rgba(255,255,255,0.05);"><td style="padding:10px;color:#e67e22;font-weight:700;">İsminin</td><td style="padding:10px;color:#dc143c;">2</td><td style="padding:10px;color:#ccc;">Команды, пользователи, loglar</td></tr>
+      <tr><td style="padding:10px;color:#3498db;font-weight:700;">Mod</td><td style="padding:10px;color:#dc143c;">1</td><td style="padding:10px;color:#ccc;">Сервера, loglar, предупреждения</td></tr>
     </table>
   </div>
   <div class="section">
-    <h2><i class="fas fa-users-cog" style="color:#dc143c;"></i> Панель Kullanicilari</h2>
-    <div style="background:rgba(220,20,60,0.1);border:1px solid rgba(220,20,60,0.3);border-radius:10px;padding:15px;margin-ботtom:10px;">
+    <h2><i class="fas fa-users-cog" style="color:#dc143c;"></i> Panel Пользователь</h2>
+    <div style="background:rgba(220,20,60,0.1);border:1px solid rgba(220,20,60,0.3);border-radius:10px;padding:15px;margin-bottom:10px;">
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <span style="color:#ffd700;font-weight:700;">owner</span>
         <span style="background:#dc143c;padding:3px 10px;border-radius:10px;font-size:12px;color:white;">OWNER</span>
       </div>
       <div style="color:#888;font-size:12px;margin-top:5px;">Sifre: owner123</div>
     </div>
-    <div style="background:rgba(220,20,60,0.1);border:1px solid rgba(220,20,60,0.3);border-radius:10px;padding:15px;margin-ботtom:10px;">
+    <div style="background:rgba(220,20,60,0.1);border:1px solid rgba(220,20,60,0.3);border-radius:10px;padding:15px;margin-bottom:10px;">
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <span style="color:#e67e22;font-weight:700;">admin</span>
         <span style="background:#e67e22;padding:3px 10px;border-radius:10px;font-size:12px;color:white;">ADMIN</span>
@@ -449,18 +449,18 @@ settings_html = '''{% extends "base.html" %}
       <div style="color:#888;font-size:12px;margin-top:5px;">Sifre: mod123</div>
     </div>
     <div style="margin-top:15px;padding:12px;background:rgba(243,156,18,0.1);border:1px solid rgba(243,156,18,0.3);border-radius:8px;color:#f39c12;font-size:13px;">
-      <i class="fas fa-exclamation-triangle"></i> Production ortaminda bu bilgileri degistirin!
+      <i class="fas fa-exclamation-triangle"></i> Production ortaminda bu информация degistirin!
     </div>
   </div>
   <div class="section">
-    <h2><i class="fas fa-roбот" style="color:#dc143c;"></i> Бот Istatistikleri</h2>
-    <div id="бот-stats" style="color:#aaa;text-align:center;padding:20px;"><i class="fas fa-spinner fa-spin" style="color:#dc143c;"></i> Yukleniyor...</div>
+    <h2><i class="fas fa-robot" style="color:#dc143c;"></i> Bot Статистика</h2>
+    <div id="bot-stats" style="color:#aaa;text-align:center;padding:20px;"><i class="fas fa-spinner fa-spin" style="color:#dc143c;"></i> Yukleniyor...</div>
   </div>
   <div class="section">
-    <h2><i class="fas fa-info-circle" style="color:#dc143c;"></i> Sistem Информацияsi</h2>
+    <h2><i class="fas fa-info-circle" style="color:#dc143c;"></i> Система Информация</h2>
     <div style="display:grid;gap:10px;">
       <div style="background:rgba(220,20,60,0.1);border:1px solid rgba(220,20,60,0.2);border-radius:8px;padding:12px;display:flex;justify-content:space-between;">
-        <span style="color:#888;">Панель Versiyonu</span><span style="color:#ffd700;font-weight:700;">v2.0 Aether</span>
+        <span style="color:#888;">Panel Versiyonu</span><span style="color:#ffd700;font-weight:700;">v2.0 Aether</span>
       </div>
       <div style="background:rgba(220,20,60,0.1);border:1px solid rgba(220,20,60,0.2);border-radius:8px;padding:12px;display:flex;justify-content:space-between;">
         <span style="color:#888;">Framework</span><span style="color:#ccc;">Flask + Discord.py</span>
@@ -475,13 +475,13 @@ settings_html = '''{% extends "base.html" %}
 async function loadStats() {
   var r = await fetch('/api/stats');
   var d = await r.json();
-  if (d.error) { document.getElementById('бот-stats').innerHTML = '<p style="color:#e74c3c;">'+d.error+'</p>'; return; }
-  document.getElementById('бот-stats').innerHTML =
+  if (d.error) { document.getElementById('bot-stats').innerHTML = '<p style="color:#e74c3c;">'+d.error+'</p>'; return; }
+  document.getElementById('bot-stats').innerHTML =
     '<div style="display:grid;gap:10px;">' +
-    '<div style="background:rgba(220,20,60,0.1);border:1px solid rgba(220,20,60,0.2);border-radius:8px;padding:12px;display:flex;justify-content:space-between;"><span style="color:#888;">Сервер Sayisi</span><span style="color:#ffd700;font-weight:700;">'+d.guilds+'</span></div>' +
-    '<div style="background:rgba(220,20,60,0.1);border:1px solid rgba(220,20,60,0.2);border-radius:8px;padding:12px;display:flex;justify-content:space-between;"><span style="color:#888;">Kullanici Sayisi</span><span style="color:#ffd700;font-weight:700;">'+d.users+'</span></div>' +
+    '<div style="background:rgba(220,20,60,0.1);border:1px solid rgba(220,20,60,0.2);border-radius:8px;padding:12px;display:flex;justify-content:space-between;"><span style="color:#888;">Сервер Количество</span><span style="color:#ffd700;font-weight:700;">'+d.guilds+'</span></div>' +
+    '<div style="background:rgba(220,20,60,0.1);border:1px solid rgba(220,20,60,0.2);border-radius:8px;padding:12px;display:flex;justify-content:space-between;"><span style="color:#888;">Пользователь Количество</span><span style="color:#ffd700;font-weight:700;">'+d.users+'</span></div>' +
     '<div style="background:rgba(220,20,60,0.1);border:1px solid rgba(220,20,60,0.2);border-radius:8px;padding:12px;display:flex;justify-content:space-between;"><span style="color:#888;">Ping</span><span style="color:#2ecc71;font-weight:700;">'+d.latency+'ms</span></div>' +
-    '<div style="background:rgba(220,20,60,0.1);border:1px solid rgba(220,20,60,0.2);border-radius:8px;padding:12px;display:flex;justify-content:space-between;"><span style="color:#888;">Статус</span><span style="color:#2ecc71;font-weight:700;">● ONLINE</span></div>' +
+    '<div style="background:rgba(220,20,60,0.1);border:1px solid rgba(220,20,60,0.2);border-radius:8px;padding:12px;display:flex;justify-content:space-between;"><span style="color:#888;">Состояние</span><span style="color:#2ecc71;font-weight:700;">● ONLINE</span></div>' +
     '</div>';
 }
 loadStats();
@@ -491,6 +491,6 @@ loadStats();
 
 with open(os.path.join(templates_dir, 'settings.html'), 'w', encoding='utf-8') as f:
     f.write(settings_html)
-print("settings.html записатьildi")
+print("settings.html написано")
 
-print("\nTum template'ler успешно записатьildi!")
+print("\nTum template'ler успешно написано!")

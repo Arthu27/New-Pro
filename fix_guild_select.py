@@ -3,11 +3,11 @@ import os, re
 GUILD_ID = '1384282749317152878'
 TEMPLATES_DIR = 'web/templates'
 
-# loadGuilds fonksiyonunu sabit ID ile değiştir
+# loadGuilds fonksiyonunu sabit ID с değiştir
 # Pattern: async function loadGuilds() { ... } bloğunu bul ve değiştir
 
 REPLACEMENT = f"""async function loadGuilds() {{
-  // Sabit server ID
+  // Sabit сервер ID
   var gid = '{GUILD_ID}';
   if (typeof selectedGuild !== 'undefined') selectedGuild = gid;
   if (document.getElementById('guild-select')) document.getElementById('guild-select').value = gid;
@@ -31,7 +31,7 @@ REPLACEMENT = f"""async function loadGuilds() {{
   if (typeof loadAnalytics === 'function') {{ loadAnalytics(gid); return; }}
 }}"""
 
-# Сервер выбратьim dropdown'larını gizle
+# Сервер выбор dropdown'larını gizle
 HIDE_SELECT = [
     r'<select[^>]*id=["\']guild-select["\'][^>]*>.*?</select>',
     r'<select[^>]*id=["\']guild-sel["\'][^>]*>.*?</select>',
@@ -48,7 +48,7 @@ for fname in os.listdir(TEMPLATES_DIR):
     
     original = content
     
-    # loadGuilds fonksiyonunu bul ve değiştir (sadece gerзагрузить API çağrısı yapanları)
+    # loadGuilds fonksiyonunu bul ve değiştir (только geri загрузить API çağrısı yapanları)
     # Pattern: async function loadGuilds() { ... /api/guilds ... }
     pattern = re.compile(
         r'async function loadGuilds\(\)\s*\{[^}]*?/api/guilds[^}]*?\}',
@@ -58,7 +58,7 @@ for fname in os.listdir(TEMPLATES_DIR):
     if pattern.search(content):
         content = pattern.sub(REPLACEMENT, content)
     
-    # Сервер выбратьim dropdown'larını gizle (display:none add)
+    # Сервер выбор dropdown'larını gizle (display:none add)
     for pat in HIDE_SELECT:
         content = re.sub(
             pat,

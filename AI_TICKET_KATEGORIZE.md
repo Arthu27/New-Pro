@@ -1,102 +1,102 @@
-# AI Ticket Sistemi - Kategorize Destek
+# AI Ticket Система - Kategorize Поддержка
 
-## 🎯 Yeni Özellik: Akıllı Kategorizasyon
+## 🎯 Новый Особенность: Akıllı Kategorizasyon
 
-AI artık kullanıcının mesajını otomatik olarak kategorize ediyor ve ona göre davranıyor:
+AI теперь пользователя сообщение автоматически как kategorize ediyor ve ona по davranıyor:
 
 ### Kategoriler
 
-1. **Şikayet** 🛡️
-   - Kanıt ister
-   - Mesaj geçmişini kontrol eder
-   - Jail cezası verebilir
-   - Ağır durumlarda yönlendirir
+1. **Жалоба** 🛡️
+   - Доказательство хочет
+   - Сообщение историю контроль eder
+   - Jail наказание verebilir
+   - Тяжелый состояние направление
 
 2. **Soru** 💡
-   - Panel, kayıt, komutlar
-   - Roller, ekonomi, level
-   - Genel bilgiler
-   - Kısa ve net cevaplar
+   - Panel, запись, команды
+   - Роли, ekonomi, level
+   - Общий информация
+   - Краткий ve net cevaplar
 
 3. **Teknik** 🔧
    - Bot çalışmıyor
    - Müzik/ses sorunları
    - Ticket açılmıyor
    - Panel sorunları
-   - Çözüm odaklı
+   - Решение комната
 
 4. **Diğer** 📋
-   - Belirsiz durumlar
-   - Genel yardım
+   - Belirsiz состояние
+   - Общий помощь
    - Kategori tespiti
 
-## 🔄 Nasıl Çalışır?
+## 🔄 Как Çalışır?
 
 ```
-Kullanıcı mesajı
+Пользователь сообщение
        ↓
 Kategori Tespiti
 (anahtar kelime analizi)
        ↓
   ┌────────────┬────────────┬────────────┐
   ↓            ↓            ↓            ↓
-Şikayet      Soru        Teknik       Diğer
+Жалоба      Soru        Teknik       Diğer
 Prompt       Prompt      Prompt       Prompt
   ↓            ↓            ↓            ↓
-Kanıt iste   Cevapla     Çözüm sun    Yönlendir
+Доказательство желание   Cevapla     Решение sun    Направление
 ```
 
-## 📝 Örnekler
+## 📝 Пример
 
-### Şikayet
+### Жалоба
 ```
-Kullanıcı: "X kişisi bana hakaret etti"
-AI: [Şikayet prompt'u aktif]
-    "📋 Şikayetinizi incelemek için kanıt yükleyiniz..."
+Пользователь: "X человек bana оскорбление etti"
+AI: [Жалоба prompt'u активен]
+    "📋 Жалоба incelemek для доказательство загруз..."
 ```
 
 ### Soru
 ```
-Kullanıcı: "Panel nasıl kullanılır?"
-AI: [Soru prompt'u aktif]
+Пользователь: "Panel как использовать?"
+AI: [Soru prompt'u активен]
     "🌐 Panel adresi duyurularda paylaşılır.
-    Discord ile giriş yapabilirsin..."
+    Discord с вход yapabilirsin..."
 ```
 
 ### Teknik
 ```
-Kullanıcı: "Bot cevap vermiyor"
-AI: [Teknik prompt'u aktif]
-    "🔧 Slash komutları (/) kullanıyor musun?
-    /help komutunu dene..."
+Пользователь: "Bot ответитьmiyor"
+AI: [Teknik prompt'u активен]
+    "🔧 Slash команды (/) использовать musun?
+    /help команду dene..."
 ```
 
 ## 🎨 Avantajlar
 
-✅ **Daha Tutarlı**: Her kategori kendi prompt'una odaklanır
-✅ **Daha Hızlı**: AI kafası karışmaz, direkt cevap verir
-✅ **Daha Akıllı**: Kategori geçmişi korunur
-✅ **Daha Esnek**: Yeni kategoriler kolayca eklenebilir
+✅ **Более Tutarlı**: Каждый kategori kendi prompt'una комната
+✅ **Более Быстрый**: AI kafası karışmaz, direkt ответитьir
+✅ **Более Akıllı**: Kategori история korunur
+✅ **Более Esnek**: Новый kategoriler kolayca добавл
 
-## 🛠️ Teknik Detaylar
+## 🛠️ Teknik Детали
 
-### Yeni Fonksiyonlar
+### Новый Fonksiyonlar
 
 - `_detect_category(message, history)` → Kategori tespiti
-- `_prompt_sikayet()` → Şikayet prompt'u
+- `_prompt_sikayet()` → Жалоба prompt'u
 - `_prompt_soru()` → Soru prompt'u
 - `_prompt_teknik()` → Teknik prompt'u
-- `_prompt_diger()` → Genel prompt
-- `_get_prompt_by_category(category)` → Prompt seçici
+- `_prompt_diger()` → Общий prompt
+- `_get_prompt_by_category(category)` → Prompt выбрать
 
-### Güncellenen Fonksiyonlar
+### Обновл Fonksiyonlar
 
-- `ai_ticket_response()` → Artık kategoriye göre prompt kullanıyor
-- `ai_ticket_greeting()` → Daha genel karşılama mesajı
+- `ai_ticket_response()` → Теперь kategoriye по prompt использовать
+- `ai_ticket_greeting()` → Более общий приветствие сообщение
 
-## 🚀 Kullanım
+## 🚀 Использование
 
-Hiçbir değişiklik gerekmez! `ticket.py` aynı şekilde çalışmaya devam eder.
+Hiçbir изменение gerekmez! `ticket.py` одинаковый şekilde работа devam eder.
 
 ```python
 response, should_escalate, category, history = ai_ticket_response(
@@ -106,19 +106,19 @@ response, should_escalate, category, history = ai_ticket_response(
 )
 ```
 
-AI otomatik olarak kategoriyi tespit edip doğru prompt'u kullanacak.
+AI автоматически как kategoriyi tespit edip верно prompt'u использовать.
 
 ## 📊 Kategori Anahtar Kelimeleri
 
-**Şikayet:**
-- şikayet, hakaret, küfür, tehdit, taciz, zorbalık, saldırı, rapor, ihbar
+**Жалоба:**
+- жалоба, оскорбление, мат, tehdit, taciz, zorbalık, saldırı, rapor, ihbar
 
-**Soru:**
-- nasıl, panel, kayıt, giriş, nerede, komut, yardım, bilgi, öğrenmek
+**Вопрос:**
+- как, panel, запись, вход, где, команда, помощь, информация, öğrenmek
 
 **Teknik:**
-- çalışmıyor, hata, bug, sorun, bozuk, açılmıyor, müzik, ses, voice
+- çalışmıyor, ошибка, bug, sorun, bozuk, açılmıyor, музыка, ses, voice
 
-## 🎯 Sonuç
+## 🎯 В конецuç
 
-AI artık hem şikayetleri çözüyor, hem sorulara cevap veriyor, hem de teknik destek sağlıyor — hepsi aynı ticket sisteminde!
+AI теперь hem жалоба çözüyor, hem sorulara ответитьiyor, hem de teknik поддержка sağlıyor — hepsi одинаковый ticket sisteminde!

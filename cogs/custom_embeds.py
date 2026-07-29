@@ -1,4 +1,4 @@
-"""Custom Embed Builder - Allows server admins to create custom embeds"""
+"""Custom Embed Builder - Allows сервер admins to create custom embeds"""
 import discord
 from discord.ext import commands
 from discord import app_commands

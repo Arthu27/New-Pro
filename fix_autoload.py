@@ -1,4 +1,4 @@
-"""Во всех шаблонах loadGuilds sonrası ilk server автоматически выбирать"""
+"""Vo все sablonah loadGuilds sonrası ilk сервер автоматически как vibirat"""
 import os, re
 
 templates_dir = "web/templates"
@@ -18,7 +18,7 @@ for fname in os.listdir(templates_dir):
     # loadGuilds fonksiyonunu bul ve düzelt
     # Pattern: guilds.forEach(...); } (son satır) -> guilds.forEach(...); if(guilds.length>0){sel.value=guilds[0].id; loadSettings();}
     
-    # Farklı pattern'ler dene
+    # Разница pattern'ler dene
     patterns = [
         # Pattern 1: forEach sonrası kapanış
         (r'(guilds\.forEach\([^;]+;\s*\n\s*\})',
@@ -32,7 +32,7 @@ for fname in os.listdir(templates_dir):
     if new_content != content:
         with open(path, 'w', encoding='utf-8') as f:
             f.write(new_content)
-        print(f"✅ Исправлено: {fname}")
+        print(f"✅ Haklarıkuruldu: {fname}")
         fixed += 1
 
-print(f"\nВсего {fixed} dosya исправлено.")
+print(f"\nToplam {fixed} dosya haklarıkuruldu.")

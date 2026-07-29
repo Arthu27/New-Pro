@@ -1,220 +1,220 @@
 ﻿╔═══════════════════════════════════════════════════════════════════════════╗
-║                  🛡️ AI MODERATOR SİSTEMİ AKIŞI                           ║
+║                  🛡️ AI MODERATOR СИСТЕМА AKIŞI                           ║
 ╚═══════════════════════════════════════════════════════════════════════════╝
 
 ┌─────────────────────────────────────────────────────────────────────────┐
-│  1️⃣  TICKET AÇILMA VE KARŞILAMA                                          │
+│  1️⃣  TICKET AÇILMA VE ПРИВЕТСТВИЕ                                          │
 └─────────────────────────────────────────────────────────────────────────┘
 
-    Kullanıcı ticket açar
+    Пользователь ticket açar
                 ↓
-    🤖 AI Moderator karşılar:
+    🤖 AI Moderator приветствие:
     
     "Merhabalar, ben Aether Moderator.
-     Sorununuzu detaylı açıklayınız.
+     Sorununuzu детали açıklayınız.
      
-     Şikayet için:
-     1️⃣ Kullanıcı ID
-     2️⃣ Olay açıklaması
-     3️⃣ KANIT: Ekran görüntüsü
+     Жалоба для:
+     1️⃣ Пользователь ID
+     2️⃣ Olay описание
+     3️⃣ ДОКАЗАТЕЛЬСТВО: Ekran скриншот
      
-     ⚠️ Kanıtsız şikayetler işleme alınmaz."
+     ⚠️ Доказательство жалобы действие alınmaz."
 
 
 ┌─────────────────────────────────────────────────────────────────────────┐
-│  2️⃣  ŞİKAYET SÜRECİ                                                      │
+│  2️⃣  ЖАЛОБА ДЛИТЕЛЬНОСТЬ                                                      │
 └─────────────────────────────────────────────────────────────────────────┘
 
-    Kullanıcı: "X kişisi bana hakaret etti"
+    Пользователь: "X человек bana оскорбление etti"
                 ↓
-    🤖 AI: "Şikayetinizi incelemek için:
-            • Kullanıcı ID veya @mention
-            • Ekran görüntüsü yükleyiniz
-            • Ne zaman oldu belirtiniz"
+    🤖 AI: "Жалоба incelemek для:
+            • Пользователь ID или @mention
+            • Ekran скриншот загруз
+            • Ne время oldu belirtiniz"
                 ↓
-    Kullanıcı: [Ekran görüntüsü yükler]
-               "@user123 bana 'aptal' dedi, 5 dakika önce"
+    Пользователь: [Ekran скриншот загруз]
+               "@user123 bana 'aptal' dedi, 5 dakika до"
                 ↓
-    🤖 AI: [ANALYZE_IMAGE] tag'i ile analiz başlatır
-           [CHECK_HISTORY] tag'i ile mesaj geçmişini kontrol eder
+    🤖 AI: [ANALYZE_IMAGE] tag'i с analiz запуск
+           [CHECK_HISTORY] tag'i с сообщение историю контроль eder
 
 
 ┌─────────────────────────────────────────────────────────────────────────┐
-│  3️⃣  KANIT ANALİZİ                                                       │
+│  3️⃣  ДОКАЗАТЕЛЬСТВО ANALİZİ                                                       │
 └─────────────────────────────────────────────────────────────────────────┘
 
     ┌───────────────────────────────────────┐
-    │  Ekran Görüntüsü Analizi:             │
-    │  ✓ Mesaj içeriği okunuyor             │
-    │  ✓ Zaman damgası kontrol ediliyor     │
-    │  ✓ Kullanıcı adları kontrol ediliyor  │
+    │  Ekran Скриншот Analizi:             │
+    │  ✓ Сообщение содержимое okunuyor             │
+    │  ✓ Время damgası контроль ediliyor     │
+    │  ✓ Пользователь adları контроль ediliyor  │
     └───────────────────────────────────────┘
                 ↓
     ┌───────────────────────────────────────┐
-    │  Mesaj Geçmişi Kontrolü:              │
-    │  ✓ Son 50 mesaj alınıyor              │
-    │  ✓ Şikayet edilen kullanıcının        │
-    │    mesajları bulunuyor                │
-    │  ✓ Zaman farkı hesaplanıyor           │
+    │  Сообщение История Контроль:              │
+    │  ✓ В конец 50 сообщение alınıyor              │
+    │  ✓ Жалоба edilen пользователя        │
+    │    сообщения найден                │
+    │  ✓ Время разница hesaplanıyor           │
     └───────────────────────────────────────┘
                 ↓
     ┌───────────────────────────────────────┐
-    │  Doğrulama:                           │
-    │  • Ekran görüntüsü gerçek mi?         │
-    │  • Mesajlar uyuşuyor mu?              │
-    │  • Zaman farkı 30 dakikadan az mı?    │
+    │  Проверка:                           │
+    │  • Ekran скриншот gerçek mi?         │
+    │  • Сообщения uyuşuyor mu?              │
+    │  • Время разница 30 dakikadan az mı?    │
     └───────────────────────────────────────┘
 
 
 ┌─────────────────────────────────────────────────────────────────────────┐
-│  4️⃣  CİDDİYET DEĞERLENDİRMESİ                                            │
+│  4️⃣  CİDDİYET ЗНАЧЕНИЕ                                            │
 └─────────────────────────────────────────────────────────────────────────┘
 
-                    Kanıt Doğrulandı
+                    Доказательство Проверка
                             ↓
             ┌───────────────┼───────────────┐
             │               │               │
-        🟢 HAFİF        🟡 ORTA         🔴 AĞIR
+        🟢 HAFİF        🟡 ORTA         🔴 ТЯЖЕЛЫЙ
             │               │               │
             ↓               ↓               ↓
-    Tek küfür      Tekrarlayan      Tehdit
-    Küçük tartışma  hakaret         Nefret söylemi
+    Tek мат      Tekrarlayan      Tehdit
+    Маленький tartışma  оскорбление         Nefret сказатьmi
     1-2 spam       Orta spam        Cinsel taciz
             │               │               │
             ↓               ↓               ↓
-    SADECE UYARI    JAIL 30-60 DK   JAIL 120 DK
-                                    + YÖNLENDİRME
+    ТОЛЬКО ПРЕДУПРЕЖДЕНИЕ    JAIL 30-60 DK   JAIL 120 DK
+                                    + НАПРАВЛЕНИЕ
 
 
 ┌─────────────────────────────────────────────────────────────────────────┐
-│  5️⃣  KARAR UYGULAMA                                                      │
+│  5️⃣  KARAR ПРИМЕН                                                      │
 └─────────────────────────────────────────────────────────────────────────┘
 
-    ═══ SENARYO A: UYARI ═══
+    ═══ SENARYO A: ПРЕДУПРЕЖДЕНИЕ ═══
     
-    🤖 AI: "✅ İnceleme tamamlandı.
+    🤖 AI: "✅ İnceleme завершено.
             
-            Kullanıcıya uyarı verildi.
-            Tekrar ederse daha ağır ceza alacaktır."
+            Выдать предупреждение пользователюildi.
+            Tekrar ederse более тяжелый наказание alacaktır."
     
-    [Sadece mesaj gönderilir, ceza yok]
+    [Только сообщение отправл, наказание yok]
 
 
     ═══ SENARYO B: JAIL (ORTA) ═══
     
-    🤖 AI: [JAIL] tag'i ile jail komutu verir:
+    🤖 AI: [JAIL] tag'i с jail команда verir:
     
     ```
     [JAIL]
     user_id: 123456789
     duration: 30
-    reason: Tekrarlayan hakaret
+    reason: Tekrarlayan оскорбление
     ```
                 ↓
     ┌───────────────────────────────────────┐
-    │  Jail Uygulanıyor:                    │
-    │  1. Jail rolü oluştur (yoksa)         │
-    │  2. Kullanıcıya jail rolü ver         │
-    │  3. Kullanıcıya DM gönder             │
+    │  Jail Применитьnıyor:                    │
+    │  1. Jail роль создать (yoksa)         │
+    │  2. Пользователю jail роль ver         │
+    │  3. Пользователю DM отправить             │
     │  4. Ticket'e bildir                   │
-    │  5. Mod log'a kaydet                  │
+    │  5. Mod log'a сохранить                  │
     │  6. 30 dakika bekle                   │
-    │  7. Jail rolünü kaldır                │
-    │  8. Kullanıcıya DM gönder (serbest)   │
+    │  7. Jail роль удалить                │
+    │  8. Пользователю DM отправить (serbest)   │
     └───────────────────────────────────────┘
                 ↓
-    🤖 AI: "✅ İnceleme tamamlandı.
+    🤖 AI: "✅ İnceleme завершено.
             
-            📋 KARAR: Jail cezası verildi
-            👤 Kullanıcı: @user123
-            ⏱️ Süre: 30 dakika
-            📝 Sebep: Tekrarlayan hakaret
+            📋 KARAR: Jail наказание verildi
+            👤 Пользователь: @user123
+            ⏱️ Длительность: 30 dakika
+            📝 Причина: Tekrarlayan оскорбление
             
-            Olayı çözmekte size yetkili ekibimiz
-            yardımcı olacaktır."
+            Olayı çözmekte size администратор ekibimiz
+            помощник olacaktır."
 
 
-    ═══ SENARYO C: JAIL + YÖNLENDİRME (AĞIR) ═══
+    ═══ SENARYO C: JAIL + НАПРАВЛЕНИЕ (ТЯЖЕЛЫЙ) ═══
     
-    🤖 AI: [JAIL] + [ESCALATE] tag'leri ile:
+    🤖 AI: [JAIL] + [ESCALATE] tag'leri с:
     
     ```
     [JAIL]
     user_id: 123456789
     duration: 120
-    reason: Ağır hakaret ve tehdit
+    reason: Тяжелый оскорбление ve tehdit
     
     [ESCALATE]
     Kategori: agir_ihlal
-    Aciklama: Tehdit içeren mesajlar
+    Aciklama: Tehdit içeren сообщения
     ```
                 ↓
-    1. Jail uygulanır (120 dakika)
-    2. Yetkililere yönlendirme embed'i
-    3. Destek rolü ping atılır
+    1. Jail примен (120 dakika)
+    2. Администрации направление embed'i
+    3. Поддержка роль ping atılır
                 ↓
-    🤖 AI: "✅ İnceleme tamamlandı.
+    🤖 AI: "✅ İnceleme завершено.
             
-            📋 KARAR: Jail cezası verildi
-            👤 Kullanıcı: @user123
-            ⏱️ Süre: 120 dakika
-            📝 Sebep: Ağır hakaret ve tehdit
+            📋 KARAR: Jail наказание verildi
+            👤 Пользователь: @user123
+            ⏱️ Длительность: 120 dakika
+            📝 Причина: Тяжелый оскорбление ve tehdit
             
-            🔄 Yetkililere yönlendiriliyor..."
+            🔄 Администрации направление..."
                 ↓
-    🔔 Destek rolü ping atılır
-    👥 Yetkililer konuyu ele alır
+    🔔 Поддержка роль ping atılır
+    👥 Администраторы konuyu ele получает
 
 
     ═══ SENARYO D: REDDEDİLDİ ═══
     
-    Kanıt yetersiz / Zaman farkı çok fazla
+    Доказательство yetersiz / Время разница очень fazla
                 ↓
-    🤖 AI: "❌ Şikayetiniz reddedildi.
+    🤖 AI: "❌ Жалоба reddedildi.
             
-            📋 SEBEP:
-            - Mesajlar uyuşmuyor
-            - Zaman farkı çok fazla (30+ dakika)
-            - Ciddi ihlal tespit edilemedi
+            📋 ПРИЧИНА:
+            - Сообщения uyuşmuyor
+            - Время разница очень fazla (30+ dakika)
+            - Ciddi нарушение tespit edilemedi
             
-            ⚠️ Sahte şikayet ceza alabilir."
+            ⚠️ Sahte жалоба наказание alabilir."
 
 
 ┌─────────────────────────────────────────────────────────────────────────┐
-│  6️⃣  JAIL SÜRECİ DETAYI                                                  │
+│  6️⃣  JAIL ДЛИТЕЛЬНОСТЬ ДЕТАЛИ                                                  │
 └─────────────────────────────────────────────────────────────────────────┘
 
-    Jail Komutu Verildi
+    Jail Команда Verildi
             ↓
     ┌───────────────────────────────────────┐
-    │  1. Jail Rolü Kontrolü                │
-    │     • "Jail" rolü var mı?             │
-    │     • Yoksa oluştur                   │
-    │     • Tüm kanallarda izinleri ayarla  │
+    │  1. Jail Роль Контроль                │
+    │     • "Jail" роль var mı?             │
+    │     • Yoksa создать                   │
+    │     • Все в каналах izinleri настройк  │
     └───────────────────────────────────────┘
             ↓
     ┌───────────────────────────────────────┐
-    │  2. Kullanıcıya Rol Ver               │
+    │  2. Пользователю Роль Ver               │
     │     • target_user.add_roles(jail)     │
     │     • Reason: "AI Moderator: ..."     │
     └───────────────────────────────────────┘
             ↓
     ┌───────────────────────────────────────┐
-    │  3. Kullanıcıya DM Gönder             │
-    │     "⚠️ Jail Cezası Aldınız"          │
-    │     Süre: X dakika                    │
-    │     Sebep: ...                        │
+    │  3. Пользователю DM Отправить             │
+    │     "⚠️ Jail Наказание Aldınız"          │
+    │     Длительность: X dakika                    │
+    │     Причина: ...                        │
     └───────────────────────────────────────┘
             ↓
     ┌───────────────────────────────────────┐
     │  4. Ticket'e Bildir                   │
-    │     "✅ Jail cezası uygulandı"        │
-    │     Kullanıcı: @user                  │
-    │     Süre: X dakika                    │
+    │     "✅ Jail наказание применено"        │
+    │     Пользователь: @user                  │
+    │     Длительность: X dakika                    │
     └───────────────────────────────────────┘
             ↓
     ┌───────────────────────────────────────┐
-    │  5. Mod Log'a Kaydet                  │
+    │  5. Mod Log'a Сохранить                  │
     │     Category: moderation              │
     │     Action: ai_jail                   │
     │     Details: {...}                    │
@@ -223,30 +223,30 @@
     ⏱️  X Dakika Bekle (asyncio.sleep)
             ↓
     ┌───────────────────────────────────────┐
-    │  6. Jail Rolünü Kaldır                │
+    │  6. Jail Роль Удалить                │
     │     • target_user.remove_roles(jail)  │
-    │     • Reason: "Jail süresi doldu"     │
+    │     • Reason: "Jail длительность doldu"     │
     └───────────────────────────────────────┘
             ↓
     ┌───────────────────────────────────────┐
-    │  7. Kullanıcıya DM Gönder             │
-    │     "✅ Jail cezanız sona erdi"       │
-    │     Artık normal erişim               │
+    │  7. Пользователю DM Отправить             │
+    │     "✅ Jail наказание sona erdi"       │
+    │     Теперь normal erişim               │
     └───────────────────────────────────────┘
 
 
 ┌─────────────────────────────────────────────────────────────────────────┐
-│  7️⃣  GÜVENLİK KONTROLLERI                                                │
+│  7️⃣  БЕЗОПАСНОСТЬ КОНТРОЛЬ                                                │
 └─────────────────────────────────────────────────────────────────────────┘
 
     ┌───────────────────────────────────────┐
-    │  Sahte Şikayet Koruması:              │
-    │  ✓ Mesaj geçmişi kontrolü            │
-    │  ✓ Zaman farkı kontrolü               │
-    │  ✓ Ekran görüntüsü doğrulama          │
+    │  Sahte Жалоба Koruması:              │
+    │  ✓ Сообщение история контроль            │
+    │  ✓ Время разница контроль               │
+    │  ✓ Ekran скриншот проверка          │
     └───────────────────────────────────────┘
                 ↓
-    Zaman farkı 30+ dakika mı?
+    Время разница 30+ dakika mı?
                 ↓
             ┌───┴───┐
             │       │
@@ -257,10 +257,10 @@
 
 
     ┌───────────────────────────────────────┐
-    │  Jail Kötüye Kullanım Koruması:       │
+    │  Jail Kötüye Использование Koruması:       │
     │  ✓ Max jail: 120 dakika               │
-    │  ✓ Tüm işlemler loglanır              │
-    │  ✓ Yetkililer override edebilir       │
+    │  ✓ Все действия loglanır              │
+    │  ✓ Администраторы override edebilir       │
     └───────────────────────────────────────┘
 
 
@@ -270,83 +270,83 @@
 
 ┌─────────────────────────────────────────────────────────────────────────┐
 │  🟢 HAFİF SEVİYE                                                          │
-│  • Tek seferlik küfür                                                    │
-│  • Küçük tartışma                                                        │
-│  • Spam (1-2 mesaj)                                                      │
+│  • Tek seferlik мат                                                    │
+│  • Маленький tartışma                                                        │
+│  • Spam (1-2 сообщение)                                                      │
 │                                                                           │
-│  AI AKSIYONU: Sadece uyarı mesajı                                        │
+│  AI AKSIYONU: Только предупреждение сообщение                                        │
 └─────────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────────┐
 │  🟡 ORTA SEVİYE                                                           │
-│  • Tekrarlayan hakaret                                                   │
-│  • Küçük düşürme                                                         │
+│  • Tekrarlayan оскорбление                                                   │
+│  • Маленький düşürme                                                         │
 │  • Orta seviye spam                                                      │
-│  • Sürekli rahatsız etme                                                 │
+│  • Длительность rahatsız etme                                                 │
 │                                                                           │
 │  AI AKSIYONU: Jail 30-60 dakika                                          │
 └─────────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────────┐
-│  🔴 AĞIR SEVİYE                                                           │
-│  • Ağır hakaret, tehdit                                                  │
-│  • Irkçılık, nefret söylemi                                              │
+│  🔴 ТЯЖЕЛЫЙ SEVİYE                                                           │
+│  • Тяжелый оскорбление, tehdit                                                  │
+│  • Irkçılık, nefret сказатьmi                                              │
 │  • Cinsel taciz                                                          │
-│  • Sürekli spam/raid                                                     │
+│  • Длительность spam/raid                                                     │
 │                                                                           │
-│  AI AKSIYONU: Jail 120 dakika + Yetkililere yönlendirme                 │
+│  AI AKSIYONU: Jail 120 dakika + Администрации направление                 │
 └─────────────────────────────────────────────────────────────────────────┘
 
 
 ╔═══════════════════════════════════════════════════════════════════════════╗
-║                      🎮 ÖRNEK SENARYO                                     ║
+║                      🎮 ПРИМЕР SENARYO                                     ║
 ╚═══════════════════════════════════════════════════════════════════════════╝
 
-👤 Kullanıcı: [Ticket açar]
+👤 Пользователь: [Ticket açar]
     ↓
 🤖 AI: "Merhabalar, ben Aether Moderator..."
     ↓
-👤 Kullanıcı: "X kişisi bana hakaret etti"
+👤 Пользователь: "X человек bana оскорбление etti"
     ↓
-🤖 AI: "Kanıt yükleyiniz"
+🤖 AI: "Доказательство загруз"
     ↓
-👤 Kullanıcı: [Ekran görüntüsü] "@user123 bana 'aptal' dedi, 5 dakika önce"
+👤 Пользователь: [Ekran скриншот] "@user123 bana 'aptal' dedi, 5 dakika до"
     ↓
 🤖 AI: [Analiz ediyor...]
-       [Mesaj geçmişini kontrol ediyor...]
-       [Zaman farkı: 5 dakika ✓]
-       [Mesajlar uyuşuyor ✓]
+       [Сообщение историю контроль ediyor...]
+       [Время разница: 5 dakika ✓]
+       [Сообщения uyuşuyor ✓]
        [Ciddiyet: ORTA]
     ↓
-🤖 AI: "✅ İnceleme tamamlandı.
+🤖 AI: "✅ İnceleme завершено.
         
-        📋 KARAR: Jail cezası verildi
-        👤 Kullanıcı: @user123
-        ⏱️ Süre: 30 dakika
-        📝 Sebep: Tekrarlayan hakaret"
+        📋 KARAR: Jail наказание verildi
+        👤 Пользователь: @user123
+        ⏱️ Длительность: 30 dakika
+        📝 Причина: Tekrarlayan оскорбление"
     ↓
-[user123'e otomatik jail rolü verilir]
-[user123'e DM gönderilir]
-[Mod log'a kaydedilir]
+[user123'e автоматически jail роль verilir]
+[user123'e DM отправл]
+[Mod log'a сохран]
     ↓
 ⏱️  30 dakika bekle...
     ↓
-[Jail rolü otomatik kaldırılır]
-[user123'e DM gönderilir: "Jail sona erdi"]
+[Jail роль автоматически удален]
+[user123'e DM отправл: "Jail sona erdi"]
 
 
 ╔═══════════════════════════════════════════════════════════════════════════╗
-║                         ✅ SİSTEM HAZIR!                                  ║
+║                         ✅ СИСТЕМА HAZIR!                                  ║
 ╚═══════════════════════════════════════════════════════════════════════════╝
 
-AI Moderator artık:
-✓ Şikayetleri dinliyor
-✓ Kanıt istiyor
+AI Moderator теперь:
+✓ Жалоба dinliyor
+✓ Доказательство istiyor
 ✓ Analiz ediyor
-✓ Jail cezası verebiliyor
-✓ Otomatik kaldırıyor
-✓ Sadece gerektiğinde yönlendiriyor
+✓ Jail наказание verebiliyor
+✓ Автоматически удален
+✓ Только gerektiğinde направление
 
-Kullanıcılar daha hızlı yardım alacak!
-Yetkililer daha az basit durumla uğraşacak!
-Sunucu daha güvenli olacak!
+Пользователи более быстрый помощь alacak!
+Администраторы более az basit состояние uğraşacak!
+Сервер более доверие olacak!

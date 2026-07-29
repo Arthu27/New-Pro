@@ -1,7 +1,7 @@
 from flask import Flask
 import json
 import discord
-from web.app import bot_instance as бот
+from web.app import bot_instance as bot
 from cogs.giveaway import GiveawayView
 import asyncio
 from datetime import timedelta, datetime
@@ -29,7 +29,7 @@ def fix():
     
     async def send():
         ch = bot.get_channel(int(channel_id))
-        embed = discord.Embed(title=f'🎉 {prize}', description='**Katılmak için butona bas!**', color=0xffd700)
+        embed = discord.Embed(title=f'🎉 {prize}', description='**Katılmak для butona bas!**', color=0xffd700)
         embed.add_field(name='Kazanan', value=winners, inline=True)
         embed.add_field(name='Katılımcı', value='0/{}'.format(winners), inline=True)
         embed.add_field(name='Bitiş', value=f'<t:{int(datetime.utcnow().timestamp())+duration*60}:R>', inline=True)

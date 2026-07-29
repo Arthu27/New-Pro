@@ -27,15 +27,15 @@ class AutoMod(commands.Cog):
         self.invite_pattern = re.compile(r'discord\.gg/\S+|discord\.com/invite/\S+')
 
     async def _get_log_ch(self, guild):
-        """Наказание messageları için log channelını döndür."""
+        """Наказание messageları для log channelını вернуть."""
         ch = guild.get_channel(LOG_CHANNEL_ID)
         if ch:
             return ch
-        # Fallback: mod-log channelı
+        # Fallback: mod-log канал
         return discord.utils.get(guild.text_channels, name="mod-log")
 
     async def _purge_user(self, channel, member, limit=5):
-        """Пользователя son N messageını удалить."""
+        """Пользователь son N messageını удалить."""
         try:
             deleted = 0
             async for msg in channel.history(limit=100):
@@ -50,22 +50,22 @@ class AutoMod(commands.Cog):
 
     async def _punish(self, message, title, desc, color, action=None, duration_min=5):
         """
-        Наказание uygula:
-        - Tetikleyen messageı удалить
-        - Наказание embed'ini LOG channelına отправить (chatte gösterme)
+        Наказание примен:
+        - Tetikleyen сообщение удалить
+        - Наказание embed'ini LOG в канал отправить (chatte показ)
         - action: 'timeout' | None
         """
         member = message.author
         channel = message.channel
         guild = message.guild
 
-        # Tetikleyen messageı удалить
+        # Tetikleyen сообщение удалить
         try:
             await message.delete()
         except Exception:
             pass
 
-        # Мут uygula
+        # Mute примен
         if action == 'timeout':
             try:
                 await member.timeout(
@@ -75,19 +75,19 @@ class AutoMod(commands.Cog):
             except Exception:
                 pass
 
-        # Наказание embed'ini log channelına отправить
+        # Наказание embed'ini log в канал отправить
         log_ch = await self._get_log_ch(guild)
         if log_ch:
             e = discord.Embed(title=title, color=color, timestamp=discord.utils.utcnow())
             e.description = (
-                f"```ansi\n\u001b[1;31m⚡ OTOMATİK MODERASYON\u001b[0m\n```\n"
+                f"```ansi\n\u001b[1;31m⚡ АВТОМАТИЧЕСКИ MODERASYON\u001b[0m\n```\n"
                 f"{DIV}\n\n{desc}\n\n{DIV}"
             )
             e.set_thumbnail(url=member.display_avatar.url)
             e.add_field(name="👤 Пользователь", value=f"{member.mention}\n`{member.id}`", inline=True)
             e.add_field(name="📺 Канал", value=channel.mention, inline=True)
             if action == 'timeout':
-                e.add_field(name="⏳ Наказание", value=f"```{duration_min} minutes мут```", inline=True)
+                e.add_field(name="⏳ Наказание", value=f"```{duration_min} minutes mute```", inline=True)
             e.set_footer(text="🤖 Aether AutoMod")
             await log_ch.send(embed=e)
 
@@ -95,7 +95,7 @@ class AutoMod(commands.Cog):
     async def on_message(self, message):
         if message.author.bot or not message.guild:
             return
-        # Модератор, admin ve server sahibi bypass
+        # Модератор, admin ve сервер sahibi bypass
         if (message.author.guild_permissions.moderate_members or
             message.author.guild_permissions.administrator or
             message.author.id == message.guild.owner_id):
@@ -104,22 +104,22 @@ class AutoMod(commands.Cog):
         guild_id = str(message.guild.id)
         cfg = _load_cfg(guild_id)
 
-        # Config yoksa hiçbir şey yapma
+        # Config yoksa hiçbir что-то yapma
         if not cfg:
             return
 
-        # Muaf channel kontroleü
+        # Muaf channel контроль
         exempt = cfg.get('exempt_channels', [])
         if str(message.channel.id) in exempt:
             return
 
-        # Запрещённое kelimeler — sadece panel'de kelime varsa çalışır
+        # Zapresennoe kelimeler — только panel'de kelime varsa çalışır
         panel_words = cfg.get('banned_words', [])
         if panel_words:
             if await self._check_bad_words(message, panel_words):
                 return
 
-        # Spam koruması — sadece message удалить, timeout atma
+        # Spam koruması — только message удалить, timeout atma
         if cfg.get('spam_protection', False):
             if await self._check_spam(message, cfg):
                 return
@@ -160,7 +160,7 @@ class AutoMod(commands.Cog):
                 await self._punish(
                     message,
                     "🚫  YASAKLI KELİME",
-                    f"{message.author.mention} запрещённое kelime использовано!\n**📋 Причина:** `{word}` kelimesi запрещено",
+                    f"{message.author.mention} zapresennoe kelime ispolzovano!\n**📋 Причина:** `{word}` kelimesi zapreseno",
                     0xe74c3c
                 )
                 return True
@@ -180,7 +180,7 @@ class AutoMod(commands.Cog):
                 pass
             try:
                 warn_msg = await message.channel.send(
-                    f"{message.author.mention} çok hızlı message atıyorsun, yavaşla!",
+                    f"{message.author.mention} очень быстрый message atıyorsun, yavaşla!",
                     delete_after=5
                 )
             except Exception:
@@ -195,8 +195,8 @@ class AutoMod(commands.Cog):
         if ratio > 0.7:
             await self._punish(
                 message,
-                "🔠  CAPS LOCK UYARISI",
-                f"{message.author.mention} aşırı büyük harf kullanma!\n**📋 Причина:** CAPS filtresi ihlali",
+                "🔠  CAPS LOCK ПРЕДУПРЕЖДЕНИЕ",
+                f"{message.author.mention} aşırı большой harf использовать!\n**📋 Причина:** CAPS filtresi нарушение",
                 0xf39c12
             )
             return True
@@ -208,7 +208,7 @@ class AutoMod(commands.Cog):
         await self._punish(
             message,
             "🔗  LİNK ENGELLENDİ",
-            f"{message.author.mention} link paylaşma правоn yok!\n**📋 Причина:** Link filtresi ihlali",
+            f"{message.author.mention} link paylaşma администратор yok!\n**📋 Причина:** Link filtresi нарушение",
             0xe67e22
         )
         return True
@@ -219,7 +219,7 @@ class AutoMod(commands.Cog):
         await self._punish(
             message,
             "📨  DAVET LİNKİ ENGELLENDİ",
-            f"{message.author.mention} davet linki paylaşamazsın!\n**📋 Причина:** Davet filtresi ihlali",
+            f"{message.author.mention} davet linki paylaşamazsın!\n**📋 Причина:** Davet filtresi нарушение",
             0xe74c3c
         )
         return True
@@ -236,8 +236,8 @@ class AutoMod(commands.Cog):
             self.duplicate_tracker[uid].clear()
             await self._punish(
                 message,
-                "🔁  TEKRAR MESAJ UYARISI",
-                f"{message.author.mention} aynı messageı tekrarlama!\n**⏳ Наказание:** 10 minutes мут",
+                "🔁  TEKRAR СООБЩЕНИЕ ПРЕДУПРЕЖДЕНИЕ",
+                f"{message.author.mention} одинаковый сообщение tekrarlama!\n**⏳ Наказание:** 10 minutes mute",
                 0xe74c3c,
                 action='timeout',
                 duration_min=10
@@ -247,15 +247,15 @@ class AutoMod(commands.Cog):
         return False
 
     async def _check_mention_spam(self, message):
-        # Reply mention'ı sayma (yanıt atarken otomatik 1 mention geliyor)
+        # Reply mention'ı sayma (yanıt atarken автоматически 1 mention geliyor)
         reply_id = message.reference.resolved.author.id if (message.reference and message.reference.resolved) else None
         mentions = [m for m in message.mentions if m.id != reply_id]
         count = len(mentions) + len(message.role_mentions)
         if count >= 8:
             await self._punish(
                 message,
-                "📢  TOPLU MENTİON UYARISI",
-                f"{message.author.mention} toplu mention запрещеноtır!\n**⏳ Наказание:** 15 minutes мут",
+                "📢  TOPLU MENTİON ПРЕДУПРЕЖДЕНИЕ",
+                f"{message.author.mention} toplu mention zapresenotır!\n**⏳ Наказание:** 15 minutes mute",
                 0xe74c3c,
                 action='timeout',
                 duration_min=15
@@ -268,8 +268,8 @@ class AutoMod(commands.Cog):
         if count >= 10:
             await self._punish(
                 message,
-                "😵  EMOJİ SPAM UYARISI",
-                f"{message.author.mention} çok fazla emoji kullanma!\n**📋 Причина:** Emoji spam ihlali",
+                "😵  EMOJİ SPAM ПРЕДУПРЕЖДЕНИЕ",
+                f"{message.author.mention} очень fazla emoji использовать!\n**📋 Причина:** Emoji spam нарушение",
                 0xf39c12
             )
             return True

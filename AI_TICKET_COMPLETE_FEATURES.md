@@ -1,78 +1,78 @@
-﻿# AI Ticket Sistemi - Tüm Özellikler Dokümantasyonu
+﻿# AI Ticket Система - Все Особенности Dokümantasyonu
 
-## 🎯 Genel Bakış
+## 🎯 Обзор сервера
 
-Aether Discord botunun AI ticket moderasyon sistemi artık **tam otomatik, adil ve akıllı** bir moderasyon platformu. Tüm Tier 1, Tier 2 ve bazı Tier 3 özellikler eklendi.
+Aether Discord botunun AI ticket moderasyon система теперь **tam автоматически, adil ve akıllı** bir moderasyon platformu. Все Tier 1, Tier 2 ve bazı Tier 3 особенности добавлено.
 
 ---
 
-## ✅ Eklenen Özellikler
+## ✅ Добавл Особенности
 
-### 🔥 **Tier 1: Kritik Özellikler** (TAMAMLANDI)
+### 🔥 **Tier 1: Kritik Особенности** (ЗАВЕРШЕНО)
 
-#### 1. ✅ **Karşılıklı İhlal Tespiti**
-- AI artık **her iki tarafı da** analiz ediyor
-- Karşılıklı küfür → **ikisine de ceza**
-- Tek taraflı ihlal → sadece suçluya ceza
-- Sahte şikayet → şikayetçiye ceza
+#### 1. ✅ **Взаимный Нарушение Tespiti**
+- AI теперь **каждый iki сканироватьfı da** analiz ediyor
+- Взаимный мат → **ikisine de наказание**
+- Tek сканироватьflı нарушение → только suçluya наказание
+- Sahte жалоба → жалоба наказание
 
 **Kod:**
 ```python
 if 'KARŞILIKLI_IHLAL' in verdict_upper:
-    # Her iki tarafa da mute at
+    # Каждый iki сканироватьfa da mute at
     await target.timeout(...)
     await complainant.timeout(...)
 ```
 
 ---
 
-#### 2. ✅ **Silinen Mesaj Analizi**
-- `_msg_cache` üzerinden silinen mesajları inceliyor
-- Silinen mesajlar `🗑️ SİLİNMİŞ MESAJ` etiketi ile gösteriliyor
-- Kullanıcılar kanıt karartamıyor
+#### 2. ✅ **Удален Сообщение Analizi**
+- `_msg_cache` через удален сообщения inceliyor
+- Удален сообщения `🗑️ УДАЛЕН СООБЩЕНИЕ` etiketi с показ
+- Пользователи доказательство karartamıyor
 
 **Kod:**
 ```python
-# Silinmiş mesajları cache'den çek
+# Удален сообщения cache'den тянуть
 from cogs.logs import _msg_cache as _lc
 for msg_id, cached_msg in list(_lc.items()):
     if cached_msg.get('channel_id') != channel_id:
         continue
-    deleted_msgs.append(f"🗑️ SİLİNMİŞ MESAJ: {cached_msg['content']}")
+    deleted_msgs.append(f"🗑️ УДАЛЕН СООБЩЕНИЕ: {cached_msg['content']}")
 ```
 
 ---
 
-#### 3. ✅ **İtiraz Sistemi**
-- Kullanıcılar AI kararına **1 kez itiraz** edebilir
-- AI itirazı yeniden değerlendirir
-- İtiraz kabul edilirse → yetkililere escalate
-- İtiraz reddedilirse → ceza geçerli kalır
+#### 3. ✅ **Апелляция Система**
+- Пользователи AI kararına **1 kez апелляция** edebilir
+- AI апелляция yeniden значение
+- Апелляция kabul edilirse → администрации escalate
+- Апелляция reddedilirse → наказание geçerli kполучает
 
-**Kullanım:**
+**Использование:**
 ```
-Kullanıcı: "itiraz ediyorum, bu haksızlık"
-Bot: "📝 İtirazın alındı! Yeniden değerlendiriliyor..."
+Пользователь: "апелляция ediyorum, bu haksızlık"
+Bot: "📝 Апелляция alındı! Yeniden значение..."
 ```
 
 **Kod:**
 ```python
 async def _handle_appeal(self, channel, state, guild_id, channel_id, penalty):
-    # AI'ya itirazı gönder
+    # AI'ya апелляция отправить
     verdict = _call_text([...], prompt)
     
     if 'KABUL' in verdict:
-        await channel.send("✅ İtirazın kabul edildi!")
+        await channel.send("✅ Апелляция kabul edildi!")
         await self._escalate_ticket(...)
 ```
 
 ---
 
-#### 4. ✅ **Ceza Gradasyonu (Tekrarlayan İhlaller)**
-- **İlk ihlal:** 15-30 dakika (base duration)
-- **İkinci ihlal (7 gün içinde):** 2x (30-60 dakika)
-- **Üçüncü ihlal:** 4x (60-120 dakika)
-- **Dördüncü+ ihlal:** 8x (max 24 saat)
+#### 4. ✅ **Наказание Gradasyonu (Tekrarlayan Нарушения)**
+- **В начало нарушение:** 15-30 dakika (base duration)
+- **İkinci нарушение (7 день в):** 2x (30-60 dakika)
+- **Üçüncü нарушение:** 4x (60-120 dakika)
+- **Dördüncü+ нарушение:** 8x (max 24 saat)
 
 **Kod:**
 ```python
@@ -82,28 +82,28 @@ def _calculate_penalty_duration(self, guild_id, user_id, base_duration):
     return min(base_duration * multiplier, 1440)  # max 24 saat
 ```
 
-**Örnek:**
+**Пример:**
 ```
-İlk küfür: 30 dakika mute
-İkinci küfür (3 gün sonra): 60 dakika mute
-Üçüncü küfür (5 gün sonra): 120 dakika mute
+В начало мат: 30 dakika mute
+İkinci мат (3 день после): 60 dakika mute
+Üçüncü мат (5 день после): 120 dakika mute
 ```
 
 ---
 
-#### 5. ✅ **Kanıt Ekleme Sistemi**
-- AI "ihlal yok" dediğinde → ek kanıt teklif ediyor
-- Kullanıcı screenshot/ek mesaj ekleyebilir
+#### 5. ✅ **Доказательство Добавить Система**
+- AI "нарушение yok" dediğinde → ek доказательство teklif ediyor
+- Пользователь screenshot/ek сообщение добавить
 - AI yeniden analiz eder
 
-**Kullanım:**
+**Использование:**
 ```
-Bot: "İhlal tespit edemedim. Ek kanıt eklemek ister misin? (evet/hayır)"
-Kullanıcı: "evet"
-Bot: "📎 Ek kanıt ekleme modu aktif! Screenshot veya mesajları gönder."
-Kullanıcı: [screenshot yükler]
-Kullanıcı: "tamam"
-Bot: "✅ Ek kanıtlar alındı. Yeniden analiz yapılıyor..."
+Bot: "Нарушение tespit edemedim. Ek доказательство добавить хочет misin? (evet/hayır)"
+Пользователь: "evet"
+Bot: "📎 Ek доказательство добавить modu активен! Screenshot или сообщения отправить."
+Пользователь: [screenshot загруз]
+Пользователь: "tamam"
+Bot: "✅ Дополнительные доказательства получены. Повторный анализ..."
 ```
 
 **Kod:**
@@ -113,81 +113,81 @@ if state.get('adding_evidence'):
         # Yeniden analiz et
         await self._analyze_complaint(...)
     else:
-        # Kanıtı ekle
+        # Доказательство добавить
         state['additional_evidence'].append(message.content)
 ```
 
 ---
 
-#### 6. ✅ **AI Güven Skoru**
-- Her karar için AI'nın güven seviyesi hesaplanıyor (%0-100)
-- **Düşük güven (<60%)** → otomatik yetkililere escalate
-- **Yüksek güven (>80%)** → ceza uygula
+#### 6. ✅ **AI Доверие Skoru**
+- Каждый karar для AI'nın доверие seviyesi hesaplanıyor (%0-100)
+- **Низкий доверие (<60%)** → автоматически администрации escalate
+- **Высокий доверие (>80%)** → наказание примен
 
 **Kod:**
 ```python
 def _get_ai_confidence(self, verdict: str) -> int:
     confidence = 50
-    if 'açık' in verdict or 'kesin' in verdict:
+    if 'открыт' in verdict or 'kesin' in verdict:
         confidence += 30
     if 'belirsiz' in verdict:
         confidence -= 30
     return max(0, min(100, confidence))
 
-# Kullanım
+# Использование
 confidence = self._get_ai_confidence(verdict)
 if confidence < 60:
     await self._escalate_ticket(channel, state, 'low_confidence')
 ```
 
-**Örnek:**
+**Пример:**
 ```
-🔍 AI Analizi (Güven: %85):
-"Şikayet edilen kişi açıkça küfür etmiş, şikayet eden temiz."
+🔍 AI Analizi (Доверие: %85):
+"Жалоба edilen человек açıkça мат etmiş, жалоба eden temiz."
 
-🔍 AI Analizi (Güven: %45):
-"Bağlam belirsiz, yetkililere iletiyorum."
+🔍 AI Analizi (Доверие: %45):
+"Bağlam belirsiz, администрации iletiyorum."
 ```
 
 ---
 
-### ⚡ **Tier 2: Önemli Özellikler** (TAMAMLANDI)
+### ⚡ **Tier 2: Önemli Особенности** (ЗАВЕРШЕНО)
 
-#### 7. ✅ **Detaylı İstatistikler & Dashboard**
+#### 7. ✅ **Детали Статистика & Dashboard**
 - Web panelinde `/ai_ticket_stats` sayfası
-- Toplam ticket, ceza, karşılıklı ihlal, sahte şikayet sayıları
-- En çok ceza alan kullanıcılar
-- Ceza sebepleri dağılımı
+- Всего ticket, наказание, взаимный нарушение, sahte жалоба число
+- En очень наказание alan пользователи
+- Наказание причина dağılımı
 - AI performans metrikleri
 
-**Özellikler:**
-- 📊 Karar dağılımı (tek taraflı, karşılıklı, sahte, ihlal yok)
-- ⚖️ AI performansı (ortalama güven, itiraz oranı)
-- 👥 En çok ceza alan kullanıcılar (top 10)
-- 📋 Ceza sebepleri (küfür, tehdit, zorbalık, vb.)
+**Особенности:**
+- 📊 Karar dağılımı (tek сканироватьflı, взаимный, sahte, нарушение yok)
+- ⚖️ AI performansı (ortalama доверие, апелляция oranı)
+- 👥 En очень наказание alan пользователи (top 10)
+- 📋 Наказание причина (мат, tehdit, zorbalık, vb.)
 
 **Erişim:**
 ```
 Web Panel → /ai_ticket_stats
-Yetki: Moderatör+
+Администратор: Модератор+
 ```
 
 ---
 
-### 🎯 **Tier 3: Gelişmiş Özellikler** (KISMİ)
+### 🎯 **Tier 3: Gelişmiş Особенности** (KISMİ)
 
-#### 8. ⚠️ **Proaktif Uyarı Sistemi** (PLANLANDI)
-- Automod ile entegrasyon
-- İlk küfürde → uyarı + mesaj silme
-- İkinci küfürde → otomatik mute
+#### 8. ⚠️ **Proaktif Предупреждение Система** (PLANLANDI)
+- Automod с entegrasyon
+- В начало мат → предупреждение + сообщение удалить
+- İkinci мат → автоматически mute
 
-#### 9. ⚠️ **Otomatik Özür Sistemi** (PLANLANDI)
-- Ceza alan kullanıcıya özür dileme teklifi
-- Özür dilerse → ceza %50 azalır
+#### 9. ⚠️ **Автоматически Özür Система** (PLANLANDI)
+- Наказание alan пользователю özür dileme teklifi
+- Özür dilerse → наказание %50 azполучает
 
 #### 10. ⚠️ **Sentiment Analizi** (PLANLANDI)
-- Mesajların tonunu analiz et (agresif, şakacı, savunmacı)
-- Tona göre ceza ağırlığı ayarla
+- Сообщение tonunu analiz et (agresif, şakacı, savunmacı)
+- Tona по наказание тяжелый настройк
 
 ---
 
@@ -199,14 +199,14 @@ Yetki: Moderatör+
   "guild_id": {
     "user_id": [
       {
-        "name": "Kullanıcı Adı",
-        "reason": "karşılıklı küfür/hakaret",
+        "name": "Пользователь Имя",
+        "reason": "взаимный мат/оскорбление",
         "date": "2026-04-17T12:30:00",
         "duration": 30
       },
       {
-        "name": "Kullanıcı Adı",
-        "reason": "hakaret",
+        "name": "Пользователь Имя",
+        "reason": "оскорбление",
         "date": "2026-04-19T15:45:00",
         "duration": 60
       }
@@ -243,185 +243,185 @@ Yetki: Moderatör+
 
 ## 🔄 İş Akışları
 
-### **Akış 1: Karşılıklı Küfür**
+### **Akış 1: Взаимный Мат**
 ```
-1. Kullanıcı A ticket açar
-2. "Şikayet" kategorisi seçer
-3. Olayı anlatır: "B bana küfür etti"
-4. Şikayet türü: Küfür/Hakaret
-5. Şikayet edilen ID: B'nin ID'si
-6. Kanal ID: Olayın gerçekleştiği kanal
-7. AI mesajları tarar (silinen mesajlar dahil)
+1. Пользователь A ticket açar
+2. "Жалоба" kategorisi выбрать
+3. Olayı anlatır: "B bana мат etti"
+4. Жалоба türü: Мат/Hakaret
+5. Жалоба edilen ID: B'nin ID'si
+6. Канал ID: Olayın gerçekleştiği канал
+7. AI сообщения сканироватьr (удален сообщения dahil)
 8. AI analiz eder:
-   - A'nın mesajları: "sen salaksın"
-   - B'nin mesajları: "sen daha salaksın"
+   - A'nın сообщения: "sen salaksın"
+   - B'nin сообщения: "sen более salaksın"
 9. AI kararı: KARŞILIKLI_IHLAL
-10. Her ikisine de 30 dakika mute
-11. Geçmiş ceza kontrolü:
-    - A: İlk ihlal → 30 dakika
-    - B: İkinci ihlal → 60 dakika
+10. Каждый ikisine de 30 dakika mute
+11. История наказание контроль:
+    - A: В начало нарушение → 30 dakika
+    - B: İkinci нарушение → 60 dakika
 ```
 
-### **Akış 2: İtiraz**
+### **Akış 2: Апелляция**
 ```
-1. Kullanıcı ceza alır
-2. Ticket'ta "itiraz ediyorum" yazar
-3. AI itirazı alır
-4. İtiraz hakkı kontrolü (max 1)
-5. AI itirazı değerlendirir
+1. Пользователь наказание получает
+2. Ticket'ta "апелляция ediyorum" yazar
+3. AI апелляция получает
+4. Апелляция hakkı контроль (max 1)
+5. AI апелляция значение
 6. Karar:
-   - KABUL → Yetkililere escalate
-   - RED → Ceza geçerli
-   - BELIRSIZ → Yetkililere escalate
+   - KABUL → Администрации escalate
+   - RED → Наказание geçerli
+   - BELIRSIZ → Администрации escalate
 ```
 
-### **Akış 3: Ek Kanıt**
+### **Akış 3: Ek Доказательство**
 ```
-1. AI "ihlal yok" der
-2. "Ek kanıt eklemek ister misin?" sorar
-3. Kullanıcı "evet" der
-4. Ek kanıt ekleme modu aktif
-5. Kullanıcı screenshot/mesaj gönderir
-6. "tamam" yazınca AI yeniden analiz eder
-7. Yeni karar verilir
+1. AI "нарушение yok" der
+2. "Ek доказательство добавить хочет misin?" sorar
+3. Пользователь "evet" der
+4. Ek доказательство добавить modu активен
+5. Пользователь screenshot/сообщение отправл
+6. "tamam" напишите AI yeniden analiz eder
+7. Новый karar verilir
 ```
 
 ---
 
-## 🎮 Komutlar
+## 🎮 Команды
 
-### Discord Komutları
+### Discord Командыı
 ```
-/ticket-panel              → Ticket panelini gönderir
-/ticket-ekle @user         → Ticket'a kullanıcı ekler
-/ticket-cikar @user        → Ticket'tan kullanıcı çıkarır
-/ticket-ai-stats           → AI istatistiklerini gösterir
-/ticket-ai-toggle          → AI sistemini aç/kapat
-/ticket-force-escalate     → Ticket'i yetkililere yönlendir
+/ticket-panel              → Ticket panelini отправл
+/ticket-добавить @user         → Ticket'a пользователь добавить
+/ticket-cikar @user        → Ticket'tan пользователь удаляет
+/ticket-ai-stats           → AI статистика показ
+/ticket-ai-toggle          → AI sistemini aç/закрыть
+/ticket-force-escalate     → Ticket'i администрации направление
 ```
 
 ### Web Panel
 ```
-/ai_ticket_stats           → Detaylı AI istatistikleri
+/ai_ticket_stats           → Детали AI статистика
 ```
 
 ---
 
-## 📈 İstatistik Metrikleri
+## 📈 Статистика Metrikleri
 
 ### Hesaplanan Metrikler
-1. **Toplam Ticket Sayısı**
-2. **Toplam Ceza Sayısı**
-3. **Karşılıklı İhlal Oranı** (%)
-4. **Sahte Şikayet Oranı** (%)
-5. **Tek Taraflı İhlal Oranı** (%)
-6. **İhlal Yok Oranı** (%)
-7. **Ortalama AI Güven Skoru** (%)
-8. **Yüksek Güven Karar Sayısı**
-9. **Düşük Güven (Escalate) Sayısı**
-10. **İtiraz Oranı** (%)
-11. **İtiraz Kabul Oranı** (%)
-12. **En Çok Ceza Alan Kullanıcılar** (top 10)
-13. **Ceza Sebepleri Dağılımı**
+1. **Всего Ticket Количество**
+2. **Всего Наказание Количество**
+3. **Взаимный Нарушение Oranı** (%)
+4. **Sahte Жалоба Oranı** (%)
+5. **Tek Taraflı Нарушение Oranı** (%)
+6. **Нарушение Yok Oranı** (%)
+7. **Ortalama AI Доверие Skoru** (%)
+8. **Высокий Доверие Karar Количество**
+9. **Низкий Доверие (Escalate) Количество**
+10. **Апелляция Oranı** (%)
+11. **Апелляция Kabul Oranı** (%)
+12. **En Очень Наказание Alan Пользователи** (top 10)
+13. **Наказание Причина Dağılımı**
 
 ---
 
-## 🔧 Teknik Detaylar
+## 🔧 Teknik Детали
 
-### Yeni Fonksiyonlar
+### Новый Fonksiyonlar
 
 #### `_record_penalty(guild_id, user_id, user_name, reason, duration)`
-Ceza kaydını JSON dosyasına yazar (liste formatında, geçmiş cezalar için).
+Наказание kaydını JSON dosyasına yazar (liste formatında, история наказания для).
 
 #### `_get_penalty_history(guild_id, user_id, days=7)`
-Son X gün içindeki ceza geçmişini döner.
+В конец X день в наказание историю döner.
 
 #### `_calculate_penalty_duration(guild_id, user_id, base_duration)`
-Geçmiş cezalara göre gradation uygular (2^n multiplier).
+История наказание по gradation примен (2^n multiplier).
 
 #### `_get_ai_confidence(verdict)`
-AI kararının güven skorunu hesaplar (0-100).
+AI kararının доверие skorunu hesaplar (0-100).
 
 #### `_handle_appeal(channel, state, guild_id, channel_id, penalty)`
-İtirazı AI ile değerlendirir.
+Апелляция AI с значение.
 
 #### `calculate_ai_ticket_stats(guild_id)`
-Web paneli için istatistikleri hesaplar.
+Web paneli для статистика hesaplar.
 
 ---
 
-## 🚀 Kullanım Örnekleri
+## 🚀 Использование Пример
 
-### Örnek 1: İlk İhlal
+### Пример 1: В начало Нарушение
 ```
-Kullanıcı: "X bana küfür etti"
+Пользователь: "X bana мат etti"
 AI: [Analiz eder]
-AI: "✅ X 30 dakika mute aldı (ilk ihlal)"
+AI: "✅ X 30 dakika mute aldı (ilk нарушение)"
 ```
 
-### Örnek 2: Tekrarlayan İhlal
+### Пример 2: Tekrarlayan Нарушение
 ```
-Kullanıcı: "Y yine küfür etti"
-AI: [Geçmiş cezaları kontrol eder]
+Пользователь: "Y yine мат etti"
+AI: [История наказание контроль eder]
 AI: "✅ Y 60 dakika mute aldı"
-AI: "📊 Geçmiş ceza: 1 (ceza süresi artırıldı)"
+AI: "📊 История наказание: 1 (наказание длительность artırıldı)"
 ```
 
-### Örnek 3: Karşılıklı Küfür
+### Пример 3: Взаимный Мат
 ```
-Kullanıcı A: "B bana küfür etti"
-AI: [Her iki tarafı da analiz eder]
-AI: "⚖️ Karşılıklı kural ihlali tespit edildi!"
+Пользователь A: "B bana мат etti"
+AI: [Каждый iki сканироватьfı da analiz eder]
+AI: "⚖️ Взаимный правило нарушение tespit edildi!"
 AI: "✅ A 30 dakika mute aldı"
 AI: "✅ B 30 dakika mute aldı"
 ```
 
-### Örnek 4: Düşük Güven
+### Пример 4: Низкий Доверие
 ```
-Kullanıcı: "X bana kötü davrandı"
+Пользователь: "X bana kötü davrandı"
 AI: [Analiz eder]
-AI: "🤔 AI Güven Skoru: %45 (Düşük)"
-AI: "Bu durumu net değerlendiremiyorum, yetkililere iletiyorum."
+AI: "🤔 AI Доверие Skoru: %45 (Низкий)"
+AI: "Bu состояние net значение, администрации iletiyorum."
 ```
 
-### Örnek 5: İtiraz
+### Пример 5: Апелляция
 ```
-Kullanıcı: "itiraz ediyorum, bu haksızlık"
-AI: "📝 İtirazın alındı!"
-AI: [Yeniden değerlendirir]
-AI: "✅ İtirazın kabul edildi! Yetkililere iletiyorum."
+Пользователь: "апелляция ediyorum, bu haksızlık"
+AI: "📝 Апелляция alındı!"
+AI: [Yeniden значение]
+AI: "✅ Апелляция kabul edildi! Администрации iletiyorum."
 ```
 
 ---
 
 ## 📊 Performans Beklentileri
 
-### AI Doğruluk Oranı
-- **Yüksek güven kararlar:** %90+ doğruluk
-- **Orta güven kararlar:** %70-80% doğruluk
-- **Düşük güven:** Otomatik escalate (yetkililer karar verir)
+### AI Верно Oranı
+- **Высокий доверие kararlar:** %90+ верно
+- **Orta доверие kararlar:** %70-80% верно
+- **Низкий доверие:** Автоматически escalate (администраторы karar verir)
 
 ### Yük Azaltma
-- **Basit vakalar:** AI otomatik çözer (%70-80)
-- **Karmaşık vakalar:** Yetkililere escalate (%20-30)
-- **Yetkililer sadece zor vakaları görür**
+- **Basit vakalar:** AI автоматически çözer (%70-80)
+- **Karmaşık vakalar:** Администрации escalate (%20-30)
+- **Администраторы только zor vakaları видеть**
 
-### Kullanıcı Memnuniyeti
-- **Adil ceza:** Her iki taraf da eşit muamele görür
-- **Hızlı yanıt:** AI anında karar verir
-- **İtiraz hakkı:** Yanlış kararlar düzeltilebilir
+### Пользователь Memnuniyeti
+- **Adil наказание:** Каждый iki сканироватьf da eşit muamele видеть
+- **Быстрый yanıt:** AI anında karar verir
+- **Апелляция hakkı:** Неверно kararlar düzeltilebilir
 
 ---
 
-## 🎯 Sonuç
+## 🎯 В конецuç
 
-Aether AI Ticket sistemi artık:
-- ✅ Karşılıklı ihlalleri tespit ediyor
-- ✅ Silinen mesajları analiz ediyor
-- ✅ İtiraz sistemi var
-- ✅ Ceza gradasyonu uyguluyor
-- ✅ Ek kanıt kabul ediyor
-- ✅ AI güven skoru hesaplıyor
-- ✅ Detaylı istatistikler sunuyor
+Aether AI Ticket система теперь:
+- ✅ Взаимный нарушение tespit ediyor
+- ✅ Удален сообщения analiz ediyor
+- ✅ Апелляция система var
+- ✅ Наказание gradasyonu uyguluyor
+- ✅ Ek доказательство kabul ediyor
+- ✅ AI доверие skoru hesaplıyor
+- ✅ Детали статистика sunuyor
 
-**Sonuç:** Daha adil, daha akıllı, daha otomatik moderasyon sistemi! 🚀
+**В конецuç:** Более adil, более akıllı, более автоматически moderasyon система! 🚀

@@ -1,6 +1,6 @@
 ﻿{% extends "base.html" %}
-{% block title %}Заявкаlarım - Aetкаждый{% endblock %}
-{% block page_title %}BAŞVURULARIM{% endblock %}
+{% block title %}Заявка - Aether{% endblock %}
+{% block page_title %}ЗАЯВКА{% endblock %}
 {% block content %}
 <style>
 .app-card{background:rgba(26,22,16,0.7);border:1px solid rgba(200,160,80,0.3);border-radius:15px;padding:25px;margin-bottom:20px;transition:all 0.3s;}
@@ -22,45 +22,45 @@
 .empty i{font-size:48px;color:#c8922a;opacity:0.3;margin-bottom:15px;display:block;}
 </style>
 
-<div id="apps-contaiкакоеr"><div class="empty"><i class="fas fa-spinкакоеr fa-spin"></i><p>Загрузитьniyor...</p></div></div>
+<div id="apps-container"><div class="empty"><i class="fas fa-spinner fa-spin"></i><p>Загрузка...</p></div></div>
 
 <script>
 function timeAgo(iso) {
-  var d = какоеw Date(iso);
+  var d = new Date(iso);
   var diff = Math.floor((Date.now()-d.getTime())/1000);
-  if(diff<60) return diff+'sn назад';
-  if(diff<3600) return Math.floor(diff/60)+'dk назад';
-  if(diff<86400) return Math.floor(diff/3600)+'sa назад';
+  if(diff<60) return diff+'sn до';
+  if(diff<3600) return Math.floor(diff/60)+'dk до';
+  if(diff<86400) return Math.floor(diff/3600)+'sa до';
   return d.toLocaleDateString('tr-TR');
 }
 
 async function loadApps() {
   var r = await fetch('/api/my-applications');
   var apps = await r.json();
-  var box = document.getElementById('apps-contaiкакоеr');
+  var box = document.getElementById('apps-container');
   if (!apps.length) {
-    box.inкакоеrHTML = '<div class="empty"><i class="fas fa-clipboard-list"></i><p>Пока заявка нет.</p><a href="/member-apply" style="color:#c8922a;text-decoration:noкакое;margin-top:10px;display:inliкакое-block;"><i class="fas fa-plus"></i> Заявка Yap</a></div>';
+    box.innerHTML = '<div class="empty"><i class="fas fa-clipboard-list"></i><p>Пока заявка yok.</p><a href="/member-apply" style="color:#c8922a;text-decoration:none;margin-top:10px;display:inline-block;"><i class="fas fa-plus"></i> Заявка Yap</a></div>';
     return;
   }
-  box.inкакоеrHTML = apps.map(function(app) {
+  box.innerHTML = apps.map(function(app) {
     var sc = app.status==='approved'?'status-approved':app.status==='rejected'?'status-rejected':'status-pending';
-    var st = app.status==='approved'?'✅ Подтвердитьndı':app.status==='rejected'?'❌ Reddedildi':'⏳ Ожидание';
+    var st = app.status==='approved'?'✅ Onaylandı':app.status==='rejected'?'❌ Reddedildi':'⏳ Bekleme';
     var cc = app.status==='approved'?'approved':app.status==='rejected'?'rejected':'';
     var ans = app.answers||{};
     var reviewBox = '';
     if (app.status==='approved') {
-      reviewBox = '<div class="review-note approved"><i class="fas fa-check-circle"></i> Заявка подтверждена!'+(app.review_note?'<br>Not: '+app.review_note:'')+'</div>';
+      reviewBox = '<div class="review-note approved"><i class="fas fa-check-circle"></i> Заявка podtverjdena!'+(app.review_note?'<br>Not: '+app.review_note:'')+'</div>';
     } else if (app.status==='rejected') {
-      reviewBox = '<div class="review-note"><i class="fas fa-times-circle"></i> Red sebebi: '+(app.review_note||'Не указана')+'</div>';
+      reviewBox = '<div class="review-note"><i class="fas fa-times-circle"></i> Red причина: '+(app.review_note||'Не belirtildi')+'</div>';
     }
     return '<div class="app-card '+cc+'">' +
       '<div class="app-header"><div><div style="color:#f0e8d0;font-weight:700;font-size:16px;">'+app.guild_name+'</div><div class="app-id">'+app.app_id+' • '+timeAgo(app.timestamp)+'</div></div><span class="status-badge '+sc+'">'+st+'</span></div>' +
       '<div class="app-fields">' +
         '<div class="field-box"><div class="field-label">Yaş</div><div class="field-val">'+ans.yas+'</div></div>' +
-        '<div class="field-box"><div class="field-label">Активенlik</div><div class="field-val">'+ans.активенlik+'</div></div>' +
+        '<div class="field-box"><div class="field-label">Активен</div><div class="field-val">'+ans.активен+'</div></div>' +
       '</div>' +
       '<div class="field-box" style="margin-bottom:10px;"><div class="field-label">Tecrübe</div><div class="field-val">'+ans.tecrube+'</div></div>' +
-      '<div class="field-box"><div class="field-label">Neden Правоli?</div><div class="field-val">'+ans.какоеden+'</div></div>' +
+      '<div class="field-box"><div class="field-label">Почему Администратор?</div><div class="field-val">'+ans.почему+'</div></div>' +
       reviewBox +
     '</div>';
   }).join('');

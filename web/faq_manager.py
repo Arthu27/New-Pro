@@ -1,14 +1,14 @@
 """
-FAQ / Öğrenme Sistemi — Dosya taзабаненные
+FAQ / Öğrenme Система — Dosya tayasaklanmış
 
 Dosyalar:
-  data/learned_faq.json      — Öğrenilen soru-cevaplar (bot kullanır)
+  data/learned_faq.json      — Öğrenilen soru-cevaplar (bot использовать)
   data/unknown_questions.json — Cevaplanamayan sorular (sen inceliyorsun)
 
 Управление:
-  - learned_faq.json'u doğrudan редактироватьyebilirsin
-  - unknown_questions.json'daki soruları inceleyip learned_faq.json'a addyebilirsin
-  - Bir FAQ'ı devre dışı bırakmak için "active": false yap
+  - learned_faq.json'u верно redaktirovatyebilirsin
+  - unknown_questions.json'daki вопросы inceleyip learned_faq.json'a addyebilirsin
+  - Bir FAQ'ı devre dışı bırakmak для "active": false yap
 """
 import os
 import json
@@ -19,7 +19,7 @@ FAQ_FILE     = 'data/learned_faq.json'
 UNKNOWN_FILE = 'data/unknown_questions.json'
 
 
-# ─── Yardımcı ────────────────────────────────────────────────────────────────
+# ─── Помощник ────────────────────────────────────────────────────────────────
 
 def _load(path: str) -> list:
     os.makedirs('data', exist_ok=True)
@@ -72,7 +72,7 @@ def save_unknown_question(question: str, guild_id: int, channel_id: int, history
         'question': question,
         'guild_id': guild_id,
         'channel_id': channel_id,
-        'history_snapshot': history[-6:],  # Последний 6 message bağlam için
+        'history_snapshot': history[-6:],  # В конец 6 message bağlam для
         'count': 1,
         'created_at': datetime.utcnow().isoformat(),
         'last_seen': datetime.utcnow().isoformat(),
@@ -85,10 +85,10 @@ def save_unknown_question(question: str, guild_id: int, channel_id: int, history
 
 # ─── Staff Cevabından Öğren ───────────────────────────────────────────────────
 
-def learn_from_staff(question: str, answer: str, guild_id: int, staff_name: str = 'Правоli'):
+def learn_from_staff(question: str, answer: str, guild_id: int, staff_name: str = 'Администратор'):
     """
-    Staff'ın ticket'ta verdiği cevabı learned_faq.json'a add.
-    Benzer soru zaten varsa günceller.
+    Staff'ın ticket'ta данные cevabı learned_faq.json'a add.
+    Benzer soru zaten varsa обновл.
     """
     faq = _load(FAQ_FILE)
 
@@ -123,7 +123,7 @@ def learn_from_staff(question: str, answer: str, guild_id: int, staff_name: str 
 
 
 def _mark_unknown_learned(question: str):
-    """unknown_questions'da benzer soruyu 'learned' olarak işaretle."""
+    """unknown_questions'da benzer soruyu 'learned' как işaretle."""
     items = _load(UNKNOWN_FILE)
     changed = False
     for item in items:
@@ -134,11 +134,11 @@ def _mark_unknown_learned(question: str):
         _save(UNKNOWN_FILE, items)
 
 
-# ─── Benzer FAQ Найти (AI tarafından çağrılır) ─────────────────────────────────
+# ─── Benzer FAQ Bul (AI сканироватьfından çağrılır) ─────────────────────────────────
 
 def find_relevant_faqs(question: str, guild_id: int = None, top_k: int = 3, threshold: float = 0.25) -> list:
     """
-    Soruya en benzer FAQ'ları döndür.
+    Soruya en benzer FAQ'ları вернуть.
     Returns: [{'question': str, 'answer': str, 'score': float}, ...]
     """
     faq = _load(FAQ_FILE)
@@ -158,7 +158,7 @@ def find_relevant_faqs(question: str, guild_id: int = None, top_k: int = 3, thre
 
     results.sort(key=lambda x: x['score'], reverse=True)
 
-    # Использование sayısını artır
+    # Использование число artır
     if results:
         faq_map = {item['id']: item for item in faq}
         for r in results[:top_k]:

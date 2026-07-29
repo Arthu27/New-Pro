@@ -18,47 +18,47 @@
       },
       {
         "role": "assistant",
-        "content": "Selam! 👋 Nasıl yardımcı olabilirim? Şikayetin mi var, yoksa bir şey mi merak ediyorsun? 😊"
+        "content": "Selam! 👋 Как помощник olabilirim? Жалоба mi var, yoksa bir что-то mi merak ediyorsun? 😊"
       },
       {
         "role": "user",
-        "content": "acaba sorucaktim panelde nasil kayit ola bilirim"
+        "content": "acaba sorucaktim panelde как запись ola bilirim"
       },
       {
         "role": "assistant",
-        "content": "Selam! 👋\n\n📋 Panelimize kayıt olmak için şu adımları izleyebilirsin:\n\n1.  Sunucu duyurularında paylaşılan panel adresine git.\n2.  Panelde \"Kayıt Ol\" butonuna tıkla.\n3.  Discord hesabınla giriş yap.\n\n✅ İşte bu kadar! Başka sorun olursa çekinme. 😊"
+        "content": "Selam! 👋\n\n📋 Panelimize запись olmak для şu adımları izleyebilirsin:\n\n1.  Сервер duyurularında paylaşılan panel adresine git.\n2.  Panelde \"Запись Ol\" butonuna клик.\n3.  Discord hesabınla вход yap.\n\n✅ İşte bu kadar! Başka sorun olursa тянуть. 😊"
       },
       {
         "role": "user",
-        "content": "tamamda nasil giris yapicam ve hangi odada"
+        "content": "tamamda как giris yapicam ve какой комната"
       },
       {
         "role": "assistant",
-        "content": "💡 Panel adresi sunucu duyurularında paylaşılıyor. Giriş yapmak için:\n\n1.  Panel adresine git.\n2.  \"Giriş\" butonuna tıkla.\n3.  Discord hesabınla giriş yap.\n\n✅ Bu kadar basit! Eğer yetkili değilsen, sadece \"Üye\" paneline erişebilirsin. 😊"
+        "content": "💡 Panel adresi сервер duyurularında paylaşılıyor. Вход yapmak для:\n\n1.  Panel adresine git.\n2.  \"Вход\" butonuna клик.\n3.  Discord hesabınla вход yap.\n\n✅ Bu kadar basit! Если администратор değilsen, только \"Участник\" paneline erişebilirsin. 😊"
       },
       {
         "role": "user",
-        "content": "oy kayit olucam diyicektim"
+        "content": "oy запись olucam diyicektim"
       },
       {
         "role": "assistant",
-        "content": "💡 \"Kayıt Ol\" butonunu göremiyorsan, muhtemelen zaten giriş yapmışsındır. Eğer hala sorun yaşıyorsan, bir ekran görüntüsü paylaşırsan daha iyi yardımcı olabilirim. 😊"
+        "content": "💡 \"Запись Ol\" butonunu видеть, muhtemelen zaten вход yapmışsındır. Если hala sorun yaşıyorsan, bir ekran скриншот paylaşırsan более iyi помощник olabilirim. 😊"
       },
       {
         "role": "user",
-        "content": "kayit olmak icin ne logini lazim ki?"
+        "content": "запись olmak icin ne logini lazim ki?"
       },
       {
         "role": "assistant",
-        "content": "✅ Kayıt olmak için Discord hesabınla giriş yapman gerekiyor. Paneldeki \"Kayıt Ol\" butonuna tıkladığında Discord yetkilendirme sayfası açılacak. Orada hesabınla giriş yaparak kaydı tamamlayabilirsin. 😊"
+        "content": "✅ Запись olmak для Discord hesabınla вход yapman gerekiyor. Paneldeki \"Запись Ol\" butonuna клик Discord администратор sayfası açılacak. Там hesabınla вход yaparak kaydı заверш. 😊"
       },
       {
         "role": "user",
-        "content": "nasil yani hesabim derken?"
+        "content": "как yani hesabim derken?"
       },
       {
         "role": "assistant",
-        "content": "💡 \"Hesabın\" derken, Discord kullanıcı adın ve şifrenle giriş yapman gerekiyor. Yani, Discord'a giriş yaparken kullandığın bilgileri kullanacaksın. 😊"
+        "content": "💡 \"Hesabın\" derken, Discord пользователь adın ve пароль вход yapman gerekiyor. Yani, Discord'a вход yaparken использовать информация использовать. 😊"
       },
       {
         "role": "user",
@@ -66,15 +66,15 @@
       },
       {
         "role": "assistant",
-        "content": "Şu an cevap veremiyorum, biraz sonra tekrar dene."
+        "content": "Şu an ответитьemiyorum, biraz после tekrar dene."
       },
       {
         "role": "user",
-        "content": "Nasıl yani?"
+        "content": "Как yani?"
       },
       {
         "role": "assistant",
-        "content": "Şu an cevap veremiyorum, biraz sonra tekrar dene."
+        "content": "Şu an ответитьemiyorum, biraz после tekrar dene."
       },
       {
         "role": "user",
@@ -82,7 +82,7 @@
       },
       {
         "role": "assistant",
-        "content": "Şu an cevap veremiyorum, biraz sonra tekrar dene."
+        "content": "Şu an ответитьemiyorum, biraz после tekrar dene."
       },
       {
         "role": "user",
@@ -90,7 +90,7 @@
       },
       {
         "role": "assistant",
-        "content": "Üzgünüm, sana yardımcı olabilmek için daha fazla ayrıntı sağlayabilirim.\n\nDiscord'ın kaydı oluşturmak isteyen kullanıcılarına gerekli olan şey şu:\n\n1. **Bir Discord hesap alın:** Bu, genellikle bir e-posta adresi ve şifre ile oluşturulur.\n2. Giriş yapabilirsiniz: İstediğiniz zaman Discord'a giriş yaptığınızda kaydedilen bilgiler kullanılır.\n\n**Örnek adımlar:**\n1. Panelinizi açın (web sitesini)\n2. \"Kayıt Ol\" butonuna tıklayın.\n3. Bir e-posta adresi ve bir şifre oluşturun veya giriş yapın.\n4. Kayıt işlemini tamamlayabilirsiniz.\n\nBu adımlar yardımıyla, Discord hesabınızla panelize otomatik olarak kaydedilebilir ve etkinleştirilmesini sağlayın. Eğer daha fazlasını anladığım için belirtseydinizse, size yardımcı olabilirdim!"
+        "content": "Üzgünüm, sana помощник olabilmek для более fazla ayrıntı sağlayabilirim.\n\nDiscord'ın kaydı создан желание пользователь gerekli olan что-то şu:\n\n1. **Bir Discord hesap alın:** Bu, genellikle bir e-posta adresi ve пароль с создан.\n2. Вход yapabilirsiniz: Желание время Discord'a вход yaptığınızda сохран информация использовать.\n\n**Пример adımlar:**\n1. Panelinizi açın (web sitesini)\n2. \"Запись Ol\" butonuna клик.\n3. Bir e-posta adresi ve bir пароль создан или вход yapın.\n4. Запись действие заверш.\n\nBu adımlar помощь, Discord hesabınızla panelize автоматически как сохран ve etkinleştirilmesini sağlayın. Если более fazlasını anladığım для belirtseydinizse, size помощник olabilirdim!"
       }
     ],
     "status": "escalated",

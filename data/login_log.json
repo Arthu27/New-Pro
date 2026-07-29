@@ -538,5 +538,75 @@
     "guild_icon": null,
     "ip": "127.0.0.1",
     "timestamp": "2026-04-22T20:13:14.376997"
+  },
+  {
+    "username": "owner",
+    "role": "owner",
+    "avatar": null,
+    "discord_id": null,
+    "guild_name": null,
+    "guild_icon": null,
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T05:40:42.401519"
+  },
+  {
+    "username": "owner",
+    "role": "owner",
+    "avatar": null,
+    "discord_id": null,
+    "guild_name": null,
+    "guild_icon": null,
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T06:36:49.380974"
+  },
+  {
+    "username": "owner",
+    "role": "owner",
+    "avatar": null,
+    "discord_id": null,
+    "guild_name": null,
+    "guild_icon": null,
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T06:37:08.448286"
+  },
+  {
+    "username": "owner",
+    "role": "owner",
+    "avatar": null,
+    "discord_id": null,
+    "guild_name": null,
+    "guild_icon": null,
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T06:44:39.703972"
+  },
+  {
+    "username": "owner",
+    "role": "owner",
+    "avatar": null,
+    "discord_id": null,
+    "guild_name": null,
+    "guild_icon": null,
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T06:46:02.773440"
+  },
+  {
+    "username": "owner",
+    "role": "owner",
+    "avatar": null,
+    "discord_id": null,
+    "guild_name": null,
+    "guild_icon": null,
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T06:47:05.894042"
+  },
+  {
+    "username": "owner",
+    "role": "owner",
+    "avatar": null,
+    "discord_id": null,
+    "guild_name": null,
+    "guild_icon": null,
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T06:47:26.817824"
   }
 ]

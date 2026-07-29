@@ -1,5 +1,5 @@
 """
-DeepSeek web scraper — API olmadan chat.deepseek.com kullanır.
+DeepSeek web scraper — API olmadan chat.deepseek.com использовать.
 Gereksinim: pip install playwright && python -m playwright install chromium
 
 Использование: .env'e add:
@@ -15,7 +15,7 @@ from datetime import datetime
 DEEPSEEK_EMAIL    = os.getenv('DEEPSEEK_EMAIL', '')
 DEEPSEEK_PASSWORD = os.getenv('DEEPSEEK_PASSWORD', '')
 
-# Oturum statusu (tek seferlik login, sonra yeniden используется)
+# Oturum statusu (tek seferlik login, после yeniden ispolzuetsya)
 _browser   = None
 _page      = None
 _lock      = threading.Lock()
@@ -52,7 +52,7 @@ async def _ensure_login():
 
         # Вход butonu
         try:
-            login_btn = _page.locator('text=Лог in').first
+            login_btn = _page.locator('text=Log in').first
             await login_btn.click(timeout=5000)
             await _page.wait_for_timeout(1000)
         except Exception:
@@ -62,7 +62,7 @@ async def _ensure_login():
         email_input = _page.locator('input[type="email"], input[name="email"], input[placeholder*="email" i]').first
         await email_input.fill(DEEPSEEK_EMAIL, timeout=10000)
 
-        # Паrole
+        # Parola
         pass_input = _page.locator('input[type="password"]').first
         await pass_input.fill(DEEPSEEK_PASSWORD, timeout=5000)
 
@@ -70,7 +70,7 @@ async def _ensure_login():
         submit = _page.locator('button[type="submit"]').first
         await submit.click(timeout=5000)
 
-        # Вход tamamlanana kadar badd
+        # Вход заверш kadar badd
         await _page.wait_for_url('**/chat**', timeout=20000)
         await _page.wait_for_timeout(2000)
 
@@ -79,13 +79,13 @@ async def _ensure_login():
         return True
 
     except Exception as e:
-        print(f'[DeepSeek] Вход Ошибкаsı: {e}')
+        print(f'[DeepSeek] Вход Ошибки: {e}')
         _logged_in = False
         return False
 
 
 async def _ask_deepseek_async(prompt: str, timeout: int = 60) -> str:
-    """DeepSeek'e soru sor, cevabı döndür."""
+    """DeepSeek'e soru sor, cevabı вернуть."""
     global _page, _logged_in
 
     if not DEEPSEEK_EMAIL or not DEEPSEEK_PASSWORD:
@@ -110,7 +110,7 @@ async def _ask_deepseek_async(prompt: str, timeout: int = 60) -> str:
         await textarea.click(timeout=5000)
         await textarea.fill(prompt, timeout=5000)
 
-        # Отправить (Enter veya buton)
+        # Отправить (Enter или buton)
         await textarea.press('Enter')
 
         # Cevabın gelmesini badd — "düşünüyor" animasyonu bitene kadar
@@ -124,7 +124,7 @@ async def _ask_deepseek_async(prompt: str, timeout: int = 60) -> str:
         while (datetime.utcnow() - start).seconds < timeout:
             await _page.wait_for_timeout(1000)
 
-            # Последний message bloğunu al
+            # В конец message bloğunu al
             msgs = await _page.locator('.message-content, .ds-markdown, [class*="message"], [class*="response"]').all()
             if msgs:
                 current_text = await msgs[-1].inner_text()
@@ -139,26 +139,26 @@ async def _ask_deepseek_async(prompt: str, timeout: int = 60) -> str:
         return last_text.strip() if last_text else ''
 
     except Exception as e:
-        print(f'[DeepSeek] Soru Ошибкаsı: {e}')
-        _logged_in = False  # Новыйden login denensin
+        print(f'[DeepSeek] Soru Ошибки: {e}')
+        _logged_in = False  # Yeniden login denensin
         return ''
 
 
 def ask_deepseek(prompt: str, timeout: int = 60) -> str:
     """
     Sync wrapper — ai_helper.py'den çağrılır.
-    DeepSeek'e soru sorar, cevabı string olarak döndürür.
-    Неудачно olursa boş string döner.
+    DeepSeek'e soru sorar, cevabı string как вернуть.
+    Неудачно olursa пусто string döner.
     """
     if not DEEPSEEK_EMAIL or not DEEPSEEK_PASSWORD:
         return ''
 
     try:
-        # Mevcut event loop varsa kullan, yoksa yeni создать
+        # Текущий event loop varsa использовать, yoksa новый создать
         try:
             loop = asyncio.get_event_loop()
             if loop.is_running():
-                # Discord bot loop'u içindeyiz, thread'de çalıştır
+                # Discord bot loop'u в, thread'de çalıştır
                 import concurrent.futures
                 with concurrent.futures.ThreadPoolExecutor() as pool:
                     future = pool.submit(asyncio.run, _ask_deepseek_async(prompt, timeout))
@@ -168,5 +168,5 @@ def ask_deepseek(prompt: str, timeout: int = 60) -> str:
         except RuntimeError:
             return asyncio.run(_ask_deepseek_async(prompt, timeout))
     except Exception as e:
-        print(f'[DeepSeek] Wrapper Ошибкаsı: {e}')
+        print(f'[DeepSeek] Wrapper Ошибки: {e}')
         return ''

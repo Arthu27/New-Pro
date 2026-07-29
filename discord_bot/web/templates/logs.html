@@ -1,9 +1,9 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 {% block title %}Denetim Kaydi - Aether{% endblock %}
 {% block page_title %}DENETİM KAYDI{% endblock %}
 {% block content %}
 <style>
-.filter-bar{display:flex;gap:10px;flex-wrap:wrap;margin-ботtom:15px;align-items:center;}
+.filter-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:15px;align-items:center;}
 .filter-bar input,.filter-bar select{padding:9px 13px;background:#0a0a0a;border:2px solid rgba(220,20,60,0.3);border-radius:8px;color:#eee;font-size:13px;}
 .filter-bar input:focus,.filter-bar select:focus{outline:none;border-color:#dc143c;}
 .filter-bar input{flex:1;min-width:180px;}
@@ -18,37 +18,37 @@
 .ev-time{color:#444;font-size:11px;flex-shrink:0;min-width:100px;text-align:right;}
 .ev-btn{background:rgba(220,20,60,0.15);border:1px solid rgba(220,20,60,0.3);color:#dc143c;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:11px;flex-shrink:0;transition:all 0.2s;}
 .ev-btn:hover{background:rgba(220,20,60,0.3);}
-.stats-bar{display:flex;gap:8px;flex-wrap:wrap;margin-ботtom:15px;}
+.stats-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:15px;}
 .stat-chip{background:rgba(220,20,60,0.08);border:1px solid rgba(220,20,60,0.2);border-radius:10px;padding:8px 14px;text-align:center;min-width:80px;cursor:pointer;transition:all 0.2s;}
 .stat-chip:hover{border-color:#dc143c;background:rgba(220,20,60,0.15);}
 .stat-chip .num{font-size:18px;font-weight:700;}
 .stat-chip .lbl{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:1px;}
 .detail-modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.88);z-index:9999;justify-content:center;align-items:center;}
 .detail-box{background:linear-gradient(135deg,#1a1a1a,#2a2a2a);border:2px solid #dc143c;border-radius:18px;padding:30px;max-width:560px;width:92%;max-height:85vh;overflow-y:auto;position:relative;box-shadow:0 20px 60px rgba(220,20,60,0.4);}
-.detail-row{display:flex;gap:10px;margin-ботtom:12px;align-items:flex-start;}
+.detail-row{display:flex;gap:10px;margin-bottom:12px;align-items:flex-start;}
 .detail-label{color:#888;font-size:11px;text-transform:uppercase;letter-spacing:1px;min-width:120px;flex-shrink:0;padding-top:2px;}
 .detail-value{color:#eee;font-size:13px;flex:1;word-break:break-word;}
 .msg-box{background:#0a0a0a;border:1px solid rgba(220,20,60,0.2);border-radius:8px;padding:12px;color:#ccc;font-size:13px;line-height:1.5;white-space:pre-wrap;word-break:break-word;margin-top:6px;}
 .msg-box.deleted{border-color:rgba(231,76,60,0.5);background:rgba(231,76,60,0.06);}
 .msg-box.before{border-color:rgba(243,156,18,0.4);background:rgba(243,156,18,0.04);}
 .msg-box.after{border-color:rgba(46,204,113,0.4);background:rgba(46,204,113,0.04);}
-.msg-label{font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-top:15px;margin-ботtom:4px;}
+.msg-label{font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-top:15px;margin-bottom:4px;}
 </style>
 
 <div class="stats-bar" id="stats-bar"></div>
 <div class="section" style="overflow:visible;">
   <div class="filter-bar">
-    <input type="text" id="search" placeholder="Kullanici, канал, сообщение ara..." oninput="applyFilters()">
-    <select id="guild-filter" onchange="applyFilters()"><option value="">Tum Серверlar</option></select>
+    <input type="text" id="search" placeholder="Пользователь, channel, message ara..." oninput="applyFilters()">
+    <select id="guild-filter" onchange="applyFilters()"><option value="">Tum Сервера</option></select>
   </div>
-  <div class="filter-bar" id="cat-buttons" style="margin-ботtom:15px;"></div>
+  <div class="filter-bar" id="cat-buttons" style="margin-bottom:15px;"></div>
   <div id="event-list" style="display:flex;flex-direction:column;gap:5px;">
     <div style="text-align:center;padding:50px;color:#555;">
       <i class="fas fa-spinner fa-spin" style="font-size:28px;color:#dc143c;"></i><br><br>Yukleniyor...
     </div>
   </div>
   <div id="load-more-wrap" style="text-align:center;margin-top:15px;display:none;">
-    <button id="load-more-btn" style="background:rgba(220,20,60,0.15);border:2px solid rgba(220,20,60,0.4);color:#dc143c;padding:9px 28px;border-radius:8px;cursor:pointer;font-size:13px;">Daha Fazla Yukle</button>
+    <button id="load-more-btn" style="background:rgba(220,20,60,0.15);border:2px solid rgba(220,20,60,0.4);color:#dc143c;padding:9px 28px;border-radius:8px;cursor:pointer;font-size:13px;">Более Fazla Yukle</button>
   </div>
 </div>
 
@@ -67,10 +67,10 @@ var CATS={
   mod:    {icon:'🔨',label:'Mod',    bg:'rgba(231,76,60,0.2)',  border:'rgba(231,76,60,0.5)',  text:'#e74c3c'},
   member: {icon:'👤',label:'Uye',    bg:'rgba(46,204,113,0.2)', border:'rgba(46,204,113,0.5)', text:'#2ecc71'},
   message:{icon:'💬',label:'Сообщение',  bg:'rgba(52,152,219,0.2)', border:'rgba(52,152,219,0.5)', text:'#3498db'},
-  рольe:   {icon:'🎭',label:'Роль',    bg:'rgba(155,89,182,0.2)', border:'rgba(155,89,182,0.5)', text:'#9b59b6'},
+  роли:   {icon:'🎭',label:'Роль',    bg:'rgba(155,89,182,0.2)', border:'rgba(155,89,182,0.5)', text:'#9b59b6'},
   channel:{icon:'📺',label:'Канал',  bg:'rgba(243,156,18,0.2)', border:'rgba(243,156,18,0.5)', text:'#f39c12'},
-  voice:  {icon:'🔊',label:'Голос',    bg:'rgba(26,188,156,0.2)', border:'rgba(26,188,156,0.5)', text:'#1abc9c'},
-  server: {icon:'🏰',label:'Сервер', bg:'rgba(230,126,34,0.2)', border:'rgba(230,126,34,0.5)', text:'#e67e22'},
+  voice:  {icon:'🔊',label:'Ses',    bg:'rgba(26,188,156,0.2)', border:'rgba(26,188,156,0.5)', text:'#1abc9c'},
+  сервер: {icon:'🏰',label:'Сервер', bg:'rgba(230,126,34,0.2)', border:'rgba(230,126,34,0.5)', text:'#e67e22'},
   automod:{icon:'🤖',label:'AutoMod',bg:'rgba(231,76,60,0.2)',  border:'rgba(231,76,60,0.5)',  text:'#e74c3c'},
   invite: {icon:'📨',label:'Davet',  bg:'rgba(149,165,166,0.2)',border:'rgba(149,165,166,0.5)',text:'#95a5a6'}
 };
@@ -101,8 +101,8 @@ function shortDetail(ev){
   if(ev.content) p.push('<span style="color:#888;">'+esc(String(ev.content).substring(0,60))+(ev.content.length>60?'...':'')+'</span>');
   if(ev.before) p.push('<span style="color:#888;">'+esc(String(ev.before).substring(0,50))+'...</span>');
   if(ev.old_name&&ev.new_name) p.push(esc(ev.old_name)+' → <b style="color:white;">'+esc(ev.new_name)+'</b>');
-  if(ev.added_рольes&&ev.added_рольes.length) p.push('➕ '+esc(ev.added_рольes.join(', ')));
-  if(ev.removed_рольes&&ev.removed_рольes.length) p.push('➖ '+esc(ev.removed_рольes.join(', ')));
+  if(ev.added_roles&&ev.added_roles.length) p.push('➕ '+esc(ev.added_roles.join(', ')));
+  if(ev.removed_roles&&ev.removed_roles.length) p.push('➖ '+esc(ev.removed_roles.join(', ')));
   if(ev.reason) p.push('<span style="color:#f39c12;">'+esc(String(ev.reason).substring(0,60))+'</span>');
   if(ev.code) p.push('discord.gg/'+esc(ev.code));
   return p.join(' · ') || '<span style="color:#333;">-</span>';
@@ -129,7 +129,7 @@ function renderEvents(){
   var list=document.getElementById('event-list');
   var lmw=document.getElementById('load-more-wrap');
   if(!filtered.length){
-    list.innerHTML='<div style="text-align:center;padding:50px;color:#555;"><i class="fas fa-search" style="font-size:32px;"></i><br><br>Последнийuc bulunamadi</div>';
+    list.innerHTML='<div style="text-align:center;padding:50px;color:#555;"><i class="fas fa-search" style="font-size:32px;"></i><br><br>В конецuç не найдено</div>';
     lmw.style.display='none'; return;
   }
   var slice=filtered.slice(0,shown), html='';
@@ -141,7 +141,7 @@ function renderEvents(){
     html+='<div class="ev-action">'+esc(ev.action||'-')+'</div>';
     html+='<div class="ev-detail">'+shortDetail(ev)+'</div>';
     html+='<div class="ev-time">'+formatTime(ev.timestamp)+'</div>';
-    html+='<button class="ev-btn" data-idx="'+i+'">Detay</button>';
+    html+='<button class="ev-btn" data-idx="'+i+'">Детали</button>';
     html+='</div>';
   }
   list.innerHTML=html;
@@ -164,7 +164,7 @@ function showDetail(idx){
   var cat=ev.category||'mod', c=CATS[cat]||CATS.mod;
   var h='';
   // Заголовок
-  h+='<div style="display:flex;align-items:center;gap:12px;margin-ботtom:20px;padding-ботtom:15px;border-ботtom:1px solid rgba(220,20,60,0.2);">';
+  h+='<div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-bottom:15px;border-bottom:1px solid rgba(220,20,60,0.2);">';
   h+='<span style="font-size:32px;">'+c.icon+'</span>';
   h+='<div><div style="color:#dc143c;font-size:18px;font-weight:700;">'+esc(ev.action||'-')+'</div>';
   h+='<div style="color:#888;font-size:12px;">'+c.label+' · '+fullTime(ev.timestamp)+'</div></div></div>';
@@ -174,9 +174,9 @@ function showDetail(idx){
     return '<div class="detail-row"><div class="detail-label">'+label+'</div><div class="detail-value">'+val+'</div></div>';
   }
 
-  // Пользователь информацияleri
-  if(ev.user_name) h+=row('Kullanici','<span style="color:#dc143c;font-weight:700;">@'+esc(ev.user_name)+'</span>');
-  if(ev.user_id)   h+=row('Kullanici ID','<code style="color:#aaa;font-size:12px;">'+esc(ev.user_id)+'</code>');
+  // Пользователь информация
+  if(ev.user_name) h+=row('Пользователь','<span style="color:#dc143c;font-weight:700;">@'+esc(ev.user_name)+'</span>');
+  if(ev.user_id)   h+=row('Пользователь ID','<code style="color:#aaa;font-size:12px;">'+esc(ev.user_id)+'</code>');
   if(ev.channel)   h+=row('Канал','<span style="color:#3498db;">#'+esc(ev.channel)+'</span>');
   if(ev.channel_id)h+=row('Канал ID','<code style="color:#aaa;font-size:12px;">'+esc(ev.channel_id)+'</code>');
   if(ev.guild_id)  h+=row('Сервер ID','<code style="color:#aaa;font-size:12px;">'+esc(ev.guild_id)+'</code>');
@@ -184,34 +184,34 @@ function showDetail(idx){
   if(ev.reason)    h+=row('Причина','<span style="color:#f39c12;">'+esc(ev.reason)+'</span>');
   if(ev.message_id)h+=row('Сообщение ID','<code style="color:#aaa;font-size:12px;">'+esc(ev.message_id)+'</code>');
   if(ev.account_age_days!==undefined) h+=row('Hesap Yasi',ev.account_age_days+' gun');
-  if(ev.рольes&&ev.рольes.length)         h+=row('Рольler',esc(ev.рольes.join(', ')));
-  if(ev.added_рольes&&ev.added_рольes.length)   h+=row('Добавитьnen Рольler','<span style="color:#2ecc71;">'+esc(ev.added_рольes.join(', '))+'</span>');
-  if(ev.removed_рольes&&ev.removed_рольes.length) h+=row('Kaldirilan Рольler','<span style="color:#e74c3c;">'+esc(ev.removed_рольes.join(', '))+'</span>');
-  if(ev.old_name)  h+=row('Старый Имя','<span style="color:#e74c3c;">'+esc(ev.old_name)+'</span>');
-  if(ev.new_name)  h+=row('Новый Имя','<span style="color:#2ecc71;">'+esc(ev.new_name)+'</span>');
+  if(ev.roles&&ev.roles.length)         h+=row('Роли',esc(ev.roles.join(', ')));
+  if(ev.added_roles&&ev.added_roles.length)   h+=row('Добавл Роли','<span style="color:#2ecc71;">'+esc(ev.added_roles.join(', '))+'</span>');
+  if(ev.removed_roles&&ev.removed_roles.length) h+=row('Удален Роли','<span style="color:#e74c3c;">'+esc(ev.removed_roles.join(', '))+'</span>');
+  if(ev.old_name)  h+=row('Старый Isim','<span style="color:#e74c3c;">'+esc(ev.old_name)+'</span>');
+  if(ev.new_name)  h+=row('Новый Isim','<span style="color:#2ecc71;">'+esc(ev.new_name)+'</span>');
   if(ev.old_nick)  h+=row('Старый Nick','<span style="color:#e74c3c;">'+esc(ev.old_nick)+'</span>');
   if(ev.new_nick)  h+=row('Новый Nick','<span style="color:#2ecc71;">'+esc(ev.new_nick)+'</span>');
-  if(ev.max_uголос)  h+=row('Maks Kullanim',esc(String(ev.max_uголос)));
+  if(ev.max_uses)  h+=row('Maks Использование',esc(String(ev.max_uses)));
   if(ev.code)      h+=row('Davet Kodu','discord.gg/'+esc(ev.code));
   if(ev.channel_type) h+=row('Канал Tipi',esc(ev.channel_type));
 
-  // Сообщение içerikleri - action'a göre göster
+  // Сообщение содержимое - action'a по показать
   var action = ev.action || '';
-  if(action.indexOf('Yazild') !== -1 || action.indexOf('Текстldı') !== -1) {
+  if(action.indexOf('Написано') !== -1 || action.indexOf('Metinldı') !== -1) {
     if(ev.content){
-      h+='<div class="msg-label" style="color:#3498db;">💬 Сообщение İçeriği</div>';
+      h+='<div class="msg-label" style="color:#3498db;">💬 Сообщение Содержимое</div>';
       h+='<div class="msg-box">'+esc(ev.content)+'</div>';
     }
   }
-  if(action.indexOf('Удалитьindi') !== -1) {
+  if(action.indexOf('Удалено') !== -1) {
     if(ev.content){
-      h+='<div class="msg-label" style="color:#e74c3c;">🗑️ Удалитьinen Сообщение</div>';
+      h+='<div class="msg-label" style="color:#e74c3c;">🗑️ Удален Сообщение</div>';
       h+='<div class="msg-box deleted">'+esc(ev.content)+'</div>';
     }
   }
   if(action.indexOf('Duzenlendi') !== -1 || action.indexOf('Редактироватьndi') !== -1) {
     if(ev.before){
-      h+='<div class="msg-label" style="color:#f39c12;">✏️ Предыдущий Сообщение</div>';
+      h+='<div class="msg-label" style="color:#f39c12;">✏️ Назад Сообщение</div>';
       h+='<div class="msg-box before">'+esc(ev.before)+'</div>';
     }
     if(ev.after){
@@ -260,7 +260,7 @@ function populateGuilds(){
   var guilds={};
   allEvents.forEach(function(ev){if(ev.guild_id) guilds[ev.guild_id]=true;});
   var sel=document.getElementById('guild-filter');
-  sel.innerHTML='<option value="">Tum Серверlar</option>';
+  sel.innerHTML='<option value="">Tum Сервера</option>';
   Object.keys(guilds).forEach(function(gid){
     sel.innerHTML+='<option value="'+gid+'">'+gid+'</option>';
   });
@@ -268,7 +268,7 @@ function populateGuilds(){
 
 document.getElementById('load-more-btn').addEventListener('click',function(){shown+=PAGE;renderEvents();});
 
-async function loadЛогs(){
+async function loadLogs(){
   try{
     var r=await fetch('/api/logs');
     if(!r.ok) throw new Error('HTTP '+r.status);
@@ -281,6 +281,6 @@ async function loadЛогs(){
   }
 }
 
-buildCatButtons(); loadЛогs(); setInterval(loadЛогs,15000);
+buildCatButtons(); loadLogs(); setInterval(loadLogs,15000);
 </script>
 {% endblock %}

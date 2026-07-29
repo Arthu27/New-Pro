@@ -410,7 +410,7 @@
   {
     "username": "admin",
     "role": "admin",
-    "action": "POST /api/guild/1384282749317152878/roles/create",
+    "action": "POST /api/guild/1384282749317152878/роли/create",
     "detail": "",
     "ip": "127.0.0.1",
     "timestamp": "2026-04-07T17:04:44.436746"
@@ -3086,5 +3086,701 @@
     "detail": "",
     "ip": "127.0.0.1",
     "timestamp": "2026-04-22T22:27:41.055859"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/ai/assistant",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T05:33:50.354712"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/ai/stream",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T05:33:50.358825"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/ai/announcement",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T05:33:50.362728"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/ai/mod-report",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T05:33:50.366413"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/ai/embed",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T05:33:50.370018"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/ai-chat",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T05:33:50.403269"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/ai/assistant",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T05:34:16.548235"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/ai/stream",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T05:34:16.552575"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/ai/announcement",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T05:34:16.556939"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/ai/mod-report",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T05:34:16.561103"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/ai/embed",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T05:34:16.564942"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/ai-chat",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T05:34:16.600315"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/ai/assistant",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T05:34:43.001540"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/ai/stream",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T05:34:43.008178"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/ai/announcement",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T05:34:43.014007"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/ai/mod-report",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T05:34:43.019625"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/ai/embed",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T05:34:43.025319"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/ai-chat",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T05:34:43.030825"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/ai/assistant",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T05:34:48.785425"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/ai/stream",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T05:34:48.791433"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/ai/announcement",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T05:34:48.797092"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/ai/mod-report",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T05:34:48.802432"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/ai/embed",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T05:34:48.807702"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/ai-chat",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T05:34:48.813055"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/ai/assistant",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T05:34:57.649694"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/ai/stream",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T05:34:57.658818"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/ai/announcement",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T05:34:57.667187"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/ai/mod-report",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T05:34:57.675036"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/ai/embed",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T05:34:57.682674"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/ai-chat",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T05:34:57.690377"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/ai/assistant",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T05:35:05.670266"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/ai/stream",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T05:35:05.674531"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/ai/announcement",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T05:35:05.678489"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/ai/mod-report",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T05:35:05.682509"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/ai/embed",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T05:35:05.686281"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/ai-chat",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T05:35:05.720421"
+  },
+  {
+    "username": "owner",
+    "role": "owner",
+    "action": "POST /api/discord-check",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T05:40:42.405401"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/ai-chat",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T05:46:46.811252"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/ai-chat",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T05:58:48.797850"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/ai/assistant",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T06:03:46.959373"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/ai/announcement",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T06:03:46.963320"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/ai/mod-report",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T06:03:46.967178"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/ai-chat",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T06:03:47.055141"
+  },
+  {
+    "username": "Owner",
+    "role": "?",
+    "action": "POST /api/ai/assistant",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T06:15:06.629965"
+  },
+  {
+    "username": "Owner",
+    "role": "?",
+    "action": "POST /api/ai/announcement",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T06:15:06.633708"
+  },
+  {
+    "username": "Owner",
+    "role": "?",
+    "action": "POST /api/ai/mod-report",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T06:15:06.637234"
+  },
+  {
+    "username": "Owner",
+    "role": "?",
+    "action": "POST /api/ai-chat",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T06:15:06.640756"
+  },
+  {
+    "username": "Owner",
+    "role": "?",
+    "action": "POST /api/ai/assistant",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T06:18:06.524463"
+  },
+  {
+    "username": "Owner",
+    "role": "?",
+    "action": "POST /api/ai/announcement",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T06:18:06.530698"
+  },
+  {
+    "username": "Owner",
+    "role": "?",
+    "action": "POST /api/ai/mod-report",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T06:18:06.534637"
+  },
+  {
+    "username": "Owner",
+    "role": "?",
+    "action": "POST /api/ai-chat",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T06:18:06.539333"
+  },
+  {
+    "username": "Owner",
+    "role": "?",
+    "action": "POST /api/ai/assistant",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T06:18:35.388032"
+  },
+  {
+    "username": "Owner",
+    "role": "?",
+    "action": "POST /api/ai/announcement",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T06:18:35.392140"
+  },
+  {
+    "username": "Owner",
+    "role": "?",
+    "action": "POST /api/ai/mod-report",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T06:18:35.395998"
+  },
+  {
+    "username": "Owner",
+    "role": "?",
+    "action": "POST /api/ai-chat",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T06:18:35.399811"
+  },
+  {
+    "username": "Owner",
+    "role": "?",
+    "action": "POST /api/ai/assistant",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T06:18:48.891707"
+  },
+  {
+    "username": "Owner",
+    "role": "?",
+    "action": "POST /api/ai/announcement",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T06:18:48.895868"
+  },
+  {
+    "username": "Owner",
+    "role": "?",
+    "action": "POST /api/ai/mod-report",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T06:18:48.900191"
+  },
+  {
+    "username": "Owner",
+    "role": "?",
+    "action": "POST /api/ai-chat",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T06:18:48.904038"
+  },
+  {
+    "username": "Owner",
+    "role": "?",
+    "action": "POST /api/ai/assistant",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T06:33:17.741306"
+  },
+  {
+    "username": "Owner",
+    "role": "?",
+    "action": "POST /api/ai/announcement",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T06:33:17.748324"
+  },
+  {
+    "username": "Owner",
+    "role": "?",
+    "action": "POST /api/ai/mod-report",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T06:33:17.755076"
+  },
+  {
+    "username": "Owner",
+    "role": "?",
+    "action": "POST /api/ai-chat",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T06:33:17.761808"
+  },
+  {
+    "username": "Owner",
+    "role": "?",
+    "action": "POST /api/ai/assistant",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T06:33:52.585496"
+  },
+  {
+    "username": "Owner",
+    "role": "?",
+    "action": "POST /api/ai/announcement",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T06:33:52.589228"
+  },
+  {
+    "username": "Owner",
+    "role": "?",
+    "action": "POST /api/ai/mod-report",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T06:33:52.592810"
+  },
+  {
+    "username": "Owner",
+    "role": "?",
+    "action": "POST /api/ai-chat",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T06:33:52.596450"
+  },
+  {
+    "username": "owner",
+    "role": "?",
+    "action": "POST /api/discord-check",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T06:36:19.808343"
+  },
+  {
+    "username": "Owner",
+    "role": "?",
+    "action": "POST /api/ai/assistant",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T06:36:19.816297"
+  },
+  {
+    "username": "Owner",
+    "role": "?",
+    "action": "POST /api/ai/announcement",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T06:36:19.820128"
+  },
+  {
+    "username": "Owner",
+    "role": "?",
+    "action": "POST /api/ai/mod-report",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T06:36:19.823984"
+  },
+  {
+    "username": "Owner",
+    "role": "?",
+    "action": "POST /api/ai/embed",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T06:36:19.828333"
+  },
+  {
+    "username": "Owner",
+    "role": "?",
+    "action": "POST /api/ai-chat",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T06:36:19.832100"
+  },
+  {
+    "username": "owner",
+    "role": "owner",
+    "action": "POST /api/discord-check",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T06:36:49.384775"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/ai/assistant",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T06:36:49.393523"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/ai/announcement",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T06:36:49.398251"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/ai/mod-report",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T06:36:49.403537"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/ai/embed",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T06:36:49.409551"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/ai-chat",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T06:36:49.414869"
+  },
+  {
+    "username": "owner",
+    "role": "owner",
+    "action": "POST /api/discord-check",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T06:37:08.451641"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/ai/assistant",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T06:37:08.459655"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/ai/announcement",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T06:37:08.463990"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/ai/mod-report",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T06:37:08.468414"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/ai/embed",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T06:37:08.472546"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/ai-chat",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T06:37:08.477536"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/security/toggle-lockdown",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T16:00:18.020462"
+  },
+  {
+    "username": "Owner",
+    "role": "owner",
+    "action": "POST /api/security/toggle-lockdown",
+    "detail": "",
+    "ip": "127.0.0.1",
+    "timestamp": "2026-07-29T16:00:18.025408"
   }
 ]

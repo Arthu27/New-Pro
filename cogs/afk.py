@@ -1,4 +1,4 @@
-"""AFK sistemi — /afk причина ile AFK'ya gir, mention edilince bildir"""
+"""AFK система — /afk причина с AFK'ya gir, mention edilince bildir"""
 import discord
 from discord.ext import commands
 from discord import app_commands
@@ -31,7 +31,7 @@ class AFK(commands.Cog):
         self._afk.get(str(guild_id), {}).pop(str(user_id), None)
 
     def _is_afk_anywhere(self, user_id):
-        """Herhangi bir serverda AFK mı?"""
+        """Каждый bir на сервере AFK mı?"""
         for guild_data in self._afk.values():
             if str(user_id) in guild_data:
                 return guild_data[str(user_id)]
@@ -48,13 +48,13 @@ class AFK(commands.Cog):
             icon_url=interaction.user.display_avatar.url
         )
         e.description = (
-            f"```\n😴  AFK MODU AKTİF\n```\n"
+            f"```\n😴  AFK MODU АКТИВЕН\n```\n"
             f"> **Причина:** {причина}\n"
             f"> **Başlangıç:** <t:{ts}:R>\n\n"
             f"*Biri seni mention edince уведомление alacaklar.*"
         )
         e.set_thumbnail(url=interaction.user.display_avatar.url)
-        e.set_footer(text="AFK'dan çıkmak için: /afk-kaldir")
+        e.set_footer(text="AFK'dan çıkmak для: /afk-удалить")
         await interaction.response.send_message(embed=e)
 
         # Nick'e 😴 add
@@ -65,21 +65,21 @@ class AFK(commands.Cog):
         except Exception:
             pass
 
-    @app_commands.command(name="afk-remove", description="Выйти из режима AFK")
+    @app_commands.command(name="afk-remove", description="Viyti den moda AFK")
     async def afk_kaldir(self, interaction: discord.Interaction):
         data = self._get(interaction.guild_id, interaction.user.id)
         if not data:
-            await interaction.response.send_message("AFK modunda değilsin.", ephemeral=True)
+            await interaction.response.send_message("Вы не в режиме AFK.", ephemeral=True)
             return
         self._remove(interaction.guild_id, interaction.user.id)
-        # Nick'ten 😴 убрать
+        # Nick'ten 😴 удалить
         try:
             nick = interaction.user.display_name
             if nick.startswith("😴 "):
                 await interaction.user.edit(nick=nick[2:].strip() or None)
         except:
             pass
-        # Baddyen mention'ları göster
+        # Baddyen mention'ları показать
         uid = interaction.user.id
         pending = _pending_mentions.pop(uid, [])
         if pending:
@@ -87,13 +87,13 @@ class AFK(commands.Cog):
             for p in pending[-10:]:
                 lines.append(f"• **{p['from']}** — {p['guild']} #{p['channel']}\n  > {p['msg'][:100]}")
             embed = discord.Embed(
-                title=f'👋 Hoş geldin! {len(pending)} kişi seni etiketledi',
+                title=f'👋 Добро пожаловать geldin! {len(pending)} человек seni etiketledi',
                 description='\n\n'.join(lines),
                 color=0x57F287
             )
             await interaction.response.send_message(embed=embed)
         else:
-            await interaction.response.send_message('✅ AFK modu закрытьıldı! Kimse seni etiketlemedi.')
+            await interaction.response.send_message('✅ AFK modu закрыто! Кто seni etiketlemedi.')
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -103,14 +103,14 @@ class AFK(commands.Cog):
         gid = message.guild.id
         uid = message.author.id
 
-        # Сообщение atan kişi AFK'daysa — SADECE owner_mode=False ise otomatik убрать
+        # Сообщение atan человек AFK'daysa — ТОЛЬКО owner_mode=False ise автоматически удалить
         afk_data = self._get(gid, uid)
         if afk_data and not afk_data.get('owner_mode'):
             self._remove(gid, uid)
             since = datetime.fromisoformat(afk_data["since"])
             elapsed = datetime.now(timezone.utc) - since
             mins = int(elapsed.total_seconds() // 60)
-            dur = f"{mins} minutes" if mins > 0 else "az önce"
+            dur = f"{mins} minutes" if mins > 0 else "az до"
             e = discord.Embed(color=0x2ED573, timestamp=datetime.now(timezone.utc))
             e.set_author(
                 name=f"{message.author.display_name} AFK'dan döndü",
@@ -118,7 +118,7 @@ class AFK(commands.Cog):
             )
             e.description = f"> Нетtu: **{dur}**\n> Причина: *{afk_data['reason']}*"
             await message.channel.send(embed=e, delete_after=8)
-            # Nick'ten 😴 убрать
+            # Nick'ten 😴 удалить
             try:
                 nick = message.author.display_name
                 if nick.startswith("😴 "):
@@ -138,7 +138,7 @@ class AFK(commands.Cog):
             since = datetime.fromisoformat(data["since"])
             elapsed = datetime.now(timezone.utc) - since
             mins = int(elapsed.total_seconds() // 60)
-            dur = f"{mins} minutes" if mins > 0 else "az önce"
+            dur = f"{mins} minutes" if mins > 0 else "az до"
 
             # Owner mode — bot soracak
             if data.get('owner_mode') and OWNER_ID and mentioned.id == OWNER_ID:
@@ -150,10 +150,10 @@ class AFK(commands.Cog):
                 e.description = (
                     f"> **Причина:** {data['reason']}\n"
                     f"> **Нетtu:** {dur}\n\n"
-                    f"Bunu Arthur'a iletebilirim. **Ne sormak istediniz?**\n"
-                    f"-# Cevabınızı yazın, uyanınca ileteyim."
+                    f"Bunu Arthur'a iletebilirim. **Ne sormak желание?**\n"
+                    f"-# Cevabınızı напишите, uyanınca ileteyim."
                 )
-                e.set_footer(text="Сообщениеınız Arthur'a iletilecek")
+                e.set_footer(text="Сообщение Arthur'a iletilecek")
                 sent = await message.channel.send(embed=e)
 
                 # Mention'ı сохранить
@@ -169,13 +169,13 @@ class AFK(commands.Cog):
                     'channel_id': message.channel.id,
                 })
 
-                # Последнийraki messageı yakala — ne sormak istediklerini öğren
+                # Вперед сообщение yakala — ne sormak желание öğren
                 def check(m):
                     return m.channel == message.channel and not m.author.bot and m.author.id != OWNER_ID
 
                 try:
                     follow = await self.bot.wait_for('message', check=check, timeout=120)
-                    # Сообщениеı owner'a DM at
+                    # Сообщение owner'a DM at
                     owner = await self.bot.fetch_user(OWNER_ID)
                     dm_embed = discord.Embed(
                         color=0xf59e0b,
@@ -190,9 +190,9 @@ class AFK(commands.Cog):
                         icon_url=message.author.display_avatar.url
                     )
                     await owner.send(embed=dm_embed)
-                    # Каналa bildir
+                    # Канал bildir
                     await message.channel.send(
-                        f'✅ Сообщениеın Arthur\'a iletildi! Uyanınca cevap verecek.',
+                        f'✅ Сообщения Arthur\'a iletildi! Uyanınca ответитьecek.',
                         delete_after=10
                     )
                     # Pending'e add
@@ -201,7 +201,7 @@ class AFK(commands.Cog):
                     pass
 
             else:
-                # Normal AFK уведомлениеi
+                # Normal AFK уведомление
                 e = discord.Embed(color=0x5865F2, timestamp=datetime.now(timezone.utc))
                 e.set_author(
                     name=f"{mentioned.display_name} şu an AFK 😴",
@@ -211,7 +211,7 @@ class AFK(commands.Cog):
                     f"> **Причина:** {data['reason']}\n"
                     f"> **Нетtu:** {dur}"
                 )
-                e.set_footer(text="AFK modunda — message görmeyebilir")
+                e.set_footer(text="AFK modunda — message видеть")
                 await message.channel.send(embed=e, delete_after=10)
 
                 # Owner'a DM at

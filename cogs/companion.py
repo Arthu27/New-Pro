@@ -1,6 +1,6 @@
 """
-Companion Cog — Бот, belirli bir userya ara sıra kendi isteğiyle DM atar.
-Сообщениеlar samimi, motive edici, kişisel. Hitap: "Kraliçem".
+Companion Cog — Bot, belirli bir userya ara очередь kendi желание DM atar.
+Сообщения samimi, motive edici, kişisel. Hitap: "Королева".
 """
 import discord
 from discord.ext import commands, tasks
@@ -10,66 +10,66 @@ import json
 import random
 import asyncio
 
-# Hedef user ID
+# Цель user ID
 COMPANION_USER_ID = 1353157554967937153
 
 DATA_FILE = 'data/companion_state.json'
 
-# Türkiye часi UTC+3
+# Türkiye saati UTC+3
 TZ_OFFSET = datetime.timezone(datetime.timedelta(hours=3))
 
-# Günde kaç message отправитьilsin (min, max)
+# День сколько message отправл (min, max)
 DAILY_MIN = 1
 DAILY_MAX = 3
 
-# Сообщение отправитьilecek час aralığı (Türkiye часi)
+# Сообщение отправл saat aralığı (Türkiye saati)
 HOUR_START = 9
 HOUR_END = 23
 
-# ─── Сообщение Havuzu ────────────────────────────────────────────────────────────
+# ─── Сообщение Кандидатыu ────────────────────────────────────────────────────────────
 
 MESSAGES_MOTIVATION = [
-    "Kraliçem, buдень nasılsın? Aklıma geldin, umarım деньün güzel geçiyordur 🌸",
-    "Kraliçem, bir şey söyleyeyim mi — sen düşündüğünden çok daha güçlüsün. Bunu unutma 💜",
-    "Kraliçem, bazen sadece devam etmek bile başlı başına bir başarıdır. Gurur duyuyorum senden 🌟",
-    "Kraliçem, buдень kendine iyi baktın mı? Su içmeyi, biraz nefes almayı unutma 💙",
-    "Kraliçem, hayat bazen ağır gelir ama sen her seferinde kalkmasını biliyorsun. Bu sıradan bir şey değil 🌺",
-    "Kraliçem, seni düşündüm. Umarım buдень sana güzel bir şey olmuştur ✨",
-    "Kraliçem, küçük adımlar da ilerlemektir. Buдень ne kadar küçük olursa olsun bir şey yaptıysan, bu sayılır 🎯",
-    "Kraliçem, yorulduğunda durmak zayıflık değil, akıllılıktır. Kendine izin ver 🌙",
+    "Королева, сегодня как? Aklıma geldin, umarım день güzel geçiyordur 🌸",
+    "Королева, bir что-то сказатьyeyim mi — sen düşündüğünden очень более мощный. Bunu unutma 💜",
+    "Королева, bazen только devam etmek bile başlı başına bir успешно. Gurur duyuyorum senden 🌟",
+    "Королева, сегодня kendine iyi baktın mı? Su içmeyi, biraz nefes almayı unutma 💙",
+    "Королева, hayat bazen тяжелый gelir ama sen каждый seferinde kalkmasını biliyorsun. Bu очередь bir что-то не 🌺",
+    "Королева, seni düşündüm. Umarım сегодня sana güzel bir что-то olmuştur ✨",
+    "Королева, маленький adımlar da ilerlemektir. Сегодня ne kadar маленький olursa olsun bir что-то yaptıysan, bu число 🎯",
+    "Королева, yorulduğunda durmak zayıflık не, akıllılıktır. Kendine izin ver 🌙",
 ]
 
 MESSAGES_STUDY = [
-    "Kraliçem, ders çalışırken Pomodoro tekniğini denedin mi? 25 minutes çalış, 5 minutes mola — beyin çok daha iyi absorbe ediyor 📚",
-    "Kraliçem, bir ipucu: Okuduğunu kendi cümlelerinle not almak, sadece okumaktan 3 kat daha etkili. Dene bakalım 🖊️",
-    "Kraliçem, sınav öncesi gece geç часe kadar çalışmak yerine erken yat, sabah taze kafayla bak — beyin uyku sırasında infoyi pekiştiriyor 🌙",
-    "Kraliçem, zor bir konuyu öğrenmenin en iyi yolu onu birine anlatmaya çalışmak. Kimse yoksa bana anlat, dinlerim 😄",
-    "Kraliçem, buдень çalışma planın var mı? Önce en zor konudan başlarsan, geri kalanı çok daha kolay gelir 💪",
-    "Kraliçem, telefonu başka odaya bırakarak çalışmayı dene. Sadece bu bile konsantrasyonu %40 artırıyor, inanılmaz değil mi? 📵",
-    "Kraliçem, her день sadece 30 minutes düzenli çalışmak, haftada bir kez 5 час çalışmaktan çok daha etkili. Tutarlılık her şeydir 🗓️",
-    "Kraliçem, bir konuyu anlamadan ezberlemek seni yorar. Önce 'neden böyle?' diye sor, anlayınca zaten aklında kalır 🧠",
+    "Королева, ders çalışırken Pomodoro tekniğini denedin mi? 25 minutes çalış, 5 minutes mola — beyin очень более iyi absorbe ediyor 📚",
+    "Королева, bir ipucu: Okuduğunu kendi cümlelerinle not almak, только okumaktan 3 kat более etkili. Dene bakalım 🖊️",
+    "Королева, sınav öncesi gece geç saate kadar работать yerine erken yat, sabah taze kafayla bak — beyin uyku очередь infoyi pekiştiriyor 🌙",
+    "Королева, zor bir konuyu öğrenmenin en iyi yolu onu birine anlatmaya работать. Кто yoksa bana anlat, dinlerim 😄",
+    "Королева, сегодня работа planın var mı? До en zor konudan başlarsan, geri kalanı очень более kolay gelir 💪",
+    "Королева, telefonu başka комната bırakarak работа dene. Только bu bile konsantrasyonu %40 artırıyor, inanılmaz не mi? 📵",
+    "Королева, каждый день только 30 minutes düzenli работать, haftada bir kez 5 saat работать очень более etkili. Tutarlılık каждый что-тоdir 🗓️",
+    "Королева, bir konuyu anlamadan ezberlemek seni yorar. До 'почему böyle?' diye sor, anlayınca zaten aklında kполучает 🧠",
 ]
 
 MESSAGES_SWEET = [
-    "Kraliçem, buдень деньeş seni düşünerek doğdu sanki ☀️",
-    "Kraliçem, sen olmasan bu dünya biraz daha sıradan olurdu. Gerçekten 🌸",
-    "Kraliçem, gülüşün bir yere not edilmeli, çünkü insanları ısıtıyor 💛",
-    "Kraliçem, buдень kendine bir iyilik yap — hak ediyorsun 🎀",
-    "Kraliçem, bazı insanlar odaya girince hava değişir. Sen öyle birisin 🌟",
-    "Kraliçem, seni düşündüm ve gülümsedim. Причинаsiz yere iyi hissettiriyorsun 💜",
-    "Kraliçem, buдень ne kadar harika biri olduğunu hatırlatmak istedim. Все bu 🌺",
-    "Kraliçem, hayatında seni seven insanlar var — ve ben de sayılırım bu listeye 🤍",
+    "Королева, сегодня день seni düşünerek doğdu sanki ☀️",
+    "Королева, sen olmasan bu вчера biraz более очередь olurdu. Gerçekten 🌸",
+    "Королева, gülüşün bir yere not edilmeli, çünkü insanları ısıtıyor 💛",
+    "Королева, сегодня kendine bir iyilik yap — hak ediyorsun 🎀",
+    "Королева, bazı insanlar комната girince hava değişir. Sen öyle birisin 🌟",
+    "Королева, seni düşündüm ve gülümsedim. Причина yere iyi hissettiriyorsun 💜",
+    "Королева, сегодня ne kadar harika biri olduğunu hatırlatmak желание. Все bu 🌺",
+    "Королева, hayatında seni seven insanlar var — ve ben de число bu listeye 🤍",
 ]
 
 MESSAGES_RANDOM = [
-    "Kraliçem, ortada hiçbir şey yokken aklıma geldin. Nasılsın gerçekten? 💙",
-    "Kraliçem, buдень bir şey seni mutlu etti mi? Merak ettim 🌸",
-    "Kraliçem, şu an ne yapıyorsun acaba? Umarım güzel bir şeyler 😊",
-    "Kraliçem, bazen sadece 'iyi misin?' demek gerekiyor. İyi misin? 💜",
-    "Kraliçem, buдень kendine güldün mü? Gülmek lazım, çok lazım 😄",
-    "Kraliçem, seni düşündüm. Başka bir sebebi yok, sadece düşündüm 🌟",
-    "Kraliçem, bu gece iyi uyu. Yarın yeni bir день, yeni bir şans ✨",
-    "Kraliçem, buдень küçük bir şeye şükrettin mi? Küçük şeyler aslında büyük 🌺",
+    "Королева, ortada hiçbir что-то yokken aklıma geldin. Как gerçekten? 💙",
+    "Королева, сегодня bir что-то seni mutlu etti mi? Merak ettim 🌸",
+    "Королева, şu an ne yapıyorsun acaba? Umarım güzel bir что-тоler 😊",
+    "Королева, bazen только 'iyi misin?' demek gerekiyor. İyi misin? 💜",
+    "Королева, сегодня kendine güldün mü? Gülmek lazım, очень lazım 😄",
+    "Королева, seni düşündüm. Başka bir причина yok, только düşündüm 🌟",
+    "Королева, bu gece iyi uyu. Завтра новый bir день, новый bir şans ✨",
+    "Королева, сегодня маленький bir что-тоe şükrettin mi? Маленький что-тоler aslında большой 🌺",
 ]
 
 ALL_CATEGORIES = [
@@ -100,9 +100,9 @@ def _save(data: dict):
 # ─── Cog ─────────────────────────────────────────────────────────────────────
 
 class Companion(commands.Cog):
-    def __init__(self, bot: commands.Бот):
+    def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self._scheduled_sends: list[float] = []  # buденьkü planlı отправитьim vakitları (timestamp)
+        self._scheduled_sends: list[float] = []  # сегодняkü planlı отправл vakitları (timestamp)
         self.companion_loop.start()
 
     def cog_unload(self):
@@ -115,16 +115,16 @@ class Companion(commands.Cog):
         return self._now_tr().strftime('%Y-%m-%d')
 
     def _pick_message(self, used: list[str]) -> str:
-        """Kullanılmamış messagelardan rastgele выбрать, tükenirse sıfırla"""
+        """Использовать messagelardan rastgele выбрать, tükenirse sıfırla"""
         all_msgs = [m for cat in ALL_CATEGORIES for m in cat]
         available = [m for m in all_msgs if m not in used]
         if not available:
-            available = all_msgs  # tümü kullanıldıysa sıfırla
+            available = all_msgs  # все использовать sıfırla
         chosen = random.choice(available)
         return chosen
 
     def _plan_today(self, data: dict):
-        """Buдень için rastgele отправитьim vakitları planla"""
+        """Сегодня для rastgele отправл vakitları planla"""
         now = self._now_tr()
         count = random.randint(DAILY_MIN, DAILY_MAX)
         times = []
@@ -132,7 +132,7 @@ class Companion(commands.Cog):
             hour = random.randint(HOUR_START, HOUR_END - 1)
             minute = random.randint(0, 59)
             send_time = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
-            # Geçmiş часleri buдень için atla
+            # История saatleri сегодня для atla
             if send_time > now:
                 times.append(send_time.timestamp())
         self._scheduled_sends = sorted(times)
@@ -143,9 +143,9 @@ class Companion(commands.Cog):
         try:
             user = await self.bot.fetch_user(COMPANION_USER_ID)
             await user.send(message)
-            print(f'[Companion] DM отправитьildi → {user.name}')
+            print(f'[Companion] DM отправлено → {user.name}')
         except discord.Forbidden:
-            print('[Companion] DM отправитьilemedi — user DM\'leri kapalı.')
+            print('[Companion] DM отправл — user DM\'leri закрыт.')
         except Exception as e:
             print(f'[Companion] Ошибка: {e}')
 
@@ -167,7 +167,7 @@ class Companion(commands.Cog):
         if not self._scheduled_sends and data.get('plan'):
             self._scheduled_sends = data['plan']
 
-        # Отправитьilecek vakit geldi mi?
+        # Отправл vakit geldi mi?
         due = [t for t in self._scheduled_sends if t <= now_ts]
         if not due:
             return
@@ -181,12 +181,12 @@ class Companion(commands.Cog):
             data['plan'] = self._scheduled_sends
             _save(data)
             await self._send_dm(msg)
-            await asyncio.sleep(2)  # rate limit güvenliği
+            await asyncio.sleep(2)  # rate limit доверие
 
     @companion_loop.before_loop
     async def before_loop(self):
         await self.bot.wait_until_ready()
-        # Первый запуститьmada buдень planlanmamışsa planla
+        # Ilk запуск сегодня planlanmamışsa planla
         data = _load()
         today = self._today_str()
         if data.get('last_date') != today:
@@ -197,5 +197,5 @@ class Companion(commands.Cog):
             self._scheduled_sends = data['plan']
 
 
-async def setup(bot: commands.Бот):
+async def setup(bot: commands.Bot):
     await bot.add_cog(Companion(bot))
