@@ -195,7 +195,7 @@ class TicketView(discord.ui.View):
                     name="Aether AI Destek",
                     icon_url=interaction.client.user.display_avatar.url
                 )
-                ai_embed.set_footer(text="Çözemediğim statuslarda right_btnlere otomatik yönlendiririm.")
+                ai_embed.set_footer(text="Если не смогу помочь — направлю к модераторам.")
                 await channel.send(
                     embed=ai_embed,
                     view=TicketCategoryView(channel.id, guild.id)
@@ -205,26 +205,22 @@ class TicketView(discord.ui.View):
 
         # Пользователю DM
         try:
-            dm_e = discord.Embed(
-                title="🎫  Destek Talebiniz Создано",
-                color=0x5865F2,
-                timestamp=datetime.datetime.utcnow()
-            )
+            dm_e = discord.Embed(color=0x5865F2, timestamp=datetime.datetime.utcnow())
             dm_e.description = (
-                f"```ansi\n\u001b[1;34m✔ TALEBİN ALINDI\u001b[0m\n```\n"
-                f"{_divider()}\n\n"
-                f"**{guild.name}** serversunda bir destek talebi başarıyla açıldı.\n\n"
-                "> Destek ekibimiz en kısa sürede seninle ilgilenecek.\n"
-                "> Каналda sorununu detaylıca описаниеyı unutma!\n\n"
-                f"{_divider()}"
+                f"## Тикет создан\n"
+                f"### Ваш запрос принят\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                f"**Сервер:** {guild.name}\n"
+                f"**Канал:** {channel.mention}\n"
+                f"**Создан:** <t:{ts}:R>\n\n"
+                f"Опишите проблему как можно подробнее — так решение будет быстрее.\n\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             )
             dm_e.set_thumbnail(url=guild.icon.url if guild.icon else None)
-            dm_e.add_field(name="📌 Канал", value=channel.mention, inline=True)
-            dm_e.add_field(name="🕐 Создатьulma", value=f"<t:{ts}:R>", inline=True)
-            dm_e.add_field(name="⏱️ Baddnen Yanıt", value="```5 — 15 minutes```", inline=False)
-            dm_e.add_field(name="💡 İpucu", value="*Sorunu ne kadar detaylı anlatırsan, o kadar hızlı çözüm alırsın.*", inline=False)
-            dm_e.set_image(url=GIF_TICKET_OPEN)
-            dm_e.set_footer(text=f"Aether Destek • {guild.name}", icon_url=guild.icon.url if guild.icon else None)
+            if guild.icon:
+                dm_e.set_footer(text=f"{guild.name} · Поддержка", icon_url=guild.icon.url)
+            else:
+                dm_e.set_footer(text=f"{guild.name} · Поддержка")
             await interaction.user.send(embed=dm_e)
         except discord.Forbidden:
             pass
@@ -273,49 +269,43 @@ class CloseTicketView(discord.ui.View):
 
         log_ch = discord.utils.get(interaction.guild.text_channels, name="ticket-log")
         if log_ch:
-            log_e = discord.Embed(
-                title="📋  Destek Talebi Закрытьıldı",
-                color=0xE74C3C,
-                timestamp=datetime.datetime.utcnow()
-            )
+            log_e = discord.Embed(color=0xE74C3C, timestamp=datetime.datetime.utcnow())
             log_e.description = (
-                f"```ansi\n\u001b[1;31m🔒 KAPATILDI\u001b[0m\n```\n"
-                f"{_divider()}"
+                f"## Тикет закрыт\n"
+                f"### {channel.name}\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                f"**Закрыл:** {interaction.user.mention}\n"
+                f"**Дата:** <t:{ts}:F>\n"
+                f"**Сообщений:** {len(messages)}\n\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             )
-            log_e.add_field(name="📁 Канал", value=f"`{channel.name}`", inline=True)
-            log_e.add_field(name="👤 Закрытьan", value=interaction.user.mention, inline=True)
-            log_e.add_field(name="📅 Дата", value=f"<t:{ts}:F>", inline=False)
-            log_e.add_field(name="💬 Сообщение Sayısı", value=f"```{len(messages)} message```", inline=True)
-            log_e.set_footer(text="Aether Destek")
+            if interaction.guild.icon:
+                log_e.set_footer(text=f"{interaction.guild.name} · Логи", icon_url=interaction.guild.icon.url)
+            else:
+                log_e.set_footer(text=f"{interaction.guild.name} · Логи")
             file = discord.File(fp=io.StringIO(transcript), filename=f"{channel.name}_transcript.txt")
             await log_ch.send(embed=log_e, file=file)
 
         if owner_id:
             try:
                 owner = await interaction.guild.fetch_member(owner_id)
-                dm_e = discord.Embed(
-                    title="🔒  Destek Talebiniz Закрытьıldı",
-                    color=0xE74C3C,
-                    timestamp=datetime.datetime.utcnow()
-                )
+                dm_e = discord.Embed(color=0xE74C3C, timestamp=datetime.datetime.utcnow())
                 dm_e.description = (
-                    f"```ansi\n\u001b[1;31m🔒 TALEBİN KAPATILDI\u001b[0m\n```\n"
-                    f"{_divider()}\n\n"
-                    f"**{interaction.guild.name}** serversundaki destek talebiniz закрытьıldı.\n\n"
-                    "> Новый bir sorunuz olursa tekrar destek talebi создатьabilirsiniz.\n"
-                    "> Transcript dosyası server регистрацияlarına addndi.\n\n"
-                    f"{_divider()}"
+                    f"## Тикет закрыт\n"
+                    f"### Ваш запрос завершён\n"
+                    f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                    f"**Сервер:** {interaction.guild.name}\n"
+                    f"**Закрыл:** {interaction.user.display_name}\n"
+                    f"**Закрыт:** <t:{ts}:R>\n"
+                    f"**Сообщений:** {len(messages)}\n\n"
+                    f"Если у вас возникнет новый вопрос — создайте новый тикет.\n\n"
+                    f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
                 )
                 dm_e.set_thumbnail(url=interaction.guild.icon.url if interaction.guild.icon else None)
-                dm_e.add_field(name="👤 Закрытьan", value=f"```{interaction.user.display_name}```", inline=True)
-                dm_e.add_field(name="🕐 Kapanma", value=f"<t:{ts}:R>", inline=True)
-                dm_e.add_field(name="💬 Всего Сообщение", value=f"```{len(messages)} message```", inline=True)
-                dm_e.add_field(name="💡 Информация", value="*Новый bir sorun için tekrar destek talebi açabilirsiniz.*", inline=False)
-                dm_e.set_image(url=GIF_TICKET_CLOSE)
-                dm_e.set_footer(
-                    text=f"Aether Destek • {interaction.guild.name}",
-                    icon_url=interaction.guild.icon.url if interaction.guild.icon else None
-                )
+                if interaction.guild.icon:
+                    dm_e.set_footer(text=f"{interaction.guild.name} · Поддержка", icon_url=interaction.guild.icon.url)
+                else:
+                    dm_e.set_footer(text=f"{interaction.guild.name} · Поддержка")
                 await owner.send(embed=dm_e)
             except:
                 pass
@@ -1319,32 +1309,31 @@ YANIT FORMATI:
         state['staff_notified'] = True
         
         # Yonlendirme messagei
-        e = discord.Embed(
-            title="🔄  Правоlilere Yönlendiriliyor",
-            color=0xF39C12,
-            timestamp=datetime.datetime.utcnow()
-        )
+        e = discord.Embed(color=0xF39C12, timestamp=datetime.datetime.utcnow())
         
         reason_text = {
-            'sikayet': 'Şikayet konusu right_btnler tarafından değerlendirilmeli',
-            'teknik': 'Teknik sorun right_btnler tarafından incelenmeli',
-            'право': 'Право gerektiren действие',
-            'agir_ihlal': 'Ağır ihlal tespit edildi, üst düzey inceleme gerekiyor',
-            'itiraz': 'Пользователь AI kararına itiraz ediyor',
-            'ban_talebi': 'Бан действиеi sadece right_btnler tarafından yapılabilir',
-            'max_messages': 'Konuşma limiti aşıldı, right_btnler devralıyor',
-            'ai_error': 'Система Ошибкаsı, right_btnler devralıyor',
-            'diger': 'Bu konu right_btnler tarafından ele alınmalı'
+            'sikayet': 'Жалоба должна быть рассмотрена модераторами',
+            'teknik': 'Техническая проблема требует проверки модераторами',
+            'право': 'Действие требует прав модератора',
+            'agir_ihlal': 'Обнаружено серьёзное нарушение, требуется проверка',
+            'itiraz': 'Пользователь оспаривает решение AI',
+            'ban_talebi': 'Бан может быть выполнен только модераторами',
+            'max_messages': 'Лимит сообщений превышен, модераторы берут управление',
+            'ai_error': 'Системная ошибка, модераторы берут управление',
+            'diger': 'Этот вопрос должен быть рассмотрен модераторами'
         }
         
         e.description = (
-            f"```ansi\n\u001b[1;33m🔄 YÖNLENDİRİLİYOR\u001b[0m\n```\n"
-            f"{_divider()}\n\n"
-            f"**Причина:** {reason_text.get(reason, 'Правоliler devralıyor')}\n\n"
-            "Destek ekibimiz en kısa sürede seninle ilgilenecek. 💙\n"
-            f"{_divider()}"
+            f"## Направление к модераторам\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            f"**Причина:** {reason_text.get(reason, 'Модераторы берут управление')}\n\n"
+            f"Наша команда поддержки свяжется с вами в ближайшее время.\n\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         )
-        e.set_footer(text="Aether AI Moderator")
+        if channel.guild.icon:
+            e.set_footer(text=f"{channel.guild.name} · Модерация", icon_url=channel.guild.icon.url)
+        else:
+            e.set_footer(text=f"{channel.guild.name} · Модерация")
         
         await channel.send(embed=e)
         
@@ -1394,40 +1383,44 @@ YANIT FORMATI:
             
             # Kullaniciya DM gonder
             try:
-                dm_embed = discord.Embed(
-                    title="⚠️  Jail Наказаниеsı Aldınız",
-                    color=0xE74C3C,
-                    timestamp=datetime.datetime.utcnow()
-                )
+                dm_embed = discord.Embed(color=0xE74C3C, timestamp=datetime.datetime.utcnow())
                 dm_embed.description = (
+                    f"## Jail наказание\n"
+                    f"### Вы получили jail\n"
+                    f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
                     f"**Сервер:** {guild.name}\n"
-                    f"**Süre:** {duration} minutes\n"
+                    f"**Длительность:** {duration} минут\n"
                     f"**Причина:** {reason}\n\n"
-                    f"Наказание süresi sonunda jail roleünüz otomatik убратьılacaktır.\n"
-                    f"İtiraz etmek isterseniz ticket channelında belirtiniz."
+                    f"После окончания срока jail роль будет автоматически снята.\n"
+                    f"Если хотите оспорить — напишите в тикет.\n\n"
+                    f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
                 )
-                dm_embed.set_footer(text="Aether AI Moderator")
+                if guild.icon:
+                    dm_embed.set_footer(text=f"{guild.name} · Модерация", icon_url=guild.icon.url)
+                else:
+                    dm_embed.set_footer(text=f"{guild.name} · Модерация")
                 await target_user.send(embed=dm_embed)
             except:
                 pass
             
             # Каналa bildir
-            jail_embed = discord.Embed(
-                title="✅  Jail Наказаниеsı Uygulandı",
-                color=0x2ECC71,
-                timestamp=datetime.datetime.utcnow()
-            )
+            jail_embed = discord.Embed(color=0x2ECC71, timestamp=datetime.datetime.utcnow())
             jail_embed.description = (
-                f"```ansi\n\u001b[1;32m✅ CEZA UYGULAND\u001b[0m\n```\n"
-                f"{_divider()}\n\n"
+                f"## Jail применён\n"
+                f"### Наказание выполнено\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
                 f"**Пользователь:** {target_user.mention}\n"
-                f"**Süre:** {duration} minutes\n"
+                f"**Длительность:** {duration} минут\n"
                 f"**Причина:** {reason}\n\n"
-                f"Olayı çözmekte size right_btn ekibimiz yardımcı olacaktır.\n"
-                f"İtiraz etmek isterseniz, bu channelı açık tutun.\n"
-                f"{_divider()}"
+                f"Наша команда модераторов поможет решить проблему.\n"
+                f"Если хотите оспорить — оставьте этот тикет открытым.\n\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             )
-            jail_embed.set_footer(text="Aether AI Moderator")
+            if channel.guild.icon:
+                jail_embed.set_footer(text=f"{channel.guild.name} · Модерация", icon_url=channel.guild.icon.url)
+            else:
+                jail_embed.set_footer(text=f"{channel.guild.name} · Модерация")
+            await channel.send(embed=jail_embed)
             await channel.send(embed=jail_embed)
             
             # Jail'i otomatik kaldir (duration minutes sonra)
@@ -1481,17 +1474,20 @@ YANIT FORMATI:
             if fresh_role in fresh_member.roles:
                 await fresh_member.remove_roles(fresh_role, reason="Jail süresi doldu (AI Moderator)")
                 try:
-                    dm_embed = discord.Embed(
-                        title="✅  Jail Наказаниеnız Последнийa Erdi",
-                        color=0x2ECC71,
-                        timestamp=datetime.datetime.utcnow()
-                    )
+                    dm_embed = discord.Embed(color=0x2ECC71, timestamp=datetime.datetime.utcnow())
                     dm_embed.description = (
+                        f"## Jail снят\n"
+                        f"### Наказание завершено\n"
+                        f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
                         f"**Сервер:** {guild.name}\n\n"
-                        f"Jail cezanız sona erdi. Artık normal şekilde serverya erişebilirsiniz.\n"
-                        f"Lütfen server kurallarına uygun davranmaya devam edin."
+                        f"Ваш jail срок истёк. Теперь вы можете пользоваться сервером как обычно.\n"
+                        f"Пожалуйста, продолжайте соблюдать правила сервера.\n\n"
+                        f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
                     )
-                    dm_embed.set_footer(text="Aether AI Moderator")
+                    if guild.icon:
+                        dm_embed.set_footer(text=f"{guild.name} · Модерация", icon_url=guild.icon.url)
+                    else:
+                        dm_embed.set_footer(text=f"{guild.name} · Модерация")
                     await fresh_member.send(embed=dm_embed)
                 except:
                     pass
