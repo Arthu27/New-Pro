@@ -39,7 +39,7 @@ class AFK(commands.Cog):
 
     @app_commands.command(name="afk", description="AFK moduna gir")
     async def afk(self, interaction: discord.Interaction, причина: str = "AFK"):
-        self._set(interaction.guild_id, interaction.user.id, причина)
+        self._set(interaction.guild_id, interaction.user.id, reason)
 
         ts = int(datetime.now(timezone.utc).timestamp())
         e = discord.Embed(color=0x5865F2, timestamp=datetime.now(timezone.utc))
@@ -49,7 +49,7 @@ class AFK(commands.Cog):
         )
         e.description = (
             f"```\n😴  AFK MODU АКТИВЕН\n```\n"
-            f"> **Причина:** {причина}\n"
+            f"> **Причина:** {reason}\n"
             f"> **Başlangıç:** <t:{ts}:R>\n\n"
             f"*Biri seni mention edince уведомление alacaklar.*"
         )

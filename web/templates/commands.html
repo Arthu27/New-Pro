@@ -93,7 +93,7 @@ async function loadRoles(selId) {
   var gid = document.getElementById('guild-sel').value;
   if (!gid) return;
   var r = await fetch('/api/guild/'+gid+'/роли');
-  var role = await r.json();
+  var roles = await r.json();
   if (!Array.isArray(roles)) role = [];
   var sel = document.getElementById(selId);
   sel.innerHTML = roles.map(function(ro){return '<option value="'+ro.id+'">'+ro.name+'</option>';}).join('');
@@ -108,8 +108,8 @@ function openCmd(cmd) {
     kick: '<div class="form-group"><label>Сервер</label><select id="guild-sel" class="form-controle">'+guildOptions()+'</select></div><div class="form-group"><label>Пользователь ID</label><input type="text" id="user_id" placeholder="123456789"></div><div class="form-group"><label>Причина</label><input type="text" id="reason" placeholder="Kick причина"></div><button class="btn-exec" onclick="execCmd()">KICK</button><button class="btn-cancel" onclick="closeCmd()">Отмена</button>',
     timeout: '<div class="form-group"><label>Сервер</label><select id="guild-sel" class="form-controle">'+guildOptions()+'</select></div><div class="form-group"><label>Пользователь ID</label><input type="text" id="user_id" placeholder="123456789"></div><div class="form-group"><label>Sure (dakika)</label><input type="number" id="duration" value="60"></div><div class="form-group"><label>Причина</label><input type="text" id="reason" placeholder="Mute причина"></div><button class="btn-exec" onclick="execCmd()">TIMEOUT</button><button class="btn-cancel" onclick="closeCmd()">Отмена</button>',
     warn: '<div class="form-group"><label>Сервер</label><select id="guild-sel" class="form-controle">'+guildOptions()+'</select></div><div class="form-group"><label>Пользователь ID</label><input type="text" id="user_id" placeholder="123456789"></div><div class="form-group"><label>Причина</label><input type="text" id="reason" placeholder="Предупреждение причина"></div><button class="btn-exec" onclick="execCmd()">WARN</button><button class="btn-cancel" onclick="closeCmd()">Отмена</button>',
-    clear: '<div class="form-group"><label>Сервер</label><select id="guild-sel" class="form-controle" onchange="loadChannels('channel-sel')">'+guildOptions()+'</select></div><div class="form-group"><label>Канал</label><select id="channel-sel" class="form-controle"><option>Once сервер secin</option></select></div><div class="form-group"><label>Сообщение Количество</label><input type="number" id="amount" value="10"></div><button class="btn-exec" onclick="execCmd()">TEMİZLE</button><button class="btn-cancel" onclick="closeCmd()">Отмена</button>',
-    роли: '<div class="form-group"><label>Сервер</label><select id="guild-sel" class="form-controle" onchange="loadRoles('role-sel')">'+guildOptions()+'</select></div><div class="form-group"><label>Пользователь ID</label><input type="text" id="user_id" placeholder="123456789"></div><div class="form-group"><label>Роль</label><select id="роли-sel" class="form-controle"><option>Once сервер secin</option></select></div><button class="btn-exec" onclick="execCmd()">ПРИМЕН</button><button class="btn-cancel" onclick="closeCmd()">Отмена</button>'
+    clear: '<div class="form-group"><label>Сервер</label><select id="guild-sel" class="form-controle" onchange="loadChannels(\'channel-sel\')">'+guildOptions()+'</select></div><div class="form-group"><label>Канал</label><select id="channel-sel" class="form-controle"><option>Once сервер secin</option></select></div><div class="form-group"><label>Сообщение Количество</label><input type="number" id="amount" value="10"></div><button class="btn-exec" onclick="execCmd()">TEMİZLE</button><button class="btn-cancel" onclick="closeCmd()">Отмена</button>',
+    role: '<div class="form-group"><label>Сервер</label><select id="guild-sel" class="form-controle" onchange="loadRoles(\'role-sel\')">'+guildOptions()+'</select></div><div class="form-group"><label>Пользователь ID</label><input type="text" id="user_id" placeholder="123456789"></div><div class="form-group"><label>Роль</label><select id="role-sel" class="form-controle"><option>Once сервер secin</option></select></div><button class="btn-exec" onclick="execCmd()">ПРИМЕН</button><button class="btn-cancel" onclick="closeCmd()">Отмена</button>'
   };
   document.getElementById('cmdForm').innerHTML = forms[cmd];
   document.getElementById('cmdModal').style.display = 'flex';
@@ -126,7 +126,7 @@ async function execCmd() {
   var dur = document.getElementById('duration'); if (dur) data.duration = dur.value;
   var amt = document.getElementById('amount'); if (amt) data.amount = amt.value;
   var chs = document.getElementById('channel-sel'); if (chs) data.channel_id = chs.value;
-  var rls = document.getElementById('роли-sel'); if (rls) data.role_id = rls.value;
+  var rls = document.getElementById('role-sel'); if (rls) data.role_id = rls.value;
 
   var r = await fetch('/api/execute-command', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
   var res = await r.json();

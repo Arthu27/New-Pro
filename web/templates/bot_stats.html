@@ -48,7 +48,7 @@ async function loadStats() {
   if (d.error) return;
 
   document.getElementById('stats').innerHTML =
-    '<div class="stat-box"><div class="stat-icon"><i class="fas fa-сервер"></i></div><div class="stat-value">'+d.guilds+'</div><div class="stat-label">Сервер</div></div>' +
+    '<div class="stat-box"><div class="stat-icon"><i class="fas fa-server"></i></div><div class="stat-value">'+d.guilds+'</div><div class="stat-label">Сервер</div></div>' +
     '<div class="stat-box"><div class="stat-icon"><i class="fas fa-users"></i></div><div class="stat-value">'+d.users+'</div><div class="stat-label">Пользователь</div></div>' +
     '<div class="stat-box"><div class="stat-icon"><i class="fas fa-signal"></i></div><div class="stat-value">'+d.latency+'<span style="font-size:14px;">ms</span></div><div class="stat-label">Ping</div></div>' +
     '<div class="stat-box"><div class="stat-icon"><i class="fas fa-clock"></i></div><div class="stat-value" style="font-size:18px;">'+d.uptime+'</div><div class="stat-label">Uptime</div></div>' +

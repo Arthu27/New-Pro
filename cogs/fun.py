@@ -161,8 +161,8 @@ class Fun(commands.Cog):
         await interaction.response.send_message("✅ Anket создано!", ephemeral=True)
 
     @app_commands.command(name="profil-kartı", description="Показать подробную карточку профиля")
-    async def profil_karti(self, interaction: discord.Interaction, пользователь: discord.Member = None):
-        u = пользователь or interaction.user
+    async def profil_karti(self, interaction: discord.Interaction, user: discord.Member = None):
+        u = user or interaction.user
         rozet = "👑" if u == interaction.guild.owner else "🛡️" if u.guild_permissions.administrator else "⚔️" if u.guild_permissions.moderate_members else "👤"
         e = discord.Embed(
             title=f"{rozet}  {u.display_name} — Profil",

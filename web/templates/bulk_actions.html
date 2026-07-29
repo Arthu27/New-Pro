@@ -53,22 +53,22 @@
   <div class="grid3" style="margin-bottom:15px;">
     <div>
       <label class="field-label">Hedef Роль (sahip olmak olanlar)</label>
-      <select id="bulk-target-роли" class="field-input"></select>
+      <select id="bulk-target-role" class="field-input"></select>
     </div>
     <div>
       <label class="field-label">Verilecek / Alınacak Роль</label>
-      <select id="bulk-action-роли" class="field-input"></select>
+      <select id="bulk-action-role" class="field-input"></select>
     </div>
     <div>
       <label class="field-label">Действие</label>
-      <select id="bulk-роли-action" class="field-input">
+      <select id="bulk-role-action" class="field-input">
         <option value="add">✅ Роль Ver</option>
         <option value="remove">❌ Роль Al</option>
       </select>
     </div>
   </div>
   <button class="safe-btn" onclick="bulkRole()"><i class="fas fa-users-cog"></i> Применить</button>
-  <div id="роли-result" class="result-box"></div>
+  <div id="roles-result" class="result-box"></div>
 </div>
 
 <!-- Toplu DM -->
@@ -77,7 +77,7 @@
   <div class="warning-box"><i class="fas fa-info-circle"></i> Только выбрать роли sahip olmak участник отправл!</div>
   <div style="margin-bottom:12px;">
     <label class="field-label">Hedef Роль</label>
-    <select id="dm-роли" class="field-input"></select>
+    <select id="dm-role" class="field-input"></select>
   </div>
   <div style="margin-bottom:15px;">
     <label class="field-label">Сообщение</label>
@@ -103,7 +103,7 @@ async function loadData(gid_param) {
     .map(function(c){return '<option value="'+c.id+'">#'+c.name+'</option>';}).join('');
   document.getElementById('purge-channel').innerHTML = chOpts || '<option>Канал yok</option>';
   var role = roles.map(function(r){return '<option value="'+r.id+'">'+r.name+'</option>';}).join('');
-  ['bulk-target-роли','bulk-action-роли','dm-роли'].forEach(function(id){
+  ['bulk-target-role','bulk-action-role','dm-role'].forEach(function(id){
     document.getElementById(id).innerHTML = roles || '<option>Роль yok</option>';
   });
 }
@@ -121,12 +121,12 @@ async function purgeMessages() {
 
 async function bulkRole() {
   if (!selectedGuild) { alert('Сервер выбрать!'); return; }
-  var r = await fetch('/api/guild/'+selectedGuild+'/bulk-роли', {
+  var r = await fetch('/api/guild/'+selectedGuild+'/bulk-role', {
     method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({target_role:document.getElementById('bulk-target-роли').value, action_role:document.getElementById('bulk-action-роли').value, action:document.getElementById('bulk-роли-action').value})
+    body: JSON.stringify({target_role:document.getElementById('bulk-target-role').value, action_role:document.getElementById('bulk-action-role').value, action:document.getElementById('bulk-role-action').value})
   });
   var d = await r.json();
-  showResult('роли-result', d.success, d.success ? d.count+' üüyeyi prismetndı!' : (d.error||'Ошибка'));
+  showResult('roles-result', d.success, d.success ? d.count+' üüyeyi prismetndı!' : (d.error||'Ошибка'));
 }
 
 async function bulkDM() {
@@ -136,7 +136,7 @@ async function bulkDM() {
   if (!confirm('Bu роли sahip olmak все участник DM отправл. Devam et?')) return;
   var r = await fetch('/api/guild/'+selectedGuild+'/bulk-dm', {
     method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({role_id:document.getElementById('dm-роли').value, message:msg})
+    body: JSON.stringify({role_id:document.getElementById('dm-role').value, message:msg})
   });
   var d = await r.json();
   showResult('dm-result', d.success, d.success ? d.count+' üüyeyi отправлено!' : (d.error||'Ошибка'));

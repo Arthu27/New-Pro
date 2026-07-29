@@ -883,7 +883,7 @@ def api_guild_members(guild_id):
                 'avatar': str(m.display_avatar.url),
                 'joined_at': m.joined_at.isoformat() if m.joined_at else None,
                 'created_at': created_at.isoformat(),
-                'role': [{'name': r.name, 'color': str(r.color)} for r in m.roles[1:]],
+                'roles': [{'name': r.name, 'color': str(r.color)} for r in m.roles[1:]],
                 'bot': m.bot,
                 'status': str(m.status) if hasattr(m, 'status') else 'offline',
                 'nick': m.nick,
@@ -1557,6 +1557,14 @@ def _save_login_token(username, roles):
     with open(tokens_file, 'w', encoding='utf-8') as f:
         json.dump(tokens, f, indent=2, ensure_ascii=False)
     return existing
+
+@app.context_processor
+def inject_guild_id():
+    """Expose the active guild to templates without hard-coding an ID."""
+    gid = MAIN_GUILD_ID
+    if not gid and bot_instance and getattr(bot_instance, 'guilds', None):
+        gid = str(bot_instance.guilds[0].id)
+    return {'main_guild_id': gid or '', 'MAIN_GUILD_ID': gid or ''}
 
 def set_bot_instance(bot):
     global bot_instance

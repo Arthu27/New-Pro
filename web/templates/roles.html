@@ -22,7 +22,7 @@
   </select>
 </div>
 
-<div id="роли-list"></div>
+<div id="roles-list"></div>
 
 <div id="modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;justify-content:center;align-items:center;">
   <div style="background:linear-gradient(135deg,var(--bg2),var(--surface));border:2px solid var(--accent);border-radius:20px;padding:30px;max-width:450px;width:90%;">
@@ -45,8 +45,8 @@ async function loadGuilds() {
 async function loadRoles() {
   if(!selectedGuild) return;
   var r = await fetch('/api/guild/'+selectedGuild+'/roles');
-  var role = await r.json();
-  document.getElementById('роли-list').innerHTML = roles.map(function(roles){
+  var roles = await r.json()
+  document.getElementById('roles-list').innerHTML = roles.map(function(roles){
     return '<div class="role-card">'+
       '<div style="display:flex;gap:15px;align-items:center;">'+
         '<div class="role-color" style="background:'+role.color+';"></div>'+

@@ -29,7 +29,7 @@ def _load_cfg(guild_id: int) -> dict:
         'day': 0,
         'hour': 9,
         'staff_roles': [],
-        'last_meeting': None  # В конец собрание дата (ISO format)
+        'last_meeting': None  # В конец собрание date (ISO format)
     }
 
 
@@ -584,14 +584,14 @@ class ModReport(commands.Cog):
 
     @commands.command(name='собрание-baslat')
     @commands.has_permissions(administrator=True)
-    async def start_meeting(self, ctx, дата: str = None):
+    async def start_meeting(self, ctx, date: str = None):
         """Собрание запустить: !собрание-baslat [GG.AA.YYYY]"""
         cfg = _load_cfg(ctx.guild.id)
 
         # Дата parse et
-        if дата:
+        if date:
             try:
-                dt = datetime.datetime.strptime(дата, '%d.%m.%Y')
+                dt = datetime.datetime.strptime(date, '%d.%m.%Y')
                 meeting_time = dt.replace(tzinfo=datetime.timezone.utc)
             except ValueError:
                 await ctx.send('❌ Неверный формат даты! Напр.: `!собрание-baslat 12.04.2026`')
@@ -611,7 +611,7 @@ class ModReport(commands.Cog):
         cfg['last_meeting'] = meeting_time.isoformat()
         _save_cfg(ctx.guild.id, cfg)
         ts = int(meeting_time.timestamp())
-        await ctx.send(f'✅ Собрание дата настройк: <t:{ts}:F>\nBir sonraki rapor bu дата itibaren sayacak.')
+        await ctx.send(f'✅ Собрание date настройк: <t:{ts}:F>\nBir sonraki rapor bu date itibaren sayacak.')
 
     @commands.command(name='собрание-sayac')
     async def meeting_counter(self, ctx):

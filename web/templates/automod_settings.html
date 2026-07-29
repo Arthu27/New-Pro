@@ -6,11 +6,11 @@
 .am-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;}
 @media(max-width:900px){.am-grid{grid-template-columns:1fr;}}
 .am-box{background:linear-gradient(135deg,#100e08,rgba(26,22,16,0.7));border:1px solid rgba(231,76,60,0.25);border-radius:16px;padding:24px;position:relative;overflow:hidden;}
-.am-box.гол{border-color:rgba(200,146,42,0.3);}
+.am-box.section{border-color:rgba(200,146,42,0.3);}
 .am-box::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#e74c3c,transparent);}
-.am-box.гол::before{background:linear-gradient(90deg,transparent,#c8922a,transparent);}
+.am-box.section::before{background:linear-gradient(90deg,transparent,#c8922a,transparent);}
 .am-title{font-size:12px;text-transform:uppercase;letter-spacing:2px;margin-bottom:18px;display:flex;align-items:center;gap:8px;padding-bottom:12px;border-bottom:1px solid rgba(231,76,60,0.15);color:#e05555;}
-.am-title.гол{color:#c8922a;border-color:rgba(200,146,42,0.15);}
+.am-title.section{color:#c8922a;border-color:rgba(200,146,42,0.15);}
 .toggle-row{display:flex;justify-content:space-between;align-items:center;padding:11px 14px;background:rgba(0,0,0,0.3);border-radius:12px;margin-bottom:8px;border:1px solid rgba(255,255,255,0.04);transition:all 0.2s;}
 .toggle-row:hover{background:rgba(231,76,60,0.06);border-color:rgba(231,76,60,0.15);}
 .toggle-label{color:#f0e8d0;font-size:13px;}
@@ -24,8 +24,8 @@ input:checked+.slider:before{transform:translateX(20px);background:#e05555;}
 .field-label{color:rgba(240,232,208,0.5);font-size:10px;text-transform:uppercase;letter-spacing:1px;display:block;margin:12px 0 5px;}
 .field-input{width:100%;padding:9px 12px;background:#100e08;border:1px solid rgba(231,76,60,0.2);border-radius:10px;color:#f0e8d0;box-sizing:border-box;font-size:13px;font-family:Inter,sans-serif;transition:border-color 0.2s;}
 .field-input:focus{outline:none;border-color:#e05555;}
-.field-input.гол{border-color:rgba(200,146,42,0.2);}
-.field-input.гол:focus{border-color:#c8922a;}
+.field-input.section{border-color:rgba(200,146,42,0.2);}
+.field-input.section:focus{border-color:#c8922a;}
 .word-tag{display:inline-flex;align-items:center;gap:5px;background:rgba(231,76,60,0.1);border:1px solid rgba(231,76,60,0.3);border-radius:99px;padding:4px 10px;margin:3px;font-size:12px;color:#f0e8d0;}
 .word-tag button{background:none;border:none;color:#e05555;cursor:pointer;font-size:14px;padding:0;line-height:1;}
 .add-row{display:flex;gap:8px;margin-bottom:10px;}
@@ -35,8 +35,8 @@ input:checked+.slider:before{transform:translateX(20px);background:#e05555;}
 .add-row button:hover{background:rgba(231,76,60,0.25);}
 .save-btn{width:100%;padding:11px;background:rgba(231,76,60,0.15);color:#f0e8d0;border:1px solid rgba(231,76,60,0.3);border-radius:12px;cursor:pointer;font-weight:700;margin-top:14px;font-size:13px;letter-spacing:1px;transition:all 0.2s;font-family:Inter,sans-serif;}
 .save-btn:hover{background:rgba(231,76,60,0.25);transform:translateY(-1px);}
-.save-btn.гол{background:rgba(200,146,42,0.15);border-color:rgba(200,146,42,0.3);}
-.save-btn.гол:hover{background:rgba(200,146,42,0.25);}
+.save-btn.section{background:rgba(200,146,42,0.15);border-color:rgba(200,146,42,0.3);}
+.save-btn.section:hover{background:rgba(200,146,42,0.25);}
 /* Warning steps */
 .warn-step{background:rgba(0,0,0,0.35);border:1px solid rgba(200,146,42,0.15);border-radius:12px;padding:14px;margin-bottom:10px;display:grid;grid-template-columns:auto 1fr 1fr 1fr auto;gap:10px;align-items:center;}
 .warn-step-num{width:28px;height:28px;background:rgba(200,146,42,0.15);border:1px solid rgba(200,146,42,0.3);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#c8922a;font-weight:700;font-size:13px;flex-shrink:0;}
@@ -82,7 +82,7 @@ input:checked+.slider:before{transform:translateX(20px);background:#e05555;}
       </div>
       <div class="toggle-row">
         <div><div class="toggle-label">🔗 Link Filtresi</div><div class="toggle-sub">Bez razreseniya ссылка obmen engelle</div></div>
-        <label class="toggle"><input type="checkbox" id="ссылка-filter"><span class="slider"></span></label>
+        <label class="toggle"><input type="checkbox" id="link-filter"><span class="slider"></span></label>
       </div>
       <div class="toggle-row">
         <div><div class="toggle-label">📢 Caps Lock Filtresi</div><div class="toggle-sub">Crezmernoe bolsie bukvi использование</div></div>
@@ -112,21 +112,21 @@ input:checked+.slider:before{transform:translateX(20px);background:#e05555;}
 
   <!-- SAĞ: Каналы-исключения для спама Каналы + Warning Система -->
   <div>
-    <div class="am-box гол" style="margin-bottom:20px;">
-      <div class="am-title гол"><i class="fas fa-hashtag"></i> Каналы-исключения для спама Каналы</div>
+    <div class="am-box section" style="margin-bottom:20px;">
+      <div class="am-title section"><i class="fas fa-hashtag"></i> Каналы-исключения для спама Каналы</div>
       <p style="color:#5a5040;font-size:12px;margin-bottom:10px;">Bu в каналах spam/ссылка/caps filtresi не работает.</p>
       <div class="ch-list" id="exempt-channels">
         <div style="padding:20px;text-align:center;color:#5a5040;font-size:12px;">Сервер выберите...</div>
       </div>
-      <button class="save-btn гол" onclick="saveExempt()" style="margin-top:12px;"><i class="fas fa-save"></i> Исключения Каналы Сохранить</button>
+      <button class="save-btn section" onclick="saveExempt()" style="margin-top:12px;"><i class="fas fa-save"></i> Исключения Каналы Сохранить</button>
     </div>
 
-    <div class="am-box гол">
-      <div class="am-title гол"><i class="fas fa-exclamation-triangle"></i> Warning Наказание Система</div>
+    <div class="am-box section">
+      <div class="am-title section"><i class="fas fa-exclamation-triangle"></i> Warning Наказание Система</div>
       <p style="color:#5a5040;font-size:12px;margin-bottom:14px;">Сколько предупреждение ne наказание olacak verildi настройк.</p>
       <div id="warn-steps"></div>
       <button class="add-step-btn" onclick="addWarningStep()">+ Новый Правило Добавить</button>
-      <button class="save-btn гол" onclick="saveWarningConfig()" style="margin-top:12px;"><i class="fas fa-save"></i> Warning Система Сохранить</button>
+      <button class="save-btn section" onclick="saveWarningConfig()" style="margin-top:12px;"><i class="fas fa-save"></i> Warning Система Сохранить</button>
     </div>
   </div>
 </div>
@@ -148,7 +148,7 @@ async function loadAutomod(gid) {
   var r = await fetch('/api/guild/'+gid+'/automod');
   var d = await r.json();
   document.getElementById('spam-prot').checked    = d.spam_protection||false;
-  document.getElementById('ссылка-filter').checked  = d.bağlantı_filter||false;
+  document.getElementById('link-filter').checked  = d.bağlantı_filter||false;
   document.getElementById('caps-filter').checked  = d.caps_filter||false;
   document.getElementById('invite-filter').checked= d.invite_filter||false;
   document.getElementById('etiket-spam').checked = d.etiket_spam||false;
@@ -285,7 +285,7 @@ async function saveAutomod() {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({
       spam_protection: document.getElementById('spam-prot').checked,
-      bağlantı_filter:     document.getElementById('ссылка-filter').checked,
+      bağlantı_filter:     document.getElementById('link-filter').checked,
       caps_filter:     document.getElementById('caps-filter').checked,
       invite_filter:   document.getElementById('invite-filter').checked,
       etiket_spam:    document.getElementById('etiket-spam').checked,
