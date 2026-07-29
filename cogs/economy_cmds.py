@@ -65,7 +65,7 @@ class Economy(commands.Cog):
         app_commands.Choice(name="ranking", value="очередь"),
     ])
     async def economy(self, interaction: discord.Interaction, islem: str,
-                     пользователь: discord.Member = None, miktar: int = None):
+                     user: discord.Member = None, miktar: int = None):
         gid = str(interaction.guild_id)
 
         if islem == "bakiye":

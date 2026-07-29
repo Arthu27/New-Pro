@@ -33,7 +33,7 @@ def duration_to_minutes(duration, unit):
     return duration
 
 
-class Предупреждениеs(commands.Cog):
+class warnings(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
@@ -82,7 +82,7 @@ class Предупреждениеs(commands.Cog):
 
     @app_commands.command(name="warn", description="Выдать предупреждение пользователю")
     @app_commands.checks.has_permissions(moderate_members=True)
-    async def warn(self, interaction, user: discord.Member, причина: str = None):
+    async def warn(self, interaction, user: discord.Member, reason: str = None):
         guild = interaction.guild
         data = load_warnings()
         gid, uid = str(guild.id), str(user.id)

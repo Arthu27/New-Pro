@@ -1,4 +1,4 @@
-"""Etkinlik/Event система - дата belirle, hatırlatma отправить"""
+"""Etkinlik/Event система - date belirle, hatırlatma отправить"""
 import discord
 from discord.ext import commands, tasks
 from discord import app_commands
@@ -92,14 +92,14 @@ class Events(commands.Cog):
     @app_commands.describe(
         baslik='Etkinlik başlığı',
         aciklama='Etkinlik описание',
-        дата='Дата (GG/AA/YYYY)',
+        date='Дата (GG/AA/YYYY)',
         saat='Время (SS:DD)',
         channel='Duyuru канал'
     )
     @app_commands.checks.has_permissions(manage_events=True)
     async def create_event(self, interaction: discord.Interaction,
                            baslik: str, aciklama: str,
-                           дата: str, saat: str,
+                           date: str, saat: str,
                            channel: discord.TextChannel):
         try:
             dt = datetime.strptime(f'{date} {saat}', '%d/%m/%Y %H:%M')
@@ -108,7 +108,7 @@ class Events(commands.Cog):
             return
 
         if dt < datetime.utcnow():
-            await interaction.response.send_message('❌ История bir дата giremezsin!', ephemeral=True)
+            await interaction.response.send_message('❌ История bir date giremezsin!', ephemeral=True)
             return
 
         events = self._load(interaction.guild_id)

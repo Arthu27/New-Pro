@@ -1,4 +1,4 @@
-"""Сервер Информация Система — Bot'a сервер о каждый что-тоi öğret"""
+"""Server Информация Система — Bot'a сервер о каждый что-тоi öğret"""
 import discord
 from discord.ext import commands
 from discord import app_commands
@@ -38,7 +38,7 @@ def get_sunucu_context(guild_id: int) -> str:
     lines = ['=== СЕРВЕР ИНФОРМАЦИЯ ===']
     
     if info.get('о'):
-        lines.append(f'Сервер О: {info["о"]}')
+        lines.append(f'Server О: {info["о"]}')
     if info.get('правила'):
         lines.append(f'Правила: {info["правила"]}')
     if info.get('yetkili_olmak'):
@@ -50,7 +50,7 @@ def get_sunucu_context(guild_id: int) -> str:
     return '\n'.join(lines)
 
 
-class Сервер(discord.ui.Modal):
+class Server(discord.ui.Modal):
     def __init__(self, field: str, title: str, guild_id: int):
         super().__init__(title=title)
         self.field = field
@@ -73,18 +73,18 @@ class Сервер(discord.ui.Modal):
         )
 
 
-class Сервер(discord.ui.View):
+class Server(discord.ui.View):
     def __init__(self, guild_id: int):
         super().__init__(timeout=None)
         self.guild_id = guild_id
 
-    @discord.ui.button(label='📖  Сервер О', style=discord.ButtonStyle.primary, row=0)
+    @discord.ui.button(label='📖  Server О', style=discord.ButtonStyle.primary, row=0)
     async def о(self, interaction: discord.Interaction, button: discord.ui.Button):
         if not interaction.user.guild_permissions.administrator:
             await interaction.response.send_message('❌ Администратор yok.', ephemeral=True)
             return
         await interaction.response.send_modal(
-            server('о', 'Сервер О', self.guild_id)
+            server('о', 'Server О', self.guild_id)
         )
 
     @discord.ui.button(label='📋  Правила', style=discord.ButtonStyle.primary, row=0)
@@ -119,7 +119,7 @@ class Сервер(discord.ui.View):
             await interaction.response.send_message('Информация еще не введена.', ephemeral=True)
             return
         
-        embed = discord.Embed(title='📚 Сервер Информация', color=0x5865F2)
+        embed = discord.Embed(title='📚 Server Информация', color=0x5865F2)
         if interaction.guild.icon:
             embed.set_thumbnail(url=interaction.guild.icon.url)
         
@@ -173,21 +173,21 @@ class OzelBilgiModal(discord.ui.Modal, title='Добавлено информа�
         )
 
 
-class Сервер(commands.Cog):
+class Server(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
     @commands.command(name='сервер-info')
     @commands.has_permissions(administrator=True)
     async def sunucu_info_panel(self, ctx):
-        """Сервер info control paneli: !сервер-info"""
+        """Server info control paneli: !сервер-info"""
         embed = discord.Embed(
-            title='📚 Сервер Информация Управление',
+            title='📚 Server Информация Управление',
             color=0x5865F2,
             description=(
                 '> Bot\'a сервер о info öğret.\n'
                 '> Bu infoler AI sohbetinde использовать.\n\n'
-                '**📖 Сервер О** — Сервера amacı, teması\n'
+                '**📖 Server О** — Сервера amacı, teması\n'
                 '**📋 Правила** — Правила сервера\n'
                 '**👮 Как стать модератором** — Как администратор olunur\n'
                 '**➕ Особый Информация** — Başka каждый bir info\n'
@@ -199,7 +199,7 @@ class Сервер(commands.Cog):
         if ctx.guild.banner:
             embed.set_image(url=ctx.guild.banner.url)
         embed.set_footer(
-            text=f'{ctx.guild.name}  ·  Сервер Информация Система',
+            text=f'{ctx.guild.name}  ·  Server Информация Система',
             icon_url=ctx.guild.icon.url if ctx.guild.icon else None
         )
         await ctx.send(embed=embed, view=server(ctx.guild.id))

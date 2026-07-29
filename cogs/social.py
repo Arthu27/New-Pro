@@ -366,13 +366,13 @@ class Social(commands.Cog):
     @app_commands.describe(
         baslik="Etkinlik başlığı",
         aciklama="Etkinlik описание",
-        дата="Дата (GG.AA.YYYY SS:DD formatında)",
+        date="Дата (GG.AA.YYYY SS:DD formatında)",
         max_katilimci="Maksimum katılımcı количество (0 = лимит)"
     )
     @app_commands.checks.has_permissions(moderate_members=True)
     async def event_create(self, interaction: discord.Interaction,
                            baslik: str, aciklama: str,
-                           дата: str, max_katilimci: int = 0):
+                           date: str, max_katilimci: int = 0):
         try:
             event_dt = datetime.strptime(date, '%d.%m.%Y %H:%M').replace(tzinfo=timezone.utc)
         except ValueError:
