@@ -94,17 +94,17 @@ var selectedGuild = MAIN_GID;
 async function loadData(gid_param) {
   selectedGuild = gid_param || MAIN_GID;
   if (!selectedGuild) return;
-  var [chRes, роли] = await Promise.all([
+  var [chRes, roles] = await Promise.all([
     fetch('/api/guild/'+selectedGuild+'/channels').then(r=>r.json()),
-    fetch('/api/guild/'+selectedGuild+'/роли').then(r=>r.json())
+    fetch('/api/guild/'+selectedGuild+'/roles').then(r=>r.json())
   ]);
   var channels = Array.isArray(chRes) ? chRes : (chRes.channels || []);
   var chOpts = channels.filter(function(c){return c.type==='text';})
     .map(function(c){return '<option value="'+c.id+'">#'+c.name+'</option>';}).join('');
   document.getElementById('purge-channel').innerHTML = chOpts || '<option>Канал yok</option>';
-  var role = роли.map(function(r){return '<option value="'+r.id+'">'+r.name+'</option>';}).join('');
+  var role = roles.map(function(r){return '<option value="'+r.id+'">'+r.name+'</option>';}).join('');
   ['bulk-target-роли','bulk-action-роли','dm-роли'].forEach(function(id){
-    document.getElementById(id).innerHTML = роли || '<option>Роль yok</option>';
+    document.getElementById(id).innerHTML = roles || '<option>Роль yok</option>';
   });
 }
 

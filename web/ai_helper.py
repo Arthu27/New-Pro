@@ -125,7 +125,7 @@ Panel erişimüzerinde с Cloudflare tunnel по publicnoy ssilke.
 - /botinfo — информация о botta
 - /сервер — сервер информация
 - /uptime — время работа botun
-- /health — sağlık сервер
+- /health — состояние сервер
 - /avatar @user — avatar пользователь
 - /channel-stats — статистика канал
 - /archive [число] — arhiv сообщение
@@ -171,10 +171,10 @@ Panel erişimüzerinde с Cloudflare tunnel по publicnoy ssilke.
 ## 🌐 WEB-PANEL
 Panel — web-interfeys управление сервер.
 Как вход yap: ссылка в канал #aether-panel → Discord ID + parola.
-Seviyeler erişimi:
+Seviyeler доступ:
 - Участник: profil, заявка, день рождение
 - Модератор: loglar, предупреждения, ticketlar
-- Yönetici: команды, каналы, роли, автоматически
+- Yönetici: команды, каналы, roles, автоматически
 - Sahip: vse
 
 ## ❓ CASTIE SORULAR

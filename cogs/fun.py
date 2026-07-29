@@ -172,14 +172,14 @@ class Fun(commands.Cog):
         e.description = f"```ansi\n\u001b[1;31m👤 ПОЛЬЗОВАТЕЛЬ PROFİLİ\u001b[0m\n```\n{_divider()}"
         e.set_thumbnail(url=u.display_avatar.url)
         e.add_field(name="🆔 ID", value=f"```{u.id}```", inline=True)
-        e.add_field(name="📅 Katılım", value=f"<t:{int(u.joined_at.timestamp())}:R>", inline=True)
+        e.add_field(name="📅 Вход", value=f"<t:{int(u.joined_at.timestamp())}:R>", inline=True)
         e.add_field(name="🎂 Hesap", value=f"<t:{int(u.created_at.timestamp())}:R>", inline=True)
         e.add_field(name="🎭 Роли", value=f"```{len(u.roles)-1} роли```", inline=True)
         e.add_field(name="📊 Состояние", value=f"```{str(u.status).title()}```", inline=True)
         e.add_field(name="🖥️ Platform", value=f"```{'Mobil' if u.is_on_mobile() else 'Masaüstü'}```", inline=True)
         role = [r.mention for r in u.roles[1:6]]
         if role:
-            e.add_field(name="🎭 Verhnie роли", value=" ".join(роли), inline=False)
+            e.add_field(name="🎭 Verhnie роли", value=" ".join(roles), inline=False)
         e.set_footer(text=f"Aether • {interaction.guild.name}", icon_url=interaction.guild.icon.url if interaction.guild.icon else None)
         await interaction.response.send_message(embed=e)
 
@@ -215,7 +215,7 @@ class Fun(commands.Cog):
     async def rastgele_uye(self, interaction: discord.Interaction, role: discord.Role = None):
         havuz = [m for m in interaction.guild.members if not m.bot]
         if role:
-            havuz = [m for m in havuz if роли in m.roles]
+            havuz = [m for m in havuz if role in m.roles]
         if not havuz:
             await interaction.response.send_message("❌ Uygun участник не найден!", ephemeral=True)
             return

@@ -12,7 +12,7 @@
         <h2>🤖 ПАНЕЛЬ AETHER</h2>
         <a href="/" {% if request.path == "/" %}class="active"{% endif %}><i class="fas fa-home"></i> Panel управление</a>
 
-        {% if роли in ["admin", "owner"] %}
+        {% if role in ["admin", "owner"] %}
         <a href="/guilds" {% if request.path == "/guilds" %}class="active"{% endif %}><i class="fas fa-сервер"></i> Сервера</a>
         <a href="/users" {% if request.path == "/users" %}class="active"{% endif %}><i class="fas fa-users"></i> Пользователи</a>
         {% endif %}
@@ -20,7 +20,7 @@
         <a href="/logs" {% if request.path == "/logs" %}class="active"{% endif %}><i class="fas fa-clipboard-list"></i> Логи модерации</a>
         <a href="/warnings" {% if request.path == "/warnings" %}class="active"{% endif %}><i class="fas fa-exclamation-triangle"></i> Предупреждения</a>
 
-        {% if роли in ["admin", "owner"] %}
+        {% if role in ["admin", "owner"] %}
         <a href="/commands" {% if request.path == "/commands" %}class="active"{% endif %}><i class="fas fa-terminal"></i> Команды</a>
         <a href="/send-command" {% if request.path == "/send-command" %}class="active"{% endif %}><i class="fas fa-paper-plane"></i> Команда Отправить</a>
         <a href="/staff-apps" {% if request.path == "/staff-apps" %}class="active"{% endif %}><i class="fas fa-user-shield"></i> Заявки в модераторы</a>

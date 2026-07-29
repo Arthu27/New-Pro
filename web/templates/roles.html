@@ -44,17 +44,17 @@ async function loadGuilds() {
 
 async function loadRoles() {
   if(!selectedGuild) return;
-  var r = await fetch('/api/guild/'+selectedGuild+'/роли');
+  var r = await fetch('/api/guild/'+selectedGuild+'/roles');
   var role = await r.json();
-  document.getElementById('роли-list').innerHTML = роли.map(function(роли){
+  document.getElementById('роли-list').innerHTML = roles.map(function(roles){
     return '<div class="role-card">'+
       '<div style="display:flex;gap:15px;align-items:center;">'+
-        '<div class="role-color" style="background:'+роли.color+';"></div>'+
-        '<div><div class="role-name">'+роли.name+'</div><div class="role-members">'+роли.members+' участников</div></div>'+
+        '<div class="role-color" style="background:'+role.color+';"></div>'+
+        '<div><div class="role-name">'+role.name+'</div><div class="role-members">'+role.members+' участников</div></div>'+
       '</div>'+
       '<div class="role-actions">'+
-        '<button class="btn-sm btn-edit" onclick="editRole(\''+роли.id+'\')"><i class="fas fa-edit"></i></button>'+
-        '<button class="btn-sm btn-delete" onclick="deleteRole(\''+роли.id+'\',\''+роли.name+'\')"><i class="fas fa-trash"></i></button>'+
+        '<button class="btn-sm btn-edit" onclick="editRole(\''+role.id+'\')"><i class="fas fa-edit"></i></button>'+
+        '<button class="btn-sm btn-delete" onclick="deleteRole(\''+role.id+'\',\''+role.name+'\')"><i class="fas fa-trash"></i></button>'+
       '</div>'+
     '</div>';
   }).join('');
@@ -69,7 +69,7 @@ async function createRole() {
   var name = document.getElementById('role-name').value.trim();
   var color = document.getElementById('role-color').value;
   if(!name) { alert('Роль имя gir!'); return; }
-  var r = await fetch('/api/guild/'+selectedGuild+'/роли/create', {
+  var r = await fetch('/api/guild/'+selectedGuild+'/roles/create', {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({name:name, color:color})
   });
@@ -80,7 +80,7 @@ async function createRole() {
 
 async function deleteRole(id, name) {
   if(!confirm(name+' роль удалить если хотите emin misiniz mı siz?')) return;
-  var r = await fetch('/api/guild/'+selectedGuild+'/роли/'+id+'/delete', {method:'POST'});
+  var r = await fetch('/api/guild/'+selectedGuild+'/roles/'+id+'/delete', {method:'POST'});
   var d = await r.json();
   if(d.success) loadRoles();
   else alert(d.error||'Ошибка');

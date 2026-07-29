@@ -91,7 +91,7 @@ class Birthday(commands.Cog):
                     role = guild.get_role(int(settings['role_id']))
                     if role:
                         try:
-                            await member.add_roles(роли, reason="Рождение день роль")
+                            await member.add_roles(roles, reason="Рождение день роль")
                         except Exception:
                             pass
 
@@ -122,7 +122,7 @@ class Birthday(commands.Cog):
                 member = guild.get_member(int(user_id))
                 if member and роли in member.roles:
                     try:
-                        await member.remove_roles(роли, reason="Рождение день bitti")
+                        await member.remove_roles(roles, reason="Рождение день bitti")
                     except Exception:
                         pass
 

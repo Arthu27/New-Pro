@@ -438,7 +438,7 @@ async def main():
                 print("[BOT] Discord'a baglaniliyor...")
                 await bot.start(os.getenv("TOKEN"))
             except Exception as e:
-                # Ağ/Discord erişimi anlık düşerse panel de ayakta kalsın diye
+                # Ağ/Discord доступ anlık düşerse panel de ayakta kalsın diye
                 # botu öldürmüyoruz; краткий baddyip tekrar deniyoruz.
                 print(f"[ERR] Bot baslatma ошибки: {e}")
                 await asyncio.sleep(10)

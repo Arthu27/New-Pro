@@ -175,7 +175,7 @@ def _bar(value: int, max_val: int, length: int = 10) -> str:
 
 
 async def _build_meeting_report(guild: discord.Guild, since: datetime.datetime) -> list[discord.Embed]:
-    """Собрание raporu embed listesi"""
+    """Собрание raporu embed список"""
     now = datetime.datetime.now(datetime.timezone.utc)
     ts_since = int(since.timestamp())
     ts_now = int(now.timestamp())
@@ -252,10 +252,10 @@ async def _build_meeting_report(guild: discord.Guild, since: datetime.datetime) 
     # ── РОЛЬ BAZLI TOP 4 ───────────────────────────────────────────────────────
     for role_id in staff_role_ids[:8]:
         role = guild.get_role(role_id)
-        if not роли or роли.is_default():
+        if not роли or role.is_default():
             continue
 
-        role_members = [m for m in роли.members if not m.bot]
+        role_members = [m for m in role.members if not m.bot]
         if not role_members:
             continue
 

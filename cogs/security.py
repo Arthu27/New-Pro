@@ -2,7 +2,7 @@
 Aether Security Cog
 - AI поддержка spam tespiti (pattern + скорость + benzerlik analizi)
 - Fake hesap tespiti (новый hesap, avatar yok, şüpheli isim)
-- Link безопасность сканироватьyıcısı (вредоносный domain listesi + URL shortener)
+- Link безопасность сканироватьyıcısı (вредоносный domain список + URL shortener)
 - Автоматически backup система (сервер настройк yedeği)
 """
 import discord
@@ -12,7 +12,7 @@ import json, os, re, time, math
 from collections import defaultdict
 from datetime import datetime, timezone, timedelta
 
-# ── Zararlı domain listesi ────────────────────────────────────────────────────
+# ── Zararlı domain список ────────────────────────────────────────────────────
 MALICIOUS_DOMAINS = {
     # Phishing / scam
     'grabify.link', 'iplogger.org', 'blasze.tk', 'ps3cfw.com',
@@ -164,7 +164,7 @@ class Security(commands.Cog):
 
     # ── Фейковые аккаунты Tespiti ────────────────────────────────────────────────────
     def _fake_account_score(self, member: discord.Member, cfg: dict) -> tuple[float, list]:
-        """Fake hesap risk skoru (0-1) ve предупреждение listesi вернуть."""
+        """Fake hesap risk skoru (0-1) ve предупреждение список вернуть."""
         warnings = []
         score = 0.0
 

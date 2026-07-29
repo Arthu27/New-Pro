@@ -18,7 +18,7 @@ def _load_ai_tickets(guild_id: int) -> dict:
 
 
 def _process_action(answer: str, bot, guild_id: str, session_obj) -> str:
-    """AI cevabındaki <action> bloğunu işler, результат сообщение döner."""
+    """AI cevabındaki <action> обрабатывает блок, результат сообщение возвращает."""
     import re as _re, asyncio as _asyncio, os as _os
     from datetime import datetime as _dt, timedelta as _td
 
@@ -31,7 +31,7 @@ def _process_action(answer: str, bot, guild_id: str, session_obj) -> str:
         raw = _re.sub(r'[\x00-\x1f]', ' ', raw)  # контроль karakterleri
         action_data = json.loads(raw)
     except Exception:
-        # JSON parse неудачно — action'ı yoksay
+        # JSON parse неудачно — action'ı игнорировать
         return ''
 
     action_type = action_data.get('action', '').lower()
@@ -50,7 +50,7 @@ def _process_action(answer: str, bot, guild_id: str, session_obj) -> str:
             reason = action_data.get('reason', 'AI asistan warn')
             if not uid:
                 return '❌ Пользователь ID не найдено'
-            # AI asistan hiçbir vakit автоматически warn atamaz — только predlojenie sunar
+            # AI asistan никогда автоматически warn не может отправить — только predlojenie предлагает
             return f'⚠️ AI warn предложение: {uid} usersına "{reason}" причина warn. Onaylamak для /moderate команду использовать.'
 
         elif action_type == 'ban':
@@ -101,9 +101,9 @@ def _process_action(answer: str, bot, guild_id: str, session_obj) -> str:
                 return '❌ Eksik parametre'
             member = guild.get_member(int(uid))
             role = guild.get_role(int(role_id))
-            if not (member and роли):
+            if not (member and roles):
                 return '❌ Участник или роли не найдено'
-            _asyncio.run_coroutine_threadsafe(member.add_roles(роли), bot.loop).result(timeout=10)
+            _asyncio.run_coroutine_threadsafe(member.add_roles(role), bot.loop).result(timeout=10)
             return f'✅ Роли addndi: {role.name}'
 
         elif action_type == 'remove_role':
@@ -112,9 +112,9 @@ def _process_action(answer: str, bot, guild_id: str, session_obj) -> str:
                 return '❌ Eksik parametre'
             member = guild.get_member(int(uid))
             role = guild.get_role(int(role_id))
-            if not (member and роли):
+            if not (member and roles):
                 return '❌ Участник или роли не найдено'
-            _asyncio.run_coroutine_threadsafe(member.remove_roles(роли), bot.loop).result(timeout=10)
+            _asyncio.run_coroutine_threadsafe(member.remove_roles(role), bot.loop).result(timeout=10)
             return f'✅ Роли alındı: {role.name}'
 
         elif action_type == 'send_message':
@@ -176,7 +176,7 @@ def _process_action(answer: str, bot, guild_id: str, session_obj) -> str:
                             pass
                 return count
             count = _asyncio.run_coroutine_threadsafe(_bulk(), bot.loop).result(timeout=60)
-            return f'✅ {count} kişiye DM отправлено'
+            return f'✅ {count} пользователям DM отправлено'
 
         elif action_type == 'create_channel':
             name = action_data.get('name', 'новый-channel')
@@ -218,7 +218,7 @@ def _process_action(answer: str, bot, guild_id: str, session_obj) -> str:
             role = guild.get_role(int(role_id))
             if not role:
                 return '❌ Роли не найдено'
-            _asyncio.run_coroutine_threadsafe(роли.delete(), bot.loop).result(timeout=10)
+            _asyncio.run_coroutine_threadsafe(role.delete(), bot.loop).result(timeout=10)
             return f'✅ Роли удалено: {role.name}'
 
         elif action_type == 'nick':
@@ -229,7 +229,7 @@ def _process_action(answer: str, bot, guild_id: str, session_obj) -> str:
             if not member:
                 return '❌ Участник не найдено'
             _asyncio.run_coroutine_threadsafe(member.edit(nick=nick or None), bot.loop).result(timeout=10)
-            return f'✅ Nickname değiştirildi → {nick or "(sıfırlandı)"}'
+            return f'✅ Nickname изменено → {nick or "(sıfırlandı)"}'
 
         elif action_type == 'unban':
             if not (guild and uid):
@@ -256,9 +256,9 @@ def _process_action(answer: str, bot, guild_id: str, session_obj) -> str:
                 except Exception:
                     pass
             return (f'👤 {member.display_name} ({member.name})\n'
-                    f'📅 Katılım: {member.joined_at.strftime("%d.%m.%Y") if member.joined_at else "?"}\n'
+                    f'📅 Вход: {member.joined_at.strftime("%d.%m.%Y") if member.joined_at else "?"}\n'
                     f'⚠️ Warning: {warn_count}\n'
-                    f'🎭 Роли: {", ".join(роли) or "Yok"}')
+                    f'🎭 Роли: {", ".join(roles) or "Yok"}')
 
         return f'⚠️ Bilinmeyen action: {action_type}'
     except Exception as e:
@@ -273,7 +273,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
     @login_required
     @role_required('mod')
     def ai_ticket_stats():
-        """AI ticket статистика sayfası"""
+        """AI ticket статистика страница"""
         guild_id = session.get('selected_guild')
         if not guild_id:
             return redirect(url_for('guilds_page'))
@@ -581,7 +581,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
     @login_required
     @role_required('uye')
     def api_ai_chat():
-        """Panel AI — tam сервер erişimi + eylem yapabilme"""
+        """Panel AI — tam сервер доступ + выполнение действий"""
         from web.ai_helper import _call
         import web.app as _app; bot = _app.bot_instance
         import datetime as _dt, asyncio as _asyncio, discord as _discord
@@ -606,15 +606,15 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
                     if mems: in_voice.append(f"{vc.name}: {', '.join(mems)}")
                 channels = [f"#{c.name}(id={c.id})" for c in g.text_channels[:20]]
                 role = [r.name for r in g.roles if not r.is_default()][:15]
-                # Участник listesi (eylemler для isim→ID eşleştirmesi)
+                # Участник список (eylemler для isim→ID eşleştirmesi)
                 members_list = [f"{m.display_name}(id={m.id})" for m in g.members if not m.bot][:50]
 
-                # На сервер ait все data dosyalarını oku
+                # На сервер ait все data читать файлы
                 sunucu_configs = []
                 config_files = {
                     f'data/automod_{g.id}.json':   'Automod настройк',
                     f'data/antiraid_{g.id}.json':  'Anti-raid настройк',
-                    f'data/health_{g.id}.json':    'Сервер sağlığı',
+                    f'data/health_{g.id}.json':    'Сервер состояние',
                     f'data/badges_{g.id}.json':    'Rozetler',
                     f'data/warn_config_{g.id}.json': 'Warning limitleri',
                 }
@@ -624,7 +624,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
                             with open(fpath, 'r', encoding='utf-8') as fp:
                                 fdata = json.load(fp)
                             # Только сводка info отправить (token tasarrufu)
-                            if flabel == 'Сервер sağlığı':
+                            if flabel == 'Сервер состояние':
                                 score = fdata.get('score', fdata.get('health_score', '?'))
                                 label = fdata.get('label', fdata.get('status', '?'))
                                 sunucu_configs.append(f"{flabel}: {score}/100 ({label})")
@@ -661,7 +661,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
                     f"  Всего участник: {g.member_count}, Online: {len(online)}\n"
                     f"  Ses channelları: {', '.join(in_voice) or 'Пусто'}\n"
                     f"  Каналы: {', '.join(channels)}\n"
-                    f"  Роли: {', '.join(роли)}\n"
+                    f"  Роли: {', '.join(roles)}\n"
                     f"  Участники: {', '.join(members_list)}\n"
                     + (f"  Warninglar: {warn_summary}\n" if warn_summary else '')
                     + ('\n'.join(f'  {c}' for c in sunucu_configs))
@@ -671,8 +671,8 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         import re as _re2
         user_info_block = ''
         id_matches = _re2.findall(r'\b(\d{17,20})\b', question)
-        # Isim araması — только tırnak в или belirgin isimler
-        name_matches = _re2.findall(r'"([^"]+)"', question)  # Tırnak в isimler
+        # Isim поиск — только кавычки в или belirgin isimler
+        name_matches = _re2.findall(r'"([^"]+)"', question)  # кавычки в isimler
         if not id_matches and bot and name_matches:
             for name_q in name_matches[:2]:
                 for g in bot.guilds:
@@ -900,7 +900,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
             f"Вчера ({yesterday}) действия:\n{fmt_actions(yesterday_actions)}"
         )
 
-        # Sağlık skoru — все guild'lerin health dosyalarından тянуть
+        # состояние skoru — все guild'lerin health dosyalarından тянуть
         health_info = ''
         health_lines = []
         if bot:
@@ -915,7 +915,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
                         health_lines.append(f"{g.name}: {score}/100 ({label})")
                     except: pass
         if health_lines:
-            health_info = 'Сервер sağlık skorları:\n' + '\n'.join(f'  {l}' for l in health_lines)
+            health_info = 'Сервер состояние skorları:\n' + '\n'.join(f'  {l}' for l in health_lines)
         else:
             # Fallback: API'den hesapla
             try:
@@ -927,7 +927,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
                     )
                     if r.status_code == 200:
                         hd = r.json()
-                        health_info = f"{g.name} sağlık skoru: {hd.get('score','?')}/100 ({hd.get('label','?')})"
+                        health_info = f"{g.name} состояние skoru: {hd.get('score','?')}/100 ({hd.get('label','?')})"
                         break
             except: pass
 
@@ -937,8 +937,8 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         if is_owner:
             eylem_prompt = (
                 "=== J.A.R.V.I.S. MODU (OWNER) ===\n"
-                "Sen Arthur'un kişisel asistanısın.\n\n"
-                "EYLEM ПРАВИЛО — ТОЛЬКО şu tam ifadeler geçtiğinde [EYLEM:...] использовать:\n"
+                "Sen Arthur'un личный ассистент.\n\n"
+                "EYLEM ПРАВИЛО — ТОЛЬКО şu tam при наличии выражений [EYLEM:...] использовать:\n"
                 "  'kilitle' → [EYLEM:KANAL_KILITLE:channel_id]\n"
                 "  'kilidi aç' или 'канал aç' → [EYLEM:KANAL_AC:channel_id]\n"
                 "  'ban at' → [EYLEM:BAN:user_id:причина]\n"
@@ -969,7 +969,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
                 "  'роли создать' → [EYLEM:ROL_OLUSTUR:роли имя]\n"
                 "  'announce yap' → [EYLEM:DUYURU:channel:metin]\n"
                 "  'nick değiştir' или 'isminin yanına X yaz' → [EYLEM:NICK:user_id:yeni_nick]\n\n"
-                "YASAK: 'удалить', 'ne', 'кто', 'сколько', 'показать', 'var mı', 'statusu', 'sağlık', 'listele', 'oku', 'bak', 'atacağım', 'atıcam', 'gidiyorum', 'yokum' gibi kelimelerde KESİNLİKLE eylem üretme!\n"
+                "YASAK: 'удалить', 'ne', 'кто', 'сколько', 'показать', 'var mı', 'statusu', 'состояние', 'listele', 'oku', 'bak', 'atacağım', 'atıcam', 'gidiyorum', 'yokum' gibi kelimelerde KESİNLİKLE eylem üretme!\n"
                 "NOT: Канал имя использовать ID yerine channel adını yaz, система автоматически преобразоватьir. Пример: [EYLEM:СООБЩЕНИЕ:общий:merhaba]\n"
                 "Краткий ve net ответить. 'Efendim' diye hitap et.\n"
             )
@@ -981,13 +981,13 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
             )
 
         system = (
-            f"Sen Aether, Aether Discord сервер panel asistanısın.\n"
+            f"Sen Aether, Aether Discord сервер panel ассистент.\n"
             f"Пользователь: {session.get('username')}, Роль: {user_role}\n"
             f"Время: {now.strftime('%H:%M')}, Дата: {now.strftime('%d %B %Y, %A')}\n\n"
             f"=== СЕРВЕР СОСТОЯНИЕ ===\n"
             f"{chr(10).join(guild_data) if guild_data else 'Bot offline'}\n\n"
             f"=== MOD СТАТИСТИКА ===\n{mod_stats}\n\n"
-            f"{f'=== SAĞLIK ==={chr(10)}{health_info}{chr(10)}{chr(10)}' if health_info else ''}"
+            f"{f'=== состояние ==={chr(10)}{health_info}{chr(10)}{chr(10)}' if health_info else ''}"
             f"=== SON LOGLAR (son 10) ===\n{chr(10).join(recent_logs[-10:]) if recent_logs else 'Log yok'}\n\n"
             f"{user_info_block}"
             f"{channel_messages_block}\n"
@@ -1943,7 +1943,23 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         all_events.sort(key=lambda x: x.get('created_at', ''), reverse=True)
         return jsonify(all_events[:500])
 
-    @app.route('/api/guild/<guild_id>/роли')
+    @app.route('/api/roles')
+    @login_required
+    def api_roles_default():
+        return api_guild_roles(str(MAIN_GUILD_ID))
+
+    @app.route('/api/channels')
+    @login_required
+    def api_channels_default():
+        return api_guild_channels(str(MAIN_GUILD_ID))
+
+    @app.route('/api/members')
+    @login_required
+    def api_members_default():
+        from web.app import api_guild_members
+        return api_guild_members(str(MAIN_GUILD_ID))
+
+    @app.route('/api/guild/<guild_id>/roles')
     @login_required
     def api_guild_roles(guild_id):
         import web.app as _app
@@ -1951,11 +1967,11 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         if not bot: return jsonify([])
         guild = bot.get_guild(int(guild_id))
         if not guild: return jsonify([])
-        role = [{'id': str(r.id), 'name': r.name, 'color': str(r.color), 'members': len(r.members)}
+        roles = [{'id': str(r.id), 'name': r.name, 'color': str(r.color), 'members': len(r.members)}
                  for r in guild.roles if r.name != '@everyone']
-        return jsonify(sorted(роли, key=lambda x: -x['members']))
+        return jsonify(sorted(roles, key=lambda x: -x['members']))
 
-    @app.route('/api/guild/<guild_id>/роли/create', methods=['POST'])
+    @app.route('/api/guild/<guild_id>/roles/create', methods=['POST'])
     @login_required
     @role_required('admin')
     def api_create_role(guild_id):
@@ -1971,7 +1987,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         asyncio.run_coroutine_threadsafe(do(), bot.loop).result(timeout=10)
         return jsonify({'success': True})
 
-    @app.route('/api/guild/<guild_id>/роли/<role_id>/delete', methods=['POST'])
+    @app.route('/api/guild/<guild_id>/roles/<role_id>/delete', methods=['POST'])
     @login_required
     @role_required('admin')
     def api_delete_role(guild_id, role_id):
@@ -1981,7 +1997,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         async def do():
             guild = bot.get_guild(int(guild_id))
             role = guild.get_role(int(role_id))
-            if role: await роли.delete()
+            if role: await role.delete()
         asyncio.run_coroutine_threadsafe(do(), bot.loop).result(timeout=10)
         return jsonify({'success': True})
 
@@ -2889,7 +2905,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         asyncio.run_coroutine_threadsafe(do(), bot.loop).result(timeout=30)
         return jsonify({'success': True, 'count': result['count']})
 
-    @app.route('/api/guild/<guild_id>/bulk-роли', methods=['POST'])
+    @app.route('/api/guild/<guild_id>/bulk-roles', methods=['POST'])
     @login_required
     @role_required('admin')
     def api_bulk_role(guild_id):
@@ -2927,7 +2943,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
             if not role: return
             embed = discord.Embed(title="📢 Duyuru", description=data['message'], color=0xdc143c)
             embed.set_footer(text="Aether Panel", icon_url=bot.user.display_avatar.url)
-            for member in роли.members:
+            for member in role.members:
                 try: await member.send(embed=embed); result['count'] += 1
                 except: pass
         asyncio.run_coroutine_threadsafe(do(), bot.loop).result(timeout=120)
@@ -3266,7 +3282,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
                     invites = invites_future.result(timeout=5)
                     result['active_invites'] = len(invites)
                     result['total_invites'] = sum(inv.uses or 0 for inv in invites)
-                    # Davet listesi
+                    # Davet список
                     result['invite_list'] = [{
                         'code': inv.code,
                         'inviter': inv.inviter.display_name if inv.inviter else '?',
@@ -3289,7 +3305,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
                     result['leaderboard'] = sorted(lb_map.values(), key=lambda x: x['total'], reverse=True)[:20]
                 except Exception:
                     pass
-        # JSON dosyasından katılım история oku
+        # JSON dosyasından Вход история oku
         joins_file = f'data/invite_joins_{guild_id}.json'
         if os.path.exists(joins_file):
             with open(joins_file, 'r', encoding='utf-8') as fp:
@@ -3421,14 +3437,14 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         with open(f, 'w') as fp: json.dump(request.get_json(), fp)
         return jsonify({'success': True})
 
-    @app.route('/api/guild/<guild_id>/reaction-роли')
+    @app.route('/api/guild/<guild_id>/reaction-roles')
     @login_required
     def api_reaction_roles(guild_id):
         f = f'data/rr_{guild_id}.json'
         if not os.path.exists(f): return jsonify([])
         with open(f) as fp: return jsonify(list(json.load(fp).values()))
 
-    @app.route('/api/guild/<guild_id>/reaction-роли/create', methods=['POST'])
+    @app.route('/api/guild/<guild_id>/reaction-roles/create', methods=['POST'])
     @login_required
     @role_required('admin')
     def api_create_reaction_role(guild_id):
@@ -3462,7 +3478,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         asyncio.run_coroutine_threadsafe(send(), bot.loop)
         return jsonify({'success': True})
 
-    @app.route('/api/guild/<guild_id>/reaction-роли/<rr_id>/delete', methods=['POST'])
+    @app.route('/api/guild/<guild_id>/reaction-roles/<rr_id>/delete', methods=['POST'])
     @login_required
     @role_required('admin')
     def api_delete_reaction_role(guild_id, rr_id):

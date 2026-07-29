@@ -182,7 +182,7 @@ FORMAT VIZOVA:
             if not role:
                 return f"U <@{user_id}> yok роль."
             
-            return f"Роли <@{user_id}>: {', '.join(роли)}"
+            return f"Роли <@{user_id}>: {', '.join(roles)}"
         except Exception as e:
             return f"Ошибка: {str(e)}"
     

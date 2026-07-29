@@ -59,7 +59,7 @@ class InfoTools(commands.Cog):
         if not emojis:
             await ctx.send("❌ Особый emoji yok!")
             return
-        e = discord.Embed(title="😀 EMOJİ LİSTESİ", color=0xdc143c)
+        e = discord.Embed(title="😀 EMOJİ список", color=0xdc143c)
         e.description = f"Всего **{len(emojis)}** emoji\n" + ' '.join(str(em) for em in emojis[:40])
         await ctx.send(embed=e)
 
@@ -134,7 +134,7 @@ class InfoTools(commands.Cog):
 
     @commands.command(name="rolemembers")
     async def role_uyeler(self, ctx, *, role: discord.Role):
-        members = роли.members
+        members = role.members
         if not members:
             await ctx.send(f"{role.name} роли кто yok!")
             return

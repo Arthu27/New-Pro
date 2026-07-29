@@ -37,7 +37,7 @@ CATEGORIES = [
         ("!bakiye",   "Bakiyeni gor",     "!bakiye",              "all"),
         ("!gunluk",   "Gunluk odul al",   "!gunluk",              "all"),
         ("!transfer", "Para gonder",      "!transfer @user 1000", "all"),
-        ("!liderlik", "Zenginler listesi","!liderlik",            "all"),
+        ("!liderlik", "Zenginler список","!liderlik",            "all"),
     ]},
     {"id": "utility",  "emoji": "\U0001f527", "title": "ARACLAR",        "color": 0x00BFFF, "commands": [
         ("!сервер",    "Сервер infosi",    "!сервер",          "all"),
@@ -80,7 +80,7 @@ def build_embed(page: int) -> discord.Embed:
         perms = "\n".join([
             _a("  \U0001f7e2  Каждый    ", 1, 32) + _a("\u2500 Tum uyeler использовать", 2, 37),
             _a("  \U0001f7e1  Moderator ", 1, 33) + _a("\u2500 Moderator роли gerekli",  2, 37),
-            _a("  \U0001f534  İsminin     ", 1, 31) + _a("\u2500 İsminin роли gerekli",      2, 37),
+            _a("  \U0001f534  İsminin     ", 1, 31) + _a("\u2500 İsminin roles gerekli",      2, 37),
             _a("  \u2699\ufe0f  Owner     ", 1, 37) + _a("\u2500 Только сервер sahibi",    2, 37),
         ])
         embed = discord.Embed(
@@ -90,7 +90,7 @@ def build_embed(page: int) -> discord.Embed:
         )
         embed.add_field(name="\U0001f4cb  Kategoriler",      value="```ansi\n" + cats.strip()  + "\n```", inline=False)
         embed.add_field(name="\U0001f510  Izin Seviyeleri", value="```ansi\n" + perms          + "\n```", inline=False)
-        embed.set_footer(text=f"Sayfa 1/{TOTAL_PAGES}  \u2022  Aether Bot  \u2022  !помощь")
+        embed.set_footer(text=f"Sayfa 1/{TOTAL_PAGES}  \u2022  Aether Bot  \u2022  !help")
         return embed
 
     cmds = cat["commands"]
@@ -118,7 +118,7 @@ def build_embed(page: int) -> discord.Embed:
         color=cat["color"]
     )
     embed.add_field(name="\U0001f4ca  Команда Dagilimi", value="```ansi\n" + summary + "\n```", inline=False)
-    embed.set_footer(text=f"Sayfa {page_idx+1}/{TOTAL_PAGES}  \u2022  Aether Bot  \u2022  !помощь")
+    embed.set_footer(text=f"Sayfa {page_idx+1}/{TOTAL_PAGES}  \u2022  Aether Bot  \u2022  !help")
     return embed
 
 
@@ -189,7 +189,7 @@ class Help(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(name="помощь", aliases=["help", "команды", "h", "menu"])
+    @commands.command(name="help", aliases=["команды", "h", "menu"])
     async def yardim_prefix(self, ctx):
         try:
             await ctx.message.delete()
@@ -197,7 +197,7 @@ class Help(commands.Cog):
             pass
         await ctx.send(embed=build_embed(0), view=HelpView(page=0))
 
-    @app_commands.command(name="помощь", description="Tum bot команды gosterir")
+    @app_commands.command(name="help", description="Tum bot команды gosterir")
     async def yardim_slash(self, interaction: discord.Interaction):
         await interaction.response.send_message(embed=build_embed(0), view=HelpView(page=0), ephemeral=True)
 

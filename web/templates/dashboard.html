@@ -215,7 +215,7 @@ async function loadLoginLog() {
         logs.slice(0,20).map(function(l) {
             var t = l.timestamp ? new Date(l.timestamp).toLocaleString('ru-RU') : '-';
             var role = {owner:'#e05555', admin:'#c8922a', mod:'#2ecc71', uye:'#5a5040'};
-            var rc = роли[l.roles] || '#5a5040';
+            var rc = roles[l.roles] || '#5a5040';
             var avatar = l.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png';
             return '<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:rgba(0,0,0,0.3);border-radius:12px;border:1px solid rgba(255,255,255,0.04);">'+
                 '<img src="'+avatar+'" style="width:36px;height:36px;border-radius:50%;border:2px solid '+rc+';object-fit:cover;" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">'+

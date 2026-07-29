@@ -148,7 +148,7 @@ def ask_deepseek(prompt: str, timeout: int = 60) -> str:
     """
     Sync wrapper — ai_helper.py'den çağrılır.
     DeepSeek'e soru sorar, cevabı string как вернуть.
-    Неудачно olursa пусто string döner.
+    Неудачно olursa пусто string возвращает.
     """
     if not DEEPSEEK_EMAIL or not DEEPSEEK_PASSWORD:
         return ''

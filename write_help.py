@@ -37,7 +37,7 @@ CATEGORIES = [
         ("!bakiye",   "Bakiyeni gor",     "!bakiye",              "all"),
         ("!gunluk",   "Gunluk odul al",   "!gunluk",              "all"),
         ("!transfer", "Para gonder",      "!transfer @user 1000", "all"),
-        ("!liderlik", "Zenginler listesi","!liderlik",            "all"),
+        ("!liderlik", "Zenginler список","!liderlik",            "all"),
     ]},
     {"id": "utility",  "emoji": "\U0001f527", "title": "ARACLAR",        "color": 0x00BFFF, "commands": [
         ("!сервер",    "Сервер infosi",    "!сервер",          "all"),
@@ -80,7 +80,7 @@ def build_embed(page: int) -> discord.Embed:
         perms = "\n".join([
             _a("  \U0001f7e2  Каждый    ", 1, 32) + _a("\u2500 Tum uyeler использовать", 2, 37),
             _a("  \U0001f7e1  Moderator ", 1, 33) + _a("\u2500 Moderator роли gerekli",  2, 37),
-            _a("  \U0001f534  İsminin     ", 1, 31) + _a("\u2500 İsminin роли gerekli",      2, 37),
+            _a("  \U0001f534  İsminin     ", 1, 31) + _a("\u2500 İsminin roles gerekli",      2, 37),
             _a("  \u2699\ufe0f  Owner     ", 1, 37) + _a("\u2500 Только сервер sahibi",    2, 37),
         ])
         embed = discord.Embed(

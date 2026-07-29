@@ -247,11 +247,11 @@ async def _build_weekly_report(guild: discord.Guild, days: int = 7, force_cutoff
 
     for role_id in staff_role_ids[:8]:  # Max 8 роли
         role = guild.get_role(role_id)
-        if not роли or роли.is_default():
+        if not роли or role.is_default():
             continue
 
         # Bu роли участников skorları
-        role_members = [m for m in роли.members if not m.bot]
+        role_members = [m for m in role.members if not m.bot]
         if not role_members:
             continue
 

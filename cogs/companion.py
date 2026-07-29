@@ -1,6 +1,6 @@
 """
 Companion Cog — Bot, belirli bir userya ara очередь kendi желание DM atar.
-Сообщения samimi, motive edici, kişisel. Hitap: "Королева".
+Сообщения samimi, motive edici, личный. Hitap: "Королева".
 """
 import discord
 from discord.ext import commands, tasks

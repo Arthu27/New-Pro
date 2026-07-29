@@ -90,9 +90,9 @@ async function loadGuilds() {
 async function loadSettings() {
   selectedGuild = document.getElementById('guild-select').value;
   if(!selectedGuild) return;
-  var [chRes, роли, setRes, tickRes] = await Promise.all([
+  var [chRes, roles, setRes, tickRes] = await Promise.all([
     fetch('/api/guild/'+selectedGuild+'/channels').then(r=>r.json()),
-    fetch('/api/guild/'+selectedGuild+'/роли').then(r=>r.json()),
+    fetch('/api/guild/'+selectedGuild+'/roles').then(r=>r.json()),
     fetch('/api/guild/'+selectedGuild+'/ticket-settings').then(r=>r.json()),
     fetch('/api/guild/'+selectedGuild+'/tickets').then(r=>r.json())
   ]);
@@ -101,8 +101,8 @@ async function loadSettings() {
   var chOpts = '<option value="">Выбрать...</option>'+textChs.map(function(c){return '<option value="'+c.id+'">#'+c.name+'</option>';}).join('');
   document.getElementById('ticket-ch').innerHTML = chOpts;
   document.getElementById('log-ch').innerHTML = chOpts;
-  var role = '<option value="">Выбрать...</option>'+роли.map(function(r){return '<option value="'+r.id+'">'+r.name+'</option>';}).join('');
-  document.getElementById('support-роли').innerHTML = роли;
+  var role = '<option value="">Выбрать...</option>'+roles.map(function(r){return '<option value="'+r.id+'">'+r.name+'</option>';}).join('');
+  document.getElementById('support-роли').innerHTML = roles;
   if(setRes.ticket_channel_id) document.getElementById('ticket-ch').value = setRes.ticket_channel_id;
   if(setRes.log_channel_id) document.getElementById('log-ch').value = setRes.log_channel_id;
   if(setRes.support_role_id) document.getElementById('support-роли').value = setRes.support_role_id;

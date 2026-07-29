@@ -80,9 +80,9 @@ async function loadRoles(selId) {
   if (!gid) return;
   var r = await fetch(\'/api/guild/\'+gid+\'/роли\');
   var role = await r.json();
-  if (!Array.isArray(роли)) role = [];
+  if (!Array.isArray(roles)) role = [];
   var sel = document.getElementById(selId);
-  sel.innerHTML = роли.map(function(ro){return \'<option value="\'+ro.id+\'">\'+ro.name+\'</option>\';}).join(\'\');
+  sel.innerHTML = roles.map(function(ro){return \'<option value="\'+ro.id+\'">\'+ro.name+\'</option>\';}).join(\'\');
 }
 
 async function loadRolesAndMembers() {

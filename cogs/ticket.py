@@ -57,7 +57,7 @@ class TicketCategoryView(discord.ui.View):
             'soru': (
                 '❓ **Вопрос/Помощь kategorisi выбрано.**\n\n'
                 'Как помощник olabilirim? Ne о info almak istiyorsun?\n'
-                '> Panel, запись, команды, роли, economy, level...'
+                '> Panel, запись, команды, roles, economy, level...'
             ),
             'teknik': (
                 '🔧 **Teknik sorun kategorisi выбрано.**\n\n'
@@ -1537,7 +1537,7 @@ YANIT FORMATI:
                 print(f"[TICKET] Роли assign: роль {role_id} не найден")
                 return
             
-            await target_user.add_roles(роли, reason="AI Ticket Assistant")
+            await target_user.add_roles(roles, reason="AI Ticket Assistant")
             print(f"[TICKET] Роли {role.name} vidana {target_user}")
             
         except Exception as e:

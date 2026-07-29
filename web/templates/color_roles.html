@@ -105,7 +105,7 @@ async function loadColorRoles() {
   selectedGuild = document.getElementById('guild-select').value;
   if(!selectedGuild) return;
   var [colRes, chRes] = await Promise.all([
-    fetch('/api/guild/'+selectedGuild+'/color-роли').then(r=>r.json()),
+    fetch('/api/guild/'+selectedGuild+'/color-roles').then(r=>r.json()),
     fetch('/api/guild/'+selectedGuild+'/channels').then(r=>r.json())
   ]);
   colors = Array.isArray(colRes) ? colRes : [];
@@ -159,7 +159,7 @@ async function publishPanel() {
   var ch = document.getElementById('panel-channel').value;
   if(!ch) { alert('Канал выбрать!'); return; }
   if(!colors.length) { alert('До renk добавить!'); return; }
-  var r = await fetch('/api/guild/'+selectedGuild+'/color-роли/publish', {
+  var r = await fetch('/api/guild/'+selectedGuild+'/color-roles/publish', {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({channel_id:ch, colors:colors})
   });

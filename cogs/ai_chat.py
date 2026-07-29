@@ -233,7 +233,7 @@ def _extract_learned_info(question: str, answer: str) -> dict:
     q = question.lower().strip()
     
     # Web если выполнен поиск доверие низкий
-    is_web_search = '🔍 Web araması yapıldı' in answer
+    is_web_search = '🔍 Web поиск yapıldı' in answer
     confidence = 'low' if is_web_search else 'high'
     
     # "X кто" вопросы
@@ -408,10 +408,10 @@ def _call_ai(question: str, user_id: int, guild=None, recent_messages: list = No
                 # Администратор роли — manage_messages или kick izni olanlar
                 staff_roles = []
                 for role in guild.roles:
-                    if роли.is_default():
+                    if role.is_default():
                         continue
-                    if роли.permissions.manage_messages or роли.permissions.kick_members or роли.permissions.administrator:
-                        members = [m.display_name for m in роли.members if not m.bot][:5]
+                    if role.permissions.manage_messages or role.permissions.kick_members or role.permissions.administrator:
+                        members = [m.display_name for m in role.members if not m.bot][:5]
                         if members:
                             staff_roles.append({'name': role.name, 'members': members})
                 if staff_roles:
@@ -470,7 +470,7 @@ def _call_ai(question: str, user_id: int, guild=None, recent_messages: list = No
             q_lower = question.lower()
             
             for item in guild_knowledge:
-                # Низкий доверие информация atla (web araması)
+                # Низкий доверие информация atla (web поиск)
                 if item.get('confidence') == 'low':
                     continue
                     
@@ -1111,7 +1111,7 @@ class AIChat(commands.Cog):
             return True
 
         gorev_listele = ['задача показать', 'gorevi goster', 'активен задачи', 'активен gorevler',
-                         'задача listesi', 'gorev listesi']
+                         'задача список', 'gorev список']
         if any(t in cn for t in [self._norm(x) for x in gorev_listele]):
             if not _active_tasks:
                 await message.channel.send('📋 Активен задача yok.')

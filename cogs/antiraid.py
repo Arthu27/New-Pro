@@ -56,7 +56,7 @@ class AntiRaid(commands.Cog):
             except:
                 pass
 
-        # Raid контроль (10 saniyede 5+ katılım)
+        # Raid контроль (10 saniyede 5+ Вход)
         if len(self.join_tracker[guild_id]) >= 5:
             try:
                 # Lockdown modu
@@ -103,7 +103,7 @@ class AntiRaid(commands.Cog):
             await channel.set_permissions(interaction.guild.default_role, send_messages=None)
         await interaction.followup.send("🔓 Блокировка сервера снята.", ephemeral=True)
 
-    @app_commands.command(name="massban", description="Toplu ban (ID listesi)")
+    @app_commands.command(name="massban", description="Toplu ban (ID список)")
     @app_commands.checks.has_permissions(administrator=True)
     async def massban(self, interaction: discord.Interaction, ids: str, reason: str = "Toplu ban"):
         await interaction.response.defer(ephemeral=True)

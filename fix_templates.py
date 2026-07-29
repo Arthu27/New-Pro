@@ -2,7 +2,7 @@ import os
 
 templates_dir = os.path.join(os.path.dirname(__file__), 'web', 'templates')
 
-# logs.html - onmouseover/onmouseout tırnak sorunu haklarıkuruldu
+# logs.html - onmouseover/onmouseout кавычки sorunu haklarıkuruldu
 logs_html = """{% extends "base.html" %}
 {% block title %}Логи модерации - Aether{% endblock %}
 {% block page_title %}MOD LOGLARI{% endblock %}

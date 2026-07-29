@@ -185,8 +185,8 @@ class ProactiveModeration(commands.Cog):
                 
                 # Daem erişim модератор
                 for role in guild.roles:
-                    if роли.permissions.kick_members or роли.permissions.ban_members:
-                        overwrites[роли] = discord.PermissionOverwrite(read_messages=True)
+                    if role.permissions.kick_members or role.permissions.ban_members:
+                        overwrites[role] = discord.PermissionOverwrite(read_messages=True)
                 
                 alert_channel = await guild.create_text_channel(
                     'ai-alerts',

@@ -122,13 +122,13 @@ async function loadGuilds() {
 async function loadRR() {
   selectedGuild = document.getElementById('guild-select').value;
   if (!selectedGuild) return;
-  var [rrs, chRes, роли] = await Promise.all([
-    fetch('/api/guild/'+selectedGuild+'/reaction-роли').then(r=>r.json()),
+  var [rrs, chRes, roles] = await Promise.all([
+    fetch('/api/guild/'+selectedGuild+'/reaction-roles').then(r=>r.json()),
     fetch('/api/guild/'+selectedGuild+'/channels').then(r=>r.json()),
-    fetch('/api/guild/'+selectedGuild+'/роли').then(r=>r.json())
+    fetch('/api/guild/'+selectedGuild+'/roles').then(r=>r.json())
   ]);
   var channels = Array.isArray(chRes) ? chRes : (chRes.channels || []);
-  allRoles = роли;
+  allRoles = roles;
   document.getElementById('rr-channel').innerHTML = channels.filter(c=>c.type==='text').map(c=>'<option value="'+c.id+'">#'+c.name+'</option>').join('');
 
   var box = document.getElementById('rr-list');
@@ -175,7 +175,7 @@ async function createRR() {
   if (!title || entries.length < 1) { alert('Заголовок ve en az 1 eşleşme gir!'); return; }
   var btn = document.querySelector('.btn-submit');
   btn.textContent = '⏳ Создан...'; btn.disabled = true;
-  var r = await fetch('/api/guild/'+selectedGuild+'/reaction-роли/create', {
+  var r = await fetch('/api/guild/'+selectedGuild+'/reaction-roles/create', {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({ title, channel_id, entries })
   });
@@ -186,7 +186,7 @@ async function createRR() {
 
 async function deleteRR(id) {
   if (!confirm('Удалитьmek если хотите emin misiniz mı siz?')) return;
-  await fetch('/api/guild/'+selectedGuild+'/reaction-роли/'+id+'/delete', {method:'POST'});
+  await fetch('/api/guild/'+selectedGuild+'/reaction-roles/'+id+'/delete', {method:'POST'});
   loadRR();
 }
 

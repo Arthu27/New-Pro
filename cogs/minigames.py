@@ -150,7 +150,7 @@ class MiniGames(commands.Cog):
     async def random_member(self, interaction: discord.Interaction, role: discord.Role = None):
         members = [m for m in interaction.guild.members if not m.bot]
         if role:
-            members = [m for m in members if роли in m.roles]
+            members = [m for m in members if role in m.roles]
         if not members:
             await interaction.response.send_message('❌ Uygun участник не найден!', ephemeral=True)
             return

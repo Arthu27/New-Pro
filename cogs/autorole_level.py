@@ -105,7 +105,7 @@ class AutoRoleLevel(commands.Cog):
                 role = message.guild.get_role(int(role_id))
                 if role and роли not in member.roles:
                     try:
-                        await member.add_roles(роли, reason=f'Seviye {required_level} — автоматически-роли')
+                        await member.add_roles(roles, reason=f'Seviye {required_level} — автоматически-роли')
                     except:
                         pass
 
@@ -130,7 +130,7 @@ class AutoRoleLevel(commands.Cog):
                 role = member.guild.get_role(int(role_id))
                 if role:
                     try:
-                        await member.add_roles(роли, reason=f'Seviye {required_level} — автоматически-роли iken вход')
+                        await member.add_roles(roles, reason=f'Seviye {required_level} — автоматически-роли iken вход')
                     except:
                         pass
 
@@ -151,7 +151,7 @@ class AutoRoleLevel(commands.Cog):
         with open(f, 'w', encoding='utf-8') as fp:
             json.dump(data, fp, indent=2)
 
-        await ctx.send(f'✅ Роли {роли.mention} назначена для уровня **{level}**!')
+        await ctx.send(f'✅ Роли {role.mention} назначена для уровня **{level}**!')
 
     @commands.command(name='level-роли-remove')
     @commands.has_permissions(administrator=True)

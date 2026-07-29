@@ -313,8 +313,8 @@ class Moderation(commands.Cog):
             u = user or interaction.user
             role = [r.mention for r in u.roles[1:]]
             roles_text = " ".join(роли[:20]) if роли else "Нет"
-            if len(роли) > 20:
-                roles_text += f" · +{len(роли) - 20}"
+            if len(roles) > 20:
+                roles_text += f" · +{len(roles) - 20}"
 
             e = discord.Embed(
                 color=u.color if u.color != discord.Color.default() else 0x3498DB,
@@ -327,7 +327,7 @@ class Moderation(commands.Cog):
                 f"Takma ad: **{u.display_name}**\n"
                 f"Hesap: <t:{int(u.created_at.timestamp())}:R>\n"
                 f"На на сервере: <t:{int(u.joined_at.timestamp())}:R>\n"
-                f"Роли ({len(роли)}): {roles_text}\n\n"
+                f"Роли ({len(roles)}): {roles_text}\n\n"
                 f"{DIVIDER}"
             )
             e.set_thumbnail(url=u.display_avatar.url)
@@ -366,12 +366,12 @@ class Moderation(commands.Cog):
     @app_commands.checks.has_permissions(manage_roles=True)
     async def role(self, interaction, user: discord.Member, role: discord.Role):
         guild = interaction.guild
-        if роли in user.roles:
-            await user.remove_roles(роли)
+        if role in user.roles:
+            await user.remove_roles(role)
             action_text = "удален"
             color = 0xE74C3C
         else:
-            await user.add_roles(роли)
+            await user.add_roles(role)
             action_text = "vidana"
             color = 0x2ECC71
 
@@ -379,7 +379,7 @@ class Moderation(commands.Cog):
         e.description = (
             f"## Роль {action_text}\n"
             f"**{user.display_name}** · `{user.id}`\n\n"
-            f"Роль: {роли.mention}\n"
+            f"Роль: {role.mention}\n"
             f"Модератор: {interaction.user.mention}\n\n"
             f"{DIVIDER}"
         )

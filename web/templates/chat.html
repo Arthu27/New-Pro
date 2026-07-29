@@ -796,7 +796,7 @@ function openProfile(event, memberId) {
     var c = r.color && r.color !== '#000000' ? r.color : 'rgba(212,168,67,0.4)';
     return '<span class="profile-role-badge" style="color:' + c + ';border-color:' + c + '20;">' + r.name + '</span>';
   }).join('');
-  document.getElementById('pp-роли').innerHTML = роли || '<span style="color:rgba(240,232,208,0.2);font-size:11px;">Роль yok</span>';
+  document.getElementById('pp-роли').innerHTML = roles || '<span style="color:rgba(240,232,208,0.2);font-size:11px;">Роль yok</span>';
   document.getElementById('pp-nick-input').value = m.nick || '';
   var rect = event.currentTarget.getBoundingClientRect();
   var left = rect.right + 8, top = rect.top;

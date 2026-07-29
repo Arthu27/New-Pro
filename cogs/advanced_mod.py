@@ -232,7 +232,7 @@ class AdvancedMod(commands.Cog):
             )
             return
 
-        e = discord.Embed(title="👁️  İzleme Listesi", color=0xF39C12, timestamp=datetime.utcnow())
+        e = discord.Embed(title="👁️  İzleme список", color=0xF39C12, timestamp=datetime.utcnow())
         e.description = (
             f"```ansi\n\u001b[1;33m⚠ İZLEMEDEKİ ПОЛЬЗОВАТЕЛИ\u001b[0m\n```\n{_divider()}"
         )
@@ -267,7 +267,7 @@ class AdvancedMod(commands.Cog):
             )
             return
 
-        e = discord.Embed(title=f"🔨  Ban Listesi", color=0xE74C3C, timestamp=datetime.utcnow())
+        e = discord.Embed(title=f"🔨  Ban список", color=0xE74C3C, timestamp=datetime.utcnow())
         e.description = (
             f"```ansi\n\u001b[1;31m🔨 BANLI ПОЛЬЗОВАТЕЛИ\u001b[0m\n```\n{_divider()}"
         )
@@ -290,9 +290,9 @@ class AdvancedMod(commands.Cog):
         count = 0
         if action.lower() == "ver":
             for member in interaction.guild.members:
-                if роли not in member.roles and not member.bot:
+                if role not in member.roles and not member.bot:
                     try:
-                        await member.add_roles(роли)
+                        await member.add_roles(role)
                         count += 1
                     except:
                         pass
@@ -302,9 +302,9 @@ class AdvancedMod(commands.Cog):
             e.add_field(name="👥 Затронуто", value=f"```{count} человек```", inline=True)
         elif action.lower() == "al":
             for member in interaction.guild.members:
-                if роли in member.roles:
+                if role in member.roles:
                     try:
-                        await member.remove_roles(роли)
+                        await member.remove_roles(role)
                         count += 1
                     except:
                         pass

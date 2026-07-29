@@ -58,7 +58,7 @@ def before_request():
     pass  # Rate limit удалено
 
 # ── Panel Log ─────────────────────────────────────────────────────────────────
-def _log_login(username, роли, avatar, discord_id):
+def _log_login(username, roles, avatar, discord_id):
     """Вход yapan useryı сохранить."""
     try:
         os.makedirs('data', exist_ok=True)
@@ -250,7 +250,7 @@ def role_required(min_role):
             if 'role' not in session:
                 return jsonify({'error': 'Не автоматически'}), 403
             if ROLES.get(session['role'], -1) < ROLES.get(min_role, 999):
-                return jsonify({'error': 'Yok erişimi'}), 403
+                return jsonify({'error': 'Yok доступ'}), 403
             return f(*args, **kwargs)
         return decorated_function
     return decorator
@@ -344,16 +344,16 @@ def login():
 # Geçici проверка kodları {discord_id: {code, data}}
 PENDING_VERIFICATIONS = {}
 
-# 2FA baddyen oturumlar {session_token: {username, роли, expires}}
+# 2FA baddyen oturumlar {session_token: {username, roles, expires}}
 PENDING_2FA = {}
 
-def _require_2fa(username, роли):
+def _require_2fa(username, roles):
     """2FA kodu создать ve DM отправить, token вернуть"""
     import secrets
     token = secrets.token_hex(16)
     code = ''.join([str(random.randint(0, 9)) for _ in range(6)])
     expires = datetime.utcnow().timestamp() + 300  # 5 minutes
-    PENDING_2FA[token] = {'username': username, 'role': роли, 'code': code, 'expires': expires}
+    PENDING_2FA[token] = {'username': username, 'role': roles, 'code': code, 'expires': expires}
 
     # Discord DM отправить
     if bot_instance:
@@ -570,7 +570,7 @@ def logout():
 @login_required
 def api_add_member():
     if ROLES.get(session.get('role'), -1) < ROLES.get('admin', 999):
-        return jsonify({'error': 'Yok erişimi'}), 403
+        return jsonify({'error': 'Yok доступ'}), 403
     data = request.get_json()
     discord_id   = str(data.get('discord_id', '')).strip()
     password     = data.get('password', '').strip()
@@ -654,7 +654,7 @@ def api_announcements():
 @login_required
 def api_send_notification():
     if ROLES.get(session.get('role'), -1) < ROLES.get('mod', 999):
-        return jsonify({'error': 'Yok erişimi'}), 403
+        return jsonify({'error': 'Yok доступ'}), 403
     data = request.get_json()
     discord_id = str(data.get('discord_id', '')).strip()
     message = data.get('message', '').strip()
@@ -703,7 +703,7 @@ def api_send_notification():
 @login_required
 def api_send_announcement():
     if ROLES.get(session.get('role'), -1) < ROLES.get('mod', 999):
-        return jsonify({'error': 'Yok erişimi'}), 403
+        return jsonify({'error': 'Yok доступ'}), 403
     data = request.get_json()
     title = data.get('title', '').strip()
     message = data.get('message', '').strip()
@@ -813,7 +813,7 @@ def api_guilds():
         
         return jsonify(guilds)
     except Exception as e:
-        print(f"Сервер listesi Ошибки: {e}")
+        print(f"Сервер список Ошибки: {e}")
         return jsonify([])
 
 @app.route('/api/leave-guild', methods=['POST'])
@@ -892,7 +892,7 @@ def api_guild_members(guild_id):
         
         return jsonify(members)
     except Exception as e:
-        print(f"Участник listesi Ошибки: {e}")
+        print(f"Участник список Ошибки: {e}")
         return jsonify([])
 
 @app.route('/api/logs')
@@ -905,19 +905,21 @@ def api_logs():
     filter_guild = request.args.get('guild_id', '')
 
     try:
-        if os.path.exists(audit_file):
-            try:
-                with open(audit_file, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-            except Exception as je:
-                print(f'[LOGS] audit_log.json bozuk, atlanıyor: {je}')
-                data = {}
-            for guild_id, events in data.items():
-                if filter_guild and guild_id != filter_guild:
-                    continue
-                for ev in events:
-                    ev['guild_id'] = guild_id
-                    all_events.append(ev)
+        for log_file in ['data/audit_log.json', 'data/audit_log_backup.json']:
+            if os.path.exists(log_file):
+                try:
+                    with open(log_file, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                except Exception as je:
+                    data = {}
+                for guild_id, events in data.items():
+                    if filter_guild and guild_id != filter_guild:
+                        continue
+                    for ev in events:
+                        ev['guild_id'] = guild_id
+                        all_events.append(ev)
+                if all_events:
+                    break
 
         if os.path.exists(mod_file):
             with open(mod_file, 'r', encoding='utf-8') as f:
@@ -1363,9 +1365,9 @@ def api_execute_command():
                     raise Exception('Bu роли botun en высокий роли высокий')
                 action = data.get('action', 'add')
                 if action == 'remove':
-                    await member.remove_roles(роли)
+                    await member.remove_roles(role)
                 else:
-                    await member.add_roles(роли)
+                    await member.add_roles(role)
         
         import asyncio
         result = asyncio.run_coroutine_threadsafe(execute(), bot_instance.loop).result(timeout=15)
@@ -1539,7 +1541,7 @@ def api_tunnel_url():
         pass
     return jsonify({'url': None})
 
-def _save_login_token(username, роли):
+def _save_login_token(username, roles):
     """Пользователь для постоянный token создать/обновить"""
     tokens_file = 'data/tokens.json'
     os.makedirs('data', exist_ok=True)
@@ -1551,7 +1553,7 @@ def _save_login_token(username, роли):
     existing = next((t for t, v in tokens.items() if v.get('username') == username), None)
     if not existing:
         existing = ''.join(random.choices(string.ascii_letters + string.digits, k=48))
-    tokens[existing] = {'username': username, 'role': роли, 'created_at': datetime.utcnow().isoformat()}
+    tokens[existing] = {'username': username, 'role': roles, 'created_at': datetime.utcnow().isoformat()}
     with open(tokens_file, 'w', encoding='utf-8') as f:
         json.dump(tokens, f, indent=2, ensure_ascii=False)
     return existing
@@ -1566,7 +1568,7 @@ def api_my_token():
     """Вход yapmış usernın автоматически вход tokenını вернуть"""
     username = session.get('username')
     role = session.get('role')
-    token = _save_login_token(username, роли)
+    token = _save_login_token(username, roles)
     return jsonify({'token': token})
 
 @app.route('/api/change-password', methods=['POST'])
@@ -1575,7 +1577,7 @@ def api_change_password():
     username = session.get('username')
     # Только Arthur или owner роли userlar
     if username != 'Arthur' and session.get('role') != 'owner':
-        return jsonify({'error': 'Yok erişimi'}), 403
+        return jsonify({'error': 'Yok доступ'}), 403
     data = request.get_json()
     target = data.get('target', '').strip()   # какой hesabın parolasi değişecek
     new_pass = data.get('new_password', '').strip()
@@ -1761,7 +1763,7 @@ def api_get_role_map():
         'guild_roles': guild_roles,
     })
 
-@app.route('/api/роли-map', methods=['POST'])
+@app.route('/api/role-map', methods=['POST'])
 @login_required
 @role_required('admin')
 def api_set_role_map():
@@ -1776,7 +1778,7 @@ def api_set_role_map():
     _log_panel_action('ROLE_MAP_SET', f'{role_id} → {panel_role}')
     return jsonify({'success': True})
 
-@app.route('/api/роли-map/<role_id>', methods=['DELETE'])
+@app.route('/api/role-map/<role_id>', methods=['DELETE'])
 @login_required
 @role_required('admin')
 def api_delete_role_map(role_id):
@@ -2183,7 +2185,7 @@ def api_voice_command():
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
 
-# ── Parola Sıfırlama (login sayfası для) ─────────────────────────────────────
+# ── Parola Sıfırlama (login страница для) ─────────────────────────────────────
 import random as _random
 _reset_codes = {}  # {discord_id: {code, expires}}
 
@@ -2217,7 +2219,7 @@ def api_forgot_password():
         await user.send(
             f"🔑 **Parola Sıfırlama Kodun:** `{code}`\n"
             f"Bu kod 5 minutes geçerlidir. Panelde bu kodu girerek parolani sıfırlayabilirsin.\n"
-            f"Если bu желание sen yapmadıysan bu сообщение yoksay."
+            f"Если bu желание sen yapmadıysan bu сообщение игнорировать."
         )
     try:
         asyncio.run_coroutine_threadsafe(send_dm(), bot_instance.loop).result(timeout=10)

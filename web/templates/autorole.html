@@ -96,16 +96,16 @@ async function loadSettings(gid_param){
   selectedGuild=gid_param||MAIN_GID;
   if(!selectedGuild)return;
   var[роли,settings]=await Promise.all([
-    fetch('/api/guild/'+selectedGuild+'/роли').then(r=>r.json()),
+    fetch('/api/guild/'+selectedGuild+'/roles').then(r=>r.json()),
     fetch('/api/guild/'+selectedGuild+'/autorole').then(r=>r.json())
   ]);
   allRoles=роли;
-  роли.member=settings.member_roles||[];
-  роли.girl=settings.girl_roles||[];
-  роли.boy=settings.boy_roles||[];
-  роли.bot=settings.bot_roles||[];
+  roles.member=settings.member_roles||[];
+  roles.girl=settings.girl_roles||[];
+  roles.boy=settings.boy_roles||[];
+  roles.bot=settings.bot_roles||[];
   ['member','girl','boy','bot'].forEach(function(t){
-    document.getElementById(t+'-роли-add').innerHTML=роли.map(r=>'<option value="'+r.id+'">'+r.name+'</option>').join('');
+    document.getElementById(t+'-роли-add').innerHTML=roles.map(r=>'<option value="'+r.id+'">'+r.name+'</option>').join('');
   });
   renderAll();
 }
@@ -115,7 +115,7 @@ function renderType(type){
   if(!роли[type].length){box.innerHTML='<p class="empty-msg">Пока роль добавл.</p>';return;}
   box.innerHTML=роли[type].map(function(id){
     var role=allRoles.find(r=>r.id===id)||{name:id};
-    return '<span class="role-tag">'+роли.name+'<button onclick="removeRole(''+type+'',''+id+'')">×</button></span>';
+    return '<span class="role-tag">'+role.name+'<button onclick="removeRole(''+type+'',''+id+'')">×</button></span>';
   }).join('');
 }
 function addRole(type){

@@ -176,8 +176,8 @@ class Logs(commands.Cog):
             }
             # Daem erişim модератор (роли с администрации kick/ban)
             for role in guild.roles:
-                if роли.permissions.kick_members or роли.permissions.ban_members or роли.permissions.administrator:
-                    overwrites[роли] = discord.PermissionOverwrite(
+                if role.permissions.kick_members or role.permissions.ban_members or role.permissions.administrator:
+                    overwrites[role] = discord.PermissionOverwrite(
                         read_messages=True,
                         send_messages=False,
                         read_message_history=True,
@@ -240,7 +240,7 @@ class Logs(commands.Cog):
                 "👤 **-участники** — вход, çıkış, smena nika\n"
                 "💬 **-сообщения** — удалить, redaktirovanie\n"
                 "🔊 **-ses** — вход/çıkış den ses\n"
-                "⚙️ **-сервер** — каналы, роли, invayti, сервер\n"
+                "⚙️ **-сервер** — каналы, roles, invayti, сервер\n"
                 "👋 **-приветствие** — приветствие ve prosaniya"
             ),
             inline=False
@@ -423,7 +423,7 @@ class Logs(commands.Cog):
             added = [r for r in after.roles if r not in before.roles]
             removed = [r for r in before.roles if r not in after.roles]
             if added or removed:
-                save_event(before.guild.id, 'role', 'Роли değiştirildi', {
+                save_event(before.guild.id, 'role', 'Роли изменено', {
                     'user_id': str(before.id),
                     'user_name': str(before),
                     'added_roles': [r.name for r in added],
@@ -432,7 +432,7 @@ class Logs(commands.Cog):
                 ch = await self.get_log_channel(before.guild, 'role')
                 if ch:
                     e = discord.Embed(color=0x9B59B6, timestamp=datetime.datetime.utcnow())
-                    desc = f"## Роли değiştirildi\n**{before.display_name}** · `{before.id}`\n\n"
+                    desc = f"## Роли изменено\n**{before.display_name}** · `{before.id}`\n\n"
                     if added:
                         desc += f"Dobavleni: {', '.join(r.mention for r in added)}\n"
                     if removed:
@@ -664,15 +664,15 @@ class Logs(commands.Cog):
     # ─── ROLES ─────────────────────────────────────────────────────────
 
     @commands.Cog.listener()
-    async def on_guild_role_create(self, роли):
-        save_event(роли.guild.id, 'role', 'Роль создан', {
+    async def on_guild_role_create(self, roles):
+        save_event(role.guild.id, 'role', 'Роль создан', {
             'role_id': str(role.id),
             'role_name': role.name,
         })
 
     @commands.Cog.listener()
-    async def on_guild_role_delete(self, роли):
-        save_event(роли.guild.id, 'role', 'Роль удалено', {
+    async def on_guild_role_delete(self, roles):
+        save_event(role.guild.id, 'role', 'Роль удалено', {
             'role_id': str(role.id),
             'role_name': role.name,
         })
@@ -738,7 +738,7 @@ class Logs(commands.Cog):
             discord.AuditLogAction.role_create:        ('role',    'Роль создан'),
             discord.AuditLogAction.role_delete:        ('role',    'Роль удалено'),
             discord.AuditLogAction.role_update:        ('role',    'Роль obnovlena'),
-            discord.AuditLogAction.member_role_update: ('role',    'Роли değiştirildi'),
+            discord.AuditLogAction.member_role_update: ('role',    'Роли изменено'),
             discord.AuditLogAction.invite_create:      ('invite',  'Davet создано'),
             discord.AuditLogAction.invite_delete:      ('invite',  'Davet удалено'),
             discord.AuditLogAction.message_delete:     ('message', 'Сообщение удалено'),

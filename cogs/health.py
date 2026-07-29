@@ -1,4 +1,4 @@
-"""Сервер sağlık skoru + channel основанный на статистика"""
+"""Сервер состояние skoru + channel основанный на статистика"""
 import discord
 from discord.ext import commands
 from discord import app_commands
@@ -23,7 +23,7 @@ def _save_health(guild_id, data):
         json.dump(data, fp, indent=2, ensure_ascii=False)
 
 def _calc_score(data, guild: discord.Guild):
-    """0-100 arası sağlık skoru hesapla"""
+    """0-100 arası состояние skoru hesapla"""
     score = 100
     total_members = max(guild.member_count, 1)
 
@@ -127,14 +127,14 @@ class Health(commands.Cog):
         except Exception:
             pass
 
-    @app_commands.command(name="health", description="Сервера sağlık skorunu показ")
+    @app_commands.command(name="health", description="Сервера состояние skorunu показ")
     async def saglik(self, interaction: discord.Interaction):
         gid = str(interaction.guild.id)
         data = _load_health(gid)
         score = _calc_score(data, interaction.guild)
         label, color = _score_label(score)
 
-        e = discord.Embed(title=f"🏥 {interaction.guild.name} — Sağlık Puanlamau", color=color)
+        e = discord.Embed(title=f"🏥 {interaction.guild.name} — состояние Puanlamau", color=color)
         e.set_thumbnail(url=interaction.guild.icon.url if interaction.guild.icon else None)
 
         bar_filled = round(score / 10)

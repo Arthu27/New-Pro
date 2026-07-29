@@ -1,7 +1,7 @@
 """
 Aether Social Cog
 - Gelişmiş anket система (çoklu выбрать, vakitlı, anonim, grafik)
-- Event planlayıcısı (etkinlik takvimi, katılımcı listesi, hatırlatmalar)
+- Event planlayıcısı (etkinlik takvimi, katılımcı список, hatırlatmalar)
 - Matchmaking система (oyun arkadaşı bulma, команда создан)
 """
 import discord
@@ -419,7 +419,7 @@ class Social(commands.Cog):
         data[event_id]['message_id'] = str(msg.id)
         _save(path, data)
 
-    @app_commands.command(name="etkinlik-listesi", description="Показать предстоящие события")
+    @app_commands.command(name="etkinlik-список", description="Показать предстоящие события")
     async def event_list(self, interaction: discord.Interaction):
         guild_id = str(interaction.guild.id)
         path = EVENT_FILE.format(guild_id=guild_id)
@@ -524,7 +524,7 @@ class Social(commands.Cog):
         view = MatchView(match_id, guild_id, max_oyuncu)
         await interaction.response.send_message(embed=e, view=view)
 
-    @app_commands.command(name="oyun-listesi", description="Показать активные поиски игроков")
+    @app_commands.command(name="oyun-список", description="Показать активные поиски игроков")
     async def matchmaking_list(self, interaction: discord.Interaction):
         guild_id = str(interaction.guild.id)
         path = MATCH_FILE.format(guild_id=guild_id)
@@ -540,7 +540,7 @@ class Social(commands.Cog):
 
         e = discord.Embed(title="🎮 Активен Игра Aramamaları", color=0x1abc9c, timestamp=now)
         if not active:
-            e.description = "Şu an активен oyun araması yok.\n`/oyun-ara` с новый arama запустить!"
+            e.description = "Şu an активен oyun поиск yok.\n`/oyun-ara` с новый arama запустить!"
         else:
             for m in active[:8]:
                 players = m.get('players', [])
