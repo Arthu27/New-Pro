@@ -726,7 +726,7 @@ class Ticket(commands.Cog):
                     pass
 
                 full_message = message.content
-                response, should_escalate, escalation_category, updated_history, detected_category = ai_ticket_response(
+                response, should_escalate, escalation_category, updated_history, detected_category = await ai_ticket_response(
                     full_message, state['history'], guild_context
                 )
                 actions = parse_ai_actions(response)

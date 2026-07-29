@@ -1,11 +1,18 @@
 """
 Ticket AI — продвинутая система поддержки
-Chain-of-thought reasoning, персонализация, проактивное поведение
+Chain-of-thought reasoning, персонализация, проактивное поведение, function calling
 """
 import os
 import json
+import re
 import datetime
 from typing import Dict, List, Optional, Tuple
+
+# Import function calling system
+try:
+    from web.ai_functions import AIFunctions
+except ImportError:
+    AIFunctions = None
 
 # ─── БАЗА ЗНАНИЙ БОТА ───────────────────────────────────────────────────────
 
@@ -374,7 +381,7 @@ def _get_prompt_by_category(category: str) -> str:
 
 # ─── ГЛАВНАЯ ФУНКЦИЯ — AI TICKET RESPONSE ───────────────────────────────────
 
-def ai_ticket_response(user_message: str, history: List[Dict], guild_context: Dict) -> Tuple[str, bool, str, List[Dict], str]:
+async def ai_ticket_response(user_message: str, history: List[Dict], guild_context: Dict) -> Tuple[str, bool, str, List[Dict], str]:
     """
     Главная функция AI ответа в тикете.
 
@@ -434,6 +441,16 @@ def ai_ticket_response(user_message: str, history: List[Dict], guild_context: Di
             'content': "КОНТЕКСТ СЕРВЕРА:\n" + "\n".join(server_info)
         })
 
+    # 5.5. Function calling — описание доступных функций
+    guild = guild_context.get('guild')
+    ai_functions = None
+    if guild and AIFunctions:
+        ai_functions = AIFunctions(guild.client)
+        messages.append({
+            'role': 'system',
+            'content': ai_functions.get_available_functions()
+        })
+
     # 6. История разговора (последние 20 сообщений)
     if history:
         messages.extend(history[-20:])
@@ -441,9 +458,31 @@ def ai_ticket_response(user_message: str, history: List[Dict], guild_context: Di
     # 7. Текущее сообщение
     messages.append({'role': 'user', 'content': user_message})
 
-    # 8. Вызываем AI
-    response, _, _ = _call(messages, max_tokens=2048, temperature=0.7)
-
+    # 8. Вызываем AI с function calling (максимум 3 итерации)
+    max_iterations = 3
+    for iteration in range(max_iterations):
+        response, _, _ = _call(messages, max_tokens=2048, temperature=0.7)
+        
+        # Проверяем есть ли вызовы функций
+        func_calls = re.findall(r'\[FUNC:[^\]]+\]', response)
+        
+        if not func_calls or not ai_functions or not guild:
+            # Нет вызовов функций или function calling недоступен — выходим
+            break
+        
+        # Выполняем функции
+        for func_call in func_calls[:3]:  # Максимум 3 функции за раз
+            result = await ai_functions.execute_function(func_call, guild)
+            if result:
+                # Добавляем результат функции в контекст
+                messages.append({
+                    'role': 'system',
+                    'content': f"РЕЗУЛЬТАТ ФУНКЦИИ {func_call}:\n{result}"
+                })
+        
+        # Убираем вызовы функций из ответа
+        response = re.sub(r'\[FUNC:[^\]]+\]', '', response).strip()
+    
     # 9. Парсим действия
     should_escalate = False
     if 'ACTION:ESCALATE' in response:
