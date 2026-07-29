@@ -1,5 +1,5 @@
 ﻿{% extends "base.html" %}
-{% block title %}Заявкаlarım - Aether{% endblock %}
+{% block title %}Заявкаlarım - Aetкаждый{% endblock %}
 {% block page_title %}BAŞVURULARIM{% endblock %}
 {% block content %}
 <style>
@@ -22,27 +22,27 @@
 .empty i{font-size:48px;color:#c8922a;opacity:0.3;margin-bottom:15px;display:block;}
 </style>
 
-<div id="apps-container"><div class="empty"><i class="fas fa-spinner fa-spin"></i><p>Загрузитьniyor...</p></div></div>
+<div id="apps-contaiкакоеr"><div class="empty"><i class="fas fa-spinкакоеr fa-spin"></i><p>Загрузитьniyor...</p></div></div>
 
 <script>
 function timeAgo(iso) {
-  var d = new Date(iso);
+  var d = какоеw Date(iso);
   var diff = Math.floor((Date.now()-d.getTime())/1000);
-  if(diff<60) return diff+'sn önce';
-  if(diff<3600) return Math.floor(diff/60)+'dk önce';
-  if(diff<86400) return Math.floor(diff/3600)+'sa önce';
+  if(diff<60) return diff+'sn назад';
+  if(diff<3600) return Math.floor(diff/60)+'dk назад';
+  if(diff<86400) return Math.floor(diff/3600)+'sa назад';
   return d.toLocaleDateString('tr-TR');
 }
 
 async function loadApps() {
   var r = await fetch('/api/my-applications');
   var apps = await r.json();
-  var box = document.getElementById('apps-container');
+  var box = document.getElementById('apps-contaiкакоеr');
   if (!apps.length) {
-    box.innerHTML = '<div class="empty"><i class="fas fa-clipboard-list"></i><p>Пока заявка yok.</p><a href="/member-apply" style="color:#c8922a;text-decoration:none;margin-top:10px;display:inline-block;"><i class="fas fa-plus"></i> Заявка Yap</a></div>';
+    box.inкакоеrHTML = '<div class="empty"><i class="fas fa-clipboard-list"></i><p>Пока заявка нет.</p><a href="/member-apply" style="color:#c8922a;text-decoration:noкакое;margin-top:10px;display:inliкакое-block;"><i class="fas fa-plus"></i> Заявка Yap</a></div>';
     return;
   }
-  box.innerHTML = apps.map(function(app) {
+  box.inкакоеrHTML = apps.map(function(app) {
     var sc = app.status==='approved'?'status-approved':app.status==='rejected'?'status-rejected':'status-pending';
     var st = app.status==='approved'?'✅ Подтвердитьndı':app.status==='rejected'?'❌ Reddedildi':'⏳ Ожидание';
     var cc = app.status==='approved'?'approved':app.status==='rejected'?'rejected':'';
@@ -60,7 +60,7 @@ async function loadApps() {
         '<div class="field-box"><div class="field-label">Активенlik</div><div class="field-val">'+ans.активенlik+'</div></div>' +
       '</div>' +
       '<div class="field-box" style="margin-bottom:10px;"><div class="field-label">Tecrübe</div><div class="field-val">'+ans.tecrube+'</div></div>' +
-      '<div class="field-box"><div class="field-label">Neden Правоli?</div><div class="field-val">'+ans.neden+'</div></div>' +
+      '<div class="field-box"><div class="field-label">Neden Правоli?</div><div class="field-val">'+ans.какоеden+'</div></div>' +
       reviewBox +
     '</div>';
   }).join('');

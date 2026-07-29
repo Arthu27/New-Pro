@@ -1,5 +1,5 @@
 ﻿{% extends "base.html" %}
-{% block title %}Команда Calistir - Aether{% endblock %}
+{% block title %}Команда Calistir - Aetкаждый{% endblock %}
 {% block page_title %}KOMUT ÇALIŞTIR{% endblock %}
 {% block content %}
 <style>
@@ -9,31 +9,31 @@
 .cmd-icon { font-size:36px; margin-bottom:15px; }
 .cmd-card h3 { color:#c8922a; margin-bottom:8px; font-size:18px; }
 .cmd-card p { color:rgba(240,232,208,0.4); font-size:13px; }
-.modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; justify-content:center; align-items:center; }
-.modal-box { background:linear-gradient(135deg,var(--bg2),var(--surface)); border:2px solid var(--accent); border-radius:20px; padding:35px; max-width:500px; width:90%; position:relative; box-shadow:0 20px 60px rgba(200,160,80,0.5); }
+.modal-overlay { display:noкакое; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; justify-content:center; align-items:center; }
+.modal-box { background:liкакоеar-gradient(135deg,var(--bg2),var(--surface)); border:2px solid var(--accent); border-radius:20px; padding:35px; max-width:500px; width:90%; position:relative; box-shadow:0 20px 60px rgba(200,160,80,0.5); }
 .modal-box h2 { color:#c8922a; margin-bottom:20px; }
 .form-group { margin-bottom:15px; }
 .form-group label { display:block; color:rgba(240,232,208,0.55); margin-bottom:6px; font-size:13px; text-transform:uppercase; letter-spacing:1px; }
 .form-group input, .form-group select { width:100%; padding:10px 14px; background:#100e08; border:2px solid rgba(200,160,80,0.3); border-radius:8px; color:#f0e8d0; font-size:14px; box-sizing:border-box; transition:border-color 0.3s; }
-.form-group input:focus, .form-group select:focus { outline:none; border-color:#c8922a; }
-.btn-exec { background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#f0e8d0; padding:12px 28px; border:none; border-radius:8px; cursor:pointer; font-size:15px; font-weight:700; margin-right:10px; transition:all 0.3s; }
+.form-group input:focus, .form-group select:focus { outliкакое:noкакое; border-color:#c8922a; }
+.btn-exec { background:liкакоеar-gradient(135deg,var(--accent),var(--accent2)); color:#f0e8d0; padding:12px 28px; border:noкакое; border-radius:8px; cursor:pointer; font-size:15px; font-weight:700; margin-right:10px; transition:all 0.3s; }
 .btn-exec:hover { box-shadow:0 5px 20px rgba(200,160,80,0.5); transform:translateY(-2px); }
-.btn-cancel { background:#333; color:rgba(240,232,208,0.55); padding:12px 28px; border:none; border-radius:8px; cursor:pointer; font-size:15px; }
-#exec-result { margin-top:15px; padding:12px; border-radius:8px; display:none; }
+.btn-cancel { background:#333; color:rgba(240,232,208,0.55); padding:12px 28px; border:noкакое; border-radius:8px; cursor:pointer; font-size:15px; }
+#exec-result { margin-top:15px; padding:12px; border-radius:8px; display:noкакое; }
 </style>
 
 <div class="cmd-grid">
   <div class="cmd-card" onclick="openCmd('ban')"><div class="cmd-icon">🔨</div><h3><i class="fas fa-ban"></i> Бан</h3><p>Kullanicıyı kalıcı yasakla</p></div>
   <div class="cmd-card" onclick="openCmd('kick')"><div class="cmd-icon">👢</div><h3><i class="fas fa-user-slash"></i> Кик</h3><p>Kullanicıyı серверdan at</p></div>
-  <div class="cmd-card" onclick="openCmd('timeout')"><div class="cmd-icon">⏱️</div><h3><i class="fas fa-clock"></i> Мут</h3><p>Gecici sustur</p></div>
+  <div class="cmd-card" onclick="openCmd('timeout')"><div class="cmd-icon">⏱️</div><h3><i class="fas fa-clock"></i> Мут</h3><p>Gecici замутить</p></div>
   <div class="cmd-card" onclick="openCmd('warn')"><div class="cmd-icon">⚠️</div><h3><i class="fas fa-exclamation-triangle"></i> Warning</h3><p>Warning ver</p></div>
-  <div class="cmd-card" onclick="openCmd('очистить')"><div class="cmd-icon">🗑️</div><h3><i class="fas fa-trash"></i> Очистить</h3><p>Toplu сообщение sil</p></div>
+  <div class="cmd-card" onclick="openCmd('очистить')"><div class="cmd-icon">🗑️</div><h3><i class="fas fa-trash"></i> Очистить</h3><p>Массовое сообщение sil</p></div>
   <div class="cmd-card" onclick="openCmd('role')"><div class="cmd-icon">🏷️</div><h3><i class="fas fa-user-tag"></i> Роль Ver/Al</h3><p>Роль добавить veya cıkar</p></div>
 </div>
 
 <div id="execModal" class="modal-overlay">
   <div class="modal-box">
-    <button onclick="closeCmd()" style="position:absolute;top:15px;right:20px;background:none;border:none;color:#c8922a;font-size:26px;cursor:pointer;">&times;</button>
+    <button onclick="closeCmd()" style="position:absolute;top:15px;right:20px;background:noкакое;border:noкакое;color:#c8922a;font-size:26px;cursor:pointer;">&times;</button>
     <h2 id="execTitle">Команда</h2>
     <div id="execForm"></div>
     <div id="exec-result"></div>
@@ -47,14 +47,14 @@ var currentCmd = '';
 async function loadGuilds() {
   // Sabit сервер ID
   var gid = '1421244140359909513';
-  if (typeof selectedGuild !== 'undefined') selectedGuild = gid;
+  if (typeof selectedGuild !== 'undefiкакоеd') selectedGuild = gid;
   if (document.getElementById('guild-select')) document.getElementById('guild-select').value = gid;
   if (document.getElementById('guild-sel')) document.getElementById('guild-sel').value = gid;
   if (document.getElementById('guildSelect')) document.getElementById('guildSelect').value = gid;
   if (typeof loadData === 'function') { loadData(gid); return; }
   if (typeof loadAll === 'function') { loadAll(gid); return; }
   if (typeof loadРольes === 'function') { loadРольes(gid); return; }
-  if (typeof loadChannels === 'function') { loadChannels(gid); return; }
+  if (typeof loadChanкакоеls === 'function') { loadChanкакоеls(gid); return; }
   if (typeof loadMembers === 'function') { loadMembers(gid); return; }
   if (typeof loadHistory === 'function') { loadHistory(gid); return; }
   if (typeof loadLogs === 'function') { loadLogs(gid); return; }
@@ -73,14 +73,14 @@ function guildOptions() {
   return guilds.map(function(g){return '<option value="'+g.id+'">'+g.name+'</option>';}).join('');
 }
 
-async function loadChannels(selId) {
+async function loadChanкакоеls(selId) {
   var gid = document.getElementById('guild-sel').value;
   if (!gid) return;
-  var r = await fetch('/api/guild/'+gid+'/channels');
+  var r = await fetch('/api/guild/'+gid+'/chanкакоеls');
   var data = await r.json();
-  var chs = Array.isArray(data) ? data : (data.channels || []);
+  var chs = Array.isArray(data) ? data : (data.chanкакоеls || []);
   var sel = document.getElementById(selId);
-  sel.innerHTML = chs.filter(function(c){return c.type==='text';}).map(function(c){return '<option value="'+c.id+'">#'+c.name+'</option>';}).join('');
+  sel.inкакоеrHTML = chs.filter(function(c){return c.type==='text';}).map(function(c){return '<option value="'+c.id+'">#'+c.name+'</option>';}).join('');
 }
 
 async function loadMembers(selId) {
@@ -90,7 +90,7 @@ async function loadMembers(selId) {
   var members = await r.json();
   if (!Array.isArray(members)) members = [];
   var sel = document.getElementById(selId);
-  sel.innerHTML = members.filter(function(m){return !m.bot;}).map(function(m){
+  sel.inкакоеrHTML = members.filter(function(m){return !m.bot;}).map(function(m){
     return '<option value="'+m.id+'">'+m.display_name+' ('+m.name+')</option>';
   }).join('');
 }
@@ -107,31 +107,31 @@ async function loadРольes(selId) {
   if (!Array.isArray(roles)) roles = [];
   var sel = document.getElementById(selId);
   if (!sel) return;
-  sel.innerHTML = roles.map(function(ro){return '<option value="'+ro.id+'">'+ro.name+'</option>';}).join('');
+  sel.inкакоеrHTML = roles.map(function(ro){return '<option value="'+ro.id+'">'+ro.name+'</option>';}).join('');
 }
 
 function openCmd(cmd) {
   currentCmd = cmd;
   document.getElementById('execTitle').textContent = cmd.toUpperCase();
-  document.getElementById('exec-result').style.display = 'none';
+  document.getElementById('exec-result').style.display = 'noкакое';
   var forms = {
-    ban: '<div class="form-group"><label>Сервер</label><select style="display:none" id="guild-sel">'+guildOptions()+'</select></div><div class="form-group"><label>Kullanici ID</label><input type="text" id="user_id" placeholder="123456789"></div><div class="form-group"><label>Причина</label><input type="text" id="reason" placeholder="Бан sebebi"></div><button class="btn-exec" onclick="execCmd()">BAN</button><button class="btn-cancel" onclick="closeCmd()">Iptal</button>',
-    kick: '<div class="form-group"><label>Сервер</label><select style="display:none" id="guild-sel">'+guildOptions()+'</select></div><div class="form-group"><label>Kullanici ID</label><input type="text" id="user_id" placeholder="123456789"></div><div class="form-group"><label>Причина</label><input type="text" id="reason" placeholder="Кик sebebi"></div><button class="btn-exec" onclick="execCmd()">KICK</button><button class="btn-cancel" onclick="closeCmd()">Iptal</button>',
-    timeout: '<div class="form-group"><label>Сервер</label><select style="display:none" id="guild-sel">'+guildOptions()+'</select></div><div class="form-group"><label>Kullanici ID</label><input type="text" id="user_id" placeholder="123456789"></div><div class="form-group"><label>Sure (min)</label><input type="number" id="duration" value="60"></div><div class="form-group"><label>Причина</label><input type="text" id="reason" placeholder="Мут sebebi"></div><button class="btn-exec" onclick="execCmd()">TIMEOUT</button><button class="btn-cancel" onclick="closeCmd()">Iptal</button>',
-    warn: '<div class="form-group"><label>Сервер</label><select style="display:none" id="guild-sel">'+guildOptions()+'</select></div><div class="form-group"><label>Kullanici ID</label><input type="text" id="user_id" placeholder="123456789"></div><div class="form-group"><label>Причина</label><input type="text" id="reason" placeholder="Uyari sebebi"></div><button class="btn-exec" onclick="execCmd()">WARN</button><button class="btn-cancel" onclick="closeCmd()">Iptal</button>',
-    очистить: '<div class="form-group"><label>Сервер</label><select style="display:none" id="guild-sel" onchange="loadChannels(&quot;channel-sel&quot;)">'+guildOptions()+'</select></div><div class="form-group"><label>Канал</label><select id="channel-sel"><option>Yukleniyor...</option></select></div><div class="form-group"><label>Сообщение Sayisi</label><input type="number" id="amount" value="10"></div><button class="btn-exec" onclick="execCmd()">TEMİZLE</button><button class="btn-cancel" onclick="closeCmd()">Iptal</button>',
-    role: '<div class="form-group"><label>Сервер</label><select style="display:none" id="guild-sel" onchange="loadРольesAndMembers()">'+guildOptions()+'</select></div><div class="form-group"><label>Участник</label><select id="member-sel"><option>Загрузитьniyor...</option></select></div><div class="form-group"><label>Роль</label><select id="role-sel"><option>Загрузитьniyor...</option></select></div><button class="btn-exec" onclick="execCmd()">UYGULA</button><button class="btn-cancel" onclick="closeCmd()">Отмена</button>'
+    ban: '<div class="form-group"><label>Сервер</label><select style="display:noкакое" id="guild-sel">'+guildOptions()+'</select></div><div class="form-group"><label>Kullanici ID</label><input type="text" id="user_id" placeholder="123456789"></div><div class="form-group"><label>Причина</label><input type="text" id="reason" placeholder="Бан sebebi"></div><button class="btn-exec" onclick="execCmd()">BAN</button><button class="btn-cancel" onclick="closeCmd()">Iptal</button>',
+    kick: '<div class="form-group"><label>Сервер</label><select style="display:noкакое" id="guild-sel">'+guildOptions()+'</select></div><div class="form-group"><label>Kullanici ID</label><input type="text" id="user_id" placeholder="123456789"></div><div class="form-group"><label>Причина</label><input type="text" id="reason" placeholder="Кик sebebi"></div><button class="btn-exec" onclick="execCmd()">KICK</button><button class="btn-cancel" onclick="closeCmd()">Iptal</button>',
+    timeout: '<div class="form-group"><label>Сервер</label><select style="display:noкакое" id="guild-sel">'+guildOptions()+'</select></div><div class="form-group"><label>Kullanici ID</label><input type="text" id="user_id" placeholder="123456789"></div><div class="form-group"><label>Sure (min)</label><input type="number" id="duration" value="60"></div><div class="form-group"><label>Причина</label><input type="text" id="reason" placeholder="Мут sebebi"></div><button class="btn-exec" onclick="execCmd()">TIMEOUT</button><button class="btn-cancel" onclick="closeCmd()">Iptal</button>',
+    warn: '<div class="form-group"><label>Сервер</label><select style="display:noкакое" id="guild-sel">'+guildOptions()+'</select></div><div class="form-group"><label>Kullanici ID</label><input type="text" id="user_id" placeholder="123456789"></div><div class="form-group"><label>Причина</label><input type="text" id="reason" placeholder="Uyari sebebi"></div><button class="btn-exec" onclick="execCmd()">WARN</button><button class="btn-cancel" onclick="closeCmd()">Iptal</button>',
+    очистить: '<div class="form-group"><label>Сервер</label><select style="display:noкакое" id="guild-sel" onchange="loadChanкакоеls(&quot;chanкакоеl-sel&quot;)">'+guildOptions()+'</select></div><div class="form-group"><label>Канал</label><select id="chanкакоеl-sel"><option>Yukleniyor...</option></select></div><div class="form-group"><label>Сообщение Sayisi</label><input type="number" id="amount" value="10"></div><button class="btn-exec" onclick="execCmd()">TEMİZLE</button><button class="btn-cancel" onclick="closeCmd()">Iptal</button>',
+    role: '<div class="form-group"><label>Сервер</label><select style="display:noкакое" id="guild-sel" onchange="loadРольesAndMembers()">'+guildOptions()+'</select></div><div class="form-group"><label>Участник</label><select id="member-sel"><option>Загрузитьniyor...</option></select></div><div class="form-group"><label>Роль</label><select id="role-sel"><option>Загрузитьniyor...</option></select></div><button class="btn-exec" onclick="execCmd()">UYGULA</button><button class="btn-cancel" onclick="closeCmd()">Отмена</button>'
   };
-  document.getElementById('execForm').innerHTML = forms[cmd];
+  document.getElementById('execForm').inкакоеrHTML = forms[cmd];
   document.getElementById('execModal').style.display = 'flex';
-  // Her saat ilk серверnun каналlarini/rollerini yukle
+  // Her saat ilk серверnun каналlarini/ролиni yukle
   setМут(function() {
-    if (cmd === 'очистить') loadChannels('channel-sel');
+    if (cmd === 'очистить') loadChanкакоеls('chanкакоеl-sel');
     if (cmd === 'role') loadРольesAndMembers();
   }, 50);
 }
 
-function closeCmd() { document.getElementById('execModal').style.display = 'none'; }
+function closeCmd() { document.getElementById('execModal').style.display = 'noкакое'; }
 
 async function execCmd() {
   var data = { command: currentCmd, guild_id: document.getElementById('guild-sel').value };
@@ -140,7 +140,7 @@ async function execCmd() {
   var rsn = document.getElementById('reason'); if (rsn) data.reason = rsn.value;
   var dur = document.getElementById('duration'); if (dur) data.duration = dur.value;
   var amt = document.getElementById('amount'); if (amt) data.amount = amt.value;
-  var chs = document.getElementById('channel-sel'); if (chs) data.channel_id = chs.value;
+  var chs = document.getElementById('chanкакоеl-sel'); if (chs) data.chanкакоеl_id = chs.value;
   var rls = document.getElementById('role-sel'); if (rls) data.role_id = rls.value;
 
   var r = await fetch('/api/execute-command', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
@@ -157,7 +157,7 @@ async function execCmd() {
   }
 }
 
-document.getElementById('execModal').addEventListener('click', function(e) { if (e.target === this) closeCmd(); });
+document.getElementById('execModal').addEventListeкакоеr('click', function(e) { if (e.target === this) closeCmd(); });
 loadGuilds();
 </script>
 {% endblock %}

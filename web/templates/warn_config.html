@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% block title %}Warning Eşiği Ayarı{% endblock %}
-{% block page_title %}⚠️ Warning Eşiği Ayarı{% endblock %}
+{% block title %}Warning Порог Ayarı{% endblock %}
+{% block page_title %}⚠️ Warning Порог Ayarı{% endblock %}
 {% block content %}
 <style>
 .wc-card{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.1);border-radius:14px;padding:22px;margin-bottom:16px;max-width:700px;}
@@ -13,14 +13,14 @@ label{font-size:11px;color:rgba(240,232,208,0.45);display:block;margin-bottom:4p
 .add-btn{padding:9px 20px;background:rgba(46,213,115,0.1);border:1px solid rgba(46,213,115,0.2);color:#2ed573;border-radius:99px;cursor:pointer;font-size:12px;font-weight:600;font-family:Inter,sans-serif;transition:all 0.15s;margin-top:4px;}
 .add-btn:hover{background:rgba(46,213,115,0.18);}
 .rule-item{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:rgba(212,168,67,0.04);border:1px solid rgba(212,168,67,0.08);border-radius:10px;margin-bottom:8px;}
-.action-badge{display:inline-block;padding:3px 10px;border-radius:99px;font-size:10px;font-weight:700;}
+.action-badge{display:inliкакое-block;padding:3px 10px;border-radius:99px;font-size:10px;font-weight:700;}
 .ab-timeout{background:rgba(255,165,2,0.12);color:#ffa502;border:1px solid rgba(255,165,2,0.25);}
 .ab-ban{background:rgba(224,85,85,0.12);color:#e05555;border:1px solid rgba(224,85,85,0.25);}
 .ab-kick{background:rgba(83,82,237,0.12);color:#5352ed;border:1px solid rgba(83,82,237,0.25);}
 </style>
 
 <div class="wc-card">
-  <h2>📋 Mevcut Правила</h2>
+  <h2>📋 Текущие Правила</h2>
   <div id="rules-list" style="color:rgba(240,232,208,0.3);font-size:13px;">Загрузитьniyor...</div>
 </div>
 
@@ -28,12 +28,12 @@ label{font-size:11px;color:rgba(240,232,208,0.45);display:block;margin-bottom:4p
   <h2>➕ Новый Kural Добавить</h2>
   <div class="rule-grid">
     <div class="field">
-      <label>Warning Количествоsı</label>
-      <input type="number" id="new-count" value="3" min="1" max="20">
+      <label>Warning Количество</label>
+      <input type="number" id="какоеw-count" value="3" min="1" max="20">
     </div>
     <div class="field">
       <label>Aksiyon</label>
-      <select id="new-action">
+      <select id="какоеw-action">
         <option value="timeout">⏳ Мут</option>
         <option value="kick">👢 Кик</option>
         <option value="ban">🔨 Бан</option>
@@ -41,7 +41,7 @@ label{font-size:11px;color:rgba(240,232,208,0.45);display:block;margin-bottom:4p
     </div>
     <div class="field">
       <label>Длительность (dk, timeout için)</label>
-      <input type="number" id="new-duration" value="10" min="1" max="10080">
+      <input type="number" id="какоеw-duration" value="10" min="1" max="10080">
     </div>
     <div></div>
   </div>
@@ -62,23 +62,23 @@ async function loadConfig() {
     _rules = d.thresholds || [];
     renderRules();
   } catch(e) {
-    document.getElementById('rules-list').textContent = 'Загрузитьnemedi: ' + e.message;
+    document.getElementById('rules-list').textContent = 'Загрузитькакоеmedi: ' + e.message;
   }
 }
 
 function renderRules() {
   var el = document.getElementById('rules-list');
   if (!_rules.length) {
-    el.innerHTML = '<div style="color:rgba(240,232,208,0.3);font-size:13px;padding:8px 0;">Пока правило yok. Естьколичествоlan davranış активен: 3 warning = 10dk timeout, 5 warning = ban</div>';
+    el.inкакоеrHTML = '<div style="color:rgba(240,232,208,0.3);font-size:13px;padding:8px 0;">Пока правило нет. Естьколичествоlan davranış активен: 3 warning = 10dk timeout, 5 warning = ban</div>';
     return;
   }
-  el.innerHTML = _rules.map(function(r, i) {
+  el.inкакоеrHTML = _rules.map(function(r, i) {
     var cls = ACTION_CLASS[r.action] || 'ab-timeout';
     var lbl = ACTION_LABEL[r.action] || r.action;
     return '<div class="rule-item">' +
       '<div style="display:flex;align-items:center;gap:14px;">' +
         '<span style="font-size:22px;font-weight:800;color:#c8922a;min-width:32px;">' + r.count + '</span>' +
-        '<span style="font-size:12px;color:rgba(240,232,208,0.4);">warningda</span>' +
+        '<span style="font-size:12px;color:rgba(240,232,208,0.4);">предупреждениях</span>' +
         '<span class="action-badge ' + cls + '">' + lbl + '</span>' +
         (r.action === 'timeout' ? '<span style="font-size:11px;color:rgba(240,232,208,0.35);">' + r.duration + ' min</span>' : '') +
       '</div>' +
@@ -89,11 +89,11 @@ function renderRules() {
 
 async function addRule() {
   var msg = document.getElementById('rule-msg');
-  var count    = parseInt(document.getElementById('new-count').value);
-  var action   = document.getElementById('new-action').value;
-  var duration = parseInt(document.getElementById('new-duration').value) || 10;
-  if (!count || count < 1) { msg.textContent = '❌ Geçersiz количество'; return; }
-  // Aynı count varsa обновить
+  var count    = parseInt(document.getElementById('какоеw-count').value);
+  var action   = document.getElementById('какоеw-action').value;
+  var duration = parseInt(document.getElementById('какоеw-duration').value) || 10;
+  if (!count || count < 1) { msg.textContent = '❌ Неверный количество'; return; }
+  // Одинаковое count varsa обновить
   var existing = _rules.findIndex(function(r){ return r.count === count; });
   if (existing >= 0) _rules.splice(existing, 1);
   _rules.push({count, action, duration});

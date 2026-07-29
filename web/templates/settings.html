@@ -1,14 +1,14 @@
 ﻿{% extends "base.html" %}
-{% block title %}Настройки - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-cog" style="color:#c8922a;animation:spin 4s linear infinite;"></i> PANEL AYARLARI{% endblock %}
+{% block title %}Настройки - Aetкаждый{% endblock %}
+{% block page_title %}<i class="fas fa-cog" style="color:#c8922a;animation:spin 4s liкакоеar infinite;"></i> PANEL AYARLARI{% endblock %}
 {% block content %}
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap');
 @keyframes spin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
 .st-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:20px;}
-.st-box{background:linear-gradient(145deg,#100e08,#100e08,#100e08);border:1px solid rgba(200,146,42,0.25);border-radius:20px;padding:26px;position:relative;overflow:hidden;transition:all .3s;}
+.st-box{background:liкакоеar-gradient(145deg,#100e08,#100e08,#100e08);border:1px solid rgba(200,146,42,0.25);border-radius:20px;padding:26px;position:relative;overflow:hidden;transition:all .3s;}
 .st-box:hover{border-color:rgba(200,146,42,0.5);box-shadow:0 8px 30px rgba(200,146,42,0.12);}
-.st-box::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,rgba(26,22,16,0.7),#c8922a,#c8922a,#c8922a,rgba(26,22,16,0.7));background-size:300% 100%;animation:shimmer 3s linear infinite;}
+.st-box::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:liкакоеar-gradient(90deg,rgba(26,22,16,0.7),#c8922a,#c8922a,#c8922a,rgba(26,22,16,0.7));background-size:300% 100%;animation:shimmer 3s liкакоеar infinite;}
 @keyframes shimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
 .st-title{font-family:Inter,sans-serif;font-size:12px;color:#c8922a;text-transform:uppercase;letter-spacing:2px;margin-bottom:18px;display:flex;align-items:center;gap:8px;padding-ботtom:12px;border-ботtom:1px solid rgba(200,146,42,0.2);}
 .role-card{background:rgba(0,0,0,0.4);border:1px solid rgba(200,146,42,0.15);border-radius:14px;padding:14px 16px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;transition:all .2s;}
@@ -20,17 +20,17 @@
 .info-row:hover{background:rgba(212,168,67,0.06);}
 .info-key{color:rgba(240,232,208,0.55);font-size:13px;}
 .info-val{color:#f0e8d0;font-weight:700;font-size:13px;}
-.tunnel-box{background:rgba(46,204,113,0.08);border:1px solid rgba(46,204,113,0.3);border-radius:14px;padding:16px;margin-bottom:14px;}
-.tunnel-url{color:#5ec47a;font-size:14px;font-weight:700;word-break:break-all;}
-.copy-btn{width:100%;padding:12px;background:linear-gradient(135deg,rgba(26,22,16,0.7),var(--accent));color:#f0e8d0;border:none;border-radius:14px;cursor:pointer;font-weight:700;font-size:13px;font-family:Inter,sans-serif;letter-spacing:1px;transition:all .3s;margin-top:8px;}
+.tunкакоеl-box{background:rgba(46,204,113,0.08);border:1px solid rgba(46,204,113,0.3);border-radius:14px;padding:16px;margin-bottom:14px;}
+.tunкакоеl-url{color:#5ec47a;font-size:14px;font-weight:700;word-break:break-all;}
+.copy-btn{width:100%;padding:12px;background:liкакоеar-gradient(135deg,rgba(26,22,16,0.7),var(--accent));color:#f0e8d0;border:noкакое;border-radius:14px;cursor:pointer;font-weight:700;font-size:13px;font-family:Inter,sans-serif;letter-spacing:1px;transition:all .3s;margin-top:8px;}
 .copy-btn:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(200,160,80,0.4);}
 .warn-box{background:rgba(212,168,67,0.08);border:1px solid rgba(212,168,67,0.3);border-radius:14px;padding:12px 16px;color:#c8922a;font-size:12px;margin-top:12px;display:flex;align-items:center;gap:8px;}
-.pw-input{width:100%;background:rgba(0,0,0,0.5);border:1px solid rgba(200,146,42,0.3);border-radius:14px;padding:10px 14px;color:#f0e8d0;font-size:13px;font-family:Rajdhani,sans-serif;margin-bottom:10px;box-sizing:border-box;outline:none;transition:border .2s;}
+.pw-input{width:100%;background:rgba(0,0,0,0.5);border:1px solid rgba(200,146,42,0.3);border-radius:14px;padding:10px 14px;color:#f0e8d0;font-size:13px;font-family:Rajdhani,sans-serif;margin-bottom:10px;box-sizing:border-box;outliкакое:noкакое;transition:border .2s;}
 .pw-input:focus{border-color:rgba(200,146,42,0.7);}
-.pw-select{width:100%;background:rgba(0,0,0,0.5);border:1px solid rgba(200,146,42,0.3);border-radius:14px;padding:10px 14px;color:#f0e8d0;font-size:13px;font-family:Rajdhani,sans-serif;margin-bottom:10px;box-sizing:border-box;outline:none;}
-.pw-btn{width:100%;padding:12px;background:linear-gradient(135deg,rgba(26,22,16,0.7),#c8922a);color:#f0e8d0;border:none;border-radius:14px;cursor:pointer;font-weight:700;font-size:13px;font-family:Inter,sans-serif;letter-spacing:1px;transition:all .3s;}
+.pw-select{width:100%;background:rgba(0,0,0,0.5);border:1px solid rgba(200,146,42,0.3);border-radius:14px;padding:10px 14px;color:#f0e8d0;font-size:13px;font-family:Rajdhani,sans-serif;margin-bottom:10px;box-sizing:border-box;outliкакое:noкакое;}
+.pw-btn{width:100%;padding:12px;background:liкакоеar-gradient(135deg,rgba(26,22,16,0.7),#c8922a);color:#f0e8d0;border:noкакое;border-radius:14px;cursor:pointer;font-weight:700;font-size:13px;font-family:Inter,sans-serif;letter-spacing:1px;transition:all .3s;}
 .pw-btn:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(200,146,42,0.4);}
-#pw-msg{margin-top:10px;padding:10px;border-radius:8px;font-size:13px;display:none;text-align:center;}
+#pw-msg{margin-top:10px;padding:10px;border-radius:8px;font-size:13px;display:noкакое;text-align:center;}
 </style>
 
 <div class="st-grid">
@@ -38,7 +38,7 @@
   <div class="st-box">
     <div class="st-title"><i class="fas fa-shield-alt"></i> Роль Правоleri</div>
     <div class="role-card">
-      <div><div class="role-name" style="color:#c8922a;">Owner</div><div class="role-perms">Tüm Права</div></div>
+      <div><div class="role-name" style="color:#c8922a;">Owкакоеr</div><div class="role-perms">Tüm Права</div></div>
       <span class="role-badge" style="background:rgba(200,146,42,0.15);border:1px solid rgba(200,146,42,0.4);color:#c8922a;">LVL 3</span>
     </div>
     <div class="role-card">
@@ -50,7 +50,7 @@
       <span class="role-badge" style="background:rgba(212,168,67,0.15);border:1px solid rgba(212,168,67,0.4);color:#c8922a;">LVL 1</span>
     </div>
     <div class="role-card">
-      <div><div class="role-name" style="color:#5ec47a;">Участник</div><div class="role-perms">/register ile регистрация olur</div></div>
+      <div><div class="role-name" style="color:#5ec47a;">Участник</div><div class="role-perms">/register с помощью регистрация olur</div></div>
       <span class="role-badge" style="background:rgba(46,204,113,0.15);border:1px solid rgba(46,204,113,0.4);color:#5ec47a;">LVL 0</span>
     </div>
   </div>
@@ -59,7 +59,7 @@
   <div class="st-box">
     <div class="st-title"><i class="fas fa-users-cog"></i> Панель Пользовательları</div>
     <div class="role-card">
-      <div><div class="role-name" style="color:#c8922a;">owner</div><div class="role-perms">Пароль: owner123</div></div>
+      <div><div class="role-name" style="color:#c8922a;">owкакоеr</div><div class="role-perms">Пароль: owкакоеr123</div></div>
       <span class="role-badge" style="background:rgba(200,160,80,0.2);border:1px solid var(--accent);color:#c8922a;">OWNER</span>
     </div>
     <div class="role-card">
@@ -76,10 +76,10 @@
   <!-- HERKESE AÇIK LİNK -->
   <div class="st-box">
     <div class="st-title"><i class="fas fa-globe"></i> Herkese Открыт Link</div>
-    <div id="tunnel-info" style="color:#5a5040;text-align:center;padding:20px;font-family:Inter,sans-serif;font-size:11px;letter-spacing:2px;">
-      <i class="fas fa-spinner fa-spin" style="font-size:24px;color:#c8922a;display:block;margin-bottom:10px;"></i>YÜKLENIYOR...
+    <div id="tunкакоеl-info" style="color:#5a5040;text-align:center;padding:20px;font-family:Inter,sans-serif;font-size:11px;letter-spacing:2px;">
+      <i class="fas fa-spinкакоеr fa-spin" style="font-size:24px;color:#c8922a;display:block;margin-bottom:10px;"></i>YÜKLENIYOR...
     </div>
-    <button onclick="copyLink()" id="copy-btn" style="display:none;" class="copy-btn">
+    <button onclick="copyLink()" id="copy-btn" style="display:noкакое;" class="copy-btn">
       <i class="fas fa-copy"></i> Linki Kopyala
     </button>
   </div>
@@ -87,29 +87,29 @@
   <!-- OTOMATİK GİRİŞ LİNKİ -->
   <div class="st-box">
     <div class="st-title"><i class="fas fa-magic"></i> Автоматический Вход Linki</div>
-    <div style="color:rgba(240,232,208,0.55);font-size:12px;margin-bottom:14px;line-height:1.6;">
-      Bu linki açtığında пароль girmeden direkt panele girersin.<br>
+    <div style="color:rgba(240,232,208,0.55);font-size:12px;margin-bottom:14px;liкакое-height:1.6;">
+      Bu ссылкиi açtığında пароль girmeden direkt paкакоеle girersin.<br>
       <span style="color:#c8922a;"><i class="fas fa-exclamation-triangle"></i> Kimseyle paylaşma!</span>
     </div>
     <div id="auto-login-box" style="color:#5a5040;text-align:center;padding:10px;font-size:12px;">
-      <i class="fas fa-spinner fa-spin" style="color:#c8922a;"></i> Загрузитьniyor...
+      <i class="fas fa-spinкакоеr fa-spin" style="color:#c8922a;"></i> Загрузитьniyor...
     </div>
-    <button onclick="copyAutoЛогin()" id="auto-login-btn" style="display:none;" class="copy-btn" style="background:linear-gradient(135deg,rgba(26,22,16,0.7),#5ec47a);">
-      <i class="fas fa-link"></i> Автоматический Вход Linkini Kopyala
+    <button onclick="copyAutoЛогin()" id="auto-login-btn" style="display:noкакое;" class="copy-btn" style="background:liкакоеar-gradient(135deg,rgba(26,22,16,0.7),#5ec47a);">
+      <i class="fas fa-ссылки"></i> Автоматический Вход Linkini Kopyala
     </button>
   </div>
 
-  {% if username == 'Arthur' or role == 'owner' %}
+  {% if username == 'Arthur' or role == 'owкакоеr' %}
   <!-- ŞİFRE DEĞİŞTİR -->
   <div class="st-box">
     <div class="st-title"><i class="fas fa-key"></i> Пароль Değiştir</div>
     <select id="pw-target" class="pw-select">
-      <option value="owner">owner</option>
+      <option value="owкакоеr">owкакоеr</option>
       <option value="admin">admin</option>
       <option value="mod">mod</option>
       <option value="uye">uye</option>
     </select>
-    <input type="password" id="pw-new" class="pw-input" placeholder="Новый пароль (min 4 karakter)">
+    <input type="password" id="pw-какоеw" class="pw-input" placeholder="Новый пароль (min 4 karakter)">
     <button class="pw-btn" onclick="changePassword()"><i class="fas fa-save"></i> Парольyi Обновить</button>
     <div id="pw-msg"></div>
   </div>
@@ -117,7 +117,7 @@
 
   <!-- SİSTEM BİLGİSİ -->  <div class="st-box">
     <div class="st-title"><i class="fas fa-info-circle"></i> Sistem Информацияsi</div>
-    <div class="info-row"><span class="info-key">Панель Versiyonu</span><span class="info-val" style="color:#c8922a;">v2.0 Aether</span></div>
+    <div class="info-row"><span class="info-key">Панель Versiyonu</span><span class="info-val" style="color:#c8922a;">v2.0 Aetкаждый</span></div>
     <div class="info-row"><span class="info-key">Framework</span><span class="info-val">Flask + Discord.py</span></div>
     <div class="info-row"><span class="info-key">Port</span><span class="info-val">5001</span></div>
     <div class="info-row"><span class="info-key">Бот Статусu</span><span class="info-val" style="color:#5ec47a;">● ONLINE</span></div>
@@ -126,54 +126,54 @@
 </div>
 
 <script>
-var tunnelUrl='';
+var tunкакоеlUrl='';
 async function loadStats(){
   try{
     var r=await fetch('/api/stats'),d=await r.json();
     if(d.error)return;
     var box=document.getElementById('бот-stats');
-    box.innerHTML=
-      '<div class="info-row"><span class="info-key">Сервер Количествоsı</span><span class="info-val" style="color:#c8922a;">'+d.guilds+'</span></div>'+
-      '<div class="info-row"><span class="info-key">Пользователь Количествоsı</span><span class="info-val" style="color:#c8922a;">'+d.users+'</span></div>'+
+    box.inкакоеrHTML=
+      '<div class="info-row"><span class="info-key">Сервер Количество</span><span class="info-val" style="color:#c8922a;">'+d.guilds+'</span></div>'+
+      '<div class="info-row"><span class="info-key">Пользователь Количество</span><span class="info-val" style="color:#c8922a;">'+d.users+'</span></div>'+
       '<div class="info-row"><span class="info-key">Ping</span><span class="info-val" style="color:#5ec47a;">'+d.latency+'ms</span></div>';
   }catch(e){}
 }
-async function loadTunnelUrl(){
+async function loadTunкакоеlUrl(){
   try{
-    var r=await fetch('/api/tunnel-url'),d=await r.json(),box=document.getElementById('tunnel-info'),btn=document.getElementById('copy-btn');
+    var r=await fetch('/api/tunкакоеl-url'),d=await r.json(),box=document.getElementById('tunкакоеl-info'),btn=document.getElementById('copy-btn');
     if(d.url){
-      tunnelUrl=d.url;
-      box.innerHTML='<div class="tunnel-box"><div style="color:rgba(240,232,208,0.55);font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;font-family:Inter,sans-serif;">🌍 Активен Tünel</div><a href="'+d.url+'" target="_blank" class="tunnel-url">'+d.url+'</a></div><div style="color:#5a5040;font-size:11px;"><i class="fas fa-info-circle"></i> Бот her yeniden başlatıldığında link değişir.</div>';
+      tunкакоеlUrl=d.url;
+      box.inкакоеrHTML='<div class="tunкакоеl-box"><div style="color:rgba(240,232,208,0.55);font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;font-family:Inter,sans-serif;">🌍 Активен Tüкакоеl</div><a href="'+d.url+'" target="_blank" class="tunкакоеl-url">'+d.url+'</a></div><div style="color:#5a5040;font-size:11px;"><i class="fas fa-info-circle"></i> Бот каждый yeniden başlatıldığında ссылки değişir.</div>';
       btn.style.display='block';
     }else{
-      box.innerHTML='<div style="color:#c8922a;font-size:13px;"><i class="fas fa-exclamation-triangle"></i> Tünel пока başlatılmadı.</div>';
-      setМут(loadTunnelUrl,5000);
+      box.inкакоеrHTML='<div style="color:#c8922a;font-size:13px;"><i class="fas fa-exclamation-triangle"></i> Tüкакоеl пока başlatılmadı.</div>';
+      setМут(loadTunкакоеlUrl,5000);
     }
-  }catch(e){document.getElementById('tunnel-info').innerHTML='<p style="color:#e05555;font-size:13px;">Ошибка: '+e.message+'</p>';}
+  }catch(e){document.getElementById('tunкакоеl-info').inкакоеrHTML='<p style="color:#e05555;font-size:13px;">Ошибка: '+e.message+'</p>';}
 }
 function copyLink(){
-  if(!tunnelUrl)return;
-  navigator.clipboard.writeText(tunnelUrl).then(function(){
+  if(!tunкакоеlUrl)return;
+  navigator.clipboard.writeText(tunкакоеlUrl).then(function(){
     var btn=document.getElementById('copy-btn');
-    btn.innerHTML='<i class="fas fa-check"></i> Kopyalandı!';
+    btn.inкакоеrHTML='<i class="fas fa-check"></i> Kopyalandı!';
     btn.style.background='rgba(94,196,122,0.8)';
-    setМут(function(){btn.innerHTML='<i class="fas fa-copy"></i> Linki Kopyala';btn.style.background='linear-gradient(135deg,rgba(26,22,16,0.7),var(--accent))';},2000);
+    setМут(function(){btn.inкакоеrHTML='<i class="fas fa-copy"></i> Linki Kopyala';btn.style.background='liкакоеar-gradient(135deg,rgba(26,22,16,0.7),var(--accent))';},2000);
   });
 }
-loadStats();loadTunnelUrl();
+loadStats();loadTunкакоеlUrl();
 
 var autoЛогinUrl='';
 async function loadAutoЛогinLink(){
   try{
-    var tr=await fetch('/api/tunnel-url'),td=await tr.json();
+    var tr=await fetch('/api/tunкакоеl-url'),td=await tr.json();
     var ar=await fetch('/api/my-token'),ad=await ar.json();
     if(td.url&&ad.token){
       autoЛогinUrl=td.url+'/?token='+ad.token;
       var box=document.getElementById('auto-login-box');
-      box.innerHTML='<div style="background:rgba(39,174,96,0.08);border:1px solid rgba(39,174,96,0.3);border-radius:14px;padding:12px;word-break:break-all;color:#5ec47a;font-size:12px;">'+autoЛогinUrl+'</div>';
+      box.inкакоеrHTML='<div style="background:rgba(39,174,96,0.08);border:1px solid rgba(39,174,96,0.3);border-radius:14px;padding:12px;word-break:break-all;color:#5ec47a;font-size:12px;">'+autoЛогinUrl+'</div>';
       document.getElementById('auto-login-btn').style.display='block';
     }else{
-      document.getElementById('auto-login-box').innerHTML='<span style="color:#c8922a;font-size:12px;"><i class="fas fa-exclamation-triangle"></i> Tünel пока hazır değil, birkaç saniye bдобавить.</span>';
+      document.getElementById('auto-login-box').inкакоеrHTML='<span style="color:#c8922a;font-size:12px;"><i class="fas fa-exclamation-triangle"></i> Tüкакоеl пока hazır değil, birсколько секунд bдобавить.</span>';
       setМут(loadAutoЛогinLink,5000);
     }
   }catch(e){}
@@ -182,35 +182,35 @@ function copyAutoЛогin(){
   if(!autoЛогinUrl)return;
   navigator.clipboard.writeText(autoЛогinUrl).then(function(){
     var btn=document.getElementById('auto-login-btn');
-    btn.innerHTML='<i class="fas fa-check"></i> Kopyalandı!';
-    btn.style.background='linear-gradient(135deg,rgba(26,22,16,0.7),#5ec47a)';
-    setМут(function(){btn.innerHTML='<i class="fas fa-link"></i> Автоматический Вход Linkini Kopyala';btn.style.background='';},2000);
+    btn.inкакоеrHTML='<i class="fas fa-check"></i> Kopyalandı!';
+    btn.style.background='liкакоеar-gradient(135deg,rgba(26,22,16,0.7),#5ec47a)';
+    setМут(function(){btn.inкакоеrHTML='<i class="fas fa-ссылки"></i> Автоматический Вход Linkini Kopyala';btn.style.background='';},2000);
   });
 }
 loadAutoЛогinLink();
 
 async function changePassword(){
   var target=document.getElementById('pw-target').value;
-  var newPass=document.getElementById('pw-new').value;
+  var какоеwPass=document.getElementById('pw-какоеw').value;
   var msg=document.getElementById('pw-msg');
-  if(!newPass||newPass.length<4){
+  if(!какоеwPass||какоеwPass.length<4){
     msg.style.display='block';msg.style.background='rgba(231,76,60,0.15)';msg.style.color='#e74c3c';
-    msg.textContent='Пароль en az 4 karakter olmalı!';return;
+    msg.textContent='Пароль en az 4 karakter должен!';return;
   }
   try{
-    var r=await fetch('/api/change-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({target:target,new_password:newPass})});
+    var r=await fetch('/api/change-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({target:target,какоеw_password:какоеwPass})});
     var d=await r.json();
     if(d.success){
       msg.style.display='block';msg.style.background='rgba(46,204,113,0.15)';msg.style.color='#2ecc71';
       msg.textContent='✅ '+d.message;
-      document.getElementById('pw-new').value='';
+      document.getElementById('pw-какоеw').value='';
     }else{
       msg.style.display='block';msg.style.background='rgba(231,76,60,0.15)';msg.style.color='#e74c3c';
       msg.textContent='❌ '+(d.error||'Ошибка');
     }
   }catch(e){
     msg.style.display='block';msg.style.background='rgba(231,76,60,0.15)';msg.style.color='#e74c3c';
-    msg.textContent='❌ Bağlantı ошибкаsı';
+    msg.textContent='❌ Соединение ошибкаsı';
   }
 }
 </script>

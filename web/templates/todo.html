@@ -1,10 +1,10 @@
 ﻿{% extends "base.html" %}
-{% block title %}Задание Listesi - Aether{% endblock %}
+{% block title %}Задание Listesi - Aetкаждый{% endblock %}
 {% block page_title %}<i class="fas fa-tasks" style="color:#c8922a;animation:pulse 2s infinite;"></i> MOD GÖREV LİSTESİ{% endblock %}
 {% block content %}
 <style>
-  .todo-box{background:linear-gradient(135deg,rgba(26,22,16,0.7),rgba(26,22,16,0.7));border:1px solid rgba(212,168,67,0.1);border-radius:16px;padding:25px;margin-bottom:20px;position:relative;overflow:hidden;}
-  .todo-box::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:2px;background:linear-gradient(90deg,transparent,#c8922a,transparent);animation:scan 4s infinite;}
+  .todo-box{background:liкакоеar-gradient(135deg,rgba(26,22,16,0.7),rgba(26,22,16,0.7));border:1px solid rgba(212,168,67,0.1);border-radius:16px;padding:25px;margin-bottom:20px;position:relative;overflow:hidden;}
+  .todo-box::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:2px;background:liкакоеar-gradient(90deg,transparent,#c8922a,transparent);animation:scan 4s infinite;}
   @keyframes scan{0%{left:-100%}100%{left:100%}}
   .todo-title{color:#c8922a;font-size:13px;text-transform:uppercase;letter-spacing:2px;margin-bottom:18px;display:flex;align-items:center;gap:8px;padding-ботtom:12px;border-ботtom:1px solid rgba(212,168,67,0.07);}
   .task-card{background:rgba(0,0,0,0.35);border-radius:14px;padding:14px;margin-bottom:10px;border-left:4px solid #27ae60;transition:all 0.3s;}
@@ -15,16 +15,16 @@
   .task-title{color:#f0e8d0;font-size:14px;font-weight:700;margin-bottom:6px;}
   .task-meta{color:rgba(240,232,208,0.55);font-size:12px;}
   .task-actions{display:flex;gap:6px;margin-top:10px;}
-  .task-btn{padding:5px 12px;border:none;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;color:#f0e8d0;transition:all 0.2s;}
+  .task-btn{padding:5px 12px;border:noкакое;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;color:#f0e8d0;transition:all 0.2s;}
   .task-btn:hover{transform:translateY(-1px);}
   .col-header{font-size:14px;font-weight:700;margin-bottom:15px;padding-ботtom:10px;border-ботtom:2px solid rgba(212,168,67,0.1);display:flex;align-items:center;gap:8px;}
   .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;}
   @media(max-width:900px){.grid3{grid-template-columns:1fr;}}
-  .field-input{width:100%;padding:10px 14px;background:#100e08;border:1px solid rgba(212,168,67,0.15);border-radius:14px;color:#f0e8d0;box-sizing:border-box;font-family:inherit;transition:all 0.3s;font-size:14px;}
-  .field-input:focus{outline:none;border-color:#c8922a;box-shadow:0 0 12px rgba(212,168,67,0.07);}
+  .field-input{width:100%;padding:10px 14px;background:#100e08;border:1px solid rgba(212,168,67,0.15);border-radius:14px;color:#f0e8d0;box-sizing:border-box;font-family:inкаждыйit;transition:all 0.3s;font-size:14px;}
+  .field-input:focus{outliкакое:noкакое;border-color:#c8922a;box-shadow:0 0 12px rgba(212,168,67,0.07);}
   .add-grid{display:grid;grid-template-columns:1fr 1fr auto auto;gap:10px;align-items:end;}
   @media(max-width:768px){.add-grid{grid-template-columns:1fr;}}
-  .add-btn{padding:10px 20px;background:#c8922a;color:#f0e8d0;border:none;border-radius:14px;cursor:pointer;font-weight:700;white-space:nowrap;transition:all 0.3s;}
+  .add-btn{padding:10px 20px;background:#c8922a;color:#f0e8d0;border:noкакое;border-radius:14px;cursor:pointer;font-weight:700;white-space:nowrap;transition:all 0.3s;}
   .add-btn:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(212,168,67,0.2);}
   .priority-high{color:#e05555;}
   .priority-medium{color:#c8922a;}
@@ -45,11 +45,11 @@
       <input type="text" id="task-assign" placeholder="Пользователь adı..." class="field-input">
     </div>
     <div>
-      <label style="color:#c8922a;font-size:11px;text-transform:uppercase;display:block;margin-bottom:6px;">Öncelik</label>
+      <label style="color:#c8922a;font-size:11px;text-transform:uppercase;display:block;margin-bottom:6px;">Сначалаlik</label>
       <select id="task-priority" class="field-input" style="width:auto;">
-        <option value="low">🟢 Düşük</option>
+        <option value="low">🟢 Низкий</option>
         <option value="medium" selected>🟡 Orta</option>
-        <option value="high">🔴 Yüksek</option>
+        <option value="high">🔴 Высокий</option>
       </select>
     </div>
     <div>
@@ -69,7 +69,7 @@
   </div>
   <div class="todo-box" style="border-color:rgba(200,146,42,0.3);">
     <div class="col-header" style="color:#c8922a;border-color:rgba(200,146,42,0.3);">
-      <i class="fas fa-spinner fa-spin"></i> Продолжить Ediyor
+      <i class="fas fa-spinкакоеr fa-spin"></i> Продолжить Ediyor
       <span class="task-count" style="background:rgba(212,168,67,0.15);border-color:rgba(200,146,42,0.3);color:#c8922a;" id="count-inprogress">0</span>
     </div>
     <div id="col-inprogress"></div>
@@ -77,39 +77,39 @@
   <div class="todo-box">
     <div class="col-header" style="color:#c8922a;">
       <i class="fas fa-check-circle"></i> ОКlandı
-      <span class="task-count" id="count-done">0</span>
+      <span class="task-count" id="count-doкакое">0</span>
     </div>
-    <div id="col-done"></div>
+    <div id="col-doкакое"></div>
   </div>
 </div>
 
 <script>
-var priorityLabels = {low:'🟢 Düşük', medium:'🟡 Orta', high:'🔴 Yüksek'};
+var priorityLabels = {low:'🟢 Низкий', medium:'🟡 Orta', high:'🔴 Высокий'};
 var priorityColors = {low:'#27ae60', medium:'#c8922a', high:'#e74c3c'};
 
 async function loadTasks() {
   var r = await fetch('/api/tasks');
   var tasks = await r.json();
-  ['pending','inprogress','done'].forEach(function(s){
-    document.getElementById('col-'+s).innerHTML = '';
+  ['pending','inprogress','doкакое'].forEach(function(s){
+    document.getElementById('col-'+s).inкакоеrHTML = '';
     document.getElementById('count-'+s).textContent = 0;
   });
-  var counts = {pending:0, inprogress:0, done:0};
+  var counts = {pending:0, inprogress:0, doкакое:0};
   if(!tasks.length) {
-    document.getElementById('col-pending').innerHTML = '<div class="empty-col">Задание yok.</div>';
+    document.getElementById('col-pending').inкакоеrHTML = '<div class="empty-col">Задание нет.</div>';
     return;
   }
   tasks.forEach(function(t){
-    var col = t.status==='pending'?'col-pending':t.status==='inprogress'?'col-inprogress':'col-done';
+    var col = t.status==='pending'?'col-pending':t.status==='inprogress'?'col-inprogress':'col-doкакое';
     counts[t.status] = (counts[t.status]||0)+1;
     var div = document.createElement('div');
     div.className = 'task-card '+(t.priority||'medium');
     var actions = '';
     if(t.status!=='inprogress') actions += '<button class="task-btn" style="background:#c8922a;" onclick="updateTask(\''+t.id+'\',\'inprogress\')">▶ Запустить</button>';
-    if(t.status!=='done') actions += '<button class="task-btn" style="background:#5ec47a;" onclick="updateTask(\''+t.id+'\',\'done\')">✓ ОКla</button>';
+    if(t.status!=='doкакое') actions += '<button class="task-btn" style="background:#5ec47a;" onclick="updateTask(\''+t.id+'\',\'doкакое\')">✓ ОКla</button>';
     actions += '<button class="task-btn" style="background:#e74c3c;" onclick="deleteTask(\''+t.id+'\')"><i class="fas fa-trash"></i></button>';
-    div.innerHTML = '<div class="task-title">'+t.title+'</div>'+
-      '<div class="task-meta"><i class="fas fa-user" style="font-size:10px;margin-right:4px;"></i>'+(t.assigned_to||'Atanmadı')+
+    div.inкакоеrHTML = '<div class="task-title">'+t.title+'</div>'+
+      '<div class="task-meta"><i class="fas fa-user" style="font-size:10px;margin-right:4px;"></i>'+(t.assigкакоеd_to||'Atanmadı')+
       ' &nbsp;·&nbsp; <span style="color:'+priorityColors[t.priority||'medium']+';">'+priorityLabels[t.priority||'medium']+'</span></div>'+
       '<div class="task-actions">'+actions+'</div>';
     document.getElementById(col).appendChild(div);
@@ -122,7 +122,7 @@ async function addTask() {
   if(!title) { alert('Задание başlığı gir!'); return; }
   var r = await fetch('/api/tasks', {
     method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({title:title, assigned_to:document.getElementById('task-assign').value, priority:document.getElementById('task-priority').value})
+    body: JSON.stringify({title:title, assigкакоеd_to:document.getElementById('task-assign').value, priority:document.getElementById('task-priority').value})
   });
   var d = await r.json();
   if(d.success) { document.getElementById('task-title').value=''; loadTasks(); }

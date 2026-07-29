@@ -5,8 +5,8 @@
 {% block content %}
 <style>
     /* Modern Glassmorphism Design */
-    .ai-stats-container {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    .ai-stats-contaiкакоеr {
+        background: liкакоеar-gradient(135deg, #667eea 0%, #764ba2 100%);
         min-height: 100vh;
         padding: 2rem 0;
     }
@@ -45,7 +45,7 @@
         left: -100%;
         width: 100%;
         height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+        background: liкакоеar-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
         transition: left 0.5s;
     }
     
@@ -104,7 +104,7 @@
     .modern-progress-bar {
         height: 100%;
         border-radius: 10px;
-        background: linear-gradient(90deg, #667eea, #764ba2);
+        background: liкакоеar-gradient(90deg, #667eea, #764ba2);
         transition: width 1s ease;
         position: relative;
         overflow: hidden;
@@ -117,7 +117,7 @@
         left: 0;
         ботtom: 0;
         right: 0;
-        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+        background: liкакоеar-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
         animation: shimmer 2s infinite;
     }
     
@@ -145,13 +145,13 @@
         font-size: 0.85rem;
         letter-spacing: 1px;
         padding: 1rem;
-        border: none;
+        border: noкакое;
     }
     
     .modern-table td {
         color: rgba(255, 255, 255, 0.9);
         padding: 1rem;
-        border: none;
+        border: noкакое;
         border-ботtom: 1px solid rgba(255, 255, 255, 0.1);
     }
     
@@ -169,7 +169,7 @@
         border-radius: 20px;
         font-weight: 600;
         font-size: 0.85rem;
-        background: linear-gradient(135deg, #667eea, #764ba2);
+        background: liкакоеar-gradient(135deg, #667eea, #764ba2);
         color: #fff;
         border: 1px solid rgba(255, 255, 255, 0.3);
         box-shadow: 0 4px 15px rgba(0,0,0,0.2);
@@ -218,8 +218,8 @@
     .stat-box:nth-child(4) { animation-delay: 0.4s; }
 </style>
 
-<div class="ai-stats-container">
-    <div class="container">
+<div class="ai-stats-contaiкакоеr">
+    <div class="contaiкакоеr">
         <h1 class="page-title">🤖 AI Модерация Статистикаleri</h1>
         
         <!-- Общий Статистикаler -->
@@ -233,13 +233,13 @@
             <div class="col-md-3 mb-3">
                 <div class="stat-box" style="animation: fadeInUp 0.6s ease 0.2s ботh;">
                     <div class="stat-number">{{ stats.total_penalties }}</div>
-                    <div class="stat-label">Всего Ceza</div>
+                    <div class="stat-label">Всего Наказание</div>
                 </div>
             </div>
             <div class="col-md-3 mb-3">
                 <div class="stat-box" style="animation: fadeInUp 0.6s ease 0.3s ботh;">
                     <div class="stat-number">{{ stats.mutual_violations }}</div>
-                    <div class="stat-label">Karşılıklı İhlal</div>
+                    <div class="stat-label">Взаимный Нарушение</div>
                 </div>
             </div>
             <div class="col-md-3 mb-3">
@@ -250,29 +250,29 @@
             </div>
         </div>
 
-        <!-- Karar Dağılımı ve AI Performansı -->
+        <!-- Решение Распределение ve AI Производительность -->
         <div class="row mb-4">
             <div class="col-lg-6 mb-4">
                 <div class="glass-card">
-                    <h5 class="section-title">📊 Karar Dağılımı</h5>
+                    <h5 class="section-title">📊 Решение Распределение</h5>
                     
                     <div class="mb-3">
                         <div class="d-flex justify-content-between mb-2">
-                            <span style="color: rgba(255,255,255,0.9);">Tek Taraflı İhlal</span>
+                            <span style="color: rgba(255,255,255,0.9);">Односторонний Нарушение</span>
                             <span style="color: #fff; font-weight: 600;">{{ stats.single_violation_rate }}%</span>
                         </div>
                         <div class="modern-progress">
-                            <div class="modern-progress-bar" style="width: {{ stats.single_violation_rate }}%; background: linear-gradient(90deg, #f093fb, #f5576c);"></div>
+                            <div class="modern-progress-bar" style="width: {{ stats.single_violation_rate }}%; background: liкакоеar-gradient(90deg, #f093fb, #f5576c);"></div>
                         </div>
                     </div>
                     
                     <div class="mb-3">
                         <div class="d-flex justify-content-between mb-2">
-                            <span style="color: rgba(255,255,255,0.9);">Karşılıklı İhlal</span>
+                            <span style="color: rgba(255,255,255,0.9);">Взаимный Нарушение</span>
                             <span style="color: #fff; font-weight: 600;">{{ stats.mutual_rate }}%</span>
                         </div>
                         <div class="modern-progress">
-                            <div class="modern-progress-bar" style="width: {{ stats.mutual_rate }}%; background: linear-gradient(90deg, #ffd89b, #19547b);"></div>
+                            <div class="modern-progress-bar" style="width: {{ stats.mutual_rate }}%; background: liкакоеar-gradient(90deg, #ffd89b, #19547b);"></div>
                         </div>
                     </div>
                     
@@ -282,17 +282,17 @@
                             <span style="color: #fff; font-weight: 600;">{{ stats.fake_rate }}%</span>
                         </div>
                         <div class="modern-progress">
-                            <div class="modern-progress-bar" style="width: {{ stats.fake_rate }}%; background: linear-gradient(90deg, #a8edea, #fed6e3);"></div>
+                            <div class="modern-progress-bar" style="width: {{ stats.fake_rate }}%; background: liкакоеar-gradient(90deg, #a8edea, #fed6e3);"></div>
                         </div>
                     </div>
                     
                     <div class="mb-0">
                         <div class="d-flex justify-content-between mb-2">
-                            <span style="color: rgba(255,255,255,0.9);">İhlal Нет</span>
+                            <span style="color: rgba(255,255,255,0.9);">Нарушение Нет</span>
                             <span style="color: #fff; font-weight: 600;">{{ stats.no_violation_rate }}%</span>
                         </div>
                         <div class="modern-progress">
-                            <div class="modern-progress-bar" style="width: {{ stats.no_violation_rate }}%; background: linear-gradient(90deg, #4facfe, #00f2fe);"></div>
+                            <div class="modern-progress-bar" style="width: {{ stats.no_violation_rate }}%; background: liкакоеar-gradient(90deg, #4facfe, #00f2fe);"></div>
                         </div>
                     </div>
                 </div>
@@ -300,48 +300,48 @@
             
             <div class="col-lg-6 mb-4">
                 <div class="glass-card">
-                    <h5 class="section-title">⚖️ AI Performansı</h5>
+                    <h5 class="section-title">⚖️ AI Производительность</h5>
                     
                     <div class="metric-card">
-                        <div class="metric-label">Ortalama Güven Оценкаu</div>
+                        <div class="metric-label">Среднее Уверенность Оценкаu</div>
                         <div class="metric-value">{{ stats.avg_confidence }}%</div>
                     </div>
                     
                     <div class="metric-card">
-                        <div class="metric-label">Yüksek Güven Kararlar</div>
+                        <div class="metric-label">Высокий Уверенность Kararlar</div>
                         <div class="metric-value">{{ stats.high_confidence_count }}</div>
                     </div>
                     
                     <div class="metric-card">
-                        <div class="metric-label">Düşük Güven (Escalate)</div>
+                        <div class="metric-label">Низкий Уверенность (Escalate)</div>
                         <div class="metric-value">{{ stats.low_confidence_count }}</div>
                     </div>
                     
                     <div class="metric-card">
-                        <div class="metric-label">İtiraz Oranı</div>
+                        <div class="metric-label">Оспорить Процент</div>
                         <div class="metric-value">{{ stats.appeal_rate }}%</div>
                     </div>
                     
                     <div class="metric-card mb-0">
-                        <div class="metric-label">İtiraz Kabul Oranı</div>
+                        <div class="metric-label">Оспорить Принять Процент</div>
                         <div class="metric-value">{{ stats.appeal_success_rate }}%</div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- En Çok Ceza Alan Пользовательlar -->
+        <!-- En Çok Наказание Alan Пользовательlar -->
         <div class="glass-card mb-4">
-            <h5 class="section-title">👥 En Çok Ceza Alan Пользовательlar</h5>
+            <h5 class="section-title">👥 En Çok Наказание Alan Пользовательlar</h5>
             <div class="modern-table">
                 <table class="table table-hover mb-0">
                     <thead>
                         <tr>
                             <th>#</th>
                             <th>Пользователь</th>
-                            <th>Ceza Количествоsı</th>
+                            <th>Наказание Количество</th>
                             <th>Всего Длительность</th>
-                            <th>Последний Ceza</th>
+                            <th>Последние Наказание</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -359,9 +359,9 @@
             </div>
         </div>
 
-        <!-- Ceza Типleri -->
+        <!-- Наказание Типleri -->
         <div class="glass-card">
-            <h5 class="section-title">📋 Ceza Причинаleri</h5>
+            <h5 class="section-title">📋 Наказание Причинаleri</h5>
             <div class="modern-table">
                 <table class="table table-hover mb-0">
                     <thead>
@@ -395,9 +395,9 @@
 </div>
 
 <script>
-    // Smooth scroll animasyonları
-    document.addEventListener('DOMContentLoaded', function() {
-        const observer = new IntersectionObserver((entries) => {
+    // Smooth scroll анимации
+    document.addEventListeкакоеr('DOMContentLoaded', function() {
+        const observer = какоеw IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
                     entry.target.style.opacity = '1';

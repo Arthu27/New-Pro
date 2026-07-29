@@ -1,5 +1,5 @@
 ﻿{% extends "base.html" %}
-{% block title %}Custom Встраивание Builder - Aether{% endblock %}
+{% block title %}Custom Встраивание Builder - Aetкаждый{% endblock %}
 {% block page_title %}CUSTOM EMBED BUILDER{% endblock %}
 {% block content %}
 <style>
@@ -52,9 +52,9 @@
 }
 
 .btn-send {
-  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  background: liкакоеar-gradient(135deg, var(--accent), var(--accent2));
   color: white;
-  border: none;
+  border: noкакое;
   padding: 12px 20px;
   border-radius: 8px;
   cursor: pointer;
@@ -69,7 +69,7 @@
   box-shadow: 0 4px 15px rgba(200,160,80, 0.4);
 }
 
-.preview-container {
+.preview-contaiкакоеr {
   background: #2f3136;
   border-radius: 4px;
   padding: 15px;
@@ -77,7 +77,7 @@
   min-height: 300px;
 }
 
-.embed-container {
+.embed-contaiкакоеr {
   background: #36393f;
   border-radius: 4px;
   padding: 10px 15px;
@@ -103,7 +103,7 @@
 .embed-description {
   color: #dcddde;
   font-size: 14px;
-  line-height: 1.2;
+  liкакое-height: 1.2;
 }
 
 .embed-footer {
@@ -184,12 +184,12 @@
     
     <div class="form-group">
       <label class="form-label">Guild</label>
-      <select style="display:none" id="guild-select" class="form-input" onchange="onGuildChange()"></select>
+      <select style="display:noкакое" id="guild-select" class="form-input" onchange="onGuildChange()"></select>
     </div>
     
     <div class="form-group">
-      <label class="form-label">Target Channel</label>
-      <select id="target-channel" class="form-input"></select>
+      <label class="form-label">Target Chanкакоеl</label>
+      <select id="target-chanкакоеl" class="form-input"></select>
     </div>
     
     <button class="btn-send" onclick="sendEmbed()">📤 Отправить встраивание</button>
@@ -197,11 +197,11 @@
   
   <div class="builder-preview">
     <h3 style="color:#c8922a;margin-top:0;">Preview</h3>
-    <div class="preview-container">
-      <div class="embed-container" id="embed-preview">
+    <div class="preview-contaiкакоеr">
+      <div class="embed-contaiкакоеr" id="embed-preview">
         <div class="embed-color-bar" id="preview-color-bar" style="background:#c8922a;"></div>
         <div class="embed-title" id="preview-title">Your embed title</div>
-        <div class="embed-description" id="preview-description">Your embed description will appear here...</div>
+        <div class="embed-description" id="preview-description">Your embed description will appear каждыйe...</div>
         <div class="embed-footer" id="preview-footer">Footer text</div>
       </div>
     </div>
@@ -219,18 +219,18 @@ async function onGuildChange() {
   var guildId = document.getElementById('guild-select').value;
   if (!guildId) return;
   selectedGuildId = guildId;
-  var sel = document.getElementById('target-channel');
-  sel.innerHTML = '<option value="">Загрузитьniyor...</option>';
+  var sel = document.getElementById('target-chanкакоеl');
+  sel.inкакоеrHTML = '<option value="">Загрузитьniyor...</option>';
   try {
-    var r = await fetch('/api/guild/' + guildId + '/channels');
+    var r = await fetch('/api/guild/' + guildId + '/chanкакоеls');
     var data = await r.json();
-    var channels = Array.isArray(data) ? data : (data.channels || []);
-    var text = channels.filter(function(c){ return c.type === 'text'; });
-    sel.innerHTML = text.length
+    var chanкакоеls = Array.isArray(data) ? data : (data.chanкакоеls || []);
+    var text = chanкакоеls.filter(function(c){ return c.type === 'text'; });
+    sel.inкакоеrHTML = text.length
       ? text.map(function(c){ return '<option value="'+c.id+'">#'+c.name+'</option>'; }).join('')
       : '<option value="">Metin канал не найдено./option>';
   } catch(e) {
-    sel.innerHTML = '<option value="">Ошибка oluştu</option>';
+    sel.inкакоеrHTML = '<option value="">Ошибка oluştu</option>';
     console.error(e);
   }
 }
@@ -238,14 +238,14 @@ async function onGuildChange() {
 async function loadGuilds() {
   // Sabit сервер ID
   var gid = '1421244140359909513';
-  if (typeof selectedGuild !== 'undefined') selectedGuild = gid;
+  if (typeof selectedGuild !== 'undefiкакоеd') selectedGuild = gid;
   if (document.getElementById('guild-select')) document.getElementById('guild-select').value = gid;
   if (document.getElementById('guild-sel')) document.getElementById('guild-sel').value = gid;
   if (document.getElementById('guildSelect')) document.getElementById('guildSelect').value = gid;
   if (typeof loadData === 'function') { loadData(gid); return; }
   if (typeof loadAll === 'function') { loadAll(gid); return; }
   if (typeof loadРольes === 'function') { loadРольes(gid); return; }
-  if (typeof loadChannels === 'function') { loadChannels(gid); return; }
+  if (typeof loadChanкакоеls === 'function') { loadChanкакоеls(gid); return; }
   if (typeof loadMembers === 'function') { loadMembers(gid); return; }
   if (typeof loadHistory === 'function') { loadHistory(gid); return; }
   if (typeof loadLogs === 'function') { loadLogs(gid); return; }
@@ -259,17 +259,17 @@ async function loadGuilds() {
   if (typeof loadHealth === 'function') { loadHealth(gid); return; }
   if (typeof loadAnalytics === 'function') { loadAnalytics(gid); return; }
 }
-    sel.innerHTML = guilds.map(function(g){ return '<option value="'+g.id+'">'+g.name+'</option>'; }).join('');
+    sel.inкакоеrHTML = guilds.map(function(g){ return '<option value="'+g.id+'">'+g.name+'</option>'; }).join('');
     selectedGuildId = guilds[0].id;
     await onGuildChange();
   } catch(e) {
-    console.error('Guild yükleme ошибкаsı:', e);
+    console.error('Guild загрузитьme ошибкаsı:', e);
   }
 }
 
 function updatePreview() {
   var title = document.getElementById('embed-title').value || 'Встраивание başlığı';
-  var desc = document.getElementById('description').value || 'Встраивание описаниеsı burada görünecek...';
+  var desc = document.getElementById('description').value || 'Встраивание описаниеsı burada görüкакоеcek...';
   var footer = document.getElementById('footer').value || 'Footer metni';
   var color = document.getElementById('custom-color').value || '#c8922a';
   document.getElementById('preview-title').textContent = title;
@@ -279,7 +279,7 @@ function updatePreview() {
 }
 
 document.querySelectorAll('.color-option').forEach(function(el) {
-  el.addEventListener('click', function() {
+  el.addEventListeкакоеr('click', function() {
     var color = this.getAttribute('data-color');
     document.getElementById('custom-color').value = color;
     document.querySelectorAll('.color-option').forEach(function(o){ o.classList.remove('selected'); });
@@ -295,10 +295,10 @@ async function sendEmbed() {
   var footer = document.getElementById('footer').value.trim();
   var imageUrl = document.getElementById('image-url').value.trim();
   var thumbUrl = document.getElementById('thumbnail-url').value.trim();
-  var channelId = document.getElementById('target-channel').value;
+  var chanкакоеlId = document.getElementById('target-chanкакоеl').value;
   var guildId = document.getElementById('guild-select').value;
 
-  if (!channelId) { alert('Канал выбрать!'); return; }
+  if (!chanкакоеlId) { alert('Канал выбрать!'); return; }
   if (!guildId) { alert('Сервер выбрать!'); return; }
 
   var btn = document.querySelector('.btn-send');
@@ -311,7 +311,7 @@ async function sendEmbed() {
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
         guild_id: guildId,
-        channel_id: channelId,
+        chanкакоеl_id: chanкакоеlId,
         title: title,
         description: desc,
         color: color,
@@ -330,18 +330,18 @@ async function sendEmbed() {
       btn.disabled = false;
     }
   } catch(e) {
-    alert('Bağlantı ошибкаsı');
+    alert('Соединение ошибкаsı');
     btn.textContent = '📤 Отправить встраивание';
     btn.disabled = false;
   }
 }
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListeкакоеr('DOMContentLoaded', function() {
   loadGuilds();
   updatePreview();
   ['embed-title','description','footer','custom-color'].forEach(function(id) {
     var el = document.getElementById(id);
-    if (el) el.addEventListener('input', updatePreview);
+    if (el) el.addEventListeкакоеr('input', updatePreview);
   });
 });
 </script>

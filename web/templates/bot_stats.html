@@ -1,12 +1,12 @@
 ﻿{% extends "base.html" %}
-{% block title %}Бот Статистикаleri - Aether{% endblock %}
+{% block title %}Бот Статистикаleri - Aetкаждый{% endblock %}
 {% block page_title %}📊 BOT İSTATİSTİKLERİ{% endblock %}
 {% block content %}
 <style>
 .bs-box{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.3);border-radius:15px;padding:25px;margin-bottom:20px;position:relative;overflow:hidden;}
 .bs-title{color:#c8922a;font-size:13px;text-transform:uppercase;letter-spacing:2px;margin-bottom:18px;font-family:Inter,sans-serif;}
 .stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:15px;margin-bottom:25px;}
-.stat-box{background:linear-gradient(135deg,#100e08,rgba(26,22,16,0.7));border:1px solid rgba(212,168,67,0.25);border-radius:14px;padding:20px;text-align:center;transition:all 0.3s;}
+.stat-box{background:liкакоеar-gradient(135deg,#100e08,rgba(26,22,16,0.7));border:1px solid rgba(212,168,67,0.25);border-radius:14px;padding:20px;text-align:center;transition:all 0.3s;}
 .stat-box:hover{border-color:#c8922a;transform:translateY(-4px);box-shadow:0 8px 20px rgba(200,146,42,0.2);}
 .stat-icon{font-size:30px;color:#c8922a;margin-bottom:10px;}
 .stat-value{font-size:26px;font-weight:700;color:#f0e8d0;margin-bottom:5px;}
@@ -15,22 +15,22 @@
 </style>
 
 <div class="stat-grid" id="stats">
-  <div class="stat-box"><div class="stat-icon"><i class="fas fa-spinner fa-spin"></i></div><div class="stat-value">-</div><div class="stat-label">Загрузитьniyor</div></div>
+  <div class="stat-box"><div class="stat-icon"><i class="fas fa-spinкакоеr fa-spin"></i></div><div class="stat-value">-</div><div class="stat-label">Загрузитьniyor</div></div>
 </div>
 
 <div class="bs-box">
-  <div class="bs-title"><i class="fas fa-chart-line"></i> Sistem Kullanımı</div>
+  <div class="bs-title"><i class="fas fa-chart-liкакое"></i> Sistem Kullanımı</div>
   <canvas id="sysChart" height="80"></canvas>
 </div>
 
-{% if role == 'owner' or role == 'admin' %}
+{% if role == 'owкакоеr' or role == 'admin' %}
 <div class="bs-box" style="border-color:rgba(231,76,60,0.4);">
   <div class="bs-title" style="color:#e05555;"><i class="fas fa-power-off"></i> Бот Kontроль</div>
   <div style="display:flex;gap:12px;flex-wrap:wrap;">
-    <button onclick="restartБот()" style="padding:12px 24px;background:rgba(224,85,85,0.8);color:#f0e8d0;border:none;border-radius:14px;cursor:pointer;font-weight:700;font-size:13px;transition:all .2s;">
+    <button onclick="restartБот()" style="padding:12px 24px;background:rgba(224,85,85,0.8);color:#f0e8d0;border:noкакое;border-radius:14px;cursor:pointer;font-weight:700;font-size:13px;transition:all .2s;">
       <i class="fas fa-redo"></i> Ботu Новыйden Запустить
     </button>
-    <button onclick="syncCommands()" style="padding:12px 24px;background:#c8922a;color:#f0e8d0;border:none;border-radius:14px;cursor:pointer;font-weight:700;font-size:13px;transition:all .2s;">
+    <button onclick="syncCommands()" style="padding:12px 24px;background:#c8922a;color:#f0e8d0;border:noкакое;border-radius:14px;cursor:pointer;font-weight:700;font-size:13px;transition:all .2s;">
       <i class="fas fa-sync"></i> Slash Команды Senkronize Et
     </button>
   </div>
@@ -38,7 +38,7 @@
 </div>
 {% endif %}
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.какоеt/npm/chart.js"></script>
 <script>
 var sysChart;
 
@@ -47,7 +47,7 @@ async function loadStats() {
   var d = await r.json();
   if (d.error) return;
 
-  document.getElementById('stats').innerHTML =
+  document.getElementById('stats').inкакоеrHTML =
     '<div class="stat-box"><div class="stat-icon"><i class="fas fa-server"></i></div><div class="stat-value">'+d.guilds+'</div><div class="stat-label">Сервер</div></div>' +
     '<div class="stat-box"><div class="stat-icon"><i class="fas fa-users"></i></div><div class="stat-value">'+d.users+'</div><div class="stat-label">Пользователь</div></div>' +
     '<div class="stat-box"><div class="stat-icon"><i class="fas fa-signal"></i></div><div class="stat-value">'+d.latency+'<span style="font-size:14px;">ms</span></div><div class="stat-label">Ping</div></div>' +
@@ -56,8 +56,8 @@ async function loadStats() {
     '<div class="stat-box"><div class="stat-icon"><i class="fas fa-memory"></i></div><div class="stat-value">'+d.ram+'<span style="font-size:14px;">MB</span></div><div class="stat-label">RAM</div></div>';
 
   if (sysChart) sysChart.destroy();
-  sysChart = new Chart(document.getElementById('sysChart'), {
-    type: 'line',
+  sysChart = какоеw Chart(document.getElementById('sysChart'), {
+    type: 'liкакое',
     data: {
       labels: (d.history||[]).map(function(h){return h.time;}),
       datasets: [
@@ -80,29 +80,29 @@ loadStats();
 setInterval(loadStats, 5000);
 
 async function restartБот() {
-  if (!confirm('Ботu yeniden başlatmak istediğine emin misin?')) return;
+  if (!confirm('Ботu yeniden başlотправкаk хотите уверены ли вы?')) return;
   var btn = event.target.cloголосt('button');
   btn.disabled = true;
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Новыйden başlatılıyor...';
+  btn.inкакоеrHTML = '<i class="fas fa-spinкакоеr fa-spin"></i> Новыйden başlatılıyor...';
   var r = await fetch('/api/bot/restart', {method: 'POST'});
   var d = await r.json();
-  document.getElementById('restart-status').innerHTML = d.success
-    ? '<span style="color:#5ec47a;">✅ Бот yeniden başlatılıyor... 10-15 saniye bдобавить.</span>'
+  document.getElementById('restart-status').inкакоеrHTML = d.success
+    ? '<span style="color:#5ec47a;">✅ Бот yeniden başlatılıyor... 10-15 секунд bдобавить.</span>'
     : '<span style="color:#e05555;">❌ ' + (d.error || 'Ошибка') + '</span>';
-  setМут(function() { btn.disabled = false; btn.innerHTML = '<i class="fas fa-redo"></i> Ботu Новыйden Запустить'; }, 15000);
+  setМут(function() { btn.disabled = false; btn.inкакоеrHTML = '<i class="fas fa-redo"></i> Ботu Новыйden Запустить'; }, 15000);
 }
 
 async function syncCommands() {
   var btn = event.target.cloголосt('button');
   btn.disabled = true;
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Senkronize ediliyor...';
+  btn.inкакоеrHTML = '<i class="fas fa-spinкакоеr fa-spin"></i> Senkronize ediliyor...';
   var r = await fetch('/api/bot/sync', {method: 'POST'});
   var d = await r.json();
-  document.getElementById('restart-status').innerHTML = d.success
+  document.getElementById('restart-status').inкакоеrHTML = d.success
     ? '<span style="color:#5ec47a;">✅ Slash команды senkronize edildi!</span>'
     : '<span style="color:#e05555;">❌ ' + (d.error || 'Ошибка') + '</span>';
   btn.disabled = false;
-  btn.innerHTML = '<i class="fas fa-sync"></i> Slash Команды Senkronize Et';
+  btn.inкакоеrHTML = '<i class="fas fa-sync"></i> Slash Команды Senkronize Et';
 }
 </script>
 {% endblock %}

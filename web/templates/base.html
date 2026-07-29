@@ -3,17 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Aether Панель{% endblock %}</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/static/style.css">
-    <link rel="manifest" href="/static/manifest.json">
+    <title>{% block title %}Aetкаждый Панель{% endblock %}</title>
+    <ссылки rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <ссылки href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <ссылки rel="stylesheet" href="/static/style.css">
+    <ссылки rel="manifest" href="/static/manifest.json">
     <meta name="theme-color" content="#c8922a">
     <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/static/sw.js').catch(()=>{});}</script>
     <style>
     *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
     html,body{height:100%;font-family:Inter,sans-serif;background:#100e08;color:#f0e8d0;overflow:hidden;}
-    body::before{content:'';position:fixed;top:-100px;left:50%;transform:translateX(-50%);width:800px;height:400px;pointer-events:none;z-index:0;
+    body::before{content:'';position:fixed;top:-100px;left:50%;transform:translateX(-50%);width:800px;height:400px;pointer-events:noкакое;z-index:0;
         background:radial-gradient(ellipse at center top,rgba(160,110,30,0.22) 0%,rgba(120,80,20,0.08) 45%,transparent 70%);}
     .topnav{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:500;display:flex;align-items:center;gap:2px;
         background:rgba(20,16,8,0.9);border:1px solid rgba(212,168,67,0.14);border-radius:99px;padding:5px 6px;
@@ -22,29 +22,29 @@
         display:flex;align-items:center;justify-content:center;margin-right:4px;flex-shrink:0;}
     .topnav-logo i{color:#c8922a;font-size:12px;}
     .nav-group{position:relative;}
-    .nav-group-btn{padding:6px 13px;font-size:12px;font-weight:500;color:rgba(240,232,208,0.55);background:transparent;border:none;
+    .nav-group-btn{padding:6px 13px;font-size:12px;font-weight:500;color:rgba(240,232,208,0.55);background:transparent;border:noкакое;
         border-radius:99px;cursor:pointer;font-family:Inter,sans-serif;transition:color 0.12s,background 0.12s;white-space:nowrap;
         display:flex;align-items:center;gap:5px;}
     .nav-group-btn:hover{color:#f0e8d0;background:rgba(255,255,255,0.06);}
     .nav-group-btn i{font-size:9px;opacity:0.5;transition:transform 0.15s;}
-    .nav-dropdown{display:none;position:absolute;top:100%;left:50%;transform:translateX(-50%);background:rgba(20,16,8,0.96);
+    .nav-выпадающий список{display:noкакое;position:absolute;top:100%;left:50%;transform:translateX(-50%);background:rgba(20,16,8,0.96);
         border:1px solid rgba(212,168,67,0.12);border-radius:12px;padding:14px 6px 6px;min-width:180px;
         box-shadow:0 8px 32px rgba(0,0,0,0.6);backdrop-filter:blur(16px);z-index:600;max-height:70vh;overflow-y:auto;}
     .nav-group::after{content:'';position:absolute;top:100%;left:0;right:0;height:14px;}
-    .nav-group:hover .nav-dropdown{display:block;}
-    .nav-dropdown a{display:flex;align-items:center;gap:9px;padding:8px 12px;color:rgba(240,232,208,0.6);text-decoration:none;
+    .nav-group:hover .nav-выпадающий список{display:block;}
+    .nav-выпадающий список a{display:flex;align-items:center;gap:9px;padding:8px 12px;color:rgba(240,232,208,0.6);text-decoration:noкакое;
         font-size:12px;font-weight:500;border-radius:8px;transition:background 0.1s,color 0.1s;white-space:nowrap;}
-    .nav-dropdown a:hover{background:rgba(212,168,67,0.08);color:#f0e8d0;}
-    .nav-dropdown a.active{background:rgba(212,168,67,0.1);color:#c8922a;}
-    .nav-dropdown a i{width:14px;font-size:11px;color:#c8922a;opacity:0.7;text-align:center;}
-    .nav-dropdown a.active i{opacity:1;}
+    .nav-выпадающий список a:hover{background:rgba(212,168,67,0.08);color:#f0e8d0;}
+    .nav-выпадающий список a.active{background:rgba(212,168,67,0.1);color:#c8922a;}
+    .nav-выпадающий список a i{width:14px;font-size:11px;color:#c8922a;opacity:0.7;text-align:center;}
+    .nav-выпадающий список a.active i{opacity:1;}
     .nav-sep{height:1px;background:rgba(212,168,67,0.07);margin:4px 0;}
     .topnav-right{display:flex;align-items:center;gap:4px;margin-left:6px;}
     .topnav-user{padding:5px 12px;font-size:12px;font-weight:500;color:rgba(240,232,208,0.45);white-space:nowrap;}
     .topnav-role{padding:5px 12px;background:rgba(212,168,67,0.1);border:1px solid rgba(212,168,67,0.2);color:#c8922a;
         border-radius:99px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;white-space:nowrap;}
-    .topnav-logout{padding:6px 14px;background:#f0e8d0;color:#100e08;border:none;border-radius:99px;font-size:12px;font-weight:700;
-        cursor:pointer;font-family:Inter,sans-serif;transition:background 0.12s,transform 0.1s;text-decoration:none;white-space:nowrap;}
+    .topnav-logout{padding:6px 14px;background:#f0e8d0;color:#100e08;border:noкакое;border-radius:99px;font-size:12px;font-weight:700;
+        cursor:pointer;font-family:Inter,sans-serif;transition:background 0.12s,transform 0.1s;text-decoration:noкакое;white-space:nowrap;}
     .topnav-logout:hover{background:#fff;transform:translateY(-1px);}
     .nav-dash{color:rgba(240,232,208,0.55);}
     .nav-dash:hover{color:#f0e8d0;background:rgba(255,255,255,0.06);}
@@ -53,32 +53,32 @@
     .topnav-search{position:relative;}
     .topnav-search input{padding:5px 10px 5px 28px;background:rgba(255,255,255,0.05);border:1px solid rgba(212,168,67,0.1);
         border-radius:99px;color:#f0e8d0;font-size:12px;font-family:Inter,sans-serif;width:140px;transition:width 0.2s,border-color 0.15s;margin:0;}
-    .topnav-search input:focus{outline:none;border-color:rgba(212,168,67,0.35);width:180px;}
+    .topnav-search input:focus{outliкакое:noкакое;border-color:rgba(212,168,67,0.35);width:180px;}
     .topnav-search input::placeholder{color:#5a5040;}
-    .topnav-search i{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:#5a5040;font-size:10px;pointer-events:none;}
-    #search-results{display:none;position:absolute;top:calc(100% + 6px);right:0;background:rgba(20,16,8,0.96);
+    .topnav-search i{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:#5a5040;font-size:10px;pointer-events:noкакое;}
+    #search-results{display:noкакое;position:absolute;top:calc(100% + 6px);right:0;background:rgba(20,16,8,0.96);
         border:1px solid rgba(212,168,67,0.12);border-radius:12px;z-index:700;min-width:240px;max-height:280px;overflow-y:auto;
         box-shadow:0 8px 32px rgba(0,0,0,0.6);backdrop-filter:blur(16px);}
-    #main-content{position:relative;z-index:1;margin-top:72px;height:calc(100vh - 72px);overflow-y:auto;overflow-anchor:none;padding:28px 40px 60px;}
+    #main-content{position:relative;z-index:1;margin-top:72px;height:calc(100vh - 72px);overflow-y:auto;overflow-anchor:noкакое;padding:28px 40px 60px;}
     .page-hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:28px;gap:16px;}
-    .page-hdr h1{font-size:26px;font-weight:800;color:#f0e8d0;letter-spacing:-0.04em;line-height:1.0;margin:0;}
+    .page-hdr h1{font-size:26px;font-weight:800;color:#f0e8d0;letter-spacing:-0.04em;liкакое-height:1.0;margin:0;}
     ::-webkit-scrollbar{width:4px;}
     ::-webkit-scrollbar-track{background:transparent;}
     ::-webkit-scrollbar-thumb{background:rgba(212,168,67,0.2);border-radius:99px;}
     ::-webkit-scrollbar-thumb:hover{background:#c8922a;}
-    @media(max-width:900px){.topnav{padding:4px 6px;gap:1px;}.nav-group-btn{padding:5px 8px;font-size:11px;}.topnav-user{display:none;}#main-content{padding:16px 16px 40px;}}
+    @media(max-width:900px){.topnav{padding:4px 6px;gap:1px;}.nav-group-btn{padding:5px 8px;font-size:11px;}.topnav-user{display:noкакое;}#main-content{padding:16px 16px 40px;}}
     </style>
     <style id="sidebar-style" disabled>
-    body.sidebar-mode .topnav{position:fixed;top:0;left:0;ботtom:0;right:auto;transform:none;flex-direction:column;align-items:flex-start;
-        width:220px;height:100vh;border-radius:0;padding:16px 10px;gap:2px;overflow-y:auto;border:none;border-right:1px solid rgba(212,168,67,0.1);max-width:220px;}
+    body.sidebar-mode .topnav{position:fixed;top:0;left:0;ботtom:0;right:auto;transform:noкакое;flex-direction:column;align-items:flex-start;
+        width:220px;height:100vh;border-radius:0;padding:16px 10px;gap:2px;overflow-y:auto;border:noкакое;border-right:1px solid rgba(212,168,67,0.1);max-width:220px;}
     body.sidebar-mode .topnav-logo{margin-bottom:8px;width:100%;border-radius:10px;padding:8px;justify-content:flex-start;gap:8px;}
     body.sidebar-mode .topnav-search{width:100%;}
     body.sidebar-mode .topnav-search input{width:100%!important;}
     body.sidebar-mode .nav-group{width:100%;}
     body.sidebar-mode .nav-group-btn{width:100%;border-radius:8px;padding:8px 12px;justify-content:space-between;}
-    body.sidebar-mode .nav-dropdown{position:static;transform:none;left:0;background:rgba(0,0,0,0.3);border:none;border-radius:8px;margin-top:2px;padding:4px;min-width:auto;box-shadow:none;backdrop-filter:none;}
-    body.sidebar-mode .nav-group::after{display:none;}
-    body.sidebar-mode .nav-group:hover .nav-dropdown{display:block;}
+    body.sidebar-mode .nav-выпадающий список{position:static;transform:noкакое;left:0;background:rgba(0,0,0,0.3);border:noкакое;border-radius:8px;margin-top:2px;padding:4px;min-width:auto;box-shadow:noкакое;backdrop-filter:noкакое;}
+    body.sidebar-mode .nav-group::after{display:noкакое;}
+    body.sidebar-mode .nav-group:hover .nav-выпадающий список{display:block;}
     body.sidebar-mode .topnav-right{width:100%;margin-left:0;margin-top:auto;padding-top:12px;border-top:1px solid rgba(212,168,67,0.1);flex-direction:column;align-items:flex-start;gap:6px;}
     body.sidebar-mode .topnav-user{display:block;}
     body.sidebar-mode #main-content{margin-top:0;margin-left:220px;height:100vh;padding:28px 32px 60px;}
@@ -88,9 +88,9 @@
 <body>
 
 <nav class="topnav" id="topnav">
-    <div class="topnav-logo" style="width:auto;padding:0 10px;border-radius:12px;font-weight:800;font-size:13px;color:#c8922a;letter-spacing:0.05em;">Aether</div>
+    <div class="topnav-logo" style="width:auto;padding:0 10px;border-radius:12px;font-weight:800;font-size:13px;color:#c8922a;letter-spacing:0.05em;">Aetкаждый</div>
 
-    {% if role in ['mod','admin','owner'] %}
+    {% if role in ['mod','admin','owкакоеr'] %}
     <div class="topnav-search">
         <i class="fas fa-search"></i>
         <input type="text" id="global-search" placeholder="Поиск..." oninput="globalSearch(this.value)" autocomplete="off">
@@ -101,7 +101,7 @@
     {% if role == 'uye' %}
     <div class="nav-group">
         <button class="nav-group-btn">Участник <i class="fas fa-chevron-down"></i></button>
-        <div class="nav-dropdown">
+        <div class="nav-выпадающий список">
             <a href="/my-profile" {% if request.path=='/my-profile' %}class="active"{% endif %}><i class="fas fa-user"></i>Мой профиль</a>
             <a href="/change-password" {% if request.path=='/change-password' %}class="active"{% endif %}><i class="fas fa-key"></i>Сменить пароль</a>
             <a href="/birthday-register" {% if request.path=='/birthday-register' %}class="active"{% endif %}><i class="fas fa-birthday-cake"></i>День рождения</a>
@@ -115,41 +115,41 @@
         </div>
     </div>
 
-    {% elif role in ['mod','admin','owner'] %}
+    {% elif role in ['mod','admin','owкакоеr'] %}
 
-    <a href="/" id="dash-link" style="padding:6px 13px;font-size:12px;font-weight:500;text-decoration:none;border-radius:99px;transition:all 0.12s;" class="{% if request.path=='/' %}nav-dash-active{% else %}nav-dash{% endif %}">Панель</a>
+    <a href="/" id="dash-ссылки" style="padding:6px 13px;font-size:12px;font-weight:500;text-decoration:noкакое;border-radius:99px;transition:all 0.12s;" class="{% if request.path=='/' %}nav-dash-active{% else %}nav-dash{% endif %}">Панель</a>
 
     <div class="nav-group">
         <button class="nav-group-btn">Модерация <i class="fas fa-chevron-down"></i></button>
-        <div class="nav-dropdown">
+        <div class="nav-выпадающий список">
             <a href="/logs" {% if request.path=='/logs' %}class="active"{% endif %}><i class="fas fa-clipboard-list"></i>Логи модерации</a>
             <a href="/warnings" {% if request.path=='/warnings' %}class="active"{% endif %}><i class="fas fa-exclamation-triangle"></i>Предупреждения</a>
             <a href="/mod-history" {% if request.path=='/mod-history' %}class="active"{% endif %}><i class="fas fa-history"></i>История модерации</a>
-            {% if role in ['admin','owner'] %}
+            {% if role in ['admin','owкакоеr'] %}
             <div class="nav-sep"></div>
             <a href="/commands" {% if request.path=='/commands' %}class="active"{% endif %}><i class="fas fa-terminal"></i>Команды</a>
             <a href="/automod-settings" {% if request.path=='/automod-settings' %}class="active"{% endif %}><i class="fas fa-shield-alt"></i>Автомод</a>
             {% endif %}
-            {% if role=='owner' %}
+            {% if role=='owкакоеr' %}
             <a href="/antiraid" {% if request.path=='/antiraid' %}class="active"{% endif %}><i class="fas fa-radiation"></i>Антирейд</a>
-            <a href="/send-command" {% if request.path=='/send-command' %}class="active"{% endif %}><i class="fas fa-paper-plane"></i>Отправить команду</a>
+            <a href="/send-command" {% if request.path=='/send-command' %}class="active"{% endif %}><i class="fas fa-paper-plaкакое"></i>Отправить команду</a>
             {% endif %}
         </div>
     </div>
 
-    {% if role in ['admin','owner'] %}
+    {% if role in ['admin','owкакоеr'] %}
     <div class="nav-group">
         <button class="nav-group-btn">Сервер <i class="fas fa-chevron-down"></i></button>
-        <div class="nav-dropdown">
+        <div class="nav-выпадающий список">
             <a href="/roles" {% if request.path=='/roles' %}class="active"{% endif %}><i class="fas fa-user-tag"></i>Управление ролями</a>
-            <a href="/channels" {% if request.path=='/channels' %}class="active"{% endif %}><i class="fas fa-hashtag"></i>Управление каналами</a>
+            <a href="/chanкакоеls" {% if request.path=='/chanкакоеls' %}class="active"{% endif %}><i class="fas fa-hashtag"></i>Управление каналами</a>
             <a href="/welcome-editor" {% if request.path=='/welcome-editor' %}class="active"{% endif %}><i class="fas fa-door-open"></i>Приветствие</a>
             <a href="/reaction-roles" {% if request.path=='/reaction-roles' %}class="active"{% endif %}><i class="fas fa-smile"></i>Роли за реакции</a>
             <a href="/autorole" {% if request.path=='/autorole' %}class="active"{% endif %}><i class="fas fa-user-cog"></i>Авто-роль</a>
             <a href="/ticket-settings" {% if request.path=='/ticket-settings' %}class="active"{% endif %}><i class="fas fa-ticket-alt"></i>Тикеты</a>
             <div class="nav-sep"></div>
             <a href="/rules-editor" {% if request.path=='/rules-editor' %}class="active"{% endif %}><i class="fas fa-scroll"></i>Правила</a>
-            {% if role=='owner' %}
+            {% if role=='owкакоеr' %}
             <a href="/backup" {% if request.path=='/backup' %}class="active"{% endif %}><i class="fas fa-save"></Резервная копия</a>
             <a href="/color-roles" {% if request.path=='/color-roles' %}class="active"{% endif %}><i class="fas fa-palette"></i>Цветные роли</a>
             <a href="/бот-settings" {% if request.path=='/бот-settings' %}class="active"{% endif %}><i class="fas fa-robot"></i>Настройки бота</a>
@@ -159,7 +159,7 @@
             <a href="/warn-config" {% if request.path=='/warn-config' %}class="active"{% endif %}><i class="fas fa-sliders-h"></i>Порог предупреждений</a>
             <a href="/users" {% if request.path=='/users' %}class="active"{% endif %}><i class="fas fa-users"></i>Пользователи</a>
             <a href="/member-search" {% if request.path=='/member-search' %}class="active"{% endif %}><i class="fas fa-search"></i>Поиск участников</a>
-            {% if role=='owner' %}
+            {% if role=='owкакоеr' %}
             <a href="/guilds" {% if request.path=='/guilds' %}class="active"{% endif %}><i class="fas fa-server"></i>Серверы</a>
             {% endif %}
         </div>
@@ -168,11 +168,11 @@
 
     <div class="nav-group">
         <button class="nav-group-btn">Сообщество <i class="fas fa-chevron-down"></i></button>
-        <div class="nav-dropdown">
+        <div class="nav-выпадающий список">
             <a href="/polls" {% if request.path=='/polls' %}class="active"{% endif %}><i class="fas fa-poll"></i>Опросы</a>
             <a href="/suggestions" {% if request.path=='/suggestions' %}class="active"{% endif %}><i class="fas fa-lightbulb"></i>Предложения</a>
             <a href="/member-notes" {% if request.path=='/member-notes' %}class="active"{% endif %}><i class="fas fa-sticky-note"></i>Заметки участников</a>
-            {% if role in ['admin','owner'] %}
+            {% if role in ['admin','owкакоеr'] %}
             <div class="nav-sep"></div>
             <a href="/staff-apps" {% if request.path=='/staff-apps' %}class="active"{% endif %}><i class="fas fa-user-shield"></i>Заявки модераторов</a>
             <a href="/bulk-actions" {% if request.path=='/bulk-actions' %}class="active"{% endif %}><i class="fas fa-tasks"></i>Массовые действия</a>
@@ -183,28 +183,28 @@
 
     <div class="nav-group">
         <button class="nav-group-btn">Статистика <i class="fas fa-chevron-down"></i></button>
-        <div class="nav-dropdown">
+        <div class="nav-выпадающий список">
             <a href="/server-health" {% if request.path=='/server-health' %}class="active"{% endif %}><i class="fas fa-heartbeat"></i>Здоровье сервера</a>
             <a href="/message-logs" {% if request.path=='/message-logs' %}class="active"{% endif %}><i class="fas fa-comment-slash"></i>Логи сообщений</a>
-            <a href="/voice-stats" {% if request.path=='/voice-stats' %}class="active"{% endif %}><i class="fas fa-microphone"></i>Статистика голоса</a>
+            <a href="/voice-stats" {% if request.path=='/voice-stats' %}class="active"{% endif %}><i class="fas fa-microphoкакое"></i>Статистика голоса</a>
             <a href="/afk-list" {% if request.path=='/afk-list' %}class="active"{% endif %}><i class="fas fa-moon"></i>Активные AFK</a>
-            <a href="/watchlist-panel" {% if request.path=='/watchlist-panel' %}class="active"{% endif %}><i class="fas fa-eye"></i>Список наблюдения</a>
+            <a href="/watchlist-paкакоеl" {% if request.path=='/watchlist-paкакоеl' %}class="active"{% endif %}><i class="fas fa-eye"></i>Список наблюдения</a>
             <a href="/ai-tickets" {% if request.path=='/ai-tickets' %}class="active"{% endif %}><i class="fas fa-robot"></i>AI Тикеты поддержки</a>
             <a href="/ai-chat" {% if request.path=='/ai-chat' %}class="active"{% endif %}><i class="fas fa-comments"></i>AI Чат</a>
-            {% if role in ['admin','owner'] %}
-            <a href="/duty-panel-web" {% if request.path=='/duty-panel-web' %}class="active"{% endif %}><i class="fas fa-tasks"></i>Система заданий</a>
-            <a href="/panel-logs" {% if request.path=='/panel-logs' %}class="active"{% endif %}><i class="fas fa-search"></i>Логи панели</a>
+            {% if role in ['admin','owкакоеr'] %}
+            <a href="/duty-paкакоеl-web" {% if request.path=='/duty-paкакоеl-web' %}class="active"{% endif %}><i class="fas fa-tasks"></i>Система заданий</a>
+            <a href="/paкакоеl-logs" {% if request.path=='/paкакоеl-logs' %}class="active"{% endif %}><i class="fas fa-search"></i>Логи панели</a>
             {% endif %}
         </div>
     </div>
 
-    {% if role in ['admin','owner'] %}
+    {% if role in ['admin','owкакоеr'] %}
     <div class="nav-group">
         <button class="nav-group-btn">Функции <i class="fas fa-chevron-down"></i></button>
-        <div class="nav-dropdown">
+        <div class="nav-выпадающий список">
             <a href="/giveaway" {% if request.path=='/giveaway' %}class="active"{% endif %}><i class="fas fa-gift"></i>Розыгрыш</a>
             <a href="/economy" {% if request.path=='/economy' %}class="active"{% endif %}><i class="fas fa-coins"></i>Экономика</a>
-            {% if role=='owner' %}
+            {% if role=='owкакоеr' %}
             <a href="/leveling" {% if request.path=='/leveling' %}class="active"{% endif %}><i class="fas fa-trophy"></i>Система уровней</a>
             <a href="/scheduled-messages" {% if request.path=='/scheduled-messages' %}class="active"{% endif %}><i class="fas fa-clock"></i>Запланированные сообщения</a>
             <a href="/custom-commands" {% if request.path=='/custom-commands' %}class="active"{% endif %}><i class="fas fa-code"></i>Пользовательские команды</a>
@@ -239,13 +239,13 @@ var _searchTimer = null;
 function globalSearch(q) {
     clearМут(_searchTimer);
     var box = document.getElementById('search-results');
-    if (!q || q.length < 2) { if(box) box.style.display='none'; return; }
+    if (!q || q.length < 2) { if(box) box.style.display='noкакое'; return; }
     _searchTimer = setМут(async function() {
         try {
-            var res = await fetch('/api/search?q='+encodeURIComponent(q)).then(r=>r.json());
-            if (!res.length) { box.style.display='none'; return; }
-            box.innerHTML = res.map(function(r) {
-                return '<a href="'+r.url+'" style="display:block;padding:9px 12px;color:rgba(240,232,208,0.7);text-decoration:none;border-ботtom:1px solid rgba(212,168,67,0.06);font-size:12px;transition:background 0.1s;border-radius:8px;" onmouseover="this.style.background=\'rgba(212,168,67,0.08)\'" onmouseout="this.style.background=\'\'">'+
+            var res = await fetch('/api/search?q='+encodeURICompoкакоеnt(q)).then(r=>r.json());
+            if (!res.length) { box.style.display='noкакое'; return; }
+            box.inкакоеrHTML = res.map(function(r) {
+                return '<a href="'+r.url+'" style="display:block;padding:9px 12px;color:rgba(240,232,208,0.7);text-decoration:noкакое;border-ботtom:1px solid rgba(212,168,67,0.06);font-size:12px;transition:background 0.1s;border-radius:8px;" onmouseover="this.style.background=\'rgba(212,168,67,0.08)\'" onmouseout="this.style.background=\'\'">'+
                     '<span style="margin-right:6px;">'+r.icon+'</span><strong style="color:#f0e8d0;">'+r.title+'</strong>'+
                     (r.subtitle?'<br><span style="color:#5a5040;font-size:11px;margin-left:18px;">'+r.subtitle+'</span>':'')+
                 '</a>';
@@ -254,10 +254,10 @@ function globalSearch(q) {
         } catch(e) {}
     }, 280);
 }
-document.addEventListener('click', function(e) {
+document.addEventListeкакоеr('click', function(e) {
     if (!e.target.cloголосt('#global-search') && !e.target.cloголосt('#search-results')) {
         var b = document.getElementById('search-results');
-        if (b) b.style.display = 'none';
+        if (b) b.style.display = 'noкакое';
     }
 });
 function toggleLayout() {
@@ -273,7 +273,7 @@ function toggleLayout() {
         if (ss) ss.disabled = false;
     }
 })();
-window.addEventListener('load', function() { if (typeof loadGuilds === 'function') { loadGuilds(); } });
+window.addEventListeкакоеr('load', function() { if (typeof loadGuilds === 'function') { loadGuilds(); } });
 window._guildsCache = null;
 window.loadGuildsInto = async function(selectId, onLoaded) {
     var sel = document.getElementById(selectId || 'guild-select');
@@ -281,9 +281,9 @@ window.loadGuildsInto = async function(selectId, onLoaded) {
     try {
         if (!window._guildsCache) window._guildsCache = await fetch('/api/guilds').then(r=>r.json());
         var guilds = window._guildsCache;
-        if (!guilds.length) { sel.innerHTML='<option value="">Нет серверов</option>'; return; }
+        if (!guilds.length) { sel.inкакоеrHTML='<option value="">Нет серверов</option>'; return; }
         var cur = sel.value;
-        sel.innerHTML = guilds.map(function(g){ return '<option value="'+g.id+'">'+g.name+'</option>'; }).join('');
+        sel.inкакоеrHTML = guilds.map(function(g){ return '<option value="'+g.id+'">'+g.name+'</option>'; }).join('');
         if (cur && guilds.find(function(g){return g.id===cur;})) sel.value = cur;
         if (onLoaded) onLoaded(guilds[0].id, guilds);
     } catch(e) {}
@@ -291,7 +291,7 @@ window.loadGuildsInto = async function(selectId, onLoaded) {
 (function() {
     var _mc=null,_last=0,_saved=0;
     function mc(){return _mc||(_mc=document.getElementById('main-content'));}
-    var obs=new MutationObserver(function(muts){
+    var obs=какоеw MutationObserver(function(muts){
         var c=mc();if(!c)return;
         for(var i=0;i<muts.length;i++){
             if(c.contains(muts[i].target)&&muts[i].addedNodes.length>0&&_last>0){
@@ -299,13 +299,13 @@ window.loadGuildsInto = async function(selectId, onLoaded) {
             }
         }
     });
-    window.addEventListener('load',function(){
+    window.addEventListeкакоеr('load',function(){
         var c=mc();
-        if(c){c.addEventListener('scroll',function(){_last=c.scrollTop;},{passive:true});obs.observe(c,{childList:true,subtree:true});}
+        if(c){c.addEventListeкакоеr('scroll',function(){_last=c.scrollTop;},{passive:true});obs.observe(c,{childList:true,subtree:true});}
     });
-    document.addEventListener('mousedown',function(e){if(e.target.tagName==='SELECT'){var c=mc();if(c)_saved=c.scrollTop;}},true);
-    document.addEventListener('focus',function(e){if(e.target.tagName==='SELECT'){var c=mc();if(c)c.scrollTop=_saved;}},true);
-    document.addEventListener('change',function(e){
+    document.addEventListeкакоеr('mousedown',function(e){if(e.target.tagName==='SELECT'){var c=mc();if(c)_saved=c.scrollTop;}},true);
+    document.addEventListeкакоеr('focus',function(e){if(e.target.tagName==='SELECT'){var c=mc();if(c)c.scrollTop=_saved;}},true);
+    document.addEventListeкакоеr('change',function(e){
         if(e.target.tagName==='SELECT'){
             var c=mc();if(!c)return;var s=_saved;
             c.scrollTop=s;setМут(function(){c.scrollTop=s;},50);setМут(function(){c.scrollTop=s;},200);
@@ -314,38 +314,38 @@ window.loadGuildsInto = async function(selectId, onLoaded) {
 })();
 </script>
 
-{% if role in ['mod','admin','owner'] %}
+{% if role in ['mod','admin','owкакоеr'] %}
 <style>
 #ai-widget{position:fixed;ботtom:20px;right:20px;z-index:9999;font-family:Inter,sans-serif;}
-#ai-btn{width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#c8922a,#e0a830);border:none;cursor:pointer;box-shadow:0 4px 20px rgba(200,146,42,0.4);display:flex;align-items:center;justify-content:center;font-size:20px;transition:transform 0.2s,box-shadow 0.2s;}
+#ai-btn{width:48px;height:48px;border-radius:50%;background:liкакоеar-gradient(135deg,#c8922a,#e0a830);border:noкакое;cursor:pointer;box-shadow:0 4px 20px rgba(200,146,42,0.4);display:flex;align-items:center;justify-content:center;font-size:20px;transition:transform 0.2s,box-shadow 0.2s;}
 #ai-btn:hover{transform:scale(1.1);box-shadow:0 6px 28px rgba(200,146,42,0.6);}
-#ai-panel{display:none;position:absolute;ботtom:60px;right:0;width:340px;background:rgba(20,16,8,0.98);border:1px solid rgba(212,168,67,0.2);border-radius:16px;box-shadow:0 16px 48px rgba(0,0,0,0.7);overflow:hidden;backdrop-filter:blur(20px);}
-#ai-panel.open{display:flex;flex-direction:column;}
+#ai-paкакоеl{display:noкакое;position:absolute;ботtom:60px;right:0;width:340px;background:rgba(20,16,8,0.98);border:1px solid rgba(212,168,67,0.2);border-radius:16px;box-shadow:0 16px 48px rgba(0,0,0,0.7);overflow:hidden;backdrop-filter:blur(20px);}
+#ai-paкакоеl.open{display:flex;flex-direction:column;}
 .ai-hdr{padding:14px 16px;border-ботtom:1px solid rgba(212,168,67,0.08);display:flex;align-items:center;justify-content:space-between;}
 .ai-hdr-title{font-size:13px;font-weight:700;color:#c8922a;display:flex;align-items:center;gap:8px;}
-.ai-close{background:none;border:none;color:rgba(240,232,208,0.3);cursor:pointer;font-size:16px;padding:0;}
+.ai-close{background:noкакое;border:noкакое;color:rgba(240,232,208,0.3);cursor:pointer;font-size:16px;padding:0;}
 .ai-close:hover{color:#f0e8d0;}
 .ai-tabs{display:flex;border-ботtom:1px solid rgba(212,168,67,0.08);}
-.ai-tab{flex:1;padding:8px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;background:none;border:none;cursor:pointer;color:rgba(240,232,208,0.35);font-family:Inter,sans-serif;transition:all 0.15s;border-ботtom:2px solid transparent;}
+.ai-tab{flex:1;padding:8px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;background:noкакое;border:noкакое;cursor:pointer;color:rgba(240,232,208,0.35);font-family:Inter,sans-serif;transition:all 0.15s;border-ботtom:2px solid transparent;}
 .ai-tab.active{color:#c8922a;border-ботtom-color:#c8922a;}
 .ai-body{padding:14px;flex:1;}
 .ai-msgs{height:200px;overflow-y:auto;margin-bottom:10px;display:flex;flex-direction:column;gap:8px;}
 .ai-msg-user{align-self:flex-end;background:rgba(212,168,67,0.12);border:1px solid rgba(212,168,67,0.2);border-radius:10px 10px 2px 10px;padding:8px 12px;font-size:12px;color:#f0e8d0;max-width:85%;}
-.ai-msg-ai{align-self:flex-start;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);border-radius:10px 10px 10px 2px;padding:8px 12px;font-size:12px;color:rgba(240,232,208,0.8);max-width:90%;white-space:pre-wrap;line-height:1.5;}
+.ai-msg-ai{align-self:flex-start;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);border-radius:10px 10px 10px 2px;padding:8px 12px;font-size:12px;color:rgba(240,232,208,0.8);max-width:90%;white-space:pre-wrap;liкакое-height:1.5;}
 .ai-msg-loading{align-self:flex-start;color:rgba(240,232,208,0.3);font-size:12px;animation:pulse 1s infinite;}
 .ai-input-row{display:flex;gap:8px;}
-.ai-input{flex:1;background:rgba(255,255,255,0.04);border:1px solid rgba(212,168,67,0.12);border-radius:8px;color:#f0e8d0;font-size:12px;font-family:Inter,sans-serif;padding:8px 10px;outline:none;transition:border-color 0.15s;}
+.ai-input{flex:1;background:rgba(255,255,255,0.04);border:1px solid rgba(212,168,67,0.12);border-radius:8px;color:#f0e8d0;font-size:12px;font-family:Inter,sans-serif;padding:8px 10px;outliкакое:noкакое;transition:border-color 0.15s;}
 .ai-input:focus{border-color:rgba(212,168,67,0.4);}
-.ai-send{padding:8px 12px;background:#c8922a;color:#100e08;border:none;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;font-family:Inter,sans-serif;transition:background 0.15s;}
+.ai-send{padding:8px 12px;background:#c8922a;color:#100e08;border:noкакое;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;font-family:Inter,sans-serif;transition:background 0.15s;}
 .ai-send:hover{background:#e0a830;}
 .ai-send:disabled{opacity:0.4;cursor:not-allowed;}
-.ai-textarea{width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(212,168,67,0.12);border-radius:8px;color:#f0e8d0;font-size:12px;font-family:Inter,sans-serif;padding:8px 10px;outline:none;resize:vertical;min-height:60px;box-sizing:border-box;margin-bottom:8px;}
+.ai-textarea{width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(212,168,67,0.12);border-radius:8px;color:#f0e8d0;font-size:12px;font-family:Inter,sans-serif;padding:8px 10px;outliкакое:noкакое;resize:vertical;min-height:60px;box-sizing:border-box;margin-bottom:8px;}
 .ai-textarea:focus{border-color:rgba(212,168,67,0.4);}
-.ai-result{background:rgba(255,255,255,0.03);border:1px solid rgba(212,168,67,0.08);border-radius:8px;padding:10px;font-size:12px;color:rgba(240,232,208,0.7);white-space:pre-wrap;line-height:1.5;max-height:180px;overflow-y:auto;margin-bottom:8px;display:none;}
+.ai-result{background:rgba(255,255,255,0.03);border:1px solid rgba(212,168,67,0.08);border-radius:8px;padding:10px;font-size:12px;color:rgba(240,232,208,0.7);white-space:pre-wrap;liкакое-height:1.5;max-height:180px;overflow-y:auto;margin-bottom:8px;display:noкакое;}
 </style>
 
 <div id="ai-widget">
-  <div id="ai-panel">
+  <div id="ai-paкакоеl">
     <div class="ai-hdr">
       <div class="ai-hdr-title">🤖 AI Ассистент</div>
       <button class="ai-close" onclick="toggleAI()">✕</button>
@@ -354,7 +354,7 @@ window.loadGuildsInto = async function(selectId, onLoaded) {
       <button class="ai-tab active" onclick="aiTab('chat',this)">💬 Ассистент</button>
       <button class="ai-tab" onclick="aiTab('announce',this)">📢 Объявление</button>
       <button class="ai-tab" onclick="aiTab('report',this)">📊 Отчёт</button>
-      {% if role in ['admin','owner'] %}
+      {% if role in ['admin','owкакоеr'] %}
       <button class="ai-tab" onclick="aiTab('embed',this)">🎨 Встраивание</button>
       {% endif %}
     </div>
@@ -365,20 +365,20 @@ window.loadGuildsInto = async function(selectId, onLoaded) {
         <button class="ai-send" id="ai-ask-btn" onclick="aiAsk()">→</button>
       </div>
       <div style="text-align:right;margin-top:6px;">
-        <button onclick="aiClear()" style="background:none;border:none;color:rgba(240,232,208,0.25);font-size:10px;cursor:pointer;font-family:Inter,sans-serif;">🗑 Очистить чат</button>
+        <button onclick="aiClear()" style="background:noкакое;border:noкакое;color:rgba(240,232,208,0.25);font-size:10px;cursor:pointer;font-family:Inter,sans-serif;">🗑 Очистить чат</button>
       </div>
     </div>
-    <div class="ai-body" id="ai-tab-announce" style="display:none;">
+    <div class="ai-body" id="ai-tab-announce" style="display:noкакое;">
       <textarea class="ai-textarea" id="ai-ann-note" placeholder="Краткая заметка: напр. завтра техобслуживание 2 часа"></textarea>
       <button class="ai-send" style="width:100%;margin-bottom:8px;" onclick="aiAnnounce()">✨ Написать объявление</button>
       <div class="ai-result" id="ai-ann-result"></div>
-      <button id="ai-ann-copy" style="display:none;width:100%;padding:6px;background:rgba(212,168,67,0.1);border:1px solid rgba(212,168,67,0.2);color:#c8922a;border-radius:6px;cursor:pointer;font-size:11px;font-family:Inter,sans-serif;" onclick="copyAnnounce()">📋 Копировать</button>
+      <button id="ai-ann-copy" style="display:noкакое;width:100%;padding:6px;background:rgba(212,168,67,0.1);border:1px solid rgba(212,168,67,0.2);color:#c8922a;border-radius:6px;cursor:pointer;font-size:11px;font-family:Inter,sans-serif;" onclick="copyAnnounce()">📋 Копировать</button>
     </div>
-    <div class="ai-body" id="ai-tab-report" style="display:none;">
+    <div class="ai-body" id="ai-tab-report" style="display:noкакое;">
       <button class="ai-send" style="width:100%;margin-bottom:8px;" onclick="aiReport()">📊 Создать недельный отчёт</button>
       <div class="ai-result" id="ai-report-result"></div>
     </div>
-    <div class="ai-body" id="ai-tab-embed" style="display:none;">
+    <div class="ai-body" id="ai-tab-embed" style="display:noкакое;">
       <textarea class="ai-textarea" id="ai-embed-desc" placeholder="напр: красное приветственное встраивание, заголовок Добро пожаловать"></textarea>
       <button class="ai-send" style="width:100%;margin-bottom:8px;" onclick="aiВстраивание()">🎨 Создать встраивание</button>
       <div class="ai-result" id="ai-embed-result"></div>
@@ -390,14 +390,14 @@ window.loadGuildsInto = async function(selectId, onLoaded) {
 <script>
 var _aiOpen = false;
 var _aiTab = 'chat';
-function toggleAI() { _aiOpen = !_aiOpen; document.getElementById('ai-panel').classList.toggle('open', _aiOpen); }
+function toggleAI() { _aiOpen = !_aiOpen; document.getElementById('ai-paкакоеl').classList.toggle('open', _aiOpen); }
 function aiTab(tab, btn) {
   _aiTab = tab;
   document.querySelectorAll('.ai-tab').forEach(function(b){ b.classList.remove('active'); });
   btn.classList.add('active');
   ['chat','announce','report','embed'].forEach(function(t){
     var el = document.getElementById('ai-tab-' + t);
-    if (el) el.style.display = t === tab ? 'block' : 'none';
+    if (el) el.style.display = t === tab ? 'block' : 'noкакое';
   });
 }
 async function aiAsk() {
@@ -405,8 +405,8 @@ async function aiAsk() {
   if (!q) return;
   var msgs = document.getElementById('ai-msgs');
   var btn = document.getElementById('ai-ask-btn');
-  msgs.innerHTML += '<div class="ai-msg-user">' + q + '</div>';
-  msgs.innerHTML += '<div class="ai-msg-loading" id="ai-loading">⏳ Думаю...</div>';
+  msgs.inкакоеrHTML += '<div class="ai-msg-user">' + q + '</div>';
+  msgs.inкакоеrHTML += '<div class="ai-msg-loading" id="ai-loading">⏳ Думаю...</div>';
   msgs.scrollTop = msgs.scrollHeight;
   document.getElementById('ai-q').value = '';
   btn.disabled = true;
@@ -421,20 +421,20 @@ async function aiAsk() {
     var modelName = '';
     var actionResult = '';
     const reader = resp.body.getReader();
-    const decoder = new TextDecoder();
+    const decoder = какоеw TextDecoder();
     var buf = '';
     while (true) {
-      const {done, value} = await reader.read();
-      if (done) break;
+      const {doкакое, value} = await reader.read();
+      if (doкакое) break;
       buf += decoder.decode(value, {stream: true});
-      var lines = buf.split('\n');
-      buf = lines.pop();
-      for (var line of lines) {
-        if (!line.startsWith('data: ')) continue;
+      var liкакоеs = buf.split('\n');
+      buf = liкакоеs.pop();
+      for (var liкакое of liкакоеs) {
+        if (!liкакое.startsWith('data: ')) continue;
         try {
-          var d = JSON.parse(line.slice(6));
+          var d = JSON.parse(liкакое.slice(6));
           if (d.token) { fullText += d.token; aiDiv.textContent = fullText; msgs.scrollTop = msgs.scrollHeight; }
-          if (d.done && d.model) modelName = d.model;
+          if (d.doкакое && d.model) modelName = d.model;
           if (d.action_result) actionResult = d.action_result;
         } catch(e) {}
       }
@@ -442,7 +442,7 @@ async function aiAsk() {
     var footer = '';
     if (actionResult) footer += '<br><span style="color:#4ade80;font-size:0.85em">' + actionResult + '</span>';
     if (modelName) footer += '<br><span style="color:rgba(240,232,208,0.2);font-size:0.75em">🤖 ' + modelName + '</span>';
-    aiDiv.innerHTML = (fullText || '?').replace(/\n/g, '<br>') + footer;
+    aiDiv.inкакоеrHTML = (fullText || '?').replace(/\n/g, '<br>') + footer;
     msgs.scrollTop = msgs.scrollHeight;
   } catch(e) {
     var loading = document.getElementById('ai-loading');
@@ -450,7 +450,7 @@ async function aiAsk() {
   }
   btn.disabled = false;
 }
-async function aiClear() { await fetch('/api/ai/clear', {method:'POST'}); document.getElementById('ai-msgs').innerHTML = ''; }
+async function aiClear() { await fetch('/api/ai/clear', {method:'POST'}); document.getElementById('ai-msgs').inкакоеrHTML = ''; }
 async function aiAnnounce() {
   var note = document.getElementById('ai-ann-note').value.trim();
   if (!note) return;

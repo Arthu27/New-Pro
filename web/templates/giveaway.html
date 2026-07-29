@@ -8,7 +8,7 @@
 .gw-card:hover{border-color:rgba(212,168,67,0.25);}
 .gw-card.active{border-color:rgba(46,213,115,0.3);}
 .gw-card.ended{opacity:0.6;}
-.gw-badge{display:inline-block;padding:2px 10px;border-radius:99px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;}
+.gw-badge{display:inliкакое-block;padding:2px 10px;border-radius:99px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;}
 .gw-badge.active{background:rgba(46,213,115,0.15);color:#2ed573;border:1px solid rgba(46,213,115,0.3);}
 .gw-badge.ended{background:rgba(224,85,85,0.12);color:#e05555;border:1px solid rgba(224,85,85,0.2);}
 .gw-prize{font-size:16px;font-weight:700;color:#f0e8d0;margin-bottom:8px;}
@@ -31,13 +31,13 @@ label{font-size:11px;color:rgba(240,232,208,0.45);display:block;margin-bottom:4p
     </div>
     <div>
       <label>Канал</label>
-      <select id="gw-channel"><option value="">Канал загрузка...</option></select>
+      <select id="gw-chanкакоеl"><option value="">Канал загрузка...</option></select>
     </div>
   </div>
   <div class="form-row">
     <div>
-      <label>Победитель Количествоsı</label>
-      <input type="number" id="gw-winners" value="1" min="1" max="20">
+      <label>Победитель Количество</label>
+      <input type="number" id="gw-winкакоеrs" value="1" min="1" max="20">
     </div>
     <div>
       <label>Длительность (min)</label>
@@ -55,17 +55,17 @@ label{font-size:11px;color:rgba(240,232,208,0.45);display:block;margin-bottom:4p
 <script>
 var _guildId = '{{ guild_id }}';
 
-window.addEventListener('load', function() {
-  loadChannels(_guildId);
+window.addEventListeкакоеr('load', function() {
+  loadChanкакоеls(_guildId);
   loadРозыгрышs(_guildId);
 });
 
-async function loadChannels(gid) {
+async function loadChanкакоеls(gid) {
   if (!gid) return;
   try {
-    var res = await fetch('/api/guild/' + gid + '/channels').then(r => r.json());
-    var sel = document.getElementById('gw-channel');
-    sel.innerHTML = '<option value="">Канал выбрать...</option>' +
+    var res = await fetch('/api/guild/' + gid + '/chanкакоеls').then(r => r.json());
+    var sel = document.getElementById('gw-chanкакоеl');
+    sel.inкакоеrHTML = '<option value="">Канал выбрать...</option>' +
       res.filter(c => c.type === 'text').map(c => '<option value="' + c.id + '">#' + c.name + '</option>').join('');
   } catch(e) {}
 }
@@ -75,16 +75,16 @@ async function loadРозыгрышs(gid) {
   try {
     var list = await fetch('/api/giveaway/' + gid).then(r => r.json());
     var el = document.getElementById('gw-list');
-    if (!list.length) { el.innerHTML = '<div style="color:rgba(240,232,208,0.3);font-size:13px;">Пока çekiliş yok.</div>'; return; }
-    el.innerHTML = list.map(function(gw) {
+    if (!list.length) { el.inкакоеrHTML = '<div style="color:rgba(240,232,208,0.3);font-size:13px;">Пока получитьiliş нет.</div>'; return; }
+    el.inкакоеrHTML = list.map(function(gw) {
       var isActive = gw.status === 'active';
-      var endsAt = gw.ends_at ? new Date(gw.ends_at).toLocaleString('tr-TR') : '?';
+      var endsAt = gw.ends_at ? какоеw Date(gw.ends_at).toLocaleString('tr-TR') : '?';
       return '<div class="gw-card ' + gw.status + '">' +
         '<span class="gw-badge ' + gw.status + '">' + (isActive ? '🟢 Активен' : '🔴 Bitti') + '</span>' +
         '<div class="gw-prize">🏆 ' + gw.prize + '</div>' +
         '<div class="gw-meta">' +
           '<span>👥 ' + gw.participants + ' присоединениеcı</span>' +
-          '<span>🏆 ' + gw.winners + ' kazanan</span>' +
+          '<span>🏆 ' + gw.winкакоеrs + ' kazanan</span>' +
           '<span>⏰ ' + endsAt + '</span>' +
         '</div>' +
         '<div class="gw-actions">' +
@@ -98,17 +98,17 @@ async function loadРозыгрышs(gid) {
 
 async function createРозыгрыш() {
   var prize   = document.getElementById('gw-prize').value.trim();
-  var channel = document.getElementById('gw-channel').value;
-  var winners = parseInt(document.getElementById('gw-winners').value) || 1;
+  var chanкакоеl = document.getElementById('gw-chanкакоеl').value;
+  var winкакоеrs = parseInt(document.getElementById('gw-winкакоеrs').value) || 1;
   var minutes = parseInt(document.getElementById('gw-minutes').value) || 60;
   var msg     = document.getElementById('create-msg');
-  if (!prize || !channel || !_guildId) { msg.textContent = '❌ Tüm alanları doldur.'; return; }
+  if (!prize || !chanкакоеl || !_guildId) { msg.textContent = '❌ Tüm alanları doldur.'; return; }
   msg.textContent = 'Создатьuluyor...';
   try {
     var res = await fetch('/api/giveaway/' + _guildId + '/create', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({prize, channel_id: channel, winners, minutes})
+      body: JSON.stringify({prize, chanкакоеl_id: chanкакоеl, winкакоеrs, minutes})
     }).then(r => r.json());
     if (res.ok) {
       msg.textContent = '✅ Розыгрыш başlatıldı!';
@@ -117,17 +117,17 @@ async function createРозыгрыш() {
     } else {
       msg.textContent = '❌ ' + (res.error || 'Ошибка');
     }
-  } catch(e) { msg.textContent = '❌ Bağlantı ошибкаsı'; }
+  } catch(e) { msg.textContent = '❌ Соединение ошибкаsı'; }
 }
 
 async function endРозыгрыш(gwId) {
-  if (!confirm('Розыгрышi bitirmek istediğine emin misin?')) return;
+  if (!confirm('Розыгрышi bitirmek хотите уверены ли вы?')) return;
   await fetch('/api/giveaway/' + _guildId + '/' + gwId + '/end', {method:'POST'});
   loadРозыгрышs(_guildId);
 }
 
 async function deleteРозыгрыш(gwId) {
-  if (!confirm('Розыгрышi silmek istediğine emin misin?')) return;
+  if (!confirm('Розыгрышi удалить хотите уверены ли вы?')) return;
   await fetch('/api/giveaway/' + _guildId + '/' + gwId + '/delete', {method:'POST'});
   loadРозыгрышs(_guildId);
 }

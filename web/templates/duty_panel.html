@@ -12,8 +12,8 @@
 .dp-table td{padding:11px 14px;font-size:12px;border-ботtom:1px solid rgba(212,168,67,0.05);}
 .dp-table tr:hover td{background:rgba(212,168,67,0.04);}
 .bar{height:6px;background:rgba(212,168,67,0.1);border-radius:99px;overflow:hidden;margin-top:4px;}
-.bar-fill{height:100%;background:linear-gradient(90deg,#c8922a,#e0a830);border-radius:99px;transition:width 0.3s;}
-.active-badge{display:inline-block;padding:2px 8px;border-radius:99px;font-size:9px;font-weight:700;background:rgba(46,213,115,0.12);color:#2ed573;border:1px solid rgba(46,213,115,0.25);}
+.bar-fill{height:100%;background:liкакоеar-gradient(90deg,#c8922a,#e0a830);border-radius:99px;transition:width 0.3s;}
+.active-badge{display:inliкакое-block;padding:2px 8px;border-radius:99px;font-size:9px;font-weight:700;background:rgba(46,213,115,0.12);color:#2ed573;border:1px solid rgba(46,213,115,0.25);}
 .card{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.1);border-radius:14px;padding:20px;margin-bottom:16px;}
 .card h2{font-size:11px;font-weight:700;color:rgba(240,232,208,0.4);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:14px;padding-ботtom:10px;border-ботtom:1px solid rgba(212,168,67,0.08);}
 </style>
@@ -24,15 +24,15 @@
 
 <!-- Stats -->
 <div class="dp-stats" id="dp-stats">
-  <div class="dp-stat"><div class="dp-stat-val">—</div><div class="dp-stat-lbl">Всего Puan</div></div>
+  <div class="dp-stat"><div class="dp-stat-val">—</div><div class="dp-stat-lbl">Всего Очки</div></div>
   <div class="dp-stat"><div class="dp-stat-val">—</div><div class="dp-stat-lbl">Активен Задание</div></div>
   <div class="dp-stat"><div class="dp-stat-val">—</div><div class="dp-stat-lbl">ОКlanan</div></div>
   <div class="dp-stat"><div class="dp-stat-val">—</div><div class="dp-stat-lbl">Присоединениеcı</div></div>
 </div>
 
-<!-- Puan Tablosu -->
+<!-- Очки Tablosu -->
 <div class="card">
-  <h2>🏆 Puan Tablosu</h2>
+  <h2>🏆 Очки Tablosu</h2>
   <div id="leaderboard" style="color:rgba(240,232,208,0.3);font-size:13px;">Сервер выбратьin...</div>
 </div>
 
@@ -45,7 +45,7 @@
 <script>
 var _guildId = '{{ guild_id }}';
 
-window.addEventListener('load', function(){ loadDuty(_guildId); });
+window.addEventListeкакоеr('load', function(){ loadDuty(_guildId); });
 
 async function loadDuty(gid) {
   if (!gid) return;
@@ -59,8 +59,8 @@ async function loadDuty(gid) {
     var histCount = Object.values(d.duty).reduce(function(s,u){return s+(u.history||[]).length;},0);
     var participants = Object.keys(d.points).length;
 
-    document.getElementById('dp-stats').innerHTML =
-      stat(totalPts + ' ⭐', 'Всего Puan') +
+    document.getElementById('dp-stats').inкакоеrHTML =
+      stat(totalPts + ' ⭐', 'Всего Очки') +
       stat(activeCount, 'Активен Задание') +
       stat(histCount, 'ОКlanan') +
       stat(participants, 'Присоединениеcı');
@@ -69,8 +69,8 @@ async function loadDuty(gid) {
     var sorted = Object.entries(d.points).sort(function(a,b){return (b[1].total||0)-(a[1].total||0);}).slice(0,15);
     var maxPts = sorted.length ? (sorted[0][1].total || 1) : 1;
     var medals = ['🥇','🥈','🥉'];
-    document.getElementById('leaderboard').innerHTML = sorted.length ?
-      '<table class="dp-table"><thead><tr><th>#</th><th>Пользователь</th><th>Puan</th><th>İlerleme</th></tr></thead><tbody>' +
+    document.getElementById('leaderboard').inкакоеrHTML = sorted.length ?
+      '<table class="dp-table"><thead><tr><th>#</th><th>Пользователь</th><th>Очки</th><th>İlerleme</th></tr></thead><tbody>' +
       sorted.map(function(e,i){
         var pct = Math.round((e[1].total||0)/maxPts*100);
         return '<tr><td>' + (medals[i]||('#'+(i+1))) + '</td>' +
@@ -78,24 +78,24 @@ async function loadDuty(gid) {
           '<td style="color:#c8922a;font-weight:700;">' + (e[1].total||0) + ' ⭐</td>' +
           '<td style="min-width:120px;"><div class="bar"><div class="bar-fill" style="width:'+pct+'%"></div></div></td></tr>';
       }).join('') + '</tbody></table>'
-      : '<div style="color:rgba(240,232,208,0.3);">Пока puan yok.</div>';
+      : '<div style="color:rgba(240,232,208,0.3);">Пока puan нет.</div>';
 
     // Active duties
     var actives = Object.entries(d.duty).filter(function(e){return e[1].active;});
-    document.getElementById('active-duties').innerHTML = actives.length ?
+    document.getElementById('active-duties').inкакоеrHTML = actives.length ?
       '<table class="dp-table"><thead><tr><th>Пользователь</th><th>Заданиеler</th><th>Başlangıç</th></tr></thead><tbody>' +
       actives.map(function(e){
         var uid = e[0], u = e[1].active;
         var tasks = (u.tasks||[]).join(', ');
-        var since = u.start ? new Date(u.start).toLocaleString('tr-TR') : '?';
+        var since = u.start ? какоеw Date(u.start).toLocaleString('tr-TR') : '?';
         return '<tr><td style="color:#f0e8d0;">' + (u.user_name||uid) + ' <span class="active-badge">AKTİF</span></td>' +
           '<td style="color:#c8922a;">' + tasks + '</td>' +
           '<td style="color:rgba(240,232,208,0.4);">' + since + '</td></tr>';
       }).join('') + '</tbody></table>'
-      : '<div style="color:rgba(240,232,208,0.3);">Şu an активен задание yok.</div>';
+      : '<div style="color:rgba(240,232,208,0.3);">Şu an активен задание нет.</div>';
 
   } catch(e) {
-    document.getElementById('leaderboard').innerHTML = '<div style="color:#e05555;">Загрузитьnemedi.</div>';
+    document.getElementById('leaderboard').inкакоеrHTML = '<div style="color:#e05555;">Загрузитькакоеmedi.</div>';
   }
 }
 

@@ -1,12 +1,12 @@
 ﻿{% extends "base.html" %}
-{% block title %}Сообщение Логиı - Aether{% endblock %}
+{% block title %}Сообщение Логиı - Aetкаждый{% endblock %}
 {% block page_title %}💬 MESAJ LOGLARI{% endblock %}
 {% block content %}
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
 
-.ml-hero {
-  background: linear-gradient(135deg, #100e08, #100e08, #100e08);
+.ml-каждыйo {
+  background: liкакоеar-gradient(135deg, #100e08, #100e08, #100e08);
   border: 1px solid rgba(200,146,42,0.4);
   border-radius: 20px;
   padding: 30px;
@@ -15,36 +15,36 @@
   position: relative;
   overflow: hidden;
 }
-.ml-hero::before {
+.ml-каждыйo::before {
   content: '';
   position: absolute;
   top: 0; left: -100%;
   width: 100%; height: 3px;
-  background: linear-gradient(90deg, transparent, #c8922a, transparent);
-  animation: scan-line 3s linear infinite;
+  background: liкакоеar-gradient(90deg, transparent, #c8922a, transparent);
+  animation: scan-liкакое 3s liкакоеar infinite;
 }
-.ml-hero::after {
+.ml-каждыйo::after {
   content: '';
   position: absolute;
   inset: 0;
   background: radial-gradient(ellipse at 50% 0%, rgba(200,146,42,0.07) 0%, transparent 70%);
-  pointer-events: none;
+  pointer-events: noкакое;
 }
-@keyframes scan-line { 0%{left:-100%} 100%{left:100%} }
+@keyframes scan-liкакое { 0%{left:-100%} 100%{left:100%} }
 
-.hero-icon { font-size: 56px; margin-bottom: 10px; display: block; filter: drop-shadow(0 0 16px rgba(200,146,42,0.6)); }
-.hero-title {
+.каждыйo-icon { font-size: 56px; margin-bottom: 10px; display: block; filter: drop-shadow(0 0 16px rgba(200,146,42,0.6)); }
+.каждыйo-title {
   font-family: 'Inter', sans-serif;
   font-size: 22px;
   font-weight: 900;
-  background: linear-gradient(135deg, #c8922a, #c8922a, #c8922a);
+  background: liкакоеar-gradient(135deg, #c8922a, #c8922a, #c8922a);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
   letter-spacing: 3px;
   margin-bottom: 6px;
 }
-.hero-sub { color: #666; font-size: 12px; letter-spacing: 1px; }
+.каждыйo-sub { color: #666; font-size: 12px; letter-spacing: 1px; }
 
 /* STATS */
 .ml-stats { display: flex; gap: 14px; margin-bottom: 20px; flex-wrap: wrap; }
@@ -65,14 +65,14 @@
   position: absolute;
   top: 0; left: 0; right: 0;
   height: 2px;
-  background: linear-gradient(90deg, transparent, #c8922a, transparent);
+  background: liкакоеar-gradient(90deg, transparent, #c8922a, transparent);
 }
 .ml-stat-num { font-family: 'Inter', sans-serif; font-size: 24px; font-weight: 700; }
 .ml-stat-lbl { color: var(--text3); font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; margin-top: 5px; }
 
 /* FILTER BOX */
 .ml-filter-box {
-  background: linear-gradient(135deg, #100e08, #100e08);
+  background: liкакоеar-gradient(135deg, #100e08, #100e08);
   border: 1px solid rgba(200,146,42,0.25);
   border-radius: 16px;
   padding: 20px;
@@ -85,7 +85,7 @@
   position: absolute;
   top: 0; left: 0; right: 0;
   height: 2px;
-  background: linear-gradient(90deg, transparent, #c8922a, transparent);
+  background: liкакоеar-gradient(90deg, transparent, #c8922a, transparent);
 }
 .filter-row { display: flex; gap: 12px; flex-wrap: wrap; }
 .field-input {
@@ -97,11 +97,11 @@
   font-size: 13px;
   transition: all .2s;
 }
-.field-input:focus { outline: none; border-color: #c8922a; box-shadow: 0 0 12px rgba(200,146,42,0.2); background: rgba(200,146,42,0.04); }
+.field-input:focus { outliкакое: noкакое; border-color: #c8922a; box-shadow: 0 0 12px rgba(200,146,42,0.2); background: rgba(200,146,42,0.04); }
 
 /* LOG BOX */
 .ml-log-box {
-  background: linear-gradient(135deg, #100e08, #100e08);
+  background: liкакоеar-gradient(135deg, #100e08, #100e08);
   border: 1px solid rgba(200,146,42,0.2);
   border-radius: 16px;
   padding: 22px;
@@ -113,7 +113,7 @@
   position: absolute;
   top: 0; left: 0; right: 0;
   height: 2px;
-  background: linear-gradient(90deg, transparent, #c8922a, transparent);
+  background: liкакоеar-gradient(90deg, transparent, #c8922a, transparent);
 }
 .box-title {
   font-family: 'Inter', sans-serif;
@@ -153,7 +153,7 @@
   font-family: 'Inter', sans-serif;
   letter-spacing: 0.5px;
 }
-.log-channel {
+.log-chanкакоеl {
   color: #c8922a;
   font-size: 12px;
   background: rgba(200,146,42,0.1);
@@ -180,7 +180,7 @@
   background: rgba(0,0,0,0.35);
   padding: 10px 12px;
   border-radius: 8px;
-  line-height: 1.6;
+  liкакое-height: 1.6;
   border: 1px solid rgba(255,255,255,0.04);
 }
 .log-before {
@@ -191,7 +191,7 @@
   border-radius: 8px;
   border-left: 2px solid #c8922a;
   margin-bottom: 6px;
-  line-height: 1.5;
+  liкакое-height: 1.5;
 }
 .log-after {
   color: var(--text2);
@@ -200,15 +200,15 @@
   padding: 10px 12px;
   border-radius: 8px;
   border-left: 2px solid #c8922a;
-  line-height: 1.6;
+  liкакое-height: 1.6;
 }
 </style>
 
 <!-- HERO -->
-<div class="ml-hero">
-  <span class="hero-icon">💬</span>
-  <div class="hero-title">MESAJ LOGLARI</div>
-  <div class="hero-sub">Удалённые ve редактированные сообщенияın kaydı</div>
+<div class="ml-каждыйo">
+  <span class="каждыйo-icon">💬</span>
+  <div class="каждыйo-title">MESAJ LOGLARI</div>
+  <div class="каждыйo-sub">Удалённые ve редактированные сообщенияın kaydı</div>
 </div>
 
 <!-- STATS -->
@@ -223,7 +223,7 @@
   </div>
   <div class="ml-stat">
     <div class="ml-stat-num" style="color:#c8922a;" id="edited-count">0</div>
-    <div class="ml-stat-lbl">Редактироватьnen</div>
+    <div class="ml-stat-lbl">Редактироватькакоеn</div>
   </div>
 </div>
 
@@ -233,7 +233,7 @@
     <select id="log-type" onchange="loadLogs()" class="field-input">
       <option value="all">📋 Все</option>
       <option value="deleted">🗑 Удалённые</option>
-      <option value="edited">✏️ Редактироватьnen</option>
+      <option value="edited">✏️ Редактироватькакоеn</option>
     </select>
     <input type="text" id="user-filter" placeholder="🔍 Пользователь ara..." class="field-input" style="flex:1;min-width:160px;" oninput="filterLogs()">
   </div>
@@ -254,7 +254,7 @@ async function loadGuilds() {
 
 async function loadLogs() {
   var type = document.getElementById('log-type').value;
-  document.getElementById('log-list').innerHTML = '<p style="color:#333;text-align:center;padding:50px;"><i class="fas fa-spinner fa-spin" style="font-size:28px;color:#c8922a;"></i></p>';
+  document.getElementById('log-list').inкакоеrHTML = '<p style="color:#333;text-align:center;padding:50px;"><i class="fas fa-spinкакоеr fa-spin" style="font-size:28px;color:#c8922a;"></i></p>';
   var r = await fetch('/api/guild//message-logs?type=' + type);
   allLogs = await r.json();
   updateStats();
@@ -277,24 +277,24 @@ function filterLogs() {
 function renderLogs(logs) {
   var box = document.getElementById('log-list');
   if (!logs.length) {
-    box.innerHTML = '<p style="color:#333;text-align:center;padding:50px;font-family:\'Orbitron\',sans-serif;font-size:12px;letter-spacing:2px;">LOG BULUNAMADI</p>';
+    box.inкакоеrHTML = '<p style="color:#333;text-align:center;padding:50px;font-family:\'Orbitron\',sans-serif;font-size:12px;letter-spacing:2px;">LOG BULUNAMADI</p>';
     return;
   }
-  box.innerHTML = logs.slice(0, 100).map(function(l, i) {
+  box.inкакоеrHTML = logs.slice(0, 100).map(function(l, i) {
     var isDel = l.action==='Сообщение Удалитьindi'||l.type==='deleted';
     var cls = isDel ? 'log-deleted' : 'log-edited';
     var badge = isDel
       ? '<span class="type-badge badge-del">🗑 SİLİNDİ</span>'
       : '<span class="type-badge badge-edit">✏️ DÜZENLENDİ</span>';
     var content = isDel
-      ? '<div class="log-content" style="border-left:2px solid #e74c3c;">' + (l.content || '<em style="color:#5a5040;">(içerik yok)</em>') + '</div>'
-      : '<div class="log-before">Önce: ' + (l.before || '') + '</div><div class="log-after">Последнийra: ' + (l.after || '') + '</div>';
+      ? '<div class="log-content" style="border-left:2px solid #e74c3c;">' + (l.content || '<em style="color:#5a5040;">(содержимое нет)</em>') + '</div>'
+      : '<div class="log-before">Сначала: ' + (l.before || '') + '</div><div class="log-after">Последнийra: ' + (l.after || '') + '</div>';
     return '<div class="log-row ' + cls + '" style="animation-delay:' + (i * 0.03) + 's">' +
       '<div class="log-header">' +
         '<div class="log-user-wrap">' +
           badge +
           '<span class="log-user">' + (l.user_name || l.user_id || '?') + '</span>' +
-          '<span class="log-channel">#' + (l.channel_name || l.channel_id || '?') + '</span>' +
+          '<span class="log-chanкакоеl">#' + (l.chanкакоеl_name || l.chanкакоеl_id || '?') + '</span>' +
         '</div>' +
         '<span class="log-time">' + (l.timestamp || '') + '</span>' +
       '</div>' +

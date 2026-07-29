@@ -1,17 +1,17 @@
 ﻿{% extends "base.html" %}
-{% block title %}Antiraid - Aether{% endblock %}
+{% block title %}Antiraid - Aetкаждый{% endblock %}
 {% block page_title %}<i class="fas fa-shield-alt" style="color:#c8922a;animation:pulse 2s infinite;"></i> ANTİRAİD KORUMASI{% endblock %}
 {% block content %}
 <style>
-  .ar-box{background:linear-gradient(135deg,rgba(26,22,16,0.7),rgba(26,22,16,0.7));border:1px solid rgba(212,168,67,0.3);border-radius:16px;padding:25px;margin-bottom:20px;position:relative;overflow:hidden;}
-  .ar-box::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:2px;background:linear-gradient(90deg,transparent,#c8922a,transparent);;}
+  .ar-box{background:liкакоеar-gradient(135deg,rgba(26,22,16,0.7),rgba(26,22,16,0.7));border:1px solid rgba(212,168,67,0.3);border-radius:16px;padding:25px;margin-bottom:20px;position:relative;overflow:hidden;}
+  .ar-box::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:2px;background:liкакоеar-gradient(90deg,transparent,#c8922a,transparent);;}
   @keyframes scan{0%{left:-100%}100%{left:100%}}
   .ar-title{color:#c8922a;font-size:13px;text-transform:uppercase;letter-spacing:2px;margin-bottom:18px;display:flex;align-items:center;gap:8px;padding-ботtom:12px;border-ботtom:1px solid rgba(200,146,42,0.2);}
   .toggle-row{display:flex;justify-content:space-between;align-items:center;padding:13px 15px;background:rgba(0,0,0,0.3);border-radius:14px;margin-bottom:8px;border:1px solid rgba(255,255,255,0.04);transition:all 0.2s;}
   .toggle-row:hover{background:rgba(212,168,67,0.07);border-color:rgba(200,146,42,0.2);}
   .toggle-label{color:#f0e8d0;font-size:14px;}
   .toggle-sub{color:rgba(240,232,208,0.55);font-size:11px;margin-top:2px;}
-  .toggle{position:relative;display:inline-block;width:48px;height:26px;}
+  .toggle{position:relative;display:inliкакое-block;width:48px;height:26px;}
   .toggle input{opacity:0;width:0;height:0;}
   .slider{position:absolute;cursor:pointer;top:0;left:0;right:0;ботtom:0;background:#222;border-radius:26px;transition:.3s;}
   .slider:before{position:absolute;content:"";height:20px;width:20px;left:3px;ботtom:3px;background:#fff;border-radius:50%;transition:.3s;}
@@ -19,21 +19,21 @@
   input:checked+.slider:before{transform:translateX(22px);}
   .field-label{color:#c8922a;font-size:11px;text-transform:uppercase;display:block;margin-bottom:6px;margin-top:14px;letter-spacing:1px;}
   .field-input{width:100%;padding:10px 14px;background:#100e08;border:1px solid rgba(212,168,67,0.25);border-radius:14px;color:#f0e8d0;box-sizing:border-box;transition:all 0.3s;font-size:14px;}
-  .field-input:focus{outline:none;border-color:#c8922a;box-shadow:0 0 0 3px rgba(212,168,67,0.1);}
-  .save-btn{width:100%;padding:12px;background:#c8922a;color:#f0e8d0;border:none;border-radius:14px;cursor:pointer;font-weight:700;margin-top:15px;font-size:14px;letter-spacing:1px;transition:all 0.3s;}
+  .field-input:focus{outliкакое:noкакое;border-color:#c8922a;box-shadow:0 0 0 3px rgba(212,168,67,0.1);}
+  .save-btn{width:100%;padding:12px;background:#c8922a;color:#f0e8d0;border:noкакое;border-radius:14px;cursor:pointer;font-weight:700;margin-top:15px;font-size:14px;letter-spacing:1px;transition:all 0.3s;}
   .save-btn:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(212,168,67,0.2);}
   .event-row{background:rgba(212,168,67,0.08);border-left:3px solid #c8922a;border-radius:0 8px 8px 0;padding:10px 14px;margin-bottom:8px;}
-  .wl-tag{display:inline-flex;align-items:center;gap:6px;background:rgba(46,204,113,0.12);border:1px solid rgba(46,204,113,0.35);border-radius:20px;padding:5px 12px;margin:3px;font-size:13px;color:#f0e8d0;}
-  .wl-tag button{background:none;border:none;color:#e05555;cursor:pointer;font-size:15px;padding:0;}
+  .wl-tag{display:inliкакое-flex;align-items:center;gap:6px;background:rgba(46,204,113,0.12);border:1px solid rgba(46,204,113,0.35);border-radius:20px;padding:5px 12px;margin:3px;font-size:13px;color:#f0e8d0;}
+  .wl-tag button{background:noкакое;border:noкакое;color:#e05555;cursor:pointer;font-size:15px;padding:0;}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
   @media(max-width:900px){.grid2{grid-template-columns:1fr;}}
   .guild-select{width:100%;padding:12px;background:#100e08;border:1px solid rgba(212,168,67,0.3);border-radius:14px;color:#f0e8d0;margin-bottom:20px;font-size:14px;}
   .wl-add-row{display:flex;gap:8px;margin-bottom:12px;}
   .wl-add-row input{flex:1;padding:10px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(94,196,122,0.25);border-radius:14px;color:#f0e8d0;font-size:14px;}
-  .wl-add-row button{padding:10px 16px;background:rgba(94,196,122,0.8);color:#f0e8d0;border:none;border-radius:14px;cursor:pointer;font-weight:700;white-space:nowrap;}
+  .wl-add-row button{padding:10px 16px;background:rgba(94,196,122,0.8);color:#f0e8d0;border:noкакое;border-radius:14px;cursor:pointer;font-weight:700;white-space:nowrap;}
 </style>
 
-<select style="display:none" id="guild-select" class="guild-select" onchange="loadAntiraid()">
+<select style="display:noкакое" id="guild-select" class="guild-select" onchange="loadAntiraid()">
   <option value="">Сервер выбрать...</option>
 </select>
 
@@ -41,28 +41,28 @@
   <div class="ar-box">
     <div class="ar-title"><i class="fas fa-shield-alt"></i> Защита Настройки</div>
     <div class="toggle-row">
-      <div><div class="toggle-label">🚪 Join Raid Защитаsı</div><div class="toggle-sub">Kısa длительностьde çok участник katılırsa kilitle</div></div>
+      <div><div class="toggle-label">🚪 Join Raid Защита</div><div class="toggle-sub">Короткая длительности много участников присоединится заблокировать</div></div>
       <label class="toggle"><input type="checkbox" id="join-raid"><span class="slider"></span></label>
     </div>
     <div class="toggle-row">
-      <div><div class="toggle-label">🤖 Бот Защитаsı</div><div class="toggle-sub">Правоsiz бот добавитьmeyi engelle</div></div>
+      <div><div class="toggle-label">🤖 Бот Защита</div><div class="toggle-sub">Правоsiz бот добавление engelle</div></div>
       <label class="toggle"><input type="checkbox" id="бот-prot"><span class="slider"></span></label>
     </div>
     <div class="toggle-row">
-      <div><div class="toggle-label">🔨 Webhook Защитаsı</div><div class="toggle-sub">Правоsiz webhook создатьmayı engelle</div></div>
+      <div><div class="toggle-label">🔨 Webhook Защита</div><div class="toggle-sub">Правоsiz webhook создание engelle</div></div>
       <label class="toggle"><input type="checkbox" id="webhook-prot"><span class="slider"></span></label>
     </div>
     <div class="toggle-row">
-      <div><div class="toggle-label">📛 Канал/Роль Удалитьme Защитаsı</div><div class="toggle-sub">Toplu silme входimini engelle</div></div>
+      <div><div class="toggle-label">📛 Канал/Роль Удалитьme Защита</div><div class="toggle-sub">Массовое silme входimini engelle</div></div>
       <label class="toggle"><input type="checkbox" id="delete-prot"><span class="slider"></span></label>
     </div>
     <div class="toggle-row">
-      <div><div class="toggle-label">👤 Hesap Yaşı Фильтрsi</div><div class="toggle-sub">Новый hesapları автоматический at</div></div>
+      <div><div class="toggle-label">👤 Аккаунт Возраст Фильтрsi</div><div class="toggle-sub">Новый hesapları автоматический at</div></div>
       <label class="toggle"><input type="checkbox" id="age-prot"><span class="slider"></span></label>
     </div>
-    <label class="field-label">Min. Hesap Yaşı (gün)</label>
+    <label class="field-label">Min. Аккаунт Возраст (дней)</label>
     <input type="number" id="min-age" value="7" min="0" max="365" class="field-input">
-    <label class="field-label">Join Eşiği (X участник/min)</label>
+    <label class="field-label">Join Порог (X участников/мин)</label>
     <input type="number" id="join-threshold" value="10" min="2" max="100" class="field-input">
     <label class="field-label">Raid Aksiyonu</label>
     <select id="raid-action" class="field-input">
@@ -76,7 +76,7 @@
 
   <div>
     <div class="ar-box">
-      <div class="ar-title"><i class="fas fa-exclamation-triangle"></i> Последний Raid Olayları</div>
+      <div class="ar-title"><i class="fas fa-exclamation-triangle"></i> Последние Raid События</div>
       <div id="raid-events"><p style="color:#5a5040;font-size:13px;font-style:italic;">Сервер выбратьin...</p></div>
     </div>
     <div class="ar-box">
@@ -111,19 +111,19 @@ async function loadAntiraid(gid_деньгиm) {
   whitelist = data.whitelist||[];
   renderWhitelist();
   var evts = data.recent_events||[];
-  document.getElementById('raid-events').innerHTML = evts.length ?
+  document.getElementById('raid-events').inкакоеrHTML = evts.length ?
     evts.map(function(e){
       return '<div class="event-row"><span style="color:#c8922a;font-weight:700;">⚠️ '+e.type+'</span>'+
         '<span style="color:rgba(240,232,208,0.55);font-size:11px;margin-left:8px;">'+e.timestamp+'</span>'+
         '<div style="color:rgba(240,232,208,0.4);font-size:12px;margin-top:4px;">'+e.description+'</div></div>';
     }).join('') :
-    '<p style="color:#5a5040;font-size:13px;font-style:italic;">Raid olayı yok.</p>';
+    '<p style="color:#5a5040;font-size:13px;font-style:italic;">Raid событие нет.</p>';
 }
 
 function renderWhitelist() {
   var box = document.getElementById('whitelist-items');
-  if(!whitelist.length) { box.innerHTML='<p style="color:#5a5040;font-size:13px;font-style:italic;">Whitelist пусто.</p>'; return; }
-  box.innerHTML = whitelist.map(function(id,i){
+  if(!whitelist.length) { box.inкакоеrHTML='<p style="color:#5a5040;font-size:13px;font-style:italic;">Whitelist пусто.</p>'; return; }
+  box.inкакоеrHTML = whitelist.map(function(id,i){
     return '<span class="wl-tag">'+id+'<button onclick="removeWhitelist('+i+')">×</button></span>';
   }).join('');
 }
@@ -155,10 +155,10 @@ async function saveAntiraid() {
   });
   var d = await r.json();
   var btn = event.target;
-  if(d.success) { btn.textContent='✅ Сохранено!'; setМут(function(){btn.innerHTML='<i class="fas fa-save"></i> Сохранить';},2000); }
+  if(d.success) { btn.textContent='✅ Сохранено!'; setМут(function(){btn.inкакоеrHTML='<i class="fas fa-save"></i> Сохранить';},2000); }
   else alert('❌ '+(d.error||'Ошибка'));
 }
 
-window.addEventListener('load', function(){ loadAntiraid(''); });
+window.addEventListeкакоеr('load', function(){ loadAntiraid(''); });
 </script>
 {% endblock %}

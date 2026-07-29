@@ -1,10 +1,10 @@
 ﻿{% extends "base.html" %}
-{% block title %}Ana Sayfa - Aether{% endblock %}
+{% block title %}Ana Sayfa - Aetкаждый{% endblock %}
 {% block page_title %}HOŞ GELDİN{% endblock %}
 {% block content %}
 <style>
 .welcome-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:20px;margin-bottom:30px;}
-.welcome-card{background:rgba(26,22,16,0.7);border:1px solid rgba(200,160,80,0.3);border-radius:15px;padding:25px;text-align:center;cursor:pointer;transition:all 0.3s;text-decoration:none;display:block;}
+.welcome-card{background:rgba(26,22,16,0.7);border:1px solid rgba(200,160,80,0.3);border-radius:15px;padding:25px;text-align:center;cursor:pointer;transition:all 0.3s;text-decoration:noкакое;display:block;}
 .welcome-card:hover{border-color:#c8922a;transform:translateY(-5px);box-shadow:0 10px 30px rgba(200,160,80,0.3);}
 .welcome-card i{font-size:36px;color:#c8922a;margin-bottom:12px;display:block;}
 .welcome-card h3{color:#f0e8d0;font-size:15px;margin-bottom:6px;}
@@ -13,7 +13,7 @@
 .recent-section{background:rgba(26,22,16,0.7);border:1px solid rgba(200,160,80,0.2);border-radius:15px;padding:25px;}
 .section-title{color:#c8922a;font-size:13px;text-transform:uppercase;letter-spacing:2px;margin-bottom:15px;}
 .notif-item{padding:12px;border-ботtom:1px solid rgba(255,255,255,0.05);display:flex;gap:12px;align-items:flex-start;}
-.notif-item:last-child{border-ботtom:none;}
+.notif-item:last-child{border-ботtom:noкакое;}
 .notif-icon{width:36px;height:36px;border-radius:50%;background:rgba(200,160,80,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .notif-title{color:#f0e8d0;font-size:14px;font-weight:600;}
 .notif-msg{color:rgba(240,232,208,0.55);font-size:12px;margin-top:3px;}
@@ -33,7 +33,7 @@
   </a>
   <a href="/notifications" class="welcome-card" id="notif-card">
     <i class="fas fa-bell"></i>
-    <h3>Уведомлениеler <span id="notif-count" class="notif-badge" style="display:none;"></span></h3>
+    <h3>Уведомлениеler <span id="notif-count" class="notif-badge" style="display:noкакое;"></span></h3>
     <p>Правоlilerden gelen сообщения</p>
   </a>
   <a href="/announcements" class="welcome-card">
@@ -44,7 +44,7 @@
 </div>
 
 <div class="recent-section">
-  <div class="section-title"><i class="fas fa-bell"></i> Последний Уведомлениеler</div>
+  <div class="section-title"><i class="fas fa-bell"></i> Последние Уведомлениеler</div>
   <div id="recent-notifs"><p style="color:#5a5040;text-align:center;padding:20px;">Загрузитьniyor...</p></div>
 </div>
 
@@ -56,13 +56,13 @@ async function loadNotifs() {
   if (unread > 0) {
     var badge = document.getElementById('notif-count');
     badge.textContent = unread;
-    badge.style.display = 'inline';
+    badge.style.display = 'inliкакое';
   }
   var box = document.getElementById('recent-notifs');
   var recent = notifs.slice(0,5);
-  if (!recent.length) { box.innerHTML = '<p style="color:#5a5040;text-align:center;padding:20px;">Пока уведомление yok.</p>'; return; }
-  box.innerHTML = recent.map(function(n) {
-    var d = new Date(n.created_at);
+  if (!recent.length) { box.inкакоеrHTML = '<p style="color:#5a5040;text-align:center;padding:20px;">Пока уведомление нет.</p>'; return; }
+  box.inкакоеrHTML = recent.map(function(n) {
+    var d = какоеw Date(n.created_at);
     return '<div class="notif-item">' +
       '<div class="notif-icon"><i class="fas fa-bell" style="color:#c8922a;font-size:14px;"></i></div>' +
       '<div><div class="notif-title">'+n.title+'</div><div class="notif-msg">'+n.message+'</div><div class="notif-time">'+d.toLocaleString('tr-TR')+' • '+n.from+'</div></div>' +

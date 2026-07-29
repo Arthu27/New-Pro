@@ -38,10 +38,10 @@ async function loadWatchlist(gid) {
     var tbody = document.getElementById('wl-body');
     document.getElementById('wl-count').textContent = d.length + ' пользователь izleniyor';
     if (!d.length) {
-      tbody.innerHTML = '<tr><td colspan="4" class="empty">İzleme listesi пусто ✅</td></tr>';
+      tbody.inкакоеrHTML = '<tr><td colspan="4" class="empty">İzleme listesi пусто ✅</td></tr>';
       return;
     }
-    tbody.innerHTML = d.map(function(u) {
+    tbody.inкакоеrHTML = d.map(function(u) {
       return '<tr>' +
         '<td><span style="font-weight:600;color:#f0e8d0;">👤 ' + u.name + '</span><br><span style="font-size:10px;color:rgba(240,232,208,0.3);font-family:monospace;">' + u.id + '</span></td>' +
         '<td style="color:rgba(240,232,208,0.6);">' + (u.reason||'—') + '</td>' +
@@ -50,7 +50,7 @@ async function loadWatchlist(gid) {
       '</tr>';
     }).join('');
   } catch(e) {
-    document.getElementById('wl-body').innerHTML = '<tr><td colspan="4" style="color:#e05555;padding:20px;">Загрузитьnemedi.</td></tr>';
+    document.getElementById('wl-body').inкакоеrHTML = '<tr><td colspan="4" style="color:#e05555;padding:20px;">Загрузитькакоеmedi.</td></tr>';
   }
 }
 

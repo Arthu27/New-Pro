@@ -1,5 +1,5 @@
 ﻿{% extends "base.html" %}
-{% block title %}Приветствие Editörü - Aether{% endblock %}
+{% block title %}Приветствие Editörü - Aetкаждый{% endblock %}
 {% block page_title %}Приветствие / Güle Güle{% endblock %}
 {% block content %}
 <style>
@@ -11,28 +11,28 @@
   .form-group{margin-bottom:13px;}
   .form-group label{display:block;color:rgba(240,232,208,0.4);font-size:10px;text-transform:uppercase;letter-spacing:0.08em;font-weight:700;margin-bottom:6px;}
   .form-group input,.form-group textarea,.form-group select{width:100%;padding:10px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(212,168,67,0.12);border-radius:8px;color:#f0e8d0;font-size:13px;box-sizing:border-box;font-family:Inter,sans-serif;transition:border-color 0.15s;margin:0;}
-  .form-group input:focus,.form-group textarea:focus,.form-group select:focus{outline:none;border-color:rgba(212,168,67,0.45);}
+  .form-group input:focus,.form-group textarea:focus,.form-group select:focus{outliкакое:noкакое;border-color:rgba(212,168,67,0.45);}
   .form-group textarea{min-height:72px;resize:vertical;}
   .preview-box{background:#2f3136;border-radius:10px;padding:14px;margin-top:12px;}
   .preview-embed{border-radius:0 6px 6px 0;padding:12px;}
   .preview-title{color:#f0e8d0;font-weight:700;margin-bottom:4px;font-size:14px;}
-  .preview-desc{color:#dcddde;font-size:12px;line-height:1.5;}
-  .save-btn{width:100%;padding:11px;background:#c8922a;color:#100e08;border:none;border-radius:99px;cursor:pointer;font-weight:700;margin-top:14px;font-size:13px;font-family:Inter,sans-serif;transition:background 0.15s;}
+  .preview-desc{color:#dcddde;font-size:12px;liкакое-height:1.5;}
+  .save-btn{width:100%;padding:11px;background:#c8922a;color:#100e08;border:noкакое;border-radius:99px;cursor:pointer;font-weight:700;margin-top:14px;font-size:13px;font-family:Inter,sans-serif;transition:background 0.15s;}
   .save-btn:hover{background:#e0a830;}
   .vars-box{background:rgba(212,168,67,0.06);border:1px solid rgba(212,168,67,0.12);border-radius:10px;padding:12px;margin-bottom:16px;font-size:12px;color:rgba(240,232,208,0.5);}
-  .vars-box span{color:#c8922a;font-family:monospace;background:rgba(212,168,67,0.08);padding:2px 6px;border-radius:4px;margin:2px;display:inline-block;}
+  .vars-box span{color:#c8922a;font-family:monospace;background:rgba(212,168,67,0.08);padding:2px 6px;border-radius:4px;margin:2px;display:inliкакое-block;}
 </style>
 
 <div class="vars-box">
   <i class="fas fa-code" style="color:#c8922a;margin-right:6px;"></i>
   Kullanılabilir değişkenler:
-  <span>{user}</span> <span>{server}</span> <span>{count}</span> <span>{mention}</span>
+  <span>{user}</span> <span>{server}</span> <span>{count}</span> <span>{упоминание}</span>
 </div>
 
 <div class="editor-grid">
   <div class="editor-box">
     <div class="section-title"><i class="fas fa-door-open"></i> Приветствие Сообщение</div>
-    <div class="form-group"><label>Канал</label><select id="welcome-channel"><option value="">Канал выбрать...</option></select></div>
+    <div class="form-group"><label>Канал</label><select id="welcome-chanкакоеl"><option value="">Канал выбрать...</option></select></div>
     <div class="form-group"><label>Заголовок</label><input type="text" id="welcome-title" placeholder="Hoş Geldin, {user}!"></div>
     <div class="form-group"><label>Сообщение</label><textarea id="welcome-msg" placeholder="{server} серверsuna hoş geldin!"></textarea></div>
     <div class="form-group"><label>Встраивание Rengi</label><input type="color" id="welcome-color" value="#c8922a" style="height:40px;cursor:pointer;background:rgba(255,255,255,0.04);border:1px solid rgba(212,168,67,0.2);border-radius:8px;padding:3px;"></div>
@@ -40,7 +40,7 @@
       <div style="font-size:10px;color:rgba(240,232,208,0.35);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.08em;">Предпросмотр</div>
       <div class="preview-embed" id="welcome-preview" style="border-left:3px solid #c8922a;">
         <div class="preview-title">Hoş Geldin!</div>
-        <div class="preview-desc">Предпросмотр burada görünecek...</div>
+        <div class="preview-desc">Предпросмотр burada görüкакоеcek...</div>
       </div>
     </div>
     <button class="save-btn" onclick="saveWelcome()"><i class="fas fa-save" style="margin-right:6px;"></i>Сохранить</button>
@@ -48,7 +48,7 @@
 
   <div class="editor-box" style="border-color:rgba(224,85,85,0.15);">
     <div class="section-title" style="border-color:rgba(224,85,85,0.1);"><i class="fas fa-door-closed" style="color:#e05555;"></i> Güle Güle Сообщение</div>
-    <div class="form-group"><label>Канал</label><select id="leave-channel"><option value="">Канал выбрать...</option></select></div>
+    <div class="form-group"><label>Канал</label><select id="leave-chanкакоеl"><option value="">Канал выбрать...</option></select></div>
     <div class="form-group"><label>Заголовок</label><input type="text" id="leave-title" placeholder="Güle Güle, {user}!"></div>
     <div class="form-group"><label>Сообщение</label><textarea id="leave-msg" placeholder="{user} серверdan ayrıldı."></textarea></div>
     <div class="form-group"><label>Встраивание Rengi</label><input type="color" id="leave-color" value="#e05555" style="height:40px;cursor:pointer;background:rgba(255,255,255,0.04);border:1px solid rgba(212,168,67,0.2);border-radius:8px;padding:3px;"></div>
@@ -56,7 +56,7 @@
       <div style="font-size:10px;color:rgba(240,232,208,0.35);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.08em;">Предпросмотр</div>
       <div class="preview-embed" id="leave-preview" style="border-left:3px solid #e05555;">
         <div class="preview-title">Güle Güle!</div>
-        <div class="preview-desc">Предпросмотр burada görünecek...</div>
+        <div class="preview-desc">Предпросмотр burada görüкакоеcek...</div>
       </div>
     </div>
     <button class="save-btn" onclick="saveLeave()" style="background:rgba(224,85,85,0.15);color:#e05555;"><i class="fas fa-save" style="margin-right:6px;"></i>Сохранить</button>
@@ -70,35 +70,35 @@ async function loadSettings() {
   try {
     console.log('Loading settings for guild:', selectedGuild);
     
-    // Каналları yükle
-    var r = await fetch('/api/guild/' + selectedGuild + '/channels');
+    // Каналları загрузить
+    var r = await fetch('/api/guild/' + selectedGuild + '/chanкакоеls');
     if (!r.ok) {
-      console.error('Channels API error:', r.status, r.statusText);
-      alert('Канал listesi yüklenemedi. Lütfen sayfayı обновитьyin.');
+      console.error('Chanкакоеls API error:', r.status, r.statusText);
+      alert('Канал listesi загрузитькакоеmedi. Lütfen sayfayı обновитьyin.');
       return;
     }
     
     var chData = await r.json();
-    console.log('Channels data:', chData);
+    console.log('Chanкакоеls data:', chData);
     
     // API'den gelen veri formatını kontроль et
-    var channels = [];
+    var chanкакоеls = [];
     if (Array.isArray(chData)) {
-      channels = chData.filter(function(c) { return c.type === 'text'; });
-    } else if (chData.channels && Array.isArray(chData.channels)) {
-      channels = chData.channels.filter(function(c) { return c.type === 'text'; });
+      chanкакоеls = chData.filter(function(c) { return c.type === 'text'; });
+    } else if (chData.chanкакоеls && Array.isArray(chData.chanкакоеls)) {
+      chanкакоеls = chData.chanкакоеls.filter(function(c) { return c.type === 'text'; });
     } else if (chData.error) {
-      console.error('Channels API returned error:', chData.error);
+      console.error('Chanкакоеls API returкакоеd error:', chData.error);
       alert('Канал listesi alınamadı: ' + chData.error);
       return;
     }
     
-    console.log('Filtered text channels:', channels);
+    console.log('Filtered text chanкакоеls:', chanкакоеls);
 
-    ['welcome-channel','leave-channel'].forEach(function(id) {
+    ['welcome-chanкакоеl','leave-chanкакоеl'].forEach(function(id) {
       var sel = document.getElementById(id);
-      sel.innerHTML = '<option value="">Канал выбрать...</option>';
-      channels.forEach(function(c) {
+      sel.inкакоеrHTML = '<option value="">Канал выбрать...</option>';
+      chanкакоеls.forEach(function(c) {
         var o = document.createElement('option');
         o.value = c.id; 
         o.textContent = '#' + c.name;
@@ -106,20 +106,20 @@ async function loadSettings() {
       });
     });
 
-    // Mevcut настройки yükle
+    // Текущие настройки загрузить
     var s = await fetch('/api/guild/' + selectedGuild + '/welcome-settings');
     if (s.ok) {
       var d = await s.json();
       console.log('Welcome settings:', d);
       
       if (d.welcome) {
-        document.getElementById('welcome-channel').value = d.welcome.channel_id || '';
+        document.getElementById('welcome-chanкакоеl').value = d.welcome.chanкакоеl_id || '';
         document.getElementById('welcome-title').value = d.welcome.title || '';
         document.getElementById('welcome-msg').value = d.welcome.message || '';
         document.getElementById('welcome-color').value = d.welcome.color || '#c8922a';
       }
       if (d.leave) {
-        document.getElementById('leave-channel').value = d.leave.channel_id || '';
+        document.getElementById('leave-chanкакоеl').value = d.leave.chanкакоеl_id || '';
         document.getElementById('leave-title').value = d.leave.title || '';
         document.getElementById('leave-msg').value = d.leave.message || '';
         document.getElementById('leave-color').value = d.leave.color || '#e05555';
@@ -129,29 +129,29 @@ async function loadSettings() {
     }
   } catch(e) { 
     console.error('loadSettings ошибкаsı:', e); 
-    alert('Настройки yüklenirken ошибка oluştu: ' + e.message);
+    alert('Настройки загрузитьnirken ошибка oluştu: ' + e.message);
   }
   updatePreviews();
 }
 
 function updatePreviews() {
   var wt = document.getElementById('welcome-title').value || 'Hoş Geldin!';
-  var wm = document.getElementById('welcome-msg').value || 'Предпросмотр burada görünecek...';
+  var wm = document.getElementById('welcome-msg').value || 'Предпросмотр burada görüкакоеcek...';
   var wc = document.getElementById('welcome-color').value;
   document.getElementById('welcome-preview').style.borderLeftColor = wc;
-  document.getElementById('welcome-preview').innerHTML = '<div class="preview-title">'+wt+'</div><div class="preview-desc">'+wm+'</div>';
+  document.getElementById('welcome-preview').inкакоеrHTML = '<div class="preview-title">'+wt+'</div><div class="preview-desc">'+wm+'</div>';
   
   var lt = document.getElementById('leave-title').value || 'Güle Güle!';
-  var lm = document.getElementById('leave-msg').value || 'Предпросмотр burada görünecek...';
+  var lm = document.getElementById('leave-msg').value || 'Предпросмотр burada görüкакоеcek...';
   var lc = document.getElementById('leave-color').value;
   document.getElementById('leave-preview').style.borderLeftColor = lc;
-  document.getElementById('leave-preview').innerHTML = '<div class="preview-title">'+lt+'</div><div class="preview-desc">'+lm+'</div>';
+  document.getElementById('leave-preview').inкакоеrHTML = '<div class="preview-title">'+lt+'</div><div class="preview-desc">'+lm+'</div>';
 }
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListeкакоеr('DOMContentLoaded', function() {
   ['welcome-title','welcome-msg','welcome-color','leave-title','leave-msg','leave-color'].forEach(function(id) {
     var el = document.getElementById(id);
-    if (el) el.addEventListener('input', updatePreviews);
+    if (el) el.addEventListeкакоеr('input', updatePreviews);
   });
   loadSettings();
 });
@@ -168,7 +168,7 @@ async function saveWelcome() {
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
         type:'welcome', 
-        channel_id:document.getElementById('welcome-channel').value,
+        chanкакоеl_id:document.getElementById('welcome-chanкакоеl').value,
         title:document.getElementById('welcome-title').value, 
         message:document.getElementById('welcome-msg').value,
         color:document.getElementById('welcome-color').value
@@ -181,7 +181,7 @@ async function saveWelcome() {
     if (d.success) { 
       btn.textContent='✅ Сохранено!'; 
       setМут(function(){
-        btn.innerHTML='<i class="fas fa-save" style="margin-right:6px;"></i>Сохранить';
+        btn.inкакоеrHTML='<i class="fas fa-save" style="margin-right:6px;"></i>Сохранить';
       }, 2000); 
     } else {
       alert('❌ '+(d.error||'Ошибка'));
@@ -204,7 +204,7 @@ async function saveLeave() {
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
         type:'leave', 
-        channel_id:document.getElementById('leave-channel').value,
+        chanкакоеl_id:document.getElementById('leave-chanкакоеl').value,
         title:document.getElementById('leave-title').value, 
         message:document.getElementById('leave-msg').value,
         color:document.getElementById('leave-color').value
@@ -217,7 +217,7 @@ async function saveLeave() {
     if (d.success) { 
       btn.textContent='✅ Сохранено!'; 
       setМут(function(){
-        btn.innerHTML='<i class="fas fa-save" style="margin-right:6px;"></i>Сохранить';
+        btn.inкакоеrHTML='<i class="fas fa-save" style="margin-right:6px;"></i>Сохранить';
       }, 2000); 
     } else {
       alert('❌ '+(d.error||'Ошибка'));

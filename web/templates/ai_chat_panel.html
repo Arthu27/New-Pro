@@ -1,5 +1,5 @@
 ﻿{% extends "base.html" %}
-{% block title %}AI Sohbet - Aether{% endblock %}
+{% block title %}AI Чат - Aetкаждый{% endblock %}
 {% block page_title %}🤖 AI SOHBET{% endblock %}
 {% block content %}
 <style>
@@ -12,7 +12,7 @@
   font-size:14px;flex-shrink:0;border:1px solid rgba(212,168,67,0.2);}
 .msg.бот .msg-avatar{background:rgba(200,146,42,0.15);color:#c8922a;}
 .msg.user .msg-avatar{background:rgba(88,101,242,0.2);color:#7289da;}
-.msg-bubble{max-width:72%;padding:12px 16px;border-radius:16px;font-size:13.5px;line-height:1.6;word-break:break-word;}
+.msg-bubble{max-width:72%;padding:12px 16px;border-radius:16px;font-size:13.5px;liкакое-height:1.6;word-break:break-word;}
 .msg.бот .msg-bubble{background:rgba(26,22,16,0.9);border:1px solid rgba(212,168,67,0.12);color:#f0e8d0;border-radius:4px 16px 16px 16px;}
 .msg.user .msg-bubble{background:rgba(88,101,242,0.2);border:1px solid rgba(88,101,242,0.25);color:#f0e8d0;border-radius:16px 4px 16px 16px;}
 .msg-time{font-size:10px;color:rgba(240,232,208,0.3);margin-top:4px;}
@@ -24,16 +24,16 @@
 @keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-8px)}}
 @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 .chat-input-wrap{display:flex;gap:10px;padding:14px;
-  background:rgba(20,16,8,0.9);border:1px solid rgba(212,168,67,0.15);border-top:none;border-radius:0 0 18px 18px;}
+  background:rgba(20,16,8,0.9);border:1px solid rgba(212,168,67,0.15);border-top:noкакое;border-radius:0 0 18px 18px;}
 .chat-input{flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(212,168,67,0.15);
   border-radius:12px;padding:11px 16px;color:#f0e8d0;font-size:13.5px;font-family:Inter,sans-serif;
-  resize:none;outline:none;transition:border-color .15s;max-height:120px;}
+  resize:noкакое;outliкакое:noкакое;transition:border-color .15s;max-height:120px;}
 .chat-input:focus{border-color:rgba(212,168,67,0.4);}
 .chat-input::placeholder{color:rgba(240,232,208,0.3);}
-.send-btn{padding:11px 20px;background:#c8922a;color:#100e08;border:none;border-radius:12px;
+.send-btn{padding:11px 20px;background:#c8922a;color:#100e08;border:noкакое;border-radius:12px;
   cursor:pointer;font-weight:700;font-size:13px;font-family:Inter,sans-serif;transition:all .15s;flex-shrink:0;}
 .send-btn:hover{background:#e0a830;transform:translateY(-1px);}
-.send-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+.send-btn:disabled{opacity:.5;cursor:not-allowed;transform:noкакое;}
 .clear-btn{padding:11px 14px;background:rgba(255,255,255,0.05);color:rgba(240,232,208,0.5);
   border:1px solid rgba(212,168,67,0.1);border-radius:12px;cursor:pointer;font-size:12px;
   font-family:Inter,sans-serif;transition:all .15s;flex-shrink:0;}
@@ -44,27 +44,27 @@
   border:1px solid rgba(212,168,67,0.1);border-radius:99px;padding:3px 10px;}
 .welcome-msg{text-align:center;padding:40px 20px;color:rgba(240,232,208,0.4);}
 .welcome-msg i{font-size:40px;color:rgba(200,146,42,0.3);margin-bottom:12px;display:block;}
-.welcome-msg p{font-size:13px;line-height:1.7;}
+.welcome-msg p{font-size:13px;liкакое-height:1.7;}
 </style>
 
 <div class="chat-wrap">
   <div class="chat-header">
-    <h2>🤖 Aether AI</h2>
+    <h2>🤖 Aetкаждый AI</h2>
     <span class="model-badge" id="model-badge">Mistral</span>
   </div>
 
   <div class="chat-box" id="chat-box">
     <div class="welcome-msg">
       <i class="fas fa-robot"></i>
-      <p>Merhaba <strong>{{ username }}</strong>! Ben Aether AI.<br>
-      Сервер hakkında soru sorabilir, sohbet edebilirsin.</p>
+      <p>Merhaba <strong>{{ username }}</strong>! Ben Aetкаждый AI.<br>
+      Сервер о вопрос можете задать, чат можете общаться.</p>
     </div>
   </div>
 
   <div class="chat-input-wrap">
-    <textarea class="chat-input" id="chat-input" placeholder="Bir şeyler yaz..." rows="1"></textarea>
+    <textarea class="chat-input" id="chat-input" placeholder=" что-нибудь напишите..." rows="1"></textarea>
     <button class="clear-btn" onclick="clearChat()" title="Sohbeti очистить"><i class="fas fa-trash"></i></button>
-    <button class="send-btn" id="send-btn" onclick="sendMessage()"><i class="fas fa-paper-plane"></i></button>
+    <button class="send-btn" id="send-btn" onclick="sendMessage()"><i class="fas fa-paper-plaкакое"></i></button>
   </div>
 </div>
 
@@ -75,18 +75,18 @@ const sendBtn = document.getElementById('send-btn');
 let isTyping = false;
 
 function getTime() {
-  return new Date().toLocaleTimeString('tr-TR', {hour:'2-digit',minute:'2-digit'});
+  return какоеw Date().toLocaleTimeString('tr-TR', {hour:'2-digit',minute:'2-digit'});
 }
 
 function addMsg(text, type, model) {
-  // Приветствие сообщениеı убрать
+  // Приветствие сообщение убрать
   const welcome = chatBox.querySelector('.welcome-msg');
   if (welcome) welcome.remove();
 
   const div = document.createElement('div');
   div.className = `msg ${type}`;
   const icon = type === 'bot' ? 'fa-robot' : 'fa-user';
-  div.innerHTML = `
+  div.inкакоеrHTML = `
     <div class="msg-avatar"><i class="fas ${icon}"></i></div>
     <div>
       <div class="msg-bubble">${text.replace(/\n/g,'<br>')}</div>
@@ -100,7 +100,7 @@ function showTyping() {
   const div = document.createElement('div');
   div.className = 'msg bot';
   div.id = 'typing-indicator';
-  div.innerHTML = `
+  div.inкакоеrHTML = `
     <div class="msg-avatar"><i class="fas fa-robot"></i></div>
     <div class="typing"><span></span><span></span><span></span></div>`;
   chatBox.appendChild(div);
@@ -139,7 +139,7 @@ async function sendMessage() {
     }
   } catch(e) {
     removeTyping();
-    addMsg('❌ Bağlantı ошибкаsı.', 'bot');
+    addMsg('❌ Соединение ошибкаsı.', 'bot');
   }
 
   isTyping = false;
@@ -149,22 +149,22 @@ async function sendMessage() {
 
 async function clearChat() {
   await fetch('/api/ai-chat/clear', {method:'POST'});
-  chatBox.innerHTML = `<div class="welcome-msg">
+  chatBox.inкакоеrHTML = `<div class="welcome-msg">
     <i class="fas fa-robot"></i>
-    <p>Sohbet очищена. Новый bir konuşma başlat можешь.</p>
+    <p>Чат очищена. Новый  разговор начать можете.</p>
   </div>`;
 }
 
-// Enter ile отправить (Shift+Enter yeni satır)
-input.addEventListener('keydown', e => {
+// Enter с помощью отправить (Shift+Enter новый строка)
+input.addEventListeкакоеr('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault();
     sendMessage();
   }
 });
 
-// Textarea автоматический büyüme
-input.addEventListener('input', () => {
+// Textarea автоматический рост
+input.addEventListeкакоеr('input', () => {
   input.style.height = 'auto';
   input.style.height = Math.min(input.scrollHeight, 120) + 'px';
 });

@@ -1,5 +1,5 @@
 ﻿{% extends "base.html" %}
-{% block title %}Команда Rehberi — Aether{% endblock %}
+{% block title %}Команда Rehberi — Aetкаждый{% endblock %}
 {% block page_title %}{% endblock %}
 {% block content %}
 <style>
@@ -14,7 +14,7 @@
   --glass:rgba(10,8,4,0.75);
   --border-base:rgba(212,168,67,0.1);
 }
-.yr-orb{position:fixed;border-radius:50%;pointer-events:none;z-index:0;filter:blur(100px);opacity:0.07;}
+.yr-orb{position:fixed;border-radius:50%;pointer-events:noкакое;z-index:0;filter:blur(100px);opacity:0.07;}
 .yr-orb-1{width:500px;height:500px;background:#ff4757;top:-150px;right:-100px;animation:orbFloat 8s ease-in-out infinite;}
 .yr-orb-2{width:400px;height:400px;background:#5352ed;ботtom:-100px;left:-80px;animation:orbFloat 10s ease-in-out infinite reverse;}
 .yr-orb-3{width:300px;height:300px;background:#2ed573;top:40%;left:40%;animation:orbFloat 12s ease-in-out infinite 2s;}
@@ -23,27 +23,27 @@
   33%{transform:translate(30px,-20px) scale(1.05);}
   66%{transform:translate(-20px,30px) scale(0.95);}
 }
-.yr-hero{text-align:center;padding:32px 20px 28px;position:relative;z-index:1;}
+.yr-каждыйo{text-align:center;padding:32px 20px 28px;position:relative;z-index:1;}
 .yr-badge{
-  display:inline-flex;align-items:center;gap:8px;
+  display:inliкакое-flex;align-items:center;gap:8px;
   background:rgba(212,168,67,0.08);border:1px solid rgba(212,168,67,0.2);
   border-radius:99px;padding:5px 16px;font-size:11px;font-weight:700;
   color:#c8922a;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:18px;
 }
 .yr-badge::before{
   content:'';width:6px;height:6px;border-radius:50%;
-  background:#c8922a;animation:blink 1.5s ease-in-out infinite;
+  background:#c8922a;animation:bссылки 1.5s ease-in-out infinite;
 }
-@keyframes blink{0%,100%{opacity:1;box-shadow:0 0 6px #c8922a;}50%{opacity:0.3;box-shadow:none;}}
-.yr-hero h1{
+@keyframes bссылки{0%,100%{opacity:1;box-shadow:0 0 6px #c8922a;}50%{opacity:0.3;box-shadow:noкакое;}}
+.yr-каждыйo h1{
   font-size:clamp(28px,4vw,48px);font-weight:900;letter-spacing:-0.04em;
-  line-height:1;margin-bottom:10px;
-  background:linear-gradient(135deg,#f0e8d0 0%,#c8922a 40%,#f0e8d0 70%,#e0a830 100%);
+  liкакое-height:1;margin-bottom:10px;
+  background:liкакоеar-gradient(135deg,#f0e8d0 0%,#c8922a 40%,#f0e8d0 70%,#e0a830 100%);
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;
   background-clip:text;background-size:200% 200%;animation:shimmer 4s ease-in-out infinite;
 }
 @keyframes shimmer{0%,100%{background-position:0% 50%;}50%{background-position:100% 50%;}}
-.yr-hero-sub{font-size:13px;color:rgba(240,232,208,0.35);margin-bottom:24px;}
+.yr-каждыйo-sub{font-size:13px;color:rgba(240,232,208,0.35);margin-bottom:24px;}
 </style>
 
 <style>
@@ -56,7 +56,7 @@
 }
 .yr-stat:hover{transform:translateY(-2px);}
 .yr-stat-icon{font-size:18px;}
-.yr-stat-val{font-size:20px;font-weight:800;color:#f0e8d0;letter-spacing:-0.03em;line-height:1;}
+.yr-stat-val{font-size:20px;font-weight:800;color:#f0e8d0;letter-spacing:-0.03em;liкакое-height:1;}
 .yr-stat-lbl{font-size:10px;color:rgba(240,232,208,0.35);text-transform:uppercase;letter-spacing:0.08em;margin-top:2px;}
 .yr-stat.s-gold{border-color:rgba(255,215,0,0.2);}
 .yr-stat.s-gold:hover{border-color:var(--gold);box-shadow:0 0 20px var(--gold2);}
@@ -68,14 +68,14 @@
 .yr-stat.s-red:hover{border-color:var(--r);box-shadow:0 0 20px var(--r2);}
 .yr-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:24px;position:relative;z-index:1;}
 .yr-search-wrap{position:relative;flex:1;min-width:220px;}
-.yr-search-wrap i{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:rgba(212,168,67,0.4);font-size:12px;pointer-events:none;}
+.yr-search-wrap i{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:rgba(212,168,67,0.4);font-size:12px;pointer-events:noкакое;}
 .yr-search{
   width:100%;padding:11px 14px 11px 38px;
   background:var(--glass);border:1px solid var(--border-base);
   border-radius:12px;color:#f0e8d0;font-size:13px;font-family:Inter,sans-serif;
   backdrop-filter:blur(20px);transition:border-color 0.2s,box-shadow 0.2s;margin:0;
 }
-.yr-search:focus{outline:none;border-color:rgba(212,168,67,0.45);box-shadow:0 0 0 3px rgba(212,168,67,0.08);}
+.yr-search:focus{outliкакое:noкакое;border-color:rgba(212,168,67,0.45);box-shadow:0 0 0 3px rgba(212,168,67,0.08);}
 .yr-search::placeholder{color:rgba(240,232,208,0.2);}
 .yr-tabs{display:flex;gap:6px;flex-wrap:wrap;}
 .yr-tab{
@@ -98,7 +98,7 @@
 .yr-section{position:relative;z-index:1;margin-bottom:28px;}
 .yr-section-hdr{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
 .yr-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.14em;white-space:nowrap;}
-.yr-section-line{flex:1;height:1px;}
+.yr-section-liкакое{flex:1;height:1px;}
 .yr-section-count{font-size:10px;color:rgba(240,232,208,0.3);border:1px solid rgba(212,168,67,0.1);border-radius:99px;padding:2px 8px;background:rgba(212,168,67,0.05);}
 .yr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;}
 .yr-card{
@@ -108,7 +108,7 @@
 }
 .yr-card::after{
   content:'';position:absolute;top:0;left:-100%;width:60%;height:100%;
-  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.03),transparent);
+  background:liкакоеar-gradient(90deg,transparent,rgba(255,255,255,0.03),transparent);
   transition:left 0.5s;
 }
 .yr-card:hover::after{left:150%;}
@@ -121,7 +121,7 @@
 .yr-card[data-c="gold"]:hover{border-color:var(--gold);box-shadow:0 0 20px var(--gold2),0 4px 20px rgba(0,0,0,0.4);}
 .yr-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px;}
 .yr-cmd-name{font-size:13px;font-weight:700;font-family:'Courier New',monospace;letter-spacing:0.02em;}
-.yr-cmd-desc{font-size:11px;color:rgba(240,232,208,0.5);line-height:1.5;}
+.yr-cmd-desc{font-size:11px;color:rgba(240,232,208,0.5);liкакое-height:1.5;}
 .yr-cmd-usage{font-size:10px;color:rgba(240,232,208,0.22);margin-top:4px;font-family:'Courier New',monospace;}
 .pb{font-size:9px;font-weight:700;padding:2px 7px;border-radius:99px;text-transform:uppercase;letter-spacing:0.08em;white-space:nowrap;flex-shrink:0;}
 .pb-all{background:rgba(46,213,115,0.1);color:var(--g);border:1px solid rgba(46,213,115,0.25);}
@@ -139,10 +139,10 @@
 <div class="yr-orb yr-orb-3"></div>
 
 <!-- Hero -->
-<div class="yr-hero">
-  <div class="yr-badge">Aether Бот</div>
+<div class="yr-каждыйo">
+  <div class="yr-badge">Aetкаждый Бот</div>
   <h1>Команда Rehberi</h1>
-  <p class="yr-hero-sub">Tüm командаlar, категорияler ve izin уровни</p>
+  <p class="yr-каждыйo-sub">Tüm командаlar, категорияler ve izin уровни</p>
 </div>
 
 <!-- Stats -->
@@ -182,7 +182,7 @@
   </div>
 </div>
 
-<div id="yr-container"></div>
+<div id="yr-contaiкакоеr"></div>
 
 
 <script>
@@ -190,11 +190,11 @@ var YR_CATS=[
   {id:'mod',color:'r',title:'🛡️ Модерация',cmds:[
     {n:'/moderate ban',d:'Пользовательyı kalıcı yasakla',u:'/moderate ban @user причина',p:'admin'},
     {n:'/moderate kick',d:'Сервера at',u:'/moderate kick @user причина',p:'admin'},
-    {n:'/moderate timeout',d:'Geçici sustur',u:'/moderate timeout @user 10m',p:'admin'},
+    {n:'/moderate timeout',d:'Geçici замутить',u:'/moderate timeout @user 10m',p:'admin'},
     {n:'/moderate untimeout',d:'Susturmayı убрать',u:'/moderate untimeout @user',p:'admin'},
     {n:'/moderate unban',d:'Банı убрать',u:'/moderate unban user_id',p:'admin'},
-    {n:'/utility очистить',d:'Toplu сообщение sil',u:'/utility очистить 50',p:'admin'},
-    {n:'/utility lock',d:'Канал kilitle',u:'/utility lock',p:'mod'},
+    {n:'/utility очистить',d:'Массовое сообщение sil',u:'/utility очистить 50',p:'admin'},
+    {n:'/utility lock',d:'Канал заблокировать',u:'/utility lock',p:'mod'},
     {n:'/utility unlock',d:'Канал kilidini убрать',u:'/utility unlock',p:'mod'},
     {n:'/utility userinfo',d:'Пользователь информацияsi',u:'/utility userinfo @user',p:'mod'},
     {n:'/role',d:'Роль ver / al',u:'/role @user @роль',p:'admin'},
@@ -220,15 +220,15 @@ var YR_CATS=[
     {n:'/taş-kağıt-makas',d:'Taş kağıt makas',u:'/taş-kağıt-makas',p:'all'},
     {n:'/игра-baslat',d:'Количество tahmin играu',u:'/игра-baslat',p:'all'},
     {n:'/игра-tahmin',d:'Tahmin et',u:'/игра-tahmin 42',p:'all'},
-    {n:'/sihirli-top',d:'Sihirli 8 top',u:'/sihirli-top soru',p:'all'},
-    {n:'/игра-rastgele-uye',d:'Rastgele участник выбрать',u:'/игра-rastgele-uye',p:'all'},
+    {n:'/sihirli-top',d:'Sihirli 8 top',u:'/sihirli-top вопрос',p:'all'},
+    {n:'/игра-rastgele-uye',d:'Rastgele участников выбрать',u:'/игра-rastgele-uye',p:'all'},
   ]},
   {id:'eco',color:'gold',title:'💰 Экономика ve Пользовательскийlikler',cmds:[
-    {n:'/dogumgunu',d:'Doğum gününü сохранить',u:'/dogumgunu 15.03',p:'all'},
-    {n:'/dogumgunleri',d:'Yaklaşan doğum günleri',u:'/dogumgunleri',p:'all'},
-    {n:'/duty-panel',d:'Задание panelni отправить',u:'/duty-panel #канал',p:'admin'},
+    {n:'/dogumgunu',d:'Doğum днейünü сохранить',u:'/dogumgunu 15.03',p:'all'},
+    {n:'/dogumgunleri',d:'Yaklaşan doğum днейleri',u:'/dogumgunleri',p:'all'},
+    {n:'/duty-paкакоеl',d:'Задание paкакоеlni отправить',u:'/duty-paкакоеl #канал',p:'admin'},
     {n:'/duty-add',d:'Manuel ilerleme добавить',u:'/duty-add @user 10',p:'mod'},
-    {n:'/ticket_panel',d:'Тикет panelni отправить',u:'/ticket_panel',p:'admin'},
+    {n:'/ticket_paкакоеl',d:'Тикет paкакоеlni отправить',u:'/ticket_paкакоеl',p:'admin'},
     {n:'/webhook',d:'Webhook действияi',u:'/webhook создать',p:'admin'},
   ]},
   {id:'util',color:'b',title:'🔧 Yardımcı Поискçlar',cmds:[
@@ -237,7 +237,7 @@ var YR_CATS=[
     {n:'/здоровье',d:'Сервер здоровье оценкаu',u:'/здоровье',p:'all'},
     {n:'/канал-статистика',d:'Канал сообщение istatistiği',u:'/канал-статистика',p:'all'},
     {n:'/duty-stats',d:'Задание puan tablosu',u:'/duty-stats',p:'mod'},
-    {n:'/verify-setup',d:'Doğrulama sistemini kur',u:'/verify-setup',p:'admin'},
+    {n:'/verify-setup',d:'Doğrulama sistувереныi kur',u:'/verify-setup',p:'admin'},
   ]},
 ];
 var CM={
@@ -262,7 +262,7 @@ function yrTab(id,btn){
   yrRender();
 }
 function yrRender(){
-  var c=document.getElementById('yr-container'),html='',shown=0;
+  var c=document.getElementById('yr-contaiкакоеr'),html='',shown=0;
   YR_CATS.forEach(function(cat){
     if(yrTab_!=='all'&&yrTab_!==cat.id)return;
     var f=cat.cmds.filter(function(x){
@@ -275,7 +275,7 @@ function yrRender(){
     html+='<div class="yr-section" data-cat="'+cat.id+'">';
     html+='<div class="yr-section-hdr">';
     html+='<span class="yr-section-title" style="color:'+cm.t+';text-shadow:0 0 10px '+cm.t+'40;">'+cat.title+'</span>';
-    html+='<div class="yr-section-line" style="background:linear-gradient(90deg,'+cm.l+',transparent);"></div>';
+    html+='<div class="yr-section-liкакое" style="background:liкакоеar-gradient(90deg,'+cm.l+',transparent);"></div>';
     html+='<span class="yr-section-count">'+f.length+' команда</span>';
     html+='</div><div class="yr-grid">';
     f.forEach(function(x){
@@ -288,7 +288,7 @@ function yrRender(){
     html+='</div></div>';
   });
   if(!html)html='<div class="yr-empty"><i class="fas fa-search"></i>Результат не найдено.</div>';
-  c.innerHTML=html;
+  c.inкакоеrHTML=html;
   document.getElementById('filtered-count').textContent=shown;
 }
 (function(){

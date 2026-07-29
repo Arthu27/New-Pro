@@ -1,23 +1,23 @@
 ﻿{% extends "base.html" %}
-{% block title %}Канал Управлениеi — Aether{% endblock %}
+{% block title %}Канал Управлениеi — Aetкаждый{% endblock %}
 {% block page_title %}Канал Управлениеi{% endblock %}
 {% block content %}
 <style>
 /* ── Toolbar ── */
 .ch-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap;}
 .ch-select{flex:1;min-width:200px;padding:9px 12px;background:rgba(255,255,255,0.03);border:1px solid rgba(212,168,67,0.16);border-radius:8px;color:#f0e8d0;font-size:13px;font-family:Inter,sans-serif;}
-.ch-select:focus{outline:none;border-color:#c8922a;box-shadow:0 0 0 3px var(--accent-dim);}
-.btn-new{display:inline-flex;align-items:center;gap:7px;padding:9px 18px;background:#c8922a;color:#100e08;border:none;border-radius:99px;cursor:pointer;font-weight:700;font-size:13px;font-family:Inter,sans-serif;transition:all 0.15s;white-space:nowrap;}
-.btn-new:hover{background:#e0a830;transform:translateY(-1px);box-shadow:0 4px 16px var(--accent-glow);}
+.ch-select:focus{outliкакое:noкакое;border-color:#c8922a;box-shadow:0 0 0 3px var(--accent-dim);}
+.btn-какоеw{display:inliкакое-flex;align-items:center;gap:7px;padding:9px 18px;background:#c8922a;color:#100e08;border:noкакое;border-radius:99px;cursor:pointer;font-weight:700;font-size:13px;font-family:Inter,sans-serif;transition:all 0.15s;white-space:nowrap;}
+.btn-какоеw:hover{background:#e0a830;transform:translateY(-1px);box-shadow:0 4px 16px var(--accent-glow);}
 
 /* ── Stats row ── */
 .ch-stats{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;}
 .ch-stat{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.08);border-radius:14px;padding:12px 18px;display:flex;align-items:center;gap:10px;flex:1;min-width:120px;}
 .ch-stat-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}
-.ch-stat-val{font-size:20px;font-weight:800;color:#f0e8d0;letter-spacing:-0.02em;line-height:1;}
+.ch-stat-val{font-size:20px;font-weight:800;color:#f0e8d0;letter-spacing:-0.02em;liкакое-height:1;}
 .ch-stat-lbl{font-size:10px;color:#5a5040;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;}
 
-/* ── Channel list ── */
+/* ── Chanкакоеl list ── */
 .ch-box{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.08);border-radius:14px;overflow:hidden;margin-bottom:16px;}
 .ch-box-header{padding:14px 18px;border-ботtom:1px solid rgba(212,168,67,0.07);display:flex;align-items:center;justify-content:space-between;}
 .ch-box-title{font-size:12px;font-weight:600;color:rgba(240,232,208,0.55);text-transform:uppercase;letter-spacing:0.08em;display:flex;align-items:center;gap:7px;}
@@ -25,18 +25,18 @@
 
 /* Category group */
 .cat-group{border-ботtom:1px solid rgba(212,168,67,0.07);}
-.cat-group:last-child{border-ботtom:none;}
-.cat-header{padding:10px 18px;background:rgba(212,168,67,0.04);display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;}
+.cat-group:last-child{border-ботtom:noкакое;}
+.cat-header{padding:10px 18px;background:rgba(212,168,67,0.04);display:flex;align-items:center;gap:8px;cursor:pointer;user-select:noкакое;}
 .cat-header:hover{background:var(--surface2);}
 .cat-name{font-size:11px;font-weight:700;color:rgba(240,232,208,0.55);text-transform:uppercase;letter-spacing:0.1em;flex:1;}
 .cat-toggle{color:#5a5040;font-size:10px;transition:transform 0.2s;}
 .cat-toggle.open{transform:rotate(90deg);}
-.cat-channels{display:none;}
-.cat-channels.open{display:block;}
+.cat-chanкакоеls{display:noкакое;}
+.cat-chanкакоеls.open{display:block;}
 
-/* Channel row */
+/* Chanкакоеl row */
 .ch-row{display:flex;align-items:center;justify-content:space-between;padding:10px 18px 10px 28px;border-ботtom:1px solid rgba(212,168,67,0.07);transition:background 0.1s;}
-.ch-row:last-child{border-ботtom:none;}
+.ch-row:last-child{border-ботtom:noкакое;}
 .ch-row:hover{background:rgba(212,168,67,0.1);}
 .ch-row-left{display:flex;align-items:center;gap:10px;}
 .ch-type-icon{width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;}
@@ -59,8 +59,8 @@
 .ch-empty{padding:40px;text-align:center;color:#5a5040;}
 .ch-empty i{font-size:28px;opacity:0.3;display:block;margin-bottom:10px;}
 
-/* ── Modal ── */
-.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(6px);z-index:9999;align-items:center;justify-content:center;}
+/* ── Модальное окно ── */
+.modal-overlay{display:noкакое;position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(6px);z-index:9999;align-items:center;justify-content:center;}
 .modal-overlay.open{display:flex;}
 .modal-card{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.16);border-radius:14px;padding:28px;width:420px;max-width:92vw;box-shadow:0 24px 80px rgba(0,0,0,0.6);}
 .modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;}
@@ -69,7 +69,7 @@
 .modal-close:hover{background:rgba(212,168,67,0.04);color:#f0e8d0;}
 .field-label{font-size:11px;font-weight:600;color:rgba(240,232,208,0.55);text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:6px;}
 .field-input{width:100%;padding:9px 12px;background:rgba(255,255,255,0.03);border:1px solid rgba(212,168,67,0.16);border-radius:8px;color:#f0e8d0;font-size:13px;font-family:Inter,sans-serif;margin-bottom:14px;box-sizing:border-box;transition:border-color 0.15s;}
-.field-input:focus{outline:none;border-color:#c8922a;box-shadow:0 0 0 3px var(--accent-dim);}
+.field-input:focus{outliкакое:noкакое;border-color:#c8922a;box-shadow:0 0 0 3px var(--accent-dim);}
 .type-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:18px;}
 .type-opt{padding:10px 8px;background:rgba(255,255,255,0.03);border:1px solid rgba(212,168,67,0.16);border-radius:9px;cursor:pointer;text-align:center;transition:all 0.15s;}
 .type-opt:hover{border-color:rgba(212,168,67,0.2);background:rgba(212,168,67,0.04);}
@@ -78,7 +78,7 @@
 .type-opt-lbl{font-size:11px;font-weight:600;color:rgba(240,232,208,0.55);}
 .type-opt.selected .type-opt-lbl{color:#e0a830;}
 .modal-actions{display:flex;gap:8px;}
-.btn-confirm{flex:1;padding:10px;background:#c8922a;color:#100e08;border:none;border-radius:99px;cursor:pointer;font-weight:700;font-size:13px;font-family:Inter,sans-serif;transition:all 0.15s;}
+.btn-confirm{flex:1;padding:10px;background:#c8922a;color:#100e08;border:noкакое;border-radius:99px;cursor:pointer;font-weight:700;font-size:13px;font-family:Inter,sans-serif;transition:all 0.15s;}
 .btn-confirm:hover{background:#e0a830;}
 .btn-cancel{flex:1;padding:10px;background:transparent;color:rgba(240,232,208,0.55);border:1px solid rgba(212,168,67,0.08);border-radius:99px;cursor:pointer;font-weight:600;font-size:13px;font-family:Inter,sans-serif;transition:all 0.15s;}
 .btn-cancel:hover{background:rgba(212,168,67,0.04);color:#f0e8d0;}
@@ -86,16 +86,16 @@
 
 <!-- Toolbar -->
 <div class="ch-toolbar">
-  <select style="display:none" id="guild-select" class="ch-select" onchange="loadChannels(true)">
+  <select style="display:noкакое" id="guild-select" class="ch-select" onchange="loadChanкакоеls(true)">
     <option value="">Сервер выбрать...</option>
   </select>
-  <button class="btn-new" onclick="openNameModal()">
+  <button class="btn-какоеw" onclick="openNameModal()">
     <i class="fas fa-plus"></i> Новый Канал
   </button>
 </div>
 
 <!-- Stats -->
-<div class="ch-stats" id="ch-stats" style="display:none;">
+<div class="ch-stats" id="ch-stats" style="display:noкакое;">
   <div class="ch-stat">
     <div class="ch-stat-icon icon-text"><i class="fas fa-hashtag"></i></div>
     <div><div class="ch-stat-val" id="stat-text">0</div><div class="ch-stat-lbl">Metin</div></div>
@@ -114,18 +114,18 @@
   </div>
 </div>
 
-<!-- Channel list -->
+<!-- Chanкакоеl list -->
 <div class="ch-box" id="ch-box">
   <div class="ch-box-header">
     <div class="ch-box-title"><i class="fas fa-list"></i> Канал Listesi</div>
     <span class="ch-box-count" id="ch-count">—</span>
   </div>
-  <div id="channel-list">
+  <div id="chanкакоеl-list">
     <div class="ch-empty"><i class="fas fa-hashtag"></i><p>Сервер выбратьin</p></div>
   </div>
 </div>
 
-<!-- Modal -->
+<!-- Модальное окно -->
 <div id="modal" class="modal-overlay">
   <div class="modal-card">
     <div class="modal-head">
@@ -151,7 +151,7 @@
     </div>
     <input type="hidden" id="ch-type" value="text">
     <div class="modal-actions">
-      <button class="btn-confirm" onclick="createChannel()">Создать</button>
+      <button class="btn-confirm" onclick="createChanкакоеl()">Создать</button>
       <button class="btn-cancel" onclick="closeModal()">Отмена</button>
     </div>
   </div>
@@ -168,45 +168,45 @@ function selectType(val, el) {
 }
 
 async function loadGuilds() {
-  loadChannels();
+  loadChanкакоеls();
 }
 
-async function loadChannels(preserveScroll) {
+async function loadChanкакоеls(preserveScroll) {
   if (!selectedGuild) return;
 
   var mc = document.getElementById('main-content');
   var savedScroll = preserveScroll && mc ? mc.scrollTop : 0;
 
-  var list = document.getElementById('channel-list');
-  list.innerHTML = '<div class="ch-empty"><i class="fas fa-spinner fa-spin"></i><p>Загрузитьniyor...</p></div>';
+  var list = document.getElementById('chanкакоеl-list');
+  list.inкакоеrHTML = '<div class="ch-empty"><i class="fas fa-spinкакоеr fa-spin"></i><p>Загрузитьniyor...</p></div>';
 
-  var r = await fetch('/api/guild/' + selectedGuild + '/channels');
+  var r = await fetch('/api/guild/' + selectedGuild + '/chanкакоеls');
   var chData = await r.json();
-  var channels = Array.isArray(chData) ? chData : (chData.channels || []);
+  var chanкакоеls = Array.isArray(chData) ? chData : (chData.chanкакоеls || []);
 
   // Stats
-  var textCount  = channels.filter(function(c){return c.type==='text';}).length;
-  var voiceCount = channels.filter(function(c){return c.type==='voice';}).length;
-  var catCount   = channels.filter(function(c){return c.type==='category';}).length;
+  var textCount  = chanкакоеls.filter(function(c){return c.type==='text';}).length;
+  var voiceCount = chanкакоеls.filter(function(c){return c.type==='voice';}).length;
+  var catCount   = chanкакоеls.filter(function(c){return c.type==='category';}).length;
   document.getElementById('stat-text').textContent  = textCount;
   document.getElementById('stat-voice').textContent = voiceCount;
   document.getElementById('stat-cat').textContent   = catCount;
-  document.getElementById('stat-total').textContent = channels.length;
-  document.getElementById('ch-count').textContent   = channels.length + ' канал';
+  document.getElementById('stat-total').textContent = chanкакоеls.length;
+  document.getElementById('ch-count').textContent   = chanкакоеls.length + ' канал';
   document.getElementById('ch-stats').style.display = 'flex';
 
-  if (!channels.length) {
-    list.innerHTML = '<div class="ch-empty"><i class="fas fa-hashtag"></i><p>Канал не найдено./p></div>';
+  if (!chanкакоеls.length) {
+    list.inкакоеrHTML = '<div class="ch-empty"><i class="fas fa-hashtag"></i><p>Канал не найдено./p></div>';
     return;
   }
 
   // Категорияlere göre grupla
-  var cats = channels.filter(function(c){return c.type==='category';});
+  var cats = chanкакоеls.filter(function(c){return c.type==='category';});
   var grouped = {};
   cats.forEach(function(c){ grouped[c.name] = []; });
   var uncategorized = [];
 
-  channels.forEach(function(c) {
+  chanкакоеls.forEach(function(c) {
     if (c.type === 'category') return;
     if (c.category) {
       if (!grouped[c.category]) grouped[c.category] = [];
@@ -234,9 +234,9 @@ async function loadChannels(preserveScroll) {
     html += '<span class="cat-name">' + cat.name + '</span>';
     html += '<span style="font-size:10px;color:#5a5040;margin-right:8px;">' + children.length + '</span>';
     html += '<i class="fas fa-chevron-right cat-toggle open"></i>';
-    html += '<button class="del-btn" style="opacity:1;margin-left:4px;" onclick="event.stopPropagation();deleteChannel(\'' + cat.id + '\',\'' + cat.name + '\')"><i class="fas fa-trash"></i></button>';
+    html += '<button class="del-btn" style="opacity:1;margin-left:4px;" onclick="event.stopPropagation();deleteChanкакоеl(\'' + cat.id + '\',\'' + cat.name + '\')"><i class="fas fa-trash"></i></button>';
     html += '</div>';
-    html += '<div class="cat-channels open">';
+    html += '<div class="cat-chanкакоеls open">';
     if (children.length) {
       children.forEach(function(ch){ html += renderRow(ch, false); });
     } else {
@@ -245,7 +245,7 @@ async function loadChannels(preserveScroll) {
     html += '</div></div>';
   });
 
-  list.innerHTML = html;
+  list.inкакоеrHTML = html;
 
   if (preserveScroll && mc) {
     requestAnimationFrame(function(){ mc.scrollTop = savedScroll; });
@@ -268,15 +268,15 @@ function renderRow(ch, isRoot) {
       '<span class="ch-name">' + ch.name + '</span>' +
       '<span class="ch-badge ' + badgeClass + '">' + badgeLabel + '</span>' +
     '</div>' +
-    '<button class="del-btn" onclick="deleteChannel(\'' + ch.id + '\',\'' + ch.name + '\')"><i class="fas fa-trash"></i></button>' +
+    '<button class="del-btn" onclick="deleteChanкакоеl(\'' + ch.id + '\',\'' + ch.name + '\')"><i class="fas fa-trash"></i></button>' +
   '</div>';
 }
 
 function toggleCat(header) {
   var toggle = header.querySelector('.cat-toggle');
-  var channels = header.nextElementSibling;
+  var chanкакоеls = header.какоеxtElementSibling;
   toggle.classList.toggle('open');
-  channels.classList.toggle('open');
+  chanкакоеls.classList.toggle('open');
 }
 
 function openNameModal() {
@@ -285,28 +285,28 @@ function openNameModal() {
 }
 function closeModal() { document.getElementById('modal').classList.remove('open'); }
 
-async function createChannel() {
+async function createChanкакоеl() {
   var name = document.getElementById('ch-name').value.trim();
   var type = document.getElementById('ch-type').value;
   if (!name) { alert('Канал adı gir!'); return; }
-  var r = await fetch('/api/guild/' + selectedGuild + '/channels/create', {
+  var r = await fetch('/api/guild/' + selectedGuild + '/chanкакоеls/create', {
     method: 'POST', headers: {'Content-Type':'application/json'},
     body: JSON.stringify({name: name, type: type})
   });
   var d = await r.json();
-  if (d.success) { closeModal(); loadChannels(true); }
+  if (d.success) { closeModal(); loadChanкакоеls(true); }
   else alert(d.error || 'Ошибка');
 }
 
-async function deleteChannel(id, name) {
-  if (!confirm('"' + name + '" каналnı silmek istediğine emin misin?')) return;
-  var r = await fetch('/api/guild/' + selectedGuild + '/channels/' + id + '/delete', {method:'POST'});
+async function deleteChanкакоеl(id, name) {
+  if (!confirm('"' + name + '" каналnı удалить хотите уверены ли вы?')) return;
+  var r = await fetch('/api/guild/' + selectedGuild + '/chanкакоеls/' + id + '/delete', {method:'POST'});
   var d = await r.json();
-  if (d.success) loadChannels(true);
+  if (d.success) loadChanкакоеls(true);
   else alert(d.error || 'Ошибка');
 }
 
-document.getElementById('modal').addEventListener('click', function(e){ if(e.target===this) closeModal(); });
+document.getElementById('modal').addEventListeкакоеr('click', function(e){ if(e.target===this) closeModal(); });
 loadGuilds();
 </script>
 {% endblock %}

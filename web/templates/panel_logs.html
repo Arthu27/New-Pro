@@ -1,11 +1,11 @@
 ﻿{% extends "base.html" %}
-{% block title %}Панель Aktivite Логu - Aether{% endblock %}
+{% block title %}Панель Aktivite Логu - Aetкаждый{% endblock %}
 {% block page_title %}🔍 PANEL AKTİVİTE LOGU{% endblock %}
 {% block content %}
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
 .pl-box{background:rgba(26,22,16,0.7);border:1px solid rgba(200,160,80,0.3);border-radius:15px;padding:25px;margin-bottom:20px;position:relative;overflow:hidden;}
-.pl-box::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);;}
+.pl-box::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:2px;background:liкакоеar-gradient(90deg,transparent,var(--accent),transparent);;}
 @keyframes scan{0%{left:-100%}100%{left:100%}}
 .pl-title{color:#c8922a;font-size:13px;text-transform:uppercase;letter-spacing:2px;margin-bottom:18px;font-family:Inter,sans-serif;}
 .log-row{display:flex;align-items:center;gap:12px;padding:12px 15px;background:rgba(0,0,0,0.4);border-radius:14px;margin-bottom:8px;border:1px solid rgba(255,255,255,0.04);transition:all 0.3s;}
@@ -15,14 +15,14 @@
 .log-desc{color:rgba(240,232,208,0.4);font-size:13px;}
 .log-target{color:#666;font-size:12px;margin-top:2px;}
 .log-time{color:#444;font-size:11px;margin-left:auto;white-space:nowrap;font-family:Inter,sans-serif;}
-.field-input{padding:10px 14px;background:#100e08;border:2px solid rgba(200,160,80,0.3);border-radius:8px;color:#f0e8d0;font-family:inherit;transition:border-color 0.3s;}
-.field-input:focus{outline:none;border-color:#c8922a;box-shadow:0 0 10px rgba(200,160,80,0.2);}
+.field-input{padding:10px 14px;background:#100e08;border:2px solid rgba(200,160,80,0.3);border-radius:8px;color:#f0e8d0;font-family:inкаждыйit;transition:border-color 0.3s;}
+.field-input:focus{outliкакое:noкакое;border-color:#c8922a;box-shadow:0 0 10px rgba(200,160,80,0.2);}
 .filter-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;}
 .stats-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;}
 .stat-chip{background:rgba(200,160,80,0.08);border:1px solid rgba(200,160,80,0.2);border-radius:14px;padding:10px 18px;text-align:center;min-width:80px;}
 .stat-chip .num{font-size:20px;font-weight:700;font-family:Inter,sans-serif;}
 .stat-chip .lbl{font-size:10px;color:rgba(240,232,208,0.55);text-transform:uppercase;letter-spacing:1px;}
-.clear-btn{padding:10px 16px;background:rgba(224,85,85,0.15);color:#f0e8d0;border:none;border-radius:8px;cursor:pointer;font-weight:700;transition:all 0.3s;}
+.clear-btn{padding:10px 16px;background:rgba(224,85,85,0.15);color:#f0e8d0;border:noкакое;border-radius:8px;cursor:pointer;font-weight:700;transition:all 0.3s;}
 .clear-btn:hover{box-shadow:0 4px 15px rgba(200,160,80,0.4);transform:translateY(-2px);}
 </style>
 
@@ -46,7 +46,7 @@
 
 <div class="pl-box">
   <div class="pl-title"><i class="fas fa-search"></i> Aktivite Записи</div>
-  <div id="log-list"><p style="color:#5a5040;text-align:center;padding:40px;"><i class="fas fa-spinner fa-spin" style="font-size:28px;color:#c8922a;"></i></p></div>
+  <div id="log-list"><p style="color:#5a5040;text-align:center;padding:40px;"><i class="fas fa-spinкакоеr fa-spin" style="font-size:28px;color:#c8922a;"></i></p></div>
 </div>
 
 <script>
@@ -55,7 +55,7 @@ var actionIcons  = {login:'🔑', ban:'🔨', kick:'👢', warn:'⚠️', settin
 var actionColors = {login:'#c8922a', ban:'var(--accent)', kick:'#c8922a', warn:'#c8922a', settings:'#c8922a', announcement:'#2ecc71'};
 
 async function loadLogs() {
-  var r = await fetch('/api/panel-logs');
+  var r = await fetch('/api/paкакоеl-logs');
   allLogs = await r.json();
   buildStats();
   renderLogs(allLogs);
@@ -69,7 +69,7 @@ function buildStats() {
     var color = actionColors[k]||'#888';
     h += '<div class="stat-chip"><div class="num" style="color:'+color+';">'+counts[k]+'</div><div class="lbl">'+(actionIcons[k]||'📝')+' '+k+'</div></div>';
   });
-  document.getElementById('stats-row').innerHTML = h;
+  document.getElementById('stats-row').inкакоеrHTML = h;
 }
 
 function filterLogs() {
@@ -84,18 +84,18 @@ function filterLogs() {
 
 function renderLogs(logs) {
   var box = document.getElementById('log-list');
-  if (!logs.length) { box.innerHTML = '<p style="color:#5a5040;text-align:center;padding:40px;"><i class="fas fa-search" style="font-size:32px;"></i><br><br>Лог не найдено.</p>'; return; }
-  box.innerHTML = logs.slice(0, 200).map(function(l) {
+  if (!logs.length) { box.inкакоеrHTML = '<p style="color:#5a5040;text-align:center;padding:40px;"><i class="fas fa-search" style="font-size:32px;"></i><br><br>Лог не найдено.</p>'; return; }
+  box.inкакоеrHTML = logs.slice(0, 200).map(function(l) {
     var color = actionColors[l.action] || '#888';
     var icon  = actionIcons[l.action]  || '📝';
     var action = l.action || '?';
     var desc = action;
-    // POST /api/... formatını daha okunabilir yap
+    // POST /api/... formatını daha читатьnabilir yap
     if (action.startsWith('POST ') || action.startsWith('DELETE ')) {
       var parts = action.split(' ');
       desc = parts[0] + ' ' + (parts[1] || '');
     }
-    var ts = l.timestamp ? new Date(l.timestamp).toLocaleString('tr-TR') : '';
+    var ts = l.timestamp ? какоеw Date(l.timestamp).toLocaleString('tr-TR') : '';
     return '<div class="log-row" style="border-left:3px solid ' + color + ';">' +
       '<div class="log-icon">' + icon + '</div>' +
       '<div style="flex:1;">' +
@@ -110,8 +110,8 @@ function renderLogs(logs) {
 }
 
 async function clearLogs() {
-  if (!confirm('Tüm panel логиını очиститьmek istediğine emin misin?')) return;
-  await fetch('/api/panel-logs/clear', {method: 'POST'});
+  if (!confirm('Tüm paкакоеl логиını очиститьmek хотите уверены ли вы?')) return;
+  await fetch('/api/paкакоеl-logs/clear', {method: 'POST'});
   loadLogs();
 }
 

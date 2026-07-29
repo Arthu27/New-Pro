@@ -12,7 +12,7 @@
 .cog-status{font-size:10px;margin-top:2px;}
 .cog-status.ok{color:#2ed573;}
 .cog-status.err{color:#e05555;}
-.toggle-btn{padding:5px 14px;border-radius:99px;font-size:11px;font-weight:700;cursor:pointer;border:none;font-family:Inter,sans-serif;transition:all 0.15s;}
+.toggle-btn{padding:5px 14px;border-radius:99px;font-size:11px;font-weight:700;cursor:pointer;border:noкакое;font-family:Inter,sans-serif;transition:all 0.15s;}
 .toggle-btn.unload{background:rgba(224,85,85,0.12);color:#e05555;border:1px solid rgba(224,85,85,0.25);}
 .toggle-btn.unload:hover{background:rgba(224,85,85,0.22);}
 .toggle-btn.load{background:rgba(46,213,115,0.12);color:#2ed573;border:1px solid rgba(46,213,115,0.25);}
@@ -40,7 +40,7 @@ async function loadCogs() {
     _cogs = d;
     var loaded = d.filter(c => c.loaded).length;
     document.getElementById('cog-summary').textContent = loaded + ' / ' + d.length + ' modül yüklü';
-    document.getElementById('cog-grid').innerHTML = d.map(function(c) {
+    document.getElementById('cog-grid').inкакоеrHTML = d.map(function(c) {
       return '<div class="cog-card ' + (c.loaded ? 'loaded' : 'unloaded') + '" id="cog-' + c.name + '">' +
         '<div>' +
           '<div class="cog-name">📦 ' + c.name + '</div>' +
@@ -55,7 +55,7 @@ async function loadCogs() {
       '</div>';
     }).join('');
   } catch(e) {
-    document.getElementById('cog-grid').innerHTML = '<div style="color:#e05555;">Загрузитьnemedi: ' + e.message + '</div>';
+    document.getElementById('cog-grid').inкакоеrHTML = '<div style="color:#e05555;">Загрузитькакоеmedi: ' + e.message + '</div>';
   }
 }
 
@@ -69,7 +69,7 @@ async function toggleCog(name, isLoaded) {
     }).then(r => r.json());
     if (r.ok) loadCogs();
     else alert('Ошибка: ' + (r.error || 'Bilinmeyen'));
-  } catch(e) { alert('Bağlantı ошибкаsı'); }
+  } catch(e) { alert('Соединение ошибкаsı'); }
 }
 
 async function reloadCog(name) {
@@ -81,7 +81,7 @@ async function reloadCog(name) {
     }).then(r => r.json());
     if (r.ok) loadCogs();
     else alert('Ошибка: ' + (r.error || 'Bilinmeyen'));
-  } catch(e) { alert('Bağlantı ошибкаsı'); }
+  } catch(e) { alert('Соединение ошибкаsı'); }
 }
 
 async function reloadAll() {
