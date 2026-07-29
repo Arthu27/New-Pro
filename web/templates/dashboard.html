@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% block title %}Panel - Aether{% endblock %}
-{% block page_title %}Yönetim Paneli{% endblock %}
+{% block title %}Панель - Aether{% endblock %}
+{% block page_title %}Панель управления{% endblock %}
 {% block content %}
 <style>
 .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:22px;}
@@ -37,7 +37,7 @@ tr:hover td{background:rgba(212,168,67,0.04);}
 .stat-card:nth-child(4){animation-delay:0.2s}
 </style>
 
-<!-- Sunucu bilgi barı -->
+<!-- Информация о сервере -->
 <div id="guild-info-bar" style="display:none;background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.08);border-radius:14px;padding:16px 20px;margin-bottom:18px;">
     <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
         <img id="guild-icon" src="" style="width:42px;height:42px;border-radius:14px;border:1px solid rgba(212,168,67,0.16);display:none;object-fit:cover;">
@@ -57,62 +57,62 @@ tr:hover td{background:rgba(212,168,67,0.04);}
                 <i class="fas fa-shield-alt" id="threatIcon" style="color:#2ECC71;"></i>
             </div>
             <div>
-                <div style="font-size:11px;color:#8c7b58;font-weight:700;text-transform:uppercase;letter-spacing:1px;">🛡️ Sunucu Tehdit Endeksi</div>
+                <div style="font-size:11px;color:#8c7b58;font-weight:700;text-transform:uppercase;letter-spacing:1px;">🛡️ Индекс угрозы сервера</div>
                 <div style="display:flex;align-items:baseline;gap:10px;margin-top:4px;">
                     <span id="threatScoreVal" style="font-size:26px;font-weight:900;color:#f0e8d0;">15/100</span>
-                    <span id="threatLevelBadge" style="font-size:13px;font-weight:700;color:#2ECC71;background:rgba(46,204,113,0.12);padding:4px 10px;border-radius:99px;border:1px solid rgba(46,204,113,0.35);">Düşük tehdit (Sakin)</span>
+                    <span id="threatLevelBadge" style="font-size:13px;font-weight:700;color:#2ECC71;background:rgba(46,204,113,0.12);padding:4px 10px;border-radius:99px;border:1px solid rgba(46,204,113,0.35);">Низкая угроза (Спокойно)</span>
                 </div>
             </div>
         </div>
         <div>
             <button id="btnLockdown" type="button" style="padding:10px 18px;border-radius:99px;font-size:13px;font-weight:700;cursor:pointer;background:#2ECC71;color:#100e08;border:none;transition:all 0.2s;display:flex;align-items:center;gap:8px;">
                 <i class="fas fa-lock"></i>
-                <span id="btnLockdownText">Karantinayı Aç (Lockdown)</span>
+                <span id="btnLockdownText">Включить карантин (Lockdown)</span>
             </button>
         </div>
     </div>
 </div>
 
 <div class="stats-grid">
-    <div class="stat-card"><div class="stat-icon"><i class="fas fa-server"></i></div><div class="stat-val" id="guild-count">-</div><div class="stat-lbl">Sunucu</div></div>
-    <div class="stat-card"><div class="stat-icon"><i class="fas fa-users"></i></div><div class="stat-val" id="user-count">-</div><div class="stat-lbl">Kullanıcı</div></div>
+    <div class="stat-card"><div class="stat-icon"><i class="fas fa-server"></i></div><div class="stat-val" id="guild-count">-</div><div class="stat-lbl">Сервера</div></div>
+    <div class="stat-card"><div class="stat-icon"><i class="fas fa-users"></i></div><div class="stat-val" id="user-count">-</div><div class="stat-lbl">Пользователи</div></div>
     <div class="stat-card"><div class="stat-icon"><i class="fas fa-signal"></i></div><div class="stat-val" id="latency">-</div><div class="stat-lbl">Ping (ms)</div></div>
-    <div class="stat-card"><div class="stat-icon"><i class="fas fa-circle" style="color:#4ade80;font-size:10px;"></i></div><div class="stat-val" id="status" style="font-size:18px;color:#4ade80;">ÇEVRİMİÇİ</div><div class="stat-lbl">Bot Durumu</div></div>
+    <div class="stat-card"><div class="stat-icon"><i class="fas fa-circle" style="color:#4ade80;font-size:10px;"></i></div><div class="stat-val" id="status" style="font-size:18px;color:#4ade80;">ОНЛАЙН</div><div class="stat-lbl">Состояние бота</div></div>
 </div>
 
 <div class="dash-box">
-    <div class="dash-title"><i class="fas fa-chart-line"></i> Hızlı İstatistikler</div>
+    <div class="dash-title"><i class="fas fa-chart-line"></i> Быстрая статистика</div>
     <div id="quick-stats" style="text-align:center;padding:24px;color:#5a5040;"><i class="fas fa-spinner fa-spin" style="color:#c8922a;"></i></div>
 </div>
 
 <div class="dash-box">
-    <div class="dash-title"><i class="fas fa-history"></i> Son İşlemler</div>
+    <div class="dash-title"><i class="fas fa-history"></i> Последние действия</div>
     <div id="recent-activity" style="text-align:center;padding:24px;color:#5a5040;"><i class="fas fa-spinner fa-spin" style="color:#c8922a;"></i></div>
 </div>
 
 {% if role == 'owner' %}
 <div class="dash-box" style="margin-top:16px;">
     <div class="dash-title" style="justify-content:space-between;">
-        <span><i class="fas fa-sign-in-alt"></i> Panele Son Girişler</span>
-        <a href="/panel-logs" style="font-size:11px;color:#c8922a;text-decoration:none;">Tümünü Gör →</a>
+        <span><i class="fas fa-sign-in-alt"></i> Последние входы в панель</span>
+        <a href="/panel-logs" style="font-size:11px;color:#c8922a;text-decoration:none;">Показать все →</a>
     </div>
     <div id="login-log" style="text-align:center;padding:20px;color:#5a5040;"><i class="fas fa-spinner fa-spin" style="color:#c8922a;"></i></div>
 </div>
 
 <div class="notif-grid">
     <div class="dash-box" style="margin-bottom:0;">
-        <div class="dash-title"><i class="fas fa-bell"></i> Bildirim Gönder</div>
+        <div class="dash-title"><i class="fas fa-bell"></i> Отправить уведомление</div>
         <label class="form-label">Discord ID</label><input type="text" id="notif-discord-id" placeholder="123456789012345678" class="form-input">
-        <label class="form-label">Başlık</label><input type="text" id="notif-title" placeholder="Bildirim başlığı" class="form-input">
-        <label class="form-label">Mesaj</label><textarea id="notif-message" class="form-input" style="resize:vertical;min-height:64px;"></textarea>
-        <button type="button" id="btnSendNotif" class="form-btn">Gönder</button>
+        <label class="form-label">Заголовок</label><input type="text" id="notif-title" placeholder="Заголовок уведомления" class="form-input">
+        <label class="form-label">Сообщение</label><textarea id="notif-message" class="form-input" style="resize:vertical;min-height:64px;"></textarea>
+        <button type="button" id="btnSendNotif" class="form-btn">Отправить</button>
         <div id="notif-result" style="margin-top:8px;display:none;font-size:12px;"></div>
     </div>
     <div class="dash-box" style="margin-bottom:0;">
-        <div class="dash-title"><i class="fas fa-bullhorn"></i> Duyuru Yayınla</div>
-        <label class="form-label">Başlık</label><input type="text" id="ann-title" placeholder="Duyuru başlığı" class="form-input">
-        <label class="form-label">İçerik</label><textarea id="ann-message" class="form-input" style="resize:vertical;min-height:64px;"></textarea>
-        <button type="button" id="btnSendAnn" class="form-btn">Yayınla</button>
+        <div class="dash-title"><i class="fas fa-bullhorn"></i> Опубликовать объявление</div>
+        <label class="form-label">Заголовок</label><input type="text" id="ann-title" placeholder="Заголовок объявления" class="form-input">
+        <label class="form-label">Содержание</label><textarea id="ann-message" class="form-input" style="resize:vertical;min-height:64px;"></textarea>
+        <button type="button" id="btnSendAnn" class="form-btn">Опубликовать</button>
         <div id="ann-result" style="margin-top:8px;display:none;font-size:12px;"></div>
     </div>
 </div>
@@ -145,10 +145,10 @@ tr:hover td{background:rgba(212,168,67,0.04);}
       $('user-count').textContent = (d.users || 0).toLocaleString();
       $('latency').textContent = (d.latency || 0) + 'ms';
       var s = $('status');
-      if (d.error) { s.textContent = 'ÇEVRİMDIŞI'; s.style.color = '#ef4444'; }
-      else { s.textContent = 'ÇEVRİMİÇİ'; s.style.color = '#4ade80'; }
+      if (d.error) { s.textContent = 'ОФЛАЙН'; s.style.color = '#ef4444'; }
+      else { s.textContent = 'ОНЛАЙН'; s.style.color = '#4ade80'; }
     } catch (e) {
-      $('status').textContent = 'ÇEVRİMDIŞI';
+      $('status').textContent = 'ОФЛАЙН';
       $('status').style.color = '#ef4444';
     }
   }
@@ -163,15 +163,15 @@ tr:hover td{background:rgba(212,168,67,0.04);}
       var mutes = logs.filter(function (l) { var a = (l.action || '').toLowerCase(); return a.indexOf('mute') !== -1 || a.indexOf('timeout') !== -1; }).length;
       $('quick-stats').innerHTML =
         '<div class="quick-grid">' +
-        '<div class="quick-item"><h3>' + logs.length + '</h3><p>Mod İşlem</p></div>' +
-        '<div class="quick-item"><h3>' + warns.length + '</h3><p>Uyarı</p></div>' +
-        '<div class="quick-item"><h3>' + bans + '</h3><p>Ban</p></div>' +
-        '<div class="quick-item"><h3>' + kicks + '</h3><p>Kick</p></div>' +
-        '<div class="quick-item"><h3>' + mutes + '</h3><p>Susturma</p></div>' +
-        '<div class="quick-item"><h3>' + (logs.length > 0 ? '✓' : '-') + '</h3><p>Aktif</p></div>' +
+        '<div class="quick-item"><h3>' + logs.length + '</h3><p>Мод Действий</p></div>' +
+        '<div class="quick-item"><h3>' + warns.length + '</h3><p>Предупреждений</p></div>' +
+        '<div class="quick-item"><h3>' + bans + '</h3><p>Банов</p></div>' +
+        '<div class="quick-item"><h3>' + kicks + '</h3><p>Киков</p></div>' +
+        '<div class="quick-item"><h3>' + mutes + '</h3><p>Мутов</p></div>' +
+        '<div class="quick-item"><h3>' + (logs.length > 0 ? '✓' : '-') + '</h3><p>Активен</p></div>' +
         '</div>';
     } catch (e) {
-      $('quick-stats').innerHTML = '<p style="color:#ef4444">Yüklenemedi</p>';
+      $('quick-stats').innerHTML = '<p style="color:#ef4444">Не удалось загрузить</p>';
     }
   }
 
@@ -180,7 +180,7 @@ tr:hover td{background:rgba(212,168,67,0.04);}
     try {
       var logs = await fetch('/api/logs').then(function (r) { return r.json(); }).catch(function () { return []; });
       var box = $('recent-activity');
-      if (!logs.length) { box.innerHTML = '<p style="color:#5a5040;text-align:center;padding:20px">Henüz işlem yok.</p>'; return; }
+      if (!logs.length) { box.innerHTML = '<p style="color:#5a5040;text-align:center;padding:20px">Пока действий нет.</p>'; return; }
       var colors = { ban: '#ef4444', kick: '#f97316', warn: '#c8922a', mute: '#c8922a', timeout: '#c8922a', unban: '#4ade80', unmute: '#4ade80', lock: '#60a5fa', unlock: '#4ade80' };
       var rows = logs.slice(0, 15).map(function (log) {
         var a = (log.action || '?').toLowerCase(), c = colors[a] || '#5a5040';
@@ -190,13 +190,13 @@ tr:hover td{background:rgba(212,168,67,0.04);}
         var r = log.reason || '-';
         return '<tr><td><span class="action-badge" style="background:' + c + '18;color:' + c + ';border:1px solid ' + c + '33">' + (log.action || '?') + '</span></td><td>' + tg + '</td><td style="color:rgba(240,232,208,0.55)">' + m + '</td><td style="color:#5a5040;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + r + '</td><td style="color:#5a5040;font-size:11px">' + t + '</td></tr>';
       }).join('');
-      box.innerHTML = '<table><thead><tr><th>İşlem</th><th>Hedef</th><th>Moderatör</th><th>Sebep</th><th>Zaman</th></tr></thead><tbody>' + rows + '</tbody></table>';
+      box.innerHTML = '<table><thead><tr><th>Действие</th><th>Цель</th><th>Модератор</th><th>Причина</th><th>Время</th></tr></thead><tbody>' + rows + '</tbody></table>';
     } catch (e) {
-      $('recent-activity').innerHTML = '<p style="color:#ef4444;text-align:center;padding:20px">Yüklenemedi</p>';
+      $('recent-activity').innerHTML = '<p style="color:#ef4444;text-align:center;padding:20px">Не удалось загрузить</p>';
     }
   }
 
-  // ── Sunucu bilgi barı ────────────────────────────────────────────────────────
+  // ── Информация о сервере ────────────────────────────────────────────────────────
   async function loadGuildInfo() {
     try {
       var guilds = await fetch('/api/guilds').then(function (r) { return r.json(); });
@@ -206,7 +206,7 @@ tr:hover td{background:rgba(212,168,67,0.04);}
       if (guild.icon) { var ic = $('guild-icon'); ic.src = guild.icon; ic.style.display = 'block'; }
       $('guild-name').textContent = guild.name;
       $('guild-meta').textContent = 'ID: ' + guild.id;
-      var items = [{ val: guild.members ? guild.members.toLocaleString() : '-', lbl: 'Üyeler' }];
+      var items = [{ val: guild.members ? guild.members.toLocaleString() : '-', lbl: 'Участники' }];
       $('guild-stats-row').innerHTML = items.map(function (s) {
         return '<div style="text-align:center"><div style="font-size:16px;font-weight:700;color:#c8922a">' + s.val + '</div><div style="color:#5a5040;font-size:10px;text-transform:uppercase">' + s.lbl + '</div></div>';
       }).join('');
@@ -219,7 +219,7 @@ tr:hover td{background:rgba(212,168,67,0.04);}
     var title = $('notif-title').value.trim();
     var msg = $('notif-message').value.trim();
     var el = $('notif-result');
-    if (!id || !msg) { showToast('Discord ID ve mesaj zorunlu!', false); return; }
+    if (!id || !msg) { showToast('Discord ID и сообщение обязательны!', false); return; }
     try {
       var d = await fetch('/api/send-notification', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -227,10 +227,10 @@ tr:hover td{background:rgba(212,168,67,0.04);}
       }).then(function (r) { return r.json(); });
       el.style.display = 'block';
       el.innerHTML = d.success
-        ? '<span style="color:#4ade80">Bildirim gönderildi!</span>'
+        ? '<span style="color:#4ade80">Уведомление отправлено!</span>'
         : '<span style="color:#ef4444">' + (d.error || 'Hata') + '</span>';
       setTimeout(function () { el.style.display = 'none'; }, 3000);
-    } catch (e) { showToast('Hata: ' + e.message, false); }
+    } catch (e) { showToast('Ошибка: ' + e.message, false); }
   }
 
   // ── Duyuru gönder ────────────────────────────────────────────────────────────
@@ -238,7 +238,7 @@ tr:hover td{background:rgba(212,168,67,0.04);}
     var title = $('ann-title').value.trim();
     var msg = $('ann-message').value.trim();
     var el = $('ann-result');
-    if (!title || !msg) { showToast('Başlık ve içerik zorunlu!', false); return; }
+    if (!title || !msg) { showToast('Заголовок ve içerik zorunlu!', false); return; }
     try {
       var d = await fetch('/api/send-announcement', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -246,10 +246,10 @@ tr:hover td{background:rgba(212,168,67,0.04);}
       }).then(function (r) { return r.json(); });
       el.style.display = 'block';
       el.innerHTML = d.success
-        ? '<span style="color:#4ade80">Duyuru yayınlandı!</span>'
+        ? '<span style="color:#4ade80">Объявление опубликовано!</span>'
         : '<span style="color:#ef4444">' + (d.error || 'Hata') + '</span>';
       setTimeout(function () { el.style.display = 'none'; }, 3000);
-    } catch (e) { showToast('Hata: ' + e.message, false); }
+    } catch (e) { showToast('Ошибка: ' + e.message, false); }
   }
 
   // ── Giriş logları ────────────────────────────────────────────────────────────
@@ -258,7 +258,7 @@ tr:hover td{background:rgba(212,168,67,0.04);}
       var logs = await fetch('/api/login-log').then(function (r) { return r.json(); });
       var box = $('login-log');
       if (!box) return;
-      if (!logs.length) { box.innerHTML = '<p style="color:#5a5040;text-align:center;padding:16px">Henüz giriş yok.</p>'; return; }
+      if (!logs.length) { box.innerHTML = '<p style="color:#5a5040;text-align:center;padding:16px">Пока входов нет.</p>'; return; }
       var roleColors = { owner: '#e05555', admin: '#c8922a', mod: '#2ecc71', uye: '#5a5040' };
       box.innerHTML = '<div style="display:flex;flex-direction:column;gap:8px;">' +
         logs.slice(0, 20).map(function (l) {
@@ -284,7 +284,7 @@ tr:hover td{background:rgba(212,168,67,0.04);}
       var d = await res.json();
       if (!d || !d.success) return;
       var score = d.threat_score || 15;
-      var level = d.threat_level || 'Düşük tehdit (Sakin)';
+      var level = d.threat_level || 'Низкая угроза (Спокойно)';
       var color = d.threat_color || '#2ECC71';
       var active = d.lockdown_active || false;
 
@@ -305,11 +305,11 @@ tr:hover td{background:rgba(212,168,67,0.04);}
       if (active) {
         btn.style.background = '#E74C3C';
         btn.style.color = '#fff';
-        btnText.textContent = 'Karantinayı Kapat (AÇIK)';
+        btnText.textContent = 'Отключить карантин (АКТИВЕН)';
       } else {
         btn.style.background = '#2ECC71';
         btn.style.color = '#100e08';
-        btnText.textContent = 'Karantinayı Aç (Lockdown)';
+        btnText.textContent = 'Включить карантин (Lockdown)';
       }
     } catch (e) { /* yoksay */ }
   }
@@ -327,12 +327,12 @@ tr:hover td{background:rgba(212,168,67,0.04);}
       });
       var d = await res.json();
       if (d && d.success) {
-        showToast(d.message || 'Lockdown durumu değişti', true);
+        showToast(d.message || 'Статус карантина изменён', true);
         loadThreatIndex();
       } else {
         showToast((d && d.error) || 'Hata', false);
       }
-    } catch (e) { showToast('Hata: ' + e.message, false); }
+    } catch (e) { showToast('Ошибка: ' + e.message, false); }
     btn.disabled = false;
   }
 

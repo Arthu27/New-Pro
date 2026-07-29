@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Oto-Mod & Uyarı Ayarları - Aether{% endblock %}
+{% block title %}Automod & Warning Настройки - Aether{% endblock %}
 {% block page_title %}<i class="fas fa-shield-alt" style="color:#e05555;"></i> AUTOMOD & WARN НАСТРОЙК{% endblock %}
 {% block content %}
 <style>
@@ -58,34 +58,34 @@ input:checked+.slider:before{transform:translateX(20px);background:#e05555;}
 
 <div style="margin-bottom:20px;">
   <select id="guild-select" style="display:none" onchange="loadAll()" style="width:100%;padding:11px;background:#100e08;border:1px solid rgba(231,76,60,0.3);border-radius:12px;color:#f0e8d0;font-size:14px;">
-    <option value="">Sunucu seç...</option>
+    <option value="">Сервер выбрать...</option>
   </select>
 </div>
 
 <div class="am-grid">
-  <!-- SOL: Yasaklı Kelimeler + Koruma -->
+  <!-- SOL: Zapresennie Kelimeler + Koruma -->
   <div>
     <div class="am-box" style="margin-bottom:20px;">
-      <div class="am-title"><i class="fas fa-ban"></i> Yasaklı Kelimeler</div>
+      <div class="am-title"><i class="fas fa-ban"></i> Zapresennie Kelimeler</div>
       <div class="add-row">
-        <input type="text" id="new-word" placeholder="Yasaklı kelime ekle...">
-        <button id="btnAddWord" type="button">+ Ekle</button>
+        <input type="text" id="new-word" placeholder="Kelime добавить...">
+        <button id="btnAddWord" type="button">+ Добавить</button>
       </div>
       <div id="word-list" style="min-height:32px;"></div>
     </div>
 
     <div class="am-box">
-      <div class="am-title"><i class="fas fa-shield-alt"></i> Koruma Ayarları</div>
+      <div class="am-title"><i class="fas fa-shield-alt"></i> Koruma Настройки</div>
       <div class="toggle-row">
-        <div><div class="toggle-label">🔁 Spam Koruması</div><div class="toggle-sub">Hızlı mesaj atanları otomatik susturur</div></div>
+        <div><div class="toggle-label">🔁 Защита от спама</div><div class="toggle-sub">Быстрый сообщение denhaklarıniteley susturmak</div></div>
         <label class="toggle"><input type="checkbox" id="spam-prot"><span class="slider"></span></label>
       </div>
       <div class="toggle-row">
-        <div><div class="toggle-label">🔗 Link Filtresi</div><div class="toggle-sub">İzinsiz link paylaşımını engeller</div></div>
+        <div><div class="toggle-label">🔗 Link Filtresi</div><div class="toggle-sub">Bez razreseniya ссылка obmen engelle</div></div>
         <label class="toggle"><input type="checkbox" id="link-filter"><span class="slider"></span></label>
       </div>
       <div class="toggle-row">
-        <div><div class="toggle-label">📢 Caps Lock Filtresi</div><div class="toggle-sub">Aşırı büyük harf kullanımını engeller</div></div>
+        <div><div class="toggle-label">📢 Caps Lock Filtresi</div><div class="toggle-sub">Crezmernoe bolsie bukvi использование</div></div>
         <label class="toggle"><input type="checkbox" id="caps-filter"><span class="slider"></span></label>
       </div>
       <div class="toggle-row">
@@ -93,40 +93,40 @@ input:checked+.slider:before{transform:translateX(20px);background:#e05555;}
         <label class="toggle"><input type="checkbox" id="invite-filter"><span class="slider"></span></label>
       </div>
       <div class="toggle-row">
-        <div><div class="toggle-label">😡 Toplu Etiket</div><div class="toggle-sub">Toplu mention engelle</div></div>
+        <div><div class="toggle-label">😡 Mention Spam</div><div class="toggle-sub">Toplu etiket zapret</div></div>
         <label class="toggle"><input type="checkbox" id="etiket-spam"><span class="slider"></span></label>
       </div>
       <div class="toggle-row">
-        <div><div class="toggle-label">🔁 Tekrar Mesaj</div><div class="toggle-sub">Benzer mesajı 3+ kez göndereni engeller</div></div>
+        <div><div class="toggle-label">🔁 Tekrar Сообщение</div><div class="toggle-sub">Benzer сообщение 3+ kez отправл</div></div>
         <label class="toggle"><input type="checkbox" id="duplicate-filter"><span class="slider"></span></label>
       </div>
       <div class="toggle-row">
-        <div><div class="toggle-label">😵 Emoji Spam</div><div class="toggle-sub">10+ emoji içeren mesajları yakala</div></div>
+        <div><div class="toggle-label">😵 Emoji Spam</div><div class="toggle-sub">10+ emoji soderjasie сообщения</div></div>
         <label class="toggle"><input type="checkbox" id="emoji-filter"><span class="slider"></span></label>
       </div>
-      <label class="field-label">Spam Eşiği (X mesaj / 5 sn)</label>
+      <label class="field-label">Порог спама (X сообщений / 5 сек)</label>
       <input type="number" id="spam-threshold" value="5" min="2" max="20" class="field-input">
-      <button class="save-btn" id="btnSaveAutomod" type="button"><i class="fas fa-save"></i> Otomatik Moderasyonu Kaydet</button>
+      <button class="save-btn" id="btnSaveAutomod" type="button"><i class="fas fa-save"></i> Automod Сохранить</button>
     </div>
   </div>
 
-  <!-- SAĞ: Spam Muaf Kanalları + Uyarı Sistemi -->
+  <!-- SAĞ: Каналы-исключения для спама Каналы + Uyarı Sistemi -->
   <div>
     <div class="am-box section" style="margin-bottom:20px;">
-      <div class="am-title section"><i class="fas fa-hashtag"></i> Spam Muaf Kanalları</div>
-      <p style="color:#5a5040;font-size:12px;margin-bottom:10px;">Bu kanallarda spam/link/caps filtresi çalışmaz.</p>
+      <div class="am-title section"><i class="fas fa-hashtag"></i> Каналы-исключения для спама Каналы</div>
+      <p style="color:#5a5040;font-size:12px;margin-bottom:10px;">Bu в каналах spam/ссылка/caps filtresi не работает.</p>
       <div class="ch-list" id="exempt-channels">
-        <div style="padding:20px;text-align:center;color:#5a5040;font-size:12px;">Sunucu seçin...</div>
+        <div style="padding:20px;text-align:center;color:#5a5040;font-size:12px;">Сервер выберите...</div>
       </div>
-      <button class="save-btn section" id="btnSaveExempt" type="button" style="margin-top:12px;"><i class="fas fa-save"></i> Muaf Kanalları Kaydet</button>
+      <button class="save-btn section" id="btnSaveExempt" type="button" style="margin-top:12px;"><i class="fas fa-save"></i> Исключения Каналы Сохранить</button>
     </div>
 
     <div class="am-box section">
-      <div class="am-title section"><i class="fas fa-exclamation-triangle"></i> Uyarı ve Ceza Sistemi</div>
-      <p style="color:#5a5040;font-size:12px;margin-bottom:14px;">Kaç uyarıdan sonra hangi cezanın verileceğini ayarla.</p>
+      <div class="am-title section"><i class="fas fa-exclamation-triangle"></i> Warning Наказание Система</div>
+      <p style="color:#5a5040;font-size:12px;margin-bottom:14px;">Сколько предупреждение ne наказание olacak verildi настройк.</p>
       <div id="warn-steps"></div>
-      <button class="add-step-btn" id="btnAddWarnStep" type="button">+ Yeni Kural Ekle</button>
-      <button class="save-btn section" id="btnSaveWarnConfig" type="button" style="margin-top:12px;"><i class="fas fa-save"></i> Uyarı Sistemini Kaydet</button>
+      <button class="add-step-btn" id="btnAddWarnStep" type="button">+ Новый Правило Добавить</button>
+      <button class="save-btn section" id="btnSaveWarnConfig" type="button" style="margin-top:12px;"><i class="fas fa-save"></i> Warning Система Сохранить</button>
     </div>
   </div>
 </div>

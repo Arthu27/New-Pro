@@ -1,105 +1,105 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Aether Paneli{% endblock %}</title>
+    <title>{% block title %}Панель Aether{% endblock %}</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
     <div class="sidebar">
-        <h2>🤖 AETHER PANEL</h2>
+        <h2>🤖 ПАНЕЛЬ AETHER</h2>
 
         {% if role == 'uye' %}
-        <a href="/member-apply" {% if request.path == '/member-apply' %}class="active"{% endif %}><i class="fas fa-user-shield"></i> Yönetici Başvurusu</a>
+        <a href="/member-apply" {% if request.path == '/member-apply' %}class="active"{% endif %}><i class="fas fa-user-shield"></i> Заявка в администрацию</a>
 
         {% elif role == 'mod' %}
-        <a href="/" {% if request.path == '/' %}class="active"{% endif %}><i class="fas fa-home"></i> Yönetim Paneli</a>
-        <a href="/logs" {% if request.path == '/logs' %}class="active"{% endif %}><i class="fas fa-clipboard-list"></i> Moderasyon Logları</a>
-        <a href="/warnings" {% if request.path == '/warnings' %}class="active"{% endif %}><i class="fas fa-exclamation-triangle"></i> Uyarılar</a>
+        <a href="/" {% if request.path == '/' %}class="active"{% endif %}><i class="fas fa-home"></i> Панель управления</a>
+        <a href="/logs" {% if request.path == '/logs' %}class="active"{% endif %}><i class="fas fa-clipboard-list"></i> Логи модерации</a>
+        <a href="/warnings" {% if request.path == '/warnings' %}class="active"{% endif %}><i class="fas fa-exclamation-triangle"></i> Предупреждения</a>
 
         {% elif role == 'admin' %}
-        <a href="/" {% if request.path == '/' %}class="active"{% endif %}><i class="fas fa-home"></i> Yönetim Paneli</a>
-        <a href="/users" {% if request.path == '/users' %}class="active"{% endif %}><i class="fas fa-users"></i> Kullanıcılar</a>
-        <a href="/logs" {% if request.path == '/logs' %}class="active"{% endif %}><i class="fas fa-clipboard-list"></i> Moderasyon Logları</a>
-        <a href="/warnings" {% if request.path == '/warnings' %}class="active"{% endif %}><i class="fas fa-exclamation-triangle"></i> Uyarılar</a>
-        <a href="/commands" {% if request.path == '/commands' %}class="active"{% endif %}><i class="fas fa-terminal"></i> Komutlar</a>
-        <a href="/staff-apps" {% if request.path == '/staff-apps' %}class="active"{% endif %}><i class="fas fa-user-shield"></i> Yönetici Başvuruları</a>
+        <a href="/" {% if request.path == '/' %}class="active"{% endif %}><i class="fas fa-home"></i> Панель управления</a>
+        <a href="/users" {% if request.path == '/users' %}class="active"{% endif %}><i class="fas fa-users"></i> Пользователи</a>
+        <a href="/logs" {% if request.path == '/logs' %}class="active"{% endif %}><i class="fas fa-clipboard-list"></i> Логи модерации</a>
+        <a href="/warnings" {% if request.path == '/warnings' %}class="active"{% endif %}><i class="fas fa-exclamation-triangle"></i> Предупреждения</a>
+        <a href="/commands" {% if request.path == '/commands' %}class="active"{% endif %}><i class="fas fa-terminal"></i> Команды</a>
+        <a href="/staff-apps" {% if request.path == '/staff-apps' %}class="active"{% endif %}><i class="fas fa-user-shield"></i> Заявки в администрацию</a>
 
                 {% elif role == 'owner' or role == 'admin' %}
-        <div style="font-size:10px;color:#8c7b58;font-weight:700;text-transform:uppercase;margin:12px 0 6px 14px;letter-spacing:1px;">🏠 ANA SAYFA</div>
-        <a href="/" {% if request.path == '/' %}class="active"{% endif %}><i class="fas fa-home"></i> Sunucu Özeti</a>
-        <a href="/guilds" {% if request.path == '/guilds' %}class="active"{% endif %}><i class="fas fa-server"></i> Sunucular</a>
-        <a href="/analytics" {% if request.path == '/analytics' %}class="active"{% endif %}><i class="fas fa-chart-line"></i> Sunucu Analizi</a>
-        <a href="/bot-stats" {% if request.path == '/bot-stats' %}class="active"{% endif %}><i class="fas fa-robot"></i> Bot İstatistikleri</a>
-        <a href="/server-health" {% if request.path == '/server-health' %}class="active"{% endif %}><i class="fas fa-heartbeat"></i> Sunucu Durumu</a>
+        <div style="font-size:10px;color:#8c7b58;font-weight:700;text-transform:uppercase;margin:12px 0 6px 14px;letter-spacing:1px;">🏠 ОСНОВНОЕ</div>
+        <a href="/" {% if request.path == '/' %}class="active"{% endif %}><i class="fas fa-home"></i> Обзор сервера</a>
+        <a href="/guilds" {% if request.path == '/guilds' %}class="active"{% endif %}><i class="fas fa-server"></i> Серверы</a>
+        <a href="/analytics" {% if request.path == '/analytics' %}class="active"{% endif %}><i class="fas fa-chart-line"></i> Аналитика сервера</a>
+        <a href="/bot-stats" {% if request.path == '/bot-stats' %}class="active"{% endif %}><i class="fas fa-robot"></i> Статистика бота</a>
+        <a href="/server-health" {% if request.path == '/server-health' %}class="active"{% endif %}><i class="fas fa-heartbeat"></i> Состояние сервера</a>
 
-        <div style="font-size:10px;color:#8c7b58;font-weight:700;text-transform:uppercase;margin:14px 0 6px 14px;letter-spacing:1px;">🛡️ MODERASYON & GÜVENLİK</div>
-        <a href="/logs" {% if request.path == '/logs' %}class="active"{% endif %}><i class="fas fa-clipboard-list"></i> Moderasyon Logları</a>
-        <a href="/warnings" {% if request.path == '/warnings' %}class="active"{% endif %}><i class="fas fa-exclamation-triangle"></i> Uyarılar</a>
-        <a href="/mod-history" {% if request.path == '/mod-history' %}class="active"{% endif %}><i class="fas fa-history"></i> Moderasyon Geçmişi</a>
-        <a href="/automod-settings" {% if request.path == '/automod-settings' %}class="active"{% endif %}><i class="fas fa-shield-alt"></i> Otomatik Moderasyon</a>
-        <a href="/antiraid" {% if request.path == '/antiraid' %}class="active"{% endif %}><i class="fas fa-user-shield"></i> Anti-Raid ve Koruma</a>
-        <a href="/member-notes" {% if request.path == '/member-notes' %}class="active"{% endif %}><i class="fas fa-sticky-note"></i> Üye Notları</a>
-        <a href="/watchlist-panel" {% if request.path == '/watchlist-panel' %}class="active"{% endif %}><i class="fas fa-eye"></i> İzleme Paneli</a>
-        <a href="/bulk-actions" {% if request.path == '/bulk-actions' %}class="active"{% endif %}><i class="fas fa-layer-group"></i> Toplu İşlemler</a>
+        <div style="font-size:10px;color:#8c7b58;font-weight:700;text-transform:uppercase;margin:14px 0 6px 14px;letter-spacing:1px;">🛡️ МОДЕРАЦИЯ И ЗАЩИТА</div>
+        <a href="/logs" {% if request.path == '/logs' %}class="active"{% endif %}><i class="fas fa-clipboard-list"></i> Логи модерации</a>
+        <a href="/warnings" {% if request.path == '/warnings' %}class="active"{% endif %}><i class="fas fa-exclamation-triangle"></i> Предупреждения</a>
+        <a href="/mod-history" {% if request.path == '/mod-history' %}class="active"{% endif %}><i class="fas fa-history"></i> История модерации</a>
+        <a href="/automod-settings" {% if request.path == '/automod-settings' %}class="active"{% endif %}><i class="fas fa-shield-alt"></i> Автомодерация</a>
+        <a href="/antiraid" {% if request.path == '/antiraid' %}class="active"{% endif %}><i class="fas fa-user-shield"></i> Анти-рейд и защита</a>
+        <a href="/member-notes" {% if request.path == '/member-notes' %}class="active"{% endif %}><i class="fas fa-sticky-note"></i> Заметки об участниках</a>
+        <a href="/watchlist-panel" {% if request.path == '/watchlist-panel' %}class="active"{% endif %}><i class="fas fa-eye"></i> Панель наблюдения</a>
+        <a href="/bulk-actions" {% if request.path == '/bulk-actions' %}class="active"{% endif %}><i class="fas fa-layer-group"></i> Массовые действия</a>
 
-        <div style="font-size:10px;color:#8c7b58;font-weight:700;text-transform:uppercase;margin:14px 0 6px 14px;letter-spacing:1px;">👥 ÜYELER & ROLLER</div>
-        <a href="/users" {% if request.path == '/users' %}class="active"{% endif %}><i class="fas fa-users"></i> Kullanıcılar</a>
-        <a href="/roles" {% if request.path == '/roles' %}class="active"{% endif %}><i class="fas fa-user-tag"></i> Rol Yönetimi</a>
-        <a href="/autorole" {% if request.path == '/autorole' %}class="active"{% endif %}><i class="fas fa-id-badge"></i> Oto-Rol ve Seviyeler</a>
-        <a href="/color-roles" {% if request.path == '/color-roles' %}class="active"{% endif %}><i class="fas fa-palette"></i> Renkli Roller</a>
-        <a href="/reaction-roles" {% if request.path == '/reaction-roles' %}class="active"{% endif %}><i class="fas fa-smile"></i> Tepki Rolleri</a>
-        <a href="/member-search" {% if request.path == '/member-search' %}class="active"{% endif %}><i class="fas fa-search"></i> Üye Arama</a>
-        <a href="/invite-tracker" {% if request.path == '/invite-tracker' %}class="active"{% endif %}"><i class="fas fa-user-plus"></i> Davet Takipçisi</a>
-        <a href="/afk-list" {% if request.path == '/afk-list' %}class="active"{% endif %}><i class="fas fa-moon"></i> AFK Listesi</a>
+        <div style="font-size:10px;color:#8c7b58;font-weight:700;text-transform:uppercase;margin:14px 0 6px 14px;letter-spacing:1px;">👥 УЧАСТНИКИ И РОЛИ</div>
+        <a href="/users" {% if request.path == '/users' %}class="active"{% endif %}><i class="fas fa-users"></i> Пользователи</a>
+        <a href="/roles" {% if request.path == '/roles' %}class="active"{% endif %}"><i class="fas fa-user-tag"></i> Управление ролями</a>
+        <a href="/autorole" {% if request.path == '/autorole' %}class="active"{% endif %}><i class="fas fa-id-badge"></i> Автороли и уровни</a>
+        <a href="/color-roles" {% if request.path == '/color-roles' %}class="active"{% endif %}><i class="fas fa-palette"></i> Цветовые роли</a>
+        <a href="/reaction-roles" {% if request.path == '/reaction-roles' %}class="active"{% endif %}><i class="fas fa-smile"></i> Роли по реакциям</a>
+        <a href="/member-search" {% if request.path == '/member-search' %}class="active"{% endif %}><i class="fas fa-search"></i> Поиск участников</a>
+        <a href="/invite-tracker" {% if request.path == '/invite-tracker' %}class="active"{% endif %}><i class="fas fa-user-plus"></i> Трекер приглашений</a>
+        <a href="/afk-list" {% if request.path == '/afk-list' %}class="active"{% endif %}><i class="fas fa-moon"></i> Список AFK</a>
 
-        <div style="font-size:10px;color:#8c7b58;font-weight:700;text-transform:uppercase;margin:14px 0 6px 14px;letter-spacing:1px;">🎫 DESTEK & TALEPLER</div>
-        <a href="/ai-tickets" {% if request.path == '/ai-tickets' %}class="active"{% endif %}><i class="fas fa-ticket-alt"></i> AI Talepleri</a>
-        <a href="/ai_ticket_stats" {% if request.path == '/ai_ticket_stats' %}class="active"{% endif %}><i class="fas fa-chart-pie"></i> Talep İstatistikleri</a>
-        <a href="/ticket-settings" {% if request.path == '/ticket-settings' %}class="active"{% endif %}><i class="fas fa-cogs"></i> Talep Ayarları</a>
-        <a href="/staff-apps" {% if request.path == '/staff-apps' %}class="active"{% endif %}><i class="fas fa-file-signature"></i> Moderatör Başvuruları</a>
+        <div style="font-size:10px;color:#8c7b58;font-weight:700;text-transform:uppercase;margin:14px 0 6px 14px;letter-spacing:1px;">🎫 ПОДДЕРЖКА И ТИКЕТЫ</div>
+        <a href="/ai-tickets" {% if request.path == '/ai-tickets' %}class="active"{% endif %}><i class="fas fa-ticket-alt"></i> AI Тикеты</a>
+        <a href="/ai_ticket_stats" {% if request.path == '/ai_ticket_stats' %}class="active"{% endif %}><i class="fas fa-chart-pie"></i> Статистика тикетов</a>
+        <a href="/ticket-settings" {% if request.path == '/ticket-settings' %}class="active"{% endif %}><i class="fas fa-cogs"></i> Настройки тикетов</a>
+        <a href="/staff-apps" {% if request.path == '/staff-apps' %}class="active"{% endif %}><i class="fas fa-file-signature"></i> Заявки в модераторы</a>
 
-        <div style="font-size:10px;color:#8c7b58;font-weight:700;text-transform:uppercase;margin:14px 0 6px 14px;letter-spacing:1px;">🤖 KOMUTLAR & AYARLAR</div>
-        <a href="/commands" {% if request.path == '/commands' %}class="active"{% endif %}><i class="fas fa-terminal"></i> Bot Komutları</a>
-        <a href="/custom-commands" {% if request.path == '/custom-commands' %}class="active"{% endif %}><i class="fas fa-code"></i> Özel Komutlar</a>
-        <a href="/send-command" {% if request.path == '/send-command' %}class="active"{% endif %}><i class="fas fa-paper-plane"></i> Komut Gönder</a>
-        <a href="/bot-settings" {% if request.path == '/bot-settings' %}class="active"{% endif %}><i class="fas fa-sliders-h"></i> Bot Ayarları</a>
-        <a href="/cog-manager" {% if request.path == '/cog-manager' %}class="active"{% endif %}><i class="fas fa-cubes"></i> Modül Yöneticisi</a>
-        <a href="/settings" {% if request.path == '/settings' %}class="active"{% endif %}><i class="fas fa-cog"></i> Sunucu Ayarları</a>
-        <a href="/rules-editor" {% if request.path == '/rules-editor' %}class="active"{% endif %}><i class="fas fa-gavel"></i> Kural Düzenleyici</a>
-        <a href="/welcome-editor" {% if request.path == '/welcome-editor' %}class="active"{% endif %}><i class="fas fa-handshake"></i> Karşılama Düzenleyici</a>
-        <a href="/warn-config" {% if request.path == '/warn-config' %}class="active"{% endif %}><i class="fas fa-exclamation"></i> Uyarı Ayarları</a>
+        <div style="font-size:10px;color:#8c7b58;font-weight:700;text-transform:uppercase;margin:14px 0 6px 14px;letter-spacing:1px;">🤖 КОМАНДЫ И НАСТРОЙКИ</div>
+        <a href="/commands" {% if request.path == '/commands' %}class="active"{% endif %}><i class="fas fa-terminal"></i> Команды бота</a>
+        <a href="/custom-commands" {% if request.path == '/custom-commands' %}class="active"{% endif %}><i class="fas fa-code"></i> Пользовательские команды</a>
+        <a href="/send-command" {% if request.path == '/send-command' %}class="active"{% endif %}><i class="fas fa-paper-plane"></i> Отправить команду</a>
+        <a href="/bot-settings" {% if request.path == '/bot-settings' %}class="active"{% endif %}><i class="fas fa-sliders-h"></i> Настройки бота</a>
+        <a href="/cog-manager" {% if request.path == '/cog-manager' %}class="active"{% endif %}><i class="fas fa-cubes"></i> Менеджер модулей</a>
+        <a href="/settings" {% if request.path == '/settings' %}class="active"{% endif %}><i class="fas fa-cog"></i> Настройки сервера</a>
+        <a href="/rules-editor" {% if request.path == '/rules-editor' %}class="active"{% endif %}><i class="fas fa-gavel"></i> Редактор правил</a>
+        <a href="/welcome-editor" {% if request.path == '/welcome-editor' %}class="active"{% endif %}><i class="fas fa-handshake"></i> Редактор приветствия</a>
+        <a href="/warn-config" {% if request.path == '/warn-config' %}class="active"{% endif %}><i class="fas fa-exclamation"></i> Настройки предупреждений</a>
 
-        <div style="font-size:10px;color:#8c7b58;font-weight:700;text-transform:uppercase;margin:14px 0 6px 14px;letter-spacing:1px;">🎮 ETKİLEŞİM & İSTATİSTİK</div>
-        <a href="/economy" {% if request.path == '/economy' %}class="active"{% endif %}><i class="fas fa-coins"></i> Sunucu Ekonomisi</a>
-        <a href="/leveling" {% if request.path == '/leveling' %}class="active"{% endif %}><i class="fas fa-star"></i> XP ve Seviyeler</a>
-        <a href="/giveaway" {% if request.path == '/giveaway' %}class="active"{% endif %}><i class="fas fa-gift"></i> Çekilişler</a>
-        <a href="/polls" {% if request.path == '/polls' %}class="active"{% endif %}><i class="fas fa-poll"></i> Anketler</a>
-        <a href="/suggestions" {% if request.path == '/suggestions' %}class="active"{% endif %}><i class="fas fa-lightbulb"></i> Öneriler</a>
-        <a href="/starboard" {% if request.path == '/starboard' %}class="active"{% endif %}><i class="fas fa-star"></i> Yıldız Panosu</a>
-        <a href="/voice-stats" {% if request.path == '/voice-stats' %}class="active"{% endif %}"><i class="fas fa-microphone"></i> Ses İstatistikleri</a>
-        <a href="/duty-panel-web" {% if request.path == '/duty-panel-web' %}class="active"{% endif %}><i class="fas fa-user-clock"></i> Nöbet Paneli</a>
-        <a href="/scheduled-messages" {% if request.path == '/scheduled-messages' %}class="active"{% endif %}><i class="fas fa-clock"></i> Zamanlanmış Mesajlar</a>
+        <div style="font-size:10px;color:#8c7b58;font-weight:700;text-transform:uppercase;margin:14px 0 6px 14px;letter-spacing:1px;">🎮 ИНТЕРАКТИВ И СТАТИСТИКА</div>
+        <a href="/economy" {% if request.path == '/economy' %}class="active"{% endif %}><i class="fas fa-coins"></i> Экономика сервера</a>
+        <a href="/leveling" {% if request.path == '/leveling' %}class="active"{% endif %}><i class="fas fa-star"></i> Рейтинг и уровни XP</a>
+        <a href="/giveaway" {% if request.path == '/giveaway' %}class="active"{% endif %}><i class="fas fa-gift"></i> Розыгрыши</a>
+        <a href="/polls" {% if request.path == '/polls' %}class="active"{% endif %}><i class="fas fa-poll"></i> Опросы</a>
+        <a href="/suggestions" {% if request.path == '/suggestions' %}class="active"{% endif %}><i class="fas fa-lightbulb"></i> Предложения</a>
+        <a href="/starboard" {% if request.path == '/starboard' %}class="active"{% endif %}><i class="fas fa-star"></i> Starboard</a>
+        <a href="/voice-stats" {% if request.path == '/voice-stats' %}class="active"{% endif %}><i class="fas fa-microphone"></i> Голосовая статистика</a>
+        <a href="/duty-panel-web" {% if request.path == '/duty-panel-web' %}class="active"{% endif %}><i class="fas fa-user-clock"></i> Панель дежурств</a>
+        <a href="/scheduled-messages" {% if request.path == '/scheduled-messages' %}class="active"{% endif %}><i class="fas fa-clock"></i> Запланированные сообщения</a>
 
-        <div style="font-size:10px;color:#8c7b58;font-weight:700;text-transform:uppercase;margin:14px 0 6px 14px;letter-spacing:1px;">📜 LOGLAR & BAKIM</div>
-        <a href="/chat" {% if request.path == '/chat' %}class="active"{% endif %}><i class="fas fa-comments"></i> Sohbet ve Mesaj Logları</a>
-        <a href="/message-logs" {% if request.path == '/message-logs' %}class="active"{% endif %}><i class="fas fa-comment-alt"></i> Mesaj Logları</a>
-        <a href="/panel-logs" {% if request.path == '/panel-logs' %}class="active"{% endif %}><i class="fas fa-list"></i> Panel Logları</a>
-        <a href="/backup" {% if request.path == '/backup' %}class="active"{% endif %}><i class="fas fa-database"></i> Yedekleme</a>
-        <a href="/todo" {% if request.path == '/todo' %}class="active"{% endif %}><i class="fas fa-check-square"></i> Görev Listesi</a>
-        <a href="/yardim" {% if request.path == '/yardim' %}class="active"{% endif %}><i class="fas fa-question-circle"></i> Yardım ve Rehber</a>
+        <div style="font-size:10px;color:#8c7b58;font-weight:700;text-transform:uppercase;margin:14px 0 6px 14px;letter-spacing:1px;">📜 ЛОГИ И ОБСЛУЖИВАНИЕ</div>
+        <a href="/chat" {% if request.path == '/chat' %}class="active"{% endif %}><i class="fas fa-comments"></i> Чат и логи сообщений</a>
+        <a href="/message-logs" {% if request.path == '/message-logs' %}class="active"{% endif %}><i class="fas fa-comment-alt"></i> Логи сообщений</a>
+        <a href="/panel-logs" {% if request.path == '/panel-logs' %}class="active"{% endif %}><i class="fas fa-list"></i> Логи панели</a>
+        <a href="/backup" {% if request.path == '/backup' %}class="active"{% endif %}><i class="fas fa-database"></i> Резервное копирование</a>
+        <a href="/todo" {% if request.path == '/todo' %}class="active"{% endif %}><i class="fas fa-check-square"></i> Список задач</a>
+        <a href="/yardim" {% if request.path == '/yardim' %}class="active"{% endif %}><i class="fas fa-question-circle"></i> Справка и руководство</a>
         {% endif %}
     </div>
 
     <div id="main-content" class="main-content">
         <div class="navbar">
-            <h1>{% block page_title %}Bot Yönetim Paneli{% endblock %}</h1>
+            <h1>{% block page_title %}Панель управления ботом{% endblock %}</h1>
             <div class="user-info">
                 <span>{{ username }}</span>
                 <span class="role-badge">{{ role }}</span>
-                <a href="/logout" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Çıkış</a>
+                <a href="/logout" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Выход</a>
             </div>
         </div>
 

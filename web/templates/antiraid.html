@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Antiraid - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-shield-alt" style="color:#c8922a;animation:pulse 2s infinite;"></i> ANTİ-RAİD KORUMASI{% endblock %}
+{% block page_title %}<i class="fas fa-shield-alt" style="color:#c8922a;animation:pulse 2s infinite;"></i> АНТИРАЙД ЗАЩИТЫ{% endblock %}
 {% block content %}
 <style>
   .ar-box{background:linear-gradient(135deg,rgba(26,22,16,0.7),rgba(26,22,16,0.7));border:1px solid rgba(212,168,67,0.3);border-radius:16px;padding:25px;margin-bottom:20px;position:relative;overflow:hidden;}
@@ -38,55 +38,55 @@
 </style>
 
 <select id="guild-select" style="display:none" class="guild-select">
-  <option value="">Sunucu seç...</option>
+  <option value="">Сервер выбрать...</option>
 </select>
 
 <div class="grid2">
   <div class="ar-box">
-    <div class="ar-title"><i class="fas fa-shield-alt"></i> Koruma Ayarları</div>
+    <div class="ar-title"><i class="fas fa-shield-alt"></i> Koruma Настройки</div>
     <div class="toggle-row">
-      <div><div class="toggle-label">🚪 Katılım Raid Koruması</div><div class="toggle-sub">Kısa sürede çok fazla üyenin katılmasını engeller</div></div>
+      <div><div class="toggle-label">🚪 Join Raid Koruma</div><div class="toggle-sub">Korotkaya dlitelnosti очень участников prisoedinitsya engellemek</div></div>
       <label class="toggle"><input type="checkbox" id="join-raid"><span class="slider"></span></label>
     </div>
     <div class="toggle-row">
-      <div><div class="toggle-label">🤖 Bot Koruma</div><div class="toggle-sub">Yetkisiz bot eklenmesini engeller</div></div>
+      <div><div class="toggle-label">🤖 Bot Koruma</div><div class="toggle-sub">Администратор bot dobavlenie engelle</div></div>
       <label class="toggle"><input type="checkbox" id="bot-prot"><span class="slider"></span></label>
     </div>
     <div class="toggle-row">
-      <div><div class="toggle-label">🔨 Webhook Koruma</div><div class="toggle-sub">Yetkisiz webhook oluşturulmasını engeller</div></div>
+      <div><div class="toggle-label">🔨 Защита Webhook</div><div class="toggle-sub">Администратор webhook oluşoluşturulanlar engelle</div></div>
       <label class="toggle"><input type="checkbox" id="webhook-prot"><span class="slider"></span></label>
     </div>
     <div class="toggle-row">
-      <div><div class="toggle-label">📛 Kanal/Rol Silme Koruması</div><div class="toggle-sub">Toplu silme işlemlerini engeller</div></div>
+      <div><div class="toggle-label">📛 Канал/Роль Удалитьme Koruma</div><div class="toggle-sub">Toplu удалить вход engelle</div></div>
       <label class="toggle"><input type="checkbox" id="delete-prot"><span class="slider"></span></label>
     </div>
     <div class="toggle-row">
-      <div><div class="toggle-label">👤 Hesap Yaşı Filtresi</div><div class="toggle-sub">Yeni hesapları otomatik olarak atar</div></div>
+      <div><div class="toggle-label">👤 Фильтр по возрасту аккаунта</div><div class="toggle-sub">Новый hesapları автоматически at</div></div>
       <label class="toggle"><input type="checkbox" id="age-prot"><span class="slider"></span></label>
     </div>
-    <label class="field-label">Min. Hesap Yaşı (gün)</label>
+    <label class="field-label">Min. Hesap Yaşı (день)</label>
     <input type="number" id="min-age" value="7" min="0" max="365" class="field-input">
-    <label class="field-label">Katılım Eşiği (X üye/dk)</label>
+    <label class="field-label">Порог входа (X участников/мин)</label>
     <input type="number" id="join-threshold" value="10" min="2" max="100" class="field-input">
     <label class="field-label">Raid Aksiyonu</label>
     <select id="raid-action" class="field-input">
-      <option value="lockdown">🔒 Sunucuyu Kilitle</option>
-      <option value="kick">👢 Yeni Üyeyi At</option>
-      <option value="ban">🔨 Yeni Üyeyi Banla</option>
-      <option value="alert">🔔 Sadece Uyar</option>
+      <option value="lockdown">🔒 Сервер Kilitle</option>
+      <option value="kick">👢 Новый Участник At</option>
+      <option value="ban">🔨 Новый Участник Banla</option>
+      <option value="alert">🔔 Только Uyar</option>
     </select>
-    <button class="save-btn" id="btnSaveAntiraid" type="button"><i class="fas fa-save"></i> Kaydet</button>
+    <button class="save-btn" id="btnSaveAntiraid" type="button"><i class="fas fa-save"></i> Сохранить</button>
   </div>
 
   <div>
     <div class="ar-box">
-      <div class="ar-title"><i class="fas fa-exclamation-triangle"></i> Son Raid Olayları</div>
-      <div id="raid-events"><p style="color:#5a5040;font-size:13px;font-style:italic;">Sunucu seçin...</p></div>
+      <div class="ar-title"><i class="fas fa-exclamation-triangle"></i> В конец Raid Sobitiya</div>
+      <div id="raid-events"><p style="color:#5a5040;font-size:13px;font-style:italic;">Сервер выберите...</p></div>
     </div>
     <div class="ar-box">
-      <div class="ar-title"><i class="fas fa-check-circle" style="color:#5ec47a;"></i> Beyaz Liste</div>
+      <div class="ar-title"><i class="fas fa-check-circle" style="color:#5ec47a;"></i> Whitelist</div>
       <div class="wl-add-row">
-        <input type="text" id="whitelist-id" placeholder="Kullanıcı/Bot ID...">
+        <input type="text" id="whitelist-id" placeholder="Пользователь/Bot ID...">
         <button type="button" id="btnAddWl"><i class="fas fa-plus"></i> Ekle</button>
       </div>
       <div id="whitelist-items"></div>
@@ -133,15 +133,15 @@
               '<span style="color:rgba(240,232,208,0.55);font-size:11px;margin-left:8px;">' + e.timestamp + '</span>' +
               '<div style="color:rgba(240,232,208,0.4);font-size:12px;margin-top:4px;">' + e.description + '</div></div>';
           }).join('')
-        : '<p style="color:#5a5040;font-size:13px;font-style:italic;">Raid olayı yok.</p>';
+        : '<p style="color:#5a5040;font-size:13px;font-style:italic;">Raid sobitie yok.</p>';
     } catch (e) {
-      toast('Yüklenemedi: ' + e.message, false);
+      toast('Не удалось загрузить: ' + e.message, false);
     }
   }
 
   function renderWhitelist() {
     var box = $('whitelist-items');
-    if (!whitelist.length) { box.innerHTML = '<p style="color:#5a5040;font-size:13px;font-style:italic;">Beyaz liste boş.</p>'; return; }
+    if (!whitelist.length) { box.innerHTML = '<p style="color:#5a5040;font-size:13px;font-style:italic;">Whitelist пусто.</p>'; return; }
     box.innerHTML = whitelist.map(function (id, i) {
       return '<span class="wl-tag">' + id + '<button data-wl-idx="' + i + '" type="button">×</button></span>';
     }).join('');
@@ -161,7 +161,7 @@
   }
 
   async function saveAntiraid() {
-    if (!selectedGuild) { toast('Önce sunucu seç!', false); return; }
+    if (!selectedGuild) { toast('Сервер выбрать!', false); return; }
     try {
       var r = await fetch('/api/guild/' + selectedGuild + '/antiraid', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -179,7 +179,7 @@
       });
       var d = await r.json();
       if (d.success) {
-        toast('✅ Kaydedildi!', true);
+        toast('✅ Сохранено!', true);
       } else {
         toast('❌ ' + (d.error || 'Hata'), false);
       }

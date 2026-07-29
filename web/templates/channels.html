@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% block title %}Kanal Yönetimi — Aether{% endblock %}
-{% block page_title %}Kanal Yönetimi{% endblock %}
+{% block title %}Канал Управление — Aether{% endblock %}
+{% block page_title %}Канал Управление{% endblock %}
 {% block content %}
 <style>
 /* ── Toolbar ── */
@@ -87,10 +87,10 @@
 <!-- Toolbar -->
 <div class="ch-toolbar">
   <select id="guild-select" style="display:none" class="ch-select">
-    <option value="">Sunucu seç...</option>
+    <option value="">Сервер выбрать...</option>
   </select>
   <button class="btn-new" id="btnNewChannel" type="button">
-    <i class="fas fa-plus"></i> Yeni Kanal
+    <i class="fas fa-plus"></i> Новый Канал
   </button>
 </div>
 
@@ -110,18 +110,18 @@
   </div>
   <div class="ch-stat">
     <div class="ch-stat-icon" style="background:rgba(212,168,67,0.1);color:#e0a830;"><i class="fas fa-layer-group"></i></div>
-    <div><div class="ch-stat-val" id="stat-total">0</div><div class="ch-stat-lbl">Toplam</div></div>
+    <div><div class="ch-stat-val" id="stat-total">0</div><div class="ch-stat-lbl">Всего</div></div>
   </div>
 </div>
 
 <!-- Channel list -->
 <div class="ch-box" id="ch-box">
   <div class="ch-box-header">
-    <div class="ch-box-title"><i class="fas fa-list"></i> Kanal Listesi</div>
+    <div class="ch-box-title"><i class="fas fa-list"></i> Канал Listesi</div>
     <span class="ch-box-count" id="ch-count">—</span>
   </div>
   <div id="channel-list">
-    <div class="ch-empty"><i class="fas fa-hashtag"></i><p>Sunucu seçin</p></div>
+    <div class="ch-empty"><i class="fas fa-hashtag"></i><p>Сервер выберите</p></div>
   </div>
 </div>
 
@@ -129,11 +129,11 @@
 <div id="modal" class="modal-overlay">
   <div class="modal-card">
     <div class="modal-head">
-      <h3><i class="fas fa-plus-circle" style="color:#c8922a;margin-right:8px;"></i>Yeni Kanal</h3>
+      <h3><i class="fas fa-plus-circle" style="color:#c8922a;margin-right:8px;"></i>Новый Канал</h3>
       <button class="modal-close" id="btnCloseModal" type="button"><i class="fas fa-times"></i></button>
     </div>
-    <label class="field-label">Kanal Adı</label>
-    <input type="text" id="ch-name" placeholder="kanal-adı" class="field-input">
+    <label class="field-label">Канал Isim</label>
+    <input type="text" id="ch-name" placeholder="канал-имя" class="field-input">
     <label class="field-label">Kanal Türü</label>
     <div class="type-grid">
       <div class="type-opt selected" data-type="text">
@@ -151,8 +151,8 @@
     </div>
     <input type="hidden" id="ch-type" value="text">
     <div class="modal-actions">
-      <button class="btn-confirm" id="btnCreateChannel" type="button">Oluştur</button>
-      <button class="btn-cancel" id="btnCancelChannel" type="button">İptal</button>
+      <button class="btn-confirm" id="btnCreateChannel" type="button">Создать</button>
+      <button class="btn-cancel" id="btnCancelChannel" type="button">Отмена</button>
     </div>
   </div>
 </div>
@@ -189,7 +189,7 @@
     var restoreY = preserveScroll ? getScroll() : 0;
 
     var list = $('channel-list');
-    list.innerHTML = '<div class="ch-empty"><i class="fas fa-spinner fa-spin"></i><p>Yükleniyor...</p></div>';
+    list.innerHTML = '<div class="ch-empty"><i class="fas fa-spinner fa-spin"></i><p>Загрузка...</p></div>';
 
     try {
       var r = await fetch('/api/guild/' + selectedGuild + '/channels');
@@ -204,11 +204,11 @@
       $('stat-voice').textContent = voiceCount;
       $('stat-cat').textContent   = catCount;
       $('stat-total').textContent = channels.length;
-      $('ch-count').textContent   = channels.length + ' kanal';
+      $('ch-count').textContent   = channels.length + ' канал';
       $('ch-stats').style.display = 'flex';
 
       if (!channels.length) {
-        list.innerHTML = '<div class="ch-empty"><i class="fas fa-hashtag"></i><p>Kanal bulunamadı.</p></div>';
+        list.innerHTML = '<div class="ch-empty"><i class="fas fa-hashtag"></i><p>Канал не найдено.</p></div>';
         return;
       }
 
@@ -230,7 +230,7 @@
 
       var html = '';
 
-      // Kategorisiz kanallar
+      // Kategorisiz каналlar
       if (uncategorized.length) {
         uncategorized.forEach(function (ch) {
           html += renderRow(ch, true);
@@ -252,7 +252,7 @@
         if (children.length) {
           children.forEach(function (ch) { html += renderRow(ch, false); });
         } else {
-          html += '<div style="padding:10px 28px;font-size:12px;color:#5a5040;font-style:italic;">Boş kategori</div>';
+          html += '<div style="padding:10px 28px;font-size:12px;color:#5a5040;font-style:italic;">Пусто kategori</div>';
         }
         html += '</div></div>';
       });
@@ -266,7 +266,7 @@
         setTimeout(function () { setScroll(restoreY); }, 30);
       }
     } catch (e) {
-      list.innerHTML = '<div class="ch-empty"><i class="fas fa-exclamation-triangle"></i><p>Hata: ' + e.message + '</p></div>';
+      list.innerHTML = '<div class="ch-empty"><i class="fas fa-exclamation-triangle"></i><p>Ошибка: ' + e.message + '</p></div>';
     }
   }
 
@@ -311,7 +311,7 @@
   async function createChannel() {
     var name = $('ch-name').value.trim();
     var type = $('ch-type').value;
-    if (!name) { alert('Kanal adı gir!'); return; }
+    if (!name) { alert('Канал имя gir!'); return; }
     try {
       var r = await fetch('/api/guild/' + selectedGuild + '/channels/create', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -319,17 +319,17 @@
       });
       var d = await r.json();
       if (d.success) { closeModal(); loadChannels(true); }
-      else alert('Hata: ' + (d.error || 'Bilinmeyen'));
+      else alert('Ошибка: ' + (d.error || 'Bilinmeyen'));
     } catch (e) { alert('İstek hatası: ' + e.message); }
   }
 
   async function deleteChannel(id, name) {
-    if (!confirm('"' + name + '" kanalını silmek istediğine emin misin?')) return;
+    if (!confirm('"' + name + '" каналını silmek istediğine emin misin?')) return;
     try {
       var r = await fetch('/api/guild/' + selectedGuild + '/channels/' + id + '/delete', { method: 'POST' });
       var d = await r.json();
       if (d.success) loadChannels(true);
-      else alert('Hata: ' + (d.error || 'Bilinmeyen'));
+      else alert('Ошибка: ' + (d.error || 'Bilinmeyen'));
     } catch (e) { alert('İstek hatası: ' + e.message); }
   }
 
@@ -341,7 +341,7 @@
       });
     });
 
-    // Yeni kanal butonu
+    // Yeni канал butonu
     var btnNew = $('btnNewChannel');
     if (btnNew) btnNew.addEventListener('click', openNameModal);
     var btnClose = $('btnCloseModal');

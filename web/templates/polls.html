@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Anketler - Aether{% endblock %}
+{% block title %}Опросы - Aether{% endblock %}
 {% block page_title %}📊 ANKET YÖNETİCİSİ{% endblock %}
 {% block content %}
 <style>
@@ -334,16 +334,16 @@
 <div class="polls-hero">
   <span class="hero-icon">📊</span>
   <div class="hero-title">ANKET YÖNETİCİSİ</div>
-  <div class="hero-sub">Sunucuda anket oluştur, sonuçları canlı takip et</div>
+  <div class="hero-sub">Сервер пользователь anketi создать, результат canlı takip et</div>
 </div>
 
 <div class="controls-bar">
   <select id="guild-select" style="display:none" class="guild-sel" onchange="loadPolls()">
-    <option value="">🏠 Sunucu seç...</option>
+    <option value="">🏠 Сервер seçenek...</option>
   </select>
   {% if role == 'owner' %}
   <button class="btn-new" onclick="openModal()">
-    <span>📊</span> YENİ ANKET
+    <span>📊</span> НОВЫЙ ANKET
   </button>
   {% endif %}
 </div>
@@ -353,21 +353,21 @@
 {% if role == 'owner' %}
 <div id="modal" class="modal-overlay">
   <div class="modal-box">
-    <div class="modal-title">📊 Anket Oluştur</div>
+    <div class="modal-title">📊 Anket Создать</div>
     <div class="form-group">
       <label class="form-label">📺 Kanal</label>
       <select id="poll-channel" class="form-input"></select>
     </div>
     <div class="form-group">
       <label class="form-label">❓ Soru</label>
-      <input type="text" id="poll-question" class="form-input" placeholder="Anket sorusunu yaz...">
+      <input type="text" id="poll-question" class="form-input" placeholder="Anket sorusunu напишите...">
     </div>
-    <label class="form-label" style="margin-bottom:10px;">🗳️ Seçenekler</label>
+    <label class="form-label" style="margin-bottom:10px;">🗳️ Выбрать</label>
     <div id="poll-options"></div>
-    <button class="btn-add-opt" onclick="addOption()">＋ Seçenek Ekle</button>
+    <button class="btn-add-opt" onclick="addOption()">＋ Выбрать Добавить</button>
     <div class="modal-actions">
-      <button class="btn-submit" onclick="createPoll()">📊 GÖNDER</button>
-      <button class="btn-cancel" onclick="closeModal()">İptal</button>
+      <button class="btn-submit" onclick="createPoll()">📊 ОТПРАВИТЬ</button>
+      <button class="btn-cancel" onclick="closeModal()">Отмена</button>
     </div>
   </div>
 </div>
@@ -390,7 +390,7 @@ function toast(msg, ok) {
 async function loadPolls() {
   var box = document.getElementById('poll-list');
   if (!selectedGuild) {
-    box.innerHTML = '<div class="empty-state">Sunucu seçili değil.</div>';
+    box.innerHTML = '<div class="empty-state">Сервер выбран değil.</div>';
     return;
   }
   try {
@@ -410,7 +410,7 @@ async function loadPolls() {
     }
 
     if (polls.length === 0) {
-      box.innerHTML = '<div class="empty-state"><div style="font-size:64px;margin-bottom:16px;opacity:.4;">📊</div><p style="font-family:Inter,sans-serif;font-size:12px;letter-spacing:2px;color:#555;">HENÜZ ANKET YOK</p></div>';
+      box.innerHTML = '<div class="empty-state"><div style="font-size:64px;margin-bottom:16px;opacity:.4;">📊</div><p style="font-family:Inter,sans-serif;font-size:12px;letter-spacing:2px;color:#555;">ПОКА ANKET YOK</p></div>';
       return;
     }
 
@@ -478,10 +478,10 @@ async function voteOption(pollId, optionIndex, btn) {
     if (d.success) {
       btn.textContent = '✅ OY VERİLDİ';
       btn.classList.add('voted');
-      toast('✅ Oyun kaydedildi!', true);
+      toast('✅ Oy kaydedildi!', true);
       setTimeout(function () { loadPolls(); }, 800);
     } else {
-      toast('Hata: ' + (d.error || 'Bilinmeyen hata'), false);
+      toast('Ошибка: ' + (d.error || 'Bilinmeyen hata'), false);
     }
   } catch (e) {
     toast('İstek hatası: ' + e.message, false);
@@ -502,7 +502,7 @@ function addOption() {
 }
 
 function openModal() {
-  if (!selectedGuild) { alert('Önce sunucu seç!'); return; }
+  if (!selectedGuild) { alert('До сервер seçenek!'); return; }
   document.getElementById('poll-options').innerHTML = '';
   document.getElementById('poll-question').value = '';
   addOption(); addOption();
@@ -519,10 +519,10 @@ async function createPoll() {
     if (text) options.push({ emoji: emoji, text: text });
   });
   if (!question) { toast('Soru gir!', false); return; }
-  if (options.length < 2) { toast('En az 2 seçenek ekle!', false); return; }
+  if (options.length < 2) { toast('En az 2 seçenek добавить!', false); return; }
 
   var btn = document.querySelector('.btn-submit');
-  btn.textContent = '⏳ GÖNDERİLİYOR...';
+  btn.textContent = '⏳ ОТПРАВИТЬİLİYOR...';
   btn.disabled = true;
 
   try {
@@ -541,12 +541,12 @@ async function createPoll() {
       toast('✅ Anket oluşturuldu!', true);
       loadPolls();
     } else {
-      toast('Hata: ' + (d.error || 'Bilinmeyen hata'), false);
+      toast('Ошибка: ' + (d.error || 'Bilinmeyen hata'), false);
     }
   } catch (e) {
     toast('İstek hatası: ' + e.message, false);
   } finally {
-    btn.textContent = '📊 GÖNDER';
+    btn.textContent = '📊 ОТПРАВИТЬ';
     btn.disabled = false;
   }
 }

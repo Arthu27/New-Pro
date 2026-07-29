@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% block title %}Oto-Rol - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-user-tag" style="color:#c8922a;animation:pulse 2s infinite;"></i> OTO-ROL AYARLARI{% endblock %}
+{% block title %}Ото-Роль - Aether{% endblock %}
+{% block page_title %}<i class="fas fa-user-tag" style="color:#c8922a;animation:pulse 2s infinite;"></i> ОТО-РОЛЬ НАСТРОЙКИ{% endblock %}
 {% block content %}
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap');
@@ -42,54 +42,54 @@
 
 <div class="ar-hero">
   <span class="hero-icon">🎭</span>
-  <div class="hero-title">OTO-ROL AYARLARI</div>
-  <div class="hero-sub">Yeni üyelere otomatik olarak verilecek rolleri yönet</div>
+  <div class="hero-title">ОТО-РОЛЬ НАСТРОЙКИ</div>
+  <div class="hero-sub">Участник автоматически роль ata</div>
 </div>
 
 <select id="guild-select" style="display:none" class="guild-sel" onchange="loadSettings()">
-  <option value="">🏠 Sunucu seç...</option>
+  <option value="">🏠 Сервер выбрать...</option>
 </select>
 
 <div class="ar-grid">
   <div class="ar-box">
-    <div class="ar-title"><i class="fas fa-user-plus"></i> Yeni Üye Oto-Rol</div>
-    <div class="ar-desc">Sunucuya yeni katılan üyelere otomatik olarak verilecek roller:</div>
+    <div class="ar-title"><i class="fas fa-user-plus"></i> Новый Участник Ото-Роль</div>
+    <div class="ar-desc">На сервер katılanlara hero üüyeyi автоматически olacak verildi роли:</div>
     <div id="member-roles-list"></div>
     <div class="add-row">
       <select id="member-role-add"></select>
-      <button onclick="addRole('member')"><i class="fas fa-plus"></i> Ekle</button>
+      <button onclick="addRole('member')"><i class="fas fa-plus"></i> Добавить</button>
     </div>
-    <button class="save-btn" onclick="saveSettings('member')"><i class="fas fa-save"></i> Kaydet</button>
+    <button class="save-btn" onclick="saveSettings('member')"><i class="fas fa-save"></i> Сохранить</button>
   </div>
   <div class="ar-box">
-    <div class="ar-title"><i class="fas fa-venus" style="color:#c8922a;"></i> Kadın Üye Oto-Rol</div>
-    <div class="ar-desc">Kadın olarak işaretlenen yeni üyelere otomatik olarak verilecek roller:</div>
+    <div class="ar-title"><i class="fas fa-venus" style="color:#c8922a;"></i> Девушка Участник Ото-Роль</div>
+    <div class="ar-desc">Роль для новых участников (Женская): участник olacak verildi роли:</div>
     <div id="girl-roles-list"></div>
     <div class="add-row">
       <select id="girl-role-add"></select>
-      <button onclick="addRole('girl')"><i class="fas fa-plus"></i> Ekle</button>
+      <button onclick="addRole('girl')"><i class="fas fa-plus"></i> Добавить</button>
     </div>
-    <button class="save-btn" onclick="saveSettings('girl')"><i class="fas fa-save"></i> Kaydet</button>
+    <button class="save-btn" onclick="saveSettings('girl')"><i class="fas fa-save"></i> Сохранить</button>
   </div>
   <div class="ar-box">
-    <div class="ar-title"><i class="fas fa-mars" style="color:#c8922a;"></i> Erkek Üye Oto-Rol</div>
-    <div class="ar-desc">Erkek olarak işaretlenen yeni üyelere otomatik olarak verilecek roller:</div>
+    <div class="ar-title"><i class="fas fa-mars" style="color:#c8922a;"></i> Мужчина Участник Ото-Роль</div>
+    <div class="ar-desc">Роль для новых участников (Мужская): участник olacak verildi роли:</div>
     <div id="boy-roles-list"></div>
     <div class="add-row">
       <select id="boy-role-add"></select>
-      <button onclick="addRole('boy')"><i class="fas fa-plus"></i> Ekle</button>
+      <button onclick="addRole('boy')"><i class="fas fa-plus"></i> Добавить</button>
     </div>
-    <button class="save-btn" onclick="saveSettings('boy')"><i class="fas fa-save"></i> Kaydet</button>
+    <button class="save-btn" onclick="saveSettings('boy')"><i class="fas fa-save"></i> Сохранить</button>
   </div>
   <div class="ar-box">
-    <div class="ar-title"><i class="fas fa-robot"></i> Bot Oto-Rol</div>
-    <div class="ar-desc">Sunucuya eklenen botlara otomatik olarak verilecek roller:</div>
+    <div class="ar-title"><i class="fas fa-robot"></i> Бот Ото-Роль</div>
+    <div class="ar-desc">На сервер добавл botlara автоматически olacak verildi роли:</div>
     <div id="bot-roles-list"></div>
     <div class="add-row">
       <select id="bot-role-add"></select>
-      <button onclick="addRole('bot')"><i class="fas fa-plus"></i> Ekle</button>
+      <button onclick="addRole('bot')"><i class="fas fa-plus"></i> Добавить</button>
     </div>
-    <button class="save-btn" onclick="saveSettings('bot')"><i class="fas fa-save"></i> Kaydet</button>
+    <button class="save-btn" onclick="saveSettings('bot')"><i class="fas fa-save"></i> Сохранить</button>
   </div>
 </div>
 
@@ -136,7 +136,7 @@ async function loadSettings(gid) {
       var sel = document.getElementById(t + '-role-add');
       if (!sel) return;
       if (allRoles.length === 0) {
-        sel.innerHTML = '<option value="">Sunucuda hiç rol yok</option>';
+        sel.innerHTML = '<option value="">На этом сервере роли yok</option>';
       } else {
         sel.innerHTML = '<option value="">— Rol seç —</option>' +
           allRoles.map(function (r) { return '<option value="' + r.id + '">' + r.name + '</option>'; }).join('');
@@ -158,12 +158,12 @@ function renderType(type) {
   if (!box) return;
   var ids = currentRoles[type] || [];
   if (ids.length === 0) {
-    box.innerHTML = '<p class="empty-msg">Henüz rol eklenmedi.</p>';
+    box.innerHTML = '<p class="empty-msg">Пока роль добавл.</p>';
     return;
   }
   box.innerHTML = ids.map(function (id) {
     var role = allRoles.find(function (r) { return r.id === id; });
-    var name = role ? role.name : ('(silinmiş: ' + id + ')');
+    var name = role ? role.name : ('(удалён: ' + id + ')');
     return '<span class="role-tag">' + name +
       '<button onclick="removeRole(\'' + type + '\',\'' + id + '\')">×</button></span>';
   }).join('');
@@ -196,7 +196,7 @@ async function saveSettings(type) {
     });
     var d = await r.json();
     if (d.success) {
-      toast('✅ Kaydedildi!', true);
+      toast('✅ Сохранено!', true);
     } else {
       toast('❌ ' + (d.error || 'Hata'), false);
     }
