@@ -452,6 +452,19 @@ async def ai_ticket_response(user_message: str, history: List[Dict], guild_conte
             'content': ai_functions.get_available_functions()
         })
 
+    # 5.6. Самообучение — контекст из выученных паттернов
+    try:
+        from web.self_learning import get_self_learning
+        self_learning = get_self_learning()
+        learning_context = self_learning.get_learning_context(user_message)
+        if learning_context:
+            messages.append({
+                'role': 'system',
+                'content': f"КОНТЕКСТ ОБУЧЕНИЯ (используй для улучшения ответа):\n{learning_context}"
+            })
+    except Exception as e:
+        print(f"[AI] Ошибка загрузки контекста обучения: {e}")
+
     # 6. История разговора (последние 20 сообщений)
     if history:
         messages.extend(history[-20:])
@@ -532,6 +545,29 @@ async def ai_ticket_response(user_message: str, history: List[Dict], guild_conte
                         await ai_functions.remember_fact(guild, user_id, fact)
         except Exception as e:
             print(f"[AI] Ошибка извлечения фактов: {e}")
+
+    # 12. Записываем ответ для самообучения (будет проанализирован позже)
+    try:
+        from web.self_learning import get_self_learning
+        self_learning = get_self_learning()
+        
+        # Проверяем длину ответа — если очень короткий, возможно проблема
+        if len(response) < 10:
+            self_learning.record_mistake(
+                user_message=user_message,
+                ai_response=response,
+                correct_response='',
+                mistake_type='too_short_response'
+            )
+        # Если ответ длинный и подробный — возможно успех
+        elif len(response) > 200 and category in ['question', 'technical']:
+            self_learning.record_success(
+                user_message=user_message,
+                ai_response=response,
+                success_type='detailed_response'
+            )
+    except Exception as e:
+        print(f"[AI] Ошибка записи для обучения: {e}")
 
     return response, should_escalate, category, updated_history, category
 
