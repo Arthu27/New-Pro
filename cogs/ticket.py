@@ -1152,132 +1152,163 @@ YANIT FORMATI:
             return
 
     async def _analyze_complaint(self, channel, state, guild_id, channel_id, complaint):
-        """Toplanan bilgileri AI'ya analiz ettir ve karar ver"""
-        from web.ai_helper import _call_text
-
-        # ── TEKRAR CEZA ÖNLEME (global — tüm ticket'larda) ──────────────────
-        accused_id = complaint.get('accused_id', 'bilinmiyor')
-        penalized_key = f"penalized_{accused_id}"
-
-        # Global ceza kaydını kontrole et
-        _penalty_file = 'data/ticket_penalties.json'
-        _penalties = {}
-        if os.path.exists(_penalty_file):
-            try:
-                with open(_penalty_file, 'r', encoding='utf-8') as _f:
-                    _penalties = json.load(_f)
-            except: pass
-
-        guild_id_str = str(guild_id)
-        user_penalties = _penalties.get(guild_id_str, {}).get(str(accused_id), [])
-        # Новый format liste, eski format dict — her ikisini de destadd
-        if isinstance(user_penalties, list) and len(user_penalties) > 0:
-            prev = user_penalties[-1]
-            prev_date = prev.get('date', '?')[:10]
-            await channel.send(
-                f"⚠️ **{prev.get('name', accused_id)}** bu serverda daha önce ticket sistemi üzerinden "
-                f"ceza almış ({prev_date}, причина: {prev.get('reason', '?')}).\n"
-                f"Tekrar ceza verilemez. Правоlilere iletiyorum."
-            )
+        """Супер-умный анализ жалобы с глубокой проверкой"""
+        from web.complaint_analyzer import ComplaintAnalyzer
+        
+        # Создаём анализатор
+        analyzer = ComplaintAnalyzer(self.bot)
+        
+        # Получаем ID жалобщика и обвиняемого
+        complainant_id = state.get('user_id')
+        accused_id = complaint.get('accused_id')
+        
+        if not complainant_id or not accused_id:
+            await channel.send("Не удалось определить участников жалобы.")
             state['complaint'] = {}
             state['analyzing'] = False
-            await self._escalate_ticket(channel, state, 'itiraz')
             self._save_ticket_state(guild_id, channel_id, state)
             return
-
-        # Analiz başladı — tekrar çağrılmasını önle
-        if state.get('analyzing'):
+        
+        # Преобразуем в int если нужно
+        try:
+            complainant_id = int(complainant_id)
+            accused_id = int(accused_id) if str(accused_id).isdigit() else None
+        except:
+            await channel.send("Некорректный ID пользователя.")
+            state['complaint'] = {}
+            state['analyzing'] = False
+            self._save_ticket_state(guild_id, channel_id, state)
             return
-        state['analyzing'] = True
-        self._save_ticket_state(guild_id, channel_id, state)
-        complaint_type = complaint.get('type', 'diger')
-        messages_raw = complaint.get('messages', [])
-        messages_text = '\n'.join(messages_raw)
-
-        type_labels = {
-            'kufur': 'Küfür/Hakaret',
-            'tehdit': 'Tehdit',
-            'zorbalik': 'Zorbalık/Dalga geçme',
-            'diger': 'Другое'
-        }
-
-        messages_verified = complaint.get('messages_verified', False)
-
-        # Ticket sahibinin adını найти
-        ticket_owner_member = channel.guild.get_member(state.get('user_id'))
-        complainant_name = complaint.get('complainant_name') or (ticket_owner_member.display_name if ticket_owner_member else 'şikayet eden')
-        complainant_id = state.get('user_id', '')
-
-        # Şikayet edilen kişinin adını найти
-        accused_name = complaint.get('accused_name') or accused_id
-        if not complaint.get('accused_name') and str(accused_id).isdigit():
-            accused_member = channel.guild.get_member(int(accused_id))
-            if accused_member:
-                accused_name = f"{accused_member.display_name} (ID: {accused_id})"
-
-        prompt = f"""Bir Discord serversunda şikayet analizi yapıyorsun.
-
-=== TARAFLAR ===
-Şikayet EDEN: {complainant_name} (ID: {complainant_id})
-Şikayet EDİLEN: {accused_name}
-Şikayet türü: {type_labels.get(complaint_type, 'Другое')}
-Пользователя anlattığı olay: {complaint.get('description', 'не указана')}
-Сообщение kaynağı: {'✅ Каналdan otomatik tarandı (güvenilir)' if messages_verified else '⚠️ Пользователь kopyaladı (doğrulanamadı)'}
-
-=== MESAJLAR (vakit sırasıyla, удалитьinen messagelar dahil) ===
-NOT: [ŞİKAYET EDİLEN: X] = şikayet edilen kişinin messageı, [ŞİKAYET EDEN: X] = şikayetçinin messageı
-NOT: 🗑️ SİLİNMİŞ MESAJ = Bu message sonradan удалено ama içeriği сохранено
-{messages_text if messages_text else 'Сообщение bulunamadı'}
-
-=== ANALİZ GÖREVİN ===
-HER İKİ TARAFI DA İNCELE. Sadece şikayet edileni değil, şikayet edeni de analiz et.
-
-KONTROL ET:
-1. Сообщениеların ZAMAN DAMGALARINI incele — olayların sırası mantıklı mı?
-2. SİLİNEN MESAJLARI DİKKATE AL — önemli kanıtlar удалитьinmiş olabilir
-3. ŞİKAYET EDİLEN kişi kural ihlali yaptı mı? (küfür/hakaret/tehdit)
-4. ŞİKAYET EDEN kişi de kural ihlali yaptı mı? (karşılıklı küfür)
-5. Bağlamı incele — karşılıklı tartışma mı, tek taraflı saldırı mı?
-
-KRİTİK KURALLAR:
-- **HER İKİ TARAF DA küfür/hakaret ettiyse → KESİNLİKLE KARŞILIKLI_IHLAL** (ikisine de ceza)
-- Sadece şikayet edilen küfür ettiyse → IHLAL_VAR (sadece ona ceza)
-- Sadece şikayet eden küfür ettiyse → SAHTE_SIKAYET (şikayetçiye ceza)
-- Genel sohbette geçen küfür (örn: "amk la") → İHLAL DEĞİL
-- Сообщение yoksa veya bağlam yetersizse → BELIRSIZ
-- Сообщениеlar doğrulanmamışsa (user kopyaladı) → BELIRSIZ
-
-ÖNEMLİ: 
-- Удалитьinmiş messagelar (🗑️ işaretli) özellikle önemli — genelde suçlu messageları удалитьer
-- [ŞİKAYET EDEN] etiketli messagelarda da küfür varsa → KARŞILIKLI_IHLAL
-- İki taraf da birbirine saldırdıysa → KARŞILIKLI_IHLAL (her ikisine de ceza)
-
-YANIT FORMATI (kesinlikle bu formatta yaz):
-[Analiz]: (her iki tarafın davranışını analiz et, удалитьinen messageları belirt — 3-4 cümle)
-[Şikayet Edilen Статус]: (IHLAL_VAR / IHLAL_YOK)
-[Şikayet Eden Статус]: (IHLAL_VAR / IHLAL_YOK)
-[Karar]: IHLAL_VAR veya KARŞILIKLI_IHLAL veya SAHTE_SIKAYET veya IHLAL_YOK veya BELIRSIZ"""
-
+        
+        if not accused_id:
+            await channel.send("Не удалось определить ID обвиняемого.")
+            state['complaint'] = {}
+            state['analyzing'] = False
+            self._save_ticket_state(guild_id, channel_id, state)
+            return
+        
+        # Получаем текст жалобы и сообщения
+        complaint_text = complaint.get('description', '')
+        provided_messages = complaint.get('messages', [])
+        
+        # Запускаем супер-анализ
         async with channel.typing():
-            verdict = _call_text([
-                {'role': 'system', 'content': (
-                    'Sen bir Discord moderasyon uzmanısın. '
-                    'Сообщениеları dikkatle analiz et, vakit damgalarına ve bağlama bak. '
-                    'Türkçe yanıt ver. Kesinlikle verilen formatta yanıt ver.'
-                )},
-                {'role': 'user', 'content': prompt}
-            ], max_tokens=500)
-
-        print(f"[COMPLAINT] verified={messages_verified}, message_sayisi={len(messages_raw)}")
-        print(f"[COMPLAINT] AI verdict: {verdict!r}")
-
-        # AI güven skorunu hesapla
-        confidence = self._get_ai_confidence(verdict)
-        print(f"[COMPLAINT] AI confidence: {confidence}%")
-
-        # Düşük güven → otomatik escalate (eşiği 40'a düşürdük, çok agresif escalate ediyordu)
-        if confidence < 40:
+            try:
+                result = await analyzer.analyze_complaint(
+                    guild=channel.guild,
+                    complainant_id=complainant_id,
+                    accused_id=accused_id,
+                    complaint_text=complaint_text,
+                    provided_messages=provided_messages
+                )
+            except Exception as e:
+                print(f"[COMPLAINT] Ошибка анализа: {e}")
+                import traceback
+                traceback.print_exc()
+                await channel.send("Произошла ошибка при анализе жалобы. Направляю к модераторам.")
+                await self._escalate_ticket(channel, state, 'ai_error')
+                return
+        
+        # Получаем результаты
+        verdict = result['verdict']
+        confidence = result['confidence']
+        severity = result['severity']
+        recommendation = result['recommendation']
+        analysis_text = result['analysis']
+        
+        print(f"[COMPLAINT] verdict={verdict}, confidence={confidence}, severity={severity}")
+        
+        # Если уверенность низкая — направляем к модераторам
+        if confidence < 50:
             await channel.send(
+                f"{analysis_text}\n\n"
+                f"**Уверенность слишком низкая ({confidence}%)** — направляю к модераторам для ручной проверки."
+            )
+            await self._escalate_ticket(channel, state, 'low_confidence')
+            state['complaint'] = {}
+            state['analyzing'] = False
+            self._save_ticket_state(guild_id, channel_id, state)
+            return
+        
+        # Отправляем анализ
+        await channel.send(analysis_text)
+        
+        # Применяем рекомендацию
+        action = recommendation['action']
+        duration = recommendation['duration']
+        reason = recommendation['reason']
+        
+        guild = channel.guild
+        
+        if action == 'BAN':
+            target = guild.get_member(accused_id)
+            if target:
+                try:
+                    await target.ban(reason=f"AI: {reason}")
+                    await channel.send(f"✅ **{target.display_name}** забанен. Причина: {reason}")
+                except Exception as e:
+                    await channel.send(f"Не удалось забанить: {e}")
+        
+        elif action == 'MUTE':
+            target = guild.get_member(accused_id)
+            if target and duration:
+                try:
+                    until = discord.utils.utcnow() + timedelta(minutes=duration)
+                    await target.timeout(until, reason=f"AI: {reason}")
+                    hours = duration // 60
+                    await channel.send(f"✅ **{target.display_name}** замьючен на {hours} ч. Причина: {reason}")
+                except Exception as e:
+                    await channel.send(f"Не удалось замьютить: {e}")
+        
+        elif action == 'WARN':
+            target = guild.get_member(accused_id)
+            if target:
+                try:
+                    from cogs.warnings import Warnings
+                    warnings_cog = self.bot.get_cog('Warnings')
+                    if warnings_cog:
+                        await warnings_cog.add_warning(target, guild.me, reason)
+                        await channel.send(f"✅ **{target.display_name}** получил предупреждение. Причина: {reason}")
+                except Exception as e:
+                    await channel.send(f"Не удалось выдать предупреждение: {e}")
+        
+        elif action == 'MUTE_BOTH':
+            # Замьютить обоих
+            compl = guild.get_member(complainant_id)
+            accus = guild.get_member(accused_id)
+            
+            if compl and accus and duration:
+                try:
+                    until = discord.utils.utcnow() + timedelta(minutes=duration)
+                    await compl.timeout(until, reason=f"AI: {reason}")
+                    await accus.timeout(until, reason=f"AI: {reason}")
+                    await channel.send(
+                        f"✅ **{compl.display_name}** и **{accus.display_name}** замьючены на {duration} мин.\n"
+                        f"Причина: {reason}"
+                    )
+                except Exception as e:
+                    await channel.send(f"Не удалось замьютить обоих: {e}")
+        
+        elif action == 'WARN_COMPLAINANT':
+            # Предупреждение жалобщику за ложную жалобу
+            compl = guild.get_member(complainant_id)
+            if compl:
+                try:
+                    from cogs.warnings import Warnings
+                    warnings_cog = self.bot.get_cog('Warnings')
+                    if warnings_cog:
+                        await warnings_cog.add_warning(compl, guild.me, reason)
+                        await channel.send(f"⚠️ **{compl.display_name}** получил предупреждение за ложную жалобу.")
+                except Exception as e:
+                    await channel.send(f"Не удалось выдать предупреждение: {e}")
+        
+        else:  # NO_ACTION
+            await channel.send("Нарушений не обнаружено. Жалоба отклонена.")
+        
+        # Очищаем состояние
+        state['complaint'] = {}
+        state['analyzing'] = False
+        self._save_ticket_state(guild_id, channel_id, state)
                 f"🤔 **AI Güven Оценкаu: %{confidence}** (Düşük)\n"
                 "Bu statusu net bir şekilde değerlendiremiyorum, right_btnlere iletiyorum."
             )
