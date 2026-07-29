@@ -84,29 +84,27 @@ class StaffApplyModal(discord.ui.Modal, title="⚔️ Правоli Заявка 
             await interaction.response.send_message("❌ Заявка channelı bulunamadı.", ephemeral=True)
             return
 
-        embed = discord.Embed(
-            title="📋 YENİ YETKİLİ BAŞVURUSU",
-            color=0xDC143C,
-            timestamp=datetime.now(timezone.utc)
+        embed = discord.Embed(color=0xDC143C, timestamp=datetime.now(timezone.utc))
+        embed.description = (
+            f"## Новая заявка модератора\n"
+            f"### {interaction.user.display_name}\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            f"**Пользователь:** {interaction.user.mention}\n"
+            f"**ID:** `{interaction.user.id}`\n"
+            f"**Возраст:** {self.yas.value}\n"
+            f"**Активность:** {self.activity_input.value}\n\n"
+            f"**Опыт модерации:**\n{self.tecrube.value}\n\n"
+            f"**Почему хотите стать модератором?**\n{self.neden.value}\n"
         )
-        embed.set_author(
-            name=f"{interaction.user.display_name} ({interaction.user})",
-            icon_url=interaction.user.display_avatar.url
-        )
-        embed.set_thumbnail(url=interaction.user.display_avatar.url)
-
-        embed.add_field(name="👤 Пользователь", value=f"{interaction.user.mention}\n`{interaction.user.id}`", inline=True)
-        embed.add_field(name="🎂 Yaş", value=self.yas.value, inline=True)
-        embed.add_field(name="⏰ Günlük Активенlik", value=self.activity_input.value, inline=True)
-        embed.add_field(name="🏆 Moderasyon Tecrübesi", value=f"```{self.tecrube.value}```", inline=False)
-        embed.add_field(name="💬 Neden Правоli Olmak İstiyor?", value=f"```{self.neden.value}```", inline=False)
         if self.ekstra.value:
-            embed.add_field(name="📝 Ekstra Информация", value=f"```{self.ekstra.value}```", inline=False)
-
-        embed.set_footer(
-            text=f"Заявка ID: {app_id} • {interaction.guild.name}",
-            icon_url=interaction.guild.icon.url if interaction.guild.icon else None
-        )
+            embed.description += f"\n**Дополнительно:**\n{self.ekstra.value}\n"
+        embed.description += f"\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        
+        embed.set_thumbnail(url=interaction.user.display_avatar.url)
+        if interaction.guild.icon:
+            embed.set_footer(text=f"Заявка ID: {app_id} · {interaction.guild.name}", icon_url=interaction.guild.icon.url)
+        else:
+            embed.set_footer(text=f"Заявка ID: {app_id} · {interaction.guild.name}")
 
         view = StaffReviewView(app_id)
         msg = await channel.send(embed=embed, view=view)
@@ -175,8 +173,8 @@ class StaffReviewView(discord.ui.View):
         # Embed güncelle
         embed = interaction.message.embeds[0]
         embed.color = 0x2ECC71
-        embed.title = "✅ BAŞVURU ONAYLANDI"
-        embed.add_field(name="✅ Подтвердитьyan", value=f"{interaction.user.mention}", inline=True)
+        embed.description = embed.description.replace("## Новая заявка модератора", "## Заявка одобрена")
+        embed.description += f"\n\n**Одобрено:** {interaction.user.mention}"
 
         await interaction.message.edit(embed=embed, view=None)
 
@@ -184,29 +182,25 @@ class StaffReviewView(discord.ui.View):
         try:
             user = await interaction.client.fetch_user(int(apps[app_id]["user_id"]))
             ts = int(datetime.now(timezone.utc).timestamp())
-            dm_embed = discord.Embed(
-                title="🎉  Правоli Заявка одобрена!",
-                color=0x2ECC71,
-                timestamp=datetime.now(timezone.utc)
-            )
+            dm_embed = discord.Embed(color=0x2ECC71, timestamp=datetime.now(timezone.utc))
             dm_embed.description = (
-                f"```ansi\n\u001b[1;32m✔ BAŞVURUN ONAYLANDI\u001b[0m\n```\n"
-                f"{_divider()}\n\n"
-                f"**{interaction.guild.name}** serversundaki right_btn заявка **подтвердитьndı**! 🎊\n\n"
-                "> Серверya girerek right_btnlerle iletişime geçebilirsin.\n"
-                "> Поискmıza hoş geldin, başarılar dileriz! 💪\n\n"
-                f"{_divider()}"
+                f"## Заявка одобрена!\n"
+                f"### Поздравляем!\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                f"Ваша заявка модератора на сервере **{interaction.guild.name}** одобрена!\n\n"
+                f"**Статус:** Одобрено\n"
+                f"**Рассмотрено:** {interaction.user.display_name}\n"
+                f"**Дата:** <t:{ts}:F>\n\n"
+                f"Зайдите на сервер и свяжитесь с администрацией чтобы получить роль модератора.\n"
+                f"Добро пожаловать в команду, желаем успехов!\n\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             )
             dm_embed.set_thumbnail(url=interaction.guild.icon.url if interaction.guild.icon else None)
-            dm_embed.add_field(name="✅ Статус", value="```Подтвердитьndı```", inline=True)
-            dm_embed.add_field(name="👮 İnceleyen", value=f"```{interaction.user.display_name}```", inline=True)
-            dm_embed.add_field(name="🕐 Дата", value=f"<t:{ts}:F>", inline=False)
-            dm_embed.add_field(name="💡 Последнийraki Имяım", value="*Серверya girerek right_btn roleünü almak için controlle iletişime geç.*", inline=False)
             dm_embed.set_image(url="https://media.tenor.com/ZBDpMFBMFpkAAAAC/celebration-party.gif")
-            dm_embed.set_footer(
-                text=f"Aether Правоli • {interaction.guild.name}",
-                icon_url=interaction.guild.icon.url if interaction.guild.icon else None
-            )
+            if interaction.guild.icon:
+                dm_embed.set_footer(text=f"{interaction.guild.name} · Модерация", icon_url=interaction.guild.icon.url)
+            else:
+                dm_embed.set_footer(text=f"{interaction.guild.name} · Модерация")
             await user.send(embed=dm_embed)
         except:
             pass
@@ -255,30 +249,26 @@ class RejectReasonModal(discord.ui.Modal, title="❌ Red Sebebi"):
             try:
                 user = await interaction.client.fetch_user(int(apps[app_id]["user_id"]))
                 ts = int(datetime.now(timezone.utc).timestamp())
-                dm_embed = discord.Embed(
-                    title="❌  Правоli Заявка отклонена",
-                    color=0xE74C3C,
-                    timestamp=datetime.now(timezone.utc)
-                )
+                dm_embed = discord.Embed(color=0xE74C3C, timestamp=datetime.now(timezone.utc))
                 dm_embed.description = (
-                    f"```ansi\n\u001b[1;31m✘ BAŞVURUN REDDEDİLDİ\u001b[0m\n```\n"
-                    f"{_divider()}\n\n"
-                    f"**{interaction.guild.name}** serversundaki right_btn заявка **reddedildi**.\n\n"
-                    "> Daha sonra tekrar başvurabilirsin.\n"
-                    "> Kendini geliştirmeye devam et! 💪\n\n"
-                    f"{_divider()}"
+                    f"## Заявка отклонена\n"
+                    f"### К сожалению\n"
+                    f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                    f"Ваша заявка модератора на сервере **{interaction.guild.name}** отклонена.\n\n"
+                    f"**Статус:** Отклонено\n"
+                    f"**Рассмотрено:** {interaction.user.display_name}\n"
+                    f"**Причина:** {self.reason.value}\n"
+                    f"**Дата:** <t:{ts}:F>\n\n"
+                    f"Вы можете подать заявку снова через некоторое время.\n"
+                    f"Продолжайте развиваться!\n\n"
+                    f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
                 )
                 dm_embed.set_thumbnail(url=interaction.guild.icon.url if interaction.guild.icon else None)
-                dm_embed.add_field(name="❌ Статус", value="```Reddedildi```", inline=True)
-                dm_embed.add_field(name="👮 İnceleyen", value=f"```{interaction.user.display_name}```", inline=True)
-                dm_embed.add_field(name="📝 Red Sebebi", value=f"```{self.reason.value}```", inline=False)
-                dm_embed.add_field(name="🕐 Дата", value=f"<t:{ts}:F>", inline=False)
-                dm_embed.add_field(name="💡 Информация", value="*Belirli bir süre sonra tekrar başvurabilirsin.*", inline=False)
                 dm_embed.set_image(url="https://media.tenor.com/x8v1oNUOmg4AAAAC/ban-hammer.gif")
-                dm_embed.set_footer(
-                    text=f"{interaction.guild.name} • Правоli Sistemi",
-                    icon_url=interaction.guild.icon.url if interaction.guild.icon else None
-                )
+                if interaction.guild.icon:
+                    dm_embed.set_footer(text=f"{interaction.guild.name} · Модерация", icon_url=interaction.guild.icon.url)
+                else:
+                    dm_embed.set_footer(text=f"{interaction.guild.name} · Модерация")
                 await user.send(embed=dm_embed)
             except:
                 pass
@@ -286,9 +276,8 @@ class RejectReasonModal(discord.ui.Modal, title="❌ Red Sebebi"):
         # Embed güncelle
         embed = self.message.embeds[0]
         embed.color = 0xE74C3C
-        embed.title = "❌ BAŞVURU REDDEDİLDİ"
-        embed.add_field(name="❌ Reddeden", value=f"{interaction.user.mention}", inline=True)
-        embed.add_field(name="📝 Причина", value=self.reason.value, inline=False)
+        embed.description = embed.description.replace("## Новая заявка модератора", "## Заявка отклонена")
+        embed.description += f"\n\n**Отклонено:** {interaction.user.mention}\n**Причина:** {self.reason.value}"
 
         await self.message.edit(embed=embed, view=None)
         await interaction.response.send_message("❌ Заявка reddedildi.", ephemeral=True)
@@ -324,13 +313,19 @@ class StaffApply(commands.Cog):
             await interaction.response.send_message(f"'{status}' statusunda заявка yok.", ephemeral=True)
             return
 
-        embed = discord.Embed(title=f"📋 Заявкаlar — {status.upper()}", color=0xDC143C)
+        embed = discord.Embed(color=0xDC143C, timestamp=datetime.now(timezone.utc))
+        embed.description = (
+            f"## Заявки\n"
+            f"### Статус: {status.upper()}\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        )
         for app in filtered[-10:]:
-            embed.add_field(
-                name=f"{app['display_name']} ({app['user_name']})",
-                value=f"ID: `{app['app_id']}`\nДата: <t:{int(datetime.fromisoformat(app['timestamp']).timestamp())}:R>",
-                inline=False
-            )
+            embed.description += f"**{app['display_name']}** ({app['user_name']})\nID: `{app['app_id']}` · Дата: <t:{int(datetime.fromisoformat(app['timestamp']).timestamp())}:R>\n\n"
+        embed.description += f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        if interaction.guild.icon:
+            embed.set_footer(text=f"{interaction.guild.name} · Заявки", icon_url=interaction.guild.icon.url)
+        else:
+            embed.set_footer(text=f"{interaction.guild.name} · Заявки")
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
