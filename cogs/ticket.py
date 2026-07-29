@@ -1309,10 +1309,6 @@ YANIT FORMATI:
         state['complaint'] = {}
         state['analyzing'] = False
         self._save_ticket_state(guild_id, channel_id, state)
-                f"🤔 **AI Güven Оценкаu: %{confidence}** (Düşük)\n"
-                "Bu statusu net bir şekilde değerlendiremiyorum, right_btnlere iletiyorum."
-            )
-            state['complaint'] = {}
             state['analyzing'] = False
             await self._escalate_ticket(channel, state, 'low_confidence')
             self._save_ticket_state(guild_id, channel_id, state)
