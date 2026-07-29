@@ -1030,33 +1030,35 @@ def _call(messages: List[Dict], max_tokens: int = 2048, temperature: float = 0.7
     except Exception:
         pass
 
-    # 2. Mistral AI API (mistral-large-latest / mistral-small-latest vb.)
-    mistral_key = os.getenv("MISTRAL_API_KEY")
-    if mistral_key:
-        try:
-            target_model = model_name if "mistral" in str(model_name).lower() else "mistral-large-latest"
-            payload = json.dumps({
-                "model": target_model,
-                "messages": messages,
-                "max_tokens": max_tokens,
-                "temperature": temperature
-            }).encode('utf-8')
-            req = urllib.request.Request(
-                "https://api.mistral.ai/v1/chat/completions",
-                data=payload,
-                headers={
-                    "Content-Type": "application/json",
-                    "Authorization": f"Bearer {mistral_key}"
-                },
-                method="POST"
-            )
-            with urllib.request.urlopen(req, timeout=10) as resp:
-                data = json.loads(resp.read().decode('utf-8'))
-                text = data.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
-                if text:
-                    return text, target_model, {"provider": "mistral"}
-        except Exception as _me:
-            print(f"[AI API] Mistral API ошибка: {_me}")
+    # 2. Mistral AI API — Автоматическая ротация нескольких ключей (Key Rotation)
+    mistral_env = os.getenv("MISTRAL_API_KEY", "")
+    mistral_keys = [k.strip() for k in mistral_env.split(",") if k.strip()]
+    if mistral_keys:
+        target_model = model_name if "mistral" in str(model_name).lower() else "mistral-large-latest"
+        payload = json.dumps({
+            "model": target_model,
+            "messages": messages,
+            "max_tokens": max_tokens,
+            "temperature": temperature
+        }).encode('utf-8')
+        for idx_key, mistral_key in enumerate(mistral_keys):
+            try:
+                req = urllib.request.Request(
+                    "https://api.mistral.ai/v1/chat/completions",
+                    data=payload,
+                    headers={
+                        "Content-Type": "application/json",
+                        "Authorization": f"Bearer {mistral_key}"
+                    },
+                    method="POST"
+                )
+                with urllib.request.urlopen(req, timeout=10) as resp:
+                    data = json.loads(resp.read().decode('utf-8'))
+                    text = data.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
+                    if text:
+                        return text, target_model, {"provider": "mistral", "key_index": idx_key}
+            except Exception as _me:
+                print(f"[AI API] Mistral ключ #{idx_key+1} недоступен ({_me}), пробуем следующий...")
 
     # 3. OpenRouter / DeepSeek / OpenAI API
     api_key = os.getenv("OPENROUTER_API_KEY") or os.getenv("DEEPSEEK_API_KEY") or os.getenv("OPENAI_API_KEY") or os.getenv("AI_API_KEY")
