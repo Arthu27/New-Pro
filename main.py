@@ -400,7 +400,7 @@ async def load_cogs():
         try:
             await asyncio.wait_for(bot.load_extension(ext), timeout=20)
             print(f"[LOAD] Yuklendi: {filename}")
-        except asyncio.MuteError:
+        except asyncio.TimeoutError:
             print(f"[ERR] Cog timeout (20s): {filename}")
         except Exception as e:
             import traceback

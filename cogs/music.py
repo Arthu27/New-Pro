@@ -44,7 +44,7 @@ async def fetch_source(query: str):
                 loop.run_in_executor(None, lambda: ydl.extract_info(query, download=False)),
                 timeout=20
             )
-        except asyncio.MuteError:
+        except asyncio.TimeoutError:
             raise Exception('Aramama vakit aşımına uğradı, tekrar dene')
     if not info:
         raise Exception('результат не найдено')

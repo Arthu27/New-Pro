@@ -521,7 +521,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
     def api_user_change_password():
         from web.app import USERS
         import json as _json
-        data = request.get_json() or {}
+        data = request.get_json(silent=True) or {}
         old_pass = data.get('old_password', '').strip()
         new_pass = data.get('new_password', '').strip()
 
@@ -585,7 +585,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         from web.ai_helper import _call
         import web.app as _app; bot = _app.bot_instance
         import datetime as _dt, asyncio as _asyncio, discord as _discord
-        d = request.json or {}
+        d = request.get_json(silent=True) or {}
         question = d.get('message', '').strip()
         if not question:
             return jsonify({'error': 'Сообщение пустое'}), 400
@@ -1239,15 +1239,15 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
                             return f'✅ #{ch.name} из канала {len(deleted)} message удалено'
                     elif tip == 'KANAL_OLUSTUR' and len(parts) > 1:
                         channel_name = '-'.join(parts[1:]).lower().replace(' ', '-')
-                        ch = await guild.create_text_channel(isim)
+                        ch = await guild.create_text_channel(channel_name)
                         return f'✅ #{ch.name} канал создано'
                     elif tip == 'SES_KANAL_OLUSTUR' and len(parts) > 1:
                         channel_name = ' '.join(parts[1:])
-                        ch = await guild.create_voice_channel(isim)
+                        ch = await guild.create_voice_channel(channel_name)
                         return f'✅ 🔊 {ch.name} ses канал создано'
                     elif tip == 'ROL_OLUSTUR' and len(parts) > 1:
                         channel_name = ' '.join(parts[1:])
-                        r = await guild.create_role(name=isim)
+                        r = await guild.create_role(name=channel_name)
                         return f'✅ @{r.name} роль создано'
                     elif tip == 'DUYURU' and len(parts) > 2:
                         ch = resolve_channel(parts[1])
@@ -1312,7 +1312,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         import web.app as _app; bot = _app.bot_instance
         import asyncio
         if not bot: return jsonify({'error': 'Bot offline'}), 503
-        d = request.json or {}
+        d = request.get_json(silent=True) or {}
         status_map = {'online': discord.Status.online, 'idle': discord.Status.idle, 'dnd': discord.Status.dnd, 'invisible': discord.Status.invisible}
         type_map = {'listening': discord.ActivityType.listening, 'playing': discord.ActivityType.playing, 'watching': discord.ActivityType.watching, 'competing': discord.ActivityType.competing}
         status = status_map.get(d.get('status', 'online'), discord.Status.online)
@@ -1340,7 +1340,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
     @login_required
     @role_required('owner')
     def api_bot_prefix():
-        d = request.json or {}
+        d = request.get_json(silent=True) or {}
         prefix = d.get('prefix', '!').strip()
         if not prefix: return jsonify({'error': 'Пусто prefix'}), 400
         os.makedirs('data', exist_ok=True)
@@ -1369,7 +1369,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         import web.app as _app; bot = _app.bot_instance
         import asyncio
         if not bot: return jsonify({'error': 'Bot offline'}), 503
-        name = (request.json or {}).get('name', '')
+        name = (request.get_json(silent=True) or {}).get('name', '')
         try:
             asyncio.run_coroutine_threadsafe(bot.load_extension(name), bot.loop).result(timeout=10)
             return jsonify({'ok': True})
@@ -1383,7 +1383,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         import web.app as _app; bot = _app.bot_instance
         import asyncio
         if not bot: return jsonify({'error': 'Bot offline'}), 503
-        name = (request.json or {}).get('name', '')
+        name = (request.get_json(silent=True) or {}).get('name', '')
         try:
             asyncio.run_coroutine_threadsafe(bot.unload_extension(name), bot.loop).result(timeout=10)
             return jsonify({'ok': True})
@@ -1397,7 +1397,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         import web.app as _app; bot = _app.bot_instance
         import asyncio
         if not bot: return jsonify({'error': 'Bot offline'}), 503
-        name = (request.json or {}).get('name', '')
+        name = (request.get_json(silent=True) or {}).get('name', '')
         try:
             asyncio.run_coroutine_threadsafe(bot.reload_extension(name), bot.loop).result(timeout=10)
             return jsonify({'ok': True})
@@ -1434,7 +1434,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
     @login_required
     @role_required('admin')
     def api_warn_config_save(guild_id):
-        d = request.json or {}
+        d = request.get_json(silent=True) or {}
         os.makedirs('data', exist_ok=True)
         with open(f'data/warn_config_{guild_id}.json', 'w', encoding='utf-8') as fp:
             json.dump(d, fp, indent=2, ensure_ascii=False)
@@ -1614,7 +1614,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
                 if m.get('username') == username:
                     discord_id = uid; break
         if not discord_id: return jsonify({'error': 'Пользователь не найден'}), 404
-        d = request.json or {}
+        d = request.get_json(silent=True) or {}
         day, month, year = d.get('day'), d.get('month'), d.get('year')
         if not day or not month: return jsonify({'error': 'День ve ay zorunlu'}), 400
         os.makedirs('data', exist_ok=True)
@@ -1686,7 +1686,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         import web.app as _app; bot = _app.bot_instance
         import asyncio, random
         from datetime import timedelta
-        data_req = request.json or {}
+        data_req = request.get_json(silent=True) or {}
         prize    = data_req.get('prize', '').strip()
         winners  = int(data_req.get('winners', 1))
         minutes  = int(data_req.get('minutes', 60))
@@ -1978,7 +1978,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         import web.app as _app; bot = _app.bot_instance
         import asyncio, discord
         if not bot: return jsonify({'error': 'Bot offline'})
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
         async def do():
             guild = bot.get_guild(int(guild_id))
             color_hex = data.get('color', '#dc143c').lstrip('#')
@@ -2132,7 +2132,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
     @role_required('admin')
     def api_toggle_lockdown():
         import json as _json
-        data = request.get_json() or {}
+        data = request.get_json(silent=True) or {}
         guild_id = str(data.get('guild_id', MAIN_GUILD_ID))
         lockdown_file = f'data/lockdown_{guild_id}.json'
         os.makedirs('data', exist_ok=True)
@@ -2163,7 +2163,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
     @role_required('mod')
     def api_ai_stream():
         from web.ai_helper import ai_assistant
-        d = request.json or {}
+        d = request.get_json(silent=True) or {}
         message = d.get('message', '').strip()
         if not message:
             return jsonify({'error': 'Сообщение пустое'}), 400
@@ -2178,7 +2178,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
     @role_required('mod')
     def api_ai_assistant():
         from web.ai_helper import ai_assistant
-        d = request.json or {}
+        d = request.get_json(silent=True) or {}
         message = d.get('message', '').strip()
         if not message:
             return jsonify({'error': 'Сообщение пустое'}), 400
@@ -2199,7 +2199,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
     @role_required('admin')
     def api_ai_announcement():
         from web.ai_helper import _call_text
-        d = request.json or {}
+        d = request.get_json(silent=True) or {}
         topic = d.get('topic', 'Общий duyuru')
         tone = d.get('tone', 'resmi')
         prompt = f"'{topic}' о {tone} bir dille, profesyonel bir Discord сервер duyurusu yaz. Заголовок ve emoji использовать, net ve anlaşılır olsun."
@@ -2245,7 +2245,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
     @role_required('admin')
     def api_ai_embed():
         from web.ai_helper import _call_text
-        d = request.json or {}
+        d = request.get_json(silent=True) or {}
         prompt = d.get('prompt', 'Правила сервера embedi')
         messages = [
             {"role": "system", "content": "Sen Discord embed tasarımcısı bir asistansın. Желание konuya uygun bir embed başlığı ve описание üret."},
@@ -2301,7 +2301,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         if not bot: return jsonify({'error': 'Bot offline'}), 503
         channel = bot.get_channel(int(channel_id))
         if not channel: return jsonify({'error': 'Канал не найдено'}), 404
-        d = request.json or {}
+        d = request.get_json(silent=True) or {}
         content = d.get('content', '').strip()
         if not content: return jsonify({'error': 'Сообщение пустое'}), 400
         async def _send():
@@ -2405,7 +2405,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         import web.app as _app; bot = _app.bot_instance
         import asyncio as _asyncio, datetime as _dt2
         if not bot: return jsonify({'error': 'Bot offline'}), 503
-        data = request.get_json() or {}
+        data = request.get_json(silent=True) or {}
         content = data.get('content', '').strip()
         if not content: return jsonify({'error': 'Сообщение пустое'}), 400
 
@@ -2437,7 +2437,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         import web.app as _app; bot = _app.bot_instance
         import asyncio, discord
         if not bot: return jsonify({'error': 'Bot offline'})
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
         async def do():
             guild = bot.get_guild(int(guild_id))
             t = data.get('type', 'text')
@@ -2479,7 +2479,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
                 
         # POST request
         try:
-            data = request.get_json()
+            data = request.get_json(silent=True) or {}
             if not data:
                 return jsonify({'error': 'No data provided'})
                 
@@ -2515,7 +2515,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
             data.setdefault('girl_roles', [])
             data.setdefault('boy_roles', [])
             return jsonify(data)
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
         settings = {}
         if os.path.exists(f):
             with open(f, encoding='utf-8') as fp: settings = json.load(fp)
@@ -2535,7 +2535,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         if request.method == 'GET':
             if not os.path.exists(f): return jsonify({'enabled': False, 'xp_min': 15, 'xp_max': 25})
             with open(f) as fp: return jsonify(json.load(fp))
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
         with open(f, 'w') as fp: json.dump(data, fp, indent=2)
         return jsonify({'success': True})
 
@@ -2556,7 +2556,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         if request.method == 'GET':
             if not os.path.exists(f): return jsonify({'currency_name': 'Coin', 'currency_emoji': '💰', 'start_balance': 100, 'daily_reward': 50})
             with open(f) as fp: return jsonify(json.load(fp))
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
         with open(f, 'w') as fp: json.dump(data, fp, indent=2)
         return jsonify({'success': True})
 
@@ -2575,7 +2575,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         items = []
         if os.path.exists(f):
             with open(f) as fp: items = json.load(fp)
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
         data['id'] = str(int(datetime.utcnow().timestamp()))
         items.append(data)
         with open(f, 'w') as fp: json.dump(items, fp, indent=2)
@@ -2614,7 +2614,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         import web.app as _app; bot = _app.bot_instance
         import asyncio, discord
         if not bot: return jsonify({'error': 'Bot offline'})
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
         gw_id = str(int(datetime.utcnow().timestamp()))
         from datetime import timedelta
         ends_at = (datetime.utcnow() + timedelta(minutes=data['duration'])).isoformat()
@@ -2709,7 +2709,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         if not os.path.exists(f): return jsonify({'error': 'Anket не найдено'})
         with open(f, encoding='utf-8') as fp: polls = json.load(fp)
         if poll_id not in polls: return jsonify({'error': 'Anket не найдено'})
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
         option_index = data.get('option_index', 0)
         poll = polls[poll_id]
         voters = poll.setdefault('voters', [])
@@ -2729,7 +2729,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         import web.app as _app; bot = _app.bot_instance
         import asyncio, discord
         if not bot: return jsonify({'error': 'Bot offline'})
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
         poll_id = str(int(datetime.utcnow().timestamp()))
         f = f'data/polls_{guild_id}.json'
         polls = {}
@@ -2763,7 +2763,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
     @login_required
     @role_required('owner')
     def api_create_custom_command(guild_id):
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
         f = f'data/custom_cmds_{guild_id}.json'
         cmds = {}
         if os.path.exists(f):
@@ -2796,7 +2796,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
     @login_required
     @role_required('mod')
     def api_create_scheduled_message(guild_id):
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
         f = f'data/scheduled_{guild_id}.json'
         msgs = {}
         if os.path.exists(f):
@@ -2867,7 +2867,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
                         avatar = str(m.display_avatar.url)
                         break
             data[member_id] = {'name': name, 'avatar': avatar, 'notes': []}
-        note = {'id': str(int(datetime.utcnow().timestamp())), 'text': request.get_json().get('text', ''),
+        note = {'id': str(int(datetime.utcnow().timestamp())), 'text': request.get_json(silent=True).get('text', ''),
                 'author': session.get('username'), 'created_at': datetime.utcnow().isoformat()}
         data[member_id]['notes'].append(note)
         with open(f, 'w', encoding='utf-8') as fp: json.dump(data, fp, indent=2, ensure_ascii=False)
@@ -2895,7 +2895,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         import web.app as _app; bot = _app.bot_instance
         import asyncio
         if not bot: return jsonify({'error': 'Bot offline'})
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
         result = {'count': 0}
         async def do():
             ch = bot.get_channel(int(data['channel_id']))
@@ -2912,7 +2912,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         import web.app as _app; bot = _app.bot_instance
         import asyncio, discord
         if not bot: return jsonify({'error': 'Bot offline'})
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
         result = {'count': 0}
         async def do():
             guild = bot.get_guild(int(guild_id))
@@ -2935,7 +2935,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         import web.app as _app; bot = _app.bot_instance
         import asyncio, discord
         if not bot: return jsonify({'error': 'Bot offline'})
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
         result = {'count': 0}
         async def do():
             guild = bot.get_guild(int(guild_id))
@@ -2961,7 +2961,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
                 return jsonify({'steps': []})
             with open(f, 'r', encoding='utf-8') as fp:
                 return jsonify(json.load(fp))
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
         os.makedirs('data', exist_ok=True)
         with open(f, 'w', encoding='utf-8') as fp:
             json.dump(data, fp, indent=2, ensure_ascii=False)
@@ -2979,7 +2979,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
                 return jsonify({'message': ''})
             with open(f, 'r', encoding='utf-8') as fp:
                 return jsonify(json.load(fp))
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
         os.makedirs('data', exist_ok=True)
         with open(f, 'w', encoding='utf-8') as fp:
             json.dump({'message': data.get('message', '')}, fp, ensure_ascii=False)
@@ -3359,7 +3359,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         if not os.path.exists(f): return jsonify({'error': 'Не найдено'})
         with open(f) as fp: data = json.load(fp)
         if sug_id in data:
-            data[sug_id]['status'] = 'approved' if request.get_json().get('action') == 'approve' else 'rejected'
+            data[sug_id]['status'] = 'approved' if request.get_json(silent=True).get('action') == 'approve' else 'rejected'
             with open(f, 'w') as fp: json.dump(data, fp, indent=2)
         return jsonify({'success': True})
 
@@ -3368,7 +3368,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
     @role_required('admin')
     def api_suggestions_channel(guild_id):
         f = f'data/sug_settings_{guild_id}.json'
-        with open(f, 'w') as fp: json.dump(request.get_json(), fp)
+        with open(f, 'w') as fp: json.dump(request.get_json(silent=True), fp)
         return jsonify({'success': True})
 
     @app.route('/api/guild/<guild_id>/starboard')
@@ -3434,7 +3434,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         if request.method == 'GET':
             if not os.path.exists(f): return jsonify({'min_stars': 3})
             with open(f) as fp: return jsonify(json.load(fp))
-        with open(f, 'w') as fp: json.dump(request.get_json(), fp)
+        with open(f, 'w') as fp: json.dump(request.get_json(silent=True), fp)
         return jsonify({'success': True})
 
     @app.route('/api/guild/<guild_id>/reaction-roles')
@@ -3451,7 +3451,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         import web.app as _app; bot = _app.bot_instance
         import asyncio, discord
         if not bot: return jsonify({'error': 'Bot offline'})
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
         rr_id = str(int(datetime.utcnow().timestamp()))
         f = f'data/rr_{guild_id}.json'
         rrs = {}
@@ -3461,7 +3461,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         entries_with_names = []
         for e in data.get('entries', []):
             role = guild.get_role(int(e['role_id'])) if guild else None
-            entries_with_names.append({'emoji': e['emoji'], 'role_id': e['role_id'], 'role_name': role.name if роли else e['role_id']})
+            entries_with_names.append({'emoji': e['emoji'], 'role_id': e['role_id'], 'role_name': role.name if role else e['role_id']})
         rrs[rr_id] = {'id': rr_id, 'title': data['title'], 'channel_id': data['channel_id'], 'entries': entries_with_names}
         with open(f, 'w') as fp: json.dump(rrs, fp, indent=2)
         async def send():
@@ -3561,7 +3561,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         if request.method == 'GET':
             if not os.path.exists(f): return jsonify({})
             with open(f) as fp: return jsonify(json.load(fp))
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
         with open(f, 'w') as fp: json.dump(data, fp, indent=2)
         # Panel сообщение отправить
         import web.app as _app; bot = _app.bot_instance
@@ -3629,7 +3629,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         if request.method == 'GET':
             if not os.path.exists(f): return jsonify({'banned_words': []})
             with open(f) as fp: return jsonify(json.load(fp))
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
         # Текущий config'i oku ve merge et (hiçbir alan kaybolmasın)
         existing = {}
         if os.path.exists(f):
@@ -3648,7 +3648,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         if not bot: return jsonify({'error': 'Bot offline'})
         guild = bot.get_guild(int(guild_id))
         if not guild: return jsonify({'error': 'Сервер не найдено'})
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
         backup = {'guild_name': guild.name, 'guild_id': str(guild.id),
                   'created_at': datetime.utcnow().strftime('%Y-%m-%d %H:%M'), 'size': '0 KB'}
         if data.get('role'):
@@ -3739,7 +3739,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
             except Exception:
                 return jsonify({'error': 'Неверный JSON dosyası'})
         else:
-            data = request.get_json()
+            data = request.get_json(silent=True) or {}
             backup_id = data.get('backup_id')
             bf = 'data/backups.json'
             if not os.path.exists(bf): return jsonify({'error': 'Yedek не найдено'})
@@ -3859,7 +3859,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
     @login_required
     @role_required('mod')
     def api_create_task():
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
         f = 'data/tasks.json'
         os.makedirs('data', exist_ok=True)
         tasks = {}
@@ -3880,7 +3880,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         if not os.path.exists(f): return jsonify({'error': 'Не найдено'})
         with open(f) as fp: tasks = json.load(fp)
         if task_id in tasks:
-            tasks[task_id].update(request.get_json())
+            tasks[task_id].update(request.get_json(silent=True))
             with open(f, 'w') as fp: json.dump(tasks, fp, indent=2)
         return jsonify({'success': True})
 
@@ -3904,7 +3904,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         if request.method == 'GET':
             if not os.path.exists(f): return jsonify([])
             with open(f, encoding='utf-8') as fp: return jsonify(json.load(fp))
-        rules = request.get_json(force=True, удалить=True)
+        rules = request.get_json(force=True, silent=True)
         if rules is None: rules = []
         with open(f, 'w', encoding='utf-8') as fp: json.dump(rules, fp, indent=2, ensure_ascii=False)
         return jsonify({'success': True})
@@ -3916,7 +3916,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         import web.app as _app; bot = _app.bot_instance
         import asyncio, discord
         if not bot: return jsonify({'error': 'Bot offline'})
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
         async def send():
             ch = bot.get_channel(int(data['channel_id']))
             if ch:
@@ -3941,7 +3941,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         import web.app as _app; bot = _app.bot_instance
         import asyncio, discord
         if not bot: return jsonify({'error': 'Bot offline'})
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
         f = f'data/color_roles_{guild_id}.json'
         with open(f, 'w') as fp: json.dump(data.get('colors', []), fp, indent=2)
         async def send():
@@ -3967,7 +3967,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         if request.method == 'GET':
             if not os.path.exists(f): return jsonify({'whitelist': [], 'recent_events': []})
             with open(f) as fp: return jsonify(json.load(fp))
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
         existing = {}
         if os.path.exists(f):
             with open(f) as fp: existing = json.load(fp)
@@ -4126,7 +4126,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         import web.app as _app; bot = _app.bot_instance
         import asyncio, discord as _discord
         if not bot: return jsonify({'error': 'Bot offline'})
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
         wh_id = data.get('webhook_id')
         message = data.get('message', '')
         username = data.get('username', 'Aether')

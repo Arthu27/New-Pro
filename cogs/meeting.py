@@ -252,7 +252,7 @@ async def _build_meeting_report(guild: discord.Guild, since: datetime.datetime) 
     # ── РОЛЬ BAZLI TOP 4 ───────────────────────────────────────────────────────
     for role_id in staff_role_ids[:8]:
         role = guild.get_role(role_id)
-        if not роли or role.is_default():
+        if not role or role.is_default():
             continue
 
         role_members = [m for m in role.members if not m.bot]

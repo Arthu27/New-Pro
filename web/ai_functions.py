@@ -178,9 +178,9 @@ FORMAT VIZOVA:
             if not member:
                 return f"Пользователь <@{user_id}> не найдено."
             
-            role = [role.name for role in member.roles if role.name != "@everyone"]
-            if not role:
-                return f"U <@{user_id}> yok роль."
+            roles = [r.name for r in member.roles if r.name != "@everyone"]
+            if not roles:
+                return f"У <@{user_id}> нет ролей."
             
             return f"Роли <@{user_id}>: {', '.join(roles)}"
         except Exception as e:
@@ -252,7 +252,7 @@ FORMAT VIZOVA:
                 f"Участников: {total_members} (onlayn: {online_members})\n"
                 f"Metin каналы: {text_channels}\n"
                 f"Ses каналы: {voice_channels}\n"
-                f"Роль: {роли}"
+                f"Ролей: {len(guild.roles)}"
             )
         except Exception as e:
             return f"Ошибка: {str(e)}"

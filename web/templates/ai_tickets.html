@@ -131,7 +131,7 @@
 
 <script>
 // Ticket verilerini JS'e aktar
-const ticketsData = {{ tickets|tojson|safe }};
+const ticketsData = {{ (tickets or [])|tojson|safe }};
 
 function viewConversation(channelId) {
     const ticket = ticketsData.find(t => t.channel_id == channelId);

@@ -177,9 +177,9 @@ class Fun(commands.Cog):
         e.add_field(name="🎭 Роли", value=f"```{len(u.roles)-1} роли```", inline=True)
         e.add_field(name="📊 Состояние", value=f"```{str(u.status).title()}```", inline=True)
         e.add_field(name="🖥️ Platform", value=f"```{'Mobil' if u.is_on_mobile() else 'Masaüstü'}```", inline=True)
-        role = [r.mention for r in u.roles[1:6]]
-        if role:
-            e.add_field(name="🎭 Verhnie роли", value=" ".join(roles), inline=False)
+        roles = [r.mention for r in u.roles[1:6]]
+        if roles:
+            e.add_field(name="🎭 Высшие роли", value=" ".join(roles), inline=False)
         e.set_footer(text=f"Aether • {interaction.guild.name}", icon_url=interaction.guild.icon.url if interaction.guild.icon else None)
         await interaction.response.send_message(embed=e)
 

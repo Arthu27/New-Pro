@@ -91,7 +91,7 @@ class Birthday(commands.Cog):
                     role = guild.get_role(int(settings['role_id']))
                     if role:
                         try:
-                            await member.add_roles(roles, reason="Рождение день роль")
+                            await member.add_roles(role, reason="Роль именинника")
                         except Exception:
                             pass
 
@@ -120,9 +120,9 @@ class Birthday(commands.Cog):
                 if info.get('date') == today:
                     continue  # Сегодня рождение день, роль tut
                 member = guild.get_member(int(user_id))
-                if member and роли in member.roles:
+                if member and role in member.roles:
                     try:
-                        await member.remove_roles(roles, reason="Рождение день bitti")
+                        await member.remove_roles(role, reason="День рождения закончился")
                     except Exception:
                         pass
 
@@ -234,7 +234,7 @@ class Birthday(commands.Cog):
         e = discord.Embed(title="✅  День рождения Система Kuruldu!", color=0x2ECC71, timestamp=datetime.now(timezone.utc))
         e.description = f"```ansi\n\u001b[1;32m✔ СИСТЕМА АКТИВЕН\u001b[0m\n```\n{_divider()}"
         e.add_field(name="📢 Канал", value=channel.mention, inline=True)
-        e.add_field(name="🎭 Роль", value=role.mention if роли else "```Нет```", inline=True)
+        e.add_field(name="🎭 Роль", value=role.mention if role else "```Нет```", inline=True)
         e.set_footer(text=f"Aether • {ctx.guild.name}", icon_url=ctx.guild.icon.url if ctx.guild.icon else None)
         await ctx.send(embed=e)
 
@@ -260,7 +260,7 @@ class Birthday(commands.Cog):
 
         e = discord.Embed(title="✅ День рождения Система Kuruldu!", color=0x2ECC71, timestamp=datetime.now(timezone.utc))
         e.add_field(name="📢 Канал", value=channel.mention, inline=True)
-        e.add_field(name="🎭 Роль", value=role.mention if роли else "`Нет`", inline=True)
+        e.add_field(name="🎭 Роль", value=role.mention if role else "`Нет`", inline=True)
         e.add_field(name="🎁 Бонусные монеты", value=f"`{hediye_coin}`" if hediye_coin else "`Нет`", inline=True)
         e.set_footer(text=f"Aether • {interaction.guild.name}")
         await interaction.response.send_message(embed=e, ephemeral=True)

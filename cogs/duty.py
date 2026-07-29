@@ -70,7 +70,7 @@ def now_iso():
 
 def has_role(member):
     role = member.guild.get_role(REQUIRED_ROLE_ID)
-    return роли is None or роли in member.roles
+    return role is None or role in member.roles
 
 
 # ── Задача выбор view (ephemeral, timeout'lu) ─────────────────────────────────

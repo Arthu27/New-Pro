@@ -311,8 +311,8 @@ class Moderation(commands.Cog):
 
         elif action == "userinfo":
             u = user or interaction.user
-            role = [r.mention for r in u.roles[1:]]
-            roles_text = " ".join(роли[:20]) if роли else "Нет"
+            roles = [r.mention for r in u.roles[1:]]
+            roles_text = " ".join(roles[:20]) if roles else "Нет"
             if len(roles) > 20:
                 roles_text += f" · +{len(roles) - 20}"
 

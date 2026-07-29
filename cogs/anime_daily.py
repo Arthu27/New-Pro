@@ -175,7 +175,7 @@ class AnimeDaily(commands.Cog):
             'channel_id': channel.id,
             'tur_id': tur_id,
             'tur_adi': tur_adi,
-            'role_id': role.id if роли else None,
+            'role_id': role.id if role else None,
         }
         _save(cfg)
 
@@ -184,7 +184,7 @@ class AnimeDaily(commands.Cog):
             embed.set_thumbnail(url=interaction.guild.icon.url)
         embed.add_field(name='📺 Канал', value=channel.mention, inline=True)
         embed.add_field(name='📂 Kategori', value=tur_adi, inline=True)
-        embed.add_field(name='🔔 Роль', value=role.mention if роли else 'Нет', inline=True)
+        embed.add_field(name='🔔 Роль', value=role.mention if role else 'Нет', inline=True)
         embed.set_footer(text='Каждый день saat 10:00\'da отправл.')
         await interaction.response.send_message(embed=embed)
 

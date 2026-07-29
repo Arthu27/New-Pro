@@ -103,9 +103,9 @@ class AutoRoleLevel(commands.Cog):
         for required_level, role_id in level_roles.items():
             if new_level >= int(required_level):
                 role = message.guild.get_role(int(role_id))
-                if role and роли not in member.roles:
+                if role and role not in member.roles:
                     try:
-                        await member.add_roles(roles, reason=f'Seviye {required_level} — автоматически-роли')
+                        await member.add_roles(role, reason=f'Уровень {required_level} — автороль')
                     except:
                         pass
 
@@ -130,7 +130,7 @@ class AutoRoleLevel(commands.Cog):
                 role = member.guild.get_role(int(role_id))
                 if role:
                     try:
-                        await member.add_roles(roles, reason=f'Seviye {required_level} — автоматически-роли iken вход')
+                        await member.add_roles(role, reason=f'Уровень {required_level} — автороль при входе')
                     except:
                         pass
 
@@ -188,7 +188,7 @@ class AutoRoleLevel(commands.Cog):
             role = ctx.guild.get_role(int(role_id))
             embed.add_field(
                 name=f'Seviye {level}',
-                value=role.mention if роли else f'Удален роли ({role_id})',
+                value=role.mention if role else f'Удалённая роль ({role_id})',
                 inline=False
             )
         await ctx.send(embed=embed)

@@ -79,7 +79,7 @@ def _log_login(username, roles, avatar, discord_id):
                     break
         logs.append({
             'username': username,
-            'role': роли,
+            'role': role,
             'avatar': avatar,
             'discord_id': discord_id,
             'guild_name': guild_name,
@@ -571,7 +571,7 @@ def logout():
 def api_add_member():
     if ROLES.get(session.get('role'), -1) < ROLES.get('admin', 999):
         return jsonify({'error': 'Yok доступ'}), 403
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     discord_id   = str(data.get('discord_id', '')).strip()
     password     = data.get('password', '').strip()
     display_name = data.get('display_name', discord_id)
@@ -655,7 +655,7 @@ def api_announcements():
 def api_send_notification():
     if ROLES.get(session.get('role'), -1) < ROLES.get('mod', 999):
         return jsonify({'error': 'Yok доступ'}), 403
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     discord_id = str(data.get('discord_id', '')).strip()
     message = data.get('message', '').strip()
     title = data.get('title', 'Уведомление').strip()
@@ -704,7 +704,7 @@ def api_send_notification():
 def api_send_announcement():
     if ROLES.get(session.get('role'), -1) < ROLES.get('mod', 999):
         return jsonify({'error': 'Yok доступ'}), 403
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     title = data.get('title', '').strip()
     message = data.get('message', '').strip()
     if not title or not message:
@@ -822,7 +822,7 @@ def api_guilds():
 def api_leave_guild():
     if not bot_instance:
         return jsonify({'error': 'Бот Discord сейчас не в сети или не подключен.'}), 503
-    data = request.get_json() or {}
+    data = request.get_json(silent=True) or {}
     guild_id = data.get('guild_id')
     if not guild_id:
         return jsonify({'error': 'Neobhodim guild_id'}), 400
@@ -842,7 +842,7 @@ def api_leave_guild():
 def api_set_nick(guild_id, member_id):
     if not bot_instance:
         return jsonify({'error': 'Бот Discord сейчас не в сети или не подключен.'}), 503
-    data = request.get_json() or {}
+    data = request.get_json(silent=True) or {}
     nick = data.get('nick', '')
     try:
         guild = discord.utils.get(bot_instance.guilds, id=int(guild_id))
@@ -1029,7 +1029,7 @@ def api_ban():
     if not bot_instance:
         return jsonify({'error': 'Бот Discord сейчас не в сети или не подключен.'})
     
-    data = request.json
+    data = request.get_json(silent=True) or {}
     guild_id = int(data.get('guild_id'))
     user_id = int(data.get('user_id'))
     reason = data.get('reason', 'Ban с web-panel')
@@ -1056,7 +1056,7 @@ def api_kick():
     if not bot_instance:
         return jsonify({'error': 'Бот Discord сейчас не в сети или не подключен.'})
     
-    data = request.json
+    data = request.get_json(silent=True) or {}
     guild_id = int(data.get('guild_id'))
     user_id = int(data.get('user_id'))
     reason = data.get('reason', 'Kick с web-panel')
@@ -1082,7 +1082,7 @@ def api_kick():
 @login_required
 @role_required('mod')
 def api_warn():
-    data = request.json
+    data = request.get_json(silent=True) or {}
     guild_id = data.get('guild_id')
     user_id = data.get('user_id')
     reason = data.get('reason', 'Warning с web-panel')
@@ -1141,7 +1141,7 @@ def api_execute_command():
     if not bot_instance:
         return jsonify({'error': 'Бот Discord сейчас не в сети или не подключен.'})
     
-    data = request.json
+    data = request.get_json(silent=True) or {}
     command = data.get('command')
     guild_id = data.get('guild_id')
     
@@ -1356,13 +1356,13 @@ def api_execute_command():
                 member = guild.get_member(int(data.get('user_id')))
                 role = guild.get_role(int(data.get('role_id')))
                 if not member:
-                    raise Exception('Участник не найдено')
+                    raise Exception('Участник не найден')
                 if not role:
-                    raise Exception('Роли не найдено')
+                    raise Exception('Роль не найдена')
                 if not guild.me.guild_permissions.manage_roles:
-                    raise Exception('Botun Роли Управление администратор yok')
-                if роли >= guild.me.top_role:
-                    raise Exception('Bu роли botun en высокий роли высокий')
+                    raise Exception('У бота нет права «Управление ролями»')
+                if role >= guild.me.top_role:
+                    raise Exception('Эта роль выше самой высокой роли бота')
                 action = data.get('action', 'add')
                 if action == 'remove':
                     await member.remove_roles(role)
@@ -1413,7 +1413,7 @@ def api_send_message():
     if not bot_instance:
         return jsonify({'error': 'Бот Discord сейчас не в сети или не подключен.'})
     
-    data = request.json
+    data = request.get_json(silent=True) or {}
     guild_id = data.get('guild_id')
     channel_id = data.get('channel_id')
     message = data.get('message')
@@ -1479,7 +1479,7 @@ def api_review_staff_app(app_id):
         data = json.load(f)
     if app_id not in data:
         return jsonify({'error': 'Заявка не найдено'})
-    req = request.json
+    req = request.get_json(silent=True) or {}
     action = req.get('action')  # 'approve' or 'reject'
     note = req.get('note', '')
     data[app_id]['status'] = 'approved' if action == 'approve' else 'rejected'
@@ -1565,10 +1565,10 @@ def set_bot_instance(bot):
 @app.route('/api/my-token')
 @login_required
 def api_my_token():
-    """Вход yapmış usernın автоматически вход tokenını вернуть"""
+    """Вернуть токен автоматического входа для вошедшего пользователя"""
     username = session.get('username')
     role = session.get('role')
-    token = _save_login_token(username, roles)
+    token = _save_login_token(username, role)
     return jsonify({'token': token})
 
 @app.route('/api/change-password', methods=['POST'])
@@ -1578,7 +1578,7 @@ def api_change_password():
     # Только Arthur или owner роли userlar
     if username != 'Arthur' and session.get('role') != 'owner':
         return jsonify({'error': 'Yok доступ'}), 403
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     target = data.get('target', '').strip()   # какой hesabın parolasi değişecek
     new_pass = data.get('new_password', '').strip()
     if not target or not new_pass or len(new_pass) < 4:
@@ -1613,7 +1613,7 @@ def api_check_member():
             'found': False,
             'error': 'Bot пока hazır не, birkaç saniye после tekrar dene.'
         })
-    data = request.json
+    data = request.get_json(silent=True) or {}
     guild_id = str(data.get('guild_id', ''))
     user_id  = str(data.get('user_id', ''))
     if not guild_id or not user_id:
@@ -1648,7 +1648,7 @@ def api_public_guilds():
 
 @app.route('/api/public/apply', methods=['POST'])
 def api_public_apply():
-    data = request.json
+    data = request.get_json(silent=True) or {}
     required = ['discord_id', 'discord_name', 'guild_id', 'yas', 'tecrube', 'почему', 'активен']
     for field in required:
         if not data.get(field):
@@ -1768,7 +1768,7 @@ def api_get_role_map():
 @role_required('admin')
 def api_set_role_map():
     """Добавить/izmenit eşleme роли"""
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     role_id = str(data.get('role_id', '')).strip()
     panel_role = data.get('panel_role', '').strip()
     if not role_id or panel_role not in ('mod', 'admin', 'owner'):
@@ -1794,7 +1794,7 @@ _login_pins = {}
 
 @app.route('/api/login/suggest', methods=['GET', 'POST'])
 def api_login_suggest():
-    query = (request.args.get('q') or (request.json or {}).get('q', '') or '').strip()
+    query = (request.args.get('q') or (request.get_json(silent=True) or {}).get('q', '') or '').strip()
     query_clean = query.lstrip('@').lower()
     
     suggestions = []
@@ -1857,7 +1857,7 @@ def api_login_suggest():
 def api_discord_check():
     if not bot_instance:
         return jsonify({'success': False, 'error': 'Бот Discord сейчас не в сети или не подключен.', 'tests': []})
-    data = request.get_json() or {}
+    data = request.get_json(silent=True) or {}
     query = str(data.get('query', '')).strip()
     if not query:
         return jsonify({'success': False, 'error': 'Пожалуйста, введите корректный Discord ID или @имя пользователя.', 'tests': []})
@@ -1949,7 +1949,7 @@ def api_discord_check():
 
 @app.route('/api/discord-login', methods=['POST'])
 def api_discord_login():
-    data = request.get_json() or {}
+    data = request.get_json(silent=True) or {}
     discord_id = str(data.get('discord_id', '')).strip()
     pin = str(data.get('pin', '')).strip()
     if not discord_id or not pin:
@@ -2002,7 +2002,7 @@ def custom_embeds_page():
 @role_required('admin')
 def api_send_embed():
     if not bot_instance: return jsonify({'error': 'Бот Discord сейчас не в сети или не подключен.'})
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     guild_id = int(data.get('guild_id', 0))
     channel_id = int(data.get('channel_id', 0))
     title = data.get('title', '')
@@ -2143,7 +2143,7 @@ VOICE_SECRET = os.getenv('VOICE_SECRET', 'Aether-voice-2024')
 @app.route('/api/voice-command', methods=['POST'])
 def api_voice_command():
     """voice_listener.py'den gelen sesli команды işle"""
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     if not data or data.get('secret') != VOICE_SECRET:
         return jsonify({'error': 'Unauthorized'}), 401
     command = data.get('command', '').strip()
@@ -2191,7 +2191,7 @@ _reset_codes = {}  # {discord_id: {code, expires}}
 
 @app.route('/api/forgot-password', methods=['POST'])
 def api_forgot_password():
-    data = request.get_json() or {}
+    data = request.get_json(silent=True) or {}
     discord_id = str(data.get('discord_id', '')).strip()
     if not discord_id:
         return jsonify({'error': 'Neobhodim Discord ID'})
@@ -2231,7 +2231,7 @@ def api_forgot_password():
 @app.route('/api/reset-password', methods=['POST'])
 def api_reset_password():
     import time as _time
-    data = request.get_json() or {}
+    data = request.get_json(silent=True) or {}
     discord_id = str(data.get('discord_id', '')).strip()
     code       = str(data.get('code', '')).strip()
     new_pass   = str(data.get('new_password', '')).strip()

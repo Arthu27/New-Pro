@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 import datetime
+from datetime import timedelta
 import io
 import json
 import os
@@ -1534,11 +1535,11 @@ YANIT FORMATI:
                 return
             
             if not role:
-                print(f"[TICKET] Роли assign: роль {role_id} не найден")
+                print(f"[TICKET] Назначение роли: роль {role_id} не найдена")
                 return
             
-            await target_user.add_roles(roles, reason="AI Ticket Assistant")
-            print(f"[TICKET] Роли {role.name} vidana {target_user}")
+            await target_user.add_roles(role, reason="AI Ticket Assistant")
+            print(f"[TICKET] Роль {role.name} выдана {target_user}")
             
         except Exception as e:
             print(f"Роли assign error: {e}")
