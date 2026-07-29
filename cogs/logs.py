@@ -283,7 +283,19 @@ class Logs(commands.Cog):
         if not ch:
             return
 
-        age_text = f"новый аккаунт ({age_days} дн.)" if age_days < 7 else f"{age_days} дн."
+        # Hesap yaşı formatı
+        if age_days < 7:
+            age_text = f"⚠️ новый аккаунт ({age_days} дн.)"
+        elif age_days < 30:
+            age_text = f"{age_days} дней"
+        elif age_days < 365:
+            months = age_days // 30
+            age_text = f"{months} мес."
+        else:
+            years = age_days // 365
+            months = (age_days % 365) // 30
+            age_text = f"{years} г. {months} мес."
+
         member_count = member.guild.member_count
         join_ts = int(datetime.datetime.utcnow().timestamp())
 
@@ -300,9 +312,21 @@ class Logs(commands.Cog):
             f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         )
         e.set_thumbnail(url=member.display_avatar.url)
+
+        # Banner veya welcome GIF
         if member.guild.banner:
             e.set_image(url=member.guild.banner.url)
-        e.set_footer(text=f"{member.guild.name}")
+        else:
+            # Welcome GIF
+            e.set_image(url="https://media.tenor.com/ZBDpMFBMFpkAAAAC/celebration-party.gif")
+
+        # Footer с иконкой сервера
+        footer_text = f"{member.guild.name} · {member_count} участников"
+        if member.guild.icon:
+            e.set_footer(text=footer_text, icon_url=member.guild.icon.url)
+        else:
+            e.set_footer(text=footer_text)
+
         await ch.send(embed=e)
 
     @commands.Cog.listener()
@@ -367,7 +391,14 @@ class Logs(commands.Cog):
             f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         )
         e.set_thumbnail(url=member.display_avatar.url)
-        e.set_footer(text=f"{member.guild.name}")
+
+        # Footer с иконкой сервера
+        footer_text = f"{member.guild.name} · {member_count} участников"
+        if member.guild.icon:
+            e.set_footer(text=footer_text, icon_url=member.guild.icon.url)
+        else:
+            e.set_footer(text=footer_text)
+
         await ch.send(embed=e)
 
     @commands.Cog.listener()
