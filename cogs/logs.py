@@ -283,15 +283,25 @@ class Logs(commands.Cog):
         if not ch:
             return
 
-        age_text = f"**Новый аккаунт!** ({age_days} дн.)" if age_days < 7 else f"{age_days} дн."
-        e = discord.Embed(color=0x2ECC71, timestamp=datetime.datetime.utcnow())
+        age_text = f"новый аккаунт ({age_days} дн.)" if age_days < 7 else f"{age_days} дн."
+        member_count = member.guild.member_count
+        join_ts = int(datetime.datetime.utcnow().timestamp())
+
+        e = discord.Embed(color=0xC8922A, timestamp=datetime.datetime.utcnow())
         e.description = (
-            f"## Новый участник\n"
-            f"**{member.display_name}** · `{member.id}`\n\n"
-            f"Возраст аккаунта: {age_text}\n"
-            f"Участников на сервере: **{member.guild.member_count}**"
+            f"## Добро пожаловать!\n"
+            f"### {member.mention} присоединился к серверу\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            f"**Пользователь** — {member.display_name}\n"
+            f"**ID** — `{member.id}`\n"
+            f"**Аккаунт** — {age_text}\n"
+            f"**Участник** — {member_count}-й на сервере\n"
+            f"**Присоединился** — <t:{join_ts}:R>\n\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         )
         e.set_thumbnail(url=member.display_avatar.url)
+        if member.guild.banner:
+            e.set_image(url=member.guild.banner.url)
         e.set_footer(text=f"{member.guild.name}")
         await ch.send(embed=e)
 
@@ -327,13 +337,34 @@ class Logs(commands.Cog):
         if not ch:
             return
 
-        roles_str = ", ".join(r.name for r in member.roles[1:]) if member.roles[1:] else "Нет"
+        roles_str = ", ".join(r.name for r in member.roles[1:]) if member.roles[1:] else "нет"
+        member_count = member.guild.member_count
+        # Вычисляем сколько был на сервере
+        joined_ago = ""
+        if member.joined_at:
+            days_on_server = (datetime.datetime.utcnow() - member.joined_at.replace(tzinfo=None)).days
+            if days_on_server == 0:
+                joined_ago = "менее дня"
+            elif days_on_server == 1:
+                joined_ago = "1 день"
+            elif days_on_server < 30:
+                joined_ago = f"{days_on_server} дн."
+            elif days_on_server < 365:
+                joined_ago = f"{days_on_server // 30} мес."
+            else:
+                joined_ago = f"{days_on_server // 365} г. {days_on_server % 365 // 30} мес."
+
         e = discord.Embed(color=0xE74C3C, timestamp=datetime.datetime.utcnow())
         e.description = (
             f"## Участник вышел\n"
-            f"**{member.display_name}** · `{member.id}`\n\n"
-            f"Участников на сервере: **{member.guild.member_count}**\n"
-            f"Роли: {roles_str[:200]}"
+            f"### {member.display_name} покинул сервер\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            f"**Пользователь** — {member.display_name}\n"
+            f"**ID** — `{member.id}`\n"
+            f"**Был на сервере** — {joined_ago}\n"
+            f"**Роли** — {roles_str[:200]}\n"
+            f"**Участников** — {member_count}\n\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         )
         e.set_thumbnail(url=member.display_avatar.url)
         e.set_footer(text=f"{member.guild.name}")
