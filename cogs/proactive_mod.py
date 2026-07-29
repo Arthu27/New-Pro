@@ -1,3 +1,4 @@
+from typing import Dict
 """
 Проактивная модерация — AI сам замечает проблемы в чате
 Токсичность, спам, подозрительные ссылки, повторяющиеся вопросы
@@ -39,6 +40,11 @@ class ProactiveModeration(commands.Cog):
         
         channel_id = message.channel.id
         
+        # Анализ настроений
+        from web.sentiment_analyzer import get_sentiment_analyzer
+        sentiment_analyzer = get_sentiment_analyzer()
+        sentiment_result = sentiment_analyzer.analyze_message(message)
+        
         # Добавляем в буфер
         if channel_id not in self.message_buffer:
             self.message_buffer[channel_id] = []
@@ -59,6 +65,53 @@ class ProactiveModeration(commands.Cog):
         await self._check_toxicity(message)
         await self._check_spam(message)
         await self._check_suspicious_links(message)
+        
+        # Проверяем алерты настроений
+        alerts = await sentiment_analyzer.check_for_alerts(message.guild)
+        for alert in alerts:
+            await self._send_sentiment_alert(message.guild, alert)
+    
+    async def _send_sentiment_alert(self, guild: discord.Guild, alert: Dict):
+        """Отправляет алерт о настроении"""
+        try:
+            # Ищем канал для уведомлений
+            alert_channel = discord.utils.get(guild.text_channels, name="ai-alerts")
+            if not alert_channel:
+                return
+            
+            # Создаём embed
+            color_map = {
+                'negative_sentiment': 0xFFA500,
+                'potential_conflict': 0xFF0000,
+            }
+            
+            e = discord.Embed(
+                color=color_map.get(alert['type'], 0xFF0000),
+                timestamp=datetime.utcnow()
+            )
+            
+            e.description = (
+                f"## AI Sentiment Alert\n"
+                f"{alert['message']}\n\n"
+            )
+            
+            if alert['type'] == 'negative_sentiment':
+                e.description += (
+                    f"**Настроение:** {alert['sentiment']}\n"
+                    f"**Сообщений:** {alert['message_count']}\n"
+                )
+            elif alert['type'] == 'potential_conflict':
+                e.description += (
+                    f"**Негативных сообщений:** {alert['negative_messages']}\n"
+                    f"**Рекомендация:** Проверить канал на конфликт\n"
+                )
+            
+            e.set_footer(text=f"{guild.name} · Анализ настроений")
+            
+            await alert_channel.send(embed=e)
+            
+        except Exception as e:
+            print(f"[SENTIMENT] Ошибка отправки алерта: {e}")
     
     async def _check_toxicity(self, message: discord.Message):
         """Проверяет на токсичность"""
