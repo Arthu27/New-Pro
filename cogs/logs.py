@@ -283,25 +283,16 @@ class Logs(commands.Cog):
         if not ch:
             return
 
-        age_warn = "⚠️ **Новый аккаунт!**" if age_days < 7 else f"✅ {age_days} дн."
-        e = discord.Embed(
-            title="📥  НОВЫЙ УЧАСТНИК",
-            color=0x2ECC71,
-            timestamp=datetime.datetime.utcnow()
-        )
+        age_text = f"**Новый аккаунт!** ({age_days} дн.)" if age_days < 7 else f"{age_days} дн."
+        e = discord.Embed(color=0x2ECC71, timestamp=datetime.datetime.utcnow())
         e.description = (
-            f"```ansi\n\u001b[1;32m✦ ПРИСОЕДИНИЛСЯ ✦\u001b[0m\n```\n"
-            f"{DIV}\n\n"
-            f"{member.mention} присоединился к серверу! 🎉\n\n"
-            f"{DIV}"
+            f"## Новый участник\n"
+            f"**{member.display_name}** · `{member.id}`\n\n"
+            f"Возраст аккаунта: {age_text}\n"
+            f"Участников на сервере: **{member.guild.member_count}**"
         )
         e.set_thumbnail(url=member.display_avatar.url)
-        e.add_field(name="👤 Пользователь", value=f"```{member.name}```", inline=True)
-        e.add_field(name="🆔 ID", value=f"```{member.id}```", inline=True)
-        e.add_field(name="📅 Возраст аккаунта", value=age_warn, inline=True)
-        e.add_field(name="📊 Участников", value=f"```{member.guild.member_count}```", inline=True)
-        e.add_field(name="🕐 Присоединился", value=f"<t:{int(datetime.datetime.utcnow().timestamp())}:R>", inline=True)
-        e.set_footer(text=f"Aether Логи • {member.guild.name}", icon_url=member.guild.icon.url if member.guild.icon else None)
+        e.set_footer(text=f"{member.guild.name}")
         await ch.send(embed=e)
 
     @commands.Cog.listener()
@@ -337,23 +328,15 @@ class Logs(commands.Cog):
             return
 
         roles_str = ", ".join(r.name for r in member.roles[1:]) if member.roles[1:] else "Нет"
-        e = discord.Embed(
-            title="📤  УЧАСТНИК ВЫШЕЛ",
-            color=0xE74C3C,
-            timestamp=datetime.datetime.utcnow()
-        )
+        e = discord.Embed(color=0xE74C3C, timestamp=datetime.datetime.utcnow())
         e.description = (
-            f"```ansi\n\u001b[1;31m✦ ПОКИНУЛ СЕРВЕР ✦\u001b[0m\n```\n"
-            f"{DIV}\n\n"
-            f"**{member.display_name}** покинул сервер. 👋\n\n"
-            f"{DIV}"
+            f"## Участник вышел\n"
+            f"**{member.display_name}** · `{member.id}`\n\n"
+            f"Участников на сервере: **{member.guild.member_count}**\n"
+            f"Роли: {roles_str[:200]}"
         )
         e.set_thumbnail(url=member.display_avatar.url)
-        e.add_field(name="👤 Пользователь", value=f"```{member.name}```", inline=True)
-        e.add_field(name="🆔 ID", value=f"```{member.id}```", inline=True)
-        e.add_field(name="📊 Участников", value=f"```{member.guild.member_count}```", inline=True)
-        e.add_field(name="🎭 Роли", value=f"```{roles_str[:200]}```", inline=False)
-        e.set_footer(text=f"Aether Логи • {member.guild.name}", icon_url=member.guild.icon.url if member.guild.icon else None)
+        e.set_footer(text=f"{member.guild.name}")
         await ch.send(embed=e)
 
     @commands.Cog.listener()
@@ -386,18 +369,14 @@ class Logs(commands.Cog):
                 })
                 ch = await self.get_log_channel(before.guild, 'role')
                 if ch:
-                    e = discord.Embed(
-                        title="🎭  РОЛИ ИЗМЕНЕНЫ",
-                        color=0x9B59B6,
-                        timestamp=datetime.datetime.utcnow()
-                    )
-                    e.set_thumbnail(url=before.display_avatar.url)
-                    e.add_field(name="👤 Пользователь", value=f"{before.mention} `{before.id}`", inline=False)
+                    e = discord.Embed(color=0x9B59B6, timestamp=datetime.datetime.utcnow())
+                    desc = f"## Роли изменены\n**{before.display_name}** · `{before.id}`\n\n"
                     if added:
-                        e.add_field(name="➕ Добавлены", value=" ".join(r.mention for r in added), inline=True)
+                        desc += f"Добавлены: {', '.join(r.mention for r in added)}\n"
                     if removed:
-                        e.add_field(name="➖ Сняты", value=" ".join(r.mention for r in removed), inline=True)
-                    e.set_footer(text=f"Aether Логи • {before.guild.name}", icon_url=before.guild.icon.url if before.guild.icon else None)
+                        desc += f"Сняты: {', '.join(r.mention for r in removed)}"
+                    e.description = desc
+                    e.set_footer(text=f"{before.guild.name}")
                     await ch.send(embed=e)
 
         # Мут
@@ -451,12 +430,14 @@ class Logs(commands.Cog):
             })
             ch = await self.get_log_channel(before.guild, 'member')
             if ch:
-                e = discord.Embed(title="✏️  НИК ИЗМЕНЁН", color=0x3498DB, timestamp=datetime.datetime.utcnow())
-                e.set_thumbnail(url=before.display_avatar.url)
-                e.add_field(name="👤 Пользователь", value=f"{before.mention}", inline=False)
-                e.add_field(name="📝 Старый ник", value=f"```{before.nick or before.name}```", inline=True)
-                e.add_field(name="✨ Новый ник", value=f"```{after.nick or after.name}```", inline=True)
-                e.set_footer(text=f"Aether Логи • {before.guild.name}", icon_url=before.guild.icon.url if before.guild.icon else None)
+                e = discord.Embed(color=0x3498DB, timestamp=datetime.datetime.utcnow())
+                e.description = (
+                    f"## Ник изменён\n"
+                    f"**{before.display_name}** · `{before.id}`\n\n"
+                    f"Было: `{before.nick or before.name}`\n"
+                    f"Стало: `{after.nick or after.name}`"
+                )
+                e.set_footer(text=f"{before.guild.name}")
                 await ch.send(embed=e)
 
     # ─── СООБЩЕНИЯ ────────────────────────────────────────────────────
@@ -496,20 +477,14 @@ class Logs(commands.Cog):
         ch = await self.get_log_channel(message.guild, 'message')
         if not ch:
             return
-        e = discord.Embed(
-            title="🗑️  СООБЩЕНИЕ УДАЛЕНО",
-            color=0xE74C3C,
-            timestamp=datetime.datetime.utcnow()
-        )
+        e = discord.Embed(color=0xE74C3C, timestamp=datetime.datetime.utcnow())
         e.description = (
-            f"```ansi\n\u001b[1;31m✦ УДАЛЕНО ✦\u001b[0m\n```\n"
-            f"{DIV}"
+            f"## Сообщение удалено\n"
+            f"**{message.author.display_name}** · `{message.author.id}`\n"
+            f"Канал: {message.channel.mention}\n\n"
+            f"> {content[:500] or '[Вложение]'}"
         )
-        e.set_thumbnail(url=message.author.display_avatar.url)
-        e.add_field(name="👤 Автор", value=f"{message.author.mention} `{message.author.id}`", inline=True)
-        e.add_field(name="📺 Канал", value=message.channel.mention, inline=True)
-        e.add_field(name="💬 Текст", value=f"```{content[:500] or '[Вложение]'}```", inline=False)
-        e.set_footer(text=f"Aether Логи • {message.guild.name}", icon_url=message.guild.icon.url if message.guild.icon else None)
+        e.set_footer(text=f"{message.guild.name}")
         await ch.send(embed=e)
 
     @commands.Cog.listener()
@@ -527,18 +502,15 @@ class Logs(commands.Cog):
         ch = await self.get_log_channel(before.guild, 'message')
         if not ch:
             return
-        e = discord.Embed(
-            title="✏️  СООБЩЕНИЕ ИЗМЕНЕНО",
-            color=0x3498DB,
-            timestamp=datetime.datetime.utcnow()
+        e = discord.Embed(color=0x3498DB, timestamp=datetime.datetime.utcnow())
+        e.description = (
+            f"## Сообщение изменено\n"
+            f"**{before.author.display_name}** · `{before.author.id}`\n"
+            f"Канал: {before.channel.mention} · [Перейти]({after.jump_url})\n\n"
+            f"Было:\n> {before.content[:400] or '[Пусто]'}\n\n"
+            f"Стало:\n> {after.content[:400] or '[Пусто]'}"
         )
-        e.set_thumbnail(url=before.author.display_avatar.url)
-        e.add_field(name="👤 Пользователь", value=f"{before.author.mention} `{before.author.id}`", inline=True)
-        e.add_field(name="📺 Канал", value=before.channel.mention, inline=True)
-        e.add_field(name="📝 Перейти", value=f"[Ссылка]({after.jump_url})", inline=True)
-        e.add_field(name="🔴 Было", value=f"```{before.content[:400] or '[Пусто]'}```", inline=False)
-        e.add_field(name="🟢 Стало", value=f"```{after.content[:400] or '[Пусто]'}```", inline=False)
-        e.set_footer(text=f"Aether Логи • {before.guild.name}", icon_url=before.guild.icon.url if before.guild.icon else None)
+        e.set_footer(text=f"{before.guild.name}")
         await ch.send(embed=e)
 
     # ─── ГОЛОСОВЫЕ КАНАЛЫ ────────────────────────────────────────────
@@ -568,12 +540,14 @@ class Logs(commands.Cog):
         ch = await self.get_log_channel(member.guild, 'voice')
         if not ch:
             return
-        e = discord.Embed(title=f"{icon}  {action.upper()}", color=color, timestamp=datetime.datetime.utcnow())
-        e.set_thumbnail(url=member.display_avatar.url)
-        e.description = desc
-        e.add_field(name="👤 Пользователь", value=f"{member.mention}", inline=True)
-        e.add_field(name="🔊 Канал", value=f"```{detail['channel']}```", inline=True)
-        e.set_footer(text=f"Aether Логи • {member.guild.name}", icon_url=member.guild.icon.url if member.guild.icon else None)
+        title_text = "Подключился к голосовому" if after.channel else "Отключился от голосового"
+        e = discord.Embed(color=color, timestamp=datetime.datetime.utcnow())
+        e.description = (
+            f"## {title_text}\n"
+            f"**{member.display_name}** · `{member.id}`\n\n"
+            f"Канал: **{detail['channel']}**"
+        )
+        e.set_footer(text=f"{member.guild.name}")
         await ch.send(embed=e)
 
     # ─── КАНАЛЫ ───────────────────────────────────────────────────────
@@ -588,10 +562,13 @@ class Logs(commands.Cog):
         ch = await self.get_log_channel(channel.guild, 'channel')
         if not ch:
             return
-        e = discord.Embed(title="📺  КАНАЛ СОЗДАН", color=0x2ECC71, timestamp=datetime.datetime.utcnow())
-        e.add_field(name="📌 Канал", value=f"```{channel.name}```", inline=True)
-        e.add_field(name="📂 Тип", value=f"```{str(channel.type)}```", inline=True)
-        e.set_footer(text=f"Aether Логи • {channel.guild.name}", icon_url=channel.guild.icon.url if channel.guild.icon else None)
+        e = discord.Embed(color=0x2ECC71, timestamp=datetime.datetime.utcnow())
+        e.description = (
+            f"## Канал создан\n"
+            f"**{channel.name}** · `{channel.id}`\n\n"
+            f"Тип: {str(channel.type)}"
+        )
+        e.set_footer(text=f"{channel.guild.name}")
         await ch.send(embed=e)
 
     @commands.Cog.listener()
@@ -604,10 +581,13 @@ class Logs(commands.Cog):
         ch = await self.get_log_channel(channel.guild, 'channel')
         if not ch:
             return
-        e = discord.Embed(title="🗑️  КАНАЛ УДАЛЁН", color=0xE74C3C, timestamp=datetime.datetime.utcnow())
-        e.add_field(name="📌 Канал", value=f"```{channel.name}```", inline=True)
-        e.add_field(name="📂 Тип", value=f"```{str(channel.type)}```", inline=True)
-        e.set_footer(text=f"Aether Логи • {channel.guild.name}", icon_url=channel.guild.icon.url if channel.guild.icon else None)
+        e = discord.Embed(color=0xE74C3C, timestamp=datetime.datetime.utcnow())
+        e.description = (
+            f"## Канал удалён\n"
+            f"**{channel.name}** · `{channel.id}`\n\n"
+            f"Тип: {str(channel.type)}"
+        )
+        e.set_footer(text=f"{channel.guild.name}")
         await ch.send(embed=e)
 
     @commands.Cog.listener()
