@@ -237,29 +237,20 @@ def build_embed(page, guild=None):
 
 class CategorySelect(discord.ui.Select):
     def __init__(self, current_page):
-        # Эмодзи для каждого option (отдельно от label)
-        CAT_EMOJIS = {
-            "home": "🏠", "mod": "🛡️", "warn": "⚠️", "music": "🎵",
-            "fun": "🎮", "eco": "💰", "social": "👥", "rank": "🏆",
-            "events": "📅", "server": "⚙️", "util": "🔧", "ai": "🤖",
-        }
-
         options = []
         for i, c in enumerate(CATEGORIES):
             count = len(c['commands'])
             desc = f"{count} команд" if count else "Обзор всех категорий"
-            emoji_str = CAT_EMOJIS.get(c["id"], "📋")
 
             options.append(discord.SelectOption(
-                label=f"{c['title']}",
+                label=c['title'],
                 value=str(i),
                 description=desc[:100],
-                emoji=emoji_str,
                 default=(i == current_page),
             ))
 
         super().__init__(
-            placeholder="📂  Выберите категорию команд...",
+            placeholder="Выберите категорию...",
             options=options,
             custom_id="help_cat_select",
             min_values=1,
