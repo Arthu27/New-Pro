@@ -1,0 +1,302 @@
+{% extends "base.html" %}
+{% block title %}Panel - Aether{% endblock %}
+{% block page_title %}Panel управление{% endblock %}
+{% block content %}
+<style>
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:22px;}
+.stat-card{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.1);border-radius:14px;padding:22px 24px;transition:border-color 0.2s,transform 0.2s;backdrop-filter:blur(4px);}
+.stat-card:hover{border-color:rgba(212,168,67,0.22);transform:translateY(-2px);}
+.stat-icon{width:36px;height:36px;border-radius:9px;background:rgba(212,168,67,0.1);border:1px solid rgba(212,168,67,0.2);display:flex;align-items:center;justify-content:center;margin-bottom:14px;}
+.stat-icon i{color:#c8922a;font-size:15px;}
+.stat-val{font-size:30px;font-weight:900;color:#f0e8d0;letter-spacing:-0.04em;line-height:1;margin-bottom:4px;}
+.stat-lbl{font-size:10px;color:#5a5040;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;}
+.dash-box{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.1);border-radius:14px;padding:22px;margin-bottom:16px;backdrop-filter:blur(4px);}
+.dash-title{font-size:10px;font-weight:700;color:rgba(240,232,208,0.4);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:18px;display:flex;align-items:center;gap:8px;padding-bottom:12px;border-bottom:1px solid rgba(212,168,67,0.07);}
+.dash-title i{color:#c8922a;font-size:11px;}
+.quick-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;}
+.quick-item{background:rgba(255,255,255,0.03);border:1px solid rgba(212,168,67,0.08);border-radius:14px;padding:16px;text-align:center;transition:border-color 0.15s;}
+.quick-item:hover{border-color:rgba(212,168,67,0.18);}
+.quick-item h3{font-size:26px;font-weight:900;color:#f0e8d0;letter-spacing:-0.04em;margin-bottom:4px;}
+.quick-item p{font-size:10px;color:#5a5040;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;}
+table{width:100%;border-collapse:collapse;}
+th,td{padding:11px 16px;text-align:left;border-bottom:1px solid rgba(212,168,67,0.06);font-size:12px;}
+th{background:rgba(212,168,67,0.04);color:rgba(240,232,208,0.35);font-weight:600;text-transform:uppercase;letter-spacing:0.08em;font-size:10px;}
+tr:hover td{background:rgba(212,168,67,0.04);}
+.action-badge{padding:3px 8px;border-radius:5px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;}
+.notif-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;}
+.form-label{color:rgba(240,232,208,0.4);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:5px;}
+.form-input{width:100%;padding:10px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(212,168,67,0.12);border-radius:8px;color:#f0e8d0;font-size:13px;box-sizing:border-box;font-family:Inter,sans-serif;margin:0 0 10px;transition:border-color 0.15s;}
+.form-input:focus{outline:none;border-color:rgba(212,168,67,0.45);}
+.form-btn{width:100%;padding:11px;background:#c8922a;color:#100e08;border:none;border-radius:99px;cursor:pointer;font-weight:700;font-size:13px;font-family:Inter,sans-serif;transition:background 0.15s;}
+.form-btn:hover{background:#e0a830;}
+@keyframes up{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.stat-card{animation:up 0.3s ease-out both;}
+.stat-card:nth-child(1){animation-delay:0.05s}
+.stat-card:nth-child(2){animation-delay:0.1s}
+.stat-card:nth-child(3){animation-delay:0.15s}
+.stat-card:nth-child(4){animation-delay:0.2s}
+</style>
+
+<div id="guild-info-bar" style="display:none;background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.08);border-radius:14px;padding:16px 20px;margin-bottom:18px;">
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+        <img id="guild-icon" src="" style="width:42px;height:42px;border-radius:14px;border:1px solid rgba(212,168,67,0.16);display:none;object-fit:cover;">
+        <div style="flex:1;min-width:140px;">
+            <div id="guild-name" style="font-size:15px;font-weight:700;color:#f0e8d0;"></div>
+            <div id="guild-meta" style="color:#5a5040;font-size:11px;margin-top:2px;"></div>
+        </div>
+        <div id="guild-stats-row" style="display:flex;gap:20px;flex-wrap:wrap;"></div>
+    
+<!-- THREAT INDEX & LOCKDOWN WIDGET -->
+<div class="dash-box" id="threatDashboard" style="background:rgba(26,22,16,0.85);border:1px solid rgba(212,168,67,0.25);margin-bottom:20px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+        <div style="display:flex;align-items:center;gap:14px;">
+            <div id="threatIconWrap" style="width:46px;height:46px;border-radius:12px;background:rgba(46,204,113,0.15);border:1px solid #2ECC71;display:flex;align-items:center;justify-content:center;font-size:20px;">
+                <i class="fas fa-shield-alt" id="threatIcon" style="color:#2ECC71;"></i>
+            </div>
+            <div>
+                <div style="font-size:11px;color:#8c7b58;font-weight:700;text-transform:uppercase;letter-spacing:1px;">🛡️ Индекс угрозы сервера</div>
+                <div style="display:flex;align-items:baseline;gap:10px;margin-top:4px;">
+                    <span id="threatScoreVal" style="font-size:26px;font-weight:900;color:#f0e8d0;">15/100</span>
+                    <span id="threatLevelBadge" style="font-size:13px;font-weight:700;color:#2ECC71;background:rgba(46,204,113,0.12);padding:4px 10px;border-radius:99px;border:1px solid rgba(46,204,113,0.35);">Низкая угроза (Спокойно)</span>
+                </div>
+            </div>
+        </div>
+        <div>
+            <button id="btnLockdown" onclick="toggleLockdown()" style="padding:10px 18px;border-radius:99px;font-size:13px;font-weight:700;cursor:pointer;background:#2ECC71;color:#100e08;border:none;transition:all 0.2s;display:flex;align-items:center;gap:8px;">
+                <i class="fas fa-lock"></i>
+                <span id="btnLockdownText">Включить карантин (Lockdown)</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+</div>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card"><div class="stat-icon"><i class="fas fa-сервер"></i></div><div class="stat-val" id="guild-count">-</div><div class="stat-lbl">Сервера</div></div>
+    <div class="stat-card"><div class="stat-icon"><i class="fas fa-users"></i></div><div class="stat-val" id="user-count">-</div><div class="stat-lbl">Пользователи</div></div>
+    <div class="stat-card"><div class="stat-icon"><i class="fas fa-signal"></i></div><div class="stat-val" id="latency">-</div><div class="stat-lbl">Ping (ms)</div></div>
+    <div class="stat-card"><div class="stat-icon"><i class="fas fa-circle" style="color:#4ade80;font-size:10px;"></i></div><div class="stat-val" id="status" style="font-size:18px;color:#4ade80;">ONLAYN</div><div class="stat-lbl">Состояние botun</div></div>
+</div>
+
+<div class="dash-box">
+    <div class="dash-title"><i class="fas fa-chart-line"></i> Быстрый статистика</div>
+    <div id="quick-stats" style="text-align:center;padding:24px;color:#5a5040;"><i class="fas fa-spinner fa-spin" style="color:#c8922a;"></i></div>
+</div>
+
+<div class="dash-box">
+    <div class="dash-title"><i class="fas fa-history"></i> В конец действия</div>
+    <div id="recent-activity" style="text-align:center;padding:24px;color:#5a5040;"><i class="fas fa-spinner fa-spin" style="color:#c8922a;"></i></div>
+</div>
+
+{% if role == 'owner' %}
+<div class="dash-box" style="margin-top:16px;">
+    <div class="dash-title" style="justify-content:space-between;">
+        <span><i class="fas fa-sign-in-alt"></i> Новый вход в panel</span>
+        <a href="/panel-logs" style="font-size:11px;color:#c8922a;text-decoration:none;">Показать все →</a>
+    </div>
+    <div id="login-log" style="text-align:center;padding:20px;color:#5a5040;"><i class="fas fa-spinner fa-spin" style="color:#c8922a;"></i></div>
+</div>
+
+<div class="notif-grid">
+    <div class="dash-box" style="margin-bottom:0;">
+        <div class="dash-title"><i class="fas fa-bell"></i> Отправить уведомление</div>
+        <label class="form-label">Discord ID</label><input type="text" id="notif-discord-id" placeholder="123456789012345678" class="form-input">
+        <label class="form-label">Заголовок</label><input type="text" id="notif-title" placeholder="Заголовок уведомления" class="form-input">
+        <label class="form-label">Сообщение</label><textarea id="notif-message" class="form-input" style="resize:vertical;min-height:64px;"></textarea>
+        <button onclick="sendNotification()" class="form-btn">Отправить</button>
+        <div id="notif-result" style="margin-top:8px;display:none;font-size:12px;"></div>
+    </div>
+    <div class="dash-box" style="margin-bottom:0;">
+        <div class="dash-title"><i class="fas fa-bullhorn"></i> Yayınla duyuru</div>
+        <label class="form-label">Заголовок</label><input type="text" id="ann-title" placeholder="Заголовок obyavleniya" class="form-input">
+        <label class="form-label">Soderjanie</label><textarea id="ann-message" class="form-input" style="resize:vertical;min-height:64px;"></textarea>
+        <button onclick="sendAnnouncement()" class="form-btn">Yayınla</button>
+        <div id="ann-result" style="margin-top:8px;display:none;font-size:12px;"></div>
+    </div>
+</div>
+{% endif %}
+
+<script>
+async function loadStats() {
+    try {
+        var d = await fetch('/api/stats').then(function(r){return r.json();});
+        document.getElementById('guild-count').textContent = d.guilds != null ? d.guilds : '-';
+        document.getElementById('user-count').textContent = (d.users||0).toLocaleString();
+        document.getElementById('latency').textContent = (d.latency||0) + 'ms';
+        var s = document.getElementById('status');
+        if (d.error) { s.textContent='OFLAYN'; s.style.color='#ef4444'; }
+        else { s.textContent='ONLAYN'; s.style.color='#4ade80'; }
+    } catch(e) { document.getElementById('status').textContent='OFLAYN'; document.getElementById('status').style.color='#ef4444'; }
+}
+
+async function loadQuickStats() {
+    try {
+        var logs = await fetch('/api/logs').then(function(r){return r.json();}).catch(function(){return [];});
+        var warns = await fetch('/api/warnings').then(function(r){return r.json();}).catch(function(){return [];});
+        var bans = logs.filter(function(l){return (l.action||'').toLowerCase()==='ban';}).length;
+        var kicks = logs.filter(function(l){return (l.action||'').toLowerCase()==='kick';}).length;
+        var mutes = logs.filter(function(l){var a=(l.action||'').toLowerCase();return a.includes('mute')||a.includes('timeout');}).length;
+        document.getElementById('quick-stats').innerHTML =
+            '<div class="quick-grid">' +
+            '<div class="quick-item"><h3>'+logs.length+'</h3><p>Mod действие</p></div>' +
+            '<div class="quick-item"><h3>'+warns.length+'</h3><p>Предупреждение</p></div>' +
+            '<div class="quick-item"><h3>'+bans+'</h3><p>Banov</p></div>' +
+            '<div class="quick-item"><h3>'+kicks+'</h3><p>Kikov</p></div>' +
+            '<div class="quick-item"><h3>'+mutes+'</h3><p>Mutov</p></div>' +
+            '<div class="quick-item"><h3>'+(logs.length > 0 ? '✓' : '-')+'</h3><p>Активен</p></div>' +
+            '</div>';
+    } catch(e) { document.getElementById('quick-stats').innerHTML='<p style="color:#ef4444">Не успешно oldu загрузить</p>'; }
+}
+
+async function loadRecentActivity() {
+    try {
+        var logs = await fetch('/api/logs').then(function(r){return r.json();}).catch(function(){return [];});
+        var box = document.getElementById('recent-activity');
+        if (!logs.length) { box.innerHTML='<p style="color:#5a5040;text-align:center;padding:20px">Пока yok действие.</p>'; return; }
+        var colors = {ban:'#ef4444',kick:'#f97316',warn:'#c8922a',mute:'#c8922a',timeout:'#c8922a',unban:'#4ade80',unmute:'#4ade80',lock:'#60a5fa',unlock:'#4ade80'};
+        var rows = logs.slice(0,15).map(function(log) {
+            var a=(log.action||'?').toLowerCase(), c=colors[a]||'#5a5040';
+            var t=log.timestamp?new Date(log.timestamp).toLocaleString('ru-RU'):'-';
+            var tg=log.user_name||log.target_name||log.user_id||'-';
+            var m=log.mod_name||log.mod_id||'-';
+            var r=log.reason||'-';
+            return '<tr><td><span class="action-badge" style="background:'+c+'18;color:'+c+';border:1px solid '+c+'33">'+(log.action||'?')+'</span></td><td>'+tg+'</td><td style="color:rgba(240,232,208,0.55)">'+m+'</td><td style="color:#5a5040;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+r+'</td><td style="color:#5a5040;font-size:11px">'+t+'</td></tr>';
+        }).join('');
+        box.innerHTML='<table><thead><tr><th>Действие</th><th>Cel</th><th>Модератор</th><th>Причина</th><th>Время</th></tr></thead><tbody>'+rows+'</tbody></table>';
+    } catch(e) { document.getElementById('recent-activity').innerHTML='<p style="color:#ef4444;text-align:center;padding:20px">Не успешно oldu загрузить</p>'; }
+}
+
+async function loadGuildInfo() {
+    try {
+        var guilds = await fetch('/api/guilds').then(function(r){return r.json();});
+        if (!guilds.length) return;
+        var guild = guilds[0];
+        document.getElementById('guild-info-bar').style.display='block';
+        if (guild.icon) { var ic=document.getElementById('guild-icon'); ic.src=guild.icon; ic.style.display='block'; }
+        document.getElementById('guild-name').textContent=guild.name;
+        document.getElementById('guild-meta').textContent='ID: '+guild.id;
+        var items=[{val:guild.members?guild.members.toLocaleString():'-',lbl:'Участники'}];
+        document.getElementById('guild-stats-row').innerHTML=items.map(function(s){return '<div style="text-align:center"><div style="font-size:16px;font-weight:700;color:#c8922a">'+s.val+'</div><div style="color:#5a5040;font-size:10px;text-transform:uppercase">'+s.lbl+'</div></div>';}).join('');
+    } catch(e) {}
+}
+
+async function sendNotification() {
+    var id=document.getElementById('notif-discord-id').value.trim();
+    var title=document.getElementById('notif-title').value.trim();
+    var msg=document.getElementById('notif-message').value.trim();
+    var el=document.getElementById('notif-result');
+    if (!id||!msg) { alert('Discord ID ve сообщение obyazatelni!'); return; }
+    var d=await fetch('/api/send-notification',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({discord_id:id,title:title,message:msg})}).then(function(r){return r.json();});
+    el.style.display='block';
+    el.innerHTML=d.success?'<span style="color:#4ade80">Уведомление отправлено!</span>':'<span style="color:#ef4444">'+(d.error||'Ошибка')+'</span>';
+    setTimeout(function(){el.style.display='none';},3000);
+}
+
+async function sendAnnouncement() {
+    var title=document.getElementById('ann-title').value.trim();
+    var msg=document.getElementById('ann-message').value.trim();
+    var el=document.getElementById('ann-result');
+    if (!title||!msg) { alert('Заголовок ve soderjanie obyazatelni!'); return; }
+    var d=await fetch('/api/send-announcement',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:title,message:msg})}).then(function(r){return r.json();});
+    el.style.display='block';
+    el.innerHTML=d.success?'<span style="color:#4ade80">Duyuru opublikovano!</span>':'<span style="color:#ef4444">'+(d.error||'Ошибка')+'</span>';
+    setTimeout(function(){el.style.display='none';},3000);
+}
+
+async function loadLoginLog() {
+    try {
+        var logs = await fetch('/api/login-log').then(function(r){return r.json();});
+        var box = document.getElementById('login-log');
+        if (!box) return;
+        if (!logs.length) { box.innerHTML='<p style="color:#5a5040;text-align:center;padding:16px;">Пока yok вход.</p>'; return; }
+        box.innerHTML = '<div style="display:flex;flex-direction:column;gap:8px;">' +
+        logs.slice(0,20).map(function(l) {
+            var t = l.timestamp ? new Date(l.timestamp).toLocaleString('ru-RU') : '-';
+            var role = {owner:'#e05555', admin:'#c8922a', mod:'#2ecc71', uye:'#5a5040'};
+            var rc = roles[l.roles] || '#5a5040';
+            var avatar = l.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png';
+            return '<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:rgba(0,0,0,0.3);border-radius:12px;border:1px solid rgba(255,255,255,0.04);">'+
+                '<img src="'+avatar+'" style="width:36px;height:36px;border-radius:50%;border:2px solid '+rc+';object-fit:cover;" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">'+
+                '<div style="flex:1;min-width:0;">'+
+                    '<div style="font-weight:700;font-size:13px;color:#f0e8d0;">'+l.username+'</div>'+
+                    '<div style="font-size:11px;color:#5a5040;">'+t+'</div>'+
+                '</div>'+
+                '<span style="padding:3px 9px;border-radius:99px;font-size:10px;font-weight:700;background:'+rc+'18;color:'+rc+';border:1px solid '+rc+'44;">'+l.roles.toUpperCase()+'</span>'+
+            '</div>';
+        }).join('') + '</div>';
+    } catch(e) {}
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadStats(); loadQuickStats(); loadRecentActivity(); loadGuildInfo(); loadLoginLog();
+    setInterval(loadStats, 5000);
+    setInterval(loadRecentActivity, 10000);
+    setInterval(loadLoginLog, 10000);
+});
+</script>
+{% endblock %}
+
+async def _load_threat_unused(): pass
+<script>
+async function loadThreatIndex() {
+    try {
+        const res = await fetch('/api/security/threat-index');
+        const d = await res.json();
+        if (!d.success) return;
+        
+        const score = d.threat_score || 15;
+        const level = d.threat_level || 'Низкая угроза (Спокойно)';
+        const color = d.threat_color || '#2ECC71';
+        const active = d.lockdown_active || false;
+        
+        document.getElementById('threatScoreVal').textContent = score + '/100';
+        const badge = document.getElementById('threatLevelBadge');
+        badge.textContent = level;
+        badge.style.color = color;
+        badge.style.borderColor = color;
+        badge.style.background = color + '22';
+        
+        const wrap = document.getElementById('threatIconWrap');
+        wrap.style.borderColor = color;
+        wrap.style.background = color + '22';
+        document.getElementById('threatIcon').style.color = color;
+        
+        const btn = document.getElementById('btnLockdown');
+        const btnText = document.getElementById('btnLockdownText');
+        if (active) {
+            btn.style.background = '#E74C3C';
+            btn.style.color = '#fff';
+            btnText.textContent = 'Отключить карантин (Lockdown АКТИВЕН)';
+        } else {
+            btn.style.background = '#2ECC71';
+            btn.style.color = '#100e08';
+            btnText.textContent = 'Включить карантин (Lockdown)';
+        }
+    } catch(e) {}
+}
+
+async function toggleLockdown() {
+    const btn = document.getElementById('btnLockdown');
+    btn.disabled = true;
+    try {
+        const res = await fetch('/api/security/toggle-lockdown', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({})
+        });
+        const d = await res.json();
+        if (d.success) {
+            loadThreatIndex();
+            if (typeof showToast === 'function') showToast(d.message);
+        }
+    } catch(e) {}
+    btn.disabled = false;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadThreatIndex();
+    setInterval(loadThreatIndex, 15000);
+});
+</script>

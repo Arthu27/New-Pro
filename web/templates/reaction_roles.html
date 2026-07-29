@@ -1,0 +1,195 @@
+﻿{% extends "base.html" %}
+{% block title %}Reaction Роли - Aether{% endblock %}
+{% block page_title %}🎭 REAKSİYON ROLES{% endblock %}
+{% block content %}
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&display=swap');
+.rr-каждый{background:linear-gradient(135deg,#100e08,#100e08,#100e08);border:1px solid rgba(200,146,42,0.4);border-radius:20px;padding:30px;margin-bottom:25px;text-align:center;position:relative;overflow:hidden;}
+.rr-каждый::before{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(ellipse at center,rgba(200,146,42,0.08) 0%,transparent 60%);animation:pulse-bg 4s ease-in-out infinite;}
+@keyframes pulse-bg{0%,100%{opacity:.5;}50%{opacity:1;}}
+.каждый-title{font-family:Rajdhani,sans-serif;font-size:28px;font-weight:700;background:linear-gradient(135deg,#c8922a,#c8922a,#c8922a);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px;}
+.каждый-sub{color:rgba(240,232,208,0.55);font-size:13px;}
+.controls-bar{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;}
+.guild-sel{flex:1;min-width:200px;padding:12px 16px;background:rgba(0,0,0,0.6);border:2px solid rgba(200,146,42,0.3);border-radius:14px;color:#f0e8d0;font-size:14px;}
+.guild-sel:focus{outline:none;border-color:#c8922a;}
+.btn-new{padding:12px 24px;background:linear-gradient(135deg,#c8922a,#c8922a);color:#f0e8d0;border:none;border-radius:14px;cursor:pointer;font-weight:700;font-size:14px;display:flex;align-items:center;gap:8px;transition:all .2s;box-shadow:0 4px 15px rgba(200,146,42,0.3);}
+.btn-new:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(200,146,42,0.5);}
+.rr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:20px;}
+.rr-card{background:linear-gradient(135deg,#100e08,#100e08);border:1px solid rgba(200,146,42,0.25);border-radius:18px;padding:22px;position:relative;overflow:hidden;transition:all .3s;animation:fadeInUp .4s ease both;}
+.rr-card:hover{border-color:rgba(200,146,42,0.6);transform:translateY(-3px);box-shadow:0 8px 30px rgba(200,146,42,0.2);}
+.rr-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#c8922a,#c8922a,#c8922a);background-size:200% 100%;animation:shimmer 2s linear infinite;}
+@keyframes shimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
+@keyframes fadeInUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+.rr-title{font-size:16px;font-weight:700;color:#f0e8d0;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.rr-entry{display:flex;align-items:center;gap:10px;padding:9px 12px;background:rgba(212,168,67,0.1);border:1px solid rgba(200,146,42,0.2);border-radius:14px;margin-bottom:7px;}
+.rr-emoji{font-size:22px;width:32px;text-align:center;}
+.rr-arrow{color:#666;font-size:12px;}
+.rr-роли{color:#c8922a;font-size:13px;font-weight:600;}
+.rr-footer{display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.05);}
+.btn-del{padding:6px 14px;background:rgba(231,76,60,0.2);border:1px solid rgba(231,76,60,0.4);color:#e05555;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;transition:all .2s;}
+.btn-del:hover{background:rgba(231,76,60,0.4);}
+.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:9999;justify-content:center;align-items:center;backdrop-filter:blur(4px);}
+.modal-box{background:linear-gradient(135deg,#100e08,#100e08,#100e08);border:2px solid rgba(200,146,42,0.5);border-radius:24px;padding:32px;max-width:520px;width:92%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(200,146,42,0.3);animation:modalIn .3s cubic-bezier(.34,1.56,.64,1);}
+@keyframes modalIn{from{opacity:0;transform:scale(0.8);}to{opacity:1;transform:scale(1);}}
+.modal-title{font-family:Rajdhani,sans-serif;font-size:22px;font-weight:700;color:#c8922a;margin-bottom:20px;display:flex;align-items:center;gap:10px;}
+.form-group{margin-bottom:14px;}
+.form-label{display:block;color:#c8922a;font-size:11px;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:7px;font-weight:600;}
+.form-input{width:100%;padding:11px 14px;background:rgba(0,0,0,0.5);border:2px solid rgba(200,146,42,0.25);border-radius:14px;color:#f0e8d0;font-size:14px;transition:border-color .2s;box-sizing:border-box;}
+.form-input:focus{outline:none;border-color:#c8922a;}
+.entry-row{display:flex;gap:8px;margin-bottom:8px;align-items:center;animation:fadeInUp .2s ease;}
+.entry-emoji{width:56px;padding:10px 6px;background:rgba(0,0,0,0.5);border:2px solid rgba(200,146,42,0.25);border-radius:14px;color:#f0e8d0;text-align:center;font-size:20px;}
+.entry-emoji:focus{outline:none;border-color:#c8922a;}
+.entry-роли{flex:1;padding:10px 12px;background:rgba(0,0,0,0.5);border:2px solid rgba(200,146,42,0.25);border-radius:14px;color:#f0e8d0;font-size:14px;}
+.entry-роли:focus{outline:none;border-color:#c8922a;}
+.entry-del{width:36px;height:36px;background:rgba(231,76,60,0.2);border:1px solid rgba(231,76,60,0.4);border-radius:8px;color:#e05555;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0;}
+.entry-del:hover{background:rgba(231,76,60,0.4);}
+.btn-add-entry{width:100%;padding:9px;background:rgba(212,168,67,0.1);color:#c8922a;border:1px dashed rgba(200,146,42,0.4);border-radius:14px;cursor:pointer;font-size:13px;margin-bottom:18px;transition:all .2s;}
+.btn-add-entry:hover{background:rgba(212,168,67,0.2);}
+.modal-actions{display:flex;gap:10px;}
+.btn-submit{flex:1;padding:12px;background:linear-gradient(135deg,#c8922a,#c8922a);color:#f0e8d0;border:none;border-radius:14px;cursor:pointer;font-weight:700;font-size:15px;transition:all .2s;box-shadow:0 4px 15px rgba(200,146,42,0.3);}
+.btn-submit:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(200,146,42,0.5);}
+.btn-cancel{padding:12px 20px;background:rgba(255,255,255,0.05);color:rgba(240,232,208,0.55);border:1px solid rgba(255,255,255,0.1);border-radius:14px;cursor:pointer;}
+.btn-cancel:hover{background:rgba(255,255,255,0.1);color:rgba(240,232,208,0.55);}
+.empty-state{text-align:center;padding:60px 20px;color:#444;grid-column:1/-1;}
+</style>
+
+<div class="rr-каждый">
+  <div style="font-size:60px;margin-bottom:10px;">🎭</div>
+  <div class="каждый-title">🎭 Reaksiyon Роли</div>
+  <div class="каждый-sub">Emojiye клик автоматически роль ver</div>
+</div>
+
+<div class="controls-bar">
+  <select style="display:none" style="display:none" id="guild-select" class="guild-sel" onchange="loadRR()">
+    <option value="">🏠 Сервер выбрать...</option>
+  </select>
+  <button class="btn-new" onclick="openModal()"><span>➕</span> Новый Добавить</button>
+</div>
+
+<div id="rr-list" class="rr-grid"></div>
+
+<div id="modal" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-title">🎭 Reaksiyon Роль Создать</div>
+    <div class="form-group">
+      <label class="form-label">📺 Канал</label>
+      <select id="rr-channel" class="form-input"></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">📝 Заголовок</label>
+      <input type="text" id="rr-title" class="form-input" placeholder="Роль выбор сообщение başlığı...">
+    </div>
+    <label class="form-label" style="margin-bottom:10px;">🎭 Emoji → Роль Eşleşmeleri</label>
+    <div id="rr-entries"></div>
+    <button class="btn-add-entry" onclick="addEntry()">➕ Eşleşme Добавить</button>
+    <div class="modal-actions">
+      <button class="btn-submit" onclick="createRR()">🎭 Создать ve Отправить</button>
+      <button class="btn-cancel" onclick="closeModal()">Отмена</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var selectedGuild = '1421244140359909513';
+var allRoles = [];
+
+async function loadGuilds() {
+  // Sabit сервер ID
+  var gid = '1421244140359909513';
+  if (typeof selectedGuild !== 'undefined') selectedGuild = gid;
+  if (document.getElementById('guild-select')) document.getElementById('guild-select').value = gid;
+  if (document.getElementById('guild-sel')) document.getElementById('guild-sel').value = gid;
+  if (document.getElementById('guildSelect')) document.getElementById('guildSelect').value = gid;
+  if (typeof loadData === 'function') { loadData(gid); return; }
+  if (typeof loadAll === 'function') { loadAll(gid); return; }
+  if (typeof loadRoles === 'function') { loadRoles(gid); return; }
+  if (typeof loadChannels === 'function') { loadChannels(gid); return; }
+  if (typeof loadMembers === 'function') { loadMembers(gid); return; }
+  if (typeof loadHistory === 'function') { loadHistory(gid); return; }
+  if (typeof loadLogs === 'function') { loadLogs(gid); return; }
+  if (typeof loadVoiceStats === 'function') { loadVoiceStats(gid); return; }
+  if (typeof loadSettings === 'function') { loadSettings(gid); return; }
+  if (typeof loadGiveaways === 'function') { loadGiveaways(gid); return; }
+  if (typeof loadPolls === 'function') { loadPolls(gid); return; }
+  if (typeof loadEconomy === 'function') { loadEconomy(gid); return; }
+  if (typeof loadSuggestions === 'function') { loadSuggestions(gid); return; }
+  if (typeof loadInvites === 'function') { loadInvites(gid); return; }
+  if (typeof loadHealth === 'function') { loadHealth(gid); return; }
+  if (typeof loadAnalytics === 'function') { loadAnalytics(gid); return; }
+
+}
+
+async function loadRR() {
+  selectedGuild = document.getElementById('guild-select').value;
+  if (!selectedGuild) return;
+  var [rrs, chRes, roles] = await Promise.all([
+    fetch('/api/guild/'+selectedGuild+'/reaction-roles').then(r=>r.json()),
+    fetch('/api/guild/'+selectedGuild+'/channels').then(r=>r.json()),
+    fetch('/api/guild/'+selectedGuild+'/roles').then(r=>r.json())
+  ]);
+  var channels = Array.isArray(chRes) ? chRes : (chRes.channels || []);
+  allRoles = roles;
+  document.getElementById('rr-channel').innerHTML = channels.filter(c=>c.type==='text').map(c=>'<option value="'+c.id+'">#'+c.name+'</option>').join('');
+
+  var box = document.getElementById('rr-list');
+  if (!rrs.length) { box.innerHTML='<div class="empty-state"><div style="font-size:60px;margin-bottom:16px;">🎭</div><p>Пока reaksiyon роль yok.</p></div>'; return; }
+  box.innerHTML = rrs.map(function(rr, i) {
+    var entries = (rr.entries||[]).map(function(e) {
+      return '<div class="rr-entry"><span class="rr-emoji">'+e.emoji+'</span><span class="rr-arrow">→</span><span class="rr-роли">@'+e.role_name+'</span></div>';
+    }).join('');
+    return '<div class="rr-card" style="animation-delay:'+(i*0.08)+'s">'+
+      '<div class="rr-title">🎭 '+rr.title+'</div>'+entries+
+      '<div class="rr-footer"><span style="color:#5a5040;font-size:11px;">'+rr.entries.length+' роль</span>'+
+      '<button class="btn-del" onclick="deleteRR(\''+rr.id+'\')">🗑 Удалить</button></div></div>';
+  }).join('');
+}
+
+function addEntry() {
+  var div = document.createElement('div');
+  div.className = 'entry-row';
+  var role = allRoles.map(r=>'<option value="'+r.id+'">@'+r.name+'</option>').join('');
+  div.innerHTML = '<input type="text" class="entry-emoji" value="🎭" maxlength="2">'+
+    '<select class="entry-роли form-input" style="flex:1;">'+роли+'</select>'+
+    '<button class="entry-del" onclick="this.parentElement.remove()">×</button>';
+  document.getElementById('rr-entries').appendChild(div);
+}
+
+function openModal() {
+  if (!selectedGuild) { alert('Сервер выбрать!'); return; }
+  document.getElementById('rr-entries').innerHTML = '';
+  document.getElementById('rr-title').value = '';
+  addEntry(); addEntry();
+  document.getElementById('modal').style.display = 'flex';
+}
+function closeModal() { document.getElementById('modal').style.display = 'none'; }
+
+async function createRR() {
+  var title = document.getElementById('rr-title').value.trim();
+  var channel_id = document.getElementById('rr-channel').value;
+  var entries = [];
+  document.querySelectorAll('.entry-row').forEach(function(row) {
+    var emoji = row.querySelector('.entry-emoji').value.trim();
+    var sel = row.querySelector('.entry-роли');
+    if (emoji && sel.value) entries.push({ emoji, role_id: sel.value });
+  });
+  if (!title || entries.length < 1) { alert('Заголовок ve en az 1 eşleşme gir!'); return; }
+  var btn = document.querySelector('.btn-submit');
+  btn.textContent = '⏳ Создан...'; btn.disabled = true;
+  var r = await fetch('/api/guild/'+selectedGuild+'/reaction-roles/create', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ title, channel_id, entries })
+  });
+  var d = await r.json();
+  btn.textContent = '🎭 Создать ve Отправить'; btn.disabled = false;
+  if (d.success) { closeModal(); loadRR(); } else alert(d.error||'Ошибка!');
+}
+
+async function deleteRR(id) {
+  if (!confirm('Удалитьmek если хотите emin misiniz mı siz?')) return;
+  await fetch('/api/guild/'+selectedGuild+'/reaction-roles/'+id+'/delete', {method:'POST'});
+  loadRR();
+}
+
+loadGuilds();
+</script>
+{% endblock %}

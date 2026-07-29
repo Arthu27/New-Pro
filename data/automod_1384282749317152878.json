@@ -1,0 +1,23 @@
+{
+  "spam_protection": true,
+  "link_filter": false,
+  "caps_filter": false,
+  "invite_filter": false,
+  "mention_spam": false,
+  "duplicate_filter": false,
+  "emoji_filter": true,
+  "spam_threshold": 5,
+  "banned_words": [],
+  "exempt_channels": [
+    "1385370137292570734",
+    "1470709321322070189",
+    "1471876178397761690",
+    "1384282750001090720",
+    "1471387247034110027",
+    "1427410259563253760",
+    "1471402687311515739",
+    "1471390623557877974",
+    "1471387344220323946",
+    "1471387383478878425"
+  ]
+}

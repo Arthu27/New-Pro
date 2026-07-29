@@ -1,0 +1,46 @@
+{
+  "1773981109": {
+    "app_id": "1773981109",
+    "user_id": "987430047889637426",
+    "user_name": "legacy.noper",
+    "display_name": "legacy.noper",
+    "avatar": "https://cdn.discordapp.com/embed/avatars/2.png",
+    "guild_id": "1107038411895881788",
+    "guild_name": "🍁Rakuzan ⸺ Anime & Manga #BAKIM",
+    "timestamp": "2026-03-20T08:31:49.528641",
+    "status": "approved",
+    "source": "web",
+    "answers": {
+      "yas": "18",
+      "tecrube": "hic bir sru",
+      "почему": "oyle canim cekti",
+      "активен": "5",
+      "ekstra": "yoo"
+    },
+    "message_id": "1484469496486822029",
+    "reviewed_by": "legacy.noper",
+    "review_note": ""
+  },
+  "1774024764": {
+    "app_id": "1774024764",
+    "user_id": "1406597367695806564",
+    "user_name": "eiisw.",
+    "display_name": "eiisw.",
+    "avatar": "https://cdn.discordapp.com/embed/avatars/4.png",
+    "guild_id": "1107038411895881788",
+    "guild_name": "🍁Rakuzan ⸺ Anime & Manga #BAKIM",
+    "timestamp": "2026-03-20T20:39:24.836756",
+    "status": "approved",
+    "source": "web",
+    "answers": {
+      "yas": "15115",
+      "tecrube": "Olmadim",
+      "почему": "Kedi ozelden tehdit etti",
+      "активен": "Allah ne verirse",
+      "ekstra": "Arturh babadir gerisi yalandir"
+    },
+    "message_id": "1484652605257814168",
+    "reviewed_by": "owner",
+    "review_note": ""
+  }
+}

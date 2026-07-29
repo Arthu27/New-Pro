@@ -1,0 +1,166 @@
+﻿{% extends "base.html" %}
+{% block title %}Редактор правил - Aether{% endblock %}
+{% block page_title %}<i class="fas fa-scroll" style="color:#c8922a;animation:pulse 2s infinite;"></i> СЕРВЕР ПРАВИЛ{% endblock %}
+{% block content %}
+<style>
+  .re-box{background:linear-gradient(135deg,rgba(26,22,16,0.7),rgba(26,22,16,0.7));border:1px solid rgba(212,168,67,0.3);border-radius:16px;padding:25px;margin-bottom:20px;position:relative;overflow:hidden;}
+  .re-box::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:2px;background:linear-gradient(90deg,transparent,#c8922a,transparent);;}
+  @keyframes scan{0%{left:-100%}100%{left:100%}}
+  .re-title{color:#c8922a;font-size:13px;text-transform:uppercase;letter-spacing:2px;margin-bottom:15px;display:flex;align-items:center;gap:8px;padding-bottom:12px;border-bottom:1px solid rgba(200,146,42,0.2);}
+  .rule-row{display:flex;gap:8px;margin-bottom:8px;align-items:center;}
+  .rule-num{color:#c8922a;font-weight:700;min-width:28px;font-size:15px;}
+  .rule-input{flex:1;padding:10px 14px;background:#100e08;border:1px solid rgba(212,168,67,0.25);border-radius:14px;color:#f0e8d0;font-family:inherit;font-size:14px;transition:all 0.3s;}
+  .rule-input:focus{outline:none;border-color:#c8922a;box-shadow:0 0 12px rgba(200,146,42,0.2);}
+  .rule-del{padding:8px 14px;background:rgba(224,85,85,0.15);color:#f0e8d0;border:none;border-radius:8px;cursor:pointer;font-size:14px;transition:all 0.2s;}
+  .rule-del:hover{transform:scale(1.05);}
+  .btn-add{width:100%;padding:10px;background:rgba(212,168,67,0.08);color:#c8922a;border:1px dashed rgba(200,146,42,0.4);border-radius:14px;cursor:pointer;margin-top:8px;font-size:14px;transition:all 0.2s;}
+  .btn-add:hover{background:rgba(212,168,67,0.15);}
+  .save-btn{padding:12px 24px;background:#c8922a;color:#f0e8d0;border:none;border-radius:14px;cursor:pointer;font-weight:700;margin-top:12px;transition:all 0.3s;}
+  .save-btn:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(212,168,67,0.2);}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+  @media(max-width:900px){.grid2{grid-template-columns:1fr;}}
+  .field-label{color:#c8922a;font-size:11px;text-transform:uppercase;display:block;margin-bottom:6px;letter-spacing:1px;}
+  .field-sel{width:100%;padding:10px 14px;background:#100e08;border:1px solid rgba(212,168,67,0.25);border-radius:14px;color:#f0e8d0;transition:all 0.3s;font-size:14px;}
+  .field-sel:focus{outline:none;border-color:#c8922a;}
+  .guild-select{width:100%;padding:12px;background:#100e08;border:1px solid rgba(212,168,67,0.3);border-radius:14px;color:#f0e8d0;margin-bottom:20px;font-size:14px;}
+  .preview-rule{margin-bottom:8px;color:#f0e8d0;font-size:13px;line-height:1.6;padding:8px 12px;background:rgba(212,168,67,0.05);border-radius:8px;border-left:3px solid #c8922a;}
+  .preview-rule span{color:#c8922a;font-weight:700;margin-right:6px;}
+  .publish-btn{width:100%;padding:12px;background:rgba(94,196,122,0.8);color:#f0e8d0;border:none;border-radius:14px;cursor:pointer;font-weight:700;margin-top:12px;transition:all 0.3s;}
+  .publish-btn:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(39,174,96,0.4);}
+</style>
+
+<select style="display:none" style="display:none" id="guild-select" class="guild-select" onchange="loadRules()">
+  <option value="">Сервер выбрать...</option>
+</select>
+
+<div class="grid2">
+  <div class="re-box">
+    <div class="re-title"><i class="fas fa-edit"></i> Правила Redaktirovat</div>
+    <div id="rules-list"></div>
+    <button class="btn-add" onclick="addRule()"><i class="fas fa-plus"></i> Правило Добавить</button>
+    <div style="display:flex;gap:10px;margin-top:12px;">
+      <button class="save-btn" onclick="saveRules()" style="flex:1;"><i class="fas fa-save"></i> Сохранить</button>
+    </div>
+  </div>
+
+  <div class="re-box">
+    <div class="re-title"><i class="fas fa-eye"></i> Önizleme & Yayınla</div>
+    <div id="preview" style="background:rgba(0,0,0,0.3);border-radius:14px;padding:15px;min-height:150px;margin-bottom:15px;"></div>
+    <label class="field-label">Yayınlanacak Канал</label>
+    <select id="rules-channel" class="field-sel" style="margin-bottom:12px;"></select>
+    <button class="publish-btn" onclick="publishRules()">
+      <i class="fas fa-paper-plane"></i> Discord'a Yayınla
+    </button>
+  </div>
+</div>
+
+<script>
+var rules = [];
+var selectedGuild = '1421244140359909513';
+
+async function loadGuilds() {
+  // Sabit сервер ID
+  var gid = '1421244140359909513';
+  if (typeof selectedGuild !== 'undefined') selectedGuild = gid;
+  if (document.getElementById('guild-select')) document.getElementById('guild-select').value = gid;
+  if (document.getElementById('guild-sel')) document.getElementById('guild-sel').value = gid;
+  if (document.getElementById('guildSelect')) document.getElementById('guildSelect').value = gid;
+  if (typeof loadData === 'function') { loadData(gid); return; }
+  if (typeof loadAll === 'function') { loadAll(gid); return; }
+  if (typeof loadRoles === 'function') { loadRoles(gid); return; }
+  if (typeof loadChannels === 'function') { loadChannels(gid); return; }
+  if (typeof loadMembers === 'function') { loadMembers(gid); return; }
+  if (typeof loadHistory === 'function') { loadHistory(gid); return; }
+  if (typeof loadLogs === 'function') { loadLogs(gid); return; }
+  if (typeof loadVoiceStats === 'function') { loadVoiceStats(gid); return; }
+  if (typeof loadSettings === 'function') { loadSettings(gid); return; }
+  if (typeof loadGiveaways === 'function') { loadGiveaways(gid); return; }
+  if (typeof loadPolls === 'function') { loadPolls(gid); return; }
+  if (typeof loadEconomy === 'function') { loadEconomy(gid); return; }
+  if (typeof loadSuggestions === 'function') { loadSuggestions(gid); return; }
+  if (typeof loadInvites === 'function') { loadInvites(gid); return; }
+  if (typeof loadHealth === 'function') { loadHealth(gid); return; }
+  if (typeof loadAnalytics === 'function') { loadAnalytics(gid); return; }
+
+}
+
+async function loadRules() {
+  selectedGuild = document.getElementById('guild-select').value;
+  if(!selectedGuild) return;
+  var [rRes, chRes] = await Promise.all([
+    fetch('/api/guild/'+selectedGuild+'/rules').then(r=>r.json()),
+    fetch('/api/guild/'+selectedGuild+'/channels').then(r=>r.json())
+  ]);
+  rules = Array.isArray(rRes) ? rRes : [];
+  var chSel = document.getElementById('rules-channel');
+  chSel.innerHTML = '<option value="">Канал выбрать...</option>';
+  var channels = Array.isArray(chRes) ? chRes : (chRes.channels||[]);
+  channels.filter(function(c){return c.type==='text';}).forEach(function(c){
+    chSel.innerHTML += '<option value="'+c.id+'">#'+c.name+'</option>';
+  });
+  renderRules();
+}
+
+function renderRules() {
+  var box = document.getElementById('rules-list');
+  if(!rules.length) {
+    box.innerHTML = '<p style="color:#5a5040;font-size:13px;font-style:italic;">Пока правило yok. + Правило Добавить butonuna bas.</p>';
+    updatePreview(); return;
+  }
+  box.innerHTML = rules.map(function(r,i){
+    return '<div class="rule-row">'+
+      '<span class="rule-num">'+(i+1)+'.</span>'+
+      '<input class="rule-input" value="'+r.replace(/"/g,'&quot;')+'" oninput="rules['+i+']=this.value;updatePreview()">'+
+      '<button class="rule-del" onclick="removeRule('+i+')">×</button>'+
+    '</div>';
+  }).join('');
+  updatePreview();
+}
+
+function addRule() {
+  rules.push('Новый правило...');
+  renderRules();
+  var inputs = document.querySelectorAll('.rule-input');
+  if(inputs.length) inputs[inputs.length-1].focus();
+}
+
+function removeRule(i) { rules.splice(i,1); renderRules(); }
+
+function updatePreview() {
+  var box = document.getElementById('preview');
+  if(!rules.length) { box.innerHTML='<p style="color:#5a5040;font-size:13px;font-style:italic;">Правило yok.</p>'; return; }
+  box.innerHTML = '<div style="color:#c8922a;font-weight:700;margin-bottom:12px;font-size:15px;"><i class="fas fa-scroll"></i> Сервер Правила</div>'+
+    rules.map(function(r,i){
+      return '<div class="preview-rule"><span>'+(i+1)+'.</span>'+r+'</div>';
+    }).join('');
+}
+
+async function saveRules() {
+  if(!selectedGuild) { alert('Сервер выбрать!'); return; }
+  var r = await fetch('/api/guild/'+selectedGuild+'/rules', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(rules)
+  });
+  var d = await r.json();
+  var btn = event.target;
+  if(d.success) { btn.textContent='✅ Сохранено!'; setTimeout(function(){btn.innerHTML='<i class="fas fa-save"></i> Сохранить';},2000); }
+}
+
+async function publishRules() {
+  if(!selectedGuild) { alert('Сервер выбрать!'); return; }
+  var ch = document.getElementById('rules-channel').value;
+  if(!ch) { alert('Канал выбрать!'); return; }
+  if(!rules.length) { alert('До правило добавить!'); return; }
+  var r = await fetch('/api/guild/'+selectedGuild+'/rules/publish', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({channel_id:ch, rules:rules})
+  });
+  var d = await r.json();
+  var btn = event.target;
+  if(d.success) { btn.textContent='✅ Yayınlandı!'; setTimeout(function(){btn.innerHTML='<i class="fas fa-paper-plane"></i> Discord\'a Yayınla';},2000); }
+  else alert('❌ '+(d.error||'Ошибка'));
+}
+
+loadGuilds();
+</script>
+{% endblock %}

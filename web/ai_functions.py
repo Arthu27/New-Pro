@@ -1,0 +1,373 @@
+"""
+AI Function Calling — AI olabilir vizivat fonksiyonlar для poluceniya verilerin ve заверш действие
+"""
+import json
+import os
+import discord
+from datetime import datetime, timedelta
+from typing import Dict, List, Optional, Any
+
+
+class AIFunctions:
+    """Nabor fonksiyonların erişisimlerin AI"""
+    
+    def __init__(self, bot: discord.Client):
+        self.bot = bot
+        self.functions = {
+            'get_user_warnings': self.get_user_warnings,
+            'get_user_info': self.get_user_info,
+            'get_user_roles': self.get_user_roles,
+            'check_message_history': self.check_message_history,
+            'search_rules': self.search_rules,
+            'get_sunucu_stats': self.get_sunucu_stats,
+            'get_ticket_history': self.get_ticket_history,
+            'remember_fact': self.remember_fact,
+            'recall_facts': self.recall_facts,
+            'check_user_reputation': self.check_user_reputation,
+            'search_knowledge_base': self.search_knowledge_base,
+        }
+    
+    def get_available_functions(self) -> str:
+        """Vozvrasaet описание erişisimlerin fonksiyonların для AI"""
+        return """
+ERIŞIMNIE FONKSIYONLAR (vizivay ne время gerekli):
+
+1. get_user_warnings(user_id: int)
+   Al история предупреждение пользователь
+   Пример: get_user_warnings(123456789)
+
+2. get_user_info(user_id: int)
+   Al информация о у пользователя (isim, дата registracii, время на на сервере)
+   Пример: get_user_info(123456789)
+
+3. get_user_roles(user_id: int)
+   Al liste роль пользователь
+   Пример: get_user_roles(123456789)
+
+4. check_message_history(user_id: int, limit: int = 10)
+   Контроль et son сообщения пользователь
+   Пример: check_message_history(123456789, 20)
+
+5. search_rules(query: str)
+   Arama по правил сервер
+   Пример: search_rules("spam")
+
+6. get_sunucu_stats()
+   Al istatistiği сервер (участники, onlayn, каналы)
+   Пример: get_sunucu_stats()
+
+7. get_ticket_history(user_id: int)
+   Al история ticketların пользователь
+   Пример: get_ticket_history(123456789)
+
+8. remember_fact(user_id: int, fact: str)
+   Zapomnit vajniy fakt о у пользователя
+   Пример: remember_fact(123456789, "Predpocitaet kratkie cevaplar")
+
+9. recall_facts(user_id: int)
+   Vspomnit все fakti о у пользователя
+   Пример: recall_facts(123456789)
+
+10. check_user_reputation(user_id: int)
+    Контроль et itibarı пользователь (предупреждения, muti, bani)
+    Пример: check_user_reputation(123456789)
+
+11. search_knowledge_base(query: str)
+    Arama по tabanda информация сервер (правила, FAQ, ticketlar, notlar)
+    Пример: search_knowledge_base("spam")
+
+FORMAT VIZOVA:
+[FUNC:function_name(param1=value1, param2=value2)]
+
+ПРИМЕР:
+[FUNC:get_user_warnings(user_id=123456789)]
+"""
+    
+    async def execute_function(self, func_call: str, guild: discord.Guild) -> Optional[str]:
+        """Vipolnyaet funkciyu den vizova AI"""
+        try:
+            # Ayrıştırıyoruz vizov: [FUNC:name(param1=value1, param2=value2)]
+            if not func_call.startswith('[FUNC:') or not func_call.endswith(']'):
+                return None
+            
+            func_call = func_call[6:-1]  # Удален [FUNC: ve ]
+            
+            # Ayrıştırıyoruz isim fonksiyonlar ve parametri
+            if '(' not in func_call or ')' not in func_call:
+                return None
+            
+            func_name = func_call.split('(')[0].strip()
+            params_str = func_call.split('(')[1].rsplit(')', 1)[0].strip()
+            
+            # Ayrıştırıyoruz parametri
+            params = {}
+            if params_str:
+                for param in params_str.split(','):
+                    if '=' in param:
+                        key, value = param.split('=', 1)
+                        key = key.strip()
+                        value = value.strip()
+                        
+                        # Konvertiruem tipi
+                        if value.isdigit():
+                            value = int(value)
+                        elif value.replace('.', '').isdigit():
+                            value = float(value)
+                        elif value.lower() in ('true', 'false'):
+                            value = value.lower() == 'true'
+                        
+                        params[key] = value
+            
+            # Çтяжелыйıyoruz funkciyu
+            if func_name not in self.functions:
+                return f"Ошибка: funkciya {func_name} не найден"
+            
+            result = await self.functions[func_name](guild=guild, **params)
+            return str(result)
+            
+        except Exception as e:
+            return f"Ошибка заверш fonksiyonlar: {str(e)}"
+    
+    async def get_user_warnings(self, guild: discord.Guild, user_id: int) -> str:
+        """Al история предупреждение"""
+        try:
+            from cogs.warnings import load_warnings
+            warnings_data = load_warnings()
+            gid = str(guild.id)
+            uid = str(user_id)
+            
+            user_warnings = warnings_data.get(gid, {}).get(uid, [])
+            
+            if not user_warnings:
+                return f"U пользователь <@{user_id}> yok предупреждение."
+            
+            result = f"Предупреждения <@{user_id}> ({len(user_warnings)}):\n"
+            for i, warn in enumerate(user_warnings[-5:], 1):  # В конец 5
+                result += f"{i}. {warn.get('reason', 'Bez причина')} — {warn.get('mod', '?')} ({warn.get('timestamp', '?')[:10]})\n"
+            
+            return result
+        except Exception as e:
+            return f"Ошибка: {str(e)}"
+    
+    async def get_user_info(self, guild: discord.Guild, user_id: int) -> str:
+        """Al информация о у пользователя"""
+        try:
+            member = guild.get_member(user_id)
+            if not member:
+                return f"Пользователь <@{user_id}> не найдено на на сервере."
+            
+            created = member.created_at.strftime("%d.%m.%Y")
+            joined = member.joined_at.strftime("%d.%m.%Y") if member.joined_at else "?"
+            days_on_sunucu = (datetime.utcnow() - member.joined_at).days if member.joined_at else 0
+            
+            return (
+                f"Информация о <@{user_id}>:\n"
+                f"Isim: {member.display_name}\n"
+                f"ID: {user_id}\n"
+                f"Zaregistrirovan: {created}\n"
+                f"На на сервере: {joined} ({days_on_sunucu} день)\n"
+                f"Роль: {len(member.roles)}"
+            )
+        except Exception as e:
+            return f"Ошибка: {str(e)}"
+    
+    async def get_user_roles(self, guild: discord.Guild, user_id: int) -> str:
+        """Al роли пользователь"""
+        try:
+            member = guild.get_member(user_id)
+            if not member:
+                return f"Пользователь <@{user_id}> не найдено."
+            
+            roles = [r.name for r in member.roles if r.name != "@everyone"]
+            if not roles:
+                return f"У <@{user_id}> нет ролей."
+            
+            return f"Роли <@{user_id}>: {', '.join(roles)}"
+        except Exception as e:
+            return f"Ошибка: {str(e)}"
+    
+    async def check_message_history(self, guild: discord.Guild, user_id: int, limit: int = 10) -> str:
+        """Контроль et son сообщения пользователь"""
+        try:
+            from cogs.logs import _msg_cache
+            
+            user_messages = [
+                msg for msg in _msg_cache.values()
+                if msg.get('author_id') == user_id
+            ][:limit]
+            
+            if not user_messages:
+                return f"Yok nedavnih сообщение den <@{user_id}> в kese."
+            
+            result = f"В конец {len(user_messages)} сообщение <@{user_id}>:\n"
+            for msg in reversed(user_messages):
+                content = msg.get('content', '')[:100]
+                channel = msg.get('channel_name', '?')
+                result += f"#{channel}: {content}\n"
+            
+            return result
+        except Exception as e:
+            return f"Ошибка: {str(e)}"
+    
+    async def search_rules(self, guild: discord.Guild, query: str) -> str:
+        """Arama по правил сервер"""
+        try:
+            rules_file = f"data/rules_{guild.id}.json"
+            if not os.path.exists(rules_file):
+                return "Правила сервер не найден."
+            
+            with open(rules_file, 'r', encoding='utf-8') as f:
+                rules_data = json.load(f)
+            
+            rules = rules_data.get('rules', [])
+            query_lower = query.lower()
+            
+            matches = [
+                rule for rule in rules
+                if query_lower in rule.get('text', '').lower()
+            ]
+            
+            if not matches:
+                return f"Не найдено правила по sorguyu '{query}'."
+            
+            result = f"Найдено {len(matches)} правила:\n"
+            for i, rule in enumerate(matches[:5], 1):
+                result += f"{i}. {rule.get('text', '')}\n"
+            
+            return result
+        except Exception as e:
+            return f"Ошибка: {str(e)}"
+    
+    async def get_sunucu_stats(self, guild: discord.Guild) -> str:
+        """Al istatistiği сервер"""
+        try:
+            total_members = guild.member_count
+            online_members = len([m for m in guild.members if m.status == discord.Status.online])
+            text_channels = len(guild.text_channels)
+            voice_channels = len(guild.voice_channels)
+            role = len(guild.roles)
+            
+            return (
+                f"Статистика сервер {guild.name}:\n"
+                f"Участников: {total_members} (onlayn: {online_members})\n"
+                f"Metin каналы: {text_channels}\n"
+                f"Ses каналы: {voice_channels}\n"
+                f"Ролей: {len(guild.roles)}"
+            )
+        except Exception as e:
+            return f"Ошибка: {str(e)}"
+    
+    async def get_ticket_history(self, guild: discord.Guild, user_id: int) -> str:
+        """Al история ticketların"""
+        try:
+            ticket_file = f"data/tickets_{guild.id}.json"
+            if not os.path.exists(ticket_file):
+                return f"U <@{user_id}> yok istorii ticketların."
+            
+            with open(ticket_file, 'r', encoding='utf-8') as f:
+                tickets_data = json.load(f)
+            
+            user_tickets = [
+                t for t in tickets_data.get('tickets', [])
+                if t.get('user_id') == user_id
+            ]
+            
+            if not user_tickets:
+                return f"U <@{user_id}> yok ticketların."
+            
+            result = f"Ticketlar <@{user_id}> ({len(user_tickets)}):\n"
+            for ticket in user_tickets[-5:]:  # В конец 5
+                status = ticket.get('status', '?')
+                category = ticket.get('category', '?')
+                created = ticket.get('created_at', '?')[:10]
+                result += f"- {category} ({status}) — {created}\n"
+            
+            return result
+        except Exception as e:
+            return f"Ошибка: {str(e)}"
+    
+    async def remember_fact(self, guild: discord.Guild, user_id: int, fact: str) -> str:
+        """Zapomnit fakt о у пользователя"""
+        try:
+            memory_file = 'data/ai_memory.json'
+            memory = {}
+            
+            if os.path.exists(memory_file):
+                with open(memory_file, 'r', encoding='utf-8') as f:
+                    memory = json.load(f)
+            
+            user_key = str(user_id)
+            if user_key not in memory:
+                memory[user_key] = []
+            
+            memory[user_key].append({
+                'fact': fact,
+                'timestamp': datetime.utcnow().isoformat()
+            })
+            
+            # Ограничиваем 50 faktami
+            if len(memory[user_key]) > 50:
+                memory[user_key] = memory[user_key][-50:]
+            
+            with open(memory_file, 'w', encoding='utf-8') as f:
+                json.dump(memory, f, ensure_ascii=False, indent=2)
+            
+            return f"Zapomnil: {fact}"
+        except Exception as e:
+            return f"Ошибка: {str(e)}"
+    
+    async def recall_facts(self, guild: discord.Guild, user_id: int) -> str:
+        """Vspomnit fakti о у пользователя"""
+        try:
+            memory_file = 'data/ai_memory.json'
+            if not os.path.exists(memory_file):
+                return f"Yok sohranennih gerçekler о <@{user_id}>."
+            
+            with open(memory_file, 'r', encoding='utf-8') as f:
+                memory = json.load(f)
+            
+            user_key = str(user_id)
+            facts = memory.get(user_key, [])
+            
+            if not facts:
+                return f"Yok sohranennih gerçekler о <@{user_id}>."
+            
+            result = f"Fakti о <@{user_id}> ({len(facts)}):\n"
+            for fact_data in facts[-10:]:  # В конец 10
+                fact = fact_data.get('fact', '')
+                result += f"- {fact}\n"
+            
+            return result
+        except Exception as e:
+            return f"Ошибка: {str(e)}"
+    
+    async def check_user_reputation(self, guild: discord.Guild, user_id: int) -> str:
+        """Контроль et itibarı пользователь"""
+        try:
+            warnings_text = await self.get_user_warnings(guild, user_id)
+            info_text = await self.get_user_info(guild, user_id)
+            tickets_text = await self.get_ticket_history(guild, user_id)
+            
+            return (
+                f"=== REPUTACIYa <@{user_id}> ===\n\n"
+                f"{info_text}\n\n"
+                f"{warnings_text}\n\n"
+                f"{tickets_text}"
+            )
+        except Exception as e:
+            return f"Ошибка: {str(e)}"
+    
+    async def search_knowledge_base(self, guild: discord.Guild, query: str) -> str:
+        """Arama по tabanda информация сервер (правила, FAQ, ticketlar, notlar)"""
+        try:
+            from web.ai_rag import get_knowledge_base
+            
+            kb = get_knowledge_base(guild.id)
+            context = kb.get_context_for_query(query)
+            
+            if not context:
+                return f"Не найдено informacii в tabanda информация по sorguyu: {query}"
+            
+            return context
+        except Exception as e:
+            return f"Ошибка aramaa в tabanda информация: {str(e)}"

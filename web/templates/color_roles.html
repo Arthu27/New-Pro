@@ -1,0 +1,174 @@
+﻿{% extends "base.html" %}
+{% block title %}Renk Роли - Aether{% endblock %}
+{% block page_title %}Renk Роли{% endblock %}
+{% block content %}
+<style>
+  .cr-box{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.1);border-radius:14px;padding:22px;margin-bottom:16px;backdrop-filter:blur(4px);}
+  .cr-title{color:rgba(240,232,208,0.4);font-size:10px;text-transform:uppercase;letter-spacing:0.1em;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px;padding-bottom:12px;border-bottom:1px solid rgba(212,168,67,0.07);}
+  .cr-title i{color:#c8922a;}
+  .color-card{background:rgba(255,255,255,0.03);border-radius:12px;padding:16px;text-align:center;min-width:110px;position:relative;border:1px solid rgba(212,168,67,0.08);transition:border-color 0.15s,transform 0.15s;}
+  .color-card:hover{transform:translateY(-3px);border-color:rgba(212,168,67,0.2);}
+  .color-swatch{width:52px;height:52px;border-radius:50%;margin:0 auto 10px;border:2px solid rgba(255,255,255,0.15);}
+  .color-name{color:#f0e8d0;font-size:13px;font-weight:600;}
+  .color-hex{font-size:11px;margin-top:3px;font-family:monospace;color:#5a5040;}
+  .del-btn{position:absolute;top:6px;right:6px;background:rgba(224,85,85,0.15);border:1px solid rgba(224,85,85,0.25);color:#e05555;width:22px;height:22px;border-radius:50%;cursor:pointer;font-size:12px;line-height:20px;padding:0;transition:all 0.15s;}
+  .del-btn:hover{background:rgba(224,85,85,0.3);}
+  .field-label{color:rgba(240,232,208,0.4);font-size:10px;text-transform:uppercase;display:block;margin-bottom:6px;letter-spacing:0.08em;font-weight:700;}
+  .field-input{width:100%;padding:10px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(212,168,67,0.12);border-radius:8px;color:#f0e8d0;box-sizing:border-box;transition:border-color 0.15s;font-size:13px;font-family:Inter,sans-serif;margin:0;}
+  .field-input:focus{outline:none;border-color:rgba(212,168,67,0.45);}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+  @media(max-width:768px){.grid3{grid-template-columns:1fr;}}
+  .save-btn{padding:10px 22px;background:#c8922a;color:#100e08;border:none;border-radius:99px;cursor:pointer;font-weight:700;font-size:13px;font-family:Inter,sans-serif;transition:background 0.15s,transform 0.12s;}
+  .save-btn:hover{background:#e0a830;transform:translateY(-1px);}
+  .guild-select{width:100%;padding:10px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(212,168,67,0.12);border-radius:8px;color:#f0e8d0;margin-bottom:16px;font-size:13px;font-family:Inter,sans-serif;}
+  .guild-select:focus{outline:none;border-color:rgba(212,168,67,0.45);}
+  .colors-grid{display:flex;flex-wrap:wrap;gap:12px;min-height:60px;}
+</style>
+
+<select style="display:none" style="display:none" id="guild-select" class="guild-select" onchange="loadColorRoles()">
+  <option value="">Сервер выбрать...</option>
+</select>
+
+<div class="cr-box">
+  <div class="cr-title"><i class="fas fa-plus"></i> Renk Добавить</div>
+  <div class="grid3" style="margin-bottom:14px;">
+    <div>
+      <label class="field-label">Renk Isim</label>
+      <input type="text" id="color-name" placeholder="напр.: Красный" class="field-input">
+    </div>
+    <div>
+      <label class="field-label">Renk Kodu</label>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="color" id="color-picker" value="#c8922a" style="width:42px;height:38px;padding:2px;background:rgba(255,255,255,0.04);border:1px solid rgba(212,168,67,0.2);border-radius:8px;cursor:pointer;">
+        <input type="text" id="color-hex" placeholder="#c8922a" class="field-input" style="flex:1;" oninput="syncColor(this.value)">
+      </div>
+    </div>
+    <div>
+      <label class="field-label">Emoji</label>
+      <input type="text" id="color-emoji" placeholder="🎨" class="field-input">
+    </div>
+  </div>
+  <button onclick="addColor()" class="save-btn"><i class="fas fa-plus" style="margin-right:6px;"></i>Добавить</button>
+</div>
+
+<div class="cr-box">
+  <div class="cr-title"><i class="fas fa-palette"></i> Текущий Renkler</div>
+  <div class="colors-grid" id="color-list">
+    <p style="color:#5a5040;font-size:13px;font-style:italic;">Сервер выберите...</p>
+  </div>
+</div>
+
+<div class="cr-box">
+  <div class="cr-title"><i class="fas fa-paper-plane"></i> Panel Yayınla</div>
+  <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+    <div style="flex:1;min-width:200px;">
+      <label class="field-label">Panel Канал</label>
+      <select id="panel-channel" class="field-input"></select>
+    </div>
+    <button onclick="publishPanel()" class="save-btn" style="background:rgba(94,196,122,0.8);color:#100e08;white-space:nowrap;">
+      <i class="fas fa-paper-plane" style="margin-right:6px;"></i>Yayınla
+    </button>
+  </div>
+</div>
+
+<script>
+var selectedGuild = '1421244140359909513';
+var colors = [];
+
+async function loadGuilds() {
+  // Sabit сервер ID
+  var gid = '1421244140359909513';
+  if (typeof selectedGuild !== 'undefined') selectedGuild = gid;
+  if (document.getElementById('guild-select')) document.getElementById('guild-select').value = gid;
+  if (document.getElementById('guild-sel')) document.getElementById('guild-sel').value = gid;
+  if (document.getElementById('guildSelect')) document.getElementById('guildSelect').value = gid;
+  if (typeof loadData === 'function') { loadData(gid); return; }
+  if (typeof loadAll === 'function') { loadAll(gid); return; }
+  if (typeof loadRoles === 'function') { loadRoles(gid); return; }
+  if (typeof loadChannels === 'function') { loadChannels(gid); return; }
+  if (typeof loadMembers === 'function') { loadMembers(gid); return; }
+  if (typeof loadHistory === 'function') { loadHistory(gid); return; }
+  if (typeof loadLogs === 'function') { loadLogs(gid); return; }
+  if (typeof loadVoiceStats === 'function') { loadVoiceStats(gid); return; }
+  if (typeof loadSettings === 'function') { loadSettings(gid); return; }
+  if (typeof loadGiveaways === 'function') { loadGiveaways(gid); return; }
+  if (typeof loadPolls === 'function') { loadPolls(gid); return; }
+  if (typeof loadEconomy === 'function') { loadEconomy(gid); return; }
+  if (typeof loadSuggestions === 'function') { loadSuggestions(gid); return; }
+  if (typeof loadInvites === 'function') { loadInvites(gid); return; }
+  if (typeof loadHealth === 'function') { loadHealth(gid); return; }
+  if (typeof loadAnalytics === 'function') { loadAnalytics(gid); return; }
+
+}
+
+async function loadColorRoles() {
+  selectedGuild = document.getElementById('guild-select').value;
+  if(!selectedGuild) return;
+  var [colRes, chRes] = await Promise.all([
+    fetch('/api/guild/'+selectedGuild+'/color-roles').then(r=>r.json()),
+    fetch('/api/guild/'+selectedGuild+'/channels').then(r=>r.json())
+  ]);
+  colors = Array.isArray(colRes) ? colRes : [];
+  var channels = Array.isArray(chRes) ? chRes : (chRes.channels||[]);
+  document.getElementById('panel-channel').innerHTML = '<option value="">Канал выбрать...</option>' +
+    channels.filter(function(c){return c.type==='text';})
+    .map(function(c){return '<option value="'+c.id+'">#'+c.name+'</option>';}).join('');
+  renderColors();
+}
+
+function syncColor(hex) {
+  if(/^#[0-9a-fA-F]{6}$/.test(hex)) document.getElementById('color-picker').value = hex;
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+  document.getElementById('color-picker').addEventListener('input', function(){
+    document.getElementById('color-hex').value = this.value;
+  });
+});
+
+function renderColors() {
+  var box = document.getElementById('color-list');
+  if(!colors.length) { box.innerHTML='<p style="color:#5a5040;font-size:13px;font-style:italic;">Пока renk добавл.</p>'; return; }
+  box.innerHTML = colors.map(function(c,i){
+    return '<div class="color-card">'+
+      '<button class="del-btn" onclick="removeColor('+i+')">×</button>'+
+      '<div class="color-swatch" style="background:'+c.hex+';"></div>'+
+      '<div style="font-size:20px;margin-bottom:4px;">'+(c.emoji||'🎨')+'</div>'+
+      '<div class="color-name">'+c.name+'</div>'+
+      '<div class="color-hex">'+c.hex+'</div>'+
+    '</div>';
+  }).join('');
+}
+
+function addColor() {
+  var name = document.getElementById('color-name').value.trim();
+  if(!name) { alert('Renk имя gir!'); return; }
+  var hex = document.getElementById('color-hex').value.trim() || document.getElementById('color-picker').value;
+  if(!/^#[0-9a-fA-F]{6}$/.test(hex)) hex = document.getElementById('color-picker').value;
+  var emoji = document.getElementById('color-emoji').value.trim() || '🎨';
+  colors.push({name:name, hex:hex, emoji:emoji});
+  renderColors();
+  document.getElementById('color-name').value = '';
+  document.getElementById('color-emoji').value = '';
+}
+
+function removeColor(i) { colors.splice(i,1); renderColors(); }
+
+async function publishPanel() {
+  if(!selectedGuild) { alert('Сервер выбрать!'); return; }
+  var ch = document.getElementById('panel-channel').value;
+  if(!ch) { alert('Канал выбрать!'); return; }
+  if(!colors.length) { alert('До renk добавить!'); return; }
+  var r = await fetch('/api/guild/'+selectedGuild+'/color-roles/publish', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({channel_id:ch, colors:colors})
+  });
+  var d = await r.json();
+  var btn = event.target;
+  if(d.success) { btn.textContent='✅ Yayınlandı!'; setTimeout(function(){btn.innerHTML='<i class="fas fa-paper-plane"></i> Yayınla';},2000); }
+  else alert('❌ '+(d.error||'Ошибка'));
+}
+
+loadGuilds();
+</script>
+{% endblock %}

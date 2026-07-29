@@ -1,0 +1,69 @@
+{
+  "1774025839": {
+    "id": "1774025839",
+    "prize": "Nitro",
+    "winners": 1,
+    "ends_at": "2026-03-20T20:58:19.740638",
+    "status": "ended",
+    "channel_id": "1484527463353815130"
+  },
+  "1774596194": {
+    "id": "1774596194",
+    "prize": "Steam",
+    "winners": 1,
+    "ends_at": "2026-03-27T10:24:14.347633",
+    "status": "ended",
+    "channel_id": "1484527463353815130"
+  },
+  "1774597782": {
+    "id": "1774597782",
+    "prize": "Nitro",
+    "winners": 1,
+    "ends_at": "2026-03-27T10:50:42.896688",
+    "status": "ended",
+    "channel_id": "1484527463353815130"
+  },
+  "1774598255": {
+    "id": "1774598255",
+    "prize": "dsd",
+    "winners": 1,
+    "ends_at": "2026-03-27T10:58:35.296525",
+    "status": "ended",
+    "channel_id": "1484527463353815130"
+  },
+  "1774598654": {
+    "id": "1774598654",
+    "prize": "Nitro",
+    "winners": 1,
+    "ends_at": "2026-03-27T11:05:14.899018",
+    "status": "ended",
+    "channel_id": "1484527463353815130",
+    "participants": []
+  },
+  "1774598937": {
+    "id": "1774598937",
+    "prize": "Nitro",
+    "winners": 1,
+    "ends_at": "2026-03-27T11:09:57.074823",
+    "status": "ended",
+    "channel_id": "1484527463353815130"
+  },
+  "1774619227": {
+    "id": "1774619227",
+    "prize": "DS",
+    "winners": 1,
+    "ends_at": "2026-03-27T16:48:07.501913",
+    "status": "ended",
+    "channel_id": "1484303972067053892",
+    "participants": [
+      "987430047889637426"
+    ],
+    "message_id": "1487130869238857979",
+    "user_info": {
+      "987430047889637426": {
+        "name": "Arthur",
+        "avatar": "https://cdn.discordapp.com/avatars/987430047889637426/d6ae04a02b9bfb09fb755c7e480789a6.png?size=1024"
+      }
+    }
+  }
+}

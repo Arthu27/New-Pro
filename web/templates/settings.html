@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Настройки - Aether{% endblock %}
+{% block page_title %}PANEL НАСТРОЙК{% endblock %}
+{% block content %}
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(400px,1fr));gap:20px;">
+  <div class="section">
+    <h2><i class="fas fa-shield-alt" style="color:#dc143c;"></i> Роли Администратор</h2>
+    <table style="width:100%;border-collapse:collapse;">
+      <tr style="border-bottom:2px solid rgba(220,20,60,0.3);"><th style="padding:10px;text-align:left;color:#dc143c;">Роль</th><th style="padding:10px;text-align:left;color:#dc143c;">Seviye</th><th style="padding:10px;text-align:left;color:#dc143c;">Администратор</th></tr>
+      <tr style="border-bottom:1px solid rgba(255,255,255,0.05);"><td style="padding:10px;color:#ffd700;font-weight:700;">Owner</td><td style="padding:10px;color:#dc143c;">3</td><td style="padding:10px;color:#ccc;">Tum администратор</td></tr>
+      <tr style="border-bottom:1px solid rgba(255,255,255,0.05);"><td style="padding:10px;color:#e67e22;font-weight:700;">İsminin</td><td style="padding:10px;color:#dc143c;">2</td><td style="padding:10px;color:#ccc;">Команды, пользователи, loglar</td></tr>
+      <tr><td style="padding:10px;color:#3498db;font-weight:700;">Mod</td><td style="padding:10px;color:#dc143c;">1</td><td style="padding:10px;color:#ccc;">Сервера, loglar, предупреждения</td></tr>
+    </table>
+  </div>
+  <div class="section">
+    <h2><i class="fas fa-users-cog" style="color:#dc143c;"></i> Panel Пользователь</h2>
+    <div style="background:rgba(220,20,60,0.1);border:1px solid rgba(220,20,60,0.3);border-radius:10px;padding:15px;margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="color:#ffd700;font-weight:700;">owner</span>
+        <span style="background:#dc143c;padding:3px 10px;border-radius:10px;font-size:12px;color:white;">OWNER</span>
+      </div>
+      <div style="color:#888;font-size:12px;margin-top:5px;">Sifre: owner123</div>
+    </div>
+    <div style="background:rgba(220,20,60,0.1);border:1px solid rgba(220,20,60,0.3);border-radius:10px;padding:15px;margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="color:#e67e22;font-weight:700;">admin</span>
+        <span style="background:#e67e22;padding:3px 10px;border-radius:10px;font-size:12px;color:white;">ADMIN</span>
+      </div>
+      <div style="color:#888;font-size:12px;margin-top:5px;">Sifre: admin123</div>
+    </div>
+    <div style="background:rgba(220,20,60,0.1);border:1px solid rgba(220,20,60,0.3);border-radius:10px;padding:15px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="color:#3498db;font-weight:700;">mod</span>
+        <span style="background:#3498db;padding:3px 10px;border-radius:10px;font-size:12px;color:white;">MOD</span>
+      </div>
+      <div style="color:#888;font-size:12px;margin-top:5px;">Sifre: mod123</div>
+    </div>
+    <div style="margin-top:15px;padding:12px;background:rgba(243,156,18,0.1);border:1px solid rgba(243,156,18,0.3);border-radius:8px;color:#f39c12;font-size:13px;">
+      <i class="fas fa-exclamation-triangle"></i> Production ortaminda bu информация degistirin!
+    </div>
+  </div>
+  <div class="section">
+    <h2><i class="fas fa-robot" style="color:#dc143c;"></i> Bot Статистика</h2>
+    <div id="bot-stats" style="color:#aaa;text-align:center;padding:20px;"><i class="fas fa-spinner fa-spin" style="color:#dc143c;"></i> Yukleniyor...</div>
+  </div>
+  <div class="section">
+    <h2><i class="fas fa-info-circle" style="color:#dc143c;"></i> Система Информация</h2>
+    <div style="display:grid;gap:10px;">
+      <div style="background:rgba(220,20,60,0.1);border:1px solid rgba(220,20,60,0.2);border-radius:8px;padding:12px;display:flex;justify-content:space-between;">
+        <span style="color:#888;">Panel Versiyonu</span><span style="color:#ffd700;font-weight:700;">v2.0 Aether</span>
+      </div>
+      <div style="background:rgba(220,20,60,0.1);border:1px solid rgba(220,20,60,0.2);border-radius:8px;padding:12px;display:flex;justify-content:space-between;">
+        <span style="color:#888;">Framework</span><span style="color:#ccc;">Flask + Discord.py</span>
+      </div>
+      <div style="background:rgba(220,20,60,0.1);border:1px solid rgba(220,20,60,0.2);border-radius:8px;padding:12px;display:flex;justify-content:space-between;">
+        <span style="color:#888;">Port</span><span style="color:#ccc;">5001</span>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+async function loadStats() {
+  var r = await fetch('/api/stats');
+  var d = await r.json();
+  if (d.error) { document.getElementById('bot-stats').innerHTML = '<p style="color:#e74c3c;">'+d.error+'</p>'; return; }
+  document.getElementById('bot-stats').innerHTML =
+    '<div style="display:grid;gap:10px;">' +
+    '<div style="background:rgba(220,20,60,0.1);border:1px solid rgba(220,20,60,0.2);border-radius:8px;padding:12px;display:flex;justify-content:space-between;"><span style="color:#888;">Сервер Количество</span><span style="color:#ffd700;font-weight:700;">'+d.guilds+'</span></div>' +
+    '<div style="background:rgba(220,20,60,0.1);border:1px solid rgba(220,20,60,0.2);border-radius:8px;padding:12px;display:flex;justify-content:space-between;"><span style="color:#888;">Пользователь Количество</span><span style="color:#ffd700;font-weight:700;">'+d.users+'</span></div>' +
+    '<div style="background:rgba(220,20,60,0.1);border:1px solid rgba(220,20,60,0.2);border-radius:8px;padding:12px;display:flex;justify-content:space-between;"><span style="color:#888;">Ping</span><span style="color:#2ecc71;font-weight:700;">'+d.latency+'ms</span></div>' +
+    '<div style="background:rgba(220,20,60,0.1);border:1px solid rgba(220,20,60,0.2);border-radius:8px;padding:12px;display:flex;justify-content:space-between;"><span style="color:#888;">Состояние</span><span style="color:#2ecc71;font-weight:700;">● ONLINE</span></div>' +
+    '</div>';
+}
+loadStats();
+</script>
+{% endblock %}

@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Предупреждения - Aether{% endblock %}
+{% block page_title %}ПРЕДУПРЕЖДЕНИЕ СИСТЕМА{% endblock %}
+{% block content %}
+<div class="section">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+    <h2><i class="fas fa-exclamation-triangle" style="color:#dc143c;"></i> Tum Предупреждения</h2>
+    <input type="text" id="warn-filter" placeholder="Filtrele (пользователь ID, moderator, причина...)" style="padding:10px 15px;background:#0a0a0a;border:2px solid rgba(220,20,60,0.3);border-radius:8px;color:#eee;width:300px;" oninput="filterWarnings()">
+  </div>
+  <div id="warnings-list" style="color:#aaa;text-align:center;padding:40px;"><i class="fas fa-spinner fa-spin" style="font-size:30px;color:#dc143c;"></i><br><br>Yukleniyor...</div>
+</div>
+<script>
+var allWarnings = [];
+async function loadWarnings() {
+  var r = await fetch('/api/warnings');
+  allWarnings = await r.json();
+  displayWarnings(allWarnings);
+}
+function displayWarnings(warns) {
+  if (!warns.length) {
+    document.getElementById('warnings-list').innerHTML = '<p style="color:#aaa;text-align:center;padding:40px;">Hic предупреждение не найдено</p>';
+    return;
+  }
+  var html = '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;">';
+  html += '<tr style="border-bottom:2px solid rgba(220,20,60,0.3);"><th style="padding:12px;text-align:left;color:#dc143c;">Пользователь ID</th><th style="padding:12px;text-align:left;color:#dc143c;">Moderator</th><th style="padding:12px;text-align:left;color:#dc143c;">Причина</th><th style="padding:12px;text-align:left;color:#dc143c;">Дата</th><th style="padding:12px;text-align:left;color:#dc143c;">Сервер</th></tr>';
+  warns.slice(0,100).forEach(function(w, i) {
+    var bg = i%2===0 ? 'rgba(220,20,60,0.03)' : 'transparent';
+    html += '<tr style="border-bottom:1px solid rgba(255,255,255,0.05);background:'+bg+';transition:background 0.2s;" onmouseover="this.style.background='rgba(220,20,60,0.08)'" onmouseout="this.style.background=''+bg+''">';
+    html += '<td style="padding:12px;"><code style="color:#dc143c;font-size:12px;">'+w.user_id+'</code></td>';
+    html += '<td style="padding:12px;color:#ffd700;">'+w.moderator+'</td>';
+    html += '<td style="padding:12px;color:#ccc;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+w.reason+'</td>';
+    html += '<td style="padding:12px;color:#888;font-size:12px;">'+new Date(w.timestamp).toLocaleString("tr-TR")+'</td>';
+    html += '<td style="padding:12px;"><code style="color:#aaa;font-size:11px;">'+w.guild_id+'</code></td>';
+    html += '</tr>';
+  });
+  html += '</table></div><p style="margin-top:15px;color:#666;font-size:13px;">Всего '+warns.length+' предупреждение</p>';
+  document.getElementById('warnings-list').innerHTML = html;
+}
+function filterWarnings() {
+  var q = document.getElementById('warn-filter').value.toLowerCase();
+  displayWarnings(allWarnings.filter(function(w) {
+    return String(w.user_id).includes(q) || (w.moderator||'').toLowerCase().includes(q) || (w.reason||'').toLowerCase().includes(q);
+  }));
+}
+loadWarnings();
+setInterval(loadWarnings, 15000);
+</script>
+{% endblock %}

@@ -1,0 +1,151 @@
+﻿{% extends "base.html" %}
+{% block title %}Ticket Система - Aether{% endblock %}
+{% block page_title %}<i class="fas fa-ticket-alt" style="color:#c8922a;animation:pulse 2s infinite;"></i> TİCKET СИСТЕМА{% endblock %}
+{% block content %}
+<style>
+  .ts-box{background:linear-gradient(135deg,rgba(26,22,16,0.7),rgba(26,22,16,0.7));border:1px solid rgba(200,146,42,0.3);border-radius:16px;padding:25px;margin-bottom:20px;position:relative;overflow:hidden;}
+  .ts-box::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:2px;background:linear-gradient(90deg,transparent,#c8922a,transparent);;}
+  @keyframes scan{0%{left:-100%}100%{left:100%}}
+  .ts-title{color:#c8922a;font-size:13px;text-transform:uppercase;letter-spacing:2px;margin-bottom:18px;display:flex;align-items:center;gap:8px;padding-bottom:12px;border-bottom:1px solid rgba(200,146,42,0.2);}
+  .field-label{color:#c8922a;font-size:11px;text-transform:uppercase;display:block;margin-bottom:6px;margin-top:14px;letter-spacing:1px;}
+  .field-input{width:100%;padding:10px 14px;background:#100e08;border:2px solid rgba(200,146,42,0.25);border-radius:14px;color:#f0e8d0;box-sizing:border-box;font-family:inherit;transition:all 0.3s;font-size:14px;}
+  .field-input:focus{outline:none;border-color:#c8922a;box-shadow:0 0 15px rgba(200,146,42,0.2);}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:15px;}
+  @media(max-width:768px){.grid2{grid-template-columns:1fr;}}
+  .save-btn{width:100%;padding:12px;background:linear-gradient(135deg,#c8922a,#c8922a);color:var(--bg2);border:none;border-radius:14px;cursor:pointer;font-weight:800;margin-top:15px;font-size:14px;letter-spacing:1px;transition:all 0.3s;}
+  .save-btn:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(200,146,42,0.4);}
+  .ticket-row{background:rgba(0,0,0,0.3);border-radius:14px;padding:13px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;border:1px solid rgba(255,255,255,0.04);transition:all 0.2s;}
+  .ticket-row:hover{background:rgba(200,146,42,0.07);border-color:rgba(200,146,42,0.2);}
+  .badge-open{background:rgba(46,204,113,0.15);color:#5ec47a;border:1px solid #2ecc71;padding:4px 12px;border-radius:14px;font-size:11px;font-weight:700;}
+  .badge-closed{background:rgba(100,100,100,0.15);color:rgba(240,232,208,0.55);border:1px solid #555;padding:4px 12px;border-radius:14px;font-size:11px;}
+  .guild-select{width:100%;padding:12px;background:#100e08;border:2px solid #c8922a;border-radius:14px;color:#f0e8d0;margin-bottom:20px;font-size:14px;}
+  .close-btn{padding:5px 14px;background:rgba(224,85,85,0.15);color:#f0e8d0;border:none;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;transition:all 0.2s;}
+  .close-btn:hover{transform:scale(1.05);}
+  .empty-state{text-align:center;padding:40px;color:#5a5040;font-style:italic;}
+</style>
+
+<select style="display:none" style="display:none" id="guild-select" class="guild-select" onchange="loadSettings()">
+  <option value="">Сервер выбрать...</option>
+</select>
+
+<div class="ts-box">
+  <div class="ts-title"><i class="fas fa-cog"></i> Ticket Настройки</div>
+  <div class="grid2">
+    <div>
+      <label class="field-label">Ticket Канал (panel отправл)</label>
+      <select id="ticket-ch" class="field-input"></select>
+    </div>
+    <div>
+      <label class="field-label">Log Канал</label>
+      <select id="log-ch" class="field-input"></select>
+    </div>
+    <div>
+      <label class="field-label">Поддержка Роль</label>
+      <select id="support-роли" class="field-input"></select>
+    </div>
+    <div>
+      <label class="field-label">Ticket Başlığı</label>
+      <input type="text" id="ticket-title" class="field-input" value="🎫 Поддержка Talebi">
+    </div>
+  </div>
+  <label class="field-label">Описание</label>
+  <input type="text" id="ticket-desc" class="field-input" value=" sorunla mı приветствие? Vnizdaki butona клик пользователь поддержка канал создан. Ekibimiz en краткий dlitelnosti seninle ilgilenecek! 💙">
+  <button class="save-btn" onclick="saveSettings()"><i class="fas fa-paper-plane"></i> Сохранить & Panel Отправить</button>
+</div>
+
+<div class="ts-box">
+  <div class="ts-title"><i class="fas fa-list"></i> Открыт Ticketlar</div>
+  <div id="ticket-list"><div class="empty-state">Сервер выберите...</div></div>
+</div>
+
+<script>
+var selectedGuild = '1421244140359909513';
+
+async function loadGuilds() {
+  // Sabit сервер ID
+  var gid = '1421244140359909513';
+  if (typeof selectedGuild !== 'undefined') selectedGuild = gid;
+  if (document.getElementById('guild-select')) document.getElementById('guild-select').value = gid;
+  if (document.getElementById('guild-sel')) document.getElementById('guild-sel').value = gid;
+  if (document.getElementById('guildSelect')) document.getElementById('guildSelect').value = gid;
+  if (typeof loadData === 'function') { loadData(gid); return; }
+  if (typeof loadAll === 'function') { loadAll(gid); return; }
+  if (typeof loadRoles === 'function') { loadRoles(gid); return; }
+  if (typeof loadChannels === 'function') { loadChannels(gid); return; }
+  if (typeof loadMembers === 'function') { loadMembers(gid); return; }
+  if (typeof loadHistory === 'function') { loadHistory(gid); return; }
+  if (typeof loadLogs === 'function') { loadLogs(gid); return; }
+  if (typeof loadVoiceStats === 'function') { loadVoiceStats(gid); return; }
+  if (typeof loadSettings === 'function') { loadSettings(gid); return; }
+  if (typeof loadGiveaways === 'function') { loadGiveaways(gid); return; }
+  if (typeof loadPolls === 'function') { loadPolls(gid); return; }
+  if (typeof loadEconomy === 'function') { loadEconomy(gid); return; }
+  if (typeof loadSuggestions === 'function') { loadSuggestions(gid); return; }
+  if (typeof loadInvites === 'function') { loadInvites(gid); return; }
+  if (typeof loadHealth === 'function') { loadHealth(gid); return; }
+  if (typeof loadAnalytics === 'function') { loadAnalytics(gid); return; }
+
+}
+
+async function loadSettings() {
+  selectedGuild = document.getElementById('guild-select').value;
+  if(!selectedGuild) return;
+  var [chRes, roles, setRes, tickRes] = await Promise.all([
+    fetch('/api/guild/'+selectedGuild+'/channels').then(r=>r.json()),
+    fetch('/api/guild/'+selectedGuild+'/roles').then(r=>r.json()),
+    fetch('/api/guild/'+selectedGuild+'/ticket-settings').then(r=>r.json()),
+    fetch('/api/guild/'+selectedGuild+'/tickets').then(r=>r.json())
+  ]);
+  var channels = Array.isArray(chRes) ? chRes : (chRes.channels||[]);
+  var textChs = channels.filter(function(c){return c.type==='text';});
+  var chOpts = '<option value="">Выбрать...</option>'+textChs.map(function(c){return '<option value="'+c.id+'">#'+c.name+'</option>';}).join('');
+  document.getElementById('ticket-ch').innerHTML = chOpts;
+  document.getElementById('log-ch').innerHTML = chOpts;
+  var role = '<option value="">Выбрать...</option>'+roles.map(function(r){return '<option value="'+r.id+'">'+r.name+'</option>';}).join('');
+  document.getElementById('support-роли').innerHTML = roles;
+  if(setRes.ticket_channel_id) document.getElementById('ticket-ch').value = setRes.ticket_channel_id;
+  if(setRes.log_channel_id) document.getElementById('log-ch').value = setRes.log_channel_id;
+  if(setRes.support_role_id) document.getElementById('support-роли').value = setRes.support_role_id;
+  if(setRes.title) document.getElementById('ticket-title').value = setRes.title;
+  if(setRes.description) document.getElementById('ticket-desc').value = setRes.description;
+  var box = document.getElementById('ticket-list');
+  if(!tickRes.length) { box.innerHTML='<div class="empty-state"><i class="fas fa-ticket-alt" style="font-size:32px;color:#c8922a;opacity:0.3;display:block;margin-bottom:10px;"></i>Открыт ticket yok.</div>'; return; }
+  box.innerHTML = tickRes.map(function(t){
+    var isOpen = t.status==='open';
+    return '<div class="ticket-row">'+
+      '<div><strong style="color:#f0e8d0;">#'+(t.channel_name||t.channel_id)+'</strong>'+
+      '<span style="color:rgba(240,232,208,0.55);font-size:12px;margin-left:8px;">— '+(t.user_name||t.user_id)+'</span></div>'+
+      '<div style="display:flex;align-items:center;gap:8px;">'+
+        '<span class="'+(isOpen?'badge-open':'badge-closed')+'">'+(isOpen?'🟢 Открыт':'⚫ Закрыт')+'</span>'+
+        (isOpen?'<button class="close-btn" onclick="closeTicket(\''+t.id+'\')">Закрыть</button>':'')+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+
+async function saveSettings() {
+  if(!selectedGuild) { alert('Сервер выбрать!'); return; }
+  var r = await fetch('/api/guild/'+selectedGuild+'/ticket-settings', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      ticket_channel_id:document.getElementById('ticket-ch').value,
+      log_channel_id:document.getElementById('log-ch').value,
+      support_role_id:document.getElementById('support-роли').value,
+      title:document.getElementById('ticket-title').value,
+      description:document.getElementById('ticket-desc').value
+    })
+  });
+  var d = await r.json();
+  var btn = event.target;
+  if(d.success) { btn.textContent='✅ Сохранено!'; setTimeout(function(){btn.innerHTML='<i class="fas fa-paper-plane"></i> Сохранить & Panel Отправить';},2000); }
+  else alert('❌ '+(d.error||'Ошибка'));
+}
+
+async function closeTicket(id) {
+  await fetch('/api/guild/'+selectedGuild+'/tickets/'+id+'/close', {method:'POST'});
+  loadSettings();
+}
+
+loadGuilds();
+</script>
+{% endblock %}

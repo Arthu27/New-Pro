@@ -1,0 +1,101 @@
+{
+  "1492617071849111575": {
+    "user_id": 987430047889637426,
+    "category": null,
+    "history": [],
+    "status": "ai_handling",
+    "ai_message_count": 0,
+    "escalated_at": null,
+    "staff_notified": false
+  },
+  "1492637004804919306": {
+    "user_id": 987430047889637426,
+    "category": null,
+    "history": [
+      {
+        "role": "user",
+        "content": "Selam"
+      },
+      {
+        "role": "assistant",
+        "content": "Selam! 👋 Как помощник olabilirim? Жалоба mi var, yoksa bir что-то mi merak ediyorsun? 😊"
+      },
+      {
+        "role": "user",
+        "content": "acaba sorucaktim panelde как запись ola bilirim"
+      },
+      {
+        "role": "assistant",
+        "content": "Selam! 👋\n\n📋 Panelimize запись olmak для şu adımları izleyebilirsin:\n\n1.  Сервер duyurularında paylaşılan panel adresine git.\n2.  Panelde \"Запись Ol\" butonuna клик.\n3.  Discord hesabınla вход yap.\n\n✅ İşte bu kadar! Başka sorun olursa тянуть. 😊"
+      },
+      {
+        "role": "user",
+        "content": "tamamda как giris yapicam ve какой комната"
+      },
+      {
+        "role": "assistant",
+        "content": "💡 Panel adresi сервер duyurularında paylaşılıyor. Вход yapmak для:\n\n1.  Panel adresine git.\n2.  \"Вход\" butonuna клик.\n3.  Discord hesabınla вход yap.\n\n✅ Bu kadar basit! Если администратор değilsen, только \"Участник\" paneline erişebilirsin. 😊"
+      },
+      {
+        "role": "user",
+        "content": "oy запись olucam diyicektim"
+      },
+      {
+        "role": "assistant",
+        "content": "💡 \"Запись Ol\" butonunu видеть, muhtemelen zaten вход yapmışsındır. Если hala sorun yaşıyorsan, bir ekran скриншот paylaşırsan более iyi помощник olabilirim. 😊"
+      },
+      {
+        "role": "user",
+        "content": "запись olmak icin ne logini lazim ki?"
+      },
+      {
+        "role": "assistant",
+        "content": "✅ Запись olmak для Discord hesabınla вход yapman gerekiyor. Paneldeki \"Запись Ol\" butonuna клик Discord администратор sayfası açılacak. Там hesabınla вход yaparak kaydı заверш. 😊"
+      },
+      {
+        "role": "user",
+        "content": "как yani hesabim derken?"
+      },
+      {
+        "role": "assistant",
+        "content": "💡 \"Hesabın\" derken, Discord пользователь adın ve пароль вход yapman gerekiyor. Yani, Discord'a вход yaparken использовать информация использовать. 😊"
+      },
+      {
+        "role": "user",
+        "content": "Anlamadım"
+      },
+      {
+        "role": "assistant",
+        "content": "Şu an ответитьemiyorum, biraz после tekrar dene."
+      },
+      {
+        "role": "user",
+        "content": "Как yani?"
+      },
+      {
+        "role": "assistant",
+        "content": "Şu an ответитьemiyorum, biraz после tekrar dene."
+      },
+      {
+        "role": "user",
+        "content": "Niye lan"
+      },
+      {
+        "role": "assistant",
+        "content": "Şu an ответитьemiyorum, biraz после tekrar dene."
+      },
+      {
+        "role": "user",
+        "content": "anlamadim"
+      },
+      {
+        "role": "assistant",
+        "content": "Üzgünüm, sana помощник olabilmek для более fazla ayrıntı sağlayabilirim.\n\nDiscord'ın kaydı создан желание пользователь gerekli olan что-то şu:\n\n1. **Bir Discord hesap alın:** Bu, genellikle bir e-posta adresi ve пароль с создан.\n2. Вход yapabilirsiniz: Желание время Discord'a вход yaptığınızda сохран информация использовать.\n\n**Пример adımlar:**\n1. Panelinizi açın (web sitesini)\n2. \"Запись Ol\" butonuna клик.\n3. Bir e-posta adresi ve bir пароль создан или вход yapın.\n4. Запись действие заверш.\n\nBu adımlar помощь, Discord hesabınızla panelize автоматически как сохран ve etkinleştirilmesini sağlayın. Если более fazlasını anladığım для belirtseydinizse, size помощник olabilirdim!"
+      }
+    ],
+    "status": "escalated",
+    "ai_message_count": 10,
+    "escalated_at": "2026-04-11T22:01:41.634612",
+    "staff_notified": true
+  }
+}
