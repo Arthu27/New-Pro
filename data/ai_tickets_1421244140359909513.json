@@ -1,0 +1,30 @@
+{
+  "1492705835472654427": {
+    "user_id": 987430047889637426,
+    "category": null,
+    "history": [],
+    "status": "escalated",
+    "ai_message_count": 5,
+    "escalated_at": "2026-04-12T02:00:34.918007",
+    "staff_notified": true,
+    "complaint": {}
+  },
+  "1496605166307381319": {
+    "user_id": 987430047889637426,
+    "category": "soru",
+    "history": [
+      {
+        "role": "user",
+        "content": "Roller hakkında bilgi versene"
+      },
+      {
+        "role": "assistant",
+        "content": "Roller hakkında kısa bilgi:\n\n- **Doğrulanmış rolü**: Sunucuya kayıt olduğunda otomatik alınır, yetkililerden biri onaylayınca kalıcı olur.\n- **Jail rolü**: Cezalı üyelerin aldığı geçici rol.\n- **Renk seçimi rolleri**: <#1484575449295228999> kanalından alabilirsin.\n- **Partner rolleri**: <#1484575453049257984> kanalında partnerlik sistemine katılabilirsin."
+      }
+    ],
+    "status": "ai_handling",
+    "ai_message_count": 1,
+    "escalated_at": null,
+    "staff_notified": false
+  }
+}

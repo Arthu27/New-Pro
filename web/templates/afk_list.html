@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Активен AFK'lar{% endblock %}
+{% block page_title %}💤 Активен AFK'lar{% endblock %}
+{% block content %}
+<style>
+.afk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;}
+.afk-card{background:rgba(26,22,16,0.7);border:1px solid rgba(88,101,242,0.2);border-radius:12px;padding:16px 18px;transition:border-color 0.2s;}
+.afk-card:hover{border-color:rgba(88,101,242,0.4);}
+.afk-name{font-size:14px;font-weight:700;color:#f0e8d0;margin-bottom:4px;}
+.afk-reason{font-size:12px;color:rgba(240,232,208,0.5);margin-bottom:8px;}
+.afk-time{font-size:11px;color:rgba(88,101,242,0.8);background:rgba(88,101,242,0.1);border:1px solid rgba(88,101,242,0.2);border-radius:99px;padding:2px 10px;display:inline-block;}
+.empty-state{text-align:center;padding:60px 20px;color:rgba(240,232,208,0.25);}
+.empty-state i{font-size:40px;margin-bottom:12px;display:block;opacity:0.3;}
+</style>
+
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+  <div style="font-size:12px;color:rgba(240,232,208,0.35);" id="afk-count"></div>
+</div>
+
+<div class="afk-grid" id="afk-grid">
+  <div style="color:rgba(240,232,208,0.3);font-size:13px;">Загрузитьniyor...</div>
+</div>
+
+<script>
+var _guildId = '{{ guild_id }}';
+
+function timeSince(iso) {
+  var diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+  if (diff < 60) return diff + ' saniye';
+  if (diff < 3600) return Math.floor(diff/60) + ' min';
+  return Math.floor(diff/3600) + ' saat ' + Math.floor((diff%3600)/60) + ' min';
+}
+
+async function loadAFK(gid) {
+  try {
+    var d = await fetch('/api/afk/' + gid).then(r => r.json());
+    var el = document.getElementById('afk-grid');
+    document.getElementById('afk-count').textContent = d.length + ' kişi AFK';
+    if (!d.length) {
+      el.innerHTML = '<div class="empty-state"><i class="fas fa-moon"></i>Şu an AFK olan kimse yok.</div>';
+      return;
+    }
+    el.innerHTML = d.map(function(u) {
+      return '<div class="afk-card">' +
+        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">' +
+          (u.avatar ? '<img src="' + u.avatar + '" style="width:36px;height:36px;border-radius:50%;border:1px solid rgba(88,101,242,0.3);">' : '<div style="width:36px;height:36px;border-radius:50%;background:rgba(88,101,242,0.1);display:flex;align-items:center;justify-content:center;">💤</div>') +
+          '<div><div class="afk-name">💤 ' + u.name + '</div></div>' +
+        '</div>' +
+        '<div class="afk-reason">' + (u.reason || 'AFK') + '</div>' +
+        '<span class="afk-time">⏱ ' + timeSince(u.since) + ' önce</span>' +
+      '</div>';
+    }).join('');
+  } catch(e) {
+    document.getElementById('afk-grid').innerHTML = '<div style="color:#e05555;">Загрузитьnemedi.</div>';
+  }
+}
+
+setInterval(function(){ loadAFK(_guildId); }, 1000);
+loadAFK(_guildId);
+</script>
+{% endblock %}

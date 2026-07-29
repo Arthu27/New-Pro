@@ -1,0 +1,101 @@
+{
+  "1492617071849111575": {
+    "user_id": 987430047889637426,
+    "category": null,
+    "history": [],
+    "status": "ai_handling",
+    "ai_message_count": 0,
+    "escalated_at": null,
+    "staff_notified": false
+  },
+  "1492637004804919306": {
+    "user_id": 987430047889637426,
+    "category": null,
+    "history": [
+      {
+        "role": "user",
+        "content": "Selam"
+      },
+      {
+        "role": "assistant",
+        "content": "Selam! 👋 Nasıl yardımcı olabilirim? Şikayetin mi var, yoksa bir şey mi merak ediyorsun? 😊"
+      },
+      {
+        "role": "user",
+        "content": "acaba sorucaktim panelde nasil kayit ola bilirim"
+      },
+      {
+        "role": "assistant",
+        "content": "Selam! 👋\n\n📋 Panelimize kayıt olmak için şu adımları izleyebilirsin:\n\n1.  Sunucu duyurularında paylaşılan panel adresine git.\n2.  Panelde \"Kayıt Ol\" butonuna tıkla.\n3.  Discord hesabınla giriş yap.\n\n✅ İşte bu kadar! Başka sorun olursa çekinme. 😊"
+      },
+      {
+        "role": "user",
+        "content": "tamamda nasil giris yapicam ve hangi odada"
+      },
+      {
+        "role": "assistant",
+        "content": "💡 Panel adresi sunucu duyurularında paylaşılıyor. Giriş yapmak için:\n\n1.  Panel adresine git.\n2.  \"Giriş\" butonuna tıkla.\n3.  Discord hesabınla giriş yap.\n\n✅ Bu kadar basit! Eğer yetkili değilsen, sadece \"Üye\" paneline erişebilirsin. 😊"
+      },
+      {
+        "role": "user",
+        "content": "oy kayit olucam diyicektim"
+      },
+      {
+        "role": "assistant",
+        "content": "💡 \"Kayıt Ol\" butonunu göremiyorsan, muhtemelen zaten giriş yapmışsındır. Eğer hala sorun yaşıyorsan, bir ekran görüntüsü paylaşırsan daha iyi yardımcı olabilirim. 😊"
+      },
+      {
+        "role": "user",
+        "content": "kayit olmak icin ne logini lazim ki?"
+      },
+      {
+        "role": "assistant",
+        "content": "✅ Kayıt olmak için Discord hesabınla giriş yapman gerekiyor. Paneldeki \"Kayıt Ol\" butonuna tıkladığında Discord yetkilendirme sayfası açılacak. Orada hesabınla giriş yaparak kaydı tamamlayabilirsin. 😊"
+      },
+      {
+        "role": "user",
+        "content": "nasil yani hesabim derken?"
+      },
+      {
+        "role": "assistant",
+        "content": "💡 \"Hesabın\" derken, Discord kullanıcı adın ve şifrenle giriş yapman gerekiyor. Yani, Discord'a giriş yaparken kullandığın bilgileri kullanacaksın. 😊"
+      },
+      {
+        "role": "user",
+        "content": "Anlamadım"
+      },
+      {
+        "role": "assistant",
+        "content": "Şu an cevap veremiyorum, biraz sonra tekrar dene."
+      },
+      {
+        "role": "user",
+        "content": "Nasıl yani?"
+      },
+      {
+        "role": "assistant",
+        "content": "Şu an cevap veremiyorum, biraz sonra tekrar dene."
+      },
+      {
+        "role": "user",
+        "content": "Niye lan"
+      },
+      {
+        "role": "assistant",
+        "content": "Şu an cevap veremiyorum, biraz sonra tekrar dene."
+      },
+      {
+        "role": "user",
+        "content": "anlamadim"
+      },
+      {
+        "role": "assistant",
+        "content": "Üzgünüm, sana yardımcı olabilmek için daha fazla ayrıntı sağlayabilirim.\n\nDiscord'ın kaydı oluşturmak isteyen kullanıcılarına gerekli olan şey şu:\n\n1. **Bir Discord hesap alın:** Bu, genellikle bir e-posta adresi ve şifre ile oluşturulur.\n2. Giriş yapabilirsiniz: İstediğiniz zaman Discord'a giriş yaptığınızda kaydedilen bilgiler kullanılır.\n\n**Örnek adımlar:**\n1. Panelinizi açın (web sitesini)\n2. \"Kayıt Ol\" butonuna tıklayın.\n3. Bir e-posta adresi ve bir şifre oluşturun veya giriş yapın.\n4. Kayıt işlemini tamamlayabilirsiniz.\n\nBu adımlar yardımıyla, Discord hesabınızla panelize otomatik olarak kaydedilebilir ve etkinleştirilmesini sağlayın. Eğer daha fazlasını anladığım için belirtseydinizse, size yardımcı olabilirdim!"
+      }
+    ],
+    "status": "escalated",
+    "ai_message_count": 10,
+    "escalated_at": "2026-04-11T22:01:41.634612",
+    "staff_notified": true
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "join_raid": false,
+  "bot_protection": true,
+  "webhook_protection": false,
+  "delete_protection": true,
+  "age_filter": false,
+  "min_age": 5,
+  "join_threshold": 10,
+  "raid_action": "alert",
+  "whitelist": [],
+  "recent_events": []
+}

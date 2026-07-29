@@ -1,0 +1,182 @@
+﻿{% extends "base.html" %}
+{% block title %}Kullanicilar{% endblock %}
+{% block content %}
+<style>
+.ph{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.08);border-radius:14px;padding:18px 22px;margin-bottom:20px;display:flex;align-items:center;gap:14px}
+.ph h1{font-family:Inter,sans-serif;font-size:1.1rem;font-weight:700;color:#f0e8d0;margin:0;letter-spacing:-0.01em}
+.ctrl{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.gsel{background:rgba(255,255,255,0.03);border:1px solid rgba(212,168,67,0.16);color:#f0e8d0;padding:9px 14px;border-radius:8px;font-family:Inter,sans-serif;font-size:.82rem;min-width:200px}
+.sbox{background:rgba(255,255,255,0.03);border:1px solid rgba(212,168,67,0.16);color:#f0e8d0;padding:9px 14px;border-radius:8px;font-family:Inter,sans-serif;font-size:.82rem;flex:1;min-width:160px}
+.sbox:focus,.gsel:focus{outline:none;border-color:#c8922a;box-shadow:0 0 0 3px rgba(200,160,80,0.1)}
+.sbar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.chip{background:rgba(255,255,255,0.03);border:1px solid rgba(212,168,67,0.08);border-radius:8px;padding:8px 14px;font-family:Inter,sans-serif;font-size:.75rem;color:rgba(240,232,208,0.55)}
+.chip span{color:#f0e8d0;font-size:1rem;display:block;font-weight:700}
+.mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+.mcard{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.08);border-radius:14px;padding:14px;cursor:pointer;transition:border-color .2s,transform .2s;text-align:center}
+.mcard:hover{border-color:rgba(212,168,67,0.2);transform:translateY(-2px)}
+.mavt{width:52px;height:52px;border-radius:50%;border:1px solid rgba(212,168,67,0.2);margin:0 auto 10px;display:block}
+.mname{font-family:Inter,sans-serif;font-size:.75rem;font-weight:600;color:#f0e8d0;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mtag{font-size:.65rem;color:#5a5040;margin-bottom:7px}
+.mroles{display:flex;flex-wrap:wrap;gap:3px;justify-content:center}
+.rbadge{font-size:.58rem;padding:2px 5px;border-radius:4px;border:1px solid;font-family:Inter,sans-serif}
+.sdot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:3px}
+.son{background:#2ecc71}.sidle{background:#c8922a}.sdnd{background:#e74c3c}.soff{background:#636e72}
+.bbadge{background:rgba(106,176,224,.15);border:1px solid rgba(106,176,224,.3);color:var(--blue);font-size:.58rem;padding:1px 5px;border-radius:3px}
+.empty{text-align:center;padding:50px 20px;color:#5a5040;font-family:Inter,sans-serif;font-size:.82rem}
+.ld{text-align:center;padding:36px;color:#c8922a;font-family:Inter,sans-serif;animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.mov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);z-index:1000;align-items:center;justify-content:center}
+.mov.on{display:flex}
+.mdl{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.16);border-radius:14px;padding:26px;width:90%;max-width:480px;max-height:85vh;overflow-y:auto;position:relative;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.mclose{position:absolute;top:12px;right:14px;background:none;border:none;color:#5a5040;font-size:1.3rem;cursor:pointer;transition:color .2s}
+.mclose:hover{color:#f0e8d0}
+.mavtl{width:72px;height:72px;border-radius:50%;border:1px solid rgba(212,168,67,0.2);display:block;margin:0 auto 12px}
+.mttl{font-family:Inter,sans-serif;font-size:.95rem;font-weight:700;color:#f0e8d0;text-align:center;margin-bottom:3px}
+.mid{font-size:.7rem;color:#5a5040;text-align:center;margin-bottom:14px}
+.igrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.iitem{background:rgba(255,255,255,0.03);border:1px solid rgba(212,168,67,0.08);border-radius:8px;padding:9px}
+.ilbl{font-size:.6rem;color:#5a5040;font-family:Inter,sans-serif;font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px}
+.ival{font-size:.76rem;color:#f0e8d0}
+.rtitle{font-family:Inter,sans-serif;font-size:.7rem;font-weight:600;color:rgba(240,232,208,0.55);text-transform:uppercase;letter-spacing:.06em;margin-bottom:7px}
+.rlist{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:14px}
+.abts{display:flex;gap:7px;flex-wrap:wrap}
+.btn{padding:7px 13px;border-radius:7px;border:none;font-family:Inter,sans-serif;font-size:.72rem;font-weight:600;cursor:pointer;transition:all .2s}
+.bwarn{background:rgba(212,168,67,.12);border:1px solid rgba(212,168,67,.3);color:#c8922a}.bwarn:hover{background:rgba(212,168,67,.25)}
+.bkick{background:rgba(231,76,60,.12);border:1px solid rgba(231,76,60,.3);color:#e05555}.bkick:hover{background:rgba(231,76,60,.25)}
+.bban{background:rgba(192,57,43,.12);border:1px solid rgba(192,57,43,.3);color:#c0392b}.bban:hover{background:rgba(192,57,43,.25)}
+.bpnl{background:rgba(212,168,67,0.1);border:1px solid rgba(212,168,67,0.16);color:#e0a830}.bpnl:hover{background:rgba(200,160,80,.2)}
+.pform{background:rgba(255,255,255,0.03);border:1px solid rgba(212,168,67,0.08);border-radius:8px;padding:12px;margin-top:10px;display:none}
+.pform.on{display:block}
+.finp{width:100%;background:#100e08;border:1px solid rgba(212,168,67,0.16);color:#f0e8d0;padding:8px 11px;border-radius:6px;font-family:Inter,sans-serif;font-size:.76rem;margin-bottom:7px;box-sizing:border-box}
+.finp:focus{outline:none;border-color:#c8922a}
+.fsub{background:#c8922a;color:#111;border:none;padding:8px 18px;border-radius:6px;font-family:Inter,sans-serif;font-size:.72rem;font-weight:700;cursor:pointer;width:100%}
+.fsub:hover{background:#e0a830}
+.toast{position:fixed;ботtom:22px;right:22px;background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.16);border-radius:14px;padding:11px 18px;color:#f0e8d0;font-family:Inter,sans-serif;font-size:.76rem;z-index:9999;transform:translateY(100px);opacity:0;transition:all .35s;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.toast.on{transform:translateY(0);opacity:1}
+</style>
+<div class="ph">
+  <span style="font-size:1.6rem">👥</span>
+  <div><h1>Пользовательlar</h1>
+  <div style="font-size:.72rem;color:#5a5040;font-family:Inter,sans-serif;">Сервер участникlerini yönet</div></div>
+</div>
+<div class="ctrl">
+  <select style="display:none" class="gsel" id="guildSelect" onchange="loadMembers()"><option value="">Сервер Sec...</option></select>
+  <input class="sbox" id="searchBox" type="text" placeholder="Isim veya ID ara..." oninput="filterMembers()">
+</div>
+<div class="sbar" id="statsBar" style="display:none">
+  <div class="chip">TOPLAM<span id="stTotal">0</span></div>
+  <div class="chip">BOT<span id="stБотs">0</span></div>
+  <div class="chip">INSAN<span id="stHumans">0</span></div>
+</div>
+<div id="membersContainer"><div class="empty">Bir сервер sec</div></div>
+<div class="mov" id="modal">
+  <div class="mdl">
+    <button class="mclose" onclick="closeModal()">&#x2715;</button>
+    <img class="mavtl" id="mAvt" src="" alt="">
+    <div class="mttl" id="mNm"></div>
+    <div class="mid" id="mId"></div>
+    <div class="igrid">
+      <div class="iitem"><div class="ilbl">DURUM</div><div class="ival" id="mSt"></div></div>
+      <div class="iitem"><div class="ilbl">KATILMA</div><div class="ival" id="mJn"></div></div>
+      <div class="iitem"><div class="ilbl">HESAP</div><div class="ival" id="mCr"></div></div>
+      <div class="iitem"><div class="ilbl">EN YUK ROL</div><div class="ival" id="mTr"></div></div>
+    </div>
+    <div class="rtitle">ROLLER</div>
+    <div class="rlist" id="mРольes"></div>
+    <div class="abts" id="mActs"></div>
+    <div class="pform" id="pForm">
+      <div style="font-family:'Inter',monospace;font-size:.68rem;color:var(--ac);margin-bottom:10px">PANEL HESABI OLUSTUR</div>
+      <input class="finp" id="pPwd" type="password" placeholder="Sifre (min 6 karakter)">
+      <button class="fsub" onclick="createПанель()">OLUSTUR</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<div id="pageData" data-role="{{ role }}" style="display:none"></div>
+<script>
+var allM=[],curM=null,curG=null;
+var MAIN_GID = '1421244140359909513';
+
+window.addEventListener('load', function(){ loadMembers(MAIN_GID); });
+async function loadMembers(gid_деньгиm){
+  var gid = gid_деньгиm || '';
+  if(!gid) return;
+  curG = gid;
+  document.getElementById('membersContainer').innerHTML='<div class="ld">YUKLENIYOR...</div>';
+  document.getElementById('statsBar').style.display='none';
+  try{
+    var r=await fetch('/api/guild/'+gid+'/members');
+    allM=await r.json();
+    var ботs=allM.filter(function(m){return m.bot;}).length;
+    document.getElementById('stTotal').textContent=allM.length;
+    document.getElementById('stБотs').textContent=ботs;
+    document.getElementById('stHumans').textContent=allM.length-ботs;
+    document.getElementById('statsBar').style.display='flex';
+    renderM(allM);
+  }catch(e){console.error('loadMembers ошибка:',e);document.getElementById('membersContainer').innerHTML='<div class="empty">Ошибка: '+e.message+'</div>';}
+}
+function filterMembers(){
+  var q=document.getElementById('searchBox').value.toLowerCase();
+  renderM(allM.filter(function(m){return m.display_name.toLowerCase().includes(q)||m.name.toLowerCase().includes(q)||m.id.includes(q);}));
+}
+function renderM(members){
+  var c=document.getElementById('membersContainer');
+  if(!members.length){c.innerHTML='<div class="empty">Последнийuc bulunamadi</div>';return;}
+  var h='<div class="mgrid">';
+  members.forEach(function(m){
+    var sc=m.status==='online'?'son':m.status==='idle'?'sidle':m.status==='dnd'?'sdnd':'soff';
+    var rh=m.roles.slice(0,3).map(function(r){var col=r.color==='#000000'?'#555':r.color;return '<span class="rbadge" style="border-color:'+col+';color:'+col+'">'+r.name+'</span>';}).join('');
+    var mj=JSON.stringify(m).replace(/"/g,'&quot;');
+    h+='<div class="mcard" onclick="openM('+mj+')">';
+    h+='<img class="mavt" src="'+m.avatar+'" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">';
+    if(m.bot)h+='<div style="margin-bottom:4px"><span class="bbadge">BOT</span></div>';
+    h+='<div class="mname">'+m.display_name+'</div><div class="mtag"><span class="sdot '+sc+'"></span>'+m.name+'</div><div class="mroles">'+rh+'</div></div>';
+  });
+  c.innerHTML=h+'</div>';
+}
+function openM(m){
+  curM=m;
+  document.getElementById('mAvt').src=m.avatar;
+  document.getElementById('mNm').textContent=m.display_name+(m.bot?' BOT':'');
+  document.getElementById('mId').textContent='ID: '+m.id;
+  var sm={online:'Online',idle:'Bosta',dnd:'Rahatsiz Etme',offline:'Cevrimdisi'};
+  document.getElementById('mSt').textContent=sm[m.status]||'Cevrimdisi';
+  document.getElementById('mJn').textContent=m.joined_at?new Date(m.joined_at).toLocaleDateString('tr-TR'):'?';
+  document.getElementById('mCr').textContent=new Date(m.created_at).toLocaleDateString('tr-TR');
+  document.getElementById('mTr').textContent=m.top_role||'@everyone';
+  document.getElementById('mРольes').innerHTML=m.roles.map(function(r){var col=r.color==='#000000'?'#555':r.color;return '<span class="rbadge" style="border-color:'+col+';color:'+col+'">'+r.name+'</span>';}).join('')||'<span style="color:rgba(200,146,42,.4);font-size:.7rem">Роль yok</span>';
+  var role=document.getElementById('pageData').dataset.role,acts='';
+  if(role==='admin'||role==='owner'){
+    acts+='<button class="btn bwarn" onclick="doAct(\'warn\')">UYAR</button>';
+    acts+='<button class="btn bkick" onclick="doAct(\'kick\')">AT</button>';
+    acts+='<button class="btn bban" onclick="doAct(\'ban\')">BAN</button>';
+  }
+  if(role==='owner'&&!m.bot)acts+='<button class="btn bpnl" onclick="togglePF()">PANEL HESABI</button>';
+  document.getElementById('mActs').innerHTML=acts;
+  document.getElementById('pForm').classList.remove('on');
+  document.getElementById('pPwd').value='';
+  document.getElementById('modal').classList.add('on');
+}
+function closeModal(){document.getElementById('modal').classList.remove('on');}
+function togglePF(){document.getElementById('pForm').classList.toggle('on');}
+async function doAct(action){
+  if(!curM||!curG)return;
+  var reason=prompt('Причина:')||'Web panel';
+  var r=await fetch('/api/command/'+action,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({guild_id:curG,user_id:curM.id,reason:reason})});
+  var d=await r.json();
+  showToast(d.success?'OK: '+(d.message||'Basarili'):'HATA: '+(d.error||'?'));
+  if(d.success&&action!=='warn')closeModal();
+}
+async function createПанель(){
+  var pwd=document.getElementById('pPwd').value.trim();
+  if(!pwd||pwd.length<6){showToast('Sifre en az 6 karakter');return;}
+  var r=await fetch('/api/add-member',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({discord_id:curM.id,password:pwd,display_name:curM.display_name,name:curM.name,avatar:curM.avatar})});
+  var d=await r.json();
+  showToast(d.success?'Панель hesabi olusturuldu':'HATA: '+(d.error||'?'));
+  if(d.success)document.getElementById('pForm').classList.remove('on');
+}
+function showToast(msg){var t=document.getElementById('toast');t.textContent=msg;t.classList.add('on');setМут(function(){t.classList.remove('on');},3000);}
+document.getElementById('modal').addEventListener('click',function(e){if(e.target===this)closeModal();});
+
+</script>
+{% endblock %}

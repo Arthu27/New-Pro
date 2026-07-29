@@ -1,0 +1,93 @@
+﻿{% extends "base.html" %}
+{% block title %}Сообщение Отправить - Aether{% endblock %}
+{% block page_title %}Сообщение Отправить{% endblock %}
+{% block content %}
+<style>
+.sc-box{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.1);border-radius:14px;padding:24px;backdrop-filter:blur(4px);}
+.field-label{color:rgba(240,232,208,0.4);font-size:10px;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:6px;font-weight:700;}
+.field-input{width:100%;padding:10px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(212,168,67,0.12);border-radius:8px;color:#f0e8d0;font-size:13px;transition:border-color 0.15s;box-sizing:border-box;font-family:Inter,sans-serif;margin:0;}
+.field-input:focus{outline:none;border-color:rgba(212,168,67,0.45);}
+.field-input:disabled{opacity:0.4;cursor:not-allowed;}
+.form-group{margin-bottom:16px;}
+.send-btn{width:100%;padding:12px;background:#c8922a;color:#100e08;border:none;border-radius:99px;cursor:pointer;font-weight:700;font-size:13px;font-family:Inter,sans-serif;transition:background 0.15s,transform 0.12s;margin-top:6px;}
+.send-btn:hover{background:#e0a830;transform:translateY(-1px);}
+.send-btn:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
+.result-box{margin-top:14px;padding:12px 16px;border-radius:10px;display:none;font-size:13px;font-weight:600;}
+</style>
+
+<div class="sc-box">
+  <div class="form-group">
+    <label class="field-label">Сервер</label>
+    <select id="guild-select" class="field-input" onchange="loadChannels()">
+      <option value="">Загрузитьniyor...</option>
+    </select>
+  </div>
+  <div class="form-group">
+    <label class="field-label">Канал</label>
+    <select id="channel-select" class="field-input" disabled>
+      <option value="">Önce сервер выбрать</option>
+    </select>
+  </div>
+  <div class="form-group">
+    <label class="field-label">Сообщение</label>
+    <textarea id="message-input" class="field-input" rows="5" placeholder="Сообщениеnı buraya yaz..." style="resize:vertical;"></textarea>
+  </div>
+  <button id="send-btn" class="send-btn" onclick="sendMessage()">
+    <i class="fas fa-paper-plane" style="margin-right:6px;"></i>Отправить
+  </button>
+  <div id="result" class="result-box"></div>
+</div>
+
+<script>
+const GUILD_ID = '';
+
+async function loadChannels() {
+  var cs = document.getElementById('channel-select');
+  cs.innerHTML = '<option value="">Загрузитьniyor...</option>';
+  try {
+    var r = await fetch('/api/guild/' + GUILD_ID + '/channels');
+    var data = await r.json();
+    var channels = Array.isArray(data) ? data : (data.channels || []);
+    cs.innerHTML = '<option value="">Канал выбрать...</option>';
+    channels.filter(function(c) { return c.type === 'text'; }).forEach(function(c) {
+      var o = document.createElement('option');
+      o.value = c.id; o.textContent = '#' + c.name;
+      cs.appendChild(o);
+    });
+  } catch(e) { cs.innerHTML = '<option value="">Ошибка oluştu</option>'; }
+}
+
+async function sendMessage() {
+  var cid = document.getElementById('channel-select').value;
+  var msg = document.getElementById('message-input').value.trim();
+  if (!cid || !msg) { showResult('Канал ve сообщение alanlarını doldur!', false); return; }
+  var btn = document.getElementById('send-btn');
+  btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Отправитьiliyor...';
+  try {
+    var r = await fetch('/api/send-message', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({guild_id: GUILD_ID, channel_id: cid, message: msg})
+    });
+    var d = await r.json();
+    btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane" style="margin-right:6px;"></i>Отправить';
+    if (d.success) { showResult('Сообщение отправитьildi!', true); document.getElementById('message-input').value = ''; }
+    else showResult('Ошибка: ' + (d.error || 'Bilinmeyen ошибка'), false);
+  } catch(e) {
+    btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane" style="margin-right:6px;"></i>Отправить';
+    showResult('Bağlantı ошибкаsı', false);
+  }
+}
+
+function showResult(msg, ok) {
+  var box = document.getElementById('result');
+  box.style.display = 'block';
+  box.style.background = ok ? 'rgba(94,196,122,0.1)' : 'rgba(224,85,85,0.1)';
+  box.style.border = '1px solid ' + (ok ? 'rgba(94,196,122,0.3)' : 'rgba(224,85,85,0.3)');
+  box.style.color = ok ? '#5ec47a' : '#e05555';
+  box.textContent = msg;
+  setМут(function() { box.style.display = 'none'; }, 5000);
+}
+
+loadChannels();
+</script>
+{% endblock %}

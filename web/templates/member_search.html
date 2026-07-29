@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Участник Поискma{% endblock %}
+{% block page_title %}🔍 Участник Поискma{% endblock %}
+{% block content %}
+<style>
+.ms-bar{display:flex;gap:10px;margin-bottom:20px;}
+.ms-bar input{flex:1;}
+.ms-results{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;}
+.ms-result-card{display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.1);border-radius:10px;cursor:pointer;transition:border-color 0.15s;}
+.ms-result-card:hover{border-color:rgba(212,168,67,0.3);}
+.ms-profile{display:grid;grid-template-columns:280px 1fr;gap:14px;}
+.ms-card{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.1);border-radius:14px;padding:20px;margin-bottom:14px;}
+.ms-card h2{font-size:11px;font-weight:700;color:rgba(240,232,208,0.4);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:14px;padding-ботtom:10px;border-ботtom:1px solid rgba(212,168,67,0.08);}
+.ms-row{display:flex;justify-content:space-between;padding:8px 0;border-ботtom:1px solid rgba(212,168,67,0.05);font-size:12px;}
+.ms-row:last-child{border-ботtom:none;}
+.ms-key{color:rgba(240,232,208,0.4);}
+.ms-val{color:#f0e8d0;font-weight:500;text-align:right;max-width:200px;overflow:hidden;text-overflow:ellipsis;}
+.warn-item{padding:10px 12px;background:rgba(255,165,2,0.06);border:1px solid rgba(255,165,2,0.12);border-radius:8px;margin-bottom:6px;font-size:12px;}
+.case-item{padding:10px 12px;background:rgba(212,168,67,0.04);border:1px solid rgba(212,168,67,0.08);border-radius:8px;margin-bottom:6px;font-size:12px;}
+@media(max-width:768px){.ms-profile{grid-template-columns:1fr;}}
+</style>
+
+<div class="ms-bar">
+  <input type="text" id="ms-query" placeholder="Пользователь adı veya ID ara..." onkeydown="if(event.key==='Enter')search()">
+  <button class="btn btn-primary" onclick="search()">🔍 Поиск</button>
+</div>
+
+<div id="ms-results" class="ms-results"></div>
+<div id="ms-profile" style="display:none;" class="ms-profile"></div>
+
+<script>
+var GUILD_ID = '{{ guild_id }}';
+
+async function search() {
+  var q = document.getElementById('ms-query').value.trim();
+  if (!q) return;
+  document.getElementById('ms-results').innerHTML = '<div style="color:rgba(240,232,208,0.3);font-size:13px;">Ищется...</div>';
+  document.getElementById('ms-profile').style.display = 'none';
+  try {
+    var d = await fetch('/api/member-search/' + GUILD_ID + '?q=' + encodeURIComponent(q)).then(r => r.json());
+    if (!d.length) {
+      document.getElementById('ms-results').innerHTML = '<div style="color:rgba(240,232,208,0.3);font-size:13px;">Результат не найдено.</div>';
+      return;
+    }
+    document.getElementById('ms-results').innerHTML = d.map(function(m) {
+      return '<div class="ms-result-card" onclick="loadProfile(\'' + m.id + '\')">' +
+        (m.avatar ? '<img src="' + m.avatar + '" style="width:32px;height:32px;border-radius:50%;">' : '<div style="width:32px;height:32px;border-radius:50%;background:rgba(212,168,67,0.1);display:flex;align-items:center;justify-content:center;">👤</div>') +
+        '<div><div style="font-size:13px;font-weight:600;color:#f0e8d0;">' + m.display_name + '</div>' +
+        '<div style="font-size:10px;color:rgba(240,232,208,0.35);">' + m.id + '</div></div>' +
+      '</div>';
+    }).join('');
+  } catch(e) {
+    document.getElementById('ms-results').innerHTML = '<div style="color:#e05555;">Ошибка: ' + e.message + '</div>';
+  }
+}
+
+async function loadProfile(userId) {
+  document.getElementById('ms-profile').style.display = 'none';
+  try {
+    var d = await fetch('/api/member-profile/' + GUILD_ID + '/' + userId).then(r => r.json());
+    var el = document.getElementById('ms-profile');
+    el.style.display = 'grid';
+
+    var warns = d.warnings || [];
+    var caголос = d.caголос || [];
+
+    var leftHtml = '<div>' +
+      '<div class="ms-card">' +
+        '<div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;">' +
+          (d.avatar ? '<img src="' + d.avatar + '" style="width:64px;height:64px;border-radius:50%;border:2px solid rgba(212,168,67,0.3);">' : '<div style="width:64px;height:64px;border-radius:50%;background:rgba(212,168,67,0.1);display:flex;align-items:center;justify-content:center;font-size:28px;">👤</div>') +
+          '<div><div style="font-size:16px;font-weight:700;color:#f0e8d0;">' + (d.display_name||d.name||userId) + '</div>' +
+          '<div style="font-size:12px;color:rgba(240,232,208,0.4);">@' + (d.name||userId) + '</div></div>' +
+        '</div>' +
+        '<div class="ms-row"><span class="ms-key">ID</span><span class="ms-val" style="font-family:monospace;font-size:11px;">' + d.id + '</span></div>' +
+        (d.joined_at ? '<div class="ms-row"><span class="ms-key">Присоединение</span><span class="ms-val">' + new Date(d.joined_at).toLocaleDateString("tr-TR") + '</span></div>' : '') +
+        (d.created_at ? '<div class="ms-row"><span class="ms-key">Hesap</span><span class="ms-val">' + new Date(d.created_at).toLocaleDateString("tr-TR") + '</span></div>' : '') +
+        '<div class="ms-row"><span class="ms-key">Роли</span><span class="ms-val">' + (d.roles||[]).slice(0,4).join(', ') + '</span></div>' +
+        '<div class="ms-row"><span class="ms-key">Warning</span><span class="ms-val" style="color:' + ((warns.length)>0?'#ffa502':'#2ed573') + ';">' + warns.length + '</span></div>' +
+        '<div class="ms-row"><span class="ms-key">Mod Kaydı</span><span class="ms-val">' + caголос.length + '</span></div>' +
+      '</div>' +
+    '</div>';
+
+    var rightHtml = '<div>' +
+      '<div class="ms-card">' +
+        '<h2>⚠️ Предупреждения (' + warns.length + ')</h2>' +
+        (warns.length ? warns.slice(-5).map(function(w){
+          return '<div class="warn-item"><div style="font-weight:600;color:#ffa502;">#' + w.id + ' — ' + (w.timestamp||'').slice(0,10) + '</div><div style="color:rgba(240,232,208,0.5);margin-top:2px;">' + (w.reason||'?') + '</div></div>';
+        }).join('') : '<div style="text-align:center;padding:16px;color:rgba(240,232,208,0.25);font-size:12px;">✅ Warning yok</div>') +
+      '</div>' +
+      '<div class="ms-card">' +
+        '<h2>📋 Mod Geçmişi (' + caголос.length + ')</h2>' +
+        (caголос.length ? caголос.slice(-5).map(function(c){
+          return '<div class="case-item"><div style="font-weight:600;color:#c8922a;">#' + c.id + ' ' + (c.action||'').toUpperCase() + ' — ' + (c.timestamp||'').slice(0,10) + '</div><div style="color:rgba(240,232,208,0.5);margin-top:2px;">' + (c.reason||'?') + '</div></div>';
+        }).join('') : '<div style="text-align:center;padding:16px;color:rgba(240,232,208,0.25);font-size:12px;">✅ Регистрация yok</div>') +
+      '</div>' +
+    '</div>';
+
+    el.innerHTML = leftHtml + rightHtml;
+  } catch(e) {
+    document.getElementById('ms-profile').innerHTML = '<div style="color:#e05555;">Profil yüklenemedi: ' + e.message + '</div>';
+    document.getElementById('ms-profile').style.display = 'block';
+  }
+}
+</script>
+{% endblock %}

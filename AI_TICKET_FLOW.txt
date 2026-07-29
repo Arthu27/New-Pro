@@ -1,0 +1,264 @@
+﻿╔═══════════════════════════════════════════════════════════════════════════╗
+║                    🤖 AI DESTEK TICKET SİSTEMİ AKIŞI                      ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│  1️⃣  TICKET AÇILMA                                                       │
+└─────────────────────────────────────────────────────────────────────────┘
+
+    Kullanıcı "🎫 Destek Talebi Oluştur" butonuna tıklar
+                            ↓
+    Ticket kanalı oluşturulur (ticket-username)
+                            ↓
+    Hoşgeldin embed gönderilir
+                            ↓
+    🤖 AI karşılama mesajı gönderilir
+    "👋 Merhaba! Ben Aether Destek Asistanıyım..."
+
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│  2️⃣  AI KONUŞMA DÖNGÜSÜ                                                  │
+└─────────────────────────────────────────────────────────────────────────┘
+
+    Kullanıcı mesaj yazar
+                            ↓
+    ┌───────────────────────────────────────┐
+    │  AI Kontrolleri:                      │
+    │  ✓ Bot mesajı mı? → İgnore            │
+    │  ✓ Ticket kanalı mı? → Devam          │
+    │  ✓ AI aktif mi? → Devam               │
+    │  ✓ Staff mesaj attı mı? → Durdur      │
+    │  ✓ Max mesaj aşıldı mı? → Yönlendir   │
+    └───────────────────────────────────────┘
+                            ↓
+    AI cevap üretir (OpenRouter Gemini 2.0 Flash)
+                            ↓
+    ┌───────────────────────────────────────┐
+    │  Yönlendirme Kontrolü:                │
+    │  • Ban/kick talebi?                   │
+    │  • Rol işlemi?                        │
+    │  • Şikayet?                           │
+    │  • Teknik sorun (AI çözemez)?         │
+    └───────────────────────────────────────┘
+                            ↓
+            ┌───────────────┴───────────────┐
+            │                               │
+         HAYIR                            EVET
+            │                               │
+            ↓                               ↓
+    AI cevap gönderir              🔄 YÖNLENDİRME
+    History güncellenir                    │
+    Mesaj sayısı +1                        │
+            │                               │
+            └───────────────┬───────────────┘
+                            ↓
+                    Döngü devam eder
+
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│  3️⃣  YÖNLENDİRME SÜRECİ                                                  │
+└─────────────────────────────────────────────────────────────────────────┘
+
+    AI yönlendirme kararı verir
+                            ↓
+    Status: "escalated" olarak işaretlenir
+                            ↓
+    Yönlendirme embed'i gönderilir
+    "🔄 Yetkililere Yönlendiriliyor"
+                            ↓
+    Destek rolü ping atılır (1 saniye sonra silinir)
+                            ↓
+    AI artık cevap vermez (staff_notified = true)
+                            ↓
+    Yetkili gelir, konuyu ele alır
+
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│  4️⃣  STAFF MÜDAHALESİ                                                    │
+└─────────────────────────────────────────────────────────────────────────┘
+
+    Yetkili (Destek rolü) mesaj atar
+                            ↓
+    AI otomatik durur
+    Status: "staff_handling"
+                            ↓
+    Yetkili konuyu çözer
+                            ↓
+    Ticket kapatılır (🔒 Talebi Kapat butonu)
+                            ↓
+    AI state temizlenir
+    Transcript kaydedilir
+
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│  5️⃣  WEB PANEL GÖRÜNTÜLEMESİ                                             │
+└─────────────────────────────────────────────────────────────────────────┘
+
+    Yetkili /ai-tickets sayfasına girer
+                            ↓
+    ┌───────────────────────────────────────┐
+    │  İstatistikler:                       │
+    │  • Toplam Ticket: 15                  │
+    │  • AI İşliyor: 5                      │
+    │  • Yönlendirildi: 7                   │
+    │  • Staff İşliyor: 3                   │
+    └───────────────────────────────────────┘
+                            ↓
+    Her ticket için kart gösterilir:
+    ┌───────────────────────────────────────┐
+    │  🎫 ticket-username                   │
+    │  👤 Kullanıcı: JohnDoe                │
+    │  🏷️  Kategori: Şikayet                │
+    │  💬 AI Mesaj: 3                       │
+    │  [👁️ Konuşmayı Gör]                   │
+    └───────────────────────────────────────┘
+                            ↓
+    "Konuşmayı Gör" butonuna tıklanır
+                            ↓
+    Modal açılır, tüm konuşma gösterilir:
+    ┌───────────────────────────────────────┐
+    │  👤 KULLANICI                         │
+    │  Bot komutları nasıl kullanılır?      │
+    │                                       │
+    │  🤖 AI ASİSTAN                        │
+    │  /help komutunu kullanarak...         │
+    └───────────────────────────────────────┘
+
+
+╔═══════════════════════════════════════════════════════════════════════════╗
+║                         📊 VERİ YAPISI                                    ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+
+data/ai_tickets_<guild_id>.json
+{
+  "1234567890": {                    ← Channel ID
+    "user_id": 987654321,
+    "category": "sikayet",
+    "history": [
+      {"role": "user", "content": "..."},
+      {"role": "assistant", "content": "..."}
+    ],
+    "status": "escalated",           ← ai_handling | escalated | staff_handling
+    "ai_message_count": 3,
+    "escalated_at": "2026-04-11T12:34:56",
+    "staff_notified": true
+  }
+}
+
+
+╔═══════════════════════════════════════════════════════════════════════════╗
+║                      🎯 YÖNLENDIRME KURALLARI                             ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+
+AI şu durumlarda MUTLAKA yönlendirir:
+
+❌ Ban/kick/timeout gibi ceza işlemleri
+❌ Rol verme/alma işlemleri
+❌ Kanal/sunucu ayarları değişiklikleri
+❌ Ciddi şikayet ve anlaşmazlıklar
+❌ Ödeme/ekonomi sorunları
+❌ Güvenlik ve gizlilik konuları
+❌ 10 mesaj limitine ulaşıldığında
+❌ AI hata verdiğinde
+
+✅ AI şunları çözebilir:
+
+✓ Genel sunucu bilgileri
+✓ Bot komutları nasıl kullanılır
+✓ Basit teknik sorular
+✓ Yönlendirme ve bilgilendirme
+
+
+╔═══════════════════════════════════════════════════════════════════════════╗
+║                       🛠️  YÖNETİCİ KOMUTLARI                              ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+
+/ticket-panel
+    → Ticket panelini gönderir (AI destekli)
+    → Yetki: Administrator
+
+/ticket-ai-stats
+    → AI istatistiklerini gösterir
+    → Yetki: Manage Server
+
+/ticket-ai-toggle
+    → AI sistemini aç/kapat
+    → Yetki: Administrator
+
+/ticket-force-escalate
+    → Mevcut ticket'i hemen yönlendir
+    → Yetki: Manage Channels
+
+/ticket-ekle <user>
+    → Ticket'e kullanıcı ekle
+    → Yetki: Manage Channels
+
+/ticket-cikar <user>
+    → Ticket'ten kullanıcı çıkar
+    → Yetki: Manage Channels
+
+
+╔═══════════════════════════════════════════════════════════════════════════╗
+║                         ⚙️  AYARLAR                                       ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+
+cogs/ticket.py:
+    AI_ENABLED = True          # AI sistemini aktif/pasif yap
+    MAX_AI_MESSAGES = 10       # AI'nin max kaç mesaj cevaplayacağı
+
+web/ai_helper.py:
+    OPENROUTER_API_KEY         # OpenRouter API anahtarı
+    MODEL = 'google/gemini-2.0-flash-001'  # AI modeli
+
+
+╔═══════════════════════════════════════════════════════════════════════════╗
+║                      🎓 KULLANIM ÖRNEKLERİ                                ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+
+ÖRNEK 1: Basit Soru (AI Çözer)
+─────────────────────────────────
+👤 Kullanıcı: "Bot komutları nasıl kullanılır?"
+🤖 AI: "/help komutunu kullanarak tüm komutları görebilirsin. 
+       Ayrıca /commands ile detaylı liste alabilirsin."
+👤 Kullanıcı: "Teşekkürler!"
+🤖 AI: "Rica ederim! Başka sorun olursa yaz."
+[Ticket kapatılır]
+
+
+ÖRNEK 2: Şikayet (AI Yönlendirir)
+──────────────────────────────────
+👤 Kullanıcı: "X kişisi bana hakaret etti, ban atın"
+🤖 AI: "Bu konuda yetkililere yönlendiriyorum, 
+       birazdan seninle ilgilenecekler."
+🔄 [Yönlendirme embed'i]
+🔔 [Destek rolü ping atılır]
+👥 Yetkili: "Merhaba, durumu inceliyorum..."
+[Staff konuyu ele alır]
+
+
+ÖRNEK 3: Max Mesaj Limiti
+──────────────────────────
+👤 Kullanıcı: "Sorunum şu..."
+🤖 AI: "Anladım, şöyle yapabilirsin..."
+👤 Kullanıcı: "Olmadı..."
+🤖 AI: "O zaman şunu dene..."
+[... 10 mesaj sonra ...]
+🤖 AI: "Konuşma limiti aşıldı, yetkililer devralıyor."
+🔄 [Otomatik yönlendirme]
+
+
+╔═══════════════════════════════════════════════════════════════════════════╗
+║                         ✅ BAŞARILI!                                      ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+
+Sistem hazır! Artık:
+✓ Kullanıcılar daha hızlı yardım alacak
+✓ Yetkililer daha az basit soruyla uğraşacak
+✓ Tüm konuşmalar loglanacak
+✓ İstatistikler takip edilecek
+
+Test etmek için:
+1. Ticket aç
+2. AI ile konuş
+3. /ai-tickets sayfasından konuşmaları gör
+4. /ticket-ai-stats ile istatistikleri kontrol et

@@ -1,0 +1,352 @@
+﻿╔═══════════════════════════════════════════════════════════════════════════╗
+║                  🛡️ AI MODERATOR SİSTEMİ AKIŞI                           ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│  1️⃣  TICKET AÇILMA VE KARŞILAMA                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+
+    Kullanıcı ticket açar
+                ↓
+    🤖 AI Moderator karşılar:
+    
+    "Merhabalar, ben Aether Moderator.
+     Sorununuzu detaylı açıklayınız.
+     
+     Şikayet için:
+     1️⃣ Kullanıcı ID
+     2️⃣ Olay açıklaması
+     3️⃣ KANIT: Ekran görüntüsü
+     
+     ⚠️ Kanıtsız şikayetler işleme alınmaz."
+
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│  2️⃣  ŞİKAYET SÜRECİ                                                      │
+└─────────────────────────────────────────────────────────────────────────┘
+
+    Kullanıcı: "X kişisi bana hakaret etti"
+                ↓
+    🤖 AI: "Şikayetinizi incelemek için:
+            • Kullanıcı ID veya @mention
+            • Ekran görüntüsü yükleyiniz
+            • Ne zaman oldu belirtiniz"
+                ↓
+    Kullanıcı: [Ekran görüntüsü yükler]
+               "@user123 bana 'aptal' dedi, 5 dakika önce"
+                ↓
+    🤖 AI: [ANALYZE_IMAGE] tag'i ile analiz başlatır
+           [CHECK_HISTORY] tag'i ile mesaj geçmişini kontrol eder
+
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│  3️⃣  KANIT ANALİZİ                                                       │
+└─────────────────────────────────────────────────────────────────────────┘
+
+    ┌───────────────────────────────────────┐
+    │  Ekran Görüntüsü Analizi:             │
+    │  ✓ Mesaj içeriği okunuyor             │
+    │  ✓ Zaman damgası kontrol ediliyor     │
+    │  ✓ Kullanıcı adları kontrol ediliyor  │
+    └───────────────────────────────────────┘
+                ↓
+    ┌───────────────────────────────────────┐
+    │  Mesaj Geçmişi Kontrolü:              │
+    │  ✓ Son 50 mesaj alınıyor              │
+    │  ✓ Şikayet edilen kullanıcının        │
+    │    mesajları bulunuyor                │
+    │  ✓ Zaman farkı hesaplanıyor           │
+    └───────────────────────────────────────┘
+                ↓
+    ┌───────────────────────────────────────┐
+    │  Doğrulama:                           │
+    │  • Ekran görüntüsü gerçek mi?         │
+    │  • Mesajlar uyuşuyor mu?              │
+    │  • Zaman farkı 30 dakikadan az mı?    │
+    └───────────────────────────────────────┘
+
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│  4️⃣  CİDDİYET DEĞERLENDİRMESİ                                            │
+└─────────────────────────────────────────────────────────────────────────┘
+
+                    Kanıt Doğrulandı
+                            ↓
+            ┌───────────────┼───────────────┐
+            │               │               │
+        🟢 HAFİF        🟡 ORTA         🔴 AĞIR
+            │               │               │
+            ↓               ↓               ↓
+    Tek küfür      Tekrarlayan      Tehdit
+    Küçük tartışma  hakaret         Nefret söylemi
+    1-2 spam       Orta spam        Cinsel taciz
+            │               │               │
+            ↓               ↓               ↓
+    SADECE UYARI    JAIL 30-60 DK   JAIL 120 DK
+                                    + YÖNLENDİRME
+
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│  5️⃣  KARAR UYGULAMA                                                      │
+└─────────────────────────────────────────────────────────────────────────┘
+
+    ═══ SENARYO A: UYARI ═══
+    
+    🤖 AI: "✅ İnceleme tamamlandı.
+            
+            Kullanıcıya uyarı verildi.
+            Tekrar ederse daha ağır ceza alacaktır."
+    
+    [Sadece mesaj gönderilir, ceza yok]
+
+
+    ═══ SENARYO B: JAIL (ORTA) ═══
+    
+    🤖 AI: [JAIL] tag'i ile jail komutu verir:
+    
+    ```
+    [JAIL]
+    user_id: 123456789
+    duration: 30
+    reason: Tekrarlayan hakaret
+    ```
+                ↓
+    ┌───────────────────────────────────────┐
+    │  Jail Uygulanıyor:                    │
+    │  1. Jail rolü oluştur (yoksa)         │
+    │  2. Kullanıcıya jail rolü ver         │
+    │  3. Kullanıcıya DM gönder             │
+    │  4. Ticket'e bildir                   │
+    │  5. Mod log'a kaydet                  │
+    │  6. 30 dakika bekle                   │
+    │  7. Jail rolünü kaldır                │
+    │  8. Kullanıcıya DM gönder (serbest)   │
+    └───────────────────────────────────────┘
+                ↓
+    🤖 AI: "✅ İnceleme tamamlandı.
+            
+            📋 KARAR: Jail cezası verildi
+            👤 Kullanıcı: @user123
+            ⏱️ Süre: 30 dakika
+            📝 Sebep: Tekrarlayan hakaret
+            
+            Olayı çözmekte size yetkili ekibimiz
+            yardımcı olacaktır."
+
+
+    ═══ SENARYO C: JAIL + YÖNLENDİRME (AĞIR) ═══
+    
+    🤖 AI: [JAIL] + [ESCALATE] tag'leri ile:
+    
+    ```
+    [JAIL]
+    user_id: 123456789
+    duration: 120
+    reason: Ağır hakaret ve tehdit
+    
+    [ESCALATE]
+    Kategori: agir_ihlal
+    Aciklama: Tehdit içeren mesajlar
+    ```
+                ↓
+    1. Jail uygulanır (120 dakika)
+    2. Yetkililere yönlendirme embed'i
+    3. Destek rolü ping atılır
+                ↓
+    🤖 AI: "✅ İnceleme tamamlandı.
+            
+            📋 KARAR: Jail cezası verildi
+            👤 Kullanıcı: @user123
+            ⏱️ Süre: 120 dakika
+            📝 Sebep: Ağır hakaret ve tehdit
+            
+            🔄 Yetkililere yönlendiriliyor..."
+                ↓
+    🔔 Destek rolü ping atılır
+    👥 Yetkililer konuyu ele alır
+
+
+    ═══ SENARYO D: REDDEDİLDİ ═══
+    
+    Kanıt yetersiz / Zaman farkı çok fazla
+                ↓
+    🤖 AI: "❌ Şikayetiniz reddedildi.
+            
+            📋 SEBEP:
+            - Mesajlar uyuşmuyor
+            - Zaman farkı çok fazla (30+ dakika)
+            - Ciddi ihlal tespit edilemedi
+            
+            ⚠️ Sahte şikayet ceza alabilir."
+
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│  6️⃣  JAIL SÜRECİ DETAYI                                                  │
+└─────────────────────────────────────────────────────────────────────────┘
+
+    Jail Komutu Verildi
+            ↓
+    ┌───────────────────────────────────────┐
+    │  1. Jail Rolü Kontrolü                │
+    │     • "Jail" rolü var mı?             │
+    │     • Yoksa oluştur                   │
+    │     • Tüm kanallarda izinleri ayarla  │
+    └───────────────────────────────────────┘
+            ↓
+    ┌───────────────────────────────────────┐
+    │  2. Kullanıcıya Rol Ver               │
+    │     • target_user.add_roles(jail)     │
+    │     • Reason: "AI Moderator: ..."     │
+    └───────────────────────────────────────┘
+            ↓
+    ┌───────────────────────────────────────┐
+    │  3. Kullanıcıya DM Gönder             │
+    │     "⚠️ Jail Cezası Aldınız"          │
+    │     Süre: X dakika                    │
+    │     Sebep: ...                        │
+    └───────────────────────────────────────┘
+            ↓
+    ┌───────────────────────────────────────┐
+    │  4. Ticket'e Bildir                   │
+    │     "✅ Jail cezası uygulandı"        │
+    │     Kullanıcı: @user                  │
+    │     Süre: X dakika                    │
+    └───────────────────────────────────────┘
+            ↓
+    ┌───────────────────────────────────────┐
+    │  5. Mod Log'a Kaydet                  │
+    │     Category: moderation              │
+    │     Action: ai_jail                   │
+    │     Details: {...}                    │
+    └───────────────────────────────────────┘
+            ↓
+    ⏱️  X Dakika Bekle (asyncio.sleep)
+            ↓
+    ┌───────────────────────────────────────┐
+    │  6. Jail Rolünü Kaldır                │
+    │     • target_user.remove_roles(jail)  │
+    │     • Reason: "Jail süresi doldu"     │
+    └───────────────────────────────────────┘
+            ↓
+    ┌───────────────────────────────────────┐
+    │  7. Kullanıcıya DM Gönder             │
+    │     "✅ Jail cezanız sona erdi"       │
+    │     Artık normal erişim               │
+    └───────────────────────────────────────┘
+
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│  7️⃣  GÜVENLİK KONTROLLERI                                                │
+└─────────────────────────────────────────────────────────────────────────┘
+
+    ┌───────────────────────────────────────┐
+    │  Sahte Şikayet Koruması:              │
+    │  ✓ Mesaj geçmişi kontrolü            │
+    │  ✓ Zaman farkı kontrolü               │
+    │  ✓ Ekran görüntüsü doğrulama          │
+    └───────────────────────────────────────┘
+                ↓
+    Zaman farkı 30+ dakika mı?
+                ↓
+            ┌───┴───┐
+            │       │
+          EVET     HAYIR
+            │       │
+            ↓       ↓
+        REDDET   DEVAM ET
+
+
+    ┌───────────────────────────────────────┐
+    │  Jail Kötüye Kullanım Koruması:       │
+    │  ✓ Max jail: 120 dakika               │
+    │  ✓ Tüm işlemler loglanır              │
+    │  ✓ Yetkililer override edebilir       │
+    └───────────────────────────────────────┘
+
+
+╔═══════════════════════════════════════════════════════════════════════════╗
+║                      📊 CİDDİYET SEVİYELERİ                              ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│  🟢 HAFİF SEVİYE                                                          │
+│  • Tek seferlik küfür                                                    │
+│  • Küçük tartışma                                                        │
+│  • Spam (1-2 mesaj)                                                      │
+│                                                                           │
+│  AI AKSIYONU: Sadece uyarı mesajı                                        │
+└─────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│  🟡 ORTA SEVİYE                                                           │
+│  • Tekrarlayan hakaret                                                   │
+│  • Küçük düşürme                                                         │
+│  • Orta seviye spam                                                      │
+│  • Sürekli rahatsız etme                                                 │
+│                                                                           │
+│  AI AKSIYONU: Jail 30-60 dakika                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│  🔴 AĞIR SEVİYE                                                           │
+│  • Ağır hakaret, tehdit                                                  │
+│  • Irkçılık, nefret söylemi                                              │
+│  • Cinsel taciz                                                          │
+│  • Sürekli spam/raid                                                     │
+│                                                                           │
+│  AI AKSIYONU: Jail 120 dakika + Yetkililere yönlendirme                 │
+└─────────────────────────────────────────────────────────────────────────┘
+
+
+╔═══════════════════════════════════════════════════════════════════════════╗
+║                      🎮 ÖRNEK SENARYO                                     ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+
+👤 Kullanıcı: [Ticket açar]
+    ↓
+🤖 AI: "Merhabalar, ben Aether Moderator..."
+    ↓
+👤 Kullanıcı: "X kişisi bana hakaret etti"
+    ↓
+🤖 AI: "Kanıt yükleyiniz"
+    ↓
+👤 Kullanıcı: [Ekran görüntüsü] "@user123 bana 'aptal' dedi, 5 dakika önce"
+    ↓
+🤖 AI: [Analiz ediyor...]
+       [Mesaj geçmişini kontrol ediyor...]
+       [Zaman farkı: 5 dakika ✓]
+       [Mesajlar uyuşuyor ✓]
+       [Ciddiyet: ORTA]
+    ↓
+🤖 AI: "✅ İnceleme tamamlandı.
+        
+        📋 KARAR: Jail cezası verildi
+        👤 Kullanıcı: @user123
+        ⏱️ Süre: 30 dakika
+        📝 Sebep: Tekrarlayan hakaret"
+    ↓
+[user123'e otomatik jail rolü verilir]
+[user123'e DM gönderilir]
+[Mod log'a kaydedilir]
+    ↓
+⏱️  30 dakika bekle...
+    ↓
+[Jail rolü otomatik kaldırılır]
+[user123'e DM gönderilir: "Jail sona erdi"]
+
+
+╔═══════════════════════════════════════════════════════════════════════════╗
+║                         ✅ SİSTEM HAZIR!                                  ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+
+AI Moderator artık:
+✓ Şikayetleri dinliyor
+✓ Kanıt istiyor
+✓ Analiz ediyor
+✓ Jail cezası verebiliyor
+✓ Otomatik kaldırıyor
+✓ Sadece gerektiğinde yönlendiriyor
+
+Kullanıcılar daha hızlı yardım alacak!
+Yetkililer daha az basit durumla uğraşacak!
+Sunucu daha güvenli olacak!

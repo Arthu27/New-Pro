@@ -1,0 +1,82 @@
+﻿{% extends "base.html" %}
+{% block title %}Голос Канал Статистикаleri - Aether{% endblock %}
+{% block page_title %}<i class="fas fa-microphone" style="color:#c8922a;animation:pulse 2s infinite;"></i> SES KANALI İSTATİSTİKLERİ{% endblock %}
+{% block content %}
+<style>
+  .vs-box{background:linear-gradient(135deg,rgba(26,22,16,0.7),rgba(26,22,16,0.7));border:1px solid rgba(212,168,67,0.1);border-radius:16px;padding:25px;margin-bottom:20px;position:relative;overflow:hidden;}
+  .vs-box::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:2px;background:linear-gradient(90deg,transparent,#c8922a,transparent);;}
+  @keyframes scan{0%{left:-100%}100%{left:100%}}
+  .vs-title{color:#c8922a;font-size:13px;text-transform:uppercase;letter-spacing:2px;margin-bottom:18px;display:flex;align-items:center;gap:8px;padding-ботtom:12px;border-ботtom:1px solid rgba(212,168,67,0.07);}
+  .stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:15px;margin-bottom:20px;}
+  @media(max-width:768px){.stat-row{grid-template-columns:1fr;}}
+  .stat-box{background:linear-gradient(135deg,rgba(26,22,16,0.7),rgba(26,22,16,0.7));border:1px solid rgba(212,168,67,0.1);border-radius:14px;padding:20px;text-align:center;transition:all 0.3s;position:relative;overflow:hidden;}
+  .stat-box::after{content:'';position:absolute;ботtom:0;left:0;width:100%;height:3px;background:linear-gradient(90deg,transparent,#c8922a,transparent);}
+  .stat-box:hover{transform:translateY(-5px);box-shadow:0 10px 30px rgba(212,168,67,0.07);}
+  .stat-val{font-size:30px;font-weight:900;color:#c8922a;}
+  .stat-lbl{font-size:11px;color:rgba(240,232,208,0.55);text-transform:uppercase;margin-top:6px;letter-spacing:1px;}
+  .vc-row{display:flex;align-items:center;gap:12px;padding:13px;background:rgba(0,0,0,0.3);border-radius:14px;margin-bottom:8px;border:1px solid rgba(255,255,255,0.04);transition:all 0.2s;}
+  .vc-row:hover{background:rgba(212,168,67,0.05);border-color:rgba(212,168,67,0.07);}
+  .vc-rank{font-size:20px;font-weight:700;color:#c8922a;width:36px;text-align:center;}
+  .vc-avatar{width:42px;height:42px;border-radius:50%;border:2px solid rgba(212,168,67,0.2);}
+  .vc-name{color:#f0e8d0;font-size:14px;font-weight:700;}
+  .vc-time{color:#c8922a;font-size:18px;font-weight:900;margin-left:auto;}
+  .vc-bar{height:4px;background:rgba(212,168,67,0.08);border-radius:2px;margin-top:6px;overflow:hidden;}
+  .vc-bar-fill{height:100%;background:linear-gradient(90deg,#c8922a,#c8922a);border-radius:2px;transition:width 1s ease;}
+  .guild-select{width:100%;padding:12px;background:#100e08;border:2px solid #c8922a;border-radius:14px;color:#f0e8d0;margin-bottom:20px;font-size:14px;}
+  .empty-state{text-align:center;padding:50px;color:#5a5040;}
+  .empty-state i{font-size:40px;color:#c8922a;opacity:0.3;display:block;margin-bottom:12px;}
+</style>
+
+<select style="display:none" id="guild-select" class="guild-select" onchange="loadVoiceStats()">
+  <option value="">Сервер выбрать...</option>
+</select>
+
+<div class="stat-row" id="stat-cards">
+  <div class="stat-box"><div class="stat-val">-</div><div class="stat-lbl">Всего VC Длительностьsi</div></div>
+  <div class="stat-box"><div class="stat-val">-</div><div class="stat-lbl">Сегодня VC Kullanan</div></div>
+  <div class="stat-box"><div class="stat-val">-</div><div class="stat-lbl">Ortalama Длительность</div></div>
+</div>
+
+<div class="vs-box">
+  <div class="vs-title"><i class="fas fa-trophy"></i> En Çok VC'de Kalanlar</div>
+  <div id="vc-leaderboard"><div class="empty-state"><i class="fas fa-microphone-slash"></i><p>Сервер выбратьin...</p></div></div>
+</div>
+
+<script>
+var MAIN_GID = '1421244140359909513';
+
+async function loadVoiceStats(gid_деньгиm) {
+  var gid = gid_деньгиm || MAIN_GID;
+  if(!gid) return;
+  var r = await fetch('/api/guild/'+gid+'/voice-stats');
+  var data = await r.json();
+
+  document.getElementById('stat-cards').innerHTML =
+    '<div class="stat-box"><div class="stat-val">'+(data.total_time||'0s')+'</div><div class="stat-lbl">Всего VC Длительностьsi</div></div>'+
+    '<div class="stat-box"><div class="stat-val">'+(data.today_users||0)+'</div><div class="stat-lbl">Сегодня VC Kullanan</div></div>'+
+    '<div class="stat-box"><div class="stat-val">'+(data.avg_time||'0s')+'</div><div class="stat-lbl">Ortalama Длительность</div></div>';
+
+  var lb = document.getElementById('vc-leaderboard');
+  var users = data.leaderboard||[];
+  if(!users.length) {
+    lb.innerHTML = '<div class="empty-state"><i class="fas fa-microphone-slash"></i><p>Veri yok. Бот голос канал takibi yapıyor mu?</p></div>';
+    return;
+  }
+  var medals = ['🥇','🥈','🥉'];
+  var maxSecs = users[0] ? (users[0].seconds||1) : 1;
+  lb.innerHTML = users.map(function(u,i){
+    var pct = Math.round(((u.seconds||0)/maxSecs)*100);
+    return '<div class="vc-row">'+
+      '<div class="vc-rank">'+(medals[i]||'#'+(i+1))+'</div>'+
+      '<img class="vc-avatar" src="'+(u.avatar||'https://cdn.discordapp.com/embed/avatars/0.png')+'" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">'+
+      '<div style="flex:1;"><div class="vc-name">'+u.name+'</div>'+
+      '<div class="vc-bar"><div class="vc-bar-fill" style="width:'+pct+'%;"></div></div></div>'+
+      '<div class="vc-time">'+u.time+'</div>'+
+    '</div>';
+  }).join('');
+}
+
+loadVoiceStats();
+setInterval(loadVoiceStats, 1000);
+</script>
+{% endblock %}

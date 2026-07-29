@@ -1,0 +1,253 @@
+﻿{% extends "base.html" %}
+{% block title %}Denetim Kaydı - Aether{% endblock %}
+{% block page_title %}📋 DENETİM KAYDI{% endblock %}
+{% block content %}
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+.filter-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:15px;align-items:center;}
+.filter-bar input,.filter-bar select{padding:9px 13px;background:#100e08;border:2px solid rgba(200,160,80,0.3);border-radius:8px;color:#f0e8d0;font-size:13px;transition:border-color 0.3s;}
+.filter-bar input:focus,.filter-bar select:focus{outline:none;border-color:#c8922a;box-shadow:0 0 8px rgba(200,160,80,0.2);}
+.filter-bar input{flex:1;min-width:180px;}
+.cat-btn{padding:7px 14px;border-radius:20px;border:2px solid rgba(200,160,80,0.3);background:transparent;color:rgba(240,232,208,0.4);cursor:pointer;font-size:11px;font-weight:700;transition:all 0.2s;white-space:nowrap;font-family:Inter,sans-serif;}
+.cat-btn.active,.cat-btn:hover{border-color:#c8922a;color:#f0e8d0;background:rgba(200,160,80,0.2);}
+.ev-row{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);border-radius:14px;padding:10px 14px;transition:all 0.2s;}
+.ev-row:hover{background:rgba(200,160,80,0.07);border-color:rgba(200,160,80,0.2);transform:translateX(3px);}
+.ev-icon{font-size:18px;width:28px;text-align:center;flex-shrink:0;}
+.ev-cat{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;padding:2px 7px;border-radius:8px;flex-shrink:0;min-width:72px;text-align:center;font-family:Inter,sans-serif;}
+.ev-action{color:#f0e8d0;font-weight:600;font-size:13px;flex-shrink:0;min-width:140px;}
+.ev-detail{color:#666;font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ev-time{color:#444;font-size:11px;flex-shrink:0;min-width:100px;text-align:right;font-family:Inter,sans-serif;}
+.ev-btn{background:rgba(200,160,80,0.15);border:1px solid rgba(200,160,80,0.3);color:#c8922a;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:11px;flex-shrink:0;transition:all 0.2s;}
+.ev-btn:hover{background:rgba(200,160,80,0.3);}
+.stats-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:15px;}
+.stat-chip{background:rgba(200,160,80,0.08);border:1px solid rgba(200,160,80,0.2);border-radius:14px;padding:8px 14px;text-align:center;min-width:80px;cursor:pointer;transition:all 0.2s;}
+.stat-chip:hover{border-color:#c8922a;background:rgba(200,160,80,0.15);}
+.stat-chip .num{font-size:18px;font-weight:700;font-family:Inter,sans-serif;}
+.stat-chip .lbl{font-size:10px;color:rgba(240,232,208,0.55);text-transform:uppercase;letter-spacing:1px;}
+.section{background:linear-gradient(135deg,var(--bg),var(--bg2));border:1px solid rgba(200,160,80,0.2);border-radius:15px;padding:25px;margin-bottom:20px;position:relative;overflow:hidden;}
+.section::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);;}
+@keyframes scan{0%{left:-100%}100%{left:100%}}
+.detail-modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.88);z-index:9999;justify-content:center;align-items:center;}
+.detail-box{background:linear-gradient(135deg,var(--bg2),var(--surface));border:2px solid var(--accent);border-radius:18px;padding:30px;max-width:560px;width:92%;max-height:85vh;overflow-y:auto;position:relative;box-shadow:0 20px 60px rgba(200,160,80,0.4);}
+.detail-row{display:flex;gap:10px;margin-bottom:12px;align-items:flex-start;}
+.detail-label{color:rgba(240,232,208,0.55);font-size:11px;text-transform:uppercase;letter-spacing:1px;min-width:110px;flex-shrink:0;padding-top:2px;font-family:Inter,sans-serif;}
+.detail-value{color:#f0e8d0;font-size:13px;flex:1;word-break:break-word;}
+.msg-box{background:#100e08;border:1px solid rgba(200,160,80,0.2);border-radius:8px;padding:12px;color:rgba(240,232,208,0.55);font-size:13px;line-height:1.5;white-space:pre-wrap;word-break:break-word;}
+.msg-box.deleted{border-color:rgba(231,76,60,0.4);background:rgba(231,76,60,0.05);}
+.msg-box.edited-before{border-color:rgba(200,146,42,0.3);background:rgba(212,168,67,0.03);}
+.msg-box.edited-after{border-color:rgba(46,204,113,0.3);background:rgba(46,204,113,0.03);}
+</style>
+
+<div class="stats-bar" id="stats-bar"></div>
+<div class="section">
+  <div class="filter-bar">
+    <input type="text" id="search" placeholder="Пользователь, канал, сообщение ara..." oninput="applyFilters()">
+  </div>
+  <div class="filter-bar" id="cat-buttons" style="margin-bottom:15px;"></div>
+  <div id="event-list" style="display:flex;flex-direction:column;gap:5px;">
+    <div style="text-align:center;padding:50px;color:#5a5040;"><i class="fas fa-spinner fa-spin" style="font-size:28px;color:#c8922a;"></i><br><br>Загрузитьniyor...</div>
+  </div>
+  <div id="load-more-wrap" style="text-align:center;margin-top:15px;display:none;">
+    <button id="load-more-btn" style="background:rgba(200,160,80,0.15);border:2px solid rgba(200,160,80,0.4);color:#c8922a;padding:9px 28px;border-radius:8px;cursor:pointer;font-size:13px;font-family:Inter,sans-serif;">Daha Fazla Загрузить</button>
+  </div>
+</div>
+
+<div id="detailModal" class="detail-modal">
+  <div class="detail-box">
+    <button id="closeDetail" style="position:absolute;top:12px;right:16px;background:none;border:none;color:#c8922a;font-size:24px;cursor:pointer;">&times;</button>
+    <div id="detailContent"></div>
+  </div>
+</div>
+
+<script>
+var allEvents=[], filtered=[], currentCat="", shown=0, PAGE=100;
+var CATS={
+  mod:    {icon:"🔨",label:"Mod",    bg:"rgba(231,76,60,0.2)", border:"rgba(231,76,60,0.5)", text:"#e74c3c"},
+  member: {icon:"👤",label:"Участник",    bg:"rgba(46,204,113,0.2)",border:"rgba(46,204,113,0.5)",text:"#2ecc71"},
+  message:{icon:"💬",label:"Сообщение",  bg:"rgba(200,146,42,0.2)",border:"rgba(200,146,42,0.5)",text:"#c8922a"},
+  role:   {icon:"🎭",label:"Роль",    bg:"rgba(200,146,42,0.2)",border:"rgba(200,146,42,0.5)",text:"#c8922a"},
+  channel:{icon:"📺",label:"Канал",  bg:"rgba(200,146,42,0.2)",border:"rgba(200,146,42,0.5)",text:"#c8922a"},
+  voice:  {icon:"🔊",label:"Голос",    bg:"rgba(200,146,42,0.2)",border:"rgba(200,146,42,0.5)",text:"#c8922a"},
+  server: {icon:"🏰",label:"Сервер", bg:"rgba(200,146,42,0.2)",border:"rgba(200,146,42,0.5)",text:"#c8922a"}
+};
+
+function buildCatButtons(){
+  var w=document.getElementById("cat-buttons");
+  var h='<button class="cat-btn active" data-cat="">Все</button> ';
+  Object.keys(CATS).forEach(function(k){h+='<button class="cat-btn" data-cat="'+k+'">'+CATS[k].icon+' '+CATS[k].label+'</button> ';});
+  w.innerHTML=h;
+  w.querySelectorAll(".cat-btn").forEach(function(b){
+    b.addEventListener("click",function(){
+      w.querySelectorAll(".cat-btn").forEach(function(x){x.classList.remove("active");});
+      this.classList.add("active");
+      currentCat=this.getAttribute("data-cat");
+      applyFilters();
+    });
+  });
+}
+
+function shortDetail(ev){
+  var p=[];
+  if(ev.user_name) p.push('<span style="color:#c8922a;">@'+ev.user_name+'</span>');
+  // канал adı — channel_name veya channel alanından al
+  var chName = ev.channel_name || ev.channel;
+  if(chName) p.push('<span style="color:#c8922a;">#'+chName+'</span>');
+  // роль adı
+  if(ev.role_name) p.push('<span style="color:#c8922a;">@'+ev.role_name+'</span>');
+  if(ev.content) p.push('<span style="color:#666;">'+String(ev.content).substring(0,60)+(String(ev.content).length>60?"...":"")+'</span>');
+  if(ev.before) p.push('<span style="color:#666;">'+String(ev.before).substring(0,50)+'...</span>');
+  if(ev.old_name&&ev.new_name) p.push('<span style="color:#e05555;">'+ev.old_name+'</span> → <b style="color:#5ec47a;">'+ev.new_name+'</b>');
+  if(ev.added_roles&&ev.added_roles.length) p.push('➕ '+ev.added_roles.join(", "));
+  if(ev.removed_roles&&ev.removed_roles.length) p.push('➖ '+ev.removed_roles.join(", "));
+  if(ev.reason) p.push('<span style="color:#c8922a;">'+String(ev.reason).substring(0,60)+'</span>');
+  if(ev.code) p.push("discord.gg/"+ev.code);
+  if(ev.channel_type) p.push('<span style="color:#5a5040;">'+ev.channel_type+'</span>');
+  return p.join(" · ") || '<span style="color:#333;">-</span>';
+}
+
+function formatTime(ts){
+  if(!ts) return "-";
+  var d=new Date(ts), diff=Math.floor((Date.now()-d)/1000);
+  if(diff<60) return diff+"s önce";
+  if(diff<3600) return Math.floor(diff/60)+"dk önce";
+  if(diff<86400) return Math.floor(diff/3600)+"sa önce";
+  return d.toLocaleDateString("tr-TR")+" "+d.toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit"});
+}
+
+function fullTime(ts){
+  if(!ts) return "-";
+  var d=new Date(ts);
+  return d.toLocaleDateString("tr-TR",{weekday:"long",year:"numeric",month:"long",day:"numeric"})+" "+d.toLocaleTimeString("tr-TR");
+}
+
+function renderEvents(){
+  var list=document.getElementById("event-list");
+  var lmw=document.getElementById("load-more-wrap");
+  if(!filtered.length){
+    list.innerHTML='<div style="text-align:center;padding:50px;color:#5a5040;"><i class="fas fa-search" style="font-size:32px;"></i><br><br>Результат не найдено./div>';
+    lmw.style.display="none"; return;
+  }
+  var slice=filtered.slice(0,shown), html="";
+  for(var i=0;i<slice.length;i++){
+    var ev=slice[i], cat=ev.category||"mod", c=CATS[cat]||CATS.mod;
+    html+='<div class="ev-row">';
+    html+='<div class="ev-icon">'+c.icon+'</div>';
+    html+='<div class="ev-cat" style="background:'+c.bg+';border:1px solid '+c.border+';color:'+c.text+'">'+c.label+'</div>';
+    html+='<div class="ev-action">'+(ev.action||"-")+'</div>';
+    html+='<div class="ev-detail">'+shortDetail(ev)+'</div>';
+    html+='<div class="ev-time">'+formatTime(ev.timestamp)+'</div>';
+    html+='<button class="ev-btn" data-idx="'+filtered.indexOf(ev)+'">Detay</button>';
+    html+='</div>';
+  }
+  list.innerHTML=html;
+  list.querySelectorAll(".ev-btn").forEach(function(btn){
+    btn.addEventListener("click",function(){showDetail(parseInt(this.getAttribute("data-idx")));});
+  });
+  lmw.style.display=shown<filtered.length?"block":"none";
+}
+
+function showDetail(idx){
+  var ev=filtered[idx];
+  if(!ev) return;
+  var cat=ev.category||"mod", c=CATS[cat]||CATS.mod;
+  var h='<div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-ботtom:15px;border-ботtom:1px solid rgba(200,160,80,0.2);">';
+  h+='<span style="font-size:32px;">'+c.icon+'</span>';
+  h+='<div><div style="color:#c8922a;font-size:18px;font-weight:700;font-family:Inter,sans-serif;">'+(ev.action||"-")+'</div>';
+  h+='<div style="color:rgba(240,232,208,0.55);font-size:12px;">'+c.label+' · '+fullTime(ev.timestamp)+'</div></div></div>';
+  function row(label,val){
+    if(!val&&val!==0) return "";
+    return '<div class="detail-row"><div class="detail-label">'+label+'</div><div class="detail-value">'+val+'</div></div>';
+  }
+  if(ev.user_name) h+=row("Пользователь",'<span style="color:#c8922a;font-weight:700;">@'+ev.user_name+'</span>');
+  if(ev.user_id) h+=row("Пользователь ID",'<code style="color:rgba(240,232,208,0.4);font-size:12px;">'+ev.user_id+'</code>');
+  var chName = ev.channel_name || ev.channel;
+  if(chName) h+=row("Канал",'<span style="color:#c8922a;">#'+chName+'</span>');
+  if(ev.channel_id) h+=row("Канал ID",'<code style="color:rgba(240,232,208,0.4);font-size:12px;">'+ev.channel_id+'</code>');
+  if(ev.channel_type) h+=row("Канал Tipi",'<span style="color:rgba(240,232,208,0.55);">'+ev.channel_type+'</span>');
+  if(ev.role_name) h+=row("Роль",'<span style="color:#c8922a;">@'+ev.role_name+'</span>');
+  if(ev.role_id) h+=row("Роль ID",'<code style="color:rgba(240,232,208,0.4);font-size:12px;">'+ev.role_id+'</code>');
+  if(ev.guild_id) h+=row("Сервер ID",'<code style="color:rgba(240,232,208,0.4);font-size:12px;">'+ev.guild_id+'</code>');
+  if(ev.mod_id) h+=row("Модератор ID",'<code style="color:rgba(240,232,208,0.4);font-size:12px;">'+ev.mod_id+'</code>');
+  if(ev.reason) h+=row("Причина",'<span style="color:#c8922a;">'+ev.reason+'</span>');
+  if(ev.message_id) h+=row("Сообщение ID",'<code style="color:rgba(240,232,208,0.4);font-size:12px;">'+ev.message_id+'</code>');
+  if(ev.account_age_days!==undefined) h+=row("Hesap Yaşı",ev.account_age_days+" gün");
+  if(ev.roles&&ev.roles.length) h+=row("Роли",ev.roles.join(", "));
+  if(ev.added_roles&&ev.added_roles.length) h+=row("Добавитьnen Роли",'<span style="color:#5ec47a;">'+ev.added_roles.join(", ")+'</span>');
+  if(ev.removed_roles&&ev.removed_roles.length) h+=row("Убратьılan Роли",'<span style="color:#e05555;">'+ev.removed_roles.join(", ")+'</span>');
+  if(ev.old_name) h+=row("Старый Имя",'<span style="color:#e05555;">'+ev.old_name+'</span>');
+  if(ev.new_name) h+=row("Новый Имя",'<span style="color:#5ec47a;">'+ev.new_name+'</span>');
+  if(ev.code) h+=row("Приглашение Kodu","discord.gg/"+ev.code);
+  if(ev.content&&ev.action==="Сообщение Текстldı") h+='<div style="margin-top:15px;"><div style="color:rgba(240,232,208,0.55);font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Сообщение İçeriği</div><div class="msg-box">'+ev.content+'</div></div>';
+  if(ev.content&&ev.action==="Сообщение Удалитьindi") h+='<div style="margin-top:15px;"><div style="color:#e05555;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">🗑️ Удалённые Сообщение</div><div class="msg-box deleted">'+ev.content+'</div></div>';
+  if(ev.before) h+='<div style="margin-top:15px;"><div style="color:#c8922a;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">✏️ Предыдущий Сообщение</div><div class="msg-box edited-before">'+ev.before+'</div></div>';
+  if(ev.after) h+='<div style="margin-top:8px;"><div style="color:#5ec47a;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">✅ Новый Сообщение</div><div class="msg-box edited-after">'+ev.after+'</div></div>';
+  document.getElementById("detailContent").innerHTML=h;
+  document.getElementById("detailModal").style.display="flex";
+}
+
+function applyFilters(){
+  var q=document.getElementById("search").value.toLowerCase();
+  filtered=allEvents.filter(function(ev){
+    if(currentCat&&ev.category!==currentCat) return false;
+    if(q&&!JSON.stringify(ev).toLowerCase().includes(q)) return false;
+    return true;
+  });
+  shown=PAGE; renderEvents(); buildStats();
+}
+
+function buildStats(){
+  var counts={};
+  allEvents.forEach(function(ev){var c=ev.category||"mod";counts[c]=(counts[c]||0)+1;});
+  var h='<div class="stat-chip" data-cat=""><div class="num" style="color:#c8922a;">'+allEvents.length+'</div><div class="lbl">Всего</div></div>';
+  Object.keys(CATS).forEach(function(k){
+    if(!counts[k]) return;
+    var c=CATS[k];
+    h+='<div class="stat-chip" data-cat="'+k+'" style="border-color:'+c.border+';"><div class="num" style="color:'+c.text+'">'+counts[k]+'</div><div class="lbl">'+c.icon+' '+c.label+'</div></div>';
+  });
+  var bar=document.getElementById("stats-bar");
+  bar.innerHTML=h;
+  bar.querySelectorAll(".stat-chip").forEach(function(chip){
+    chip.addEventListener("click",function(){
+      var cat=this.getAttribute("data-cat");
+      var btn=document.querySelector('.cat-btn[data-cat="'+cat+'"]');
+      if(btn) btn.click();
+    });
+  });
+}
+
+function populateGuilds(){
+  var guilds={};
+  allEvents.forEach(function(ev){if(ev.guild_id) guilds[ev.guild_id]=true;});
+  var sel=document.getElementById("guild-filter");
+  sel.innerHTML='<option value="">Tüm Серверы</option>';
+  // Guild имяlerini API'den al
+  fetch('/api/guilds').then(function(r){return r.json();}).then(function(guildList){
+    var guildMap={};
+    guildList.forEach(function(g){guildMap[g.id]=g.name;});
+    Object.keys(guilds).forEach(function(gid){
+      sel.innerHTML+='<option value="'+gid+'">'+(guildMap[gid]||gid)+'</option>';
+    });
+  }).catch(function(){
+    Object.keys(guilds).forEach(function(gid){sel.innerHTML+='<option value="'+gid+'">'+gid+'</option>';});
+  });
+}
+
+document.getElementById("load-more-btn").addEventListener("click",function(){shown+=PAGE;renderEvents();});
+document.getElementById("closeDetail").addEventListener("click",function(){document.getElementById("detailModal").style.display="none";});
+document.getElementById("detailModal").addEventListener("click",function(e){if(e.target===this) this.style.display="none";});
+
+async function loadLogs(){
+  try{
+    var r=await fetch("/api/logs?guild_id=");
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    allEvents=await r.json();
+    if(!Array.isArray(allEvents)) allEvents=[];
+    applyFilters();
+  }catch(e){
+    document.getElementById("event-list").innerHTML='<p style="color:#e05555;text-align:center;padding:40px;"><i class="fas fa-exclamation-triangle"></i> Ошибка: '+e.message+'</p>';
+  }
+}
+
+buildCatButtons(); loadLogs(); setInterval(loadLogs,1000);
+</script>
+{% endblock %}

@@ -1,0 +1,411 @@
+﻿<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Правоli Заявкаsu — Aether</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;min-height:100vh;overflow-x:hidden;}
+
+  /* Animated background */
+  body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;
+    background:radial-gradient(ellipse at 20% 50%,rgba(200,160,80,0.08) 0%,transparent 60%),
+               radial-gradient(ellipse at 80% 20%,rgba(200,160,80,0.05) 0%,transparent 50%);
+    pointer-events:none;z-index:0;}
+
+  .particles{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;overflow:hidden;}
+  .particle{position:absolute;width:2px;height:2px;background:rgba(200,160,80,0.4);border-radius:50%;
+    animation:float linear infinite;}
+  @keyframes float{0%{transform:translateY(100vh) translateX(0);opacity:0;}
+    10%{opacity:1;}90%{opacity:1;}100%{transform:translateY(-100px) translateX(100px);opacity:0;}}
+
+  .container{position:relative;z-index:1;max-width:780px;margin:0 auto;padding:40px 20px 80px;}
+
+  /* Header */
+  .header{text-align:center;margin-bottom:50px;}
+  .header .logo{width:80px;height:80px;border-radius:50%;border:3px solid var(--accent);
+    box-shadow:0 0 30px rgba(200,160,80,0.5);margin:0 auto 20px;display:block;
+    animation:pulse 2s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{box-shadow:0 0 30px rgba(200,160,80,0.5);}
+    50%{box-shadow:0 0 60px rgba(200,160,80,0.8),0 0 100px rgba(200,160,80,0.3);}}
+  .header h1{font-size:36px;font-weight:900;letter-spacing:4px;
+    background:linear-gradient(135deg,var(--accent),#ff6b6b,#ffd700);
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+    text-transform:uppercase;margin-bottom:8px;}
+  .header p{color:var(--text2);font-size:15px;letter-spacing:1px;}
+  .divider{width:100px;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);
+    margin:20px auto;}
+
+  /* Server select */
+  .server-select-wrap{margin-bottom:35px;}
+  .server-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-top:12px;}
+  .server-card{background:rgba(200,160,80,0.05);border:2px solid rgba(200,160,80,0.2);
+    border-radius:12px;padding:14px;cursor:pointer;transition:all 0.3s;display:flex;align-items:center;gap:10px;}
+  .server-card:hover,.server-card.selected{border-color:var(--accent);background:rgba(200,160,80,0.15);
+    box-shadow:0 4px 20px rgba(200,160,80,0.3);}
+  .server-card img{width:40px;height:40px;border-radius:50%;border:2px solid rgba(200,160,80,0.4);}
+  .server-card .sname{font-size:13px;font-weight:600;color:var(--text);}
+  .server-card .smembers{font-size:11px;color:var(--text2);}
+
+  /* Form */
+  .form-card{background:linear-gradient(135deg,rgba(20,5,5,0.9),rgba(30,10,10,0.9));
+    border:1px solid rgba(200,160,80,0.3);border-radius:20px;padding:40px;
+    backdrop-filter:blur(10px);box-shadow:0 20px 60px rgba(0,0,0,0.5);}
+  .section-title{color:var(--accent);font-size:13px;text-transform:uppercase;letter-spacing:2px;
+    margin-bottom:20px;display:flex;align-items:center;gap:8px;}
+  .section-title::after{content:'';flex:1;height:1px;background:rgba(200,160,80,0.3);}
+
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+  .form-row.full{grid-template-columns:1fr;}
+  .form-group{display:flex;flex-direction:column;gap:6px;}
+  .form-group label{font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--accent);font-weight:600;}
+  .form-group input,.form-group textarea,.form-group select{
+    background:rgba(0,0,0,0.5);border:2px solid rgba(200,160,80,0.2);border-radius:10px;
+    color:var(--text);padding:12px 16px;font-size:14px;transition:all 0.3s;font-family:inherit;resize:vertical;}
+  .form-group input:focus,.form-group textarea:focus,.form-group select:focus{
+    outline:none;border-color:var(--accent);box-shadow:0 0 15px rgba(200,160,80,0.2);}
+  .form-group textarea{min-height:100px;}
+  .form-group .hint{font-size:11px;color:var(--text3);margin-top:2px;}
+
+  /* Submit */
+  .submit-btn{width:100%;padding:16px;margin-top:30px;
+    background:linear-gradient(135deg,var(--accent),var(--accent2));
+    color:white;border:none;border-radius:12px;font-size:16px;font-weight:800;
+    letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all 0.3s;
+    position:relative;overflow:hidden;}
+  .submit-btn::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,0.1),transparent);
+    transition:left 0.5s;}
+  .submit-btn:hover::before{left:100%;}
+  .submit-btn:hover{box-shadow:0 8px 30px rgba(200,160,80,0.6);transform:translateY(-2px);}
+  .submit-btn:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
+
+  /* Alert */
+  .alert{padding:14px 18px;border-radius:10px;margin-bottom:20px;font-size:14px;display:none;}
+  .alert.success{background:rgba(46,204,113,0.15);border:1px solid #2ecc71;color:#2ecc71;}
+  .alert.error{background:rgba(200,160,80,0.15);border:1px solid var(--accent);color:#ff6b6b;}
+
+  /* Steps */
+  .steps{display:flex;justify-content:center;gap:0;margin-bottom:40px;}
+  .step{display:flex;align-items:center;gap:8px;color:var(--text3);font-size:13px;}
+  .step.active{color:var(--accent);}
+  .step.done{color:#2ecc71;}
+  .step-num{width:28px;height:28px;border-radius:50%;border:2px solid currentColor;
+    display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;}
+  .step-line{width:40px;height:2px;background:rgba(200,160,80,0.2);margin:0 4px;}
+
+  /* Success screen */
+  .success-screen{display:none;text-align:center;padding:60px 20px;}
+  .success-screen .check{font-size:80px;animation:bounceIn 0.6s ease;}
+  @keyframes bounceIn{0%{transform:scale(0);}60%{transform:scale(1.2);}100%{transform:scale(1);}}
+  .success-screen h2{font-size:28px;color:#2ecc71;margin:20px 0 10px;}
+  .success-screen p{color:var(--text2);font-size:15px;line-height:1.6;}
+  .app-id-box{background:rgba(46,204,113,0.1);border:1px solid rgba(46,204,113,0.3);
+    border-radius:10px;padding:12px 20px;margin:20px auto;max-width:300px;
+    font-family:monospace;color:#2ecc71;font-size:14px;}
+
+  @media(max-width:600px){.form-row{grid-template-columns:1fr;}.header h1{font-size:26px;}}
+</style>
+</head>
+<body>
+
+<div class="particles" id="particles"></div>
+
+<div class="container">
+  <!-- Header -->
+  <div class="header">
+    <img class="logo" id="бот-logo" src="https://cdn.discordapp.com/embed/avatars/0.png" alt="Aether">
+    <h1>Aether</h1>
+    <p>Правоli Заявка Sistemi</p>
+    <div class="divider"></div>
+  </div>
+
+  <!-- Steps -->
+  <div class="steps">
+    <div class="step active" id="step1-ind">
+      <div class="step-num">1</div>
+      <span>Сервер Выбрать</span>
+    </div>
+    <div class="step-line"></div>
+    <div class="step" id="step2-ind">
+      <div class="step-num">2</div>
+      <span>Formu Doldur</span>
+    </div>
+    <div class="step-line"></div>
+    <div class="step" id="step3-ind">
+      <div class="step-num">3</div>
+      <span>Отправить</span>
+    </div>
+  </div>
+
+  <!-- Step 1: Сервер выбрать -->
+  <div id="step1">
+    <div class="section-title"><i class="fas fa-server"></i> Hangi Серверya Заявкаyorsun?</div>
+    <div class="server-grid" id="server-grid">
+      <div style="color:var(--text3);text-align:center;padding:20px;grid-column:1/-1;">
+        <i class="fas fa-spinner fa-spin" style="color:var(--accent);font-size:24px;"></i>
+        <p style="margin-top:10px;">Серверы загрузка...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 2: Form -->
+  <div id="step2" style="display:none;">
+    <div class="form-card">
+      <div id="alert-box" class="alert"></div>
+
+      <div class="section-title"><i class="fas fa-user"></i> Kişisel Информацияler</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Discord Пользователь Имяn</label>
+          <input type="text" id="discord_name" placeholder="Автоматический doldurulacak..." readonly
+            style="background:rgba(0,0,0,0.3);cursor:not-allowed;color:var(--text2);">
+          <span class="hint">ID girince автоматический bulunur</span>
+        </div>
+        <div class="form-group">
+          <label>Discord ID'n</label>
+          <div style="position:relative;">
+            <input type="text" id="discord_id" placeholder="örn: 123456789012345678"
+              oninput="onIdInput()" style="padding-right:40px;">
+            <span id="id-status" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:16px;"></span>
+          </div>
+          <span class="hint">Разработчик режимnu aç → правый клик → ID копировать</span>
+        </div>
+      </div>
+      <!-- Участник информация kartı -->
+      <div id="member-card" style="display:none;background:rgba(46,204,113,0.08);border:1px solid rgba(46,204,113,0.3);
+        border-radius:10px;padding:14px;margin-bottom:16px;display:none;align-items:center;gap:12px;">
+        <img id="member-avatar" src="" style="width:44px;height:44px;border-radius:50%;border:2px solid #2ecc71;">
+        <div>
+          <div id="member-name" style="font-weight:700;color:#2ecc71;"></div>
+          <div style="font-size:12px;color:var(--text2);">✅ Сервер участник olarak подтверждено</div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Yaşın</label>
+          <input type="number" id="yas" placeholder="örn: 18" min="13" max="99">
+        </div>
+        <div class="form-group">
+          <label>Ежедневный Активенlik</label>
+          <input type="text" id="активенlik" placeholder="örn: 3-4 saat">
+        </div>
+      </div>
+
+      <div class="section-title" style="margin-top:25px;"><i class="fas fa-shield-alt"></i> Модерация</div>
+      <div class="form-row full">
+        <div class="form-group">
+          <label>Модерация Tecrüben</label>
+          <textarea id="tecrube" placeholder="Daha önce hangi серверыda правоli oldun? Ne kadar длительность? Hangi заданиеleri üstlendin?"></textarea>
+        </div>
+      </div>
+      <div class="form-row full">
+        <div class="form-group">
+          <label>Neden Правоli Olmak İstiyorsun?</label>
+          <textarea id="neden" placeholder="Motivasyonunu, серверya katkılarını ve hedeflerini anlat..."></textarea>
+        </div>
+      </div>
+      <div class="form-row full">
+        <div class="form-group">
+          <label>Добавитьmek İstediklerin <span style="color:var(--text3);font-size:10px;">(opsiyonel)</span></label>
+          <textarea id="ekstra" placeholder="Kendini tanıt, пользовательский yetenдобавитьrin, referansların..." style="min-height:80px;"></textarea>
+        </div>
+      </div>
+
+      <button class="submit-btn" id="submit-btn" onclick="submitForm()">
+        <i class="fas fa-paper-plane"></i> &nbsp; BAŞVURUYU GÖNDER
+      </button>
+    </div>
+  </div>
+
+  <!-- Success -->
+  <div class="success-screen" id="success-screen">
+    <div class="check">✅</div>
+    <h2>Заявка Alındı!</h2>
+    <p>Заявка правоliler tarafından incelenecek.<br>Результат Discord DM'inden bildirilecek.</p>
+    <div class="app-id-box" id="app-id-display"></div>
+    <p style="margin-top:20px;color:var(--text3);font-size:13px;">Bu sayfayı закрытьabilirsin.</p>
+  </div>
+</div>
+
+<script>
+var selectedGuild = '1421244140359909513';
+var memberVerified = false;
+var idCheckTimer = null;
+
+// ID girilince участник kontроль
+function onIdInput() {
+  var id = document.getElementById('discord_id').value.trim();
+  var status = document.getElementById('id-status');
+  var card = document.getElementById('member-card');
+  memberVerified = false;
+  card.style.display = 'none';
+  document.getElementById('discord_name').value = '';
+
+  if (!/^\d{17,19}$/.test(id)) {
+    status.textContent = id.length > 0 ? '❌' : '';
+    return;
+  }
+  if (!selectedGuild) {
+    status.textContent = '⚠️';
+    showAlert('error', '⚠️ Önce сервер выбратьmelisin!');
+    return;
+  }
+
+  status.textContent = '⏳';
+  clearМут(idCheckTimer);
+  idCheckTimer = setМут(async function() {
+    try {
+      var r = await fetch('/api/public/check-member', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({guild_id: selectedGuild.id, user_id: id})
+      });
+      var res = await r.json();
+      if (res.found) {
+        status.textContent = '✅';
+        document.getElementById('discord_name').value = res.name;
+        document.getElementById('member-avatar').src = res.avatar;
+        document.getElementById('member-name').textContent = res.display_name + ' (' + res.name + ')';
+        card.style.display = 'flex';
+        memberVerified = true;
+        hideAlert();
+      } else {
+        status.textContent = '❌';
+        card.style.display = 'none';
+        memberVerified = false;
+        showAlert('error', '❌ ' + (res.error || 'Bu серверda участник не найдено.'));
+      }
+    } catch(e) {
+      status.textContent = '❌';
+    }
+  }, 600);
+}
+
+// Partiküller
+(function(){
+  var p = document.getElementById('particles');
+  for(var i=0;i<25;i++){
+    var d = document.createElement('div');
+    d.className = 'particle';
+    d.style.left = Math.random()*100+'%';
+    d.style.animationDuration = (8+Math.random()*15)+'s';
+    d.style.animationDelay = (Math.random()*10)+'s';
+    d.style.width = d.style.height = (1+Math.random()*3)+'px';
+    p.appendChild(d);
+  }
+})();
+
+// Серверыı yükle
+async function loadServers() {
+  try {
+    var r = await fetch('/api/public/guilds');
+    var guilds = await r.json();
+    var grid = document.getElementById('server-grid');
+    if (!guilds.length) {
+      grid.innerHTML = '<p style="color:var(--text3);text-align:center;grid-column:1/-1;">Сервер не найдено.</p>';
+      return;
+    }
+    // Бот logosunu ilk серверdan al
+    grid.innerHTML = guilds.map(function(g) {
+      var icon = g.icon || 'https://cdn.discordapp.com/embed/avatars/0.png';
+      return '<div class="server-card" onclick="selectGuild(\''+g.id+'\',\''+g.name.replace(/'/g,"\\'")+'\')" id="sc-'+g.id+'">' +
+        '<img src="'+icon+'" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' +
+        '<div><div class="sname">'+g.name+'</div><div class="smembers">'+g.members+' участник</div></div>' +
+        '</div>';
+    }).join('');
+  } catch(e) {
+    document.getElementById('server-grid').innerHTML = '<p style="color:#e74c3c;text-align:center;grid-column:1/-1;">Серверы yüklenemedi.</p>';
+  }
+}
+
+function selectGuild(id, name) {
+  selectedGuild = {id: id, name: name};
+  document.querySelectorAll('.server-card').forEach(function(c){c.classList.remove('selected');});
+  document.getElementById('sc-'+id).classList.add('selected');
+
+  // Step geçişi
+  setМут(function(){
+    document.getElementById('step1').style.display = 'none';
+    document.getElementById('step2').style.display = 'block';
+    document.getElementById('step1-ind').className = 'step done';
+    document.getElementById('step1-ind').querySelector('.step-num').innerHTML = '<i class="fas fa-check" style="font-size:10px;"></i>';
+    document.getElementById('step2-ind').className = 'step active';
+    window.scrollTo({top:0,behavior:'smooth'});
+  }, 300);
+}
+
+async function submitForm() {
+  var btn = document.getElementById('submit-btn');
+  var alert = document.getElementById('alert-box');
+
+  var discord_name = document.getElementById('discord_name').value.trim();
+  var discord_id   = document.getElementById('discord_id').value.trim();
+  var yas          = document.getElementById('yas').value.trim();
+  var активенlik     = document.getElementById('активенlik').value.trim();
+  var tecrube      = document.getElementById('tecrube').value.trim();
+  var neden        = document.getElementById('neden').value.trim();
+  var ekstra       = document.getElementById('ekstra').value.trim();
+
+  if (!memberVerified) {
+    showAlert('error', '❌ Discord ID\'ni gir ve сервер участникliğini doğrula!');
+    return;
+  }
+  if (!yas || !активенlik || !tecrube || !neden) {
+    showAlert('error', '❌ Lütfen tüm zorunlu alanları doldur!');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> &nbsp; GÖNDERİLİYOR...';
+
+  try {
+    var r = await fetch('/api/public/apply', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        discord_id, discord_name,
+        guild_id: selectedGuild.id,
+        guild_name: selectedGuild.name,
+        yas, активенlik, tecrube, neden, ekstra
+      })
+    });
+    var res = await r.json();
+    if (res.success) {
+      document.getElementById('step2').style.display = 'none';
+      document.getElementById('success-screen').style.display = 'block';
+      document.getElementById('step2-ind').className = 'step done';
+      document.getElementById('step3-ind').className = 'step done';
+      document.getElementById('app-id-display').textContent = 'Заявка ID: ' + res.app_id;
+      window.scrollTo({top:0,behavior:'smooth'});
+    } else {
+      showAlert('error', '❌ ' + (res.error || 'Bir ошибка oluştu.'));
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-paper-plane"></i> &nbsp; BAŞVURUYU GÖNDER';
+    }
+  } catch(e) {
+    showAlert('error', '❌ Bağlantı ошибкаsı: ' + e.message);
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-paper-plane"></i> &nbsp; BAŞVURUYU GÖNDER';
+  }
+}
+
+function showAlert(type, msg) {
+  var a = document.getElementById('alert-box');
+  a.className = 'alert ' + type;
+  a.style.display = 'block';
+  a.innerHTML = msg;
+  a.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+function hideAlert() {
+  var a = document.getElementById('alert-box');
+  a.style.display = 'none';
+}
+
+loadServers();
+</script>
+</body>
+</html>

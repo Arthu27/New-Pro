@@ -1,0 +1,156 @@
+﻿{% extends "base.html" %}
+{% block title %}Toplu Действия - Aether{% endblock %}
+{% block page_title %}<i class="fas fa-bolt" style="color:#c8922a;animation:pulse 2s infinite;"></i> TOPLU İŞLEMLER{% endblock %}
+{% block content %}
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&display=swap');
+  .action-box{background:linear-gradient(135deg,rgba(26,22,16,0.7),rgba(26,22,16,0.7));border:1px solid rgba(212,168,67,0.3);border-radius:16px;padding:25px;margin-bottom:20px;position:relative;overflow:hidden;transition:all 0.3s;}
+  .action-box::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:2px;background:linear-gradient(90deg,transparent,#c8922a,transparent);animation:scan 4s infinite;}
+  @keyframes scan{0%{left:-100%}100%{left:100%}}
+  .action-box:hover{border-color:rgba(200,146,42,0.6);box-shadow:0 8px 30px rgba(200,146,42,0.15);}
+  .action-title{color:#c8922a;font-family:Inter,sans-serif;font-size:13px;text-transform:uppercase;letter-spacing:2px;margin-bottom:18px;display:flex;align-items:center;gap:8px;padding-ботtom:12px;border-ботtom:1px solid rgba(200,146,42,0.2);}
+  .warning-box{background:rgba(212,168,67,0.08);border:1px solid rgba(212,168,67,0.3);border-radius:14px;padding:12px;margin-bottom:15px;color:#c8922a;font-size:13px;display:flex;align-items:center;gap:8px;}
+  .field-label{color:#c8922a;font-size:11px;text-transform:uppercase;display:block;margin-bottom:6px;letter-spacing:1px;}
+  .field-input{width:100%;padding:10px 14px;background:#100e08;border:2px solid rgba(200,146,42,0.25);border-radius:14px;color:#f0e8d0;box-sizing:border-box;font-family:inherit;transition:all 0.3s;font-size:14px;}
+  .field-input:focus{outline:none;border-color:#c8922a;box-shadow:0 0 15px rgba(200,146,42,0.2);}
+  .danger-btn{padding:12px 22px;background:rgba(224,85,85,0.15);color:#f0e8d0;border:none;border-radius:14px;cursor:pointer;font-weight:700;font-size:13px;letter-spacing:1px;transition:all 0.3s;}
+  .danger-btn:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(231,76,60,0.4);}
+  .safe-btn{padding:12px 22px;background:rgba(94,196,122,0.8);color:#f0e8d0;border:none;border-radius:14px;cursor:pointer;font-weight:700;font-size:13px;letter-spacing:1px;transition:all 0.3s;}
+  .safe-btn:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(46,204,113,0.4);}
+  .result-box{margin-top:12px;padding:12px 16px;border-radius:14px;display:none;font-size:13px;font-weight:600;}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+  @media(max-width:768px){.grid3{grid-template-columns:1fr;}}
+  .guild-select{width:100%;padding:12px;background:#100e08;border:2px solid #c8922a;border-radius:14px;color:#f0e8d0;margin-bottom:20px;font-size:14px;}
+  .guild-select:focus{outline:none;box-shadow:0 0 15px rgba(200,146,42,0.3);}
+  .action-icon{width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:15px;}
+</style>
+
+<select style="display:none" id="guild-select" class="guild-select" onchange="loadData()">
+  <option value="">🌐 Сервер выбрать...</option>
+</select>
+
+<!-- Toplu Сообщение Удалитьme -->
+<div class="action-box">
+  <div class="action-title"><i class="fas fa-trash-alt"></i> Toplu Сообщение Удалитьme</div>
+  <div class="warning-box"><i class="fas fa-exclamation-triangle"></i> Bu действие geri alınamaz! Dikkatli kullan.</div>
+  <div style="display:flex;gap:12px;margin-bottom:15px;flex-wrap:wrap;">
+    <div style="flex:1;min-width:200px;">
+      <label class="field-label">Канал</label>
+      <select id="purge-channel" class="field-input"></select>
+    </div>
+    <div style="width:150px;">
+      <label class="field-label">Сообщение Количествоsı (max 100)</label>
+      <input type="number" id="purge-count" value="10" min="1" max="100" class="field-input">
+    </div>
+  </div>
+  <button class="danger-btn" onclick="purgeMessages()"><i class="fas fa-trash"></i> Сообщенияı Удалить</button>
+  <div id="purge-result" class="result-box"></div>
+</div>
+
+<!-- Toplu Роль Ver/Al -->
+<div class="action-box">
+  <div class="action-title"><i class="fas fa-user-tag"></i> Toplu Роль Ver / Al</div>
+  <div class="grid3" style="margin-bottom:15px;">
+    <div>
+      <label class="field-label">Hedef Роль (sahip olanlar)</label>
+      <select id="bulk-target-role" class="field-input"></select>
+    </div>
+    <div>
+      <label class="field-label">Verilecek / Alınacak Роль</label>
+      <select id="bulk-action-role" class="field-input"></select>
+    </div>
+    <div>
+      <label class="field-label">Действие</label>
+      <select id="bulk-role-action" class="field-input">
+        <option value="add">✅ Роль Ver</option>
+        <option value="remove">❌ Роль Al</option>
+      </select>
+    </div>
+  </div>
+  <button class="safe-btn" onclick="bulkРольe()"><i class="fas fa-users-cog"></i> Uygula</button>
+  <div id="role-result" class="result-box"></div>
+</div>
+
+<!-- Toplu DM -->
+<div class="action-box">
+  <div class="action-title"><i class="fas fa-envelope-open-text"></i> Toplu DM Отправить</div>
+  <div class="warning-box"><i class="fas fa-info-circle"></i> Sadece выбратьili role sahip участникlere отправитьilir!</div>
+  <div style="margin-bottom:12px;">
+    <label class="field-label">Hedef Роль</label>
+    <select id="dm-role" class="field-input"></select>
+  </div>
+  <div style="margin-bottom:15px;">
+    <label class="field-label">Сообщение</label>
+    <textarea id="dm-message" class="field-input" placeholder="Отправитьilecek сообщение..." style="min-height:90px;resize:vertical;"></textarea>
+  </div>
+  <button class="safe-btn" onclick="bulkDM()"><i class="fas fa-paper-plane"></i> Отправить</button>
+  <div id="dm-result" class="result-box"></div>
+</div>
+
+<script>
+var MAIN_GID = '1421244140359909513';
+var selectedGuild = MAIN_GID;
+
+async function loadData(gid_деньгиm) {
+  selectedGuild = gid_деньгиm || MAIN_GID;
+  if (!selectedGuild) return;
+  var [chRes, rolesRes] = await Promise.all([
+    fetch('/api/guild/'+selectedGuild+'/channels').then(r=>r.json()),
+    fetch('/api/guild/'+selectedGuild+'/roles').then(r=>r.json())
+  ]);
+  var channels = Array.isArray(chRes) ? chRes : (chRes.channels || []);
+  var chOpts = channels.filter(function(c){return c.type==='text';})
+    .map(function(c){return '<option value="'+c.id+'">#'+c.name+'</option>';}).join('');
+  document.getElementById('purge-channel').innerHTML = chOpts || '<option>Канал yok</option>';
+  var roleOpts = rolesRes.map(function(r){return '<option value="'+r.id+'">'+r.name+'</option>';}).join('');
+  ['bulk-target-role','bulk-action-role','dm-role'].forEach(function(id){
+    document.getElementById(id).innerHTML = roleOpts || '<option>Роль yok</option>';
+  });
+}
+
+async function purgeMessages() {
+  if (!selectedGuild) { alert('Сервер выбрать!'); return; }
+  if (!confirm('Сообщенияı silmek istediğine emin misin?')) return;
+  var r = await fetch('/api/guild/'+selectedGuild+'/purge', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({channel_id:document.getElementById('purge-channel').value, count:parseInt(document.getElementById('purge-count').value)})
+  });
+  var d = await r.json();
+  showResult('purge-result', d.success, d.success ? d.count+' сообщение silindi!' : (d.error||'Ошибка'));
+}
+
+async function bulkРольe() {
+  if (!selectedGuild) { alert('Сервер выбрать!'); return; }
+  var r = await fetch('/api/guild/'+selectedGuild+'/bulk-role', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({target_role:document.getElementById('bulk-target-role').value, action_role:document.getElementById('bulk-action-role').value, action:document.getElementById('bulk-role-action').value})
+  });
+  var d = await r.json();
+  showResult('role-result', d.success, d.success ? d.count+' участнику uygulandı!' : (d.error||'Ошибка'));
+}
+
+async function bulkDM() {
+  if (!selectedGuild) { alert('Сервер выбрать!'); return; }
+  var msg = document.getElementById('dm-message').value.trim();
+  if (!msg) { alert('Сообщение yaz!'); return; }
+  if (!confirm('Bu role sahip tüm участникlere DM отправляется. Продолжить?')) return;
+  var r = await fetch('/api/guild/'+selectedGuild+'/bulk-dm', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({role_id:document.getElementById('dm-role').value, message:msg})
+  });
+  var d = await r.json();
+  showResult('dm-result', d.success, d.success ? d.count+' участнику отправитьildi!' : (d.error||'Ошибка'));
+}
+
+function showResult(id, success, msg) {
+  var box = document.getElementById(id);
+  box.style.display = 'block';
+  box.style.background = success ? 'rgba(46,204,113,0.12)' : 'rgba(231,76,60,0.12)';
+  box.style.border = '1px solid '+(success ? '#2ecc71' : '#e74c3c');
+  box.style.color = success ? '#2ecc71' : '#c8922a';
+  box.innerHTML = (success ? '✅ ' : '❌ ') + msg;
+}
+
+window.addEventListener('load', function(){ loadData(''); });
+</script>
+{% endblock %}

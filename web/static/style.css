@@ -1,0 +1,437 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap');
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior:auto; }
+html, body { height:100%; overflow:hidden; }
+
+:root {
+    /* Login ile birebir aynı zemin */
+    --bg:       #100e08;
+    --bg2:      #1a1610;
+    --bg3:      #221e12;
+    --surface:  #2a2418;
+    --surface2: #342e1e;
+
+    /* Border — login ile aynı, çok subtle */
+    --border:   rgba(212,168,67,0.08);
+    --border2:  rgba(212,168,67,0.16);
+
+    /* Accent — login ile birebir */
+    --accent:   #c8922a;
+    --accent2:  #e0a830;
+    --accent3:  #f0e8d0;
+    --accent-dim: rgba(200,146,42,0.10);
+    --accent-glow: rgba(200,146,42,0.20);
+
+    /* Metin — login ile aynı */
+    --text:     #f0e8d0;
+    --text2:    #9a8a68;
+    --text3:    #5a5040;
+
+    /* Durum renkleri */
+    --red:      #e05555;
+    --green:    #5ec47a;
+    --blue:     #6ab0e0;
+    --orange:   #e8903a;
+
+    --sidebar-w: 248px;
+    --radius:    10px;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background: #100e08;
+    color: var(--text);
+    overflow: hidden;
+    height: 100%;
+}
+
+/* Login ile birebir aynı üst amber glow */
+body::before {
+    content: '';
+    position: fixed;
+    top: -100px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 800px;
+    height: 400px;
+    background: radial-gradient(ellipse at center top,
+        rgba(160,110,30,0.22) 0%,
+        rgba(120,80,20,0.08) 45%,
+        transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.particles-container { display:none; }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width:4px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--surface2); border-radius:99px; }
+::-webkit-scrollbar-thumb:hover { background:var(--accent); }
+
+/* ══════════════════════════════════════════════════════
+   SIDEBAR — ince, temiz, floating hissi
+══════════════════════════════════════════════════════ */
+.sidebar {
+    position: fixed;
+    left: 0; top: 0;
+    width: var(--sidebar-w);
+    height: 100vh;
+    /* Login ile aynı arka plan */
+    background: rgba(26,22,16,0.92);
+    border-right: 1px solid rgba(212,168,67,0.08);
+    z-index: 100;
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    backdrop-filter: blur(12px);
+}
+
+.sidebar::before { display:none; }
+.sidebar h2 { display:none; } /* Logo ayrı handle ediliyor */
+
+/* Search */
+#global-search {
+    width: 100% !important;
+    padding: 8px 10px 8px 32px !important;
+    background: var(--bg3) !important;
+    border: 1px solid var(--border2) !important;
+    border-radius: 8px !important;
+    color: var(--text) !important;
+    font-size: 12px !important;
+    font-family: 'Inter', sans-serif !important;
+    margin: 0 !important;
+    transition: border-color 0.15s, box-shadow 0.15s !important;
+}
+#global-search:focus {
+    outline: none !important;
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 0 3px var(--accent-dim) !important;
+}
+#global-search::placeholder { color: var(--text3) !important; }
+
+#search-results {
+    background: var(--bg3) !important;
+    border: 1px solid var(--border2) !important;
+    border-radius: 8px !important;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important;
+}
+
+/* Nav section labels */
+.nav-label {
+    padding: 14px 16px 4px;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+/* Nav links */
+.sidebar a {
+    display: flex;
+    align-items: center;
+    color: var(--text2);
+    text-decoration: none;
+    padding: 8px 12px;
+    margin: 1px 8px;
+    border-radius: 8px;
+    transition: background 0.12s, color 0.12s;
+    border: 1px solid transparent;
+    font-weight: 500;
+    font-size: 13px;
+    gap: 9px;
+    position: relative;
+}
+
+.sidebar a::before { display:none; }
+
+.sidebar a i {
+    width: 15px;
+    font-size: 12px;
+    opacity: 0.6;
+    flex-shrink: 0;
+    text-align: center;
+}
+
+.sidebar a:hover {
+    background: var(--accent-dim);
+    color: var(--text);
+    transform: none;
+    box-shadow: none;
+}
+.sidebar a:hover i { opacity: 0.9; }
+
+.sidebar a.active {
+    background: var(--accent-dim);
+    color: var(--accent2);
+    border-color: var(--border2);
+}
+.sidebar a.active i { opacity: 1; color: var(--accent2); }
+
+/* ══════════════════════════════════════════════════════
+   MAIN CONTENT
+══════════════════════════════════════════════════════ */
+.main-content,
+div#main-content {
+    margin-left: var(--sidebar-w) !important;
+    padding: 28px 32px !important;
+    position: relative;
+    z-index: 1;
+    height: 100vh;
+    overflow-y: auto;
+    overflow-anchor: none;
+    padding-bottom: 60px !important;
+}
+
+/* Page title — Scatter'ın büyük bold başlığı */
+div#main-content > h1,
+.page-title {
+    font-size: 28px !important;
+    font-weight: 800 !important;
+    color: var(--text) !important;
+    margin-bottom: 24px !important;
+    text-shadow: none !important;
+    letter-spacing: -0.03em !important;
+    line-height: 1.1 !important;
+}
+
+/* ══════════════════════════════════════════════════════
+   CARDS / SECTIONS — login modal card ile aynı his
+══════════════════════════════════════════════════════ */
+.section {
+    background: rgba(26,22,16,0.7);
+    padding: 24px;
+    border-radius: 14px;
+    margin-bottom: 16px;
+    border: 1px solid rgba(212,168,67,0.1);
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.15s;
+    backdrop-filter: blur(4px);
+}
+.section:hover { border-color: rgba(212,168,67,0.2); }
+.section::before { display:none; }
+
+.section h2 {
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(240,232,208,0.5);
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(212,168,67,0.08);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+/* ══════════════════════════════════════════════════════
+   TABLE — login modal içindeki tablo hissi
+══════════════════════════════════════════════════════ */
+table { width:100%; border-collapse:collapse; }
+
+th, td {
+    padding: 11px 16px;
+    text-align: left;
+    border-bottom: 1px solid rgba(212,168,67,0.06);
+    font-size: 12px;
+}
+
+th {
+    background: rgba(212,168,67,0.05);
+    color: rgba(240,232,208,0.35);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 10px;
+}
+
+tr { transition: background 0.1s; }
+tr:hover td { background: rgba(212,168,67,0.05); }
+
+/* ══════════════════════════════════════════════════════
+   BUTTONS — Scatter'ın pill butonları
+══════════════════════════════════════════════════════ */
+.btn {
+    padding: 9px 18px;
+    border: none;
+    border-radius: 99px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.15s;
+    font-size: 13px;
+    font-family: 'Inter', sans-serif;
+    letter-spacing: -0.01em;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-primary {
+    background: var(--accent);
+    color: #0e0c07;
+}
+.btn-primary:hover {
+    background: var(--accent2);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px var(--accent-glow);
+}
+
+.btn-danger {
+    background: rgba(224,85,85,0.12);
+    color: var(--red);
+    border: 1px solid rgba(224,85,85,0.2);
+    border-radius: 99px;
+}
+.btn-danger:hover { background: rgba(224,85,85,0.2); transform: translateY(-1px); }
+
+.btn-success {
+    background: rgba(94,196,122,0.12);
+    color: var(--green);
+    border: 1px solid rgba(94,196,122,0.2);
+    border-radius: 99px;
+}
+.btn-success:hover { background: rgba(94,196,122,0.2); transform: translateY(-1px); }
+
+/* ══════════════════════════════════════════════════════
+   INPUTS — login form input ile aynı
+══════════════════════════════════════════════════════ */
+input, select, textarea {
+    width: 100%;
+    padding: 10px 12px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(212,168,67,0.12);
+    border-radius: 8px;
+    color: #f0e8d0;
+    margin: 6px 0;
+    transition: border-color 0.15s, background 0.15s;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+}
+input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: rgba(212,168,67,0.45);
+    background: rgba(255,255,255,0.06);
+}
+input::placeholder, textarea::placeholder { color: #3a3020; }
+select option { background: #1a1610; color: #f0e8d0; }
+
+/* ══════════════════════════════════════════════════════
+   MODAL — login modal card ile birebir aynı
+══════════════════════════════════════════════════════ */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(8px);
+}
+.modal-content {
+    background: #1a1610;
+    margin: 6% auto;
+    padding: 32px;
+    border-radius: 16px;
+    width: 480px;
+    max-width: 92%;
+    border: 1px solid rgba(212,168,67,0.15);
+    box-shadow: 0 24px 80px rgba(0,0,0,0.7);
+    animation: modalUp 0.25s ease-out;
+}
+@keyframes modalUp {
+    from { opacity:0; transform:translateY(16px) scale(0.97); }
+    to   { opacity:1; transform:translateY(0) scale(1); }
+}
+.close {
+    color: rgba(240,232,208,0.3);
+    float: right;
+    font-size: 20px;
+    font-weight: 300;
+    cursor: pointer;
+    transition: color 0.15s;
+    line-height: 1;
+}
+.close:hover { color: #f0e8d0; }
+
+/* ══════════════════════════════════════════════════════
+   NAVBAR (legacy uyumluluk)
+══════════════════════════════════════════════════════ */
+.navbar {
+    background: var(--surface);
+    padding: 14px 20px;
+    border-radius: var(--radius);
+    margin-bottom: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 1px solid var(--border);
+}
+.navbar::before { display:none; }
+.navbar h1 {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+    background: none;
+    -webkit-text-fill-color: unset;
+    letter-spacing: -0.02em;
+}
+.user-info { display:flex; align-items:center; gap:10px; }
+.role-badge {
+    background: var(--accent-dim);
+    border: 1px solid var(--border2);
+    color: var(--accent2);
+    padding: 4px 10px;
+    border-radius: 99px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+.logout-btn {
+    background: transparent;
+    color: var(--text2);
+    padding: 6px 12px;
+    border-radius: 99px;
+    text-decoration: none;
+    transition: all 0.15s;
+    font-weight: 500;
+    font-size: 12px;
+    border: 1px solid var(--border);
+}
+.logout-btn:hover { background: rgba(224,85,85,0.1); color: var(--red); border-color: rgba(224,85,85,0.25); }
+
+/* ══════════════════════════════════════════════════════
+   ANIMATIONS
+══════════════════════════════════════════════════════ */
+@keyframes fadeIn {
+    from { opacity:0; transform:translateY(10px); }
+    to   { opacity:1; transform:translateY(0); }
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+@keyframes scan  { 0%{left:-100%} 100%{left:100%} }
+@keyframes glow  { from{} to{} }
+
+.section, .stat-card { animation: fadeIn 0.3s ease-out; }
+
+/* ══════════════════════════════════════════════════════
+   MOBILE
+══════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+    .sidebar {
+        width: 100%; height: auto; position: relative;
+        overflow-y: visible; flex-direction: row; flex-wrap: wrap;
+    }
+    .sidebar a { display:inline-flex; padding:6px 10px; margin:2px; font-size:11px; }
+    .main-content, div#main-content {
+        margin-left: 0 !important; padding: 16px !important;
+        height: auto !important; overflow-y: visible !important;
+    }
+    html, body { overflow: auto !important; height: auto !important; }
+    table { display:block; overflow-x:auto; white-space:nowrap; }
+    .stats-grid, .gw-grid, .quick-grid, .grid2, .notif-grid { grid-template-columns:1fr !important; }
+}
+@media (max-width: 480px) {
+    .login-container { width:95% !important; padding:22px !important; }
+}

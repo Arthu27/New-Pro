@@ -1,0 +1,831 @@
+[
+  {
+    "guild_name": "🍁Rakuzan ⸺ Anime & Manga #BAKIM",
+    "guild_id": "1107038411895881788",
+    "created_at": "2026-03-20 15:26",
+    "size": "14.9 KB",
+    "roles": [
+      {
+        "name": "Fibo",
+        "color": "#000000",
+        "permissions": 268696721,
+        "hoist": false,
+        "mentionable": false
+      },
+      {
+        "name": "ProBot ✨",
+        "color": "#000000",
+        "permissions": 2080374975,
+        "hoist": false,
+        "mentionable": false
+      },
+      {
+        "name": "─────────────────",
+        "color": "#000000",
+        "permissions": 0,
+        "hoist": false,
+        "mentionable": false
+      },
+      {
+        "name": "LunaBot 🌙",
+        "color": "#000000",
+        "permissions": 37088600,
+        "hoist": false,
+        "mentionable": false
+      },
+      {
+        "name": "Tickets v2",
+        "color": "#000000",
+        "permissions": 395942816984,
+        "hoist": false,
+        "mentionable": false
+      },
+      {
+        "name": "Mimu",
+        "color": "#000000",
+        "permissions": 1007021169,
+        "hoist": false,
+        "mentionable": false
+      },
+      {
+        "name": "Statbot",
+        "color": "#000000",
+        "permissions": 269601936,
+        "hoist": false,
+        "mentionable": false
+      },
+      {
+        "name": "MC-AT",
+        "color": "#000000",
+        "permissions": 8,
+        "hoist": false,
+        "mentionable": false
+      },
+      {
+        "name": "゛🤝﹕Partner Ping",
+        "color": "#000000",
+        "permissions": 0,
+        "hoist": false,
+        "mentionable": false
+      },
+      {
+        "name": "゛🌙﹕Bump Ping",
+        "color": "#000000",
+        "permissions": 0,
+        "hoist": false,
+        "mentionable": false
+      },
+      {
+        "name": "゛👋﹕Karşılama Ping",
+        "color": "#000000",
+        "permissions": 0,
+        "hoist": false,
+        "mentionable": false
+      },
+      {
+        "name": "゛🎡﹕Eğlence Ping",
+        "color": "#000000",
+        "permissions": 0,
+        "hoist": false,
+        "mentionable": false
+      },
+      {
+        "name": "─────────────────",
+        "color": "#000000",
+        "permissions": 0,
+        "hoist": false,
+        "mentionable": false
+      },
+      {
+        "name": "゛や﹒Kız",
+        "color": "#000000",
+        "permissions": 0,
+        "hoist": false,
+        "mentionable": false
+      },
+      {
+        "name": "゛そ﹒Erkek",
+        "color": "#000000",
+        "permissions": 0,
+        "hoist": false,
+        "mentionable": false
+      },
+      {
+        "name": "─────────────────",
+        "color": "#000000",
+        "permissions": 0,
+        "hoist": false,
+        "mentionable": false
+      },
+      {
+        "name": "Whitelist",
+        "color": "#00ff6c",
+        "permissions": 0,
+        "hoist": true,
+        "mentionable": false
+      },
+      {
+        "name": "゛Minecraft",
+        "color": "#000000",
+        "permissions": 0,
+        "hoist": false,
+        "mentionable": false
+      },
+      {
+        "name": "゛Roblox",
+        "color": "#000000",
+        "permissions": 0,
+        "hoist": false,
+        "mentionable": false
+      },
+      {
+        "name": "゛Valorant",
+        "color": "#000000",
+        "permissions": 0,
+        "hoist": false,
+        "mentionable": false
+      },
+      {
+        "name": "゛League Of Legends",
+        "color": "#000000",
+        "permissions": 0,
+        "hoist": false,
+        "mentionable": false
+      },
+      {
+        "name": "゛Counter Strike",
+        "color": "#000000",
+        "permissions": 0,
+        "hoist": false,
+        "mentionable": false
+      },
+      {
+        "name": "─────────────────",
+        "color": "#000000",
+        "permissions": 0,
+        "hoist": false,
+        "mentionable": false
+      },
+      {
+        "name": "゛🚯﹕Cezalı",
+        "color": "#ff0000",
+        "permissions": 0,
+        "hoist": false,
+        "mentionable": false
+      },
+      {
+        "name": "゛﹕Destekçi",
+        "color": "#e638e0",
+        "permissions": 2248473465835073,
+        "hoist": true,
+        "mentionable": false
+      },
+      {
+        "name": "゛⏾ ﹕Gri",
+        "color": "#979c9f",
+        "permissions": 0,
+        "hoist": false,
+        "mentionable": false
+      },
+      {
+        "name": "゛⏾ ﹕Mor",
+        "color": "#ab77b8",
+        "permissions": 0,
+        "hoist": false,
+        "mentionable": false
+      },
+      {
+        "name": "゛⏾ ﹕Yeşil",
+        "color": "#1abc9c",
+        "permissions": 0,
+        "hoist": false,
+        "mentionable": false
+      },
+      {
+        "name": "゛⏾ ﹕Mavi",
+        "color": "#3498db",
+        "permissions": 0,
+        "hoist": false,
+        "mentionable": false
+      },
+      {
+        "name": "゛⏾ ﹕Sarı",
+        "color": "#ffbb00",
+        "permissions": 0,
+        "hoist": false,
+        "mentionable": false
+      },
+      {
+        "name": "゛⏾ ﹕Kırmızı",
+        "color": "#ff0000",
+        "permissions": 0,
+        "hoist": false,
+        "mentionable": false
+      },
+      {
+        "name": "゛⏾ ﹕Beyaz",
+        "color": "#e0e0e0",
+        "permissions": 0,
+        "hoist": false,
+        "mentionable": false
+      },
+      {
+        "name": "゛⏾ ﹕Siyah",
+        "color": "#0e0e0e",
+        "permissions": 0,
+        "hoist": false,
+        "mentionable": false
+      },
+      {
+        "name": "─────────────────",
+        "color": "#000000",
+        "permissions": 0,
+        "hoist": false,
+        "mentionable": false
+      },
+      {
+        "name": "゛🔉﹕Ses Ekibi",
+        "color": "#616161",
+        "permissions": 0,
+        "hoist": false,
+        "mentionable": false
+      },
+      {
+        "name": "゛💭﹕Sohbet Ekibi",
+        "color": "#616161",
+        "permissions": 0,
+        "hoist": false,
+        "mentionable": false
+      },
+      {
+        "name": "゛🌙﹕Partner Ekibi",
+        "color": "#616161",
+        "permissions": 0,
+        "hoist": false,
+        "mentionable": false
+      },
+      {
+        "name": "゛🏹﹕Destek ekibi",
+        "color": "#616161",
+        "permissions": 0,
+        "hoist": false,
+        "mentionable": false
+      },
+      {
+        "name": "゛🗡️ Yetkili﹒Ekibi",
+        "color": "#020202",
+        "permissions": 0,
+        "hoist": false,
+        "mentionable": false
+      },
+      {
+        "name": "─────────────────",
+        "color": "#000000",
+        "permissions": 0,
+        "hoist": false,
+        "mentionable": false
+      },
+      {
+        "name": "゛ ﹒Zeth",
+        "color": "#5d4c3d",
+        "permissions": 8797166764032,
+        "hoist": true,
+        "mentionable": false
+      },
+      {
+        "name": "゛ ﹒Veil",
+        "color": "#47e6ff",
+        "permissions": 0,
+        "hoist": false,
+        "mentionable": false
+      },
+      {
+        "name": "゛ ﹒Raven",
+        "color": "#e29300",
+        "permissions": 0,
+        "hoist": false,
+        "mentionable": false
+      },
+      {
+        "name": "゛ ﹒Seraph",
+        "color": "#8b0900",
+        "permissions": 0,
+        "hoist": false,
+        "mentionable": false
+      },
+      {
+        "name": "゛🏹 Yönetim﹒Ekibi",
+        "color": "#020202",
+        "permissions": 0,
+        "hoist": false,
+        "mentionable": false
+      },
+      {
+        "name": "゛﹒Raku",
+        "color": "#fffcfc",
+        "permissions": 2543309139312847,
+        "hoist": true,
+        "mentionable": false
+      },
+      {
+        "name": "゛﹒Arthur",
+        "color": "#470000",
+        "permissions": 8798039704733,
+        "hoist": true,
+        "mentionable": false
+      },
+      {
+        "name": "゛﹒Sama",
+        "color": "#0a0a0a",
+        "permissions": 8797972070544,
+        "hoist": true,
+        "mentionable": false
+      },
+      {
+        "name": "─────────────────",
+        "color": "#000000",
+        "permissions": 0,
+        "hoist": false,
+        "mentionable": false
+      },
+      {
+        "name": "DISBOARD.org",
+        "color": "#000000",
+        "permissions": 19473,
+        "hoist": false,
+        "mentionable": false
+      },
+      {
+        "name": "Lofi Radio",
+        "color": "#000000",
+        "permissions": 66407424,
+        "hoist": false,
+        "mentionable": false
+      },
+      {
+        "name": "Marpel",
+        "color": "#000000",
+        "permissions": 8,
+        "hoist": false,
+        "mentionable": false
+      },
+      {
+        "name": "Mudae",
+        "color": "#000000",
+        "permissions": 537159744,
+        "hoist": false,
+        "mentionable": false
+      },
+      {
+        "name": "OwO",
+        "color": "#000000",
+        "permissions": 277025754184,
+        "hoist": false,
+        "mentionable": false
+      },
+      {
+        "name": "ErensiBOT",
+        "color": "#000000",
+        "permissions": 2146823679,
+        "hoist": false,
+        "mentionable": false
+      },
+      {
+        "name": "YAGPDB.xyz",
+        "color": "#000000",
+        "permissions": 2146827775,
+        "hoist": false,
+        "mentionable": false
+      },
+      {
+        "name": "R A K U Z A N",
+        "color": "#000000",
+        "permissions": 8,
+        "hoist": false,
+        "mentionable": false
+      }
+    ],
+    "channels": [
+      {
+        "name": "゛🌸﹒Seirin",
+        "type": "voice",
+        "position": 6,
+        "topic": null
+      },
+      {
+        "name": "﹒🔴﹕Log Kanalları・──────────",
+        "type": "category",
+        "position": 10,
+        "topic": null
+      },
+      {
+        "name": "゛🚯﹕cezalı﹒sohbet",
+        "type": "text",
+        "position": 36,
+        "topic": null
+      },
+      {
+        "name": "゛🌊﹕kelime﹒türetmece",
+        "type": "text",
+        "position": 33,
+        "topic": null
+      },
+      {
+        "name": "゛👋﹕kendini﹒tanıt",
+        "type": "text",
+        "position": 28,
+        "topic": null
+      },
+      {
+        "name": "゛🏹﹕Yönetim Toplantı",
+        "type": "voice",
+        "position": 1,
+        "topic": null
+      },
+      {
+        "name": "゛✍️﹕partner﹒text",
+        "type": "text",
+        "position": 40,
+        "topic": null
+      },
+      {
+        "name": "゛🌈﹕renk﹒seçim",
+        "type": "text",
+        "position": 17,
+        "topic": null
+      },
+      {
+        "name": "゛🤝﹕partnerler",
+        "type": "text",
+        "position": 39,
+        "topic": null
+      },
+      {
+        "name": "゛🪄﹕ses﹒komut",
+        "type": "text",
+        "position": 34,
+        "topic": null
+      },
+      {
+        "name": "゛📕﹕kurallar",
+        "type": "text",
+        "position": 12,
+        "topic": null
+      },
+      {
+        "name": "゛🗞️﹕yönetim-bilgi",
+        "type": "text",
+        "position": 2,
+        "topic": null
+      },
+      {
+        "name": "﹒🔕﹕Ceza Kanalları・──────────",
+        "type": "category",
+        "position": 8,
+        "topic": null
+      },
+      {
+        "name": "゛🔵﹕kanal﹒log",
+        "type": "text",
+        "position": 46,
+        "topic": null
+      },
+      {
+        "name": "゛🎉﹕çekiliş",
+        "type": "text",
+        "position": 14,
+        "topic": null
+      },
+      {
+        "name": "゛🏯﹒Hokage",
+        "type": "voice",
+        "position": 4,
+        "topic": null
+      },
+      {
+        "name": "﹒🤝﹕Partner Kanalları・──────────",
+        "type": "category",
+        "position": 9,
+        "topic": null
+      },
+      {
+        "name": "゛🎮﹕oyuncu﹒arama",
+        "type": "text",
+        "position": 32,
+        "topic": null
+      },
+      {
+        "name": "゛🗻﹒Peak",
+        "type": "voice",
+        "position": 8,
+        "topic": null
+      },
+      {
+        "name": "゛🎭﹕yetkili-giriş",
+        "type": "text",
+        "position": 7,
+        "topic": null
+      },
+      {
+        "name": "゛🌙﹕yönetim-duyuru",
+        "type": "text",
+        "position": 3,
+        "topic": null
+      },
+      {
+        "name": "゛📌﹕bilgilendirme",
+        "type": "text",
+        "position": 13,
+        "topic": null
+      },
+      {
+        "name": "﹒🌈 ﹕Eğlence Kanalları・──────────",
+        "type": "category",
+        "position": 6,
+        "topic": null
+      },
+      {
+        "name": "゛🍢﹕rol﹒alım",
+        "type": "text",
+        "position": 16,
+        "topic": null
+      },
+      {
+        "name": "゛🌙メ﹕Yönetim Kanalları・──────────",
+        "type": "category",
+        "position": 0,
+        "topic": null
+      },
+      {
+        "name": "゛📝﹕yetkili﹒alım",
+        "type": "text",
+        "position": 21,
+        "topic": null
+      },
+      {
+        "name": "゛⚪﹕invite﹒log",
+        "type": "text",
+        "position": 41,
+        "topic": null
+      },
+      {
+        "name": "﹒🌙 ﹕Sunucu hakkında・──────────",
+        "type": "category",
+        "position": 2,
+        "topic": null
+      },
+      {
+        "name": "゛📎﹕bot﹒komut",
+        "type": "text",
+        "position": 27,
+        "topic": null
+      },
+      {
+        "name": "゛🟣﹕rol﹒log",
+        "type": "text",
+        "position": 45,
+        "topic": null
+      },
+      {
+        "name": "゛✨﹒Akira",
+        "type": "voice",
+        "position": 7,
+        "topic": null
+      },
+      {
+        "name": "゛⚫﹕ses﹒log",
+        "type": "text",
+        "position": 44,
+        "topic": null
+      },
+      {
+        "name": "panel-link",
+        "type": "text",
+        "position": 1,
+        "topic": null
+      },
+      {
+        "name": "゛🎫﹕destek﹒talebi",
+        "type": "text",
+        "position": 22,
+        "topic": null
+      },
+      {
+        "name": "゛🔥﹒Akatsuki",
+        "type": "voice",
+        "position": 3,
+        "topic": null
+      },
+      {
+        "name": "゛🍨﹕seviye﹒bildirimi",
+        "type": "text",
+        "position": 20,
+        "topic": null
+      },
+      {
+        "name": "deneme",
+        "type": "text",
+        "position": 47,
+        "topic": null
+      },
+      {
+        "name": "゛🟤﹕mesaj﹒log",
+        "type": "text",
+        "position": 43,
+        "topic": null
+      },
+      {
+        "name": "゛📣﹕duyuru",
+        "type": "text",
+        "position": 11,
+        "topic": null
+      },
+      {
+        "name": "🍁﹕rakuzan﹒anı",
+        "type": "text",
+        "position": 0,
+        "topic": null
+      },
+      {
+        "name": "゛🍘﹕öneri﹒istek",
+        "type": "text",
+        "position": 18,
+        "topic": null
+      },
+      {
+        "name": "゛💬﹕yönetim-sohbet",
+        "type": "text",
+        "position": 4,
+        "topic": null
+      },
+      {
+        "name": "﹒☕﹕Sohbet Kategorisi・──────────",
+        "type": "category",
+        "position": 5,
+        "topic": null
+      },
+      {
+        "name": "゛🏆﹕oy﹒ver",
+        "type": "text",
+        "position": 24,
+        "topic": null
+      },
+      {
+        "name": "゛💌﹕partner﹒görme",
+        "type": "text",
+        "position": 37,
+        "topic": null
+      },
+      {
+        "name": "゛💸﹕owo",
+        "type": "text",
+        "position": 29,
+        "topic": null
+      },
+      {
+        "name": "゛🗡️﹕Yetkili Toplantı",
+        "type": "voice",
+        "position": 2,
+        "topic": null
+      },
+      {
+        "name": "゛🔨メ﹕Yetkili Kanalları・──────────",
+        "type": "category",
+        "position": 1,
+        "topic": null
+      },
+      {
+        "name": "﹒🔉﹕Ses kanalları・──────────",
+        "type": "category",
+        "position": 7,
+        "topic": null
+      },
+      {
+        "name": "゛🔕﹕cezalı﹒bilgi",
+        "type": "text",
+        "position": 35,
+        "topic": null
+      },
+      {
+        "name": "゛✨﹕takviye﹒basanlar",
+        "type": "text",
+        "position": 19,
+        "topic": null
+      },
+      {
+        "name": "゛🚨﹕ceza﹒takip",
+        "type": "text",
+        "position": 15,
+        "topic": null
+      },
+      {
+        "name": "゛💌﹕partnerlik﹒şartı",
+        "type": "text",
+        "position": 38,
+        "topic": null
+      },
+      {
+        "name": "゛🃏﹕mudae",
+        "type": "text",
+        "position": 30,
+        "topic": null
+      },
+      {
+        "name": "゛🌙﹕yetkili-duyuru",
+        "type": "text",
+        "position": 8,
+        "topic": null
+      },
+      {
+        "name": "゛🎶﹒7/24 Lofi",
+        "type": "voice",
+        "position": 9,
+        "topic": null
+      },
+      {
+        "name": "゛🪡﹕yetkili-komut",
+        "type": "text",
+        "position": 10,
+        "topic": null
+      },
+      {
+        "name": "゛🥢﹒Joestar",
+        "type": "voice",
+        "position": 5,
+        "topic": null
+      },
+      {
+        "name": "゛🟠﹕ban﹒log",
+        "type": "text",
+        "position": 42,
+        "topic": null
+      },
+      {
+        "name": "゛💖﹕ship",
+        "type": "text",
+        "position": 31,
+        "topic": null
+      },
+      {
+        "name": "゛🌙﹕bump",
+        "type": "text",
+        "position": 23,
+        "topic": null
+      },
+      {
+        "name": "゛🪡﹕yönetim-komut",
+        "type": "text",
+        "position": 5,
+        "topic": null
+      },
+      {
+        "name": "゛💬﹕yetkili-sohbet",
+        "type": "text",
+        "position": 9,
+        "topic": null
+      },
+      {
+        "name": "゛🗞️﹕yetkili-bilgi",
+        "type": "text",
+        "position": 6,
+        "topic": null
+      },
+      {
+        "name": "゛⚖️﹕Destek & İletişim・──────────",
+        "type": "category",
+        "position": 4,
+        "topic": null
+      },
+      {
+        "name": "﹒🀄﹕Bireysel Kanallar・──────────",
+        "type": "category",
+        "position": 3,
+        "topic": null
+      },
+      {
+        "name": "゛💬﹕genel﹒sohbet",
+        "type": "text",
+        "position": 25,
+        "topic": null
+      },
+      {
+        "name": "discord.gg/rakuzan",
+        "type": "voice",
+        "position": 10,
+        "topic": null
+      },
+      {
+        "name": "゛📸﹕medya﹒link",
+        "type": "text",
+        "position": 26,
+        "topic": null
+      }
+    ],
+    "settings": {
+      "name": "🍁Rakuzan ⸺ Anime & Manga #BAKIM",
+      "description": "Rakuzan; insanların birlikte eğlenmesini, oyunlar oynamasını, yeni dostluklar ve arkadaşlıklar edinmesini ve en önemlisi bizlerle birlikte bolca anı biriktirmenizi sağlayacak bir sunucudur.",
+      "verification_level": "low"
+    },
+    "id": "1774005966"
+  }
+]

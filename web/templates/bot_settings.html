@@ -1,0 +1,160 @@
+﻿{% extends "base.html" %}
+{% block title %}Бот Настройки{% endblock %}
+{% block page_title %}⚙️ Бот Настройки{% endblock %}
+{% block content %}
+<style>
+.bs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px;}
+.bs-card{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.1);border-radius:14px;padding:22px;transition:border-color 0.2s;}
+.bs-card:hover{border-color:rgba(212,168,67,0.22);}
+.bs-card h2{font-size:11px;font-weight:700;color:rgba(240,232,208,0.4);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:16px;padding-ботtom:10px;border-ботtom:1px solid rgba(212,168,67,0.08);}
+label{font-size:11px;color:rgba(240,232,208,0.45);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.06em;}
+.field{margin-bottom:14px;}
+.status-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;}
+.status-online{background:#2ed573;box-shadow:0 0 6px #2ed573;}
+.status-idle{background:#ffa502;box-shadow:0 0 6px #ffa502;}
+.status-dnd{background:#ff4757;box-shadow:0 0 6px #ff4757;}
+.status-offline{background:#747f8d;}
+.activity-row{display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(212,168,67,0.05);border:1px solid rgba(212,168,67,0.08);border-radius:8px;margin-bottom:6px;cursor:pointer;transition:all 0.15s;}
+.activity-row:hover{border-color:rgba(212,168,67,0.2);background:rgba(212,168,67,0.08);}
+.activity-row.selected{border-color:rgba(212,168,67,0.4);background:rgba(212,168,67,0.12);}
+.activity-row span{font-size:12px;color:rgba(240,232,208,0.6);}
+</style>
+
+<div class="bs-grid">
+
+  <!-- Бот Статусu -->
+  <div class="bs-card">
+    <h2>🟢 Бот Статусu</h2>
+    <div id="бот-current" style="display:flex;align-items:center;gap:8px;margin-bottom:16px;font-size:13px;color:rgba(240,232,208,0.6);">
+      <i class="fas fa-spinner fa-spin" style="color:#c8922a;"></i> Загрузитьniyor...
+    </div>
+    <div class="field">
+      <label>Статус</label>
+      <select id="бот-status">
+        <option value="online">🟢 Online</option>
+        <option value="idle">🟡 Idle (Boşta)</option>
+        <option value="dnd">🔴 Do Not Disturb</option>
+        <option value="invisible">⚫ Invisible</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Aktivite Типü</label>
+      <select id="activity-type">
+        <option value="listening">🎵 Dinliyor</option>
+        <option value="playing">🎮 Oynuyor</option>
+        <option value="watching">👀 İzliyor</option>
+        <option value="competing">🏆 Yarışıyor</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Aktivite Metni</label>
+      <input type="text" id="activity-text" placeholder=".gg/Aether">
+    </div>
+    <button class="btn btn-primary" onclick="saveStatus()">💾 Сохранить</button>
+    <span id="status-msg" style="margin-left:10px;font-size:12px;color:rgba(240,232,208,0.4);"></span>
+  </div>
+
+  <!-- Prefix Ayarı -->
+  <div class="bs-card">
+    <h2>⌨️ Prefix Ayarı</h2>
+    <div style="font-size:12px;color:rgba(240,232,208,0.4);margin-bottom:14px;">Mevcut prefix: <code style="background:rgba(212,168,67,0.1);padding:2px 8px;border-radius:4px;color:#c8922a;" id="current-prefix">!</code></div>
+    <div class="field">
+      <label>Новый Prefix</label>
+      <input type="text" id="new-prefix" placeholder="! veya . veya ?" maxlength="3">
+    </div>
+    <button class="btn btn-primary" onclick="savePrefix()">💾 Сохранить</button>
+    <span id="prefix-msg" style="margin-left:10px;font-size:12px;color:rgba(240,232,208,0.4);"></span>
+    <div style="margin-top:12px;padding:10px;background:rgba(255,165,2,0.08);border:1px solid rgba(255,165,2,0.2);border-radius:8px;font-size:11px;color:rgba(255,165,2,0.7);">
+      ⚠️ Prefix değişikliği ботu yeniden başlatmayı gerektirir.
+    </div>
+  </div>
+
+  <!-- Бот Статистикаleri -->
+  <div class="bs-card">
+    <h2>📊 Бот Статистикаleri</h2>
+    <div id="бот-stats-detail" style="color:rgba(240,232,208,0.3);font-size:13px;">Загрузитьniyor...</div>
+  </div>
+
+  <!-- Hızlı Aktiviteler -->
+  <div class="bs-card">
+    <h2>⚡ Hızlı Aktiviteler</h2>
+    <div class="activity-row" onclick="quickSet('listening','.gg/Aether')">
+      <span>🎵</span><span>Dinliyor: .gg/Aether</span>
+    </div>
+    <div class="activity-row" onclick="quickSet('watching','Aether Серверsu')">
+      <span>👀</span><span>İzliyor: Aether Серверsu</span>
+    </div>
+    <div class="activity-row" onclick="quickSet('playing','Aether Бот')">
+      <span>🎮</span><span>Oynuyor: Aether Бот</span>
+    </div>
+    <div class="activity-row" onclick="quickSet('competing','Aether League')">
+      <span>🏆</span><span>Yarışıyor: Aether League</span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+async function loadБотInfo() {
+  try {
+    var d = await fetch('/api/stats').then(r => r.json());
+    if (d.error) return;
+    document.getElementById('бот-current').innerHTML =
+      '<span class="status-dot status-online"></span>' +
+      '<strong style="color:#f0e8d0;">' + (d.name || 'Бот') + '</strong>' +
+      '<span style="color:rgba(240,232,208,0.4);font-size:11px;">• ' + d.guilds + ' сервер • ' + d.users + ' участник • ' + d.latency + 'ms</span>';
+
+    document.getElementById('бот-stats-detail').innerHTML =
+      '<div style="display:grid;gap:8px;">' +
+      row('🏠 Сервер', d.guilds) +
+      row('👥 Всего Участник', d.users) +
+      row('📡 Ping', d.latency + 'ms') +
+      row('🤖 Бот Имя', d.name || '?') +
+      '</div>';
+  } catch(e) {}
+}
+
+function row(k, v) {
+  return '<div style="display:flex;justify-content:space-between;padding:8px 12px;background:rgba(212,168,67,0.04);border-radius:8px;">' +
+    '<span style="font-size:12px;color:rgba(240,232,208,0.45);">' + k + '</span>' +
+    '<span style="font-size:12px;font-weight:600;color:#f0e8d0;">' + v + '</span></div>';
+}
+
+function quickSet(type, text) {
+  document.getElementById('activity-type').value = type;
+  document.getElementById('activity-text').value = text;
+  document.querySelectorAll('.activity-row').forEach(r => r.classList.remove('selected'));
+  event.currentTarget.classList.add('selected');
+}
+
+async function saveStatus() {
+  var msg = document.getElementById('status-msg');
+  var body = {
+    status: document.getElementById('бот-status').value,
+    activity_type: document.getElementById('activity-type').value,
+    activity_text: document.getElementById('activity-text').value
+  };
+  try {
+    var r = await fetch('/api/bot/status', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)}).then(r => r.json());
+    msg.textContent = r.ok ? '✅ Сохранено' : '❌ ' + (r.error || 'Ошибка');
+  } catch(e) { msg.textContent = '❌ Bağlantı ошибкаsı'; }
+}
+
+async function savePrefix() {
+  var msg = document.getElementById('prefix-msg');
+  var prefix = document.getElementById('new-prefix').value.trim();
+  if (!prefix) { msg.textContent = '❌ Prefix пусто olamaz'; return; }
+  try {
+    var r = await fetch('/api/bot/prefix', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({prefix})}).then(r => r.json());
+    if (r.ok) {
+      msg.textContent = '✅ Сохранено (yeniden başlatma gerekli)';
+      document.getElementById('current-prefix').textContent = prefix;
+    } else {
+      msg.textContent = '❌ ' + (r.error || 'Ошибка');
+    }
+  } catch(e) { msg.textContent = '❌ Bağlantı ошибкаsı'; }
+}
+
+loadБотInfo();
+</script>
+{% endblock %}

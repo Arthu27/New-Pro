@@ -1,0 +1,16 @@
+{
+  "steps": [
+    {
+      "action": "mute",
+      "count": 3,
+      "duration": 10,
+      "unit": "minute"
+    },
+    {
+      "action": "mute",
+      "count": 5,
+      "duration": 1,
+      "unit": "hour"
+    }
+  ]
+}

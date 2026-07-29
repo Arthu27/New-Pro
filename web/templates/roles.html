@@ -1,0 +1,91 @@
+﻿{% extends "base.html" %}
+{% block title %}Управление ролями - Aether{% endblock %}
+{% block page_title %}ROL YÖNETİMİ{% endblock %}
+{% block content %}
+<style>
+.role-card{background:rgba(26,22,16,0.7);border:1px solid rgba(200,160,80,0.3);border-radius:14px;padding:18px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;}
+.role-color{width:40px;height:40px;border-radius:50%;border:2px solid rgba(255,255,255,0.2);}
+.role-name{font-size:15px;font-weight:700;color:#f0e8d0;margin-bottom:3px;}
+.role-members{font-size:12px;color:rgba(240,232,208,0.55);}
+.role-actions{display:flex;gap:8px;}
+.btn-sm{padding:6px 12px;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;transition:all 0.3s;}
+.btn-edit{background:#c8922a;color:#f0e8d0;}
+.btn-delete{background:#e74c3c;color:#f0e8d0;}
+.btn-add{padding:12px 20px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#f0e8d0;border:none;border-radius:14px;cursor:pointer;font-weight:700;margin-bottom:20px;}
+</style>
+
+<button class="btn-add" onclick="openNameModal()"><i class="fas fa-plus"></i> Новый Роль Создать</button>
+
+<div style="margin-bottom:15px;">
+  <select style="display:none" id="guild-select" onchange="loadРольes()" style="width:100%;padding:12px;background:#100e08;border:2px solid var(--accent);border-radius:8px;color:#f0e8d0;">
+    <option value="">Сервер выбрать...</option>
+  </select>
+</div>
+
+<div id="role-list"></div>
+
+<div id="modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;justify-content:center;align-items:center;">
+  <div style="background:linear-gradient(135deg,var(--bg2),var(--surface));border:2px solid var(--accent);border-radius:20px;padding:30px;max-width:450px;width:90%;">
+    <h3 style="color:#c8922a;margin-bottom:20px;">Роль Создать</h3>
+    <input type="text" id="role-name" placeholder="Роль adı" style="width:100%;padding:10px;background:#100e08;border:2px solid rgba(200,160,80,0.3);border-radius:8px;color:#f0e8d0;margin-bottom:12px;box-sizing:border-box;">
+    <input type="color" id="role-color" value="#c8922a" style="width:100%;height:50px;border:1px solid rgba(212,168,67,0.2);border-radius:8px;margin-bottom:15px;cursor:pointer;background:rgba(255,255,255,0.04);padding:3px;">
+    <div style="display:flex;gap:10px;">
+      <button onclick="createРольe()" style="flex:1;padding:10px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#f0e8d0;border:none;border-radius:8px;cursor:pointer;font-weight:700;">Создать</button>
+      <button onclick="closeModal()" style="flex:1;padding:10px;background:#333;color:rgba(240,232,208,0.55);border:none;border-radius:8px;cursor:pointer;">Отмена</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var selectedGuild = '1421244140359909513';
+async function loadGuilds() {
+  loadРольes();
+}
+
+async function loadРольes() {
+  if(!selectedGuild) return;
+  var r = await fetch('/api/guild/'+selectedGuild+'/roles');
+  var roles = await r.json();
+  document.getElementById('role-list').innerHTML = roles.map(function(role){
+    return '<div class="role-card">'+
+      '<div style="display:flex;gap:15px;align-items:center;">'+
+        '<div class="role-color" style="background:'+role.color+';"></div>'+
+        '<div><div class="role-name">'+role.name+'</div><div class="role-members">'+role.members+' участник</div></div>'+
+      '</div>'+
+      '<div class="role-actions">'+
+        '<button class="btn-sm btn-edit" onclick="editРольe(\''+role.id+'\')"><i class="fas fa-edit"></i></button>'+
+        '<button class="btn-sm btn-delete" onclick="deleteРольe(\''+role.id+'\',\''+role.name+'\')"><i class="fas fa-trash"></i></button>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+
+function openNameModal() {
+  document.getElementById('modal').style.display='flex';
+}
+function closeModal() { document.getElementById('modal').style.display='none'; }
+
+async function createРольe() {
+  var name = document.getElementById('role-name').value.trim();
+  var color = document.getElementById('role-color').value;
+  if(!name) { alert('Роль adı gir!'); return; }
+  var r = await fetch('/api/guild/'+selectedGuild+'/roles/create', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({name:name, color:color})
+  });
+  var d = await r.json();
+  if(d.success) { closeModal(); loadРольes(); }
+  else alert(d.error||'Ошибка');
+}
+
+async function deleteРольe(id, name) {
+  if(!confirm(name+' рольnü silmek istediğine emin misin?')) return;
+  var r = await fetch('/api/guild/'+selectedGuild+'/roles/'+id+'/delete', {method:'POST'});
+  var d = await r.json();
+  if(d.success) loadРольes();
+  else alert(d.error||'Ошибка');
+}
+
+loadGuilds();
+</script>
+{% endblock %}
