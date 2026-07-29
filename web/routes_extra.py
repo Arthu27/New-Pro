@@ -1977,15 +1977,41 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
     def api_create_role(guild_id):
         import web.app as _app; bot = _app.bot_instance
         import asyncio, discord
-        if not bot: return jsonify({'error': 'Bot offline'})
+        if not bot: return jsonify({'error': 'Bot offline'}), 503
         data = request.get_json(silent=True) or {}
+        name = (data.get('name') or '').strip()
+        if not name:
+            return jsonify({'error': 'Rol adı gerekli'}), 400
+        # Bot'un sahip olduğu guild'lerden biri mi kontrol et
+        try:
+            gid = int(guild_id)
+        except (TypeError, ValueError):
+            return jsonify({'error': 'Geçersiz sunucu ID'}), 400
+        guild = bot.get_guild(gid) if bot else None
+        if guild is None and bot is not None:
+            # Fallback: id'yi string olarak karşılaştır
+            for g in bot.guilds:
+                if str(g.id) == str(guild_id):
+                    guild = g
+                    break
+        if guild is None:
+            return jsonify({'error': f'Bot bu sunucuda bulunmuyor (id={guild_id}). Bot guilds: {[str(g.id) for g in bot.guilds]}'}), 404
         async def do():
-            guild = bot.get_guild(int(guild_id))
-            color_hex = data.get('color', '#dc143c').lstrip('#')
-            color = discord.Color(int(color_hex, 16))
-            await guild.create_role(name=data['name'], color=color)
-        asyncio.run_coroutine_threadsafe(do(), bot.loop).result(timeout=10)
-        return jsonify({'success': True})
+            color_hex = (data.get('color') or '#dc143c').lstrip('#') or 'dc143c'
+            try:
+                color = discord.Color(int(color_hex, 16))
+            except ValueError:
+                color = discord.Color.default()
+            await guild.create_role(name=name, color=color, reason='Aether panel tarafından oluşturuldu')
+        try:
+            asyncio.run_coroutine_threadsafe(do(), bot.loop).result(timeout=10)
+            return jsonify({'success': True})
+        except discord.Forbidden:
+            return jsonify({'error': 'Bu sunucuda rol oluşturma yetkim yok'}), 403
+        except discord.HTTPException as e:
+            return jsonify({'error': f'Discord hatası: {e}'}), 500
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
 
     @app.route('/api/guild/<guild_id>/roles/<role_id>/delete', methods=['POST'])
     @login_required
@@ -2521,11 +2547,18 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
             with open(f, encoding='utf-8') as fp: settings = json.load(fp)
         # type -> key mapping
         key_map = {'member': 'member_roles', 'girl': 'girl_roles', 'boy': 'boy_roles', 'bot': 'bot_roles'}
-        key = key_map.get(data.get('type'), data.get('type')+'_roles')
-        settings[key] = data['role']
+        t = data.get('type', 'member')
+        key = key_map.get(t, t + '_roles')
+        # Frontend hem 'roles' (çoğul) hem 'role' (tekil) yollayabilir; ikisini de kabul et
+        new_value = data.get('roles', data.get('role', []))
+        if not isinstance(new_value, list):
+            new_value = []
+        # Sadece string id'leri tut
+        new_value = [str(x) for x in new_value if x]
+        settings[key] = new_value
         os.makedirs('data', exist_ok=True)
         with open(f, 'w', encoding='utf-8') as fp: json.dump(settings, fp, indent=2, ensure_ascii=False)
-        return jsonify({'success': True})
+        return jsonify({'success': True, 'key': key, 'value': new_value})
 
     @app.route('/api/guild/<guild_id>/leveling', methods=['GET', 'POST'])
     @login_required
