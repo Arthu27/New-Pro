@@ -172,7 +172,7 @@ lines.append('  if(ev.old_name) h+=row("Старый Имя","<span style=\\"col
 lines.append('  if(ev.new_name) h+=row("Новый Имя","<span style=\\"color:#2ecc71;\\">"+ev.new_name+"</span>");')
 lines.append('  if(ev.old_nick) h+=row("Старый Nick","<span style=\\"color:#e74c3c;\\">"+ev.old_nick+"</span>");')
 lines.append('  if(ev.new_nick) h+=row("Новый Nick","<span style=\\"color:#2ecc71;\\">"+ev.new_nick+"</span>");')
-lines.append('  if(ev.max_uголос) h+=row("Maks Kullanim",ev.max_uголос);')
+lines.append('  if(ev.max_uses) h+=row("Maks Kullanim",ev.max_uses);')
 lines.append('  if(ev.code) h+=row("Davet Kodu","discord.gg/"+ev.code);')
 lines.append('  // Сообщение icerikleri')
 lines.append('  if(ev.content&&ev.action==="Сообщение Yazildi") h+="<div style=\\"margin-top:15px;\\"><div style=\\"color:#888;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-ботtom:6px;\\">Сообщение Icerigi</div><div class=\\"msg-box\\">"+ev.content+"</div></div>";')

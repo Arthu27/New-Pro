@@ -38,14 +38,14 @@ class Stats(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_ban(self, guild, user):
-        async for entry in guild.audit_logs(limit=1, action=discord.AuditЛогAction.ban):
+        async for entry in guild.audit_logs(limit=1, action=discord.AuditLogAction.ban):
             if entry.target.id == user.id:
                 self.add_action(guild.id, entry.user.id, "ban")
                 break
 
     @commands.Cog.listener()
     async def on_member_remove(self, member):
-        async for entry in member.guild.audit_logs(limit=1, action=discord.AuditЛогAction.kick):
+        async for entry in member.guild.audit_logs(limit=1, action=discord.AuditLogAction.kick):
             if entry.target.id == member.id:
                 self.add_action(member.guild.id, entry.user.id, "kick")
                 break

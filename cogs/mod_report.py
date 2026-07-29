@@ -46,7 +46,7 @@ def _load_mod_data() -> dict:
                 return json.load(f)
         except:
             pass
-    return {'caголос': {}}
+    return {'case': {}}
 
 
 def _load_lb(guild_id: int) -> dict:
@@ -92,7 +92,7 @@ def _load_invites(guild_id: int) -> dict:
             for uid, val in data.items():
                 if isinstance(val, dict):
                     # {'name': '...', 'total': 25} veya {'count': 5}
-                    result[uid] = val.get('total', val.get('count', val.get('uголос', 0)))
+                    result[uid] = val.get('total', val.get('count', val.get('uses', 0)))
                 elif isinstance(val, (int, float)):
                     result[uid] = int(val)
             return result
@@ -153,17 +153,17 @@ async def _build_weekly_report(guild: discord.Guild, days: int = 7, force_cutoff
     cfg = _load_cfg(guild.id)
 
     gid = str(guild.id)
-    all_caголос = mod_data.get('caголос', {}).get(gid, [])
+    all_case = mod_data.get('case', {}).get(gid, [])
 
     # Bu dönemdeki mod case'leri
-    period_caголос = []
-    for c in all_caголос:
+    period_case = []
+    for c in all_case:
         try:
             ts = datetime.datetime.fromisoformat(c['timestamp'])
             if ts.tzinfo is None:
                 ts = ts.replace(tzinfo=datetime.timezone.utc)
             if ts >= cutoff:
-                period_caголос.append(c)
+                period_case.append(c)
         except:
             pass
 
@@ -189,7 +189,7 @@ async def _build_weekly_report(guild: discord.Guild, days: int = 7, force_cutoff
         f'> 📅 Dönem: **{period}**\n'
         f'> 🗓️ <t:{ts_cutoff}:D> → <t:{ts_now}:D>\n'
         f'> 👥 Всего Участник: **{guild.member_count}**\n'
-        f'> 📊 Mod Действиеi: **{len(period_caголос)}**'
+        f'> 📊 Mod Действиеi: **{len(period_case)}**'
     )
     cover.set_image(url='https://media.tenor.com/ZBDpMFBMFpkAAAAC/celebration-party.gif')
     embeds.append(cover)
@@ -296,10 +296,10 @@ async def _build_weekly_report(guild: discord.Guild, days: int = 7, force_cutoff
     # ══════════════════════════════════════════════════════════════════════════
     # 4. MOD İSTATİSTİKLERİ
     # ══════════════════════════════════════════════════════════════════════════
-    if period_caголос:
+    if period_case:
         action_counts = defaultdict(int)
         mod_counts = defaultdict(int)
-        for c in period_caголос:
+        for c in period_case:
             action_counts[c['action'].lower()] += 1
             mod_counts[c['mod_id']] += 1
 
@@ -316,7 +316,7 @@ async def _build_weekly_report(guild: discord.Guild, days: int = 7, force_cutoff
             action_lines.append(f'{_action_emoji(action)} `{action.upper():<8}` {bar} **{count}**')
 
         mod_embed.add_field(
-            name=f'📋 Действие Dağılımı ({len(period_caголос)} всего)',
+            name=f'📋 Действие Dağılımı ({len(period_case)} всего)',
             value='\n'.join(action_lines) or 'Нет',
             inline=False
         )
@@ -389,10 +389,10 @@ class ModReportView(discord.ui.View):
         # Kendi istatistiklerini göster
         data = _load_mod_data()
         gid = str(interaction.guild.id)
-        caголос = data.get('caголос', {}).get(gid, [])
-        mod_caголос = [c for c in caголос if c['mod_id'] == str(interaction.user.id)]
+        case = data.get('case', {}).get(gid, [])
+        mod_case = [c for c in case if c['mod_id'] == str(interaction.user.id)]
         action_counts = defaultdict(int)
-        for c in mod_caголос:
+        for c in mod_case:
             action_counts[c['action'].lower()] += 1
         lb = _load_lb(interaction.guild.id)
         inv = _load_invites(interaction.guild.id)
@@ -417,7 +417,7 @@ class ModReportView(discord.ui.View):
             name='⚔️ Moderasyon',
             value=(
                 f'```yaml\n'
-                f'Всего : {len(mod_caголос)}\n'
+                f'Всего : {len(mod_case)}\n'
                 f'Бан    : {action_counts.get("ban", 0)}\n'
                 f'Кик   : {action_counts.get("kick", 0)}\n'
                 f'Мут: {action_counts.get("timeout", 0)}\n'
@@ -535,7 +535,7 @@ class ModReport(commands.Cog):
         )
         await ctx.send(embed=embed, view=ModReportView())
 
-    @commands.command(name='haftalik-отчёт', aliaголос=['отчёт', 'report'])
+    @commands.command(name='haftalik-отчёт', aliases=['отчёт', 'report'])
     @commands.has_permissions(manage_messages=True)
     async def weekly_report(self, ctx, gun: int = 7):
         """Haftalık toplantı отчётunu göster: !haftalik-отчёт [день]"""
@@ -639,17 +639,17 @@ class ModReport(commands.Cog):
         except Exception as e:
             await ctx.send(f'❌ Ошибка: {e}')
 
-    @commands.command(name='mod-istatistik', aliaголос=['modstats'])
+    @commands.command(name='mod-istatistik', aliases=['modstats'])
     @commands.has_permissions(manage_messages=True)
     async def mod_stats(self, ctx, moderator: discord.Member = None):
         """Модератор istatistikleri: !mod-istatistik [@kişi]"""
         target = moderator or ctx.author
         data = _load_mod_data()
         gid = str(ctx.guild.id)
-        caголос = data.get('caголос', {}).get(gid, [])
-        mod_caголос = [c for c in caголос if c['mod_id'] == str(target.id)]
+        case = data.get('case', {}).get(gid, [])
+        mod_case = [c for c in case if c['mod_id'] == str(target.id)]
         action_counts = defaultdict(int)
-        for c in mod_caголос:
+        for c in mod_case:
             action_counts[c['action'].lower()] += 1
         lb = _load_lb(ctx.guild.id)
         inv = _load_invites(ctx.guild.id)
@@ -673,7 +673,7 @@ class ModReport(commands.Cog):
             name='⚔️ Moderasyon',
             value=(
                 f'```yaml\n'
-                f'Всего : {len(mod_caголос)}\n'
+                f'Всего : {len(mod_case)}\n'
                 f'Бан    : {action_counts.get("ban", 0)}\n'
                 f'Кик   : {action_counts.get("kick", 0)}\n'
                 f'Мут: {action_counts.get("timeout", 0)}\n'

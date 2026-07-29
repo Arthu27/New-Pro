@@ -18,12 +18,12 @@ class Moderation(commands.Cog):
                 with open(filepath, 'r', encoding='utf-8') as f:
                     data = json.load(f)
             else:
-                data = {'caголос': {}}
+                data = {'case': {}}
             gid = str(guild_id)
-            if gid not in data['caголос']:
-                data['caголос'][gid] = []
-            case_id = len(data['caголос'][gid]) + 1
-            data['caголос'][gid].append({
+            if gid not in data['case']:
+                data['case'][gid] = []
+            case_id = len(data['case'][gid]) + 1
+            data['case'][gid].append({
                 'id': case_id, 'action': action,
                 'user_id': str(user_id), 'mod_id': str(mod_id),
                 'reason': reason or 'Не указана',

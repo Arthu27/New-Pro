@@ -17,19 +17,19 @@ intents.members = True
 бот = discord.Client(intents=intents)
 
 ACTION_MAP = {
-    discord.AuditЛогAction.ban:              ('mod',     'Бан'),
-    discord.AuditЛогAction.unban:            ('mod',     'Бан Снят'),
-    discord.AuditЛогAction.kick:             ('mod',     'Кик'),
-    discord.AuditЛогAction.member_update:    ('mod',     'Участник Обновитьndi'),
-    discord.AuditЛогAction.channel_create:   ('channel', 'Канал Создатьuldu'),
-    discord.AuditЛогAction.channel_delete:   ('channel', 'Канал Удалено'),
-    discord.AuditЛогAction.role_create:      ('role',    'Role Создатьuldu'),
-    discord.AuditЛогAction.role_delete:      ('role',    'Role Удалено'),
-    discord.AuditЛогAction.member_role_update: ('role',  'Role Değişikliği'),
-    discord.AuditЛогAction.message_delete:   ('message', 'Сообщение Удалено'),
-    discord.AuditЛогAction.invite_create:    ('invite',  'Davet Создатьuldu'),
-    discord.AuditЛогAction.invite_delete:    ('invite',  'Davet Удалено'),
-    discord.AuditЛогAction.guild_update:     ('server',  'Сервер Обновитьndi'),
+    discord.AuditLogAction.ban:              ('mod',     'Бан'),
+    discord.AuditLogAction.unban:            ('mod',     'Бан Снят'),
+    discord.AuditLogAction.kick:             ('mod',     'Кик'),
+    discord.AuditLogAction.member_update:    ('mod',     'Участник Обновитьndi'),
+    discord.AuditLogAction.channel_create:   ('channel', 'Канал Создатьuldu'),
+    discord.AuditLogAction.channel_delete:   ('channel', 'Канал Удалено'),
+    discord.AuditLogAction.role_create:      ('role',    'Role Создатьuldu'),
+    discord.AuditLogAction.role_delete:      ('role',    'Role Удалено'),
+    discord.AuditLogAction.member_role_update: ('role',  'Role Değişikliği'),
+    discord.AuditLogAction.message_delete:   ('message', 'Сообщение Удалено'),
+    discord.AuditLogAction.invite_create:    ('invite',  'Davet Создатьuldu'),
+    discord.AuditLogAction.invite_delete:    ('invite',  'Davet Удалено'),
+    discord.AuditLogAction.guild_update:     ('server',  'Сервер Обновитьndi'),
 }
 
 @бот.event
@@ -52,7 +52,7 @@ async def on_ready():
                 user = entry.user
 
                 # Мут tespiti
-                if entry.action == discord.AuditЛогAction.member_update:
+                if entry.action == discord.AuditLogAction.member_update:
                     after = entry.changes.after
                     if hasattr(after, 'timed_out_until'):
                         action_name = 'Мут' if getattr(after, 'timed_out_until', None) else 'Мут Снят'

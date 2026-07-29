@@ -197,7 +197,7 @@ function showDetail(idx){
   if(ev.new_name)  h+=row('Новый Имя','<span style="color:#2ecc71;">'+esc(ev.new_name)+'</span>');
   if(ev.old_nick)  h+=row('Старый Nick','<span style="color:#e74c3c;">'+esc(ev.old_nick)+'</span>');
   if(ev.new_nick)  h+=row('Новый Nick','<span style="color:#2ecc71;">'+esc(ev.new_nick)+'</span>');
-  if(ev.max_uголос)  h+=row('Maks Kullanim',esc(String(ev.max_uголос)));
+  if(ev.max_uses)  h+=row('Maks Kullanim',esc(String(ev.max_uses)));
   if(ev.code)      h+=row('Davet Kodu','discord.gg/'+esc(ev.code));
   if(ev.channel_type) h+=row('Канал Tipi',esc(ev.channel_type));
 

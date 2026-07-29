@@ -216,7 +216,7 @@ class AutoRoleLevel(commands.Cog):
         embed.add_field(name='📈 До след. уровня', value=f'```{next_level_xp - (xp - sum(int(100 * 1.15**i) for i in range(level)))} XP```', inline=True)
         await ctx.send(embed=embed)
 
-    @commands.command(name='top-level', aliaголос=['top-xp', 'xp-top'])
+    @commands.command(name='top-level', aliases=['top-xp', 'xp-top'])
     async def top_level(self, ctx):
         """Топ-10 по уровню"""
         xp_data = self._load_xp(ctx.guild.id)

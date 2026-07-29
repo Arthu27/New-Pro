@@ -14,7 +14,7 @@ class InviteTracker(commands.Cog):
     async def cache_invites(self, guild):
         try:
             invites = await guild.invites()
-            self.invite_cache[guild.id] = {inv.code: inv.uголос for inv in invites}
+            self.invite_cache[guild.id] = {inv.code: inv.uses for inv in invites}
         except:
             pass
 
@@ -27,7 +27,7 @@ class InviteTracker(commands.Cog):
     async def on_invite_create(self, invite):
         if invite.guild.id not in self.invite_cache:
             self.invite_cache[invite.guild.id] = {}
-        self.invite_cache[invite.guild.id][invite.code] = invite.uголос
+        self.invite_cache[invite.guild.id][invite.code] = invite.uses
 
     @commands.Cog.listener()
     async def on_invite_delete(self, invite):
@@ -45,12 +45,12 @@ class InviteTracker(commands.Cog):
         inviter = None
         used_code = None
         for inv in new_invites:
-            old_uголос = old_cache.get(inv.code, 0)
-            if inv.uголос > old_uголос:
+            old_uses = old_cache.get(inv.code, 0)
+            if inv.uses > old_uses:
                 inviter = inv.inviter
                 used_code = inv.code
                 break
-        self.invite_cache[guild.id] = {inv.code: inv.uголос for inv in new_invites}
+        self.invite_cache[guild.id] = {inv.code: inv.uses for inv in new_invites}
         self._save_join(guild.id, member, inviter, used_code)
 
     @commands.Cog.listener()

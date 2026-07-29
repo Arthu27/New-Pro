@@ -73,7 +73,7 @@ class Leaderboard(commands.Cog):
                     _save(member.guild.id, data)
 
     # ── /sıralama командаu ──────────────────────────────────────────────────────
-    @commands.command(name='голос-sıralama', aliaголос=['sssıralama', 'голосliler', 'голосstat'])
+    @commands.command(name='голос-sıralama', aliases=['sssıralama', 'голосliler', 'голосstat'])
     async def voice_leaderboard(self, ctx):
         """Всего голос süresi sıralaması: !голос-sıralama"""
         vs_path = f'data/voice_stats_{ctx.guild.id}.json'
@@ -164,7 +164,7 @@ class Leaderboard(commands.Cog):
                 # Değerler dict olabilir — int'e çevir
                 for uid, val in raw.items():
                     if isinstance(val, dict):
-                        invite_data[uid] = val.get('total', val.get('count', val.get('uголос', 0)))
+                        invite_data[uid] = val.get('total', val.get('count', val.get('uses', 0)))
                     else:
                         invite_data[uid] = int(val)
             except:

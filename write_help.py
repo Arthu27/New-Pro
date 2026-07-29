@@ -189,7 +189,7 @@ class Help(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(name="yardim", aliaголос=["help", "командаlar", "h", "menu"])
+    @commands.command(name="yardim", aliases=["help", "командаlar", "h", "menu"])
     async def yardim_prefix(self, ctx):
         try:
             await ctx.message.delete()

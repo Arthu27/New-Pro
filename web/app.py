@@ -922,10 +922,10 @@ def api_logs():
         if os.path.exists(mod_file):
             with open(mod_file, 'r', encoding='utf-8') as f:
                 data = json.load(f)
-            for guild_id, caголос in data.get('caголос', {}).items():
+            for guild_id, case in data.get('case', {}).items():
                 if filter_guild and guild_id != filter_guild:
                     continue
-                for case in caголос:
+                for case in case:
                     all_events.append({
                         'guild_id': guild_id,
                         'category': 'mod',

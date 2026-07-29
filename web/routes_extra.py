@@ -35,12 +35,12 @@ def _process_action(answer: str, bot, guild_id: str, session_obj) -> str:
         return ''
 
     action_type = action_data.get('action', '').lower()
-    _aliaголос = {
+    _aliases = {
         'dm_message': 'dm', 'send_dm': 'dm', 'direct_message': 'dm',
         'chat_message': 'send_message', 'channel_message': 'send_message',
         'send_channel_message': 'send_message', 'warning': 'warn', 'mute': 'timeout',
     }
-    action_type = _aliaголос.get(action_type, action_type)
+    action_type = _aliases.get(action_type, action_type)
     uid = str(action_data.get('user_id', ''))
     gid = str(guild_id)
     guild = bot.get_guild(int(guild_id)) if bot else None
@@ -710,8 +710,8 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
                         try:
                             with open(mod_file, 'r', encoding='utf-8') as fp:
                                 md = json.load(fp)
-                            caголос = md.get('caголос', {}).get(str(g.id), [])
-                            for c in caголос:
+                            case = md.get('case', {}).get(str(g.id), [])
+                            for c in case:
                                 if str(c.get('user_id','')) == uid_str:
                                     mod_history.append(
                                         f"{c.get('timestamp','')[:10]} {c.get('action','?').upper()} — "
@@ -1530,9 +1530,9 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         mf = 'data/mod_data.json'
         if os.path.exists(mf):
             with open(mf, encoding='utf-8') as f: mdata = json.load(f)
-            caголос = [c for c in mdata.get('caголос', {}).get(guild_id, []) if str(c.get('user_id')) == str(user_id)]
-            result['caголос'] = caголос
-            result['case_count'] = len(caголос)
+            case = [c for c in mdata.get('case', {}).get(guild_id, []) if str(c.get('user_id')) == str(user_id)]
+            result['case'] = case
+            result['case_count'] = len(case)
         return jsonify(result)
 
     @app.route('/api/my-profile', methods=['GET'])
@@ -1864,8 +1864,8 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
             try:
                 with open(mod_file, 'r', encoding='utf-8') as fp:
                     md = json.load(fp)
-                caголос = md.get('caголос', {})
-                for gid, case_list in caголос.items():
+                case = md.get('case', {})
+                for gid, case_list in case.items():
                     if guild_id and gid != guild_id:
                         continue
                     if not isinstance(case_list, list):
@@ -2582,7 +2582,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
             with open(f) as fp: cmds = json.load(fp)
         cmd_id = str(int(datetime.utcnow().timestamp()))
         cmds[cmd_id] = {'id': cmd_id, 'trigger': data['trigger'], 'response': data['response'],
-                        'type': data.get('type', 'text'), 'uголос': 0, 'created_at': datetime.utcnow().isoformat()}
+                        'type': data.get('type', 'text'), 'uses': 0, 'created_at': datetime.utcnow().isoformat()}
         with open(f, 'w') as fp: json.dump(cmds, fp, indent=2)
         return jsonify({'success': True})
 
@@ -2914,8 +2914,8 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         if os.path.exists(mod_file):
             with open(mod_file, 'r', encoding='utf-8') as fp:
                 data = json.load(fp)
-            caголос = data.get('caголос', {}).get(guild_id, [])
-            for c in caголос:
+            case = data.get('case', {}).get(guild_id, [])
+            for c in case:
                 a = (c.get('action') or '').lower()
                 if 'ban' in a: ban_count += 1
                 elif 'kick' in a: kick_count += 1
@@ -3093,14 +3093,14 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
                     invites_future = asyncio.run_coroutine_threadsafe(guild.invites(), bot.loop)
                     invites = invites_future.result(timeout=5)
                     result['active_invites'] = len(invites)
-                    result['total_invites'] = sum(inv.uголос or 0 for inv in invites)
+                    result['total_invites'] = sum(inv.uses or 0 for inv in invites)
                     # Davet listesi
                     result['invite_list'] = [{
                         'code': inv.code,
                         'inviter': inv.inviter.display_name if inv.inviter else '?',
-                        'uголос': inv.uголос or 0,
+                        'uses': inv.uses or 0,
                         'channel': inv.channel.name if inv.channel else '?'
-                    } for inv in sorted(invites, key=lambda x: x.uголос or 0, reverse=True)]
+                    } for inv in sorted(invites, key=lambda x: x.uses or 0, reverse=True)]
                     # Liderboard - kim kaç kişi davet etti
                     lb_map = {}
                     for inv in invites:
@@ -3112,8 +3112,8 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
                                     'avatar': str(inv.inviter.display_avatar.url),
                                     'total': 0, 'joins': 0, 'leaves': 0, 'fake': 0
                                 }
-                            lb_map[uid]['total'] += inv.uголос or 0
-                            lb_map[uid]['joins'] += inv.uголос or 0
+                            lb_map[uid]['total'] += inv.uses or 0
+                            lb_map[uid]['joins'] += inv.uses or 0
                     result['leaderboard'] = sorted(lb_map.values(), key=lambda x: x['total'], reverse=True)[:20]
                 except Exception:
                     pass

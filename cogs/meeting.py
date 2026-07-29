@@ -158,7 +158,7 @@ def _load_invites(guild_id: int) -> dict:
             result = {}
             for uid, val in data.items():
                 if isinstance(val, dict):
-                    result[uid] = val.get('total', val.get('count', val.get('uголос', 0)))
+                    result[uid] = val.get('total', val.get('count', val.get('uses', 0)))
                 else:
                     result[uid] = int(val)
             return result

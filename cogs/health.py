@@ -119,7 +119,7 @@ class Health(commands.Cog):
     async def on_member_remove(self, member):
         # Кик mi kontrole et
         try:
-            async for entry in member.guild.audit_logs(limit=1, action=discord.AuditЛогAction.kick):
+            async for entry in member.guild.audit_logs(limit=1, action=discord.AuditLogAction.kick):
                 if entry.target.id == member.id:
                     data = _load_health(str(member.guild.id))
                     data['kick_count'] = data.get('kick_count', 0) + 1

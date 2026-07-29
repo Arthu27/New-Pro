@@ -18,7 +18,7 @@ class AdvancedMod(commands.Cog):
             with open(self.data_file, "r", encoding="utf-8") as f:
                 self.data = json.load(f)
         else:
-            self.data = {"caголос": {}, "notes": {}, "watchlist": {}}
+            self.data = {"case": {}, "notes": {}, "watchlist": {}}
 
     def save_data(self):
         with open(self.data_file, "w", encoding="utf-8") as f:
@@ -26,10 +26,10 @@ class AdvancedMod(commands.Cog):
 
     def add_case(self, guild_id, user_id, mod_id, action, reason):
         guild_id = str(guild_id)
-        if guild_id not in self.data["caголос"]:
-            self.data["caголос"][guild_id] = []
-        case_id = len(self.data["caголос"][guild_id]) + 1
-        self.data["caголос"][guild_id].append({
+        if guild_id not in self.data["case"]:
+            self.data["case"][guild_id] = []
+        case_id = len(self.data["case"][guild_id]) + 1
+        self.data["case"][guild_id].append({
             "id": case_id, "user_id": user_id, "mod_id": mod_id,
             "action": action, "reason": reason,
             "timestamp": datetime.utcnow().isoformat()
@@ -41,10 +41,10 @@ class AdvancedMod(commands.Cog):
     @app_commands.checks.has_permissions(moderate_members=True)
     async def history(self, interaction: discord.Interaction, user: discord.Member):
         guild_id = str(interaction.guild.id)
-        caголос = self.data["caголос"].get(guild_id, [])
-        user_caголос = [c for c in caголос if str(c["user_id"]) == str(user.id)]
+        case = self.data["case"].get(guild_id, [])
+        user_case = [c for c in case if str(c["user_id"]) == str(user.id)]
 
-        if not user_caголос:
+        if not user_case:
             e = discord.Embed(title="✅  Temiz Geçmiş", color=0x2ECC71, timestamp=datetime.utcnow())
             e.description = (
                 f"```ansi\n\u001b[1;32m✔ TEMİZ KAYIT\u001b[0m\n```\n{_divider()}\n\n"
@@ -67,7 +67,7 @@ class AdvancedMod(commands.Cog):
         e.set_thumbnail(url=user.display_avatar.url)
         e.set_author(name=f"{user.display_name} — Geçmiş Регистрацияlar", icon_url=user.display_avatar.url)
 
-        for case in user_caголос[-8:]:
+        for case in user_case[-8:]:
             act = case['action'].lower()
             emoji = action_emojis.get(act, "📌")
             color_code = action_colors.get(act, "37")
@@ -83,7 +83,7 @@ class AdvancedMod(commands.Cog):
 
         e.add_field(
             name="📊 Özet",
-            value=f"```Всего {len(user_caголос)} moderasyon действиеi```",
+            value=f"```Всего {len(user_case)} moderasyon действиеi```",
             inline=False
         )
         e.set_footer(
@@ -96,8 +96,8 @@ class AdvancedMod(commands.Cog):
     @app_commands.checks.has_permissions(moderate_members=True)
     async def case(self, interaction: discord.Interaction, case_id: int):
         guild_id = str(interaction.guild.id)
-        caголос = self.data["caголос"].get(guild_id, [])
-        case = next((c for c in caголос if c["id"] == case_id), None)
+        case = self.data["case"].get(guild_id, [])
+        case = next((c for c in case if c["id"] == case_id), None)
 
         if not case:
             await interaction.response.send_message(embed=error_embed(f"Case #{case_id} bulunamadı."), ephemeral=True)
