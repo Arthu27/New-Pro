@@ -13,21 +13,25 @@ GIF_GIVEAWAY_WIN = "https://media.tenor.com/ZBDpMFBMFpkAAAAC/celebration-party.g
 
 
 def _win_dm_embed(prize: str, guild_name: str, guild_icon_url: str) -> discord.Embed:
-    """Giveaway kazanan DM embed'i."""
-    e = discord.Embed(title="🎉  ÇEKİLİŞİ KAZANDIN!", color=0x2ECC71, timestamp=datetime.utcnow())
+    """Giveaway kazanan DM embed'i — минимализм стиль."""
+    e = discord.Embed(color=0x2ECC71, timestamp=datetime.utcnow())
     e.description = (
-        f"```ansi\n\u001b[1;32m🏆 KAZANAN SENSİN!\u001b[0m\n```\n"
-        f"{_divider()}\n\n"
-        f"Tebrikler! **{guild_name}** serversundaki çekilişi kazandın! 🎊\n\n"
-        "> Ödülünü almak için server администраторleriyle iletişime geç.\n"
-        "> Katıldığın için çok teşekkürler!\n\n"
-        f"{_divider()}"
+        f"## Поздравляем!\n"
+        f"### Вы выиграли в розыгрыше\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"**Сервер:** {guild_name}\n"
+        f"**Приз:** {prize}\n\n"
+        f"Свяжитесь с администрацией сервера чтобы получить приз.\n"
+        f"Спасибо за участие!\n\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     )
-    e.add_field(name="🏆 Ödül", value=f"```{prize}```", inline=True)
-    e.add_field(name="💡 Как получить?", value="*Серверdaki bir right_btnyle iletişime geçerek ödülünü talep edebilirsin.*", inline=False)
     e.set_image(url=GIF_GIVEAWAY_WIN)
-    e.set_footer(text=f"{guild_name} • Giveaway Sistemi", icon_url=guild_icon_url)
+    if guild_icon_url:
+        e.set_footer(text=f"{guild_name} · Розыгрыши", icon_url=guild_icon_url)
+    else:
+        e.set_footer(text=f"{guild_name} · Розыгрыши")
     return e
+
 
 class GiveawayView(View):
     def __init__(self, gw_id: str, guild_id: str):
@@ -108,13 +112,20 @@ class GiveawayView(View):
         participants = gw.get('participants', [])
         winners_count = gw.get('winners', 1)
         if not participants:
-            embed = discord.Embed(
-                title='😔 Giveaway Bitti - Katılımcı Нет',
-                description='❌ Maalesef hiç katılımcı yoktu...\n\n🍀 Последнийraki çekilişe mutlaka katıl!',
-                color=0xe74c3c
+            embed = discord.Embed(color=0xe74c3c, timestamp=datetime.utcnow())
+            embed.description = (
+                f"## Розыгрыш завершён\n"
+                f"### Нет участников\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                f"К сожалению, никто не участвовал в розыгрыше.\n\n"
+                f"Обязательно участвуйте в следующем розыгрыше!\n\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             )
-            embed.set_thumbnail(url='https://media.discordapp.net/attachments/1107038411895881788/1110305847399120916/gifty.gif')
-            embed.set_footer(text='Giveaway Sistemi')
+            if interaction.guild.icon:
+                embed.set_footer(text=f"{interaction.guild.name} · Розыгрыши", icon_url=interaction.guild.icon.url)
+            else:
+                embed.set_footer(text=f"{interaction.guild.name} · Розыгрыши")
+            await interaction.followup.send(embed=embed)
             await interaction.followup.send(embed=embed)
             return
         
@@ -130,21 +141,22 @@ class GiveawayView(View):
                 except:
                     pass
 
-        embed = discord.Embed(
-            title="🎉  ÇEKİLİŞ BİTTİ — KAZANANLAR AÇIKLANDI!",
-            color=0x2ECC71,
-            timestamp=datetime.utcnow()
-        )
+        embed = discord.Embed(color=0x2ECC71, timestamp=datetime.utcnow())
         embed.description = (
-            f"```ansi\n\u001b[1;32m🏆 KAZANANLAR BELLİ OLDU!\u001b[0m\n```\n"
-            f"{_divider()}\n\n"
-            f"🏆 **Ödül:** `{gw['prize']}`\n\n"
-            "**Kazananlar:**\n" + "\n".join([f"🥇 {w}" for w in win_users]) +
-            f"\n\n> Tebrikler! Ödülünüzü almak için right_btnlerle iletişime geçin.\n\n"
-            f"{_divider()}"
+            f"## Розыгрыш завершён\n"
+            f"### Победители объявлены!\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            f"**Приз:** {gw['prize']}\n\n"
+            f"**Победители:**\n" + "\n".join([f"• {w}" for w in win_users]) +
+            f"\n\nПоздравляем! Свяжитесь с администрацией чтобы получить приз.\n\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         )
         embed.set_image(url=GIF_GIVEAWAY_WIN)
-        embed.set_footer(text=f"{interaction.guild.name} • Giveaway Sistemi")
+        if interaction.guild.icon:
+            embed.set_footer(text=f"{interaction.guild.name} · Розыгрыши", icon_url=interaction.guild.icon.url)
+        else:
+            embed.set_footer(text=f"{interaction.guild.name} · Розыгрыши")
+        await interaction.followup.send(embed=embed)
         await interaction.followup.send(embed=embed)
 
 class GiveawayCog(commands.Cog):
@@ -182,13 +194,20 @@ class GiveawayCog(commands.Cog):
                                 winners_count = gw.get('winners', 1)
 
                                 if not participants:
-                                    embed = discord.Embed(
-                                        title='😔 Giveaway Bitti - Katılımcı Нет',
-                                        description='❌ Maalesef hiç katılımcı yoktu...\n\n🍀 Последнийraki çekilişe mutlaka katıl!',
-                                        color=0xe74c3c
+                                    embed = discord.Embed(color=0xe74c3c, timestamp=datetime.utcnow())
+                                    embed.description = (
+                                        f"## Розыгрыш завершён\n"
+                                        f"### Нет участников\n"
+                                        f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                                        f"К сожалению, никто не участвовал в розыгрыше.\n\n"
+                                        f"Обязательно участвуйте в следующем розыгрыше!\n\n"
+                                        f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
                                     )
-                                    embed.set_thumbnail(url='https://media.discordapp.net/attachments/1107038411895881788/1110305847399120916/gifty.gif')
-                                    embed.set_footer(text='Giveaway Sistemi')
+                                    if guild.icon:
+                                        embed.set_footer(text=f"{guild.name} · Розыгрыши", icon_url=guild.icon.url)
+                                    else:
+                                        embed.set_footer(text=f"{guild.name} · Розыгрыши")
+                                    await channel.send(embed=embed)
                                     await channel.send(embed=embed)
                                     continue
 
@@ -209,29 +228,38 @@ class GiveawayCog(commands.Cog):
                                         pass
 
                                 if win_users_mentions:
-                                    embed = discord.Embed(
-                                        title="🎉  ÇEKİLİŞ BİTTİ — KAZANANLAR AÇIKLANDI!",
-                                        color=0x2ECC71,
-                                        timestamp=datetime.utcnow()
-                                    )
+                                    embed = discord.Embed(color=0x2ECC71, timestamp=datetime.utcnow())
                                     embed.description = (
-                                        f"```ansi\n\u001b[1;32m🏆 KAZANANLAR BELLİ OLDU!\u001b[0m\n```\n"
-                                        f"{_divider()}\n\n"
-                                        f"🏆 **Ödül:** `{gw['prize']}`\n\n"
-                                        "**Kazananlar:**\n" + "\n".join([f"🥇 {m}" for m in win_users_mentions]) +
-                                        f"\n\n> Tebrikler! Ödülünüzü almak için right_btnlerle iletişime geçin.\n\n"
-                                        f"{_divider()}"
+                                        f"## Розыгрыш завершён\n"
+                                        f"### Победители объявлены!\n"
+                                        f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                                        f"**Приз:** {gw['prize']}\n\n"
+                                        f"**Победители:**\n" + "\n".join([f"• {m}" for m in win_users_mentions]) +
+                                        f"\n\nПоздравляем! Свяжитесь с администрацией чтобы получить приз.\n\n"
+                                        f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
                                     )
                                     embed.set_image(url=GIF_GIVEAWAY_WIN)
-                                    embed.set_footer(text=f"{guild.name} • Giveaway Sistemi", icon_url=icon_url)
+                                    if icon_url:
+                                        embed.set_footer(text=f"{guild.name} · Розыгрыши", icon_url=icon_url)
+                                    else:
+                                        embed.set_footer(text=f"{guild.name} · Розыгрыши")
+                                    await channel.send(embed=embed)
                                     await channel.send(embed=embed)
                                 else:
-                                    embed = discord.Embed(
-                                        title="😔  Giveaway Bitti — Kazananlar Ayrıldı",
-                                        description="Kazanan oyuncuların hepsi serverdan ayrılmış!\n\n🔄 Lütfen `rerolel` командаu kullanarak yeni kazananlar выбратьin.",
-                                        color=0xE74C3C
+                                    embed = discord.Embed(color=0xE74C3C, timestamp=datetime.utcnow())
+                                    embed.description = (
+                                        f"## Розыгрыш завершён\n"
+                                        f"### Победители покинули сервер\n"
+                                        f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                                        f"Все выбранные победители покинули сервер!\n\n"
+                                        f"Используйте команду `reroll` чтобы выбрать новых победителей.\n\n"
+                                        f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
                                     )
-                                    embed.set_footer(text="Giveaway Sistemi")
+                                    if guild.icon:
+                                        embed.set_footer(text=f"{guild.name} · Розыгрыши", icon_url=guild.icon.url)
+                                    else:
+                                        embed.set_footer(text=f"{guild.name} · Розыгрыши")
+                                    await channel.send(embed=embed)
                                     await channel.send(embed=embed)
                 except Exception as e:
                     print(f'Giveaway load error: {e}')
@@ -357,21 +385,22 @@ class GiveawayCog(commands.Cog):
             if user:
                 win_users.append(user.mention)
         
-        embed = discord.Embed(
-            title="🎰  REROLL — YENİ KAZANANLAR SEÇİLDİ!",
-            color=0xF39C12,
-            timestamp=datetime.utcnow()
-        )
+        embed = discord.Embed(color=0xF39C12, timestamp=datetime.utcnow())
         embed.description = (
-            f"```ansi\n\u001b[1;33m🔄 REROLL YAPILDI\u001b[0m\n```\n"
-            f"{_divider()}\n\n"
-            f"🏆 **Ödül:** `{gw['prize']}`\n\n"
-            "**Новый Kazananlar:**\n" + "\n".join([f"🥇 {w}" for w in win_users]) +
-            f"\n\n> Tebrikler! Ödülünüzü almak için right_btnlerle iletişime geçin.\n\n"
-            f"{_divider()}"
+            f"## Реролл выполнен\n"
+            f"### Новые победители выбраны!\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            f"**Приз:** {gw['prize']}\n\n"
+            f"**Новые победители:**\n" + "\n".join([f"• {w}" for w in win_users]) +
+            f"\n\nПоздравляем! Свяжитесь с администрацией чтобы получить приз.\n\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         )
         embed.set_image(url=GIF_GIVEAWAY_WIN)
-        embed.set_footer(text=f"{ctx.guild.name} • Giveaway Sistemi")
+        if ctx.guild.icon:
+            embed.set_footer(text=f"{ctx.guild.name} · Розыгрыши", icon_url=ctx.guild.icon.url)
+        else:
+            embed.set_footer(text=f"{ctx.guild.name} · Розыгрыши")
+        await ctx.send(embed=embed)
         await ctx.send(embed=embed)
 
 async def setup(bot):
