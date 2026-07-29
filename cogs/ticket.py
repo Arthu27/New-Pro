@@ -763,10 +763,69 @@ class Ticket(commands.Cog):
                     self._save_ticket_state(guild_id, channel_id, state)
                     return
 
+                # 12. Генерируем контекстные подсказки для модераторов
+                suggested_actions = []
+                
+                # Если есть предупреждения у пользователя
+                if guild_context.get('user_id'):
+                    try:
+                        from cogs.warnings import load_warnings
+                        warnings_data = load_warnings()
+                        user_warnings = warnings_data.get(str(guild.id), {}).get(str(guild_context['user_id']), [])
+                        
+                        if len(user_warnings) >= 2:
+                            suggested_actions.append({
+                                'label': f'Бан ({len(user_warnings)} предупреждений)',
+                                'action': 'ban',
+                                'user_id': guild_context['user_id'],
+                                'reason': f'{len(user_warnings)} предупреждений'
+                            })
+                        elif len(user_warnings) >= 1:
+                            suggested_actions.append({
+                                'label': 'Мут на 1 час',
+                                'action': 'mute',
+                                'user_id': guild_context['user_id'],
+                                'duration': 60,
+                                'reason': 'Повторное нарушение'
+                            })
+                    except:
+                        pass
+                
                 # Отправляем очищенный ответ
                 clean_response = actions.get('cleaned_response', response)
                 if clean_response:
-                    await message.channel.send(clean_response)
+                    # Если есть предложенные действия — добавляем кнопки
+                    if suggested_actions and message.channel.permissions_for(message.guild.me).send_messages:
+                        view = discord.ui.View()
+                        
+                        for action_data in suggested_actions[:3]:  # Максимум 3 кнопки
+                            async def action_callback(interaction, data=action_data):
+                                await interaction.response.defer(ephemeral=True)
+                                
+                                target_user = guild.get_member(data['user_id'])
+                                if not target_user:
+                                    await interaction.followup.send("Пользователь не найден", ephemeral=True)
+                                    return
+                                
+                                if data['action'] == 'ban':
+                                    await target_user.ban(reason=f"AI建议: {data['reason']}")
+                                    await interaction.followup.send(f"✅ {target_user.mention} забанен", ephemeral=True)
+                                elif data['action'] == 'mute':
+                                    until = discord.utils.utcnow() + timedelta(minutes=data['duration'])
+                                    await target_user.timeout(until, reason=f"AI建议: {data['reason']}")
+                                    await interaction.followup.send(f"✅ {target_user.mention} замьючен на {data['duration']} мин", ephemeral=True)
+                            
+                            button = discord.ui.Button(
+                                label=action_data['label'],
+                                style=discord.ButtonStyle.danger if action_data['action'] == 'ban' else discord.ButtonStyle.primary
+                            )
+                            button.callback = action_callback
+                            view.add_item(button)
+                        
+                        await message.channel.send(clean_response, view=view)
+                    else:
+                        await message.channel.send(clean_response)
+                
                 self._save_ticket_state(guild_id, channel_id, state)
 
             except Exception as e:
