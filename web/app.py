@@ -151,15 +151,33 @@ USERS = {
     'owner': {'password': '123', 'role': 'owner'},
 }
 
-# Discord role ID → panel roleü eşlemesi — panelden настроитьnacak
+# Discord role ID → panel role — data/role_map.json
 DISCORD_ROLE_MAP = {}
 
+def _load_role_map():
+    global DISCORD_ROLE_MAP
+    try:
+        if os.path.exists('data/role_map.json'):
+            with open('data/role_map.json', 'r', encoding='utf-8') as f:
+                DISCORD_ROLE_MAP = json.load(f)
+    except:
+        DISCORD_ROLE_MAP = {}
+
+def _save_role_map():
+    try:
+        os.makedirs('data', exist_ok=True)
+        with open('data/role_map.json', 'w', encoding='utf-8') as f:
+            json.dump(DISCORD_ROLE_MAP, f, indent=2, ensure_ascii=False)
+    except:
+        pass
+
+_load_role_map()
+
 def _get_role_from_discord(discord_id: str) -> str:
-    """Discord ID'ye göre serverdaki roleleri kontrole et, panel roleü döndür."""
+    """Определить роль в панели по Discord-ролям и правам"""
     if not bot_instance:
         return 'uye'
     try:
-        # MAIN_GUILD_ID boşsa бот'un ilk guild'ini kullan
         gid = MAIN_GUILD_ID or (str(bot_instance.guilds[0].id) if bot_instance.guilds else None)
         if not gid:
             return 'uye'
@@ -169,15 +187,30 @@ def _get_role_from_discord(discord_id: str) -> str:
         member = guild.get_member(int(discord_id))
         if not member:
             return 'uye'
-        # Самый высокий roleü найти (admin > mod > uye)
-        best_role = 'uye'
+
+        # 1. Ручной маппинг из role_map.json
+        best_mapped = 'uye'
         for discord_role in member.roles:
             mapped = DISCORD_ROLE_MAP.get(str(discord_role.id))
+            if mapped == 'owner':
+                return 'owner'
             if mapped == 'admin':
-                return 'admin'  # Самый высокий, возврат сразу
-            if mapped == 'mod':
-                best_role = 'mod'
-        return best_role
+                best_mapped = 'admin'
+            elif mapped == 'mod' and best_mapped not in ('admin', 'owner'):
+                best_mapped = 'mod'
+        if best_mapped != 'uye':
+            return best_mapped
+
+        # 2. Автоматически по Discord-правам
+        perms = member.guild_permissions
+        if perms.administrator:
+            return 'admin'
+        if perms.ban_members or perms.kick_members or perms.manage_guild:
+            return 'mod'
+        if perms.manage_messages or perms.manage_channels:
+            return 'mod'
+
+        return 'uye'
     except Exception:
         return 'uye'
 
@@ -1700,6 +1733,59 @@ def api_public_apply():
 
 from web.routes_extra import register_extra_routes
 register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_ID)
+
+# ── Role Map API ─────────────────────────────────────────────────────────────
+@app.route('/api/role-map')
+@login_required
+@role_required('admin')
+def api_get_role_map():
+    """Получить маппинг ролей + список ролей сервера"""
+    guild_roles = []
+    if bot_instance:
+        gid = MAIN_GUILD_ID or (str(bot_instance.guilds[0].id) if bot_instance.guilds else None)
+        if gid:
+            guild = bot_instance.get_guild(int(gid))
+            if guild:
+                for r in sorted(guild.roles, key=lambda x: x.position, reverse=True):
+                    if r.name == '@everyone':
+                        continue
+                    guild_roles.append({
+                        'id': str(r.id),
+                        'name': r.name,
+                        'color': str(r.color),
+                        'position': r.position,
+                        'members': r.members.__len__() if hasattr(r.members, '__len__') else 0,
+                    })
+    return jsonify({
+        'role_map': DISCORD_ROLE_MAP,
+        'guild_roles': guild_roles,
+    })
+
+@app.route('/api/role-map', methods=['POST'])
+@login_required
+@role_required('admin')
+def api_set_role_map():
+    """Добавить/изменить маппинг роли"""
+    data = request.get_json()
+    role_id = str(data.get('role_id', '')).strip()
+    panel_role = data.get('panel_role', '').strip()
+    if not role_id or panel_role not in ('mod', 'admin', 'owner'):
+        return jsonify({'error': 'Неверные данные'}), 400
+    DISCORD_ROLE_MAP[role_id] = panel_role
+    _save_role_map()
+    _log_panel_action('ROLE_MAP_SET', f'{role_id} → {panel_role}')
+    return jsonify({'success': True})
+
+@app.route('/api/role-map/<role_id>', methods=['DELETE'])
+@login_required
+@role_required('admin')
+def api_delete_role_map(role_id):
+    """Удалить маппинг роли"""
+    if role_id in DISCORD_ROLE_MAP:
+        del DISCORD_ROLE_MAP[role_id]
+        _save_role_map()
+        _log_panel_action('ROLE_MAP_DELETE', role_id)
+    return jsonify({'success': True})
 
 # ── Discord PIN Логin API ────────────────────────────────────────────────────
 _login_pins = {}
