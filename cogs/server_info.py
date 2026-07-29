@@ -50,7 +50,7 @@ def get_sunucu_context(guild_id: int) -> str:
     return '\n'.join(lines)
 
 
-class Server(discord.ui.Modal):
+class ServerModal(discord.ui.Modal):
     def __init__(self, field: str, title: str, guild_id: int):
         super().__init__(title=title)
         self.field = field
@@ -73,7 +73,7 @@ class Server(discord.ui.Modal):
         )
 
 
-class Server(discord.ui.View):
+class ServerInfoView(discord.ui.View):
     def __init__(self, guild_id: int):
         super().__init__(timeout=None)
         self.guild_id = guild_id
@@ -84,7 +84,7 @@ class Server(discord.ui.View):
             await interaction.response.send_message('❌ Администратор yok.', ephemeral=True)
             return
         await interaction.response.send_modal(
-            server('о', 'Server О', self.guild_id)
+            ServerModal('о', 'Информация о сервере', self.guild_id)
         )
 
     @discord.ui.button(label='📋  Правила', style=discord.ButtonStyle.primary, row=0)
@@ -93,7 +93,7 @@ class Server(discord.ui.View):
             await interaction.response.send_message('❌ Администратор yok.', ephemeral=True)
             return
         await interaction.response.send_modal(
-            server('правила', 'Правила сервера', self.guild_id)
+            ServerModal('правила', 'Правила сервера', self.guild_id)
         )
 
     @discord.ui.button(label='👮  Как стать модератором', style=discord.ButtonStyle.primary, row=0)
@@ -102,7 +102,7 @@ class Server(discord.ui.View):
             await interaction.response.send_message('❌ Администратор yok.', ephemeral=True)
             return
         await interaction.response.send_modal(
-            server('yetkili_olmak', 'Как стать модератором', self.guild_id)
+            ServerModal('yetkili_olmak', 'Как стать модератором', self.guild_id)
         )
 
     @discord.ui.button(label='➕  Добавлено информацию', style=discord.ButtonStyle.secondary, row=1)
@@ -173,7 +173,7 @@ class OzelBilgiModal(discord.ui.Modal, title='Добавлено информа�
         )
 
 
-class Server(commands.Cog):
+class ServerInfo(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
@@ -202,8 +202,8 @@ class Server(commands.Cog):
             text=f'{ctx.guild.name}  ·  Server Информация Система',
             icon_url=ctx.guild.icon.url if ctx.guild.icon else None
         )
-        await ctx.send(embed=embed, view=server(ctx.guild.id))
+        await ctx.send(embed=embed, view=ServerInfoView(ctx.guild.id))
 
 
 async def setup(bot):
-    await bot.add_cog(server(bot))
+    await bot.add_cog(ServerInfo(bot))
