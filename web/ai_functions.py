@@ -24,6 +24,7 @@ class AIFunctions:
             'remember_fact': self.remember_fact,
             'recall_facts': self.recall_facts,
             'check_user_reputation': self.check_user_reputation,
+            'search_knowledge_base': self.search_knowledge_base,
         }
     
     def get_available_functions(self) -> str:
@@ -70,6 +71,10 @@ class AIFunctions:
 10. check_user_reputation(user_id: int)
     Проверить репутацию пользователя (предупреждения, муты, баны)
     Пример: check_user_reputation(123456789)
+
+11. search_knowledge_base(query: str)
+    Поиск по базе знаний сервера (правила, FAQ, тикеты, заметки)
+    Пример: search_knowledge_base("спам")
 
 ФОРМАТ ВЫЗОВА:
 [FUNC:function_name(param1=value1, param2=value2)]
@@ -351,3 +356,18 @@ class AIFunctions:
             )
         except Exception as e:
             return f"Ошибка: {str(e)}"
+    
+    async def search_knowledge_base(self, guild: discord.Guild, query: str) -> str:
+        """Поиск по базе знаний сервера (правила, FAQ, тикеты, заметки)"""
+        try:
+            from web.ai_rag import get_knowledge_base
+            
+            kb = get_knowledge_base(guild.id)
+            context = kb.get_context_for_query(query)
+            
+            if not context:
+                return f"Не найдено информации в базе знаний по запросу: {query}"
+            
+            return context
+        except Exception as e:
+            return f"Ошибка поиска в базе знаний: {str(e)}"

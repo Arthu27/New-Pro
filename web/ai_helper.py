@@ -508,6 +508,20 @@ async def ai_ticket_response(user_message: str, history: List[Dict], guild_conte
     if len(updated_history) > 30:
         updated_history = updated_history[-30:]
 
+    # 11. Автоматическое извлечение и сохранение фактов
+    if guild and ai_functions:
+        try:
+            from web.ai_rag import ConversationAnalyzer
+            facts = ConversationAnalyzer.extract_facts(updated_history[-5:])
+            
+            if facts:
+                user_id = guild_context.get('user_id')
+                if user_id:
+                    for fact in facts[:2]:  # Максимум 2 факта за раз
+                        await ai_functions.remember_fact(guild, user_id, fact)
+        except Exception as e:
+            print(f"[AI] Ошибка извлечения фактов: {e}")
+
     return response, should_escalate, category, updated_history, category
 
 
