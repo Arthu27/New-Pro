@@ -2,219 +2,263 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-PERM_ICON = {"all": "🟢", "mod": "🟡", "admin": "🔴", "owner": "⚙️"}
-PERM_LABEL = {"all": "Все", "mod": "Модератор", "admin": "Админ", "owner": "Владелец"}
+# ── Права доступа ─────────────────────────────────────────────────────────────
+PERM = {
+    "all":   {"icon": "🟢", "label": "Все",       "color": 0x2ECC71},
+    "mod":   {"icon": "🟡", "label": "Модератор",  "color": 0xF39C12},
+    "admin": {"icon": "🔴", "label": "Админ",      "color": 0xE74C3C},
+    "owner": {"icon": "⚙️", "label": "Владелец",   "color": 0x9B59B6},
+}
 
+# ── Категории команд ──────────────────────────────────────────────────────────
 CATEGORIES = [
-    {"id": "home", "emoji": "🏠", "title": "Главное меню", "color": 0x7B68EE, "commands": []},
-    {"id": "mod", "emoji": "🛡️", "title": "Модерация", "color": 0xFF4757, "commands": [
-        ("/moderate ban", "Перманентный бан", "/moderate ban @user причина", "admin"),
-        ("/moderate kick", "Исключить с serverа", "/moderate kick @user причина", "admin"),
-        ("/moderate timeout", "Временный мут", "/moderate timeout @user 10m", "admin"),
-        ("/moderate untimeout", "Снять мут", "/moderate untimeout @user", "admin"),
-        ("/moderate unban", "Снять бан", "/moderate unban user_id", "admin"),
-        ("/utility clear", "Массовое удаление сообщений", "/utility clear 50", "admin"),
-        ("/utility lock", "Заблокировать channel", "/utility lock", "mod"),
-        ("/utility unlock", "Разблокировать channel", "/utility unlock", "mod"),
-        ("/utility userinfo", "Информация о пользователе", "/utility userinfo @user", "mod"),
-        ("/role", "Выдать / снять role", "/role @user @role", "admin"),
-        ("/history", "История модерации", "/history @user", "mod"),
-        ("/case", "Детали дела", "/case 42", "mod"),
-        ("/note", "Добавить заметку", "/note @user текст", "mod"),
-        ("/notes", "Показать заметки", "/notes @user", "mod"),
-        ("/watchlist", "Список наблюдения", "/watchlist @user причина", "mod"),
-        ("/watchlist-show", "Показать список наблюдения", "/watchlist-show", "mod"),
-        ("/banlist", "Забаненные пользователи", "/banlist", "admin"),
-        ("/massrole", "Массовая выдача ролей", "/massrole @role выдать", "admin"),
-        ("/massban", "Массовый бан", "/massban id1 id2 id3", "admin"),
+    {"id": "home", "emoji": "🏠", "title": "Главное меню", "color": 0xC8922A, "commands": []},
+
+    {"id": "mod", "emoji": "🛡️", "title": "Модерация", "color": 0xE74C3C, "commands": [
+        ("/moderate ban",     "Перманентный бан",               "@user причина",         "admin"),
+        ("/moderate kick",    "Исключить с сервера",            "@user причина",         "admin"),
+        ("/moderate timeout", "Временный мут",                  "@user 10m причина",     "admin"),
+        ("/moderate untimeout","Снять мут",                     "@user",                 "admin"),
+        ("/moderate unban",   "Снять бан",                      "user_id",               "admin"),
+        ("/utility clear",    "Массовое удаление сообщений",    "50",                    "admin"),
+        ("/utility lock",     "Заблокировать канал",            "",                      "mod"),
+        ("/utility unlock",   "Разблокировать канал",           "",                      "mod"),
+        ("/utility userinfo", "Информация о пользователе",      "@user",                 "mod"),
+        ("/role",             "Выдать / снять роль",            "@user @роль",           "admin"),
+        ("/history",          "История модерации",              "@user",                 "mod"),
+        ("/case",             "Детали дела",                    "42",                    "mod"),
+        ("/note",             "Добавить заметку",               "@user текст",           "mod"),
+        ("/notes",            "Показать заметки",               "@user",                 "mod"),
+        ("/watchlist",        "Список наблюдения",              "@user причина",         "mod"),
+        ("/watchlist-show",   "Показать список наблюдения",     "",                      "mod"),
+        ("/banlist",          "Забаненные пользователи",        "",                      "admin"),
+        ("/massrole",         "Массовая выдача ролей",          "@роль выдать",          "admin"),
+        ("/massban",          "Массовый бан",                   "id1 id2 id3",           "admin"),
     ]},
-    {"id": "warn", "emoji": "⚠️", "title": "Предупреждения", "color": 0xFFA502, "commands": [
-        ("/warn", "Выдать предупреждение", "/warn @user причина", "mod"),
-        ("/warnings", "Список предупреждений", "/warnings @user", "mod"),
-        ("/clearwarns", "Очистить все предупреждения", "/clearwarns @user", "admin"),
+
+    {"id": "warn", "emoji": "⚠️", "title": "Предупреждения", "color": 0xF39C12, "commands": [
+        ("/warn",       "Выдать предупреждение",     "@user причина",  "mod"),
+        ("/warnings",   "Список предупреждений",     "@user",          "mod"),
+        ("/clearwarns", "Очистить предупреждения",   "@user",          "admin"),
     ]},
-    {"id": "music", "emoji": "🎵", "title": "Музыка", "color": 0x2ED573, "commands": [
-        ("/play", "Воспроизвести музыку", "/play lofi hip hop", "all"),
-        ("/pause", "Пауза / продолжить", "/pause", "all"),
-        ("/skip", "Пропустить трек", "/skip", "all"),
-        ("/queue", "Показать очередь", "/queue", "all"),
-        ("/volume", "Громкость 0-100", "/volume 80", "all"),
-        ("/clear-queue", "Очистить очередь", "/clear-queue", "all"),
-        ("/leave", "Покинуть голосовой channel", "/leave", "all"),
-        ("/join", "Присоединиться к channelу", "/join", "all"),
+
+    {"id": "music", "emoji": "🎵", "title": "Музыка", "color": 0x1DB954, "commands": [
+        ("/play",        "Воспроизвести",             "название/ссылка",  "all"),
+        ("/pause",       "Пауза / продолжить",        "",                 "all"),
+        ("/skip",        "Пропустить трек",           "",                 "all"),
+        ("/queue",       "Очередь",                   "",                 "all"),
+        ("/volume",      "Громкость 0-100",           "80",               "all"),
+        ("/clear-queue", "Очистить очередь",          "",                 "all"),
+        ("/leave",       "Покинуть голосовой канал",  "",                 "all"),
+        ("/join",        "Присоединиться к каналу",   "",                 "all"),
     ]},
-    {"id": "fun", "emoji": "🎮", "title": "Развлечения и игры", "color": 0xFF6B81, "commands": [
-        ("/coinflip", "Подбросить монету", "/coinflip", "all"),
-        ("/rolel", "Бросить кубик 1-5", "/rolel 2", "all"),
-        ("/rps", "Камень ножницы бумага", "/rps", "all"),
-        ("/guess-start", "Игра угадай число", "/guess-start", "all"),
-        ("/guess", "Угадать число", "/guess 42", "all"),
-        ("/8ball", "Магический шар 8", "/8ball вопрос", "all"),
-        ("/random-member", "Случайный участник", "/random-member", "all"),
-        ("/fun", "Развлекательные команды", "/fun dice", "all"),
-        ("/poll", "Быстрый опрос", "/poll вопрос", "all"),
+
+    {"id": "fun", "emoji": "🎮", "title": "Развлечения", "color": 0xFF6B81, "commands": [
+        ("/coinflip",      "Монетка",                "",             "all"),
+        ("/roll",          "Бросить кубик 1-5",      "2",            "all"),
+        ("/rps",           "Камень-ножницы-бумага",  "",             "all"),
+        ("/guess-start",   "Угадай число",           "",             "all"),
+        ("/guess",         "Ввести число",           "42",           "all"),
+        ("/8ball",         "Магический шар",         "вопрос",       "all"),
+        ("/random-member", "Случайный участник",     "",             "all"),
+        ("/fun",           "Развлекательные",        "dice",         "all"),
+        ("/poll",          "Быстрый опрос",          "вопрос",       "all"),
     ]},
-    {"id": "eco", "emoji": "💰", "title": "Экономика и функции", "color": 0xFFD700, "commands": [
-        ("/economy", "Баланс, ежедневное, перевод", "/economy balance", "all"),
-        ("/games", "Азартные игры, слоты", "/games gamble 100", "all"),
-        ("/shop", "Просмотр магазина", "/shop", "all"),
-        ("/buy", "Купить товар", "/buy предмет", "all"),
-        ("/birthday", "Сохранить день рождения", "/birthday 15 3", "all"),
-        ("/birthdays", "Ближайшие дни рождения", "/birthdays", "all"),
-        ("/afk", "Режим AFK", "/afk причина", "all"),
-        ("/duty-panel", "Панель заданий", "/duty-panel", "admin"),
-        ("/duty-add", "Ручной прогресс", "/duty-add @user 10", "mod"),
-        ("/duty-stats", "Таблица очков заданий", "/duty-stats", "mod"),
-        ("/ticket_panel", "Панель ticketов", "/ticket_panel", "admin"),
-        ("/staff-apply", "Заявка модератора", "/staff-apply", "all"),
+
+    {"id": "eco", "emoji": "💰", "title": "Экономика", "color": 0xFFD700, "commands": [
+        ("/economy balance",  "Баланс",                "",           "all"),
+        ("/economy daily",    "Ежедневная награда",    "",           "all"),
+        ("/economy transfer", "Перевести coins",       "@user 100",  "all"),
+        ("/economy ranking",  "Топ богачей",           "",           "all"),
+        ("/games gamble",     "Азартная игра",         "100",        "all"),
+        ("/games slot",       "Слот-машина",           "50",         "all"),
+        ("/games heist",      "Ограбление",            "@user",      "all"),
+        ("/shop",             "Магазин",               "",           "all"),
+        ("/buy",              "Купить товар",          "предмет",    "all"),
     ]},
-    {"id": "leaderboard", "emoji": "🏆", "title": "Рейтинг и отчёты", "color": 0xF1C40F, "commands": [
-        ("!ranking", "Общий рейтинг", "!ranking", "all"),
-        ("!ranking messages", "Рейтинг сообщений", "!ranking messages", "all"),
-        ("!ranking voice", "Рейтинг голосового времени", "!ranking voice", "all"),
-        ("!ranking invites", "Рейтинг приглашений", "!ranking invites", "all"),
-        ("/profile", "Ваша статистика", "/profile", "all"),
-        ("/invites", "Статистика приглашений", "/invites", "all"),
-        ("/invite-ranking", "Топ приглашающих", "/invite-ranking", "all"),
-        ("!weekly-report", "Еженедельный отчёт", "!weekly-report", "mod"),
-        ("!meeting-start", "Начать собрание", "!meeting-start", "admin"),
-        ("!meeting-counter", "Дней с последнего собрания", "!meeting-counter", "all"),
-        ("!report-setup", "Настроить авто-отчёт", "!report-setup #channel 0 9", "admin"),
-        ("!report-role-add", "Добавить role в отчёт", "!report-role-add @Роль", "admin"),
-        ("!mod-stats", "Статистика модераторов", "!mod-stats @user", "mod"),
+
+    {"id": "social", "emoji": "👥", "title": "Социальное", "color": 0x3498DB, "commands": [
+        ("/birthday",       "Сохранить день рождения", "15 3",       "all"),
+        ("/birthdays",      "Ближайшие дни рождения",  "",           "all"),
+        ("/afk",            "Режим AFK",               "причина",    "all"),
+        ("/staff-apply",    "Заявка модератора",       "",           "all"),
+        ("/profile",        "Ваш профиль",             "",           "all"),
+        ("/invites",        "Статистика приглашений",  "",           "all"),
+        ("/invite-ranking", "Топ приглашающих",        "",           "all"),
     ]},
-    {"id": "events", "emoji": "📅", "title": "Система мероприятий", "color": 0x5865F2, "commands": [
-        ("/event-create", "Создать мероприятие", "/event-create название", "admin"),
-        ("/events", "Список активных мероприятий", "/events", "all"),
-        ("/event-cancel", "Отменить мероприятие", "/event-cancel id", "admin"),
+
+    {"id": "rank", "emoji": "🏆", "title": "Рейтинги", "color": 0xF1C40F, "commands": [
+        ("/rank",               "Ваш уровень и XP",           "",           "all"),
+        ("/top-level",          "Топ-10 по уровню",           "",           "all"),
+        ("!ranking",            "Общий рейтинг",              "",           "all"),
+        ("!ranking messages",   "Рейтинг сообщений",          "",           "all"),
+        ("!ranking voice",      "Рейтинг голосового времени", "",           "all"),
+        ("!ranking invites",    "Рейтинг приглашений",        "",           "all"),
+        ("/mod-stats",          "Статистика модераторов",     "@user",      "mod"),
+        ("/activemods",         "Активные модераторы",        "",           "mod"),
     ]},
-    {"id": "util", "emoji": "🔧", "title": "Инструменты", "color": 0x5352ED, "commands": [
-        ("/modstats", "Статистика модераторов", "/modstats", "mod"),
-        ("/activemods", "Самые активные модераторы", "/activemods", "mod"),
-        ("/health", "Оценка здоровья serverа", "/health", "all"),
-        ("/channel-stats", "Статистика сообщений channelа", "/channel-stats", "all"),
-        ("/verify-setup", "Настроить верификацию", "/verify-setup", "admin"),
-        ("/botinfo", "Информация о боте", "/botinfo", "all"),
-        ("/uptime", "Время работы бота", "/uptime", "all"),
-        ("/avatar", "Показать аватар", "/avatar @user", "all"),
-        ("/serverinfo", "Информация о serverе", "/serverinfo", "all"),
-        ("/archive", "Архивировать сообщения", "/archive 100", "admin"),
-        ("/ai-reset", "Сбросить историю AI", "/ai-reset", "all"),
-        ("/ai-learn", "Обучить AI", "/ai-learn тема info", "admin"),
+
+    {"id": "events", "emoji": "📅", "title": "Мероприятия и розыгрыши", "color": 0x5865F2, "commands": [
+        ("/event-create",  "Создать мероприятие",     "название",    "admin"),
+        ("/events",        "Активные мероприятия",    "",            "all"),
+        ("/event-cancel",  "Отменить мероприятие",    "id",          "admin"),
+        ("/giveaway",      "Создать розыгрыш",        "",            "admin"),
+    ]},
+
+    {"id": "server", "emoji": "⚙️", "title": "Управление сервером", "color": 0x9B59B6, "commands": [
+        ("/setup-logs",    "Создать лог-каналы",       "",            "admin"),
+        ("/verify-setup",  "Настроить верификацию",    "",            "admin"),
+        ("/ticket_panel",  "Панель тикетов",           "",            "admin"),
+        ("/duty-panel",    "Панель заданий",           "",            "admin"),
+        ("/duty-add",      "Добавить прогресс",        "@user 10",    "mod"),
+        ("/duty-stats",    "Таблица очков",            "",            "mod"),
+        ("/automod",       "Настройки автомодерации",  "",            "admin"),
+        ("/level-role-add","Роль за уровень",          "5 @роль",     "admin"),
+        ("/level-roles",   "Список ролей за уровни",   "",            "all"),
+    ]},
+
+    {"id": "util", "emoji": "🔧", "title": "Инструменты", "color": 0x1ABC9C, "commands": [
+        ("/botinfo",       "Информация о боте",        "",            "all"),
+        ("/serverinfo",    "Информация о сервере",     "",            "all"),
+        ("/uptime",        "Время работы бота",        "",            "all"),
+        ("/health",        "Здоровье сервера",         "",            "all"),
+        ("/avatar",        "Аватар пользователя",      "@user",       "all"),
+        ("/channel-stats", "Статистика канала",        "",            "all"),
+        ("/archive",       "Архив сообщений",          "100",         "admin"),
+        ("/ai-reset",      "Сбросить историю AI",      "",            "all"),
+        ("/ai-learn",      "Обучить AI",               "тема текст",  "admin"),
+        ("/color",         "Информация о цвете",       "#FF5733",     "all"),
+        ("/announce",      "Создать объявление",       "#канал текст","admin"),
+    ]},
+
+    {"id": "ai", "emoji": "🤖", "title": "AI Ассистент", "color": 0xC8922A, "commands": [
+        ("AI Чат",        "Просто напишите в канал с AI",     "",  "all"),
+        ("/ai-reset",     "Сбросить историю разговора",       "",  "all"),
+        ("/ai-learn",     "Научить AI новому факту",          "",  "admin"),
+        ("Тикеты",        "AI помогает в тикетах автоматически", "", "all"),
     ]},
 ]
 
 TOTAL_PAGES = len(CATEGORIES)
 TOTAL_CMDS = sum(len(c["commands"]) for c in CATEGORIES)
+DIVIDER = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
+# ── Построение Embed ──────────────────────────────────────────────────────────
 
-def build_embed(page, guild=None):
-    cat = CATEGORIES[page]
-    PT = {"all": "🟢", "mod": "🟡", "admin": "🔴", "owner": "⚙️"}
+def build_home(guild=None):
+    """Главная страница — красивый обзор всех категорий"""
+    g_name = guild.name if guild else "Aether"
+    g_icon = guild.icon.url if guild and guild.icon else None
+    g_banner = guild.banner.url if guild and guild.banner else None
 
-    guild_name   = guild.name   if guild else "Aether"
-    guild_banner = guild.banner if guild else None
-    guild_icon   = guild.icon   if guild else None
+    e = discord.Embed(color=0xC8922A)
+    e.set_author(name=f"{g_name}  ·  Справочник команд", icon_url=g_icon)
 
-    if cat["id"] == "home":
-        embed = discord.Embed(color=0x5865F2)
-        embed.set_author(
-            name=f"{guild_name}  ·  Справочник команд",
-            icon_url=guild_icon.url if guild_icon else None
-        )
-        embed.description = (
-            f"> 📦 **{TOTAL_CMDS}** команд  ·  **{TOTAL_PAGES - 1}** категорий\n"
-            f"> 🔑 `🟢 Все`  `🟡 Мод`  `🔴 Админ`  `⚙️ Владелец`\n\n"
-            f"**Выберите категорию ниже ↓**"
-        )
-
-        if guild_banner:
-            embed.set_image(url=guild_banner.url)
-        elif guild_icon:
-            embed.set_thumbnail(url=guild_icon.url)
-
-        CAT_DESC = {
-            "mod":         "Бан · Кик · Мут · История",
-            "warn":        "Предупреждения · Список · Очистка",
-            "music":       "Музыка · Очередь · Громкость",
-            "fun":         "Игры · Опросы · Развлечения",
-            "eco":         "Экономика · Задания · Ticketы · AFK",
-            "leaderboard": "Рейтинг · Отчёты · Собрания",
-            "events":      "Создать · Список мероприятий",
-            "util":        "Статистика · Инструменты · AI",
-        }
-
-        for c in CATEGORIES[1:]:
-            count = len(c['commands'])
-            embed.add_field(
-                name=f"{c['emoji']}  **{c['title']}**",
-                value=f"```{CAT_DESC.get(c['id'], '')}```\n-# {count} команд",
-                inline=True
-            )
-
-        embed.set_footer(
-            text=f"{guild_name}  ·  !help  ·  Страница 1/{TOTAL_PAGES}",
-            icon_url=guild_icon.url if guild_icon else None
-        )
-        return embed
-
-    cmds = cat["commands"]
-    embed = discord.Embed(color=cat["color"])
-    embed.set_author(
-        name=f"{cat['emoji']}  {cat['title']}  ·  {len(cmds)} команд",
-        icon_url=guild_icon.url if guild_icon else None
+    e.description = (
+        f"### 📦 {TOTAL_CMDS} команд  ·  {TOTAL_PAGES - 1} категорий\n\n"
+        f"🟢 **Все**  ·  🟡 **Мод**  ·  🔴 **Админ**\n\n"
+        f"{DIVIDER}\n"
     )
 
-    mid = (len(cmds) + 1) // 2
-    left_cmds  = cmds[:mid]
-    right_cmds = cmds[mid:]
+    for c in CATEGORIES[1:]:
+        count = len(c['commands'])
+        # Краткое описание из первых 3 команд
+        preview = " · ".join(cmd[0].split()[-1] for cmd in c['commands'][:3])
+        if len(c['commands']) > 3:
+            preview += f" · +{len(c['commands'])-3}"
+        e.description += f"\n{c['emoji']}  **{c['title']}** — `{count} команд`\n-# {preview}\n"
 
-    def fmt(name, desc, usage, perm):
-        return (
-            f"{PT[perm]} **`{name}`**\n"
-            f"╰ {desc}\n"
-            f"╰ -# `{usage}`"
-        )
+    e.description += f"\n{DIVIDER}\n-# Выберите категорию в меню ниже ↓"
 
-    embed.add_field(name="", value="\n\n".join(fmt(*c) for c in left_cmds), inline=True)
-    if right_cmds:
-        embed.add_field(name="", value="\n\n".join(fmt(*c) for c in right_cmds), inline=True)
+    if g_banner:
+        e.set_image(url=g_banner)
 
+    e.set_footer(text=f"{g_name}  ·  !help  ·  1/{TOTAL_PAGES}", icon_url=g_icon)
+    return e
+
+
+def build_category(page, guild=None):
+    """Страница конкретной категории"""
+    cat = CATEGORIES[page]
+    cmds = cat["commands"]
+    g_name = guild.name if guild else "Aether"
+    g_icon = guild.icon.url if guild and guild.icon else None
+
+    e = discord.Embed(color=cat["color"])
+    e.set_author(
+        name=f"{cat['emoji']}  {cat['title']}  ·  {len(cmds)} команд",
+        icon_url=g_icon
+    )
+
+    # Формируем список команд
+    lines = []
+    for name, desc, usage, perm in cmds:
+        icon = PERM[perm]["icon"]
+        usage_str = f" `{usage}`" if usage else ""
+        lines.append(f"{icon} **`{name}`**{usage_str}\n╰ {desc}")
+
+    # Разбиваем на 2 колонки если много команд
+    if len(lines) > 8:
+        mid = (len(lines) + 1) // 2
+        col1 = "\n".join(lines[:mid])
+        col2 = "\n".join(lines[mid:])
+        e.add_field(name="", value=col1, inline=True)
+        e.add_field(name="", value=col2, inline=True)
+    else:
+        e.description = "\n".join(lines)
+
+    # Подсчёт по правам
     perm_counts = {}
     for _, _, _, p in cmds:
         perm_counts[p] = perm_counts.get(p, 0) + 1
-    summary_parts = []
+    parts = []
     for k in ("all", "mod", "admin", "owner"):
         if k in perm_counts:
-            summary_parts.append(f"{PT[k]} {PERM_LABEL[k]}: **{perm_counts[k]}**")
-    embed.add_field(name="", value="  ·  ".join(summary_parts), inline=False)
+            parts.append(f"{PERM[k]['icon']} {PERM[k]['label']}: **{perm_counts[k]}**")
+    if parts:
+        e.add_field(name="", value="  ·  ".join(parts), inline=False)
 
-    embed.set_footer(
-        text=f"{guild_name}  ·  Страница {page + 1}/{TOTAL_PAGES}  ·  !help",
-        icon_url=guild_icon.url if guild_icon else None
+    e.set_footer(
+        text=f"{g_name}  ·  {page + 1}/{TOTAL_PAGES}  ·  !help",
+        icon_url=g_icon
     )
-    if guild_icon:
-        embed.set_thumbnail(url=guild_icon.url)
-    return embed
+    if g_icon:
+        e.set_thumbnail(url=g_icon)
+    return e
 
+
+def build_embed(page, guild=None):
+    if page == 0:
+        return build_home(guild)
+    return build_category(page, guild)
+
+
+# ── UI компоненты ─────────────────────────────────────────────────────────────
 
 class CategorySelect(discord.ui.Select):
     def __init__(self, current_page):
-        options = [
-            discord.SelectOption(
+        options = []
+        for i, c in enumerate(CATEGORIES):
+            desc = f"{len(c['commands'])} команд" if c["commands"] else "Обзор"
+            options.append(discord.SelectOption(
                 label=f"{c['emoji']} {c['title']}",
                 value=str(i),
-                description=f"{len(c['commands'])} команд" if c["commands"] else "Главное меню",
+                description=desc[:100],
                 default=(i == current_page),
-            )
-            for i, c in enumerate(CATEGORIES)
-        ]
-        super().__init__(placeholder="📂  Выбрать категорию...", options=options, custom_id="help_cat_select", row=0)
+            ))
+        super().__init__(
+            placeholder="📂  Выберите категорию...",
+            options=options,
+            custom_id="help_cat_select",
+            row=0,
+        )
 
     async def callback(self, interaction):
         page = int(self.values[0])
         view = HelpView(page=page)
-        await interaction.response.edit_message(embed=build_embed(page, interaction.guild), view=view)
+        await interaction.response.edit_message(
+            embed=build_embed(page, interaction.guild), view=view
+        )
 
 
 class HelpView(discord.ui.View):
@@ -233,9 +277,14 @@ class HelpView(discord.ui.View):
     async def prev_btn(self, interaction, button):
         self.page = max(0, self.page - 1)
         self._sync()
-        await interaction.response.edit_message(embed=build_embed(self.page, interaction.guild), view=self)
+        await interaction.response.edit_message(
+            embed=build_embed(self.page, interaction.guild), view=self
+        )
 
-    @discord.ui.button(label="  1 / 9  ", style=discord.ButtonStyle.primary, disabled=True, row=1, custom_id="help_page")
+    @discord.ui.button(
+        label="  1 / 12  ", style=discord.ButtonStyle.primary,
+        disabled=True, row=1, custom_id="help_page"
+    )
     async def page_label(self, interaction, button):
         pass
 
@@ -243,25 +292,37 @@ class HelpView(discord.ui.View):
     async def next_btn(self, interaction, button):
         self.page = min(TOTAL_PAGES - 1, self.page + 1)
         self._sync()
-        await interaction.response.edit_message(embed=build_embed(self.page, interaction.guild), view=self)
+        await interaction.response.edit_message(
+            embed=build_embed(self.page, interaction.guild), view=self
+        )
 
-    @discord.ui.button(label="🏠 Главное меню", style=discord.ButtonStyle.success, row=1, custom_id="help_home")
+    @discord.ui.button(
+        label="🏠 Меню", style=discord.ButtonStyle.success,
+        row=1, custom_id="help_home"
+    )
     async def home_btn(self, interaction, button):
         self.page = 0
         self._sync()
-        await interaction.response.edit_message(embed=build_embed(0, interaction.guild), view=self)
+        await interaction.response.edit_message(
+            embed=build_embed(0, interaction.guild), view=self
+        )
 
-    @discord.ui.button(label="✖ Закрыть", style=discord.ButtonStyle.danger, row=1, custom_id="help_close")
+    @discord.ui.button(
+        label="✖", style=discord.ButtonStyle.danger,
+        row=1, custom_id="help_close"
+    )
     async def close_btn(self, interaction, button):
         await interaction.response.defer()
         await interaction.delete_original_response()
 
 
+# ── Cog ───────────────────────────────────────────────────────────────────────
+
 class Help(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(name="help", aliaголос=["yardim", "h", "?", "команды"])
+    @commands.command(name="help", aliases=["yardim", "h", "?", "команды", "помощь"])
     async def help_prefix(self, ctx):
         try:
             await ctx.message.delete()
@@ -271,7 +332,11 @@ class Help(commands.Cog):
 
     @app_commands.command(name="help", description="Показать все команды бота")
     async def help_slash(self, interaction):
-        await interaction.response.send_message(embed=build_embed(0, interaction.guild), view=HelpView(page=0), ephemeral=True)
+        await interaction.response.send_message(
+            embed=build_embed(0, interaction.guild),
+            view=HelpView(page=0),
+            ephemeral=True,
+        )
 
 
 async def setup(bot):
