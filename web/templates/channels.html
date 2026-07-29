@@ -1,6 +1,6 @@
-﻿{% extends "base.html" %}
-{% block title %}Канал Управление — Aether{% endblock %}
-{% block page_title %}Канал Управление{% endblock %}
+{% extends "base.html" %}
+{% block title %}Kanal Yönetimi — Aether{% endblock %}
+{% block page_title %}Kanal Yönetimi{% endblock %}
 {% block content %}
 <style>
 /* ── Toolbar ── */
@@ -86,11 +86,11 @@
 
 <!-- Toolbar -->
 <div class="ch-toolbar">
-  <select style="display:none" style="display:none" id="guild-select" class="ch-select" onchange="loadChannels(true)">
-    <option value="">Сервер выбрать...</option>
+  <select id="guild-select" style="display:none" class="ch-select">
+    <option value="">Sunucu seç...</option>
   </select>
-  <button class="btn-new" onclick="openNameModal()">
-    <i class="fas fa-plus"></i> Новый Канал
+  <button class="btn-new" id="btnNewChannel" type="button">
+    <i class="fas fa-plus"></i> Yeni Kanal
   </button>
 </div>
 
@@ -110,18 +110,18 @@
   </div>
   <div class="ch-stat">
     <div class="ch-stat-icon" style="background:rgba(212,168,67,0.1);color:#e0a830;"><i class="fas fa-layer-group"></i></div>
-    <div><div class="ch-stat-val" id="stat-total">0</div><div class="ch-stat-lbl">Всего</div></div>
+    <div><div class="ch-stat-val" id="stat-total">0</div><div class="ch-stat-lbl">Toplam</div></div>
   </div>
 </div>
 
 <!-- Channel list -->
 <div class="ch-box" id="ch-box">
   <div class="ch-box-header">
-    <div class="ch-box-title"><i class="fas fa-list"></i> Канал Listesi</div>
+    <div class="ch-box-title"><i class="fas fa-list"></i> Kanal Listesi</div>
     <span class="ch-box-count" id="ch-count">—</span>
   </div>
   <div id="channel-list">
-    <div class="ch-empty"><i class="fas fa-hashtag"></i><p>Сервер выберите</p></div>
+    <div class="ch-empty"><i class="fas fa-hashtag"></i><p>Sunucu seçin</p></div>
   </div>
 </div>
 
@@ -129,184 +129,266 @@
 <div id="modal" class="modal-overlay">
   <div class="modal-card">
     <div class="modal-head">
-      <h3><i class="fas fa-plus-circle" style="color:#c8922a;margin-right:8px;"></i>Новый Канал</h3>
-      <button class="modal-close" onclick="closeModal()"><i class="fas fa-times"></i></button>
+      <h3><i class="fas fa-plus-circle" style="color:#c8922a;margin-right:8px;"></i>Yeni Kanal</h3>
+      <button class="modal-close" id="btnCloseModal" type="button"><i class="fas fa-times"></i></button>
     </div>
-    <label class="field-label">Канал Isim</label>
-    <input type="text" id="ch-name" placeholder="канал-имя" class="field-input">
-    <label class="field-label">Канал Türü</label>
+    <label class="field-label">Kanal Adı</label>
+    <input type="text" id="ch-name" placeholder="kanal-adı" class="field-input">
+    <label class="field-label">Kanal Türü</label>
     <div class="type-grid">
-      <div class="type-opt selected" onclick="selectType('text',this)">
+      <div class="type-opt selected" data-type="text">
         <div class="type-opt-icon">#</div>
         <div class="type-opt-lbl">Metin</div>
       </div>
-      <div class="type-opt" onclick="selectType('voice',this)">
+      <div class="type-opt" data-type="voice">
         <div class="type-opt-icon">🔊</div>
         <div class="type-opt-lbl">Ses</div>
       </div>
-      <div class="type-opt" onclick="selectType('category',this)">
+      <div class="type-opt" data-type="category">
         <div class="type-opt-icon">📁</div>
         <div class="type-opt-lbl">Kategori</div>
       </div>
     </div>
     <input type="hidden" id="ch-type" value="text">
     <div class="modal-actions">
-      <button class="btn-confirm" onclick="createChannel()">Создать</button>
-      <button class="btn-cancel" onclick="closeModal()">Отмена</button>
+      <button class="btn-confirm" id="btnCreateChannel" type="button">Oluştur</button>
+      <button class="btn-cancel" id="btnCancelChannel" type="button">İptal</button>
     </div>
   </div>
 </div>
 
 <script>
-var MAIN_GID = '1421244140359909513';
-var selectedGuild = MAIN_GID;
+(function () {
+  'use strict';
 
-function selectType(val, el) {
-  document.querySelectorAll('.type-opt').forEach(function(o){o.classList.remove('selected');});
-  el.classList.add('selected');
-  document.getElementById('ch-type').value = val;
-}
+  var MAIN_GID = '1498837105915330562';
+  var selectedGuild = MAIN_GID;
 
-async function loadGuilds() {
-  loadChannels();
-}
-
-async function loadChannels(preserveScroll) {
-  if (!selectedGuild) return;
-
-  var mc = document.getElementById('main-content');
-  var savedScroll = preserveScroll && mc ? mc.scrollTop : 0;
-
-  var list = document.getElementById('channel-list');
-  list.innerHTML = '<div class="ch-empty"><i class="fas fa-spinner fa-spin"></i><p>Загрузка...</p></div>';
-
-  var r = await fetch('/api/guild/' + selectedGuild + '/channels');
-  var chData = await r.json();
-  var channels = Array.isArray(chData) ? chData : (chData.channels || []);
-
-  // Stats
-  var textCount  = channels.filter(function(c){return c.type==='text';}).length;
-  var voiceCount = channels.filter(function(c){return c.type==='voice';}).length;
-  var catCount   = channels.filter(function(c){return c.type==='category';}).length;
-  document.getElementById('stat-text').textContent  = textCount;
-  document.getElementById('stat-voice').textContent = voiceCount;
-  document.getElementById('stat-cat').textContent   = catCount;
-  document.getElementById('stat-total').textContent = channels.length;
-  document.getElementById('ch-count').textContent   = channels.length + ' канал';
-  document.getElementById('ch-stats').style.display = 'flex';
-
-  if (!channels.length) {
-    list.innerHTML = '<div class="ch-empty"><i class="fas fa-hashtag"></i><p>Канал не найдено./p></div>';
-    return;
+  // Scroll restore için: data attribute ile sakla
+  function getScroll() {
+    var mc = document.getElementById('main-content');
+    return mc ? mc.scrollTop : 0;
+  }
+  function setScroll(y) {
+    var mc = document.getElementById('main-content');
+    if (mc) mc.scrollTop = y;
   }
 
-  // Kategorilere по grupla
-  var cats = channels.filter(function(c){return c.type==='category';});
-  var grouped = {};
-  cats.forEach(function(c){ grouped[c.name] = []; });
-  var uncategorized = [];
+  function $(id) { return document.getElementById(id); }
 
-  channels.forEach(function(c) {
-    if (c.type === 'category') return;
-    if (c.category) {
-      if (!grouped[c.category]) grouped[c.category] = [];
-      grouped[c.category].push(c);
-    } else {
-      uncategorized.push(c);
+  function selectType(val, el) {
+    document.querySelectorAll('.type-opt').forEach(function (o) { o.classList.remove('selected'); });
+    if (el) el.classList.add('selected');
+    $('ch-type').value = val;
+  }
+
+  async function loadChannels(preserveScroll) {
+    if (!selectedGuild) return;
+
+    // Eğer preserveScroll true değilse (örn. sayfa ilk kez yükleniyor) zaten en üstte olmamız gerek
+    var restoreY = preserveScroll ? getScroll() : 0;
+
+    var list = $('channel-list');
+    list.innerHTML = '<div class="ch-empty"><i class="fas fa-spinner fa-spin"></i><p>Yükleniyor...</p></div>';
+
+    try {
+      var r = await fetch('/api/guild/' + selectedGuild + '/channels');
+      var chData = await r.json();
+      var channels = Array.isArray(chData) ? chData : (chData.channels || []);
+
+      // Stats
+      var textCount  = channels.filter(function (c) { return c.type === 'text'; }).length;
+      var voiceCount = channels.filter(function (c) { return c.type === 'voice'; }).length;
+      var catCount   = channels.filter(function (c) { return c.type === 'category'; }).length;
+      $('stat-text').textContent  = textCount;
+      $('stat-voice').textContent = voiceCount;
+      $('stat-cat').textContent   = catCount;
+      $('stat-total').textContent = channels.length;
+      $('ch-count').textContent   = channels.length + ' kanal';
+      $('ch-stats').style.display = 'flex';
+
+      if (!channels.length) {
+        list.innerHTML = '<div class="ch-empty"><i class="fas fa-hashtag"></i><p>Kanal bulunamadı.</p></div>';
+        return;
+      }
+
+      // Kategorilere göre grupla
+      var cats = channels.filter(function (c) { return c.type === 'category'; });
+      var grouped = {};
+      cats.forEach(function (c) { grouped[c.name] = []; });
+      var uncategorized = [];
+
+      channels.forEach(function (c) {
+        if (c.type === 'category') return;
+        if (c.category) {
+          if (!grouped[c.category]) grouped[c.category] = [];
+          grouped[c.category].push(c);
+        } else {
+          uncategorized.push(c);
+        }
+      });
+
+      var html = '';
+
+      // Kategorisiz kanallar
+      if (uncategorized.length) {
+        uncategorized.forEach(function (ch) {
+          html += renderRow(ch, true);
+        });
+      }
+
+      // Kategorili gruplar
+      cats.forEach(function (cat) {
+        var children = grouped[cat.name] || [];
+        html += '<div class="cat-group">';
+        html += '<div class="cat-header">';
+        html += '<i class="fas fa-folder" style="color:#c8922a;font-size:11px;"></i>';
+        html += '<span class="cat-name">' + cat.name + '</span>';
+        html += '<span style="font-size:10px;color:#5a5040;margin-right:8px;">' + children.length + '</span>';
+        html += '<i class="fas fa-chevron-right cat-toggle open"></i>';
+        html += '<button class="del-btn" data-action="delete-cat" data-id="' + cat.id + '" data-name="' + escapeAttr(cat.name) + '" style="opacity:1;margin-left:4px;" type="button"><i class="fas fa-trash"></i></button>';
+        html += '</div>';
+        html += '<div class="cat-channels open">';
+        if (children.length) {
+          children.forEach(function (ch) { html += renderRow(ch, false); });
+        } else {
+          html += '<div style="padding:10px 28px;font-size:12px;color:#5a5040;font-style:italic;">Boş kategori</div>';
+        }
+        html += '</div></div>';
+      });
+
+      list.innerHTML = html;
+
+      // Scroll restore
+      if (preserveScroll) {
+        requestAnimationFrame(function () { setScroll(restoreY); });
+        // Bir frame daha garanti olsun
+        setTimeout(function () { setScroll(restoreY); }, 30);
+      }
+    } catch (e) {
+      list.innerHTML = '<div class="ch-empty"><i class="fas fa-exclamation-triangle"></i><p>Hata: ' + e.message + '</p></div>';
     }
-  });
+  }
 
-  var html = '';
+  function escapeAttr(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+  }
 
-  // Kategorisiz каналы
-  if (uncategorized.length) {
-    uncategorized.forEach(function(ch) {
-      html += renderRow(ch, true);
+  function renderRow(ch, isRoot) {
+    var icon, iconClass, badgeClass, badgeLabel;
+    if (ch.type === 'text') {
+      icon = 'fa-hashtag'; iconClass = 'icon-text'; badgeClass = 'badge-text'; badgeLabel = 'Metin';
+    } else if (ch.type === 'voice') {
+      icon = 'fa-volume-up'; iconClass = 'icon-voice'; badgeClass = 'badge-voice'; badgeLabel = 'Ses';
+    } else {
+      icon = 'fa-comments'; iconClass = 'icon-forum'; badgeClass = 'badge-forum'; badgeLabel = 'Forum';
+    }
+    var rootClass = isRoot ? ' ch-row-root' : '';
+    return '<div class="ch-row' + rootClass + '">' +
+      '<div class="ch-row-left">' +
+        '<div class="ch-type-icon ' + iconClass + '"><i class="fas ' + icon + '"></i></div>' +
+        '<span class="ch-name">' + ch.name + '</span>' +
+        '<span class="ch-badge ' + badgeClass + '">' + badgeLabel + '</span>' +
+      '</div>' +
+      '<button class="del-btn" data-action="delete-ch" data-id="' + ch.id + '" data-name="' + escapeAttr(ch.name) + '" type="button"><i class="fas fa-trash"></i></button>' +
+    '</div>';
+  }
+
+  function toggleCat(header) {
+    var toggle = header.querySelector('.cat-toggle');
+    var channels = header.nextElementSibling;
+    if (toggle) toggle.classList.toggle('open');
+    if (channels) channels.classList.toggle('open');
+  }
+
+  function openNameModal() {
+    $('ch-name').value = '';
+    $('modal').classList.add('open');
+    setTimeout(function () { $('ch-name').focus(); }, 50);
+  }
+  function closeModal() { $('modal').classList.remove('open'); }
+
+  async function createChannel() {
+    var name = $('ch-name').value.trim();
+    var type = $('ch-type').value;
+    if (!name) { alert('Kanal adı gir!'); return; }
+    try {
+      var r = await fetch('/api/guild/' + selectedGuild + '/channels/create', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name, type: type })
+      });
+      var d = await r.json();
+      if (d.success) { closeModal(); loadChannels(true); }
+      else alert('Hata: ' + (d.error || 'Bilinmeyen'));
+    } catch (e) { alert('İstek hatası: ' + e.message); }
+  }
+
+  async function deleteChannel(id, name) {
+    if (!confirm('"' + name + '" kanalını silmek istediğine emin misin?')) return;
+    try {
+      var r = await fetch('/api/guild/' + selectedGuild + '/channels/' + id + '/delete', { method: 'POST' });
+      var d = await r.json();
+      if (d.success) loadChannels(true);
+      else alert('Hata: ' + (d.error || 'Bilinmeyen'));
+    } catch (e) { alert('İstek hatası: ' + e.message); }
+  }
+
+  function bindEvents() {
+    // Kanal türü seçimi
+    document.querySelectorAll('.type-opt').forEach(function (el) {
+      el.addEventListener('click', function () {
+        selectType(el.getAttribute('data-type'), el);
+      });
     });
-  }
 
-  // Kategorili gruplar
-  cats.forEach(function(cat) {
-    var children = grouped[cat.name] || [];
-    html += '<div class="cat-group">';
-    html += '<div class="cat-header" onclick="toggleCat(this)">';
-    html += '<i class="fas fa-folder" style="color:#c8922a;font-size:11px;"></i>';
-    html += '<span class="cat-name">' + cat.name + '</span>';
-    html += '<span style="font-size:10px;color:#5a5040;margin-right:8px;">' + children.length + '</span>';
-    html += '<i class="fas fa-chevron-right cat-toggle open"></i>';
-    html += '<button class="del-btn" style="opacity:1;margin-left:4px;" onclick="event.stopPropagation();deleteChannel(\'' + cat.id + '\',\'' + cat.name + '\')"><i class="fas fa-trash"></i></button>';
-    html += '</div>';
-    html += '<div class="cat-channels open">';
-    if (children.length) {
-      children.forEach(function(ch){ html += renderRow(ch, false); });
-    } else {
-      html += '<div style="padding:10px 28px;font-size:12px;color:#5a5040;font-style:italic;">Пусто kategori</div>';
+    // Yeni kanal butonu
+    var btnNew = $('btnNewChannel');
+    if (btnNew) btnNew.addEventListener('click', openNameModal);
+    var btnClose = $('btnCloseModal');
+    if (btnClose) btnClose.addEventListener('click', closeModal);
+    var btnCancel = $('btnCancelChannel');
+    if (btnCancel) btnCancel.addEventListener('click', closeModal);
+    var btnCreate = $('btnCreateChannel');
+    if (btnCreate) btnCreate.addEventListener('click', createChannel);
+
+    // Sunucu seçimi (eğer görünür hale getirilirse)
+    var gs = $('guild-select');
+    if (gs) gs.addEventListener('change', function () { loadChannels(false); });
+
+    // Modal backdrop tıklama
+    var modal = $('modal');
+    if (modal) modal.addEventListener('click', function (e) { if (e.target === modal) closeModal(); });
+
+    // Event delegation: silme butonları + kategori toggle
+    var list = $('channel-list');
+    if (list) {
+      list.addEventListener('click', function (e) {
+        var btn = e.target.closest('button[data-action]');
+        if (btn) {
+          e.stopPropagation();
+          var action = btn.getAttribute('data-action');
+          var id = btn.getAttribute('data-id');
+          var name = btn.getAttribute('data-name');
+          if (action === 'delete-ch' || action === 'delete-cat') {
+            deleteChannel(id, name);
+          }
+          return;
+        }
+        var hdr = e.target.closest('.cat-header');
+        if (hdr) toggleCat(hdr);
+      });
     }
-    html += '</div></div>';
-  });
-
-  list.innerHTML = html;
-
-  if (preserveScroll && mc) {
-    requestAnimationFrame(function(){ mc.scrollTop = savedScroll; });
   }
-}
 
-function renderRow(ch, isRoot) {
-  var icon, iconClass, badgeClass, badgeLabel;
-  if (ch.type === 'text') {
-    icon = 'fa-hashtag'; iconClass = 'icon-text'; badgeClass = 'badge-text'; badgeLabel = 'Metin';
-  } else if (ch.type === 'voice') {
-    icon = 'fa-volume-up'; iconClass = 'icon-voice'; badgeClass = 'badge-voice'; badgeLabel = 'Ses';
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
   } else {
-    icon = 'fa-comments'; iconClass = 'icon-forum'; badgeClass = 'badge-forum'; badgeLabel = 'Forum';
+    init();
   }
-  var rootClass = isRoot ? ' ch-row-root' : '';
-  return '<div class="ch-row' + rootClass + '">' +
-    '<div class="ch-row-left">' +
-      '<div class="ch-type-icon ' + iconClass + '"><i class="fas ' + icon + '"></i></div>' +
-      '<span class="ch-name">' + ch.name + '</span>' +
-      '<span class="ch-badge ' + badgeClass + '">' + badgeLabel + '</span>' +
-    '</div>' +
-    '<button class="del-btn" onclick="deleteChannel(\'' + ch.id + '\',\'' + ch.name + '\')"><i class="fas fa-trash"></i></button>' +
-  '</div>';
-}
-
-function toggleCat(header) {
-  var toggle = header.querySelector('.cat-toggle');
-  var channels = header.nextElementSibling;
-  toggle.classList.toggle('open');
-  channels.classList.toggle('open');
-}
-
-function openNameModal() {
-  document.getElementById('ch-name').value = '';
-  document.getElementById('modal').classList.add('open');
-}
-function closeModal() { document.getElementById('modal').classList.remove('open'); }
-
-async function createChannel() {
-  var name = document.getElementById('ch-name').value.trim();
-  var type = document.getElementById('ch-type').value;
-  if (!name) { alert('Канал имя gir!'); return; }
-  var r = await fetch('/api/guild/' + selectedGuild + '/channels/create', {
-    method: 'POST', headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({name: name, type: type})
-  });
-  var d = await r.json();
-  if (d.success) { closeModal(); loadChannels(true); }
-  else alert(d.error || 'Ошибка');
-}
-
-async function deleteChannel(id, name) {
-  if (!confirm('"' + name + '" канал удалить если хотите emin misiniz mı siz?')) return;
-  var r = await fetch('/api/guild/' + selectedGuild + '/channels/' + id + '/delete', {method:'POST'});
-  var d = await r.json();
-  if (d.success) loadChannels(true);
-  else alert(d.error || 'Ошибка');
-}
-
-document.getElementById('modal').addEventListener('click', function(e){ if(e.target===this) closeModal(); });
-loadGuilds();
+  function init() {
+    bindEvents();
+    loadChannels(false);  // ilk yükleme: scroll restore yok
+  }
+})();
 </script>
 {% endblock %}

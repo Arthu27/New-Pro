@@ -136,7 +136,7 @@ def _handle_unexpected_error(e):
     return ("Internal Сервер Error", 500)
 
 # Sabit сервер ID — bot'un ilk bulduğu сервер ispolzuetsya, panelden mümkün izmenit
-MAIN_GUILD_ID = os.getenv('MAIN_GUILD_ID', '1421244140359909513')
+MAIN_GUILD_ID = os.getenv('MAIN_GUILD_ID', '1498837105915330562')
 
 # Роли администратор (den nizkogo e visokomu)
 ROLES = {

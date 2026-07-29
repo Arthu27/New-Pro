@@ -1,6 +1,6 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 {% block title %}Antiraid - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-shield-alt" style="color:#c8922a;animation:pulse 2s infinite;"></i> ANTİRAİD KORUMASI{% endblock %}
+{% block page_title %}<i class="fas fa-shield-alt" style="color:#c8922a;animation:pulse 2s infinite;"></i> ANTİ-RAİD KORUMASI{% endblock %}
 {% block content %}
 <style>
   .ar-box{background:linear-gradient(135deg,rgba(26,22,16,0.7),rgba(26,22,16,0.7));border:1px solid rgba(212,168,67,0.3);border-radius:16px;padding:25px;margin-bottom:20px;position:relative;overflow:hidden;}
@@ -31,59 +31,63 @@
   .wl-add-row{display:flex;gap:8px;margin-bottom:12px;}
   .wl-add-row input{flex:1;padding:10px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(94,196,122,0.25);border-radius:14px;color:#f0e8d0;font-size:14px;}
   .wl-add-row button{padding:10px 16px;background:rgba(94,196,122,0.8);color:#f0e8d0;border:none;border-radius:14px;cursor:pointer;font-weight:700;white-space:nowrap;}
+  .toast{position:fixed;top:20px;right:20px;padding:12px 22px;border-radius:10px;font-weight:700;z-index:99999;animation:slideIn .3s;font-size:13px;}
+  .toast.ok{background:linear-gradient(135deg,#27ae60,#2ecc71);color:#fff;}
+  .toast.err{background:linear-gradient(135deg,#c0392b,#e74c3c);color:#fff;}
+  @keyframes slideIn{from{transform:translateX(120%);opacity:0;}to{transform:translateX(0);opacity:1;}}
 </style>
 
-<select style="display:none" style="display:none" id="guild-select" class="guild-select" onchange="loadAntiraid()">
-  <option value="">Сервер выбрать...</option>
+<select id="guild-select" style="display:none" class="guild-select">
+  <option value="">Sunucu seç...</option>
 </select>
 
 <div class="grid2">
   <div class="ar-box">
-    <div class="ar-title"><i class="fas fa-shield-alt"></i> Koruma Настройки</div>
+    <div class="ar-title"><i class="fas fa-shield-alt"></i> Koruma Ayarları</div>
     <div class="toggle-row">
-      <div><div class="toggle-label">🚪 Join Raid Koruma</div><div class="toggle-sub">Korotkaya dlitelnosti очень участников prisoedinitsya engellemek</div></div>
+      <div><div class="toggle-label">🚪 Katılım Raid Koruması</div><div class="toggle-sub">Kısa sürede çok fazla üyenin katılmasını engeller</div></div>
       <label class="toggle"><input type="checkbox" id="join-raid"><span class="slider"></span></label>
     </div>
     <div class="toggle-row">
-      <div><div class="toggle-label">🤖 Bot Koruma</div><div class="toggle-sub">Администратор bot dobavlenie engelle</div></div>
+      <div><div class="toggle-label">🤖 Bot Koruma</div><div class="toggle-sub">Yetkisiz bot eklenmesini engeller</div></div>
       <label class="toggle"><input type="checkbox" id="bot-prot"><span class="slider"></span></label>
     </div>
     <div class="toggle-row">
-      <div><div class="toggle-label">🔨 Защита Webhook</div><div class="toggle-sub">Администратор webhook oluşoluşturulanlar engelle</div></div>
+      <div><div class="toggle-label">🔨 Webhook Koruma</div><div class="toggle-sub">Yetkisiz webhook oluşturulmasını engeller</div></div>
       <label class="toggle"><input type="checkbox" id="webhook-prot"><span class="slider"></span></label>
     </div>
     <div class="toggle-row">
-      <div><div class="toggle-label">📛 Канал/Роль Удалитьme Koruma</div><div class="toggle-sub">Toplu удалить вход engelle</div></div>
+      <div><div class="toggle-label">📛 Kanal/Rol Silme Koruması</div><div class="toggle-sub">Toplu silme işlemlerini engeller</div></div>
       <label class="toggle"><input type="checkbox" id="delete-prot"><span class="slider"></span></label>
     </div>
     <div class="toggle-row">
-      <div><div class="toggle-label">👤 Фильтр по возрасту аккаунта</div><div class="toggle-sub">Новый hesapları автоматически at</div></div>
+      <div><div class="toggle-label">👤 Hesap Yaşı Filtresi</div><div class="toggle-sub">Yeni hesapları otomatik olarak atar</div></div>
       <label class="toggle"><input type="checkbox" id="age-prot"><span class="slider"></span></label>
     </div>
-    <label class="field-label">Min. Hesap Yaş (день)</label>
+    <label class="field-label">Min. Hesap Yaşı (gün)</label>
     <input type="number" id="min-age" value="7" min="0" max="365" class="field-input">
-    <label class="field-label">Порог входа (X участников/мин)</label>
+    <label class="field-label">Katılım Eşiği (X üye/dk)</label>
     <input type="number" id="join-threshold" value="10" min="2" max="100" class="field-input">
     <label class="field-label">Raid Aksiyonu</label>
     <select id="raid-action" class="field-input">
-      <option value="lockdown">🔒 Сервер Kilitle</option>
-      <option value="kick">👢 Новый Участник At</option>
-      <option value="ban">🔨 Новый Участник Banla</option>
-      <option value="alert">🔔 Только Uyar</option>
+      <option value="lockdown">🔒 Sunucuyu Kilitle</option>
+      <option value="kick">👢 Yeni Üyeyi At</option>
+      <option value="ban">🔨 Yeni Üyeyi Banla</option>
+      <option value="alert">🔔 Sadece Uyar</option>
     </select>
-    <button class="save-btn" onclick="saveAntiraid()"><i class="fas fa-save"></i> Сохранить</button>
+    <button class="save-btn" id="btnSaveAntiraid" type="button"><i class="fas fa-save"></i> Kaydet</button>
   </div>
 
   <div>
     <div class="ar-box">
-      <div class="ar-title"><i class="fas fa-exclamation-triangle"></i> В конец Raid Sobitiya</div>
-      <div id="raid-events"><p style="color:#5a5040;font-size:13px;font-style:italic;">Сервер выберите...</p></div>
+      <div class="ar-title"><i class="fas fa-exclamation-triangle"></i> Son Raid Olayları</div>
+      <div id="raid-events"><p style="color:#5a5040;font-size:13px;font-style:italic;">Sunucu seçin...</p></div>
     </div>
     <div class="ar-box">
-      <div class="ar-title"><i class="fas fa-check-circle" style="color:#5ec47a;"></i> Whitelist</div>
+      <div class="ar-title"><i class="fas fa-check-circle" style="color:#5ec47a;"></i> Beyaz Liste</div>
       <div class="wl-add-row">
-        <input type="text" id="whitelist-id" placeholder="Пользователь/Bot ID...">
-        <button onclick="addWhitelist()">+ Добавить</button>
+        <input type="text" id="whitelist-id" placeholder="Kullanıcı/Bot ID...">
+        <button type="button" id="btnAddWl"><i class="fas fa-plus"></i> Ekle</button>
       </div>
       <div id="whitelist-items"></div>
     </div>
@@ -91,74 +95,127 @@
 </div>
 
 <script>
-var MAIN_GID = '1421244140359909513';
-var selectedGuild = MAIN_GID;
-var whitelist = [];
+(function () {
+  'use strict';
+  var MAIN_GID = '1498837105915330562';
+  var selectedGuild = MAIN_GID;
+  var whitelist = [];
 
-async function loadAntiraid(gid_param) {
-  selectedGuild = gid_param || MAIN_GID;
-  if(!selectedGuild) return;
-  var r = await fetch('/api/guild/'+selectedGuild+'/antiraid');
-  var data = await r.json();
-  document.getElementById('join-raid').checked    = data.join_raid||false;
-  document.getElementById('bot-prot').checked     = data.bot_protection||false;
-  document.getElementById('webhook-prot').checked = data.webhook_protection||false;
-  document.getElementById('delete-prot').checked  = data.delete_protection||false;
-  document.getElementById('age-prot').checked     = data.age_filter||false;
-  document.getElementById('min-age').value        = data.min_age||7;
-  document.getElementById('join-threshold').value = data.join_threshold||10;
-  document.getElementById('raid-action').value    = data.raid_action||'lockdown';
-  whitelist = data.whitelist||[];
-  renderWhitelist();
-  var evts = data.recent_events||[];
-  document.getElementById('raid-events').innerHTML = evts.length ?
-    evts.map(function(e){
-      return '<div class="event-row"><span style="color:#c8922a;font-weight:700;">⚠️ '+e.type+'</span>'+
-        '<span style="color:rgba(240,232,208,0.55);font-size:11px;margin-left:8px;">'+e.timestamp+'</span>'+
-        '<div style="color:rgba(240,232,208,0.4);font-size:12px;margin-top:4px;">'+e.description+'</div></div>';
-    }).join('') :
-    '<p style="color:#5a5040;font-size:13px;font-style:italic;">Raid sobitie yok.</p>';
-}
+  function $(id) { return document.getElementById(id); }
+  function toast(msg, ok) {
+    var t = document.createElement('div');
+    t.className = 'toast ' + (ok ? 'ok' : 'err');
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(function () { t.remove(); }, 2500);
+  }
 
-function renderWhitelist() {
-  var box = document.getElementById('whitelist-items');
-  if(!whitelist.length) { box.innerHTML='<p style="color:#5a5040;font-size:13px;font-style:italic;">Whitelist пусто.</p>'; return; }
-  box.innerHTML = whitelist.map(function(id,i){
-    return '<span class="wl-tag">'+id+'<button onclick="removeWhitelist('+i+')">×</button></span>';
-  }).join('');
-}
+  async function loadAntiraid(gid) {
+    selectedGuild = gid || MAIN_GID;
+    if (!selectedGuild) return;
+    try {
+      var r = await fetch('/api/guild/' + selectedGuild + '/antiraid');
+      var data = await r.json();
+      $('join-raid').checked    = data.join_raid || false;
+      $('bot-prot').checked     = data.bot_protection || false;
+      $('webhook-prot').checked = data.webhook_protection || false;
+      $('delete-prot').checked  = data.delete_protection || false;
+      $('age-prot').checked     = data.age_filter || false;
+      $('min-age').value        = data.min_age || 7;
+      $('join-threshold').value = data.join_threshold || 10;
+      $('raid-action').value    = data.raid_action || 'lockdown';
+      whitelist = data.whitelist || [];
+      renderWhitelist();
+      var evts = data.recent_events || [];
+      $('raid-events').innerHTML = evts.length
+        ? evts.map(function (e) {
+            return '<div class="event-row"><span style="color:#c8922a;font-weight:700;">⚠️ ' + e.type + '</span>' +
+              '<span style="color:rgba(240,232,208,0.55);font-size:11px;margin-left:8px;">' + e.timestamp + '</span>' +
+              '<div style="color:rgba(240,232,208,0.4);font-size:12px;margin-top:4px;">' + e.description + '</div></div>';
+          }).join('')
+        : '<p style="color:#5a5040;font-size:13px;font-style:italic;">Raid olayı yok.</p>';
+    } catch (e) {
+      toast('Yüklenemedi: ' + e.message, false);
+    }
+  }
 
-function addWhitelist() {
-  var id = document.getElementById('whitelist-id').value.trim();
-  if(!id) return;
-  whitelist.push(id); renderWhitelist();
-  document.getElementById('whitelist-id').value = '';
-}
+  function renderWhitelist() {
+    var box = $('whitelist-items');
+    if (!whitelist.length) { box.innerHTML = '<p style="color:#5a5040;font-size:13px;font-style:italic;">Beyaz liste boş.</p>'; return; }
+    box.innerHTML = whitelist.map(function (id, i) {
+      return '<span class="wl-tag">' + id + '<button data-wl-idx="' + i + '" type="button">×</button></span>';
+    }).join('');
+  }
 
-function removeWhitelist(i) { whitelist.splice(i,1); renderWhitelist(); }
+  function addWhitelist() {
+    var id = $('whitelist-id').value.trim();
+    if (!id) return;
+    whitelist.push(id);
+    renderWhitelist();
+    $('whitelist-id').value = '';
+  }
 
-async function saveAntiraid() {
-  if(!selectedGuild) { alert('Сервер выбрать!'); return; }
-  var r = await fetch('/api/guild/'+selectedGuild+'/antiraid', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({
-      join_raid:document.getElementById('join-raid').checked,
-      bot_protection:document.getElementById('bot-prot').checked,
-      webhook_protection:document.getElementById('webhook-prot').checked,
-      delete_protection:document.getElementById('delete-prot').checked,
-      age_filter:document.getElementById('age-prot').checked,
-      min_age:parseInt(document.getElementById('min-age').value),
-      join_threshold:parseInt(document.getElementById('join-threshold').value),
-      raid_action:document.getElementById('raid-action').value,
-      whitelist:whitelist
-    })
-  });
-  var d = await r.json();
-  var btn = event.target;
-  if(d.success) { btn.textContent='✅ Сохранено!'; setTimeout(function(){btn.innerHTML='<i class="fas fa-save"></i> Сохранить';},2000); }
-  else alert('❌ '+(d.error||'Ошибка'));
-}
+  function removeWhitelist(i) {
+    whitelist.splice(i, 1);
+    renderWhitelist();
+  }
 
-window.addEventListener('load', function(){ loadAntiraid(''); });
+  async function saveAntiraid() {
+    if (!selectedGuild) { toast('Önce sunucu seç!', false); return; }
+    try {
+      var r = await fetch('/api/guild/' + selectedGuild + '/antiraid', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          join_raid: $('join-raid').checked,
+          bot_protection: $('bot-prot').checked,
+          webhook_protection: $('webhook-prot').checked,
+          delete_protection: $('delete-prot').checked,
+          age_filter: $('age-prot').checked,
+          min_age: parseInt($('min-age').value, 10),
+          join_threshold: parseInt($('join-threshold').value, 10),
+          raid_action: $('raid-action').value,
+          whitelist: whitelist
+        })
+      });
+      var d = await r.json();
+      if (d.success) {
+        toast('✅ Kaydedildi!', true);
+      } else {
+        toast('❌ ' + (d.error || 'Hata'), false);
+      }
+    } catch (e) {
+      toast('İstek hatası: ' + e.message, false);
+    }
+  }
+
+  function bindEvents() {
+    var btnSave = $('btnSaveAntiraid');
+    if (btnSave) btnSave.addEventListener('click', saveAntiraid);
+    var btnAdd = $('btnAddWl');
+    if (btnAdd) btnAdd.addEventListener('click', addWhitelist);
+    var gs = $('guild-select');
+    if (gs) gs.addEventListener('change', function () { loadAntiraid(gs.value); });
+    // Whitelist silme butonları (event delegation)
+    var wlBox = $('whitelist-items');
+    if (wlBox) wlBox.addEventListener('click', function (e) {
+      var btn = e.target.closest('button[data-wl-idx]');
+      if (btn) removeWhitelist(parseInt(btn.getAttribute('data-wl-idx'), 10));
+    });
+    var wlInput = $('whitelist-id');
+    if (wlInput) wlInput.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); addWhitelist(); }
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+  function init() {
+    bindEvents();
+    loadAntiraid(MAIN_GID);
+  }
+})();
 </script>
 {% endblock %}
