@@ -41,9 +41,14 @@ def get_currency(guild_id: str) -> tuple:
         d = json.load(fp)
     return d.get('currency_name', 'Coin'), d.get('currency_emoji', '💰')
 
-def _eco_embed(title: str, badge: str, color: int, gif_key: str = None) -> discord.Embed:
-    e = discord.Embed(title=title, color=color, timestamp=datetime.utcnow())
-    e.description = f"```ansi\n\u001b[1;33m{badge}\u001b[0m\n```\n{_divider()}"
+def _eco_embed(title: str, subtitle: str, color: int, gif_key: str = None) -> discord.Embed:
+    """Минимализм embed для экономики"""
+    e = discord.Embed(color=color, timestamp=datetime.utcnow())
+    e.description = (
+        f"## {title}\n"
+        f"### {subtitle}\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+    )
     if gif_key:
         e.set_image(url=gif(gif_key))
     return e
@@ -67,12 +72,18 @@ class Economy(commands.Cog):
             hedef = kullanici or interaction.user
             bal = get_balance(gid, str(hedef.id))
             name, emoji = get_currency(gid)
-            e = _eco_embed(f"{emoji}  BAKİYE SORGULAMA", "💳 HESAP DURUMU", 0xF1C40F)
+            e = _eco_embed("Баланс", "Состояние счёта", 0xF1C40F)
+            e.description += (
+                f"**Пользователь:** {hedef.mention}\n"
+                f"**Баланс:** {bal:,} {name}\n"
+                f"**Запрос:** <t:{now_ts()}:R>\n\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            )
             e.set_thumbnail(url=hedef.display_avatar.url)
-            e.add_field(name="👤 Пользователь", value=f"{hedef.mention}", inline=True)
-            e.add_field(name=f"{emoji} Bakiye", value=f"```{bal:,} {name}```", inline=True)
-            e.add_field(name="🕐 Sorgu", value=f"<t:{now_ts()}:R>", inline=False)
-            e.set_footer(text=f"Aether Экономика • {interaction.guild.name}", icon_url=interaction.guild.icon.url if interaction.guild.icon else None)
+            if interaction.guild.icon:
+                e.set_footer(text=f"{interaction.guild.name} · Экономика", icon_url=interaction.guild.icon.url)
+            else:
+                e.set_footer(text=f"{interaction.guild.name} · Экономика")
             await interaction.response.send_message(embed=e)
 
         elif islem == "gunluk":
@@ -91,14 +102,21 @@ class Economy(commands.Cog):
                 if diff < timedelta(hours=24):
                     remaining = timedelta(hours=24) - diff
                     h, m = divmod(int(remaining.total_seconds()) // 60, 60)
-                    e = discord.Embed(title="⏰  Günlük Ödül — Baddme", color=0xE74C3C, timestamp=datetime.utcnow())
+                    e = discord.Embed(color=0xE74C3C, timestamp=datetime.utcnow())
                     e.description = (
-                        f"```ansi\n\u001b[1;31m⏳ COOLDOWN AKTİF\u001b[0m\n```\n{_divider()}\n\n"
-                        f"Günlük ödülünü zaten aldın! Biraz daha baddmen gerekiyor.\n\n{_divider()}"
+                        f"## Ежедневная награда\n"
+                        f"### Подождите\n"
+                        f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                        f"Вы уже получили ежедневную награду!\n"
+                        f"Нужно подождать ещё немного.\n\n"
+                        f"**Осталось:** {h} ч {m} мин\n"
+                        f"**Обновление:** <t:{int((last_dt + timedelta(hours=24)).timestamp())}:R>\n\n"
+                        f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
                     )
-                    e.add_field(name="⏱️ Kalan Süre", value=f"```{h} час {m} minutes```", inline=True)
-                    e.add_field(name="🔄 Обновитьme", value=f"<t:{int((last_dt + timedelta(hours=24)).timestamp())}:R>", inline=True)
-                    e.set_footer(text=f"Aether Экономика • {interaction.guild.name}")
+                    if interaction.guild.icon:
+                        e.set_footer(text=f"{interaction.guild.name} · Экономика", icon_url=interaction.guild.icon.url)
+                    else:
+                        e.set_footer(text=f"{interaction.guild.name} · Экономика")
                     await interaction.response.send_message(embed=e, ephemeral=True)
                     return
             f2 = f'{DATA_DIR}/economy_{gid}.json'
@@ -112,13 +130,19 @@ class Economy(commands.Cog):
             with open(cooldown_f, 'w') as fp:
                 json.dump(cooldowns, fp)
             name, emoji = get_currency(gid)
-            e = _eco_embed(f"🎁  Günlük Ödül Alındı!", "🎁 GÜNLÜK ÖDÜL", 0x2ECC71, "economy_daily")
+            e = _eco_embed("Ежедневная награда", "Награда получена!", 0x2ECC71, "economy_daily")
+            e.description += (
+                f"**Получено:** +{reward:,} {name}\n"
+                f"**Новый баланс:** {bal+reward:,} {name}\n"
+                f"**Следующая награда:** <t:{int((now + timedelta(hours=24)).timestamp())}:R>\n\n"
+                f"*Не забывайте заходить каждый день чтобы получить награду!*\n\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            )
             e.set_thumbnail(url=interaction.user.display_avatar.url)
-            e.add_field(name="💰 Kazanılan", value=f"```+{reward:,} {name}```", inline=True)
-            e.add_field(name="🏦 Новый Bakiye", value=f"```{bal+reward:,} {name}```", inline=True)
-            e.add_field(name="🔄 Последнийraki Ödül", value=f"<t:{int((now + timedelta(hours=24)).timestamp())}:R>", inline=False)
-            e.add_field(name="💡 İpucu", value="*Her день вход yaparak ödülünü almayı unutma!*", inline=False)
-            e.set_footer(text=f"Aether Экономика • {interaction.guild.name}", icon_url=interaction.guild.icon.url if interaction.guild.icon else None)
+            if interaction.guild.icon:
+                e.set_footer(text=f"{interaction.guild.name} · Экономика", icon_url=interaction.guild.icon.url)
+            else:
+                e.set_footer(text=f"{interaction.guild.name} · Экономика")
             await interaction.response.send_message(embed=e)
 
         elif islem == "transfer":
@@ -136,12 +160,20 @@ class Economy(commands.Cog):
             set_balance(gid, uid, bal - miktar, interaction.user.display_name)
             set_balance(gid, tid, get_balance(gid, tid) + miktar, kullanici.display_name)
             name, emoji = get_currency(gid)
-            e = _eco_embed("💸  Transfer ОКlandı", "💸 PARA TRANSFERİ", 0x3498DB)
-            e.add_field(name="📤 Отправитьen", value=f"{interaction.user.mention}\n`Новый: {bal-miktar:,} {name}`", inline=True)
-            e.add_field(name="📥 Alan", value=f"{kullanici.mention}\n`Новый: {get_balance(gid, tid):,} {name}`", inline=True)
-            e.add_field(name=f"{emoji} Miktar", value=f"```{miktar:,} {name}```", inline=False)
-            e.add_field(name="🕐 Дата", value=f"<t:{now_ts()}:F>", inline=False)
-            e.set_footer(text=f"Aether Экономика • {interaction.guild.name}", icon_url=interaction.guild.icon.url if interaction.guild.icon else None)
+            e = _eco_embed("Перевод", "Перевод выполнен", 0x3498DB)
+            e.description += (
+                f"**Отправитель:** {interaction.user.mention}\n"
+                f"**Новый баланс:** {bal-miktar:,} {name}\n\n"
+                f"**Получатель:** {kullanici.mention}\n"
+                f"**Новый баланс:** {get_balance(gid, tid):,} {name}\n\n"
+                f"**Сумма:** {miktar:,} {name}\n"
+                f"**Дата:** <t:{now_ts()}:F>\n\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            )
+            if interaction.guild.icon:
+                e.set_footer(text=f"{interaction.guild.name} · Экономика", icon_url=interaction.guild.icon.url)
+            else:
+                e.set_footer(text=f"{interaction.guild.name} · Экономика")
             await interaction.response.send_message(embed=e)
 
         elif islem == "siralama":
@@ -154,15 +186,21 @@ class Economy(commands.Cog):
             name, emoji = get_currency(gid)
             lb = sorted(data.items(), key=lambda x: x[1].get('balance', 0), reverse=True)[:10]
             medals = ['🥇', '🥈', '🥉']
-            e = discord.Embed(title=f"🏆  ZENGİNLİK SIRALAMASI", color=0xF1C40F, timestamp=datetime.utcnow())
+            e = discord.Embed(color=0xF1C40F, timestamp=datetime.utcnow())
             e.description = (
-                f"```ansi\n\u001b[1;33m👑 EN ZENGİN ÜYELER\u001b[0m\n```\n{_divider()}\n\n" +
+                f"## Рейтинг богатства\n"
+                f"### Самые богатые участники\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n" +
                 "\n".join([
-                    f"{medals[i] if i < 3 else f'`{i+1}.`'} **{v.get('name', k)}** — `{v.get('balance', 0):,} {emoji}`"
+                    f"{medals[i] if i < 3 else f'**{i+1}.**'} {v.get('name', k)} — {v.get('balance', 0):,} {emoji}"
                     for i, (k, v) in enumerate(lb)
-                ])
+                ]) +
+                f"\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             )
-            e.set_footer(text=f"Aether Экономика • {interaction.guild.name}", icon_url=interaction.guild.icon.url if interaction.guild.icon else None)
+            if interaction.guild.icon:
+                e.set_footer(text=f"{interaction.guild.name} · Экономика", icon_url=interaction.guild.icon.url)
+            else:
+                e.set_footer(text=f"{interaction.guild.name} · Экономика")
             await interaction.response.send_message(embed=e)
 
     @app_commands.command(name="games", description="Oyun командаları: çalış, kumar, slot, soygun")
@@ -208,17 +246,23 @@ class Economy(commands.Cog):
             cooldowns[uid] = now.isoformat()
             with open(cooldown_f, 'w') as fp:
                 json.dump(cooldowns, fp)
-            e = discord.Embed(title="💼  Çalışma ОКlandı!", color=0x2ECC71, timestamp=datetime.utcnow())
+            e = discord.Embed(color=0x2ECC71, timestamp=datetime.utcnow())
             e.description = (
-                f"```ansi\n\u001b[1;32m✔ MAAŞ ALINDI\u001b[0m\n```\n{_divider()}\n\n"
-                f"{interaction.user.mention} buдень **{job_name}** olarak çalıştı!\n\n{_divider()}"
+                f"## Работа завершена!\n"
+                f"### Зарплата получена\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                f"{interaction.user.mention} сегодня работал как **{job_name}**!\n\n"
+                f"**Профессия:** {job_name}\n"
+                f"**Заработано:** +{earned:,} {name}\n"
+                f"**Общий баланс:** {bal+earned:,} {name}\n"
+                f"**Следующая работа:** <t:{int((now + timedelta(hours=1)).timestamp())}:R>\n\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             )
             e.set_thumbnail(url=interaction.user.display_avatar.url)
-            e.add_field(name="💼 Meslek", value=f"```{job_name}```", inline=True)
-            e.add_field(name="💰 Kazanılan", value=f"```+{earned:,} {name}```", inline=True)
-            e.add_field(name="🏦 Всего Bakiye", value=f"```{bal+earned:,} {name}```", inline=True)
-            e.add_field(name="⏰ Последнийraki Çalışma", value=f"<t:{int((now + timedelta(hours=1)).timestamp())}:R>", inline=False)
-            e.set_footer(text=f"Aether Экономика • {interaction.guild.name}", icon_url=interaction.guild.icon.url if interaction.guild.icon else None)
+            if interaction.guild.icon:
+                e.set_footer(text=f"{interaction.guild.name} · Экономика", icon_url=interaction.guild.icon.url)
+            else:
+                e.set_footer(text=f"{interaction.guild.name} · Экономика")
             await interaction.response.send_message(embed=e)
 
         elif oyun == "kumar":
@@ -232,24 +276,30 @@ class Economy(commands.Cog):
             kazandi = random.random() < 0.45
             if kazandi:
                 set_balance(gid, uid, bal + miktar, interaction.user.display_name)
-                e = discord.Embed(title="🎰  Kumar — KAZANDIN!", color=0x2ECC71, timestamp=datetime.utcnow())
+                e = discord.Embed(color=0x2ECC71, timestamp=datetime.utcnow())
                 e.description = (
-                    f"```ansi\n\u001b[1;32m🎉 KAZANDIN!\u001b[0m\n```\n{_divider()}\n\n"
-                    f"Şansın yaver gitti! Bahsin iki katını kazandın.\n\n{_divider()}"
+                    f"## Казино\n"
+                    f"### Вы выиграли!\n"
+                    f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                    f"Удача на вашей стороне! Вы выиграли удвоенную ставку.\n\n"
+                    f"**Выиграно:** +{miktar:,} {name}\n"
+                    f"**Новый баланс:** {bal+miktar:,} {name}\n\n"
+                    f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
                 )
                 e.set_image(url=gif("economy_win"))
-                e.add_field(name="💰 Kazanılan", value=f"```+{miktar:,} {name}```", inline=True)
-                e.add_field(name="🏦 Новый Bakiye", value=f"```{bal+miktar:,} {name}```", inline=True)
             else:
                 set_balance(gid, uid, bal - miktar, interaction.user.display_name)
-                e = discord.Embed(title="🎰  Kumar — KAYBETTİN!", color=0xE74C3C, timestamp=datetime.utcnow())
+                e = discord.Embed(color=0xE74C3C, timestamp=datetime.utcnow())
                 e.description = (
-                    f"```ansi\n\u001b[1;31m💸 KAYBETTİN!\u001b[0m\n```\n{_divider()}\n\n"
-                    f"Şansın bu sefer yüz çevirmedi. Bir dahaki sefere!\n\n{_divider()}"
+                    f"## Казино\n"
+                    f"### Вы проиграли\n"
+                    f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                    f"Удача отвернулась от вас. Повезёт в следующий раз!\n\n"
+                    f"**Проиграно:** -{miktar:,} {name}\n"
+                    f"**Новый баланс:** {bal-miktar:,} {name}\n\n"
+                    f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
                 )
                 e.set_image(url=gif("economy_lose"))
-                e.add_field(name="💸 Kaybedilen", value=f"```-{miktar:,} {name}```", inline=True)
-                e.add_field(name="🏦 Новый Bakiye", value=f"```{bal-miktar:,} {name}```", inline=True)
             e.set_thumbnail(url=interaction.user.display_avatar.url)
             e.set_footer(text=f"Aether Экономика • {interaction.guild.name}", icon_url=interaction.guild.icon.url if interaction.guild.icon else None)
             await interaction.response.send_message(embed=e)
@@ -281,15 +331,21 @@ class Economy(commands.Cog):
                 kazanc, msg, color = -miktar, f"Kaybettin! -{miktar} {name}", 0xE74C3C
                 set_balance(gid, uid, bal - miktar, interaction.user.display_name)
                 gif_key = "economy_lose"
-            e = discord.Embed(title="🎰  SLOT MAKİNESİ", color=color, timestamp=datetime.utcnow())
+            e = discord.Embed(color=color, timestamp=datetime.utcnow())
             e.description = (
-                f"```ansi\n\u001b[1;33m🎰 SLOT SONUCU\u001b[0m\n```\n{_divider()}\n\n"
-                f"# {' '.join(s)}\n\n{_divider()}"
+                f"## Слот-машина\n"
+                f"### Результат\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                f"# {' '.join(s)}\n\n"
+                f"**Результат:** {msg}\n"
+                f"**Новый баланс:** {bal+kazanc:,} {name}\n\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             )
             e.set_image(url=gif(gif_key))
-            e.add_field(name="🎯 sonuç", value=f"```{msg}```", inline=False)
-            e.add_field(name="🏦 Новый Bakiye", value=f"```{bal+kazanc:,} {name}```", inline=True)
-            e.set_footer(text=f"Aether Экономика • {interaction.guild.name}", icon_url=interaction.guild.icon.url if interaction.guild.icon else None)
+            if interaction.guild.icon:
+                e.set_footer(text=f"{interaction.guild.name} · Экономика", icon_url=interaction.guild.icon.url)
+            else:
+                e.set_footer(text=f"{interaction.guild.name} · Экономика")
             await interaction.response.send_message(embed=e)
 
         elif oyun == "soygun":
@@ -310,25 +366,31 @@ class Economy(commands.Cog):
                 miktar_c = random.randint(1, min(hedef_bal // 3, 200))
                 set_balance(gid, uid, kendi_bal + miktar_c, interaction.user.display_name)
                 set_balance(gid, tid, hedef_bal - miktar_c, hedef.display_name)
-                e = discord.Embed(title="🦹  SOYGUN BAŞARILI!", color=0x2ECC71, timestamp=datetime.utcnow())
+                e = discord.Embed(color=0x2ECC71, timestamp=datetime.utcnow())
                 e.description = (
-                    f"```ansi\n\u001b[1;32m✔ SOYGUN BAŞARILI!\u001b[0m\n```\n{_divider()}\n\n"
-                    f"{interaction.user.mention} gece karanlığında {hedef.mention}'ı soydu!\n\n{_divider()}"
+                    f"## Ограбление\n"
+                    f"### Успешно!\n"
+                    f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                    f"{interaction.user.mention} ограбил {hedef.mention} в темноте ночи!\n\n"
+                    f"**Украдено:** {miktar_c:,} {name}\n"
+                    f"**Новый баланс:** {kendi_bal+miktar_c:,} {name}\n\n"
+                    f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
                 )
                 e.set_image(url=gif("economy_win"))
-                e.add_field(name="💰 Çalınan", value=f"```{miktar_c:,} {name}```", inline=True)
-                e.add_field(name="🏦 Новый Bakiye", value=f"```{kendi_bal+miktar_c:,} {name}```", inline=True)
             else:
                 ceza = random.randint(10, 50)
                 set_balance(gid, uid, max(0, kendi_bal - ceza), interaction.user.display_name)
-                e = discord.Embed(title="🚔  SOYGUN BAŞARISIZ!", color=0xE74C3C, timestamp=datetime.utcnow())
+                e = discord.Embed(color=0xE74C3C, timestamp=datetime.utcnow())
                 e.description = (
-                    f"```ansi\n\u001b[1;31m✘ YAKALANDIN!\u001b[0m\n```\n{_divider()}\n\n"
-                    f"{interaction.user.mention} suçüstü yakalandı ve ceza ödedi!\n\n{_divider()}"
+                    f"## Ограбление\n"
+                    f"### Неудачно!\n"
+                    f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                    f"{interaction.user.mention} пойман на месте преступления и заплатил штраф!\n\n"
+                    f"**Штраф:** -{ceza:,} {name}\n"
+                    f"**Новый баланс:** {max(0, kendi_bal-ceza):,} {name}\n\n"
+                    f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
                 )
                 e.set_image(url=gif("economy_lose"))
-                e.add_field(name="💸 Наказание", value=f"```-{ceza:,} {name}```", inline=True)
-                e.add_field(name="🏦 Новый Bakiye", value=f"```{max(0, kendi_bal-ceza):,} {name}```", inline=True)
             e.set_thumbnail(url=interaction.user.display_avatar.url)
             e.set_footer(text=f"Aether Экономика • {interaction.guild.name}", icon_url=interaction.guild.icon.url if interaction.guild.icon else None)
             await interaction.response.send_message(embed=e)
@@ -346,15 +408,19 @@ class Economy(commands.Cog):
         if not items:
             await interaction.response.send_message("🏪 Mağaza henüz boş!", ephemeral=True)
             return
-        e = discord.Embed(title="🏪  SUNUCU MAĞAZASI", color=0xF1C40F, timestamp=datetime.utcnow())
-        e.description = f"```ansi\n\u001b[1;33m🛒 MEVCUT ÜRÜNLER\u001b[0m\n```\n{_divider()}"
+        e = discord.Embed(color=0xF1C40F, timestamp=datetime.utcnow())
+        e.description = (
+            f"## Магазин сервера\n"
+            f"### Доступные товары\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        )
         for item in items[:10]:
-            e.add_field(
-                name=f"🏷️ {item.get('name','?')} — `{item.get('price',0):,} {emoji}`",
-                value=f"*{item.get('description', '-')}*",
-                inline=False
-            )
-        e.set_footer(text=f"Aether Экономика • {interaction.guild.name}", icon_url=interaction.guild.icon.url if interaction.guild.icon else None)
+            e.description += f"**{item.get('name','?')}** — {item.get('price',0):,} {emoji}\n*{item.get('description', '-')}*\n\n"
+        e.description += f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        if interaction.guild.icon:
+            e.set_footer(text=f"{interaction.guild.name} · Экономика", icon_url=interaction.guild.icon.url)
+        else:
+            e.set_footer(text=f"{interaction.guild.name} · Экономика")
         await interaction.response.send_message(embed=e)
 
     @app_commands.command(name="buy", description="Купить товар в магазине")
@@ -378,15 +444,21 @@ class Economy(commands.Cog):
             await interaction.response.send_message(f"❌ Yetersiz bakiye! Gerekli: **{price:,} {name}**", ephemeral=True)
             return
         set_balance(gid, uid, bal - price, interaction.user.display_name)
-        e = discord.Embed(title="✅  Satın Alma Успешно!", color=0x2ECC71, timestamp=datetime.utcnow())
+        e = discord.Embed(color=0x2ECC71, timestamp=datetime.utcnow())
         e.description = (
-            f"```ansi\n\u001b[1;32m✔ SATIN ALINDI\u001b[0m\n```\n{_divider()}\n\n"
-            f"**{item['name']}** başarıyla satın alındı!\n\n{_divider()}"
+            f"## Покупка\n"
+            f"### Успешно!\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            f"**{item['name']}** успешно куплен!\n\n"
+            f"**Товар:** {item['name']}\n"
+            f"**Оплачено:** -{price:,} {name}\n"
+            f"**Остаток:** {bal-price:,} {name}\n\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         )
-        e.add_field(name="🏷️ Ürün", value=f"```{item['name']}```", inline=True)
-        e.add_field(name="💸 Ödenen", value=f"```-{price:,} {name}```", inline=True)
-        e.add_field(name="🏦 Kalan Bakiye", value=f"```{bal-price:,} {name}```", inline=True)
-        e.set_footer(text=f"Aether Экономика • {interaction.guild.name}", icon_url=interaction.guild.icon.url if interaction.guild.icon else None)
+        if interaction.guild.icon:
+            e.set_footer(text=f"{interaction.guild.name} · Экономика", icon_url=interaction.guild.icon.url)
+        else:
+            e.set_footer(text=f"{interaction.guild.name} · Экономика")
         await interaction.response.send_message(embed=e)
 
 
