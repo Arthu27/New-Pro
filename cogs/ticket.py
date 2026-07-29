@@ -141,33 +141,24 @@ class TicketView(discord.ui.View):
 
         ts = int(datetime.datetime.utcnow().timestamp())
 
-        # Канал içi hoşgeldin embed
-        e = discord.Embed(
-            title="🎫  DESTEK TALEBİ OLUŞTURULDU",
-            color=0x5865F2,
-            timestamp=datetime.datetime.utcnow()
-        )
+        # Канал içi hoşgeldin embed — карточка стиль
+        e = discord.Embed(color=0x5865F2, timestamp=datetime.datetime.utcnow())
         e.description = (
-            f"```ansi\n\u001b[1;34m✔ TALEBİN ALINDI\u001b[0m\n```\n"
-            f"{_divider()}\n\n"
-            f"Merhaba {interaction.user.mention}, destek ekibimize hoş geldin! 👋\n\n"
-            "**Lütfen aşağıdaki bilgileri paylaş:**\n"
-            "```yaml\n"
-            "• Yaşadığın sorunu kısaca açıkla\n"
-            "• Естьsa ekran görüntüsü add\n"
-            "• Sorunun ne vakit başladığını belirt\n"
-            "```\n"
-            f"{_divider()}"
+            f"## Тикет открыт\n"
+            f"### {channel.mention}\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            f"**Категория:** Техническая проблема\n"
+            f"**Пользователь:** {interaction.user.mention}\n"
+            f"**Создан:** <t:{ts}:R>\n\n"
+            f"Опишите вашу проблему ниже.\n"
+            f"AI ассистент поможет вам, а при необходимости направит к модераторам.\n\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         )
         e.set_thumbnail(url=interaction.user.display_avatar.url)
-        e.set_image(url=GIF_TICKET_OPEN)
-        e.add_field(name="⏱️ Ortalama Yanıt Süresi", value="```yaml\n5 — 15 minutes\n```", inline=True)
-        e.add_field(name="📅 Создатьulma", value=f"<t:{ts}:R>", inline=True)
-        e.add_field(name="🔒 Каналı Закрытьmak İçin", value="```Нажмите кнопку ниже```", inline=False)
-        e.set_footer(
-            text=f"Aether Destek • {guild.name}",
-            icon_url=guild.icon.url if guild.icon else None
-        )
+        if guild.icon:
+            e.set_footer(text=f"{guild.name} · Поддержка", icon_url=guild.icon.url)
+        else:
+            e.set_footer(text=f"{guild.name} · Поддержка")
 
         await channel.send(
             content=f"{interaction.user.mention}" + (f" | {support_role.mention}" if support_role else ""),
