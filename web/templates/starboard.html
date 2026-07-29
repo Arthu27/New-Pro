@@ -4,11 +4,11 @@
 {% block content %}
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&display=swap');
-.sb-каждый{background:linear-gradient(135deg,#100e08,rgba(26,22,16,0.7),#100e08);border:1px solid rgba(200,146,42,0.3);border-radius:20px;padding:30px;margin-bottom:25px;text-align:center;position:relative;overflow:hidden;}
-.sb-каждый::before{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(ellipse at center,rgba(200,146,42,0.07) 0%,transparent 60%);animation:pulse-bg 4s ease-in-out infinite;}
+.sb-hero{background:linear-gradient(135deg,#100e08,rgba(26,22,16,0.7),#100e08);border:1px solid rgba(200,146,42,0.3);border-radius:20px;padding:30px;margin-bottom:25px;text-align:center;position:relative;overflow:hidden;}
+.sb-hero::before{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(ellipse at center,rgba(200,146,42,0.07) 0%,transparent 60%);animation:pulse-bg 4s ease-in-out infinite;}
 @keyframes pulse-bg{0%,100%{opacity:.5;}50%{opacity:1;}}
-.каждый-title{font-family:Rajdhani,sans-serif;font-size:28px;font-weight:700;background:linear-gradient(135deg,#c8922a,#c8922a,#c8922a);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px;}
-.каждый-sub{color:rgba(240,232,208,0.55);font-size:13px;}
+.hero-title{font-family:Rajdhani,sans-serif;font-size:28px;font-weight:700;background:linear-gradient(135deg,#c8922a,#c8922a,#c8922a);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px;}
+.hero-sub{color:rgba(240,232,208,0.55);font-size:13px;}
 .controls-bar{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;}
 .guild-sel{flex:1;min-width:200px;padding:12px 16px;background:rgba(0,0,0,0.6);border:2px solid rgba(200,146,42,0.3);border-radius:14px;color:#f0e8d0;font-size:14px;}
 .guild-sel:focus{outline:none;border-color:#c8922a;}
@@ -30,8 +30,8 @@
 .star-count{font-size:22px;font-weight:700;color:#c8922a;display:flex;align-items:center;gap:6px;margin-bottom:8px;}
 .star-content{color:rgba(240,232,208,0.55);font-size:13px;line-height:1.5;margin-bottom:8px;border-left:3px solid rgba(200,146,42,0.3);padding-left:10px;}
 .star-meta{color:#5a5040;font-size:11px;display:flex;gap:12px;}
-.star-ссылка{color:#c8922a;text-decoration:none;font-size:11px;}
-.star-ссылка:hover{color:#c8922a;}
+.star-link{color:#c8922a;text-decoration:none;font-size:11px;}
+.star-link:hover{color:#c8922a;}
 .toggle-row{display:flex;justify-content:space-between;align-items:center;padding:12px;background:rgba(0,0,0,0.3);border-radius:14px;margin-bottom:12px;}
 .toggle-label{color:rgba(240,232,208,0.7);font-size:14px;}
 .toggle{position:relative;width:48px;height:26px;cursor:pointer;}
@@ -43,10 +43,10 @@
 .empty-state{text-align:center;padding:40px 20px;color:#444;}
 </style>
 
-<div class="sb-каждый">
+<div class="sb-hero">
   <div style="font-size:60px;margin-bottom:10px;">⭐</div>
-  <div class="каждый-title">⭐ Starboard</div>
-  <div class="каждый-sub">En очень zvezda alan сообщения öne удалить</div>
+  <div class="hero-title">⭐ Starboard</div>
+  <div class="hero-sub">En очень zvezda alan сообщения öne удалить</div>
 </div>
 
 <div class="controls-bar">
@@ -59,7 +59,7 @@
   <div class="sb-box">
     <div class="box-title">⚙️ Настройки</div>
     <div class="toggle-row">
-      <span class="toggle-label">Starboard активен</span>
+      <span class="toggle-label">Starboard activity</span>
       <label class="toggle"><input type="checkbox" id="sb-enabled"><span class="toggle-slider"></span></label>
     </div>
     <div class="form-group">
@@ -89,7 +89,7 @@ var selectedGuild = '1421244140359909513';
 
 async function loadGuilds() {
   // Sabit сервер ID
-  var gid = '1421244140359909513';
+  var gid = '{{ main_guild_id }}';
   if (typeof selectedGuild !== 'undefined') selectedGuild = gid;
   if (document.getElementById('guild-select')) document.getElementById('guild-select').value = gid;
   if (document.getElementById('guild-sel')) document.getElementById('guild-sel').value = gid;
@@ -134,7 +134,7 @@ async function loadStarboard() {
       '<div class="star-count">⭐ '+e.count+' zvezda</div>'+
       '<div class="star-content">'+(e.content||'*[Ek/Эмбед]*')+'</div>'+
       '<div class="star-meta"><span>👤 '+(e.author||'?')+'</span><span>#'+(e.channel||'?')+'</span>'+
-      (e.jump_url ? '<a class="star-ссылка" href="'+e.jump_url+'" target="_blank">🔗 Сообщению git</a>' : '')+
+      (e.jump_url ? '<a class="star-link" href="'+e.jump_url+'" target="_blank">🔗 Сообщению git</a>' : '')+
       '</div></div>';
   }).join('');
 }

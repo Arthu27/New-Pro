@@ -116,7 +116,7 @@ async function loadAnalytics(gid){
     options:{responsive:true,plugins:{legend:{labels:{color:'#ccc'}}},scales:{y:{ticks:{color:'#888'},grid:{color:'rgba(255,255,255,0.05)'}},x:{ticks:{color:'#888'},grid:{color:'rgba(255,255,255,0.05)'}}}}
   });
 
-  // En активен участники
+  // En activity участники
   var members=d.top_members||[];
   var maxM=members[0]?members[0].messages:1;
   document.getElementById('top-members').innerHTML=members.length?

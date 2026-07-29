@@ -31,7 +31,7 @@
   <div class="bk-box">
     <div class="bk-title"><i class="fas fa-save"></i> Yedek kopya Создать</div>
     <p style="color:rgba(240,232,208,0.55);font-size:13px;margin-bottom:15px;">Сервер struktura JSON как yeddobavlyaetsya.</p>
-    <label class="check-row"><input type="checkbox" id="back-роли" checked> <span>🎭 Роли yedekle</span></label>
+    <label class="check-row"><input type="checkbox" id="back-role" checked> <span>🎭 Роли yedekle</span></label>
     <label class="check-row"><input type="checkbox" id="back-channels" checked> <span>#️⃣ Каналы yedekle</span></label>
     <label class="check-row"><input type="checkbox" id="back-settings"> <span>⚙️ Сервер настройк yedekle</span></label>
     <button onclick="createBackup()" class="save-btn" style="width:100%;margin-top:15px;"><i class="fas fa-download"></i> Yedek kopya Создать</button>
@@ -81,7 +81,7 @@
         <li>Benzer isimde роль/канал varsa <b style="color:#f0e8d0;">propuskaetsya</b></li>
         <li>Bot celevoy на сервере <b style="color:#f0e8d0;">yönetici</b> администратор sahip olmak olmalı</li>
         <li>Очень fazla роль/канал varsa действие <b style="color:#f0e8d0;">biraz длительность</b></li>
-        <li>Rate limit почему каждый element mejdu <b style="color:#f0e8d0;">0.5s</b> bdobavlyaetsya</li>
+        <li>Rate limit why hero element mejdu <b style="color:#f0e8d0;">0.5s</b> bdobavlyaetsya</li>
       </ul>
     </div>
   </div>
@@ -91,29 +91,10 @@
 var uploadedBackupData = null;
 
 async function loadGuilds() {
-  // Sabit сервер ID
-  var gid = '1421244140359909513';
-  if (typeof selectedGuild !== 'undefined') selectedGuild = gid;
-  if (document.getElementById('guild-select')) document.getElementById('guild-select').value = gid;
-  if (document.getElementById('guild-sel')) document.getElementById('guild-sel').value = gid;
-  if (document.getElementById('guildSelect')) document.getElementById('guildSelect').value = gid;
-  if (typeof loadData === 'function') { loadData(gid); return; }
-  if (typeof loadAll === 'function') { loadAll(gid); return; }
-  if (typeof loadRoles === 'function') { loadRoles(gid); return; }
-  if (typeof loadChannels === 'function') { loadChannels(gid); return; }
-  if (typeof loadMembers === 'function') { loadMembers(gid); return; }
-  if (typeof loadHistory === 'function') { loadHistory(gid); return; }
-  if (typeof loadLogs === 'function') { loadLogs(gid); return; }
-  if (typeof loadVoiceStats === 'function') { loadVoiceStats(gid); return; }
-  if (typeof loadSettings === 'function') { loadSettings(gid); return; }
-  if (typeof loadGiveaways === 'function') { loadGiveaways(gid); return; }
-  if (typeof loadPolls === 'function') { loadPolls(gid); return; }
-  if (typeof loadEconomy === 'function') { loadEconomy(gid); return; }
-  if (typeof loadSuggestions === 'function') { loadSuggestions(gid); return; }
-  if (typeof loadInvites === 'function') { loadInvites(gid); return; }
-  if (typeof loadHealth === 'function') { loadHealth(gid); return; }
-  if (typeof loadAnalytics === 'function') { loadAnalytics(gid); return; }
-});
+  var gid = '{{ main_guild_id }}';
+  if (!gid) return;
+  var select = document.getElementById('guild-select');
+  if (select) select.value = gid;
   loadBackups();
 }
 
@@ -144,7 +125,7 @@ async function createBackup() {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({
-      роли: document.getElementById('back-роли').checked,
+      роли: document.getElementById('back-role').checked,
       channels: document.getElementById('back-channels').checked,
       settings: document.getElementById('back-settings').checked
     })

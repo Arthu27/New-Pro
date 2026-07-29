@@ -589,9 +589,9 @@ class ModReport(commands.Cog):
         cfg = _load_cfg(ctx.guild.id)
 
         # Дата parse et
-        if дата:
+        if date:
             try:
-                dt = datetime.datetime.strptime(дата, '%d.%m.%Y')
+                dt = datetime.datetime.strptime(date, '%d.%m.%Y')
                 meeting_time = dt.replace(tzinfo=datetime.timezone.utc)
             except ValueError:
                 await ctx.send('❌ Неверный формат даты! Напр.: `!собрание-baslat 12.04.2026`')

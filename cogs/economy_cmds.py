@@ -69,7 +69,7 @@ class Economy(commands.Cog):
         gid = str(interaction.guild_id)
 
         if islem == "bakiye":
-            hedef = пользователь or interaction.user
+            hedef = user or interaction.user
             bal = get_balance(gid, str(hedef.id))
             name, emoji = get_currency(gid)
             e = _eco_embed("Bakiye", "Sostoyanie sceta", 0xF1C40F)
@@ -146,25 +146,25 @@ class Economy(commands.Cog):
             await interaction.response.send_message(embed=e)
 
         elif islem == "transfer":
-            if not пользователь or not miktar:
+            if not user or not miktar:
                 await interaction.response.send_message("❌ Пользователь ve miktar belirtmelisin!", ephemeral=True)
                 return
-            if miktar <= 0 or пользователь.bot or пользователь == interaction.user:
+            if miktar <= 0 or user.bot or user == interaction.user:
                 await interaction.response.send_message("❌ Неверный действие!", ephemeral=True)
                 return
-            uid, tid = str(interaction.user.id), str(пользователь.id)
+            uid, tid = str(interaction.user.id), str(user.id)
             bal = get_balance(gid, uid)
             if bal < miktar:
                 await interaction.response.send_message(f"❌ Yetersiz bakiye! Bakiyen: **{bal:,}**", ephemeral=True)
                 return
             set_balance(gid, uid, bal - miktar, interaction.user.display_name)
-            set_balance(gid, tid, get_balance(gid, tid) + miktar, пользователь.display_name)
+            set_balance(gid, tid, get_balance(gid, tid) + miktar, user.display_name)
             name, emoji = get_currency(gid)
             e = _eco_embed("Perevod", "Perevod завершено", 0x3498DB)
             e.description += (
                 f"**Denhaklarınitel:** {interaction.user.mention}\n"
                 f"**Новый bakiye:** {bal-miktar:,} {name}\n\n"
-                f"**Polusohbettel:** {пользователь.mention}\n"
+                f"**Polusohbettel:** {user.mention}\n"
                 f"**Новый bakiye:** {get_balance(gid, tid):,} {name}\n\n"
                 f"**Всего:** {miktar:,} {name}\n"
                 f"**Дата:** <t:{now_ts()}:F>\n\n"
@@ -378,16 +378,16 @@ class Economy(commands.Cog):
                 )
                 e.set_image(url=gif("economy_win"))
             else:
-                наказание = random.randint(10, 50)
-                set_balance(gid, uid, max(0, kendi_bal - наказание), interaction.user.display_name)
+                penalty = random.randint(10, 50)
+                set_balance(gid, uid, max(0, kendi_bal - penalty), interaction.user.display_name)
                 e = discord.Embed(color=0xE74C3C, timestamp=datetime.utcnow())
                 e.description = (
                     f"## Soygun\n"
                     f"### Неудачно!\n"
                     f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
                     f"{interaction.user.mention} poyman на meste prestupleniya ve zaplatil straf!\n\n"
-                    f"**Straf:** -{наказание:,} {name}\n"
-                    f"**Новый bakiye:** {max(0, kendi_bal-наказание):,} {name}\n\n"
+                    f"**Straf:** -{penalty:,} {name}\n"
+                    f"**Новый bakiye:** {max(0, kendi_bal-penalty):,} {name}\n\n"
                     f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
                 )
                 e.set_image(url=gif("economy_lose"))

@@ -40,14 +40,14 @@
 
   /* Сервер select */
   .сервер-select-wrap{margin-bottom:35px;}
-  .сервер-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-top:12px;}
-  .сервер-card{background:rgba(200,160,80,0.05);border:2px solid rgba(200,160,80,0.2);
+  .server-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-top:12px;}
+  .server-card{background:rgba(200,160,80,0.05);border:2px solid rgba(200,160,80,0.2);
     border-radius:12px;padding:14px;cursor:pointer;transition:all 0.3s;display:flex;align-items:center;gap:10px;}
-  .сервер-card:hover,.сервер-card.selected{border-color:var(--accent);background:rgba(200,160,80,0.15);
+  .server-card:hover,.server-card.selected{border-color:var(--accent);background:rgba(200,160,80,0.15);
     box-shadow:0 4px 20px rgba(200,160,80,0.3);}
-  .сервер-card img{width:40px;height:40px;border-radius:50%;border:2px solid rgba(200,160,80,0.4);}
-  .сервер-card .sname{font-size:13px;font-weight:600;color:var(--text);}
-  .сервер-card .smembers{font-size:11px;color:var(--text2);}
+  .server-card img{width:40px;height:40px;border-radius:50%;border:2px solid rgba(200,160,80,0.4);}
+  .server-card .sname{font-size:13px;font-weight:600;color:var(--text);}
+  .server-card .smembers{font-size:11px;color:var(--text2);}
 
   /* Form */
   .form-card{background:linear-gradient(135deg,rgba(20,5,5,0.9),rgba(30,10,10,0.9));
@@ -142,8 +142,8 @@
 
   <!-- Step 1: Сервер выбрать -->
   <div id="step1">
-    <div class="section-title"><i class="fas fa-сервер"></i> Какой На сервер Заявка?</div>
-    <div class="сервер-grid" id="сервер-grid">
+    <div class="section-title"><i class="fas fa-server"></i> Какой На сервер Заявка?</div>
+    <div class="server-grid" id="server-grid">
       <div style="color:var(--text3);text-align:center;padding:20px;grid-column:1/-1;">
         <i class="fas fa-spinner fa-spin" style="color:var(--accent);font-size:24px;"></i>
         <p style="margin-top:10px;">Сервера загруз...</p>
@@ -190,7 +190,7 @@
         </div>
         <div class="form-group">
           <label>Ежедневный Активен</label>
-          <input type="text" id="активен" placeholder="напр.: 3-4 saat">
+          <input type="text" id="activity" placeholder="напр.: 3-4 saat">
         </div>
       </div>
 
@@ -204,7 +204,7 @@
       <div class="form-row full">
         <div class="form-group">
           <label>Почему Как стать модератором İstiyorsun?</label>
-          <textarea id="почему" placeholder="Motivasyonunu, на сервер katkılarını ve celevoylerini anlat..."></textarea>
+          <textarea id="why" placeholder="Motivasyonunu, на сервер katkılarını ve celevoylerini anlat..."></textarea>
         </div>
       </div>
       <div class="form-row full">
@@ -303,7 +303,7 @@ async function loadSunucus() {
   try {
     var r = await fetch('/api/public/guilds');
     var guilds = await r.json();
-    var grid = document.getElementById('сервер-grid');
+    var grid = document.getElementById('server-grid');
     if (!guilds.length) {
       grid.innerHTML = '<p style="color:var(--text3);text-align:center;grid-column:1/-1;">Сервер не найдено.</p>';
       return;
@@ -311,19 +311,19 @@ async function loadSunucus() {
     // Bot logosunu ilk с сервера al
     grid.innerHTML = guilds.map(function(g) {
       var icon = g.icon || 'https://cdn.discordapp.com/embed/avatars/0.png';
-      return '<div class="сервер-card" onclick="selectGuild(\''+g.id+'\',\''+g.name.replace(/'/g,"\\'")+'\')" id="sc-'+g.id+'">' +
+      return '<div class="server-card" onclick="selectGuild(\''+g.id+'\',\''+g.name.replace(/'/g,"\\'")+'\')" id="sc-'+g.id+'">' +
         '<img src="'+icon+'" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' +
         '<div><div class="sname">'+g.name+'</div><div class="smembers">'+g.members+' участников</div></div>' +
         '</div>';
     }).join('');
   } catch(e) {
-    document.getElementById('сервер-grid').innerHTML = '<p style="color:#e74c3c;text-align:center;grid-column:1/-1;">Сервера загруз.</p>';
+    document.getElementById('server-grid').innerHTML = '<p style="color:#e74c3c;text-align:center;grid-column:1/-1;">Сервера загруз.</p>';
   }
 }
 
 function selectGuild(id, name) {
   selectedGuild = {id: id, name: name};
-  document.querySelectorAll('.сервер-card').forEach(function(c){c.classList.remove('selected');});
+  document.querySelectorAll('.server-card').forEach(function(c){c.classList.remove('selected');});
   document.getElementById('sc-'+id).classList.add('selected');
 
   // Step geçişi
@@ -344,16 +344,16 @@ async function submitForm() {
   var discord_name = document.getElementById('discord_name').value.trim();
   var discord_id   = document.getElementById('discord_id').value.trim();
   var yas          = document.getElementById('yas').value.trim();
-  var активен     = document.getElementById('активен').value.trim();
+  var activity     = document.getElementById('activity').value.trim();
   var tecrube      = document.getElementById('tecrube').value.trim();
-  var почему        = document.getElementById('почему').value.trim();
+  var why        = document.getElementById('why').value.trim();
   var ekstra       = document.getElementById('ekstra').value.trim();
 
   if (!memberVerified) {
     showAlert('error', '❌ Discord ID\'ni gir ve сервер участник проверка!');
     return;
   }
-  if (!yas || !активен || !tecrube || !почему) {
+  if (!yas || !activity || !tecrube || !why) {
     showAlert('error', '❌ Пожалуйста все zorunlu alanları doldur!');
     return;
   }
@@ -369,7 +369,7 @@ async function submitForm() {
         discord_id, discord_name,
         guild_id: selectedGuild.id,
         guild_name: selectedGuild.name,
-        yas, активен, tecrube, почему, ekstra
+        yas, activity, tecrube, why, ekstra
       })
     });
     var res = await r.json();

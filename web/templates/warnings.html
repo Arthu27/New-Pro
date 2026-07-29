@@ -25,7 +25,7 @@ function displayWarnings(warns) {
   html += '<tr style="border-bottom:2px solid rgba(220,20,60,0.3);"><th style="padding:12px;text-align:left;color:#dc143c;">Пользователь ID</th><th style="padding:12px;text-align:left;color:#dc143c;">Moderator</th><th style="padding:12px;text-align:left;color:#dc143c;">Причина</th><th style="padding:12px;text-align:left;color:#dc143c;">Дата</th><th style="padding:12px;text-align:left;color:#dc143c;">Сервер</th></tr>';
   warns.slice(0,100).forEach(function(w, i) {
     var bg = i%2===0 ? 'rgba(220,20,60,0.03)' : 'transparent';
-    html += '<tr style="border-bottom:1px solid rgba(255,255,255,0.05);background:'+bg+';transition:background 0.2s;" onmouseover="this.style.background='rgba(220,20,60,0.08)'" onmouseout="this.style.background=''+bg+''">';
+    html += '<tr style="border-bottom:1px solid rgba(255,255,255,0.05);background:'+bg+';transition:background 0.2s;" onmouseover="this.style.background=\'rgba(220,20,60,0.08)\'" onmouseout="this.style.background=\''+bg+'\'">';
     html += '<td style="padding:12px;"><code style="color:#dc143c;font-size:12px;">'+w.user_id+'</code></td>';
     html += '<td style="padding:12px;color:#ffd700;">'+w.moderator+'</td>';
     html += '<td style="padding:12px;color:#ccc;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+w.reason+'</td>';

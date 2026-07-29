@@ -69,7 +69,7 @@ async function loadConfig() {
 function renderRules() {
   var el = document.getElementById('rules-list');
   if (!_rules.length) {
-    el.innerHTML = '<div style="color:rgba(240,232,208,0.3);font-size:13px;padding:8px 0;">Пока правило yok. Varчислоlan davranış активен: 3 warning = 10dk timeout, 5 warning = ban</div>';
+    el.innerHTML = '<div style="color:rgba(240,232,208,0.3);font-size:13px;padding:8px 0;">Пока правило yok. Varчислоlan davranış activity: 3 warning = 10dk timeout, 5 warning = ban</div>';
     return;
   }
   el.innerHTML = _rules.map(function(r, i) {

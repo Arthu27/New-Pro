@@ -5,7 +5,7 @@
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap');
 
-.polls-каждый {
+.polls-hero {
   background: linear-gradient(135deg, #100e08, #100e08, #100e08);
   border: 1px solid rgba(200,160,80,0.4);
   border-radius: 20px;
@@ -15,7 +15,7 @@
   position: relative;
   overflow: hidden;
 }
-.polls-каждый::before {
+.polls-hero::before {
   content: '';
   position: absolute;
   top: 0; left: -100%;
@@ -23,7 +23,7 @@
   background: linear-gradient(90deg, transparent, var(--accent), transparent);
   animation: scan-line 3s linear infinite;
 }
-.polls-каждый::after {
+.polls-hero::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -32,9 +32,9 @@
 }
 @keyframes scan-line { 0%{left:-100%} 100%{left:100%} }
 
-.каждый-icon { font-size: 60px; margin-bottom: 10px; display: block; filter: drop-shadow(0 0 18px rgba(200,160,80,0.6)); animation: float 3s ease-in-out infinite; }
+.hero-icon { font-size: 60px; margin-bottom: 10px; display: block; filter: drop-shadow(0 0 18px rgba(200,160,80,0.6)); animation: float 3s ease-in-out infinite; }
 @keyframes float { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-7px);} }
-.каждый-title {
+.hero-title {
   font-family: 'Inter', sans-serif;
   font-size: 22px;
   font-weight: 900;
@@ -45,7 +45,7 @@
   letter-spacing: 3px;
   margin-bottom: 6px;
 }
-.каждый-sub { color: #666; font-size: 12px; letter-spacing: 1px; }
+.hero-sub { color: #666; font-size: 12px; letter-spacing: 1px; }
 
 .controls-bar { display: flex; gap: 12px; margin-bottom: 22px; flex-wrap: wrap; }
 .guild-sel {
@@ -331,10 +331,10 @@
 </style>
 
 <!-- КАЖДЫЙ -->
-<div class="polls-каждый">
-  <span class="каждый-icon">📊</span>
-  <div class="каждый-title">ANKET YÖNETİCİSİ</div>
-  <div class="каждый-sub">Сервер пользователь anketi создать, результат canlı takip et</div>
+<div class="polls-hero">
+  <span class="hero-icon">📊</span>
+  <div class="hero-title">ANKET YÖNETİCİSİ</div>
+  <div class="hero-sub">Сервер пользователь anketi создать, результат canlı takip et</div>
 </div>
 
 <!-- CONTROLS -->
@@ -383,7 +383,7 @@ var userRole = '{{ role }}';
 
 async function loadGuilds() {
   // Sabit сервер ID
-  var gid = '1421244140359909513';
+  var gid = '{{ main_guild_id }}';
   if (typeof selectedGuild !== 'undefined') selectedGuild = gid;
   if (document.getElementById('guild-select')) document.getElementById('guild-select').value = gid;
   if (document.getElementById('guild-sel')) document.getElementById('guild-sel').value = gid;

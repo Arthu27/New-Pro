@@ -60,7 +60,7 @@ var selectedGuild = '1421244140359909513';
 
 async function loadGuilds() {
   // Sabit сервер ID
-  var gid = '1421244140359909513';
+  var gid = '{{ main_guild_id }}';
   if (typeof selectedGuild !== 'undefined') selectedGuild = gid;
   if (document.getElementById('guild-select')) document.getElementById('guild-select').value = gid;
   if (document.getElementById('guild-sel')) document.getElementById('guild-sel').value = gid;

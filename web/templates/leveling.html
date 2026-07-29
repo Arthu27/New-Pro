@@ -5,7 +5,7 @@
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap');
 
-.lv-каждый {
+.lv-hero {
   background: linear-gradient(135deg, #100e08, rgba(26,22,16,0.7), #100e08);
   border: 1px solid rgba(200,146,42,0.4);
   border-radius: 20px;
@@ -15,7 +15,7 @@
   position: relative;
   overflow: hidden;
 }
-.lv-каждый::before {
+.lv-hero::before {
   content: '';
   position: absolute;
   top: 0; left: -100%;
@@ -23,7 +23,7 @@
   background: linear-gradient(90deg, transparent, #c8922a, transparent);
   animation: scan-line 3s linear infinite;
 }
-.lv-каждый::after {
+.lv-hero::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -32,9 +32,9 @@
 }
 @keyframes scan-line { 0%{left:-100%} 100%{left:100%} }
 
-.каждый-icon { font-size: 60px; margin-bottom: 10px; display: block; filter: drop-shadow(0 0 18px rgba(200,146,42,0.6)); animation: float 3s ease-in-out infinite; }
+.hero-icon { font-size: 60px; margin-bottom: 10px; display: block; filter: drop-shadow(0 0 18px rgba(200,146,42,0.6)); animation: float 3s ease-in-out infinite; }
 @keyframes float { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-7px);} }
-.каждый-title {
+.hero-title {
   font-family: 'Inter', sans-serif;
   font-size: 22px;
   font-weight: 900;
@@ -45,7 +45,7 @@
   letter-spacing: 3px;
   margin-bottom: 6px;
 }
-.каждый-sub { color: #666; font-size: 12px; letter-spacing: 1px; }
+.hero-sub { color: #666; font-size: 12px; letter-spacing: 1px; }
 
 .controls-bar { display: flex; gap: 12px; margin-bottom: 22px; flex-wrap: wrap; }
 .guild-sel {
@@ -188,10 +188,10 @@
 </style>
 
 <!-- КАЖДЫЙ -->
-<div class="lv-каждый">
-  <span class="каждый-icon">⭐</span>
-  <div class="каждый-title">SEVİYE СИСТЕМА</div>
-  <div class="каждый-sub">XP kazanma настройки, уведомление канал ve liderlik tablosu</div>
+<div class="lv-hero">
+  <span class="hero-icon">⭐</span>
+  <div class="hero-title">SEVİYE СИСТЕМА</div>
+  <div class="hero-sub">XP kazanma настройки, уведомление канал ve liderlik tablosu</div>
 </div>
 
 <div class="controls-bar">
@@ -206,7 +206,7 @@
     <div class="box-title">⚙️ Настройки</div>
 
     <div class="toggle-row">
-      <span class="toggle-label">Seviye система активен</span>
+      <span class="toggle-label">Seviye система activity</span>
       <label class="toggle"><input type="checkbox" id="lv-enabled"><span class="toggle-slider"></span></label>
     </div>
     <div class="toggle-row">
@@ -254,7 +254,7 @@ var selectedGuild = '1421244140359909513';
 
 async function loadGuilds() {
   // Sabit сервер ID
-  var gid = '1421244140359909513';
+  var gid = '{{ main_guild_id }}';
   if (typeof selectedGuild !== 'undefined') selectedGuild = gid;
   if (document.getElementById('guild-select')) document.getElementById('guild-select').value = gid;
   if (document.getElementById('guild-sel')) document.getElementById('guild-sel').value = gid;

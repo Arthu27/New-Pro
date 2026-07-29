@@ -41,7 +41,7 @@
     </div>
     <div>
       <label class="field-label">Поддержка Роль</label>
-      <select id="support-роли" class="field-input"></select>
+      <select id="support-role" class="field-input"></select>
     </div>
     <div>
       <label class="field-label">Ticket Başlığı</label>
@@ -63,7 +63,7 @@ var selectedGuild = '1421244140359909513';
 
 async function loadGuilds() {
   // Sabit сервер ID
-  var gid = '1421244140359909513';
+  var gid = '{{ main_guild_id }}';
   if (typeof selectedGuild !== 'undefined') selectedGuild = gid;
   if (document.getElementById('guild-select')) document.getElementById('guild-select').value = gid;
   if (document.getElementById('guild-sel')) document.getElementById('guild-sel').value = gid;
@@ -102,10 +102,10 @@ async function loadSettings() {
   document.getElementById('ticket-ch').innerHTML = chOpts;
   document.getElementById('log-ch').innerHTML = chOpts;
   var role = '<option value="">Выбрать...</option>'+roles.map(function(r){return '<option value="'+r.id+'">'+r.name+'</option>';}).join('');
-  document.getElementById('support-роли').innerHTML = roles;
+  document.getElementById('support-role').innerHTML = roles;
   if(setRes.ticket_channel_id) document.getElementById('ticket-ch').value = setRes.ticket_channel_id;
   if(setRes.log_channel_id) document.getElementById('log-ch').value = setRes.log_channel_id;
-  if(setRes.support_role_id) document.getElementById('support-роли').value = setRes.support_role_id;
+  if(setRes.support_role_id) document.getElementById('support-role').value = setRes.support_role_id;
   if(setRes.title) document.getElementById('ticket-title').value = setRes.title;
   if(setRes.description) document.getElementById('ticket-desc').value = setRes.description;
   var box = document.getElementById('ticket-list');
@@ -130,7 +130,7 @@ async function saveSettings() {
     body: JSON.stringify({
       ticket_channel_id:document.getElementById('ticket-ch').value,
       log_channel_id:document.getElementById('log-ch').value,
-      support_role_id:document.getElementById('support-роли').value,
+      support_role_id:document.getElementById('support-role').value,
       title:document.getElementById('ticket-title').value,
       description:document.getElementById('ticket-desc').value
     })

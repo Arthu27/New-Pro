@@ -101,7 +101,7 @@ class MiniGames(commands.Cog):
         game = self.active_guesses[gid]
         game['attempts'] += 1
         number = game['number']
-        if число == number:
+        if number == number:
             del self.active_guesses[gid]
             e = discord.Embed(title="🎉  ВЕРНО TAHMİN!", color=0x2ECC71, timestamp=discord.utils.utcnow())
             e.description = (
@@ -110,16 +110,16 @@ class MiniGames(commands.Cog):
             )
             e.add_field(name="🎯 Число", value=f"```{number}```", inline=True)
             e.add_field(name="🔢 Попытка", value=f"```{game['attempts']} deneme```", inline=True)
-        elif число < number:
+        elif number < number:
             e = discord.Embed(title="📈  Более Большой!", color=0xF39C12, timestamp=discord.utils.utcnow())
             e.description = f"```ansi\n\u001b[1;33m📈 БОЛЕЕ БОЛЬШОЙ\u001b[0m\n```\n{_divider()}"
-            e.add_field(name="💭 Tahminin", value=f"```{число}```", inline=True)
+            e.add_field(name="💭 Tahminin", value=f"```{number}```", inline=True)
             e.add_field(name="🔢 Попытка", value=f"```{game['attempts']}. deneme```", inline=True)
             e.add_field(name="💡 Подсказка", value="*Число более большой, yukarı çık!*", inline=False)
         else:
             e = discord.Embed(title="📉  Более Маленький!", color=0xF39C12, timestamp=discord.utils.utcnow())
             e.description = f"```ansi\n\u001b[1;33m📉 БОЛЕЕ МАЛЕНЬКИЙ\u001b[0m\n```\n{_divider()}"
-            e.add_field(name="💭 Tahminin", value=f"```{число}```", inline=True)
+            e.add_field(name="💭 Tahminin", value=f"```{number}```", inline=True)
             e.add_field(name="🔢 Попытка", value=f"```{game['attempts']}. deneme```", inline=True)
             e.add_field(name="💡 Подсказка", value="*Число более маленький, aşağı in!*", inline=False)
         e.set_footer(text=f"Aether • {interaction.guild.name}", icon_url=interaction.guild.icon.url if interaction.guild.icon else None)

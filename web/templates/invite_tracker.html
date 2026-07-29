@@ -1,6 +1,6 @@
 ﻿{% extends "base.html" %}
 {% block title %}Davet Takibi - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-ссылка" style="color:#c8922a;animation:pulse 2s infinite;"></i> DAVET TAKİBİ{% endblock %}
+{% block page_title %}<i class="fas fa-link" style="color:#c8922a;animation:pulse 2s infinite;"></i> DAVET TAKİBİ{% endblock %}
 {% block content %}
 <style>
   .inv-box{background:linear-gradient(135deg,rgba(26,22,16,0.7),rgba(26,22,16,0.7));border:1px solid rgba(200,146,42,0.3);border-radius:16px;padding:25px;margin-bottom:20px;position:relative;overflow:hidden;}
@@ -63,7 +63,7 @@
 </div>
 
 <div class="inv-box" id="tab-invites" style="display:none;">
-  <div class="inv-title"><i class="fas fa-ссылка"></i> Активен Davet Linkleri</div>
+  <div class="inv-title"><i class="fas fa-link"></i> Активен Davet Linkleri</div>
   <div id="invites-list"><p style="color:#5a5040;font-style:italic;">Сервер выберите...</p></div>
 </div>
 
@@ -78,7 +78,7 @@ function showTab(tab, btn) {
 
 async function loadGuilds() {
   // Sabit сервер ID
-  var gid = '1421244140359909513';
+  var gid = '{{ main_guild_id }}';
   if (typeof selectedGuild !== 'undefined') selectedGuild = gid;
   if (document.getElementById('guild-select')) document.getElementById('guild-select').value = gid;
   if (document.getElementById('guild-sel')) document.getElementById('guild-sel').value = gid;

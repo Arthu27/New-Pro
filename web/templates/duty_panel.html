@@ -92,7 +92,7 @@ async function loadDuty(gid) {
           '<td style="color:#c8922a;">' + tasks + '</td>' +
           '<td style="color:rgba(240,232,208,0.4);">' + since + '</td></tr>';
       }).join('') + '</tbody></table>'
-      : '<div style="color:rgba(240,232,208,0.3);">Şu an активен задача yok.</div>';
+      : '<div style="color:rgba(240,232,208,0.3);">Şu an activity задача yok.</div>';
 
   } catch(e) {
     document.getElementById('leaderboard').innerHTML = '<div style="color:#e05555;">Загруз.</div>';

@@ -5,7 +5,7 @@
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
 
-.ml-каждый {
+.ml-hero {
   background: linear-gradient(135deg, #100e08, #100e08, #100e08);
   border: 1px solid rgba(200,146,42,0.4);
   border-radius: 20px;
@@ -15,7 +15,7 @@
   position: relative;
   overflow: hidden;
 }
-.ml-каждый::before {
+.ml-hero::before {
   content: '';
   position: absolute;
   top: 0; left: -100%;
@@ -23,7 +23,7 @@
   background: linear-gradient(90deg, transparent, #c8922a, transparent);
   animation: scan-line 3s linear infinite;
 }
-.ml-каждый::after {
+.ml-hero::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -32,8 +32,8 @@
 }
 @keyframes scan-line { 0%{left:-100%} 100%{left:100%} }
 
-.каждый-icon { font-size: 56px; margin-bottom: 10px; display: block; filter: drop-shadow(0 0 16px rgba(200,146,42,0.6)); }
-.каждый-title {
+.hero-icon { font-size: 56px; margin-bottom: 10px; display: block; filter: drop-shadow(0 0 16px rgba(200,146,42,0.6)); }
+.hero-title {
   font-family: 'Inter', sans-serif;
   font-size: 22px;
   font-weight: 900;
@@ -44,7 +44,7 @@
   letter-spacing: 3px;
   margin-bottom: 6px;
 }
-.каждый-sub { color: #666; font-size: 12px; letter-spacing: 1px; }
+.hero-sub { color: #666; font-size: 12px; letter-spacing: 1px; }
 
 /* STATS */
 .ml-stats { display: flex; gap: 14px; margin-bottom: 20px; flex-wrap: wrap; }
@@ -205,10 +205,10 @@
 </style>
 
 <!-- КАЖДЫЙ -->
-<div class="ml-каждый">
-  <span class="каждый-icon">💬</span>
-  <div class="каждый-title">СООБЩЕНИЕ LOGLARI</div>
-  <div class="каждый-sub">Удалитьinenler ve redaktirovannie сообщение kaydı</div>
+<div class="ml-hero">
+  <span class="hero-icon">💬</span>
+  <div class="hero-title">СООБЩЕНИЕ LOGLARI</div>
+  <div class="hero-sub">Удалитьinenler ve redaktirovannie сообщение kaydı</div>
 </div>
 
 <!-- STATS -->

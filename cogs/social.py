@@ -374,7 +374,7 @@ class Social(commands.Cog):
                            baslik: str, aciklama: str,
                            дата: str, max_katilimci: int = 0):
         try:
-            event_dt = datetime.strptime(дата, '%d.%m.%Y %H:%M').replace(tzinfo=timezone.utc)
+            event_dt = datetime.strptime(date, '%d.%m.%Y %H:%M').replace(tzinfo=timezone.utc)
         except ValueError:
             await interaction.response.send_message(
                 "❌ Неверный формат даты! Пример: `25.12.2025 20:00`", ephemeral=True

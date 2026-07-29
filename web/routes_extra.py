@@ -1233,9 +1233,9 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
                             return f'✅ {m.display_name} предупреждения clearndi'
                     elif tip == 'MESAJ_SIL' and len(parts) > 1:
                         ch = resolve_channel(parts[1])
-                        число = int(parts[2]) if len(parts) > 2 and parts[2].isdigit() else 10
+                        number = int(parts[2]) if len(parts) > 2 and parts[2].isdigit() else 10
                         if ch:
-                            deleted = await ch.purge(limit=число)
+                            deleted = await ch.purge(limit=number)
                             return f'✅ #{ch.name} из канала {len(deleted)} message удалено'
                     elif tip == 'KANAL_OLUSTUR' and len(parts) > 1:
                         channel_name = '-'.join(parts[1:]).lower().replace(' ', '-')

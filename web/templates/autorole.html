@@ -4,14 +4,14 @@
 {% block content %}
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap');
-.ar-каждый{background:linear-gradient(135deg,#100e08,#100e08,#100e08);border:1px solid rgba(200,160,80,0.4);border-radius:20px;padding:30px;margin-bottom:22px;text-align:center;position:relative;overflow:hidden;}
-.ar-каждый::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:3px;background:linear-gradient(90deg,transparent,var(--accent),transparent);animation:scan 3s linear infinite;}
-.ar-каждый::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(200,160,80,0.08) 0%,transparent 70%);pointer-events:none;}
+.ar-hero{background:linear-gradient(135deg,#100e08,#100e08,#100e08);border:1px solid rgba(200,160,80,0.4);border-radius:20px;padding:30px;margin-bottom:22px;text-align:center;position:relative;overflow:hidden;}
+.ar-hero::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:3px;background:linear-gradient(90deg,transparent,var(--accent),transparent);animation:scan 3s linear infinite;}
+.ar-hero::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(200,160,80,0.08) 0%,transparent 70%);pointer-events:none;}
 @keyframes scan{0%{left:-100%}100%{left:100%}}
-.каждый-icon{font-size:56px;margin-bottom:10px;display:block;filter:drop-shadow(0 0 18px rgba(200,160,80,0.7));animation:float 3s ease-in-out infinite;}
+.hero-icon{font-size:56px;margin-bottom:10px;display:block;filter:drop-shadow(0 0 18px rgba(200,160,80,0.7));animation:float 3s ease-in-out infinite;}
 @keyframes float{0%,100%{transform:translateY(0);}50%{transform:translateY(-8px);}}
-.каждый-title{font-family:Inter,sans-serif;font-size:22px;font-weight:900;background:linear-gradient(135deg,#c8922a,var(--accent),var(--accent2),var(--accent));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:3px;margin-bottom:6px;}
-.каждый-sub{color:#666;font-size:12px;letter-spacing:1px;}
+.hero-title{font-family:Inter,sans-serif;font-size:22px;font-weight:900;background:linear-gradient(135deg,#c8922a,var(--accent),var(--accent2),var(--accent));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:3px;margin-bottom:6px;}
+.hero-sub{color:#666;font-size:12px;letter-spacing:1px;}
 .guild-sel{width:100%;padding:13px 16px;background:rgba(0,0,0,0.7);border:2px solid rgba(200,160,80,0.4);border-radius:14px;color:#f0e8d0;font-size:14px;margin-bottom:22px;transition:border-color .2s;}
 .guild-sel:focus{outline:none;border-color:#c8922a;box-shadow:0 0 14px rgba(200,160,80,0.25);}
 .ar-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
@@ -36,10 +36,10 @@
 .empty-msg{color:#444;font-size:12px;padding:8px 0;font-style:italic;}
 </style>
 
-<div class="ar-каждый">
-  <span class="каждый-icon">🎭</span>
-  <div class="каждый-title">OTO-РОЛЬ НАСТРОЙК</div>
-  <div class="каждый-sub">Участник автоматически роль ata</div>
+<div class="ar-hero">
+  <span class="hero-icon">🎭</span>
+  <div class="hero-title">OTO-РОЛЬ НАСТРОЙК</div>
+  <div class="hero-sub">Участник автоматически роль ata</div>
 </div>
 
 <select style="display:none" style="display:none" id="guild-select" class="guild-sel" onchange="loadSettings()">
@@ -49,10 +49,10 @@
 <div class="ar-grid">
   <div class="ar-box">
     <div class="ar-title"><i class="fas fa-user-plus"></i> Новый Участник Oto-Роль</div>
-    <div class="ar-desc">На сервер katılanlara каждый üüyeyi автоматически olacak verildi роли:</div>
-    <div id="member-роли-list"></div>
+    <div class="ar-desc">На сервер katılanlara hero üüyeyi автоматически olacak verildi роли:</div>
+    <div id="member-roles-list"></div>
     <div class="add-row">
-      <select id="member-роли-add"></select>
+      <select id="member-role-add"></select>
       <button onclick="addRole('member')"><i class="fas fa-plus"></i> Добавить</button>
     </div>
     <button class="save-btn" onclick="saveSettings('member')"><i class="fas fa-save"></i> Сохранить</button>
@@ -60,9 +60,9 @@
   <div class="ar-box">
     <div class="ar-title"><i class="fas fa-venus" style="color:#c8922a;"></i> Devuska Участник Oto-Роль</div>
     <div class="ar-desc">Роль для новых участников (Женская): участник olacak verildi роли:</div>
-    <div id="girl-роли-list"></div>
+    <div id="girl-roles-list"></div>
     <div class="add-row">
-      <select id="girl-роли-add"></select>
+      <select id="girl-role-add"></select>
       <button onclick="addRole('girl')"><i class="fas fa-plus"></i> Добавить</button>
     </div>
     <button class="save-btn" onclick="saveSettings('girl')"><i class="fas fa-save"></i> Сохранить</button>
@@ -70,9 +70,9 @@
   <div class="ar-box">
     <div class="ar-title"><i class="fas fa-mars" style="color:#c8922a;"></i> Mujcina Участник Oto-Роль</div>
     <div class="ar-desc">Роль для новых участников (Мужская): участник olacak verildi роли:</div>
-    <div id="boy-роли-list"></div>
+    <div id="boy-roles-list"></div>
     <div class="add-row">
-      <select id="boy-роли-add"></select>
+      <select id="boy-role-add"></select>
       <button onclick="addRole('boy')"><i class="fas fa-plus"></i> Добавить</button>
     </div>
     <button class="save-btn" onclick="saveSettings('boy')"><i class="fas fa-save"></i> Сохранить</button>
@@ -80,9 +80,9 @@
   <div class="ar-box">
     <div class="ar-title"><i class="fas fa-robot"></i> Bot Oto-Роль</div>
     <div class="ar-desc">На сервер добавл botlara автоматически olacak verildi роли:</div>
-    <div id="bot-роли-list"></div>
+    <div id="bot-roles-list"></div>
     <div class="add-row">
-      <select id="bot-роли-add"></select>
+      <select id="bot-role-add"></select>
       <button onclick="addRole('bot')"><i class="fas fa-plus"></i> Добавить</button>
     </div>
     <button class="save-btn" onclick="saveSettings('bot')"><i class="fas fa-save"></i> Сохранить</button>
@@ -95,11 +95,11 @@ var selectedGuild=MAIN_GID,allRoles=[],role={member:[],girl:[],boy:[],bot:[]};
 async function loadSettings(gid_param){
   selectedGuild=gid_param||MAIN_GID;
   if(!selectedGuild)return;
-  var[роли,settings]=await Promise.all([
+  var [roles, settings]=await Promise.all([
     fetch('/api/guild/'+selectedGuild+'/roles').then(r=>r.json()),
     fetch('/api/guild/'+selectedGuild+'/autorole').then(r=>r.json())
   ]);
-  allRoles=роли;
+  allRoles=roles;
   roles.member=settings.member_roles||[];
   roles.girl=settings.girl_roles||[];
   roles.boy=settings.boy_roles||[];
@@ -111,21 +111,21 @@ async function loadSettings(gid_param){
 }
 function renderAll(){['member','girl','boy','bot'].forEach(renderType);}
 function renderType(type){
-  var box=document.getElementById(type+'-роли-list');
-  if(!роли[type].length){box.innerHTML='<p class="empty-msg">Пока роль добавл.</p>';return;}
-  box.innerHTML=роли[type].map(function(id){
+  var box=document.getElementById(type+'-roles-list');
+  if(!roles[type].length){box.innerHTML='<p class="empty-msg">Пока роль добавл.</p>';return;}
+  box.innerHTML=roles[type].map(function(id){
     var role=allRoles.find(r=>r.id===id)||{name:id};
-    return '<span class="role-tag">'+role.name+'<button onclick="removeRole(''+type+'',''+id+'')">×</button></span>';
+    return '<span class="role-tag">'+role.name+'<button onclick="removeRole(\''+type+'\',\''+id+'\')">×</button></span>';
   }).join('');
 }
 function addRole(type){
   var v=document.getElementById(type+'-роли-add').value;
-  if(v&&!роли[type].includes(v)){роли[type].push(v);renderType(type);}
+  if(v&&!roles[type].includes(v)){roles[type].push(v);renderType(type);}
 }
-function removeRole(type,id){роли[type]=роли[type].filter(r=>r!==id);renderType(type);}
+function removeRole(type,id){roles[type]=roles[type].filter(r=>r!==id);renderType(type);}
 async function saveSettings(type){
   var keyMap={member:'member_roles',girl:'girl_roles',boy:'boy_roles',bot:'bot_roles'};
-  var r=await fetch('/api/guild/'+selectedGuild+'/autorole',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:type,роли:роли[type]})});
+  var r=await fetch('/api/guild/'+selectedGuild+'/autorole',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:type,roles:roles[type]})});
   var d=await r.json();
   if(d.success){var btn=event.target;btn.textContent='✅ Сохранено!';setTimeout(function(){btn.innerHTML='<i class="fas fa-save"></i> Сохранить';},2000);}
   else alert('❌ '+(d.error||'Ошибка'));

@@ -90,7 +90,7 @@ class Предупреждениеs(commands.Cog):
         warn_id = len(data[gid][uid]) + 1
         data[gid][uid].append({
             "id": warn_id,
-            "reason": причина or "Не belirtildi",
+            "reason": reason or "Не belirtildi",
             "mod": str(interaction.user),
             "mod_id": str(interaction.user.id),
             "timestamp": datetime.now(timezone.utc).isoformat()
@@ -107,7 +107,7 @@ class Предупреждениеs(commands.Cog):
             custom_dm = dm_cfg.get('message')
 
         if custom_dm:
-            msg = custom_dm.replace('{user}', user.display_name).replace('{reason}', причина or 'Не belirtildi').replace('{mod}', interaction.user.display_name).replace('{сервер}', guild.name)
+            msg = custom_dm.replace('{user}', user.display_name).replace('{reason}', reason or 'Не belirtildi').replace('{mod}', interaction.user.display_name).replace('{сервер}', guild.name)
             dm_embed = discord.Embed(color=0xFF6B6B, timestamp=datetime.now(timezone.utc))
             dm_embed.description = (
                 f"## Предупреждение #{warn_id}\n"
@@ -115,13 +115,13 @@ class Предупреждениеs(commands.Cog):
                 f"Сервер: **{guild.name}**\n"
                 f"Модератор: **{interaction.user.display_name}**\n"
                 f"Всего предупреждение: **{total}**\n"
-                f"Причина: {причина or 'Не belirtildi'}"
+                f"Причина: {reason or 'Не belirtildi'}"
             )
             dm_embed.set_thumbnail(url=guild.icon.url if guild.icon else None)
             dm_embed.set_footer(text=f"{guild.name}")
             await self.send_dm(user, dm_embed)
         else:
-            await self.send_dm(user, mod_dm_embed("warn", guild, interaction.user, причина))
+            await self.send_dm(user, mod_dm_embed("warn", guild, interaction.user, reason))
 
         # Автоматически-наказание
         punishment_result = await self.apply_warn_punishment(guild, user, total)
@@ -133,7 +133,7 @@ class Предупреждениеs(commands.Cog):
             f"**{user.display_name}** · `{user.id}`\n\n"
             f"Предупреждение: **#{warn_id}**\n"
             f"Всего: **{total}**\n"
-            f"Причина: {причина or 'Не belirtildi'}\n"
+            f"Причина: {reason or 'Не belirtildi'}\n"
             f"Модератор: {interaction.user.mention}"
         )
         if punishment_result:
@@ -200,4 +200,4 @@ class Предупреждениеs(commands.Cog):
 
 
 async def setup(bot):
-    await bot.add_cog(Предупреждениеs(bot))
+    await bot.add_cog(warnings(bot))

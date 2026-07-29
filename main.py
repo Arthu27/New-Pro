@@ -316,8 +316,8 @@ async def _monitor_voice():
                 if not vc.is_playing():
                     # 1 saniyelik sessiz ses
                     import io
-                    удалить = io.BytesIO(b'\x00' * 3840)  # 20ms PCM удалить
-                    source = discord.PCMAudio(удалить)
+                    delete = io.BytesIO(b'\x00' * 3840)  # 20ms PCM удалить
+                    source = discord.PCMAudio(delete)
                     vc.play(source)
                 last_ping = time.time()
             except Exception:

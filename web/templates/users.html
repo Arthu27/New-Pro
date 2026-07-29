@@ -3,7 +3,7 @@
 {% block page_title %}ПОЛЬЗОВАТЕЛИ{% endblock %}
 {% block content %}
 <div class="section">
-<h2><i class="fas fa-сервер"></i> Сервер Sec</h2>
+<h2><i class="fas fa-server"></i> Сервер Sec</h2>
 <select id="guild-select" onchange="loadMembers()" style="width:100%;padding:12px;background:#0a0a0a;border:2px solid #dc143c;border-radius:8px;color:#eee;font-size:15px;margin-bottom:10px;"><option value="">Сервер secin...</option></select>
 <input type="text" id="search" placeholder="Uye ara..." oninput="filterMembers()" style="display:none;">
 </div>
@@ -77,7 +77,7 @@ function showDetail(i) {
     var jo = m.joined_at ? new Date(m.joined_at) : null;
     var sc = m.status === 'online' ? '#2ecc71' : m.status === 'idle' ? '#f39c12' : m.status === 'dnd' ? '#e74c3c' : '#555';
     var st = m.status === 'online' ? 'Cevrimici' : m.status === 'idle' ? 'Bosta' : m.status === 'dnd' ? 'Rahatsiz Etme' : 'Cevrimdisi';
-    var role = m.roles.map(function(r) {
+    var roles = m.roles.map(function(r) {
         return '<span style="background:rgba(220,20,60,0.2);border:1px solid rgba(220,20,60,0.4);padding:3px 10px;border-radius:10px;font-size:12px;margin:3px;display:inline-block;">' + r.name + '</span>';
     }).join('');
     var mc = document.getElementById('modal-content');
@@ -98,7 +98,7 @@ function showDetail(i) {
         '<div style="background:rgba(220,20,60,0.1);border:1px solid rgba(220,20,60,0.3);padding:12px;border-radius:10px;text-align:center;"><i class="fas fa-sign-in-alt" style="color:#dc143c;"></i><br><small style="color:#888;">На сервер Giris</small><br><span style="color:white;font-size:13px;">' + (jo ? jo.toLocaleDateString('tr-TR') : 'Bilinmiyor') + '</span>' + (jo ? '<br><small style="color:#888;">' + jo.toLocaleTimeString('tr-TR') + '</small>' : '') + '</div>' +
         '<div style="background:rgba(220,20,60,0.1);border:1px solid rgba(220,20,60,0.3);padding:12px;border-radius:10px;text-align:center;"><i class="fas fa-crown" style="color:#dc143c;"></i><br><small style="color:#888;">En Yuksek Роль</small><br><span style="color:white;font-size:13px;">' + (m.top_role || 'Yok') + '</span></div>' +
         '</div>' +
-        (m.roles.length ? '<div><small style="color:#888;text-transform:uppercase;letter-spacing:1px;">Роли (' + m.roles.length + ')</small><br><br>' + роли + '</div>' : '');
+        (m.roles.length ? '<div><small style="color:#888;text-transform:uppercase;letter-spacing:1px;">Роли (' + m.roles.length + ')</small><br><br>' + roles + '</div>' : '');
     mc.appendChild(h);
     document.getElementById('modal').style.display = 'flex';
 }

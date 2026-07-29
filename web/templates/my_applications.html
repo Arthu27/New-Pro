@@ -57,10 +57,10 @@ async function loadApps() {
       '<div class="app-header"><div><div style="color:#f0e8d0;font-weight:700;font-size:16px;">'+app.guild_name+'</div><div class="app-id">'+app.app_id+' • '+timeAgo(app.timestamp)+'</div></div><span class="status-badge '+sc+'">'+st+'</span></div>' +
       '<div class="app-fields">' +
         '<div class="field-box"><div class="field-label">Yaş</div><div class="field-val">'+ans.yas+'</div></div>' +
-        '<div class="field-box"><div class="field-label">Активен</div><div class="field-val">'+ans.активен+'</div></div>' +
+        '<div class="field-box"><div class="field-label">Активен</div><div class="field-val">'+ans.activity+'</div></div>' +
       '</div>' +
       '<div class="field-box" style="margin-bottom:10px;"><div class="field-label">Tecrübe</div><div class="field-val">'+ans.tecrube+'</div></div>' +
-      '<div class="field-box"><div class="field-label">Почему Администратор?</div><div class="field-val">'+ans.почему+'</div></div>' +
+      '<div class="field-box"><div class="field-label">Почему Администратор?</div><div class="field-val">'+ans.why+'</div></div>' +
       reviewBox +
     '</div>';
   }).join('');

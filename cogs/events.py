@@ -102,7 +102,7 @@ class Events(commands.Cog):
                            дата: str, saat: str,
                            channel: discord.TextChannel):
         try:
-            dt = datetime.strptime(f'{дата} {saat}', '%d/%m/%Y %H:%M')
+            dt = datetime.strptime(f'{date} {saat}', '%d/%m/%Y %H:%M')
         except ValueError:
             await interaction.response.send_message('❌ Неверный формат даты/времени! Пример: 25/12/2025 20:00', ephemeral=True)
             return

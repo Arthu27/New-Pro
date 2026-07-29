@@ -84,7 +84,7 @@ class Сервер(discord.ui.View):
             await interaction.response.send_message('❌ Администратор yok.', ephemeral=True)
             return
         await interaction.response.send_modal(
-            Сервер('о', 'Сервер О', self.guild_id)
+            server('о', 'Сервер О', self.guild_id)
         )
 
     @discord.ui.button(label='📋  Правила', style=discord.ButtonStyle.primary, row=0)
@@ -93,7 +93,7 @@ class Сервер(discord.ui.View):
             await interaction.response.send_message('❌ Администратор yok.', ephemeral=True)
             return
         await interaction.response.send_modal(
-            Сервер('правила', 'Правила сервера', self.guild_id)
+            server('правила', 'Правила сервера', self.guild_id)
         )
 
     @discord.ui.button(label='👮  Как стать модератором', style=discord.ButtonStyle.primary, row=0)
@@ -102,7 +102,7 @@ class Сервер(discord.ui.View):
             await interaction.response.send_message('❌ Администратор yok.', ephemeral=True)
             return
         await interaction.response.send_modal(
-            Сервер('yetkili_olmak', 'Как стать модератором', self.guild_id)
+            server('yetkili_olmak', 'Как стать модератором', self.guild_id)
         )
 
     @discord.ui.button(label='➕  Добавлено информацию', style=discord.ButtonStyle.secondary, row=1)
@@ -202,8 +202,8 @@ class Сервер(commands.Cog):
             text=f'{ctx.guild.name}  ·  Сервер Информация Система',
             icon_url=ctx.guild.icon.url if ctx.guild.icon else None
         )
-        await ctx.send(embed=embed, view=Сервер(ctx.guild.id))
+        await ctx.send(embed=embed, view=server(ctx.guild.id))
 
 
 async def setup(bot):
-    await bot.add_cog(Сервер(bot))
+    await bot.add_cog(server(bot))

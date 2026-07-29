@@ -175,7 +175,7 @@
 .profile-status-badge.offline{background:rgba(116,127,141,0.15);color:#747f8d;}
 .profile-divider{height:1px;background:rgba(212,168,67,0.08);margin:10px 0;}
 .profile-section-title{font-size:10px;font-weight:700;color:rgba(240,232,208,0.3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;}
-.profile-роли{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;}
+.profile-role{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;}
 .profile-role-badge{font-size:10px;padding:2px 7px;border-radius:99px;border:1px solid;font-weight:600;}
 .profile-nick-row{display:flex;gap:6px;align-items:center;}
 .profile-nick-input{flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(212,168,67,0.15);border-radius:5px;padding:5px 8px;color:#f0e8d0;font-size:12px;outline:none;font-family:Inter,sans-serif;}
@@ -279,7 +279,7 @@
     <div id="pp-status-badge" class="profile-status-badge"></div>
     <div class="profile-divider"></div>
     <div class="profile-section-title">Роли</div>
-    <div class="profile-роли" id="pp-роли"></div>
+    <div class="profile-role" id="pp-role"></div>
     <div class="profile-divider"></div>
     <div class="profile-section-title">Takma Isim</div>
     <div class="profile-nick-row">
@@ -317,39 +317,23 @@ function escJs(s) {
 
 // ── GUILD BAR ─────────────────────────────────────────────────────────────
 async function loadGuilds() {
-  // Sabit сервер ID
-  var gid = '1384282749317152878';
-  if (typeof selectedGuild !== 'undefined') selectedGuild = gid;
-  if (document.getElementById('guild-select')) document.getElementById('guild-select').value = gid;
-  if (document.getElementById('guild-sel')) document.getElementById('guild-sel').value = gid;
-  if (document.getElementById('guildSelect')) document.getElementById('guildSelect').value = gid;
-  if (typeof loadData === 'function') { loadData(gid); return; }
-  if (typeof loadAll === 'function') { loadAll(gid); return; }
-  if (typeof loadRoles === 'function') { loadRoles(gid); return; }
-  if (typeof loadChannels === 'function') { loadChannels(gid); return; }
-  if (typeof loadMembers === 'function') { loadMembers(gid); return; }
-  if (typeof loadHistory === 'function') { loadHistory(gid); return; }
-  if (typeof loadLogs === 'function') { loadLogs(gid); return; }
-  if (typeof loadVoiceStats === 'function') { loadVoiceStats(gid); return; }
-  if (typeof loadSettings === 'function') { loadSettings(gid); return; }
-  if (typeof loadGiveaways === 'function') { loadGiveaways(gid); return; }
-  if (typeof loadPolls === 'function') { loadPolls(gid); return; }
-  if (typeof loadEconomy === 'function') { loadEconomy(gid); return; }
-  if (typeof loadSuggestions === 'function') { loadSuggestions(gid); return; }
-  if (typeof loadInvites === 'function') { loadInvites(gid); return; }
-  if (typeof loadHealth === 'function') { loadHealth(gid); return; }
-  if (typeof loadAnalytics === 'function') { loadAnalytics(gid); return; }
-}).join('').substring(0,2).toUpperCase();
+  try {
+    var response = await fetch('/api/guilds');
+    _guilds = await response.json();
+    _guilds = Array.isArray(_guilds) ? _guilds : [];
+    if (!_guilds.length) return;
+    if (!_activeGuildId || !_guilds.some(function(g) { return g.id === _activeGuildId; })) _activeGuildId = _guilds[0].id;
+    document.getElementById('guild-bar').innerHTML = _guilds.map(function(g, i) {
+      var initials = (g.name || '?').split(/\s+/).map(function(word) { return word[0]; }).join('').substring(0, 2).toUpperCase();
       var active = g.id === _activeGuildId ? ' active' : '';
-      var img = g.icon ? '<img src="' + g.icon + '" alt="">' : initials;
-      return (i > 0 ? '<div class="guild-sep"></div>' : '') +
-        '<div class="guild-icon' + active + '" id="gi-' + g.id + '" onclick="selectGuild(\'' + g.id + '\')" title="' + escHtml(g.name) + '">' + img + '</div>';
+      var image = g.icon ? '<img src="' + g.icon + '" alt="">' : initials;
+      return (i ? '<div class="guild-sep"></div>' : '') + '<div class="guild-icon' + active + '" id="gi-' + g.id + '" onclick="selectGuild(\'' + g.id + '\', true)" title="' + escHtml(g.name) + '">' + image + '</div>';
     }).join('');
     selectGuild(_activeGuildId, true);
-  } catch(e) { console.error('Guild загруз ошибки:', e); }
+  } catch (e) { console.error('Ошибка загрузки серверов:', e); }
 }
 
-function selectGuild(gid, удалить) {
+function selectGuild(gid, silent) {
   _activeGuildId = gid;
   document.querySelectorAll('.guild-icon').forEach(function(el){ el.classList.remove('active'); });
   var gi = document.getElementById('gi-' + gid);
@@ -796,7 +780,7 @@ function openProfile(event, memberId) {
     var c = r.color && r.color !== '#000000' ? r.color : 'rgba(212,168,67,0.4)';
     return '<span class="profile-role-badge" style="color:' + c + ';border-color:' + c + '20;">' + r.name + '</span>';
   }).join('');
-  document.getElementById('pp-роли').innerHTML = roles || '<span style="color:rgba(240,232,208,0.2);font-size:11px;">Роль yok</span>';
+  document.getElementById('pp-role').innerHTML = roles || '<span style="color:rgba(240,232,208,0.2);font-size:11px;">Роль yok</span>';
   document.getElementById('pp-nick-input').value = m.nick || '';
   var rect = event.currentTarget.getBoundingClientRect();
   var left = rect.right + 8, top = rect.top;

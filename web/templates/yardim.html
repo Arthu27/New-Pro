@@ -9,7 +9,7 @@
   --b:#5352ed;--b2:rgba(83,82,237,0.15);--b-glow:rgba(83,82,237,0.3);
   --y:#ffa502;--y2:rgba(255,165,2,0.15);--y-glow:rgba(255,165,2,0.3);
   --p:#ff6b81;--p2:rgba(255,107,129,0.15);
-  --гол:#ffd700;--gold2:rgba(255,215,0,0.15);
+  --section:#ffd700;--gold2:rgba(255,215,0,0.15);
   --cy:#00f5ff;
   --glass:rgba(10,8,4,0.75);--border-base:rgba(212,168,67,0.1);
 }
@@ -18,21 +18,21 @@
 .yr-orb-2{width:400px;height:400px;background:#5352ed;bottom:-100px;left:-80px;animation:orbFloat 10s ease-in-out infinite reverse;}
 .yr-orb-3{width:300px;height:300px;background:#2ed573;top:40%;left:40%;animation:orbFloat 12s ease-in-out infinite 2s;}
 @keyframes orbFloat{0%,100%{transform:translate(0,0) scale(1);}33%{transform:translate(30px,-20px) scale(1.05);}66%{transform:translate(-20px,30px) scale(0.95);}}
-.yr-каждый{text-align:center;padding:32px 20px 28px;position:relative;z-index:1;}
+.yr-hero{text-align:center;padding:32px 20px 28px;position:relative;z-index:1;}
 .yr-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(212,168,67,0.08);border:1px solid rgba(212,168,67,0.2);border-radius:99px;padding:5px 16px;font-size:11px;font-weight:700;color:#c8922a;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:18px;}
 .yr-badge::before{content:'';width:6px;height:6px;border-radius:50%;background:#c8922a;animation:blink 1.5s ease-in-out infinite;}
 @keyframes blink{0%,100%{opacity:1;box-shadow:0 0 6px #c8922a;}50%{opacity:0.3;box-shadow:none;}}
-.yr-каждый h1{font-size:clamp(28px,4vw,48px);font-weight:900;letter-spacing:-0.04em;line-height:1;margin-bottom:10px;background:linear-gradient(135deg,#f0e8d0 0%,#c8922a 40%,#f0e8d0 70%,#e0a830 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;background-size:200% 200%;animation:shimmer 4s ease-in-out infinite;}
+.yr-hero h1{font-size:clamp(28px,4vw,48px);font-weight:900;letter-spacing:-0.04em;line-height:1;margin-bottom:10px;background:linear-gradient(135deg,#f0e8d0 0%,#c8922a 40%,#f0e8d0 70%,#e0a830 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;background-size:200% 200%;animation:shimmer 4s ease-in-out infinite;}
 @keyframes shimmer{0%,100%{background-position:0% 50%;}50%{background-position:100% 50%;}}
-.yr-каждый-sub{font-size:13px;color:rgba(240,232,208,0.35);margin-bottom:24px;}
+.yr-hero-sub{font-size:13px;color:rgba(240,232,208,0.35);margin-bottom:24px;}
 .yr-stats{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-bottom:28px;position:relative;z-index:1;}
 .yr-stat{display:flex;align-items:center;gap:10px;background:var(--glass);border:1px solid var(--border-base);border-radius:12px;padding:12px 20px;backdrop-filter:blur(20px);transition:border-color 0.2s,box-shadow 0.2s,transform 0.2s;cursor:default;}
 .yr-stat:hover{transform:translateY(-2px);}
 .yr-stat-icon{font-size:18px;}
 .yr-stat-val{font-size:20px;font-weight:800;color:#f0e8d0;letter-spacing:-0.03em;line-height:1;}
 .yr-stat-lbl{font-size:10px;color:rgba(240,232,208,0.35);text-transform:uppercase;letter-spacing:0.08em;margin-top:2px;}
-.yr-stat.s-гол{border-color:rgba(255,215,0,0.2);}
-.yr-stat.s-гол:hover{border-color:var(--гол);box-shadow:0 0 20px var(--gold2);}
+.yr-stat.s-section{border-color:rgba(255,215,0,0.2);}
+.yr-stat.s-section:hover{border-color:var(--section);box-shadow:0 0 20px var(--gold2);}
 .yr-stat.s-green{border-color:rgba(46,213,115,0.2);}
 .yr-stat.s-green:hover{border-color:var(--g);box-shadow:0 0 20px var(--g2);}
 .yr-stat.s-blue{border-color:rgba(83,82,237,0.2);}
@@ -54,7 +54,7 @@
 .yr-tab[data-c="b"].active{color:var(--b);border-color:var(--b);background:var(--b2);box-shadow:0 0 16px var(--b-glow);}
 .yr-tab[data-c="y"].active{color:var(--y);border-color:var(--y);background:var(--y2);box-shadow:0 0 16px var(--y-glow);}
 .yr-tab[data-c="p"].active{color:var(--p);border-color:var(--p);background:var(--p2);}
-.yr-tab[data-c="гол"].active{color:var(--гол);border-color:var(--гол);background:var(--gold2);}
+.yr-tab[data-c="section"].active{color:var(--section);border-color:var(--section);background:var(--gold2);}
 .yr-section{position:relative;z-index:1;margin-bottom:28px;}
 .yr-section-hdr{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
 .yr-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.14em;white-space:nowrap;}
@@ -70,7 +70,7 @@
 .yr-card[data-c="b"]:hover{border-color:var(--b);box-shadow:0 0 20px var(--b2),0 4px 20px rgba(0,0,0,0.4);}
 .yr-card[data-c="y"]:hover{border-color:var(--y);box-shadow:0 0 20px var(--y2),0 4px 20px rgba(0,0,0,0.4);}
 .yr-card[data-c="p"]:hover{border-color:var(--p);box-shadow:0 0 20px var(--p2),0 4px 20px rgba(0,0,0,0.4);}
-.yr-card[data-c="гол"]:hover{border-color:var(--гол);box-shadow:0 0 20px var(--gold2),0 4px 20px rgba(0,0,0,0.4);}
+.yr-card[data-c="section"]:hover{border-color:var(--section);box-shadow:0 0 20px var(--gold2),0 4px 20px rgba(0,0,0,0.4);}
 .yr-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px;}
 .yr-cmd-name{font-size:13px;font-weight:700;font-family:'Courier New',monospace;letter-spacing:0.02em;}
 .yr-cmd-desc{font-size:11px;color:rgba(240,232,208,0.5);line-height:1.5;}
@@ -88,14 +88,14 @@
 <div class="yr-orb yr-orb-2"></div>
 <div class="yr-orb yr-orb-3"></div>
 
-<div class="yr-каждый">
+<div class="yr-hero">
   <div class="yr-badge">Aether Bot</div>
   <h1>Команда Руководство</h1>
-  <p class="yr-каждый-sub">Tum команды, kategoriler ve izin seviyeleri</p>
+  <p class="yr-hero-sub">Tum команды, kategoriler ve izin seviyeleri</p>
 </div>
 
 <div class="yr-stats">
-  <div class="yr-stat s-гол">
+  <div class="yr-stat s-section">
     <div class="yr-stat-icon">&#9889;</div>
     <div><div class="yr-stat-val" id="total-cmds">-</div><div class="yr-stat-lbl">Всего Команда</div></div>
   </div>
@@ -124,7 +124,7 @@
     <button class="yr-tab" data-c="y" onclick="yrTab('warn',this)">Предупреждение</button>
     <button class="yr-tab" data-c="g" onclick="yrTab('music',this)">Muzik</button>
     <button class="yr-tab" data-c="p" onclick="yrTab('fun',this)">Oyun</button>
-    <button class="yr-tab" data-c="гол" onclick="yrTab('eco',this)">Ekonomi</button>
+    <button class="yr-tab" data-c="section" onclick="yrTab('eco',this)">Ekonomi</button>
     <button class="yr-tab" data-c="b" onclick="yrTab('util',this)">Aramaclar</button>
   </div>
 </div>
@@ -169,7 +169,7 @@ var YR_CATS=[
     {n:'/sihirli-top',d:'Sihirli 8 top',u:'/sihirli-top soru',p:'all'},
     {n:'/oyun-rastgele-uye',d:'Rastgele uye sec',u:'/oyun-rastgele-uye',p:'all'},
   ]},
-  {id:'eco',color:'гол',title:'Ekonomi ve Ozellikler',cmds:[
+  {id:'eco',color:'section',title:'Ekonomi ve Ozellikler',cmds:[
     {n:'/dogumgunu',d:'Dogum gununu сохранить',u:'/dogumgunu 15.03',p:'all'},
     {n:'/dogumgunleri',d:'Yaklasan dogum gunleri',u:'/dogumgunleri',p:'all'},
     {n:'/duty-panel',d:'Gorev panelini gonder',u:'/duty-panel #channel',p:'admin'},
@@ -179,7 +179,7 @@ var YR_CATS=[
   ]},
   {id:'util',color:'b',title:'Помощник Aramaclar',cmds:[
     {n:'/modstats',d:'Moderator статистика',u:'/modstats',p:'mod'},
-    {n:'/activemods',d:'En активен moderatorler',u:'/activemods',p:'mod'},
+    {n:'/activemods',d:'En activity moderatorler',u:'/activemods',p:'mod'},
     {n:'/saglik',d:'Сервер saglik skoru',u:'/saglik',p:'all'},
     {n:'/channel-статистика',d:'Канал message istatistigi',u:'/channel-статистика',p:'all'},
     {n:'/duty-stats',d:'Gorev puan tablosu',u:'/duty-stats',p:'mod'},
@@ -192,7 +192,7 @@ var CM={
   b:{t:'#5352ed',l:'rgba(83,82,237,0.4)'},
   y:{t:'#ffa502',l:'rgba(255,165,2,0.4)'},
   p:{t:'#ff6b81',l:'rgba(255,107,129,0.4)'},
-  гол:{t:'#ffd700',l:'rgba(255,215,0,0.4)'},
+  section:{t:'#ffd700',l:'rgba(255,215,0,0.4)'},
 };
 var yrTab_='all',yrQ_='';
 function pb(p){
