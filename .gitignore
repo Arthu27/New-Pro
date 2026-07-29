@@ -3,6 +3,8 @@
 
 # Environment variables (token vs.)
 .env
+.env.local
+ENV_KEYLERIM.txt
 
 # Python cache
 __pycache__/
