@@ -232,7 +232,8 @@ def _detect_category_ai(message: str, history: List[Dict]) -> str:
     ]
 
     try:
-        result, _, _ = _call(messages, max_tokens=10, temperature=0.1)
+        from web.model_selector import smart_call
+        result, _, _ = smart_call(messages, task_type='category_detection', max_tokens=10, temperature=0.1)
         result = result.strip().lower()
         if result in ('complaint', 'question', 'technical', 'other'):
             return result
@@ -459,9 +460,19 @@ async def ai_ticket_response(user_message: str, history: List[Dict], guild_conte
     messages.append({'role': 'user', 'content': user_message})
 
     # 8. Вызываем AI с function calling (максимум 3 итерации)
+    # Выбираем тип задачи для мульти-модельности
+    task_type_map = {
+        'complaint': 'complaint_analysis',
+        'question': 'technical_support',
+        'technical': 'technical_support',
+        'other': 'general_chat'
+    }
+    task_type = task_type_map.get(category, 'general_chat')
+    
     max_iterations = 3
     for iteration in range(max_iterations):
-        response, _, _ = _call(messages, max_tokens=2048, temperature=0.7)
+        from web.model_selector import smart_call
+        response, _, _ = smart_call(messages, task_type=task_type, max_tokens=2048, temperature=0.7)
         
         # Проверяем есть ли вызовы функций
         func_calls = re.findall(r'\[FUNC:[^\]]+\]', response)
