@@ -136,7 +136,13 @@ class Diagnostics(commands.Cog):
             "commands": len(self.bot.commands),
             "latency_ms": round(self.bot.latency * 1000, 1),
             "errors_last_min": sum(1 for e in self.error_log if time.time() - e["ts"] < 60),
-            "is_ws_connected": self.bot.is_ws_ready(),
+            # discord.py renamed is_ws_ready() to is_ready() in v2 — keep
+            # a fallback so the diagnostics work on both old and new.
+            "is_ws_connected": (
+                self.bot.is_ready() if hasattr(self.bot, "is_ready")
+                else self.bot.is_ws_ready() if hasattr(self.bot, "is_ws_ready")
+                else False
+            ),
         }
         # System resources
         try:
