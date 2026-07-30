@@ -1217,7 +1217,10 @@ def api_modstats():
 @login_required
 @role_required('admin')
 def send_command_page():
-    return render_template('send_command.html', role=session.get('role'), username=session.get('username'))
+    return render_template('send_command.html',
+                           role=session.get('role'),
+                           username=session.get('username'),
+                           main_guild_id=MAIN_GUILD_ID)
 
 @app.route('/execute-command')
 @login_required

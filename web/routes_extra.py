@@ -354,7 +354,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
     @login_required
     @role_required('mod')
     def analytics_page():
-        return render_template('analytics.html', role=session.get('role'), username=session.get('username'))
+        return render_template('analytics.html', role=session.get('role'), username=session.get('username'), main_guild_id=MAIN_GUILD_ID)
 
     @app.route('/server-health')
     @login_required
@@ -366,13 +366,14 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
     @login_required
     @role_required('admin')
     def roles_page():
-        return render_template('roles.html', role=session.get('role'), username=session.get('username'))
+        return render_template('roles.html', role=session.get('role'), username=session.get('username'),
+                               main_guild_id=MAIN_GUILD_ID)
 
     @app.route('/channels')
     @login_required
     @role_required('admin')
     def channels_page():
-        return render_template('channels.html', role=session.get('role'), username=session.get('username'))
+        return render_template('channels.html', role=session.get('role'), username=session.get('username'), main_guild_id=MAIN_GUILD_ID)
 
     @app.route('/mod-history')
     @login_required
@@ -384,13 +385,14 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
     @login_required
     @role_required('admin')
     def welcome_editor_page():
-        return render_template('welcome_editor.html', role=session.get('role'), username=session.get('username'))
+        return render_template('welcome_editor.html', role=session.get('role'), username=session.get('username'),
+                               main_guild_id=MAIN_GUILD_ID)
 
     @app.route('/reaction-roles')
     @login_required
     @role_required('admin')
     def reaction_roles_page():
-        return render_template('reaction_roles.html', role=session.get('role'), username=session.get('username'))
+        return render_template('reaction_roles.html', role=session.get('role'), username=session.get('username'), main_guild_id=MAIN_GUILD_ID)
 
     @app.route('/giveaway')
     @login_required
@@ -408,13 +410,13 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
     @login_required
     @role_required('admin')
     def autorole_page():
-        return render_template('autorole.html', role=session.get('role'), username=session.get('username'))
+        return render_template('autorole.html', role=session.get('role'), username=session.get('username'), main_guild_id=MAIN_GUILD_ID)
 
     @app.route('/leveling')
     @login_required
     @role_required('owner')
     def leveling_page():
-        return render_template('leveling.html', role=session.get('role'), username=session.get('username'))
+        return render_template('leveling.html', role=session.get('role'), username=session.get('username'), main_guild_id=MAIN_GUILD_ID)
     
     @app.route('/ai-tickets')
     @login_required
@@ -466,19 +468,20 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
     @login_required
     @role_required('owner')
     def scheduled_messages_page():
-        return render_template('scheduled_messages.html', role=session.get('role'), username=session.get('username'))
+        return render_template('scheduled_messages.html', role=session.get('role'), username=session.get('username'), main_guild_id=MAIN_GUILD_ID)
 
     @app.route('/custom-commands')
     @login_required
     @role_required('owner')
     def custom_commands_page():
-        return render_template('custom_commands.html', role=session.get('role'), username=session.get('username'))
+        return render_template('custom_commands.html', role=session.get('role'), username=session.get('username'),
+                               main_guild_id=MAIN_GUILD_ID)
 
     @app.route('/member-notes')
     @login_required
     @role_required('mod')
     def member_notes_page():
-        return render_template('member_notes.html', role=session.get('role'), username=session.get('username'))
+        return render_template('member_notes.html', role=session.get('role'), username=session.get('username'), main_guild_id=MAIN_GUILD_ID)
 
     @app.route('/bulk-actions')
     @login_required
@@ -490,19 +493,19 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
     @login_required
     @role_required('mod')
     def invite_tracker_page():
-        return render_template('invite_tracker.html', role=session.get('role'), username=session.get('username'))
+        return render_template('invite_tracker.html', role=session.get('role'), username=session.get('username'), main_guild_id=MAIN_GUILD_ID)
 
     @app.route('/suggestions')
     @login_required
     @role_required('mod')
     def suggestions_page():
-        return render_template('suggestions.html', role=session.get('role'), username=session.get('username'))
+        return render_template('suggestions.html', role=session.get('role'), username=session.get('username'), main_guild_id=MAIN_GUILD_ID)
 
     @app.route('/starboard')
     @login_required
     @role_required('mod')
     def starboard_page():
-        return render_template('starboard.html', role=session.get('role'), username=session.get('username'))
+        return render_template('starboard.html', role=session.get('role'), username=session.get('username'), main_guild_id=MAIN_GUILD_ID)
 
     @app.route('/yardim')
     @login_required
@@ -4198,13 +4201,13 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
     @login_required
     @role_required('mod')
     def message_logs_page():
-        return render_template('message_logs.html', role=session.get('role'), username=session.get('username'))
+        return render_template('message_logs.html', role=session.get('role'), username=session.get('username'), main_guild_id=MAIN_GUILD_ID)
 
     @app.route('/voice-stats')
     @login_required
     @role_required('mod')
     def voice_stats_page():
-        return render_template('voice_stats.html', role=session.get('role'), username=session.get('username'))
+        return render_template('voice_stats.html', role=session.get('role'), username=session.get('username'), main_guild_id=MAIN_GUILD_ID)
 
     @app.route('/todo')
     @login_required
@@ -4216,13 +4219,13 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
     @login_required
     @role_required('owner')
     def color_roles_page():
-        return render_template('color_roles.html', role=session.get('role'), username=session.get('username'))
+        return render_template('color_roles.html', role=session.get('role'), username=session.get('username'), main_guild_id=MAIN_GUILD_ID)
 
     @app.route('/rules-editor')
     @login_required
     @role_required('admin')
     def rules_editor_page():
-        return render_template('rules_editor.html', role=session.get('role'), username=session.get('username'))
+        return render_template('rules_editor.html', role=session.get('role'), username=session.get('username'), main_guild_id=MAIN_GUILD_ID)
         
     # ── API ROUTES ───────────────────────────────────────────────────────────
 

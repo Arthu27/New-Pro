@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Тикеты - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-cogs" ></i> Настройки тикетов{% endblock %}
+{% block page_title %}<i class="fas fa-cogs"></i> Настройки тикетов{% endblock %}
 {% block content %}
 {% block page_hero %}
 <div class="page-hero compact">
@@ -15,50 +15,68 @@
 </div>
 {% endblock %}
 
-
-
 <div class="tk-grid">
-  <!-- Общий -->
   <div class="tk-card">
     <div class="tk-head">
       <div class="tk-icon"><i class="fas fa-ticket-alt"></i></div>
       <div class="tk-title">Главные настройки</div>
       <div class="tk-toggle on" id="tog-enabled"></div>
     </div>
-    <div class="form-row"><label>Категория</label>
+    <div class="form-group">
+      <label>Категория</label>
       <select id="category"><option value="">Не выбрано</option></select>
+      <div class="hint-pill amber"><i class="fas fa-info-circle"></i> Тикеты создаются в выбранной категории</div>
     </div>
-    <div class="form-row"><label>Канал</label>
+    <div class="form-group">
+      <label>Канал для логов</label>
       <select id="channel"><option value="">Не выбрано</option></select>
     </div>
-    <div class="form-row"><label>Лимит на юзер</label><input type="number" id="limit" value="1" min="1"></div>
-    <div class="form-row"><label>Авто-закрытие (мин)</label><input type="number" id="autoclose" value="0" min="0"></div>
+    <div class="form-row-2">
+      <div class="form-group">
+        <label>Лимит на юзер</label>
+        <input type="number" id="limit" value="1" min="1" max="10">
+      </div>
+      <div class="form-group">
+        <label>Авто-закрытие (мин)</label>
+        <input type="number" id="autoclose" value="0" min="0">
+      </div>
+    </div>
   </div>
 
-  <!-- Baшlиk ve aчиklama -->
   <div class="tk-card">
     <div class="tk-head">
       <div class="tk-icon"><i class="fas fa-heading"></i></div>
       <div class="tk-title">Контент панели</div>
     </div>
-    <div class="form-row"><label>Заголовок</label><input type="text" id="title" value="🎫 ПОДДЕРЖКА"></div>
-    <div class="form-row"><label>Описание</label><textarea id="description" rows="3">Нажмите кнопку ниже чтобы открыть тикет</textarea></div>
-    <div class="form-row"><label>Цвет</label><input type="color" id="color" value="#5865F2"   style="width: 60px; height: 30px;"></div>
+    <div class="form-group">
+      <label>Заголовок</label>
+      <input type="text" id="title" value="🎫 ПОДДЕРЖКА">
+    </div>
+    <div class="form-group">
+      <label>Описание</label>
+      <textarea id="description" rows="3">Нажмите кнопку ниже чтобы открыть тикет</textarea>
+    </div>
+    <div class="form-group">
+      <label>Цвет embed</label>
+      <input type="color" id="color" value="#5865F2" class="color-picker">
+    </div>
   </div>
 
-  <!-- Лог kanalи -->
   <div class="tk-card">
     <div class="tk-head">
       <div class="tk-icon"><i class="fas fa-clipboard"></i></div>
       <div class="tk-title">Логи</div>
     </div>
-    <div class="form-row"><label>Лог-канал</label>
+    <div class="form-group">
+      <label>Лог-канал</label>
       <select id="log-channel"><option value="">Не выбрано</option></select>
     </div>
-    <div class="form-row"><label>Транскрипт канал</label>
+    <div class="form-group">
+      <label>Транскрипт канал</label>
       <select id="transcript-channel"><option value="">Не выбрано</option></select>
     </div>
-    <div class="form-row"><label>Действия</label>
+    <div class="form-group">
+      <label>Какие события логировать</label>
       <select id="log-actions">
         <option value="all">Все</option>
         <option value="open">Только открытия</option>
@@ -67,40 +85,42 @@
     </div>
   </div>
 
-  <!-- Уведомление mesajи -->
   <div class="tk-card">
     <div class="tk-head">
       <div class="tk-icon"><i class="fas fa-bell"></i></div>
       <div class="tk-title">Уведомления</div>
       <div class="tk-toggle on" id="tog-dm"></div>
     </div>
-    <div class="form-row"><label>DM при открытии</label>
+    <div class="form-group">
+      <label>DM при открытии</label>
       <select id="dm-open"><option value="0">Нет</option><option value="1" selected>Да</option></select>
     </div>
-    <div class="form-row"><label>DM при закрытии</label>
+    <div class="form-group">
+      <label>DM при закрытии</label>
       <select id="dm-close"><option value="0">Нет</option><option value="1" selected>Да</option></select>
     </div>
   </div>
 
-  <!-- Desteklenen kategoriler -->
-  <div class="tk-card" >
+  <div class="tk-card tk-card-wide">
     <div class="tk-head">
       <div class="tk-icon"><i class="fas fa-list"></i></div>
       <div class="tk-title">Категории тикетов</div>
       <button class="btn btn-primary" id="add-cat" type="button"><i class="fas fa-plus"></i> Добавить</button>
     </div>
-    <div id="cat-list"   style="grid-template-columns: repeat(auto-fill,minmax(180px,1fr));">
-      <p >Загрузка...</p>
+    <div id="cat-list" class="tk-cat-grid">
+      <div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Загрузка...</p></div>
     </div>
   </div>
 </div>
 
-<div   style="margin-top: 14px;">
-  <button class="btn btn-warn" id="btn-test" type="button"><i class="fas fa-paper-plane"></i> Тест панели</button>
-  <button class="btn btn-primary" id="btn-save" type="button"><i class="fas fa-save"></i> Сохранить всё</button>
+<div class="action-bar">
+  <button class="btn-warn" id="btn-test" type="button"><i class="fas fa-paper-plane"></i> Тест панели</button>
+  <button class="btn-primary" id="btn-save" type="button"><i class="fas fa-save"></i> Сохранить всё</button>
 </div>
 
+
 <script>
+
 (function () {
   'use strict';
   function $(id) { return document.getElementById(id); }
@@ -131,5 +151,6 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind);
   else bind();
 })();
+
 </script>
 {% endblock %}

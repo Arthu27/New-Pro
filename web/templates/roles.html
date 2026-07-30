@@ -17,30 +17,39 @@
 
 
 
-<div class="hero-banner">
-  <span class="hero-emoji">🎭</span>
-  <div class="hero-title">УПРАВЛЕНИЕ РОЛЯМИ</div>
-  <div class="hero-sub">Просмотр, создание и удаление ролей на сервере</div>
+<div class="premium-card" style="margin-bottom: 14px">
+  <h3><i class="fas fa-server"></i> Сервер</h3>
+  <div class="form-group">
+    <label>Выберите сервер для просмотра ролей</label>
+    <select id="guild-select">
+      <option value="">Выберите сервер...</option>
+    </select>
+  </div>
 </div>
 
-<button class="btn-add" onclick="openNameModal()"><i class="fas fa-plus"></i> Создать новую роль</button>
-
-<div >
-  <select id="guild-select"  >
-    <option value="">Выберите сервер...</option>
-  </select>
+<div class="action-bar">
+  <div class="info-pill"><i class="fas fa-user-tag"></i> Все роли этого сервера</div>
+  <button class="btn-add" onclick="openNameModal()"><i class="fas fa-plus"></i> Создать новую роль</button>
 </div>
 
-<div id="roles-list"><div class="empty-msg"><i class="fas fa-spinner fa-spin"></i>Загрузка...</div></div>
+<div id="roles-list">
+  <div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Загрузка...</p></div>
+</div>
 
 <div id="modal" class="modal-overlay">
   <div class="modal-box">
     <h3><i class="fas fa-plus-circle"></i> Создать роль</h3>
-    <input type="text" id="role-name" class="modal-input" placeholder="Название роли">
-    <input type="color" id="role-color" class="modal-color" value="#d4a843">
+    <div class="form-group">
+      <label>Название роли</label>
+      <input type="text" id="role-name" class="field-input" placeholder="Название роли">
+    </div>
+    <div class="form-group">
+      <label>Цвет роли</label>
+      <input type="color" id="role-color" class="color-picker" value="#d4a843">
+    </div>
     <div class="modal-actions">
-      <button onclick="createRole()" class="modal-btn primary">Создать</button>
-      <button onclick="closeModal()" class="modal-btn secondary">Отмена</button>
+      <button onclick="createRole()" class="btn-exec"><i class="fas fa-check"></i> Создать</button>
+      <button onclick="closeModal()" class="btn-cancel">Отмена</button>
     </div>
   </div>
 </div>
