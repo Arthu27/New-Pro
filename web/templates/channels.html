@@ -48,8 +48,8 @@
 .badge-text{background:rgba(106,176,224,0.1);color:var(--blue);border:1px solid rgba(106,176,224,0.2);}
 .badge-voice{background:rgba(94,196,122,0.1);color:var(--green);border:1px solid rgba(94,196,122,0.2);}
 .badge-forum{background:rgba(212,168,67,0.1);color:#c8922a;border:1px solid rgba(212,168,67,0.2);}
-.del-btn{width:28px;height:28px;display:flex;align-items:center;justify-content:center;background:transparent;border:1px solid transparent;border-radius:7px;cursor:pointer;color:#5a5040;font-size:11px;transition:all 0.15s;visibility:hidden;}
-.ch-row:hover .del-btn{visibility:visible;}
+.del-btn{width:28px;height:28px;display:flex;align-items:center;justify-content:center;background:transparent;border:1px solid transparent;border-radius:7px;cursor:pointer;color:#5a5040;font-size:11px;transition:all 0.15s;opacity:0;}
+.ch-row:hover .del-btn{opacity:1;}
 .del-btn:hover{background:rgba(224,85,85,0.12);border-color:rgba(224,85,85,0.25);color:var(--red);}
 
 /* Uncategorized rows (no еnt) */
@@ -264,7 +264,7 @@
         html += '<span class="cat-name">' + cat.name + '</span>';
         html += '<span style="font-size:10px;color:#5a5040;margin-right:8px;">' + children.length + '</span>';
         html += '<i class="fas fa-chevron-right cat-toggle open"></i>';
-        html += '<button class="del-btn" tabindex="-1" data-action="delete-cat" data-id="' + cat.id + '" data-name="' + escapeAttr(cat.name) + '" style="visibility:visible;margin-left:4px;" type="button"><i class="fas fa-trash"></i></button>';
+        html += '<button class="del-btn" data-action="delete-cat" data-id="' + cat.id + '" data-name="' + escapeAttr(cat.name) + '" style="opacity:1;margin-left:4px;" type="button"><i class="fas fa-trash"></i></button>';
         html += '</div>';
         html += '<div class="cat-channels">';
         if (children.length) {
@@ -320,18 +320,16 @@
         '<span class="ch-name">' + ch.name + '</span>' +
         '<span class="ch-badge ' + badgeClass + '">' + badgeLabel + '</span>' +
       '</div>' +
-      '<button class="del-btn" tabindex="-1" data-action="delete-ch" data-id="' + ch.id + '" data-name="' + escapeAttr(ch.name) + '" type="button"><i class="fas fa-trash"></i></button>' +
+      '<button class="del-btn" data-action="delete-ch" data-id="' + ch.id + '" data-name="' + escapeAttr(ch.name) + '" type="button"><i class="fas fa-trash"></i></button>' +
     '</div>';
   }
 
   function toggleCat(header) {
     // Book-style accordion: only the selected category is open in the list.
     // No side drawer and no automatic scroll/navigation is used.
-    // Scroll koruma: kategori acilinca/ kapaninca yukseklik degisiyor, tarayici
-    // scroll anchor'i kaybedip en uste ziplayabiliyor. Pozisyonu manuel koruyoruz.
-    var mc = document.getElementById('main-content');
-    var savedPanel = mc ? mc.scrollTop : 0;
-    var savedPage = window.scrollY || window.pageYOffset || 0;
+    // Scroll restore: kategori acilinca/ kapaninca yukseklik degisiyor,
+    // tarayici scroll anchor'i kaybedip en uste ziplayabiliyor.
+    var savedPos = getScroll();
     var group = header.closest('.cat-group');
     var wasOpen = group.classList.contains('active');
     document.querySelectorAll('.cat-group.active').forEach(function (item) {
@@ -348,23 +346,9 @@
       if (channels) channels.classList.add('open');
       if (toggle) toggle.classList.add('open');
     }
-    // Layout tamamlanir tamamlanmaz ve bir frame sonra scroll'u geri yukle.
-    if (mc) mc.scrollTop = savedPanel;
-    window.scrollTo(0, savedPage);
-    requestAnimationFrame(function () {
-      if (mc) mc.scrollTop = savedPanel;
-      window.scrollTo(0, savedPage);
-    });
-    requestAnimationFrame(function () {
-      requestAnimationFrame(function () {
-        if (mc) mc.scrollTop = savedPanel;
-        window.scrollTo(0, savedPage);
-      });
-    });
-    setTimeout(function () {
-      if (mc) mc.scrollTop = savedPanel;
-      window.scrollTo(0, savedPage);
-    }, 50);
+    setScroll(savedPos);
+    requestAnimationFrame(function () { setScroll(savedPos); });
+    setTimeout(function () { setScroll(savedPos); }, 30);
   }
 
   function closeCategoryDrawer() {
@@ -397,36 +381,12 @@
 
   async function deleteChannel(id, name) {
     if (!confirm('"' + name + '" канал будет удалён. Продолжить?')) return;
-    // confirm() kapandiktan sonra focus body'ye donup scroll sifirlanmasin.
-    // Pozisyonu ONCEDEN kaydet, islem boyunca koru.
-    var savedPos = getScroll();
-    function reRestore() {
-      setScroll(savedPos);
-      requestAnimationFrame(function () { setScroll(savedPos); });
-      requestAnimationFrame(function () {
-        requestAnimationFrame(function () { setScroll(savedPos); });
-      });
-      setTimeout(function () { setScroll(savedPos); }, 30);
-      setTimeout(function () { setScroll(savedPos); }, 100);
-      setTimeout(function () { setScroll(savedPos); }, 250);
-    }
-    reRestore();
     try {
       var r = await fetch('/api/guild/' + selectedGuild + '/channels/' + id + '/delete', { method: 'POST' });
-      reRestore();
       var d = await r.json();
-      if (d.success) {
-        // loadChannels kendi icinde restore ediyor ama yine de emniyet.
-        loadChannels(true);
-        reRestore();
-      } else {
-        alert('Ошибка: ' + (d.error || 'Неизвестно'));
-        reRestore();
-      }
-    } catch (e) {
-      alert('Ошибка запроса: ' + e.message);
-      reRestore();
-    }
+      if (d.success) loadChannels(true);
+      else alert('Ошибка: ' + (d.error || 'Неизвестно'));
+    } catch (e) { alert('Ошибка запроса: ' + e.message); }
   }
 
   function bindEvents() {
@@ -480,151 +440,24 @@
         requestAnimationFrame(function () { setScroll(position); });
       }
       list.addEventListener('pointerdown', function () { clickPosition = getScroll(); }, true);
-      // Kanal satirina (ch-row) tiklaninca tarayici focus kaydedip scroll
-      // yapiyor; bunu engelle. .ch-row uzerindeki her tiklamayi yakalayip
-      // butona degilse bile scroll pozisyonunu koru.
       list.addEventListener('click', function (e) {
-        // HER tiklamada scroll pozisyonunu kaydet ve tiklama bittikten sonra
-        // birden fazla noktada geri yukle. Chrome, buton focus aldiktan sonra
-        // focus({preventScroll:true}) override'ini bile bypass edip scrollIntoView
-        // yapabiliyor; en garantili yol scroll event'ini izleyip geri almak.
-        var mc = document.getElementById('main-content');
-        var savedPanel = mc ? mc.scrollTop : 0;
-        var savedPage = window.scrollY || window.pageYOffset || 0;
-        function restore() {
-          if (mc) mc.scrollTop = savedPanel;
-          window.scrollTo(0, savedPage);
-        }
-        // Tiklama bittikten sonra coklu restore noktalari
-        restore();
-        Promise.resolve().then(restore);
-        requestAnimationFrame(function () {
-          restore();
-          requestAnimationFrame(restore);
-          setTimeout(restore, 0);
-          setTimeout(restore, 30);
-          setTimeout(restore, 100);
-          setTimeout(restore, 250);
-          setTimeout(restore, 500);
-        });
-
         var btn = e.target.closest('button[data-action]');
         if (btn) {
-          e.preventDefault();
           e.stopPropagation();
-          // Buton focus scroll tetiklemesin — blur et
-          if (document.activeElement === btn) btn.blur();
           var action = btn.getAttribute('data-action');
           var id = btn.getAttribute('data-id');
           var name = btn.getAttribute('data-name');
           if (action === 'delete-ch' || action === 'delete-cat') {
             deleteChannel(id, name);
           }
+          restoreClickPosition();
           return;
         }
         var hdr = e.target.closest('.cat-header');
-        if (hdr) {
-          toggleCat(hdr);
-          return;
-        }
-        var row = e.target.closest('.ch-row');
-        if (row) {
-          e.preventDefault();
-          if (document.activeElement) document.activeElement.blur();
-        }
+        if (hdr) toggleCat(hdr);
       });
-      // Capture fazinda mousedown'da scroll kilidi ac, butona basildi mi
-      list.addEventListener('mousedown', function (e) {
-        var mc = document.getElementById('main-content');
-        if (!mc) return;
-        // Tiklama anindaki scroll pozisyonunu kaydet
-        if (!list.__savedPos) {
-          list.__savedPos = {
-            panel: mc.scrollTop,
-            page: window.scrollY || window.pageYOffset || 0,
-            ts: Date.now(),
-          };
-        }
-      }, true);
-      // main-content uzerinde scroll olursa ve son 1 saniyede tiklanma olduysa
-      // geri al. Bu, Chrome'un focus/beklenmeyen scrollIntoView davranisini
-      // yakalar.
-      if (typeof list.__scrollGuardInstalled === 'undefined') {
-        list.__scrollGuardInstalled = true;
-        var guard = function () {
-          if (!list.__savedPos) return;
-          if (Date.now() - list.__savedPos.ts > 1500) return; // 1.5s sonra serbest birak
-          var mc = document.getElementById('main-content');
-          if (mc && (mc.scrollTop !== list.__savedPos.panel ||
-                     (window.scrollY || 0) !== list.__savedPos.page)) {
-            mc.scrollTop = list.__savedPos.panel;
-            window.scrollTo(0, list.__savedPos.page);
-          }
-        };
-        var mcEl = document.getElementById('main-content');
-        if (mcEl) {
-          mcEl.addEventListener('scroll', guard, true);
-          window.addEventListener('scroll', guard, true);
-        }
-      }
     }
   }
-
-  // Chrome focus scroll killer: buton/lik odaklandiginda tarayici o elementi
-  // ekranda tutmaya calisip scroll yapiyor. Kanal listesinde bu, sayfanin
-  // en uste ziplamasi demek. preventScroll:true ile bu davranisi kapatalim.
-  (function () {
-    var origFocus = HTMLElement.prototype.focus;
-    HTMLElement.prototype.focus = function (opts) {
-      if (opts && typeof opts === 'object') {
-        opts.preventScroll = true;
-        return origFocus.call(this, opts);
-      }
-      return origFocus.call(this, { preventScroll: true });
-    };
-    // scrollIntoView cagrilarinda da smooth olmadan, scroll yapma
-    var origScrollIntoView = Element.prototype.scrollIntoView;
-    Element.prototype.scrollIntoView = function (opts) {
-      // Eger bir kanal/cat islemi sirasinda cagrildiysa, scroll yapma.
-      // Aksi halde default davranis.
-      if (window.__suppressScrollIntoView) return;
-      return origScrollIntoView.call(this, opts);
-    };
-    // KRITIK: Chrome "scroll into view on focus" gibi durumlarda window scroll
-    // tetikliyor. Bunu engellemek icin scroll event'ini izleyip, eger son 100ms
-    // icinde bir tiklama olduysa scroll'u geri al. Bu agresif ama etkili.
-    var lastClickAt = 0;
-    var lastScrollPos = { panel: 0, page: 0 };
-    document.addEventListener('mousedown', function () {
-      lastClickAt = Date.now();
-      var mc = document.getElementById('main-content');
-      lastScrollPos.panel = mc ? mc.scrollTop : 0;
-      lastScrollPos.page = window.scrollY || window.pageYOffset || 0;
-    }, true);
-    document.addEventListener('click', function () {
-      lastClickAt = Date.now();
-    }, true);
-    function forceRestore() {
-      var mc = document.getElementById('main-content');
-      if (mc) mc.scrollTop = lastScrollPos.panel;
-      window.scrollTo(0, lastScrollPos.page);
-    }
-    // main-content scroll olursa ve son tiklama 500ms icindeyse, geri al
-    var mcEl = document.getElementById('main-content');
-    if (mcEl) {
-      mcEl.addEventListener('scroll', function () {
-        if (Date.now() - lastClickAt < 500) {
-          // Tiklama sonrasi izinsiz scroll — geri al
-          forceRestore();
-        }
-      }, true);
-    }
-    window.addEventListener('scroll', function () {
-      if (Date.now() - lastClickAt < 500) {
-        forceRestore();
-      }
-    }, true);
-  })();
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
