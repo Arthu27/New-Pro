@@ -1888,12 +1888,28 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         import web.app as _app; bot = _app.bot_instance
         import asyncio
         if not bot: return jsonify({'error': 'Bot offline'}), 503
-        name = (request.get_json(silent=True) or {}).get('name', '')
+        d = request.get_json(silent=True) or {}
+        name = (d.get('name') or d.get('cog') or '').strip()
+        if not name:
+            return jsonify({'error': 'Не указано имя расширения (name/cog)'}), 400
+        # Accept both "cogs.foo" and "foo" forms
+        if not name.startswith('cogs.'):
+            name = 'cogs.' + name
+        # Idempotent: already loaded?
+        if name in bot.extensions:
+            return jsonify({'ok': True, 'already_loaded': True, 'name': name})
         try:
-            asyncio.run_coroutine_threadsafe(bot.load_extension(name), bot.loop).result(timeout=10)
-            return jsonify({'ok': True})
+            future = asyncio.run_coroutine_threadsafe(bot.load_extension(name), bot.loop)
+            future.result(timeout=10)
+            return jsonify({'ok': True, 'name': name})
+        except ModuleNotFoundError as e:
+            return jsonify({'error': f'Файл не найден: {e}'}), 404
         except Exception as e:
-            return jsonify({'error': str(e)}), 400
+            err = str(e) or type(e).__name__
+            # Friendly translation for common cases
+            if 'already loaded' in err.lower():
+                return jsonify({'ok': True, 'already_loaded': True, 'name': name})
+            return jsonify({'error': f'Не удалось загрузить {name}: {err}'}), 400
 
     @app.route('/api/cogs/unload', methods=['POST'])
     @login_required
@@ -1902,12 +1918,20 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         import web.app as _app; bot = _app.bot_instance
         import asyncio
         if not bot: return jsonify({'error': 'Bot offline'}), 503
-        name = (request.get_json(silent=True) or {}).get('name', '')
+        d = request.get_json(silent=True) or {}
+        name = (d.get('name') or d.get('cog') or '').strip()
+        if not name:
+            return jsonify({'error': 'Не указано имя расширения'}), 400
+        if not name.startswith('cogs.'):
+            name = 'cogs.' + name
+        if name not in bot.extensions:
+            return jsonify({'ok': True, 'not_loaded': True, 'name': name})
         try:
-            asyncio.run_coroutine_threadsafe(bot.unload_extension(name), bot.loop).result(timeout=10)
-            return jsonify({'ok': True})
+            future = asyncio.run_coroutine_threadsafe(bot.unload_extension(name), bot.loop)
+            future.result(timeout=10)
+            return jsonify({'ok': True, 'name': name})
         except Exception as e:
-            return jsonify({'error': str(e)}), 400
+            return jsonify({'error': f'Не удалось выгрузить {name}: {e}'}), 400
 
     @app.route('/api/cogs/reload', methods=['POST'])
     @login_required
@@ -1916,12 +1940,18 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         import web.app as _app; bot = _app.bot_instance
         import asyncio
         if not bot: return jsonify({'error': 'Bot offline'}), 503
-        name = (request.get_json(silent=True) or {}).get('name', '')
+        d = request.get_json(silent=True) or {}
+        name = (d.get('name') or d.get('cog') or '').strip()
+        if not name:
+            return jsonify({'error': 'Не указано имя расширения'}), 400
+        if not name.startswith('cogs.'):
+            name = 'cogs.' + name
         try:
-            asyncio.run_coroutine_threadsafe(bot.reload_extension(name), bot.loop).result(timeout=10)
-            return jsonify({'ok': True})
+            future = asyncio.run_coroutine_threadsafe(bot.reload_extension(name), bot.loop)
+            future.result(timeout=10)
+            return jsonify({'ok': True, 'name': name})
         except Exception as e:
-            return jsonify({'error': str(e)}), 400
+            return jsonify({'error': f'Не удалось перезагрузить {name}: {e}'}), 400
 
     @app.route('/api/cogs/reload-all', methods=['POST'])
     @login_required
