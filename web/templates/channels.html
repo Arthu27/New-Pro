@@ -59,6 +59,13 @@
 .ch-empty{padding:40px;text-align:center;color:#5a5040;}
 .ch-empty i{font-size:28px;opacity:0.3;display:block;margin-bottom:10px;}
 
+/* ── Category drawer: fixed overlay, does not change page height or scroll ── */
+.category-drawer{display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.65);backdrop-filter:blur(3px);}
+.category-drawer.open{display:block;}
+.category-drawer-panel{position:absolute;right:0;top:0;height:100%;width:min(460px,92vw);overflow-y:auto;background:#1a1610;border-left:1px solid rgba(212,168,67,.3);box-shadow:-18px 0 50px rgba(0,0,0,.55);padding:22px;}
+.category-drawer-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-bottom:16px;margin-bottom:10px;border-bottom:1px solid rgba(212,168,67,.16);color:#f0e8d0;font-weight:700;}
+.category-drawer-close{background:transparent;border:1px solid rgba(212,168,67,.25);color:#f0e8d0;border-radius:8px;width:32px;height:32px;cursor:pointer;}
+.category-drawer .cat-channels{display:block;}
 /* ── Modal pencere ── */
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(6px);z-index:9999;align-items:center;justify-content:center;}
 .modal-overlay.open{display:flex;}
@@ -126,6 +133,13 @@
 </div>
 
 <!-- Modal pencere -->
+<div id="category-drawer" class="category-drawer" aria-hidden="true">
+  <aside class="category-drawer-panel" role="dialog" aria-modal="true" aria-label="Каналы категории">
+    <div class="category-drawer-head"><span id="category-drawer-title">Каналы категории</span><button type="button" class="category-drawer-close" id="category-drawer-close"><i class="fas fa-times"></i></button></div>
+    <div id="category-drawer-content"></div>
+  </aside>
+</div>
+
 <div id="modal" class="modal-overlay">
   <div class="modal-card">
     <div class="modal-head">
@@ -252,7 +266,7 @@
         html += '<i class="fas fa-chevron-right cat-toggle open"></i>';
         html += '<button class="del-btn" data-action="delete-cat" data-id="' + cat.id + '" data-name="' + escapeAttr(cat.name) + '" style="opacity:1;margin-left:4px;" type="button"><i class="fas fa-trash"></i></button>';
         html += '</div>';
-        html += '<div class="cat-channels open">';
+        html += '<div class="cat-channels">';
         if (children.length) {
           children.forEach(function (ch) { html += renderRow(ch, false); });
         } else {
@@ -311,26 +325,22 @@
   }
 
   function toggleCat(header) {
-    // Different browsers/layouts scroll different ancestors (main-content on
-    // desktop, document on mobile). Preserve every scrollable ancestor instead
-    // of assuming that only one of them owns the visible scroll position.
-    var scrollParents = [];
-    var node = header.parentElement;
-    while (node) {
-      if (node.scrollHeight > node.clientHeight) scrollParents.push({node: node, top: node.scrollTop, left: node.scrollLeft});
-      node = node.parentElement;
-    }
-    var pageTop = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
-    var toggle = header.querySelector('.cat-toggle');
-    var channels = header.nextElementSibling;
-    if (toggle) toggle.classList.toggle('open');
-    if (channels) channels.classList.toggle('open');
-    function restore() {
-      scrollParents.forEach(function (item) { item.node.scrollTop = item.top; item.node.scrollLeft = item.left; });
-      window.scrollTo(0, pageTop);
-    }
-    restore();
-    requestAnimationFrame(restore);
+    // Categories open in a fixed drawer. The list's height never changes, so
+    // the page remains at exactly the same scroll position.
+    var drawer = $('category-drawer');
+    var content = $('category-drawer-content');
+    var title = $('category-drawer-title');
+    var children = header.nextElementSibling;
+    title.textContent = header.querySelector('.cat-name').textContent + ' — каналы';
+    content.innerHTML = children ? children.innerHTML : '<div class="ch-empty">Каналов нет.</div>';
+    drawer.classList.add('open');
+    drawer.setAttribute('aria-hidden', 'false');
+  }
+
+  function closeCategoryDrawer() {
+    var drawer = $('category-drawer');
+    drawer.classList.remove('open');
+    drawer.setAttribute('aria-hidden', 'true');
   }
 
   function openNameModal() {
@@ -399,6 +409,8 @@
     // Клик по backdrop модала
     var modal = $('modal');
     if (modal) modal.addEventListener('click', function (e) { if (e.target === modal) closeModal(); });
+    $('category-drawer-close').addEventListener('click', closeCategoryDrawer);
+    $('category-drawer').addEventListener('click', function (e) { if (e.target === this) closeCategoryDrawer(); });
 
     // Keep the viewport fixed when a category/channel is clicked.  Some browsers
     // recalculate the scroll anchor after an expanded category changes height.
