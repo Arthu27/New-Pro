@@ -1,0 +1,362 @@
+{% extends "base.html" %}
+{% block title %}AI Модерация — Aether{% endblock %}
+{% block page_title %}<i class="fas fa-robot" ></i> AI Модерация{% endblock %}
+{% block content %}
+{% block page_hero %}
+<div class="page-hero">
+  <div class="page-hero-content">
+    <div class="page-hero-greeting">
+      <span class="dot" id="heroDot"></span>
+      <span id="heroStatus">AI Загружается...</span>
+    </div>
+    <h1>AI Модерация</h1>
+    <p>Интеллектуальная система обнаружения токсичности, спама и нарушений с автоматической эскалацией и обучением на основе обратной связи.</p>
+  </div>
+</div>
+{% endblock %}
+
+<style>
+.aimod-section { margin-bottom: 18px; }
+.aimod-toggle-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 20px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  margin-bottom: 10px;
+  transition: all 0.2s var(--ease);
+}
+.aimod-toggle-card:hover { border-color: var(--ac-line); }
+.aimod-toggle-card.active { border-color: var(--ac); background: var(--ac-soft); }
+.aimod-toggle-card .switch {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 99px;
+  cursor: pointer;
+  flex-shrink: 0;
+  border: 1px solid var(--line);
+  transition: background 0.25s;
+}
+.aimod-toggle-card .switch.on { background: linear-gradient(135deg, var(--ac), var(--ac-3)); border-color: var(--ac); }
+.aimod-toggle-card .switch::after {
+  content: '';
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 18px; height: 18px;
+  background: var(--text-3);
+  border-radius: 50%;
+  transition: all 0.25s var(--ease-spring);
+}
+.aimod-toggle-card .switch.on::after { left: 22px; background: #fff; }
+.aimod-toggle-card .info { flex: 1; }
+.aimod-toggle-card .info h4 {
+  font-size: var(--fs-md) !important;
+  font-weight: 700 !important;
+  color: var(--text) !important;
+  margin: 0 0 3px 0 !important;
+}
+.aimod-toggle-card .info p {
+  font-size: var(--fs-sm) !important;
+  color: var(--text-2) !important;
+  margin: 0;
+  line-height: 1.4;
+}
+.aimod-severity-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+.severity-card {
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--bg-3);
+  text-align: center;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+.severity-card:hover { transform: translateY(-2px); border-color: var(--ac-line); }
+.severity-card.active { background: var(--ac-soft); border-color: var(--ac); }
+.severity-card .sev-icon { font-size: 28px; margin-bottom: 6px; }
+.severity-card .sev-name { font-size: var(--fs-md); font-weight: 700; color: var(--text); margin-bottom: 3px; }
+.severity-card .sev-desc { font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.08em; }
+.aimod-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+.aimod-stat {
+  padding: 14px 16px;
+  background: var(--bg-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  text-align: center;
+}
+.aimod-stat .num { font-size: 26px; font-weight: 800; color: var(--ac); font-variant-numeric: tabular-nums; }
+.aimod-stat .lbl { font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 4px; font-weight: 700; }
+.aimod-slider-wrap { padding: 16px 20px; background: var(--bg-3); border: 1px solid var(--line); border-radius: var(--r-md); }
+.aimod-slider-wrap label { font-size: var(--fs-xs); font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; display: block; }
+.aimod-slider { width: 100%; height: 6px; background: var(--line-2); border-radius: 99px; outline: none; -webkit-appearance: none; }
+.aimod-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; background: var(--ac); border-radius: 50%; cursor: pointer; box-shadow: 0 0 8px var(--ac-glow); }
+.aimod-slider::-moz-range-thumb { width: 18px; height: 18px; background: var(--ac); border-radius: 50%; cursor: pointer; border: none; }
+.aimod-slider-value { display: inline-block; min-width: 40px; text-align: right; font-weight: 700; color: var(--ac); }
+</style>
+
+<div class="grid-2" style="gap: 16px; margin-bottom: 18px;">
+  <!-- Master toggle -->
+  <div class="dash-box">
+    <div class="dash-box-head">
+      <div class="dash-box-title"><i class="fas fa-power-off"></i> Статус системы</div>
+      <span id="statusBadge" class="badge badge-warn">ЗАГРУЗКА</span>
+    </div>
+    <div class="dash-box-body" style="padding: 20px;">
+      <div class="aimod-toggle-card" id="masterToggle" onclick="toggleMaster()">
+        <div class="switch" id="masterSwitch"></div>
+        <div class="info">
+          <h4>AI Модерация</h4>
+          <p>Главный переключатель. При выключении никакие правила не применяются.</p>
+        </div>
+      </div>
+      <div class="aimod-stats-grid" style="margin-top: 16px;">
+        <div class="aimod-stat"><div class="num" id="statTotal">—</div><div class="lbl">Всего действий</div></div>
+        <div class="aimod-stat"><div class="num" id="stat24h">—</div><div class="lbl">За 24 часа</div></div>
+        <div class="aimod-stat"><div class="num" id="statBans">—</div><div class="lbl">Банов</div></div>
+        <div class="aimod-stat"><div class="num" id="statMutes">—</div><div class="lbl">Мутов</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Languages -->
+  <div class="dash-box">
+    <div class="dash-box-head">
+      <div class="dash-box-title"><i class="fas fa-language"></i> Языки детекции</div>
+    </div>
+    <div class="dash-box-body" style="padding: 20px;">
+      <div class="aimod-toggle-card" data-lang="ru" onclick="toggleLang('ru')">
+        <div class="switch" data-switch="ru"></div>
+        <div class="info">
+          <h4>🇷🇺 Русский</h4>
+          <p>Детекция токсичности, спама и дискриминации на русском</p>
+        </div>
+      </div>
+      <div class="aimod-toggle-card" data-lang="tr" onclick="toggleLang('tr')">
+        <div class="switch" data-switch="tr"></div>
+        <div class="info">
+          <h4>🇹🇷 Türkçe</h4>
+          <p>Детекция токсичности, спама и дискриминации на турецком</p>
+        </div>
+      </div>
+      <div class="aimod-toggle-card" data-lang="en" onclick="toggleLang('en')">
+        <div class="switch" data-switch="en"></div>
+        <div class="info">
+          <h4>🇬🇧 English</h4>
+          <p>Детекция токсичности, спама и дискриминации на английском</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Auto-actions by severity -->
+<div class="dash-box aimod-section">
+  <div class="dash-box-head">
+    <div class="dash-box-title"><i class="fas fa-gavel"></i> Авто-действия по серьёзности</div>
+  </div>
+  <div class="dash-box-body" style="padding: 20px;">
+    <p style="font-size: var(--fs-sm); color: var(--text-2); margin: 0 0 14px 0;">Выберите, какие типы нарушений обрабатывать автоматически:</p>
+    <div class="aimod-severity-grid">
+      <div class="severity-card" data-sev="mild" onclick="toggleSev('mild')">
+        <div class="sev-icon">⚠️</div>
+        <div class="sev-name">Mild</div>
+        <div class="sev-desc">Warn · Оскорбления</div>
+      </div>
+      <div class="severity-card" data-sev="moderate" onclick="toggleSev('moderate')">
+        <div class="sev-icon">🔇</div>
+        <div class="sev-name">Moderate</div>
+        <div class="sev-desc">Mute 10м · Угрозы</div>
+      </div>
+      <div class="severity-card" data-sev="severe" onclick="toggleSev('severe')">
+        <div class="sev-icon">🔨</div>
+        <div class="sev-name">Severe</div>
+        <div class="sev-desc">Ban · Терроризм</div>
+      </div>
+      <div class="severity-card" data-sev="spam" onclick="toggleSev('spam')">
+        <div class="sev-icon">📢</div>
+        <div class="sev-name">Spam</div>
+        <div class="sev-desc">Warn · Спам</div>
+      </div>
+      <div class="severity-card" data-sev="discrimination" onclick="toggleSev('discrimination')">
+        <div class="sev-icon">🚫</div>
+        <div class="sev-name">Discrimination</div>
+        <div class="sev-desc">Mute 60м · Дискриминация</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="grid-2" style="gap: 16px; margin-bottom: 18px;">
+  <!-- Sensitivity slider -->
+  <div class="dash-box">
+    <div class="dash-box-head">
+      <div class="dash-box-title"><i class="fas fa-sliders-h"></i> Чувствительность</div>
+    </div>
+    <div class="dash-box-body" style="padding: 20px;">
+      <div class="aimod-slider-wrap">
+        <label>Чувствительность детекции: <span class="aimod-slider-value" id="sensValue">70%</span></label>
+        <input type="range" min="0" max="100" value="70" class="aimod-slider" id="sensSlider" oninput="updateSens(this.value)">
+        <p style="font-size: 11px; color: var(--text-3); margin: 8px 0 0 0; line-height: 1.4;">
+          <b>Низкая (0-50%):</b> только severe и discrimination<br>
+          <b>Средняя (50-70%):</b> + moderate<br>
+          <b>Высокая (70-100%):</b> + mild (может быть больше false positives)
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Escalation settings -->
+  <div class="dash-box">
+    <div class="dash-box-head">
+      <div class="dash-box-title"><i class="fas fa-level-up-alt"></i> Эскалация наказаний</div>
+      <span id="escBadge" class="badge badge-warn">ВЫКЛ</span>
+    </div>
+    <div class="dash-box-body" style="padding: 20px;">
+      <div class="aimod-toggle-card" id="escToggle" onclick="toggleEsc()">
+        <div class="switch" id="escSwitch"></div>
+        <div class="info">
+          <h4>Авто-эскалация</h4>
+          <p>3 warn → mute, 3 mute → kick, 2 kick → ban (в окне 24ч)</p>
+        </div>
+      </div>
+      <div class="grid-2" style="gap: 8px; margin-top: 12px;">
+        <div>
+          <label style="font-size: 10px; color: var(--text-3); text-transform: uppercase;">Окно (часы)</label>
+          <input type="number" id="escWindow" value="24" min="1" max="168" style="padding: 8px 12px; background: var(--bg-3); border: 1px solid var(--line-2); border-radius: 8px; color: var(--text); width: 100%;">
+        </div>
+        <div>
+          <label style="font-size: 10px; color: var(--text-3); text-transform: uppercase;">Warns → Mute</label>
+          <input type="number" id="escWarns" value="3" min="1" max="20" style="padding: 8px 12px; background: var(--bg-3); border: 1px solid var(--line-2); border-radius: 8px; color: var(--text); width: 100%;">
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Test the AI -->
+<div class="dash-box aimod-section">
+  <div class="dash-box-head">
+    <div class="dash-box-title"><i class="fas fa-vial"></i> Тест детекции</div>
+  </div>
+  <div class="dash-box-body" style="padding: 20px;">
+    <p style="font-size: var(--fs-sm); color: var(--text-2); margin: 0 0 12px 0;">Введите текст, чтобы проверить, как AI его оценит (без реальных действий):</p>
+    <div style="display: flex; gap: 10px; margin-bottom: 12px;">
+      <input type="text" id="testInput" placeholder="Например: ты тупой идиот" style="flex: 1; padding: 10px 14px; background: var(--bg-3); border: 1px solid var(--line-2); border-radius: 10px; color: var(--text);">
+      <button class="form-btn" onclick="runTest()"><i class="fas fa-play"></i> Проверить</button>
+    </div>
+    <div id="testResult" style="display: none; padding: 14px 16px; border-radius: 10px; border: 1px solid var(--line);"></div>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+  // Load config
+  function loadConfig() {
+    fetch('/api/ai-mod/config').then(r => r.json()).then(cfg => {
+      document.getElementById('masterSwitch').classList.toggle('on', cfg.enabled);
+      document.getElementById('masterToggle').classList.toggle('active', cfg.enabled);
+      document.getElementById('statusBadge').textContent = cfg.enabled ? 'ВКЛ' : 'ВЫКЛ';
+      document.getElementById('statusBadge').className = 'badge ' + (cfg.enabled ? 'badge-ok' : 'badge-err');
+      document.getElementById('heroStatus').textContent = cfg.enabled ? 'AI Активен' : 'AI Выключен';
+      document.getElementById('heroDot').className = 'dot ' + (cfg.enabled ? 'ok' : 'err');
+      ['ru', 'tr', 'en'].forEach(l => {
+        const sw = document.querySelector(`[data-switch="${l}"]`);
+        const card = document.querySelector(`[data-lang="${l}"]`);
+        const on = cfg.languages.includes(l);
+        sw.classList.toggle('on', on);
+        card.classList.toggle('active', on);
+      });
+      ['mild', 'moderate', 'severe', 'spam', 'discrimination'].forEach(s => {
+        const card = document.querySelector(`[data-sev="${s}"]`);
+        card.classList.toggle('active', cfg.auto_actions[s] !== false);
+      });
+      const sens = Math.round((cfg.sensitivity || 0.7) * 100);
+      document.getElementById('sensSlider').value = sens;
+      document.getElementById('sensValue').textContent = sens + '%';
+      document.getElementById('escSwitch').classList.toggle('on', cfg.escalation.enabled);
+      document.getElementById('escToggle').classList.toggle('active', cfg.escalation.enabled);
+      document.getElementById('escBadge').textContent = cfg.escalation.enabled ? 'ВКЛ' : 'ВЫКЛ';
+      document.getElementById('escBadge').className = 'badge ' + (cfg.escalation.enabled ? 'badge-ok' : 'badge-err');
+      document.getElementById('escWindow').value = cfg.escalation.window_hours;
+      document.getElementById('escWarns').value = cfg.escalation.warn_to_mute_after;
+    }).catch(e => console.error(e));
+  }
+  // Load stats
+  function loadStats() {
+    fetch('/api/ai-mod/stats').then(r => r.json()).then(s => {
+      document.getElementById('statTotal').textContent = s.total;
+      document.getElementById('stat24h').textContent = s.last_24h;
+      document.getElementById('statBans').textContent = s.bans;
+      document.getElementById('statMutes').textContent = s.mutes;
+    }).catch(e => console.error(e));
+  }
+  // Save config
+  function saveConfig(patch) {
+    return fetch('/api/ai-mod/config', {
+      method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(patch)
+    }).then(r => r.json());
+  }
+  window.toggleMaster = function() {
+    const el = document.getElementById('masterSwitch');
+    const newVal = !el.classList.contains('on');
+    saveConfig({enabled: newVal}).then(() => loadConfig());
+  };
+  window.toggleLang = function(l) {
+    fetch('/api/ai-mod/config').then(r => r.json()).then(cfg => {
+      let langs = cfg.languages.slice();
+      const i = langs.indexOf(l);
+      if (i >= 0) langs.splice(i, 1); else langs.push(l);
+      saveConfig({languages: langs}).then(() => loadConfig());
+    });
+  };
+  window.toggleSev = function(s) {
+    fetch('/api/ai-mod/config').then(r => r.json()).then(cfg => {
+      cfg.auto_actions[s] = !cfg.auto_actions[s];
+      saveConfig({auto_actions: cfg.auto_actions}).then(() => loadConfig());
+    });
+  };
+  window.toggleEsc = function() {
+    fetch('/api/ai-mod/config').then(r => r.json()).then(cfg => {
+      cfg.escalation.enabled = !cfg.escalation.enabled;
+      saveConfig({escalation: cfg.escalation}).then(() => loadConfig());
+    });
+  };
+  window.updateSens = function(v) {
+    document.getElementById('sensValue').textContent = v + '%';
+    clearTimeout(window.__sensT);
+    window.__sensT = setTimeout(() => saveConfig({sensitivity: v / 100}), 400);
+  };
+  window.runTest = function() {
+    const text = document.getElementById('testInput').value.trim();
+    if (!text) return;
+    const res = document.getElementById('testResult');
+    res.style.display = 'block';
+    res.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Анализ...';
+    fetch('/api/ai-mod/test', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({text})})
+      .then(r => r.json()).then(data => {
+        if (data.clean) {
+          res.style.background = 'rgba(74,222,128,0.10)';
+          res.style.borderColor = 'rgba(74,222,128,0.30)';
+          res.innerHTML = '<b style="color: var(--ok);">✅ Чистый текст</b><br><span style="font-size: var(--fs-sm); color: var(--text-2);">Нарушений не обнаружено.</span>';
+        } else {
+          res.style.background = 'rgba(248,113,113,0.10)';
+          res.style.borderColor = 'rgba(248,113,113,0.30)';
+          res.innerHTML = '<b style="color: var(--err);">⚠️ Обнаружено: ' + data.severity + '</b><br>' +
+            '<span style="font-size: var(--fs-sm); color: var(--text-2);">Паттернов: ' + data.matches + '</span><br>' +
+            '<code style="font-size: 11px; color: var(--text-3); display: block; margin-top: 6px;">' + data.patterns.join('<br>') + '</code>';
+        }
+      }).catch(e => {
+        res.innerHTML = '<b style="color: var(--err);">Ошибка</b>';
+      });
+  };
+  loadConfig();
+  loadStats();
+  setInterval(loadStats, 30000);
+})();
+</script>
+{% endblock %}

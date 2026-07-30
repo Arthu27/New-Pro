@@ -479,6 +479,24 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
     def bot_settings_page():
         return render_template('bot_settings.html', role=session.get('role'), username=session.get('username'))
 
+    @app.route('/bot-diagnostics')
+    @login_required
+    @role_required('admin')
+    def bot_diagnostics_page():
+        return render_template('bot_diagnostics.html', role=session.get('role'), username=session.get('username'))
+
+    @app.route('/leveling-admin')
+    @login_required
+    @role_required('admin')
+    def leveling_admin_page():
+        return render_template('leveling_admin.html', role=session.get('role'), username=session.get('username'))
+
+    @app.route('/ai-moderation')
+    @login_required
+    @role_required('admin')
+    def ai_moderation_page():
+        return render_template('ai_moderation.html', role=session.get('role'), username=session.get('username'))
+
     @app.route('/cog-manager')
     @login_required
     @role_required('owner')
@@ -1312,6 +1330,292 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         session.pop(history_key, None)
         session.modified = True
         return jsonify({'ok': True})
+
+    # ── LEVELING API ─────────────────────────────────────
+    @app.route('/api/leveling/config', methods=['GET', 'POST'])
+    @login_required
+    @role_required('admin')
+    def api_leveling_config():
+        from cogs.leveling_engagement import LevelingEngagement
+        if not bot_instance:
+            return jsonify({'error': 'Bot offline'}), 503
+        cog = bot_instance.get_cog('LevelingEngagement')
+        if not cog:
+            return jsonify({'error': 'Cog не загружен'}), 404
+        guild_id = str(session.get('selected_guild') or MAIN_GUILD_ID)
+        if request.method == 'POST':
+            cfg = cog.load_config(guild_id)
+            patch = request.get_json(silent=True) or {}
+            for k, v in patch.items():
+                cfg[k] = v
+            cog.save_config(guild_id, cfg)
+            return jsonify({'ok': True, 'config': cfg})
+        return jsonify(cog.load_config(guild_id))
+
+    @app.route('/api/leveling/stats')
+    @login_required
+    def api_leveling_stats():
+        from cogs.leveling_engagement import LevelingEngagement, level_from_xp
+        if not bot_instance:
+            return jsonify({'error': 'Bot offline'}), 503
+        cog = bot_instance.get_cog('LevelingEngagement')
+        if not cog:
+            return jsonify({'error': 'Cog не загружен'}), 404
+        guild_id = str(session.get('selected_guild') or MAIN_GUILD_ID)
+        data = cog.load_xp(guild_id)
+        users = data.get('users', {})
+        top = sorted(users.items(), key=lambda x: x[1].get('xp', 0), reverse=True)[:10]
+        top_list = []
+        for uid, u in top:
+            member = bot_instance.get_guild(int(guild_id)).get_member(int(uid)) if bot_instance.get_guild(int(guild_id)) else None
+            level, _, _ = level_from_xp(u.get('xp', 0))
+            top_list.append({
+                'name': member.display_name if member else f'User#{uid}',
+                'level': level,
+                'xp': u.get('xp', 0)
+            })
+        max_lvl = 0
+        for u in users.values():
+            lvl, _, _ = level_from_xp(u.get('xp', 0))
+            if lvl > max_lvl:
+                max_lvl = lvl
+        from cogs.leveling_engagement import ACHIEVEMENTS
+        return jsonify({
+            'total_users': len(users),
+            'max_level': max_lvl,
+            'total_xp': sum(u.get('xp', 0) for u in users.values()),
+            'total_achievements': sum(len(v) for v in data.get('achievements', {}).values()),
+            'total_ach_available': len(ACHIEVEMENTS),
+            'top': top_list
+        })
+
+    @app.route('/api/leveling/achievements')
+    @login_required
+    def api_leveling_achievements():
+        from cogs.leveling_engagement import LevelingEngagement
+        if not bot_instance:
+            return jsonify({'error': 'Bot offline'}), 503
+        cog = bot_instance.get_cog('LevelingEngagement')
+        if not cog:
+            return jsonify({'error': 'Cog не загружен'}), 404
+        guild_id = str(session.get('selected_guild') or MAIN_GUILD_ID)
+        data = cog.load_xp(guild_id)
+        username = session.get('username', '')
+        # Find user's unlocked achievements
+        unlocked = []
+        for uid, achs in data.get('achievements', {}).items():
+            member = None
+            try:
+                g = bot_instance.get_guild(int(guild_id))
+                if g:
+                    m = g.get_member(int(uid))
+                    if m and m.display_name == username:
+                        unlocked = achs
+                        break
+            except: pass
+        from cogs.leveling_engagement import ACHIEVEMENTS
+        return jsonify({'unlocked': unlocked, 'catalog': ACHIEVEMENTS})
+
+    @app.route('/api/leveling/rewards')
+    @login_required
+    def api_leveling_rewards():
+        from cogs.leveling_engagement import LevelingEngagement
+        if not bot_instance:
+            return jsonify({'error': 'Bot offline'}), 503
+        cog = bot_instance.get_cog('LevelingEngagement')
+        if not cog:
+            return jsonify({'error': 'Cog не загружен'}), 404
+        guild_id = str(session.get('selected_guild') or MAIN_GUILD_ID)
+        cfg = cog.load_config(guild_id)
+        return jsonify({'rewards': cfg.get('level_rewards', {})})
+
+    # ── AI MODERATION API ─────────────────────────────────────
+    @app.route('/api/ai-mod/config', methods=['GET', 'POST'])
+    @login_required
+    @role_required('admin')
+    def api_ai_mod_config():
+        from cogs.ai_moderation import AIModeration
+        if not bot_instance:
+            return jsonify({'error': 'Bot offline'}), 503
+        cog = bot_instance.get_cog('AIModeration')
+        if not cog:
+            return jsonify({'error': 'Cog не загружен'}), 404
+        guild_id = str(session.get('selected_guild') or MAIN_GUILD_ID)
+        if request.method == 'POST':
+            cfg = cog.load_config(guild_id)
+            patch = request.get_json(silent=True) or {}
+            for k, v in patch.items():
+                if isinstance(v, dict) and k in cfg:
+                    cfg[k].update(v)
+                else:
+                    cfg[k] = v
+            cog.save_config(guild_id, cfg)
+            return jsonify({'ok': True})
+        return jsonify(cog.load_config(guild_id))
+
+    @app.route('/api/ai-mod/stats')
+    @login_required
+    def api_ai_mod_stats():
+        from cogs.ai_moderation import AIModeration
+        if not bot_instance:
+            return jsonify({'error': 'Bot offline'}), 503
+        cog = bot_instance.get_cog('AIModeration')
+        if not cog:
+            return jsonify({'error': 'Cog не загружен'}), 404
+        guild_id = str(session.get('selected_guild') or MAIN_GUILD_ID)
+        history = cog.load_history(guild_id)
+        from collections import Counter
+        import time as _t
+        action_counter = Counter(h.get('action') for h in history)
+        last_24h = sum(1 for h in history if _t.time() - h.get('ts', 0) < 86400)
+        return jsonify({
+            'total': len(history),
+            'last_24h': last_24h,
+            'bans': action_counter.get('ban', 0),
+            'mutes': action_counter.get('mute', 0),
+            'kicks': action_counter.get('kick', 0),
+            'warns': action_counter.get('warn', 0),
+        })
+
+    @app.route('/api/ai-mod/test', methods=['POST'])
+    @login_required
+    @role_required('admin')
+    def api_ai_mod_test():
+        from cogs.ai_moderation import AIModeration
+        if not bot_instance:
+            return jsonify({'error': 'Bot offline'}), 503
+        cog = bot_instance.get_cog('AIModeration')
+        if not cog:
+            return jsonify({'error': 'Cog не загружен'}), 404
+        guild_id = str(session.get('selected_guild') or MAIN_GUILD_ID)
+        cfg = cog.load_config(guild_id)
+        d = request.get_json(silent=True) or {}
+        text = d.get('text', '')
+        matches = cog.detect_toxic(text, cfg.get('languages', ['ru','tr','en']), cfg.get('sensitivity', 0.7))
+        if not matches:
+            return jsonify({'clean': True})
+        severity_order = ['mild', 'spam', 'moderate', 'discrimination', 'severe']
+        top = max(matches, key=lambda m: severity_order.index(m[0]))
+        return jsonify({
+            'clean': False,
+            'severity': top[0],
+            'matches': len(matches),
+            'patterns': [p[1] for p in matches]
+        })
+
+    # ── BOT DIAGNOSTICS API ────────────────────────────────────
+    @app.route('/api/bot/health')
+    @login_required
+    def api_bot_health():
+        from cogs.diagnostics import Diagnostics
+        if not bot_instance:
+            return jsonify({'error': 'Bot offline'}), 503
+        cog = bot_instance.get_cog('Diagnostics')
+        if not cog:
+            return jsonify({'error': 'Cog не загружен'}), 404
+        health = cog.get_health_snapshot()
+        # Try to load from file
+        import json as _json
+        try:
+            with open('data/bot_health.json', 'r', encoding='utf-8') as f:
+                persisted = _json.load(f)
+                return jsonify(persisted)
+        except Exception:
+            return jsonify({'current': health, 'history': [], 'error_log': [], 'cog_perf': {}, 'repair_count': {}})
+
+    @app.route('/api/bot/errors')
+    @login_required
+    @role_required('admin')
+    def api_bot_errors():
+        import json as _json
+        try:
+            with open('data/error_log.json', 'r', encoding='utf-8') as f:
+                log = _json.load(f)
+                return jsonify(log[-20:])
+        except Exception:
+            return jsonify([])
+
+    @app.route('/api/bot/hot-reload', methods=['POST'])
+    @login_required
+    @role_required('owner')
+    def api_bot_hot_reload():
+        if not bot_instance:
+            return jsonify({'error': 'Bot offline'}), 503
+        # Trigger via discord bot
+        from cogs.diagnostics import Diagnostics
+        cog = bot_instance.get_cog('Diagnostics')
+        if not cog:
+            return jsonify({'error': 'Cog не загружен'}), 404
+        # Re-check files
+        import asyncio
+        reloaded = []
+        import hashlib, os
+        for filename in os.listdir('cogs'):
+            if filename.endswith('.py') and filename != '__init__.py':
+                cog_name = filename[:-3]
+                if cog_name in ('embed_utils',): continue
+                filepath = f'cogs/{filename}'
+                with open(filepath, 'rb') as f:
+                    h = hashlib.md5(f.read()).hexdigest()
+                if cog.cog_hash_cache.get(cog_name) != h:
+                    try:
+                        ext = f'cogs.{cog_name}'
+                        if ext in bot_instance.extensions:
+                            asyncio.run_coroutine_threadsafe(bot_instance.reload_extension(ext), bot_instance.loop).result(timeout=10)
+                        else:
+                            asyncio.run_coroutine_threadsafe(bot_instance.load_extension(ext), bot_instance.loop).result(timeout=10)
+                        reloaded.append(cog_name)
+                    except Exception as e:
+                        pass
+                cog.cog_hash_cache[cog_name] = h
+        return jsonify({'reloaded': reloaded})
+
+    @app.route('/api/bot/gc', methods=['POST'])
+    @login_required
+    @role_required('owner')
+    def api_bot_gc():
+        import gc
+        before = sum(1 for _ in gc.get_objects())
+        collected = gc.collect()
+        return jsonify({'collected': collected, 'before': before, 'after': sum(1 for _ in gc.get_objects())})
+
+    @app.route('/api/bot/diagnose', methods=['POST'])
+    @login_required
+    @role_required('admin')
+    def api_bot_diagnose():
+        from cogs.diagnostics import Diagnostics, THRESHOLDS
+        if not bot_instance:
+            return jsonify({'error': 'Bot offline'}), 503
+        cog = bot_instance.get_cog('Diagnostics')
+        if not cog:
+            return jsonify({'error': 'Cog не загружен'}), 404
+        h = cog.get_health_snapshot()
+        issues = []
+        if h['memory_mb'] > THRESHOLDS['memory_mb']['warn']:
+            issues.append(f"Высокая память: {h['memory_mb']}MB")
+        if h['cpu_percent'] > THRESHOLDS['cpu_percent']['warn']:
+            issues.append(f"Высокий CPU: {h['cpu_percent']}%")
+        if h['latency_ms'] > THRESHOLDS['latency_ms']['warn']:
+            issues.append(f"Высокий Latency: {h['latency_ms']}ms")
+        if h['errors_last_min'] > THRESHOLDS['error_rate_per_min']['warn']:
+            issues.append(f"Много ошибок: {h['errors_last_min']}/мин")
+        return jsonify({'issues': issues, 'health': h})
+
+    @app.route('/api/bot/restart', methods=['POST'])
+    @login_required
+    @role_required('owner')
+    def api_bot_restart():
+        if not bot_instance:
+            return jsonify({'error': 'Bot offline'}), 503
+        import os, sys
+        # Trigger graceful restart
+        import threading
+        def do_restart():
+            import time
+            time.sleep(1)
+            os.execv(sys.executable, [sys.executable] + sys.argv)
+        threading.Thread(target=do_restart, daemon=True).start()
+        return jsonify({'restarting': True})
 
     # ── API ROUTES ────────────────────────────────────────────────────────────
 

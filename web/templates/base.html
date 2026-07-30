@@ -209,6 +209,19 @@
                     </div>
                     <div class="nav-group-items">
                         <a href="/ai-chat" class="nav-link {% if request.path == '/ai-chat' %}active{% endif %}"><i class="fas fa-comments"></i> <span>AI Чат</span></a>
+                        <a href="/ai-moderation" class="nav-link {% if request.path == '/ai-moderation' %}active{% endif %}"><i class="fas fa-robot"></i> <span>AI Модерация</span></a>
+                    </div>
+                </div>
+
+                <div class="nav-group" data-group="ops">
+                    <div class="nav-group-title" data-toggle>
+                        <i class="fas fa-server"></i>
+                        <span>Система</span>
+                        <i class="fas fa-chevron-down nav-caret"></i>
+                    </div>
+                    <div class="nav-group-items">
+                        <a href="/bot-diagnostics" class="nav-link {% if request.path == '/bot-diagnostics' %}active{% endif %}"><i class="fas fa-heartbeat"></i> <span>Диагностика</span></a>
+                        <a href="/leveling-admin" class="nav-link {% if request.path == '/leveling-admin' %}active{% endif %}"><i class="fas fa-trophy"></i> <span>Leveling</span></a>
                     </div>
                 </div>
 
