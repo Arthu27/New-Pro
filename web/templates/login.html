@@ -244,6 +244,8 @@
         .tab-btn i { font-size: 14px; }
 
         /* Form */
+        #formPass { display: block; }
+        #formPin { display: none; }
         .form-group { margin-bottom: 18px; position: relative; }
         .form-label {
             display: block;
@@ -540,7 +542,7 @@
         </form>
 
         <!-- TAB 2: DISCORD ID PIN LOGIN -->
-        <div id="formPin"  >
+        <div id="formPin">
             <div class="progress-bar" id="progressBar"><div class="progress-fill" id="progressFill"></div></div>
 
             <div id="step1">
@@ -596,6 +598,16 @@
         p.style.opacity = (0.3 + Math.random() * 0.5);
         container.appendChild(p);
     }
+})();
+
+// Sayfa yüklendiğinde: URL hash'te pin varsa PIN tab'ını aç, yoksa pass (default)
+(function () {
+    var initialTab = 'pass';
+    try {
+        var h = (window.location.hash || '').toLowerCase();
+        if (h === '#pin' || h === '#discord') initialTab = 'pin';
+    } catch (e) {}
+    if (typeof switchTab === 'function') switchTab(initialTab);
 })();
 
 let _discordId = '';
