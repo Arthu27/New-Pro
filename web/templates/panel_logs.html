@@ -28,11 +28,23 @@
   <button class="btn-primary" id="btn-clear" type="button" style="cursor: pointer">Temizle</button>
 </div>
 
-<div class="pl-stats">
-  <div class="pl-stat"><div class="pl-stat-num" id="stat-total">-</div><div class="pl-stat-lbl">Всего</div></div>
-  <div class="pl-stat"><div class="pl-stat-num" id="stat-today" >-</div><div class="pl-stat-lbl">Сегодня</div></div>
-  <div class="pl-stat"><div class="pl-stat-num" id="stat-post" >-</div><div class="pl-stat-lbl">POST</div></div>
-  <div class="pl-stat"><div class="pl-stat-num" id="stat-delete" >-</div><div class="pl-stat-lbl">DELETE</div></div>
+<div class="stat-row" id="pl-stats">
+  <div class="stat-box">
+    <div class="stat-icon gold"><i class="fas fa-list"></i></div>
+    <div class="stat-body"><div class="stat-val" id="stat-total">-</div><div class="stat-lbl">Всего</div></div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-icon cyan"><i class="fas fa-calendar-day"></i></div>
+    <div class="stat-body"><div class="stat-val" id="stat-today">-</div><div class="stat-lbl">Сегодня</div></div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-icon green"><i class="fas fa-plus-circle"></i></div>
+    <div class="stat-body"><div class="stat-val" id="stat-post">-</div><div class="stat-lbl">POST</div></div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-icon red"><i class="fas fa-trash"></i></div>
+    <div class="stat-body"><div class="stat-val" id="stat-delete">-</div><div class="stat-lbl">DELETE</div></div>
+  </div>
 </div>
 
 <div class="pl-box">
