@@ -1371,10 +1371,11 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
     @login_required
     @role_required('admin')
     def api_leveling_config():
+        import web.app as _app; bot = _app.bot_instance
         from cogs.leveling_engagement import LevelingEngagement
-        if not bot_instance:
+        if not bot:
             return jsonify({'error': 'Bot offline'}), 503
-        cog = bot_instance.get_cog('LevelingEngagement')
+        cog = bot.get_cog('LevelingEngagement')
         if not cog:
             return jsonify({'error': 'Cog не загружен'}), 404
         guild_id = str(session.get('selected_guild') or MAIN_GUILD_ID)
@@ -1390,10 +1391,11 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
     @app.route('/api/leveling/stats')
     @login_required
     def api_leveling_stats():
+        import web.app as _app; bot = _app.bot_instance
         from cogs.leveling_engagement import LevelingEngagement, level_from_xp
-        if not bot_instance:
+        if not bot:
             return jsonify({'error': 'Bot offline'}), 503
-        cog = bot_instance.get_cog('LevelingEngagement')
+        cog = bot.get_cog('LevelingEngagement')
         if not cog:
             return jsonify({'error': 'Cog не загружен'}), 404
         guild_id = str(session.get('selected_guild') or MAIN_GUILD_ID)
@@ -1402,7 +1404,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         top = sorted(users.items(), key=lambda x: x[1].get('xp', 0), reverse=True)[:10]
         top_list = []
         for uid, u in top:
-            member = bot_instance.get_guild(int(guild_id)).get_member(int(uid)) if bot_instance.get_guild(int(guild_id)) else None
+            member = bot.get_guild(int(guild_id)).get_member(int(uid)) if bot.get_guild(int(guild_id)) else None
             level, _, _ = level_from_xp(u.get('xp', 0))
             top_list.append({
                 'name': member.display_name if member else f'User#{uid}',
@@ -1427,10 +1429,11 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
     @app.route('/api/leveling/achievements')
     @login_required
     def api_leveling_achievements():
+        import web.app as _app; bot = _app.bot_instance
         from cogs.leveling_engagement import LevelingEngagement
-        if not bot_instance:
+        if not bot:
             return jsonify({'error': 'Bot offline'}), 503
-        cog = bot_instance.get_cog('LevelingEngagement')
+        cog = bot.get_cog('LevelingEngagement')
         if not cog:
             return jsonify({'error': 'Cog не загружен'}), 404
         guild_id = str(session.get('selected_guild') or MAIN_GUILD_ID)
@@ -1441,7 +1444,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         for uid, achs in data.get('achievements', {}).items():
             member = None
             try:
-                g = bot_instance.get_guild(int(guild_id))
+                g = bot.get_guild(int(guild_id))
                 if g:
                     m = g.get_member(int(uid))
                     if m and m.display_name == username:
@@ -1454,10 +1457,11 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
     @app.route('/api/leveling/rewards')
     @login_required
     def api_leveling_rewards():
+        import web.app as _app; bot = _app.bot_instance
         from cogs.leveling_engagement import LevelingEngagement
-        if not bot_instance:
+        if not bot:
             return jsonify({'error': 'Bot offline'}), 503
-        cog = bot_instance.get_cog('LevelingEngagement')
+        cog = bot.get_cog('LevelingEngagement')
         if not cog:
             return jsonify({'error': 'Cog не загружен'}), 404
         guild_id = str(session.get('selected_guild') or MAIN_GUILD_ID)
@@ -1469,10 +1473,11 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
     @login_required
     @role_required('admin')
     def api_ai_mod_config():
+        import web.app as _app; bot = _app.bot_instance
         from cogs.ai_moderation import AIModeration
-        if not bot_instance:
+        if not bot:
             return jsonify({'error': 'Bot offline'}), 503
-        cog = bot_instance.get_cog('AIModeration')
+        cog = bot.get_cog('AIModeration')
         if not cog:
             return jsonify({'error': 'Cog не загружен'}), 404
         guild_id = str(session.get('selected_guild') or MAIN_GUILD_ID)
@@ -1491,10 +1496,11 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
     @app.route('/api/ai-mod/stats')
     @login_required
     def api_ai_mod_stats():
+        import web.app as _app; bot = _app.bot_instance
         from cogs.ai_moderation import AIModeration
-        if not bot_instance:
+        if not bot:
             return jsonify({'error': 'Bot offline'}), 503
-        cog = bot_instance.get_cog('AIModeration')
+        cog = bot.get_cog('AIModeration')
         if not cog:
             return jsonify({'error': 'Cog не загружен'}), 404
         guild_id = str(session.get('selected_guild') or MAIN_GUILD_ID)
@@ -1516,10 +1522,11 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
     @login_required
     @role_required('admin')
     def api_ai_mod_test():
+        import web.app as _app; bot = _app.bot_instance
         from cogs.ai_moderation import AIModeration
-        if not bot_instance:
+        if not bot:
             return jsonify({'error': 'Bot offline'}), 503
-        cog = bot_instance.get_cog('AIModeration')
+        cog = bot.get_cog('AIModeration')
         if not cog:
             return jsonify({'error': 'Cog не загружен'}), 404
         guild_id = str(session.get('selected_guild') or MAIN_GUILD_ID)
@@ -1542,10 +1549,11 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
     @app.route('/api/bot/health')
     @login_required
     def api_bot_health():
+        import web.app as _app; bot = _app.bot_instance
         from cogs.diagnostics import Diagnostics
-        if not bot_instance:
+        if not bot:
             return jsonify({'error': 'Bot offline'}), 503
-        cog = bot_instance.get_cog('Diagnostics')
+        cog = bot.get_cog('Diagnostics')
         if not cog:
             return jsonify({'error': 'Cog не загружен'}), 404
         health = cog.get_health_snapshot()
@@ -1574,11 +1582,12 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
     @login_required
     @role_required('owner')
     def api_bot_hot_reload():
-        if not bot_instance:
+        import web.app as _app; bot = _app.bot_instance
+        if not bot:
             return jsonify({'error': 'Bot offline'}), 503
         # Trigger via discord bot
         from cogs.diagnostics import Diagnostics
-        cog = bot_instance.get_cog('Diagnostics')
+        cog = bot.get_cog('Diagnostics')
         if not cog:
             return jsonify({'error': 'Cog не загружен'}), 404
         # Re-check files
@@ -1595,10 +1604,10 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
                 if cog.cog_hash_cache.get(cog_name) != h:
                     try:
                         ext = f'cogs.{cog_name}'
-                        if ext in bot_instance.extensions:
-                            asyncio.run_coroutine_threadsafe(bot_instance.reload_extension(ext), bot_instance.loop).result(timeout=10)
+                        if ext in bot.extensions:
+                            asyncio.run_coroutine_threadsafe(bot.reload_extension(ext), bot.loop).result(timeout=10)
                         else:
-                            asyncio.run_coroutine_threadsafe(bot_instance.load_extension(ext), bot_instance.loop).result(timeout=10)
+                            asyncio.run_coroutine_threadsafe(bot.load_extension(ext), bot.loop).result(timeout=10)
                         reloaded.append(cog_name)
                     except Exception as e:
                         pass
@@ -1614,10 +1623,11 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
     @login_required
     @role_required('mod')
     def api_temp_mod_active():
+        import web.app as _app; bot = _app.bot_instance
         from cogs.temp_moderation import TempModeration
-        if not bot_instance:
+        if not bot:
             return jsonify({'error': 'Bot offline'}), 503
-        cog = bot_instance.get_cog('TempModeration')
+        cog = bot.get_cog('TempModeration')
         if not cog:
             return jsonify({'error': 'Cog не загружен'}), 404
         guild_id = str(session.get('selected_guild') or MAIN_GUILD_ID)
@@ -1641,17 +1651,18 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
     @login_required
     @role_required('mod')
     def api_temp_mod_mute():
+        import web.app as _app; bot = _app.bot_instance
         from cogs.temp_moderation import TempModeration, parse_duration
-        if not bot_instance:
+        if not bot:
             return jsonify({'error': 'Bot offline'}), 503
-        cog = bot_instance.get_cog('TempModeration')
+        cog = bot.get_cog('TempModeration')
         if not cog:
             return jsonify({'error': 'Cog не загружен'}), 404
         d = request.get_json(silent=True) or {}
         sec = parse_duration(d.get('duration', '1h'))
         if not sec:
             return jsonify({'error': 'Неверный формат времени'}), 400
-        guild = bot_instance.get_guild(int(session.get('selected_guild') or MAIN_GUILD_ID))
+        guild = bot.get_guild(int(session.get('selected_guild') or MAIN_GUILD_ID))
         if not guild:
             return jsonify({'error': 'Сервер не найден'}), 404
         # Resolve user
@@ -1679,17 +1690,18 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
     @login_required
     @role_required('mod')
     def api_temp_mod_ban():
+        import web.app as _app; bot = _app.bot_instance
         from cogs.temp_moderation import TempModeration, parse_duration
-        if not bot_instance:
+        if not bot:
             return jsonify({'error': 'Bot offline'}), 503
-        cog = bot_instance.get_cog('TempModeration')
+        cog = bot.get_cog('TempModeration')
         if not cog:
             return jsonify({'error': 'Cog не загружен'}), 404
         d = request.get_json(silent=True) or {}
         sec = parse_duration(d.get('duration', '1d'))
         if not sec:
             return jsonify({'error': 'Неверный формат'}), 400
-        guild = bot_instance.get_guild(int(session.get('selected_guild') or MAIN_GUILD_ID))
+        guild = bot.get_guild(int(session.get('selected_guild') or MAIN_GUILD_ID))
         user_id = d.get('user_id', '').strip('<@!>')
         try:
             member = _run_async(_resolve_member_async(guild, int(user_id)))
@@ -1713,17 +1725,18 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
     @login_required
     @role_required('mod')
     def api_temp_mod_kick():
+        import web.app as _app; bot = _app.bot_instance
         from cogs.temp_moderation import TempModeration, parse_duration
-        if not bot_instance:
+        if not bot:
             return jsonify({'error': 'Bot offline'}), 503
-        cog = bot_instance.get_cog('TempModeration')
+        cog = bot.get_cog('TempModeration')
         if not cog:
             return jsonify({'error': 'Cog не загружен'}), 404
         d = request.get_json(silent=True) or {}
         sec = parse_duration(d.get('duration', '5m'))
         if not sec:
             return jsonify({'error': 'Неверный формат'}), 400
-        guild = bot_instance.get_guild(int(session.get('selected_guild') or MAIN_GUILD_ID))
+        guild = bot.get_guild(int(session.get('selected_guild') or MAIN_GUILD_ID))
         user_id = d.get('user_id', '').strip('<@!>')
         try:
             member = _run_async(_resolve_member_async(guild, int(user_id)))
@@ -1747,15 +1760,16 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
     @login_required
     @role_required('mod')
     def api_temp_mod_unmute():
-        if not bot_instance:
+        import web.app as _app; bot = _app.bot_instance
+        if not bot:
             return jsonify({'error': 'Bot offline'}), 503
         from cogs.temp_moderation import TempModeration
-        cog = bot_instance.get_cog('TempModeration')
+        cog = bot.get_cog('TempModeration')
         if not cog:
             return jsonify({'error': 'Cog не загружен'}), 404
         d = request.get_json(silent=True) or {}
         user_id = d.get('user_id', '').strip('<@!>')
-        guild = bot_instance.get_guild(int(session.get('selected_guild') or MAIN_GUILD_ID))
+        guild = bot.get_guild(int(session.get('selected_guild') or MAIN_GUILD_ID))
         member = guild.get_member(int(user_id))
         if member and member.is_timed_out():
             try:
@@ -1770,17 +1784,18 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
     @login_required
     @role_required('mod')
     def api_temp_mod_unban():
-        if not bot_instance:
+        import web.app as _app; bot = _app.bot_instance
+        if not bot:
             return jsonify({'error': 'Bot offline'}), 503
         from cogs.temp_moderation import TempModeration
-        cog = bot_instance.get_cog('TempModeration')
+        cog = bot.get_cog('TempModeration')
         if not cog:
             return jsonify({'error': 'Cog не загружен'}), 404
         d = request.get_json(silent=True) or {}
         user_id = d.get('user_id', '').strip('<@!>')
-        guild = bot_instance.get_guild(int(session.get('selected_guild') or MAIN_GUILD_ID))
+        guild = bot.get_guild(int(session.get('selected_guild') or MAIN_GUILD_ID))
         try:
-            user = _run_async(bot_instance.fetch_user(int(user_id)))
+            user = _run_async(bot.fetch_user(int(user_id)))
             _run_async(guild.unban(user))
         except Exception as e:
             return jsonify({'error': str(e)}), 400
@@ -1792,10 +1807,11 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
     @login_required
     @role_required('mod')
     def api_temp_mod_unschedule():
-        if not bot_instance:
+        import web.app as _app; bot = _app.bot_instance
+        if not bot:
             return jsonify({'error': 'Bot offline'}), 503
         from cogs.temp_moderation import TempModeration
-        cog = bot_instance.get_cog('TempModeration')
+        cog = bot.get_cog('TempModeration')
         if not cog:
             return jsonify({'error': 'Cog не загружен'}), 404
         d = request.get_json(silent=True) or {}
@@ -2536,7 +2552,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         import web.app as _app; bot = _app.bot_instance
         import discord as _discord
         if not bot:
-            print(f'[WEB][WARN] /channels: bot_instance is None')
+            print(f'[WEB][WARN] /channels: bot is None')
             return jsonify({'error': 'Bot offline', 'channels': []})
 
         guild = bot.get_guild(int(guild_id))
