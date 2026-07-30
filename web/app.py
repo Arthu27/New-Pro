@@ -2156,6 +2156,64 @@ def api_bot_restart():
     threading.Thread(target=do_restart, daemon=True).start()
     return jsonify({'success': True})
 
+
+@app.route('/api/bot/diagnose', methods=['POST'])
+@login_required
+@role_required('admin')
+def api_bot_diagnose():
+    """Run a quick health diagnose. Returns a list of issues found."""
+    issues = []
+    try:
+        if not bot_instance:
+            issues.append('Бот Discord не подключен')
+        else:
+            # Memory check
+            try:
+                import psutil, os as _os
+                proc = psutil.Process(_os.getpid())
+                mem_mb = proc.memory_info().rss / 1024 / 1024
+                if mem_mb > 700:
+                    issues.append(f'Высокое потребление памяти: {round(mem_mb, 1)}MB')
+            except Exception:
+                pass
+            # Latency check
+            try:
+                lat = bot_instance.latency * 1000
+                if lat > 800:
+                    issues.append(f'Высокий Discord latency: {round(lat, 0)}ms')
+            except Exception:
+                pass
+            # Guild count
+            try:
+                guilds = list(bot_instance.guilds)
+                if not guilds:
+                    issues.append('Бот не на ни одном сервере')
+            except Exception:
+                issues.append('Не удалось получить список серверов')
+    except Exception as e:
+        issues.append(f'Ошибка диагностики: {e}')
+    return jsonify({'issues': issues, 'health': 'ok' if not issues else 'warn'})
+
+
+@app.route('/api/bot/gc', methods=['POST'])
+@login_required
+@role_required('owner')
+def api_bot_gc():
+    """Force Python garbage collection, free memory."""
+    import gc
+    before = sum(1 for _ in gc.get_objects())
+    collected = gc.collect()
+    after = sum(1 for _ in gc.get_objects())
+    freed = before - after
+    _log_panel_action('BOT_GC', session.get('username'))
+    return jsonify({
+        'success': True,
+        'collected': collected,
+        'freed': freed,
+        'before': before,
+        'after': after,
+    })
+
 @app.route('/api/bot/sync', methods=['POST'])
 @login_required
 @role_required('admin')
