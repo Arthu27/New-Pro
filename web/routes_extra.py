@@ -497,6 +497,12 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
     def ai_moderation_page():
         return render_template('ai_moderation.html', role=session.get('role'), username=session.get('username'))
 
+    @app.route('/temp-moderation')
+    @login_required
+    @role_required('mod')
+    def temp_moderation_page():
+        return render_template('temp_moderation.html', role=session.get('role'), username=session.get('username'))
+
     @app.route('/cog-manager')
     @login_required
     @role_required('owner')
@@ -1616,6 +1622,192 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
             os.execv(sys.executable, [sys.executable] + sys.argv)
         threading.Thread(target=do_restart, daemon=True).start()
         return jsonify({'restarting': True})
+
+    # ── TEMP MODERATION API ─────────────────────────────────
+    @app.route('/api/temp-mod/active')
+    @login_required
+    @role_required('mod')
+    def api_temp_mod_active():
+        from cogs.temp_moderation import TempModeration
+        if not bot_instance:
+            return jsonify({'error': 'Bot offline'}), 503
+        cog = bot_instance.get_cog('TempModeration')
+        if not cog:
+            return jsonify({'error': 'Cog не загружен'}), 404
+        guild_id = str(session.get('selected_guild') or MAIN_GUILD_ID)
+        return jsonify({
+            'mutes': list((cog._mutes.get(guild_id, {}) or {}).values()),
+            'bans': list((cog._bans.get(guild_id, {}) or {}).values()),
+            'kicks': list((cog._kicks.get(guild_id, {}) or {}).values()),
+            'scheduled': [s for s in cog._scheduled if s.get('guild_id') == guild_id and s.get('status') == 'pending'],
+        })
+
+    @app.route('/api/temp-mod/mute', methods=['POST'])
+    @login_required
+    @role_required('mod')
+    def api_temp_mod_mute():
+        from cogs.temp_moderation import TempModeration, parse_duration
+        if not bot_instance:
+            return jsonify({'error': 'Bot offline'}), 503
+        cog = bot_instance.get_cog('TempModeration')
+        if not cog:
+            return jsonify({'error': 'Cog не загружен'}), 404
+        d = request.get_json(silent=True) or {}
+        sec = parse_duration(d.get('duration', '1h'))
+        if not sec:
+            return jsonify({'error': 'Неверный формат времени'}), 400
+        guild = bot_instance.get_guild(int(session.get('selected_guild') or MAIN_GUILD_ID))
+        if not guild:
+            return jsonify({'error': 'Сервер не найден'}), 404
+        # Resolve user
+        user_id = d.get('user_id', '').strip('<@!>')
+        try:
+            member = guild.get_member(int(user_id)) or await guild.fetch_member(int(user_id))
+        except Exception:
+            return jsonify({'error': 'Пользователь не найден'}), 404
+        if not member:
+            return jsonify({'error': 'Пользователь не найден'}), 404
+        from datetime import datetime, timedelta
+        until = datetime.utcnow() + timedelta(seconds=sec)
+        try:
+            await member.timeout(until, reason=f"[Panel] {session.get('username')}: {d.get('reason', '')}")
+        except Exception as e:
+            return jsonify({'error': str(e)}), 400
+        cog._mutes.setdefault(str(guild.id), {})[str(member.id)] = {
+            'until': time.time() + sec, 'reason': d.get('reason', ''),
+            'mod_id': session.get('username', ''), 'created_at': time.time(), 'duration': sec,
+        }
+        cog._save('_mutes', cog._mutes_file())
+        return jsonify({'ok': True})
+
+    @app.route('/api/temp-mod/ban', methods=['POST'])
+    @login_required
+    @role_required('mod')
+    def api_temp_mod_ban():
+        from cogs.temp_moderation import TempModeration, parse_duration
+        if not bot_instance:
+            return jsonify({'error': 'Bot offline'}), 503
+        cog = bot_instance.get_cog('TempModeration')
+        if not cog:
+            return jsonify({'error': 'Cog не загружен'}), 404
+        d = request.get_json(silent=True) or {}
+        sec = parse_duration(d.get('duration', '1d'))
+        if not sec:
+            return jsonify({'error': 'Неверный формат'}), 400
+        guild = bot_instance.get_guild(int(session.get('selected_guild') or MAIN_GUILD_ID))
+        user_id = d.get('user_id', '').strip('<@!>')
+        try:
+            member = guild.get_member(int(user_id)) or await guild.fetch_member(int(user_id))
+        except Exception:
+            return jsonify({'error': 'Пользователь не найден'}), 404
+        if not member:
+            return jsonify({'error': 'Пользователь не найден'}), 404
+        try:
+            await guild.ban(member, reason=f"[Panel] {session.get('username')}: {d.get('reason', '')}")
+        except Exception as e:
+            return jsonify({'error': str(e)}), 400
+        cog._bans.setdefault(str(guild.id), {})[str(member.id)] = {
+            'until': time.time() + sec, 'reason': d.get('reason', ''),
+            'mod_id': session.get('username', ''), 'created_at': time.time(), 'duration': sec,
+            'user_name': str(member),
+        }
+        cog._save('_bans', cog._bans_file())
+        return jsonify({'ok': True})
+
+    @app.route('/api/temp-mod/kick', methods=['POST'])
+    @login_required
+    @role_required('mod')
+    def api_temp_mod_kick():
+        from cogs.temp_moderation import TempModeration, parse_duration
+        if not bot_instance:
+            return jsonify({'error': 'Bot offline'}), 503
+        cog = bot_instance.get_cog('TempModeration')
+        if not cog:
+            return jsonify({'error': 'Cog не загружен'}), 404
+        d = request.get_json(silent=True) or {}
+        sec = parse_duration(d.get('duration', '5m'))
+        if not sec:
+            return jsonify({'error': 'Неверный формат'}), 400
+        guild = bot_instance.get_guild(int(session.get('selected_guild') or MAIN_GUILD_ID))
+        user_id = d.get('user_id', '').strip('<@!>')
+        try:
+            member = guild.get_member(int(user_id)) or await guild.fetch_member(int(user_id))
+        except Exception:
+            return jsonify({'error': 'Пользователь не найден'}), 404
+        if not member:
+            return jsonify({'error': 'Пользователь не найден'}), 404
+        try:
+            await member.kick(reason=f"[Panel] {session.get('username')}: {d.get('reason', '')}")
+        except Exception as e:
+            return jsonify({'error': str(e)}), 400
+        cog._kicks.setdefault(str(guild.id), {})[str(member.id)] = {
+            'until': time.time() + sec, 'reason': d.get('reason', ''),
+            'mod_id': session.get('username', ''), 'created_at': time.time(), 'duration': sec,
+            'user_name': str(member),
+        }
+        cog._save('_kicks', cog._kicks_file())
+        return jsonify({'ok': True})
+
+    @app.route('/api/temp-mod/unmute', methods=['POST'])
+    @login_required
+    @role_required('mod')
+    def api_temp_mod_unmute():
+        if not bot_instance:
+            return jsonify({'error': 'Bot offline'}), 503
+        from cogs.temp_moderation import TempModeration
+        cog = bot_instance.get_cog('TempModeration')
+        if not cog:
+            return jsonify({'error': 'Cog не загружен'}), 404
+        d = request.get_json(silent=True) or {}
+        user_id = d.get('user_id', '').strip('<@!>')
+        guild = bot_instance.get_guild(int(session.get('selected_guild') or MAIN_GUILD_ID))
+        member = guild.get_member(int(user_id))
+        if member and member.is_timed_out():
+            try:
+                await member.timeout(None)
+            except Exception:
+                pass
+        cog._mutes.get(str(guild.id), {}).pop(user_id, None)
+        cog._save('_mutes', cog._mutes_file())
+        return jsonify({'ok': True})
+
+    @app.route('/api/temp-mod/unban', methods=['POST'])
+    @login_required
+    @role_required('mod')
+    def api_temp_mod_unban():
+        if not bot_instance:
+            return jsonify({'error': 'Bot offline'}), 503
+        from cogs.temp_moderation import TempModeration
+        cog = bot_instance.get_cog('TempModeration')
+        if not cog:
+            return jsonify({'error': 'Cog не загружен'}), 404
+        d = request.get_json(silent=True) or {}
+        user_id = d.get('user_id', '').strip('<@!>')
+        guild = bot_instance.get_guild(int(session.get('selected_guild') or MAIN_GUILD_ID))
+        try:
+            user = await bot_instance.fetch_user(int(user_id))
+            await guild.unban(user)
+        except Exception as e:
+            return jsonify({'error': str(e)}), 400
+        cog._bans.get(str(guild.id), {}).pop(user_id, None)
+        cog._save('_bans', cog._bans_file())
+        return jsonify({'ok': True})
+
+    @app.route('/api/temp-mod/unschedule', methods=['POST'])
+    @login_required
+    @role_required('mod')
+    def api_temp_mod_unschedule():
+        if not bot_instance:
+            return jsonify({'error': 'Bot offline'}), 503
+        from cogs.temp_moderation import TempModeration
+        cog = bot_instance.get_cog('TempModeration')
+        if not cog:
+            return jsonify({'error': 'Cog не загружен'}), 404
+        d = request.get_json(silent=True) or {}
+        eid = d.get('id', '')
+        cog._scheduled = [s for s in cog._scheduled if s['id'] != eid]
+        cog._save('_scheduled', cog._scheduled_file())
+        return jsonify({'ok': True})
 
     # ── API ROUTES ────────────────────────────────────────────────────────────
 
