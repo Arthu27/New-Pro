@@ -32,7 +32,7 @@
   <div class="ts-title"><i class="fas fa-cog"></i> Настройки тикетов</div>
   <div class="grid2">
     <div>
-      <label class="field-label">Канал для тикетов (отправляетсяяется панель)</label>
+      <label class="field-label">Канал для панели тикетов</label>
       <select id="ticket-ch" class="field-input"></select>
     </div>
     <div>
@@ -50,11 +50,11 @@
   </div>
   <label class="field-label">Описание</label>
   <input type="text" id="ticket-desc" class="field-input" value=" sorunla ? приветствие? Vnizdaki butona клик пользователь поддержка канал создан. Ekibimiz en краткий dlitelnosti seninle ilgсnecek! 💙">
-  <button class="save-btn" onclick="saveSettings()"><i class="fas fa-paper-plane"></i> Сохранить & Panel Отправить</button>
+  <button class="save-btn" onclick="saveSettings()"><i class="fas fa-paper-plane"></i> Сохранить и отправить панель</button>
 </div>
 
 <div class="ts-box">
-  <div class="ts-title"><i class="fas fa-list"></i> Открыт Тикетlar</div>
+  <div class="ts-title"><i class="fas fa-list"></i> Открытые тикеты</div>
   <div id="ticket-list"><div class="empty-state">Выберите сервер...</div></div>
 </div>
 
@@ -101,15 +101,15 @@ async function loadSettings() {
   var chOpts = '<option value="">Выбрать...</option>'+textChs.map(function(c){return '<option value="'+c.id+'">#'+c.name+'</option>';}).join('');
   document.getElementById('ticket-ch').innerHTML = chOpts;
   document.getElementById('log-ch').innerHTML = chOpts;
-  var role = '<option value="">Выбрать...</option>'+roles.map(function(r){return '<option value="'+r.id+'">'+r.name+'</option>';}).join('');
-  document.getElementById('support-role').innerHTML = roles;
+  var roleOptions = '<option value="">Выберите роль...</option>' + (Array.isArray(roles) ? roles.map(function(r){ return '<option value="'+r.id+'">'+r.name+'</option>'; }).join('') : '');
+  document.getElementById('support-role').innerHTML = roleOptions;
   if(setRes.ticket_channel_id) document.getElementById('ticket-ch').value = setRes.ticket_channel_id;
   if(setRes.log_channel_id) document.getElementById('log-ch').value = setRes.log_channel_id;
   if(setRes.support_role_id) document.getElementById('support-role').value = setRes.support_role_id;
   if(setRes.title) document.getElementById('ticket-title').value = setRes.title;
   if(setRes.description) document.getElementById('ticket-desc').value = setRes.description;
   var box = document.getElementById('ticket-list');
-  if(!tickRes.length) { box.innerHTML='<div class="empty-state"><i class="fas fa-ticket-alt" style="font-size:32px;color:#c8922a;opacity:0.3;display:block;margin-bottom:10px;"></i>Открыт ticket yok.</div>'; return; }
+  if(!tickRes.length) { box.innerHTML='<div class="empty-state"><i class="fas fa-ticket-alt" style="font-size:32px;color:#c8922a;opacity:0.3;display:block;margin-bottom:10px;"></i>Открытых тикетов нет.</div>'; return; }
   box.innerHTML = tickRes.map(function(t){
     var isOpen = t.status==='open';
     return '<div class="ticket-row">'+
@@ -124,7 +124,7 @@ async function loadSettings() {
 }
 
 async function saveSettings() {
-  if(!selectedGuild) { alert('Сервер выбрать!'); return; }
+  if(!selectedGuild) { alert('Сервер не найден.'); return; }
   var r = await fetch('/api/guild/'+selectedGuild+'/ticket-settings', {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({
@@ -137,7 +137,7 @@ async function saveSettings() {
   });
   var d = await r.json();
   var btn = event.target;
-  if(d.success) { btn.textContent='✅ Сохранено!'; setTimeout(function(){btn.innerHTML='<i class="fas fa-paper-plane"></i> Сохранить & Panel Отправить';},2000); }
+  if(d.success) { btn.textContent='✅ Сохранено!'; setTimeout(function(){btn.innerHTML='<i class="fas fa-paper-plane"></i> Сохранить и отправить панель';},2000); }
   else alert('❌ '+(d.error||'Ошибка'));
 }
 
