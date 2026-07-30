@@ -1883,20 +1883,6 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
             json.dump(cfg, f, indent=2, ensure_ascii=False)
         return jsonify({'ok': True})
 
-    @app.route('/api/cogs', methods=['GET'])
-    @login_required
-    @role_required('owner')
-    def api_cogs_list():
-        import web.app as _app; bot = _app.bot_instance
-        if not bot: return jsonify([])
-        loaded = set(bot.extensions.keys())
-        all_files = [f[:-3] for f in os.listdir('./cogs') if f.endswith('.py') and f != 'embed_utils.py']
-        result = []
-        for name in sorted(all_files):
-            ext = 'cogs.' + name
-            result.append({'name': name, 'loaded': ext in loaded})
-        return jsonify(result)
-
     @app.route('/api/cogs/load', methods=['POST'])
     @login_required
     @role_required('owner')
