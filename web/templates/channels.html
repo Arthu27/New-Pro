@@ -387,10 +387,10 @@
       function restoreClickPosition() {
         if (!clickPosition) return;
         var position = clickPosition;
+        // Restore in the same render frame. Delayed corrections caused a visible
+        // "jump up, then back" effect, which is exactly what we must avoid.
+        setScroll(position);
         requestAnimationFrame(function () { setScroll(position); });
-        setTimeout(function () { setScroll(position); }, 0);
-        setTimeout(function () { setScroll(position); }, 80);
-        setTimeout(function () { setScroll(position); }, 250);
       }
       list.addEventListener('pointerdown', function () { clickPosition = getScroll(); }, true);
       list.addEventListener('click', function (e) {
