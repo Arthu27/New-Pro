@@ -84,11 +84,81 @@ bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
 
 ALERT_ROLE_ID = None  # Panelden настройк
 
+# ── Web server (gunicorn subprocess) ─────────────────────────────────────────
+_web_server_proc = None
+_gunicorn_available = None  # cache: gunicorn kurulu mu?
+
+
+def _have_gunicorn():
+    """gunicorn kurulu mu, sh'ye gerek var mi? subprocess ucuz bir kontrol."""
+    global _gunicorn_available
+    if _gunicorn_available is not None:
+        return _gunicorn_available
+    try:
+        subprocess.run(
+            [sys.executable, '-m', 'gunicorn', '--version'],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True,
+            timeout=5,
+        )
+        _gunicorn_available = True
+    except Exception:
+        _gunicorn_available = False
+    return _gunicorn_available
+
+
+def _start_web_server(app):
+    """Gunicorn subprocess baslat. Calismazsa werkzeug fallback."""
+    global _web_server_proc
+    if _have_gunicorn():
+        try:
+            cmd = [
+                sys.executable, '-m', 'gunicorn',
+                '--config', 'web/gunicorn_conf.py',
+                'web.wsgi:application',
+            ]
+            _web_server_proc = subprocess.Popen(
+                cmd,
+                stdout=sys.stdout, stderr=subprocess.STDOUT,
+                # bot kapanirsa web de kapansin (process group)
+                preexec_fn=os.setsid if hasattr(os, 'setsid') else None,
+            )
+            print(f"[WEB] Gunicorn baslatildi (pid={_web_server_proc.pid})")
+            return
+        except Exception as e:
+            print(f"[WEB] Gunicorn baslatilamadi, werkzeug fallback: {e}")
+
+    # Fallback: werkzeug development server (tek thread)
+    import logging
+    logging.getLogger('werkzeug').setLevel(logging.WARNING)
+    threading.Thread(
+        target=lambda: app.run(host='0.0.0.0', port=5001, debug=False, use_reloader=False),
+        daemon=True
+    ).start()
+    print("[WEB] Werkzeug (fallback) baslatildi")
+
+
+def _stop_web_server():
+    """Web server'i kibarca kapat."""
+    global _web_server_proc
+    if _web_server_proc and _web_server_proc.poll() is None:
+        try:
+            _web_server_proc.terminate()
+            try:
+                _web_server_proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                _web_server_proc.kill()
+        except Exception as e:
+            print(f"[WEB] Kapatma hatasi: {e}")
+        _web_server_proc = None
+
+
 # ── Cleanup functions ───────────────────────────────────────────────────────
 def cleanup_on_exit():
     """Bot закрыт temizlik действия"""
     try:
         print("[CLEANUP] Bot закрыт...")
+        # Web server'i kapat
+        _stop_web_server()
         # Ses ссылки закрыть
         if hasattr(bot, 'voice_clients'):
             for vc in bot.voice_clients:
@@ -412,14 +482,7 @@ async def main():
     # Web paneli запустить (bot başlamadan до - только bir kez)
     from web.app import app, set_bot_instance
     set_bot_instance(bot)
-    # Werkzeug terminal colorlerini закрыть
-    import logging
-    log = logging.getLogger('werkzeug')
-    log.setLevel(logging.WARNING)
-    threading.Thread(
-        target=lambda: app.run(host='0.0.0.0', port=5001, debug=False, use_reloader=False),
-        daemon=True
-    ).start()
+    _start_web_server(app)
     print("[WEB] Web panel: http://localhost:5001")
 
     # Cloudflare tüneli запустить (Flask'ın ayağa kalkması для 3 sn badd)
