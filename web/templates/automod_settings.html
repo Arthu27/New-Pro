@@ -143,8 +143,9 @@ var allChannels = [];
 var warnSteps = [];
 
 async function loadAll(gid_param) {
-  var gid = gid_param || GUILD_ID;
+  var gid = gid_param || document.getElementById('guild-select').value || GUILD_ID;
   if (!gid) return;
+  GUILD_ID = gid;
   await Promise.all([loadAutomod(gid), loadChannels(gid), loadWarningConfig(gid)]);
 }
 
@@ -152,14 +153,14 @@ async function loadAutomod(gid) {
   var r = await fetch('/api/guild/'+gid+'/automod');
   var d = await r.json();
   document.getElementById('spam-prot').checked    = d.spam_protection||false;
-  document.getElementById('link-filter').checked  = d.ссылка_filter||false;
+  document.getElementById('link-filter').checked  = d.link_filter||false;
   document.getElementById('caps-filter').checked  = d.caps_filter||false;
   document.getElementById('invite-filter').checked= d.invite_filter||false;
   document.getElementById('etiket-spam').checked = d.etiket_spam||false;
   document.getElementById('duplicate-filter').checked = d.duplicate_filter||false;
   document.getElementById('emoji-filter').checked = d.emoji_filter||false;
   document.getElementById('spam-threshold').value = d.spam_threshold||5;
-  currentWords = d.банned_words||[];
+  currentWords = d.banned_words||[];
   renderWords();
 }
 
@@ -178,7 +179,7 @@ async function loadChannels(gid) {
   var exempt = cfg.exempt_channels || [];
 
   var box = document.getElementById('exempt-channels');
-  if (!allChannels.length) { box.innerHTML='<div style="padding:16px;text-align:center;color:#5a5040;font-size:12px;">Канал не найдено./div>'; return; }
+  if (!allChannels.length) { box.innerHTML='<div style="padding:16px;text-align:center;color:#5a5040;font-size:12px;">Каналы не найдены.</div>'; return; }
   box.innerHTML = allChannels.map(function(c) {
     var checked = exempt.includes(c.id) ? 'checked' : '';
     return '<div class="ch-item">'+
@@ -278,7 +279,7 @@ function removeWord(w) {
 }
 
 async function saveAutomod() {
-  var gid = MAIN_GID;
+  var gid = document.getElementById('guild-select').value || MAIN_GID;
   // Получить текущую конфигурацию, сохранить exempt_channels
   var existing = {};
   try {
@@ -289,14 +290,14 @@ async function saveAutomod() {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({
       spam_protection: document.getElementById('spam-prot').checked,
-      ссылка_filter:     document.getElementById('link-filter').checked,
+      link_filter:       document.getElementById('link-filter').checked,
       caps_filter:     document.getElementById('caps-filter').checked,
       invite_filter:   document.getElementById('invite-filter').checked,
       etiket_spam:    document.getElementById('etiket-spam').checked,
       duplicate_filter:document.getElementById('duplicate-filter').checked,
       emoji_filter:    document.getElementById('emoji-filter').checked,
       spam_threshold:  parseInt(document.getElementById('spam-threshold').value),
-      банned_words:    currentWords,
+      banned_words:      currentWords,
       exempt_channels: existing.exempt_channels || []
     })
   });
@@ -305,7 +306,7 @@ async function saveAutomod() {
 }
 
 async function saveExempt() {
-  var gid = MAIN_GID;
+  var gid = document.getElementById('guild-select').value || MAIN_GID;
   var checked = Array.from(document.querySelectorAll('#exempt-channels input:checked')).map(function(el){return el.value;});
   // Текущий automod config'e добавить
   var r0 = await fetch('/api/guild/'+gid+'/automod');
@@ -320,7 +321,7 @@ async function saveExempt() {
 }
 
 async function saveWarningConfig() {
-  var gid = MAIN_GID;
+  var gid = document.getElementById('guild-select').value || MAIN_GID;
   var r = await fetch('/api/guild/'+gid+'/warn-config', {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({steps: warnSteps})
