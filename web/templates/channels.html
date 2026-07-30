@@ -376,7 +376,12 @@
     // the bot's current guild. Do not reset the scroll position in that case.
     var gs = $('guild-select');
     if (gs) gs.addEventListener('change', function () {
-      selectedGuild = gs.value || MAIN_GID;
+      var nextGuild = gs.value || MAIN_GID;
+      // base.html populates the selector after this page has already started its
+      // first load. Reloading the same guild created a late second render that
+      // reset the list to the top while the user was clicking a category.
+      if (nextGuild === selectedGuild) return;
+      selectedGuild = nextGuild;
       loadChannels(true);
     });
 
