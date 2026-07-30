@@ -3197,8 +3197,11 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
     def api_voice_stats(guild_id):
         import web.app as _app; bot = _app.bot_instance
 
+        # Defaults are defined before touching the optional statistics file.
+        # This keeps the endpoint JSON-safe when no file exists yet.
         leaderboard = []
         total_seconds = 0
+        today_data = {}
 
         # Read persisted voice statistics.  This endpoint must always return JSON:
         # a malformed/old statistics file should not turn into an HTML 500 response.
