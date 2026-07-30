@@ -4,15 +4,15 @@
 {% block content %}
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&display=swap');
-  .action-box{background:lеar-gradient(135deg,rgba(26,22,16,0.7),rgba(26,22,16,0.7));border:1px solid rgba(212,168,67,0.3);border-radius:16px;padding:25px;margin-bottom:20px;position:relative;overflow:hidden;transition:all 0.3s;}
-  .action-box::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:2px;background:lеar-gradient(90deg,transparent,#c8922a,transparent);animation:scan 4s infinite;}
+  .action-box{background:linear-gradient(135deg,rgba(26,22,16,0.7),rgba(26,22,16,0.7));border:1px solid rgba(212,168,67,0.3);border-radius:16px;padding:25px;margin-bottom:20px;position:relative;overflow:hidden;transition:all 0.3s;}
+  .action-box::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:2px;background:linear-gradient(90deg,transparent,#c8922a,transparent);animation:scan 4s infinite;}
   @keyframes scan{0%{left:-100%}100%{left:100%}}
   .action-box:hover{border-color:rgba(200,146,42,0.6);box-shadow:0 8px 30px rgba(200,146,42,0.15);}
   .action-title{color:#c8922a;font-family:Inter,sans-serif;font-size:13px;text-transform:uppercase;letter-spacing:2px;margin-bottom:18px;display:flex;align-items:center;gap:8px;padding-bottom:12px;border-bottom:1px solid rgba(200,146,42,0.2);}
   .warning-box{background:rgba(212,168,67,0.08);border:1px solid rgba(212,168,67,0.3);border-radius:14px;padding:12px;margin-bottom:15px;color:#c8922a;font-size:13px;display:flex;align-items:center;gap:8px;}
   .field-label{color:#c8922a;font-size:11px;text-transform:uppercase;display:block;margin-bottom:6px;letter-spacing:1px;}
   .field-input{width:100%;padding:10px 14px;background:#100e08;border:2px solid rgba(200,146,42,0.25);border-radius:14px;color:#f0e8d0;box-sizing:border-box;font-family:inherit;transition:all 0.3s;font-size:14px;}
-  .field-input:focus{outlе:none;border-color:#c8922a;box-shadow:0 0 15px rgba(200,146,42,0.2);}
+  .field-input:focus{outline:none;border-color:#c8922a;box-shadow:0 0 15px rgba(200,146,42,0.2);}
   .danger-btn{padding:12px 22px;background:rgba(224,85,85,0.15);color:#f0e8d0;border:none;border-radius:14px;cursor:pointer;font-weight:700;font-size:13px;letter-spacing:1px;transition:all 0.3s;}
   .danger-btn:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(231,76,60,0.4);}
   .safe-btn{padding:12px 22px;background:rgba(94,196,122,0.8);color:#f0e8d0;border:none;border-radius:14px;cursor:pointer;font-weight:700;font-size:13px;letter-spacing:1px;transition:all 0.3s;}
@@ -21,11 +21,11 @@
   .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
   @media(max-width:768px){.grid3{grid-template-columns:1fr;}}
   .guild-select{width:100%;padding:12px;background:#100e08;border:2px solid #c8922a;border-radius:14px;color:#f0e8d0;margin-bottom:20px;font-size:14px;}
-  .guild-select:focus{outlе:none;box-shadow:0 0 15px rgba(200,146,42,0.3);}
+  .guild-select:focus{outline:none;box-shadow:0 0 15px rgba(200,146,42,0.3);}
   .action-icon{width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:15px;}
 </style>
 
-<select style="display:none" style="display:none" id="guild-select" class="guild-select" onchange="loadData()">
+<select  id="guild-select" class="guild-select" onchange="loadData()">
   <option value="">🌐 Выберите сервер...</option>
 </select>
 

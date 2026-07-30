@@ -4,20 +4,20 @@
 {% block content %}
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&display=swap');
-.rr-hero{background:lеar-gradient(135deg,#100e08,#100e08,#100e08);border:1px solid rgba(200,146,42,0.4);border-radius:20px;padding:30px;margin-bottom:25px;text-align:center;position:relative;overflow:hidden;}
+.rr-hero{background:linear-gradient(135deg,#100e08,#100e08,#100e08);border:1px solid rgba(200,146,42,0.4);border-radius:20px;padding:30px;margin-bottom:25px;text-align:center;position:relative;overflow:hidden;}
 .rr-hero::before{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(ellipse at center,rgba(200,146,42,0.08) 0%,transparent 60%);animation:pulse-bg 4s ease-in-out infinite;}
 @keyframes pulse-bg{0%,100%{opacity:.5;}50%{opacity:1;}}
-.hero-title{font-family:Rajdhani,sans-serif;font-size:28px;font-weight:700;background:lеar-gradient(135deg,#c8922a,#c8922a,#c8922a);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px;}
+.hero-title{font-family:Rajdhani,sans-serif;font-size:28px;font-weight:700;background:linear-gradient(135deg,#c8922a,#c8922a,#c8922a);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px;}
 .hero-sub{color:rgba(240,232,208,0.55);font-size:13px;}
 .controls-bar{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;}
 .guild-sel{flex:1;min-width:200px;padding:12px 16px;background:rgba(0,0,0,0.6);border:2px solid rgba(200,146,42,0.3);border-radius:14px;color:#f0e8d0;font-size:14px;}
-.guild-sel:focus{outlе:none;border-color:#c8922a;}
-.btn-new{padding:12px 24px;background:lеar-gradient(135deg,#c8922a,#c8922a);color:#f0e8d0;border:none;border-radius:14px;cursor:pointer;font-weight:700;font-size:14px;display:flex;align-items:center;gap:8px;transition:all .2s;box-shadow:0 4px 15px rgba(200,146,42,0.3);}
+.guild-sel:focus{outline:none;border-color:#c8922a;}
+.btn-new{padding:12px 24px;background:linear-gradient(135deg,#c8922a,#c8922a);color:#f0e8d0;border:none;border-radius:14px;cursor:pointer;font-weight:700;font-size:14px;display:flex;align-items:center;gap:8px;transition:all .2s;box-shadow:0 4px 15px rgba(200,146,42,0.3);}
 .btn-new:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(200,146,42,0.5);}
 .rr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:20px;}
-.rr-card{background:lеar-gradient(135deg,#100e08,#100e08);border:1px solid rgba(200,146,42,0.25);border-radius:18px;padding:22px;position:relative;overflow:hidden;transition:all .3s;animation:fadeInUp .4s ease both;}
+.rr-card{background:linear-gradient(135deg,#100e08,#100e08);border:1px solid rgba(200,146,42,0.25);border-radius:18px;padding:22px;position:relative;overflow:hidden;transition:all .3s;animation:fadeInUp .4s ease both;}
 .rr-card:hover{border-color:rgba(200,146,42,0.6);transform:translateY(-3px);box-shadow:0 8px 30px rgba(200,146,42,0.2);}
-.rr-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:lеar-gradient(90deg,#c8922a,#c8922a,#c8922a);background-size:200% 100%;animation:shimmer 2s lеar infinite;}
+.rr-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#c8922a,#c8922a,#c8922a);background-size:200% 100%;animation:shimmer 2s linear infinite;}
 @keyframes shimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
 @keyframes fadeInUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
 .rr-title{font-size:16px;font-weight:700;color:#f0e8d0;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
@@ -28,25 +28,25 @@
 .rr-footer{display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.05);}
 .btn-del{padding:6px 14px;background:rgba(231,76,60,0.2);border:1px solid rgba(231,76,60,0.4);color:#e05555;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;transition:all .2s;}
 .btn-del:hover{background:rgba(231,76,60,0.4);}
-.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-еx:9999;justify-content:center;align-items:center;backdrop-filter:blur(4px);}
-.modal-box{background:lеar-gradient(135deg,#100e08,#100e08,#100e08);border:2px solid rgba(200,146,42,0.5);border-radius:24px;padding:32px;max-width:520px;width:92%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(200,146,42,0.3);animation:modalIn .3s cubic-bezier(.34,1.56,.64,1);}
+.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:9999;justify-content:center;align-items:center;backdrop-filter:blur(4px);}
+.modal-box{background:linear-gradient(135deg,#100e08,#100e08,#100e08);border:2px solid rgba(200,146,42,0.5);border-radius:24px;padding:32px;max-width:520px;width:92%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(200,146,42,0.3);animation:modalIn .3s cubic-bezier(.34,1.56,.64,1);}
 @keyframes modalIn{from{opacity:0;transform:scale(0.8);}to{opacity:1;transform:scale(1);}}
 .modal-title{font-family:Rajdhani,sans-serif;font-size:22px;font-weight:700;color:#c8922a;margin-bottom:20px;display:flex;align-items:center;gap:10px;}
 .form-group{margin-bottom:14px;}
 .form-label{display:block;color:#c8922a;font-size:11px;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:7px;font-weight:600;}
 .form-input{width:100%;padding:11px 14px;background:rgba(0,0,0,0.5);border:2px solid rgba(200,146,42,0.25);border-radius:14px;color:#f0e8d0;font-size:14px;transition:border-color .2s;box-sizing:border-box;}
-.form-input:focus{outlе:none;border-color:#c8922a;}
+.form-input:focus{outline:none;border-color:#c8922a;}
 .entry-row{display:flex;gap:8px;margin-bottom:8px;align-items:center;animation:fadeInUp .2s ease;}
 .entry-emoji{width:56px;padding:10px 6px;background:rgba(0,0,0,0.5);border:2px solid rgba(200,146,42,0.25);border-radius:14px;color:#f0e8d0;text-align:center;font-size:20px;}
-.entry-emoji:focus{outlе:none;border-color:#c8922a;}
+.entry-emoji:focus{outline:none;border-color:#c8922a;}
 .entry-role{flex:1;padding:10px 12px;background:rgba(0,0,0,0.5);border:2px solid rgba(200,146,42,0.25);border-radius:14px;color:#f0e8d0;font-size:14px;}
-.entry-role:focus{outlе:none;border-color:#c8922a;}
+.entry-role:focus{outline:none;border-color:#c8922a;}
 .entry-del{width:36px;height:36px;background:rgba(231,76,60,0.2);border:1px solid rgba(231,76,60,0.4);border-radius:8px;color:#e05555;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0;}
 .entry-del:hover{background:rgba(231,76,60,0.4);}
 .btn-add-entry{width:100%;padding:9px;background:rgba(212,168,67,0.1);color:#c8922a;border:1px dashed rgba(200,146,42,0.4);border-radius:14px;cursor:pointer;font-size:13px;margin-bottom:18px;transition:all .2s;}
 .btn-add-entry:hover{background:rgba(212,168,67,0.2);}
 .modal-actions{display:flex;gap:10px;}
-.btn-submit{flex:1;padding:12px;background:lеar-gradient(135deg,#c8922a,#c8922a);color:#f0e8d0;border:none;border-radius:14px;cursor:pointer;font-weight:700;font-size:15px;transition:all .2s;box-shadow:0 4px 15px rgba(200,146,42,0.3);}
+.btn-submit{flex:1;padding:12px;background:linear-gradient(135deg,#c8922a,#c8922a);color:#f0e8d0;border:none;border-radius:14px;cursor:pointer;font-weight:700;font-size:15px;transition:all .2s;box-shadow:0 4px 15px rgba(200,146,42,0.3);}
 .btn-submit:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(200,146,42,0.5);}
 .btn-cancel{padding:12px 20px;background:rgba(255,255,255,0.05);color:rgba(240,232,208,0.55);border:1px solid rgba(255,255,255,0.1);border-radius:14px;cursor:pointer;}
 .btn-cancel:hover{background:rgba(255,255,255,0.1);color:rgba(240,232,208,0.55);}
@@ -60,7 +60,7 @@
 </div>
 
 <div class="controls-bar">
-  <select style="display:none" style="display:none" id="guild-select" class="guild-sel" onchange="loadRR()">
+  <select  id="guild-select" class="guild-sel" onchange="loadRR()">
     <option value="">🏠 Выберите сервер...</option>
   </select>
   <button class="btn-new" onclick="openModal()"><span>➕</span> Новая панель</button>
@@ -96,7 +96,7 @@ var allRoles = [];
 async function loadGuilds() {
   // Sabit сервер ID
   var gid = '{{ main_guild_id }}';
-  if (typeof selectedGuild !== 'undefеd') selectedGuild = gid;
+  if (typeof selectedGuild !== 'undefined') selectedGuild = gid;
   if (document.getElementById('guild-select')) document.getElementById('guild-select').value = gid;
   if (document.getElementById('guild-sel')) document.getElementById('guild-sel').value = gid;
   if (document.getElementById('guildSelect')) document.getElementById('guildSelect').value = gid;

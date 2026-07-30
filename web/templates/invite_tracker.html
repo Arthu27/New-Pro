@@ -3,13 +3,13 @@
 {% block page_title %}<i class="fas fa-link" style="color:#c8922a;animation:pulse 2s infinite;"></i> DAVET ОТСЛЕЖИВАНИЕ{% endblock %}
 {% block content %}
 <style>
-  .inv-box{background:lеar-gradient(135deg,rgba(26,22,16,0.7),rgba(26,22,16,0.7));border:1px solid rgba(200,146,42,0.3);border-radius:16px;padding:25px;margin-bottom:20px;position:relative;overflow:hidden;}
-  .inv-box::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:2px;background:lеar-gradient(90deg,transparent,#c8922a,transparent);;}
+  .inv-box{background:linear-gradient(135deg,rgba(26,22,16,0.7),rgba(26,22,16,0.7));border:1px solid rgba(200,146,42,0.3);border-radius:16px;padding:25px;margin-bottom:20px;position:relative;overflow:hidden;}
+  .inv-box::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:2px;background:linear-gradient(90deg,transparent,#c8922a,transparent);;}
   @keyframes scan{0%{left:-100%}100%{left:100%}}
   .inv-title{color:#c8922a;font-size:13px;text-transform:uppercase;letter-spacing:2px;margin-bottom:18px;display:flex;align-items:center;gap:8px;padding-bottom:12px;border-bottom:1px solid rgba(200,146,42,0.2);}
   .stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin-bottom:20px;}
   @media(max-width:768px){.stat-row{grid-template-columns:repeat(2,1fr);}}
-  .stat-box{background:lеar-gradient(135deg,rgba(26,22,16,0.7),rgba(26,22,16,0.7));border:1px solid rgba(200,146,42,0.3);border-radius:14px;padding:18px;text-align:center;transition:all 0.3s;}
+  .stat-box{background:linear-gradient(135deg,rgba(26,22,16,0.7),rgba(26,22,16,0.7));border:1px solid rgba(200,146,42,0.3);border-radius:14px;padding:18px;text-align:center;transition:all 0.3s;}
   .stat-box:hover{transform:translateY(-5px);box-shadow:0 10px 25px rgba(200,146,42,0.2);}
   .stat-val{font-size:28px;font-weight:900;color:#c8922a;}
   .stat-lbl{font-size:11px;color:rgba(240,232,208,0.55);text-transform:uppercase;margin-top:4px;letter-spacing:1px;}
@@ -27,7 +27,7 @@
   .join-inviter{color:rgba(240,232,208,0.55);font-size:12px;}
   .join-time{color:#5a5040;font-size:11px;margin-left:auto;}
   .tab-btn{padding:8px 18px;border:2px solid rgba(200,146,42,0.3);background:transparent;color:rgba(240,232,208,0.55);border-radius:20px;cursor:pointer;font-size:13px;transition:all 0.2s;}
-  .tab-btn.active,.tab-btn:hover{background:lеar-gradient(135deg,#c8922a,#c8922a);border-color:#c8922a;color:#f0e8d0;}
+  .tab-btn.active,.tab-btn:hover{background:linear-gradient(135deg,#c8922a,#c8922a);border-color:#c8922a;color:#f0e8d0;}
   .guild-select{width:100%;padding:12px;background:#100e08;border:2px solid #c8922a;border-radius:14px;color:#f0e8d0;margin-bottom:20px;font-size:14px;}
   .inv-table{width:100%;border-collapse:collapse;}
   .inv-table th{padding:10px 12px;background:rgba(200,146,42,0.15);color:#c8922a;font-size:11px;text-transform:uppercase;letter-spacing:1px;text-align:left;}
@@ -35,7 +35,7 @@
   .inv-table tr:hover td{background:rgba(200,146,42,0.05);}
 </style>
 
-<select style="display:none" style="display:none" id="guild-select" class="guild-select" onchange="loadInvites()">
+<select  id="guild-select" class="guild-select" onchange="loadInvites()">
   <option value="">Выберите сервер...</option>
 </select>
 
@@ -57,12 +57,12 @@
   <div id="leaderboard-list"><p style="color:#5a5040;font-style:italic;">Выберите сервер...</p></div>
 </div>
 
-<div class="inv-box" id="tab-joins" style="display:none;">
+<div class="inv-box" id="tab-joins" >
   <div class="inv-title"><i class="fas fa-user-plus"></i> В конец Использовано ссылокlar</div>
   <div id="joins-list"><p style="color:#5a5040;font-style:italic;">Выберите сервер...</p></div>
 </div>
 
-<div class="inv-box" id="tab-invites" style="display:none;">
+<div class="inv-box" id="tab-invites" >
   <div class="inv-title"><i class="fas fa-link"></i> Активных приглашений Linkы</div>
   <div id="invites-list"><p style="color:#5a5040;font-style:italic;">Выберите сервер...</p></div>
 </div>
@@ -79,7 +79,7 @@ function showTab(tab, btn) {
 async function loadGuilds() {
   // Sabit сервер ID
   var gid = '{{ main_guild_id }}';
-  if (typeof selectedGuild !== 'undefеd') selectedGuild = gid;
+  if (typeof selectedGuild !== 'undefined') selectedGuild = gid;
   if (document.getElementById('guild-select')) document.getElementById('guild-select').value = gid;
   if (document.getElementById('guild-sel')) document.getElementById('guild-sel').value = gid;
   if (document.getElementById('guildSelect')) document.getElementById('guildSelect').value = gid;
@@ -126,7 +126,7 @@ async function loadInvites() {
         '<div class="inv-count">'+(u.total||0)+'</div>'+
       '</div>';
     }).join('') :
-    '<p style="color:#5a5040;text-align:center;padding:30px;font-style:italic;">Данные yok.</p>';
+    '<p style="color:#5a5040;text-align:center;padding:30px;font-style:italic;">Нет данных.</p>';
 
   var joins = d.recent_joins||[];
   document.getElementById('joins-list').innerHTML = joins.length ?

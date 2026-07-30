@@ -69,7 +69,7 @@ async function toggleCog(name, isLoaded) {
     }).then(r => r.json());
     if (r.ok) loadCogs();
     else alert('Ошибка: ' + (r.error || 'Bilinmeyen'));
-  } catch(e) { alert('Ссылка ошибки'); }
+  } catch(e) { alert('Ошибка соединения'); }
 }
 
 async function reloadCog(name) {
@@ -81,7 +81,7 @@ async function reloadCog(name) {
     }).then(r => r.json());
     if (r.ok) loadCogs();
     else alert('Ошибка: ' + (r.error || 'Bilinmeyen'));
-  } catch(e) { alert('Ссылка ошибки'); }
+  } catch(e) { alert('Ошибка соединения'); }
 }
 
 async function reloadAll() {

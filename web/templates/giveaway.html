@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% block title %}Розыгрыш Управление{% endblock %}
-{% block page_title %}🎉 Розыгрыш Управление{% endblock %}
+{% block title %}Управление розыгрышами{% endblock %}
+{% block page_title %}🎉 Управление розыгрышами{% endblock %}
 {% block content %}
 <style>
 .gw-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;margin-bottom:28px;}
@@ -8,7 +8,7 @@
 .gw-card:hover{border-color:rgba(212,168,67,0.25);}
 .gw-card.active{border-color:rgba(46,213,115,0.3);}
 .gw-card.ended{opacity:0.6;}
-.gw-badge{display:inlе-block;padding:2px 10px;border-radius:99px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;}
+.gw-badge{display:inline-block;padding:2px 10px;border-radius:99px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;}
 .gw-badge.active{background:rgba(46,213,115,0.15);color:#2ed573;border:1px solid rgba(46,213,115,0.3);}
 .gw-badge.ended{background:rgba(224,85,85,0.12);color:#e05555;border:1px solid rgba(224,85,85,0.2);}
 .gw-prize{font-size:16px;font-weight:700;color:#f0e8d0;margin-bottom:8px;}
@@ -40,7 +40,7 @@ label{font-size:11px;color:rgba(240,232,208,0.45);display:block;margin-bottom:4p
       <input type="number" id="gw-winners" value="1" min="1" max="20">
     </div>
     <div>
-      <label>Длительность (min)</label>
+      <label>Длительность (мин.)</label>
       <input type="number" id="gw-minutes" value="60" min="1" max="10080">
     </div>
   </div>
@@ -65,7 +65,7 @@ async function loadChannels(gid) {
   try {
     var res = await fetch('/api/guild/' + gid + '/channels').then(r => r.json());
     var sel = document.getElementById('gw-channel');
-    sel.innerHTML = '<option value="">Канал выбрать...</option>' +
+    sel.innerHTML = '<option value="">Выберите канал...</option>' +
       res.filter(c => c.type === 'text').map(c => '<option value="' + c.id + '">#' + c.name + '</option>').join('');
   } catch(e) {}
 }
@@ -80,7 +80,7 @@ async function loadGiveaways(gid) {
       var isActive = gw.status === 'active';
       var endsAt = gw.ends_at ? new Date(gw.ends_at).toLocaleString('tr-TR') : '?';
       return '<div class="gw-card ' + gw.status + '">' +
-        '<span class="gw-badge ' + gw.status + '">' + (isActive ? '🟢 Активен' : '🔴 Bitti') + '</span>' +
+        '<span class="gw-badge ' + gw.status + '">' + (isActive ? '🟢 Активен' : '🔴 Завершён') + '</span>' +
         '<div class="gw-prize">🏆 ' + gw.prize + '</div>' +
         '<div class="gw-meta">' +
           '<span>👥 ' + gw.participants + ' участников</span>' +
@@ -88,7 +88,7 @@ async function loadGiveaways(gid) {
           '<span>⏰ ' + endsAt + '</span>' +
         '</div>' +
         '<div class="gw-actions">' +
-          (isActive ? '<button class="btn btn-danger" style="font-size:11px;padding:6px 12px;" onclick="endРозыгрыш(\'' + gw.id + '\')">⏹ Bitir</button>' : '') +
+          (isActive ? '<button class="btn btn-danger" style="font-size:11px;padding:6px 12px;" onclick="endРозыгрыш(\'' + gw.id + '\')">⏹ Завершить</button>' : '') +
           '<button class="btn" style="font-size:11px;padding:6px 12px;background:rgba(224,85,85,0.1);color:#e05555;border:1px solid rgba(224,85,85,0.2);" onclick="deleteРозыгрыш(\'' + gw.id + '\')">🗑 Удалить</button>' +
         '</div>' +
       '</div>';
@@ -102,7 +102,7 @@ async function createРозыгрыш() {
   var winners = parseInt(document.getElementById('gw-winners').value) || 1;
   var minutes = parseInt(document.getElementById('gw-minutes').value) || 60;
   var msg     = document.getElementById('create-msg');
-  if (!prize || !channel || !_guildId) { msg.textContent = '❌ Все alanы doldur.'; return; }
+  if (!prize || !channel || !_guildId) { msg.textContent = '❌ Заполните все поля.'; return; }
   msg.textContent = 'Создан...';
   try {
     var res = await fetch('/api/giveaway/' + _guildId + '/create', {
@@ -117,7 +117,7 @@ async function createРозыгрыш() {
     } else {
       msg.textContent = '❌ ' + (res.error || 'Ошибка');
     }
-  } catch(e) { msg.textContent = '❌ Ссылка ошибки'; }
+  } catch(e) { msg.textContent = '❌ Ошибка соединения'; }
 }
 
 async function endРозыгрыш(gwId) {

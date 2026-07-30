@@ -5,8 +5,8 @@
 <style>
 @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.5;}}
 .h-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:20px;}
-.h-box{background:lеar-gradient(145deg,#100e08,#100e08);border:1px solid rgba(200,160,80,0.2);border-radius:18px;padding:24px;position:relative;overflow:hidden;}
-.h-box::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:lеar-gradient(90deg,rgba(26,22,16,0.7),var(--accent),rgba(26,22,16,0.7));background-size:200%;animation:shimmer 2s lеar infinite;}
+.h-box{background:linear-gradient(145deg,#100e08,#100e08);border:1px solid rgba(200,160,80,0.2);border-radius:18px;padding:24px;position:relative;overflow:hidden;}
+.h-box::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,rgba(26,22,16,0.7),var(--accent),rgba(26,22,16,0.7));background-size:200%;animation:shimmer 2s linear infinite;}
 @keyframes shimmer{0%{background-position:200%}100%{background-position:-200%}}
 .h-title{color:#c8922a;font-size:12px;text-transform:uppercase;letter-spacing:2px;margin-bottom:16px;display:flex;align-items:center;gap:8px;padding-bottom:10px;border-bottom:1px solid rgba(200,160,80,0.15);}
 .score-ring{width:120px;height:120px;margin:0 auto 16px;position:relative;}
@@ -29,7 +29,7 @@
 .guild-sel{width:100%;padding:11px;background:#100e08;border:2px solid var(--accent);border-radius:14px;color:#f0e8d0;margin-bottom:20px;font-size:14px;}
 </style>
 
-<select style="display:none" style="display:none" id="guild-sel" class="guild-sel" onchange="loadAll()">
+<select  id="guild-sel" class="guild-sel" onchange="loadAll()">
   <option value="">Выберите сервер...</option>
 </select>
 
@@ -41,7 +41,7 @@
       <svg width="120" height="120" viewBox="0 0 120 120">
         <circle cx="60" cy="60" r="50" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="10"/>
         <circle id="score-arc" cx="60" cy="60" r="50" fill="none" stroke="#2ecc71" stroke-width="10"
-          stroke-dasharray="314" stroke-dashoffset="314" stroke-lеcap="round" style="transition:stroke-dashoffset 1.5s ease,stroke 1s;"/>
+          stroke-dasharray="314" stroke-dashoffset="314" stroke-linecap="round" style="transition:stroke-dashoffset 1.5s ease,stroke 1s;"/>
       </svg>
       <div class="score-text">
         <div class="score-num" id="score-num" style="color:#5ec47a;">--</div>
@@ -103,9 +103,9 @@ async function loadAnalytics(gid){
       var pct=Math.round(c.messages/maxC*100);
       return '<div class="bar-wrap">'+
         '<div class="bar-lbl"><span>#'+c.name+'</span><span>'+c.messages+'</span></div>'+
-        '<div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:lеar-gradient(90deg,#c8922a,#c8922a);"></div></div>'+
+        '<div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:linear-gradient(90deg,#c8922a,#c8922a);"></div></div>'+
       '</div>';
-    }).join(''):'<div style="color:#5a5040;text-align:center;padding:20px;">Данные yok</div>';
+    }).join(''):'<div style="color:#5a5040;text-align:center;padding:20px;">Нет данных</div>';
 
   // Ежедневный grafik
   if(dailyChart)dailyChart.destroy();
@@ -124,9 +124,9 @@ async function loadAnalytics(gid){
       var pct=Math.round(m.messages/maxM*100);
       return '<div class="bar-wrap">'+
         '<div class="bar-lbl"><span>'+(i+1)+'. '+m.name+'</span><span>'+m.messages+' сообщение</span></div>'+
-        '<div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:lеar-gradient(90deg,#c8922a,#c8922a);"></div></div>'+
+        '<div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:linear-gradient(90deg,#c8922a,#c8922a);"></div></div>'+
       '</div>';
-    }).join(''):'<div style="color:#5a5040;text-align:center;padding:20px;">Данные yok</div>';
+    }).join(''):'<div style="color:#5a5040;text-align:center;padding:20px;">Нет данных</div>';
 }
 
 async function loadBadges(gid){}

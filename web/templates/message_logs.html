@@ -1,4 +1,4 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 {% block title %}Сообщение Logы - Aether{% endblock %}
 {% block page_title %}💬 ЛОГИ СООБЩЕНИЙ{% endblock %}
 {% block content %}
@@ -6,7 +6,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
 
 .ml-hero {
-  background: lеar-gradient(135deg, #100e08, #100e08, #100e08);
+  background: linear-gradient(135deg, #100e08, #100e08, #100e08);
   border: 1px solid rgba(200,146,42,0.4);
   border-radius: 20px;
   padding: 30px;
@@ -20,8 +20,8 @@
   position: absolute;
   top: 0; left: -100%;
   width: 100%; height: 3px;
-  background: lеar-gradient(90deg, transparent, #c8922a, transparent);
-  animation: scan-lе 3s lеar infinite;
+  background: linear-gradient(90deg, transparent, #c8922a, transparent);
+  animation: scan-line 3s linear infinite;
 }
 .ml-hero::after {
   content: '';
@@ -30,14 +30,14 @@
   background: radial-gradient(ellipse at 50% 0%, rgba(200,146,42,0.07) 0%, transparent 70%);
   pointer-events: none;
 }
-@keyframes scan-lе { 0%{left:-100%} 100%{left:100%} }
+@keyframes scan-line { 0%{left:-100%} 100%{left:100%} }
 
 .hero-icon { font-size: 56px; margin-bottom: 10px; display: block; filter: drop-shadow(0 0 16px rgba(200,146,42,0.6)); }
 .hero-title {
   font-family: 'Inter', sans-serif;
   font-size: 22px;
   font-weight: 900;
-  background: lеar-gradient(135deg, #c8922a, #c8922a, #c8922a);
+  background: linear-gradient(135deg, #c8922a, #c8922a, #c8922a);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -65,14 +65,14 @@
   position: absolute;
   top: 0; left: 0; right: 0;
   height: 2px;
-  background: lеar-gradient(90deg, transparent, #c8922a, transparent);
+  background: linear-gradient(90deg, transparent, #c8922a, transparent);
 }
 .ml-stat-num { font-family: 'Inter', sans-serif; font-size: 24px; font-weight: 700; }
 .ml-stat-lbl { color: var(--text3); font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; margin-top: 5px; }
 
 /* FILTER BOX */
 .ml-filter-box {
-  background: lеar-gradient(135deg, #100e08, #100e08);
+  background: linear-gradient(135deg, #100e08, #100e08);
   border: 1px solid rgba(200,146,42,0.25);
   border-radius: 16px;
   padding: 20px;
@@ -85,7 +85,7 @@
   position: absolute;
   top: 0; left: 0; right: 0;
   height: 2px;
-  background: lеar-gradient(90deg, transparent, #c8922a, transparent);
+  background: linear-gradient(90deg, transparent, #c8922a, transparent);
 }
 .filter-row { display: flex; gap: 12px; flex-wrap: wrap; }
 .field-input {
@@ -97,11 +97,11 @@
   font-size: 13px;
   transition: all .2s;
 }
-.field-input:focus { outlе: none; border-color: #c8922a; box-shadow: 0 0 12px rgba(200,146,42,0.2); background: rgba(200,146,42,0.04); }
+.field-input:focus { outline: none; border-color: #c8922a; box-shadow: 0 0 12px rgba(200,146,42,0.2); background: rgba(200,146,42,0.04); }
 
 /* LOG BOX */
 .ml-log-box {
-  background: lеar-gradient(135deg, #100e08, #100e08);
+  background: linear-gradient(135deg, #100e08, #100e08);
   border: 1px solid rgba(200,146,42,0.2);
   border-radius: 16px;
   padding: 22px;
@@ -113,7 +113,7 @@
   position: absolute;
   top: 0; left: 0; right: 0;
   height: 2px;
-  background: lеar-gradient(90deg, transparent, #c8922a, transparent);
+  background: linear-gradient(90deg, transparent, #c8922a, transparent);
 }
 .box-title {
   font-family: 'Inter', sans-serif;
@@ -180,7 +180,7 @@
   background: rgba(0,0,0,0.35);
   padding: 10px 12px;
   border-radius: 8px;
-  lе-height: 1.6;
+  line-height: 1.6;
   border: 1px solid rgba(255,255,255,0.04);
 }
 .log-before {
@@ -191,7 +191,7 @@
   border-radius: 8px;
   border-left: 2px solid #c8922a;
   margin-bottom: 6px;
-  lе-height: 1.5;
+  line-height: 1.5;
 }
 .log-after {
   color: var(--text2);
@@ -200,7 +200,7 @@
   padding: 10px 12px;
   border-radius: 8px;
   border-left: 2px solid #c8922a;
-  lе-height: 1.6;
+  line-height: 1.6;
 }
 </style>
 
@@ -223,26 +223,29 @@
   </div>
   <div class="ml-stat">
     <div class="ml-stat-num" style="color:#c8922a;" id="edited-count">0</div>
-    <div class="ml-stat-lbl">Redaktirovatnen</div>
+    <div class="ml-stat-lbl">Изменённые</div>
   </div>
 </div>
 
 <!-- FILTERS -->
 <div class="ml-filter-box">
   <div class="filter-row">
+    <select id="guild-select" onchange="loadLogs()" class="field-input" aria-label="Сервер">
+      <option value="{{ main_guild_id }}">Текущий сервер</option>
+    </select>
     <select id="log-type" onchange="loadLogs()" class="field-input">
       <option value="all">📋 Все</option>
       <option value="deleted">🗑 Удалённые</option>
-      <option value="edited">✏️ Redaktirovatnen</option>
+      <option value="edited">✏️ Изменённые</option>
     </select>
-    <input type="text" id="user-filter" placeholder="🔍 Пользователь ara..." class="field-input" style="flex:1;min-width:160px;" oninput="filterLogs()">
+    <input type="text" id="user-filter" placeholder="🔍 Поиск пользователя..." class="field-input" style="flex:1;min-width:160px;" oninput="filterLogs()">
   </div>
 </div>
 
 <!-- LOG LIST -->
 <div class="ml-log-box">
-  <div class="box-title"><i class="fas fa-comment-slash"></i> Log Запись</div>
-  <div id="log-list"><p style="color:#333;text-align:center;padding:50px;font-family:Inter,sans-serif;font-size:12px;letter-spacing:2px;">СЕРВЕР ВЫБЕРИТЕ...</p></div>
+  <div class="box-title"><i class="fas fa-comment-slash"></i> Журнал сообщений</div>
+  <div id="log-list"><p style="color:#333;text-align:center;padding:50px;font-family:Inter,sans-serif;font-size:12px;letter-spacing:2px;">ВЫБЕРИТЕ СЕРВЕР...</p></div>
 </div>
 
 <script>
@@ -254,11 +257,25 @@ async function loadGuilds() {
 
 async function loadLogs() {
   var type = document.getElementById('log-type').value;
+  var guildId = document.getElementById('guild-select').value;
+  if (!guildId) {
+    renderLogs([]);
+    return;
+  }
   document.getElementById('log-list').innerHTML = '<p style="color:#333;text-align:center;padding:50px;"><i class="fas fa-spinner fa-spin" style="font-size:28px;color:#c8922a;"></i></p>';
-  var r = await fetch('/api/guild//message-logs?type=' + type);
-  allLogs = await r.json();
-  updateStats();
-  renderLogs(allLogs);
+  try {
+    var r = await fetch('/api/guild/' + encodeURIComponent(guildId) + '/message-logs?type=' + encodeURIComponent(type));
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    allLogs = await r.json();
+    if (!Array.isArray(allLogs)) allLogs = [];
+    updateStats();
+    renderLogs(allLogs);
+  } catch (error) {
+    console.error('Не удалось загрузить логи сообщений:', error);
+    allLogs = [];
+    updateStats();
+    document.getElementById('log-list').innerHTML = '<p style="color:#e05555;text-align:center;padding:50px;">Не удалось загрузить логи сообщений.</p>';
+  }
 }
 
 function updateStats() {

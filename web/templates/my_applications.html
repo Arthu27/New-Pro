@@ -39,7 +39,7 @@ async function loadApps() {
   var apps = await r.json();
   var box = document.getElementById('apps-contaеr');
   if (!apps.length) {
-    box.innerHTML = '<div class="empty"><i class="fas fa-clipboard-list"></i><p>Пока заявок нет.</p><a href="/member-apply" style="color:#c8922a;text-decoration:none;margin-top:10px;display:inlе-block;"><i class="fas fa-plus"></i> Подать заявку</a></div>';
+    box.innerHTML = '<div class="empty"><i class="fas fa-clipboard-list"></i><p>Пока заявок нет.</p><a href="/member-apply" style="color:#c8922a;text-decoration:none;margin-top:10px;display:inline-block;"><i class="fas fa-plus"></i> Подать заявку</a></div>';
     return;
   }
   box.innerHTML = apps.map(function(app) {

@@ -6,15 +6,15 @@
 /* ── Toolbar ── */
 .ch-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap;}
 .ch-select{flex:1;min-width:200px;padding:9px 12px;background:rgba(255,255,255,0.03);border:1px solid rgba(212,168,67,0.16);border-radius:8px;color:#f0e8d0;font-size:13px;font-family:Inter,sans-serif;}
-.ch-select:focus{outlе:none;border-color:#c8922a;box-shadow:0 0 0 3px var(--accent-dim);}
-.btn-new{display:inlе-flex;align-items:center;gap:7px;padding:9px 18px;background:#c8922a;color:#100e08;border:none;border-radius:99px;cursor:pointer;font-weight:700;font-size:13px;font-family:Inter,sans-serif;transition:all 0.15s;white-space:nowrap;}
+.ch-select:focus{outline:none;border-color:#c8922a;box-shadow:0 0 0 3px var(--accent-dim);}
+.btn-new{display:inline-flex;align-items:center;gap:7px;padding:9px 18px;background:#c8922a;color:#100e08;border:none;border-radius:99px;cursor:pointer;font-weight:700;font-size:13px;font-family:Inter,sans-serif;transition:all 0.15s;white-space:nowrap;}
 .btn-new:hover{background:#e0a830;transform:translateY(-1px);box-shadow:0 4px 16px var(--accent-glow);}
 
 /* ── Stats row ── */
 .ch-stats{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;}
 .ch-stat{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.08);border-radius:14px;padding:12px 18px;display:flex;align-items:center;gap:10px;flex:1;min-width:120px;}
 .ch-stat-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}
-.ch-stat-val{font-size:20px;font-weight:800;color:#f0e8d0;letter-spacing:-0.02em;lе-height:1;}
+.ch-stat-val{font-size:20px;font-weight:800;color:#f0e8d0;letter-spacing:-0.02em;line-height:1;}
 .ch-stat-lbl{font-size:10px;color:#5a5040;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;}
 
 /* ── Channel list ── */
@@ -60,7 +60,7 @@
 .ch-empty i{font-size:28px;opacity:0.3;display:block;margin-bottom:10px;}
 
 /* ── Modal pencere ── */
-.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(6px);z-еx:9999;align-items:center;justify-content:center;}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(6px);z-index:9999;align-items:center;justify-content:center;}
 .modal-overlay.open{display:flex;}
 .modal-card{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.16);border-radius:14px;padding:28px;width:420px;max-width:92vw;box-shadow:0 24px 80px rgba(0,0,0,0.6);}
 .modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;}
@@ -69,7 +69,7 @@
 .modal-close:hover{background:rgba(212,168,67,0.04);color:#f0e8d0;}
 .field-label{font-size:11px;font-weight:600;color:rgba(240,232,208,0.55);text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:6px;}
 .field-input{width:100%;padding:9px 12px;background:rgba(255,255,255,0.03);border:1px solid rgba(212,168,67,0.16);border-radius:8px;color:#f0e8d0;font-size:13px;font-family:Inter,sans-serif;margin-bottom:14px;box-sizing:border-box;transition:border-color 0.15s;}
-.field-input:focus{outlе:none;border-color:#c8922a;box-shadow:0 0 0 3px var(--accent-dim);}
+.field-input:focus{outline:none;border-color:#c8922a;box-shadow:0 0 0 3px var(--accent-dim);}
 .type-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:18px;}
 .type-opt{padding:10px 8px;background:rgba(255,255,255,0.03);border:1px solid rgba(212,168,67,0.16);border-radius:9px;cursor:pointer;text-align:center;transition:all 0.15s;}
 .type-opt:hover{border-color:rgba(212,168,67,0.2);background:rgba(212,168,67,0.04);}
@@ -86,7 +86,7 @@
 
 <!-- Toolbar -->
 <div class="ch-toolbar">
-  <select id="guild-select" style="display:none" class="ch-select">
+  <select id="guild-select"  class="ch-select">
     <option value="">Выберите сервер...</option>
   </select>
   <button class="btn-new" id="btnNewChannel" type="button">
@@ -95,7 +95,7 @@
 </div>
 
 <!-- Stats -->
-<div class="ch-stats" id="ch-stats" style="display:none;">
+<div class="ch-stats" id="ch-stats" >
   <div class="ch-stat">
     <div class="ch-stat-icon icon-text"><i class="fas fa-hashtag"></i></div>
     <div><div class="ch-stat-val" id="stat-text">0</div><div class="ch-stat-lbl">Текст</div></div>

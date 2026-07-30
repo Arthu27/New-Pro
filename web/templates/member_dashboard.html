@@ -33,7 +33,7 @@
   </a>
   <a href="/notifications" class="welcome-card" id="notif-card">
     <i class="fas fa-bell"></i>
-    <h3>Уведомления <span id="notif-count" class="notif-badge" style="display:none;"></span></h3>
+    <h3>Уведомления <span id="notif-count" class="notif-badge" ></span></h3>
     <p>Сообщения от администратора</p>
   </a>
   <a href="/announcements" class="welcome-card">
@@ -56,7 +56,7 @@ async function loadNotifs() {
   if (unread > 0) {
     var badge = document.getElementById('notif-count');
     badge.textContent = unread;
-    badge.style.display = 'inlе';
+    badge.style.display = 'inline';
   }
   var box = document.getElementById('recent-notifs');
   var recent = notifs.slice(0,5);

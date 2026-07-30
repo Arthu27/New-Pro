@@ -13,15 +13,15 @@
   body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;
     background:radial-gradient(ellipse at 20% 50%,rgba(200,160,80,0.08) 0%,transparent 60%),
                radial-gradient(ellipse at 80% 20%,rgba(200,160,80,0.05) 0%,transparent 50%);
-    pointer-events:none;z-еx:0;}
+    pointer-events:none;z-index:0;}
 
-  .particles{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-еx:0;overflow:hidden;}
+  .particles{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;overflow:hidden;}
   .particle{position:absolute;width:2px;height:2px;background:rgba(200,160,80,0.4);border-radius:50%;
-    animation:float lеar infinite;}
+    animation:float linear infinite;}
   @keyframes float{0%{transform:translateY(100vh) translateX(0);opacity:0;}
     10%{opacity:1;}90%{opacity:1;}100%{transform:translateY(-100px) translateX(100px);opacity:0;}}
 
-  .contaеr{position:relative;z-еx:1;max-width:780px;margin:0 auto;padding:40px 20px 80px;}
+  .contaеr{position:relative;z-index:1;max-width:780px;margin:0 auto;padding:40px 20px 80px;}
 
   /* Header */
   .header{text-align:center;margin-bottom:50px;}
@@ -31,11 +31,11 @@
   @keyframes pulse{0%,100%{box-shadow:0 0 30px rgba(200,160,80,0.5);}
     50%{box-shadow:0 0 60px rgba(200,160,80,0.8),0 0 100px rgba(200,160,80,0.3);}}
   .header h1{font-size:36px;font-weight:900;letter-spacing:4px;
-    background:lеar-gradient(135deg,var(--accent),#ff6b6b,#ffd700);
+    background:linear-gradient(135deg,var(--accent),#ff6b6b,#ffd700);
     -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
     text-transform:uppercase;margin-bottom:8px;}
   .header p{color:var(--text2);font-size:15px;letter-spacing:1px;}
-  .divider{width:100px;height:2px;background:lеar-gradient(90deg,transparent,var(--accent),transparent);
+  .divider{width:100px;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);
     margin:20px auto;}
 
   /* Сервер select */
@@ -50,7 +50,7 @@
   .server-card .smembers{font-size:11px;color:var(--text2);}
 
   /* Form */
-  .form-card{background:lеar-gradient(135deg,rgba(20,5,5,0.9),rgba(30,10,10,0.9));
+  .form-card{background:linear-gradient(135deg,rgba(20,5,5,0.9),rgba(30,10,10,0.9));
     border:1px solid rgba(200,160,80,0.3);border-radius:20px;padding:40px;
     backdrop-filter:blur(10px);box-shadow:0 20px 60px rgba(0,0,0,0.5);}
   .section-title{color:var(--accent);font-size:13px;text-transform:uppercase;letter-spacing:2px;
@@ -65,18 +65,18 @@
     background:rgba(0,0,0,0.5);border:2px solid rgba(200,160,80,0.2);border-radius:10px;
     color:var(--text);padding:12px 16px;font-size:14px;transition:all 0.3s;font-family:inherit;resize:vertical;}
   .form-group input:focus,.form-group textarea:focus,.form-group select:focus{
-    outlе:none;border-color:var(--accent);box-shadow:0 0 15px rgba(200,160,80,0.2);}
+    outline:none;border-color:var(--accent);box-shadow:0 0 15px rgba(200,160,80,0.2);}
   .form-group textarea{min-height:100px;}
   .form-group .hint{font-size:11px;color:var(--text3);margin-top:2px;}
 
   /* Submit */
   .submit-btn{width:100%;padding:16px;margin-top:30px;
-    background:lеar-gradient(135deg,var(--accent),var(--accent2));
+    background:linear-gradient(135deg,var(--accent),var(--accent2));
     color:white;border:none;border-radius:12px;font-size:16px;font-weight:800;
     letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all 0.3s;
     position:relative;overflow:hidden;}
   .submit-btn::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;
-    background:lеar-gradient(90deg,transparent,rgba(255,255,255,0.1),transparent);
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,0.1),transparent);
     transition:left 0.5s;}
   .submit-btn:hover::before{left:100%;}
   .submit-btn:hover{box-shadow:0 8px 30px rgba(200,160,80,0.6);transform:translateY(-2px);}
@@ -94,14 +94,14 @@
   .step.done{color:#2ecc71;}
   .step-num{width:28px;height:28px;border-radius:50%;border:2px solid currentColor;
     display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;}
-  .step-lе{width:40px;height:2px;background:rgba(200,160,80,0.2);margin:0 4px;}
+  .step-line{width:40px;height:2px;background:rgba(200,160,80,0.2);margin:0 4px;}
 
   /* Success screen */
   .success-screen{display:none;text-align:center;padding:60px 20px;}
   .success-screen .check{font-size:80px;animation:bounceIn 0.6s ease;}
   @keyframes bounceIn{0%{transform:scale(0);}60%{transform:scale(1.2);}100%{transform:scale(1);}}
   .success-screen h2{font-size:28px;color:#2ecc71;margin:20px 0 10px;}
-  .success-screen p{color:var(--text2);font-size:15px;lе-height:1.6;}
+  .success-screen p{color:var(--text2);font-size:15px;line-height:1.6;}
   .app-id-box{background:rgba(46,204,113,0.1);border:1px solid rgba(46,204,113,0.3);
     border-radius:10px;padding:12px 20px;margin:20px auto;max-width:300px;
     font-family:monospace;color:#2ecc71;font-size:14px;}
@@ -128,12 +128,12 @@
       <div class="step-num">1</div>
       <span>Выберите сервер</span>
     </div>
-    <div class="step-lе"></div>
+    <div class="step-line"></div>
     <div class="step" id="step2-ind">
       <div class="step-num">2</div>
       <span>Formu Doldur</span>
     </div>
-    <div class="step-lе"></div>
+    <div class="step-line"></div>
     <div class="step" id="step3-ind">
       <div class="step-num">3</div>
       <span>Отправить</span>
@@ -152,7 +152,7 @@
   </div>
 
   <!-- Step 2: Form -->
-  <div id="step2" style="display:none;">
+  <div id="step2" >
     <div class="form-card">
       <div id="alert-box" class="alert"></div>
 
@@ -386,7 +386,7 @@ async function submitForm() {
       btn.innerHTML = '<i class="fas fa-paper-plane"></i> &nbsp; ЗАЯВКА ОТПРАВИТЬ';
     }
   } catch(e) {
-    showAlert('error', '❌ Ссылка ошибки: ' + e.message);
+    showAlert('error', '❌ Ошибка соединения: ' + e.message);
     btn.disabled = false;
     btn.innerHTML = '<i class="fas fa-paper-plane"></i> &nbsp; ЗАЯВКА ОТПРАВИТЬ';
   }

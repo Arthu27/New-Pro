@@ -16,7 +16,7 @@ label{font-size:11px;color:rgba(240,232,208,0.45);display:block;margin-bottom:4p
 <div class="bd-grid">
   <div class="bd-card">
     <h2>🎂 Сохранить мою дату рождения</h2>
-    <div id="bd-current" style="display:none;" class="bd-current"></div>
+    <div id="bd-current"  class="bd-current"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
       <div class="field"><label>день</label><input type="number" id="bd-day" placeholder="15" min="1" max="31"></div>
       <div class="field"><label>Месяц</label><input type="number" id="bd-month" placeholder="3" min="1" max="12"></div>
@@ -81,7 +81,7 @@ async function saveBirthday() {
     }).then(r => r.json());
     if (r.ok) { msg.textContent = '✅ Сохранено!'; init(); }
     else msg.textContent = '❌ ' + (r.error || 'Ошибка');
-  } catch(e) { msg.textContent = '❌ Ссылка ошибки'; }
+  } catch(e) { msg.textContent = '❌ Ошибка соединения'; }
 }
 
 init();

@@ -30,12 +30,12 @@
             height: 500px;
             background: radial-gradient(ellipse at center top, rgba(200, 146, 42, 0.22) 0%, rgba(160, 110, 30, 0.08) 45%, transparent 70%);
             pointer-events: none;
-            z-еx: 0;
+            z-index: 0;
         }
 
         .login-wrapper {
             position: relative;
-            z-еx: 10;
+            z-index: 10;
             width: 100%;
             max-width: 440px;
         }
@@ -50,7 +50,7 @@
             background: rgba(212, 168, 67, 0.15);
             border: 1px solid rgba(212, 168, 67, 0.35);
             border-radius: 16px;
-            display: inlе-flex;
+            display: inline-flex;
             align-items: center;
             justify-content: center;
             margin-bottom: 14px;
@@ -151,7 +151,7 @@
             transition: all 0.2s;
         }
         .form-input:focus {
-            outlе: none;
+            outline: none;
             border-color: #d4a843;
             background: rgba(22, 18, 11, 1);
             box-shadow: 0 0 0 3px rgba(212, 168, 67, 0.15);
@@ -170,7 +170,7 @@
             margin-top: 6px;
             max-height: 220px;
             overflow-y: auto;
-            z-еx: 1000;
+            z-index: 1000;
         }
         .suggest-item {
             display: flex;
@@ -207,7 +207,7 @@
         .btn-submit {
             width: 100%;
             padding: 13px;
-            background: lеar-gradient(135deg, #c8922a, #d4a843);
+            background: linear-gradient(135deg, #c8922a, #d4a843);
             color: #100e08;
             border: none;
             border-radius: 12px;
@@ -261,7 +261,7 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            lе-height: 1.4;
+            line-height: 1.4;
         }
         .alert-err {
             background: rgba(220, 53, 69, 0.12);
@@ -282,7 +282,7 @@
             border-radius: 12px;
             font-size: 12px;
             color: #a09068;
-            lе-height: 1.5;
+            line-height: 1.5;
             text-align: center;
         }
         .helper-note code {
@@ -304,7 +304,7 @@
         .progress-bar.active { display: block; }
         .progress-fill {
             height: 100%;
-            background: lеar-gradient(90deg, #c8922a, #f0e8d0);
+            background: linear-gradient(90deg, #c8922a, #f0e8d0);
             width: 0%;
             transition: width 0.3s ease;
         }
@@ -383,7 +383,7 @@
                     <input type="text" name="username" id="passUsername" class="form-input" placeholder="owner, @username или ID" required autocomplete="off" oninput="showSuggest(this, 'passPopup')" onfocus="showSuggest(this, 'passPopup')">
                 </div>
                 <!-- Autocomplete dropdown for password login -->
-                <div class="autocomplete-popup" id="passPopup" style="display:none;"></div>
+                <div class="autocomplete-popup" id="passPopup" ></div>
             </div>
 
             <div class="form-group">
@@ -415,7 +415,7 @@
                         <input type="text" id="discordQuery" class="form-input" placeholder="123456789012345678 или @username" autocomplete="off" oninput="showSuggest(this, 'pinPopup')" onfocus="showSuggest(this, 'pinPopup')">
                     </div>
                     <!-- Autocomplete dropdown for PIN check -->
-                    <div class="autocomplete-popup" id="pinPopup" style="display:none;"></div>
+                    <div class="autocomplete-popup" id="pinPopup" ></div>
                 </div>
                 <div id="step1-error"></div>
                 <button type="button" class="btn-submit" id="btnCheck" onclick="doCheck()">
@@ -423,11 +423,11 @@
                 </button>
             </div>
 
-            <div id="step2" style="display:none;">
+            <div id="step2" >
                 <div class="test-list" id="testList"></div>
             </div>
 
-            <div id="step3" style="display:none;">
+            <div id="step3" >
                 <div class="user-card" id="userCard"></div>
                 <div class="form-group">
                     <label class="form-label">6-значный PIN-код из ЛС</label>

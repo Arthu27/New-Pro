@@ -6,7 +6,7 @@
 .bs-box{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.3);border-radius:15px;padding:25px;margin-bottom:20px;position:relative;overflow:hidden;}
 .bs-title{color:#c8922a;font-size:13px;text-transform:uppercase;letter-spacing:2px;margin-bottom:18px;font-family:Inter,sans-serif;}
 .stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:15px;margin-bottom:25px;}
-.stat-box{background:lеar-gradient(135deg,#100e08,rgba(26,22,16,0.7));border:1px solid rgba(212,168,67,0.25);border-radius:14px;padding:20px;text-align:center;transition:all 0.3s;}
+.stat-box{background:linear-gradient(135deg,#100e08,rgba(26,22,16,0.7));border:1px solid rgba(212,168,67,0.25);border-radius:14px;padding:20px;text-align:center;transition:all 0.3s;}
 .stat-box:hover{border-color:#c8922a;transform:translateY(-4px);box-shadow:0 8px 20px rgba(200,146,42,0.2);}
 .stat-icon{font-size:30px;color:#c8922a;margin-bottom:10px;}
 .stat-value{font-size:26px;font-weight:700;color:#f0e8d0;margin-bottom:5px;}
@@ -19,7 +19,7 @@
 </div>
 
 <div class="bs-box">
-  <div class="bs-title"><i class="fas fa-chart-lе"></i> Использование системы</div>
+  <div class="bs-title"><i class="fas fa-chart-line"></i> Использование системы</div>
   <canvas id="sysChart" height="80"></canvas>
 </div>
 
@@ -57,7 +57,7 @@ async function loadStats() {
 
   if (sysChart) sysChart.destroy();
   sysChart = new Chart(document.getElementById('sysChart'), {
-    type: 'lе',
+    type: 'line',
     data: {
       labels: (d.history||[]).map(function(h){return h.time;}),
       datasets: [

@@ -1,10 +1,10 @@
 ﻿{% extends "base.html" %}
 {% block title %}Analitik - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-chart-lе" style="color:#c8922a;animation:pulse 2s infinite;"></i> СЕРВЕР АНАЛИТИКА{% endblock %}
+{% block page_title %}<i class="fas fa-chart-line" style="color:#c8922a;animation:pulse 2s infinite;"></i> СЕРВЕР АНАЛИТИКА{% endblock %}
 {% block content %}
 <style>
-  .chart-box{background:lеar-gradient(135deg,#100e08,rgba(26,22,16,0.7));border:1px solid rgba(200,146,42,0.3);border-radius:16px;padding:25px;margin-bottom:20px;position:relative;overflow:hidden;}
-  .chart-box::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:2px;background:lеar-gradient(90deg,transparent,#c8922a,transparent);;}
+  .chart-box{background:linear-gradient(135deg,#100e08,rgba(26,22,16,0.7));border:1px solid rgba(200,146,42,0.3);border-radius:16px;padding:25px;margin-bottom:20px;position:relative;overflow:hidden;}
+  .chart-box::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:2px;background:linear-gradient(90deg,transparent,#c8922a,transparent);;}
   @keyframes scan{0%{left:-100%}100%{left:100%}}
   .chart-title{color:#c8922a;font-size:13px;text-transform:uppercase;letter-spacing:2px;margin-bottom:18px;display:flex;align-items:center;gap:8px;padding-bottom:12px;border-bottom:1px solid rgba(200,146,42,0.2);}
   .top-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;}
@@ -19,10 +19,10 @@
   .bar-contaеr{margin-bottom:8px;}
   .bar-label{display:flex;justify-content:space-between;margin-bottom:4px;font-size:12px;}
   .bar-track{height:8px;background:rgba(200,146,42,0.15);border-radius:4px;overflow:hidden;}
-  .bar-fill{height:100%;background:lеar-gradient(90deg,#c8922a,#c8922a);border-radius:4px;transition:width 1s ease;}
+  .bar-fill{height:100%;background:linear-gradient(90deg,#c8922a,#c8922a);border-radius:4px;transition:width 1s ease;}
 </style>
 
-<select style="display:none" style="display:none" id="guild-select" class="guild-select" onchange="loadAnalytics()">
+<select  id="guild-select" class="guild-select" onchange="loadAnalytics()">
   <option value="">Выберите сервер...</option>
 </select>
 
@@ -68,7 +68,7 @@ async function loadAnalytics(gid_param) {
         '<div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;"></div></div>'+
       '</div>';
     }).join('') :
-    '<div class="empty-state">Данные yok</div>';
+    '<div class="empty-state">Нет данных</div>';
 
   var topChannels = d.top_channels||[];
   var maxC = topChannels[0] ? topChannels[0].messages : 1;
@@ -77,10 +77,10 @@ async function loadAnalytics(gid_param) {
       var pct = Math.round((c.messages/maxC)*100);
       return '<div class="bar-contaеr">'+
         '<div class="bar-label"><span class="top-name">'+(i+1)+'. #'+c.name+'</span><span class="top-val">'+c.messages+' сообщение</span></div>'+
-        '<div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:lеar-gradient(90deg,#c8922a,#c8922a);"></div></div>'+
+        '<div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:linear-gradient(90deg,#c8922a,#c8922a);"></div></div>'+
       '</div>';
     }).join('') :
-    '<div class="empty-state">Данные yok</div>';
+    '<div class="empty-state">Нет данных</div>';
 
   if(msgChart) msgChart.destroy();
   if(memberChart) memberChart.destroy();
@@ -93,7 +93,7 @@ async function loadAnalytics(gid_param) {
   });
 
   memberChart = new Chart(document.getElementById('memberChart'), {
-    type:'lе',
+    type:'line',
     data:{labels:d.member_labels||[],datasets:[{label:'Участник',data:d.member_counts||[],borderColor:'#2ecc71',tension:0.4,fill:true,backgroundColor:'rgba(46,204,113,0.08)',pointBackgroundColor:'#2ecc71',pointRadius:4}]},
     options:{responsive:true,plugins:{legend:{labels:{color:'#ccc'}}},scales:{y:{ticks:{color:'#888'},grid:{color:'rgba(255,255,255,0.05)'}},x:{ticks:{color:'#888'},grid:{color:'rgba(255,255,255,0.05)'}}}}
   });

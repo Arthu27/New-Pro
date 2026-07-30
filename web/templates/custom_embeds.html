@@ -52,7 +52,7 @@
 }
 
 .btn-send {
-  background: lеar-gradient(135deg, var(--accent), var(--accent2));
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
   color: white;
   border: none;
   padding: 12px 20px;
@@ -103,7 +103,7 @@
 .embed-description {
   color: #dcddde;
   font-size: 14px;
-  lе-height: 1.2;
+  line-height: 1.2;
 }
 
 .embed-footer {
@@ -184,7 +184,7 @@
     
     <div class="form-group">
       <label class="form-label">Guild</label>
-      <select style="display:none" style="display:none" id="guild-select" class="form-input" onchange="onGuildChange()"></select>
+      <select  id="guild-select" class="form-input" onchange="onGuildChange()"></select>
     </div>
     
     <div class="form-group">
@@ -276,7 +276,7 @@ async function sendEmbed() {
   var channelId = document.getElementById('target-channel').value;
   var guildId = document.getElementById('guild-select').value;
 
-  if (!channelId) { alert('Канал выбрать!'); return; }
+  if (!channelId) { alert('Выберите канал!'); return; }
   if (!guildId) { alert('Сервер выбрать!'); return; }
 
   var btn = document.querySelector('.btn-send');
@@ -308,7 +308,7 @@ async function sendEmbed() {
       btn.disabled = false;
     }
   } catch(e) {
-    alert('Ссылка ошибки');
+    alert('Ошибка соединения');
     btn.textContent = '📤 Отправить эмбед';
     btn.disabled = false;
   }

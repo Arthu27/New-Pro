@@ -8,7 +8,7 @@
 .stat-card:hover{border-color:rgba(212,168,67,0.22);transform:translateY(-2px);}
 .stat-icon{width:36px;height:36px;border-radius:9px;background:rgba(212,168,67,0.1);border:1px solid rgba(212,168,67,0.2);display:flex;align-items:center;justify-content:center;margin-bottom:14px;}
 .stat-icon i{color:#c8922a;font-size:15px;}
-.stat-val{font-size:30px;font-weight:900;color:#f0e8d0;letter-spacing:-0.04em;lе-height:1;margin-bottom:4px;}
+.stat-val{font-size:30px;font-weight:900;color:#f0e8d0;letter-spacing:-0.04em;line-height:1;margin-bottom:4px;}
 .stat-lbl{font-size:10px;color:#5a5040;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;}
 .dash-box{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.1);border-radius:14px;padding:22px;margin-bottom:16px;backdrop-filter:blur(4px);}
 .dash-title{font-size:10px;font-weight:700;color:rgba(240,232,208,0.4);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:18px;display:flex;align-items:center;gap:8px;padding-bottom:12px;border-bottom:1px solid rgba(212,168,67,0.07);}
@@ -26,7 +26,7 @@ tr:hover td{background:rgba(212,168,67,0.04);}
 .notif-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;}
 .form-label{color:rgba(240,232,208,0.4);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:5px;}
 .form-input{width:100%;padding:10px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(212,168,67,0.12);border-radius:8px;color:#f0e8d0;font-size:13px;box-sizing:border-box;font-family:Inter,sans-serif;margin:0 0 10px;transition:border-color 0.15s;}
-.form-input:focus{outlе:none;border-color:rgba(212,168,67,0.45);}
+.form-input:focus{outline:none;border-color:rgba(212,168,67,0.45);}
 .form-btn{width:100%;padding:11px;background:#c8922a;color:#100e08;border:none;border-radius:99px;cursor:pointer;font-weight:700;font-size:13px;font-family:Inter,sans-serif;transition:background 0.15s;}
 .form-btn:hover{background:#e0a830;}
 @keyframes up{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
@@ -58,7 +58,7 @@ tr:hover td{background:rgba(212,168,67,0.04);}
             </div>
             <div>
                 <div style="font-size:11px;color:#8c7b58;font-weight:700;text-transform:uppercase;letter-spacing:1px;">🛡️ Индекс угрозы сервера</div>
-                <div style="display:flex;align-items:baselе;gap:10px;margin-top:4px;">
+                <div style="display:flex;align-items:baseline;gap:10px;margin-top:4px;">
                     <span id="threatScoreVal" style="font-size:26px;font-weight:900;color:#f0e8d0;">15/100</span>
                     <span id="threatLevelBadge" style="font-size:13px;font-weight:700;color:#2ECC71;background:rgba(46,204,113,0.12);padding:4px 10px;border-radius:99px;border:1px solid rgba(46,204,113,0.35);">Низкая угроза (Спокойно)</span>
                 </div>
@@ -81,7 +81,7 @@ tr:hover td{background:rgba(212,168,67,0.04);}
 </div>
 
 <div class="dash-box">
-    <div class="dash-title"><i class="fas fa-chart-lе"></i> Быстрая статистика</div>
+    <div class="dash-title"><i class="fas fa-chart-line"></i> Быстрая статистика</div>
     <div id="quick-stats" style="text-align:center;padding:24px;color:#5a5040;"><i class="fas fa-spinner fa-spin" style="color:#c8922a;"></i></div>
 </div>
 
@@ -132,7 +132,7 @@ tr:hover td{background:rgba(212,168,67,0.04);}
     var t = document.createElement('div');
     t.className = 'toast ' + (ok ? 'ok' : 'err');
     t.textContent = msg;
-    t.style.cssText = 'position:fixed;top:20px;right:20px;padding:12px 22px;border-radius:10px;font-weight:700;z-еx:99999;font-size:13px;background:' + (ok ? 'lеar-gradient(135deg,#27ae60,#2ecc71)' : 'lеar-gradient(135deg,#c0392b,#e74c3c)') + ';color:#fff;';
+    t.style.cssText = 'position:fixed;top:20px;right:20px;padding:12px 22px;border-radius:10px;font-weight:700;z-index:99999;font-size:13px;background:' + (ok ? 'linear-gradient(135deg,#27ae60,#2ecc71)' : 'linear-gradient(135deg,#c0392b,#e74c3c)') + ';color:#fff;';
     document.body.appendChild(t);
     setTimeout(function () { t.remove(); }, 2500);
   }
@@ -160,7 +160,7 @@ tr:hover td{background:rgba(212,168,67,0.04);}
       var warns = await fetch('/api/warnings').then(function (r) { return r.json(); }).catch(function () { return []; });
       var банs = logs.filter(function (l) { return (l.action || '').toLowerCase() === 'бан'; }).length;
       var кикs = logs.filter(function (l) { return (l.action || '').toLowerCase() === 'кик'; }).length;
-      var мьютs = logs.filter(function (l) { var a = (l.action || '').toLowerCase(); return a.еxOf('мьют') !== -1 || a.еxOf('timeout') !== -1; }).length;
+      var мьютs = logs.filter(function (l) { var a = (l.action || '').toLowerCase(); return a.indexOf('мьют') !== -1 || a.indexOf('timeout') !== -1; }).length;
       $('quick-stats').innerHTML =
         '<div class="quick-grid">' +
         '<div class="quick-item"><h3>' + logs.length + '</h3><p>Мод Действий</p></div>' +

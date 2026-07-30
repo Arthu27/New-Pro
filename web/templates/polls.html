@@ -6,7 +6,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap');
 
 .polls-hero {
-  background: lеar-gradient(135deg, #100e08, #100e08, #100e08);
+  background: linear-gradient(135deg, #100e08, #100e08, #100e08);
   border: 1px solid rgba(200,160,80,0.4);
   border-radius: 20px;
   padding: 32px 30px;
@@ -20,8 +20,8 @@
   position: absolute;
   top: 0; left: -100%;
   width: 100%; height: 3px;
-  background: lеar-gradient(90deg, transparent, var(--accent), transparent);
-  animation: scan-lе 3s lеar infinite;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  animation: scan-line 3s linear infinite;
 }
 .polls-hero::after {
   content: '';
@@ -30,7 +30,7 @@
   background: radial-gradient(ellipse at 50% 0%, rgba(200,160,80,0.07) 0%, transparent 70%);
   pointer-events: none;
 }
-@keyframes scan-lе { 0%{left:-100%} 100%{left:100%} }
+@keyframes scan-line { 0%{left:-100%} 100%{left:100%} }
 
 .hero-icon { font-size: 60px; margin-bottom: 10px; display: block; filter: drop-shadow(0 0 18px rgba(200,160,80,0.6)); animation: float 3s ease-in-out infinite; }
 @keyframes float { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-7px);} }
@@ -38,7 +38,7 @@
   font-family: 'Inter', sans-serif;
   font-size: 22px;
   font-weight: 900;
-  background: lеar-gradient(135deg, #c8922a, var(--accent), var(--accent2));
+  background: linear-gradient(135deg, #c8922a, var(--accent), var(--accent2));
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -57,11 +57,11 @@
   color: var(--text); font-size: 14px;
   transition: all .2s;
 }
-.guild-sel:focus { outlе: none; border-color: var(--accent); box-shadow: 0 0 12px rgba(200,160,80,0.2); }
+.guild-sel:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 12px rgba(200,160,80,0.2); }
 
 .btn-new {
   padding: 12px 24px;
-  background: lеar-gradient(135deg, rgba(26,22,16,0.7), var(--accent), var(--accent2));
+  background: linear-gradient(135deg, rgba(26,22,16,0.7), var(--accent), var(--accent2));
   color: white;
   border: none;
   border-radius: 12px;
@@ -81,7 +81,7 @@
 .poll-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 20px; }
 
 .poll-card {
-  background: lеar-gradient(145deg, #100e08, #100e08, #100e08);
+  background: linear-gradient(145deg, #100e08, #100e08, #100e08);
   border: 1px solid rgba(200,160,80,0.2);
   border-radius: 20px;
   padding: 24px;
@@ -100,9 +100,9 @@
   position: absolute;
   top: 0; left: 0; right: 0;
   height: 3px;
-  background: lеar-gradient(90deg, rgba(26,22,16,0.7), var(--accent), #c8922a, var(--accent), rgba(26,22,16,0.7));
+  background: linear-gradient(90deg, rgba(26,22,16,0.7), var(--accent), #c8922a, var(--accent), rgba(26,22,16,0.7));
   background-size: 300% 100%;
-  animation: shimmer 3s lеar infinite;
+  animation: shimmer 3s linear infinite;
 }
 @keyframes shimmer { 0%{background-position:200% 0;} 100%{background-position:-200% 0;} }
 @keyframes fadeInUp { from{opacity:0;transform:translateY(20px);} to{opacity:1;transform:translateY(0);} }
@@ -110,13 +110,13 @@
 .poll-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 18px; }
 .poll-icon {
   width: 44px; height: 44px;
-  background: lеar-gradient(135deg, rgba(200,160,80,0.25), rgba(232,184,109,0.15));
+  background: linear-gradient(135deg, rgba(200,160,80,0.25), rgba(232,184,109,0.15));
   border: 1px solid rgba(200,160,80,0.4);
   border-radius: 12px;
   display: flex; align-items: center; justify-content: center;
   font-size: 22px; flex-shrink: 0;
 }
-.poll-question { font-size: 15px; font-weight: 700; color: #fff; lе-height: 1.4; }
+.poll-question { font-size: 15px; font-weight: 700; color: #fff; line-height: 1.4; }
 .poll-meta { color: var(--text3); font-size: 11px; margin-top: 4px; }
 
 .poll-option { margin-bottom: 10px; animation: fadeInUp .3s ease both; }
@@ -138,17 +138,17 @@
   content: '';
   position: absolute;
   top: 0; left: 0; right: 0; bottom: 0;
-  background: lеar-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
   animation: bar-shе 2.5s ease-in-out infinite;
 }
 @keyframes bar-shе { 0%{transform:translateX(-100%);} 100%{transform:translateX(100%);} }
 
-.bar-red    { background: lеar-gradient(90deg, rgba(26,22,16,0.7), var(--accent)); }
-.bar-green  { background: lеar-gradient(90deg, rgba(26,22,16,0.7), #2ecc71); }
-.bar-blue   { background: lеar-gradient(90deg, rgba(26,22,16,0.7), #c8922a); }
-.bar-purple { background: lеar-gradient(90deg, rgba(26,22,16,0.7), #c8922a); }
-.bar-orange { background: lеar-gradient(90deg, rgba(26,22,16,0.7), #c8922a); }
-.bar-teal   { background: lеar-gradient(90deg, rgba(26,22,16,0.7), #c8922a); }
+.bar-red    { background: linear-gradient(90deg, rgba(26,22,16,0.7), var(--accent)); }
+.bar-green  { background: linear-gradient(90deg, rgba(26,22,16,0.7), #2ecc71); }
+.bar-blue   { background: linear-gradient(90deg, rgba(26,22,16,0.7), #c8922a); }
+.bar-purple { background: linear-gradient(90deg, rgba(26,22,16,0.7), #c8922a); }
+.bar-orange { background: linear-gradient(90deg, rgba(26,22,16,0.7), #c8922a); }
+.bar-teal   { background: linear-gradient(90deg, rgba(26,22,16,0.7), #c8922a); }
 
 .btn-vote {
   padding: 6px 14px;
@@ -192,13 +192,13 @@
   top: 0; left: 0;
   width: 100%; height: 100%;
   background: rgba(0,0,0,0.92);
-  z-еx: 9999;
+  z-index: 9999;
   justify-content: center;
   align-items: center;
   backdrop-filter: blur(6px);
 }
 .modal-box {
-  background: lеar-gradient(145deg, #100e08, #100e08, #100e08);
+  background: linear-gradient(145deg, #100e08, #100e08, #100e08);
   border: 2px solid rgba(200,160,80,0.5);
   border-radius: 24px;
   padding: 34px;
@@ -216,9 +216,9 @@
   position: absolute;
   top: 0; left: 0; right: 0;
   height: 3px;
-  background: lеar-gradient(90deg, rgba(26,22,16,0.7), var(--accent), #c8922a, var(--accent), rgba(26,22,16,0.7));
+  background: linear-gradient(90deg, rgba(26,22,16,0.7), var(--accent), #c8922a, var(--accent), rgba(26,22,16,0.7));
   background-size: 300% 100%;
-  animation: shimmer 3s lеar infinite;
+  animation: shimmer 3s linear infinite;
 }
 @keyframes modalIn { from{opacity:0;transform:scale(0.85) translateY(20px);} to{opacity:1;transform:scale(1) translateY(0);} }
 
@@ -255,7 +255,7 @@
   transition: all .2s;
   box-sizing: border-box;
 }
-.form-input:focus { outlе: none; border-color: var(--accent); background: rgba(200,160,80,0.04); }
+.form-input:focus { outline: none; border-color: var(--accent); background: rgba(200,160,80,0.04); }
 
 .opt-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; animation: fadeInUp .2s ease; }
 .opt-emoji-input {
@@ -266,7 +266,7 @@
   color: var(--text); text-align: center; font-size: 20px;
   transition: border-color .2s;
 }
-.opt-emoji-input:focus { outlе: none; border-color: var(--accent); }
+.opt-emoji-input:focus { outline: none; border-color: var(--accent); }
 .opt-text-input {
   flex: 1; padding: 10px 12px;
   background: rgba(0,0,0,0.6);
@@ -275,7 +275,7 @@
   color: var(--text); font-size: 14px;
   transition: border-color .2s;
 }
-.opt-text-input:focus { outlе: none; border-color: var(--accent); }
+.opt-text-input:focus { outline: none; border-color: var(--accent); }
 .opt-del {
   width: 36px; height: 36px;
   background: rgba(231,76,60,0.15);
@@ -303,7 +303,7 @@
 .modal-actions { display: flex; gap: 10px; }
 .btn-submit {
   flex: 1; padding: 13px;
-  background: lеar-gradient(135deg, rgba(26,22,16,0.7), var(--accent), var(--accent2));
+  background: linear-gradient(135deg, rgba(26,22,16,0.7), var(--accent), var(--accent2));
   color: white; border: none;
   border-radius: 12px; cursor: pointer;
   font-weight: 700; font-size: 14px;
@@ -324,9 +324,9 @@
 .btn-cancel:hover { background: rgba(255,255,255,0.08); color: #ccc; }
 
 .empty-state { text-align: center; padding: 70px 20px; color: #555; grid-column: 1/-1; }
-.toast{position:fixed;top:20px;right:20px;padding:12px 22px;border-radius:10px;font-weight:700;z-еx:99999;animation:slideIn .3s;font-size:13px;}
-.toast.ok{background:lеar-gradient(135deg,#27ae60,#2ecc71);color:#fff;}
-.toast.err{background:lеar-gradient(135deg,#c0392b,#e74c3c);color:#fff;}
+.toast{position:fixed;top:20px;right:20px;padding:12px 22px;border-radius:10px;font-weight:700;z-index:99999;animation:slideIn .3s;font-size:13px;}
+.toast.ok{background:linear-gradient(135deg,#27ae60,#2ecc71);color:#fff;}
+.toast.err{background:linear-gradient(135deg,#c0392b,#e74c3c);color:#fff;}
 @keyframes slideIn{from{transform:translateX(120%);opacity:0;}to{transform:translateX(0);opacity:1;}}
 @media(max-width:600px) { .poll-grid { grid-template-columns: 1fr; } }
 </style>
@@ -338,7 +338,7 @@
 </div>
 
 <div class="controls-bar">
-  <select id="guild-select" style="display:none" class="guild-sel" onchange="loadPolls()">
+  <select id="guild-select"  class="guild-sel" onchange="loadPolls()">
     <option value="">🏠 Выберите сервер...</option>
   </select>
   {% if role == 'owner' %}

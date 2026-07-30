@@ -6,7 +6,7 @@
 .sc-box{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.1);border-radius:14px;padding:24px;backdrop-filter:blur(4px);}
 .field-label{color:rgba(240,232,208,0.4);font-size:10px;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:6px;font-weight:700;}
 .field-input{width:100%;padding:10px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(212,168,67,0.12);border-radius:8px;color:#f0e8d0;font-size:13px;transition:border-color 0.15s;box-sizing:border-box;font-family:Inter,sans-serif;margin:0;}
-.field-input:focus{outlе:none;border-color:rgba(212,168,67,0.45);}
+.field-input:focus{outline:none;border-color:rgba(212,168,67,0.45);}
 .field-input:disabled{opacity:0.4;cursor:not-allowed;}
 .form-group{margin-bottom:16px;}
 .send-btn{width:100%;padding:12px;background:#c8922a;color:#100e08;border:none;border-radius:99px;cursor:pointer;font-weight:700;font-size:13px;font-family:Inter,sans-serif;transition:background 0.15s,transform 0.12s;margin-top:6px;}
@@ -18,7 +18,7 @@
 <div class="sc-box">
   <div class="form-group">
     <label class="field-label">Сервер</label>
-    <select style="display:none" id="guild-select" class="field-input" onchange="loadChannels()">
+    <select  id="guild-select" class="field-input" onchange="loadChannels()">
       <option value="">Загрузка...</option>
     </select>
   </div>
@@ -48,7 +48,7 @@ async function loadChannels() {
     var r = await fetch('/api/guild/' + GUILD_ID + '/channels');
     var data = await r.json();
     var channels = Array.isArray(data) ? data : (data.channels || []);
-    cs.innerHTML = '<option value="">Канал выбрать...</option>';
+    cs.innerHTML = '<option value="">Выберите канал...</option>';
     channels.filter(function(c) { return c.type === 'text'; }).forEach(function(c) {
       var o = document.createElement('option');
       o.value = c.id; o.textContent = '#' + c.name;
@@ -74,7 +74,7 @@ async function sendMessage() {
     else showResult('Ошибка: ' + (d.error || 'Bilinmeyen ошибка'), false);
   } catch(e) {
     btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane" style="margin-right:6px;"></i>Отправить';
-    showResult('Ссылка ошибки', false);
+    showResult('Ошибка соединения', false);
   }
 }
 

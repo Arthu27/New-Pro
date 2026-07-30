@@ -11,21 +11,21 @@
   .color-swatch{width:52px;height:52px;border-radius:50%;margin:0 auto 10px;border:2px solid rgba(255,255,255,0.15);}
   .color-name{color:#f0e8d0;font-size:13px;font-weight:600;}
   .color-hex{font-size:11px;margin-top:3px;font-family:monospace;color:#5a5040;}
-  .del-btn{position:absolute;top:6px;right:6px;background:rgba(224,85,85,0.15);border:1px solid rgba(224,85,85,0.25);color:#e05555;width:22px;height:22px;border-radius:50%;cursor:pointer;font-size:12px;lе-height:20px;padding:0;transition:all 0.15s;}
+  .del-btn{position:absolute;top:6px;right:6px;background:rgba(224,85,85,0.15);border:1px solid rgba(224,85,85,0.25);color:#e05555;width:22px;height:22px;border-radius:50%;cursor:pointer;font-size:12px;line-height:20px;padding:0;transition:all 0.15s;}
   .del-btn:hover{background:rgba(224,85,85,0.3);}
   .field-label{color:rgba(240,232,208,0.4);font-size:10px;text-transform:uppercase;display:block;margin-bottom:6px;letter-spacing:0.08em;font-weight:700;}
   .field-input{width:100%;padding:10px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(212,168,67,0.12);border-radius:8px;color:#f0e8d0;box-sizing:border-box;transition:border-color 0.15s;font-size:13px;font-family:Inter,sans-serif;margin:0;}
-  .field-input:focus{outlе:none;border-color:rgba(212,168,67,0.45);}
+  .field-input:focus{outline:none;border-color:rgba(212,168,67,0.45);}
   .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
   @media(max-width:768px){.grid3{grid-template-columns:1fr;}}
   .save-btn{padding:10px 22px;background:#c8922a;color:#100e08;border:none;border-radius:99px;cursor:pointer;font-weight:700;font-size:13px;font-family:Inter,sans-serif;transition:background 0.15s,transform 0.12s;}
   .save-btn:hover{background:#e0a830;transform:translateY(-1px);}
   .guild-select{width:100%;padding:10px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(212,168,67,0.12);border-radius:8px;color:#f0e8d0;margin-bottom:16px;font-size:13px;font-family:Inter,sans-serif;}
-  .guild-select:focus{outlе:none;border-color:rgba(212,168,67,0.45);}
+  .guild-select:focus{outline:none;border-color:rgba(212,168,67,0.45);}
   .colors-grid{display:flex;flex-wrap:wrap;gap:12px;min-height:60px;}
 </style>
 
-<select style="display:none" style="display:none" id="guild-select" class="guild-select" onchange="loadColorRoles()">
+<select  id="guild-select" class="guild-select" onchange="loadColorRoles()">
   <option value="">Выберите сервер...</option>
 </select>
 
@@ -78,7 +78,7 @@ var colors = [];
 async function loadGuilds() {
   // Sabit сервер ID
   var gid = '{{ main_guild_id }}';
-  if (typeof selectedGuild !== 'undefеd') selectedGuild = gid;
+  if (typeof selectedGuild !== 'undefined') selectedGuild = gid;
   if (document.getElementById('guild-select')) document.getElementById('guild-select').value = gid;
   if (document.getElementById('guild-sel')) document.getElementById('guild-sel').value = gid;
   if (document.getElementById('guildSelect')) document.getElementById('guildSelect').value = gid;
@@ -110,7 +110,7 @@ async function loadColorRoles() {
   ]);
   colors = Array.isArray(colRes) ? colRes : [];
   var channels = Array.isArray(chRes) ? chRes : (chRes.channels||[]);
-  document.getElementById('panel-channel').innerHTML = '<option value="">Канал выбрать...</option>' +
+  document.getElementById('panel-channel').innerHTML = '<option value="">Выберите канал...</option>' +
     channels.filter(function(c){return c.type==='text';})
     .map(function(c){return '<option value="'+c.id+'">#'+c.name+'</option>';}).join('');
   renderColors();
@@ -157,7 +157,7 @@ function removeColor(i) { colors.splice(i,1); renderColors(); }
 async function publishPanel() {
   if(!selectedGuild) { alert('Сервер выбрать!'); return; }
   var ch = document.getElementById('panel-channel').value;
-  if(!ch) { alert('Канал выбрать!'); return; }
+  if(!ch) { alert('Выберите канал!'); return; }
   if(!colors.length) { alert('До renk добавить!'); return; }
   var r = await fetch('/api/guild/'+selectedGuild+'/color-roles/publish', {
     method:'POST', headers:{'Content-Type':'application/json'},

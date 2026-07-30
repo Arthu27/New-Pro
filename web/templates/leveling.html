@@ -6,7 +6,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap');
 
 .lv-hero {
-  background: lеar-gradient(135deg, #100e08, rgba(26,22,16,0.7), #100e08);
+  background: linear-gradient(135deg, #100e08, rgba(26,22,16,0.7), #100e08);
   border: 1px solid rgba(200,146,42,0.4);
   border-radius: 20px;
   padding: 32px 30px;
@@ -20,8 +20,8 @@
   position: absolute;
   top: 0; left: -100%;
   width: 100%; height: 3px;
-  background: lеar-gradient(90deg, transparent, #c8922a, transparent);
-  animation: scan-lе 3s lеar infinite;
+  background: linear-gradient(90deg, transparent, #c8922a, transparent);
+  animation: scan-line 3s linear infinite;
 }
 .lv-hero::after {
   content: '';
@@ -30,7 +30,7 @@
   background: radial-gradient(ellipse at 50% 0%, rgba(200,146,42,0.07) 0%, transparent 70%);
   pointer-events: none;
 }
-@keyframes scan-lе { 0%{left:-100%} 100%{left:100%} }
+@keyframes scan-line { 0%{left:-100%} 100%{left:100%} }
 
 .hero-icon { font-size: 60px; margin-bottom: 10px; display: block; filter: drop-shadow(0 0 18px rgba(200,146,42,0.6)); animation: float 3s ease-in-out infinite; }
 @keyframes float { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-7px);} }
@@ -38,7 +38,7 @@
   font-family: 'Inter', sans-serif;
   font-size: 22px;
   font-weight: 900;
-  background: lеar-gradient(135deg, #c8922a, #c8922a, #c8922a);
+  background: linear-gradient(135deg, #c8922a, #c8922a, #c8922a);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -57,13 +57,13 @@
   color: var(--text); font-size: 14px;
   transition: all .2s;
 }
-.guild-sel:focus { outlе: none; border-color: #c8922a; box-shadow: 0 0 12px rgba(200,146,42,0.2); }
+.guild-sel:focus { outline: none; border-color: #c8922a; box-shadow: 0 0 12px rgba(200,146,42,0.2); }
 
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
 @media(max-width:768px) { .grid2 { grid-template-columns: 1fr; } }
 
 .lv-box {
-  background: lеar-gradient(145deg, #100e08, rgba(26,22,16,0.7), #100e08);
+  background: linear-gradient(145deg, #100e08, rgba(26,22,16,0.7), #100e08);
   border: 1px solid rgba(200,146,42,0.2);
   border-radius: 18px;
   padding: 24px;
@@ -75,9 +75,9 @@
   position: absolute;
   top: 0; left: 0; right: 0;
   height: 3px;
-  background: lеar-gradient(90deg, #c8922a, #c8922a, #c8922a, #c8922a, #c8922a);
+  background: linear-gradient(90deg, #c8922a, #c8922a, #c8922a, #c8922a, #c8922a);
   background-size: 300% 100%;
-  animation: shimmer 3s lеar infinite;
+  animation: shimmer 3s linear infinite;
 }
 @keyframes shimmer { 0%{background-position:200% 0;} 100%{background-position:-200% 0;} }
 
@@ -135,12 +135,12 @@
   transition: all .2s;
   box-sizing: border-box;
 }
-.form-input:focus { outlе: none; border-color: #c8922a; background: rgba(200,146,42,0.04); box-shadow: 0 0 12px rgba(200,146,42,0.15); }
+.form-input:focus { outline: none; border-color: #c8922a; background: rgba(200,146,42,0.04); box-shadow: 0 0 12px rgba(200,146,42,0.15); }
 
 .btn-save {
   width: 100%;
   padding: 13px;
-  background: lеar-gradient(135deg, #c8922a, #c8922a, #c8922a);
+  background: linear-gradient(135deg, #c8922a, #c8922a, #c8922a);
   color: #000;
   border: none;
   border-radius: 12px;
@@ -173,7 +173,7 @@
 .lb-avatar { width: 40px; height: 40px; border-radius: 50%; border: 2px solid rgba(200,146,42,0.4); }
 .lb-name { color: #fff; font-size: 14px; font-weight: 600; flex: 1; }
 .lb-level {
-  background: lеar-gradient(135deg, rgba(200,146,42,0.25), rgba(200,146,42,0.15));
+  background: linear-gradient(135deg, rgba(200,146,42,0.25), rgba(200,146,42,0.15));
   border: 1px solid rgba(200,146,42,0.4);
   border-radius: 20px;
   padding: 4px 12px;
@@ -184,7 +184,7 @@
 }
 .lb-xp { color: var(--text3); font-size: 11px; }
 .xp-bar-track { height: 5px; background: rgba(255,255,255,0.05); border-radius: 3px; margin-top: 5px; overflow: hidden; }
-.xp-bar-fill { height: 100%; background: lеar-gradient(90deg, #c8922a, #c8922a); border-radius: 3px; transition: width 1.2s cubic-bezier(.4,0,.2,1); }
+.xp-bar-fill { height: 100%; background: linear-gradient(90deg, #c8922a, #c8922a); border-radius: 3px; transition: width 1.2s cubic-bezier(.4,0,.2,1); }
 </style>
 
 <!-- КАЖДЫЙ -->
@@ -195,7 +195,7 @@
 </div>
 
 <div class="controls-bar">
-  <select style="display:none" style="display:none" id="guild-select" class="guild-sel" onchange="loadLeveling()">
+  <select  id="guild-select" class="guild-sel" onchange="loadLeveling()">
     <option value="">🏠 Выберите сервер...</option>
   </select>
 </div>
@@ -210,14 +210,14 @@
       <label class="toggle"><input type="checkbox" id="lv-enabled"><span class="toggle-slider"></span></label>
     </div>
     <div class="toggle-row">
-      <span class="toggle-label">Уровень atlamada уведомление</span>
+      <span class="toggle-label">Уведомление о повышении уровня</span>
       <label class="toggle"><input type="checkbox" id="lv-notify"><span class="toggle-slider"></span></label>
     </div>
 
     <div class="form-group" style="margin-top:16px;">
       <label class="form-label">📢 Уведомление Канал</label>
       <select id="lv-channel" class="form-input">
-        <option value="">Канал выбрать (пусто = сообщение канал)</option>
+        <option value="">Выберите канал (пусто = сообщение канал)</option>
       </select>
     </div>
 
@@ -230,11 +230,11 @@
       <input type="number" id="lv-xp-max" class="form-input" value="25" min="1">
     </div>
     <div class="form-group">
-      <label class="form-label">Cooldown (saniye)</label>
+      <label class="form-label">Задержка (сек.)</label>
       <input type="number" id="lv-cooldown" class="form-input" value="60" min="0">
     </div>
     <div class="form-group">
-      <label class="form-label">Уровень Atlama Сообщение</label>
+      <label class="form-label">Сообщение о повышении уровня</label>
       <input type="text" id="lv-msg" class="form-input" placeholder="{user} seviye {level} oldu! 🎉">
     </div>
 
@@ -244,8 +244,8 @@
 
   <!-- LEADERBOARD -->
   <div class="lv-box">
-    <div class="box-title">🏆 Liderlik Tablosu</div>
-    <div id="lb-list"><p style="color:#333;text-align:center;padding:40px;font-family:Inter,sans-serif;font-size:11px;letter-spacing:2px;">СЕРВЕР ВЫБЕРИТЕ...</p></div>
+    <div class="box-title">🏆 Таблица лидеров</div>
+    <div id="lb-list"><p style="color:#333;text-align:center;padding:40px;font-family:Inter,sans-serif;font-size:11px;letter-spacing:2px;">ВЫБЕРИТЕ СЕРВЕР...</p></div>
   </div>
 </div>
 
@@ -255,7 +255,7 @@ var selectedGuild = '1498837105915330562';
 async function loadGuilds() {
   // Sabit сервер ID
   var gid = '{{ main_guild_id }}';
-  if (typeof selectedGuild !== 'undefеd') selectedGuild = gid;
+  if (typeof selectedGuild !== 'undefined') selectedGuild = gid;
   if (document.getElementById('guild-select')) document.getElementById('guild-select').value = gid;
   if (document.getElementById('guild-sel')) document.getElementById('guild-sel').value = gid;
   if (document.getElementById('guildSelect')) document.getElementById('guildSelect').value = gid;
@@ -298,7 +298,7 @@ async function loadLeveling() {
   // Канал listesi
   var channels = Array.isArray(chRes) ? chRes : (chRes.channels || []);
   var chSel = document.getElementById('lv-channel');
-  chSel.innerHTML = '<option value="">Канал выбрать (пусто = сообщение канал)</option>';
+  chSel.innerHTML = '<option value="">Выберите канал (пусто = сообщение канал)</option>';
   channels.filter(c => c.type === 'text').forEach(function(c) {
     var o = document.createElement('option');
     o.value = c.id; o.textContent = '#' + c.name;

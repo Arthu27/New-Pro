@@ -3,8 +3,8 @@
 {% block page_title %}<i class="fas fa-tasks" style="color:#c8922a;animation:pulse 2s infinite;"></i> MOD ЗАДАЧА СПИСОК{% endblock %}
 {% block content %}
 <style>
-  .todo-box{background:lеar-gradient(135deg,rgba(26,22,16,0.7),rgba(26,22,16,0.7));border:1px solid rgba(212,168,67,0.1);border-radius:16px;padding:25px;margin-bottom:20px;position:relative;overflow:hidden;}
-  .todo-box::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:2px;background:lеar-gradient(90deg,transparent,#c8922a,transparent);animation:scan 4s infinite;}
+  .todo-box{background:linear-gradient(135deg,rgba(26,22,16,0.7),rgba(26,22,16,0.7));border:1px solid rgba(212,168,67,0.1);border-radius:16px;padding:25px;margin-bottom:20px;position:relative;overflow:hidden;}
+  .todo-box::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:2px;background:linear-gradient(90deg,transparent,#c8922a,transparent);animation:scan 4s infinite;}
   @keyframes scan{0%{left:-100%}100%{left:100%}}
   .todo-title{color:#c8922a;font-size:13px;text-transform:uppercase;letter-spacing:2px;margin-bottom:18px;display:flex;align-items:center;gap:8px;padding-bottom:12px;border-bottom:1px solid rgba(212,168,67,0.07);}
   .task-card{background:rgba(0,0,0,0.35);border-radius:14px;padding:14px;margin-bottom:10px;border-left:4px solid #27ae60;transition:all 0.3s;}
@@ -21,7 +21,7 @@
   .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;}
   @media(max-width:900px){.grid3{grid-template-columns:1fr;}}
   .field-input{width:100%;padding:10px 14px;background:#100e08;border:1px solid rgba(212,168,67,0.15);border-radius:14px;color:#f0e8d0;box-sizing:border-box;font-family:inherit;transition:all 0.3s;font-size:14px;}
-  .field-input:focus{outlе:none;border-color:#c8922a;box-shadow:0 0 12px rgba(212,168,67,0.07);}
+  .field-input:focus{outline:none;border-color:#c8922a;box-shadow:0 0 12px rgba(212,168,67,0.07);}
   .add-grid{display:grid;grid-template-columns:1fr 1fr auto auto;gap:10px;align-items:end;}
   @media(max-width:768px){.add-grid{grid-template-columns:1fr;}}
   .add-btn{padding:10px 20px;background:#c8922a;color:#f0e8d0;border:none;border-radius:14px;cursor:pointer;font-weight:700;white-space:nowrap;transition:all 0.3s;}

@@ -31,7 +31,7 @@
 .ch-item .ch-name{overflow:hidden;text-overflow:ellipsis;}
 .ch-item .unread-dot{margin-left:auto;width:8px;height:8px;border-radius:50%;background:#e05555;flex-shrink:0;}
 .dm-search-wrap{padding:6px 10px;}
-.dm-search{width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(212,168,67,0.1);border-radius:5px;padding:5px 8px;color:#f0e8d0;font-size:11px;outlе:none;box-sizing:border-box;font-family:Inter,sans-serif;}
+.dm-search{width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(212,168,67,0.1);border-radius:5px;padding:5px 8px;color:#f0e8d0;font-size:11px;outline:none;box-sizing:border-box;font-family:Inter,sans-serif;}
 .dm-search::placeholder{color:rgba(240,232,208,0.25);}
 
 /* ── Ana chat ── */
@@ -61,14 +61,14 @@
 .msg-avatar{width:38px;height:38px;border-radius:50%;object-fit:cover;}
 .msg-avatar-placeholder{width:38px;height:38px;border-radius:50%;background:rgba(212,168,67,0.1);display:flex;align-items:center;justify-content:center;font-size:16px;}
 .msg-body{flex:1;min-width:0;}
-.msg-meta{display:flex;align-items:baselе;gap:8px;margin-bottom:2px;}
+.msg-meta{display:flex;align-items:baseline;gap:8px;margin-bottom:2px;}
 .msg-author{font-size:14px;font-weight:600;color:#f0e8d0;cursor:pointer;}
-.msg-author:hover{text-decoration:underlе;}
+.msg-author:hover{text-decoration:underline;}
 .msg-author.is-bot{color:#5865F2;}
 .msg-time{font-size:11px;color:rgba(240,232,208,0.22);}
-.msg-content{font-size:14px;color:rgba(240,232,208,0.88);lе-height:1.55;word-break:break-word;white-space:pre-wrap;}
+.msg-content{font-size:14px;color:rgba(240,232,208,0.88);line-height:1.55;word-break:break-word;white-space:pre-wrap;}
 .msg-content a{color:#c8922a;text-decoration:none;}
-.msg-content a:hover{text-decoration:underlе;}
+.msg-content a:hover{text-decoration:underline;}
 .etiket{color:#8ab4f8;background:rgba(138,180,248,0.1);border-radius:3px;padding:0 3px;font-weight:500;}
 .msg-edited{font-size:10px;color:rgba(240,232,208,0.22);margin-left:4px;}
 .bot-badge{font-size:9px;background:#5865F2;color:#fff;padding:1px 5px;border-radius:3px;font-weight:700;margin-left:4px;vertical-align:middle;letter-spacing:0.03em;}
@@ -78,22 +78,22 @@
 .msg-img{max-width:380px;max-height:280px;border-radius:6px;cursor:pointer;display:block;object-fit:contain;background:rgba(0,0,0,0.2);}
 .msg-img:hover{opacity:0.9;}
 .msg-gif-badge{position:absolute;bottom:4px;left:4px;background:rgba(0,0,0,0.7);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;letter-spacing:0.05em;}
-.msg-fс{display:inlе-flex;align-items:center;gap:8px;background:rgba(255,255,255,0.04);border:1px solid rgba(212,168,67,0.1);border-radius:6px;padding:8px 12px;font-size:12px;color:rgba(240,232,208,0.7);text-decoration:none;}
+.msg-fс{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,0.04);border:1px solid rgba(212,168,67,0.1);border-radius:6px;padding:8px 12px;font-size:12px;color:rgba(240,232,208,0.7);text-decoration:none;}
 .msg-fс:hover{background:rgba(212,168,67,0.06);color:#f0e8d0;}
 .msg-embed{border-left:3px solid #5865F2;background:rgba(88,101,242,0.06);border-radius:0 6px 6px 0;padding:10px 12px;margin-top:6px;max-width:420px;}
 .msg-embed-title{font-size:13px;font-weight:700;color:#8ab4f8;margin-bottom:4px;}
-.msg-embed-desc{font-size:12px;color:rgba(240,232,208,0.65);lе-height:1.5;}
+.msg-embed-desc{font-size:12px;color:rgba(240,232,208,0.65);line-height:1.5;}
 .msg-embed-img{max-width:100%;border-radius:4px;margin-top:8px;}
 .msg-sticker{max-width:120px;max-height:120px;}
 
 /* ── Reply ── */
 .msg-reply-ref{display:flex;align-items:center;gap:6px;margin-bottom:3px;font-size:11px;color:rgba(240,232,208,0.4);cursor:pointer;padding:2px 0;}
 .msg-reply-ref:hover{color:rgba(240,232,208,0.7);}
-.msg-reply-ref::before{content:'';display:inlе-block;width:28px;height:10px;border-top:2px solid rgba(240,232,208,0.2);border-left:2px solid rgba(240,232,208,0.2);border-radius:4px 0 0 0;margin-right:4px;flex-shrink:0;}
+.msg-reply-ref::before{content:'';display:inline-block;width:28px;height:10px;border-top:2px solid rgba(240,232,208,0.2);border-left:2px solid rgba(240,232,208,0.2);border-radius:4px 0 0 0;margin-right:4px;flex-shrink:0;}
 .msg-reply-author{font-weight:600;color:rgba(240,232,208,0.6);}
 
 /* ── Сообщение aksiyonы ── */
-.msg-actions{opacity:0;position:absolute;right:14px;top:-14px;display:flex;gap:3px;background:rgba(14,12,7,0.95);border:1px solid rgba(212,168,67,0.1);border-radius:6px;padding:3px 4px;z-еx:10;}
+.msg-actions{opacity:0;position:absolute;right:14px;top:-14px;display:flex;gap:3px;background:rgba(14,12,7,0.95);border:1px solid rgba(212,168,67,0.1);border-radius:6px;padding:3px 4px;z-index:10;}
 .msg-act-btn{padding:4px 8px;background:none;border:none;color:rgba(240,232,208,0.45);border-radius:4px;cursor:pointer;font-size:12px;transition:all 0.12s;font-family:Inter,sans-serif;}
 .msg-act-btn:hover{background:rgba(212,168,67,0.08);color:#f0e8d0;}
 .msg-act-btn.del:hover{background:rgba(224,85,85,0.1);color:#e05555;}
@@ -101,7 +101,7 @@
 /* ── Reply bar ── */
 .reply-bar{display:none;padding:7px 18px;background:rgba(212,168,67,0.05);border-top:1px solid rgba(212,168,67,0.08);font-size:12px;color:rgba(240,232,208,0.55);align-items:center;gap:8px;flex-shrink:0;}
 .reply-bar.show{display:flex;}
-.reply-bar-close{margin-left:auto;cursor:pointer;color:rgba(240,232,208,0.3);font-size:16px;lе-height:1;transition:color 0.15s;}
+.reply-bar-close{margin-left:auto;cursor:pointer;color:rgba(240,232,208,0.3);font-size:16px;line-height:1;transition:color 0.15s;}
 .reply-bar-close:hover{color:#f0e8d0;}
 
 /* ── Input область ── */
@@ -112,7 +112,7 @@
 .toolbar-btn{width:28px;height:28px;display:flex;align-items:center;justify-content:center;background:none;border:none;color:rgba(240,232,208,0.3);border-radius:5px;cursor:pointer;font-size:14px;transition:all 0.15s;}
 .toolbar-btn:hover{background:rgba(212,168,67,0.08);color:rgba(240,232,208,0.7);}
 .chat-input-row{display:flex;align-items:flex-end;padding:4px 10px 8px;}
-.chat-input{flex:1;background:none;border:none;color:#f0e8d0;font-size:14px;font-family:Inter,sans-serif;resize:none;outlе:none;max-height:140px;min-height:22px;lе-height:1.5;padding:0;}
+.chat-input{flex:1;background:none;border:none;color:#f0e8d0;font-size:14px;font-family:Inter,sans-serif;resize:none;outline:none;max-height:140px;min-height:22px;line-height:1.5;padding:0;}
 .chat-input::placeholder{color:rgba(240,232,208,0.2);}
 .input-actions{display:flex;align-items:center;gap:4px;flex-shrink:0;}
 .dm-btn{padding:5px 10px;background:rgba(88,101,242,0.12);border:1px solid rgba(88,101,242,0.2);color:#8ab4f8;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;font-family:Inter,sans-serif;transition:all 0.15s;white-space:nowrap;}
@@ -123,13 +123,13 @@
 .input-hint{font-size:10px;color:rgba(240,232,208,0.15);padding:0 12px 6px;text-align:right;}
 
 /* ── Mention popup ── */
-.etiket-popup{position:absolute;bottom:calc(100% + 4px);left:0;right:0;background:rgba(18,14,8,0.98);border:1px solid rgba(212,168,67,0.12);border-radius:8px;max-height:200px;overflow-y:auto;z-еx:200;display:none;box-shadow:0 -8px 24px rgba(0,0,0,0.4);}
+.etiket-popup{position:absolute;bottom:calc(100% + 4px);left:0;right:0;background:rgba(18,14,8,0.98);border:1px solid rgba(212,168,67,0.12);border-radius:8px;max-height:200px;overflow-y:auto;z-index:200;display:none;box-shadow:0 -8px 24px rgba(0,0,0,0.4);}
 .mention-item{padding:7px 12px;font-size:12px;color:rgba(240,232,208,0.65);cursor:pointer;display:flex;align-items:center;gap:8px;}
 .mention-item:hover,.mention-item.selected{background:rgba(212,168,67,0.08);color:#f0e8d0;}
 .mention-item img{width:22px;height:22px;border-radius:50%;object-fit:cover;}
 
 /* ── Lightbox ── */
-.lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-еx:9999;align-items:center;justify-content:center;cursor:zoom-out;}
+.lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;align-items:center;justify-content:center;cursor:zoom-out;}
 .lightbox.show{display:flex;}
 .lightbox img{max-width:90vw;max-height:90vh;border-radius:8px;object-fit:contain;}
 
@@ -152,33 +152,33 @@
 .member-av{width:30px;height:30px;border-radius:50%;object-fit:cover;}
 .member-av-placeholder{width:30px;height:30px;border-radius:50%;background:rgba(212,168,67,0.1);display:flex;align-items:center;justify-content:center;font-size:13px;}
 .status-dot{position:absolute;bottom:0;right:0;width:9px;height:9px;border-radius:50%;border:2px solid #0a0906;}
-.status-dot.onlе{background:#3ba55d;}
+.status-dot.online{background:#3ba55d;}
 .status-dot.idle{background:#faa61a;}
 .status-dot.dnd{background:#ed4245;}
-.status-dot.offlе{background:#747f8d;}
+.status-dot.offline{background:#747f8d;}
 .member-name{font-size:13px;color:rgba(240,232,208,0.55);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
 .member-item:hover .member-name{color:rgba(240,232,208,0.9);}
 .member-name.is-bot{color:rgba(88,101,242,0.7);}
 /* ── Профиль popup ── */
-.profс-popup{display:none;position:fixed;z-еx:500;width:280px;background:#0e0c07;border:1px solid rgba(212,168,67,0.15);border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.6);overflow:hidden;}
+.profс-popup{display:none;position:fixed;z-index:500;width:280px;background:#0e0c07;border:1px solid rgba(212,168,67,0.15);border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.6);overflow:hidden;}
 .profс-popup.show{display:block;}
-.profс-банner{height:60px;background:lеar-gradient(135deg,rgba(200,146,42,0.3),rgba(88,101,242,0.2));position:relative;}
+.profс-банner{height:60px;background:linear-gradient(135deg,rgba(200,146,42,0.3),rgba(88,101,242,0.2));position:relative;}
 .profс-av{width:56px;height:56px;border-radius:50%;border:4px solid #0e0c07;position:absolute;bottom:-28px;left:14px;object-fit:cover;}
 .profс-av-placeholder{width:56px;height:56px;border-radius:50%;border:4px solid #0e0c07;background:rgba(212,168,67,0.1);display:flex;align-items:center;justify-content:center;font-size:22px;position:absolute;bottom:-28px;left:14px;}
 .profс-body{padding:36px 14px 14px;}
 .profс-displayname{font-size:16px;font-weight:700;color:#f0e8d0;}
 .profс-username{font-size:12px;color:rgba(240,232,208,0.35);margin-bottom:8px;}
-.profс-status-badge{display:inlе-flex;align-items:center;gap:5px;font-size:11px;padding:2px 8px;border-radius:99px;margin-bottom:10px;}
-.profс-status-badge.onlе{background:rgba(59,165,93,0.15);color:#3ba55d;}
+.profс-status-badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;padding:2px 8px;border-radius:99px;margin-bottom:10px;}
+.profс-status-badge.online{background:rgba(59,165,93,0.15);color:#3ba55d;}
 .profс-status-badge.idle{background:rgba(250,166,26,0.15);color:#faa61a;}
 .profс-status-badge.dnd{background:rgba(237,66,69,0.15);color:#ed4245;}
-.profс-status-badge.offlе{background:rgba(116,127,141,0.15);color:#747f8d;}
+.profс-status-badge.offline{background:rgba(116,127,141,0.15);color:#747f8d;}
 .profс-divider{height:1px;background:rgba(212,168,67,0.08);margin:10px 0;}
 .profс-section-title{font-size:10px;font-weight:700;color:rgba(240,232,208,0.3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;}
 .profс-role{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;}
 .profс-role-badge{font-size:10px;padding:2px 7px;border-radius:99px;border:1px solid;font-weight:600;}
 .profс-nick-row{display:flex;gap:6px;align-items:center;}
-.profс-nick-input{flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(212,168,67,0.15);border-radius:5px;padding:5px 8px;color:#f0e8d0;font-size:12px;outlе:none;font-family:Inter,sans-serif;}
+.profс-nick-input{flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(212,168,67,0.15);border-radius:5px;padding:5px 8px;color:#f0e8d0;font-size:12px;outline:none;font-family:Inter,sans-serif;}
 .profс-nick-input:focus{border-color:rgba(212,168,67,0.4);}
 .profс-nick-btn{padding:5px 10px;background:#c8922a;color:#100e08;border:none;border-radius:5px;cursor:pointer;font-size:11px;font-weight:700;font-family:Inter,sans-serif;transition:background 0.15s;}
 .profс-nick-btn:hover{background:#e0a830;}
@@ -219,7 +219,7 @@
     <div class="chat-header">
       <span class="chat-header-icon" id="ch-icon"><i class="fas fa-hashtag"></i></span>
       <span class="chat-header-name" id="ch-name">Выберите канал</span>
-      <div class="chat-header-sep" id="ch-sep" style="display:none;"></div>
+      <div class="chat-header-sep" id="ch-sep" ></div>
       <span class="chat-header-topic" id="ch-topic"></span>
       <div class="chat-header-actions">
         <button class="hdr-btn" onclick="loadMessages()"><i class="fas fa-sync-alt"></i></button>
@@ -247,7 +247,7 @@
             oninput="handleInput(this)"
             disabled></textarea>
           <div class="input-actions">
-            <button class="dm-btn" id="dm-open-btn" onclick="openDmFromInput()" title="DM отправить" style="display:none;">
+            <button class="dm-btn" id="dm-open-btn" onclick="openDmFromInput()" title="DM отправить" >
               <i class="fas fa-user"></i> DM
             </button>
             <button class="send-btn" id="send-btn" onclick="sendMessage()" disabled>
@@ -447,7 +447,7 @@ function renderMsg(m, continued) {
     m.attachments.forEach(function(url) {
       if (/\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(url)) {
         var isGif = /\.gif(\?|$)/i.test(url);
-        attachHtml += '<div style="position:relative;display:inlе-block;">' +
+        attachHtml += '<div style="position:relative;display:inline-block;">' +
           '<img class="msg-img" src="' + url + '" loading="lazy" onclick="openLightbox(\'' + url + '\')">' +
           (isGif ? '<span class="msg-gif-badge">GIF</span>' : '') + '</div>';
       } else {
@@ -458,12 +458,12 @@ function renderMsg(m, continued) {
     attachHtml += '</div>';
   }
 
-  var inlеMedia = '';
+  var inlineMedia = '';
   if (!attachHtml) {
     var urlMatch = (m.content||'').match(/https?:\/\/\S+\.(gif|jpg|jpeg|png|webp)(\?\S*)?/i);
     if (urlMatch) {
       var isGif = /\.gif(\?|$)/i.test(urlMatch[0]);
-      inlеMedia = '<div class="msg-attachments"><div style="position:relative;display:inlе-block;">' +
+      inlineMedia = '<div class="msg-attachments"><div style="position:relative;display:inline-block;">' +
         '<img class="msg-img" src="' + urlMatch[0] + '" loading="lazy" onclick="openLightbox(\'' + urlMatch[0] + '\')">' +
         (isGif ? '<span class="msg-gif-badge">GIF</span>' : '') + '</div></div>';
     }
@@ -482,7 +482,7 @@ function renderMsg(m, continued) {
     '<div class="msg-avatar-wrap">' + avatarHtml + '</div>' +
     '<div class="msg-body">' + replyHtml + metaHtml +
       '<div class="msg-content">' + content + (m.edited ? '<span class="msg-edited">(редактировать)</span>' : '') + '</div>' +
-      attachHtml + inlеMedia +
+      attachHtml + inlineMedia +
     '</div>' +
     '<div class="msg-actions">' +
       '<button class="msg-act-btn" onclick="startReply(\'' + m.id + '\',\'' + safeAuthor + '\',\'' + safeContent + '\')"><i class="fas fa-reply"></i></button>' +
@@ -625,13 +625,13 @@ async function loadDmMessages() {
       var av = isBot ? '<div class="msg-avatar-placeholder" style="background:rgba(88,101,242,0.15);">🤖</div>'
                      : '<div class="msg-avatar-placeholder">👤</div>';
       var urlMatch = (m.content||'').match(/https?:\/\/\S+\.(gif|jpg|jpeg|png|webp)(\?\S*)?/i);
-      var inlеMedia = urlMatch ? '<div class="msg-attachments"><div style="position:relative;display:inlе-block;">' +
+      var inlineMedia = urlMatch ? '<div class="msg-attachments"><div style="position:relative;display:inline-block;">' +
         '<img class="msg-img" src="' + urlMatch[0] + '" loading="lazy" onclick="openLightbox(\'' + urlMatch[0] + '\')">' +
         (/\.gif(\?|$)/i.test(urlMatch[0]) ? '<span class="msg-gif-badge">GIF</span>' : '') + '</div></div>' : '';
       return '<div class="msg-group">' + av + '<div class="msg-body">' +
         '<div class="msg-meta"><span class="msg-author' + (isBot?' is-bot':'') + '">' + escHtml(m.author) + (isBot?'<span class="bot-badge">BOT</span>':'') + '</span>' +
         '<span class="msg-time">' + time + '</span></div>' +
-        '<div class="msg-content">' + parseContent(m.content) + '</div>' + inlеMedia + '</div></div>';
+        '<div class="msg-content">' + parseContent(m.content) + '</div>' + inlineMedia + '</div></div>';
     }).join('') : '<div class="chat-empty"><i class="fas fa-comment-slash"></i>Пока сообщение yok</div>';
     if (atBottom) el.scrollTop = el.scrollHeight;
   } catch(e) {}
@@ -739,20 +739,20 @@ async function loadMemberList(gid) {
 }
 
 function renderMemberList(members) {
-  var onlе = members.filter(function(m){ return m.status !== 'offlе' && !m.bot; });
-  var offlе = members.filter(function(m){ return m.status === 'offlе' && !m.bot; });
+  var online = members.filter(function(m){ return m.status !== 'offline' && !m.bot; });
+  var offline = members.filter(function(m){ return m.status === 'offline' && !m.bot; });
   var bots = members.filter(function(m){ return m.bot; });
   document.getElementById('members-count').textContent = members.length;
   var html = '';
-  if (onlе.length) { html += '<div class="member-section">Cevrimici - ' + onlе.length + '</div>'; html += onlе.map(renderMemberItem).join(''); }
+  if (online.length) { html += '<div class="member-section">В сети - ' + online.length + '</div>'; html += online.map(renderMemberItem).join(''); }
   if (bots.length) { html += '<div class="member-section">Botlar - ' + bots.length + '</div>'; html += bots.map(renderMemberItem).join(''); }
-  if (offlе.length) { html += '<div class="member-section">Cevrimdisi - ' + offlе.length + '</div>'; html += offlе.map(renderMemberItem).join(''); }
+  if (offline.length) { html += '<div class="member-section">Не в сети - ' + offline.length + '</div>'; html += offline.map(renderMemberItem).join(''); }
   document.getElementById('members-scroll').innerHTML = html || '<div style="padding:20px;text-align:center;color:rgba(240,232,208,0.2);font-size:12px;">Uye yok</div>';
 }
 
 function renderMemberItem(m) {
   var av = m.avatar ? '<img class="member-av" src="' + m.avatar + '" onerror="this.outerHTML=\'<div class=member-av-placeholder>\u{1F464}</div>\'">': '<div class="member-av-placeholder">' + (m.bot ? '\u{1F916}' : '\u{1F464}') + '</div>';
-  var st = m.status === 'onlе' ? 'onlе' : m.status === 'idle' ? 'idle' : m.status === 'dnd' ? 'dnd' : 'offlе';
+  var st = m.status === 'online' ? 'online' : m.status === 'idle' ? 'idle' : m.status === 'dnd' ? 'dnd' : 'offline';
   var dn = m.nick || m.display_name || m.name;
   return '<div class="member-item" id="mi-' + m.id + '" onclick="openПрофильe(event,\'' + m.id + '\')">' +
     '<div class="member-avatar-wrap">' + av + '<span class="status-dot ' + st + '"></span></div>' +
@@ -770,9 +770,9 @@ function openПрофильe(event, memberId) {
   document.getElementById('pp-avatar').innerHTML = avHtml;
   document.getElementById('pp-displayname').textContent = dn;
   document.getElementById('pp-username').textContent = '@' + m.name + (m.discriminator && m.discriminator !== '0' ? '#' + m.discriminator : '');
-  var stLabels = {onlе:'Cevrimici', idle:'Bosta', dnd:'Rahatsiz Etme', offlе:'Cevrimdisi'};
-  var stDots = {onlе:'\u25CF', idle:'\u25D0', dnd:'\u2298', offlе:'\u25CB'};
-  var st = m.status || 'offlе';
+  var stLabels = {online:'В сети', idle:'Неактивен', dnd:'Не беспокоить', offline:'Не в сети'};
+  var stDots = {online:'\u25CF', idle:'\u25D0', dnd:'\u2298', offline:'\u25CB'};
+  var st = m.status || 'offline';
   var badge = document.getElementById('pp-status-badge');
   badge.className = 'profс-status-badge ' + st;
   badge.textContent = stDots[st] + ' ' + (stLabels[st] || st);

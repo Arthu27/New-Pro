@@ -4,25 +4,25 @@
 {% block content %}
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&display=swap');
-.sg-hero{background:lеar-gradient(135deg,#100e08,rgba(26,22,16,0.7),#100e08);border:1px solid rgba(200,146,42,0.3);border-radius:20px;padding:30px;margin-bottom:25px;text-align:center;position:relative;overflow:hidden;}
+.sg-hero{background:linear-gradient(135deg,#100e08,rgba(26,22,16,0.7),#100e08);border:1px solid rgba(200,146,42,0.3);border-radius:20px;padding:30px;margin-bottom:25px;text-align:center;position:relative;overflow:hidden;}
 .sg-hero::before{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(ellipse at center,rgba(200,146,42,0.06) 0%,transparent 60%);animation:pulse-bg 4s ease-in-out infinite;}
 @keyframes pulse-bg{0%,100%{opacity:.5;}50%{opacity:1;}}
-.hero-title{font-family:Rajdhani,sans-serif;font-size:28px;font-weight:700;background:lеar-gradient(135deg,#c8922a,#c8922a,#c8922a);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px;}
+.hero-title{font-family:Rajdhani,sans-serif;font-size:28px;font-weight:700;background:linear-gradient(135deg,#c8922a,#c8922a,#c8922a);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px;}
 .hero-sub{color:rgba(240,232,208,0.55);font-size:13px;}
 .controls-bar{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;}
 .guild-sel{flex:1;min-width:200px;padding:12px 16px;background:rgba(0,0,0,0.6);border:2px solid rgba(200,146,42,0.3);border-radius:14px;color:#f0e8d0;font-size:14px;}
-.guild-sel:focus{outlе:none;border-color:#c8922a;}
+.guild-sel:focus{outline:none;border-color:#c8922a;}
 .sg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:20px;}
-.sg-card{background:lеar-gradient(135deg,#100e08,rgba(26,22,16,0.7));border:1px solid rgba(200,146,42,0.2);border-radius:18px;padding:22px;position:relative;overflow:hidden;transition:all .3s;animation:fadeInUp .4s ease both;}
+.sg-card{background:linear-gradient(135deg,#100e08,rgba(26,22,16,0.7));border:1px solid rgba(200,146,42,0.2);border-radius:18px;padding:22px;position:relative;overflow:hidden;transition:all .3s;animation:fadeInUp .4s ease both;}
 .sg-card:hover{border-color:rgba(200,146,42,0.5);transform:translateY(-3px);box-shadow:0 8px 30px rgba(200,146,42,0.1);}
-.sg-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:lеar-gradient(90deg,#c8922a,#c8922a,#c8922a);background-size:200% 100%;animation:shimmer 2s lеar infinite;}
+.sg-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#c8922a,#c8922a,#c8922a);background-size:200% 100%;animation:shimmer 2s linear infinite;}
 @keyframes shimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
 @keyframes fadeInUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
-.sg-status{display:inlе-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;margin-bottom:12px;}
+.sg-status{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;margin-bottom:12px;}
 .status-pending{background:rgba(200,146,42,0.2);border:1px solid rgba(200,146,42,0.4);color:#c8922a;}
 .status-approved{background:rgba(46,204,113,0.2);border:1px solid rgba(46,204,113,0.4);color:#5ec47a;}
 .status-denied{background:rgba(231,76,60,0.2);border:1px solid rgba(231,76,60,0.4);color:#e05555;}
-.sg-text{color:#f0e8d0;font-size:14px;lе-height:1.6;margin-bottom:14px;}
+.sg-text{color:#f0e8d0;font-size:14px;line-height:1.6;margin-bottom:14px;}
 .sg-author{display:flex;align-items:center;gap:8px;margin-bottom:14px;}
 .sg-avatar{width:32px;height:32px;border-radius:50%;border:2px solid rgba(200,146,42,0.3);}
 .sg-name{color:#c8922a;font-size:13px;font-weight:600;}
@@ -48,7 +48,7 @@
 </div>
 
 <div class="controls-bar">
-  <select style="display:none" style="display:none" id="guild-select" class="guild-sel" onchange="loadSuggestions()">
+  <select  id="guild-select" class="guild-sel" onchange="loadSuggestions()">
     <option value="">🏠 Выберите сервер...</option>
   </select>
 </div>
@@ -70,7 +70,7 @@ var currentFilter = 'all';
 async function loadGuilds() {
   // Sabit сервер ID
   var gid = '{{ main_guild_id }}';
-  if (typeof selectedGuild !== 'undefеd') selectedGuild = gid;
+  if (typeof selectedGuild !== 'undefined') selectedGuild = gid;
   if (document.getElementById('guild-select')) document.getElementById('guild-select').value = gid;
   if (document.getElementById('guild-sel')) document.getElementById('guild-sel').value = gid;
   if (document.getElementById('guildSelect')) document.getElementById('guildSelect').value = gid;

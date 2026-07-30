@@ -3,14 +3,14 @@
 {% block page_title %}<i class="fas fa-microphone" style="color:#c8922a;animation:pulse 2s infinite;"></i> SES КАНАЛ СТАТИСТИКА{% endblock %}
 {% block content %}
 <style>
-  .vs-box{background:lеar-gradient(135deg,rgba(26,22,16,0.7),rgba(26,22,16,0.7));border:1px solid rgba(212,168,67,0.1);border-radius:16px;padding:25px;margin-bottom:20px;position:relative;overflow:hidden;}
-  .vs-box::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:2px;background:lеar-gradient(90deg,transparent,#c8922a,transparent);;}
+  .vs-box{background:linear-gradient(135deg,rgba(26,22,16,0.7),rgba(26,22,16,0.7));border:1px solid rgba(212,168,67,0.1);border-radius:16px;padding:25px;margin-bottom:20px;position:relative;overflow:hidden;}
+  .vs-box::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:2px;background:linear-gradient(90deg,transparent,#c8922a,transparent);;}
   @keyframes scan{0%{left:-100%}100%{left:100%}}
   .vs-title{color:#c8922a;font-size:13px;text-transform:uppercase;letter-spacing:2px;margin-bottom:18px;display:flex;align-items:center;gap:8px;padding-bottom:12px;border-bottom:1px solid rgba(212,168,67,0.07);}
   .stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:15px;margin-bottom:20px;}
   @media(max-width:768px){.stat-row{grid-template-columns:1fr;}}
-  .stat-box{background:lеar-gradient(135deg,rgba(26,22,16,0.7),rgba(26,22,16,0.7));border:1px solid rgba(212,168,67,0.1);border-radius:14px;padding:20px;text-align:center;transition:all 0.3s;position:relative;overflow:hidden;}
-  .stat-box::after{content:'';position:absolute;bottom:0;left:0;width:100%;height:3px;background:lеar-gradient(90deg,transparent,#c8922a,transparent);}
+  .stat-box{background:linear-gradient(135deg,rgba(26,22,16,0.7),rgba(26,22,16,0.7));border:1px solid rgba(212,168,67,0.1);border-radius:14px;padding:20px;text-align:center;transition:all 0.3s;position:relative;overflow:hidden;}
+  .stat-box::after{content:'';position:absolute;bottom:0;left:0;width:100%;height:3px;background:linear-gradient(90deg,transparent,#c8922a,transparent);}
   .stat-box:hover{transform:translateY(-5px);box-shadow:0 10px 30px rgba(212,168,67,0.07);}
   .stat-val{font-size:30px;font-weight:900;color:#c8922a;}
   .stat-lbl{font-size:11px;color:rgba(240,232,208,0.55);text-transform:uppercase;margin-top:6px;letter-spacing:1px;}
@@ -21,20 +21,20 @@
   .vc-name{color:#f0e8d0;font-size:14px;font-weight:700;}
   .vc-time{color:#c8922a;font-size:18px;font-weight:900;margin-left:auto;}
   .vc-bar{height:4px;background:rgba(212,168,67,0.08);border-radius:2px;margin-top:6px;overflow:hidden;}
-  .vc-bar-fill{height:100%;background:lеar-gradient(90deg,#c8922a,#c8922a);border-radius:2px;transition:width 1s ease;}
+  .vc-bar-fill{height:100%;background:linear-gradient(90deg,#c8922a,#c8922a);border-radius:2px;transition:width 1s ease;}
   .guild-select{width:100%;padding:12px;background:#100e08;border:2px solid #c8922a;border-radius:14px;color:#f0e8d0;margin-bottom:20px;font-size:14px;}
   .empty-state{text-align:center;padding:50px;color:#5a5040;}
   .empty-state i{font-size:40px;color:#c8922a;opacity:0.3;display:block;margin-bottom:12px;}
 </style>
 
-<select style="display:none" style="display:none" id="guild-select" class="guild-select" onchange="loadVoiceStats()">
+<select  id="guild-select" class="guild-select" onchange="loadVoiceStats()">
   <option value="">Выберите сервер...</option>
 </select>
 
 <div class="stat-row" id="stat-cards">
   <div class="stat-box"><div class="stat-val">-</div><div class="stat-lbl">Всего голос Длительность</div></div>
   <div class="stat-box"><div class="stat-val">-</div><div class="stat-lbl">Голосовая активность сегодня</div></div>
-  <div class="stat-box"><div class="stat-val">-</div><div class="stat-lbl">Ortalama Длительность</div></div>
+  <div class="stat-box"><div class="stat-val">-</div><div class="stat-lbl">Средняя длительность</div></div>
 </div>
 
 <div class="vs-box">
@@ -43,23 +43,26 @@
 </div>
 
 <script>
-var MAIN_GID = '1498837105915330562';
+var MAIN_GID = '{{ main_guild_id }}';
 
 async function loadVoiceStats(gid_param) {
-  var gid = gid_param || MAIN_GID;
+  var selector = document.getElementById('guild-select');
+  var gid = gid_param || (selector && selector.value) || MAIN_GID;
   if(!gid) return;
-  var r = await fetch('/api/guild/'+gid+'/voice-stats');
-  var data = await r.json();
+  try {
+    var r = await fetch('/api/guild/'+encodeURIComponent(gid)+'/voice-stats');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    var data = await r.json();
 
   document.getElementById('stat-cards').innerHTML =
     '<div class="stat-box"><div class="stat-val">'+(data.total_time||'0s')+'</div><div class="stat-lbl">Всего голос Длительность</div></div>'+
     '<div class="stat-box"><div class="stat-val">'+(data.today_users||0)+'</div><div class="stat-lbl">Голосовая активность сегодня</div></div>'+
-    '<div class="stat-box"><div class="stat-val">'+(data.avg_time||'0s')+'</div><div class="stat-lbl">Ortalama Длительность</div></div>';
+    '<div class="stat-box"><div class="stat-val">'+(data.avg_time||'0s')+'</div><div class="stat-lbl">Средняя длительность</div></div>';
 
   var lb = document.getElementById('vc-leaderboard');
   var users = data.leaderboard||[];
   if(!users.length) {
-    lb.innerHTML = '<div class="empty-state"><i class="fas fa-microphone-slash"></i><p>Данные yok. Bot ses канал takibi делает mu?</p></div>';
+    lb.innerHTML = '<div class="empty-state"><i class="fas fa-microphone-slash"></i><p>Нет данных. Bot ses канал takibi делает mu?</p></div>';
     return;
   }
   var medals = ['🥇','🥈','🥉'];
@@ -74,9 +77,28 @@ async function loadVoiceStats(gid_param) {
       '<div class="vc-time">'+u.time+'</div>'+
     '</div>';
   }).join('');
+  } catch (error) {
+    console.error('Не удалось загрузить голосовую статистику:', error);
+    document.getElementById('vc-leaderboard').innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>Не удалось загрузить статистику. Повторите попытку позже.</p></div>';
+  }
 }
 
-loadVoiceStats();
-setInterval(loadVoiceStats, 1000);
+async function initialiseGuildSelector() {
+  var selector = document.getElementById('guild-select');
+  if (!selector) return;
+  try {
+    var response = await fetch('/api/guilds');
+    var guilds = await response.json();
+    if (!Array.isArray(guilds)) return;
+    selector.innerHTML = '<option value="">Выберите сервер...</option>' + guilds.map(function(g) {
+      return '<option value="' + g.id + '">' + g.name + '</option>';
+    }).join('');
+    selector.value = MAIN_GID || (guilds[0] && guilds[0].id) || '';
+  } catch (error) { console.error('Не удалось загрузить список серверов:', error); }
+  loadVoiceStats();
+}
+
+initialiseGuildSelector();
+setInterval(loadVoiceStats, 30000);
 </script>
 {% endblock %}

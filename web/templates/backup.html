@@ -10,18 +10,18 @@
 .backup-row{background:rgba(0,0,0,0.3);border-radius:8px;padding:14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;}
 .backup-name{color:#f0e8d0;font-size:14px;font-weight:700;}
 .backup-meta{color:rgba(240,232,208,0.55);font-size:12px;margin-top:3px;}
-.save-btn{padding:12px 24px;background:lеar-gradient(135deg,var(--accent),var(--accent2));color:#f0e8d0;border:none;border-radius:8px;cursor:pointer;font-weight:700;}
-.restore-btn{padding:6px 14px;background:lеar-gradient(135deg,#c8922a,#c8922a);color:#f0e8d0;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700;}
+.save-btn{padding:12px 24px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#f0e8d0;border:none;border-radius:8px;cursor:pointer;font-weight:700;}
+.restore-btn{padding:6px 14px;background:linear-gradient(135deg,#c8922a,#c8922a);color:#f0e8d0;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700;}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
 .upload-zone{border:2px dashed rgba(200,160,80,0.4);border-radius:14px;padding:30px;text-align:center;cursor:pointer;transition:all .2s;}
 .upload-zone:hover{border-color:#c8922a;background:rgba(200,160,80,0.05);}
 .preview-box{background:rgba(0,0,0,0.4);border-radius:8px;padding:15px;margin-top:12px;display:none;}
-.stat-chip{display:inlе-block;padding:4px 10px;background:rgba(200,160,80,0.2);border:1px solid rgba(200,160,80,0.3);border-radius:20px;color:#c8922a;font-size:12px;margin:3px;}
+.stat-chip{display:inline-block;padding:4px 10px;background:rgba(200,160,80,0.2);border:1px solid rgba(200,160,80,0.3);border-radius:20px;color:#c8922a;font-size:12px;margin:3px;}
 @media(max-width:768px){.grid2{grid-template-columns:1fr;}}
 </style>
 
 <div style="margin-bottom:15px;">
-  <select style="display:none" style="display:none" id="guild-select" style="width:100%;padding:12px;background:#100e08;border:2px solid var(--accent);border-radius:8px;color:#f0e8d0;">
+  <select  id="guild-select" style="width:100%;padding:12px;background:#100e08;border:2px solid var(--accent);border-radius:8px;color:#f0e8d0;">
     <option value="">Выберите сервер...</option>
   </select>
 </div>
@@ -61,13 +61,13 @@
       <div class="upload-zone" onclick="document.getElementById('restore-fс').click()">
         <i class="fas fa-fс-upload" style="font-size:28px;color:#c8922a;margin-bottom:8px;display:block;"></i>
         <span style="color:rgba(240,232,208,0.55);font-size:13px;" id="upload-label">Dosya выбрать или peretasit otpustit</span>
-        <input type="fс" id="restore-fс" accept=".json" style="display:none" onchange="previewBackup(this)">
+        <input type="fс" id="restore-fс" accept=".json"  onchange="previewBackup(this)">
       </div>
 
       <div class="preview-box" id="preview-box">
         <div style="color:#c8922a;font-size:12px;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">📋 Резерв kopya Предпросмотр</div>
         <div id="preview-content"></div>
-        <button onclick="doRestore()" class="save-btn" style="width:100%;margin-top:12px;background:lеar-gradient(135deg,#c8922a,#c8922a);">
+        <button onclick="doRestore()" class="save-btn" style="width:100%;margin-top:12px;background:linear-gradient(135deg,#c8922a,#c8922a);">
           <i class="fas fa-magic"></i> На сервер Применить
         </button>
       </div>
@@ -76,7 +76,7 @@
 
     <div style="background:rgba(0,0,0,0.3);border-radius:14px;padding:15px;">
       <div style="color:#c8922a;font-size:12px;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">⚠️ Важно Информация</div>
-      <ul style="color:rgba(240,232,208,0.55);font-size:13px;lе-height:1.8;padding-left:18px;">
+      <ul style="color:rgba(240,232,208,0.55);font-size:13px;line-height:1.8;padding-left:18px;">
         <li>Текущий роли/каналы <b style="color:#f0e8d0;">удален</b>, только eksikler dobavlyaetsya</li>
         <li>Benzer isimde роль/канал varsa <b style="color:#f0e8d0;">propuskaetsya</b></li>
         <li>Bot celevoy на сервере <b style="color:#f0e8d0;">администратор</b> администратор sahip быть должен</li>
@@ -225,7 +225,7 @@ async function applyRestore(guildId, backupId, rawData) {
       status.innerHTML = '<span style="color:#e05555;">❌ ' + (d.error||'Ошибка') + '</span>';
     }
   } catch(e) {
-    status.innerHTML = '<span style="color:#e05555;">❌ Ссылка ошибки</span>';
+    status.innerHTML = '<span style="color:#e05555;">❌ Ошибка соединения</span>';
   }
 }
 

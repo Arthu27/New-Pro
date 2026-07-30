@@ -3200,54 +3200,75 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         leaderboard = []
         total_seconds = 0
 
-        # voice_stats_<guild_id>.json dosyasını oku
+        # Read persisted voice statistics.  This endpoint must always return JSON:
+        # a malformed/old statistics file should not turn into an HTML 500 response.
         vs_file = f'data/voice_stats_{guild_id}.json'
+        data = {}
         if os.path.exists(vs_file):
-            with open(vs_file, 'r', encoding='utf-8') as fp:
-                data = json.load(fp)
+            try:
+                with open(vs_file, 'r', encoding='utf-8') as fp:
+                    data = json.load(fp)
+            except (OSError, json.JSONDecodeError):
+                data = {}
 
-            users_dict = data.get('users', data) if isinstance(data, dict) else {}
-            today_data = data.get('today', {}) if isinstance(data, dict) else {}
+        users_dict = data.get('users', data) if isinstance(data, dict) else {}
+        today_data = data.get('today', {}) if isinstance(data, dict) else {}
+        if not isinstance(users_dict, dict):
+            users_dict = {}
 
-            for uid, entry in users_dict.items():
-                if not isinstance(entry, dict):
-                    continue
-                secs = entry.get('total_seconds', entry.get('seconds', 0))
-                if not secs:
-                    # Старый format: minutes
-                    secs = entry.get('minutes', 0) * 60
-                total_seconds += secs
+        for uid, entry in users_dict.items():
+            if not isinstance(entry, dict):
+                continue
+            raw_seconds = entry.get('total_seconds', entry.get('seconds', 0))
+            if not raw_seconds:
+                # Legacy files store minutes instead of seconds.
+                raw_seconds = entry.get('minutes', 0)
+                try:
+                    raw_seconds = float(raw_seconds) * 60
+                except (TypeError, ValueError):
+                    raw_seconds = 0
+            try:
+                secs = max(0, int(float(raw_seconds)))
+            except (TypeError, ValueError):
+                secs = 0
+            total_seconds += secs
 
-                # Isim ve avatar al
-                name = entry.get('name', uid)
-                avatar = entry.get('avatar', 'https://cdn.discordapp.com/embed/avatars/0.png')
-                if bot:
-                    for g in bot.guilds:
-                        try:
-                            m = g.get_member(int(uid))
-                            if m:
-                                name = m.display_name
-                                avatar = str(m.display_avatar.url)
-                                break
-                        except Exception:
-                            pass
+            # Resolve the currently cached Discord profile where possible.
+            name = entry.get('name', uid)
+            avatar = entry.get('avatar', 'https://cdn.discordapp.com/embed/avatars/0.png')
+            # Guild avatar URLs expire when a member changes their guild profile.
+            # The canonical Discord CDN path is stable for a given avatar hash.
+            if isinstance(avatar, str) and '/guilds/' in avatar and '/users/' in avatar:
+                import re
+                match = re.search(r'/users/(\d+)/avatars/([^/?]+)', avatar)
+                if match:
+                    avatar = f'https://cdn.discordapp.com/avatars/{match.group(1)}/{match.group(2)}?size=1024'
+            if bot:
+                for g in bot.guilds:
+                    try:
+                        m = g.get_member(int(uid))
+                        if m:
+                            name = m.display_name
+                            avatar = str(m.display_avatar.url)
+                            break
+                    except Exception:
+                        pass
 
-                h, rem = divmod(int(secs), 3600)
-                m_val, s_val = divmod(rem, 60)
-                if h > 0:
-                    time_str = f'{h}s {m_val}dk'
-                elif m_val > 0:
-                    time_str = f'{m_val}dk {s_val}sn'
-                else:
-                    time_str = f'{s_val}sn'
+            h, rem = divmod(int(secs), 3600)
+            m_val, s_val = divmod(rem, 60)
+            if h > 0:
+                time_str = f'{h}s {m_val}dk'
+            elif m_val > 0:
+                time_str = f'{m_val}dk {s_val}sn'
+            else:
+                time_str = f'{s_val}sn'
 
-                leaderboard.append({
-                    'name': name,
-                    'avatar': avatar,
-                    'seconds': secs,
-                    'time': time_str
-                })
-
+            leaderboard.append({
+                'name': name,
+                'avatar': avatar,
+                'seconds': secs,
+                'time': time_str
+            })
         leaderboard.sort(key=lambda x: x['seconds'], reverse=True)
 
         # Всего длительность formatla

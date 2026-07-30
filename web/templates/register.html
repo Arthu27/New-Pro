@@ -14,7 +14,7 @@ body::before{content:'';position:absolute;top:0;left:0;width:100%;height:100%;
              radial-gradient(circle at 80% 80%,rgba(200,146,42,0.1) 0%,transparent 50%);
   animation:bgPulse 4s ease-in-out infinite;}
 @keyframes bgPulse{0%,100%{opacity:0.5;}50%{opacity:1;}}
-.box{background:#1a1610;padding:40px;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,0.5);width:440px;border:1px solid rgba(212,168,67,0.15);position:relative;z-еx:10;animation:slideIn 0.8s ease-out;}
+.box{background:#1a1610;padding:40px;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,0.5);width:440px;border:1px solid rgba(212,168,67,0.15);position:relative;z-index:10;animation:slideIn 0.8s ease-out;}
 @keyframes slideIn{from{opacity:0;transform:translateY(-50px);}to{opacity:1;transform:translateY(0);}}
 .logo{text-align:center;margin-bottom:10px;}
 .logo i{font-size:50px;color:#c8922a;text-shadow:0 0 30px rgba(200,146,42,0.5);}
@@ -28,7 +28,7 @@ label{display:block;margin-bottom:6px;color:#c8922a;font-weight:700;text-transfo
 .input-wrap .eye:hover{color:#c8922a;}
 input{width:100%;padding:13px 42px 13px 42px;border:1px solid rgba(212,168,67,0.15);border-radius:10px;
   font-size:14px;transition:all 0.3s;background:rgba(255,255,255,0.04);color:#f0e8d0;font-family:Inter,sans-serif;font-weight:500;}
-input:focus{outlе:none;border-color:rgba(212,168,67,0.45);box-shadow:0 0 20px rgba(200,146,42,0.15);background:rgba(255,255,255,0.06);}
+input:focus{outline:none;border-color:rgba(212,168,67,0.45);box-shadow:0 0 20px rgba(200,146,42,0.15);background:rgba(255,255,255,0.06);}
 input::placeholder{color:#3a3020;}
 .hint{font-size:11px;color:#5a5040;margin-top:4px;}
 .btn{width:100%;padding:14px;background:#c8922a;color:#100e08;
@@ -41,7 +41,7 @@ input::placeholder{color:#3a3020;}
   border-radius:10px;margin-bottom:20px;text-align:center;font-weight:600;font-size:13px;}
 .footer{text-align:center;margin-top:20px;color:#5a5040;font-size:12px;}
 .footer a{color:#c8922a;text-decoration:none;}
-.footer a:hover{text-decoration:underlе;}
+.footer a:hover{text-decoration:underline;}
 .code-input{text-align:center;font-size:28px;letter-spacing:12px;font-family:Inter,sans-serif;padding:15px 20px;}
 </style>
 </head>
