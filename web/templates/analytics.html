@@ -1,122 +1,384 @@
 {% extends "base.html" %}
-{% block title %}Аналитика - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-chart-line" ></i> Аналитика сервера{% endblock %}
+{% block title %}Аналитика — Aether{% endblock %}
+{% block page_title %}<i class="fas fa-chart-line" style="color:var(--ac);"></i> Аналитика сервера{% endblock %}
 {% block content %}
 
-<select id="guild-select" class="guild-select" onchange="loadAnalytics()">
-  <option value="">Выберите сервер...</option>
-</select>
+<style>
+.analytics-wrap { display: flex; flex-direction: column; gap: 16px; }
+.analytics-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 900px) { .analytics-grid-2 { grid-template-columns: 1fr; } }
 
-<div class="top-grid">
-  <div class="section">
-    <div class="chart-title"><i class="fas fa-trophy"></i> Самые активные участники</div>
-    <div id="top-members"><div class="empty-state">Загрузка...</div></div>
+.guild-select {
+  width: 100%;
+  padding: 12px 16px;
+  background: var(--surface) !important;
+  border: 1px solid var(--line) !important;
+  border-radius: var(--r-md) !important;
+  color: var(--text) !important;
+  font-size: var(--fs-md) !important;
+  font-weight: 500 !important;
+  cursor: pointer;
+  transition: all 0.18s var(--ease);
+}
+.guild-select:focus {
+  outline: none !important;
+  border-color: var(--ac) !important;
+  box-shadow: 0 0 0 3px rgba(224, 176, 74, 0.12) !important;
+}
+
+.leaderboard { display: flex; flex-direction: column; gap: 8px; }
+.leader-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: rgba(0, 0, 0, 0.20);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  transition: all 0.18s var(--ease);
+  animation: fadeUp 0.3s var(--ease-out) both;
+}
+.leader-row:hover { background: var(--ac-soft); border-color: var(--ac-line); transform: translateX(3px); }
+
+.leader-rank {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--fs-xs) !important;
+  font-weight: 800 !important;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-3);
+  font-family: 'JetBrains Mono', monospace;
+}
+.leader-rank.gold   { background: linear-gradient(135deg, #fbbf24, #d97706); color: #1a0f00; box-shadow: 0 0 12px rgba(251, 191, 36, 0.4); }
+.leader-rank.silver { background: linear-gradient(135deg, #d1d5db, #6b7280); color: #0a0907; }
+.leader-rank.bronze { background: linear-gradient(135deg, #b45309, #78350f); color: #fef3c7; }
+
+.leader-avatar {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  border: 2px solid var(--ac);
+  object-fit: cover;
+  flex-shrink: 0;
+  background: var(--surface-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: var(--ac);
+  font-weight: 700;
+  box-shadow: 0 0 0 2px rgba(0,0,0,0.3);
+}
+.leader-avatar-fallback {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--ac), var(--ac-3));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--bg);
+  font-size: 13px;
+  font-weight: 800;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 2px rgba(0,0,0,0.3);
+}
+
+.leader-info { flex: 1; min-width: 0; }
+.leader-name {
+  font-size: var(--fs-md) !important;
+  font-weight: 600 !important;
+  color: var(--text) !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  display: block;
+  line-height: 1.3 !important;
+}
+.leader-sub {
+  font-size: 11px !important;
+  color: var(--text-3) !important;
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+}
+
+.leader-count {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: var(--fs-md) !important;
+  font-weight: 700 !important;
+  color: var(--ac) !important;
+  background: var(--ac-soft);
+  padding: 4px 10px;
+  border-radius: 99px;
+  border: 1px solid var(--ac-line);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.bar-track {
+  height: 6px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 99px;
+  overflow: hidden;
+  margin-top: 6px;
+  position: relative;
+}
+.bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--ac), var(--ac-2));
+  border-radius: 99px;
+  transition: width 0.6s var(--ease-out);
+  position: relative;
+  overflow: hidden;
+}
+.bar-fill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 2.4s ease infinite;
+}
+</style>
+
+<div class="analytics-wrap">
+  <select id="guild-select" class="guild-select" onchange="window.__analytics && window.__analytics.load()">
+    <option value="">Выберите сервер...</option>
+  </select>
+
+  <div class="analytics-grid-2">
+    <div class="section">
+      <h2><i class="fas fa-trophy"></i> Самые активные участники</h2>
+      <div id="top-members"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Загрузка...</p></div></div>
+    </div>
+    <div class="section">
+      <h2><i class="fas fa-hashtag"></i> Самые активные каналы</h2>
+      <div id="top-channels"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Загрузка...</p></div></div>
+    </div>
   </div>
+
   <div class="section">
-    <div class="chart-title"><i class="fas fa-hashtag"></i> Самые активные каналы</div>
-    <div id="top-channels"><div class="empty-state">Загрузка...</div></div>
+    <h2><i class="fas fa-chart-bar"></i> Сообщений в день (последние 7 дней)</h2>
+    <div style="height: 240px; position: relative;">
+      <canvas id="msgChart"></canvas>
+    </div>
   </div>
-</div>
 
-<div class="section">
-  <div class="chart-title"><i class="fas fa-chart-bar"></i> Сообщений в день (последние 7 дней)</div>
-  <canvas id="msgChart" height="80"></canvas>
-</div>
-
-<div class="section">
-  <div class="chart-title"><i class="fas fa-user-plus"></i> Рост участников</div>
-  <canvas id="memberChart" height="80"></canvas>
+  <div class="section">
+    <h2><i class="fas fa-user-plus"></i> Рост участников</h2>
+    <div style="height: 240px; position: relative;">
+      <canvas id="memberChart"></canvas>
+    </div>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-var MAIN_GID = '{{ main_guild_id }}';
-var msgChart, memberChart;
+(function () {
+  'use strict';
+  function $id(id) { return document.getElementById(id); }
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function num(v) { return Number(v || 0).toLocaleString('ru-RU'); }
+  function fmtNum(n) { return n.toLocaleString('ru-RU'); }
 
-async function loadAnalytics(gid_param) {
-  var gid = gid_param || MAIN_GID;
-  if(!gid) return;
-  var r = await fetch('/api/guild/'+gid+'/analytics');
-  var d = await r.json();
+  var MAIN_GID = '{{ main_guild_id }}';
+  var msgChart, memberChart;
+  var _loaded = false;
 
-  var topMembers = d.top_members||[];
-  var maxM = topMembers[0] ? topMembers[0].messages : 1;
-  document.getElementById('top-members').innerHTML = topMembers.length ?
-    topMembers.map(function(m,i){
-      var pct = Math.round((m.messages/maxM)*100);
-      return '<div class="bar-container">'+
-        '<div class="bar-label"><span class="top-name"><span class="top-rank">#'+(i+1)+'</span> '+m.name+'</span><span class="top-val">'+m.messages.toLocaleString()+' сообщ.</span></div>'+
-        '<div class="bar-track"><div class="bar-fill" style="width: '+pct+'%"></div></div>'+
-      '</div>';
-    }).join('') :
-    '<div class="empty-state">Нет данных</div>';
+  function getInitial(name) {
+    name = String(name || '?').trim();
+    return name.charAt(0).toUpperCase() || '?';
+  }
 
-  var topChannels = d.top_channels||[];
-  var maxC = topChannels[0] ? topChannels[0].messages : 1;
-  document.getElementById('top-channels').innerHTML = topChannels.length ?
-    topChannels.map(function(c,i){
-      var pct = Math.round((c.messages/maxC)*100);
-      return '<div class="bar-container">'+
-        '<div class="bar-label"><span class="top-name"><span class="top-rank">#'+(i+1)+'</span> #'+c.name+'</span><span class="top-val">'+c.messages.toLocaleString()+' сообщ.</span></div>'+
-        '<div class="bar-track"><div class="bar-fill" style="width: '+pct+'"></div></div>'+
-      '</div>';
-    }).join('') :
-    '<div class="empty-state">Нет данных</div>';
-
-  if(msgChart) msgChart.destroy();
-  if(memberChart) memberChart.destroy();
-
-  Chart.defaults.color = '#b6a47b';
-  Chart.defaults.font.family = 'Inter';
-
-  msgChart = new Chart(document.getElementById('msgChart'), {
-    type:'bar',
-    data:{labels:d.daily_labels||[],datasets:[{
-      label:'Сообщения',
-      data:d.daily_messages||[],
-      backgroundColor:'rgba(212,168,67,0.55)',
-      borderColor:'#d4a843',
-      borderWidth:2,
-      borderRadius:8,
-      hoverBackgroundColor:'rgba(240,199,94,0.7)'
-    }]},
-    options:{
-      responsive:true,
-      plugins:{legend:{labels:{color:'#b6a47b', font:{size:12, weight:'600'}}}},
-      scales:{
-        y:{ticks:{color:'#7a6a48', font:{size:11}}, grid:{color:'rgba(212,168,67,0.06)'}, beginAtZero:true},
-        x:{ticks:{color:'#7a6a48', font:{size:11}}, grid:{color:'rgba(212,168,67,0.06)'}}
-      }
+  function renderMembers(list) {
+    var box = $id('top-members');
+    if (!list.length) {
+      box.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><p>Нет данных</p></div>';
+      return;
     }
-  });
+    var maxM = list[0].messages || 1;
+    var ranks = ['gold', 'silver', 'bronze'];
+    box.innerHTML = '<div class="leaderboard">' + list.slice(0, 10).map(function (m, i) {
+      var rank = ranks[i] || '';
+      var name = String(m.name || m.username || m.id || '?');
+      var avatarUrl = m.avatar || '';
+      var avatarHtml = avatarUrl
+        ? '<img class="leader-avatar" src="' + esc(avatarUrl) + '" onerror="this.outerHTML=\'<div class=&quot;leader-avatar-fallback&quot;>' + esc(getInitial(name)) + '</div>\'" />'
+        : '<div class="leader-avatar-fallback">' + esc(getInitial(name)) + '</div>';
+      return '<div class="leader-row" style="animation-delay:' + (i * 0.04) + 's;">' +
+        '<div class="leader-rank ' + rank + '">#' + (i + 1) + '</div>' +
+        avatarHtml +
+        '<div class="leader-info">' +
+          '<div class="leader-name">' + esc(name) + '</div>' +
+          '<div class="leader-sub"><i class="fas fa-comment"></i> сообщений</div>' +
+        '</div>' +
+        '<div class="leader-count">' + fmtNum(m.messages || 0) + '</div>' +
+      '</div>';
+    }).join('') + '</div>';
+  }
 
-  memberChart = new Chart(document.getElementById('memberChart'), {
-    type:'line',
-    data:{labels:d.member_labels||[],datasets:[{
-      label:'Участники',
-      data:d.member_counts||[],
-      borderColor:'#34d399',
-      tension:0.4,
-      fill:true,
-      backgroundColor:'rgba(52,211,153,0.10)',
-      pointBackgroundColor:'#34d399',
-      pointBorderColor:'#0a0907',
-      pointBorderWidth:2,
-      pointRadius:5,
-      pointHoverRadius:7,
-      borderWidth:2.5
-    }]},
-    options:{
-      responsive:true,
-      plugins:{legend:{labels:{color:'#b6a47b', font:{size:12, weight:'600'}}}},
-      scales:{
-        y:{ticks:{color:'#7a6a48', font:{size:11}}, grid:{color:'rgba(212,168,67,0.06)'}},
-        x:{ticks:{color:'#7a6a48', font:{size:11}}, grid:{color:'rgba(212,168,67,0.06)'}}
-      }
+  function renderChannels(list) {
+    var box = $id('top-channels');
+    if (!list.length) {
+      box.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><p>Нет данных</p></div>';
+      return;
     }
-  });
-}
+    var maxC = list[0].messages || 1;
+    var ranks = ['gold', 'silver', 'bronze'];
+    box.innerHTML = '<div class="leaderboard">' + list.slice(0, 10).map(function (c, i) {
+      var rank = ranks[i] || '';
+      var name = String(c.name || c.id || '?');
+      var pct = Math.round(((c.messages || 0) / maxC) * 100);
+      return '<div class="leader-row" style="animation-delay:' + (i * 0.04) + 's;">' +
+        '<div class="leader-rank ' + rank + '">#' + (i + 1) + '</div>' +
+        '<div class="leader-avatar-fallback" style="background: linear-gradient(135deg, var(--cyan), var(--violet));">#</div>' +
+        '<div class="leader-info">' +
+          '<div class="leader-name">#' + esc(name) + '</div>' +
+          '<div class="bar-track"><div class="bar-fill" style="width: ' + pct + '%;"></div></div>' +
+        '</div>' +
+        '<div class="leader-count">' + fmtNum(c.messages || 0) + '</div>' +
+      '</div>';
+    }).join('') + '</div>';
+  }
 
-window.addEventListener('load', function(){ loadAnalytics(''); });
+  function renderCharts(d) {
+    if (typeof Chart === 'undefined') return;
+    Chart.defaults.color = '#c4b48c';
+    Chart.defaults.font.family = 'Inter';
+    Chart.defaults.font.size = 12;
+    Chart.defaults.borderColor = 'rgba(224, 176, 74, 0.08)';
+
+    var msgLabels = d.daily_labels || [];
+    var msgData = d.daily_messages || [];
+
+    if (msgChart) { msgChart.destroy(); msgChart = null; }
+    var msgCanvas = $id('msgChart');
+    if (msgCanvas) {
+      msgChart = new Chart(msgCanvas, {
+        type: 'bar',
+        data: {
+          labels: msgLabels,
+          datasets: [{
+            label: 'Сообщения',
+            data: msgData,
+            backgroundColor: 'rgba(224, 176, 74, 0.55)',
+            hoverBackgroundColor: 'rgba(244, 204, 106, 0.75)',
+            borderColor: '#e0b04a',
+            borderWidth: 2,
+            borderRadius: 8,
+            borderSkipped: false
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: 'rgba(20, 17, 12, 0.95)',
+              titleColor: '#f0e6d0',
+              bodyColor: '#c4b48c',
+              borderColor: '#e0b04a',
+              borderWidth: 1,
+              padding: 10,
+              cornerRadius: 8,
+              titleFont: { family: 'Inter', size: 12, weight: '600' },
+              bodyFont: { family: 'Inter', size: 12 }
+            }
+          },
+          scales: {
+            y: {
+              ticks: { color: '#8a7d5f', font: { size: 11, family: 'Inter' } },
+              grid: { color: 'rgba(224, 176, 74, 0.06)' },
+              beginAtZero: true
+            },
+            x: {
+              ticks: { color: '#8a7d5f', font: { size: 11, family: 'Inter' } },
+              grid: { display: false }
+            }
+          }
+        }
+      });
+    }
+
+    if (memberChart) { memberChart.destroy(); memberChart = null; }
+    var memCanvas = $id('memberChart');
+    if (memCanvas) {
+      memberChart = new Chart(memCanvas, {
+        type: 'line',
+        data: {
+          labels: d.member_labels || [],
+          datasets: [{
+            label: 'Участники',
+            data: d.member_counts || [],
+            borderColor: '#4ade80',
+            backgroundColor: 'rgba(74, 222, 128, 0.12)',
+            tension: 0.4,
+            fill: true,
+            pointBackgroundColor: '#4ade80',
+            pointBorderColor: '#0a0907',
+            pointBorderWidth: 2,
+            pointRadius: 5,
+            pointHoverRadius: 7,
+            borderWidth: 2.5
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: {
+              ticks: { color: '#8a7d5f', font: { size: 11, family: 'Inter' } },
+              grid: { color: 'rgba(224, 176, 74, 0.06)' }
+            },
+            x: {
+              ticks: { color: '#8a7d5f', font: { size: 11, family: 'Inter' } },
+              grid: { display: false }
+            }
+          }
+        }
+      });
+    }
+  }
+
+  async function load() {
+    var sel = $id('guild-select');
+    var gid = (sel && sel.value) || MAIN_GID;
+    if (!gid) return;
+    try {
+      var res = await fetch('/api/guild/' + gid + '/analytics');
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      var d = await res.json();
+      renderMembers(d.top_members || []);
+      renderChannels(d.top_channels || []);
+      renderCharts(d);
+      _loaded = true;
+    } catch (e) {
+      var mb = $id('top-members'); if (mb) mb.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle" style="color:var(--err);"></i><p style="color:var(--err);">Не удалось загрузить</p></div>';
+      var cb = $id('top-channels'); if (cb) cb.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle" style="color:var(--err);"></i><p style="color:var(--err);">Не удалось загрузить</p></div>';
+    }
+  }
+
+  // Auto-load on ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', load);
+  } else {
+    load();
+  }
+
+  // Expose for guild select
+  window.__analytics = { load: load };
+})();
 </script>
 {% endblock %}

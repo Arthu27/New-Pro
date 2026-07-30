@@ -2031,3 +2031,25 @@ img[style*="border-radius:50%"], img[style*="border-radius: 50%"] {
 }
 
 .main-content { padding-bottom: 80px !important; }
+
+/* ============================================================
+   SIDEBAR SEARCH NO-RESULTS
+   ============================================================ */
+.nav-no-results {
+  text-align: center;
+  padding: 32px 20px;
+  color: var(--text-3);
+  font-size: var(--fs-sm) !important;
+}
+.nav-no-results i {
+  font-size: 24px;
+  color: var(--ac);
+  opacity: 0.4;
+  display: block;
+  margin-bottom: 10px;
+}
+.nav-no-results div {
+  font-size: var(--fs-sm) !important;
+  font-weight: 500;
+  color: var(--text-3) !important;
+}

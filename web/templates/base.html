@@ -260,10 +260,10 @@
   var _etagStore = {};
   window.fetchCached = function (url, opts) {
     opts = opts || {};
-    var init = Object.assign({}, opts);
-    init.headers = Object.assign({}, opts.headers || {});
-    if (_etagStore[url]) init.headers['If-None-Match'] = _etagStore[url];
-    return fetch(url, init).then(function (r) {
+    var _init = Object.assign({}, opts);
+    _init.headers = Object.assign({}, opts.headers || {});
+    if (_etagStore[url]) _init.headers['If-None-Match'] = _etagStore[url];
+    return fetch(url, _init).then(function (r) {
       var et = r.headers.get('ETag');
       if (et) _etagStore[url] = et;
       return r;
@@ -338,26 +338,51 @@ document.addEventListener('DOMContentLoaded', function () {
   // Search filter in sidebar
   var search = document.getElementById('sidebarSearch');
   if (search) {
-    search.addEventListener('input', function () {
+    function applySidebarFilter() {
       var q = search.value.toLowerCase().trim();
-      document.querySelectorAll('.nav-link').forEach(function (a) {
-        var txt = a.textContent.toLowerCase();
-        var match = !q || txt.indexOf(q) !== -1;
-        a.style.display = match ? '' : 'none';
-      });
-      // Auto-expand groups with matches
-      document.querySelectorAll('.nav-group').forEach(function (g) {
-        var hasVisible = !!g.querySelector('.nav-link[], .nav-link:not([style])');
-        if (q && hasVisible) {
+      var groups = document.querySelectorAll('.nav-group');
+      var totalVisible = 0;
+      groups.forEach(function (g) {
+        var items = g.querySelectorAll('.nav-link');
+        var visibleInGroup = 0;
+        items.forEach(function (a) {
+          var txt = a.textContent.toLowerCase();
+          var match = !q || txt.indexOf(q) !== -1;
+          a.style.display = match ? '' : 'none';
+          if (match) visibleInGroup++;
+        });
+        if (q && visibleInGroup > 0) {
           g.classList.remove('collapsed');
-          var items = g.querySelector('.nav-group-items');
+          var itemsContainer = g.querySelector('.nav-group-items');
           var caret = g.querySelector('.nav-caret');
-          if (items) items.style.display = '';
+          if (itemsContainer) itemsContainer.style.display = '';
           if (caret) caret.style.transform = '';
+          g.style.display = '';
+          totalVisible += visibleInGroup;
+        } else if (q) {
+          g.style.display = 'none';
+        } else {
+          g.style.display = '';
         }
       });
+      var noResults = document.getElementById('navNoResults');
+      if (q && totalVisible === 0) {
+        if (!noResults) {
+          noResults = document.createElement('div');
+          noResults.id = 'navNoResults';
+          noResults.className = 'nav-no-results';
+          noResults.innerHTML = '<i class="fas fa-search"></i><div>Ничего не найдено</div>';
+          var nav = document.getElementById('sidebarNav');
+          if (nav) nav.appendChild(noResults);
+        }
+      } else if (noResults) {
+        noResults.remove();
+      }
+    }
+    search.addEventListener('input', applySidebarFilter);
+    search.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); applySidebarFilter(); }
     });
-    // Keyboard shortcut: Cmd/Ctrl+K
     document.addEventListener('keydown', function (e) {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
@@ -366,7 +391,7 @@ document.addEventListener('DOMContentLoaded', function () {
       }
       if (e.key === 'Escape' && document.activeElement === search) {
         search.value = '';
-        search.dispatchEvent(new Event('input'));
+        applySidebarFilter();
         search.blur();
       }
     });
