@@ -12,7 +12,7 @@
 .ba-title{font-size:12px;font-weight:700;color:rgba(240,232,208,0.7);text-transform:uppercase;letter-spacing:0.05em;flex:1;}
 
 .row{display:flex;gap:8px;align-items:center;margin-bottom:8px;}
-.row label{flex:0 0 100px;font-size:10px;color:#5a5040;text-transform:uppercase;letter-spacing:0.05em;}
+.row label{flex:0 0 110px;font-size:10px;color:#5a5040;text-transform:uppercase;letter-spacing:0.05em;}
 .row input,.row select,.row textarea{flex:1;padding:6px 10px;background:rgba(255,255,255,0.04);border:1px solid rgba(212,168,67,0.16);border-radius:6px;color:#f0e8d0;font-size:12px;}
 .row textarea{font-family:Inter,sans-serif;resize:vertical;min-height:60px;}
 
@@ -34,51 +34,51 @@
 </style>
 
 <div class="ba-grid">
-  <!-- Toplu DM (mesaj gönder) -->
+  <!-- Рассылка сообщений -->
   <div class="ba-card">
     <div class="ba-head">
       <div class="ba-icon"><i class="fas fa-bullhorn"></i></div>
-      <div class="ba-title">Toplu Mesaj (DM)</div>
+      <div class="ba-title">Рассылка сообщений</div>
     </div>
-    <div class="warning-box"><i class="fas fa-info-circle"></i> Seçili role sahip tüm üyelere DM gönderilir.</div>
-    <div class="row"><label>Sunucu</label><select id="dm-guild" data-type="guilds"></select></div>
-    <div class="row"><label>Rol</label><select id="dm-role" data-type="roles" data-source="dm-guild"></select></div>
-    <div class="row"><label>Mesaj</label><textarea id="dm-msg" rows="3" placeholder="Gönderilecek mesaj..."></textarea></div>
-    <button class="btn btn-primary" id="btn-dm" type="button"><i class="fas fa-paper-plane"></i> Toplu Gönder</button>
+    <div class="warning-box"><i class="fas fa-info-circle"></i> Сообщение будет отправлено всем участникам с выбранной ролью в личные сообщения.</div>
+    <div class="row"><label>Сервер</label><select id="dm-guild" class="ba-guild"></select></div>
+    <div class="row"><label>Роль</label><select id="dm-role" class="ba-roles" data-from="dm-guild"></select></div>
+    <div class="row"><label>Сообщение</label><textarea id="dm-msg" rows="3" placeholder="Текст сообщения..."></textarea></div>
+    <button class="btn btn-primary" id="btn-dm" type="button"><i class="fas fa-paper-plane"></i> Отправить всем</button>
     <div class="result" id="dm-result"></div>
   </div>
 
-  <!-- Toplu Rol -->
+  <!-- Массовое назначение ролей -->
   <div class="ba-card">
     <div class="ba-head">
       <div class="ba-icon"><i class="fas fa-user-tag"></i></div>
-      <div class="ba-title">Toplu Rol İşlemi</div>
+      <div class="ba-title">Массовые роли</div>
     </div>
-    <div class="warning-box"><i class="fas fa-info-circle"></i> Hedef roldeki herkese aksiyon rolü eklenir/kaldırılır.</div>
-    <div class="row"><label>Sunucu</label><select id="role-guild" data-type="guilds"></select></div>
-    <div class="row"><label>Hedef rol</label><select id="role-target" data-type="roles" data-source="role-guild"></select></div>
-    <div class="row"><label>Aksiyon rol</label><select id="role-action" data-type="roles" data-source="role-guild"></select></div>
-    <div class="row"><label>İşlem</label>
-      <select id="role-op"><option value="add">Ekle</option><option value="remove">Kaldır</option></select>
+    <div class="warning-box"><i class="fas fa-info-circle"></i> Действие будет применено ко всем участникам с целевой ролью.</div>
+    <div class="row"><label>Сервер</label><select id="role-guild" class="ba-guild"></select></div>
+    <div class="row"><label>Целевая роль</label><select id="role-target" class="ba-roles" data-from="role-guild"></select></div>
+    <div class="row"><label>Назначаемая роль</label><select id="role-action-sel" class="ba-roles" data-from="role-guild"></select></div>
+    <div class="row"><label>Действие</label>
+      <select id="role-op"><option value="add">Добавить</option><option value="remove">Убрать</option></select>
     </div>
-    <button class="btn btn-warn" id="btn-role" type="button"><i class="fas fa-user-plus"></i> Uygula</button>
+    <button class="btn btn-warn" id="btn-role" type="button"><i class="fas fa-user-plus"></i> Применить</button>
     <div class="result" id="role-result"></div>
   </div>
 
-  <!-- Toplu Mute/Kick/Ban -->
+  <!-- Массовое наказание -->
   <div class="ba-card">
     <div class="ba-head">
       <div class="ba-icon" style="background:rgba(224,85,85,0.15);color:var(--red);"><i class="fas fa-gavel"></i></div>
-      <div class="ba-title">Toplu Ceza</div>
+      <div class="ba-title">Массовое наказание</div>
     </div>
-    <div class="warning-box danger"><i class="fas fa-exclamation-triangle"></i> Geri alınamaz işlem!</div>
-    <div class="row"><label>Sunucu</label><select id="punish-guild" data-type="guilds"></select></div>
-    <div class="row"><label>Hedef rol</label><select id="punish-role" data-type="roles" data-source="punish-guild"></select></div>
-    <div class="row"><label>Süre (dk)</label><input type="number" id="punish-duration" value="60" min="1"></div>
-    <div class="row"><label>İşlem</label>
-      <select id="punish-op"><option value="mute">Mute</option><option value="kick">Kick</option><option value="ban">Ban</option></select>
+    <div class="warning-box danger"><i class="fas fa-exclamation-triangle"></i> Действие необратимо!</div>
+    <div class="row"><label>Сервер</label><select id="punish-guild" class="ba-guild"></select></div>
+    <div class="row"><label>Целевая роль</label><select id="punish-role" class="ba-roles" data-from="punish-guild"></select></div>
+    <div class="row"><label>Длительность (мин)</label><input type="number" id="punish-duration" value="60" min="1"></div>
+    <div class="row"><label>Действие</label>
+      <select id="punish-op"><option value="mute">Mute (заглушить)</option><option value="kick">Kick (исключить)</option><option value="ban">Ban (забанить)</option></select>
     </div>
-    <button class="btn btn-danger" id="btn-punish" type="button"><i class="fas fa-gavel"></i> Uygula</button>
+    <button class="btn btn-danger" id="btn-punish" type="button"><i class="fas fa-gavel"></i> Применить</button>
     <div class="result" id="punish-result"></div>
   </div>
 </div>
@@ -95,38 +95,41 @@
     el.textContent = msg;
   }
 
-  // Guild listesi doldur
-  async function loadGuilds() {
-    try {
-      var guilds = await fetch('/api/guilds').then(function (r) { return r.json(); });
-      document.querySelectorAll('[data-type="guilds"]').forEach(function (sel) {
+  // Заполнить guild dropdown'lari
+  function loadGuilds() {
+    fetch('/api/guilds').then(function (r) { return r.json(); }).then(function (guilds) {
+      if (!Array.isArray(guilds)) return;
+      document.querySelectorAll('.ba-guild').forEach(function (sel) {
+        sel.innerHTML = '<option value="">Выберите сервер...</option>';
         guilds.forEach(function (g) {
           var opt = document.createElement('option');
           opt.value = g.id;
           opt.textContent = g.name;
           sel.appendChild(opt);
         });
-        sel.addEventListener('change', function () { loadRoles(sel); });
       });
-    } catch (e) { /* sessiz */ }
+    }).catch(function () { /* sessiz */ });
   }
 
-  // Rol listesi doldur
-  async function loadRoles(guildSelect) {
-    var src = guildSelect.getAttribute('data-source');
-    var targetSel = src ? document.getElementById(src === guildSelect.id ? null : src) : null;
-    // Hedef sel'leri doldur
-    document.querySelectorAll('[data-type="roles"]').forEach(function (sel) {
-      var sourceId = sel.getAttribute('data-source');
-      if (sourceId === guildSelect.id.replace('-guild', '-guild')) {
-        // ayni kart icindeki rol sel'leri
-        var gid = guildSelect.value;
-        if (!gid) return;
-        sel.innerHTML = '<option value="">Yükleniyor...</option>';
+  // Заполнить role dropdown'lari (karta ozel guild'e gore)
+  function loadRoles(guildSelect) {
+    var gid = guildSelect.value;
+    // Ayni karttaki tum .ba-roles sel'leri (data-from=guildSelect.id olanlar)
+    document.querySelectorAll('.ba-roles').forEach(function (sel) {
+      if (sel.getAttribute('data-from') === guildSelect.id) {
+        sel.innerHTML = '<option value="">Загрузка...</option>';
+        if (!gid) { sel.innerHTML = '<option value="">Сначала выберите сервер</option>'; return; }
         fetch('/api/guild/' + gid + '/roles').then(function (r) { return r.json(); }).then(function (data) {
-          sel.innerHTML = '<option value="">Seçin...</option>';
-          if (data && data.roles) {
+          sel.innerHTML = '<option value="">Выберите роль...</option>';
+          if (data && Array.isArray(data.roles)) {
             data.roles.forEach(function (role) {
+              var opt = document.createElement('option');
+              opt.value = role.id;
+              opt.textContent = role.name + (role.members ? ' (' + role.members + ')' : '');
+              sel.appendChild(opt);
+            });
+          } else if (data && Array.isArray(data)) {
+            data.forEach(function (role) {
               var opt = document.createElement('option');
               opt.value = role.id;
               opt.textContent = role.name;
@@ -138,62 +141,78 @@
     });
   }
 
-  // Toplu DM
-  async function sendBulkDM() {
+  // Рассылка DM
+  function sendBulkDM() {
     var gid = $('dm-guild').value;
     var rid = $('dm-role').value;
     var msg = $('dm-msg').value.trim();
-    if (!gid || !rid || !msg) { showResult('dm-result', 'Tüm alanları doldurun', false); return; }
-    if (!confirm('Seçili role sahip üyelere DM gönderilecek. Devam?')) return;
-    try {
-      var d = await fetch('/api/guild/' + gid + '/bulk-dm', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role_id: rid, message: msg })
-      }).then(function (r) { return r.json(); });
-      if (d.success) showResult('dm-result', '✓ ' + d.count + ' üyeye DM gönderildi', true);
-      else showResult('dm-result', '✗ ' + (d.error || 'Hata'), false);
-    } catch (e) { showResult('dm-result', '✗ ' + e.message, false); }
+    if (!gid) { showResult('dm-result', 'Выберите сервер', false); return; }
+    if (!rid) { showResult('dm-result', 'Выберите роль', false); return; }
+    if (!msg) { showResult('dm-result', 'Введите текст сообщения', false); return; }
+    if (!confirm('Отправить сообщение всем участникам с этой ролью?')) return;
+    var btn = $('btn-dm');
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Отправка...';
+    fetch('/api/guild/' + gid + '/bulk-dm', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role_id: rid, message: msg })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (d.success) showResult('dm-result', '✓ Отправлено ' + d.count + ' участникам', true);
+      else showResult('dm-result', '✗ ' + (d.error || 'Ошибка'), false);
+    }).catch(function (e) { showResult('dm-result', '✗ ' + e.message, false); })
+      .finally(function () { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Отправить всем'; });
   }
 
-  // Toplu Rol
-  async function bulkRole() {
+  // Массовая роль
+  function bulkRole() {
     var gid = $('role-guild').value;
     var target = $('role-target').value;
-    var action = $('role-action').value;
+    var action = $('role-action-sel').value;
     var op = $('role-op').value;
-    if (!gid || !target || !action) { showResult('role-result', 'Tüm alanları doldurun', false); return; }
-    if (!confirm('Toplu rol işlemi uygulanacak. Devam?')) return;
-    try {
-      var d = await fetch('/api/guild/' + gid + '/bulk-roles', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ target_role: target, action_role: action, action: op })
-      }).then(function (r) { return r.json(); });
-      if (d.success) showResult('role-result', '✓ ' + d.count + ' üyeye uygulandı', true);
-      else showResult('role-result', '✗ ' + (d.error || 'Hata'), false);
-    } catch (e) { showResult('role-result', '✗ ' + e.message, false); }
+    if (!gid) { showResult('role-result', 'Выберите сервер', false); return; }
+    if (!target) { showResult('role-result', 'Выберите целевую роль', false); return; }
+    if (!action) { showResult('role-result', 'Выберите назначаемую роль', false); return; }
+    if (!confirm('Применить массовую операцию к роли?')) return;
+    var btn = $('btn-role');
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Применение...';
+    fetch('/api/guild/' + gid + '/bulk-roles', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ target_role: target, action_role: action, action: op })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (d.success) showResult('role-result', '✓ Применено к ' + d.count + ' участникам', true);
+      else showResult('role-result', '✗ ' + (d.error || 'Ошибка'), false);
+    }).catch(function (e) { showResult('role-result', '✗ ' + e.message, false); })
+      .finally(function () { btn.disabled = false; btn.innerHTML = '<i class="fas fa-user-plus"></i> Применить'; });
   }
 
-  // Toplu ceza
-  async function bulkPunish() {
+  // Массовое наказание
+  function bulkPunish() {
     var gid = $('punish-guild').value;
     var rid = $('punish-role').value;
-    var dur = parseInt($('punish-duration').value, 10);
     var op = $('punish-op').value;
-    if (!gid || !rid) { showResult('punish-result', 'Sunucu ve rol seçin', false); return; }
-    if (op !== 'kick' && op !== 'ban' && !dur) { showResult('punish-result', 'Süre girin', false); return; }
-    if (!confirm('⚠️ ' + op.toUpperCase() + ' işlemi GERI ALINAMAZ! Devam edilsin mi?')) return;
-    try {
-      var endpoint = op === 'mute' ? '/api/guild/' + gid + '/bulk-mute' : '/api/guild/' + gid + '/bulk-' + op;
-      var d = await fetch(endpoint, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role_id: rid, duration: dur })
-      }).then(function (r) { return r.json(); });
-      if (d.success) showResult('punish-result', '✓ ' + d.count + ' üyeye uygulandı', true);
-      else showResult('punish-result', '✗ ' + (d.error || 'Hata') + ' (bulk-' + op + ' endpoint\'i olmayabilir)', false);
-    } catch (e) { showResult('punish-result', '✗ ' + e.message, false); }
+    var dur = parseInt($('punish-duration').value, 10) || 60;
+    if (!gid) { showResult('punish-result', 'Выберите сервер', false); return; }
+    if (!rid) { showResult('punish-result', 'Выберите целевую роль', false); return; }
+    if (!confirm('⚠️ ' + op.toUpperCase() + ' — необратимое действие! Продолжить?')) return;
+    var btn = $('btn-punish');
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Выполнение...';
+    var endpoint = '/api/guild/' + gid + '/bulk-' + op;
+    var body = { role_id: rid };
+    if (op === 'mute') body.duration = dur;
+    fetch(endpoint, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (d.success) showResult('punish-result', '✓ ' + op.toUpperCase() + ' применено к ' + d.count + ' участникам', true);
+      else showResult('punish-result', '✗ ' + (d.error || 'Ошибка'), false);
+    }).catch(function (e) { showResult('punish-result', '✗ ' + e.message, false); })
+      .finally(function () { btn.disabled = false; btn.innerHTML = '<i class="fas fa-gavel"></i> Применить'; });
   }
 
   function bind() {
+    // Her guild secim degisikliginde ayni karttaki rol sel'lerini doldur
+    document.querySelectorAll('.ba-guild').forEach(function (sel) {
+      sel.addEventListener('change', function () { loadRoles(sel); });
+    });
     $('btn-dm').addEventListener('click', sendBulkDM);
     $('btn-role').addEventListener('click', bulkRole);
     $('btn-punish').addEventListener('click', bulkPunish);
