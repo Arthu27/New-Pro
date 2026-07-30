@@ -277,7 +277,7 @@
       <span class="threat-badge" id="threatLevelBadge">Низкая</span>
     </div>
     <div class="threat-bar-track">
-      <div class="threat-bar-fill" id="threatFill" style="width: 15%"></div>
+      <div class="threat-bar-fill" id="threatFill"   style="width: 15%;"></div>
     </div>
   </div>
   <button class="lockdown-btn" id="btnLockdown" type="button">
@@ -330,22 +330,22 @@
 <!-- Send notification + announcement (owner only) -->
 <div class="grid-2">
   <div class="dash-card quick-action">
-    <div class="dash-box-title" style="margin-bottom: 14px"><i class="fas fa-bell"></i> Отправить уведомление</div>
+    <div class="dash-box-title" ><i class="fas fa-bell"></i> Отправить уведомление</div>
     <label class="form-label">Discord ID</label>
     <input type="text" id="notif-discord-id" placeholder="123456789012345678" class="form-input">
     <label class="form-label">Заголовок</label>
     <input type="text" id="notif-title" placeholder="Заголовок" class="form-input">
     <label class="form-label">Сообщение</label>
-    <textarea id="notif-message" class="form-input" style="min-height: 70px"></textarea>
+    <textarea id="notif-message" class="form-input"   style="min-height: 70px;"></textarea>
     <button type="button" id="btnSendNotif" class="form-btn"><i class="fas fa-paper-plane"></i> Отправить</button>
     <div id="notif-result" class="result-msg"></div>
   </div>
   <div class="dash-card quick-action">
-    <div class="dash-box-title" style="margin-bottom: 14px"><i class="fas fa-bullhorn"></i> Опубликовать объявление</div>
+    <div class="dash-box-title" ><i class="fas fa-bullhorn"></i> Опубликовать объявление</div>
     <label class="form-label">Заголовок</label>
     <input type="text" id="ann-title" placeholder="Заголовок" class="form-input">
     <label class="form-label">Содержание</label>
-    <textarea id="ann-message" class="form-input" style="min-height: 70px"></textarea>
+    <textarea id="ann-message" class="form-input"   style="min-height: 70px;"></textarea>
     <button type="button" id="btnSendAnn" class="form-btn"><i class="fas fa-bullhorn"></i> Опубликовать</button>
     <div id="ann-result" class="result-msg"></div>
   </div>
@@ -502,7 +502,7 @@
         return '<tr><td><span class="action-badge ' + cls + '">' + esc(log.action || '?') + '</span></td>' +
                '<td>' + esc(tg) + '</td>' +
                '<td class="text-2">' + esc(m) + '</td>' +
-               '<td class="text-3" style="max-width: 160px; overflow: hidden">' + esc(r) + '</td>' +
+               '<td class="text-3"   style="max-width: 160px; overflow: hidden;">' + esc(r) + '</td>' +
                '<td class="text-3" >' + esc(fmtDate(log.timestamp)) + '</td></tr>';
       }).join('');
       box.innerHTML = '<table><thead><tr><th>Действие</th><th>Цель</th><th>Модер.</th><th>Причина</th><th>Время</th></tr></thead><tbody>' + rows + '</tbody></table>';

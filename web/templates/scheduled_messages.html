@@ -18,7 +18,7 @@
 
 
 <div class="sm-hero">
-  <div style="margin-bottom: 10px">⏰</div>
+  <div   style="margin-bottom: 10px;">⏰</div>
   <div class="hero-title">⏰ Запланированные сообщения</div>
   <div class="hero-sub">Через определённые интервалы отправлять сообщения автоматически</div>
 </div>
@@ -43,7 +43,7 @@
       <label class="form-label">💬 Текст сообщения</label>
       <textarea id="sm-content" class="form-input" rows="4" placeholder="Отправл сообщение..." ></textarea>
     </div>
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
+    <div   style="grid-template-columns: 1fr 1fr;">
       <div class="form-group">
         <label class="form-label">⏱️ Периодичность (мин)</label>
         <input type="number" id="sm-interval" class="form-input" value="60" min="1">
@@ -100,7 +100,7 @@ async function loadMessages() {
   document.getElementById('sm-channel').innerHTML = channels.filter(c=>c.type==='text').map(c=>'<option value="'+c.id+'">#'+c.name+'</option>').join('');
 
   var box = document.getElementById('sm-list');
-  if (!msgs.length) { box.innerHTML='<div class="empty-state"><div style="margin-bottom: 16px">⏰</div><p>Пока нет запланированных сообщений.</p></div>'; return; }
+  if (!msgs.length) { box.innerHTML='<div class="empty-state"><div >⏰</div><p>Пока нет запланированных сообщений.</p></div>'; return; }
   box.innerHTML = msgs.map(function(m, i) {
     var nextRun = '';
     try { nextRun = new Date(m.next_run).toLocaleString('tr-TR'); } catch(e) {}

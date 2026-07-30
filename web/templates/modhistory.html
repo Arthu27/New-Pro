@@ -19,7 +19,7 @@
 
 <div class="mh-toolbar">
   <input type="text" id="search" class="mh-search" placeholder="Поиск по истории (пользователь, мод, причина)...">
-  <select id="filter" class="mh-search" style="flex: 0 0 auto; min-width: 140px">
+  <select id="filter" class="mh-search"   style="flex: 0 0 auto; min-width: 140px;">
     <option value="">Все действия</option>
     <option>Ban</option>
     <option>Kick</option>
@@ -79,7 +79,7 @@
         '<td><span class="case-badge" >' + c.action + '</span></td>' +
         '<td >' + esc(c.user) + '</td>' +
         '<td >' + esc(c.mod) + '</td>' +
-        '<td style="max-width: 180px; overflow: hidden">' + esc(c.reason) + '</td>' +
+        '<td   style="max-width: 180px; overflow: hidden;">' + esc(c.reason) + '</td>' +
         '<td >' + esc(c.date) + '</td></tr>';
     }).join('');
     $('mh-body').innerHTML = '<table><thead><tr><th>ID</th><th>Действие</th><th>Пользователь</th><th>Модер.</th><th>Причина</th><th>Дата</th></tr></thead><tbody>' + rows + '</tbody></table>';

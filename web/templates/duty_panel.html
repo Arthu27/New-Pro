@@ -69,7 +69,7 @@ async function loadDuty(gid) {
         return '<tr><td><span class="dp-rank-medal">' + (medals[i]||'') + '</span><span class="dp-rank-num">#' + (i+1) + '</span></td>' +
           '<td >' + esc(e[1].name||e[0]) + '</td>' +
           '<td >' + (e[1].total||0) + ' ⭐</td>' +
-          '<td style="min-width: 140px"><div class="dp-bar"><div class="dp-bar-fill" style="width: '+pct+'%"></div></div></td></tr>';
+          '<td   style="min-width: 140px;"><div class="dp-bar"><div class="dp-bar-fill"   style="width: '+pct+'%;"></div></div></td></tr>';
       }).join('') + '</tbody></table>'
       : '<div class="empty-state">Пока очков нет</div>';
 

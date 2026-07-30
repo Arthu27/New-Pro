@@ -18,7 +18,7 @@
 
 
 <div class="rr-hero">
-  <div style="margin-bottom: 10px">🎭</div>
+  <div   style="margin-bottom: 10px;">🎭</div>
   <div class="hero-title">🎭 Роли по реакциям</div>
   <div class="hero-sub">Автоматически выдавать роль по клику на эмодзи</div>
 </div>
@@ -43,7 +43,7 @@
       <label class="form-label">📝 Заголовок</label>
       <input type="text" id="rr-title" class="form-input" placeholder="Роль выбор сообщение заголовок...">
     </div>
-    <label class="form-label" style="margin-bottom: 10px">🎭 Emoji → Роль Совпадениеы</label>
+    <label class="form-label"   style="margin-bottom: 10px;">🎭 Emoji → Роль Совпадениеы</label>
     <div id="rr-entries"></div>
     <button class="btn-add-entry" onclick="addEntry()">➕ Совпадение Добавить</button>
     <div class="modal-actions">
@@ -96,7 +96,7 @@ async function loadRR() {
   document.getElementById('rr-channel').innerHTML = channels.filter(c=>c.type==='text').map(c=>'<option value="'+c.id+'">#'+c.name+'</option>').join('');
 
   var box = document.getElementById('rr-list');
-  if (!rrs.length) { box.innerHTML='<div class="empty-state"><div style="margin-bottom: 16px">🎭</div><p>Пока reaksiyon роль yok.</p></div>'; return; }
+  if (!rrs.length) { box.innerHTML='<div class="empty-state"><div >🎭</div><p>Пока reaksiyon роль yok.</p></div>'; return; }
   box.innerHTML = rrs.map(function(rr, i) {
     var entries = (rr.entries||[]).map(function(e) {
       return '<div class="rr-entry"><span class="rr-emoji">'+e.emoji+'</span><span class="rr-arrow">→</span><span class="rr-role">@'+e.role_name+'</span></div>';
@@ -113,7 +113,7 @@ function addEntry() {
   div.className = 'entry-row';
   var roles = allRoles.map(r=>'<option value="'+r.id+'">@'+r.name+'</option>').join('');
   div.innerHTML = '<input type="text" class="entry-emoji" value="🎭" maxlength="2">'+
-    '<select class="entry-role form-input" style="flex: 1">'+roles+'</select>'+
+    '<select class="entry-role form-input" >'+roles+'</select>'+
     '<button class="entry-del" onclick="this.parentElement.remove()">×</button>';
   document.getElementById('rr-entries').appendChild(div);
 }

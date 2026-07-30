@@ -32,7 +32,7 @@
 {% if role == 'owner' or role == 'admin' %}
 <div class="section" >
   <div class="bs-title" ><i class="fas fa-power-off"></i> Управление ботом</div>
-  <div style="display: flex; gap: 12px">
+  <div  >
     <button onclick="restartBot()" class="control-btn danger">
       <i class="fas fa-redo"></i> Перезапустить бот
     </button>
@@ -40,7 +40,7 @@
       <i class="fas fa-sync"></i> Синхронизировать команды
     </button>
   </div>
-  <div id="restart-status" style="margin-top: 14px; display: none"></div>
+  <div id="restart-status"   style="margin-top: 14px;"></div>
 </div>
 {% endif %}
 

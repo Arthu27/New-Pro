@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Ses Канал Статистика - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-microphone" style="animation: pulse 2s infinite"></i> SES КАНАЛ СТАТИСТИКА{% endblock %}
+{% block page_title %}<i class="fas fa-microphone"   style="animation: pulse 2s infinite;"></i> SES КАНАЛ СТАТИСТИКА{% endblock %}
 {% block content %}
 {% block page_hero %}
 <div class="page-hero compact">
@@ -80,8 +80,8 @@ async function loadVoiceStats(gid_param) {
     return '<div class="vc-row">'+
       '<div class="vc-rank">'+(medals[i]||'#'+(i+1))+'</div>'+
       '<img class="vc-avatar" src="'+(u.avatar||'https://cdn.discordapp.com/embed/avatars/0.png')+'" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">'+
-      '<div style="flex: 1"><div class="vc-name">'+u.name+'</div>'+
-      '<div class="vc-bar"><div class="vc-bar-fill" style="width: '+pct+'%"></div></div></div>'+
+      '<div ><div class="vc-name">'+u.name+'</div>'+
+      '<div class="vc-bar"><div class="vc-bar-fill"   style="width: '+pct+'%;"></div></div></div>'+
       '<div class="vc-time">'+u.time+'</div>'+
     '</div>';
   }).join('');

@@ -4027,3 +4027,342 @@ input:focus::placeholder, textarea:focus::placeholder {
   left: 22px;
   background: #1a1a1a;
 }
+
+/* ============================================================
+   GLOBAL INLINE COLOR KILLER
+   Bootstrap/kütüphane remnant'lerinde #fff direkt text rengi olarak
+   verilmiş — beyaz-üzerine-beyaz sorununu kökünden çöz.
+   ============================================================ */
+[style*="color: #fff"]:not([class*="icon"]):not([class*="btn"]):not([class*="badge"]),
+[style*="color:#fff"]:not([class*="icon"]):not([class*="btn"]):not([class*="badge"]),
+[style*="color: white"]:not([class*="icon"]):not([class*="btn"]):not([class*="badge"]),
+[style*="color:white"]:not([class*="icon"]):not([class*="btn"]):not([class*="badge"]),
+[style*="color: #FFF"]:not([class*="icon"]):not([class*="btn"]):not([class*="badge"]) {
+  color: #e8e6df !important;
+}
+/* Sadece buton ve icon'lar beyaz kalsın */
+button [style*="color: #fff"], a [style*="color: #fff"],
+.btn [style*="color: #fff"], .icon [style*="color: #fff"],
+[class*="icon"] [style*="color: #fff"],
+[class*="btn"] [style*="color: #fff"],
+[class*="badge"] [style*="color: #fff"] {
+  color: inherit !important;
+}
+
+/* ============================================================
+   TABLE → CARD GRID (eski <table> layout'larını flex card'a çevir)
+   ============================================================ */
+table {
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+  width: 100% !important;
+  color: #e8e6df !important;
+}
+table thead th {
+  text-align: left !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.06em !important;
+  color: #b8b3a3 !important;
+  padding: 10px 14px !important;
+  background: rgba(212, 168, 67, 0.06) !important;
+  border-bottom: 1px solid rgba(212, 168, 67, 0.15) !important;
+}
+table tbody td {
+  padding: 12px 14px !important;
+  border-bottom: 1px solid rgba(212, 168, 67, 0.08) !important;
+  color: #e8e6df !important;
+  font-size: 14px !important;
+}
+table tbody tr {
+  background: rgba(255, 255, 255, 0.015) !important;
+  transition: background .15s ease;
+}
+table tbody tr:hover {
+  background: rgba(212, 168, 67, 0.06) !important;
+}
+table tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.04) !important;
+}
+table tbody tr:nth-child(even):hover {
+  background: rgba(212, 168, 67, 0.08) !important;
+}
+
+/* ============================================================
+   IMG ALT FALLBACK — alt eksikse kırmızı çerçeve
+   ============================================================ */
+img:not([alt]) {
+  outline: 2px dashed rgba(248, 113, 113, 0.4);
+  outline-offset: -2px;
+}
+img[alt=""]:not([role="presentation"]) {
+  outline: 2px dashed rgba(248, 113, 113, 0.2);
+}
+
+/* ============================================================
+   IMAGES — Avatar/object default
+   ============================================================ */
+img.avatar, img.user-avatar, img.member-avatar, img.icon {
+  border-radius: 50% !important;
+  border: 1.5px solid rgba(212, 168, 67, 0.25) !important;
+  object-fit: cover;
+}
+img.icon-rect, img.role-icon, img.server-icon, img.guild-icon {
+  border-radius: 12px !important;
+  border: 1.5px solid rgba(212, 168, 67, 0.25) !important;
+  object-fit: cover;
+}
+
+/* ============================================================
+   OLD CLASS ALIASES — eski class'lar yeni tasarıma bağlanır
+   ============================================================ */
+.sh-stat-num, .mh-stat-num, .warn-stat-num, .app-stat-num, .at-stat-num,
+.ba-stat-num, .ms-stat-num, .g-stat-num, .pl-stat-num, .ml-stat-num,
+.am-stat-num, .ar-stat-num, .stat-num, .ec-num, .giveaway-num {
+  font-size: 30px !important;
+  font-weight: 800 !important;
+  color: #f4f1e8 !important;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+.sh-stat-lbl, .mh-stat-lbl, .warn-stat-lbl, .app-stat-lbl, .at-stat-lbl,
+.ba-stat-lbl, .ms-stat-lbl, .g-stat-lbl, .pl-stat-lbl, .ml-stat-lbl,
+.am-stat-lbl, .ar-stat-lbl, .stat-lbl, .ec-lbl, .giveaway-lbl {
+  font-size: 11px !important;
+  color: #b8b3a3 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600 !important;
+  margin-top: 4px !important;
+}
+
+/* ============================================================
+   ECONOMY / SHOP / PREFIX'LER (eco-, shop-, ld-, give-)
+   ============================================================ */
+.eco-card, .eco-grid > div, .ld-card, .give-card, .shop-card,
+.shop-item, .ld-item, .giveaway-item, .award-card, .aw-card,
+.bulk-section-card, .aw-section-card, .ld-section, .g-stat {
+  display: flex !important;
+  align-items: center !important;
+  gap: 14px !important;
+  padding: 18px !important;
+  background: linear-gradient(135deg, rgba(212, 168, 67, 0.06), rgba(212, 168, 67, 0.02)) !important;
+  border: 1px solid rgba(212, 168, 67, 0.18) !important;
+  border-radius: 12px !important;
+  color: #f4f1e8 !important;
+  transition: all .15s ease;
+}
+.eco-card:hover, .ld-card:hover, .give-card:hover, .shop-card:hover, .shop-item:hover {
+  border-color: rgba(212, 168, 67, 0.35) !important;
+  transform: translateY(-1px);
+}
+.eco-icon, .ld-icon, .give-icon, .shop-icon, .aw-icon, .ld-card > i, .eco-card > i {
+  width: 48px !important; height: 48px !important;
+  border-radius: 12px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 20px !important;
+  background: linear-gradient(135deg, #d4a843, #e0b04a) !important;
+  color: #1a1a1a !important;
+  flex-shrink: 0;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+.eco-val, .ld-val, .give-val, .aw-val, .ld-card .ld-num {
+  font-size: 30px !important;
+  font-weight: 800 !important;
+  color: #f4f1e8 !important;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.05;
+}
+.eco-lbl, .ld-lbl, .give-lbl, .aw-lbl {
+  font-size: 11px !important;
+  color: #b8b3a3 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600 !important;
+  margin-top: 4px !important;
+}
+.eco-grid, .ld-grid, .aw-grid, .give-grid, .shop-grid, .g-grid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important;
+  gap: 14px !important;
+  margin-bottom: 18px !important;
+}
+.eco-box, .ld-box, .aw-box, .give-box, .shop-box {
+  background: linear-gradient(135deg, rgba(212, 168, 67, 0.04), rgba(212, 168, 67, 0.01)) !important;
+  border: 1px solid rgba(212, 168, 67, 0.12) !important;
+  border-radius: 12px !important;
+  padding: 16px 20px !important;
+  margin-bottom: 14px !important;
+  color: #e8e6df !important;
+}
+.eco-tabs, .ld-tabs, .aw-tabs, .give-tabs, .ms-tabs, .cmd-tabs,
+.app-tabs, .at-tabs, .mh-tabs, .warn-tabs, .sh-tabs, .color-tabs {
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 14px;
+  padding: 6px;
+  background: rgba(15, 15, 20, 0.4);
+  border: 1px solid rgba(212, 168, 67, 0.10);
+  border-radius: 10px;
+}
+.eco-tab, .ld-tab, .aw-tab, .give-tab {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 8px 16px !important;
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 8px !important;
+  color: #b8b3a3 !important;
+  font-size: 13.5px !important;
+  font-weight: 600 !important;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+.eco-tab:hover, .ld-tab:hover, .aw-tab:hover, .give-tab:hover {
+  background: rgba(212, 168, 67, 0.10) !important;
+  border-color: rgba(212, 168, 67, 0.30) !important;
+  color: #e0b04a !important;
+}
+.eco-tab.active, .ld-tab.active, .aw-tab.active, .give-tab.active {
+  background: linear-gradient(135deg, #d4a843, #e0b04a) !important;
+  color: #1a1a1a !important;
+  border-color: transparent !important;
+  font-weight: 700 !important;
+}
+.eco-body, .ld-body, .aw-body, .give-body, .shop-body {
+  color: #e8e6df !important;
+}
+.eco-row, .ld-row, .give-row, .aw-row, .shop-item {
+  display: flex !important;
+  align-items: center !important;
+  gap: 14px !important;
+  padding: 12px 16px !important;
+  background: linear-gradient(135deg, rgba(255,255,255,0.025), transparent) !important;
+  border: 1px solid rgba(212, 168, 67, 0.10) !important;
+  border-radius: 10px !important;
+  margin-bottom: 6px !important;
+  color: #e8e6df !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+}
+.eco-row:hover, .ld-row:hover, .give-row:hover, .aw-row:hover, .shop-item:hover {
+  background: linear-gradient(135deg, rgba(212, 168, 67, 0.08), rgba(212, 168, 67, 0.02)) !important;
+  border-color: rgba(212, 168, 67, 0.30) !important;
+}
+.eco-row .name, .ld-row .name, .give-row .name, .aw-row .name,
+.eco-name, .ld-name, .give-name, .aw-name, .shop-name {
+  font-weight: 600 !important;
+  color: #f4f1e8 !important;
+  font-size: 15px !important;
+  flex: 1;
+}
+.eco-row .count, .ld-row .count, .give-row .count, .aw-row .count,
+.eco-count, .ld-count, .give-count, .aw-count {
+  background: rgba(212, 168, 67, 0.12) !important;
+  color: #d4a843 !important;
+  padding: 4px 12px !important;
+  border-radius: 6px !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  border: 1px solid rgba(212, 168, 67, 0.20) !important;
+  font-variant-numeric: tabular-nums;
+}
+.eco-head, .ld-head, .aw-head, .give-head, .shop-head {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 0 0 12px 0 !important;
+  margin-bottom: 12px !important;
+  border-bottom: 1px solid rgba(212, 168, 67, 0.10) !important;
+}
+.eco-title, .ld-title, .aw-title, .give-title {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  font-weight: 700 !important;
+  font-size: 16px !important;
+  color: #f4f1e8 !important;
+}
+.eco-title i, .ld-title i, .aw-title i, .give-title i { color: #d4a843 !important; }
+
+/* ============================================================
+   TEMP MOD PRESETS / KV (key-value pairs)
+   ============================================================ */
+.tm-preset, .dp-preset, .am-preset, .cmd-preset, .ar-preset, .ms-preset {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 8px 14px !important;
+  background: rgba(212, 168, 67, 0.08) !important;
+  color: #d4a843 !important;
+  border: 1px solid rgba(212, 168, 67, 0.20) !important;
+  border-radius: 8px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  cursor: pointer;
+  transition: all .15s ease;
+  margin: 3px;
+}
+.tm-preset:hover, .dp-preset:hover, .am-preset:hover, .cmd-preset:hover {
+  background: rgba(212, 168, 67, 0.15) !important;
+  color: #f4f1e8 !important;
+  border-color: rgba(212, 168, 67, 0.35) !important;
+}
+.tm-preset.active, .dp-preset.active, .am-preset.active, .cmd-preset.active {
+  background: linear-gradient(135deg, #d4a843, #e0b04a) !important;
+  color: #1a1a1a !important;
+  border-color: transparent !important;
+}
+.tm-preset-row, .dp-preset-row, .cmd-preset-row {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 6px !important;
+  margin: 10px 0;
+}
+
+.tm-action, .dp-action, .cmd-action, .ms-action, .ar-action, .am-action,
+.tm-action-row, .dp-action-row, .cmd-action-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 10px 12px !important;
+  background: linear-gradient(135deg, rgba(255,255,255,0.025), transparent) !important;
+  border: 1px solid rgba(212, 168, 67, 0.10) !important;
+  border-radius: 8px !important;
+  margin-bottom: 6px !important;
+  color: #e8e6df !important;
+  font-size: 13.5px !important;
+}
+
+/* === KEY-VALUE display === */
+.kv-row, .kv-item {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  padding: 8px 12px !important;
+  background: rgba(255, 255, 255, 0.025) !important;
+  border: 1px solid rgba(212, 168, 67, 0.08) !important;
+  border-radius: 8px !important;
+  margin-bottom: 4px !important;
+  color: #e8e6df !important;
+}
+.kv-key, .kv-label {
+  font-size: 12.5px !important;
+  color: #b8b3a3 !important;
+  font-weight: 500 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.kv-val, .kv-value {
+  font-size: 14px !important;
+  color: #f4f1e8 !important;
+  font-weight: 600 !important;
+  font-variant-numeric: tabular-nums;
+}

@@ -23,16 +23,16 @@
 
 <div class="cr-box">
   <div class="cr-title"><i class="fas fa-plus"></i> Добавить цвет</div>
-  <div class="grid3" style="margin-bottom: 14px">
+  <div class="grid3" >
     <div>
       <label class="field-label">Цвет Isim</label>
       <input type="text" id="color-name" placeholder="напр.: Красный" class="field-input">
     </div>
     <div>
       <label class="field-label">Цвет Kodu</label>
-      <div style="display: flex; gap: 8px">
-        <input type="color" id="color-picker" value="#c8922a" style="width: 42px; height: 38px; cursor: pointer">
-        <input type="text" id="color-hex" placeholder="#c8922a" class="field-input" style="flex: 1" oninput="syncColor(this.value)">
+      <div  >
+        <input type="color" id="color-picker" value="#c8922a"   style="width: 42px; height: 38px;">
+        <input type="text" id="color-hex" placeholder="#c8922a" class="field-input"  oninput="syncColor(this.value)">
       </div>
     </div>
     <div>
@@ -40,7 +40,7 @@
       <input type="text" id="color-emoji" placeholder="🎨" class="field-input">
     </div>
   </div>
-  <button onclick="addColor()" class="save-btn"><i class="fas fa-plus" style="margin-right: 6px"></i>Добавить</button>
+  <button onclick="addColor()" class="save-btn"><i class="fas fa-plus"   style="margin-right: 6px;"></i>Добавить</button>
 </div>
 
 <div class="cr-box">
@@ -52,13 +52,13 @@
 
 <div class="cr-box">
   <div class="cr-title"><i class="fas fa-paper-plane"></i> Panel Опубликовать</div>
-  <div style="display: flex; gap: 12px">
-    <div style="flex: 1; min-width: 200px">
+  <div  >
+    <div   style="min-width: 200px;">
       <label class="field-label">Panel Канал</label>
       <select id="panel-channel" class="field-input"></select>
     </div>
     <button onclick="publishPanel()" class="save-btn" >
-      <i class="fas fa-paper-plane" style="margin-right: 6px"></i>Опубликовать
+      <i class="fas fa-paper-plane"   style="margin-right: 6px;"></i>Опубликовать
     </button>
   </div>
 </div>
@@ -125,7 +125,7 @@ function renderColors() {
     return '<div class="color-card">'+
       '<button class="del-btn" onclick="removeColor('+i+')">×</button>'+
       '<div class="color-swatch" ></div>'+
-      '<div style="margin-bottom: 4px">'+(c.emoji||'🎨')+'</div>'+
+      '<div   style="margin-bottom: 4px;">'+(c.emoji||'🎨')+'</div>'+
       '<div class="color-name">'+c.name+'</div>'+
       '<div class="color-hex">'+c.hex+'</div>'+
     '</div>';

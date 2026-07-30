@@ -18,7 +18,7 @@
 
 
 <div class="vars-box">
-  <i class="fas fa-code" style="margin-right: 6px"></i>
+  <i class="fas fa-code"   style="margin-right: 6px;"></i>
   Использовать переменные:
   <span>{user}</span> <span>{сервер}</span> <span>{count}</span> <span>{etiket}</span>
 </div>
@@ -29,15 +29,15 @@
     <div class="form-group"><label>Канал</label><select id="welcome-channel"><option value="">Выберите канал...</option></select></div>
     <div class="form-group"><label>Заголовок</label><input type="text" id="welcome-title" placeholder="Добро пожаловать, {user}!"></div>
     <div class="form-group"><label>Сообщение</label><textarea id="welcome-msg" placeholder="{сервер} сервер приветствует тебя!"></textarea></div>
-    <div class="form-group"><label>Цвет эмбеда</label><input type="color" id="welcome-color" value="#c8922a" style="height: 40px; cursor: pointer"></div>
+    <div class="form-group"><label>Цвет эмбеда</label><input type="color" id="welcome-color" value="#c8922a"   style="height: 40px;"></div>
     <div class="preview-box">
-      <div style="margin-bottom: 8px">Предпросмотр</div>
+      <div   style="margin-bottom: 8px;">Предпросмотр</div>
       <div class="preview-embed" id="welcome-preview" >
         <div class="preview-title">Добро пожаловать приветствуем!</div>
         <div class="preview-desc">Предпросмотр здесь видеть...</div>
       </div>
     </div>
-    <button class="save-btn" onclick="saveWelcome()"><i class="fas fa-save" style="margin-right: 6px"></i>Сохранить</button>
+    <button class="save-btn" onclick="saveWelcome()"><i class="fas fa-save"   style="margin-right: 6px;"></i>Сохранить</button>
   </div>
 
   <div class="editor-box" >
@@ -45,15 +45,15 @@
     <div class="form-group"><label>Канал</label><select id="leave-channel"><option value="">Выберите канал...</option></select></div>
     <div class="form-group"><label>Заголовок</label><input type="text" id="leave-title" placeholder="Пока Пока, {user}!"></div>
     <div class="form-group"><label>Сообщение</label><textarea id="leave-msg" placeholder="{user} с сервера покинул."></textarea></div>
-    <div class="form-group"><label>Цвет эмбеда</label><input type="color" id="leave-color" value="var(--err)" style="height: 40px; cursor: pointer"></div>
+    <div class="form-group"><label>Цвет эмбеда</label><input type="color" id="leave-color" value="var(--err)"   style="height: 40px;"></div>
     <div class="preview-box">
-      <div style="margin-bottom: 8px">Предпросмотр</div>
+      <div   style="margin-bottom: 8px;">Предпросмотр</div>
       <div class="preview-embed" id="leave-preview" >
         <div class="preview-title">Пока Пока!</div>
         <div class="preview-desc">Предпросмотр здесь видеть...</div>
       </div>
     </div>
-    <button class="save-btn" onclick="saveLeave()" ><i class="fas fa-save" style="margin-right: 6px"></i>Сохранить</button>
+    <button class="save-btn" onclick="saveLeave()" ><i class="fas fa-save"   style="margin-right: 6px;"></i>Сохранить</button>
   </div>
 </div>
 
@@ -175,7 +175,7 @@ async function saveWelcome() {
     if (d.success) { 
       btn.textContent='✅ Сохранено!'; 
       setTimeout(function(){
-        btn.innerHTML='<i class="fas fa-save" style="margin-right: 6px"></i>Сохранить';
+        btn.innerHTML='<i class="fas fa-save"   style="margin-right: 6px;"></i>Сохранить';
       }, 2000); 
     } else {
       alert('❌ '+(d.error||'Ошибка'));
@@ -211,7 +211,7 @@ async function saveLeave() {
     if (d.success) { 
       btn.textContent='✅ Сохранено!'; 
       setTimeout(function(){
-        btn.innerHTML='<i class="fas fa-save" style="margin-right: 6px"></i>Сохранить';
+        btn.innerHTML='<i class="fas fa-save"   style="margin-right: 6px;"></i>Сохранить';
       }, 2000); 
     } else {
       alert('❌ '+(d.error||'Ошибка'));

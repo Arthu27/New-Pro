@@ -49,13 +49,13 @@
 .lvl-stat .lbl { font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 4px; font-weight: 700; }
 </style>
 
-<div class="grid-2" style="gap: 16px; margin-bottom: 18px;">
+<div class="grid-2" >
   <!-- Master + Text XP -->
   <div class="dash-box">
     <div class="dash-box-head">
       <div class="dash-box-title"><i class="fas fa-power-off"></i> Управление системой</div>
     </div>
-    <div class="dash-box-body" style="padding: 20px;">
+    <div class="dash-box-body" >
       <div class="lvl-toggle-card" id="masterCard" onclick="toggle('enabled', null)">
         <div class="switch" id="masterSwitch"></div>
         <div class="info">
@@ -106,53 +106,53 @@
     <div class="dash-box-head">
       <div class="dash-box-title"><i class="fas fa-sliders-h"></i> Параметры</div>
     </div>
-    <div class="dash-box-body" style="padding: 20px;">
-      <h5 style="font-size: var(--fs-xs); color: var(--text-3); text-transform: uppercase; letter-spacing: 0.10em; margin: 0 0 12px 0;">Text XP</h5>
-      <div class="lvl-input-group" style="margin-bottom: 8px;">
+    <div class="dash-box-body" >
+      <h5  >Text XP</h5>
+      <div class="lvl-input-group"   style="margin-bottom: 8px;">
         <label>Мин XP</label>
         <input type="number" id="textMin" value="15" min="1" max="100">
       </div>
-      <div class="lvl-input-group" style="margin-bottom: 8px;">
+      <div class="lvl-input-group"   style="margin-bottom: 8px;">
         <label>Макс XP</label>
         <input type="number" id="textMax" value="25" min="1" max="100">
       </div>
-      <div class="lvl-input-group" style="margin-bottom: 18px;">
+      <div class="lvl-input-group" >
         <label>Cooldown (s)</label>
         <input type="number" id="textCooldown" value="60" min="5" max="600">
       </div>
-      <h5 style="font-size: var(--fs-xs); color: var(--text-3); text-transform: uppercase; letter-spacing: 0.10em; margin: 0 0 12px 0;">Voice XP</h5>
-      <div class="lvl-input-group" style="margin-bottom: 18px;">
+      <h5  >Voice XP</h5>
+      <div class="lvl-input-group" >
         <label>XP / минута</label>
         <input type="number" id="voicePerMin" value="5" min="1" max="50">
       </div>
-      <h5 style="font-size: var(--fs-xs); color: var(--text-3); text-transform: uppercase; letter-spacing: 0.10em; margin: 0 0 12px 0;">Streak Bonus</h5>
-      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 18px;">
+      <h5  >Streak Bonus</h5>
+      <div   style="grid-template-columns: 1fr 1fr 1fr;">
         <div>
-          <label style="font-size: 10px; color: var(--text-3); display: block; margin-bottom: 4px;">7 дней</label>
-          <input type="number" id="streak7" value="2" step="0.5" min="1" max="10" style="width: 100%; padding: 8px; background: var(--bg-3); border: 1px solid var(--line-2); border-radius: 8px; color: var(--text);">
+          <label   style="margin-bottom: 4px;">7 дней</label>
+          <input type="number" id="streak7" value="2" step="0.5" min="1" max="10"  >
         </div>
         <div>
-          <label style="font-size: 10px; color: var(--text-3); display: block; margin-bottom: 4px;">14 дней</label>
-          <input type="number" id="streak14" value="3" step="0.5" min="1" max="10" style="width: 100%; padding: 8px; background: var(--bg-3); border: 1px solid var(--line-2); border-radius: 8px; color: var(--text);">
+          <label   style="margin-bottom: 4px;">14 дней</label>
+          <input type="number" id="streak14" value="3" step="0.5" min="1" max="10"  >
         </div>
         <div>
-          <label style="font-size: 10px; color: var(--text-3); display: block; margin-bottom: 4px;">30 дней</label>
-          <input type="number" id="streak30" value="5" step="0.5" min="1" max="10" style="width: 100%; padding: 8px; background: var(--bg-3); border: 1px solid var(--line-2); border-radius: 8px; color: var(--text);">
+          <label   style="margin-bottom: 4px;">30 дней</label>
+          <input type="number" id="streak30" value="5" step="0.5" min="1" max="10"  >
         </div>
       </div>
-      <button class="form-btn" onclick="saveSettings()" style="width: 100%; padding: 10px;"><i class="fas fa-save"></i> Сохранить настройки</button>
+      <button class="form-btn" onclick="saveSettings()"  ><i class="fas fa-save"></i> Сохранить настройки</button>
     </div>
   </div>
 </div>
 
 <!-- Stats + Achievements -->
-<div class="grid-2" style="gap: 16px; margin-bottom: 18px;">
+<div class="grid-2" >
   <!-- Stats -->
   <div class="dash-box">
     <div class="dash-box-head">
       <div class="dash-box-title"><i class="fas fa-chart-bar"></i> Статистика сервера</div>
     </div>
-    <div class="dash-box-body" style="padding: 20px;">
+    <div class="dash-box-body" >
       <div class="lvl-stats-grid">
         <div class="lvl-stat"><div class="num" id="statUsers">—</div><div class="lbl">С XP</div></div>
         <div class="lvl-stat"><div class="num" id="statLevel">—</div><div class="lbl">Макс уровень</div></div>
@@ -167,8 +167,8 @@
     <div class="dash-box-head">
       <div class="dash-box-title"><i class="fas fa-gift"></i> Награды за уровни</div>
     </div>
-    <div class="dash-box-body" style="padding: 20px;" id="rewardsList">
-      <p style="color: var(--text-3); font-size: var(--fs-sm); text-align: center; margin: 20px 0;">
+    <div class="dash-box-body"  id="rewardsList">
+      <p   style="text-align: center;">
         <i class="fas fa-circle-notch fa-spin"></i> Загрузка...
       </p>
     </div>
@@ -181,9 +181,9 @@
     <div class="dash-box-title"><i class="fas fa-trophy"></i> Все достижения (50+)</div>
     <span id="achCount" class="badge badge-gold">—</span>
   </div>
-  <div class="dash-box-body" style="padding: 20px;">
+  <div class="dash-box-body" >
     <div class="lvl-achievement-grid" id="achGrid">
-      <p style="color: var(--text-3); font-size: var(--fs-sm); text-align: center; grid-column: 1/-1;">Загрузка...</p>
+      <p   style="text-align: center; grid-column: 1/-1;">Загрузка...</p>
     </div>
   </div>
 </div>
@@ -193,8 +193,8 @@
   <div class="dash-box-head">
     <div class="dash-box-title"><i class="fas fa-crown"></i> Топ-10 пользователей</div>
   </div>
-  <div class="dash-box-body" id="leaderboardList" style="padding: 0;">
-    <p style="color: var(--text-3); font-size: var(--fs-sm); text-align: center; margin: 20px 0;">Загрузка...</p>
+  <div class="dash-box-body" id="leaderboardList"  >
+    <p   style="text-align: center;">Загрузка...</p>
   </div>
 </div>
 
@@ -231,14 +231,14 @@
       // Leaderboard
       const medals = ['🥇', '🥈', '🥉'];
       document.getElementById('leaderboardList').innerHTML = s.top.map((u, i) => {
-        const medal = i < 3 ? medals[i] : '<span style="color: var(--text-3);">' + (i+1) + '</span>';
-        return `<div class="kv" style="padding: 14px 20px;">
-          <div class="kv-key" style="min-width: 40px; font-size: 20px;">${medal}</div>
-          <div class="kv-val" style="flex: 1; text-align: left;">${esc(u.name)}</div>
-          <div class="kv-key" style="font-weight: 700;">Ур.${u.level}</div>
-          <div class="kv-val" style="min-width: 80px;">${u.xp.toLocaleString()} XP</div>
+        const medal = i < 3 ? medals[i] : '<span >' + (i+1) + '</span>';
+        return `<div class="kv"   style="20px;">
+          <div class="kv-key"   style="min-width: 40px;">${medal}</div>
+          <div class="kv-val"   style="text-align: left;">${esc(u.name)}</div>
+          <div class="kv-key"   style="font-weight: 700;">Ур.${u.level}</div>
+          <div class="kv-val"   style="min-width: 80px;">${u.xp.toLocaleString()} XP</div>
         </div>`;
-      }).join('') || '<p style="text-align:center; padding: 20px; color: var(--text-3);">Нет данных</p>';
+      }).join('') || '<p   style="text-align:center;">Нет данных</p>';
     });
     // Achievements
     fetch('/api/leveling/achievements').then(r => r.json()).then(d => {
@@ -264,7 +264,7 @@
             <div class="role">${info.role_id ? 'Роль: ' + esc(info.role_id) : 'Без роли · ' + esc(info.message)}</div>
           </div>
         </div>`;
-      }).join('') || '<p style="text-align:center; color: var(--text-3);">Нет наград</p>';
+      }).join('') || '<p   style="text-align:center;">Нет наград</p>';
     });
   }
   function setSwitch(swId, cardId, on) {

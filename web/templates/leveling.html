@@ -44,7 +44,7 @@
       <label class="toggle"><input type="checkbox" id="lv-notify"><span class="toggle-slider"></span></label>
     </div>
 
-    <div class="form-group" style="margin-top: 16px">
+    <div class="form-group" >
       <label class="form-label">📢 Уведомление Канал</label>
       <select id="lv-channel" class="form-input">
         <option value="">Выберите канал (пусто = сообщение канал)</option>
@@ -69,7 +69,7 @@
     </div>
 
     <button class="btn-save" onclick="saveLeveling()">💾 СОХРАНИТЬ</button>
-    <div id="lv-status" style="margin-top: 10px"></div>
+    <div id="lv-status"   style="margin-top: 10px;"></div>
   </div>
 
   <!-- LEADERBOARD -->
@@ -148,13 +148,13 @@ async function loadLeveling() {
     return '<div class="lb-row" >' +
       '<div class="lb-rank">' + (medals[i] || '#' + (i + 1)) + '</div>' +
       '<img class="lb-avatar" src="' + (u.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png') + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' +
-      '<div style="flex: 1">' +
-        '<div style="display: flex; gap: 8px">' +
+      '<div >' +
+        '<div  >' +
           '<span class="lb-name">' + (u.name || '?') + '</span>' +
           '<span class="lb-level">Lv.' + (u.level || 0) + '</span>' +
           '<span class="lb-xp">' + (u.xp || 0) + ' Опыт</span>' +
         '</div>' +
-        '<div class="xp-bar-track"><div class="xp-bar-fill" style="width: 0%" data-pct="' + pct + '"></div></div>' +
+        '<div class="xp-bar-track"><div class="xp-bar-fill"   style="width: 0%;" data-pct="' + pct + '"></div></div>' +
       '</div>' +
     '</div>';
   }).join('');

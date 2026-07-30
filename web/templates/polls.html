@@ -57,7 +57,7 @@
         '<div class="poll-q">' + esc(p.q) + '</div>';
       p.opts.forEach(function (o) {
         var pct = total ? Math.round(o.v / total * 100) : 0;
-        html += '<div class="poll-opt"><span class="name">' + esc(o.t) + '</span><div class="poll-bar"><div class="poll-bar-fill" style="width: ' + pct + '%"></div></div><span class="poll-votes">' + pct + '%</span></div>';
+        html += '<div class="poll-opt"><span class="name">' + esc(o.t) + '</span><div class="poll-bar"><div class="poll-bar-fill"   style="width: ' + pct + '%;"></div></div><span class="poll-votes">' + pct + '%</span></div>';
       });
       html += '<div class="poll-foot"><span class="voters"><i class="fas fa-users"></i> ' + p.voters + ' голосов</span><span class="poll-counter ' + (p.active ? 'active' : 'ended') + '">' + (p.active ? 'Активен' : 'Завершён') + '</span></div></div>';
     });

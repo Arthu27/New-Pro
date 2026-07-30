@@ -117,7 +117,7 @@
       return '<tr><td><span class="action-badge" >' + esc(l.action || '?') + '</span></td>' +
         '<td >' + esc(l.user_name || l.user_id || '-') + '</td>' +
         '<td >' + esc(l.mod_name || l.mod_id || '-') + '</td>' +
-        '<td style="max-width: 160px; overflow: hidden">' + esc(l.reason || '-') + '</td>' +
+        '<td   style="max-width: 160px; overflow: hidden;">' + esc(l.reason || '-') + '</td>' +
         '<td >' + esc(fmtDate(l.timestamp)) + '</td></tr>';
     }).join('');
     $('logs-body').innerHTML = '<table><thead><tr><th>Действие</th><th>Цель</th><th>Модер.</th><th>Причина</th><th>Время</th></tr></thead><tbody>' + rows + '</tbody></table>';

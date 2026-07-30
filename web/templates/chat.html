@@ -16,7 +16,7 @@
         <span>Текстовые каналы</span>
       </div>
       <div id="ch-list"></div>
-      <div class="sidebar-section" style="margin-top: 8px">
+      <div class="sidebar-section"   style="margin-top: 8px;">
         <span>Личные сообщения</span>
       </div>
       <div class="dm-search-wrap">
@@ -45,12 +45,12 @@
 
     <div class="reply-bar" id="reply-bar">
       <i class="fas fa-reply" ></i>
-      <span id="reply-text" style="flex: 1; overflow: hidden"></span>
+      <span id="reply-text"   style="overflow: hidden;"></span>
       <span class="reply-bar-close" onclick="cancelReply()">✕</span>
     </div>
 
     <div class="chat-input-wrap">
-      <div class="chat-input-outer" style="position: relative">
+      <div class="chat-input-outer"   style="position: relative;">
         <div class="etiket-popup" id="etiket-popup"></div>
         <div class="chat-input-row">
           <textarea class="chat-input" id="chat-input"
@@ -83,7 +83,7 @@
 <!-- Профиль Popup -->
 <div class="profс-popup" id="profс-popup">
   <div class="profс-банner"></div>
-  <div style="position: relative; height: 32px">
+  <div   style="position: relative; height: 32px;">
     <div id="pp-avatar"></div>
   </div>
   <div class="profс-body">
@@ -260,7 +260,7 @@ function renderMsg(m, continued) {
     m.attachments.forEach(function(url) {
       if (/\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(url)) {
         var isGif = /\.gif(\?|$)/i.test(url);
-        attachHtml += '<div style="position: relative; display: inline-block">' +
+        attachHtml += '<div   style="position: relative;">' +
           '<img class="msg-img" src="' + url + '" loading="lazy" onclick="openLightbox(\'' + url + '\')">' +
           (isGif ? '<span class="msg-gif-badge">GIF</span>' : '') + '</div>';
       } else {
@@ -276,7 +276,7 @@ function renderMsg(m, continued) {
     var urlMatch = (m.content||'').match(/https?:\/\/\S+\.(gif|jpg|jpeg|png|webp)(\?\S*)?/i);
     if (urlMatch) {
       var isGif = /\.gif(\?|$)/i.test(urlMatch[0]);
-      inlineMedia = '<div class="msg-attachments"><div style="position: relative; display: inline-block">' +
+      inlineMedia = '<div class="msg-attachments"><div   style="position: relative;">' +
         '<img class="msg-img" src="' + urlMatch[0] + '" loading="lazy" onclick="openLightbox(\'' + urlMatch[0] + '\')">' +
         (isGif ? '<span class="msg-gif-badge">GIF</span>' : '') + '</div></div>';
     }
@@ -392,7 +392,7 @@ async function searchDmUser(q) {
     }).slice(0, 8);
     res.innerHTML = filtered.map(function(m) {
       return '<div class="ch-item" onclick="openDm(\'' + m.id + '\',\'' + escJs(m.display_name) + '\')">' +
-        (m.avatar ? '<img src="' + m.avatar + '" style="width: 20px; height: 20px">' : '<i class="fas fa-user ch-icon"></i>') +
+        (m.avatar ? '<img src="' + m.avatar + '"   style="width: 20px; height: 20px;">' : '<i class="fas fa-user ch-icon"></i>') +
         '<span class="ch-name">' + escHtml(m.display_name) + '</span></div>';
     }).join('');
   } catch(e) {}
@@ -438,7 +438,7 @@ async function loadDmMessages() {
       var av = isBot ? '<div class="msg-avatar-placeholder" >🤖</div>'
                      : '<div class="msg-avatar-placeholder">👤</div>';
       var urlMatch = (m.content||'').match(/https?:\/\/\S+\.(gif|jpg|jpeg|png|webp)(\?\S*)?/i);
-      var inlineMedia = urlMatch ? '<div class="msg-attachments"><div style="position: relative; display: inline-block">' +
+      var inlineMedia = urlMatch ? '<div class="msg-attachments"><div   style="position: relative;">' +
         '<img class="msg-img" src="' + urlMatch[0] + '" loading="lazy" onclick="openLightbox(\'' + urlMatch[0] + '\')">' +
         (/\.gif(\?|$)/i.test(urlMatch[0]) ? '<span class="msg-gif-badge">GIF</span>' : '') + '</div></div>' : '';
       return '<div class="msg-group">' + av + '<div class="msg-body">' +
@@ -505,7 +505,7 @@ function renderMentionPopup() {
   var popup = document.getElementById('etiket-popup');
   popup.style.display = 'block';
   popup.innerHTML = _mentionMatches.map(function(m, i) {
-    var av = m.avatar ? '<img src="' + m.avatar + '">' : '<i class="fas fa-user" style="opacity: .5"></i>';
+    var av = m.avatar ? '<img src="' + m.avatar + '">' : '<i class="fas fa-user"   style="opacity: .5;"></i>';
     return '<div class="mention-item' + (i===_mentionIdx?' selected':'') + '" onclick="selectMention(' + i + ')">' + av + escHtml(m.name) + '</div>';
   }).join('');
 }

@@ -95,9 +95,9 @@
     }
 
     $('cmd-modal-content').innerHTML =
-      '<h3 style="margin-bottom: 14px">' + esc(commands.find(function (c) { return c.cmd === cmd; }).name) + '</h3>' +
+      '<h3 >' + esc(commands.find(function (c) { return c.cmd === cmd; }).name) + '</h3>' +
       fields +
-      '<div style="display: flex; gap: 8px; margin-top: 14px">' +
+      '<div   style="margin-top: 14px;">' +
         '<button class="btn-exec" id="btnExec" type="button">Чalишtиr</button>' +
         '<button class="btn-cancel" id="btnCancel" type="button">Отмена</button>' +
       '</div>' +

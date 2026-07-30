@@ -20,7 +20,7 @@
 <div class="warn-toolbar">
   <select id="guild-filter" class="warn-select"><option value="">Все серверы</option></select>
   <input type="text" id="search" class="warn-search" placeholder="Предупреждение ara... (kullanиcи, sebep)">
-  <span id="warn-count" class="warn-count" style="margin-left: auto">0</span>
+  <span id="warn-count" class="warn-count"   style="margin-left: auto;">0</span>
 </div>
 
 <div class="warn-stats">
@@ -104,7 +104,7 @@
     var rows = filtered.slice(0, 200).map(function (w) {
       return '<tr><td><span class="warn-badge">' + esc(w.user_id || '-') + '</span></td>' +
         '<td >' + esc(w.moderator || '-') + '</td>' +
-        '<td style="max-width: 160px; overflow: hidden">' + esc(w.reason || '-') + '</td>' +
+        '<td   style="max-width: 160px; overflow: hidden;">' + esc(w.reason || '-') + '</td>' +
         '<td >' + esc(fmtDate(w.timestamp)) + '</td></tr>';
     }).join('');
     $('warn-body').innerHTML = '<table><thead><tr><th>User</th><th>Модер.</th><th>Причина</th><th>Время</th></tr></thead><tbody>' + rows + '</tbody></table>';

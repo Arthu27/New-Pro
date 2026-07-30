@@ -25,8 +25,8 @@
 
 <button class="btn-add" onclick="openNameModal()"><i class="fas fa-plus"></i> Создать новую роль</button>
 
-<div style="margin-bottom: 16px">
-  <select id="guild-select" style="display: none; width: 100%">
+<div >
+  <select id="guild-select"  >
     <option value="">Выберите сервер...</option>
   </select>
 </div>
@@ -62,7 +62,7 @@ async function loadRoles() {
     }
     box.innerHTML = roles.map(function(role) {
       return '<div class="roles-card">' +
-        '<div style="display: flex; gap: 14px">' +
+        '<div  >' +
           '<div class="roles-color" ></div>' +
           '<div><div class="roles-name">' + esc(role.name) + '</div><div class="roles-members"><i class="fas fa-users"></i> ' + (role.members || 0) + ' участников</div></div>' +
         '</div>' +

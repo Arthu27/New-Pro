@@ -156,14 +156,14 @@
 .aimod-slider-value { display: inline-block; min-width: 40px; text-align: right; font-weight: 700; color: var(--ac); }
 </style>
 
-<div class="grid-2" style="gap: 16px; margin-bottom: 18px;">
+<div class="grid-2" >
   <!-- Master toggle -->
   <div class="dash-box">
     <div class="dash-box-head">
       <div class="dash-box-title"><i class="fas fa-power-off"></i> Статус системы</div>
       <span id="statusBadge" class="badge badge-warn">ЗАГРУЗКА</span>
     </div>
-    <div class="dash-box-body" style="padding: 20px;">
+    <div class="dash-box-body" >
       <div class="aimod-toggle-card" id="masterToggle" onclick="toggleMaster()">
         <div class="switch" id="masterSwitch"></div>
         <div class="info">
@@ -171,7 +171,7 @@
           <p>Главный переключатель. При выключении никакие правила не применяются.</p>
         </div>
       </div>
-      <div class="aimod-stats-grid" style="margin-top: 16px;">
+      <div class="aimod-stats-grid" >
         <div class="aimod-stat stat-total">
           <div class="stat-icon"><i class="fas fa-chart-line"></i></div>
           <div class="stat-body">
@@ -209,7 +209,7 @@
     <div class="dash-box-head">
       <div class="dash-box-title"><i class="fas fa-language"></i> Языки детекции</div>
     </div>
-    <div class="dash-box-body" style="padding: 20px;">
+    <div class="dash-box-body" >
       <div class="aimod-toggle-card" data-lang="ru" onclick="toggleLang('ru')">
         <div class="switch" data-switch="ru"></div>
         <div class="info">
@@ -240,8 +240,8 @@
   <div class="dash-box-head">
     <div class="dash-box-title"><i class="fas fa-gavel"></i> Авто-действия по серьёзности</div>
   </div>
-  <div class="dash-box-body" style="padding: 20px;">
-    <p style="font-size: var(--fs-sm); color: var(--text-2); margin: 0 0 14px 0;">Выберите, какие типы нарушений обрабатывать автоматически:</p>
+  <div class="dash-box-body" >
+    <p >Выберите, какие типы нарушений обрабатывать автоматически:</p>
     <div class="aimod-severity-grid">
       <div class="severity-card" data-sev="mild" onclick="toggleSev('mild')">
         <div class="sev-icon">⚠️</div>
@@ -272,17 +272,17 @@
   </div>
 </div>
 
-<div class="grid-2" style="gap: 16px; margin-bottom: 18px;">
+<div class="grid-2" >
   <!-- Sensitivity slider -->
   <div class="dash-box">
     <div class="dash-box-head">
       <div class="dash-box-title"><i class="fas fa-sliders-h"></i> Чувствительность</div>
     </div>
-    <div class="dash-box-body" style="padding: 20px;">
+    <div class="dash-box-body" >
       <div class="aimod-slider-wrap">
         <label>Чувствительность детекции: <span class="aimod-slider-value" id="sensValue">70%</span></label>
         <input type="range" min="0" max="100" value="70" class="aimod-slider" id="sensSlider" oninput="updateSens(this.value)">
-        <p style="font-size: 11px; color: var(--text-3); margin: 8px 0 0 0; line-height: 1.4;">
+        <p   style="0 0;">
           <b>Низкая (0-50%):</b> только severe и discrimination<br>
           <b>Средняя (50-70%):</b> + moderate<br>
           <b>Высокая (70-100%):</b> + mild (может быть больше false positives)
@@ -297,7 +297,7 @@
       <div class="dash-box-title"><i class="fas fa-level-up-alt"></i> Эскалация наказаний</div>
       <span id="escBadge" class="badge badge-warn">ВЫКЛ</span>
     </div>
-    <div class="dash-box-body" style="padding: 20px;">
+    <div class="dash-box-body" >
       <div class="aimod-toggle-card" id="escToggle" onclick="toggleEsc()">
         <div class="switch" id="escSwitch"></div>
         <div class="info">
@@ -305,14 +305,14 @@
           <p>3 warn → mute, 3 mute → kick, 2 kick → ban (в окне 24ч)</p>
         </div>
       </div>
-      <div class="grid-2" style="gap: 8px; margin-top: 12px;">
+      <div class="grid-2" >
         <div>
-          <label style="font-size: 10px; color: var(--text-3); text-transform: uppercase;">Окно (часы)</label>
-          <input type="number" id="escWindow" value="24" min="1" max="168" style="padding: 8px 12px; background: var(--bg-3); border: 1px solid var(--line-2); border-radius: 8px; color: var(--text); width: 100%;">
+          <label >Окно (часы)</label>
+          <input type="number" id="escWindow" value="24" min="1" max="168"  >
         </div>
         <div>
-          <label style="font-size: 10px; color: var(--text-3); text-transform: uppercase;">Warns → Mute</label>
-          <input type="number" id="escWarns" value="3" min="1" max="20" style="padding: 8px 12px; background: var(--bg-3); border: 1px solid var(--line-2); border-radius: 8px; color: var(--text); width: 100%;">
+          <label >Warns → Mute</label>
+          <input type="number" id="escWarns" value="3" min="1" max="20"  >
         </div>
       </div>
     </div>
@@ -324,13 +324,13 @@
   <div class="dash-box-head">
     <div class="dash-box-title"><i class="fas fa-vial"></i> Тест детекции</div>
   </div>
-  <div class="dash-box-body" style="padding: 20px;">
-    <p style="font-size: var(--fs-sm); color: var(--text-2); margin: 0 0 12px 0;">Введите текст, чтобы проверить, как AI его оценит (без реальных действий):</p>
-    <div style="display: flex; gap: 10px; margin-bottom: 12px;">
-      <input type="text" id="testInput" placeholder="Например: ты тупой идиот" style="flex: 1; padding: 10px 14px; background: var(--bg-3); border: 1px solid var(--line-2); border-radius: 10px; color: var(--text);">
+  <div class="dash-box-body" >
+    <p >Введите текст, чтобы проверить, как AI его оценит (без реальных действий):</p>
+    <div  >
+      <input type="text" id="testInput" placeholder="Например: ты тупой идиот"  >
       <button class="form-btn" onclick="runTest()"><i class="fas fa-play"></i> Проверить</button>
     </div>
-    <div id="testResult" style="display: none; padding: 14px 16px; border-radius: 10px; border: 1px solid var(--line);"></div>
+    <div id="testResult"   style="16px;"></div>
   </div>
 </div>
 
@@ -424,16 +424,16 @@
         if (data.clean) {
           res.style.background = 'rgba(74,222,128,0.10)';
           res.style.borderColor = 'rgba(74,222,128,0.30)';
-          res.innerHTML = '<b style="color: var(--ok);">✅ Чистый текст</b><br><span style="font-size: var(--fs-sm); color: var(--text-2);">Нарушений не обнаружено.</span>';
+          res.innerHTML = '<b  >✅ Чистый текст</b><br><span >Нарушений не обнаружено.</span>';
         } else {
           res.style.background = 'rgba(248,113,113,0.10)';
           res.style.borderColor = 'rgba(248,113,113,0.30)';
-          res.innerHTML = '<b style="color: var(--err);">⚠️ Обнаружено: ' + data.severity + '</b><br>' +
-            '<span style="font-size: var(--fs-sm); color: var(--text-2);">Паттернов: ' + data.matches + '</span><br>' +
-            '<code style="font-size: 11px; color: var(--text-3); display: block; margin-top: 6px;">' + data.patterns.join('<br>') + '</code>';
+          res.innerHTML = '<b  >⚠️ Обнаружено: ' + data.severity + '</b><br>' +
+            '<span >Паттернов: ' + data.matches + '</span><br>' +
+            '<code   style="margin-top: 6px;">' + data.patterns.join('<br>') + '</code>';
         }
       }).catch(e => {
-        res.innerHTML = '<b style="color: var(--err);">Ошибка</b>';
+        res.innerHTML = '<b  >Ошибка</b>';
       });
   };
   loadConfig();

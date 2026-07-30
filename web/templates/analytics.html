@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Аналитика — Aether{% endblock %}
-{% block page_title %}<i class="fas fa-chart-line" style="color:var(--ac);"></i> Аналитика сервера{% endblock %}
+{% block page_title %}<i class="fas fa-chart-line"  ></i> Аналитика сервера{% endblock %}
 {% block content %}
 {% block page_hero %}
 <div class="page-hero compact">
@@ -179,14 +179,14 @@
 
   <div class="section">
     <h2><i class="fas fa-chart-bar"></i> Сообщений в день (последние 7 дней)</h2>
-    <div style="height: 240px; position: relative;">
+    <div   style="height: 240px; position: relative;">
       <canvas id="msgChart"></canvas>
     </div>
   </div>
 
   <div class="section">
     <h2><i class="fas fa-user-plus"></i> Рост участников</h2>
-    <div style="height: 240px; position: relative;">
+    <div   style="height: 240px; position: relative;">
       <canvas id="memberChart"></canvas>
     </div>
   </div>
@@ -229,7 +229,7 @@
       var avatarHtml = avatarUrl
         ? '<img class="leader-avatar" src="' + esc(avatarUrl) + '" onerror="this.outerHTML=\'<div class=&quot;leader-avatar-fallback&quot;>' + esc(getInitial(name)) + '</div>\'" />'
         : '<div class="leader-avatar-fallback">' + esc(getInitial(name)) + '</div>';
-      return '<div class="leader-row" style="animation-delay:' + (i * 0.04) + 's;">' +
+      return '<div class="leader-row"   style="animation-delay:' + (i * 0.04) + 's;">' +
         '<div class="leader-rank ' + rank + '">#' + (i + 1) + '</div>' +
         avatarHtml +
         '<div class="leader-info">' +
@@ -253,12 +253,12 @@
       var rank = ranks[i] || '';
       var name = String(c.name || c.id || '?');
       var pct = Math.round(((c.messages || 0) / maxC) * 100);
-      return '<div class="leader-row" style="animation-delay:' + (i * 0.04) + 's;">' +
+      return '<div class="leader-row"   style="animation-delay:' + (i * 0.04) + 's;">' +
         '<div class="leader-rank ' + rank + '">#' + (i + 1) + '</div>' +
-        '<div class="leader-avatar-fallback" style="background: linear-gradient(135deg, var(--cyan), var(--violet));">#</div>' +
+        '<div class="leader-avatar-fallback"   style="background: linear-gradient(135deg, var(--cyan), var(--violet));">#</div>' +
         '<div class="leader-info">' +
           '<div class="leader-name">#' + esc(name) + '</div>' +
-          '<div class="bar-track"><div class="bar-fill" style="width: ' + pct + '%;"></div></div>' +
+          '<div class="bar-track"><div class="bar-fill"   style="width: ' + pct + '%;"></div></div>' +
         '</div>' +
         '<div class="leader-count">' + fmtNum(c.messages || 0) + '</div>' +
       '</div>';
@@ -379,8 +379,8 @@
       renderCharts(d);
       _loaded = true;
     } catch (e) {
-      var mb = $id('top-members'); if (mb) mb.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle" style="color:var(--err);"></i><p style="color:var(--err);">Не удалось загрузить</p></div>';
-      var cb = $id('top-channels'); if (cb) cb.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle" style="color:var(--err);"></i><p style="color:var(--err);">Не удалось загрузить</p></div>';
+      var mb = $id('top-members'); if (mb) mb.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"  ></i><p  >Не удалось загрузить</p></div>';
+      var cb = $id('top-channels'); if (cb) cb.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"  ></i><p  >Не удалось загрузить</p></div>';
     }
   }
 

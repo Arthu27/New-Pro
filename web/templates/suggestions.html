@@ -18,7 +18,7 @@
 
 
 <div class="sg-hero">
-  <div style="margin-bottom: 10px">💡</div>
+  <div   style="margin-bottom: 10px;">💡</div>
   <div class="hero-title">💡 Менеджер предложений</div>
   <div class="hero-sub">Управляйте предложениями и следите за результатами голосования</div>
 </div>
@@ -88,7 +88,7 @@ function renderSuggestions() {
   var filtered = currentFilter === 'all' ? allSuggestions : allSuggestions.filter(s => s.status === currentFilter);
   var box = document.getElementById('sg-list');
   if (!filtered.length) {
-    box.innerHTML = '<div class="empty-state"><div style="margin-bottom: 16px">💡</div><p>В этой категории предложений нет.</p></div>';
+    box.innerHTML = '<div class="empty-state"><div >💡</div><p>В этой категории предложений нет.</p></div>';
     return;
   }
   box.innerHTML = filtered.map(function(s, i) {

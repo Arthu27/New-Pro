@@ -1,6 +1,6 @@
 ﻿{% extends "base.html" %}
 {% block title %}Редактор правил - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-scroll" style="animation: pulse 2s infinite"></i> СЕРВЕР ПРАВИЛ{% endblock %}
+{% block page_title %}<i class="fas fa-scroll"   style="animation: pulse 2s infinite;"></i> СЕРВЕР ПРАВИЛ{% endblock %}
 {% block content %}
 {% block page_hero %}
 <div class="page-hero compact">
@@ -26,16 +26,16 @@
     <div class="re-title"><i class="fas fa-edit"></i> Редактирование правил</div>
     <div id="rules-list"></div>
     <button class="btn-add" onclick="addRule()"><i class="fas fa-plus"></i> Добавить правило</button>
-    <div style="display: flex; gap: 10px; margin-top: 12px">
-      <button class="save-btn" onclick="saveRules()" style="flex: 1"><i class="fas fa-save"></i> Сохранить</button>
+    <div  >
+      <button class="save-btn" onclick="saveRules()" ><i class="fas fa-save"></i> Сохранить</button>
     </div>
   </div>
 
   <div class="re-box">
     <div class="re-title"><i class="fas fa-eye"></i> Предпросмотр & Опубликовать</div>
-    <div id="preview" style="min-height: 150px; margin-bottom: 15px"></div>
+    <div id="preview"   style="min-height: 150px; margin-bottom: 15px;"></div>
     <label class="field-label">Опубликоватьnacak Канал</label>
-    <select id="rules-channel" class="field-sel" style="margin-bottom: 12px"></select>
+    <select id="rules-channel" class="field-sel" ></select>
     <button class="publish-btn" onclick="publishRules()">
       <i class="fas fa-paper-plane"></i> Discord'a Опубликовать
     </button>
@@ -117,7 +117,7 @@ function removeRule(i) { rules.splice(i,1); renderRules(); }
 function updatePreview() {
   var box = document.getElementById('preview');
   if(!rules.length) { box.innerHTML='<p >Правило yok.</p>'; return; }
-  box.innerHTML = '<div style="margin-bottom: 12px"><i class="fas fa-scroll"></i> Сервер Правила</div>'+
+  box.innerHTML = '<div ><i class="fas fa-scroll"></i> Сервер Правила</div>'+
     rules.map(function(r,i){
       return '<div class="preview-rule"><span>'+(i+1)+'.</span>'+r+'</div>';
     }).join('');

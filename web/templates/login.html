@@ -540,7 +540,7 @@
         </form>
 
         <!-- TAB 2: DISCORD ID PIN LOGIN -->
-        <div id="formPin" style="display: none">
+        <div id="formPin"  >
             <div class="progress-bar" id="progressBar"><div class="progress-fill" id="progressFill"></div></div>
 
             <div id="step1">
@@ -649,7 +649,7 @@ function addTestItem(name, status, detail) {
     if (status === 'ok') iconHtml = '<i class="fas fa-check-circle" ></i>';
     else if (status === 'fail') iconHtml = '<i class="fas fa-times-circle" ></i>';
     else if (status === 'warn') iconHtml = '<i class="fas fa-exclamation-circle" ></i>';
-    item.innerHTML = '<div>' + iconHtml + ' <span class="test-name" style="margin-left: 6px">' + name + '</span></div><span class="test-detail">' + (detail || '') + '</span>';
+    item.innerHTML = '<div>' + iconHtml + ' <span class="test-name"   style="margin-left: 6px;">' + name + '</span></div><span class="test-detail">' + (detail || '') + '</span>';
     list.appendChild(item);
     return item;
 }

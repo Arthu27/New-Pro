@@ -17,8 +17,8 @@
 
 
 
-<div style="display: flex; margin-bottom: 12px; gap: 8px">
-  <div style="display: flex; gap: 8px">
+<div  >
+  <div  >
     <span class="gw-badge live" id="live-count">0 live</span>
     <span class="gw-badge ended" id="ended-count">0 завершено</span>
   </div>
@@ -57,7 +57,7 @@
         '<div class="gw-prize"><i class="fas ' + esc(g.prize) + '"></i></div>' +
         '<div class="gw-title">' + esc(g.title) + '</div>' +
         '<div class="gw-info"><span><i class="fas fa-trophy"></i>' + g.winners + ' победител' + '</span><span><i class="fas fa-clock"></i>' + esc(g.ends) + '</span></div>' +
-        '<div class="gw-progress"><div class="gw-progress-fill" style="width: ' + pct + '%"></div></div>' +
+        '<div class="gw-progress"><div class="gw-progress-fill"   style="width: ' + pct + '%;"></div></div>' +
         '<div class="gw-foot"><span>' + g.entries + ' / ' + g.max + ' katиlиmcи</span><span class="gw-badge ' + (g.live ? 'live' : 'ended') + '">' + (g.live ? 'LIVE' : 'Готово') + '</span></div>' +
       '</div>';
     });

@@ -60,7 +60,7 @@
 </style>
 
 <!-- Vital signs grid -->
-<div class="grid-4" style="gap: 12px; margin-bottom: 18px;">
+<div class="grid-4"  >
   <div class="diag-vital" id="vital-mem">
     <div class="diag-vital-header">
       <div class="diag-vital-icon"><i class="fas fa-memory"></i></div>
@@ -99,14 +99,14 @@
   </div>
 </div>
 
-<div class="grid-2" style="gap: 16px; margin-bottom: 18px;">
+<div class="grid-2" >
   <!-- Bot status -->
   <div class="dash-box">
     <div class="dash-box-head">
       <div class="dash-box-title"><i class="fas fa-robot"></i> Статус бота</div>
       <span id="botOnlineBadge" class="badge badge-ok">ОНЛАЙН</span>
     </div>
-    <div class="dash-box-body" style="padding: 20px;">
+    <div class="dash-box-body" >
       <div class="kv"><div class="kv-key">Uptime</div><div class="kv-val" id="uptimeVal">—</div></div>
       <div class="kv"><div class="kv-key">Guilds</div><div class="kv-val" id="guildsVal">—</div></div>
       <div class="kv"><div class="kv-key">Users</div><div class="kv-val" id="usersVal">—</div></div>
@@ -120,9 +120,9 @@
   <div class="diag-chart">
     <h4><i class="fas fa-chart-area"></i> Производительность (60 мин)</h4>
     <div class="diag-spark" id="memChart"></div>
-    <h4 style="margin-top: 14px;"><i class="fas fa-tachometer-alt"></i> Latency (60 мин)</h4>
+    <h4   style="margin-top: 14px;"><i class="fas fa-tachometer-alt"></i> Latency (60 мин)</h4>
     <div class="diag-spark" id="latChart"></div>
-    <h4 style="margin-top: 14px;"><i class="fas fa-exclamation-triangle"></i> Ошибки (60 мин)</h4>
+    <h4   style="margin-top: 14px;"><i class="fas fa-exclamation-triangle"></i> Ошибки (60 мин)</h4>
     <div class="diag-spark" id="errChart"></div>
   </div>
 </div>
@@ -132,7 +132,7 @@
   <div class="dash-box-head">
     <div class="dash-box-title"><i class="fas fa-tools"></i> Действия</div>
   </div>
-  <div class="dash-box-body" style="padding: 20px;">
+  <div class="dash-box-body" >
     <div class="diag-action">
       <div class="icon"><i class="fas fa-fire"></i></div>
       <div class="text">Hot Reload Cogs
@@ -168,10 +168,10 @@
 <div class="dash-box aimod-section">
   <div class="dash-box-head">
     <div class="dash-box-title"><i class="fas fa-list"></i> Последние ошибки</div>
-    <button onclick="loadErrors()" style="background: none; border: 1px solid var(--line); color: var(--text-2); padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 11px;"><i class="fas fa-sync"></i> Обновить</button>
+    <button onclick="loadErrors()"   style="background: none; border-radius: 6px;"><i class="fas fa-sync"></i> Обновить</button>
   </div>
-  <div class="dash-box-body" id="errorsBox" style="padding: 0; max-height: 300px; overflow-y: auto;">
-    <div style="padding: 30px; text-align: center; color: var(--text-3);">
+  <div class="dash-box-body" id="errorsBox"   style="max-height: 300px; overflow-y: auto;">
+    <div   style="text-align: center;">
       <i class="fas fa-circle-notch fa-spin"></i> Загрузка...
     </div>
   </div>
@@ -226,9 +226,9 @@
       let cls = '';
       if (v >= crit) cls = 'crit';
       else if (v >= warn) cls = 'warn';
-      return `<div class="diag-spark-bar ${cls}" style="height: ${pct}%" title="${v.toFixed(1)}"></div>`;
+      return `<div class="diag-spark-bar ${cls}"   style="height: ${pct}%;" title="${v.toFixed(1)}"></div>`;
     }).join('');
-    document.getElementById(id).innerHTML = html || '<div style="color: var(--text-3); font-size: 11px;">Нет данных</div>';
+    document.getElementById(id).innerHTML = html || '<div  >Нет данных</div>';
   }
   function formatUptime(sec) {
     const d = Math.floor(sec / 86400);
@@ -273,7 +273,7 @@
     fetch('/api/bot/errors').then(r => r.json()).then(errs => {
       const box = document.getElementById('errorsBox');
       if (!errs.length) {
-        box.innerHTML = '<div style="padding: 30px; text-align: center; color: var(--ok);"><i class="fas fa-check-circle"></i> Нет ошибок ✨</div>';
+        box.innerHTML = '<div   style="text-align: center;"><i class="fas fa-check-circle"></i> Нет ошибок ✨</div>';
         return;
       }
       box.innerHTML = errs.slice(0, 15).map(e => {
