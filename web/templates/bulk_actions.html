@@ -16,55 +16,70 @@
 .row input,.row select,.row textarea{flex:1;padding:6px 10px;background:rgba(255,255,255,0.04);border:1px solid rgba(212,168,67,0.16);border-radius:6px;color:#f0e8d0;font-size:12px;}
 .row textarea{font-family:Inter,sans-serif;resize:vertical;min-height:60px;}
 
-.btn{padding:8px 14px;border:none;border-radius:99px;cursor:pointer;font-weight:600;font-size:11px;font-family:Inter,sans-serif;display:inline-flex;align-items:center;gap:5px;}
-.btn-primary{background:#c8922a;color:#100e08;}
+.btn{padding:8px 14px;border:none;border-radius:99px;cursor:pointer;font-weight:600;font-size:11px;font-family:Inter,sans-serif;display:inline-flex;align-items:center;gap:5px;width:100%;justify-content:center;margin-top:6px;}
+.btn-primary{background:linear-gradient(135deg,#c8922a,#e0a830);color:#100e08;}
 .btn-primary:hover{background:#e0a830;}
 .btn-warn{background:rgba(232,144,58,0.15);color:#e8903a;border:1px solid rgba(232,144,58,0.3);}
+.btn-warn:hover{background:rgba(232,144,58,0.25);}
 .btn-danger{background:rgba(224,85,85,0.15);color:var(--red);border:1px solid rgba(224,85,85,0.3);}
+.btn-danger:hover{background:rgba(224,85,85,0.25);}
 
 .warning-box{background:rgba(232,144,58,0.08);border:1px solid rgba(232,144,58,0.25);padding:10px 12px;border-radius:8px;font-size:11px;color:#e8903a;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
 .warning-box i{font-size:14px;}
+.warning-box.danger{background:rgba(224,85,85,0.08);border-color:rgba(224,85,85,0.25);color:var(--red);}
+
+.result{font-size:11px;padding:8px 10px;border-radius:6px;margin-top:8px;display:none;}
+.result.ok{background:rgba(94,196,122,0.1);color:#5ec47a;display:block;}
+.result.err{background:rgba(224,85,85,0.1);color:var(--red);display:block;}
 </style>
 
 <div class="ba-grid">
-  <!-- Toplu mesaj -->
+  <!-- Toplu DM (mesaj gönder) -->
   <div class="ba-card">
     <div class="ba-head">
       <div class="ba-icon"><i class="fas fa-bullhorn"></i></div>
-      <div class="ba-title">Toplu Mesaj</div>
+      <div class="ba-title">Toplu Mesaj (DM)</div>
     </div>
-    <div class="warning-box"><i class="fas fa-info-circle"></i> Mesaj seçili role sahip tüm üyelere gönderilir.</div>
-    <div class="row"><label>Sunucu</label><select id="guild"><option value="">Seçin...</option></select></div>
-    <div class="row"><label>Rol</label><select id="role"><option value="">Tüm üyeler</option></select></div>
-    <div class="row"><label>Mesaj</label><textarea id="message" rows="3" placeholder="Mesajınız..."></textarea></div>
-    <button class="btn btn-primary" id="btn-send" type="button" style="width:100%;justify-content:center;"><i class="fas fa-paper-plane"></i> Gönder</button>
+    <div class="warning-box"><i class="fas fa-info-circle"></i> Seçili role sahip tüm üyelere DM gönderilir.</div>
+    <div class="row"><label>Sunucu</label><select id="dm-guild" data-type="guilds"></select></div>
+    <div class="row"><label>Rol</label><select id="dm-role" data-type="roles" data-source="dm-guild"></select></div>
+    <div class="row"><label>Mesaj</label><textarea id="dm-msg" rows="3" placeholder="Gönderilecek mesaj..."></textarea></div>
+    <button class="btn btn-primary" id="btn-dm" type="button"><i class="fas fa-paper-plane"></i> Toplu Gönder</button>
+    <div class="result" id="dm-result"></div>
   </div>
 
-  <!-- Toplu rol -->
+  <!-- Toplu Rol -->
   <div class="ba-card">
     <div class="ba-head">
       <div class="ba-icon"><i class="fas fa-user-tag"></i></div>
       <div class="ba-title">Toplu Rol İşlemi</div>
     </div>
-    <div class="warning-box"><i class="fas fa-info-circle"></i> Tüm üyelere veya seçili role toplu rol ver/kaldır.</div>
-    <div class="row"><label>Sunucu</label><select id="guild2"><option value="">Seçin...</option></select></div>
-    <div class="row"><label>Rol</label><select id="role2"><option value="">Seçin...</option></select></div>
-    <div class="row"><label>Aksiyon</label><select id="action2"><option value="add">Ekle</option><option value="remove">Kaldır</option></select></div>
-    <button class="btn btn-warn" id="btn-role" type="button" style="width:100%;justify-content:center;"><i class="fas fa-user-plus"></i> Uygula</button>
+    <div class="warning-box"><i class="fas fa-info-circle"></i> Hedef roldeki herkese aksiyon rolü eklenir/kaldırılır.</div>
+    <div class="row"><label>Sunucu</label><select id="role-guild" data-type="guilds"></select></div>
+    <div class="row"><label>Hedef rol</label><select id="role-target" data-type="roles" data-source="role-guild"></select></div>
+    <div class="row"><label>Aksiyon rol</label><select id="role-action" data-type="roles" data-source="role-guild"></select></div>
+    <div class="row"><label>İşlem</label>
+      <select id="role-op"><option value="add">Ekle</option><option value="remove">Kaldır</option></select>
+    </div>
+    <button class="btn btn-warn" id="btn-role" type="button"><i class="fas fa-user-plus"></i> Uygula</button>
+    <div class="result" id="role-result"></div>
   </div>
 
-  <!-- Toplu mute/kick -->
+  <!-- Toplu Mute/Kick/Ban -->
   <div class="ba-card">
     <div class="ba-head">
       <div class="ba-icon" style="background:rgba(224,85,85,0.15);color:var(--red);"><i class="fas fa-gavel"></i></div>
       <div class="ba-title">Toplu Ceza</div>
     </div>
-    <div class="warning-box" style="background:rgba(224,85,85,0.08);border-color:rgba(224,85,85,0.25);color:var(--red);"><i class="fas fa-exclamation-triangle"></i> Geri alınamaz işlem!</div>
-    <div class="row"><label>Sunucu</label><select id="guild3"><option value="">Seçin...</option></select></div>
-    <div class="row"><label>Rol</label><select id="role3"><option value="">Tüm üyeler</option></select></div>
-    <div class="row"><label>Süre (dk)</label><input type="number" id="duration" value="60"></div>
-    <div class="row"><label>Aksiyon</label><select id="action3"><option value="mute">Mute</option><option value="kick">Kick</option><option value="ban">Ban</option></select></div>
-    <button class="btn btn-danger" id="btn-punish" type="button" style="width:100%;justify-content:center;"><i class="fas fa-gavel"></i> Uygula</button>
+    <div class="warning-box danger"><i class="fas fa-exclamation-triangle"></i> Geri alınamaz işlem!</div>
+    <div class="row"><label>Sunucu</label><select id="punish-guild" data-type="guilds"></select></div>
+    <div class="row"><label>Hedef rol</label><select id="punish-role" data-type="roles" data-source="punish-guild"></select></div>
+    <div class="row"><label>Süre (dk)</label><input type="number" id="punish-duration" value="60" min="1"></div>
+    <div class="row"><label>İşlem</label>
+      <select id="punish-op"><option value="mute">Mute</option><option value="kick">Kick</option><option value="ban">Ban</option></select>
+    </div>
+    <button class="btn btn-danger" id="btn-punish" type="button"><i class="fas fa-gavel"></i> Uygula</button>
+    <div class="result" id="punish-result"></div>
   </div>
 </div>
 
@@ -72,21 +87,120 @@
 (function () {
   'use strict';
   function $(id) { return document.getElementById(id); }
-  function showToast(msg, ok) {
-    var t = document.createElement('div');
-    t.textContent = msg;
-    t.style.cssText = 'position:fixed;top:14px;right:14px;padding:9px 16px;border-radius:8px;font-weight:600;z-index:99999;font-size:12px;background:' + (ok ? 'linear-gradient(135deg,#27ae60,#2ecc71)' : 'linear-gradient(135deg,#c0392b,#e74c3c)') + ';color:#fff;';
-    document.body.appendChild(t);
-    setTimeout(function () { t.remove(); }, 1800);
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+  function showResult(id, msg, ok) {
+    var el = $(id);
+    el.className = 'result ' + (ok ? 'ok' : 'err');
+    el.textContent = msg;
   }
-  function bind() {
-    ['btn-send','btn-role','btn-punish'].forEach(function (id) {
-      var b = $(id);
-      if (b) b.addEventListener('click', function () { showToast('Toplu işlem başlatıldı', true); });
+
+  // Guild listesi doldur
+  async function loadGuilds() {
+    try {
+      var guilds = await fetch('/api/guilds').then(function (r) { return r.json(); });
+      document.querySelectorAll('[data-type="guilds"]').forEach(function (sel) {
+        guilds.forEach(function (g) {
+          var opt = document.createElement('option');
+          opt.value = g.id;
+          opt.textContent = g.name;
+          sel.appendChild(opt);
+        });
+        sel.addEventListener('change', function () { loadRoles(sel); });
+      });
+    } catch (e) { /* sessiz */ }
+  }
+
+  // Rol listesi doldur
+  async function loadRoles(guildSelect) {
+    var src = guildSelect.getAttribute('data-source');
+    var targetSel = src ? document.getElementById(src === guildSelect.id ? null : src) : null;
+    // Hedef sel'leri doldur
+    document.querySelectorAll('[data-type="roles"]').forEach(function (sel) {
+      var sourceId = sel.getAttribute('data-source');
+      if (sourceId === guildSelect.id.replace('-guild', '-guild')) {
+        // ayni kart icindeki rol sel'leri
+        var gid = guildSelect.value;
+        if (!gid) return;
+        sel.innerHTML = '<option value="">Yükleniyor...</option>';
+        fetch('/api/guild/' + gid + '/roles').then(function (r) { return r.json(); }).then(function (data) {
+          sel.innerHTML = '<option value="">Seçin...</option>';
+          if (data && data.roles) {
+            data.roles.forEach(function (role) {
+              var opt = document.createElement('option');
+              opt.value = role.id;
+              opt.textContent = role.name;
+              sel.appendChild(opt);
+            });
+          }
+        });
+      }
     });
   }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind);
-  else bind();
+
+  // Toplu DM
+  async function sendBulkDM() {
+    var gid = $('dm-guild').value;
+    var rid = $('dm-role').value;
+    var msg = $('dm-msg').value.trim();
+    if (!gid || !rid || !msg) { showResult('dm-result', 'Tüm alanları doldurun', false); return; }
+    if (!confirm('Seçili role sahip üyelere DM gönderilecek. Devam?')) return;
+    try {
+      var d = await fetch('/api/guild/' + gid + '/bulk-dm', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role_id: rid, message: msg })
+      }).then(function (r) { return r.json(); });
+      if (d.success) showResult('dm-result', '✓ ' + d.count + ' üyeye DM gönderildi', true);
+      else showResult('dm-result', '✗ ' + (d.error || 'Hata'), false);
+    } catch (e) { showResult('dm-result', '✗ ' + e.message, false); }
+  }
+
+  // Toplu Rol
+  async function bulkRole() {
+    var gid = $('role-guild').value;
+    var target = $('role-target').value;
+    var action = $('role-action').value;
+    var op = $('role-op').value;
+    if (!gid || !target || !action) { showResult('role-result', 'Tüm alanları doldurun', false); return; }
+    if (!confirm('Toplu rol işlemi uygulanacak. Devam?')) return;
+    try {
+      var d = await fetch('/api/guild/' + gid + '/bulk-roles', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target_role: target, action_role: action, action: op })
+      }).then(function (r) { return r.json(); });
+      if (d.success) showResult('role-result', '✓ ' + d.count + ' üyeye uygulandı', true);
+      else showResult('role-result', '✗ ' + (d.error || 'Hata'), false);
+    } catch (e) { showResult('role-result', '✗ ' + e.message, false); }
+  }
+
+  // Toplu ceza
+  async function bulkPunish() {
+    var gid = $('punish-guild').value;
+    var rid = $('punish-role').value;
+    var dur = parseInt($('punish-duration').value, 10);
+    var op = $('punish-op').value;
+    if (!gid || !rid) { showResult('punish-result', 'Sunucu ve rol seçin', false); return; }
+    if (op !== 'kick' && op !== 'ban' && !dur) { showResult('punish-result', 'Süre girin', false); return; }
+    if (!confirm('⚠️ ' + op.toUpperCase() + ' işlemi GERI ALINAMAZ! Devam edilsin mi?')) return;
+    try {
+      var endpoint = op === 'mute' ? '/api/guild/' + gid + '/bulk-mute' : '/api/guild/' + gid + '/bulk-' + op;
+      var d = await fetch(endpoint, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role_id: rid, duration: dur })
+      }).then(function (r) { return r.json(); });
+      if (d.success) showResult('punish-result', '✓ ' + d.count + ' üyeye uygulandı', true);
+      else showResult('punish-result', '✗ ' + (d.error || 'Hata') + ' (bulk-' + op + ' endpoint\'i olmayabilir)', false);
+    } catch (e) { showResult('punish-result', '✗ ' + e.message, false); }
+  }
+
+  function bind() {
+    $('btn-dm').addEventListener('click', sendBulkDM);
+    $('btn-role').addEventListener('click', bulkRole);
+    $('btn-punish').addEventListener('click', bulkPunish);
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { loadGuilds(); bind(); });
+  else { loadGuilds(); bind(); }
 })();
 </script>
 {% endblock %}

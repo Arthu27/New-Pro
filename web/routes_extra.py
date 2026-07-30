@@ -2994,6 +2994,67 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         asyncio.run_coroutine_threadsafe(do(), bot.loop).result(timeout=120)
         return jsonify({'success': True, 'count': result['count']})
 
+    @app.route('/api/guild/<guild_id>/bulk-mute', methods=['POST'])
+    @login_required
+    @role_required('admin')
+    def api_bulk_mute(guild_id):
+        import web.app as _app; bot = _app.bot_instance
+        import asyncio, discord
+        from datetime import timedelta
+        if not bot: return jsonify({'error': 'Bot offline'})
+        data = request.get_json(silent=True) or {}
+        result = {'count': 0}
+        async def do():
+            guild = bot.get_guild(int(guild_id))
+            role = guild.get_role(int(data['role_id']))
+            if not role: return
+            duration = int(data.get('duration', 60))
+            for member in role.members:
+                try:
+                    await member.timeout(discord.utils.utcnow() + timedelta(minutes=duration), reason='Bulk mute')
+                    result['count'] += 1
+                except: pass
+        asyncio.run_coroutine_threadsafe(do(), bot.loop).result(timeout=120)
+        return jsonify({'success': True, 'count': result['count']})
+
+    @app.route('/api/guild/<guild_id>/bulk-kick', methods=['POST'])
+    @login_required
+    @role_required('admin')
+    def api_bulk_kick(guild_id):
+        import web.app as _app; bot = _app.bot_instance
+        import asyncio, discord
+        if not bot: return jsonify({'error': 'Bot offline'})
+        data = request.get_json(silent=True) or {}
+        result = {'count': 0}
+        async def do():
+            guild = bot.get_guild(int(guild_id))
+            role = guild.get_role(int(data['role_id']))
+            if not role: return
+            for member in role.members:
+                try: await member.kick(reason='Bulk kick'); result['count'] += 1
+                except: pass
+        asyncio.run_coroutine_threadsafe(do(), bot.loop).result(timeout=120)
+        return jsonify({'success': True, 'count': result['count']})
+
+    @app.route('/api/guild/<guild_id>/bulk-ban', methods=['POST'])
+    @login_required
+    @role_required('admin')
+    def api_bulk_ban(guild_id):
+        import web.app as _app; bot = _app.bot_instance
+        import asyncio, discord
+        if not bot: return jsonify({'error': 'Bot offline'})
+        data = request.get_json(silent=True) or {}
+        result = {'count': 0}
+        async def do():
+            guild = bot.get_guild(int(guild_id))
+            role = guild.get_role(int(data['role_id']))
+            if not role: return
+            for member in role.members:
+                try: await guild.ban(member, reason='Bulk ban'); result['count'] += 1
+                except: pass
+        asyncio.run_coroutine_threadsafe(do(), bot.loop).result(timeout=180)
+        return jsonify({'success': True, 'count': result['count']})
+
     # ── WARN CONFIG API ───────────────────────────────────────────────────────
 
     @app.route('/api/guild/<guild_id>/warn-config', methods=['GET', 'POST'])

@@ -161,6 +161,16 @@ def after_request(response):
         except Exception as _ex:
             print(f"[ETAG] error on {request.path}: {_ex!r}", flush=True)
 
+    # Tarayici cache'i bypass — admin panel icin kritik (gelistirme sureci)
+    if request.path.startswith('/static/'):
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+    elif request.path.startswith('/api/') or response.is_json:
+        response.headers['Cache-Control'] = 'no-store'
+    else:
+        response.headers['Cache-Control'] = 'no-cache, must-revalidate'
+
     # CSP: Cloudflare veya proxy bazen cok sikili CSP ekler; kendi
     # header'imizi koyarak 'unsafe-eval' ve 'unsafe-inline' izni veriyoruz.
     # Bu admin paneli (trusted kullanicilar) oldugu icin inline JS/eval OK.
