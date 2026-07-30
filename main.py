@@ -283,39 +283,80 @@ def _write_and_broadcast_tunnel_url(url):
 
 
 def _get_cloudflared_binary():
-    import shutil, platform, urllib.request
+    import shutil, platform, urllib.request, struct
     base_dir = os.path.dirname(os.path.abspath(__file__))
+    is_win = platform.system().lower() == "windows"
+
+    def is_valid_exe(path):
+        """Win32 PE dosya mı kontrol et (minimum 5MB, MZ magic)."""
+        if not os.path.exists(path):
+            return False
+        if os.path.getsize(path) < 5 * 1024 * 1024:  # 5MB minimum
+            return False
+        try:
+            with open(path, 'rb') as f:
+                magic = f.read(2)
+                if magic != b'MZ':  # PE/EXE magic
+                    return False
+            return True
+        except Exception:
+            return False
+
     for name in ["cloudflared.exe", "cloudflared_new.exe", "cloudflared"]:
         p = os.path.join(base_dir, name)
-        if os.path.exists(p):
+        if is_valid_exe(p):
             return p
+        elif os.path.exists(p):
+            # Bozuk dosya, sil ki yeniden indirilsin
+            try: os.remove(p)
+            except: pass
+
     sys_cf = shutil.which("cloudflared") or shutil.which("cloudflared.exe")
-    if sys_cf:
+    if sys_cf and is_valid_exe(sys_cf):
         return sys_cf
+
+    # Env ile tunnel tamamen kapatilabilir
+    if os.getenv('DISABLE_TUNNEL', '0') == '1':
+        print("[CLOUDFLARE] DISABLE_TUNNEL=1, tunnel atlandi")
+        return None
+
     try:
         print("[CLOUDFLARE] Исполняемый файл cloudflared не найден. Начинаем автоматическую загрузку...")
-        is_win = platform.system().lower() == "windows"
         url = "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe" if is_win else "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64"
         dest_name = "cloudflared.exe" if is_win else "cloudflared"
         dest_path = os.path.join(base_dir, dest_name)
         urllib.request.urlretrieve(url, dest_path)
         if not is_win:
             os.chmod(dest_path, 0o755)
-        print(f"[CLOUDFLARE] Успешно загружен cloudflared в: {dest_path}")
-        return dest_path
+        if is_valid_exe(dest_path):
+            print(f"[CLOUDFLARE] Успешно загружен cloudflared в: {dest_path}")
+            return dest_path
+        else:
+            print(f"[CLOUDFLARE] Загруженный файл невалиден (размер/формат). Удален: {dest_path}")
+            try: os.remove(dest_path)
+            except: pass
+            return None
     except Exception as _e:
         print(f"[CLOUDFLARE] Ошибка автоматической загрузки cloudflared: {_e}")
         return None
 
 def start_tunnel():
     import time
+    # Env ile kapatilabilir
+    if os.getenv('DISABLE_TUNNEL', '0') == '1':
+        print("[CLOUDFLARE] DISABLE_TUNNEL=1, tunnel baslatilmiyor")
+        return
+
     cf_path = _get_cloudflared_binary()
     if not cf_path:
         print("⚠️ Не удалось найти или загрузить cloudflared. Туннель Cloudflare отключен.")
         return
+
     protocols = ["http2", "quic", "auto"]
     proto_idx = 0
-    while True:
+    fail_count = 0
+    MAX_FAILS = 3
+    while fail_count < MAX_FAILS:
         try:
             proto = protocols[proto_idx % len(protocols)]
             print(f"[INFO] Запуск туннеля Cloudflare (протокол: {proto})...")
@@ -348,13 +389,28 @@ def start_tunnel():
                                 return
                             _t.sleep(1)
                     threading.Thread(target=_send_when_ready, args=(url,), daemon=True).start()
+                    fail_count = 0  # basarili, sayaci sifirla
             proc.wait()
-            proto_idx += 1
-            print("[WARN] Туннель отключился. Повторный запуск через 4 секунды с другим протоколом...")
+            if proc.returncode != 0:
+                fail_count += 1
+                print(f"[WARN] Туннель отключился (kod={proc.returncode}, deneme {fail_count}/{MAX_FAILS})")
+            else:
+                print("[WARN] Туннель отключился. Повторный запуск через 4 секунды...")
+                fail_count = 0
             time.sleep(4)
+            proto_idx += 1
+        except FileNotFoundError as e:
+            fail_count += 1
+            print(f"[ERR] Cloudflare binary bulunamadi/exec edilemedi: {e}")
+            print(f"[ERR] Tunnel devre disi birakildi ({fail_count}/{MAX_FAILS}).")
+            time.sleep(5)
         except Exception as e:
-            print(f"[ERR] Ошибка работы Cloudflare Tunnel: {e}")
-            time.sleep(10)
+            fail_count += 1
+            print(f"[ERR] Ошибка работы Cloudflare Tunnel ({fail_count}/{MAX_FAILS}): {e}")
+            time.sleep(5)
+
+    print(f"[CLOUDFLARE] {MAX_FAILS} ardisik hata, tunnel tamamen devre disi.")
+    print(f"[CLOUDFLARE] Sorun devam ederse .env'e ekle: DISABLE_TUNNEL=1")
 
 
 # ── on_ready ─────────────────────────────────────────────────────────────────
