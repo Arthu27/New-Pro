@@ -1,6 +1,6 @@
 ﻿{% extends "base.html" %}
-{% block title %}Сервер Yeddobavlenie - Aether{% endblock %}
-{% block page_title %}💾 СЕРВЕР YEDEKLEME{% endblock %}
+{% block title %}Резервное копирование сервера - Aether{% endblock %}
+{% block page_title %}💾 РЕЗЕРВНОЕ КОПИРОВАНИЕ{% endblock %}
 {% block content %}
 <style>
 .bk-box{background:rgba(26,22,16,0.7);border:1px solid rgba(200,160,80,0.3);border-radius:15px;padding:25px;margin-bottom:20px;}
@@ -58,10 +58,10 @@
       </select>
 
       <p style="color:rgba(240,232,208,0.4);font-size:12px;margin-bottom:8px;">2. Резерв файл загрузить (.json):</p>
-      <div class="upload-zone" onclick="document.getElementById('restore-fс').click()">
+      <div class="upload-zone" onclick="document.getElementById('restore-file').click()">
         <i class="fas fa-fс-upload" style="font-size:28px;color:#c8922a;margin-bottom:8px;display:block;"></i>
         <span style="color:rgba(240,232,208,0.55);font-size:13px;" id="upload-label">Dosya выбрать или peretasit otpustit</span>
-        <input type="fс" id="restore-fс" accept=".json"  onchange="previewBackup(this)">
+        <input type="file" id="restore-file" accept=".json"  onchange="previewBackup(this)">
       </div>
 
       <div class="preview-box" id="preview-box">
@@ -89,146 +89,69 @@
 
 <script>
 var uploadedBackupData = null;
+var activeGuildId = '{{ main_guild_id }}';
+
+function setStatus(id, message, ok) {
+  var node = document.getElementById(id);
+  node.innerHTML = '<span style="color:' + (ok ? '#5ec47a' : '#e05555') + ';">' + (ok ? '✅ ' : '❌ ') + message + '</span>';
+}
 
 async function loadGuilds() {
-  var gid = '{{ main_guild_id }}';
-  if (!gid) return;
-  var select = document.getElementById('guild-select');
-  if (select) select.value = gid;
-  loadBackups();
+  var mainSelect = document.getElementById('guild-select');
+  var restoreSelect = document.getElementById('restore-guild');
+  try {
+    var response = await fetch('/api/guilds');
+    var guilds = await response.json();
+    if (!Array.isArray(guilds) || !guilds.length) throw new Error('Нет доступных серверов');
+    var options = guilds.map(function (g) { return '<option value="' + g.id + '">' + g.name + '</option>'; }).join('');
+    mainSelect.innerHTML = options;
+    restoreSelect.innerHTML = options;
+    activeGuildId = guilds.some(function(g) { return g.id === activeGuildId; }) ? activeGuildId : guilds[0].id;
+    mainSelect.value = activeGuildId;
+    restoreSelect.value = activeGuildId;
+    if (guilds.length === 1) mainSelect.closest('div').style.display = 'none';
+    await loadBackups();
+  } catch (error) {
+    setStatus('backup-status', 'Не удалось загрузить сервер: ' + error.message, false);
+  }
 }
 
 async function loadBackups() {
-  var r = await fetch('/api/backups');
-  var data = await r.json();
+  var response = await fetch('/api/backups');
+  var data = await response.json();
   var box = document.getElementById('backup-list');
-  if (!data.length) { box.innerHTML = '<p style="color:#5a5040;font-size:13px;">Пока резервной kopya yok.</p>'; return; }
-  box.innerHTML = data.map(function(b) {
-    return '<div class="backup-row">' +
-      '<div><div class="backup-name">' + (b.guild_name||'?') + '</div>' +
-      '<div class="backup-meta">' + (b.created_at||'') + ' — ' + (b.size||'') + '</div></div>' +
-      '<div style="display:flex;gap:6px;flex-wrap:wrap;">' +
-        '<button onclick="restoreFromSaved(\'' + b.id + '\',\'' + (b.guild_name||'').replace(/'/g,"\\'") + '\')" class="restore-btn">♻️ Restore</button>' +
-        '<a href="/api/backups/' + b.id + '/download" style="padding:6px 14px;background:#27ae60;color:#f0e8d0;border-radius:6px;text-decoration:none;font-size:12px;font-weight:700;">⬇ Skacat</a>' +
-        '<button onclick="deleteBackup(\'' + b.id + '\')" style="padding:6px 12px;background:#e74c3c;color:#f0e8d0;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700;">🗑</button>' +
-      '</div>' +
-    '</div>';
+  if (!Array.isArray(data) || !data.length) { box.innerHTML = '<p style="color:#5a5040;">Резервных копий пока нет.</p>'; return; }
+  box.innerHTML = data.map(function (b) {
+    return '<div class="backup-row"><div><div class="backup-name">' + (b.guild_name || '?') + '</div><div class="backup-meta">' + (b.created_at || '') + ' — ' + (b.size || '') + '</div></div><div style="display:flex;gap:6px;flex-wrap:wrap;"><button type="button" onclick="restoreFromSaved(\'' + b.id + '\')" class="restore-btn">♻️ Восстановить</button><a href="/api/backups/' + b.id + '/download" style="padding:6px 14px;background:#27ae60;color:#f0e8d0;border-radius:6px;text-decoration:none;font-size:12px;font-weight:700;">⬇ Скачать</a><button type="button" onclick="deleteBackup(\'' + b.id + '\')" style="padding:6px 12px;background:#e74c3c;color:#f0e8d0;border:none;border-radius:6px;cursor:pointer;">🗑</button></div></div>';
   }).join('');
 }
 
 async function createBackup() {
-  var gid = document.getElementById('guild-select').value;
-  if (!gid) { alert('Сервер выбрать!'); return; }
-  var status = document.getElementById('backup-status');
-  status.innerHTML = '<span style="color:#c8922a;">⏳ Резерв kopya создан...</span>';
-  var r = await fetch('/api/guild/' + gid + '/backup', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({
-      роли: document.getElementById('back-role').checked,
-      channels: document.getElementById('back-channels').checked,
-      settings: document.getElementById('back-settings').checked
-    })
-  });
-  var d = await r.json();
-  if (d.success) {
-    status.innerHTML = '<span style="color:#5ec47a;">✅ Резерв kopya создано!</span>';
-    loadBackups();
-  } else {
-    status.innerHTML = '<span style="color:#e05555;">❌ ' + (d.error||'Ошибка') + '</span>';
-  }
-}
-
-async function deleteBackup(id) {
-  if (!confirm('Резервная копия удалить если хотите emin misiniz ? siz?')) return;
-  await fetch('/api/backups/' + id + '/delete', {method: 'POST'});
-  loadBackups();
-}
-
-function previewBackup(input) {
-  var fс = input.fсs[0];
-  if (!fс) return;
-  document.getElementById('upload-label').textContent = fс.name;
-  var reader = new FсReader();
-  reader.onload = function(e) {
-    try {
-      var data = JSON.parse(e.target.result);
-      uploadedBackupData = data;
-      showPreview(data);
-    } catch(err) {
-      alert('Неверный JSON файл!');
-    }
-  };
-  reader.readAsText(fс);
-}
-
-function showPreview(data) {
-  var box = document.getElementById('preview-box');
-  var content = document.getElementById('preview-content');
-  box.style.display = 'block';
-  content.innerHTML =
-    '<span class="stat-chip">🏠 ' + (data.guild_name||'?') + '</span>' +
-    '<span class="stat-chip">📅 ' + (data.created_at||'?') + '</span>' +
-    (data.roles ? '<span class="stat-chip">🎭 ' + data.roles.length + ' роль</span>' : '') +
-    (data.channels ? '<span class="stat-chip">#️⃣ ' + data.channels.length + ' канал</span>' : '') +
-    (data.settings ? '<span class="stat-chip">⚙️ Настройки</span>' : '');
-}
-
-async function doRestore() {
-  var gid = document.getElementById('restore-guild').value;
-  if (!gid) { alert('Hedef сервер выбрать!'); return; }
-  if (!uploadedBackupData) { alert('До dosya загрузить!'); return; }
-  if (!confirm('Bu резервной kopya "' + (uploadedBackupData.guild_name||'?') + '" сервер.\n"' + document.getElementById('restore-guild').selectedOptions[0].text + '" сервер применитьnacak.\n\nDevam et et?')) return;
-  await applyRestore(gid, null, uploadedBackupData);
-}
-
-async function restoreFromSaved(backupId, guildName) {
-  var gid = document.getElementById('restore-guild').value;
-  if (!gid) { alert('До celevoy сервер выбрать! (Restore пересечения vipadayusiy liste)'); return; }
-  if (!confirm('"' + guildName + '" rezervnuyu kopiyu "' + document.getElementById('restore-guild').selectedOptions[0].text + '" сервер применитьnacak.\n\nDevam et et?')) return;
-  await applyRestore(gid, backupId, null);
-}
-
-async function applyRestore(guildId, backupId, rawData) {
-  var status = document.getElementById('restore-status');
-  status.innerHTML = '<span style="color:#c8922a;">⏳ Восстановление применяется... (это займёт некоторое время)</span>';
-
-  var formData = null;
-  var fetchOpts = {};
-
-  if (rawData) {
-    // Upload edсn dosyadan restore
-    var blob = new Blob([JSON.stringify(rawData)], {type: 'application/json'});
-    formData = new FormData();
-    formData.append('fс', blob, 'backup.json');
-    fetchOpts = {method: 'POST', body: formData};
-  } else {
-    // Запись backup'tan restore
-    fetchOpts = {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({backup_id: backupId})
-    };
-  }
-
+  var guildId = document.getElementById('guild-select').value;
+  if (!guildId) return setStatus('backup-status', 'Сервер не выбран.', false);
+  document.getElementById('backup-status').innerHTML = '<span style="color:#c8922a;">⏳ Создание резервной копии…</span>';
   try {
-    var r = await fetch('/api/guild/' + guildId + '/restore', fetchOpts);
-    var d = await r.json();
-    if (d.success) {
-      var res = d.result || {};
-      var msg = '✅ Restore завершено! ';
-      if (res.roles_created) msg += res.roles_created + ' роль создано. ';
-      if (res.channels_created) msg += res.channels_created + ' канал создано. ';
-      if (res.errors && res.errors.length) msg += '<br><span style="color:#c8922a;">⚠️ ' + res.errors.length + ' ошибка: ' + res.errors.slice(0,3).join(', ') + '</span>';
-      status.innerHTML = '<span style="color:#5ec47a;">' + msg + '</span>';
-    } else {
-      status.innerHTML = '<span style="color:#e05555;">❌ ' + (d.error||'Ошибка') + '</span>';
-    }
-  } catch(e) {
-    status.innerHTML = '<span style="color:#e05555;">❌ Ошибка соединения</span>';
-  }
+    var response = await fetch('/api/guild/' + encodeURIComponent(guildId) + '/backup', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ role: document.getElementById('back-role').checked, channels: document.getElementById('back-channels').checked, settings: document.getElementById('back-settings').checked }) });
+    var data = await response.json();
+    if (!response.ok || !data.success) throw new Error(data.error || 'Ошибка создания копии');
+    setStatus('backup-status', 'Резервная копия создана.', true); loadBackups();
+  } catch (error) { setStatus('backup-status', error.message, false); }
 }
 
+async function deleteBackup(id) { if (confirm('Удалить резервную копию?')) { await fetch('/api/backups/' + id + '/delete', {method:'POST'}); loadBackups(); } }
+function previewBackup(input) {
+  var file = input.files && input.files[0]; if (!file) return;
+  document.getElementById('upload-label').textContent = file.name;
+  var reader = new FileReader();
+  reader.onload = function(e) { try { uploadedBackupData = JSON.parse(e.target.result); document.getElementById('preview-box').style.display = 'block'; document.getElementById('preview-content').textContent = 'Файл: ' + file.name; } catch (_) { alert('Выберите корректный JSON-файл резервной копии.'); } };
+  reader.readAsText(file);
+}
+async function restoreFromSaved(id) { await restoreBackup({backup_id:id}); }
+async function doRestore() { if (uploadedBackupData) await restoreBackup(uploadedBackupData, true); else alert('Сначала выберите файл резервной копии.'); }
+async function restoreBackup(payload, upload) {
+  var guildId = document.getElementById('restore-guild').value; if (!guildId || !confirm('Восстановить резервную копию на выбранный сервер?')) return;
+  try { var options = {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)}; if (upload) { var fd = new FormData(); fd.append('file', new Blob([JSON.stringify(payload)], {type:'application/json'}), 'backup.json'); options={method:'POST',body:fd}; } var response = await fetch('/api/guild/' + encodeURIComponent(guildId) + '/restore', options); var data=await response.json(); if (!data.success) throw new Error(data.error || 'Ошибка восстановления'); setStatus('restore-status', 'Восстановление завершено.', true); } catch (error) { setStatus('restore-status', error.message, false); }
+}
 loadGuilds();
 </script>
 {% endblock %}

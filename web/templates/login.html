@@ -554,19 +554,14 @@ function selectSuggestItem(inputId, popupId, mentionVal, idVal) {
     const inputEl = document.getElementById(inputId);
     document.getElementById(popupId).style.display = 'none';
 
-    // A member selected from the password form does not know a panel password.
-    // Take them to the Discord PIN flow instead of leaving a mismatched @name in
-    // the username field (the server authenticates password logins by Discord ID).
-    if (inputId === 'passUsername' && idVal) {
-        switchTab('pin');
-        const discordQuery = document.getElementById('discordQuery');
-        discordQuery.value = idVal;
-        discordQuery.focus();
-        return;
-    }
-
+    // Password login is keyed by the Discord ID. Keep the user on this form
+    // and move to the password field; selecting a member must not switch tabs.
     inputEl.value = idVal || mentionVal;
-    inputEl.focus();
+    if (inputId === 'passUsername') {
+        document.querySelector('#formPass input[name="password"]').focus();
+    } else {
+        inputEl.focus();
+    }
 }
 
 async function doCheck() {
