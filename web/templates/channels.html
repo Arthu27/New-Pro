@@ -379,9 +379,20 @@
     var modal = $('modal');
     if (modal) modal.addEventListener('click', function (e) { if (e.target === modal) closeModal(); });
 
-    // Event delegation: silme butonы + kategori toggle
+    // Keep the viewport fixed when a category/channel is clicked.  Some browsers
+    // recalculate the scroll anchor after an expanded category changes height.
     var list = $('channel-list');
     if (list) {
+      var clickPosition = null;
+      function restoreClickPosition() {
+        if (!clickPosition) return;
+        var position = clickPosition;
+        requestAnimationFrame(function () { setScroll(position); });
+        setTimeout(function () { setScroll(position); }, 0);
+        setTimeout(function () { setScroll(position); }, 80);
+        setTimeout(function () { setScroll(position); }, 250);
+      }
+      list.addEventListener('pointerdown', function () { clickPosition = getScroll(); }, true);
       list.addEventListener('click', function (e) {
         var btn = e.target.closest('button[data-action]');
         if (btn) {
@@ -392,10 +403,12 @@
           if (action === 'delete-ch' || action === 'delete-cat') {
             deleteChannel(id, name);
           }
+          restoreClickPosition();
           return;
         }
         var hdr = e.target.closest('.cat-header');
         if (hdr) toggleCat(hdr);
+        restoreClickPosition();
       });
     }
   }
