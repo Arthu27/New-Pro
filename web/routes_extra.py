@@ -78,9 +78,9 @@ def _process_action(answer: str, bot, guild_id: str, session_obj) -> str:
             message = action_data.get('message', '')
             if not (bot and uid and message):
                 return '❌ Пользователь ID или message eksik'
-            async def _send_dm():
-                user = await bot.fetch_user(int(uid))
-                await user.send(message)
+            def _send_dm():
+                user = _run_async(bot.fetch_user(int(uid)))
+                _run_async(user.send(message))
             _asyncio.run_coroutine_threadsafe(_send_dm(), bot.loop).result(timeout=10)
             return f'✅ DM отправлено (user_id: {uid})'
 
@@ -133,12 +133,12 @@ def _process_action(answer: str, bot, guild_id: str, session_obj) -> str:
             message_id = str(action_data.get('message_id', ''))
             if not (bot and channel_id and message_id):
                 return '❌ Канал ID или message ID eksik'
-            async def _del_msg():
+            def _del_msg():
                 ch = bot.get_channel(int(channel_id))
                 if not ch:
                     return '❌ Канал не найдено'
-                msg = await ch.fetch_message(int(message_id))
-                await msg.delete()
+                msg = _run_async(ch.fetch_message(int(message_id)))
+                _run_async(msg.delete())
                 return '✅ Сообщение удалено'
             return _asyncio.run_coroutine_threadsafe(_del_msg(), bot.loop).result(timeout=10)
 
@@ -165,12 +165,12 @@ def _process_action(answer: str, bot, guild_id: str, session_obj) -> str:
             members = guild.members if not role_id else [
                 m for m in guild.members if any(str(r.id) == role_id for r in m.roles)
             ]
-            async def _bulk():
+            def _bulk():
                 count = 0
                 for m in members:
                     if not m.bot:
                         try:
-                            await m.send(message)
+                            _run_async(m.send(message))
                             count += 1
                         except Exception:
                             pass
@@ -183,9 +183,9 @@ def _process_action(answer: str, bot, guild_id: str, session_obj) -> str:
             category_id = action_data.get('category_id')
             if not (bot and guild):
                 return '❌ Guild не найдено'
-            async def _create_ch():
+            def _create_ch():
                 cat = guild.get_channel(int(category_id)) if category_id else None
-                return await guild.create_text_channel(name, category=cat)
+                return _run_async(guild.create_text_channel(name, category=cat))
             ch = _asyncio.run_coroutine_threadsafe(_create_ch(), bot.loop).result(timeout=10)
             return f'✅ Канал создано: #{ch.name} (ID: {ch.id})'
 
@@ -234,9 +234,9 @@ def _process_action(answer: str, bot, guild_id: str, session_obj) -> str:
         elif action_type == 'unban':
             if not (guild and uid):
                 return '❌ Eksik parametre'
-            async def _unban():
-                user = await bot.fetch_user(int(uid))
-                await guild.unban(user)
+            def _unban():
+                user = _run_async(bot.fetch_user(int(uid)))
+                _run_async(guild.unban(user))
             _asyncio.run_coroutine_threadsafe(_unban(), bot.loop).result(timeout=10)
             return f'✅ Ban удалено (user_id: {uid})'
 
@@ -289,13 +289,13 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         future = _aio.run_coroutine_threadsafe(coro, bot.loop)
         return future.result(timeout=timeout)
 
-    async def _resolve_member_async(guild, user_id):
+    def _resolve_member_async(guild, user_id):
         """Async helper: get cached member or fetch from API."""
         member = guild.get_member(int(user_id))
         if member:
             return member
         try:
-            return await guild.fetch_member(int(user_id))
+            return _run_async(guild.fetch_member(int(user_id)))
         except Exception:
             return None
 
@@ -843,7 +843,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         channel_mentions = _re3.findall(r'#([\w\-]+)', question)
         channel_keywords = ['channel', 'текст', 'написано', 'messagelar', 'son message']
         if bot and (channel_mentions or any(k in question.lower() for k in channel_keywords)):
-            async def fetch_channel_msgs():
+            def fetch_channel_msgs():
                 lines = []
                 for g in bot.guilds:
                     for ch in g.text_channels:
@@ -1076,7 +1076,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
                 clean_parts.append(_re3.sub(r'^[a-z_]+=', '', p))
             parts = clean_parts
             try:
-                async def do_action():
+                def do_action():
                     guild = bot.get_guild(int(MAIN_GUILD_ID))
                     if not guild: return '❌ Сервер не найдено'
                     _owner_id = int(os.getenv('OWNER_ID', '987430047889637426'))
@@ -1120,45 +1120,45 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
                     if tip == 'KANAL_KILITLE' and len(parts) > 1:
                         ch = resolve_channel(parts[1])
                         if ch:
-                            await ch.set_permissions(guild.default_role, send_messages=False)
+                            _run_async(ch.set_permissions(guild.default_role, send_messages=False))
                             return f'✅ #{ch.name} kilitlendi'
                     elif tip == 'KANAL_AC' and len(parts) > 1:
                         ch = resolve_channel(parts[1])
                         if ch:
-                            await ch.set_permissions(guild.default_role, send_messages=None)
+                            _run_async(ch.set_permissions(guild.default_role, send_messages=None))
                             return f'✅ #{ch.name} açıldı'
                     elif tip == 'BAN' and len(parts) > 1:
                         m = resolve_member(parts[1])
                         if m:
                             reason = ':'.join(parts[2:]) or 'Panel AI'
-                            await m.ban(reason=reason)
+                            _run_async(m.ban(reason=reason))
                             return f'✅ {m.display_name} banlandı'
                     elif tip == 'KICK' and len(parts) > 1:
                         m = resolve_member(parts[1])
                         if m:
                             reason = ':'.join(parts[2:]) or 'Panel AI'
-                            await m.kick(reason=reason)
+                            _run_async(m.kick(reason=reason))
                             return f'✅ {m.display_name} atıldı'
                     elif tip == 'TIMEOUT' and len(parts) > 2:
                         m = resolve_member(parts[1])
                         if m and m.id != _owner_id:
                             mins = int(parts[2]) if parts[2].isdigit() else 10
                             until = _discord.utils.utcnow() + _dt.timedelta(minutes=mins)
-                            await m.timeout(until)
+                            _run_async(m.timeout(until))
                             return f'✅ {m.display_name} {mins} dk timeout'
                     elif tip == 'СООБЩЕНИЕ' and len(parts) > 2:
                         ch = resolve_channel(parts[1])
                         if ch:
                             metin = ':'.join(parts[2:])
                             if metin:
-                                await ch.send(metin)
+                                _run_async(ch.send(metin))
                                 return f'✅ #{ch.name} в канал message отправлено'
                             return '❌ Сообщение содержимое пусто'
                     elif tip == 'KANAL_YAVAŞ' and len(parts) > 2:
                         ch = resolve_channel(parts[1])
                         if ch:
                             secs = int(parts[2]) if parts[2].isdigit() else 5
-                            await ch.edit(slowmode_delay=secs)
+                            _run_async(ch.edit(slowmode_delay=secs))
                             return f'✅ #{ch.name} yavaş mod: {secs}s'
                     elif tip == 'DM' and len(parts) > 2:
                         m = resolve_member(parts[1])
@@ -1166,7 +1166,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
                             metin = ':'.join(parts[2:])
                             if metin:
                                 try:
-                                    await m.send(metin)
+                                    _run_async(m.send(metin))
                                     return f'✅ {m.display_name} usersına DM отправлено'
                                 except discord.Forbidden:
                                     return f'❌ {m.display_name} DM\'lere закрыт'
@@ -1174,14 +1174,14 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
                     elif tip == 'SESTEN_AT' and len(parts) > 1:
                         m = resolve_member(parts[1])
                         if m and m.voice:
-                            await m.move_to(None)
+                            _run_async(m.move_to(None))
                             return f'✅ {m.display_name} sesten atıldı'
                         return f'❌ Участник seste не или не найдено'
                     elif tip == 'SESE_TAS' and len(parts) > 2:
                         m = resolve_member(parts[1])
                         ch = discord.utils.find(lambda c: parts[2].lower() in c.name.lower(), guild.voice_channels)
                         if m and ch:
-                            await m.move_to(ch)
+                            _run_async(m.move_to(ch))
                             return f'✅ {m.display_name} → {ch.name} movendı'
                         return '❌ Участник или channel не найдено'
                     elif tip == 'UST_SESE' and len(parts) > 1:
@@ -1197,13 +1197,13 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
                         orijinal = m.voice.channel
                         hedef_idx = max(0, idx - adim)
                         hedef = vcs[hedef_idx]
-                        await m.move_to(hedef)
+                        _run_async(m.move_to(hedef))
                         if geri:
                             import asyncio as _as2
-                            await _as2.sleep(3)
+                            _run_async(_as2.sleep(3))
                             fresh = guild.get_member(m.id)
                             if fresh and fresh.voice:
-                                await fresh.move_to(orijinal)
+                                _run_async(fresh.move_to(orijinal))
                             return f'✅ {m.display_name} → {hedef.name} movendı, 3sn после {orijinal.name} geri getirildi'
                         return f'✅ {m.display_name} → {hedef.name} movendı'
                     elif tip == 'ALT_SESE' and len(parts) > 1:
@@ -1218,13 +1218,13 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
                         orijinal = m.voice.channel
                         hedef_idx = min(len(vcs) - 1, idx + adim)
                         hedef = vcs[hedef_idx]
-                        await m.move_to(hedef)
+                        _run_async(m.move_to(hedef))
                         if geri:
                             import asyncio as _as2
-                            await _as2.sleep(3)
+                            _run_async(_as2.sleep(3))
                             fresh = guild.get_member(m.id)
                             if fresh and fresh.voice:
-                                await fresh.move_to(orijinal)
+                                _run_async(fresh.move_to(orijinal))
                             return f'✅ {m.display_name} → {hedef.name} movendı, 3sn после {orijinal.name} geri getirildi'
                         return f'✅ {m.display_name} → {hedef.name} movendı'
                     elif tip == 'SUSTUR' and len(parts) > 1:
@@ -1232,7 +1232,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
                         if m:
                             if not m.voice:
                                 return f'❌ {m.display_name} şu an ses в канале не, susturulamaz'
-                            await m.edit(mute=True)
+                            _run_async(m.edit(mute=True))
                             return f'✅ {m.display_name} susturuldu'
                         return '❌ Участник не найдено'
                     elif tip == 'SUSTUR_KALDIR' and len(parts) > 1:
@@ -1240,28 +1240,28 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
                         if m:
                             if not m.voice:
                                 return f'❌ {m.display_name} şu an ses в канале не'
-                            await m.edit(mute=False)
+                            _run_async(m.edit(mute=False))
                             return f'✅ {m.display_name} susturma удалено'
                         return '❌ Участник не найдено'
                     elif tip == 'KULAKLIK_KAPAT' and len(parts) > 1:
                         m = resolve_member(parts[1])
                         if m:
-                            await m.edit(deafen=True)
+                            _run_async(m.edit(deafen=True))
                             return f'✅ {m.display_name} kulaklığı закрыто'
                     elif tip == 'KULAKLIK_AC' and len(parts) > 1:
                         m = resolve_member(parts[1])
                         if m:
-                            await m.edit(deafen=False)
+                            _run_async(m.edit(deafen=False))
                             return f'✅ {m.display_name} kulaklığı açıldı'
                     elif tip == 'TIMEOUT_KALDIR' and len(parts) > 1:
                         m = resolve_member(parts[1])
                         if m:
-                            await m.timeout(None)
+                            _run_async(m.timeout(None))
                             return f'✅ {m.display_name} timeout удалено'
                     elif tip == 'UNBAN' and len(parts) > 1:
                         try:
-                            u = await bot.fetch_user(int(parts[1]))
-                            await guild.unban(u)
+                            u = _run_async(bot.fetch_user(int(parts[1])))
+                            _run_async(guild.unban(u))
                             return f'✅ {u.name} unban edildi'
                         except: return '❌ Пользователь не найден'
                     elif tip == 'ПРЕДУПРЕЖДЕНИЕ' and len(parts) > 1:
@@ -1291,43 +1291,43 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
                         ch = resolve_channel(parts[1])
                         number = int(parts[2]) if len(parts) > 2 and parts[2].isdigit() else 10
                         if ch:
-                            deleted = await ch.purge(limit=number)
+                            deleted = _run_async(ch.purge(limit=number))
                             return f'✅ #{ch.name} из канала {len(deleted)} message удалено'
                     elif tip == 'KANAL_OLUSTUR' and len(parts) > 1:
                         channel_name = '-'.join(parts[1:]).lower().replace(' ', '-')
-                        ch = await guild.create_text_channel(channel_name)
+                        ch = _run_async(guild.create_text_channel(channel_name))
                         return f'✅ #{ch.name} канал создано'
                     elif tip == 'SES_KANAL_OLUSTUR' and len(parts) > 1:
                         channel_name = ' '.join(parts[1:])
-                        ch = await guild.create_voice_channel(channel_name)
+                        ch = _run_async(guild.create_voice_channel(channel_name))
                         return f'✅ 🔊 {ch.name} ses канал создано'
                     elif tip == 'ROL_OLUSTUR' and len(parts) > 1:
                         channel_name = ' '.join(parts[1:])
-                        r = await guild.create_role(name=channel_name)
+                        r = _run_async(guild.create_role(name=channel_name))
                         return f'✅ @{r.name} роль создано'
                     elif tip == 'DUYURU' and len(parts) > 2:
                         ch = resolve_channel(parts[1])
                         metin = ':'.join(parts[2:])
                         if ch and metin:
-                            await ch.send(f'📢 **DUYURU**\n\n{metin}')
+                            _run_async(ch.send(f'📢 **DUYURU**\n\n{metin}'))
                             return f'✅ #{ch.name} в канал announce отправлено'
                     elif tip == 'ROL_VER' and len(parts) > 2:
                         m = resolve_member(parts[1])
                         r = resolve_role(parts[2])
                         if m and r:
-                            await m.add_roles(r)
+                            _run_async(m.add_roles(r))
                             return f'✅ {m.display_name} → {r.name} роль verildi'
                     elif tip == 'ROL_AL' and len(parts) > 2:
                         m = resolve_member(parts[1])
                         r = resolve_role(parts[2])
                         if m and r:
-                            await m.remove_roles(r)
+                            _run_async(m.remove_roles(r))
                             return f'✅ {m.display_name} → {r.name} роль alındı'
                     elif tip == 'NICK' and len(parts) > 2:
                         m = resolve_member(parts[1])
                         if m:
                             yeni_nick = ':'.join(parts[2:])
-                            await m.edit(nick=yeni_nick)
+                            _run_async(m.edit(nick=yeni_nick))
                             return f'✅ {m.name} nicki → {yeni_nick}'
                     return '⚠️ Eylem заверш — channel/участник не найдено'
                 action_result = _asyncio.run_coroutine_threadsafe(do_action(), bot.loop).result(timeout=10)
@@ -1784,7 +1784,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         member = guild.get_member(int(user_id))
         if member and member.is_timed_out():
             try:
-                await member.timeout(None)
+                _run_async(member.timeout(None))
             except Exception:
                 pass
         cog._mutes.get(str(guild.id), {}).pop(user_id, None)
@@ -1846,8 +1846,8 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         status = status_map.get(d.get('status', 'online'), discord.Status.online)
         atype  = type_map.get(d.get('activity_type', 'listening'), discord.ActivityType.listening)
         atext  = d.get('activity_text', '.gg/Aether')
-        async def _set():
-            await bot.change_presence(status=status, activity=discord.Activity(type=atype, name=atext))
+        def _set():
+            _run_async(bot.change_presence(status=status, activity=discord.Activity(type=atype, name=atext)))
         asyncio.run_coroutine_threadsafe(_set(), bot.loop).result(timeout=5)
         # Config'e сохранить — bot yeniden başlayınca da hatırlasın
         os.makedirs('data', exist_ok=True)
@@ -2236,7 +2236,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         ends_at = datetime.utcnow() + timedelta(minutes=minutes)
         gw_id   = str(int(ends_at.timestamp()))
 
-        async def _send():
+        def _send():
             embed = discord.Embed(
                 title="🎉  РОЗЫГРЫШ BAŞLADI!",
                 color=0x2ECC71,
@@ -2254,7 +2254,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
 
             from cogs.giveaway import GiveawayView
             view = GiveawayView(gw_id, guild_id)
-            msg  = await channel.send(embed=embed, view=view)
+            msg  = _run_async(channel.send(embed=embed, view=view))
 
             os.makedirs('data', exist_ok=True)
             f = f'data/giveaways_{guild_id}.json'
@@ -2524,13 +2524,13 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
                     break
         if guild is None:
             return jsonify({'error': f'Bot bu sunucuda bulunmuyor (id={guild_id}). Bot guilds: {[str(g.id) for g in bot.guilds]}'}), 404
-        async def do():
+        def do():
             color_hex = (data.get('color') or '#dc143c').lstrip('#') or 'dc143c'
             try:
                 color = discord.Color(int(color_hex, 16))
             except ValueError:
                 color = discord.Color.default()
-            await guild.create_role(name=name, color=color, reason='Aether panel tarafından oluşturuldu')
+            _run_async(guild.create_role(name=name, color=color, reason='Aether panel tarafından oluşturuldu'))
         try:
             asyncio.run_coroutine_threadsafe(do(), bot.loop).result(timeout=10)
             return jsonify({'success': True})
@@ -2548,10 +2548,10 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         import web.app as _app; bot = _app.bot_instance
         import asyncio
         if not bot: return jsonify({'error': 'Bot offline'})
-        async def do():
+        def do():
             guild = bot.get_guild(int(guild_id))
             role = guild.get_role(int(role_id))
-            if role: await role.delete()
+            if role: _run_async(role.delete())
         asyncio.run_coroutine_threadsafe(do(), bot.loop).result(timeout=10)
         return jsonify({'success': True})
 
@@ -2824,7 +2824,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         if not bot: return jsonify({'error': 'Bot offline'}), 503
         channel = bot.get_channel(int(channel_id))
         if not channel: return jsonify({'error': 'Канал не найдено'}), 404
-        async def _fetch():
+        def _fetch():
             msgs = []
             async for m in channel.history(limit=50, oldest_first=False):
                 msgs.append({
@@ -2858,8 +2858,8 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         d = request.get_json(silent=True) or {}
         content = d.get('content', '').strip()
         if not content: return jsonify({'error': 'Сообщение пустое'}), 400
-        async def _send():
-            await channel.send(content)
+        def _send():
+            _run_async(channel.send(content))
         try:
             asyncio.run_coroutine_threadsafe(_send(), bot.loop).result(timeout=10)
             return jsonify({'ok': True})
@@ -2875,9 +2875,9 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         if not bot: return jsonify({'error': 'Bot offline'}), 503
         channel = bot.get_channel(int(channel_id))
         if not channel: return jsonify({'error': 'Канал не найдено'}), 404
-        async def _delete():
-            msg = await channel.fetch_message(int(message_id))
-            await msg.delete()
+        def _delete():
+            msg = _run_async(channel.fetch_message(int(message_id)))
+            _run_async(msg.delete())
         try:
             asyncio.run_coroutine_threadsafe(_delete(), bot.loop).result(timeout=10)
             return jsonify({'ok': True})
@@ -2963,9 +2963,9 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         content = data.get('content', '').strip()
         if not content: return jsonify({'error': 'Сообщение пустое'}), 400
 
-        async def do():
-            user = await bot.fetch_user(int(user_id))
-            await user.send(content)
+        def do():
+            user = _run_async(bot.fetch_user(int(user_id)))
+            _run_async(user.send(content))
             return str(user)
 
         try:
@@ -2992,12 +2992,12 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         import asyncio, discord
         if not bot: return jsonify({'error': 'Bot offline'})
         data = request.get_json(silent=True) or {}
-        async def do():
+        def do():
             guild = bot.get_guild(int(guild_id))
             t = data.get('type', 'text')
-            if t == 'text': await guild.create_text_channel(data['name'])
-            elif t == 'voice': await guild.create_voice_channel(data['name'])
-            elif t == 'category': await guild.create_category(data['name'])
+            if t == 'text': _run_async(guild.create_text_channel(data['name']))
+            elif t == 'voice': _run_async(guild.create_voice_channel(data['name']))
+            elif t == 'category': _run_async(guild.create_category(data['name']))
         asyncio.run_coroutine_threadsafe(do(), bot.loop).result(timeout=10)
         return jsonify({'success': True})
 
@@ -3008,9 +3008,9 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         import web.app as _app; bot = _app.bot_instance
         import asyncio
         if not bot: return jsonify({'error': 'Bot offline'})
-        async def do():
+        def do():
             ch = bot.get_channel(int(channel_id))
-            if ch: await ch.delete()
+            if ch: _run_async(ch.delete())
         asyncio.run_coroutine_threadsafe(do(), bot.loop).result(timeout=10)
         return jsonify({'success': True})
 
@@ -3194,7 +3194,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
             'message_id': None
         }
         with open(f, 'w', encoding='utf-8') as fp: json.dump(gws, fp, indent=2, ensure_ascii=False)
-        async def send():
+        def send():
             from cogs.giveaway import GiveawayView
             ch = bot.get_channel(int(data['channel_id']))
             if ch:
@@ -3220,7 +3220,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
                 embed.set_image(url='https://media.discordapp.net/attachments/1107038411895881788/1110305847399120916/gifty.gif')
                 embed.set_footer(text=f'🎯 Giveaway ID: {gw_id} | Система: Bot Giveaway v2')
                 view = GiveawayView(gw_id, guild_id)
-                msg = await ch.send(embed=embed, view=view)
+                msg = _run_async(ch.send(embed=embed, view=view))
                 gws[gw_id]['message_id'] = str(msg.id)
                 with open(f, 'w', encoding='utf-8') as fp:
                     json.dump(gws, fp, indent=2, ensure_ascii=False)
@@ -3300,15 +3300,15 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
                  'options': [{'emoji': o['emoji'], 'text': o['text'], 'votes': 0} for o in data['options']]}
         polls[poll_id] = entry
         with open(f, 'w') as fp: json.dump(polls, fp, indent=2)
-        async def send():
+        def send():
             ch = bot.get_channel(int(data['channel_id']))
             if ch:
                 desc = '\n'.join([f"{o['emoji']} **{o['text']}**" for o in data['options']])
                 embed = discord.Embed(title=f"📊 {data['question']}", description=desc, color=0xdc143c)
                 embed.set_footer(text=f"Anket ID: {poll_id}")
-                msg = await ch.send(embed=embed)
+                msg = _run_async(ch.send(embed=embed))
                 for o in data['options']:
-                    try: await msg.add_reaction(o['emoji'])
+                    try: _run_async(msg.add_reaction(o['emoji']))
                     except: pass
         asyncio.run_coroutine_threadsafe(send(), bot.loop)
         return jsonify({'success': True})
@@ -3458,10 +3458,10 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         if not bot: return jsonify({'error': 'Bot offline'})
         data = request.get_json(silent=True) or {}
         result = {'count': 0}
-        async def do():
+        def do():
             ch = bot.get_channel(int(data['channel_id']))
             if ch:
-                deleted = await ch.purge(limit=int(data.get('count', 10)))
+                deleted = _run_async(ch.purge(limit=int(data.get('count', 10))))
                 result['count'] = len(deleted)
         asyncio.run_coroutine_threadsafe(do(), bot.loop).result(timeout=30)
         return jsonify({'success': True, 'count': result['count']})
@@ -3475,15 +3475,15 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         if not bot: return jsonify({'error': 'Bot offline'})
         data = request.get_json(silent=True) or {}
         result = {'count': 0}
-        async def do():
+        def do():
             guild = bot.get_guild(int(guild_id))
             target_role = guild.get_role(int(data['target_role']))
             action_role = guild.get_role(int(data['action_role']))
             if not target_role or not action_role: return
             for member in target_role.members:
                 try:
-                    if data['action'] == 'add': await member.add_roles(action_role)
-                    else: await member.remove_roles(action_role)
+                    if data['action'] == 'add': _run_async(member.add_roles(action_role))
+                    else: _run_async(member.remove_roles(action_role))
                     result['count'] += 1
                 except: pass
         asyncio.run_coroutine_threadsafe(do(), bot.loop).result(timeout=60)
@@ -3498,14 +3498,16 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         if not bot: return jsonify({'error': 'Bot offline'})
         data = request.get_json(silent=True) or {}
         result = {'count': 0}
-        async def do():
+        def do():
             guild = bot.get_guild(int(guild_id))
             role = guild.get_role(int(data['role_id']))
             if not role: return
             embed = discord.Embed(title="📢 Duyuru", description=data['message'], color=0xdc143c)
             embed.set_footer(text="Aether Panel", icon_url=bot.user.display_avatar.url)
             for member in role.members:
-                try: await member.send(embed=embed); result['count'] += 1
+                try:
+                    _run_async(member.send(embed=embed))
+                    result['count'] += 1
                 except: pass
         asyncio.run_coroutine_threadsafe(do(), bot.loop).result(timeout=120)
         return jsonify({'success': True, 'count': result['count']})
@@ -3520,14 +3522,14 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         if not bot: return jsonify({'error': 'Bot offline'})
         data = request.get_json(silent=True) or {}
         result = {'count': 0}
-        async def do():
+        def do():
             guild = bot.get_guild(int(guild_id))
             role = guild.get_role(int(data['role_id']))
             if not role: return
             duration = int(data.get('duration', 60))
             for member in role.members:
                 try:
-                    await member.timeout(discord.utils.utcnow() + timedelta(minutes=duration), reason='Bulk mute')
+                    _run_async(member.timeout(discord.utils.utcnow() + timedelta(minutes=duration), reason='Bulk mute'))
                     result['count'] += 1
                 except: pass
         asyncio.run_coroutine_threadsafe(do(), bot.loop).result(timeout=120)
@@ -3542,12 +3544,14 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         if not bot: return jsonify({'error': 'Bot offline'})
         data = request.get_json(silent=True) or {}
         result = {'count': 0}
-        async def do():
+        def do():
             guild = bot.get_guild(int(guild_id))
             role = guild.get_role(int(data['role_id']))
             if not role: return
             for member in role.members:
-                try: await member.kick(reason='Bulk kick'); result['count'] += 1
+                try:
+                    _run_async(member.kick(reason='Bulk kick'))
+                    result['count'] += 1
                 except: pass
         asyncio.run_coroutine_threadsafe(do(), bot.loop).result(timeout=120)
         return jsonify({'success': True, 'count': result['count']})
@@ -3561,12 +3565,14 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         if not bot: return jsonify({'error': 'Bot offline'})
         data = request.get_json(silent=True) or {}
         result = {'count': 0}
-        async def do():
+        def do():
             guild = bot.get_guild(int(guild_id))
             role = guild.get_role(int(data['role_id']))
             if not role: return
             for member in role.members:
-                try: await guild.ban(member, reason='Bulk ban'); result['count'] += 1
+                try:
+                    _run_async(guild.ban(member, reason='Bulk ban'))
+                    result['count'] += 1
                 except: pass
         asyncio.run_coroutine_threadsafe(do(), bot.loop).result(timeout=180)
         return jsonify({'success': True, 'count': result['count']})
@@ -4110,14 +4116,14 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
             entries_with_names.append({'emoji': e['emoji'], 'role_id': e['role_id'], 'role_name': role.name if role else e['role_id']})
         rrs[rr_id] = {'id': rr_id, 'title': data['title'], 'channel_id': data['channel_id'], 'entries': entries_with_names}
         with open(f, 'w') as fp: json.dump(rrs, fp, indent=2)
-        async def send():
+        def send():
             ch = bot.get_channel(int(data['channel_id']))
             if ch:
                 desc = '\n'.join([f"{e['emoji']} → **{e['role_name']}**" for e in entries_with_names])
                 embed = discord.Embed(title=data['title'], description=desc, color=0xdc143c)
-                msg = await ch.send(embed=embed)
+                msg = _run_async(ch.send(embed=embed))
                 for e in entries_with_names:
-                    try: await msg.add_reaction(e['emoji'])
+                    try: _run_async(msg.add_reaction(e['emoji']))
                     except: pass
                 rrs[rr_id]['message_id'] = str(msg.id)
                 with open(f, 'w') as fp2: json.dump(rrs, fp2, indent=2)
@@ -4216,7 +4222,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         panel_sent = False
         panel_error = None
         if bot and data.get('ticket_channel_id'):
-            async def send_panel():
+            def send_panel():
                 ch = bot.get_channel(int(data['ticket_channel_id']))
                 if not ch:
                     raise ValueError(f"Канал не найдено: {data['ticket_channel_id']}")
@@ -4238,7 +4244,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
                     text=f"{ch.guild.name} • Поддержка Система",
                     icon_url=ch.guild.icon.url if ch.guild.icon else None
                 )
-                await ch.send(embed=embed, view=TicketView())
+                _run_async(ch.send(embed=embed, view=TicketView()))
             try:
                 future = asyncio.run_coroutine_threadsafe(send_panel(), bot.loop)
                 future.result(timeout=10)  # 10 saniye badd, Ошибка varsa yakala
@@ -4398,7 +4404,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
 
         result = {'roles_created': 0, 'channels_created': 0, 'errors': []}
 
-        async def do_restore():
+        def do_restore():
             # Роли примен
             if 'role' in backup_data:
                 existing_role_names = [r.name.lower() for r in guild.roles]
@@ -4408,15 +4414,15 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
                     try:
                         color_str = role_data.get('color', '#000000').lstrip('#')
                         color = discord.Color(int(color_str, 16)) if color_str and color_str != '000000' else discord.Color.default()
-                        await guild.create_role(
+                        _run_async(guild.create_role(
                             name=role_data['name'],
                             color=color,
                             hoist=role_data.get('hoist', False),
                             mentionable=role_data.get('mentionable', False),
                             permissions=discord.Permissions(role_data.get('permissions', 0))
-                        )
+                        ))
                         result['roles_created'] += 1
-                        await asyncio.sleep(0.5)  # rate limit
+                        _run_async(asyncio.sleep(0.5))  # rate limit
                     except Exception as e:
                         result['errors'].append(f"Роли '{role_data['name']}': {str(e)}")
 
@@ -4429,16 +4435,16 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
                     try:
                         ch_type = ch_data.get('type', 'text')
                         if 'text' in ch_type:
-                            await guild.create_text_channel(
+                            _run_async(guild.create_text_channel(
                                 name=ch_data['name'],
                                 topic=ch_data.get('topic')
-                            )
+                            ))
                         elif 'voice' in ch_type:
-                            await guild.create_voice_channel(name=ch_data['name'])
+                            _run_async(guild.create_voice_channel(name=ch_data['name']))
                         elif 'category' in ch_type:
-                            await guild.create_category(name=ch_data['name'])
+                            _run_async(guild.create_category(name=ch_data['name']))
                         result['channels_created'] += 1
-                        await asyncio.sleep(0.5)
+                        _run_async(asyncio.sleep(0.5))
                     except Exception as e:
                         result['errors'].append(f"Канал '{ch_data['name']}': {str(e)}")
 
@@ -4563,13 +4569,13 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         import asyncio, discord
         if not bot: return jsonify({'error': 'Bot offline'})
         data = request.get_json(silent=True) or {}
-        async def send():
+        def send():
             ch = bot.get_channel(int(data['channel_id']))
             if ch:
                 desc = '\n'.join([f"**{i+1}.** {r}" for i, r in enumerate(data['rules'])])
                 embed = discord.Embed(title="📜 Правила сервера", description=desc, color=0xdc143c)
                 embed.set_footer(text="Правил нарушение edenler наказание.")
-                await ch.send(embed=embed)
+                _run_async(ch.send(embed=embed))
         asyncio.run_coroutine_threadsafe(send(), bot.loop).result(timeout=10)
         return jsonify({'success': True})
 
@@ -4590,7 +4596,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         data = request.get_json(silent=True) or {}
         f = f'data/color_roles_{guild_id}.json'
         with open(f, 'w') as fp: json.dump(data.get('colors', []), fp, indent=2)
-        async def send():
+        def send():
             guild = bot.get_guild(int(guild_id))
             ch = bot.get_channel(int(data['channel_id']))
             if not guild or not ch: return
@@ -4598,10 +4604,10 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
                 role = discord.utils.get(guild.roles, name=f"🎨 {c['name']}")
                 if not role:
                     color_hex = c['hex'].lstrip('#')
-                    role = await guild.create_role(name=f"🎨 {c['name']}", color=discord.Color(int(color_hex, 16)))
+                    role = _run_async(guild.create_role(name=f"🎨 {c['name']}", color=discord.Color(int(color_hex, 16))))
             desc = '\n'.join([f"{c.get('emoji','🎨')} **{c['name']}** — `{c['hex']}`" for c in data.get('colors', [])])
             embed = discord.Embed(title="🎨 Renk Роли", description=desc + "\n\nİstediğin rengi almak для `/color` команду использовать!", color=0xdc143c)
-            await ch.send(embed=embed)
+            _run_async(ch.send(embed=embed))
         asyncio.run_coroutine_threadsafe(send(), bot.loop)
         return jsonify({'success': True})
 
@@ -4660,11 +4666,11 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         import web.app as _app; bot = _app.bot_instance
         import asyncio
         if not bot: return jsonify({'error': 'Bot offline'})
-        async def do():
+        def do():
             if f'cogs.{cog_name}' in bot.extensions:
-                await bot.reload_extension(f'cogs.{cog_name}')
+                _run_async(bot.reload_extension(f'cogs.{cog_name}'))
             else:
-                await bot.load_extension(f'cogs.{cog_name}')
+                _run_async(bot.load_extension(f'cogs.{cog_name}'))
         try:
             asyncio.run_coroutine_threadsafe(do(), bot.loop).result(timeout=10)
             return jsonify({'success': True})
@@ -4680,8 +4686,8 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         if not bot: return jsonify({'error': 'Bot offline'})
         if cog_name == 'cog_manager':
             return jsonify({'error': 'Bu cog удален!'})
-        async def do():
-            await bot.unload_extension(f'cogs.{cog_name}')
+        def do():
+            _run_async(bot.unload_extension(f'cogs.{cog_name}'))
         try:
             asyncio.run_coroutine_threadsafe(do(), bot.loop).result(timeout=10)
             return jsonify({'success': True})
@@ -4781,13 +4787,13 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         with open(f, 'r', encoding='utf-8') as fp: whs = json.load(fp)
         if wh_id not in whs: return jsonify({'error': 'Webhook не найдено'})
         wh_data = whs[wh_id]
-        async def do():
+        def do():
             channel = bot.get_channel(int(wh_data['channel_id']))
             if channel:
-                webhooks = await channel.webhooks()
+                webhooks = _run_async(channel.webhooks())
                 wh = _discord.utils.get(webhooks, id=int(wh_id))
                 if wh:
-                    await wh.send(content=message, username=username)
+                    _run_async(wh.send(content=message, username=username))
         try:
             asyncio.run_coroutine_threadsafe(do(), bot.loop).result(timeout=10)
             return jsonify({'success': True})
