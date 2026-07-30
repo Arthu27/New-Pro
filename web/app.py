@@ -2368,3 +2368,103 @@ def api_reset_password():
 
     del _reset_codes[discord_id]
     return jsonify({'success': True})
+
+
+# ── NOTIFICATIONS & ACTIVITY FEED ──────────────────────────────────────
+# These endpoints back the polling code in base.html so the panel can
+# surface toast notifications and the activity drawer without
+# 404-ing in the browser console.
+
+@app.route('/api/notifications/poll')
+@login_required
+def api_notifications_poll():
+    """Lightweight poll for unread panel notifications for the current user."""
+    username = session.get('username', 'anon')
+    cutoff_ts = request.args.get('since', 0)
+    try:
+        cutoff_ts = int(cutoff_ts)
+    except (TypeError, ValueError):
+        cutoff_ts = 0
+    notifs = []
+    # 1) panel_logs.json -> recent mod-style actions attributed to the user
+    try:
+        import os, json, time as _t
+        f = 'data/panel_logs.json'
+        if os.path.exists(f):
+            with open(f, 'r', encoding='utf-8') as fp:
+                raw = json.load(fp)
+            for entry in raw[-30:]:
+                ts = entry.get('ts', 0) or 0
+                if ts > cutoff_ts and (entry.get('user') == username or entry.get('target_user') == username):
+                    notifs.append({
+                        'id': f"pl-{ts}",
+                        'title': entry.get('action', 'Действие'),
+                        'body': entry.get('detail', ''),
+                        'icon': '🛡️',
+                        'ts': ts,
+                        'kind': 'mod',
+                    })
+    except Exception:
+        pass
+    # 2) temp moderation activity
+    try:
+        import os, json, time as _t
+        f = 'data/temp_mod_log.json'
+        if os.path.exists(f):
+            with open(f, 'r', encoding='utf-8') as fp:
+                raw = json.load(fp)
+            for entry in raw[-30:]:
+                ts = entry.get('ts', 0) or 0
+                if ts > cutoff_ts and entry.get('mod') == username:
+                    notifs.append({
+                        'id': f"tm-{ts}-{entry.get('user_id', '')}",
+                        'title': f"Временное {entry.get('action', 'действие')}",
+                        'body': entry.get('reason', ''),
+                        'icon': '⏱️',
+                        'ts': ts,
+                        'kind': 'temp',
+                    })
+    except Exception:
+        pass
+    notifs.sort(key=lambda x: x.get('ts', 0), reverse=True)
+    return jsonify({'notifications': notifs[:20], 'ts': int(__import__('time').time() * 1000)})
+
+
+@app.route('/api/activity-feed')
+@login_required
+def api_activity_feed():
+    """Recent panel activity (newest first) for the activity drawer."""
+    import os, json
+    items = []
+    try:
+        f = 'data/panel_logs.json'
+        if os.path.exists(f):
+            with open(f, 'r', encoding='utf-8') as fp:
+                raw = json.load(fp)
+            for e in raw[-50:]:
+                items.append({
+                    'icon': '🛡️',
+                    'title': e.get('action', 'Действие'),
+                    'user': e.get('user', ''),
+                    'detail': e.get('detail', ''),
+                    'ts': e.get('ts', 0),
+                })
+    except Exception:
+        pass
+    try:
+        f = 'data/temp_mod_log.json'
+        if os.path.exists(f):
+            with open(f, 'r', encoding='utf-8') as fp:
+                raw = json.load(fp)
+            for e in raw[-30:]:
+                items.append({
+                    'icon': '⏱️',
+                    'title': f"Временное {e.get('action', 'действие')}",
+                    'user': e.get('mod', ''),
+                    'detail': e.get('reason', ''),
+                    'ts': e.get('ts', 0),
+                })
+    except Exception:
+        pass
+    items.sort(key=lambda x: x.get('ts', 0) or 0, reverse=True)
+    return jsonify({'items': items[:60]})

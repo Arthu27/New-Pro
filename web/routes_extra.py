@@ -1621,11 +1621,20 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         if not cog:
             return jsonify({'error': 'Cog не загружен'}), 404
         guild_id = str(session.get('selected_guild') or MAIN_GUILD_ID)
+        # Defensive: mutes/bans/kicks dict-of-dicts may be missing or shaped differently.
+        mutes = (getattr(cog, '_mutes', {}) or {}).get(guild_id, {}) or {}
+        bans  = (getattr(cog, '_bans',  {}) or {}).get(guild_id, {}) or {}
+        kicks = (getattr(cog, '_kicks', {}) or {}).get(guild_id, {}) or {}
+        scheduled = getattr(cog, '_scheduled', []) or []
+        scheduled = [s for s in scheduled
+                     if isinstance(s, dict)
+                     and s.get('guild_id') == guild_id
+                     and s.get('status') == 'pending']
         return jsonify({
-            'mutes': list((cog._mutes.get(guild_id, {}) or {}).values()),
-            'bans': list((cog._bans.get(guild_id, {}) or {}).values()),
-            'kicks': list((cog._kicks.get(guild_id, {}) or {}).values()),
-            'scheduled': [s for s in cog._scheduled if s.get('guild_id') == guild_id and s.get('status') == 'pending'],
+            'mutes': list(mutes.values()) if isinstance(mutes, dict) else [],
+            'bans':  list(bans.values())  if isinstance(bans, dict)  else [],
+            'kicks': list(kicks.values()) if isinstance(kicks, dict) else [],
+            'scheduled': scheduled,
         })
 
     @app.route('/api/temp-mod/mute', methods=['POST'])

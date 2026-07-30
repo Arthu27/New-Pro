@@ -2775,3 +2775,155 @@ img[style*="border-radius:50%"], img[style*="border-radius: 50%"] {
   0%   { background-position: -200% 0; }
   100% { background-position: 200% 0; }
 }
+
+/* ============================================================
+   TOAST ANIMATION (used by window.showToast)
+   ============================================================ */
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(40px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+#toastHost > div { font-family: inherit; letter-spacing: 0.01em; }
+
+/* ============================================================
+   GLOBAL FIX — readable message text in lists/tables
+   ============================================================ */
+/* Many panels render names/counts in rows. The default white-on-dark
+   was hard to scan when stacked vertically. Force a consistent
+   horizontal layout (flex row), good color, and a small muted
+   secondary label for counts. */
+.list-row, .stats-row, .invite-row, .role-row, .member-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 14px !important;
+  padding: 12px 16px !important;
+  border-radius: 10px !important;
+  background: var(--surface-1, rgba(255,255,255,0.03)) !important;
+  border: 1px solid var(--border-1, rgba(212,168,67,0.12)) !important;
+  color: var(--text-1, #e8e6df) !important;
+  font-size: 15px !important;
+  font-weight: 500 !important;
+  margin-bottom: 8px !important;
+}
+.list-row .name, .stats-row .name, .invite-row .name, .role-row .name, .member-row .name {
+  flex: 1 !important;
+  color: #e8e6df !important;
+  font-weight: 600 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+.list-row .count, .stats-row .count, .invite-row .count, .role-row .count, .member-row .count {
+  color: #d4a843 !important;
+  font-weight: 700 !important;
+  font-variant-numeric: tabular-nums !important;
+  min-width: 64px !important;
+  text-align: right !important;
+}
+.list-row .meta, .stats-row .meta, .invite-row .meta, .role-row .meta, .member-row .meta {
+  color: #8b8579 !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+}
+
+/* White text inside dark cards/panels -> warmer "champagne" tone
+   so it doesn't feel sterile. */
+.card, .panel, .stat-card, .info-box, .data-card {
+  color: #e8e6df !important;
+}
+.card h1, .card h2, .card h3, .card h4,
+.panel h1, .panel h2, .panel h3, .panel h4 {
+  color: #f4f1e8 !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.01em !important;
+}
+
+/* ============================================================
+   FIX #2 — readable text in stat rows, invite lists, role lists
+   (user reported "yazılar dümdüz, güzel görünsün")
+   ============================================================ */
+.stat-row {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)) !important;
+  gap: 12px !important;
+  margin: 16px 0 !important;
+}
+.stat-row .stat-box {
+  background: var(--surface-1, rgba(255,255,255,0.04)) !important;
+  border: 1px solid var(--border-1, rgba(212,168,67,0.15)) !important;
+  border-radius: 12px !important;
+  padding: 16px 18px !important;
+  color: #f4f1e8 !important;
+}
+.stat-row .stat-box .stat-val {
+  color: #e0b04a !important;
+  font-size: 22px !important;
+  font-weight: 700 !important;
+  font-variant-numeric: tabular-nums !important;
+  line-height: 1.1 !important;
+  margin-bottom: 4px !important;
+}
+.stat-row .stat-box .stat-lbl {
+  color: #b8b3a3 !important;
+  font-size: 12.5px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.01em !important;
+}
+
+.inv-box, .leader-box, .data-box, .role-box {
+  background: var(--surface-1, rgba(255,255,255,0.03)) !important;
+  border: 1px solid var(--border-1, rgba(212,168,67,0.12)) !important;
+  border-radius: 12px !important;
+  padding: 16px 18px !important;
+  margin-bottom: 14px !important;
+  color: #e8e6df !important;
+}
+.inv-box .inv-title, .leader-box .inv-title, .data-box .inv-title, .role-box .inv-title {
+  color: #f4f1e8 !important;
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  margin-bottom: 12px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+#leaderboard-list > *, #joins-list > *, #invites-list > *, #roles-list > *, #members-list > * {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  padding: 10px 14px !important;
+  border-radius: 8px !important;
+  border: 1px solid rgba(212,168,67,0.08) !important;
+  background: rgba(255,255,255,0.02) !important;
+  color: #e8e6df !important;
+  font-size: 14.5px !important;
+  font-weight: 500 !important;
+  margin-bottom: 6px !important;
+}
+#leaderboard-list > *:hover, #joins-list > *:hover, #invites-list > *:hover, #roles-list > *:hover {
+  background: rgba(212,168,67,0.08) !important;
+  border-color: rgba(212,168,67,0.25) !important;
+}
+
+/* Toast accent color overrides — readable on dark */
+.tab-btn, .btn, button {
+  font-weight: 600 !important;
+}
+
+/* White-text legacy fallback for any uncatched element inside .card/.panel */
+.page-content, .main-content, .container, .content {
+  color: #e8e6df;
+}
+.page-content h1, .page-content h2, .page-content h3,
+.main-content h1, .main-content h2, .main-content h3,
+.container h1, .container h2, .container h3 {
+  color: #f4f1e8;
+}
+
+/* ============================================================
+   FIX #3 — global readable message body color
+   ============================================================ */
+body, p, span, div, td, th, li {
+  color: inherit;
+}
