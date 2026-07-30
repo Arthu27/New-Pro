@@ -73,7 +73,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 var dailyChart;
-var MAIN_GID = '1498837105915330562';
+var MAIN_GID = '{{ main_guild_id }}';
 
 async function loadHealth(gid){
   var r=await fetch('/api/guild/'+gid+'/health'),d=await r.json();

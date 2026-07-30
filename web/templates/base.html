@@ -105,5 +105,26 @@
 
         {% block content %}{% endblock %}
     </div>
+<script>
+// Resolve server selection once from the connected bot. On single-server bots no
+// manual server selection is needed; page loaders receive the only live guild.
+document.addEventListener('DOMContentLoaded', async function () {
+  var select = document.getElementById('guild-select');
+  if (!select) return;
+  try {
+    var response = await fetch('/api/guilds');
+    if (!response.ok) return;
+    var guilds = await response.json();
+    if (!Array.isArray(guilds) || !guilds.length) return;
+    var desired = '{{ main_guild_id }}';
+    select.innerHTML = guilds.map(function (guild) {
+      return '<option value="' + guild.id + '">' + guild.name + '</option>';
+    }).join('');
+    select.value = guilds.some(function (guild) { return guild.id === desired; }) ? desired : guilds[0].id;
+    if (guilds.length === 1) select.style.display = 'none';
+    select.dispatchEvent(new Event('change'));
+  } catch (error) { console.error('Не удалось определить сервер:', error); }
+});
+</script>
 </body>
 </html>

@@ -280,7 +280,7 @@ tr:hover td{background:rgba(212,168,67,0.04);}
   // ── Угроза endeksi (lockdown) ────────────────────────────────────────────────
   async function loadThreatIndex() {
     try {
-      var res = await fetch('/api/security/threat-еx');
+      var res = await fetch('/api/security/threat-index');
       var d = await res.json();
       if (!d || !d.success) return;
       var score = d.threat_score || 15;

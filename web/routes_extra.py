@@ -267,6 +267,18 @@ def _process_action(answer: str, bot, guild_id: str, session_obj) -> str:
 
 def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_ID='1384282749317152878'):
 
+    def active_guild_id():
+        """Return a live guild ID, never a stale value left in .env."""
+        import web.app as _app
+        bot = _app.bot_instance
+        guilds = getattr(bot, 'guilds', None) if bot else None
+        configured = str(MAIN_GUILD_ID or '')
+        if guilds:
+            if any(str(g.id) == configured for g in guilds):
+                return configured
+            return str(guilds[0].id)
+        return configured
+
     # ── PAGE ROUTES ──────────────────────────────────────────────────────────
 
     @app.route('/ai_ticket_stats')
@@ -339,7 +351,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
     @login_required
     @role_required('admin')
     def giveaway_page():
-        return render_template('giveaway.html', role=session.get('role'), username=session.get('username'), guild_id=MAIN_GUILD_ID)
+        return render_template('giveaway.html', role=session.get('role'), username=session.get('username'), guild_id=active_guild_id())
 
     @app.route('/polls')
     @login_required
@@ -459,7 +471,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
     @login_required
     @role_required('owner')
     def chat_page():
-        return render_template('chat.html', role=session.get('role'), username=session.get('username'), guild_id=MAIN_GUILD_ID)
+        return render_template('chat.html', role=session.get('role'), username=session.get('username'), guild_id=active_guild_id())
 
     @app.route('/bot-settings')
     @login_required
@@ -477,31 +489,31 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
     @login_required
     @role_required('admin')
     def warn_config_page():
-        return render_template('warn_config.html', role=session.get('role'), username=session.get('username'), guild_id=MAIN_GUILD_ID)
+        return render_template('warn_config.html', role=session.get('role'), username=session.get('username'), guild_id=active_guild_id())
 
     @app.route('/duty-panel-web')
     @login_required
     @role_required('admin')
     def duty_panel_web_page():
-        return render_template('duty_panel.html', role=session.get('role'), username=session.get('username'), guild_id=MAIN_GUILD_ID)
+        return render_template('duty_panel.html', role=session.get('role'), username=session.get('username'), guild_id=active_guild_id())
 
     @app.route('/member-search')
     @login_required
     @role_required('admin')
     def member_search_page():
-        return render_template('member_search.html', role=session.get('role'), username=session.get('username'), guild_id=MAIN_GUILD_ID)
+        return render_template('member_search.html', role=session.get('role'), username=session.get('username'), guild_id=active_guild_id())
 
     @app.route('/afk-list')
     @login_required
     @role_required('mod')
     def afk_list_page():
-        return render_template('afk_list.html', role=session.get('role'), username=session.get('username'), guild_id=MAIN_GUILD_ID)
+        return render_template('afk_list.html', role=session.get('role'), username=session.get('username'), guild_id=active_guild_id())
 
     @app.route('/watchlist-panel')
     @login_required
     @role_required('mod')
     def watchlist_panel_page():
-        return render_template('watchlist.html', role=session.get('role'), username=session.get('username'), guild_id=MAIN_GUILD_ID)
+        return render_template('watchlist.html', role=session.get('role'), username=session.get('username'), guild_id=active_guild_id())
 
     @app.route('/my-profile')
     @login_required
@@ -569,13 +581,13 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
     @login_required
     @role_required('uye')
     def birthday_register_page():
-        return render_template('birthday_register.html', role=session.get('role'), username=session.get('username'), guild_id=MAIN_GUILD_ID)
+        return render_template('birthday_register.html', role=session.get('role'), username=session.get('username'), guild_id=active_guild_id())
 
     @app.route('/ai-chat')
     @login_required
     @role_required('uye')
     def ai_chat_page():
-        return render_template('ai_chat_panel.html', role=session.get('role'), username=session.get('username'), guild_id=MAIN_GUILD_ID)
+        return render_template('ai_chat_panel.html', role=session.get('role'), username=session.get('username'), guild_id=active_guild_id())
 
     @app.route('/api/ai-chat', methods=['POST'])
     @login_required

@@ -1561,10 +1561,15 @@ def _save_login_token(username, roles):
 @app.context_processor
 def inject_guild_id():
     """Expose the active guild to templates without hard-coding an ID."""
-    gid = MAIN_GUILD_ID
-    if not gid and bot_instance and getattr(bot_instance, 'guilds', None):
-        gid = str(bot_instance.guilds[0].id)
-    return {'main_guild_id': gid or '', 'MAIN_GUILD_ID': gid or ''}
+    configured = str(MAIN_GUILD_ID or '')
+    guilds = getattr(bot_instance, 'guilds', None) if bot_instance else None
+    if guilds:
+        # A copied .env commonly contains a departed server's ID. Use the
+        # configured guild only while the bot is actually connected to it.
+        gid = configured if any(str(g.id) == configured for g in guilds) else str(guilds[0].id)
+    else:
+        gid = configured
+    return {'main_guild_id': gid, 'MAIN_GUILD_ID': gid}
 
 def set_bot_instance(bot):
     global bot_instance
