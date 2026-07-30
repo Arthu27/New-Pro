@@ -248,7 +248,7 @@ async def send_panel_link(url):
                 inline=False
             )
             embed.set_footer(
-                text="Aether Panel • Obnovlyaetsya iken kajdom zapuske",
+                text="Aether Panel • Обновляется при каждом запуске",
                 icon_url=guild.icon.url if guild.icon else None
             )
             await panel_ch.send(embed=embed)
