@@ -1,6 +1,6 @@
 ﻿{% extends "base.html" %}
 {% block title %}Чат — Aether{% endblock %}
-{% block page_title %}<i class="fas fa-comments" style="color:var(--ac);"></i> {% endblock %}
+{% block page_title %}<i class="fas fa-comments" ></i> {% endblock %}
 {% block content %}
 
 <div class="chat-wrap">
@@ -16,7 +16,7 @@
         <span>Текстовые каналы</span>
       </div>
       <div id="ch-list"></div>
-      <div class="sidebar-section" style="margin-top:8px;">
+      <div class="sidebar-section" style="margin-top: 8px">
         <span>Личные сообщения</span>
       </div>
       <div class="dm-search-wrap">
@@ -44,13 +44,13 @@
     </div>
 
     <div class="reply-bar" id="reply-bar">
-      <i class="fas fa-reply" style="color:#c8922a;"></i>
-      <span id="reply-text" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+      <i class="fas fa-reply" ></i>
+      <span id="reply-text" style="flex: 1; overflow: hidden"></span>
       <span class="reply-bar-close" onclick="cancelReply()">✕</span>
     </div>
 
     <div class="chat-input-wrap">
-      <div class="chat-input-outer" style="position:relative;">
+      <div class="chat-input-outer" style="position: relative">
         <div class="etiket-popup" id="etiket-popup"></div>
         <div class="chat-input-row">
           <textarea class="chat-input" id="chat-input"
@@ -83,7 +83,7 @@
 <!-- Профиль Popup -->
 <div class="profс-popup" id="profс-popup">
   <div class="profс-банner"></div>
-  <div style="position:relative;height:32px;">
+  <div style="position: relative; height: 32px">
     <div id="pp-avatar"></div>
   </div>
   <div class="profс-body">
@@ -247,7 +247,7 @@ function renderMsg(m, continued) {
 
   var avatarHtml = m.avatar
     ? '<img class="msg-avatar" src="' + m.avatar + '" onerror="this.outerHTML=\'<div class=msg-avatar-placeholder>👤</div>\'">'
-    : (m.bot ? '<div class="msg-avatar-placeholder" style="background:rgba(88,101,242,0.15);">🤖</div>'
+    : (m.bot ? '<div class="msg-avatar-placeholder" >🤖</div>'
              : '<div class="msg-avatar-placeholder">👤</div>');
 
   var replyHtml = m.reply_to
@@ -260,7 +260,7 @@ function renderMsg(m, continued) {
     m.attachments.forEach(function(url) {
       if (/\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(url)) {
         var isGif = /\.gif(\?|$)/i.test(url);
-        attachHtml += '<div style="position:relative;display:inline-block;">' +
+        attachHtml += '<div style="position: relative; display: inline-block">' +
           '<img class="msg-img" src="' + url + '" loading="lazy" onclick="openLightbox(\'' + url + '\')">' +
           (isGif ? '<span class="msg-gif-badge">GIF</span>' : '') + '</div>';
       } else {
@@ -276,7 +276,7 @@ function renderMsg(m, continued) {
     var urlMatch = (m.content||'').match(/https?:\/\/\S+\.(gif|jpg|jpeg|png|webp)(\?\S*)?/i);
     if (urlMatch) {
       var isGif = /\.gif(\?|$)/i.test(urlMatch[0]);
-      inlineMedia = '<div class="msg-attachments"><div style="position:relative;display:inline-block;">' +
+      inlineMedia = '<div class="msg-attachments"><div style="position: relative; display: inline-block">' +
         '<img class="msg-img" src="' + urlMatch[0] + '" loading="lazy" onclick="openLightbox(\'' + urlMatch[0] + '\')">' +
         (isGif ? '<span class="msg-gif-badge">GIF</span>' : '') + '</div></div>';
     }
@@ -309,7 +309,7 @@ function parseContent(s) {
   var h = escHtml(s);
   h = h.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
   h = h.replace(/\*(.+?)\*/g, '<em>$1</em>');
-  h = h.replace(/`(.+?)`/g, '<code style="background:rgba(255,255,255,0.07);padding:1px 5px;border-radius:3px;font-size:13px;">$1</code>');
+  h = h.replace(/`(.+?)`/g, '<code >$1</code>');
   h = h.replace(/&lt;@(\d+)&gt;/g, '<span class="etiket">@$1</span>');
   h = h.replace(/@(\w+)/g, '<span class="etiket">@$1</span>');
   h = h.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
@@ -392,7 +392,7 @@ async function searchDmUser(q) {
     }).slice(0, 8);
     res.innerHTML = filtered.map(function(m) {
       return '<div class="ch-item" onclick="openDm(\'' + m.id + '\',\'' + escJs(m.display_name) + '\')">' +
-        (m.avatar ? '<img src="' + m.avatar + '" style="width:20px;height:20px;border-radius:50%;object-fit:cover;">' : '<i class="fas fa-user ch-icon"></i>') +
+        (m.avatar ? '<img src="' + m.avatar + '" style="width: 20px; height: 20px">' : '<i class="fas fa-user ch-icon"></i>') +
         '<span class="ch-name">' + escHtml(m.display_name) + '</span></div>';
     }).join('');
   } catch(e) {}
@@ -435,10 +435,10 @@ async function loadDmMessages() {
       var d = new Date(m.timestamp);
       var time = d.toLocaleTimeString('tr-TR', {hour:'2-digit',minute:'2-digit'});
       var isBot = m.from_bot;
-      var av = isBot ? '<div class="msg-avatar-placeholder" style="background:rgba(88,101,242,0.15);">🤖</div>'
+      var av = isBot ? '<div class="msg-avatar-placeholder" >🤖</div>'
                      : '<div class="msg-avatar-placeholder">👤</div>';
       var urlMatch = (m.content||'').match(/https?:\/\/\S+\.(gif|jpg|jpeg|png|webp)(\?\S*)?/i);
-      var inlineMedia = urlMatch ? '<div class="msg-attachments"><div style="position:relative;display:inline-block;">' +
+      var inlineMedia = urlMatch ? '<div class="msg-attachments"><div style="position: relative; display: inline-block">' +
         '<img class="msg-img" src="' + urlMatch[0] + '" loading="lazy" onclick="openLightbox(\'' + urlMatch[0] + '\')">' +
         (/\.gif(\?|$)/i.test(urlMatch[0]) ? '<span class="msg-gif-badge">GIF</span>' : '') + '</div></div>' : '';
       return '<div class="msg-group">' + av + '<div class="msg-body">' +
@@ -505,7 +505,7 @@ function renderMentionPopup() {
   var popup = document.getElementById('etiket-popup');
   popup.style.display = 'block';
   popup.innerHTML = _mentionMatches.map(function(m, i) {
-    var av = m.avatar ? '<img src="' + m.avatar + '">' : '<i class="fas fa-user" style="font-size:12px;opacity:.5;"></i>';
+    var av = m.avatar ? '<img src="' + m.avatar + '">' : '<i class="fas fa-user" style="opacity: .5"></i>';
     return '<div class="mention-item' + (i===_mentionIdx?' selected':'') + '" onclick="selectMention(' + i + ')">' + av + escHtml(m.name) + '</div>';
   }).join('');
 }
@@ -560,7 +560,7 @@ function renderMemberList(members) {
   if (online.length) { html += '<div class="member-section">В сети - ' + online.length + '</div>'; html += online.map(renderMemberItem).join(''); }
   if (bots.length) { html += '<div class="member-section">Botlar - ' + bots.length + '</div>'; html += bots.map(renderMemberItem).join(''); }
   if (offline.length) { html += '<div class="member-section">Не в сети - ' + offline.length + '</div>'; html += offline.map(renderMemberItem).join(''); }
-  document.getElementById('members-scroll').innerHTML = html || '<div style="padding:20px;color:rgba(240,232,208,0.2);font-size:12px;">Uye yok</div>';
+  document.getElementById('members-scroll').innerHTML = html || '<div >Uye yok</div>';
 }
 
 function renderMemberItem(m) {
@@ -591,9 +591,9 @@ function openПрофильe(event, memberId) {
   badge.textContent = stDots[st] + ' ' + (stLabels[st] || st);
   var role = (m.roles || []).slice(0,8).map(function(r) {
     var c = r.color && r.color !== '#000000' ? r.color : 'rgba(212,168,67,0.4)';
-    return '<span class="profс-role-badge" style="color:' + c + ';border-color:' + c + '20;">' + r.name + '</span>';
+    return '<span class="profс-role-badge" >' + r.name + '</span>';
   }).join('');
-  document.getElementById('pp-role').innerHTML = roles || '<span style="color:rgba(240,232,208,0.2);font-size:11px;">Роль yok</span>';
+  document.getElementById('pp-role').innerHTML = roles || '<span >Роль yok</span>';
   document.getElementById('pp-nick-input').value = m.nick || '';
   var rect = event.currentTarget.getBoundingClientRect();
   var left = rect.right + 8, top = rect.top;

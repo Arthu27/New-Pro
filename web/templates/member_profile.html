@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Профиль участника — Aether{% endblock %}
-{% block page_title %}<i class="fas fa-id-card" style="color:var(--ac);"></i> Профиль участника{% endblock %}
+{% block page_title %}<i class="fas fa-id-card" ></i> Профиль участника{% endblock %}
 {% block content %}
 
 <div class="search-bar">
@@ -8,7 +8,7 @@
   <button class="btn btn-primary" id="btn-load" type="button"><i class="fas fa-search"></i> Загрузить</button>
 </div>
 
-<div id="profile" style="display:none;">
+<div id="profile" style="display: none">
   <div class="mp-grid">
     <div class="mp-card">
       <div class="mp-head">
@@ -36,24 +36,24 @@
     </div>
 
     <div class="mp-card">
-      <div class="section-sub" style="margin-bottom:10px;"><i class="fas fa-user-tag"></i> Роли участника</div>
-      <div id="p-roles" style="margin-bottom:18px;"><p style="color:var(--text-3);font-size:12px;">Нет ролей</p></div>
+      <div class="section-sub" style="margin-bottom: 10px"><i class="fas fa-user-tag"></i> Роли участника</div>
+      <div id="p-roles" style="margin-bottom: 18px"><p >Нет ролей</p></div>
 
-      <div class="section-sub" style="margin-bottom:8px;justify-content:space-between;display:flex;">
+      <div class="section-sub" style="margin-bottom: 8px; display: flex">
         <span><i class="fas fa-sticky-note"></i> Заметка</span>
-        <button class="btn btn-primary" id="btn-save-note" type="button" style="font-size:10px;padding:4px 10px;">Сохранить</button>
+        <button class="btn btn-primary" id="btn-save-note" type="button" >Сохранить</button>
       </div>
-      <textarea id="p-note-text" rows="6" placeholder="Заметка о участнике..." style="margin-bottom:18px;"></textarea>
+      <textarea id="p-note-text" rows="6" placeholder="Заметка о участнике..." style="margin-bottom: 18px"></textarea>
 
-      <div class="section-sub" style="margin-bottom:8px;"><i class="fas fa-history"></i> История</div>
-      <div id="p-history" style="max-height:180px;overflow-y:auto;"></div>
+      <div class="section-sub" style="margin-bottom: 8px"><i class="fas fa-history"></i> История</div>
+      <div id="p-history" style="max-height: 180px"></div>
     </div>
   </div>
 </div>
 
 <div id="empty" class="empty-state">
   <i class="fas fa-search"></i>
-  <p>Введите ID или имя и нажмите <strong style="color:var(--ac);">Загрузить</strong></p>
+  <p>Введите ID или имя и нажмите <strong >Загрузить</strong></p>
 </div>
 
 <script>

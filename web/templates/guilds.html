@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Сервера - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-server" style="color:var(--ac);"></i> Сервера{% endblock %}
+{% block page_title %}<i class="fas fa-server" ></i> Сервера{% endblock %}
 {% block content %}
 
 <div class="g-hero">
@@ -39,10 +39,10 @@
       var html = '<div class="g-grid">';
       guilds.forEach(function (g, i) {
         totalUsers += g.members || 0;
-        html += '<div class="g-card" style="animation-delay:' + (i * 0.03) + 's">' +
+        html += '<div class="g-card" >' +
           '<img class="g-icon" src="' + esc(g.icon || 'https://cdn.discordapp.com/embed/avatars/0.png') + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' +
           '<div class="g-name">' + esc(g.name) + '</div>' +
-          '<div class="g-members"><i class="fas fa-users" style="font-size:11px;"></i> ' + (g.members || 0).toLocaleString() + '</div>' +
+          '<div class="g-members"><i class="fas fa-users" ></i> ' + (g.members || 0).toLocaleString() + '</div>' +
           '<div class="g-id">' + esc(g.id) + '</div>' +
         '</div>';
       });

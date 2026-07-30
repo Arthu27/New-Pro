@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Команда Calistir - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-bolt" style="color:var(--ac);"></i> КОМАНДА ЗАПУСК{% endblock %}
+{% block page_title %}<i class="fas fa-bolt" ></i> КОМАНДА ЗАПУСК{% endblock %}
 {% block content %}
 
 <div class="cmd-grid">
@@ -14,7 +14,7 @@
 
 <div id="execModal" class="modal-overlay">
   <div class="modal-box">
-    <button onclick="closeCmd()" style="position:absolute;top:15px;right:20px;background:none;border:none;color:var(--ac);font-size:26px;cursor:pointer;">&times;</button>
+    <button onclick="closeCmd()" style="position: absolute; top: 15px; right: 20px; cursor: pointer">&times;</button>
     <h2 id="execTitle">Команда</h2>
     <div id="execForm"></div>
     <div id="exec-result"></div>

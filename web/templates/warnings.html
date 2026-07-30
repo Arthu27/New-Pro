@@ -1,18 +1,18 @@
 {% extends "base.html" %}
 {% block title %}Предупреждения - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-exclamation-triangle" style="color:var(--ac);"></i> Предупреждения{% endblock %}
+{% block page_title %}<i class="fas fa-exclamation-triangle" ></i> Предупреждения{% endblock %}
 {% block content %}
 
 <div class="warn-toolbar">
   <select id="guild-filter" class="warn-select"><option value="">Все серверы</option></select>
   <input type="text" id="search" class="warn-search" placeholder="Предупреждение ara... (kullanиcи, sebep)">
-  <span id="warn-count" class="warn-count" style="margin-left:auto;">0</span>
+  <span id="warn-count" class="warn-count" style="margin-left: auto">0</span>
 </div>
 
 <div class="warn-stats">
   <div class="warn-stat"><div class="warn-stat-num" id="stat-total">-</div><div class="warn-stat-lbl">Всего</div></div>
-  <div class="warn-stat"><div class="warn-stat-num" id="stat-users" style="color:#ef4444;">-</div><div class="warn-stat-lbl">Участников</div></div>
-  <div class="warn-stat"><div class="warn-stat-num" id="stat-top" style="color:#c8922a;">-</div><div class="warn-stat-lbl">Топ</div></div>
+  <div class="warn-stat"><div class="warn-stat-num" id="stat-users" >-</div><div class="warn-stat-lbl">Участников</div></div>
+  <div class="warn-stat"><div class="warn-stat-num" id="stat-top" >-</div><div class="warn-stat-lbl">Топ</div></div>
 </div>
 
 <div class="warn-box">
@@ -89,9 +89,9 @@
     }
     var rows = filtered.slice(0, 200).map(function (w) {
       return '<tr><td><span class="warn-badge">' + esc(w.user_id || '-') + '</span></td>' +
-        '<td style="color:rgba(240,232,208,0.55);font-size:10px;">' + esc(w.moderator || '-') + '</td>' +
-        '<td style="color:var(--text-3);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;">' + esc(w.reason || '-') + '</td>' +
-        '<td style="color:var(--text-3);font-size:10px;white-space:nowrap;">' + esc(fmtDate(w.timestamp)) + '</td></tr>';
+        '<td >' + esc(w.moderator || '-') + '</td>' +
+        '<td style="max-width: 160px; overflow: hidden">' + esc(w.reason || '-') + '</td>' +
+        '<td >' + esc(fmtDate(w.timestamp)) + '</td></tr>';
     }).join('');
     $('warn-body').innerHTML = '<table><thead><tr><th>User</th><th>Модер.</th><th>Причина</th><th>Время</th></tr></thead><tbody>' + rows + '</tbody></table>';
   }

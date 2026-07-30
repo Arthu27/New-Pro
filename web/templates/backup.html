@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Резервные копии - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-database" style="color:var(--ac);"></i> Резервное копирование{% endblock %}
+{% block page_title %}<i class="fas fa-database" ></i> Резервное копирование{% endblock %}
 {% block content %}
 
 <div class="bk-grid">
@@ -21,7 +21,7 @@
     <span class="bk-count" id="bk-count">-</span>
   </div>
   <div class="bk-body" id="bk-body">
-    <p style="color:var(--text-3);padding:30px;font-size:12px;"><i class="fas fa-spinner fa-spin"></i> Загрузка...</p>
+    <p ><i class="fas fa-spinner fa-spin"></i> Загрузка...</p>
   </div>
 </div>
 
@@ -56,7 +56,7 @@
         '<div class="bk-file-icon"><i class="fas fa-file-archive"></i></div>' +
         '<div class="bk-file-info"><div class="bk-file-name">' + esc(b.name) + '</div><div class="bk-file-meta">' + esc(b.date) + '</div></div>' +
         '<div class="bk-file-size">' + esc(b.size) + '</div>' +
-        '<div class="bk-file-actions"><button class="btn btn-warn" data-i="' + i + '" data-act="restore" type="button" style="padding:4px 8px;font-size:10px;"><i class="fas fa-undo"></i></button><button class="btn btn-danger" data-i="' + i + '" data-act="del" type="button" style="padding:4px 8px;font-size:10px;"><i class="fas fa-trash"></i></button></div>' +
+        '<div class="bk-file-actions"><button class="btn btn-warn" data-i="' + i + '" data-act="restore" type="button" ><i class="fas fa-undo"></i></button><button class="btn btn-danger" data-i="' + i + '" data-act="del" type="button" ><i class="fas fa-trash"></i></button></div>' +
       '</div>';
     });
     $('bk-body').innerHTML = html;

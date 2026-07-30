@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Команды - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-terminal" style="color:var(--ac);"></i> Команды{% endblock %}
+{% block page_title %}<i class="fas fa-terminal" ></i> Команды{% endblock %}
 {% block content %}
 
 <div class="cmd-grid" id="cmd-grid"></div>
@@ -39,11 +39,11 @@
   function renderGrid() {
     var html = '';
     commands.forEach(function (c, i) {
-      html += '<div class="cmd-card" data-cmd="' + esc(c.cmd) + '" style="animation-delay:' + (i * 0.02) + 's">' +
+      html += '<div class="cmd-card" data-cmd="' + esc(c.cmd) + '" >' +
         '<div class="cmd-icon"><i class="fas ' + esc(c.icon) + '"></i></div>' +
         '<div class="cmd-name">' + esc(c.name) + '</div>' +
         '<div class="cmd-desc">' + esc(c.desc) + '</div>' +
-        '<div class="cmd-tag" style="color:' + (roleColors[c.tag] || 'var(--text-3)') + ';">' + esc(c.tag.toUpperCase()) + '</div>' +
+        '<div class="cmd-tag" >' + esc(c.tag.toUpperCase()) + '</div>' +
       '</div>';
     });
     $('cmd-grid').innerHTML = html;
@@ -81,9 +81,9 @@
     }
 
     $('cmd-modal-content').innerHTML =
-      '<h3 style="font-size:15px;color:var(--text);margin-bottom:14px;letter-spacing:-0.02em;">' + esc(commands.find(function (c) { return c.cmd === cmd; }).name) + '</h3>' +
+      '<h3 style="margin-bottom: 14px">' + esc(commands.find(function (c) { return c.cmd === cmd; }).name) + '</h3>' +
       fields +
-      '<div style="display:flex;gap:8px;margin-top:14px;">' +
+      '<div style="display: flex; gap: 8px; margin-top: 14px">' +
         '<button class="btn-exec" id="btnExec" type="button">Чalишtиr</button>' +
         '<button class="btn-cancel" id="btnCancel" type="button">Отмена</button>' +
       '</div>' +

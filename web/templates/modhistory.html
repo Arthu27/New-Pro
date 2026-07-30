@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 {% block title %}История модерации — Aether{% endblock %}
-{% block page_title %}<i class="fas fa-history" style="color:var(--ac);"></i> История модерации{% endblock %}
+{% block page_title %}<i class="fas fa-history" ></i> История модерации{% endblock %}
 {% block content %}
 
 <div class="mh-toolbar">
   <input type="text" id="search" class="mh-search" placeholder="Поиск по истории (пользователь, мод, причина)...">
-  <select id="filter" class="mh-search" style="flex:0 0 auto;min-width:140px;">
+  <select id="filter" class="mh-search" style="flex: 0 0 auto; min-width: 140px">
     <option value="">Все действия</option>
     <option>Ban</option>
     <option>Kick</option>
@@ -61,12 +61,12 @@
     if (!list.length) { $('mh-body').innerHTML = '<p class="empty"><i class="fas fa-inbox"></i>Кейсов нет</p>'; return; }
     var rows = list.map(function (c) {
       var c1 = colorMap[c.action] || 'var(--text-3)';
-      return '<tr><td><span class="case-badge" style="background:' + c1 + '15;color:' + c1 + ';">#' + c.id + '</span></td>' +
-        '<td><span class="case-badge" style="background:' + c1 + '15;color:' + c1 + ';">' + c.action + '</span></td>' +
-        '<td style="font-size:12.5px;">' + esc(c.user) + '</td>' +
-        '<td style="color:var(--text-2);font-size:12px;">' + esc(c.mod) + '</td>' +
-        '<td style="color:var(--text-3);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;">' + esc(c.reason) + '</td>' +
-        '<td style="color:var(--text-3);font-size:11.5px;white-space:nowrap;">' + esc(c.date) + '</td></tr>';
+      return '<tr><td><span class="case-badge" >#' + c.id + '</span></td>' +
+        '<td><span class="case-badge" >' + c.action + '</span></td>' +
+        '<td >' + esc(c.user) + '</td>' +
+        '<td >' + esc(c.mod) + '</td>' +
+        '<td style="max-width: 180px; overflow: hidden">' + esc(c.reason) + '</td>' +
+        '<td >' + esc(c.date) + '</td></tr>';
     }).join('');
     $('mh-body').innerHTML = '<table><thead><tr><th>ID</th><th>Действие</th><th>Пользователь</th><th>Модер.</th><th>Причина</th><th>Дата</th></tr></thead><tbody>' + rows + '</tbody></table>';
   }

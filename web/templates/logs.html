@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Логи - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-clipboard-list" style="color:var(--ac);"></i> Логи модерации{% endblock %}
+{% block page_title %}<i class="fas fa-clipboard-list" ></i> Логи модерации{% endblock %}
 {% block content %}
 
 <div class="logs-toolbar">
@@ -11,10 +11,10 @@
 
 <div class="logs-stats" id="logs-stats">
   <div class="log-stat"><div class="log-stat-num" id="stat-total">-</div><div class="log-stat-lbl">Всего</div></div>
-  <div class="log-stat"><div class="log-stat-num" id="stat-bans" style="color:var(--err);">-</div><div class="log-stat-lbl">Банов</div></div>
-  <div class="log-stat"><div class="log-stat-num" id="stat-kicks" style="color:#f97316;">-</div><div class="log-stat-lbl">Киков</div></div>
-  <div class="log-stat"><div class="log-stat-num" id="stat-warns" style="color:var(--warn);">-</div><div class="log-stat-lbl">Warn</div></div>
-  <div class="log-stat"><div class="log-stat-num" id="stat-mutes" style="color:#a78bfa;">-</div><div class="log-stat-lbl">Мутов</div></div>
+  <div class="log-stat"><div class="log-stat-num" id="stat-bans" >-</div><div class="log-stat-lbl">Банов</div></div>
+  <div class="log-stat"><div class="log-stat-num" id="stat-kicks" >-</div><div class="log-stat-lbl">Киков</div></div>
+  <div class="log-stat"><div class="log-stat-num" id="stat-warns" >-</div><div class="log-stat-lbl">Warn</div></div>
+  <div class="log-stat"><div class="log-stat-num" id="stat-mutes" >-</div><div class="log-stat-lbl">Мутов</div></div>
 </div>
 
 <div class="logs-box">
@@ -61,7 +61,7 @@
       render();
       updateStats();
     } catch (e) {
-      $('logs-body').innerHTML = '<p class="empty"><i class="fas fa-exclamation-triangle" style="color:var(--err);"></i>Не удалось загрузить</p>';
+      $('logs-body').innerHTML = '<p class="empty"><i class="fas fa-exclamation-triangle" ></i>Не удалось загрузить</p>';
     }
   }
 
@@ -100,11 +100,11 @@
     var rows = filtered.slice(0, 200).map(function (l) {
       var a = (l.action || '?').toLowerCase();
       var c = colors[a] || 'var(--text-3)';
-      return '<tr><td><span class="action-badge" style="background:' + c + '15;color:' + c + ';">' + esc(l.action || '?') + '</span></td>' +
-        '<td style="font-size:12.5px;">' + esc(l.user_name || l.user_id || '-') + '</td>' +
-        '<td style="color:var(--text-2);font-size:12px;">' + esc(l.mod_name || l.mod_id || '-') + '</td>' +
-        '<td style="color:var(--text-3);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;">' + esc(l.reason || '-') + '</td>' +
-        '<td style="color:var(--text-3);font-size:11.5px;white-space:nowrap;">' + esc(fmtDate(l.timestamp)) + '</td></tr>';
+      return '<tr><td><span class="action-badge" >' + esc(l.action || '?') + '</span></td>' +
+        '<td >' + esc(l.user_name || l.user_id || '-') + '</td>' +
+        '<td >' + esc(l.mod_name || l.mod_id || '-') + '</td>' +
+        '<td style="max-width: 160px; overflow: hidden">' + esc(l.reason || '-') + '</td>' +
+        '<td >' + esc(fmtDate(l.timestamp)) + '</td></tr>';
     }).join('');
     $('logs-body').innerHTML = '<table><thead><tr><th>Действие</th><th>Цель</th><th>Модер.</th><th>Причина</th><th>Время</th></tr></thead><tbody>' + rows + '</tbody></table>';
   }

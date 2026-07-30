@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Уведомления — Aether{% endblock %}
-{% block page_title %}<i class="fas fa-bell" style="color:var(--ac);"></i> Уведомления{% endblock %}
+{% block page_title %}<i class="fas fa-bell" ></i> Уведомления{% endblock %}
 {% block content %}
 
 <div id="notif-list"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Загрузка...</p></div></div>
@@ -24,7 +24,7 @@ async function loadNotifs() {
       '<div class="notif-body">' +
         '<div class="notif-title">'+esc(n.title)+'</div>' +
         '<div class="notif-msg">'+esc(n.message)+'</div>' +
-        '<div class="notif-meta"><i class="fas fa-user"></i> '+esc(n.from)+' <span style="color:var(--text-4);">•</span> <i class="fas fa-clock"></i> '+d.toLocaleString('ru-RU')+'</div>' +
+        '<div class="notif-meta"><i class="fas fa-user"></i> '+esc(n.from)+' <span >•</span> <i class="fas fa-clock"></i> '+d.toLocaleString('ru-RU')+'</div>' +
       '</div>' +
       (unread?'<div class="unread-dot"></div>':'') +
     '</div>';

@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 {% block title %}Задачи - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-check-square" style="color:var(--ac);"></i> Список задач{% endblock %}
+{% block page_title %}<i class="fas fa-check-square" ></i> Список задач{% endblock %}
 {% block content %}
 
 <div class="todo-stats">
   <div class="todo-stat"><div class="todo-stat-num" id="stat-total">-</div><div class="todo-stat-lbl">Всего</div></div>
-  <div class="todo-stat"><div class="todo-stat-num" id="stat-done" style="color:var(--ok);">-</div><div class="todo-stat-lbl">Готово</div></div>
-  <div class="todo-stat"><div class="todo-stat-num" id="stat-active" style="color:#c8922a;">-</div><div class="todo-stat-lbl">Активный</div></div>
+  <div class="todo-stat"><div class="todo-stat-num" id="stat-done" >-</div><div class="todo-stat-lbl">Готово</div></div>
+  <div class="todo-stat"><div class="todo-stat-num" id="stat-active" >-</div><div class="todo-stat-lbl">Активный</div></div>
 </div>
 
 <div class="todo-add">
@@ -55,7 +55,7 @@
     var html = '';
     todos.forEach(function (t, i) {
       html += '<div class="todo-item">' +
-        '<div class="todo-check ' + (t.done ? 'done' : '') + '" data-i="' + i + '" data-act="toggle">' + (t.done ? '<i class="fas fa-check" style="font-size:11px;"></i>' : '') + '</div>' +
+        '<div class="todo-check ' + (t.done ? 'done' : '') + '" data-i="' + i + '" data-act="toggle">' + (t.done ? '<i class="fas fa-check" ></i>' : '') + '</div>' +
         '<div class="todo-text ' + (t.done ? 'done' : '') + '">' + esc(t.text) + '</div>' +
         '<button class="todo-del" data-i="' + i + '" data-act="del" type="button"><i class="fas fa-trash"></i></button>' +
       '</div>';

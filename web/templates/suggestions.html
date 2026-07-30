@@ -1,10 +1,10 @@
 ﻿{% extends "base.html" %}
 {% block title %}предложениеler - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-lightbulb" style="color:var(--ac);"></i> 💡 ПРЕДЛОЖЕНИЕ РУКОВОДИТЕЛЬ{% endblock %}
+{% block page_title %}<i class="fas fa-lightbulb" ></i> 💡 ПРЕДЛОЖЕНИЕ РУКОВОДИТЕЛЬ{% endblock %}
 {% block content %}
 
 <div class="sg-hero">
-  <div style="font-size:32px;margin-bottom:10px;">💡</div>
+  <div style="margin-bottom: 10px">💡</div>
   <div class="hero-title">💡 Менеджер предложений</div>
   <div class="hero-sub">Управляйте предложениями и следите за результатами голосования</div>
 </div>
@@ -74,7 +74,7 @@ function renderSuggestions() {
   var filtered = currentFilter === 'all' ? allSuggestions : allSuggestions.filter(s => s.status === currentFilter);
   var box = document.getElementById('sg-list');
   if (!filtered.length) {
-    box.innerHTML = '<div class="empty-state"><div style="font-size:32px;margin-bottom:16px;">💡</div><p>В этой категории предложений нет.</p></div>';
+    box.innerHTML = '<div class="empty-state"><div style="margin-bottom: 16px">💡</div><p>В этой категории предложений нет.</p></div>';
     return;
   }
   box.innerHTML = filtered.map(function(s, i) {
@@ -84,7 +84,7 @@ function renderSuggestions() {
     try { date = new Date(s.created_at).toLocaleDateString('tr-TR'); } catch(e) {}
     var upvotes = s.upvotes || 0;
     var downvotes = s.downvotes || 0;
-    return '<div class="sg-card" style="animation-delay:'+(i*0.06)+'s">'+
+    return '<div class="sg-card" >'+
       '<span class="sg-status '+(statusClass[s.status]||'status-pending')+'">'+(statusMap[s.status]||'⏳ Ожидание')+'</span>'+
       '<div class="sg-text">💬 '+s.content+'</div>'+
       '<div class="sg-author">'+

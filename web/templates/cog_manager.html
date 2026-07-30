@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Менеджер модулей — Aether{% endblock %}
-{% block page_title %}<i class="fas fa-cubes" style="color:var(--ac);"></i> Менеджер модулей{% endblock %}
+{% block page_title %}<i class="fas fa-cubes" ></i> Менеджер модулей{% endblock %}
 {% block content %}
 
 <div class="top-bar">
@@ -9,7 +9,7 @@
 </div>
 
 <div class="cog-grid" id="cog-grid">
-  <div style="color:var(--text-3);font-size:13px;padding:10px;">Загрузка...</div>
+  <div >Загрузка...</div>
 </div>
 
 <script>
@@ -26,9 +26,9 @@ async function loadCogs() {
       return '<div class="cog-card ' + (c.loaded ? 'loaded' : 'unloaded') + '" id="cog-' + esc(c.name) + '">' +
         '<div>' +
           '<div class="cog-name"><i class="fas fa-cube"></i> ' + esc(c.name) + '</div>' +
-          '<div class="cog-status ' + (c.loaded ? 'ok' : 'err') + '"><i class="fas fa-circle" style="font-size:11px;margin-right:4px;"></i>' + (c.loaded ? 'Загружен' : 'Не загружен') + '</div>' +
+          '<div class="cog-status ' + (c.loaded ? 'ok' : 'err') + '"><i class="fas fa-circle" style="margin-right: 4px"></i>' + (c.loaded ? 'Загружен' : 'Не загружен') + '</div>' +
         '</div>' +
-        '<div style="display:flex;align-items:center;">' +
+        '<div style="display: flex">' +
           (c.loaded ? '<button class="reload-btn" onclick="reloadCog(\'' + esc(c.name) + '\')" title="Перезагрузить"><i class="fas fa-redo"></i></button>' : '') +
           '<button class="toggle-btn ' + (c.loaded ? 'unload' : 'load') + '" onclick="toggleCog(\'' + esc(c.name) + '\',' + c.loaded + ')">' +
             (c.loaded ? 'Выкл.' : 'Вкл.') +
@@ -37,7 +37,7 @@ async function loadCogs() {
       '</div>';
     }).join('');
   } catch(e) {
-    document.getElementById('cog-grid').innerHTML = '<div style="color:var(--err);">Ошибка: ' + esc(e.message) + '</div>';
+    document.getElementById('cog-grid').innerHTML = '<div >Ошибка: ' + esc(e.message) + '</div>';
   }
 }
 

@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 {% block title %}Настройка порогов — Aether{% endblock %}
-{% block page_title %}<i class="fas fa-exclamation-triangle" style="color:var(--ac);"></i> Пороги предупреждений{% endblock %}
+{% block page_title %}<i class="fas fa-exclamation-triangle" ></i> Пороги предупреждений{% endblock %}
 {% block content %}
 
 <div class="wc-card">
   <h2><i class="fas fa-list"></i> Текущие правила</h2>
-  <div id="rules-list" style="color:var(--text-3);font-size:13px;">Загрузка...</div>
+  <div id="rules-list" >Загрузка...</div>
 </div>
 
 <div class="wc-card">
@@ -30,7 +30,7 @@
     <div></div>
   </div>
   <button class="add-btn" onclick="addRule()"><i class="fas fa-plus"></i> Добавить правило</button>
-  <span id="rule-msg" style="margin-left:12px;font-size:12px;color:var(--text-3);"></span>
+  <span id="rule-msg" style="margin-left: 12px"></span>
 </div>
 
 <script>
@@ -54,7 +54,7 @@ async function loadConfig() {
 function renderRules() {
   var el = document.getElementById('rules-list');
   if (!_rules.length) {
-    el.innerHTML = '<div class="empty-hint"><i class="fas fa-info-circle"></i>Пока правил нет.<br><span style="font-size:11px;color:var(--text-4);">По умолчанию: 3 варна = 10 мин мьют, 5 варнов = бан</span></div>';
+    el.innerHTML = '<div class="empty-hint"><i class="fas fa-info-circle"></i>Пока правил нет.<br><span >По умолчанию: 3 варна = 10 мин мьют, 5 варнов = бан</span></div>';
     return;
   }
   el.innerHTML = _rules.map(function(r, i) {
@@ -77,13 +77,13 @@ async function addRule() {
   var count    = parseInt(document.getElementById('new-count').value);
   var action   = document.getElementById('new-action').value;
   var duration = parseInt(document.getElementById('new-duration').value) || 10;
-  if (!count || count < 1) { msg.innerHTML = '<span style="color:var(--err);">✗ Неверное число</span>'; return; }
+  if (!count || count < 1) { msg.innerHTML = '<span >✗ Неверное число</span>'; return; }
   var existing = _rules.findIndex(function(r){ return r.count === count; });
   if (existing >= 0) _rules.splice(existing, 1);
   _rules.push({count, action, duration});
   _rules.sort(function(a,b){ return a.count - b.count; });
   await saveConfig();
-  msg.innerHTML = '<span style="color:var(--ok);">✓ Сохранено</span>';
+  msg.innerHTML = '<span >✓ Сохранено</span>';
   setTimeout(function(){ msg.textContent = ''; }, 2000);
   renderRules();
 }

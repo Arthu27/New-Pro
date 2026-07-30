@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Автомодерация — Aether{% endblock %}
-{% block page_title %}<i class="fas fa-shield-alt" style="color:var(--ac);"></i> Автомодерация{% endblock %}
+{% block page_title %}<i class="fas fa-shield-alt" ></i> Автомодерация{% endblock %}
 {% block content %}
 
 <div class="automod-grid">
@@ -19,7 +19,7 @@
         <option value="ban">Ban</option>
       </select>
     </div>
-    <label class="form-label" style="margin-top:6px;">Список слов (по одному в строке)</label>
+    <label class="form-label" style="margin-top: 6px">Список слов (по одному в строке)</label>
     <textarea id="words-list" class="am-textarea" rows="6" placeholder="badword1&#10;badword2&#10;..."></textarea>
     <div class="am-actions">
       <button class="btn btn-primary" id="save-words" type="button"><i class="fas fa-save"></i> Сохранить</button>

@@ -540,7 +540,7 @@
         </form>
 
         <!-- TAB 2: DISCORD ID PIN LOGIN -->
-        <div id="formPin" style="display: none;">
+        <div id="formPin" style="display: none">
             <div class="progress-bar" id="progressBar"><div class="progress-fill" id="progressFill"></div></div>
 
             <div id="step1">
@@ -645,11 +645,11 @@ function addTestItem(name, status, detail) {
     const list = document.getElementById('testList');
     const item = document.createElement('div');
     item.className = 'test-item';
-    let iconHtml = '<i class="fas fa-spinner fa-spin" style="color:#d4a843;"></i>';
-    if (status === 'ok') iconHtml = '<i class="fas fa-check-circle" style="color:#6ee7b7;"></i>';
-    else if (status === 'fail') iconHtml = '<i class="fas fa-times-circle" style="color:#fca5a5;"></i>';
-    else if (status === 'warn') iconHtml = '<i class="fas fa-exclamation-circle" style="color:#fcd34d;"></i>';
-    item.innerHTML = '<div>' + iconHtml + ' <span class="test-name" style="margin-left:6px;">' + name + '</span></div><span class="test-detail">' + (detail || '') + '</span>';
+    let iconHtml = '<i class="fas fa-spinner fa-spin" ></i>';
+    if (status === 'ok') iconHtml = '<i class="fas fa-check-circle" ></i>';
+    else if (status === 'fail') iconHtml = '<i class="fas fa-times-circle" ></i>';
+    else if (status === 'warn') iconHtml = '<i class="fas fa-exclamation-circle" ></i>';
+    item.innerHTML = '<div>' + iconHtml + ' <span class="test-name" style="margin-left: 6px">' + name + '</span></div><span class="test-detail">' + (detail || '') + '</span>';
     list.appendChild(item);
     return item;
 }

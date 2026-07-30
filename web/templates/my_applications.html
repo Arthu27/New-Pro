@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Мои заявки — Aether{% endblock %}
-{% block page_title %}<i class="fas fa-clipboard-list" style="color:var(--ac);"></i> Мои заявки{% endblock %}
+{% block page_title %}<i class="fas fa-clipboard-list" ></i> Мои заявки{% endblock %}
 {% block content %}
 
 <div id="apps-container"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Загрузка...</p></div></div>
@@ -41,7 +41,7 @@ async function loadApps() {
         '<div class="field-box"><div class="field-label">Возраст</div><div class="field-val">'+esc(ans.yas||'—')+'</div></div>' +
         '<div class="field-box"><div class="field-label">Активность</div><div class="field-val">'+esc(ans.activity||'—')+'</div></div>' +
       '</div>' +
-      '<div class="field-box" style="margin-bottom:10px;"><div class="field-label">Опыт</div><div class="field-val">'+esc(ans.tecrube||'—')+'</div></div>' +
+      '<div class="field-box" style="margin-bottom: 10px"><div class="field-label">Опыт</div><div class="field-val">'+esc(ans.tecrube||'—')+'</div></div>' +
       '<div class="field-box"><div class="field-label">Почему администратор?</div><div class="field-val">'+esc(ans.why||'—')+'</div></div>' +
       reviewBox +
     '</div>';

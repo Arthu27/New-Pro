@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Наблюдение — Aether{% endblock %}
-{% block page_title %}<i class="fas fa-eye" style="color:var(--ac);"></i> Список наблюдения{% endblock %}
+{% block page_title %}<i class="fas fa-eye" ></i> Список наблюдения{% endblock %}
 {% block content %}
 
 <div class="wl-toolbar">
@@ -37,14 +37,14 @@ async function loadWatchlist(gid) {
     }
     tbody.innerHTML = d.map(function(u) {
       return '<tr>' +
-        '<td><div style="color:var(--text);">👤 ' + esc(u.name) + '</div><div class="wl-meta">' + esc(u.id) + '</div></td>' +
-        '<td style="color:var(--text-2);">' + esc(u.reason||'—') + '</td>' +
-        '<td style="color:var(--text-3);">' + esc(u.added_by||'—') + '</td>' +
-        '<td style="color:var(--text-3);">' + esc((u.timestamp||'').slice(0,10)) + '</td>' +
+        '<td><div >👤 ' + esc(u.name) + '</div><div class="wl-meta">' + esc(u.id) + '</div></td>' +
+        '<td >' + esc(u.reason||'—') + '</td>' +
+        '<td >' + esc(u.added_by||'—') + '</td>' +
+        '<td >' + esc((u.timestamp||'').slice(0,10)) + '</td>' +
       '</tr>';
     }).join('');
   } catch(e) {
-    document.getElementById('wl-body').innerHTML = '<tr><td colspan="4" style="color:var(--err);padding:20px;">Не удалось загрузить</td></tr>';
+    document.getElementById('wl-body').innerHTML = '<tr><td colspan="4" >Не удалось загрузить</td></tr>';
   }
 }
 

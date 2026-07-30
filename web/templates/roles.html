@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Управление ролями — Aether{% endblock %}
-{% block page_title %}<i class="fas fa-user-tag" style="color:var(--ac);"></i> Управление ролями{% endblock %}
+{% block page_title %}<i class="fas fa-user-tag" ></i> Управление ролями{% endblock %}
 {% block content %}
 
 <div class="hero-banner">
@@ -11,8 +11,8 @@
 
 <button class="btn-add" onclick="openNameModal()"><i class="fas fa-plus"></i> Создать новую роль</button>
 
-<div style="margin-bottom:16px;">
-  <select id="guild-select" style="display:none;width:100%;">
+<div style="margin-bottom: 16px">
+  <select id="guild-select" style="display: none; width: 100%">
     <option value="">Выберите сервер...</option>
   </select>
 </div>
@@ -48,8 +48,8 @@ async function loadRoles() {
     }
     box.innerHTML = roles.map(function(role) {
       return '<div class="roles-card">' +
-        '<div style="display:flex;gap:14px;align-items:center;">' +
-          '<div class="roles-color" style="background:' + esc(role.color || '#888') + ';"></div>' +
+        '<div style="display: flex; gap: 14px">' +
+          '<div class="roles-color" ></div>' +
           '<div><div class="roles-name">' + esc(role.name) + '</div><div class="roles-members"><i class="fas fa-users"></i> ' + (role.members || 0) + ' участников</div></div>' +
         '</div>' +
         '<div class="roles-actions">' +
@@ -59,7 +59,7 @@ async function loadRoles() {
       '</div>';
     }).join('');
   } catch (e) {
-    box.innerHTML = '<div class="empty-msg"><i class="fas fa-exclamation-triangle" style="color:var(--err);"></i>Не удалось загрузить: ' + esc(e.message) + '</div>';
+    box.innerHTML = '<div class="empty-msg"><i class="fas fa-exclamation-triangle" ></i>Не удалось загрузить: ' + esc(e.message) + '</div>';
   }
 }
 

@@ -5,10 +5,10 @@
 {% block content %}
 
 <div class="ai-stats-container">
-    <h1 class="page-title"><i class="fas fa-robot" style="color:var(--ac);"></i> Статистика AI-модерации</h1>
+    <h1 class="page-title"><i class="fas fa-robot" ></i> Статистика AI-модерации</h1>
 
     <!-- Общая статистика -->
-    <div class="row-flex" style="margin-bottom: 18px;">
+    <div class="row-flex" style="margin-bottom: 18px">
         <div class="col-3">
             <div class="stat-box">
                 <div class="stat-number">{{ stats.total_tickets }}</div>
@@ -36,7 +36,7 @@
     </div>
 
     <!-- Распределение решений + Производительность AI -->
-    <div class="row-flex" style="margin-bottom: 18px;">
+    <div class="row-flex" style="margin-bottom: 18px">
         <div class="col-6">
             <div class="glass-card">
                 <div class="section-title"><i class="fas fa-chart-pie"></i> Распределение решений</div>
@@ -47,7 +47,7 @@
                         <span class="progress-value">{{ stats.single_violation_rate }}%</span>
                     </div>
                     <div class="modern-progress">
-                        <div class="modern-progress-bar" style="width: {{ stats.single_violation_rate }}%; background: linear-gradient(90deg, #f472b6, #ec4899);"></div>
+                        <div class="modern-progress-bar" style="width: {{ stats.single_violation_rate }}%"></div>
                     </div>
                 </div>
 
@@ -57,7 +57,7 @@
                         <span class="progress-value">{{ stats.mutual_rate }}%</span>
                     </div>
                     <div class="modern-progress">
-                        <div class="modern-progress-bar" style="width: {{ stats.mutual_rate }}%; background: linear-gradient(90deg, #fbbf24, #f59e0b);"></div>
+                        <div class="modern-progress-bar" style="width: {{ stats.mutual_rate }}%"></div>
                     </div>
                 </div>
 
@@ -67,7 +67,7 @@
                         <span class="progress-value">{{ stats.fake_rate }}%</span>
                     </div>
                     <div class="modern-progress">
-                        <div class="modern-progress-bar" style="width: {{ stats.fake_rate }}%; background: linear-gradient(90deg, #06b6d4, #0ea5e9);"></div>
+                        <div class="modern-progress-bar" style="width: {{ stats.fake_rate }}%"></div>
                     </div>
                 </div>
 
@@ -77,7 +77,7 @@
                         <span class="progress-value">{{ stats.no_violation_rate }}%</span>
                     </div>
                     <div class="modern-progress">
-                        <div class="modern-progress-bar" style="width: {{ stats.no_violation_rate }}%; background: linear-gradient(90deg, #34d399, #10b981);"></div>
+                        <div class="modern-progress-bar" style="width: {{ stats.no_violation_rate }}%"></div>
                     </div>
                 </div>
             </div>
@@ -132,7 +132,7 @@
                 <tbody>
                     {% for user in stats.top_offenders %}
                     <tr>
-                        <td><span style="color:var(--text-3);">#{{ loop.index }}</span></td>
+                        <td><span >#{{ loop.index }}</span></td>
                         <td>{{ user.name }}</td>
                         <td><span class="badge-modern">{{ user.count }}</span></td>
                         <td>{{ user.total_duration }} дн.</td>
@@ -153,7 +153,7 @@
                     <tr>
                         <th>Причина</th>
                         <th>Количество</th>
-                        <th style="width:50%;">Доля</th>
+                        <th style="width: 50%">Доля</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -162,11 +162,11 @@
                         <td>{{ reason.name }}</td>
                         <td><span class="badge-modern">{{ reason.count }}</span></td>
                         <td>
-                            <div style="display:flex;align-items:center;gap:12px;">
-                                <div class="modern-progress" style="flex:1;">
-                                    <div class="modern-progress-bar" style="width:{{ reason.percentage }}%; background: linear-gradient(90deg, #d4a843, #f0c75e);"></div>
+                            <div style="display: flex; gap: 12px">
+                                <div class="modern-progress" style="flex: 1">
+                                    <div class="modern-progress-bar" style="width: {{ reason.percentage }}%"></div>
                                 </div>
-                                <span style="color:var(--text);min-width:48px;">{{ reason.percentage }}%</span>
+                                <span style="min-width: 48px">{{ reason.percentage }}%</span>
                             </div>
                         </td>
                     </tr>

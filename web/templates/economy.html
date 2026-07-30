@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Экономика - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-coins" style="color:var(--ac);"></i> Экономика сервера{% endblock %}
+{% block page_title %}<i class="fas fa-coins" ></i> Экономика сервера{% endblock %}
 {% block content %}
 
 <div class="eco-tabs">
@@ -13,7 +13,7 @@
   <div class="eco-grid">
     <div class="eco-card"><div class="eco-icon"><i class="fas fa-coins"></i></div><div class="eco-val" id="stat-total">-</div><div class="eco-lbl">В обращении</div></div>
     <div class="eco-card"><div class="eco-icon"><i class="fas fa-users"></i></div><div class="eco-val" id="stat-users">-</div><div class="eco-lbl">Участников</div></div>
-    <div class="eco-card"><div class="eco-icon"><i class="fas fa-crown"></i></div><div class="eco-val" id="stat-richest" style="color:#c8922a;">-</div><div class="eco-lbl">Топ 1</div></div>
+    <div class="eco-card"><div class="eco-icon"><i class="fas fa-crown"></i></div><div class="eco-val" id="stat-richest" >-</div><div class="eco-lbl">Топ 1</div></div>
   </div>
 
   <div class="eco-box">
@@ -22,30 +22,30 @@
       <span class="eco-count" id="lb-count">-</span>
     </div>
     <div class="eco-body" id="lb-body">
-      <p style="color:var(--text-3);padding:30px;font-size:12px;"><i class="fas fa-spinner fa-spin"></i></p>
+      <p ><i class="fas fa-spinner fa-spin"></i></p>
     </div>
   </div>
 </div>
 
-<div id="tab-shop" class="tab-content" style="display:none;">
+<div id="tab-shop" class="tab-content" style="display: none">
   <div class="eco-box">
     <div class="eco-head">
       <div class="eco-title"><i class="fas fa-shopping-cart"></i> Магазин</div>
       <button class="btn btn-primary" id="add-item"><i class="fas fa-plus"></i> Добавить</button>
     </div>
     <div class="shop-grid" id="shop-grid">
-      <p style="grid-column:1/-1;color:var(--text-3);padding:30px;font-size:12px;">Магазин не найден</p>
+      <p >Магазин не найден</p>
     </div>
   </div>
 </div>
 
-<div id="tab-rich" class="tab-content" style="display:none;">
+<div id="tab-rich" class="tab-content" style="display: none">
   <div class="eco-box">
     <div class="eco-head">
       <div class="eco-title"><i class="fas fa-gem"></i> Богатые участники</div>
     </div>
     <div class="eco-body" id="rich-body">
-      <p style="color:var(--text-3);padding:30px;font-size:12px;"><i class="fas fa-spinner fa-spin"></i></p>
+      <p ><i class="fas fa-spinner fa-spin"></i></p>
     </div>
   </div>
 </div>
@@ -85,10 +85,10 @@
     var max = lbData[0] ? lbData[0].coins : 1;
     lbData.forEach(function (u) {
       var pct = Math.round(u.coins / max * 100);
-      html += '<tr><td><span style="color:#c8922a;">#' + u.rank + '</span></td>' +
-        '<td style="">' + esc(u.name) + '</td>' +
-        '<td><span class="coin">' + u.coins.toLocaleString() + '</span><div class="bar"><div class="bar-fill" style="width:' + pct + '%;"></div></div></td>' +
-        '<td style="color:var(--text-3);">' + Math.floor(u.coins / 1000) + '</td></tr>';
+      html += '<tr><td><span >#' + u.rank + '</span></td>' +
+        '<td >' + esc(u.name) + '</td>' +
+        '<td><span class="coin">' + u.coins.toLocaleString() + '</span><div class="bar"><div class="bar-fill" style="width: ' + pct + '%"></div></div></td>' +
+        '<td >' + Math.floor(u.coins / 1000) + '</td></tr>';
     });
     html += '</tbody></table>';
     $('lb-body').innerHTML = html;
@@ -99,7 +99,7 @@
 
   function renderShop() {
     if (!shopItems.length) {
-      $('shop-grid').innerHTML = '<p style="grid-column:1/-1;color:var(--text-3);padding:30px;font-size:12px;">Магазин не найден</p>';
+      $('shop-grid').innerHTML = '<p >Магазин не найден</p>';
       return;
     }
     var html = '';
@@ -107,7 +107,7 @@
       html += '<div class="shop-item">' +
         '<div class="shop-icon"><i class="fas ' + i.icon + '"></i></div>' +
         '<div class="shop-name">' + esc(i.name) + '</div>' +
-        '<div class="shop-price">' + i.price.toLocaleString() + ' <i class="fas fa-coins" style="font-size:11px;"></i></div>' +
+        '<div class="shop-price">' + i.price.toLocaleString() + ' <i class="fas fa-coins" ></i></div>' +
       '</div>';
     });
     $('shop-grid').innerHTML = html;
@@ -118,9 +118,9 @@
     var total = lbData.reduce(function (a, b) { return a + b.coins; }, 0);
     lbData.forEach(function (u, i) {
       var pct = total ? Math.round(u.coins / total * 100) : 0;
-      html += '<tr><td>' + (i + 1) + '</td><td style="">' + esc(u.name) + '</td>' +
+      html += '<tr><td>' + (i + 1) + '</td><td >' + esc(u.name) + '</td>' +
         '<td><span class="coin">' + u.coins.toLocaleString() + '</span></td>' +
-        '<td><div style="display:flex;align-items:center;gap:6px;"><div class="bar" style="flex:1;"><div class="bar-fill" style="width:' + pct + '%;"></div></div><span style="font-size:10px;color:var(--text-3);">' + pct + '%</span></div></td></tr>';
+        '<td><div style="display: flex; gap: 6px"><div class="bar" style="flex: 1"><div class="bar-fill" style="width: ' + pct + '%"></div></div><span >' + pct + '%</span></div></td></tr>';
     });
     html += '</tbody></table>';
     $('rich-body').innerHTML = html;

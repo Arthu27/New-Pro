@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Отправить сообщение — Aether{% endblock %}
-{% block page_title %}<i class="fas fa-paper-plane" style="color:var(--ac);"></i> Отправить сообщение{% endblock %}
+{% block page_title %}<i class="fas fa-paper-plane" ></i> Отправить сообщение{% endblock %}
 {% block content %}
 
 <div class="sc-wrap">
@@ -20,7 +20,7 @@
     </div>
     <div class="form-group">
       <label>Сообщение</label>
-      <textarea id="message-input" class="field-input" rows="5" placeholder="Напишите сообщение..." style="resize:vertical;"></textarea>
+      <textarea id="message-input" class="field-input" rows="5" placeholder="Напишите сообщение..." ></textarea>
     </div>
     <button id="send-btn" class="send-btn" onclick="sendMessage()">
       <i class="fas fa-paper-plane"></i> Отправить

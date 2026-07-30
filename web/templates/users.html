@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Пользователи - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-users" style="color:var(--ac);"></i> Пользователи{% endblock %}
+{% block page_title %}<i class="fas fa-users" ></i> Пользователи{% endblock %}
 {% block content %}
 
 <div class="users-toolbar">
@@ -50,14 +50,14 @@
       $('members-list').innerHTML = '<div class="empty-state"><i class="fas fa-user-friends"></i><p>Выберите сервер для просмотра участников</p></div>';
       return;
     }
-    $('members-list').innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin" style="color:var(--ac);"></i><p>Загрузка...</p></div>';
+    $('members-list').innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin" ></i><p>Загрузка...</p></div>';
     try {
       var res = await fetch('/api/guild/' + guildId + '/members?limit=500');
       allMembers = await res.json();
       $('member-count').textContent = allMembers.length + ' чел.';
       renderMembers(allMembers);
     } catch (e) {
-      $('members-list').innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle" style="color:var(--err);"></i><p style="color:var(--err);">Не удалось загрузить: ' + esc(e.message) + '</p></div>';
+      $('members-list').innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle" ></i><p >Не удалось загрузить: ' + esc(e.message) + '</p></div>';
     }
   }
 
@@ -91,7 +91,7 @@
     var sc = statusClass[m.status] || 'status-offline';
     var roles = (m.roles || []).map(function (r) {
       var color = r.color ? '#' + r.color.toString(16).padStart(6, '0') : 'var(--ac)';
-      return '<span class="role-chip" style="border-color:' + color + '55;color:' + color + ';">' + esc(r.name) + '</span>';
+      return '<span class="role-chip" >' + esc(r.name) + '</span>';
     }).join('');
     $('modal-content').innerHTML =
       '<div class="member-detail-info">' +
@@ -99,7 +99,7 @@
         '<div class="member-detail-name">' + esc(m.display_name) + '</div>' +
         (m.nick ? '<div class="member-detail-sub">Nick: ' + esc(m.nick) + '</div>' : '') +
         '<div class="member-detail-sub">@' + esc(m.name) + '</div>' +
-        '<div><span class="status-dot ' + sc + '" style="display:inline-block;position:static;margin-right:6px;width:9px;height:9px;"></span> ' + st + (m.bot ? ' <span class="bot-badge" style="margin-left:6px;">BOT</span>' : '') + '</div>' +
+        '<div><span class="status-dot ' + sc + '" style="display: inline-block; position: static; margin-right: 6px; width: 9px; height: 9px"></span> ' + st + (m.bot ? ' <span class="bot-badge" style="margin-left: 6px">BOT</span>' : '') + '</div>' +
       '</div>' +
       '<div class="detail-grid">' +
         '<div class="detail-cell"><i class="fas fa-id-card"></i><div class="detail-cell-label">ID</div><div class="detail-cell-val">' + esc(m.id) + '</div></div>' +

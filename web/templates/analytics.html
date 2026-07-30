@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Аналитика - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-chart-line" style="color:var(--ac);"></i> Аналитика сервера{% endblock %}
+{% block page_title %}<i class="fas fa-chart-line" ></i> Аналитика сервера{% endblock %}
 {% block content %}
 
 <select id="guild-select" class="guild-select" onchange="loadAnalytics()">
@@ -46,7 +46,7 @@ async function loadAnalytics(gid_param) {
       var pct = Math.round((m.messages/maxM)*100);
       return '<div class="bar-container">'+
         '<div class="bar-label"><span class="top-name"><span class="top-rank">#'+(i+1)+'</span> '+m.name+'</span><span class="top-val">'+m.messages.toLocaleString()+' сообщ.</span></div>'+
-        '<div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;"></div></div>'+
+        '<div class="bar-track"><div class="bar-fill" style="width: '+pct+'%"></div></div>'+
       '</div>';
     }).join('') :
     '<div class="empty-state">Нет данных</div>';
@@ -58,7 +58,7 @@ async function loadAnalytics(gid_param) {
       var pct = Math.round((c.messages/maxC)*100);
       return '<div class="bar-container">'+
         '<div class="bar-label"><span class="top-name"><span class="top-rank">#'+(i+1)+'</span> #'+c.name+'</span><span class="top-val">'+c.messages.toLocaleString()+' сообщ.</span></div>'+
-        '<div class="bar-track"><div class="bar-fill" style="width:'+pct+';"></div></div>'+
+        '<div class="bar-track"><div class="bar-fill" style="width: '+pct+'"></div></div>'+
       '</div>';
     }).join('') :
     '<div class="empty-state">Нет данных</div>';

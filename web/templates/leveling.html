@@ -1,6 +1,6 @@
 ﻿{% extends "base.html" %}
 {% block title %}Leveling - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-star" style="color:var(--ac);"></i> ⭐ СИСТЕМА УРОВНЕЙ{% endblock %}
+{% block page_title %}<i class="fas fa-star" ></i> ⭐ СИСТЕМА УРОВНЕЙ{% endblock %}
 {% block content %}
 
 <!-- КАЖДЫЙ -->
@@ -30,7 +30,7 @@
       <label class="toggle"><input type="checkbox" id="lv-notify"><span class="toggle-slider"></span></label>
     </div>
 
-    <div class="form-group" style="margin-top:16px;">
+    <div class="form-group" style="margin-top: 16px">
       <label class="form-label">📢 Уведомление Канал</label>
       <select id="lv-channel" class="form-input">
         <option value="">Выберите канал (пусто = сообщение канал)</option>
@@ -55,13 +55,13 @@
     </div>
 
     <button class="btn-save" onclick="saveLeveling()">💾 СОХРАНИТЬ</button>
-    <div id="lv-status" style="margin-top:10px;font-size:12px;letter-spacing:1px;"></div>
+    <div id="lv-status" style="margin-top: 10px"></div>
   </div>
 
   <!-- LEADERBOARD -->
   <div class="lv-box">
     <div class="box-title">🏆 Таблица лидеров</div>
-    <div id="lb-list"><p style="color:#333;padding:40px;font-size:11px;letter-spacing:2px;">ВЫБЕРИТЕ СЕРВЕР...</p></div>
+    <div id="lb-list"><p >ВЫБЕРИТЕ СЕРВЕР...</p></div>
   </div>
 </div>
 
@@ -126,21 +126,21 @@ async function loadLeveling() {
   var medals = ['🥇','🥈','🥉'];
   var box = document.getElementById('lb-list');
   if (!lb.length) {
-    box.innerHTML = '<p style="color:#333;padding:40px;font-size:11px;letter-spacing:2px;">ДАННЫЕ YOK</p>';
+    box.innerHTML = '<p >ДАННЫЕ YOK</p>';
     return;
   }
   box.innerHTML = lb.map(function(u, i) {
     var pct = u.level ? Math.min(100, Math.round((u.xp % (u.level * 100)) / (u.level * 100) * 100)) : 0;
-    return '<div class="lb-row" style="animation-delay:' + (i * 0.05) + 's">' +
+    return '<div class="lb-row" >' +
       '<div class="lb-rank">' + (medals[i] || '#' + (i + 1)) + '</div>' +
       '<img class="lb-avatar" src="' + (u.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png') + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' +
-      '<div style="flex:1;">' +
-        '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
+      '<div style="flex: 1">' +
+        '<div style="display: flex; gap: 8px">' +
           '<span class="lb-name">' + (u.name || '?') + '</span>' +
           '<span class="lb-level">Lv.' + (u.level || 0) + '</span>' +
           '<span class="lb-xp">' + (u.xp || 0) + ' Опыт</span>' +
         '</div>' +
-        '<div class="xp-bar-track"><div class="xp-bar-fill" style="width:0%" data-pct="' + pct + '"></div></div>' +
+        '<div class="xp-bar-track"><div class="xp-bar-fill" style="width: 0%" data-pct="' + pct + '"></div></div>' +
       '</div>' +
     '</div>';
   }).join('');
@@ -175,7 +175,7 @@ async function saveLeveling() {
   btn.textContent = '💾 СОХРАНИТЬ';
   btn.disabled = false;
   var st = document.getElementById('lv-status');
-  st.innerHTML = d.success ? '<span style="color:var(--ok);">✅ СОХРАНЕНО</span>' : '<span style="color:var(--err);">❌ ОШИБКА</span>';
+  st.innerHTML = d.success ? '<span >✅ СОХРАНЕНО</span>' : '<span >❌ ОШИБКА</span>';
   setTimeout(function() { st.innerHTML = ''; }, 3000);
 }
 

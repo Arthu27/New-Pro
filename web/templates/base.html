@@ -219,7 +219,7 @@
 
         <div class="sidebar-foot">
             <div class="sidebar-version">
-                <i class="fas fa-circle" style="color:var(--ok);font-size:11px;"></i>
+                <i class="fas fa-circle" ></i>
                 v2.0 · Online
             </div>
         </div>
@@ -347,7 +347,7 @@ document.addEventListener('DOMContentLoaded', function () {
       });
       // Auto-expand groups with matches
       document.querySelectorAll('.nav-group').forEach(function (g) {
-        var hasVisible = !!g.querySelector('.nav-link[style=""], .nav-link:not([style])');
+        var hasVisible = !!g.querySelector('.nav-link[], .nav-link:not([style])');
         if (q && hasVisible) {
           g.classList.remove('collapsed');
           var items = g.querySelector('.nav-group-items');
@@ -405,10 +405,10 @@ document.addEventListener('DOMContentLoaded', function () {
   panel.innerHTML =
     '<div class="notif-dropdown-head">' +
       '<span>Уведомления</span>' +
-      '<a href="/notifications" style="font-size:10.5px;color:var(--ac);text-decoration:none;text-transform:uppercase;letter-spacing:0.06em;">Все →</a>' +
+      '<a href="/notifications" >Все →</a>' +
     '</div>' +
     '<div class="notif-dropdown-body" id="notifDropBody">' +
-      '<div class="empty-state" style="padding:24px 14px;"><i class="fas fa-spinner fa-spin"></i><p>Загрузка...</p></div>' +
+      '<div class="empty-state" ><i class="fas fa-spinner fa-spin"></i><p>Загрузка...</p></div>' +
     '</div>';
   document.body.appendChild(panel);
 
@@ -436,7 +436,7 @@ document.addEventListener('DOMContentLoaded', function () {
       .then(function (r) { return r.json(); })
       .then(function (notifs) {
         if (!Array.isArray(notifs) || !notifs.length) {
-          body.innerHTML = '<div class="empty-state" style="padding:24px 14px;"><i class="fas fa-bell-slash"></i><p>Нет уведомлений</p></div>';
+          body.innerHTML = '<div class="empty-state" ><i class="fas fa-bell-slash"></i><p>Нет уведомлений</p></div>';
           return;
         }
         body.innerHTML = notifs.slice(0, 8).map(function (n) {
@@ -444,7 +444,7 @@ document.addEventListener('DOMContentLoaded', function () {
           var unread = !n.read;
           return '<div class="notif-dropdown-item' + (unread ? ' unread' : '') + '">' +
             '<div class="notif-dropdown-icon"><i class="fas fa-bell"></i></div>' +
-            '<div style="flex:1;min-width:0;">' +
+            '<div style="flex: 1; min-width: 0">' +
               '<div class="notif-dropdown-title">' + esc(n.title) + '</div>' +
               '<div class="notif-dropdown-msg">' + esc(n.message) + '</div>' +
               '<div class="notif-dropdown-time">' + d.toLocaleString('ru-RU') + '</div>' +
@@ -459,7 +459,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
       })
       .catch(function () {
-        body.innerHTML = '<div class="empty-state" style="padding:24px 14px;color:var(--err);"><i class="fas fa-exclamation-triangle"></i><p>Ошибка загрузки</p></div>';
+        body.innerHTML = '<div class="empty-state" ><i class="fas fa-exclamation-triangle"></i><p>Ошибка загрузки</p></div>';
       });
   }
 })();

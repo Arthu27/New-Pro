@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Поиск участников — Aether{% endblock %}
-{% block page_title %}<i class="fas fa-search" style="color:var(--ac);"></i> Поиск участников{% endblock %}
+{% block page_title %}<i class="fas fa-search" ></i> Поиск участников{% endblock %}
 {% block content %}
 
 <div class="ms-bar">
@@ -9,7 +9,7 @@
 </div>
 
 <div id="ms-results" class="ms-results"></div>
-<div id="ms-profile" class="ms-profile" style="display:none;"></div>
+<div id="ms-profile" class="ms-profile" style="display: none"></div>
 
 <script>
 var GUILD_ID = '{{ guild_id }}';
@@ -18,23 +18,23 @@ function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').repla
 async function search() {
   var q = document.getElementById('ms-query').value.trim();
   if (!q) return;
-  document.getElementById('ms-results').innerHTML = '<div style="color:var(--text-3);font-size:13px;padding:10px;">Поиск...</div>';
+  document.getElementById('ms-results').innerHTML = '<div >Поиск...</div>';
   document.getElementById('ms-profile').style.display = 'none';
   try {
     var d = await fetch('/api/member-search/' + GUILD_ID + '?q=' + encodeURIComponent(q)).then(r => r.json());
     if (!d.length) {
-      document.getElementById('ms-results').innerHTML = '<div style="color:var(--text-3);font-size:13px;padding:10px;">Ничего не найдено</div>';
+      document.getElementById('ms-results').innerHTML = '<div >Ничего не найдено</div>';
       return;
     }
     document.getElementById('ms-results').innerHTML = d.map(function(m) {
       return '<div class="ms-result-card" onclick="loadProfile(' + m.id + ')">' +
-        (m.avatar ? '<img src="' + esc(m.avatar) + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' : '<div style="width:32px;height:32px;border-radius:50%;background:var(--ac-soft);display:flex;align-items:center;justify-content:center;">👤</div>') +
+        (m.avatar ? '<img src="' + esc(m.avatar) + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' : '<div style="width: 32px; height: 32px; display: flex">👤</div>') +
         '<div><div class="name">' + esc(m.display_name) + '</div>' +
         '<div class="id">' + esc(m.id) + '</div></div>' +
       '</div>';
     }).join('');
   } catch(e) {
-    document.getElementById('ms-results').innerHTML = '<div style="color:var(--err);padding:10px;">Ошибка: ' + esc(e.message) + '</div>';
+    document.getElementById('ms-results').innerHTML = '<div >Ошибка: ' + esc(e.message) + '</div>';
   }
 }
 
@@ -50,10 +50,10 @@ async function loadProfile(userId) {
 
     var leftHtml = '<div>' +
       '<div class="ms-card">' +
-        '<div style="display:flex;align-items:center;gap:14px;margin-bottom:18px;">' +
-          (d.avatar ? '<img src="' + esc(d.avatar) + '" style="width:64px;height:64px;border-radius:50%;border:2px solid var(--ac);box-shadow:0 0 0 3px rgba(0,0,0,0.4);" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' : '<div style="width:64px;height:64px;border-radius:50%;background:var(--ac-soft);display:flex;align-items:center;justify-content:center;font-size:28px;">👤</div>') +
-          '<div><div style="font-size:16px;color:var(--text);">' + esc(d.display_name||d.name||userId) + '</div>' +
-          '<div style="font-size:12px;color:var(--text-3);">@' + esc(d.name||userId) + '</div></div>' +
+        '<div style="display: flex; gap: 14px; margin-bottom: 18px">' +
+          (d.avatar ? '<img src="' + esc(d.avatar) + '" style="width: 64px; height: 64px" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' : '<div style="width: 64px; height: 64px; display: flex">👤</div>') +
+          '<div><div >' + esc(d.display_name||d.name||userId) + '</div>' +
+          '<div >@' + esc(d.name||userId) + '</div></div>' +
         '</div>' +
         '<div class="ms-row"><span class="ms-key">ID</span><span class="ms-val id">' + esc(d.id) + '</span></div>' +
         (d.joined_at ? '<div class="ms-row"><span class="ms-key">Дата входа</span><span class="ms-val">' + new Date(d.joined_at).toLocaleDateString('ru-RU') + '</span></div>' : '') +
@@ -68,20 +68,20 @@ async function loadProfile(userId) {
       '<div class="ms-card">' +
         '<h2><i class="fas fa-exclamation-triangle"></i> Предупреждения (' + warns.length + ')</h2>' +
         (warns.length ? warns.slice(-5).map(function(w){
-          return '<div class="warn-item"><div style="color:var(--warn);">#' + esc(w.id) + ' — ' + esc((w.timestamp||'').slice(0,10)) + '</div><div style="color:var(--text-2);margin-top:3px;">' + esc(w.reason||'?') + '</div></div>';
-        }).join('') : '<div style="padding:18px;color:var(--text-3);font-size:12.5px;">✓ Предупреждений нет</div>') +
+          return '<div class="warn-item"><div >#' + esc(w.id) + ' — ' + esc((w.timestamp||'').slice(0,10)) + '</div><div style="margin-top: 3px">' + esc(w.reason||'?') + '</div></div>';
+        }).join('') : '<div >✓ Предупреждений нет</div>') +
       '</div>' +
       '<div class="ms-card">' +
         '<h2><i class="fas fa-clipboard-list"></i> История модерации (' + cases.length + ')</h2>' +
         (cases.length ? cases.slice(-5).map(function(c){
-          return '<div class="case-item"><div style="color:var(--ac);">#' + esc(c.id) + ' ' + esc((c.action||'').toUpperCase()) + ' — ' + esc((c.timestamp||'').slice(0,10)) + '</div><div style="color:var(--text-2);margin-top:3px;">' + esc(c.reason||'?') + '</div></div>';
-        }).join('') : '<div style="padding:18px;color:var(--text-3);font-size:12.5px;">✓ Записей нет</div>') +
+          return '<div class="case-item"><div >#' + esc(c.id) + ' ' + esc((c.action||'').toUpperCase()) + ' — ' + esc((c.timestamp||'').slice(0,10)) + '</div><div style="margin-top: 3px">' + esc(c.reason||'?') + '</div></div>';
+        }).join('') : '<div >✓ Записей нет</div>') +
       '</div>' +
     '</div>';
 
     el.innerHTML = leftHtml + rightHtml;
   } catch(e) {
-    document.getElementById('ms-profile').innerHTML = '<div style="color:var(--err);">Ошибка загрузки: ' + esc(e.message) + '</div>';
+    document.getElementById('ms-profile').innerHTML = '<div >Ошибка загрузки: ' + esc(e.message) + '</div>';
     document.getElementById('ms-profile').style.display = 'block';
   }
 }

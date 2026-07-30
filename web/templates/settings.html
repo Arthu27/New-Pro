@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 {% block title %}Ayarlar - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-cog" style="color:var(--ac);"></i> Ayarlar{% endblock %}
+{% block page_title %}<i class="fas fa-cog" ></i> Ayarlar{% endblock %}
 {% block content %}
 
 <div class="settings-grid">
   <!-- Bot Durumu -->
-  <div class="set-card" style="animation-delay:0s;">
+  <div class="set-card" >
     <div class="set-head">
       <div class="set-icon"><i class="fas fa-robot"></i></div>
       <div class="set-title">Bot Durumu</div>
@@ -24,7 +24,7 @@
   </div>
 
   <!-- Gюvenlik -->
-  <div class="set-card" style="animation-delay:0.05s;">
+  <div class="set-card" >
     <div class="set-head">
       <div class="set-icon"><i class="fas fa-shield-alt"></i></div>
       <div class="set-title">Gюvenlik</div>
@@ -40,7 +40,7 @@
   </div>
 
   <!-- Panel Gюvenlik -->
-  <div class="set-card" style="animation-delay:0.1s;">
+  <div class="set-card" >
     <div class="set-head">
       <div class="set-icon"><i class="fas fa-user-shield"></i></div>
       <div class="set-title">Panel</div>
@@ -57,7 +57,7 @@
   </div>
 
   <!-- Cloudflare -->
-  <div class="set-card" style="animation-delay:0.15s;">
+  <div class="set-card" >
     <div class="set-head">
       <div class="set-icon"><i class="fas fa-globe"></i></div>
       <div class="set-title">Tюnel</div>
@@ -66,7 +66,7 @@
       <span class="dot" id="tunnel-dot"></span>
       <span id="tunnel-status">Загрузка...</span>
     </div>
-    <div id="tunnel-url-wrap" style="display:none;margin-top:8px;padding:8px;background:rgba(0,0,0,0.3);border-radius:7px;font-size:10px;color:#c8922a;word-break:break-all;cursor:pointer;" onclick="navigator.clipboard.writeText(this.textContent);this.textContent='✓ Kopyalandи';setTimeout(()=>this.textContent=this.dataset.url,1500)" data-url=""></div>
+    <div id="tunnel-url-wrap" style="display: none; margin-top: 8px; cursor: pointer" onclick="navigator.clipboard.writeText(this.textContent);this.textContent='✓ Kopyalandи';setTimeout(()=>this.textContent=this.dataset.url,1500)" data-url=""></div>
   </div>
 </div>
 

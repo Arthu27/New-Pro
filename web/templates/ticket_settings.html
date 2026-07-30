@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Тикеты - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-cogs" style="color:var(--ac);"></i> Настройки тикетов{% endblock %}
+{% block page_title %}<i class="fas fa-cogs" ></i> Настройки тикетов{% endblock %}
 {% block content %}
 
 <div class="tk-grid">
@@ -29,7 +29,7 @@
     </div>
     <div class="form-row"><label>Заголовок</label><input type="text" id="title" value="🎫 ПОДДЕРЖКА"></div>
     <div class="form-row"><label>Описание</label><textarea id="description" rows="3">Нажмите кнопку ниже чтобы открыть тикет</textarea></div>
-    <div class="form-row"><label>Цвет</label><input type="color" id="color" value="#5865F2" style="width:60px;height:30px;"></div>
+    <div class="form-row"><label>Цвет</label><input type="color" id="color" value="#5865F2" style="width: 60px; height: 30px"></div>
   </div>
 
   <!-- Лог kanalи -->
@@ -69,19 +69,19 @@
   </div>
 
   <!-- Desteklenen kategoriler -->
-  <div class="tk-card" style="grid-column:1/-1;">
+  <div class="tk-card" >
     <div class="tk-head">
       <div class="tk-icon"><i class="fas fa-list"></i></div>
       <div class="tk-title">Категории тикетов</div>
       <button class="btn btn-primary" id="add-cat" type="button"><i class="fas fa-plus"></i> Добавить</button>
     </div>
-    <div id="cat-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;">
-      <p style="grid-column:1/-1;color:var(--text-3);padding:14px;font-size:11px;">Загрузка...</p>
+    <div id="cat-list" style="display: grid; grid-template-columns: repeat(auto-fill,minmax(180px,1fr)); gap: 8px">
+      <p >Загрузка...</p>
     </div>
   </div>
 </div>
 
-<div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end;">
+<div style="display: flex; gap: 8px; margin-top: 14px">
   <button class="btn btn-warn" id="btn-test" type="button"><i class="fas fa-paper-plane"></i> Тест панели</button>
   <button class="btn btn-primary" id="btn-save" type="button"><i class="fas fa-save"></i> Сохранить всё</button>
 </div>

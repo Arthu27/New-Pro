@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Розыгрыши - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-gift" style="color:var(--ac);"></i> Розыгрыши{% endblock %}
+{% block page_title %}<i class="fas fa-gift" ></i> Розыгрыши{% endblock %}
 {% block content %}
 
-<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
-  <div style="display:flex;gap:8px;">
+<div style="display: flex; margin-bottom: 12px; gap: 8px">
+  <div style="display: flex; gap: 8px">
     <span class="gw-badge live" id="live-count">0 live</span>
     <span class="gw-badge ended" id="ended-count">0 завершено</span>
   </div>
@@ -39,11 +39,11 @@
     var html = '';
     giveaways.forEach(function (g, i) {
       var pct = g.max ? Math.round(g.entries / g.max * 100) : 0;
-      html += '<div class="gw-card" style="animation-delay:' + (i * 0.05) + 's;">' +
+      html += '<div class="gw-card" >' +
         '<div class="gw-prize"><i class="fas ' + esc(g.prize) + '"></i></div>' +
         '<div class="gw-title">' + esc(g.title) + '</div>' +
         '<div class="gw-info"><span><i class="fas fa-trophy"></i>' + g.winners + ' победител' + '</span><span><i class="fas fa-clock"></i>' + esc(g.ends) + '</span></div>' +
-        '<div class="gw-progress"><div class="gw-progress-fill" style="width:' + pct + '%;"></div></div>' +
+        '<div class="gw-progress"><div class="gw-progress-fill" style="width: ' + pct + '%"></div></div>' +
         '<div class="gw-foot"><span>' + g.entries + ' / ' + g.max + ' katиlиmcи</span><span class="gw-badge ' + (g.live ? 'live' : 'ended') + '">' + (g.live ? 'LIVE' : 'Готово') + '</span></div>' +
       '</div>';
     });

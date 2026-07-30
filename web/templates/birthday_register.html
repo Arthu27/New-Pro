@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}День рождения — Aether{% endblock %}
-{% block page_title %}<i class="fas fa-birthday-cake" style="color:var(--ac);"></i> День рождения{% endblock %}
+{% block page_title %}<i class="fas fa-birthday-cake" ></i> День рождения{% endblock %}
 {% block content %}
 
 <div class="bd-grid">
@@ -13,7 +13,7 @@
       <div class="form-group"><label>Год (опц.)</label><input type="number" id="bd-year" placeholder="2000" min="1900" max="2020"></div>
     </div>
     <button class="btn btn-primary" onclick="saveBirthday()"><i class="fas fa-save"></i> Сохранить</button>
-    <span id="bd-msg" style="margin-left:12px;font-size:12px;color:var(--text-3);"></span>
+    <span id="bd-msg" style="margin-left: 12px"></span>
   </div>
 
   <div class="bd-card">
@@ -61,17 +61,17 @@ async function saveBirthday() {
   var day   = parseInt(document.getElementById('bd-day').value);
   var month = parseInt(document.getElementById('bd-month').value);
   var year  = parseInt(document.getElementById('bd-year').value) || null;
-  if (!day || !month) { msg.innerHTML = '<span style="color:var(--err);">❌ День и месяц обязательны</span>'; return; }
-  if (day < 1 || day > 31 || month < 1 || month > 12) { msg.innerHTML = '<span style="color:var(--err);">❌ Неверная дата</span>'; return; }
+  if (!day || !month) { msg.innerHTML = '<span >❌ День и месяц обязательны</span>'; return; }
+  if (day < 1 || day > 31 || month < 1 || month > 12) { msg.innerHTML = '<span >❌ Неверная дата</span>'; return; }
   try {
     var r = await fetch('/api/my-birthday/' + GUILD_ID, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({day, month, year})
     }).then(r => r.json());
-    if (r.ok) { msg.innerHTML = '<span style="color:var(--ok);">✅ Сохранено!</span>'; init(); }
-    else msg.innerHTML = '<span style="color:var(--err);">❌ ' + (r.error || 'Ошибка') + '</span>';
-  } catch(e) { msg.innerHTML = '<span style="color:var(--err);">❌ Ошибка соединения</span>'; }
+    if (r.ok) { msg.innerHTML = '<span >✅ Сохранено!</span>'; init(); }
+    else msg.innerHTML = '<span >❌ ' + (r.error || 'Ошибка') + '</span>';
+  } catch(e) { msg.innerHTML = '<span >❌ Ошибка соединения</span>'; }
 }
 
 init();

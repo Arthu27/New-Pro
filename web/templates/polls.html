@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 {% block title %}Опросы — Aether{% endblock %}
-{% block page_title %}<i class="fas fa-poll-h" style="color:var(--ac);"></i> Опросы{% endblock %}
+{% block page_title %}<i class="fas fa-poll-h" ></i> Опросы{% endblock %}
 {% block content %}
 
 <div class="poll-toolbar">
   <div class="poll-counters">
-    <span class="poll-counter active"><i class="fas fa-circle" style="font-size:11px;"></i> <span id="active-count">0 активных</span></span>
+    <span class="poll-counter active"><i class="fas fa-circle" ></i> <span id="active-count">0 активных</span></span>
     <span class="poll-counter ended"><i class="fas fa-check"></i> <span id="ended-count">0 завершённых</span></span>
   </div>
   <button class="btn btn-primary" id="btn-new" type="button"><i class="fas fa-plus"></i> Новый опрос</button>
@@ -39,11 +39,11 @@
     var html = '';
     polls.forEach(function (p, i) {
       var total = p.opts.reduce(function (a, b) { return a + b.v; }, 0);
-      html += '<div class="poll-card" style="animation-delay:' + (i * 0.05) + 's;">' +
+      html += '<div class="poll-card" >' +
         '<div class="poll-q">' + esc(p.q) + '</div>';
       p.opts.forEach(function (o) {
         var pct = total ? Math.round(o.v / total * 100) : 0;
-        html += '<div class="poll-opt"><span class="name">' + esc(o.t) + '</span><div class="poll-bar"><div class="poll-bar-fill" style="width:' + pct + '%;"></div></div><span class="poll-votes">' + pct + '%</span></div>';
+        html += '<div class="poll-opt"><span class="name">' + esc(o.t) + '</span><div class="poll-bar"><div class="poll-bar-fill" style="width: ' + pct + '%"></div></div><span class="poll-votes">' + pct + '%</span></div>';
       });
       html += '<div class="poll-foot"><span class="voters"><i class="fas fa-users"></i> ' + p.voters + ' голосов</span><span class="poll-counter ' + (p.active ? 'active' : 'ended') + '">' + (p.active ? 'Активен' : 'Завершён') + '</span></div></div>';
     });

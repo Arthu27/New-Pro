@@ -1,10 +1,10 @@
 ﻿{% extends "base.html" %}
 {% block title %}Starboard - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-star" style="color:var(--ac);"></i> ⭐ STARBOARD{% endblock %}
+{% block page_title %}<i class="fas fa-star" ></i> ⭐ STARBOARD{% endblock %}
 {% block content %}
 
 <div class="sb-hero">
-  <div style="font-size:32px;margin-bottom:10px;">⭐</div>
+  <div style="margin-bottom: 10px">⭐</div>
   <div class="hero-title">⭐ Starboard</div>
   <div class="hero-sub">Самые звёздные сообщения поднимаются наверх</div>
 </div>
@@ -35,12 +35,12 @@
       <input type="text" id="sb-emoji" class="form-input" value="⭐" maxlength="2">
     </div>
     <button class="btn-save" onclick="saveStarboard()">💾 Сохранить</button>
-    <div id="sb-status" style="margin-top:10px;font-size:13px;"></div>
+    <div id="sb-status" style="margin-top: 10px"></div>
   </div>
 
   <div class="sb-box">
     <div class="box-title">🌟 Самые звёздные</div>
-    <div id="star-list"><p style="color:var(--text-3);padding:30px;">Выберите сервер...</p></div>
+    <div id="star-list"><p >Выберите сервер...</p></div>
   </div>
 </div>
 
@@ -88,9 +88,9 @@ async function loadStarboard() {
   document.getElementById('sb-emoji').value = settings.emoji || '⭐';
 
   var box = document.getElementById('star-list');
-  if (!entries || !entries.length) { box.innerHTML='<div class="empty-state"><div style="font-size:32px;margin-bottom:12px;">⭐</div><p>Пока zvezdalanan сообщение yok.</p></div>'; return; }
+  if (!entries || !entries.length) { box.innerHTML='<div class="empty-state"><div style="margin-bottom: 12px">⭐</div><p>Пока zvezdalanan сообщение yok.</p></div>'; return; }
   box.innerHTML = entries.slice(0,10).map(function(e, i) {
-    return '<div class="star-card" style="animation-delay:'+(i*0.06)+'s">'+
+    return '<div class="star-card" >'+
       '<div class="star-count">⭐ '+e.count+' zvezda</div>'+
       '<div class="star-content">'+(e.content||'*[Ek/Эмбед]*')+'</div>'+
       '<div class="star-meta"><span>👤 '+(e.author||'?')+'</span><span>#'+(e.channel||'?')+'</span>'+
@@ -114,7 +114,7 @@ async function saveStarboard() {
   });
   var d = await r.json();
   btn.textContent = '💾 Сохранить'; btn.disabled = false;
-  document.getElementById('sb-status').innerHTML = d.success ? '<span style="color:var(--ok);">✅ Сохранено!</span>' : '<span style="color:var(--err);">❌ Ошибка!</span>';
+  document.getElementById('sb-status').innerHTML = d.success ? '<span >✅ Сохранено!</span>' : '<span >❌ Ошибка!</span>';
   setTimeout(()=>document.getElementById('sb-status').innerHTML='', 3000);
 }
 

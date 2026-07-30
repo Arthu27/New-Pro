@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Panel Logs - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-list" style="color:var(--ac);"></i> Логи панели{% endblock %}
+{% block page_title %}<i class="fas fa-list" ></i> Логи панели{% endblock %}
 {% block content %}
 
 <div class="pl-filters">
@@ -11,14 +11,14 @@
     <option>DELETE</option>
     <option>GET</option>
   </select>
-  <button class="btn-primary" id="btn-clear" type="button" style="padding:7px 14px;background:rgba(224,85,85,0.15);color:var(--red);border:1px solid rgba(224,85,85,0.3);border-radius:8px;cursor:pointer;font-size:11px;">Temizle</button>
+  <button class="btn-primary" id="btn-clear" type="button" style="cursor: pointer">Temizle</button>
 </div>
 
 <div class="pl-stats">
   <div class="pl-stat"><div class="pl-stat-num" id="stat-total">-</div><div class="pl-stat-lbl">Всего</div></div>
-  <div class="pl-stat"><div class="pl-stat-num" id="stat-today" style="color:var(--ok);">-</div><div class="pl-stat-lbl">Сегодня</div></div>
-  <div class="pl-stat"><div class="pl-stat-num" id="stat-post" style="color:#c8922a;">-</div><div class="pl-stat-lbl">POST</div></div>
-  <div class="pl-stat"><div class="pl-stat-num" id="stat-delete" style="color:var(--red);">-</div><div class="pl-stat-lbl">DELETE</div></div>
+  <div class="pl-stat"><div class="pl-stat-num" id="stat-today" >-</div><div class="pl-stat-lbl">Сегодня</div></div>
+  <div class="pl-stat"><div class="pl-stat-num" id="stat-post" >-</div><div class="pl-stat-lbl">POST</div></div>
+  <div class="pl-stat"><div class="pl-stat-num" id="stat-delete" >-</div><div class="pl-stat-lbl">DELETE</div></div>
 </div>
 
 <div class="pl-box">
@@ -65,7 +65,7 @@
       var icon = l.method === 'POST' ? 'fa-plus' : l.method === 'DELETE' ? 'fa-trash' : 'fa-eye';
       html += '<div class="pl-item"><div class="pl-icon"><i class="fas ' + icon + '"></i></div>' +
         '<div class="pl-action">' + esc(l.action) + '</div>' +
-        '<div class="pl-user" style="color:' + (roleColor[l.role] || 'var(--text-3)') + ';">' + esc(l.user) + '</div>' +
+        '<div class="pl-user" >' + esc(l.user) + '</div>' +
         '<div class="pl-ip">' + esc(l.ip) + '</div>' +
         '<div class="pl-time">' + esc(l.time) + '</div></div>';
     });
