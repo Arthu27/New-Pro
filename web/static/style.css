@@ -3524,3 +3524,506 @@ input:focus::placeholder, textarea:focus::placeholder {
   border: 1px solid rgba(212, 168, 67, 0.10) !important;
   white-space: nowrap;
 }
+
+/* ============================================================
+   MASSIVE GLOBAL FIX — TÜM SAYFALAR İÇİN ORTAK PREMIUM TASARIM
+   sh-, mh-, warn-, at-, app-, ba-, am-, ar-, color-, rr-, cr-, re-, 
+   ms-, ba-, at-, cmd- prefix'li TÜM sınıflar
+   ============================================================ */
+
+/* === GENERIC BOX WRAPPERS === */
+.sh-box, .mh-box, .warn-box, .app-box, .am-card, .ar-box, .ar-card,
+.ba-card, .ms-card, .at-box, .cr-box, .re-box, .rr-card, .ms-result-card,
+.cmd-card, .note-card, .roles-card, .roles-card-wrap, .ms-bar, .case-card,
+.rule-item, .filter-card, .sc-card, .sc-wrap, .pw-card, .ann-card, .announcement-card,
+.cog-card, .todo-card, .afk-card, .eco-card, .bulk-card, .setting-card, .ms-card,
+.pl-card, .pl-list, .ms-message, .ms-result, .ch-box, .ch-message, .ch-card,
+.sh-box, .sh-card, .log-stat, .mh-stat, .ms-stat, .stats-card, .dp-stat,
+.inv-box, .data-box, .leader-box, .role-box, .ch-row, .data-row, .bulk-section,
+.mh-section, .warn-section, .ar-section, .ms-section {
+  background: linear-gradient(135deg, rgba(212, 168, 67, 0.04), rgba(212, 168, 67, 0.01)) !important;
+  border: 1px solid rgba(212, 168, 67, 0.12) !important;
+  border-radius: 12px !important;
+  padding: 16px 20px !important;
+  margin-bottom: 12px !important;
+  color: #e8e6df !important;
+  transition: all .15s ease;
+}
+.sh-box:hover, .mh-box:hover, .warn-box:hover, .app-box:hover,
+.am-card:hover, .ar-box:hover, .ar-card:hover, .ba-card:hover, .ms-card:hover,
+.at-box:hover, .cr-box:hover, .re-box:hover, .rr-card:hover, .cmd-card:hover {
+  border-color: rgba(212, 168, 67, 0.30) !important;
+  transform: translateY(-1px);
+}
+
+/* === BOX HEADS === */
+.sh-head, .mh-head, .warn-head, .app-head, .am-head, .ar-head, .ba-head,
+.ms-head, .at-head, .cr-head, .re-head, .rr-head, .cmd-head,
+.pl-head, .ml-head {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 0 0 12px 0 !important;
+  margin-bottom: 12px !important;
+  border-bottom: 1px solid rgba(212, 168, 67, 0.10) !important;
+  color: #f4f1e8 !important;
+}
+.sh-title, .mh-title, .warn-title, .app-title, .am-title, .ar-title, .ba-title,
+.ms-title, .at-title, .cr-title, .re-title, .rr-title, .cmd-title, .cmd-name,
+.bd-title, .case-title {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  font-weight: 700 !important;
+  font-size: 16px !important;
+  color: #f4f1e8 !important;
+}
+.sh-title i, .mh-title i, .warn-title i, .app-title i, .am-title i,
+.ar-title i, .ba-title i, .ms-title i, .at-title i, .cr-title i, .re-title i,
+.rr-title i, .cmd-title i {
+  color: #d4a843 !important;
+  font-size: 15px;
+}
+.sh-count, .mh-count, .warn-count, .app-count, .at-count, .cmd-count,
+.pl-count, .ms-count {
+  background: rgba(212, 168, 67, 0.12) !important;
+  color: #d4a843 !important;
+  padding: 4px 12px !important;
+  border-radius: 6px !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  border: 1px solid rgba(212, 168, 67, 0.20) !important;
+  font-variant-numeric: tabular-nums;
+}
+
+/* === BOX BODIES === */
+.sh-body, .mh-body, .warn-body, .app-body, .am-body, .ar-body, .ba-body,
+.ms-body, .at-body, .cr-body, .re-body, .rr-body, .cmd-body,
+.pl-body, .ml-body, .bulk-body {
+  color: #e8e6df !important;
+  font-size: 14px !important;
+}
+
+/* === STAT KUTULARI (mh-stat, sh-stat, warn-stat, app-stat, at-stat, ba-stat) === */
+.sh-stat, .mh-stat, .warn-stat, .app-stat, .at-stat, .ba-stat, .ms-stat, .stat,
+.log-stat, .ms-stat, .stats-card, .am-stat, .ar-stat, .ms-result,
+.dp-stat, .ar-result, .bulk-stat {
+  display: flex !important;
+  align-items: center !important;
+  gap: 14px !important;
+  background: linear-gradient(135deg, rgba(212, 168, 67, 0.06), rgba(212, 168, 67, 0.02)) !important;
+  border: 1px solid rgba(212, 168, 67, 0.18) !important;
+  border-radius: 12px !important;
+  padding: 18px !important;
+  color: #f4f1e8 !important;
+  transition: all .15s ease;
+}
+.sh-stat-num, .mh-stat-num, .warn-stat-num, .app-stat-num, .at-stat-num,
+.ba-stat-num, .ms-stat-num, .g-stat-num, .ml-stat-num, .pl-stat-num {
+  font-size: 30px !important;
+  font-weight: 800 !important;
+  color: #f4f1e8 !important;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+.sh-stat-lbl, .mh-stat-lbl, .warn-stat-lbl, .app-stat-lbl, .at-stat-lbl,
+.ba-stat-lbl, .ms-stat-lbl, .g-stat-lbl, .ml-stat-lbl, .pl-stat-lbl {
+  font-size: 11px !important;
+  color: #b8b3a3 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600 !important;
+  margin-top: 4px !important;
+}
+.sh-stats, .mh-stats, .warn-stats, .app-stats, .at-stats, .ba-stats,
+.ms-stats, .g-stats, .ml-stats, .pl-stats, .stats-grid, .ar-stats {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important;
+  gap: 14px !important;
+  margin-bottom: 18px !important;
+}
+
+/* === ROW/CARD İÇERİKLERİ (mh-row, warn-row, app-row, at-row, ms-row, cmd-row, ba-row) === */
+.sh-row, .mh-row, .warn-row, .app-row, .at-row, .ms-row, .cmd-row, .ba-row,
+.ar-row, .ms-bar, .at-row, .case-item, .ms-profile, .ms-result-card,
+.rr-entry, .color-card, .at-row, .app-row, .note-item {
+  display: flex !important;
+  align-items: center !important;
+  gap: 14px !important;
+  padding: 12px 16px !important;
+  background: linear-gradient(135deg, rgba(255,255,255,0.025), rgba(255,255,255,0.005)) !important;
+  border: 1px solid rgba(212, 168, 67, 0.10) !important;
+  border-radius: 10px !important;
+  margin-bottom: 6px !important;
+  color: #e8e6df !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  transition: all .15s ease;
+}
+.sh-row:hover, .mh-row:hover, .warn-row:hover, .app-row:hover, .at-row:hover,
+.ms-row:hover, .cmd-row:hover, .ba-row:hover, .ar-row:hover, .note-item:hover {
+  background: linear-gradient(135deg, rgba(212, 168, 67, 0.08), rgba(212, 168, 67, 0.02)) !important;
+  border-color: rgba(212, 168, 67, 0.30) !important;
+  transform: translateX(2px);
+}
+.sh-row .sh-name, .mh-row .mh-name, .warn-row .warn-name, .app-row .app-name,
+.at-row .at-name, .ms-row .ms-name, .cmd-row .cmd-name, .cmd-name,
+.ba-row .ba-name, .ar-row .ar-name, .ms-name, .cmd-name,
+.case-item .case-name, .note-item .note-name {
+  font-weight: 600 !important;
+  color: #f4f1e8 !important;
+  font-size: 15px !important;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sh-row .sh-meta, .mh-row .mh-meta, .warn-row .warn-meta, .app-row .app-meta,
+.at-row .at-meta, .ms-row .ms-meta, .cmd-row .cmd-meta, .ba-row .ba-meta,
+.ar-row .ar-meta, .ms-meta, .case-item .case-meta, .note-item .note-meta {
+  font-size: 12.5px !important;
+  color: #b8b3a3 !important;
+  font-weight: 500 !important;
+}
+
+/* === AVATARLAR === */
+.app-av, .mh-av, .warn-av, .at-av, .ms-av, .cmd-av, .ba-av, .ar-av,
+.av, .note-avatar, .ms-avatar, .at-avatar, .at-img, .ms-img,
+.case-avatar, .author-img, .av-wrap img, .av-wrap,
+.sh-row img, .mh-row img, .warn-row img, .app-row img, .at-row img,
+.ms-row img, .cmd-row img, .ba-row img, .ar-row img, .note-item img,
+.case-item img {
+  width: 40px !important; height: 40px !important;
+  border-radius: 50% !important;
+  flex-shrink: 0;
+  border: 1.5px solid rgba(212, 168, 67, 0.25) !important;
+  object-fit: cover;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* === BADGES === */
+.sh-badge, .mh-badge, .warn-badge, .case-badge, .app-status, .at-status,
+.ms-status, .ba-status, .cmd-status, .at-status, .status-badge,
+.bot-badge, .member-badge, .role-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  padding: 3px 10px !important;
+  border-radius: 6px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.04em !important;
+  background: rgba(212, 168, 67, 0.15) !important;
+  color: #d4a843 !important;
+  border: 1px solid rgba(212, 168, 67, 0.30) !important;
+}
+.sh-badge.approved, .warn-badge.approved, .case-badge.approved,
+.app-status.approved, .at-status.approved, .ms-status.approved, .cmd-status.approved,
+.status-badge-online, .bot-badge, .status-badge.ok {
+  background: rgba(74, 222, 128, 0.15) !important;
+  color: #86efac !important;
+  border-color: rgba(74, 222, 128, 0.30) !important;
+}
+.sh-badge.pending, .warn-badge.pending, .case-badge.pending,
+.app-status.pending, .at-status.pending, .ms-status.pending, .cmd-status.pending,
+.status-badge-warn {
+  background: rgba(251, 191, 36, 0.15) !important;
+  color: #fcd34d !important;
+  border-color: rgba(251, 191, 36, 0.30) !important;
+}
+.sh-badge.rejected, .warn-badge.rejected, .case-badge.rejected,
+.app-status.rejected, .at-status.rejected, .ms-status.rejected, .cmd-status.rejected,
+.status-badge-err, .status-badge-offline {
+  background: rgba(248, 113, 113, 0.15) !important;
+  color: #fca5a5 !important;
+  border-color: rgba(248, 113, 113, 0.30) !important;
+}
+
+/* === TABS === */
+.sh-tab, .mh-tab, .warn-tab, .app-tab, .at-tab, .ms-tab, .cmd-tab, .tab-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 8px 16px !important;
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 8px !important;
+  color: #b8b3a3 !important;
+  font-size: 13.5px !important;
+  font-weight: 600 !important;
+  cursor: pointer;
+  transition: all .15s ease;
+  margin-right: 6px;
+}
+.sh-tab:hover, .mh-tab:hover, .warn-tab:hover, .app-tab:hover, .at-tab:hover,
+.ms-tab:hover, .cmd-tab:hover, .tab-btn:hover {
+  background: rgba(212, 168, 67, 0.10) !important;
+  border-color: rgba(212, 168, 67, 0.30) !important;
+  color: #e0b04a !important;
+}
+.sh-tab.active, .mh-tab.active, .warn-tab.active, .app-tab.active,
+.at-tab.active, .ms-tab.active, .cmd-tab.active, .tab-btn.active {
+  background: linear-gradient(135deg, #d4a843, #e0b04a) !important;
+  color: #1a1a1a !important;
+  border-color: transparent !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 12px rgba(212, 168, 67, 0.25);
+}
+.sh-tabs, .mh-tabs, .warn-tabs, .app-tabs, .at-tabs, .ms-tabs, .cmd-tabs {
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 14px;
+  padding: 6px;
+  background: rgba(15, 15, 20, 0.4);
+  border: 1px solid rgba(212, 168, 67, 0.10);
+  border-radius: 10px;
+}
+
+/* === PRIMARY BUTTONS (btn-add, btn-new, save-btn, publish-btn) === */
+.btn-add, .btn-new, .save-btn, .publish-btn, .btn-primary, .btn-exec,
+.add-row button, .submit-btn, .btn-create, .btn-confirm,
+.sh-btn, .mh-btn, .warn-btn, .app-btn, .at-btn, .cmd-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 10px 18px !important;
+  background: linear-gradient(135deg, #d4a843, #e0b04a) !important;
+  color: #1a1a1a !important;
+  border: none !important;
+  border-radius: 10px !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  cursor: pointer;
+  transition: all .15s ease;
+  box-shadow: 0 2px 8px rgba(212, 168, 67, 0.25);
+}
+.btn-add:hover, .btn-new:hover, .save-btn:hover, .publish-btn:hover,
+.btn-primary:hover, .btn-exec:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(212, 168, 67, 0.4);
+  filter: brightness(1.05);
+}
+
+/* === DELETE / DANGER BUTTONS === */
+.btn-delete, .del-btn, .entry-del, .note-del, .btn-remove, .btn-no,
+.btn-cancel, .btn-red {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 7px 12px !important;
+  background: rgba(248, 113, 113, 0.10) !important;
+  color: #fca5a5 !important;
+  border: 1px solid rgba(248, 113, 113, 0.25) !important;
+  border-radius: 8px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+.btn-delete:hover, .del-btn:hover, .entry-del:hover, .note-del:hover,
+.btn-no:hover, .btn-cancel:hover {
+  background: rgba(248, 113, 113, 0.20) !important;
+  color: #fff !important;
+  border-color: rgba(248, 113, 113, 0.50) !important;
+}
+
+/* === OK / APPROVE BUTTONS === */
+.btn-ok, .btn-approve, .btn-green {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 7px 12px !important;
+  background: rgba(74, 222, 128, 0.10) !important;
+  color: #86efac !important;
+  border: 1px solid rgba(74, 222, 128, 0.25) !important;
+  border-radius: 8px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+.btn-ok:hover, .btn-approve:hover {
+  background: rgba(74, 222, 128, 0.20) !important;
+  color: #fff !important;
+  border-color: rgba(74, 222, 128, 0.50) !important;
+}
+
+/* === EMPTY STATES === */
+.empty, .empty-state, .empty-msg, .ld, .ms-empty {
+  text-align: center !important;
+  padding: 50px 24px !important;
+  color: #8b8579 !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+}
+.empty i, .empty-state i, .empty-msg i, .ld i, .ms-empty i {
+  display: block !important;
+  font-size: 40px !important;
+  margin-bottom: 14px !important;
+  color: rgba(212, 168, 67, 0.4) !important;
+}
+.empty p, .empty-state p, .empty-msg p, .ld p, .ms-empty p {
+  margin: 0 !important;
+  color: #8b8579 !important;
+  font-size: 13.5px !important;
+}
+
+/* === STATUS ROW (server_health live status) === */
+.status-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 10px 14px !important;
+  background: rgba(255, 255, 255, 0.025) !important;
+  border: 1px solid rgba(212, 168, 67, 0.10) !important;
+  border-radius: 8px !important;
+  margin-bottom: 6px !important;
+  color: #e8e6df !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+}
+.status-row .dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.status-row .dot-on { background: #4ade80; box-shadow: 0 0 6px #4ade80; }
+.status-row .dot-warn { background: #fbbf24; box-shadow: 0 0 6px #fbbf24; }
+.status-row .dot-off { background: #f87171; box-shadow: 0 0 6px #f87171; }
+
+/* === ICON CONTAINERS (mh-icon, sh-icon, am-icon, ar-icon, ba-icon, at-icon, cmd-icon, ms-icon) === */
+.sh-icon, .mh-icon, .am-icon, .ar-icon, .ba-icon, .at-icon, .cmd-icon, .ms-icon,
+.alert-icon, .case-icon, .color-swatch, .role-icon, .entry-emoji {
+  width: 40px !important; height: 40px !important;
+  border-radius: 10px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 16px !important;
+  background: linear-gradient(135deg, #d4a843, #e0b04a) !important;
+  color: #1a1a1a !important;
+  flex-shrink: 0;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+.sh-icon.red, .mh-icon.red, .am-icon.red, .ar-icon.red {
+  background: linear-gradient(135deg, #ef4444, #b91c1c) !important;
+  color: #fff !important;
+}
+.sh-icon.green, .mh-icon.green, .am-icon.green, .ar-icon.green {
+  background: linear-gradient(135deg, #4ade80, #16a34a) !important;
+  color: #1a1a1a !important;
+}
+.sh-icon.cyan, .mh-icon.cyan, .am-icon.cyan, .ar-icon.cyan {
+  background: linear-gradient(135deg, #38bdf8, #0284c7) !important;
+  color: #fff !important;
+}
+.sh-icon.amber, .mh-icon.amber, .am-icon.amber, .ar-icon.amber {
+  background: linear-gradient(135deg, #f59e0b, #b45309) !important;
+  color: #fff !important;
+}
+.sh-icon.purple, .mh-icon.purple, .am-icon.purple, .ar-icon.purple {
+  background: linear-gradient(135deg, #a78bfa, #7c3aed) !important;
+  color: #fff !important;
+}
+
+/* === COLOR SWATCH (color_roles sayfası) === */
+.color-swatch {
+  background: linear-gradient(135deg, #555, #888) !important;
+  position: relative;
+  overflow: hidden;
+}
+.color-swatch::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--swatch-color, transparent);
+  border-radius: inherit;
+}
+.color-card {
+  display: flex !important;
+  align-items: center !important;
+  gap: 14px !important;
+  padding: 12px 16px !important;
+  background: linear-gradient(135deg, rgba(212, 168, 67, 0.04), rgba(212, 168, 67, 0.01)) !important;
+  border: 1px solid rgba(212, 168, 67, 0.12) !important;
+  border-radius: 10px !important;
+  margin-bottom: 8px !important;
+  color: #e8e6df !important;
+}
+.color-card .color-name {
+  font-weight: 600 !important;
+  color: #f4f1e8 !important;
+  font-size: 15px !important;
+  flex: 1;
+}
+.color-card .color-hex {
+  font-family: 'JetBrains Mono', monospace !important;
+  color: #d4a843 !important;
+  background: rgba(212, 168, 67, 0.10) !important;
+  padding: 3px 8px !important;
+  border-radius: 5px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  border: 1px solid rgba(212, 168, 67, 0.20) !important;
+}
+
+/* === NOTE ITEMS (member_notes) === */
+.note-item {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.02), transparent) !important;
+  padding: 14px 16px !important;
+  margin-bottom: 8px !important;
+}
+.note-text {
+  color: #e8e6df !important;
+  font-size: 14px !important;
+  line-height: 1.5;
+  margin: 6px 0;
+  padding: 8px 12px;
+  background: rgba(212, 168, 67, 0.05);
+  border-left: 3px solid #d4a843;
+  border-radius: 0 6px 6px 0;
+}
+.note-meta {
+  font-size: 11.5px !important;
+  color: #8b8579 !important;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.note-meta strong {
+  color: #d4a843 !important;
+}
+
+/* === TOGGLE / SWITCH (am-toggle, switch) === */
+.am-toggle, .switch, [data-switch] {
+  position: relative !important;
+  display: inline-block !important;
+  width: 44px !important;
+  height: 24px !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.10) !important;
+  border-radius: 14px !important;
+  cursor: pointer;
+  transition: all .2s ease;
+  flex-shrink: 0;
+}
+.am-toggle::after, .switch::after, [data-switch]::after {
+  content: '';
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 18px; height: 18px;
+  background: #b8b3a3;
+  border-radius: 50%;
+  transition: all .2s ease;
+}
+.am-toggle.on, .switch.on, [data-switch="on"] {
+  background: linear-gradient(135deg, #d4a843, #e0b04a) !important;
+  border-color: transparent !important;
+}
+.am-toggle.on::after, .switch.on::after, [data-switch="on"]::after {
+  left: 22px;
+  background: #1a1a1a;
+}
