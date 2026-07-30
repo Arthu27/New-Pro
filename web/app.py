@@ -18,6 +18,10 @@ app = Flask(__name__,
             template_folder=_os.path.join(_BASE, 'templates'),
             static_folder=_os.path.join(_BASE, 'static'))
 
+# Performans: atomic yazma, TTL cache, toplu (batch) log flusher
+from web import _store  # noqa: E402
+import atexit  # noqa: E402
+
 app.secret_key = "ultra-secret-key-change-this-in-production"
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 app.config['SESSION_PERMANENT'] = True
@@ -63,10 +67,9 @@ def _log_login(username, roles, avatar, discord_id):
     try:
         os.makedirs('data', exist_ok=True)
         f = 'data/login_log.json'
-        logs = []
-        if os.path.exists(f):
-            with open(f, 'r', encoding='utf-8') as fp:
-                logs = json.load(fp)
+        logs = _store.read_json(f, default=[])
+        if not isinstance(logs, list):
+            logs = []
         # Сервер infosini bot'tan al
         guild_name = None
         guild_icon = None
@@ -87,29 +90,31 @@ def _log_login(username, roles, avatar, discord_id):
             'ip': request.remote_addr,
             'timestamp': datetime.utcnow().isoformat()
         })
-        with open(f, 'w', encoding='utf-8') as fp:
-            json.dump(logs[-200:], fp, indent=2, ensure_ascii=False)
+        _store.atomic_write_json(f, logs[-200:])
+        _store.invalidate_path(f)
     except Exception:
         pass
 
+# Toplu (batch) panel log flusher — POST/DELETE yolunu bloklamaz
+_panel_log_flusher = _store.PeriodicFlush(
+    'data/panel_logs.json',
+    flush_interval=5.0,
+    max_entries=1000,
+    batch_threshold=50,
+)
+atexit.register(_panel_log_flusher.shutdown)
+
+
 def _log_panel_action(action, detail=''):
     try:
-        os.makedirs('data', exist_ok=True)
-        f = 'data/panel_logs.json'
-        logs = []
-        if os.path.exists(f):
-            with open(f, 'r', encoding='utf-8') as fp:
-                logs = json.load(fp)
-        logs.append({
+        _panel_log_flusher.append({
             'username': session.get('username', '?'),
             'role': session.get('role', '?'),
             'action': action,
             'detail': detail,
             'ip': request.remote_addr,
-            'timestamp': datetime.utcnow().isoformat()
+            'timestamp': datetime.utcnow().isoformat(),
         })
-        with open(f, 'w', encoding='utf-8') as fp:
-            json.dump(logs[-1000:], fp, indent=2, ensure_ascii=False)
     except Exception:
         pass
 
@@ -159,21 +164,24 @@ def _safe_avatar_url(value):
 
 # Discord роли ID → panel роли — data/role_map.json
 DISCORD_ROLE_MAP = {}
+_ROLE_MAP_PATH = 'data/role_map.json'
 
 def _load_role_map():
     global DISCORD_ROLE_MAP
     try:
-        if os.path.exists('data/role_map.json'):
-            with open('data/role_map.json', 'r', encoding='utf-8') as f:
-                DISCORD_ROLE_MAP = json.load(f)
+        if os.path.exists(_ROLE_MAP_PATH):
+            data = _store.read_json(_ROLE_MAP_PATH, default={})
+            DISCORD_ROLE_MAP = data if isinstance(data, dict) else {}
+        else:
+            DISCORD_ROLE_MAP = {}
     except:
         DISCORD_ROLE_MAP = {}
 
 def _save_role_map():
     try:
         os.makedirs('data', exist_ok=True)
-        with open('data/role_map.json', 'w', encoding='utf-8') as f:
-            json.dump(DISCORD_ROLE_MAP, f, indent=2, ensure_ascii=False)
+        _store.atomic_write_json(_ROLE_MAP_PATH, DISCORD_ROLE_MAP)
+        _store.invalidate_path(_ROLE_MAP_PATH)
     except:
         pass
 
@@ -777,8 +785,7 @@ def api_login_log():
     if not os.path.exists(f):
         return jsonify([])
     try:
-        with open(f, 'r', encoding='utf-8') as fp:
-            logs = json.load(fp)
+        logs = _store.cached_read_json(f, ttl=5.0, default=[])
         # Owner kendi вход видеть — только diğer userları показать
         current_user = session.get('username', '')
         filtered = [l for l in logs if not (l.get('username') == current_user and l.get('role') == 'owner')]
@@ -914,12 +921,10 @@ def api_logs():
 
     try:
         for log_file in ['data/audit_log.json', 'data/audit_log_backup.json']:
-            if os.path.exists(log_file):
-                try:
-                    with open(log_file, 'r', encoding='utf-8') as f:
-                        data = json.load(f)
-                except Exception as je:
-                    data = {}
+            data = _store.cached_read_json(log_file, ttl=5.0, default={})
+            if not isinstance(data, dict):
+                data = {}
+            if data:
                 for guild_id, events in data.items():
                     if filter_guild and guild_id != filter_guild:
                         continue
@@ -929,10 +934,9 @@ def api_logs():
                 if all_events:
                     break
 
-        if os.path.exists(mod_file):
-            with open(mod_file, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-            for guild_id, case in data.get('case', {}).items():
+        mod_data = _store.cached_read_json(mod_file, ttl=5.0, default={})
+        if isinstance(mod_data, dict):
+            for guild_id, case in mod_data.get('case', {}).items():
                 if filter_guild and guild_id != filter_guild:
                     continue
                 for case in case:
@@ -949,23 +953,19 @@ def api_logs():
 
         # Discord audit cache'den oku (bot 30sn'de bir обновл — быстрый)
         cache_file = 'data/discord_audit_cache.json'
-        if os.path.exists(cache_file):
-            try:
-                with open(cache_file, 'r', encoding='utf-8') as f:
-                    cache = json.load(f)
-                existing_ts = {e.get('timestamp', '') for e in all_events}
-                for gid, events in cache.items():
-                    if filter_guild and gid != filter_guild:
+        cache = _store.cached_read_json(cache_file, ttl=3.0, default={})
+        if isinstance(cache, dict) and cache:
+            existing_ts = {e.get('timestamp', '') for e in all_events}
+            for gid, events in cache.items():
+                if filter_guild and gid != filter_guild:
+                    continue
+                for ev in events:
+                    ev_copy = dict(ev)
+                    ev_copy['guild_id'] = gid
+                    if not ev_copy.get('timestamp'):
                         continue
-                    for ev in events:
-                        ev_copy = dict(ev)
-                        ev_copy['guild_id'] = gid
-                        if not ev_copy.get('timestamp'):
-                            continue
-                        if ev_copy['timestamp'] not in existing_ts:
-                            all_events.append(ev_copy)
-            except Exception as _e:
-                print(f'[LOGS] Cache okuma Ошибки: {_e}')
+                    if ev_copy['timestamp'] not in existing_ts:
+                        all_events.append(ev_copy)
 
         all_events.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
         return jsonify(all_events[:1000])
@@ -982,9 +982,8 @@ def api_warnings():
     filter_guild = request.args.get('guild_id', '')
 
     try:
-        if os.path.exists(warns_file):
-            with open(warns_file, 'r', encoding='utf-8') as f:
-                data = json.load(f)
+        data = _store.cached_read_json(warns_file, ttl=5.0, default={})
+        if isinstance(data, dict):
 
                 for guild_id, guild_warns in data.items():
                     if filter_guild and guild_id != filter_guild:
@@ -1115,9 +1114,9 @@ def api_warn():
         'timestamp': datetime.utcnow().isoformat()
     })
     
-    with open(warns_file, 'w', encoding='utf-8') as f:
-        json.dump(warns, f, indent=2, ensure_ascii=False)
-    
+    _store.atomic_write_json(warns_file, warns)
+    _store.invalidate_path(warns_file)
+
     return jsonify({'success': True, 'message': 'Warning addndi'})
 
 @app.route('/api/modstats')
@@ -1209,7 +1208,8 @@ def api_execute_command():
                     'timestamp': datetime.utcnow().isoformat()
                 })
                 with open(warns_file, 'w', encoding='utf-8') as wf:
-                    json.dump(warns, wf, indent=2, ensure_ascii=False)
+                    json.dump(warns, wf, ensure_ascii=False)
+                _store.invalidate_path(warns_file)
                 # Warning DM отправить
                 member = guild.get_member(int(data.get('user_id')))
                 if member:
@@ -1312,7 +1312,8 @@ def api_execute_command():
                     if gid_str in warns and uid_str in warns[gid_str]:
                         warns[gid_str][uid_str] = []
                         with open(warns_file, 'w', encoding='utf-8') as wf:
-                            json.dump(warns, wf, indent=2, ensure_ascii=False)
+                            json.dump(warns, wf, ensure_ascii=False)
+                        _store.invalidate_path(warns_file)
             elif command == 'ticket_panel':
                 from cogs.ticket import TicketView
                 ch = guild.get_channel(int(data.get('channel_id', 0)))

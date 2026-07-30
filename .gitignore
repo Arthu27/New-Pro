@@ -39,3 +39,6 @@ data/backups/
 data/dm_log.json
 data/ai_chat_histories.json
 data/proactive_ai.json
+
+# Python venv
+.venv/
