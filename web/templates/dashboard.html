@@ -140,7 +140,7 @@ tr:hover td{background:rgba(212,168,67,0.04);}
   // ── Ana istatistikler ────────────────────────────────────────────────────────
   async function loadStats() {
     try {
-      var d = await fetch('/api/stats').then(function (r) { return r.json(); });
+      var d = await window.fetchCachedJSON('/api/stats');
       $('guild-count').textContent = d.guilds != null ? d.guilds : '-';
       $('user-count').textContent = (d.users || 0).toLocaleString();
       $('latency').textContent = (d.latency || 0) + 'ms';
@@ -156,8 +156,8 @@ tr:hover td{background:rgba(212,168,67,0.04);}
   // ── Быстрая статистика ──────────────────────────────────────────────────────
   async function loadQuickStats() {
     try {
-      var logs = await fetch('/api/logs').then(function (r) { return r.json(); }).catch(function () { return []; });
-      var warns = await fetch('/api/warnings').then(function (r) { return r.json(); }).catch(function () { return []; });
+      var logs = await window.fetchCachedJSON('/api/logs').catch(function () { return []; });
+      var warns = await window.fetchCachedJSON('/api/warnings').catch(function () { return []; });
       var банs = logs.filter(function (l) { return (l.action || '').toLowerCase() === 'бан'; }).length;
       var кикs = logs.filter(function (l) { return (l.action || '').toLowerCase() === 'кик'; }).length;
       var мьютs = logs.filter(function (l) { var a = (l.action || '').toLowerCase(); return a.indexOf('мьют') !== -1 || a.indexOf('timeout') !== -1; }).length;
@@ -178,7 +178,7 @@ tr:hover td{background:rgba(212,168,67,0.04);}
   // ── Последний действия ─────────────────────────────────────────────────────────────
   async function loadRecentActivity() {
     try {
-      var logs = await fetch('/api/logs').then(function (r) { return r.json(); }).catch(function () { return []; });
+      var logs = await window.fetchCachedJSON('/api/logs').catch(function () { return []; });
       var box = $('recent-activity');
       if (!logs.length) { box.innerHTML = '<p style="color:#5a5040;text-align:center;padding:20px">Пока действий нет.</p>'; return; }
       var colors = { бан: '#ef4444', кик: '#f97316', warn: '#c8922a', мьют: '#c8922a', timeout: '#c8922a', unбан: '#4ade80', unмьют: '#4ade80', lock: '#60a5fa', unlock: '#4ade80' };
@@ -255,7 +255,7 @@ tr:hover td{background:rgba(212,168,67,0.04);}
   // ── Вход logы ────────────────────────────────────────────────────────────
   async function loadLoginLog() {
     try {
-      var logs = await fetch('/api/login-log').then(function (r) { return r.json(); });
+      var logs = await window.fetchCachedJSON('/api/login-log');
       var box = $('login-log');
       if (!box) return;
       if (!logs.length) { box.innerHTML = '<p style="color:#5a5040;text-align:center;padding:16px">Пока входов нет.</p>'; return; }

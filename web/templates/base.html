@@ -106,6 +106,51 @@
         {% block content %}{% endblock %}
     </div>
 <script>
+// fetchCached(url, opts) — fetch + ETag onbellegi. 304 donerse onceki JSON'u dondurur.
+// 304 durumunda JSON parse etmeden ve network tasarrufu ile geri doner.
+(function () {
+  var _etagStore = {};
+  window.fetchCached = function (url, opts) {
+    opts = opts || {};
+    var init = Object.assign({}, opts);
+    init.headers = Object.assign({}, opts.headers || {});
+    if (_etagStore[url]) {
+      init.headers['If-None-Match'] = _etagStore[url];
+    }
+    return fetch(url, init).then(function (r) {
+      var et = r.headers.get('ETag');
+      if (et) _etagStore[url] = et;
+      if (r.status === 304) {
+        // Onceki cevabi cache'ten dondurmek lazim; burada r.status=304 donduruyoruz,
+        // cagiran taraf _etagCache.get(url) ile onceki datayi alabilir.
+        return r;
+      }
+      return r;
+    });
+  };
+  // Onceden yuklenmis datayi saklamak icin basit depo
+  window._etagCache = {
+    _d: {},
+    get: function (url) { return this._d[url]; },
+    set: function (url, data) { this._d[url] = data; return data; }
+  };
+  // fetchCachedJSON: 304 ise onceki datayi dondurur
+  window.fetchCachedJSON = function (url, opts) {
+    var self = this;
+    return window.fetchCached(url, opts).then(function (r) {
+      if (r.status === 304) {
+        var cached = window._etagCache.get(url);
+        if (cached !== undefined) return cached;
+        return r.json(); // fallback (ilk 304 ise cache bos)
+      }
+      return r.json().then(function (data) {
+        window._etagCache.set(url, data);
+        return data;
+      });
+    });
+  };
+})();
+
 // Resolve server selection once from the connected bot. On single-server bots no
 // manual server selection is needed; page loaders receive the only live guild.
 document.addEventListener('DOMContentLoaded', async function () {

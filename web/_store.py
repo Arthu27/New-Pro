@@ -4,11 +4,13 @@ Ortak performans yardimcisi.
 - read_json: dosya yoksa None; JSON bozuksa None (uyariyi bir key yazdirir).
 - ttl_cache: basit TTL onbellegi; sık okunan JSON dosyalari icin.
 - PeriodicFlush: log yazimini toplu (batch) ve periyodik yapar; onyuzde bloklama yok.
+- make_etag: JSON dump etmeden hizli (weak) ETag uretir.
 """
 import json
 import os
 import time
 import threading
+import hashlib
 from collections import OrderedDict
 
 
@@ -105,6 +107,34 @@ def invalidate_path(path):
         for k in list(_cache._d.keys()):
             if k and k[0] == 'json' and k[1] == abspath:
                 _cache._d.pop(k, None)
+
+
+# ── ETag helpers (saf, Flask'siz) ─────────────────────────────────────────────
+def make_etag(payload):
+    """Zayif (weak) ETag olustur. JSON dump etmeden hizli sekilde."""
+    try:
+        h = hashlib.md5()
+        if isinstance(payload, (list, tuple)):
+            for item in payload:
+                _etag_hash_item(h, item)
+        elif isinstance(payload, dict):
+            for k in sorted(payload.keys()):
+                _etag_hash_item(h, (k, payload[k]))
+        else:
+            _etag_hash_item(h, payload)
+        # Werkzeug'un set_etag'i "W/<etag>" veya "<etag>" seklinde kabul eder;
+        # tirnak icermeyen weak prefix kullaniyoruz.
+        return 'W/' + h.hexdigest()
+    except Exception:
+        return None
+
+
+def _etag_hash_item(h, item):
+    try:
+        h.update(repr(item).encode('utf-8', 'replace'))
+        h.update(b'|')
+    except Exception:
+        h.update(str(type(item)).encode())
 
 
 # ── Periodic flush (panel_logs icin) ──────────────────────────────────────────

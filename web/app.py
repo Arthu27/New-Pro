@@ -31,7 +31,9 @@ app.jinja_env.auto_reload = True
 # Сервер-side filesystem session
 app.config['SESSION_TYPE'] = 'filesystem'
 app.config['SESSION_FILE_DIR'] = _os.path.join(_BASE, '..', 'data', 'flask_sessions')
-app.config['SESSION_FILE_THRESHOLD'] = 500
+# Eski: 500 — cookielerde sikinti yasiyorduk. Cok yuksek (5000) tutuyoruz ki
+# 30 gunluk kalici oturumlarda dosya prüne'i minimuma insin.
+app.config['SESSION_FILE_THRESHOLD'] = int(_os.getenv('FLASK_SESSION_THRESHOLD', '5000'))
 _os.makedirs(app.config['SESSION_FILE_DIR'], exist_ok=True)
 
 from flask_session import Session
@@ -118,6 +120,16 @@ def _log_panel_action(action, detail=''):
     except Exception:
         pass
 
+# ETag: GET + JSON + whitelist path'lerde tarayici/bot seviyesinde cache
+_ETAG_PATHS = (
+    '/api/logs',
+    '/api/warnings',
+    '/api/login-log',
+    '/api/stats',
+    '/api/guilds',
+)
+
+
 @app.after_request
 def after_request(response):
     # Только POST/DELETE действия logla
@@ -126,6 +138,27 @@ def after_request(response):
         # Login/logout hariç
         if path not in ('/login', '/logout', '/register'):
             _log_panel_action(f'{request.method} {path}', '')
+
+    # ETag: ayni icerik icin 304 dondur (network + JSON parse tasarrufu)
+    if (request.method == 'GET'
+            and response.status_code == 200
+            and response.is_json
+            and request.path in _ETAG_PATHS):
+        try:
+            data = response.get_json()
+            etag = _store.make_etag(data)
+            if etag:
+                # set_etag onu '"W/..."' formatina cevirir; biz de If-None-Match ile
+                # tirnak dahil tam karsilastiriyoruz.
+                response.set_etag(etag)
+                response_etag = response.headers.get('ETag')
+                inm = request.headers.get('If-None-Match')
+                if inm and response_etag and inm.strip() == response_etag:
+                    response.status_code = 304
+                    response.set_data(b'')
+        except Exception as _ex:
+            print(f"[ETAG] error on {request.path}: {_ex!r}", flush=True)
+
     return response
 @app.errorhandler(Exception)
 def _handle_unexpected_error(e):
@@ -880,32 +913,56 @@ def api_set_nick(guild_id, member_id):
 def api_guild_members(guild_id):
     if not bot_instance:
         return jsonify([])
-    
+
     try:
         guild = discord.utils.get(bot_instance.guilds, id=int(guild_id))
         if not guild:
             return jsonify([])
-        
-        members = []
-        for m in list(guild.members)[:500]:
-            # Discord ID'den hesap создан дата hesapla
-            created_at = discord.utils.snowflake_time(m.id)
-            members.append({
-                'id': str(m.id),
-                'name': m.name,
-                'display_name': m.display_name,
-                'discriminator': m.discriminator,
-                'avatar': str(m.display_avatar.url),
-                'joined_at': m.joined_at.isoformat() if m.joined_at else None,
-                'created_at': created_at.isoformat(),
-                'roles': [{'name': r.name, 'color': str(r.color)} for r in m.roles[1:]],
-                'bot': m.bot,
-                'status': str(m.status) if hasattr(m, 'status') else 'offline',
-                'nick': m.nick,
-                'top_role': m.top_role.name if m.top_role else None,
-            })
-        
-        return jsonify(members)
+
+        # Pagination: ?limit=50 (default), max 500
+        try:
+            limit = int(request.args.get('limit', 50))
+        except (TypeError, ValueError):
+            limit = 50
+        try:
+            offset = int(request.args.get('offset', 0))
+        except (TypeError, ValueError):
+            offset = 0
+        limit = max(1, min(limit, 500))
+        offset = max(0, offset)
+
+        # 10s TTL cache — ayni icerik icin tekrar tekrar guild.members iterate etme
+        cache_key = ('members', int(guild_id), guild.member_count)
+        cached = _store._cache.get(cache_key, ttl=10.0)
+        if cached is None:
+            cached = []
+            for m in list(guild.members):
+                created_at = discord.utils.snowflake_time(m.id)
+                cached.append({
+                    'id': str(m.id),
+                    'name': m.name,
+                    'display_name': m.display_name,
+                    'discriminator': m.discriminator,
+                    'avatar': str(m.display_avatar.url),
+                    'joined_at': m.joined_at.isoformat() if m.joined_at else None,
+                    'created_at': created_at.isoformat(),
+                    'roles': [{'name': r.name, 'color': str(r.color)} for r in m.roles[1:]],
+                    'bot': m.bot,
+                    'status': str(m.status) if hasattr(m, 'status') else 'offline',
+                    'nick': m.nick,
+                    'top_role': m.top_role.name if m.top_role else None,
+                })
+            _store._cache.set(cache_key, cached, ttl=10.0)
+
+        # Toplam sayiyi pagination meta olarak dondurmek icin basit bir sarmalayici yerine
+        # X-Total-Count header'i ekleyelim ki frontend tarafinda gerekirse kullanabilsin.
+        total = len(cached)
+        page = cached[offset:offset + limit]
+        resp = jsonify(page)
+        resp.headers['X-Total-Count'] = str(total)
+        resp.headers['X-Limit'] = str(limit)
+        resp.headers['X-Offset'] = str(offset)
+        return resp
     except Exception as e:
         print(f"Участник список Ошибки: {e}")
         return jsonify([])
