@@ -4,7 +4,7 @@
 {% block content %}
 
 <div class="sb-hero">
-  <div style="font-size:60px;margin-bottom:10px;">⭐</div>
+  <div style="font-size:32px;margin-bottom:10px;">⭐</div>
   <div class="hero-title">⭐ Starboard</div>
   <div class="hero-sub">Самые звёздные сообщения поднимаются наверх</div>
 </div>
@@ -88,7 +88,7 @@ async function loadStarboard() {
   document.getElementById('sb-emoji').value = settings.emoji || '⭐';
 
   var box = document.getElementById('star-list');
-  if (!entries || !entries.length) { box.innerHTML='<div class="empty-state"><div style="font-size:50px;margin-bottom:12px;">⭐</div><p>Пока zvezdalanan сообщение yok.</p></div>'; return; }
+  if (!entries || !entries.length) { box.innerHTML='<div class="empty-state"><div style="font-size:32px;margin-bottom:12px;">⭐</div><p>Пока zvezdalanan сообщение yok.</p></div>'; return; }
   box.innerHTML = entries.slice(0,10).map(function(e, i) {
     return '<div class="star-card" style="animation-delay:'+(i*0.06)+'s">'+
       '<div class="star-count">⭐ '+e.count+' zvezda</div>'+

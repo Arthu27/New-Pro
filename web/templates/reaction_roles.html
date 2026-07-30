@@ -4,7 +4,7 @@
 {% block content %}
 
 <div class="rr-hero">
-  <div style="font-size:60px;margin-bottom:10px;">🎭</div>
+  <div style="font-size:32px;margin-bottom:10px;">🎭</div>
   <div class="hero-title">🎭 Роли по реакциям</div>
   <div class="hero-sub">Автоматически выдавать роль по клику на эмодзи</div>
 </div>
@@ -82,7 +82,7 @@ async function loadRR() {
   document.getElementById('rr-channel').innerHTML = channels.filter(c=>c.type==='text').map(c=>'<option value="'+c.id+'">#'+c.name+'</option>').join('');
 
   var box = document.getElementById('rr-list');
-  if (!rrs.length) { box.innerHTML='<div class="empty-state"><div style="font-size:60px;margin-bottom:16px;">🎭</div><p>Пока reaksiyon роль yok.</p></div>'; return; }
+  if (!rrs.length) { box.innerHTML='<div class="empty-state"><div style="font-size:32px;margin-bottom:16px;">🎭</div><p>Пока reaksiyon роль yok.</p></div>'; return; }
   box.innerHTML = rrs.map(function(rr, i) {
     var entries = (rr.entries||[]).map(function(e) {
       return '<div class="rr-entry"><span class="rr-emoji">'+e.emoji+'</span><span class="rr-arrow">→</span><span class="rr-role">@'+e.role_name+'</span></div>';

@@ -26,7 +26,7 @@ async function loadCogs() {
       return '<div class="cog-card ' + (c.loaded ? 'loaded' : 'unloaded') + '" id="cog-' + esc(c.name) + '">' +
         '<div>' +
           '<div class="cog-name"><i class="fas fa-cube"></i> ' + esc(c.name) + '</div>' +
-          '<div class="cog-status ' + (c.loaded ? 'ok' : 'err') + '"><i class="fas fa-circle" style="font-size:5px;margin-right:4px;"></i>' + (c.loaded ? 'Загружен' : 'Не загружен') + '</div>' +
+          '<div class="cog-status ' + (c.loaded ? 'ok' : 'err') + '"><i class="fas fa-circle" style="font-size:11px;margin-right:4px;"></i>' + (c.loaded ? 'Загружен' : 'Не загружен') + '</div>' +
         '</div>' +
         '<div style="display:flex;align-items:center;">' +
           (c.loaded ? '<button class="reload-btn" onclick="reloadCog(\'' + esc(c.name) + '\')" title="Перезагрузить"><i class="fas fa-redo"></i></button>' : '') +

@@ -86,6 +86,269 @@ html, body {
   line-height: 1.5;
 }
 
+/* ============================================================
+   GLOBAL TYPOGRAPHY RESET
+   Force all text elements to a consistent, beautiful scale.
+   ============================================================ */
+body, body * {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Body text default: 14px / 1.55 */
+body, p, div, span, td, li, dt, dd, blockquote, label, input, select, textarea, button {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text);
+}
+
+/* Headings - Beautiful scale */
+h1, .h1 { font-size: 26px !important; font-weight: 800 !important; line-height: 1.2 !important; letter-spacing: -0.025em !important; color: var(--text) !important; margin: 0 0 18px 0 !important; }
+h2, .h2 { font-size: 20px !important; font-weight: 700 !important; line-height: 1.25 !important; letter-spacing: -0.02em !important; color: var(--text) !important; margin: 0 0 14px 0 !important; }
+h3, .h3 { font-size: 17px !important; font-weight: 700 !important; line-height: 1.3 !important; letter-spacing: -0.015em !important; color: var(--text) !important; margin: 0 0 10px 0 !important; }
+h4, .h4 { font-size: 15px !important; font-weight: 700 !important; line-height: 1.35 !important; letter-spacing: -0.01em !important; color: var(--text) !important; margin: 0 0 8px 0 !important; }
+h5, .h5 { font-size: 13px !important; font-weight: 700 !important; line-height: 1.4 !important; letter-spacing: -0.005em !important; color: var(--text) !important; margin: 0 0 6px 0 !important; }
+h6, .h6 { font-size: 12px !important; font-weight: 700 !important; line-height: 1.4 !important; letter-spacing: 0 !important; color: var(--text-2) !important; text-transform: uppercase !important; margin: 0 0 4px 0 !important; }
+
+/* Body text */
+p { font-size: 14px !important; line-height: 1.6 !important; margin: 0 0 12px 0 !important; color: rgba(245, 236, 210, 0.78) !important; }
+small, .text-sm { font-size: 12px !important; line-height: 1.4 !important; }
+.text-xs { font-size: 11px !important; line-height: 1.35 !important; }
+.text-lg { font-size: 16px !important; line-height: 1.5 !important; }
+.text-xl { font-size: 18px !important; line-height: 1.4 !important; }
+
+/* Labels - 11px uppercase, 0.08em letter-spacing */
+label, .label, .form-label, .field-label, .x-label {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  line-height: 1.3 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  color: var(--text-2) !important;
+  margin-bottom: 7px !important;
+  display: block !important;
+}
+
+/* Inputs - 13.5px for readability */
+input, select, textarea, .input, .field-input, .form-input, .form-control, .form-input-old,
+.text-input, .code-input, .ms-input, .tk-input, .aw-input, .pl-input, .ch-input, .ld-input,
+.sc-input, .bulk-input, .set-input, .pw-input, .filter-input, .search-input-old,
+.input-field, .text-field, .input-1, .input-2, .aw-input-old, .ms-input2, .sc-input-old, .ms-input-old {
+  font-size: 13.5px !important;
+  line-height: 1.5 !important;
+  letter-spacing: 0 !important;
+  color: var(--text) !important;
+  font-weight: 500 !important;
+}
+input::placeholder, textarea::placeholder {
+  color: var(--text-4) !important;
+  font-weight: 400 !important;
+}
+
+/* Buttons - 13px, weight 600, 0.005em letter-spacing */
+button, .btn, [type="submit"], [type="button"], .btn-save, .save-btn, .btn-add, .btn-new,
+.btn-create, .btn-publish, .btn-confirm, .btn-edit, .btn-info, .btn-ok, .btn-apply, .btn-send,
+.btn-submit-old, .btn-msg, .btn-load, .publish-btn, .clear-btn, .submit-btn, .search-btn,
+.btn-pri, .btn-gold, .btn-l, .btn-ld, .btn-search, .btn-create-old, .btn-new-old, .aw-btn,
+.send-btn, .sc-btn, .sc-submit, .sc-button, .form-btn, .btn-pri, .btn-load, .btn-gold,
+.btn-success, .btn-danger, .btn-warn, .btn-secondary, .btn-ghost, .btn-edit, .btn-edit-old,
+.btn-delete, .btn-red, .del-btn, .btn-remove, .btn-del, .btn-warning {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  line-height: 1.3 !important;
+  letter-spacing: 0.005em !important;
+}
+.btn-sm, button.btn-sm {
+  font-size: 12px !important;
+  font-weight: 600 !important;
+}
+.btn-lg, button.btn-lg {
+  font-size: 14.5px !important;
+  font-weight: 700 !important;
+}
+
+/* Tables - 13.5px body, 11px headers */
+table, .data-table, .table-old, .tk-table, .x-table, .table-wrap, .pl-table, .aw-table,
+.ar-table, .ms-table, .ld-table, .aw-table-old, .tk-table-old, .ms-table-old, .pl-table-old,
+.ld-table-old, .eco-table, .dp-table, .mh-table, .ms-table-2 {
+  font-size: 13.5px !important;
+  line-height: 1.5 !important;
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+}
+table th, table td, .data-table th, .data-table td, .tk-table th, .tk-table td,
+.x-table th, .x-table td, .pl-table th, .pl-table td, .aw-table th, .aw-table td,
+.ar-table th, .ar-table td, .ms-table th, .ms-table td, .ld-table th, .ld-table td,
+.aw-table-old th, .aw-table-old td, .tk-table-old th, .tk-table-old td, .ms-table-old th,
+.ms-table-old td, .pl-table-old th, .pl-table-old td, .ld-table-old th, .ld-table-old td,
+.eco-table th, .eco-table td, .dp-table th, .dp-table td, .mh-table th, .mh-table td,
+.ms-table-2 th, .ms-table-2 td {
+  font-size: 13.5px !important;
+  line-height: 1.5 !important;
+  vertical-align: middle !important;
+}
+table th, .data-table th, .tk-table th, .x-table th, .pl-table th, .aw-table th,
+.ar-table th, .ms-table th, .ld-table th, .aw-table-old th, .tk-table-old th, .ms-table-old th,
+.pl-table-old th, .ld-table-old th, .eco-table th, .dp-table th, .mh-table th, .ms-table-2 th {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  line-height: 1.3 !important;
+  letter-spacing: 0.10em !important;
+  text-transform: uppercase !important;
+  color: var(--text-2) !important;
+}
+
+/* Badges - 11px, uppercase, 0.06em */
+.badge, .action-badge, .action-badge-old, .status-badge, .user-badge, .rank-badge,
+.vip-badge, .tag, .pill, .pill-badge, .uses-badge, .poll-badge, .model-badge,
+.ld-tag, .tk-tag, .aw-tag, .pl-tag, .ms-tag, .sc-tag, .bulk-tag, .ann-tag,
+.ld-badge, .ms-badge, .tk-badge, .aw-badge, .pl-badge, .ch-badge, .ld-count,
+.ms-count, .aw-count, .role-chip, .mp-role, .role-tag, .ms-chip, .tk-chip,
+.tk-tag-gold, .aw-count, .ld-tag-ok, .ld-tag-err, .ld-tag-warn, .ld-tag-mute,
+.ms-tag-ok, .ms-tag-err, .tk-tag-ok, .aw-count, .badge-gold, .badge-ok,
+.badge-err, .badge-warn, .badge-info, .badge-mute, .badge-active, .badge-inactive,
+.active-badge, .inactive-badge {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  line-height: 1.3 !important;
+  letter-spacing: 0.06em !important;
+  text-transform: uppercase !important;
+}
+
+/* Lists */
+ul, ol { font-size: 14px !important; line-height: 1.6 !important; }
+li { font-size: 14px !important; line-height: 1.6 !important; margin-bottom: 4px !important; }
+
+/* Code */
+code, pre { font-family: 'JetBrains Mono', monospace !important; font-size: 12.5px !important; }
+code { font-size: 12.5px !important; line-height: 1.4 !important; padding: 1px 6px !important; }
+pre { font-size: 13px !important; line-height: 1.55 !important; padding: 14px 16px !important; }
+
+/* Page title (block in navbar) */
+.page-title, .navbar h1 {
+  font-size: 24px !important;
+  font-weight: 800 !important;
+  line-height: 1.2 !important;
+  letter-spacing: -0.02em !important;
+  color: var(--text) !important;
+}
+
+/* Brand title */
+.brand-title { font-size: 16px !important; font-weight: 800 !important; line-height: 1.1 !important; letter-spacing: 0.5px !important; }
+.brand-sub { font-size: 10px !important; font-weight: 600 !important; line-height: 1.2 !important; letter-spacing: 1.5px !important; text-transform: uppercase !important; }
+
+/* Nav link text */
+.nav-link { font-size: 13px !important; font-weight: 500 !important; line-height: 1.3 !important; letter-spacing: 0 !important; }
+.nav-link.active { font-weight: 600 !important; }
+.nav-link span { font-size: 13px !important; }
+.nav-group-title { font-size: 10.5px !important; font-weight: 700 !important; line-height: 1.3 !important; letter-spacing: 1.2px !important; text-transform: uppercase !important; }
+.nav-group-title span { font-size: 10.5px !important; }
+
+/* Sidebar search */
+.sidebar-search input { font-size: 13px !important; font-weight: 500 !important; }
+.sidebar-search input::placeholder { font-size: 13px !important; font-weight: 400 !important; }
+.sidebar-search kbd { font-size: 10px !important; font-weight: 700 !important; }
+
+/* User pill */
+.user-name { font-size: 13px !important; font-weight: 700 !important; line-height: 1.2 !important; }
+.user-role { font-size: 10px !important; font-weight: 700 !important; line-height: 1.2 !important; letter-spacing: 0.08em !important; text-transform: uppercase !important; }
+.user-menu a { font-size: 13px !important; font-weight: 500 !important; }
+
+/* Stat values (large numbers) */
+.dash-card-val, .stat-value, .stat-hero, .ms-stat-val, .dp-stat-val, .sh-val,
+.mh-stat-num, .log-stat-num, .ms-stat-num, .mh-stat-num, .dp-stat-val,
+.stat-number, .stat-value, .stat-val, .quick-item h3, .ld-stat-num {
+  font-size: 28px !important;
+  font-weight: 800 !important;
+  line-height: 1.05 !important;
+  letter-spacing: -0.025em !important;
+  font-variant-numeric: tabular-nums !important;
+}
+.stat-hero { font-size: 36px !important; }
+
+/* Stat labels */
+.dash-card-lbl, .stat-label, .ms-stat-lbl, .dp-stat-lbl, .sh-lbl, .mh-stat-lbl,
+.log-stat-lbl, .ms-stat-lbl, .ld-stat-lbl, .quick-item p {
+  font-size: 10.5px !important;
+  font-weight: 700 !important;
+  line-height: 1.3 !important;
+  letter-spacing: 0.10em !important;
+  text-transform: uppercase !important;
+}
+
+/* KV rows (key-value pairs) */
+.kv, .kv-row, .x-row, .ms-row, .profile-row, .row-old, .mr, .kv-pair, .sh-row, .dp-row,
+.bulk-row, .kv-line, .detail-row, .ms-detail-row, .set-row, .profile-kv, .ms-kv {
+  font-size: 13.5px !important;
+  line-height: 1.5 !important;
+}
+.kv-key, .x-key, .ms-key, .kv-label, .row-key-old, .x-label, .lbl-key, .sh-key, .dp-key, .kvk {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  line-height: 1.3 !important;
+  letter-spacing: 0.06em !important;
+  text-transform: uppercase !important;
+  color: var(--text-3) !important;
+}
+.kv-val, .x-val, .ms-val, .kv-value, .row-val-old, .x-value, .lbl-val, .sh-val2, .dp-val, .kvv {
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  line-height: 1.3 !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  text-align: right !important;
+  color: var(--text) !important;
+}
+
+/* Section headings */
+.section > h2, .box h2, .panel h2, .card h2, .x-title, .box-title-old, .ch-title,
+.section-title-old, .x-head-title, .aw-title, .tk-title, .cc-title, .mh-title-old,
+.x-h2, .x-name, .x-head, .box-h, .aw-h, .tk-h, .ms-h, .bd-h, .am-h, .bs-h,
+.eco-h, .ch-h, .ch-head, .poll-h, .mh-h, .set-h, .afk-h, .todo-h, .sc-h, .pw-h,
+.afk-card-h, .bd-h2, .todo-header, .tk-header, .ann-h, .sh-h, .bh-title, .ms-h2,
+.ann-head, .ms-title, .pl-title, .x-section-title, .ld-title, .dp-section-title,
+.b-title, .b-head, .b-head-title, .x-section, .ms-title-old, .set-section-title,
+.bulk-section-title, .tk-section-title, .bulk-title, .am-title, .aw-title-old,
+.ai-title, .ms-section-title, .section-sub, .ms-sub, .tk-sub, .ld-sub, .mp-sub,
+.section-title, .ms-h, .ms-h2, .aw-h, .aw-h2, .tk-h2, .bulk-h2 {
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  line-height: 1.3 !important;
+  letter-spacing: 0.10em !important;
+  text-transform: uppercase !important;
+  color: var(--text-2) !important;
+  margin: 0 0 14px 0 !important;
+  padding: 0 0 12px 0 !important;
+  font-family: 'Inter', sans-serif !important;
+}
+
+/* Toggle/switch (no text issue, but for consistency) */
+
+/* Mono text */
+.mono, .x-val, .kv-val, .ms-val, .ms-id, .suggest-id, .dm-id, .mention-id,
+.aw-suggestion-id, .ms-suggestion-id, .ms-input2, .ms-input-old,
+.kv-val, .x-val, .ms-val, code, .ms-id, .suggest-id {
+  font-family: 'JetBrains Mono', monospace !important;
+}
+
+/* Empty state text */
+.empty-state, .empty, .ld, .ld-state, .loading-msg, .empty-msg-old, .no-data,
+.x-empty, .ms-empty, .aw-empty {
+  font-size: 13.5px !important;
+  line-height: 1.55 !important;
+}
+.empty-state p, .empty p, .ld p { font-size: 13.5px !important; line-height: 1.5 !important; }
+.empty-state i, .empty i, .ld i { line-height: 1 !important; }
+
+/* Time / meta */
+.login-item-time, .notif-meta, .ms-meta, .ms-time, .ms-timestamp, .dp-time,
+.sh-time, .ms-time-old, .meta-time, .item-time, .entry-time {
+  font-size: 11.5px !important;
+  line-height: 1.4 !important;
+  color: var(--text-3) !important;
+}
+
+/* Force no italics on labels/UI */
+label, .label, button, input, select, textarea, .btn, code { font-style: normal !important; }
+
 body {
   min-height: 100vh;
   background:
