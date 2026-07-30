@@ -199,7 +199,7 @@
                         <i class="fas fa-chevron-down nav-caret"></i>
                     </div>
                     <div class="nav-group-items">
-                        <a href="/ai-chat-panel" class="nav-link {% if request.path == '/ai-chat-panel' %}active{% endif %}"><i class="fas fa-comments"></i> <span>AI Чат</span></a>
+                        <a href="/ai-chat" class="nav-link {% if request.path == '/ai-chat' %}active{% endif %}"><i class="fas fa-comments"></i> <span>AI Чат</span></a>
                     </div>
                 </div>
 
@@ -392,6 +392,76 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!document.fullscreenElement) document.documentElement.requestFullscreen();
     else document.exitFullscreen();
   });
+})();
+
+// Notifications dropdown
+(function () {
+  var btn = document.getElementById('notifBtn');
+  if (!btn) return;
+
+  // Create dropdown panel once
+  var panel = document.createElement('div');
+  panel.className = 'notif-dropdown';
+  panel.innerHTML =
+    '<div class="notif-dropdown-head">' +
+      '<span>Уведомления</span>' +
+      '<a href="/notifications" style="font-size:10.5px;color:var(--ac);text-decoration:none;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;">Все →</a>' +
+    '</div>' +
+    '<div class="notif-dropdown-body" id="notifDropBody">' +
+      '<div class="empty-state" style="padding:24px 14px;"><i class="fas fa-spinner fa-spin"></i><p>Загрузка...</p></div>' +
+    '</div>';
+  document.body.appendChild(panel);
+
+  function position() {
+    var r = btn.getBoundingClientRect();
+    panel.style.top = (r.bottom + 8) + 'px';
+    panel.style.right = (window.innerWidth - r.right) + 'px';
+  }
+
+  btn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    position();
+    panel.classList.toggle('open');
+    if (panel.classList.contains('open')) loadNotifs();
+  });
+  document.addEventListener('click', function (e) {
+    if (!panel.contains(e.target) && e.target !== btn) panel.classList.remove('open');
+  });
+
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+  function loadNotifs() {
+    var body = document.getElementById('notifDropBody');
+    fetch('/api/my-notifications')
+      .then(function (r) { return r.json(); })
+      .then(function (notifs) {
+        if (!Array.isArray(notifs) || !notifs.length) {
+          body.innerHTML = '<div class="empty-state" style="padding:24px 14px;"><i class="fas fa-bell-slash"></i><p>Нет уведомлений</p></div>';
+          return;
+        }
+        body.innerHTML = notifs.slice(0, 8).map(function (n) {
+          var d = new Date(n.created_at);
+          var unread = !n.read;
+          return '<div class="notif-dropdown-item' + (unread ? ' unread' : '') + '">' +
+            '<div class="notif-dropdown-icon"><i class="fas fa-bell"></i></div>' +
+            '<div style="flex:1;min-width:0;">' +
+              '<div class="notif-dropdown-title">' + esc(n.title) + '</div>' +
+              '<div class="notif-dropdown-msg">' + esc(n.message) + '</div>' +
+              '<div class="notif-dropdown-time">' + d.toLocaleString('ru-RU') + '</div>' +
+            '</div>' +
+          '</div>';
+        }).join('');
+        var badge = btn.querySelector('.nav-badge');
+        if (badge) {
+          var unread = notifs.filter(function (n) { return !n.read; }).length;
+          badge.textContent = unread > 99 ? '99+' : unread;
+          badge.style.display = unread > 0 ? 'flex' : 'none';
+        }
+      })
+      .catch(function () {
+        body.innerHTML = '<div class="empty-state" style="padding:24px 14px;color:var(--err);"><i class="fas fa-exclamation-triangle"></i><p>Ошибка загрузки</p></div>';
+      });
+  }
 })();
 
 // Guild select (from old logic)
