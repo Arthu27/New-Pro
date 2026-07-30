@@ -1605,52 +1605,9 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
                 cog.cog_hash_cache[cog_name] = h
         return jsonify({'reloaded': reloaded})
 
-    @app.route('/api/bot/gc', methods=['POST'])
-    @login_required
-    @role_required('owner')
-    def api_bot_gc():
-        import gc
-        before = sum(1 for _ in gc.get_objects())
-        collected = gc.collect()
-        return jsonify({'collected': collected, 'before': before, 'after': sum(1 for _ in gc.get_objects())})
-
-    @app.route('/api/bot/diagnose', methods=['POST'])
-    @login_required
-    @role_required('admin')
-    def api_bot_diagnose():
-        from cogs.diagnostics import Diagnostics, THRESHOLDS
-        if not bot_instance:
-            return jsonify({'error': 'Bot offline'}), 503
-        cog = bot_instance.get_cog('Diagnostics')
-        if not cog:
-            return jsonify({'error': 'Cog не загружен'}), 404
-        h = cog.get_health_snapshot()
-        issues = []
-        if h['memory_mb'] > THRESHOLDS['memory_mb']['warn']:
-            issues.append(f"Высокая память: {h['memory_mb']}MB")
-        if h['cpu_percent'] > THRESHOLDS['cpu_percent']['warn']:
-            issues.append(f"Высокий CPU: {h['cpu_percent']}%")
-        if h['latency_ms'] > THRESHOLDS['latency_ms']['warn']:
-            issues.append(f"Высокий Latency: {h['latency_ms']}ms")
-        if h['errors_last_min'] > THRESHOLDS['error_rate_per_min']['warn']:
-            issues.append(f"Много ошибок: {h['errors_last_min']}/мин")
-        return jsonify({'issues': issues, 'health': h})
-
-    @app.route('/api/bot/restart', methods=['POST'])
-    @login_required
-    @role_required('owner')
-    def api_bot_restart():
-        if not bot_instance:
-            return jsonify({'error': 'Bot offline'}), 503
-        import os, sys
-        # Trigger graceful restart
-        import threading
-        def do_restart():
-            import time
-            time.sleep(1)
-            os.execv(sys.executable, [sys.executable] + sys.argv)
-        threading.Thread(target=do_restart, daemon=True).start()
-        return jsonify({'restarting': True})
+    # NOTE: api_bot_gc / api_bot_diagnose / api_bot_restart are defined in web/app.py.
+    # Defining them here again would clash with Flask's endpoint registry
+    # ("View function mapping is overwriting an existing endpoint function").
 
     # ── TEMP MODERATION API ─────────────────────────────────
     @app.route('/api/temp-mod/active')
