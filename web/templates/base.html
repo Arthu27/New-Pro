@@ -5,165 +5,396 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Панель Aether{% endblock %}</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/static/style.css?v=3">
+    <link rel="stylesheet" href="/static/style.css?v=4">
 </head>
 <body>
     <button class="mobile-menu" id="mobileMenu" aria-label="Меню"><i class="fas fa-bars"></i></button>
+
     <aside class="sidebar" id="sidebar">
-        <h2>AETHER PANEL</h2>
+        <a href="/" class="brand">
+            <div class="brand-icon"><i class="fas fa-bolt"></i></div>
+            <div class="brand-text">
+                <div class="brand-title">AETHER</div>
+                <div class="brand-sub">Control Panel</div>
+            </div>
+        </a>
 
-        {% if role == 'uye' %}
-        <a href="/member-apply" {% if request.path == '/member-apply' %}class="active"{% endif %}><i class="fas fa-user-shield"></i> Заявка в администрацию</a>
+        <div class="sidebar-search">
+            <i class="fas fa-search"></i>
+            <input type="text" id="sidebarSearch" placeholder="Быстрый поиск...">
+            <kbd>⌘K</kbd>
+        </div>
 
-        {% elif role == 'mod' %}
-        <a href="/" {% if request.path == '/' %}class="active"{% endif %}><i class="fas fa-home"></i> Панель управления</a>
-        <a href="/logs" {% if request.path == '/logs' %}class="active"{% endif %}><i class="fas fa-clipboard-list"></i> Логи модерации</a>
-        <a href="/warnings" {% if request.path == '/warnings' %}class="active"{% endif %}><i class="fas fa-exclamation-triangle"></i> Предупреждения</a>
+        <nav class="sidebar-nav" id="sidebarNav">
+            {% if role == 'uye' %}
+            <div class="nav-group">
+                <a href="/member-apply" class="nav-link {% if request.path == '/member-apply' %}active{% endif %}">
+                    <i class="fas fa-user-shield"></i>
+                    <span>Заявка в администрацию</span>
+                </a>
+            </div>
 
-        {% elif role == 'admin' %}
-        <a href="/" {% if request.path == '/' %}class="active"{% endif %}><i class="fas fa-home"></i> Панель управления</a>
-        <a href="/users" {% if request.path == '/users' %}class="active"{% endif %}><i class="fas fa-users"></i> Пользователи</a>
-        <a href="/logs" {% if request.path == '/logs' %}class="active"{% endif %}><i class="fas fa-clipboard-list"></i> Логи модерации</a>
-        <a href="/warnings" {% if request.path == '/warnings' %}class="active"{% endif %}><i class="fas fa-exclamation-triangle"></i> Предупреждения</a>
-        <a href="/commands" {% if request.path == '/commands' %}class="active"{% endif %}><i class="fas fa-terminal"></i> Команды</a>
-        <a href="/staff-apps" {% if request.path == '/staff-apps' %}class="active"{% endif %}><i class="fas fa-user-shield"></i> Заявки в администрацию</a>
+            {% elif role == 'mod' %}
+            <div class="nav-group">
+                <a href="/" class="nav-link {% if request.path == '/' %}active{% endif %}"><i class="fas fa-home"></i> <span>Панель управления</span></a>
+                <a href="/logs" class="nav-link {% if request.path == '/logs' %}active{% endif %}"><i class="fas fa-clipboard-list"></i> <span>Логи модерации</span></a>
+                <a href="/warnings" class="nav-link {% if request.path == '/warnings' %}active{% endif %}"><i class="fas fa-exclamation-triangle"></i> <span>Предупреждения</span></a>
+            </div>
 
-        {% elif role == 'owner' or role == 'admin' %}
-        <div class="nav-group-title">🏠 Основное</div>
-        <a href="/" {% if request.path == '/' %}class="active"{% endif %}><i class="fas fa-home"></i> Обзор сервера</a>
-        <a href="/guilds" {% if request.path == '/guilds' %}class="active"{% endif %}><i class="fas fa-server"></i> Серверы</a>
-        <a href="/analytics" {% if request.path == '/analytics' %}class="active"{% endif %}><i class="fas fa-chart-line"></i> Аналитика сервера</a>
-        <a href="/bot-stats" {% if request.path == '/bot-stats' %}class="active"{% endif %}><i class="fas fa-robot"></i> Статистика бота</a>
-        <a href="/server-health" {% if request.path == '/server-health' %}class="active"{% endif %}><i class="fas fa-heartbeat"></i> Состояние сервера</a>
+            {% elif role == 'admin' %}
+            <div class="nav-group">
+                <a href="/" class="nav-link {% if request.path == '/' %}active{% endif %}"><i class="fas fa-home"></i> <span>Панель управления</span></a>
+                <a href="/users" class="nav-link {% if request.path == '/users' %}active{% endif %}"><i class="fas fa-users"></i> <span>Пользователи</span></a>
+                <a href="/logs" class="nav-link {% if request.path == '/logs' %}active{% endif %}"><i class="fas fa-clipboard-list"></i> <span>Логи модерации</span></a>
+                <a href="/warnings" class="nav-link {% if request.path == '/warnings' %}active{% endif %}"><i class="fas fa-exclamation-triangle"></i> <span>Предупреждения</span></a>
+                <a href="/commands" class="nav-link {% if request.path == '/commands' %}active{% endif %}"><i class="fas fa-terminal"></i> <span>Команды</span></a>
+                <a href="/staff-apps" class="nav-link {% if request.path == '/staff-apps' %}active{% endif %}"><i class="fas fa-user-shield"></i> <span>Заявки в администрацию</span></a>
+            </div>
 
-        <div class="nav-group-title">🛡️ Модерация и защита</div>
-        <a href="/logs" {% if request.path == '/logs' %}class="active"{% endif %}><i class="fas fa-clipboard-list"></i> Логи модерации</a>
-        <a href="/warnings" {% if request.path == '/warnings' %}class="active"{% endif %}><i class="fas fa-exclamation-triangle"></i> Предупреждения</a>
-        <a href="/mod-history" {% if request.path == '/mod-history' %}class="active"{% endif %}><i class="fas fa-history"></i> История модерации</a>
-        <a href="/automod-settings" {% if request.path == '/automod-settings' %}class="active"{% endif %}><i class="fas fa-shield-alt"></i> Автомодерация</a>
-        <a href="/antiraid" {% if request.path == '/antiraid' %}class="active"{% endif %}><i class="fas fa-user-shield"></i> Анти-рейд и защита</a>
-        <a href="/member-notes" {% if request.path == '/member-notes' %}class="active"{% endif %}><i class="fas fa-sticky-note"></i> Заметки об участниках</a>
-        <a href="/watchlist-panel" {% if request.path == '/watchlist-panel' %}class="active"{% endif %}><i class="fas fa-eye"></i> Панель наблюдения</a>
-        <a href="/bulk-actions" {% if request.path == '/bulk-actions' %}class="active"{% endif %}><i class="fas fa-layer-group"></i> Массовые действия</a>
+            {% elif role == 'owner' or role == 'admin' %}
+                <div class="nav-group" data-group="main">
+                    <div class="nav-group-title" data-toggle>
+                        <i class="fas fa-house"></i>
+                        <span>Основное</span>
+                        <i class="fas fa-chevron-down nav-caret"></i>
+                    </div>
+                    <div class="nav-group-items">
+                        <a href="/" class="nav-link {% if request.path == '/' %}active{% endif %}"><i class="fas fa-home"></i> <span>Обзор сервера</span></a>
+                        <a href="/guilds" class="nav-link {% if request.path == '/guilds' %}active{% endif %}"><i class="fas fa-server"></i> <span>Серверы</span></a>
+                        <a href="/analytics" class="nav-link {% if request.path == '/analytics' %}active{% endif %}"><i class="fas fa-chart-line"></i> <span>Аналитика</span></a>
+                        <a href="/bot-stats" class="nav-link {% if request.path == '/bot-stats' %}active{% endif %}"><i class="fas fa-robot"></i> <span>Статистика бота</span></a>
+                        <a href="/server-health" class="nav-link {% if request.path == '/server-health' %}active{% endif %}"><i class="fas fa-heartbeat"></i> <span>Состояние</span></a>
+                    </div>
+                </div>
 
-        <div class="nav-group-title">👥 Участники и роли</div>
-        <a href="/users" {% if request.path == '/users' %}class="active"{% endif %}><i class="fas fa-users"></i> Пользователи</a>
-        <a href="/roles" {% if request.path == '/roles' %}class="active"{% endif %}><i class="fas fa-user-tag"></i> Управление ролями</a>
-        <a href="/autorole" {% if request.path == '/autorole' %}class="active"{% endif %}><i class="fas fa-id-badge"></i> Автороли и уровни</a>
-        <a href="/color-roles" {% if request.path == '/color-roles' %}class="active"{% endif %}><i class="fas fa-palette"></i> Цветовые роли</a>
-        <a href="/reaction-roles" {% if request.path == '/reaction-roles' %}class="active"{% endif %}><i class="fas fa-smile"></i> Роли по реакциям</a>
-        <a href="/member-search" {% if request.path == '/member-search' %}class="active"{% endif %}><i class="fas fa-search"></i> Поиск участников</a>
-        <a href="/invite-tracker" {% if request.path == '/invite-tracker' %}class="active"{% endif %}><i class="fas fa-user-plus"></i> Трекер приглашений</a>
-        <a href="/afk-list" {% if request.path == '/afk-list' %}class="active"{% endif %}><i class="fas fa-moon"></i> Список AFK</a>
+                <div class="nav-group" data-group="mod">
+                    <div class="nav-group-title" data-toggle>
+                        <i class="fas fa-shield-halved"></i>
+                        <span>Модерация</span>
+                        <i class="fas fa-chevron-down nav-caret"></i>
+                    </div>
+                    <div class="nav-group-items">
+                        <a href="/logs" class="nav-link {% if request.path == '/logs' %}active{% endif %}"><i class="fas fa-clipboard-list"></i> <span>Логи модерации</span></a>
+                        <a href="/warnings" class="nav-link {% if request.path == '/warnings' %}active{% endif %}"><i class="fas fa-exclamation-triangle"></i> <span>Предупреждения</span></a>
+                        <a href="/mod-history" class="nav-link {% if request.path == '/mod-history' %}active{% endif %}"><i class="fas fa-history"></i> <span>История</span></a>
+                        <a href="/automod-settings" class="nav-link {% if request.path == '/automod-settings' %}active{% endif %}"><i class="fas fa-shield-alt"></i> <span>Автомодерация</span></a>
+                        <a href="/antiraid" class="nav-link {% if request.path == '/antiraid' %}active{% endif %}"><i class="fas fa-shield-virus"></i> <span>Анти-рейд</span></a>
+                        <a href="/bulk-actions" class="nav-link {% if request.path == '/bulk-actions' %}active{% endif %}"><i class="fas fa-layer-group"></i> <span>Массовые действия</span></a>
+                    </div>
+                </div>
 
-        <div class="nav-group-title">🎫 Поддержка и тикеты</div>
-        <a href="/ai-tickets" {% if request.path == '/ai-tickets' %}class="active"{% endif %}><i class="fas fa-ticket-alt"></i> AI Тикеты</a>
-        <a href="/ai_ticket_stats" {% if request.path == '/ai_ticket_stats' %}class="active"{% endif %}><i class="fas fa-chart-pie"></i> Статистика тикетов</a>
-        <a href="/ticket-settings" {% if request.path == '/ticket-settings' %}class="active"{% endif %}><i class="fas fa-cogs"></i> Настройки тикетов</a>
-        <a href="/staff-apps" {% if request.path == '/staff-apps' %}class="active"{% endif %}><i class="fas fa-file-signature"></i> Заявки в модераторы</a>
+                <div class="nav-group" data-group="members">
+                    <div class="nav-group-title" data-toggle>
+                        <i class="fas fa-users"></i>
+                        <span>Участники</span>
+                        <i class="fas fa-chevron-down nav-caret"></i>
+                    </div>
+                    <div class="nav-group-items">
+                        <a href="/users" class="nav-link {% if request.path == '/users' %}active{% endif %}"><i class="fas fa-users"></i> <span>Пользователи</span></a>
+                        <a href="/member-search" class="nav-link {% if request.path == '/member-search' %}active{% endif %}"><i class="fas fa-search"></i> <span>Поиск</span></a>
+                        <a href="/member-notes" class="nav-link {% if request.path == '/member-notes' %}active{% endif %}"><i class="fas fa-sticky-note"></i> <span>Заметки</span></a>
+                        <a href="/watchlist-panel" class="nav-link {% if request.path == '/watchlist-panel' %}active{% endif %}"><i class="fas fa-eye"></i> <span>Наблюдение</span></a>
+                        <a href="/invite-tracker" class="nav-link {% if request.path == '/invite-tracker' %}active{% endif %}"><i class="fas fa-user-plus"></i> <span>Приглашения</span></a>
+                        <a href="/afk-list" class="nav-link {% if request.path == '/afk-list' %}active{% endif %}"><i class="fas fa-moon"></i> <span>AFK список</span></a>
+                    </div>
+                </div>
 
-        <div class="nav-group-title">🤖 Команды и настройки</div>
-        <a href="/commands" {% if request.path == '/commands' %}class="active"{% endif %}><i class="fas fa-terminal"></i> Команды бота</a>
-        <a href="/custom-commands" {% if request.path == '/custom-commands' %}class="active"{% endif %}><i class="fas fa-code"></i> Пользовательские команды</a>
-        <a href="/send-command" {% if request.path == '/send-command' %}class="active"{% endif %}><i class="fas fa-paper-plane"></i> Отправить команду</a>
-        <a href="/bot-settings" {% if request.path == '/bot-settings' %}class="active"{% endif %}><i class="fas fa-sliders-h"></i> Настройки бота</a>
-        <a href="/cog-manager" {% if request.path == '/cog-manager' %}class="active"{% endif %}><i class="fas fa-cubes"></i> Менеджер модулей</a>
-        <a href="/settings" {% if request.path == '/settings' %}class="active"{% endif %}><i class="fas fa-cog"></i> Настройки сервера</a>
-        <a href="/rules-editor" {% if request.path == '/rules-editor' %}class="active"{% endif %}><i class="fas fa-gavel"></i> Редактор правил</a>
-        <a href="/welcome-editor" {% if request.path == '/welcome-editor' %}class="active"{% endif %}><i class="fas fa-handshake"></i> Редактор приветствия</a>
-        <a href="/warn-config" {% if request.path == '/warn-config' %}class="active"{% endif %}><i class="fas fa-exclamation"></i> Настройки предупреждений</a>
+                <div class="nav-group" data-group="roles">
+                    <div class="nav-group-title" data-toggle>
+                        <i class="fas fa-user-tag"></i>
+                        <span>Роли</span>
+                        <i class="fas fa-chevron-down nav-caret"></i>
+                    </div>
+                    <div class="nav-group-items">
+                        <a href="/roles" class="nav-link {% if request.path == '/roles' %}active{% endif %}"><i class="fas fa-user-tag"></i> <span>Управление ролями</span></a>
+                        <a href="/autorole" class="nav-link {% if request.path == '/autorole' %}active{% endif %}"><i class="fas fa-id-badge"></i> <span>Автороли</span></a>
+                        <a href="/color-roles" class="nav-link {% if request.path == '/color-roles' %}active{% endif %}"><i class="fas fa-palette"></i> <span>Цветовые роли</span></a>
+                        <a href="/reaction-roles" class="nav-link {% if request.path == '/reaction-roles' %}active{% endif %}"><i class="fas fa-smile"></i> <span>Роли по реакциям</span></a>
+                    </div>
+                </div>
 
-        <div class="nav-group-title">🎮 Интерактив и статистика</div>
-        <a href="/economy" {% if request.path == '/economy' %}class="active"{% endif %}><i class="fas fa-coins"></i> Экономика сервера</a>
-        <a href="/leveling" {% if request.path == '/leveling' %}class="active"{% endif %}><i class="fas fa-star"></i> Рейтинг и уровни Опыт</a>
-        <a href="/giveaway" {% if request.path == '/giveaway' %}class="active"{% endif %}><i class="fas fa-gift"></i> Розыгрыши</a>
-        <a href="/polls" {% if request.path == '/polls' %}class="active"{% endif %}><i class="fas fa-poll-h"></i> Опросы</a>
-        <a href="/suggestions" {% if request.path == '/suggestions' %}class="active"{% endif %}><i class="fas fa-lightbulb"></i> Предложения</a>
-        <a href="/starboard" {% if request.path == '/starboard' %}class="active"{% endif %}><i class="fas fa-star"></i> Starboard</a>
-        <a href="/voice-stats" {% if request.path == '/voice-stats' %}class="active"{% endif %}><i class="fas fa-microphone"></i> Голосовая статистика</a>
-        <a href="/duty-panel-web" {% if request.path == '/duty-panel-web' %}class="active"{% endif %}><i class="fas fa-user-clock"></i> Панель дежурств</a>
-        <a href="/scheduled-messages" {% if request.path == '/scheduled-messages' %}class="active"{% endif %}><i class="fas fa-clock"></i> Запланированные сообщения</a>
+                <div class="nav-group" data-group="tickets">
+                    <div class="nav-group-title" data-toggle>
+                        <i class="fas fa-ticket-alt"></i>
+                        <span>Тикеты</span>
+                        <i class="fas fa-chevron-down nav-caret"></i>
+                    </div>
+                    <div class="nav-group-items">
+                        <a href="/ai-tickets" class="nav-link {% if request.path == '/ai-tickets' %}active{% endif %}"><i class="fas fa-ticket-alt"></i> <span>AI Тикеты</span></a>
+                        <a href="/ai_ticket_stats" class="nav-link {% if request.path == '/ai_ticket_stats' %}active{% endif %}"><i class="fas fa-chart-pie"></i> <span>Статистика</span></a>
+                        <a href="/ticket-settings" class="nav-link {% if request.path == '/ticket-settings' %}active{% endif %}"><i class="fas fa-cogs"></i> <span>Настройки</span></a>
+                        <a href="/staff-apps" class="nav-link {% if request.path == '/staff-apps' %}active{% endif %}"><i class="fas fa-file-signature"></i> <span>Заявки</span></a>
+                    </div>
+                </div>
 
-        <div class="nav-group-title">📜 Логи и обслуживание</div>
-        <a href="/chat" {% if request.path == '/chat' %}class="active"{% endif %}><i class="fas fa-comments"></i> Чат и логи сообщений</a>
-        <a href="/message-logs" {% if request.path == '/message-logs' %}class="active"{% endif %}><i class="fas fa-comment-alt"></i> Логи сообщений</a>
-        <a href="/panel-logs" {% if request.path == '/panel-logs' %}class="active"{% endif %}><i class="fas fa-list"></i> Логи панели</a>
-        <a href="/backup" {% if request.path == '/backup' %}class="active"{% endif %}><i class="fas fa-database"></i> Резервное копирование</a>
-        <a href="/todo" {% if request.path == '/todo' %}class="active"{% endif %}><i class="fas fa-check-square"></i> Список задач</a>
-        <a href="/yardim" {% if request.path == '/yardim' %}class="active"{% endif %}><i class="fas fa-question-circle"></i> Справка и руководство</a>
-        {% endif %}
+                <div class="nav-group" data-group="bot">
+                    <div class="nav-group-title" data-toggle>
+                        <i class="fas fa-robot"></i>
+                        <span>Бот</span>
+                        <i class="fas fa-chevron-down nav-caret"></i>
+                    </div>
+                    <div class="nav-group-items">
+                        <a href="/commands" class="nav-link {% if request.path == '/commands' %}active{% endif %}"><i class="fas fa-terminal"></i> <span>Команды</span></a>
+                        <a href="/custom-commands" class="nav-link {% if request.path == '/custom-commands' %}active{% endif %}"><i class="fas fa-code"></i> <span>Свои команды</span></a>
+                        <a href="/send-command" class="nav-link {% if request.path == '/send-command' %}active{% endif %}"><i class="fas fa-paper-plane"></i> <span>Отправить</span></a>
+                        <a href="/bot-settings" class="nav-link {% if request.path == '/bot-settings' %}active{% endif %}"><i class="fas fa-sliders-h"></i> <span>Настройки</span></a>
+                        <a href="/cog-manager" class="nav-link {% if request.path == '/cog-manager' %}active{% endif %}"><i class="fas fa-cubes"></i> <span>Модули</span></a>
+                        <a href="/settings" class="nav-link {% if request.path == '/settings' %}active{% endif %}"><i class="fas fa-cog"></i> <span>Сервер</span></a>
+                        <a href="/rules-editor" class="nav-link {% if request.path == '/rules-editor' %}active{% endif %}"><i class="fas fa-gavel"></i> <span>Правила</span></a>
+                        <a href="/welcome-editor" class="nav-link {% if request.path == '/welcome-editor' %}active{% endif %}"><i class="fas fa-handshake"></i> <span>Приветствие</span></a>
+                        <a href="/warn-config" class="nav-link {% if request.path == '/warn-config' %}active{% endif %}"><i class="fas fa-exclamation"></i> <span>Варны</span></a>
+                    </div>
+                </div>
+
+                <div class="nav-group" data-group="community">
+                    <div class="nav-group-title" data-toggle>
+                        <i class="fas fa-gamepad"></i>
+                        <span>Сообщество</span>
+                        <i class="fas fa-chevron-down nav-caret"></i>
+                    </div>
+                    <div class="nav-group-items">
+                        <a href="/economy" class="nav-link {% if request.path == '/economy' %}active{% endif %}"><i class="fas fa-coins"></i> <span>Экономика</span></a>
+                        <a href="/leveling" class="nav-link {% if request.path == '/leveling' %}active{% endif %}"><i class="fas fa-star"></i> <span>Уровни</span></a>
+                        <a href="/giveaway" class="nav-link {% if request.path == '/giveaway' %}active{% endif %}"><i class="fas fa-gift"></i> <span>Розыгрыши</span></a>
+                        <a href="/polls" class="nav-link {% if request.path == '/polls' %}active{% endif %}"><i class="fas fa-poll-h"></i> <span>Опросы</span></a>
+                        <a href="/suggestions" class="nav-link {% if request.path == '/suggestions' %}active{% endif %}"><i class="fas fa-lightbulb"></i> <span>Предложения</span></a>
+                        <a href="/starboard" class="nav-link {% if request.path == '/starboard' %}active{% endif %}"><i class="fas fa-star"></i> <span>Starboard</span></a>
+                        <a href="/voice-stats" class="nav-link {% if request.path == '/voice-stats' %}active{% endif %}"><i class="fas fa-microphone"></i> <span>Голосовая</span></a>
+                        <a href="/duty-panel-web" class="nav-link {% if request.path == '/duty-panel-web' %}active{% endif %}"><i class="fas fa-user-clock"></i> <span>Дежурства</span></a>
+                        <a href="/scheduled-messages" class="nav-link {% if request.path == '/scheduled-messages' %}active{% endif %}"><i class="fas fa-clock"></i> <span>Расписание</span></a>
+                    </div>
+                </div>
+
+                <div class="nav-group" data-group="logs">
+                    <div class="nav-group-title" data-toggle>
+                        <i class="fas fa-file-lines"></i>
+                        <span>Логи</span>
+                        <i class="fas fa-chevron-down nav-caret"></i>
+                    </div>
+                    <div class="nav-group-items">
+                        <a href="/chat" class="nav-link {% if request.path == '/chat' %}active{% endif %}"><i class="fas fa-comments"></i> <span>Чат</span></a>
+                        <a href="/message-logs" class="nav-link {% if request.path == '/message-logs' %}active{% endif %}"><i class="fas fa-comment-alt"></i> <span>Сообщения</span></a>
+                        <a href="/panel-logs" class="nav-link {% if request.path == '/panel-logs' %}active{% endif %}"><i class="fas fa-list"></i> <span>Панель</span></a>
+                        <a href="/backup" class="nav-link {% if request.path == '/backup' %}active{% endif %}"><i class="fas fa-database"></i> <span>Бэкапы</span></a>
+                    </div>
+                </div>
+
+                <div class="nav-group" data-group="content">
+                    <div class="nav-group-title" data-toggle>
+                        <i class="fas fa-palette"></i>
+                        <span>Контент</span>
+                        <i class="fas fa-chevron-down nav-caret"></i>
+                    </div>
+                    <div class="nav-group-items">
+                        <a href="/custom-embeds" class="nav-link {% if request.path == '/custom-embeds' %}active{% endif %}"><i class="fas fa-palette"></i> <span>Embed-ы</span></a>
+                        <a href="/channels" class="nav-link {% if request.path == '/channels' %}active{% endif %}"><i class="fas fa-hashtag"></i> <span>Каналы</span></a>
+                        <a href="/execute-command" class="nav-link {% if request.path == '/execute-command' %}active{% endif %}"><i class="fas fa-bolt"></i> <span>Команда</span></a>
+                    </div>
+                </div>
+
+                <div class="nav-group" data-group="ai">
+                    <div class="nav-group-title" data-toggle>
+                        <i class="fas fa-brain"></i>
+                        <span>AI</span>
+                        <i class="fas fa-chevron-down nav-caret"></i>
+                    </div>
+                    <div class="nav-group-items">
+                        <a href="/ai-chat-panel" class="nav-link {% if request.path == '/ai-chat-panel' %}active{% endif %}"><i class="fas fa-comments"></i> <span>AI Чат</span></a>
+                    </div>
+                </div>
+
+                <div class="nav-group" data-group="utility">
+                    <div class="nav-group-title" data-toggle>
+                        <i class="fas fa-toolbox"></i>
+                        <span>Утилиты</span>
+                        <i class="fas fa-chevron-down nav-caret"></i>
+                    </div>
+                    <div class="nav-group-items">
+                        <a href="/todo" class="nav-link {% if request.path == '/todo' %}active{% endif %}"><i class="fas fa-check-square"></i> <span>Задачи</span></a>
+                        <a href="/yardim" class="nav-link {% if request.path == '/yardim' %}active{% endif %}"><i class="fas fa-question-circle"></i> <span>Справка</span></a>
+                    </div>
+                </div>
+            {% endif %}
+        </nav>
+
+        <div class="sidebar-foot">
+            <div class="sidebar-version">
+                <i class="fas fa-circle" style="color:var(--ok);font-size:6px;"></i>
+                v2.0 · Online
+            </div>
+        </div>
     </aside>
 
     <main id="main-content" class="main-content">
         <div class="navbar">
-            <h1>{% block page_title %}Панель управления ботом{% endblock %}</h1>
-            <div class="user-info">
-                <span>{{ username }}</span>
-                <span class="role-badge">{{ role }}</span>
-                <a href="/logout" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Выход</a>
+            <div class="navbar-left">
+                <h1>{% block page_title %}Панель управления{% endblock %}</h1>
+            </div>
+            <div class="navbar-right">
+                <button class="nav-icon-btn" title="Поиск" id="globalSearchBtn"><i class="fas fa-search"></i></button>
+                <button class="nav-icon-btn" title="Уведомления" id="notifBtn"><i class="fas fa-bell"></i><span class="nav-badge">3</span></button>
+                <button class="nav-icon-btn" title="Полный экран" id="fullscreenBtn"><i class="fas fa-expand"></i></button>
+                <div class="user-pill">
+                    <div class="user-avatar">{{ (username or 'U')[0]|upper }}</div>
+                    <div class="user-info">
+                        <div class="user-name">{{ username }}</div>
+                        <div class="user-role">{{ role }}</div>
+                    </div>
+                    <i class="fas fa-chevron-down user-caret"></i>
+                    <div class="user-menu">
+                        <a href="/change-password"><i class="fas fa-key"></i> Сменить пароль</a>
+                        <a href="/panel-logs"><i class="fas fa-list"></i> Логи панели</a>
+                        <hr>
+                        <a href="/logout" class="logout"><i class="fas fa-sign-out-alt"></i> Выход</a>
+                    </div>
+                </div>
             </div>
         </div>
 
         {% block content %}{% endblock %}
     </main>
+
 <script>
-// fetchCached(url, opts) — fetch + ETag onbellegi. 304 donerse onceki JSON'u dondurur.
+// ETag fetch cache
 (function () {
   var _etagStore = {};
   window.fetchCached = function (url, opts) {
     opts = opts || {};
     var init = Object.assign({}, opts);
     init.headers = Object.assign({}, opts.headers || {});
-    if (_etagStore[url]) {
-      init.headers['If-None-Match'] = _etagStore[url];
-    }
+    if (_etagStore[url]) init.headers['If-None-Match'] = _etagStore[url];
     return fetch(url, init).then(function (r) {
       var et = r.headers.get('ETag');
       if (et) _etagStore[url] = et;
-      if (r.status === 304) {
-        return r;
-      }
       return r;
     });
   };
-  window._etagCache = {
-    _d: {},
-    get: function (url) { return this._d[url]; },
-    set: function (url, data) { this._d[url] = data; return data; }
-  };
+  window._etagCache = { _d: {}, get: function (u) { return this._d[u]; }, set: function (u, d) { this._d[u] = d; return d; } };
   window.fetchCachedJSON = function (url, opts) {
     return window.fetchCached(url, opts).then(function (r) {
       if (r.status === 304) {
-        var cached = window._etagCache.get(url);
-        if (cached !== undefined) return cached;
+        var c = window._etagCache.get(url);
+        if (c !== undefined) return c;
         return r.json();
       }
-      return r.json().then(function (data) {
-        window._etagCache.set(url, data);
-        return data;
-      });
+      return r.json().then(function (d) { window._etagCache.set(url, d); return d; });
     });
   };
 })();
 
-// Mobile menu toggle
+// Mobile menu
 document.addEventListener('DOMContentLoaded', function () {
   var btn = document.getElementById('mobileMenu');
   var sb  = document.getElementById('sidebar');
   if (btn && sb) {
-    btn.addEventListener('click', function (e) {
-      e.stopPropagation();
-      sb.classList.toggle('open');
-    });
+    btn.addEventListener('click', function (e) { e.stopPropagation(); sb.classList.toggle('open'); });
     document.addEventListener('click', function (e) {
-      if (sb.classList.contains('open') && !sb.contains(e.target) && e.target !== btn) {
-        sb.classList.remove('open');
-      }
+      if (sb.classList.contains('open') && !sb.contains(e.target) && e.target !== btn) sb.classList.remove('open');
     });
   }
 });
 
-// Resolve server selection once from the connected bot.
+// Collapsible sidebar groups (with localStorage persistence)
+(function () {
+  var KEY = 'aether_sidebar_state';
+  var state = {};
+  try { state = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch(e) { state = {}; }
+
+  document.querySelectorAll('.nav-group').forEach(function (g) {
+    var key = g.getAttribute('data-group');
+    if (!key) return;
+    var items = g.querySelector('.nav-group-items');
+    var caret = g.querySelector('.nav-caret');
+    var hasActive = !!g.querySelector('.nav-link.active');
+    // Default: open if state[key] === true OR state[key] undefined AND has active child
+    var open = (state[key] === true) || (state[key] === undefined && hasActive);
+    if (!open) {
+      g.classList.add('collapsed');
+      if (items) items.style.display = 'none';
+      if (caret) caret.style.transform = 'rotate(-90deg)';
+    }
+
+    var toggle = g.querySelector('[data-toggle]');
+    if (toggle) {
+      toggle.addEventListener('click', function (e) {
+        e.preventDefault();
+        var isOpen = !g.classList.contains('collapsed');
+        if (isOpen) {
+          g.classList.add('collapsed');
+          if (items) items.style.display = 'none';
+          if (caret) caret.style.transform = 'rotate(-90deg)';
+          state[key] = false;
+        } else {
+          g.classList.remove('collapsed');
+          if (items) items.style.display = '';
+          if (caret) caret.style.transform = '';
+          state[key] = true;
+        }
+        try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(err) {}
+      });
+    }
+  });
+
+  // Search filter in sidebar
+  var search = document.getElementById('sidebarSearch');
+  if (search) {
+    search.addEventListener('input', function () {
+      var q = search.value.toLowerCase().trim();
+      document.querySelectorAll('.nav-link').forEach(function (a) {
+        var txt = a.textContent.toLowerCase();
+        var match = !q || txt.indexOf(q) !== -1;
+        a.style.display = match ? '' : 'none';
+      });
+      // Auto-expand groups with matches
+      document.querySelectorAll('.nav-group').forEach(function (g) {
+        var hasVisible = !!g.querySelector('.nav-link[style=""], .nav-link:not([style])');
+        if (q && hasVisible) {
+          g.classList.remove('collapsed');
+          var items = g.querySelector('.nav-group-items');
+          var caret = g.querySelector('.nav-caret');
+          if (items) items.style.display = '';
+          if (caret) caret.style.transform = '';
+        }
+      });
+    });
+    // Keyboard shortcut: Cmd/Ctrl+K
+    document.addEventListener('keydown', function (e) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        search.focus();
+        search.select();
+      }
+      if (e.key === 'Escape' && document.activeElement === search) {
+        search.value = '';
+        search.dispatchEvent(new Event('input'));
+        search.blur();
+      }
+    });
+  }
+})();
+
+// User menu dropdown
+(function () {
+  var pill = document.querySelector('.user-pill');
+  if (pill) {
+    pill.addEventListener('click', function (e) {
+      e.stopPropagation();
+      pill.classList.toggle('open');
+    });
+    document.addEventListener('click', function () { pill.classList.remove('open'); });
+  }
+})();
+
+// Fullscreen toggle
+(function () {
+  var btn = document.getElementById('fullscreenBtn');
+  if (btn) btn.addEventListener('click', function () {
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+    else document.exitFullscreen();
+  });
+})();
+
+// Guild select (from old logic)
 document.addEventListener('DOMContentLoaded', async function () {
   var select = document.getElementById('guild-select');
   if (!select) return;
@@ -173,13 +404,11 @@ document.addEventListener('DOMContentLoaded', async function () {
     var guilds = await response.json();
     if (!Array.isArray(guilds) || !guilds.length) return;
     var desired = '{{ main_guild_id }}';
-    select.innerHTML = guilds.map(function (guild) {
-      return '<option value="' + guild.id + '">' + guild.name + '</option>';
-    }).join('');
-    select.value = guilds.some(function (guild) { return guild.id === desired; }) ? desired : guilds[0].id;
+    select.innerHTML = guilds.map(function (g) { return '<option value="' + g.id + '">' + g.name + '</option>'; }).join('');
+    select.value = guilds.some(function (g) { return g.id === desired; }) ? desired : guilds[0].id;
     if (guilds.length === 1) select.style.display = 'none';
     select.dispatchEvent(new Event('change'));
-  } catch (error) { console.error('Не удалось определить сервер:', error); }
+  } catch (e) { console.error('Guild error:', e); }
 });
 </script>
 </body>

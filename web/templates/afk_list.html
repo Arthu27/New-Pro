@@ -2,28 +2,6 @@
 {% block title %}AFK список — Aether{% endblock %}
 {% block page_title %}<i class="fas fa-moon" style="color:var(--ac);"></i> Список AFK{% endblock %}
 {% block content %}
-<style>
-.afk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;}
-.afk-card{
-  background:var(--surface) !important;
-  border:1px solid var(--line) !important;
-  border-radius:var(--r-lg) !important;
-  padding:16px 18px !important;
-  transition:all 0.22s var(--ease) !important;
-  position:relative;
-  overflow:hidden;
-}
-.afk-card:hover{border-color:var(--ac-line) !important;transform:translateY(-2px);box-shadow:var(--shadow-md);}
-.afk-card::after{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg, transparent, var(--ac), transparent);opacity:0.4;}
-.afk-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
-.afk-avatar{width:42px;height:42px;border-radius:50%;border:2px solid var(--ac);object-fit:cover;box-shadow:0 0 0 3px rgba(0,0,0,0.4);flex-shrink:0;}
-.afk-name{font-size:14px;font-weight:700;color:var(--text);letter-spacing:-0.01em;}
-.afk-id{font-size:10.5px;color:var(--text-3);font-family:'JetBrains Mono', monospace;margin-top:1px;}
-.afk-reason{font-size:12.5px;color:var(--text-2);margin-bottom:10px;line-height:1.5;}
-.afk-time{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:99px;background:var(--ac-soft);color:var(--ac);border:1px solid var(--ac-line);font-size:10.5px;font-weight:700;letter-spacing:0.04em;}
-.afk-toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;}
-.afk-count-pill{font-size:11px;color:var(--text-2);background:var(--ac-soft);padding:5px 12px;border-radius:99px;font-weight:700;border:1px solid var(--ac-line);letter-spacing:0.05em;}
-</style>
 
 <div class="afk-toolbar">
   <div class="afk-count-pill" id="afk-count">0 человек AFK</div>

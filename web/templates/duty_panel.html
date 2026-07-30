@@ -2,57 +2,6 @@
 {% block title %}Система задач — Aether{% endblock %}
 {% block page_title %}<i class="fas fa-swords" style="color:var(--ac);"></i> Система задач{% endblock %}
 {% block content %}
-<style>
-.dp-stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:18px;}
-.dp-stat{
-  background:var(--surface) !important;
-  border:1px solid var(--line) !important;
-  border-radius:var(--r-lg) !important;
-  padding:18px 16px !important;
-  text-align:center;
-  transition:all 0.22s var(--ease);
-  position:relative;
-  overflow:hidden;
-}
-.dp-stat::after{content:'';position:absolute;top:0;right:0;width:60px;height:60px;background:radial-gradient(circle, var(--ac-soft), transparent 70%);}
-.dp-stat:hover{border-color:var(--ac-line) !important;transform:translateY(-2px);box-shadow:var(--shadow-md);}
-.dp-stat-val{font-size:24px;font-weight:800;background:linear-gradient(135deg, var(--ac-2), var(--ac));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-0.025em;font-variant-numeric:tabular-nums;line-height:1;}
-.dp-stat-lbl{font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.10em;margin-top:6px;font-weight:700;}
-
-.dp-table{width:100%;border-collapse:separate;border-spacing:0;}
-.dp-table th{padding:12px 18px;text-align:left;font-size:10.5px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:0.10em;border-bottom:1px solid var(--ac-line);background:rgba(212,168,67,0.04);}
-.dp-table td{padding:13px 18px;font-size:12.5px;border-bottom:1px solid var(--line);color:var(--text);vertical-align:middle;}
-.dp-table tr:last-child td{border-bottom:none;}
-.dp-table tr{transition:background 0.15s var(--ease);}
-.dp-table tbody tr:hover{background:rgba(212,168,67,0.04);}
-
-.dp-rank-medal{font-size:18px;width:28px;display:inline-block;text-align:center;}
-.dp-rank-num{color:var(--text-3);font-weight:700;font-size:12px;}
-
-.dp-bar{height:6px;background:rgba(212,168,67,0.10);border-radius:99px;overflow:hidden;margin-top:4px;position:relative;}
-.dp-bar-fill{height:100%;background:linear-gradient(90deg, var(--ac-3), var(--ac-2));border-radius:99px;transition:width 0.6s var(--ease-out);position:relative;overflow:hidden;}
-.dp-bar-fill::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);background-size:200% 100%;animation:shimmer 2.4s ease infinite;}
-
-.active-badge{
-  display:inline-flex;align-items:center;gap:4px;
-  padding:3px 9px;border-radius:99px;
-  font-size:9.5px;font-weight:700;letter-spacing:0.06em;
-  background:rgba(52,211,153,0.12);color:var(--ok);
-  border:1px solid rgba(52,211,153,0.30);
-  text-transform:uppercase;
-}
-.active-badge::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--ok);animation:pulse 2s ease infinite;}
-
-.guild-info{
-  font-size:11px;color:var(--text-2);
-  background:var(--ac-soft);padding:6px 14px;border-radius:99px;
-  border:1px solid var(--ac-line);font-weight:600;
-  display:inline-block;
-  margin-bottom:14px;
-}
-.guild-info strong{color:var(--ac);font-family:'JetBrains Mono', monospace;font-weight:700;}
-.empty-state{padding:30px 20px;text-align:center;color:var(--text-3);font-size:13px;}
-</style>
 
 <div class="guild-info">Сервер: <strong>{{ guild_id }}</strong></div>
 

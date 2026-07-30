@@ -2,60 +2,6 @@
 {% block title %}Настройки бота — Aether{% endblock %}
 {% block page_title %}<i class="fas fa-sliders-h" style="color:var(--ac);"></i> Настройки бота{% endblock %}
 {% block content %}
-<style>
-.bs-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;}
-.bs-card{
-  background:var(--surface) !important;
-  border:1px solid var(--line) !important;
-  border-radius:var(--r-lg) !important;
-  padding:18px 20px !important;
-  animation:fadeUp 0.4s var(--ease-out) both;
-  transition:border-color 0.2s var(--ease);
-}
-.bs-card:hover{border-color:var(--ac-line) !important;}
-.bs-head{display:flex;align-items:center;gap:10px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--line);}
-.bs-icon{
-  width:34px;height:34px;border-radius:10px;
-  background:var(--ac-soft);
-  color:var(--ac);
-  display:flex;align-items:center;justify-content:center;
-  font-size:14px;flex-shrink:0;
-  border:1px solid var(--ac-line);
-}
-.bs-title{font-size:12px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:0.10em;flex:1;}
-
-.row{display:flex;gap:10px;align-items:center;margin-bottom:10px;}
-.row label{flex:0 0 110px;font-size:10.5px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;font-weight:600;margin:0;}
-.row input,.row select{flex:1;}
-.row.with-toggle{justify-content:space-between;}
-.row.with-toggle label{flex:1;}
-
-.toggle{
-  position:relative;width:42px;height:22px;
-  background:rgba(255,255,255,0.08);
-  border-radius:99px;cursor:pointer;
-  transition:background 0.2s var(--ease);
-  flex-shrink:0;border:1px solid var(--line);
-}
-.toggle::after{
-  content:'';position:absolute;top:2px;left:2px;
-  width:16px;height:16px;
-  background:var(--text-3);
-  border-radius:50%;
-  transition:all 0.25s var(--ease-spring);
-  box-shadow:0 2px 4px rgba(0,0,0,0.3);
-}
-.toggle.on{
-  background:linear-gradient(135deg, rgba(212,168,67,0.40), rgba(212,168,67,0.20));
-  border-color:var(--ac-line);
-}
-.toggle.on::after{left:22px;background:linear-gradient(135deg, var(--ac-2), var(--ac));box-shadow:0 0 8px var(--ac-glow);}
-
-.btn{padding:8px 18px;border:none;border-radius:99px;cursor:pointer;font-weight:700;font-size:12px;font-family:Inter,sans-serif;transition:all 0.18s var(--ease);}
-.btn-primary{background:linear-gradient(135deg, var(--ac), var(--ac-3));color:var(--bg);box-shadow:0 4px 14px var(--ac-glow);}
-.btn-primary:hover{transform:translateY(-1px);box-shadow:0 6px 22px rgba(212,168,67,0.40);filter:brightness(1.05);}
-.save-bar{display:flex;gap:8px;margin-top:18px;justify-content:flex-end;}
-</style>
 
 <div class="bs-grid">
   <div class="bs-card">

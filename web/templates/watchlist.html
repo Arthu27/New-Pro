@@ -2,20 +2,6 @@
 {% block title %}Наблюдение — Aether{% endblock %}
 {% block page_title %}<i class="fas fa-eye" style="color:var(--ac);"></i> Список наблюдения{% endblock %}
 {% block content %}
-<style>
-.wl-wrap{background:var(--surface) !important;border:1px solid var(--line) !important;border-radius:var(--r-lg) !important;overflow:hidden;transition:border-color 0.2s var(--ease);}
-.wl-wrap:hover{border-color:var(--ac-line) !important;}
-.wl-wrap table{width:100%;border-collapse:separate;border-spacing:0;}
-.wl-wrap th{padding:12px 18px;text-align:left;font-size:10.5px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:0.10em;border-bottom:1px solid var(--ac-line);background:rgba(212,168,67,0.04);}
-.wl-wrap td{padding:14px 18px;font-size:13px;border-bottom:1px solid var(--line);color:var(--text);vertical-align:middle;}
-.wl-wrap tr:last-child td{border-bottom:none;}
-.wl-wrap tr{transition:background 0.15s var(--ease);}
-.wl-wrap tbody tr:hover{background:rgba(212,168,67,0.04);}
-.wl-meta{font-size:12px;color:var(--text-3);font-family:'JetBrains Mono', monospace;}
-.wl-tag{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:99px;background:rgba(212,168,67,0.10);color:var(--ac);border:1px solid var(--ac-line);font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;}
-.wl-toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;}
-.wl-count-pill{font-size:11px;color:var(--text-2);background:var(--ac-soft);padding:5px 12px;border-radius:99px;font-weight:700;border:1px solid var(--ac-line);letter-spacing:0.05em;}
-</style>
 
 <div class="wl-toolbar">
   <div class="wl-count-pill" id="wl-count">0 пользователей</div>

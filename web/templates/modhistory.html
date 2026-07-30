@@ -2,69 +2,6 @@
 {% block title %}История модерации — Aether{% endblock %}
 {% block page_title %}<i class="fas fa-history" style="color:var(--ac);"></i> История модерации{% endblock %}
 {% block content %}
-<style>
-.mh-toolbar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;}
-.mh-search{
-  flex:1;min-width:200px;
-  padding:10px 14px;background:rgba(10,9,7,0.55);
-  border:1px solid var(--line-2);border-radius:10px;
-  color:var(--text);font-size:13px;font-family:Inter,sans-serif;
-  transition:all 0.18s var(--ease);
-}
-.mh-search:focus{outline:none;border-color:var(--ac);box-shadow:0 0 0 3px rgba(212,168,67,0.12);}
-
-.mh-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:10px;margin-bottom:16px;}
-.mh-stat{
-  background:var(--surface) !important;
-  border:1px solid var(--line) !important;
-  border-radius:10px;
-  padding:12px 14px;text-align:center;
-  transition:all 0.22s var(--ease);
-}
-.mh-stat:hover{transform:translateY(-2px);border-color:var(--ac-line) !important;box-shadow:var(--shadow-md);}
-.mh-stat-num{font-size:22px;font-weight:800;letter-spacing:-0.025em;font-variant-numeric:tabular-nums;line-height:1;}
-.mh-stat-num.total{background:linear-gradient(135deg, var(--ac-2), var(--ac));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;}
-.mh-stat-num.danger{color:var(--err);}
-.mh-stat-num.warn{color:var(--warn);}
-.mh-stat-num.accent{color:var(--orange);}
-.mh-stat-lbl{font-size:9.5px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.10em;margin-top:5px;font-weight:700;}
-
-.mh-box{
-  background:var(--surface) !important;
-  border:1px solid var(--line) !important;
-  border-radius:var(--r-lg) !important;
-  overflow:hidden;
-  transition:border-color 0.2s var(--ease);
-}
-.mh-box:hover{border-color:var(--ac-line) !important;}
-.mh-head{
-  padding:14px 20px;border-bottom:1px solid var(--line);
-  display:flex;justify-content:space-between;align-items:center;
-  background:linear-gradient(180deg, rgba(212,168,67,0.04), transparent);
-}
-.mh-title{font-size:11px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:0.10em;display:flex;align-items:center;gap:8px;}
-.mh-title i{color:var(--ac);font-size:13px;}
-.mh-count{font-size:10.5px;color:var(--text-3);background:var(--ac-soft);padding:3px 10px;border-radius:99px;font-weight:700;letter-spacing:0.05em;border:1px solid var(--ac-line);}
-
-.mh-body{max-height:520px;overflow-y:auto;overflow-anchor:none;}
-.mh-body table{width:100%;border-collapse:separate;border-spacing:0;}
-.mh-body th{padding:11px 18px;text-align:left;font-size:10.5px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:0.08em;border-bottom:1px solid var(--ac-line);background:rgba(212,168,67,0.04);position:sticky;top:0;z-index:1;}
-.mh-body td{padding:11px 18px;font-size:12.5px;border-bottom:1px solid var(--line);color:var(--text);vertical-align:middle;}
-.mh-body tr:last-child td{border-bottom:none;}
-.mh-body tr{transition:background 0.15s var(--ease);}
-.mh-body tbody tr:hover{background:rgba(212,168,67,0.04);}
-
-.case-badge{
-  display:inline-flex;align-items:center;gap:4px;
-  padding:3px 9px;border-radius:6px;
-  font-size:10.5px;font-weight:700;
-  text-transform:uppercase;letter-spacing:0.06em;
-  border:1px solid currentColor;
-}
-
-.empty{padding:40px;text-align:center;color:var(--text-3);font-size:13px;}
-.empty i{display:block;font-size:32px;margin-bottom:10px;opacity:0.4;color:var(--ac);}
-</style>
 
 <div class="mh-toolbar">
   <input type="text" id="search" class="mh-search" placeholder="Поиск по истории (пользователь, мод, причина)...">

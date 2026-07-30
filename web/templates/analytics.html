@@ -2,25 +2,6 @@
 {% block title %}Аналитика - Aether{% endblock %}
 {% block page_title %}<i class="fas fa-chart-line" style="color:var(--ac);"></i> Аналитика сервера{% endblock %}
 {% block content %}
-<style>
-  .chart-title{color:var(--ac);font-size:11.5px;text-transform:uppercase;letter-spacing:0.10em;margin-bottom:18px;display:flex;align-items:center;gap:8px;padding-bottom:12px;border-bottom:1px solid var(--line);font-weight:700;}
-  .top-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
-  @media(max-width:900px){.top-grid{grid-template-columns:1fr;}}
-  .top-item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);transition:all 0.18s var(--ease);}
-  .top-item:last-child{border-bottom:none;}
-  .top-item:hover{padding-left:6px;}
-  .top-name{color:var(--text);font-size:13px;font-weight:500;}
-  .top-val{color:var(--ac);font-weight:700;font-size:13px;}
-  .top-rank{color:var(--text-3);font-size:11px;min-width:24px;font-weight:700;}
-  .guild-select{width:100%;padding:12px 14px;background:rgba(10,9,7,0.7);border:1px solid var(--ac-line);border-radius:10px;color:var(--text);margin-bottom:16px;font-size:13.5px;font-family:Inter,sans-serif;transition:all 0.18s var(--ease);}
-  .guild-select:focus{outline:none;border-color:var(--ac);box-shadow:0 0 0 3px rgba(212,168,67,0.12);}
-  .empty-state{text-align:center;padding:30px;color:var(--text-3);font-style:italic;font-size:13px;}
-  .bar-container{margin-bottom:12px;}
-  .bar-label{display:flex;justify-content:space-between;margin-bottom:6px;font-size:12.5px;}
-  .bar-track{height:8px;background:rgba(212,168,67,0.10);border-radius:99px;overflow:hidden;position:relative;}
-  .bar-fill{height:100%;background:linear-gradient(90deg, #d4a843, #f0c75e);border-radius:99px;transition:width 1s var(--ease-out);position:relative;overflow:hidden;}
-  .bar-fill::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);background-size:200% 100%;animation:shimmer 2.4s ease infinite;}
-</style>
 
 <select id="guild-select" class="guild-select" onchange="loadAnalytics()">
   <option value="">Выберите сервер...</option>

@@ -3,7 +3,6 @@
 {% block page_title %}<i class="fas fa-terminal" style="color:#c8922a;animation:pulse 2s infinite;"></i> ОСОБЫЙ КОМАНДЫ{% endblock %}
 {% block content %}
 
-
 {% if role == 'owner' %}<button class="btn-add" onclick="openModal()"><i class="fas fa-plus"></i> Создать новую команду</button>{% endif %}
 
 <select  id="guild-select" class="guild-select" onchange="loadCommands()">

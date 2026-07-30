@@ -2,48 +2,6 @@
 {% block title %}Поиск участников — Aether{% endblock %}
 {% block page_title %}<i class="fas fa-search" style="color:var(--ac);"></i> Поиск участников{% endblock %}
 {% block content %}
-<style>
-.ms-bar{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;}
-.ms-bar input{flex:1;min-width:240px;}
-.ms-results{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px;}
-.ms-result-card{
-  display:flex;align-items:center;gap:10px;
-  padding:10px 14px;
-  background:var(--surface);
-  border:1px solid var(--line);
-  border-radius:10px;
-  cursor:pointer;
-  transition:all 0.18s var(--ease);
-}
-.ms-result-card:hover{border-color:var(--ac-line);transform:translateY(-2px);box-shadow:var(--shadow-md);}
-.ms-result-card img{width:32px;height:32px;border-radius:50%;border:2px solid var(--ac);object-fit:cover;}
-.ms-result-card .name{font-size:13px;font-weight:600;color:var(--text);}
-.ms-result-card .id{font-size:10.5px;color:var(--text-3);font-family:'JetBrains Mono', monospace;}
-.ms-profile{display:grid;grid-template-columns:280px 1fr;gap:14px;}
-.ms-card{
-  background:var(--surface) !important;
-  border:1px solid var(--line) !important;
-  border-radius:var(--r-lg) !important;
-  padding:20px !important;
-  margin-bottom:14px !important;
-  transition:border-color 0.2s var(--ease);
-}
-.ms-card:hover{border-color:var(--ac-line) !important;}
-.ms-card h2{font-size:11.5px !important;font-weight:700 !important;color:var(--text-2) !important;text-transform:uppercase !important;letter-spacing:0.10em !important;margin-bottom:14px !important;padding-bottom:10px !important;border-bottom:1px solid var(--line) !important;display:flex;align-items:center;gap:8px;}
-.ms-card h2 i{color:var(--ac);font-size:14px;}
-.ms-row{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);font-size:12.5px;align-items:center;}
-.ms-row:last-child{border-bottom:none;}
-.ms-key{color:var(--text-3);font-size:11px;text-transform:uppercase;letter-spacing:0.06em;font-weight:600;}
-.ms-val{color:var(--text);font-weight:600;text-align:right;max-width:200px;overflow:hidden;text-overflow:ellipsis;}
-.ms-val.id{font-family:'JetBrains Mono', monospace;font-size:11px;color:var(--ac);}
-.ms-val.danger{color:var(--err);}
-.ms-val.ok{color:var(--ok);}
-.warn-item{padding:10px 14px;background:rgba(251,191,36,0.06);border:1px solid rgba(251,191,36,0.18);border-radius:8px;margin-bottom:6px;font-size:12.5px;transition:all 0.18s var(--ease);}
-.warn-item:hover{background:rgba(251,191,36,0.10);transform:translateX(3px);}
-.case-item{padding:10px 14px;background:var(--ac-soft);border:1px solid var(--ac-line);border-radius:8px;margin-bottom:6px;font-size:12.5px;transition:all 0.18s var(--ease);}
-.case-item:hover{background:rgba(212,168,67,0.10);transform:translateX(3px);}
-@media(max-width:768px){.ms-profile{grid-template-columns:1fr;}}
-</style>
 
 <div class="ms-bar">
   <input type="text" id="ms-query" placeholder="Имя пользователя или ID..." onkeydown="if(event.key==='Enter')search()">

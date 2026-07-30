@@ -2,42 +2,6 @@
 {% block title %}Объявления — Aether{% endblock %}
 {% block page_title %}<i class="fas fa-bullhorn" style="color:var(--ac);"></i> Объявления{% endblock %}
 {% block content %}
-<style>
-.ann-card{
-  background:var(--surface) !important;
-  border:1px solid var(--line) !important;
-  border-radius:var(--r-lg) !important;
-  padding:22px 24px !important;
-  margin-bottom:14px !important;
-  transition:all 0.25s var(--ease) !important;
-  position:relative;
-  overflow:hidden;
-}
-.ann-card:hover{border-color:var(--ac-line) !important;transform:translateY(-2px);box-shadow:var(--shadow-md);}
-.ann-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg, transparent, var(--ac), transparent);opacity:0.5;}
-.ann-header{display:flex;align-items:center;gap:14px;margin-bottom:14px;}
-.ann-icon{
-  width:48px;height:48px;border-radius:12px;
-  background:linear-gradient(135deg, var(--ac), var(--ac-3));
-  display:flex;align-items:center;justify-content:center;flex-shrink:0;
-  box-shadow:0 4px 14px var(--ac-glow);
-}
-.ann-icon i{color:var(--bg);font-size:18px;}
-.ann-title{color:var(--text);font-size:17px;font-weight:700;letter-spacing:-0.01em;}
-.ann-meta{color:var(--text-3);font-size:11.5px;margin-top:3px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
-.ann-meta i{color:var(--ac);font-size:11px;}
-.ann-body{
-  color:rgba(245,236,210,0.75);
-  font-size:14px;line-height:1.7;
-  background:rgba(0,0,0,0.30);
-  border-radius:var(--r-md);
-  padding:14px 16px;
-  border:1px solid var(--line);
-}
-.empty-state{padding:60px 20px;text-align:center;color:var(--text-3);}
-.empty-state i{font-size:48px;color:var(--ac);opacity:0.4;margin-bottom:15px;display:block;}
-.empty-state p{margin:0;font-size:13px;}
-</style>
 
 <div id="ann-list"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Загрузка...</p></div></div>
 

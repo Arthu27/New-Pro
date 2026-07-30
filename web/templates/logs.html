@@ -2,44 +2,6 @@
 {% block title %}Логи - Aether{% endblock %}
 {% block page_title %}<i class="fas fa-clipboard-list" style="color:var(--ac);"></i> Логи модерации{% endblock %}
 {% block content %}
-<style>
-.logs-toolbar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;}
-.filter-select,.search-input{
-  padding:10px 14px;background:rgba(10,9,7,0.55);
-  border:1px solid var(--line-2);border-radius:10px;
-  color:var(--text);font-size:13px;font-family:Inter,sans-serif;
-  transition:all 0.18s var(--ease);
-}
-.filter-select{flex:0 0 auto;min-width:160px;}
-.search-input{flex:1;min-width:200px;}
-.filter-select:focus,.search-input:focus{outline:none;border-color:var(--ac);box-shadow:0 0 0 3px rgba(212,168,67,0.12);}
-
-.logs-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:16px;}
-.log-stat{
-  background:var(--surface) !important;border:1px solid var(--line) !important;
-  border-radius:12px;padding:14px 12px;text-align:center;
-  transition:all 0.2s var(--ease);
-}
-.log-stat:hover{transform:translateY(-2px);border-color:var(--ac-line) !important;box-shadow:0 6px 20px rgba(212,168,67,0.08);}
-.log-stat-num{font-size:22px;font-weight:800;color:var(--ac);letter-spacing:-0.025em;font-variant-numeric:tabular-nums;line-height:1;}
-.log-stat-lbl{font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.08em;margin-top:4px;font-weight:700;}
-
-.logs-box{background:var(--surface) !important;border:1px solid var(--line) !important;border-radius:var(--r-lg) !important;overflow:hidden;transition:border-color 0.2s var(--ease) !important;}
-.logs-box:hover{border-color:var(--ac-line) !important;}
-.logs-head{padding:14px 20px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;background:linear-gradient(180deg, rgba(212,168,67,0.04), transparent);}
-.logs-title{font-size:11px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:0.10em;display:flex;align-items:center;gap:8px;}
-.logs-title i{color:var(--ac);font-size:13px;}
-.logs-count{font-size:10.5px;color:var(--text-3);background:var(--ac-soft);padding:3px 10px;border-radius:99px;font-weight:700;letter-spacing:0.05em;border:1px solid var(--ac-line);}
-
-.logs-body{max-height:560px;overflow-y:auto;overflow-anchor:none;}
-
-.empty{text-align:center;padding:36px 20px;color:var(--text-3);font-size:13px;}
-.empty i{display:block;font-size:32px;margin-bottom:10px;opacity:0.4;}
-
-.action-badge{padding:3px 9px;border-radius:6px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;display:inline-flex;align-items:center;gap:4px;border:1px solid currentColor;}
-
-@media (max-width:700px){.logs-body{max-height:420px;}}
-</style>
 
 <div class="logs-toolbar">
   <select id="guild-filter" class="filter-select"><option value="">Все серверы</option></select>
