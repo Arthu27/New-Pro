@@ -4198,6 +4198,12 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
     def antiraid_page():
         return render_template('antiraid.html', role=session.get('role'), username=session.get('username'))
 
+    @app.route('/rejoin-roles')
+    @login_required
+    @role_required('admin')
+    def rejoin_roles_page():
+        return render_template('rejoin_roles.html', role=session.get('role'), username=session.get('username'))
+
     @app.route('/backup')
     @login_required
     @role_required('owner')
@@ -4696,6 +4702,82 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
             data[bkey] = bool(data.get(bkey, False))
         with open(f, 'w') as fp: json.dump(data, fp, indent=2, ensure_ascii=False)
         return jsonify({'success': True})
+
+    # ── RE-JOIN ROLES API ────────────────────────────────────────────────────
+
+    @app.route('/api/guild/<guild_id>/rejoin-roles', methods=['GET', 'POST'])
+    @login_required
+    @role_required('admin')
+    def api_rejoin_roles(guild_id):
+        f = f'data/rejoin_{guild_id}.json'
+        if request.method == 'GET':
+            if not os.path.exists(f):
+                return jsonify({'enabled': False, 'tracked_role_ids': [], 'leave_log': []})
+            try:
+                with open(f, 'r', encoding='utf-8') as fp:
+                    d = json.load(fp)
+            except Exception:
+                d = {'enabled': False, 'tracked_role_ids': [], 'leave_log': []}
+            d.setdefault('enabled', False)
+            d.setdefault('tracked_role_ids', [])
+            d.setdefault('leave_log', [])
+            return jsonify(d)
+
+        data = request.get_json(silent=True) or {}
+        enabled = bool(data.get('enabled', False))
+        # tracked_role_ids: sadece sayısal string'leri kabul et, max 50
+        raw_ids = data.get('tracked_role_ids', [])
+        if not isinstance(raw_ids, list):
+            raw_ids = []
+        seen = set()
+        clean_ids = []
+        for x in raw_ids:
+            s = str(x)
+            if s.isdigit() and 17 <= len(s) <= 22 and s not in seen:
+                seen.add(s)
+                clean_ids.append(s)
+            if len(clean_ids) >= 50:
+                break
+        # Bot'un rol listesiyle çapraz kontrol — listede olmayan roller sunucu tarafından silinmiş olabilir
+        import web.app as _app
+        bot = _app.bot_instance
+        guild = None
+        if bot:
+            guild = bot.get_guild(int(guild_id))
+            if guild is None:
+                for g in bot.guilds:
+                    if str(g.id) == str(guild_id):
+                        guild = g
+                        break
+
+        if guild is not None:
+            valid_ids = [rid for rid in clean_ids if guild.get_role(int(rid)) is not None]
+        else:
+            # Bot offline veya guild bulunamadı — tüm ID'leri kabul et
+            valid_ids = clean_ids
+
+        # leave_log korunuyor (cog tarafından yazılır)
+        existing = {}
+        if os.path.exists(f):
+            try:
+                with open(f, 'r', encoding='utf-8') as fp:
+                    existing = json.load(fp)
+            except Exception:
+                existing = {}
+        leave_log = data.get('leave_log')
+        if not isinstance(leave_log, list):
+            leave_log = existing.get('leave_log', [])
+        # leave_log'u 200 ile sınırla
+        leave_log = leave_log[-200:]
+        result = {
+            'enabled': enabled,
+            'tracked_role_ids': valid_ids,
+            'leave_log': leave_log,
+        }
+        os.makedirs('data', exist_ok=True)
+        with open(f, 'w', encoding='utf-8') as fp:
+            json.dump(result, fp, indent=2, ensure_ascii=False)
+        return jsonify({'success': True, 'tracked_count': len(valid_ids)})
 
     # ── ROZET API ────────────────────────────────────────────────────────────
 

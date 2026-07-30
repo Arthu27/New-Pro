@@ -65,6 +65,7 @@ data/lockdown_*.json
 data/sug_settings_*.json
 data/starboard_settings_*.json
 data/ticket_settings_*.json
+data/rejoin_*.json
 data/health_*.json
 data/voice_stats_*.json
 data/invite_*.json
