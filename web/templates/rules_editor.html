@@ -29,34 +29,34 @@
   .publish-btn:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(39,174,96,0.4);}
 </style>
 
-<select style="display:none" style="display:none" id="guild-select" class="guild-select" onchange="loadRules()">
-  <option value="">Сервер выбрать...</option>
+<select  id="guild-select" class="guild-select" onchange="loadRules()">
+  <option value="">Выберите сервер...</option>
 </select>
 
 <div class="grid2">
   <div class="re-box">
-    <div class="re-title"><i class="fas fa-edit"></i> Правила Redaktirovat</div>
+    <div class="re-title"><i class="fas fa-edit"></i> Редактирование правил</div>
     <div id="rules-list"></div>
-    <button class="btn-add" onclick="addRule()"><i class="fas fa-plus"></i> Правило Добавить</button>
+    <button class="btn-add" onclick="addRule()"><i class="fas fa-plus"></i> Добавить правило</button>
     <div style="display:flex;gap:10px;margin-top:12px;">
       <button class="save-btn" onclick="saveRules()" style="flex:1;"><i class="fas fa-save"></i> Сохранить</button>
     </div>
   </div>
 
   <div class="re-box">
-    <div class="re-title"><i class="fas fa-eye"></i> Önizleme & Yayınla</div>
+    <div class="re-title"><i class="fas fa-eye"></i> Предпросмотр & Опубликовать</div>
     <div id="preview" style="background:rgba(0,0,0,0.3);border-radius:14px;padding:15px;min-height:150px;margin-bottom:15px;"></div>
-    <label class="field-label">Yayınlanacak Канал</label>
+    <label class="field-label">Опубликоватьnacak Канал</label>
     <select id="rules-channel" class="field-sel" style="margin-bottom:12px;"></select>
     <button class="publish-btn" onclick="publishRules()">
-      <i class="fas fa-paper-plane"></i> Discord'a Yayınla
+      <i class="fas fa-paper-plane"></i> Discord'a Опубликовать
     </button>
   </div>
 </div>
 
 <script>
 var rules = [];
-var selectedGuild = '1421244140359909513';
+var selectedGuild = '{{ main_guild_id }}';
 
 async function loadGuilds() {
   // Sabit сервер ID
@@ -93,7 +93,7 @@ async function loadRules() {
   ]);
   rules = Array.isArray(rRes) ? rRes : [];
   var chSel = document.getElementById('rules-channel');
-  chSel.innerHTML = '<option value="">Канал выбрать...</option>';
+  chSel.innerHTML = '<option value="">Выберите канал...</option>';
   var channels = Array.isArray(chRes) ? chRes : (chRes.channels||[]);
   channels.filter(function(c){return c.type==='text';}).forEach(function(c){
     chSel.innerHTML += '<option value="'+c.id+'">#'+c.name+'</option>';
@@ -104,7 +104,7 @@ async function loadRules() {
 function renderRules() {
   var box = document.getElementById('rules-list');
   if(!rules.length) {
-    box.innerHTML = '<p style="color:#5a5040;font-size:13px;font-style:italic;">Пока правило yok. + Правило Добавить butonuna bas.</p>';
+    box.innerHTML = '<p style="color:#5a5040;font-size:13px;font-style:italic;">Пока правило yok. + Добавить правило butonuna bas.</p>';
     updatePreview(); return;
   }
   box.innerHTML = rules.map(function(r,i){
@@ -149,7 +149,7 @@ async function saveRules() {
 async function publishRules() {
   if(!selectedGuild) { alert('Сервер выбрать!'); return; }
   var ch = document.getElementById('rules-channel').value;
-  if(!ch) { alert('Канал выбрать!'); return; }
+  if(!ch) { alert('Выберите канал!'); return; }
   if(!rules.length) { alert('До правило добавить!'); return; }
   var r = await fetch('/api/guild/'+selectedGuild+'/rules/publish', {
     method:'POST', headers:{'Content-Type':'application/json'},
@@ -157,7 +157,7 @@ async function publishRules() {
   });
   var d = await r.json();
   var btn = event.target;
-  if(d.success) { btn.textContent='✅ Yayınlandı!'; setTimeout(function(){btn.innerHTML='<i class="fas fa-paper-plane"></i> Discord\'a Yayınla';},2000); }
+  if(d.success) { btn.textContent='✅ Опубликовано!'; setTimeout(function(){btn.innerHTML='<i class="fas fa-paper-plane"></i> Discord\'a Опубликовать';},2000); }
   else alert('❌ '+(d.error||'Ошибка'));
 }
 

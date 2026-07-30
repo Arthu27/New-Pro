@@ -25,22 +25,22 @@
 
 <div class="vars-box">
   <i class="fas fa-code" style="color:#c8922a;margin-right:6px;"></i>
-  Использовать değişkenler:
+  Использовать переменные:
   <span>{user}</span> <span>{сервер}</span> <span>{count}</span> <span>{etiket}</span>
 </div>
 
 <div class="editor-grid">
   <div class="editor-box">
-    <div class="section-title"><i class="fas fa-door-open"></i> Приветствие Сообщение</div>
-    <div class="form-group"><label>Канал</label><select id="welcome-channel"><option value="">Канал выбрать...</option></select></div>
-    <div class="form-group"><label>Заsectionовок</label><input type="text" id="welcome-title" placeholder="Добро пожаловать Geldin, {user}!"></div>
-    <div class="form-group"><label>Сообщение</label><textarea id="welcome-msg" placeholder="{сервер} сервер добро пожаловать geldin!"></textarea></div>
-    <div class="form-group"><label>Эмбед Rengi</label><input type="color" id="welcome-color" value="#c8922a" style="height:40px;cursor:pointer;background:rgba(255,255,255,0.04);border:1px solid rgba(212,168,67,0.2);border-radius:8px;padding:3px;"></div>
+    <div class="section-title"><i class="fas fa-door-open"></i> Приветственное сообщение</div>
+    <div class="form-group"><label>Канал</label><select id="welcome-channel"><option value="">Выберите канал...</option></select></div>
+    <div class="form-group"><label>Заголовок</label><input type="text" id="welcome-title" placeholder="Добро пожаловать, {user}!"></div>
+    <div class="form-group"><label>Сообщение</label><textarea id="welcome-msg" placeholder="{сервер} сервер приветствует тебя!"></textarea></div>
+    <div class="form-group"><label>Цвет эмбеда</label><input type="color" id="welcome-color" value="#c8922a" style="height:40px;cursor:pointer;background:rgba(255,255,255,0.04);border:1px solid rgba(212,168,67,0.2);border-radius:8px;padding:3px;"></div>
     <div class="preview-box">
-      <div style="font-size:10px;color:rgba(240,232,208,0.35);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.08em;">Önizleme</div>
+      <div style="font-size:10px;color:rgba(240,232,208,0.35);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.08em;">Предпросмотр</div>
       <div class="preview-embed" id="welcome-preview" style="border-left:3px solid #c8922a;">
-        <div class="preview-title">Добро пожаловать Geldin!</div>
-        <div class="preview-desc">Önizleme здесь видеть...</div>
+        <div class="preview-title">Добро пожаловать приветствуем!</div>
+        <div class="preview-desc">Предпросмотр здесь видеть...</div>
       </div>
     </div>
     <button class="save-btn" onclick="saveWelcome()"><i class="fas fa-save" style="margin-right:6px;"></i>Сохранить</button>
@@ -48,15 +48,15 @@
 
   <div class="editor-box" style="border-color:rgba(224,85,85,0.15);">
     <div class="section-title" style="border-color:rgba(224,85,85,0.1);"><i class="fas fa-door-closed" style="color:#e05555;"></i> Пока Пока Сообщение</div>
-    <div class="form-group"><label>Канал</label><select id="leave-channel"><option value="">Канал выбрать...</option></select></div>
-    <div class="form-group"><label>Заsectionовок</label><input type="text" id="leave-title" placeholder="Пока Пока, {user}!"></div>
+    <div class="form-group"><label>Канал</label><select id="leave-channel"><option value="">Выберите канал...</option></select></div>
+    <div class="form-group"><label>Заголовок</label><input type="text" id="leave-title" placeholder="Пока Пока, {user}!"></div>
     <div class="form-group"><label>Сообщение</label><textarea id="leave-msg" placeholder="{user} с сервера покинул."></textarea></div>
-    <div class="form-group"><label>Эмбед Rengi</label><input type="color" id="leave-color" value="#e05555" style="height:40px;cursor:pointer;background:rgba(255,255,255,0.04);border:1px solid rgba(212,168,67,0.2);border-radius:8px;padding:3px;"></div>
+    <div class="form-group"><label>Цвет эмбеда</label><input type="color" id="leave-color" value="#e05555" style="height:40px;cursor:pointer;background:rgba(255,255,255,0.04);border:1px solid rgba(212,168,67,0.2);border-radius:8px;padding:3px;"></div>
     <div class="preview-box">
-      <div style="font-size:10px;color:rgba(240,232,208,0.35);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.08em;">Önizleme</div>
+      <div style="font-size:10px;color:rgba(240,232,208,0.35);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.08em;">Предпросмотр</div>
       <div class="preview-embed" id="leave-preview" style="border-left:3px solid #e05555;">
         <div class="preview-title">Пока Пока!</div>
-        <div class="preview-desc">Önizleme здесь видеть...</div>
+        <div class="preview-desc">Предпросмотр здесь видеть...</div>
       </div>
     </div>
     <button class="save-btn" onclick="saveLeave()" style="background:rgba(224,85,85,0.15);color:#e05555;"><i class="fas fa-save" style="margin-right:6px;"></i>Сохранить</button>
@@ -64,7 +64,7 @@
 </div>
 
 <script>
-var selectedGuild = '1421244140359909513';
+var selectedGuild = '{{ main_guild_id }}';
 
 async function loadSettings() {
   try {
@@ -74,14 +74,14 @@ async function loadSettings() {
     var r = await fetch('/api/guild/' + selectedGuild + '/channels');
     if (!r.ok) {
       console.error('Channels API error:', r.status, r.statusText);
-      alert('Канал listesi загруз. Пожалуйста sayfayı обновл.');
+      alert('Канал listesi загруз. Пожалуйста страница обновл.');
       return;
     }
     
     var chData = await r.json();
     console.log('Channels data:', chData);
     
-    // API'den gelen veri formatını контроль et
+    // API'den gelen veri формат контроль et
     var channels = [];
     if (Array.isArray(chData)) {
       channels = chData.filter(function(c) { return c.type === 'text'; });
@@ -89,7 +89,7 @@ async function loadSettings() {
       channels = chData.channels.filter(function(c) { return c.type === 'text'; });
     } else if (chData.error) {
       console.error('Channels API returned error:', chData.error);
-      alert('Канал listesi alınamadı: ' + chData.error);
+      alert('Не удалось получить список каналов: ' + chData.error);
       return;
     }
     
@@ -97,7 +97,7 @@ async function loadSettings() {
 
     ['welcome-channel','leave-channel'].forEach(function(id) {
       var sel = document.getElementById(id);
-      sel.innerHTML = '<option value="">Канал выбрать...</option>';
+      sel.innerHTML = '<option value="">Выберите канал...</option>';
       channels.forEach(function(c) {
         var o = document.createElement('option');
         o.value = c.id; 
@@ -129,20 +129,20 @@ async function loadSettings() {
     }
   } catch(e) { 
     console.error('loadSettings ошибки:', e); 
-    alert('Настройки загруз ошибка oluştu: ' + e.message);
+    alert('Настройки загруз ошибка произошла: ' + e.message);
   }
   updatePreviews();
 }
 
 function updatePreviews() {
-  var wt = document.getElementById('welcome-title').value || 'Добро пожаловать Geldin!';
-  var wm = document.getElementById('welcome-msg').value || 'Önizleme здесь видеть...';
+  var wt = document.getElementById('welcome-title').value || 'Добро пожаловать приветствуем!';
+  var wm = document.getElementById('welcome-msg').value || 'Предпросмотр здесь видеть...';
   var wc = document.getElementById('welcome-color').value;
   document.getElementById('welcome-preview').style.borderLeftColor = wc;
   document.getElementById('welcome-preview').innerHTML = '<div class="preview-title">'+wt+'</div><div class="preview-desc">'+wm+'</div>';
   
   var lt = document.getElementById('leave-title').value || 'Пока Пока!';
-  var lm = document.getElementById('leave-msg').value || 'Önizleme здесь видеть...';
+  var lm = document.getElementById('leave-msg').value || 'Предпросмотр здесь видеть...';
   var lc = document.getElementById('leave-color').value;
   document.getElementById('leave-preview').style.borderLeftColor = lc;
   document.getElementById('leave-preview').innerHTML = '<div class="preview-title">'+lt+'</div><div class="preview-desc">'+lm+'</div>';

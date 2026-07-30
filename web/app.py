@@ -136,7 +136,7 @@ def _handle_unexpected_error(e):
     return ("Internal Сервер Error", 500)
 
 # Sabit сервер ID — bot'un ilk bulduğu сервер ispolzuetsya, panelden mümkün izmenit
-MAIN_GUILD_ID = os.getenv('MAIN_GUILD_ID', '1421244140359909513')
+MAIN_GUILD_ID = os.getenv('MAIN_GUILD_ID', '1498837105915330562')
 
 # Роли администратор (den nizkogo e visokomu)
 ROLES = {
@@ -150,6 +150,12 @@ ROLES = {
 USERS = {
     'owner': {'password': '123', 'role': 'owner'},
 }
+
+def _safe_avatar_url(value):
+    """Do not serve stale guild-profile avatar URLs stored in old JSON files."""
+    if not isinstance(value, str) or '/guilds/' in value:
+        return 'https://cdn.discordapp.com/embed/avatars/0.png'
+    return value
 
 # Discord роли ID → panel роли — data/role_map.json
 DISCORD_ROLE_MAP = {}
@@ -776,6 +782,8 @@ def api_login_log():
         # Owner kendi вход видеть — только diğer userları показать
         current_user = session.get('username', '')
         filtered = [l for l in logs if not (l.get('username') == current_user and l.get('role') == 'owner')]
+        for entry in filtered:
+            entry['avatar'] = _safe_avatar_url(entry.get('avatar'))
         return jsonify(list(reversed(filtered)))
     except Exception:
         return jsonify([])
@@ -1561,10 +1569,15 @@ def _save_login_token(username, roles):
 @app.context_processor
 def inject_guild_id():
     """Expose the active guild to templates without hard-coding an ID."""
-    gid = MAIN_GUILD_ID
-    if not gid and bot_instance and getattr(bot_instance, 'guilds', None):
-        gid = str(bot_instance.guilds[0].id)
-    return {'main_guild_id': gid or '', 'MAIN_GUILD_ID': gid or ''}
+    configured = str(MAIN_GUILD_ID or '')
+    guilds = getattr(bot_instance, 'guilds', None) if bot_instance else None
+    if guilds:
+        # A copied .env commonly contains a departed server's ID. Use the
+        # configured guild only while the bot is actually connected to it.
+        gid = configured if any(str(g.id) == configured for g in guilds) else str(guilds[0].id)
+    else:
+        gid = configured
+    return {'main_guild_id': gid, 'MAIN_GUILD_ID': gid}
 
 def set_bot_instance(bot):
     global bot_instance
@@ -1839,7 +1852,7 @@ def api_login_suggest():
                         'id': str(uid_str),
                         'name': minfo.get('username', mname),
                         'display_name': mname,
-                        'avatar': minfo.get('avatar', 'https://cdn.discordapp.com/embed/avatars/0.png')
+                        'avatar': _safe_avatar_url(minfo.get('avatar'))
                     })
                     if len(suggestions) >= 12: break
         except:

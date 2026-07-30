@@ -24,22 +24,22 @@
 
 <!-- Stats -->
 <div class="dp-stats" id="dp-stats">
-  <div class="dp-stat"><div class="dp-stat-val">—</div><div class="dp-stat-lbl">Всего Puan</div></div>
-  <div class="dp-stat"><div class="dp-stat-val">—</div><div class="dp-stat-lbl">Активен Задача</div></div>
+  <div class="dp-stat"><div class="dp-stat-val">—</div><div class="dp-stat-lbl">Всего очков</div></div>
+  <div class="dp-stat"><div class="dp-stat-val">—</div><div class="dp-stat-lbl">Активных задач</div></div>
   <div class="dp-stat"><div class="dp-stat-val">—</div><div class="dp-stat-lbl">OKlanan</div></div>
-  <div class="dp-stat"><div class="dp-stat-val">—</div><div class="dp-stat-lbl">Ikenbağlantıcı</div></div>
+  <div class="dp-stat"><div class="dp-stat-val">—</div><div class="dp-stat-lbl">Подключившихся</div></div>
 </div>
 
-<!-- Puan Tablosu -->
+<!-- Таблица очков -->
 <div class="card">
-  <h2>🏆 Puan Tablosu</h2>
-  <div id="leaderboard" style="color:rgba(240,232,208,0.3);font-size:13px;">Сервер выберите...</div>
+  <h2>🏆 Таблица очков</h2>
+  <div id="leaderboard" style="color:rgba(240,232,208,0.3);font-size:13px;">Выберите сервер...</div>
 </div>
 
 <!-- Активен Задачи -->
 <div class="card">
   <h2>⚡ Активен Задачи</h2>
-  <div id="active-duties" style="color:rgba(240,232,208,0.3);font-size:13px;">Сервер выберите...</div>
+  <div id="active-duties" style="color:rgba(240,232,208,0.3);font-size:13px;">Выберите сервер...</div>
 </div>
 
 <script>
@@ -60,17 +60,17 @@ async function loadDuty(gid) {
     var participants = Object.keys(d.points).length;
 
     document.getElementById('dp-stats').innerHTML =
-      stat(totalPts + ' ⭐', 'Всего Puan') +
-      stat(activeCount, 'Активен Задача') +
+      stat(totalPts + ' ⭐', 'Всего очков') +
+      stat(activeCount, 'Активных задач') +
       stat(histCount, 'OKlanan') +
-      stat(participants, 'Ikenbağlantıcı');
+      stat(participants, 'Подключившихся');
 
     // Leaderboard
     var sorted = Object.entries(d.points).sort(function(a,b){return (b[1].total||0)-(a[1].total||0);}).slice(0,15);
     var maxPts = sorted.length ? (sorted[0][1].total || 1) : 1;
     var medals = ['🥇','🥈','🥉'];
     document.getElementById('leaderboard').innerHTML = sorted.length ?
-      '<table class="dp-table"><thead><tr><th>#</th><th>Пользователь</th><th>Puan</th><th>İlerleme</th></tr></thead><tbody>' +
+      '<table class="dp-table"><thead><tr><th>#</th><th>Пользователь</th><th>Очки</th><th>Прогресс</th></tr></thead><tbody>' +
       sorted.map(function(e,i){
         var pct = Math.round((e[1].total||0)/maxPts*100);
         return '<tr><td>' + (medals[i]||('#'+(i+1))) + '</td>' +
@@ -83,7 +83,7 @@ async function loadDuty(gid) {
     // Active duties
     var actives = Object.entries(d.duty).filter(function(e){return e[1].active;});
     document.getElementById('active-duties').innerHTML = actives.length ?
-      '<table class="dp-table"><thead><tr><th>Пользователь</th><th>Задачи</th><th>Başlangıç</th></tr></thead><tbody>' +
+      '<table class="dp-table"><thead><tr><th>Пользователь</th><th>Задачи</th><th>Начало</th></tr></thead><tbody>' +
       actives.map(function(e){
         var uid = e[0], u = e[1].active;
         var tasks = (u.tasks||[]).join(', ');
@@ -92,7 +92,7 @@ async function loadDuty(gid) {
           '<td style="color:#c8922a;">' + tasks + '</td>' +
           '<td style="color:rgba(240,232,208,0.4);">' + since + '</td></tr>';
       }).join('') + '</tbody></table>'
-      : '<div style="color:rgba(240,232,208,0.3);">Şu an activity задача yok.</div>';
+      : '<div style="color:rgba(240,232,208,0.3);">Сейчас нет активных задач.</div>';
 
   } catch(e) {
     document.getElementById('leaderboard').innerHTML = '<div style="color:#e05555;">Загруз.</div>';

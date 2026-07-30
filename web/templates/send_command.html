@@ -18,14 +18,14 @@
 <div class="sc-box">
   <div class="form-group">
     <label class="field-label">Сервер</label>
-    <select style="display:none" id="guild-select" class="field-input" onchange="loadChannels()">
+    <select  id="guild-select" class="field-input" onchange="loadChannels()">
       <option value="">Загрузка...</option>
     </select>
   </div>
   <div class="form-group">
     <label class="field-label">Канал</label>
     <select id="channel-select" class="field-input" disabled>
-      <option value="">До сервер выбрать</option>
+      <option value="">Сначала выберите сервер</option>
     </select>
   </div>
   <div class="form-group">
@@ -48,19 +48,19 @@ async function loadChannels() {
     var r = await fetch('/api/guild/' + GUILD_ID + '/channels');
     var data = await r.json();
     var channels = Array.isArray(data) ? data : (data.channels || []);
-    cs.innerHTML = '<option value="">Канал выбрать...</option>';
+    cs.innerHTML = '<option value="">Выберите канал...</option>';
     channels.filter(function(c) { return c.type === 'text'; }).forEach(function(c) {
       var o = document.createElement('option');
       o.value = c.id; o.textContent = '#' + c.name;
       cs.appendChild(o);
     });
-  } catch(e) { cs.innerHTML = '<option value="">Ошибка oluştu</option>'; }
+  } catch(e) { cs.innerHTML = '<option value="">Ошибка произошла</option>'; }
 }
 
 async function sendMessage() {
   var cid = document.getElementById('channel-select').value;
   var msg = document.getElementById('message-input').value.trim();
-  if (!cid || !msg) { showResult('Канал ve сообщение alanlarını doldur!', false); return; }
+  if (!cid || !msg) { showResult('Заполните поля канала и сообщения!', false); return; }
   var btn = document.getElementById('send-btn');
   btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Отправл...';
   try {
@@ -74,7 +74,7 @@ async function sendMessage() {
     else showResult('Ошибка: ' + (d.error || 'Bilinmeyen ошибка'), false);
   } catch(e) {
     btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane" style="margin-right:6px;"></i>Отправить';
-    showResult('Ссылка ошибки', false);
+    showResult('Ошибка соединения', false);
   }
 }
 

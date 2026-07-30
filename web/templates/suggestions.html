@@ -1,6 +1,6 @@
 ﻿{% extends "base.html" %}
-{% block title %}Predlojenieler - Aether{% endblock %}
-{% block page_title %}💡 ПРЕДЛОЖЕНИЕ YÖNETİCİSİ{% endblock %}
+{% block title %}предложениеler - Aether{% endblock %}
+{% block page_title %}💡 ПРЕДЛОЖЕНИЕ РУКОВОДИТЕЛЬ{% endblock %}
 {% block content %}
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&display=swap');
@@ -43,27 +43,27 @@
 
 <div class="sg-hero">
   <div style="font-size:60px;margin-bottom:10px;">💡</div>
-  <div class="hero-title">💡 Predlojenie Yöneticisi</div>
-  <div class="hero-sub">Сервер predlojeniya yönet ve oylama результат takip et</div>
+  <div class="hero-title">💡 Менеджер предложений</div>
+  <div class="hero-sub">Управляйте предложениями и следите за результатами голосования</div>
 </div>
 
 <div class="controls-bar">
-  <select style="display:none" style="display:none" id="guild-select" class="guild-sel" onchange="loadSuggestions()">
-    <option value="">🏠 Сервер выбрать...</option>
+  <select  id="guild-select" class="guild-sel" onchange="loadSuggestions()">
+    <option value="">🏠 Выберите сервер...</option>
   </select>
 </div>
 
 <div class="filter-tabs">
   <div class="tab active" onclick="filterSuggestions('all', this)">📋 Все</div>
-  <div class="tab" onclick="filterSuggestions('pending', this)">⏳ Bekleyenler</div>
-  <div class="tab" onclick="filterSuggestions('approved', this)">✅ Onaylanan</div>
-  <div class="tab" onclick="filterSuggestions('denied', this)">❌ Reddedilenler</div>
+  <div class="tab" onclick="filterSuggestions('pending', this)">⏳ Ожидающие</div>
+  <div class="tab" onclick="filterSuggestions('approved', this)">✅ Подтверждённые</div>
+  <div class="tab" onclick="filterSuggestions('denied', this)">❌ Reddedсnler</div>
 </div>
 
 <div id="sg-list" class="sg-grid"></div>
 
 <script>
-var selectedGuild = '1421244140359909513';
+var selectedGuild = '{{ main_guild_id }}';
 var allSuggestions = [];
 var currentFilter = 'all';
 
@@ -112,18 +112,18 @@ function renderSuggestions() {
   var filtered = currentFilter === 'all' ? allSuggestions : allSuggestions.filter(s => s.status === currentFilter);
   var box = document.getElementById('sg-list');
   if (!filtered.length) {
-    box.innerHTML = '<div class="empty-state"><div style="font-size:60px;margin-bottom:16px;">💡</div><p>Bu kategoride predlojenie yok.</p></div>';
+    box.innerHTML = '<div class="empty-state"><div style="font-size:60px;margin-bottom:16px;">💡</div><p>В этой категории предложений нет.</p></div>';
     return;
   }
   box.innerHTML = filtered.map(function(s, i) {
-    var statusMap = {pending:'⏳ Bekleme', approved:'✅ Onaylandı', denied:'❌ Reddedildi'};
+    var statusMap = {pending:'⏳ Ожидание', approved:'✅ Подтверждено', denied:'❌ Отклонено'};
     var statusClass = {pending:'status-pending', approved:'status-approved', denied:'status-denied'};
     var date = '';
     try { date = new Date(s.created_at).toLocaleDateString('tr-TR'); } catch(e) {}
     var upvotes = s.upvotes || 0;
     var downvotes = s.downvotes || 0;
     return '<div class="sg-card" style="animation-delay:'+(i*0.06)+'s">'+
-      '<span class="sg-status '+(statusClass[s.status]||'status-pending')+'">'+(statusMap[s.status]||'⏳ Bekleme')+'</span>'+
+      '<span class="sg-status '+(statusClass[s.status]||'status-pending')+'">'+(statusMap[s.status]||'⏳ Ожидание')+'</span>'+
       '<div class="sg-text">💬 '+s.content+'</div>'+
       '<div class="sg-author">'+
         '<img class="sg-avatar" src="'+(s.avatar||'https://cdn.discordapp.com/embed/avatars/0.png')+'" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">'+
@@ -135,8 +135,8 @@ function renderSuggestions() {
       '</div>'+
       (s.status === 'pending' ?
         '<div class="sg-actions">'+
-          '<button class="btn-approve" onclick="updateSuggestion(\''+s.id+'\',\'approved\')">✅ Onayla</button>'+
-          '<button class="btn-deny" onclick="updateSuggestion(\''+s.id+'\',\'denied\')">❌ Reddet</button>'+
+          '<button class="btn-approve" onclick="updateSuggestion(\''+s.id+'\',\'approved\')">✅ Подтвердить</button>'+
+          '<button class="btn-deny" onclick="updateSuggestion(\''+s.id+'\',\'denied\')">❌ Отклонить</button>'+
         '</div>' : '') +
     '</div>';
   }).join('');

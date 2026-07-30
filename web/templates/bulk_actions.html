@@ -1,5 +1,5 @@
-﻿{% extends "base.html" %}
-{% block title %}Toplu Действия - Aether{% endblock %}
+{% extends "base.html" %}
+{% block title %}Массовое Действия - Aether{% endblock %}
 {% block page_title %}<i class="fas fa-bolt" style="color:#c8922a;animation:pulse 2s infinite;"></i> TOPLU ДЕЙСТВИЯ{% endblock %}
 {% block content %}
 <style>
@@ -25,21 +25,21 @@
   .action-icon{width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:15px;}
 </style>
 
-<select style="display:none" style="display:none" id="guild-select" class="guild-select" onchange="loadData()">
-  <option value="">🌐 Сервер выбрать...</option>
+<select  id="guild-select" class="guild-select" onchange="loadData()">
+  <option value="">🌐 Выберите сервер...</option>
 </select>
 
-<!-- Toplu Сообщение Удалитьme -->
+<!-- Удалить сообщения оптом -->
 <div class="action-box">
-  <div class="action-title"><i class="fas fa-trash-alt"></i> Toplu Сообщение Удалитьme</div>
-  <div class="warning-box"><i class="fas fa-exclamation-triangle"></i> Bu действие geri alınamaz! Dikkatli использовать.</div>
+  <div class="action-title"><i class="fas fa-trash-alt"></i> Удалить сообщения оптом</div>
+  <div class="warning-box"><i class="fas fa-exclamation-triangle"></i> Это действие нельзя отменить! Будьте осторожны.</div>
   <div style="display:flex;gap:12px;margin-bottom:15px;flex-wrap:wrap;">
     <div style="flex:1;min-width:200px;">
       <label class="field-label">Канал</label>
       <select id="purge-channel" class="field-input"></select>
     </div>
     <div style="width:150px;">
-      <label class="field-label">Сообщение Число (max 100)</label>
+      <label class="field-label">Количество сообщений (max 100)</label>
       <input type="number" id="purge-count" value="10" min="1" max="100" class="field-input">
     </div>
   </div>
@@ -47,23 +47,23 @@
   <div id="purge-result" class="result-box"></div>
 </div>
 
-<!-- Toplu Роль Ver/Al -->
+<!-- Массовое управление ролями -->
 <div class="action-box">
-  <div class="action-title"><i class="fas fa-user-tag"></i> Toplu Роль Ver / Al</div>
+  <div class="action-title"><i class="fas fa-user-tag"></i> Массовое управление ролями</div>
   <div class="grid3" style="margin-bottom:15px;">
     <div>
-      <label class="field-label">Hedef Роль (sahip olmak olanlar)</label>
+      <label class="field-label">Целевая роль (у кого есть)</label>
       <select id="bulk-target-role" class="field-input"></select>
     </div>
     <div>
-      <label class="field-label">Verilecek / Alınacak Роль</label>
+      <label class="field-label">Роль для добавления / удаления</label>
       <select id="bulk-action-role" class="field-input"></select>
     </div>
     <div>
       <label class="field-label">Действие</label>
       <select id="bulk-role-action" class="field-input">
-        <option value="add">✅ Роль Ver</option>
-        <option value="remove">❌ Роль Al</option>
+        <option value="add">✅ Добавить роль</option>
+        <option value="remove">❌ Удалить роль</option>
       </select>
     </div>
   </div>
@@ -71,24 +71,24 @@
   <div id="roles-result" class="result-box"></div>
 </div>
 
-<!-- Toplu DM -->
+<!-- Массовое DM -->
 <div class="action-box">
-  <div class="action-title"><i class="fas fa-envelope-open-text"></i> Toplu DM Отправить</div>
-  <div class="warning-box"><i class="fas fa-info-circle"></i> Только выбрать роли sahip olmak участник отправл!</div>
+  <div class="action-title"><i class="fas fa-envelope-open-text"></i> Массовая отправка ЛС</div>
+  <div class="warning-box"><i class="fas fa-info-circle"></i> Сообщение будет отправлено участникам с выбранной ролью.</div>
   <div style="margin-bottom:12px;">
-    <label class="field-label">Hedef Роль</label>
+    <label class="field-label">Целевая роль</label>
     <select id="dm-role" class="field-input"></select>
   </div>
   <div style="margin-bottom:15px;">
     <label class="field-label">Сообщение</label>
-    <textarea id="dm-message" class="field-input" placeholder="Отправл сообщение..." style="min-height:90px;resize:vertical;"></textarea>
+    <textarea id="dm-message" class="field-input" placeholder="Введите сообщение..." style="min-height:90px;resize:vertical;"></textarea>
   </div>
   <button class="safe-btn" onclick="bulkDM()"><i class="fas fa-paper-plane"></i> Отправить</button>
   <div id="dm-result" class="result-box"></div>
 </div>
 
 <script>
-var MAIN_GID = '1421244140359909513';
+var MAIN_GID = '{{ main_guild_id }}';
 var selectedGuild = MAIN_GID;
 
 async function loadData(gid_param) {
@@ -101,16 +101,16 @@ async function loadData(gid_param) {
   var channels = Array.isArray(chRes) ? chRes : (chRes.channels || []);
   var chOpts = channels.filter(function(c){return c.type==='text';})
     .map(function(c){return '<option value="'+c.id+'">#'+c.name+'</option>';}).join('');
-  document.getElementById('purge-channel').innerHTML = chOpts || '<option>Канал yok</option>';
-  var role = roles.map(function(r){return '<option value="'+r.id+'">'+r.name+'</option>';}).join('');
+  document.getElementById('purge-channel').innerHTML = chOpts || '<option>Нет текстовых каналов</option>';
+  var roleOptions = roles.map(function(r){return '<option value="'+r.id+'">'+r.name+'</option>';}).join('');
   ['bulk-target-role','bulk-action-role','dm-role'].forEach(function(id){
-    document.getElementById(id).innerHTML = roles || '<option>Роль yok</option>';
+    document.getElementById(id).innerHTML = roleOptions || '<option value="">Нет доступных ролей</option>';
   });
 }
 
 async function purgeMessages() {
-  if (!selectedGuild) { alert('Сервер выбрать!'); return; }
-  if (!confirm('Сообщения удалить если хотите emin misiniz mı siz?')) return;
+  if (!selectedGuild) { alert('Сервер не найден.'); return; }
+  if (!confirm('Удалить выбранные сообщения?')) return;
   var r = await fetch('/api/guild/'+selectedGuild+'/purge', {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({channel_id:document.getElementById('purge-channel').value, count:parseInt(document.getElementById('purge-count').value)})
@@ -120,26 +120,26 @@ async function purgeMessages() {
 }
 
 async function bulkRole() {
-  if (!selectedGuild) { alert('Сервер выбрать!'); return; }
+  if (!selectedGuild) { alert('Сервер не найден.'); return; }
   var r = await fetch('/api/guild/'+selectedGuild+'/bulk-role', {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({target_role:document.getElementById('bulk-target-role').value, action_role:document.getElementById('bulk-action-role').value, action:document.getElementById('bulk-role-action').value})
   });
   var d = await r.json();
-  showResult('roles-result', d.success, d.success ? d.count+' üüyeyi prismetndı!' : (d.error||'Ошибка'));
+  showResult('roles-result', d.success, d.success ? d.count+' участников обновлено!' : (d.error||'Ошибка'));
 }
 
 async function bulkDM() {
-  if (!selectedGuild) { alert('Сервер выбрать!'); return; }
+  if (!selectedGuild) { alert('Сервер не найден.'); return; }
   var msg = document.getElementById('dm-message').value.trim();
   if (!msg) { alert('Сообщение напишите!'); return; }
-  if (!confirm('Bu роли sahip olmak все участник DM отправл. Devam et?')) return;
+  if (!confirm('Отправить ЛС всем участникам с выбранной ролью?')) return;
   var r = await fetch('/api/guild/'+selectedGuild+'/bulk-dm', {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({role_id:document.getElementById('dm-role').value, message:msg})
   });
   var d = await r.json();
-  showResult('dm-result', d.success, d.success ? d.count+' üüyeyi отправлено!' : (d.error||'Ошибка'));
+  showResult('dm-result', d.success, d.success ? d.count+' участникам отправлено!' : (d.error||'Ошибка'));
 }
 
 function showResult(id, success, msg) {

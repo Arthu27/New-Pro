@@ -267,6 +267,18 @@ def _process_action(answer: str, bot, guild_id: str, session_obj) -> str:
 
 def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_ID='1384282749317152878'):
 
+    def active_guild_id():
+        """Return a live guild ID, never a stale value left in .env."""
+        import web.app as _app
+        bot = _app.bot_instance
+        guilds = getattr(bot, 'guilds', None) if bot else None
+        configured = str(MAIN_GUILD_ID or '')
+        if guilds:
+            if any(str(g.id) == configured for g in guilds):
+                return configured
+            return str(guilds[0].id)
+        return configured
+
     # ── PAGE ROUTES ──────────────────────────────────────────────────────────
 
     @app.route('/ai_ticket_stats')
@@ -339,7 +351,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
     @login_required
     @role_required('admin')
     def giveaway_page():
-        return render_template('giveaway.html', role=session.get('role'), username=session.get('username'), guild_id=MAIN_GUILD_ID)
+        return render_template('giveaway.html', role=session.get('role'), username=session.get('username'), guild_id=active_guild_id())
 
     @app.route('/polls')
     @login_required
@@ -459,7 +471,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
     @login_required
     @role_required('owner')
     def chat_page():
-        return render_template('chat.html', role=session.get('role'), username=session.get('username'), guild_id=MAIN_GUILD_ID)
+        return render_template('chat.html', role=session.get('role'), username=session.get('username'), guild_id=active_guild_id())
 
     @app.route('/bot-settings')
     @login_required
@@ -477,31 +489,31 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
     @login_required
     @role_required('admin')
     def warn_config_page():
-        return render_template('warn_config.html', role=session.get('role'), username=session.get('username'), guild_id=MAIN_GUILD_ID)
+        return render_template('warn_config.html', role=session.get('role'), username=session.get('username'), guild_id=active_guild_id())
 
     @app.route('/duty-panel-web')
     @login_required
     @role_required('admin')
     def duty_panel_web_page():
-        return render_template('duty_panel.html', role=session.get('role'), username=session.get('username'), guild_id=MAIN_GUILD_ID)
+        return render_template('duty_panel.html', role=session.get('role'), username=session.get('username'), guild_id=active_guild_id())
 
     @app.route('/member-search')
     @login_required
     @role_required('admin')
     def member_search_page():
-        return render_template('member_search.html', role=session.get('role'), username=session.get('username'), guild_id=MAIN_GUILD_ID)
+        return render_template('member_search.html', role=session.get('role'), username=session.get('username'), guild_id=active_guild_id())
 
     @app.route('/afk-list')
     @login_required
     @role_required('mod')
     def afk_list_page():
-        return render_template('afk_list.html', role=session.get('role'), username=session.get('username'), guild_id=MAIN_GUILD_ID)
+        return render_template('afk_list.html', role=session.get('role'), username=session.get('username'), guild_id=active_guild_id())
 
     @app.route('/watchlist-panel')
     @login_required
     @role_required('mod')
     def watchlist_panel_page():
-        return render_template('watchlist.html', role=session.get('role'), username=session.get('username'), guild_id=MAIN_GUILD_ID)
+        return render_template('watchlist.html', role=session.get('role'), username=session.get('username'), guild_id=active_guild_id())
 
     @app.route('/my-profile')
     @login_required
@@ -569,13 +581,13 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
     @login_required
     @role_required('uye')
     def birthday_register_page():
-        return render_template('birthday_register.html', role=session.get('role'), username=session.get('username'), guild_id=MAIN_GUILD_ID)
+        return render_template('birthday_register.html', role=session.get('role'), username=session.get('username'), guild_id=active_guild_id())
 
     @app.route('/ai-chat')
     @login_required
     @role_required('uye')
     def ai_chat_page():
-        return render_template('ai_chat_panel.html', role=session.get('role'), username=session.get('username'), guild_id=MAIN_GUILD_ID)
+        return render_template('ai_chat_panel.html', role=session.get('role'), username=session.get('username'), guild_id=active_guild_id())
 
     @app.route('/api/ai-chat', methods=['POST'])
     @login_required
@@ -1977,15 +1989,41 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
     def api_create_role(guild_id):
         import web.app as _app; bot = _app.bot_instance
         import asyncio, discord
-        if not bot: return jsonify({'error': 'Bot offline'})
+        if not bot: return jsonify({'error': 'Bot offline'}), 503
         data = request.get_json(silent=True) or {}
+        name = (data.get('name') or '').strip()
+        if not name:
+            return jsonify({'error': 'Rol adı gerekli'}), 400
+        # Bot'un sahip olduğu guild'lerden biri mi kontrol et
+        try:
+            gid = int(guild_id)
+        except (TypeError, ValueError):
+            return jsonify({'error': 'Geçersiz sunucu ID'}), 400
+        guild = bot.get_guild(gid) if bot else None
+        if guild is None and bot is not None:
+            # Fallback: id'yi string olarak karşılaştır
+            for g in bot.guilds:
+                if str(g.id) == str(guild_id):
+                    guild = g
+                    break
+        if guild is None:
+            return jsonify({'error': f'Bot bu sunucuda bulunmuyor (id={guild_id}). Bot guilds: {[str(g.id) for g in bot.guilds]}'}), 404
         async def do():
-            guild = bot.get_guild(int(guild_id))
-            color_hex = data.get('color', '#dc143c').lstrip('#')
-            color = discord.Color(int(color_hex, 16))
-            await guild.create_role(name=data['name'], color=color)
-        asyncio.run_coroutine_threadsafe(do(), bot.loop).result(timeout=10)
-        return jsonify({'success': True})
+            color_hex = (data.get('color') or '#dc143c').lstrip('#') or 'dc143c'
+            try:
+                color = discord.Color(int(color_hex, 16))
+            except ValueError:
+                color = discord.Color.default()
+            await guild.create_role(name=name, color=color, reason='Aether panel tarafından oluşturuldu')
+        try:
+            asyncio.run_coroutine_threadsafe(do(), bot.loop).result(timeout=10)
+            return jsonify({'success': True})
+        except discord.Forbidden:
+            return jsonify({'error': 'Bu sunucuda rol oluşturma yetkim yok'}), 403
+        except discord.HTTPException as e:
+            return jsonify({'error': f'Discord hatası: {e}'}), 500
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
 
     @app.route('/api/guild/<guild_id>/roles/<role_id>/delete', methods=['POST'])
     @login_required
@@ -2521,11 +2559,18 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
             with open(f, encoding='utf-8') as fp: settings = json.load(fp)
         # type -> key mapping
         key_map = {'member': 'member_roles', 'girl': 'girl_roles', 'boy': 'boy_roles', 'bot': 'bot_roles'}
-        key = key_map.get(data.get('type'), data.get('type')+'_roles')
-        settings[key] = data['role']
+        t = data.get('type', 'member')
+        key = key_map.get(t, t + '_roles')
+        # Frontend hem 'roles' (çoğul) hem 'role' (tekil) yollayabilir; ikisini de kabul et
+        new_value = data.get('roles', data.get('role', []))
+        if not isinstance(new_value, list):
+            new_value = []
+        # Sadece string id'leri tut
+        new_value = [str(x) for x in new_value if x]
+        settings[key] = new_value
         os.makedirs('data', exist_ok=True)
         with open(f, 'w', encoding='utf-8') as fp: json.dump(settings, fp, indent=2, ensure_ascii=False)
-        return jsonify({'success': True})
+        return jsonify({'success': True, 'key': key, 'value': new_value})
 
     @app.route('/api/guild/<guild_id>/leveling', methods=['GET', 'POST'])
     @login_required
@@ -3164,57 +3209,81 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
     def api_voice_stats(guild_id):
         import web.app as _app; bot = _app.bot_instance
 
+        # Defaults are defined before touching the optional statistics file.
+        # This keeps the endpoint JSON-safe when no file exists yet.
         leaderboard = []
         total_seconds = 0
+        today_data = {}
 
-        # voice_stats_<guild_id>.json dosyasını oku
+        # Read persisted voice statistics.  This endpoint must always return JSON:
+        # a malformed/old statistics file should not turn into an HTML 500 response.
         vs_file = f'data/voice_stats_{guild_id}.json'
+        data = {}
         if os.path.exists(vs_file):
-            with open(vs_file, 'r', encoding='utf-8') as fp:
-                data = json.load(fp)
+            try:
+                with open(vs_file, 'r', encoding='utf-8') as fp:
+                    data = json.load(fp)
+            except (OSError, json.JSONDecodeError):
+                data = {}
 
-            users_dict = data.get('users', data) if isinstance(data, dict) else {}
-            today_data = data.get('today', {}) if isinstance(data, dict) else {}
+        users_dict = data.get('users', data) if isinstance(data, dict) else {}
+        today_data = data.get('today', {}) if isinstance(data, dict) else {}
+        if not isinstance(users_dict, dict):
+            users_dict = {}
 
-            for uid, entry in users_dict.items():
-                if not isinstance(entry, dict):
-                    continue
-                secs = entry.get('total_seconds', entry.get('seconds', 0))
-                if not secs:
-                    # Старый format: minutes
-                    secs = entry.get('minutes', 0) * 60
-                total_seconds += secs
+        for uid, entry in users_dict.items():
+            if not isinstance(entry, dict):
+                continue
+            raw_seconds = entry.get('total_seconds', entry.get('seconds', 0))
+            if not raw_seconds:
+                # Legacy files store minutes instead of seconds.
+                raw_seconds = entry.get('minutes', 0)
+                try:
+                    raw_seconds = float(raw_seconds) * 60
+                except (TypeError, ValueError):
+                    raw_seconds = 0
+            try:
+                secs = max(0, int(float(raw_seconds)))
+            except (TypeError, ValueError):
+                secs = 0
+            total_seconds += secs
 
-                # Isim ve avatar al
-                name = entry.get('name', uid)
-                avatar = entry.get('avatar', 'https://cdn.discordapp.com/embed/avatars/0.png')
-                if bot:
-                    for g in bot.guilds:
-                        try:
-                            m = g.get_member(int(uid))
-                            if m:
-                                name = m.display_name
-                                avatar = str(m.display_avatar.url)
-                                break
-                        except Exception:
-                            pass
+            # Resolve the currently cached Discord profile where possible.
+            name = entry.get('name', uid)
+            avatar = entry.get('avatar', 'https://cdn.discordapp.com/embed/avatars/0.png')
+            # Guild avatar URLs expire when a member changes their guild profile.
+            # The canonical Discord CDN path is stable for a given avatar hash.
+            if isinstance(avatar, str) and '/guilds/' in avatar and '/users/' in avatar:
+                import re
+                match = re.search(r'/users/(\d+)/avatars/([^/?]+)', avatar)
+                if match:
+                    avatar = f'https://cdn.discordapp.com/avatars/{match.group(1)}/{match.group(2)}?size=1024'
+            if bot:
+                for g in bot.guilds:
+                    try:
+                        m = g.get_member(int(uid))
+                        if m:
+                            name = m.display_name
+                            avatar = str(m.display_avatar.url)
+                            break
+                    except Exception:
+                        pass
 
-                h, rem = divmod(int(secs), 3600)
-                m_val, s_val = divmod(rem, 60)
-                if h > 0:
-                    time_str = f'{h}s {m_val}dk'
-                elif m_val > 0:
-                    time_str = f'{m_val}dk {s_val}sn'
-                else:
-                    time_str = f'{s_val}sn'
+            h, rem = divmod(int(secs), 3600)
+            m_val, s_val = divmod(rem, 60)
+            if h > 0:
+                time_str = f'{h}s {m_val}dk'
+            elif m_val > 0:
+                time_str = f'{m_val}dk {s_val}sn'
+            else:
+                time_str = f'{s_val}sn'
 
-                leaderboard.append({
-                    'name': name,
-                    'avatar': avatar,
-                    'seconds': secs,
-                    'time': time_str
-                })
-
+            leaderboard.append({
+                'name': name,
+                'avatar': avatar,
+                'seconds': secs,
+                'time': time_str
+            })
         leaderboard.sort(key=lambda x: x['seconds'], reverse=True)
 
         # Всего длительность formatla

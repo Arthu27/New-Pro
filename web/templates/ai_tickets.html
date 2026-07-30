@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
-{% block title %}AI Поддержка Ticketları{% endblock %}
-{% block page_title %}🤖 AI Поддержка Ticketları{% endblock %}
+{% block title %}AI Поддержка Ticketы{% endblock %}
+{% block page_title %}🤖 AI Поддержка Ticketы{% endblock %}
 
 {% block content %}
 <style>
@@ -46,7 +46,7 @@
 {% if tickets|length == 0 %}
 <div class="empty-state">
     <i class="fas fa-robot"></i>
-    <p>Пока AI поддержка ticketin yok</p>
+    <p>Пока AI поддержка тикетов пока отсутствует</p>
 </div>
 {% else %}
 
@@ -91,7 +91,7 @@
             </div>
             <div class="ticket-info-row">
                 <i class="fas fa-tag"></i>
-                Kategori: <strong>{{ ticket.category or 'Общий' }}</strong>
+                Категория: <strong>{{ ticket.category or 'Общий' }}</strong>
             </div>
             <div class="ticket-info-row">
                 <i class="fas fa-comments"></i>
@@ -130,7 +130,7 @@
 </div>
 
 <script>
-// Ticket verilerini JS'e aktar
+// Ticket verсrini JS'e aktar
 const ticketsData = {{ (tickets or [])|tojson|safe }};
 
 function viewConversation(channelId) {

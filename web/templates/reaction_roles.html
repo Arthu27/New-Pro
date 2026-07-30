@@ -1,6 +1,6 @@
 ﻿{% extends "base.html" %}
 {% block title %}Reaction Роли - Aether{% endblock %}
-{% block page_title %}🎭 REAKSİYON ROLES{% endblock %}
+{% block page_title %}🎭 РЕАКЦИЯ ROLES{% endblock %}
 {% block content %}
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&display=swap');
@@ -55,33 +55,33 @@
 
 <div class="rr-hero">
   <div style="font-size:60px;margin-bottom:10px;">🎭</div>
-  <div class="hero-title">🎭 Reaksiyon Роли</div>
-  <div class="hero-sub">Emojiye клик автоматически роль ver</div>
+  <div class="hero-title">🎭 Роли по реакциям</div>
+  <div class="hero-sub">Автоматически выдавать роль по клику на эмодзи</div>
 </div>
 
 <div class="controls-bar">
-  <select style="display:none" style="display:none" id="guild-select" class="guild-sel" onchange="loadRR()">
-    <option value="">🏠 Сервер выбрать...</option>
+  <select  id="guild-select" class="guild-sel" onchange="loadRR()">
+    <option value="">🏠 Выберите сервер...</option>
   </select>
-  <button class="btn-new" onclick="openModal()"><span>➕</span> Новый Добавить</button>
+  <button class="btn-new" onclick="openModal()"><span>➕</span> Новая панель</button>
 </div>
 
 <div id="rr-list" class="rr-grid"></div>
 
 <div id="modal" class="modal-overlay">
   <div class="modal-box">
-    <div class="modal-title">🎭 Reaksiyon Роль Создать</div>
+    <div class="modal-title">🎭 Роль по реакции Создать</div>
     <div class="form-group">
       <label class="form-label">📺 Канал</label>
       <select id="rr-channel" class="form-input"></select>
     </div>
     <div class="form-group">
-      <label class="form-label">📝 Заsectionовок</label>
-      <input type="text" id="rr-title" class="form-input" placeholder="Роль выбор сообщение başlığı...">
+      <label class="form-label">📝 Заголовок</label>
+      <input type="text" id="rr-title" class="form-input" placeholder="Роль выбор сообщение заголовок...">
     </div>
-    <label class="form-label" style="margin-bottom:10px;">🎭 Emoji → Роль Eşleşmeleri</label>
+    <label class="form-label" style="margin-bottom:10px;">🎭 Emoji → Роль Совпадениеы</label>
     <div id="rr-entries"></div>
-    <button class="btn-add-entry" onclick="addEntry()">➕ Eşleşme Добавить</button>
+    <button class="btn-add-entry" onclick="addEntry()">➕ Совпадение Добавить</button>
     <div class="modal-actions">
       <button class="btn-submit" onclick="createRR()">🎭 Создать ve Отправить</button>
       <button class="btn-cancel" onclick="closeModal()">Отмена</button>
@@ -90,7 +90,7 @@
 </div>
 
 <script>
-var selectedGuild = '1421244140359909513';
+var selectedGuild = '{{ main_guild_id }}';
 var allRoles = [];
 
 async function loadGuilds() {
@@ -172,7 +172,7 @@ async function createRR() {
     var sel = row.querySelector('.entry-role');
     if (emoji && sel.value) entries.push({ emoji, role_id: sel.value });
   });
-  if (!title || entries.length < 1) { alert('Заsectionовок ve en az 1 eşleşme gir!'); return; }
+  if (!title || entries.length < 1) { alert('Заголовок ve en az 1 совпадение gir!'); return; }
   var btn = document.querySelector('.btn-submit');
   btn.textContent = '⏳ Создан...'; btn.disabled = true;
   var r = await fetch('/api/guild/'+selectedGuild+'/reaction-roles/create', {
@@ -185,7 +185,7 @@ async function createRR() {
 }
 
 async function deleteRR(id) {
-  if (!confirm('Удалитьmek если хотите emin misiniz mı siz?')) return;
+  if (!confirm('Удалитьmek если хотите emin misiniz ? siz?')) return;
   await fetch('/api/guild/'+selectedGuild+'/reaction-roles/'+id+'/delete', {method:'POST'});
   loadRR();
 }

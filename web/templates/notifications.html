@@ -22,7 +22,7 @@ async function loadNotifs() {
   var notifs = await r.json();
   var box = document.getElementById('notif-list');
   if (!notifs.length) {
-    box.innerHTML = '<div class="empty"><i class="fas fa-bell-slash"></i><p>Пока уведомление yok.</p></div>';
+    box.innerHTML = '<div class="empty"><i class="fas fa-bell-slash"></i><p>Пока уведомлений нет.</p></div>';
     return;
   }
   box.innerHTML = notifs.map(function(n) {

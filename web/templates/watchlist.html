@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% block title %}İzleme Listesi{% endblock %}
-{% block page_title %}👁️ İzleme Listesi{% endblock %}
+{% block title %}Наблюдение Список{% endblock %}
+{% block page_title %}👁️ Наблюдение Список{% endblock %}
 {% block content %}
 <style>
 .wl-table{width:100%;border-collapse:collapse;}
@@ -20,7 +20,7 @@
     <thead><tr>
       <th>Пользователь</th>
       <th>Причина</th>
-      <th>Добавитьyen</th>
+      <th>Добавил</th>
       <th>Дата</th>
     </tr></thead>
     <tbody id="wl-body">
@@ -38,7 +38,7 @@ async function loadWatchlist(gid) {
     var tbody = document.getElementById('wl-body');
     document.getElementById('wl-count').textContent = d.length + ' пользователь izleniyor';
     if (!d.length) {
-      tbody.innerHTML = '<tr><td colspan="4" class="empty">İzleme listesi пусто ✅</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="4" class="empty">Наблюдение listesi пусто ✅</td></tr>';
       return;
     }
     tbody.innerHTML = d.map(function(u) {

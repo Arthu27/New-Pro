@@ -10,9 +10,9 @@
   .mod-card{background:linear-gradient(135deg,#100e08,rgba(26,22,16,0.7));border:1px solid rgba(231,76,60,0.2);border-radius:14px;padding:18px;margin-bottom:12px;display:flex;gap:15px;align-items:flex-start;transition:all 0.3s;cursor:pointer;}
   .mod-card:hover{border-color:rgba(231,76,60,0.5);transform:translateX(4px);box-shadow:0 6px 20px rgba(231,76,60,0.1);}
   .mod-icon{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px;}
-  .ban-icon{background:rgba(231,76,60,0.15);color:#e05555;border:1px solid rgba(231,76,60,0.3);}
-  .kick-icon{background:rgba(212,168,67,0.15);color:#c8922a;border:1px solid rgba(212,168,67,0.3);}
-  .mute-icon{background:rgba(212,168,67,0.15);color:#c8922a;border:1px solid rgba(212,168,67,0.3);}
+  .бан-icon{background:rgba(231,76,60,0.15);color:#e05555;border:1px solid rgba(231,76,60,0.3);}
+  .кик-icon{background:rgba(212,168,67,0.15);color:#c8922a;border:1px solid rgba(212,168,67,0.3);}
+  .мьют-icon{background:rgba(212,168,67,0.15);color:#c8922a;border:1px solid rgba(212,168,67,0.3);}
   .warn-icon{background:rgba(255,193,7,0.15);color:#c8922a;border:1px solid rgba(255,193,7,0.3);}
   .mod-user{font-size:15px;font-weight:700;color:#f0e8d0;}
   .mod-reason{font-size:13px;color:rgba(240,232,208,0.55);margin-top:4px;line-height:1.5;max-width:400px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -39,9 +39,9 @@
 <div class="reason-modal" id="reason-modal" onclick="if(event.target===this)closeModal()">
   <div class="reason-modal-box">
     <button class="reason-modal-close" onclick="closeModal()"><i class="fas fa-times"></i></button>
-    <div class="reason-modal-title"><i class="fas fa-gavel" style="color:#e05555;"></i> <span id="modal-action-title">Действие Детали</span></div>
+    <div class="reason-modal-title"><i class="fas fa-gavel" style="color:#e05555;"></i> <span id="modal-action-title">Детали действия</span></div>
     <div class="reason-field">
-      <div class="reason-field-label">Hedef Пользователь</div>
+      <div class="reason-field-label">Целевой пользователь</div>
       <div class="reason-field-value" id="modal-target">-</div>
     </div>
     <div class="reason-field">
@@ -59,13 +59,13 @@
   </div>
 </div>
 
-<select style="display:none" style="display:none" id="guild-select" class="guild-select" style="display:none;"></select>
-<input type="text" class="search-box" id="search" placeholder="🔍 Пользователь ara..." oninput="filterHistory()">
+<select  id="guild-select" class="guild-select" ></select>
+<input type="text" class="search-box" id="search" placeholder="🔍 Поиск пользователя..." oninput="filterHistory()">
 <div class="filter-bar">
   <button class="filter-btn active" onclick="setFilter('all',this)">📋 Все</button>
-  <button class="filter-btn" onclick="setFilter('ban',this)">🔨 Ban</button>
-  <button class="filter-btn" onclick="setFilter('kick',this)">👢 Kick</button>
-  <button class="filter-btn" onclick="setFilter('mute',this)">🔇 Mute</button>
+  <button class="filter-btn" onclick="setFilter('бан',this)">🔨 Бан</button>
+  <button class="filter-btn" onclick="setFilter('кик',this)">👢 Кик</button>
+  <button class="filter-btn" onclick="setFilter('мьют',this)">🔇 Мьют</button>
   <button class="filter-btn" onclick="setFilter('warn',this)">⚠️ Warning</button>
 </div>
 <div id="history-list"></div>
@@ -86,7 +86,7 @@ async function loadHistory() {
     var data = await r.json();
     allHistory = Array.isArray(data) ? data : [];
     if (allHistory.length === 0) {
-      // Предупреждения'ı da dene
+      // Попробовать также предупреждения
       var r2 = await fetch('/api/warnings');
       var warns = await r2.json();
       allHistory = warns.map(function(w) {
@@ -121,8 +121,8 @@ function openModal(idx) {
   if (!h) return;
   var action = (h.action||'warn').toLowerCase();
   var iconMap = {
-    ban:'🔨 Ban', kick:'👢 Kick', mute:'🔇 Mute', timeout:'⏱ Mute',
-    warn:'⚠️ Warning', unban:'✅ Unban'
+    бан:'🔨 Бан', кик:'👢 Кик', мьют:'🔇 Мьют', timeout:'⏱ Мьют',
+    warn:'⚠️ Warning', unбан:'✅ Разбан'
   };
   document.getElementById('modal-action-title').textContent = iconMap[action] || action.toUpperCase();
   document.getElementById('modal-target').textContent = h.target_name||h.user_name||h.user_id||'?';
@@ -144,7 +144,7 @@ function render() {
   var filtered = allHistory.filter(function(h){
     var action = (h.action||'warn').toLowerCase();
     var matchFilter = currentFilter==='all' || action===currentFilter ||
-      (currentFilter==='mute' && (action==='mute'||action==='timeout'));
+      (currentFilter==='мьют' && (action==='мьют'||action==='timeout'));
     var matchSearch = !q || (h.target_name||'').toLowerCase().includes(q) ||
       (h.user_name||'').toLowerCase().includes(q) || (h.mod_name||'').toLowerCase().includes(q);
     return matchFilter && matchSearch;
@@ -155,15 +155,15 @@ function render() {
     return;
   }
   var iconMap = {
-    ban:{cls:'ban-icon',icon:'fa-ban',color:'#e74c3c'},
-    kick:{cls:'kick-icon',icon:'fa-sign-out-alt',color:'#c8922a'},
-    mute:{cls:'mute-icon',icon:'fa-microphone-slash',color:'#c8922a'},
-    timeout:{cls:'mute-icon',icon:'fa-clock',color:'#c8922a'},
+    бан:{cls:'бан-icon',icon:'fa-бан',color:'#e74c3c'},
+    кик:{cls:'кик-icon',icon:'fa-sign-out-alt',color:'#c8922a'},
+    мьют:{cls:'мьют-icon',icon:'fa-microphone-slash',color:'#c8922a'},
+    timeout:{cls:'мьют-icon',icon:'fa-clock',color:'#c8922a'},
     warn:{cls:'warn-icon',icon:'fa-exclamation-triangle',color:'#c8922a'},
-    unban:{cls:'ban-icon',icon:'fa-user-check',color:'#2ecc71'}
+    unбан:{cls:'бан-icon',icon:'fa-user-check',color:'#2ecc71'}
   };
 
-  // filtered'ın orijinal allHistory index'lerini bul
+  // Найти оригинальный индекс allHistory для filtered
   var filteredWithIdx = filtered.map(function(h){ return {h:h, idx:allHistory.indexOf(h)}; });
 
   box.innerHTML = filteredWithIdx.map(function(item){

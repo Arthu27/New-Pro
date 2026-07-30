@@ -1,5 +1,5 @@
 ﻿{% extends "base.html" %}
-{% block title %}Участник Notları - Aether{% endblock %}
+{% block title %}Участник Notы - Aether{% endblock %}
 {% block page_title %}<i class="fas fa-sticky-note" style="color:#c8922a;animation:pulse 2s infinite;"></i> УЧАСТНИК NOTLARI{% endblock %}
 {% block content %}
 <style>
@@ -31,10 +31,10 @@
 
 <div class="search-box">
   <input type="text" id="search-id" class="search-input" placeholder="🔍 Discord ID или isim ara...">
-  <button onclick="searchMember()" class="search-btn"><i class="fas fa-search"></i> Arama</button>
+  <button onclick="searchMember()" class="search-btn"><i class="fas fa-search"></i> Поиск</button>
 </div>
 
-<div id="member-result" style="display:none;" class="member-result-box">
+<div id="member-result"  class="member-result-box">
   <div class="note-user">
     <img class="note-avatar" id="res-avatar" src="">
     <div><div class="note-name" id="res-name"></div><div class="note-id" id="res-id"></div></div>
@@ -52,7 +52,7 @@
 
 <script>
 var currentMemberId = null;
-var selectedGuild = '1421244140359909513';
+var selectedGuild = '{{ main_guild_id }}';
 
 async function init() {
   var r = await fetch('/api/guilds');
@@ -87,7 +87,7 @@ async function loadNotes(id) {
         '<div class="note-meta"><i class="fas fa-user" style="font-size:10px;margin-right:4px;"></i>'+n.author+' &nbsp;·&nbsp; '+new Date(n.created_at).toLocaleString('tr-TR')+'</div>'+
         '<button class="note-del" onclick="deleteNote(\''+n.id+'\',\''+id+'\')">×</button></div>';
     }).join('') :
-    '<p style="color:#5a5040;font-size:13px;font-style:italic;">Пока not yok.</p>';
+    '<p style="color:#5a5040;font-size:13px;font-style:italic;">Пока заметок нет.</p>';
 }
 
 async function addNote() {
@@ -112,7 +112,7 @@ async function loadAllNotes() {
   var r = await fetch('/api/member-notes');
   var all = await r.json();
   var box = document.getElementById('all-notes');
-  if(!all.length) { box.innerHTML='<div class="empty-state"><i class="fas fa-sticky-note" style="font-size:36px;color:#c8922a;opacity:0.3;display:block;margin-bottom:10px;"></i>Пока not yok.</div>'; return; }
+  if(!all.length) { box.innerHTML='<div class="empty-state"><i class="fas fa-sticky-note" style="font-size:36px;color:#c8922a;opacity:0.3;display:block;margin-bottom:10px;"></i>Пока заметок нет.</div>'; return; }
   box.innerHTML = all.map(function(entry){
     return '<div class="note-card"><div class="note-user">'+
       '<img class="note-avatar" src="'+entry.avatar+'" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">'+

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% block title %}Profilim{% endblock %}
-{% block page_title %}👤 Profilim{% endblock %}
+{% block title %}Профильim{% endblock %}
+{% block page_title %}👤 Профильim{% endblock %}
 {% block content %}
 <style>
 .mp-grid{display:grid;grid-template-columns:300px 1fr;gap:16px;}
@@ -17,52 +17,52 @@
 </style>
 
 <div id="mp-loading" style="color:rgba(240,232,208,0.3);font-size:13px;">Загрузка...</div>
-<div id="mp-content" style="display:none;" class="mp-grid"></div>
+<div id="mp-content"  class="mp-grid"></div>
 
 <script>
-async function loadProfile() {
+async function loadПрофильe() {
   try {
-    var d = await fetch('/api/my-profile').then(r => r.json());
+    var d = await fetch('/api/my-profс').then(r => r.json());
     if (d.error) { document.getElementById('mp-loading').textContent = '❌ ' + d.error; return; }
 
     document.getElementById('mp-loading').style.display = 'none';
     var el = document.getElementById('mp-content');
     el.style.display = 'grid';
 
-    var warns = d.warnings || [];
+    var warns = d.предупреждs || [];
     var balance = d.balance || 0;
     var invites = d.invites || 0;
     var voiceSecs = d.voice_seconds || 0;
     var voiceHours = Math.floor(voiceSecs / 3600);
     var voiceMins = Math.floor((voiceSecs % 3600) / 60);
 
-    // Sol sütun
+    // Sol столбец
     var leftHtml = '<div>' +
       '<div class="mp-card" style="text-align:center;">' +
         (d.avatar ? '<img src="' + d.avatar + '" class="mp-avatar">' : '<div class="mp-avatar" style="background:rgba(212,168,67,0.1);display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 12px;">👤</div>') +
         '<div style="font-size:18px;font-weight:800;color:#f0e8d0;margin-bottom:4px;">' + (d.display_name||d.username) + '</div>' +
         '<div style="font-size:12px;color:rgba(240,232,208,0.4);margin-bottom:12px;">@' + d.username + '</div>' +
-        (warns.length ? '<span class="warn-pill">⚠️ ' + warns.length + ' warning</span>' : '<span class="no-warn">✅ Temiz</span>') +
+        (warns.length ? '<span class="warn-pill">⚠️ ' + warns.length + ' предупрежд</span>' : '<span class="no-warn">✅ Чисто</span>') +
       '</div>' +
       '<div class="mp-card">' +
         '<h2>📊 Статистика</h2>' +
-        '<div class="mp-stat"><span class="mp-stat-key">💰 Bakiye</span><span class="mp-stat-val" style="color:#c8922a;">' + balance.toLocaleString() + ' coin</span></div>' +
-        '<div class="mp-stat"><span class="mp-stat-key">📨 Davetler</span><span class="mp-stat-val">' + invites + ' celovek</span></div>' +
-        '<div class="mp-stat"><span class="mp-stat-key">🔊 Ses Длительность</span><span class="mp-stat-val">' + voiceHours + 's ' + voiceMins + 'dk</span></div>' +
+        '<div class="mp-stat"><span class="mp-stat-key">💰 Баланс</span><span class="mp-stat-val" style="color:#c8922a;">' + balance.toLocaleString() + ' монет</span></div>' +
+        '<div class="mp-stat"><span class="mp-stat-key">📨 Приглашения</span><span class="mp-stat-val">' + invites + ' человек</span></div>' +
+        '<div class="mp-stat"><span class="mp-stat-key">🔊 Время в голосе</span><span class="mp-stat-val">' + voiceHours + 's ' + voiceMins + 'dk</span></div>' +
         '<div class="mp-stat"><span class="mp-stat-key">⚠️ Warning</span><span class="mp-stat-val">' + warns.length + '</span></div>' +
       '</div>' +
     '</div>';
 
-    // Sağ sütun
+    // Правый столбец
     var rightHtml = '<div>' +
       '<div class="mp-card">' +
-        '<h2>⚠️ Предупрежденияım</h2>' +
+        '<h2>⚠️ Мои предупреждения</h2>' +
         (warns.length ? warns.map(function(w){
           return '<div style="padding:10px 12px;background:rgba(255,165,2,0.06);border:1px solid rgba(255,165,2,0.1);border-radius:8px;margin-bottom:6px;">' +
             '<div style="font-size:11px;color:#ffa502;font-weight:700;">#' + w.id + ' — ' + (w.timestamp||'').slice(0,10) + '</div>' +
             '<div style="font-size:12px;color:rgba(240,232,208,0.5);margin-top:3px;">' + (w.reason||'Не belirtildi') + '</div>' +
           '</div>';
-        }).join('') : '<div style="text-align:center;padding:20px;color:rgba(240,232,208,0.25);font-size:13px;">✅ Hiç warningn yok!</div>') +
+        }).join('') : '<div style="text-align:center;padding:20px;color:rgba(240,232,208,0.25);font-size:13px;">✅ Никогда предупреждn yok!</div>') +
       '</div>' +
     '</div>';
 
@@ -72,6 +72,6 @@ async function loadProfile() {
   }
 }
 
-loadProfile();
+loadПрофильe();
 </script>
 {% endblock %}

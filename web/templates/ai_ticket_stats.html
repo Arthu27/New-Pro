@@ -5,7 +5,7 @@
 {% block content %}
 <style>
     /* Modern Glassmorphism Design */
-    .ai-stats-container {
+    .ai-stats-contaеr {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         min-height: 100vh;
         padding: 2rem 0;
@@ -218,9 +218,9 @@
     .stat-box:nth-child(4) { animation-delay: 0.4s; }
 </style>
 
-<div class="ai-stats-container">
-    <div class="container">
-        <h1 class="page-title">🤖 AI Moderasyon Статистика</h1>
+<div class="ai-stats-contaеr">
+    <div class="contaеr">
+        <h1 class="page-title">🤖 Статистика AI-модерации</h1>
         
         <!-- Общий Статистика -->
         <div class="row mb-4">
@@ -233,19 +233,19 @@
             <div class="col-md-3 mb-3">
                 <div class="stat-box" style="animation: fadeInUp 0.6s ease 0.2s both;">
                     <div class="stat-number">{{ stats.total_penalties }}</div>
-                    <div class="stat-label">Всего Наказание</div>
+                    <div class="stat-label">Всего наказаний</div>
                 </div>
             </div>
             <div class="col-md-3 mb-3">
                 <div class="stat-box" style="animation: fadeInUp 0.6s ease 0.3s both;">
                     <div class="stat-number">{{ stats.mutual_violations }}</div>
-                    <div class="stat-label">Vzaimniy Нарушение</div>
+                    <div class="stat-label">Взаимные нарушения</div>
                 </div>
             </div>
             <div class="col-md-3 mb-3">
                 <div class="stat-box" style="animation: fadeInUp 0.6s ease 0.4s both;">
                     <div class="stat-number">{{ stats.fake_complaints }}</div>
-                    <div class="stat-label">Sahte Жалоба</div>
+                    <div class="stat-label">Ложные жалобы</div>
                 </div>
             </div>
         </div>
@@ -268,7 +268,7 @@
                     
                     <div class="mb-3">
                         <div class="d-flex justify-content-between mb-2">
-                            <span style="color: rgba(255,255,255,0.9);">Vzaimniy Нарушение</span>
+                            <span style="color: rgba(255,255,255,0.9);">Взаимные нарушения</span>
                             <span style="color: #fff; font-weight: 600;">{{ stats.mutual_rate }}%</span>
                         </div>
                         <div class="modern-progress">
@@ -278,7 +278,7 @@
                     
                     <div class="mb-3">
                         <div class="d-flex justify-content-between mb-2">
-                            <span style="color: rgba(255,255,255,0.9);">Sahte Жалоба</span>
+                            <span style="color: rgba(255,255,255,0.9);">Ложные жалобы</span>
                             <span style="color: #fff; font-weight: 600;">{{ stats.fake_rate }}%</span>
                         </div>
                         <div class="modern-progress">
@@ -303,12 +303,12 @@
                     <h5 class="section-title">⚖️ AI Proizvoditelnost</h5>
                     
                     <div class="metric-card">
-                        <div class="metric-label">Ortalama Доверие Puanlamau</div>
+                        <div class="metric-label">Ortalama Доверие Очкиlamau</div>
                         <div class="metric-value">{{ stats.avg_confidence }}%</div>
                     </div>
                     
                     <div class="metric-card">
-                        <div class="metric-label">Высокий Доверие Kararlar</div>
+                        <div class="metric-label">Высокий Доверие Решениеlar</div>
                         <div class="metric-value">{{ stats.high_confidence_count }}</div>
                     </div>
                     
@@ -347,7 +347,7 @@
                     <tbody>
                         {% for user in stats.top_offenders %}
                         <tr>
-                            <td>{{ loop.index }}</td>
+                            <td>{{ loop.еx }}</td>
                             <td>{{ user.name }}</td>
                             <td><span class="badge-modern">{{ user.count }}</span></td>
                             <td>{{ user.total_duration }} dk</td>
@@ -359,7 +359,7 @@
             </div>
         </div>
 
-        <!-- Наказание Türleri -->
+        <!-- Тип наказания -->
         <div class="glass-card">
             <h5 class="section-title">📋 Наказание Причина</h5>
             <div class="modern-table">

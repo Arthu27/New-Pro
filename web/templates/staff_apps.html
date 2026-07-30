@@ -47,9 +47,9 @@
 
 <div class="stats-bar" id="stats-bar"></div>
 <div class="filter-bar">
-  <button class="filter-btn active" onclick="setFilter('pending',this)">⏳ Bekleyenler</button>
-  <button class="filter-btn" onclick="setFilter('approved',this)">✅ Onaylanan</button>
-  <button class="filter-btn" onclick="setFilter('rejected',this)">❌ Reddedilenler</button>
+  <button class="filter-btn active" onclick="setFilter('pending',this)">⏳ Ожидающие</button>
+  <button class="filter-btn" onclick="setFilter('approved',this)">✅ Подтверждённые</button>
+  <button class="filter-btn" onclick="setFilter('rejected',this)">❌ Reddedсnler</button>
   <button class="filter-btn" onclick="setFilter('all',this)">📋 Все</button>
 </div>
 
@@ -62,7 +62,7 @@
     <h3>❌ Red Причина</h3>
     <textarea id="reject-reason" placeholder="Red причина напишите..."></textarea>
     <div style="display:flex;gap:10px;margin-top:15px;">
-      <button onclick="confirmReject()" style="flex:1;padding:10px;background:rgba(224,85,85,0.15);color:#f0e8d0;border:none;border-radius:8px;cursor:pointer;font-weight:700;">Reddet</button>
+      <button onclick="confirmReject()" style="flex:1;padding:10px;background:rgba(224,85,85,0.15);color:#f0e8d0;border:none;border-radius:8px;cursor:pointer;font-weight:700;">Отклонить</button>
       <button onclick="closeReject()" style="flex:1;padding:10px;background:#333;color:rgba(240,232,208,0.55);border:none;border-radius:8px;cursor:pointer;">Отмена</button>
     </div>
   </div>
@@ -83,9 +83,9 @@ function updateStats() {
   var rejected = allApps.filter(function(a){return a.status==='rejected';}).length;
   document.getElementById('stats-bar').innerHTML =
     '<div class="stat-chip"><div class="num">'+allApps.length+'</div><div class="lbl">Всего</div></div>' +
-    '<div class="stat-chip"><div class="num" style="color:#c8922a;">'+pending+'</div><div class="lbl">⏳ Bekleyenler</div></div>' +
-    '<div class="stat-chip"><div class="num" style="color:#5ec47a;">'+approved+'</div><div class="lbl">✅ Onaylanan</div></div>' +
-    '<div class="stat-chip"><div class="num" style="color:#e05555;">'+rejected+'</div><div class="lbl">❌ Reddedilenler</div></div>';
+    '<div class="stat-chip"><div class="num" style="color:#c8922a;">'+pending+'</div><div class="lbl">⏳ Ожидающие</div></div>' +
+    '<div class="stat-chip"><div class="num" style="color:#5ec47a;">'+approved+'</div><div class="lbl">✅ Подтверждённые</div></div>' +
+    '<div class="stat-chip"><div class="num" style="color:#e05555;">'+rejected+'</div><div class="lbl">❌ Reddedсnler</div></div>';
 }
 
 function setFilter(f, btn) {
@@ -112,21 +112,21 @@ function renderApps() {
   }
   grid.innerHTML = filtered.map(function(app) {
     var sc = app.status==='approved'?'status-approved':app.status==='rejected'?'status-rejected':'status-pending';
-    var st = app.status==='approved'?'✅ Onaylandı':app.status==='rejected'?'❌ Reddedildi':'⏳ Bekleme';
+    var st = app.status==='approved'?'✅ Подтверждено':app.status==='rejected'?'❌ Отклонено':'⏳ Bдобавитьme';
     var cc = app.status==='approved'?'app-card approved':app.status==='rejected'?'app-card rejected':'app-card';
     var ans = app.answers || {};
     var actions = app.status==='pending'
-      ? '<div class="app-actions"><button class="btn-approve" onclick="approveApp(\''+app.app_id+'\')">✅ Onayla</button><button class="btn-reject" onclick="openReject(\''+app.app_id+'\')">❌ Reddet</button></div>'
-      : (app.reviewed_by ? '<div style="color:#666;font-size:12px;margin-top:10px;">İnceleyen: '+app.reviewed_by+(app.review_note?' • '+app.review_note:'')+'</div>' : '');
+      ? '<div class="app-actions"><button class="btn-approve" onclick="approveApp(\''+app.app_id+'\')">✅ Подтвердить</button><button class="btn-reject" onclick="openReject(\''+app.app_id+'\')">❌ Отклонить</button></div>'
+      : (app.reviewed_by ? '<div style="color:#666;font-size:12px;margin-top:10px;">Проверитьyen: '+app.reviewed_by+(app.review_note?' • '+app.review_note:'')+'</div>' : '');
     return '<div class="'+cc+'">' +
       '<div class="app-header">' +
         '<img class="app-avatar" src="'+app.avatar+'" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' +
         '<div><div class="app-name">'+app.display_name+'</div><div class="app-tag">'+app.user_name+' • '+timeAgo(app.timestamp)+'</div></div>' +
         '<span class="status-badge '+sc+'">'+st+'</span>' +
       '</div>' +
-      '<div class="app-field"><label>🎂 Yaş</label><p>'+(ans.yas||'-')+'</p></div>' +
+      '<div class="app-field"><label>🎂 Возраст</label><p>'+(ans.yas||'-')+'</p></div>' +
       '<div class="app-field"><label>⏰ Активен</label><p>'+(ans.activity||'-')+'</p></div>' +
-      '<div class="app-field"><label>🏆 Tecrübe</label><p>'+(ans.tecrube||'-')+'</p></div>' +
+      '<div class="app-field"><label>🏆 Опыт</label><p>'+(ans.tecrube||'-')+'</p></div>' +
       '<div class="app-field"><label>💬 Почему Администратор?</label><p>'+(ans.why||'-')+'</p></div>' +
       (ans.ekstra&&ans.ekstra!=='—' ? '<div class="app-field"><label>📝 Ekstra</label><p>'+ans.ekstra+'</p></div>' : '') +
       actions +

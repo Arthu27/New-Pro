@@ -36,7 +36,7 @@
 <div class="g-hero">
   <span class="hero-icon">🌐</span>
   <div class="hero-title">СЕРВЕРА</div>
-  <div class="hero-sub">Botun найден Discord сервер</div>
+  <div class="hero-sub">Discord серверы, где есть бот</div>
 </div>
 
 <div class="g-stats">
@@ -55,7 +55,7 @@ async function loadGuilds() {
     var totalMembers = guilds.reduce(function(total, guild) { return total + (guild.members || 0); }, 0);
     document.getElementById('stat-guilds').textContent = guilds.length;
     document.getElementById('stat-members').textContent = totalMembers.toLocaleString('ru-RU');
-    if (!guilds.length) { document.getElementById('guilds-list').innerHTML = '<div class="empty">🌐<br><br>Серверы не найдены.</div>'; return; }
+    if (!guilds.length) { document.getElementById('guilds-list').innerHTML = '<div class="empty">🌐<br><br>Серверы не найденныеы.</div>'; return; }
     var h = '<div class="g-grid">';
     guilds.forEach(function(g, i) {
       var icon = g.icon || 'https://cdn.discordapp.com/embed/avatars/0.png';
@@ -66,7 +66,7 @@ async function loadGuilds() {
 }
 
 async function leaveGuild(guildId, guildName) {
-  if (!confirm('"' + guildName + '" сервер çıkmak если хотите emin misiniz mı siz?')) return;
+  if (!confirm('"' + guildName + '" сервер выйти если хотите emin misiniz ? siz?')) return;
   try {
     var r = await fetch('/api/leave-guild', {
       method: 'POST',
@@ -75,13 +75,13 @@ async function leaveGuild(guildId, guildName) {
     });
     var d = await r.json();
     if (d.ok) {
-      alert('"' + guildName + '" сервер çıkıldı.');
+      alert('"' + guildName + '" сервер вышли.');
       loadGuilds();
     } else {
       alert('Ошибка: ' + (d.error || 'Bilinmeyen ошибка'));
     }
   } catch(e) {
-    alert('Ссылка ошибки.');
+    alert('Ошибка соединения.');
   }
 }
 

@@ -69,7 +69,7 @@
   box-shadow: 0 4px 15px rgba(200,160,80, 0.4);
 }
 
-.preview-container {
+.preview-contaеr {
   background: #2f3136;
   border-radius: 4px;
   padding: 15px;
@@ -77,7 +77,7 @@
   min-height: 300px;
 }
 
-.embed-container {
+.embed-contaеr {
   background: #36393f;
   border-radius: 4px;
   padding: 10px 15px;
@@ -142,7 +142,7 @@
 
 <div class="embed-builder">
   <div class="builder-form">
-    <h3 style="color:#c8922a;margin-top:0;">Эмбед Settings</h3>
+    <h3 style="color:#c8922a;margin-top:0;">Настройки эмбеда</h3>
     
     <div class="form-group">
       <label class="form-label">Title</label>
@@ -184,7 +184,7 @@
     
     <div class="form-group">
       <label class="form-label">Guild</label>
-      <select style="display:none" style="display:none" id="guild-select" class="form-input" onchange="onGuildChange()"></select>
+      <select  id="guild-select" class="form-input" onchange="onGuildChange()"></select>
     </div>
     
     <div class="form-group">
@@ -197,8 +197,8 @@
   
   <div class="builder-preview">
     <h3 style="color:#c8922a;margin-top:0;">Preview</h3>
-    <div class="preview-container">
-      <div class="embed-container" id="embed-preview">
+    <div class="preview-contaеr">
+      <div class="embed-contaеr" id="embed-preview">
         <div class="embed-color-bar" id="preview-color-bar" style="background:#c8922a;"></div>
         <div class="embed-title" id="preview-title">Your embed title</div>
         <div class="embed-description" id="preview-description">Your embed description will appear hero...</div>
@@ -230,7 +230,7 @@ async function onGuildChange() {
       ? text.map(function(c){ return '<option value="'+c.id+'">#'+c.name+'</option>'; }).join('')
       : '<option value="">Metin канал не найдено./option>';
   } catch(e) {
-    sel.innerHTML = '<option value="">Ошибка oluştu</option>';
+    sel.innerHTML = '<option value="">Произошла ошибка</option>';
     console.error(e);
   }
 }
@@ -246,7 +246,7 @@ async function loadGuilds() {
 }
 
 function updatePreview() {
-  var title = document.getElementById('embed-title').value || 'Эмбед başlığı';
+  var title = document.getElementById('embed-title').value || 'Эмбед заголовок';
   var desc = document.getElementById('description').value || 'Эмбед описание здесь видеть...';
   var footer = document.getElementById('footer').value || 'Footer metni';
   var color = document.getElementById('custom-color').value || '#c8922a';
@@ -276,7 +276,7 @@ async function sendEmbed() {
   var channelId = document.getElementById('target-channel').value;
   var guildId = document.getElementById('guild-select').value;
 
-  if (!channelId) { alert('Канал выбрать!'); return; }
+  if (!channelId) { alert('Выберите канал!'); return; }
   if (!guildId) { alert('Сервер выбрать!'); return; }
 
   var btn = document.querySelector('.btn-send');
@@ -308,7 +308,7 @@ async function sendEmbed() {
       btn.disabled = false;
     }
   } catch(e) {
-    alert('Ссылка ошибки');
+    alert('Ошибка соединения');
     btn.textContent = '📤 Отправить эмбед';
     btn.disabled = false;
   }

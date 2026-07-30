@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% block title %}Panel - Aether{% endblock %}
-{% block page_title %}Panel управление{% endblock %}
+{% block title %}Панель - Aether{% endblock %}
+{% block page_title %}Панель управления{% endblock %}
 {% block content %}
 <style>
 .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:22px;}
@@ -37,6 +37,7 @@ tr:hover td{background:rgba(212,168,67,0.04);}
 .stat-card:nth-child(4){animation-delay:0.2s}
 </style>
 
+<!-- Информация о сервере -->
 <div id="guild-info-bar" style="display:none;background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.08);border-radius:14px;padding:16px 20px;margin-bottom:18px;">
     <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
         <img id="guild-icon" src="" style="width:42px;height:42px;border-radius:14px;border:1px solid rgba(212,168,67,0.16);display:none;object-fit:cover;">
@@ -45,8 +46,10 @@ tr:hover td{background:rgba(212,168,67,0.04);}
             <div id="guild-meta" style="color:#5a5040;font-size:11px;margin-top:2px;"></div>
         </div>
         <div id="guild-stats-row" style="display:flex;gap:20px;flex-wrap:wrap;"></div>
-    
-<!-- THREAT INDEX & LOCKDOWN WIDGET -->
+    </div>
+</div>
+
+<!-- Угроза Endeksi & Карантин Widget -->
 <div class="dash-box" id="threatDashboard" style="background:rgba(26,22,16,0.85);border:1px solid rgba(212,168,67,0.25);margin-bottom:20px;">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
         <div style="display:flex;align-items:center;gap:14px;">
@@ -62,7 +65,7 @@ tr:hover td{background:rgba(212,168,67,0.04);}
             </div>
         </div>
         <div>
-            <button id="btnLockdown" onclick="toggleLockdown()" style="padding:10px 18px;border-radius:99px;font-size:13px;font-weight:700;cursor:pointer;background:#2ECC71;color:#100e08;border:none;transition:all 0.2s;display:flex;align-items:center;gap:8px;">
+            <button id="btnLockdown" type="button" style="padding:10px 18px;border-radius:99px;font-size:13px;font-weight:700;cursor:pointer;background:#2ECC71;color:#100e08;border:none;transition:all 0.2s;display:flex;align-items:center;gap:8px;">
                 <i class="fas fa-lock"></i>
                 <span id="btnLockdownText">Включить карантин (Lockdown)</span>
             </button>
@@ -70,30 +73,27 @@ tr:hover td{background:rgba(212,168,67,0.04);}
     </div>
 </div>
 
-</div>
-</div>
-
 <div class="stats-grid">
     <div class="stat-card"><div class="stat-icon"><i class="fas fa-server"></i></div><div class="stat-val" id="guild-count">-</div><div class="stat-lbl">Сервера</div></div>
     <div class="stat-card"><div class="stat-icon"><i class="fas fa-users"></i></div><div class="stat-val" id="user-count">-</div><div class="stat-lbl">Пользователи</div></div>
     <div class="stat-card"><div class="stat-icon"><i class="fas fa-signal"></i></div><div class="stat-val" id="latency">-</div><div class="stat-lbl">Ping (ms)</div></div>
-    <div class="stat-card"><div class="stat-icon"><i class="fas fa-circle" style="color:#4ade80;font-size:10px;"></i></div><div class="stat-val" id="status" style="font-size:18px;color:#4ade80;">ONLAYN</div><div class="stat-lbl">Состояние botun</div></div>
+    <div class="stat-card"><div class="stat-icon"><i class="fas fa-circle" style="color:#4ade80;font-size:10px;"></i></div><div class="stat-val" id="status" style="font-size:18px;color:#4ade80;">ОНЛАЙН</div><div class="stat-lbl">Состояние бота</div></div>
 </div>
 
 <div class="dash-box">
-    <div class="dash-title"><i class="fas fa-chart-line"></i> Быстрый статистика</div>
+    <div class="dash-title"><i class="fas fa-chart-line"></i> Быстрая статистика</div>
     <div id="quick-stats" style="text-align:center;padding:24px;color:#5a5040;"><i class="fas fa-spinner fa-spin" style="color:#c8922a;"></i></div>
 </div>
 
 <div class="dash-box">
-    <div class="dash-title"><i class="fas fa-history"></i> В конец действия</div>
+    <div class="dash-title"><i class="fas fa-history"></i> Последние действия</div>
     <div id="recent-activity" style="text-align:center;padding:24px;color:#5a5040;"><i class="fas fa-spinner fa-spin" style="color:#c8922a;"></i></div>
 </div>
 
 {% if role == 'owner' %}
 <div class="dash-box" style="margin-top:16px;">
     <div class="dash-title" style="justify-content:space-between;">
-        <span><i class="fas fa-sign-in-alt"></i> Новый вход в panel</span>
+        <span><i class="fas fa-sign-in-alt"></i> Последние входы в панель</span>
         <a href="/panel-logs" style="font-size:11px;color:#c8922a;text-decoration:none;">Показать все →</a>
     </div>
     <div id="login-log" style="text-align:center;padding:20px;color:#5a5040;"><i class="fas fa-spinner fa-spin" style="color:#c8922a;"></i></div>
@@ -103,200 +103,271 @@ tr:hover td{background:rgba(212,168,67,0.04);}
     <div class="dash-box" style="margin-bottom:0;">
         <div class="dash-title"><i class="fas fa-bell"></i> Отправить уведомление</div>
         <label class="form-label">Discord ID</label><input type="text" id="notif-discord-id" placeholder="123456789012345678" class="form-input">
-        <label class="form-label">Заsectionовок</label><input type="text" id="notif-title" placeholder="Заsectionовок уведомления" class="form-input">
+        <label class="form-label">Заголовок</label><input type="text" id="notif-title" placeholder="Заголовок уведомления" class="form-input">
         <label class="form-label">Сообщение</label><textarea id="notif-message" class="form-input" style="resize:vertical;min-height:64px;"></textarea>
-        <button onclick="sendNotification()" class="form-btn">Отправить</button>
+        <button type="button" id="btnSendNotif" class="form-btn">Отправить</button>
         <div id="notif-result" style="margin-top:8px;display:none;font-size:12px;"></div>
     </div>
     <div class="dash-box" style="margin-bottom:0;">
-        <div class="dash-title"><i class="fas fa-bullhorn"></i> Yayınla duyuru</div>
-        <label class="form-label">Заsectionовок</label><input type="text" id="ann-title" placeholder="Заsectionовок obyavleniya" class="form-input">
-        <label class="form-label">Soderjanie</label><textarea id="ann-message" class="form-input" style="resize:vertical;min-height:64px;"></textarea>
-        <button onclick="sendAnnouncement()" class="form-btn">Yayınla</button>
+        <div class="dash-title"><i class="fas fa-bullhorn"></i> Опубликовать объявление</div>
+        <label class="form-label">Заголовок</label><input type="text" id="ann-title" placeholder="Заголовок объявления" class="form-input">
+        <label class="form-label">Содержание</label><textarea id="ann-message" class="form-input" style="resize:vertical;min-height:64px;"></textarea>
+        <button type="button" id="btnSendAnn" class="form-btn">Опубликовать</button>
         <div id="ann-result" style="margin-top:8px;display:none;font-size:12px;"></div>
     </div>
 </div>
 {% endif %}
 
 <script>
-async function loadStats() {
+(function () {
+  'use strict';
+
+  // ── Вспомогательные функции ─────────────────────────────────────────────────────────────
+  function $(id) { return document.getElementById(id); }
+  function fmtDate(iso) {
+    if (!iso) return '-';
+    try { return new Date(iso).toLocaleString('tr-TR'); } catch (e) { return '-'; }
+  }
+  function showToast(msg, ok) {
+    var t = document.createElement('div');
+    t.className = 'toast ' + (ok ? 'ok' : 'err');
+    t.textContent = msg;
+    t.style.cssText = 'position:fixed;top:20px;right:20px;padding:12px 22px;border-radius:10px;font-weight:700;z-index:99999;font-size:13px;background:' + (ok ? 'linear-gradient(135deg,#27ae60,#2ecc71)' : 'linear-gradient(135deg,#c0392b,#e74c3c)') + ';color:#fff;';
+    document.body.appendChild(t);
+    setTimeout(function () { t.remove(); }, 2500);
+  }
+
+  // ── Ana istatistikler ────────────────────────────────────────────────────────
+  async function loadStats() {
     try {
-        var d = await fetch('/api/stats').then(function(r){return r.json();});
-        document.getElementById('guild-count').textContent = d.guilds != null ? d.guilds : '-';
-        document.getElementById('user-count').textContent = (d.users||0).toLocaleString();
-        document.getElementById('latency').textContent = (d.latency||0) + 'ms';
-        var s = document.getElementById('status');
-        if (d.error) { s.textContent='OFLAYN'; s.style.color='#ef4444'; }
-        else { s.textContent='ONLAYN'; s.style.color='#4ade80'; }
-    } catch(e) { document.getElementById('status').textContent='OFLAYN'; document.getElementById('status').style.color='#ef4444'; }
-}
+      var d = await fetch('/api/stats').then(function (r) { return r.json(); });
+      $('guild-count').textContent = d.guilds != null ? d.guilds : '-';
+      $('user-count').textContent = (d.users || 0).toLocaleString();
+      $('latency').textContent = (d.latency || 0) + 'ms';
+      var s = $('status');
+      if (d.error) { s.textContent = 'ОФЛАЙН'; s.style.color = '#ef4444'; }
+      else { s.textContent = 'ОНЛАЙН'; s.style.color = '#4ade80'; }
+    } catch (e) {
+      $('status').textContent = 'ОФЛАЙН';
+      $('status').style.color = '#ef4444';
+    }
+  }
 
-async function loadQuickStats() {
+  // ── Быстрая статистика ──────────────────────────────────────────────────────
+  async function loadQuickStats() {
     try {
-        var logs = await fetch('/api/logs').then(function(r){return r.json();}).catch(function(){return [];});
-        var warns = await fetch('/api/warnings').then(function(r){return r.json();}).catch(function(){return [];});
-        var bans = logs.filter(function(l){return (l.action||'').toLowerCase()==='ban';}).length;
-        var kicks = logs.filter(function(l){return (l.action||'').toLowerCase()==='kick';}).length;
-        var mutes = logs.filter(function(l){var a=(l.action||'').toLowerCase();return a.includes('mute')||a.includes('timeout');}).length;
-        document.getElementById('quick-stats').innerHTML =
-            '<div class="quick-grid">' +
-            '<div class="quick-item"><h3>'+logs.length+'</h3><p>Mod действие</p></div>' +
-            '<div class="quick-item"><h3>'+warns.length+'</h3><p>Предупреждение</p></div>' +
-            '<div class="quick-item"><h3>'+bans+'</h3><p>Banov</p></div>' +
-            '<div class="quick-item"><h3>'+kicks+'</h3><p>Kikov</p></div>' +
-            '<div class="quick-item"><h3>'+mutes+'</h3><p>Mutov</p></div>' +
-            '<div class="quick-item"><h3>'+(logs.length > 0 ? '✓' : '-')+'</h3><p>Активен</p></div>' +
-            '</div>';
-    } catch(e) { document.getElementById('quick-stats').innerHTML='<p style="color:#ef4444">Не успешно oldu загрузить</p>'; }
-}
+      var logs = await fetch('/api/logs').then(function (r) { return r.json(); }).catch(function () { return []; });
+      var warns = await fetch('/api/warnings').then(function (r) { return r.json(); }).catch(function () { return []; });
+      var банs = logs.filter(function (l) { return (l.action || '').toLowerCase() === 'бан'; }).length;
+      var кикs = logs.filter(function (l) { return (l.action || '').toLowerCase() === 'кик'; }).length;
+      var мьютs = logs.filter(function (l) { var a = (l.action || '').toLowerCase(); return a.indexOf('мьют') !== -1 || a.indexOf('timeout') !== -1; }).length;
+      $('quick-stats').innerHTML =
+        '<div class="quick-grid">' +
+        '<div class="quick-item"><h3>' + logs.length + '</h3><p>Мод Действий</p></div>' +
+        '<div class="quick-item"><h3>' + warns.length + '</h3><p>Предупреждений</p></div>' +
+        '<div class="quick-item"><h3>' + банs + '</h3><p>Банов</p></div>' +
+        '<div class="quick-item"><h3>' + кикs + '</h3><p>Киков</p></div>' +
+        '<div class="quick-item"><h3>' + мьютs + '</h3><p>Мутов</p></div>' +
+        '<div class="quick-item"><h3>' + (logs.length > 0 ? '✓' : '-') + '</h3><p>Активен</p></div>' +
+        '</div>';
+    } catch (e) {
+      $('quick-stats').innerHTML = '<p style="color:#ef4444">Не удалось загрузить</p>';
+    }
+  }
 
-async function loadRecentActivity() {
+  // ── Последний действия ─────────────────────────────────────────────────────────────
+  async function loadRecentActivity() {
     try {
-        var logs = await fetch('/api/logs').then(function(r){return r.json();}).catch(function(){return [];});
-        var box = document.getElementById('recent-activity');
-        if (!logs.length) { box.innerHTML='<p style="color:#5a5040;text-align:center;padding:20px">Пока yok действие.</p>'; return; }
-        var colors = {ban:'#ef4444',kick:'#f97316',warn:'#c8922a',mute:'#c8922a',timeout:'#c8922a',unban:'#4ade80',unmute:'#4ade80',lock:'#60a5fa',unlock:'#4ade80'};
-        var rows = logs.slice(0,15).map(function(log) {
-            var a=(log.action||'?').toLowerCase(), c=colors[a]||'#5a5040';
-            var t=log.timestamp?new Date(log.timestamp).toLocaleString('ru-RU'):'-';
-            var tg=log.user_name||log.target_name||log.user_id||'-';
-            var m=log.mod_name||log.mod_id||'-';
-            var r=log.reason||'-';
-            return '<tr><td><span class="action-badge" style="background:'+c+'18;color:'+c+';border:1px solid '+c+'33">'+(log.action||'?')+'</span></td><td>'+tg+'</td><td style="color:rgba(240,232,208,0.55)">'+m+'</td><td style="color:#5a5040;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+r+'</td><td style="color:#5a5040;font-size:11px">'+t+'</td></tr>';
-        }).join('');
-        box.innerHTML='<table><thead><tr><th>Действие</th><th>Cel</th><th>Модератор</th><th>Причина</th><th>Время</th></tr></thead><tbody>'+rows+'</tbody></table>';
-    } catch(e) { document.getElementById('recent-activity').innerHTML='<p style="color:#ef4444;text-align:center;padding:20px">Не успешно oldu загрузить</p>'; }
-}
+      var logs = await fetch('/api/logs').then(function (r) { return r.json(); }).catch(function () { return []; });
+      var box = $('recent-activity');
+      if (!logs.length) { box.innerHTML = '<p style="color:#5a5040;text-align:center;padding:20px">Пока действий нет.</p>'; return; }
+      var colors = { бан: '#ef4444', кик: '#f97316', warn: '#c8922a', мьют: '#c8922a', timeout: '#c8922a', unбан: '#4ade80', unмьют: '#4ade80', lock: '#60a5fa', unlock: '#4ade80' };
+      var rows = logs.slice(0, 15).map(function (log) {
+        var a = (log.action || '?').toLowerCase(), c = colors[a] || '#5a5040';
+        var t = log.timestamp ? fmtDate(log.timestamp) : '-';
+        var tg = log.user_name || log.target_name || log.user_id || '-';
+        var m = log.mod_name || log.mod_id || '-';
+        var r = log.reason || '-';
+        return '<tr><td><span class="action-badge" style="background:' + c + '18;color:' + c + ';border:1px solid ' + c + '33">' + (log.action || '?') + '</span></td><td>' + tg + '</td><td style="color:rgba(240,232,208,0.55)">' + m + '</td><td style="color:#5a5040;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + r + '</td><td style="color:#5a5040;font-size:11px">' + t + '</td></tr>';
+      }).join('');
+      box.innerHTML = '<table><thead><tr><th>Действие</th><th>Цель</th><th>Модератор</th><th>Причина</th><th>Время</th></tr></thead><tbody>' + rows + '</tbody></table>';
+    } catch (e) {
+      $('recent-activity').innerHTML = '<p style="color:#ef4444;text-align:center;padding:20px">Не удалось загрузить</p>';
+    }
+  }
 
-async function loadGuildInfo() {
+  // ── Информация о сервере ────────────────────────────────────────────────────────
+  async function loadGuildInfo() {
     try {
-        var guilds = await fetch('/api/guilds').then(function(r){return r.json();});
-        if (!guilds.length) return;
-        var guild = guilds[0];
-        document.getElementById('guild-info-bar').style.display='block';
-        if (guild.icon) { var ic=document.getElementById('guild-icon'); ic.src=guild.icon; ic.style.display='block'; }
-        document.getElementById('guild-name').textContent=guild.name;
-        document.getElementById('guild-meta').textContent='ID: '+guild.id;
-        var items=[{val:guild.members?guild.members.toLocaleString():'-',lbl:'Участники'}];
-        document.getElementById('guild-stats-row').innerHTML=items.map(function(s){return '<div style="text-align:center"><div style="font-size:16px;font-weight:700;color:#c8922a">'+s.val+'</div><div style="color:#5a5040;font-size:10px;text-transform:uppercase">'+s.lbl+'</div></div>';}).join('');
-    } catch(e) {}
-}
+      var guilds = await fetch('/api/guilds').then(function (r) { return r.json(); });
+      if (!guilds.length) return;
+      var guild = guilds[0];
+      $('guild-info-bar').style.display = 'block';
+      if (guild.icon) { var ic = $('guild-icon'); ic.src = guild.icon; ic.style.display = 'block'; }
+      $('guild-name').textContent = guild.name;
+      $('guild-meta').textContent = 'ID: ' + guild.id;
+      var items = [{ val: guild.members ? guild.members.toLocaleString() : '-', lbl: 'Участники' }];
+      $('guild-stats-row').innerHTML = items.map(function (s) {
+        return '<div style="text-align:center"><div style="font-size:16px;font-weight:700;color:#c8922a">' + s.val + '</div><div style="color:#5a5040;font-size:10px;text-transform:uppercase">' + s.lbl + '</div></div>';
+      }).join('');
+    } catch (e) { /* yoksay */ }
+  }
 
-async function sendNotification() {
-    var id=document.getElementById('notif-discord-id').value.trim();
-    var title=document.getElementById('notif-title').value.trim();
-    var msg=document.getElementById('notif-message').value.trim();
-    var el=document.getElementById('notif-result');
-    if (!id||!msg) { alert('Discord ID ve сообщение obyazatelni!'); return; }
-    var d=await fetch('/api/send-notification',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({discord_id:id,title:title,message:msg})}).then(function(r){return r.json();});
-    el.style.display='block';
-    el.innerHTML=d.success?'<span style="color:#4ade80">Уведомление отправлено!</span>':'<span style="color:#ef4444">'+(d.error||'Ошибка')+'</span>';
-    setTimeout(function(){el.style.display='none';},3000);
-}
-
-async function sendAnnouncement() {
-    var title=document.getElementById('ann-title').value.trim();
-    var msg=document.getElementById('ann-message').value.trim();
-    var el=document.getElementById('ann-result');
-    if (!title||!msg) { alert('Заsectionовок ve soderjanie obyazatelni!'); return; }
-    var d=await fetch('/api/send-announcement',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:title,message:msg})}).then(function(r){return r.json();});
-    el.style.display='block';
-    el.innerHTML=d.success?'<span style="color:#4ade80">Duyuru opublikovano!</span>':'<span style="color:#ef4444">'+(d.error||'Ошибка')+'</span>';
-    setTimeout(function(){el.style.display='none';},3000);
-}
-
-async function loadLoginLog() {
+  // ── Отправка уведомления ──────────────────────────────────────────────────────────
+  async function sendNotification() {
+    var id = $('notif-discord-id').value.trim();
+    var title = $('notif-title').value.trim();
+    var msg = $('notif-message').value.trim();
+    var el = $('notif-result');
+    if (!id || !msg) { showToast('Discord ID и сообщение обязательны!', false); return; }
     try {
-        var logs = await fetch('/api/login-log').then(function(r){return r.json();});
-        var box = document.getElementById('login-log');
-        if (!box) return;
-        if (!logs.length) { box.innerHTML='<p style="color:#5a5040;text-align:center;padding:16px;">Пока yok вход.</p>'; return; }
-        box.innerHTML = '<div style="display:flex;flex-direction:column;gap:8px;">' +
-        logs.slice(0,20).map(function(l) {
-            var t = l.timestamp ? new Date(l.timestamp).toLocaleString('ru-RU') : '-';
-            var role = {owner:'#e05555', admin:'#c8922a', mod:'#2ecc71', uye:'#5a5040'};
-            var rc = roles[l.roles] || '#5a5040';
-            var avatar = l.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png';
-            return '<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:rgba(0,0,0,0.3);border-radius:12px;border:1px solid rgba(255,255,255,0.04);">'+
-                '<img src="'+avatar+'" style="width:36px;height:36px;border-radius:50%;border:2px solid '+rc+';object-fit:cover;" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">'+
-                '<div style="flex:1;min-width:0;">'+
-                    '<div style="font-weight:700;font-size:13px;color:#f0e8d0;">'+l.username+'</div>'+
-                    '<div style="font-size:11px;color:#5a5040;">'+t+'</div>'+
-                '</div>'+
-                '<span style="padding:3px 9px;border-radius:99px;font-size:10px;font-weight:700;background:'+rc+'18;color:'+rc+';border:1px solid '+rc+'44;">'+l.roles.toUpperCase()+'</span>'+
-            '</div>';
+      var d = await fetch('/api/send-notification', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ discord_id: id, title: title, message: msg })
+      }).then(function (r) { return r.json(); });
+      el.style.display = 'block';
+      el.innerHTML = d.success
+        ? '<span style="color:#4ade80">Уведомление отправлено!</span>'
+        : '<span style="color:#ef4444">' + (d.error || 'Hata') + '</span>';
+      setTimeout(function () { el.style.display = 'none'; }, 3000);
+    } catch (e) { showToast('Ошибка: ' + e.message, false); }
+  }
+
+  // ── Публикация объявления ────────────────────────────────────────────────────────────
+  async function sendAnnouncement() {
+    var title = $('ann-title').value.trim();
+    var msg = $('ann-message').value.trim();
+    var el = $('ann-result');
+    if (!title || !msg) { showToast('Заголовок и содержание обязательны!', false); return; }
+    try {
+      var d = await fetch('/api/send-announcement', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: title, message: msg })
+      }).then(function (r) { return r.json(); });
+      el.style.display = 'block';
+      el.innerHTML = d.success
+        ? '<span style="color:#4ade80">Объявление опубликовано!</span>'
+        : '<span style="color:#ef4444">' + (d.error || 'Hata') + '</span>';
+      setTimeout(function () { el.style.display = 'none'; }, 3000);
+    } catch (e) { showToast('Ошибка: ' + e.message, false); }
+  }
+
+  // ── Вход logы ────────────────────────────────────────────────────────────
+  async function loadLoginLog() {
+    try {
+      var logs = await fetch('/api/login-log').then(function (r) { return r.json(); });
+      var box = $('login-log');
+      if (!box) return;
+      if (!logs.length) { box.innerHTML = '<p style="color:#5a5040;text-align:center;padding:16px">Пока входов нет.</p>'; return; }
+      var roleColors = { owner: '#e05555', admin: '#c8922a', mod: '#2ecc71', uye: '#5a5040' };
+      box.innerHTML = '<div style="display:flex;flex-direction:column;gap:8px;">' +
+        logs.slice(0, 20).map(function (l) {
+          var t = l.timestamp ? fmtDate(l.timestamp) : '-';
+          var rc = roleColors[l.roles] || '#5a5040';
+          var avatar = l.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png';
+          return '<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:rgba(0,0,0,0.3);border-radius:12px;border:1px solid rgba(255,255,255,0.04);">' +
+            '<img src="' + avatar + '" style="width:36px;height:36px;border-radius:50%;border:2px solid ' + rc + ';object-fit:cover;" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' +
+            '<div style="flex:1;min-width:0;">' +
+              '<div style="font-weight:700;font-size:13px;color:#f0e8d0;">' + l.username + '</div>' +
+              '<div style="font-size:11px;color:#5a5040;">' + t + '</div>' +
+            '</div>' +
+            '<span style="padding:3px 9px;border-radius:99px;font-size:10px;font-weight:700;background:' + rc + '18;color:' + rc + ';border:1px solid ' + rc + '44;">' + (l.roles || '').toUpperCase() + '</span>' +
+          '</div>';
         }).join('') + '</div>';
-    } catch(e) {}
-}
+    } catch (e) { /* yoksay */ }
+  }
 
-document.addEventListener('DOMContentLoaded', function() {
-    loadStats(); loadQuickStats(); loadRecentActivity(); loadGuildInfo(); loadLoginLog();
+  // ── Угроза endeksi (lockdown) ────────────────────────────────────────────────
+  async function loadThreatIndex() {
+    try {
+      var res = await fetch('/api/security/threat-index');
+      var d = await res.json();
+      if (!d || !d.success) return;
+      var score = d.threat_score || 15;
+      var level = d.threat_level || 'Низкая угроза (Спокойно)';
+      var color = d.threat_color || '#2ECC71';
+      var active = d.lockdown_active || false;
+
+      $('threatScoreVal').textContent = score + '/100';
+      var badge = $('threatLevelBadge');
+      badge.textContent = level;
+      badge.style.color = color;
+      badge.style.borderColor = color;
+      badge.style.background = color + '22';
+
+      var wrap = $('threatIconWrap');
+      wrap.style.borderColor = color;
+      wrap.style.background = color + '22';
+      $('threatIcon').style.color = color;
+
+      var btn = $('btnLockdown');
+      var btnText = $('btnLockdownText');
+      if (active) {
+        btn.style.background = '#E74C3C';
+        btn.style.color = '#fff';
+        btnText.textContent = 'Отключить карантин (АКТИВЕН)';
+      } else {
+        btn.style.background = '#2ECC71';
+        btn.style.color = '#100e08';
+        btnText.textContent = 'Включить карантин (Lockdown)';
+      }
+    } catch (e) { /* yoksay */ }
+  }
+
+  // toggleLockdown: теперь в одном глобальном IIFE scope'unda определено, butona
+  // addEventListener (CSP не блокирует inline-обработчики)
+  async function toggleLockdown() {
+    var btn = $('btnLockdown');
+    if (!btn) return;
+    btn.disabled = true;
+    try {
+      var res = await fetch('/api/security/toggle-lockdown', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      });
+      var d = await res.json();
+      if (d && d.success) {
+        showToast(d.message || 'Статус карантина изменён', true);
+        loadThreatIndex();
+      } else {
+        showToast((d && d.error) || 'Hata', false);
+      }
+    } catch (e) { showToast('Ошибка: ' + e.message, false); }
+    btn.disabled = false;
+  }
+
+  // ── Привязка кнопок (CSP-совместимо, без inline onclick) ─────────────────────────
+  function bindButtons() {
+    var bl = $('btnLockdown');
+    if (bl) bl.addEventListener('click', toggleLockdown);
+    var bn = $('btnSendNotif');
+    if (bn) bn.addEventListener('click', sendNotification);
+    var ba = $('btnSendAnn');
+    if (ba) ba.addEventListener('click', sendAnnouncement);
+  }
+
+  // ── Запуск после готовности DOM ───────────────────────────────────────────
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+  function init() {
+    bindButtons();
+    loadStats();
+    loadQuickStats();
+    loadRecentActivity();
+    loadGuildInfo();
+    loadLoginLog();
+    loadThreatIndex();
     setInterval(loadStats, 5000);
     setInterval(loadRecentActivity, 10000);
     setInterval(loadLoginLog, 10000);
-});
+    setInterval(loadThreatIndex, 15000);
+  }
+
+  // toggleLockdown вынесен наружу, чтобы старые inline onclick тоже работали
+  window.toggleLockdown = toggleLockdown;
+})();
 </script>
 {% endblock %}
-
-async def _load_threat_unused(): pass
-<script>
-async function loadThreatIndex() {
-    try {
-        const res = await fetch('/api/security/threat-index');
-        const d = await res.json();
-        if (!d.success) return;
-        
-        const score = d.threat_score || 15;
-        const level = d.threat_level || 'Низкая угроза (Спокойно)';
-        const color = d.threat_color || '#2ECC71';
-        const active = d.lockdown_active || false;
-        
-        document.getElementById('threatScoreVal').textContent = score + '/100';
-        const badge = document.getElementById('threatLevelBadge');
-        badge.textContent = level;
-        badge.style.color = color;
-        badge.style.borderColor = color;
-        badge.style.background = color + '22';
-        
-        const wrap = document.getElementById('threatIconWrap');
-        wrap.style.borderColor = color;
-        wrap.style.background = color + '22';
-        document.getElementById('threatIcon').style.color = color;
-        
-        const btn = document.getElementById('btnLockdown');
-        const btnText = document.getElementById('btnLockdownText');
-        if (active) {
-            btn.style.background = '#E74C3C';
-            btn.style.color = '#fff';
-            btnText.textContent = 'Отключить карантин (Lockdown АКТИВЕН)';
-        } else {
-            btn.style.background = '#2ECC71';
-            btn.style.color = '#100e08';
-            btnText.textContent = 'Включить карантин (Lockdown)';
-        }
-    } catch(e) {}
-}
-
-async function toggleLockdown() {
-    const btn = document.getElementById('btnLockdown');
-    btn.disabled = true;
-    try {
-        const res = await fetch('/api/security/toggle-lockdown', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({})
-        });
-        const d = await res.json();
-        if (d.success) {
-            loadThreatIndex();
-            if (typeof showToast === 'function') showToast(d.message);
-        }
-    } catch(e) {}
-    btn.disabled = false;
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-    loadThreatIndex();
-    setInterval(loadThreatIndex, 15000);
-});
-</script>

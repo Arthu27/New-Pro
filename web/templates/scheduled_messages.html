@@ -1,5 +1,5 @@
 ﻿{% extends "base.html" %}
-{% block title %}Planlananlar Сообщения - Aether{% endblock %}
+{% block title %}Запланированные сообщения - Aether{% endblock %}
 {% block page_title %}⏰ ВРЕМЯ СООБЩЕНИЯ{% endblock %}
 {% block content %}
 <style>
@@ -49,37 +49,37 @@
 
 <div class="sm-hero">
   <div style="font-size:60px;margin-bottom:10px;">⏰</div>
-  <div class="hero-title">⏰ Planlananlar Сообщения</div>
-  <div class="hero-sub">Belirli aralıklarla автоматически сообщение отправить</div>
+  <div class="hero-title">⏰ Запланированные сообщения</div>
+  <div class="hero-sub">Через определённые интервалы отправлять сообщения автоматически</div>
 </div>
 
 <div class="controls-bar">
-  <select style="display:none" style="display:none" id="guild-select" class="guild-sel" onchange="loadMessages()">
-    <option value="">🏠 Сервер выбрать...</option>
+  <select  id="guild-select" class="guild-sel" onchange="loadMessages()">
+    <option value="">🏠 Выберите сервер...</option>
   </select>
-  <button class="btn-new" onclick="openModal()"><span>➕</span> Новый Сообщение</button>
+  <button class="btn-new" onclick="openModal()"><span>➕</span> Новое сообщение</button>
 </div>
 
 <div id="sm-list" class="sm-grid"></div>
 
 <div id="modal" class="modal-overlay">
   <div class="modal-box">
-    <div class="modal-title">⏰ Planlananlar Сообщение</div>
+    <div class="modal-title">⏰ Запланированное сообщение</div>
     <div class="form-group">
       <label class="form-label">📺 Канал</label>
       <select id="sm-channel" class="form-input"></select>
     </div>
     <div class="form-group">
-      <label class="form-label">💬 Сообщение Содержимое</label>
+      <label class="form-label">💬 Текст сообщения</label>
       <textarea id="sm-content" class="form-input" rows="4" placeholder="Отправл сообщение..." style="resize:vertical;"></textarea>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
       <div class="form-group">
-        <label class="form-label">⏱️ Aramalık (min)</label>
+        <label class="form-label">⏱️ Периодичность (мин)</label>
         <input type="number" id="sm-interval" class="form-input" value="60" min="1">
       </div>
       <div class="form-group">
-        <label class="form-label">📅 Başlangıç</label>
+        <label class="form-label">📅 Начало</label>
         <input type="datetime-local" id="sm-start" class="form-input">
       </div>
     </div>
@@ -91,7 +91,7 @@
 </div>
 
 <script>
-var selectedGuild = '1421244140359909513';
+var selectedGuild = '{{ main_guild_id }}';
 
 async function loadGuilds() {
   // Sabit сервер ID
@@ -130,15 +130,15 @@ async function loadMessages() {
   document.getElementById('sm-channel').innerHTML = channels.filter(c=>c.type==='text').map(c=>'<option value="'+c.id+'">#'+c.name+'</option>').join('');
 
   var box = document.getElementById('sm-list');
-  if (!msgs.length) { box.innerHTML='<div class="empty-state"><div style="font-size:60px;margin-bottom:16px;">⏰</div><p>Пока saatlanmış сообщение yok.</p></div>'; return; }
+  if (!msgs.length) { box.innerHTML='<div class="empty-state"><div style="font-size:60px;margin-bottom:16px;">⏰</div><p>Пока нет запланированных сообщений.</p></div>'; return; }
   box.innerHTML = msgs.map(function(m, i) {
     var nextRun = '';
     try { nextRun = new Date(m.next_run).toLocaleString('tr-TR'); } catch(e) {}
     return '<div class="sm-card" style="animation-delay:'+(i*0.08)+'s">'+
-      '<span class="sm-badge '+(m.active ? 'badge-active' : 'badge-inactive')+'">'+(m.active ? '🟢 Активен' : '⚫ Değilaktif')+'</span>'+
+      '<span class="sm-badge '+(m.active ? 'badge-active' : 'badge-inactive')+'">'+(m.active ? '🟢 Активен' : '⚫ Неактивно')+'</span>'+
       '<div class="sm-content">'+m.content+'</div>'+
       '<div class="sm-info">'+
-        '<div class="sm-info-item"><div class="sm-info-val">'+m.interval+'dk</div><div class="sm-info-lbl">Aramalık</div></div>'+
+        '<div class="sm-info-item"><div class="sm-info-val">'+m.interval+'dk</div><div class="sm-info-lbl">Периодичность</div></div>'+
         '<div class="sm-info-item"><div class="sm-info-val" style="font-size:11px;">'+nextRun+'</div><div class="sm-info-lbl">Вперед</div></div>'+
       '</div>'+
       '<div class="sm-footer"><span style="color:#5a5040;font-size:11px;">ID: '+m.id+'</span>'+
@@ -172,7 +172,7 @@ async function createMessage() {
 }
 
 async function deleteMessage(id) {
-  if (!confirm('Удалитьmek если хотите emin misiniz mı siz?')) return;
+  if (!confirm('Удалитьmek если хотите emin misiniz ? siz?')) return;
   await fetch('/api/guild/'+selectedGuild+'/scheduled-messages/'+id+'/delete', {method:'POST'});
   loadMessages();
 }

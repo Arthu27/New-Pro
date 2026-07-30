@@ -22,7 +22,7 @@ async function loadAnns() {
   var anns = await r.json();
   var box = document.getElementById('ann-list');
   if (!anns.length) {
-    box.innerHTML = '<div class="empty"><i class="fas fa-bullhorn"></i><p>Пока duyuru yok.</p></div>';
+    box.innerHTML = '<div class="empty"><i class="fas fa-bullhorn"></i><p>Пока объявлений нет.</p></div>';
     return;
   }
   box.innerHTML = anns.map(function(a) {

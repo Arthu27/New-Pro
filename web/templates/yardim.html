@@ -91,25 +91,25 @@
 <div class="yr-hero">
   <div class="yr-badge">Aether Bot</div>
   <h1>Команда Руководство</h1>
-  <p class="yr-hero-sub">Tum команды, kategoriler ve izin seviyeleri</p>
+  <p class="yr-hero-sub">Все команды, категории и уровни доступа</p>
 </div>
 
 <div class="yr-stats">
   <div class="yr-stat s-section">
     <div class="yr-stat-icon">&#9889;</div>
-    <div><div class="yr-stat-val" id="total-cmds">-</div><div class="yr-stat-lbl">Всего Команда</div></div>
+    <div><div class="yr-stat-val" id="total-cmds">-</div><div class="yr-stat-lbl">Всего команд</div></div>
   </div>
   <div class="yr-stat s-blue">
     <div class="yr-stat-icon">&#128194;</div>
-    <div><div class="yr-stat-val">6</div><div class="yr-stat-lbl">Kategori</div></div>
+    <div><div class="yr-stat-val">6</div><div class="yr-stat-lbl">Категория</div></div>
   </div>
   <div class="yr-stat s-green">
     <div class="yr-stat-icon">&#128065;</div>
-    <div><div class="yr-stat-val" id="filtered-count">-</div><div class="yr-stat-lbl">Gosterilen</div></div>
+    <div><div class="yr-stat-val" id="filtered-count">-</div><div class="yr-stat-lbl">Gosterсn</div></div>
   </div>
   <div class="yr-stat s-red">
     <div class="yr-stat-icon">&#128172;</div>
-    <div><div class="yr-stat-val">/помощь</div><div class="yr-stat-lbl">Discord Команда</div></div>
+    <div><div class="yr-stat-val">/помощь</div><div class="yr-stat-lbl">Discord команды</div></div>
   </div>
 </div>
 
@@ -125,20 +125,20 @@
     <button class="yr-tab" data-c="g" onclick="yrTab('music',this)">Muzik</button>
     <button class="yr-tab" data-c="p" onclick="yrTab('fun',this)">Oyun</button>
     <button class="yr-tab" data-c="section" onclick="yrTab('eco',this)">Ekonomi</button>
-    <button class="yr-tab" data-c="b" onclick="yrTab('util',this)">Aramaclar</button>
+    <button class="yr-tab" data-c="b" onclick="yrTab('util',this)">Поискclar</button>
   </div>
 </div>
 
-<div id="yr-container"></div>
+<div id="yr-contaеr"></div>
 
 <script>
 var YR_CATS=[
   {id:'mod',color:'r',title:'Moderasyon',cmds:[
-    {n:'/moderate ban',d:'Пользователя постоянный yasakla',u:'/moderate ban @user причина',p:'admin'},
-    {n:'/moderate kick',d:'С сервера at',u:'/moderate kick @user причина',p:'admin'},
-    {n:'/moderate timeout',d:'Gecici sustur',u:'/moderate timeout @user 10m',p:'admin'},
-    {n:'/moderate untimeout',d:'Susturmayi удалить',u:'/moderate untimeout @user',p:'admin'},
-    {n:'/moderate unban',d:'Bani удалить',u:'/moderate unban user_id',p:'admin'},
+    {n:'/moderate бан',d:'Пользователя постоянный yasakla',u:'/moderate бан @user причина',p:'admin'},
+    {n:'/moderate кик',d:'С сервера at',u:'/moderate кик @user причина',p:'admin'},
+    {n:'/moderate timeout',d:'Gecici заглушить',u:'/moderate timeout @user 10m',p:'admin'},
+    {n:'/moderate untimeout',d:'Мьютmayi удалить',u:'/moderate untimeout @user',p:'admin'},
+    {n:'/moderate unбан',d:'Банi удалить',u:'/moderate unбан user_id',p:'admin'},
     {n:'/utility clear',d:'Toplu message удалить',u:'/utility clear 50',p:'admin'},
     {n:'/utility lock',d:'Канал kilitle',u:'/utility lock',p:'mod'},
     {n:'/utility unlock',d:'Канал kilidini удалить',u:'/utility unlock',p:'mod'},
@@ -171,13 +171,13 @@ var YR_CATS=[
   ]},
   {id:'eco',color:'section',title:'Ekonomi ve Ozellikler',cmds:[
     {n:'/dogumgunu',d:'Dogum gununu сохранить',u:'/dogumgunu 15.03',p:'all'},
-    {n:'/dogumgunleri',d:'Yaklasan dogum gunleri',u:'/dogumgunleri',p:'all'},
+    {n:'/dogumgunы',d:'Yaklasan dogum gunы',u:'/dogumgunы',p:'all'},
     {n:'/duty-panel',d:'Gorev panelini gonder',u:'/duty-panel #channel',p:'admin'},
-    {n:'/duty-add',d:'Manuel ilerleme add',u:'/duty-add @user 10',p:'mod'},
+    {n:'/duty-add',d:'Manuel сrleme add',u:'/duty-add @user 10',p:'mod'},
     {n:'/ticket_panel',d:'Ticket panelini gonder',u:'/ticket_panel',p:'admin'},
-    {n:'/webhook',d:'Webhook islemleri',u:'/webhook olustur',p:'admin'},
+    {n:'/webhook',d:'Webhook islemы',u:'/webhook olustur',p:'admin'},
   ]},
-  {id:'util',color:'b',title:'Помощник Aramaclar',cmds:[
+  {id:'util',color:'b',title:'Помощник Поискclar',cmds:[
     {n:'/modstats',d:'Moderator статистика',u:'/modstats',p:'mod'},
     {n:'/activemods',d:'En activity moderatorler',u:'/activemods',p:'mod'},
     {n:'/saglik',d:'Сервер saglik skoru',u:'/saglik',p:'all'},
@@ -196,7 +196,7 @@ var CM={
 };
 var yrTab_='all',yrQ_='';
 function pb(p){
-  if(p==='admin')return '<span class="pb pb-admin">İsminin</span>';
+  if(p==='admin')return '<span class="pb pb-admin">Твоё имя</span>';
   if(p==='mod')return '<span class="pb pb-mod">Mod</span>';
   return '<span class="pb pb-all">Каждый</span>';
 }
@@ -208,7 +208,7 @@ function yrTab(id,btn){
   yrRender();
 }
 function yrRender(){
-  var c=document.getElementById('yr-container'),html='',shown=0;
+  var c=document.getElementById('yr-contaеr'),html='',shown=0;
   YR_CATS.forEach(function(cat){
     if(yrTab_!=='all'&&yrTab_!==cat.id)return;
     var f=cat.cmds.filter(function(x){
@@ -233,7 +233,7 @@ function yrRender(){
     });
     html+='</div></div>';
   });
-  if(!html)html='<div class="yr-empty"><i class="fas fa-search"></i>В конецuç не найдено.</div>';
+  if(!html)html='<div class="yr-empty"><i class="fas fa-search"></i>В конецконец не найдено.</div>';
   c.innerHTML=html;
   document.getElementById('filtered-count').textContent=shown;
 }

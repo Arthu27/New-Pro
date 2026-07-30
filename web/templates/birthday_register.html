@@ -16,18 +16,18 @@ label{font-size:11px;color:rgba(240,232,208,0.45);display:block;margin-bottom:4p
 <div class="bd-grid">
   <div class="bd-card">
     <h2>🎂 Сохранить мою дату рождения</h2>
-    <div id="bd-current" style="display:none;" class="bd-current"></div>
+    <div id="bd-current"  class="bd-current"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
       <div class="field"><label>день</label><input type="number" id="bd-day" placeholder="15" min="1" max="31"></div>
-      <div class="field"><label>Ay</label><input type="number" id="bd-month" placeholder="3" min="1" max="12"></div>
-      <div class="field"><label>Yıl (opsiyonel)</label><input type="number" id="bd-year" placeholder="2000" min="1900" max="2020"></div>
+      <div class="field"><label>Месяц</label><input type="number" id="bd-month" placeholder="3" min="1" max="12"></div>
+      <div class="field"><label>Год (opsiyonel)</label><input type="number" id="bd-year" placeholder="2000" min="1900" max="2020"></div>
     </div>
     <button class="btn btn-primary" onclick="saveBirthday()">🎂 Сохранить</button>
     <span id="bd-msg" style="margin-left:10px;font-size:12px;color:rgba(240,232,208,0.4);"></span>
   </div>
 
   <div class="bd-card">
-    <h2>🎉 Yaklaşan Рождение День</h2>
+    <h2>🎉 Ближайшие дни рождения</h2>
     <div id="bd-upcoming" style="color:rgba(240,232,208,0.3);font-size:13px;">Загрузка...</div>
   </div>
 </div>
@@ -81,7 +81,7 @@ async function saveBirthday() {
     }).then(r => r.json());
     if (r.ok) { msg.textContent = '✅ Сохранено!'; init(); }
     else msg.textContent = '❌ ' + (r.error || 'Ошибка');
-  } catch(e) { msg.textContent = '❌ Ссылка ошибки'; }
+  } catch(e) { msg.textContent = '❌ Ошибка соединения'; }
 }
 
 init();

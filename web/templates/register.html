@@ -72,12 +72,12 @@ input::placeholder{color:#3a3020;}
       </div>
       <div class="hint">Girin 6-znacniy kod den Discord DM</div>
     </div>
-    <button type="submit" class="btn"><i class="fas fa-check"></i> Onayla ve zaregistrirovatsya</button>
+    <button type="submit" class="btn"><i class="fas fa-check"></i> Подтвердить и зарегистрироваться</button>
   </form>
   <div class="footer"><a href="/register">← До</a></div>
 
   {% else %}
-  <p class="subtitle">Запись участник</p>
+  <p class="subtitle">Регистрация участника</p>
   <form method="POST">
     <input type="hidden" name="step" value="1">
     <div class="form-group">
@@ -86,10 +86,10 @@ input::placeholder{color:#3a3020;}
         <i class="icon fab fa-discord"></i>
         <input type="text" name="discord_id" placeholder="123456789012345678" required>
       </div>
-      <div class="hint">Mod razrabotcika → sağ клик → kopyala ID</div>
+      <div class="hint">Режим разработчика → правый клик → скопировать ID</div>
     </div>
     <div class="form-group">
-      <label>Pridumayte parola</label>
+      <label>Pridumayte пароль</label>
       <div class="input-wrap">
         <i class="icon fas fa-lock"></i>
         <input type="password" name="password" id="pass1" placeholder="Minimum 6 simvolov" required>
@@ -97,10 +97,10 @@ input::placeholder{color:#3a3020;}
       </div>
     </div>
     <div class="form-group">
-      <label>Povtorite parola</label>
+      <label>Povtorite пароль</label>
       <div class="input-wrap">
         <i class="icon fas fa-lock"></i>
-        <input type="password" name="password2" id="pass2" placeholder="Povtorite parola" required>
+        <input type="password" name="password2" id="pass2" placeholder="Povtorite пароль" required>
         <button type="button" class="eye" onclick="togglePass('pass2',this)"><i class="fas fa-eye"></i></button>
       </div>
     </div>

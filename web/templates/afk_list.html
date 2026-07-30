@@ -37,7 +37,7 @@ async function loadAFK(gid) {
     var el = document.getElementById('afk-grid');
     document.getElementById('afk-count').textContent = d.length + ' celovek AFK';
     if (!d.length) {
-      el.innerHTML = '<div class="empty-state"><i class="fas fa-moon"></i>Сейчас никто не AFK кто yok.</div>';
+      el.innerHTML = '<div class="empty-state"><i class="fas fa-moon"></i>Сейчас никто не AFK.</div>';
       return;
     }
     el.innerHTML = d.map(function(u) {

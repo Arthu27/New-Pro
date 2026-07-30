@@ -1,5 +1,5 @@
 ﻿{% extends "base.html" %}
-{% block title %}Пользователь Команды - Aether{% endblock %}
+{% block title %}Пользовательские команды - Aether{% endblock %}
 {% block page_title %}<i class="fas fa-terminal" style="color:#c8922a;animation:pulse 2s infinite;"></i> ОСОБЫЙ КОМАНДЫ{% endblock %}
 {% block content %}
 <style>
@@ -31,28 +31,28 @@
   .section-title{color:#c8922a;font-size:13px;text-transform:uppercase;letter-spacing:2px;margin-bottom:20px;display:flex;align-items:center;gap:8px;padding-bottom:12px;border-bottom:1px solid rgba(212,168,67,0.1);}
 </style>
 
-{% if role == 'owner' %}<button class="btn-add" onclick="openModal()"><i class="fas fa-plus"></i> Новый Создать команды</button>{% endif %}
+{% if role == 'owner' %}<button class="btn-add" onclick="openModal()"><i class="fas fa-plus"></i> Создать новую команду</button>{% endif %}
 
-<select style="display:none" style="display:none" id="guild-select" class="guild-select" onchange="loadCommands()">
-  <option value="">Сервер выбрать...</option>
+<select  id="guild-select" class="guild-select" onchange="loadCommands()">
+  <option value="">Выберите сервер...</option>
 </select>
 
 <div class="section-box">
-  <div class="section-title"><i class="fas fa-list"></i> Пользователь Команды</div>
-  <div id="cmd-list"><div class="empty-state">Сервер выберите...</div></div>
+  <div class="section-title"><i class="fas fa-list"></i> Пользовательские команды</div>
+  <div id="cmd-list"><div class="empty-state">Выберите сервер...</div></div>
 </div>
 
 <div id="modal" class="modal-overlay">
   <div class="modal-box">
-    <div class="modal-title"><i class="fas fa-terminal"></i> Пользователь Создать команды</div>
-    <div class="vars-box">Değişkenler: <span>{user}</span> <span>{сервер}</span> <span>{channel}</span> <span>{count}</span></div>
+    <div class="modal-title"><i class="fas fa-terminal"></i> Пользователь Создать команду</div>
+    <div class="vars-box">Переменные: <span>{user}</span> <span>{сервер}</span> <span>{channel}</span> <span>{count}</span></div>
     <label style="color:#c8922a;font-size:11px;text-transform:uppercase;display:block;margin-bottom:6px;">Tetikleyici (prefix olmadan)</label>
     <input type="text" id="cmd-trigger" placeholder="напр.: merhaba, правила" class="modal-input" style="font-family:monospace;">
-    <label style="color:#c8922a;font-size:11px;text-transform:uppercase;display:block;margin-bottom:6px;">Cevap</label>
-    <textarea id="cmd-response" placeholder="Команда yanıtı..." class="modal-textarea"></textarea>
-    <label style="color:#c8922a;font-size:11px;text-transform:uppercase;display:block;margin-bottom:6px;">Cevap Tipi</label>
+    <label style="color:#c8922a;font-size:11px;text-transform:uppercase;display:block;margin-bottom:6px;">Ответ</label>
+    <textarea id="cmd-response" placeholder="Ответ команды..." class="modal-textarea"></textarea>
+    <label style="color:#c8922a;font-size:11px;text-transform:uppercase;display:block;margin-bottom:6px;">Ответ Tipi</label>
     <select id="cmd-type" class="modal-input">
-      <option value="text">Düz Metin</option>
+      <option value="text">Прямой Metin</option>
       <option value="embed">Эмбед</option>
     </select>
     <div style="display:flex;gap:10px;margin-top:5px;">
@@ -63,7 +63,7 @@
 </div>
 
 <script>
-var selectedGuild = '1421244140359909513';
+var selectedGuild = '{{ main_guild_id }}';
 var role = '{{ role }}';
 
 async function loadGuilds() {
@@ -121,7 +121,7 @@ function closeModal() { document.getElementById('modal').style.display='none'; }
 async function createCommand() {
   var trigger = document.getElementById('cmd-trigger').value.trim().replace(/^!/,'');
   var response = document.getElementById('cmd-response').value.trim();
-  if(!trigger || !response) { alert('Tetikleyici ve yanıt gir!'); return; }
+  if(!trigger || !response) { alert('Tetikleyici ve ответ gir!'); return; }
   var r = await fetch('/api/guild/'+selectedGuild+'/custom-commands/create', {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({trigger:trigger, response:response, type:document.getElementById('cmd-type').value})
@@ -132,7 +132,7 @@ async function createCommand() {
 }
 
 async function deleteCmd(id) {
-  if(!confirm('Bu команда удалить если хотите emin misiniz mı siz?')) return;
+  if(!confirm('Bu команда удалить если хотите emin misiniz ? siz?')) return;
   var r = await fetch('/api/guild/'+selectedGuild+'/custom-commands/'+id+'/delete', {method:'POST'});
   var d = await r.json();
   if(d.success) loadCommands();

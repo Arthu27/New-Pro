@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Denetim Kaydi - Aether{% endblock %}
-{% block page_title %}DENETİM KAYDI{% endblock %}
+{% block page_title %}ЖУРНАЛ ДЕЙСТВИЙ{% endblock %}
 {% block content %}
 <style>
 .filter-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:15px;align-items:center;}
@@ -38,7 +38,7 @@
 <div class="section">
   <div class="filter-bar">
     <input type="text" id="search" placeholder="Пользователь, channel, message ara..." oninput="applyFilters()">
-    <select id="guild-filter" onchange="applyFilters()"><option value="">Tum Сервера</option></select>
+    <select id="guild-filter" onchange="applyFilters()"><option value="">Все серверы</option></select>
   </div>
   <div class="filter-bar" id="cat-buttons" style="margin-bottom:15px;"></div>
   <div id="event-list" style="display:flex;flex-direction:column;gap:5px;"><div style="text-align:center;padding:50px;color:#555;"><i class="fas fa-spinner fa-spin" style="font-size:28px;color:#dc143c;"></i><br><br>Yukleniyor...</div></div>
@@ -66,12 +66,12 @@ var CATS={
   voice:  {icon:"🔊",label:"Ses",    bg:"rgba(26,188,156,0.2)",border:"rgba(26,188,156,0.5)",text:"#1abc9c"},
   сервер: {icon:"🏰",label:"Сервер", bg:"rgba(230,126,34,0.2)",border:"rgba(230,126,34,0.5)",text:"#e67e22"},
   automod:{icon:"🤖",label:"AutoMod",bg:"rgba(231,76,60,0.2)", border:"rgba(231,76,60,0.5)", text:"#e74c3c"},
-  invite: {icon:"📨",label:"Davet",  bg:"rgba(149,165,166,0.2)",border:"rgba(149,165,166,0.5)",text:"#95a5a6"}
+  invite: {icon:"📨",label:"Приглашение",  bg:"rgba(149,165,166,0.2)",border:"rgba(149,165,166,0.5)",text:"#95a5a6"}
 };
 
 function buildCatButtons(){
   var w=document.getElementById("cat-buttons");
-  var h="<button class=\"cat-btn active\" data-cat=\"\">Tumu</button> ";
+  var h="<button class=\"cat-btn active\" data-cat=\"\">Всеu</button> ";
   Object.keys(CATS).forEach(function(k){h+="<button class=\"cat-btn\" data-cat=\""+k+"\">"+CATS[k].icon+" "+CATS[k].label+"</button> ";});
   w.innerHTML=h;
   w.querySelectorAll(".cat-btn").forEach(function(b){
@@ -117,7 +117,7 @@ function renderEvents(){
   var list=document.getElementById("event-list");
   var lmw=document.getElementById("load-more-wrap");
   if(!filtered.length){
-    list.innerHTML="<div style=\"text-align:center;padding:50px;color:#555;\"><i class=\"fas fa-search\" style=\"font-size:32px;\"></i><br><br>В конецuç не найдено</div>";
+    list.innerHTML="<div style=\"text-align:center;padding:50px;color:#555;\"><i class=\"fas fa-search\" style=\"font-size:32px;\"></i><br><br>Ничего не найдено</div>";
     lmw.style.display="none"; return;
   }
   var slice=filtered.slice(0,shown), html="";
@@ -157,23 +157,23 @@ function showDetail(idx){
   if(ev.channel) h+=row("Канал","<span style=\"color:#3498db;\">#"+ev.channel+"</span>");
   if(ev.channel_id) h+=row("Канал ID","<code style=\"color:#aaa;font-size:12px;\">"+ev.channel_id+"</code>");
   if(ev.guild_id) h+=row("Сервер ID","<code style=\"color:#aaa;font-size:12px;\">"+ev.guild_id+"</code>");
-  if(ev.mod_id) h+=row("Moderator ID","<code style=\"color:#aaa;font-size:12px;\">"+ev.mod_id+"</code>");
+  if(ev.mod_id) h+=row("ID модератора","<code style=\"color:#aaa;font-size:12px;\">"+ev.mod_id+"</code>");
   if(ev.reason) h+=row("Причина","<span style=\"color:#f39c12;\">"+ev.reason+"</span>");
   if(ev.message_id) h+=row("Сообщение ID","<code style=\"color:#aaa;font-size:12px;\">"+ev.message_id+"</code>");
-  if(ev.account_age_days!==undefined) h+=row("Hesap Yasi",ev.account_age_days+" gun");
+  if(ev.account_age_days!==undefined) h+=row("Возраст аккаунта",ev.account_age_days+" дн.");
   if(ev.roles&&ev.roles.length) h+=row("Роли",ev.roles.join(", "));
-  if(ev.added_roles&&ev.added_roles.length) h+=row("Добавитьnen Роли","<span style=\"color:#2ecc71;\">"+ev.added_roles.join(", ")+"</span>");
+  if(ev.added_roles&&ev.added_roles.length) h+=row("Добавленные роли","<span style=\"color:#2ecc71;\">"+ev.added_roles.join(", ")+"</span>");
   if(ev.removed_roles&&ev.removed_roles.length) h+=row("Удален Роли","<span style=\"color:#e74c3c;\">"+ev.removed_roles.join(", ")+"</span>");
-  if(ev.old_name) h+=row("Старый Isim","<span style=\"color:#e74c3c;\">"+ev.old_name+"</span>");
-  if(ev.new_name) h+=row("Новый Isim","<span style=\"color:#2ecc71;\">"+ev.new_name+"</span>");
+  if(ev.old_name) h+=row("Старое имя","<span style=\"color:#e74c3c;\">"+ev.old_name+"</span>");
+  if(ev.new_name) h+=row("Новое имя","<span style=\"color:#2ecc71;\">"+ev.new_name+"</span>");
   if(ev.old_nick) h+=row("Старый Nick","<span style=\"color:#e74c3c;\">"+ev.old_nick+"</span>");
   if(ev.new_nick) h+=row("Новый Nick","<span style=\"color:#2ecc71;\">"+ev.new_nick+"</span>");
-  if(ev.max_uses) h+=row("Maks Использование",ev.max_uses);
-  if(ev.code) h+=row("Davet Kodu","discord.gg/"+ev.code);
-  // Сообщение icerikleri
-  if(ev.content&&ev.action==="Сообщение Написано") h+="<div style=\"margin-top:15px;\"><div style=\"color:#888;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;\">Сообщение Icerigi</div><div class=\"msg-box\">"+ev.content+"</div></div>";
-  if(ev.content&&ev.action==="Сообщение Удалитьindi") h+="<div style=\"margin-top:15px;\"><div style=\"color:#e74c3c;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;\">🗑️ Удалитьinen Сообщение</div><div class=\"msg-box deleted\">"+ev.content+"</div></div>";
-  if(ev.before) h+="<div style=\"margin-top:15px;\"><div style=\"color:#f39c12;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;\">✏️ Onceki Сообщение</div><div class=\"msg-box edited-before\">"+ev.before+"</div></div>";
+  if(ev.max_uses) h+=row("Макс. использований",ev.max_uses);
+  if(ev.code) h+=row("Код приглашения","discord.gg/"+ev.code);
+  // Сообщение icerikы
+  if(ev.content&&ev.action==="Сообщение написано") h+="<div style=\"margin-top:15px;\"><div style=\"color:#888;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;\">Текст сообщения</div><div class=\"msg-box\">"+ev.content+"</div></div>";
+  if(ev.content&&ev.action==="Сообщение удалено") h+="<div style=\"margin-top:15px;\"><div style=\"color:#e74c3c;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;\">🗑️ Удалённое сообщение</div><div class=\"msg-box deleted\">"+ev.content+"</div></div>";
+  if(ev.before) h+="<div style=\"margin-top:15px;\"><div style=\"color:#f39c12;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;\">✏️ Предыдущее сообщение</div><div class=\"msg-box edited-before\">"+ev.before+"</div></div>";
   if(ev.after) h+="<div style=\"margin-top:8px;\"><div style=\"color:#2ecc71;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;\">✅ Новый Сообщение</div><div class=\"msg-box edited-after\">"+ev.after+"</div></div>";
   document.getElementById("detailContent").innerHTML=h;
   document.getElementById("detailModal").style.display="flex";
@@ -215,7 +215,7 @@ function populateGuilds(){
   var guilds={};
   allEvents.forEach(function(ev){if(ev.guild_id) guilds[ev.guild_id]=true;});
   var sel=document.getElementById("guild-filter");
-  sel.innerHTML="<option value=\"\">Tum Сервера</option>";
+  sel.innerHTML="<option value=\"\">Все серверы</option>";
   Object.keys(guilds).forEach(function(gid){sel.innerHTML+="<option value=\""+gid+"\">"+gid+"</option>";});
 }
 

@@ -383,7 +383,7 @@
                     <input type="text" name="username" id="passUsername" class="form-input" placeholder="owner, @username или ID" required autocomplete="off" oninput="showSuggest(this, 'passPopup')" onfocus="showSuggest(this, 'passPopup')">
                 </div>
                 <!-- Autocomplete dropdown for password login -->
-                <div class="autocomplete-popup" id="passPopup" style="display:none;"></div>
+                <div class="autocomplete-popup" id="passPopup" ></div>
             </div>
 
             <div class="form-group">
@@ -415,7 +415,7 @@
                         <input type="text" id="discordQuery" class="form-input" placeholder="123456789012345678 или @username" autocomplete="off" oninput="showSuggest(this, 'pinPopup')" onfocus="showSuggest(this, 'pinPopup')">
                     </div>
                     <!-- Autocomplete dropdown for PIN check -->
-                    <div class="autocomplete-popup" id="pinPopup" style="display:none;"></div>
+                    <div class="autocomplete-popup" id="pinPopup" ></div>
                 </div>
                 <div id="step1-error"></div>
                 <button type="button" class="btn-submit" id="btnCheck" onclick="doCheck()">
@@ -423,11 +423,11 @@
                 </button>
             </div>
 
-            <div id="step2" style="display:none;">
+            <div id="step2" >
                 <div class="test-list" id="testList"></div>
             </div>
 
-            <div id="step3" style="display:none;">
+            <div id="step3" >
                 <div class="user-card" id="userCard"></div>
                 <div class="form-group">
                     <label class="form-label">6-значный PIN-код из ЛС</label>
@@ -552,9 +552,16 @@ function showSuggest(inputEl, popupId) {
 
 function selectSuggestItem(inputId, popupId, mentionVal, idVal) {
     const inputEl = document.getElementById(inputId);
-    inputEl.value = mentionVal;
     document.getElementById(popupId).style.display = 'none';
-    inputEl.focus();
+
+    // Password login is keyed by the Discord ID. Keep the user on this form
+    // and move to the password field; selecting a member must not switch tabs.
+    inputEl.value = idVal || mentionVal;
+    if (inputId === 'passUsername') {
+        document.querySelector('#formPass input[name="password"]').focus();
+    } else {
+        inputEl.focus();
+    }
 }
 
 async function doCheck() {

@@ -27,39 +27,42 @@
   .empty-state i{font-size:40px;color:#c8922a;opacity:0.3;display:block;margin-bottom:12px;}
 </style>
 
-<select style="display:none" style="display:none" id="guild-select" class="guild-select" onchange="loadVoiceStats()">
-  <option value="">Сервер выбрать...</option>
+<select  id="guild-select" class="guild-select" onchange="loadVoiceStats()">
+  <option value="">Выберите сервер...</option>
 </select>
 
 <div class="stat-row" id="stat-cards">
-  <div class="stat-box"><div class="stat-val">-</div><div class="stat-lbl">Всего VC Длительность</div></div>
-  <div class="stat-box"><div class="stat-val">-</div><div class="stat-lbl">Сегодня VC Использовать</div></div>
-  <div class="stat-box"><div class="stat-val">-</div><div class="stat-lbl">Ortalama Длительность</div></div>
+  <div class="stat-box"><div class="stat-val">-</div><div class="stat-lbl">Всего голос Длительность</div></div>
+  <div class="stat-box"><div class="stat-val">-</div><div class="stat-lbl">Голосовая активность сегодня</div></div>
+  <div class="stat-box"><div class="stat-val">-</div><div class="stat-lbl">Средняя длительность</div></div>
 </div>
 
 <div class="vs-box">
-  <div class="vs-title"><i class="fas fa-trophy"></i> En Очень VC'de Kalanlar</div>
-  <div id="vc-leaderboard"><div class="empty-state"><i class="fas fa-microphone-slash"></i><p>Сервер выберите...</p></div></div>
+  <div class="vs-title"><i class="fas fa-trophy"></i> Самые активные в голосе</div>
+  <div id="vc-leaderboard"><div class="empty-state"><i class="fas fa-microphone-slash"></i><p>Выберите сервер...</p></div></div>
 </div>
 
 <script>
-var MAIN_GID = '1421244140359909513';
+var MAIN_GID = '{{ main_guild_id }}';
 
 async function loadVoiceStats(gid_param) {
-  var gid = gid_param || MAIN_GID;
+  var selector = document.getElementById('guild-select');
+  var gid = gid_param || (selector && selector.value) || MAIN_GID;
   if(!gid) return;
-  var r = await fetch('/api/guild/'+gid+'/voice-stats');
-  var data = await r.json();
+  try {
+    var r = await fetch('/api/guild/'+encodeURIComponent(gid)+'/voice-stats');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    var data = await r.json();
 
   document.getElementById('stat-cards').innerHTML =
-    '<div class="stat-box"><div class="stat-val">'+(data.total_time||'0s')+'</div><div class="stat-lbl">Всего VC Длительность</div></div>'+
-    '<div class="stat-box"><div class="stat-val">'+(data.today_users||0)+'</div><div class="stat-lbl">Сегодня VC Использовать</div></div>'+
-    '<div class="stat-box"><div class="stat-val">'+(data.avg_time||'0s')+'</div><div class="stat-lbl">Ortalama Длительность</div></div>';
+    '<div class="stat-box"><div class="stat-val">'+(data.total_time||'0s')+'</div><div class="stat-lbl">Всего голос Длительность</div></div>'+
+    '<div class="stat-box"><div class="stat-val">'+(data.today_users||0)+'</div><div class="stat-lbl">Голосовая активность сегодня</div></div>'+
+    '<div class="stat-box"><div class="stat-val">'+(data.avg_time||'0s')+'</div><div class="stat-lbl">Средняя длительность</div></div>';
 
   var lb = document.getElementById('vc-leaderboard');
   var users = data.leaderboard||[];
   if(!users.length) {
-    lb.innerHTML = '<div class="empty-state"><i class="fas fa-microphone-slash"></i><p>Veri yok. Bot ses канал takibi yapıyor mu?</p></div>';
+    lb.innerHTML = '<div class="empty-state"><i class="fas fa-microphone-slash"></i><p>Нет данных. Bot ses канал takibi делает mu?</p></div>';
     return;
   }
   var medals = ['🥇','🥈','🥉'];
@@ -74,9 +77,28 @@ async function loadVoiceStats(gid_param) {
       '<div class="vc-time">'+u.time+'</div>'+
     '</div>';
   }).join('');
+  } catch (error) {
+    console.error('Не удалось загрузить голосовую статистику:', error);
+    document.getElementById('vc-leaderboard').innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>Не удалось загрузить статистику. Повторите попытку позже.</p></div>';
+  }
 }
 
-loadVoiceStats();
-setInterval(loadVoiceStats, 1000);
+async function initialiseGuildSelector() {
+  var selector = document.getElementById('guild-select');
+  if (!selector) return;
+  try {
+    var response = await fetch('/api/guilds');
+    var guilds = await response.json();
+    if (!Array.isArray(guilds)) return;
+    selector.innerHTML = '<option value="">Выберите сервер...</option>' + guilds.map(function(g) {
+      return '<option value="' + g.id + '">' + g.name + '</option>';
+    }).join('');
+    selector.value = MAIN_GID || (guilds[0] && guilds[0].id) || '';
+  } catch (error) { console.error('Не удалось загрузить список серверов:', error); }
+  loadVoiceStats();
+}
+
+initialiseGuildSelector();
+setInterval(loadVoiceStats, 30000);
 </script>
 {% endblock %}

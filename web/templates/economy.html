@@ -1,6 +1,6 @@
 ﻿{% extends "base.html" %}
 {% block title %}Ekonomi - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-coins" style="color:#c8922a;animation:pulse 2s infinite;"></i> EKONOMİ СИСТЕМА{% endblock %}
+{% block page_title %}<i class="fas fa-coins" style="color:#c8922a;animation:pulse 2s infinite;"></i> ЭКОНОМИКА СИСТЕМА{% endblock %}
 {% block content %}
 <style>
   .eco-box{background:linear-gradient(135deg,rgba(26,22,16,0.7),rgba(26,22,16,0.7));border:1px solid rgba(200,146,42,0.3);border-radius:16px;padding:25px;margin-bottom:20px;position:relative;overflow:hidden;}
@@ -32,28 +32,28 @@
   .empty-state{text-align:center;padding:30px;color:#5a5040;font-style:italic;}
 </style>
 
-<select style="display:none" style="display:none" id="guild-select" class="guild-select" onchange="loadEconomy()">
-  <option value="">Сервер выбрать...</option>
+<select  id="guild-select" class="guild-select" onchange="loadEconomy()">
+  <option value="">Выберите сервер...</option>
 </select>
 
 <div class="grid2">
   <div>
     <div class="eco-box">
-      <div class="eco-title"><i class="fas fa-cog"></i> Ekonomi Настройки</div>
+      <div class="eco-title"><i class="fas fa-cog"></i> Настройки экономики</div>
       <div style="margin-bottom:12px;">
         <label class="field-label">День Birimi Isim</label>
-        <input type="text" id="currency-name" placeholder="напр.: Coin, Altın" class="field-input">
+        <input type="text" id="currency-name" placeholder="напр.: Coin, Золотые" class="field-input">
       </div>
       <div style="margin-bottom:12px;">
         <label class="field-label">День Birimi Emojisi</label>
         <input type="text" id="currency-emoji" placeholder="💰" class="field-input">
       </div>
       <div style="margin-bottom:12px;">
-        <label class="field-label">Başlangıç Bakiyesi</label>
+        <label class="field-label">Начальный баланс</label>
         <input type="number" id="start-balance" value="100" class="field-input">
       </div>
       <div style="margin-bottom:12px;">
-        <label class="field-label">Ежедневный Награда</label>
+        <label class="field-label">Ежедневная награда</label>
         <input type="number" id="daily-reward" value="50" class="field-input">
       </div>
       <button class="save-btn" onclick="saveSettings()"><i class="fas fa-save"></i> Сохранить</button>
@@ -61,18 +61,18 @@
 
     <div class="eco-box">
       <div class="eco-title"><i class="fas fa-crown"></i> En Zenginler</div>
-      <div id="rich-list"><div class="empty-state">Сервер выбрать...</div></div>
+      <div id="rich-list"><div class="empty-state">Выберите сервер...</div></div>
     </div>
   </div>
 
   <div class="eco-box">
-    <div class="eco-title"><i class="fas fa-store"></i> Mağaza Управление</div>
-    <div id="shop-items"><div class="empty-state">Сервер выбрать...</div></div>
+    <div class="eco-title"><i class="fas fa-store"></i> Управление магазином</div>
+    <div id="shop-items"><div class="empty-state">Выберите сервер...</div></div>
     <div class="add-section">
-      <h4><i class="fas fa-plus"></i> Новый Ürün Добавить</h4>
+      <h4><i class="fas fa-plus"></i> Новый Продукт Добавить</h4>
       <div style="margin-bottom:8px;">
-        <label class="field-label">Ürün Isim</label>
-        <input type="text" id="item-name" placeholder="Ürün имя" class="field-input">
+        <label class="field-label">Продукт Isim</label>
+        <input type="text" id="item-name" placeholder="Продукт имя" class="field-input">
       </div>
       <div style="margin-bottom:8px;">
         <label class="field-label">Описание</label>
@@ -88,7 +88,7 @@
 </div>
 
 <script>
-var selectedGuild = '1421244140359909513';
+var selectedGuild = '{{ main_guild_id }}';
 var currencyEmoji = '💰';
 
 async function loadGuilds() {
@@ -141,7 +141,7 @@ async function loadEconomy() {
         '</div>'+
       '</div>';
     }).join('') :
-    '<div class="empty-state">Mağaza пусто.</div>';
+    '<div class="empty-state">Магазин пусто.</div>';
 
   var medals = ['🥇','🥈','🥉'];
   document.getElementById('rich-list').innerHTML = rich.slice(0,10).length ?
@@ -152,7 +152,7 @@ async function loadEconomy() {
         '<span style="color:#c8922a;font-weight:700;">'+u.balance+' '+currencyEmoji+'</span>'+
       '</div>';
     }).join('') :
-    '<div class="empty-state">Veri yok.</div>';
+    '<div class="empty-state">Нет данных.</div>';
 }
 
 async function saveSettings() {

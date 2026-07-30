@@ -1,4 +1,4 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 {% block title %}Automod & Warning Настройки - Aether{% endblock %}
 {% block page_title %}<i class="fas fa-shield-alt" style="color:#e05555;"></i> AUTOMOD & WARN НАСТРОЙК{% endblock %}
 {% block content %}
@@ -57,90 +57,95 @@ input:checked+.slider:before{transform:translateX(20px);background:#e05555;}
 </style>
 
 <div style="margin-bottom:20px;">
-  <select style="display:none" style="display:none" id="guild-select" onchange="loadAll()" style="width:100%;padding:11px;background:#100e08;border:1px solid rgba(231,76,60,0.3);border-radius:12px;color:#f0e8d0;font-size:14px;">
-    <option value="">Сервер выбрать...</option>
+  <select id="guild-select"  onchange="loadAll()" style="width:100%;padding:11px;background:#100e08;border:1px solid rgba(231,76,60,0.3);border-radius:12px;color:#f0e8d0;font-size:14px;">
+    <option value="">Выберите сервер...</option>
   </select>
 </div>
 
 <div class="am-grid">
-  <!-- SOL: Zapresennie Kelimeler + Koruma -->
+  <!-- SOL: Zapresennie Kelimeler + Защита -->
   <div>
     <div class="am-box" style="margin-bottom:20px;">
-      <div class="am-title"><i class="fas fa-ban"></i> Zapresennie Kelimeler</div>
+      <div class="am-title"><i class="fas fa-бан"></i> Zapresennie Kelimeler</div>
       <div class="add-row">
-        <input type="text" id="new-word" placeholder="Kelime добавить..." onkeydown="if(event.key==='Enter')addWord()">
-        <button onclick="addWord()">+ Добавить</button>
+        <input type="text" id="new-word" placeholder="Kelime добавить...">
+        <button id="btnAddWord" type="button">+ Добавить</button>
       </div>
       <div id="word-list" style="min-height:32px;"></div>
     </div>
 
     <div class="am-box">
-      <div class="am-title"><i class="fas fa-shield-alt"></i> Koruma Настройки</div>
+      <div class="am-title"><i class="fas fa-shield-alt"></i> Настройки защиты</div>
       <div class="toggle-row">
-        <div><div class="toggle-label">🔁 Защита от спама</div><div class="toggle-sub">Быстрый сообщение denhaklarıniteley susturmak</div></div>
+        <div><div class="toggle-label">🔁 Защита от спама</div><div class="toggle-sub">Определять и блокировать быстрые сообщения</div></div>
         <label class="toggle"><input type="checkbox" id="spam-prot"><span class="slider"></span></label>
       </div>
       <div class="toggle-row">
-        <div><div class="toggle-label">🔗 Link Filtresi</div><div class="toggle-sub">Bez razreseniya ссылка obmen engelle</div></div>
+        <div><div class="toggle-label">🔗 Фильтр ссылок</div><div class="toggle-sub">Запрещать обмен ссылками без разрешения</div></div>
         <label class="toggle"><input type="checkbox" id="link-filter"><span class="slider"></span></label>
       </div>
       <div class="toggle-row">
-        <div><div class="toggle-label">📢 Caps Lock Filtresi</div><div class="toggle-sub">Crezmernoe bolsie bukvi использование</div></div>
+        <div><div class="toggle-label">📢 Фильтр капс-лока</div><div class="toggle-sub">Использование чрезмерно больших букв</div></div>
         <label class="toggle"><input type="checkbox" id="caps-filter"><span class="slider"></span></label>
       </div>
       <div class="toggle-row">
-        <div><div class="toggle-label">🤖 Davet Linki Filtresi</div><div class="toggle-sub">Discord davet ссылка engelle</div></div>
+        <div><div class="toggle-label">🤖 Фильтр приглашений</div><div class="toggle-sub">Запрещать ссылки-приглашения Discord</div></div>
         <label class="toggle"><input type="checkbox" id="invite-filter"><span class="slider"></span></label>
       </div>
       <div class="toggle-row">
-        <div><div class="toggle-label">😡 Mention Spam</div><div class="toggle-sub">Toplu etiket zapret</div></div>
+        <div><div class="toggle-label">😡 Спам упоминаниями</div><div class="toggle-sub">Запрещать массовые упоминания</div></div>
         <label class="toggle"><input type="checkbox" id="etiket-spam"><span class="slider"></span></label>
       </div>
       <div class="toggle-row">
-        <div><div class="toggle-label">🔁 Tekrar Сообщение</div><div class="toggle-sub">Benzer сообщение 3+ kez отправл</div></div>
+        <div><div class="toggle-label">🔁 Повторяющиеся сообщения</div><div class="toggle-sub">Похожие сообщения 3+ раз</div></div>
         <label class="toggle"><input type="checkbox" id="duplicate-filter"><span class="slider"></span></label>
       </div>
       <div class="toggle-row">
-        <div><div class="toggle-label">😵 Emoji Spam</div><div class="toggle-sub">10+ emoji soderjasie сообщения</div></div>
+        <div><div class="toggle-label">😵 Спам эмодзи</div><div class="toggle-sub">Сообщения с 10+ эмодзи</div></div>
         <label class="toggle"><input type="checkbox" id="emoji-filter"><span class="slider"></span></label>
       </div>
       <label class="field-label">Порог спама (X сообщений / 5 сек)</label>
       <input type="number" id="spam-threshold" value="5" min="2" max="20" class="field-input">
-      <button class="save-btn" onclick="saveAutomod()"><i class="fas fa-save"></i> Automod Сохранить</button>
+      <button class="save-btn" id="btnSaveAutomod" type="button"><i class="fas fa-save"></i> Automod Сохранить</button>
     </div>
   </div>
 
-  <!-- SAĞ: Каналы-исключения для спама Каналы + Warning Система -->
+  <!-- ПРАВО: Каналы-исключения для спама Каналы + Предупреждение Sistemi -->
   <div>
     <div class="am-box section" style="margin-bottom:20px;">
       <div class="am-title section"><i class="fas fa-hashtag"></i> Каналы-исключения для спама Каналы</div>
-      <p style="color:#5a5040;font-size:12px;margin-bottom:10px;">Bu в каналах spam/ссылка/caps filtresi не работает.</p>
+      <p style="color:#5a5040;font-size:12px;margin-bottom:10px;">Bu в каналах spam/ссылка/caps фильтрsi не работает.</p>
       <div class="ch-list" id="exempt-channels">
-        <div style="padding:20px;text-align:center;color:#5a5040;font-size:12px;">Сервер выберите...</div>
+        <div style="padding:20px;text-align:center;color:#5a5040;font-size:12px;">Выберите сервер...</div>
       </div>
-      <button class="save-btn section" onclick="saveExempt()" style="margin-top:12px;"><i class="fas fa-save"></i> Исключения Каналы Сохранить</button>
+      <button class="save-btn section" id="btnSaveExempt" type="button" style="margin-top:12px;"><i class="fas fa-save"></i> Исключения Каналы Сохранить</button>
     </div>
 
     <div class="am-box section">
       <div class="am-title section"><i class="fas fa-exclamation-triangle"></i> Warning Наказание Система</div>
-      <p style="color:#5a5040;font-size:12px;margin-bottom:14px;">Сколько предупреждение ne наказание olacak verildi настройк.</p>
+      <p style="color:#5a5040;font-size:12px;margin-bottom:14px;">Сколько предупреждение ne наказание будет выдано настройк.</p>
       <div id="warn-steps"></div>
-      <button class="add-step-btn" onclick="addWarningStep()">+ Новый Правило Добавить</button>
-      <button class="save-btn section" onclick="saveWarningConfig()" style="margin-top:12px;"><i class="fas fa-save"></i> Warning Система Сохранить</button>
+      <button class="add-step-btn" id="btnAddWarnStep" type="button">+ Новый Правило Добавить</button>
+      <button class="save-btn section" id="btnSaveWarnConfig" type="button" style="margin-top:12px;"><i class="fas fa-save"></i> Warning Система Сохранить</button>
     </div>
   </div>
 </div>
 
 <script>
-var MAIN_GID = '1421244140359909513';
+// NOT: Bu sayfa IIFE не используется потому что dinamik HTML дляdeki inlе event'ler
+// global scope'a обращается (warnSteps, renderWarningSteps, addWord vs.)
+// CSP tarafеn inlе event handler'lar bloklanabilir ama одинаковые origin'de
+// 'self' script-src с работает; mevcut sistem его gibi оставлено.
+var MAIN_GID = '{{ main_guild_id }}';
 var GUILD_ID = MAIN_GID;
 var currentWords = [];
 var allChannels = [];
 var warnSteps = [];
 
 async function loadAll(gid_param) {
-  var gid = gid_param || GUILD_ID;
+  var gid = gid_param || document.getElementById('guild-select').value || GUILD_ID;
   if (!gid) return;
+  GUILD_ID = gid;
   await Promise.all([loadAutomod(gid), loadChannels(gid), loadWarningConfig(gid)]);
 }
 
@@ -148,7 +153,7 @@ async function loadAutomod(gid) {
   var r = await fetch('/api/guild/'+gid+'/automod');
   var d = await r.json();
   document.getElementById('spam-prot').checked    = d.spam_protection||false;
-  document.getElementById('link-filter').checked  = d.bağlantı_filter||false;
+  document.getElementById('link-filter').checked  = d.link_filter||false;
   document.getElementById('caps-filter').checked  = d.caps_filter||false;
   document.getElementById('invite-filter').checked= d.invite_filter||false;
   document.getElementById('etiket-spam').checked = d.etiket_spam||false;
@@ -165,7 +170,7 @@ async function loadChannels(gid) {
   if (!Array.isArray(allChannels)) allChannels = [];
   allChannels = allChannels.filter(function(c){return c.type==='text';});
 
-  // Текущий hariç tutulanlar каналы citat
+  // Текущий кроме tutulanlar каналы citat
   var cfg = {};
   try {
     var r2 = await fetch('/api/guild/'+gid+'/automod');
@@ -174,7 +179,7 @@ async function loadChannels(gid) {
   var exempt = cfg.exempt_channels || [];
 
   var box = document.getElementById('exempt-channels');
-  if (!allChannels.length) { box.innerHTML='<div style="padding:16px;text-align:center;color:#5a5040;font-size:12px;">Канал не найдено./div>'; return; }
+  if (!allChannels.length) { box.innerHTML='<div style="padding:16px;text-align:center;color:#5a5040;font-size:12px;">Каналы не найдены.</div>'; return; }
   box.innerHTML = allChannels.map(function(c) {
     var checked = exempt.includes(c.id) ? 'checked' : '';
     return '<div class="ch-item">'+
@@ -193,12 +198,12 @@ async function loadWarningConfig(gid) {
     warnSteps = [];
   }
   if (!warnSteps.length) {
-    // Varчислоlan adımlar
+    // Шаги расчёта
     warnSteps = [
-      {count:3, action:'mute', duration:10, unit:'minute'},
-      {count:5, action:'mute', duration:1,  unit:'hour'},
-      {count:7, action:'kick', duration:0,  unit:'minute'},
-      {count:10,action:'ban',  duration:0,  unit:'minute'},
+      {count:3, action:'мьют', duration:10, unit:'minute'},
+      {count:5, action:'мьют', duration:1,  unit:'hour'},
+      {count:7, action:'кик', duration:0,  unit:'minute'},
+      {count:10,action:'бан',  duration:0,  unit:'minute'},
     ];
   }
   renderWarningSteps();
@@ -207,7 +212,7 @@ async function loadWarningConfig(gid) {
 function renderWarningSteps() {
   var box = document.getElementById('warn-steps');
   box.innerHTML = warnSteps.map(function(s, i) {
-    var showDur = (s.action === 'mute' || s.action === 'timeout');
+    var showDur = (s.action === 'мьют' || s.action === 'timeout');
     return '<div class="warn-step" id="ws-'+i+'" style="grid-template-columns:auto 1fr '+(showDur?'1fr 1fr':'2fr')+' auto;">'+
       '<div class="warn-step-num">'+(i+1)+'</div>'+
       '<div><label style="color:#5a5040;font-size:10px;display:block;margin-bottom:3px;">ПРЕДУПРЕЖДЕНИЕ КОЛИЧЕСТВО</label>'+
@@ -215,10 +220,10 @@ function renderWarningSteps() {
       '</div>'+
       '<div><label style="color:#5a5040;font-size:10px;display:block;margin-bottom:3px;">НАКАЗАНИЕ</label>'+
         '<select onchange="warnSteps['+i+'].action=this.value;renderWarningSteps()">'+
-          '<option value="mute"'+(s.action==='mute'?' selected':'')+'>🔇 Mute</option>'+
-          '<option value="timeout"'+(s.action==='timeout'?' selected':'')+'>⏱️ Mute</option>'+
-          '<option value="kick"'+(s.action==='kick'?' selected':'')+'>👢 Kick</option>'+
-          '<option value="ban"'+(s.action==='ban'?' selected':'')+'>🔨 Ban</option>'+
+          '<option value="мьют"'+(s.action==='мьют'?' selected':'')+'>🔇 Мьют</option>'+
+          '<option value="timeout"'+(s.action==='timeout'?' selected':'')+'>⏱️ Мьют</option>'+
+          '<option value="кик"'+(s.action==='кик'?' selected':'')+'>👢 Кик</option>'+
+          '<option value="бан"'+(s.action==='бан'?' selected':'')+'>🔨 Бан</option>'+
         '</select>'+
       '</div>'+
       (showDur ?
@@ -226,7 +231,7 @@ function renderWarningSteps() {
           '<div style="display:flex;gap:4px;">'+
             '<input type="number" value="'+s.duration+'" min="1" style="width:60px;text-align:center;" onchange="warnSteps['+i+'].duration=parseInt(this.value)">'+
             '<select onchange="warnSteps['+i+'].unit=this.value" style="flex:1;">'+
-              '<option value="minute"'+(s.unit==='minute'?' selected':'')+'>Dakika</option>'+
+              '<option value="minute"'+(s.unit==='minute'?' selected':'')+'>Минут</option>'+
               '<option value="hour"'+(s.unit==='hour'?' selected':'')+'>Время</option>'+
               '<option value="day"'+(s.unit==='day'?' selected':'')+'>день</option>'+
             '</select>'+
@@ -242,7 +247,7 @@ function renderWarningSteps() {
 
 function addWarningStep() {
   var lastCount = warnSteps.length ? warnSteps[warnSteps.length-1].count + 1 : 3;
-  warnSteps.push({count:lastCount, action:'mute', duration:10, unit:'minute'});
+  warnSteps.push({count:lastCount, action:'мьют', duration:10, unit:'minute'});
   renderWarningSteps();
 }
 
@@ -274,8 +279,8 @@ function removeWord(w) {
 }
 
 async function saveAutomod() {
-  var gid = MAIN_GID;
-  // Текущий konfiguraciyu al, exempt_channels'ı сохранить
+  var gid = document.getElementById('guild-select').value || MAIN_GID;
+  // Получить текущую конфигурацию, сохранить exempt_channels
   var existing = {};
   try {
     var r0 = await fetch('/api/guild/'+gid+'/automod');
@@ -285,14 +290,14 @@ async function saveAutomod() {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({
       spam_protection: document.getElementById('spam-prot').checked,
-      bağlantı_filter:     document.getElementById('link-filter').checked,
+      link_filter:       document.getElementById('link-filter').checked,
       caps_filter:     document.getElementById('caps-filter').checked,
       invite_filter:   document.getElementById('invite-filter').checked,
       etiket_spam:    document.getElementById('etiket-spam').checked,
       duplicate_filter:document.getElementById('duplicate-filter').checked,
       emoji_filter:    document.getElementById('emoji-filter').checked,
       spam_threshold:  parseInt(document.getElementById('spam-threshold').value),
-      banned_words:    currentWords,
+      banned_words:      currentWords,
       exempt_channels: existing.exempt_channels || []
     })
   });
@@ -301,7 +306,7 @@ async function saveAutomod() {
 }
 
 async function saveExempt() {
-  var gid = MAIN_GID;
+  var gid = document.getElementById('guild-select').value || MAIN_GID;
   var checked = Array.from(document.querySelectorAll('#exempt-channels input:checked')).map(function(el){return el.value;});
   // Текущий automod config'e добавить
   var r0 = await fetch('/api/guild/'+gid+'/automod');
@@ -316,7 +321,7 @@ async function saveExempt() {
 }
 
 async function saveWarningConfig() {
-  var gid = MAIN_GID;
+  var gid = document.getElementById('guild-select').value || MAIN_GID;
   var r = await fetch('/api/guild/'+gid+'/warn-config', {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({steps: warnSteps})

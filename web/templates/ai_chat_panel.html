@@ -139,7 +139,7 @@ async function sendMessage() {
     }
   } catch(e) {
     removeTyping();
-    addMsg('❌ Ссылка ошибки.', 'bot');
+    addMsg('❌ Ошибка соединения.', 'bot');
   }
 
   isTyping = false;
@@ -155,7 +155,7 @@ async function clearChat() {
   </div>`;
 }
 
-// Enter с с отправить (Shift+Enter новый satır)
+// Enter с с отправить (Shift+Enter новый строка)
 input.addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault();

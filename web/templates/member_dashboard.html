@@ -1,6 +1,6 @@
 ﻿{% extends "base.html" %}
 {% block title %}Ana Sayfa - Aether{% endblock %}
-{% block page_title %}ДОБРО ПОЖАЛОВАТЬ GELDİN{% endblock %}
+{% block page_title %}ДОБРО ПОЖАЛОВАТЬ ПРИБЫЛ{% endblock %}
 {% block content %}
 <style>
 .welcome-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:20px;margin-bottom:30px;}
@@ -24,22 +24,22 @@
   <a href="/member-apply" class="welcome-card">
     <i class="fas fa-user-shield"></i>
     <h3>Заявки на модератора</h3>
-    <p>Администратор olmak для başvur</p>
+    <p>Подать заявку на администратора</p>
   </a>
   <a href="/my-applications" class="welcome-card">
     <i class="fas fa-clipboard-list"></i>
     <h3>Заявка</h3>
-    <p>Заявка состояние takip et</p>
+    <p>Следить за состоянием заявки</p>
   </a>
   <a href="/notifications" class="welcome-card" id="notif-card">
     <i class="fas fa-bell"></i>
-    <h3>Уведомления <span id="notif-count" class="notif-badge" style="display:none;"></span></h3>
-    <p>Администратор gelen сообщения</p>
+    <h3>Уведомления <span id="notif-count" class="notif-badge" ></span></h3>
+    <p>Сообщения от администратора</p>
   </a>
   <a href="/announcements" class="welcome-card">
     <i class="fas fa-bullhorn"></i>
     <h3>Объявления</h3>
-    <p>Сервер duyurularını видеть</p>
+    <p>Видеть объявления сервера</p>
   </a>
 </div>
 
