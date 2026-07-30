@@ -48,8 +48,8 @@
 .badge-text{background:rgba(106,176,224,0.1);color:var(--blue);border:1px solid rgba(106,176,224,0.2);}
 .badge-voice{background:rgba(94,196,122,0.1);color:var(--green);border:1px solid rgba(94,196,122,0.2);}
 .badge-forum{background:rgba(212,168,67,0.1);color:#c8922a;border:1px solid rgba(212,168,67,0.2);}
-.del-btn{width:28px;height:28px;display:flex;align-items:center;justify-content:center;background:transparent;border:1px solid transparent;border-radius:7px;cursor:pointer;color:#5a5040;font-size:11px;transition:all 0.15s;opacity:0;}
-.ch-row:hover .del-btn{opacity:1;}
+.del-btn{width:28px;height:28px;display:flex;align-items:center;justify-content:center;background:transparent;border:1px solid transparent;border-radius:7px;cursor:pointer;color:#5a5040;font-size:11px;transition:all 0.15s;visibility:hidden;}
+.ch-row:hover .del-btn{visibility:visible;}
 .del-btn:hover{background:rgba(224,85,85,0.12);border-color:rgba(224,85,85,0.25);color:var(--red);}
 
 /* Uncategorized rows (no еnt) */
@@ -264,7 +264,7 @@
         html += '<span class="cat-name">' + cat.name + '</span>';
         html += '<span style="font-size:10px;color:#5a5040;margin-right:8px;">' + children.length + '</span>';
         html += '<i class="fas fa-chevron-right cat-toggle open"></i>';
-        html += '<button class="del-btn" data-action="delete-cat" data-id="' + cat.id + '" data-name="' + escapeAttr(cat.name) + '" style="opacity:1;margin-left:4px;" type="button"><i class="fas fa-trash"></i></button>';
+        html += '<button class="del-btn" tabindex="-1" data-action="delete-cat" data-id="' + cat.id + '" data-name="' + escapeAttr(cat.name) + '" style="visibility:visible;margin-left:4px;" type="button"><i class="fas fa-trash"></i></button>';
         html += '</div>';
         html += '<div class="cat-channels">';
         if (children.length) {
@@ -320,7 +320,7 @@
         '<span class="ch-name">' + ch.name + '</span>' +
         '<span class="ch-badge ' + badgeClass + '">' + badgeLabel + '</span>' +
       '</div>' +
-      '<button class="del-btn" data-action="delete-ch" data-id="' + ch.id + '" data-name="' + escapeAttr(ch.name) + '" type="button"><i class="fas fa-trash"></i></button>' +
+      '<button class="del-btn" tabindex="-1" data-action="delete-ch" data-id="' + ch.id + '" data-name="' + escapeAttr(ch.name) + '" type="button"><i class="fas fa-trash"></i></button>' +
     '</div>';
   }
 
