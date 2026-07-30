@@ -397,12 +397,36 @@
 
   async function deleteChannel(id, name) {
     if (!confirm('"' + name + '" канал будет удалён. Продолжить?')) return;
+    // confirm() kapandiktan sonra focus body'ye donup scroll sifirlanmasin.
+    // Pozisyonu ONCEDEN kaydet, islem boyunca koru.
+    var savedPos = getScroll();
+    function reRestore() {
+      setScroll(savedPos);
+      requestAnimationFrame(function () { setScroll(savedPos); });
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { setScroll(savedPos); });
+      });
+      setTimeout(function () { setScroll(savedPos); }, 30);
+      setTimeout(function () { setScroll(savedPos); }, 100);
+      setTimeout(function () { setScroll(savedPos); }, 250);
+    }
+    reRestore();
     try {
       var r = await fetch('/api/guild/' + selectedGuild + '/channels/' + id + '/delete', { method: 'POST' });
+      reRestore();
       var d = await r.json();
-      if (d.success) loadChannels(true);
-      else alert('Ошибка: ' + (d.error || 'Неизвестно'));
-    } catch (e) { alert('Ошибка запроса: ' + e.message); }
+      if (d.success) {
+        // loadChannels kendi icinde restore ediyor ama yine de emniyet.
+        loadChannels(true);
+        reRestore();
+      } else {
+        alert('Ошибка: ' + (d.error || 'Неизвестно'));
+        reRestore();
+      }
+    } catch (e) {
+      alert('Ошибка запроса: ' + e.message);
+      reRestore();
+    }
   }
 
   function bindEvents() {
@@ -456,24 +480,79 @@
         requestAnimationFrame(function () { setScroll(position); });
       }
       list.addEventListener('pointerdown', function () { clickPosition = getScroll(); }, true);
+      // Kanal satirina (ch-row) tiklaninca tarayici focus kaydedip scroll
+      // yapiyor; bunu engelle. .ch-row uzerindeki her tiklamayi yakalayip
+      // butona degilse bile scroll pozisyonunu koru.
       list.addEventListener('click', function (e) {
         var btn = e.target.closest('button[data-action]');
         if (btn) {
-          e.stopPropagation();
+          // Onemli: confirm() cagirilmadan once scroll kaybolmasin, focus'u
+          // engelle, sonra restore et.
+          e.preventDefault();
+          // Buton focus scroll tetiklemesin diye once body'se focus ver.
+          if (document.activeElement) document.activeElement.blur();
           var action = btn.getAttribute('data-action');
           var id = btn.getAttribute('data-id');
           var name = btn.getAttribute('data-name');
           if (action === 'delete-ch' || action === 'delete-cat') {
+            // confirm() senkron oldugu icin scroll burada restore edilir,
+            // sonra islem asenkron giderse yine restore et.
+            restoreClickPosition();
             deleteChannel(id, name);
           }
-          restoreClickPosition();
+          // Silme onay diyalogu kapandiktan sonra scroll restore et.
+          setTimeout(restoreClickPosition, 0);
+          setTimeout(restoreClickPosition, 50);
+          setTimeout(restoreClickPosition, 200);
           return;
         }
         var hdr = e.target.closest('.cat-header');
-        if (hdr) toggleCat(hdr);
+        if (hdr) {
+          toggleCat(hdr);
+          // toggleCat kendi icinde scroll restore yapiyor; yine de emniyet.
+          setTimeout(restoreClickPosition, 0);
+          return;
+        }
+        // Kanal satiri (ch-row) veya herhangi bir alt elementine tiklandi:
+        // burada bir islem yapmiyoruz ama tarayici scroll yapabilir,
+        // restore et.
+        var row = e.target.closest('.ch-row');
+        if (row) {
+          e.preventDefault();
+          if (document.activeElement) document.activeElement.blur();
+          restoreClickPosition();
+          setTimeout(restoreClickPosition, 0);
+        }
+      });
+      // Document seviyesinde: hash degisikligi veya herhangi bir tarayici
+      // scroll tetiklemesini de engellemek icin mouseup'ta restore.
+      list.addEventListener('mouseup', function () {
+        setTimeout(restoreClickPosition, 0);
       });
     }
   }
+
+  // Chrome focus scroll killer: buton/lik odaklandiginda tarayici o elementi
+  // ekranda tutmaya calisip scroll yapiyor. Kanal listesinde bu, sayfanin
+  // en uste ziplamasi demek. preventScroll:true ile bu davranisi kapatalim.
+  (function () {
+    var origFocus = HTMLElement.prototype.focus;
+    HTMLElement.prototype.focus = function (opts) {
+      if (opts && typeof opts === 'object') {
+        opts.preventScroll = true;
+        return origFocus.call(this, opts);
+      }
+      return origFocus.call(this, { preventScroll: true });
+    };
+    // scrollIntoView cagrilarinda da smooth olmadan, scroll yapma
+    var origScrollIntoView = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = function (opts) {
+      // Eger bir kanal/cat islemi sirasinda cagrildiysa, scroll yapma.
+      // Aksi halde default davranis.
+      if (window.__suppressScrollIntoView) return;
+      return origScrollIntoView.call(this, opts);
+    };
+  })();
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);

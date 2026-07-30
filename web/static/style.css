@@ -185,6 +185,19 @@ div#main-content {
     overflow-y: auto;
     overflow-anchor: none;
     padding-bottom: 60px !important;
+    /* Chrome focus scroll: tum container icin scroll-margin sifir */
+    scroll-padding: 0 !important;
+    scroll-margin: 0 !important;
+}
+
+/* Buton focus scroll koruma: Chrome focus alan elemani ekranda tutmaya calisiyor,
+   bu da scroll'u en uste ziplatabiliyor. */
+button, .del-btn, [data-action] {
+    scroll-margin: 0 !important;
+    scroll-padding: 0 !important;
+}
+button:focus, button:focus-visible, .del-btn:focus, [data-action]:focus {
+    outline: none !important;
 }
 
 /* Page title — Scatter'ın большой bold başlığı */
