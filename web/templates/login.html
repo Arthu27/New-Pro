@@ -552,8 +552,20 @@ function showSuggest(inputEl, popupId) {
 
 function selectSuggestItem(inputId, popupId, mentionVal, idVal) {
     const inputEl = document.getElementById(inputId);
-    inputEl.value = mentionVal;
     document.getElementById(popupId).style.display = 'none';
+
+    // A member selected from the password form does not know a panel password.
+    // Take them to the Discord PIN flow instead of leaving a mismatched @name in
+    // the username field (the server authenticates password logins by Discord ID).
+    if (inputId === 'passUsername' && idVal) {
+        switchTab('pin');
+        const discordQuery = document.getElementById('discordQuery');
+        discordQuery.value = idVal;
+        discordQuery.focus();
+        return;
+    }
+
+    inputEl.value = idVal || mentionVal;
     inputEl.focus();
 }
 

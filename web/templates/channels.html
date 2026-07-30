@@ -165,13 +165,16 @@
   var selectedGuild = MAIN_GID;
 
   // Scroll restore для: data attribute с sakla
+  // The panel itself is scrollable on desktop, while mobile uses window scroll.
+  // Preserve both positions whenever a channel list is rendered.
   function getScroll() {
     var mc = document.getElementById('main-content');
-    return mc ? mc.scrollTop : 0;
+    return { panel: mc ? mc.scrollTop : 0, page: window.scrollY || window.pageYOffset || 0 };
   }
-  function setScroll(y) {
+  function setScroll(position) {
     var mc = document.getElementById('main-content');
-    if (mc) mc.scrollTop = y;
+    if (mc) mc.scrollTop = position.panel;
+    window.scrollTo(0, position.page);
   }
 
   function $(id) { return document.getElementById(id); }
@@ -364,9 +367,13 @@
     var btnCreate = $('btnCreateChannel');
     if (btnCreate) btnCreate.addEventListener('click', createChannel);
 
-    // Переключатель серверов (если виден)
+    // The shared live-guild resolver dispatches this event after it has selected
+    // the bot's current guild. Do not reset the scroll position in that case.
     var gs = $('guild-select');
-    if (gs) gs.addEventListener('change', function () { loadChannels(false); });
+    if (gs) gs.addEventListener('change', function () {
+      selectedGuild = gs.value || MAIN_GID;
+      loadChannels(true);
+    });
 
     // Клик по backdrop модала
     var modal = $('modal');
