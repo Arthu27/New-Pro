@@ -46,3 +46,6 @@ data/proactive_ai.json
 # Local preview server artifacts
 _previews/
 _previews_server.py
+
+# Test server (temporary)
+test_server.py
