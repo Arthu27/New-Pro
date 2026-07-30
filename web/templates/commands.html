@@ -48,22 +48,24 @@
     { cmd: 'ticket_panel', icon: 'fa-ticket-alt', name: 'Ticket Panel', desc: 'Ticket paneli gёnder', tag: 'admin' }
   ];
 
-  var roleColors = { mod: 'var(--ok)', admin: '#c8922a' };
+  var roleColors = { mod: '#4ade80', admin: '#d4a843' };
+  var currentCmd = null;  // The currently open command (set by openModal, used by Execute)
 
   function renderGrid() {
     var html = '';
-    commands.forEach(function (c, i) {
-      html += '<div class="cmd-card" data-cmd="' + esc(c.cmd) + '" >' +
+    commands.forEach(function (c) {
+      html += '<div class="cmd-card" data-cmd="' + esc(c.cmd) + '" role="button" tabindex="0">' +
         '<div class="cmd-icon"><i class="fas ' + esc(c.icon) + '"></i></div>' +
         '<div class="cmd-name">' + esc(c.name) + '</div>' +
         '<div class="cmd-desc">' + esc(c.desc) + '</div>' +
-        '<div class="cmd-tag" >' + esc(c.tag.toUpperCase()) + '</div>' +
+        '<div class="cmd-tag" data-tag="' + esc(c.tag) + '">' + esc(c.tag.toUpperCase()) + '</div>' +
       '</div>';
     });
     $('cmd-grid').innerHTML = html;
   }
 
   function openModal(cmd) {
+    currentCmd = cmd;
     var fields = '';
     if (cmd === 'ban' || cmd === 'kick' || cmd === 'warn' || cmd === 'mute' || cmd === 'unmute' || cmd === 'jail' || cmd === 'unjail' || cmd === 'role') {
       fields += '<div class="form-group"><label>Sunucu</label><select id="guild-id">' +
@@ -118,9 +120,24 @@
     $('cmdModal').classList.add('open');
   }
 
-  function closeModal() { $('cmdModal').classList.remove('open'); }
+  function closeModal() {
+    $('cmdModal').classList.remove('open');
+    currentCmd = null;
+  }
 
-  async function execute(cmd) {
+  async function execute() {
+    if (!currentCmd) {
+      var m0 = $('result-msg');
+      m0.style.display = 'block';
+      m0.style.background = 'rgba(239,68,68,0.10)';
+      m0.style.color = '#fca5a5';
+      m0.style.border = '1px solid rgba(239,68,68,0.30)';
+      m0.style.borderRadius = '10px';
+      m0.style.padding = '10px 14px';
+      m0.textContent = 'Команда не выбрана';
+      return;
+    }
+    var cmd = currentCmd;
     var data = { command: cmd };
     var guildId = $('guild-id');
     if (guildId) data.guild_id = guildId.value;
@@ -171,18 +188,25 @@
   }
 
   function bind() {
+    // Card click — open modal
     $('cmd-grid').addEventListener('click', function (e) {
       var card = e.target.closest('.cmd-card');
       if (card) openModal(card.getAttribute('data-cmd'));
     });
+    // Keyboard: Enter / Space on focused card
+    $('cmd-grid').addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      var card = e.target.closest('.cmd-card');
+      if (card) { e.preventDefault(); openModal(card.getAttribute('data-cmd')); }
+    });
+    // Modal close
     $('modalClose').addEventListener('click', closeModal);
     $('cmdModal').addEventListener('click', function (e) { if (e.target === this) closeModal(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeModal(); });
+    // Execute + Cancel — attach handlers to the actual buttons (id stable)
     document.addEventListener('click', function (e) {
-      if (e.target.id === 'btnExec') {
-        var cmd = $('cmd-grid').querySelector('.cmd-card[style*="border-color: rgb(200, 146, 42)"]');
-        if (cmd) execute(cmd.getAttribute('data-cmd'));
-      }
-      if (e.target.id === 'btnCancel') closeModal();
+      if (e.target && e.target.id === 'btnExec') execute();
+      else if (e.target && e.target.id === 'btnCancel') closeModal();
     });
   }
 

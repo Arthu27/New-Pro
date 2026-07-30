@@ -4366,3 +4366,238 @@ img.icon-rect, img.role-icon, img.server-icon, img.guild-icon {
   font-weight: 600 !important;
   font-variant-numeric: tabular-nums;
 }
+
+/* ============================================================
+   COMMANDS PAGE — premium grid + clickable cards
+   ============================================================ */
+.cmd-grid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)) !important;
+  gap: 14px !important;
+  margin-top: 8px;
+}
+.cmd-card {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  gap: 10px !important;
+  padding: 18px 18px !important;
+  background: linear-gradient(135deg, rgba(212, 168, 67, 0.05), rgba(212, 168, 67, 0.02)) !important;
+  border: 1px solid rgba(212, 168, 67, 0.15) !important;
+  border-radius: 14px !important;
+  color: #e8e6df !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  transition: all .15s ease;
+  position: relative;
+  user-select: none;
+}
+.cmd-card:hover {
+  background: linear-gradient(135deg, rgba(212, 168, 67, 0.12), rgba(212, 168, 67, 0.04)) !important;
+  border-color: rgba(212, 168, 67, 0.40) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.30), 0 0 0 1px rgba(212, 168, 67, 0.20);
+}
+.cmd-card:active {
+  transform: translateY(0);
+}
+.cmd-card:focus-visible {
+  outline: 2px solid rgba(212, 168, 67, 0.6);
+  outline-offset: 2px;
+}
+.cmd-card .cmd-icon {
+  width: 44px !important; height: 44px !important;
+  border-radius: 11px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 18px !important;
+  background: linear-gradient(135deg, #d4a843, #e0b04a) !important;
+  color: #1a1a1a !important;
+  flex-shrink: 0;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.20), 0 2px 8px rgba(212, 168, 67, 0.30);
+}
+.cmd-card .cmd-name {
+  font-weight: 700 !important;
+  color: #f4f1e8 !important;
+  font-size: 16px !important;
+  line-height: 1.1;
+  margin-top: 2px;
+}
+.cmd-card .cmd-desc {
+  font-size: 12.5px !important;
+  color: #b8b3a3 !important;
+  line-height: 1.4;
+  flex: 1;
+}
+.cmd-card .cmd-tag {
+  display: inline-flex !important;
+  align-items: center !important;
+  padding: 3px 10px !important;
+  border-radius: 6px !important;
+  font-size: 10.5px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.04em !important;
+  background: rgba(74, 222, 128, 0.15) !important;
+  color: #86efac !important;
+  border: 1px solid rgba(74, 222, 128, 0.30) !important;
+  align-self: flex-start;
+  margin-top: 2px;
+}
+.cmd-card .cmd-tag[data-tag="admin"] {
+  background: rgba(212, 168, 67, 0.15) !important;
+  color: #e0b04a !important;
+  border-color: rgba(212, 168, 67, 0.30) !important;
+}
+.cmd-card .cmd-tag[data-tag="owner"] {
+  background: rgba(248, 113, 113, 0.15) !important;
+  color: #fca5a5 !important;
+  border-color: rgba(248, 113, 113, 0.30) !important;
+}
+
+/* === MODAL — command executor === */
+.cmd-modal-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  background: rgba(0, 0, 0, 0.65) !important;
+  backdrop-filter: blur(4px);
+  z-index: 9000 !important;
+  display: none !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+.cmd-modal-overlay.open,
+.cmd-modal-overlay[style*="display: block"],
+.cmd-modal-overlay[style*="display:block"] {
+  display: flex !important;
+}
+.cmd-modal {
+  background: linear-gradient(135deg, rgba(28, 24, 18, 0.98), rgba(20, 17, 13, 0.98)) !important;
+  border: 1px solid rgba(212, 168, 67, 0.25) !important;
+  border-radius: 16px !important;
+  padding: 24px !important;
+  width: min(90vw, 480px) !important;
+  max-height: 86vh !important;
+  overflow-y: auto !important;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(212, 168, 67, 0.10);
+  position: relative;
+  color: #e8e6df !important;
+}
+.cmd-modal h3 {
+  margin: 0 0 16px 0 !important;
+  font-size: 19px !important;
+  font-weight: 700 !important;
+  color: #f4f1e8 !important;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.cmd-modal h3::before {
+  content: '\f0ad';
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  color: #d4a843;
+  font-size: 16px;
+}
+.cmd-modal-close {
+  position: absolute !important;
+  top: 14px !important;
+  right: 14px !important;
+  width: 32px !important; height: 32px !important;
+  border-radius: 8px !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: #b8b3a3 !important;
+  font-size: 18px !important;
+  cursor: pointer;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all .15s ease;
+}
+.cmd-modal-close:hover {
+  background: rgba(248, 113, 113, 0.15) !important;
+  color: #fca5a5 !important;
+  border-color: rgba(248, 113, 113, 0.30) !important;
+}
+.cmd-modal .form-group {
+  margin-bottom: 12px !important;
+}
+.cmd-modal .form-group label {
+  display: block !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  color: #b8b3a3 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.06em !important;
+  margin-bottom: 5px !important;
+}
+.cmd-modal input,
+.cmd-modal select,
+.cmd-modal textarea {
+  background: rgba(15, 15, 20, 0.7) !important;
+  color: #f4f1e8 !important;
+  border: 1.5px solid rgba(212, 168, 67, 0.20) !important;
+  border-radius: 9px !important;
+  padding: 9px 12px !important;
+  font-size: 14px !important;
+  width: 100%;
+  font-family: inherit;
+}
+.cmd-modal input:focus,
+.cmd-modal select:focus,
+.cmd-modal textarea:focus {
+  outline: none;
+  border-color: rgba(212, 168, 67, 0.55);
+  box-shadow: 0 0 0 3px rgba(212, 168, 67, 0.15);
+}
+.btn-exec {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 10px 20px !important;
+  background: linear-gradient(135deg, #d4a843, #e0b04a) !important;
+  color: #1a1a1a !important;
+  border: none !important;
+  border-radius: 10px !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  cursor: pointer;
+  margin-right: 8px;
+  box-shadow: 0 2px 8px rgba(212, 168, 67, 0.25);
+  transition: all .15s ease;
+}
+.btn-exec:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(212, 168, 67, 0.4);
+  filter: brightness(1.05);
+}
+.btn-cancel {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 10px 20px !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: #b8b3a3 !important;
+  border: 1px solid rgba(255, 255, 255, 0.10) !important;
+  border-radius: 10px !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+.btn-cancel:hover {
+  background: rgba(255, 255, 255, 0.10) !important;
+  color: #f4f1e8 !important;
+  border-color: rgba(255, 255, 255, 0.20) !important;
+}
+#result-msg {
+  display: none;
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 500;
+}
