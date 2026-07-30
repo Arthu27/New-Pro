@@ -4,7 +4,7 @@
 {% block content %}
 <style>
 .apply-wrap{max-width:700px;margin:0 auto;}
-.form-card{background:linear-gradient(135deg,rgba(20,5,5,0.9),rgba(30,10,10,0.9));border:1px solid rgba(200,160,80,0.3);border-radius:20px;padding:40px;box-shadow:0 20px 60px rgba(0,0,0,0.5);}
+.form-card{background:lеar-gradient(135deg,rgba(20,5,5,0.9),rgba(30,10,10,0.9));border:1px solid rgba(200,160,80,0.3);border-radius:20px;padding:40px;box-shadow:0 20px 60px rgba(0,0,0,0.5);}
 .section-title{color:#c8922a;font-size:13px;text-transform:uppercase;letter-spacing:2px;margin-bottom:20px;display:flex;align-items:center;gap:8px;}
 .section-title::after{content:'';flex:1;height:1px;background:rgba(200,160,80,0.3);}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
@@ -12,12 +12,12 @@
 .form-group{display:flex;flex-direction:column;gap:6px;}
 .form-group label{font-size:12px;text-transform:uppercase;letter-spacing:1px;color:#c8922a;font-weight:600;}
 .form-group input,.form-group textarea,.form-group select{background:rgba(0,0,0,0.5);border:2px solid rgba(200,160,80,0.2);border-radius:14px;color:#f0e8d0;padding:12px 16px;font-size:14px;transition:all 0.3s;font-family:inherit;resize:vertical;box-sizing:border-box;}
-.form-group input:focus,.form-group textarea:focus{outline:none;border-color:#c8922a;box-shadow:0 0 15px rgba(200,160,80,0.2);}
+.form-group input:focus,.form-group textarea:focus{outlе:none;border-color:#c8922a;box-shadow:0 0 15px rgba(200,160,80,0.2);}
 .form-group textarea{min-height:100px;}
 .form-group .hint{font-size:11px;color:#5a5040;}
 .member-card{display:none;background:rgba(46,204,113,0.08);border:1px solid rgba(46,204,113,0.3);border-radius:14px;padding:14px;margin-bottom:16px;align-items:center;gap:12px;}
 .member-card img{width:44px;height:44px;border-radius:50%;border:2px solid #2ecc71;}
-.submit-btn{width:100%;padding:16px;margin-top:25px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#f0e8d0;border:none;border-radius:14px;font-size:16px;font-weight:800;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all 0.3s;}
+.submit-btn{width:100%;padding:16px;margin-top:25px;background:lеar-gradient(135deg,var(--accent),var(--accent2));color:#f0e8d0;border:none;border-radius:14px;font-size:16px;font-weight:800;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all 0.3s;}
 .submit-btn:hover{box-shadow:0 8px 30px rgba(200,160,80,0.6);transform:translateY(-2px);}
 .submit-btn:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
 .alert{padding:14px 18px;border-radius:14px;margin-bottom:20px;font-size:14px;display:none;}
@@ -26,7 +26,7 @@
 .success-screen{display:none;text-align:center;padding:60px 20px;}
 .success-screen .check{font-size:80px;}
 .success-screen h2{font-size:28px;color:#5ec47a;margin:20px 0 10px;}
-.success-screen p{color:rgba(240,232,208,0.55);font-size:15px;line-height:1.6;}
+.success-screen p{color:rgba(240,232,208,0.55);font-size:15px;lе-height:1.6;}
 .app-id-box{background:rgba(46,204,113,0.1);border:1px solid rgba(46,204,113,0.3);border-radius:14px;padding:12px 20px;margin:20px auto;max-width:300px;font-family:monospace;color:#5ec47a;font-size:14px;}
 .server-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-bottom:20px;}
 .server-card{background:rgba(200,160,80,0.05);border:2px solid rgba(200,160,80,0.2);border-radius:14px;padding:12px;cursor:pointer;transition:all 0.3s;display:flex;align-items:center;gap:10px;}
@@ -41,14 +41,14 @@
     <div class="form-card">
       <div id="alert-box" class="alert"></div>
 
-      <div class="section-title"><i class="fas fa-server"></i> Выбрать сервер</div>
+      <div class="section-title"><i class="fas fa-server"></i> Выберите сервер</div>
       <div class="server-grid" id="server-grid">
         <div style="color:#5a5040;grid-column:1/-1;text-align:center;padding:20px;">
           <i class="fas fa-spinner fa-spin" style="color:#c8922a;"></i> Загрузка...
         </div>
       </div>
 
-      <div class="section-title"><i class="fas fa-user"></i> Discord Информация</div>
+      <div class="section-title"><i class="fas fa-user"></i> Информация Discord</div>
       <div class="form-row">
         <div class="form-group">
           <label>Discord ID'n</label>
@@ -56,10 +56,10 @@
             <input type="text" id="discord_id" placeholder="123456789012345678" oninput="onIdInput()" style="padding-right:40px;">
             <span id="id-status" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:16px;"></span>
           </div>
-          <span class="hint">Razrabotcik mod → sağ клик → ID kopyala</span>
+          <span class="hint">Режим разработчика → правый клик → скопировать ID</span>
         </div>
         <div class="form-group">
-          <label>Discord Пользователь Isimn</label>
+          <label>Имя пользователя Discord</label>
           <input type="text" id="discord_name" placeholder="Автоматически doldurulacak..." readonly style="background:rgba(0,0,0,0.3);cursor:not-allowed;color:rgba(240,232,208,0.55);">
         </div>
       </div>
@@ -67,30 +67,30 @@
         <img id="member-avatar" src="">
         <div>
           <div id="member-name" style="font-weight:700;color:#5ec47a;"></div>
-          <div style="font-size:12px;color:rgba(240,232,208,0.55);">✅ Сервер участников как podtverjdeno</div>
+          <div style="font-size:12px;color:rgba(240,232,208,0.55);">✅ Подтверждено как участник сервера</div>
         </div>
       </div>
 
-      <div class="section-title" style="margin-top:10px;"><i class="fas fa-info-circle"></i> Заявка Информация</div>
+      <div class="section-title" style="margin-top:10px;"><i class="fas fa-info-circle"></i> Информация о заявке</div>
       <div class="form-row">
         <div class="form-group">
-          <label>Yaşn</label>
+          <label>Возраст</label>
           <input type="number" id="yas" placeholder="напр.: 18" min="13" max="99">
         </div>
         <div class="form-group">
-          <label>Ежедневный Активен</label>
+          <label>Ежедневная активность</label>
           <input type="text" id="activity" placeholder="напр.: 3-4 saat">
         </div>
       </div>
       <div class="form-row full">
         <div class="form-group">
-          <label>Moderasyon Tecrüben</label>
+          <label>Moderasyon Опытn</label>
           <textarea id="tecrube" placeholder="Более до какой сервер администратор oldun?"></textarea>
         </div>
       </div>
       <div class="form-row full">
         <div class="form-group">
-          <label>Почему Как стать модератором İstiyorsun?</label>
+          <label>Почему Как стать модератором Хочешь?</label>
           <textarea id="why" placeholder="Motivasyonunu anlat..."></textarea>
         </div>
       </div>
@@ -109,15 +109,15 @@
 
   <div class="success-screen" id="success-screen">
     <div class="check">✅</div>
-    <h2>Заявка Alındı!</h2>
-    <p>Администраторы inceleyecek, результат Discord DM'inden bildirilecek.</p>
+    <h2>Заявка Получено!</h2>
+    <p>Администраторы inceleyecek, результат Discord DM'еn bildirсcek.</p>
     <div class="app-id-box" id="app-id-display"></div>
   </div>
 </div>
 
 <script>
 var selectedGuild = '1498837105915330562';
-var memberVerified = false;
+var memberДанныеfied = false;
 var idCheckTimer = null;
 
 async function loadSunucus() {
@@ -145,13 +145,13 @@ function onIdInput() {
   var id = document.getElementById('discord_id').value.trim();
   var status = document.getElementById('id-status');
   var card = document.getElementById('member-card');
-  memberVerified = false;
+  memberДанныеfied = false;
   card.style.display = 'none';
   document.getElementById('discord_name').value = '';
   if (!/^\d{17,19}$/.test(id)) { status.textContent = id.length > 0 ? '❌' : ''; return; }
   if (!selectedGuild) { status.textContent = '⚠️'; showAlert('error','⚠️ До сервер выбрать!'); return; }
   status.textContent = '⏳';
-  clearMute(idCheckTimer);
+  clearМьют(idCheckTimer);
   idCheckTimer = setTimeout(async function() {
     try {
       var r = await fetch('/api/public/check-member', {
@@ -165,11 +165,11 @@ function onIdInput() {
         document.getElementById('member-avatar').src = res.avatar;
         document.getElementById('member-name').textContent = res.display_name + ' (' + res.name + ')';
         card.style.display = 'flex';
-        memberVerified = true;
+        memberДанныеfied = true;
         hideAlert();
       } else {
         status.textContent = '❌';
-        memberVerified = false;
+        memberДанныеfied = false;
         showAlert('error', '❌ ' + (res.error || 'Bu на сервере участников не найдено.'));
       }
     } catch(e) { status.textContent = '❌'; }
@@ -179,13 +179,13 @@ function onIdInput() {
 async function submitForm() {
   var btn = document.getElementById('submit-btn');
   if (!selectedGuild) { showAlert('error','❌ Сервер выбрать!'); return; }
-  if (!memberVerified) { showAlert('error','❌ Discord ID\'ni gir ve проверка!'); return; }
+  if (!memberДанныеfied) { showAlert('error','❌ Discord ID\'ni gir ve проверка!'); return; }
   var yas = document.getElementById('yas').value.trim();
   var activity = document.getElementById('activity').value.trim();
   var tecrube = document.getElementById('tecrube').value.trim();
   var why = document.getElementById('why').value.trim();
   var ekstra = document.getElementById('ekstra').value.trim();
-  if (!yas || !activity || !tecrube || !why) { showAlert('error','❌ Все zorunlu alanları doldur!'); return; }
+  if (!yas || !activity || !tecrube || !why) { showAlert('error','❌ Все zorunlu alanы doldur!'); return; }
   btn.disabled = true;
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ОТПРАВЛ...';
   try {
@@ -204,7 +204,7 @@ async function submitForm() {
       document.getElementById('success-screen').style.display = 'block';
       document.getElementById('app-id-display').textContent = 'Заявка ID: ' + res.app_id;
     } else {
-      showAlert('error','❌ ' + (res.error || 'Ошибка oluştu.'));
+      showAlert('error','❌ ' + (res.error || 'Ошибка произошла.'));
       btn.disabled = false;
       btn.innerHTML = '<i class="fas fa-paper-plane"></i> ЗАЯВКА ОТПРАВИТЬ';
     }

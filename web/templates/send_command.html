@@ -6,7 +6,7 @@
 .sc-box{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.1);border-radius:14px;padding:24px;backdrop-filter:blur(4px);}
 .field-label{color:rgba(240,232,208,0.4);font-size:10px;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:6px;font-weight:700;}
 .field-input{width:100%;padding:10px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(212,168,67,0.12);border-radius:8px;color:#f0e8d0;font-size:13px;transition:border-color 0.15s;box-sizing:border-box;font-family:Inter,sans-serif;margin:0;}
-.field-input:focus{outline:none;border-color:rgba(212,168,67,0.45);}
+.field-input:focus{outlе:none;border-color:rgba(212,168,67,0.45);}
 .field-input:disabled{opacity:0.4;cursor:not-allowed;}
 .form-group{margin-bottom:16px;}
 .send-btn{width:100%;padding:12px;background:#c8922a;color:#100e08;border:none;border-radius:99px;cursor:pointer;font-weight:700;font-size:13px;font-family:Inter,sans-serif;transition:background 0.15s,transform 0.12s;margin-top:6px;}
@@ -25,7 +25,7 @@
   <div class="form-group">
     <label class="field-label">Канал</label>
     <select id="channel-select" class="field-input" disabled>
-      <option value="">До сервер выбрать</option>
+      <option value="">Сначала выберите сервер</option>
     </select>
   </div>
   <div class="form-group">
@@ -54,13 +54,13 @@ async function loadChannels() {
       o.value = c.id; o.textContent = '#' + c.name;
       cs.appendChild(o);
     });
-  } catch(e) { cs.innerHTML = '<option value="">Ошибка oluştu</option>'; }
+  } catch(e) { cs.innerHTML = '<option value="">Ошибка произошла</option>'; }
 }
 
 async function sendMessage() {
   var cid = document.getElementById('channel-select').value;
   var msg = document.getElementById('message-input').value.trim();
-  if (!cid || !msg) { showResult('Канал ve сообщение alanlarını doldur!', false); return; }
+  if (!cid || !msg) { showResult('Заполните поля канала и сообщения!', false); return; }
   var btn = document.getElementById('send-btn');
   btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Отправл...';
   try {

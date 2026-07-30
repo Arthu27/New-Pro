@@ -8,7 +8,7 @@
 .afk-card:hover{border-color:rgba(88,101,242,0.4);}
 .afk-name{font-size:14px;font-weight:700;color:#f0e8d0;margin-bottom:4px;}
 .afk-reason{font-size:12px;color:rgba(240,232,208,0.5);margin-bottom:8px;}
-.afk-time{font-size:11px;color:rgba(88,101,242,0.8);background:rgba(88,101,242,0.1);border:1px solid rgba(88,101,242,0.2);border-radius:99px;padding:2px 10px;display:inline-block;}
+.afk-time{font-size:11px;color:rgba(88,101,242,0.8);background:rgba(88,101,242,0.1);border:1px solid rgba(88,101,242,0.2);border-radius:99px;padding:2px 10px;display:inlе-block;}
 .empty-state{text-align:center;padding:60px 20px;color:rgba(240,232,208,0.25);}
 .empty-state i{font-size:40px;margin-bottom:12px;display:block;opacity:0.3;}
 </style>
@@ -37,7 +37,7 @@ async function loadAFK(gid) {
     var el = document.getElementById('afk-grid');
     document.getElementById('afk-count').textContent = d.length + ' celovek AFK';
     if (!d.length) {
-      el.innerHTML = '<div class="empty-state"><i class="fas fa-moon"></i>Сейчас никто не AFK кто yok.</div>';
+      el.innerHTML = '<div class="empty-state"><i class="fas fa-moon"></i>Сейчас никто не AFK.</div>';
       return;
     }
     el.innerHTML = d.map(function(u) {

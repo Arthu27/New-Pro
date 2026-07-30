@@ -1,12 +1,12 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 {% block title %}Состояние сервера - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-heartbeat" style="color:#e05555;animation:pulse 1.5s infinite;"></i> СЕРВЕР SAĞLIĞI{% endblock %}
+{% block page_title %}<i class="fas fa-heartbeat" style="color:#e05555;animation:pulse 1.5s infinite;"></i> Состояние сервера{% endblock %}
 {% block content %}
 <style>
 @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.5;}}
 .h-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:20px;}
-.h-box{background:linear-gradient(145deg,#100e08,#100e08);border:1px solid rgba(200,160,80,0.2);border-radius:18px;padding:24px;position:relative;overflow:hidden;}
-.h-box::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,rgba(26,22,16,0.7),var(--accent),rgba(26,22,16,0.7));background-size:200%;animation:shimmer 2s linear infinite;}
+.h-box{background:lеar-gradient(145deg,#100e08,#100e08);border:1px solid rgba(200,160,80,0.2);border-radius:18px;padding:24px;position:relative;overflow:hidden;}
+.h-box::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:lеar-gradient(90deg,rgba(26,22,16,0.7),var(--accent),rgba(26,22,16,0.7));background-size:200%;animation:shimmer 2s lеar infinite;}
 @keyframes shimmer{0%{background-position:200%}100%{background-position:-200%}}
 .h-title{color:#c8922a;font-size:12px;text-transform:uppercase;letter-spacing:2px;margin-bottom:16px;display:flex;align-items:center;gap:8px;padding-bottom:10px;border-bottom:1px solid rgba(200,160,80,0.15);}
 .score-ring{width:120px;height:120px;margin:0 auto 16px;position:relative;}
@@ -30,18 +30,18 @@
 </style>
 
 <select style="display:none" style="display:none" id="guild-sel" class="guild-sel" onchange="loadAll()">
-  <option value="">Сервер выбрать...</option>
+  <option value="">Выберите сервер...</option>
 </select>
 
 <div class="h-grid">
-  <!-- SAĞLIK SKORU -->
+  <!-- СОСТОЯНИЕLIK SKORU -->
   <div class="h-box">
-    <div class="h-title"><i class="fas fa-heartbeat"></i> Sağlık Puanlamau</div>
+    <div class="h-title"><i class="fas fa-heartbeat"></i> Показатели здоровья</div>
     <div class="score-ring">
       <svg width="120" height="120" viewBox="0 0 120 120">
         <circle cx="60" cy="60" r="50" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="10"/>
         <circle id="score-arc" cx="60" cy="60" r="50" fill="none" stroke="#2ecc71" stroke-width="10"
-          stroke-dasharray="314" stroke-dashoffset="314" stroke-linecap="round" style="transition:stroke-dashoffset 1.5s ease,stroke 1s;"/>
+          stroke-dasharray="314" stroke-dashoffset="314" stroke-lеcap="round" style="transition:stroke-dashoffset 1.5s ease,stroke 1s;"/>
       </svg>
       <div class="score-text">
         <div class="score-num" id="score-num" style="color:#5ec47a;">--</div>
@@ -53,13 +53,13 @@
 
   <!-- КАНАЛ СТАТИСТИКА -->
   <div class="h-box">
-    <div class="h-title"><i class="fas fa-hashtag"></i> Канал Статистика</div>
+    <div class="h-title"><i class="fas fa-hashtag"></i> Статистика каналов</div>
     <div id="channel-stats"><div style="color:#5a5040;text-align:center;padding:20px;">Загрузка...</div></div>
   </div>
 
   <!-- ЕЖЕДНЕВНЫЙ АКТИВЕН -->
   <div class="h-box" style="grid-column:span 2;">
-    <div class="h-title"><i class="fas fa-chart-bar"></i> Ежедневный Сообщение Aktivitesi (В конец 7 день)</div>
+    <div class="h-title"><i class="fas fa-chart-bar"></i> Ежедневный Сообщение Активностьsi (В конец 7 день)</div>
     <canvas id="dailyChart" height="70"></canvas>
   </div>
 
@@ -87,9 +87,9 @@ async function loadHealth(gid){
   document.getElementById('score-num').style.color=color;
   document.getElementById('score-lbl').textContent=d.label||'';
   document.getElementById('score-stats').innerHTML=
-    '<div class="stat-row"><span class="stat-key">🔨 Ban</span><span class="stat-val" style="color:#e05555;">'+d.ban_count+'</span></div>'+
-    '<div class="stat-row"><span class="stat-key">👢 Kick</span><span class="stat-val" style="color:#c8922a;">'+d.kick_count+'</span></div>'+
-    '<div class="stat-row"><span class="stat-key">⚠️ Spam Tespiti</span><span class="stat-val" style="color:#c8922a;">'+d.spam_count+'</span></div>';
+    '<div class="stat-row"><span class="stat-key">🔨 Бан</span><span class="stat-val" style="color:#e05555;">'+d.бан_count+'</span></div>'+
+    '<div class="stat-row"><span class="stat-key">👢 Кик</span><span class="stat-val" style="color:#c8922a;">'+d.кик_count+'</span></div>'+
+    '<div class="stat-row"><span class="stat-key">⚠️ Спам Tespiti</span><span class="stat-val" style="color:#c8922a;">'+d.spam_count+'</span></div>';
 }
 
 async function loadAnalytics(gid){
@@ -103,9 +103,9 @@ async function loadAnalytics(gid){
       var pct=Math.round(c.messages/maxC*100);
       return '<div class="bar-wrap">'+
         '<div class="bar-lbl"><span>#'+c.name+'</span><span>'+c.messages+'</span></div>'+
-        '<div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:linear-gradient(90deg,#c8922a,#c8922a);"></div></div>'+
+        '<div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:lеar-gradient(90deg,#c8922a,#c8922a);"></div></div>'+
       '</div>';
-    }).join(''):'<div style="color:#5a5040;text-align:center;padding:20px;">Veri yok</div>';
+    }).join(''):'<div style="color:#5a5040;text-align:center;padding:20px;">Данные yok</div>';
 
   // Ежедневный grafik
   if(dailyChart)dailyChart.destroy();
@@ -124,9 +124,9 @@ async function loadAnalytics(gid){
       var pct=Math.round(m.messages/maxM*100);
       return '<div class="bar-wrap">'+
         '<div class="bar-lbl"><span>'+(i+1)+'. '+m.name+'</span><span>'+m.messages+' сообщение</span></div>'+
-        '<div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:linear-gradient(90deg,#c8922a,#c8922a);"></div></div>'+
+        '<div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:lеar-gradient(90deg,#c8922a,#c8922a);"></div></div>'+
       '</div>';
-    }).join(''):'<div style="color:#5a5040;text-align:center;padding:20px;">Veri yok</div>';
+    }).join(''):'<div style="color:#5a5040;text-align:center;padding:20px;">Данные yok</div>';
 }
 
 async function loadBadges(gid){}

@@ -5,17 +5,17 @@
 <style>
 .am-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;}
 @media(max-width:900px){.am-grid{grid-template-columns:1fr;}}
-.am-box{background:linear-gradient(135deg,#100e08,rgba(26,22,16,0.7));border:1px solid rgba(231,76,60,0.25);border-radius:16px;padding:24px;position:relative;overflow:hidden;}
+.am-box{background:lеar-gradient(135deg,#100e08,rgba(26,22,16,0.7));border:1px solid rgba(231,76,60,0.25);border-radius:16px;padding:24px;position:relative;overflow:hidden;}
 .am-box.section{border-color:rgba(200,146,42,0.3);}
-.am-box::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#e74c3c,transparent);}
-.am-box.section::before{background:linear-gradient(90deg,transparent,#c8922a,transparent);}
+.am-box::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:lеar-gradient(90deg,transparent,#e74c3c,transparent);}
+.am-box.section::before{background:lеar-gradient(90deg,transparent,#c8922a,transparent);}
 .am-title{font-size:12px;text-transform:uppercase;letter-spacing:2px;margin-bottom:18px;display:flex;align-items:center;gap:8px;padding-bottom:12px;border-bottom:1px solid rgba(231,76,60,0.15);color:#e05555;}
 .am-title.section{color:#c8922a;border-color:rgba(200,146,42,0.15);}
 .toggle-row{display:flex;justify-content:space-between;align-items:center;padding:11px 14px;background:rgba(0,0,0,0.3);border-radius:12px;margin-bottom:8px;border:1px solid rgba(255,255,255,0.04);transition:all 0.2s;}
 .toggle-row:hover{background:rgba(231,76,60,0.06);border-color:rgba(231,76,60,0.15);}
 .toggle-label{color:#f0e8d0;font-size:13px;}
 .toggle-sub{color:#5a5040;font-size:11px;margin-top:2px;}
-.toggle{position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0;}
+.toggle{position:relative;display:inlе-block;width:44px;height:24px;flex-shrink:0;}
 .toggle input{opacity:0;width:0;height:0;}
 .slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#1a1610;border-radius:24px;transition:.3s;border:1px solid rgba(255,255,255,0.08);}
 .slider:before{position:absolute;content:"";height:18px;width:18px;left:3px;bottom:3px;background:#5a5040;border-radius:50%;transition:.3s;}
@@ -23,14 +23,14 @@ input:checked+.slider{background:rgba(224,85,85,0.2);border-color:rgba(231,76,60
 input:checked+.slider:before{transform:translateX(20px);background:#e05555;}
 .field-label{color:rgba(240,232,208,0.5);font-size:10px;text-transform:uppercase;letter-spacing:1px;display:block;margin:12px 0 5px;}
 .field-input{width:100%;padding:9px 12px;background:#100e08;border:1px solid rgba(231,76,60,0.2);border-radius:10px;color:#f0e8d0;box-sizing:border-box;font-size:13px;font-family:Inter,sans-serif;transition:border-color 0.2s;}
-.field-input:focus{outline:none;border-color:#e05555;}
+.field-input:focus{outlе:none;border-color:#e05555;}
 .field-input.section{border-color:rgba(200,146,42,0.2);}
 .field-input.section:focus{border-color:#c8922a;}
-.word-tag{display:inline-flex;align-items:center;gap:5px;background:rgba(231,76,60,0.1);border:1px solid rgba(231,76,60,0.3);border-radius:99px;padding:4px 10px;margin:3px;font-size:12px;color:#f0e8d0;}
-.word-tag button{background:none;border:none;color:#e05555;cursor:pointer;font-size:14px;padding:0;line-height:1;}
+.word-tag{display:inlе-flex;align-items:center;gap:5px;background:rgba(231,76,60,0.1);border:1px solid rgba(231,76,60,0.3);border-radius:99px;padding:4px 10px;margin:3px;font-size:12px;color:#f0e8d0;}
+.word-tag button{background:none;border:none;color:#e05555;cursor:pointer;font-size:14px;padding:0;lе-height:1;}
 .add-row{display:flex;gap:8px;margin-bottom:10px;}
 .add-row input{flex:1;padding:9px 12px;background:#100e08;border:1px solid rgba(231,76,60,0.2);border-radius:10px;color:#f0e8d0;font-size:13px;font-family:Inter,sans-serif;}
-.add-row input:focus{outline:none;border-color:#e05555;}
+.add-row input:focus{outlе:none;border-color:#e05555;}
 .add-row button{padding:9px 16px;background:rgba(231,76,60,0.15);color:#f0e8d0;border:1px solid rgba(231,76,60,0.3);border-radius:10px;cursor:pointer;font-size:13px;font-weight:700;white-space:nowrap;transition:all 0.2s;}
 .add-row button:hover{background:rgba(231,76,60,0.25);}
 .save-btn{width:100%;padding:11px;background:rgba(231,76,60,0.15);color:#f0e8d0;border:1px solid rgba(231,76,60,0.3);border-radius:12px;cursor:pointer;font-weight:700;margin-top:14px;font-size:13px;letter-spacing:1px;transition:all 0.2s;font-family:Inter,sans-serif;}
@@ -41,7 +41,7 @@ input:checked+.slider:before{transform:translateX(20px);background:#e05555;}
 .warn-step{background:rgba(0,0,0,0.35);border:1px solid rgba(200,146,42,0.15);border-radius:12px;padding:14px;margin-bottom:10px;display:grid;grid-template-columns:auto 1fr 1fr 1fr auto;gap:10px;align-items:center;}
 .warn-step-num{width:28px;height:28px;background:rgba(200,146,42,0.15);border:1px solid rgba(200,146,42,0.3);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#c8922a;font-weight:700;font-size:13px;flex-shrink:0;}
 .warn-step select,.warn-step input{padding:8px 10px;background:#100e08;border:1px solid rgba(200,146,42,0.2);border-radius:8px;color:#f0e8d0;font-size:12px;font-family:Inter,sans-serif;width:100%;}
-.warn-step select:focus,.warn-step input:focus{outline:none;border-color:#c8922a;}
+.warn-step select:focus,.warn-step input:focus{outlе:none;border-color:#c8922a;}
 .warn-step .del-btn{background:rgba(231,76,60,0.1);border:1px solid rgba(231,76,60,0.2);color:#e05555;width:28px;height:28px;border-radius:8px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s;}
 .warn-step .del-btn:hover{background:rgba(231,76,60,0.25);}
 .add-step-btn{width:100%;padding:10px;background:rgba(200,146,42,0.08);border:1px dashed rgba(200,146,42,0.25);border-radius:10px;color:rgba(200,146,42,0.6);cursor:pointer;font-size:12px;font-family:Inter,sans-serif;transition:all 0.2s;margin-top:4px;}
@@ -58,15 +58,15 @@ input:checked+.slider:before{transform:translateX(20px);background:#e05555;}
 
 <div style="margin-bottom:20px;">
   <select id="guild-select" style="display:none" onchange="loadAll()" style="width:100%;padding:11px;background:#100e08;border:1px solid rgba(231,76,60,0.3);border-radius:12px;color:#f0e8d0;font-size:14px;">
-    <option value="">Сервер выбрать...</option>
+    <option value="">Выберите сервер...</option>
   </select>
 </div>
 
 <div class="am-grid">
-  <!-- SOL: Zapresennie Kelimeler + Koruma -->
+  <!-- SOL: Zapresennie Kelimeler + Защита -->
   <div>
     <div class="am-box" style="margin-bottom:20px;">
-      <div class="am-title"><i class="fas fa-ban"></i> Zapresennie Kelimeler</div>
+      <div class="am-title"><i class="fas fa-бан"></i> Zapresennie Kelimeler</div>
       <div class="add-row">
         <input type="text" id="new-word" placeholder="Kelime добавить...">
         <button id="btnAddWord" type="button">+ Добавить</button>
@@ -75,33 +75,33 @@ input:checked+.slider:before{transform:translateX(20px);background:#e05555;}
     </div>
 
     <div class="am-box">
-      <div class="am-title"><i class="fas fa-shield-alt"></i> Koruma Настройки</div>
+      <div class="am-title"><i class="fas fa-shield-alt"></i> Настройки защиты</div>
       <div class="toggle-row">
-        <div><div class="toggle-label">🔁 Защита от спама</div><div class="toggle-sub">Быстрый сообщение denhaklarıniteley susturmak</div></div>
+        <div><div class="toggle-label">🔁 Защита от спама</div><div class="toggle-sub">Определять и блокировать быстрые сообщения</div></div>
         <label class="toggle"><input type="checkbox" id="spam-prot"><span class="slider"></span></label>
       </div>
       <div class="toggle-row">
-        <div><div class="toggle-label">🔗 Link Filtresi</div><div class="toggle-sub">Bez razreseniya ссылка obmen engelle</div></div>
+        <div><div class="toggle-label">🔗 Фильтр ссылок</div><div class="toggle-sub">Запрещать обмен ссылками без разрешения</div></div>
         <label class="toggle"><input type="checkbox" id="link-filter"><span class="slider"></span></label>
       </div>
       <div class="toggle-row">
-        <div><div class="toggle-label">📢 Caps Lock Filtresi</div><div class="toggle-sub">Crezmernoe bolsie bukvi использование</div></div>
+        <div><div class="toggle-label">📢 Фильтр капс-лока</div><div class="toggle-sub">Использование чрезмерно больших букв</div></div>
         <label class="toggle"><input type="checkbox" id="caps-filter"><span class="slider"></span></label>
       </div>
       <div class="toggle-row">
-        <div><div class="toggle-label">🤖 Davet Linki Filtresi</div><div class="toggle-sub">Discord davet ссылка engelle</div></div>
+        <div><div class="toggle-label">🤖 Фильтр приглашений</div><div class="toggle-sub">Запрещать ссылки-приглашения Discord</div></div>
         <label class="toggle"><input type="checkbox" id="invite-filter"><span class="slider"></span></label>
       </div>
       <div class="toggle-row">
-        <div><div class="toggle-label">😡 Mention Spam</div><div class="toggle-sub">Toplu etiket zapret</div></div>
+        <div><div class="toggle-label">😡 Спам упоминаниями</div><div class="toggle-sub">Запрещать массовые упоминания</div></div>
         <label class="toggle"><input type="checkbox" id="etiket-spam"><span class="slider"></span></label>
       </div>
       <div class="toggle-row">
-        <div><div class="toggle-label">🔁 Tekrar Сообщение</div><div class="toggle-sub">Benzer сообщение 3+ kez отправл</div></div>
+        <div><div class="toggle-label">🔁 Повторяющиеся сообщения</div><div class="toggle-sub">Похожие сообщения 3+ раз</div></div>
         <label class="toggle"><input type="checkbox" id="duplicate-filter"><span class="slider"></span></label>
       </div>
       <div class="toggle-row">
-        <div><div class="toggle-label">😵 Emoji Spam</div><div class="toggle-sub">10+ emoji soderjasie сообщения</div></div>
+        <div><div class="toggle-label">😵 Спам эмодзи</div><div class="toggle-sub">Сообщения с 10+ эмодзи</div></div>
         <label class="toggle"><input type="checkbox" id="emoji-filter"><span class="slider"></span></label>
       </div>
       <label class="field-label">Порог спама (X сообщений / 5 сек)</label>
@@ -110,20 +110,20 @@ input:checked+.slider:before{transform:translateX(20px);background:#e05555;}
     </div>
   </div>
 
-  <!-- SAĞ: Каналы-исключения для спама Каналы + Uyarı Sistemi -->
+  <!-- ПРАВО: Каналы-исключения для спама Каналы + Предупреждение Sistemi -->
   <div>
     <div class="am-box section" style="margin-bottom:20px;">
       <div class="am-title section"><i class="fas fa-hashtag"></i> Каналы-исключения для спама Каналы</div>
-      <p style="color:#5a5040;font-size:12px;margin-bottom:10px;">Bu в каналах spam/ссылка/caps filtresi не работает.</p>
+      <p style="color:#5a5040;font-size:12px;margin-bottom:10px;">Bu в каналах spam/ссылка/caps фильтрsi не работает.</p>
       <div class="ch-list" id="exempt-channels">
-        <div style="padding:20px;text-align:center;color:#5a5040;font-size:12px;">Сервер выберите...</div>
+        <div style="padding:20px;text-align:center;color:#5a5040;font-size:12px;">Выберите сервер...</div>
       </div>
       <button class="save-btn section" id="btnSaveExempt" type="button" style="margin-top:12px;"><i class="fas fa-save"></i> Исключения Каналы Сохранить</button>
     </div>
 
     <div class="am-box section">
       <div class="am-title section"><i class="fas fa-exclamation-triangle"></i> Warning Наказание Система</div>
-      <p style="color:#5a5040;font-size:12px;margin-bottom:14px;">Сколько предупреждение ne наказание olacak verildi настройк.</p>
+      <p style="color:#5a5040;font-size:12px;margin-bottom:14px;">Сколько предупреждение ne наказание будет выдано настройк.</p>
       <div id="warn-steps"></div>
       <button class="add-step-btn" id="btnAddWarnStep" type="button">+ Новый Правило Добавить</button>
       <button class="save-btn section" id="btnSaveWarnConfig" type="button" style="margin-top:12px;"><i class="fas fa-save"></i> Warning Система Сохранить</button>
@@ -132,10 +132,10 @@ input:checked+.slider:before{transform:translateX(20px);background:#e05555;}
 </div>
 
 <script>
-// NOT: Bu sayfa IIFE kullanmıyor çünkü dinamik HTML içindeki inline event'ler
-// global scope'a erişiyor (warnSteps, renderWarningSteps, addWord vs.)
-// CSP tarafından inline event handler'lar bloklanabilir ama aynı origin'de
-// 'self' script-src ile çalışıyor; mevcut sistem olduğu gibi bırakıldı.
+// NOT: Bu sayfa IIFE не используется потому что dinamik HTML дляdeki inlе event'ler
+// global scope'a обращается (warnSteps, renderWarningSteps, addWord vs.)
+// CSP tarafеn inlе event handler'lar bloklanabilir ama одинаковые origin'de
+// 'self' script-src с работает; mevcut sistem его gibi оставлено.
 var MAIN_GID = '1498837105915330562';
 var GUILD_ID = MAIN_GID;
 var currentWords = [];
@@ -152,14 +152,14 @@ async function loadAutomod(gid) {
   var r = await fetch('/api/guild/'+gid+'/automod');
   var d = await r.json();
   document.getElementById('spam-prot').checked    = d.spam_protection||false;
-  document.getElementById('link-filter').checked  = d.bağlantı_filter||false;
+  document.getElementById('link-filter').checked  = d.ссылка_filter||false;
   document.getElementById('caps-filter').checked  = d.caps_filter||false;
   document.getElementById('invite-filter').checked= d.invite_filter||false;
   document.getElementById('etiket-spam').checked = d.etiket_spam||false;
   document.getElementById('duplicate-filter').checked = d.duplicate_filter||false;
   document.getElementById('emoji-filter').checked = d.emoji_filter||false;
   document.getElementById('spam-threshold').value = d.spam_threshold||5;
-  currentWords = d.banned_words||[];
+  currentWords = d.банned_words||[];
   renderWords();
 }
 
@@ -169,7 +169,7 @@ async function loadChannels(gid) {
   if (!Array.isArray(allChannels)) allChannels = [];
   allChannels = allChannels.filter(function(c){return c.type==='text';});
 
-  // Текущий hariç tutulanlar каналы citat
+  // Текущий кроме tutulanlar каналы citat
   var cfg = {};
   try {
     var r2 = await fetch('/api/guild/'+gid+'/automod');
@@ -197,12 +197,12 @@ async function loadWarningConfig(gid) {
     warnSteps = [];
   }
   if (!warnSteps.length) {
-    // Varчислоlan adımlar
+    // Шаги расчёта
     warnSteps = [
-      {count:3, action:'mute', duration:10, unit:'minute'},
-      {count:5, action:'mute', duration:1,  unit:'hour'},
-      {count:7, action:'kick', duration:0,  unit:'minute'},
-      {count:10,action:'ban',  duration:0,  unit:'minute'},
+      {count:3, action:'мьют', duration:10, unit:'minute'},
+      {count:5, action:'мьют', duration:1,  unit:'hour'},
+      {count:7, action:'кик', duration:0,  unit:'minute'},
+      {count:10,action:'бан',  duration:0,  unit:'minute'},
     ];
   }
   renderWarningSteps();
@@ -211,7 +211,7 @@ async function loadWarningConfig(gid) {
 function renderWarningSteps() {
   var box = document.getElementById('warn-steps');
   box.innerHTML = warnSteps.map(function(s, i) {
-    var showDur = (s.action === 'mute' || s.action === 'timeout');
+    var showDur = (s.action === 'мьют' || s.action === 'timeout');
     return '<div class="warn-step" id="ws-'+i+'" style="grid-template-columns:auto 1fr '+(showDur?'1fr 1fr':'2fr')+' auto;">'+
       '<div class="warn-step-num">'+(i+1)+'</div>'+
       '<div><label style="color:#5a5040;font-size:10px;display:block;margin-bottom:3px;">ПРЕДУПРЕЖДЕНИЕ КОЛИЧЕСТВО</label>'+
@@ -219,10 +219,10 @@ function renderWarningSteps() {
       '</div>'+
       '<div><label style="color:#5a5040;font-size:10px;display:block;margin-bottom:3px;">НАКАЗАНИЕ</label>'+
         '<select onchange="warnSteps['+i+'].action=this.value;renderWarningSteps()">'+
-          '<option value="mute"'+(s.action==='mute'?' selected':'')+'>🔇 Mute</option>'+
-          '<option value="timeout"'+(s.action==='timeout'?' selected':'')+'>⏱️ Mute</option>'+
-          '<option value="kick"'+(s.action==='kick'?' selected':'')+'>👢 Kick</option>'+
-          '<option value="ban"'+(s.action==='ban'?' selected':'')+'>🔨 Ban</option>'+
+          '<option value="мьют"'+(s.action==='мьют'?' selected':'')+'>🔇 Мьют</option>'+
+          '<option value="timeout"'+(s.action==='timeout'?' selected':'')+'>⏱️ Мьют</option>'+
+          '<option value="кик"'+(s.action==='кик'?' selected':'')+'>👢 Кик</option>'+
+          '<option value="бан"'+(s.action==='бан'?' selected':'')+'>🔨 Бан</option>'+
         '</select>'+
       '</div>'+
       (showDur ?
@@ -230,7 +230,7 @@ function renderWarningSteps() {
           '<div style="display:flex;gap:4px;">'+
             '<input type="number" value="'+s.duration+'" min="1" style="width:60px;text-align:center;" onchange="warnSteps['+i+'].duration=parseInt(this.value)">'+
             '<select onchange="warnSteps['+i+'].unit=this.value" style="flex:1;">'+
-              '<option value="minute"'+(s.unit==='minute'?' selected':'')+'>Dakika</option>'+
+              '<option value="minute"'+(s.unit==='minute'?' selected':'')+'>Минут</option>'+
               '<option value="hour"'+(s.unit==='hour'?' selected':'')+'>Время</option>'+
               '<option value="day"'+(s.unit==='day'?' selected':'')+'>день</option>'+
             '</select>'+
@@ -246,7 +246,7 @@ function renderWarningSteps() {
 
 function addWarningStep() {
   var lastCount = warnSteps.length ? warnSteps[warnSteps.length-1].count + 1 : 3;
-  warnSteps.push({count:lastCount, action:'mute', duration:10, unit:'minute'});
+  warnSteps.push({count:lastCount, action:'мьют', duration:10, unit:'minute'});
   renderWarningSteps();
 }
 
@@ -279,7 +279,7 @@ function removeWord(w) {
 
 async function saveAutomod() {
   var gid = MAIN_GID;
-  // Текущий konfiguraciyu al, exempt_channels'ı сохранить
+  // Получить текущую конфигурацию, сохранить exempt_channels
   var existing = {};
   try {
     var r0 = await fetch('/api/guild/'+gid+'/automod');
@@ -289,14 +289,14 @@ async function saveAutomod() {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({
       spam_protection: document.getElementById('spam-prot').checked,
-      bağlantı_filter:     document.getElementById('link-filter').checked,
+      ссылка_filter:     document.getElementById('link-filter').checked,
       caps_filter:     document.getElementById('caps-filter').checked,
       invite_filter:   document.getElementById('invite-filter').checked,
       etiket_spam:    document.getElementById('etiket-spam').checked,
       duplicate_filter:document.getElementById('duplicate-filter').checked,
       emoji_filter:    document.getElementById('emoji-filter').checked,
       spam_threshold:  parseInt(document.getElementById('spam-threshold').value),
-      banned_words:    currentWords,
+      банned_words:    currentWords,
       exempt_channels: existing.exempt_channels || []
     })
   });
@@ -332,7 +332,7 @@ async function saveWarningConfig() {
 function showToast(msg, ok) {
   var t = document.createElement('div');
   t.textContent = msg;
-  t.style.cssText = 'position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:12px;font-size:13px;font-weight:700;z-index:9999;transition:opacity 0.3s;'+(ok?'background:rgba(46,204,113,0.2);border:1px solid #2ecc71;color:#2ecc71;':'background:rgba(231,76,60,0.2);border:1px solid #e74c3c;color:#e74c3c;');
+  t.style.cssText = 'position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:12px;font-size:13px;font-weight:700;z-еx:9999;transition:opacity 0.3s;'+(ok?'background:rgba(46,204,113,0.2);border:1px solid #2ecc71;color:#2ecc71;':'background:rgba(231,76,60,0.2);border:1px solid #e74c3c;color:#e74c3c;');
   document.body.appendChild(t);
   setTimeout(function(){t.style.opacity='0';setTimeout(function(){t.remove();},300);}, 2500);
 }

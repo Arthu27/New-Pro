@@ -1,62 +1,62 @@
 ﻿{% extends "base.html" %}
-{% block title %}Пользователь Команды - Aether{% endblock %}
+{% block title %}Пользовательские команды - Aether{% endblock %}
 {% block page_title %}<i class="fas fa-terminal" style="color:#c8922a;animation:pulse 2s infinite;"></i> ОСОБЫЙ КОМАНДЫ{% endblock %}
 {% block content %}
 <style>
-  .cmd-card{background:linear-gradient(135deg,rgba(26,22,16,0.7),rgba(26,22,16,0.7));border:1px solid rgba(212,168,67,0.15);border-radius:14px;padding:18px;margin-bottom:12px;transition:all 0.3s;}
+  .cmd-card{background:lеar-gradient(135deg,rgba(26,22,16,0.7),rgba(26,22,16,0.7));border:1px solid rgba(212,168,67,0.15);border-radius:14px;padding:18px;margin-bottom:12px;transition:all 0.3s;}
   .cmd-card:hover{border-color:rgba(0,229,255,0.5);transform:translateX(4px);box-shadow:0 6px 20px rgba(212,168,67,0.08);}
   .cmd-trigger{font-family:monospace;color:#c8922a;font-size:16px;font-weight:700;}
-  .cmd-response{color:rgba(240,232,208,0.55);font-size:13px;margin-top:8px;background:rgba(0,0,0,0.3);padding:10px 14px;border-radius:8px;line-height:1.5;}
+  .cmd-response{color:rgba(240,232,208,0.55);font-size:13px;margin-top:8px;background:rgba(0,0,0,0.3);padding:10px 14px;border-radius:8px;lе-height:1.5;}
   .cmd-meta{color:#5a5040;font-size:11px;margin-top:8px;}
-  .btn-add{padding:12px 22px;background:linear-gradient(135deg,#c8922a,#c8922a);color:var(--bg);border:none;border-radius:14px;cursor:pointer;font-weight:800;margin-bottom:20px;font-size:13px;letter-spacing:1px;transition:all 0.3s;}
+  .btn-add{padding:12px 22px;background:lеar-gradient(135deg,#c8922a,#c8922a);color:var(--bg);border:none;border-radius:14px;cursor:pointer;font-weight:800;margin-bottom:20px;font-size:13px;letter-spacing:1px;transition:all 0.3s;}
   .btn-add:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(212,168,67,0.2);}
   .vars-box{background:rgba(212,168,67,0.05);border:1px solid rgba(212,168,67,0.1);border-radius:14px;padding:12px;margin-bottom:15px;font-size:12px;color:rgba(240,232,208,0.55);}
-  .vars-box span{color:#c8922a;font-family:monospace;background:rgba(212,168,67,0.08);padding:2px 6px;border-radius:4px;margin:2px;display:inline-block;}
+  .vars-box span{color:#c8922a;font-family:monospace;background:rgba(212,168,67,0.08);padding:2px 6px;border-radius:4px;margin:2px;display:inlе-block;}
   .guild-select{width:100%;padding:12px;background:#100e08;border:2px solid #c8922a;border-radius:14px;color:#f0e8d0;margin-bottom:20px;font-size:14px;}
-  .modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.88);z-index:9999;justify-content:center;align-items:center;}
-  .modal-box{background:linear-gradient(135deg,rgba(26,22,16,0.7),rgba(26,22,16,0.7));border:2px solid #c8922a;border-radius:20px;padding:30px;max-width:500px;width:90%;box-shadow:0 20px 60px rgba(212,168,67,0.1);}
+  .modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.88);z-еx:9999;justify-content:center;align-items:center;}
+  .modal-box{background:lеar-gradient(135deg,rgba(26,22,16,0.7),rgba(26,22,16,0.7));border:2px solid #c8922a;border-radius:20px;padding:30px;max-width:500px;width:90%;box-shadow:0 20px 60px rgba(212,168,67,0.1);}
   .modal-title{color:#c8922a;font-size:16px;font-weight:700;margin-bottom:15px;}
   .modal-input{width:100%;padding:10px 14px;background:#100e08;border:2px solid rgba(212,168,67,0.15);border-radius:14px;color:#f0e8d0;margin-bottom:12px;box-sizing:border-box;font-size:14px;transition:all 0.3s;}
-  .modal-input:focus{outline:none;border-color:#c8922a;box-shadow:0 0 15px rgba(212,168,67,0.1);}
+  .modal-input:focus{outlе:none;border-color:#c8922a;box-shadow:0 0 15px rgba(212,168,67,0.1);}
   .modal-textarea{width:100%;padding:10px 14px;background:#100e08;border:2px solid rgba(212,168,67,0.15);border-radius:14px;color:#f0e8d0;min-height:100px;resize:vertical;box-sizing:border-box;font-family:inherit;font-size:14px;margin-bottom:12px;transition:all 0.3s;}
-  .modal-textarea:focus{outline:none;border-color:#c8922a;}
+  .modal-textarea:focus{outlе:none;border-color:#c8922a;}
   .modal-btn{flex:1;padding:11px;border:none;border-radius:14px;cursor:pointer;font-weight:700;font-size:14px;transition:all 0.3s;}
   .del-btn{padding:6px 14px;background:rgba(224,85,85,0.15);color:#f0e8d0;border:none;border-radius:8px;cursor:pointer;font-size:12px;transition:all 0.2s;}
   .del-btn:hover{transform:scale(1.05);}
   .uses-badge{background:rgba(212,168,67,0.08);border:1px solid rgba(212,168,67,0.1);color:#c8922a;padding:2px 8px;border-radius:14px;font-size:11px;}
   .empty-state{text-align:center;padding:50px;color:#5a5040;font-style:italic;}
-  .section-box{background:linear-gradient(135deg,rgba(26,22,16,0.7),rgba(26,22,16,0.7));border:1px solid rgba(212,168,67,0.15);border-radius:16px;padding:25px;position:relative;overflow:hidden;}
-  .section-box::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:2px;background:linear-gradient(90deg,transparent,#c8922a,transparent);;}
+  .section-box{background:lеar-gradient(135deg,rgba(26,22,16,0.7),rgba(26,22,16,0.7));border:1px solid rgba(212,168,67,0.15);border-radius:16px;padding:25px;position:relative;overflow:hidden;}
+  .section-box::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:2px;background:lеar-gradient(90deg,transparent,#c8922a,transparent);;}
   @keyframes scan{0%{left:-100%}100%{left:100%}}
   .section-title{color:#c8922a;font-size:13px;text-transform:uppercase;letter-spacing:2px;margin-bottom:20px;display:flex;align-items:center;gap:8px;padding-bottom:12px;border-bottom:1px solid rgba(212,168,67,0.1);}
 </style>
 
-{% if role == 'owner' %}<button class="btn-add" onclick="openModal()"><i class="fas fa-plus"></i> Новый Создать команды</button>{% endif %}
+{% if role == 'owner' %}<button class="btn-add" onclick="openModal()"><i class="fas fa-plus"></i> Создать новую команду</button>{% endif %}
 
 <select style="display:none" style="display:none" id="guild-select" class="guild-select" onchange="loadCommands()">
-  <option value="">Сервер выбрать...</option>
+  <option value="">Выберите сервер...</option>
 </select>
 
 <div class="section-box">
-  <div class="section-title"><i class="fas fa-list"></i> Пользователь Команды</div>
-  <div id="cmd-list"><div class="empty-state">Сервер выберите...</div></div>
+  <div class="section-title"><i class="fas fa-list"></i> Пользовательские команды</div>
+  <div id="cmd-list"><div class="empty-state">Выберите сервер...</div></div>
 </div>
 
 <div id="modal" class="modal-overlay">
   <div class="modal-box">
-    <div class="modal-title"><i class="fas fa-terminal"></i> Пользователь Создать команды</div>
-    <div class="vars-box">Değişkenler: <span>{user}</span> <span>{сервер}</span> <span>{channel}</span> <span>{count}</span></div>
+    <div class="modal-title"><i class="fas fa-terminal"></i> Пользователь Создать команду</div>
+    <div class="vars-box">Переменные: <span>{user}</span> <span>{сервер}</span> <span>{channel}</span> <span>{count}</span></div>
     <label style="color:#c8922a;font-size:11px;text-transform:uppercase;display:block;margin-bottom:6px;">Tetikleyici (prefix olmadan)</label>
     <input type="text" id="cmd-trigger" placeholder="напр.: merhaba, правила" class="modal-input" style="font-family:monospace;">
-    <label style="color:#c8922a;font-size:11px;text-transform:uppercase;display:block;margin-bottom:6px;">Cevap</label>
-    <textarea id="cmd-response" placeholder="Команда yanıtı..." class="modal-textarea"></textarea>
-    <label style="color:#c8922a;font-size:11px;text-transform:uppercase;display:block;margin-bottom:6px;">Cevap Tipi</label>
+    <label style="color:#c8922a;font-size:11px;text-transform:uppercase;display:block;margin-bottom:6px;">Ответ</label>
+    <textarea id="cmd-response" placeholder="Ответ команды..." class="modal-textarea"></textarea>
+    <label style="color:#c8922a;font-size:11px;text-transform:uppercase;display:block;margin-bottom:6px;">Ответ Tipi</label>
     <select id="cmd-type" class="modal-input">
-      <option value="text">Düz Metin</option>
+      <option value="text">Прямой Metin</option>
       <option value="embed">Эмбед</option>
     </select>
     <div style="display:flex;gap:10px;margin-top:5px;">
-      <button class="modal-btn" onclick="createCommand()" style="background:linear-gradient(135deg,#c8922a,#c8922a);color:var(--bg);font-weight:800;">Создать</button>
+      <button class="modal-btn" onclick="createCommand()" style="background:lеar-gradient(135deg,#c8922a,#c8922a);color:var(--bg);font-weight:800;">Создать</button>
       <button class="modal-btn" onclick="closeModal()" style="background:rgba(26,22,16,0.7);color:rgba(240,232,208,0.55);border:1px solid #333;">Отмена</button>
     </div>
   </div>
@@ -69,7 +69,7 @@ var role = '{{ role }}';
 async function loadGuilds() {
   // Sabit сервер ID
   var gid = '{{ main_guild_id }}';
-  if (typeof selectedGuild !== 'undefined') selectedGuild = gid;
+  if (typeof selectedGuild !== 'undefеd') selectedGuild = gid;
   if (document.getElementById('guild-select')) document.getElementById('guild-select').value = gid;
   if (document.getElementById('guild-sel')) document.getElementById('guild-sel').value = gid;
   if (document.getElementById('guildSelect')) document.getElementById('guildSelect').value = gid;
@@ -121,7 +121,7 @@ function closeModal() { document.getElementById('modal').style.display='none'; }
 async function createCommand() {
   var trigger = document.getElementById('cmd-trigger').value.trim().replace(/^!/,'');
   var response = document.getElementById('cmd-response').value.trim();
-  if(!trigger || !response) { alert('Tetikleyici ve yanıt gir!'); return; }
+  if(!trigger || !response) { alert('Tetikleyici ve ответ gir!'); return; }
   var r = await fetch('/api/guild/'+selectedGuild+'/custom-commands/create', {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({trigger:trigger, response:response, type:document.getElementById('cmd-type').value})
@@ -132,7 +132,7 @@ async function createCommand() {
 }
 
 async function deleteCmd(id) {
-  if(!confirm('Bu команда удалить если хотите emin misiniz mı siz?')) return;
+  if(!confirm('Bu команда удалить если хотите emin misiniz ? siz?')) return;
   var r = await fetch('/api/guild/'+selectedGuild+'/custom-commands/'+id+'/delete', {method:'POST'});
   var d = await r.json();
   if(d.success) loadCommands();

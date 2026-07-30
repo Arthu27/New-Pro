@@ -9,11 +9,11 @@
 .bs-card h2{font-size:11px;font-weight:700;color:rgba(240,232,208,0.4);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid rgba(212,168,67,0.08);}
 label{font-size:11px;color:rgba(240,232,208,0.45);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.06em;}
 .field{margin-bottom:14px;}
-.status-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;}
-.status-online{background:#2ed573;box-shadow:0 0 6px #2ed573;}
+.status-dot{width:8px;height:8px;border-radius:50%;display:inlе-block;margin-right:6px;}
+.status-onlе{background:#2ed573;box-shadow:0 0 6px #2ed573;}
 .status-idle{background:#ffa502;box-shadow:0 0 6px #ffa502;}
 .status-dnd{background:#ff4757;box-shadow:0 0 6px #ff4757;}
-.status-offline{background:#747f8d;}
+.status-offlе{background:#747f8d;}
 .activity-row{display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(212,168,67,0.05);border:1px solid rgba(212,168,67,0.08);border-radius:8px;margin-bottom:6px;cursor:pointer;transition:all 0.15s;}
 .activity-row:hover{border-color:rgba(212,168,67,0.2);background:rgba(212,168,67,0.08);}
 .activity-row.selected{border-color:rgba(212,168,67,0.4);background:rgba(212,168,67,0.12);}
@@ -22,32 +22,32 @@ label{font-size:11px;color:rgba(240,232,208,0.45);display:block;margin-bottom:4p
 
 <div class="bs-grid">
 
-  <!-- Bot Состояние -->
+  <!-- Статус бота -->
   <div class="bs-card">
-    <h2>🟢 Bot Состояние</h2>
+    <h2>🟢 Статус бота</h2>
     <div id="bot-current" style="display:flex;align-items:center;gap:8px;margin-bottom:16px;font-size:13px;color:rgba(240,232,208,0.6);">
       <i class="fas fa-spinner fa-spin" style="color:#c8922a;"></i> Загрузка...
     </div>
     <div class="field">
       <label>Состояние</label>
       <select id="bot-status">
-        <option value="online">🟢 Online</option>
-        <option value="idle">🟡 Idle (Пусто)</option>
+        <option value="onlе">🟢 Онлайн</option>
+        <option value="idle">🟡 Idle (Неактивен)</option>
         <option value="dnd">🔴 Do Not Disturb</option>
         <option value="invisible">⚫ Invisible</option>
       </select>
     </div>
     <div class="field">
-      <label>Aktivite Türü</label>
+      <label>Тип активности</label>
       <select id="activity-type">
         <option value="listening">🎵 Dinliyor</option>
         <option value="playing">🎮 Oynuyor</option>
-        <option value="watching">👀 İzliyor</option>
-        <option value="competing">🏆 Yarışıyor</option>
+        <option value="watching">👀 Смотрит</option>
+        <option value="competing">🏆 Соревнуется</option>
       </select>
     </div>
     <div class="field">
-      <label>Aktivite Metni</label>
+      <label>Активность Metni</label>
       <input type="text" id="activity-text" placeholder=".gg/Aether">
     </div>
     <button class="btn btn-primary" onclick="saveStatus()">💾 Сохранить</button>
@@ -65,7 +65,7 @@ label{font-size:11px;color:rgba(240,232,208,0.45);display:block;margin-bottom:4p
     <button class="btn btn-primary" onclick="savePrefix()">💾 Сохранить</button>
     <span id="prefix-msg" style="margin-left:10px;font-size:12px;color:rgba(240,232,208,0.4);"></span>
     <div style="margin-top:12px;padding:10px;background:rgba(255,165,2,0.08);border:1px solid rgba(255,165,2,0.2);border-radius:8px;font-size:11px;color:rgba(255,165,2,0.7);">
-      ⚠️ Prefix изменение botu yeniden başldenhaklarınku gerektirir.
+      ⚠️ Изменение префикса требует перезапуска бота.
     </div>
   </div>
 
@@ -75,20 +75,20 @@ label{font-size:11px;color:rgba(240,232,208,0.45);display:block;margin-bottom:4p
     <div id="bot-stats-detail" style="color:rgba(240,232,208,0.3);font-size:13px;">Загрузка...</div>
   </div>
 
-  <!-- Быстрый Aktiviteler -->
+  <!-- Быстрый Активностьler -->
   <div class="bs-card">
-    <h2>⚡ Быстрый Aktiviteler</h2>
+    <h2>⚡ Быстрый Активностьler</h2>
     <div class="activity-row" onclick="quickSet('listening','.gg/Aether')">
       <span>🎵</span><span>Dinliyor: .gg/Aether</span>
     </div>
     <div class="activity-row" onclick="quickSet('watching','Aether Сервер')">
-      <span>👀</span><span>İzliyor: Aether Сервер</span>
+      <span>👀</span><span>Смотрит: Aether Сервер</span>
     </div>
     <div class="activity-row" onclick="quickSet('playing','Aether Bot')">
       <span>🎮</span><span>Oynuyor: Aether Bot</span>
     </div>
     <div class="activity-row" onclick="quickSet('competing','Aether League')">
-      <span>🏆</span><span>Yarışıyor: Aether League</span>
+      <span>🏆</span><span>Соревнуется: Aether League</span>
     </div>
   </div>
 
@@ -100,7 +100,7 @@ async function loadBotInfo() {
     var d = await fetch('/api/stats').then(r => r.json());
     if (d.error) return;
     document.getElementById('bot-current').innerHTML =
-      '<span class="status-dot status-online"></span>' +
+      '<span class="status-dot status-onlе"></span>' +
       '<strong style="color:#f0e8d0;">' + (d.name || 'Bot') + '</strong>' +
       '<span style="color:rgba(240,232,208,0.4);font-size:11px;">• ' + d.guilds + ' сервер • ' + d.users + ' участников • ' + d.latency + 'ms</span>';
 
@@ -147,7 +147,7 @@ async function savePrefix() {
   try {
     var r = await fetch('/api/bot/prefix', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({prefix})}).then(r => r.json());
     if (r.ok) {
-      msg.textContent = '✅ Сохранено (yeniden başlgönderim gerekli)';
+      msg.textContent = '✅ Сохранено (требуется перезапуск)';
       document.getElementById('current-prefix').textContent = prefix;
     } else {
       msg.textContent = '❌ ' + (r.error || 'Ошибка');

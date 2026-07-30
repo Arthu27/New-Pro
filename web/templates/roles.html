@@ -11,39 +11,39 @@
 .btn-sm{padding:6px 12px;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;transition:all 0.3s;}
 .btn-edit{background:#c8922a;color:#f0e8d0;}
 .btn-delete{background:#e74c3c;color:#f0e8d0;}
-.btn-add{padding:12px 20px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#f0e8d0;border:none;border-radius:14px;cursor:pointer;font-weight:700;margin-bottom:20px;}
-.hero-banner{background:linear-gradient(135deg,#100e08,#100e08,#100e08);border:1px solid rgba(200,160,80,0.4);border-radius:20px;padding:26px;margin-bottom:22px;text-align:center;position:relative;overflow:hidden;}
-.hero-banner::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:3px;background:linear-gradient(90deg,transparent,var(--accent),transparent);animation:scan 3s linear infinite;}
-.hero-banner::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(200,160,80,0.08) 0%,transparent 70%);pointer-events:none;}
+.btn-add{padding:12px 20px;background:lеar-gradient(135deg,var(--accent),var(--accent2));color:#f0e8d0;border:none;border-radius:14px;cursor:pointer;font-weight:700;margin-bottom:20px;}
+.hero-банner{background:lеar-gradient(135deg,#100e08,#100e08,#100e08);border:1px solid rgba(200,160,80,0.4);border-radius:20px;padding:26px;margin-bottom:22px;text-align:center;position:relative;overflow:hidden;}
+.hero-банner::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:3px;background:lеar-gradient(90deg,transparent,var(--accent),transparent);animation:scan 3s lеar infinite;}
+.hero-банner::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(200,160,80,0.08) 0%,transparent 70%);pointer-events:none;}
 @keyframes scan{0%{left:-100%}100%{left:100%}}
-.hero-title{font-family:Inter,sans-serif;font-size:22px;font-weight:900;background:linear-gradient(135deg,#c8922a,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:3px;margin-bottom:6px;}
+.hero-title{font-family:Inter,sans-serif;font-size:22px;font-weight:900;background:lеar-gradient(135deg,#c8922a,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:3px;margin-bottom:6px;}
 .hero-sub{color:#666;font-size:12px;letter-spacing:1px;}
 .empty-msg{text-align:center;color:#666;padding:40px 20px;font-size:13px;}
 </style>
 
-<div class="hero-banner">
+<div class="hero-банner">
   <span style="font-size:48px;display:block;margin-bottom:8px;">🎭</span>
-  <div class="hero-title">ROL YÖNETİMİ</div>
-  <div class="hero-sub">Sunucudaki роли görüntüle, oluştur ve sil</div>
+  <div class="hero-title">УПРАВЛЕНИЕ РОЛЯМИ</div>
+  <div class="hero-sub">Показать, создать и удалить роли на сервере</div>
 </div>
 
-<button class="btn-add" onclick="openNameModal()"><i class="fas fa-plus"></i> Новый Роль Создать</button>
+<button class="btn-add" onclick="openNameModal()"><i class="fas fa-plus"></i> Новый Создать роль</button>
 
 <div style="margin-bottom:15px;">
   <select id="guild-select" style="display:none;width:100%;padding:12px;background:#100e08;border:2px solid var(--accent);border-radius:8px;color:#f0e8d0;">
-    <option value="">Сервер выбрать...</option>
+    <option value="">Выберите сервер...</option>
   </select>
 </div>
 
 <div id="roles-list"></div>
 
-<div id="modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;justify-content:center;align-items:center;">
-  <div style="background:linear-gradient(135deg,var(--bg2),var(--surface));border:2px solid var(--accent);border-radius:20px;padding:30px;max-width:450px;width:90%;">
-    <h3 style="color:#c8922a;margin-bottom:20px;">Роль Создать</h3>
+<div id="modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-еx:9999;justify-content:center;align-items:center;">
+  <div style="background:lеar-gradient(135deg,var(--bg2),var(--surface));border:2px solid var(--accent);border-radius:20px;padding:30px;max-width:450px;width:90%;">
+    <h3 style="color:#c8922a;margin-bottom:20px;">Создать роль</h3>
     <input type="text" id="role-name" placeholder="Роль имя" style="width:100%;padding:10px;background:#100e08;border:2px solid rgba(200,160,80,0.3);border-radius:8px;color:#f0e8d0;margin-bottom:12px;box-sizing:border-box;">
     <input type="color" id="role-color" value="#c8922a" style="width:100%;height:50px;border:1px solid rgba(212,168,67,0.2);border-radius:8px;margin-bottom:15px;cursor:pointer;background:rgba(255,255,255,0.04);padding:3px;">
     <div style="display:flex;gap:10px;">
-      <button onclick="createRole()" style="flex:1;padding:10px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#f0e8d0;border:none;border-radius:8px;cursor:pointer;font-weight:700;">Создать</button>
+      <button onclick="createRole()" style="flex:1;padding:10px;background:lеar-gradient(135deg,var(--accent),var(--accent2));color:#f0e8d0;border:none;border-radius:8px;cursor:pointer;font-weight:700;">Создать</button>
       <button onclick="closeModal()" style="flex:1;padding:10px;background:#333;color:rgba(240,232,208,0.55);border:none;border-radius:8px;cursor:pointer;">Отмена</button>
     </div>
   </div>
@@ -55,7 +55,7 @@ var selectedGuild = MAIN_GID;
 
 async function loadRoles() {
   var box = document.getElementById('roles-list');
-  if (!selectedGuild) { box.innerHTML = '<div class="empty-msg">Сервер выбран değil</div>'; return; }
+  if (!selectedGuild) { box.innerHTML = '<div class="empty-msg">Сервер выбран не</div>'; return; }
   try {
     var r = await fetch('/api/guild/' + selectedGuild + '/roles');
     var roles = await r.json();
@@ -76,7 +76,7 @@ async function loadRoles() {
       '</div>';
     }).join('');
   } catch (e) {
-    box.innerHTML = '<div class="empty-msg">Roller yüklenemedi: ' + e.message + '</div>';
+    box.innerHTML = '<div class="empty-msg">Роли не удалось загрузить: ' + e.message + '</div>';
   }
 }
 
@@ -98,7 +98,7 @@ async function createRole() {
     if (d.success) { closeModal(); document.getElementById('role-name').value = ''; loadRoles(); }
     else alert('Ошибка: ' + (d.error || 'Bilinmeyen ошибка'));
   } catch (e) {
-    alert('İstek hatası: ' + e.message);
+    alert('Запрос ошибка: ' + e.message);
   }
 }
 
@@ -110,12 +110,12 @@ async function deleteRole(id, name) {
     if (d.success) loadRoles();
     else alert('Ошибка: ' + (d.error || 'Bilinmeyen ошибка'));
   } catch (e) {
-    alert('İstek hatası: ' + e.message);
+    alert('Запрос ошибка: ' + e.message);
   }
 }
 
 function editRole(id) {
-  alert('Rol düzenleme скоро eklenecek (ID: ' + id + ')');
+  alert('Rol редактирование скоро добавитьnecek (ID: ' + id + ')');
 }
 
 loadRoles();

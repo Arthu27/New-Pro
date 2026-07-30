@@ -12,7 +12,7 @@
   font-size:14px;flex-shrink:0;border:1px solid rgba(212,168,67,0.2);}
 .msg.bot .msg-avatar{background:rgba(200,146,42,0.15);color:#c8922a;}
 .msg.user .msg-avatar{background:rgba(88,101,242,0.2);color:#7289da;}
-.msg-bubble{max-width:72%;padding:12px 16px;border-radius:16px;font-size:13.5px;line-height:1.6;word-break:break-word;}
+.msg-bubble{max-width:72%;padding:12px 16px;border-radius:16px;font-size:13.5px;lе-height:1.6;word-break:break-word;}
 .msg.bot .msg-bubble{background:rgba(26,22,16,0.9);border:1px solid rgba(212,168,67,0.12);color:#f0e8d0;border-radius:4px 16px 16px 16px;}
 .msg.user .msg-bubble{background:rgba(88,101,242,0.2);border:1px solid rgba(88,101,242,0.25);color:#f0e8d0;border-radius:16px 4px 16px 16px;}
 .msg-time{font-size:10px;color:rgba(240,232,208,0.3);margin-top:4px;}
@@ -27,7 +27,7 @@
   background:rgba(20,16,8,0.9);border:1px solid rgba(212,168,67,0.15);border-top:none;border-radius:0 0 18px 18px;}
 .chat-input{flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(212,168,67,0.15);
   border-radius:12px;padding:11px 16px;color:#f0e8d0;font-size:13.5px;font-family:Inter,sans-serif;
-  resize:none;outline:none;transition:border-color .15s;max-height:120px;}
+  resize:none;outlе:none;transition:border-color .15s;max-height:120px;}
 .chat-input:focus{border-color:rgba(212,168,67,0.4);}
 .chat-input::placeholder{color:rgba(240,232,208,0.3);}
 .send-btn{padding:11px 20px;background:#c8922a;color:#100e08;border:none;border-radius:12px;
@@ -44,7 +44,7 @@
   border:1px solid rgba(212,168,67,0.1);border-radius:99px;padding:3px 10px;}
 .welcome-msg{text-align:center;padding:40px 20px;color:rgba(240,232,208,0.4);}
 .welcome-msg i{font-size:40px;color:rgba(200,146,42,0.3);margin-bottom:12px;display:block;}
-.welcome-msg p{font-size:13px;line-height:1.7;}
+.welcome-msg p{font-size:13px;lе-height:1.7;}
 </style>
 
 <div class="chat-wrap">
@@ -155,7 +155,7 @@ async function clearChat() {
   </div>`;
 }
 
-// Enter с с отправить (Shift+Enter новый satır)
+// Enter с с отправить (Shift+Enter новый строка)
 input.addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault();

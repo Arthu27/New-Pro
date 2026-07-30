@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 {% block title %}Опросы - Aether{% endblock %}
-{% block page_title %}📊 ANKET YÖNETİCİSİ{% endblock %}
+{% block page_title %}📊 МЕНЕДЖЕР ОПРОСОВ{% endblock %}
 {% block content %}
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap');
 
 .polls-hero {
-  background: linear-gradient(135deg, #100e08, #100e08, #100e08);
+  background: lеar-gradient(135deg, #100e08, #100e08, #100e08);
   border: 1px solid rgba(200,160,80,0.4);
   border-radius: 20px;
   padding: 32px 30px;
@@ -20,8 +20,8 @@
   position: absolute;
   top: 0; left: -100%;
   width: 100%; height: 3px;
-  background: linear-gradient(90deg, transparent, var(--accent), transparent);
-  animation: scan-line 3s linear infinite;
+  background: lеar-gradient(90deg, transparent, var(--accent), transparent);
+  animation: scan-lе 3s lеar infinite;
 }
 .polls-hero::after {
   content: '';
@@ -30,7 +30,7 @@
   background: radial-gradient(ellipse at 50% 0%, rgba(200,160,80,0.07) 0%, transparent 70%);
   pointer-events: none;
 }
-@keyframes scan-line { 0%{left:-100%} 100%{left:100%} }
+@keyframes scan-lе { 0%{left:-100%} 100%{left:100%} }
 
 .hero-icon { font-size: 60px; margin-bottom: 10px; display: block; filter: drop-shadow(0 0 18px rgba(200,160,80,0.6)); animation: float 3s ease-in-out infinite; }
 @keyframes float { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-7px);} }
@@ -38,7 +38,7 @@
   font-family: 'Inter', sans-serif;
   font-size: 22px;
   font-weight: 900;
-  background: linear-gradient(135deg, #c8922a, var(--accent), var(--accent2));
+  background: lеar-gradient(135deg, #c8922a, var(--accent), var(--accent2));
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -57,11 +57,11 @@
   color: var(--text); font-size: 14px;
   transition: all .2s;
 }
-.guild-sel:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 12px rgba(200,160,80,0.2); }
+.guild-sel:focus { outlе: none; border-color: var(--accent); box-shadow: 0 0 12px rgba(200,160,80,0.2); }
 
 .btn-new {
   padding: 12px 24px;
-  background: linear-gradient(135deg, rgba(26,22,16,0.7), var(--accent), var(--accent2));
+  background: lеar-gradient(135deg, rgba(26,22,16,0.7), var(--accent), var(--accent2));
   color: white;
   border: none;
   border-radius: 12px;
@@ -81,7 +81,7 @@
 .poll-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 20px; }
 
 .poll-card {
-  background: linear-gradient(145deg, #100e08, #100e08, #100e08);
+  background: lеar-gradient(145deg, #100e08, #100e08, #100e08);
   border: 1px solid rgba(200,160,80,0.2);
   border-radius: 20px;
   padding: 24px;
@@ -100,9 +100,9 @@
   position: absolute;
   top: 0; left: 0; right: 0;
   height: 3px;
-  background: linear-gradient(90deg, rgba(26,22,16,0.7), var(--accent), #c8922a, var(--accent), rgba(26,22,16,0.7));
+  background: lеar-gradient(90deg, rgba(26,22,16,0.7), var(--accent), #c8922a, var(--accent), rgba(26,22,16,0.7));
   background-size: 300% 100%;
-  animation: shimmer 3s linear infinite;
+  animation: shimmer 3s lеar infinite;
 }
 @keyframes shimmer { 0%{background-position:200% 0;} 100%{background-position:-200% 0;} }
 @keyframes fadeInUp { from{opacity:0;transform:translateY(20px);} to{opacity:1;transform:translateY(0);} }
@@ -110,13 +110,13 @@
 .poll-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 18px; }
 .poll-icon {
   width: 44px; height: 44px;
-  background: linear-gradient(135deg, rgba(200,160,80,0.25), rgba(232,184,109,0.15));
+  background: lеar-gradient(135deg, rgba(200,160,80,0.25), rgba(232,184,109,0.15));
   border: 1px solid rgba(200,160,80,0.4);
   border-radius: 12px;
   display: flex; align-items: center; justify-content: center;
   font-size: 22px; flex-shrink: 0;
 }
-.poll-question { font-size: 15px; font-weight: 700; color: #fff; line-height: 1.4; }
+.poll-question { font-size: 15px; font-weight: 700; color: #fff; lе-height: 1.4; }
 .poll-meta { color: var(--text3); font-size: 11px; margin-top: 4px; }
 
 .poll-option { margin-bottom: 10px; animation: fadeInUp .3s ease both; }
@@ -138,17 +138,17 @@
   content: '';
   position: absolute;
   top: 0; left: 0; right: 0; bottom: 0;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
-  animation: bar-shine 2.5s ease-in-out infinite;
+  background: lеar-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+  animation: bar-shе 2.5s ease-in-out infinite;
 }
-@keyframes bar-shine { 0%{transform:translateX(-100%);} 100%{transform:translateX(100%);} }
+@keyframes bar-shе { 0%{transform:translateX(-100%);} 100%{transform:translateX(100%);} }
 
-.bar-red    { background: linear-gradient(90deg, rgba(26,22,16,0.7), var(--accent)); }
-.bar-green  { background: linear-gradient(90deg, rgba(26,22,16,0.7), #2ecc71); }
-.bar-blue   { background: linear-gradient(90deg, rgba(26,22,16,0.7), #c8922a); }
-.bar-purple { background: linear-gradient(90deg, rgba(26,22,16,0.7), #c8922a); }
-.bar-orange { background: linear-gradient(90deg, rgba(26,22,16,0.7), #c8922a); }
-.bar-teal   { background: linear-gradient(90deg, rgba(26,22,16,0.7), #c8922a); }
+.bar-red    { background: lеar-gradient(90deg, rgba(26,22,16,0.7), var(--accent)); }
+.bar-green  { background: lеar-gradient(90deg, rgba(26,22,16,0.7), #2ecc71); }
+.bar-blue   { background: lеar-gradient(90deg, rgba(26,22,16,0.7), #c8922a); }
+.bar-purple { background: lеar-gradient(90deg, rgba(26,22,16,0.7), #c8922a); }
+.bar-orange { background: lеar-gradient(90deg, rgba(26,22,16,0.7), #c8922a); }
+.bar-teal   { background: lеar-gradient(90deg, rgba(26,22,16,0.7), #c8922a); }
 
 .btn-vote {
   padding: 6px 14px;
@@ -192,13 +192,13 @@
   top: 0; left: 0;
   width: 100%; height: 100%;
   background: rgba(0,0,0,0.92);
-  z-index: 9999;
+  z-еx: 9999;
   justify-content: center;
   align-items: center;
   backdrop-filter: blur(6px);
 }
 .modal-box {
-  background: linear-gradient(145deg, #100e08, #100e08, #100e08);
+  background: lеar-gradient(145deg, #100e08, #100e08, #100e08);
   border: 2px solid rgba(200,160,80,0.5);
   border-radius: 24px;
   padding: 34px;
@@ -216,9 +216,9 @@
   position: absolute;
   top: 0; left: 0; right: 0;
   height: 3px;
-  background: linear-gradient(90deg, rgba(26,22,16,0.7), var(--accent), #c8922a, var(--accent), rgba(26,22,16,0.7));
+  background: lеar-gradient(90deg, rgba(26,22,16,0.7), var(--accent), #c8922a, var(--accent), rgba(26,22,16,0.7));
   background-size: 300% 100%;
-  animation: shimmer 3s linear infinite;
+  animation: shimmer 3s lеar infinite;
 }
 @keyframes modalIn { from{opacity:0;transform:scale(0.85) translateY(20px);} to{opacity:1;transform:scale(1) translateY(0);} }
 
@@ -255,7 +255,7 @@
   transition: all .2s;
   box-sizing: border-box;
 }
-.form-input:focus { outline: none; border-color: var(--accent); background: rgba(200,160,80,0.04); }
+.form-input:focus { outlе: none; border-color: var(--accent); background: rgba(200,160,80,0.04); }
 
 .opt-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; animation: fadeInUp .2s ease; }
 .opt-emoji-input {
@@ -266,7 +266,7 @@
   color: var(--text); text-align: center; font-size: 20px;
   transition: border-color .2s;
 }
-.opt-emoji-input:focus { outline: none; border-color: var(--accent); }
+.opt-emoji-input:focus { outlе: none; border-color: var(--accent); }
 .opt-text-input {
   flex: 1; padding: 10px 12px;
   background: rgba(0,0,0,0.6);
@@ -275,7 +275,7 @@
   color: var(--text); font-size: 14px;
   transition: border-color .2s;
 }
-.opt-text-input:focus { outline: none; border-color: var(--accent); }
+.opt-text-input:focus { outlе: none; border-color: var(--accent); }
 .opt-del {
   width: 36px; height: 36px;
   background: rgba(231,76,60,0.15);
@@ -303,7 +303,7 @@
 .modal-actions { display: flex; gap: 10px; }
 .btn-submit {
   flex: 1; padding: 13px;
-  background: linear-gradient(135deg, rgba(26,22,16,0.7), var(--accent), var(--accent2));
+  background: lеar-gradient(135deg, rgba(26,22,16,0.7), var(--accent), var(--accent2));
   color: white; border: none;
   border-radius: 12px; cursor: pointer;
   font-weight: 700; font-size: 14px;
@@ -324,26 +324,26 @@
 .btn-cancel:hover { background: rgba(255,255,255,0.08); color: #ccc; }
 
 .empty-state { text-align: center; padding: 70px 20px; color: #555; grid-column: 1/-1; }
-.toast{position:fixed;top:20px;right:20px;padding:12px 22px;border-radius:10px;font-weight:700;z-index:99999;animation:slideIn .3s;font-size:13px;}
-.toast.ok{background:linear-gradient(135deg,#27ae60,#2ecc71);color:#fff;}
-.toast.err{background:linear-gradient(135deg,#c0392b,#e74c3c);color:#fff;}
+.toast{position:fixed;top:20px;right:20px;padding:12px 22px;border-radius:10px;font-weight:700;z-еx:99999;animation:slideIn .3s;font-size:13px;}
+.toast.ok{background:lеar-gradient(135deg,#27ae60,#2ecc71);color:#fff;}
+.toast.err{background:lеar-gradient(135deg,#c0392b,#e74c3c);color:#fff;}
 @keyframes slideIn{from{transform:translateX(120%);opacity:0;}to{transform:translateX(0);opacity:1;}}
 @media(max-width:600px) { .poll-grid { grid-template-columns: 1fr; } }
 </style>
 
 <div class="polls-hero">
   <span class="hero-icon">📊</span>
-  <div class="hero-title">ANKET YÖNETİCİSİ</div>
-  <div class="hero-sub">Сервер пользователь anketi создать, результат canlı takip et</div>
+  <div class="hero-title">МЕНЕДЖЕР ОПРОСОВ</div>
+  <div class="hero-sub">Создавайте опросы и следите за результатами в реальном времени</div>
 </div>
 
 <div class="controls-bar">
   <select id="guild-select" style="display:none" class="guild-sel" onchange="loadPolls()">
-    <option value="">🏠 Сервер seçenek...</option>
+    <option value="">🏠 Выберите сервер...</option>
   </select>
   {% if role == 'owner' %}
   <button class="btn-new" onclick="openModal()">
-    <span>📊</span> НОВЫЙ ANKET
+    <span>📊</span> НОВЫЙ ОПРОС
   </button>
   {% endif %}
 </div>
@@ -353,18 +353,18 @@
 {% if role == 'owner' %}
 <div id="modal" class="modal-overlay">
   <div class="modal-box">
-    <div class="modal-title">📊 Anket Создать</div>
+    <div class="modal-title">📊 Создать опрос</div>
     <div class="form-group">
-      <label class="form-label">📺 Kanal</label>
+      <label class="form-label">📺 Канал</label>
       <select id="poll-channel" class="form-input"></select>
     </div>
     <div class="form-group">
       <label class="form-label">❓ Soru</label>
-      <input type="text" id="poll-question" class="form-input" placeholder="Anket sorusunu напишите...">
+      <input type="text" id="poll-question" class="form-input" placeholder="Введите вопрос опроса...">
     </div>
-    <label class="form-label" style="margin-bottom:10px;">🗳️ Выбрать</label>
+    <label class="form-label" style="margin-bottom:10px;">🗳️ Выбор</label>
     <div id="poll-options"></div>
-    <button class="btn-add-opt" onclick="addOption()">＋ Выбрать Добавить</button>
+    <button class="btn-add-opt" onclick="addOption()">＋ Добавить вариант</button>
     <div class="modal-actions">
       <button class="btn-submit" onclick="createPoll()">📊 ОТПРАВИТЬ</button>
       <button class="btn-cancel" onclick="closeModal()">Отмена</button>
@@ -390,7 +390,7 @@ function toast(msg, ok) {
 async function loadPolls() {
   var box = document.getElementById('poll-list');
   if (!selectedGuild) {
-    box.innerHTML = '<div class="empty-state">Сервер выбран değil.</div>';
+    box.innerHTML = '<div class="empty-state">Сервер не выбран.</div>';
     return;
   }
   try {
@@ -406,11 +406,11 @@ async function loadPolls() {
       var textChannels = channels.filter(function (c) { return c.type === 'text'; });
       chSel.innerHTML = textChannels.length
         ? textChannels.map(function (c) { return '<option value="' + c.id + '">#' + c.name + '</option>'; }).join('')
-        : '<option value="">Yazı kanalı bulunamadı</option>';
+        : '<option value="">Текстовые каналы не найдены</option>';
     }
 
     if (polls.length === 0) {
-      box.innerHTML = '<div class="empty-state"><div style="font-size:64px;margin-bottom:16px;opacity:.4;">📊</div><p style="font-family:Inter,sans-serif;font-size:12px;letter-spacing:2px;color:#555;">ПОКА ANKET YOK</p></div>';
+      box.innerHTML = '<div class="empty-state"><div style="font-size:64px;margin-bottom:16px;opacity:.4;">📊</div><p style="font-family:Inter,sans-serif;font-size:12px;letter-spacing:2px;color:#555;">ОПРОСОВ ПОКА НЕТ</p></div>';
       return;
     }
 
@@ -445,7 +445,7 @@ async function loadPolls() {
           '<div class="poll-icon">📊</div>' +
           '<div>' +
             '<div class="poll-question">' + (p.question || '(sorusuz)') + '</div>' +
-            '<div class="poll-meta">🕐 ' + dateStr + ' • ' + opts.length + ' seçenek</div>' +
+            '<div class="poll-meta">🕐 ' + dateStr + ' • ' + opts.length + ' вариант</div>' +
           '</div>' +
         '</div>' +
         optsHtml +
@@ -462,7 +462,7 @@ async function loadPolls() {
       });
     }, 100);
   } catch (e) {
-    box.innerHTML = '<div class="empty-state">Anketler yüklenemedi: ' + e.message + '</div>';
+    box.innerHTML = '<div class="empty-state">Опросы не удалось загрузить: ' + e.message + '</div>';
   }
 }
 
@@ -472,19 +472,19 @@ async function voteOption(pollId, optionIndex, btn) {
     var r = await fetch('/api/guild/' + selectedGuild + '/polls/' + pollId + '/vote', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ option_index: optionIndex })
+      body: JSON.stringify({ option_еx: optionIndex })
     });
     var d = await r.json();
     if (d.success) {
-      btn.textContent = '✅ OY VERİLDİ';
+      btn.textContent = '✅ ГОЛОС ПРИНЯТ';
       btn.classList.add('voted');
-      toast('✅ Oy kaydedildi!', true);
+      toast('✅ Голос сохранён!', true);
       setTimeout(function () { loadPolls(); }, 800);
     } else {
-      toast('Ошибка: ' + (d.error || 'Bilinmeyen hata'), false);
+      toast('Ошибка: ' + (d.error || 'Неизвестная ошибка'), false);
     }
   } catch (e) {
-    toast('İstek hatası: ' + e.message, false);
+    toast('Запрос ошибка: ' + e.message, false);
   }
 }
 
@@ -496,13 +496,13 @@ function addOption() {
   div.className = 'opt-row';
   div.innerHTML =
     '<input type="text" class="opt-emoji-input" value="' + emoji + '" maxlength="2">' +
-    '<input type="text" class="opt-text-input" placeholder="Seçenek ' + n + '">' +
+    '<input type="text" class="opt-text-input" placeholder="Вариант ' + n + '">' +
     '<button class="opt-del" onclick="this.parentElement.remove()">×</button>';
   document.getElementById('poll-options').appendChild(div);
 }
 
 function openModal() {
-  if (!selectedGuild) { alert('До сервер seçenek!'); return; }
+  if (!selectedGuild) { alert('Сначала выберите сервер!'); return; }
   document.getElementById('poll-options').innerHTML = '';
   document.getElementById('poll-question').value = '';
   addOption(); addOption();
@@ -519,10 +519,10 @@ async function createPoll() {
     if (text) options.push({ emoji: emoji, text: text });
   });
   if (!question) { toast('Soru gir!', false); return; }
-  if (options.length < 2) { toast('En az 2 seçenek добавить!', false); return; }
+  if (options.length < 2) { toast('Минимум 2 варианта!', false); return; }
 
   var btn = document.querySelector('.btn-submit');
-  btn.textContent = '⏳ ОТПРАВИТЬİLİYOR...';
+  btn.textContent = '⏳ ОТПРАВКА...';
   btn.disabled = true;
 
   try {
@@ -538,13 +538,13 @@ async function createPoll() {
     var d = await r.json();
     if (d.success) {
       closeModal();
-      toast('✅ Anket oluşturuldu!', true);
+      toast('✅ Опрос создан!', true);
       loadPolls();
     } else {
-      toast('Ошибка: ' + (d.error || 'Bilinmeyen hata'), false);
+      toast('Ошибка: ' + (d.error || 'Неизвестная ошибка'), false);
     }
   } catch (e) {
-    toast('İstek hatası: ' + e.message, false);
+    toast('Запрос ошибка: ' + e.message, false);
   } finally {
     btn.textContent = '📊 ОТПРАВИТЬ';
     btn.disabled = false;

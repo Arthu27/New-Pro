@@ -4,8 +4,8 @@
 {% block content %}
 <div class="section">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
-    <h2><i class="fas fa-exclamation-triangle" style="color:#dc143c;"></i> Tum Предупреждения</h2>
-    <input type="text" id="warn-filter" placeholder="Filtrele (пользователь ID, moderator, причина...)" style="padding:10px 15px;background:#0a0a0a;border:2px solid rgba(220,20,60,0.3);border-radius:8px;color:#eee;width:300px;" oninput="filterWarnings()">
+    <h2><i class="fas fa-exclamation-triangle" style="color:#dc143c;"></i> Все предупреждения</h2>
+    <input type="text" id="warn-filter" placeholder="Фильтрle (пользователь ID, moderator, причина...)" style="padding:10px 15px;background:#0a0a0a;border:2px solid rgba(220,20,60,0.3);border-radius:8px;color:#eee;width:300px;" oninput="filterWarnings()">
   </div>
   <div id="warnings-list" style="color:#aaa;text-align:center;padding:40px;"><i class="fas fa-spinner fa-spin" style="font-size:30px;color:#dc143c;"></i><br><br>Yukleniyor...</div>
 </div>
@@ -18,7 +18,7 @@ async function loadWarnings() {
 }
 function displayWarnings(warns) {
   if (!warns.length) {
-    document.getElementById('warnings-list').innerHTML = '<p style="color:#aaa;text-align:center;padding:40px;">Hic предупреждение не найдено</p>';
+    document.getElementById('warnings-list').innerHTML = '<p style="color:#aaa;text-align:center;padding:40px;">Ни одного предупреждения не найдено</p>';
     return;
   }
   var html = '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;">';
@@ -33,7 +33,7 @@ function displayWarnings(warns) {
     html += '<td style="padding:12px;"><code style="color:#aaa;font-size:11px;">'+w.guild_id+'</code></td>';
     html += '</tr>';
   });
-  html += '</table></div><p style="margin-top:15px;color:#666;font-size:13px;">Всего '+warns.length+' предупреждение</p>';
+  html += '</table></div><p style="margin-top:15px;color:#666;font-size:13px;">Всего '+warns.length+' предупреждений</p>';
   document.getElementById('warnings-list').innerHTML = html;
 }
 function filterWarnings() {

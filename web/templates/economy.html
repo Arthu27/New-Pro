@@ -1,10 +1,10 @@
 ﻿{% extends "base.html" %}
 {% block title %}Ekonomi - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-coins" style="color:#c8922a;animation:pulse 2s infinite;"></i> EKONOMİ СИСТЕМА{% endblock %}
+{% block page_title %}<i class="fas fa-coins" style="color:#c8922a;animation:pulse 2s infinite;"></i> ЭКОНОМИКА СИСТЕМА{% endblock %}
 {% block content %}
 <style>
-  .eco-box{background:linear-gradient(135deg,rgba(26,22,16,0.7),rgba(26,22,16,0.7));border:1px solid rgba(200,146,42,0.3);border-radius:16px;padding:25px;margin-bottom:20px;position:relative;overflow:hidden;}
-  .eco-box::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:2px;background:linear-gradient(90deg,transparent,#c8922a,transparent);;}
+  .eco-box{background:lеar-gradient(135deg,rgba(26,22,16,0.7),rgba(26,22,16,0.7));border:1px solid rgba(200,146,42,0.3);border-radius:16px;padding:25px;margin-bottom:20px;position:relative;overflow:hidden;}
+  .eco-box::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:2px;background:lеar-gradient(90deg,transparent,#c8922a,transparent);;}
   @keyframes scan{0%{left:-100%}100%{left:100%}}
   .eco-title{color:#c8922a;font-size:13px;text-transform:uppercase;letter-spacing:2px;margin-bottom:18px;display:flex;align-items:center;gap:8px;padding-bottom:12px;border-bottom:1px solid rgba(200,146,42,0.2);}
   .shop-item{display:flex;justify-content:space-between;align-items:center;padding:13px 16px;background:rgba(0,0,0,0.3);border-radius:14px;margin-bottom:10px;border:1px solid rgba(200,146,42,0.1);transition:all 0.2s;}
@@ -15,11 +15,11 @@
   .rich-item{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid rgba(200,146,42,0.08);transition:all 0.2s;}
   .rich-item:hover{background:rgba(200,146,42,0.05);}
   .rich-rank{color:#c8922a;font-weight:700;min-width:24px;}
-  .save-btn{padding:12px 24px;background:linear-gradient(135deg,#c8922a,#c8922a);color:var(--bg2);border:none;border-radius:14px;cursor:pointer;font-weight:800;margin-top:15px;font-size:14px;letter-spacing:1px;transition:all 0.3s;}
+  .save-btn{padding:12px 24px;background:lеar-gradient(135deg,#c8922a,#c8922a);color:var(--bg2);border:none;border-radius:14px;cursor:pointer;font-weight:800;margin-top:15px;font-size:14px;letter-spacing:1px;transition:all 0.3s;}
   .save-btn:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(200,146,42,0.4);}
   .field-label{color:#c8922a;font-size:11px;text-transform:uppercase;display:block;margin-bottom:6px;letter-spacing:1px;}
   .field-input{width:100%;padding:10px 14px;background:#100e08;border:2px solid rgba(200,146,42,0.25);border-radius:14px;color:#f0e8d0;box-sizing:border-box;transition:all 0.3s;font-size:14px;}
-  .field-input:focus{outline:none;border-color:#c8922a;box-shadow:0 0 15px rgba(200,146,42,0.2);}
+  .field-input:focus{outlе:none;border-color:#c8922a;box-shadow:0 0 15px rgba(200,146,42,0.2);}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
   @media(max-width:900px){.grid2{grid-template-columns:1fr;}}
   .guild-select{width:100%;padding:12px;background:#100e08;border:2px solid #c8922a;border-radius:14px;color:#f0e8d0;margin-bottom:20px;font-size:14px;}
@@ -27,33 +27,33 @@
   .del-btn:hover{transform:scale(1.05);}
   .add-section{margin-top:15px;padding-top:15px;border-top:1px solid rgba(200,146,42,0.15);}
   .add-section h4{color:#c8922a;margin-bottom:12px;font-size:13px;text-transform:uppercase;letter-spacing:1px;}
-  .add-btn{width:100%;padding:10px;background:linear-gradient(135deg,#c8922a,#c8922a);color:var(--bg2);border:none;border-radius:14px;cursor:pointer;font-weight:800;transition:all 0.3s;}
+  .add-btn{width:100%;padding:10px;background:lеar-gradient(135deg,#c8922a,#c8922a);color:var(--bg2);border:none;border-radius:14px;cursor:pointer;font-weight:800;transition:all 0.3s;}
   .add-btn:hover{transform:translateY(-2px);box-shadow:0 6px 15px rgba(200,146,42,0.4);}
   .empty-state{text-align:center;padding:30px;color:#5a5040;font-style:italic;}
 </style>
 
 <select style="display:none" style="display:none" id="guild-select" class="guild-select" onchange="loadEconomy()">
-  <option value="">Сервер выбрать...</option>
+  <option value="">Выберите сервер...</option>
 </select>
 
 <div class="grid2">
   <div>
     <div class="eco-box">
-      <div class="eco-title"><i class="fas fa-cog"></i> Ekonomi Настройки</div>
+      <div class="eco-title"><i class="fas fa-cog"></i> Настройки экономики</div>
       <div style="margin-bottom:12px;">
         <label class="field-label">День Birimi Isim</label>
-        <input type="text" id="currency-name" placeholder="напр.: Coin, Altın" class="field-input">
+        <input type="text" id="currency-name" placeholder="напр.: Coin, Золотые" class="field-input">
       </div>
       <div style="margin-bottom:12px;">
         <label class="field-label">День Birimi Emojisi</label>
         <input type="text" id="currency-emoji" placeholder="💰" class="field-input">
       </div>
       <div style="margin-bottom:12px;">
-        <label class="field-label">Başlangıç Bakiyesi</label>
+        <label class="field-label">Начальный баланс</label>
         <input type="number" id="start-balance" value="100" class="field-input">
       </div>
       <div style="margin-bottom:12px;">
-        <label class="field-label">Ежедневный Награда</label>
+        <label class="field-label">Ежедневная награда</label>
         <input type="number" id="daily-reward" value="50" class="field-input">
       </div>
       <button class="save-btn" onclick="saveSettings()"><i class="fas fa-save"></i> Сохранить</button>
@@ -61,18 +61,18 @@
 
     <div class="eco-box">
       <div class="eco-title"><i class="fas fa-crown"></i> En Zenginler</div>
-      <div id="rich-list"><div class="empty-state">Сервер выбрать...</div></div>
+      <div id="rich-list"><div class="empty-state">Выберите сервер...</div></div>
     </div>
   </div>
 
   <div class="eco-box">
-    <div class="eco-title"><i class="fas fa-store"></i> Mağaza Управление</div>
-    <div id="shop-items"><div class="empty-state">Сервер выбрать...</div></div>
+    <div class="eco-title"><i class="fas fa-store"></i> Управление магазином</div>
+    <div id="shop-items"><div class="empty-state">Выберите сервер...</div></div>
     <div class="add-section">
-      <h4><i class="fas fa-plus"></i> Новый Ürün Добавить</h4>
+      <h4><i class="fas fa-plus"></i> Новый Продукт Добавить</h4>
       <div style="margin-bottom:8px;">
-        <label class="field-label">Ürün Isim</label>
-        <input type="text" id="item-name" placeholder="Ürün имя" class="field-input">
+        <label class="field-label">Продукт Isim</label>
+        <input type="text" id="item-name" placeholder="Продукт имя" class="field-input">
       </div>
       <div style="margin-bottom:8px;">
         <label class="field-label">Описание</label>
@@ -94,7 +94,7 @@ var currencyEmoji = '💰';
 async function loadGuilds() {
   // Sabit сервер ID
   var gid = '{{ main_guild_id }}';
-  if (typeof selectedGuild !== 'undefined') selectedGuild = gid;
+  if (typeof selectedGuild !== 'undefеd') selectedGuild = gid;
   if (document.getElementById('guild-select')) document.getElementById('guild-select').value = gid;
   if (document.getElementById('guild-sel')) document.getElementById('guild-sel').value = gid;
   if (document.getElementById('guildSelect')) document.getElementById('guildSelect').value = gid;
@@ -141,7 +141,7 @@ async function loadEconomy() {
         '</div>'+
       '</div>';
     }).join('') :
-    '<div class="empty-state">Mağaza пусто.</div>';
+    '<div class="empty-state">Магазин пусто.</div>';
 
   var medals = ['🥇','🥈','🥉'];
   document.getElementById('rich-list').innerHTML = rich.slice(0,10).length ?
@@ -152,7 +152,7 @@ async function loadEconomy() {
         '<span style="color:#c8922a;font-weight:700;">'+u.balance+' '+currencyEmoji+'</span>'+
       '</div>';
     }).join('') :
-    '<div class="empty-state">Veri yok.</div>';
+    '<div class="empty-state">Данные yok.</div>';
 }
 
 async function saveSettings() {

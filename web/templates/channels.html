@@ -6,15 +6,15 @@
 /* ── Toolbar ── */
 .ch-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap;}
 .ch-select{flex:1;min-width:200px;padding:9px 12px;background:rgba(255,255,255,0.03);border:1px solid rgba(212,168,67,0.16);border-radius:8px;color:#f0e8d0;font-size:13px;font-family:Inter,sans-serif;}
-.ch-select:focus{outline:none;border-color:#c8922a;box-shadow:0 0 0 3px var(--accent-dim);}
-.btn-new{display:inline-flex;align-items:center;gap:7px;padding:9px 18px;background:#c8922a;color:#100e08;border:none;border-radius:99px;cursor:pointer;font-weight:700;font-size:13px;font-family:Inter,sans-serif;transition:all 0.15s;white-space:nowrap;}
+.ch-select:focus{outlе:none;border-color:#c8922a;box-shadow:0 0 0 3px var(--accent-dim);}
+.btn-new{display:inlе-flex;align-items:center;gap:7px;padding:9px 18px;background:#c8922a;color:#100e08;border:none;border-radius:99px;cursor:pointer;font-weight:700;font-size:13px;font-family:Inter,sans-serif;transition:all 0.15s;white-space:nowrap;}
 .btn-new:hover{background:#e0a830;transform:translateY(-1px);box-shadow:0 4px 16px var(--accent-glow);}
 
 /* ── Stats row ── */
 .ch-stats{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;}
 .ch-stat{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.08);border-radius:14px;padding:12px 18px;display:flex;align-items:center;gap:10px;flex:1;min-width:120px;}
 .ch-stat-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}
-.ch-stat-val{font-size:20px;font-weight:800;color:#f0e8d0;letter-spacing:-0.02em;line-height:1;}
+.ch-stat-val{font-size:20px;font-weight:800;color:#f0e8d0;letter-spacing:-0.02em;lе-height:1;}
 .ch-stat-lbl{font-size:10px;color:#5a5040;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;}
 
 /* ── Channel list ── */
@@ -52,7 +52,7 @@
 .ch-row:hover .del-btn{opacity:1;}
 .del-btn:hover{background:rgba(224,85,85,0.12);border-color:rgba(224,85,85,0.25);color:var(--red);}
 
-/* Uncategorized rows (no indent) */
+/* Uncategorized rows (no еnt) */
 .ch-row-root{padding-left:18px;}
 
 /* Empty */
@@ -60,7 +60,7 @@
 .ch-empty i{font-size:28px;opacity:0.3;display:block;margin-bottom:10px;}
 
 /* ── Modal pencere ── */
-.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(6px);z-index:9999;align-items:center;justify-content:center;}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(6px);z-еx:9999;align-items:center;justify-content:center;}
 .modal-overlay.open{display:flex;}
 .modal-card{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.16);border-radius:14px;padding:28px;width:420px;max-width:92vw;box-shadow:0 24px 80px rgba(0,0,0,0.6);}
 .modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;}
@@ -69,7 +69,7 @@
 .modal-close:hover{background:rgba(212,168,67,0.04);color:#f0e8d0;}
 .field-label{font-size:11px;font-weight:600;color:rgba(240,232,208,0.55);text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:6px;}
 .field-input{width:100%;padding:9px 12px;background:rgba(255,255,255,0.03);border:1px solid rgba(212,168,67,0.16);border-radius:8px;color:#f0e8d0;font-size:13px;font-family:Inter,sans-serif;margin-bottom:14px;box-sizing:border-box;transition:border-color 0.15s;}
-.field-input:focus{outline:none;border-color:#c8922a;box-shadow:0 0 0 3px var(--accent-dim);}
+.field-input:focus{outlе:none;border-color:#c8922a;box-shadow:0 0 0 3px var(--accent-dim);}
 .type-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:18px;}
 .type-opt{padding:10px 8px;background:rgba(255,255,255,0.03);border:1px solid rgba(212,168,67,0.16);border-radius:9px;cursor:pointer;text-align:center;transition:all 0.15s;}
 .type-opt:hover{border-color:rgba(212,168,67,0.2);background:rgba(212,168,67,0.04);}
@@ -87,7 +87,7 @@
 <!-- Toolbar -->
 <div class="ch-toolbar">
   <select id="guild-select" style="display:none" class="ch-select">
-    <option value="">Сервер выбрать...</option>
+    <option value="">Выберите сервер...</option>
   </select>
   <button class="btn-new" id="btnNewChannel" type="button">
     <i class="fas fa-plus"></i> Новый Канал
@@ -98,15 +98,15 @@
 <div class="ch-stats" id="ch-stats" style="display:none;">
   <div class="ch-stat">
     <div class="ch-stat-icon icon-text"><i class="fas fa-hashtag"></i></div>
-    <div><div class="ch-stat-val" id="stat-text">0</div><div class="ch-stat-lbl">Metin</div></div>
+    <div><div class="ch-stat-val" id="stat-text">0</div><div class="ch-stat-lbl">Текст</div></div>
   </div>
   <div class="ch-stat">
     <div class="ch-stat-icon icon-voice"><i class="fas fa-volume-up"></i></div>
-    <div><div class="ch-stat-val" id="stat-voice">0</div><div class="ch-stat-lbl">Ses</div></div>
+    <div><div class="ch-stat-val" id="stat-voice">0</div><div class="ch-stat-lbl">Голос</div></div>
   </div>
   <div class="ch-stat">
     <div class="ch-stat-icon" style="background:rgba(212,168,67,0.12);color:#c8922a;"><i class="fas fa-folder"></i></div>
-    <div><div class="ch-stat-val" id="stat-cat">0</div><div class="ch-stat-lbl">Kategori</div></div>
+    <div><div class="ch-stat-val" id="stat-cat">0</div><div class="ch-stat-lbl">Категория</div></div>
   </div>
   <div class="ch-stat">
     <div class="ch-stat-icon" style="background:rgba(212,168,67,0.1);color:#e0a830;"><i class="fas fa-layer-group"></i></div>
@@ -117,11 +117,11 @@
 <!-- Channel list -->
 <div class="ch-box" id="ch-box">
   <div class="ch-box-header">
-    <div class="ch-box-title"><i class="fas fa-list"></i> Канал Listesi</div>
+    <div class="ch-box-title"><i class="fas fa-list"></i> Список каналов</div>
     <span class="ch-box-count" id="ch-count">—</span>
   </div>
   <div id="channel-list">
-    <div class="ch-empty"><i class="fas fa-hashtag"></i><p>Сервер выберите</p></div>
+    <div class="ch-empty"><i class="fas fa-hashtag"></i><p>Выберите сервер</p></div>
   </div>
 </div>
 
@@ -132,21 +132,21 @@
       <h3><i class="fas fa-plus-circle" style="color:#c8922a;margin-right:8px;"></i>Новый Канал</h3>
       <button class="modal-close" id="btnCloseModal" type="button"><i class="fas fa-times"></i></button>
     </div>
-    <label class="field-label">Канал Isim</label>
+    <label class="field-label">Название канала</label>
     <input type="text" id="ch-name" placeholder="канал-имя" class="field-input">
-    <label class="field-label">Kanal Türü</label>
+    <label class="field-label">Тип канала</label>
     <div class="type-grid">
       <div class="type-opt selected" data-type="text">
         <div class="type-opt-icon">#</div>
-        <div class="type-opt-lbl">Metin</div>
+        <div class="type-opt-lbl">Текст</div>
       </div>
       <div class="type-opt" data-type="voice">
         <div class="type-opt-icon">🔊</div>
-        <div class="type-opt-lbl">Ses</div>
+        <div class="type-opt-lbl">Голос</div>
       </div>
       <div class="type-opt" data-type="category">
         <div class="type-opt-icon">📁</div>
-        <div class="type-opt-lbl">Kategori</div>
+        <div class="type-opt-lbl">Категория</div>
       </div>
     </div>
     <input type="hidden" id="ch-type" value="text">
@@ -164,7 +164,7 @@
   var MAIN_GID = '1498837105915330562';
   var selectedGuild = MAIN_GID;
 
-  // Scroll restore için: data attribute ile sakla
+  // Scroll restore для: data attribute с sakla
   function getScroll() {
     var mc = document.getElementById('main-content');
     return mc ? mc.scrollTop : 0;
@@ -185,7 +185,8 @@
   async function loadChannels(preserveScroll) {
     if (!selectedGuild) return;
 
-    // Eğer preserveScroll true değilse (örn. sayfa ilk kez yükleniyor) zaten en üstte olmamız gerek
+    // Сохраняем текущую позицию скролла ПЕРЕД любым рендером,
+    // чтобы избежать скачка наверх при list.innerHTML = html
     var restoreY = preserveScroll ? getScroll() : 0;
 
     var list = $('channel-list');
@@ -212,7 +213,7 @@
         return;
       }
 
-      // Kategorilere göre grupla
+      // Группировка по категориям
       var cats = channels.filter(function (c) { return c.type === 'category'; });
       var grouped = {};
       cats.forEach(function (c) { grouped[c.name] = []; });
@@ -230,14 +231,14 @@
 
       var html = '';
 
-      // Kategorisiz каналlar
+      // Каналы без категории
       if (uncategorized.length) {
         uncategorized.forEach(function (ch) {
           html += renderRow(ch, true);
         });
       }
 
-      // Kategorili gruplar
+      // Категории с каналами
       cats.forEach(function (cat) {
         var children = grouped[cat.name] || [];
         html += '<div class="cat-group">';
@@ -252,18 +253,30 @@
         if (children.length) {
           children.forEach(function (ch) { html += renderRow(ch, false); });
         } else {
-          html += '<div style="padding:10px 28px;font-size:12px;color:#5a5040;font-style:italic;">Пусто kategori</div>';
+          html += '<div style="padding:10px 28px;font-size:12px;color:#5a5040;font-style:italic;">Пустая категория</div>';
         }
         html += '</div></div>';
       });
 
-      list.innerHTML = html;
+      // Рендер через DocumentFragment, чтобы избежать промежуточного состояния
+      // (когда list пуст между очисткой и заполнением, браузер скроллит вверх)
+      var frag = document.createDocumentFragment();
+      var tmp = document.createElement('div');
+      tmp.innerHTML = html;
+      while (tmp.firstChild) frag.appendChild(tmp.firstChild);
+      list.innerHTML = '';
+      list.appendChild(frag);
 
-      // Scroll restore
+      // Scroll restore — несколько попыток, чтобы браузер не успел прыгнуть наверх
       if (preserveScroll) {
+        setScroll(restoreY);
         requestAnimationFrame(function () { setScroll(restoreY); });
-        // Bir frame daha garanti olsun
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () { setScroll(restoreY); });
+        });
+        setTimeout(function () { setScroll(restoreY); }, 0);
         setTimeout(function () { setScroll(restoreY); }, 30);
+        setTimeout(function () { setScroll(restoreY); }, 100);
       }
     } catch (e) {
       list.innerHTML = '<div class="ch-empty"><i class="fas fa-exclamation-triangle"></i><p>Ошибка: ' + e.message + '</p></div>';
@@ -277,9 +290,9 @@
   function renderRow(ch, isRoot) {
     var icon, iconClass, badgeClass, badgeLabel;
     if (ch.type === 'text') {
-      icon = 'fa-hashtag'; iconClass = 'icon-text'; badgeClass = 'badge-text'; badgeLabel = 'Metin';
+      icon = 'fa-hashtag'; iconClass = 'icon-text'; badgeClass = 'badge-text'; badgeLabel = 'Текст';
     } else if (ch.type === 'voice') {
-      icon = 'fa-volume-up'; iconClass = 'icon-voice'; badgeClass = 'badge-voice'; badgeLabel = 'Ses';
+      icon = 'fa-volume-up'; iconClass = 'icon-voice'; badgeClass = 'badge-voice'; badgeLabel = 'Голос';
     } else {
       icon = 'fa-comments'; iconClass = 'icon-forum'; badgeClass = 'badge-forum'; badgeLabel = 'Forum';
     }
@@ -311,7 +324,7 @@
   async function createChannel() {
     var name = $('ch-name').value.trim();
     var type = $('ch-type').value;
-    if (!name) { alert('Канал имя gir!'); return; }
+    if (!name) { alert('Введите имя канала!'); return; }
     try {
       var r = await fetch('/api/guild/' + selectedGuild + '/channels/create', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -319,29 +332,29 @@
       });
       var d = await r.json();
       if (d.success) { closeModal(); loadChannels(true); }
-      else alert('Ошибка: ' + (d.error || 'Bilinmeyen'));
-    } catch (e) { alert('İstek hatası: ' + e.message); }
+      else alert('Ошибка: ' + (d.error || 'Неизвестно'));
+    } catch (e) { alert('Ошибка запроса: ' + e.message); }
   }
 
   async function deleteChannel(id, name) {
-    if (!confirm('"' + name + '" каналını silmek istediğine emin misin?')) return;
+    if (!confirm('"' + name + '" канал будет удалён. Продолжить?')) return;
     try {
       var r = await fetch('/api/guild/' + selectedGuild + '/channels/' + id + '/delete', { method: 'POST' });
       var d = await r.json();
       if (d.success) loadChannels(true);
-      else alert('Ошибка: ' + (d.error || 'Bilinmeyen'));
-    } catch (e) { alert('İstek hatası: ' + e.message); }
+      else alert('Ошибка: ' + (d.error || 'Неизвестно'));
+    } catch (e) { alert('Ошибка запроса: ' + e.message); }
   }
 
   function bindEvents() {
-    // Kanal türü seçimi
+    // Выбор типа канала
     document.querySelectorAll('.type-opt').forEach(function (el) {
       el.addEventListener('click', function () {
         selectType(el.getAttribute('data-type'), el);
       });
     });
 
-    // Yeni канал butonu
+    // Кнопка нового канала
     var btnNew = $('btnNewChannel');
     if (btnNew) btnNew.addEventListener('click', openNameModal);
     var btnClose = $('btnCloseModal');
@@ -351,15 +364,15 @@
     var btnCreate = $('btnCreateChannel');
     if (btnCreate) btnCreate.addEventListener('click', createChannel);
 
-    // Sunucu seçimi (eğer görünür hale getirilirse)
+    // Переключатель серверов (если виден)
     var gs = $('guild-select');
     if (gs) gs.addEventListener('change', function () { loadChannels(false); });
 
-    // Modal backdrop tıklama
+    // Клик по backdrop модала
     var modal = $('modal');
     if (modal) modal.addEventListener('click', function (e) { if (e.target === modal) closeModal(); });
 
-    // Event delegation: silme butonları + kategori toggle
+    // Event delegation: silme butonы + kategori toggle
     var list = $('channel-list');
     if (list) {
       list.addEventListener('click', function (e) {
@@ -387,7 +400,7 @@
   }
   function init() {
     bindEvents();
-    loadChannels(false);  // ilk yükleme: scroll restore yok
+    loadChannels(false);  // первая загрузка: без восстановления скролла
   }
 })();
 </script>

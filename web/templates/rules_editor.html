@@ -3,14 +3,14 @@
 {% block page_title %}<i class="fas fa-scroll" style="color:#c8922a;animation:pulse 2s infinite;"></i> СЕРВЕР ПРАВИЛ{% endblock %}
 {% block content %}
 <style>
-  .re-box{background:linear-gradient(135deg,rgba(26,22,16,0.7),rgba(26,22,16,0.7));border:1px solid rgba(212,168,67,0.3);border-radius:16px;padding:25px;margin-bottom:20px;position:relative;overflow:hidden;}
-  .re-box::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:2px;background:linear-gradient(90deg,transparent,#c8922a,transparent);;}
+  .re-box{background:lеar-gradient(135deg,rgba(26,22,16,0.7),rgba(26,22,16,0.7));border:1px solid rgba(212,168,67,0.3);border-radius:16px;padding:25px;margin-bottom:20px;position:relative;overflow:hidden;}
+  .re-box::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:2px;background:lеar-gradient(90deg,transparent,#c8922a,transparent);;}
   @keyframes scan{0%{left:-100%}100%{left:100%}}
   .re-title{color:#c8922a;font-size:13px;text-transform:uppercase;letter-spacing:2px;margin-bottom:15px;display:flex;align-items:center;gap:8px;padding-bottom:12px;border-bottom:1px solid rgba(200,146,42,0.2);}
   .rule-row{display:flex;gap:8px;margin-bottom:8px;align-items:center;}
   .rule-num{color:#c8922a;font-weight:700;min-width:28px;font-size:15px;}
   .rule-input{flex:1;padding:10px 14px;background:#100e08;border:1px solid rgba(212,168,67,0.25);border-radius:14px;color:#f0e8d0;font-family:inherit;font-size:14px;transition:all 0.3s;}
-  .rule-input:focus{outline:none;border-color:#c8922a;box-shadow:0 0 12px rgba(200,146,42,0.2);}
+  .rule-input:focus{outlе:none;border-color:#c8922a;box-shadow:0 0 12px rgba(200,146,42,0.2);}
   .rule-del{padding:8px 14px;background:rgba(224,85,85,0.15);color:#f0e8d0;border:none;border-radius:8px;cursor:pointer;font-size:14px;transition:all 0.2s;}
   .rule-del:hover{transform:scale(1.05);}
   .btn-add{width:100%;padding:10px;background:rgba(212,168,67,0.08);color:#c8922a;border:1px dashed rgba(200,146,42,0.4);border-radius:14px;cursor:pointer;margin-top:8px;font-size:14px;transition:all 0.2s;}
@@ -21,35 +21,35 @@
   @media(max-width:900px){.grid2{grid-template-columns:1fr;}}
   .field-label{color:#c8922a;font-size:11px;text-transform:uppercase;display:block;margin-bottom:6px;letter-spacing:1px;}
   .field-sel{width:100%;padding:10px 14px;background:#100e08;border:1px solid rgba(212,168,67,0.25);border-radius:14px;color:#f0e8d0;transition:all 0.3s;font-size:14px;}
-  .field-sel:focus{outline:none;border-color:#c8922a;}
+  .field-sel:focus{outlе:none;border-color:#c8922a;}
   .guild-select{width:100%;padding:12px;background:#100e08;border:1px solid rgba(212,168,67,0.3);border-radius:14px;color:#f0e8d0;margin-bottom:20px;font-size:14px;}
-  .preview-rule{margin-bottom:8px;color:#f0e8d0;font-size:13px;line-height:1.6;padding:8px 12px;background:rgba(212,168,67,0.05);border-radius:8px;border-left:3px solid #c8922a;}
+  .preview-rule{margin-bottom:8px;color:#f0e8d0;font-size:13px;lе-height:1.6;padding:8px 12px;background:rgba(212,168,67,0.05);border-radius:8px;border-left:3px solid #c8922a;}
   .preview-rule span{color:#c8922a;font-weight:700;margin-right:6px;}
   .publish-btn{width:100%;padding:12px;background:rgba(94,196,122,0.8);color:#f0e8d0;border:none;border-radius:14px;cursor:pointer;font-weight:700;margin-top:12px;transition:all 0.3s;}
   .publish-btn:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(39,174,96,0.4);}
 </style>
 
 <select style="display:none" style="display:none" id="guild-select" class="guild-select" onchange="loadRules()">
-  <option value="">Сервер выбрать...</option>
+  <option value="">Выберите сервер...</option>
 </select>
 
 <div class="grid2">
   <div class="re-box">
-    <div class="re-title"><i class="fas fa-edit"></i> Правила Redaktirovat</div>
+    <div class="re-title"><i class="fas fa-edit"></i> Редактирование правил</div>
     <div id="rules-list"></div>
-    <button class="btn-add" onclick="addRule()"><i class="fas fa-plus"></i> Правило Добавить</button>
+    <button class="btn-add" onclick="addRule()"><i class="fas fa-plus"></i> Добавить правило</button>
     <div style="display:flex;gap:10px;margin-top:12px;">
       <button class="save-btn" onclick="saveRules()" style="flex:1;"><i class="fas fa-save"></i> Сохранить</button>
     </div>
   </div>
 
   <div class="re-box">
-    <div class="re-title"><i class="fas fa-eye"></i> Önizleme & Yayınla</div>
+    <div class="re-title"><i class="fas fa-eye"></i> Предпросмотр & Опубликовать</div>
     <div id="preview" style="background:rgba(0,0,0,0.3);border-radius:14px;padding:15px;min-height:150px;margin-bottom:15px;"></div>
-    <label class="field-label">Yayınlanacak Канал</label>
+    <label class="field-label">Опубликоватьnacak Канал</label>
     <select id="rules-channel" class="field-sel" style="margin-bottom:12px;"></select>
     <button class="publish-btn" onclick="publishRules()">
-      <i class="fas fa-paper-plane"></i> Discord'a Yayınla
+      <i class="fas fa-paper-plane"></i> Discord'a Опубликовать
     </button>
   </div>
 </div>
@@ -61,7 +61,7 @@ var selectedGuild = '1498837105915330562';
 async function loadGuilds() {
   // Sabit сервер ID
   var gid = '{{ main_guild_id }}';
-  if (typeof selectedGuild !== 'undefined') selectedGuild = gid;
+  if (typeof selectedGuild !== 'undefеd') selectedGuild = gid;
   if (document.getElementById('guild-select')) document.getElementById('guild-select').value = gid;
   if (document.getElementById('guild-sel')) document.getElementById('guild-sel').value = gid;
   if (document.getElementById('guildSelect')) document.getElementById('guildSelect').value = gid;
@@ -104,7 +104,7 @@ async function loadRules() {
 function renderRules() {
   var box = document.getElementById('rules-list');
   if(!rules.length) {
-    box.innerHTML = '<p style="color:#5a5040;font-size:13px;font-style:italic;">Пока правило yok. + Правило Добавить butonuna bas.</p>';
+    box.innerHTML = '<p style="color:#5a5040;font-size:13px;font-style:italic;">Пока правило yok. + Добавить правило butonuna bas.</p>';
     updatePreview(); return;
   }
   box.innerHTML = rules.map(function(r,i){
@@ -157,7 +157,7 @@ async function publishRules() {
   });
   var d = await r.json();
   var btn = event.target;
-  if(d.success) { btn.textContent='✅ Yayınlandı!'; setTimeout(function(){btn.innerHTML='<i class="fas fa-paper-plane"></i> Discord\'a Yayınla';},2000); }
+  if(d.success) { btn.textContent='✅ Опубликовано!'; setTimeout(function(){btn.innerHTML='<i class="fas fa-paper-plane"></i> Discord\'a Опубликовать';},2000); }
   else alert('❌ '+(d.error||'Ошибка'));
 }
 

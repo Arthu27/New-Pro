@@ -6,7 +6,7 @@
 .bs-box{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.3);border-radius:15px;padding:25px;margin-bottom:20px;position:relative;overflow:hidden;}
 .bs-title{color:#c8922a;font-size:13px;text-transform:uppercase;letter-spacing:2px;margin-bottom:18px;font-family:Inter,sans-serif;}
 .stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:15px;margin-bottom:25px;}
-.stat-box{background:linear-gradient(135deg,#100e08,rgba(26,22,16,0.7));border:1px solid rgba(212,168,67,0.25);border-radius:14px;padding:20px;text-align:center;transition:all 0.3s;}
+.stat-box{background:lеar-gradient(135deg,#100e08,rgba(26,22,16,0.7));border:1px solid rgba(212,168,67,0.25);border-radius:14px;padding:20px;text-align:center;transition:all 0.3s;}
 .stat-box:hover{border-color:#c8922a;transform:translateY(-4px);box-shadow:0 8px 20px rgba(200,146,42,0.2);}
 .stat-icon{font-size:30px;color:#c8922a;margin-bottom:10px;}
 .stat-value{font-size:26px;font-weight:700;color:#f0e8d0;margin-bottom:5px;}
@@ -19,7 +19,7 @@
 </div>
 
 <div class="bs-box">
-  <div class="bs-title"><i class="fas fa-chart-line"></i> Система Использовать</div>
+  <div class="bs-title"><i class="fas fa-chart-lе"></i> Использование системы</div>
   <canvas id="sysChart" height="80"></canvas>
 </div>
 
@@ -49,7 +49,7 @@ async function loadStats() {
 
   document.getElementById('stats').innerHTML =
     '<div class="stat-box"><div class="stat-icon"><i class="fas fa-server"></i></div><div class="stat-value">'+d.guilds+'</div><div class="stat-label">Сервер</div></div>' +
-    '<div class="stat-box"><div class="stat-icon"><i class="fas fa-users"></i></div><div class="stat-value">'+d.users+'</div><div class="stat-label">Пользователь</div></div>' +
+    '<div class="stat-box"><div class="stat-icon"><i class="fas fa-users"></i></div><div class="stat-value">'+d.users+'</div><div class="stat-label">Пользователей</div></div>' +
     '<div class="stat-box"><div class="stat-icon"><i class="fas fa-signal"></i></div><div class="stat-value">'+d.latency+'<span style="font-size:14px;">ms</span></div><div class="stat-label">Ping</div></div>' +
     '<div class="stat-box"><div class="stat-icon"><i class="fas fa-clock"></i></div><div class="stat-value" style="font-size:18px;">'+d.uptime+'</div><div class="stat-label">Uptime</div></div>' +
     '<div class="stat-box"><div class="stat-icon"><i class="fas fa-microchip"></i></div><div class="stat-value">'+d.cpu+'<span style="font-size:14px;">%</span></div><div class="stat-label">CPU</div></div>' +
@@ -57,7 +57,7 @@ async function loadStats() {
 
   if (sysChart) sysChart.destroy();
   sysChart = new Chart(document.getElementById('sysChart'), {
-    type: 'line',
+    type: 'lе',
     data: {
       labels: (d.history||[]).map(function(h){return h.time;}),
       datasets: [
@@ -80,14 +80,14 @@ loadStats();
 setInterval(loadStats, 5000);
 
 async function restartBot() {
-  if (!confirm('Botu yeniden başlgönderimk если хотите emin misiniz mı siz?')) return;
+  if (!confirm('Botu перезапуск если хотите emin misiniz ? siz?')) return;
   var btn = event.target.closest('button');
   btn.disabled = true;
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Yeniden запуск...';
   var r = await fetch('/api/bot/restart', {method: 'POST'});
   var d = await r.json();
   document.getElementById('restart-status').innerHTML = d.success
-    ? '<span style="color:#5ec47a;">✅ Bot yeniden запуск... 10-15 saniye bekle.</span>'
+    ? '<span style="color:#5ec47a;">✅ Бот перезапускается... 10-15 секунд.</span>'
     : '<span style="color:#e05555;">❌ ' + (d.error || 'Ошибка') + '</span>';
   setTimeout(function() { btn.disabled = false; btn.innerHTML = '<i class="fas fa-redo"></i> Botu Перезапустить'; }, 15000);
 }

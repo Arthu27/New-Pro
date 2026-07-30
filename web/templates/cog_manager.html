@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% block title %}Modül Управление{% endblock %}
-{% block page_title %}🧩 Modül Управление{% endblock %}
+{% block title %}Модуль Управление{% endblock %}
+{% block page_title %}🧩 Модуль Управление{% endblock %}
 {% block content %}
 <style>
 .cog-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;}
@@ -24,7 +24,7 @@
 
 <div class="top-bar">
   <div style="font-size:12px;color:rgba(240,232,208,0.4);" id="cog-summary">Загрузка...</div>
-  <button class="btn btn-primary" onclick="reloadAll()" style="font-size:12px;padding:7px 16px;">🔄 Все Обновить</button>
+  <button class="btn btn-primary" onclick="reloadAll()" style="font-size:12px;padding:7px 16px;">🔄 Обновить все</button>
 </div>
 
 <div class="cog-grid" id="cog-grid">
@@ -39,7 +39,7 @@ async function loadCogs() {
     var d = await fetch('/api/cogs').then(r => r.json());
     _cogs = d;
     var loaded = d.filter(c => c.loaded).length;
-    document.getElementById('cog-summary').textContent = loaded + ' / ' + d.length + ' modül загруз';
+    document.getElementById('cog-summary').textContent = loaded + ' / ' + d.length + ' модуль загруз';
     document.getElementById('cog-grid').innerHTML = d.map(function(c) {
       return '<div class="cog-card ' + (c.loaded ? 'loaded' : 'unloaded') + '" id="cog-' + c.name + '">' +
         '<div>' +
@@ -49,7 +49,7 @@ async function loadCogs() {
         '<div style="display:flex;align-items:center;">' +
           (c.loaded ? '<button class="reload-btn" onclick="reloadCog(\'' + c.name + '\')">↺</button>' : '') +
           '<button class="toggle-btn ' + (c.loaded ? 'unload' : 'load') + '" onclick="toggleCog(\'' + c.name + '\',' + c.loaded + ')">' +
-            (c.loaded ? 'Закрыть' : 'Aç') +
+            (c.loaded ? 'Закрыть' : 'Открыть') +
           '</button>' +
         '</div>' +
       '</div>';

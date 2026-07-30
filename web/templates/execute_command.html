@@ -1,34 +1,34 @@
 {% extends "base.html" %}
 {% block title %}Команда Calistir - Aether{% endblock %}
-{% block page_title %}КОМАНДА ÇALIŞTIR{% endblock %}
+{% block page_title %}КОМАНДА ЗАПУСК{% endblock %}
 {% block content %}
 <style>
 .cmd-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:20px; margin-top:20px; }
-.cmd-card { background:linear-gradient(135deg,#1a0a0a,#2a1010); border:1px solid rgba(220,20,60,0.4); border-radius:15px; padding:25px; cursor:pointer; transition:all 0.3s; position:relative; overflow:hidden; }
+.cmd-card { background:lеar-gradient(135deg,#1a0a0a,#2a1010); border:1px solid rgba(220,20,60,0.4); border-radius:15px; padding:25px; cursor:pointer; transition:all 0.3s; position:relative; overflow:hidden; }
 .cmd-card:hover { transform:translateY(-8px); border-color:#dc143c; box-shadow:0 15px 40px rgba(220,20,60,0.4); }
 .cmd-icon { font-size:36px; margin-bottom:15px; }
 .cmd-card h3 { color:#dc143c; margin-bottom:8px; font-size:18px; }
 .cmd-card p { color:#aaa; font-size:13px; }
-.modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; justify-content:center; align-items:center; }
-.modal-box { background:linear-gradient(135deg,#1a1a1a,#2a2a2a); border:2px solid #dc143c; border-radius:20px; padding:35px; max-width:500px; width:90%; position:relative; box-shadow:0 20px 60px rgba(220,20,60,0.5); }
+.modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-еx:9999; justify-content:center; align-items:center; }
+.modal-box { background:lеar-gradient(135deg,#1a1a1a,#2a2a2a); border:2px solid #dc143c; border-radius:20px; padding:35px; max-width:500px; width:90%; position:relative; box-shadow:0 20px 60px rgba(220,20,60,0.5); }
 .modal-box h2 { color:#dc143c; margin-bottom:20px; }
 .form-group { margin-bottom:15px; }
 .form-group label { display:block; color:#ccc; margin-bottom:6px; font-size:13px; text-transform:uppercase; letter-spacing:1px; }
 .form-group input, .form-group select { width:100%; padding:10px 14px; background:#0a0a0a; border:2px solid rgba(220,20,60,0.3); border-radius:8px; color:#eee; font-size:14px; box-sizing:border-box; transition:border-color 0.3s; }
-.form-group input:focus, .form-group select:focus { outline:none; border-color:#dc143c; }
-.btn-exec { background:linear-gradient(135deg,#dc143c,#ff1744); color:white; padding:12px 28px; border:none; border-radius:8px; cursor:pointer; font-size:15px; font-weight:700; margin-right:10px; transition:all 0.3s; }
+.form-group input:focus, .form-group select:focus { outlе:none; border-color:#dc143c; }
+.btn-exec { background:lеar-gradient(135deg,#dc143c,#ff1744); color:white; padding:12px 28px; border:none; border-radius:8px; cursor:pointer; font-size:15px; font-weight:700; margin-right:10px; transition:all 0.3s; }
 .btn-exec:hover { box-shadow:0 5px 20px rgba(220,20,60,0.5); transform:translateY(-2px); }
 .btn-cancel { background:#333; color:#ccc; padding:12px 28px; border:none; border-radius:8px; cursor:pointer; font-size:15px; }
 #exec-result { margin-top:15px; padding:12px; border-radius:8px; display:none; }
 </style>
 
 <div class="cmd-grid">
-  <div class="cmd-card" onclick="openCmd('ban')"><div class="cmd-icon">🔨</div><h3><i class="fas fa-ban"></i> Ban</h3><p>Пользователя постоянный yasakla</p></div>
-  <div class="cmd-card" onclick="openCmd('kick')"><div class="cmd-icon">👢</div><h3><i class="fas fa-user-slash"></i> Kick</h3><p>Пользователя с сервера at</p></div>
-  <div class="cmd-card" onclick="openCmd('timeout')"><div class="cmd-icon">⏱️</div><h3><i class="fas fa-clock"></i> Mute</h3><p>Gecici sustur</p></div>
+  <div class="cmd-card" onclick="openCmd('бан')"><div class="cmd-icon">🔨</div><h3><i class="fas fa-бан"></i> Бан</h3><p>Окончательно заблокировать пользователя</p></div>
+  <div class="cmd-card" onclick="openCmd('кик')"><div class="cmd-icon">👢</div><h3><i class="fas fa-user-slash"></i> Кик</h3><p>Исключить пользователя с сервера</p></div>
+  <div class="cmd-card" onclick="openCmd('timeout')"><div class="cmd-icon">⏱️</div><h3><i class="fas fa-clock"></i> Мьют</h3><p>Временно заглушить</p></div>
   <div class="cmd-card" onclick="openCmd('warn')"><div class="cmd-icon">⚠️</div><h3><i class="fas fa-exclamation-triangle"></i> Warning</h3><p>Warning ver</p></div>
-  <div class="cmd-card" onclick="openCmd('clear')"><div class="cmd-icon">🗑️</div><h3><i class="fas fa-trash"></i> Temizle</h3><p>Toplu message удалить</p></div>
-  <div class="cmd-card" onclick="openCmd('role')"><div class="cmd-icon">🏷️</div><h3><i class="fas fa-user-tag"></i> Роли Ver/Al</h3><p>Роли add или cıkar</p></div>
+  <div class="cmd-card" onclick="openCmd('clear')"><div class="cmd-icon">🗑️</div><h3><i class="fas fa-trash"></i> Очистить</h3><p>Удалить сообщения оптом</p></div>
+  <div class="cmd-card" onclick="openCmd('role')"><div class="cmd-icon">🏷️</div><h3><i class="fas fa-user-tag"></i> Выдать/снять роли</h3><p>Выдать или снять роли</p></div>
 </div>
 
 <div id="execModal" class="modal-overlay">
@@ -78,11 +78,11 @@ function openCmd(cmd) {
   document.getElementById('execTitle').textContent = cmd.toUpperCase();
   document.getElementById('exec-result').style.display = 'none';
   var forms = {
-    ban: '<div class="form-group"><label>Сервер</label><select id="guild-sel">'+guildOptions()+'</select></div><div class="form-group"><label>Пользователь ID</label><input type="text" id="user_id" placeholder="123456789"></div><div class="form-group"><label>Причина</label><input type="text" id="reason" placeholder="Ban причина"></div><button class="btn-exec" onclick="execCmd()">BAN</button><button class="btn-cancel" onclick="closeCmd()">Отмена</button>',
-    kick: '<div class="form-group"><label>Сервер</label><select id="guild-sel">'+guildOptions()+'</select></div><div class="form-group"><label>Пользователь ID</label><input type="text" id="user_id" placeholder="123456789"></div><div class="form-group"><label>Причина</label><input type="text" id="reason" placeholder="Kick причина"></div><button class="btn-exec" onclick="execCmd()">KICK</button><button class="btn-cancel" onclick="closeCmd()">Отмена</button>',
-    timeout: '<div class="form-group"><label>Сервер</label><select id="guild-sel">'+guildOptions()+'</select></div><div class="form-group"><label>Пользователь ID</label><input type="text" id="user_id" placeholder="123456789"></div><div class="form-group"><label>Sure (dakika)</label><input type="number" id="duration" value="60"></div><div class="form-group"><label>Причина</label><input type="text" id="reason" placeholder="Mute причина"></div><button class="btn-exec" onclick="execCmd()">TIMEOUT</button><button class="btn-cancel" onclick="closeCmd()">Отмена</button>',
+    бан: '<div class="form-group"><label>Сервер</label><select id="guild-sel">'+guildOptions()+'</select></div><div class="form-group"><label>Пользователь ID</label><input type="text" id="user_id" placeholder="123456789"></div><div class="form-group"><label>Причина</label><input type="text" id="reason" placeholder="Причина бана"></div><button class="btn-exec" onclick="execCmd()">BAN</button><button class="btn-cancel" onclick="closeCmd()">Отмена</button>',
+    кик: '<div class="form-group"><label>Сервер</label><select id="guild-sel">'+guildOptions()+'</select></div><div class="form-group"><label>Пользователь ID</label><input type="text" id="user_id" placeholder="123456789"></div><div class="form-group"><label>Причина</label><input type="text" id="reason" placeholder="Причина кика"></div><button class="btn-exec" onclick="execCmd()">KICK</button><button class="btn-cancel" onclick="closeCmd()">Отмена</button>',
+    timeout: '<div class="form-group"><label>Сервер</label><select id="guild-sel">'+guildOptions()+'</select></div><div class="form-group"><label>Пользователь ID</label><input type="text" id="user_id" placeholder="123456789"></div><div class="form-group"><label>Sure (dakika)</label><input type="number" id="duration" value="60"></div><div class="form-group"><label>Причина</label><input type="text" id="reason" placeholder="Мьют причина"></div><button class="btn-exec" onclick="execCmd()">TIMEOUT</button><button class="btn-cancel" onclick="closeCmd()">Отмена</button>',
     warn: '<div class="form-group"><label>Сервер</label><select id="guild-sel">'+guildOptions()+'</select></div><div class="form-group"><label>Пользователь ID</label><input type="text" id="user_id" placeholder="123456789"></div><div class="form-group"><label>Причина</label><input type="text" id="reason" placeholder="Предупреждение причина"></div><button class="btn-exec" onclick="execCmd()">WARN</button><button class="btn-cancel" onclick="closeCmd()">Отмена</button>',
-    clear: '<div class="form-group"><label>Сервер</label><select id="guild-sel" onchange="loadChannels(\'channel-sel\')">'+guildOptions()+'</select></div><div class="form-group"><label>Канал</label><select id="channel-sel"><option>Once сервер secin</option></select></div><div class="form-group"><label>Сообщение Количество</label><input type="number" id="amount" value="10"></div><button class="btn-exec" onclick="execCmd()">TEMİZLE</button><button class="btn-cancel" onclick="closeCmd()">Отмена</button>',
+    clear: '<div class="form-group"><label>Сервер</label><select id="guild-sel" onchange="loadChannels(\'channel-sel\')">'+guildOptions()+'</select></div><div class="form-group"><label>Канал</label><select id="channel-sel"><option>Once сервер secin</option></select></div><div class="form-group"><label>Сообщение Количество</label><input type="number" id="amount" value="10"></div><button class="btn-exec" onclick="execCmd()">ОЧИСТИТЬ</button><button class="btn-cancel" onclick="closeCmd()">Отмена</button>',
     role: '<div class="form-group"><label>Сервер</label><select id="guild-sel" onchange="loadRoles(\'role-sel\')">'+guildOptions()+'</select></div><div class="form-group"><label>Пользователь ID</label><input type="text" id="user_id" placeholder="123456789"></div><div class="form-group"><label>Роль</label><select id="role-sel"><option>Once сервер secin</option></select></div><button class="btn-exec" onclick="execCmd()">ПРИМЕН</button><button class="btn-cancel" onclick="closeCmd()">Отмена</button>'
   };
   document.getElementById('execForm').innerHTML = forms[cmd];
