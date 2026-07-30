@@ -49,3 +49,6 @@ _previews_server.py
 
 # Test server (temporary)
 test_server.py
+run_daemon.py
+start_bg.py
+test_server.py
