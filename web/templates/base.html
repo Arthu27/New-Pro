@@ -241,11 +241,14 @@
             </div>
             <div class="navbar-right">
                 <button class="nav-icon-btn" title="Поиск (Ctrl+K)" id="globalSearchBtn"><i class="fas fa-search"></i></button>
+                <button class="activity-btn" title="Лента активности" id="activityBtn" aria-label="Activity">
+                    <i class="fas fa-stream"></i>
+                </button>
                 <button class="theme-toggle" title="Сменить тему" id="themeToggle" aria-label="Theme">
                     <i class="fas fa-sun icon-sun icon-swap" ></i>
                     <i class="fas fa-moon icon-moon icon-swap" ></i>
                 </button>
-                <button class="nav-icon-btn" title="Уведомления" id="notifBtn"><i class="fas fa-bell"></i><span class="nav-badge">3</span></button>
+                <button class="nav-icon-btn" title="Уведомления" id="notifBtn"><i class="fas fa-bell"></i><span class="nav-badge live">3</span></button>
                 <button class="nav-icon-btn" title="Полный экран" id="fullscreenBtn"><i class="fas fa-expand"></i></button>
                 <div class="user-pill">
                     <div class="user-avatar">{{ (username or 'U')[0]|upper }}</div>
@@ -268,6 +271,42 @@
 {% block page_hero %}{% endblock %}
 {% endblock %}
     </main>
+
+<!-- Idle indicator (top pulse when user is idle) -->
+<div class="idle-indicator" id="idleIndicator"></div>
+
+<!-- Session timeout warning -->
+<div class="session-warning" id="sessionWarning" role="alert">
+  <div class="session-warning-icon"><i class="fas fa-hourglass-half"></i></div>
+  <div class="session-warning-content">
+    <div class="session-warning-title">Сессия истекает</div>
+    <div class="session-warning-msg">Вы будете автоматически вылогинены через <strong id="sessionCountdown">60</strong> сек.</div>
+  </div>
+  <button class="session-warning-btn" id="sessionStay">Остаться</button>
+</div>
+
+<!-- Activity Feed Drawer -->
+<div class="drawer-backdrop" id="drawerBackdrop"></div>
+<aside class="activity-drawer" id="activityDrawer" aria-label="Лента активности">
+  <div class="activity-drawer-head">
+    <h3>
+      <i class="fas fa-stream"></i>
+      Активность
+      <span class="live-pill"><span class="dot"></span>LIVE</span>
+    </h3>
+    <button class="activity-drawer-close" id="activityClose" title="Закрыть"><i class="fas fa-times"></i></button>
+  </div>
+  <div class="activity-drawer-body" id="activityBody">
+    <div class="activity-drawer-empty">
+      <i class="fas fa-circle-notch fa-spin"></i>
+      <p>Загрузка событий...</p>
+    </div>
+  </div>
+  <div class="activity-drawer-foot">
+    <div><span class="pulse-dot"></span><span id="activityLastUpdate">Только что</span></div>
+    <button class="btn-link" id="activityRefresh"><i class="fas fa-sync-alt"></i> Обновить</button>
+  </div>
+</aside>
 
 <!-- Keyboard shortcut palette -->
 <div class="kbd-palette" id="kbdPalette">
@@ -730,6 +769,285 @@ window.addEventListener('pageshow', function (e) {
     document.querySelector('.main-content').style.animation = '';
   }
 });
+
+// ============================================================
+// ACTIVITY FEED DRAWER + REAL-TIME POLLING
+// ============================================================
+(function () {
+  var btn      = document.getElementById('activityBtn');
+  var drawer   = document.getElementById('activityDrawer');
+  var backdrop = document.getElementById('drawerBackdrop');
+  var closeBtn = document.getElementById('activityClose');
+  var body     = document.getElementById('activityBody');
+  var refresh  = document.getElementById('activityRefresh');
+  var lastUpd  = document.getElementById('activityLastUpdate');
+  if (!btn || !drawer) return;
+
+  var lastEventId = null;
+  var pollInterval = null;
+  var isOpen = false;
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function fmtTime(ts) {
+    if (!ts) return '';
+    var d = new Date(ts * 1000);
+    var now = new Date();
+    var diff = (now - d) / 1000;
+    if (diff < 5)   return 'только что';
+    if (diff < 60)  return Math.floor(diff) + ' сек назад';
+    if (diff < 3600) return Math.floor(diff/60) + ' мин назад';
+    if (diff < 86400) return Math.floor(diff/3600) + ' ч назад';
+    return d.toLocaleDateString('ru-RU', {day: '2-digit', month: '2-digit'});
+  }
+
+  function renderEvent(ev, prepend) {
+    var live = ev.live ? ' live' : '';
+    var html = '<div class="activity-event ' + esc(ev.type || 'system') + live + '">' +
+      '<div class="activity-event-icon"><i class="fas ' + esc(ev.icon || 'fa-circle') + '"></i></div>' +
+      '<div class="activity-event-content">' +
+        '<div class="activity-event-text"><strong>' + esc(ev.user || 'system') + '</strong> ' + esc(ev.action || '') + ' <strong>' + esc(ev.target || '') + '</strong></div>' +
+        (ev.detail ? '<div class="activity-event-detail">' + esc(ev.detail) + '</div>' : '') +
+        '<div class="activity-event-time"><i class="fas fa-clock"></i> ' + esc(fmtTime(ev.timestamp)) + '</div>' +
+      '</div>' +
+    '</div>';
+    if (prepend && body.firstChild) {
+      body.insertAdjacentHTML('afterbegin', html);
+    } else {
+      body.insertAdjacentHTML('beforeend', html);
+    }
+  }
+
+  async function loadFeed(showLoader) {
+    if (showLoader) {
+      body.innerHTML = '<div class="activity-drawer-empty"><i class="fas fa-circle-notch fa-spin"></i><p>Загрузка событий...</p></div>';
+    }
+    try {
+      var r = await fetch('/api/activity-feed', { headers: { 'Accept': 'application/json' } });
+      var events = await r.json();
+      if (!Array.isArray(events) || !events.length) {
+        body.innerHTML = '<div class="activity-drawer-empty"><i class="fas fa-inbox"></i><p>Нет событий</p></div>';
+        return;
+      }
+      body.innerHTML = '';
+      events.forEach(function (ev) { renderEvent(ev, false); });
+      lastEventId = events[0] ? events[0].id : null;
+      if (lastUpd) lastUpd.textContent = 'Только что';
+    } catch (e) {
+      body.innerHTML = '<div class="activity-drawer-empty"><i class="fas fa-exclamation-triangle" style="color: var(--err);"></i><p>Ошибка загрузки</p></div>';
+    }
+  }
+
+  function open() {
+    isOpen = true;
+    drawer.classList.add('open');
+    backdrop.classList.add('open');
+    btn.classList.add('active');
+    loadFeed(true);
+    startPolling();
+  }
+  function close() {
+    isOpen = false;
+    drawer.classList.remove('open');
+    backdrop.classList.remove('open');
+    btn.classList.remove('active');
+    stopPolling();
+  }
+
+  function startPolling() {
+    stopPolling();
+    pollInterval = setInterval(async function () {
+      if (!isOpen) return;
+      try {
+        var r = await fetch('/api/activity-feed', { headers: { 'Accept': 'application/json' } });
+        var events = await r.json();
+        if (!Array.isArray(events) || !events.length) return;
+        // Prepend any new events
+        var newOnes = events.filter(function (e) { return e.id !== lastEventId && e.id > (lastEventId || ''); });
+        if (newOnes.length) {
+          newOnes.reverse().forEach(function (ev) { renderEvent(ev, true); });
+          lastEventId = newOnes[0].id;
+          // Limit total events in DOM to 50
+          var all = body.querySelectorAll('.activity-event');
+          if (all.length > 50) {
+            for (var i = 50; i < all.length; i++) all[i].remove();
+          }
+        }
+        if (lastUpd) lastUpd.textContent = 'Только что';
+      } catch (e) { /* ignore */ }
+    }, 15000); // 15s polling
+  }
+  function stopPolling() {
+    if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+  }
+
+  btn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    if (isOpen) close(); else open();
+  });
+  if (closeBtn) closeBtn.addEventListener('click', close);
+  if (backdrop) backdrop.addEventListener('click', close);
+  if (refresh) refresh.addEventListener('click', function () { loadFeed(true); });
+
+  // Global shortcut: Shift+A
+  document.addEventListener('keydown', function (e) {
+    if (e.shiftKey && (e.key === 'A' || e.key === 'a') && !e.ctrlKey && !e.metaKey) {
+      var tag = (document.activeElement && document.activeElement.tagName) || '';
+      if (tag !== 'INPUT' && tag !== 'TEXTAREA') {
+        e.preventDefault();
+        if (isOpen) close(); else open();
+      }
+    }
+    if (e.key === 'Escape' && isOpen) close();
+  });
+})();
+
+// ============================================================
+// REAL-TIME NOTIFICATIONS POLLING (badge + toast on new)
+// ============================================================
+(function () {
+  var lastUnread = -1;
+  var pollInterval = null;
+
+  async function pollNotifs() {
+    try {
+      var r = await fetch('/api/notifications/poll', { headers: { 'Accept': 'application/json' } });
+      var d = await r.json();
+      var unread = d.unread || 0;
+      var badge = document.querySelector('#notifBtn .nav-badge');
+      if (badge) {
+        badge.textContent = unread > 99 ? '99+' : unread;
+        badge.style.display = unread > 0 ? 'flex' : 'none';
+        if (unread > lastUnread && lastUnread >= 0) {
+          // New notification!
+          badge.classList.add('live');
+          setTimeout(function () { badge.classList.remove('live'); }, 5000);
+        }
+      }
+      lastUnread = unread;
+    } catch (e) { /* silent */ }
+  }
+
+  // Initial poll + every 20s
+  pollNotifs();
+  pollInterval = setInterval(pollNotifs, 20000);
+
+  // Cleanup on page hide
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) {
+      if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+    } else {
+      if (!pollInterval) {
+        pollNotifs();
+        pollInterval = setInterval(pollNotifs, 20000);
+      }
+    }
+  });
+})();
+
+// ============================================================
+// SESSION TIMEOUT & IDLE DETECTION
+// ============================================================
+(function () {
+  // Settings
+  var IDLE_TIMEOUT_MS = 5 * 60 * 1000;   // 5 min idle → show warning
+  var WARNING_DURATION = 60;             // 60 sec to respond
+  var ACTIVITY_EVENTS = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
+
+  var idleTimer = null;
+  var warningTimer = null;
+  var countdownInterval = null;
+  var isWarningShown = false;
+
+  var warningEl  = document.getElementById('sessionWarning');
+  var countdownEl = document.getElementById('sessionCountdown');
+  var stayBtn     = document.getElementById('sessionStay');
+  var idleInd     = document.getElementById('idleIndicator');
+  if (!warningEl) return;
+
+  function resetIdle() {
+    clearTimeout(idleTimer);
+    clearTimeout(warningTimer);
+    if (countdownInterval) { clearInterval(countdownInterval); countdownInterval = null; }
+    if (isWarningShown) {
+      warningEl.classList.remove('show');
+      isWarningShown = false;
+    }
+    if (idleInd) idleInd.classList.remove('show');
+    // Schedule next idle check
+    idleTimer = setTimeout(showIdleIndicator, IDLE_TIMEOUT_MS);
+  }
+
+  function showIdleIndicator() {
+    if (isWarningShown) return;
+    if (idleInd) idleInd.classList.add('show');
+    // After 30s more, show full warning
+    warningTimer = setTimeout(showSessionWarning, 30000);
+  }
+
+  function showSessionWarning() {
+    if (isWarningShown) return;
+    isWarningShown = true;
+    warningEl.classList.add('show');
+    var remaining = WARNING_DURATION;
+    if (countdownEl) countdownEl.textContent = remaining;
+    countdownInterval = setInterval(function () {
+      remaining--;
+      if (countdownEl) countdownEl.textContent = remaining;
+      if (remaining <= 0) {
+        clearInterval(countdownInterval);
+        // "Logout"
+        showToast('Сессия истекла', false);
+        setTimeout(function () { window.location.href = '/logout'; }, 800);
+      }
+    }, 1000);
+  }
+
+  function hideWarning() {
+    if (!isWarningShown) return;
+    isWarningShown = false;
+    warningEl.classList.remove('show');
+    if (countdownInterval) { clearInterval(countdownInterval); countdownInterval = null; }
+    resetIdle();
+    // Ping server to extend session
+    fetch('/api/notifications/poll', { method: 'GET' }).catch(function(){});
+  }
+
+  if (stayBtn) stayBtn.addEventListener('click', hideWarning);
+
+  // Listen to activity
+  ACTIVITY_EVENTS.forEach(function (ev) {
+    document.addEventListener(ev, resetIdle, { passive: true });
+  });
+
+  // Start
+  resetIdle();
+})();
+
+// ============================================================
+// RATE LIMITING (client-side safety net for AI chat etc.)
+// ============================================================
+(function () {
+  var BUDGET = {}; // { endpoint: { count, windowStart } }
+  var WINDOW_MS = 60000; // 1 min
+
+  window.__rateLimit = function (endpoint, maxPerMin) {
+    maxPerMin = maxPerMin || 10;
+    var now = Date.now();
+    var b = BUDGET[endpoint];
+    if (!b || (now - b.windowStart) > WINDOW_MS) {
+      BUDGET[endpoint] = { count: 1, windowStart: now };
+      return { allowed: true, remaining: maxPerMin - 1 };
+    }
+    b.count++;
+    if (b.count > maxPerMin) {
+      return { allowed: false, remaining: 0, retryAfter: Math.ceil((WINDOW_MS - (now - b.windowStart)) / 1000) };
+    }
+    return { allowed: true, remaining: maxPerMin - b.count };
+  };
+})();
 </script>
 </body>
 </html>
