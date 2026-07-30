@@ -1,246 +1,97 @@
 {% extends "base.html" %}
-{% block title %}Команда Руководство — Aether{% endblock %}
-{% block page_title %}{% endblock %}
+{% block title %}Справка - Aether{% endblock %}
+{% block page_title %}Справка и руководство{% endblock %}
 {% block content %}
 <style>
-:root{
-  --r:#ff4757;--r2:rgba(255,71,87,0.15);--r-glow:rgba(255,71,87,0.3);
-  --g:#2ed573;--g2:rgba(46,213,115,0.15);--g-glow:rgba(46,213,115,0.3);
-  --b:#5352ed;--b2:rgba(83,82,237,0.15);--b-glow:rgba(83,82,237,0.3);
-  --y:#ffa502;--y2:rgba(255,165,2,0.15);--y-glow:rgba(255,165,2,0.3);
-  --p:#ff6b81;--p2:rgba(255,107,129,0.15);
-  --section:#ffd700;--gold2:rgba(255,215,0,0.15);
-  --cy:#00f5ff;
-  --glass:rgba(10,8,4,0.75);--border-base:rgba(212,168,67,0.1);
-}
-.yr-orb{position:fixed;border-radius:50%;pointer-events:none;z-index:0;filter:blur(100px);opacity:0.07;}
-.yr-orb-1{width:500px;height:500px;background:#ff4757;top:-150px;right:-100px;animation:orbFloat 8s ease-in-out infinite;}
-.yr-orb-2{width:400px;height:400px;background:#5352ed;bottom:-100px;left:-80px;animation:orbFloat 10s ease-in-out infinite reverse;}
-.yr-orb-3{width:300px;height:300px;background:#2ed573;top:40%;left:40%;animation:orbFloat 12s ease-in-out infinite 2s;}
-@keyframes orbFloat{0%,100%{transform:translate(0,0) scale(1);}33%{transform:translate(30px,-20px) scale(1.05);}66%{transform:translate(-20px,30px) scale(0.95);}}
-.yr-hero{text-align:center;padding:32px 20px 28px;position:relative;z-index:1;}
-.yr-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(212,168,67,0.08);border:1px solid rgba(212,168,67,0.2);border-radius:99px;padding:5px 16px;font-size:11px;font-weight:700;color:#c8922a;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:18px;}
-.yr-badge::before{content:'';width:6px;height:6px;border-radius:50%;background:#c8922a;animation:blink 1.5s ease-in-out infinite;}
-@keyframes blink{0%,100%{opacity:1;box-shadow:0 0 6px #c8922a;}50%{opacity:0.3;box-shadow:none;}}
-.yr-hero h1{font-size:clamp(28px,4vw,48px);font-weight:900;letter-spacing:-0.04em;line-height:1;margin-bottom:10px;background:linear-gradient(135deg,#f0e8d0 0%,#c8922a 40%,#f0e8d0 70%,#e0a830 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;background-size:200% 200%;animation:shimmer 4s ease-in-out infinite;}
-@keyframes shimmer{0%,100%{background-position:0% 50%;}50%{background-position:100% 50%;}}
-.yr-hero-sub{font-size:13px;color:rgba(240,232,208,0.35);margin-bottom:24px;}
-.yr-stats{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-bottom:28px;position:relative;z-index:1;}
-.yr-stat{display:flex;align-items:center;gap:10px;background:var(--glass);border:1px solid var(--border-base);border-radius:12px;padding:12px 20px;backdrop-filter:blur(20px);transition:border-color 0.2s,box-shadow 0.2s,transform 0.2s;cursor:default;}
-.yr-stat:hover{transform:translateY(-2px);}
-.yr-stat-icon{font-size:18px;}
-.yr-stat-val{font-size:20px;font-weight:800;color:#f0e8d0;letter-spacing:-0.03em;line-height:1;}
-.yr-stat-lbl{font-size:10px;color:rgba(240,232,208,0.35);text-transform:uppercase;letter-spacing:0.08em;margin-top:2px;}
-.yr-stat.s-section{border-color:rgba(255,215,0,0.2);}
-.yr-stat.s-section:hover{border-color:var(--section);box-shadow:0 0 20px var(--gold2);}
-.yr-stat.s-green{border-color:rgba(46,213,115,0.2);}
-.yr-stat.s-green:hover{border-color:var(--g);box-shadow:0 0 20px var(--g2);}
-.yr-stat.s-blue{border-color:rgba(83,82,237,0.2);}
-.yr-stat.s-blue:hover{border-color:var(--b);box-shadow:0 0 20px var(--b2);}
-.yr-stat.s-red{border-color:rgba(255,71,87,0.2);}
-.yr-stat.s-red:hover{border-color:var(--r);box-shadow:0 0 20px var(--r2);}
-.yr-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:24px;position:relative;z-index:1;}
-.yr-search-wrap{position:relative;flex:1;min-width:220px;}
-.yr-search-wrap i{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:rgba(212,168,67,0.4);font-size:12px;pointer-events:none;}
-.yr-search{width:100%;padding:11px 14px 11px 38px;background:var(--glass);border:1px solid var(--border-base);border-radius:12px;color:#f0e8d0;font-size:13px;font-family:Inter,sans-serif;backdrop-filter:blur(20px);transition:border-color 0.2s,box-shadow 0.2s;margin:0;}
-.yr-search:focus{outline:none;border-color:rgba(212,168,67,0.45);box-shadow:0 0 0 3px rgba(212,168,67,0.08);}
-.yr-search::placeholder{color:rgba(240,232,208,0.2);}
-.yr-tabs{display:flex;gap:6px;flex-wrap:wrap;}
-.yr-tab{display:flex;align-items:center;gap:6px;padding:8px 16px;background:var(--glass);border:1px solid var(--border-base);border-radius:99px;color:rgba(240,232,208,0.4);font-size:11px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;transition:all 0.18s;white-space:nowrap;backdrop-filter:blur(12px);}
-.yr-tab:hover{color:#f0e8d0;border-color:rgba(212,168,67,0.3);background:rgba(212,168,67,0.06);}
-.yr-tab.active{color:#c8922a;border-color:rgba(212,168,67,0.4);background:rgba(212,168,67,0.1);box-shadow:0 0 16px rgba(212,168,67,0.15);}
-.yr-tab[data-c="r"].active{color:var(--r);border-color:var(--r);background:var(--r2);box-shadow:0 0 16px var(--r-glow);}
-.yr-tab[data-c="g"].active{color:var(--g);border-color:var(--g);background:var(--g2);box-shadow:0 0 16px var(--g-glow);}
-.yr-tab[data-c="b"].active{color:var(--b);border-color:var(--b);background:var(--b2);box-shadow:0 0 16px var(--b-glow);}
-.yr-tab[data-c="y"].active{color:var(--y);border-color:var(--y);background:var(--y2);box-shadow:0 0 16px var(--y-glow);}
-.yr-tab[data-c="p"].active{color:var(--p);border-color:var(--p);background:var(--p2);}
-.yr-tab[data-c="section"].active{color:var(--section);border-color:var(--section);background:var(--gold2);}
-.yr-section{position:relative;z-index:1;margin-bottom:28px;}
-.yr-section-hdr{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
-.yr-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.14em;white-space:nowrap;}
-.yr-section-line{flex:1;height:1px;}
-.yr-section-count{font-size:10px;color:rgba(240,232,208,0.3);border:1px solid rgba(212,168,67,0.1);border-radius:99px;padding:2px 8px;background:rgba(212,168,67,0.05);}
-.yr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;}
-.yr-card{background:var(--glass);border:1px solid rgba(212,168,67,0.08);border-radius:12px;padding:16px 18px;cursor:default;transition:all 0.22s;backdrop-filter:blur(20px);position:relative;overflow:hidden;}
-.yr-card::after{content:'';position:absolute;top:0;left:-100%;width:60%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.03),transparent);transition:left 0.5s;}
-.yr-card:hover::after{left:150%;}
-.yr-card:hover{transform:translateY(-2px);}
-.yr-card[data-c="r"]:hover{border-color:var(--r);box-shadow:0 0 20px var(--r2),0 4px 20px rgba(0,0,0,0.4);}
-.yr-card[data-c="g"]:hover{border-color:var(--g);box-shadow:0 0 20px var(--g2),0 4px 20px rgba(0,0,0,0.4);}
-.yr-card[data-c="b"]:hover{border-color:var(--b);box-shadow:0 0 20px var(--b2),0 4px 20px rgba(0,0,0,0.4);}
-.yr-card[data-c="y"]:hover{border-color:var(--y);box-shadow:0 0 20px var(--y2),0 4px 20px rgba(0,0,0,0.4);}
-.yr-card[data-c="p"]:hover{border-color:var(--p);box-shadow:0 0 20px var(--p2),0 4px 20px rgba(0,0,0,0.4);}
-.yr-card[data-c="section"]:hover{border-color:var(--section);box-shadow:0 0 20px var(--gold2),0 4px 20px rgba(0,0,0,0.4);}
-.yr-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px;}
-.yr-cmd-name{font-size:13px;font-weight:700;font-family:'Courier New',monospace;letter-spacing:0.02em;}
-.yr-cmd-desc{font-size:11px;color:rgba(240,232,208,0.5);line-height:1.5;}
-.yr-cmd-usage{font-size:10px;color:rgba(240,232,208,0.22);margin-top:4px;font-family:'Courier New',monospace;}
-.pb{font-size:9px;font-weight:700;padding:2px 7px;border-radius:99px;text-transform:uppercase;letter-spacing:0.08em;white-space:nowrap;flex-shrink:0;}
-.pb-all{background:rgba(46,213,115,0.1);color:var(--g);border:1px solid rgba(46,213,115,0.25);}
-.pb-mod{background:rgba(255,165,2,0.1);color:var(--y);border:1px solid rgba(255,165,2,0.25);}
-.pb-admin{background:rgba(255,71,87,0.1);color:var(--r);border:1px solid rgba(255,71,87,0.25);}
-.yr-empty{text-align:center;padding:60px 20px;color:rgba(240,232,208,0.2);font-size:13px;position:relative;z-index:1;}
-.yr-empty i{font-size:32px;margin-bottom:12px;display:block;opacity:0.3;}
-@media(max-width:768px){.yr-grid{grid-template-columns:1fr;}.yr-stats{flex-direction:column;}}
+.yd-hero{background:linear-gradient(135deg,rgba(26,22,16,0.85),rgba(26,22,16,0.6));border:1px solid rgba(212,168,67,0.25);border-radius:14px;padding:18px 24px;margin-bottom:14px;display:flex;align-items:center;gap:16px;animation:fadeIn 0.4s ease-out;}
+.yd-hero-icon{font-size:28px;}
+.yd-hero-title{font-size:18px;font-weight:800;background:linear-gradient(135deg,#c8922a,#e0a830);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;}
+.yd-hero-sub{color:#5a5040;font-size:11px;margin-top:2px;}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+
+.yd-search{padding:8px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(212,168,67,0.16);border-radius:8px;color:#f0e8d0;font-size:12px;width:100%;margin-bottom:14px;}
+
+.yd-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;}
+.yd-card{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.1);border-radius:12px;padding:14px;animation:fadeUp 0.3s ease-out both;transition:all 0.2s;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.yd-card:hover{border-color:rgba(212,168,67,0.25);transform:translateY(-2px);}
+.yd-icon{width:36px;height:36px;border-radius:9px;background:rgba(212,168,67,0.12);color:#c8922a;display:flex;align-items:center;justify-content:center;font-size:15px;margin-bottom:8px;}
+.yd-title{font-size:13px;font-weight:700;color:#f0e8d0;margin-bottom:4px;}
+.yd-desc{font-size:11px;color:#5a5040;line-height:1.4;}
+.yd-cat{display:inline-block;background:rgba(212,168,67,0.1);color:#c8922a;padding:1px 6px;border-radius:99px;font-size:9px;margin-top:6px;letter-spacing:0.04em;}
+
+.yd-section{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.08);border-radius:12px;padding:14px;margin-bottom:12px;}
+.yd-section h3{font-size:13px;font-weight:700;color:rgba(240,232,208,0.7);margin-bottom:8px;display:flex;align-items:center;gap:7px;}
+.yd-section h3 i{color:#c8922a;}
+.yd-section p{font-size:11px;color:#5a5040;line-height:1.5;margin-bottom:6px;}
+.yd-section code{background:rgba(212,168,67,0.1);padding:1px 6px;border-radius:4px;font-family:monospace;font-size:10px;color:#c8922a;}
+
+.kbd{display:inline-block;padding:2px 6px;background:rgba(0,0,0,0.4);border:1px solid rgba(212,168,67,0.2);border-bottom-width:2px;border-radius:5px;font-family:monospace;font-size:10px;color:#c8922a;margin:0 2px;}
 </style>
 
-<div class="yr-orb yr-orb-1"></div>
-<div class="yr-orb yr-orb-2"></div>
-<div class="yr-orb yr-orb-3"></div>
-
-<div class="yr-hero">
-  <div class="yr-badge">Aether Bot</div>
-  <h1>Команда Руководство</h1>
-  <p class="yr-hero-sub">Все команды, категории и уровни доступа</p>
-</div>
-
-<div class="yr-stats">
-  <div class="yr-stat s-section">
-    <div class="yr-stat-icon">&#9889;</div>
-    <div><div class="yr-stat-val" id="total-cmds">-</div><div class="yr-stat-lbl">Всего команд</div></div>
-  </div>
-  <div class="yr-stat s-blue">
-    <div class="yr-stat-icon">&#128194;</div>
-    <div><div class="yr-stat-val">6</div><div class="yr-stat-lbl">Категория</div></div>
-  </div>
-  <div class="yr-stat s-green">
-    <div class="yr-stat-icon">&#128065;</div>
-    <div><div class="yr-stat-val" id="filtered-count">-</div><div class="yr-stat-lbl">Gosterсn</div></div>
-  </div>
-  <div class="yr-stat s-red">
-    <div class="yr-stat-icon">&#128172;</div>
-    <div><div class="yr-stat-val">/помощь</div><div class="yr-stat-lbl">Discord команды</div></div>
+<div class="yd-hero">
+  <div class="yd-hero-icon">📖</div>
+  <div>
+    <div class="yd-hero-title">Aether Panel - Справка</div>
+    <div class="yd-hero-sub">Все что нужно знать о панели</div>
   </div>
 </div>
 
-<div class="yr-toolbar">
-  <div class="yr-search-wrap">
-    <i class="fas fa-search"></i>
-    <input class="yr-search" type="text" id="cmd-search" placeholder="Команда или aciklama ara..." oninput="yrFilter()">
-  </div>
-  <div class="yr-tabs" id="yr-tabs">
-    <button class="yr-tab active" data-c="" onclick="yrTab('all',this)">Tumu</button>
-    <button class="yr-tab" data-c="r" onclick="yrTab('mod',this)">Mod</button>
-    <button class="yr-tab" data-c="y" onclick="yrTab('warn',this)">Предупреждение</button>
-    <button class="yr-tab" data-c="g" onclick="yrTab('music',this)">Muzik</button>
-    <button class="yr-tab" data-c="p" onclick="yrTab('fun',this)">Oyun</button>
-    <button class="yr-tab" data-c="section" onclick="yrTab('eco',this)">Ekonomi</button>
-    <button class="yr-tab" data-c="b" onclick="yrTab('util',this)">Поискclar</button>
-  </div>
+<input type="text" id="search" class="yd-search" placeholder="🔍 Поиск по справке...">
+
+<div class="yd-section">
+  <h3><i class="fas fa-rocket"></i> Быстрый старт</h3>
+  <p>1. Выберите сервер в боковой панели<br>2. Настройте категории и каналы в разделе <code>Каналы</code><br>3. Включите автомодерацию в <code>Автомодерация</code><br>4. Пригласите бот на сервер с помощью кнопки <code>+ Добавить бот</code></p>
 </div>
 
-<div id="yr-contaеr"></div>
+<div class="yd-section">
+  <h3><i class="fas fa-keyboard"></i> Горячие клавиши</h3>
+  <p><span class="kbd">Ctrl</span> + <span class="kbd">Shift</span> + <span class="kbd">R</span> — Жёсткая перезагрузка страницы<br><span class="kbd">Ctrl</span> + <span class="kbd">Shift</span> + <span class="kbd">N</span> — Открыть инкогнито окно<br><span class="kbd">F12</span> — Инструменты разработчика (консоль)</p>
+</div>
+
+<div class="yd-grid" id="yd-grid">
+  <div class="yd-card"><div class="yd-icon"><i class="fas fa-users"></i></div><div class="yd-title">Пользователи</div><div class="yd-desc">Просмотр участников сервера, изменение никнеймов, массовые действия</div><span class="yd-cat">Управление</span></div>
+  <div class="yd-card"><div class="yd-icon"><i class="fas fa-shield-alt"></i></div><div class="yd-title">Анти-рейд</div><div class="yd-desc">Защита от массовых атак, фильтр новых аккаунтов, карантин</div><span class="yd-cat">Безопасность</span></div>
+  <div class="yd-card"><div class="yd-icon"><i class="fas fa-ticket-alt"></i></div><div class="yd-title">AI Тикеты</div><div class="yd-desc">Автоматическая поддержка пользователей с помощью AI</div><span class="yd-cat">Поддержка</span></div>
+  <div class="yd-card"><div class="yd-icon"><i class="fas fa-coins"></i></div><div class="yd-title">Экономика</div><div class="yd-desc">Виртуальная валюта, магазин, лидерборд, уровни</div><span class="yd-cat">Игры</span></div>
+  <div class="yd-card"><div class="yd-icon"><i class="fas fa-bullhorn"></i></div><div class="yd-title">Опросы</div><div class="yd-desc">Голосования и опросы для участников</div><span class="yd-cat">Интерактив</span></div>
+  <div class="yd-card"><div class="yd-icon"><i class="fas fa-gift"></i></div><div class="yd-title">Розыгрыши</div><div class="yd-desc">Автоматические розыгрыши призов</div><span class="yd-cat">Интерактив</span></div>
+  <div class="yd-card"><div class="yd-icon"><i class="fas fa-chart-line"></i></div><div class="yd-title">Аналитика</div><div class="yd-desc">Графики активности, рост сервера, статистика сообщений</div><span class="yd-cat">Статистика</span></div>
+  <div class="yd-card"><div class="yd-icon"><i class="fas fa-database"></i></div><div class="yd-title">Резервные копии</div><div class="yd-desc">Автоматический бэкап данных, восстановление из копий</div><span class="yd-cat">Обслуживание</span></div>
+  <div class="yd-card"><div class="yd-icon"><i class="fas fa-database"></i></div><div class="yd-title">Бэкапы</div><div class="yd-desc">Авто-бэкап, восстановление</div><span class="yd-cat">Система</span></div>
+  <div class="yd-card"><div class="yd-icon"><i class="fas fa-cogs"></i></div><div class="yd-title">Настройки бота</div><div class="yd-desc">Статус, активность, префикс, логирование</div><span class="yd-cat">Система</span></div>
+  <div class="yd-card"><div class="yd-icon"><i class="fas fa-cubes"></i></div><div class="yd-title">Менеджер модулей</div><div class="yd-desc">Включение/выключение cog'ов бота</div><span class="yd-cat">Система</span></div>
+  <div class="yd-card"><div class="yd-icon"><i class="fas fa-gavel"></i></div><div class="yd-title">Редактор правил</div><div class="yd-desc">Создание и управление правилами сервера</div><span class="yd-cat">Управление</span></div>
+</div>
+
+<div class="yd-section">
+  <h3><i class="fas fa-question-circle"></i> Часто задаваемые вопросы</h3>
+  <p><strong>Бот не отвечает на команды?</strong> Проверьте что бот онлайн и у него есть нужные права в каналах.</p>
+  <p><strong>Как сбросить пароль?</strong> Используйте <code>/change-password</code> или обратитесь к owner.</p>
+  <p><strong>Где хранятся данные?</strong> В файлах <code>data/*.json</code>. Регулярно создавайте бэкапы.</p>
+  <p><strong>Как связаться с поддержкой?</strong> Создайте тикет через <code>/ai-tickets</code> или Discord сервер поддержки.</p>
+</div>
 
 <script>
-var YR_CATS=[
-  {id:'mod',color:'r',title:'Moderasyon',cmds:[
-    {n:'/moderate бан',d:'Пользователя постоянный yasakla',u:'/moderate бан @user причина',p:'admin'},
-    {n:'/moderate кик',d:'С сервера at',u:'/moderate кик @user причина',p:'admin'},
-    {n:'/moderate timeout',d:'Gecici заглушить',u:'/moderate timeout @user 10m',p:'admin'},
-    {n:'/moderate untimeout',d:'Мьютmayi удалить',u:'/moderate untimeout @user',p:'admin'},
-    {n:'/moderate unбан',d:'Банi удалить',u:'/moderate unбан user_id',p:'admin'},
-    {n:'/utility clear',d:'Toplu message удалить',u:'/utility clear 50',p:'admin'},
-    {n:'/utility lock',d:'Канал kilitle',u:'/utility lock',p:'mod'},
-    {n:'/utility unlock',d:'Канал kilidini удалить',u:'/utility unlock',p:'mod'},
-    {n:'/utility userinfo',d:'Пользователь infosi',u:'/utility userinfo @user',p:'mod'},
-    {n:'/роли',d:'Роли ver / al',u:'/роли @user @роли',p:'admin'},
-  ]},
-  {id:'warn',color:'y',title:'Предупреждение Система',cmds:[
-    {n:'/warn',d:'Предупреждение ver',u:'/warn @user причина',p:'mod'},
-    {n:'/warnings',d:'Предупреждения listele',u:'/warnings @user',p:'mod'},
-    {n:'/clearwarns',d:'Tum предупреждения clear',u:'/clearwarns @user',p:'admin'},
-  ]},
-  {id:'music',color:'g',title:'Muzik',cmds:[
-    {n:'/cal',d:"YouTube'dan muzik cal",u:'/cal lofi hip hop',p:'all'},
-    {n:'/dur',d:'Duraklat / devam',u:'/dur',p:'all'},
-    {n:'/atla',d:'Sarkiyi atla',u:'/atla',p:'all'},
-    {n:'/kuyruk',d:'Kuyrugu goster',u:'/kuyruk',p:'all'},
-    {n:'/ses',d:'Ses seviyesi (0-100)',u:'/ses 80',p:'all'},
-    {n:'/clear-kuyruk',d:'Kuyrugu clear',u:'/clear-kuyruk',p:'all'},
-    {n:'/ayril',d:'Ses из канала cik',u:'/ayril',p:'all'},
-    {n:'/join',d:'Ses в канал katil',u:'/join',p:'all'},
-  ]},
-  {id:'fun',color:'p',title:'Eglence ve Oyun',cmds:[
-    {n:'/текст',d:'Текст tura at',u:'/текст',p:'all'},
-    {n:'/zar-at',d:'Zar at (1-5 adet)',u:'/zar-at 2',p:'all'},
-    {n:'/tas-kagit-makas',d:'Tas kagit makas',u:'/tas-kagit-makas',p:'all'},
-    {n:'/oyun-baslat',d:'Число tahmin oyunu',u:'/oyun-baslat',p:'all'},
-    {n:'/oyun-tahmin',d:'Tahmin et',u:'/oyun-tahmin 42',p:'all'},
-    {n:'/sihirli-top',d:'Sihirli 8 top',u:'/sihirli-top soru',p:'all'},
-    {n:'/oyun-rastgele-uye',d:'Rastgele uye sec',u:'/oyun-rastgele-uye',p:'all'},
-  ]},
-  {id:'eco',color:'section',title:'Ekonomi ve Ozellikler',cmds:[
-    {n:'/dogumgunu',d:'Dogum gununu сохранить',u:'/dogumgunu 15.03',p:'all'},
-    {n:'/dogumgunы',d:'Yaklasan dogum gunы',u:'/dogumgunы',p:'all'},
-    {n:'/duty-panel',d:'Gorev panelini gonder',u:'/duty-panel #channel',p:'admin'},
-    {n:'/duty-add',d:'Manuel сrleme add',u:'/duty-add @user 10',p:'mod'},
-    {n:'/ticket_panel',d:'Ticket panelini gonder',u:'/ticket_panel',p:'admin'},
-    {n:'/webhook',d:'Webhook islemы',u:'/webhook olustur',p:'admin'},
-  ]},
-  {id:'util',color:'b',title:'Помощник Поискclar',cmds:[
-    {n:'/modstats',d:'Moderator статистика',u:'/modstats',p:'mod'},
-    {n:'/activemods',d:'En activity moderatorler',u:'/activemods',p:'mod'},
-    {n:'/saglik',d:'Сервер saglik skoru',u:'/saglik',p:'all'},
-    {n:'/channel-статистика',d:'Канал message istatistigi',u:'/channel-статистика',p:'all'},
-    {n:'/duty-stats',d:'Gorev puan tablosu',u:'/duty-stats',p:'mod'},
-    {n:'/verify-setup',d:'Dogrulama sistemini kur',u:'/verify-setup',p:'admin'},
-  ]},
-];
-var CM={
-  r:{t:'#ff4757',l:'rgba(255,71,87,0.4)'},
-  g:{t:'#2ed573',l:'rgba(46,213,115,0.4)'},
-  b:{t:'#5352ed',l:'rgba(83,82,237,0.4)'},
-  y:{t:'#ffa502',l:'rgba(255,165,2,0.4)'},
-  p:{t:'#ff6b81',l:'rgba(255,107,129,0.4)'},
-  section:{t:'#ffd700',l:'rgba(255,215,0,0.4)'},
-};
-var yrTab_='all',yrQ_='';
-function pb(p){
-  if(p==='admin')return '<span class="pb pb-admin">Твоё имя</span>';
-  if(p==='mod')return '<span class="pb pb-mod">Mod</span>';
-  return '<span class="pb pb-all">Каждый</span>';
-}
-function yrFilter(){yrQ_=document.getElementById('cmd-search').value.toLowerCase().trim();yrRender();}
-function yrTab(id,btn){
-  yrTab_=id;
-  document.querySelectorAll('.yr-tab').forEach(function(b){b.classList.remove('active');});
-  btn.classList.add('active');
-  yrRender();
-}
-function yrRender(){
-  var c=document.getElementById('yr-contaеr'),html='',shown=0;
-  YR_CATS.forEach(function(cat){
-    if(yrTab_!=='all'&&yrTab_!==cat.id)return;
-    var f=cat.cmds.filter(function(x){
-      if(!yrQ_)return true;
-      return x.n.toLowerCase().includes(yrQ_)||x.d.toLowerCase().includes(yrQ_);
+(function () {
+  'use strict';
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+  function bind() {
+    var s = $('search');
+    if (!s) return;
+    s.addEventListener('input', function () {
+      var q = s.value.toLowerCase();
+      document.querySelectorAll('.yd-card').forEach(function (c) {
+        var text = c.textContent.toLowerCase();
+        c.style.display = text.indexOf(q) === -1 ? 'none' : '';
+      });
     });
-    if(!f.length)return;
-    shown+=f.length;
-    var cm=CM[cat.color]||CM.b;
-    html+='<div class="yr-section" data-cat="'+cat.id+'">';
-    html+='<div class="yr-section-hdr">';
-    html+='<span class="yr-section-title" style="color:'+cm.t+';text-shadow:0 0 10px '+cm.t+'40;">'+cat.title+'</span>';
-    html+='<div class="yr-section-line" style="background:linear-gradient(90deg,'+cm.l+',transparent);"></div>';
-    html+='<span class="yr-section-count">'+f.length+' команда</span>';
-    html+='</div><div class="yr-grid">';
-    f.forEach(function(x){
-      html+='<div class="yr-card" data-c="'+cat.color+'">';
-      html+='<div class="yr-card-top"><span class="yr-cmd-name" style="color:'+cm.t+';text-shadow:0 0 8px '+cm.t+'60;">'+x.n+'</span>'+pb(x.p)+'</div>';
-      html+='<div class="yr-cmd-desc">'+x.d+'</div>';
-      html+='<div class="yr-cmd-usage">'+x.u+'</div>';
-      html+='</div>';
-    });
-    html+='</div></div>';
-  });
-  if(!html)html='<div class="yr-empty"><i class="fas fa-search"></i>В конецконец не найдено.</div>';
-  c.innerHTML=html;
-  document.getElementById('filtered-count').textContent=shown;
-}
-(function(){
-  var t=YR_CATS.reduce(function(s,c){return s+c.cmds.length;},0);
-  document.getElementById('total-cmds').textContent=t;
-  yrRender();
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind);
+  else bind();
 })();
 </script>
 {% endblock %}

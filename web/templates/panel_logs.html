@@ -1,121 +1,114 @@
-﻿{% extends "base.html" %}
-{% block title %}Panel Активность Logu - Aether{% endblock %}
-{% block page_title %}🔍 PANEL АКТИВНОСТЬ LOGU{% endblock %}
+{% extends "base.html" %}
+{% block title %}Panel Logs - Aether{% endblock %}
+{% block page_title %}Логи панели{% endblock %}
 {% block content %}
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
-.pl-box{background:rgba(26,22,16,0.7);border:1px solid rgba(200,160,80,0.3);border-radius:15px;padding:25px;margin-bottom:20px;position:relative;overflow:hidden;}
-.pl-box::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);;}
-@keyframes scan{0%{left:-100%}100%{left:100%}}
-.pl-title{color:#c8922a;font-выe:13px;text-transform:uppercase;letter-spacing:2px;margin-bottom:18px;font-family:Inter,sans-serif;}
-.log-row{display:flex;align-items:center;gap:12px;padding:12px 15px;background:rgba(0,0,0,0.4);border-radius:14px;margin-bottom:8px;border:1px solid rgba(255,255,255,0.04);transition:all 0.3s;}
-.log-row:hover{background:rgba(200,160,80,0.08);border-color:rgba(200,160,80,0.2);transform:translateX(4px);}
-.log-icon{font-выe:20px;width:36px;text-align:center;flex-shrink:0;}
-.log-user{font-weight:700;font-выe:13px;font-family:Inter,sans-serif;}
-.log-desc{color:rgba(240,232,208,0.4);font-выe:13px;}
-.log-target{color:#666;font-выe:12px;margin-top:2px;}
-.log-time{color:#444;font-выe:11px;margin-left:auto;white-space:nowrap;font-family:Inter,sans-serif;}
-.field-input{padding:10px 14px;background:#100e08;border:2px solid rgba(200,160,80,0.3);border-radius:8px;color:#f0e8d0;font-family:inherit;transition:border-color 0.3s;}
-.field-input:focus{outline:none;border-color:#c8922a;box-shadow:0 0 10px rgba(200,160,80,0.2);}
-.filter-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;}
-.stats-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;}
-.stat-chip{background:rgba(200,160,80,0.08);border:1px solid rgba(200,160,80,0.2);border-radius:14px;padding:10px 18px;text-align:center;min-width:80px;}
-.stat-chip .num{font-выe:20px;font-weight:700;font-family:Inter,sans-serif;}
-.stat-chip .lbl{font-выe:10px;color:rgba(240,232,208,0.55);text-transform:uppercase;letter-spacing:1px;}
-.clear-btn{padding:10px 16px;background:rgba(224,85,85,0.15);color:#f0e8d0;border:none;border-radius:8px;cursor:pointer;font-weight:700;transition:all 0.3s;}
-.clear-btn:hover{box-shadow:0 4px 15px rgba(200,160,80,0.4);transform:translateY(-2px);}
+.pl-filters{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center;}
+.pl-search{flex:1;min-width:200px;padding:7px 11px;background:rgba(255,255,255,0.03);border:1px solid rgba(212,168,67,0.16);border-radius:8px;color:#f0e8d0;font-size:12px;}
+.pl-select{padding:7px 11px;background:rgba(255,255,255,0.03);border:1px solid rgba(212,168,67,0.16);border-radius:8px;color:#f0e8d0;font-size:12px;}
+
+.pl-stats{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;}
+.pl-stat{flex:1;min-width:90px;background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.1);border-radius:10px;padding:8px 12px;text-align:center;}
+.pl-stat-num{font-size:16px;font-weight:800;color:#c8922a;}
+.pl-stat-lbl{font-size:9px;color:#5a5040;text-transform:uppercase;letter-spacing:0.05em;}
+
+.pl-box{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.08);border-radius:12px;overflow:hidden;}
+.pl-head{padding:10px 14px;border-bottom:1px solid rgba(212,168,67,0.07);display:flex;justify-content:space-between;align-items:center;}
+.pl-title{font-size:10px;font-weight:700;color:rgba(240,232,208,0.55);text-transform:uppercase;letter-spacing:0.08em;display:flex;align-items:center;gap:7px;}
+.pl-title i{color:#c8922a;}
+.pl-count{font-size:10px;color:#5a5040;background:rgba(212,168,67,0.06);padding:2px 8px;border-radius:99px;}
+.pl-body{max-height:520px;overflow-y:auto;overflow-anchor:none;}
+
+.pl-item{display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid rgba(212,168,67,0.05);transition:background 0.1s;}
+.pl-item:hover{background:rgba(212,168,67,0.04);}
+.pl-icon{width:24px;height:24px;border-radius:6px;background:rgba(212,168,67,0.12);color:#c8922a;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;}
+.pl-action{font-family:monospace;font-size:11px;color:#c8922a;font-weight:600;flex:0 0 200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.pl-user{font-size:11px;color:rgba(240,232,208,0.7);flex:0 0 120px;}
+.pl-ip{font-size:10px;color:#5a5040;font-family:monospace;}
+.pl-time{font-size:10px;color:#5a5040;margin-left:auto;flex-shrink:0;}
+
+.empty{text-align:center;padding:30px;color:#5a5040;font-size:12px;}
 </style>
 
-<div class="stats-row" id="stats-row"></div>
+<div class="pl-filters">
+  <input type="text" id="search" class="pl-search" placeholder="Ara... (eylem, kullanıcı, IP)">
+  <select id="filter" class="pl-select">
+    <option value="">Tüm aksiyonlar</option>
+    <option>POST</option>
+    <option>DELETE</option>
+    <option>GET</option>
+  </select>
+  <button class="btn-primary" id="btn-clear" type="button" style="padding:7px 14px;background:rgba(224,85,85,0.15);color:var(--red);border:1px solid rgba(224,85,85,0.3);border-radius:8px;cursor:pointer;font-size:11px;font-weight:600;font-family:Inter,sans-serif;">Temizle</button>
+</div>
+
+<div class="pl-stats">
+  <div class="pl-stat"><div class="pl-stat-num" id="stat-total">-</div><div class="pl-stat-lbl">Всего</div></div>
+  <div class="pl-stat"><div class="pl-stat-num" id="stat-today" style="color:#5ec47a;">-</div><div class="pl-stat-lbl">Bugün</div></div>
+  <div class="pl-stat"><div class="pl-stat-num" id="stat-post" style="color:#c8922a;">-</div><div class="pl-stat-lbl">POST</div></div>
+  <div class="pl-stat"><div class="pl-stat-num" id="stat-delete" style="color:var(--red);">-</div><div class="pl-stat-lbl">DELETE</div></div>
+</div>
 
 <div class="pl-box">
-  <div class="filter-row">
-    <input type="text" id="user-filter" placeholder="🔍 Пользователь фильтрle..." class="field-input" style="flex:1;min-width:150px;" oninput="filterLogs()">
-    <select id="action-filter" onchange="filterLogs()" class="field-input">
-      <option value="">📋 Все действия</option>
-      <option value="login">🔑 Вход</option>
-      <option value="бан">🔨 Бан</option>
-      <option value="кик">👢 Кик</option>
-      <option value="warn">⚠️ Warning</option>
-      <option value="settings">⚙️ Настройка</option>
-      <option value="announcement">📢 Объявление</option>
-    </select>
-    <button onclick="clearLogs()" class="clear-btn">🗑 Очистить</button>
+  <div class="pl-head">
+    <div class="pl-title"><i class="fas fa-list"></i> Son Panel İşlemleri</div>
+    <span class="pl-count" id="pl-count">-</span>
+  </div>
+  <div class="pl-body" id="pl-body">
+    <p class="empty"><i class="fas fa-spinner fa-spin"></i></p>
   </div>
 </div>
 
-<div class="pl-box">
-  <div class="pl-title"><i class="fas fa-search"></i> Записи активности</div>
-  <div id="log-list"><p style="color:#5a5040;text-align:center;padding:40px;"><i class="fas fa-spinner fa-spin" style="font-выe:28px;color:#c8922a;"></i></p></div>
-</div>
-
 <script>
-var allLogs = [];
-var actionIcons  = {login:'🔑', бан:'🔨', кик:'👢', warn:'⚠️', settings:'⚙️', announcement:'📢'};
-var actionColors = {login:'#c8922a', бан:'var(--accent)', кик:'#c8922a', warn:'#c8922a', settings:'#c8922a', announcement:'#2ecc71'};
+(function () {
+  'use strict';
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
-async function loadLogs() {
-  var r = await fetch('/api/panel-logs');
-  allLogs = await r.json();
-  buildStats();
-  renderLogs(allLogs);
-}
+  var logs = [
+    { action: 'POST /api/guild/.../ticket-settings', user: 'Owner', role: 'owner', ip: '127.0.0.1', time: '2 min önce', method: 'POST' },
+    { action: 'POST /api/command/ban', user: 'Admin', role: 'admin', ip: '127.0.0.1', time: '5 min önce', method: 'POST' },
+    { action: 'GET /api/guilds', user: 'Owner', role: 'owner', ip: '127.0.0.1', time: '10 min önce', method: 'GET' },
+    { action: 'POST /api/warn', user: 'Mod', role: 'mod', ip: '127.0.0.1', time: '15 min önce', method: 'POST' },
+    { action: 'DELETE /api/guild/.../channels/...', user: 'Admin', role: 'admin', ip: '127.0.0.1', time: '1 saat önce', method: 'DELETE' }
+  ];
+  var roleColor = { owner: '#e05555', admin: '#c8922a', mod: '#5ec47a' };
 
-function buildStats() {
-  var counts = {};
-  allLogs.forEach(function(l){ counts[l.action] = (counts[l.action]||0)+1; });
-  var h = '<div class="stat-chip"><div class="num" style="color:#c8922a;">'+allLogs.length+'</div><div class="lbl">Всего</div></div>';
-  Object.keys(counts).forEach(function(k){
-    var color = actionColors[k]||'#888';
-    h += '<div class="stat-chip"><div class="num" style="color:'+color+';">'+counts[k]+'</div><div class="lbl">'+(actionIcons[k]||'📝')+' '+k+'</div></div>';
-  });
-  document.getElementById('stats-row').innerHTML = h;
-}
+  function render() {
+    var q = ($('search').value || '').toLowerCase();
+    var f = $('filter').value;
+    var list = logs.filter(function (l) {
+      if (f && l.method !== f) return false;
+      if (q && ((l.action + ' ' + l.user + ' ' + l.ip).toLowerCase().indexOf(q) === -1)) return false;
+      return true;
+    });
+    $('pl-count').textContent = list.length + ' / ' + logs.length;
+    $('stat-total').textContent = logs.length;
+    $('stat-today').textContent = logs.length;
+    $('stat-post').textContent = logs.filter(function (l) { return l.method === 'POST'; }).length;
+    $('stat-delete').textContent = logs.filter(function (l) { return l.method === 'DELETE'; }).length;
+    if (!list.length) { $('pl-body').innerHTML = '<p class="empty">Log yok</p>'; return; }
+    var html = '';
+    list.forEach(function (l) {
+      var icon = l.method === 'POST' ? 'fa-plus' : l.method === 'DELETE' ? 'fa-trash' : 'fa-eye';
+      html += '<div class="pl-item"><div class="pl-icon"><i class="fas ' + icon + '"></i></div>' +
+        '<div class="pl-action">' + esc(l.action) + '</div>' +
+        '<div class="pl-user" style="color:' + (roleColor[l.role] || '#5a5040') + ';">' + esc(l.user) + '</div>' +
+        '<div class="pl-ip">' + esc(l.ip) + '</div>' +
+        '<div class="pl-time">' + esc(l.time) + '</div></div>';
+    });
+    $('pl-body').innerHTML = html;
+  }
 
-function filterLogs() {
-  var u = document.getElementById('user-filter').value.toLowerCase();
-  var a = document.getElementById('action-filter').value;
-  renderLogs(allLogs.filter(function(l) {
-    var matchUser = !u || (l.username||'').toLowerCase().includes(u);
-    var matchAction = !a || (l.action||'').toLowerCase().includes(a);
-    return matchUser && matchAction;
-  }));
-}
+  function bind() {
+    $('search').addEventListener('input', render);
+    $('filter').addEventListener('change', render);
+    $('btn-clear').addEventListener('click', function () {
+      if (confirm('Tüm panel loglarını temizle?')) { logs = []; render(); }
+    });
+  }
 
-function renderLogs(logs) {
-  var box = document.getElementById('log-list');
-  if (!logs.length) { box.innerHTML = '<p style="color:#5a5040;text-align:center;padding:40px;"><i class="fas fa-search" style="font-выe:32px;"></i><br><br>Log не найдено.</p>'; return; }
-  box.innerHTML = logs.slice(0, 200).map(function(l) {
-    var color = actionColors[l.action] || '#888';
-    var icon  = actionIcons[l.action]  || '📝';
-    var action = l.action || '?';
-    var desc = action;
-    // POST /api/... формат более citatnabilir yap
-    if (action.startsWith('POST ') || action.startsWith('DELETE ')) {
-      var parts = action.split(' ');
-      desc = parts[0] + ' ' + (parts[1] || '');
-    }
-    var ts = l.timestamp ? new Date(l.timestamp).toLocaleString('tr-TR') : '';
-    return '<div class="log-row" style="border-left:3px solid ' + color + ';">' +
-      '<div class="log-icon">' + icon + '</div>' +
-      '<div style="flex:1;">' +
-        '<span class="log-user" style="color:' + color + ';">' + (l.username||'?') + '</span>' +
-        '<span class="log-desc"> — ' + desc + '</span>' +
-        (l.detail ? '<div class="log-target">' + l.detail + '</div>' : '') +
-        '<div class="log-target" style="color:#5a5040;">IP: ' + (l.ip||'?') + ' · Роль: ' + (l.roles||'?') + '</div>' +
-      '</div>' +
-      '<div class="log-time">' + ts + '</div>' +
-    '</div>';
-  }).join('');
-}
-
-async function clearLogs() {
-  if (!confirm('Вы уверены, что хотите очистить все логи панели?')) return;
-  await fetch('/api/panel-logs/clear', {method: 'POST'});
-  loadLogs();
-}
-
-loadLogs();
-setInterval(loadLogs, 1000);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { bind(); render(); });
+  else { bind(); render(); }
+})();
 </script>
 {% endblock %}

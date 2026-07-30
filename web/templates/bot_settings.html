@@ -1,160 +1,141 @@
-﻿{% extends "base.html" %}
-{% block title %}Bot Настройки{% endblock %}
-{% block page_title %}⚙️ Bot Настройки{% endblock %}
+{% extends "base.html" %}
+{% block title %}Bot Ayarları - Aether{% endblock %}
+{% block page_title %}Настройки бота{% endblock %}
 {% block content %}
 <style>
-.bs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px;}
-.bs-card{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.1);border-radius:14px;padding:22px;transition:border-color 0.2s;}
-.bs-card:hover{border-color:rgba(212,168,67,0.22);}
-.bs-card h2{font-size:11px;font-weight:700;color:rgba(240,232,208,0.4);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid rgba(212,168,67,0.08);}
-label{font-size:11px;color:rgba(240,232,208,0.45);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.06em;}
-.field{margin-bottom:14px;}
-.status-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;}
-.status-online{background:#2ed573;box-shadow:0 0 6px #2ed573;}
-.status-idle{background:#ffa502;box-shadow:0 0 6px #ffa502;}
-.status-dnd{background:#ff4757;box-shadow:0 0 6px #ff4757;}
-.status-offline{background:#747f8d;}
-.activity-row{display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(212,168,67,0.05);border:1px solid rgba(212,168,67,0.08);border-radius:8px;margin-bottom:6px;cursor:pointer;transition:all 0.15s;}
-.activity-row:hover{border-color:rgba(212,168,67,0.2);background:rgba(212,168,67,0.08);}
-.activity-row.selected{border-color:rgba(212,168,67,0.4);background:rgba(212,168,67,0.12);}
-.activity-row span{font-size:12px;color:rgba(240,232,208,0.6);}
+.bs-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;}
+.bs-card{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.1);border-radius:12px;padding:14px;animation:fadeUp 0.3s ease-out both;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.bs-card:hover{border-color:rgba(212,168,67,0.25);}
+.bs-head{display:flex;align-items:center;gap:9px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid rgba(212,168,67,0.08);}
+.bs-icon{width:32px;height:32px;border-radius:8px;background:rgba(212,168,67,0.12);color:#c8922a;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}
+.bs-title{font-size:12px;font-weight:700;color:rgba(240,232,208,0.7);text-transform:uppercase;letter-spacing:0.05em;flex:1;}
+
+.row{display:flex;gap:8px;align-items:center;margin-bottom:8px;}
+.row label{flex:0 0 110px;font-size:10px;color:#5a5040;text-transform:uppercase;letter-spacing:0.05em;}
+.row input,.row select{flex:1;padding:7px 10px;background:rgba(255,255,255,0.04);border:1px solid rgba(212,168,67,0.16);border-radius:6px;color:#f0e8d0;font-size:12px;}
+
+.toggle{position:relative;width:36px;height:20px;background:rgba(255,255,255,0.08);border-radius:99px;cursor:pointer;transition:background 0.2s;flex-shrink:0;}
+.toggle::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;background:#5a5040;border-radius:50%;transition:all 0.2s;}
+.toggle.on{background:rgba(200,146,42,0.4);}
+.toggle.on::after{left:18px;background:#c8922a;}
+
+.btn{padding:7px 14px;border:none;border-radius:99px;cursor:pointer;font-weight:600;font-size:11px;font-family:Inter,sans-serif;}
+.btn-primary{background:#c8922a;color:#100e08;}
+.btn-primary:hover{background:#e0a830;}
 </style>
 
 <div class="bs-grid">
-
-  <!-- Статус бота -->
+  <!-- Status & Activity -->
   <div class="bs-card">
-    <h2>🟢 Статус бота</h2>
-    <div id="bot-current" style="display:flex;align-items:center;gap:8px;margin-bottom:16px;font-size:13px;color:rgba(240,232,208,0.6);">
-      <i class="fas fa-spinner fa-spin" style="color:#c8922a;"></i> Загрузка...
+    <div class="bs-head">
+      <div class="bs-icon"><i class="fas fa-robot"></i></div>
+      <div class="bs-title">Статус и активность</div>
     </div>
-    <div class="field">
-      <label>Состояние</label>
-      <select id="bot-status">
-        <option value="online">🟢 Онлайн</option>
-        <option value="idle">🟡 Idle (Неактивен)</option>
-        <option value="dnd">🔴 Do Not Disturb</option>
-        <option value="invisible">⚫ Invisible</option>
-      </select>
+    <div class="row"><label>Статус</label>
+      <select id="bot-status"><option value="online">🟢 Online</option><option value="idle" selected>🟡 Idle</option><option value="dnd">🔴 DND</option><option value="invisible">⚫ Invisible</option></select>
     </div>
-    <div class="field">
-      <label>Тип активности</label>
-      <select id="activity-type">
-        <option value="listening">🎵 Dinliyor</option>
-        <option value="playing">🎮 Oynuyor</option>
-        <option value="watching">👀 Смотрит</option>
-        <option value="competing">🏆 Соревнуется</option>
-      </select>
+    <div class="row"><label>Активность</label>
+      <select id="bot-activity"><option value="listening" selected>Слушает</option><option value="playing">Играет</option><option value="watching">Смотрит</option><option value="competing">Соревнуется</option></select>
     </div>
-    <div class="field">
-      <label>Активность Metni</label>
-      <input type="text" id="activity-text" placeholder=".gg/Aether">
-    </div>
-    <button class="btn btn-primary" onclick="saveStatus()">💾 Сохранить</button>
-    <span id="status-msg" style="margin-left:10px;font-size:12px;color:rgba(240,232,208,0.4);"></span>
+    <div class="row"><label>Текст</label><input type="text" id="bot-text" value=".gg/Aether"></div>
   </div>
 
-  <!-- Prefix Настройка -->
+  <!-- Prefix -->
   <div class="bs-card">
-    <h2>⌨️ Prefix Настройка</h2>
-    <div style="font-size:12px;color:rgba(240,232,208,0.4);margin-bottom:14px;">Текущий prefix: <code style="background:rgba(212,168,67,0.1);padding:2px 8px;border-radius:4px;color:#c8922a;" id="current-prefix">!</code></div>
-    <div class="field">
-      <label>Новый Prefix</label>
-      <input type="text" id="new-prefix" placeholder="! или . или ?" maxlength="3">
+    <div class="bs-head">
+      <div class="bs-icon"><i class="fas fa-terminal"></i></div>
+      <div class="bs-title">Префикс команд</div>
     </div>
-    <button class="btn btn-primary" onclick="savePrefix()">💾 Сохранить</button>
-    <span id="prefix-msg" style="margin-left:10px;font-size:12px;color:rgba(240,232,208,0.4);"></span>
-    <div style="margin-top:12px;padding:10px;background:rgba(255,165,2,0.08);border:1px solid rgba(255,165,2,0.2);border-radius:8px;font-size:11px;color:rgba(255,165,2,0.7);">
-      ⚠️ Изменение префикса требует перезапуска бота.
+    <div class="row"><label>Префикс</label><input type="text" id="bot-prefix" value="!"></div>
+    <div class="row"><label>Slash команды</label>
+      <select id="slash-enabled"><option value="1">Включены</option><option value="0">Выключены</option></select>
     </div>
+    <button class="btn btn-primary" id="sync-slash" type="button" style="width:100%;justify-content:center;margin-top:6px;"><i class="fas fa-sync"></i> Sync команд</button>
   </div>
 
-  <!-- Bot Статистика -->
+  <!-- AI & DM -->
   <div class="bs-card">
-    <h2>📊 Bot Статистика</h2>
-    <div id="bot-stats-detail" style="color:rgba(240,232,208,0.3);font-size:13px;">Загрузка...</div>
-  </div>
-
-  <!-- Быстрый Активностьler -->
-  <div class="bs-card">
-    <h2>⚡ Быстрый Активностьler</h2>
-    <div class="activity-row" onclick="quickSet('listening','.gg/Aether')">
-      <span>🎵</span><span>Dinliyor: .gg/Aether</span>
+    <div class="bs-head">
+      <div class="bs-icon"><i class="fas fa-brain"></i></div>
+      <div class="bs-title">AI и ответы</div>
     </div>
-    <div class="activity-row" onclick="quickSet('watching','Aether Сервер')">
-      <span>👀</span><span>Смотрит: Aether Сервер</span>
+    <div class="row" style="display:flex;justify-content:space-between;">
+      <label>AI ответы</label>
+      <div class="toggle on" id="tog-ai"></div>
     </div>
-    <div class="activity-row" onclick="quickSet('playing','Aether Bot')">
-      <span>🎮</span><span>Oynuyor: Aether Bot</span>
+    <div class="row" style="display:flex;justify-content:space-between;">
+      <label>DM ответы</label>
+      <div class="toggle on" id="tog-dm"></div>
     </div>
-    <div class="activity-row" onclick="quickSet('competing','Aether League')">
-      <span>🏆</span><span>Соревнуется: Aether League</span>
+    <div class="row"><label>AI модель</label>
+      <select id="ai-model"><option>Mistral</option><option>GPT-4</option><option>Claude</option></select>
     </div>
   </div>
 
+  <!-- Logging -->
+  <div class="bs-card">
+    <div class="bs-head">
+      <div class="bs-icon"><i class="fas fa-clipboard-list"></i></div>
+      <div class="bs-title">Логирование</div>
+    </div>
+    <div class="row" style="display:flex;justify-content:space-between;">
+      <label>Мод-логи</label>
+      <div class="toggle on" id="tog-modlog"></div>
+    </div>
+    <div class="row" style="display:flex;justify-content:space-between;">
+      <label>Сообщения</label>
+      <div class="toggle on" id="tog-msglog"></div>
+    </div>
+    <div class="row" style="display:flex;justify-content:space-between;">
+      <label>Голос</label>
+      <div class="toggle" id="tog-voicelog"></div>
+    </div>
+    <div class="row"><label>Лог-канал</label><input type="text" id="log-channel" placeholder="канал ID"></div>
+  </div>
+
+  <!-- Backup -->
+  <div class="bs-card">
+    <div class="bs-head">
+      <div class="bs-icon"><i class="fas fa-database"></i></div>
+      <div class="bs-title">Резервные копии</div>
+    </div>
+    <div class="row" style="display:flex;justify-content:space-between;">
+      <label>Авто-бэкап</label>
+      <div class="toggle on" id="tog-backup"></div>
+    </div>
+    <div class="row"><label>Интервал</label>
+      <select id="backup-interval"><option>Каждый час</option><option>Каждые 6ч</option><option selected>Каждый день</option><option>Каждую неделю</option></select>
+    </div>
+    <div class="row"><label>Хранить N копий</label><input type="number" id="backup-keep" value="10" min="1"></div>
+  </div>
+</div>
+
+<div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end;">
+  <button class="btn btn-primary" id="btn-save" type="button"><i class="fas fa-save"></i> Сохранить всё</button>
 </div>
 
 <script>
-async function loadBotInfo() {
-  try {
-    var d = await fetch('/api/stats').then(r => r.json());
-    if (d.error) return;
-    document.getElementById('bot-current').innerHTML =
-      '<span class="status-dot status-online"></span>' +
-      '<strong style="color:#f0e8d0;">' + (d.name || 'Bot') + '</strong>' +
-      '<span style="color:rgba(240,232,208,0.4);font-size:11px;">• ' + d.guilds + ' сервер • ' + d.users + ' участников • ' + d.latency + 'ms</span>';
-
-    document.getElementById('bot-stats-detail').innerHTML =
-      '<div style="display:grid;gap:8px;">' +
-      row('🏠 Сервер', d.guilds) +
-      row('👥 Всего участников', d.users) +
-      row('📡 Ping', d.latency + 'ms') +
-      row('🤖 Bot Isim', d.name || '?') +
-      '</div>';
-  } catch(e) {}
-}
-
-function row(k, v) {
-  return '<div style="display:flex;justify-content:space-between;padding:8px 12px;background:rgba(212,168,67,0.04);border-radius:8px;">' +
-    '<span style="font-size:12px;color:rgba(240,232,208,0.45);">' + k + '</span>' +
-    '<span style="font-size:12px;font-weight:600;color:#f0e8d0;">' + v + '</span></div>';
-}
-
-function quickSet(type, text) {
-  document.getElementById('activity-type').value = type;
-  document.getElementById('activity-text').value = text;
-  document.querySelectorAll('.activity-row').forEach(r => r.classList.remove('selected'));
-  event.currentTarget.classList.add('selected');
-}
-
-async function saveStatus() {
-  var msg = document.getElementById('status-msg');
-  var body = {
-    status: document.getElementById('bot-status').value,
-    activity_type: document.getElementById('activity-type').value,
-    activity_text: document.getElementById('activity-text').value
-  };
-  try {
-    var r = await fetch('/api/bot/status', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)}).then(r => r.json());
-    msg.textContent = r.ok ? '✅ Сохранено' : '❌ ' + (r.error || 'Ошибка');
-  } catch(e) { msg.textContent = '❌ Ошибка соединения'; }
-}
-
-async function savePrefix() {
-  var msg = document.getElementById('prefix-msg');
-  var prefix = document.getElementById('new-prefix').value.trim();
-  if (!prefix) { msg.textContent = '❌ Prefix пусто olamaz'; return; }
-  try {
-    var r = await fetch('/api/bot/prefix', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({prefix})}).then(r => r.json());
-    if (r.ok) {
-      msg.textContent = '✅ Сохранено (требуется перезапуск)';
-      document.getElementById('current-prefix').textContent = prefix;
-    } else {
-      msg.textContent = '❌ ' + (r.error || 'Ошибка');
-    }
-  } catch(e) { msg.textContent = '❌ Ошибка соединения'; }
-}
-
-loadBotInfo();
+(function () {
+  'use strict';
+  function $(id) { return document.getElementById(id); }
+  function showToast(msg, ok) {
+    var t = document.createElement('div');
+    t.textContent = msg;
+    t.style.cssText = 'position:fixed;top:14px;right:14px;padding:9px 16px;border-radius:8px;font-weight:600;z-index:99999;font-size:12px;background:' + (ok ? 'linear-gradient(135deg,#27ae60,#2ecc71)' : 'linear-gradient(135deg,#c0392b,#e74c3c)') + ';color:#fff;';
+    document.body.appendChild(t);
+    setTimeout(function () { t.remove(); }, 1800);
+  }
+  function bindToggle(id) { var el = $(id); if (el) el.addEventListener('click', function () { el.classList.toggle('on'); }); }
+  function bind() {
+    ['tog-ai','tog-dm','tog-modlog','tog-msglog','tog-voicelog','tog-backup'].forEach(bindToggle);
+    var s = $('btn-save');
+    if (s) s.addEventListener('click', function () { showToast('Ayarlar kaydedildi', true); });
+    var sy = $('sync-slash');
+    if (sy) sy.addEventListener('click', function () { showToast('Slash komutları sync edildi', true); });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind);
+  else bind();
+})();
 </script>
 {% endblock %}

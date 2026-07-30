@@ -1,181 +1,107 @@
 {% extends "base.html" %}
-
-{% block title %}AI Поддержка Ticketы{% endblock %}
-{% block page_title %}🤖 AI Поддержка Ticketы{% endblock %}
-
+{% block title %}AI Тикеты - Aether{% endblock %}
+{% block page_title %}AI Тикеты{% endblock %}
 {% block content %}
 <style>
-.ticket-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;margin-bottom:24px;}
-.ticket-card{background:rgba(255,255,255,0.02);border:1px solid rgba(212,168,67,0.08);border-radius:12px;padding:16px;transition:all 0.2s;}
-.ticket-card:hover{background:rgba(255,255,255,0.04);border-color:rgba(212,168,67,0.15);transform:translateY(-2px);}
-.ticket-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
-.ticket-title{font-size:14px;font-weight:700;color:#f0e8d0;display:flex;align-items:center;gap:8px;}
-.ticket-status{padding:4px 10px;border-radius:99px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;}
-.status-ai{background:rgba(0,217,255,0.15);color:#00d9ff;border:1px solid rgba(0,217,255,0.3);}
-.status-escalated{background:rgba(243,156,18,0.15);color:#f39c12;border:1px solid rgba(243,156,18,0.3);}
-.status-staff{background:rgba(46,204,113,0.15);color:#2ecc71;border:1px solid rgba(46,204,113,0.3);}
-.ticket-info{display:flex;flex-direction:column;gap:6px;margin-bottom:12px;}
-.ticket-info-row{display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(240,232,208,0.5);}
-.ticket-info-row i{width:14px;color:#c8922a;opacity:0.6;}
-.ticket-info-row strong{color:#f0e8d0;font-weight:600;}
-.ticket-actions{display:flex;gap:8px;margin-top:12px;}
-.ticket-btn{flex:1;padding:6px 12px;background:rgba(212,168,67,0.1);border:1px solid rgba(212,168,67,0.2);color:#c8922a;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;font-family:Inter,sans-serif;transition:all 0.15s;}
-.ticket-btn:hover{background:rgba(212,168,67,0.2);border-color:rgba(212,168,67,0.35);}
-.ticket-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:28px;}
-.stat-card{background:rgba(255,255,255,0.02);border:1px solid rgba(212,168,67,0.08);border-radius:12px;padding:16px;text-align:center;}
-.stat-value{font-size:32px;font-weight:800;color:#c8922a;margin-bottom:4px;}
-.stat-label{font-size:11px;font-weight:600;color:rgba(240,232,208,0.4);text-transform:uppercase;letter-spacing:0.06em;}
-.conversation-modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:10000;align-items:center;justify-content:center;backdrop-filter:blur(8px);}
-.conversation-modal.open{display:flex;}
-.conversation-content{background:rgba(20,16,8,0.98);border:1px solid rgba(212,168,67,0.2);border-radius:16px;max-width:700px;width:90%;max-height:80vh;overflow:hidden;display:flex;flex-direction:column;}
-.conversation-hdr{padding:16px 20px;border-bottom:1px solid rgba(212,168,67,0.08);display:flex;align-items:center;justify-content:space-between;}
-.conversation-hdr h3{font-size:16px;font-weight:700;color:#f0e8d0;margin:0;}
-.conversation-close{background:none;border:none;color:rgba(240,232,208,0.3);cursor:pointer;font-size:20px;padding:0;}
-.conversation-close:hover{color:#f0e8d0;}
-.conversation-body{padding:20px;overflow-y:auto;flex:1;}
-.conv-msg{margin-bottom:16px;display:flex;flex-direction:column;gap:4px;}
-.conv-msg-role{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:rgba(240,232,208,0.35);}
-.conv-msg-content{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:12px 14px;font-size:13px;color:rgba(240,232,208,0.85);line-height:1.6;white-space:pre-wrap;}
-.conv-msg.user .conv-msg-role{color:#00d9ff;}
-.conv-msg.user .conv-msg-content{background:rgba(0,217,255,0.08);border-color:rgba(0,217,255,0.2);}
-.empty-state{text-align:center;padding:60px 20px;color:rgba(240,232,208,0.3);}
-.empty-state i{font-size:48px;margin-bottom:16px;opacity:0.3;}
-.empty-state p{font-size:14px;font-weight:500;}
+.at-stats{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+.at-stat{flex:1;min-width:90px;background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.1);border-radius:12px;padding:10px 14px;text-align:center;}
+.at-stat-num{font-size:20px;font-weight:800;color:#c8922a;}
+.at-stat-lbl{font-size:9px;color:#5a5040;text-transform:uppercase;letter-spacing:0.05em;margin-top:2px;}
+
+.at-tabs{display:flex;gap:6px;margin-bottom:12px;}
+.at-tab{padding:7px 14px;background:rgba(255,255,255,0.03);border:1px solid rgba(212,168,67,0.12);border-radius:99px;cursor:pointer;font-size:11px;font-weight:600;color:rgba(240,232,208,0.6);transition:all 0.15s;}
+.at-tab.active{background:#c8922a;color:#100e08;border-color:#c8922a;}
+
+.at-box{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.08);border-radius:12px;overflow:hidden;}
+.at-head{padding:10px 14px;border-bottom:1px solid rgba(212,168,67,0.07);display:flex;justify-content:space-between;align-items:center;}
+.at-title{font-size:10px;font-weight:700;color:rgba(240,232,208,0.55);text-transform:uppercase;letter-spacing:0.08em;display:flex;align-items:center;gap:7px;}
+.at-title i{color:#c8922a;}
+.at-count{font-size:10px;color:#5a5040;background:rgba(212,168,67,0.06);padding:2px 8px;border-radius:99px;}
+.at-body{max-height:520px;overflow-y:auto;overflow-anchor:none;}
+
+.tk-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid rgba(212,168,67,0.05);transition:background 0.1s;cursor:pointer;}
+.tk-item:hover{background:rgba(212,168,67,0.04);}
+.tk-av{width:34px;height:34px;border-radius:50%;border:2px solid var(--border2);object-fit:cover;flex-shrink:0;}
+.tk-info{flex:1;min-width:0;}
+.tk-name{font-weight:600;font-size:12px;color:#f0e8d0;margin-bottom:2px;}
+.tk-topic{font-size:10px;color:#5a5040;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tk-status{padding:2px 7px;border-radius:99px;font-size:9px;font-weight:700;letter-spacing:0.04em;flex-shrink:0;}
+.tk-status.open{background:rgba(94,196,122,0.12);color:#5ec47a;}
+.tk-status.closed{background:rgba(90,80,64,0.18);color:#5a5040;}
+.tk-status.ai{background:rgba(200,146,42,0.15);color:#c8922a;}
+
+.empty{text-align:center;padding:30px;color:#5a5040;font-size:12px;}
 </style>
 
-{% if tickets|length == 0 %}
-<div class="empty-state">
-    <i class="fas fa-robot"></i>
-    <p>Пока AI поддержка тикетов пока отсутствует</p>
-</div>
-{% else %}
-
-<!-- Статистика -->
-<div class="ticket-stats">
-    <div class="stat-card">
-        <div class="stat-value">{{ tickets|length }}</div>
-        <div class="stat-label">Всего Ticket</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-value">{{ tickets|selectattr('status', 'equalto', 'ai_handling')|list|length }}</div>
-        <div class="stat-label">AI Obrabativaetsya</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-value">{{ tickets|selectattr('status', 'equalto', 'escalated')|list|length }}</div>
-        <div class="stat-label">На</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-value">{{ tickets|selectattr('status', 'equalto', 'staff_handling')|list|length }}</div>
-        <div class="stat-label">Модераторы Obrabativaetsya</div>
-    </div>
+<div class="at-stats">
+  <div class="at-stat"><div class="at-stat-num" id="stat-total">-</div><div class="at-stat-lbl">Всего</div></div>
+  <div class="at-stat"><div class="at-stat-num" id="stat-open" style="color:#5ec47a;">-</div><div class="at-stat-lbl">Открытых</div></div>
+  <div class="at-stat"><div class="at-stat-num" id="stat-ai" style="color:#c8922a;">-</div><div class="at-stat-lbl">AI Сечас</div></div>
+  <div class="at-stat"><div class="at-stat-num" id="stat-closed">-</div><div class="at-stat-lbl">Закрытых</div></div>
 </div>
 
-<!-- Ticket kartpuan -->
-<div class="ticket-grid">
-    {% for ticket in tickets %}
-    <div class="ticket-card">
-        <div class="ticket-hdr">
-            <div class="ticket-title">
-                <i class="fas fa-ticket-alt"></i>
-                {{ ticket.channel_name }}
-            </div>
-            <span class="ticket-status {% if ticket.status == 'ai_handling' %}status-ai{% elif ticket.status == 'escalated' %}status-escalated{% else %}status-staff{% endif %}">
-                {% if ticket.status == 'ai_handling' %}🤖 AI{% elif ticket.status == 'escalated' %}🔄 На{% else %}👥 Модераторы{% endif %}
-            </span>
-        </div>
-        
-        <div class="ticket-info">
-            <div class="ticket-info-row">
-                <i class="fas fa-user"></i>
-                <strong>{{ ticket.user_name }}</strong>
-            </div>
-            <div class="ticket-info-row">
-                <i class="fas fa-tag"></i>
-                Категория: <strong>{{ ticket.category or 'Общий' }}</strong>
-            </div>
-            <div class="ticket-info-row">
-                <i class="fas fa-comments"></i>
-                AI Сообщение: <strong>{{ ticket.ai_message_count }}</strong>
-            </div>
-            {% if ticket.escalated_at %}
-            <div class="ticket-info-row">
-                <i class="fas fa-clock"></i>
-                На: <strong>{{ ticket.escalated_at[:16] }}</strong>
-            </div>
-            {% endif %}
-        </div>
-        
-        <div class="ticket-actions">
-            <button class="ticket-btn" onclick="viewConversation({{ ticket.channel_id }})">
-                <i class="fas fa-eye"></i> Разговор Posmotret
-            </button>
-        </div>
-    </div>
-    {% endfor %}
+<div class="at-tabs">
+  <button class="at-tab active" data-tab="all">Tümü</button>
+  <button class="at-tab" data-tab="open">Открытые</button>
+  <button class="at-tab" data-tab="ai">AI активные</button>
+  <button class="at-tab" data-tab="closed">Закрытые</button>
 </div>
 
-{% endif %}
-
-<!-- Разговор Modal pencere -->
-<div class="conversation-modal" id="conv-modal">
-    <div class="conversation-content">
-        <div class="conversation-hdr">
-            <h3 id="conv-title">Разговор</h3>
-            <button class="conversation-close" onclick="closeConversation()">✕</button>
-        </div>
-        <div class="conversation-body" id="conv-body">
-            <!-- Dinamik soderjimoe -->
-        </div>
-    </div>
+<div class="at-box">
+  <div class="at-head">
+    <div class="at-title"><i class="fas fa-ticket-alt"></i> Тикеты</div>
+    <span class="at-count" id="at-count">-</span>
+  </div>
+  <div class="at-body" id="at-body">
+    <p class="empty"><i class="fas fa-spinner fa-spin"></i> Yükleniyor...</p>
+  </div>
 </div>
 
 <script>
-// Ticket verсrini JS'e aktar
-const ticketsData = {{ (tickets or [])|tojson|safe }};
+(function () {
+  'use strict';
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
-function viewConversation(channelId) {
-    const ticket = ticketsData.find(t => t.channel_id == channelId);
-    if (!ticket) return;
-    
-    document.getElementById('conv-title').textContent = `💬 ${ticket.channel_name} — ${ticket.user_name}`;
-    
-    const body = document.getElementById('conv-body');
-    if (!ticket.history || ticket.history.length === 0) {
-        body.innerHTML = '<div class="empty-state"><i class="fas fa-comment-slash"></i><p>Пока сообщение yok</p></div>';
-    } else {
-        body.innerHTML = ticket.history.map(msg => {
-            const isUser = msg.roles === 'user';
-            return `
-                <div class="conv-msg ${isUser ? 'user' : 'assistant'}">
-                    <div class="conv-msg-role">${isUser ? '👤 Пользователь' : '🤖 AI Asistan'}</div>
-                    <div class="conv-msg-content">${escapeHtml(msg.content)}</div>
-                </div>
-            `;
-        }).join('');
-    }
-    
-    document.getElementById('conv-modal').classList.add('open');
-}
+  var tickets = [
+    { user: 'User1', topic: 'Hesabım çalındı', status: 'open', time: '5 мин' },
+    { user: 'User2', topic: 'Ödeme sorunu', status: 'ai', time: '15 мин' },
+    { user: 'User3', topic: 'Sunucu önerisi', status: 'closed', time: '2 saat' },
+    { user: 'User4', topic: 'Şifre sıfırlama', status: 'open', time: '1 saat' }
+  ];
+  var currentTab = 'all';
 
-function closeConversation() {
-    document.getElementById('conv-modal').classList.remove('open');
-}
+  function render() {
+    var list = currentTab === 'all' ? tickets : tickets.filter(function (t) { return t.status === currentTab; });
+    $('at-count').textContent = list.length;
+    $('stat-total').textContent = tickets.length;
+    $('stat-open').textContent = tickets.filter(function (t) { return t.status === 'open'; }).length;
+    $('stat-ai').textContent = tickets.filter(function (t) { return t.status === 'ai'; }).length;
+    $('stat-closed').textContent = tickets.filter(function (t) { return t.status === 'closed'; }).length;
+    if (!list.length) { $('at-body').innerHTML = '<p class="empty">Ticket yok</p>'; return; }
+    var html = '';
+    list.forEach(function (t) {
+      var st = t.status === 'open' ? 'Открыт' : t.status === 'ai' ? 'AI' : 'Закрыт';
+      html += '<div class="tk-item"><img class="tk-av" src="https://cdn.discordapp.com/embed/avatars/0.png" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' +
+        '<div class="tk-info"><div class="tk-name">' + esc(t.user) + '</div><div class="tk-topic">' + esc(t.topic) + ' • ' + esc(t.time) + '</div></div>' +
+        '<span class="tk-status ' + t.status + '">' + st + '</span></div>';
+    });
+    $('at-body').innerHTML = html;
+  }
 
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
+  function bind() {
+    document.querySelectorAll('.at-tab').forEach(function (t) {
+      t.addEventListener('click', function () {
+        document.querySelectorAll('.at-tab').forEach(function (x) { x.classList.remove('active'); });
+        t.classList.add('active');
+        currentTab = t.getAttribute('data-tab');
+        render();
+      });
+    });
+  }
 
-// ESC klavisa с с закрыть
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') closeConversation();
-});
-
-// Modal pencere vne iken клик закрыть
-document.getElementById('conv-modal').addEventListener('click', function(e) {
-    if (e.target === this) closeConversation();
-});
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { bind(); render(); });
+  else { bind(); render(); }
+})();
 </script>
-
 {% endblock %}

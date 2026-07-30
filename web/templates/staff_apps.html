@@ -1,172 +1,132 @@
-﻿{% extends "base.html" %}
-{% block title %}Заявки в модераторы - Aether{% endblock %}
-{% block page_title %}📋 АДМИНИСТРАТОР ЗАЯВКА{% endblock %}
+{% extends "base.html" %}
+{% block title %}Заявки - Aether{% endblock %}
+{% block page_title %}Заявки в администрацию{% endblock %}
 {% block content %}
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
-.sa-box{background:rgba(26,22,16,0.7);border:1px solid rgba(200,160,80,0.3);border-radius:15px;padding:25px;margin-bottom:20px;position:relative;overflow:hidden;}
-.sa-box::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);;}
-@keyframes scan{0%{left:-100%}100%{left:100%}}
-.filter-bar{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;}
-.filter-btn{padding:8px 20px;border:2px solid rgba(200,160,80,0.4);background:transparent;color:rgba(240,232,208,0.55);border-radius:20px;cursor:pointer;transition:all 0.3s;font-size:13px;font-family:Inter,sans-serif;}
-.filter-btn.active,.filter-btn:hover{background:#c8922a;border-color:#c8922a;color:#f0e8d0;}
-.app-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:20px;}
-.app-card{background:linear-gradient(135deg,var(--bg),var(--bg2));border:1px solid rgba(200,160,80,0.25);border-radius:15px;padding:20px;transition:all 0.3s;position:relative;overflow:hidden;}
-.app-card::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);animation:scan 4s infinite;}
-.app-card:hover{border-color:#c8922a;box-shadow:0 8px 30px rgba(200,160,80,0.2);}
-.app-card.approved{border-color:rgba(46,204,113,0.5);}
-.app-card.rejected{border-color:rgba(231,76,60,0.3);opacity:0.7;}
-.app-header{display:flex;align-items:center;gap:12px;margin-bottom:15px;}
-.app-avatar{width:50px;height:50px;border-radius:50%;border:2px solid var(--accent);}
-.app-name{font-size:15px;font-weight:700;color:#f0e8d0;font-family:Inter,sans-serif;}
-.app-tag{font-size:11px;color:rgba(240,232,208,0.55);margin-top:2px;}
-.status-badge{padding:3px 10px;border-radius:14px;font-size:11px;font-weight:700;margin-left:auto;white-space:nowrap;}
-.status-pending{background:rgba(212,168,67,0.2);color:#c8922a;border:1px solid #c8922a;}
-.status-approved{background:rgba(46,204,113,0.2);color:#5ec47a;border:1px solid #2ecc71;}
-.status-rejected{background:rgba(231,76,60,0.2);color:#e05555;border:1px solid #e74c3c;}
-.app-field{margin-bottom:10px;}
-.app-field label{display:block;color:#c8922a;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;font-family:Inter,sans-serif;}
-.app-field p{color:rgba(240,232,208,0.55);font-size:13px;background:rgba(0,0,0,0.3);padding:8px 10px;border-radius:6px;margin:0;line-height:1.5;}
-.app-actions{display:flex;gap:8px;margin-top:15px;}
-.btn-approve{flex:1;padding:9px;background:rgba(94,196,122,0.8);color:#f0e8d0;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:13px;transition:all 0.3s;}
-.btn-approve:hover{box-shadow:0 4px 15px rgba(46,204,113,0.4);transform:translateY(-2px);}
-.btn-reject{flex:1;padding:9px;background:rgba(224,85,85,0.15);color:#f0e8d0;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:13px;transition:all 0.3s;}
-.btn-reject:hover{box-shadow:0 4px 15px rgba(231,76,60,0.4);transform:translateY(-2px);}
-.empty-state{text-align:center;padding:60px;color:#5a5040;}
-.empty-state i{font-size:48px;margin-bottom:15px;color:#c8922a;opacity:0.3;}
-.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.88);z-index:9999;justify-content:center;align-items:center;}
-.modal-box{background:linear-gradient(135deg,var(--bg2),var(--surface));border:2px solid var(--accent);border-radius:20px;padding:30px;max-width:420px;width:90%;}
-.modal-box h3{color:#c8922a;margin-bottom:15px;font-family:Inter,sans-serif;}
-.modal-box textarea{width:100%;padding:10px;background:#100e08;border:2px solid rgba(200,160,80,0.3);border-radius:8px;color:#f0e8d0;font-size:14px;resize:vertical;min-height:80px;box-sizing:border-box;}
-.modal-box textarea:focus{outline:none;border-color:#c8922a;}
-.stats-bar{display:flex;gap:15px;margin-bottom:20px;flex-wrap:wrap;}
-.stat-chip{background:rgba(200,160,80,0.08);border:1px solid rgba(200,160,80,0.2);border-radius:14px;padding:10px 18px;text-align:center;}
-.stat-chip .num{font-size:22px;font-weight:700;color:#c8922a;font-family:Inter,sans-serif;}
-.stat-chip .lbl{font-size:11px;color:rgba(240,232,208,0.55);}
+.app-stats{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+.app-stat{flex:1;min-width:100px;background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.1);border-radius:12px;padding:10px 14px;text-align:center;}
+.app-stat-num{font-size:20px;font-weight:800;color:#c8922a;}
+.app-stat-lbl{font-size:9px;color:#5a5040;text-transform:uppercase;letter-spacing:0.05em;margin-top:2px;}
+
+.app-tabs{display:flex;gap:6px;margin-bottom:12px;}
+.app-tab{padding:7px 14px;background:rgba(255,255,255,0.03);border:1px solid rgba(212,168,67,0.12);border-radius:99px;cursor:pointer;font-size:11px;font-weight:600;color:rgba(240,232,208,0.6);transition:all 0.15s;}
+.app-tab.active{background:#c8922a;color:#100e08;border-color:#c8922a;}
+
+.app-box{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.08);border-radius:12px;overflow:hidden;}
+.app-head{padding:10px 14px;border-bottom:1px solid rgba(212,168,67,0.07);display:flex;justify-content:space-between;align-items:center;}
+.app-title{font-size:10px;font-weight:700;color:rgba(240,232,208,0.55);text-transform:uppercase;letter-spacing:0.08em;display:flex;align-items:center;gap:7px;}
+.app-title i{color:#c8922a;}
+.app-count{font-size:10px;color:#5a5040;background:rgba(212,168,67,0.06);padding:2px 8px;border-radius:99px;}
+.app-body{max-height:480px;overflow-y:auto;overflow-anchor:none;}
+
+.app-row{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid rgba(212,168,67,0.05);transition:background 0.1s;}
+.app-row:hover{background:rgba(212,168,67,0.04);}
+.app-av{width:36px;height:36px;border-radius:50%;border:2px solid var(--border2);object-fit:cover;flex-shrink:0;}
+.app-info{flex:1;min-width:0;}
+.app-name{font-weight:600;font-size:12px;color:#f0e8d0;margin-bottom:2px;}
+.app-meta{font-size:10px;color:#5a5040;}
+.app-actions{display:flex;gap:6px;flex-shrink:0;}
+.btn{padding:5px 10px;border:none;border-radius:99px;cursor:pointer;font-weight:600;font-size:10px;font-family:Inter,sans-serif;}
+.btn-ok{background:rgba(94,196,122,0.15);color:#5ec47a;border:1px solid rgba(94,196,122,0.3);}
+.btn-no{background:rgba(224,85,85,0.15);color:var(--red);border:1px solid rgba(224,85,85,0.3);}
+.btn-ok:hover{background:rgba(94,196,122,0.25);}
+.btn-no:hover{background:rgba(224,85,85,0.25);}
+
+.app-status{padding:2px 7px;border-radius:99px;font-size:9px;font-weight:700;letter-spacing:0.04em;}
+.app-status.pending{background:rgba(232,144,58,0.15);color:#e8903a;}
+.app-status.approved{background:rgba(94,196,122,0.15);color:#5ec47a;}
+.app-status.rejected{background:rgba(224,85,85,0.15);color:var(--red);}
+
+.empty{text-align:center;padding:30px;color:#5a5040;font-size:12px;}
 </style>
 
-<div class="stats-bar" id="stats-bar"></div>
-<div class="filter-bar">
-  <button class="filter-btn active" onclick="setFilter('pending',this)">⏳ Ожидающие</button>
-  <button class="filter-btn" onclick="setFilter('approved',this)">✅ Подтверждённые</button>
-  <button class="filter-btn" onclick="setFilter('rejected',this)">❌ Reddedсnler</button>
-  <button class="filter-btn" onclick="setFilter('all',this)">📋 Все</button>
+<div class="app-stats">
+  <div class="app-stat"><div class="app-stat-num" id="stat-total">-</div><div class="app-stat-lbl">Всего</div></div>
+  <div class="app-stat"><div class="app-stat-num" id="stat-pending" style="color:#e8903a;">-</div><div class="app-stat-lbl">Beklemede</div></div>
+  <div class="app-stat"><div class="app-stat-num" id="stat-approved" style="color:#5ec47a;">-</div><div class="app-stat-lbl">Onaylanan</div></div>
+  <div class="app-stat"><div class="app-stat-num" id="stat-rejected" style="color:var(--red);">-</div><div class="app-stat-lbl">Reddedilen</div></div>
 </div>
 
-<div class="app-grid" id="app-grid">
-  <div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Загрузка...</p></div>
+<div class="app-tabs">
+  <button class="app-tab active" data-tab="all">Tümü</button>
+  <button class="app-tab" data-tab="pending">Beklemede</button>
+  <button class="app-tab" data-tab="approved">Onaylanan</button>
+  <button class="app-tab" data-tab="rejected">Reddedilen</button>
 </div>
 
-<div id="rejectModal" class="modal-overlay">
-  <div class="modal-box">
-    <h3>❌ Red Причина</h3>
-    <textarea id="reject-reason" placeholder="Red причина напишите..."></textarea>
-    <div style="display:flex;gap:10px;margin-top:15px;">
-      <button onclick="confirmReject()" style="flex:1;padding:10px;background:rgba(224,85,85,0.15);color:#f0e8d0;border:none;border-radius:8px;cursor:pointer;font-weight:700;">Отклонить</button>
-      <button onclick="closeReject()" style="flex:1;padding:10px;background:#333;color:rgba(240,232,208,0.55);border:none;border-radius:8px;cursor:pointer;">Отмена</button>
-    </div>
+<div class="app-box">
+  <div class="app-head">
+    <div class="app-title"><i class="fas fa-user-shield"></i> Başvurular</div>
+    <span class="app-count" id="app-count">-</span>
+  </div>
+  <div class="app-body" id="app-body">
+    <p class="empty"><i class="fas fa-spinner fa-spin"></i> Yükleniyor...</p>
   </div>
 </div>
 
 <script>
-var allApps = [], currentFilter = 'pending', pendingRejectId = null;
+(function () {
+  'use strict';
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function fmtDate(iso) { if (!iso) return '-'; try { return new Date(iso).toLocaleDateString('ru-RU'); } catch (e) { return '-'; } }
 
-async function loadApps() {
-  var r = await fetch('/api/staff-apps');
-  allApps = await r.json();
-  updateStats(); renderApps();
-}
+  var apps = [
+    { user: 'NewMod1', status: 'pending', date: '2026-01-15', av: 'https://cdn.discordapp.com/embed/avatars/0.png' },
+    { user: 'ProGamer', status: 'approved', date: '2026-01-10', av: 'https://cdn.discordapp.com/embed/avatars/1.png' },
+    { user: 'BadUser', status: 'rejected', date: '2026-01-08', av: 'https://cdn.discordapp.com/embed/avatars/2.png' },
+    { user: 'Helper', status: 'pending', date: '2026-01-14', av: 'https://cdn.discordapp.com/embed/avatars/3.png' }
+  ];
+  var currentTab = 'all';
 
-function updateStats() {
-  var pending = allApps.filter(function(a){return a.status==='pending';}).length;
-  var approved = allApps.filter(function(a){return a.status==='approved';}).length;
-  var rejected = allApps.filter(function(a){return a.status==='rejected';}).length;
-  document.getElementById('stats-bar').innerHTML =
-    '<div class="stat-chip"><div class="num">'+allApps.length+'</div><div class="lbl">Всего</div></div>' +
-    '<div class="stat-chip"><div class="num" style="color:#c8922a;">'+pending+'</div><div class="lbl">⏳ Ожидающие</div></div>' +
-    '<div class="stat-chip"><div class="num" style="color:#5ec47a;">'+approved+'</div><div class="lbl">✅ Подтверждённые</div></div>' +
-    '<div class="stat-chip"><div class="num" style="color:#e05555;">'+rejected+'</div><div class="lbl">❌ Reddedсnler</div></div>';
-}
+  function render() {
+    var pend = apps.filter(function (a) { return a.status === 'pending'; }).length;
+    var appr = apps.filter(function (a) { return a.status === 'approved'; }).length;
+    var rej = apps.filter(function (a) { return a.status === 'rejected'; }).length;
+    $('stat-total').textContent = apps.length;
+    $('stat-pending').textContent = pend;
+    $('stat-approved').textContent = appr;
+    $('stat-rejected').textContent = rej;
 
-function setFilter(f, btn) {
-  currentFilter = f;
-  document.querySelectorAll('.filter-btn').forEach(function(b){b.classList.remove('active');});
-  btn.classList.add('active');
-  renderApps();
-}
-
-function timeAgo(iso) {
-  var d = new Date(iso), diff = Math.floor((Date.now()-d.getTime())/1000);
-  if(diff<60) return diff+'sn до';
-  if(diff<3600) return Math.floor(diff/60)+'dk до';
-  if(diff<86400) return Math.floor(diff/3600)+'sa до';
-  return Math.floor(diff/86400)+'день до';
-}
-
-function renderApps() {
-  var filtered = currentFilter==='all' ? allApps : allApps.filter(function(a){return a.status===currentFilter;});
-  var grid = document.getElementById('app-grid');
-  if (!filtered.length) {
-    grid.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><p style="color:#5a5040;margin-top:10px;">Bu kategoride заявка yok.</p></div>';
-    return;
+    var list = currentTab === 'all' ? apps : apps.filter(function (a) { return a.status === currentTab; });
+    $('app-count').textContent = list.length;
+    if (!list.length) { $('app-body').innerHTML = '<p class="empty">Başvuru yok</p>'; return; }
+    var html = '';
+    list.forEach(function (a) {
+      var statusLabel = a.status === 'pending' ? 'Beklemede' : a.status === 'approved' ? 'Onaylandı' : 'Reddedildi';
+      var actions = a.status === 'pending'
+        ? '<div class="app-actions"><button class="btn btn-ok" data-act="approve">✓</button><button class="btn btn-no" data-act="reject">✗</button></div>'
+        : '';
+      html += '<div class="app-row"><img class="app-av" src="' + esc(a.av) + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' +
+        '<div class="app-info"><div class="app-name">' + esc(a.user) + '</div><div class="app-meta">' + fmtDate(a.date) + ' • <span class="app-status ' + a.status + '">' + statusLabel + '</span></div></div>' +
+        actions + '</div>';
+    });
+    $('app-body').innerHTML = html;
   }
-  grid.innerHTML = filtered.map(function(app) {
-    var sc = app.status==='approved'?'status-approved':app.status==='rejected'?'status-rejected':'status-pending';
-    var st = app.status==='approved'?'✅ Подтверждено':app.status==='rejected'?'❌ Отклонено':'⏳ Bдобавитьme';
-    var cc = app.status==='approved'?'app-card approved':app.status==='rejected'?'app-card rejected':'app-card';
-    var ans = app.answers || {};
-    var actions = app.status==='pending'
-      ? '<div class="app-actions"><button class="btn-approve" onclick="approveApp(\''+app.app_id+'\')">✅ Подтвердить</button><button class="btn-reject" onclick="openReject(\''+app.app_id+'\')">❌ Отклонить</button></div>'
-      : (app.reviewed_by ? '<div style="color:#666;font-size:12px;margin-top:10px;">Проверитьyen: '+app.reviewed_by+(app.review_note?' • '+app.review_note:'')+'</div>' : '');
-    return '<div class="'+cc+'">' +
-      '<div class="app-header">' +
-        '<img class="app-avatar" src="'+app.avatar+'" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' +
-        '<div><div class="app-name">'+app.display_name+'</div><div class="app-tag">'+app.user_name+' • '+timeAgo(app.timestamp)+'</div></div>' +
-        '<span class="status-badge '+sc+'">'+st+'</span>' +
-      '</div>' +
-      '<div class="app-field"><label>🎂 Возраст</label><p>'+(ans.yas||'-')+'</p></div>' +
-      '<div class="app-field"><label>⏰ Активен</label><p>'+(ans.activity||'-')+'</p></div>' +
-      '<div class="app-field"><label>🏆 Опыт</label><p>'+(ans.tecrube||'-')+'</p></div>' +
-      '<div class="app-field"><label>💬 Почему Администратор?</label><p>'+(ans.why||'-')+'</p></div>' +
-      (ans.ekstra&&ans.ekstra!=='—' ? '<div class="app-field"><label>📝 Ekstra</label><p>'+ans.ekstra+'</p></div>' : '') +
-      actions +
-    '</div>';
-  }).join('');
-}
 
-async function approveApp(appId) {
-  var r = await fetch('/api/staff-apps/'+appId+'/review', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({action:'approve'})
-  });
-  var res = await r.json();
-  if (res.success) loadApps();
-}
+  function bind() {
+    document.querySelectorAll('.app-tab').forEach(function (t) {
+      t.addEventListener('click', function () {
+        document.querySelectorAll('.app-tab').forEach(function (x) { x.classList.remove('active'); });
+        t.classList.add('active');
+        currentTab = t.getAttribute('data-tab');
+        render();
+      });
+    });
+    $('app-body').addEventListener('click', function (e) {
+      var btn = e.target.closest('button[data-act]');
+      if (!btn) return;
+      var row = btn.closest('.app-row');
+      var name = row.querySelector('.app-name').textContent;
+      var idx = apps.findIndex(function (a) { return a.user === name; });
+      if (idx < 0) return;
+      apps[idx].status = btn.getAttribute('data-act') === 'approve' ? 'approved' : 'rejected';
+      render();
+    });
+  }
 
-function openReject(appId) {
-  pendingRejectId = appId;
-  document.getElementById('reject-reason').value = '';
-  document.getElementById('rejectModal').style.display = 'flex';
-}
-
-function closeReject() {
-  document.getElementById('rejectModal').style.display = 'none';
-  pendingRejectId = null;
-}
-
-async function confirmReject() {
-  if (!pendingRejectId) return;
-  var note = document.getElementById('reject-reason').value;
-  var r = await fetch('/api/staff-apps/'+pendingRejectId+'/review', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({action:'reject', note:note})
-  });
-  var res = await r.json();
-  if (res.success) { closeReject(); loadApps(); }
-}
-
-document.getElementById('rejectModal').addEventListener('click', function(e){ if(e.target===this) closeReject(); });
-loadApps();
-setInterval(loadApps, 1000);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { bind(); render(); });
+  else { bind(); render(); }
+})();
 </script>
 {% endblock %}

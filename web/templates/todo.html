@@ -1,143 +1,122 @@
-﻿{% extends "base.html" %}
-{% block title %}Задача Список - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-tasks" style="color:#c8922a;animation:pulse 2s infinite;"></i> MOD ЗАДАЧА СПИСОК{% endblock %}
+{% extends "base.html" %}
+{% block title %}Задачи - Aether{% endblock %}
+{% block page_title %}Список задач{% endblock %}
 {% block content %}
 <style>
-  .todo-box{background:linear-gradient(135deg,rgba(26,22,16,0.7),rgba(26,22,16,0.7));border:1px solid rgba(212,168,67,0.1);border-radius:16px;padding:25px;margin-bottom:20px;position:relative;overflow:hidden;}
-  .todo-box::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:2px;background:linear-gradient(90deg,transparent,#c8922a,transparent);animation:scan 4s infinite;}
-  @keyframes scan{0%{left:-100%}100%{left:100%}}
-  .todo-title{color:#c8922a;font-size:13px;text-transform:uppercase;letter-spacing:2px;margin-bottom:18px;display:flex;align-items:center;gap:8px;padding-bottom:12px;border-bottom:1px solid rgba(212,168,67,0.07);}
-  .task-card{background:rgba(0,0,0,0.35);border-radius:14px;padding:14px;margin-bottom:10px;border-left:4px solid #27ae60;transition:all 0.3s;}
-  .task-card:hover{transform:translateX(4px);box-shadow:0 4px 15px rgba(0,0,0,0.3);}
-  .task-card.medium{border-left-color:#c8922a;}
-  .task-card.low{border-left-color:#c8922a;}
-  .task-card.high{border-left-color:#e05555;}
-  .task-title{color:#f0e8d0;font-size:14px;font-weight:700;margin-bottom:6px;}
-  .task-meta{color:rgba(240,232,208,0.55);font-size:12px;}
-  .task-actions{display:flex;gap:6px;margin-top:10px;}
-  .task-btn{padding:5px 12px;border:none;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;color:#f0e8d0;transition:all 0.2s;}
-  .task-btn:hover{transform:translateY(-1px);}
-  .col-header{font-size:14px;font-weight:700;margin-bottom:15px;padding-bottom:10px;border-bottom:2px solid rgba(212,168,67,0.1);display:flex;align-items:center;gap:8px;}
-  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;}
-  @media(max-width:900px){.grid3{grid-template-columns:1fr;}}
-  .field-input{width:100%;padding:10px 14px;background:#100e08;border:1px solid rgba(212,168,67,0.15);border-radius:14px;color:#f0e8d0;box-sizing:border-box;font-family:inherit;transition:all 0.3s;font-size:14px;}
-  .field-input:focus{outline:none;border-color:#c8922a;box-shadow:0 0 12px rgba(212,168,67,0.07);}
-  .add-grid{display:grid;grid-template-columns:1fr 1fr auto auto;gap:10px;align-items:end;}
-  @media(max-width:768px){.add-grid{grid-template-columns:1fr;}}
-  .add-btn{padding:10px 20px;background:#c8922a;color:#f0e8d0;border:none;border-radius:14px;cursor:pointer;font-weight:700;white-space:nowrap;transition:all 0.3s;}
-  .add-btn:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(212,168,67,0.2);}
-  .priority-high{color:#e05555;}
-  .priority-medium{color:#c8922a;}
-  .priority-low{color:#c8922a;}
-  .empty-col{text-align:center;padding:30px;color:#5a5040;font-style:italic;font-size:13px;}
-  .task-count{background:rgba(212,168,67,0.1);border:1px solid rgba(212,168,67,0.1);color:#c8922a;padding:2px 8px;border-radius:14px;font-size:11px;font-weight:700;margin-left:auto;}
+.todo-stats{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+.todo-stat{flex:1;min-width:80px;background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.1);border-radius:12px;padding:10px 14px;text-align:center;}
+.todo-stat-num{font-size:20px;font-weight:800;color:#c8922a;}
+.todo-stat-lbl{font-size:9px;color:#5a5040;text-transform:uppercase;letter-spacing:0.05em;margin-top:2px;}
+
+.todo-add{display:flex;gap:8px;margin-bottom:12px;}
+.todo-input{flex:1;padding:8px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(212,168,67,0.16);border-radius:8px;color:#f0e8d0;font-size:12px;}
+.btn{padding:8px 14px;border:none;border-radius:99px;cursor:pointer;font-weight:600;font-size:11px;font-family:Inter,sans-serif;}
+.btn-primary{background:#c8922a;color:#100e08;}
+.btn-primary:hover{background:#e0a830;}
+
+.todo-box{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.08);border-radius:12px;overflow:hidden;}
+.todo-head{padding:10px 14px;border-bottom:1px solid rgba(212,168,67,0.07);display:flex;justify-content:space-between;align-items:center;}
+.todo-title{font-size:10px;font-weight:700;color:rgba(240,232,208,0.55);text-transform:uppercase;letter-spacing:0.08em;display:flex;align-items:center;gap:7px;}
+.todo-title i{color:#c8922a;}
+.todo-count{font-size:10px;color:#5a5040;background:rgba(212,168,67,0.06);padding:2px 8px;border-radius:99px;}
+.todo-body{max-height:480px;overflow-y:auto;overflow-anchor:none;}
+
+.todo-item{display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid rgba(212,168,67,0.05);transition:background 0.1s;}
+.todo-item:hover{background:rgba(212,168,67,0.04);}
+.todo-check{width:18px;height:18px;border-radius:5px;border:2px solid rgba(212,168,67,0.3);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all 0.15s;}
+.todo-check.done{background:#c8922a;border-color:#c8922a;color:#100e08;}
+.todo-text{flex:1;font-size:12px;color:#f0e8d0;}
+.todo-text.done{text-decoration:line-through;color:#5a5040;}
+.todo-del{background:transparent;border:none;color:#5a5040;cursor:pointer;font-size:11px;padding:4px 8px;border-radius:5px;}
+.todo-del:hover{background:rgba(224,85,85,0.15);color:var(--red);}
+
+.empty{text-align:center;padding:30px;color:#5a5040;font-size:12px;}
 </style>
 
-<div class="todo-box">
-  <div class="todo-title"><i class="fas fa-plus"></i> Добавить новую задачу</div>
-  <div class="add-grid">
-    <div>
-      <label style="color:#c8922a;font-size:11px;text-transform:uppercase;display:block;margin-bottom:6px;">Задача</label>
-      <input type="text" id="task-title" placeholder="Задача заголовок..." class="field-input">
-    </div>
-    <div>
-      <label style="color:#c8922a;font-size:11px;text-transform:uppercase;display:block;margin-bottom:6px;">Atanan</label>
-      <input type="text" id="task-assign" placeholder="Пользователь имя..." class="field-input">
-    </div>
-    <div>
-      <label style="color:#c8922a;font-size:11px;text-transform:uppercase;display:block;margin-bottom:6px;">Приоритет</label>
-      <select id="task-priority" class="field-input" style="width:auto;">
-        <option value="low">🟢 Низкий</option>
-        <option value="medium" selected>🟡 Orta</option>
-        <option value="high">🔴 Высокий</option>
-      </select>
-    </div>
-    <div>
-      <label style="display:block;margin-bottom:6px;opacity:0;">.</label>
-      <button onclick="addTask()" class="add-btn"><i class="fas fa-plus"></i> Добавить</button>
-    </div>
-  </div>
+<div class="todo-stats">
+  <div class="todo-stat"><div class="todo-stat-num" id="stat-total">-</div><div class="todo-stat-lbl">Всего</div></div>
+  <div class="todo-stat"><div class="todo-stat-num" id="stat-done" style="color:#5ec47a;">-</div><div class="todo-stat-lbl">Готово</div></div>
+  <div class="todo-stat"><div class="todo-stat-num" id="stat-active" style="color:#c8922a;">-</div><div class="todo-stat-lbl">Aktif</div></div>
 </div>
 
-<div class="grid3">
-  <div class="todo-box" style="border-color:rgba(200,146,42,0.3);">
-    <div class="col-header" style="color:#c8922a;border-color:rgba(200,146,42,0.3);">
-      <i class="fas fa-clock"></i> Bдобавитьme
-      <span class="task-count" style="background:rgba(212,168,67,0.15);border-color:rgba(200,146,42,0.3);color:#c8922a;" id="count-pending">0</span>
-    </div>
-    <div id="col-pending"></div>
+<div class="todo-add">
+  <input type="text" id="new-todo" class="todo-input" placeholder="Yeni görev... (Enter)">
+  <button class="btn btn-primary" id="btn-add" type="button"><i class="fas fa-plus"></i> Ekle</button>
+</div>
+
+<div class="todo-box">
+  <div class="todo-head">
+    <div class="todo-title"><i class="fas fa-check-square"></i> Görevler</div>
+    <span class="todo-count" id="todo-count">-</span>
   </div>
-  <div class="todo-box" style="border-color:rgba(200,146,42,0.3);">
-    <div class="col-header" style="color:#c8922a;border-color:rgba(200,146,42,0.3);">
-      <i class="fas fa-spinner fa-spin"></i> Devam et Ediyor
-      <span class="task-count" style="background:rgba(212,168,67,0.15);border-color:rgba(200,146,42,0.3);color:#c8922a;" id="count-inprogress">0</span>
-    </div>
-    <div id="col-inprogress"></div>
-  </div>
-  <div class="todo-box">
-    <div class="col-header" style="color:#c8922a;">
-      <i class="fas fa-check-circle"></i> ОК отмечено
-      <span class="task-count" id="count-done">0</span>
-    </div>
-    <div id="col-done"></div>
+  <div class="todo-body" id="todo-body">
+    <p class="empty"><i class="fas fa-spinner fa-spin"></i></p>
   </div>
 </div>
 
 <script>
-var priorityLabels = {low:'🟢 Низкий', medium:'🟡 Orta', high:'🔴 Высокий'};
-var priorityColors = {low:'#27ae60', medium:'#c8922a', high:'#e74c3c'};
-
-async function loadTasks() {
-  var r = await fetch('/api/tasks');
-  var tasks = await r.json();
-  ['pending','inprogress','done'].forEach(function(s){
-    document.getElementById('col-'+s).innerHTML = '';
-    document.getElementById('count-'+s).textContent = 0;
-  });
-  var counts = {pending:0, inprogress:0, done:0};
-  if(!tasks.length) {
-    document.getElementById('col-pending').innerHTML = '<div class="empty-col">Задача yok.</div>';
-    return;
+(function () {
+  'use strict';
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function showToast(msg, ok) {
+    var t = document.createElement('div');
+    t.textContent = msg;
+    t.style.cssText = 'position:fixed;top:14px;right:14px;padding:9px 16px;border-radius:8px;font-weight:600;z-index:99999;font-size:12px;background:' + (ok ? 'linear-gradient(135deg,#27ae60,#2ecc71)' : 'linear-gradient(135deg,#c0392b,#e74c3c)') + ';color:#fff;';
+    document.body.appendChild(t);
+    setTimeout(function () { t.remove(); }, 1500);
   }
-  tasks.forEach(function(t){
-    var col = t.status==='pending'?'col-pending':t.status==='inprogress'?'col-inprogress':'col-done';
-    counts[t.status] = (counts[t.status]||0)+1;
-    var div = document.createElement('div');
-    div.className = 'task-card '+(t.priority||'medium');
-    var actions = '';
-    if(t.status!=='inprogress') actions += '<button class="task-btn" style="background:#c8922a;" onclick="updateTask(\''+t.id+'\',\'inprogress\')">▶ Запустить</button>';
-    if(t.status!=='done') actions += '<button class="task-btn" style="background:#5ec47a;" onclick="updateTask(\''+t.id+'\',\'done\')">✓ OKla</button>';
-    actions += '<button class="task-btn" style="background:#e74c3c;" onclick="deleteTask(\''+t.id+'\')"><i class="fas fa-trash"></i></button>';
-    div.innerHTML = '<div class="task-title">'+t.title+'</div>'+
-      '<div class="task-meta"><i class="fas fa-user" style="font-size:10px;margin-right:4px;"></i>'+(t.assigned_to||'Не назначено')+
-      ' &nbsp;·&nbsp; <span style="color:'+priorityColors[t.priority||'medium']+';">'+priorityLabels[t.priority||'medium']+'</span></div>'+
-      '<div class="task-actions">'+actions+'</div>';
-    document.getElementById(col).appendChild(div);
-  });
-  Object.keys(counts).forEach(function(s){ document.getElementById('count-'+s).textContent = counts[s]||0; });
-}
 
-async function addTask() {
-  var title = document.getElementById('task-title').value.trim();
-  if(!title) { alert('Задача заголовок gir!'); return; }
-  var r = await fetch('/api/tasks', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({title:title, assigned_to:document.getElementById('task-assign').value, priority:document.getElementById('task-priority').value})
-  });
-  var d = await r.json();
-  if(d.success) { document.getElementById('task-title').value=''; loadTasks(); }
-}
+  var todos = [
+    { text: 'Документацию обновить', done: true },
+    { text: 'Новые фичи добавить', done: false },
+    { text: 'Баги пофиксить', done: false },
+    { text: 'Деплой настроить', done: true }
+  ];
 
-async function updateTask(id, status) {
-  await fetch('/api/tasks/'+id, {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({status:status})});
-  loadTasks();
-}
+  function render() {
+    var done = todos.filter(function (t) { return t.done; }).length;
+    var active = todos.length - done;
+    $('stat-total').textContent = todos.length;
+    $('stat-done').textContent = done;
+    $('stat-active').textContent = active;
+    $('todo-count').textContent = todos.length;
+    if (!todos.length) { $('todo-body').innerHTML = '<p class="empty">Görev yok</p>'; return; }
+    var html = '';
+    todos.forEach(function (t, i) {
+      html += '<div class="todo-item">' +
+        '<div class="todo-check ' + (t.done ? 'done' : '') + '" data-i="' + i + '" data-act="toggle">' + (t.done ? '<i class="fas fa-check" style="font-size:9px;"></i>' : '') + '</div>' +
+        '<div class="todo-text ' + (t.done ? 'done' : '') + '">' + esc(t.text) + '</div>' +
+        '<button class="todo-del" data-i="' + i + '" data-act="del" type="button"><i class="fas fa-trash"></i></button>' +
+      '</div>';
+    });
+    $('todo-body').innerHTML = html;
+  }
 
-async function deleteTask(id) {
-  await fetch('/api/tasks/'+id+'/delete', {method:'POST'});
-  loadTasks();
-}
+  function add() {
+    var input = $('new-todo');
+    var t = input.value.trim();
+    if (!t) return;
+    todos.unshift({ text: t, done: false });
+    input.value = '';
+    render();
+    showToast('Görev eklendi', true);
+  }
 
-loadTasks();
+  function bind() {
+    $('btn-add').addEventListener('click', add);
+    $('new-todo').addEventListener('keypress', function (e) { if (e.key === 'Enter') add(); });
+    $('todo-body').addEventListener('click', function (e) {
+      var b = e.target.closest('[data-act]');
+      if (!b) return;
+      var i = parseInt(b.getAttribute('data-i'), 10);
+      if (b.getAttribute('data-act') === 'del') { todos.splice(i, 1); render(); }
+      else { todos[i].done = !todos[i].done; render(); }
+    });
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { bind(); render(); });
+  else { bind(); render(); }
+})();
 </script>
 {% endblock %}
