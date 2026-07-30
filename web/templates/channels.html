@@ -325,16 +325,24 @@
   }
 
   function toggleCat(header) {
-    // Categories open in a fixed drawer. The list's height never changes, so
-    // the page remains at exactly the same scroll position.
-    var drawer = $('category-drawer');
-    var content = $('category-drawer-content');
-    var title = $('category-drawer-title');
-    var children = header.nextElementSibling;
-    title.textContent = header.querySelector('.cat-name').textContent + ' — каналы';
-    content.innerHTML = children ? children.innerHTML : '<div class="ch-empty">Каналов нет.</div>';
-    drawer.classList.add('open');
-    drawer.setAttribute('aria-hidden', 'false');
+    // Book-style accordion: only the selected category is open in the list.
+    // No side drawer and no automatic scroll/navigation is used.
+    var group = header.closest('.cat-group');
+    var wasOpen = group.classList.contains('active');
+    document.querySelectorAll('.cat-group.active').forEach(function (item) {
+      item.classList.remove('active');
+      var children = item.querySelector('.cat-channels');
+      var icon = item.querySelector('.cat-toggle');
+      if (children) children.classList.remove('open');
+      if (icon) icon.classList.remove('open');
+    });
+    if (!wasOpen) {
+      group.classList.add('active');
+      var channels = header.nextElementSibling;
+      var toggle = header.querySelector('.cat-toggle');
+      if (channels) channels.classList.add('open');
+      if (toggle) toggle.classList.add('open');
+    }
   }
 
   function closeCategoryDrawer() {
