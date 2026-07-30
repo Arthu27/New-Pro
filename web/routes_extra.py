@@ -1865,9 +1865,22 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         d = request.get_json(silent=True) or {}
         prefix = d.get('prefix', '!').strip()
         if not prefix: return jsonify({'error': 'Пусто prefix'}), 400
+        if len(prefix) > 10: return jsonify({'error': 'prefix çok uzun'}), 400
         os.makedirs('data', exist_ok=True)
-        with open('data/bot_config.json', 'w', encoding='utf-8') as f:
-            json.dump({'prefix': prefix}, f)
+        cfg_file = 'data/bot_config.json'
+        cfg = {}
+        if os.path.exists(cfg_file):
+            try:
+                with open(cfg_file, 'r', encoding='utf-8') as f:
+                    cfg = json.load(f) or {}
+            except Exception:
+                pass
+        if not isinstance(cfg, dict):
+            cfg = {}
+        # Mevcut status/activity alanlarını KORU
+        cfg['prefix'] = prefix
+        with open(cfg_file, 'w', encoding='utf-8') as f:
+            json.dump(cfg, f, indent=2, ensure_ascii=False)
         return jsonify({'ok': True})
 
     @app.route('/api/cogs', methods=['GET'])
@@ -4181,7 +4194,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
 
     @app.route('/antiraid')
     @login_required
-    @role_required('owner')
+    @role_required('admin')
     def antiraid_page():
         return render_template('antiraid.html', role=session.get('role'), username=session.get('username'))
 
@@ -4647,8 +4660,41 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         existing = {}
         if os.path.exists(f):
             with open(f) as fp: existing = json.load(fp)
-        data['recent_events'] = existing.get('recent_events', [])
-        with open(f, 'w') as fp: json.dump(data, fp, indent=2)
+        # recent_events: payload'da varsa kullan, yoksa diskten koru
+        if 'recent_events' not in data:
+            data['recent_events'] = existing.get('recent_events', [])
+        # whitelist: sadece geçerli 17-22 haneli sayısal user_id'leri kabul et
+        wl = data.get('whitelist')
+        if not isinstance(wl, list):
+            wl = existing.get('whitelist', [])
+        else:
+            wl = [str(x) for x in wl if isinstance(x, (str, int))
+                  and str(x).isdigit() and 17 <= len(str(x)) <= 22]
+        # Tekrar'leri kaldır ve sırayı koru
+        seen = set()
+        wl_clean = []
+        for x in wl:
+            if x not in seen:
+                seen.add(x)
+                wl_clean.append(x)
+        # Maks 500 user limit
+        data['whitelist'] = wl_clean[:500]
+        # raid_action her zaman 'alert' — diğer değerleri reddet
+        data['raid_action'] = 'alert'
+        # Numeric alanların tipini koru
+        try:
+            data['join_threshold'] = max(2, min(50, int(data.get('join_threshold', 5))))
+            data['join_window'] = max(5, min(120, int(data.get('join_window', 10))))
+            data['min_age'] = max(0, min(365, int(data.get('min_age', 5))))
+        except (TypeError, ValueError):
+            data['join_threshold'] = 5
+            data['join_window'] = 10
+            data['min_age'] = 5
+        # Boolean alanlar
+        for bkey in ('join_raid', 'bot_protection', 'webhook_protection',
+                     'delete_protection', 'age_filter'):
+            data[bkey] = bool(data.get(bkey, False))
+        with open(f, 'w') as fp: json.dump(data, fp, indent=2, ensure_ascii=False)
         return jsonify({'success': True})
 
     # ── ROZET API ────────────────────────────────────────────────────────────

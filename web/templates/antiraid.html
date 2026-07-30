@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Анти-рейд - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-shield-virus" ></i> Анти-рейд и защита{% endblock %}
+{% block page_title %}<i class="fas fa-shield-virus"></i> Анти-рейд и защита{% endblock %}
 {% block content %}
 {% block page_hero %}
 <div class="page-hero compact">
@@ -10,76 +10,459 @@
       <span>Анти-рейд и защита</span>
     </div>
     <h1>Анти-рейд и защита</h1>
-    <p>Защита от массовых атак и подозрительных присоединений.</p>
+    <p>Gözlemci modu — bot otomatik aksiyon yapmaz, sadece alert kanalına bildirir.</p>
   </div>
 </div>
 {% endblock %}
 
+<!-- Gözlemci modu uyarısı -->
+<div class="observer-banner" id="observer-banner">
+  <i class="fas fa-eye"></i>
+  <div>
+    <strong>Gözlemci modu aktif.</strong>
+    Bot hiçbir kullanıcıyı otomatik olarak <b>kick/ban/lockdown</b> yapmaz.
+    Tüm kurallar tetiklendiğinde sadece ayarladığınız alert kanalına (yoksa <code>mod-log</code>) embed gönderir.
+    İcra yetkisi sizde — aşağıdan ayarları yönetin.
+  </div>
+</div>
 
+<!-- Guild seçici -->
+<div class="guild-picker" id="guild-picker">
+  <label for="guild-select"><i class="fas fa-server"></i> Sunucu:</label>
+  <select id="guild-select"><option value="">Yükleniyor…</option></select>
+  {% if role == 'owner' %}
+  <button class="btn btn-ghost" id="btn-reload" type="button" title="Config'i şimdi yeniden yükle (owner only)">
+    <i class="fas fa-sync"></i> Yenile
+  </button>
+  {% endif %}
+  <span class="save-status" id="save-status"></span>
+</div>
 
 <div class="ar-grid">
-  <!-- Raid algиlama -->
+  <!-- Raid algılama -->
   <div class="ar-card">
     <div class="ar-head">
       <div class="ar-icon danger"><i class="fas fa-exclamation-triangle"></i></div>
-      <div class="ar-title">Raid Algиlama</div>
-      <div class="toggle on" id="tog-raid"></div>
+      <div class="ar-title">Raid Algılama</div>
+      <div class="toggle" id="tog-raid" data-key="join_raid"></div>
     </div>
-    <div class="row"><label>Join/сек</label><input type="number" id="raid-rate" value="5" min="2"></div>
-    <div class="row"><label>Действие</label>
-      <select id="raid-action"><option value="lock">Lock + Ban</option><option value="ban">Ban</option><option value="kick">Kick</option></select>
+    <div class="row"><label>Kişi / süre (sn)</label>
+      <div style="display:flex; gap:6px;">
+        <input type="number" id="join_threshold" data-key="join_threshold" min="2" max="50" value="5">
+        <input type="number" id="join_window" data-key="join_window" min="5" max="120" value="10">
+      </div>
     </div>
-    <div class="row"><label>Alert канал</label><input type="text" id="raid-channel" placeholder="канал ID"></div>
+    <div class="row"><label>Whitelist'tekiler muaf</label>
+      <span class="muted">Aşağıdaki listeden yönet</span>
+    </div>
   </div>
 
-  <!-- Hesap yaши filtresi -->
+  <!-- Hesap yaşı filtresi -->
   <div class="ar-card">
     <div class="ar-head">
       <div class="ar-icon"><i class="fas fa-user-clock"></i></div>
-      <div class="ar-title">Hesap Yaши Filtresi</div>
-      <div class="toggle on" id="tog-age"></div>
+      <div class="ar-title">Hesap Yaşı Filtresi</div>
+      <div class="toggle" id="tog-age" data-key="age_filter"></div>
     </div>
-    <div class="row"><label>Min yaш (gюn)</label><input type="number" id="age-min" value="7" min="0"></div>
-    <div class="row"><label>Действие</label>
-      <select id="age-action"><option value="kick">Kick</option><option value="ban">Ban</option><option value="mute">Мьют</option></select>
+    <div class="row"><label>Min yaş (gün)</label>
+      <input type="number" id="min_age" data-key="min_age" min="0" max="365" value="5">
+    </div>
+    <div class="row"><label>Açıklama</label>
+      <span class="muted">Bu eşiğin altındaki hesaplar alert oluşturur</span>
     </div>
   </div>
 
-  <!-- Bot filtresi -->
+  <!-- Bot koruması -->
   <div class="ar-card">
     <div class="ar-head">
       <div class="ar-icon"><i class="fas fa-robot"></i></div>
-      <div class="ar-title">Bot Filtresi</div>
-      <div class="toggle" id="tog-bot"></div>
+      <div class="ar-title">Bot Koruması</div>
+      <div class="toggle" id="tog-bot" data-key="bot_protection"></div>
     </div>
-    <div class="row"><label>Действие</label>
-      <select id="bot-action"><option value="kick">Kick</option><option value="ban">Ban</option><option value="verify">Verify</option></select>
+    <div class="row"><label>Açıklama</label>
+      <span class="muted">Sunucuya eklenen botlar için alert</span>
     </div>
   </div>
 
-  <!-- Последний raidler -->
-  <div class="ar-card" >
+  <!-- Toplu silme koruması -->
+  <div class="ar-card">
+    <div class="ar-head">
+      <div class="ar-icon"><i class="fas fa-trash-alt"></i></div>
+      <div class="ar-title">Toplu Silme Koruması</div>
+      <div class="toggle" id="tog-delete" data-key="delete_protection"></div>
+    </div>
+    <div class="row"><label>Açıklama</label>
+      <span class="muted">Tek seferde 5+ mesaj silinirse alert</span>
+    </div>
+  </div>
+
+  <!-- Alert kanalı -->
+  <div class="ar-card span-2">
+    <div class="ar-head">
+      <div class="ar-icon"><i class="fas fa-bell"></i></div>
+      <div class="ar-title">Alert Kanalı</div>
+    </div>
+    <div class="row">
+      <label>Kanal ID</label>
+      <input type="text" id="alert_channel_id" data-key="alert_channel_id"
+             placeholder="Boş bırakırsanız 'mod-log' kanalı kullanılır">
+    </div>
+    <div class="row">
+      <label>Raid aksiyonu</label>
+      <select id="raid_action" data-key="raid_action">
+        <option value="alert">Sadece alert (önerilen)</option>
+      </select>
+      <span class="muted" style="margin-left:8px;">Diğer aksiyonlar güvenlik gereği devre dışı.</span>
+    </div>
+  </div>
+
+  <!-- Whitelist -->
+  <div class="ar-card span-2">
+    <div class="ar-head">
+      <div class="ar-icon"><i class="fas fa-user-shield"></i></div>
+      <div class="ar-title">Whitelist (Muaf Kullanıcılar)</div>
+      <button class="btn btn-primary" id="btn-add-wl" type="button">
+        <i class="fas fa-plus"></i> Ekle
+      </button>
+    </div>
+    <div class="row">
+      <label>User ID</label>
+      <input type="text" id="wl-input" placeholder="Discord user ID (17-20 haneli sayı)">
+    </div>
+    <ul class="wl-list" id="wl-list"></ul>
+  </div>
+
+  <!-- Son olaylar -->
+  <div class="ar-card span-2">
     <div class="ar-head">
       <div class="ar-icon danger"><i class="fas fa-history"></i></div>
-      <div class="ar-title">Последний Tespit Edilen Raidler</div>
-      <button class="btn btn-primary" id="btn-clear" type="button" >Temizle</button>
+      <div class="ar-title">Son Tespit Edilen Olaylar</div>
+      <button class="btn btn-primary" id="btn-clear" type="button">
+        <i class="fas fa-broom"></i> Temizle
+      </button>
     </div>
     <div class="alert-list" id="alerts">
-      <div class="alert-item"><i class="fas fa-exclamation-circle"></i><span>5 saniyede 12 yeni kullanиcи katиldи — otomatik lock aktif</span><span class="alert-time">2 дн назад</span></div>
-      <div class="alert-item"><i class="fas fa-exclamation-circle"></i><span>Новый hesaplar (3 gюn) — 4 hesap kicklendi</span><span class="alert-time">5 дн назад</span></div>
-      <p >Raid tespit edilmedi</p>
+      <p class="muted">Henüz olay yok.</p>
     </div>
   </div>
 </div>
 
+<style>
+  .observer-banner {
+    display: flex; gap: 14px; align-items: flex-start;
+    background: linear-gradient(135deg, rgba(46,204,113,0.12), rgba(52,152,219,0.12));
+    border: 1px solid rgba(46,204,113,0.4);
+    border-left: 4px solid #2ecc71;
+    border-radius: 10px; padding: 14px 18px; margin: 18px 0 8px;
+    color: #e6e9ef; font-size: 14px; line-height: 1.55;
+  }
+  .observer-banner i { color: #2ecc71; font-size: 20px; margin-top: 2px; }
+  .observer-banner code { background: rgba(255,255,255,0.07); padding: 1px 6px; border-radius: 4px; }
+
+  .guild-picker {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px; padding: 10px 14px; margin: 8px 0 18px;
+  }
+  .guild-picker label { color: #cfd6e4; font-weight: 600; }
+  .guild-picker select {
+    background: #1f2530; color: #e6e9ef; border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 6px; padding: 6px 10px; min-width: 220px; font-size: 14px;
+  }
+  .guild-picker .save-status { color: #2ecc71; font-size: 13px; min-width: 80px; }
+  .guild-picker .save-status.error { color: #e74c3c; }
+  .btn-ghost {
+    background: transparent; color: #cfd6e4; border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 6px; padding: 6px 10px; cursor: pointer; font-size: 13px;
+  }
+  .btn-ghost:hover { background: rgba(255,255,255,0.06); }
+
+  .ar-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  .ar-card.span-2 { grid-column: span 2; }
+  @media (max-width: 800px) {
+    .ar-grid { grid-template-columns: 1fr; }
+    .ar-card.span-2 { grid-column: span 1; }
+  }
+
+  .ar-card .row { display: flex; align-items: center; gap: 10px; margin: 8px 0; }
+  .ar-card .row label { min-width: 130px; color: #b0b6c1; font-size: 13px; }
+  .ar-card .row input[type="text"], .ar-card .row input[type="number"], .ar-card .row select {
+    flex: 1; background: #1a1f29; color: #e6e9ef; border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px; padding: 6px 10px; font-size: 14px;
+  }
+  .ar-card .row .muted { color: #7d8593; font-size: 12px; }
+
+  .wl-list { list-style: none; padding: 0; margin: 10px 0 0; }
+  .wl-list li {
+    display: flex; align-items: center; justify-content: space-between;
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 6px; padding: 6px 10px; margin: 4px 0; font-size: 13px;
+  }
+  .wl-list li button {
+    background: transparent; border: none; color: #e74c3c; cursor: pointer; font-size: 14px;
+  }
+  .wl-list li button:hover { color: #ff1744; }
+
+  .alert-list .alert-item {
+    display: flex; align-items: center; gap: 10px;
+    background: rgba(231,76,60,0.07); border-left: 3px solid #e74c3c;
+    border-radius: 6px; padding: 8px 12px; margin: 4px 0; font-size: 13px;
+  }
+  .alert-list .alert-item .alert-time { color: #7d8593; font-size: 12px; margin-left: auto; }
+  .alert-list .alert-item.young { border-left-color: #f1c40f; background: rgba(241,196,15,0.07); }
+  .alert-list .alert-item.bot { border-left-color: #9b59b6; background: rgba(155,89,182,0.07); }
+  .alert-list .alert-item.bulk { border-left-color: #95a5a6; background: rgba(149,165,166,0.07); }
+  .alert-list .alert-item .badge {
+    display: inline-block; padding: 1px 8px; border-radius: 4px;
+    background: rgba(255,255,255,0.08); color: #cfd6e4; font-size: 11px; margin-right: 6px;
+  }
+</style>
+
 <script>
 (function () {
   'use strict';
+
+  var currentGuildId = null;
+  var currentConfig = null;
+  var saveTimer = null;
+
   function $(id) { return document.getElementById(id); }
-  function bindToggle(id) { var el = $(id); if (el) el.addEventListener('click', function () { el.classList.toggle('on'); }); }
-  function bind() {
-    ['tog-raid','tog-age','tog-bot'].forEach(bindToggle);
+  function setSaveStatus(text, isError) {
+    var el = $('save-status');
+    el.textContent = text || '';
+    el.classList.toggle('error', !!isError);
+    if (text) {
+      clearTimeout(setSaveStatus._t);
+      setSaveStatus._t = setTimeout(function () { el.textContent = ''; }, 1800);
+    }
   }
+
+  // ── Guild listesi yükle ────────────────────────────────────────────────
+  function loadGuilds() {
+    fetch('/api/guilds', { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (list) {
+        var sel = $('guild-select');
+        sel.innerHTML = '';
+        if (!list || !list.length) {
+          sel.innerHTML = '<option value="">Sunucu bulunamadı</option>';
+          return;
+        }
+        list.forEach(function (g) {
+          var opt = document.createElement('option');
+          opt.value = g.id;
+          opt.textContent = g.name;
+          sel.appendChild(opt);
+        });
+        currentGuildId = sel.value;
+        loadConfig();
+      })
+      .catch(function (e) {
+        $('guild-select').innerHTML = '<option value="">Yüklenemedi</option>';
+        console.error(e);
+      });
+  }
+
+  // ── Config yükle ──────────────────────────────────────────────────────
+  function loadConfig() {
+    if (!currentGuildId) return;
+    fetch('/api/guild/' + currentGuildId + '/antiraid', { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (cfg) {
+        currentConfig = cfg || {};
+        // defaults
+        ['join_raid','age_filter','bot_protection','delete_protection'].forEach(function (k) {
+          if (typeof currentConfig[k] !== 'boolean') currentConfig[k] = false;
+        });
+        if (typeof currentConfig.join_threshold !== 'number') currentConfig.join_threshold = 5;
+        if (typeof currentConfig.join_window !== 'number') currentConfig.join_window = 10;
+        if (typeof currentConfig.min_age !== 'number') currentConfig.min_age = 5;
+        if (!Array.isArray(currentConfig.whitelist)) currentConfig.whitelist = [];
+        if (!Array.isArray(currentConfig.recent_events)) currentConfig.recent_events = [];
+        renderUI();
+      })
+      .catch(function (e) {
+        console.error(e);
+        setSaveStatus('Yüklenemedi', true);
+      });
+  }
+
+  function renderUI() {
+    if (!currentConfig) return;
+    // toggles
+    ['tog-raid','tog-age','tog-bot','tog-delete'].forEach(function (id) {
+      var el = $(id); if (!el) return;
+      var key = el.getAttribute('data-key');
+      el.classList.toggle('on', !!currentConfig[key]);
+    });
+    // numeric/text
+    ['join_threshold','join_window','min_age','alert_channel_id'].forEach(function (key) {
+      var el = document.querySelector('[data-key="' + key + '"]');
+      if (el) el.value = currentConfig[key] != null ? currentConfig[key] : '';
+    });
+    $('raid_action').value = 'alert';
+
+    renderWhitelist();
+    renderEvents();
+  }
+
+  function renderWhitelist() {
+    var ul = $('wl-list');
+    ul.innerHTML = '';
+    if (!currentConfig.whitelist.length) {
+      ul.innerHTML = '<li style="background:transparent;border:none;color:#7d8593;">Henüz muaf kullanıcı yok.</li>';
+      return;
+    }
+    currentConfig.whitelist.forEach(function (uid, idx) {
+      var li = document.createElement('li');
+      li.innerHTML = '<span><i class="fas fa-user"></i> <code>' + uid + '</code></span>' +
+                     '<button type="button" title="Kaldır"><i class="fas fa-times"></i></button>';
+      li.querySelector('button').addEventListener('click', function () {
+        currentConfig.whitelist.splice(idx, 1);
+        saveConfig();
+      });
+      ul.appendChild(li);
+    });
+  }
+
+  function renderEvents() {
+    var box = $('alerts');
+    box.innerHTML = '';
+    if (!currentConfig.recent_events.length) {
+      box.innerHTML = '<p class="muted">Henüz olay yok.</p>';
+      return;
+    }
+    currentConfig.recent_events.forEach(function (ev) {
+      var div = document.createElement('div');
+      div.className = 'alert-item';
+      var cls = '';
+      var icon = 'fas fa-exclamation-circle';
+      var label = ev.type;
+      if (ev.type === 'young_account') { cls = 'young'; icon = 'fas fa-user-clock'; label = 'Yeni hesap'; }
+      else if (ev.type === 'join_raid') { cls = ''; icon = 'fas fa-exclamation-triangle'; label = 'Raid dalgası'; }
+      else if (ev.type === 'bot_join') { cls = 'bot'; icon = 'fas fa-robot'; label = 'Bot katıldı'; }
+      else if (ev.type === 'bulk_delete') { cls = 'bulk'; icon = 'fas fa-trash-alt'; label = 'Toplu silme'; }
+      div.className = 'alert-item ' + cls;
+
+      var main = '';
+      if (ev.type === 'join_raid') {
+        main = '<b>' + (ev.count || '?') + '</b> kişi / ' + (ev.window || '?') + 'sn (eşik ' + (ev.threshold || '?') + ')';
+        if (ev.last_user) main += ' — son: ' + ev.last_user;
+      } else if (ev.type === 'young_account') {
+        main = (ev.user_tag || ev.user_id) + ' — hesap yaşı: <b>' + (ev.account_age_days || '?') + ' gün</b>';
+      } else if (ev.type === 'bot_join') {
+        main = ev.user_tag || ev.user_id;
+      } else if (ev.type === 'bulk_delete') {
+        main = 'Kanal <code>' + (ev.channel_id || '?') + '</code> — <b>' + (ev.count || '?') + '</b> mesaj';
+      } else {
+        main = JSON.stringify(ev);
+      }
+      var t = ev.timestamp ? new Date(ev.timestamp).toLocaleString('tr-TR') : '';
+      div.innerHTML = '<i class="' + icon + '"></i>' +
+                      '<span class="badge">' + label + '</span>' +
+                      '<span>' + main + '</span>' +
+                      '<span class="alert-time">' + t + '</span>';
+      box.appendChild(div);
+    });
+  }
+
+  // ── Config kaydet (debounced) ──────────────────────────────────────────
+  function saveConfig() {
+    if (!currentGuildId || !currentConfig) return;
+    setSaveStatus('Kaydediliyor…');
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(function () {
+      fetch('/api/guild/' + currentGuildId + '/antiraid', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(currentConfig),
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (data && data.success) setSaveStatus('✓ Kaydedildi');
+          else setSaveStatus('Hata: ' + (data && data.error || 'bilinmiyor'), true);
+        })
+        .catch(function (e) { setSaveStatus('Hata: ' + e.message, true); });
+    }, 250);
+  }
+
+  // ── Event bindings ─────────────────────────────────────────────────────
+  function bind() {
+    loadGuilds();
+
+    $('guild-select').addEventListener('change', function () {
+      currentGuildId = this.value;
+      loadConfig();
+    });
+
+    $('btn-reload').addEventListener('click', function () {
+      if (!currentGuildId) return;
+      fetch('/api/cogs/antiraid/reload', { method: 'POST', credentials: 'same-origin' })
+        .then(function (r) { return r.json(); })
+        .then(function (d) { setSaveStatus(d && d.success ? '✓ Yenilendi' : 'Hata', !(d && d.success)); })
+        .catch(function (e) { setSaveStatus('Hata: ' + e.message, true); });
+    });
+
+    // toggle'lar
+    ['tog-raid','tog-age','tog-bot','tog-delete'].forEach(function (id) {
+      var el = $(id);
+      el.addEventListener('click', function () {
+        if (!currentConfig) return;
+        var key = this.getAttribute('data-key');
+        currentConfig[key] = !this.classList.contains('on');
+        this.classList.toggle('on', currentConfig[key]);
+        saveConfig();
+      });
+    });
+
+    // numeric/text alanlar
+    ['join_threshold','join_window','min_age','alert_channel_id'].forEach(function (key) {
+      var el = document.querySelector('[data-key="' + key + '"]');
+      if (!el) return;
+      el.addEventListener('change', function () {
+        if (!currentConfig) return;
+        var v = this.value;
+        if (key === 'alert_channel_id') {
+          currentConfig[key] = v ? String(v) : null;
+        } else {
+          currentConfig[key] = parseInt(v, 10) || 0;
+        }
+        saveConfig();
+      });
+    });
+
+    // whitelist ekle
+    $('btn-add-wl').addEventListener('click', function () {
+      if (!currentConfig) return;
+      var inp = $('wl-input');
+      var v = (inp.value || '').trim();
+      if (!/^\d{15,22}$/.test(v)) {
+        setSaveStatus('Geçersiz user ID', true);
+        return;
+      }
+      if (currentConfig.whitelist.indexOf(v) !== -1) {
+        setSaveStatus('Zaten listede', true);
+        return;
+      }
+      currentConfig.whitelist.push(v);
+      inp.value = '';
+      renderWhitelist();
+      saveConfig();
+    });
+    $('wl-input').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); $('btn-add-wl').click(); }
+    });
+
+    // olayları temizle
+    $('btn-clear').addEventListener('click', function () {
+      if (!currentConfig) return;
+      currentConfig.recent_events = [];
+      renderEvents();
+      saveConfig();
+    });
+  }
+
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind);
   else bind();
 })();

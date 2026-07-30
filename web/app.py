@@ -103,7 +103,7 @@ def _log_login(username, roles, avatar, discord_id):
 _panel_log_flusher = _store.PeriodicFlush(
     'data/panel_logs.json',
     flush_interval=5.0,
-    max_entries=1000,
+    max_entries=500,  # 1000 -> 500: dosya şişmesin
     batch_threshold=50,
 )
 atexit.register(_panel_log_flusher.shutdown)
@@ -134,7 +134,7 @@ _ETAG_PATHS = (
 
 @app.after_request
 def after_request(response):
-    # Только POST/DELETE действия logla
+    # Sadece POST/DELETE işlemleri logla — yüksek frekanslı GET polling'leri sessiz
     if request.method in ('POST', 'DELETE') and session.get('logged_in'):
         path = request.path
         # Login/logout hariç
@@ -1070,12 +1070,23 @@ def api_warnings():
         if isinstance(data, dict):
 
                 for guild_id, guild_warns in data.items():
+                    # None / "null" / boş / numeric olmayan / kısa-uzun ID'leri atla
+                    if (not isinstance(guild_id, str) or not guild_id
+                            or not guild_id.isdigit() or not (17 <= len(guild_id) <= 22)):
+                        continue
                     if filter_guild and guild_id != filter_guild:
                         continue
+                    if not isinstance(guild_warns, dict):
+                        continue
                     for user_id, warns in guild_warns.items():
+                        if (not isinstance(user_id, str) or not user_id
+                                or not user_id.isdigit() or not (17 <= len(user_id) <= 22)):
+                            continue
                         if not isinstance(warns, list):
                             continue
                         for warn in warns[-10:]:
+                            if not isinstance(warn, dict):
+                                continue
                             all_warnings.append({
                                 'guild_id': guild_id,
                                 'user_id': user_id,
@@ -1176,32 +1187,53 @@ def api_warn():
     data = request.get_json(silent=True) or {}
     guild_id = data.get('guild_id')
     user_id = data.get('user_id')
-    reason = data.get('reason', 'Warning с web-panel')
-    
+    reason = (data.get('reason') or 'Warning с web-panel').strip() or 'Sebep belirtilmedi'
+
+    # Validasyon: guild_id ve user_id numeric ve dolu olmalı
+    if not guild_id or not str(guild_id).strip():
+        return jsonify({'error': 'guild_id gerekli'}), 400
+    if not user_id or not str(user_id).strip():
+        return jsonify({'error': 'user_id gerekli'}), 400
+    guild_id = str(guild_id).strip()
+    user_id = str(user_id).strip()
+    if not (guild_id.isdigit() and user_id.isdigit()):
+        return jsonify({'error': 'guild_id ve user_id sayısal olmalı'}), 400
+    if not (17 <= len(guild_id) <= 22 and 17 <= len(user_id) <= 22):
+        return jsonify({'error': 'guild_id ve user_id geçersiz (Discord ID 17-22 haneli olmalı)'}), 400
+    if len(reason) > 500:
+        return jsonify({'error': 'reason çok uzun (max 500 karakter)'}), 400
+
     warns_file = 'data/warnings.json'
     os.makedirs('data', exist_ok=True)
-    
+
     if os.path.exists(warns_file):
         with open(warns_file, 'r', encoding='utf-8') as f:
-            warns = json.load(f)
+            try:
+                warns = json.load(f)
+            except json.JSONDecodeError:
+                warns = {}
     else:
         warns = {}
-    
-    if guild_id not in warns:
+
+    # Bozuk/istenmeyen anahtarları (None, "null", boş dict olmayan) atla
+    if not isinstance(warns, dict):
+        warns = {}
+
+    if guild_id not in warns or not isinstance(warns[guild_id], dict):
         warns[guild_id] = {}
-    if user_id not in warns[guild_id]:
+    if user_id not in warns[guild_id] or not isinstance(warns[guild_id][user_id], list):
         warns[guild_id][user_id] = []
-    
+
     warns[guild_id][user_id].append({
         'reason': reason,
         'moderator': session.get('username'),
         'timestamp': datetime.utcnow().isoformat()
     })
-    
+
     _store.atomic_write_json(warns_file, warns)
     _store.invalidate_path(warns_file)
 
-    return jsonify({'success': True, 'message': 'Warning addndi'})
+    return jsonify({'success': True, 'message': 'Warning eklendi'})
 
 @app.route('/api/modstats')
 @login_required
