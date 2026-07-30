@@ -22,16 +22,16 @@
     { cmd: 'ban', icon: 'fa-gavel', name: 'Ban', desc: 'Участника banla', tag: 'admin' },
     { cmd: 'kick', icon: 'fa-user-times', name: 'Kick', desc: 'Участника at', tag: 'admin' },
     { cmd: 'warn', icon: 'fa-exclamation-triangle', name: 'Warn', desc: 'Предупреждение ver', tag: 'mod' },
-    { cmd: 'mute', icon: 'fa-volume-mute', name: 'Mute', desc: 'Sustur (timeout)', tag: 'mod' },
+    { cmd: 'mute', icon: 'fa-volume-mute', name: 'Мьют', desc: 'Мьют (timeout)', tag: 'mod' },
     { cmd: 'unmute', icon: 'fa-volume-up', name: 'Unmute', desc: 'Susturmayi kaldir', tag: 'mod' },
     { cmd: 'unban', icon: 'fa-user-plus', name: 'Unban', desc: 'Ban kaldir', tag: 'admin' },
     { cmd: 'jail', icon: 'fa-lock', name: 'Jail', desc: 'Hapishane at', tag: 'admin' },
     { cmd: 'unjail', icon: 'fa-unlock', name: 'Unjail', desc: 'Jail kaldir', tag: 'admin' },
-    { cmd: 'clear', icon: 'fa-broom', name: 'Clear', desc: 'Mesaj temizle', tag: 'mod' },
+    { cmd: 'clear', icon: 'fa-broom', name: 'Clear', desc: 'Сообщение temizle', tag: 'mod' },
     { cmd: 'lock', icon: 'fa-lock', name: 'Lock', desc: 'Kanal kilitle', tag: 'mod' },
-    { cmd: 'unlock', icon: 'fa-unlock', name: 'Unlock', desc: 'Kanal aç', tag: 'mod' },
+    { cmd: 'unlock', icon: 'fa-unlock', name: 'Unlock', desc: 'Kanal aч', tag: 'mod' },
     { cmd: 'role', icon: 'fa-user-tag', name: 'Role', desc: 'Rol ver/al', tag: 'mod' },
-    { cmd: 'ticket_panel', icon: 'fa-ticket-alt', name: 'Ticket Panel', desc: 'Ticket paneli gönder', tag: 'admin' }
+    { cmd: 'ticket_panel', icon: 'fa-ticket-alt', name: 'Ticket Panel', desc: 'Ticket paneli gёnder', tag: 'admin' }
   ];
 
   var roleColors = { mod: 'var(--ok)', admin: '#c8922a' };
@@ -53,39 +53,39 @@
     var fields = '';
     if (cmd === 'ban' || cmd === 'kick' || cmd === 'warn' || cmd === 'mute' || cmd === 'unmute' || cmd === 'jail' || cmd === 'unjail' || cmd === 'role') {
       fields += '<div class="form-group"><label>Sunucu</label><select id="guild-id">' +
-        '<option value="">Seçin...</option></select></div>';
-      fields += '<div class="form-group"><label>Kullanıcı ID</label><input type="text" id="user-id" placeholder="123456789012345678"></div>';
+        '<option value="">Выберите...</option></select></div>';
+      fields += '<div class="form-group"><label>Пользователь ID</label><input type="text" id="user-id" placeholder="123456789012345678"></div>';
     }
     if (cmd === 'mute') {
-      fields += '<div class="form-group"><label>Süre (dakika)</label><input type="number" id="duration" value="60" min="1"></div>';
+      fields += '<div class="form-group"><label>Длительность (dakika)</label><input type="number" id="duration" value="60" min="1"></div>';
     }
     if (cmd === 'role') {
       fields += '<div class="form-group"><label>Rol ID</label><input type="text" id="role-id" placeholder="Rol ID"></div>';
-      fields += '<div class="form-group"><label>Aksiyon</label><select id="role-action"><option value="add">Ekle</option><option value="remove">Kaldır</option></select></div>';
+      fields += '<div class="form-group"><label>Действие</label><select id="role-action"><option value="add">Ekle</option><option value="remove">Kaldиr</option></select></div>';
     }
     if (cmd === 'ban' || cmd === 'kick' || cmd === 'warn' || cmd === 'jail' || cmd === 'role' || cmd === 'clear') {
-      fields += '<div class="form-group"><label>Sebep</label><textarea id="reason" rows="2"></textarea></div>';
+      fields += '<div class="form-group"><label>Причина</label><textarea id="reason" rows="2"></textarea></div>';
     }
     if (cmd === 'clear' || cmd === 'lock' || cmd === 'unlock' || cmd === 'ticket_panel') {
       fields += '<div class="form-group"><label>Sunucu</label><select id="guild-id">' +
-        '<option value="">Seçin...</option></select></div>';
+        '<option value="">Выберите...</option></select></div>';
     }
     if (cmd === 'clear' || cmd === 'lock' || cmd === 'unlock' || cmd === 'ticket_panel') {
       fields += '<div class="form-group"><label>Kanal ID</label><input type="text" id="channel-id" placeholder="Kanal ID"></div>';
     }
     if (cmd === 'unban') {
       fields += '<div class="form-group"><label>Sunucu</label><select id="guild-id">' +
-        '<option value="">Seçin...</option></select></div>';
-      fields += '<div class="form-group"><label>Kullanıcı ID</label><input type="text" id="user-id"></div>';
-      fields += '<div class="form-group"><label>Sebep</label><textarea id="reason" rows="2"></textarea></div>';
+        '<option value="">Выберите...</option></select></div>';
+      fields += '<div class="form-group"><label>Пользователь ID</label><input type="text" id="user-id"></div>';
+      fields += '<div class="form-group"><label>Причина</label><textarea id="reason" rows="2"></textarea></div>';
     }
 
     $('cmd-modal-content').innerHTML =
       '<h3 style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:14px;letter-spacing:-0.02em;">' + esc(commands.find(function (c) { return c.cmd === cmd; }).name) + '</h3>' +
       fields +
       '<div style="display:flex;gap:8px;margin-top:14px;">' +
-        '<button class="btn-exec" id="btnExec" type="button">Çalıştır</button>' +
-        '<button class="btn-cancel" id="btnCancel" type="button">İptal</button>' +
+        '<button class="btn-exec" id="btnExec" type="button">Чalишtиr</button>' +
+        '<button class="btn-cancel" id="btnCancel" type="button">Отмена</button>' +
       '</div>' +
       '<div id="result-msg"></div>';
 
@@ -127,7 +127,7 @@
       msg.style.display = 'block';
       msg.style.background = 'rgba(239,68,68,0.1)';
       msg.style.color = '#ef4444';
-      msg.textContent = 'Sunucu seçin!';
+      msg.textContent = 'Sunucu seчin!';
       return;
     }
     try {
@@ -141,18 +141,18 @@
       if (d.success) {
         msg.style.background = 'rgba(74,222,128,0.1)';
         msg.style.color = '#4ade80';
-        msg.textContent = '✓ ' + (d.message || 'Başarılı');
+        msg.textContent = '✓ ' + (d.message || 'Успешно');
       } else {
         msg.style.background = 'rgba(239,68,68,0.1)';
         msg.style.color = '#ef4444';
-        msg.textContent = '✗ ' + (d.error || 'Hata');
+        msg.textContent = '✗ ' + (d.error || 'Ошибка');
       }
     } catch (e) {
       var msg = $('result-msg');
       msg.style.display = 'block';
       msg.style.background = 'rgba(239,68,68,0.1)';
       msg.style.color = '#ef4444';
-      msg.textContent = 'Hata: ' + e.message;
+      msg.textContent = 'Ошибка: ' + e.message;
     }
   }
 

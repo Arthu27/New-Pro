@@ -12,10 +12,10 @@
     </div>
     <div class="status-row">
       <span class="dot status-on" id="bot-dot"></span>
-      <span id="bot-status">Yükleniyor...</span>
+      <span id="bot-status">Загрузка...</span>
     </div>
     <div class="kv"><span class="kv-key">Sunucu</span><span class="kv-val" id="stat-guilds">-</span></div>
-    <div class="kv"><span class="kv-key">Kullanıcı</span><span class="kv-val" id="stat-users">-</span></div>
+    <div class="kv"><span class="kv-key">Пользователь</span><span class="kv-val" id="stat-users">-</span></div>
     <div class="kv"><span class="kv-key">Ping</span><span class="kv-val" id="stat-ping">-</span></div>
     <div class="action-row">
       <button class="btn btn-primary" id="btn-sync" type="button"><i class="fas fa-sync"></i> Sync</button>
@@ -23,11 +23,11 @@
     </div>
   </div>
 
-  <!-- Güvenlik -->
+  <!-- Gюvenlik -->
   <div class="set-card" style="animation-delay:0.05s;">
     <div class="set-head">
       <div class="set-icon"><i class="fas fa-shield-alt"></i></div>
-      <div class="set-title">Güvenlik</div>
+      <div class="set-title">Gюvenlik</div>
     </div>
     <div class="status-row">
       <span class="dot status-on" id="sec-dot"></span>
@@ -39,7 +39,7 @@
     </div>
   </div>
 
-  <!-- Panel Güvenlik -->
+  <!-- Panel Gюvenlik -->
   <div class="set-card" style="animation-delay:0.1s;">
     <div class="set-head">
       <div class="set-icon"><i class="fas fa-user-shield"></i></div>
@@ -47,12 +47,12 @@
     </div>
     <div class="status-row">
       <span class="dot status-on"></span>
-      <span>Session: Cookie (güvenli)</span>
+      <span>Session: Cookie (gюvenli)</span>
     </div>
-    <div class="kv"><span class="kv-key">Süre</span><span class="kv-val">30 gün</span></div>
-    <div class="kv"><span class="kv-key">CSP</span><span class="kv-val">Aktif</span></div>
+    <div class="kv"><span class="kv-key">Длительность</span><span class="kv-val">30 gюn</span></div>
+    <div class="kv"><span class="kv-key">CSP</span><span class="kv-val">Активный</span></div>
     <div class="action-row">
-      <button class="btn btn-danger" id="btn-logout" type="button"><i class="fas fa-sign-out-alt"></i> Çıkış</button>
+      <button class="btn btn-danger" id="btn-logout" type="button"><i class="fas fa-sign-out-alt"></i> Выход</button>
     </div>
   </div>
 
@@ -60,13 +60,13 @@
   <div class="set-card" style="animation-delay:0.15s;">
     <div class="set-head">
       <div class="set-icon"><i class="fas fa-globe"></i></div>
-      <div class="set-title">Tünel</div>
+      <div class="set-title">Tюnel</div>
     </div>
     <div class="status-row">
       <span class="dot" id="tunnel-dot"></span>
-      <span id="tunnel-status">Yükleniyor...</span>
+      <span id="tunnel-status">Загрузка...</span>
     </div>
-    <div id="tunnel-url-wrap" style="display:none;margin-top:8px;padding:8px;background:rgba(0,0,0,0.3);border-radius:7px;font-family:monospace;font-size:10px;color:#c8922a;word-break:break-all;cursor:pointer;" onclick="navigator.clipboard.writeText(this.textContent);this.textContent='✓ Kopyalandı';setTimeout(()=>this.textContent=this.dataset.url,1500)" data-url=""></div>
+    <div id="tunnel-url-wrap" style="display:none;margin-top:8px;padding:8px;background:rgba(0,0,0,0.3);border-radius:7px;font-family:monospace;font-size:10px;color:#c8922a;word-break:break-all;cursor:pointer;" onclick="navigator.clipboard.writeText(this.textContent);this.textContent='✓ Kopyalandи';setTimeout(()=>this.textContent=this.dataset.url,1500)" data-url=""></div>
   </div>
 </div>
 
@@ -109,7 +109,7 @@
     try {
       var d = await fetch('/api/tunnel-url').then(function (r) { return r.json(); });
       if (d && d.url) {
-        $('tunnel-status').textContent = 'Cloudflare Aktif';
+        $('tunnel-status').textContent = 'Cloudflare Активный';
         $('tunnel-dot').className = 'dot status-on';
         var w = $('tunnel-url-wrap');
         w.style.display = 'block';
@@ -136,7 +136,7 @@
   }
 
   async function doRestart() {
-    if (!confirm('Botu yeniden başlatmak istediğine emin misin?')) return;
+    if (!confirm('Botu yeniden baшlatmak istediгine emin misin?')) return;
     try {
       await fetch('/api/bot/restart', { method: 'POST' });
     } catch (e) { /* sessiz */ }
@@ -150,7 +150,7 @@
   }
 
   function doLogout() {
-    if (!confirm('Çıkmak istediğine emin misin?')) return;
+    if (!confirm('Чиkmak istediгine emin misin?')) return;
     window.location.href = '/logout';
   }
 

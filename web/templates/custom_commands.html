@@ -104,7 +104,7 @@ async function createCommand() {
 }
 
 async function deleteCmd(id) {
-  if(!confirm('Bu команда удалить если хотите emin misiniz ? siz?')) return;
+  if(!confirm('Это команда удалить если хотите emin misiniz ? siz?')) return;
   var r = await fetch('/api/guild/'+selectedGuild+'/custom-commands/'+id+'/delete', {method:'POST'});
   var d = await r.json();
   if(d.success) loadCommands();

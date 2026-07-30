@@ -161,7 +161,7 @@ async function saveSettings(type) {
     if (d.success) {
       toast('✅ Сохранено!', true);
     } else {
-      toast('❌ ' + (d.error || 'Hata'), false);
+      toast('❌ ' + (d.error || 'Ошибка'), false);
     }
   } catch (e) {
     toast('Запрос ошибка: ' + e.message, false);

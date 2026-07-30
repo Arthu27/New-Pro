@@ -3,7 +3,7 @@
 {% block page_title %}Панель управления{% endblock %}
 {% block content %}
 
-<!-- Üst hero bölümü -->
+<!-- Верх hero bёlюmю -->
 <div class="dash-hero">
   <div class="dash-hero-greeting">
     <span class="dot"></span>
@@ -13,7 +13,7 @@
   <p>Полный обзор активности, модерации и состояния вашего Discord-сообщества в реальном времени.</p>
 </div>
 
-<!-- 4 büyük istatistik kartı -->
+<!-- 4 bюyюk istatistik kartи -->
 <div class="stat-grid">
   <div class="stat-card-big purple">
     <div class="stat-label">
@@ -68,7 +68,7 @@
   </button>
 </div>
 
-<!-- Hızlı istatistikler -->
+<!-- Быстро istatistikler -->
 <div class="dash-box">
   <div class="dash-box-head">
     <div class="dash-box-title"><i class="fas fa-chart-line"></i> Быстрая статистика</div>
@@ -83,9 +83,9 @@
   </div>
 </div>
 
-<!-- İki kolon: Son aksiyonlar + Login log (owner) -->
+<!-- Два kolon: Последний aksiyonlar + Login log (owner) -->
 <div style="display:grid;grid-template-columns:{% if role == 'owner' %}1.4fr 1fr{% else %}1fr{% endif %};gap:16px;margin-bottom:16px;">
-  <!-- Son aksiyonlar -->
+  <!-- Последний aksiyonlar -->
   <div class="dash-box">
     <div class="dash-box-head">
       <div class="dash-box-title"><i class="fas fa-history"></i> Последние действия</div>
@@ -111,7 +111,7 @@
 </div>
 
 {% if role == 'owner' %}
-<!-- Bildirim + Duyuru (sadece owner) -->
+<!-- Уведомление + Duyuru (sadece owner) -->
 <div class="grid-2">
   <div class="dash-card" style="padding:20px 22px !important;">
     <div class="dash-box-title" style="margin-bottom:14px;"><i class="fas fa-bell"></i> Отправить уведомление</div>
@@ -220,7 +220,7 @@
     }
   }
 
-  // ── Hızlı istatistikler ──
+  // ── Быстро istatistikler ──
   async function loadQuickStats() {
     try {
       var logs = await window.fetchCachedJSON('/api/logs').catch(function () { return []; });
@@ -240,7 +240,7 @@
     }
   }
 
-  // ── Son aksiyonlar ──
+  // ── Последний aksiyonlar ──
   async function loadRecentActivity() {
     try {
       var logs = await window.fetchCachedJSON('/api/logs').catch(function () { return []; });
@@ -344,13 +344,13 @@
         showToast(d.message || 'Статус карантина изменён', true);
         loadThreatIndex();
       } else {
-        showToast((d && d.error) || 'Hata', false);
+        showToast((d && d.error) || 'Ошибка', false);
       }
     } catch (e) { showToast('Ошибка: ' + e.message, false); }
     btn.disabled = false;
   }
 
-  // ── Bildirim gönder ──
+  // ── Уведомление gёnder ──
   async function sendNotification() {
     var id = $('notif-discord-id').value.trim();
     var title = $('notif-title').value.trim();
@@ -365,12 +365,12 @@
       el.style.display = 'block';
       el.innerHTML = d.success
         ? '<span style="color:var(--ok);">✓ Уведомление отправлено!</span>'
-        : '<span style="color:var(--err);">' + esc(d.error || 'Hata') + '</span>';
+        : '<span style="color:var(--err);">' + esc(d.error || 'Ошибка') + '</span>';
       setTimeout(function () { el.style.display = 'none'; }, 2500);
     } catch (e) { showToast('Ошибка: ' + e.message, false); }
   }
 
-  // ── Duyuru yayınla ──
+  // ── Duyuru yayиnla ──
   async function sendAnnouncement() {
     var title = $('ann-title').value.trim();
     var msg = $('ann-message').value.trim();
@@ -384,12 +384,12 @@
       el.style.display = 'block';
       el.innerHTML = d.success
         ? '<span style="color:var(--ok);">✓ Объявление опубликовано!</span>'
-        : '<span style="color:var(--err);">' + esc(d.error || 'Hata') + '</span>';
+        : '<span style="color:var(--err);">' + esc(d.error || 'Ошибка') + '</span>';
       setTimeout(function () { el.style.display = 'none'; }, 2500);
     } catch (e) { showToast('Ошибка: ' + e.message, false); }
   }
 
-  // ── Buton bağlama ──
+  // ── Buton baгlama ──
   function bindButtons() {
     var bl = $('btnLockdown');
     if (bl) bl.addEventListener('click', toggleLockdown);
@@ -399,7 +399,7 @@
     if (ba) ba.addEventListener('click', sendAnnouncement);
   }
 
-  // ── Başlat ──
+  // ── Baшlat ──
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {

@@ -137,7 +137,7 @@ function onIdInput() {
       } else {
         status.textContent = '❌';
         memberДанныеfied = false;
-        showAlert('error', '❌ ' + (res.error || 'Bu на сервере участников не найдено.'));
+        showAlert('error', '❌ ' + (res.error || 'Это на сервере участников не найдено.'));
       }
     } catch(e) { status.textContent = '❌'; }
   }, 600);

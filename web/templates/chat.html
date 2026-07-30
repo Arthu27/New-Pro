@@ -1,5 +1,5 @@
 ﻿{% extends "base.html" %}
-{% block title %}Sohbet — Aether{% endblock %}
+{% block title %}Чат — Aether{% endblock %}
 {% block page_title %}<i class="fas fa-comments" style="color:var(--ac);"></i> {% endblock %}
 {% block content %}
 
@@ -362,7 +362,7 @@ async function sendMessage() {
 }
 
 async function deleteMsg(msgId) {
-  if (!confirm('Bu сообщение удалить если хотите emin misiniz ? siz?')) return;
+  if (!confirm('Это сообщение удалить если хотите emin misiniz ? siz?')) return;
   try {
     await fetch('/api/chat/' + _activeGuildId + '/' + _channelId + '/delete/' + msgId, {method:'POST'});
     _lastMsgId = null; loadMessages();

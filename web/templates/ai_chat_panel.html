@@ -1,5 +1,5 @@
 ﻿{% extends "base.html" %}
-{% block title %}AI Sohbet - Aether{% endblock %}
+{% block title %}AI Чат - Aether{% endblock %}
 {% block page_title %}<i class="fas fa-comments" style="color:var(--ac);"></i> 🤖 AI SOHBET{% endblock %}
 {% block content %}
 
@@ -107,7 +107,7 @@ async function clearChat() {
   await fetch('/api/ai-chat/clear', {method:'POST'});
   chatBox.innerHTML = `<div class="welcome-msg">
     <i class="fas fa-robot"></i>
-    <p>Sohbet ocisena. Новый  разговор nacat edebilirsiniz.</p>
+    <p>Чат ocisena. Новый  разговор nacat edebilirsiniz.</p>
   </div>`;
 }
 

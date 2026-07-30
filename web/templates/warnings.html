@@ -5,7 +5,7 @@
 
 <div class="warn-toolbar">
   <select id="guild-filter" class="warn-select"><option value="">Все серверы</option></select>
-  <input type="text" id="search" class="warn-search" placeholder="Предупреждение ara... (kullanıcı, sebep)">
+  <input type="text" id="search" class="warn-search" placeholder="Предупреждение ara... (kullanиcи, sebep)">
   <span id="warn-count" class="warn-count" style="margin-left:auto;">0</span>
 </div>
 
@@ -20,7 +20,7 @@
     <div class="warn-title"><i class="fas fa-exclamation-triangle"></i> Предупреждения</div>
   </div>
   <div class="warn-body" id="warn-body">
-    <p class="empty"><i class="fas fa-spinner fa-spin"></i> Yükleniyor...</p>
+    <p class="empty"><i class="fas fa-spinner fa-spin"></i> Загрузка...</p>
   </div>
 </div>
 
@@ -51,7 +51,7 @@
   }
 
   async function loadWarnings() {
-    $('warn-body').innerHTML = '<p class="empty"><i class="fas fa-spinner fa-spin"></i> Yükleniyor...</p>';
+    $('warn-body').innerHTML = '<p class="empty"><i class="fas fa-spinner fa-spin"></i> Загрузка...</p>';
     try {
       allWarnings = await window.fetchCachedJSON('/api/warnings');
       render();

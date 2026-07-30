@@ -4,9 +4,9 @@
 {% block content %}
 
 <div class="pl-filters">
-  <input type="text" id="search" class="pl-search" placeholder="Ara... (eylem, kullanıcı, IP)">
+  <input type="text" id="search" class="pl-search" placeholder="Ara... (eylem, kullanиcи, IP)">
   <select id="filter" class="pl-select">
-    <option value="">Tüm aksiyonlar</option>
+    <option value="">Все aksiyonlar</option>
     <option>POST</option>
     <option>DELETE</option>
     <option>GET</option>
@@ -16,14 +16,14 @@
 
 <div class="pl-stats">
   <div class="pl-stat"><div class="pl-stat-num" id="stat-total">-</div><div class="pl-stat-lbl">Всего</div></div>
-  <div class="pl-stat"><div class="pl-stat-num" id="stat-today" style="color:var(--ok);">-</div><div class="pl-stat-lbl">Bugün</div></div>
+  <div class="pl-stat"><div class="pl-stat-num" id="stat-today" style="color:var(--ok);">-</div><div class="pl-stat-lbl">Сегодня</div></div>
   <div class="pl-stat"><div class="pl-stat-num" id="stat-post" style="color:#c8922a;">-</div><div class="pl-stat-lbl">POST</div></div>
   <div class="pl-stat"><div class="pl-stat-num" id="stat-delete" style="color:var(--red);">-</div><div class="pl-stat-lbl">DELETE</div></div>
 </div>
 
 <div class="pl-box">
   <div class="pl-head">
-    <div class="pl-title"><i class="fas fa-list"></i> Son Panel İşlemleri</div>
+    <div class="pl-title"><i class="fas fa-list"></i> Последний Panel Ишlemleri</div>
     <span class="pl-count" id="pl-count">-</span>
   </div>
   <div class="pl-body" id="pl-body">
@@ -38,11 +38,11 @@
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
   var logs = [
-    { action: 'POST /api/guild/.../ticket-settings', user: 'Owner', role: 'owner', ip: '127.0.0.1', time: '2 min önce', method: 'POST' },
-    { action: 'POST /api/command/ban', user: 'Admin', role: 'admin', ip: '127.0.0.1', time: '5 min önce', method: 'POST' },
-    { action: 'GET /api/guilds', user: 'Owner', role: 'owner', ip: '127.0.0.1', time: '10 min önce', method: 'GET' },
-    { action: 'POST /api/warn', user: 'Mod', role: 'mod', ip: '127.0.0.1', time: '15 min önce', method: 'POST' },
-    { action: 'DELETE /api/guild/.../channels/...', user: 'Admin', role: 'admin', ip: '127.0.0.1', time: '1 saat önce', method: 'DELETE' }
+    { action: 'POST /api/guild/.../ticket-settings', user: 'Owner', role: 'owner', ip: '127.0.0.1', time: '2 min ёnce', method: 'POST' },
+    { action: 'POST /api/command/ban', user: 'Администратор', role: 'admin', ip: '127.0.0.1', time: '5 min ёnce', method: 'POST' },
+    { action: 'GET /api/guilds', user: 'Owner', role: 'owner', ip: '127.0.0.1', time: '10 min ёnce', method: 'GET' },
+    { action: 'POST /api/warn', user: 'Mod', role: 'mod', ip: '127.0.0.1', time: '15 min ёnce', method: 'POST' },
+    { action: 'DELETE /api/guild/.../channels/...', user: 'Администратор', role: 'admin', ip: '127.0.0.1', time: '1 saat ёnce', method: 'DELETE' }
   ];
   var roleColor = { owner: 'var(--err)', admin: '#c8922a', mod: 'var(--ok)' };
 
@@ -59,7 +59,7 @@
     $('stat-today').textContent = logs.length;
     $('stat-post').textContent = logs.filter(function (l) { return l.method === 'POST'; }).length;
     $('stat-delete').textContent = logs.filter(function (l) { return l.method === 'DELETE'; }).length;
-    if (!list.length) { $('pl-body').innerHTML = '<p class="empty">Log yok</p>'; return; }
+    if (!list.length) { $('pl-body').innerHTML = '<p class="empty">Лог yok</p>'; return; }
     var html = '';
     list.forEach(function (l) {
       var icon = l.method === 'POST' ? 'fa-plus' : l.method === 'DELETE' ? 'fa-trash' : 'fa-eye';
@@ -76,7 +76,7 @@
     $('search').addEventListener('input', render);
     $('filter').addEventListener('change', render);
     $('btn-clear').addEventListener('click', function () {
-      if (confirm('Tüm panel loglarını temizle?')) { logs = []; render(); }
+      if (confirm('Все panel loglarиnи temizle?')) { logs = []; render(); }
     });
   }
 

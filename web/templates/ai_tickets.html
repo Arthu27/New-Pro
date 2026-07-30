@@ -11,7 +11,7 @@
 </div>
 
 <div class="at-tabs">
-  <button class="at-tab active" data-tab="all">Tümü</button>
+  <button class="at-tab active" data-tab="all">Все</button>
   <button class="at-tab" data-tab="open">Открытые</button>
   <button class="at-tab" data-tab="ai">AI активные</button>
   <button class="at-tab" data-tab="closed">Закрытые</button>
@@ -23,7 +23,7 @@
     <span class="at-count" id="at-count">-</span>
   </div>
   <div class="at-body" id="at-body">
-    <p class="empty"><i class="fas fa-spinner fa-spin"></i> Yükleniyor...</p>
+    <p class="empty"><i class="fas fa-spinner fa-spin"></i> Загрузка...</p>
   </div>
 </div>
 
@@ -34,10 +34,10 @@
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
   var tickets = [
-    { user: 'User1', topic: 'Hesabım çalındı', status: 'open', time: '5 мин' },
-    { user: 'User2', topic: 'Ödeme sorunu', status: 'ai', time: '15 мин' },
-    { user: 'User3', topic: 'Sunucu önerisi', status: 'closed', time: '2 saat' },
-    { user: 'User4', topic: 'Şifre sıfırlama', status: 'open', time: '1 saat' }
+    { user: 'User1', topic: 'Hesabиm чalиndи', status: 'open', time: '5 мин' },
+    { user: 'User2', topic: 'Оплата sorunu', status: 'ai', time: '15 мин' },
+    { user: 'User3', topic: 'Sunucu ёnerisi', status: 'closed', time: '2 saat' },
+    { user: 'User4', topic: 'Шifre sиfиrlama', status: 'open', time: '1 saat' }
   ];
   var currentTab = 'all';
 

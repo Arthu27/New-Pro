@@ -4,11 +4,11 @@
 {% block content %}
 
 <div class="ar-grid">
-  <!-- Raid algılama -->
+  <!-- Raid algиlama -->
   <div class="ar-card">
     <div class="ar-head">
       <div class="ar-icon danger"><i class="fas fa-exclamation-triangle"></i></div>
-      <div class="ar-title">Raid Algılama</div>
+      <div class="ar-title">Raid Algиlama</div>
       <div class="toggle on" id="tog-raid"></div>
     </div>
     <div class="row"><label>Join/сек</label><input type="number" id="raid-rate" value="5" min="2"></div>
@@ -18,16 +18,16 @@
     <div class="row"><label>Alert канал</label><input type="text" id="raid-channel" placeholder="канал ID"></div>
   </div>
 
-  <!-- Hesap yaşı filtresi -->
+  <!-- Hesap yaши filtresi -->
   <div class="ar-card">
     <div class="ar-head">
       <div class="ar-icon"><i class="fas fa-user-clock"></i></div>
-      <div class="ar-title">Hesap Yaşı Filtresi</div>
+      <div class="ar-title">Hesap Yaши Filtresi</div>
       <div class="toggle on" id="tog-age"></div>
     </div>
-    <div class="row"><label>Min yaş (gün)</label><input type="number" id="age-min" value="7" min="0"></div>
+    <div class="row"><label>Min yaш (gюn)</label><input type="number" id="age-min" value="7" min="0"></div>
     <div class="row"><label>Действие</label>
-      <select id="age-action"><option value="kick">Kick</option><option value="ban">Ban</option><option value="mute">Mute</option></select>
+      <select id="age-action"><option value="kick">Kick</option><option value="ban">Ban</option><option value="mute">Мьют</option></select>
     </div>
   </div>
 
@@ -43,16 +43,16 @@
     </div>
   </div>
 
-  <!-- Son raidler -->
+  <!-- Последний raidler -->
   <div class="ar-card" style="grid-column:1/-1;">
     <div class="ar-head">
       <div class="ar-icon danger"><i class="fas fa-history"></i></div>
-      <div class="ar-title">Son Tespit Edilen Raidler</div>
+      <div class="ar-title">Последний Tespit Edilen Raidler</div>
       <button class="btn btn-primary" id="btn-clear" type="button" style="font-size:10px;padding:4px 10px;">Temizle</button>
     </div>
     <div class="alert-list" id="alerts">
-      <div class="alert-item"><i class="fas fa-exclamation-circle"></i><span>5 saniyede 12 yeni kullanıcı katıldı — otomatik lock aktif</span><span class="alert-time">2 дн назад</span></div>
-      <div class="alert-item"><i class="fas fa-exclamation-circle"></i><span>Yeni hesaplar (3 gün) — 4 hesap kicklendi</span><span class="alert-time">5 дн назад</span></div>
+      <div class="alert-item"><i class="fas fa-exclamation-circle"></i><span>5 saniyede 12 yeni kullanиcи katиldи — otomatik lock aktif</span><span class="alert-time">2 дн назад</span></div>
+      <div class="alert-item"><i class="fas fa-exclamation-circle"></i><span>Новый hesaplar (3 gюn) — 4 hesap kicklendi</span><span class="alert-time">5 дн назад</span></div>
       <p style="text-align:center;color:var(--text-3);padding:14px;font-size:11px;">Raid tespit edilmedi</p>
     </div>
   </div>

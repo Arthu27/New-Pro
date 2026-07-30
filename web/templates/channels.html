@@ -294,7 +294,7 @@
     var list = $('channel-list');
     if (list) {
       list.addEventListener('click', function (e) {
-        // Once silme butonunu kontrol et (event.stopPropagation ile)
+        // Once silme butonunu kontrol et (event.stopPropagation с)
         var btn = e.target.closest('button[data-action]');
         if (btn) {
           e.stopPropagation();
@@ -306,7 +306,7 @@
           }
           return;
         }
-        // Sonra kategori basligini kontrol et
+        // Потом kategori basligini kontrol et
         var hdr = e.target.closest('[data-toggle-cat]');
         if (hdr) toggleCat(hdr);
       });

@@ -8,7 +8,7 @@
     <span class="gw-badge live" id="live-count">0 live</span>
     <span class="gw-badge ended" id="ended-count">0 завершено</span>
   </div>
-  <button class="btn btn-primary" id="btn-new" type="button"><i class="fas fa-plus"></i> Yeni розыгрыш</button>
+  <button class="btn btn-primary" id="btn-new" type="button"><i class="fas fa-plus"></i> Новый розыгрыш</button>
 </div>
 
 <div class="gw-grid" id="gw-grid">
@@ -22,9 +22,9 @@
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
   var giveaways = [
-    { prize: 'fa-gift', title: 'Nitro 1 ay', winners: 1, entries: 245, max: 500, live: true, ends: '2 gün' },
+    { prize: 'fa-gift', title: 'Nitro 1 ay', winners: 1, entries: 245, max: 500, live: true, ends: '2 gюn' },
     { prize: 'fa-crown', title: 'VIP Rol', winners: 3, entries: 89, max: 100, live: true, ends: '5 saat' },
-    { prize: 'fa-gamepad', title: 'Oyun kodu', winners: 1, entries: 50, max: 50, live: false, ends: 'Bitti' }
+    { prize: 'fa-gamepad', title: 'Oyun kodu', winners: 1, entries: 50, max: 50, live: false, ends: 'Готово' }
   ];
 
   function render() {
@@ -44,7 +44,7 @@
         '<div class="gw-title">' + esc(g.title) + '</div>' +
         '<div class="gw-info"><span><i class="fas fa-trophy"></i>' + g.winners + ' победител' + '</span><span><i class="fas fa-clock"></i>' + esc(g.ends) + '</span></div>' +
         '<div class="gw-progress"><div class="gw-progress-fill" style="width:' + pct + '%;"></div></div>' +
-        '<div class="gw-foot"><span>' + g.entries + ' / ' + g.max + ' katılımcı</span><span class="gw-badge ' + (g.live ? 'live' : 'ended') + '">' + (g.live ? 'LIVE' : 'Bitti') + '</span></div>' +
+        '<div class="gw-foot"><span>' + g.entries + ' / ' + g.max + ' katиlиmcи</span><span class="gw-badge ' + (g.live ? 'live' : 'ended') + '">' + (g.live ? 'LIVE' : 'Готово') + '</span></div>' +
       '</div>';
     });
     $('gw-grid').innerHTML = html;
@@ -52,7 +52,7 @@
 
   function bind() {
     var b = $('btn-new');
-    if (b) b.addEventListener('click', function () { alert('Yeni розыгрыш — form burada olacak'); });
+    if (b) b.addEventListener('click', function () { alert('Новый розыгрыш — form burada olacak'); });
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { bind(); render(); });

@@ -11,7 +11,7 @@
 </div>
 
 <div class="app-tabs">
-  <button class="app-tab active" data-tab="all">Tümü</button>
+  <button class="app-tab active" data-tab="all">Все</button>
   <button class="app-tab" data-tab="pending">Beklemede</button>
   <button class="app-tab" data-tab="approved">Onaylanan</button>
   <button class="app-tab" data-tab="rejected">Reddedilen</button>
@@ -19,11 +19,11 @@
 
 <div class="app-box">
   <div class="app-head">
-    <div class="app-title"><i class="fas fa-user-shield"></i> Başvurular</div>
+    <div class="app-title"><i class="fas fa-user-shield"></i> Baшvurular</div>
     <span class="app-count" id="app-count">-</span>
   </div>
   <div class="app-body" id="app-body">
-    <p class="empty"><i class="fas fa-spinner fa-spin"></i> Yükleniyor...</p>
+    <p class="empty"><i class="fas fa-spinner fa-spin"></i> Загрузка...</p>
   </div>
 </div>
 
@@ -53,10 +53,10 @@
 
     var list = currentTab === 'all' ? apps : apps.filter(function (a) { return a.status === currentTab; });
     $('app-count').textContent = list.length;
-    if (!list.length) { $('app-body').innerHTML = '<p class="empty">Başvuru yok</p>'; return; }
+    if (!list.length) { $('app-body').innerHTML = '<p class="empty">Baшvuru yok</p>'; return; }
     var html = '';
     list.forEach(function (a) {
-      var statusLabel = a.status === 'pending' ? 'Beklemede' : a.status === 'approved' ? 'Onaylandı' : 'Reddedildi';
+      var statusLabel = a.status === 'pending' ? 'Beklemede' : a.status === 'approved' ? 'Onaylandи' : 'Reddedildi';
       var actions = a.status === 'pending'
         ? '<div class="app-actions"><button class="btn btn-ok" data-act="approve">✓</button><button class="btn btn-no" data-act="reject">✗</button></div>'
         : '';
