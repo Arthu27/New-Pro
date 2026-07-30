@@ -80,16 +80,74 @@
 .severity-card .sev-icon { font-size: 28px; margin-bottom: 6px; }
 .severity-card .sev-name { font-size: var(--fs-md); font-weight: 700; color: var(--text); margin-bottom: 3px; }
 .severity-card .sev-desc { font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.08em; }
-.aimod-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
-.aimod-stat {
-  padding: 14px 16px;
-  background: var(--bg-3);
-  border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  text-align: center;
+.aimod-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
 }
-.aimod-stat .num { font-size: 26px; font-weight: 800; color: var(--ac); font-variant-numeric: tabular-nums; }
-.aimod-stat .lbl { font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 4px; font-weight: 700; }
+.aimod-stat {
+  position: relative;
+  display: flex !important;
+  align-items: center !important;
+  gap: 14px !important;
+  background: linear-gradient(135deg, rgba(212, 168, 67, 0.06) 0%, rgba(224, 176, 74, 0.02) 100%);
+  border: 1px solid rgba(212, 168, 67, 0.18);
+  border-radius: 14px;
+  padding: 18px 18px !important;
+  text-align: left !important;
+  overflow: hidden;
+  transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease;
+}
+.aimod-stat:hover {
+  transform: translateY(-2px);
+  border-color: rgba(212, 168, 67, 0.45);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(212, 168, 67, 0.25);
+}
+.aimod-stat .stat-icon {
+  flex: 0 0 48px;
+  width: 48px; height: 48px;
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+  color: #1a1a1a;
+  background: linear-gradient(135deg, #d4a843 0%, #e0b04a 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 2px 8px rgba(212, 168, 67, 0.35);
+}
+.aimod-stat.stat-bans .stat-icon {
+  background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+  color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 2px 8px rgba(239, 68, 68, 0.35);
+}
+.aimod-stat.stat-mutes .stat-icon {
+  background: linear-gradient(135deg, #f59e0b 0%, #b45309 100%);
+  color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 2px 8px rgba(245, 158, 11, 0.35);
+}
+.aimod-stat.stat-24h .stat-icon {
+  background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
+  color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 2px 8px rgba(56, 189, 248, 0.35);
+}
+.aimod-stat .stat-body { flex: 1; min-width: 0; }
+.aimod-stat .num {
+  font-size: 30px !important;
+  font-weight: 800 !important;
+  color: #f4f1e8 !important;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+.aimod-stat.stat-bans .num { color: #fca5a5 !important; }
+.aimod-stat.stat-mutes .num { color: #fcd34d !important; }
+.aimod-stat.stat-24h .num { color: #7dd3fc !important; }
+.aimod-stat .lbl {
+  font-size: 11px !important;
+  color: #b8b3a3 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-top: 4px !important;
+  font-weight: 600 !important;
+}
 .aimod-slider-wrap { padding: 16px 20px; background: var(--bg-3); border: 1px solid var(--line); border-radius: var(--r-md); }
 .aimod-slider-wrap label { font-size: var(--fs-xs); font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; display: block; }
 .aimod-slider { width: 100%; height: 6px; background: var(--line-2); border-radius: 99px; outline: none; -webkit-appearance: none; }
@@ -114,10 +172,34 @@
         </div>
       </div>
       <div class="aimod-stats-grid" style="margin-top: 16px;">
-        <div class="aimod-stat"><div class="num" id="statTotal">—</div><div class="lbl">Всего действий</div></div>
-        <div class="aimod-stat"><div class="num" id="stat24h">—</div><div class="lbl">За 24 часа</div></div>
-        <div class="aimod-stat"><div class="num" id="statBans">—</div><div class="lbl">Банов</div></div>
-        <div class="aimod-stat"><div class="num" id="statMutes">—</div><div class="lbl">Мутов</div></div>
+        <div class="aimod-stat stat-total">
+          <div class="stat-icon"><i class="fas fa-chart-line"></i></div>
+          <div class="stat-body">
+            <div class="num" id="statTotal">—</div>
+            <div class="lbl">Всего действий</div>
+          </div>
+        </div>
+        <div class="aimod-stat stat-24h">
+          <div class="stat-icon"><i class="fas fa-bolt"></i></div>
+          <div class="stat-body">
+            <div class="num" id="stat24h">—</div>
+            <div class="lbl">За 24 часа</div>
+          </div>
+        </div>
+        <div class="aimod-stat stat-bans">
+          <div class="stat-icon"><i class="fas fa-gavel"></i></div>
+          <div class="stat-body">
+            <div class="num" id="statBans">—</div>
+            <div class="lbl">Банов</div>
+          </div>
+        </div>
+        <div class="aimod-stat stat-mutes">
+          <div class="stat-icon"><i class="fas fa-microphone-slash"></i></div>
+          <div class="stat-body">
+            <div class="num" id="statMutes">—</div>
+            <div class="lbl">Мутов</div>
+          </div>
+        </div>
       </div>
     </div>
   </div>

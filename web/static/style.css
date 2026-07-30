@@ -2927,3 +2927,100 @@ img[style*="border-radius:50%"], img[style*="border-radius: 50%"] {
 body, p, span, div, td, th, li {
   color: inherit;
 }
+
+/* ============================================================
+   GLOBAL PREMIUM STAT CARDS (для всех sayfalar)
+   Все "stat-row", "stat-box", "metric-box", "info-box" artık
+   ikonu + accent rengi ile premium görünecek.
+   ============================================================ */
+.stat-row, .stat-grid, .metric-grid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important;
+  gap: 14px !important;
+  margin: 16px 0 !important;
+}
+.stat-box, .metric-box, .info-box {
+  position: relative;
+  display: flex !important;
+  align-items: center !important;
+  gap: 14px !important;
+  background: linear-gradient(135deg, rgba(212, 168, 67, 0.06) 0%, rgba(224, 176, 74, 0.02) 100%) !important;
+  border: 1px solid rgba(212, 168, 67, 0.18) !important;
+  border-radius: 14px !important;
+  padding: 18px 18px !important;
+  text-align: left !important;
+  overflow: hidden;
+  transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease;
+  color: #f4f1e8 !important;
+}
+.stat-box:hover, .metric-box:hover, .info-box:hover {
+  transform: translateY(-2px);
+  border-color: rgba(212, 168, 67, 0.45);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(212, 168, 67, 0.25);
+}
+.stat-box .stat-icon, .metric-box .stat-icon, .info-box .stat-icon {
+  flex: 0 0 48px;
+  width: 48px; height: 48px;
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+  color: #1a1a1a;
+  background: linear-gradient(135deg, #d4a843 0%, #e0b04a 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 2px 8px rgba(212, 168, 67, 0.35);
+}
+.stat-box .stat-icon.red, .metric-box .stat-icon.red, .info-box .stat-icon.red {
+  background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%) !important;
+  color: #fff !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 2px 8px rgba(239, 68, 68, 0.35) !important;
+}
+.stat-box .stat-icon.amber, .metric-box .stat-icon.amber, .info-box .stat-icon.amber {
+  background: linear-gradient(135deg, #f59e0b 0%, #b45309 100%) !important;
+  color: #fff !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 2px 8px rgba(245, 158, 11, 0.35) !important;
+}
+.stat-box .stat-icon.cyan, .metric-box .stat-icon.cyan, .info-box .stat-icon.cyan {
+  background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%) !important;
+  color: #fff !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 2px 8px rgba(56, 189, 248, 0.35) !important;
+}
+.stat-box .stat-icon.green, .metric-box .stat-icon.green, .info-box .stat-icon.green {
+  background: linear-gradient(135deg, #4ade80 0%, #16a34a 100%) !important;
+  color: #1a1a1a !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 2px 8px rgba(74, 222, 128, 0.35) !important;
+}
+.stat-box .stat-icon.purple, .metric-box .stat-icon.purple, .info-box .stat-icon.purple {
+  background: linear-gradient(135deg, #a78bfa 0%, #7c3aed 100%) !important;
+  color: #fff !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 2px 8px rgba(167, 139, 250, 0.35) !important;
+}
+.stat-box .stat-icon.pink, .metric-box .stat-icon.pink, .info-box .stat-icon.pink {
+  background: linear-gradient(135deg, #f472b6 0%, #be185d 100%) !important;
+  color: #fff !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 2px 8px rgba(244, 114, 182, 0.35) !important;
+}
+.stat-box .stat-body, .metric-box .stat-body, .info-box .stat-body {
+  flex: 1; min-width: 0;
+}
+.stat-box .stat-val, .metric-box .stat-val, .info-box .stat-val,
+.stat-box .stat-value, .metric-box .stat-value, .info-box .stat-value {
+  font-size: 30px !important;
+  font-weight: 800 !important;
+  color: #f4f1e8 !important;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+.stat-box .stat-val.red, .metric-box .stat-val.red { color: #fca5a5 !important; }
+.stat-box .stat-val.amber, .metric-box .stat-val.amber { color: #fcd34d !important; }
+.stat-box .stat-val.cyan, .metric-box .stat-val.cyan { color: #7dd3fc !important; }
+.stat-box .stat-val.green, .metric-box .stat-val.green { color: #86efac !important; }
+.stat-box .stat-val.gold, .metric-box .stat-val.gold { color: #fde68a !important; }
+.stat-box .stat-lbl, .metric-box .stat-lbl, .info-box .stat-lbl,
+.stat-box .stat-label, .metric-box .stat-label, .info-box .stat-label {
+  font-size: 11px !important;
+  color: #b8b3a3 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-top: 4px !important;
+  font-weight: 600 !important;
+}

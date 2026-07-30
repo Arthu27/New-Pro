@@ -1,4 +1,4 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 {% block title %}Ses Канал Статистика - Aether{% endblock %}
 {% block page_title %}<i class="fas fa-microphone" style="animation: pulse 2s infinite"></i> SES КАНАЛ СТАТИСТИКА{% endblock %}
 {% block content %}
@@ -22,9 +22,18 @@
 </select>
 
 <div class="stat-row" id="stat-cards">
-  <div class="stat-box"><div class="stat-val">-</div><div class="stat-lbl">Всего голос Длительность</div></div>
-  <div class="stat-box"><div class="stat-val">-</div><div class="stat-lbl">Голосовая активность сегодня</div></div>
-  <div class="stat-box"><div class="stat-val">-</div><div class="stat-lbl">Средняя длительность</div></div>
+  <div class="stat-box">
+    <div class="stat-icon cyan"><i class="fas fa-clock"></i></div>
+    <div class="stat-body"><div class="stat-val">-</div><div class="stat-lbl">Всего голос Длительность</div></div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-icon green"><i class="fas fa-users"></i></div>
+    <div class="stat-body"><div class="stat-val">-</div><div class="stat-lbl">Голосовая активность сегодня</div></div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-icon purple"><i class="fas fa-stopwatch"></i></div>
+    <div class="stat-body"><div class="stat-val">-</div><div class="stat-lbl">Средняя длительность</div></div>
+  </div>
 </div>
 
 <div class="vs-box">
@@ -45,9 +54,18 @@ async function loadVoiceStats(gid_param) {
     var data = await r.json();
 
   document.getElementById('stat-cards').innerHTML =
-    '<div class="stat-box"><div class="stat-val">'+(data.total_time||'0s')+'</div><div class="stat-lbl">Всего голос Длительность</div></div>'+
-    '<div class="stat-box"><div class="stat-val">'+(data.today_users||0)+'</div><div class="stat-lbl">Голосовая активность сегодня</div></div>'+
-    '<div class="stat-box"><div class="stat-val">'+(data.avg_time||'0s')+'</div><div class="stat-lbl">Средняя длительность</div></div>';
+    '<div class="stat-box">'+
+      '<div class="stat-icon cyan"><i class="fas fa-clock"></i></div>'+
+      '<div class="stat-body"><div class="stat-val">'+(data.total_time||'0s')+'</div><div class="stat-lbl">Всего голос Длительность</div></div>'+
+    '</div>'+
+    '<div class="stat-box">'+
+      '<div class="stat-icon green"><i class="fas fa-users"></i></div>'+
+      '<div class="stat-body"><div class="stat-val">'+(data.today_users||0)+'</div><div class="stat-lbl">Голосовая активность сегодня</div></div>'+
+    '</div>'+
+    '<div class="stat-box">'+
+      '<div class="stat-icon purple"><i class="fas fa-stopwatch"></i></div>'+
+      '<div class="stat-body"><div class="stat-val">'+(data.avg_time||'0s')+'</div><div class="stat-lbl">Средняя длительность</div></div>'+
+    '</div>';
 
   var lb = document.getElementById('vc-leaderboard');
   var users = data.leaderboard||[];

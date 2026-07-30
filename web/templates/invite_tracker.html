@@ -1,4 +1,4 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 {% block title %}Приглашение Отслеживание - Aether{% endblock %}
 {% block page_title %}<i class="fas fa-link" style="animation: pulse 2s infinite"></i> DAVET ОТСЛЕЖИВАНИЕ{% endblock %}
 {% block content %}
@@ -22,10 +22,22 @@
 </select>
 
 <div class="stat-row" id="stats">
-  <div class="stat-box"><div class="stat-val">-</div><div class="stat-lbl">Всего приглашений</div></div>
-  <div class="stat-box"><div class="stat-val">-</div><div class="stat-lbl">Использовано ссылок</div></div>
-  <div class="stat-box"><div class="stat-val">-</div><div class="stat-lbl">Выход</div></div>
-  <div class="stat-box"><div class="stat-val">-</div><div class="stat-lbl">Активных приглашений</div></div>
+  <div class="stat-box">
+    <div class="stat-icon gold"><i class="fas fa-link"></i></div>
+    <div class="stat-body"><div class="stat-val">-</div><div class="stat-lbl">Всего приглашений</div></div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-icon green"><i class="fas fa-user-plus"></i></div>
+    <div class="stat-body"><div class="stat-val">-</div><div class="stat-lbl">Использовано ссылок</div></div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-icon red"><i class="fas fa-user-minus"></i></div>
+    <div class="stat-body"><div class="stat-val">-</div><div class="stat-lbl">Выход</div></div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-icon cyan"><i class="fas fa-bolt"></i></div>
+    <div class="stat-body"><div class="stat-val">-</div><div class="stat-lbl">Активных приглашений</div></div>
+  </div>
 </div>
 
 <div style="display: flex; gap: 10px; margin-bottom: 15px">
@@ -91,10 +103,22 @@ async function loadInvites() {
   var d = await r.json();
 
   document.getElementById('stats').innerHTML =
-    '<div class="stat-box"><div class="stat-val">'+(d.total_invites||0)+'</div><div class="stat-lbl">Всего приглашений</div></div>'+
-    '<div class="stat-box"><div class="stat-val">'+(d.total_joins||0)+'</div><div class="stat-lbl">Использовано ссылок</div></div>'+
-    '<div class="stat-box"><div class="stat-val">'+(d.total_leaves||0)+'</div><div class="stat-lbl">Выход</div></div>'+
-    '<div class="stat-box"><div class="stat-val">'+(d.active_invites||0)+'</div><div class="stat-lbl">Активных приглашений</div></div>';
+    '<div class="stat-box">'+
+      '<div class="stat-icon gold"><i class="fas fa-link"></i></div>'+
+      '<div class="stat-body"><div class="stat-val">'+(d.total_invites||0)+'</div><div class="stat-lbl">Всего приглашений</div></div>'+
+    '</div>'+
+    '<div class="stat-box">'+
+      '<div class="stat-icon green"><i class="fas fa-user-plus"></i></div>'+
+      '<div class="stat-body"><div class="stat-val">'+(d.total_joins||0)+'</div><div class="stat-lbl">Использовано ссылок</div></div>'+
+    '</div>'+
+    '<div class="stat-box">'+
+      '<div class="stat-icon red"><i class="fas fa-user-minus"></i></div>'+
+      '<div class="stat-body"><div class="stat-val">'+(d.total_leaves||0)+'</div><div class="stat-lbl">Выход</div></div>'+
+    '</div>'+
+    '<div class="stat-box">'+
+      '<div class="stat-icon cyan"><i class="fas fa-bolt"></i></div>'+
+      '<div class="stat-body"><div class="stat-val">'+(d.active_invites||0)+'</div><div class="stat-lbl">Активных приглашений</div></div>'+
+    '</div>';
 
   var lb = d.leaderboard||[];
   var medals = ['🥇','🥈','🥉'];
