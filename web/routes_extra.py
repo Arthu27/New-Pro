@@ -17,6 +17,31 @@ def _load_ai_tickets(guild_id: int) -> dict:
     return {}
 
 
+async def _fetch_channel_msgs_async(bot, channel_mentions):
+    """Async helper to fetch recent messages from a channel, given a bot instance and optional mentions filter."""
+    lines = []
+    for g in bot.guilds:
+        for ch in g.text_channels:
+            # Канал имя soruda geçiyor mu?
+            if channel_mentions and not any(m.lower() in ch.name.lower() for m in channel_mentions):
+                continue
+            if not channel_mentions:
+                break  # Общий soru — только ilk канал al
+            try:
+                msgs = [m async for m in ch.history(limit=10)]
+                for m in reversed(msgs):
+                    lines.append(f"  [{ch.name}] {m.author.display_name}: {m.content[:100]}")
+            except Exception:
+                pass
+    return lines
+
+
+def _fetch_channel_msgs_sync(bot, channel_mentions):
+    """Sync wrapper around the async channel-history helper. Use this from sync Flask handlers."""
+    import asyncio as _asyncio3
+    return _asyncio3.run(_fetch_channel_msgs_async(bot, channel_mentions))
+
+
 def _process_action(answer: str, bot, guild_id: str, session_obj) -> str:
     """AI cevabındaki <action> обрабатывает блок, результат сообщение возвращает."""
     import re as _re, asyncio as _asyncio, os as _os
@@ -843,26 +868,10 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         channel_mentions = _re3.findall(r'#([\w\-]+)', question)
         channel_keywords = ['channel', 'текст', 'написано', 'messagelar', 'son message']
         if bot and (channel_mentions or any(k in question.lower() for k in channel_keywords)):
-            def fetch_channel_msgs():
-                lines = []
-                for g in bot.guilds:
-                    for ch in g.text_channels:
-                        # Канал имя soruda geçiyor mu?
-                        if channel_mentions and not any(m.lower() in ch.name.lower() for m in channel_mentions):
-                            continue
-                        if not channel_mentions:
-                            break  # Общий soru — только ilk канал al
-                        try:
-                            msgs = [m async for m in ch.history(limit=10)]
-                            for m in reversed(msgs):
-                                lines.append(f"  [{ch.name}] {m.author.display_name}: {m.content[:100]}")
-                        except: pass
-                return lines
-
             try:
                 import asyncio as _asyncio3
                 ch_lines = _asyncio3.run_coroutine_threadsafe(
-                    fetch_channel_msgs(), bot.loop
+                    _fetch_channel_msgs_sync(bot, channel_mentions), bot.loop
                 ).result(timeout=8)
                 if ch_lines:
                     channel_messages_block = f"\n=== КАНАЛ СООБЩЕНИЯ ===\n" + '\n'.join(ch_lines[:30])
@@ -2824,7 +2833,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         if not bot: return jsonify({'error': 'Bot offline'}), 503
         channel = bot.get_channel(int(channel_id))
         if not channel: return jsonify({'error': 'Канал не найдено'}), 404
-        def _fetch():
+        async def _fetch():
             msgs = []
             async for m in channel.history(limit=50, oldest_first=False):
                 msgs.append({
