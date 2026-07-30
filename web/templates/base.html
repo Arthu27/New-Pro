@@ -251,7 +251,9 @@
             </div>
         </div>
 
-        {% block content %}{% endblock %}
+        {% block content %}
+{% block page_hero %}{% endblock %}
+{% endblock %}
     </main>
 
 <script>

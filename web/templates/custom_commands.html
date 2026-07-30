@@ -2,6 +2,20 @@
 {% block title %}Пользовательские команды - Aether{% endblock %}
 {% block page_title %}<i class="fas fa-terminal" style="animation: pulse 2s infinite"></i> ОСОБЫЙ КОМАНДЫ{% endblock %}
 {% block content %}
+{% block page_hero %}
+<div class="page-hero compact">
+  <div class="page-hero-content">
+    <div class="page-hero-greeting">
+      <span class="dot"></span>
+      <span>ОСОБЫЙ КОМАНДЫ</span>
+    </div>
+    <h1>ОСОБЫЙ КОМАНДЫ</h1>
+    <p>Создание собственных команд с пользовательскими ответами.</p>
+  </div>
+</div>
+{% endblock %}
+
+
 
 {% if role == 'owner' %}<button class="btn-add" onclick="openModal()"><i class="fas fa-plus"></i> Создать новую команду</button>{% endif %}
 

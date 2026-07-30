@@ -3,6 +3,85 @@
    Glassmorphism · Aurora · Perfect Typography · Premium Colors
    ============================================================ */
 
+/* ============================================
+   PAGE HERO — used at the top of every page
+   ============================================ */
+.page-hero {
+  background: linear-gradient(135deg, rgba(224,176,74,0.10) 0%, rgba(244,204,106,0.04) 50%, transparent 100%);
+  border: 1px solid var(--ac-line);
+  border-radius: var(--r-xl);
+  padding: 26px 30px;
+  margin-bottom: 18px;
+  position: relative;
+  overflow: hidden;
+  animation: fadeUp 0.45s var(--ease-out) both;
+}
+.page-hero::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--ac), transparent);
+}
+.page-hero::after {
+  content: '';
+  position: absolute;
+  top: -50%; right: -20%;
+  width: 400px; height: 400px;
+  background: radial-gradient(circle, var(--ac-soft), transparent 70%);
+  pointer-events: none;
+}
+.page-hero-content { position: relative; z-index: 1; }
+.page-hero-greeting {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.10em;
+  color: var(--ac);
+  margin-bottom: 8px;
+}
+.page-hero-greeting .dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--ok);
+  box-shadow: 0 0 8px var(--ok);
+  animation: pulse 2s ease-in-out infinite;
+}
+.page-hero h1 {
+  font-size: 24px !important;
+  font-weight: 800 !important;
+  line-height: 1.2 !important;
+  letter-spacing: -0.025em !important;
+  background: linear-gradient(135deg, #f0e6d0 0%, #c4b48c 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 0 0 6px 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  text-transform: none !important;
+}
+.page-hero p {
+  font-size: var(--fs-md) !important;
+  line-height: 1.55 !important;
+  color: var(--text-2) !important;
+  margin: 0 !important;
+  max-width: 720px;
+  font-weight: 400 !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+}
+/* Compact variant for small pages */
+.page-hero.compact { padding: 18px 22px; margin-bottom: 14px; }
+.page-hero.compact h1 { font-size: 19px !important; }
+.page-hero.compact p { font-size: var(--fs-sm) !important; }
+@media (max-width: 700px) {
+  .page-hero { padding: 20px 22px; }
+  .page-hero h1 { font-size: 19px !important; }
+}
+
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 :root {

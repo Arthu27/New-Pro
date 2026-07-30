@@ -2,6 +2,20 @@
 {% block title %}Ses Канал Статистика - Aether{% endblock %}
 {% block page_title %}<i class="fas fa-microphone" style="animation: pulse 2s infinite"></i> SES КАНАЛ СТАТИСТИКА{% endblock %}
 {% block content %}
+{% block page_hero %}
+<div class="page-hero compact">
+  <div class="page-hero-content">
+    <div class="page-hero-greeting">
+      <span class="dot"></span>
+      <span>SES КАНАЛ СТАТИСТИКА</span>
+    </div>
+    <h1>SES КАНАЛ СТАТИСТИКА</h1>
+    <p>Статистика голосовой активности: время в каналах, лидеры.</p>
+  </div>
+</div>
+{% endblock %}
+
+
 
 <select  id="guild-select" class="guild-select" onchange="loadVoiceStats()">
   <option value="">Выберите сервер...</option>

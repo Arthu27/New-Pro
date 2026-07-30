@@ -4,73 +4,8 @@
 {% block content %}
 
 <style>
-/* Dashboard hero */
-.dash-hero {
-  background: linear-gradient(135deg, rgba(224,176,74,0.10) 0%, rgba(244,204,106,0.04) 50%, transparent 100%);
-  border: 1px solid var(--ac-line);
-  border-radius: var(--r-xl);
-  padding: 28px 32px;
-  margin-bottom: 18px;
-  position: relative;
-  overflow: hidden;
-  animation: fadeUp 0.45s var(--ease-out) both;
-}
-.dash-hero::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0; height: 2px;
-  background: linear-gradient(90deg, transparent, var(--ac), transparent);
-}
-.dash-hero::after {
-  content: '';
-  position: absolute;
-  top: -50%; right: -20%;
-  width: 400px; height: 400px;
-  background: radial-gradient(circle, var(--ac-soft), transparent 70%);
-  pointer-events: none;
-}
-.dash-hero-content { position: relative; z-index: 1; }
-.dash-hero-greeting {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  font-size: var(--fs-xs);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.10em;
-  color: var(--ac);
-  margin-bottom: 8px;
-}
-.dash-hero-greeting .dot {
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  background: var(--ok);
-  box-shadow: 0 0 8px var(--ok);
-  animation: pulse 2s ease-in-out infinite;
-}
-.dash-hero h2 {
-  font-size: 24px !important;
-  font-weight: 800 !important;
-  line-height: 1.2 !important;
-  letter-spacing: -0.025em !important;
-  background: linear-gradient(135deg, #f0e6d0 0%, #c4b48c 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  margin: 0 0 6px 0 !important;
-  padding: 0 !important;
-  border: none !important;
-  text-transform: none !important;
-}
-.dash-hero p {
-  font-size: var(--fs-md) !important;
-  line-height: 1.55 !important;
-  color: var(--text-2) !important;
-  margin: 0 !important;
-  max-width: 720px;
-}
+/* Dashboard — uses .page-hero (defined globally in style.css) */
 
-/* Stat grid - 4 large cards */
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -283,13 +218,13 @@
 </style>
 
 <!-- Hero section -->
-<div class="dash-hero">
-  <div class="dash-hero-content">
-    <div class="dash-hero-greeting">
+<div class="page-hero">
+  <div class="page-hero-content">
+    <div class="page-hero-greeting">
       <span class="dot"></span>
       <span id="heroGreeting">Добро пожаловать, {{ username }}</span>
     </div>
-    <h2>Центр управления сервером</h2>
+    <h1>Центр управления сервером</h1>
     <p>Полный обзор активности, модерации и состояния вашего Discord-сообщества в реальном времени.</p>
   </div>
 </div>

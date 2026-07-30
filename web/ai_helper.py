@@ -1005,7 +1005,7 @@ def _call(messages: List[Dict], max_tokens: int = 2048, temperature: float = 0.7
     model_name = model or os.getenv("AI_MODEL", "mistral-large-latest")
     ollama_url = os.getenv("OLLAMA_URL", "http://127.0.0.1:11434")
 
-    # 1. Ollama (Yerel LLM) denemesi
+    # 1. Ollama (Yerel LLM) denemesi — sadece çalışıyorsa çok hızlı
     try:
         payload = json.dumps({
             "model": model_name,
@@ -1022,7 +1022,7 @@ def _call(messages: List[Dict], max_tokens: int = 2048, temperature: float = 0.7
             headers={"Content-Type": "application/json"},
             method="POST"
         )
-        with urllib.request.urlopen(req, timeout=3.5) as resp:
+        with urllib.request.urlopen(req, timeout=1.5) as resp:
             data = json.loads(resp.read().decode('utf-8'))
             text = data.get("message", {}).get("content", "").strip()
             if text:

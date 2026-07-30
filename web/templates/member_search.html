@@ -2,6 +2,20 @@
 {% block title %}Поиск участников — Aether{% endblock %}
 {% block page_title %}<i class="fas fa-search" ></i> Поиск участников{% endblock %}
 {% block content %}
+{% block page_hero %}
+<div class="page-hero compact">
+  <div class="page-hero-content">
+    <div class="page-hero-greeting">
+      <span class="dot"></span>
+      <span>Поиск участников</span>
+    </div>
+    <h1>Поиск участников</h1>
+    <p>Быстрый поиск участников по имени или ID.</p>
+  </div>
+</div>
+{% endblock %}
+
+
 
 <div class="ms-bar">
   <input type="text" id="ms-query" placeholder="Имя пользователя или ID..." onkeydown="if(event.key==='Enter')search()">
