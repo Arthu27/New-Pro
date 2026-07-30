@@ -1,47 +1,8 @@
 {% extends "base.html" %}
 {% block title %}Экономика - Aether{% endblock %}
-{% block page_title %}Экономика сервера{% endblock %}
+{% block page_title %}<i class="fas fa-coins" style="color:var(--ac);"></i> Экономика сервера{% endblock %}
 {% block content %}
-<style>
-.eco-tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;}
-.eco-tab{padding:7px 14px;background:rgba(255,255,255,0.03);border:1px solid rgba(212,168,67,0.12);border-radius:99px;cursor:pointer;font-size:11px;font-weight:600;color:rgba(240,232,208,0.6);transition:all 0.15s;}
-.eco-tab:hover{border-color:rgba(212,168,67,0.3);color:#f0e8d0;}
-.eco-tab.active{background:#c8922a;color:#100e08;border-color:#c8922a;}
 
-.eco-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:14px;}
-.eco-card{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.1);border-radius:12px;padding:12px 14px;text-align:center;animation:fadeUp 0.3s ease-out both;}
-@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-.eco-icon{width:32px;height:32px;border-radius:8px;background:rgba(212,168,67,0.12);color:#c8922a;display:flex;align-items:center;justify-content:center;font-size:13px;margin:0 auto 6px;}
-.eco-val{font-size:18px;font-weight:800;color:#f0e8d0;}
-.eco-lbl{font-size:9px;color:#5a5040;text-transform:uppercase;letter-spacing:0.05em;margin-top:2px;}
-
-.eco-box{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.08);border-radius:12px;overflow:hidden;margin-bottom:12px;}
-.eco-head{padding:10px 14px;border-bottom:1px solid rgba(212,168,67,0.07);display:flex;justify-content:space-between;align-items:center;}
-.eco-title{font-size:10px;font-weight:700;color:rgba(240,232,208,0.55);text-transform:uppercase;letter-spacing:0.08em;display:flex;align-items:center;gap:7px;}
-.eco-title i{color:#c8922a;}
-.eco-count{font-size:10px;color:#5a5040;background:rgba(212,168,67,0.06);padding:2px 8px;border-radius:99px;}
-.eco-body{max-height:420px;overflow-y:auto;overflow-anchor:none;}
-
-table{width:100%;border-collapse:collapse;font-size:11px;}
-th,td{padding:6px 12px;text-align:left;border-bottom:1px solid rgba(212,168,67,0.05);}
-th{background:rgba(212,168,67,0.04);color:rgba(240,232,208,0.35);font-weight:600;text-transform:uppercase;letter-spacing:0.06em;font-size:9px;position:sticky;top:0;}
-tr:hover td{background:rgba(212,168,67,0.04);}
-
-.coin{color:#c8922a;font-weight:700;}
-.bar{height:6px;background:rgba(255,255,255,0.04);border-radius:99px;overflow:hidden;margin-top:4px;}
-.bar-fill{height:100%;background:linear-gradient(90deg,#c8922a,#e0a830);border-radius:99px;}
-
-.btn{padding:7px 12px;border:none;border-radius:99px;cursor:pointer;font-weight:600;font-size:11px;font-family:Inter,sans-serif;}
-.btn-primary{background:#c8922a;color:#100e08;}
-.btn-primary:hover{background:#e0a830;}
-
-.shop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;padding:10px;}
-.shop-item{background:rgba(255,255,255,0.03);border:1px solid rgba(212,168,67,0.1);border-radius:10px;padding:10px;text-align:center;cursor:pointer;transition:all 0.15s;}
-.shop-item:hover{border-color:rgba(212,168,67,0.3);transform:translateY(-2px);}
-.shop-icon{font-size:24px;color:#c8922a;margin-bottom:6px;}
-.shop-name{font-size:11px;font-weight:600;color:#f0e8d0;margin-bottom:3px;}
-.shop-price{font-size:11px;color:#c8922a;font-weight:700;}
-</style>
 
 <div class="eco-tabs">
   <button class="eco-tab active" data-tab="leaderboard"><i class="fas fa-trophy"></i> Топ</button>
@@ -62,7 +23,7 @@ tr:hover td{background:rgba(212,168,67,0.04);}
       <span class="eco-count" id="lb-count">-</span>
     </div>
     <div class="eco-body" id="lb-body">
-      <p style="text-align:center;color:#5a5040;padding:30px;font-size:12px;"><i class="fas fa-spinner fa-spin"></i></p>
+      <p style="text-align:center;color:var(--text-3);padding:30px;font-size:12px;"><i class="fas fa-spinner fa-spin"></i></p>
     </div>
   </div>
 </div>
@@ -74,7 +35,7 @@ tr:hover td{background:rgba(212,168,67,0.04);}
       <button class="btn btn-primary" id="add-item"><i class="fas fa-plus"></i> Добавить</button>
     </div>
     <div class="shop-grid" id="shop-grid">
-      <p style="grid-column:1/-1;text-align:center;color:#5a5040;padding:30px;font-size:12px;">Магазин не найден</p>
+      <p style="grid-column:1/-1;text-align:center;color:var(--text-3);padding:30px;font-size:12px;">Магазин не найден</p>
     </div>
   </div>
 </div>
@@ -85,7 +46,7 @@ tr:hover td{background:rgba(212,168,67,0.04);}
       <div class="eco-title"><i class="fas fa-gem"></i> Богатые участники</div>
     </div>
     <div class="eco-body" id="rich-body">
-      <p style="text-align:center;color:#5a5040;padding:30px;font-size:12px;"><i class="fas fa-spinner fa-spin"></i></p>
+      <p style="text-align:center;color:var(--text-3);padding:30px;font-size:12px;"><i class="fas fa-spinner fa-spin"></i></p>
     </div>
   </div>
 </div>
@@ -128,7 +89,7 @@ tr:hover td{background:rgba(212,168,67,0.04);}
       html += '<tr><td><span style="color:#c8922a;font-weight:700;">#' + u.rank + '</span></td>' +
         '<td style="font-weight:600;">' + esc(u.name) + '</td>' +
         '<td><span class="coin">' + u.coins.toLocaleString() + '</span><div class="bar"><div class="bar-fill" style="width:' + pct + '%;"></div></div></td>' +
-        '<td style="color:#5a5040;">' + Math.floor(u.coins / 1000) + '</td></tr>';
+        '<td style="color:var(--text-3);">' + Math.floor(u.coins / 1000) + '</td></tr>';
     });
     html += '</tbody></table>';
     $('lb-body').innerHTML = html;
@@ -139,7 +100,7 @@ tr:hover td{background:rgba(212,168,67,0.04);}
 
   function renderShop() {
     if (!shopItems.length) {
-      $('shop-grid').innerHTML = '<p style="grid-column:1/-1;text-align:center;color:#5a5040;padding:30px;font-size:12px;">Магазин не найден</p>';
+      $('shop-grid').innerHTML = '<p style="grid-column:1/-1;text-align:center;color:var(--text-3);padding:30px;font-size:12px;">Магазин не найден</p>';
       return;
     }
     var html = '';
@@ -160,7 +121,7 @@ tr:hover td{background:rgba(212,168,67,0.04);}
       var pct = total ? Math.round(u.coins / total * 100) : 0;
       html += '<tr><td>' + (i + 1) + '</td><td style="font-weight:600;">' + esc(u.name) + '</td>' +
         '<td><span class="coin">' + u.coins.toLocaleString() + '</span></td>' +
-        '<td><div style="display:flex;align-items:center;gap:6px;"><div class="bar" style="flex:1;"><div class="bar-fill" style="width:' + pct + '%;"></div></div><span style="font-size:10px;color:#5a5040;">' + pct + '%</span></div></td></tr>';
+        '<td><div style="display:flex;align-items:center;gap:6px;"><div class="bar" style="flex:1;"><div class="bar-fill" style="width:' + pct + '%;"></div></div><span style="font-size:10px;color:var(--text-3);">' + pct + '%</span></div></td></tr>';
     });
     html += '</tbody></table>';
     $('rich-body').innerHTML = html;

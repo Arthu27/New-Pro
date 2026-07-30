@@ -1,24 +1,36 @@
 {% extends "base.html" %}
-{% block title %}Активен AFK'lar{% endblock %}
-{% block page_title %}💤 Активен AFK'lar{% endblock %}
+{% block title %}AFK список — Aether{% endblock %}
+{% block page_title %}<i class="fas fa-moon" style="color:var(--ac);"></i> Список AFK{% endblock %}
 {% block content %}
 <style>
 .afk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;}
-.afk-card{background:rgba(26,22,16,0.7);border:1px solid rgba(88,101,242,0.2);border-radius:12px;padding:16px 18px;transition:border-color 0.2s;}
-.afk-card:hover{border-color:rgba(88,101,242,0.4);}
-.afk-name{font-size:14px;font-weight:700;color:#f0e8d0;margin-bottom:4px;}
-.afk-reason{font-size:12px;color:rgba(240,232,208,0.5);margin-bottom:8px;}
-.afk-time{font-size:11px;color:rgba(88,101,242,0.8);background:rgba(88,101,242,0.1);border:1px solid rgba(88,101,242,0.2);border-radius:99px;padding:2px 10px;display:inline-block;}
-.empty-state{text-align:center;padding:60px 20px;color:rgba(240,232,208,0.25);}
-.empty-state i{font-size:40px;margin-bottom:12px;display:block;opacity:0.3;}
+.afk-card{
+  background:var(--surface) !important;
+  border:1px solid var(--line) !important;
+  border-radius:var(--r-lg) !important;
+  padding:16px 18px !important;
+  transition:all 0.22s var(--ease) !important;
+  position:relative;
+  overflow:hidden;
+}
+.afk-card:hover{border-color:var(--ac-line) !important;transform:translateY(-2px);box-shadow:var(--shadow-md);}
+.afk-card::after{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg, transparent, var(--ac), transparent);opacity:0.4;}
+.afk-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.afk-avatar{width:42px;height:42px;border-radius:50%;border:2px solid var(--ac);object-fit:cover;box-shadow:0 0 0 3px rgba(0,0,0,0.4);flex-shrink:0;}
+.afk-name{font-size:14px;font-weight:700;color:var(--text);letter-spacing:-0.01em;}
+.afk-id{font-size:10.5px;color:var(--text-3);font-family:'JetBrains Mono', monospace;margin-top:1px;}
+.afk-reason{font-size:12.5px;color:var(--text-2);margin-bottom:10px;line-height:1.5;}
+.afk-time{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:99px;background:var(--ac-soft);color:var(--ac);border:1px solid var(--ac-line);font-size:10.5px;font-weight:700;letter-spacing:0.04em;}
+.afk-toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;}
+.afk-count-pill{font-size:11px;color:var(--text-2);background:var(--ac-soft);padding:5px 12px;border-radius:99px;font-weight:700;border:1px solid var(--ac-line);letter-spacing:0.05em;}
 </style>
 
-<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
-  <div style="font-size:12px;color:rgba(240,232,208,0.35);" id="afk-count"></div>
+<div class="afk-toolbar">
+  <div class="afk-count-pill" id="afk-count">0 человек AFK</div>
 </div>
 
 <div class="afk-grid" id="afk-grid">
-  <div style="color:rgba(240,232,208,0.3);font-size:13px;">Загрузка...</div>
+  <div class="empty-state"><i class="fas fa-spinner fa-spin"></i>Загрузка...</div>
 </div>
 
 <script>
@@ -26,36 +38,37 @@ var _guildId = '{{ guild_id }}';
 
 function timeSince(iso) {
   var diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
-  if (diff < 60) return diff + ' saniye';
-  if (diff < 3600) return Math.floor(diff/60) + ' min';
-  return Math.floor(diff/3600) + ' saat ' + Math.floor((diff%3600)/60) + ' min';
+  if (diff < 60) return diff + ' сек';
+  if (diff < 3600) return Math.floor(diff/60) + ' мин';
+  return Math.floor(diff/3600) + ' ч ' + Math.floor((diff%3600)/60) + ' мин';
 }
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
 async function loadAFK(gid) {
   try {
     var d = await fetch('/api/afk/' + gid).then(r => r.json());
     var el = document.getElementById('afk-grid');
-    document.getElementById('afk-count').textContent = d.length + ' celovek AFK';
+    document.getElementById('afk-count').textContent = d.length + ' человек AFK';
     if (!d.length) {
-      el.innerHTML = '<div class="empty-state"><i class="fas fa-moon"></i>Сейчас никто не AFK.</div>';
+      el.innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><i class="fas fa-moon"></i><p>Сейчас никто не AFK</p></div>';
       return;
     }
     el.innerHTML = d.map(function(u) {
       return '<div class="afk-card">' +
-        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">' +
-          (u.avatar ? '<img src="' + u.avatar + '" style="width:36px;height:36px;border-radius:50%;border:1px solid rgba(88,101,242,0.3);">' : '<div style="width:36px;height:36px;border-radius:50%;background:rgba(88,101,242,0.1);display:flex;align-items:center;justify-content:center;">💤</div>') +
-          '<div><div class="afk-name">💤 ' + u.name + '</div></div>' +
+        '<div class="afk-head">' +
+          (u.avatar ? '<img src="' + esc(u.avatar) + '" class="afk-avatar" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' : '<div class="afk-avatar" style="background:var(--ac-soft);display:flex;align-items:center;justify-content:center;font-size:18px;">💤</div>') +
+          '<div style="flex:1;min-width:0;"><div class="afk-name">💤 ' + esc(u.name) + '</div><div class="afk-id">' + esc(u.id) + '</div></div>' +
         '</div>' +
-        '<div class="afk-reason">' + (u.reason || 'AFK') + '</div>' +
-        '<span class="afk-time">⏱ ' + timeSince(u.since) + ' до</span>' +
+        '<div class="afk-reason">' + esc(u.reason || 'AFK') + '</div>' +
+        '<span class="afk-time"><i class="fas fa-clock"></i> ' + timeSince(u.since) + '</span>' +
       '</div>';
     }).join('');
   } catch(e) {
-    document.getElementById('afk-grid').innerHTML = '<div style="color:#e05555;">Загруз.</div>';
+    document.getElementById('afk-grid').innerHTML = '<div class="empty-state" style="color:var(--err);">Не удалось загрузить</div>';
   }
 }
 
-setInterval(function(){ loadAFK(_guildId); }, 1000);
+setInterval(function(){ loadAFK(_guildId); }, 30000);
 loadAFK(_guildId);
 </script>
 {% endblock %}

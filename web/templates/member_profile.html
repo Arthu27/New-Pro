@@ -1,50 +1,96 @@
 {% extends "base.html" %}
-{% block title %}Üye Profili - Aether{% endblock %}
-{% block page_title %}Профиль участника{% endblock %}
+{% block title %}Профиль участника — Aether{% endblock %}
+{% block page_title %}<i class="fas fa-id-card" style="color:var(--ac);"></i> Профиль участника{% endblock %}
 {% block content %}
 <style>
-.mp-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-@media (max-width:700px){.mp-grid{grid-template-columns:1fr;}}
+.search-bar{display:flex;gap:10px;margin-bottom:18px;align-items:center;}
+.search-bar input{flex:1;}
+.mp-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+@media (max-width:768px){.mp-grid{grid-template-columns:1fr;}}
+.mp-card{
+  background:var(--surface) !important;
+  border:1px solid var(--line) !important;
+  border-radius:var(--r-lg) !important;
+  padding:20px !important;
+  animation:fadeUp 0.4s var(--ease-out) both;
+  transition:border-color 0.2s var(--ease);
+}
+.mp-card:hover{border-color:var(--ac-line) !important;}
 
-.mp-card{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.1);border-radius:12px;padding:14px;animation:fadeUp 0.3s ease-out both;}
-@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-.mp-card:hover{border-color:rgba(212,168,67,0.25);}
+.mp-head{display:flex;align-items:center;gap:12px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--line);}
+.mp-av{
+  width:56px;height:56px;border-radius:50%;
+  border:2px solid var(--ac);object-fit:cover;
+  box-shadow:0 0 0 3px rgba(0,0,0,0.4);
+  flex-shrink:0;
+}
+.mp-info{flex:1;min-width:0;}
+.mp-name{font-size:15.5px;font-weight:700;color:var(--text);letter-spacing:-0.01em;}
+.mp-sub{font-size:10.5px;color:var(--text-3);margin-top:2px;font-family:'JetBrains Mono', monospace;}
 
-.mp-head{display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid rgba(212,168,67,0.08);}
-.mp-av{width:48px;height:48px;border-radius:50%;border:2px solid var(--ac);object-fit:cover;}
-.mp-info{flex:1;}
-.mp-name{font-size:15px;font-weight:700;color:#f0e8d0;letter-spacing:-0.02em;}
-.mp-sub{font-size:10px;color:#5a5040;}
-
-.row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(212,168,67,0.04);font-size:11px;}
+.row{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);font-size:12px;align-items:center;}
 .row:last-child{border-bottom:none;}
-.row-key{color:#5a5040;}
-.row-val{color:#f0e8d0;font-weight:600;font-family:monospace;}
+.row-key{color:var(--text-3);font-size:10.5px;text-transform:uppercase;letter-spacing:0.06em;font-weight:700;}
+.row-val{color:var(--text);font-weight:700;font-family:'JetBrains Mono', monospace;font-size:11.5px;}
+.row-val.danger{color:var(--err);}
+.row-val.ok{color:var(--ok);}
+.row-val.accent{color:var(--ac);}
 
-.mp-role{display:inline-block;background:rgba(212,168,67,0.1);border:1px solid rgba(212,168,67,0.25);padding:2px 8px;border-radius:99px;font-size:10px;margin:2px;}
+.mp-role{
+  display:inline-block;
+  background:var(--ac-soft);
+  border:1px solid var(--ac-line);
+  padding:3px 10px;border-radius:99px;
+  font-size:10.5px;margin:3px;font-weight:600;color:var(--text-2);
+}
 
-.btn{padding:6px 12px;border:none;border-radius:99px;cursor:pointer;font-weight:600;font-size:10px;font-family:Inter,sans-serif;}
-.btn-warn{background:rgba(232,144,58,0.15);color:#e8903a;border:1px solid rgba(232,144,58,0.3);}
-.btn-warn:hover{background:rgba(232,144,58,0.25);}
-.btn-danger{background:rgba(224,85,85,0.15);color:var(--red);border:1px solid rgba(224,85,85,0.3);}
-.btn-danger:hover{background:rgba(224,85,85,0.25);}
-.btn-primary{background:#c8922a;color:#100e08;}
-.btn-primary:hover{background:#e0a830;}
+.btn{
+  padding:7px 14px;border:none;border-radius:99px;
+  cursor:pointer;font-weight:700;font-size:11px;
+  font-family:Inter,sans-serif;
+  transition:all 0.18s var(--ease);
+  display:inline-flex;align-items:center;gap:5px;
+  letter-spacing:0.04em;
+}
+.btn-warn{background:rgba(232,144,58,0.12);color:var(--orange);border:1px solid rgba(232,144,58,0.30);}
+.btn-warn:hover{background:rgba(232,144,58,0.22);transform:translateY(-1px);}
+.btn-danger{background:rgba(248,113,113,0.12);color:var(--err);border:1px solid rgba(248,113,113,0.30);}
+.btn-danger:hover{background:rgba(248,113,113,0.22);transform:translateY(-1px);}
+.btn-primary{background:linear-gradient(135deg, var(--ac), var(--ac-3));color:var(--bg);box-shadow:0 2px 8px var(--ac-glow);}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(212,168,67,0.40);filter:brightness(1.05);}
 
-.actions-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;}
+.actions-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid var(--line);}
+
+.section-sub{
+  font-size:11px;font-weight:700;color:var(--text-2);
+  text-transform:uppercase;letter-spacing:0.10em;margin-bottom:10px;
+  display:flex;align-items:center;gap:8px;
+}
+.section-sub i{color:var(--ac);font-size:12px;}
+
+.history-item{
+  padding:8px 12px;background:rgba(0,0,0,0.20);
+  border:1px solid var(--line);
+  border-radius:8px;margin-bottom:6px;font-size:11.5px;
+  transition:all 0.18s var(--ease);
+}
+.history-item:hover{background:rgba(0,0,0,0.30);transform:translateX(3px);}
+
+.empty-state{padding:60px 20px;text-align:center;color:var(--text-3);}
+.empty-state i{font-size:36px;margin-bottom:12px;opacity:0.4;display:block;color:var(--ac);}
+.empty-state p{margin:0;font-size:13px;}
 </style>
 
-<div style="display:flex;gap:10px;margin-bottom:12px;align-items:center;">
-  <input type="text" id="search" placeholder="Üye ara... (ID veya isim)" style="flex:1;padding:8px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(212,168,67,0.16);border-radius:8px;color:#f0e8d0;font-size:12px;">
-  <button class="btn btn-primary" id="btn-load" type="button"><i class="fas fa-search"></i> Yükle</button>
+<div class="search-bar">
+  <input type="text" id="search" placeholder="ID или имя участника...">
+  <button class="btn btn-primary" id="btn-load" type="button"><i class="fas fa-search"></i> Загрузить</button>
 </div>
 
 <div id="profile" style="display:none;">
   <div class="mp-grid">
-    <!-- Sol: Profil bilgileri -->
     <div class="mp-card">
       <div class="mp-head">
-        <img class="mp-av" id="p-avatar" src="https://cdn.discordapp.com/embed/avatars/0.png">
+        <img class="mp-av" id="p-avatar" src="https://cdn.discordapp.com/embed/avatars/0.png" onerror="this.src='https://cdn.discordapp.com/embed/avatars/0.png'">
         <div class="mp-info">
           <div class="mp-name" id="p-name">-</div>
           <div class="mp-sub" id="p-sub">-</div>
@@ -53,7 +99,7 @@
       <div class="row"><span class="row-key">ID</span><span class="row-val" id="p-id">-</span></div>
       <div class="row"><span class="row-key">Возраст аккаунта</span><span class="row-val" id="p-age">-</span></div>
       <div class="row"><span class="row-key">На сервере с</span><span class="row-val" id="p-joined">-</span></div>
-      <div class="row"><span class="row-key">Предупреждений</span><span class="row-val" id="p-warns" style="color:#c8922a;">-</span></div>
+      <div class="row"><span class="row-key">Предупреждений</span><span class="row-val accent" id="p-warns">-</span></div>
       <div class="row"><span class="row-key">Мьют</span><span class="row-val" id="p-mute">-</span></div>
       <div class="row"><span class="row-key">Jail</span><span class="row-val" id="p-jail">-</span></div>
       <div class="row"><span class="row-key">Заметки</span><span class="row-val" id="p-notes">-</span></div>
@@ -67,69 +113,62 @@
       </div>
     </div>
 
-    <!-- Sağ: Roller + notlar -->
     <div class="mp-card">
-      <div class="mp-head" style="margin-bottom:8px;padding-bottom:6px;">
-        <div style="font-size:11px;font-weight:700;color:rgba(240,232,208,0.55);text-transform:uppercase;letter-spacing:0.05em;">Роли участника</div>
-      </div>
-      <div id="p-roles" style="margin-bottom:14px;"><p style="color:#5a5040;font-size:11px;">Yok</p></div>
+      <div class="section-sub" style="margin-bottom:10px;"><i class="fas fa-user-tag"></i> Роли участника</div>
+      <div id="p-roles" style="margin-bottom:18px;"><p style="color:var(--text-3);font-size:12px;">Нет ролей</p></div>
 
-      <div class="mp-head" style="margin-bottom:8px;padding-bottom:6px;">
-        <div style="font-size:11px;font-weight:700;color:rgba(240,232,208,0.55);text-transform:uppercase;letter-spacing:0.05em;">Заметка</div>
-        <button class="btn btn-primary" id="btn-save-note" type="button" style="font-size:9px;padding:3px 8px;">Сохранить</button>
+      <div class="section-sub" style="margin-bottom:8px;justify-content:space-between;display:flex;">
+        <span><i class="fas fa-sticky-note"></i> Заметка</span>
+        <button class="btn btn-primary" id="btn-save-note" type="button" style="font-size:10px;padding:4px 10px;">Сохранить</button>
       </div>
-      <textarea id="p-note-text" rows="6" placeholder="Заметка о участнике..." style="width:100%;padding:8px;background:rgba(255,255,255,0.04);border:1px solid rgba(212,168,67,0.16);border-radius:6px;color:#f0e8d0;font-size:11px;font-family:Inter,sans-serif;resize:vertical;"></textarea>
+      <textarea id="p-note-text" rows="6" placeholder="Заметка о участнике..." style="margin-bottom:18px;"></textarea>
 
-      <div class="mp-head" style="margin-bottom:8px;padding-bottom:6px;margin-top:14px;">
-        <div style="font-size:11px;font-weight:700;color:rgba(240,232,208,0.55);text-transform:uppercase;letter-spacing:0.05em;">История</div>
-      </div>
-      <div id="p-history" style="max-height:160px;overflow-y:auto;font-size:10px;color:rgba(240,232,208,0.6);"></div>
+      <div class="section-sub" style="margin-bottom:8px;"><i class="fas fa-history"></i> История</div>
+      <div id="p-history" style="max-height:180px;overflow-y:auto;"></div>
     </div>
   </div>
 </div>
 
-<div id="empty" style="text-align:center;padding:50px;color:#5a5040;font-size:12px;">
-  <i class="fas fa-search" style="font-size:30px;display:block;margin-bottom:10px;opacity:0.3;"></i>
-  Üye ID veya isim girip <strong>Yükle</strong>'ye bas
+<div id="empty" class="empty-state">
+  <i class="fas fa-search"></i>
+  <p>Введите ID или имя и нажмите <strong style="color:var(--ac);">Загрузить</strong></p>
 </div>
 
 <script>
 (function () {
   'use strict';
   function $(id) { return document.getElementById(id); }
-  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
-
   function showToast(msg, ok) {
     var t = document.createElement('div');
+    t.className = 'toast ' + (ok ? 'ok' : 'err');
     t.textContent = msg;
-    t.style.cssText = 'position:fixed;top:14px;right:14px;padding:9px 16px;border-radius:8px;font-weight:600;z-index:99999;font-size:12px;background:' + (ok ? 'linear-gradient(135deg,#27ae60,#2ecc71)' : 'linear-gradient(135deg,#c0392b,#e74c3c)') + ';color:#fff;';
     document.body.appendChild(t);
-    setTimeout(function () { t.remove(); }, 1800);
+    setTimeout(function () { t.remove(); }, 2200);
   }
 
   function load() {
     var q = $('search').value.trim();
-    if (!q) { showToast('ID или имя girin', false); return; }
+    if (!q) { showToast('Введите ID или имя', false); return; }
     $('profile').style.display = 'block';
     $('empty').style.display = 'none';
     $('p-name').textContent = 'User_' + q;
     $('p-sub').textContent = '@user_' + q;
     $('p-id').textContent = q;
-    $('p-age').textContent = '142 gün';
-    $('p-joined').textContent = '45 gün';
+    $('p-age').textContent = '142 дней';
+    $('p-joined').textContent = '45 дней';
     $('p-warns').textContent = '2';
-    $('p-mute').textContent = 'Yok';
-    $('p-jail').textContent = 'Yok';
-    $('p-notes').textContent = 'Yok';
+    $('p-mute').textContent = 'Нет';
+    $('p-jail').textContent = 'Нет';
+    $('p-notes').textContent = 'Нет';
     $('p-roles').innerHTML = '<span class="mp-role">@Member</span> <span class="mp-role">@Level 5</span> <span class="mp-role">@VIP</span>';
-    $('p-history').innerHTML = '<div style="padding:5px 0;border-bottom:1px solid rgba(212,168,67,0.04);">⚠️ Warn — Spam (3 gün önce)</div><div style="padding:5px 0;">🔇 Mute 1h — Caps (1 hafta önce)</div>';
+    $('p-history').innerHTML = '<div class="history-item">⚠️ <strong>Warn</strong> — Spam (3 дн. назад)</div><div class="history-item">🔇 <strong>Mute 1h</strong> — CAPS (1 нед. назад)</div>';
   }
 
   function bind() {
     $('btn-load').addEventListener('click', load);
     $('search').addEventListener('keypress', function (e) { if (e.key === 'Enter') load(); });
     var sn = $('btn-save-note');
-    if (sn) sn.addEventListener('click', function () { showToast('Заметка сохранена', true); });
+    if (sn) sn.addEventListener('click', function () { showToast('✓ Заметка сохранена', true); });
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind);
   else bind();

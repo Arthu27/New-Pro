@@ -1,31 +1,8 @@
 {% extends "base.html" %}
 {% block title %}Тикеты - Aether{% endblock %}
-{% block page_title %}Настройки тикетов{% endblock %}
+{% block page_title %}<i class="fas fa-cogs" style="color:var(--ac);"></i> Настройки тикетов{% endblock %}
 {% block content %}
-<style>
-.tk-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;}
-.tk-card{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.1);border-radius:12px;padding:14px;animation:fadeUp 0.3s ease-out both;}
-@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-.tk-card:hover{border-color:rgba(212,168,67,0.25);}
-.tk-head{display:flex;align-items:center;gap:9px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid rgba(212,168,67,0.08);}
-.tk-icon{width:32px;height:32px;border-radius:8px;background:rgba(212,168,67,0.12);color:#c8922a;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}
-.tk-title{font-size:12px;font-weight:700;color:rgba(240,232,208,0.7);text-transform:uppercase;letter-spacing:0.05em;flex:1;}
 
-.tk-toggle{position:relative;width:36px;height:20px;background:rgba(255,255,255,0.08);border-radius:99px;cursor:pointer;transition:background 0.2s;flex-shrink:0;}
-.tk-toggle::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;background:#5a5040;border-radius:50%;transition:all 0.2s;}
-.tk-toggle.on{background:rgba(200,146,42,0.4);}
-.tk-toggle.on::after{left:18px;background:#c8922a;}
-
-.form-row{display:flex;gap:8px;align-items:center;margin-bottom:8px;}
-.form-row label{flex:0 0 110px;font-size:10px;color:#5a5040;text-transform:uppercase;letter-spacing:0.05em;}
-.form-row input,.form-row select,.form-row textarea{flex:1;padding:7px 10px;background:rgba(255,255,255,0.04);border:1px solid rgba(212,168,67,0.16);border-radius:6px;color:#f0e8d0;font-size:12px;}
-.form-row textarea{font-family:Inter,sans-serif;resize:vertical;min-height:60px;}
-
-.btn{padding:7px 14px;border:none;border-radius:99px;cursor:pointer;font-weight:600;font-size:11px;font-family:Inter,sans-serif;transition:all 0.15s;display:inline-flex;align-items:center;gap:5px;}
-.btn-primary{background:#c8922a;color:#100e08;}
-.btn-primary:hover{background:#e0a830;}
-.btn-warn{background:rgba(232,144,58,0.15);color:#e8903a;border:1px solid rgba(232,144,58,0.3);}
-</style>
 
 <div class="tk-grid">
   <!-- Genel -->
@@ -100,7 +77,7 @@
       <button class="btn btn-primary" id="add-cat" type="button"><i class="fas fa-plus"></i> Добавить</button>
     </div>
     <div id="cat-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;">
-      <p style="grid-column:1/-1;text-align:center;color:#5a5040;padding:14px;font-size:11px;">Загрузка...</p>
+      <p style="grid-column:1/-1;text-align:center;color:var(--text-3);padding:14px;font-size:11px;">Загрузка...</p>
     </div>
   </div>
 </div>
@@ -117,7 +94,7 @@
   function showToast(msg, ok) {
     var t = document.createElement('div');
     t.textContent = msg;
-    t.style.cssText = 'position:fixed;top:14px;right:14px;padding:9px 16px;border-radius:8px;font-weight:600;z-index:99999;font-size:12px;background:' + (ok ? 'linear-gradient(135deg,#27ae60,#2ecc71)' : 'linear-gradient(135deg,#c0392b,#e74c3c)') + ';color:#fff;';
+    t.style.cssText = 'position:fixed;top:14px;right:14px;padding:9px 16px;border-radius:8px;font-weight:600;z-index:99999;font-size:12px;background:' + (ok ? 'linear-gradient(135deg,var(--ok),var(--ok))' : 'linear-gradient(135deg,var(--err),var(--err))') + ';color:#fff;';
     document.body.appendChild(t);
     setTimeout(function () { t.remove(); }, 1800);
   }

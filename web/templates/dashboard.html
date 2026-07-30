@@ -2,98 +2,292 @@
 {% block title %}Панель - Aether{% endblock %}
 {% block page_title %}Панель управления{% endblock %}
 {% block content %}
+
 <style>
-/* ── Genel kompakt stil ── */
-.dash-row{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:14px;}
-.dash-card{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.08);border-radius:12px;padding:12px 16px;flex:1;min-width:160px;transition:border-color 0.15s;}
-.dash-card:hover{border-color:rgba(212,168,67,0.18);}
-.dash-card-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;background:rgba(212,168,67,0.1);color:#c8922a;margin-bottom:8px;}
-.dash-card-val{font-size:20px;font-weight:800;color:#f0e8d0;letter-spacing:-0.02em;line-height:1;}
-.dash-card-lbl{font-size:10px;color:#5a5040;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;margin-top:2px;}
+/* ── Hero bölümü: ortada büyük başlık + 4 istatistik ── */
+.dash-hero {
+  background:
+    radial-gradient(ellipse 60% 80% at 20% 30%, rgba(139, 92, 246, 0.10), transparent 60%),
+    radial-gradient(ellipse 50% 70% at 80% 70%, rgba(236, 72, 153, 0.08), transparent 60%),
+    var(--surface-2);
+  border: 1px solid var(--ac-line) !important;
+  border-radius: var(--r-xl) !important;
+  padding: 28px 32px !important;
+  margin-bottom: 18px !important;
+  position: relative;
+  overflow: hidden;
+  animation: fadeUp 0.5s var(--ease-out) both;
+}
+.dash-hero::before {
+  content: '';
+  position: absolute;
+  top: -50%; right: -10%;
+  width: 400px; height: 400px;
+  background: radial-gradient(circle, rgba(212, 168, 67, 0.10), transparent 60%);
+  pointer-events: none;
+  animation: float 8s ease-in-out infinite;
+}
+.dash-hero-greeting {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ac);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  margin-bottom: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.dash-hero-greeting .dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--ok);
+  box-shadow: 0 0 12px var(--ok);
+  animation: pulse 2s ease-in-out infinite;
+}
+.dash-hero h2 {
+  font-size: 26px !important;
+  font-weight: 800 !important;
+  color: var(--text) !important;
+  margin: 0 0 4px 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  letter-spacing: -0.025em !important;
+  text-transform: none !important;
+  background: linear-gradient(135deg, #f5ecd2 0%, #b6a47b 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.dash-hero p {
+  color: var(--text-2);
+  font-size: 13.5px;
+  margin: 0;
+}
+
+/* ── Stat grid: 4 büyük kart yan yana ── */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 18px;
+}
+.stat-grid .dash-card { min-width: 0; }
+
+/* Big number stat cards */
+.stat-card-big {
+  padding: 22px 24px !important;
+  position: relative;
+  overflow: hidden;
+  background: var(--surface-2) !important;
+  border: 1px solid var(--line) !important;
+  border-radius: var(--r-lg) !important;
+  transition: all 0.25s var(--ease) !important;
+}
+.stat-card-big::before {
+  content: '';
+  position: absolute;
+  top: -50%; right: -30%;
+  width: 220px; height: 220px;
+  border-radius: 50%;
+  opacity: 0.15;
+  pointer-events: none;
+  filter: blur(40px);
+}
+.stat-card-big:hover {
+  transform: translateY(-3px);
+  border-color: var(--ac-line) !important;
+  box-shadow: var(--shadow-md), 0 0 30px rgba(212, 168, 67, 0.10) !important;
+}
+.stat-card-big .stat-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.10em;
+  margin-bottom: 12px;
+}
+.stat-card-big .stat-label i {
+  width: 32px; height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: var(--ac-soft);
+  color: var(--ac);
+  font-size: 13px;
+  border: 1px solid var(--ac-line);
+}
+.stat-card-big .stat-value {
+  font-size: 30px;
+  font-weight: 900;
+  color: var(--text);
+  letter-spacing: -0.025em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.stat-card-big .stat-value small {
+  font-size: 13px;
+  color: var(--text-3);
+  font-weight: 600;
+}
+.stat-card-big .stat-trend {
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--text-3);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.stat-card-big.purple::before  { background: linear-gradient(135deg, #8b5cf6, #6366f1); }
+.stat-card-big.pink::before    { background: linear-gradient(135deg, #ec4899, #f43f5e); }
+.stat-card-big.cyan::before    { background: linear-gradient(135deg, #06b6d4, #0ea5e9); }
+.stat-card-big.green::before   { background: linear-gradient(135deg, #10b981, #34d399); }
+.stat-card-big.purple .stat-label i { background: rgba(139, 92, 246, 0.15); color: #a78bfa; border-color: rgba(139, 92, 246, 0.30); }
+.stat-card-big.pink .stat-label i   { background: rgba(236, 72, 153, 0.15); color: #f472b6; border-color: rgba(236, 72, 153, 0.30); }
+.stat-card-big.cyan .stat-label i   { background: rgba(6, 182, 212, 0.15); color: #67e8f9; border-color: rgba(6, 182, 212, 0.30); }
+.stat-card-big.green .stat-label i  { background: rgba(16, 185, 129, 0.15); color: #6ee7b7; border-color: rgba(16, 185, 129, 0.30); }
 
 /* ── Tehlike endeksi (özel) ── */
-.threat-bar{height:6px;background:rgba(255,255,255,0.04);border-radius:99px;overflow:hidden;margin-top:6px;}
-.threat-bar-fill{height:100%;transition:width 0.4s,background 0.4s;border-radius:99px;}
+.threat-bar{height:6px;background:rgba(255,255,255,0.04);border-radius:99px;overflow:hidden;margin-top:8px;position:relative;}
+.threat-bar-fill{height:100%;transition:width 0.6s var(--ease-out),background 0.4s;border-radius:99px;position:relative;overflow:hidden;}
+.threat-bar-fill::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+  background-size:200% 100%;animation:shimmer 2.4s ease infinite;
+}
 
-/* ── Liste (son aksiyonlar, login log) ── */
-.dash-box{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.08);border-radius:12px;margin-bottom:12px;overflow:hidden;}
-.dash-box-head{padding:10px 14px;border-bottom:1px solid rgba(212,168,67,0.07);display:flex;align-items:center;justify-content:space-between;}
-.dash-box-title{font-size:10px;font-weight:700;color:rgba(240,232,208,0.55);text-transform:uppercase;letter-spacing:0.08em;display:flex;align-items:center;gap:7px;}
-.dash-box-title i{color:#c8922a;font-size:11px;}
-.dash-box-body{padding:8px 0;max-height:260px;overflow-y:auto;overflow-anchor:none;}
+/* ── Dash box (kart listesi / tablo) ── */
+.dash-box{background:var(--surface) !important;border:1px solid var(--line) !important;border-radius:var(--r-lg) !important;margin-bottom:16px !important;overflow:hidden;transition:border-color 0.2s var(--ease) !important;}
+.dash-box:hover { border-color: var(--ac-line) !important; }
+.dash-box-head{padding:14px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;background:linear-gradient(180deg, rgba(212,168,67,0.04), transparent);}
+.dash-box-title{font-size:11px !important;font-weight:700 !important;color:var(--text-2) !important;text-transform:uppercase;letter-spacing:0.10em !important;display:flex;align-items:center;gap:8px;margin:0 !important;padding:0 !important;border:none !important;}
+.dash-box-title i{color:var(--ac);font-size:13px;}
+.dash-box-body{padding:8px 0;}
 
 /* ── Tablo (son aksiyonlar) ── */
-table{width:100%;border-collapse:collapse;}
-th,td{padding:8px 14px;text-align:left;border-bottom:1px solid rgba(212,168,67,0.05);font-size:12px;}
-th{background:rgba(212,168,67,0.04);color:rgba(240,232,208,0.35);font-weight:600;text-transform:uppercase;letter-spacing:0.06em;font-size:9px;position:sticky;top:0;}
-tr:hover td{background:rgba(212,168,67,0.03);}
-.action-badge{padding:2px 7px;border-radius:5px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;}
+table{width:100%;border-collapse:separate;border-spacing:0;}
+th,td{padding:11px 18px;text-align:left;border-bottom:1px solid var(--line);font-size:12.5px;vertical-align:middle;}
+th{background:rgba(212,168,67,0.04);color:var(--text-2);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;font-size:10.5px;position:sticky;top:0;border-bottom:1px solid var(--ac-line);}
+th:first-child{border-top-left-radius:0;}
+th:last-child{border-top-right-radius:0;}
+tr{transition:background 0.15s var(--ease);}
+tbody tr:hover{background:rgba(212,168,67,0.04);}
+tbody tr:last-child td{border-bottom:none;}
+.action-badge{padding:3px 9px;border-radius:6px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;border:1px solid currentColor;display:inline-flex;align-items:center;gap:4px;}
 
 /* ── Hızlı istatistik grid ── */
-.quick-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(85px,1fr));gap:8px;padding:0 14px 10px;}
-.quick-item{background:rgba(255,255,255,0.03);border:1px solid rgba(212,168,67,0.08);border-radius:10px;padding:10px 8px;text-align:center;}
-.quick-item h3{font-size:20px;font-weight:800;color:#f0e8d0;letter-spacing:-0.02em;line-height:1;margin-bottom:2px;}
-.quick-item p{font-size:9px;color:#5a5040;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;}
+.quick-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;padding:16px 20px 20px;}
+.quick-item{background:rgba(255,255,255,0.025);border:1px solid var(--line);border-radius:12px;padding:16px 10px;text-align:center;transition:all 0.2s var(--ease);}
+.quick-item:hover{background:var(--ac-soft);border-color:var(--ac-line);transform:translateY(-2px);}
+.quick-item h3{font-size:24px;font-weight:800;color:var(--text);letter-spacing:-0.025em;line-height:1;margin:0 0 4px 0;font-variant-numeric:tabular-nums;}
+.quick-item p{font-size:10px;color:var(--text-3);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin:0;}
 
 /* ── Form ── */
-.form-label{color:rgba(240,232,208,0.4);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:4px;}
-.form-input{width:100%;padding:8px 10px;background:rgba(255,255,255,0.04);border:1px solid rgba(212,168,67,0.12);border-radius:7px;color:#f0e8d0;font-size:12px;box-sizing:border-box;font-family:Inter,sans-serif;margin:0 0 8px;}
-.form-input:focus{outline:none;border-color:rgba(212,168,67,0.45);}
-.form-btn{width:100%;padding:9px;background:#c8922a;color:#100e08;border:none;border-radius:99px;cursor:pointer;font-weight:700;font-size:12px;font-family:Inter,sans-serif;}
-.form-btn:hover{background:#e0a830;}
+.form-label{color:var(--text-2) !important;font-size:10.5px !important;font-weight:700 !important;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:6px;}
+.form-input{width:100%;padding:10px 12px;background:rgba(10,9,7,0.55);border:1px solid var(--line-2);border-radius:10px;color:var(--text);font-size:13px;box-sizing:border-box;font-family:Inter,sans-serif;margin:0 0 10px;transition:all 0.18s var(--ease);}
+.form-input:focus{outline:none;border-color:var(--ac);background:rgba(10,9,7,0.85);box-shadow:0 0 0 3px rgba(212,168,67,0.12);}
+.form-btn{width:100%;padding:11px;background:linear-gradient(135deg, var(--ac), var(--ac-3));color:var(--bg);border:none;border-radius:10px;cursor:pointer;font-weight:700;font-size:13px;font-family:Inter,sans-serif;box-shadow:0 4px 14px rgba(212,168,67,0.25);transition:all 0.18s var(--ease);}
+.form-btn:hover{transform:translateY(-1px);box-shadow:0 6px 22px rgba(212,168,67,0.45);filter:brightness(1.08);}
 
 /* ── Login log item ── */
-.login-item{display:flex;align-items:center;gap:10px;padding:7px 14px;}
-.login-item img{width:28px;height:28px;border-radius:50%;border:2px solid #5a5040;object-fit:cover;flex-shrink:0;}
+.login-item{display:flex;align-items:center;gap:12px;padding:10px 20px;transition:background 0.15s var(--ease);}
+.login-item:hover{background:rgba(212,168,67,0.05);}
+.login-item img{width:36px;height:36px;border-radius:50%;border:2px solid var(--ac);object-fit:cover;flex-shrink:0;box-shadow:0 0 0 2px rgba(0,0,0,0.3);transition:transform 0.2s var(--ease);}
+.login-item:hover img{transform:scale(1.05);}
 .login-item-info{flex:1;min-width:0;}
-.login-item-name{font-weight:600;font-size:12px;color:#f0e8d0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.login-item-time{font-size:10px;color:#5a5040;}
+.login-item-name{font-weight:600;font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.login-item-time{font-size:11px;color:var(--text-3);margin-top:2px;}
+
+/* ── Skeleton loader ── */
+.skeleton-bar {
+  background: linear-gradient(90deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.10) 50%, rgba(255,255,255,0.04) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease infinite;
+  border-radius: 6px;
+  height: 14px;
+  margin: 6px 0;
+}
 
 /* ── Mobile ── */
-@media (max-width: 600px){
-  .dash-card{min-width:140px;padding:10px 12px;}
-  .dash-card-val{font-size:17px;}
+@media (max-width: 900px) {
+  .stat-grid { grid-template-columns: repeat(2, 1fr); }
+  .dash-hero { padding: 22px 20px !important; }
+  .dash-hero h2 { font-size: 22px !important; }
+}
+@media (max-width: 600px) {
+  .stat-grid { grid-template-columns: 1fr; }
+  .stat-card-big .stat-value { font-size: 26px; }
+  .quick-grid { grid-template-columns: repeat(3, 1fr); }
 }
 </style>
 
-<!-- Üst kartlar: Sunucu, Kullanıcı, Ping, Durum -->
-<div class="dash-row">
-  <div class="dash-card">
-    <div class="dash-card-icon"><i class="fas fa-server"></i></div>
-    <div class="dash-card-val" id="guild-count">-</div>
-    <div class="dash-card-lbl">Сервера</div>
+<!-- Üst hero bölümü -->
+<div class="dash-hero">
+  <div class="dash-hero-greeting">
+    <span class="dot"></span>
+    <span id="heroGreeting">Добро пожаловать, {{ username }}</span>
   </div>
-  <div class="dash-card">
-    <div class="dash-card-icon"><i class="fas fa-users"></i></div>
-    <div class="dash-card-val" id="user-count">-</div>
-    <div class="dash-card-lbl">Пользователи</div>
+  <h2>Центр управления сервером</h2>
+  <p>Полный обзор активности, модерации и состояния вашего Discord-сообщества в реальном времени.</p>
+</div>
+
+<!-- 4 büyük istatistik kartı -->
+<div class="stat-grid">
+  <div class="stat-card-big purple">
+    <div class="stat-label">
+      <i class="fas fa-server"></i>
+      <span>Сервера</span>
+    </div>
+    <div class="stat-value" id="guild-count">—</div>
+    <div class="stat-trend"><i class="fas fa-circle" style="font-size:5px;color:var(--ok);"></i> Активных подключений</div>
   </div>
-  <div class="dash-card">
-    <div class="dash-card-icon"><i class="fas fa-signal"></i></div>
-    <div class="dash-card-val" id="latency">-</div>
-    <div class="dash-card-lbl">Ping (ms)</div>
+  <div class="stat-card-big pink">
+    <div class="stat-label">
+      <i class="fas fa-users"></i>
+      <span>Пользователи</span>
+    </div>
+    <div class="stat-value" id="user-count">—</div>
+    <div class="stat-trend"><i class="fas fa-chart-line" style="color:var(--ok);"></i> В кэше бота</div>
   </div>
-  <div class="dash-card">
-    <div class="dash-card-icon" style="background:rgba(74,222,128,0.15);color:#4ade80;"><i class="fas fa-circle" style="font-size:9px;"></i></div>
-    <div class="dash-card-val" id="status" style="font-size:14px;color:#4ade80;">ОНЛАЙН</div>
-    <div class="dash-card-lbl">Состояние</div>
+  <div class="stat-card-big cyan">
+    <div class="stat-label">
+      <i class="fas fa-signal"></i>
+      <span>Ping</span>
+    </div>
+    <div class="stat-value" id="latency">—<small>ms</small></div>
+    <div class="stat-trend"><i class="fas fa-wave-square"></i> Задержка API</div>
+  </div>
+  <div class="stat-card-big green">
+    <div class="stat-label">
+      <i class="fas fa-heartbeat"></i>
+      <span>Состояние</span>
+    </div>
+    <div class="stat-value" id="status" style="font-size:22px;color:var(--ok);">ОНЛАЙН</div>
+    <div class="stat-trend"><i class="fas fa-check" style="color:var(--ok);"></i> Система работает</div>
   </div>
 </div>
 
-<!-- Tehlike endeksi + Karantin butonu -->
-<div class="dash-card" id="threatDashboard" style="background:rgba(26,22,16,0.85);border-color:rgba(212,168,67,0.18);display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
-  <div id="threatIconWrap" style="width:36px;height:36px;border-radius:9px;background:rgba(46,204,113,0.15);border:1px solid #2ECC71;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;">
+<!-- Tehlike endeksi + Lockdown butonu -->
+<div class="dash-card" id="threatDashboard" style="background:var(--surface-2) !important;border:1px solid var(--ac-line) !important;border-radius:var(--r-lg) !important;display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:18px 22px !important;margin-bottom:16px;">
+  <div id="threatIconWrap" style="width:44px;height:44px;border-radius:12px;background:rgba(46,204,113,0.15);border:1px solid #2ECC71;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;transition:all 0.3s var(--ease);">
     <i class="fas fa-shield-alt" id="threatIcon" style="color:#2ECC71;"></i>
   </div>
-  <div style="flex:1;min-width:140px;">
-    <div style="font-size:10px;color:#8c7b58;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">🛡️ Индекс угрозы</div>
-    <div style="display:flex;align-items:baseline;gap:8px;margin-top:2px;">
-      <span id="threatScoreVal" style="font-size:17px;font-weight:800;color:#f0e8d0;">15/100</span>
-      <span id="threatLevelBadge" style="font-size:10px;font-weight:700;color:#2ECC71;background:rgba(46,204,113,0.12);padding:2px 8px;border-radius:99px;">Низкая</span>
+  <div style="flex:1;min-width:200px;">
+    <div style="font-size:10.5px;color:var(--text-2);font-weight:700;text-transform:uppercase;letter-spacing:0.10em;margin-bottom:4px;">🛡️ Индекс угрозы</div>
+    <div style="display:flex;align-items:baseline;gap:10px;">
+      <span id="threatScoreVal" style="font-size:20px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;letter-spacing:-0.02em;">15/100</span>
+      <span id="threatLevelBadge" style="font-size:10.5px;font-weight:700;color:#2ECC71;background:rgba(46,204,113,0.12);padding:3px 10px;border-radius:99px;border:1px solid #2ECC7133;">Низкая</span>
     </div>
     <div class="threat-bar"><div class="threat-bar-fill" id="threatFill" style="width:15%;background:#2ECC71;"></div></div>
   </div>
-  <button id="btnLockdown" type="button" style="padding:8px 14px;border-radius:99px;font-size:12px;font-weight:700;cursor:pointer;background:#2ECC71;color:#100e08;border:none;display:flex;align-items:center;gap:6px;white-space:nowrap;">
+  <button id="btnLockdown" type="button" style="padding:10px 18px;border-radius:99px;font-size:13px;font-weight:700;cursor:pointer;background:linear-gradient(135deg, #34d399, #10b981);color:#0a0907;border:none;display:inline-flex;align-items:center;gap:8px;white-space:nowrap;box-shadow:0 4px 14px rgba(52,211,153,0.30);transition:all 0.2s var(--ease);">
     <i class="fas fa-lock"></i>
     <span id="btnLockdownText">Lockdown</span>
   </button>
@@ -103,58 +297,66 @@ tr:hover td{background:rgba(212,168,67,0.03);}
 <div class="dash-box">
   <div class="dash-box-head">
     <div class="dash-box-title"><i class="fas fa-chart-line"></i> Быстрая статистика</div>
+    <span style="font-size:10.5px;color:var(--text-3);font-weight:600;text-transform:uppercase;letter-spacing:0.08em;">в реальном времени</span>
   </div>
-  <div class="dash-box-body" style="padding:0;max-height:none;">
-    <div class="quick-grid" id="quick-stats" style="text-align:center;padding:20px;color:#5a5040;">
-      <i class="fas fa-spinner fa-spin" style="color:#c8922a;"></i>
+  <div class="dash-box-body" style="padding:0;">
+    <div class="quick-grid" id="quick-stats">
+      <div style="grid-column:1/-1;text-align:center;padding:14px;color:var(--text-3);">
+        <i class="fas fa-spinner fa-spin" style="color:var(--ac);"></i>
+      </div>
     </div>
   </div>
 </div>
 
-<!-- Son aksiyonlar -->
-<div class="dash-box">
-  <div class="dash-box-head">
-    <div class="dash-box-title"><i class="fas fa-history"></i> Последние действия</div>
-    <a href="/logs" style="font-size:10px;color:#c8922a;text-decoration:none;letter-spacing:0.05em;">Все →</a>
+<!-- İki kolon: Son aksiyonlar + Login log (owner) -->
+<div style="display:grid;grid-template-columns:{% if role == 'owner' %}1.4fr 1fr{% else %}1fr{% endif %};gap:16px;margin-bottom:16px;">
+  <!-- Son aksiyonlar -->
+  <div class="dash-box">
+    <div class="dash-box-head">
+      <div class="dash-box-title"><i class="fas fa-history"></i> Последние действия</div>
+      <a href="/logs" style="font-size:10.5px;color:var(--ac);text-decoration:none;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;transition:color 0.15s;">Все →</a>
+    </div>
+    <div class="dash-box-body" id="recent-activity" style="text-align:center;padding:20px;color:var(--text-3);">
+      <i class="fas fa-spinner fa-spin" style="color:var(--ac);"></i>
+    </div>
   </div>
-  <div class="dash-box-body" id="recent-activity" style="text-align:center;padding:20px;color:#5a5040;">
-    <i class="fas fa-spinner fa-spin" style="color:#c8922a;"></i>
+
+  {% if role == 'owner' %}
+  <!-- Login log -->
+  <div class="dash-box">
+    <div class="dash-box-head">
+      <div class="dash-box-title"><i class="fas fa-sign-in-alt"></i> Входы в панель</div>
+      <a href="/panel-logs" style="font-size:10.5px;color:var(--ac);text-decoration:none;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;">Все →</a>
+    </div>
+    <div class="dash-box-body" id="login-log" style="text-align:center;padding:20px;color:var(--text-3);">
+      <i class="fas fa-spinner fa-spin" style="color:var(--ac);"></i>
+    </div>
   </div>
+  {% endif %}
 </div>
 
 {% if role == 'owner' %}
-<!-- Login log (sadece owner) -->
-<div class="dash-box">
-  <div class="dash-box-head">
-    <div class="dash-box-title"><i class="fas fa-sign-in-alt"></i> Входы в панель</div>
-    <a href="/panel-logs" style="font-size:10px;color:#c8922a;text-decoration:none;">Все →</a>
-  </div>
-  <div class="dash-box-body" id="login-log" style="text-align:center;padding:20px;color:#5a5040;">
-    <i class="fas fa-spinner fa-spin" style="color:#c8922a;"></i>
-  </div>
-</div>
-
 <!-- Bildirim + Duyuru (sadece owner) -->
-<div class="dash-row">
-  <div class="dash-card" style="min-width:240px;flex:1;">
-    <div class="dash-box-title" style="margin-bottom:10px;"><i class="fas fa-bell"></i> Отправить уведомление</div>
+<div class="grid-2">
+  <div class="dash-card" style="padding:20px 22px !important;">
+    <div class="dash-box-title" style="margin-bottom:14px;"><i class="fas fa-bell"></i> Отправить уведомление</div>
     <label class="form-label">Discord ID</label>
     <input type="text" id="notif-discord-id" placeholder="123456789012345678" class="form-input">
     <label class="form-label">Заголовок</label>
     <input type="text" id="notif-title" placeholder="Заголовок" class="form-input">
     <label class="form-label">Сообщение</label>
-    <textarea id="notif-message" class="form-input" style="resize:vertical;min-height:50px;"></textarea>
-    <button type="button" id="btnSendNotif" class="form-btn">Отправить</button>
-    <div id="notif-result" style="margin-top:6px;display:none;font-size:11px;"></div>
+    <textarea id="notif-message" class="form-input" style="resize:vertical;min-height:60px;"></textarea>
+    <button type="button" id="btnSendNotif" class="form-btn"><i class="fas fa-paper-plane"></i> Отправить</button>
+    <div id="notif-result" style="margin-top:8px;display:none;font-size:11.5px;"></div>
   </div>
-  <div class="dash-card" style="min-width:240px;flex:1;">
-    <div class="dash-box-title" style="margin-bottom:10px;"><i class="fas fa-bullhorn"></i> Опубликовать объявление</div>
+  <div class="dash-card" style="padding:20px 22px !important;">
+    <div class="dash-box-title" style="margin-bottom:14px;"><i class="fas fa-bullhorn"></i> Опубликовать объявление</div>
     <label class="form-label">Заголовок</label>
     <input type="text" id="ann-title" placeholder="Заголовок" class="form-input">
     <label class="form-label">Содержание</label>
-    <textarea id="ann-message" class="form-input" style="resize:vertical;min-height:50px;"></textarea>
-    <button type="button" id="btnSendAnn" class="form-btn">Опубликовать</button>
-    <div id="ann-result" style="margin-top:6px;display:none;font-size:11px;"></div>
+    <textarea id="ann-message" class="form-input" style="resize:vertical;min-height:60px;"></textarea>
+    <button type="button" id="btnSendAnn" class="form-btn"><i class="fas fa-bullhorn"></i> Опубликовать</button>
+    <div id="ann-result" style="margin-top:8px;display:none;font-size:11.5px;"></div>
   </div>
 </div>
 {% endif %}
@@ -176,27 +378,70 @@ tr:hover td{background:rgba(212,168,67,0.03);}
       return d.toLocaleDateString('ru-RU', {day:'2-digit', month:'2-digit'});
     } catch (e) { return '-'; }
   }
+  function animateNumber(el, target, suffix) {
+    if (!el) return;
+    suffix = suffix || '';
+    var start = parseInt((el.textContent || '0').replace(/\D/g, ''), 10) || 0;
+    if (start === target) { el.innerHTML = target.toLocaleString() + suffix; return; }
+    var duration = 800;
+    var startTime = null;
+    function step(ts) {
+      if (!startTime) startTime = ts;
+      var p = Math.min(1, (ts - startTime) / duration);
+      var eased = 1 - Math.pow(1 - p, 3);
+      var val = Math.round(start + (target - start) * eased);
+      el.innerHTML = val.toLocaleString() + suffix;
+      if (p < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
   function showToast(msg, ok) {
     var t = document.createElement('div');
+    t.className = 'toast ' + (ok ? 'ok' : 'err');
     t.textContent = msg;
-    t.style.cssText = 'position:fixed;top:14px;right:14px;padding:10px 18px;border-radius:9px;font-weight:700;z-index:99999;font-size:12px;background:' + (ok ? 'linear-gradient(135deg,#27ae60,#2ecc71)' : 'linear-gradient(135deg,#c0392b,#e74c3c)') + ';color:#fff;';
     document.body.appendChild(t);
-    setTimeout(function () { t.remove(); }, 2200);
+    setTimeout(function () {
+      t.style.transition = 'all 0.3s ease';
+      t.style.opacity = '0';
+      t.style.transform = 'translateX(20px)';
+      setTimeout(function () { t.remove(); }, 300);
+    }, 2200);
+  }
+
+  // ── Greeting by time of day ──
+  function setGreeting() {
+    var h = new Date().getHours();
+    var g = h < 6 ? 'Доброй ночи' : h < 12 ? 'Доброе утро' : h < 18 ? 'Добрый день' : 'Добрый вечер';
+    var el = $('heroGreeting');
+    if (el) el.innerHTML = '<span class="dot"></span> ' + g + ', {{ username }}';
   }
 
   // ── Ana istatistikler ──
   async function loadStats() {
     try {
       var d = await window.fetchCachedJSON('/api/stats');
-      $('guild-count').textContent = d.guilds != null ? d.guilds : '-';
-      $('user-count').textContent = (d.users || 0).toLocaleString();
-      $('latency').textContent = (d.latency || 0) + 'ms';
-      var s = $('status');
-      if (d.error) { s.textContent = 'ОФЛАЙН'; s.style.color = '#ef4444'; }
-      else { s.textContent = 'ОНЛАЙН'; s.style.color = '#4ade80'; }
+      var gEl = $('guild-count');
+      var uEl = $('user-count');
+      var lEl = $('latency');
+      var sEl = $('status');
+
+      var gVal = d.guilds != null ? d.guilds : 0;
+      var uVal = d.users || 0;
+      var lVal = d.latency || 0;
+      animateNumber(gEl, gVal);
+      animateNumber(uEl, uVal);
+      lEl.innerHTML = lVal + '<small>ms</small>';
+
+      if (d.error) {
+        sEl.textContent = 'ОФФЛАЙН';
+        sEl.style.color = 'var(--err)';
+      } else {
+        sEl.textContent = 'ОНЛАЙН';
+        sEl.style.color = 'var(--ok)';
+      }
     } catch (e) {
-      $('status').textContent = 'ОФЛАЙН';
-      $('status').style.color = '#ef4444';
+      $('status').textContent = 'ОФФЛАЙН';
+      $('status').style.color = 'var(--err)';
     }
   }
 
@@ -214,9 +459,9 @@ tr:hover td{background:rgba(212,168,67,0.03);}
         '<div class="quick-item"><h3>' + bans + '</h3><p>Банов</p></div>' +
         '<div class="quick-item"><h3>' + kicks + '</h3><p>Киков</p></div>' +
         '<div class="quick-item"><h3>' + mutes + '</h3><p>Мутов</p></div>' +
-        '<div class="quick-item"><h3>' + (logs.length > 0 ? '✓' : '-') + '</h3><p>Активен</p></div>';
+        '<div class="quick-item"><h3 style="color:var(--ok);">✓</h3><p>Активен</p></div>';
     } catch (e) {
-      $('quick-stats').innerHTML = '<p style="color:#ef4444">Не удалось загрузить</p>';
+      $('quick-stats').innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--err);">Не удалось загрузить</div>';
     }
   }
 
@@ -226,20 +471,20 @@ tr:hover td{background:rgba(212,168,67,0.03);}
       var logs = await window.fetchCachedJSON('/api/logs').catch(function () { return []; });
       var box = $('recent-activity');
       if (!logs.length) {
-        box.innerHTML = '<p style="color:#5a5040;text-align:center;padding:14px;font-size:11px;">Пока действий нет.</p>';
+        box.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><p>Пока действий нет.</p></div>';
         return;
       }
-      var colors = { бан: '#ef4444', кик: '#f97316', warn: '#c8922a', мьют: '#c8922a', timeout: '#c8922a', unбан: '#4ade80', unмьют: '#4ade80', lock: '#60a5fa', unlock: '#4ade80' };
+      var colors = { бан: 'var(--err)', кик: '#f97316', warn: 'var(--ac)', мьют: 'var(--ac)', timeout: 'var(--ac)', unбан: 'var(--ok)', unмьют: 'var(--ok)', lock: 'var(--info)', unlock: 'var(--ok)' };
       var rows = logs.slice(0, 12).map(function (log) {
-        var a = (log.action || '?').toLowerCase(), c = colors[a] || '#5a5040';
+        var a = (log.action || '?').toLowerCase(), c = colors[a] || 'var(--text-3)';
         var tg = log.user_name || log.target_name || log.user_id || '-';
         var m = log.mod_name || log.mod_id || '-';
         var r = log.reason || '-';
-        return '<tr><td><span class="action-badge" style="background:' + c + '18;color:' + c + ';border:1px solid ' + c + '33">' + esc(log.action || '?') + '</span></td><td style="font-size:11px;">' + esc(tg) + '</td><td style="color:rgba(240,232,208,0.5);font-size:11px;">' + esc(m) + '</td><td style="color:#5a5040;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;">' + esc(r) + '</td><td style="color:#5a5040;font-size:10px;white-space:nowrap;">' + esc(fmtDate(log.timestamp)) + '</td></tr>';
+        return '<tr><td><span class="action-badge" style="background:' + c + '15;color:' + c + ';">' + esc(log.action || '?') + '</span></td><td style="font-size:12.5px;">' + esc(tg) + '</td><td style="color:var(--text-2);font-size:12px;">' + esc(m) + '</td><td style="color:var(--text-3);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;">' + esc(r) + '</td><td style="color:var(--text-3);font-size:11px;white-space:nowrap;">' + esc(fmtDate(log.timestamp)) + '</td></tr>';
       }).join('');
       box.innerHTML = '<table><thead><tr><th>Действие</th><th>Цель</th><th>Модер.</th><th>Причина</th><th>Время</th></tr></thead><tbody>' + rows + '</tbody></table>';
     } catch (e) {
-      $('recent-activity').innerHTML = '<p style="color:#ef4444">Не удалось загрузить</p>';
+      $('recent-activity').innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle" style="color:var(--err);"></i><p style="color:var(--err);">Не удалось загрузить</p></div>';
     }
   }
 
@@ -249,11 +494,14 @@ tr:hover td{background:rgba(212,168,67,0.03);}
       var box = $('login-log');
       if (!box) return;
       var logs = await window.fetchCachedJSON('/api/login-log');
-      if (!logs.length) { box.innerHTML = '<p style="color:#5a5040;text-align:center;padding:14px;font-size:11px;">Пока входов нет.</p>'; return; }
-      var roleColors = { owner: '#e05555', admin: '#c8922a', mod: '#2ecc71', uye: '#5a5040' };
+      if (!logs.length) {
+        box.innerHTML = '<div class="empty-state"><i class="fas fa-user-clock"></i><p>Пока входов нет.</p></div>';
+        return;
+      }
+      var roleColors = { owner: 'var(--err)', admin: 'var(--ac)', mod: 'var(--ok)', uye: 'var(--text-3)' };
       box.innerHTML = logs.slice(0, 15).map(function (l) {
         var t = fmtDate(l.timestamp);
-        var rc = roleColors[l.roles] || '#5a5040';
+        var rc = roleColors[l.roles] || 'var(--text-3)';
         var avatar = l.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png';
         return '<div class="login-item">' +
           '<img src="' + esc(avatar) + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' +
@@ -261,7 +509,7 @@ tr:hover td{background:rgba(212,168,67,0.03);}
             '<div class="login-item-name">' + esc(l.username) + '</div>' +
             '<div class="login-item-time">' + esc(t) + '</div>' +
           '</div>' +
-          '<span style="padding:2px 7px;border-radius:99px;font-size:9px;font-weight:700;background:' + rc + '18;color:' + rc + ';border:1px solid ' + rc + '44;">' + esc((l.roles || '').toUpperCase()) + '</span>' +
+          '<span style="padding:3px 9px;border-radius:99px;font-size:9.5px;font-weight:700;background:' + rc + '15;color:' + rc + ';border:1px solid ' + rc + '44;letter-spacing:0.06em;">' + esc((l.roles || '').toUpperCase()) + '</span>' +
         '</div>';
       }).join('');
     } catch (e) { /* yoksay */ }
@@ -282,11 +530,11 @@ tr:hover td{background:rgba(212,168,67,0.03);}
       var badge = $('threatLevelBadge');
       badge.textContent = level;
       badge.style.color = color;
-      badge.style.borderColor = color;
-      badge.style.background = color + '22';
+      badge.style.borderColor = color + '55';
+      badge.style.background = color + '15';
 
       $('threatIconWrap').style.borderColor = color;
-      $('threatIconWrap').style.background = color + '22';
+      $('threatIconWrap').style.background = color + '15';
       $('threatIcon').style.color = color;
       $('threatFill').style.width = Math.min(100, score) + '%';
       $('threatFill').style.background = color;
@@ -294,12 +542,14 @@ tr:hover td{background:rgba(212,168,67,0.03);}
       var btn = $('btnLockdown');
       var btnText = $('btnLockdownText');
       if (active) {
-        btn.style.background = '#E74C3C';
+        btn.style.background = 'linear-gradient(135deg, #f87171, #dc2626)';
         btn.style.color = '#fff';
+        btn.style.boxShadow = '0 4px 14px rgba(248,113,113,0.30)';
         btnText.textContent = 'Активен ✓';
       } else {
-        btn.style.background = '#2ECC71';
-        btn.style.color = '#100e08';
+        btn.style.background = 'linear-gradient(135deg, #34d399, #10b981)';
+        btn.style.color = '#0a0907';
+        btn.style.boxShadow = '0 4px 14px rgba(52,211,153,0.30)';
         btnText.textContent = 'Lockdown';
       }
     } catch (e) { /* yoksay */ }
@@ -339,8 +589,8 @@ tr:hover td{background:rgba(212,168,67,0.03);}
       }).then(function (r) { return r.json(); });
       el.style.display = 'block';
       el.innerHTML = d.success
-        ? '<span style="color:#4ade80">Уведомление отправлено!</span>'
-        : '<span style="color:#ef4444">' + esc(d.error || 'Hata') + '</span>';
+        ? '<span style="color:var(--ok);">✓ Уведомление отправлено!</span>'
+        : '<span style="color:var(--err);">' + esc(d.error || 'Hata') + '</span>';
       setTimeout(function () { el.style.display = 'none'; }, 2500);
     } catch (e) { showToast('Ошибка: ' + e.message, false); }
   }
@@ -358,8 +608,8 @@ tr:hover td{background:rgba(212,168,67,0.03);}
       }).then(function (r) { return r.json(); });
       el.style.display = 'block';
       el.innerHTML = d.success
-        ? '<span style="color:#4ade80">Объявление опубликовано!</span>'
-        : '<span style="color:#ef4444">' + esc(d.error || 'Hata') + '</span>';
+        ? '<span style="color:var(--ok);">✓ Объявление опубликовано!</span>'
+        : '<span style="color:var(--err);">' + esc(d.error || 'Hata') + '</span>';
       setTimeout(function () { el.style.display = 'none'; }, 2500);
     } catch (e) { showToast('Ошибка: ' + e.message, false); }
   }
@@ -381,6 +631,7 @@ tr:hover td{background:rgba(212,168,67,0.03);}
     init();
   }
   function init() {
+    setGreeting();
     bindButtons();
     loadStats();
     loadQuickStats();
@@ -391,6 +642,8 @@ tr:hover td{background:rgba(212,168,67,0.03);}
     setInterval(loadRecentActivity, 10000);
     setInterval(loadLoginLog, 10000);
     setInterval(loadThreatIndex, 15000);
+    // Update greeting every minute
+    setInterval(setGreeting, 60000);
   }
 
   window.toggleLockdown = toggleLockdown;

@@ -1,49 +1,13 @@
 {% extends "base.html" %}
 {% block title %}Заявки - Aether{% endblock %}
-{% block page_title %}Заявки в администрацию{% endblock %}
+{% block page_title %}<i class="fas fa-user-shield" style="color:var(--ac);"></i> Заявки в администрацию{% endblock %}
 {% block content %}
-<style>
-.app-stats{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
-.app-stat{flex:1;min-width:100px;background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.1);border-radius:12px;padding:10px 14px;text-align:center;}
-.app-stat-num{font-size:20px;font-weight:800;color:#c8922a;}
-.app-stat-lbl{font-size:9px;color:#5a5040;text-transform:uppercase;letter-spacing:0.05em;margin-top:2px;}
 
-.app-tabs{display:flex;gap:6px;margin-bottom:12px;}
-.app-tab{padding:7px 14px;background:rgba(255,255,255,0.03);border:1px solid rgba(212,168,67,0.12);border-radius:99px;cursor:pointer;font-size:11px;font-weight:600;color:rgba(240,232,208,0.6);transition:all 0.15s;}
-.app-tab.active{background:#c8922a;color:#100e08;border-color:#c8922a;}
-
-.app-box{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.08);border-radius:12px;overflow:hidden;}
-.app-head{padding:10px 14px;border-bottom:1px solid rgba(212,168,67,0.07);display:flex;justify-content:space-between;align-items:center;}
-.app-title{font-size:10px;font-weight:700;color:rgba(240,232,208,0.55);text-transform:uppercase;letter-spacing:0.08em;display:flex;align-items:center;gap:7px;}
-.app-title i{color:#c8922a;}
-.app-count{font-size:10px;color:#5a5040;background:rgba(212,168,67,0.06);padding:2px 8px;border-radius:99px;}
-.app-body{max-height:480px;overflow-y:auto;overflow-anchor:none;}
-
-.app-row{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid rgba(212,168,67,0.05);transition:background 0.1s;}
-.app-row:hover{background:rgba(212,168,67,0.04);}
-.app-av{width:36px;height:36px;border-radius:50%;border:2px solid var(--border2);object-fit:cover;flex-shrink:0;}
-.app-info{flex:1;min-width:0;}
-.app-name{font-weight:600;font-size:12px;color:#f0e8d0;margin-bottom:2px;}
-.app-meta{font-size:10px;color:#5a5040;}
-.app-actions{display:flex;gap:6px;flex-shrink:0;}
-.btn{padding:5px 10px;border:none;border-radius:99px;cursor:pointer;font-weight:600;font-size:10px;font-family:Inter,sans-serif;}
-.btn-ok{background:rgba(94,196,122,0.15);color:#5ec47a;border:1px solid rgba(94,196,122,0.3);}
-.btn-no{background:rgba(224,85,85,0.15);color:var(--red);border:1px solid rgba(224,85,85,0.3);}
-.btn-ok:hover{background:rgba(94,196,122,0.25);}
-.btn-no:hover{background:rgba(224,85,85,0.25);}
-
-.app-status{padding:2px 7px;border-radius:99px;font-size:9px;font-weight:700;letter-spacing:0.04em;}
-.app-status.pending{background:rgba(232,144,58,0.15);color:#e8903a;}
-.app-status.approved{background:rgba(94,196,122,0.15);color:#5ec47a;}
-.app-status.rejected{background:rgba(224,85,85,0.15);color:var(--red);}
-
-.empty{text-align:center;padding:30px;color:#5a5040;font-size:12px;}
-</style>
 
 <div class="app-stats">
   <div class="app-stat"><div class="app-stat-num" id="stat-total">-</div><div class="app-stat-lbl">Всего</div></div>
-  <div class="app-stat"><div class="app-stat-num" id="stat-pending" style="color:#e8903a;">-</div><div class="app-stat-lbl">Beklemede</div></div>
-  <div class="app-stat"><div class="app-stat-num" id="stat-approved" style="color:#5ec47a;">-</div><div class="app-stat-lbl">Onaylanan</div></div>
+  <div class="app-stat"><div class="app-stat-num" id="stat-pending" style="color:var(--orange);">-</div><div class="app-stat-lbl">Beklemede</div></div>
+  <div class="app-stat"><div class="app-stat-num" id="stat-approved" style="color:var(--ok);">-</div><div class="app-stat-lbl">Onaylanan</div></div>
   <div class="app-stat"><div class="app-stat-num" id="stat-rejected" style="color:var(--red);">-</div><div class="app-stat-lbl">Reddedilen</div></div>
 </div>
 

@@ -1,38 +1,8 @@
 {% extends "base.html" %}
 {% block title %}Команды - Aether{% endblock %}
-{% block page_title %}Команды{% endblock %}
+{% block page_title %}<i class="fas fa-terminal" style="color:var(--ac);"></i> Команды{% endblock %}
 {% block content %}
-<style>
-.cmd-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;max-height:520px;overflow-y:auto;overflow-anchor:none;padding:4px;}
-.cmd-card{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.1);border-radius:12px;padding:14px;cursor:pointer;transition:all 0.2s;position:relative;overflow:hidden;animation:fadeUp 0.3s ease-out both;text-align:center;}
-.cmd-card:hover{transform:translateY(-3px);border-color:rgba(200,146,42,0.4);box-shadow:0 8px 24px rgba(200,146,42,0.15);}
-.cmd-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#c8922a,transparent);}
-@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-.cmd-icon{width:42px;height:42px;border-radius:10px;background:rgba(212,168,67,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;font-size:18px;color:#c8922a;transition:all 0.2s;}
-.cmd-card:hover .cmd-icon{background:rgba(200,146,42,0.25);transform:scale(1.05);}
-.cmd-name{font-size:12px;font-weight:700;color:#f0e8d0;margin-bottom:3px;}
-.cmd-desc{font-size:10px;color:#5a5040;line-height:1.3;min-height:24px;}
-.cmd-tag{display:inline-block;background:rgba(212,168,67,0.1);color:#c8922a;padding:1px 6px;border-radius:99px;font-size:8px;margin-top:4px;letter-spacing:0.04em;}
 
-.cmd-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(6px);z-index:9999;align-items:center;justify-content:center;}
-.cmd-modal-overlay.open{display:flex;}
-.cmd-modal{background:rgba(26,22,16,0.95);border:1px solid rgba(212,168,67,0.25);border-radius:14px;padding:22px;max-width:460px;width:92vw;max-height:85vh;overflow-y:auto;position:relative;}
-.cmd-modal-close{position:absolute;top:10px;right:10px;background:transparent;border:1px solid rgba(212,168,67,0.15);color:#5a5040;width:28px;height:28px;border-radius:6px;cursor:pointer;font-size:14px;}
-.cmd-modal-close:hover{background:rgba(212,168,67,0.08);color:#f0e8d0;}
-.form-group{margin-bottom:10px;}
-.form-group label{display:block;color:rgba(240,232,208,0.55);font-size:10px;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;}
-.form-group input,.form-group select,.form-group textarea{width:100%;padding:8px 11px;background:rgba(255,255,255,0.04);border:1px solid rgba(212,168,67,0.16);border-radius:7px;color:#f0e8d0;font-size:12px;font-family:Inter,sans-serif;box-sizing:border-box;}
-.form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:none;border-color:rgba(212,168,67,0.45);}
-.btn-exec{flex:1;padding:9px;background:#c8922a;color:#100e08;border:none;border-radius:99px;cursor:pointer;font-weight:700;font-size:12px;font-family:Inter,sans-serif;transition:all 0.15s;}
-.btn-exec:hover{background:#e0a830;}
-.btn-cancel{flex:1;padding:9px;background:transparent;color:rgba(240,232,208,0.55);border:1px solid rgba(212,168,67,0.08);border-radius:99px;cursor:pointer;font-weight:600;font-size:12px;font-family:Inter,sans-serif;}
-.btn-cancel:hover{background:rgba(212,168,67,0.04);color:#f0e8d0;}
-#result-msg{margin-top:10px;padding:10px;border-radius:7px;display:none;font-size:11px;}
-
-@media (max-width:600px){
-  .cmd-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));}
-}
-</style>
 
 <div class="cmd-grid" id="cmd-grid"></div>
 
@@ -65,7 +35,7 @@
     { cmd: 'ticket_panel', icon: 'fa-ticket-alt', name: 'Ticket Panel', desc: 'Ticket paneli gönder', tag: 'admin' }
   ];
 
-  var roleColors = { mod: '#2ecc71', admin: '#c8922a' };
+  var roleColors = { mod: 'var(--ok)', admin: '#c8922a' };
 
   function renderGrid() {
     var html = '';
@@ -74,7 +44,7 @@
         '<div class="cmd-icon"><i class="fas ' + esc(c.icon) + '"></i></div>' +
         '<div class="cmd-name">' + esc(c.name) + '</div>' +
         '<div class="cmd-desc">' + esc(c.desc) + '</div>' +
-        '<div class="cmd-tag" style="color:' + (roleColors[c.tag] || '#5a5040') + ';">' + esc(c.tag.toUpperCase()) + '</div>' +
+        '<div class="cmd-tag" style="color:' + (roleColors[c.tag] || 'var(--text-3)') + ';">' + esc(c.tag.toUpperCase()) + '</div>' +
       '</div>';
     });
     $('cmd-grid').innerHTML = html;
@@ -112,7 +82,7 @@
     }
 
     $('cmd-modal-content').innerHTML =
-      '<h3 style="font-size:15px;font-weight:700;color:#f0e8d0;margin-bottom:14px;letter-spacing:-0.02em;">' + esc(commands.find(function (c) { return c.cmd === cmd; }).name) + '</h3>' +
+      '<h3 style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:14px;letter-spacing:-0.02em;">' + esc(commands.find(function (c) { return c.cmd === cmd; }).name) + '</h3>' +
       fields +
       '<div style="display:flex;gap:8px;margin-top:14px;">' +
         '<button class="btn-exec" id="btnExec" type="button">Çalıştır</button>' +

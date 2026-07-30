@@ -1,36 +1,75 @@
 {% extends "base.html" %}
-{% block title %}Mod Geçmişi - Aether{% endblock %}
-{% block page_title %}История модерации{% endblock %}
+{% block title %}История модерации — Aether{% endblock %}
+{% block page_title %}<i class="fas fa-history" style="color:var(--ac);"></i> История модерации{% endblock %}
 {% block content %}
 <style>
-.mh-toolbar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center;}
-.mh-search{flex:1;min-width:200px;padding:7px 11px;background:rgba(255,255,255,0.03);border:1px solid rgba(212,168,67,0.16);border-radius:8px;color:#f0e8d0;font-size:12px;}
+.mh-toolbar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;}
+.mh-search{
+  flex:1;min-width:200px;
+  padding:10px 14px;background:rgba(10,9,7,0.55);
+  border:1px solid var(--line-2);border-radius:10px;
+  color:var(--text);font-size:13px;font-family:Inter,sans-serif;
+  transition:all 0.18s var(--ease);
+}
+.mh-search:focus{outline:none;border-color:var(--ac);box-shadow:0 0 0 3px rgba(212,168,67,0.12);}
 
-.mh-stats{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;}
-.mh-stat{flex:1;min-width:80px;background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.1);border-radius:10px;padding:8px 12px;text-align:center;}
-.mh-stat-num{font-size:16px;font-weight:800;color:#c8922a;}
-.mh-stat-lbl{font-size:9px;color:#5a5040;text-transform:uppercase;letter-spacing:0.05em;}
+.mh-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:10px;margin-bottom:16px;}
+.mh-stat{
+  background:var(--surface) !important;
+  border:1px solid var(--line) !important;
+  border-radius:10px;
+  padding:12px 14px;text-align:center;
+  transition:all 0.22s var(--ease);
+}
+.mh-stat:hover{transform:translateY(-2px);border-color:var(--ac-line) !important;box-shadow:var(--shadow-md);}
+.mh-stat-num{font-size:22px;font-weight:800;letter-spacing:-0.025em;font-variant-numeric:tabular-nums;line-height:1;}
+.mh-stat-num.total{background:linear-gradient(135deg, var(--ac-2), var(--ac));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;}
+.mh-stat-num.danger{color:var(--err);}
+.mh-stat-num.warn{color:var(--warn);}
+.mh-stat-num.accent{color:var(--orange);}
+.mh-stat-lbl{font-size:9.5px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.10em;margin-top:5px;font-weight:700;}
 
-.mh-box{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.08);border-radius:12px;overflow:hidden;}
-.mh-head{padding:10px 14px;border-bottom:1px solid rgba(212,168,67,0.07);display:flex;justify-content:space-between;align-items:center;}
-.mh-title{font-size:10px;font-weight:700;color:rgba(240,232,208,0.55);text-transform:uppercase;letter-spacing:0.08em;display:flex;align-items:center;gap:7px;}
-.mh-title i{color:#c8922a;}
-.mh-count{font-size:10px;color:#5a5040;background:rgba(212,168,67,0.06);padding:2px 8px;border-radius:99px;}
+.mh-box{
+  background:var(--surface) !important;
+  border:1px solid var(--line) !important;
+  border-radius:var(--r-lg) !important;
+  overflow:hidden;
+  transition:border-color 0.2s var(--ease);
+}
+.mh-box:hover{border-color:var(--ac-line) !important;}
+.mh-head{
+  padding:14px 20px;border-bottom:1px solid var(--line);
+  display:flex;justify-content:space-between;align-items:center;
+  background:linear-gradient(180deg, rgba(212,168,67,0.04), transparent);
+}
+.mh-title{font-size:11px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:0.10em;display:flex;align-items:center;gap:8px;}
+.mh-title i{color:var(--ac);font-size:13px;}
+.mh-count{font-size:10.5px;color:var(--text-3);background:var(--ac-soft);padding:3px 10px;border-radius:99px;font-weight:700;letter-spacing:0.05em;border:1px solid var(--ac-line);}
+
 .mh-body{max-height:520px;overflow-y:auto;overflow-anchor:none;}
+.mh-body table{width:100%;border-collapse:separate;border-spacing:0;}
+.mh-body th{padding:11px 18px;text-align:left;font-size:10.5px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:0.08em;border-bottom:1px solid var(--ac-line);background:rgba(212,168,67,0.04);position:sticky;top:0;z-index:1;}
+.mh-body td{padding:11px 18px;font-size:12.5px;border-bottom:1px solid var(--line);color:var(--text);vertical-align:middle;}
+.mh-body tr:last-child td{border-bottom:none;}
+.mh-body tr{transition:background 0.15s var(--ease);}
+.mh-body tbody tr:hover{background:rgba(212,168,67,0.04);}
 
-table{width:100%;border-collapse:collapse;font-size:11px;}
-th,td{padding:7px 12px;text-align:left;border-bottom:1px solid rgba(212,168,67,0.05);}
-th{background:rgba(212,168,67,0.04);color:rgba(240,232,208,0.35);font-weight:600;text-transform:uppercase;letter-spacing:0.06em;font-size:9px;position:sticky;top:0;z-index:1;}
-tr:hover td{background:rgba(212,168,67,0.04);}
-.case-badge{padding:2px 7px;border-radius:99px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;}
+.case-badge{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:3px 9px;border-radius:6px;
+  font-size:10.5px;font-weight:700;
+  text-transform:uppercase;letter-spacing:0.06em;
+  border:1px solid currentColor;
+}
 
-.empty{text-align:center;padding:30px;color:#5a5040;font-size:12px;}
+.empty{padding:40px;text-align:center;color:var(--text-3);font-size:13px;}
+.empty i{display:block;font-size:32px;margin-bottom:10px;opacity:0.4;color:var(--ac);}
 </style>
 
 <div class="mh-toolbar">
-  <input type="text" id="search" class="mh-search" placeholder="Mod geçmişi ara... (kullanıcı, mod, sebep)">
-  <select id="filter" class="mh-search" style="flex:0 0 auto;min-width:120px;">
-    <option value="">Tüm aksiyonlar</option>
+  <input type="text" id="search" class="mh-search" placeholder="Поиск по истории (пользователь, мод, причина)...">
+  <select id="filter" class="mh-search" style="flex:0 0 auto;min-width:140px;">
+    <option value="">Все действия</option>
     <option>Ban</option>
     <option>Kick</option>
     <option>Warn</option>
@@ -39,15 +78,15 @@ tr:hover td{background:rgba(212,168,67,0.04);}
 </div>
 
 <div class="mh-stats">
-  <div class="mh-stat"><div class="mh-stat-num" id="stat-total">-</div><div class="mh-stat-lbl">Всего</div></div>
-  <div class="mh-stat"><div class="mh-stat-num" id="stat-bans" style="color:var(--red);">-</div><div class="mh-stat-lbl">Ban</div></div>
-  <div class="mh-stat"><div class="mh-stat-num" id="mh-kicks" style="color:#e8903a;">-</div><div class="mh-stat-lbl">Kick</div></div>
-  <div class="mh-stat"><div class="mh-stat-num" id="mh-warns" style="color:#c8922a;">-</div><div class="mh-stat-lbl">Warn</div></div>
+  <div class="mh-stat"><div class="mh-stat-num total" id="stat-total">-</div><div class="mh-stat-lbl">Всего</div></div>
+  <div class="mh-stat"><div class="mh-stat-num danger" id="stat-bans">-</div><div class="mh-stat-lbl">Банов</div></div>
+  <div class="mh-stat"><div class="mh-stat-num accent" id="mh-kicks">-</div><div class="mh-stat-lbl">Киков</div></div>
+  <div class="mh-stat"><div class="mh-stat-num warn" id="mh-warns">-</div><div class="mh-stat-lbl">Варнов</div></div>
 </div>
 
 <div class="mh-box">
   <div class="mh-head">
-    <div class="mh-title"><i class="fas fa-history"></i> Mod Geçmişi</div>
+    <div class="mh-title"><i class="fas fa-history"></i> История модерации</div>
     <span class="mh-count" id="mh-count">-</span>
   </div>
   <div class="mh-body" id="mh-body">
@@ -62,12 +101,12 @@ tr:hover td{background:rgba(212,168,67,0.04);}
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
   var cases = [
-    { id: 1, action: 'Ban', user: 'User1', mod: 'Mod1', reason: 'Reklam', date: '2 дн назад' },
-    { id: 2, action: 'Warn', user: 'User2', mod: 'Mod2', reason: 'Spam', date: '3 дн назад' },
-    { id: 3, action: 'Kick', user: 'User3', mod: 'Mod1', reason: 'Hakaret', date: '4 дн назад' },
+    { id: 1, action: 'Ban', user: 'User1', mod: 'Mod1', reason: 'Реклама', date: '2 дн назад' },
+    { id: 2, action: 'Warn', user: 'User2', mod: 'Mod2', reason: 'Спам', date: '3 дн назад' },
+    { id: 3, action: 'Kick', user: 'User3', mod: 'Mod1', reason: 'Оскорбление', date: '4 дн назад' },
     { id: 4, action: 'Mute', user: 'User4', mod: 'Mod2', reason: 'CAPS', date: '5 дн назад' }
   ];
-  var colorMap = { Ban: '#ef4444', Kick: '#f97316', Warn: '#c8922a', Mute: '#c8922a' };
+  var colorMap = { Ban: 'var(--err)', Kick: 'var(--orange)', Warn: 'var(--warn)', Mute: 'var(--warn)' };
 
   function render() {
     var q = ($('search').value || '').toLowerCase();
@@ -82,17 +121,17 @@ tr:hover td{background:rgba(212,168,67,0.04);}
     $('stat-bans').textContent = cases.filter(function (c) { return c.action === 'Ban'; }).length;
     $('mh-kicks').textContent = cases.filter(function (c) { return c.action === 'Kick'; }).length;
     $('mh-warns').textContent = cases.filter(function (c) { return c.action === 'Warn'; }).length;
-    if (!list.length) { $('mh-body').innerHTML = '<p class="empty">Vaka yok</p>'; return; }
+    if (!list.length) { $('mh-body').innerHTML = '<p class="empty"><i class="fas fa-inbox"></i>Кейсов нет</p>'; return; }
     var rows = list.map(function (c) {
-      var c1 = colorMap[c.action] || '#5a5040';
-      return '<tr><td><span class="case-badge" style="background:' + c1 + '18;color:' + c1 + ';border:1px solid ' + c1 + '33">#' + c.id + '</span></td>' +
-        '<td><span class="case-badge" style="background:' + c1 + '18;color:' + c1 + ';">' + c.action + '</span></td>' +
-        '<td style="font-size:11px;">' + esc(c.user) + '</td>' +
-        '<td style="color:rgba(240,232,208,0.55);font-size:10px;">' + esc(c.mod) + '</td>' +
-        '<td style="color:#5a5040;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;">' + esc(c.reason) + '</td>' +
-        '<td style="color:#5a5040;font-size:10px;white-space:nowrap;">' + esc(c.date) + '</td></tr>';
+      var c1 = colorMap[c.action] || 'var(--text-3)';
+      return '<tr><td><span class="case-badge" style="background:' + c1 + '15;color:' + c1 + ';">#' + c.id + '</span></td>' +
+        '<td><span class="case-badge" style="background:' + c1 + '15;color:' + c1 + ';">' + c.action + '</span></td>' +
+        '<td style="font-size:12.5px;">' + esc(c.user) + '</td>' +
+        '<td style="color:var(--text-2);font-size:12px;">' + esc(c.mod) + '</td>' +
+        '<td style="color:var(--text-3);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;">' + esc(c.reason) + '</td>' +
+        '<td style="color:var(--text-3);font-size:11.5px;white-space:nowrap;">' + esc(c.date) + '</td></tr>';
     }).join('');
-    $('mh-body').innerHTML = '<table><thead><tr><th>ID</th><th>Aksiyon</th><th>Kullanıcı</th><th>Mod</th><th>Sebep</th><th>Tarih</th></tr></thead><tbody>' + rows + '</tbody></table>';
+    $('mh-body').innerHTML = '<table><thead><tr><th>ID</th><th>Действие</th><th>Пользователь</th><th>Модер.</th><th>Причина</th><th>Дата</th></tr></thead><tbody>' + rows + '</tbody></table>';
   }
 
   function bind() {

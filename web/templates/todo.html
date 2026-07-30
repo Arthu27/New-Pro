@@ -1,41 +1,12 @@
 {% extends "base.html" %}
 {% block title %}Задачи - Aether{% endblock %}
-{% block page_title %}Список задач{% endblock %}
+{% block page_title %}<i class="fas fa-check-square" style="color:var(--ac);"></i> Список задач{% endblock %}
 {% block content %}
-<style>
-.todo-stats{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
-.todo-stat{flex:1;min-width:80px;background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.1);border-radius:12px;padding:10px 14px;text-align:center;}
-.todo-stat-num{font-size:20px;font-weight:800;color:#c8922a;}
-.todo-stat-lbl{font-size:9px;color:#5a5040;text-transform:uppercase;letter-spacing:0.05em;margin-top:2px;}
 
-.todo-add{display:flex;gap:8px;margin-bottom:12px;}
-.todo-input{flex:1;padding:8px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(212,168,67,0.16);border-radius:8px;color:#f0e8d0;font-size:12px;}
-.btn{padding:8px 14px;border:none;border-radius:99px;cursor:pointer;font-weight:600;font-size:11px;font-family:Inter,sans-serif;}
-.btn-primary{background:#c8922a;color:#100e08;}
-.btn-primary:hover{background:#e0a830;}
-
-.todo-box{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.08);border-radius:12px;overflow:hidden;}
-.todo-head{padding:10px 14px;border-bottom:1px solid rgba(212,168,67,0.07);display:flex;justify-content:space-between;align-items:center;}
-.todo-title{font-size:10px;font-weight:700;color:rgba(240,232,208,0.55);text-transform:uppercase;letter-spacing:0.08em;display:flex;align-items:center;gap:7px;}
-.todo-title i{color:#c8922a;}
-.todo-count{font-size:10px;color:#5a5040;background:rgba(212,168,67,0.06);padding:2px 8px;border-radius:99px;}
-.todo-body{max-height:480px;overflow-y:auto;overflow-anchor:none;}
-
-.todo-item{display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid rgba(212,168,67,0.05);transition:background 0.1s;}
-.todo-item:hover{background:rgba(212,168,67,0.04);}
-.todo-check{width:18px;height:18px;border-radius:5px;border:2px solid rgba(212,168,67,0.3);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all 0.15s;}
-.todo-check.done{background:#c8922a;border-color:#c8922a;color:#100e08;}
-.todo-text{flex:1;font-size:12px;color:#f0e8d0;}
-.todo-text.done{text-decoration:line-through;color:#5a5040;}
-.todo-del{background:transparent;border:none;color:#5a5040;cursor:pointer;font-size:11px;padding:4px 8px;border-radius:5px;}
-.todo-del:hover{background:rgba(224,85,85,0.15);color:var(--red);}
-
-.empty{text-align:center;padding:30px;color:#5a5040;font-size:12px;}
-</style>
 
 <div class="todo-stats">
   <div class="todo-stat"><div class="todo-stat-num" id="stat-total">-</div><div class="todo-stat-lbl">Всего</div></div>
-  <div class="todo-stat"><div class="todo-stat-num" id="stat-done" style="color:#5ec47a;">-</div><div class="todo-stat-lbl">Готово</div></div>
+  <div class="todo-stat"><div class="todo-stat-num" id="stat-done" style="color:var(--ok);">-</div><div class="todo-stat-lbl">Готово</div></div>
   <div class="todo-stat"><div class="todo-stat-num" id="stat-active" style="color:#c8922a;">-</div><div class="todo-stat-lbl">Aktif</div></div>
 </div>
 
@@ -62,7 +33,7 @@
   function showToast(msg, ok) {
     var t = document.createElement('div');
     t.textContent = msg;
-    t.style.cssText = 'position:fixed;top:14px;right:14px;padding:9px 16px;border-radius:8px;font-weight:600;z-index:99999;font-size:12px;background:' + (ok ? 'linear-gradient(135deg,#27ae60,#2ecc71)' : 'linear-gradient(135deg,#c0392b,#e74c3c)') + ';color:#fff;';
+    t.style.cssText = 'position:fixed;top:14px;right:14px;padding:9px 16px;border-radius:8px;font-weight:600;z-index:99999;font-size:12px;background:' + (ok ? 'linear-gradient(135deg,var(--ok),var(--ok))' : 'linear-gradient(135deg,var(--err),var(--err))') + ';color:#fff;';
     document.body.appendChild(t);
     setTimeout(function () { t.remove(); }, 1500);
   }

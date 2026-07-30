@@ -1,45 +1,8 @@
 ﻿{% extends "base.html" %}
 {% block title %}предложениеler - Aether{% endblock %}
-{% block page_title %}💡 ПРЕДЛОЖЕНИЕ РУКОВОДИТЕЛЬ{% endblock %}
+{% block page_title %}<i class="fas fa-lightbulb" style="color:var(--ac);"></i> 💡 ПРЕДЛОЖЕНИЕ РУКОВОДИТЕЛЬ{% endblock %}
 {% block content %}
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&display=swap');
-.sg-hero{background:linear-gradient(135deg,#100e08,rgba(26,22,16,0.7),#100e08);border:1px solid rgba(200,146,42,0.3);border-radius:20px;padding:30px;margin-bottom:25px;text-align:center;position:relative;overflow:hidden;}
-.sg-hero::before{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(ellipse at center,rgba(200,146,42,0.06) 0%,transparent 60%);animation:pulse-bg 4s ease-in-out infinite;}
-@keyframes pulse-bg{0%,100%{opacity:.5;}50%{opacity:1;}}
-.hero-title{font-family:Rajdhani,sans-serif;font-size:28px;font-weight:700;background:linear-gradient(135deg,#c8922a,#c8922a,#c8922a);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px;}
-.hero-sub{color:rgba(240,232,208,0.55);font-size:13px;}
-.controls-bar{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;}
-.guild-sel{flex:1;min-width:200px;padding:12px 16px;background:rgba(0,0,0,0.6);border:2px solid rgba(200,146,42,0.3);border-radius:14px;color:#f0e8d0;font-size:14px;}
-.guild-sel:focus{outline:none;border-color:#c8922a;}
-.sg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:20px;}
-.sg-card{background:linear-gradient(135deg,#100e08,rgba(26,22,16,0.7));border:1px solid rgba(200,146,42,0.2);border-radius:18px;padding:22px;position:relative;overflow:hidden;transition:all .3s;animation:fadeInUp .4s ease both;}
-.sg-card:hover{border-color:rgba(200,146,42,0.5);transform:translateY(-3px);box-shadow:0 8px 30px rgba(200,146,42,0.1);}
-.sg-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#c8922a,#c8922a,#c8922a);background-size:200% 100%;animation:shimmer 2s linear infinite;}
-@keyframes shimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
-@keyframes fadeInUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
-.sg-status{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;margin-bottom:12px;}
-.status-pending{background:rgba(200,146,42,0.2);border:1px solid rgba(200,146,42,0.4);color:#c8922a;}
-.status-approved{background:rgba(46,204,113,0.2);border:1px solid rgba(46,204,113,0.4);color:#5ec47a;}
-.status-denied{background:rgba(231,76,60,0.2);border:1px solid rgba(231,76,60,0.4);color:#e05555;}
-.sg-text{color:#f0e8d0;font-size:14px;line-height:1.6;margin-bottom:14px;}
-.sg-author{display:flex;align-items:center;gap:8px;margin-bottom:14px;}
-.sg-avatar{width:32px;height:32px;border-radius:50%;border:2px solid rgba(200,146,42,0.3);}
-.sg-name{color:#c8922a;font-size:13px;font-weight:600;}
-.sg-date{color:#5a5040;font-size:11px;}
-.vote-bar{display:flex;gap:8px;margin-bottom:14px;}
-.vote-up{flex:1;background:rgba(46,204,113,0.15);border:1px solid rgba(46,204,113,0.3);border-radius:14px;padding:8px;text-align:center;color:#5ec47a;font-weight:700;font-size:14px;}
-.vote-down{flex:1;background:rgba(231,76,60,0.15);border:1px solid rgba(231,76,60,0.3);border-radius:14px;padding:8px;text-align:center;color:#e05555;font-weight:700;font-size:14px;}
-.sg-actions{display:flex;gap:8px;}
-.btn-approve{flex:1;padding:8px;background:rgba(46,204,113,0.2);border:1px solid rgba(46,204,113,0.4);color:#5ec47a;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;transition:all .2s;}
-.btn-approve:hover{background:rgba(46,204,113,0.4);}
-.btn-deny{flex:1;padding:8px;background:rgba(231,76,60,0.2);border:1px solid rgba(231,76,60,0.4);color:#e05555;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;transition:all .2s;}
-.btn-deny:hover{background:rgba(231,76,60,0.4);}
-.filter-tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;}
-.tab{padding:8px 18px;background:rgba(0,0,0,0.4);border:1px solid rgba(200,146,42,0.2);border-radius:20px;color:rgba(240,232,208,0.55);cursor:pointer;font-size:13px;transition:all .2s;}
-.tab.active,.tab:hover{background:rgba(200,146,42,0.15);border-color:rgba(200,146,42,0.5);color:#c8922a;}
-.empty-state{text-align:center;padding:60px 20px;color:#444;grid-column:1/-1;}
-</style>
+
 
 <div class="sg-hero">
   <div style="font-size:60px;margin-bottom:10px;">💡</div>

@@ -1,31 +1,8 @@
 {% extends "base.html" %}
 {% block title %}Розыгрыши - Aether{% endblock %}
-{% block page_title %}Розыгрыши{% endblock %}
+{% block page_title %}<i class="fas fa-gift" style="color:var(--ac);"></i> Розыгрыши{% endblock %}
 {% block content %}
-<style>
-.gw-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;max-height:520px;overflow-y:auto;overflow-anchor:none;padding:4px;}
-.gw-card{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.1);border-radius:12px;padding:14px;animation:fadeUp 0.3s ease-out both;position:relative;overflow:hidden;}
-@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-.gw-card:hover{border-color:rgba(212,168,67,0.25);}
-.gw-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#c8922a,transparent);}
-.gw-prize{font-size:22px;color:#c8922a;margin-bottom:6px;text-align:center;}
-.gw-title{font-size:13px;font-weight:700;color:#f0e8d0;margin-bottom:6px;text-align:center;line-height:1.3;}
-.gw-info{display:flex;justify-content:space-between;font-size:10px;color:#5a5040;padding:6px 10px;background:rgba(0,0,0,0.3);border-radius:7px;margin-bottom:8px;}
-.gw-info i{color:#c8922a;margin-right:4px;}
-.gw-progress{height:6px;background:rgba(255,255,255,0.04);border-radius:99px;overflow:hidden;margin-bottom:4px;}
-.gw-progress-fill{height:100%;background:linear-gradient(90deg,#c8922a,#e0a830);border-radius:99px;transition:width 0.3s;}
-.gw-foot{display:flex;justify-content:space-between;align-items:center;font-size:10px;color:#5a5040;}
-.gw-badge{padding:2px 7px;border-radius:99px;font-size:9px;font-weight:700;letter-spacing:0.04em;}
-.gw-badge.live{background:rgba(94,196,122,0.12);color:#5ec47a;}
-.gw-badge.ended{background:rgba(90,80,64,0.18);color:#5a5040;}
 
-.btn{padding:7px 12px;border:none;border-radius:99px;cursor:pointer;font-weight:600;font-size:11px;font-family:Inter,sans-serif;display:inline-flex;align-items:center;gap:4px;}
-.btn-primary{background:#c8922a;color:#100e08;}
-.btn-primary:hover{background:#e0a830;}
-.btn-warn{background:rgba(232,144,58,0.15);color:#e8903a;border:1px solid rgba(232,144,58,0.3);}
-
-.empty{text-align:center;color:#5a5040;padding:30px;font-size:12px;}
-</style>
 
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
   <div style="display:flex;gap:8px;">

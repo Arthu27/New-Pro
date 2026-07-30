@@ -1,27 +1,8 @@
 ﻿{% extends "base.html" %}
 {% block title %}Приветствие Редактор - Aether{% endblock %}
-{% block page_title %}Приветствие / Пока Пока{% endblock %}
+{% block page_title %}<i class="fas fa-handshake" style="color:var(--ac);"></i> Приветствие / Пока Пока{% endblock %}
 {% block content %}
-<style>
-  .editor-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
-  @media(max-width:900px){.editor-grid{grid-template-columns:1fr;}}
-  .editor-box{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.1);border-radius:14px;padding:22px;backdrop-filter:blur(4px);}
-  .section-title{color:rgba(240,232,208,0.4);font-size:10px;text-transform:uppercase;letter-spacing:0.1em;font-weight:700;margin-bottom:18px;display:flex;align-items:center;gap:8px;padding-bottom:12px;border-bottom:1px solid rgba(212,168,67,0.07);}
-  .section-title i{color:#c8922a;}
-  .form-group{margin-bottom:13px;}
-  .form-group label{display:block;color:rgba(240,232,208,0.4);font-size:10px;text-transform:uppercase;letter-spacing:0.08em;font-weight:700;margin-bottom:6px;}
-  .form-group input,.form-group textarea,.form-group select{width:100%;padding:10px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(212,168,67,0.12);border-radius:8px;color:#f0e8d0;font-size:13px;box-sizing:border-box;font-family:Inter,sans-serif;transition:border-color 0.15s;margin:0;}
-  .form-group input:focus,.form-group textarea:focus,.form-group select:focus{outline:none;border-color:rgba(212,168,67,0.45);}
-  .form-group textarea{min-height:72px;resize:vertical;}
-  .preview-box{background:#2f3136;border-radius:10px;padding:14px;margin-top:12px;}
-  .preview-embed{border-radius:0 6px 6px 0;padding:12px;}
-  .preview-title{color:#f0e8d0;font-weight:700;margin-bottom:4px;font-size:14px;}
-  .preview-desc{color:#dcddde;font-size:12px;line-height:1.5;}
-  .save-btn{width:100%;padding:11px;background:#c8922a;color:#100e08;border:none;border-radius:99px;cursor:pointer;font-weight:700;margin-top:14px;font-size:13px;font-family:Inter,sans-serif;transition:background 0.15s;}
-  .save-btn:hover{background:#e0a830;}
-  .vars-box{background:rgba(212,168,67,0.06);border:1px solid rgba(212,168,67,0.12);border-radius:10px;padding:12px;margin-bottom:16px;font-size:12px;color:rgba(240,232,208,0.5);}
-  .vars-box span{color:#c8922a;font-family:monospace;background:rgba(212,168,67,0.08);padding:2px 6px;border-radius:4px;margin:2px;display:inline-block;}
-</style>
+
 
 <div class="vars-box">
   <i class="fas fa-code" style="color:#c8922a;margin-right:6px;"></i>
@@ -47,19 +28,19 @@
   </div>
 
   <div class="editor-box" style="border-color:rgba(224,85,85,0.15);">
-    <div class="section-title" style="border-color:rgba(224,85,85,0.1);"><i class="fas fa-door-closed" style="color:#e05555;"></i> Пока Пока Сообщение</div>
+    <div class="section-title" style="border-color:rgba(224,85,85,0.1);"><i class="fas fa-door-closed" style="color:var(--err);"></i> Пока Пока Сообщение</div>
     <div class="form-group"><label>Канал</label><select id="leave-channel"><option value="">Выберите канал...</option></select></div>
     <div class="form-group"><label>Заголовок</label><input type="text" id="leave-title" placeholder="Пока Пока, {user}!"></div>
     <div class="form-group"><label>Сообщение</label><textarea id="leave-msg" placeholder="{user} с сервера покинул."></textarea></div>
-    <div class="form-group"><label>Цвет эмбеда</label><input type="color" id="leave-color" value="#e05555" style="height:40px;cursor:pointer;background:rgba(255,255,255,0.04);border:1px solid rgba(212,168,67,0.2);border-radius:8px;padding:3px;"></div>
+    <div class="form-group"><label>Цвет эмбеда</label><input type="color" id="leave-color" value="var(--err)" style="height:40px;cursor:pointer;background:rgba(255,255,255,0.04);border:1px solid rgba(212,168,67,0.2);border-radius:8px;padding:3px;"></div>
     <div class="preview-box">
       <div style="font-size:10px;color:rgba(240,232,208,0.35);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.08em;">Предпросмотр</div>
-      <div class="preview-embed" id="leave-preview" style="border-left:3px solid #e05555;">
+      <div class="preview-embed" id="leave-preview" style="border-left:3px solid var(--err);">
         <div class="preview-title">Пока Пока!</div>
         <div class="preview-desc">Предпросмотр здесь видеть...</div>
       </div>
     </div>
-    <button class="save-btn" onclick="saveLeave()" style="background:rgba(224,85,85,0.15);color:#e05555;"><i class="fas fa-save" style="margin-right:6px;"></i>Сохранить</button>
+    <button class="save-btn" onclick="saveLeave()" style="background:rgba(224,85,85,0.15);color:var(--err);"><i class="fas fa-save" style="margin-right:6px;"></i>Сохранить</button>
   </div>
 </div>
 
@@ -122,7 +103,7 @@ async function loadSettings() {
         document.getElementById('leave-channel').value = d.leave.channel_id || '';
         document.getElementById('leave-title').value = d.leave.title || '';
         document.getElementById('leave-msg').value = d.leave.message || '';
-        document.getElementById('leave-color').value = d.leave.color || '#e05555';
+        document.getElementById('leave-color').value = d.leave.color || 'var(--err)';
       }
     } else {
       console.warn('Welcome settings API error:', s.status, s.statusText);

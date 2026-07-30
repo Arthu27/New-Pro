@@ -1,34 +1,8 @@
 {% extends "base.html" %}
 {% block title %}Panel Logs - Aether{% endblock %}
-{% block page_title %}Логи панели{% endblock %}
+{% block page_title %}<i class="fas fa-list" style="color:var(--ac);"></i> Логи панели{% endblock %}
 {% block content %}
-<style>
-.pl-filters{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center;}
-.pl-search{flex:1;min-width:200px;padding:7px 11px;background:rgba(255,255,255,0.03);border:1px solid rgba(212,168,67,0.16);border-radius:8px;color:#f0e8d0;font-size:12px;}
-.pl-select{padding:7px 11px;background:rgba(255,255,255,0.03);border:1px solid rgba(212,168,67,0.16);border-radius:8px;color:#f0e8d0;font-size:12px;}
 
-.pl-stats{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;}
-.pl-stat{flex:1;min-width:90px;background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.1);border-radius:10px;padding:8px 12px;text-align:center;}
-.pl-stat-num{font-size:16px;font-weight:800;color:#c8922a;}
-.pl-stat-lbl{font-size:9px;color:#5a5040;text-transform:uppercase;letter-spacing:0.05em;}
-
-.pl-box{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.08);border-radius:12px;overflow:hidden;}
-.pl-head{padding:10px 14px;border-bottom:1px solid rgba(212,168,67,0.07);display:flex;justify-content:space-between;align-items:center;}
-.pl-title{font-size:10px;font-weight:700;color:rgba(240,232,208,0.55);text-transform:uppercase;letter-spacing:0.08em;display:flex;align-items:center;gap:7px;}
-.pl-title i{color:#c8922a;}
-.pl-count{font-size:10px;color:#5a5040;background:rgba(212,168,67,0.06);padding:2px 8px;border-radius:99px;}
-.pl-body{max-height:520px;overflow-y:auto;overflow-anchor:none;}
-
-.pl-item{display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid rgba(212,168,67,0.05);transition:background 0.1s;}
-.pl-item:hover{background:rgba(212,168,67,0.04);}
-.pl-icon{width:24px;height:24px;border-radius:6px;background:rgba(212,168,67,0.12);color:#c8922a;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;}
-.pl-action{font-family:monospace;font-size:11px;color:#c8922a;font-weight:600;flex:0 0 200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.pl-user{font-size:11px;color:rgba(240,232,208,0.7);flex:0 0 120px;}
-.pl-ip{font-size:10px;color:#5a5040;font-family:monospace;}
-.pl-time{font-size:10px;color:#5a5040;margin-left:auto;flex-shrink:0;}
-
-.empty{text-align:center;padding:30px;color:#5a5040;font-size:12px;}
-</style>
 
 <div class="pl-filters">
   <input type="text" id="search" class="pl-search" placeholder="Ara... (eylem, kullanıcı, IP)">
@@ -43,7 +17,7 @@
 
 <div class="pl-stats">
   <div class="pl-stat"><div class="pl-stat-num" id="stat-total">-</div><div class="pl-stat-lbl">Всего</div></div>
-  <div class="pl-stat"><div class="pl-stat-num" id="stat-today" style="color:#5ec47a;">-</div><div class="pl-stat-lbl">Bugün</div></div>
+  <div class="pl-stat"><div class="pl-stat-num" id="stat-today" style="color:var(--ok);">-</div><div class="pl-stat-lbl">Bugün</div></div>
   <div class="pl-stat"><div class="pl-stat-num" id="stat-post" style="color:#c8922a;">-</div><div class="pl-stat-lbl">POST</div></div>
   <div class="pl-stat"><div class="pl-stat-num" id="stat-delete" style="color:var(--red);">-</div><div class="pl-stat-lbl">DELETE</div></div>
 </div>
@@ -71,7 +45,7 @@
     { action: 'POST /api/warn', user: 'Mod', role: 'mod', ip: '127.0.0.1', time: '15 min önce', method: 'POST' },
     { action: 'DELETE /api/guild/.../channels/...', user: 'Admin', role: 'admin', ip: '127.0.0.1', time: '1 saat önce', method: 'DELETE' }
   ];
-  var roleColor = { owner: '#e05555', admin: '#c8922a', mod: '#5ec47a' };
+  var roleColor = { owner: 'var(--err)', admin: '#c8922a', mod: 'var(--ok)' };
 
   function render() {
     var q = ($('search').value || '').toLowerCase();
@@ -92,7 +66,7 @@
       var icon = l.method === 'POST' ? 'fa-plus' : l.method === 'DELETE' ? 'fa-trash' : 'fa-eye';
       html += '<div class="pl-item"><div class="pl-icon"><i class="fas ' + icon + '"></i></div>' +
         '<div class="pl-action">' + esc(l.action) + '</div>' +
-        '<div class="pl-user" style="color:' + (roleColor[l.role] || '#5a5040') + ';">' + esc(l.user) + '</div>' +
+        '<div class="pl-user" style="color:' + (roleColor[l.role] || 'var(--text-3)') + ';">' + esc(l.user) + '</div>' +
         '<div class="pl-ip">' + esc(l.ip) + '</div>' +
         '<div class="pl-time">' + esc(l.time) + '</div></div>';
     });

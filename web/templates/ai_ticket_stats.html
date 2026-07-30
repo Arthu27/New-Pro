@@ -4,413 +4,424 @@
 
 {% block content %}
 <style>
-    /* Modern Glassmorphism Design */
-    .ai-stats-contaеr {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        min-height: 100vh;
-        padding: 2rem 0;
+    /* Modern Premium Glassmorphism Design — gold theme */
+    .ai-stats-container {
+        min-height: 60vh;
+        padding: 0;
     }
-    
+
     .glass-card {
-        background: rgba(255, 255, 255, 0.1);
-        backdrop-filter: blur(10px);
-        border-radius: 20px;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        padding: 2rem;
-        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
-        transition: all 0.3s ease;
+        background: var(--surface-2) !important;
+        backdrop-filter: blur(16px) !important;
+        -webkit-backdrop-filter: blur(16px) !important;
+        border-radius: var(--r-xl) !important;
+        border: 1px solid var(--ac-line) !important;
+        padding: 24px 28px !important;
+        box-shadow: var(--shadow-md) !important;
+        transition: all 0.3s var(--ease) !important;
+        margin-bottom: 18px !important;
     }
-    
     .glass-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.5);
+        border-color: var(--ac) !important;
+        box-shadow: var(--shadow-md), 0 0 30px rgba(212, 168, 67, 0.10) !important;
     }
-    
+
     .stat-box {
-        background: rgba(255, 255, 255, 0.15);
-        backdrop-filter: blur(5px);
-        border-radius: 15px;
-        padding: 1.5rem;
+        background: var(--surface) !important;
+        border: 1px solid var(--line) !important;
+        border-radius: var(--r-lg) !important;
+        padding: 24px 18px !important;
         text-align: center;
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        transition: all 0.3s ease;
+        transition: all 0.25s var(--ease);
         position: relative;
         overflow: hidden;
     }
-    
     .stat-box::before {
         content: '';
         position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-        transition: left 0.5s;
+        top: -50%; right: -30%;
+        width: 180px; height: 180px;
+        background: radial-gradient(circle, var(--ac-soft), transparent 70%);
+        border-radius: 50%;
+        pointer-events: none;
     }
-    
-    .stat-box:hover::before {
-        left: 100%;
+    .stat-box::after {
+        content: '';
+        position: absolute;
+        top: 0; left: -100%;
+        width: 100%; height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(212,168,67,0.10), transparent);
+        transition: left 0.6s;
     }
-    
+    .stat-box:hover::after { left: 100%; }
     .stat-box:hover {
-        transform: scale(1.05);
-        background: rgba(255, 255, 255, 0.25);
+        transform: translateY(-4px);
+        border-color: var(--ac-line) !important;
+        box-shadow: var(--shadow-md), 0 0 30px rgba(212, 168, 67, 0.10) !important;
     }
-    
+
     .stat-number {
-        font-size: 2.5rem;
-        font-weight: 700;
-        color: #fff;
-        text-shadow: 0 2px 10px rgba(0,0,0,0.3);
-        margin-bottom: 0.5rem;
+        font-size: 36px;
+        font-weight: 800;
+        background: linear-gradient(135deg, #f0c75e 0%, #d4a843 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        letter-spacing: -0.025em;
+        margin-bottom: 8px;
+        line-height: 1;
+        font-variant-numeric: tabular-nums;
+        position: relative;
+        z-index: 1;
     }
-    
+
     .stat-label {
-        font-size: 0.9rem;
-        color: rgba(255, 255, 255, 0.9);
+        font-size: 11px;
+        color: var(--text-2);
         text-transform: uppercase;
-        letter-spacing: 1px;
-        font-weight: 500;
-    }
-    
-    .page-title {
-        color: #fff;
-        font-size: 2.5rem;
+        letter-spacing: 0.10em;
         font-weight: 700;
-        text-align: center;
-        margin-bottom: 2rem;
-        text-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        position: relative;
+        z-index: 1;
     }
-    
-    .section-title {
-        color: #fff;
-        font-size: 1.5rem;
-        font-weight: 600;
-        margin-bottom: 1.5rem;
+
+    .page-title {
+        color: var(--text);
+        font-size: 24px;
+        font-weight: 800;
+        margin-bottom: 22px;
+        letter-spacing: -0.02em;
         display: flex;
         align-items: center;
-        gap: 0.5rem;
+        gap: 10px;
     }
-    
+    .page-title::before {
+        content: '';
+        width: 3px; height: 24px;
+        background: linear-gradient(180deg, #f0c75e, #b88728);
+        border-radius: 3px;
+    }
+
+    .section-title {
+        color: var(--text);
+        font-size: 14px;
+        font-weight: 700;
+        margin-bottom: 18px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.10em;
+    }
+    .section-title i { color: var(--ac); }
+
     .modern-progress {
-        height: 10px;
-        border-radius: 10px;
-        background: rgba(255, 255, 255, 0.2);
+        height: 8px;
+        border-radius: 99px;
+        background: rgba(212, 168, 67, 0.10);
         overflow: hidden;
         position: relative;
     }
-    
+
     .modern-progress-bar {
         height: 100%;
-        border-radius: 10px;
-        background: linear-gradient(90deg, #667eea, #764ba2);
-        transition: width 1s ease;
+        border-radius: 99px;
+        transition: width 1s var(--ease-out);
         position: relative;
         overflow: hidden;
     }
-    
     .modern-progress-bar::after {
         content: '';
         position: absolute;
-        top: 0;
-        left: 0;
-        bottom: 0;
-        right: 0;
+        top: 0; left: 0; bottom: 0; right: 0;
         background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-        animation: shimmer 2s infinite;
+        background-size: 200% 100%;
+        animation: shimmer 2.4s ease infinite;
     }
-    
-    @keyframes shimmer {
-        0% { transform: translateX(-100%); }
-        100% { transform: translateX(100%); }
+
+    .progress-row {
+        margin-bottom: 16px;
     }
-    
-    .modern-table {
-        background: rgba(255, 255, 255, 0.1);
-        backdrop-filter: blur(5px);
-        border-radius: 15px;
-        overflow: hidden;
-        border: 1px solid rgba(255, 255, 255, 0.2);
+    .progress-row:last-child { margin-bottom: 0; }
+    .progress-label {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 6px;
+        font-size: 12.5px;
     }
-    
-    .modern-table thead {
-        background: rgba(255, 255, 255, 0.15);
-    }
-    
-    .modern-table th {
-        color: #fff;
-        font-weight: 600;
-        text-transform: uppercase;
-        font-size: 0.85rem;
-        letter-spacing: 1px;
-        padding: 1rem;
-        border: none;
-    }
-    
-    .modern-table td {
-        color: rgba(255, 255, 255, 0.9);
-        padding: 1rem;
-        border: none;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    }
-    
-    .modern-table tbody tr {
-        transition: all 0.3s ease;
-    }
-    
-    .modern-table tbody tr:hover {
-        background: rgba(255, 255, 255, 0.15);
-        transform: scale(1.02);
-    }
-    
-    .badge-modern {
-        padding: 0.5rem 1rem;
-        border-radius: 20px;
-        font-weight: 600;
-        font-size: 0.85rem;
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        color: #fff;
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-    }
-    
+    .progress-name { color: var(--text-2); font-weight: 500; }
+    .progress-value { color: var(--text); font-weight: 700; }
+
     .metric-card {
-        background: rgba(255, 255, 255, 0.12);
-        backdrop-filter: blur(8px);
-        border-radius: 15px;
-        padding: 1.5rem;
-        border: 1px solid rgba(255, 255, 255, 0.25);
-        margin-bottom: 1rem;
+        background: var(--surface) !important;
+        border: 1px solid var(--line) !important;
+        border-radius: var(--r-md) !important;
+        padding: 14px 16px;
+        margin-bottom: 10px;
+        transition: all 0.2s var(--ease);
     }
-    
+    .metric-card:hover {
+        border-color: var(--ac-line) !important;
+        background: var(--surface-2) !important;
+    }
+    .metric-card:last-child { margin-bottom: 0; }
     .metric-label {
-        color: rgba(255, 255, 255, 0.8);
-        font-size: 0.9rem;
-        margin-bottom: 0.5rem;
-    }
-    
-    .metric-value {
-        color: #fff;
-        font-size: 1.5rem;
+        color: var(--text-3);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
         font-weight: 700;
+        margin-bottom: 4px;
     }
-    
-    /* Animasyonlar */
-    @keyframes fadeInUp {
-        from {
-            opacity: 0;
-            transform: translateY(30px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
+    .metric-value {
+        color: var(--text);
+        font-size: 22px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        font-variant-numeric: tabular-nums;
     }
-    
-    .glass-card {
-        animation: fadeInUp 0.6s ease;
+
+    .table-wrap {
+        background: var(--surface) !important;
+        border: 1px solid var(--line) !important;
+        border-radius: var(--r-md) !important;
+        overflow: hidden;
     }
-    
-    .stat-box:nth-child(1) { animation-delay: 0.1s; }
-    .stat-box:nth-child(2) { animation-delay: 0.2s; }
-    .stat-box:nth-child(3) { animation-delay: 0.3s; }
-    .stat-box:nth-child(4) { animation-delay: 0.4s; }
+    table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; }
+    th {
+        background: rgba(212, 168, 67, 0.06) !important;
+        color: var(--text-2) !important;
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 10.5px;
+        letter-spacing: 0.10em;
+        padding: 12px 18px;
+        text-align: left;
+        border-bottom: 1px solid var(--ac-line);
+    }
+    td {
+        color: var(--text) !important;
+        padding: 12px 18px;
+        border-bottom: 1px solid var(--line) !important;
+    }
+    tbody tr { transition: background 0.15s var(--ease); }
+    tbody tr:hover { background: rgba(212, 168, 67, 0.05); }
+    tbody tr:last-child td { border-bottom: none !important; }
+
+    .badge-modern {
+        padding: 4px 11px;
+        border-radius: 99px;
+        font-weight: 700;
+        font-size: 11.5px;
+        background: linear-gradient(135deg, #d4a843, #b88728) !important;
+        color: var(--bg) !important;
+        display: inline-block;
+        font-variant-numeric: tabular-nums;
+        box-shadow: 0 2px 8px rgba(212, 168, 67, 0.20);
+    }
+
+    .row-flex {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+    }
+    .col-3 { flex: 0 0 calc(25% - 11px); min-width: 160px; }
+    .col-6 { flex: 0 0 calc(50% - 8px); min-width: 320px; }
+    @media(max-width: 900px){
+        .col-3 { flex: 0 0 calc(50% - 7px); }
+        .col-6 { flex: 0 0 100%; }
+    }
+    @media(max-width: 600px){
+        .col-3 { flex: 0 0 100%; }
+    }
 </style>
 
-<div class="ai-stats-contaеr">
-    <div class="contaеr">
-        <h1 class="page-title">🤖 Статистика AI-модерации</h1>
-        
-        <!-- Общий Статистика -->
-        <div class="row mb-4">
-            <div class="col-md-3 mb-3">
-                <div class="stat-box" style="animation: fadeInUp 0.6s ease 0.1s both;">
-                    <div class="stat-number">{{ stats.total_tickets }}</div>
-                    <div class="stat-label">Всего Ticket</div>
-                </div>
-            </div>
-            <div class="col-md-3 mb-3">
-                <div class="stat-box" style="animation: fadeInUp 0.6s ease 0.2s both;">
-                    <div class="stat-number">{{ stats.total_penalties }}</div>
-                    <div class="stat-label">Всего наказаний</div>
-                </div>
-            </div>
-            <div class="col-md-3 mb-3">
-                <div class="stat-box" style="animation: fadeInUp 0.6s ease 0.3s both;">
-                    <div class="stat-number">{{ stats.mutual_violations }}</div>
-                    <div class="stat-label">Взаимные нарушения</div>
-                </div>
-            </div>
-            <div class="col-md-3 mb-3">
-                <div class="stat-box" style="animation: fadeInUp 0.6s ease 0.4s both;">
-                    <div class="stat-number">{{ stats.fake_complaints }}</div>
-                    <div class="stat-label">Ложные жалобы</div>
-                </div>
-            </div>
-        </div>
+<div class="ai-stats-container">
+    <h1 class="page-title"><i class="fas fa-robot" style="color:var(--ac);"></i> Статистика AI-модерации</h1>
 
-        <!-- Решение Raspredelenie ve AI Proizvoditelnost -->
-        <div class="row mb-4">
-            <div class="col-lg-6 mb-4">
-                <div class="glass-card">
-                    <h5 class="section-title">📊 Решение Raspredelenie</h5>
-                    
-                    <div class="mb-3">
-                        <div class="d-flex justify-content-between mb-2">
-                            <span style="color: rgba(255,255,255,0.9);">Birstoronniy Нарушение</span>
-                            <span style="color: #fff; font-weight: 600;">{{ stats.single_violation_rate }}%</span>
-                        </div>
-                        <div class="modern-progress">
-                            <div class="modern-progress-bar" style="width: {{ stats.single_violation_rate }}%; background: linear-gradient(90deg, #f093fb, #f5576c);"></div>
-                        </div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <div class="d-flex justify-content-between mb-2">
-                            <span style="color: rgba(255,255,255,0.9);">Взаимные нарушения</span>
-                            <span style="color: #fff; font-weight: 600;">{{ stats.mutual_rate }}%</span>
-                        </div>
-                        <div class="modern-progress">
-                            <div class="modern-progress-bar" style="width: {{ stats.mutual_rate }}%; background: linear-gradient(90deg, #ffd89b, #19547b);"></div>
-                        </div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <div class="d-flex justify-content-between mb-2">
-                            <span style="color: rgba(255,255,255,0.9);">Ложные жалобы</span>
-                            <span style="color: #fff; font-weight: 600;">{{ stats.fake_rate }}%</span>
-                        </div>
-                        <div class="modern-progress">
-                            <div class="modern-progress-bar" style="width: {{ stats.fake_rate }}%; background: linear-gradient(90deg, #a8edea, #fed6e3);"></div>
-                        </div>
-                    </div>
-                    
-                    <div class="mb-0">
-                        <div class="d-flex justify-content-between mb-2">
-                            <span style="color: rgba(255,255,255,0.9);">Нарушение Yok</span>
-                            <span style="color: #fff; font-weight: 600;">{{ stats.no_violation_rate }}%</span>
-                        </div>
-                        <div class="modern-progress">
-                            <div class="modern-progress-bar" style="width: {{ stats.no_violation_rate }}%; background: linear-gradient(90deg, #4facfe, #00f2fe);"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="col-lg-6 mb-4">
-                <div class="glass-card">
-                    <h5 class="section-title">⚖️ AI Proizvoditelnost</h5>
-                    
-                    <div class="metric-card">
-                        <div class="metric-label">Ortalama Доверие Очкиlamau</div>
-                        <div class="metric-value">{{ stats.avg_confidence }}%</div>
-                    </div>
-                    
-                    <div class="metric-card">
-                        <div class="metric-label">Высокий Доверие Решениеlar</div>
-                        <div class="metric-value">{{ stats.high_confidence_count }}</div>
-                    </div>
-                    
-                    <div class="metric-card">
-                        <div class="metric-label">Низкий Доверие (Escalate)</div>
-                        <div class="metric-value">{{ stats.low_confidence_count }}</div>
-                    </div>
-                    
-                    <div class="metric-card">
-                        <div class="metric-label">Osporit Procent</div>
-                        <div class="metric-value">{{ stats.appeal_rate }}%</div>
-                    </div>
-                    
-                    <div class="metric-card mb-0">
-                        <div class="metric-label">Osporit Prinyat Procent</div>
-                        <div class="metric-value">{{ stats.appeal_success_rate }}%</div>
-                    </div>
-                </div>
+    <!-- Общая статистика -->
+    <div class="row-flex" style="margin-bottom: 18px;">
+        <div class="col-3">
+            <div class="stat-box">
+                <div class="stat-number">{{ stats.total_tickets }}</div>
+                <div class="stat-label">Всего тикетов</div>
             </div>
         </div>
-
-        <!-- En Очень Наказание Alan Пользователи -->
-        <div class="glass-card mb-4">
-            <h5 class="section-title">👥 En Очень Наказание Alan Пользователи</h5>
-            <div class="modern-table">
-                <table class="table table-hover mb-0">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Пользователь</th>
-                            <th>Наказание Число</th>
-                            <th>Всего Длительность</th>
-                            <th>В конец Наказание</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for user in stats.top_offenders %}
-                        <tr>
-                            <td>{{ loop.еx }}</td>
-                            <td>{{ user.name }}</td>
-                            <td><span class="badge-modern">{{ user.count }}</span></td>
-                            <td>{{ user.total_duration }} dk</td>
-                            <td>{{ user.last_penalty }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+        <div class="col-3">
+            <div class="stat-box">
+                <div class="stat-number">{{ stats.total_penalties }}</div>
+                <div class="stat-label">Всего наказаний</div>
             </div>
         </div>
-
-        <!-- Тип наказания -->
-        <div class="glass-card">
-            <h5 class="section-title">📋 Наказание Причина</h5>
-            <div class="modern-table">
-                <table class="table table-hover mb-0">
-                    <thead>
-                        <tr>
-                            <th>Причина</th>
-                            <th>Число</th>
-                            <th style="width: 50%;">Oran</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for reason in stats.penalty_reasons %}
-                        <tr>
-                            <td>{{ reason.name }}</td>
-                            <td><span class="badge-modern">{{ reason.count }}</span></td>
-                            <td>
-                                <div class="d-flex align-items-center gap-2">
-                                    <div class="modern-progress flex-grow-1">
-                                        <div class="modern-progress-bar" style="width: {{ reason.percentage }}%;"></div>
-                                    </div>
-                                    <span style="color: #fff; font-weight: 600; min-width: 50px;">{{ reason.percentage }}%</span>
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+        <div class="col-3">
+            <div class="stat-box">
+                <div class="stat-number">{{ stats.mutual_violations }}</div>
+                <div class="stat-label">Взаимных нарушений</div>
             </div>
         </div>
-        
+        <div class="col-3">
+            <div class="stat-box">
+                <div class="stat-number">{{ stats.fake_complaints }}</div>
+                <div class="stat-label">Ложных жалоб</div>
+            </div>
+        </div>
     </div>
+
+    <!-- Распределение решений + Производительность AI -->
+    <div class="row-flex" style="margin-bottom: 18px;">
+        <div class="col-6">
+            <div class="glass-card">
+                <div class="section-title"><i class="fas fa-chart-pie"></i> Распределение решений</div>
+
+                <div class="progress-row">
+                    <div class="progress-label">
+                        <span class="progress-name">Одностороннее нарушение</span>
+                        <span class="progress-value">{{ stats.single_violation_rate }}%</span>
+                    </div>
+                    <div class="modern-progress">
+                        <div class="modern-progress-bar" style="width: {{ stats.single_violation_rate }}%; background: linear-gradient(90deg, #f472b6, #ec4899);"></div>
+                    </div>
+                </div>
+
+                <div class="progress-row">
+                    <div class="progress-label">
+                        <span class="progress-name">Взаимные нарушения</span>
+                        <span class="progress-value">{{ stats.mutual_rate }}%</span>
+                    </div>
+                    <div class="modern-progress">
+                        <div class="modern-progress-bar" style="width: {{ stats.mutual_rate }}%; background: linear-gradient(90deg, #fbbf24, #f59e0b);"></div>
+                    </div>
+                </div>
+
+                <div class="progress-row">
+                    <div class="progress-label">
+                        <span class="progress-name">Ложные жалобы</span>
+                        <span class="progress-value">{{ stats.fake_rate }}%</span>
+                    </div>
+                    <div class="modern-progress">
+                        <div class="modern-progress-bar" style="width: {{ stats.fake_rate }}%; background: linear-gradient(90deg, #06b6d4, #0ea5e9);"></div>
+                    </div>
+                </div>
+
+                <div class="progress-row">
+                    <div class="progress-label">
+                        <span class="progress-name">Без нарушений</span>
+                        <span class="progress-value">{{ stats.no_violation_rate }}%</span>
+                    </div>
+                    <div class="modern-progress">
+                        <div class="modern-progress-bar" style="width: {{ stats.no_violation_rate }}%; background: linear-gradient(90deg, #34d399, #10b981);"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6">
+            <div class="glass-card">
+                <div class="section-title"><i class="fas fa-balance-scale"></i> Производительность AI</div>
+
+                <div class="metric-card">
+                    <div class="metric-label">Средний уровень доверия</div>
+                    <div class="metric-value">{{ stats.avg_confidence }}%</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-label">Высокая уверенность решений</div>
+                    <div class="metric-value">{{ stats.high_confidence_count }}</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-label">Низкая уверенность (Escalate)</div>
+                    <div class="metric-value">{{ stats.low_confidence_count }}</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-label">Процент оспариваний</div>
+                    <div class="metric-value">{{ stats.appeal_rate }}%</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-label">Процент принятых оспариваний</div>
+                    <div class="metric-value">{{ stats.appeal_success_rate }}%</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Топ нарушителей -->
+    <div class="glass-card">
+        <div class="section-title"><i class="fas fa-users"></i> Топ нарушителей</div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Пользователь</th>
+                        <th>Наказаний</th>
+                        <th>Общая длительность</th>
+                        <th>Последнее наказание</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in stats.top_offenders %}
+                    <tr>
+                        <td><span style="color:var(--text-3);font-weight:700;">#{{ loop.index }}</span></td>
+                        <td>{{ user.name }}</td>
+                        <td><span class="badge-modern">{{ user.count }}</span></td>
+                        <td>{{ user.total_duration }} дн.</td>
+                        <td>{{ user.last_penalty }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Причины наказаний -->
+    <div class="glass-card">
+        <div class="section-title"><i class="fas fa-list"></i> Причины наказаний</div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Причина</th>
+                        <th>Количество</th>
+                        <th style="width:50%;">Доля</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for reason in stats.penalty_reasons %}
+                    <tr>
+                        <td>{{ reason.name }}</td>
+                        <td><span class="badge-modern">{{ reason.count }}</span></td>
+                        <td>
+                            <div style="display:flex;align-items:center;gap:12px;">
+                                <div class="modern-progress" style="flex:1;">
+                                    <div class="modern-progress-bar" style="width:{{ reason.percentage }}%; background: linear-gradient(90deg, #d4a843, #f0c75e);"></div>
+                                </div>
+                                <span style="color:var(--text);font-weight:700;min-width:48px;text-align:right;">{{ reason.percentage }}%</span>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
 </div>
 
 <script>
-    // Smooth scroll animacii
     document.addEventListener('DOMContentLoaded', function() {
-        const obsunucu = new IntersectionObsunucu((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.style.opacity = '1';
-                    entry.target.style.transform = 'translateY(0)';
-                }
-            });
-        });
-        
-        document.querySelectorAll('.glass-card').forEach(card => {
-            card.style.opacity = '0';
-            card.style.transform = 'translateY(30px)';
-            card.style.transition = 'all 0.6s ease';
-            obsunucu.observe(card);
+        // Staggered fade-in for cards
+        var cards = document.querySelectorAll('.stat-box, .glass-card, .metric-card');
+        cards.forEach(function(c, i) {
+            c.style.opacity = '0';
+            c.style.transform = 'translateY(12px)';
+            c.style.transition = 'all 0.45s cubic-bezier(0.16, 1, 0.3, 1)';
+            setTimeout(function() {
+                c.style.opacity = '1';
+                c.style.transform = 'translateY(0)';
+            }, 40 * i);
         });
     });
 </script>

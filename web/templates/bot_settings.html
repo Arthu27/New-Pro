@@ -1,32 +1,63 @@
 {% extends "base.html" %}
-{% block title %}Bot Ayarları - Aether{% endblock %}
-{% block page_title %}Настройки бота{% endblock %}
+{% block title %}Настройки бота — Aether{% endblock %}
+{% block page_title %}<i class="fas fa-sliders-h" style="color:var(--ac);"></i> Настройки бота{% endblock %}
 {% block content %}
 <style>
-.bs-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;}
-.bs-card{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.1);border-radius:12px;padding:14px;animation:fadeUp 0.3s ease-out both;}
-@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-.bs-card:hover{border-color:rgba(212,168,67,0.25);}
-.bs-head{display:flex;align-items:center;gap:9px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid rgba(212,168,67,0.08);}
-.bs-icon{width:32px;height:32px;border-radius:8px;background:rgba(212,168,67,0.12);color:#c8922a;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}
-.bs-title{font-size:12px;font-weight:700;color:rgba(240,232,208,0.7);text-transform:uppercase;letter-spacing:0.05em;flex:1;}
+.bs-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;}
+.bs-card{
+  background:var(--surface) !important;
+  border:1px solid var(--line) !important;
+  border-radius:var(--r-lg) !important;
+  padding:18px 20px !important;
+  animation:fadeUp 0.4s var(--ease-out) both;
+  transition:border-color 0.2s var(--ease);
+}
+.bs-card:hover{border-color:var(--ac-line) !important;}
+.bs-head{display:flex;align-items:center;gap:10px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--line);}
+.bs-icon{
+  width:34px;height:34px;border-radius:10px;
+  background:var(--ac-soft);
+  color:var(--ac);
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;flex-shrink:0;
+  border:1px solid var(--ac-line);
+}
+.bs-title{font-size:12px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:0.10em;flex:1;}
 
-.row{display:flex;gap:8px;align-items:center;margin-bottom:8px;}
-.row label{flex:0 0 110px;font-size:10px;color:#5a5040;text-transform:uppercase;letter-spacing:0.05em;}
-.row input,.row select{flex:1;padding:7px 10px;background:rgba(255,255,255,0.04);border:1px solid rgba(212,168,67,0.16);border-radius:6px;color:#f0e8d0;font-size:12px;}
+.row{display:flex;gap:10px;align-items:center;margin-bottom:10px;}
+.row label{flex:0 0 110px;font-size:10.5px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;font-weight:600;margin:0;}
+.row input,.row select{flex:1;}
+.row.with-toggle{justify-content:space-between;}
+.row.with-toggle label{flex:1;}
 
-.toggle{position:relative;width:36px;height:20px;background:rgba(255,255,255,0.08);border-radius:99px;cursor:pointer;transition:background 0.2s;flex-shrink:0;}
-.toggle::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;background:#5a5040;border-radius:50%;transition:all 0.2s;}
-.toggle.on{background:rgba(200,146,42,0.4);}
-.toggle.on::after{left:18px;background:#c8922a;}
+.toggle{
+  position:relative;width:42px;height:22px;
+  background:rgba(255,255,255,0.08);
+  border-radius:99px;cursor:pointer;
+  transition:background 0.2s var(--ease);
+  flex-shrink:0;border:1px solid var(--line);
+}
+.toggle::after{
+  content:'';position:absolute;top:2px;left:2px;
+  width:16px;height:16px;
+  background:var(--text-3);
+  border-radius:50%;
+  transition:all 0.25s var(--ease-spring);
+  box-shadow:0 2px 4px rgba(0,0,0,0.3);
+}
+.toggle.on{
+  background:linear-gradient(135deg, rgba(212,168,67,0.40), rgba(212,168,67,0.20));
+  border-color:var(--ac-line);
+}
+.toggle.on::after{left:22px;background:linear-gradient(135deg, var(--ac-2), var(--ac));box-shadow:0 0 8px var(--ac-glow);}
 
-.btn{padding:7px 14px;border:none;border-radius:99px;cursor:pointer;font-weight:600;font-size:11px;font-family:Inter,sans-serif;}
-.btn-primary{background:#c8922a;color:#100e08;}
-.btn-primary:hover{background:#e0a830;}
+.btn{padding:8px 18px;border:none;border-radius:99px;cursor:pointer;font-weight:700;font-size:12px;font-family:Inter,sans-serif;transition:all 0.18s var(--ease);}
+.btn-primary{background:linear-gradient(135deg, var(--ac), var(--ac-3));color:var(--bg);box-shadow:0 4px 14px var(--ac-glow);}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 6px 22px rgba(212,168,67,0.40);filter:brightness(1.05);}
+.save-bar{display:flex;gap:8px;margin-top:18px;justify-content:flex-end;}
 </style>
 
 <div class="bs-grid">
-  <!-- Status & Activity -->
   <div class="bs-card">
     <div class="bs-head">
       <div class="bs-icon"><i class="fas fa-robot"></i></div>
@@ -41,77 +72,61 @@
     <div class="row"><label>Текст</label><input type="text" id="bot-text" value=".gg/Aether"></div>
   </div>
 
-  <!-- Prefix -->
   <div class="bs-card">
     <div class="bs-head">
       <div class="bs-icon"><i class="fas fa-terminal"></i></div>
       <div class="bs-title">Префикс команд</div>
     </div>
     <div class="row"><label>Префикс</label><input type="text" id="bot-prefix" value="!"></div>
-    <div class="row"><label>Slash команды</label>
+    <div class="row"><label>Slash</label>
       <select id="slash-enabled"><option value="1">Включены</option><option value="0">Выключены</option></select>
     </div>
     <button class="btn btn-primary" id="sync-slash" type="button" style="width:100%;justify-content:center;margin-top:6px;"><i class="fas fa-sync"></i> Sync команд</button>
   </div>
 
-  <!-- AI & DM -->
   <div class="bs-card">
     <div class="bs-head">
       <div class="bs-icon"><i class="fas fa-brain"></i></div>
       <div class="bs-title">AI и ответы</div>
     </div>
-    <div class="row" style="display:flex;justify-content:space-between;">
+    <div class="row with-toggle">
       <label>AI ответы</label>
       <div class="toggle on" id="tog-ai"></div>
     </div>
-    <div class="row" style="display:flex;justify-content:space-between;">
+    <div class="row with-toggle">
       <label>DM ответы</label>
       <div class="toggle on" id="tog-dm"></div>
     </div>
-    <div class="row"><label>AI модель</label>
+    <div class="row"><label>Модель</label>
       <select id="ai-model"><option>Mistral</option><option>GPT-4</option><option>Claude</option></select>
     </div>
   </div>
 
-  <!-- Logging -->
   <div class="bs-card">
     <div class="bs-head">
       <div class="bs-icon"><i class="fas fa-clipboard-list"></i></div>
       <div class="bs-title">Логирование</div>
     </div>
-    <div class="row" style="display:flex;justify-content:space-between;">
-      <label>Мод-логи</label>
-      <div class="toggle on" id="tog-modlog"></div>
-    </div>
-    <div class="row" style="display:flex;justify-content:space-between;">
-      <label>Сообщения</label>
-      <div class="toggle on" id="tog-msglog"></div>
-    </div>
-    <div class="row" style="display:flex;justify-content:space-between;">
-      <label>Голос</label>
-      <div class="toggle" id="tog-voicelog"></div>
-    </div>
-    <div class="row"><label>Лог-канал</label><input type="text" id="log-channel" placeholder="канал ID"></div>
+    <div class="row with-toggle"><label>Мод-логи</label><div class="toggle on" id="tog-modlog"></div></div>
+    <div class="row with-toggle"><label>Сообщения</label><div class="toggle on" id="tog-msglog"></div></div>
+    <div class="row with-toggle"><label>Голос</label><div class="toggle" id="tog-voicelog"></div></div>
+    <div class="row"><label>Канал</label><input type="text" id="log-channel" placeholder="ID канала"></div>
   </div>
 
-  <!-- Backup -->
   <div class="bs-card">
     <div class="bs-head">
       <div class="bs-icon"><i class="fas fa-database"></i></div>
       <div class="bs-title">Резервные копии</div>
     </div>
-    <div class="row" style="display:flex;justify-content:space-between;">
-      <label>Авто-бэкап</label>
-      <div class="toggle on" id="tog-backup"></div>
-    </div>
+    <div class="row with-toggle"><label>Авто-бэкап</label><div class="toggle on" id="tog-backup"></div></div>
     <div class="row"><label>Интервал</label>
       <select id="backup-interval"><option>Каждый час</option><option>Каждые 6ч</option><option selected>Каждый день</option><option>Каждую неделю</option></select>
     </div>
-    <div class="row"><label>Хранить N копий</label><input type="number" id="backup-keep" value="10" min="1"></div>
+    <div class="row"><label>Копий</label><input type="number" id="backup-keep" value="10" min="1"></div>
   </div>
 </div>
 
-<div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end;">
+<div class="save-bar">
   <button class="btn btn-primary" id="btn-save" type="button"><i class="fas fa-save"></i> Сохранить всё</button>
 </div>
 
@@ -121,18 +136,21 @@
   function $(id) { return document.getElementById(id); }
   function showToast(msg, ok) {
     var t = document.createElement('div');
+    t.className = 'toast ' + (ok ? 'ok' : 'err');
     t.textContent = msg;
-    t.style.cssText = 'position:fixed;top:14px;right:14px;padding:9px 16px;border-radius:8px;font-weight:600;z-index:99999;font-size:12px;background:' + (ok ? 'linear-gradient(135deg,#27ae60,#2ecc71)' : 'linear-gradient(135deg,#c0392b,#e74c3c)') + ';color:#fff;';
     document.body.appendChild(t);
-    setTimeout(function () { t.remove(); }, 1800);
+    setTimeout(function () { t.remove(); }, 2200);
   }
-  function bindToggle(id) { var el = $(id); if (el) el.addEventListener('click', function () { el.classList.toggle('on'); }); }
+  function bindToggle(id) {
+    var el = $(id);
+    if (el) el.addEventListener('click', function () { el.classList.toggle('on'); });
+  }
   function bind() {
     ['tog-ai','tog-dm','tog-modlog','tog-msglog','tog-voicelog','tog-backup'].forEach(bindToggle);
     var s = $('btn-save');
-    if (s) s.addEventListener('click', function () { showToast('Ayarlar kaydedildi', true); });
+    if (s) s.addEventListener('click', function () { showToast('✓ Настройки сохранены', true); });
     var sy = $('sync-slash');
-    if (sy) sy.addEventListener('click', function () { showToast('Slash komutları sync edildi', true); });
+    if (sy) sy.addEventListener('click', function () { showToast('✓ Slash команды синхронизированы', true); });
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind);
   else bind();

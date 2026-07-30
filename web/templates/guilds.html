@@ -1,41 +1,8 @@
 {% extends "base.html" %}
 {% block title %}Сервера - Aether{% endblock %}
-{% block page_title %}Сервера{% endblock %}
+{% block page_title %}<i class="fas fa-server" style="color:var(--ac);"></i> Сервера{% endblock %}
 {% block content %}
-<style>
-.g-hero{background:linear-gradient(135deg,rgba(26,22,16,0.85),rgba(26,22,16,0.6));border:1px solid rgba(212,168,67,0.25);border-radius:14px;padding:18px 24px;margin-bottom:14px;display:flex;align-items:center;gap:16px;position:relative;overflow:hidden;animation:fadeIn 0.4s ease-out;}
-.g-hero::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(200,146,42,0.08) 0%,transparent 70%);pointer-events:none;}
-.g-hero-icon{font-size:28px;filter:drop-shadow(0 0 10px rgba(200,146,42,0.6));animation:float 3s ease-in-out infinite;z-index:1;}
-@keyframes float{0%,100%{transform:translateY(0);}50%{transform:translateY(-4px);}}
-@keyframes fadeIn{from{opacity:0}to{opacity:1}}
-.g-hero-info{flex:1;z-index:1;}
-.g-hero-title{font-size:18px;font-weight:800;background:linear-gradient(135deg,#c8922a,#e0a830);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:2px;}
-.g-hero-sub{color:#5a5040;font-size:11px;}
 
-.g-stats{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
-.g-stat{flex:1;min-width:90px;background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.1);border-radius:12px;padding:10px 14px;text-align:center;}
-.g-stat-num{font-size:18px;font-weight:800;color:#c8922a;}
-.g-stat-lbl{color:#5a5040;font-size:9px;text-transform:uppercase;letter-spacing:0.06em;margin-top:2px;}
-
-.g-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;max-height:480px;overflow-y:auto;overflow-anchor:none;padding:4px;}
-.g-card{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.1);border-radius:12px;padding:14px;text-align:center;position:relative;overflow:hidden;transition:all 0.2s;animation:fadeUp 0.3s ease-out both;}
-.g-card:hover{border-color:rgba(200,146,42,0.4);transform:translateY(-2px);box-shadow:0 6px 18px rgba(200,146,42,0.12);}
-.g-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#c8922a,transparent);}
-@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-.g-icon{width:52px;height:52px;border-radius:50%;border:2px solid rgba(200,146,42,0.5);margin:0 auto 8px;display:block;box-shadow:0 0 12px rgba(200,146,42,0.2);transition:all 0.2s;object-fit:cover;}
-.g-card:hover .g-icon{border-color:#c8922a;box-shadow:0 0 18px rgba(200,146,42,0.4);transform:scale(1.05);}
-.g-name{font-size:12px;font-weight:700;color:#f0e8d0;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.g-members{display:inline-flex;align-items:center;gap:4px;background:rgba(212,168,67,0.1);border:1px solid rgba(212,168,67,0.25);border-radius:99px;padding:2px 9px;color:#c8922a;font-size:10px;font-weight:700;}
-.g-id{color:#3a3020;font-size:9px;font-family:monospace;margin-top:4px;}
-.empty{text-align:center;padding:40px;color:#3a3020;font-size:11px;letter-spacing:0.05em;}
-.ld{text-align:center;padding:30px;color:#c8922a;font-size:12px;animation:pulse 1.5s infinite;}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-
-@media (max-width:600px){
-  .g-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));}
-  .g-hero{padding:14px;}
-}
-</style>
 
 <div class="g-hero">
   <span class="g-hero-icon">🌐</span>

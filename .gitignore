@@ -42,3 +42,7 @@ data/proactive_ai.json
 
 # Python venv
 .venv/
+
+# Local preview server artifacts
+_previews/
+_previews_server.py

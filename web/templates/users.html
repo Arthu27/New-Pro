@@ -1,64 +1,86 @@
 {% extends "base.html" %}
 {% block title %}Пользователи - Aether{% endblock %}
-{% block page_title %}Пользователи{% endblock %}
+{% block page_title %}<i class="fas fa-users" style="color:var(--ac);"></i> Пользователи{% endblock %}
 {% block content %}
 <style>
-/* ── Toolbar ── */
-.users-toolbar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center;}
-.guild-select,.search-input{padding:8px 12px;background:rgba(255,255,255,0.03);border:1px solid rgba(212,168,67,0.16);border-radius:8px;color:#f0e8d0;font-size:12px;font-family:Inter,sans-serif;transition:border-color 0.15s;}
-.guild-select{flex:1;min-width:160px;}
-.search-input{flex:2;min-width:200px;}
-.guild-select:focus,.search-input:focus{outline:none;border-color:rgba(212,168,67,0.45);}
-.users-count{font-size:11px;color:#5a5040;background:rgba(212,168,67,0.06);padding:4px 10px;border-radius:99px;letter-spacing:0.05em;}
+.users-toolbar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;}
+.guild-select,.search-input{
+  padding:10px 14px;background:rgba(10,9,7,0.55);
+  border:1px solid var(--line-2);border-radius:10px;
+  color:var(--text);font-size:13px;font-family:Inter,sans-serif;
+  transition:all 0.18s var(--ease);
+}
+.guild-select{flex:1;min-width:180px;}
+.search-input{flex:2;min-width:220px;}
+.guild-select:focus,.search-input:focus{outline:none;border-color:var(--ac);box-shadow:0 0 0 3px rgba(212,168,67,0.12);}
+.users-count{font-size:11px;color:var(--text-2);background:var(--ac-soft);padding:5px 12px;border-radius:99px;letter-spacing:0.05em;font-weight:700;border:1px solid var(--ac-line);}
 
-/* ── Members grid ── */
-.members-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;max-height:520px;overflow-y:auto;overflow-anchor:none;padding:4px;}
-.member-card{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.08);border-radius:10px;padding:12px 8px;cursor:pointer;text-align:center;transition:all 0.2s;animation:fadeUp 0.3s ease-out both;}
-.member-card:hover{border-color:rgba(212,168,67,0.35);transform:translateY(-2px);box-shadow:0 6px 20px rgba(200,146,42,0.15);}
-.member-card .av-wrap{position:relative;display:inline-block;margin-bottom:8px;}
-.member-card .av{width:48px;height:48px;border-radius:50%;border:2px solid rgba(212,168,67,0.4);object-fit:cover;}
-.status-dot{position:absolute;bottom:0;right:0;width:11px;height:11px;border-radius:50%;border:2px solid #1a1610;}
-.status-online{background:#2ecc71;}
-.status-idle{background:#f39c12;}
-.status-dnd{background:#e74c3c;}
+.members-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;max-height:560px;overflow-y:auto;overflow-anchor:none;padding:4px;}
+.member-card{
+  background:var(--surface) !important;border:1px solid var(--line) !important;
+  border-radius:12px;padding:16px 10px;cursor:pointer;text-align:center;
+  transition:all 0.22s var(--ease);animation:fadeUp 0.35s var(--ease-out) both;position:relative;overflow:hidden;
+}
+.member-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg, transparent, var(--ac), transparent);opacity:0;transition:opacity 0.2s;}
+.member-card:hover{border-color:var(--ac-line) !important;transform:translateY(-3px);box-shadow:var(--shadow-md), 0 0 30px rgba(212,168,67,0.10) !important;}
+.member-card:hover::before{opacity:1;}
+.member-card .av-wrap{position:relative;display:inline-block;margin-bottom:10px;}
+.member-card .av{width:56px;height:56px;border-radius:50%;border:2px solid var(--ac);object-fit:cover;box-shadow:0 0 0 3px rgba(0,0,0,0.4);transition:transform 0.2s var(--ease);}
+.member-card:hover .av{transform:scale(1.05);}
+.status-dot{position:absolute;bottom:0;right:0;width:13px;height:13px;border-radius:50%;border:2px solid #0a0907;}
+.status-online{background:var(--ok);}
+.status-idle{background:var(--warn);}
+.status-dnd{background:var(--err);}
 .status-offline{background:#555;}
-.member-name{font-weight:600;font-size:12px;color:#f0e8d0;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.member-username{font-size:10px;color:#5a5040;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.bot-badge{background:rgba(212,168,67,0.15);color:#c8922a;padding:1px 6px;border-radius:99px;font-size:8px;margin-top:4px;display:inline-block;letter-spacing:0.05em;}
+.member-name{font-weight:600;font-size:12.5px;color:var(--text);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.member-username{font-size:10.5px;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.bot-badge{background:var(--ac-soft);color:var(--ac);padding:2px 8px;border-radius:99px;font-size:9px;margin-top:5px;display:inline-block;letter-spacing:0.06em;font-weight:700;border:1px solid var(--ac-line);}
 
-/* ── Modal ── */
-.member-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(6px);z-index:9999;align-items:center;justify-content:center;}
+.member-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);z-index:9999;align-items:center;justify-content:center;animation:fadeIn 0.2s var(--ease-out) both;}
 .member-modal-overlay.open{display:flex;}
-.member-modal{background:rgba(26,22,16,0.95);border:1px solid rgba(212,168,67,0.25);border-radius:14px;padding:24px;max-width:480px;width:92vw;max-height:85vh;overflow-y:auto;position:relative;box-shadow:0 24px 80px rgba(0,0,0,0.6);}
-.member-modal-close{position:absolute;top:12px;right:12px;background:transparent;border:1px solid rgba(212,168,67,0.15);color:#5a5040;width:30px;height:30px;border-radius:7px;cursor:pointer;font-size:16px;transition:all 0.15s;}
-.member-modal-close:hover{background:rgba(212,168,67,0.08);color:#f0e8d0;}
-.member-detail-info{display:flex;flex-direction:column;align-items:center;margin-bottom:16px;}
-.member-detail-av{width:80px;height:80px;border-radius:50%;border:3px solid rgba(212,168,67,0.4);box-shadow:0 0 16px rgba(200,146,42,0.2);margin-bottom:10px;object-fit:cover;}
-.member-detail-name{font-size:18px;font-weight:700;color:#f0e8d0;margin-bottom:2px;}
-.member-detail-sub{font-size:11px;color:#5a5040;margin-bottom:8px;}
-.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;}
-.detail-cell{background:rgba(0,0,0,0.3);border:1px solid rgba(212,168,67,0.1);padding:10px;border-radius:8px;text-align:center;}
-.detail-cell i{color:#c8922a;font-size:14px;margin-bottom:4px;display:block;}
-.detail-cell-label{font-size:9px;color:#5a5040;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:2px;}
-.detail-cell-val{font-size:11px;color:#f0e8d0;font-weight:600;word-break:break-all;}
-.role-chip{display:inline-block;background:rgba(212,168,67,0.1);border:1px solid rgba(212,168,67,0.25);padding:2px 8px;border-radius:99px;font-size:10px;margin:2px;}
+.member-modal{
+  background:var(--surface-3) !important;border:1px solid var(--ac-line) !important;
+  border-radius:20px !important;padding:28px;max-width:500px;width:92vw;max-height:85vh;overflow-y:auto;
+  position:relative;box-shadow:var(--shadow-lg), 0 0 60px rgba(212,168,67,0.15) !important;
+  animation:scaleIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.member-modal-close{position:absolute;top:14px;right:14px;background:transparent;border:1px solid var(--line-2);color:var(--text-3);width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:18px;transition:all 0.15s;display:flex;align-items:center;justify-content:center;}
+.member-modal-close:hover{background:var(--ac-soft);color:var(--text);border-color:var(--ac-line);}
+.member-detail-info{display:flex;flex-direction:column;align-items:center;margin-bottom:20px;text-align:center;}
+.member-detail-av{width:88px;height:88px;border-radius:50%;border:3px solid var(--ac);box-shadow:0 0 24px rgba(212,168,67,0.30), 0 0 0 4px rgba(0,0,0,0.4);margin-bottom:12px;object-fit:cover;}
+.member-detail-name{font-size:20px;font-weight:800;color:var(--text);margin-bottom:4px;letter-spacing:-0.02em;}
+.member-detail-sub{font-size:11.5px;color:var(--text-3);margin-bottom:8px;font-family:'JetBrains Mono', monospace;}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+.detail-cell{background:rgba(0,0,0,0.3);border:1px solid var(--line);padding:14px 10px;border-radius:10px;text-align:center;transition:border-color 0.18s var(--ease);}
+.detail-cell:hover{border-color:var(--ac-line);}
+.detail-cell i{color:var(--ac);font-size:15px;margin-bottom:6px;display:block;}
+.detail-cell-label{font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px;font-weight:700;}
+.detail-cell-val{font-size:12px;color:var(--text);font-weight:700;word-break:break-all;}
+.role-chip{display:inline-block;background:var(--ac-soft);border:1px solid var(--ac-line);padding:3px 10px;border-radius:99px;font-size:10.5px;margin:3px;font-weight:600;color:var(--text-2);}
+.roles-section-title{font-size:10.5px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;font-weight:700;}
 
 @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes scaleIn{from{opacity:0;transform:scale(0.94)}to{opacity:1;transform:scale(1)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+
+.empty-state{padding:60px 20px;text-align:center;color:var(--text-3);}
+.empty-state i{font-size:36px;margin-bottom:12px;opacity:0.4;display:block;}
+.empty-state p{font-size:13px;margin:0;}
 
 @media (max-width:600px){
-  .members-grid{grid-template-columns:repeat(auto-fill,minmax(110px,1fr));}
+  .members-grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr));}
   .detail-grid{grid-template-columns:1fr;}
 }
 </style>
 
 <div class="users-toolbar">
-  <select id="guild-select" class="guild-select"><option value="">Сервер secin...</option></select>
-  <input type="text" id="search" class="search-input" placeholder="Участник ara...">
+  <select id="guild-select" class="guild-select"><option value="">Выберите сервер...</option></select>
+  <input type="text" id="search" class="search-input" placeholder="Поиск участника...">
   <span class="users-count" id="member-count">0</span>
 </div>
 
 <div id="members-section">
-  <div id="members-list"><p style="text-align:center;color:#5a5040;padding:30px;font-size:12px;">Sunucu seçin veya yükleniyor...</p></div>
+  <div id="members-list"><div class="empty-state"><i class="fas fa-user-friends"></i><p>Выберите сервер для просмотра участников</p></div></div>
 </div>
 
 <!-- Modal -->
@@ -94,21 +116,24 @@
 
   async function loadMembers() {
     var guildId = $('guild-select').value;
-    if (!guildId) return;
-    $('members-list').innerHTML = '<p style="text-align:center;color:#5a5040;padding:30px;font-size:12px;"><i class="fas fa-spinner fa-spin" style="color:#c8922a;"></i></p>';
+    if (!guildId) {
+      $('members-list').innerHTML = '<div class="empty-state"><i class="fas fa-user-friends"></i><p>Выберите сервер для просмотра участников</p></div>';
+      return;
+    }
+    $('members-list').innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin" style="color:var(--ac);"></i><p>Загрузка...</p></div>';
     try {
       var res = await fetch('/api/guild/' + guildId + '/members?limit=500');
       allMembers = await res.json();
-      $('member-count').textContent = allMembers.length + ' kisi';
+      $('member-count').textContent = allMembers.length + ' чел.';
       renderMembers(allMembers);
     } catch (e) {
-      $('members-list').innerHTML = '<p style="text-align:center;color:#ef4444;padding:20px;">Yuklenemedi: ' + esc(e.message) + '</p>';
+      $('members-list').innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle" style="color:var(--err);"></i><p style="color:var(--err);">Не удалось загрузить: ' + esc(e.message) + '</p></div>';
     }
   }
 
   function renderMembers(members) {
     if (!members.length) {
-      $('members-list').innerHTML = '<p style="text-align:center;color:#5a5040;padding:30px;font-size:12px;">Участник yok</p>';
+      $('members-list').innerHTML = '<div class="empty-state"><i class="fas fa-user-slash"></i><p>Участники не найдены</p></div>';
       return;
     }
     var html = '';
@@ -120,7 +145,7 @@
           '<span class="status-dot ' + sc + '"></span>' +
         '</div>' +
         '<div class="member-name">' + esc(m.display_name) + '</div>' +
-        '<div class="member-username">' + esc(m.name) + '</div>' +
+        '<div class="member-username">@' + esc(m.name) + '</div>' +
         (m.bot ? '<span class="bot-badge">BOT</span>' : '') +
       '</div>';
     });
@@ -134,22 +159,25 @@
     var jo = m.joined_at ? new Date(m.joined_at) : null;
     var st = statusLabel[m.status] || 'Не в сети';
     var sc = statusClass[m.status] || 'status-offline';
-    var roles = (m.roles || []).map(function (r) { return '<span class="role-chip">' + esc(r.name) + '</span>'; }).join('');
+    var roles = (m.roles || []).map(function (r) {
+      var color = r.color ? '#' + r.color.toString(16).padStart(6, '0') : 'var(--ac)';
+      return '<span class="role-chip" style="border-color:' + color + '55;color:' + color + ';">' + esc(r.name) + '</span>';
+    }).join('');
     $('modal-content').innerHTML =
       '<div class="member-detail-info">' +
         '<img class="member-detail-av" src="' + esc(m.avatar) + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' +
         '<div class="member-detail-name">' + esc(m.display_name) + '</div>' +
         (m.nick ? '<div class="member-detail-sub">Nick: ' + esc(m.nick) + '</div>' : '') +
         '<div class="member-detail-sub">@' + esc(m.name) + '</div>' +
-        '<div><span class="status-dot ' + sc + '" style="display:inline-block;position:static;margin-right:6px;width:8px;height:8px;"></span> ' + st + (m.bot ? ' <span class="bot-badge" style="margin-left:6px;">BOT</span>' : '') + '</div>' +
+        '<div><span class="status-dot ' + sc + '" style="display:inline-block;position:static;margin-right:6px;width:9px;height:9px;"></span> ' + st + (m.bot ? ' <span class="bot-badge" style="margin-left:6px;">BOT</span>' : '') + '</div>' +
       '</div>' +
       '<div class="detail-grid">' +
         '<div class="detail-cell"><i class="fas fa-id-card"></i><div class="detail-cell-label">ID</div><div class="detail-cell-val">' + esc(m.id) + '</div></div>' +
-        '<div class="detail-cell"><i class="fas fa-crown"></i><div class="detail-cell-label">Роль</div><div class="detail-cell-val">' + esc(m.top_role || 'Yok') + '</div></div>' +
-        '<div class="detail-cell"><i class="fas fa-calendar-plus"></i><div class="detail-cell-label">Hesap Acilis</div><div class="detail-cell-val">' + cr.toLocaleDateString('ru-RU') + '</div></div>' +
-        '<div class="detail-cell"><i class="fas fa-sign-in-alt"></i><div class="detail-cell-label">Вход</div><div class="detail-cell-val">' + (jo ? jo.toLocaleDateString('ru-RU') : '—') + '</div></div>' +
+        '<div class="detail-cell"><i class="fas fa-crown"></i><div class="detail-cell-label">Главная роль</div><div class="detail-cell-val">' + esc(m.top_role || 'Нет') + '</div></div>' +
+        '<div class="detail-cell"><i class="fas fa-calendar-plus"></i><div class="detail-cell-label">Аккаунт создан</div><div class="detail-cell-val">' + cr.toLocaleDateString('ru-RU') + '</div></div>' +
+        '<div class="detail-cell"><i class="fas fa-sign-in-alt"></i><div class="detail-cell-label">Вход на сервер</div><div class="detail-cell-val">' + (jo ? jo.toLocaleDateString('ru-RU') : '—') + '</div></div>' +
       '</div>' +
-      ((m.roles || []).length ? '<div><div class="detail-cell-label" style="margin-bottom:6px;">Роли (' + m.roles.length + ')</div>' + roles + '</div>' : '');
+      ((m.roles || []).length ? '<div><div class="roles-section-title">Роли (' + m.roles.length + ')</div>' + roles + '</div>' : '');
     $('modal').classList.add('open');
   }
 
@@ -169,6 +197,7 @@
     $('search').addEventListener('input', filterMembers);
     $('modalClose').addEventListener('click', closeModal);
     $('modal').addEventListener('click', function (e) { if (e.target === this) closeModal(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeModal(); });
     $('members-list').addEventListener('click', function (e) {
       var card = e.target.closest('.member-card');
       if (card) showDetail(parseInt(card.getAttribute('data-idx'), 10));

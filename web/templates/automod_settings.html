@@ -1,31 +1,64 @@
 {% extends "base.html" %}
-{% block title %}Автомодерация - Aether{% endblock %}
-{% block page_title %}Автомодерация{% endblock %}
+{% block title %}Автомодерация — Aether{% endblock %}
+{% block page_title %}<i class="fas fa-shield-alt" style="color:var(--ac);"></i> Автомодерация{% endblock %}
 {% block content %}
 <style>
-.automod-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;}
-.am-card{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.1);border-radius:12px;padding:14px;animation:fadeUp 0.3s ease-out both;}
-@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-.am-card:hover{border-color:rgba(212,168,67,0.25);}
-.am-head{display:flex;align-items:center;gap:9px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid rgba(212,168,67,0.08);}
-.am-icon{width:32px;height:32px;border-radius:8px;background:rgba(212,168,67,0.12);color:#c8922a;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}
-.am-title{font-size:12px;font-weight:700;color:rgba(240,232,208,0.7);text-transform:uppercase;letter-spacing:0.05em;flex:1;}
-.am-toggle{position:relative;width:36px;height:20px;background:rgba(255,255,255,0.08);border-radius:99px;cursor:pointer;transition:background 0.2s;flex-shrink:0;}
-.am-toggle::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;background:#5a5040;border-radius:50%;transition:all 0.2s;}
-.am-toggle.on{background:rgba(200,146,42,0.4);}
-.am-toggle.on::after{left:18px;background:#c8922a;}
-.form-row{display:flex;gap:8px;align-items:center;margin-bottom:8px;}
-.form-row label{flex:0 0 110px;font-size:10px;color:#5a5040;text-transform:uppercase;letter-spacing:0.05em;}
-.form-row select,.form-row input{flex:1;padding:6px 10px;background:rgba(255,255,255,0.04);border:1px solid rgba(212,168,67,0.16);border-radius:6px;color:#f0e8d0;font-size:12px;}
-.btn{padding:7px 14px;border:none;border-radius:99px;cursor:pointer;font-weight:600;font-size:11px;font-family:Inter,sans-serif;transition:all 0.15s;}
-.btn-primary{background:#c8922a;color:#100e08;}
-.btn-primary:hover{background:#e0a830;}
-.btn-warn{background:rgba(232,144,58,0.15);color:#e8903a;border:1px solid rgba(232,144,58,0.3);}
-.btn-warn:hover{background:rgba(232,144,58,0.25);}
+.automod-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;}
+.am-card{
+  background:var(--surface) !important;
+  border:1px solid var(--line) !important;
+  border-radius:var(--r-lg) !important;
+  padding:18px 20px !important;
+  animation:fadeUp 0.4s var(--ease-out) both;
+  transition:all 0.22s var(--ease);
+}
+.am-card:hover{border-color:var(--ac-line) !important;}
+.am-head{display:flex;align-items:center;gap:10px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--line);}
+.am-icon{
+  width:34px;height:34px;border-radius:10px;
+  background:var(--ac-soft);color:var(--ac);
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;flex-shrink:0;
+  border:1px solid var(--ac-line);
+}
+.am-title{font-size:12px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:0.10em;flex:1;}
+
+.am-toggle{
+  position:relative;width:42px;height:22px;
+  background:rgba(255,255,255,0.08);
+  border-radius:99px;cursor:pointer;
+  transition:background 0.2s var(--ease);
+  flex-shrink:0;border:1px solid var(--line);
+}
+.am-toggle::after{
+  content:'';position:absolute;top:2px;left:2px;
+  width:16px;height:16px;
+  background:var(--text-3);
+  border-radius:50%;
+  transition:all 0.25s var(--ease-spring);
+  box-shadow:0 2px 4px rgba(0,0,0,0.3);
+}
+.am-toggle.on{
+  background:linear-gradient(135deg, rgba(212,168,67,0.40), rgba(212,168,67,0.20));
+  border-color:var(--ac-line);
+}
+.am-toggle.on::after{left:22px;background:linear-gradient(135deg, var(--ac-2), var(--ac));box-shadow:0 0 8px var(--ac-glow);}
+
+.form-row{display:flex;gap:10px;align-items:center;margin-bottom:10px;}
+.form-row label{flex:0 0 110px;font-size:10.5px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;font-weight:600;margin:0;}
+.form-row select,.form-row input{flex:1;}
+
+.btn{padding:9px 18px;border:none;border-radius:99px;cursor:pointer;font-weight:700;font-size:11.5px;font-family:Inter,sans-serif;transition:all 0.18s var(--ease);display:inline-flex;align-items:center;gap:6px;}
+.btn-primary{background:linear-gradient(135deg, var(--ac), var(--ac-3));color:var(--bg);box-shadow:0 4px 14px var(--ac-glow);}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 6px 22px rgba(212,168,67,0.40);filter:brightness(1.05);}
+
+.am-textarea{width:100%;padding:10px 12px;background:rgba(10,9,7,0.55);border:1px solid var(--line-2);border-radius:10px;color:var(--text);font-size:12.5px;font-family:Inter,sans-serif;margin-top:4px;margin-bottom:10px;min-height:110px;resize:vertical;transition:all 0.18s var(--ease);}
+.am-textarea:focus{outline:none;border-color:var(--ac);box-shadow:0 0 0 3px rgba(212,168,67,0.12);}
+
+.am-actions{display:flex;gap:8px;margin-top:10px;}
 </style>
 
 <div class="automod-grid">
-  <!-- Ban kelimeler -->
   <div class="am-card">
     <div class="am-head">
       <div class="am-icon"><i class="fas fa-ban"></i></div>
@@ -41,21 +74,20 @@
         <option value="ban">Ban</option>
       </select>
     </div>
-    <label>Список слов (по одному в строке)</label>
-    <textarea id="words-list" rows="6" placeholder="badword1&#10;badword2&#10;..." style="width:100%;padding:8px;background:rgba(255,255,255,0.04);border:1px solid rgba(212,168,67,0.16);border-radius:6px;color:#f0e8d0;font-size:12px;font-family:Inter,sans-serif;margin-top:4px;"></textarea>
-    <div style="display:flex;gap:6px;margin-top:8px;">
+    <label class="form-label" style="margin-top:6px;">Список слов (по одному в строке)</label>
+    <textarea id="words-list" class="am-textarea" rows="6" placeholder="badword1&#10;badword2&#10;..."></textarea>
+    <div class="am-actions">
       <button class="btn btn-primary" id="save-words" type="button"><i class="fas fa-save"></i> Сохранить</button>
     </div>
   </div>
 
-  <!-- Anti-spam -->
   <div class="am-card">
     <div class="am-head">
       <div class="am-icon"><i class="fas fa-comment-slash"></i></div>
       <div class="am-title">Анти-спам</div>
       <div class="am-toggle on" id="tog-antispam"></div>
     </div>
-    <div class="form-row"><label>Макс. сообщений</label><input type="number" id="spam-count" value="5" min="2"></div>
+    <div class="form-row"><label>Макс. сообщ.</label><input type="number" id="spam-count" value="5" min="2"></div>
     <div class="form-row"><label>За (сек)</label><input type="number" id="spam-window" value="10" min="1"></div>
     <div class="form-row"><label>Действие</label>
       <select id="spam-action">
@@ -64,12 +96,11 @@
         <option value="kick">Kick</option>
       </select>
     </div>
-    <div style="display:flex;gap:6px;margin-top:8px;">
+    <div class="am-actions">
       <button class="btn btn-primary" id="save-antispam" type="button"><i class="fas fa-save"></i> Сохранить</button>
     </div>
   </div>
 
-  <!-- Anti-link -->
   <div class="am-card">
     <div class="am-head">
       <div class="am-icon"><i class="fas fa-link"></i></div>
@@ -83,15 +114,14 @@
         <option value="ban">Ban</option>
       </select>
     </div>
-    <div class="form-row"><label>Whitelist домены</label>
+    <div class="form-row"><label>Whitelist</label>
       <input type="text" id="antilink-whitelist" placeholder="discord.gg, github.com" value="discord.gg">
     </div>
-    <div style="display:flex;gap:6px;margin-top:8px;">
+    <div class="am-actions">
       <button class="btn btn-primary" id="save-antilink" type="button"><i class="fas fa-save"></i> Сохранить</button>
     </div>
   </div>
 
-  <!-- Caps lock -->
   <div class="am-card">
     <div class="am-head">
       <div class="am-icon"><i class="fas fa-text-height"></i></div>
@@ -103,12 +133,11 @@
     <div class="form-row"><label>Действие</label>
       <select id="caps-action"><option value="warn">Warn</option><option value="mute">Mute</option></select>
     </div>
-    <div style="display:flex;gap:6px;margin-top:8px;">
+    <div class="am-actions">
       <button class="btn btn-primary" id="save-anticaps" type="button"><i class="fas fa-save"></i> Сохранить</button>
     </div>
   </div>
 
-  <!-- Anti-invite -->
   <div class="am-card">
     <div class="am-head">
       <div class="am-icon"><i class="fas fa-server"></i></div>
@@ -122,10 +151,10 @@
         <option value="ban">Ban</option>
       </select>
     </div>
-    <div class="form-row"><label>Whitelist серверы</label>
-      <input type="text" id="antiinvite-whitelist" placeholder="Сервер ID (через запятую)">
+    <div class="form-row"><label>Whitelist</label>
+      <input type="text" id="antiinvite-whitelist" placeholder="ID серверов через запятую">
     </div>
-    <div style="display:flex;gap:6px;margin-top:8px;">
+    <div class="am-actions">
       <button class="btn btn-primary" id="save-antiinvite" type="button"><i class="fas fa-save"></i> Сохранить</button>
     </div>
   </div>
@@ -137,10 +166,10 @@
   function $(id) { return document.getElementById(id); }
   function showToast(msg, ok) {
     var t = document.createElement('div');
+    t.className = 'toast ' + (ok ? 'ok' : 'err');
     t.textContent = msg;
-    t.style.cssText = 'position:fixed;top:14px;right:14px;padding:9px 16px;border-radius:8px;font-weight:600;z-index:99999;font-size:12px;background:' + (ok ? 'linear-gradient(135deg,#27ae60,#2ecc71)' : 'linear-gradient(135deg,#c0392b,#e74c3c)') + ';color:#fff;';
     document.body.appendChild(t);
-    setTimeout(function () { t.remove(); }, 1800);
+    setTimeout(function () { t.remove(); }, 2200);
   }
 
   function bindToggle(id) {
@@ -151,10 +180,9 @@
 
   function bind() {
     ['tog-badwords','tog-antispam','tog-antilink','tog-anticaps','tog-antiinvite'].forEach(bindToggle);
-    // Save butonlari (placeholder)
     ['save-words','save-antispam','save-antilink','save-anticaps','save-antiinvite'].forEach(function (id) {
       var b = $(id);
-      if (b) b.addEventListener('click', function () { showToast('Настройки сохранены', true); });
+      if (b) b.addEventListener('click', function () { showToast('✓ Настройки сохранены', true); });
     });
   }
 

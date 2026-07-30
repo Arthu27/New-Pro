@@ -2,32 +2,7 @@
 {% block title %}Редактор правил - Aether{% endblock %}
 {% block page_title %}<i class="fas fa-scroll" style="color:#c8922a;animation:pulse 2s infinite;"></i> СЕРВЕР ПРАВИЛ{% endblock %}
 {% block content %}
-<style>
-  .re-box{background:linear-gradient(135deg,rgba(26,22,16,0.7),rgba(26,22,16,0.7));border:1px solid rgba(212,168,67,0.3);border-radius:16px;padding:25px;margin-bottom:20px;position:relative;overflow:hidden;}
-  .re-box::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:2px;background:linear-gradient(90deg,transparent,#c8922a,transparent);;}
-  @keyframes scan{0%{left:-100%}100%{left:100%}}
-  .re-title{color:#c8922a;font-size:13px;text-transform:uppercase;letter-spacing:2px;margin-bottom:15px;display:flex;align-items:center;gap:8px;padding-bottom:12px;border-bottom:1px solid rgba(200,146,42,0.2);}
-  .rule-row{display:flex;gap:8px;margin-bottom:8px;align-items:center;}
-  .rule-num{color:#c8922a;font-weight:700;min-width:28px;font-size:15px;}
-  .rule-input{flex:1;padding:10px 14px;background:#100e08;border:1px solid rgba(212,168,67,0.25);border-radius:14px;color:#f0e8d0;font-family:inherit;font-size:14px;transition:all 0.3s;}
-  .rule-input:focus{outline:none;border-color:#c8922a;box-shadow:0 0 12px rgba(200,146,42,0.2);}
-  .rule-del{padding:8px 14px;background:rgba(224,85,85,0.15);color:#f0e8d0;border:none;border-radius:8px;cursor:pointer;font-size:14px;transition:all 0.2s;}
-  .rule-del:hover{transform:scale(1.05);}
-  .btn-add{width:100%;padding:10px;background:rgba(212,168,67,0.08);color:#c8922a;border:1px dashed rgba(200,146,42,0.4);border-radius:14px;cursor:pointer;margin-top:8px;font-size:14px;transition:all 0.2s;}
-  .btn-add:hover{background:rgba(212,168,67,0.15);}
-  .save-btn{padding:12px 24px;background:#c8922a;color:#f0e8d0;border:none;border-radius:14px;cursor:pointer;font-weight:700;margin-top:12px;transition:all 0.3s;}
-  .save-btn:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(212,168,67,0.2);}
-  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
-  @media(max-width:900px){.grid2{grid-template-columns:1fr;}}
-  .field-label{color:#c8922a;font-size:11px;text-transform:uppercase;display:block;margin-bottom:6px;letter-spacing:1px;}
-  .field-sel{width:100%;padding:10px 14px;background:#100e08;border:1px solid rgba(212,168,67,0.25);border-radius:14px;color:#f0e8d0;transition:all 0.3s;font-size:14px;}
-  .field-sel:focus{outline:none;border-color:#c8922a;}
-  .guild-select{width:100%;padding:12px;background:#100e08;border:1px solid rgba(212,168,67,0.3);border-radius:14px;color:#f0e8d0;margin-bottom:20px;font-size:14px;}
-  .preview-rule{margin-bottom:8px;color:#f0e8d0;font-size:13px;line-height:1.6;padding:8px 12px;background:rgba(212,168,67,0.05);border-radius:8px;border-left:3px solid #c8922a;}
-  .preview-rule span{color:#c8922a;font-weight:700;margin-right:6px;}
-  .publish-btn{width:100%;padding:12px;background:rgba(94,196,122,0.8);color:#f0e8d0;border:none;border-radius:14px;cursor:pointer;font-weight:700;margin-top:12px;transition:all 0.3s;}
-  .publish-btn:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(39,174,96,0.4);}
-</style>
+
 
 <select  id="guild-select" class="guild-select" onchange="loadRules()">
   <option value="">Выберите сервер...</option>
@@ -104,7 +79,7 @@ async function loadRules() {
 function renderRules() {
   var box = document.getElementById('rules-list');
   if(!rules.length) {
-    box.innerHTML = '<p style="color:#5a5040;font-size:13px;font-style:italic;">Пока правило yok. + Добавить правило butonuna bas.</p>';
+    box.innerHTML = '<p style="color:var(--text-3);font-size:13px;font-style:italic;">Пока правило yok. + Добавить правило butonuna bas.</p>';
     updatePreview(); return;
   }
   box.innerHTML = rules.map(function(r,i){
@@ -128,7 +103,7 @@ function removeRule(i) { rules.splice(i,1); renderRules(); }
 
 function updatePreview() {
   var box = document.getElementById('preview');
-  if(!rules.length) { box.innerHTML='<p style="color:#5a5040;font-size:13px;font-style:italic;">Правило yok.</p>'; return; }
+  if(!rules.length) { box.innerHTML='<p style="color:var(--text-3);font-size:13px;font-style:italic;">Правило yok.</p>'; return; }
   box.innerHTML = '<div style="color:#c8922a;font-weight:700;margin-bottom:12px;font-size:15px;"><i class="fas fa-scroll"></i> Сервер Правила</div>'+
     rules.map(function(r,i){
       return '<div class="preview-rule"><span>'+(i+1)+'.</span>'+r+'</div>';

@@ -1,41 +1,50 @@
-﻿{% extends "base.html" %}
-{% block title %}Сообщение Отправить - Aether{% endblock %}
-{% block page_title %}Сообщение Отправить{% endblock %}
+{% extends "base.html" %}
+{% block title %}Отправить сообщение — Aether{% endblock %}
+{% block page_title %}<i class="fas fa-paper-plane" style="color:var(--ac);"></i> Отправить сообщение{% endblock %}
 {% block content %}
 <style>
-.sc-box{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.1);border-radius:14px;padding:24px;backdrop-filter:blur(4px);}
-.field-label{color:rgba(240,232,208,0.4);font-size:10px;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:6px;font-weight:700;}
-.field-input{width:100%;padding:10px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(212,168,67,0.12);border-radius:8px;color:#f0e8d0;font-size:13px;transition:border-color 0.15s;box-sizing:border-box;font-family:Inter,sans-serif;margin:0;}
-.field-input:focus{outline:none;border-color:rgba(212,168,67,0.45);}
-.field-input:disabled{opacity:0.4;cursor:not-allowed;}
-.form-group{margin-bottom:16px;}
-.send-btn{width:100%;padding:12px;background:#c8922a;color:#100e08;border:none;border-radius:99px;cursor:pointer;font-weight:700;font-size:13px;font-family:Inter,sans-serif;transition:background 0.15s,transform 0.12s;margin-top:6px;}
-.send-btn:hover{background:#e0a830;transform:translateY(-1px);}
+.sc-wrap{max-width:620px;margin:0 auto;}
+.sc-card{
+  background:var(--surface) !important;
+  border:1px solid var(--line) !important;
+  border-radius:var(--r-lg) !important;
+  padding:28px !important;
+  transition:border-color 0.2s var(--ease);
+}
+.sc-card:hover{border-color:var(--ac-line) !important;}
+.sc-card h2{font-size:11.5px !important;font-weight:700 !important;color:var(--text-2) !important;text-transform:uppercase !important;letter-spacing:0.10em !important;margin-bottom:18px !important;padding-bottom:12px !important;border-bottom:1px solid var(--line) !important;display:flex;align-items:center;gap:8px;}
+.sc-card h2 i{color:var(--ac);font-size:14px;}
+.field-input:disabled{opacity:0.45;cursor:not-allowed;}
+.send-btn{width:100%;padding:12px;background:linear-gradient(135deg, var(--ac), var(--ac-3));color:var(--bg);border:none;border-radius:10px;cursor:pointer;font-weight:700;font-size:13px;font-family:Inter,sans-serif;transition:all 0.18s var(--ease);margin-top:8px;box-shadow:0 4px 14px var(--ac-glow);}
+.send-btn:hover{transform:translateY(-1px);box-shadow:0 6px 22px rgba(212,168,67,0.40);filter:brightness(1.05);}
 .send-btn:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
-.result-box{margin-top:14px;padding:12px 16px;border-radius:10px;display:none;font-size:13px;font-weight:600;}
+.result-box{margin-top:14px;padding:12px 16px;border-radius:10px;display:none;font-size:13px;font-weight:600;animation:fadeUp 0.3s var(--ease-out) both;}
 </style>
 
-<div class="sc-box">
-  <div class="form-group">
-    <label class="field-label">Сервер</label>
-    <select  id="guild-select" class="field-input" onchange="loadChannels()">
-      <option value="">Загрузка...</option>
-    </select>
+<div class="sc-wrap">
+  <div class="sc-card">
+    <h2><i class="fas fa-paper-plane"></i> Новое сообщение</h2>
+    <div class="form-group">
+      <label>Сервер</label>
+      <select id="guild-select" class="field-input" onchange="loadChannels()">
+        <option value="">Загрузка...</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Канал</label>
+      <select id="channel-select" class="field-input" disabled>
+        <option value="">Сначала выберите сервер</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Сообщение</label>
+      <textarea id="message-input" class="field-input" rows="5" placeholder="Напишите сообщение..." style="resize:vertical;"></textarea>
+    </div>
+    <button id="send-btn" class="send-btn" onclick="sendMessage()">
+      <i class="fas fa-paper-plane"></i> Отправить
+    </button>
+    <div id="result" class="result-box"></div>
   </div>
-  <div class="form-group">
-    <label class="field-label">Канал</label>
-    <select id="channel-select" class="field-input" disabled>
-      <option value="">Сначала выберите сервер</option>
-    </select>
-  </div>
-  <div class="form-group">
-    <label class="field-label">Сообщение</label>
-    <textarea id="message-input" class="field-input" rows="5" placeholder="Сообщение buraya напишите..." style="resize:vertical;"></textarea>
-  </div>
-  <button id="send-btn" class="send-btn" onclick="sendMessage()">
-    <i class="fas fa-paper-plane" style="margin-right:6px;"></i>Отправить
-  </button>
-  <div id="result" class="result-box"></div>
 </div>
 
 <script>
@@ -54,7 +63,7 @@ async function loadChannels() {
       o.value = c.id; o.textContent = '#' + c.name;
       cs.appendChild(o);
     });
-  } catch(e) { cs.innerHTML = '<option value="">Ошибка произошла</option>'; }
+  } catch(e) { cs.innerHTML = '<option value="">Ошибка загрузки</option>'; }
 }
 
 async function sendMessage() {
@@ -62,28 +71,28 @@ async function sendMessage() {
   var msg = document.getElementById('message-input').value.trim();
   if (!cid || !msg) { showResult('Заполните поля канала и сообщения!', false); return; }
   var btn = document.getElementById('send-btn');
-  btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Отправл...';
+  btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Отправка...';
   try {
     var r = await fetch('/api/send-message', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({guild_id: GUILD_ID, channel_id: cid, message: msg})
     });
     var d = await r.json();
-    btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane" style="margin-right:6px;"></i>Отправить';
-    if (d.success) { showResult('Сообщение отправлено!', true); document.getElementById('message-input').value = ''; }
-    else showResult('Ошибка: ' + (d.error || 'Bilinmeyen ошибка'), false);
+    btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Отправить';
+    if (d.success) { showResult('✓ Сообщение отправлено!', true); document.getElementById('message-input').value = ''; }
+    else showResult('✗ ' + (d.error || 'Неизвестная ошибка'), false);
   } catch(e) {
-    btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane" style="margin-right:6px;"></i>Отправить';
-    showResult('Ошибка соединения', false);
+    btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Отправить';
+    showResult('✗ Ошибка соединения', false);
   }
 }
 
 function showResult(msg, ok) {
   var box = document.getElementById('result');
   box.style.display = 'block';
-  box.style.background = ok ? 'rgba(94,196,122,0.1)' : 'rgba(224,85,85,0.1)';
-  box.style.border = '1px solid ' + (ok ? 'rgba(94,196,122,0.3)' : 'rgba(224,85,85,0.3)');
-  box.style.color = ok ? '#5ec47a' : '#e05555';
+  box.style.background = ok ? 'rgba(52,211,153,0.10)' : 'rgba(248,113,113,0.10)';
+  box.style.border = '1px solid ' + (ok ? 'rgba(52,211,153,0.30)' : 'rgba(248,113,113,0.30)');
+  box.style.color = ok ? 'var(--ok)' : 'var(--err)';
   box.textContent = msg;
   setTimeout(function() { box.style.display = 'none'; }, 5000);
 }

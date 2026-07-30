@@ -1,33 +1,8 @@
 {% extends "base.html" %}
 {% block title %}Справка - Aether{% endblock %}
-{% block page_title %}Справка и руководство{% endblock %}
+{% block page_title %}<i class="fas fa-question-circle" style="color:var(--ac);"></i> Справка и руководство{% endblock %}
 {% block content %}
-<style>
-.yd-hero{background:linear-gradient(135deg,rgba(26,22,16,0.85),rgba(26,22,16,0.6));border:1px solid rgba(212,168,67,0.25);border-radius:14px;padding:18px 24px;margin-bottom:14px;display:flex;align-items:center;gap:16px;animation:fadeIn 0.4s ease-out;}
-.yd-hero-icon{font-size:28px;}
-.yd-hero-title{font-size:18px;font-weight:800;background:linear-gradient(135deg,#c8922a,#e0a830);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;}
-.yd-hero-sub{color:#5a5040;font-size:11px;margin-top:2px;}
-@keyframes fadeIn{from{opacity:0}to{opacity:1}}
 
-.yd-search{padding:8px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(212,168,67,0.16);border-radius:8px;color:#f0e8d0;font-size:12px;width:100%;margin-bottom:14px;}
-
-.yd-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;}
-.yd-card{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.1);border-radius:12px;padding:14px;animation:fadeUp 0.3s ease-out both;transition:all 0.2s;}
-@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-.yd-card:hover{border-color:rgba(212,168,67,0.25);transform:translateY(-2px);}
-.yd-icon{width:36px;height:36px;border-radius:9px;background:rgba(212,168,67,0.12);color:#c8922a;display:flex;align-items:center;justify-content:center;font-size:15px;margin-bottom:8px;}
-.yd-title{font-size:13px;font-weight:700;color:#f0e8d0;margin-bottom:4px;}
-.yd-desc{font-size:11px;color:#5a5040;line-height:1.4;}
-.yd-cat{display:inline-block;background:rgba(212,168,67,0.1);color:#c8922a;padding:1px 6px;border-radius:99px;font-size:9px;margin-top:6px;letter-spacing:0.04em;}
-
-.yd-section{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.08);border-radius:12px;padding:14px;margin-bottom:12px;}
-.yd-section h3{font-size:13px;font-weight:700;color:rgba(240,232,208,0.7);margin-bottom:8px;display:flex;align-items:center;gap:7px;}
-.yd-section h3 i{color:#c8922a;}
-.yd-section p{font-size:11px;color:#5a5040;line-height:1.5;margin-bottom:6px;}
-.yd-section code{background:rgba(212,168,67,0.1);padding:1px 6px;border-radius:4px;font-family:monospace;font-size:10px;color:#c8922a;}
-
-.kbd{display:inline-block;padding:2px 6px;background:rgba(0,0,0,0.4);border:1px solid rgba(212,168,67,0.2);border-bottom-width:2px;border-radius:5px;font-family:monospace;font-size:10px;color:#c8922a;margin:0 2px;}
-</style>
 
 <div class="yd-hero">
   <div class="yd-hero-icon">📖</div>

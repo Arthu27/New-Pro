@@ -1,22 +1,28 @@
 {% extends "base.html" %}
-{% block title %}Наблюдение Список{% endblock %}
-{% block page_title %}👁️ Наблюдение Список{% endblock %}
+{% block title %}Наблюдение — Aether{% endblock %}
+{% block page_title %}<i class="fas fa-eye" style="color:var(--ac);"></i> Список наблюдения{% endblock %}
 {% block content %}
 <style>
-.wl-table{width:100%;border-collapse:collapse;}
-.wl-table th{padding:10px 14px;text-align:left;font-size:10px;font-weight:700;color:rgba(240,232,208,0.3);text-transform:uppercase;letter-spacing:0.08em;border-bottom:1px solid rgba(212,168,67,0.08);background:rgba(212,168,67,0.04);}
-.wl-table td{padding:12px 14px;font-size:12px;border-bottom:1px solid rgba(212,168,67,0.05);}
-.wl-table tr:hover td{background:rgba(212,168,67,0.04);}
-.wl-wrap{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.1);border-radius:14px;overflow:hidden;}
-.empty{text-align:center;padding:40px;color:rgba(240,232,208,0.25);font-size:13px;}
+.wl-wrap{background:var(--surface) !important;border:1px solid var(--line) !important;border-radius:var(--r-lg) !important;overflow:hidden;transition:border-color 0.2s var(--ease);}
+.wl-wrap:hover{border-color:var(--ac-line) !important;}
+.wl-wrap table{width:100%;border-collapse:separate;border-spacing:0;}
+.wl-wrap th{padding:12px 18px;text-align:left;font-size:10.5px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:0.10em;border-bottom:1px solid var(--ac-line);background:rgba(212,168,67,0.04);}
+.wl-wrap td{padding:14px 18px;font-size:13px;border-bottom:1px solid var(--line);color:var(--text);vertical-align:middle;}
+.wl-wrap tr:last-child td{border-bottom:none;}
+.wl-wrap tr{transition:background 0.15s var(--ease);}
+.wl-wrap tbody tr:hover{background:rgba(212,168,67,0.04);}
+.wl-meta{font-size:12px;color:var(--text-3);font-family:'JetBrains Mono', monospace;}
+.wl-tag{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:99px;background:rgba(212,168,67,0.10);color:var(--ac);border:1px solid var(--ac-line);font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;}
+.wl-toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;}
+.wl-count-pill{font-size:11px;color:var(--text-2);background:var(--ac-soft);padding:5px 12px;border-radius:99px;font-weight:700;border:1px solid var(--ac-line);letter-spacing:0.05em;}
 </style>
 
-<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
-  <div style="font-size:12px;color:rgba(240,232,208,0.35);" id="wl-count"></div>
+<div class="wl-toolbar">
+  <div class="wl-count-pill" id="wl-count">0 пользователей</div>
 </div>
 
 <div class="wl-wrap">
-  <table class="wl-table">
+  <table>
     <thead><tr>
       <th>Пользователь</th>
       <th>Причина</th>
@@ -24,7 +30,7 @@
       <th>Дата</th>
     </tr></thead>
     <tbody id="wl-body">
-      <tr><td colspan="4" class="empty">Загрузка...</td></tr>
+      <tr><td colspan="4" class="empty-state"><i class="fas fa-spinner fa-spin"></i>Загрузка...</td></tr>
     </tbody>
   </table>
 </div>
@@ -32,25 +38,27 @@
 <script>
 var _guildId = '{{ guild_id }}';
 
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
 async function loadWatchlist(gid) {
   try {
     var d = await fetch('/api/watchlist/' + gid).then(r => r.json());
     var tbody = document.getElementById('wl-body');
-    document.getElementById('wl-count').textContent = d.length + ' пользователь izleniyor';
+    document.getElementById('wl-count').textContent = d.length + ' пользователей';
     if (!d.length) {
-      tbody.innerHTML = '<tr><td colspan="4" class="empty">Наблюдение listesi пусто ✅</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="4" class="empty-state"><i class="fas fa-shield-alt"></i>Список наблюдения пуст</td></tr>';
       return;
     }
     tbody.innerHTML = d.map(function(u) {
       return '<tr>' +
-        '<td><span style="font-weight:600;color:#f0e8d0;">👤 ' + u.name + '</span><br><span style="font-size:10px;color:rgba(240,232,208,0.3);font-family:monospace;">' + u.id + '</span></td>' +
-        '<td style="color:rgba(240,232,208,0.6);">' + (u.reason||'—') + '</td>' +
-        '<td style="color:rgba(240,232,208,0.5);">' + (u.added_by||'—') + '</td>' +
-        '<td style="color:rgba(240,232,208,0.4);">' + (u.timestamp||'').slice(0,10) + '</td>' +
+        '<td><div style="font-weight:600;color:var(--text);">👤 ' + esc(u.name) + '</div><div class="wl-meta">' + esc(u.id) + '</div></td>' +
+        '<td style="color:var(--text-2);">' + esc(u.reason||'—') + '</td>' +
+        '<td style="color:var(--text-3);">' + esc(u.added_by||'—') + '</td>' +
+        '<td style="color:var(--text-3);">' + esc((u.timestamp||'').slice(0,10)) + '</td>' +
       '</tr>';
     }).join('');
   } catch(e) {
-    document.getElementById('wl-body').innerHTML = '<tr><td colspan="4" style="color:#e05555;padding:20px;">Загруз.</td></tr>';
+    document.getElementById('wl-body').innerHTML = '<tr><td colspan="4" style="color:var(--err);padding:20px;text-align:center;">Не удалось загрузить</td></tr>';
   }
 }
 

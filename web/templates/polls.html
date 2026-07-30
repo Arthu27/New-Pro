@@ -1,38 +1,83 @@
 {% extends "base.html" %}
-{% block title %}Опросы - Aether{% endblock %}
-{% block page_title %}Опросы{% endblock %}
+{% block title %}Опросы — Aether{% endblock %}
+{% block page_title %}<i class="fas fa-poll-h" style="color:var(--ac);"></i> Опросы{% endblock %}
 {% block content %}
 <style>
-.poll-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;max-height:520px;overflow-y:auto;overflow-anchor:none;padding:4px;}
-.poll-card{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.1);border-radius:12px;padding:14px;animation:fadeUp 0.3s ease-out both;position:relative;overflow:hidden;}
-@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-.poll-card:hover{border-color:rgba(212,168,67,0.25);}
-.poll-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#c8922a,transparent);}
-.poll-q{font-size:13px;font-weight:700;color:#f0e8d0;margin-bottom:10px;line-height:1.3;}
-.poll-opt{display:flex;align-items:center;gap:6px;padding:6px 10px;background:rgba(255,255,255,0.04);border-radius:6px;margin-bottom:4px;font-size:11px;}
-.poll-bar{flex:1;height:5px;background:rgba(255,255,255,0.06);border-radius:99px;overflow:hidden;}
-.poll-bar-fill{height:100%;background:linear-gradient(90deg,#c8922a,#e0a830);border-radius:99px;transition:width 0.3s;}
-.poll-votes{font-size:10px;color:#5a5040;min-width:36px;text-align:right;}
-.poll-foot{display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid rgba(212,168,67,0.06);font-size:10px;color:#5a5040;}
-.poll-badge{padding:2px 7px;border-radius:99px;background:rgba(94,196,122,0.12);color:#5ec47a;font-size:9px;font-weight:700;letter-spacing:0.04em;}
-.poll-badge.ended{background:rgba(90,80,64,0.18);color:#5a5040;}
+.poll-toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px;}
+.poll-counters{display:flex;gap:8px;flex-wrap:wrap;}
+.poll-counter{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:5px 12px;border-radius:99px;
+  font-size:11px;font-weight:700;letter-spacing:0.05em;
+  border:1px solid;
+}
+.poll-counter.active{background:rgba(52,211,153,0.10);color:var(--ok);border-color:rgba(52,211,153,0.30);}
+.poll-counter.ended{background:rgba(122,106,72,0.10);color:var(--text-3);border-color:var(--line-2);}
 
-.btn{padding:8px 14px;border:none;border-radius:99px;cursor:pointer;font-weight:600;font-size:12px;font-family:Inter,sans-serif;display:inline-flex;align-items:center;gap:5px;}
-.btn-primary{background:#c8922a;color:#100e08;}
-.btn-primary:hover{background:#e0a830;}
-.btn-warn{background:rgba(232,144,58,0.15);color:#e8903a;border:1px solid rgba(232,144,58,0.3);}
+.btn{
+  padding:10px 18px;border:none;border-radius:99px;
+  cursor:pointer;font-weight:700;font-size:12.5px;
+  font-family:Inter,sans-serif;
+  transition:all 0.18s var(--ease);
+  display:inline-flex;align-items:center;gap:7px;
+}
+.btn-primary{background:linear-gradient(135deg, var(--ac), var(--ac-3));color:var(--bg);box-shadow:0 4px 14px var(--ac-glow);}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 6px 22px rgba(212,168,67,0.40);filter:brightness(1.05);}
+
+.poll-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;max-height:580px;overflow-y:auto;overflow-anchor:none;padding:4px;}
+.poll-card{
+  background:var(--surface) !important;
+  border:1px solid var(--line) !important;
+  border-radius:var(--r-lg) !important;
+  padding:18px 20px !important;
+  animation:fadeUp 0.4s var(--ease-out) both;
+  transition:all 0.22s var(--ease);
+  position:relative;
+  overflow:hidden;
+}
+.poll-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg, transparent, var(--ac), transparent);opacity:0.6;}
+.poll-card:hover{border-color:var(--ac-line) !important;transform:translateY(-2px);box-shadow:var(--shadow-md);}
+.poll-q{font-size:14px;font-weight:700;color:var(--text);margin-bottom:14px;line-height:1.4;letter-spacing:-0.01em;}
+
+.poll-opt{
+  display:flex;align-items:center;gap:10px;
+  padding:8px 12px;
+  background:rgba(0,0,0,0.20);
+  border:1px solid var(--line);
+  border-radius:8px;margin-bottom:6px;
+  font-size:12px;
+  transition:all 0.18s var(--ease);
+}
+.poll-opt:hover{background:rgba(0,0,0,0.30);transform:translateX(3px);}
+.poll-opt .name{flex:0 0 auto;min-width:100px;font-size:12px;color:var(--text);font-weight:500;}
+.poll-bar{flex:1;height:6px;background:rgba(212,168,67,0.10);border-radius:99px;overflow:hidden;position:relative;}
+.poll-bar-fill{height:100%;background:linear-gradient(90deg, var(--ac-3), var(--ac-2));border-radius:99px;transition:width 0.6s var(--ease-out);position:relative;overflow:hidden;}
+.poll-bar-fill::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);background-size:200% 100%;animation:shimmer 2.4s ease infinite;}
+.poll-votes{font-size:10.5px;color:var(--text-2);min-width:40px;text-align:right;font-weight:700;font-variant-numeric:tabular-nums;}
+
+.poll-foot{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-top:12px;padding-top:12px;
+  border-top:1px solid var(--line);
+  font-size:10.5px;color:var(--text-3);
+}
+.poll-foot .voters{display:flex;align-items:center;gap:5px;}
+.poll-foot .voters i{color:var(--ac);font-size:10px;}
+
+.empty-state{text-align:center;padding:60px 20px;color:var(--text-3);font-size:13px;grid-column:1/-1;}
+.empty-state i{font-size:36px;margin-bottom:10px;display:block;opacity:0.4;color:var(--ac);}
 </style>
 
-<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
-  <div style="display:flex;gap:8px;">
-    <div class="poll-badge" id="active-count">0 aktifных</div>
-    <div class="poll-badge ended" id="ended-count">0 завершённых</div>
+<div class="poll-toolbar">
+  <div class="poll-counters">
+    <span class="poll-counter active"><i class="fas fa-circle" style="font-size:5px;"></i> <span id="active-count">0 активных</span></span>
+    <span class="poll-counter ended"><i class="fas fa-check"></i> <span id="ended-count">0 завершённых</span></span>
   </div>
   <button class="btn btn-primary" id="btn-new" type="button"><i class="fas fa-plus"></i> Новый опрос</button>
 </div>
 
 <div class="poll-grid" id="poll-grid">
-  <p style="text-align:center;color:#5a5040;padding:30px;font-size:12px;grid-column:1/-1;">Опросов нет</p>
+  <p class="empty-state"><i class="fas fa-inbox"></i>Опросов пока нет</p>
 </div>
 
 <script>
@@ -42,18 +87,18 @@
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
   var polls = [
-    { q: 'Hangi oyun en sevdiğiniz?', opts: [{t:'Minecraft',v:120},{t:'LOL',v:85},{t:'Valorant',v:64}], active: true, voters: 269 },
-    { q: 'Yeni özellik önerisi?', opts: [{t:'Müzik sistemi',v:45},{t:'Mini oyunlar',v:32}], active: true, voters: 77 },
-    { q: 'Eski anket', opts: [{t:'A',v:10}], active: false, voters: 10 }
+    { q: 'Какая игра вам нравится больше всего?', opts: [{t:'Minecraft',v:120},{t:'LOL',v:85},{t:'Valorant',v:64}], active: true, voters: 269 },
+    { q: 'Какую новую функцию добавить?', opts: [{t:'Музыка',v:45},{t:'Мини-игры',v:32}], active: true, voters: 77 },
+    { q: 'Старый опрос', opts: [{t:'A',v:10}], active: false, voters: 10 }
   ];
 
   function render() {
     var act = polls.filter(function (p) { return p.active; }).length;
     var end = polls.filter(function (p) { return !p.active; }).length;
-    $('active-count').textContent = act + ' aktif';
+    $('active-count').textContent = act + ' активных';
     $('ended-count').textContent = end + ' завершённых';
     if (!polls.length) {
-      $('poll-grid').innerHTML = '<p style="text-align:center;color:#5a5040;padding:30px;font-size:12px;grid-column:1/-1;">Опросов нет</p>';
+      $('poll-grid').innerHTML = '<p class="empty-state"><i class="fas fa-inbox"></i>Опросов пока нет</p>';
       return;
     }
     var html = '';
@@ -63,16 +108,16 @@
         '<div class="poll-q">' + esc(p.q) + '</div>';
       p.opts.forEach(function (o) {
         var pct = total ? Math.round(o.v / total * 100) : 0;
-        html += '<div class="poll-opt"><span style="flex:0 0 90px;font-size:11px;color:#f0e8d0;">' + esc(o.t) + '</span><div class="poll-bar"><div class="poll-bar-fill" style="width:' + pct + '%;"></div></div><span class="poll-votes">' + pct + '%</span></div>';
+        html += '<div class="poll-opt"><span class="name">' + esc(o.t) + '</span><div class="poll-bar"><div class="poll-bar-fill" style="width:' + pct + '%;"></div></div><span class="poll-votes">' + pct + '%</span></div>';
       });
-      html += '<div class="poll-foot"><span>' + p.voters + ' голосов</span><span class="poll-badge ' + (p.active ? '' : 'ended') + '">' + (p.active ? 'Активен' : 'Завершён') + '</span></div></div>';
+      html += '<div class="poll-foot"><span class="voters"><i class="fas fa-users"></i> ' + p.voters + ' голосов</span><span class="poll-counter ' + (p.active ? 'active' : 'ended') + '">' + (p.active ? 'Активен' : 'Завершён') + '</span></div></div>';
     });
     $('poll-grid').innerHTML = html;
   }
 
   function bind() {
     var b = $('btn-new');
-    if (b) b.addEventListener('click', function () { alert('Новый опрос — форма burada olacak'); });
+    if (b) b.addEventListener('click', function () { alert('Форма нового опроса будет здесь'); });
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { bind(); render(); });

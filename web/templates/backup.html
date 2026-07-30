@@ -1,39 +1,8 @@
 {% extends "base.html" %}
 {% block title %}Резервные копии - Aether{% endblock %}
-{% block page_title %}Резервное копирование{% endblock %}
+{% block page_title %}<i class="fas fa-database" style="color:var(--ac);"></i> Резервное копирование{% endblock %}
 {% block content %}
-<style>
-.bk-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:14px;}
-.bk-card{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.1);border-radius:12px;padding:12px 14px;animation:fadeUp 0.3s ease-out both;text-align:center;}
-@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-.bk-icon{width:34px;height:34px;border-radius:8px;background:rgba(212,168,67,0.12);color:#c8922a;display:flex;align-items:center;justify-content:center;font-size:14px;margin:0 auto 8px;}
-.bk-val{font-size:18px;font-weight:800;color:#f0e8d0;}
-.bk-lbl{font-size:9px;color:#5a5040;text-transform:uppercase;letter-spacing:0.05em;margin-top:2px;}
 
-.bk-actions{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
-.btn{padding:8px 14px;border:none;border-radius:99px;cursor:pointer;font-weight:600;font-size:11px;font-family:Inter,sans-serif;display:inline-flex;align-items:center;gap:5px;}
-.btn-primary{background:#c8922a;color:#100e08;}
-.btn-primary:hover{background:#e0a830;}
-.btn-warn{background:rgba(232,144,58,0.15);color:#e8903a;border:1px solid rgba(232,144,58,0.3);}
-.btn-warn:hover{background:rgba(232,144,58,0.25);}
-.btn-danger{background:rgba(224,85,85,0.15);color:var(--red);border:1px solid rgba(224,85,85,0.3);}
-
-.bk-box{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.08);border-radius:12px;overflow:hidden;}
-.bk-head{padding:10px 14px;border-bottom:1px solid rgba(212,168,67,0.07);display:flex;justify-content:space-between;align-items:center;}
-.bk-title{font-size:10px;font-weight:700;color:rgba(240,232,208,0.55);text-transform:uppercase;letter-spacing:0.08em;display:flex;align-items:center;gap:7px;}
-.bk-title i{color:#c8922a;}
-.bk-count{font-size:10px;color:#5a5040;background:rgba(212,168,67,0.06);padding:2px 8px;border-radius:99px;}
-.bk-body{max-height:480px;overflow-y:auto;overflow-anchor:none;}
-
-.bk-file{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid rgba(212,168,67,0.05);transition:background 0.1s;}
-.bk-file:hover{background:rgba(212,168,67,0.04);}
-.bk-file-icon{width:32px;height:32px;border-radius:6px;background:rgba(212,168,67,0.12);color:#c8922a;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;}
-.bk-file-info{flex:1;min-width:0;}
-.bk-file-name{font-weight:600;font-size:12px;color:#f0e8d0;margin-bottom:2px;}
-.bk-file-meta{font-size:10px;color:#5a5040;}
-.bk-file-size{font-size:10px;color:#c8922a;font-weight:600;flex-shrink:0;}
-.bk-file-actions{display:flex;gap:4px;flex-shrink:0;}
-</style>
 
 <div class="bk-grid">
   <div class="bk-card"><div class="bk-icon"><i class="fas fa-database"></i></div><div class="bk-val" id="stat-total">-</div><div class="bk-lbl">Всего копий</div></div>
@@ -53,7 +22,7 @@
     <span class="bk-count" id="bk-count">-</span>
   </div>
   <div class="bk-body" id="bk-body">
-    <p style="text-align:center;color:#5a5040;padding:30px;font-size:12px;"><i class="fas fa-spinner fa-spin"></i> Yükleniyor...</p>
+    <p style="text-align:center;color:var(--text-3);padding:30px;font-size:12px;"><i class="fas fa-spinner fa-spin"></i> Yükleniyor...</p>
   </div>
 </div>
 
@@ -65,7 +34,7 @@
   function showToast(msg, ok) {
     var t = document.createElement('div');
     t.textContent = msg;
-    t.style.cssText = 'position:fixed;top:14px;right:14px;padding:9px 16px;border-radius:8px;font-weight:600;z-index:99999;font-size:12px;background:' + (ok ? 'linear-gradient(135deg,#27ae60,#2ecc71)' : 'linear-gradient(135deg,#c0392b,#e74c3c)') + ';color:#fff;';
+    t.style.cssText = 'position:fixed;top:14px;right:14px;padding:9px 16px;border-radius:8px;font-weight:600;z-index:99999;font-size:12px;background:' + (ok ? 'linear-gradient(135deg,var(--ok),var(--ok))' : 'linear-gradient(135deg,var(--err),var(--err))') + ';color:#fff;';
     document.body.appendChild(t);
     setTimeout(function () { t.remove(); }, 1800);
   }
