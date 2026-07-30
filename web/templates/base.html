@@ -1,11 +1,20 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Панель Aether{% endblock %}</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/static/style.css?v=4">
+    <link rel="stylesheet" href="/static/style.css?v=5">
+    <script>
+      // Apply theme before render to prevent FOUC
+      (function(){
+        try {
+          var t = localStorage.getItem('aether_theme') || 'dark';
+          document.documentElement.setAttribute('data-theme', t);
+        } catch(e) {}
+      })();
+    </script>
 </head>
 <body>
     <button class="mobile-menu" id="mobileMenu" aria-label="Меню"><i class="fas fa-bars"></i></button>
@@ -231,7 +240,11 @@
                 <h1>{% block page_title %}Панель управления{% endblock %}</h1>
             </div>
             <div class="navbar-right">
-                <button class="nav-icon-btn" title="Поиск" id="globalSearchBtn"><i class="fas fa-search"></i></button>
+                <button class="nav-icon-btn" title="Поиск (Ctrl+K)" id="globalSearchBtn"><i class="fas fa-search"></i></button>
+                <button class="theme-toggle" title="Сменить тему" id="themeToggle" aria-label="Theme">
+                    <i class="fas fa-sun icon-sun icon-swap" ></i>
+                    <i class="fas fa-moon icon-moon icon-swap" ></i>
+                </button>
                 <button class="nav-icon-btn" title="Уведомления" id="notifBtn"><i class="fas fa-bell"></i><span class="nav-badge">3</span></button>
                 <button class="nav-icon-btn" title="Полный экран" id="fullscreenBtn"><i class="fas fa-expand"></i></button>
                 <div class="user-pill">
@@ -255,6 +268,23 @@
 {% block page_hero %}{% endblock %}
 {% endblock %}
     </main>
+
+<!-- Keyboard shortcut palette -->
+<div class="kbd-palette" id="kbdPalette">
+  <div class="kbd-palette-panel">
+    <div class="kbd-palette-search">
+      <i class="fas fa-search"></i>
+      <input type="text" id="kbdPaletteInput" placeholder="Введите команду или название страницы..." autocomplete="off">
+      <span class="kbd-hint">ESC</span>
+    </div>
+    <div class="kbd-palette-results" id="kbdPaletteResults"></div>
+    <div class="kbd-palette-foot">
+      <div><span class="kbd-hint">↑↓</span> Навигация</div>
+      <div><span class="kbd-hint">↵</span> Открыть</div>
+      <div><span class="kbd-hint">Ctrl K</span> Вызов</div>
+    </div>
+  </div>
+</div>
 
 <script>
 // ETag fetch cache
@@ -506,6 +536,199 @@ document.addEventListener('DOMContentLoaded', async function () {
     if (guilds.length === 1) select.style.display = 'none';
     select.dispatchEvent(new Event('change'));
   } catch (e) { console.error('Guild error:', e); }
+});
+
+// Theme toggle (light/dark)
+(function () {
+  var btn = document.getElementById('themeToggle');
+  if (!btn) return;
+  btn.addEventListener('click', function () {
+    var current = document.documentElement.getAttribute('data-theme') || 'dark';
+    var next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try { localStorage.setItem('aether_theme', next); } catch (e) {}
+    showToast(next === 'light' ? '☀️ Светлая тема' : '🌙 Тёмная тема', true);
+  });
+})();
+
+// Keyboard shortcut palette (Ctrl+K / Cmd+K)
+(function () {
+  var palette = document.getElementById('kbdPalette');
+  var input   = document.getElementById('kbdPaletteInput');
+  var results = document.getElementById('kbdPaletteResults');
+  if (!palette || !input || !results) return;
+
+  // Build list of pages from sidebar links
+  function getPages() {
+    var items = [];
+    document.querySelectorAll('.sidebar-nav .nav-link').forEach(function (a) {
+      var href = a.getAttribute('href');
+      if (!href || href === '#' || href.startsWith('javascript')) return;
+      var span = a.querySelector('span');
+      var title = span ? span.textContent.trim() : a.textContent.trim();
+      var icon = a.querySelector('i');
+      var iconClass = icon ? icon.className : 'fas fa-circle';
+      // Find group
+      var groupEl = a.closest('.nav-group');
+      var groupTitle = '';
+      if (groupEl) {
+        var gt = groupEl.querySelector('.nav-group-title span');
+        if (gt) groupTitle = gt.textContent.trim();
+      }
+      items.push({ href: href, title: title, group: groupTitle, icon: iconClass });
+    });
+    return items;
+  }
+
+  var pages = getPages();
+  var filtered = pages.slice();
+  var activeIdx = 0;
+
+  function render() {
+    if (!filtered.length) {
+      results.innerHTML = '<div class="empty-state"><i class="fas fa-search"></i><p>Ничего не найдено</p></div>';
+      return;
+    }
+    results.innerHTML = filtered.map(function (p, i) {
+      return '<div class="kbd-palette-item' + (i === activeIdx ? ' active' : '') + '" data-href="' + p.href + '">' +
+        '<div class="kbd-palette-icon"><i class="' + p.icon + '"></i></div>' +
+        '<div class="kbd-palette-text">' +
+          '<div class="kbd-palette-title">' + p.title + '</div>' +
+          '<div class="kbd-palette-group">' + (p.group || 'Страница') + '</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+    // Click handlers
+    results.querySelectorAll('.kbd-palette-item').forEach(function (el) {
+      el.addEventListener('click', function () {
+        window.location.href = el.getAttribute('data-href');
+      });
+    });
+    // Scroll active into view
+    var active = results.querySelector('.kbd-palette-item.active');
+    if (active) active.scrollIntoView({ block: 'nearest' });
+  }
+
+  function open() {
+    palette.classList.add('open');
+    input.value = '';
+    input.focus();
+    filtered = pages.slice();
+    activeIdx = 0;
+    render();
+  }
+  function close() {
+    palette.classList.remove('open');
+    input.blur();
+  }
+
+  input.addEventListener('input', function () {
+    var q = input.value.toLowerCase().trim();
+    if (!q) {
+      filtered = pages.slice();
+    } else {
+      filtered = pages.filter(function (p) {
+        return p.title.toLowerCase().indexOf(q) !== -1 ||
+               p.group.toLowerCase().indexOf(q) !== -1 ||
+               p.href.toLowerCase().indexOf(q) !== -1;
+      });
+    }
+    activeIdx = 0;
+    render();
+  });
+
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      activeIdx = Math.min(activeIdx + 1, filtered.length - 1);
+      render();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      activeIdx = Math.max(activeIdx - 1, 0);
+      render();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      var target = filtered[activeIdx];
+      if (target) window.location.href = target.href;
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      close();
+    }
+  });
+
+  // Click outside to close
+  palette.addEventListener('click', function (e) {
+    if (e.target === palette) close();
+  });
+
+  // Global shortcuts
+  document.addEventListener('keydown', function (e) {
+    // Ctrl/Cmd + K — open palette
+    if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {
+      e.preventDefault();
+      if (palette.classList.contains('open')) close(); else open();
+      return;
+    }
+    // "/" — open palette (when not in input)
+    if (e.key === '/' && !palette.classList.contains('open')) {
+      var tag = (document.activeElement && document.activeElement.tagName) || '';
+      if (tag !== 'INPUT' && tag !== 'TEXTAREA' && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+        open();
+      }
+    }
+    // G + key navigation (vim-style): gd= dashboard, ga=analytics, etc.
+    // Only when not typing
+    if (window.__aetherGPressed) {
+      var tag2 = (document.activeElement && document.activeElement.tagName) || '';
+      if (tag2 !== 'INPUT' && tag2 !== 'TEXTAREA') {
+        var map = { 'd': '/', 'g': '/guilds', 'a': '/analytics', 's': '/bot-stats',
+                    'l': '/logs', 'w': '/warnings', 'u': '/users', 'm': '/mod-history',
+                    'c': '/commands', 't': '/ticket-settings', 'e': '/economy', 'p': '/polls' };
+        if (map[e.key.toLowerCase()]) {
+          e.preventDefault();
+          window.location.href = map[e.key.toLowerCase()];
+        }
+      }
+      window.__aetherGPressed = false;
+    } else if (e.key === 'g' && !palette.classList.contains('open')) {
+      var tag3 = (document.activeElement && document.activeElement.tagName) || '';
+      if (tag3 !== 'INPUT' && tag3 !== 'TEXTAREA') {
+        window.__aetherGPressed = true;
+        setTimeout(function() { window.__aetherGPressed = false; }, 1200);
+      }
+    }
+    // ? — show help (only when not typing)
+    if (e.key === '?' && !e.shiftKey === false) {
+      var tag4 = (document.activeElement && document.activeElement.tagName) || '';
+      if (tag4 !== 'INPUT' && tag4 !== 'TEXTAREA' && !palette.classList.contains('open')) {
+        // optional: show shortcut help
+      }
+    }
+  });
+})();
+
+// Global keyboard shortcut: ? to show help toast
+(function () {
+  document.addEventListener('keydown', function (e) {
+    if (e.key === '?' && !e.shiftKey) return;
+    if (e.key === '?' && e.shiftKey) {
+      var tag = (document.activeElement && document.activeElement.tagName) || '';
+      if (tag !== 'INPUT' && tag !== 'TEXTAREA') {
+        e.preventDefault();
+        showToast('⌨️ Ctrl+K: Поиск · T: Тема · G+D: Главная · G+A: Аналитика', true);
+      }
+    }
+  });
+})();
+
+// Smooth page enter animation (already in CSS, but trigger on load)
+window.addEventListener('pageshow', function (e) {
+  if (e.persisted) {
+    document.querySelector('.main-content').style.animation = 'none';
+    void document.querySelector('.main-content').offsetWidth;
+    document.querySelector('.main-content').style.animation = '';
+  }
 });
 </script>
 </body>

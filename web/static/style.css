@@ -2132,3 +2132,307 @@ img[style*="border-radius:50%"], img[style*="border-radius: 50%"] {
   font-weight: 500;
   color: var(--text-3) !important;
 }
+
+/* ============================================================
+   THEME TOGGLE — Light/Dark switch in navbar
+   ============================================================ */
+.theme-toggle {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--ac);
+  border-radius: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  transition: all 0.25s var(--ease);
+  overflow: hidden;
+}
+.theme-toggle:hover {
+  background: var(--ac-soft);
+  border-color: var(--ac-line);
+  transform: translateY(-1px) rotate(15deg);
+  box-shadow: 0 0 12px var(--ac-glow);
+}
+.theme-toggle .fa-sun { color: var(--warn); }
+.theme-toggle .fa-moon { color: var(--violet); }
+.theme-toggle .icon-swap {
+  position: absolute;
+  transition: all 0.4s var(--ease-spring);
+}
+[data-theme="light"] .theme-toggle .icon-moon { transform: translateY(30px) rotate(90deg); opacity: 0; }
+[data-theme="light"] .theme-toggle .icon-sun  { transform: translateY(0) rotate(0); opacity: 1; }
+[data-theme="dark"] .theme-toggle .icon-sun   { transform: translateY(-30px) rotate(-90deg); opacity: 0; }
+[data-theme="dark"] .theme-toggle .icon-moon { transform: translateY(0) rotate(0); opacity: 1; }
+
+/* ============================================================
+   LIGHT THEME OVERRIDES
+   ============================================================ */
+[data-theme="light"] {
+  --bg:        #f5f1e8;
+  --bg-2:      #ede7d8;
+  --bg-3:      #e5dec9;
+  --surface:   rgba(255, 252, 245, 0.85);
+  --surface-2: rgba(255, 252, 245, 0.95);
+  --surface-3: #fffefb;
+  --line:      rgba(176, 138, 46, 0.18);
+  --line-2:    rgba(176, 138, 46, 0.30);
+  --line-3:    rgba(176, 138, 46, 0.45);
+  --text:      #2a2417;
+  --text-2:    #5a4d2e;
+  --text-3:    #8a7d5f;
+  --text-4:    #b8aa7d;
+  --ac-soft:   rgba(224, 176, 74, 0.20);
+  --ac-glow:   rgba(224, 176, 74, 0.45);
+  --ac-line:   rgba(176, 138, 46, 0.30);
+}
+[data-theme="light"] body {
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 0%, rgba(139, 92, 246, 0.06), transparent 60%),
+    radial-gradient(ellipse 60% 50% at 80% 10%, rgba(236, 72, 153, 0.04), transparent 60%),
+    radial-gradient(ellipse 100% 80% at 50% 100%, rgba(6, 182, 212, 0.04), transparent 60%),
+    #f5f1e8;
+}
+[data-theme="light"] body::before {
+  background-image:
+    linear-gradient(rgba(176, 138, 46, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(176, 138, 46, 0.04) 1px, transparent 1px);
+}
+[data-theme="light"] .sidebar {
+  background: linear-gradient(180deg, rgba(255, 254, 251, 0.98), rgba(245, 241, 232, 0.98));
+  box-shadow: 1px 0 0 var(--line), 4px 0 32px rgba(176, 138, 46, 0.10);
+}
+[data-theme="light"] .brand-title {
+  background: linear-gradient(135deg, #b88a2e, #e0b04a, #b88a2e);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+[data-theme="light"] .page-hero,
+[data-theme="light"] .hero-banner-old,
+[data-theme="light"] .section,
+[data-theme="light"] .box,
+[data-theme="light"] .panel,
+[data-theme="light"] .card,
+[data-theme="light"] .dash-box,
+[data-theme="light"] .ch-box,
+[data-theme="light"] .logs-box,
+[data-theme="light"] .warn-box,
+[data-theme="light"] .stat-card {
+  box-shadow: 0 2px 8px rgba(176, 138, 46, 0.08), 0 1px 0 rgba(255,255,255,0.6) inset !important;
+}
+[data-theme="light"] .navbar {
+  background: linear-gradient(180deg, rgba(245, 241, 232, 0.95) 0%, rgba(245, 241, 232, 0.7) 80%, transparent 100%);
+}
+[data-theme="light"] .nav-link.active {
+  background: linear-gradient(90deg, rgba(224,176,74,0.25), rgba(224,176,74,0.08));
+}
+[data-theme="light"] .page-hero h1,
+[data-theme="light"] .brand-title {
+  background: linear-gradient(135deg, #2a2417 0%, #5a4d2e 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+[data-theme="light"] .page-hero p,
+[data-theme="light"] .nav-link,
+[data-theme="light"] body,
+[data-theme="light"] p,
+[data-theme="light"] h1,
+[data-theme="light"] h2,
+[data-theme="light"] h3,
+[data-theme="light"] h4,
+[data-theme="light"] th,
+[data-theme="light"] td {
+  color: var(--text) !important;
+}
+[data-theme="light"] .nav-link { color: var(--text-2) !important; }
+[data-theme="light"] .nav-link:hover { background: var(--ac-soft); color: var(--text) !important; }
+[data-theme="light"] input,
+[data-theme="light"] select,
+[data-theme="light"] textarea {
+  background: rgba(255, 255, 255, 0.7) !important;
+}
+[data-theme="light"] input:focus,
+[data-theme="light"] select:focus,
+[data-theme="light"] textarea:focus {
+  background: rgba(255, 255, 255, 0.95) !important;
+}
+[data-theme="light"] .toast { background: rgba(255,255,255,0.95) !important; }
+[data-theme="light"] .toast.ok  { background: linear-gradient(135deg, #4ade80, #22c55e) !important; color: #fff !important; }
+[data-theme="light"] .toast.err { background: linear-gradient(135deg, #dc2626, #f87171) !important; color: #fff !important; }
+
+/* ============================================================
+   PAGE TRANSITION ANIMATIONS
+   ============================================================ */
+.main-content { animation: pageEnter 0.4s var(--ease-out) both; }
+@keyframes pageEnter {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.page-hero { animation: heroEnter 0.55s var(--ease-out) both; animation-delay: 0.05s; }
+@keyframes heroEnter {
+  from { opacity: 0; transform: translateY(20px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.section, .box, .panel, .card, .stat-card, .dash-box, .ch-box, .logs-box, .warn-box, .dash-card {
+  animation: cardEnter 0.4s var(--ease-out) both;
+}
+@keyframes cardEnter {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.section:nth-of-type(1) { animation-delay: 0.10s; }
+.section:nth-of-type(2) { animation-delay: 0.16s; }
+.section:nth-of-type(3) { animation-delay: 0.22s; }
+.section:nth-of-type(4) { animation-delay: 0.28s; }
+.section:nth-of-type(5) { animation-delay: 0.34s; }
+.section:nth-of-type(6) { animation-delay: 0.40s; }
+.section:nth-of-type(7) { animation-delay: 0.46s; }
+.section:nth-of-type(8) { animation-delay: 0.52s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .main-content, .page-hero, .section, .box, .panel, .card, .stat-card,
+  .dash-box, .ch-box, .logs-box, .warn-box, .dash-card {
+    animation: none !important;
+  }
+}
+
+/* ============================================================
+   KEYBOARD SHORTCUTS PALETTE
+   ============================================================ */
+.kbd-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  background: var(--bg-3);
+  border: 1px solid var(--line-2);
+  border-radius: 5px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px !important;
+  font-weight: 700 !important;
+  color: var(--text-2) !important;
+  line-height: 1.2 !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+}
+.kbd-palette {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 9999;
+  display: none;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 12vh;
+  animation: fadeIn 0.15s var(--ease-out) both;
+}
+.kbd-palette.open { display: flex; }
+.kbd-palette-panel {
+  width: 560px;
+  max-width: calc(100vw - 32px);
+  background: var(--surface-3);
+  border: 1px solid var(--ac-line);
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow-lg), 0 0 80px rgba(224, 176, 74, 0.20);
+  overflow: hidden;
+  animation: scaleIn 0.25s var(--ease-spring) both;
+}
+.kbd-palette-search {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(224, 176, 74, 0.06), transparent);
+}
+.kbd-palette-search i {
+  color: var(--ac);
+  font-size: 18px;
+}
+.kbd-palette-search input {
+  flex: 1;
+  background: transparent !important;
+  border: none !important;
+  padding: 4px 0 !important;
+  font-size: var(--fs-lg) !important;
+  color: var(--text) !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+.kbd-palette-search input::placeholder { color: var(--text-4) !important; }
+.kbd-palette-results {
+  max-height: 50vh;
+  overflow-y: auto;
+  padding: 8px;
+}
+.kbd-palette-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.kbd-palette-item:hover, .kbd-palette-item.active {
+  background: var(--ac-soft);
+}
+.kbd-palette-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--bg-3);
+  border: 1px solid var(--line-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ac);
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.kbd-palette-item.active .kbd-palette-icon {
+  background: var(--ac);
+  color: var(--bg);
+  border-color: var(--ac);
+}
+.kbd-palette-text { flex: 1; min-width: 0; }
+.kbd-palette-title {
+  font-size: var(--fs-md) !important;
+  font-weight: 600 !important;
+  color: var(--text) !important;
+  margin-bottom: 2px;
+}
+.kbd-palette-group {
+  font-size: 11px !important;
+  color: var(--text-3) !important;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600 !important;
+}
+.kbd-palette-foot {
+  padding: 10px 20px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 11px !important;
+  color: var(--text-3) !important;
+  background: rgba(0, 0, 0, 0.2);
+}
+.kbd-palette-foot > div { display: flex; align-items: center; gap: 6px; }
+
+/* Toast zaten yukarıda, ekstra toast variant */
+.toast {
+  animation: toastIn 0.3s var(--ease-spring) both, toastOut 0.3s var(--ease) 2.7s both;
+  top: 80px;
+}
+@keyframes toastIn  { from { opacity: 0; transform: translateX(20px) scale(0.95); } to { opacity: 1; transform: translateX(0) scale(1); } }
+@keyframes toastOut { to   { opacity: 0; transform: translateX(20px) scale(0.95); } }
