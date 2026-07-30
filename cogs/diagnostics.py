@@ -352,7 +352,7 @@ class Diagnostics(commands.Cog):
 
     @cog.command(name="perf")
     @commands.is_owner()
-    async def cog_perf(self, ctx):
+    async def diag_perf(self, ctx):
         """Cog performance stats"""
         if not self.cog_perf:
             await ctx.send("Нет данных")
@@ -367,7 +367,7 @@ class Diagnostics(commands.Cog):
 
     @cog.command(name="errors")
     @commands.is_owner()
-    async def cog_errors(self, ctx, limit: int = 10):
+    async def diag_errors(self, ctx, limit: int = 10):
         """Last N errors"""
         errors = list(self.error_log)[-limit:]
         if not errors:
