@@ -24,7 +24,7 @@
 .ch-box-count{font-size:11px;color:#5a5040;background:rgba(212,168,67,0.04);padding:2px 8px;border-radius:99px;}
 
 /* Category group */
-.cat-group{border-bottom:1px solid rgba(212,168,67,0.07);}
+.cat-group{border-bottom:1px solid rgba(212,168,67,0.07);overflow-anchor:none;}
 .cat-group:last-child{border-bottom:none;}
 .cat-header{padding:10px 18px;background:rgba(212,168,67,0.04);display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;}
 .cat-header:hover{background:var(--surface2);}
@@ -311,10 +311,15 @@
   }
 
   function toggleCat(header) {
+    // Opening a category changes the document height. Keep the scroll container
+    // at its exact current offset before the browser can choose a new anchor.
+    var position = getScroll();
     var toggle = header.querySelector('.cat-toggle');
     var channels = header.nextElementSibling;
     if (toggle) toggle.classList.toggle('open');
     if (channels) channels.classList.toggle('open');
+    setScroll(position);
+    requestAnimationFrame(function () { setScroll(position); });
   }
 
   function openNameModal() {
