@@ -1,0 +1,227 @@
+/* ============================================================
+   Aether Panel — Modern Tasarım Override
+   Eski sayfalari kompakt, scroll'suz, altin temaya zorlar.
+   base.html'den <link> ile otomatik yuklenir.
+   ============================================================ */
+
+:root {
+  --ac: #c8922a;
+  --ac2: #e0a830;
+  --ac3: #f0e8d0;
+  --ac-dim: rgba(200,146,42,0.1);
+  --ac-glow: rgba(200,146,42,0.18);
+  --bg: #100e08;
+  --bg2: #1a1610;
+  --bg3: #221e12;
+  --surface: #2a2418;
+  --surface2: #342e1e;
+  --border: rgba(212,168,67,0.08);
+  --border2: rgba(212,168,67,0.16);
+  --text: #f0e8d0;
+  --text2: #9a8a68;
+  --text3: #5a5040;
+  --red: #e05555;
+  --green: #5ec47a;
+  --blue: #6ab0e0;
+  --orange: #e8903a;
+  --radius: 10px;
+}
+
+/* Tüm section'lar kompakt olsun */
+.section {
+  background: rgba(26,22,16,0.7) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 14px !important;
+  padding: 16px 20px !important;
+  margin-bottom: 12px !important;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+.section:hover { border-color: rgba(212,168,67,0.22); }
+.section h2 {
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  color: rgba(240,232,208,0.55) !important;
+  margin-bottom: 12px !important;
+  padding-bottom: 8px !important;
+  border-bottom: 1px solid var(--border) !important;
+  letter-spacing: 0.06em !important;
+  text-transform: uppercase !important;
+}
+
+/* H1, h2, h3 normalize */
+h1 {
+  font-size: 22px !important;
+  font-weight: 800 !important;
+  color: var(--text) !important;
+  letter-spacing: -0.02em !important;
+  margin-bottom: 18px !important;
+}
+h3 {
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  color: var(--text) !important;
+  letter-spacing: -0.01em !important;
+}
+
+/* Butonlar — kirmizi #dc143c olanlari altin yap */
+button, .btn, [type="submit"], [type="button"] {
+  cursor: pointer !important;
+  font-family: Inter, sans-serif !important;
+  transition: all 0.15s !important;
+}
+input[type="submit"], .btn-primary, button[style*="#dc143c"], button[style*="crimson"] {
+  background: var(--ac) !important;
+  color: #100e08 !important;
+  border: none !important;
+  border-radius: 99px !important;
+  font-weight: 700 !important;
+  padding: 9px 18px !important;
+}
+input[type="submit"]:hover, .btn-primary:hover {
+  background: var(--ac2) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 16px var(--ac-glow) !important;
+}
+
+/* Input / select / textarea */
+input, select, textarea {
+  width: 100% !important;
+  padding: 8px 12px !important;
+  background: rgba(255,255,255,0.04) !important;
+  border: 1px solid var(--border2) !important;
+  border-radius: 8px !important;
+  color: var(--text) !important;
+  font-size: 12px !important;
+  font-family: Inter, sans-serif !important;
+  transition: border-color 0.15s !important;
+  box-sizing: border-box !important;
+}
+input:focus, select:focus, textarea:focus {
+  outline: none !important;
+  border-color: rgba(212,168,67,0.5) !important;
+}
+label {
+  color: var(--text3) !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.06em !important;
+  display: block !important;
+  margin-bottom: 5px !important;
+}
+
+/* Tablo kompakt */
+table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  font-size: 11px !important;
+}
+th, td {
+  padding: 7px 12px !important;
+  border-bottom: 1px solid rgba(212,168,67,0.05) !important;
+}
+th {
+  background: rgba(212,168,67,0.04) !important;
+  color: rgba(240,232,208,0.35) !important;
+  font-size: 9px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.06em !important;
+  font-weight: 600 !important;
+}
+tr:hover td { background: rgba(212,168,67,0.04); }
+
+/* Kırmızı renk şemasını altına çevir */
+[style*="color:#dc143c"],
+[style*="color: #dc143c"],
+[style*="color: #DC143C"],
+[style*="color: #ff1744"],
+[style*="color:#ff1744"] {
+  color: var(--ac) !important;
+}
+[style*="background:#dc143c"],
+[style*="background: #dc143c"],
+[style*="background:#ff1744"] {
+  background: var(--ac) !important;
+  color: #100e08 !important;
+}
+[style*="border-color: #dc143c"],
+[style*="border-color:#dc143c"] {
+  border-color: var(--ac) !important;
+}
+
+/* Background gradient: kırmızı -> altın */
+[style*="linear-gradient"][style*="#dc143c"] {
+  background: linear-gradient(135deg, #1a1610, #2a2418, #1a1610) !important;
+}
+[style*="linear-gradient"][style*="#1a0a0a"],
+[style*="linear-gradient"][style*="#2a1010"] {
+  background: linear-gradient(135deg, #1a1610, #221e12, #1a1610) !important;
+}
+
+/* Animasyonlar: kart fade-up */
+@keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.section, .stat-card, .dash-box { animation: fadeUp 0.3s ease-out both; }
+
+/* Scroll'suz sayfa: max-height ile ic scroll */
+.section { max-height: 80vh; overflow-y: auto; overflow-anchor: none; }
+.section.no-scroll, .no-scroll { max-height: none; }
+
+/* Modal — kompakt */
+[style*="position:fixed"][style*="z-index:9999"] {
+  backdrop-filter: blur(6px) !important;
+}
+
+/* Modallarin ici */
+[style*="position:fixed"][style*="z-index:9999"] > div {
+  background: rgba(26,22,16,0.95) !important;
+  border: 1px solid var(--border2) !important;
+  border-radius: 14px !important;
+}
+
+/* Kırmızı arka planlı rozet/badge */
+[style*="background:#dc143c"]:not([style*="color"]) {
+  background: var(--ac) !important;
+  color: #100e08 !important;
+}
+
+/* Özel: büyük h1 / page-title */
+.page-title, h1.page-title {
+  font-size: 22px !important;
+  font-weight: 800 !important;
+  color: var(--text) !important;
+  margin-bottom: 18px !important;
+  letter-spacing: -0.02em !important;
+}
+
+/* Form group'lar */
+.form-group { margin-bottom: 10px; }
+
+/* Resim kart */
+img[style*="border-radius:50%"] {
+  border-color: var(--ac) !important;
+}
+
+/* Loading animasyonu daha kisa */
+@keyframes spin { to { transform: rotate(360deg); } }
+.fa-spin { animation: spin 0.8s linear infinite; }
+
+/* Empty state */
+p:empty, .empty { display: none; }
+
+/* p text rengi */
+p { color: var(--text2); }
+
+/* Status badge'ler */
+.status-online { background: var(--green) !important; }
+.status-idle { background: var(--orange) !important; }
+.status-dnd { background: var(--red) !important; }
+.status-offline { background: #555 !important; }
+
+/* Scrollbar (zaten style.css'te var, override) */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: var(--ac); }
