@@ -83,7 +83,11 @@
     var html = '';
     members.forEach(function (m, i) {
       var sc = statusClass[m.status] || 'status-offline';
-      html += '<div class="member-card" data-idx="' + i + '">' +
+      // Use m.id as the data-id so filtering doesn't break the click handler.
+      // Previously we used `data-idx="i"` which was the FILTERED array's
+      // index, but showDetail() looked up `allMembers[i]` — so clicking a
+      // filtered card always opened the wrong member.
+      html += '<div class="member-card" data-id="' + esc(m.id) + '">' +
         '<div class="av-wrap">' +
           '<img class="av" src="' + esc(m.avatar) + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' +
           '<span class="status-dot ' + sc + '"></span>' +
@@ -96,8 +100,17 @@
     $('members-list').innerHTML = '<div class="members-grid">' + html + '</div>';
   }
 
-  function showDetail(i) {
-    var m = allMembers[i];
+  function showDetail(idOrIdx) {
+    // Accept either a Discord id (string) or a numeric index into allMembers.
+    var m = null;
+    if (typeof idOrIdx === 'string' || (typeof idOrIdx === 'number' && idOrIdx > 1000000000000000)) {
+      // Treat as Discord id
+      var wantedId = String(idOrIdx);
+      m = allMembers.find(function (x) { return String(x.id) === wantedId; });
+    } else {
+      // Legacy index lookup
+      m = allMembers[idOrIdx];
+    }
     if (!m) return;
     var cr = new Date(m.created_at);
     var jo = m.joined_at ? new Date(m.joined_at) : null;
@@ -144,7 +157,7 @@
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeModal(); });
     $('members-list').addEventListener('click', function (e) {
       var card = e.target.closest('.member-card');
-      if (card) showDetail(parseInt(card.getAttribute('data-idx'), 10));
+      if (card) showDetail(card.getAttribute('data-id'));
     });
   }
 
