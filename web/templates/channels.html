@@ -311,15 +311,26 @@
   }
 
   function toggleCat(header) {
-    // Opening a category changes the document height. Keep the scroll container
-    // at its exact current offset before the browser can choose a new anchor.
-    var position = getScroll();
+    // Different browsers/layouts scroll different ancestors (main-content on
+    // desktop, document on mobile). Preserve every scrollable ancestor instead
+    // of assuming that only one of them owns the visible scroll position.
+    var scrollParents = [];
+    var node = header.parentElement;
+    while (node) {
+      if (node.scrollHeight > node.clientHeight) scrollParents.push({node: node, top: node.scrollTop, left: node.scrollLeft});
+      node = node.parentElement;
+    }
+    var pageTop = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
     var toggle = header.querySelector('.cat-toggle');
     var channels = header.nextElementSibling;
     if (toggle) toggle.classList.toggle('open');
     if (channels) channels.classList.toggle('open');
-    setScroll(position);
-    requestAnimationFrame(function () { setScroll(position); });
+    function restore() {
+      scrollParents.forEach(function (item) { item.node.scrollTop = item.top; item.node.scrollLeft = item.left; });
+      window.scrollTo(0, pageTop);
+    }
+    restore();
+    requestAnimationFrame(restore);
   }
 
   function openNameModal() {
@@ -418,7 +429,6 @@
         }
         var hdr = e.target.closest('.cat-header');
         if (hdr) toggleCat(hdr);
-        restoreClickPosition();
       });
     }
   }
