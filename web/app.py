@@ -151,6 +151,12 @@ USERS = {
     'owner': {'password': '123', 'role': 'owner'},
 }
 
+def _safe_avatar_url(value):
+    """Do not serve stale guild-profile avatar URLs stored in old JSON files."""
+    if not isinstance(value, str) or '/guilds/' in value:
+        return 'https://cdn.discordapp.com/embed/avatars/0.png'
+    return value
+
 # Discord роли ID → panel роли — data/role_map.json
 DISCORD_ROLE_MAP = {}
 
@@ -776,6 +782,8 @@ def api_login_log():
         # Owner kendi вход видеть — только diğer userları показать
         current_user = session.get('username', '')
         filtered = [l for l in logs if not (l.get('username') == current_user and l.get('role') == 'owner')]
+        for entry in filtered:
+            entry['avatar'] = _safe_avatar_url(entry.get('avatar'))
         return jsonify(list(reversed(filtered)))
     except Exception:
         return jsonify([])
@@ -1844,7 +1852,7 @@ def api_login_suggest():
                         'id': str(uid_str),
                         'name': minfo.get('username', mname),
                         'display_name': mname,
-                        'avatar': minfo.get('avatar', 'https://cdn.discordapp.com/embed/avatars/0.png')
+                        'avatar': _safe_avatar_url(minfo.get('avatar'))
                     })
                     if len(suggestions) >= 12: break
         except:
