@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
 /* ============================================================
    Aether Panel — Premium UI v5.0
    Glassmorphism · Aurora · Perfect Typography · Premium Colors
@@ -81,8 +83,6 @@
   .page-hero { padding: 20px 22px; }
   .page-hero h1 { font-size: 19px !important; }
 }
-
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 :root {
   /* ============================================
@@ -3259,4 +3259,268 @@ body, p, span, div, td, th, li {
   background: linear-gradient(135deg, #d4a843, #e0b04a) !important;
   color: #1a1a1a !important;
   flex-shrink: 0;
+}
+
+/* ============================================================
+   FIX #1 — BEYAZ TEXT'İ SICAК YAP
+   Tüm .guild-card, .server-card, .channel-list, .role-list,
+   .member-list ve generic card/list görünümleri
+   ============================================================ */
+body, html {
+  color: #e8e6df !important;
+}
+* {
+  /* Renk: beyaz görünüyor okunmuyor — fallback olarak champagne */
+  color: inherit;
+}
+.card, .server-card, .guild-card, .info-card, .stat-card, .dash-card, .dash-box,
+.panel, .box, .inv-box, .data-box, .leader-box, .role-box,
+.ch-box, .roles-card, .stat-box, .glass-card, .premium-card, .ch-stat,
+.tm-stat, .diag-vital, .aimod-stat, .pl-box, .ml-box, .ar-box, .sh-card,
+.voice-stat, .vc-leaderboard, .ch-row, .data-row {
+  color: #e8e6df !important;
+}
+.card p, .server-card p, .guild-card p, .info-card p, .stat-card p,
+.dash-card p, .dash-box p, .panel p, .box p, .inv-box p, .data-box p,
+.leader-box p, .role-box p, .ch-box p, .roles-card p, .stat-box p,
+.glass-card p, .premium-card p, .ch-stat p, .tm-stat p, .diag-vital p,
+.aimod-stat p, .pl-box p, .ml-box p, .ar-box p, .sh-card p,
+.voice-stat p, .vc-leaderboard p, .ch-row p, .data-row p {
+  color: #b8b3a3 !important;
+}
+.card h1, .card h2, .card h3, .card h4, .card h5, .card h6,
+.server-card h1, .server-card h2, .server-card h3,
+.guild-card h1, .guild-card h2, .guild-card h3,
+.dash-card h1, .dash-card h2, .dash-card h3,
+.dash-box h1, .dash-box h2, .dash-box h3,
+.panel h1, .panel h2, .panel h3,
+.box h1, .box h2, .box h3,
+.inv-box h1, .inv-box h2, .inv-box h3,
+.data-box h1, .data-box h2, .data-box h3,
+.leader-box h1, .leader-box h2, .leader-box h3,
+.role-box h1, .role-box h2, .role-box h3,
+.ch-box h1, .ch-box h2, .ch-box h3,
+.stat-box h1, .stat-box h2, .stat-box h3,
+.glass-card h1, .glass-card h2, .glass-card h3,
+.premium-card h1, .premium-card h2, .premium-card h3 {
+  color: #f4f1e8 !important;
+  font-weight: 700 !important;
+}
+
+/* ============================================================
+   FIX #2 — GUILD/SERVER LİSTESİ (gösterdiğin liste)
+   Обзор сервера gibi her server cardı premium
+   ============================================================ */
+.guild-card, .server-card {
+  display: flex !important;
+  align-items: center !important;
+  gap: 16px !important;
+  padding: 16px 20px !important;
+  background: linear-gradient(135deg, rgba(212, 168, 67, 0.04), rgba(212, 168, 67, 0.01)) !important;
+  border: 1px solid rgba(212, 168, 67, 0.12) !important;
+  border-radius: 12px !important;
+  margin-bottom: 8px !important;
+  color: #e8e6df !important;
+  font-size: 14.5px !important;
+  font-weight: 500 !important;
+  transition: all .15s ease;
+  cursor: pointer;
+}
+.guild-card:hover, .server-card:hover {
+  background: linear-gradient(135deg, rgba(212, 168, 67, 0.10), rgba(212, 168, 67, 0.03)) !important;
+  border-color: rgba(212, 168, 67, 0.35) !important;
+  transform: translateX(3px);
+}
+.guild-card .guild-icon, .server-card .server-icon,
+.guild-card .server-icon, .guild-card img, .server-card img {
+  width: 48px !important; height: 48px !important;
+  border-radius: 12px !important;
+  flex-shrink: 0;
+  border: 1px solid rgba(212, 168, 67, 0.25) !important;
+  object-fit: cover;
+  background: linear-gradient(135deg, #d4a843, #e0b04a);
+  color: #1a1a1a;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 22px;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(212, 168, 67, 0.3);
+}
+.guild-card .guild-info, .server-card .server-info,
+.guild-card .server-body, .server-card .server-body { flex: 1; min-width: 0; }
+.guild-card .guild-name, .server-card .server-name,
+.guild-card h3, .server-card h3 {
+  font-weight: 700 !important;
+  color: #f4f1e8 !important;
+  font-size: 16px !important;
+  margin-bottom: 2px !important;
+}
+.guild-card .guild-meta, .server-card .server-meta,
+.guild-card .server-stats, .server-card .server-stats {
+  font-size: 12.5px !important;
+  color: #b8b3a3 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  font-weight: 500 !important;
+}
+.guild-card .guild-meta strong, .server-card .server-meta strong,
+.guild-card .server-stats strong, .server-card .server-stats strong {
+  color: #d4a843 !important;
+  font-variant-numeric: tabular-nums;
+}
+.guild-card .guild-badge, .server-card .server-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  padding: 3px 10px !important;
+  border-radius: 6px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  background: rgba(74, 222, 128, 0.15) !important;
+  color: #86efac !important;
+  border: 1px solid rgba(74, 222, 128, 0.30) !important;
+}
+.guild-card .guild-badge.warn, .server-card .server-badge.warn {
+  background: rgba(251, 191, 36, 0.15) !important;
+  color: #fcd34d !important;
+  border-color: rgba(251, 191, 36, 0.30) !important;
+}
+.guild-card .guild-badge.err, .server-card .server-badge.err {
+  background: rgba(248, 113, 113, 0.15) !important;
+  color: #fca5a5 !important;
+  border-color: rgba(248, 113, 113, 0.30) !important;
+}
+
+/* ============================================================
+   FIX #3 — INPUT/SEARCH BOXES "kullanici yazacak yer belli degil"
+   ============================================================ */
+input[type="text"], input[type="search"], input[type="email"],
+input[type="password"], input[type="number"], input[type="url"],
+input[type="tel"], textarea, select, .field-input, .search-input,
+input.pl-search, input.user-search, input.member-search,
+input.ch-search, input.ar-search, .form-control, .form-input {
+  background: rgba(15, 15, 20, 0.6) !important;
+  color: #f4f1e8 !important;
+  border: 1.5px solid rgba(212, 168, 67, 0.20) !important;
+  border-radius: 10px !important;
+  padding: 10px 14px !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  width: 100%;
+  transition: all .15s ease;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+input[type="text"]:focus, input[type="search"]:focus, input[type="email"]:focus,
+input[type="password"]:focus, input[type="number"]:focus, input[type="url"]:focus,
+input[type="tel"]:focus, textarea:focus, select:focus, .field-input:focus,
+.search-input:focus {
+  outline: none !important;
+  background: rgba(20, 20, 25, 0.8) !important;
+  color: #ffffff !important;
+  border-color: rgba(212, 168, 67, 0.55) !important;
+  box-shadow: 0 0 0 3px rgba(212, 168, 67, 0.15), inset 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+}
+input::placeholder, textarea::placeholder {
+  color: #6b6558 !important;
+  opacity: 1 !important;
+  font-weight: 400 !important;
+}
+input::-webkit-input-placeholder, textarea::-webkit-input-placeholder {
+  color: #6b6558 !important;
+  opacity: 1 !important;
+}
+input::-moz-placeholder, textarea::-moz-placeholder {
+  color: #6b6558 !important;
+  opacity: 1 !important;
+}
+input:focus::placeholder, textarea:focus::placeholder {
+  color: #8b8579 !important;
+}
+
+/* === Search containers — make them pop with icon === */
+.search-box, .search-wrap, .pl-filters, .ml-filter-box, .ar-search,
+.member-search-box, .ch-toolbar, .users-toolbar, .ch-filters {
+  background: linear-gradient(135deg, rgba(212, 168, 67, 0.04), rgba(212, 168, 67, 0.01)) !important;
+  border: 1px solid rgba(212, 168, 67, 0.15) !important;
+  border-radius: 12px !important;
+  padding: 14px 16px !important;
+  margin-bottom: 14px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  flex-wrap: wrap;
+}
+
+/* ============================================================
+   GUILD CARDS (g-card / g-icon / g-name / g-members)
+   ============================================================ */
+.g-grid, .guild-grid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)) !important;
+  gap: 12px !important;
+  margin-top: 8px;
+}
+.g-card, .guild-card {
+  display: flex !important;
+  align-items: center !important;
+  gap: 14px !important;
+  padding: 14px 18px !important;
+  background: linear-gradient(135deg, rgba(212, 168, 67, 0.04), rgba(212, 168, 67, 0.01)) !important;
+  border: 1px solid rgba(212, 168, 67, 0.12) !important;
+  border-radius: 12px !important;
+  color: #e8e6df !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  transition: all .15s ease;
+  cursor: pointer;
+}
+.g-card:hover, .guild-card:hover {
+  background: linear-gradient(135deg, rgba(212, 168, 67, 0.10), rgba(212, 168, 67, 0.03)) !important;
+  border-color: rgba(212, 168, 67, 0.35) !important;
+  transform: translateX(3px);
+}
+.g-icon, .guild-icon, .g-card > img, .guild-card > img {
+  width: 48px !important; height: 48px !important;
+  border-radius: 12px !important;
+  flex-shrink: 0;
+  border: 1.5px solid rgba(212, 168, 67, 0.30) !important;
+  object-fit: cover;
+  background: linear-gradient(135deg, #d4a843, #e0b04a);
+  box-shadow: 0 2px 8px rgba(212, 168, 67, 0.25);
+}
+.g-name, .guild-name, .g-card > .g-name, .guild-card > .guild-name {
+  font-weight: 700 !important;
+  color: #f4f1e8 !important;
+  font-size: 16px !important;
+  line-height: 1.2;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.g-members, .guild-members, .g-card > .g-members, .guild-card > .guild-members {
+  font-size: 12.5px !important;
+  color: #b8b3a3 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  font-weight: 500 !important;
+}
+.g-members i, .guild-members i {
+  color: #d4a843 !important;
+  font-size: 11px;
+}
+.g-id, .guild-id, .g-card > .g-id, .guild-card > .guild-id {
+  font-size: 11px !important;
+  color: #6b6558 !important;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 500 !important;
+  padding: 2px 7px !important;
+  background: rgba(212, 168, 67, 0.06) !important;
+  border-radius: 5px !important;
+  border: 1px solid rgba(212, 168, 67, 0.10) !important;
+  white-space: nowrap;
 }
