@@ -484,51 +484,89 @@
       // yapiyor; bunu engelle. .ch-row uzerindeki her tiklamayi yakalayip
       // butona degilse bile scroll pozisyonunu koru.
       list.addEventListener('click', function (e) {
+        // HER tiklamada scroll pozisyonunu kaydet ve tiklama bittikten sonra
+        // birden fazla noktada geri yukle. Chrome, buton focus aldiktan sonra
+        // focus({preventScroll:true}) override'ini bile bypass edip scrollIntoView
+        // yapabiliyor; en garantili yol scroll event'ini izleyip geri almak.
+        var mc = document.getElementById('main-content');
+        var savedPanel = mc ? mc.scrollTop : 0;
+        var savedPage = window.scrollY || window.pageYOffset || 0;
+        function restore() {
+          if (mc) mc.scrollTop = savedPanel;
+          window.scrollTo(0, savedPage);
+        }
+        // Tiklama bittikten sonra coklu restore noktalari
+        restore();
+        Promise.resolve().then(restore);
+        requestAnimationFrame(function () {
+          restore();
+          requestAnimationFrame(restore);
+          setTimeout(restore, 0);
+          setTimeout(restore, 30);
+          setTimeout(restore, 100);
+          setTimeout(restore, 250);
+          setTimeout(restore, 500);
+        });
+
         var btn = e.target.closest('button[data-action]');
         if (btn) {
-          // Onemli: confirm() cagirilmadan once scroll kaybolmasin, focus'u
-          // engelle, sonra restore et.
           e.preventDefault();
-          // Buton focus scroll tetiklemesin diye once body'se focus ver.
-          if (document.activeElement) document.activeElement.blur();
+          e.stopPropagation();
+          // Buton focus scroll tetiklemesin — blur et
+          if (document.activeElement === btn) btn.blur();
           var action = btn.getAttribute('data-action');
           var id = btn.getAttribute('data-id');
           var name = btn.getAttribute('data-name');
           if (action === 'delete-ch' || action === 'delete-cat') {
-            // confirm() senkron oldugu icin scroll burada restore edilir,
-            // sonra islem asenkron giderse yine restore et.
-            restoreClickPosition();
             deleteChannel(id, name);
           }
-          // Silme onay diyalogu kapandiktan sonra scroll restore et.
-          setTimeout(restoreClickPosition, 0);
-          setTimeout(restoreClickPosition, 50);
-          setTimeout(restoreClickPosition, 200);
           return;
         }
         var hdr = e.target.closest('.cat-header');
         if (hdr) {
           toggleCat(hdr);
-          // toggleCat kendi icinde scroll restore yapiyor; yine de emniyet.
-          setTimeout(restoreClickPosition, 0);
           return;
         }
-        // Kanal satiri (ch-row) veya herhangi bir alt elementine tiklandi:
-        // burada bir islem yapmiyoruz ama tarayici scroll yapabilir,
-        // restore et.
         var row = e.target.closest('.ch-row');
         if (row) {
           e.preventDefault();
           if (document.activeElement) document.activeElement.blur();
-          restoreClickPosition();
-          setTimeout(restoreClickPosition, 0);
         }
       });
-      // Document seviyesinde: hash degisikligi veya herhangi bir tarayici
-      // scroll tetiklemesini de engellemek icin mouseup'ta restore.
-      list.addEventListener('mouseup', function () {
-        setTimeout(restoreClickPosition, 0);
-      });
+      // Capture fazinda mousedown'da scroll kilidi ac, butona basildi mi
+      list.addEventListener('mousedown', function (e) {
+        var mc = document.getElementById('main-content');
+        if (!mc) return;
+        // Tiklama anindaki scroll pozisyonunu kaydet
+        if (!list.__savedPos) {
+          list.__savedPos = {
+            panel: mc.scrollTop,
+            page: window.scrollY || window.pageYOffset || 0,
+            ts: Date.now(),
+          };
+        }
+      }, true);
+      // main-content uzerinde scroll olursa ve son 1 saniyede tiklanma olduysa
+      // geri al. Bu, Chrome'un focus/beklenmeyen scrollIntoView davranisini
+      // yakalar.
+      if (typeof list.__scrollGuardInstalled === 'undefined') {
+        list.__scrollGuardInstalled = true;
+        var guard = function () {
+          if (!list.__savedPos) return;
+          if (Date.now() - list.__savedPos.ts > 1500) return; // 1.5s sonra serbest birak
+          var mc = document.getElementById('main-content');
+          if (mc && (mc.scrollTop !== list.__savedPos.panel ||
+                     (window.scrollY || 0) !== list.__savedPos.page)) {
+            mc.scrollTop = list.__savedPos.panel;
+            window.scrollTo(0, list.__savedPos.page);
+          }
+        };
+        var mcEl = document.getElementById('main-content');
+        if (mcEl) {
+          mcEl.addEventListener('scroll', guard, true);
+          window.addEventListener('scroll', guard, true);
+        }
+      }
     }
   }
 
@@ -552,6 +590,40 @@
       if (window.__suppressScrollIntoView) return;
       return origScrollIntoView.call(this, opts);
     };
+    // KRITIK: Chrome "scroll into view on focus" gibi durumlarda window scroll
+    // tetikliyor. Bunu engellemek icin scroll event'ini izleyip, eger son 100ms
+    // icinde bir tiklama olduysa scroll'u geri al. Bu agresif ama etkili.
+    var lastClickAt = 0;
+    var lastScrollPos = { panel: 0, page: 0 };
+    document.addEventListener('mousedown', function () {
+      lastClickAt = Date.now();
+      var mc = document.getElementById('main-content');
+      lastScrollPos.panel = mc ? mc.scrollTop : 0;
+      lastScrollPos.page = window.scrollY || window.pageYOffset || 0;
+    }, true);
+    document.addEventListener('click', function () {
+      lastClickAt = Date.now();
+    }, true);
+    function forceRestore() {
+      var mc = document.getElementById('main-content');
+      if (mc) mc.scrollTop = lastScrollPos.panel;
+      window.scrollTo(0, lastScrollPos.page);
+    }
+    // main-content scroll olursa ve son tiklama 500ms icindeyse, geri al
+    var mcEl = document.getElementById('main-content');
+    if (mcEl) {
+      mcEl.addEventListener('scroll', function () {
+        if (Date.now() - lastClickAt < 500) {
+          // Tiklama sonrasi izinsiz scroll — geri al
+          forceRestore();
+        }
+      }, true);
+    }
+    window.addEventListener('scroll', function () {
+      if (Date.now() - lastClickAt < 500) {
+        forceRestore();
+      }
+    }, true);
   })();
 
   if (document.readyState === 'loading') {
