@@ -19,7 +19,7 @@
     <div class="modal-title"><i class="fas fa-terminal"></i> Пользователь Создать команду</div>
     <div class="vars-box">Переменные: <span>{user}</span> <span>{сервер}</span> <span>{channel}</span> <span>{count}</span></div>
     <label style="color:#c8922a;font-size:11px;text-transform:uppercase;display:block;margin-bottom:6px;">Tetikleyici (prefix olmadan)</label>
-    <input type="text" id="cmd-trigger" placeholder="напр.: merhaba, правила" class="modal-input" style="font-family:monospace;">
+    <input type="text" id="cmd-trigger" placeholder="напр.: merhaba, правила" class="modal-input" style="">
     <label style="color:#c8922a;font-size:11px;text-transform:uppercase;display:block;margin-bottom:6px;">Ответ</label>
     <textarea id="cmd-response" placeholder="Ответ команды..." class="modal-textarea"></textarea>
     <label style="color:#c8922a;font-size:11px;text-transform:uppercase;display:block;margin-bottom:6px;">Ответ Tipi</label>
@@ -28,7 +28,7 @@
       <option value="embed">Эмбед</option>
     </select>
     <div style="display:flex;gap:10px;margin-top:5px;">
-      <button class="modal-btn" onclick="createCommand()" style="background:linear-gradient(135deg,#c8922a,#c8922a);color:var(--bg);font-weight:800;">Создать</button>
+      <button class="modal-btn" onclick="createCommand()" style="background:linear-gradient(135deg,#c8922a,#c8922a);color:var(--bg);">Создать</button>
       <button class="modal-btn" onclick="closeModal()" style="background:rgba(26,22,16,0.7);color:rgba(240,232,208,0.55);border:1px solid #333;">Отмена</button>
     </div>
   </div>

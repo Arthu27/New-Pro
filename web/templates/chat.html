@@ -560,7 +560,7 @@ function renderMemberList(members) {
   if (online.length) { html += '<div class="member-section">В сети - ' + online.length + '</div>'; html += online.map(renderMemberItem).join(''); }
   if (bots.length) { html += '<div class="member-section">Botlar - ' + bots.length + '</div>'; html += bots.map(renderMemberItem).join(''); }
   if (offline.length) { html += '<div class="member-section">Не в сети - ' + offline.length + '</div>'; html += offline.map(renderMemberItem).join(''); }
-  document.getElementById('members-scroll').innerHTML = html || '<div style="padding:20px;text-align:center;color:rgba(240,232,208,0.2);font-size:12px;">Uye yok</div>';
+  document.getElementById('members-scroll').innerHTML = html || '<div style="padding:20px;color:rgba(240,232,208,0.2);font-size:12px;">Uye yok</div>';
 }
 
 function renderMemberItem(m) {

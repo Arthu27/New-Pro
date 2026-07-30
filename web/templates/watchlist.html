@@ -37,14 +37,14 @@ async function loadWatchlist(gid) {
     }
     tbody.innerHTML = d.map(function(u) {
       return '<tr>' +
-        '<td><div style="font-weight:600;color:var(--text);">👤 ' + esc(u.name) + '</div><div class="wl-meta">' + esc(u.id) + '</div></td>' +
+        '<td><div style="color:var(--text);">👤 ' + esc(u.name) + '</div><div class="wl-meta">' + esc(u.id) + '</div></td>' +
         '<td style="color:var(--text-2);">' + esc(u.reason||'—') + '</td>' +
         '<td style="color:var(--text-3);">' + esc(u.added_by||'—') + '</td>' +
         '<td style="color:var(--text-3);">' + esc((u.timestamp||'').slice(0,10)) + '</td>' +
       '</tr>';
     }).join('');
   } catch(e) {
-    document.getElementById('wl-body').innerHTML = '<tr><td colspan="4" style="color:var(--err);padding:20px;text-align:center;">Не удалось загрузить</td></tr>';
+    document.getElementById('wl-body').innerHTML = '<tr><td colspan="4" style="color:var(--err);padding:20px;">Не удалось загрузить</td></tr>';
   }
 }
 

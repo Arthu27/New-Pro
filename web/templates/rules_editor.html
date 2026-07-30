@@ -103,7 +103,7 @@ function removeRule(i) { rules.splice(i,1); renderRules(); }
 function updatePreview() {
   var box = document.getElementById('preview');
   if(!rules.length) { box.innerHTML='<p style="color:var(--text-3);font-size:13px;font-style:italic;">Правило yok.</p>'; return; }
-  box.innerHTML = '<div style="color:#c8922a;font-weight:700;margin-bottom:12px;font-size:15px;"><i class="fas fa-scroll"></i> Сервер Правила</div>'+
+  box.innerHTML = '<div style="color:#c8922a;margin-bottom:12px;font-size:15px;"><i class="fas fa-scroll"></i> Сервер Правила</div>'+
     rules.map(function(r,i){
       return '<div class="preview-rule"><span>'+(i+1)+'.</span>'+r+'</div>';
     }).join('');

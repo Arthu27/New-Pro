@@ -55,13 +55,13 @@
     </div>
 
     <button class="btn-save" onclick="saveLeveling()">💾 СОХРАНИТЬ</button>
-    <div id="lv-status" style="margin-top:10px;font-size:12px;text-align:center;font-family:Inter,sans-serif;letter-spacing:1px;"></div>
+    <div id="lv-status" style="margin-top:10px;font-size:12px;letter-spacing:1px;"></div>
   </div>
 
   <!-- LEADERBOARD -->
   <div class="lv-box">
     <div class="box-title">🏆 Таблица лидеров</div>
-    <div id="lb-list"><p style="color:#333;text-align:center;padding:40px;font-family:Inter,sans-serif;font-size:11px;letter-spacing:2px;">ВЫБЕРИТЕ СЕРВЕР...</p></div>
+    <div id="lb-list"><p style="color:#333;padding:40px;font-size:11px;letter-spacing:2px;">ВЫБЕРИТЕ СЕРВЕР...</p></div>
   </div>
 </div>
 
@@ -126,7 +126,7 @@ async function loadLeveling() {
   var medals = ['🥇','🥈','🥉'];
   var box = document.getElementById('lb-list');
   if (!lb.length) {
-    box.innerHTML = '<p style="color:#333;text-align:center;padding:40px;font-family:\'Orbitron\',sans-serif;font-size:11px;letter-spacing:2px;">ДАННЫЕ YOK</p>';
+    box.innerHTML = '<p style="color:#333;padding:40px;font-size:11px;letter-spacing:2px;">ДАННЫЕ YOK</p>';
     return;
   }
   box.innerHTML = lb.map(function(u, i) {

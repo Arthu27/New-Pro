@@ -53,8 +53,8 @@ async function loadDuty(gid) {
       sorted.map(function(e,i){
         var pct = Math.round((e[1].total||0)/maxPts*100);
         return '<tr><td><span class="dp-rank-medal">' + (medals[i]||'') + '</span><span class="dp-rank-num">#' + (i+1) + '</span></td>' +
-          '<td style="color:var(--text);font-weight:600;">' + esc(e[1].name||e[0]) + '</td>' +
-          '<td style="color:var(--ac);font-weight:700;">' + (e[1].total||0) + ' ⭐</td>' +
+          '<td style="color:var(--text);">' + esc(e[1].name||e[0]) + '</td>' +
+          '<td style="color:var(--ac);">' + (e[1].total||0) + ' ⭐</td>' +
           '<td style="min-width:140px;"><div class="dp-bar"><div class="dp-bar-fill" style="width:'+pct+'%"></div></div></td></tr>';
       }).join('') + '</tbody></table>'
       : '<div class="empty-state">Пока очков нет</div>';
@@ -66,7 +66,7 @@ async function loadDuty(gid) {
         var u = e[1].active;
         var tasks = (u.tasks||[]).join(', ');
         var since = u.start ? new Date(u.start).toLocaleString('ru-RU') : '?';
-        return '<tr><td style="color:var(--text);font-weight:600;">' + esc(u.user_name||e[0]) + ' <span class="active-badge">Активен</span></td>' +
+        return '<tr><td style="color:var(--text);">' + esc(u.user_name||e[0]) + ' <span class="active-badge">Активен</span></td>' +
           '<td style="color:var(--ac);">' + esc(tasks) + '</td>' +
           '<td style="color:var(--text-3);">' + since + '</td></tr>';
       }).join('') + '</tbody></table>'

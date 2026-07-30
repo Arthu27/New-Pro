@@ -55,14 +55,14 @@
     <i class="fas fa-shield-alt" id="threatIcon" style="color:#2ECC71;"></i>
   </div>
   <div style="flex:1;min-width:200px;">
-    <div style="font-size:10.5px;color:var(--text-2);font-weight:700;text-transform:uppercase;letter-spacing:0.10em;margin-bottom:4px;">🛡️ Индекс угрозы</div>
+    <div style="font-size:10.5px;color:var(--text-2);text-transform:uppercase;letter-spacing:0.10em;margin-bottom:4px;">🛡️ Индекс угрозы</div>
     <div style="display:flex;align-items:baseline;gap:10px;">
-      <span id="threatScoreVal" style="font-size:20px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;letter-spacing:-0.02em;">15/100</span>
-      <span id="threatLevelBadge" style="font-size:10.5px;font-weight:700;color:#2ECC71;background:rgba(46,204,113,0.12);padding:3px 10px;border-radius:99px;border:1px solid #2ECC7133;">Низкая</span>
+      <span id="threatScoreVal" style="font-size:20px;color:var(--text);font-variant-numeric:tabular-nums;letter-spacing:-0.02em;">15/100</span>
+      <span id="threatLevelBadge" style="font-size:10.5px;color:#2ECC71;background:rgba(46,204,113,0.12);padding:3px 10px;border-radius:99px;border:1px solid #2ECC7133;">Низкая</span>
     </div>
     <div class="threat-bar"><div class="threat-bar-fill" id="threatFill" style="width:15%;background:#2ECC71;"></div></div>
   </div>
-  <button id="btnLockdown" type="button" style="padding:10px 18px;border-radius:99px;font-size:13px;font-weight:700;cursor:pointer;background:linear-gradient(135deg, #34d399, #10b981);color:#0a0907;border:none;display:inline-flex;align-items:center;gap:8px;white-space:nowrap;box-shadow:0 4px 14px rgba(52,211,153,0.30);transition:all 0.2s var(--ease);">
+  <button id="btnLockdown" type="button" style="padding:10px 18px;border-radius:99px;font-size:13px;cursor:pointer;background:linear-gradient(135deg, #34d399, #10b981);color:#0a0907;border:none;display:inline-flex;align-items:center;gap:8px;white-space:nowrap;box-shadow:0 4px 14px rgba(52,211,153,0.30);transition:all 0.2s var(--ease);">
     <i class="fas fa-lock"></i>
     <span id="btnLockdownText">Lockdown</span>
   </button>
@@ -72,11 +72,11 @@
 <div class="dash-box">
   <div class="dash-box-head">
     <div class="dash-box-title"><i class="fas fa-chart-line"></i> Быстрая статистика</div>
-    <span style="font-size:10.5px;color:var(--text-3);font-weight:600;text-transform:uppercase;letter-spacing:0.08em;">в реальном времени</span>
+    <span style="font-size:10.5px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.08em;">в реальном времени</span>
   </div>
   <div class="dash-box-body" style="padding:0;">
     <div class="quick-grid" id="quick-stats">
-      <div style="grid-column:1/-1;text-align:center;padding:14px;color:var(--text-3);">
+      <div style="grid-column:1/-1;padding:14px;color:var(--text-3);">
         <i class="fas fa-spinner fa-spin" style="color:var(--ac);"></i>
       </div>
     </div>
@@ -89,9 +89,9 @@
   <div class="dash-box">
     <div class="dash-box-head">
       <div class="dash-box-title"><i class="fas fa-history"></i> Последние действия</div>
-      <a href="/logs" style="font-size:10.5px;color:var(--ac);text-decoration:none;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;transition:color 0.15s;">Все →</a>
+      <a href="/logs" style="font-size:10.5px;color:var(--ac);text-decoration:none;text-transform:uppercase;letter-spacing:0.08em;transition:color 0.15s;">Все →</a>
     </div>
-    <div class="dash-box-body" id="recent-activity" style="text-align:center;padding:20px;color:var(--text-3);">
+    <div class="dash-box-body" id="recent-activity" style="padding:20px;color:var(--text-3);">
       <i class="fas fa-spinner fa-spin" style="color:var(--ac);"></i>
     </div>
   </div>
@@ -101,9 +101,9 @@
   <div class="dash-box">
     <div class="dash-box-head">
       <div class="dash-box-title"><i class="fas fa-sign-in-alt"></i> Входы в панель</div>
-      <a href="/panel-logs" style="font-size:10.5px;color:var(--ac);text-decoration:none;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;">Все →</a>
+      <a href="/panel-logs" style="font-size:10.5px;color:var(--ac);text-decoration:none;text-transform:uppercase;letter-spacing:0.08em;">Все →</a>
     </div>
-    <div class="dash-box-body" id="login-log" style="text-align:center;padding:20px;color:var(--text-3);">
+    <div class="dash-box-body" id="login-log" style="padding:20px;color:var(--text-3);">
       <i class="fas fa-spinner fa-spin" style="color:var(--ac);"></i>
     </div>
   </div>
@@ -236,7 +236,7 @@
         '<div class="quick-item"><h3>' + mutes + '</h3><p>Мутов</p></div>' +
         '<div class="quick-item"><h3 style="color:var(--ok);">✓</h3><p>Активен</p></div>';
     } catch (e) {
-      $('quick-stats').innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--err);">Не удалось загрузить</div>';
+      $('quick-stats').innerHTML = '<div style="grid-column:1/-1;color:var(--err);">Не удалось загрузить</div>';
     }
   }
 
@@ -284,7 +284,7 @@
             '<div class="login-item-name">' + esc(l.username) + '</div>' +
             '<div class="login-item-time">' + esc(t) + '</div>' +
           '</div>' +
-          '<span style="padding:3px 9px;border-radius:99px;font-size:11px;font-weight:700;background:' + rc + '15;color:' + rc + ';border:1px solid ' + rc + '44;letter-spacing:0.06em;">' + esc((l.roles || '').toUpperCase()) + '</span>' +
+          '<span style="padding:3px 9px;border-radius:99px;font-size:11px;background:' + rc + '15;color:' + rc + ';border:1px solid ' + rc + '44;letter-spacing:0.06em;">' + esc((l.roles || '').toUpperCase()) + '</span>' +
         '</div>';
       }).join('');
     } catch (e) { /* yoksay */ }

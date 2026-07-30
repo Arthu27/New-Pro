@@ -76,7 +76,7 @@
       <button class="btn btn-primary" id="add-cat" type="button"><i class="fas fa-plus"></i> Добавить</button>
     </div>
     <div id="cat-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;">
-      <p style="grid-column:1/-1;text-align:center;color:var(--text-3);padding:14px;font-size:11px;">Загрузка...</p>
+      <p style="grid-column:1/-1;color:var(--text-3);padding:14px;font-size:11px;">Загрузка...</p>
     </div>
   </div>
 </div>
@@ -93,7 +93,7 @@
   function showToast(msg, ok) {
     var t = document.createElement('div');
     t.textContent = msg;
-    t.style.cssText = 'position:fixed;top:14px;right:14px;padding:9px 16px;border-radius:8px;font-weight:600;z-index:99999;font-size:12px;background:' + (ok ? 'linear-gradient(135deg,var(--ok),var(--ok))' : 'linear-gradient(135deg,var(--err),var(--err))') + ';color:#fff;';
+    t.style.cssText = 'position:fixed;top:14px;right:14px;padding:9px 16px;border-radius:8px;z-index:99999;font-size:12px;background:' + (ok ? 'linear-gradient(135deg,var(--ok),var(--ok))' : 'linear-gradient(135deg,var(--err),var(--err))') + ';color:#fff;';
     document.body.appendChild(t);
     setTimeout(function () { t.remove(); }, 1800);
   }

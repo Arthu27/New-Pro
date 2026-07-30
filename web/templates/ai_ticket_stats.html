@@ -132,7 +132,7 @@
                 <tbody>
                     {% for user in stats.top_offenders %}
                     <tr>
-                        <td><span style="color:var(--text-3);font-weight:700;">#{{ loop.index }}</span></td>
+                        <td><span style="color:var(--text-3);">#{{ loop.index }}</span></td>
                         <td>{{ user.name }}</td>
                         <td><span class="badge-modern">{{ user.count }}</span></td>
                         <td>{{ user.total_duration }} дн.</td>
@@ -166,7 +166,7 @@
                                 <div class="modern-progress" style="flex:1;">
                                     <div class="modern-progress-bar" style="width:{{ reason.percentage }}%; background: linear-gradient(90deg, #d4a843, #f0c75e);"></div>
                                 </div>
-                                <span style="color:var(--text);font-weight:700;min-width:48px;text-align:right;">{{ reason.percentage }}%</span>
+                                <span style="color:var(--text);min-width:48px;">{{ reason.percentage }}%</span>
                             </div>
                         </td>
                     </tr>
