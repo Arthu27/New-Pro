@@ -279,6 +279,26 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
             return str(guilds[0].id)
         return configured
 
+    def _run_async(coro, timeout=10):
+        """Run an async coroutine from sync code, return result or raise."""
+        import asyncio as _aio
+        import web.app as _app
+        bot = _app.bot_instance
+        if not bot or not getattr(bot, 'loop', None):
+            raise RuntimeError('Bot not running')
+        future = _aio.run_coroutine_threadsafe(coro, bot.loop)
+        return future.result(timeout=timeout)
+
+    async def _resolve_member_async(guild, user_id):
+        """Async helper: get cached member or fetch from API."""
+        member = guild.get_member(int(user_id))
+        if member:
+            return member
+        try:
+            return await guild.fetch_member(int(user_id))
+        except Exception:
+            return None
+
     # ── PAGE ROUTES ──────────────────────────────────────────────────────────
 
     @app.route('/ai_ticket_stats')
@@ -1662,7 +1682,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         # Resolve user
         user_id = d.get('user_id', '').strip('<@!>')
         try:
-            member = guild.get_member(int(user_id)) or await guild.fetch_member(int(user_id))
+            member = _run_async(_resolve_member_async(guild, int(user_id)))
         except Exception:
             return jsonify({'error': 'Пользователь не найден'}), 404
         if not member:
@@ -1670,7 +1690,7 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         from datetime import datetime, timedelta
         until = datetime.utcnow() + timedelta(seconds=sec)
         try:
-            await member.timeout(until, reason=f"[Panel] {session.get('username')}: {d.get('reason', '')}")
+            _run_async(member.timeout(until, reason=f"[Panel] {session.get('username')}: {d.get('reason', '')}"))
         except Exception as e:
             return jsonify({'error': str(e)}), 400
         cog._mutes.setdefault(str(guild.id), {})[str(member.id)] = {
@@ -1697,13 +1717,13 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         guild = bot_instance.get_guild(int(session.get('selected_guild') or MAIN_GUILD_ID))
         user_id = d.get('user_id', '').strip('<@!>')
         try:
-            member = guild.get_member(int(user_id)) or await guild.fetch_member(int(user_id))
+            member = _run_async(_resolve_member_async(guild, int(user_id)))
         except Exception:
             return jsonify({'error': 'Пользователь не найден'}), 404
         if not member:
             return jsonify({'error': 'Пользователь не найден'}), 404
         try:
-            await guild.ban(member, reason=f"[Panel] {session.get('username')}: {d.get('reason', '')}")
+            _run_async(guild.ban(member, reason=f"[Panel] {session.get('username')}: {d.get('reason', '')}"))
         except Exception as e:
             return jsonify({'error': str(e)}), 400
         cog._bans.setdefault(str(guild.id), {})[str(member.id)] = {
@@ -1731,13 +1751,13 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         guild = bot_instance.get_guild(int(session.get('selected_guild') or MAIN_GUILD_ID))
         user_id = d.get('user_id', '').strip('<@!>')
         try:
-            member = guild.get_member(int(user_id)) or await guild.fetch_member(int(user_id))
+            member = _run_async(_resolve_member_async(guild, int(user_id)))
         except Exception:
             return jsonify({'error': 'Пользователь не найден'}), 404
         if not member:
             return jsonify({'error': 'Пользователь не найден'}), 404
         try:
-            await member.kick(reason=f"[Panel] {session.get('username')}: {d.get('reason', '')}")
+            _run_async(member.kick(reason=f"[Panel] {session.get('username')}: {d.get('reason', '')}"))
         except Exception as e:
             return jsonify({'error': str(e)}), 400
         cog._kicks.setdefault(str(guild.id), {})[str(member.id)] = {
@@ -1785,8 +1805,8 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         user_id = d.get('user_id', '').strip('<@!>')
         guild = bot_instance.get_guild(int(session.get('selected_guild') or MAIN_GUILD_ID))
         try:
-            user = await bot_instance.fetch_user(int(user_id))
-            await guild.unban(user)
+            user = _run_async(bot_instance.fetch_user(int(user_id)))
+            _run_async(guild.unban(user))
         except Exception as e:
             return jsonify({'error': str(e)}), 400
         cog._bans.get(str(guild.id), {}).pop(user_id, None)
