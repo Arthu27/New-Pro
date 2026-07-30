@@ -40,3 +40,18 @@ proc_name = 'moebius-web'
 # Maksimum istek sayisi sonrasi worker'i yenile (memory leak korunmasi)
 max_requests = int(os.getenv('WEB_MAX_REQUESTS', '1000'))
 max_requests_jitter = int(os.getenv('WEB_MAX_REQUESTS_JITTER', '100'))
+
+# Worker sinifi: sync (default) veya gevent (cok baglantili I/O icin).
+# Flask + flask_session (filesystem) ile 'sync' yeterli; yuksek RPS isteniyorsa
+# 'gevent' secilebilir (gevent kurulu olmali).
+_worker_class_env = os.getenv('WEB_WORKER_CLASS', 'sync').lower()
+if _worker_class_env == 'gevent':
+    try:
+        import gevent  # noqa: F401
+        worker_class = 'gevent'
+        # gevent ile connection basina thread olmadigindan worker basina daha
+        # fazla eszamanli istek kaldirir.
+        if int(os.getenv('WEB_WORKERS', '0') or 0) <= 1:
+            workers = int(os.getenv('WEB_THREADS', '2'))  # threads yerine worker
+    except ImportError:
+        worker_class = 'sync'

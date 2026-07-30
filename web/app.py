@@ -28,16 +28,18 @@ app.config['SESSION_PERMANENT'] = True
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
 app.jinja_env.auto_reload = True
 
-# Сервер-side filesystem session
-app.config['SESSION_TYPE'] = 'filesystem'
-app.config['SESSION_FILE_DIR'] = _os.path.join(_BASE, '..', 'data', 'flask_sessions')
-# Eski: 500 — cookielerde sikinti yasiyorduk. Cok yuksek (5000) tutuyoruz ki
-# 30 gunluk kalici oturumlarda dosya prüne'i minimuma insin.
-app.config['SESSION_FILE_THRESHOLD'] = int(_os.getenv('FLASK_SESSION_THRESHOLD', '5000'))
-_os.makedirs(app.config['SESSION_FILE_DIR'], exist_ok=True)
-
-from flask_session import Session
-Session(app)
+# Session: default Flask cookie session (itsdangerous imzali cookie).
+# Eski: flask_session filesystem (her istekte dosya IO, 50 paralel istekte darboğaz).
+# Yeni: cookie, sifir disk IO, <500 byte. Oturum boyutu kucuk oldugu icin sorun degil.
+# Ileride Redis gerekirse SESSION_TYPE=redis eklenebilir.
+_USE_FS_SESSION = _os.getenv('USE_FS_SESSION', '0') == '1'
+if _USE_FS_SESSION:
+    app.config['SESSION_TYPE'] = 'filesystem'
+    app.config['SESSION_FILE_DIR'] = _os.path.join(_BASE, '..', 'data', 'flask_sessions')
+    app.config['SESSION_FILE_THRESHOLD'] = int(_os.getenv('FLASK_SESSION_THRESHOLD', '5000'))
+    _os.makedirs(app.config['SESSION_FILE_DIR'], exist_ok=True)
+    from flask_session import Session
+    Session(app)
 
 bot_instance = None
 

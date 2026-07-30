@@ -327,6 +327,11 @@
   function toggleCat(header) {
     // Book-style accordion: only the selected category is open in the list.
     // No side drawer and no automatic scroll/navigation is used.
+    // Scroll koruma: kategori acilinca/ kapaninca yukseklik degisiyor, tarayici
+    // scroll anchor'i kaybedip en uste ziplayabiliyor. Pozisyonu manuel koruyoruz.
+    var mc = document.getElementById('main-content');
+    var savedPanel = mc ? mc.scrollTop : 0;
+    var savedPage = window.scrollY || window.pageYOffset || 0;
     var group = header.closest('.cat-group');
     var wasOpen = group.classList.contains('active');
     document.querySelectorAll('.cat-group.active').forEach(function (item) {
@@ -343,6 +348,23 @@
       if (channels) channels.classList.add('open');
       if (toggle) toggle.classList.add('open');
     }
+    // Layout tamamlanir tamamlanmaz ve bir frame sonra scroll'u geri yukle.
+    if (mc) mc.scrollTop = savedPanel;
+    window.scrollTo(0, savedPage);
+    requestAnimationFrame(function () {
+      if (mc) mc.scrollTop = savedPanel;
+      window.scrollTo(0, savedPage);
+    });
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        if (mc) mc.scrollTop = savedPanel;
+        window.scrollTo(0, savedPage);
+      });
+    });
+    setTimeout(function () {
+      if (mc) mc.scrollTop = savedPanel;
+      window.scrollTo(0, savedPage);
+    }, 50);
   }
 
   function closeCategoryDrawer() {
