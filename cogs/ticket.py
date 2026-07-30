@@ -19,7 +19,7 @@ GIF_PANEL        = "https://media.tenor.com/ZBDpMFBMFpkAAAAC/celebration-party.g
 AI_ENABLED = True  # AI поддержка система активен
 MAX_AI_MESSAGES = 10
 
-# Bu сервер ticket система отключено
+# Это сервер ticket система отключено
 TICKET_DISABLED_GUILDS: set = set()
 
 
@@ -36,7 +36,7 @@ class TicketCategoryView(discord.ui.View):
             state = cog._get_ticket_state(self.guild_id, self.channel_id)
             state['category'] = category
             
-            # Жалоба kategorisinde direkt жалоба поток запустить
+            # В категории жалобы сразу запускать поток жалобы
             if category == 'sikayet':
                 state['complaint'] = {
                     'active': True,
@@ -100,10 +100,10 @@ class TicketView(discord.ui.View):
     async def open_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
         guild = interaction.guild
         
-        # Bu на сервере ticket отключено
+        # Это на сервере ticket отключено
         if guild.id in TICKET_DISABLED_GUILDS:
             await interaction.response.send_message(
-                '❌ Bu на сервере ticket система активен не.', ephemeral=True
+                '❌ Это на сервере ticket система активен не.', ephemeral=True
             )
             return
         
@@ -115,7 +115,7 @@ class TicketView(discord.ui.View):
             )
             return
         
-        # ДО response отправить (3 saniye правило)
+        # Пауза перед отправкой ответа (правило 3 секунды Discord)
         await interaction.response.send_message(
             "🎫 Канал тикета создан...",
             ephemeral=True
@@ -245,7 +245,7 @@ class CloseTicketView(discord.ui.View):
     async def close_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
         channel = interaction.channel
         if not channel.name.startswith("ticket-"):
-            await interaction.response.send_message("Bu bir ticket канал не.", ephemeral=True)
+            await interaction.response.send_message("Это bir ticket канал не.", ephemeral=True)
             return
 
         # AI state'ini clear
@@ -334,7 +334,7 @@ class Ticket(commands.Cog):
                 with open(_penalty_file, 'r', encoding='utf-8') as _f:
                     _penalties = json.load(_f)
             
-            # Новый format: liste как sakla (история наказания для)
+            # Новый формат: список как хранение (история наказаний)
             guild_str = str(guild_id)
             user_str = str(user_id)
             
@@ -395,74 +395,73 @@ class Ticket(commands.Cog):
         history = self._get_penalty_history(guild_id, user_id, days=7)
         history_count = len(history)
         
-        # Ilk нарушение: base_duration
-        # İkinci: 2x
-        # Üçüncü: 4x
-        # Dördüncü+: 8x (max 24 saat)
+        # Первое нарушение: base_duration
+        # Второе: 2x
+        # Третье: 4x
+        # Четвёртое+: 8x (макс 24 часа)
         multiplier = 2 ** min(history_count, 3)
         calculated = base_duration * multiplier
-        
-        # Max 1440 minutes (24 saat)
+
+        # Макс 1440 минут (24 часа)
         return min(calculated, 1440)
-    
+
     def _get_ai_confidence(self, verdict: str) -> int:
-        """AI kararının доверие skorunu hesapla (0-100)"""
-        # Basit heuristic: belirli kelimelere по доверие skoru
-        confidence = 50  # Varчислоlan
-        
+        """Рассчитать уровень доверия к решению AI (0-100)"""
+        confidence = 50  # Начальное значение
+
         verdict_lower = verdict.lower()
-        
-        # Высокий доверие показ
-        if 'открыт' in verdict_lower or 'kesin' in verdict_lower or 'net' in verdict_lower:
+
+        # Признаки высокого доверия
+        if 'открыт' in verdict_lower or 'явно' in verdict_lower or 'точно' in verdict_lower:
             confidence += 30
-        if 'верно' in verdict_lower or 'direkt' in verdict_lower:
+        if 'верно' in verdict_lower or 'прямо' in verdict_lower:
             confidence += 20
         if 'удалено' in verdict_lower or 'удален' in verdict_lower:
             confidence += 15
-        
-        # Низкий доверие показ
-        if 'belirsiz' in verdict_lower or 'bağlam' in verdict_lower:
+
+        # Признаки низкого доверия
+        if 'неясно' in verdict_lower or 'контекст' in verdict_lower:
             confidence -= 30
-        if 'yetersiz' in verdict_lower or 'eksik' in verdict_lower:
+        if 'недостаточно' in verdict_lower or 'отсутствует' in verdict_lower:
             confidence -= 20
-        if 'olabilir' in verdict_lower or 'muhtemelen' in verdict_lower:
+        if 'возможно' in verdict_lower or 'вероятно' in verdict_lower:
             confidence -= 15
-        
+
         return max(0, min(100, confidence))
-    
+
     def _load_ai_data(self, guild_id: int) -> dict:
-        """AI ticket verilerini yukle"""
+        """Загрузить данные AI-тикетов"""
         path = self._get_ai_data_path(guild_id)
         if os.path.exists(path):
             try:
                 with open(path, 'r', encoding='utf-8') as f:
                     return json.load(f)
             except json.JSONDecodeError:
-                # Bozuk JSON — backup al ve sıfırla
+                # Повреждённый JSON — создать резервную копию и сбросить
                 import shutil
                 shutil.copy(path, path + '.bak')
-                print(f'[TICKET] Bozuk JSON backup alındı: {path}')
+                print(f'[TICKET] Резервная копия повреждённого JSON создана: {path}')
                 return {}
             except Exception as e:
-                print(f'[TICKET] Veri загруз Ошибки: {e}')
+                print(f'[TICKET] Ошибка загрузки данных: {e}')
         return {}
-    
+
     def _save_ai_data(self, guild_id: int, data: dict):
-        """AI ticket verilerini сохранить"""
+        """Сохранить данные AI-тикетов"""
         os.makedirs('data', exist_ok=True)
         path = self._get_ai_data_path(guild_id)
         try:
-            # До temp dosyaya yaz, после rename (atomic write)
+            # Сначала пишем во временный файл, затем переименовываем (атомарная запись)
             tmp = path + '.tmp'
             with open(tmp, 'w', encoding='utf-8') as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
             import shutil
             shutil.move(tmp, path)
         except Exception as e:
-            print(f'[TICKET] Veri сохран Ошибки: {e}')
-    
+            print(f'[TICKET] Ошибка сохранения данных: {e}')
+
     def _get_ticket_state(self, guild_id: int, channel_id: int) -> dict:
-        """Ticket state'ini al"""
+        """Получить состояние тикета"""
         data = self._load_ai_data(guild_id)
         return data.get(str(channel_id), {
             'user_id': None,
@@ -589,20 +588,20 @@ class Ticket(commands.Cog):
                 await message.add_reaction("✅")
             return  # ← каждый statusda dur, normal AI akışına geçme
 
-        # ── АПЕЛЛЯЦИЯ СИСТЕМА ────────────────────────────────────────────────────
-        itiraz_keywords = ['апелляция', 'апелляция ediyorum', 'haksızlık', 'неверно karar',
-                           'adil не', 'katılmıyorum', 'kabul etmiyorum']
+        # ── СИСТЕМА АПЕЛЛЯЦИИ ────────────────────────────────────────────────────
+        itiraz_keywords = ['апелляция', 'подаю апелляцию', 'несправедливо', 'неверное решение',
+                           'нечестно', 'не согласен', 'не согласна', 'не принимаю']
         if any(kw in message.content.lower() for kw in itiraz_keywords):
-            # В конец наказание контроль et
+            # Проверяем последние наказания
             user_penalties = self._get_penalty_history(guild_id, message.author.id, days=1)
             if user_penalties:
                 last_penalty = user_penalties[-1]
-                
-                # Апелляция hakkı var mı?
+
+                # Есть ли право на апелляцию?
                 if state.get('appeal_used'):
                     await message.channel.send(
-                        "⚠️ Апелляция о zaten ispolzovano. Более fazla апелляция edemezsin.\n"
-                        "Администрации iletiyorum."
+                        "⚠️ Апелляция уже использована. Повторно подать апелляцию нельзя.\n"
+                        "Передаю администрации."
                     )
                     await self._escalate_ticket(message.channel, state, 'appeal_rejected')
                     return
@@ -623,7 +622,7 @@ class Ticket(commands.Cog):
                 return
 
         # Жалоба tetikleyici kelimeler — только ticket açma amacıyla написано tetikle
-        # NOT: Жалоба butonu zaten direkt akışı запуск, keyword tetikleyici только yedek
+        # ПРИМЕЧАНИЕ: кнопка жалобы уже сразу запускает поток, ключевое слово — только резервный триггер
         sikayet_keywords = ['sikayet', 'жалоба', 'kufur', 'мат', 'оскорбление',
                             'tehdit', 'taciz', 'bully', 'zorba', 'rahatsiz', 'rahatsız']
         # "как", "nedir", "ne" gibi soru kelimeleri varsa жалоба поток запуск
@@ -773,38 +772,38 @@ class Ticket(commands.Cog):
                             })
                         elif len(user_warnings) >= 1:
                             suggested_actions.append({
-                                'label': 'Mute на 1 saat',
+                                'label': 'Мут на 1 час',
                                 'action': 'mute',
                                 'user_id': guild_context['user_id'],
                                 'duration': 60,
-                                'reason': 'Povtornoe нарушение'
+                                'reason': 'Повторное нарушение'
                             })
                     except:
                         pass
-                
-                # Отправл ocisenniy cevap
+
+                # Отправляем очищенный ответ
                 clean_response = actions.get('cleaned_response', response)
                 if clean_response:
-                    # Если var predlojennie действия — ekliyoruz knopki
+                    # Если есть предложенные действия — добавляем кнопки
                     if suggested_actions and message.channel.permissions_for(message.guild.me).send_messages:
                         view = discord.ui.View()
-                        
-                        for action_data in suggested_actions[:3]:  # Maksimum 3 knopki
+
+                        for action_data in suggested_actions[:3]:  # Максимум 3 кнопки
                             async def action_callback(interaction, data=action_data):
                                 await interaction.response.defer(ephemeral=True)
-                                
+
                                 target_user = guild.get_member(data['user_id'])
                                 if not target_user:
-                                    await interaction.followup.send("Пользователь не найдено", ephemeral=True)
+                                    await interaction.followup.send("Пользователь не найден", ephemeral=True)
                                     return
-                                
+
                                 if data['action'] == 'ban':
-                                    await target_user.ban(reason=f"AI建议: {data['reason']}")
+                                    await target_user.ban(reason=f"AI рекомендация: {data['reason']}")
                                     await interaction.followup.send(f"✅ {target_user.mention} забанен", ephemeral=True)
                                 elif data['action'] == 'mute':
                                     until = discord.utils.utcnow() + timedelta(minutes=data['duration'])
-                                    await target_user.timeout(until, reason=f"AI建议: {data['reason']}")
-                                    await interaction.followup.send(f"✅ {target_user.mention} susturuldu на {data['duration']} dk", ephemeral=True)
+                                    await target_user.timeout(until, reason=f"AI рекомендация: {data['reason']}")
+                                    await interaction.followup.send(f"✅ {target_user.mention} заглушён на {data['duration']} мин", ephemeral=True)
                             
                             button = discord.ui.Button(
                                 label=action_data['label'],
@@ -843,51 +842,51 @@ class Ticket(commands.Cog):
 {appeal_reason}
 
 === ЗАДАЧА ===
-Апелляция значение. Пользователь haklı mı?
+Апелляция значение. Пользователь haklı ?
 
 КОНТРОЛЬ ET:
-1. Апелляция geçerli bir причина содержимое mu?
-2. Наказание haksız mıydı?
-3. Неверно anlama var mıydı?
+1. Содержит ли апелляция обоснованную причину?
+2. Было ли наказание несправедливым?
+3. Было ли неверное понимание?
 
-YANIT FORMATI:
-[Значение]: (апелляция geçerliliği — 2-3 cümle)
+ФОРМАТ ОТВЕТА:
+[Значение]: (обоснованность апелляции — 2-3 предложения)
 [Karar]: KABUL или RED или BELIRSIZ"""
 
         async with channel.typing():
             verdict = _call_text([
-                {'role': 'system', 'content': 'Sen bir moderasyon uzmanısın. Апелляция adil значение.'},
+                {'role': 'system', 'content': 'Ты эксперт по модерации. Оцени апелляцию справедливо.'},
                 {'role': 'user', 'content': prompt}
             ], max_tokens=300)
-        
+
         print(f"[APPEAL] verdict: {verdict!r}")
-        
+
         verdict_upper = verdict.strip().upper()
-        
+
         if 'KABUL' in verdict_upper:
             await channel.send(
-                "✅ **Апелляция kabul edildi!**\n\n"
-                "AI kararı yeniden значение ve haksız olduğu tespit edildi.\n"
-                "Наказание удален для администрации iletiyorum."
+                "✅ **Апелляция принята!**\n\n"
+                "Решение AI пересмотрено, и выявлена несправедливость.\n"
+                "Наказание будет снято, передаю администрации."
             )
             await self._escalate_ticket(channel, state, 'appeal_accepted')
         elif 'RED' in verdict_upper:
             await channel.send(
-                "❌ **Апелляция reddedildi.**\n\n"
-                "AI kararı yeniden incelendi ve верно olduğu tespit edildi.\n"
-                "Наказание geçerli kalıyor."
+                "❌ **Апелляция отклонена.**\n\n"
+                "Решение AI пересмотрено и подтверждено как верное.\n"
+                "Наказание остаётся в силе."
             )
         else:  # BELIRSIZ
             await channel.send(
-                "🤔 **Апелляция belirsiz.**\n\n"
-                "Bu statusu net значение, администрации iletiyorum."
+                "🤔 **Апелляция неясна.**\n\n"
+                "Этот статус не имеет чёткого значения, передаю администрации."
             )
             await self._escalate_ticket(channel, state, 'appeal_unclear')
-        
+
         self._save_ticket_state(guild_id, channel_id, state)
-    
+
     async def _handle_complaint_flow(self, message, state, guild_id, channel_id, complaint):
-        """Жалоба поток adım adım yönet"""
+        """Управление потоком жалобы шаг за шагом"""
         content = message.content.strip()
         step = complaint.get('step')
 
@@ -897,8 +896,8 @@ YANIT FORMATI:
             state['ai_message_count'] += 1
             self._save_ticket_state(guild_id, channel_id, state)
             await message.channel.send(
-                "Жалоба aldım. Ne tür bir sorun yaşadın?\n"
-                "**1** - Мат/Hakaret\n**2** - Tehdit\n**3** - Zorbalık/Dalga geçme\n**4** - Diğer"
+                "Жалоба принята. Какого рода проблема у вас возникла?\n"
+                "**1** - Мат/Оскорбление\n**2** - Угроза\n**3** - Травля/Насмешка\n**4** - Другое"
             )
             return
 
@@ -908,11 +907,11 @@ YANIT FORMATI:
             complaint['step'] = 'ask_accused'
             state['ai_message_count'] += 1
 
-            # "Diğer" выбрать direkt escalate et
+            # При выборе "Другое" сразу передаём администрации
             if complaint['type'] == 'diger':
                 state['complaint'] = {}
                 self._save_ticket_state(guild_id, channel_id, state)
-                await message.channel.send("Состояние администрации iletiyorum, en краткий длительность ilgilenecaddr.")
+                await message.channel.send("Передаю администрации, в кратчайшие сроки займутся вашим обращением.")
                 await self._escalate_ticket(message.channel, state, 'diger')
                 return
 
@@ -922,13 +921,13 @@ YANIT FORMATI:
 
         if step == 'ask_accused':
             accused_id = content.strip()
-            # ID проверка — mention, число ID или isim kabul et
+            # Проверка ID — принимаем mention, числовой ID или имя
             import re as _re
             mention_match = _re.search(r'<@!?(\d+)>', accused_id)
             if mention_match:
                 accused_id = mention_match.group(1)
             elif not accused_id.isdigit():
-                # Isimle ara
+                # Поиск по имени
                 found = discord.utils.find(
                     lambda m: m.display_name.lower() == accused_id.lower() or m.name.lower() == accused_id.lower(),
                     message.guild.members
@@ -937,7 +936,7 @@ YANIT FORMATI:
                     accused_id = str(found.id)
                 else:
                     await message.channel.send(
-                        "❌ Пользователь не найден. Пожалуйста Discord ID'si (17-19 haneli число) или @mention gir:"
+                        "❌ Пользователь не найден. Пожалуйста, введите Discord ID (17-19-значное число) или @упоминание:"
                     )
                     return
             complaint['accused_id'] = accused_id
@@ -945,8 +944,8 @@ YANIT FORMATI:
             state['ai_message_count'] += 1
             self._save_ticket_state(guild_id, channel_id, state)
             await message.channel.send(
-                "Bu olay какой channelda gerçaddşti? Канал ID'sini yaz.\n"
-                "*(Канал ID'sini bulmak для: канал sağ клик → ID Kopyala)*"
+                "В каком канале произошёл инцидент? Введите ID канала.\n"
+                "*(Чтобы узнать ID канала: правый клик на канал → Копировать ID)*"
             )
             return
 
@@ -995,7 +994,7 @@ YANIT FORMATI:
                             if not (is_accused or is_complainant):
                                 continue
 
-                            # Yakın pencerede karşı сканироватьf var mı?
+                            # Yakın pencerede karşı сканироватьf var ?
                             window_start = max(0, i - 15)
                             window_end = min(len(all_msgs_raw), i + 16)
                             other_id = complainant_id_int if is_accused else accused_id_int
@@ -1044,7 +1043,7 @@ YANIT FORMATI:
                                 # Только iki сканироватьfın messagelarını al
                                 if author_id not in (accused_id_int, complainant_id_int):
                                     continue
-                                # Hâlâ channelda var mı?
+                                # Hâlâ channelda var ?
                                 still_exists = any(m.id == msg_id for m in all_msgs_raw)
                                 if still_exists:
                                     continue
@@ -1313,15 +1312,15 @@ YANIT FORMATI:
         e = discord.Embed(color=0xF39C12, timestamp=datetime.datetime.utcnow())
         
         reason_text = {
-            'sikayet': 'Жалоба doljna olmak rassmotrena модератор',
-            'teknik': 'Tehniceskaya sorun trebuet контроль модератор',
-            'администратор': 'Действие trebuet hakların модератора',
-            'agir_ihlal': 'Obnarujeno sereznoe нарушение, trebuetsya контроль',
-            'апелляция': 'Пользователь osparivaet решение AI',
-            'ban_talebi': 'Ban olabilir olmak завершено только модератор',
-            'max_messages': 'Limit сообщение previsen, модераторы получает управление',
-            'ai_error': 'Sistemnaya ошибка, модераторы получает управление',
-            'diger': 'Etot soru olmalı olmak rassmotren модератор'
+            'sikayet': 'Жалоба должна быть рассмотрена модератором',
+            'teknik': 'Техническая проблема требует контроля модератора',
+            'администратор': 'Действие требует прав модератора',
+            'agir_ihlal': 'Обнаружено серьёзное нарушение, требуется контроль',
+            'апелляция': 'Пользователь оспаривает решение AI',
+            'ban_talebi': 'Бан может быть завершён только модератором',
+            'max_messages': 'Лимит сообщений превышен, модераторы получают управление',
+            'ai_error': 'Системная ошибка, модераторы получают управление',
+            'diger': 'Этот вопрос должен быть рассмотрен модератором'
         }
         
         e.description = (
@@ -1372,28 +1371,28 @@ YANIT FORMATI:
                     color=discord.Color.dark_gray(),
                     reason="AI Moderator jail роли"
                 )
-                # Tum channellarda jail роли izin verme
-                for channel_obj in guild.channels:
-                    try:
-                        await channel_obj.set_permissions(jail_role, send_messages=False, speak=False)
-                    except:
-                        pass
-            
-            # Jail роли ver
+            # Запрещаем jail-роль во всех каналах
+            for channel_obj in guild.channels:
+                try:
+                    await channel_obj.set_permissions(jail_role, send_messages=False, speak=False)
+                except:
+                    pass
+
+            # Выдаём jail-роль
             await target_user.add_roles(jail_role, reason=f"AI Moderator: {reason}")
-            
-            # Пользователю DM gonder
+
+            # Отправляем DM пользователю
             try:
                 dm_embed = discord.Embed(color=0xE74C3C, timestamp=datetime.datetime.utcnow())
                 dm_embed.description = (
-                    f"## Jail наказание\n"
-                    f"### Siz aldınız jail\n"
+                    f"## Наказание: Jail\n"
+                    f"### Вы получили jail\n"
                     f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
                     f"**Сервер:** {guild.name}\n"
-                    f"**Длительность:** {duration} dakika\n"
+                    f"**Длительность:** {duration} минут\n"
                     f"**Причина:** {reason}\n\n"
-                    f"Posle okoncaniya sroka jail роль olacak автоматически как удален.\n"
-                    f"Если если хотите osporit — напишите в ticket.\n\n"
+                    f"По окончании срока jail-роль будет автоматически снята.\n"
+                    f"Если хотите оспорить — напишите в тикет.\n\n"
                     f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
                 )
                 if guild.icon:
@@ -1407,14 +1406,14 @@ YANIT FORMATI:
             # Канал bildir
             jail_embed = discord.Embed(color=0x2ECC71, timestamp=datetime.datetime.utcnow())
             jail_embed.description = (
-                f"## Jail primenen\n"
-                f"### Наказание заверш\n"
+                f"## Jail применён\n"
+                f"### Наказание завершено\n"
                 f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
                 f"**Пользователь:** {target_user.mention}\n"
-                f"**Длительность:** {duration} dakika\n"
+                f"**Длительность:** {duration} минут\n"
                 f"**Причина:** {reason}\n\n"
-                f"Nasa команда модератор помощник olur çözmek sorunu.\n"
-                f"Если если хотите osporit — ostavte etot ticket açıkim.\n\n"
+                f"Наша команда модераторов поможет решить проблему.\n"
+                f"Если хотите оспорить — оставьте этот тикет открытым.\n\n"
                 f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             )
             if channel.guild.icon:
@@ -1443,30 +1442,37 @@ YANIT FORMATI:
                     'timestamp': datetime.datetime.utcnow().isoformat()
                 }
             )
-            
+
+            # Уведомить администраторов о применённом наказании
+            await self._notify_admins_penalty(
+                guild, penalty_type='jail',
+                target=target_user, reason=reason,
+                source_channel=channel, moderator=complainant,
+            )
+
         except Exception as e:
             await channel.send(f"❌ Ошибка при выдаче наказания Jail: {str(e)}")
             print(f"Jail error: {e}")
     
     async def _schedule_unjail(self, guild: discord.Guild, user: discord.Member, jail_role: discord.Role, duration: int):
-        """Jail наказание belirli sure после удалить"""
+        """Снять jail-наказание после указанного времени"""
         import asyncio
         await asyncio.sleep(duration * 60)
 
         try:
-            # Пользователь hâlâ на сервере mı?
+            # Пользователь всё ещё на сервере?
             fresh_member = guild.get_member(user.id)
             if not fresh_member:
                 try:
                     fresh_member = await guild.fetch_member(user.id)
                 except discord.NotFound:
-                    print(f'[TICKET] Unjail: {user} с сервера ayrılmış, роли удален')
+                    print(f'[TICKET] Unjail: {user} покинул сервер, роль не снята')
                     return
                 except Exception as e:
-                    print(f'[TICKET] Unjail fetch Ошибки: {e}')
+                    print(f'[TICKET] Unjail fetch ошибка: {e}')
                     return
 
-            # Jail роль hâlâ var mı?
+            # Jail роль hâlâ var ?
             fresh_role = guild.get_role(jail_role.id)
             if not fresh_role:
                 print(f'[TICKET] Unjail: Jail роль удален')
@@ -1505,11 +1511,11 @@ YANIT FORMATI:
                     target_user = await guild.fetch_member(user_id)
                 except:
                     target_user = None
-            
+
             if not target_user:
                 await channel.send("Пользователь не найдено на на сервере.")
                 return
-            
+
             # Выдать предупреждение пользователю с система warnings
             from cogs.warnings import Предупреждениеs
             warnings_cog = self.bot.get_cog('Предупреждениеs')
@@ -1517,12 +1523,98 @@ YANIT FORMATI:
                 # Создал feykovoe interaction для vizova /warn
                 await warnings_cog.add_warning(target_user, moderator, reason)
                 await channel.send(f"Предупреждение verildi {target_user.mention}: {reason}")
+                # Уведомить администраторов
+                await self._notify_admins_penalty(
+                    guild, penalty_type='warn',
+                    target=target_user, reason=reason,
+                    source_channel=channel, moderator=moderator,
+                )
             else:
                 await channel.send("Система предупреждений недоступна.")
-                
+
         except Exception as e:
             await channel.send(f"Ошибка iken vidace предупреждения: {str(e)}")
             print(f"Warn error: {e}")
+
+    async def _notify_admins_penalty(self, guild, *, penalty_type: str, target,
+                                     reason: str, source_channel, moderator):
+        """Уведомить администраторов о применённом наказании.
+
+        Канал для уведомлений: сначала `data/ticket_notify_<guild_id>.json` →
+        `notify_channel_id`, иначе первый текстовый канал с именем
+        'admin-log'/'mod-log'/'логи-модерации', иначе None (тогда DM
+        владельцу сервера).
+        """
+        notify_ch_id = None
+        cfg_path = f'data/ticket_notify_{guild.id}.json'
+        try:
+            if os.path.exists(cfg_path):
+                with open(cfg_path, 'r', encoding='utf-8') as f:
+                    notify_ch_id = (json.load(f) or {}).get('notify_channel_id')
+        except Exception:
+            notify_ch_id = None
+
+        target_ch = None
+        if notify_ch_id:
+            try:
+                target_ch = guild.get_channel(int(notify_ch_id)) or await guild.fetch_channel(int(notify_ch_id))
+            except Exception:
+                target_ch = None
+        if target_ch is None:
+            for name in ('admin-log', 'mod-log', 'логи-модерации', 'staff-log'):
+                target_ch = discord.utils.get(guild.text_channels, name=name)
+                if target_ch:
+                    break
+
+        type_emoji = {
+            'warn': '⚠️',
+            'jail': '🔒',
+            'ban': '🔨',
+            'kick': '👢',
+            'mute': '🔇',
+        }.get(penalty_type, '📢')
+        type_label = {
+            'warn': 'Предупреждение',
+            'jail': 'Jail (ограничение)',
+            'ban': 'Бан',
+            'kick': 'Кик',
+            'mute': 'Мут',
+        }.get(penalty_type, penalty_type.title())
+
+        embed = discord.Embed(
+            title=f"{type_emoji} AI Модератор: {type_label}",
+            color=0xE74C3C if penalty_type in ('ban', 'jail') else 0xF1C40F,
+            timestamp=datetime.datetime.utcnow(),
+        )
+        embed.add_field(name="Пользователь", value=f"{target.mention} (`{target.id}`)", inline=False)
+        embed.add_field(name="Причина", value=reason[:500] if reason else "—", inline=False)
+        embed.add_field(name="Канал тикета", value=source_channel.mention if source_channel else "—", inline=True)
+        embed.add_field(name="Модератор", value=moderator.mention if moderator else "AI", inline=True)
+        embed.set_footer(text=f"{guild.name} • AI Moderation", icon_url=guild.icon.url if guild.icon else None)
+
+        # Пинг админов (роли с правами Administrator)
+        admin_ping = ""
+        try:
+            admin_role = discord.utils.get(guild.roles, permissions=discord.Permissions(administrator=True))
+            if admin_role:
+                admin_ping = admin_role.mention + " "
+        except Exception:
+            pass
+
+        sent = False
+        if target_ch is not None:
+            try:
+                await target_ch.send(content=admin_ping or None, embed=embed)
+                sent = True
+            except Exception:
+                sent = False
+        if not sent:
+            # Fallback: DM владельцу
+            try:
+                if guild.owner and not guild.owner.bot:
+                    await guild.owner.send(content=admin_ping, embed=embed)
+            except Exception:
+                pass
     
     async def _assign_role(self, guild: discord.Guild, user_id: int, role_id: int):
         """AI ver роль"""
@@ -1559,7 +1651,7 @@ YANIT FORMATI:
             print(f"Delete messages error: {e}")
     
     async def _check_message_history(self, channel: discord.TextChannel, guild: discord.Guild, user_id: int = None, target_channel_id: int = None) -> str:
-        """Belirli пользователя messagelarini сканировать"""
+        """Сканировать сообщения указанного пользователя"""
         try:
             target_channel = channel
             if target_channel_id:
@@ -1582,7 +1674,7 @@ YANIT FORMATI:
                 })
 
             if not messages:
-                return f"Bu channelda {'bu userya ait ' if user_id else ''}message не найдено."
+                return f"Это channelda {'bu userya ait ' if user_id else ''}message не найдено."
 
             summary = f"#{target_channel.name} в канале найден messagelar ({len(messages)} adet):\n"
             for msg in messages[:20]:
@@ -1599,18 +1691,18 @@ YANIT FORMATI:
     async def ticket_panel(self, interaction: discord.Interaction):
         if interaction.guild.id in TICKET_DISABLED_GUILDS:
             await interaction.response.send_message(
-                '❌ Bu на сервере ticket система активен не.', ephemeral=True
+                '❌ Это на сервере ticket система активен не.', ephemeral=True
             )
             return
 
-        # Канал zaten bot сканироватьfından отправл bir ticket paneli var mı?
+        # Канал zaten bot сканироватьfından отправл bir ticket paneli var ?
         async for msg in interaction.channel.history(limit=20):
             if (msg.author == interaction.guild.me and
                     msg.embeds and
                     msg.components and
                     any('ticket_open' in str(c) for c in msg.components)):
                 await interaction.response.send_message(
-                    "⚠️ Bu channelda zaten bir ticket paneli var. До eskisini удалить.",
+                    "⚠️ Это channelda zaten bir ticket paneli var. До eskisini удалить.",
                     ephemeral=True
                 )
                 return
@@ -1620,16 +1712,16 @@ YANIT FORMATI:
             timestamp=datetime.datetime.utcnow()
         )
         e.description = (
-            f"```ansi\n\u001b[1;34m✦ Aether ПОДДЕРЖКА СИСТЕМА ✦\u001b[0m\n```\n"
+            f"```ansi\n\u001b[1;34m✦ Aether СИСТЕМА ПОДДЕРЖКИ ✦\u001b[0m\n```\n"
             f"{_divider()}\n\n"
-            "Сервер bir sorunla mı приветствие?\n"
-            "Bir что-то mi sormak istiyorsun?\n\n"
-            "**Клик butona aşağıdayarak** особый bir поддержка канал создан.\n"
-            "🤖 **AI Asistan** ilk как sana помощник olacak!\n"
-            "Gerekirse ekibimiz devralacak. 💙\n\n"
+            "Возникла ли проблема на сервере?\n"
+            "Хотите что-то спросить?\n\n"
+            "**Нажмите на кнопку ниже**, чтобы создать приватный канал поддержки.\n"
+            "🤖 **AI-ассистент** сначала поможет вам!\n"
+            "При необходимости подключится наша команда. 💙\n\n"
             f"{_divider()}\n\n"
             "```yaml\n"
-            "🤖 AI Поддержка    •    ⚡ Быстрый yanıt    •    🔒 Sekretniy channel\n"
+            "🤖 AI Поддержка    •    ⚡ Быстрый ответ    •    🔒 Приватный канал\n"
             "```"
         )
         e.set_image(url=GIF_PANEL)
@@ -1700,7 +1792,7 @@ YANIT FORMATI:
     @app_commands.command(name="ticket-ai-toggle", description="Включить/отключить AI-поддержку тикетов")
     @app_commands.checks.has_permissions(administrator=True)
     async def ticket_ai_toggle(self, interaction: discord.Interaction):
-        """AI поддержка sistemini активен/değilaktif yap"""
+        """Включить/отключить AI-поддержку тикетов"""
         global AI_ENABLED
         AI_ENABLED = not AI_ENABLED
         
@@ -1717,13 +1809,13 @@ YANIT FORMATI:
     async def ticket_force_escalate(self, interaction: discord.Interaction):
         """Ticket'i manuel как yonlendir"""
         if not interaction.channel.name.startswith("ticket-"):
-            await interaction.response.send_message("❌ Bu bir ticket канал не.", ephemeral=True)
+            await interaction.response.send_message("❌ Это bir ticket канал не.", ephemeral=True)
             return
         
         state = self._get_ticket_state(interaction.guild.id, interaction.channel.id)
         
         if state['status'] == 'escalated':
-            await interaction.response.send_message("⚠️ Bu ticket zaten направление.", ephemeral=True)
+            await interaction.response.send_message("⚠️ Это ticket zaten направление.", ephemeral=True)
             return
         
         await interaction.response.send_message("🔄 Ticket администрации направление...", ephemeral=True)

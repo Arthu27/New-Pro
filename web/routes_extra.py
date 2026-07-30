@@ -742,12 +742,12 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
 
                 guild_data.append(
                     f"Сервер: {g.name} (id={g.id})\n"
-                    f"  Всего участник: {g.member_count}, Online: {len(online)}\n"
-                    f"  Ses channelları: {', '.join(in_voice) or 'Пусто'}\n"
+                    f"  Всего участников: {g.member_count}, Онлайн: {len(online)}\n"
+                    f"  Голосовые каналы: {', '.join(in_voice) or 'Пусто'}\n"
                     f"  Каналы: {', '.join(channels)}\n"
-                    f"  Роли: {', '.join(roles)}\n"
+                    f"  Роли: {', '.join(role)}\n"
                     f"  Участники: {', '.join(members_list)}\n"
-                    + (f"  Warninglar: {warn_summary}\n" if warn_summary else '')
+                    + (f"  Предупреждения: {warn_summary}\n" if warn_summary else '')
                     + ('\n'.join(f'  {c}' for c in sunucu_configs))
                 )
 
@@ -4295,6 +4295,34 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
             except Exception as ex:
                 panel_error = str(ex)
         return jsonify({'success': True, 'panel_sent': panel_sent, 'error': panel_error})
+
+    # ── TICKET ADMIN BİLDİRİM KANALI ────────────────────────────────────
+    @app.route('/api/guild/<guild_id>/ticket-notify-channel', methods=['GET', 'POST'])
+    @login_required
+    @role_required('admin')
+    def api_ticket_notify_channel(guild_id):
+        f = f'data/ticket_notify_{guild_id}.json'
+        if request.method == 'GET':
+            if not os.path.exists(f):
+                return jsonify({'notify_channel_id': None})
+            try:
+                with open(f, 'r', encoding='utf-8') as fp:
+                    return jsonify(json.load(fp))
+            except Exception:
+                return jsonify({'notify_channel_id': None})
+        data = request.get_json(silent=True) or {}
+        cid = data.get('notify_channel_id')
+        # Sadece sayısal string kabul et
+        if cid is not None and cid != '':
+            cid = str(cid)
+            if not (cid.isdigit() and 17 <= len(cid) <= 22):
+                return jsonify({'error': 'Geçersiz kanal ID'}), 400
+        else:
+            cid = None
+        os.makedirs('data', exist_ok=True)
+        with open(f, 'w', encoding='utf-8') as fp:
+            json.dump({'notify_channel_id': cid}, fp, indent=2, ensure_ascii=False)
+        return jsonify({'success': True, 'notify_channel_id': cid})
 
     @app.route('/api/guild/<guild_id>/tickets')
     @login_required

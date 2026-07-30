@@ -101,6 +101,42 @@
     </div>
   </div>
 
+  <!-- AI ceza bildirim kanalı -->
+  <div class="tk-card tk-card-wide">
+    <div class="tk-head">
+      <div class="tk-icon warn"><i class="fas fa-gavel"></i></div>
+      <div class="tk-title">AI Модератор: уведомления о наказаниях</div>
+      <span class="save-status" id="notify-save-status"></span>
+    </div>
+    <p class="hint-pill amber" style="margin-bottom: 12px;">
+      <i class="fas fa-info-circle"></i>
+      AI ceza verdiğinde (warn, jail, mute, ban) admin'lere buraya embed atılır.
+      Boş bırakırsanız otomatik olarak <code>admin-log</code> / <code>mod-log</code> / <code>staff-log</code> kanalı aranır,
+      o da yoksa sunucu sahibine DM gider.
+    </p>
+    <div class="form-row-2">
+      <div class="form-group">
+        <label>Sunucu</label>
+        <select id="notify-guild"><option value="">Yükleniyor…</option></select>
+      </div>
+      <div class="form-group">
+        <label>Bildirim kanal ID</label>
+        <input type="text" id="notify-channel-id" placeholder="17-22 haneli kanal ID (örn: 123456789012345678)">
+      </div>
+    </div>
+    <div style="display:flex; gap:8px; align-items:center;">
+      <button class="btn-warn" id="btn-notify-save" type="button">
+        <i class="fas fa-save"></i> Kaydet
+      </button>
+      <button class="btn-primary" id="btn-notify-clear" type="button">
+        <i class="fas fa-times"></i> Temizle
+      </button>
+      <span class="muted" style="font-size: 12px;">
+        * Tüm admin yetkisine sahip rollere otomatik ping atılır
+      </span>
+    </div>
+  </div>
+
   <div class="tk-card tk-card-wide">
     <div class="tk-head">
       <div class="tk-icon"><i class="fas fa-list"></i></div>
@@ -146,6 +182,71 @@
     if (t) t.addEventListener('click', function () { showToast('Тест панели отправлен', true); });
     var a = $('add-cat');
     if (a) a.addEventListener('click', function () { showToast('Категория добавлена', true); });
+
+    // ── AI ceza bildirim kanalı ──
+    var notifyGuild = $('notify-guild');
+    var notifyCid = $('notify-channel-id');
+    var notifyStatus = $('notify-save-status');
+
+    function setNotifyStatus(text, isError) {
+      notifyStatus.textContent = text || '';
+      notifyStatus.style.color = isError ? '#e74c3c' : '#2ecc71';
+      if (text) setTimeout(function () { notifyStatus.textContent = ''; }, 1800);
+    }
+
+    function loadNotifyGuilds() {
+      fetch('/api/guilds', { credentials: 'same-origin' })
+        .then(function (r) { return r.json(); })
+        .then(function (list) {
+          notifyGuild.innerHTML = '';
+          if (!list || !list.length) {
+            notifyGuild.innerHTML = '<option value="">Sunucu bulunamadı</option>';
+            return;
+          }
+          list.forEach(function (g) {
+            var opt = document.createElement('option');
+            opt.value = g.id; opt.textContent = g.name;
+            notifyGuild.appendChild(opt);
+          });
+          loadNotifyConfig();
+        })
+        .catch(function () { notifyGuild.innerHTML = '<option value="">Yüklenemedi</option>'; });
+    }
+
+    function loadNotifyConfig() {
+      if (!notifyGuild.value) return;
+      fetch('/api/guild/' + notifyGuild.value + '/ticket-notify-channel', { credentials: 'same-origin' })
+        .then(function (r) { return r.json(); })
+        .then(function (d) { notifyCid.value = d.notify_channel_id || ''; })
+        .catch(function () { notifyCid.value = ''; });
+    }
+
+    notifyGuild.addEventListener('change', loadNotifyConfig);
+
+    $('btn-notify-save').addEventListener('click', function () {
+      if (!notifyGuild.value) { setNotifyStatus('Sunucu seç', true); return; }
+      var v = (notifyCid.value || '').trim();
+      if (v && (!/^\d{17,22}$/.test(v))) { setNotifyStatus('Geçersiz kanal ID (17-22 hane)', true); return; }
+      fetch('/api/guild/' + notifyGuild.value + '/ticket-notify-channel', {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notify_channel_id: v || null })
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (d.success) setNotifyStatus('✓ Kaydedildi');
+          else setNotifyStatus('Hata: ' + (d.error || 'bilinmiyor'), true);
+        })
+        .catch(function (e) { setNotifyStatus('Hata: ' + e.message, true); });
+    });
+
+    $('btn-notify-clear').addEventListener('click', function () {
+      if (!notifyGuild.value) return;
+      notifyCid.value = '';
+      $('btn-notify-save').click();
+    });
+
+    loadNotifyGuilds();
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind);
