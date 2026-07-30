@@ -161,6 +161,21 @@ def after_request(response):
         except Exception as _ex:
             print(f"[ETAG] error on {request.path}: {_ex!r}", flush=True)
 
+    # CSP: Cloudflare veya proxy bazen cok sikili CSP ekler; kendi
+    # header'imizi koyarak 'unsafe-eval' ve 'unsafe-inline' izni veriyoruz.
+    # Bu admin paneli (trusted kullanicilar) oldugu icin inline JS/eval OK.
+    if not response.headers.get('Content-Security-Policy'):
+        csp = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; "
+            "font-src 'self' https://fonts.gstatic.com data:; "
+            "img-src 'self' data: https:; "
+            "connect-src 'self' https: wss:; "
+            "frame-ancestors 'self'"
+        )
+        response.headers['Content-Security-Policy'] = csp
+
     return response
 @app.errorhandler(Exception)
 def _handle_unexpected_error(e):
