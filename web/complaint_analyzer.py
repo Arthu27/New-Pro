@@ -16,17 +16,30 @@ class ComplaintAnalyzer:
     def __init__(self, bot: discord.Client):
         self.bot = bot
         self.toxicity_patterns = [
-            # Russkie оскорбление
-            r'\b(tvar|ublyudok|mraz|svoloc|aptal|aptal|aptal|aptal|durak|dura)\b',
-            r'\b(posel|idi)\s*(на|в)\s*(aptal|каждый|pizdu|jopu)\b',
-            r'\b(suka|blyat|blya|nahuy|pizdec|ebat|ebaniy|ebanutiy)\b',
-            r'\b(aptal|huya|hue|pizd|eb|blyad|mudak|gandon)\w*',
-            # Tureckie оскорбление
-            r'\b(amk|amq|orospu|piç|yarrak|siktir|göt|amcık)\b',
-            r'\b(ananı|bacını|karını|kızını)\s*(sikeyim|becereyim)\b',
-            # Tehditler
-            r'\b(ubyu|ubit|zaryaju|zastrelyu|povesu)\b',
-            r'\b(öldüreceğim|öldür|gebert|vuracağım)\b',
+            # === РУССКИЙ ===
+            r'\b(тварь|ублюдок|мраз|сволочь|мразь|мерзавец|подонок|скотина)\b',
+            r'\b(дурак|дура|идиот|тупой|тупица|дебил|кретин|олух|болван|придурок)\b',
+            r'\b(пошёл|пошла|пошли|иди|идите)\s*(на\s*хер|на\s*хуй|в\s*жопу|в\s*задницу)\b',
+            r'\b(сука|блядь|блять|нахер|нахуй|пиздец|ебать|ебаный|ебанутый|хуй|хуя|хую)\w*',
+            r'\b(мудак|мудak|гондон|пидор|пидорас|шлюха|блядина)\w*',
+            r'\b(урод|мразотный|дрянь|сволота|скотина|гадина|тварь)\b',
+            r'\b(ты\s+чмо|ты\s+лох|ты\s+конченый|ты\s+тупой|ты\s+идиот)\b',
+            # === ТУРЕЦКИЙ ===
+            r'\b(amk|amq|orospu|piç|yarrak|siktir|göt|amcık|salak|aptal|gerizekalı)\b',
+            r'\b(ananı|bacını|karını|kızını|karını)\s*(sikeyim|becereyim|sikim)\b',
+            r'\b(aqılsız|ahmak|şerefsiz|namussuz|orospu|pezevenk)\b',
+            r'\b(siktir\s*git|defol|ibne|top\s*senin|göt\s*veren)\b',
+            r'\b(lan|aq|amına|koyim|amcığını|yarram)\w*',
+            # === АНГЛИЙСКИЙ ===
+            r'\b(stupid|idiot|moron|fool|dumb|loser|asshole|jerk|dickhead)\b',
+            r'\b(shut\s*up|fuck\s*you|go\s*to\s*hell|piece\s*of\s*shit)\b',
+            r'\b(bastard|bitch|whore|slut|cunt|wanker)\b',
+            r'\b(nigger|faggot|retard)\w*',
+            # === УГРОЗЫ (RU/TR/EN) ===
+            r'\b(убью|убить|зарежу|прирежу|прибью|пристрелю|закопаю|утоплю)\b',
+            r'\b(повешу|отрежу|разорву|сломаю|разобью)\w*',
+            r'\b(öldüreceğim|öldür|gebert|vuracağım|keseceğim)\b',
+            r'\b(kill\s*you|will\s*kill|i\s*will\s*kill|murder\s*you)\b',
         ]
     
     async def analyze_complaint(
@@ -183,29 +196,59 @@ class ComplaintAnalyzer:
         complainer_toxic = 0
         accused_toxic = 0
 
+        # Расширенный список оскорбительных слов (для fallback-проверки,
+        # когда regex не сработал но маркер [ЖАЛОБА EDEN] присутствует)
+        offensive_words = {
+            'тварь', 'ублюдок', 'мразь', 'сволочь', 'мерзавец', 'подонок', 'скотина',
+            'дурак', 'дура', 'идиот', 'тупой', 'тупица', 'дебил', 'кретин', 'олух',
+            'придурок', 'чмо', 'лох', 'урод', 'гадина', 'дрянь', 'мразотный',
+            'сука', 'блядь', 'блять', 'нахер', 'нахуй', 'пиздец', 'ебать', 'ебаный',
+            'ебанутый', 'хуй', 'хуя', 'хую', 'мудак', 'гондон', 'пидор', 'пидорас',
+            'шлюха', 'блядина', 'конченый', 'гнида', 'мразь',
+            # Турецкий
+            'amk', 'amq', 'orospu', 'piç', 'yarrak', 'siktir', 'salak', 'aptal',
+            'gerizekalı', 'aqılsız', 'ahmak', 'şerefsiz', 'namussuz', 'pezevenk',
+            'ibne', 'lan', 'aq', 'amcık',
+            # Английский
+            'stupid', 'idiot', 'moron', 'fool', 'dumb', 'loser', 'asshole', 'jerk',
+            'dickhead', 'bastard', 'bitch', 'whore', 'slut', 'cunt', 'wanker',
+            'nigger', 'faggot', 'retard', 'scum',
+        }
+        offensive_set = set(offensive_words)
+
         for msg in messages:
             msg_lower = msg.lower()
+            # Удаляем метки времени и теги для чистой проверки
+            clean_text = re.sub(r'^\[[^\]]+\]\s*\[(?:ЖАЛОБА EDEN|ЖАЛОБА EDİLEN)[^\]]*\]\s*(?:🎯 ВЕРНО|📍 BAĞLAMLI|🗑️ УДАЛЕН СООБЩЕНИЕ):\s*', '', msg)
 
-            # Проверяем на токсичность
-            is_toxic = any(
+            # Проверяем на токсичность через regex
+            is_toxic_regex = any(
                 re.search(pattern, msg_lower, re.IGNORECASE)
                 for pattern in self.toxicity_patterns
             )
+
+            # Проверяем на токсичность через словарь (fallback)
+            words_in_text = re.findall(r'\b[a-zA-Zа-яА-ЯёЁ]+\b', clean_text.lower())
+            is_toxic_dict = bool(words_in_text) and any(
+                w in offensive_set for w in words_in_text
+            )
+
+            is_toxic = is_toxic_regex or is_toxic_dict
 
             if is_toxic:
                 toxicity_count += 1
 
                 # Определяем кто токсичен
-                if '[ЖАЛОБА EDEN' in msg or '[ЖАЛОБА' in msg:
+                if '[ЖАЛОБА EDEN' in msg or '[ЖАЛОБА EDEN]' in msg:
                     complainer_toxic += 1
-                elif '[ЖАЛОБА EDİLEN' in msg or '[OBVINYaEMIY' in msg:
+                elif '[ЖАЛОБА EDİLEN' in msg or '[ЖАЛОБА EDİLEN]' in msg:
                     accused_toxic += 1
 
-            # Проверяем на угрозы (русские + турецкие ключевые слова)
+            # Проверяем на угрозы (русские + турецкие + английские ключевые слова)
             threat_patterns = [
-                r'\b(убью|убить|зарежу|зарежу|прирежу|прибью|пристрелю|закопаю)\b',
-                r'\b(öldüreceğim|öldür|seni|geberticem|gebert|kesicem|keserim)\b',
-                r'\b(kill\s*you|will\s*kill|i\s*will\s*kill)\b',
+                r'\b(убью|убить|зарежу|прирежу|прибью|пристрелю|закопаю|утоплю|повешу|отрежу|разорву|грохну)\b',
+                r'\b(öldüreceğim|öldür|gebert|vuracağım|keseceğim|seni\s*öldür)\b',
+                r'\b(kill\s*you|will\s*kill|i\s*will\s*kill|murder\s*you|i\s*will\s*end\s*you)\b',
             ]
             if any(re.search(p, msg_lower, re.IGNORECASE) for p in threat_patterns):
                 threats_count += 1
@@ -349,6 +392,8 @@ class ComplaintAnalyzer:
                 'toxic_messages': provided_analysis['toxic_messages'],
                 'threats': provided_analysis['threats'],
                 'mutual_toxicity': provided_analysis['mutual_toxicity'],
+                'complainer_toxic': provided_analysis['complainer_toxic'],
+                'accused_toxic': provided_analysis['accused_toxic'],
                 'accused_warnings': accused_rep['warnings_total'],
                 'complainer_warnings': complainant_rep['warnings_total'],
                 'had_provocation': context_analysis['had_provocation'],
@@ -524,6 +569,11 @@ class ComplaintAnalyzer:
         complainer_name = complainant_info.get('name', f"ID {complainant_info.get('id', '?')}")
         complainer_id = complainant_info.get('id', '?')
 
+        # Проверяем оскорбил ли жалобщик обвиняемого
+        complainer_toxic = evidence.get('complainer_toxic', 0)
+        accused_toxic = evidence.get('accused_toxic', 0)
+        complainer_abused = complainer_toxic > 0
+
         embed = discord.Embed(
             title=f"⚖️ Анализ жалобы — {verdict_text}",
             description=f"_{verdict_desc}_",
@@ -583,6 +633,21 @@ class ComplaintAnalyzer:
             inline=False,
         )
 
+        # ⚠️ ВАЖНО: Если жалобщик сам оскорбил — выделить это!
+        if complainer_abused:
+            complainer_insult_block = (
+                f"⚠️ **Жалобщик сам оскорбил обвиняемого** ({complainer_toxic} токсичных сообщений)\n"
+            )
+            if accused_toxic > 0:
+                complainer_insult_block += f"↳ Обвиняемый тоже отвечал ({accused_toxic} токсичных) — это **взаимная вина**\n"
+            else:
+                complainer_insult_block += "↳ Обвиняемый не отвечал — это **ложная жалоба**\n"
+            embed.add_field(
+                name="⚠️ ВАЖНАЯ ИНФОРМАЦИЯ",
+                value=complainer_insult_block,
+                inline=False,
+            )
+
         # 💡 Рекомендация AI
         embed.add_field(
             name="💡 Рекомендация AI для модератора",
@@ -598,7 +663,14 @@ class ComplaintAnalyzer:
         if verdict == 'GUILTY':
             conclusion = "✅ AI рекомендует применить наказание к обвиняемому."
         elif verdict == 'INNOCENT':
-            conclusion = "✅ Доказательств нарушения не найдено. Жалоба отклонена."
+            if complainer_abused:
+                conclusion = (
+                    "✅ Доказательств нарушения обвиняемого не найдено. "
+                    "Жалоба отклонена.\n"
+                    "⚠️ Но жалобщик сам оскорблял — рекомендуется вынести предупреждение."
+                )
+            else:
+                conclusion = "✅ Доказательств нарушения не найдено. Жалоба отклонена."
         elif verdict == 'MUTUAL':
             conclusion = "⚖️ Оба участника нарушили правила. Рекомендуется наказать обоих."
         elif verdict == 'FALSE_COMPLAINT':
