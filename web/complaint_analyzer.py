@@ -175,37 +175,41 @@ class ComplaintAnalyzer:
         }
     
     def _analyze_provided_messages(self, messages: List[str]) -> Dict:
-        """Analiz ediyor predostavlennie сообщения"""
+        """Анализирует предоставленные сообщения (турецкие/русские/английские)."""
         import re
-        
+
         toxicity_count = 0
         threats_count = 0
         complainer_toxic = 0
         accused_toxic = 0
-        
+
         for msg in messages:
             msg_lower = msg.lower()
-            
-            # Контроль ediyoruz на toksisite
+
+            # Проверяем на токсичность
             is_toxic = any(
                 re.search(pattern, msg_lower, re.IGNORECASE)
                 for pattern in self.toxicity_patterns
             )
-            
+
             if is_toxic:
                 toxicity_count += 1
-                
-                # Belirliyoruz кто toksicit
+
+                # Определяем кто токсичен
                 if '[ЖАЛОБА EDEN' in msg or '[ЖАЛОБА' in msg:
                     complainer_toxic += 1
                 elif '[ЖАЛОБА EDİLEN' in msg or '[OBVINYaEMIY' in msg:
                     accused_toxic += 1
-            
-            # Контроль ediyoruz на tehditler
-            threat_patterns = [r'\b(ubyu|ubit|zaryaju|öldüreceğim|öldür)\b']
+
+            # Проверяем на угрозы (русские + турецкие ключевые слова)
+            threat_patterns = [
+                r'\b(убью|убить|зарежу|зарежу|прирежу|прибью|пристрелю|закопаю)\b',
+                r'\b(öldüreceğim|öldür|seni|geberticem|gebert|kesicem|keserim)\b',
+                r'\b(kill\s*you|will\s*kill|i\s*will\s*kill)\b',
+            ]
             if any(re.search(p, msg_lower, re.IGNORECASE) for p in threat_patterns):
                 threats_count += 1
-        
+
         return {
             'total_messages': len(messages),
             'toxic_messages': toxicity_count,
@@ -214,7 +218,7 @@ class ComplaintAnalyzer:
             'accused_toxic': accused_toxic,
             'mutual_toxicity': complainer_toxic > 0 and accused_toxic > 0,
         }
-    
+
     async def _analyze_context(
         self,
         guild: discord.Guild,
@@ -222,31 +226,33 @@ class ComplaintAnalyzer:
         complainant_id: int,
         accused_id: int
     ) -> Dict:
-        """Analiz ediyor bağlam разговор"""
-        
-        # Arıyoruz сообщения pryamo pered incidentom
+        """Анализирует контекст разговора между двумя пользователями."""
+
+        # Ищем сообщения прямо перед инцидентом
         context_messages = []
-        for msg in message_history[-20:]:  # В конец 20
+        for msg in message_history[-20:]:  # последние 20
             if msg.get('author_id') in [complainant_id, accused_id]:
                 context_messages.append(msg)
-        
-        # Контроль ediyoruz bila mı provokasyon
+
+        # Проверяем была ли провокация (русские/турецкие ключевые слова)
         provocation_indicators = [
-            'kendi takoy',
-            'otvecu',
-            'a sen кто',
-            'zatknis',
-            'kapa çeneni',
-            'sen кто',
+            # Русский
+            'сам такой', 'отвечай', 'а ты кто', 'заткнись', 'закрой рот', 'ты кто',
+            'ответь мне', 'что молчишь', 'сам дурак', 'ты тупой', 'ты идиот',
+            # Турецкий
+            'kendi takoy', 'otvecu', 'a sen кто', 'zatknis', 'kapa çeneni', 'sen кто',
+            'sen aptalsin', 'salak', 'gerizekalı',
+            # Английский
+            'shut up', 'stupid', 'idiot', 'fool',
         ]
-        
+
         provocation_count = 0
         for msg in context_messages:
             content = msg.get('content', '').lower()
             if any(indicator in content for indicator in provocation_indicators):
                 provocation_count += 1
-        
-        # Контроль ediyoruz кто nacal
+
+        # Проверяем кто начал первый — ищем первое токсичное сообщение
         first_aggressor = None
         for msg in context_messages:
             content = msg.get('content', '').lower()
@@ -257,35 +263,35 @@ class ComplaintAnalyzer:
             if is_toxic:
                 first_aggressor = msg.get('author_id')
                 break
-        
+
         return {
             'context_messages_count': len(context_messages),
             'provocation_indicators': provocation_count,
             'first_aggressor': first_aggressor,
             'had_provocation': provocation_count > 0,
         }
-    
+
     def _assess_severity(self, provided_analysis: Dict, context_analysis: Dict) -> str:
-        """Ocenivaet ciddiyet naruseniya"""
-        
-        # Tehditler — каждый время kriticno
+        """Оценивает серьёзность нарушения."""
+
+        # Угрозы — всегда критично
         if provided_analysis['threats'] > 0:
             return 'CRITICAL'
-        
-        # Очень toksicnih сообщение
+
+        # Очень много токсичных сообщений
         if provided_analysis['toxic_messages'] >= 5:
             return 'HIGH'
-        
-        # Neskolko toksicnih сообщение
+
+        # Несколько токсичных сообщений
         if provided_analysis['toxic_messages'] >= 2:
             return 'MEDIUM'
-        
-        # Bir toksicnoe сообщение
+
+        # Одно токсичное сообщение
         if provided_analysis['toxic_messages'] == 1:
             return 'LOW'
-        
+
         return 'NONE'
-    
+
     def _form_verdict(
         self,
         complainant_info: Dict,
@@ -296,9 +302,9 @@ class ComplaintAnalyzer:
         context_analysis: Dict,
         severity: str
     ) -> Dict:
-        """Создан finalniy karar"""
-        
-        # Belirliyoruz karar
+        """Создаёт финальное решение AI по жалобе."""
+
+        # Определяем вердикт
         if provided_analysis['mutual_toxicity']:
             verdict = 'MUTUAL'
             confidence = 85
@@ -314,27 +320,27 @@ class ComplaintAnalyzer:
         else:
             verdict = 'UNCLEAR'
             confidence = 40
-        
-        # Korrektiruem доверие на osnove reputacii
+
+        # Корректируем доверие на основе репутации
         if accused_rep['warnings_7d'] >= 3:
             if verdict == 'GUILTY':
                 confidence += 10
         elif complainant_rep['warnings_7d'] >= 3:
             if verdict == 'FALSE_COMPLAINT':
                 confidence += 10
-        
-        # Создан предложение
+
+        # Создаём предложение
         recommendation = self._form_recommendation(
             verdict, severity, accused_rep, complainant_rep
         )
-        
-        # Создан analiz
-        analysis = self._form_analysis_text(
+
+        # Создаём текстовый анализ
+        analysis_text = self._form_analysis_text(
             complainant_info, accused_info,
             provided_analysis, context_analysis,
             verdict, confidence, severity
         )
-        
+
         return {
             'verdict': verdict,
             'confidence': min(confidence, 100),
@@ -348,9 +354,9 @@ class ComplaintAnalyzer:
                 'had_provocation': context_analysis['had_provocation'],
             },
             'recommendation': recommendation,
-            'analysis': analysis,
+            'analysis': analysis_text,
         }
-    
+
     def _form_recommendation(
         self,
         verdict: str,
@@ -358,62 +364,62 @@ class ComplaintAnalyzer:
         accused_rep: Dict,
         complainant_rep: Dict
     ) -> Dict:
-        """Создан предложение для модератор"""
-        
+        """Создаёт предложение по наказанию для модератора."""
+
         if verdict == 'GUILTY':
             if severity == 'CRITICAL':
                 return {
                     'action': 'BAN',
-                    'duration': None,  # Permanent
-                    'reason': 'Tehditler + оскорбление'
+                    'duration': None,  # Перманентный
+                    'reason': 'Угрозы и оскорбления — критическое нарушение'
                 }
             elif severity == 'HIGH':
                 if accused_rep['warnings_total'] >= 3:
                     return {
                         'action': 'BAN',
-                        'duration': 7 * 24 * 60,  # 7 день
-                        'reason': 'Sistemticeskie оскорбление'
+                        'duration': 7 * 24 * 60,  # 7 дней
+                        'reason': 'Систематические оскорбления (множество предупреждений)'
                     }
                 else:
                     return {
                         'action': 'MUTE',
-                        'duration': 24 * 60,  # 24 saat
-                        'reason': 'Mnojestvennie оскорбление'
+                        'duration': 24 * 60,  # 24 часа
+                        'reason': 'Множественные оскорбления'
                     }
             elif severity == 'MEDIUM':
                 return {
                     'action': 'MUTE',
-                    'duration': 4 * 60,  # 4 saat
-                    'reason': 'Hakaret'
+                    'duration': 4 * 60,  # 4 часа
+                    'reason': 'Оскорбление в чате'
                 }
             else:  # LOW
                 return {
                     'action': 'WARN',
                     'duration': None,
-                    'reason': 'Oskorblenie'
+                    'reason': 'Единичное оскорбление'
                 }
-        
+
         elif verdict == 'MUTUAL':
             return {
                 'action': 'MUTE_BOTH',
-                'duration': 2 * 60,  # 2 saat oboim
-                'reason': 'Vzaimnie оскорбление'
+                'duration': 2 * 60,  # 2 часа обоим
+                'reason': 'Взаимные оскорбления (оба нарушили правила)'
             }
-        
+
         elif verdict == 'FALSE_COMPLAINT':
             return {
                 'action': 'WARN_COMPLAINANT',
                 'duration': None,
-                'reason': 'Lojnaya жалоба'
+                'reason': 'Ложная жалоба — доказательств нарушения не найдено'
             }
-        
+
         else:  # INNOCENT or UNCLEAR
             return {
                 'action': 'NO_ACTION',
                 'duration': None,
-                'reason': 'Yetersiz dokazatelstv'
+                'reason': 'Недостаточно доказательств для наказания'
             }
-    
+
     def _form_analysis_text(
         self,
         complainant_info: Dict,
@@ -424,21 +430,201 @@ class ComplaintAnalyzer:
         confidence: int,
         severity: str
     ) -> str:
-        """Создан metinoviy analiz"""
-        
+        """Создаёт текстовый анализ жалобы (plain-text вариант)."""
+
+        # Локализация
+        verdict_ru = {
+            'GUILTY': '🚨 ВИНОВЕН',
+            'INNOCENT': '✅ НЕ ВИНОВЕН',
+            'MUTUAL': '⚖️ ВЗАИМНАЯ ВИНА',
+            'FALSE_COMPLAINT': '🟡 ЛОЖНАЯ ЖАЛОБА',
+            'UNCLEAR': '❓ НЕЯСНО',
+        }.get(verdict, verdict)
+
+        severity_ru = {
+            'CRITICAL': '🔴 Критическая',
+            'HIGH': '🟠 Высокая',
+            'MEDIUM': '🟡 Средняя',
+            'LOW': '🔵 Низкая',
+            'NONE': '⚪ Нет нарушений',
+        }.get(severity, severity)
+
         analysis_parts = [
-            f"## Analiz жалобы\n",
-            f"**Karar:** {verdict} (доверие: {confidence}%)\n",
-            f"**Ciddiyet:** {severity}\n\n",
-            
-            f"### Dokazatelstva:\n",
-            f"- Toksicnih сообщение: {provided_analysis['toxic_messages']}\n",
-            f"- Ugroz: {provided_analysis['threats']}\n",
-            f"- Vzaimnaya toksisite: {'Evet' if provided_analysis['mutual_toxicity'] else 'Yok'}\n\n",
-            
-            f"### Bağlam:\n",
-            f"- Bila provokasyon: {'Evet' if context_analysis['had_provocation'] else 'Yok'}\n",
-            f"- Ilk agressor: {context_analysis.get('first_aggressor', 'Не opredelen')}\n\n",
+            f"## 📋 Анализ жалобы\n",
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n",
+            f"**Вердикт:** {verdict_ru}\n",
+            f"**Уверенность:** {confidence}%\n",
+            f"**Серьёзность:** {severity_ru}\n\n",
+
+            f"### 📊 Доказательства:\n",
+            f"• Токсичных сообщений: **{provided_analysis['toxic_messages']}**\n",
+            f"• Угроз: **{provided_analysis['threats']}**\n",
+            f"• Взаимная токсичность: **{'⚠️ Да' if provided_analysis['mutual_toxicity'] else '✅ Нет'}**\n\n",
+
+            f"### 🔍 Контекст:\n",
+            f"• Была провокация: **{'⚠️ Да' if context_analysis['had_provocation'] else '✅ Нет'}**\n",
+            f"• Первый агрессор: **{context_analysis.get('first_aggressor') or 'Не определён'}**\n",
+            f"• Сообщений в контексте: **{context_analysis['context_messages_count']}**\n\n",
         ]
-        
+
         return ''.join(analysis_parts)
+
+    def _form_embed(
+        self,
+        verdict: str,
+        confidence: int,
+        severity: str,
+        evidence: Dict,
+        recommendation: Dict,
+        complainant_info: Dict,
+        accused_info: Dict
+    ) -> discord.Embed:
+        """Создаёт красивый discord.Embed с результатами анализа (как /help)."""
+
+        # Локализация вердикта
+        verdict_ru_map = {
+            'GUILTY': ('🚨 ВИНОВЕН', 0xE74C3C, 'Подтверждено нарушение правил сервера'),
+            'INNOCENT': ('✅ НЕ ВИНОВЕН', 0x2ECC71, 'Доказательств нарушения не найдено'),
+            'MUTUAL': ('⚖️ ВЗАИМНАЯ ВИНА', 0xF39C12, 'Оба участника нарушили правила'),
+            'FALSE_COMPLAINT': ('🟡 ЛОЖНАЯ ЖАЛОБА', 0x95A5A6, 'Жалоба не подтвердилась, жалобщик сам нарушал правила'),
+            'UNCLEAR': ('❓ НЕЯСНО', 0x95A5A6, 'Недостаточно данных для принятия решения'),
+        }
+        verdict_text, embed_color, verdict_desc = verdict_ru_map.get(verdict, (verdict, 0x3498DB, ''))
+
+        # Серьёзность → текст
+        severity_ru_map = {
+            'CRITICAL': ('🔴 Критическая', 0xE74C3C),
+            'HIGH': ('🟠 Высокая', 0xE67E22),
+            'MEDIUM': ('🟡 Средняя', 0xF1C40F),
+            'LOW': ('🔵 Низкая', 0x3498DB),
+            'NONE': ('⚪ Нет нарушений', 0x95A5A6),
+        }
+        severity_text, severity_color = severity_ru_map.get(severity, (severity, 0x95A5A6))
+
+        # Рекомендация → текст
+        action_ru_map = {
+            'BAN': '🔨 Бан',
+            'MUTE': '🔇 Мут',
+            'WARN': '⚠️ Предупреждение',
+            'MUTE_BOTH': '🔇 Мут обоим',
+            'WARN_COMPLAINANT': '⚠️ Предупреждение жалобщику',
+            'NO_ACTION': '✅ Действие не требуется',
+        }
+        action_text = action_ru_map.get(recommendation['action'], recommendation['action'])
+
+        duration_text = 'Перманентно' if recommendation.get('duration') is None else self._format_duration(recommendation.get('duration', 0))
+
+        # Жертва (accused)
+        accused_name = accused_info.get('name', f"ID {accused_info.get('id', '?')}")
+        accused_id = accused_info.get('id', '?')
+        accused_account_age = accused_info.get('account_age', 0)
+        accused_days = accused_info.get('days_on_sunucu', 0)
+
+        # Жалобщик (complainant)
+        complainer_name = complainant_info.get('name', f"ID {complainant_info.get('id', '?')}")
+        complainer_id = complainant_info.get('id', '?')
+
+        embed = discord.Embed(
+            title=f"⚖️ Анализ жалобы — {verdict_text}",
+            description=f"_{verdict_desc}_",
+            color=embed_color,
+            timestamp=datetime.now(timezone.utc),
+        )
+
+        # 📊 Главный блок
+        embed.add_field(
+            name="━━━━━━━━━━━━━━━━━━━━",
+            value=(
+                f"**🎯 Вердикт:** {verdict_text}\n"
+                f"**📈 Уверенность AI:** {confidence}%\n"
+                f"**⚠️ Серьёзность:** {severity_text}\n"
+                f"━━━━━━━━━━━━━━━━━━━━"
+            ),
+            inline=False,
+        )
+
+        # 👤 Участники
+        embed.add_field(
+            name="👤 Обвиняемый",
+            value=(
+                f"**{accused_name}** (`{accused_id}`)\n"
+                f"├ Возраст аккаунта: `{accused_account_age} дн.`\n"
+                f"├ На сервере: `{accused_days} дн.`\n"
+                f"└ Предупреждений: `{evidence.get('accused_warnings', 0)}`"
+            ),
+            inline=True,
+        )
+
+        embed.add_field(
+            name="📝 Жалобщик",
+            value=(
+                f"**{complainer_name}** (`{complainer_id}`)\n"
+                f"└ Предупреждений: `{evidence.get('complainer_warnings', 0)}`"
+            ),
+            inline=True,
+        )
+
+        embed.add_field(
+            name="\u200b",  # невидимый разделитель
+            value="\u200b",
+            inline=False,
+        )
+
+        # 🔍 Доказательства
+        evidence_text = (
+            f"├ 💬 Токсичных сообщений: **`{evidence.get('toxic_messages', 0)}`**\n"
+            f"├ ⚠️ Угроз: **`{evidence.get('threats', 0)}`**\n"
+            f"├ 🔄 Взаимная токсичность: **`{'⚠️ Да' if evidence.get('mutual_toxicity') else '✅ Нет'}`**\n"
+            f"└ 🎭 Провокация: **`{'⚠️ Была' if evidence.get('had_provocation') else '✅ Нет'}`**"
+        )
+        embed.add_field(
+            name="🔍 Доказательства",
+            value=f"```\n{evidence_text}\n```",
+            inline=False,
+        )
+
+        # 💡 Рекомендация AI
+        embed.add_field(
+            name="💡 Рекомендация AI для модератора",
+            value=(
+                f"**Действие:** {action_text}\n"
+                f"**Длительность:** {duration_text}\n"
+                f"**Причина:** {recommendation.get('reason', 'Не указана')}"
+            ),
+            inline=False,
+        )
+
+        # 📝 Заключение
+        if verdict == 'GUILTY':
+            conclusion = "✅ AI рекомендует применить наказание к обвиняемому."
+        elif verdict == 'INNOCENT':
+            conclusion = "✅ Доказательств нарушения не найдено. Жалоба отклонена."
+        elif verdict == 'MUTUAL':
+            conclusion = "⚖️ Оба участника нарушили правила. Рекомендуется наказать обоих."
+        elif verdict == 'FALSE_COMPLAINT':
+            conclusion = "🟡 Жалобщик сам нарушал правила. Рекомендуется предупреждение жалобщику."
+        else:
+            conclusion = "❓ Недостаточно данных для принятия решения. Передаётся модератору."
+
+        embed.add_field(
+            name="📝 Заключение",
+            value=conclusion,
+            inline=False,
+        )
+
+        embed.set_footer(text="🤖 Aether AI · Система анализа жалоб")
+
+        return embed
+
+    @staticmethod
+    def _format_duration(minutes: int) -> str:
+        """Форматирует длительность из минут в читаемый текст."""
+        if minutes is None or minutes == 0:
+            return 'Перманентно'
+        if minutes < 60:
+            return f'{minutes} мин.'
+        if minutes < 1440:
+            hours = minutes / 60
+            return f'{hours:g} ч.'
+        days = minutes / 1440
+        return f'{days:g} дн.'

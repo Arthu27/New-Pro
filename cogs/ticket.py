@@ -1199,29 +1199,60 @@ class Ticket(commands.Cog):
                 await self._escalate_ticket(channel, state, 'ai_error')
                 return
         
-        # Alıyoruz результат
+        # Получаем результат
         verdict = result['verdict']
         confidence = result['confidence']
         severity = result['severity']
         recommendation = result['recommendation']
         analysis_text = result['analysis']
-        
+        evidence = result['evidence']
+
         print(f"[COMPLAINT] verdict={verdict}, confidence={confidence}, severity={severity}")
-        
-        # Если доверие nizkaya — на e модератор
-        if confidence < 50:
-            await channel.send(
-                f"{analysis_text}\n\n"
-                f"**Доверие fazla nizkaya ({confidence}%)** — на e модератор для rucnoy контроль."
+
+        # Получаем профили для embed (analyzer уже импортирован на строке 1146)
+        complainant_info = await analyzer._get_user_profile(channel.guild, complainant_id)
+        accused_info = await analyzer._get_user_profile(channel.guild, accused_id)
+
+        # Строим красивый embed
+        try:
+            embed = analyzer._form_embed(
+                verdict=verdict,
+                confidence=confidence,
+                severity=severity,
+                evidence=evidence,
+                recommendation=recommendation,
+                complainant_info=complainant_info,
+                accused_info=accused_info,
             )
+        except Exception as _ee:
+            print(f"[COMPLAINT] embed build error: {_ee}")
+            embed = None
+
+        # Если уверенность низкая — передаём модератору
+        if confidence < 50:
+            if embed:
+                embed.add_field(
+                    name="⚠️ Внимание",
+                    value=f"**Уверенность слишком низкая ({confidence}%)** — передаю модератору для ручной проверки.",
+                    inline=False,
+                )
+                await channel.send(embed=embed)
+            else:
+                await channel.send(
+                    f"{analysis_text}\n\n"
+                    f"**Уверенность слишком низкая ({confidence}%)** — передаю модератору для ручной проверки."
+                )
             await self._escalate_ticket(channel, state, 'low_confidence')
             state['complaint'] = {}
             state['analyzing'] = False
             self._save_ticket_state(guild_id, channel_id, state)
             return
-        
-        # Отправл analiz
-        await channel.send(analysis_text)
+
+        # Отправляем красивый embed с анализом
+        if embed:
+            await channel.send(embed=embed)
+        else:
+            await channel.send(analysis_text)
         
         # Primenyaem предложение
         action = recommendation['action']
