@@ -1090,9 +1090,63 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
             except Exception:
                 return jsonify({'error': 'AI boş yanıt döndü.'}), 502
 
+        # ── FUNC İŞLE (function calling) — выполнение [FUNC:...] от AI ──────────
+        import re as _re
+        func_calls_in_answer = _re.findall(r'\[FUNC:[^\]]+\]', answer)
+        func_results_text = ''
+        if func_calls_in_answer and bot:
+            try:
+                from web.ai_functions import AIFunctions
+                # Guild belli mi? MAIN_GUILD_ID veya session.selected_guild
+                _gid_str = str(session.get('selected_guild') or MAIN_GUILD_ID or '')
+                _guild = bot.get_guild(int(_gid_str)) if _gid_str.isdigit() else None
+                if _guild:
+                    ai_fns = AIFunctions(bot)
+                    for fc in func_calls_in_answer[:3]:  # макс 3 функции
+                        try:
+                            res = _run_async(ai_fns.execute_function(fc, _guild), timeout=15)
+                            if res:
+                                func_results_text += f"\n--- РЕЗУЛЬТАТ {fc} ---\n{res}\n"
+                        except Exception as _fce:
+                            print(f"[AI-CHAT] func exec error ({fc}): {_fce}")
+                            func_results_text += f"\n--- РЕЗУЛЬТАТ {fc} ---\nОшибка: {_fce}\n"
+            except Exception as _fce_outer:
+                print(f"[AI-CHAT] function calling setup error: {_fce_outer}")
+
+        # Если были вызваны функции — попросим LLM переформулировать ответ
+        # на основе реальных данных (одна доп. итерация)
+        if func_results_text:
+            # Вырежем [FUNC:...] маркеры из ответа
+            answer = _re.sub(r'\[FUNC:[^\]]+\]', '', answer).strip()
+            messages.append({'role': 'assistant', 'content': answer})
+            messages.append({
+                'role': 'system',
+                'content': (
+                    "Система выполнила функции по твоему запросу. Вот РЕАЛЬНЫЕ результаты:\n"
+                    f"{func_results_text}\n"
+                    "ВАЖНО: сформулируй финальный ответ на русском языке, используя ТОЛЬКО эти "
+                    "реальные данные. НЕ выдумывай сообщения, имена, каналы или даты. "
+                    "Если в результатах сказано 'не найдены' — так и напиши пользователю. "
+                    "Не используй markdown кодовые блоки (```) в ответе — пиши обычным текстом."
+                )
+            })
+            messages.append({
+                'role': 'user',
+                'content': "Сформулируй финальный ответ на основе данных выше."
+            })
+            try:
+                final_answer, model_name2, _ = _call(messages, max_tokens=1024)
+                if final_answer:
+                    answer = final_answer
+            except Exception as _fe2:
+                print(f"[AI-CHAT] re-call after FUNC error: {_fe2}")
+                # Не вышло — просто приклеим результат функции
+                answer = (answer + "\n\n" + func_results_text).strip() if answer else func_results_text.strip()
+            # На всякий случай вырежем оставшиеся маркеры
+            answer = _re.sub(r'\[FUNC:[^\]]+\]', '', answer).strip()
+
         # ── EYLEM İŞLE (только owner) ─────────────────────────────────────────
         action_result = None
-        import re as _re
         action_match = _re.search(r'\[EYLEM:([^\]]+)\]', answer)
         if action_match and bot and user_role == 'owner':
             parts = action_match.group(1).split(':')
