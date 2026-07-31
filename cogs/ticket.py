@@ -831,7 +831,7 @@ class Ticket(commands.Cog):
         
         appeal_reason = state.get('appeal_reason', '')
         
-        prompt = f"""Bir user AI moderasyon kararına апелляция ediyor.
+        prompt = f"""Пользователь подаёт апелляцию на решение AI-модератора.
 
 === НАКАЗАНИЕ ИНФОРМАЦИЯ ===
 Наказание: {penalty['reason']}
@@ -1195,7 +1195,7 @@ class Ticket(commands.Cog):
                 print(f"[COMPLAINT] Ошибка analiza: {e}")
                 import traceback
                 traceback.print_exc()
-                await channel.send("Proizosla ошибка iken analize жалобы. На e модератор.")
+                await channel.send("Произошла ошибка при анализе жалобы. Передаю модератору.")
                 await self._escalate_ticket(channel, state, 'ai_error')
                 return
         
@@ -1246,9 +1246,9 @@ class Ticket(commands.Cog):
                     until = discord.utils.utcnow() + timedelta(minutes=duration)
                     await target.timeout(until, reason=f"AI: {reason}")
                     hours = duration // 60
-                    await channel.send(f"✅ **{target.display_name}** susturuldu на {hours} c. Причина: {reason}")
+                    await channel.send(f"✅ **{target.display_name}** заглушён на {hours} ч. Причина: {reason}")
                 except Exception as e:
-                    await channel.send(f"Не успешно oldu zamyutit: {e}")
+                    await channel.send(f"Не удалось заглушить: {e}")
         
         elif action == 'WARN':
             target = guild.get_member(accused_id)
@@ -1258,9 +1258,9 @@ class Ticket(commands.Cog):
                     warnings_cog = self.bot.get_cog('Предупреждениеs')
                     if warnings_cog:
                         await warnings_cog.add_warning(target, guild.me, reason)
-                        await channel.send(f"✅ **{target.display_name}** polucil предупреждение. Причина: {reason}")
+                        await channel.send(f"✅ **{target.display_name}** получил предупреждение. Причина: {reason}")
                 except Exception as e:
-                    await channel.send(f"Не успешно oldu ver предупреждение: {e}")
+                    await channel.send(f"Не удалось выдать предупреждение: {e}")
         
         elif action == 'MUTE_BOTH':
             # Zamyutit каждый ikisi
@@ -1277,7 +1277,7 @@ class Ticket(commands.Cog):
                         f"Причина: {reason}"
                     )
                 except Exception as e:
-                    await channel.send(f"Не успешно oldu zamyutit каждый ikisi: {e}")
+                    await channel.send(f"Не удалось заглушить (в обоих случаях): {e}")
         
         elif action == 'WARN_COMPLAINANT':
             # Предупреждение жалоба для lojnuyu жалоба
@@ -1288,9 +1288,9 @@ class Ticket(commands.Cog):
                     warnings_cog = self.bot.get_cog('Предупреждениеs')
                     if warnings_cog:
                         await warnings_cog.add_warning(compl, guild.me, reason)
-                        await channel.send(f"⚠️ **{compl.display_name}** polucil предупреждение для lojnuyu жалоба.")
+                        await channel.send(f"⚠️ **{compl.display_name}** получил предупреждение за ложную жалобу.")
                 except Exception as e:
-                    await channel.send(f"Не успешно oldu ver предупреждение: {e}")
+                    await channel.send(f"Не удалось выдать предупреждение: {e}")
         
         else:  # NO_ACTION
             await channel.send("Naruseniy не obnarujeno. Жалоба reddedildi.")
@@ -1324,16 +1324,16 @@ class Ticket(commands.Cog):
         }
         
         e.description = (
-            f"## На e модератор\n"
+            f"## Передано модератору\n"
             f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-            f"**Причина:** {reason_text.get(reason, 'Модераторы получает управление')}\n\n"
-            f"Nasa команда podderjki svyajetsya с vami в blijaysee время.\n\n"
+            f"**Причина:** {reason_text.get(reason, 'Модераторы получают управление')}\n\n"
+            f"Наша команда поддержки свяжется с вами в ближайшее время.\n\n"
             f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         )
         if channel.guild.icon:
-            e.set_footer(text=f"{channel.guild.name} · Moderasyon", icon_url=channel.guild.icon.url)
+            e.set_footer(text=f"{channel.guild.name} · Модерация", icon_url=channel.guild.icon.url)
         else:
-            e.set_footer(text=f"{channel.guild.name} · Moderasyon")
+            e.set_footer(text=f"{channel.guild.name} · Модерация")
         
         await channel.send(embed=e)
         
@@ -1396,9 +1396,9 @@ class Ticket(commands.Cog):
                     f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
                 )
                 if guild.icon:
-                    dm_embed.set_footer(text=f"{guild.name} · Moderasyon", icon_url=guild.icon.url)
+                    dm_embed.set_footer(text=f"{guild.name} · Модерация", icon_url=guild.icon.url)
                 else:
-                    dm_embed.set_footer(text=f"{guild.name} · Moderasyon")
+                    dm_embed.set_footer(text=f"{guild.name} · Модерация")
                 await target_user.send(embed=dm_embed)
             except:
                 pass
@@ -1417,9 +1417,9 @@ class Ticket(commands.Cog):
                 f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             )
             if channel.guild.icon:
-                jail_embed.set_footer(text=f"{channel.guild.name} · Moderasyon", icon_url=channel.guild.icon.url)
+                jail_embed.set_footer(text=f"{channel.guild.name} · Модерация", icon_url=channel.guild.icon.url)
             else:
-                jail_embed.set_footer(text=f"{channel.guild.name} · Moderasyon")
+                jail_embed.set_footer(text=f"{channel.guild.name} · Модерация")
             await channel.send(embed=jail_embed)
             await channel.send(embed=jail_embed)
             
@@ -1492,9 +1492,9 @@ class Ticket(commands.Cog):
                         f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
                     )
                     if guild.icon:
-                        dm_embed.set_footer(text=f"{guild.name} · Moderasyon", icon_url=guild.icon.url)
+                        dm_embed.set_footer(text=f"{guild.name} · Модерация", icon_url=guild.icon.url)
                     else:
-                        dm_embed.set_footer(text=f"{guild.name} · Moderasyon")
+                        dm_embed.set_footer(text=f"{guild.name} · Модерация")
                     await fresh_member.send(embed=dm_embed)
                 except:
                     pass
@@ -1732,12 +1732,12 @@ class Ticket(commands.Cog):
         await interaction.channel.send(embed=e, view=TicketView())
         await interaction.response.send_message("✅ Ticket paneli отправлено.", ephemeral=True)
 
-    @app_commands.command(name="ticket-add", description="Tickete user ekle")
+    @app_commands.command(name="ticket-add", description="Добавить пользователя в тикет")
     @app_commands.checks.has_permissions(manage_channels=True)
     async def ticket_add(self, interaction: discord.Interaction, user: discord.Member):
         await interaction.channel.set_permissions(user, read_messages=True, send_messages=True)
         e = discord.Embed(
-            description=f"✅ {user.mention} bu поддержка в канал eklendi.",
+            description=f"✅ {user.mention} добавлен в канал поддержки.",
             color=0x2ECC71
         )
         await interaction.response.send_message(embed=e)
