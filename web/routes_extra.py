@@ -1355,7 +1355,8 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
                             _run_async(m.edit(nick=yeni_nick))
                             return f'✅ {m.name} nicki → {yeni_nick}'
                     return '⚠️ Eylem заверш — channel/участник не найдено'
-                action_result = _asyncio.run_coroutine_threadsafe(do_action(), bot.loop).result(timeout=10)
+                # do_action() senkron bir fonksiyon — direkt çağır (coroutine değil)
+                action_result = do_action()
             except Exception as ae:
                 action_result = f'❌ Eylem Ошибки: {ae}'
 
