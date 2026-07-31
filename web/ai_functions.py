@@ -360,7 +360,26 @@ FORMAT VIZOVA:
 
             return "\n".join(result_lines)
         except Exception as e:
-            return f"Ошибка: {str(e)}"
+            # Детальная диагностика — что именно упало внутри search_user_messages
+            import traceback
+            err_type = type(e).__name__
+            err_msg = str(e) or "(пусто)"
+            tb = traceback.format_exc()
+            # Сократим traceback до последних 5 строк
+            tb_lines = [l for l in tb.splitlines() if l.strip()][-5:]
+            tb_short = '\n'.join(tb_lines) if tb_lines else '(нет traceback)'
+            print(f'[AI-FUNC] search_user_messages CRASH: {err_type}: {err_msg}')
+            print(f'[AI-FUNC] Traceback (last 5):\n{tb_short}')
+            return (
+                f"⚠️ Ошибка в функции поиска сообщений\n\n"
+                f"**Тип:** `{err_type}`\n"
+                f"**Текст:** {err_msg[:200]}\n\n"
+                f"Возможные причины:\n"
+                f"• Бот не имеет прав на чтение истории каналов\n"
+                f"• Указанный пользователь не найден на сервере\n"
+                f"• Внутренняя ошибка бота (проверьте логи на [AI-FUNC])\n\n"
+                f"Подробности в логах бота: ищите строки `[AI-FUNC]`."
+            )
     
     async def search_rules(self, guild: discord.Guild, query: str) -> str:
         """Arama по правил сервер"""

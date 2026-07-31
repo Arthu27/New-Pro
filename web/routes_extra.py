@@ -1245,7 +1245,41 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
                 # Удалим "--- РЕЗУЛЬТАТ [FUNC:...] ---" обёртку (в любом месте текста)
                 clean_result = _re.sub(r'\n?---\s*РЕЗУЛЬТАТ\s*\[FUNC:[^\]]+\]\s*---\s*\n?', '\n', clean_result).strip()
 
-                if is_negative:
+                # Проверяем, является ли результат РЕАЛЬНОЙ ошибкой (начинается с "Ошибка:")
+                # или "⚠️ Ошибка" (мой новый формат). Если да — это диагностика,
+                # а не "не найдено", и должна показываться ОТДЕЛЬНО.
+                is_real_error = (
+                    clean_result.startswith('Ошибка:') or
+                    clean_result.startswith('⚠️ Ошибка') or
+                    '⚠️ Ошибка в функции поиска' in clean_result
+                )
+                is_empty_error = clean_result == 'Ошибка:' or clean_result == 'Ошибка: '
+
+                if is_empty_error:
+                    # Пустая ошибка (e без текста) — даём детальный диагноз
+                    answer = (
+                        f"🔍 Поиск сообщений {_tuid_str}:\n\n"
+                        f"⚠️ **Функция поиска упала без описания ошибки.**\n\n"
+                        f"Возможные причины:\n"
+                        f"• Бот offline или перезапускается\n"
+                        f"• Бот не имеет прав на чтение истории каналов\n"
+                        f"• Внутренняя ошибка в `search_user_messages`\n\n"
+                        f"Проверьте:\n"
+                        f"• Статус бота в Discord (Online?)\n"
+                        f"• Логи бота — ищите строки `[AI-FUNC] search_user_messages CRASH`\n"
+                        f"• Права бота: VIEW_CHANNEL + READ_MESSAGE_HISTORY\n\n"
+                        f"— Я не буду выдумывать содержимое сообщений."
+                    )
+                elif is_real_error:
+                    # Реальная ошибка с описанием — покажем как есть + предупреждение
+                    answer = (
+                        f"🔍 Поиск сообщений {_tuid_str}:\n\n"
+                        f"{clean_result}\n\n"
+                        f"— Это **диагностическое сообщение** от функции поиска, не результат. "
+                        f"Поиск сейчас не работает. Подробности в логах бота (`[AI-FUNC]`)."
+                    )
+                elif is_negative:
+                    # Реальный «пустой» результат («не найдены», «0 записей»)
                     answer = (
                         f"🔍 Поиск сообщений {_tuid_str}:\n\n"
                         f"{clean_result}\n\n"
