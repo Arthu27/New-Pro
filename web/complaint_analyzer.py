@@ -5,6 +5,7 @@ Glubokiy analiz istorii, reputacii, контекстn, dokazatelstv
 import discord
 import json
 import os
+import re
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Tuple
 
