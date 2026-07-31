@@ -78,11 +78,20 @@ ERIŞIMNIE FONKSIYONLAR (vizivay ne время gerekli):
     Пример: search_knowledge_base("spam")
 
 12. search_user_messages(user_id: int, channel_id: int = 0, limit: int = 20)
-    Поиск сообщений пользователя ГИБРИДНО: сначала Discord API (channel.history),
-    потом fallback на data/message_log_<guild_id>.json (когда бот offline).
+    ОБЯЗАТЕЛЬНО вызывай эту функцию каждый раз, когда пользователь
+    просит ПОКАЗАТЬ/НАЙТИ/ВЫВЕСТИ сообщения другого пользователя или себя.
+    ГИБРИДНЫЙ поиск: сначала Discord API (channel.history), потом fallback
+    на data/message_log_<guild_id>.json (когда бот offline).
     channel_id=0 — искать во всех каналах, иначе только в указанном.
-    Пример: search_user_messages(user_id=123456789, limit=20)
-    Или только в конкретном канале: search_user_messages(user_id=123456789, channel_id=987654321, limit=10)
+
+    КРИТИЧЕСКИ ВАЖНО: если тебя просят показать сообщения пользователя —
+    СРАЗУ вызывай [FUNC:search_user_messages(user_id=<id>, limit=20)].
+    НЕ говори "Discord API недоступен" — у тебя ЕСТЬ лог в
+    data/message_log_<guild_id>.json, и Discord API часто работает.
+
+    Пример: [FUNC:search_user_messages(user_id=123456789, limit=20)]
+    Или только в конкретном канале:
+    [FUNC:search_user_messages(user_id=123456789, channel_id=987654321, limit=10)]
 
 FORMAT VIZOVA:
 [FUNC:function_name(param1=value1, param2=value2)]
