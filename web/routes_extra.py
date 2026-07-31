@@ -1183,8 +1183,23 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
                             if res:
                                 func_results_text += f"\n--- РЕЗУЛЬТАТ {fc} ---\n{res}\n"
                         except Exception as _fce:
-                            print(f"[AI-CHAT] func exec error ({fc}): {_fce}")
-                            func_results_text += f"\n--- РЕЗУЛЬТАТ {fc} ---\nОшибка: {_fce}\n"
+                            # Детальная диагностика — type + repr (на случай пустого str)
+                            import traceback
+                            err_type = type(_fce).__name__
+                            err_repr = repr(_fce)
+                            err_str = str(_fce) or "(пусто)"
+                            tb_short = '\n'.join([l for l in traceback.format_exc().splitlines() if l.strip()][-3:])
+                            print(f"[AI-CHAT] func exec error ({fc}): {err_type}: {err_repr}")
+                            print(f"[AI-CHAT] Traceback: {tb_short}")
+                            # Сохраняем в func_results_text с type + repr
+                            func_results_text += (
+                                f"\n--- РЕЗУЛЬТАТ {fc} ---\n"
+                                f"⚠️ Ошибка в функции поиска\n\n"
+                                f"**Тип:** `{err_type}`\n"
+                                f"**repr:** `{err_repr}`\n"
+                                f"**str:** {err_str[:200]}\n\n"
+                                f"Traceback (последние 3 строки):\n```\n{tb_short}\n```\n"
+                            )
             except Exception as _fce_outer:
                 print(f"[AI-CHAT] function calling setup error: {_fce_outer}")
 
