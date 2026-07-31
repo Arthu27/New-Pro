@@ -1006,8 +1006,8 @@ class Ticket(commands.Cog):
                             # Direkt mention/reply контроль
                             is_mention = other_id and any(m.id == other_id for m in msg.mentions)
                             is_reply = False
-                            if msg.reference and msg.reference.reлевыйved:
-                                ref = msg.reference.reлевыйved
+                            if msg.reference and msg.reference.resolved:
+                                ref = msg.reference.resolved
                                 if hasattr(ref, 'author') and other_id:
                                     is_reply = ref.author.id == other_id
 
