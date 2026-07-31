@@ -5,7 +5,7 @@ Glubokiy analiz istorii, reputacii, контекстn, dokazatelstv
 import discord
 import json
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Tuple
 
 
@@ -89,10 +89,10 @@ class ComplaintAnalyzer:
             'id': user_id,
             'name': member.display_name,
             'joined_at': member.joined_at.isoformat() if member.joined_at else None,
-            'days_on_sunucu': (datetime.utcnow() - member.joined_at).days if member.joined_at else 0,
+            'days_on_sunucu': (datetime.now(timezone.utc) - member.joined_at).days if member.joined_at else 0,
             'role': [role.name for role in member.roles if role.name != "@everyone"],
             'is_moderator': member.guild_permissions.kick_members or member.guild_permissions.ban_members,
-            'account_age': (datetime.utcnow() - member.created_at).days,
+            'account_age': (datetime.now(timezone.utc) - member.created_at).days,
         }
     
     async def _get_message_history(
@@ -125,13 +125,20 @@ class ComplaintAnalyzer:
         guild_warnings = warnings_data.get(str(guild.id), {}).get(str(user_id), [])
         
         # Scitaem предупреждения для raznie periodi
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         warnings_7d = 0
         warnings_30d = 0
         warnings_total = len(guild_warnings)
         
         for warn in guild_warnings:
-            warn_date = datetime.fromisoformat(warn.get('timestamp', now.isoformat()))
+            warn_date_raw = warn.get('timestamp', now.isoformat())
+            try:
+                warn_date = datetime.fromisoformat(warn_date_raw)
+            except (ValueError, TypeError):
+                continue
+            # Если naive — делаем aware (UTC)
+            if warn_date.tzinfo is None:
+                warn_date = warn_date.replace(tzinfo=timezone.utc)
             days_ago = (now - warn_date).days
             
             if days_ago <= 7:
