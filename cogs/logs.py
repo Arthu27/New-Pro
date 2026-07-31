@@ -509,7 +509,7 @@ class Logs(commands.Cog):
         if message.author.bot or not message.guild:
             return
         content = message.content[:500] if message.content else '[Vlojenie/Embed]'
-        _msg_cache[message.id] = {
+        msg_data = {
             'content': message.content or '',
             'author_id': message.author.id,
             'author_name': message.author.display_name,
@@ -518,10 +518,43 @@ class Logs(commands.Cog):
             'guild_id': message.guild.id,
             'timestamp': message.created_at.isoformat(),
         }
+        _msg_cache[message.id] = msg_data
         if len(_msg_cache) > 5000:
             oldest = list(_msg_cache.keys())[:2500]
             for k in oldest:
                 del _msg_cache[k]
+        # Также сохранить в data/message_log_<guild_id>.json (для AI поиска)
+        self._save_message_log(message.guild.id, msg_data)
+
+    def _save_message_log(self, guild_id: int, msg_data: dict):
+        """Сохранить сообщение в per-guild JSON-лог (для AI-поиска)."""
+        import json as _json
+        try:
+            f = f'data/message_log_{guild_id}.json'
+            logs = []
+            if os.path.exists(f):
+                try:
+                    with open(f, 'r', encoding='utf-8') as fp:
+                        logs = _json.load(fp) or []
+                except (OSError, _json.JSONDecodeError, ValueError):
+                    logs = []
+            logs.append({
+                'message_id': msg_data.get('message_id', ''),
+                'author_id': str(msg_data['author_id']),
+                'author_name': msg_data['author_name'],
+                'channel_id': str(msg_data['channel_id']),
+                'channel_name': msg_data['channel_name'],
+                'content': msg_data['content'][:500],
+                'timestamp': msg_data['timestamp'],
+            })
+            # Макс 5000 сообщений (FIFO) — защита от переполнения
+            if len(logs) > 5000:
+                logs = logs[-5000:]
+            os.makedirs('data', exist_ok=True)
+            with open(f, 'w', encoding='utf-8') as fp:
+                _json.dump(logs, fp, ensure_ascii=False)
+        except Exception as e:
+            print(f'[LOG] save_message_log error: {e}')
 
     @commands.Cog.listener()
     async def on_message_delete(self, message):

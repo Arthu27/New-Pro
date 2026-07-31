@@ -97,6 +97,7 @@ data/diag_perf.json
 data/cog_errors.json
 data/diag_errors.json
 data/verification_config.json
+data/message_log_*.json
 
 # Python venv
 .venv/

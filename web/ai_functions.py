@@ -25,6 +25,7 @@ class AIFunctions:
             'recall_facts': self.recall_facts,
             'check_user_reputation': self.check_user_reputation,
             'search_knowledge_base': self.search_knowledge_base,
+            'search_user_messages': self.search_user_messages,
         }
     
     def get_available_functions(self) -> str:
@@ -75,6 +76,13 @@ ERIŞIMNIE FONKSIYONLAR (vizivay ne время gerekli):
 11. search_knowledge_base(query: str)
     Arama по tabanda информация сервер (правила, FAQ, ticketlar, notlar)
     Пример: search_knowledge_base("spam")
+
+12. search_user_messages(user_id: int, channel_id: int = 0, limit: int = 20)
+    Поиск сообщений пользователя в ЛОГЕ БОТА (работает даже если Discord API недоступен).
+    Бот записывает каждое сообщение в data/message_log_<guild_id>.json,
+    даже когда пользователь offline.
+    Пример: search_user_messages(user_id=123456789, limit=20)
+    Или только в конкретном канале: search_user_messages(user_id=123456789, channel_id=987654321)
 
 FORMAT VIZOVA:
 [FUNC:function_name(param1=value1, param2=value2)]
@@ -190,21 +198,67 @@ FORMAT VIZOVA:
         """Контроль et son сообщения пользователь"""
         try:
             from cogs.logs import _msg_cache
-            
+
             user_messages = [
                 msg for msg in _msg_cache.values()
                 if msg.get('author_id') == user_id
             ][:limit]
-            
+
             if not user_messages:
                 return f"Yok nedavnih сообщение den <@{user_id}> в kese."
-            
+
             result = f"В конец {len(user_messages)} сообщение <@{user_id}>:\n"
             for msg in reversed(user_messages):
                 content = msg.get('content', '')[:100]
                 channel = msg.get('channel_name', '?')
                 result += f"#{channel}: {content}\n"
-            
+
+            return result
+        except Exception as e:
+            return f"Ошибка: {str(e)}"
+
+    async def search_user_messages(self, guild: discord.Guild, user_id: int, channel_id: int = 0, limit: int = 20) -> str:
+        """Поиск сообщений пользователя в bot-логе (даже когда он offline).
+
+        Читает data/message_log_<guild_id>.json, который cogs/logs.py пишет
+        при каждом on_message. Это работает, даже если Discord API не
+        возвращает историю (например, бот без прав message_history).
+        """
+        try:
+            import json as _json
+            f = f'data/message_log_{guild.id}.json'
+            if not os.path.exists(f):
+                return f"Лог сообщений пуст. Бот ещё не успел записать сообщения этого сервера."
+            try:
+                with open(f, 'r', encoding='utf-8') as fp:
+                    logs = _json.load(fp) or []
+            except (OSError, _json.JSONDecodeError, ValueError):
+                return "Файл лога повреждён."
+
+            uid = str(user_id)
+            cid = str(channel_id) if channel_id else None
+            filtered = [m for m in logs if str(m.get('author_id', '')) == uid]
+            if cid:
+                filtered = [m for m in filtered if str(m.get('channel_id', '')) == cid]
+
+            if not filtered:
+                return f"В логе бота нет сообщений от <@{user_id}>."
+
+            # Сначала новые
+            filtered.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
+            try:
+                limit = int(limit)
+            except (TypeError, ValueError):
+                limit = 20
+            limit = max(1, min(limit, 100))
+            filtered = filtered[:limit]
+
+            result = f"Найдено {len(filtered)} сообщений от <@{user_id}> в логе бота:\n\n"
+            for m in filtered:
+                ts = m.get('timestamp', '')[:19].replace('T', ' ')
+                ch = m.get('channel_name', '?')
+                txt = (m.get('content') or '[вложение/эмбед]')[:200]
+                result += f"• [{ts}] #{ch}: {txt}\n"
             return result
         except Exception as e:
             return f"Ошибка: {str(e)}"

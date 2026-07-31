@@ -4552,6 +4552,53 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         result.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
         return jsonify(result[:300])
 
+    # ── KULLANICI MESAJ ARAMA (AI için) ──────────────────────────────
+    @app.route('/api/guild/<guild_id>/user-messages', methods=['GET'])
+    @login_required
+    @role_required('mod')
+    def api_user_messages(guild_id):
+        """Kullanıcının yazdığı mesajları message_log dosyasından ara.
+
+        Query params:
+          user_id (zorunlu) — Discord user ID
+          channel_id (opsiyonel) — belirli kanal
+          limit (opsiyonel, default 50, max 200) — kaç sonuç
+        """
+        try:
+            user_id = str(request.args.get('user_id', '')).strip()
+            if not user_id.isdigit() or not (17 <= len(user_id) <= 22):
+                return jsonify({'error': 'Geçersiz user_id'}), 400
+            channel_id = str(request.args.get('channel_id', '')).strip() or None
+            try:
+                limit = int(request.args.get('limit', 50))
+                limit = max(1, min(limit, 200))
+            except (TypeError, ValueError):
+                limit = 50
+
+            f = f'data/message_log_{guild_id}.json'
+            if not os.path.exists(f):
+                return jsonify({'messages': [], 'total': 0, 'note': 'log yok'})
+            try:
+                with open(f, 'r', encoding='utf-8') as fp:
+                    logs = json.load(fp) or []
+            except (OSError, json.JSONDecodeError, ValueError):
+                return jsonify({'messages': [], 'total': 0, 'note': 'log bozuk'})
+
+            # Filtrele
+            filtered = [m for m in logs
+                        if str(m.get('author_id', '')) == user_id
+                        and (channel_id is None or str(m.get('channel_id', '')) == channel_id)]
+            # En yeniden eskiye
+            filtered.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
+            filtered = filtered[:limit]
+            return jsonify({
+                'messages': filtered,
+                'total': len(filtered),
+                'note': None,
+            })
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
     @app.route('/api/restore-upload', methods=['POST'])
     @login_required
     @role_required('admin')
