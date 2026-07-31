@@ -1095,12 +1095,49 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         func_calls_in_answer = _re.findall(r'\[FUNC:[^\]]+\]', answer)
         func_results_text = ''
 
+        # ── ВАЖНО: ПРИОРИТЕТ ID ─────────────────────────────────────────────
+        # Сначала ищем ID в вопросе пользователя (это истина).
+        # Только если в вопросе НЕТ ID — берём ID из ответа AI.
+        # (AI может галлюцинировать ID из system prompt, например OWNER_ID)
+        _question_id_m = _re.search(r'\b(\d{17,20})\b', question)
+        _question_id = _question_id_m.group(1) if _question_id_m else None
+
         # Запоминаем, был ли запрос на search_user_messages (для анти-галлюцинации)
         asked_search_user_messages = any(
             'search_user_messages' in fc for fc in func_calls_in_answer
         )
+        # ID из [FUNC:...] маркера в ответе AI
         asked_user_id_m = _re.search(r'user_id=(\d+)', ' '.join(func_calls_in_answer))
-        asked_user_id = asked_user_id_m.group(1) if asked_user_id_m else None
+        asked_user_id_from_ai = asked_user_id_m.group(1) if asked_user_id_m else None
+        # ПРИОРИТЕТ: ID из вопроса > ID из ответа AI.
+        # ДОПОЛНИТЕЛЬНО: если AI подставил OWNER_ID/BOT_ID/спец. ID —
+        # это галлюцинация. Игнорируем если в вопросе НЕТ ID И есть имя
+        # пользователя (mrxway, имя из @mention).
+        _owner_id = str(os.getenv('OWNER_ID', ''))
+        _bot_id_env = str(os.getenv('BOT_ID', ''))
+        if asked_user_id_from_ai and asked_user_id_from_ai in (_owner_id, _bot_id_env) and not _question_id:
+            # AI подставил OWNER_ID — вероятно, галлюцинация.
+            # Не используем этот ID; если есть @упоминание в вопросе — найдём ниже.
+            asked_user_id_from_ai = None
+        # Если в вопросе есть @упоминание — попробуем найти его ID в guild
+        if not _question_id and not asked_user_id_from_ai:
+            _mention_m = _re.search(r'@([\w\.\-_]+)', question)
+            if _mention_m and bot:
+                _mention_name = _mention_m.group(1).lower()
+                try:
+                    _gid_str3 = str(session.get('selected_guild') or MAIN_GUILD_ID or '')
+                    _guild3 = bot.get_guild(int(_gid_str3)) if _gid_str3.isdigit() else None
+                    if _guild3:
+                        for _m in _guild3.members:
+                            if (_m.display_name.lower() == _mention_name or
+                                _m.name.lower() == _mention_name or
+                                _mention_name in _m.display_name.lower() or
+                                _mention_name in _m.name.lower()):
+                                _question_id = str(_m.id)
+                                break
+                except Exception:
+                    pass
+        asked_user_id = _question_id or asked_user_id_from_ai
 
         # ── ПРЕДИКТИВНЫЙ ВЫЗОВ: если AI НЕ вызвал [FUNC:search_user_messages] ──
         # но пользователь явно просит сообщения + в вопросе есть Discord ID
