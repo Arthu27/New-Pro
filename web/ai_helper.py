@@ -140,12 +140,12 @@ Panel erişimüzerinde с Cloudflare tunnel по publicnoy ssilke.
 - /ai-learn [tema] [metin] — naucit AI novomu faktu
 - AI pomogaet в ticketlarda автоматически как
 
-## 🎫 TICKETLAR
-- Клик butona в канал ticketların
-- Otkroetsya канал #ticket-vaseimya
-- AI помощник olur çözmek sorunu
-- Если не ileolabilir — на e модератор
-- Iken закрыт — transkript сохран
+## 🎫 ТИКЕТЫ
+- Нажмите кнопку в канале для тикета
+- Откроется канал #ticket-вашеимя
+- AI-ассистент поможет решить проблему
+- Если не получится — передаст модератору
+- При закрытии — транскрипт сохраняется
 
 ## ✅ VERIFIKACIYa
 - Girin в канал verifikacii
@@ -575,16 +575,16 @@ async def ai_ticket_response(user_message: str, history: List[Dict], guild_conte
 # ─── ПРИВЕТСТВИЕ ─────────────────────────────────────────────────────────────
 
 def ai_ticket_greeting(category: str = None) -> str:
-    """Приветствие сообщение iken açıkii ticketin"""
+    """Приветственное сообщение при открытии тикета"""
     return (
-        "## Merhaba! Ya — AI assistent\n\n"
-        "Ya pomogu çözmek vasu sorunu.\n\n"
-        "**Açıklayın ne slucilos:**\n"
-        "- Ne не работает?\n"
-        "- Какой ошибки vidite?\n"
-        "- Ne zaten probovali?\n\n"
+        "## Здравствуйте! Я — AI-ассистент\n\n"
+        "Я помогу решить вашу проблему.\n\n"
+        "**Опишите, что произошло:**\n"
+        "- Что не работает?\n"
+        "- Какую ошибку видите?\n"
+        "- Что уже пробовали?\n\n"
         "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-        "-# Если ya не smogu pomoc — направление e модератор."
+        "-# Если я не смогу помочь — передам модератору."
     )
 
 
@@ -1100,13 +1100,20 @@ def _call(messages: List[Dict], max_tokens: int = 2048, temperature: float = 0.7
 
 def _call_text(messages: List[Dict], max_tokens: int = 2048, temperature: float = 0.7, model: str = None) -> str:
     """
-    Только metin вернуть LLM çağrısı
+    Только текст, возвращаемый LLM вызовом
     """
     try:
         resp, _, _ = _call(messages, max_tokens=max_tokens, temperature=temperature, model=model)
-        return resp
+        if resp:
+            return resp
     except Exception as e:
-        return f"AI yanıtı alınamadı: {e}"
+        print(f"[AI] _call_text exception, fallback: {e}")
+    # Fallback: yerel Moebius cevabı
+    try:
+        fallback, _, _ = _local_moebius_fallback(messages)
+        return fallback
+    except Exception:
+        return "Извините, произошла ошибка. Попробуйте позже."
 
 def ai_assistant(question: str, context: Dict = None, history: List[Dict] = None) -> Tuple[str, List[Dict], str, Dict]:
     """

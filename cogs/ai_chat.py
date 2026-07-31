@@ -233,7 +233,7 @@ def _extract_learned_info(question: str, answer: str) -> dict:
     q = question.lower().strip()
     
     # Web если выполнен поиск доверие низкий
-    is_web_search = '🔍 Web поиск yapıldı' in answer
+    is_web_search = '🔍 Web поиск выполнен' in answer
     confidence = 'low' if is_web_search else 'high'
     
     # "X кто" вопросы

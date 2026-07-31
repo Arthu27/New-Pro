@@ -1072,7 +1072,20 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         try:
             answer, model_name, _ = _call(messages, max_tokens=1024)
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            # Fallback: yerel cevap
+            print(f"[AI-CHAT] _call exception: {e}")
+            from web.ai_helper import _local_moebius_fallback
+            try:
+                answer, model_name, _ = _local_moebius_fallback(messages)
+            except Exception as _fe:
+                print(f"[AI-CHAT] fallback exception: {_fe}")
+                return jsonify({'error': 'AI servisi şu an kullanılamıyor. Daha sonra tekrar deneyin.'}), 503
+        if not answer:
+            from web.ai_helper import _local_moebius_fallback
+            try:
+                answer, model_name, _ = _local_moebius_fallback(messages)
+            except Exception:
+                return jsonify({'error': 'AI boş yanıt döndü.'}), 502
 
         # ── EYLEM İŞLE (только owner) ─────────────────────────────────────────
         action_result = None
