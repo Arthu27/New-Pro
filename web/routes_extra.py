@@ -4550,6 +4550,125 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
             json.dump({'notify_channel_id': cid}, fp, indent=2, ensure_ascii=False)
         return jsonify({'success': True, 'notify_channel_id': cid})
 
+    @app.route('/api/guild/<guild_id>/ticket-notify-diagnose', methods=['GET'])
+    @login_required
+    @role_required('admin')
+    def api_ticket_notify_diagnose(guild_id):
+        """Диагностика: что происходит при вызове _notify_admins_penalty.
+        Возвращает детальную информацию о текущей конфигурации, чтобы
+        понять, почему уведомления не доходят.
+        """
+        import web.app as _app
+        bot = _app.bot_instance
+        result = {
+            'guild_id': guild_id,
+            'bot_online': bool(bot),
+            'config_file_exists': False,
+            'config_notify_channel_id': None,
+            'config_target_channel': None,
+            'config_target_channel_name': None,
+            'fallback_channels_found': [],
+            'admin_role_found': None,
+            'guild_owner_can_dm': None,
+            'all_text_channels': [],
+            'recommendation': '',
+        }
+
+        # 1. Конфиг-файл
+        f = f'data/ticket_notify_{guild_id}.json'
+        if os.path.exists(f):
+            result['config_file_exists'] = True
+            try:
+                with open(f, 'r', encoding='utf-8') as fp:
+                    cfg = json.load(fp) or {}
+                result['config_notify_channel_id'] = cfg.get('notify_channel_id')
+            except Exception as e:
+                result['config_file_error'] = str(e)
+
+        # 2. Бот и guild
+        if not bot:
+            result['recommendation'] = '❌ Бот offline. Перезапусти бота.'
+            return jsonify(result)
+        guild = None
+        for g in bot.guilds:
+            if str(g.id) == str(guild_id):
+                guild = g
+                break
+        if not guild:
+            result['recommendation'] = f'❌ Бот не на сервере {guild_id}. Бот на: {[str(g.id) for g in bot.guilds]}'
+            return jsonify(result)
+        result['guild_name'] = guild.name
+
+        # 3. Канал из конфига
+        if result['config_notify_channel_id']:
+            try:
+                ch = guild.get_channel(int(result['config_notify_channel_id']))
+                if not ch:
+                    ch = None  # fetch не делаем — sync endpoint
+                if ch:
+                    result['config_target_channel'] = str(ch.id)
+                    result['config_target_channel_name'] = ch.name
+                else:
+                    result['config_target_channel_error'] = f'Канал ID={result["config_notify_channel_id"]} не найден на сервере'
+            except Exception as e:
+                result['config_target_channel_error'] = str(e)
+
+        # 4. Все текстовые каналы
+        result['all_text_channels'] = [
+            {'id': str(c.id), 'name': c.name, 'position': c.position}
+            for c in guild.text_channels[:50]
+        ]
+
+        # 5. Fallback каналы по имени
+        for name in ('admin-log', 'mod-log', 'логи-модерации', 'staff-log'):
+            ch = discord.utils.get(guild.text_channels, name=name)
+            if ch:
+                result['fallback_channels_found'].append({'name': name, 'id': str(ch.id)})
+
+        # 6. Admin role
+        try:
+            admin_role = discord.utils.get(guild.roles, permissions=discord.Permissions(administrator=True))
+            if admin_role:
+                result['admin_role_found'] = {'name': admin_role.name, 'id': str(admin_role.id)}
+        except Exception:
+            pass
+
+        # 7. Владелец для DM
+        if guild.owner:
+            result['guild_owner_can_dm'] = {
+                'name': str(guild.owner),
+                'id': str(guild.owner.id),
+                'bot': guild.owner.bot,
+            }
+
+        # 8. Рекомендация
+        if result['config_target_channel']:
+            result['recommendation'] = (
+                f'✅ Конфиг установлен. Уведомления должны идти в канал '
+                f'#{result["config_target_channel_name"]} ({result["config_target_channel"]}). '
+                f'Если уведомлений нет — проверь логи бота (ищи "[TICKET-NOTIFY]").'
+            )
+        elif result['fallback_channels_found']:
+            ch = result['fallback_channels_found'][0]
+            result['recommendation'] = (
+                f'⚠️ Конфиг пустой, но найден fallback-канал #{ch["name"]} ({ch["id"]}). '
+                f'Уведомления должны идти туда.'
+            )
+        elif result['guild_owner_can_dm'] and not result['guild_owner_can_dm'].get('bot'):
+            result['recommendation'] = (
+                f'⚠️ Ни конфиг, ни fallback каналы не найдены. Уведомления пойдут в DM '
+                f'владельцу {result["guild_owner_can_dm"]["name"]}. '
+                f'Но лучше создать канал "admin-log" или "mod-log" ИЛИ установить '
+                f'notify_channel_id в настройках выше.'
+            )
+        else:
+            result['recommendation'] = (
+                '❌ Ни конфиг, ни fallback каналы, ни владелец для DM — '
+                'уведомления НИКУДА не доставляются! Создай канал или установи ID.'
+            )
+
+        return jsonify(result)
+
     @app.route('/api/guild/<guild_id>/tickets')
     @login_required
     @role_required('mod')

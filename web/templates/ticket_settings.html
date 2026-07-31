@@ -124,17 +124,21 @@
         <input type="text" id="notify-channel-id" placeholder="17-22 haneli kanal ID (örn: 123456789012345678)">
       </div>
     </div>
-    <div style="display:flex; gap:8px; align-items:center;">
+    <div style="display:flex; gap:8px; align-items:center; flex-wrap: wrap;">
       <button class="btn-warn" id="btn-notify-save" type="button">
         <i class="fas fa-save"></i> Kaydet
       </button>
       <button class="btn-primary" id="btn-notify-clear" type="button">
         <i class="fas fa-times"></i> Temizle
       </button>
+      <button class="btn-secondary" id="btn-notify-diagnose" type="button" style="background:#3498db;">
+        <i class="fas fa-stethoscope"></i> 🔍 Диагностика
+      </button>
       <span class="muted" style="font-size: 12px;">
         * Tüm admin yetkisine sahip rollere otomatik ping atılır
       </span>
     </div>
+    <div id="notify-diagnose-result" style="margin-top: 12px; display: none;"></div>
   </div>
 
   <div class="tk-card tk-card-wide">
@@ -244,6 +248,57 @@
       if (!notifyGuild.value) return;
       notifyCid.value = '';
       $('btn-notify-save').click();
+    });
+
+    $('btn-notify-diagnose').addEventListener('click', function () {
+      if (!notifyGuild.value) {
+        setNotifyStatus('Sunucu seç', true);
+        return;
+      }
+      var box = $('notify-diagnose-result');
+      box.style.display = 'block';
+      box.innerHTML = '<div style="padding:12px; background:#f0f0f0; border-radius:6px;">⏳ Проверяю конфигурацию...</div>';
+      fetch('/api/guild/' + notifyGuild.value + '/ticket-notify-diagnose', { credentials: 'same-origin' })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          var html = '<div style="padding:14px; background:#fff; border:1px solid #ddd; border-radius:8px; margin-top:8px;">';
+          html += '<h4 style="margin-top:0;">🔍 Диагностика уведомлений о наказаниях</h4>';
+          html += '<p><b>Бот онлайн:</b> ' + (d.bot_online ? '✅ да' : '❌ нет') + '</p>';
+          if (d.guild_name) {
+            html += '<p><b>Сервер:</b> ' + d.guild_name + ' (' + d.guild_id + ')</p>';
+          }
+          html += '<p><b>Конфиг-файл:</b> ' + (d.config_file_exists ? '✅ существует' : '❌ НЕ найден') + '</p>';
+          html += '<p><b>notify_channel_id в конфиге:</b> ' + (d.config_notify_channel_id || '(пусто)') + '</p>';
+          if (d.config_target_channel) {
+            html += '<p style="color:green;"><b>✅ Канал из конфига:</b> #' + d.config_target_channel_name + ' (' + d.config_target_channel + ')</p>';
+          } else if (d.config_notify_channel_id) {
+            html += '<p style="color:red;"><b>❌ Канал из конфига не найден на сервере!</b> ' + (d.config_target_channel_error || '') + '</p>';
+          }
+          if (d.fallback_channels_found && d.fallback_channels_found.length) {
+            html += '<p><b>Fallback-каналы (по имени):</b><ul>';
+            d.fallback_channels_found.forEach(function (c) {
+              html += '<li>✅ #' + c.name + ' (' + c.id + ')</li>';
+            });
+            html += '</ul></p>';
+          } else {
+            html += '<p style="color:orange;"><b>⚠️ Fallback-каналы (admin-log/mod-log/...) не найдены</b></p>';
+          }
+          if (d.admin_role_found) {
+            html += '<p><b>Роль с правами admin (для пинга):</b> ' + d.admin_role_found.name + ' (' + d.admin_role_found.id + ')</p>';
+          } else {
+            html += '<p style="color:orange;"><b>⚠️ Нет роли с правами admin</b> — пинг не будет отправлен</p>';
+          }
+          if (d.guild_owner_can_dm) {
+            html += '<p><b>Владелец сервера (для DM fallback):</b> ' + d.guild_owner_can_dm.name + ' (' + d.guild_owner_can_dm.id + ')</p>';
+          }
+          html += '<hr><p style="background:#fff8dc; padding:10px; border-radius:6px;"><b>💡 Рекомендация:</b><br>' + d.recommendation + '</p>';
+          html += '<p style="font-size:12px; color:#666; margin-top:8px;">Для подробностей ищите в логах бота строки <code>[TICKET-NOTIFY]</code></p>';
+          html += '</div>';
+          box.innerHTML = html;
+        })
+        .catch(function (e) {
+          box.innerHTML = '<div style="padding:12px; background:#ffe; border:1px solid #f99; border-radius:6px;">❌ Ошибка запроса: ' + e + '</div>';
+        });
     });
 
     loadNotifyGuilds();

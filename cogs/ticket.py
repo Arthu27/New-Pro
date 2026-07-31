@@ -1444,11 +1444,17 @@ class Ticket(commands.Cog):
             )
 
             # Уведомить администраторов о применённом наказании
-            await self._notify_admins_penalty(
-                guild, penalty_type='jail',
-                target=target_user, reason=reason,
-                source_channel=channel, moderator=complainant,
-            )
+            print(f'[TICKET-NOTIFY] === JAIL ВЫЗОВ === target={target_user} ({target_user.id}) reason={reason[:80]}')
+            try:
+                await self._notify_admins_penalty(
+                    guild, penalty_type='jail',
+                    target=target_user, reason=reason,
+                    source_channel=channel, moderator=complainant,
+                )
+            except Exception as _ne:
+                print(f'[TICKET-NOTIFY] ❌ _notify_admins_penalty выбросил: {_ne}')
+                import traceback as _tb
+                print(f'[TICKET-NOTIFY] Traceback: {_tb.format_exc()[:300]}')
 
         except Exception as e:
             await channel.send(f"❌ Ошибка при выдаче наказания Jail: {str(e)}")
@@ -1524,11 +1530,17 @@ class Ticket(commands.Cog):
                 await warnings_cog.add_warning(target_user, moderator, reason)
                 await channel.send(f"Предупреждение verildi {target_user.mention}: {reason}")
                 # Уведомить администраторов
-                await self._notify_admins_penalty(
-                    guild, penalty_type='warn',
-                    target=target_user, reason=reason,
-                    source_channel=channel, moderator=moderator,
-                )
+                print(f'[TICKET-NOTIFY] === WARN ВЫЗОВ === target={target_user} ({target_user.id}) reason={reason[:80]}')
+                try:
+                    await self._notify_admins_penalty(
+                        guild, penalty_type='warn',
+                        target=target_user, reason=reason,
+                        source_channel=channel, moderator=moderator,
+                    )
+                except Exception as _ne:
+                    print(f'[TICKET-NOTIFY] ❌ _notify_admins_penalty выбросил: {_ne}')
+                    import traceback as _tb
+                    print(f'[TICKET-NOTIFY] Traceback: {_tb.format_exc()[:300]}')
             else:
                 await channel.send("Система предупреждений недоступна.")
 
@@ -1545,26 +1557,47 @@ class Ticket(commands.Cog):
         'admin-log'/'mod-log'/'логи-модерации', иначе None (тогда DM
         владельцу сервера).
         """
+        import traceback
+        # ── ДИАГНОСТИКА: детальный print на каждом шаге ─────────────────────
+        print(f'[TICKET-NOTIFY] === ВЫЗОВ УВЕДОМЛЕНИЯ ===')
+        print(f'[TICKET-NOTIFY] guild={guild.id} ({guild.name}) type={penalty_type}')
+        print(f'[TICKET-NOTIFY] target={target} ({getattr(target, "id", "?")}) reason={reason[:80] if reason else "(пусто)"}')
+        print(f'[TICKET-NOTIFY] source_channel={getattr(source_channel, "id", "?")} moderator={getattr(moderator, "id", "?")}')
+
         notify_ch_id = None
         cfg_path = f'data/ticket_notify_{guild.id}.json'
         try:
             if os.path.exists(cfg_path):
                 with open(cfg_path, 'r', encoding='utf-8') as f:
                     notify_ch_id = (json.load(f) or {}).get('notify_channel_id')
-        except Exception:
+                print(f'[TICKET-NOTIFY] Конфиг найден: notify_ch_id={notify_ch_id}')
+            else:
+                print(f'[TICKET-NOTIFY] Конфиг НЕ найден: {cfg_path}')
+        except Exception as e:
+            print(f'[TICKET-NOTIFY] Ошибка чтения конфига: {e}')
             notify_ch_id = None
 
         target_ch = None
         if notify_ch_id:
             try:
-                target_ch = guild.get_channel(int(notify_ch_id)) or await guild.fetch_channel(int(notify_ch_id))
-            except Exception:
+                target_ch = guild.get_channel(int(notify_ch_id))
+                if not target_ch:
+                    target_ch = await guild.fetch_channel(int(notify_ch_id))
+                print(f'[TICKET-NOTIFY] Канал из конфига: {target_ch} ({getattr(target_ch, "id", "?")})')
+            except Exception as e:
+                print(f'[TICKET-NOTIFY] Ошибка получения канала по ID: {e}')
                 target_ch = None
         if target_ch is None:
+            # Fallback: ищем канал по имени
+            tried = []
             for name in ('admin-log', 'mod-log', 'логи-модерации', 'staff-log'):
                 target_ch = discord.utils.get(guild.text_channels, name=name)
+                tried.append(name)
                 if target_ch:
+                    print(f'[TICKET-NOTIFY] Найден канал по имени: {name} → {target_ch.id}')
                     break
+            if target_ch is None:
+                print(f'[TICKET-NOTIFY] Ни один из каналов {tried} не найден на сервере. Доступные: {[c.name for c in guild.text_channels[:10]]}...')
 
         type_emoji = {
             'warn': '⚠️',
@@ -1592,29 +1625,42 @@ class Ticket(commands.Cog):
         embed.add_field(name="Модератор", value=moderator.mention if moderator else "AI", inline=True)
         embed.set_footer(text=f"{guild.name} • AI Moderation", icon_url=guild.icon.url if guild.icon else None)
 
-        # Пинг админов (роли с правами Имяministrator)
+        # Пинг админов (роли с правами administrator)
         admin_ping = ""
         try:
             admin_role = discord.utils.get(guild.roles, permissions=discord.Permissions(administrator=True))
             if admin_role:
                 admin_ping = admin_role.mention + " "
-        except Exception:
-            pass
+                print(f'[TICKET-NOTIFY] Admin role для пинга: {admin_role.name} ({admin_role.id})')
+            else:
+                print(f'[TICKET-NOTIFY] Admin role не найдена (нет роли с правами admin)')
+        except Exception as e:
+            print(f'[TICKET-NOTIFY] Ошибка поиска admin role: {e}')
 
         sent = False
         if target_ch is not None:
             try:
+                print(f'[TICKET-NOTIFY] Отправляю embed в #{getattr(target_ch, "name", "?")} ({target_ch.id})...')
                 await target_ch.send(content=admin_ping or None, embed=embed)
                 sent = True
-            except Exception:
+                print(f'[TICKET-NOTIFY] ✅ Уведомление отправлено в канал #{target_ch.name}')
+            except Exception as e:
+                print(f'[TICKET-NOTIFY] ❌ Ошибка отправки в канал: {e}')
+                print(f'[TICKET-NOTIFY] Traceback: {traceback.format_exc()[:300]}')
                 sent = False
         if not sent:
             # Fallback: DM владельцу
             try:
                 if guild.owner and not guild.owner.bot:
+                    print(f'[TICKET-NOTIFY] Fallback: отправляю DM владельцу {guild.owner} ({guild.owner.id})...')
                     await guild.owner.send(content=admin_ping, embed=embed)
-            except Exception:
-                pass
+                    print(f'[TICKET-NOTIFY] ✅ DM отправлено владельцу')
+                else:
+                    print(f'[TICKET-NOTIFY] ❌ Нет владельца сервера — уведомление НИКУДА не доставлено!')
+            except Exception as e:
+                print(f'[TICKET-NOTIFY] ❌ Ошибка отправки DM владельцу: {e}')
+                print(f'[TICKET-NOTIFY] УВЕДОМЛЕНИЕ ПОТЕРЯНО!')
+        print(f'[TICKET-NOTIFY] === КОНЕЦ ===\n')
     
     async def _assign_role(self, guild: discord.Guild, user_id: int, role_id: int):
         """AI ver роль"""
