@@ -271,13 +271,16 @@ FORMAT VIZOVA:
                                     if len(api_msgs) >= limit:
                                         break
                 else:
-                    # Tüm kanallarda ara
-                    for ch in guild.text_channels:
+                    # Tüm kanallarda ara (bot online + yetkisi varsa)
+                    text_channels = list(guild.text_channels)
+                    for ch in text_channels:
                         try:
                             perms = ch.permissions_for(guild.me)
                             if not (perms.read_message_history and perms.read_messages):
                                 continue
-                            async for msg in ch.history(limit=200):
+                            # Her kanalda en son 500 mesajı tara (kanalda
+                            # mrxway'in yazdığı her şeyi bulmak için)
+                            async for msg in ch.history(limit=500):
                                 if msg.author.id == uid:
                                     api_msgs.append({
                                         'channel_name': ch.name,
@@ -286,6 +289,7 @@ FORMAT VIZOVA:
                                         'timestamp': msg.created_at.isoformat(),
                                         'jump_url': msg.jump_url,
                                     })
+                                    # 3x limit yeterli (en yeni sırada)
                                     if len(api_msgs) >= limit * 3:
                                         break
                             if len(api_msgs) >= limit * 3:
