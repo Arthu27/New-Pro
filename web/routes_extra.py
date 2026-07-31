@@ -1094,6 +1094,14 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         import re as _re
         func_calls_in_answer = _re.findall(r'\[FUNC:[^\]]+\]', answer)
         func_results_text = ''
+
+        # Запоминаем, был ли запрос на search_user_messages (для анти-галлюцинации)
+        asked_search_user_messages = any(
+            'search_user_messages' in fc for fc in func_calls_in_answer
+        )
+        asked_user_id_m = _re.search(r'user_id=(\d+)', ' '.join(func_calls_in_answer))
+        asked_user_id = asked_user_id_m.group(1) if asked_user_id_m else None
+
         if func_calls_in_answer and bot:
             try:
                 from web.ai_functions import AIFunctions
@@ -1113,35 +1121,84 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
             except Exception as _fce_outer:
                 print(f"[AI-CHAT] function calling setup error: {_fce_outer}")
 
-        # Если были вызваны функции — попросим LLM переформулировать ответ
-        # на основе реальных данных (одна доп. итерация)
-        if func_results_text:
+        # Если были вызваны функции — решаем, переспрашивать ли LLM.
+        # АНТИГАЛЛЮЦИНАЦИЯ: если результат содержит «не найдено» / «не найдены»
+        # / «Yok» / «0 записей» — НЕ вызываем LLM повторно, иначе он начнёт
+        # выдумывать детали. Просто отдаём реальный результат as-is.
+        if asked_search_user_messages and not func_results_text:
+            # Функция search_user_messages была запрошена, но НЕ выполнилась
+            # (бот offline, guild не найден, или ошибка). НЕ даём AI галлюцинировать —
+            # отдаём честный ответ с диагностикой.
+            _tgt_str = f"<@{asked_user_id}>" if asked_user_id else "указанного пользователя"
+            # Проверим наличие лог-файла (даже если функция не выполнилась)
+            _log_status = "не найден (бот ещё не записал сообщений)"
+            try:
+                _gid_check = str(session.get('selected_guild') or MAIN_GUILD_ID or '0')
+                _log_path = f'data/message_log_{_gid_check}.json'
+                if os.path.exists(_log_path):
+                    _log_status = f"существует, но функция поиска сейчас недоступна (бот offline?)"
+            except Exception:
+                pass
+            answer = _re.sub(r'\[FUNC:[^\]]+\]', '', answer).strip()
+            answer = (
+                f"🔍 Поиск сообщений {_tgt_str}:\n\n"
+                f"В данный момент функция поиска сообщений через Discord API недоступна "
+                f"(бот возможно offline или нет связи с Discord).\n\n"
+                f"**Статус лога:** {_log_status}\n\n"
+                f"**Что можно сделать:**\n"
+                f"• Если бот только что перезапускался — подождите 1-2 минуты и попробуйте снова.\n"
+                f"• Проверьте что бот онлайн и имеет права на чтение истории каналов.\n"
+                f"• Используйте Discord-команду `/history @пользователь` для просмотра модерационной истории.\n\n"
+                f"Я не буду выдумывать содержимое сообщений — лучше честно сказать, что поиск "
+                f"сейчас недоступен."
+            )
+        elif func_results_text:
             # Вырежем [FUNC:...] маркеры из ответа
             answer = _re.sub(r'\[FUNC:[^\]]+\]', '', answer).strip()
-            messages.append({'role': 'assistant', 'content': answer})
-            messages.append({
-                'role': 'system',
-                'content': (
-                    "Система выполнила функции по твоему запросу. Вот РЕАЛЬНЫЕ результаты:\n"
-                    f"{func_results_text}\n"
-                    "ВАЖНО: сформулируй финальный ответ на русском языке, используя ТОЛЬКО эти "
-                    "реальные данные. НЕ выдумывай сообщения, имена, каналы или даты. "
-                    "Если в результатах сказано 'не найдены' — так и напиши пользователю. "
-                    "Не используй markdown кодовые блоки (```) в ответе — пиши обычным текстом."
+            results_lower = func_results_text.lower()
+            is_negative = any(neg in results_lower for neg in [
+                'не найден', 'yok', 'недоступен', '0 записей', '0 сообщений',
+                'нет результат', 'пусто', 'ошибка:', 'не могу'
+            ])
+
+            if is_negative:
+                # Реальный результат «пустой» — НЕ даём LLM галлюцинировать.
+                # Просто выводим системный ответ-обёртку + реальные данные.
+                # Извлекаем target_user_id из func_calls если был
+                _tuid_m = _re.search(r'user_id=(\d+)', ' '.join(func_calls_in_answer))
+                _tuid_str = f"<@{_tuid_m.group(1)}>" if _tuid_m else "пользователь"
+                answer = (
+                    f"🔍 Поиск сообщений {_tuid_str}:\n\n"
+                    f"{func_results_text.strip()}\n\n"
+                    f"Я не буду выдумывать содержимое — лучше честно показать, что нашёл, "
+                    f"чем давать вам недостоверную информацию."
                 )
-            })
-            messages.append({
-                'role': 'user',
-                'content': "Сформулируй финальный ответ на основе данных выше."
-            })
-            try:
-                final_answer, model_name2, _ = _call(messages, max_tokens=1024)
-                if final_answer:
-                    answer = final_answer
-            except Exception as _fe2:
-                print(f"[AI-CHAT] re-call after FUNC error: {_fe2}")
-                # Не вышло — просто приклеим результат функции
-                answer = (answer + "\n\n" + func_results_text).strip() if answer else func_results_text.strip()
+            else:
+                # Положительный результат — попросим LLM красиво оформить
+                messages.append({'role': 'assistant', 'content': answer})
+                messages.append({
+                    'role': 'system',
+                    'content': (
+                        "Система выполнила функции по твоему запросу. Вот РЕАЛЬНЫЕ результаты:\n"
+                        f"{func_results_text}\n"
+                        "ВАЖНО: сформулируй финальный ответ на русском языке, используя ТОЛЬКО эти "
+                        "реальные данные. НЕ выдумывай сообщения, имена, каналы или даты. "
+                        "НЕ придумывай имена владельцев, администраторов, несуществующие Discord-команды "
+                        "(например, /search НЕ существует в Discord). Если в результатах нет владельца — "
+                        "так и напиши 'владелец сервера'. Не используй markdown кодовые блоки (```)."
+                    )
+                })
+                messages.append({
+                    'role': 'user',
+                    'content': "Сформулируй финальный ответ на основе данных выше."
+                })
+                try:
+                    final_answer, model_name2, _ = _call(messages, max_tokens=1024)
+                    if final_answer:
+                        answer = final_answer
+                except Exception as _fe2:
+                    print(f"[AI-CHAT] re-call after FUNC error: {_fe2}")
+                    answer = (answer + "\n\n" + func_results_text).strip() if answer else func_results_text.strip()
             # На всякий случай вырежем оставшиеся маркеры
             answer = _re.sub(r'\[FUNC:[^\]]+\]', '', answer).strip()
 
