@@ -1102,6 +1102,36 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         asked_user_id_m = _re.search(r'user_id=(\d+)', ' '.join(func_calls_in_answer))
         asked_user_id = asked_user_id_m.group(1) if asked_user_id_m else None
 
+        # ── ПРЕДИКТИВНЫЙ ВЫЗОВ: если AI НЕ вызвал [FUNC:search_user_messages] ──
+        # но пользователь явно просит сообщения + в вопросе есть Discord ID
+        # (17-20 цифр) — САМИ вызовем функцию ДО отдачи ответа AI.
+        # Это ловит случай, когда LLM пропускает вызов функции и галлюцинирует.
+        if not asked_search_user_messages and bot:
+            try:
+                _pred_id_m = _re.search(r'\b(\d{17,20})\b', question)
+                _pred_keywords = ['покажи сообщ', 'найди сообщ', 'выведи сообщ',
+                                  'историю сообщ', 'последние сообщ', 'что писал',
+                                  'где писал', 'искать сообщ', 'son mesajlar']
+                if _pred_id_m and any(kw in question.lower() for kw in _pred_keywords):
+                    asked_search_user_messages = True
+                    asked_user_id = _pred_id_m.group(1)
+                    # Сразу вызываем функцию синхронно
+                    try:
+                        from web.ai_functions import AIFunctions
+                        _gid_str2 = str(session.get('selected_guild') or MAIN_GUILD_ID or '')
+                        _guild2 = bot.get_guild(int(_gid_str2)) if _gid_str2.isdigit() else None
+                        if _guild2:
+                            ai_fns2 = AIFunctions(bot)
+                            _fc2 = f'[FUNC:search_user_messages(user_id={asked_user_id}, limit=20)]'
+                            res2 = _run_async(ai_fns2.execute_function(_fc2, _guild2), timeout=15)
+                            if res2:
+                                func_results_text = f"\n--- РЕЗУЛЬТАТ {_fc2} ---\n{res2}\n"
+                                func_calls_in_answer.append(_fc2)
+                    except Exception as _pfe:
+                        print(f"[AI-CHAT] predictive func exec error: {_pfe}")
+            except Exception:
+                pass
+
         if func_calls_in_answer and bot:
             try:
                 from web.ai_functions import AIFunctions
