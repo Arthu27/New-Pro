@@ -83,7 +83,7 @@ class Health(commands.Cog):
         # Время статистика
         hour_key = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:00')
         data.setdefault('hourly', {})[hour_key] = data['hourly'].get(hour_key, 0) + 1
-        # В конец 48 saati tut
+        # В конец 48 час tut
         hourly = data['hourly']
         if len(hourly) > 48:
             oldest = sorted(hourly.keys())[0]
@@ -162,7 +162,7 @@ class Health(commands.Cog):
         ch_msgs = data.get('channel_messages', {})
 
         if not ch_msgs:
-            await interaction.response.send_message("❌ Пока veri yok.", ephemeral=True)
+            await interaction.response.send_message("❌ Пока Данные yok.", ephemeral=True)
             return
 
         top = sorted(ch_msgs.values(), key=lambda x: x.get('total', 0), reverse=True)[:10]

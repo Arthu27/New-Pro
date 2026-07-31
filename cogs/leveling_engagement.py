@@ -2,12 +2,12 @@
 Leveling & Engagement System
 ============================
 - Text XP (her mesajda 15-25 random XP, 60s cooldown)
-- Voice XP (her dakika 5 XP online, MUTE/DEAF/AFK hariç)
-- Streak bonus (7+ gün üst üste günlük mesaj = 2x XP, 14+ gün = 3x)
+- Voice XP (her минут 5 XP online, MUTE/DEAF/AFK hariç)
+- Streak bonus (7+ gün üst üste günlük сообщение = 2x XP, 14+ gün = 3x)
 - 50+ Achievement badges
 - Level-up role rewards (configurable per guild)
 - Daily/weekly/monthly leaderboards
-- Auto-engagement: 24 saat inactive kullanıcılara DM
+- Auto-engagement: 24 часов inactive kullanıcılara DM
 """
 import discord
 from discord.ext import commands, tasks

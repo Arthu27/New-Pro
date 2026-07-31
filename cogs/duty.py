@@ -14,7 +14,7 @@ GIF_START  = "https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif"
 GIF_END    = "https://media.giphy.com/media/3o7TKSjRrfIPjeiVyM/giphy.gif"
 
 TASK_DEFS = {
-    "ses":     {"label": "🔊 Seste Kal",    "desc": "3 saat ses в канале kal",  "target": 10800, "unit": "sn",  "points": 50},
+    "ses":     {"label": "🔊 Seste Kal",    "desc": "3 часов ses в канале kal",  "target": 10800, "unit": "sn",  "points": 50},
     "message":   {"label": "💬 Сообщение At",      "desc": "150 message отправить",          "target": 150,   "unit": "msg", "points": 30},
     "invite":  {"label": "📨 Invite Тянуть",   "desc": "5 человек davet et",           "target": 5,     "unit": "inv", "points": 40},
     "администратор": {"label": "🛡️ Администратор Тянуть", "desc": "2 администратор adayı getir",     "target": 2,     "unit": "rec", "points": 60},
@@ -186,7 +186,7 @@ class DutyPanelView(discord.ui.View):
         data = load_duty()
         uid, gid = str(interaction.user.id), str(interaction.guild.id)
 
-        # Veri yoksa или bozuksa düzelt
+        # Данные yoksa или bozuksa düzelt
         if gid not in data or uid not in data[gid]:
             await interaction.response.send_message("⚠️ Активен задача yok.", ephemeral=True)
             return
@@ -271,7 +271,7 @@ class DutyPanelView(discord.ui.View):
             "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         )
         embed.add_field(name="⏱️ Длительность",       value=f"**{fmt_dur(elapsed)}**",    inline=True)
-        embed.add_field(name="⭐ Заработано",  value=f"**+{total_pts} puan**",     inline=True)
+        embed.add_field(name="⭐ Заработано",  value=f"**+{total_pts} очков**",     inline=True)
         embed.add_field(name="🏆 Всего",     value=f"**{new_total} ⭐**",        inline=True)
         embed.add_field(name="​", value="━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", inline=False)
 
@@ -357,7 +357,7 @@ class Duty(commands.Cog):
             "Задача başla, hedefine ulaş, **puan kazan!**\n"
             "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
             "🔊 **Seste Kal** ─────────────── **50 ⭐**\n"
-            "┗ *3 saat ses в канале активен kal*\n\n"
+            "┗ *3 часов ses в канале активен kal*\n\n"
             "💬 **Сообщение At** ──────────────── **30 ⭐**\n"
             "┗ *На сервере 150 message отправить*\n\n"
             "📨 **Invite Тянуть** ────────────── **40 ⭐**\n"

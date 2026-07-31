@@ -82,7 +82,7 @@ class Birthday(commands.Cog):
                 embed.add_field(name="🎂 День рождения", value=f"```{info['date'].replace('-', '/')}```", inline=True)
                 if age:
                     embed.add_field(name="🎈 Возраст", value=f"```{age}```", inline=True)
-                embed.add_field(name="💡 Kutla!", value="*Aşağıya рождение день messageını bırak!* 🎉", inline=False)
+                embed.add_field(name="💡 Kutla!", value="*вниз рождение день messageını bırak!* 🎉", inline=False)
                 embed.set_footer(text=f"Aether • {guild.name}", icon_url=guild.icon.url if guild.icon else None)
                 await channel.send(content=f"🎉 {member.mention}", embed=embed)
 
@@ -238,7 +238,7 @@ class Birthday(commands.Cog):
         e.set_footer(text=f"Aether • {ctx.guild.name}", icon_url=ctx.guild.icon.url if ctx.guild.icon else None)
         await ctx.send(embed=e)
 
-    @app_commands.command(name='dogumgunu-настройк', description="Настройк система день рождение (Yönetici)")
+    @app_commands.command(name='dogumgunu-настройк', description="Настройк система день рождение (Менеджер)")
     @app_commands.describe(
         channel='Kutlama канал',
         role='Рождение день роль (opsiyonel)',

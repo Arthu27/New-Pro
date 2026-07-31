@@ -1,4 +1,4 @@
-"""Собрание Система — Discord message историю сканироватьyarak gerçek veri собратьr"""
+"""Собрание Система — Discord message историю сканироватьyarak gerçek Данные собратьr"""
 import discord
 from discord.ext import commands
 from discord import app_commands
@@ -92,8 +92,8 @@ async def _scan_messages(guild: discord.Guild, since: datetime.datetime) -> dict
 
 async def _scan_voice(guild: discord.Guild, since: datetime.datetime) -> dict:
     """
-    voice_stats dosyasından собрание sonrası ses verisi al.
-    Not: voice_tracker anlık число, собрание основанный на snapshot использовать.
+    voice_stats dosyasından собрание sonrası ses данные al.
+    Примечание: voice_tracker показывает мгновенное число, собрание основано на snapshot.
     Returns: {user_id: seconds}
     """
     vs_path = f'{DATA_DIR}/voice_stats_{guild.id}.json'
@@ -131,7 +131,7 @@ async def _scan_voice(guild: discord.Guild, since: datetime.datetime) -> dict:
 
 
 def _save_voice_snapshot(guild_id: int):
-    """Текущий ses verilerini snapshot как сохранить"""
+    """Текущий ses данные snapshot как сохранить"""
     vs_path = f'{DATA_DIR}/voice_stats_{guild_id}.json'
     snapshot_path = f'{DATA_DIR}/meeting_snapshot_{guild_id}.json'
 
@@ -180,7 +180,7 @@ async def _build_meeting_report(guild: discord.Guild, since: datetime.datetime) 
     ts_since = int(since.timestamp())
     ts_now = int(now.timestamp())
 
-    # Veri собрать
+    # Данные собрать
     msg_counts = await _scan_messages(guild, since)
     voice_data = await _scan_voice(guild, since)
     invite_data = _load_invites(guild.id)
@@ -242,11 +242,11 @@ async def _build_meeting_report(guild: discord.Guild, since: datetime.datetime) 
         h, mn = divmod(s['voice'] // 60, 60)
         lines.append(
             f'{medals[i]} **{name}**\n'
-            f'╰ {bar} `{s["score"]:,} puan`\n'
+            f'╰ {bar} `{s["score"]:,} очков`\n'
             f'╰ 💬 {s["msg"]:,}  🎙️ {h}s{mn}dk  📨 {s["inv"]}'
         )
-    overall.description = '\n\n'.join(lines) or 'Veri yok.'
-    overall.set_footer(text='Puan: Сообщение×1 + Ses dk×2 + Davet×5', icon_url=guild.icon.url if guild.icon else None)
+    overall.description = '\n\n'.join(lines) or 'Данные yok.'
+    overall.set_footer(text='Очки: Сообщение×1 + Звук мин×2 + Приглашение×5', icon_url=guild.icon.url if guild.icon else None)
     embeds.append(overall)
 
     # ── РОЛЬ BAZLI TOP 4 ───────────────────────────────────────────────────────
@@ -301,7 +301,7 @@ async def _build_meeting_report(guild: discord.Guild, since: datetime.datetime) 
         close.set_thumbnail(url=guild.icon.url)
     close.description = (
         f'> Rapor dönemi: <t:{ts_since}:D> → <t:{ts_now}:D>\n'
-        f'> Bir sonraki собрание kadar veriler birikmeye devam edecek.\n\n'
+        f'> Bir следующий собрание kadar veriler birikmeye devam edecek.\n\n'
         f'-# Aether  ·  Собрание Система'
     )
     close.set_footer(text=f'{guild.name}', icon_url=guild.icon.url if guild.icon else None)
@@ -356,7 +356,7 @@ class MeetingStartModal(discord.ui.Modal, title='Собрание Запусти
         embed.description = (
             f'> Собрание başlangıcı: <t:{ts}:F>\n'
             f'> Сообщения ve ses длительность bu andan itibaren число.\n\n'
-            f'Собрание bitince **🏁 Собрание Bitti** butonuna bas.'
+            f'Когда собрание закончится, нажмите кнопку **🏁 Собрание завершено**.'
         )
         await interaction.response.send_message(embed=embed)
 
@@ -388,7 +388,7 @@ class MeetingView(discord.ui.View):
         await interaction.response.send_modal(MeetingStartModal())
 
     @discord.ui.button(
-        label='🏁  Собрание Bitti',
+        label='🏁  Собрание завершено',
         style=discord.ButtonStyle.danger,
         custom_id='meeting_end',
         row=0
@@ -533,8 +533,8 @@ class Meeting(commands.Cog):
         embed = _guild_embed_base(ctx.guild, '📋  Собрание Панель управления', 0x5865F2)
         embed.description = (
             f'> Bu panel с собрание yönetebilirsin.\n\n'
-            f'**📋 Собрание Запустить** — Новый собрание запуск, veri число başlar\n'
-            f'**🏁 Собрание Bitti** — Собрание закрыт ve raporu отправл\n'
+            f'**📋 Собрание Запустить** — Новый собрание запуск, Данные число başlar\n'
+            f'**🏁 Собрание завершено** — Собрание закрыто, отчёт отправлен\n'
             f'**📊 В конец Rapor** — В конец собрание bu yana raporu показ'
         )
 

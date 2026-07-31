@@ -1,5 +1,5 @@
 """
-Ticket AI — prodvinutaya система podderjki
+Ticket AI — продвинутая система поддержки
 Chain-of-thought reasoning, personalizaciya, proaktife povedenie, function calling
 """
 import os
@@ -32,7 +32,7 @@ Panel erişimüzerinde с Cloudflare tunnel по publicnoy ssilke.
 ## 🛡️ MODERASYON
 - /moderate ban @user [причина] — permanentniy ban
 - /moderate kick @user [причина] — kick с сервер
-- /moderate timeout @user [dakikai] [причина] — vremenniy mute
+- /moderate timeout @user [dakika] [причина] — временный мут
 - /moderate untimeout @user — удалено mute
 - /moderate unban [user_id] — razban
 - /utility clear [число] — toplu удалить сообщение
@@ -60,7 +60,7 @@ Panel erişimüzerinde с Cloudflare tunnel по publicnoy ssilke.
 - /queue — kuyruk
 - /volume [0-100] — gromkost
 - /clear-queue — temizle kuyruk
-- /leave — pokinut ses канал
+- /leave — покинуть голосовой канал
 - /join — prisoedinitsya e канал
 
 ## 💰 EKONOMI
@@ -99,7 +99,7 @@ Panel erişimüzerinde с Cloudflare tunnel по publicnoy ssilke.
 - /top-level — en iyi-10 по seviyeye
 - !ranking — общий очередь
 - !ranking messages — очередь сообщение
-- !ranking voice — очередь ses время
+- !ranking voice — рейтинг голосового времени
 - !ranking invites — очередь davet
 - /mod-stats @user — статистика модератор
 - /activemods — aktivnie модераторы
@@ -182,10 +182,10 @@ Seviyeler доступ:
 О: Ссылка в канал #aether-panel → Discord ID + parola.
 
 В: Müzik не oynuyor?
-О: Girin в ses канал, после /play. Если ошибка — /leave ve tekrar /play.
+О: Войдите в голосовой канал, затем /play. Если ошибка — /leave и снова /play.
 
 В: Как povisit seviye?
-О: Напишите сообщения + sidite в ses в каналах. /rank — sizin seviye.
+О: Пишите сообщения и сидите в голосовых каналах. /rank — ваш уровень.
 
 В: Как aç ticket?
 О: Buton в канал ticketların → "Создать ticket".
@@ -316,7 +316,7 @@ POLUCEN SORU. Senin задача:
 О: Ispolzuy `/moderate ban @user причина`. На: `/moderate ban @spammer Spam в sohbette`. Bot denhaklarıtutar DM пользователю ve zapiset в loglar.
 
 В: Как povisit seviye?
-О: Pisi сообщения в sohbette ve sidi в ses в каналах — polucaes XP. Контроль et seviye: `/rank`. En iyi-10: `/top-level`.
+О: Пишите сообщения в чате и сидите в голосовых каналах — получаете XP. Проверьте уровень: `/rank`. Топ-10: `/top-level`.
 """
 
 
@@ -342,9 +342,9 @@ TEHNICESKAYa SORUN. Senin задача:
 ПРИМЕР:
 В: Müzik не oynuyor
 О: Hadi proverim:
-1. Sen в seste канал? (bot olmalı olmak в tom je канал)
+1. Вы в голосовом канале? (бот должен быть в том же канале)
 2. Poprobuy `/leave` после tekrar `/play [isim]`
-3. Prover ne u botun var администратор на podanahtarenie e sesovim канал
+3. Проверьте, что у бота есть права администратора на управление голосовыми каналами
 
 Если не pomoglo — направление e модератор.
 """

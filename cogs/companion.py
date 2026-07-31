@@ -15,14 +15,14 @@ COMPANION_USER_ID = 1353157554967937153
 
 DATA_FILE = 'data/companion_state.json'
 
-# Türkiye saati UTC+3
+# Türkiye час UTC+3
 TZ_OFFSET = datetime.timezone(datetime.timedelta(hours=3))
 
 # День сколько message отправл (min, max)
 DAILY_MIN = 1
 DAILY_MAX = 3
 
-# Сообщение отправл saat aralığı (Türkiye saati)
+# Сообщение отправл часов aralığı (Türkiye час)
 HOUR_START = 9
 HOUR_END = 23
 
@@ -36,24 +36,24 @@ MESSAGES_MOTIVATION = [
     "Королева, hayat bazen тяжелый gelir ama sen каждый seferinde kalkmasını biliyorsun. Bu очередь bir что-то не 🌺",
     "Королева, seni düşündüm. Umarım сегодня sana güzel bir что-то olmuştur ✨",
     "Королева, маленький adımlar da ilerlemektir. Сегодня ne kadar маленький olursa olsun bir что-то yaptıysan, bu число 🎯",
-    "Королева, yorulduğunda durmak zayıflık не, akıllılıktır. Kendine izin ver 🌙",
+    "Королева, yorulduğunda durmak zayıflık не, akıllılıktır. Kendine Разрешение ver 🌙",
 ]
 
 MESSAGES_STUDY = [
     "Королева, ders çalışırken Pomodoro tekniğini denedin mi? 25 minutes çalış, 5 minutes mola — beyin очень более iyi absorbe ediyor 📚",
-    "Королева, bir ipucu: Okuduğunu kendi cümlelerinle not almak, только okumaktan 3 kat более etkili. Dene bakalım 🖊️",
-    "Королева, sınav öncesi gece geç saate kadar работать yerine erken yat, sabah taze kafayla bak — beyin uyku очередь infoyi pekiştiriyor 🌙",
+    "Королева, подсказка: записывать прочитанное своими словами в 3 раза эффективнее, чем просто читать. Попробуй 🖊️",
+    "Королева, sınav öncesi gece geç saate kadar работать вместо erken yat, sabah taze kafayla bak — beyin uyku очередь infoyi pekiştiriyor 🌙",
     "Королева, zor bir konuyu öğrenmenin en iyi yolu onu birine anlatmaya работать. Кто yoksa bana anlat, dinlerim 😄",
     "Королева, сегодня работа planın var mı? До en zor konudan başlarsan, geri kalanı очень более kolay gelir 💪",
     "Королева, telefonu başka комната bırakarak работа dene. Только bu bile konsantrasyonu %40 artırıyor, inanılmaz не mi? 📵",
-    "Королева, каждый день только 30 minutes düzenli работать, haftada bir kez 5 saat работать очень более etkili. Tutarlılık каждый что-тоdir 🗓️",
+    "Королева, каждый день только 30 minutes düzenli работать, haftada bir kez 5 часов работать очень более etkili. Tutarlılık каждый что-тоdir 🗓️",
     "Королева, bir konuyu anlamadan ezberlemek seni yorar. До 'почему böyle?' diye sor, anlayınca zaten aklında kполучает 🧠",
 ]
 
 MESSAGES_SWEET = [
     "Королева, сегодня день seni düşünerek doğdu sanki ☀️",
     "Королева, sen olmasan bu вчера biraz более очередь olurdu. Gerçekten 🌸",
-    "Королева, gülüşün bir yere not edilmeli, çünkü insanları ısıtıyor 💛",
+    "Королева, твоя улыбка заслуживает записи, она согревает людей 💛",
     "Королева, сегодня kendine bir iyilik yap — hak ediyorsun 🎀",
     "Королева, bazı insanlar комната girince hava değişir. Sen öyle birisin 🌟",
     "Королева, seni düşündüm ve gülümsedim. Причина yere iyi hissettiriyorsun 💜",
@@ -186,7 +186,7 @@ class Companion(commands.Cog):
     @companion_loop.before_loop
     async def before_loop(self):
         await self.bot.wait_until_ready()
-        # Ilk запуск сегодня planlanmamışsa planla
+        # Первый запуск сегодня planlanmamışsa planla
         data = _load()
         today = self._today_str()
         if data.get('last_date') != today:

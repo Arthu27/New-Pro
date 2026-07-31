@@ -43,7 +43,7 @@ class CeviriButonu(discord.ui.View):
         await interaction.response.defer(ephemeral=True)
         try:
             from deep_translator import GoogleTranslator
-            if not self.ozet or self.ozet == 'Сводка не найдено.':
+            if not self.ozet or self.ozet == 'Сводка не найдена.':
                 await interaction.followup.send('❌ Нет текста для перевода.', ephemeral=True)
                 return
             ceviri = GoogleTranslator(source='en', target='tr').translate(self.ozet)
@@ -65,8 +65,8 @@ async def _anime_getir(tur_id: int = None) -> dict:
         async with aiohttp.ClientSession() as session:
             async with session.get(url, timeout=aiohttp.ClientMute(total=10)) as resp:
                 if resp.status == 200:
-                    veri = await resp.json()
-                    animeler = veri.get('data', [])
+                    Данные = await resp.json()
+                    animeler = Данные.get('data', [])
                     if animeler:
                         return random.choice(animeler)
     except:
@@ -77,7 +77,7 @@ async def _anime_getir(tur_id: int = None) -> dict:
 def _embed_olustur(guild: discord.Guild, anime: dict, kategori: str = 'Rastgele') -> tuple:
     """Anime embed'i создать, (embed, ozet) вернуть"""
     baslik = anime.get('title_english') or anime.get('title', 'Bilinmiyor')
-    puan = anime.get('score') or 'Puanlanmamış'
+    puan = anime.get('score') or 'Не оценено'
     resim = anime.get('images', {}).get('jpg', {}).get('large_image_url', '')
     link = anime.get('url', '')
     bolum = anime.get('episodes') or 'Bilinmiyor'
@@ -95,7 +95,7 @@ def _embed_olustur(guild: discord.Guild, anime: dict, kategori: str = 'Rastgele'
     if guild.icon:
         embed.set_thumbnail(url=guild.icon.url)
     embed.add_field(name='📂 Kategori', value=kategori, inline=True)
-    embed.add_field(name='⭐ Puan', value=str(puan), inline=True)
+    embed.add_field(name='⭐ Оценка', value=str(puan), inline=True)
     embed.add_field(name='📺 Раздел', value=str(bolum), inline=True)
     embed.set_footer(
         text=f'{guild.name}  ·  Ежедневный Anime',
@@ -114,7 +114,7 @@ class AnimeDaily(commands.Cog):
 
     @tasks.loop(hours=24)
     async def gunluk_anime(self):
-        """Каждый день saat 10:00'da anime предложение отправить"""
+        """Каждый день часов 10:00'da anime предложение отправить"""
         cfg = _load()
         for guild in self.bot.guilds:
             gid = str(guild.id)
@@ -161,7 +161,7 @@ class AnimeDaily(commands.Cog):
         app_commands.Choice(name=k, value=str(v)) for k, v in KATEGORILER.items()
     ] + [app_commands.Choice(name='Rastgele', value='0')])
     @app_commands.checks.has_permissions(manage_channels=True)
-    async def anime_ayarla(self, interaction: discord.Interaction,
+    async def anime_setup(self, interaction: discord.Interaction,
                            channel: discord.TextChannel,
                            kategori: str = '0',
                            role: discord.Role = None):
@@ -185,12 +185,12 @@ class AnimeDaily(commands.Cog):
         embed.add_field(name='📺 Канал', value=channel.mention, inline=True)
         embed.add_field(name='📂 Kategori', value=tur_adi, inline=True)
         embed.add_field(name='🔔 Роль', value=role.mention if role else 'Нет', inline=True)
-        embed.set_footer(text='Каждый день saat 10:00\'da отправл.')
+        embed.set_footer(text='Каждый день часов 10:00\'da отправл.')
         await interaction.response.send_message(embed=embed)
 
     @app_commands.command(name='anime-закрыть', description="Denanahtarit ежедневный предложение anime")
     @app_commands.checks.has_permissions(manage_channels=True)
-    async def anime_kapat(self, interaction: discord.Interaction):
+    async def anime_disable(self, interaction: discord.Interaction):
         cfg = _load()
         gid = str(interaction.guild.id)
         if gid in cfg:

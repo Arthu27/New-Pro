@@ -179,7 +179,7 @@ class Economy(commands.Cog):
         elif islem == "очередь":
             f = f'{DATA_DIR}/balance_{gid}.json'
             if not os.path.exists(f):
-                await interaction.response.send_message("❌ Пока veri yok!", ephemeral=True)
+                await interaction.response.send_message("❌ Пока Данные yok!", ephemeral=True)
                 return
             with open(f) as fp:
                 data = json.load(fp)
@@ -294,7 +294,7 @@ class Economy(commands.Cog):
                     f"## Kazino\n"
                     f"### Siz prooyunmı\n"
                     f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-                    f"Udaca otvernulas den vas. Povezet в sonraki kez!\n\n"
+                    f"Udaca otvernulas den vas. Povezet в следующий kez!\n\n"
                     f"**Prooyunno:** -{miktar:,} {name}\n"
                     f"**Новый bakiye:** {bal-miktar:,} {name}\n\n"
                     f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

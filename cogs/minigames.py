@@ -87,7 +87,7 @@ class MiniGames(commands.Cog):
         e.set_thumbnail(url=interaction.user.display_avatar.url)
         e.add_field(name="🎯 Aramalık", value="```1 — 100```", inline=True)
         e.add_field(name="👤 Запуск", value=interaction.user.mention, inline=True)
-        e.add_field(name="💡 Подсказка", value="*Более большой / более маленький ipuçlarını takip et!*", inline=False)
+        e.add_field(name="💡 Подсказка", value="*Используйте подсказки больше/меньше для отслеживания!*", inline=False)
         e.set_footer(text=f"Aether • {interaction.guild.name}", icon_url=interaction.guild.icon.url if interaction.guild.icon else None)
         await interaction.response.send_message(embed=e)
 
@@ -115,13 +115,13 @@ class MiniGames(commands.Cog):
             e.description = f"```ansi\n\u001b[1;33m📈 БОЛЕЕ БОЛЬШОЙ\u001b[0m\n```\n{_divider()}"
             e.add_field(name="💭 Tahminin", value=f"```{number}```", inline=True)
             e.add_field(name="🔢 Попытка", value=f"```{game['attempts']}. deneme```", inline=True)
-            e.add_field(name="💡 Подсказка", value="*Число более большой, yukarı çık!*", inline=False)
+            e.add_field(name="💡 Подсказка", value="*Число больше, двигайтесь вверх!*", inline=False)
         else:
             e = discord.Embed(title="📉  Более Маленький!", color=0xF39C12, timestamp=discord.utils.utcnow())
             e.description = f"```ansi\n\u001b[1;33m📉 БОЛЕЕ МАЛЕНЬКИЙ\u001b[0m\n```\n{_divider()}"
             e.add_field(name="💭 Tahminin", value=f"```{number}```", inline=True)
             e.add_field(name="🔢 Попытка", value=f"```{game['attempts']}. deneme```", inline=True)
-            e.add_field(name="💡 Подсказка", value="*Число более маленький, aşağı in!*", inline=False)
+            e.add_field(name="💡 Подсказка", value="*Число меньше, двигайтесь вниз!*", inline=False)
         e.set_footer(text=f"Aether • {interaction.guild.name}", icon_url=interaction.guild.icon.url if interaction.guild.icon else None)
         await interaction.response.send_message(embed=e)
 
@@ -132,7 +132,7 @@ class MiniGames(commands.Cog):
             ('✅ Kesinlikle evet!', 0x2ECC71), ('✅ Да, öyle видеть.', 0x2ECC71),
             ('✅ Большой ihtimalle evet.', 0x2ECC71), ('✅ Buna доверие.', 0x2ECC71),
             ('🤔 Şu an сказатьmek zor.', 0xF39C12), ('🤔 Tekrar sor.', 0xF39C12),
-            ('🤔 Şimdi ответитьemem.', 0xF39C12), ('🤔 Konsantre ol ve tekrar sor.', 0xF39C12),
+            ('🤔 Сейчас ответитьemem.', 0xF39C12), ('🤔 Konsantre ol ve tekrar sor.', 0xF39C12),
             ('❌ Sanmıyorum.', 0xE74C3C), ('❌ Нет.', 0xE74C3C),
             ('❌ Kesinlikle hayır.', 0xE74C3C), ('❌ Видеть по hayır.', 0xE74C3C),
         ]
@@ -157,7 +157,7 @@ class MiniGames(commands.Cog):
         secilen = random.choice(members)
         e = discord.Embed(title="🎰  Rastgele Участник Выбрано!", color=0xDC143C, timestamp=discord.utils.utcnow())
         e.description = (
-            f"```ansi\n\u001b[1;31m🎲 ВЫБОР YAPILDI\u001b[0m\n```\n{_divider()}\n\n"
+            f"```ansi\n\u001b[1;31m🎲 ВЫБОР сделано\u001b[0m\n```\n{_divider()}\n\n"
             f"Kura тянуть ve kazanan belli oldu! 🎊\n\n{_divider()}"
         )
         e.set_thumbnail(url=secilen.display_avatar.url)

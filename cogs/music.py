@@ -209,7 +209,7 @@ async def play_next(guild: discord.Guild, channel: discord.TextChannel = None):
         msg = player_messages.pop(guild.id, None)
         if msg:
             try:
-                e = discord.Embed(title="✅ Очередь Bitti", description="Все песняlar çalındı.", color=0x2ecc71)
+                e = discord.Embed(title="✅ Очередь завершена", description="Все песни воспроизведены.", color=0x2ecc71)
                 asyncio.run_coroutine_threadsafe(msg.edit(embed=e, view=None), guild._state.loop)
             except Exception:
                 pass

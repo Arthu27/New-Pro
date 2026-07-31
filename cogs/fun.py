@@ -96,13 +96,13 @@ class Fun(commands.Cog):
             hedef = kullanici1 or interaction.user
             seed = int(str(hedef.id) + datetime.utcnow().strftime("%Y%m%d"))
             random.seed(seed)
-            puan = random.randint(1, 100)
+            score = random.randint(1, 100)
             random.seed()
-            if puan >= 80:
+            if score >= 80:
                 color, badge, yorum = 0x2ECC71, "🍀 SÜPER ŞANSLI", "Сегодня каждый что-то yolunda gidecek!"
-            elif puan >= 60:
+            elif score >= 60:
                 color, badge, yorum = 0xF1C40F, "⭐ İYİ ŞANS", "Güzel bir день seni bekleme."
-            elif puan >= 40:
+            elif score >= 40:
                 color, badge, yorum = 0xF39C12, "🌤️ ORTA ŞANS", "Dikkatli ol, ama umudu kesme."
             else:
                 color, badge, yorum = 0xE74C3C, "🌧️ НИЗКИЙ ŞANS", "Сегодня temkinli ol!"
@@ -124,17 +124,17 @@ class Fun(commands.Cog):
                 return
             seed = min(kullanici1.id, kullanici2.id) * max(kullanici1.id, kullanici2.id)
             random.seed(seed % 999999)
-            puan = random.randint(1, 100)
+            score = random.randint(1, 100)
             random.seed()
             kalpler = "❤️" * (puan // 20) + "🖤" * (5 - puan // 20)
-            if puan >= 80:
+            if score >= 80:
                 yorum, color = "Mükemmel bir uyum! Ayrılmayın! 💑", 0xFF69B4
-            elif puan >= 60:
+            elif score >= 60:
                 yorum, color = "İyi bir uyum var, devam edin! 💕", 0xE91E8C
-            elif puan >= 40:
+            elif score >= 40:
                 yorum, color = "Orta düzey uyum, çaba показ! 💛", 0xF39C12
             else:
-                yorum, color = "Zor bir ilişki olur... 💔", 0xE74C3C
+                yorum, color = "Zor bir ilişki будет... 💔", 0xE74C3C
             e = discord.Embed(title="💕  Совместимость Testi", color=color, timestamp=datetime.utcnow())
             e.description = (
                 f"```ansi\n\u001b[1;35m💕 UYUMLULUK SONUCU\u001b[0m\n```\n{_divider()}"
@@ -152,8 +152,8 @@ class Fun(commands.Cog):
             f"```ansi\n\u001b[1;31m📊 ANKET BAŞLADI\u001b[0m\n```\n{_divider()}\n\n"
             f"**{soru}**\n\n{_divider()}"
         )
-        e.add_field(name="✅ Да", value="Aşağıya oy ver!", inline=True)
-        e.add_field(name="❌ Нет", value="Aşağıya oy ver!", inline=True)
+        e.add_field(name="✅ Да", value="вниз oy ver!", inline=True)
+        e.add_field(name="❌ Нет", value="вниз oy ver!", inline=True)
         e.set_footer(text=f"Спросил: {interaction.user.name}", icon_url=interaction.user.display_avatar.url)
         msg = await interaction.channel.send(embed=e)
         await msg.add_reaction("✅")
@@ -183,23 +183,23 @@ class Fun(commands.Cog):
         e.set_footer(text=f"Aether • {interaction.guild.name}", icon_url=interaction.guild.icon.url if interaction.guild.icon else None)
         await interaction.response.send_message(embed=e)
 
-    @app_commands.command(name="geri-число", description="До число запуск (maks 60 saniye)")
-    async def geri_sayim(self, interaction: discord.Interaction, saniye: int, message: str = ""):
-        if saniye < 1 or saniye > 60:
+    @app_commands.command(name="geri-число", description="До число запуск (maks 60 секунд)")
+    async def geri_sayim(self, interaction: discord.Interaction, секунд: int, message: str = ""):
+        if секунд < 1 or секунд > 60:
             await interaction.response.send_message("❌ От 1 до 60 секунд!", ephemeral=True)
             return
         e = discord.Embed(title="⏱️  До Число", color=0xDC143C, timestamp=datetime.utcnow())
         e.description = (
             f"```ansi\n\u001b[1;31m⏱️ GERİ ЧИСЛО BAŞLADI\u001b[0m\n```\n{_divider()}\n\n"
-            f"{message}\n\n**{saniye}** saniye kaldı...\n\n{_divider()}"
+            f"{message}\n\n**{секунд}** секунд kaldı...\n\n{_divider()}"
         )
         await interaction.response.send_message(embed=e)
         msg = await interaction.original_response()
-        for i in range(saniye - 1, 0, -1):
+        for i in range(секунд - 1, 0, -1):
             await asyncio.sleep(1)
             e.description = (
                 f"```ansi\n\u001b[1;31m⏱️ GERİ ЧИСЛО\u001b[0m\n```\n{_divider()}\n\n"
-                f"{message}\n\n**{i}** saniye kaldı...\n\n{_divider()}"
+                f"{message}\n\n**{i}** секунд kaldı...\n\n{_divider()}"
             )
             await msg.edit(embed=e)
         await asyncio.sleep(1)

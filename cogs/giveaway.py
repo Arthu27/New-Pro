@@ -59,7 +59,7 @@ class GiveawayView(View):
             
             gw = giveaways[self.gw_id]
             if gw.get('status') != 'active':
-                await interaction.response.send_message('❌ Giveaway bitti!', ephemeral=True)
+                await interaction.response.send_message('❌ Розыгрыш завершён!', ephemeral=True)
                 return
             
             participants = gw.setdefault('participants', [])

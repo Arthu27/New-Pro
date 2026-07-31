@@ -107,7 +107,7 @@ class InviteTracker(commands.Cog):
     async def my_invites(self, interaction: discord.Interaction):
         f = f'data/invite_counts_{interaction.guild_id}.json'
         if not os.path.exists(f):
-            await interaction.response.send_message('❌ Пока davet verisi yok!', ephemeral=True)
+            await interaction.response.send_message('❌ Пока davet данные yok!', ephemeral=True)
             return
         with open(f, 'r', encoding='utf-8') as fp:
             counts = json.load(fp)
@@ -139,7 +139,7 @@ class InviteTracker(commands.Cog):
     async def invite_leaderboard(self, interaction: discord.Interaction):
         f = f'data/invite_counts_{interaction.guild_id}.json'
         if not os.path.exists(f):
-            await interaction.response.send_message('❌ Пока davet verisi yok!', ephemeral=True)
+            await interaction.response.send_message('❌ Пока davet данные yok!', ephemeral=True)
             return
         with open(f, 'r', encoding='utf-8') as fp:
             counts = json.load(fp)

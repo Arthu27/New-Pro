@@ -3,9 +3,9 @@ Aether — Doğrulama (Verification) — Gözlemci / opt-in modu
 ---------------------------------------------------------
 Varsayılan: KAPALI. Yeni gelen kullanıcılara otomatik hiçbir şey YAPILMAZ:
   * Captcha kodu gösterilmez
-  * "Проверка" / "Onaylandı" rolü VERILMEZ
+  * "Проверка" / "Onaylandı" роль VERILMEZ
   * Zaman aşımında KICK YAPILMAZ
-  * Sunucu sahibi panelden açmadıkça sistem sessiz kalır
+  * сервер sahibi panelden açmadıkça sistem sessiz kalır
 
 Açmak için: `/verify-toggle enabled:true` ya da panelden.
 """
@@ -41,7 +41,7 @@ def _save_global_state(state: dict):
 
 
 class Verification(commands.Cog):
-    """İsteğe bağlı captcha/rol sistemi. Varsayılan KAPALI."""
+    """İsteğe bağlı captcha/Роль sistemi. Varsayılan KAPALI."""
 
     def __init__(self, bot):
         self.bot = bot
@@ -59,17 +59,17 @@ class Verification(commands.Cog):
         unverified_role = discord.utils.get(guild.roles, name="Проверка")
         verified_role = discord.utils.get(guild.roles, name="Onaylandı")
 
-        # Sadece bilgilendirme — otomatik rol/kick YOK
+        # Sadece bilgilendirme — otomatik Роль/kick YOK
         try:
             await member.send(
                 f"👋 {guild.name} sunucusuna hoş geldin!\n"
-                f"Doğrulama gerekli ise lütfen sunucudaki talimatları takip et."
+                f"Если требуется проверка, следуйте инструкциям на сервере."
             )
         except Exception:
             pass
-        # Not: kick/rol-atama/kanal-oluşturma gibi hiçbir otomatik aksiyon YOK.
+        # Not: kick/Роль-atama/Канал-oluşturma gibi hiçbir otomatik aksiyon YOK.
 
-    @app_commands.command(name="verify-toggle", description="Verification sistemini aç/kapat (gözlemci modunda)")
+    @app_commands.command(name="verify-toggle", description="Включить/отключить систему верификации (режим наблюдателя)")
     @app_commands.checks.has_permissions(administrator=True)
     async def verify_toggle(self, interaction: discord.Interaction, enabled: bool):
         state = _load_global_state()
@@ -78,7 +78,7 @@ class Verification(commands.Cog):
         _save_global_state(state)
         await interaction.response.send_message(
             f"🔐 Verification sistemi **{'AÇIK' if enabled else 'KAPALI'}**.\n"
-            + ("⚠️ Bot otomatik captcha/rol/kick YAPMAYACAK — sadece bilgilendirme." if enabled else "✅ Artık yeni gelenler için hiçbir otomatik işlem yapılmayacak."),
+            + ("⚠️ Bot otomatik captcha/Роль/kick YAPMAYACAK — sadece bilgilendirme." if enabled else "✅ Artık yeni gelenler için hiçbir otomatik операция yapılmayacak."),
             ephemeral=True,
         )
 
@@ -93,7 +93,7 @@ class Verification(commands.Cog):
         e.add_field(name="Otomatik aksiyon", value="❌ YOK (gözlemci modu)", inline=True)
         e.add_field(name="Son güncelleme", value=state.get("updated_by", "—"), inline=True)
         e.description = (
-            "Bu cog gözlemci modunda: bot kimseye otomatik captcha/rol/kick UYGULAMAZ. "
+            "Bu cog gözlemci modunda: bot kimseye otomatik captcha/Роль/kick UYGULAMAZ. "
             "Sadece sen `/verify-toggle enabled:true` dersen bilgilendirme DM'i atar."
         )
         await interaction.response.send_message(embed=e, ephemeral=True)

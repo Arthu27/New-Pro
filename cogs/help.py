@@ -7,7 +7,7 @@ PERM_LABEL = {"all": "Каждый", "mod": "Moderator", "admin": "İsminin", "o
 
 CATEGORIES = [
     {"id": "overview", "emoji": "\u26a1", "title": "ANA MENU", "color": 0x00FFF7, "commands": []},
-    {"id": "mod",      "emoji": "\U0001f6e1\ufe0f", "title": "MODERASYON",    "color": 0xFF0055, "commands": [
+    {"id": "mod",      "emoji": "\U0001f6e1\ufe0f", "title": "МОДЕРАЦИЯ",    "color": 0xFF0055, "commands": [
         ("!ban",      "Постоянный yasakla",    "!ban @user причина",   "admin"),
         ("!kick",     "С сервера at",      "!kick @user причина",  "admin"),
         ("!timeout",  "Gecici sustur",     "!timeout @user 10m", "admin"),
@@ -89,7 +89,7 @@ def build_embed(page: int) -> discord.Embed:
             color=cat["color"]
         )
         embed.add_field(name="\U0001f4cb  Kategoriler",      value="```ansi\n" + cats.strip()  + "\n```", inline=False)
-        embed.add_field(name="\U0001f510  Izin Seviyeleri", value="```ansi\n" + perms          + "\n```", inline=False)
+        embed.add_field(name="\U0001f510  Разрешение Seviyeleri", value="```ansi\n" + perms          + "\n```", inline=False)
         embed.set_footer(text=f"Sayfa 1/{TOTAL_PAGES}  \u2022  Aether Bot  \u2022  !help")
         return embed
 
@@ -190,7 +190,7 @@ class Help(commands.Cog):
         self.bot = bot
 
     @commands.command(name="help", aliases=["команды", "h", "menu"])
-    async def yardim_prefix(self, ctx):
+    async def help_prefix(self, ctx):
         try:
             await ctx.message.delete()
         except Exception:
@@ -198,7 +198,7 @@ class Help(commands.Cog):
         await ctx.send(embed=build_embed(0), view=HelpView(page=0))
 
     @app_commands.command(name="help", description="Tum bot команды gosterir")
-    async def yardim_slash(self, interaction: discord.Interaction):
+    async def help_slash(self, interaction: discord.Interaction):
         await interaction.response.send_message(embed=build_embed(0), view=HelpView(page=0), ephemeral=True)
 
 

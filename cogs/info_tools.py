@@ -148,7 +148,7 @@ class InfoTools(commands.Cog):
     async def ilk_message(self, ctx, channel: discord.TextChannel = None):
         ch = channel or ctx.channel
         async for msg in ch.history(limit=1, oldest_first=True):
-            e = discord.Embed(title="📌 İLK СООБЩЕНИЕ", color=0xdc143c,
+            e = discord.Embed(title="📌 Первый СООБЩЕНИЕ", color=0xdc143c,
                 description=f"[Сообщению git]({msg.jump_url})\n\n{msg.content[:200] if msg.content else '*(embed)*'}")
             await ctx.send(embed=e)
             return

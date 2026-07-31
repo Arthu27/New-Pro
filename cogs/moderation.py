@@ -104,9 +104,9 @@ class Moderation(commands.Cog):
 
         # Footer с simge с сервер
         if guild.icon:
-            e.set_footer(text=f"{guild.name} · Moderasyon", icon_url=guild.icon.url)
+            e.set_footer(text=f"{guild.name} · Модерация", icon_url=guild.icon.url)
         else:
-            e.set_footer(text=f"{guild.name} · Moderasyon")
+            e.set_footer(text=f"{guild.name} · Модерация")
 
         return e
 
@@ -248,7 +248,7 @@ class Moderation(commands.Cog):
     ])
     @app_commands.checks.has_permissions(manage_messages=True)
     async def utility_commands(self, interaction, action: str,
-                               adet: int = 10, saniye: int = 0, user: discord.Member = None):
+                               adet: int = 10, секунд: int = 0, user: discord.Member = None):
         guild = interaction.guild
 
         if action == "clear":
@@ -266,15 +266,15 @@ class Moderation(commands.Cog):
             await interaction.followup.send(embed=e, ephemeral=True)
 
         elif action == "slowmode":
-            if saniye < 0 or saniye > 21600:
-                await interaction.response.send_message(embed=error_embed("Znacenie den 0 do 21600 saniye."), ephemeral=True)
+            if секунд < 0 or секунд > 21600:
+                await interaction.response.send_message(embed=error_embed("Znacenie den 0 do 21600 секунд."), ephemeral=True)
                 return
-            await interaction.channel.edit(slowmode_delay=saniye)
+            await interaction.channel.edit(slowmode_delay=секунд)
             e = discord.Embed(color=0xF39C12, timestamp=datetime.now(timezone.utc))
             e.description = (
                 f"## Medlenniy mod\n"
                 f"Канал: {interaction.channel.mention}\n"
-                f"Zaderjka: **{saniye} sek.**\n"
+                f"Zaderjka: **{секунд} sek.**\n"
                 f"Модератор: {interaction.user.mention}\n\n"
                 f"{DIVIDER}"
             )
@@ -324,7 +324,7 @@ class Moderation(commands.Cog):
                 f"## {u.display_name}\n"
                 f"`{u.id}`\n\n"
                 f"Isim: **{u.name}**\n"
-                f"Takma ad: **{u.display_name}**\n"
+                f"Псевдоним: **{u.display_name}**\n"
                 f"Hesap: <t:{int(u.created_at.timestamp())}:R>\n"
                 f"На на сервере: <t:{int(u.joined_at.timestamp())}:R>\n"
                 f"Роли ({len(roles)}): {roles_text}\n\n"

@@ -80,7 +80,7 @@ class AutoMod(commands.Cog):
         if log_ch:
             e = discord.Embed(title=title, color=color, timestamp=discord.utils.utcnow())
             e.description = (
-                f"```ansi\n\u001b[1;31m⚡ АВТОМАТИЧЕСКИ MODERASYON\u001b[0m\n```\n"
+                f"```ansi\n\u001b[1;31m⚡ АВТОМАТИЧЕСКАЯ МОДЕРАЦИЯ\u001b[0m\n```\n"
                 f"{DIV}\n\n{desc}\n\n{DIV}"
             )
             e.set_thumbnail(url=member.display_avatar.url)

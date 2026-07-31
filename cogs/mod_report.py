@@ -50,10 +50,10 @@ def _load_mod_data() -> dict:
 
 
 def _load_lb(guild_id: int) -> dict:
-    """Leaderboard verisini загрузить — voice_stats ve leaderboard dosyalarını birleştir"""
+    """Leaderboard данные загрузить — voice_stats ve leaderboard dosyalarını birleştir"""
     result = {'messages': {}, 'voice_minutes': {}}
 
-    # Сообщение verisi
+    # Сообщение данные
     lb_path = f'{DATA_DIR}/leaderboard_{guild_id}.json'
     if os.path.exists(lb_path):
         try:
@@ -66,7 +66,7 @@ def _load_lb(guild_id: int) -> dict:
         except:
             pass
 
-    # Ses verisi — voice_stats_GUILDID.json (saniye cinsinden)
+    # Ses данные — voice_stats_GUILDID.json (секунд cinsinden)
     vs_path = f'{DATA_DIR}/voice_stats_{guild_id}.json'
     if os.path.exists(vs_path):
         try:
@@ -225,11 +225,11 @@ async def _build_weekly_report(guild: discord.Guild, days: int = 7, force_cutoff
         h, mn = divmod(s['voice'], 60)
         lines.append(
             f'{medals[i]} **{name}**\n'
-            f'╰ {bar} `{s["score"]:,} puan`\n'
+            f'╰ {bar} `{s["score"]:,} очков`\n'
             f'╰ 💬 {s["msg"]:,} message  🎙️ {h}s{mn}dk  📨 {s["inv"]} davet'
         )
-    overall_embed.description = '\n\n'.join(lines) or 'Veri yok.'
-    overall_embed.set_footer(text=f'Puan: Сообщение×1 + Ses dk×2 + Davet×5')
+    overall_embed.description = '\n\n'.join(lines) or 'Данные yok.'
+    overall_embed.set_footer(text=f'Очки: Сообщение×1 + Звук мин×2 + Приглашение×5')
     embeds.append(overall_embed)
 
     # ══════════════════════════════════════════════════════════════════════════
@@ -345,8 +345,8 @@ async def _build_weekly_report(guild: discord.Guild, days: int = 7, force_cutoff
     )
     close.description = (
         f'```ansi\n\u001b[1;32m✦ Rapor В конецu ✦\u001b[0m\n```\n'
-        f'> Bu rapor **{period}** verilerini kapsamaktadır.\n'
-        f'> Bir sonraki rapor: <t:{ts_now + (7 - datetime.datetime.utcnow().weekday()) * 86400}:D>\n\n'
+        f'> Bu rapor **{period}** данные kapsamaktadır.\n'
+        f'> Bir следующий rapor: <t:{ts_now + (7 - datetime.datetime.utcnow().weekday()) * 86400}:D>\n\n'
         f'-# Aether Bot • Автоматически Haftalık Rapor'
     )
     embeds.append(close)
@@ -447,7 +447,7 @@ class ModReportView(discord.ui.View):
             name = m.display_name if m else f'<@{uid}>'
             medal = medals[i] if i < 3 else f'`#{i+1}`'
             lines.append(f'{medal} **{name}** — {score:,} puan')
-        embed = discord.Embed(title='🏆 Общий Очередь', description='\n'.join(lines) or 'Veri yok.', color=0xF1C40F)
+        embed = discord.Embed(title='🏆 Общий Очередь', description='\n'.join(lines) or 'Данные yok.', color=0xF1C40F)
         if interaction.guild.icon:
             embed.set_thumbnail(url=interaction.guild.icon.url)
         await interaction.followup.send(embed=embed)
@@ -466,7 +466,7 @@ class ModReportView(discord.ui.View):
         embed.add_field(name='День/Время', value=f'{gun_names[cfg.get("day", 0)]} {cfg.get("hour", 9):02d}:00', inline=True)
         embed.description = (
             '**Команды:**\n'
-            '`!rapor-настройк #channel [день] [saat]`\n'
+            '`!rapor-настройк #channel [день] [часов]`\n'
             '`!rapor-роли-add @Роль`\n'
             '`!rapor-роли-cikar @Роль`'
         )
@@ -546,17 +546,17 @@ class ModReport(commands.Cog):
 
     @commands.command(name='rapor-настройк')
     @commands.has_permissions(administrator=True)
-    async def setup_report(self, ctx, channel: discord.TextChannel, gun: int = 0, saat: int = 9):
-        """Автоматически haftalık raporu настройк: !rapor-настройк #channel [день] [saat]"""
+    async def setup_report(self, ctx, channel: discord.TextChannel, gun: int = 0, часов: int = 9):
+        """Автоматически haftalık raporu настройк: !rapor-настройк #channel [день] [часов]"""
         cfg = _load_cfg(ctx.guild.id)
-        cfg.update({'enabled': True, 'channel_id': channel.id, 'day': gun, 'hour': saat})
+        cfg.update({'enabled': True, 'channel_id': channel.id, 'day': gun, 'hour': часов})
         _save_cfg(ctx.guild.id, cfg)
         gun_names = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar']
         embed = discord.Embed(
             title='✅ Haftalık Rapor Настройк',
             color=0x57F287,
             description=(
-                f'Каждый **{gun_names[gun]}** saat **{saat:02d}:00**\'de\n'
+                f'Каждый **{gun_names[gun]}** часов **{часов:02d}:00**\'de\n'
                 f'{channel.mention} в канал автоматически отправл.'
             )
         )
@@ -611,7 +611,7 @@ class ModReport(commands.Cog):
         cfg['last_meeting'] = meeting_time.isoformat()
         _save_cfg(ctx.guild.id, cfg)
         ts = int(meeting_time.timestamp())
-        await ctx.send(f'✅ Собрание date настройк: <t:{ts}:F>\nBir sonraki rapor bu date itibaren sayacak.')
+        await ctx.send(f'✅ Собрание date настройк: <t:{ts}:F>\nBir следующий rapor bu date itibaren sayacak.')
 
     @commands.command(name='собрание-sayac')
     async def meeting_counter(self, ctx):

@@ -564,7 +564,7 @@ class Ticket(commands.Cog):
         # Ek доказательство собратьma modu
         if state.get('имяding_evidence'):
             content_lower = message.content.lower().strip()
-            if content_lower in ('tamam', 'hazır', 'готово', 'готова', 'bitti', 'bitir'):
+            if content_lower in ('tamam', 'hazır', 'готово', 'готова', 'bitti', 'bitir', 'готово!', 'готова!'):
                 state['имяding_evidence'] = False
                 complaint = state.get('complaint', {})
                 self._save_ticket_state(guild_id, channel_id, state)
@@ -1109,7 +1109,7 @@ class Ticket(commands.Cog):
             complaint['messages'] = [content]
             complaint['messages_verified'] = False
             complaint['step'] = 'analyze'
-            # Isimler yoksa şimdi имяd
+            # Isimler yoksa Сейчас имяd
             if 'complainant_name' not in complaint:
                 cm = message.guild.get_member(state.get('user_id'))
                 complaint['complainant_name'] = cm.display_name if cm else str(state.get('user_id', '?'))
@@ -1759,7 +1759,7 @@ class Ticket(commands.Cog):
         data = self._loимя_ai_data(interaction.guild.id)
         
         if not data:
-            await interaction.response.send_message("❌ Пока AI поддержка verisi yok.", ephemeral=True)
+            await interaction.response.send_message("❌ Пока AI поддержка данные yok.", ephemeral=True)
             return
         
         total_tickets = len(data)

@@ -78,7 +78,7 @@ class Leaderboard(commands.Cog):
         """Всего ses длительность очередь: !ses-очередь"""
         vs_path = f'data/voice_stats_{ctx.guild.id}.json'
         if not os.path.exists(vs_path):
-            await ctx.send('❌ Пока ses verisi yok.')
+            await ctx.send('❌ Пока ses данные yok.')
             return
 
         import json as _json
@@ -105,7 +105,7 @@ class Leaderboard(commands.Cog):
 
         embed = discord.Embed(
             title='🎙️  Ses Длительность Очередь',
-            description='\n\n'.join(lines) or 'Veri yok.',
+            description='\n\n'.join(lines) or 'Данные yok.',
             color=0x57F287
         )
         embed.set_footer(text=f'{ctx.guild.name} • Всего ses длительность')
@@ -137,7 +137,7 @@ class Leaderboard(commands.Cog):
             member = ctx.guild.get_member(int(uid))
             name = member.display_name if member else f'<@{uid}>'
             lines.append(f'{_medal(i)} **{name}** — {count:,} message')
-        embed.description = '\n'.join(lines) or 'Пока veri yok.'
+        embed.description = '\n'.join(lines) or 'Пока Данные yok.'
         embed.set_footer(text=f'{ctx.guild.name} • Liderlik Tablosu')
         await ctx.send(embed=embed)
 
@@ -150,7 +150,7 @@ class Leaderboard(commands.Cog):
             name = member.display_name if member else f'<@{uid}>'
             h, m = divmod(mins, 60)
             lines.append(f'{_medal(i)} **{name}** — {h}s {m}dk')
-        embed.description = '\n'.join(lines) or 'Пока veri yok.'
+        embed.description = '\n'.join(lines) or 'Пока Данные yok.'
         embed.set_footer(text=f'{ctx.guild.name} • Liderlik Tablosu')
         await ctx.send(embed=embed)
 
@@ -161,7 +161,7 @@ class Leaderboard(commands.Cog):
             try:
                 with open(invite_file, 'r', encoding='utf-8') as f:
                     raw = json.load(f)
-                # Значение dict olabilir — int'e преобразовать
+                # Значение dict может быть — int'e преобразовать
                 for uid, val in raw.items():
                     if isinstance(val, dict):
                         invite_data[uid] = val.get('total', val.get('count', val.get('uses', 0)))
@@ -176,7 +176,7 @@ class Leaderboard(commands.Cog):
             member = ctx.guild.get_member(int(uid))
             name = member.display_name if member else f'<@{uid}>'
             lines.append(f'{_medal(i)} **{name}** — {count} davet')
-        embed.description = '\n'.join(lines) or 'Пока veri yok.'
+        embed.description = '\n'.join(lines) or 'Пока Данные yok.'
         embed.set_footer(text=f'{ctx.guild.name} • Liderlik Tablosu')
         await ctx.send(embed=embed)
 
@@ -200,10 +200,10 @@ class Leaderboard(commands.Cog):
             mins = data['voice_minutes'].get(uid, 0)
             h, m = divmod(mins, 60)
             lines.append(
-                f'{_medal(i)} **{name}** — {score:,} puan\n'
+                f'{_medal(i)} **{name}** — {score:,} очков\n'
                 f'╰ 💬 {msgs:,} message • 🎙️ {h}s {m}dk'
             )
-        embed.description = (embed.description or '') + '\n\n' + ('\n'.join(lines) or 'Пока veri yok.')
+        embed.description = (embed.description or '') + '\n\n' + ('\n'.join(lines) or 'Пока Данные yok.')
         embed.set_footer(text=f'{ctx.guild.name} • Liderlik Tablosu')
         await ctx.send(embed=embed)
 

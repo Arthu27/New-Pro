@@ -252,7 +252,7 @@ def _extract_learned_info(question: str, answer: str) -> dict:
                 return {
                     'type': 'person_info',
                     'name': name,
-                    'info': answer[:500],  # Ilk 500 karakter
+                    'info': answer[:500],  # Первый 500 karakter
                     'question': question,
                     'confidence': confidence,
                     'source': 'web_search' if is_web_search else 'chat'
@@ -291,7 +291,7 @@ _cache_timeout = 300  # 5 minutes
 
 
 async def _get_recent_user_messages(user_id: int, guild, limit: int = 15) -> list:
-    """Пользователь son Discord messagelarını собрать (son 12 saat, max 15 message)"""
+    """Пользователь son Discord messagelarını собрать (son 12 часов, max 15 message)"""
     if not guild:
         return []
     
@@ -310,7 +310,7 @@ async def _get_recent_user_messages(user_id: int, guild, limit: int = 15) -> lis
     cutoff_time = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=12)
     
     try:
-        # Только активен channelları сканировать (son 2 saatte message olan)
+        # Только активен channelları сканировать (son 2 saatte message который является)
         active_channels = []
         for channel in guild.text_channels:
             if not channel.permissions_for(guild.me).read_message_history:
@@ -405,7 +405,7 @@ def _call_ai(question: str, user_id: int, guild=None, recent_messages: list = No
                 if owner:
                     context['guild_owner'] = owner.display_name
 
-                # Администратор роли — manage_messages или kick izni olanlar
+                # Администратор роли — manage_messages или kick разрешение которые являются
                 staff_roles = []
                 for role in guild.roles:
                     if role.is_default():
@@ -428,7 +428,7 @@ def _call_ai(question: str, user_id: int, guild=None, recent_messages: list = No
                     for m in vc.members:
                         if not m.bot:
                             in_voice.append(m.display_name)
-                # В конец katılanlar (son 24 saat)
+                # В конец katılanlar (son 24 часов)
                 import datetime as _dt
                 cutoff = _dt.datetime.now(_dt.timezone.utc) - _dt.timedelta(hours=24)
                 recent_joins = [m.display_name for m in guild.members
@@ -476,7 +476,7 @@ def _call_ai(question: str, user_id: int, guild=None, recent_messages: list = No
                     
                 # Вопрос benzerliği контроль et
                 if any(word in item.get('question', '').lower() for word in q_lower.split() if len(word) > 2):
-                    relevant_knowledge.append(f"Önceden öğrenilen: {item.get('question', '')} → {item.get('info', '')}")
+                    relevant_knowledge.append(f"заранее öğrenilen: {item.get('question', '')} → {item.get('info', '')}")
                 # Isim/konu benzerliği контроль et
                 elif 'name' in item and any(word in item['name'].lower() for word in q_lower.split() if len(word) > 2):
                     relevant_knowledge.append(f"Bilinen человек: {item['name']} → {item.get('info', '')}")
@@ -557,14 +557,14 @@ def _call_ai(question: str, user_id: int, guild=None, recent_messages: list = No
         return answer or 'Hmm, bir sorun oldu. Tekrar dener misin? 🤔'
     except Exception as e:
         print(f'[AI] Ошибка: {e}')
-        return 'Şimdi не mogu cevapla, poprobuyte после. 😅'
+        return 'Сейчас не mogu cevapla, poprobuyte после. 😅'
 
 
 class AIChat(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.hybrid_command(name='ai-info-clear', description="Temizle veriбазу информация AI на сервер (Yönetici)")
+    @commands.hybrid_command(name='ai-info-clear', description="Temizle veriбазу информация AI на сервер (Менеджер)")
     @commands.has_permissions(administrator=True)
     async def ai_clear_knowledge(self, ctx):
         """Сервер AI info базу clear (только adminler)"""
@@ -620,7 +620,7 @@ class AIChat(commands.Cog):
         _save_knowledge_base(_knowledge_base)
         await ctx.send(f'✅ Информация о **{konu}** сохранена! Теперь я буду знать правильный ответ.', ephemeral=True)
 
-    @commands.hybrid_command(name='ai-info-listele', description="Liste zaregistrirovannih AI информация (Yönetici)")
+    @commands.hybrid_command(name='ai-info-listele', description="Liste zaregistrirovannih AI информация (Менеджер)")
     @commands.has_permissions(administrator=True)
     async def ai_list_knowledge(self, ctx):
         """На сервер запись AI информация listele"""
@@ -659,10 +659,10 @@ class AIChat(commands.Cog):
             if id_match:
                 target_id = int(id_match.group(1))
 
-        # "benimle одинаковый seste olan" → owner'ın ses channelındaki diğer участник
+        # "benimle одинаковый seste который является" → owner'ın ses channelındaki diğer участник
         cl = text.lower()
         if not target_id and any(t in cl for t in ['одинаковый seste', 'одинаковый seste', 'ses channelındaki', 'ses channelindaki',
-                                                    'benimle olan', 'yanımdaki', 'yanimdaki']):
+                                                    'benimle который является', 'yanımdaki', 'yanimdaki']):
             for guild in self.bot.guilds:
                 owner = guild.get_member(OWNER_ID)
                 if not owner or not owner.voice:
@@ -671,7 +671,7 @@ class AIChat(commands.Cog):
                 others = [m for m in owner.voice.channel.members
                           if m.id != OWNER_ID and not m.bot]
                 if others:
-                    target_id = others[0].id  # Ilk kişiyi al
+                    target_id = others[0].id  # Первый kişiyi al
                     break
 
         if not target_id:
@@ -693,8 +693,8 @@ class AIChat(commands.Cog):
             clean = text
             for t in ['особый yaz', 'ozelden yaz', 'dm at', 'dm отправить', 'dm yaz',
                       'особый message at', 'ozel message at', 'особый message', 'ozelden message',
-                      'benimle одинаковый seste', 'benimle одинаковый seste', 'одинаковый seste olan arkadaşa',
-                      'одинаковый seste olan arkadasa']:
+                      'benimle одинаковый seste', 'benimle одинаковый seste', 'одинаковый seste который является arkadaşa',
+                      'одинаковый seste который является arkadasa']:
                 clean = clean.replace(t, '').strip()
             clean = re.sub(r'<@!?\d+>', '', clean).strip()
             clean = re.sub(r'\b\d{17,20}\b', '', clean).strip()
@@ -758,9 +758,9 @@ class AIChat(commands.Cog):
 
         # ── Yön ve adım количество ───────────────────────────────────────────────
         yon = 0
-        # Hem "üst/ust" hem "yukarı/yukari" destadd
-        yukari_words = ['üst', 'ust', 'yukarı', 'yukari', 'yukar']
-        asagi_words  = ['alt', 'aşağı', 'asagi', 'asag']
+        # Hem "верх/ust" hem "Вверх/Вверх" destadd
+        yukari_words = ['верх', 'ust', 'Вверх', 'Вверх', 'yukar']
+        asagi_words  = ['Низ', 'вниз', 'asagi', 'asag']
 
         sayi_match = re.search(r'(\d+)\s*(' +
             '|'.join(yukari_words + asagi_words) + r')', cl_norm)
@@ -843,19 +843,19 @@ class AIChat(commands.Cog):
                                 geri_hedef = vc
                                 break
 
-                    await asyncio.sleep(3)  # 3 saniye badd
+                    await asyncio.sleep(3)  # 3 секунд badd
                     # Участник hâlâ ses в канале mı контроль et
                     await member.guild.chunk()  # cache обновить
                     fresh = guild.get_member(target_id)
                     if fresh and fresh.voice:
                         await fresh.move_to(geri_hedef)
-                        msg += f'\n✅ 3 saniye после **{geri_hedef.name}** в канал geri getirildi.'
+                        msg += f'\n✅ 3 секунд после **{geri_hedef.name}** в канал geri getirildi.'
                     else:
                         msg += f'\n⚠️ До getirilemedi — участник ses из канала ayrılmış.'
 
                 results.append(msg)
             except discord.Forbidden:
-                results.append('❌ Администратор yok (Move Members izni gerekli).')
+                results.append('❌ Администратор yok (Move Members разрешение gerekli).')
             except Exception as e:
                 results.append(f'❌ Ошибка: {e}')
 
@@ -878,7 +878,7 @@ class AIChat(commands.Cog):
         if any(t in cl for t in ['beni', 'bana', 'benim', 'ben ']):
             return OWNER_ID
         # Isim с ara — все сервер участник ara
-        # Команда kelimelerini clear, kalan kısım isim olabilir
+        # Команда kelimelerini clear, kalan kısım isim может быть
         stop_words = ['sesten at', 'voice al', 'voice тянуть', 'ban at', 'kick at',
                       'timeout ver', 'uyar', 'роли ver', 'роли al', 'bu arkadasi',
                       'bu arkadasin', 'bu kisiyi', 'bu участника', 'bu uyeyi',
@@ -903,7 +903,7 @@ class AIChat(commands.Cog):
         """Metinden длительность minutes cinsinden удалить."""
         import re
         cl = text.lower()
-        m = re.search(r'(\d+)\s*(saat|hour)', cl)
+        m = re.search(r'(\d+)\s*(часов|hour)', cl)
         if m: return int(m.group(1)) * 60
         m = re.search(r'(\d+)\s*(день|gun|day)', cl)
         if m: return int(m.group(1)) * 1440
@@ -973,7 +973,7 @@ class AIChat(commands.Cog):
                     from cogs.music import fetch_source, get_queue, play_next
                     vc = guild.voice_client
                     if vc and not vc.is_connected():
-                        vc = None  # Kapanmakta olan ссылка clear
+                        vc = None  # Kapanmakta который является ссылка clear
                     if not vc:
                         vc = await voice_channel.connect()
                     elif vc.channel != voice_channel:
@@ -1049,9 +1049,9 @@ class AIChat(commands.Cog):
         # Ses канал movema
         ses_tasi_triggers = [
             'ses в канал', 'voice move', 'voice тянуть', 'voice al',
-            'üst channela', 'ust channela', 'alt channela',
+            'верх channela', 'ust channela', 'Низ channela',
             'channela move', 'channela тянуть', 'channela al', 'voice',
-            'üst channel', 'ust channel', 'yukarı channel', 'yukari channel',
+            'верх channel', 'ust channel', 'Вверх channel', 'Вверх channel',
             'в канал al', 'в канал al', 'move voice', 'тянуть voice', 'al voice',
         ]
         # Sesten at — ayrı handler
@@ -1271,9 +1271,9 @@ class AIChat(commands.Cog):
             # mention'ları clear
             for m in message.mentions:
                 content = content.replace(f'<@{m.id}>', '').replace(f'<@!{m.id}>', '')
-            content = content.strip() or 'Merhaba!'
+            content = content.strip() or 'Здравствуйте!'
         else:
-            content = message.content.strip() or 'Merhaba!'
+            content = message.content.strip() or 'Здравствуйте!'
 
         # Arthur'un команда talebi — J.A.R.V.I.S. modu
         if OWNER_ID and message.author.id == OWNER_ID:

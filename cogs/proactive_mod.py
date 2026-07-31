@@ -1,6 +1,6 @@
 from typing import Dict
 """
-Proaktifya moderasyon — AI kendi zamecaet problemi в sohbette
+Проактивная модерация — AI сам замечает проблемы в чате
 Toksisite, spam, şüpheli ссылка, povtoryayusiesya sorular
 """
 import discord
@@ -24,8 +24,8 @@ class ProactiveModeration(commands.Cog):
             r'\b(posel|idi)\s*(на|в)\s*(aptal|каждый|pizdu|jopu)\b',
             r'\b(suka|blyat|blya|nahuy|pizdec|ebat)\b',
         ]
-        self.spam_threshold = 5  # Сообщение для 10 saniye
-        self.spam_window = 10  # saniye
+        self.spam_threshold = 5  # Сообщение для 10 секунд
+        self.spam_window = 10  # секунд
         self.link_patterns = [
             r'https?://[^\s]+',
             r'www\.[^\s]+',
@@ -133,7 +133,7 @@ class ProactiveModeration(commands.Cog):
         channel_id = message.channel.id
         author_id = message.author.id
         
-        # Scitaem сообщения den bunun yazarın для son N saniye
+        # Scitaem сообщения den bunun yazarın для son N секунд
         now = datetime.utcnow()
         recent_messages = [
             msg for msg in self.message_buffer.get(channel_id, [])

@@ -114,7 +114,7 @@ class Security(commands.Cog):
         Çoklu sinyal: скорость + benzerlik + tekrar + uzunluk anomalisi
         """
         now = time.time()
-        window = 8  # saniye
+        window = 8  # секунд
         history = self.msg_history[uid]
 
         # Старый запись clear

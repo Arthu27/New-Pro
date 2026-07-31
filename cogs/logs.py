@@ -12,7 +12,7 @@ from typing import Dict, Any
 AUDIT_FILE = "data/audit_log.json"
 
 CATEGORIES = {
-    'mod':     {'label': 'Moderasyon',  'emoji': '🔨', 'color': 0xE74C3C, 'channel': 'moderasyon'},
+    'mod':     {'label': 'Модерация',  'emoji': '🔨', 'color': 0xE74C3C, 'channel': 'moderasyon'},
     'member':  {'label': 'Участники',   'emoji': '👤', 'color': 0x2ECC71, 'channel': 'участники'},
     'message': {'label': 'Сообщения',   'emoji': '💬', 'color': 0x3498DB, 'channel': 'сообщения'},
     'role':    {'label': 'Роли',        'emoji': '🎭', 'color': 0x9B59B6, 'channel': 'сервер'},
@@ -117,7 +117,7 @@ def save_event(guild_id, category, action, details: dict):
 
 # Imena log-каналы
 LOG_CHANNELS = {
-    'moderasyon':  '🔨-moderasyon',
+    'moderasyon':  '🔨-модерация',
     'участники':  '👤-участники',
     'сообщения':  '💬-сообщения',
     'ses':      '🔊-ses',
@@ -484,7 +484,7 @@ class Logs(commands.Cog):
 
         # Smena nika
         if before.nick != after.nick:
-            save_event(before.guild.id, 'member', 'Takma ad izmenen', {
+            save_event(before.guild.id, 'member', 'Псевдоним изменён', {
                 'user_id': str(before.id),
                 'user_name': str(before),
                 'old_nick': before.nick or before.name,
@@ -494,7 +494,7 @@ class Logs(commands.Cog):
             if ch:
                 e = discord.Embed(color=0x3498DB, timestamp=datetime.datetime.utcnow())
                 e.description = (
-                    f"## Takma ad izmenen\n"
+                    f"## Псевдоним изменён\n"
                     f"**{before.display_name}** · `{before.id}`\n\n"
                     f"Bilo: `{before.nick or before.name}`\n"
                     f"Stalo: `{after.nick or after.name}`"

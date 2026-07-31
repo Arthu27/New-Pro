@@ -48,19 +48,19 @@ class AdvancedMod(commands.Cog):
             e = discord.Embed(title="✅  Temiz История", color=0x2ECC71, timestamp=datetime.utcnow())
             e.description = (
                 f"```ansi\n\u001b[1;32m✔ TEMİZ ЗАПИСЬ\u001b[0m\n```\n{_divider()}\n\n"
-                f"{user.mention} для каждый bir moderasyon kaydı не найдено.\n\n{_divider()}"
+                f"{user.mention} записи о модерации не найдено.\n\n{_divider()}"
             )
             e.set_thumbnail(url=user.display_avatar.url)
             e.add_field(name="👤 Пользователь", value=f"`{user.name}` • `{user.id}`", inline=True)
             e.add_field(name="📊 Состояние", value="```diff\n+ Hiç mod действие yok\n```", inline=True)
-            e.set_footer(text=f"Aether Moderasyon • {interaction.guild.name}", icon_url=interaction.guild.icon.url if interaction.guild.icon else None)
+            e.set_footer(text=f"Aether Модерация • {interaction.guild.name}", icon_url=interaction.guild.icon.url if interaction.guild.icon else None)
             await interaction.response.send_message(embed=e, ephemeral=True)
             return
 
         action_emojis = {"ban": "🔨", "kick": "👢", "timeout": "🔇", "warn": "⚠️", "unban": "🔓"}
         action_colors = {"ban": "31", "kick": "33", "timeout": "33", "warn": "33", "unban": "32"}
 
-        e = discord.Embed(title=f"📋  Moderasyon История", color=0xE74C3C, timestamp=datetime.utcnow())
+        e = discord.Embed(title=f"📋  Модерация История", color=0xE74C3C, timestamp=datetime.utcnow())
         e.description = (
             f"```ansi\n\u001b[1;31m⚠ MOD ЗАПИСЬ\u001b[0m\n```\n{_divider()}"
         )
@@ -83,11 +83,11 @@ class AdvancedMod(commands.Cog):
 
         e.add_field(
             name="📊 Сводка",
-            value=f"```Всего {len(user_case)} moderasyon действие```",
+            value=f"```Всего {len(user_case)} действий модерации```",
             inline=False
         )
         e.set_footer(
-            text=f"Aether Moderasyon • {interaction.guild.name}",
+            text=f"Aether Модерация • {interaction.guild.name}",
             icon_url=interaction.guild.icon.url if interaction.guild.icon else None
         )
         await interaction.response.send_message(embed=e, ephemeral=True)
@@ -124,7 +124,7 @@ class AdvancedMod(commands.Cog):
         e.add_field(name="📝 Причина", value=f"```{case['reason']}```", inline=False)
         e.add_field(name="🕐 Дата", value=f"`{case['timestamp'][:19].replace('T', ' ')}`", inline=False)
         e.set_footer(
-            text=f"Aether Moderasyon • {interaction.guild.name}",
+            text=f"Aether Модерация • {interaction.guild.name}",
             icon_url=interaction.guild.icon.url if interaction.guild.icon else None
         )
         await interaction.response.send_message(embed=e, ephemeral=True)
@@ -153,7 +153,7 @@ class AdvancedMod(commands.Cog):
         e.add_field(name="👮 Добавлено", value=interaction.user.mention, inline=True)
         e.add_field(name="📝 Not", value=f"```{note}```", inline=False)
         e.add_field(name="🕐 Дата", value=f"<t:{now_ts()}:F>", inline=False)
-        e.set_footer(text=f"Aether Moderasyon • {interaction.guild.name}", icon_url=interaction.guild.icon.url if interaction.guild.icon else None)
+        e.set_footer(text=f"Aether Модерация • {interaction.guild.name}", icon_url=interaction.guild.icon.url if interaction.guild.icon else None)
         await interaction.response.send_message(embed=e, ephemeral=True)
 
     @app_commands.command(name="notes", description="Показать notlar пользователь")
@@ -179,7 +179,7 @@ class AdvancedMod(commands.Cog):
                 value=f"```{n['note']}```*— {n['mod']}*",
                 inline=False
             )
-        e.set_footer(text=f"Всего {len(notes)} not • Aether Moderasyon", icon_url=interaction.guild.icon.url if interaction.guild.icon else None)
+        e.set_footer(text=f"Всего {len(notes)} not • Aether Модерация", icon_url=interaction.guild.icon.url if interaction.guild.icon else None)
         await interaction.response.send_message(embed=e, ephemeral=True)
 
     @app_commands.command(name="watchlist", description="Добавлено/удалить den spiska наблюдение")
@@ -198,7 +198,7 @@ class AdvancedMod(commands.Cog):
             e.set_thumbnail(url=user.display_avatar.url)
             e.add_field(name="👤 Пользователь", value=f"{user.mention}\n`{user.id}`", inline=True)
             e.add_field(name="🕐 Дата", value=f"<t:{now_ts()}:R>", inline=True)
-            e.set_footer(text=f"Aether Moderasyon • {interaction.guild.name}", icon_url=interaction.guild.icon.url if interaction.guild.icon else None)
+            e.set_footer(text=f"Aether Модерация • {interaction.guild.name}", icon_url=interaction.guild.icon.url if interaction.guild.icon else None)
         else:
             self.data["watchlist"][guild_id][user_id] = {
                 "reason": reason or "Не belirtildi",
@@ -206,17 +206,17 @@ class AdvancedMod(commands.Cog):
                 "timestamp": datetime.utcnow().isoformat()
             }
             self.save_data()
-            e = discord.Embed(title="👁️  İzleme Listesine Добавлено", color=0xF39C12, timestamp=datetime.utcnow())
+            e = discord.Embed(title="👁️  Добавлено в список наблюдения", color=0xF39C12, timestamp=datetime.utcnow())
             e.description = (
-                f"```ansi\n\u001b[1;33m⚠ İZLEMEYE ALINDI\u001b[0m\n```\n{_divider()}\n\n"
-                f"{user.mention} теперь liste наблюдение. Hareketleri takip edilecek.\n\n{_divider()}"
+                f"```ansi\n\u001b[1;33m⚠ ВНЕСЕНО В СПИСОК НАБЛЮДЕНИЯ\u001b[0m\n```\n{_divider()}\n\n"
+                f"{user.mention} теперь в списке наблюдения. Действия будут отслеживаться.\n\n{_divider()}"
             )
             e.set_thumbnail(url=user.display_avatar.url)
             e.add_field(name="👤 Пользователь", value=f"{user.mention}\n`{user.id}`", inline=True)
             e.add_field(name="👮 Добавлено", value=interaction.user.mention, inline=True)
-            e.add_field(name="📝 Причина", value=f"```{reason or 'Не belirtildi'}```", inline=False)
+            e.add_field(name="📝 Причина", value=f"```{reason or 'Не указана'}```", inline=False)
             e.add_field(name="🕐 Дата", value=f"<t:{now_ts()}:F>", inline=False)
-            e.set_footer(text=f"Aether Moderasyon • {interaction.guild.name}", icon_url=interaction.guild.icon.url if interaction.guild.icon else None)
+            e.set_footer(text=f"Aether Модерация • {interaction.guild.name}", icon_url=interaction.guild.icon.url if interaction.guild.icon else None)
         await interaction.response.send_message(embed=e, ephemeral=True)
 
     @app_commands.command(name="watchlist-show", description="Показать liste наблюдение")
@@ -249,7 +249,7 @@ class AdvancedMod(commands.Cog):
                 inline=False
             )
         e.set_footer(
-            text=f"Всего {len(watchlist)} user • Aether Moderasyon",
+            text=f"Всего {len(watchlist)} user • Aether Модерация",
             icon_url=interaction.guild.icon.url if interaction.guild.icon else None
         )
         await interaction.response.send_message(embed=e, ephemeral=True)
@@ -278,7 +278,7 @@ class AdvancedMod(commands.Cog):
                 inline=False
             )
         e.set_footer(
-            text=f"Всего {len(bans)} ban • Aether Moderasyon",
+            text=f"Всего {len(bans)} ban • Aether Модерация",
             icon_url=interaction.guild.icon.url if interaction.guild.icon else None
         )
         await interaction.followup.send(embed=e, ephemeral=True)
@@ -308,14 +308,14 @@ class AdvancedMod(commands.Cog):
                         count += 1
                     except:
                         pass
-            e = discord.Embed(title="🎭  Toplu Роли Alındı", color=0xE74C3C, timestamp=datetime.utcnow())
-            e.description = f"```ansi\n\u001b[1;31m✔ TOPLU РОЛЬ ALINDI\u001b[0m\n```\n{_divider()}"
+            e = discord.Embed(title="🎭  Роли сняты", color=0xE74C3C, timestamp=datetime.utcnow())
+            e.description = f"```ansi\n\u001b[1;31m✔ РОЛЬ СНЯТА\u001b[0m\n```\n{_divider()}"
             e.add_field(name="🎭 Роль", value=role.mention, inline=True)
             e.add_field(name="👥 Затронуто", value=f"```{count} человек```", inline=True)
         else:
-            await interaction.followup.send("❌ Неверный действие! `ver` или `al` использовать.", ephemeral=True)
+            await interaction.followup.send("❌ Неверное действие! Используйте `ver` или `al`.", ephemeral=True)
             return
-        e.set_footer(text=f"Aether Moderasyon • {interaction.guild.name}", icon_url=interaction.guild.icon.url if interaction.guild.icon else None)
+        e.set_footer(text=f"Aether Модерация • {interaction.guild.name}", icon_url=interaction.guild.icon.url if interaction.guild.icon else None)
         await interaction.followup.send(embed=e, ephemeral=True)
 
 

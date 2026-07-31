@@ -66,7 +66,7 @@ class AFK(commands.Cog):
             pass
 
     @app_commands.command(name="afk-remove", description="Viyti den moda AFK")
-    async def afk_kaldir(self, interaction: discord.Interaction):
+    async def afk_remove(self, interaction: discord.Interaction):
         data = self._get(interaction.guild_id, interaction.user.id)
         if not data:
             await interaction.response.send_message("Вы не в режиме AFK.", ephemeral=True)

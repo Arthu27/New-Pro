@@ -42,7 +42,7 @@ class Events(commands.Cog):
 
                 # 60 minutes öncesi hatırlatma
                 if 55 <= diff_min <= 65 and not ev.get('reminded_1h'):
-                    await self._send_reminder(guild, ev, '1 saat')
+                    await self._send_reminder(guild, ev, '1 часов')
                     events[eid]['reminded_1h'] = True
                     changed = True
 
@@ -93,16 +93,16 @@ class Events(commands.Cog):
         baslik='Etkinlik başlığı',
         aciklama='Etkinlik описание',
         date='Дата (GG/AA/YYYY)',
-        saat='Время (SS:DD)',
+        часов='Время (SS:DD)',
         channel='Duyuru канал'
     )
     @app_commands.checks.has_permissions(manage_events=True)
     async def create_event(self, interaction: discord.Interaction,
                            baslik: str, aciklama: str,
-                           date: str, saat: str,
+                           date: str, часов: str,
                            channel: discord.TextChannel):
         try:
-            dt = datetime.strptime(f'{date} {saat}', '%d/%m/%Y %H:%M')
+            dt = datetime.strptime(f'{date} {часов}', '%d/%m/%Y %H:%M')
         except ValueError:
             await interaction.response.send_message('❌ Неверный формат даты/времени! Пример: 25/12/2025 20:00', ephemeral=True)
             return
