@@ -1823,4 +1823,4 @@ class Ticket(commands.Cog):
 
 
 async def setup(bot):
-    await bot.add_cog(Ticket(bot), guilds=[discord.Object(id=1421244140359909513), discord.Object(id=1107038411895881788)])
+    await bot.add_cog(Ticket(bot), guilds=[discord.Object(id=1421244140359909513), discord.Object(id=1107038411895881788), discord.Object(id=1498837105915330562)])
