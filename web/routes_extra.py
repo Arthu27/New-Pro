@@ -1368,10 +1368,11 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
                 answer = f"{answer}\n\n`{action_result}`" if answer else f"`{action_result}`"
 
         new_history = history + [
-            {'role': 'user', 'content': question},
-            {'role': 'assistant', 'content': answer}
+            {'role': 'user', 'content': question[:500]},
+            {'role': 'assistant', 'content': answer[:500]}
         ]
-        session[history_key] = new_history[-30:]
+        # Son 12 mesaj (6 user+assistant çifti) — cookie 4KB sınırı için
+        session[history_key] = new_history[-12:]
         session.modified = True
         return jsonify({'answer': answer, 'model': model_name})
 
@@ -2760,10 +2761,21 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         message = d.get('message', '').strip()
         if not message:
             return jsonify({'error': 'Сообщение пустое'}), 400
-        history = session.get('ai_history', [])
-        context = {'user_name': session.get('username', 'Администратор'), 'guild_name': 'Aether Сервер'}
+        username = session.get('username', 'anon')
+        history_key = f'ai_history_{username}'
+        history = session.get(history_key, [])
+        context = {'user_name': username, 'guild_name': 'Aether Сервер'}
         answer, new_history, model_name, _ = ai_assistant(message, context, history)
-        session['ai_history'] = new_history[-30:]
+        # Храним только последние 6 пар сообщений (user + assistant),
+        # чтобы session-cookie не превысил 4KB
+        compact = []
+        for m in new_history[-12:]:
+            if m.get('role') in ('user', 'assistant'):
+                compact.append({
+                    'role': m['role'],
+                    'content': (m.get('content') or '')[:500],
+                })
+        session[history_key] = compact
         return jsonify({'ok': True, 'response': answer, 'history': new_history, 'model': model_name})
 
     @app.route('/api/ai/assistant', methods=['POST'])
@@ -2775,16 +2787,27 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         message = d.get('message', '').strip()
         if not message:
             return jsonify({'error': 'Сообщение пустое'}), 400
-        history = session.get('ai_history', [])
-        context = {'user_name': session.get('username', 'Администратор'), 'guild_name': 'Aether Сервер'}
+        username = session.get('username', 'anon')
+        history_key = f'ai_history_{username}'
+        history = session.get(history_key, [])
+        context = {'user_name': username, 'guild_name': 'Aether Сервер'}
         answer, new_history, model_name, _ = ai_assistant(message, context, history)
-        session['ai_history'] = new_history[-30:]
+        compact = []
+        for m in new_history[-12:]:
+            if m.get('role') in ('user', 'assistant'):
+                compact.append({
+                    'role': m['role'],
+                    'content': (m.get('content') or '')[:500],
+                })
+        session[history_key] = compact
         return jsonify({'ok': True, 'response': answer, 'history': new_history, 'model': model_name})
 
     @app.route('/api/ai/clear', methods=['POST'])
     @login_required
     def api_ai_clear():
-        session.pop('ai_history', None)
+        # Очищаем историю только текущего пользователя
+        username = session.get('username', 'anon')
+        session.pop(f'ai_history_{username}', None)
         return jsonify({'ok': True})
 
     @app.route('/api/ai/announcement', methods=['POST'])
