@@ -504,9 +504,9 @@ async def ai_ticket_response(user_message: str, history: List[Dict], guild_conte
                     'content': f"РЕЗУЛЬТАТ FONKSIYONLAR {func_call}:\n{result}"
                 })
         
-        # Удален vizovi fonksiyonların den cevabı
-        response = re.sub(r'\[FUNC:[^\]]+\]', '', response).strip()
-    
+    # Удален vizovi fonksiyonların den cevabı
+    response = re.sub(r'\[FUNC:[^\]]+\]', '', response).strip()
+
     # 9. Ayrıştırıyoruz записейler
     should_escalate = False
     if 'ACTION:ESCALATE' in response:
@@ -514,10 +514,7 @@ async def ai_ticket_response(user_message: str, history: List[Dict], guild_conte
         response = response.replace('ACTION:ESCALATE', '').strip()
 
     # Удален chain-of-thought bloki если var
-    import re
-    response = re.sub(r'<thinking>.*?</thinking>', '', response, flags=re.DOTALL)
-    response = re.sub(r'<rassujdenie>.*?</rassujdenie>', '', response, flags=re.DOTALL)
-    response = response.strip()
+    # (re global import edildiği için burada tekrar import gerekmiyor)
 
     if not response:
         response = "Işliyorum sizin sorgu..."
