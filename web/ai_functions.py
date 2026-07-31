@@ -78,11 +78,11 @@ ERIŞIMNIE FONKSIYONLAR (vizivay ne время gerekli):
     Пример: search_knowledge_base("spam")
 
 12. search_user_messages(user_id: int, channel_id: int = 0, limit: int = 20)
-    Поиск сообщений пользователя в ЛОГЕ БОТА (работает даже если Discord API недоступен).
-    Бот записывает каждое сообщение в data/message_log_<guild_id>.json,
-    даже когда пользователь offline.
+    Поиск сообщений пользователя ГИБРИДНО: сначала Discord API (channel.history),
+    потом fallback на data/message_log_<guild_id>.json (когда бот offline).
+    channel_id=0 — искать во всех каналах, иначе только в указанном.
     Пример: search_user_messages(user_id=123456789, limit=20)
-    Или только в конкретном канале: search_user_messages(user_id=123456789, channel_id=987654321)
+    Или только в конкретном канале: search_user_messages(user_id=123456789, channel_id=987654321, limit=10)
 
 FORMAT VIZOVA:
 [FUNC:function_name(param1=value1, param2=value2)]
@@ -218,48 +218,134 @@ FORMAT VIZOVA:
             return f"Ошибка: {str(e)}"
 
     async def search_user_messages(self, guild: discord.Guild, user_id: int, channel_id: int = 0, limit: int = 20) -> str:
-        """Поиск сообщений пользователя в bot-логе (даже когда он offline).
+        """Поиск сообщений пользователя: сначала Discord API, потом лог бота (fallback).
 
-        Читает data/message_log_<guild_id>.json, который cogs/logs.py пишет
-        при каждом on_message. Это работает, даже если Discord API не
-        возвращает историю (например, бот без прав message_history).
+        Гибридный подход:
+        1) Discord API (channel.history + search) — самый полный, но требует
+           прав message_history и работает только когда бот онлайн.
+        2) data/message_log_<guild_id>.json — fallback на случай офлайна/недоступности.
+
+        Параметры:
+            user_id — Discord user ID
+            channel_id — 0 (все каналы) или конкретный канал
+            limit — сколько сообщений вернуть (default 20, max 100)
         """
         try:
             import json as _json
+            uid = int(user_id)
+            limit = max(1, min(int(limit) if str(limit).isdigit() else 20, 100))
+
+            # ── 1) DISCORD API DENEMESİ ──────────────────────────────────
+            api_msgs = []
+            api_error = None
+            try:
+                if channel_id and int(channel_id):
+                    ch = guild.get_channel(int(channel_id))
+                    if ch is None:
+                        try:
+                            ch = await guild.fetch_channel(int(channel_id))
+                        except Exception:
+                            ch = None
+                    if ch is not None:
+                        # Проверяем права бота
+                        perms = ch.permissions_for(guild.me)
+                        if perms.read_message_history and perms.read_messages:
+                            async for msg in ch.history(limit=500):
+                                if msg.author.id == uid:
+                                    api_msgs.append({
+                                        'channel_name': ch.name,
+                                        'channel_id': str(ch.id),
+                                        'content': msg.content or '[вложение/эмбед]',
+                                        'timestamp': msg.created_at.isoformat(),
+                                        'jump_url': msg.jump_url,
+                                    })
+                                    if len(api_msgs) >= limit:
+                                        break
+                else:
+                    # Tüm kanallarda ara
+                    for ch in guild.text_channels:
+                        try:
+                            perms = ch.permissions_for(guild.me)
+                            if not (perms.read_message_history and perms.read_messages):
+                                continue
+                            async for msg in ch.history(limit=200):
+                                if msg.author.id == uid:
+                                    api_msgs.append({
+                                        'channel_name': ch.name,
+                                        'channel_id': str(ch.id),
+                                        'content': msg.content or '[вложение/эмбед]',
+                                        'timestamp': msg.created_at.isoformat(),
+                                        'jump_url': msg.jump_url,
+                                    })
+                                    if len(api_msgs) >= limit * 3:
+                                        break
+                            if len(api_msgs) >= limit * 3:
+                                break
+                        except (discord.Forbidden, discord.HTTPException):
+                            continue
+            except Exception as e:
+                api_error = str(e)
+                api_msgs = []
+
+            # ── 2) FALLBACK: BOT LOG'U ──────────────────────────────────
+            log_msgs = []
+            log_error = None
             f = f'data/message_log_{guild.id}.json'
-            if not os.path.exists(f):
-                return f"Лог сообщений пуст. Бот ещё не успел записать сообщения этого сервера."
-            try:
-                with open(f, 'r', encoding='utf-8') as fp:
-                    logs = _json.load(fp) or []
-            except (OSError, _json.JSONDecodeError, ValueError):
-                return "Файл лога повреждён."
+            if os.path.exists(f):
+                try:
+                    with open(f, 'r', encoding='utf-8') as fp:
+                        logs = _json.load(fp) or []
+                except (OSError, _json.JSONDecodeError, ValueError):
+                    logs = []
+                cid_filter = str(channel_id) if channel_id and int(channel_id) else None
+                log_msgs = [m for m in logs
+                            if str(m.get('author_id', '')) == str(uid)
+                            and (cid_filter is None or str(m.get('channel_id', '')) == cid_filter)]
 
-            uid = str(user_id)
-            cid = str(channel_id) if channel_id else None
-            filtered = [m for m in logs if str(m.get('author_id', '')) == uid]
-            if cid:
-                filtered = [m for m in filtered if str(m.get('channel_id', '')) == cid]
+            # ── 3) BİRLEŞTİR + SIRALA ─────────────────────────────────
+            # Önce Discord API sonuçları (en yeni), sonra log-only olanlar
+            api_keys = {(m.get('channel_id', ''), m.get('timestamp', ''), m.get('content', '')[:100])
+                        for m in api_msgs}
+            merged = list(api_msgs)
+            for m in log_msgs:
+                key = (m.get('channel_id', ''), m.get('timestamp', ''), (m.get('content') or '')[:100])
+                if key not in api_keys:
+                    merged.append(m)
 
-            if not filtered:
-                return f"В логе бота нет сообщений от <@{user_id}>."
+            if not merged:
+                return (f"Сообщения от <@{user_id}> не найдены ни в Discord API, ни в логе бота.\n"
+                        f"Возможные причины: пользователь ничего не писал, бот ещё не записал "
+                        f"его сообщения, или у бота нет прав на чтение истории каналов.")
 
-            # Сначала новые
-            filtered.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
-            try:
-                limit = int(limit)
-            except (TypeError, ValueError):
-                limit = 20
-            limit = max(1, min(limit, 100))
-            filtered = filtered[:limit]
+            # Yeni → eski
+            merged.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
+            merged = merged[:limit]
 
-            result = f"Найдено {len(filtered)} сообщений от <@{user_id}> в логе бота:\n\n"
-            for m in filtered:
+            # ── 4) FORMATLA ────────────────────────────────────────────
+            result_lines = [f"Найдено {len(merged)} сообщений от <@{uid}>"]
+            if api_msgs:
+                result_lines.append(f"Источник: Discord API ({len(api_msgs)} записей)")
+            if log_msgs:
+                not_in_api = sum(1 for m in log_msgs if (m.get('channel_id',''), m.get('timestamp',''), (m.get('content') or '')[:100]) not in api_keys)
+                if not_in_api:
+                    result_lines.append(f"Из лога бота (только бот был офлайн): ещё {not_in_api} сообщений")
+            result_lines.append("")
+
+            for m in merged:
                 ts = m.get('timestamp', '')[:19].replace('T', ' ')
                 ch = m.get('channel_name', '?')
-                txt = (m.get('content') or '[вложение/эмбед]')[:200]
-                result += f"• [{ts}] #{ch}: {txt}\n"
-            return result
+                txt = (m.get('content') or '[вложение/эмбед]')[:300]
+                line = f"• [{ts}] #{ch}: {txt}"
+                if m.get('jump_url'):
+                    line += f"\n  [Открыть]({m['jump_url']})"
+                result_lines.append(line)
+
+            if api_error:
+                result_lines.append(f"\n⚠️ Discord API недоступен: {api_error}")
+            if log_error:
+                result_lines.append(f"\n⚠️ Ошибка чтения лога: {log_error}")
+
+            return "\n".join(result_lines)
         except Exception as e:
             return f"Ошибка: {str(e)}"
     
