@@ -144,6 +144,13 @@ def generate_staff_panel_card() -> Image.Image:
     return bg
 
 def generate_staff_panel_bytes() -> io.BytesIO:
+    path = os.path.join(ROOT, 'assets', 'staff_panel.png')
+    if os.path.exists(path):
+        try:
+            with open(path, 'rb') as f:
+                return io.BytesIO(f.read())
+        except Exception:
+            pass
     card = generate_staff_panel_card().convert('RGB')
     buf = io.BytesIO()
     card.save(buf, format='PNG', optimize=True)
