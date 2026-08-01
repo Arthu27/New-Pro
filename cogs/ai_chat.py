@@ -1393,24 +1393,23 @@ class AIChat(commands.Cog):
             is_ticket_ch = getattr(message.channel, 'name', '').lower().startswith(('ticket-', 'тикет-', 'destek-', 'tk-', 'closed-'))
             if is_ticket_ch:
                 try:
-                    root_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
-                    photo_rel = _get_gojo_photo(answer, content)
-                    photo_path = os.path.join(root_dir, photo_rel)
-                    if os.path.exists(photo_path):
-                        embed = discord.Embed(
-                            title="🤖 Aether AI • Ассистент Поддержки",
-                            description=answer[:4000],
-                            color=0x00FFF7,
-                            timestamp=datetime.utcnow()
-                        )
-                        embed.set_author(name="Satoru AI Support", icon_url="attachment://gojo_ai.png")
-                        embed.set_thumbnail(url="attachment://gojo_ai.png")
-                        file = discord.File(photo_path, filename="gojo_ai.png")
-                        await message.reply(embed=embed, file=file, mention_author=False)
-                    else:
-                        await message.reply(answer, mention_author=False)
+                    from cogs._ai_card import generate_ai_dialogue_bytes
+                    state_mode = "welcome"
+                    text_lower = (answer + " " + content).lower()
+                    if any(k in text_lower for k in ["проверяю", "лог", "баз", "данные", "настройки", "сервер", "система", "контрол", "ncele", "жалоб", "наруш", "оскорб"]):
+                        state_mode = "investigate"
+                    elif any(k in text_lower for k in ["вердикт", "наказан", "апелляц", "забанен", "мьют", "мут", "штраф", "суд", "verdict"]):
+                        state_mode = "verdict"
+                    elif any(k in text_lower for k in ["решение", "готово", "исправлено", "сделано", "помочь", "помощ", "решен", "çözüm", "halled", "tamam", "успех"]):
+                        state_mode = "solution"
+
+                    img_buf = await self.bot.loop.run_in_executor(
+                        None, generate_ai_dialogue_bytes, answer[:650], content, state_mode
+                    )
+                    file = discord.File(img_buf, filename="gojo_dialogue.png")
+                    await message.reply(file=file, mention_author=False)
                 except Exception as e:
-                    log.error(f"[AI Ticket Photo Error]: {e}")
+                    log.error(f"[AI Ticket Dialogue Card Error]: {e}")
                     await message.reply(answer, mention_author=False)
             else:
                 await message.reply(answer, mention_author=False)
