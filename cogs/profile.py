@@ -101,33 +101,23 @@ def _progress_bar(w, h, progress):
 
 
 def _generate_bg(w, h):
-    """Генерация фонового изображения"""
-    img = Image.new('RGBA', (w, h), (12, 10, 24, 255))
-    draw = ImageDraw.Draw(img)
-
-    # Градиент сверху-вниз
-    for y in range(h):
-        t = y / h
-        r = int(12 + 8 * t)
-        g = int(10 + 5 * t)
-        b = int(24 + 15 * t)
-        draw.line([(0, y), (w, y)], fill=(r, g, b, 255))
-
-    # Неоновые свечения
-    img = _glow(img, (-80, -80, 300, 300), NEON, 80)
-    img = _glow(img, (600, 250, 1000, 600), NEON_DIM, 70)
-    img = _glow(img, (350, -50, 600, 150), (80, 40, 160), 50)
-
-    # Тонкая сетка
-    grid_overlay = Image.new('RGBA', (w, h), (0, 0, 0, 0))
-    gd = ImageDraw.Draw(grid_overlay)
-    for x in range(0, w, 40):
-        gd.line([(x, 0), (x, h)], fill=(255, 255, 255, 6), width=1)
-    for y in range(0, h, 40):
-        gd.line([(0, y), (w, y)], fill=(255, 255, 255, 6), width=1)
-    img = Image.alpha_composite(img, grid_overlay)
-
-    return img
+    """Загрузить фоновое изображение или сгенерировать"""
+    bg_path = os.path.join(os.path.dirname(__file__), '..', 'assets', 'profile_bg.png')
+    try:
+        bg = Image.open(bg_path).convert('RGBA')
+        bg = bg.resize((w, h), Image.Resampling.LANCZOS)
+        return bg
+    except Exception:
+        # Fallback: простой градиент
+        img = Image.new('RGBA', (w, h), (12, 10, 24, 255))
+        draw = ImageDraw.Draw(img)
+        for y in range(h):
+            t = y / h
+            r = int(12 + 8 * t)
+            g = int(10 + 5 * t)
+            b = int(24 + 15 * t)
+            draw.line([(0, y), (w, y)], fill=(r, g, b, 255))
+        return img
 
 
 async def _download_avatar(url, size=200):
@@ -216,10 +206,30 @@ def generate_profile_card(
     # Аватар
     img.paste(avatar, (av_x, av_y), avatar)
 
-    # Никнейм
-    f_nick = _font(bold=True, size=24)
-    nick_x = _text_center_x(draw, nickname, f_nick, lx, lx + LEFT_W)
+    # Никнейм — с тёмной подложкой для контраста
+    f_nick = _font(bold=True, size=26)
+    # Подложка (backdrop)
+    nick_bbox = draw.textbbox((0, 0), nickname, font=f_nick)
+    nick_tw = nick_bbox[2] - nick_bbox[0]
+    nick_th = nick_bbox[3] - nick_bbox[1]
     nick_y = av_y + av_size + 20
+    nick_x = lx + (LEFT_W - nick_tw) // 2
+    # Рисуем тёмный прямоугольник за текстом
+    pad_x, pad_y = 12, 6
+    backdrop = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+    bd = ImageDraw.Draw(backdrop)
+    bd.rounded_rectangle(
+        (nick_x - pad_x, nick_y - pad_y, nick_x + nick_tw + pad_x, nick_y + nick_th + pad_y + 4),
+        radius=8, fill=(10, 8, 20, 200)
+    )
+    img = Image.alpha_composite(img, backdrop)
+    draw = ImageDraw.Draw(img)
+    # Обводка текста
+    for ox in [-1, 0, 1]:
+        for oy in [-1, 0, 1]:
+            if ox == 0 and oy == 0:
+                continue
+            draw.text((nick_x + ox, nick_y + oy), nickname, fill=(40, 30, 60), font=f_nick)
     draw.text((nick_x, nick_y), nickname, fill=WHITE, font=f_nick)
 
     # Разделитель
