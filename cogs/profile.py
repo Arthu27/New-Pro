@@ -54,6 +54,17 @@ def _font(bold=False, size=20):
         return ImageFont.load_default()
 
 
+def _load_icon(name: str, size: int = 48) -> Image.Image:
+    """Загрузить иконку из assets/icons/"""
+    icon_path = os.path.join(os.path.dirname(__file__), '..', 'assets', 'icons', f'{name}.png')
+    try:
+        icon = Image.open(icon_path).convert('RGBA')
+        return icon.resize((size, size), Image.Resampling.LANCZOS)
+    except Exception:
+        # Fallback: пустая иконка
+        return Image.new('RGBA', (size, size), (0, 0, 0, 0))
+
+
 def _rounded_rect(img, xy, radius, fill, outline=None, outline_w=1):
     """Нарисовать полупрозрачный прямоугольник с закруглёнными углами"""
     overlay = Image.new('RGBA', img.size, (0, 0, 0, 0))
@@ -297,16 +308,22 @@ def generate_profile_card(
     f_title = _font(bold=True, size=13)
     f_val = _font(bold=True, size=20)
     f_label = _font(bold=False, size=10)
-    f_icon = _font(bold=True, size=18)
+
+    # Загружаем иконки
+    icon_size = 38
+    icon_chat = _load_icon('chat', icon_size)
+    icon_voice = _load_icon('voice', icon_size)
+    icon_balance = _load_icon('balance', icon_size)
+    icon_rank = _load_icon('rank', icon_size)
 
     # Заголовок
     tx = _text_center_x(draw, "СТАТИСТИКА", f_title, RX, RX + pw)
     draw.text((tx, by + 10), "СТАТИСТИКА", fill=LIGHT, font=f_title)
 
     stat_items = [
-        (">", _fmt(messages), "СООБЩЕНИЙ"),
-        ("V", _fmt_time(voice_seconds), "В ГОЛОСОВЫХ"),
-        ("$", f"${_fmt(balance)}", "БАЛАНС"),
+        (icon_chat, _fmt(messages), "СООБЩЕНИЙ"),
+        (icon_voice, _fmt_time(voice_seconds), "В ГОЛОСОВЫХ"),
+        (icon_balance, f"${_fmt(balance)}", "БАЛАНС"),
     ]
     block_h = (bh - 40) // 3
     for i, (icon, value, label) in enumerate(stat_items):
@@ -318,12 +335,15 @@ def generate_profile_card(
         img = _rounded_rect(img, (bx, bby, bx + bw, bby + bhi), 10, STAT_BG)
         draw = ImageDraw.Draw(img)
 
-        # Иконка (символ)
-        draw.text((bx + 12, bby + 6), icon, fill=NEON_BRIGHT, font=f_icon)
+        # Иконка
+        icon_y = bby + (bhi - icon_size) // 2
+        img.paste(icon, (bx + 6, icon_y), icon)
+        draw = ImageDraw.Draw(img)
+
         # Значение
-        draw.text((bx + 38, bby + 6), value, fill=WHITE, font=f_val)
+        draw.text((bx + icon_size + 14, bby + 6), value, fill=WHITE, font=f_val)
         # Подпись
-        draw.text((bx + 38, bby + bhi - 16), label, fill=DIM, font=f_label)
+        draw.text((bx + icon_size + 14, bby + bhi - 16), label, fill=DIM, font=f_label)
 
     # РЕЙТИНГ
     rkx = RX + pw + GAP
@@ -335,9 +355,9 @@ def generate_profile_card(
     draw.text((tx, by + 10), "РЕЙТИНГ", fill=LIGHT, font=f_title)
 
     rank_items = [
-        (">", f"#{rank_messages}", "СООБЩЕНИЙ"),
-        ("V", f"#{rank_voice}", "В ГОЛОСОВЫХ"),
-        ("$", f"#{rank_balance}", "БАЛАНС"),
+        (icon_chat, f"#{rank_messages}", "СООБЩЕНИЙ"),
+        (icon_voice, f"#{rank_voice}", "В ГОЛОСОВЫХ"),
+        (icon_balance, f"#{rank_balance}", "БАЛАНС"),
     ]
     for i, (icon, value, label) in enumerate(rank_items):
         bx = rkx + 8
@@ -348,9 +368,12 @@ def generate_profile_card(
         img = _rounded_rect(img, (bx, bby, bx + bw, bby + bhi), 10, STAT_BG)
         draw = ImageDraw.Draw(img)
 
-        draw.text((bx + 12, bby + 6), icon, fill=NEON_BRIGHT, font=f_icon)
-        draw.text((bx + 38, bby + 6), value, fill=NEON_BRIGHT, font=f_val)
-        draw.text((bx + 38, bby + bhi - 16), label, fill=DIM, font=f_label)
+        icon_y = bby + (bhi - icon_size) // 2
+        img.paste(icon, (bx + 6, icon_y), icon)
+        draw = ImageDraw.Draw(img)
+
+        draw.text((bx + icon_size + 14, bby + 6), value, fill=NEON_BRIGHT, font=f_val)
+        draw.text((bx + icon_size + 14, bby + bhi - 16), label, fill=DIM, font=f_label)
 
     return img.convert('RGB')
 
