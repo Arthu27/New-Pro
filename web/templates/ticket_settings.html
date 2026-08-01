@@ -787,7 +787,7 @@
           $('sys-progress').checked = sys.progress_indicator !== false;
           $('sys-complaint').checked = sys.complaint_system !== false;
 
-          // Настройки
+          // Настройки параметров
           $('ai-confidence').value = settings.ai_confidence || 50;
           $('ai-max-messages').value = settings.ai_max_messages || 10;
           $('rate-24h').value = settings.rate_24h || 3;
@@ -801,6 +801,33 @@
           $('complaint-max-scan').value = settings.complaint_max_scan || 1000;
           $('complaint-appeal').checked = settings.complaint_appeal !== false;
 
+          // Главные настройки
+          if (settings.enabled !== false) $('tog-enabled').classList.add('on');
+          else $('tog-enabled').classList.remove('on');
+
+          $('category').value = settings.category_id || '';
+          $('channel').value = settings.channel_id || '';
+          $('limit').value = settings.limit_per_user || 1;
+          $('autoclose').value = settings.autoclose_mins || 0;
+
+          // Контент панели
+          $('title').value = settings.panel_title || '🎫 ПОДДЕРЖКА';
+          $('description').value = settings.panel_description || 'Нажмите кнопку ниже чтобы открыть тикет';
+          $('color').value = settings.panel_color || '#5865F2';
+
+          // Логи
+          $('log-channel').value = settings.log_channel_id || '';
+          $('transcript-channel').value = settings.transcript_channel_id || '';
+          $('log-actions').value = settings.log_actions || 'all';
+
+          // Уведомления
+          if (settings.dm_notifications !== false) $('tog-dm').classList.add('on');
+          else $('tog-dm').classList.remove('on');
+
+          $('dm-open').value = settings.dm_on_open || '1';
+          $('dm-close').value = settings.dm_on_close || '1';
+
+          // Роли
           var roles = cfg.roles || {};
           var modRoles = roles.mod_roles || [];
           var ownerRoles = roles.owner_roles || [];
@@ -811,150 +838,193 @@
           Array.from(modSel.options).forEach(function (opt) {
             opt.selected = modRoles.indexOf(opt.value) !== -1;
           });
+
           Array.from(ownerSel.options).forEach(function (opt) {
             opt.selected = ownerRoles.indexOf(opt.value) !== -1;
           });
 
-          // Обновить статистику
           updateRoleStats();
         })
         .catch(function (e) { console.error('loadPermissions error:', e); });
     }
-
-    function updateRoleStats() {
-      var modSel = $('mod-roles');
-      var ownerSel = $('owner-roles');
-      var modCount = modSel ? modSel.selectedOptions.length : 0;
-      var ownerCount = ownerSel ? ownerSel.selectedOptions.length : 0;
-      var totalRoles = modSel ? modSel.options.length : 0;
-
-      $('mod-count').textContent = modCount;
-      $('owner-count').textContent = ownerCount;
-      $('total-roles').textContent = totalRoles;
-    }
-
-    function loadRoles() {
+    function loadRolesAndChannels() {
       var guildId = getSelectedGuildId();
       if (!guildId) return;
 
-      fetch('/api/guild/' + guildId + '/roles', { credentials: 'same-origin' })
-        .then(function (r) { return r.json(); })
-        .then(function (roles) {
-          if (!roles || !Array.isArray(roles)) return;
+      var p1 = fetch('/api/guild/' + guildId + '/roles', { credentials: 'same-origin' }).then(function (r) { return r.json(); });
+      var p2 = fetch('/api/guild/' + guildId + '/channels', { credentials: 'same-origin' }).then(function (r) { return r.json(); });
 
-          var modSel = $('mod-roles');
-          var ownerSel = $('owner-roles');
-          modSel.innerHTML = '';
-          ownerSel.innerHTML = '';
+      Promise.all([p1, p2])
+        .then(function (results) {
+          var roles = results[0];
+          var channels = results[1];
 
-          roles.forEach(function (role) {
-            var opt1 = document.createElement('option');
-            opt1.value = role.id;
-            opt1.textContent = role.name;
-            opt1.style.color = role.color;
-            modSel.appendChild(opt1);
+          // 1. Наполнение ролей
+          if (roles && Array.isArray(roles)) {
+            var modSel = $('mod-roles');
+            var ownerSel = $('owner-roles');
+            modSel.innerHTML = '';
+            ownerSel.innerHTML = '';
 
-            var opt2 = document.createElement('option');
-            opt2.value = role.id;
-            opt2.textContent = role.name;
-            opt2.style.color = role.color;
-            ownerSel.appendChild(opt2);
-          });
+            roles.forEach(function (role) {
+              var opt1 = document.createElement('option');
+              opt1.value = role.id;
+              opt1.textContent = role.name;
+              opt1.style.color = role.color;
+              modSel.appendChild(opt1);
 
+              var opt2 = document.createElement('option');
+              opt2.value = role.id;
+              opt2.textContent = role.name;
+              opt2.style.color = role.color;
+              ownerSel.appendChild(opt2);
+            });
+          }
+
+          // 2. Наполнение каналов
+          if (channels && Array.isArray(channels)) {
+            var catSel = $('category');
+            var chSel = $('channel');
+            var logSel = $('log-channel');
+            var trSel = $('transcript-channel');
+
+            if (catSel) catSel.innerHTML = '<option value="">Не выбрано</option>';
+            if (chSel) chSel.innerHTML = '<option value="">Не выбрано</option>';
+            if (logSel) logSel.innerHTML = '<option value="">Не выбрано</option>';
+            if (trSel) trSel.innerHTML = '<option value="">Не выбрано</option>';
+
+            channels.forEach(function (c) {
+              var opt = document.createElement('option');
+              opt.value = c.id;
+              opt.textContent = c.name;
+
+              if (c.type === 'category') {
+                if (catSel) catSel.appendChild(opt);
+              } else if (c.type === 'text') {
+                if (chSel) chSel.appendChild(opt.cloneNode(true));
+                if (logSel) logSel.appendChild(opt.cloneNode(true));
+                if (trSel) trSel.appendChild(opt.cloneNode(true));
+              }
+            });
+          }
+
+          // 3. Загрузка сохраненных настроек
           loadPermissions();
         })
-        .catch(function (e) { console.error('loadRoles error:', e); });
+        .catch(function (e) { console.error('loadRolesAndChannels error:', e); });
     }
 
-    $('btn-perm-save').addEventListener('click', function () {
+    function saveAllConfig(onSuccess, onError) {
       var guildId = getSelectedGuildId();
-      if (!guildId) { setPermStatus('Выберите сервер', true); return; }
+      if (!guildId) { onError('Выберите сервер'); return; }
 
-      var config = {
-        systems: {
-          ai_enabled: $('sys-ai').checked,
-          rate_limiter: $('sys-rate').checked,
-          auto_close: $('sys-autoclose').checked,
-          feedback: $('sys-feedback').checked,
-          progress_indicator: $('sys-progress').checked,
-          complaint_system: $('sys-complaint').checked,
-        },
-        settings: {
-          ai_confidence: parseInt($('ai-confidence').value) || 50,
-          ai_max_messages: parseInt($('ai-max-messages').value) || 10,
-          rate_24h: parseInt($('rate-24h').value) || 3,
-          rate_cooldown: parseInt($('rate-cooldown').value) || 60,
-          rate_week: parseInt($('rate-week').value) || 10,
-          autoclose_hours: parseInt($('autoclose-hours').value) || 24,
-          autoclose_interval: parseInt($('autoclose-interval').value) || 60,
-          feedback_timeout: parseInt($('feedback-timeout').value) || 30,
-          feedback_require_comment: $('feedback-require-comment').checked,
-          progress_update: parseInt($('progress-update').value) || 100,
-          complaint_max_scan: parseInt($('complaint-max-scan').value) || 1000,
-          complaint_appeal: $('complaint-appeal').checked,
-        }
+      // Системы
+      var systems = {
+        ai_enabled: $('sys-ai').checked,
+        rate_limiter: $('sys-rate').checked,
+        auto_close: $('sys-autoclose').checked,
+        feedback: $('sys-feedback').checked,
+        progress_indicator: $('sys-progress').checked,
+        complaint_system: $('sys-complaint').checked,
+      };
+
+      // Роли
+      var modSel = $('mod-roles');
+      var ownerSel = $('owner-roles');
+      var modRoles = Array.from(modSel.selectedOptions).map(function (o) { return o.value; });
+      var ownerRoles = Array.from(ownerSel.selectedOptions).map(function (o) { return o.value; });
+      var roles = {
+        mod_roles: modRoles,
+        owner_roles: ownerRoles,
+      };
+
+      // Настройки параметров
+      var settings = {
+        enabled: $('tog-enabled').classList.contains('on'),
+        category_id: $('category').value || null,
+        channel_id: $('channel').value || null,
+        limit_per_user: parseInt($('limit').value) || 1,
+        autoclose_mins: parseInt($('autoclose').value) || 0,
+
+        ai_confidence: parseInt($('ai-confidence').value) || 50,
+        ai_max_messages: parseInt($('ai-max-messages').value) || 10,
+        rate_24h: parseInt($('rate-24h').value) || 3,
+        rate_cooldown: parseInt($('rate-cooldown').value) || 60,
+        rate_week: parseInt($('rate-week').value) || 10,
+        autoclose_hours: parseInt($('autoclose-hours').value) || 24,
+        autoclose_interval: parseInt($('autoclose-interval').value) || 60,
+        feedback_timeout: parseInt($('feedback-timeout').value) || 30,
+        feedback_require_comment: $('feedback-require-comment').checked,
+        progress_update: parseInt($('progress-update').value) || 100,
+        complaint_max_scan: parseInt($('complaint-max-scan').value) || 1000,
+        complaint_appeal: $('complaint-appeal').checked,
+
+        panel_title: $('title').value || '',
+        panel_description: $('description').value || '',
+        panel_color: $('color').value || '#5865F2',
+
+        log_channel_id: $('log-channel').value || null,
+        transcript_channel_id: $('transcript-channel').value || null,
+        log_actions: $('log-actions').value || 'all',
+
+        dm_notifications: $('tog-dm').classList.contains('on'),
+        dm_on_open: $('dm-open').value || '1',
+        dm_on_close: $('dm-close').value || '1'
+      };
+
+      var payload = {
+        systems: systems,
+        roles: roles,
+        settings: settings
       };
 
       fetch('/api/guild/' + guildId + '/ticket-permissions', {
         method: 'POST',
         credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(config)
+        body: JSON.stringify(payload)
       })
         .then(function (r) { return r.json(); })
         .then(function (d) {
-          if (d.success) setPermStatus('✓ Системы и параметры сохранены');
-          else setPermStatus('Ошибка: ' + (d.error || ''), true);
+          if (d.success) onSuccess();
+          else onError(d.error || 'неизвестная ошибка');
         })
-        .catch(function (e) { setPermStatus('Ошибка: ' + e.message, true); });
+        .catch(function (e) { onError(e.message); });
+    }
+
+    $('btn-perm-save').addEventListener('click', function () {
+      saveAllConfig(
+        function () { setPermStatus('✓ Системы и параметры сохранены'); },
+        function (err) { setPermStatus('Ошибка: ' + err, true); }
+      );
     });
 
     $('btn-roles-save').addEventListener('click', function () {
-      var guildId = getSelectedGuildId();
-      if (!guildId) { setRolesStatus('Выберите сервер', true); return; }
-
-      var modSel = $('mod-roles');
-      var ownerSel = $('owner-roles');
-
-      var modRoles = Array.from(modSel.selectedOptions).map(function (o) { return o.value; });
-      var ownerRoles = Array.from(ownerSel.selectedOptions).map(function (o) { return o.value; });
-
-      fetch('/api/guild/' + guildId + '/ticket-permissions', { credentials: 'same-origin' })
-        .then(function (r) { return r.json(); })
-        .then(function (d) {
-          var config = d.config || {};
-          config.roles = {
-            mod_roles: modRoles,
-            owner_roles: ownerRoles,
-          };
-
-          fetch('/api/guild/' + guildId + '/ticket-permissions', {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(config)
-          })
-            .then(function (r) { return r.json(); })
-            .then(function (d2) {
-              if (d2.success) setRolesStatus('✓ Роли сохранены');
-              else setRolesStatus('Ошибка: ' + (d2.error || ''), true);
-            });
-        })
-        .catch(function (e) { setRolesStatus('Ошибка: ' + e.message, true); });
+      saveAllConfig(
+        function () { setRolesStatus('✓ Роли сохранены'); },
+        function (err) { setRolesStatus('Ошибка: ' + err, true); }
+      );
     });
 
-    // При смене сервера загрузить роли
+    $('btn-save').addEventListener('click', function () {
+      saveAllConfig(
+        function () { showToast('Все настройки успешно сохранены!', true); },
+        function (err) { showToast('Ошибка: ' + err, false); }
+      );
+    });
+
+    // При смене сервера загрузить всё заново
     notifyGuild.addEventListener('change', function () {
-      loadRoles();
+      loadRolesAndChannels();
     });
 
     // Обновить статистику при изменении выбора ролей
     $('mod-roles').addEventListener('change', updateRoleStats);
     $('owner-roles').addEventListener('change', updateRoleStats);
 
-    // İlk yükleme
+    // Первоначальная загрузка
     setTimeout(function () {
-      if (getSelectedGuildId()) loadRoles();
+      if (getSelectedGuildId()) loadRolesAndChannels();
     }, 500);
   }
 
