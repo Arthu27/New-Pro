@@ -1,8 +1,8 @@
 """
-Help Cog — Professional Dashboard/ID-Card Style via Pillow
+Help Cog — Professional Dashboard/ID-Card Style via Pillow (BIG & CLEAR VERSION)
 Белый фон, тонкие чёрные линии, красные line-art иконки.
-Все страницы (Главное меню + 11 категорий) рендерятся как карточки через Pillow.
-Поддерживает Discord Select Menu для удобного переключения категорий.
+Крупный, чёткий шрифт и одноколоночный полноширинный список команд,
+чтобы всё читалось мгновенно без нажатия и увеличения картинки.
 """
 
 import os
@@ -399,8 +399,15 @@ CAT_EMOJIS = {
 
 
 def generate_help_card(category_id: str = None) -> Image.Image:
-    """Генерация карточки помощи 1000x640 в профессиональном стиле профиля"""
-    W, H = 1000, 640
+    """Генерация КРУПНОЙ карточки 1080px (Главная 1080x860, Категории динамическая высота)"""
+    W = 1080
+    if category_id is None or category_id == "overview":
+        H = 860
+    else:
+        cat = next((c for c in CATEGORIES if c["id"] == category_id), None)
+        cmds = cat["commands"] if cat else []
+        H = max(520, 115 + len(cmds) * 98 + 30)
+
     if os.path.exists(BG_PATH):
         bg = Image.open(BG_PATH).convert('RGBA')
         if bg.size != (W, H):
@@ -410,9 +417,9 @@ def generate_help_card(category_id: str = None) -> Image.Image:
 
     d = ImageDraw.Draw(bg)
 
-    # Top Header Panel
-    header_box = _rounded_panel(952, 58, radius=12, fill=WHITE, outline=BLACK, ow=2)
-    bg.alpha_composite(header_box, (24, 18))
+    # Top Header
+    header_box = _rounded_panel(1032, 70, radius=14, fill=WHITE, outline=BLACK, ow=2)
+    bg.alpha_composite(header_box, (24, 20))
 
     if category_id is None or category_id == "overview":
         title_text = "AETHER BOT • СПРАВКА И КОМАНДЫ"
@@ -422,23 +429,22 @@ def generate_help_card(category_id: str = None) -> Image.Image:
         title_text = f"КАТЕГОРИЯ: {cat['title'].upper()}" if cat else "СПРАВКА"
         badge_icon = category_id
 
-    badge = _icon_badge(42, badge_icon, ring_color=BLACK, ring_w=2)
-    bg.alpha_composite(badge, (34, 26))
+    badge = _icon_badge(52, badge_icon, ring_color=BLACK, ring_w=2)
+    bg.alpha_composite(badge, (34, 29))
 
-    d.text((88, 27), title_text, fill=BLACK, font=_f(True, 22))
-    d.text((88, 52), f"ПРОФЕССИОНАЛЬНАЯ СИСТЕМА • ВСЕГО КОМАНД: {TOTAL_CMDS} • ПРЕФИКС: !", fill=MUTED, font=_f(False, 12))
+    d.text((98, 26), title_text, fill=BLACK, font=_f(True, 24))
+    d.text((98, 56), f"ПРОФЕССИОНАЛЬНАЯ СИСТЕМА • ВСЕГО КОМАНД: {TOTAL_CMDS} • ПРЕФИКС: !", fill=MUTED, font=_f(False, 15))
 
-    # Right header pill
-    pill = _rounded_panel(140, 32, radius=8, fill=WHITE, outline=RED, ow=2)
-    bg.alpha_composite(pill, (822, 31))
-    d.text((840, 38), "HELP v4.0 PRO", fill=RED, font=_f(True, 12))
+    pill = _rounded_panel(156, 36, radius=10, fill=WHITE, outline=RED, ow=2)
+    bg.alpha_composite(pill, (886, 37))
+    d.text((904, 45), "HELP v4.0 PRO", fill=RED, font=_f(True, 14))
 
     if category_id is None or category_id == "overview":
-        # 3x4 Grid of Categories + Info navigation box
-        cols = 3
-        box_w, box_h = 306, 114
-        gap_x, gap_y = 17, 15
-        start_x, start_y = 24, 92
+        # 2x6 Grid of Categories + Info navigation box (LARGE TYPOGRAPHY)
+        cols = 2
+        box_w, box_h = 496, 108
+        gap_x, gap_y = 40, 14
+        start_x, start_y = 24, 106
 
         for idx, cat in enumerate(CATEGORIES):
             c = idx % cols
@@ -449,69 +455,62 @@ def generate_help_card(category_id: str = None) -> Image.Image:
             box = _rounded_panel(box_w, box_h, radius=14, fill=WHITE, outline=BLACK, ow=2)
             bg.alpha_composite(box, (bx, by))
 
-            cat_badge = _icon_badge(52, cat["id"], ring_color=BLACK, ring_w=2)
-            bg.alpha_composite(cat_badge, (bx + 16, by + 31))
+            cat_badge = _icon_badge(64, cat["id"], ring_color=BLACK, ring_w=2)
+            bg.alpha_composite(cat_badge, (bx + 20, by + 22))
 
-            d.text((bx + 80, by + 20), cat["title"].upper(), fill=BLACK, font=_f(True, 17))
-            d.text((bx + 80, by + 46), f"{len(cat['commands'])} КОМАНД", fill=RED, font=_f(True, 13))
+            d.text((bx + 102, by + 16), cat["title"].upper(), fill=BLACK, font=_f(True, 22))
+            d.text((bx + 102, by + 46), f"{len(cat['commands'])} КОМАНД", fill=RED, font=_f(True, 16))
 
             cmds_sample = " • ".join([cmd[0].split()[0] for cmd in cat["commands"][:3]])
-            if len(cmds_sample) > 26:
-                cmds_sample = cmds_sample[:25] + "…"
-            d.text((bx + 80, by + 74), cmds_sample, fill=MUTED, font=_f(False, 11))
+            if len(cmds_sample) > 35:
+                cmds_sample = cmds_sample[:34] + "…"
+            d.text((bx + 102, by + 72), cmds_sample, fill=MUTED, font=_f(False, 15))
 
         # 12th Box - Interactive Menu nav info
-        bx = start_x + 2 * (box_w + gap_x)
-        by = start_y + 3 * (box_h + gap_y)
+        bx = start_x + 1 * (box_w + gap_x)
+        by = start_y + 5 * (box_h + gap_y)
         box = _rounded_panel(box_w, box_h, radius=14, fill=WHITE, outline=RED, ow=2)
         bg.alpha_composite(box, (bx, by))
 
-        nav_badge = _icon_badge(52, "overview", ring_color=RED, ring_w=2)
-        bg.alpha_composite(nav_badge, (bx + 16, by + 31))
+        nav_badge = _icon_badge(64, "overview", ring_color=RED, ring_w=2)
+        bg.alpha_composite(nav_badge, (bx + 20, by + 22))
 
-        d.text((bx + 80, by + 20), "НАВИГАЦИЯ МЕНЮ", fill=BLACK, font=_f(True, 17))
-        d.text((bx + 80, by + 46), "ВЫБЕРИТЕ РАЗДЕЛ", fill=RED, font=_f(True, 13))
-        d.text((bx + 80, by + 74), "через меню ниже", fill=MUTED, font=_f(False, 12))
+        d.text((bx + 102, by + 16), "НАВИГАЦИЯ МЕНЮ", fill=BLACK, font=_f(True, 22))
+        d.text((bx + 102, by + 46), "ВЫБЕРИТЕ РАЗДЕЛ", fill=RED, font=_f(True, 16))
+        d.text((bx + 102, by + 72), "через меню ниже для подробностей", fill=MUTED, font=_f(False, 15))
 
     else:
-        # Category commands view (2 columns)
+        # Category commands view - 1 COLUMN FULL WIDTH, LARGE FONTS (25pt/18pt)
         cat = next((c for c in CATEGORIES if c["id"] == category_id), None)
         cmds = cat["commands"] if cat else []
-        cols = 2
-        box_w = 467
-        n_rows = (len(cmds) + 1) // 2
-        box_h = min(74, 480 // max(1, n_rows) - 10)
-        gap_x, gap_y = 18, 10
-        start_x, start_y = 24, 95
+        box_w = 1032
+        box_h = 86
+        gap_y = 12
+        start_x, start_y = 24, 108
 
         for idx, (cmd_str, desc, perm) in enumerate(cmds):
-            c = idx % cols
-            r = idx // cols
-            bx = start_x + c * (box_w + gap_x)
-            by = start_y + r * (box_h + gap_y)
+            bx = start_x
+            by = start_y + idx * (box_h + gap_y)
 
-            box = _rounded_panel(box_w, box_h, radius=12, fill=WHITE, outline=BLACK, ow=2)
+            box = _rounded_panel(box_w, box_h, radius=14, fill=WHITE, outline=BLACK, ow=2)
             bg.alpha_composite(box, (bx, by))
 
-            cmd_badge = _icon_badge(40, "cmd_bullet", ring_color=BLACK, ring_w=2)
-            bg.alpha_composite(cmd_badge, (bx + 14, by + (box_h - 40)//2))
+            # Command badge with category icon
+            cmd_badge = _icon_badge(56, category_id, ring_color=BLACK, ring_w=2)
+            bg.alpha_composite(cmd_badge, (bx + 20, by + (box_h - 56)//2))
 
-            cmd_name = cmd_str
-            if len(cmd_name) > 34:
-                cmd_name = cmd_name[:33] + "…"
+            d.text((bx + 96, by + 16), cmd_str, fill=BLACK, font=_f(True, 25))
+            d.text((bx + 96, by + 49), desc, fill=MUTED, font=_f(False, 18))
 
-            d.text((bx + 66, by + box_h // 2 - 19), cmd_name, fill=BLACK, font=_f(True, 15))
-            d.text((bx + 66, by + box_h // 2 + 3), desc, fill=MUTED, font=_f(False, 12))
-
-            perm_w = len(f"[{perm}]") * 7
-            d.text((bx + box_w - 18 - perm_w, by + box_h // 2 - 19), f"[{perm}]", fill=RED, font=_f(True, 12))
+            perm_w = len(f"[{perm}]") * 11
+            d.text((bx + box_w - 24 - perm_w, by + 28), f"[{perm}]", fill=RED, font=_f(True, 18))
 
     # 4 Corner brackets (red line-art accents)
-    br = _corner_bracket(38, 4, color=RED)
+    br = _corner_bracket(42, 5, color=RED)
     bg.alpha_composite(br, (6, 6))
-    bg.alpha_composite(br.rotate(270), (956, 6))
-    bg.alpha_composite(br.rotate(90), (6, 596))
-    bg.alpha_composite(br.rotate(180), (956, 596))
+    bg.alpha_composite(br.rotate(270), (W - 48, 6))
+    bg.alpha_composite(br.rotate(90), (6, H - 48))
+    bg.alpha_composite(br.rotate(180), (W - 48, H - 48))
 
     return bg
 
@@ -522,22 +521,6 @@ def generate_help_card_bytes(category_id: str = None) -> io.BytesIO:
     card.save(buf, format='PNG')
     buf.seek(0)
     return buf
-
-
-def build_help_embed(category_id: str = None) -> discord.Embed:
-    embed = discord.Embed(
-        color=discord.Color.from_rgb(220, 38, 38),
-        timestamp=datetime.now()
-    )
-    filename = "help_card.png"
-    embed.set_image(url=f"attachment://{filename}")
-    if category_id is None or category_id == "overview":
-        embed.set_footer(text="Aether Help System • Главное меню • Выберите раздел в меню ниже")
-    else:
-        cat = next((c for c in CATEGORIES if c["id"] == category_id), None)
-        title = cat["title"] if cat else "Справка"
-        embed.set_footer(text=f"Aether Help System • Раздел: {title} • Выберите раздел в меню ниже")
-    return embed
 
 
 class HelpSelect(discord.ui.Select):
@@ -562,7 +545,7 @@ class HelpSelect(discord.ui.Select):
                 )
             )
         super().__init__(
-            placeholder="Выберите категорию команд...",
+            placeholder="📂 Выберите категорию для просмотра команд...",
             options=options,
             custom_id="help_select_v4_pro"
         )
@@ -576,9 +559,9 @@ class HelpSelect(discord.ui.Select):
             None, generate_help_card_bytes, cat_id
         )
         file = discord.File(img_buf, filename="help_card.png")
-        embed = build_help_embed(cat_id)
         view = HelpView(current_cat=cat_id)
-        await interaction.edit_original_response(embed=embed, attachments=[file], view=view)
+        # Отправляем без embed, чтобы Discord показал изображение в полном размере
+        await interaction.edit_original_response(embed=None, attachments=[file], view=view)
 
 
 class HelpView(discord.ui.View):
@@ -609,9 +592,9 @@ class Help(commands.Cog):
             None, generate_help_card_bytes, cat_id
         )
         file = discord.File(img_buf, filename="help_card.png")
-        embed = build_help_embed(cat_id)
         view = HelpView(current_cat=cat_id)
-        await ctx.send(embed=embed, file=file, view=view)
+        # Отправляем напрямую как вложение, чтобы картинка была большой и читаемой
+        await ctx.send(file=file, view=view)
 
     @app_commands.command(name="help", description="Профессиональное руководство и справка по всем командам")
     async def help_slash(self, interaction: discord.Interaction, category: str = None):
@@ -627,9 +610,8 @@ class Help(commands.Cog):
             None, generate_help_card_bytes, cat_id
         )
         file = discord.File(img_buf, filename="help_card.png")
-        embed = build_help_embed(cat_id)
         view = HelpView(current_cat=cat_id)
-        await interaction.followup.send(embed=embed, file=file, view=view, ephemeral=True)
+        await interaction.followup.send(file=file, view=view, ephemeral=True)
 
 
 async def setup(bot):

@@ -132,3 +132,4 @@ plugins/
 # Preview tests
 *_test.png
 test_help_*.py
+*_big.png
