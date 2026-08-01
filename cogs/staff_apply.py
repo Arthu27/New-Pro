@@ -26,7 +26,7 @@ APPS_FILE = "data/staff_apps.json"
 
 ROOT = os.path.join(os.path.dirname(__file__), '..')
 FONTS = os.path.join(ROOT, 'assets', 'fonts')
-BG_PATH = os.path.join(ROOT, 'assets', 'profile_bg_pro.jpg')
+BG_PATH = os.path.join(ROOT, 'assets', 'staff_bg.jpg')
 FONT_B = os.path.join(FONTS, 'Bold.ttf')
 FONT_R = os.path.join(FONTS, 'Regular.ttf')
 
@@ -86,34 +86,53 @@ def _rounded_panel(w, h, radius, fill=WHITE, outline=BLACK, ow=3):
                              radius=r, fill=fill, outline=outline, width=o)
     return _ss_render(w, h, draw)
 
+def _load_bg(w, h):
+    """Корректная обрезка фона по пропорциям без растягивания и размытия"""
+    try:
+        bg = Image.open(BG_PATH).convert('RGBA')
+        bw, bh = bg.size
+        target_ratio = w / h
+        src_ratio = bw / bh
+        if src_ratio > target_ratio:
+            new_w = int(bh * target_ratio)
+            x0 = (bw - new_w) // 2
+            bg = bg.crop((x0, 0, x0 + new_w, bh))
+        else:
+            new_h = int(bw / target_ratio)
+            y0 = (bh - new_h) // 2
+            bg = bg.crop((0, y0, bw, y0 + new_h))
+        return bg.resize((w, h), Image.Resampling.LANCZOS)
+    except Exception:
+        return Image.new('RGBA', (w, h), (255, 255, 255, 255))
+
 def generate_staff_panel_card() -> Image.Image:
-    W, H = 920, 240
-    bg = Image.new('RGBA', (W, H), (255, 255, 255, 255))
+    W, H = 920, 360
+    bg = _load_bg(W, H)
     d = ImageDraw.Draw(bg)
 
     # Тематический акцент: Synth Violet (фиолетовый, как у одной из тем /help)
     accent = (139, 92, 246)
 
-    # Наружная рамка
-    outer_border = _rounded_panel(896, 216, radius=16, fill=WHITE, outline=BLACK, ow=2)
+    # Наружная полупрозрачная рамка (эффект матового стекла поверх красивого фона)
+    outer_border = _rounded_panel(896, 336, radius=16, fill=(255, 255, 255, 210), outline=BLACK, ow=2)
     bg.alpha_composite(outer_border, (12, 12))
 
     # Внутренняя панель заголовка
-    header_box = _rounded_panel(848, 140, radius=14, fill=WHITE, outline=BLACK, ow=2)
+    header_box = _rounded_panel(848, 260, radius=14, fill=(255, 255, 255, 230), outline=BLACK, ow=2)
     bg.alpha_composite(header_box, (36, 30))
 
     # Векторная иконка щита
     badge = _icon_badge(80, _icon_staff, ring_color=BLACK, ring_w=2, icon_color=accent)
-    bg.alpha_composite(badge, (56, 60))
+    bg.alpha_composite(badge, (56, 120))
 
     # Текстовые заголовки СТРОГО на русском языке
-    d.text((160, 60), "НАБОР В КОМАНДУ СЕРВЕРА", fill=BLACK, font=_f(True, 32))
-    d.text((160, 110), "ВЫБЕРИТЕ ЖЕЛАЕМУЮ ДОЛЖНОСТЬ В МЕНЮ НИЖЕ", fill=MUTED, font=_f(False, 20))
+    d.text((160, 110), "НАБОР В КОМАНДУ СЕРВЕРА", fill=BLACK, font=_f(True, 32))
+    d.text((160, 160), "ВЫБЕРИТЕ ЖЕЛАЕМУЮ ДОЛЖНОСТЬ В МЕНЮ НИЖЕ", fill=MUTED, font=_f(False, 20))
 
     # Боковая плашка
     pill = _rounded_panel(150, 40, radius=10, fill=WHITE, outline=accent, ow=2)
-    bg.alpha_composite(pill, (710, 80))
-    d.text((728, 90), "RECRUIT PRO", fill=accent, font=_f(True, 15))
+    bg.alpha_composite(pill, (710, 140))
+    d.text((728, 150), "RECRUIT PRO", fill=accent, font=_f(True, 15))
 
     # Угловые скобки
     br = _corner_bracket(40, 4, color=accent)
@@ -291,7 +310,7 @@ class StaffApply(commands.Cog):
     @app_commands.checks.has_permissions(manage_guild=True)
     async def staff_panel(self, interaction: discord.Interaction):
         """Создать профессиональную карточку-панель для набора"""
-        # Генерируем красивую кастомную Pillow карточку набора в стиле /help
+        # Генерируем красивую кастомную Pillow карточку набора в стиле /help с фоном из ИИ
         img_buf = await interaction.client.loop.run_in_executor(
             None, generate_staff_panel_bytes
         )
