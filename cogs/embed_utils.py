@@ -186,3 +186,8 @@ def warning_embed(title, description):
     e = discord.Embed(color=0xF39C12, timestamp=datetime.now(timezone.utc))
     e.description = f"## {title}\n{description}"
     return e
+
+
+async def setup(bot):
+    pass
+

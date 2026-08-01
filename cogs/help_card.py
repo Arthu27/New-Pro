@@ -405,3 +405,8 @@ def generate_help_category(cat, index, total, prefix="!"):
         _command_rows_panel(img, RX, ly, col_w, commands_, row_h)
 
     return img.convert('RGB')
+
+
+async def setup(bot):
+    pass
+

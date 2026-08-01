@@ -550,6 +550,9 @@ async def load_cogs():
     except Exception as e:
         log.error(f"Ошибка загрузки обработчика ошибок: {e}")
     
+    # Удаляем стандартную команду help discord.py, чтобы загрузить наш кастомный help cog
+    bot.remove_command('help')
+
     cog_files = sorted([f for f in os.listdir("./cogs") if f.endswith(".py") and f not in SKIP_COGS])
     for filename in cog_files:
         ext = f"cogs.{filename[:-3]}"
