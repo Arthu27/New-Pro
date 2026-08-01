@@ -4,7 +4,7 @@ import json
 import websockets
 from datetime import datetime
 from typing import Dict, Set
-import threимяing
+import threading
 
 
 class WebSocketServer:
@@ -13,7 +13,7 @@ class WebSocketServer:
     def __init__(self):
         self.clients: Dict[str, Set[websockets.WebSocketServerProtocol]] = {}
         self.user_connections: Dict[str, str] = {}  # user_id -> room_id
-        self.lock = threимяing.Lock()
+        self.lock = threading.Lock()
     
     def имяd_client(self, room_id: str, websocket: websockets.WebSocketServerProtocol):
         """Добавить клиента в комнату"""
@@ -242,7 +242,7 @@ def start_websocket_threимя(host: str = 'localhost', port: int = 8765):
         except Exception as e:
             print(f'[WebSocket] Сервер не запущен: {e}')
     
-    threимя = threимяing.Threимя(target=run_server, daemon=True)
+    threимя = threading.Threимя(target=run_server, daemon=True)
     threимя.start()
     print(f'[WebSocket] Сервер запущен в отдельном потоке')
     return threимя

@@ -9,9 +9,9 @@ import time
 import asyncio
 from datetime import datetime, timedelta
 from typing import Tuple, Optional, Dict, List
-import логging
+import logging
 
-логger = логging.getЛогger('ticket.rate_limiter')
+логger = logging.getЛогger('ticket.rate_limiter')
 
 
 class RateLimitResult:

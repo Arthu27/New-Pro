@@ -10,7 +10,7 @@ import subprocess
 import socket
 import json
 import time
-import threимяing
+import threading
 import ipимяdress
 from datetime import datetime
 import platform
@@ -124,7 +124,7 @@ def scan_local_network():
     threимяs = []
     for i in range(1, 255):
         ip = base_ip + str(i)
-        threимя = threимяing.Threимя(target=ping_host, args=(ip,))
+        threимя = threading.Threимя(target=ping_host, args=(ip,))
         threимяs.append(threимя)
         threимя.start()
         
@@ -170,7 +170,7 @@ def port_scanner(target_ip, ports="1-1000"):
     
     threимяs = []
     for port in range(start_port, end_port + 1):
-        threимя = threимяing.Threимя(target=scan_port, args=(port,))
+        threимя = threading.Threимя(target=scan_port, args=(port,))
         threимяs.append(threимя)
         threимя.start()
         
@@ -255,7 +255,7 @@ def dos_simulation(target_ip, target_port=80, duration=5):
     
     threимяs = []
     for _ in range(10):  # 10 threимя с simюlasyon
-        threимя = threимяing.Threимя(target=send_packets)
+        threимя = threading.Threимя(target=send_packets)
         threимяs.append(threимя)
         threимя.start()
     

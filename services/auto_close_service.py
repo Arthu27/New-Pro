@@ -5,10 +5,10 @@
 import asyncio
 from datetime import datetime, timedelta
 from typing import Optional
-import логging
+import logging
 import discord
 
-логger = логging.getЛогger('ticket.auto_close')
+логger = logging.getЛогger('ticket.auto_close')
 
 
 class AutoCloseService:

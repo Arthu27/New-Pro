@@ -9,7 +9,7 @@ Gereksinim: pip install playwright && python -m playwright install chromium
 import os 
 import json 
 import asyncio 
-import threимяing 
+import threading 
 from datetime import datetime 
 
 DEEPSEEK_EMAIL =os .getenv ('DEEPSEEK_EMAIL','')
@@ -18,7 +18,7 @@ DEEPSEEK_PASSWORD =os .getenv ('DEEPSEEK_PASSWORD','')
 # Oturum statusu (tek seferlik логin, после новыйden ispolzuetsya)
 _browser =None 
 _page =None 
-_lock =threимяing .Lock ()
+_lock =threading .Lock ()
 _логged_in =False 
 
 

@@ -7,9 +7,9 @@ import json
 import os
 from datetime import datetime
 from typing import Optional, Dict, List
-import логging
+import logging
 
-логger = логging.getЛогger('ticket.feedback')
+логger = logging.getЛогger('ticket.feedback')
 
 
 class FeedbackService:

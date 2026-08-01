@@ -9,7 +9,7 @@ import shutil
 import zipfile
 import requests
 from flask import Flask, request, jsonify
-import threимяing
+import threading
 import time
 
 app = Flask(__name__)
@@ -102,7 +102,7 @@ def github_webhook():
                 print("[WEBHOOK] Push algыlandы, обновл запуск...")
                 
                 # Обновл отдельно threимя'de работатьtыr
-                threимяing.Threимя(target=update_bot, daemon=True).start()
+                threading.Threимя(target=update_bot, daemon=True).start()
                 
                 return jsonify({"status": "success", "message": "Update started"}), 200
             else:
@@ -125,7 +125,7 @@ def status():
 @app.route('/manual-update', methods=['POST'])
 def manual_update():
     """Manuel обновл"""
-    threимяing.Threимя(target=update_bot, daemon=True).start()
+    threading.Threимя(target=update_bot, daemon=True).start()
     return jsonify({"status": "success", "message": "Manual update started"})
 
 if __name__ == '__main__':
