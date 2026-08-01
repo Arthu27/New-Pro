@@ -1,8 +1,8 @@
 """
-Help Cog — Professional Dashboard/ID-Card Style via Pillow (HUGE TYPOGRAPHY & ZERO BLUR)
-Белый фон, тонкие чёрные линии, красные line-art иконки.
-Огромный чёткий шрифт (30pt для команд, 22pt для описаний), одноколоночные полноширинные
-карточки 920px (без размытия, без сжатия, 100% читаемость с любого экрана).
+Help Cog — Professional Dashboard/ID-Card Style via Pillow (THEMED MULTI-ACCENT & ZERO BLUR)
+Белый фон, тонкие чёрные линии, авторские line-art иконки.
+Каждая категория имеет свой уникальный профессиональный цветовой акцент (Emerald, Violet,
+Teal, Amber, Tech Blue, Crimson и др.), свой авторский векторный значок и крупный читаемый шрифт.
 """
 
 import os
@@ -25,6 +25,22 @@ BLACK = (20, 20, 25)
 RED = (220, 38, 38)
 MUTED = (110, 115, 125)
 SS = 4
+
+# Цветовые темы для каждой категории команд
+ACCENTS = {
+    'overview': (220, 38, 38),     # Aether Crimson Red
+    'moderation': (225, 29, 72),   # Rose Shield
+    'warnings': (245, 158, 11),    # Warning Amber
+    'tickets': (13, 148, 136),     # Support Teal
+    'economy': (16, 185, 129),     # Emerald Wealth
+    'music': (139, 92, 246),       # Synth Violet
+    'levels': (217, 119, 6),       # Gold Rank
+    'utility': (2, 132, 199),      # Tech Blue
+    'voice': (236, 72, 153),       # Broadcast Pink
+    'fun': (249, 115, 22),         # Arcade Orange
+    'giveaway': (190, 18, 60),     # Ruby Gift
+    'profile': (79, 70, 229),      # Indigo Executive
+}
 
 
 def _f(bold=False, sz=20):
@@ -62,20 +78,20 @@ def _load_bg(w, h):
 
 
 # ═══════════════════════════════════════════════════════════════════════
-# Custom line-art vector icons — drawn in red, crisp thin strokes
+# Custom line-art vector icons — drawn in thematic accent color
 # ═══════════════════════════════════════════════════════════════════════
 
-def _icon_overview(d, cx, cy, s, w):
+def _icon_overview(d, cx, cy, s, w, color):
     gap = s * 0.1
     sz = s * 0.38
     for i in (-1, 1):
         for j in (-1, 1):
             x = cx + i * (sz/2 + gap/2)
             y = cy + j * (sz/2 + gap/2)
-            d.rectangle((x - sz/2, y - sz/2, x + sz/2, y + sz/2), outline=RED, width=w)
+            d.rectangle((x - sz/2, y - sz/2, x + sz/2, y + sz/2), outline=color, width=w)
 
 
-def _icon_moderation(d, cx, cy, s, w):
+def _icon_moderation(d, cx, cy, s, w, color):
     pts = [
         (cx - s*0.4, cy - s*0.4),
         (cx + s*0.4, cy - s*0.4),
@@ -83,60 +99,60 @@ def _icon_moderation(d, cx, cy, s, w):
         (cx, cy + s*0.45),
         (cx - s*0.4, cy + s*0.05)
     ]
-    d.line(pts + [pts[0]], fill=RED, width=w, joint='curve')
+    d.line(pts + [pts[0]], fill=color, width=w, joint='curve')
     chk = [(cx - s*0.18, cy + s*0.02), (cx - s*0.04, cy + s*0.16), (cx + s*0.2, cy - s*0.12)]
-    d.line(chk, fill=RED, width=w, joint='curve')
+    d.line(chk, fill=color, width=w, joint='curve')
 
 
-def _icon_warnings(d, cx, cy, s, w):
+def _icon_warnings(d, cx, cy, s, w, color):
     pts = [
         (cx, cy - s*0.42),
         (cx + s*0.42, cy + s*0.35),
         (cx - s*0.42, cy + s*0.35),
         (cx, cy - s*0.42)
     ]
-    d.line(pts, fill=RED, width=w, joint='curve')
-    d.line([(cx, cy - s*0.15), (cx, cy + s*0.1)], fill=RED, width=w)
+    d.line(pts, fill=color, width=w, joint='curve')
+    d.line([(cx, cy - s*0.15), (cx, cy + s*0.1)], fill=color, width=w)
     r = w * 0.8
-    d.ellipse((cx - r, cy + s*0.2 - r, cx + r, cy + s*0.2 + r), fill=RED)
+    d.ellipse((cx - r, cy + s*0.2 - r, cx + r, cy + s*0.2 + r), fill=color)
 
 
-def _icon_tickets(d, cx, cy, s, w):
+def _icon_tickets(d, cx, cy, s, w, color):
     w_t, h_t = s*0.44, s*0.30
     x0, y0 = cx - w_t, cy - h_t
     x1, y1 = cx + w_t, cy + h_t
-    d.rounded_rectangle((x0, y0, x1, y1), radius=h_t*0.25, outline=RED, width=w)
+    d.rounded_rectangle((x0, y0, x1, y1), radius=h_t*0.25, outline=color, width=w)
     r = s*0.1
     d.arc((x0 - r, cy - r, x0 + r, cy + r), -90, 90, fill=WHITE, width=w*2)
-    d.arc((x0 - r, cy - r, x0 + r, cy + r), -90, 90, fill=RED, width=w)
+    d.arc((x0 - r, cy - r, x0 + r, cy + r), -90, 90, fill=color, width=w)
     d.arc((x1 - r, cy - r, x1 + r, cy + r), 90, 270, fill=WHITE, width=w*2)
-    d.arc((x1 - r, cy - r, x1 + r, cy + r), 90, 270, fill=RED, width=w)
+    d.arc((x1 - r, cy - r, x1 + r, cy + r), 90, 270, fill=color, width=w)
 
 
-def _icon_economy(d, cx, cy, s, w):
+def _icon_economy(d, cx, cy, s, w, color):
     bw, bh = s * 0.64, s * 0.46
     x0, y0 = cx - bw / 2, cy - bh / 2
     x1, y1 = cx + bw / 2, cy + bh / 2
-    d.rounded_rectangle((x0, y0, x1, y1), radius=bh * 0.22, outline=RED, width=w)
-    d.line([(x0, y0 + bh * 0.32), (x1, y0 + bh * 0.32)], fill=RED, width=max(1, int(w * 0.7)))
+    d.rounded_rectangle((x0, y0, x1, y1), radius=bh * 0.22, outline=color, width=w)
+    d.line([(x0, y0 + bh * 0.32), (x1, y0 + bh * 0.32)], fill=color, width=max(1, int(w * 0.7)))
     r = s * 0.085
     ccx = x1 - r * 1.5
     ccy = y0 + bh * 0.66
-    d.ellipse((ccx - r, ccy - r, ccx + r, ccy + r), outline=RED, width=max(1, int(w * 0.8)))
+    d.ellipse((ccx - r, ccy - r, ccx + r, ccy + r), outline=color, width=max(1, int(w * 0.8)))
 
 
-def _icon_music(d, cx, cy, s, w):
+def _icon_music(d, cx, cy, s, w, color):
     r = s * 0.1
     x1, y1 = cx - s * 0.22, cy + s * 0.22
     x2, y2 = cx + s * 0.18, cy + s * 0.14
-    d.ellipse((x1 - r*1.2, y1 - r, x1 + r*1.2, y1 + r), outline=RED, width=w)
-    d.ellipse((x2 - r*1.2, y2 - r, x2 + r*1.2, y2 + r), outline=RED, width=w)
-    d.line([(x1 + r*1.2, y1), (x1 + r*1.2, y1 - s*0.45)], fill=RED, width=w)
-    d.line([(x2 + r*1.2, y2), (x2 + r*1.2, y2 - s*0.45)], fill=RED, width=w)
-    d.line([(x1 + r*1.2, y1 - s*0.45), (x2 + r*1.2, y2 - s*0.45)], fill=RED, width=int(w*1.5))
+    d.ellipse((x1 - r*1.2, y1 - r, x1 + r*1.2, y1 + r), outline=color, width=w)
+    d.ellipse((x2 - r*1.2, y2 - r, x2 + r*1.2, y2 + r), outline=color, width=w)
+    d.line([(x1 + r*1.2, y1), (x1 + r*1.2, y1 - s*0.45)], fill=color, width=w)
+    d.line([(x2 + r*1.2, y2), (x2 + r*1.2, y2 - s*0.45)], fill=color, width=w)
+    d.line([(x1 + r*1.2, y1 - s*0.45), (x2 + r*1.2, y2 - s*0.45)], fill=color, width=int(w*1.5))
 
 
-def _icon_levels(d, cx, cy, s, w):
+def _icon_levels(d, cx, cy, s, w, color):
     bar_w = s * 0.14
     bars = [
         (cx - s*0.28, cy + s*0.35, cy + s*0.1),
@@ -144,13 +160,13 @@ def _icon_levels(d, cx, cy, s, w):
         (cx + s*0.18, cy + s*0.35, cy - s*0.3)
     ]
     for bx, ybot, ytop in bars:
-        d.rounded_rectangle((bx - bar_w/2, ytop, bx + bar_w/2, ybot), radius=bar_w*0.3, outline=RED, width=w)
+        d.rounded_rectangle((bx - bar_w/2, ytop, bx + bar_w/2, ybot), radius=bar_w*0.3, outline=color, width=w)
     pts = [(cx + s*0.05, cy - s*0.32), (cx + s*0.32, cy - s*0.32), (cx + s*0.32, cy - s*0.05)]
-    d.line(pts, fill=RED, width=w, joint='curve')
-    d.line([(cx - s*0.1, cy - s*0.12), (cx + s*0.32, cy - s*0.32)], fill=RED, width=w)
+    d.line(pts, fill=color, width=w, joint='curve')
+    d.line([(cx - s*0.1, cy - s*0.12), (cx + s*0.32, cy - s*0.32)], fill=color, width=w)
 
 
-def _icon_utility(d, cx, cy, s, w):
+def _icon_utility(d, cx, cy, s, w, color):
     r_out = s * 0.4
     r_in = s * 0.28
     for idx in range(8):
@@ -160,62 +176,62 @@ def _icon_utility(d, cx, cy, s, w):
         p2 = (cx + r_out * math.cos(a1), cy + r_out * math.sin(a1))
         p3 = (cx + r_out * math.cos(a2), cy + r_out * math.sin(a2))
         p4 = (cx + r_in * math.cos(a2), cy + r_in * math.sin(a2))
-        d.line([p1, p2, p3, p4], fill=RED, width=w, joint='curve')
+        d.line([p1, p2, p3, p4], fill=color, width=w, joint='curve')
     r_mid = s * 0.28
-    d.ellipse((cx - r_mid, cy - r_mid, cx + r_mid, cy + r_mid), outline=RED, width=w)
+    d.ellipse((cx - r_mid, cy - r_mid, cx + r_mid, cy + r_mid), outline=color, width=w)
     r_center = s * 0.12
-    d.ellipse((cx - r_center, cy - r_center, cx + r_center, cy + r_center), outline=RED, width=w)
+    d.ellipse((cx - r_center, cy - r_center, cx + r_center, cy + r_center), outline=color, width=w)
 
 
-def _icon_voice(d, cx, cy, s, w):
+def _icon_voice(d, cx, cy, s, w, color):
     bx = cx - s * 0.20
     hw, hh = s * 0.14, s * 0.20
-    d.rounded_rectangle((bx - hw, cy - hh, bx + hw * 0.3, cy + hh), radius=hw * 0.5, outline=RED, width=w)
+    d.rounded_rectangle((bx - hw, cy - hh, bx + hw * 0.3, cy + hh), radius=hw * 0.5, outline=color, width=w)
     tri = [(bx + hw * 0.15, cy - hh * 0.9), (bx + s * 0.20, cy - s * 0.28), (bx + s * 0.20, cy + s * 0.28), (bx + hw * 0.15, cy + hh * 0.9)]
-    d.line(tri, fill=RED, width=w, joint='curve')
+    d.line(tri, fill=color, width=w, joint='curve')
     for r in (s * 0.11, s * 0.20, s * 0.29):
         bbox = (cx + s * 0.05 - r, cy - r, cx + s * 0.05 + r, cy + r)
-        d.arc(bbox, -42, 42, fill=RED, width=w)
+        d.arc(bbox, -42, 42, fill=color, width=w)
 
 
-def _icon_fun(d, cx, cy, s, w):
+def _icon_fun(d, cx, cy, s, w, color):
     cw, ch = s * 0.44, s * 0.28
-    d.rounded_rectangle((cx - cw, cy - ch, cx + cw, cy + ch), radius=ch*0.4, outline=RED, width=w)
+    d.rounded_rectangle((cx - cw, cy - ch, cx + cw, cy + ch), radius=ch*0.4, outline=color, width=w)
     dx, dy = cx - cw*0.45, cy
     l_d = s * 0.09
-    d.line([(dx - l_d, dy), (dx + l_d, dy)], fill=RED, width=w)
-    d.line([(dx, dy - l_d), (dx, dy + l_d)], fill=RED, width=w)
+    d.line([(dx - l_d, dy), (dx + l_d, dy)], fill=color, width=w)
+    d.line([(dx, dy - l_d), (dx, dy + l_d)], fill=color, width=w)
     bx, by = cx + cw*0.45, cy
     r_b = s * 0.05
-    d.ellipse((bx - l_d - r_b, by - r_b, bx - l_d + r_b, by + r_b), fill=RED)
-    d.ellipse((bx + l_d - r_b, by - r_b, bx + l_d + r_b, by + r_b), fill=RED)
+    d.ellipse((bx - l_d - r_b, by - r_b, bx - l_d + r_b, by + r_b), fill=color)
+    d.ellipse((bx + l_d - r_b, by - r_b, bx + l_d + r_b, by + r_b), fill=color)
 
 
-def _icon_giveaway(d, cx, cy, s, w):
+def _icon_giveaway(d, cx, cy, s, w, color):
     bw, bh = s * 0.36, s * 0.36
-    d.rounded_rectangle((cx - bw, cy - bh*0.7, cx + bw, cy + bh), radius=s*0.06, outline=RED, width=w)
-    d.rounded_rectangle((cx - bw*1.1, cy - bh*0.7, cx + bw*1.1, cy - bh*0.35), radius=s*0.05, outline=RED, width=w)
-    d.line([(cx, cy - bh*0.7), (cx, cy + bh)], fill=RED, width=int(w*1.2))
+    d.rounded_rectangle((cx - bw, cy - bh*0.7, cx + bw, cy + bh), radius=s*0.06, outline=color, width=w)
+    d.rounded_rectangle((cx - bw*1.1, cy - bh*0.7, cx + bw*1.1, cy - bh*0.35), radius=s*0.05, outline=color, width=w)
+    d.line([(cx, cy - bh*0.7), (cx, cy + bh)], fill=color, width=int(w*1.2))
     r_bow = s * 0.12
-    d.ellipse((cx - r_bow*1.4, cy - bh*0.9 - r_bow*0.5, cx, cy - bh*0.6), outline=RED, width=w)
-    d.ellipse((cx, cy - bh*0.9 - r_bow*0.5, cx + r_bow*1.4, cy - bh*0.6), outline=RED, width=w)
+    d.ellipse((cx - r_bow*1.4, cy - bh*0.9 - r_bow*0.5, cx, cy - bh*0.6), outline=color, width=w)
+    d.ellipse((cx, cy - bh*0.9 - r_bow*0.5, cx + r_bow*1.4, cy - bh*0.6), outline=color, width=w)
 
 
-def _icon_profile(d, cx, cy, s, w):
+def _icon_profile(d, cx, cy, s, w, color):
     cw, ch = s * 0.40, s * 0.28
-    d.rounded_rectangle((cx - cw, cy - ch, cx + cw, cy + ch), radius=ch*0.3, outline=RED, width=w)
+    d.rounded_rectangle((cx - cw, cy - ch, cx + cw, cy + ch), radius=ch*0.3, outline=color, width=w)
     r_h = s * 0.08
-    d.ellipse((cx - r_h, cy - s*0.12 - r_h, cx + r_h, cy - s*0.12 + r_h), outline=RED, width=w)
-    d.arc((cx - s*0.16, cy - s*0.04, cx + s*0.16, cy + s*0.18), 180, 0, fill=RED, width=w)
+    d.ellipse((cx - r_h, cy - s*0.12 - r_h, cx + r_h, cy - s*0.12 + r_h), outline=color, width=w)
+    d.arc((cx - s*0.16, cy - s*0.04, cx + s*0.16, cy + s*0.18), 180, 0, fill=color, width=w)
 
 
-def _icon_cmd_bullet(d, cx, cy, s, w):
+def _icon_cmd_bullet(d, cx, cy, s, w, color):
     r = s * 0.40
     pts = [(cx, cy - r), (cx + r, cy), (cx, cy + r), (cx - r, cy), (cx, cy - r)]
-    d.line(pts, fill=RED, width=w)
+    d.line(pts, fill=color, width=w)
     c_r = s * 0.14
     chev = [(cx - c_r*0.6, cy - c_r), (cx + c_r*0.6, cy), (cx - c_r*0.6, cy + c_r)]
-    d.line(chev, fill=RED, width=w, joint='curve')
+    d.line(chev, fill=color, width=w, joint='curve')
 
 
 ICON_FUNCS = {
@@ -235,7 +251,7 @@ ICON_FUNCS = {
 }
 
 
-def _icon_badge(diameter, glyph_key, ring_color=BLACK, ring_w=None):
+def _icon_badge(diameter, glyph_key, ring_color=BLACK, ring_w=None, icon_color=RED):
     ring_w = ring_w if ring_w is not None else max(2, diameter // 22)
 
     def draw(d, scale):
@@ -245,7 +261,7 @@ def _icon_badge(diameter, glyph_key, ring_color=BLACK, ring_w=None):
         d.rounded_rectangle((rw / 2, rw / 2, size - rw / 2 - 1, size - rw / 2 - 1),
                              radius=r, fill=WHITE, outline=ring_color, width=rw)
         fn = ICON_FUNCS.get(glyph_key, _icon_overview)
-        fn(d, size / 2, size / 2, size * 0.60, max(2, int(size * 0.032)))
+        fn(d, size / 2, size / 2, size * 0.60, max(2, int(size * 0.032)), icon_color)
 
     return _ss_render(diameter, diameter, draw)
 
@@ -419,14 +435,16 @@ CAT_EMOJIS = {
 
 
 def generate_help_card(category_id: str = None) -> Image.Image:
-    """Генерация карточки 920px (как у профиля) с ОГРОМНЫМ шрифтом (30pt команды, 22pt описания)"""
+    """Генерация карточки 920px с уникальными тематическими акцентами для каждой категории"""
     W = 920
     if category_id is None or category_id == "overview":
         H = 760
+        accent = ACCENTS['overview']
     else:
         cat = next((c for c in CATEGORIES if c["id"] == category_id), None)
         cmds = cat["commands"] if cat else []
         H = max(540, 110 + len(cmds) * 104 + 30)
+        accent = ACCENTS.get(category_id, RED)
 
     bg = _load_bg(W, H)
     d = ImageDraw.Draw(bg)
@@ -443,18 +461,18 @@ def generate_help_card(category_id: str = None) -> Image.Image:
         title_text = f"КАТЕГОРИЯ: {cat['title'].upper()}" if cat else "СПРАВКА"
         badge_icon = category_id
 
-    badge = _icon_badge(52, badge_icon, ring_color=BLACK, ring_w=2)
+    badge = _icon_badge(52, badge_icon, ring_color=BLACK, ring_w=2, icon_color=accent)
     bg.alpha_composite(badge, (36, 30))
 
     d.text((100, 26), title_text, fill=BLACK, font=_f(True, 24))
     d.text((100, 56), f"ПРОФЕССИОНАЛЬНАЯ СИСТЕМА • ВСЕГО КОМАНД: {TOTAL_CMDS} • ПРЕФИКС: !", fill=MUTED, font=_f(False, 15))
 
-    pill = _rounded_panel(146, 36, radius=10, fill=WHITE, outline=RED, ow=2)
+    pill = _rounded_panel(146, 36, radius=10, fill=WHITE, outline=accent, ow=2)
     bg.alpha_composite(pill, (734, 38))
-    d.text((752, 46), "HELP v4.0 PRO", fill=RED, font=_f(True, 14))
+    d.text((752, 46), "HELP v4.0 PRO", fill=accent, font=_f(True, 14))
 
     if category_id is None or category_id == "overview":
-        # 2 columns x 6 rows = 12 slots (HUGE FONTS 24pt/18pt/16pt)
+        # 2 columns x 6 rows = 12 slots (HUGE FONTS 24pt/18pt/16pt) - Each box has its themed accent!
         cols = 2
         box_w, box_h = 426, 96
         gap_x, gap_y = 20, 12
@@ -466,14 +484,15 @@ def generate_help_card(category_id: str = None) -> Image.Image:
             bx = start_x + c * (box_w + gap_x)
             by = start_y + r * (box_h + gap_y)
 
+            cat_acc = ACCENTS.get(cat["id"], RED)
             box = _rounded_panel(box_w, box_h, radius=14, fill=WHITE, outline=BLACK, ow=2)
             bg.alpha_composite(box, (bx, by))
 
-            cat_badge = _icon_badge(64, cat["id"], ring_color=BLACK, ring_w=2)
+            cat_badge = _icon_badge(64, cat["id"], ring_color=BLACK, ring_w=2, icon_color=cat_acc)
             bg.alpha_composite(cat_badge, (bx + 16, by + 16))
 
             d.text((bx + 94, by + 14), cat["title"].upper(), fill=BLACK, font=_f(True, 24))
-            d.text((bx + 94, by + 44), f"{len(cat['commands'])} КОМАНД", fill=RED, font=_f(True, 18))
+            d.text((bx + 94, by + 44), f"{len(cat['commands'])} КОМАНД", fill=cat_acc, font=_f(True, 18))
 
             cmds_sample = " • ".join([cmd[0].split()[0] for cmd in cat["commands"][:3]])
             if len(cmds_sample) > 30:
@@ -483,14 +502,14 @@ def generate_help_card(category_id: str = None) -> Image.Image:
         # 12th Box - Interactive Menu nav info
         bx = start_x + 1 * (box_w + gap_x)
         by = start_y + 5 * (box_h + gap_y)
-        box = _rounded_panel(box_w, box_h, radius=14, fill=WHITE, outline=RED, ow=2)
+        box = _rounded_panel(box_w, box_h, radius=14, fill=WHITE, outline=accent, ow=2)
         bg.alpha_composite(box, (bx, by))
 
-        nav_badge = _icon_badge(64, "overview", ring_color=RED, ring_w=2)
+        nav_badge = _icon_badge(64, "overview", ring_color=accent, ring_w=2, icon_color=accent)
         bg.alpha_composite(nav_badge, (bx + 16, by + 16))
 
         d.text((bx + 94, by + 14), "НАВИГАЦИЯ", fill=BLACK, font=_f(True, 24))
-        d.text((bx + 94, by + 44), "ВЫБЕРИТЕ РАЗДЕЛ", fill=RED, font=_f(True, 18))
+        d.text((bx + 94, by + 44), "ВЫБЕРИТЕ РАЗДЕЛ", fill=accent, font=_f(True, 18))
         d.text((bx + 94, by + 68), "через меню ниже для команд", fill=MUTED, font=_f(False, 16))
 
     else:
@@ -509,17 +528,17 @@ def generate_help_card(category_id: str = None) -> Image.Image:
             box = _rounded_panel(box_w, box_h, radius=14, fill=WHITE, outline=BLACK, ow=2)
             bg.alpha_composite(box, (bx, by))
 
-            cmd_badge = _icon_badge(64, category_id, ring_color=BLACK, ring_w=2)
+            cmd_badge = _icon_badge(64, category_id, ring_color=BLACK, ring_w=2, icon_color=accent)
             bg.alpha_composite(cmd_badge, (bx + 16, by + 14))
 
             d.text((bx + 94, by + 15), cmd_str, fill=BLACK, font=_f(True, 30))
             d.text((bx + 94, by + 53), desc, fill=MUTED, font=_f(False, 22))
 
             perm_w = len(f"[{perm}]") * 13
-            d.text((bx + box_w - 24 - perm_w, by + 32), f"[{perm}]", fill=RED, font=_f(True, 22))
+            d.text((bx + box_w - 24 - perm_w, by + 32), f"[{perm}]", fill=accent, font=_f(True, 22))
 
-    # 4 Corner brackets (red line-art accents)
-    br = _corner_bracket(40, 4, color=RED)
+    # 4 Corner brackets (thematic accent color)
+    br = _corner_bracket(40, 4, color=accent)
     bg.alpha_composite(br, (6, 6))
     bg.alpha_composite(br.rotate(270), (W - 46, 6))
     bg.alpha_composite(br.rotate(90), (6, H - 46))
@@ -573,74 +592,13 @@ class HelpSelect(discord.ui.Select):
         )
         file = discord.File(img_buf, filename="help_card.png")
         view = HelpView(current_cat=cat_id)
-        # Отправляем без embed, чтобы Discord показал изображение в полном размере
         await interaction.edit_original_response(embed=None, attachments=[file], view=view)
 
 
 class HelpView(discord.ui.View):
     def __init__(self, current_cat=None):
         super().__init__(timeout=300)
-        self.current_cat = current_cat
         self.add_item(HelpSelect(current_cat=current_cat))
-
-        # Интерактивные кнопки навигации ("живое" управление меню)
-        cat_ids = [c["id"] for c in CATEGORIES]
-        idx = cat_ids.index(current_cat) if current_cat in cat_ids else -1
-
-        prev_btn = discord.ui.Button(
-            style=discord.ButtonStyle.secondary,
-            label="⬅️ Назад",
-            disabled=(idx == -1),
-            custom_id="help_btn_prev"
-        )
-        home_btn = discord.ui.Button(
-            style=discord.ButtonStyle.primary if idx == -1 else discord.ButtonStyle.secondary,
-            label="🏠 Главная",
-            disabled=(idx == -1),
-            custom_id="help_btn_home"
-        )
-        next_btn = discord.ui.Button(
-            style=discord.ButtonStyle.secondary,
-            label="➡️ Вперед",
-            disabled=(idx == -1),
-            custom_id="help_btn_next"
-        )
-
-        async def prev_cb(interaction: discord.Interaction):
-            await interaction.response.defer()
-            new_idx = (idx - 1) % len(cat_ids)
-            new_cat = cat_ids[new_idx]
-            img_buf = await interaction.client.loop.run_in_executor(
-                None, generate_help_card_bytes, new_cat
-            )
-            file = discord.File(img_buf, filename="help_card.png")
-            await interaction.edit_original_response(embed=None, attachments=[file], view=HelpView(current_cat=new_cat))
-
-        async def home_cb(interaction: discord.Interaction):
-            await interaction.response.defer()
-            img_buf = await interaction.client.loop.run_in_executor(
-                None, generate_help_card_bytes, None
-            )
-            file = discord.File(img_buf, filename="help_card.png")
-            await interaction.edit_original_response(embed=None, attachments=[file], view=HelpView(current_cat=None))
-
-        async def next_cb(interaction: discord.Interaction):
-            await interaction.response.defer()
-            new_idx = (idx + 1) % len(cat_ids)
-            new_cat = cat_ids[new_idx]
-            img_buf = await interaction.client.loop.run_in_executor(
-                None, generate_help_card_bytes, new_cat
-            )
-            file = discord.File(img_buf, filename="help_card.png")
-            await interaction.edit_original_response(embed=None, attachments=[file], view=HelpView(current_cat=new_cat))
-
-        prev_btn.callback = prev_cb
-        home_btn.callback = home_cb
-        next_btn.callback = next_cb
-
-        self.add_item(prev_btn)
-        self.add_item(home_btn)
-        self.add_item(next_btn)
 
 
 class Help(commands.Cog):
