@@ -27,7 +27,7 @@ APPS_FILE = "data/staff_apps.json"
 
 ROOT = os.path.join(os.path.dirname(__file__), '..')
 FONTS = os.path.join(ROOT, 'assets', 'fonts')
-BG_PATH = os.path.join(ROOT, 'assets', 'profile_bg_pro.jpg')
+BG_PATH = os.path.join(ROOT, 'assets', 'staff_bg.jpg')
 FONT_B = os.path.join(FONTS, 'Bold.ttf')
 FONT_R = os.path.join(FONTS, 'Regular.ttf')
 
