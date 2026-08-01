@@ -18,7 +18,7 @@ class LevelCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
     
-    @commands.command(name='rank', aliases=['seviye'])
+    @commands.command(name='level-rank', aliases=['seviye'])
     async def rank(self, ctx, member: discord.Member = None):
         """Уровень kartını göster"""
         member = member or ctx.author
@@ -36,7 +36,7 @@ class LevelCog(commands.Cog):
         
         await ctx.send(embed=embed)
     
-    @commands.command(name='leaderboard', aliases=['sıralama'])
+    @commands.command(name='level-lb', aliases=['level-top'])
     async def leaderboard(self, ctx):
         """Уровень lider tablosunu göster"""
         embed = discord.Embed(

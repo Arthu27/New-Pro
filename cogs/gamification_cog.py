@@ -57,7 +57,7 @@ class GamificationCog(commands.Cog):
         
         await interaction.response.send_message(embed=embed)
     
-    @app_commands.command(name='leaderboard', description='Lider tablosunu görüntüle')
+    @app_commands.command(name='game-leaderboard', description='Oyun/Gamification lider tablosunu görüntüle')
     @app_commands.describe(type='Lider tablosu tipi (points/badges/level)')
     async def leaderboard(self, interaction: discord.Interaction, type: str = 'points'):
         """Lider tablosunu görüntüle"""

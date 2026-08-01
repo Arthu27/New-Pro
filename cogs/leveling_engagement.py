@@ -447,7 +447,7 @@ class LevelingEngagement(commands.Cog):
         await self.bot.wait_until_ready()
 
     # COMMANDS 
-    @commands.command(name="rank", aliases=["level", "xp"])
+    @commands.command(name="xp-rank", aliases=["level-info"])
     async def rank(self, ctx, member: discord.Member = None):
         """Show your or someone else's rank card"""
         target = member or ctx.author
@@ -481,7 +481,7 @@ class LevelingEngagement(commands.Cog):
             embed.add_field(name=f" Достижения ({len(achs)})", value=ach_text or "—", inline=False)
         await ctx.send(embed=embed)
 
-    @commands.command(name="leaderboard", aliases=["lb", "top"])
+    @commands.command(name="xp-leaderboard", aliases=["xp-top", "xp-lb"])
     async def leaderboard(self, ctx, scope: str = "all"):
         """Show top 10 users by XP"""
         guild_id = str(ctx.guild.id)

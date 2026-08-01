@@ -330,7 +330,7 @@ class TicketCommands(commands.Cog):
         await interaction.followup.send(embed=embed, ephemeral=True)
     
     # /help 
-    @app_commands.command(name="help", description="Показать справку по командам")
+    @app_commands.command(name="ticket-help", description="Показать справку по тикетам")
     async def help(self, interaction: discord.Interaction):
         """Показать справку"""
         embed = discord.Embed(

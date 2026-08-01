@@ -1976,7 +1976,7 @@ class Ticket(commands.Cog):
         except Exception as e:
             return f"Сообщение история контроль edilemedi: {str(e)}"
 
-    @app_commands.command(name="ticket-panel", description="Отправить панель тикетов в канал")
+    @app_commands.command(name="ai-ticket-panel", description="Отправить AI панель тикетов в канал")
     @app_commands.checks.has_permissions(administrator=True)
     async def ticket_panel(self, interaction: discord.Interaction):
         if interaction.guild.id in TICKET_DISABLED_GUILDS:

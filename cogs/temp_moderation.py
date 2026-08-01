@@ -215,7 +215,7 @@ class TempModeration(commands.Cog):
         return True, 0
 
     #  COMMANDS 
-    @commands.command(name="mute", aliases=["tempmute", "времьют"])
+    @commands.command(name="temp-mute", aliases=["tempmute", "времьют"])
     @commands.has_permissions(moderate_members=True)
     async def mute_cmd(self, ctx, member: discord.Member, duration: str = "1h", *, reason: str = "Без причины"):
         """Временный мьют: !mute @user 1h причина"""
@@ -281,7 +281,7 @@ class TempModeration(commands.Cog):
         embed.add_field(name="Модератор", value=ctx.author.mention, inline=True)
         await ctx.send(embed=embed)
 
-    @commands.command(name="unmute")
+    @commands.command(name="temp-unmute")
     @commands.has_permissions(moderate_members=True)
     async def unmute_cmd(self, ctx, member: discord.Member):
         """Снять мьют досрочно"""
@@ -365,7 +365,7 @@ class TempModeration(commands.Cog):
         embed.add_field(name="Модератор", value=ctx.author.mention, inline=True)
         await ctx.send(embed=embed)
 
-    @commands.command(name="unban")
+    @commands.command(name="temp-unban")
     @commands.has_permissions(ban_members=True)
     async def unban_cmd(self, ctx, user_id: str):
         """Снять временный бан досрочно: !unban 123456789"""
