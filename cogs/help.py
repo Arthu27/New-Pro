@@ -548,33 +548,9 @@ def generate_help_card(category_id: str = None) -> Image.Image:
 
 
 def generate_help_card_bytes(category_id: str = None) -> io.BytesIO:
-    """Создает анимированную GIF-карточку со светящимся сканлайном"""
     card = generate_help_card(category_id).convert('RGB')
-    w, h = card.size
-    accent = ACCENTS.get(category_id, ACCENTS['overview']) if category_id else ACCENTS['overview']
-
-    frames = []
-    num_frames = 8
-    for i in range(num_frames):
-        frame = card.copy()
-        d = ImageDraw.Draw(frame, 'RGBA')
-        y = int((i / num_frames) * (h + 40)) - 20
-        for dy in range(-14, 14):
-            alpha = max(0, int(55 * (1 - abs(dy) / 14)))
-            py = y + dy
-            if 0 <= py < h:
-                d.line([(0, py), (w, py)], fill=accent + (alpha,), width=2)
-        frames.append(frame)
-
     buf = io.BytesIO()
-    frames[0].save(
-        buf,
-        format='GIF',
-        save_all=True,
-        append_images=frames[1:],
-        duration=90,
-        loop=0
-    )
+    card.save(buf, format='PNG', optimize=True)
     buf.seek(0)
     return buf
 
@@ -614,7 +590,7 @@ class HelpSelect(discord.ui.Select):
         img_buf = await interaction.client.loop.run_in_executor(
             None, generate_help_card_bytes, cat_id
         )
-        file = discord.File(img_buf, filename="help_card.gif")
+        file = discord.File(img_buf, filename="help_card.png")
         view = HelpView(current_cat=cat_id)
         await interaction.edit_original_response(embed=None, attachments=[file], view=view)
 
@@ -646,7 +622,7 @@ class Help(commands.Cog):
         img_buf = await self.bot.loop.run_in_executor(
             None, generate_help_card_bytes, cat_id
         )
-        file = discord.File(img_buf, filename="help_card.gif")
+        file = discord.File(img_buf, filename="help_card.png")
         view = HelpView(current_cat=cat_id)
         await ctx.send(file=file, view=view)
 
@@ -663,7 +639,7 @@ class Help(commands.Cog):
         img_buf = await interaction.client.loop.run_in_executor(
             None, generate_help_card_bytes, cat_id
         )
-        file = discord.File(img_buf, filename="help_card.gif")
+        file = discord.File(img_buf, filename="help_card.png")
         view = HelpView(current_cat=cat_id)
         await interaction.followup.send(file=file, view=view, ephemeral=True)
 
