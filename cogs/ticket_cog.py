@@ -16,7 +16,7 @@ import io
 import json
 import asyncio
 from PIL import Image, ImageDraw, ImageFont
-from cogs.menu_bg import load_menu_bg
+from cogs._menu_bg import load_menu_bg
 
 from config import Config
 from logger import get_logger

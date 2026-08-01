@@ -14,7 +14,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 from PIL import Image, ImageDraw, ImageFont
-from cogs.menu_bg import load_menu_bg
+from cogs._menu_bg import load_menu_bg
 
 ROOT = os.path.join(os.path.dirname(__file__), '..')
 FONTS = os.path.join(ROOT, 'assets', 'fonts')

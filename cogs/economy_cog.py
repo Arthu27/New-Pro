@@ -271,7 +271,7 @@ import io
 import os
 import math
 from PIL import Image, ImageDraw, ImageFont
-from cogs.menu_bg import load_menu_bg
+from cogs._menu_bg import load_menu_bg
 
 WHITE = (255, 255, 255)
 BLACK = (20, 20, 25)

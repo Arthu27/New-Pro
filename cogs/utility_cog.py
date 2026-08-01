@@ -14,7 +14,7 @@ import math
 import asyncio
 import random
 from PIL import Image, ImageDraw, ImageFont
-from cogs.menu_bg import load_menu_bg
+from cogs._menu_bg import load_menu_bg
 
 from logger import get_logger
 log = get_logger("utility_cog")
