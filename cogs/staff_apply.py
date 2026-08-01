@@ -14,6 +14,8 @@ import json
 import os
 import io
 from datetime import datetime, timezone
+
+import aiohttp
 from PIL import Image, ImageDraw, ImageFont
 
 from logger import get_logger
@@ -27,6 +29,8 @@ APPS_FILE = "data/staff_apps.json"
 ROOT = os.path.join(os.path.dirname(__file__), '..')
 FONTS = os.path.join(ROOT, 'assets', 'fonts')
 BG_PATH = os.path.join(ROOT, 'assets', 'staff_bg.jpg')
+# Резервный баннер пользователя, если локальный файл ещё не загружен.
+STAFF_REMOTE_BANNER_URL = "https://files.catbox.moe/pe6gqw.jpeg"
 FONT_B = os.path.join(FONTS, 'Bold.ttf')
 FONT_R = os.path.join(FONTS, 'Regular.ttf')
 
@@ -327,7 +331,24 @@ class StaffApply(commands.Cog):
                 file = discord.File(p, filename="staff_banner.png")
                 break
         
-        # Если кастомного баннера нет - генерируем старый
+        # Если локального баннера нет, используем оригинальную фотографию по URL.
+        # Локальные файлы выше всегда имеют приоритет и не изменяются.
+        if not file:
+            try:
+                timeout = aiohttp.ClientTimeout(total=15)
+                async with aiohttp.ClientSession(timeout=timeout) as session:
+                    async with session.get(STAFF_REMOTE_BANNER_URL) as response:
+                        if response.status == 200:
+                            remote_banner = await response.read()
+                            if remote_banner:
+                                file = discord.File(
+                                    io.BytesIO(remote_banner),
+                                    filename="staff_banner.png"
+                                )
+            except (aiohttp.ClientError, OSError) as exc:
+                log.warning("Не удалось загрузить удалённый баннер STAFF: %s", exc)
+
+        # Если удалённый баннер недоступен - сохраняем прежний резервный баннер.
         if not file:
             img_buf = await interaction.client.loop.run_in_executor(
                 None, generate_staff_panel_bytes
