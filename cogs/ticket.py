@@ -894,7 +894,6 @@ class Ticket(commands.Cog):
         bot.add_view(TicketView())
         bot.add_view(CloseTicketView())
         bot.add_view(AdminApprovalView(0, "", ""))
-        bot.add_view(InteractiveFeedbackView(None))
     
     def _get_ai_data_path(self, guild_id: int) -> str:
         """AI ticket data dosya yolu"""
@@ -3359,7 +3358,6 @@ class Ticket(commands.Cog):
 
 
 async def setup(bot):
-    bot.add_view(InteractiveFeedbackView(None))
     """Загрузка cog и инициализация сервисов"""
     # Загружаем Ticket cog
     await bot.add_cog(
