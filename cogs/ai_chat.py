@@ -1260,21 +1260,24 @@ class AIChat(commands.Cog):
                 return  # Intent işlendi, normal AI akışına geçme
 
         is_ai_channel = message.channel.id in AI_CHANNELS or message.channel.id in _dynamic_channels
-        is_bot_mentioned = (
-            self.bot.user in message.mentions or
-            message.content.lower().strip().startswith(('aether', 'эйтер', 'moe', 'бот', 'bot', 'jarvis')) or
-            (message.reference and getattr(message.reference, 'resolved', None) and getattr(message.reference.resolved, 'author', None) == self.bot.user)
-        )
 
-        if not (is_dm or is_ai_channel or is_bot_mentioned):
+        if not (is_dm or is_ai_channel):
             return
 
-        content = message.content
-        for m in message.mentions:
-            content = content.replace(f'<@{m.id}>', '').replace(f'<@!{m.id}>', '')
-        content = re.sub(r'^(aether|эйтер|moe|бот|bot|jarvis)\s*[,:]?\s*', '', content, flags=re.IGNORECASE).strip()
-        if not content:
-            content = 'Здравствуйте!'
+        # Канал только "moe" с başlayan или bot mention içeren messagelara ответить
+        # Динамические каналыda каждый messagea ответить
+        if is_ai_channel and not is_dm:
+            is_dynamic = message.channel.id in _dynamic_channels
+            if not is_dynamic:  # Только dinamik channellarda ответить, başka hiçbir yerde
+                return
+            # "moe" prefix'ini clear
+            content = re.sub(r'^moe\s*', '', message.content, flags=re.IGNORECASE).strip()
+            # mention'ları clear
+            for m in message.mentions:
+                content = content.replace(f'<@{m.id}>', '').replace(f'<@!{m.id}>', '')
+            content = content.strip() or 'Здравствуйте!'
+        else:
+            content = message.content.strip() or 'Здравствуйте!'
 
         # Arthur'un команда talebi — J.A.R.V.I.S. modu
         if OWNER_ID and message.author.id == OWNER_ID:
