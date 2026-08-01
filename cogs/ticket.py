@@ -1560,29 +1560,22 @@ class Ticket(commands.Cog):
             log.info(f"[COMPLAINT] embed build error: {_ee}")
             embed = None
 
-        # Если уверенность низкая — передать модератору (без наказания)
+        # Отправляем полный подробный отчет анализа по письму (Embed / Текст в чат)
+        if embed:
+            await channel.send(embed=embed)
+        else:
+            await channel.send(f"**Анализ инцидента ({confidence}%):**\n\n{analysis_text}")
+
+        # Если уверенность низкая (< 50%) — не наказываем автоматически, но сообщаем результат
         if confidence < 50:
-            from cogs._ai_card import generate_ai_dialogue_bytes
-            low_text = f"Уверенность анализа слишком низкая ({confidence}%). Автоматическое наказание отменено, тикет передан модератору для проверки."
-            img_buf = await self.bot.loop.run_in_executor(
-                None, generate_ai_dialogue_bytes, low_text, "", "investigate"
+            await channel.send(
+                f"⚠️ **Уверенность ИИ ниже порога безопасности ({confidence}% < 50%)**.\n"
+                f"Анализ инцидента завершен, но автоматическое наказание не применяется."
             )
-            file = discord.File(img_buf, filename="gojo_dialogue.png")
-            await channel.send(file=file)
-            await self._escalate_ticket(channel, state, 'low_confidence')
             state['complaint'] = {}
             state['analyzing'] = False
             self._save_ticket_state(guild_id, channel_id, state)
             return
-
-        # Отправляем карточку визуальной новеллы Годжо с анализом (БЕЗ текста снизу)
-        from cogs._ai_card import generate_ai_dialogue_bytes
-        dialogue_text = f"ВЕРДИКТ ИИ ({confidence}%): {verdict}\n\n{analysis_text[:300]}"
-        img_buf = await self.bot.loop.run_in_executor(
-            None, generate_ai_dialogue_bytes, dialogue_text, "", "verdict"
-        )
-        file = discord.File(img_buf, filename="gojo_dialogue.png")
-        await channel.send(file=file)
         
         # Применяем рекомендацию на основе вердикта
         action = recommendation['action']
@@ -1609,12 +1602,12 @@ class Ticket(commands.Cog):
                     state['admin_only_close'] = True
                     state['status'] = 'escalated'
                     self._save_ticket_state(guild_id, channel_id, state)
-                    alert_text = f"РЕКОМЕНДАЦИЯ ИИ: {action_type} для {target.display_name}. Причина: {punishment_reason}. Решение передано администрации для проверки. Тикет заблокирован для обычного закрытия."
-                    img_buf = await self.bot.loop.run_in_executor(
-                        None, generate_ai_dialogue_bytes, alert_text, "", "verdict"
+                    await channel.send(
+                        f"⚠️ **[ТРЕБУЕТСЯ ПОДТВЕРЖДЕНИЕ АДМИНИСТРАЦИИ]**\n"
+                        f"ИИ рекомендует высшую меру наказания (**{action_type}**) для **{target.display_name}**.\n"
+                        f"**Причина:** {punishment_reason}\n\n"
+                        f"🔒 *Решение передано администрации для проверки. Тикет заблокирован для обычного закрытия.*"
                     )
-                    file = discord.File(img_buf, filename="gojo_dialogue.png")
-                    await channel.send(file=file)
                     return
                 
                 elif action_type == 'MUTE' or action_type == 'TIMEOUT':
@@ -1622,26 +1615,17 @@ class Ticket(commands.Cog):
                         until = discord.utils.utcnow() + timedelta(minutes=dur)
                         await target.timeout(until, reason=f"AI: {punishment_reason}")
                         hours = max(1, dur // 60)
-                        success_text = f"Судебное решение выполнено. Участник {target.display_name} заглушен на {hours}ч. Причина: {punishment_reason}."
-                        img_buf = await self.bot.loop.run_in_executor(
-                            None, generate_ai_dialogue_bytes, success_text, "", "verdict"
-                        )
-                        file = discord.File(img_buf, filename="gojo_dialogue.png")
-                        await channel.send(file=file)
+                        await channel.send(f"✅ **[СУДЕБНОЕ РЕШЕНИЕ ВЫПОЛНЕНО]**: Участнику **{target.display_name}** выдан тайм-аут на **{hours} ч.**\n**Причина:** {punishment_reason}")
                 
                 elif action_type == 'WARN':
                     from cogs.warnings import warnings
                     warnings_cog = self.bot.get_cog('warnings')
                     if warnings_cog:
                         await warnings_cog.add_warning(target, guild.me, punishment_reason)
-                        success_text = f"Судебное решение выполнено. Участник {target.display_name} получил предупреждение. Причина: {punishment_reason}."
-                        img_buf = await self.bot.loop.run_in_executor(
-                            None, generate_ai_dialogue_bytes, success_text, "", "verdict"
-                        )
-                        file = discord.File(img_buf, filename="gojo_dialogue.png")
-                        await channel.send(file=file)
+                        await channel.send(f"✅ **[СУДЕБНОЕ РЕШЕНИЕ ВЫПОЛНЕНО]**: Участнику **{target.display_name}** вынесено официальное предупреждение.\n**Причина:** {punishment_reason}")
             except Exception as e:
                 log.error(f"[AI Punishment Error]: {e}")
+                await channel.send(f"❌ Не удалось применить наказание к {target.display_name}: {e}")
         
         # Применяем наказание на основе вердикта
         if 'GUILTY' in verdict_upper and 'NOT' not in verdict_upper:
@@ -1654,11 +1638,7 @@ class Ticket(commands.Cog):
             await apply_punishment(accused, "обвиняемого", action, duration, both_reason)
             await apply_punishment(complainant, "заявителя", action, duration, both_reason)
         elif 'NO_VIOLATION' in verdict_upper or 'NO ACTION' in verdict_upper:
-            img_buf = await self.bot.loop.run_in_executor(
-                None, generate_ai_dialogue_bytes, "Нарушений не обнаружено. Жалоба отклонена по результатам проверки логов.", "", "solution"
-            )
-            file = discord.File(img_buf, filename="gojo_dialogue.png")
-            await channel.send(file=file)
+            await channel.send("⚖️ **Результат:** Нарушений не обнаружено. Жалоба отклонена по результатам проверки логов.")
         else:
             await apply_punishment(accused, "обвиняемого", action, duration, reason)
         
