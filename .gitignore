@@ -134,3 +134,4 @@ plugins/
 test_help_*.py
 *_big.png
 *_enli.png
+*_huge.png

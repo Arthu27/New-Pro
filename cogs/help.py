@@ -1,8 +1,8 @@
 """
-Help Cog — Professional Dashboard/ID-Card Style via Pillow (ENLİ / WIDESCREEN VERSION)
+Help Cog — Professional Dashboard/ID-Card Style via Pillow (HUGE TYPOGRAPHY & ZERO BLUR)
 Белый фон, тонкие чёрные линии, красные line-art иконки.
-Широкоформатный горизонтальный дизайн 1200x630/660, без размытия,
-без прыжков при переключении каналов в Discord, с крупным чётким шрифтом.
+Огромный чёткий шрифт (30pt для команд, 22pt для описаний), одноколоночные полноширинные
+карточки 920px (без размытия, без сжатия, 100% читаемость с любого экрана).
 """
 
 import os
@@ -419,18 +419,20 @@ CAT_EMOJIS = {
 
 
 def generate_help_card(category_id: str = None) -> Image.Image:
-    """Генерация ШИРОКОФОРМАТНОЙ (ENLİ) карточки 1200x630/660 для идеального вида в Discord"""
-    W = 1200
+    """Генерация карточки 920px (как у профиля) с ОГРОМНЫМ шрифтом (30pt команды, 22pt описания)"""
+    W = 920
     if category_id is None or category_id == "overview":
-        H = 630
+        H = 760
     else:
-        H = 660
+        cat = next((c for c in CATEGORIES if c["id"] == category_id), None)
+        cmds = cat["commands"] if cat else []
+        H = max(540, 110 + len(cmds) * 104 + 30)
 
     bg = _load_bg(W, H)
     d = ImageDraw.Draw(bg)
 
-    # Top Header Panel (Widescreen 1152x66 px)
-    header_box = _rounded_panel(1152, 66, radius=14, fill=WHITE, outline=BLACK, ow=2)
+    # Top Header Panel (872x72 px)
+    header_box = _rounded_panel(872, 72, radius=14, fill=WHITE, outline=BLACK, ow=2)
     bg.alpha_composite(header_box, (24, 20))
 
     if category_id is None or category_id == "overview":
@@ -441,22 +443,22 @@ def generate_help_card(category_id: str = None) -> Image.Image:
         title_text = f"КАТЕГОРИЯ: {cat['title'].upper()}" if cat else "СПРАВКА"
         badge_icon = category_id
 
-    badge = _icon_badge(48, badge_icon, ring_color=BLACK, ring_w=2)
-    bg.alpha_composite(badge, (36, 29))
+    badge = _icon_badge(52, badge_icon, ring_color=BLACK, ring_w=2)
+    bg.alpha_composite(badge, (36, 30))
 
-    d.text((98, 25), title_text, fill=BLACK, font=_f(True, 23))
-    d.text((98, 54), f"ПРОФЕССИОНАЛЬНАЯ СИСТЕМА • ВСЕГО КОМАНД: {TOTAL_CMDS} • ПРЕФИКС: !", fill=MUTED, font=_f(False, 14))
+    d.text((100, 26), title_text, fill=BLACK, font=_f(True, 24))
+    d.text((100, 56), f"ПРОФЕССИОНАЛЬНАЯ СИСТЕМА • ВСЕГО КОМАНД: {TOTAL_CMDS} • ПРЕФИКС: !", fill=MUTED, font=_f(False, 15))
 
-    pill = _rounded_panel(140, 34, radius=10, fill=WHITE, outline=RED, ow=2)
-    bg.alpha_composite(pill, (1020, 36))
-    d.text((1038, 44), "HELP v4.0 PRO", fill=RED, font=_f(True, 13))
+    pill = _rounded_panel(146, 36, radius=10, fill=WHITE, outline=RED, ow=2)
+    bg.alpha_composite(pill, (734, 38))
+    d.text((752, 46), "HELP v4.0 PRO", fill=RED, font=_f(True, 14))
 
     if category_id is None or category_id == "overview":
-        # 4 columns x 3 rows = 12 slots (WIDESCREEN / ENLİ / HORIZONTAL 1200x630)
-        cols = 4
-        box_w, box_h = 274, 155
-        gap_x, gap_y = 18, 16
-        start_x, start_y = 25, 104
+        # 2 columns x 6 rows = 12 slots (HUGE FONTS 24pt/18pt/16pt)
+        cols = 2
+        box_w, box_h = 426, 96
+        gap_x, gap_y = 20, 12
+        start_x, start_y = 24, 106
 
         for idx, cat in enumerate(CATEGORIES):
             c = idx % cols
@@ -467,67 +469,61 @@ def generate_help_card(category_id: str = None) -> Image.Image:
             box = _rounded_panel(box_w, box_h, radius=14, fill=WHITE, outline=BLACK, ow=2)
             bg.alpha_composite(box, (bx, by))
 
-            cat_badge = _icon_badge(60, cat["id"], ring_color=BLACK, ring_w=2)
-            bg.alpha_composite(cat_badge, (bx + 18, by + 47))
+            cat_badge = _icon_badge(64, cat["id"], ring_color=BLACK, ring_w=2)
+            bg.alpha_composite(cat_badge, (bx + 16, by + 16))
 
-            d.text((bx + 90, by + 22), cat["title"].upper(), fill=BLACK, font=_f(True, 19))
-            d.text((bx + 90, by + 56), f"{len(cat['commands'])} КОМАНД", fill=RED, font=_f(True, 15))
+            d.text((bx + 94, by + 14), cat["title"].upper(), fill=BLACK, font=_f(True, 24))
+            d.text((bx + 94, by + 44), f"{len(cat['commands'])} КОМАНД", fill=RED, font=_f(True, 18))
 
-            cmds_list = [cmd[0].split()[0] for cmd in cat["commands"][:4]]
-            line1 = " • ".join(cmds_list[:2])
-            line2 = " • ".join(cmds_list[2:]) if len(cmds_list) > 2 else ""
-            d.text((bx + 90, by + 92), line1, fill=MUTED, font=_f(False, 13))
-            if line2:
-                d.text((bx + 90, by + 114), line2, fill=MUTED, font=_f(False, 13))
+            cmds_sample = " • ".join([cmd[0].split()[0] for cmd in cat["commands"][:3]])
+            if len(cmds_sample) > 30:
+                cmds_sample = cmds_sample[:29] + "…"
+            d.text((bx + 94, by + 68), cmds_sample, fill=MUTED, font=_f(False, 16))
 
         # 12th Box - Interactive Menu nav info
-        bx = start_x + 3 * (box_w + gap_x)
-        by = start_y + 2 * (box_h + gap_y)
+        bx = start_x + 1 * (box_w + gap_x)
+        by = start_y + 5 * (box_h + gap_y)
         box = _rounded_panel(box_w, box_h, radius=14, fill=WHITE, outline=RED, ow=2)
         bg.alpha_composite(box, (bx, by))
 
-        nav_badge = _icon_badge(60, "overview", ring_color=RED, ring_w=2)
-        bg.alpha_composite(nav_badge, (bx + 18, by + 47))
+        nav_badge = _icon_badge(64, "overview", ring_color=RED, ring_w=2)
+        bg.alpha_composite(nav_badge, (bx + 16, by + 16))
 
-        d.text((bx + 90, by + 22), "НАВИГАЦИЯ", fill=BLACK, font=_f(True, 19))
-        d.text((bx + 90, by + 56), "ВЫБЕРИТЕ РАЗДЕЛ", fill=RED, font=_f(True, 15))
-        d.text((bx + 90, by + 92), "через меню ниже", fill=MUTED, font=_f(False, 13))
-        d.text((bx + 90, by + 114), "для всех команд", fill=MUTED, font=_f(False, 13))
+        d.text((bx + 94, by + 14), "НАВИГАЦИЯ", fill=BLACK, font=_f(True, 24))
+        d.text((bx + 94, by + 44), "ВЫБЕРИТЕ РАЗДЕЛ", fill=RED, font=_f(True, 18))
+        d.text((bx + 94, by + 68), "через меню ниже для команд", fill=MUTED, font=_f(False, 16))
 
     else:
-        # Category commands view - 2 COLUMNS WIDESCREEN (560px per col, 76px high)
+        # Category commands view - 1 COLUMN FULL WIDTH, MASSIVE FONTS (30pt / 22pt / 22pt)
         cat = next((c for c in CATEGORIES if c["id"] == category_id), None)
         cmds = cat["commands"] if cat else []
-        cols = 2
-        box_w = 560
-        box_h = 76
-        gap_x, gap_y = 30, 12
-        start_x, start_y = 25, 104
+        box_w = 872
+        box_h = 92
+        gap_y = 12
+        start_x, start_y = 24, 108
 
         for idx, (cmd_str, desc, perm) in enumerate(cmds):
-            c = idx % cols
-            r = idx // cols
-            bx = start_x + c * (box_w + gap_x)
-            by = start_y + r * (box_h + gap_y)
+            bx = start_x
+            by = start_y + idx * (box_h + gap_y)
 
-            box = _rounded_panel(box_w, box_h, radius=12, fill=WHITE, outline=BLACK, ow=2)
+            box = _rounded_panel(box_w, box_h, radius=14, fill=WHITE, outline=BLACK, ow=2)
             bg.alpha_composite(box, (bx, by))
 
-            cmd_badge = _icon_badge(48, category_id, ring_color=BLACK, ring_w=2)
+            cmd_badge = _icon_badge(64, category_id, ring_color=BLACK, ring_w=2)
             bg.alpha_composite(cmd_badge, (bx + 16, by + 14))
 
-            d.text((bx + 76, by + 15), cmd_str, fill=BLACK, font=_f(True, 20))
-            d.text((bx + 76, by + 44), desc, fill=MUTED, font=_f(False, 14))
+            d.text((bx + 94, by + 15), cmd_str, fill=BLACK, font=_f(True, 30))
+            d.text((bx + 94, by + 53), desc, fill=MUTED, font=_f(False, 22))
 
-            perm_w = len(f"[{perm}]") * 9
-            d.text((bx + box_w - 18 - perm_w, by + 16), f"[{perm}]", fill=RED, font=_f(True, 15))
+            perm_w = len(f"[{perm}]") * 13
+            d.text((bx + box_w - 24 - perm_w, by + 32), f"[{perm}]", fill=RED, font=_f(True, 22))
 
     # 4 Corner brackets (red line-art accents)
-    br = _corner_bracket(38, 4, color=RED)
+    br = _corner_bracket(40, 4, color=RED)
     bg.alpha_composite(br, (6, 6))
-    bg.alpha_composite(br.rotate(270), (W - 44, 6))
-    bg.alpha_composite(br.rotate(90), (6, H - 44))
-    bg.alpha_composite(br.rotate(180), (W - 44, H - 44))
+    bg.alpha_composite(br.rotate(270), (W - 46, 6))
+    bg.alpha_composite(br.rotate(90), (6, H - 46))
+    bg.alpha_composite(br.rotate(180), (W - 46, H - 46))
 
     return bg
 
