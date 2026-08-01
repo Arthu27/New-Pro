@@ -564,6 +564,19 @@ def _call_ai(question: str, user_id: int, guild=None, recent_messages: list = No
         return 'Сейчас не mogu cevapla, poprobuyte после. '
 
 
+def _get_gojo_photo(answer: str, question: str) -> str:
+    """Выбирает соответствующую фотографию Годжо по теме сообщения в тикете"""
+    text = (answer + " " + question).lower()
+    if any(k in text for k in ["проверяю", "лог", "баз", "данные", "настройки", "сервер", "система", "контрол", "kontrol", "incele"]):
+        return "assets/ai_gojo/gojo_computer.png"
+    elif any(k in text for k in ["думаю", "возможно", "анализ", "вопрос", "почему", "как", "neden", "nasıl", "düşün"]):
+        return "assets/ai_gojo/gojo_thinking.png"
+    elif any(k in text for k in ["решение", "готово", "исправлено", "сделано", "помочь", "помощ", "решен", "çözüm", "halled", "tamam"]):
+        return "assets/ai_gojo/gojo_solution.png"
+    else:
+        return "assets/ai_gojo/gojo_welcome.png"
+
+
 class AIChat(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -1377,7 +1390,25 @@ class AIChat(commands.Cog):
                 log.info(f'[DM LOG] Ошибка: {_le}')
             await message.channel.send(answer)
         else:
-            await message.reply(answer, mention_author=False)
+            is_ticket_ch = getattr(message.channel, 'name', '').lower().startswith(('ticket-', 'тикет-', 'destek-', 'tk-', 'closed-'))
+            if is_ticket_ch:
+                photo_rel = _get_gojo_photo(answer, content)
+                photo_path = os.path.join(ROOT, photo_rel)
+                if os.path.exists(photo_path):
+                    embed = discord.Embed(
+                        title="🤖 Aether AI • Ассистент Поддержки",
+                        description=answer,
+                        color=0x00FFF7,
+                        timestamp=datetime.utcnow()
+                    )
+                    embed.set_author(name="Satoru AI Support", icon_url="attachment://gojo_ai.png")
+                    embed.set_thumbnail(url="attachment://gojo_ai.png")
+                    file = discord.File(photo_path, filename="gojo_ai.png")
+                    await message.reply(embed=embed, file=file, mention_author=False)
+                else:
+                    await message.reply(answer, mention_author=False)
+            else:
+                await message.reply(answer, mention_author=False)
 
 
 async def setup(bot):
