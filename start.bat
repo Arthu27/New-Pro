@@ -3,60 +3,60 @@ chcp 65001 >nul 2>&1
 title Aether Bot
 
 echo ============================================================
-echo   AETHER BOT - Запуск...
+echo   AETHER BOT - Starting...
 echo ============================================================
 echo.
 
-:: Проверка Python
+:: Check Python
 python --version >nul 2>&1
 if errorlevel 1 (
-    echo [ОШИБКА] Python не найден!
-    echo Установите Python с https://python.org
-    echo При установке отметьте "Add Python to PATH"
+    echo [ERROR] Python not found!
+    echo Install Python from https://python.org
+    echo Make sure to check "Add Python to PATH"
     pause
     exit /b 1
 )
 
-:: Установка зависимостей
-echo [1/3] Установка зависимостей...
+:: Install dependencies
+echo [1/3] Installing dependencies...
 pip install -r requirements.txt --quiet 2>nul
 if errorlevel 1 (
-    echo [ВНИМАНИЕ] Некоторые пакеты не установлены, пробуем с --pre...
+    echo [WARN] Some packages failed, trying with --pre...
     pip install -r requirements.txt --pre --quiet 2>nul
 )
-echo [OK] Зависимости установлены
+echo [OK] Dependencies installed
 echo.
 
-:: Проверка .env
-echo [2/3] Проверка конфигурации...
+:: Check .env
+echo [2/3] Checking configuration...
 if not exist ".env" (
     if exist ".env.example" (
         copy ".env.example" ".env" >nul
-        echo [ВНИМАНИЕ] Файл .env создан из .env.example
-        echo Заполните TOKEN и другие настройки в файле .env
+        echo [WARN] .env created from .env.example
+        echo Please fill in TOKEN and other settings in .env
         echo.
         notepad ".env"
-        echo После заполнения .env запустите start.bat снова
+        echo After filling .env, run start.bat again
         pause
         exit /b 0
     ) else (
-        echo [ОШИБКА] Файл .env не найден!
+        echo [ERROR] .env not found!
         pause
         exit /b 1
     )
 )
-echo [OK] Конфигурация найдена
+echo [OK] Configuration found
 echo.
 
-:: Запуск бота
-echo [3/3] Запуск бота...
+:: Start bot
+echo [3/3] Starting bot...
 echo ============================================================
 echo.
 python main.py
 
-:: Если бот упал
+:: If bot crashed
 echo.
 echo ============================================================
-echo [ОШИБКА] Бот остановлен!
+echo [ERROR] Bot stopped!
 echo ============================================================
 pause
