@@ -33,10 +33,15 @@ XP_BG = (35, 28, 60)
 XP_A, XP_B = (130, 55, 215), (210, 90, 255)
 
 W, H = 920, 500
-LW = 250
-GAP = 14
-RX = LW + GAP + 18
-RW = W - RX - 18
+PAD = 16          # padding from edges
+LW = 250          # left panel width
+GAP = 14          # gap between panels
+RX = PAD + LW + GAP   # right section start X = 280
+RW = W - PAD - RX     # right section width = 624
+TOP_H = 160           # top right panel height
+BOT_Y = PAD + TOP_H + GAP  # bottom section Y = 190
+BOT_H = H - PAD - BOT_Y   # bottom section height = 294
+PW = (RW - GAP) // 2      # each bottom panel width = 305
 
 
 def _f(bold=False, sz=20):
@@ -356,39 +361,31 @@ def generate_profile_card(avatar, nickname, level, xp, xp_needed,
     img = _bg(W, H)
 
     # Atmospheric glow spots
-    img = _glow_spot(img, 60, 60, 200, NEON, 20, 80)
-    img = _glow_spot(img, W-100, H-80, 180, NEON2, 18, 70)
-    img = _glow_spot(img, W//2, -30, 160, (100,50,200), 12, 60)
+    img = _glow_spot(img, 50, 50, 220, NEON, 18, 80)
+    img = _glow_spot(img, W - 80, H - 60, 200, NEON2, 15, 70)
+    img = _glow_spot(img, W // 2, -20, 180, (100, 50, 200), 10, 60)
 
     d = ImageDraw.Draw(img)
 
-    # Subtle grid
-    grid = Image.new('RGBA', (W,H), (0,0,0,0))
-    gd = ImageDraw.Draw(grid)
-    for x in range(0, W, 50):
-        gd.line([(x,0),(x,H)], fill=(255,255,255,4), width=1)
-    for y in range(0, H, 50):
-        gd.line([(0,y),(W,y)], fill=(255,255,255,4), width=1)
-    img = Image.alpha_composite(img, grid)
-
-    # ─── LEFT PANEL ─────────────────────────────────────────────────
-    lx, ly = 18, 18
-    img = _panel(img, (lx, ly, lx+LW, H-18), 20, PANEL, BORDER, 2)
+    # ─── LEFT PANEL (User) ─────────────────────────────────────────
+    lx = PAD
+    ly = PAD
+    img = _panel(img, (lx, ly, lx + LW, H - PAD), 20, PANEL, BORDER, 2)
     d = ImageDraw.Draw(img)
 
-    # Decorative line at top of panel
-    d.line([(lx+20, ly+2), (lx+LW-20, ly+2)], fill=(*NEON, 60), width=1)
+    # Top accent line
+    d.line([(lx + 20, ly + 2), (lx + LW - 20, ly + 2)], fill=(*NEON, 60), width=1)
 
     # Avatar with double ring
-    av_sz = 155
+    av_sz = 150
     av_x = lx + (LW - av_sz) // 2
-    av_y = ly + 45
+    av_y = ly + 40
 
     # Outer glow ring
-    ring_glow = Image.new('RGBA', (W,H), (0,0,0,0))
+    ring_glow = Image.new('RGBA', (W, H), (0, 0, 0, 0))
     rgd = ImageDraw.Draw(ring_glow)
     p1 = 14
-    rgd.ellipse((av_x-p1, av_y-p1, av_x+av_sz+p1, av_y+av_sz+p1),
+    rgd.ellipse((av_x - p1, av_y - p1, av_x + av_sz + p1, av_y + av_sz + p1),
                 outline=(*NEON, 35), width=12)
     ring_glow = ring_glow.filter(ImageFilter.GaussianBlur(10))
     img = Image.alpha_composite(img, ring_glow)
@@ -396,61 +393,60 @@ def generate_profile_card(avatar, nickname, level, xp, xp_needed,
 
     # Outer ring
     p2 = 6
-    d.ellipse((av_x-p2, av_y-p2, av_x+av_sz+p2, av_y+av_sz+p2),
+    d.ellipse((av_x - p2, av_y - p2, av_x + av_sz + p2, av_y + av_sz + p2),
               outline=(*NEON, 160), width=2)
     # Inner ring
-    d.ellipse((av_x-2, av_y-2, av_x+av_sz+2, av_y+av_sz+2),
+    d.ellipse((av_x - 2, av_y - 2, av_x + av_sz + 2, av_y + av_sz + 2),
               outline=(*BRIGHT, 120), width=1)
 
     # Paste avatar
     img.paste(avatar, (av_x, av_y), avatar)
 
-    # Level badge on avatar
+    # Level badge
     badge_r = 18
     badge_x = av_x + av_sz - 8
     badge_y = av_y + av_sz - 8
-    badge = Image.new('RGBA', (W,H), (0,0,0,0))
+    badge = Image.new('RGBA', (W, H), (0, 0, 0, 0))
     bd = ImageDraw.Draw(badge)
-    bd.ellipse((badge_x-badge_r, badge_y-badge_r, badge_x+badge_r, badge_y+badge_r),
-               fill=(20,14,40,240), outline=(*NEON, 200), width=2)
+    bd.ellipse((badge_x - badge_r, badge_y - badge_r, badge_x + badge_r, badge_y + badge_r),
+               fill=(20, 14, 40, 240), outline=(*NEON, 200), width=2)
     img = Image.alpha_composite(img, badge)
     d = ImageDraw.Draw(img)
     f_badge = _f(bold=True, sz=16)
     lv_txt = str(level)
-    lv_x = _text_cx(d, lv_txt, f_badge, badge_x-badge_r, badge_x+badge_r)
-    d.text((lv_x, badge_y-9), lv_txt, fill=WHITE, font=f_badge)
+    lv_x = _text_cx(d, lv_txt, f_badge, badge_x - badge_r, badge_x + badge_r)
+    d.text((lv_x, badge_y - 9), lv_txt, fill=WHITE, font=f_badge)
 
     # Nickname with backdrop
-    f_nick = _f(bold=True, sz=28)
-    nick_y = av_y + av_sz + 22
-    bb = d.textbbox((0,0), nickname, font=f_nick)
-    nw = bb[2]-bb[0]
-    nh = bb[3]-bb[1]
+    f_nick = _f(bold=True, sz=26)
+    nick_y = av_y + av_sz + 20
+    bb = d.textbbox((0, 0), nickname, font=f_nick)
+    nw = bb[2] - bb[0]
+    nh = bb[3] - bb[1]
     nx = lx + (LW - nw) // 2
 
     # Backdrop
-    bdrop = Image.new('RGBA', (W,H), (0,0,0,0))
+    bdrop = Image.new('RGBA', (W, H), (0, 0, 0, 0))
     ImageDraw.Draw(bdrop).rounded_rectangle(
-        (nx-14, nick_y-8, nx+nw+14, nick_y+nh+10),
-        radius=10, fill=(8,5,18,210))
+        (nx - 14, nick_y - 8, nx + nw + 14, nick_y + nh + 10),
+        radius=10, fill=(8, 5, 18, 210))
     img = Image.alpha_composite(img, bdrop)
     d = ImageDraw.Draw(img)
 
-    # Text shadow
-    for ox in [-1,0,1]:
-        for oy in [-1,0,1]:
-            if ox==0 and oy==0: continue
-            d.text((nx+ox, nick_y+oy), nickname, fill=(30,20,50), font=f_nick)
+    # Text shadow + main
+    for ox in [-1, 0, 1]:
+        for oy in [-1, 0, 1]:
+            if ox == 0 and oy == 0: continue
+            d.text((nx + ox, nick_y + oy), nickname, fill=(30, 20, 50), font=f_nick)
     d.text((nx, nick_y), nickname, fill=WHITE, font=f_nick)
 
-    # Separator
-    sep_y = nick_y + nh + 20
-    # Gradient line
-    for x in range(lx+30, lx+LW-30):
-        t = (x - (lx+30)) / (LW-60)
+    # Gradient separator
+    sep_y = nick_y + nh + 18
+    for x in range(lx + 30, lx + LW - 30):
+        t = (x - (lx + 30)) / (LW - 60)
         alpha = int(100 * math.sin(t * math.pi))
         d.point((x, sep_y), fill=(*NEON, alpha))
-        d.point((x, sep_y+1), fill=(*NEON, alpha//2))
+        d.point((x, sep_y + 1), fill=(*NEON, alpha // 2))
 
     # Server rank
     f_rl = _f(bold=False, sz=11)
@@ -458,105 +454,102 @@ def generate_profile_card(avatar, nickname, level, xp, xp_needed,
     avg_rank = max(1, (rank_messages + rank_voice + rank_balance) // 3)
 
     rl_y = sep_y + 14
-    rx = _text_cx(d, "SERVER RANK", f_rl, lx, lx+LW)
+    rx = _text_cx(d, "SERVER RANK", f_rl, lx, lx + LW)
     d.text((rx, rl_y), "SERVER RANK", fill=MUTED, font=f_rl)
     rv_txt = f"#{avg_rank}"
-    rv_x = _text_cx(d, rv_txt, f_rv, lx, lx+LW)
-    # Glow behind rank
-    d.text((rv_x, rl_y+16), rv_txt, fill=(*NEON, 60), font=f_rv)
-    d.text((rv_x+1, rl_y+16), rv_txt, fill=BRIGHT, font=f_rv)
+    rv_x = _text_cx(d, rv_txt, f_rv, lx, lx + LW)
+    d.text((rv_x + 1, rl_y + 16), rv_txt, fill=(*NEON, 60), font=f_rv)
+    d.text((rv_x, rl_y + 16), rv_txt, fill=BRIGHT, font=f_rv)
 
     # ─── TOP RIGHT: LEVEL ──────────────────────────────────────────
-    ty = 18
-    top_h = 160
-    img = _panel(img, (RX, ty, W-18, ty+top_h), 20, PANEL, BORDER, 2)
+    ty = PAD
+    img = _panel(img, (RX, ty, RX + RW, ty + TOP_H), 20, PANEL, BORDER, 2)
     d = ImageDraw.Draw(img)
 
-    # Decorative accent line
-    d.line([(RX+24, ty+3), (RX+100, ty+3)], fill=(*NEON, 80), width=2)
+    # Accent line
+    d.line([(RX + 24, ty + 3), (RX + 100, ty + 3)], fill=(*NEON, 80), width=2)
 
     f_ll = _f(bold=True, sz=12)
-    f_ln = _f(bold=True, sz=60)
+    f_ln = _f(bold=True, sz=58)
     f_xp = _f(bold=False, sz=13)
 
-    d.text((RX+28, ty+18), "LEVEL", fill=MUTED, font=f_ll)
+    d.text((RX + 28, ty + 18), "LEVEL", fill=MUTED, font=f_ll)
 
-    # Big level number with glow
+    # Level number with glow
     lv_str = str(level)
-    d.text((RX+29, ty+34), lv_str, fill=(*NEON, 50), font=f_ln)
-    d.text((RX+28, ty+33), lv_str, fill=WHITE, font=f_ln)
+    d.text((RX + 29, ty + 36), lv_str, fill=(*NEON, 50), font=f_ln)
+    d.text((RX + 28, ty + 35), lv_str, fill=WHITE, font=f_ln)
 
     # XP info
-    bar_y = ty + top_h - 44
-    d.text((RX+28, bar_y-20), f"{_fmt(xp)} XP", fill=WHITE, font=f_xp)
+    bar_y = ty + TOP_H - 42
+    d.text((RX + 28, bar_y - 20), f"{_fmt(xp)} XP", fill=WHITE, font=f_xp)
     xp_max = _fmt(xp_needed) + " XP"
-    bb2 = d.textbbox((0,0), xp_max, font=f_xp)
-    d.text((W-18-28-(bb2[2]-bb2[0]), bar_y-20), xp_max, fill=MUTED, font=f_xp)
+    bb2 = d.textbbox((0, 0), xp_max, font=f_xp)
+    d.text((RX + RW - 28 - (bb2[2] - bb2[0]), bar_y - 20), xp_max, fill=MUTED, font=f_xp)
 
     # Progress bar
     bw = RW - 56
     bh = 12
     prog = xp / xp_needed if xp_needed > 0 else 0
     bar = _xp_bar(bw, bh, prog)
-    img.paste(bar, (RX+28, bar_y), bar)
+    img.paste(bar, (RX + 28, bar_y), bar)
     d = ImageDraw.Draw(img)
 
     # Percentage
-    pct = f"{int(prog*100)}%"
+    pct = f"{int(prog * 100)}%"
     f_pct = _f(bold=True, sz=11)
-    px = _text_cx(d, pct, f_pct, RX+28, RX+28+bw)
-    d.text((px, bar_y+bh+4), pct, fill=MUTED, font=f_pct)
+    px = _text_cx(d, pct, f_pct, RX + 28, RX + 28 + bw)
+    d.text((px, bar_y + bh + 4), pct, fill=MUTED, font=f_pct)
 
     # ─── BOTTOM: STATS + RANKINGS ─────────────────────────────────
-    by = ty + top_h + GAP
-    bh_total = H - by - 18
-    pw = (RW - GAP) // 2
+    by = BOT_Y
+    bht = BOT_H
 
     # Generate icons
     icons = _gen_icons(42)
-
-    # STATS panel
-    img = _panel(img, (RX, by, RX+pw, by+bh_total), 18, PANEL, BORDER, 2)
-    d = ImageDraw.Draw(img)
 
     f_t = _f(bold=True, sz=12)
     f_v = _f(bold=True, sz=19)
     f_l = _f(bold=False, sz=10)
 
-    tx = _text_cx(d, "STATISTICS", f_t, RX, RX+pw)
-    d.text((tx, by+10), "STATISTICS", fill=MUTED, font=f_t)
-    d.line([(RX+20, by+26), (RX+pw-20, by+26)], fill=(*NEON, 40), width=1)
+    # ── STATS panel (left bottom) ──
+    img = _panel(img, (RX, by, RX + PW, by + bht), 18, PANEL, BORDER, 2)
+    d = ImageDraw.Draw(img)
+
+    tx = _text_cx(d, "STATISTICS", f_t, RX, RX + PW)
+    d.text((tx, by + 10), "STATISTICS", fill=MUTED, font=f_t)
+    d.line([(RX + 20, by + 26), (RX + PW - 20, by + 26)], fill=(*NEON, 40), width=1)
 
     stat_items = [
         (icons['messages'], _fmt(messages), "MESSAGES"),
         (icons['voice'], _fmt_t(voice_seconds), "VOICE TIME"),
         (icons['balance'], f"${_fmt(balance)}", "BALANCE"),
     ]
-    blk_h = (bh_total - 42) // 3
+    blk_h = (bht - 42) // 3
     for i, (icon, val, label) in enumerate(stat_items):
         bx = RX + 8
         bby = by + 34 + i * blk_h
-        bwi = pw - 16
+        bwi = PW - 16
         bhi = blk_h - 6
 
-        img = _panel(img, (bx, bby, bx+bwi, bby+bhi), 10, STAT, (*NEON, 40), 1)
+        img = _panel(img, (bx, bby, bx + bwi, bby + bhi), 10, STAT, (*NEON, 40), 1)
         d = ImageDraw.Draw(img)
 
         iy = bby + (bhi - 42) // 2
-        img.paste(icon, (bx+6, iy), icon)
+        img.paste(icon, (bx + 6, iy), icon)
         d = ImageDraw.Draw(img)
 
-        d.text((bx+54, bby+8), val, fill=WHITE, font=f_v)
-        d.text((bx+54, bby+bhi-16), label, fill=MUTED, font=f_l)
+        d.text((bx + 54, bby + 8), val, fill=WHITE, font=f_v)
+        d.text((bx + 54, bby + bhi - 16), label, fill=MUTED, font=f_l)
 
-    # RANKINGS panel
-    rkx = RX + pw + GAP
-    img = _panel(img, (rkx, by, rkx+pw, by+bh_total), 18, PANEL, BORDER, 2)
+    # ── RANKINGS panel (right bottom) ──
+    rkx = RX + PW + GAP
+    img = _panel(img, (rkx, by, rkx + PW, by + bht), 18, PANEL, BORDER, 2)
     d = ImageDraw.Draw(img)
 
-    tx = _text_cx(d, "RANKINGS", f_t, rkx, rkx+pw)
-    d.text((tx, by+10), "RANKINGS", fill=MUTED, font=f_t)
-    d.line([(rkx+20, by+26), (rkx+pw-20, by+26)], fill=(*NEON, 40), width=1)
+    tx = _text_cx(d, "RANKINGS", f_t, rkx, rkx + PW)
+    d.text((tx, by + 10), "RANKINGS", fill=MUTED, font=f_t)
+    d.line([(rkx + 20, by + 26), (rkx + PW - 20, by + 26)], fill=(*NEON, 40), width=1)
 
     rank_items = [
         (icons['messages'], f"#{rank_messages}", "MESSAGES"),
@@ -566,24 +559,25 @@ def generate_profile_card(avatar, nickname, level, xp, xp_needed,
     for i, (icon, val, label) in enumerate(rank_items):
         bx = rkx + 8
         bby = by + 34 + i * blk_h
-        bwi = pw - 16
+        bwi = PW - 16
         bhi = blk_h - 6
 
-        img = _panel(img, (bx, bby, bx+bwi, bby+bhi), 10, STAT, (*NEON, 40), 1)
+        img = _panel(img, (bx, bby, bx + bwi, bby + bhi), 10, STAT, (*NEON, 40), 1)
         d = ImageDraw.Draw(img)
 
         iy = bby + (bhi - 42) // 2
-        img.paste(icon, (bx+6, iy), icon)
+        img.paste(icon, (bx + 6, iy), icon)
         d = ImageDraw.Draw(img)
 
-        d.text((bx+54, bby+8), val, fill=BRIGHT, font=f_v)
-        d.text((bx+54, bby+bhi-16), label, fill=MUTED, font=f_l)
+        d.text((bx + 54, bby + 8), val, fill=BRIGHT, font=f_v)
+        d.text((bx + 54, bby + bhi - 16), label, fill=MUTED, font=f_l)
 
-    # ─── Watermark ─────────────────────────────────────────────────
+    # Watermark
     f_wm = _f(bold=False, sz=9)
-    d.text((W-80, H-14), "AETHER BOT", fill=(*MUTED, 80), font=f_wm)
+    d.text((W - 80, H - 14), "AETHER BOT", fill=(*MUTED, 80), font=f_wm)
 
     return img.convert('RGB')
+
 
 
 # ═══════════════════════════════════════════════════════════════════════
