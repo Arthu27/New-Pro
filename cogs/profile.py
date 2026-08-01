@@ -1,6 +1,6 @@
 """
-Profile Cog — Premium card generation via Pillow
-Dark neon-purple glassmorphism, custom vector icons, real data
+Profile Cog — Clean premium card generation via Pillow
+Ribbon-shaped side panel, gradient icon badges, dark marble + bokeh background
 """
 import discord
 from discord.ext import commands
@@ -13,324 +13,232 @@ from db import UserData, GuildData
 
 log = get_logger("profile")
 
-FONTS = os.path.join(os.path.dirname(__file__), '..', 'assets', 'fonts')
-ICONS = os.path.join(os.path.dirname(__file__), '..', 'assets', 'icons')
+ROOT = os.path.join(os.path.dirname(__file__), '..')
+FONTS = os.path.join(ROOT, 'assets', 'fonts')
+BG_PATH = os.path.join(ROOT, 'assets', 'profile_bg_dark.jpg')
 FONT_B = os.path.join(FONTS, 'Bold.ttf')
 FONT_R = os.path.join(FONTS, 'Regular.ttf')
 
-# Palette
-BG1, BG2 = (8, 5, 18), (18, 12, 35)
-NEON = (165, 80, 255)
-NEON2 = (120, 50, 220)
-BRIGHT = (210, 160, 255)
-WHITE = (245, 242, 255)
-MUTED = (130, 115, 165)
-PANEL = (22, 16, 42, 200)
-PANEL_HI = (30, 22, 55, 220)
-BORDER = (140, 70, 230, 90)
-STAT = (28, 20, 52, 210)
-XP_BG = (35, 28, 60)
-XP_A, XP_B = (130, 55, 215), (210, 90, 255)
+# ═══════════════════════════════════════════════════════════════════════
+# Palette — violet / magenta premium, dark marble backdrop
+# ═══════════════════════════════════════════════════════════════════════
+VIOLET     = (139, 92, 246)
+VIOLET_DK  = (91, 56, 176)
+PINK       = (236, 72, 153)
+PINK_LT    = (250, 130, 190)
+WHITE      = (245, 244, 250)
+MUTED      = (158, 150, 178)
+MUTED_DK   = (120, 112, 140)
 
-W, H = 920, 500
-PAD = 16          # padding from edges
-LW = 250          # left panel width
-GAP = 14          # gap between panels
-RX = PAD + LW + GAP   # right section start X = 280
-RW = W - PAD - RX     # right section width = 624
-TOP_H = 160           # top right panel height
-BOT_Y = PAD + TOP_H + GAP  # bottom section Y = 190
-BOT_H = H - PAD - BOT_Y   # bottom section height = 294
-PW = (RW - GAP) // 2      # each bottom panel width = 305
+PANEL      = (16, 13, 24, 175)
+PANEL_BORDER = (168, 120, 255, 60)
+BADGE_A, BADGE_B = VIOLET, PINK
+
+W, H = 1000, 560
+PAD = 22
+LW = 270
+GAP = 18
+RX = PAD + LW + GAP
+RW = W - PAD - RX
+TOP_H = 168
+BOT_Y = PAD + TOP_H + GAP
+BOT_H = H - PAD - BOT_Y
+PW = (RW - GAP) // 2
+TAIL_H = 46          # height of the ribbon "flag tail" at bottom of left panel
 
 
 def _f(bold=False, sz=20):
-    try: return ImageFont.truetype(FONT_B if bold else FONT_R, sz)
-    except: return ImageFont.load_default()
+    try:
+        return ImageFont.truetype(FONT_B if bold else FONT_R, sz)
+    except Exception:
+        return ImageFont.load_default()
 
 
 # ═══════════════════════════════════════════════════════════════════════
-# Vector Icons — programmatic neon cyberpunk
+# Simple vector glyph icons — drawn crisp at any size, white on transparent
 # ═══════════════════════════════════════════════════════════════════════
 
-def _icon_base(sz=56):
-    """Create base icon canvas with subtle glow"""
-    img = Image.new('RGBA', (sz, sz), (0,0,0,0))
-    g = Image.new('RGBA', (sz, sz), (0,0,0,0))
-    gd = ImageDraw.Draw(g)
-    gd.ellipse((sz//4, sz//4, sz*3//4, sz*3//4), fill=(*NEON2, 25))
-    g = g.filter(ImageFilter.GaussianBlur(sz//5))
-    return Image.alpha_composite(g, Image.new('RGBA', (sz, sz), (0,0,0,0))), ImageDraw.Draw(img)
+def _glyph_chat(d, cx, cy, s):
+    """Speech bubble with three dots."""
+    w, h = s * 0.9, s * 0.68
+    x0, y0 = cx - w / 2, cy - h / 2 - s * 0.06
+    x1, y1 = cx + w / 2, cy + h / 2 - s * 0.06
+    d.rounded_rectangle((x0, y0, x1, y1), radius=h * 0.34, fill=WHITE)
+    tail = [(cx - w * 0.16, y1 - 1), (cx - w * 0.02, y1 + h * 0.28), (cx + w * 0.12, y1 - 1)]
+    d.polygon(tail, fill=WHITE)
+    r = s * 0.045
+    for i in (-1, 0, 1):
+        dx = i * s * 0.16
+        d.ellipse((cx + dx - r, cy - s * 0.06 - r, cx + dx + r, cy - s * 0.06 + r), fill=BADGE_A)
 
 
-def _neon_line(draw, p1, p2, color=NEON, width=2, glow_img=None):
-    """Draw a line with neon glow"""
-    if glow_img:
-        gd = ImageDraw.Draw(glow_img)
-        gd.line([p1, p2], fill=(*color, 60), width=width+4)
-    draw.line([p1, p2], fill=(*BRIGHT, 220), width=width)
+def _glyph_voice(d, cx, cy, s):
+    """Speaker with sound waves."""
+    bx = cx - s * 0.28
+    body = [(bx - s * 0.05, cy - s * 0.14), (bx + s * 0.12, cy - s * 0.14),
+            (bx + s * 0.30, cy - s * 0.30), (bx + s * 0.30, cy + s * 0.30),
+            (bx + s * 0.12, cy + s * 0.14), (bx - s * 0.05, cy + s * 0.14)]
+    d.polygon(body, fill=WHITE)
+    for i, r in enumerate([s * 0.14, s * 0.24, s * 0.34]):
+        bbox = (cx + s * 0.02 - r, cy - r, cx + s * 0.02 + r, cy + r)
+        d.arc(bbox, -45, 45, fill=WHITE, width=max(2, int(s * 0.045)))
 
 
-def _neon_poly(draw, pts, color=NEON, fill_alpha=25, glow_img=None, width=2):
-    """Draw polygon with glow"""
-    if glow_img:
-        gd = ImageDraw.Draw(glow_img)
-        gd.polygon(pts, fill=(*color, 40))
-    draw.polygon(pts, outline=(*BRIGHT, 220), fill=(*color, fill_alpha))
+def _glyph_wallet(d, cx, cy, s):
+    """Wallet / balance icon with a dollar sign badge."""
+    w, h = s * 0.80, s * 0.60
+    x0, y0 = cx - w / 2, cy - h / 2
+    x1, y1 = cx + w / 2, cy + h / 2
+    d.rounded_rectangle((x0, y0, x1, y1), radius=h * 0.24, outline=WHITE, width=max(2, int(s * 0.055)))
+    r = s * 0.20
+    coin_cx = x1 - r * 1.1
+    d.ellipse((coin_cx - r, cy - r, coin_cx + r, cy + r), fill=WHITE)
+    f = _f(bold=True, sz=max(10, int(r * 1.35)))
+    txt = "$"
+    bb = d.textbbox((0, 0), txt, font=f)
+    tw, th = bb[2] - bb[0], bb[3] - bb[1]
+    d.text((coin_cx - tw / 2 - bb[0], cy - th / 2 - bb[1]), txt, fill=BADGE_A, font=f)
 
 
-def icon_messages(sz=56):
-    """Crystal chat bubble with data streams"""
-    glow = Image.new('RGBA', (sz, sz), (0,0,0,0))
-    img = Image.new('RGBA', (sz, sz), (0,0,0,0))
-
-    # Outer glow
-    gd = ImageDraw.Draw(glow)
-    pts = [(10,8),(sz-10,8),(sz-4,16),(sz-4,sz-20),(sz-10,sz-14),(sz//2+4,sz-14),
-           (sz//2-2,sz-4),(sz//2-6,sz-14),(10,sz-14),(4,sz-20),(4,16)]
-    gd.polygon(pts, fill=(*NEON, 50))
-    glow = glow.filter(ImageFilter.GaussianBlur(6))
-
-    d = ImageDraw.Draw(img)
-    # Bubble shape
-    d.polygon(pts, outline=(*BRIGHT, 200), fill=(*NEON2, 30))
-
-    # Inner lines (data streams)
-    for y_off, length, alpha in [(14, sz-28, 160), (20, sz-36, 120), (26, sz-44, 90), (32, sz-50, 60)]:
-        x1 = 12
-        x2 = x1 + length
-        if x2 > sz - 12: x2 = sz - 12
-        d.line([(x1, y_off), (x2, y_off)], fill=(*BRIGHT, alpha), width=1)
-
-    # Floating data particles
-    particles = [(sz-8, 4, 3), (sz-3, 10, 2), (sz-12, 2, 2), (sz+1, 6, 2), (sz-6, -2, 2)]
-    for px, py, ps in particles:
-        if 0 <= px < sz and 0 <= py < sz:
-            d.rectangle((px, py, px+ps, py+ps), fill=(*BRIGHT, 180))
-
-    glow_layer = glow.filter(ImageFilter.GaussianBlur(3))
-    result = Image.alpha_composite(glow_layer, img)
-    return result
+def _glyph_star(d, cx, cy, s):
+    """5-point star (used for server rank)."""
+    pts = []
+    for i in range(10):
+        r = s * 0.46 if i % 2 == 0 else s * 0.20
+        ang = math.radians(-90 + i * 36)
+        pts.append((cx + r * math.cos(ang), cy + r * math.sin(ang)))
+    d.polygon(pts, fill=WHITE)
 
 
-def icon_voice(sz=56):
-    """Sound wave spiral with frequency bars"""
-    glow = Image.new('RGBA', (sz, sz), (0,0,0,0))
-    img = Image.new('RGBA', (sz, sz), (0,0,0,0))
-    cx, cy = sz//2, sz//2
-
-    # Central glow
-    gd = ImageDraw.Draw(glow)
-    gd.ellipse((cx-12, cy-12, cx+12, cy+12), fill=(*NEON, 40))
-    glow = glow.filter(ImageFilter.GaussianBlur(8))
-
-    d = ImageDraw.Draw(img)
-
-    # Frequency bars (equalizer style)
-    bar_count = 9
-    bar_w = 3
-    total_w = bar_count * bar_w + (bar_count-1) * 2
-    start_x = (sz - total_w) // 2
-    heights = [12, 20, 28, 36, 40, 36, 28, 20, 12]
-
-    for i, h in enumerate(heights):
-        x = start_x + i * (bar_w + 2)
-        y_top = cy - h//2
-        y_bot = cy + h//2
-        alpha = 140 + int(115 * (h / 40))
-        # Bar glow
-        d.rectangle((x-1, y_top-1, x+bar_w+1, y_bot+1), fill=(*NEON2, 40))
-        # Bar
-        d.rectangle((x, y_top, x+bar_w, y_bot), fill=(*BRIGHT, alpha))
-        # Top cap
-        d.rectangle((x-1, y_top-2, x+bar_w+1, y_top), fill=(*BRIGHT, min(255, alpha+40)))
-
-    # Circular wave rings
-    for r, alpha in [(sz//2-2, 50), (sz//2+4, 30)]:
-        d.arc((cx-r, cy-r, cx+r, cy+r), -30, 30, fill=(*NEON, alpha), width=1)
-        d.arc((cx-r, cy-r, cx+r, cy+r), 150, 210, fill=(*NEON, alpha), width=1)
-
-    result = Image.alpha_composite(glow, img)
-    return result
+GLYPHS = {
+    'chat': _glyph_chat,
+    'voice': _glyph_voice,
+    'balance': _glyph_wallet,
+    'rank': _glyph_star,
+}
 
 
-def icon_balance(sz=56):
-    """Hexagonal crystal vault with currency symbol"""
-    glow = Image.new('RGBA', (sz, sz), (0,0,0,0))
-    img = Image.new('RGBA', (sz, sz), (0,0,0,0))
-    cx, cy = sz//2, sz//2
+def _icon_badge(size, glyph_key, radius=None):
+    """A rounded-square badge with a smooth diagonal violet→pink gradient and a white glyph icon."""
+    radius = radius if radius is not None else int(size * 0.30)
+    badge = Image.new('RGBA', (size, size), (0, 0, 0, 0))
+    grad = Image.new('RGBA', (size, size), (0, 0, 0, 0))
+    gd = ImageDraw.Draw(grad)
+    diag = size * 1.5
+    for i in range(int(diag)):
+        t = i / diag
+        r = int(BADGE_A[0] + (BADGE_B[0] - BADGE_A[0]) * t)
+        g = int(BADGE_A[1] + (BADGE_B[1] - BADGE_A[1]) * t)
+        b = int(BADGE_A[2] + (BADGE_B[2] - BADGE_A[2]) * t)
+        gd.line([(i, 0), (0, i)], fill=(r, g, b, 255), width=2)
+    grad = grad.rotate(0)
+    mask = Image.new('L', (size, size), 0)
+    ImageDraw.Draw(mask).rounded_rectangle((0, 0, size - 1, size - 1), radius=radius, fill=255)
+    badge.paste(grad.crop((0, 0, size, size)), (0, 0), mask)
 
-    # Hex dimensions
-    r = sz//2 - 6
-    hex_pts = []
-    for i in range(6):
-        angle = math.radians(60 * i - 30)
-        hex_pts.append((cx + r * math.cos(angle), cy + r * math.sin(angle)))
+    d = ImageDraw.Draw(badge)
+    GLYPHS[glyph_key](d, size / 2, size / 2, size * 0.72)
 
-    # Glow
-    gd = ImageDraw.Draw(glow)
-    gd.polygon(hex_pts, fill=(*NEON, 40))
-    glow = glow.filter(ImageFilter.GaussianBlur(7))
-
-    d = ImageDraw.Draw(img)
-
-    # Outer hex
-    d.polygon(hex_pts, outline=(*BRIGHT, 200), fill=(*NEON2, 25))
-
-    # Inner hex
-    r2 = r * 0.65
-    inner_pts = []
-    for i in range(6):
-        angle = math.radians(60 * i - 30)
-        inner_pts.append((cx + r2 * math.cos(angle), cy + r2 * math.sin(angle)))
-    d.polygon(inner_pts, outline=(*NEON, 100), fill=(*NEON2, 15))
-
-    # Connecting lines (crystal facets)
-    for i in range(6):
-        d.line([hex_pts[i], inner_pts[i]], fill=(*NEON, 60), width=1)
-
-    # Currency symbol — custom drawn $ as two S curves + vertical line
-    # Vertical line
-    d.line([(cx, cy-12), (cx, cy+12)], fill=(*BRIGHT, 200), width=2)
-    # S curves
-    d.arc((cx-7, cy-12, cx+7, cy), 180, 360, fill=(*BRIGHT, 200), width=2)
-    d.arc((cx-7, cy, cx+7, cy+12), 0, 180, fill=(*BRIGHT, 200), width=2)
-
-    # Corner dots
-    for pt in hex_pts:
-        d.ellipse((pt[0]-2, pt[1]-2, pt[0]+2, pt[1]+2), fill=(*BRIGHT, 180))
-
-    result = Image.alpha_composite(glow, img)
-    return result
-
-
-def icon_rank(sz=56):
-    """Trophy/crown microphone with aura"""
-    glow = Image.new('RGBA', (sz, sz), (0,0,0,0))
-    img = Image.new('RGBA', (sz, sz), (0,0,0,0))
-    cx = sz//2
-
-    # Aura glow
-    gd = ImageDraw.Draw(glow)
-    gd.ellipse((cx-16, 6, cx+16, 38), fill=(*NEON, 35))
-    glow = glow.filter(ImageFilter.GaussianBlur(7))
-
-    d = ImageDraw.Draw(img)
-
-    # Microphone capsule
-    cap_top, cap_bot = 10, 30
-    cap_w = 9
-    d.rounded_rectangle((cx-cap_w, cap_top, cx+cap_w, cap_bot), radius=cap_w,
-                        outline=(*BRIGHT, 200), fill=(*NEON2, 35))
-    # Mesh lines
-    for y in range(cap_top+5, cap_bot-3, 3):
-        d.line([(cx-cap_w+3, y), (cx+cap_w-3, y)], fill=(*NEON, 70), width=1)
-
-    # Stand
-    d.line([(cx, cap_bot), (cx, 40)], fill=(*BRIGHT, 180), width=2)
-    # Base arc
-    d.arc((cx-12, 34, cx+12, 48), 0, 180, fill=(*BRIGHT, 140), width=2)
-    d.line([(cx-14, 44), (cx+14, 44)], fill=(*NEON, 100), width=1)
-
-    # Crown (3 peaks)
-    cr_y = 4
-    crown = [
-        (cx-14, cr_y+10), (cx-10, cr_y+2), (cx-5, cr_y+7),
-        (cx, cr_y-2), (cx+5, cr_y+7), (cx+10, cr_y+2), (cx+14, cr_y+10)
-    ]
-    d.polygon(crown, outline=(*BRIGHT, 220), fill=(*NEON, 30))
-
-    # Crown jewels
-    for px, py in [(cx-10, cr_y+2), (cx, cr_y-2), (cx+10, cr_y+2)]:
-        d.ellipse((px-2, py-2, px+2, py+2), fill=(*BRIGHT, 255))
-        # Tiny glow
-        d.ellipse((px-4, py-4, px+4, py+4), fill=(*NEON, 30))
-
-    # Sound waves from mic
-    for r, alpha in [(18, 80), (24, 50), (30, 30)]:
-        d.arc((cx-r, 15-r//2, cx+r, 15+r//2+r), -60, 60, fill=(*NEON, alpha), width=1)
-
-    result = Image.alpha_composite(glow, img)
-    return result
-
-
-def _gen_icons(sz=56):
-    """Generate all icons"""
-    return {
-        'messages': icon_messages(sz),
-        'voice': icon_voice(sz),
-        'balance': icon_balance(sz),
-        'rank': icon_rank(sz),
-    }
+    # subtle inner highlight top edge
+    hl = Image.new('RGBA', (size, size), (0, 0, 0, 0))
+    ImageDraw.Draw(hl).rounded_rectangle((1, 1, size - 2, size * 0.45), radius=radius,
+                                          fill=(255, 255, 255, 26))
+    hlm = Image.new('L', (size, size), 0)
+    ImageDraw.Draw(hlm).rounded_rectangle((0, 0, size - 1, size - 1), radius=radius, fill=255)
+    hl.putalpha(Image.composite(hl.split()[-1], Image.new('L', (size, size), 0), hlm))
+    badge.alpha_composite(hl)
+    return badge
 
 
 # ═══════════════════════════════════════════════════════════════════════
-# Drawing Helpers
+# Drawing helpers
 # ═══════════════════════════════════════════════════════════════════════
 
-def _panel(img, xy, radius, fill=PANEL, border=BORDER, bw=2):
-    o = Image.new('RGBA', img.size, (0,0,0,0))
+def _panel(img, xy, radius, fill=PANEL, border=PANEL_BORDER, bw=2):
+    o = Image.new('RGBA', img.size, (0, 0, 0, 0))
     ImageDraw.Draw(o).rounded_rectangle(xy, radius=radius, fill=fill, outline=border, width=bw)
-    return Image.alpha_composite(img, o)
+    img.alpha_composite(o)
 
 
-def _glow_spot(img, cx, cy, r, color=NEON, alpha=25, blur=50):
-    o = Image.new('RGBA', img.size, (0,0,0,0))
-    ImageDraw.Draw(o).ellipse((cx-r, cy-r, cx+r, cy+r), fill=(*color, alpha))
-    o = o.filter(ImageFilter.GaussianBlur(blur))
-    return Image.alpha_composite(img, o)
+def _ribbon_panel(img, x0, y0, x1, y_flat, y_tip, radius=22, fill=PANEL, border=PANEL_BORDER, bw=2):
+    """A rounded-top panel that tapers into a pointed ribbon/flag tail at the bottom."""
+    cx = (x0 + x1) / 2
+    y_notch = y_flat + (y_tip - y_flat) * 0.42
+
+    # --- fill (rounded body + pointed tail) ---
+    fillmask = Image.new('L', img.size, 0)
+    fd = ImageDraw.Draw(fillmask)
+    fd.rounded_rectangle((x0, y0, x1, y_flat), radius=radius, corners=(True, True, False, False), fill=255)
+    fd.polygon([(x0, y_flat), (x1, y_flat), (x1, y_tip), (cx, y_notch), (x0, y_tip)], fill=255)
+    solid = Image.new('RGBA', img.size, fill)
+    img.paste(solid, (0, 0), fillmask)
+
+    # --- outline path (no seam line at y_flat, continues smoothly into the tail) ---
+    ol = Image.new('RGBA', img.size, (0, 0, 0, 0))
+    od = ImageDraw.Draw(ol)
+    r = radius
+    od.arc((x0, y0, x0 + 2 * r, y0 + 2 * r), 180, 270, fill=border, width=bw)
+    od.line([(x0 + r, y0), (x1 - r, y0)], fill=border, width=bw)
+    od.arc((x1 - 2 * r, y0, x1, y0 + 2 * r), 270, 360, fill=border, width=bw)
+    od.line([(x1, y0 + r), (x1, y_flat)], fill=border, width=bw)
+    od.line([(x1, y_flat), (x1, y_tip)], fill=border, width=bw)
+    od.line([(x1, y_tip), (cx, y_notch)], fill=border, width=bw)
+    od.line([(cx, y_notch), (x0, y_tip)], fill=border, width=bw)
+    od.line([(x0, y_tip), (x0, y_flat)], fill=border, width=bw)
+    od.line([(x0, y_flat), (x0, y0 + r)], fill=border, width=bw)
+    img.alpha_composite(ol)
 
 
 def _text_cx(draw, text, font, x1, x2):
-    bb = draw.textbbox((0,0), text, font=font)
-    return x1 + (x2 - x1 - (bb[2]-bb[0])) // 2
+    bb = draw.textbbox((0, 0), text, font=font)
+    return x1 + (x2 - x1 - (bb[2] - bb[0])) // 2
 
 
 def _xp_bar(w, h, progress):
-    bar = Image.new('RGBA', (w, h), XP_BG + (255,))
+    bar = Image.new('RGBA', (w, h), (0, 0, 0, 0))
+    ImageDraw.Draw(bar).rounded_rectangle((0, 0, w - 1, h - 1), radius=h // 2, fill=(34, 28, 48, 255))
     fw = max(1, int(w * min(progress, 1.0)))
+    fill = Image.new('RGBA', (max(fw, 1), h), (0, 0, 0, 0))
+    fd = ImageDraw.Draw(fill)
     for x in range(fw):
-        t = x / max(w-1, 1)
-        r = int(XP_A[0]+(XP_B[0]-XP_A[0])*t)
-        g = int(XP_A[1]+(XP_B[1]-XP_A[1])*t)
-        b = int(XP_A[2]+(XP_B[2]-XP_A[2])*t)
-        ImageDraw.Draw(bar).line([(x,0),(x,h-1)], fill=(r,g,b,255))
-    m = Image.new('L', (w, h), 0)
-    ImageDraw.Draw(m).rounded_rectangle((0,0,w,h), radius=h//2, fill=255)
-    bar.putalpha(m)
-    # Bright tip
-    if fw > 4:
-        tip = Image.new('RGBA', (6, h), (0,0,0,0))
-        ImageDraw.Draw(tip).rounded_rectangle((0,0,6,h), radius=3, fill=(*BRIGHT, 120))
-        tip = tip.filter(ImageFilter.GaussianBlur(2))
-        bar.paste(tip, (fw-6, 0), tip)
+        t = x / max(w - 1, 1)
+        r = int(VIOLET[0] + (PINK[0] - VIOLET[0]) * t)
+        g = int(VIOLET[1] + (PINK[1] - VIOLET[1]) * t)
+        b = int(VIOLET[2] + (PINK[2] - VIOLET[2]) * t)
+        fd.line([(x, 0), (x, h - 1)], fill=(r, g, b, 255))
+    fill_mask = Image.new('L', (max(fw, 1), h), 0)
+    ImageDraw.Draw(fill_mask).rounded_rectangle((0, 0, fw - 1, h - 1), radius=h // 2, fill=255)
+    bar.paste(fill, (0, 0), fill_mask)
     return bar
 
 
 def _bg(w, h):
-    """Generate premium background"""
-    # Try loading cached bg
-    bg_path = os.path.join(os.path.dirname(__file__), '..', 'assets', 'profile_bg.png')
+    """Load the dark marble + bokeh background and fit to card size."""
     try:
-        bg = Image.open(bg_path).convert('RGBA').resize((w, h), Image.Resampling.LANCZOS)
-        return bg
-    except:
-        pass
-    # Fallback: generate
-    img = Image.new('RGBA', (w, h), BG1 + (255,))
-    d = ImageDraw.Draw(img)
-    for y in range(h):
-        t = y / h
-        r = int(BG1[0]+(BG2[0]-BG1[0])*t)
-        g = int(BG1[1]+(BG2[1]-BG1[1])*t)
-        b = int(BG1[2]+(BG2[2]-BG1[2])*t)
-        d.line([(0,y),(w,y)], fill=(r,g,b,255))
-    return img
+        bg = Image.open(BG_PATH).convert('RGBA')
+        bw, bh = bg.size
+        target_ratio = w / h
+        src_ratio = bw / bh
+        if src_ratio > target_ratio:
+            new_w = int(bh * target_ratio)
+            x0 = (bw - new_w) // 2
+            bg = bg.crop((x0, 0, x0 + new_w, bh))
+        else:
+            new_h = int(bw / target_ratio)
+            y0 = (bh - new_h) // 2
+            bg = bg.crop((0, y0, bw, y0 + new_h))
+        return bg.resize((w, h), Image.Resampling.LANCZOS)
+    except Exception:
+        img = Image.new('RGBA', (w, h), (12, 10, 16, 255))
+        return img
 
 
-def _fmt(n): return f"{n:,}".replace(","," ")
+def _fmt(n):
+    return f"{n:,}".replace(",", " ")
+
+
 def _fmt_t(s):
-    h, m = s//3600, (s%3600)//60
+    h, m = s // 3600, (s % 3600) // 60
     return f"{h}h {m}m" if h else f"{m}m"
 
 
@@ -339,14 +247,23 @@ async def _avatar(url, sz=180):
         async with aiohttp.ClientSession() as s:
             async with s.get(url, timeout=aiohttp.ClientTimeout(total=10)) as r:
                 data = await r.read()
-        av = Image.open(io.BytesIO(data)).convert('RGBA').resize((sz,sz), Image.Resampling.LANCZOS)
-        m = Image.new('L', (sz,sz), 0)
-        ImageDraw.Draw(m).ellipse((0,0,sz,sz), fill=255)
+        av = Image.open(io.BytesIO(data)).convert('RGBA').resize((sz, sz), Image.Resampling.LANCZOS)
+        m = Image.new('L', (sz, sz), 0)
+        ImageDraw.Draw(m).ellipse((0, 0, sz, sz), fill=255)
         av.putalpha(m)
         return av
-    except:
-        av = Image.new('RGBA', (sz,sz), (0,0,0,0))
-        ImageDraw.Draw(av).ellipse((0,0,sz,sz), fill=(50,40,80,255))
+    except Exception:
+        av = Image.new('RGBA', (sz, sz), (0, 0, 0, 0))
+        d = ImageDraw.Draw(av)
+        for yy in range(sz):
+            t = yy / sz
+            r = int(VIOLET[0] + (PINK[0] - VIOLET[0]) * t)
+            g = int(VIOLET[1] + (PINK[1] - VIOLET[1]) * t)
+            b = int(VIOLET[2] + (PINK[2] - VIOLET[2]) * t)
+            d.line([(0, yy), (sz, yy)], fill=(r, g, b, 255))
+        m = Image.new('L', (sz, sz), 0)
+        ImageDraw.Draw(m).ellipse((0, 0, sz, sz), fill=255)
+        av.putalpha(m)
         return av
 
 
@@ -358,229 +275,144 @@ def generate_profile_card(avatar, nickname, level, xp, xp_needed,
                           messages, voice_seconds, balance,
                           rank_messages, rank_voice, rank_balance):
 
-    img = _bg(W, H)
-
-    # Atmospheric glow spots
-    img = _glow_spot(img, 50, 50, 220, NEON, 18, 80)
-    img = _glow_spot(img, W - 80, H - 60, 200, NEON2, 15, 70)
-    img = _glow_spot(img, W // 2, -20, 180, (100, 50, 200), 10, 60)
-
+    img = _bg(W, H).convert('RGBA')
     d = ImageDraw.Draw(img)
 
-    # ─── LEFT PANEL (User) ─────────────────────────────────────────
-    lx = PAD
-    ly = PAD
-    img = _panel(img, (lx, ly, lx + LW, H - PAD), 20, PANEL, BORDER, 2)
+    avg_rank = max(1, round((rank_messages + rank_voice + rank_balance) / 3))
+
+    # ─── LEFT PANEL — ribbon / flag shape ───────────────────────────
+    lx, ly = PAD, PAD
+    y_flat = H - PAD - TAIL_H
+    y_tip = H - PAD
+    _ribbon_panel(img, lx, ly, lx + LW, y_flat, y_tip, radius=24)
     d = ImageDraw.Draw(img)
 
-    # Top accent line
-    d.line([(lx + 20, ly + 2), (lx + LW - 20, ly + 2)], fill=(*NEON, 60), width=1)
-
-    # Avatar with double ring
-    av_sz = 150
+    av_sz = 148
     av_x = lx + (LW - av_sz) // 2
-    av_y = ly + 40
+    av_y = ly + 46
+    av_cx, av_cy = av_x + av_sz // 2, av_y + av_sz // 2
 
-    # Outer glow ring
-    ring_glow = Image.new('RGBA', (W, H), (0, 0, 0, 0))
-    rgd = ImageDraw.Draw(ring_glow)
-    p1 = 14
-    rgd.ellipse((av_x - p1, av_y - p1, av_x + av_sz + p1, av_y + av_sz + p1),
-                outline=(*NEON, 35), width=12)
-    ring_glow = ring_glow.filter(ImageFilter.GaussianBlur(10))
-    img = Image.alpha_composite(img, ring_glow)
+    # Soft glow behind avatar
+    glow = Image.new('RGBA', img.size, (0, 0, 0, 0))
+    ImageDraw.Draw(glow).ellipse((av_cx - av_sz, av_cy - av_sz, av_cx + av_sz, av_cy + av_sz),
+                                  fill=(*PINK, 60))
+    img.alpha_composite(glow.filter(ImageFilter.GaussianBlur(30)))
     d = ImageDraw.Draw(img)
 
-    # Outer ring
-    p2 = 6
-    d.ellipse((av_x - p2, av_y - p2, av_x + av_sz + p2, av_y + av_sz + p2),
-              outline=(*NEON, 160), width=2)
-    # Inner ring
-    d.ellipse((av_x - 2, av_y - 2, av_x + av_sz + 2, av_y + av_sz + 2),
-              outline=(*BRIGHT, 120), width=1)
-
-    # Paste avatar
-    img.paste(avatar, (av_x, av_y), avatar)
-
-    # Level badge
-    badge_r = 18
-    badge_x = av_x + av_sz - 8
-    badge_y = av_y + av_sz - 8
-    badge = Image.new('RGBA', (W, H), (0, 0, 0, 0))
-    bd = ImageDraw.Draw(badge)
-    bd.ellipse((badge_x - badge_r, badge_y - badge_r, badge_x + badge_r, badge_y + badge_r),
-               fill=(20, 14, 40, 240), outline=(*NEON, 200), width=2)
-    img = Image.alpha_composite(img, badge)
+    # Gradient ring (violet -> pink) around avatar
+    ring_pad = 8
+    ring_d = av_sz + ring_pad * 2
+    ring = Image.new('RGBA', (ring_d, ring_d), (0, 0, 0, 0))
+    rd = ImageDraw.Draw(ring)
+    steps = 240
+    for i in range(steps):
+        t = i / steps
+        ang0 = t * 360
+        r = int(VIOLET[0] + (PINK[0] - VIOLET[0]) * t)
+        g = int(VIOLET[1] + (PINK[1] - VIOLET[1]) * t)
+        b = int(VIOLET[2] + (PINK[2] - VIOLET[2]) * t)
+        rd.arc((2, 2, ring_d - 2, ring_d - 2), ang0, ang0 + 360 / steps + 1, fill=(r, g, b, 255), width=7)
+    img.alpha_composite(ring, (av_cx - ring_d // 2, av_cy - ring_d // 2))
     d = ImageDraw.Draw(img)
-    f_badge = _f(bold=True, sz=16)
-    lv_txt = str(level)
-    lv_x = _text_cx(d, lv_txt, f_badge, badge_x - badge_r, badge_x + badge_r)
-    d.text((lv_x, badge_y - 9), lv_txt, fill=WHITE, font=f_badge)
 
-    # Nickname with backdrop
-    f_nick = _f(bold=True, sz=26)
-    nick_y = av_y + av_sz + 20
+    # Thin dark separator ring so avatar edge stays crisp against gradient ring
+    d.ellipse((av_x - 3, av_y - 3, av_x + av_sz + 3, av_y + av_sz + 3), outline=(14, 10, 20, 255), width=3)
+
+    img.alpha_composite(avatar, (av_x, av_y))
+    d = ImageDraw.Draw(img)
+
+    # Username
+    f_nick = _f(bold=True, sz=25)
+    nick_y = av_y + av_sz + 30
     bb = d.textbbox((0, 0), nickname, font=f_nick)
-    nw = bb[2] - bb[0]
-    nh = bb[3] - bb[1]
+    nw, nh = bb[2] - bb[0], bb[3] - bb[1]
     nx = lx + (LW - nw) // 2
-
-    # Backdrop
-    bdrop = Image.new('RGBA', (W, H), (0, 0, 0, 0))
-    ImageDraw.Draw(bdrop).rounded_rectangle(
-        (nx - 14, nick_y - 8, nx + nw + 14, nick_y + nh + 10),
-        radius=10, fill=(8, 5, 18, 210))
-    img = Image.alpha_composite(img, bdrop)
-    d = ImageDraw.Draw(img)
-
-    # Text shadow + main
-    for ox in [-1, 0, 1]:
-        for oy in [-1, 0, 1]:
-            if ox == 0 and oy == 0: continue
-            d.text((nx + ox, nick_y + oy), nickname, fill=(30, 20, 50), font=f_nick)
     d.text((nx, nick_y), nickname, fill=WHITE, font=f_nick)
 
-    # Gradient separator
-    sep_y = nick_y + nh + 18
-    for x in range(lx + 30, lx + LW - 30):
-        t = (x - (lx + 30)) / (LW - 60)
-        alpha = int(100 * math.sin(t * math.pi))
-        d.point((x, sep_y), fill=(*NEON, alpha))
-        d.point((x, sep_y + 1), fill=(*NEON, alpha // 2))
-
-    # Server rank
-    f_rl = _f(bold=False, sz=11)
-    f_rv = _f(bold=True, sz=22)
-    avg_rank = max(1, (rank_messages + rank_voice + rank_balance) // 3)
-
-    rl_y = sep_y + 14
-    rx = _text_cx(d, "SERVER RANK", f_rl, lx, lx + LW)
-    d.text((rx, rl_y), "SERVER RANK", fill=MUTED, font=f_rl)
-    rv_txt = f"#{avg_rank}"
-    rv_x = _text_cx(d, rv_txt, f_rv, lx, lx + LW)
-    d.text((rv_x + 1, rl_y + 16), rv_txt, fill=(*NEON, 60), font=f_rv)
-    d.text((rv_x, rl_y + 16), rv_txt, fill=BRIGHT, font=f_rv)
+    # Simple underline
+    uline_y = nick_y + nh + 14
+    uw = 46
+    d.line([(lx + (LW - uw) // 2, uline_y), (lx + (LW + uw) // 2, uline_y)], fill=(*MUTED, 130), width=2)
 
     # ─── TOP RIGHT: LEVEL ──────────────────────────────────────────
     ty = PAD
-    img = _panel(img, (RX, ty, RX + RW, ty + TOP_H), 20, PANEL, BORDER, 2)
+    _panel(img, (RX, ty, RX + RW, ty + TOP_H), 22)
     d = ImageDraw.Draw(img)
 
-    # Accent line
-    d.line([(RX + 24, ty + 3), (RX + 100, ty + 3)], fill=(*NEON, 80), width=2)
+    f_lvl_lbl = _f(bold=True, sz=15)
+    f_lvl_num = _f(bold=True, sz=34)
+    lbl_txt = "LEVEL"
+    lbl_bb = d.textbbox((0, 0), lbl_txt, font=f_lvl_lbl)
+    num_txt = str(level)
+    total_w = (lbl_bb[2] - lbl_bb[0]) + 10 + d.textbbox((0, 0), num_txt, font=f_lvl_num)[2]
+    start_x = RX + (RW - total_w) // 2
+    top_y = ty + 26
+    d.text((start_x, top_y + 8), lbl_txt, fill=VIOLET, font=f_lvl_lbl)
+    d.text((start_x + (lbl_bb[2] - lbl_bb[0]) + 10, top_y - 2), num_txt, fill=WHITE, font=f_lvl_num)
 
-    f_ll = _f(bold=True, sz=12)
-    f_ln = _f(bold=True, sz=58)
+    # XP row + progress bar
     f_xp = _f(bold=False, sz=13)
+    barw = RW - 64
+    barh = 10
+    bar_x = RX + (RW - barw) // 2
+    bar_y = ty + TOP_H - 40
 
-    d.text((RX + 28, ty + 18), "LEVEL", fill=MUTED, font=f_ll)
+    xp_txt = _fmt(xp)
+    xp_max_txt = _fmt(xp_needed)
+    d.text((bar_x, bar_y - 22), xp_txt, fill=WHITE, font=f_xp)
+    bb2 = d.textbbox((0, 0), xp_max_txt, font=f_xp)
+    d.text((bar_x + barw - (bb2[2] - bb2[0]), bar_y - 22), xp_max_txt, fill=MUTED, font=f_xp)
 
-    # Level number with glow
-    lv_str = str(level)
-    d.text((RX + 29, ty + 36), lv_str, fill=(*NEON, 50), font=f_ln)
-    d.text((RX + 28, ty + 35), lv_str, fill=WHITE, font=f_ln)
-
-    # XP info
-    bar_y = ty + TOP_H - 42
-    d.text((RX + 28, bar_y - 20), f"{_fmt(xp)} XP", fill=WHITE, font=f_xp)
-    xp_max = _fmt(xp_needed) + " XP"
-    bb2 = d.textbbox((0, 0), xp_max, font=f_xp)
-    d.text((RX + RW - 28 - (bb2[2] - bb2[0]), bar_y - 20), xp_max, fill=MUTED, font=f_xp)
-
-    # Progress bar
-    bw = RW - 56
-    bh = 12
     prog = xp / xp_needed if xp_needed > 0 else 0
-    bar = _xp_bar(bw, bh, prog)
-    img.paste(bar, (RX + 28, bar_y), bar)
+    bar = _xp_bar(barw, barh, prog)
+    img.alpha_composite(bar, (bar_x, bar_y))
     d = ImageDraw.Draw(img)
-
-    # Percentage
-    pct = f"{int(prog * 100)}%"
-    f_pct = _f(bold=True, sz=11)
-    px = _text_cx(d, pct, f_pct, RX + 28, RX + 28 + bw)
-    d.text((px, bar_y + bh + 4), pct, fill=MUTED, font=f_pct)
 
     # ─── BOTTOM: STATS + RANKINGS ─────────────────────────────────
-    by = BOT_Y
-    bht = BOT_H
+    by, bht = BOT_Y, BOT_H
 
-    # Generate icons
-    icons = _gen_icons(42)
+    f_t = _f(bold=True, sz=13)
+    f_v = _f(bold=True, sz=21)
+    f_l = _f(bold=False, sz=11)
 
-    f_t = _f(bold=True, sz=12)
-    f_v = _f(bold=True, sz=19)
-    f_l = _f(bold=False, sz=10)
+    badge_sz = 52
+    blk_h = (bht - 50) // 3
 
-    # ── STATS panel (left bottom) ──
-    img = _panel(img, (RX, by, RX + PW, by + bht), 18, PANEL, BORDER, 2)
-    d = ImageDraw.Draw(img)
+    def _draw_stat_column(x0, title, rows):
+        _panel(img, (x0, by, x0 + PW, by + bht), 20)
+        dd = ImageDraw.Draw(img)
+        tx = _text_cx(dd, title, f_t, x0, x0 + PW)
+        dd.text((tx, by + 14), title, fill=VIOLET, font=f_t)
+        dd.line([(x0 + 24, by + 34), (x0 + PW - 24, by + 34)], fill=(*MUTED_DK, 90), width=1)
 
-    tx = _text_cx(d, "STATISTICS", f_t, RX, RX + PW)
-    d.text((tx, by + 10), "STATISTICS", fill=MUTED, font=f_t)
-    d.line([(RX + 20, by + 26), (RX + PW - 20, by + 26)], fill=(*NEON, 40), width=1)
+        for i, (glyph_key, val_txt, label_txt) in enumerate(rows):
+            row_y = by + 44 + i * blk_h
+            icon_x = x0 + 20
+            icon_y = row_y + (blk_h - badge_sz) // 2
+            badge = _icon_badge(badge_sz, glyph_key)
+            img.alpha_composite(badge, (icon_x, icon_y))
+            dd = ImageDraw.Draw(img)
 
-    stat_items = [
-        (icons['messages'], _fmt(messages), "MESSAGES"),
-        (icons['voice'], _fmt_t(voice_seconds), "VOICE TIME"),
-        (icons['balance'], f"${_fmt(balance)}", "BALANCE"),
-    ]
-    blk_h = (bht - 42) // 3
-    for i, (icon, val, label) in enumerate(stat_items):
-        bx = RX + 8
-        bby = by + 34 + i * blk_h
-        bwi = PW - 16
-        bhi = blk_h - 6
+            text_x = icon_x + badge_sz + 16
+            dd.text((text_x, row_y + blk_h // 2 - 22), val_txt, fill=WHITE, font=f_v)
+            dd.text((text_x, row_y + blk_h // 2 + 4), label_txt, fill=MUTED, font=f_l)
 
-        img = _panel(img, (bx, bby, bx + bwi, bby + bhi), 10, STAT, (*NEON, 40), 1)
-        d = ImageDraw.Draw(img)
+    _draw_stat_column(RX, "STATISTICS", [
+        ('chat', _fmt(messages), "messages"),
+        ('voice', _fmt_t(voice_seconds), "voice time"),
+        ('balance', f"${_fmt(balance)}", "balance"),
+    ])
 
-        iy = bby + (bhi - 42) // 2
-        img.paste(icon, (bx + 6, iy), icon)
-        d = ImageDraw.Draw(img)
-
-        d.text((bx + 54, bby + 8), val, fill=WHITE, font=f_v)
-        d.text((bx + 54, bby + bhi - 16), label, fill=MUTED, font=f_l)
-
-    # ── RANKINGS panel (right bottom) ──
-    rkx = RX + PW + GAP
-    img = _panel(img, (rkx, by, rkx + PW, by + bht), 18, PANEL, BORDER, 2)
-    d = ImageDraw.Draw(img)
-
-    tx = _text_cx(d, "RANKINGS", f_t, rkx, rkx + PW)
-    d.text((tx, by + 10), "RANKINGS", fill=MUTED, font=f_t)
-    d.line([(rkx + 20, by + 26), (rkx + PW - 20, by + 26)], fill=(*NEON, 40), width=1)
-
-    rank_items = [
-        (icons['messages'], f"#{rank_messages}", "MESSAGES"),
-        (icons['voice'], f"#{rank_voice}", "VOICE TIME"),
-        (icons['balance'], f"#{rank_balance}", "BALANCE"),
-    ]
-    for i, (icon, val, label) in enumerate(rank_items):
-        bx = rkx + 8
-        bby = by + 34 + i * blk_h
-        bwi = PW - 16
-        bhi = blk_h - 6
-
-        img = _panel(img, (bx, bby, bx + bwi, bby + bhi), 10, STAT, (*NEON, 40), 1)
-        d = ImageDraw.Draw(img)
-
-        iy = bby + (bhi - 42) // 2
-        img.paste(icon, (bx + 6, iy), icon)
-        d = ImageDraw.Draw(img)
-
-        d.text((bx + 54, bby + 8), val, fill=BRIGHT, font=f_v)
-        d.text((bx + 54, bby + bhi - 16), label, fill=MUTED, font=f_l)
-
-    # Watermark
-    f_wm = _f(bold=False, sz=9)
-    d.text((W - 80, H - 14), "AETHER BOT", fill=(*MUTED, 80), font=f_wm)
+    _draw_stat_column(RX + PW + GAP, "RANKINGS", [
+        ('chat', f"#{rank_messages}", "messages"),
+        ('voice', f"#{rank_voice}", "voice time"),
+        ('balance', f"#{rank_balance}", "balance"),
+    ])
 
     return img.convert('RGB')
 
 
 
-# ═══════════════════════════════════════════════════════════════════════
 # Data Fetchers
 # ═══════════════════════════════════════════════════════════════════════
 
@@ -652,7 +484,7 @@ class ProfileCog(commands.Cog):
         member = member or ctx.author
         msg = await ctx.send(embed=discord.Embed(title="...", color=discord.Color.dark_grey()))
         try:
-            av = await _avatar(member.display_avatar.url)
+            av = await _avatar(member.display_avatar.url, sz=148)
             d = self._data(ctx.guild.id, member.id)
             card = generate_profile_card(avatar=av, nickname=member.display_name[:14], **d)
             buf = io.BytesIO()
@@ -670,7 +502,7 @@ class ProfileCog(commands.Cog):
         member = member or interaction.user
         await interaction.response.defer()
         try:
-            av = await _avatar(member.display_avatar.url)
+            av = await _avatar(member.display_avatar.url, sz=148)
             d = self._data(interaction.guild.id, member.id)
             card = generate_profile_card(avatar=av, nickname=member.display_name[:14], **d)
             buf = io.BytesIO()
