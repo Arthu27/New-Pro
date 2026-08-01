@@ -110,31 +110,31 @@ def generate_staff_panel_card() -> Image.Image:
     bg = _load_bg(W, H)
     d = ImageDraw.Draw(bg)
 
-    # Тематический акцент: Насыщенный Алый/Красный (как у луны и глаз персонажа!)
-    accent = (220, 38, 38)
+    # Тематический акцент: Теплый золотисто-бронзовый (как у волос персонажа и книг!)
+    accent = (197, 137, 47)
 
-    # Наружная полупрозрачная рамка (эффект темного матового стекла поверх красивого фона)
-    outer_border = _rounded_panel(896, 336, radius=16, fill=(15, 15, 20, 130), outline=accent, ow=2)
+    # Наружная полупрозрачная рамка (эффект теплого матового стекла поверх красивого фона)
+    outer_border = _rounded_panel(896, 336, radius=16, fill=(255, 253, 245, 160), outline=accent, ow=2)
     bg.alpha_composite(outer_border, (12, 12))
 
     # Внутренняя панель заголовка
-    header_box = _rounded_panel(848, 260, radius=14, fill=(20, 20, 25, 160), outline=BLACK, ow=2)
+    header_box = _rounded_panel(848, 260, radius=14, fill=(255, 253, 245, 190), outline=BLACK, ow=2)
     bg.alpha_composite(header_box, (36, 30))
 
-    # Векторная иконка щита в алом цвете
+    # Векторная иконка щита в бронзовом цвете
     badge = _icon_badge(80, _icon_staff, ring_color=BLACK, ring_w=2, icon_color=accent)
     bg.alpha_composite(badge, (56, 120))
 
-    # Текстовые заголовки СТРОГО на русском языке в белом цвете
-    d.text((160, 110), "НАБОР В КОМАНДУ СЕРВЕРА", fill=WHITE, font=_f(True, 32))
-    d.text((160, 160), "ВЫБЕРИТЕ ЖЕЛАЕМУЮ ДОЛЖНОСТЬ В МЕНЮ НИЖЕ", fill=(210, 215, 220), font=_f(False, 20))
+    # Текстовые заголовки СТРОГО на русском языке в темном цвете
+    d.text((160, 110), "STAFF TEAM • НАБОР В КОМАНДУ", fill=BLACK, font=_f(True, 30))
+    d.text((160, 160), "ВЫБЕРИТЕ ЖЕЛАЕМУЮ ДОЛЖНОСТЬ В МЕНЮ НИЖЕ", fill=MUTED, font=_f(False, 20))
 
-    # Боковая плашка в стиле темного стекла
-    pill = _rounded_panel(150, 40, radius=10, fill=(20, 20, 25, 180), outline=accent, ow=2)
+    # Боковая плашка в стиле светлого стекла
+    pill = _rounded_panel(150, 40, radius=10, fill=WHITE, outline=accent, ow=2)
     bg.alpha_composite(pill, (710, 140))
-    d.text((728, 150), "RECRUIT PRO", fill=accent, font=_f(True, 15))
+    d.text((746, 150), "STAFF RECRUIT", fill=accent, font=_f(True, 14))
 
-    # Угловые скобки в алом цвете
+    # Угловые скобки в бронзовом цвете
     br = _corner_bracket(40, 4, color=accent)
     bg.alpha_composite(br, (6, 6))
     bg.alpha_composite(br.rotate(270), (W - 46, 6))
@@ -144,13 +144,6 @@ def generate_staff_panel_card() -> Image.Image:
     return bg
 
 def generate_staff_panel_bytes() -> io.BytesIO:
-    path = os.path.join(ROOT, 'assets', 'staff_panel.png')
-    if os.path.exists(path):
-        try:
-            with open(path, 'rb') as f:
-                return io.BytesIO(f.read())
-        except Exception:
-            pass
     card = generate_staff_panel_card().convert('RGB')
     buf = io.BytesIO()
     card.save(buf, format='PNG', optimize=True)
@@ -317,7 +310,7 @@ class StaffApply(commands.Cog):
     @app_commands.checks.has_permissions(manage_guild=True)
     async def staff_panel(self, interaction: discord.Interaction):
         """Создать профессиональную карточку-панель для набора"""
-        # Генерируем красивую кастомную Pillow карточку набора в стиле /help с фоном из ИИ
+        # Генерируем красивую кастомную Pillow карточку набора с новым золотистым фоном
         img_buf = await interaction.client.loop.run_in_executor(
             None, generate_staff_panel_bytes
         )
