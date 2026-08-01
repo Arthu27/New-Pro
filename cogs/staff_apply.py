@@ -15,7 +15,6 @@ import os
 import io
 from datetime import datetime, timezone
 from PIL import Image, ImageDraw, ImageFont
-from cogs._menu_bg import load_menu_bg
 
 from logger import get_logger
 log = get_logger("staff_apply")
@@ -27,13 +26,12 @@ APPS_FILE = "data/staff_apps.json"
 
 ROOT = os.path.join(os.path.dirname(__file__), '..')
 FONTS = os.path.join(ROOT, 'assets', 'fonts')
-BG_PATH = os.path.join(ROOT, 'assets', 'staff_bg.jpg')
+BG_PATH = os.path.join(ROOT, 'assets', 'profile_bg_pro.jpg')
 FONT_B = os.path.join(FONTS, 'Bold.ttf')
 FONT_R = os.path.join(FONTS, 'Regular.ttf')
 
 WHITE = (255, 255, 255)
 BLACK = (20, 20, 25)
-TEAL = (13, 148, 136)
 MUTED = (110, 115, 125)
 SS = 4
 
@@ -61,7 +59,7 @@ def _icon_staff(d, cx, cy, s, w, color):
     ]
     d.polygon(points, outline=color, width=w)
 
-def _icon_badge(diameter, glyph_fn, ring_color=BLACK, ring_w=None, icon_color=TEAL):
+def _icon_badge(diameter, glyph_fn, ring_color=BLACK, ring_w=None, icon_color=BLACK):
     ring_w = ring_w if ring_w is not None else max(2, diameter // 22)
     def draw(d, scale):
         size = diameter * scale
@@ -72,7 +70,7 @@ def _icon_badge(diameter, glyph_fn, ring_color=BLACK, ring_w=None, icon_color=TE
         glyph_fn(d, size / 2, size / 2, size * 0.60, max(2, int(size * 0.032)), icon_color)
     return _ss_render(diameter, diameter, draw)
 
-def _corner_bracket(size, thickness, length_ratio=0.35, color=TEAL):
+def _corner_bracket(size, thickness, length_ratio=0.35, color=BLACK):
     def draw(d, scale):
         t = thickness * scale
         L = size * scale * length_ratio
@@ -89,48 +87,36 @@ def _rounded_panel(w, h, radius, fill=WHITE, outline=BLACK, ow=3):
     return _ss_render(w, h, draw)
 
 def generate_staff_panel_card() -> Image.Image:
-    W, H = 920, 520
-    bg = load_menu_bg(W, H, "teal")
+    W, H = 920, 240
+    bg = Image.new('RGBA', (W, H), (255, 255, 255, 255))
     d = ImageDraw.Draw(bg)
 
-    # Header
-    header_box = _rounded_panel(872, 72, radius=14, fill=WHITE, outline=BLACK, ow=2)
-    bg.alpha_composite(header_box, (24, 20))
+    # Тематический акцент: Synth Violet (фиолетовый, как у одной из тем /help)
+    accent = (139, 92, 246)
 
-    badge = _icon_badge(52, _icon_staff, ring_color=BLACK, ring_w=2, icon_color=TEAL)
-    bg.alpha_composite(badge, (36, 30))
+    # Наружная рамка
+    outer_border = _rounded_panel(896, 216, radius=16, fill=WHITE, outline=BLACK, ow=2)
+    bg.alpha_composite(outer_border, (12, 12))
 
-    d.text((100, 26), "НАБОР В КОМАНДУ СЕРВЕРА", fill=BLACK, font=_f(True, 24))
-    d.text((100, 56), "ВЫБЕРИТЕ ЖЕЛАЕМУЮ ДОЛЖНОСТЬ В МЕНЮ НИЖЕ", fill=MUTED, font=_f(False, 15))
+    # Внутренняя панель заголовка
+    header_box = _rounded_panel(848, 140, radius=14, fill=WHITE, outline=BLACK, ow=2)
+    bg.alpha_composite(header_box, (36, 30))
 
-    pill = _rounded_panel(160, 36, radius=10, fill=WHITE, outline=TEAL, ow=2)
-    bg.alpha_composite(pill, (720, 38))
-    d.text((748, 46), "RECRUIT v4.0", fill=TEAL, font=_f(True, 14))
+    # Векторная иконка щита
+    badge = _icon_badge(80, _icon_staff, ring_color=BLACK, ring_w=2, icon_color=accent)
+    bg.alpha_composite(badge, (56, 60))
 
-    # 3 Staff cards
-    items = [
-        ("MODERATOR", "Администрирование и порядок на сервере", "Возраст: 16+"),
-        ("CHAT CONTROL", "Контроль текстовых каналов и чатов", "Возраст: 14+"),
-        ("HELPER", "Помощь новичкам и ответы на вопросы", "Возраст: 14+")
-    ]
-    box_w, box_h = 872, 110
-    gap_y = 16
-    start_x, start_y = 24, 108
+    # Текстовые заголовки СТРОГО на русском языке
+    d.text((160, 60), "НАБОР В КОМАНДУ СЕРВЕРА", fill=BLACK, font=_f(True, 32))
+    d.text((160, 110), "ВЫБЕРИТЕ ЖЕЛАЕМУЮ ДОЛЖНОСТЬ В МЕНЮ НИЖЕ", fill=MUTED, font=_f(False, 20))
 
-    for idx, (title, sub, note) in enumerate(items):
-        by = start_y + idx * (box_h + gap_y)
+    # Боковая плашка
+    pill = _rounded_panel(150, 40, radius=10, fill=WHITE, outline=accent, ow=2)
+    bg.alpha_composite(pill, (710, 80))
+    d.text((728, 90), "RECRUIT PRO", fill=accent, font=_f(True, 15))
 
-        box = _rounded_panel(box_w, box_h, radius=14, fill=WHITE, outline=BLACK, ow=2)
-        bg.alpha_composite(box, (start_x, by))
-
-        ibadge = _icon_badge(64, _icon_staff, ring_color=BLACK, ring_w=2, icon_color=TEAL)
-        bg.alpha_composite(ibadge, (start_x + 16, by + 23))
-
-        d.text((start_x + 94, by + 18), title, fill=BLACK, font=_f(True, 23))
-        d.text((start_x + 94, by + 50), sub, fill=TEAL, font=_f(True, 17))
-        d.text((start_x + 94, by + 78), note, fill=MUTED, font=_f(False, 15))
-
-    br = _corner_bracket(40, 4, color=TEAL)
+    # Угловые скобки
+    br = _corner_bracket(40, 4, color=accent)
     bg.alpha_composite(br, (6, 6))
     bg.alpha_composite(br.rotate(270), (W - 46, 6))
     bg.alpha_composite(br.rotate(90), (6, H - 46))
@@ -305,7 +291,7 @@ class StaffApply(commands.Cog):
     @app_commands.checks.has_permissions(manage_guild=True)
     async def staff_panel(self, interaction: discord.Interaction):
         """Создать профессиональную карточку-панель для набора"""
-        # Генерируем красивую кастомную Pillow карточку набора
+        # Генерируем красивую кастомную Pillow карточку набора в стиле /help
         img_buf = await interaction.client.loop.run_in_executor(
             None, generate_staff_panel_bytes
         )
