@@ -528,6 +528,7 @@ async def load_cogs():
     # These cogs have duplicate commands with other cogs
     SKIP_COGS = {
         "embed_utils.py", "__init__.py",
+        "help_card.py", "_card_style.py",  # helper modules, not cogs (no setup())
         # Duplicate cog'lar (yenileri tercih ediliyor)
         "leveling_engagement.py",  # rank/leaderboard conflicts with level_cog/gamification_cog
         "temp_moderation.py",      # unban/mute conflicts with moderation_cog

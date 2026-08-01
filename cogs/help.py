@@ -1,20 +1,22 @@
 """
 Help Cog — Select Menu
-Тёмная тема, без эмодзи, только select menu
+Профессиональная карточка-меню (чёрно-белый + красный дизайн) вместо тёмного embed.
+Каждая категория рисуется как изображение через help_card.py.
 """
 
-MENU_GIF = "https://media.tenor.com/x8v1oNUOmg4AAAAC/rain-dark.gif"
-
+import io
 import discord
 from discord import app_commands
 from discord.ext import commands
-from datetime import datetime
+
+from cogs.help_card import generate_help_overview, generate_help_category
 
 
 CATEGORIES = [
     {
         "id": "moderation",
         "title": "Модерация",
+        "emoji": "🛡️",
         "commands": [
             ("!ban @user [причина]", "Бан", "Админ"),
             ("!kick @user [причина]", "Кик", "Админ"),
@@ -30,6 +32,7 @@ CATEGORIES = [
     {
         "id": "warnings",
         "title": "Предупреждения",
+        "emoji": "⚠️",
         "commands": [
             ("/warn @user [причина]", "Выдать предупреждение", "Мод"),
             ("/warnings @user", "Список предупреждений", "Мод"),
@@ -39,6 +42,7 @@ CATEGORIES = [
     {
         "id": "tickets",
         "title": "Тикеты",
+        "emoji": "🎫",
         "commands": [
             ("/ticket-panel", "Создать панель тикетов", "Админ"),
             ("/tickets [статус]", "Список тикетов", "Все"),
@@ -50,6 +54,7 @@ CATEGORIES = [
     {
         "id": "economy",
         "title": "Экономика",
+        "emoji": "💰",
         "commands": [
             ("!balance [@user]", "Баланс", "Все"),
             ("!daily", "Ежедневная награда", "Все"),
@@ -67,6 +72,7 @@ CATEGORIES = [
     {
         "id": "music",
         "title": "Музыка",
+        "emoji": "🎵",
         "commands": [
             ("!play [запрос]", "Воспроизвести", "Все"),
             ("!pause", "Пауза", "Все"),
@@ -83,6 +89,7 @@ CATEGORIES = [
     {
         "id": "levels",
         "title": "Уровни",
+        "emoji": "⭐",
         "commands": [
             ("!rank [@user]", "Ранг", "Все"),
             ("!leaderboard", "Таблица лидеров", "Все"),
@@ -93,6 +100,7 @@ CATEGORIES = [
     {
         "id": "utility",
         "title": "Утилиты",
+        "emoji": "⚙️",
         "commands": [
             ("!ping", "Задержка бота", "Все"),
             ("!botinfo", "О боте", "Все"),
@@ -107,6 +115,7 @@ CATEGORIES = [
     {
         "id": "voice",
         "title": "Голосовые",
+        "emoji": "🎧",
         "commands": [
             ("!voicetime [@user]", "Время в голосовых", "Все"),
             ("!voiceleaderboard", "Топ по голосовым", "Все"),
@@ -116,6 +125,7 @@ CATEGORIES = [
     {
         "id": "fun",
         "title": "Развлечения",
+        "emoji": "🎲",
         "commands": [
             ("!8ball [вопрос]", "Магический шар", "Все"),
             ("!coinflip", "Монетка", "Все"),
@@ -129,6 +139,7 @@ CATEGORIES = [
     {
         "id": "giveaway",
         "title": "Розыгрыши",
+        "emoji": "🎁",
         "commands": [
             ("!giveaway [время] [победителей] [приз]", "Создать розыгрыш", "Админ"),
             ("!reroll [ID]", "Перевыбрать победителя", "Админ"),
@@ -137,6 +148,7 @@ CATEGORIES = [
     {
         "id": "profile",
         "title": "Профиль",
+        "emoji": "🪪",
         "commands": [
             ("!profile [@user]", "Карточка профиля", "Все"),
             ("/profile [@user]", "Карточка профиля (slash)", "Все"),
@@ -147,41 +159,29 @@ CATEGORIES = [
 TOTAL_CMDS = sum(len(c["commands"]) for c in CATEGORIES)
 
 
-def build_embed(category_id: str = None) -> discord.Embed:
-    if category_id is None:
-        embed = discord.Embed(
-            title="Aether Bot",
-            description=(
-                f"Добро пожаловать! Здесь вы найдёте все доступные команды.\n\n"
-                f"Выберите категорию из списка ниже, чтобы увидеть список команд.\n\n"
-                f"Всего команд: **{TOTAL_CMDS}** | Префикс: **!**"
-            ),
-            color=discord.Color.dark_grey(),
-            timestamp=datetime.now()
-        )
-        embed.set_image(url=MENU_GIF)
+def _find_category(category_id):
+    return next((c for c in CATEGORIES if c["id"] == category_id), None)
 
-        return embed
 
-    cat = next((c for c in CATEGORIES if c["id"] == category_id), None)
+def _card_file(image, filename="help.png"):
+    buf = io.BytesIO()
+    image.save(buf, format="PNG")
+    buf.seek(0)
+    return discord.File(buf, filename=filename)
+
+
+def build_overview_file():
+    image = generate_help_overview(CATEGORIES, TOTAL_CMDS)
+    return _card_file(image, "help_overview.png")
+
+
+def build_category_file(category_id):
+    cat = _find_category(category_id)
     if not cat:
-        return build_embed()
-
-    embed = discord.Embed(
-        title=cat["title"],
-        color=discord.Color.dark_grey(),
-        timestamp=datetime.now()
-    )
-
-    lines = []
-    for cmd, desc, perm in cat["commands"]:
-        lines.append(f"`{cmd}` — {desc} *[{perm}]*")
-
-    embed.description = "\n".join(lines)
-    embed.set_footer(text=f"{len(cat['commands'])} команд")
-    embed.set_image(url=MENU_GIF)
-
-    return embed
+        return build_overview_file()
+    index = CATEGORIES.index(cat)
+    image = generate_help_category(cat, index, len(CATEGORIES))
+    return _card_file(image, f"help_{category_id}.png")
 
 
 class HelpSelect(discord.ui.Select):
@@ -191,19 +191,21 @@ class HelpSelect(discord.ui.Select):
                 label=c["title"],
                 value=c["id"],
                 description=f"{len(c['commands'])} команд",
+                emoji=c["emoji"],
             )
             for c in CATEGORIES
         ]
         super().__init__(
-            placeholder="Выберите категорию",
+            placeholder="Выберите категорию команд",
             options=options,
-            custom_id="help_select_v4"
+            custom_id="help_select_v5",
         )
 
     async def callback(self, interaction: discord.Interaction):
         cat_id = self.values[0]
         view = HelpView()
-        await interaction.response.edit_message(embed=build_embed(cat_id), view=view)
+        file = build_category_file(cat_id)
+        await interaction.response.edit_message(attachments=[file], view=view)
 
 
 class HelpView(discord.ui.View):
@@ -222,12 +224,12 @@ class Help(commands.Cog):
             await ctx.message.delete()
         except Exception:
             pass
-        await ctx.send(embed=build_embed(), view=HelpView())
+        await ctx.send(file=build_overview_file(), view=HelpView())
 
     @app_commands.command(name="help", description="Справка по командам")
     async def help_slash(self, interaction: discord.Interaction):
         await interaction.response.send_message(
-            embed=build_embed(), view=HelpView(), ephemeral=True
+            file=build_overview_file(), view=HelpView(), ephemeral=True
         )
 
 
