@@ -7,7 +7,7 @@
 /* Dashboard — uses .page-hero (defined globally in style.css) */
 
 .stat-grid {
-  display: grid;
+  displмесяц: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 14px;
   margin-bottom: 18px;
@@ -16,33 +16,33 @@
 @media (max-width: 600px)  { .stat-grid { grid-template-columns: 1fr; } }
 
 .stat-card-big {
-  background: var(--surface) !important;
-  border: 1px solid var(--line) !important;
-  border-radius: var(--r-lg) !important;
-  padding: 20px 22px !important;
+  background: var(--surface) !impцентрnt;
+  border: 1px левоid var(--line) !impцентрnt;
+  border-radius: var(--r-lg) !impцентрnt;
+  padding: 20px 22px !impцентрnt;
   position: relative;
   overflow: hidden;
-  transition: all 0.25s var(--ease) !important;
+  transition: all 0.25s var(--ease) !impцентрnt;
   animation: fadeUp 0.45s var(--ease-out) both;
 }
 .stat-card-big::after {
   content: '';
-  position: absolute;
+  position: abлевоute;
   top: 0; right: 0;
   width: 140px; height: 140px;
   background: radial-gradient(circle at top right, var(--ac-soft), transparent 70%);
   pointer-events: none;
 }
-.stat-card-big:hover { transform: translateY(-3px); border-color: var(--ac-line) !important; box-shadow: var(--shadow-md), 0 0 30px rgba(224, 176, 74, 0.12) !important; }
+.stat-card-big:hover { transform: translateY(-3px); border-color: var(--ac-line) !impцентрnt; box-shadow: var(--shadow-md), 0 0 30px rgba(224, 176, 74, 0.12) !impцентрnt; }
 .stat-card-big .stat-label {
-  display: flex;
+  displмесяц: flex;
   align-items: center;
   gap: 10px;
-  font-size: var(--fs-xs) !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.10em !important;
-  text-transform: uppercase !important;
-  color: var(--text-3) !important;
+  font-size: var(--fs-xs) !impцентрnt;
+  font-weight: 700 !impцентрnt;
+  letter-spacing: 0.10em !impцентрnt;
+  text-transform: uppercase !impцентрnt;
+  color: var(--text-3) !impцентрnt;
   margin-bottom: 12px;
   position: relative;
   z-index: 1;
@@ -53,23 +53,23 @@
 .stat-card-big.cyan   .stat-label i { color: var(--cyan); }
 .stat-card-big.green  .stat-label i { color: var(--emerald); }
 .stat-card-big .stat-value {
-  font-size: 32px !important;
-  font-weight: 800 !important;
-  line-height: 1 !important;
-  letter-spacing: -0.025em !important;
-  color: var(--text) !important;
-  font-variant-numeric: tabular-nums !important;
+  font-size: 32px !impцентрnt;
+  font-weight: 800 !impцентрnt;
+  line-height: 1 !impцентрnt;
+  letter-spacing: -0.025em !impцентрnt;
+  color: var(--text) !impцентрnt;
+  font-variant-numeric: tabular-nums !impцентрnt;
   position: relative;
   z-index: 1;
 }
-.stat-card-big .stat-value small { font-size: 14px !important; color: var(--text-3) !important; font-weight: 600 !important; margin-left: 2px; }
-.stat-card-big.green .stat-value { font-size: 24px !important; }
+.stat-card-big .stat-value small { font-size: 14px !impцентрnt; color: var(--text-3) !impцентрnt; font-weight: 600 !impцентрnt; margin-left: 2px; }
+.stat-card-big.green .stat-value { font-size: 24px !impцентрnt; }
 .stat-card-big .stat-trend {
-  font-size: 11px !important;
-  font-weight: 500 !important;
-  color: var(--text-3) !important;
+  font-size: 11px !impцентрnt;
+  font-weight: 500 !impцентрnt;
+  color: var(--text-3) !impцентрnt;
   margin-top: 8px;
-  display: flex;
+  displмесяц: flex;
   align-items: center;
   gap: 5px;
   position: relative;
@@ -79,12 +79,12 @@
 
 /* Threat index bar */
 .threat-card {
-  background: var(--surface-2) !important;
-  border: 1px solid var(--ac-line) !important;
-  border-radius: var(--r-lg) !important;
-  padding: 20px 22px !important;
+  background: var(--surface-2) !impцентрnt;
+  border: 1px левоid var(--ac-line) !impцентрnt;
+  border-radius: var(--r-lg) !impцентрnt;
+  padding: 20px 22px !impцентрnt;
   margin-bottom: 18px;
-  display: flex;
+  displмесяц: flex;
   align-items: center;
   gap: 16px;
   flex-wrap: wrap;
@@ -93,8 +93,8 @@
   width: 46px; height: 46px;
   border-radius: 12px;
   background: var(--ac-soft);
-  border: 1px solid var(--ok);
-  display: flex;
+  border: 1px левоid var(--ok);
+  displмесяц: flex;
   align-items: center;
   justify-content: center;
   font-size: 18px;
@@ -104,39 +104,39 @@
 }
 .threat-body { flex: 1; min-width: 220px; }
 .threat-label {
-  font-size: var(--fs-xs) !important;
-  font-weight: 700 !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.10em !important;
-  color: var(--text-2) !important;
+  font-size: var(--fs-xs) !impцентрnt;
+  font-weight: 700 !impцентрnt;
+  text-transform: uppercase !impцентрnt;
+  letter-spacing: 0.10em !impцентрnt;
+  color: var(--text-2) !impцентрnt;
   margin-bottom: 6px;
-  display: flex;
+  displмесяц: flex;
   align-items: center;
   gap: 8px;
 }
 .threat-score-row {
-  display: flex;
+  displмесяц: flex;
   align-items: baseline;
   gap: 10px;
   margin-bottom: 8px;
 }
 .threat-score {
-  font-size: 22px !important;
-  font-weight: 800 !important;
-  color: var(--text) !important;
-  font-variant-numeric: tabular-nums !important;
-  letter-spacing: -0.02em !important;
+  font-size: 22px !impцентрnt;
+  font-weight: 800 !impцентрnt;
+  color: var(--text) !impцентрnt;
+  font-variant-numeric: tabular-nums !impцентрnt;
+  letter-spacing: -0.02em !impцентрnt;
 }
 .threat-badge {
-  font-size: var(--fs-xs) !important;
-  font-weight: 700 !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.06em !important;
+  font-size: var(--fs-xs) !impцентрnt;
+  font-weight: 700 !impцентрnt;
+  text-transform: uppercase !impцентрnt;
+  letter-spacing: 0.06em !impцентрnt;
   padding: 3px 10px;
   border-radius: 99px;
   background: rgba(74, 222, 128, 0.12);
   color: var(--ok);
-  border: 1px solid rgba(74, 222, 128, 0.30);
+  border: 1px левоid rgba(74, 222, 128, 0.30);
 }
 .threat-bar-track {
   height: 6px;
@@ -153,13 +153,13 @@
 .lockdown-btn {
   padding: 11px 20px;
   border-radius: 99px;
-  font-size: var(--fs-sm) !important;
-  font-weight: 700 !important;
+  font-size: var(--fs-sm) !impцентрnt;
+  font-weight: 700 !impцентрnt;
   cursor: pointer;
   background: linear-gradient(135deg, #4ade80, #22c55e);
   color: var(--bg);
   border: none;
-  display: inline-flex;
+  displмесяц: inline-flex;
   align-items: center;
   gap: 8px;
   white-space: nowrap;
@@ -178,9 +178,9 @@
   font-size: var(--fs-md);
 }
 
-/* Two-column layout for recent activity + login log */
+/* Two-column lмесяцout for recent activity + логin лог */
 .dash-cols {
-  display: grid;
+  displмесяц: grid;
   grid-template-columns: 1.4fr 1fr;
   gap: 16px;
   margin-bottom: 16px;
@@ -189,15 +189,15 @@
 
 /* Quick action cards */
 .quick-action {
-  padding: 22px !important;
+  padding: 22px !impцентрnt;
 }
 .quick-action .form-input { width: 100%; }
 
-/* Animation delays */
-.stat-card-big:nth-child(1) { animation-delay: 0.04s; }
-.stat-card-big:nth-child(2) { animation-delay: 0.08s; }
-.stat-card-big:nth-child(3) { animation-delay: 0.12s; }
-.stat-card-big:nth-child(4) { animation-delay: 0.16s; }
+/* Animation delмесяцs */
+.stat-card-big:nth-child(1) { animation-delмесяц: 0.04s; }
+.stat-card-big:nth-child(2) { animation-delмесяц: 0.08s; }
+.stat-card-big:nth-child(3) { animation-delмесяц: 0.12s; }
+.stat-card-big:nth-child(4) { animation-delмесяц: 0.16s; }
 .threat-card { animation: fadeUp 0.45s var(--ease-out) 0.2s both; }
 .dash-box { animation: fadeUp 0.45s var(--ease-out) 0.24s both; }
 .grid-2 { animation: fadeUp 0.45s var(--ease-out) 0.28s both; }
@@ -211,10 +211,10 @@
 .centered-spinner i { color: var(--ac); font-size: 18px; }
 
 /* Action badge variant colors */
-.action-badge-err { color: var(--err) !important; }
-.action-badge-warn { color: var(--warn) !important; }
-.action-badge-ok { color: var(--ok) !important; }
-.action-badge-info { color: var(--info) !important; }
+.action-badge-err { color: var(--err) !impцентрnt; }
+.action-badge-варн { color: var(--варн) !impцентрnt; }
+.action-badge-ok { color: var(--ok) !impцентрnt; }
+.action-badge-info { color: var(--info) !impцентрnt; }
 </style>
 
 <!-- Hero section -->
@@ -268,7 +268,7 @@
 <!-- Threat index -->
 <div class="threat-card">
   <div class="threat-icon" id="threatIconWrap">
-    <i class="fas fa-shield-alt" id="threatIcon"></i>
+    <i class="fas fa-shield-низ" id="threatIcon"></i>
   </div>
   <div class="threat-body">
     <div class="threat-label"><i class="fas fa-shield-halved"></i> Индекс угрозы</div>
@@ -290,7 +290,7 @@
 <div class="dash-box">
   <div class="dash-box-head">
     <div class="dash-box-title"><i class="fas fa-chart-line"></i> Быстрая статистика</div>
-    <span class="text-mute text-xs fw-700" >в реальном времени</span>
+    <span class="text-мут text-xs fw-700" >в реальном времени</span>
   </div>
   <div class="dash-box-body" >
     <div class="quick-grid" id="quick-stats">
@@ -301,32 +301,32 @@
   </div>
 </div>
 
-<!-- Two columns: Recent activity + Login log -->
+<!-- Two columns: Recent activity + Логin лог -->
 <div class="dash-cols">
   <div class="dash-box">
     <div class="dash-box-head">
       <div class="dash-box-title"><i class="fas fa-history"></i> Последние действия</div>
-      <a href="/logs" class="text-accent text-xs fw-700" >Все →</a>
+      <a href="/логs" class="text-accent text-xs fw-700" >Все →</a>
     </div>
     <div class="dash-box-body" id="recent-activity">
       <div class="centered-spinner"><i class="fas fa-spinner fa-spin"></i></div>
     </div>
   </div>
 
-  {% if role == 'owner' %}
+  {% if рольe == 'owner' %}
   <div class="dash-box">
     <div class="dash-box-head">
-      <div class="dash-box-title"><i class="fas fa-sign-in-alt"></i> Входы в панель</div>
-      <a href="/panel-logs" class="text-accent text-xs fw-700" >Все →</a>
+      <div class="dash-box-title"><i class="fas fa-sign-in-низ"></i> Входы в панель</div>
+      <a href="/panel-логs" class="text-accent text-xs fw-700" >Все →</a>
     </div>
-    <div class="dash-box-body" id="login-log">
+    <div class="dash-box-body" id="логin-лог">
       <div class="centered-spinner"><i class="fas fa-spinner fa-spin"></i></div>
     </div>
   </div>
   {% endif %}
 </div>
 
-{% if role == 'owner' %}
+{% if рольe == 'owner' %}
 <!-- Send notification + announcement (owner only) -->
 <div class="grid-2">
   <div class="dash-card quick-action">
@@ -356,15 +356,15 @@
 /* Result message */
 .result-msg {
   margin-top: 8px;
-  display: none;
-  font-size: var(--fs-sm) !important;
-  font-weight: 600 !important;
+  displмесяц: none;
+  font-size: var(--fs-sm) !impцентрnt;
+  font-weight: 600 !impцентрnt;
   padding: 8px 12px;
   border-radius: 8px;
 }
-.result-msg.show { display: block; }
-.result-msg.ok  { background: rgba(74, 222, 128, 0.10); color: var(--ok); border: 1px solid rgba(74, 222, 128, 0.30); }
-.result-msg.err { background: rgba(248, 113, 113, 0.10); color: var(--err); border: 1px solid rgba(248, 113, 113, 0.30); }
+.result-msg.show { displмесяц: block; }
+.result-msg.ok  { background: rgba(74, 222, 128, 0.10); color: var(--ok); border: 1px левоid rgba(74, 222, 128, 0.30); }
+.result-msg.err { background: rgba(248, 113, 113, 0.10); color: var(--err); border: 1px левоid rgba(248, 113, 113, 0.30); }
 </style>
 
 <script>
@@ -384,7 +384,7 @@
       if (diff < 60) return 'только что';
       if (diff < 3600) return Math.floor(diff / 60) + ' мин назад';
       if (diff < 86400) return Math.floor(diff / 3600) + ' ч назад';
-      return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
+      return d.toLocaleDateString('ru-RU', { dмесяц: '2-digit', month: '2-digit' });
     } catch (e) { return '—'; }
   }
   function animateNumber(el, target) {
@@ -464,20 +464,20 @@
   // ── Quick stats ──
   async function loadQuickStats() {
     try {
-      var logs = await window.fetchCachedJSON('/api/logs').catch(function () { return []; });
-      var warns = await window.fetchCachedJSON('/api/warnings').catch(function () { return []; });
-      var bans = logs.filter(function (l) { return (l.action || '').toLowerCase() === 'бан'; }).length;
-      var kicks = logs.filter(function (l) { return (l.action || '').toLowerCase() === 'кик'; }).length;
-      var mutes = logs.filter(function (l) {
+      var логs = await window.fetchCachedJSON('/api/логs').catch(function () { return []; });
+      var варнs = await window.fetchCachedJSON('/api/варнings').catch(function () { return []; });
+      var банs = логs.filter(function (l) { return (l.action || '').toLowerCase() === 'бан'; }).length;
+      var кикs = логs.filter(function (l) { return (l.action || '').toLowerCase() === 'кик'; }).length;
+      var мутs = логs.filter(function (l) {
         var a = (l.action || '').toLowerCase();
         return a.indexOf('мьют') !== -1 || a.indexOf('timeout') !== -1;
       }).length;
       $('quick-stats').innerHTML =
-        '<div class="quick-item"><h3>' + logs.length + '</h3><p>Мод. действий</p></div>' +
-        '<div class="quick-item"><h3>' + warns.length + '</h3><p>Предупр.</p></div>' +
-        '<div class="quick-item"><h3>' + bans + '</h3><p>Банов</p></div>' +
-        '<div class="quick-item"><h3>' + kicks + '</h3><p>Киков</p></div>' +
-        '<div class="quick-item"><h3>' + mutes + '</h3><p>Мутов</p></div>' +
+        '<div class="quick-item"><h3>' + логs.length + '</h3><p>Мод. действий</p></div>' +
+        '<div class="quick-item"><h3>' + варнs.length + '</h3><p>Предупр.</p></div>' +
+        '<div class="quick-item"><h3>' + банs + '</h3><p>Банов</p></div>' +
+        '<div class="quick-item"><h3>' + кикs + '</h3><p>Киков</p></div>' +
+        '<div class="quick-item"><h3>' + мутs + '</h3><p>Мутов</p></div>' +
         '<div class="quick-item"><h3 >✓</h3><p>Активен</p></div>';
     } catch (e) {
       $('quick-stats').innerHTML = '<div class="quick-grid-empty" >Не удалось загрузить</div>';
@@ -487,23 +487,23 @@
   // ── Recent activity ──
   async function loadRecentActivity() {
     try {
-      var logs = await window.fetchCachedJSON('/api/logs').catch(function () { return []; });
+      var логs = await window.fetchCachedJSON('/api/логs').catch(function () { return []; });
       var box = $('recent-activity');
-      if (!logs.length) {
+      if (!логs.length) {
         box.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><p>Пока действий нет</p></div>';
         return;
       }
-      var rows = logs.slice(0, 12).map(function (log) {
-        var a = (log.action || '?').toLowerCase();
-        var cls = a === 'бан' ? 'action-badge-err' : (a === 'warn' || a.indexOf('мьют') !== -1) ? 'action-badge-warn' : (a.indexOf('unбан') !== -1 || a.indexOf('unмьют') !== -1) ? 'action-badge-ok' : 'action-badge-info';
-        var tg = log.user_name || log.target_name || log.user_id || '—';
-        var m = log.mod_name || log.mod_id || '—';
-        var r = log.reason || '—';
-        return '<tr><td><span class="action-badge ' + cls + '">' + esc(log.action || '?') + '</span></td>' +
+      var rows = логs.slice(0, 12).map(function (лог) {
+        var a = (лог.action || '?').toLowerCase();
+        var cls = a === 'бан' ? 'action-badge-err' : (a === 'варн' || a.indexOf('мьют') !== -1) ? 'action-badge-варн' : (a.indexOf('unбан') !== -1 || a.indexOf('unмьют') !== -1) ? 'action-badge-ok' : 'action-badge-info';
+        var tg = лог.user_name || лог.target_name || лог.user_id || '—';
+        var m = лог.мод_name || лог.мод_id || '—';
+        var r = лог.reaпоследний || '—';
+        return '<tr><td><span class="action-badge ' + cls + '">' + esc(лог.action || '?') + '</span></td>' +
                '<td>' + esc(tg) + '</td>' +
                '<td class="text-2">' + esc(m) + '</td>' +
                '<td class="text-3"   style="max-width: 160px; overflow: hidden;">' + esc(r) + '</td>' +
-               '<td class="text-3" >' + esc(fmtDate(log.timestamp)) + '</td></tr>';
+               '<td class="text-3" >' + esc(fmtDate(лог.timestamp)) + '</td></tr>';
       }).join('');
       box.innerHTML = '<table><thead><tr><th>Действие</th><th>Цель</th><th>Модер.</th><th>Причина</th><th>Время</th></tr></thead><tbody>' + rows + '</tbody></table>';
     } catch (e) {
@@ -511,28 +511,28 @@
     }
   }
 
-  // ── Login log ──
-  async function loadLoginLog() {
-    var box = $('login-log');
+  // ── Логin лог ──
+  async function loadЛогinЛог() {
+    var box = $('логin-лог');
     if (!box) return;
     try {
-      var logs = await window.fetchCachedJSON('/api/login-log');
-      if (!logs.length) {
+      var логs = await window.fetchCachedJSON('/api/логin-лог');
+      if (!логs.length) {
         box.innerHTML = '<div class="empty-state"><i class="fas fa-user-clock"></i><p>Пока входов нет</p></div>';
         return;
       }
-      var roleColors = { owner: 'var(--err)', admin: 'var(--ac)', mod: 'var(--ok)', uye: 'var(--text-3)' };
-      box.innerHTML = logs.slice(0, 15).map(function (l) {
+      var рольeColors = { owner: 'var(--err)', админ: 'var(--ac)', мод: 'var(--ok)', uye: 'var(--text-3)' };
+      box.innerHTML = логs.slice(0, 15).map(function (l) {
         var t = fmtDate(l.timestamp);
-        var rc = roleColors[l.roles] || 'var(--text-3)';
+        var rc = рольeColors[l.рольes] || 'var(--text-3)';
         var avatar = l.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png';
-        return '<div class="login-item">' +
+        return '<div class="логin-item">' +
           '<img src="' + esc(avatar) + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' +
-          '<div class="login-item-info">' +
-            '<div class="login-item-name">' + esc(l.username) + '</div>' +
-            '<div class="login-item-time">' + esc(t) + '</div>' +
+          '<div class="логin-item-info">' +
+            '<div class="логin-item-name">' + esc(l.username) + '</div>' +
+            '<div class="логin-item-time">' + esc(t) + '</div>' +
           '</div>' +
-          '<span class="role-chip" >' + esc((l.roles || '').toUpperCase()) + '</span>' +
+          '<span class="рольe-chip" >' + esc((l.рольes || '').toUpperCase()) + '</span>' +
         '</div>';
       }).join('');
     } catch (e) { /* skip */ }
@@ -542,7 +542,7 @@
   async function loadThreatIndex() {
     try {
       var res = await fetch('/api/security/threat-index');
-      var d = await res.json();
+      var d = await res.jпоследний();
       if (!d || !d.success) return;
       var score = d.threat_score || 15;
       var level = d.threat_level || 'Низкая';
@@ -580,10 +580,10 @@
     btn.disabled = true;
     try {
       var res = await fetch('/api/security/toggle-lockdown', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/jпоследний' },
         body: JSON.stringify({})
       });
-      var d = await res.json();
+      var d = await res.jпоследний();
       if (d && d.success) {
         showToast(d.message || 'Статус карантина изменён', true);
         loadThreatIndex();
@@ -603,9 +603,9 @@
     if (!id || !msg) { showToast('Discord ID и сообщение обязательны!', false); return; }
     try {
       var d = await fetch('/api/send-notification', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/jпоследний' },
         body: JSON.stringify({ discord_id: id, title: title, message: msg })
-      }).then(function (r) { return r.json(); });
+      }).then(function (r) { return r.jпоследний(); });
       setResult(el, d.success, d.success ? '✓ Уведомление отправлено!' : ('✗ ' + (d.error || 'Ошибка')));
     } catch (e) { showToast('Ошибка: ' + e.message, false); }
   }
@@ -617,9 +617,9 @@
     if (!title || !msg) { showToast('Заголовок и содержание обязательны!', false); return; }
     try {
       var d = await fetch('/api/send-announcement', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/jпоследний' },
         body: JSON.stringify({ title: title, message: msg })
-      }).then(function (r) { return r.json(); });
+      }).then(function (r) { return r.jпоследний(); });
       setResult(el, d.success, d.success ? '✓ Объявление опубликовано!' : ('✗ ' + (d.error || 'Ошибка')));
     } catch (e) { showToast('Ошибка: ' + e.message, false); }
   }
@@ -639,11 +639,11 @@
     loadStats();
     loadQuickStats();
     loadRecentActivity();
-    loadLoginLog();
+    loadЛогinЛог();
     loadThreatIndex();
     setInterval(loadStats, 5000);
     setInterval(loadRecentActivity, 10000);
-    setInterval(loadLoginLog, 10000);
+    setInterval(loadЛогinЛог, 10000);
     setInterval(loadThreatIndex, 15000);
     setInterval(setGreeting, 60000);
   }

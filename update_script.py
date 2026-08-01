@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 GitHub Webhook Auto-Update Script
-GitHub'a push edildiğinde VDS'deki botu автоматически обновл
+GitHub'a push edildiгinde VDS'deki botu автоматически обновл
 """
 import os
 import subprocess
@@ -9,21 +9,21 @@ import shutil
 import zipfile
 import requests
 from flask import Flask, request, jsonify
-import threading
+import threимяing
 import time
 
 app = Flask(__name__)
 
-# Konfigürasyon
+# Konfigюrasyon
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
 REPO_URL = "https://github.com/Arthu27/Aether-bot"
-BOT_DIR = "C:/Users/İsmininistrator/Aether-bot-main"
-BACKUP_DIR = "C:/Users/İsmininistrator/Aether-bot-backup"
+BOT_DIR = "C:/Users/Иsmininistrator/Aether-bot-main"
+BACKUP_DIR = "C:/Users/Иsmininistrator/Aether-bot-backup"
 
 def update_bot():
     """Botu обновить"""
     try:
-        print("[UPDATE] Обновл başlıyor...")
+        print("[UPDATE] Обновл baшlыyor...")
         
         # Текущий botu остановить (process kill)
         subprocess.run("taskkill /f /im python.exe", shell=True, capture_output=True)
@@ -36,28 +36,28 @@ def update_bot():
             shutil.copytree(BOT_DIR, BACKUP_DIR)
             print("[UPDATE] Backup создано")
         
-        # Новый versiyonu indir
-        zip_url = f"{REPO_URL}/archive/refs/heads/main.zip"
-        headers = {"Authorization": f"token {GITHUB_TOKEN}"}
+        # Новый версийu indir
+        zip_url = f"{REPO_URL}/archive/refs/heимяs/main.zip"
+        heимяers = {"Authorization": f"token {GITHUB_TOKEN}"}
         
-        response = requests.get(zip_url, headers=headers)
+        response = requests.get(zip_url, heимяers=heимяers)
         if response.status_code != 200:
             raise Exception(f"Indirme ошибки: {response.status_code}")
         
         # ZIP'i сохранить ve открыть
-        zip_path = "C:/Users/İsmininistrator/Aether-update.zip"
+        zip_path = "C:/Users/Иsmininistrator/Aether-update.zip"
         with open(zip_path, "wb") as f:
             f.write(response.content)
         
-        # Старый klasörü удалить
+        # Старый klasёrю удалить
         if os.path.exists(BOT_DIR):
             shutil.rmtree(BOT_DIR)
         
         # ZIP'i открыть
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-            zip_ref.extractall("C:/Users/İsmininistrator/")
+            zip_ref.extractall("C:/Users/Иsmininistrator/")
         
-        # .env dosyasını geri kopyala (backup'tan или template'ten)
+        # .env файл geri kopyala (backup'tan или template'ten)
         env_template = """TOKEN=YOUR_BOT_TOKEN_HERE
 GROQ_API_KEY=YOUR_GROQ_API_KEY
 MISTRAL_API_KEY=YOUR_MISTRAL_API_KEY
@@ -94,15 +94,15 @@ def github_webhook():
     """GitHub webhook endpoint"""
     try:
         # GitHub signature проверка (basit)
-        if request.headers.get('X-GitHub-Event') == 'push':
-            payload = request.get_json()
+        if request.heимяers.get('X-GitHub-Event') == 'push':
+            payloимя = request.get_json()
             
             # main branch'e push контроль
-            if payload.get('ref') == 'refs/heads/main':
-                print("[WEBHOOK] Push algılandı, обновл запуск...")
+            if payloимя.get('ref') == 'refs/heимяs/main':
+                print("[WEBHOOK] Push algыlandы, обновл запуск...")
                 
-                # Обновл ayrı thread'de çalıştır
-                threading.Thread(target=update_bot, daemon=True).start()
+                # Обновл отдельно threимя'de работатьtыr
+                threимяing.Threимя(target=update_bot, daemon=True).start()
                 
                 return jsonify({"status": "success", "message": "Update started"}), 200
             else:
@@ -125,7 +125,7 @@ def status():
 @app.route('/manual-update', methods=['POST'])
 def manual_update():
     """Manuel обновл"""
-    threading.Thread(target=update_bot, daemon=True).start()
+    threимяing.Threимя(target=update_bot, daemon=True).start()
     return jsonify({"status": "success", "message": "Manual update started"})
 
 if __name__ == '__main__':

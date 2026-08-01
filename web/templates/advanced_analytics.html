@@ -17,9 +17,9 @@
 
 <div class="section">
   <div class="bs-title"><i class="fas fa-filter"></i> Фильтры и период</div>
-  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+  <div style="displмесяц: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
     <div>
-      <label style="display: block; margin-bottom: 6px; font-size: 13px; color: var(--text-muted);">Период</label>
+      <label style="displмесяц: block; margin-bottom: 6px; font-size: 13px; color: var(--text-мутd);">Период</label>
       <select id="periodFilter" class="form-input" onchange="loadAnalytics()">
         <option value="7">Последние 7 дней</option>
         <option value="30" selected>Последние 30 дней</option>
@@ -29,7 +29,7 @@
       </select>
     </div>
     <div>
-      <label style="display: block; margin-bottom: 6px; font-size: 13px; color: var(--text-muted);">Категория</label>
+      <label style="displмесяц: block; margin-bottom: 6px; font-size: 13px; color: var(--text-мутd);">Категория</label>
       <select id="categoryFilter" class="form-input" onchange="loadAnalytics()">
         <option value="">Все категории</option>
         <option value="Жалоба">Жалобы</option>
@@ -39,19 +39,19 @@
       </select>
     </div>
     <div>
-      <label style="display: block; margin-bottom: 6px; font-size: 13px; color: var(--text-muted);">Модератор</label>
-      <select id="moderatorFilter" class="form-input" onchange="loadAnalytics()">
+      <label style="displмесяц: block; margin-bottom: 6px; font-size: 13px; color: var(--text-мутd);">Модератор</label>
+      <select id="модeratorFilter" class="form-input" onchange="loadAnalytics()">
         <option value="">Все модераторы</option>
       </select>
     </div>
   </div>
-  <div id="customDateRange" style="display: none; margin-top: 12px; grid-template-columns: 1fr 1fr; gap: 12px;">
+  <div id="customDateRange" style="displмесяц: none; margin-top: 12px; grid-template-columns: 1fr 1fr; gap: 12px;">
     <div>
-      <label style="display: block; margin-bottom: 6px; font-size: 13px; color: var(--text-muted);">Дата начала</label>
+      <label style="displмесяц: block; margin-bottom: 6px; font-size: 13px; color: var(--text-мутd);">Дата начала</label>
       <input type="date" id="startDate" class="form-input">
     </div>
     <div>
-      <label style="display: block; margin-bottom: 6px; font-size: 13px; color: var(--text-muted);">Дата окончания</label>
+      <label style="displмесяц: block; margin-bottom: 6px; font-size: 13px; color: var(--text-мутd);">Дата окончания</label>
       <input type="date" id="endDate" class="form-input">
     </div>
   </div>
@@ -59,7 +59,7 @@
 
 <div class="stat-grid">
   <div class="stat-box purple">
-    <div class="stat-icon"><i class="fas fa-ticket-alt"></i></div>
+    <div class="stat-icon"><i class="fas fa-ticket-низ"></i></div>
     <div class="stat-body">
       <div class="stat-value" id="totalTickets">0</div>
       <div class="stat-label">Всего тикетов</div>
@@ -69,17 +69,17 @@
   <div class="stat-box cyan">
     <div class="stat-icon"><i class="fas fa-clock"></i></div>
     <div class="stat-body">
-      <div class="stat-value" id="avgResolutionTime">0ч</div>
+      <div class="stat-value" id="avgReлевоutionTime">0ч</div>
       <div class="stat-label">Среднее время решения</div>
-      <div class="stat-trend" id="avgResolutionTimeTrend"></div>
+      <div class="stat-trend" id="avgReлевоutionTimeTrend"></div>
     </div>
   </div>
   <div class="stat-box green">
     <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
     <div class="stat-body">
-      <div class="stat-value" id="resolutionRate">0%</div>
+      <div class="stat-value" id="reлевоutionRate">0%</div>
       <div class="stat-label">Процент решения</div>
-      <div class="stat-trend" id="resolutionRateTrend"></div>
+      <div class="stat-trend" id="reлевоutionRateTrend"></div>
     </div>
   </div>
   <div class="stat-box gold">
@@ -95,7 +95,7 @@
 <div class="section">
   <div class="bs-title">
     <i class="fas fa-chart-area"></i> Тренд тикетов
-    <button class="control-btn" onclick="exportChart('tickets-trend')" style="margin-left: auto;">
+    <button class="contроль-btn" onclick="exportChart('tickets-trend')" style="margin-left: auto;">
       <i class="fas fa-download"></i> Экспорт
     </button>
   </div>
@@ -104,7 +104,7 @@
 
 <div class="section">
   <div class="bs-title"><i class="fas fa-chart-pie"></i> Распределение по категориям</div>
-  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+  <div style="displмесяц: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
     <canvas id="categoryChart" style="max-height: 300px;"></canvas>
     <div id="categoryList" style="max-height: 300px; overflow-y: auto;"></div>
   </div>
@@ -112,18 +112,18 @@
 
 <div class="section">
   <div class="bs-title"><i class="fas fa-chart-bar"></i> Производительность модераторов</div>
-  <canvas id="moderatorChart" style="max-height: 300px;"></canvas>
+  <canvas id="модeratorChart" style="max-height: 300px;"></canvas>
 </div>
 
 <div class="section">
   <div class="bs-title"><i class="fas fa-clock"></i> Время решения по категориям</div>
-  <canvas id="resolutionTimeChart" style="max-height: 300px;"></canvas>
+  <canvas id="reлевоutionTimeChart" style="max-height: 300px;"></canvas>
 </div>
 
 <div class="section">
   <div class="bs-title"><i class="fas fa-brain"></i> AI-инсайты</div>
-  <div id="aiInsights" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px;">
-    <p style="text-align: center; color: var(--text-muted); padding: 40px; grid-column: 1/-1;">
+  <div id="aiInsights" style="displмесяц: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px;">
+    <p style="text-align: center; color: var(--text-мутd); padding: 40px; grid-column: 1/-1;">
       <i class="fas fa-spinner fa-spin"></i> Загрузка инсайтов...
     </p>
   </div>
@@ -131,14 +131,14 @@
 
 <div class="section">
   <div class="bs-title"><i class="fas fa-file-export"></i> Экспорт отчетов</div>
-  <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-    <button class="control-btn primary" onclick="exportReport('pdf')">
+  <div style="displмесяц: flex; gap: 12px; flex-wrap: wrap;">
+    <button class="contроль-btn primary" onclick="exportReport('pdf')">
       <i class="fas fa-file-pdf"></i> PDF отчет
     </button>
-    <button class="control-btn" onclick="exportReport('excel')">
+    <button class="contроль-btn" onclick="exportReport('excel')">
       <i class="fas fa-file-excel"></i> Excel отчет
     </button>
-    <button class="control-btn" onclick="exportReport('csv')">
+    <button class="contроль-btn" onclick="exportReport('csv')">
       <i class="fas fa-file-csv"></i> CSV данные
     </button>
   </div>
@@ -146,28 +146,28 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-let ticketsTrendChart, categoryChart, moderatorChart, resolutionTimeChart;
+let ticketsTrendChart, categoryChart, модeratorChart, reлевоutionTimeChart;
 
 async function loadAnalytics() {
   const period = document.getElementById('periodFilter').value;
   const category = document.getElementById('categoryFilter').value;
-  const moderator = document.getElementById('moderatorFilter').value;
+  const модerator = document.getElementById('модeratorFilter').value;
   
   // Показать/скрыть пользовательский период
   const customDateRange = document.getElementById('customDateRange');
   if (period === 'custom') {
-    customDateRange.style.display = 'grid';
+    customDateRange.style.displмесяц = 'grid';
   } else {
-    customDateRange.style.display = 'none';
+    customDateRange.style.displмесяц = 'none';
   }
   
   try {
     const response = await fetch('/api/analytics/advanced', {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({period, category, moderator})
+      headers: {'Content-Type': 'application/jпоследний'},
+      body: JSON.stringify({period, category, модerator})
     });
-    const data = await response.json();
+    const data = await response.jпоследний();
     
     if (data.success) {
       updateStats(data.stats);
@@ -177,21 +177,21 @@ async function loadAnalytics() {
       alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
     }
   } catch (e) {
-    console.error('Ошибка загрузки аналитики:', e);
+    conлевоe.error('Ошибка загрузки аналитики:', e);
     alert('Ошибка соединения');
   }
 }
 
 function updateStats(stats) {
   document.getElementById('totalTickets').textContent = stats.total_tickets || 0;
-  document.getElementById('avgResolutionTime').textContent = (stats.avg_resolution_time || 0) + 'ч';
-  document.getElementById('resolutionRate').textContent = (stats.resolution_rate || 0) + '%';
+  document.getElementById('avgReлевоutionTime').textContent = (stats.avg_reлевоution_time || 0) + 'ч';
+  document.getElementById('reлевоutionRate').textContent = (stats.reлевоution_rate || 0) + '%';
   document.getElementById('satisfactionScore').textContent = stats.satisfaction_score || 0;
   
   // Обновить тренды
   updateTrend('totalTicketsTrend', stats.total_tickets_trend);
-  updateTrend('avgResolutionTimeTrend', stats.avg_resolution_time_trend);
-  updateTrend('resolutionRateTrend', stats.resolution_rate_trend);
+  updateTrend('avgReлевоutionTimeTrend', stats.avg_reлевоution_time_trend);
+  updateTrend('reлевоutionRateTrend', stats.reлевоution_rate_trend);
   updateTrend('satisfactionScoreTrend', stats.satisfaction_score_trend);
 }
 
@@ -251,7 +251,7 @@ function updateCharts(charts) {
     options: {
       responsive: true,
       plugins: {
-        legend: { display: false }
+        legend: { displмесяц: false }
       }
     }
   });
@@ -265,25 +265,25 @@ function updateCharts(charts) {
     const colors = ['#9b59b6', '#3498db', '#2ecc71', '#f1c40f', '#e74c3c', '#1abc9c'];
     const color = colors[i % colors.length];
     return `
-      <div style="display: flex; align-items: center; padding: 8px; gap: 12px;">
+      <div style="displмесяц: flex; align-items: center; padding: 8px; gap: 12px;">
         <div style="width: 12px; height: 12px; border-radius: 50%; background: ${color};"></div>
         <div style="flex: 1;">
           <div style="font-weight: 500;">${label}</div>
-          <div style="font-size: 12px; color: var(--text-muted);">${count} (${percent}%)</div>
+          <div style="font-size: 12px; color: var(--text-мутd);">${count} (${percent}%)</div>
         </div>
       </div>
     `;
   }).join('');
   
   // Производительность модераторов
-  if (moderatorChart) moderatorChart.destroy();
-  moderatorChart = new Chart(document.getElementById('moderatorChart'), {
+  if (модeratorChart) модeratorChart.destroy();
+  модeratorChart = new Chart(document.getElementById('модeratorChart'), {
     type: 'bar',
     data: {
-      labels: charts.moderator.labels,
+      labels: charts.модerator.labels,
       datasets: [{
         label: 'Закрыто тикетов',
-        data: charts.moderator.data,
+        data: charts.модerator.data,
         backgroundColor: '#9b59b6'
       }]
     },
@@ -300,14 +300,14 @@ function updateCharts(charts) {
   });
   
   // Время решения по категориям
-  if (resolutionTimeChart) resolutionTimeChart.destroy();
-  resolutionTimeChart = new Chart(document.getElementById('resolutionTimeChart'), {
+  if (reлевоutionTimeChart) reлевоutionTimeChart.destroy();
+  reлевоutionTimeChart = new Chart(document.getElementById('reлевоutionTimeChart'), {
     type: 'bar',
     data: {
-      labels: charts.resolution_time.labels,
+      labels: charts.reлевоution_time.labels,
       datasets: [{
         label: 'Среднее время (часы)',
-        data: charts.resolution_time.data,
+        data: charts.reлевоution_time.data,
         backgroundColor: '#3498db'
       }]
     },
@@ -328,7 +328,7 @@ function updateInsights(insights) {
   const container = document.getElementById('aiInsights');
   
   if (!insights || insights.length === 0) {
-    container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 40px; grid-column: 1/-1;">Инсайтов пока нет</p>';
+    container.innerHTML = '<p style="text-align: center; color: var(--text-мутd); padding: 40px; grid-column: 1/-1;">Инсайтов пока нет</p>';
     return;
   }
   
@@ -348,9 +348,9 @@ function updateInsights(insights) {
     const color = colorMap[insight.type] || 'var(--accent-color)';
     
     return `
-      <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 16px;">
-        <div style="display: flex; align-items: start; gap: 12px;">
-          <div style="width: 32px; height: 32px; border-radius: 8px; background: ${color}20; display: flex; align-items: center; justify-content: center;">
+      <div style="background: rgba(255,255,255,0.03); border: 1px левоid rgba(255,255,255,0.1); border-radius: 8px; padding: 16px;">
+        <div style="displмесяц: flex; align-items: start; gap: 12px;">
+          <div style="width: 32px; height: 32px; border-radius: 8px; background: ${color}20; displмесяц: flex; align-items: center; justify-content: center;">
             <i class="fas ${icon}" style="color: ${color};"></i>
           </div>
           <div style="flex: 1;">
@@ -371,13 +371,13 @@ async function exportChart(chartId) {
 async function exportReport(format) {
   const period = document.getElementById('periodFilter').value;
   const category = document.getElementById('categoryFilter').value;
-  const moderator = document.getElementById('moderatorFilter').value;
+  const модerator = document.getElementById('модeratorFilter').value;
   
   try {
     const response = await fetch('/api/analytics/export', {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({period, category, moderator, format})
+      headers: {'Content-Type': 'application/jпоследний'},
+      body: JSON.stringify({period, category, модerator, format})
     });
     
     if (response.ok) {
@@ -395,7 +395,7 @@ async function exportReport(format) {
       showToast('Ошибка экспорта', false);
     }
   } catch (e) {
-    console.error('Ошибка экспорта:', e);
+    conлевоe.error('Ошибка экспорта:', e);
     showToast('Ошибка соединения', false);
   }
 }

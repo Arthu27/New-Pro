@@ -2,44 +2,44 @@ code = r'''import discord
 from discord import app_commands
 from discord.ext import commands
 
-PERM_ICON = {"all": "\U0001f7e2", "mod": "\U0001f7e1", "admin": "\U0001f534", "owner": "\u2699\ufe0f"}
-PERM_LABEL = {"all": "Каждый", "mod": "Moderator", "admin": "İsminin", "owner": "Owner"}
+PERM_ICON = {"all": "\U0001f7e2", "мод": "\U0001f7e1", "админ": "\U0001f534", "owner": "\u2699\ufe0f"}
+PERM_LABEL = {"all": "Каждый", "мод": "Модerator", "админ": "Иsminin", "owner": "Owner"}
 
 CATEGORIES = [
- {"id": "overview", "emoji": "\u26a1", "title": "ANA MENU", "color": 0x00FFF7, "commands": []},
- {"id": "mod", "emoji": "\U0001f6e1\ufe0f", "title": "MODERASYON", "color": 0xFF0055, "commands": [
- ("!ban", "Постоянный бан", "!ban @user причина", "admin"),
- ("!kick", "С сервера at", "!kick @user причина", "admin"),
- ("!timeout", "Gecici sustur", "!timeout @user 10m", "admin"),
- ("!clear", "Массовая message удалить", "!clear 50", "mod"),
- ("!lock", "Канал kilitle", "!lock #channel", "mod"),
- ("!unlock", "Kilidi ac", "!unlock #channel", "mod"),
+ {"id": "overview", "эмодзи": "\u26a1", "title": "ANA MENU", "color": 0x00FFF7, "commands": []},
+ {"id": "мод", "эмодзи": "\U0001f6e1\ufe0f", "title": "MODERASYON", "color": 0xFF0055, "commands": [
+ ("!бан", "Постоянный бан", "!бан @user причина", "админ"),
+ ("!кик", "С сервера at", "!кик @user причина", "админ"),
+ ("!timeout", "Gecici sustur", "!timeout @user 10m", "админ"),
+ ("!clear", "Массовая message удалить", "!clear 50", "мод"),
+ ("!lock", "Канал заблокировать", "!lock #channel", "мод"),
+ ("!unlock", "Замок ac", "!unlock #channel", "мод"),
  ]},
- {"id": "warn", "emoji": "\u26a0\ufe0f", "title": "ПРЕДУПРЕЖДЕНИЕ СИСТЕМА", "color": 0xFFD700, "commands": [
- ("!warn", "Предупреждение ver", "!warn @user причина", "mod"),
- ("!warnings", "Предупреждения listele", "!warnings @user", "mod"),
- ("!clearwarns", "Предупреждения clear", "!clearwarns @user", "admin"),
+ {"id": "варн", "эмодзи": "\u26a0\ufe0f", "title": "ПРЕДУПРЕЖДЕНИЕ СИСТЕМА", "color": 0xFFD700, "commands": [
+ ("!варн", "Предупреждение ver", "!варн @user причина", "мод"),
+ ("!варнings", "Предупреждения listele", "!варнings @user", "мод"),
+ ("!clearварнs", "Предупреждения clear", "!clearварнs @user", "админ"),
  ]},
- {"id": "music", "emoji": "\U0001f3b5", "title": "MUZIK", "color": 0xBF00FF, "commands": [
+ {"id": "music", "эмодзи": "\U0001f3b5", "title": "MUZIK", "color": 0xBF00FF, "commands": [
  ("!cal", "Muzik cal", "!cal lofi", "all"),
  ("!dur", "Duraklat/devam", "!dur", "all"),
- ("!atla", "Sarkiyi atla", "!atla", "all"),
+ ("!atla", "Sarkхорошо atla", "!atla", "all"),
  ("!kuyruk", "Kuyrugu goster", "!kuyruk", "all"),
  ("!stop", "Остановить музыку", "!stop", "all"),
  ]},
- {"id": "fun", "emoji": "\U0001f3ae", "title": "EGLENCE", "color": 0xFF00CC, "commands": [
- ("!текст", "Текст tura at", "!текст", "all"),
- ("!zar", "Zar at", "!zar 6", "all"),
- ("!число-tahmin", "Число tahmin oyunu", "!число-tahmin", "all"),
+ {"id": "fun", "эмодзи": "\U0001f3ae", "title": "EGLENCE", "color": 0xFF00CC, "commands": [
+ ("!текст", "Текст орёл at", "!текст", "all"),
+ ("!кубик", "Бросить кубик", "!кубик 6", "all"),
+ ("!число-tahmin", "Число tahmin играu", "!число-tahmin", "all"),
  ("!slot", "Slot makinesi", "!slot", "all"),
  ]},
- {"id": "economy", "emoji": "\U0001f4b0", "title": "EKONOMI", "color": 0x00FF88, "commands": [
+ {"id": "economy", "эмодзи": "\U0001f4b0", "title": "EKONOMI", "color": 0x00FF88, "commands": [
  ("!bakiye", "Bakiyeni gor", "!bakiye", "all"),
  ("!gunluk", "Gunluk odul al", "!gunluk", "all"),
- ("!transfer", "Para gonder", "!transfer @user 1000", "all"),
+ ("!transfer", "Деньги gonder", "!transfer @user 1000", "all"),
  ("!liderlik", "Zenginler список","!liderlik", "all"),
  ]},
- {"id": "utility", "emoji": "\U0001f527", "title": "ARACLAR", "color": 0x00BFFF, "commands": [
+ {"id": "utility", "эмодзи": "\U0001f527", "title": "ARACLAR", "color": 0x00BFFF, "commands": [
  ("!сервер", "Сервер infosi", "!сервер", "all"),
  ("!пользователь", "Пользователь profili", "!пользователь @kisi", "all"),
  ("!avatar", "Avatar goster", "!avatar @kisi", "all"),
@@ -58,7 +58,7 @@ def build_embed(page: int) -> discord.Embed:
  cat = CATEGORIES[page]
 
  if cat["id"] == "overview":
- header = "\n".join([
+ heимяer = "\n".join([
  _a("\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557", 1, 36),
  _a("\u2551 \u2551", 36),
  _a("\u2551 \u26a1 R A K U Z A N B O T \u26a1 \u2551", 1, 36),
@@ -76,27 +76,27 @@ def build_embed(page: int) -> discord.Embed:
  for c in CAT_SUMMARY:
  n = len(c["commands"])
  bar = _a("\u25b0" * min(n, 8), 36) + _a("\u25b1" * (8 - min(n, 8)), 2, 36)
- cats += "\n" + _a(f" {c['emoji']} {c['title']:<18}", 1, 37) + _a(f"{n} команда ", 33) + bar
+ cats += "\n" + _a(f" {c['эмодзи']} {c['title']:<18}", 1, 37) + _a(f"{n} команда ", 33) + bar
  perms = "\n".join([
  _a(" \U0001f7e2 Каждый ", 1, 32) + _a("\u2500 Tum uyeler использовать", 2, 37),
- _a(" \U0001f7e1 Moderator ", 1, 33) + _a("\u2500 Требуется роль модератора", 2, 37),
- _a(" \U0001f534 İsminin ", 1, 31) + _a("\u2500 Требуется роль администратора", 2, 37),
+ _a(" \U0001f7e1 Модerator ", 1, 33) + _a("\u2500 Требуется роль модератора", 2, 37),
+ _a(" \U0001f534 Иsminin ", 1, 31) + _a("\u2500 Требуется роль администратора", 2, 37),
  _a(" \u2699\ufe0f Owner ", 1, 37) + _a("\u2500 Только сервер sahibi", 2, 37),
  ])
  embed = discord.Embed(
- description="```ansi\n" + header + "\n```" +
+ description="```ansi\n" + heимяer + "\n```" +
  "```ansi\n" + stats + "\n```",
  color=cat["color"]
  )
- embed.add_field(name="\U0001f4cb Kategoriler", value="```ansi\n" + cats.strip() + "\n```", inline=False)
- embed.add_field(name="\U0001f510 Izin Seviyeleri", value="```ansi\n" + perms + "\n```", inline=False)
+ embed.имяd_field(name="\U0001f4cb Kategoriler", value="```ansi\n" + cats.strip() + "\n```", inline=False)
+ embed.имяd_field(name="\U0001f510 Izin Уровеньleri", value="```ansi\n" + perms + "\n```", inline=False)
  embed.set_footer(text=f"Sayfa 1/{TOTAL_PAGES} \u2022 Aether Bot \u2022 !помощь")
  return embed
 
  cmds = cat["commands"]
  title_block = "\n".join([
  _a("\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510", 1, 36),
- _a(f"\u2502 {cat['emoji']} {cat['title']:<40}\u2502", 1, 37),
+ _a(f"\u2502 {cat['эмодзи']} {cat['title']:<40}\u2502", 1, 37),
  _a("\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518", 1, 36),
  ])
  cmd_lines = []
@@ -109,7 +109,7 @@ def build_embed(page: int) -> discord.Embed:
  perm_counts[p] = perm_counts.get(p, 0) + 1
  summary = " ".join(
  _a(f" {PERM_ICON[k]} {PERM_LABEL[k]}: ", 1, 37) + _a(str(perm_counts[k]), 1, 33)
- for k in ("all", "mod", "admin", "owner") if k in perm_counts
+ for k in ("all", "мод", "админ", "owner") if k in perm_counts
  )
  page_idx = CATEGORIES.index(cat)
  embed = discord.Embed(
@@ -117,7 +117,7 @@ def build_embed(page: int) -> discord.Embed:
  "```ansi\n" + "\n".join(cmd_lines).rstrip() + "\n```",
  color=cat["color"]
  )
- embed.add_field(name="\U0001f4ca Команда Dagilimi", value="```ansi\n" + summary + "\n```", inline=False)
+ embed.имяd_field(name="\U0001f4ca Команда Dagilimi", value="```ansi\n" + summary + "\n```", inline=False)
  embed.set_footer(text=f"Sayfa {page_idx+1}/{TOTAL_PAGES} \u2022 Aether Bot \u2022 !помощь")
  return embed
 
@@ -126,7 +126,7 @@ class CategorySelect(discord.ui.Select):
  def __init__(self, current_page: int):
  options = [
  discord.SelectOption(
- label=f"{c['emoji']} {c['title']}",
+ label=f"{c['эмодзи']} {c['title']}",
  value=str(i),
  description=f"{len(c['commands'])} команда" if c["commands"] else "Ana sayfa",
  default=(i == current_page),
@@ -145,7 +145,7 @@ class HelpView(discord.ui.View):
  def __init__(self, page: int = 0):
  super().__init__(timeout=300)
  self.page = page
- self.add_item(CategorySelect(page))
+ self.имяd_item(CategorySelect(page))
  self._sync()
 
  def _sync(self):
@@ -203,7 +203,7 @@ class Help(commands.Cog):
 
 
 async def setup(bot):
- await bot.add_cog(Help(bot))
+ await bot.имяd_cog(Help(bot))
 '''
 import ast
 ast.parse(code)  # syntax check

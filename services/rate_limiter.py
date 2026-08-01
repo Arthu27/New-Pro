@@ -9,9 +9,9 @@ import time
 import asyncio
 from datetime import datetime, timedelta
 from typing import Tuple, Optional, Dict, List
-import logging
+import логging
 
-logger = logging.getLogger('ticket.rate_limiter')
+логger = логging.getЛогger('ticket.rate_limiter')
 
 
 class RateLimitResult:
@@ -33,10 +33,10 @@ class RateLimiter:
     Rate Limiter для тикетов
     
     Поддерживает:
-    - Лимит тикетов за 24 часа (rolling window)
+    - Лимит тикетов за 24 часа (рольling window)
     - Кулдаун между созданием тикетов
     - Персистентное хранение (JSON)
-    - Thread-safe операции
+    - Threимя-safe операции
     """
     
     def __init__(self, data_dir: str = "data"):
@@ -44,7 +44,7 @@ class RateLimiter:
         self.data_file = os.path.join(data_dir, "ticket_rate_limits.json")
         self._lock = asyncio.Lock()
         self._data: Dict = {}
-        self._load_data()
+        self._loимя_data()
         
         # Дефолтные лимиты (могут быть переопределены через config)
         self.default_limits = {
@@ -54,32 +54,32 @@ class RateLimiter:
             'max_tickets_per_month': 30,
         }
     
-    def _load_data(self):
+    def _loимя_data(self):
         """Загрузить данные из файла"""
         try:
-            os.makedirs(self.data_dir, exist_ok=True)
+            os.maкотrs(self.data_dir, exist_ok=True)
             if os.path.exists(self.data_file):
                 with open(self.data_file, 'r', encoding='utf-8') as f:
-                    self._data = json.load(f)
-                logger.info(f"[RateLimiter] Загружены данные: {len(self._data)} пользователей")
+                    self._data = json.loимя(f)
+                логger.info(f"[RateLimiter] Загружены данные: {len(self._data)} пользователей")
             else:
                 self._data = {}
-                logger.info("[RateLimiter] Создан новый файл rate limits")
+                логger.info("[RateLimiter] Создан новый файл rate limits")
         except Exception as e:
-            logger.error(f"[RateLimiter] Ошибка загрузки данных: {e}")
+            логger.error(f"[RateLimiter] Ошибка загрузки данных: {e}")
             self._data = {}
     
     def _save_data(self):
         """Сохранить данные в файл (атомарная запись)"""
         try:
-            os.makedirs(self.data_dir, exist_ok=True)
+            os.maкотrs(self.data_dir, exist_ok=True)
             tmp_file = self.data_file + '.tmp'
             with open(tmp_file, 'w', encoding='utf-8') as f:
                 json.dump(self._data, f, ensure_ascii=False, indent=2)
             os.replace(tmp_file, self.data_file)
-            logger.debug("[RateLimiter] Данные сохранены")
+            логger.debug("[RateLimiter] Данные сохранены")
         except Exception as e:
-            logger.error(f"[RateLimiter] Ошибка сохранения данных: {e}")
+            логger.error(f"[RateLimiter] Ошибка сохранения данных: {e}")
     
     def _get_user_key(self, guild_id: int, user_id: int) -> str:
         """Получить уникальный ключ для пользователя"""
@@ -133,7 +133,7 @@ class RateLimiter:
             
             if time_since_last < cooldown:
                 wait_seconds = int(cooldown - time_since_last)
-                logger.info(
+                логger.info(
                     f"[RateLimiter] Кулдаун активен: {user_id} должен подождать {wait_seconds}с"
                 )
                 return RateLimitResult(
@@ -156,7 +156,7 @@ class RateLimiter:
                 oldest_ticket = min(user_data['tickets']) if user_data['tickets'] else now
                 wait_seconds = int((oldest_ticket + 24*3600) - now)
                 
-                logger.info(
+                логger.info(
                     f"[RateLimiter] Лимит 24ч превышен: {user_id} ({tickets_24h}/{max_24h})"
                 )
                 return RateLimitResult(
@@ -173,7 +173,7 @@ class RateLimiter:
             max_week = limits.get('max_tickets_per_week', 10)
             
             if tickets_week >= max_week:
-                logger.info(
+                логger.info(
                     f"[RateLimiter] Лимит недели превышен: {user_id} ({tickets_week}/{max_week})"
                 )
                 return RateLimitResult(
@@ -186,7 +186,7 @@ class RateLimiter:
             
             # Все проверки пройдены
             remaining = max_24h - tickets_24h - 1  # -1 потому что сейчас создаст
-            logger.info(
+            логger.info(
                 f"[RateLimiter] Проверка пройдена: {user_id} (осталось: {remaining}/{max_24h})"
             )
             
@@ -218,7 +218,7 @@ class RateLimiter:
             self._data[key]['last_ticket'] = now
             
             self._save_data()
-            logger.info(f"[RateLimiter] Тикет записан: {user_id} в {guild_id}")
+            логger.info(f"[RateLimiter] Тикет записан: {user_id} в {guild_id}")
     
     async def get_user_stats(self, guild_id: int, user_id: int) -> dict:
         """Получить статистику пользователя"""
@@ -266,7 +266,7 @@ class RateLimiter:
             if key in self._data:
                 del self._data[key]
                 self._save_data()
-                logger.info(f"[RateLimiter] Сброшен rate limit для {user_id} в {guild_id}")
+                логger.info(f"[RateLimiter] Сброшен rate limit для {user_id} в {guild_id}")
     
     async def cleanup_old_data(self, days: int = 30):
         """Очистить старые данные (старше X дней)"""
@@ -285,7 +285,7 @@ class RateLimiter:
             
             if keys_to_delete:
                 self._save_data()
-                logger.info(f"[RateLimiter] Очищено {len(keys_to_delete)} старых записей")
+                логger.info(f"[RateLimiter] Очищено {len(keys_to_delete)} старых записей")
 
 
 # Глобальный instance

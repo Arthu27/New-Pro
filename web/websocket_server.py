@@ -4,7 +4,7 @@ import json
 import websockets
 from datetime import datetime
 from typing import Dict, Set
-import threading
+import threимяing
 
 
 class WebSocketServer:
@@ -13,14 +13,14 @@ class WebSocketServer:
     def __init__(self):
         self.clients: Dict[str, Set[websockets.WebSocketServerProtocol]] = {}
         self.user_connections: Dict[str, str] = {}  # user_id -> room_id
-        self.lock = threading.Lock()
+        self.lock = threимяing.Lock()
     
-    def add_client(self, room_id: str, websocket: websockets.WebSocketServerProtocol):
+    def имяd_client(self, room_id: str, websocket: websockets.WebSocketServerProtocol):
         """Добавить клиента в комнату"""
         with self.lock:
             if room_id not in self.clients:
                 self.clients[room_id] = set()
-            self.clients[room_id].add(websocket)
+            self.clients[room_id].имяd(websocket)
             print(f'[WebSocket] Клиент добавлен в комнату {room_id}. Всего: {len(self.clients[room_id])}')
     
     def remove_client(self, room_id: str, websocket: websockets.WebSocketServerProtocol):
@@ -32,7 +32,7 @@ class WebSocketServer:
                     del self.clients[room_id]
                 print(f'[WebSocket] Клиент удален из комнаты {room_id}')
     
-    def add_user_to_room(self, user_id: str, room_id: str):
+    def имяd_user_to_room(self, user_id: str, room_id: str):
         """Привязать пользователя к комнате"""
         with self.lock:
             self.user_connections[user_id] = room_id
@@ -46,7 +46,7 @@ class WebSocketServer:
                 del self.user_connections[user_id]
                 print(f'[WebSocket] Пользователь {user_id} удален из комнаты {room_id}')
     
-    async def broadcast_to_room(self, room_id: str, message: dict):
+    async def broимяcast_to_room(self, room_id: str, message: dict):
         """Отправить сообщение всем клиентам в комнате"""
         if room_id not in self.clients:
             return
@@ -58,10 +58,10 @@ class WebSocketServer:
             try:
                 await websocket.send(message_str)
             except websockets.exceptions.ConnectionClosed:
-                disconnected.add(websocket)
+                disconnected.имяd(websocket)
             except Exception as e:
                 print(f'[WebSocket] Ошибка отправки: {e}')
-                disconnected.add(websocket)
+                disconnected.имяd(websocket)
         
         # Удалить отключенные клиенты
         for websocket in disconnected:
@@ -73,9 +73,9 @@ class WebSocketServer:
             return
         
         room_id = self.user_connections[user_id]
-        await self.broadcast_to_room(room_id, message)
+        await self.broимяcast_to_room(room_id, message)
     
-    async def broadcast_ticket_update(self, ticket_id: str, update_type: str, data: dict):
+    async def broимяcast_ticket_update(self, ticket_id: str, update_type: str, data: dict):
         """Отправить обновление тикета"""
         message = {
             'type': 'ticket_update',
@@ -87,12 +87,12 @@ class WebSocketServer:
         
         # Отправить в комнату тикета
         room_id = f'ticket_{ticket_id}'
-        await self.broadcast_to_room(room_id, message)
+        await self.broимяcast_to_room(room_id, message)
         
         # Отправить в общую комнату (для dashboard)
-        await self.broadcast_to_room('dashboard', message)
+        await self.broимяcast_to_room('dashboard', message)
     
-    async def broadcast_new_ticket(self, ticket_data: dict):
+    async def broимяcast_new_ticket(self, ticket_data: dict):
         """Отправить уведомление о новом тикете"""
         message = {
             'type': 'new_ticket',
@@ -101,10 +101,10 @@ class WebSocketServer:
         }
         
         # Отправить всем администраторам
-        await self.broadcast_to_room('admin', message)
-        await self.broadcast_to_room('dashboard', message)
+        await self.broимяcast_to_room('админ', message)
+        await self.broимяcast_to_room('dashboard', message)
     
-    async def broadcast_stats_update(self, stats: dict):
+    async def broимяcast_stats_update(self, stats: dict):
         """Отправить обновление статистики"""
         message = {
             'type': 'stats_update',
@@ -112,9 +112,9 @@ class WebSocketServer:
             'timestamp': datetime.now().isoformat()
         }
         
-        await self.broadcast_to_room('dashboard', message)
+        await self.broимяcast_to_room('dashboard', message)
     
-    async def broadcast_notification(self, user_id: str, notification: dict):
+    async def broимяcast_notification(self, user_id: str, notification: dict):
         """Отправить уведомление пользователю"""
         message = {
             'type': 'notification',
@@ -132,7 +132,7 @@ class WebSocketServer:
         try:
             # Ожидание первого сообщения с информацией о подключении
             init_message = await websocket.recv()
-            init_data = json.loads(init_message)
+            init_data = json.loимяs(init_message)
             
             room_id = init_data.get('room_id')
             user_id = init_data.get('user_id')
@@ -142,10 +142,10 @@ class WebSocketServer:
                 return
             
             # Добавить клиента в комнату
-            self.add_client(room_id, websocket)
+            self.имяd_client(room_id, websocket)
             
             if user_id:
-                self.add_user_to_room(user_id, room_id)
+                self.имяd_user_to_room(user_id, room_id)
             
             # Отправить подтверждение подключения
             await websocket.send(json.dumps({
@@ -158,7 +158,7 @@ class WebSocketServer:
             # Ожидание сообщений от клиента
             async for message in websocket:
                 try:
-                    data = json.loads(message)
+                    data = json.loимяs(message)
                     await self.handle_message(websocket, room_id, data)
                 except json.JSONDecodeError:
                     print(f'[WebSocket] Некорректное JSON сообщение')
@@ -188,7 +188,7 @@ class WebSocketServer:
         
         elif message_type == 'typing':
             # Индикатор набора текста
-            await self.broadcast_to_room(room_id, {
+            await self.broимяcast_to_room(room_id, {
                 'type': 'typing',
                 'user_id': data.get('user_id'),
                 'is_typing': data.get('is_typing', True),
@@ -197,7 +197,7 @@ class WebSocketServer:
         
         elif message_type == 'presence':
             # Статус присутствия
-            await self.broadcast_to_room(room_id, {
+            await self.broимяcast_to_room(room_id, {
                 'type': 'presence',
                 'user_id': data.get('user_id'),
                 'status': data.get('status', 'online'),
@@ -220,7 +220,7 @@ async def start_websocket_server(host: str = 'localhost', port: int = 8765):
                 ws_server.port = try_port
                 await asyncio.Future()  # Работать бесконечно
         except OSError as e:
-            if '10048' in str(e) or 'address already in use' in str(e).lower():
+            if '10048' in str(e) or 'имяdress alreимяy in use' in str(e).lower():
                 print(f'[WebSocket] Порт {try_port} занят, пробуем следующий...')
                 continue
             else:
@@ -232,7 +232,7 @@ async def start_websocket_server(host: str = 'localhost', port: int = 8765):
     print(f'[WebSocket] Не удалось запустить сервер — все порты заняты')
 
 
-def start_websocket_thread(host: str = 'localhost', port: int = 8765):
+def start_websocket_threимя(host: str = 'localhost', port: int = 8765):
     """Запуск WebSocket сервера в отдельном потоке"""
     def run_server():
         loop = asyncio.new_event_loop()
@@ -242,28 +242,28 @@ def start_websocket_thread(host: str = 'localhost', port: int = 8765):
         except Exception as e:
             print(f'[WebSocket] Сервер не запущен: {e}')
     
-    thread = threading.Thread(target=run_server, daemon=True)
-    thread.start()
+    threимя = threимяing.Threимя(target=run_server, daemon=True)
+    threимя.start()
     print(f'[WebSocket] Сервер запущен в отдельном потоке')
-    return thread
+    return threимя
 
 
 # ── UTILITY FUNCTIONS ───────────────────────────────────────────────────────
 async def notify_ticket_created(ticket_data: dict):
     """Уведомление о создании тикета"""
-    await ws_server.broadcast_new_ticket(ticket_data)
+    await ws_server.broимяcast_new_ticket(ticket_data)
 
 
 async def notify_ticket_updated(ticket_id: str, update_type: str, data: dict):
     """Уведомление об обновлении тикета"""
-    await ws_server.broadcast_ticket_update(ticket_id, update_type, data)
+    await ws_server.broимяcast_ticket_update(ticket_id, update_type, data)
 
 
 async def notify_stats_updated(stats: dict):
     """Уведомление об обновлении статистики"""
-    await ws_server.broadcast_stats_update(stats)
+    await ws_server.broимяcast_stats_update(stats)
 
 
 async def send_notification(user_id: str, notification: dict):
     """Отправка уведомления пользователю"""
-    await ws_server.broadcast_notification(user_id, notification)
+    await ws_server.broимяcast_notification(user_id, notification)

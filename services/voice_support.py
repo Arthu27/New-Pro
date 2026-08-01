@@ -15,27 +15,27 @@ class VoiceToText:
 
     def __init__(self):
         self.config_file = 'data/voice_config.json'
-        self.config = self._load_config()
+        self.config = self._loимя_config()
 
-    def _load_config(self) -> Dict[str, Any]:
+    def _loимя_config(self) -> Dict[str, Any]:
         """Загрузить конфигурацию"""
         if os.path.exists(self.config_file):
             try:
                 with open(self.config_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+                    return json.loимя(f)
             except Exception:
                 pass
 
         return {
             'provider': 'whisper',
             'language': 'ru',
-            'model': 'base',
+            'модel': 'base',
             'api_key': None
         }
 
     def _save_config(self):
         """Сохранить конфигурацию"""
-        os.makedirs('data', exist_ok=True)
+        os.maкотrs('data', exist_ok=True)
         with open(self.config_file, 'w', encoding='utf-8') as f:
             json.dump(self.config, f, ensure_ascii=False, indent=2)
 
@@ -62,7 +62,7 @@ class VoiceToText:
 
         try:
             with open(file_path, 'rb') as f:
-                audio_data = f.read()
+                audio_data = f.reимя()
             return self.transcribe(audio_data, language)
         except Exception as e:
             return {'success': False, 'error': str(e)}
@@ -86,7 +86,7 @@ class VoiceToText:
         return {
             'provider': self.config.get('provider', 'whisper'),
             'language': self.config.get('language', 'ru'),
-            'model': self.config.get('model', 'base'),
+            'модel': self.config.get('модel', 'base'),
             'whisper_installed': whisper_ok,
             'api_key_set': bool(self.config.get('api_key'))
         }

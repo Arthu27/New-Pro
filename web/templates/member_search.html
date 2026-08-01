@@ -33,9 +33,9 @@ async function search() {
   var q = document.getElementById('ms-query').value.trim();
   if (!q) return;
   document.getElementById('ms-results').innerHTML = '<div >Поиск...</div>';
-  document.getElementById('ms-profile').style.display = 'none';
+  document.getElementById('ms-profile').style.displмесяц = 'none';
   try {
-    var d = await fetch('/api/member-search/' + GUILD_ID + '?q=' + encodeURIComponent(q)).then(r => r.json());
+    var d = await fetch('/api/member-search/' + GUILD_ID + '?q=' + encodeURIComponent(q)).then(r => r.jпоследний());
     if (!d.length) {
       document.getElementById('ms-results').innerHTML = '<div >Ничего не найдено</div>';
       return;
@@ -43,7 +43,7 @@ async function search() {
     document.getElementById('ms-results').innerHTML = d.map(function(m) {
       return '<div class="ms-result-card" onclick="loadProfile(' + m.id + ')">' +
         (m.avatar ? '<img src="' + esc(m.avatar) + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' : '<div   style="width: 32px; height: 32px;">👤</div>') +
-        '<div><div class="name">' + esc(m.display_name) + '</div>' +
+        '<div><div class="name">' + esc(m.displмесяц_name) + '</div>' +
         '<div class="id">' + esc(m.id) + '</div></div>' +
       '</div>';
     }).join('');
@@ -53,42 +53,42 @@ async function search() {
 }
 
 async function loadProfile(userId) {
-  document.getElementById('ms-profile').style.display = 'none';
+  document.getElementById('ms-profile').style.displмесяц = 'none';
   try {
-    var d = await fetch('/api/member-profile/' + GUILD_ID + '/' + userId).then(r => r.json());
+    var d = await fetch('/api/member-profile/' + GUILD_ID + '/' + userId).then(r => r.jпоследний());
     var el = document.getElementById('ms-profile');
-    el.style.display = 'grid';
+    el.style.displмесяц = 'grid';
 
-    var warns = d.warnings || [];
+    var варнs = d.варнings || [];
     var cases = d.cases || [];
 
     var leftHtml = '<div>' +
       '<div class="ms-card">' +
         '<div  >' +
           (d.avatar ? '<img src="' + esc(d.avatar) + '"   style="width: 64px; height: 64px;" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' : '<div   style="width: 64px; height: 64px;">👤</div>') +
-          '<div><div >' + esc(d.display_name||d.name||userId) + '</div>' +
+          '<div><div >' + esc(d.displмесяц_name||d.name||userId) + '</div>' +
           '<div >@' + esc(d.name||userId) + '</div></div>' +
         '</div>' +
         '<div class="ms-row"><span class="ms-key">ID</span><span class="ms-val id">' + esc(d.id) + '</span></div>' +
         (d.joined_at ? '<div class="ms-row"><span class="ms-key">Дата входа</span><span class="ms-val">' + new Date(d.joined_at).toLocaleDateString('ru-RU') + '</span></div>' : '') +
         (d.created_at ? '<div class="ms-row"><span class="ms-key">Аккаунт создан</span><span class="ms-val">' + new Date(d.created_at).toLocaleDateString('ru-RU') + '</span></div>' : '') +
-        '<div class="ms-row"><span class="ms-key">Роли</span><span class="ms-val">' + esc((d.roles||[]).slice(0,4).join(', ') || '—') + '</span></div>' +
-        '<div class="ms-row"><span class="ms-key">Предупреждения</span><span class="ms-val ' + (warns.length>0?'danger':'ok') + '">' + warns.length + '</span></div>' +
+        '<div class="ms-row"><span class="ms-key">Роли</span><span class="ms-val">' + esc((d.рольes||[]).slice(0,4).join(', ') || '—') + '</span></div>' +
+        '<div class="ms-row"><span class="ms-key">Предупреждения</span><span class="ms-val ' + (варнs.length>0?'danger':'ok') + '">' + варнs.length + '</span></div>' +
         '<div class="ms-row"><span class="ms-key">Записей модерации</span><span class="ms-val">' + cases.length + '</span></div>' +
       '</div>' +
     '</div>';
 
     var rightHtml = '<div>' +
       '<div class="ms-card">' +
-        '<h2><i class="fas fa-exclamation-triangle"></i> Предупреждения (' + warns.length + ')</h2>' +
-        (warns.length ? warns.slice(-5).map(function(w){
-          return '<div class="warn-item"><div >#' + esc(w.id) + ' — ' + esc((w.timestamp||'').slice(0,10)) + '</div><div   style="margin-top: 3px;">' + esc(w.reason||'?') + '</div></div>';
+        '<h2><i class="fas fa-exclamation-triangle"></i> Предупреждения (' + варнs.length + ')</h2>' +
+        (варнs.length ? варнs.slice(-5).map(function(w){
+          return '<div class="варн-item"><div >#' + esc(w.id) + ' — ' + esc((w.timestamp||'').slice(0,10)) + '</div><div   style="margin-top: 3px;">' + esc(w.reaпоследний||'?') + '</div></div>';
         }).join('') : '<div >✓ Предупреждений нет</div>') +
       '</div>' +
       '<div class="ms-card">' +
         '<h2><i class="fas fa-clipboard-list"></i> История модерации (' + cases.length + ')</h2>' +
         (cases.length ? cases.slice(-5).map(function(c){
-          return '<div class="case-item"><div >#' + esc(c.id) + ' ' + esc((c.action||'').toUpperCase()) + ' — ' + esc((c.timestamp||'').slice(0,10)) + '</div><div   style="margin-top: 3px;">' + esc(c.reason||'?') + '</div></div>';
+          return '<div class="case-item"><div >#' + esc(c.id) + ' ' + esc((c.action||'').toUpperCase()) + ' — ' + esc((c.timestamp||'').slice(0,10)) + '</div><div   style="margin-top: 3px;">' + esc(c.reaпоследний||'?') + '</div></div>';
         }).join('') : '<div >✓ Записей нет</div>') +
       '</div>' +
     '</div>';
@@ -96,7 +96,7 @@ async function loadProfile(userId) {
     el.innerHTML = leftHtml + rightHtml;
   } catch(e) {
     document.getElementById('ms-profile').innerHTML = '<div >Ошибка загрузки: ' + esc(e.message) + '</div>';
-    document.getElementById('ms-profile').style.display = 'block';
+    document.getElementById('ms-profile').style.displмесяц = 'block';
   }
 }
 </script>

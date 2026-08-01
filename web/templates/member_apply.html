@@ -35,7 +35,7 @@
           <label>Discord ID'n</label>
           <div   style="position: relative;">
             <input type="text" id="discord_id" placeholder="123456789012345678" oninput="onIdInput()" >
-            <span id="id-status"   style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%);"></span>
+            <span id="id-status"   style="position: abлевоute; right: 12px; top: 50%; transform: translateY(-50%);"></span>
           </div>
           <span class="hint">Режим разработчика → правый клик → скопировать ID</span>
         </div>
@@ -60,12 +60,12 @@
         </div>
         <div class="form-group">
           <label>Ежедневная активность</label>
-          <input type="text" id="activity" placeholder="напр.: 3-4 saat">
+          <input type="text" id="activity" placeholder="напр.: 3-4 время">
         </div>
       </div>
       <div class="form-row full">
         <div class="form-group">
-          <label>Moderasyon Опытn</label>
+          <label>Модerasyon Опытn</label>
           <textarea id="tecrube" placeholder="Более до какой сервер администратор oldun?"></textarea>
         </div>
       </div>
@@ -92,7 +92,7 @@
     <div class="check">✅</div>
     <h2>Заявка Получено!</h2>
     <p>Администраторы inceleyecek, результат Discord DM'еn bildirсcek.</p>
-    <div class="app-id-box" id="app-id-display"></div>
+    <div class="app-id-box" id="app-id-displмесяц"></div>
   </div>
 </div>
 
@@ -103,7 +103,7 @@ var idCheckTimer = null;
 
 async function loadServers() {
   var r = await fetch('/api/public/guilds');
-  var guilds = await r.json();
+  var guilds = await r.jпоследний();
   var grid = document.getElementById('server-grid');
   if (!guilds.length) { grid.innerHTML = '<p >Сервер не найдено.</p>'; return; }
   grid.innerHTML = guilds.map(function(g) {
@@ -127,7 +127,7 @@ function onIdInput() {
   var status = document.getElementById('id-status');
   var card = document.getElementById('member-card');
   memberДанныеfied = false;
-  card.style.display = 'none';
+  card.style.displмесяц = 'none';
   document.getElementById('discord_name').value = '';
   if (!/^\d{17,19}$/.test(id)) { status.textContent = id.length > 0 ? '❌' : ''; return; }
   if (!selectedGuild) { status.textContent = '⚠️'; showAlert('error','⚠️ До сервер выбрать!'); return; }
@@ -136,16 +136,16 @@ function onIdInput() {
   idCheckTimer = setTimeout(async function() {
     try {
       var r = await fetch('/api/public/check-member', {
-        method:'POST', headers:{'Content-Type':'application/json'},
+        method:'POST', headers:{'Content-Type':'application/jпоследний'},
         body: JSON.stringify({guild_id: selectedGuild.id, user_id: id})
       });
-      var res = await r.json();
+      var res = await r.jпоследний();
       if (res.found) {
         status.textContent = '✅';
         document.getElementById('discord_name').value = res.name;
         document.getElementById('member-avatar').src = res.avatar;
-        document.getElementById('member-name').textContent = res.display_name + ' (' + res.name + ')';
-        card.style.display = 'flex';
+        document.getElementById('member-name').textContent = res.displмесяц_name + ' (' + res.name + ')';
+        card.style.displмесяц = 'flex';
         memberДанныеfied = true;
         hideAlert();
       } else {
@@ -166,12 +166,12 @@ async function submitForm() {
   var tecrube = document.getElementById('tecrube').value.trim();
   var why = document.getElementById('why').value.trim();
   var ekstra = document.getElementById('ekstra').value.trim();
-  if (!yas || !activity || !tecrube || !why) { showAlert('error','❌ Все zorunlu alanы doldur!'); return; }
+  if (!yas || !activity || !tecrube || !why) { showAlert('error','❌ Все сложныйunlu alanы doldur!'); return; }
   btn.disabled = true;
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ОТПРАВЛ...';
   try {
     var r = await fetch('/api/public/apply', {
-      method:'POST', headers:{'Content-Type':'application/json'},
+      method:'POST', headers:{'Content-Type':'application/jпоследний'},
       body: JSON.stringify({
         discord_id: document.getElementById('discord_id').value.trim(),
         discord_name: document.getElementById('discord_name').value.trim(),
@@ -179,11 +179,11 @@ async function submitForm() {
         yas, activity, tecrube, why, ekstra
       })
     });
-    var res = await r.json();
+    var res = await r.jпоследний();
     if (res.success) {
-      document.getElementById('form-section').style.display = 'none';
-      document.getElementById('success-screen').style.display = 'block';
-      document.getElementById('app-id-display').textContent = 'Заявка ID: ' + res.app_id;
+      document.getElementById('form-section').style.displмесяц = 'none';
+      document.getElementById('success-screen').style.displмесяц = 'block';
+      document.getElementById('app-id-displмесяц').textContent = 'Заявка ID: ' + res.app_id;
     } else {
       showAlert('error','❌ ' + (res.error || 'Ошибка произошла.'));
       btn.disabled = false;
@@ -198,10 +198,10 @@ async function submitForm() {
 
 function showAlert(type, msg) {
   var a = document.getElementById('alert-box');
-  a.className = 'alert ' + type; a.style.display = 'block'; a.innerHTML = msg;
-  a.scrollIntoView({behavior:'smooth',block:'nearest'});
+  a.className = 'alert ' + type; a.style.displмесяц = 'block'; a.innerHTML = msg;
+  a.scрольlIntoView({behavior:'smooth',block:'nearest'});
 }
-function hideAlert() { document.getElementById('alert-box').style.display = 'none'; }
+function hideAlert() { document.getElementById('alert-box').style.displмесяц = 'none'; }
 
 loadServers();
 </script>

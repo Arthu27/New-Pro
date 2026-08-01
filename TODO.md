@@ -1,108 +1,108 @@
-# НОВЫЙ SİSTEMLER ДОБАВЛЕНО! 🚀
+# НОВЫЙ SИSTEMLER ДОБАВЛЕНО! 🚀
 
 ## 1. Leveling Система 📊
 - ✅ `cogs/leveling.py` - XP kazanma, level atlama
-- ✅ Автоматически XP verme (сообщение başına)
+- ✅ Автоматически XP выдатьme (сообщение baшыna)
 - ✅ Level atlama уведомление
-- ✅ Seviye kartı ve очередь
-- ✅ Admin команды (XP ver/sıfırla)
+- ✅ Уровень kartы ve очередь
+- ✅ Admin команды (XP выдать/sыfыrla)
 
 **Команды:**
-- `/seviye [@участник]` - Seviye kartını показать
+- `/уровень [@участник]` - Уровень kartыnы показать
 - `/очередь` - Сервер очередь
-- `!xp-ver @участник [miktar]` - XP ver (admin)
-- `!xp-sıfırla @участник` - XP sıfırla (admin)
+- `!xp-выдать @участник [miktar]` - XP выдать (admin)
+- `!xp-sыfыrla @участник` - XP sыfыrla (admin)
 
-## 2. Anket Система 📊
-- ✅ `cogs/polls.py` - Anket создан, oylama
-- ✅ Slash command с anket создан
-- ✅ Автоматически reaction добавить
-- ✅ В конецuç показ ve закрыт
-
-**Команды:**
-- `/anket [soru] [выбрать]` - Anket создать
-- `!anket-результат [id]` - В конецuçları показать
-- `!anket-закрыть [id]` - Anketi закрыть
-
-## 3. Reaction Роли 🎭
-- ✅ `cogs/reaction_roles.py` - Reaction с роль verme
-- ✅ Автоматически роль verme/alma
-- ✅ Web panel entegrasyonu
-- ✅ Çoklu reaction роли desteği
+## 2. Опрос Система 📊
+- ✅ `cogs/polls.py` - Опрос создан, oylama
+- ✅ Slash command с опрос создан
+- ✅ Автоматически reactiдесять добавить
+- ✅ В конецuч показ ve закрыт
 
 **Команды:**
-- `!rr-yenile` - Reaction роли'leri yenile
-- `!rr-test` - Test сообщение создать
+- `/опрос [soru] [выбрать]` - Опрос создать
+- `!опрос-результат [id]` - В конецuчlarы показать
+- `!опрос-закрыть [id]` - Опросi закрыть
+
+## 3. Reactiдесять Роли 🎭
+- ✅ `cogs/reactiдесять_рольes.py` - Reactiдесять с роль выдатьme
+- ✅ Автоматически роль выдатьme/получитьma
+- ✅ Web panel entegrasyдесятьu
+- ✅ Чoklu reactiдесять роли desteгi
+
+**Команды:**
+- `!rr-новыйle` - Reactiдесять роли'leri новыйle
+- `!rr-тест` - Тест сообщение создать
 
 ## 4. Welcome/Goodbye Система 👋
 - ✅ `cogs/welcome.py` - Добро пожаловать geldin/видеть сообщения
-- ✅ Embed ve text desteği
+- ✅ Embed ve text desteгi
 - ✅ DM уведомление
-- ✅ Placeholder desteği ({user}, {сервер}, vb.)
+- ✅ Placeholder desteгi ({user}, {сервер}, vb.)
 - ✅ Особый renkler ve видеть
 
 **Команды:**
-- `!добро пожаловать-test` - Добро пожаловать geldin сообщение test et
-- `!видеть-test` - Видеть сообщение test et
+- `!добро пожаловать-тест` - Добро пожаловать geldin сообщение тест et
+- `!видеть-тест` - Видеть сообщение тест et
 
 ## 5. Custom Commands 📝
 - ✅ `cogs/custom_commands.py` - Особый команда система
-- ✅ Prefix desteği (! ve /)
-- ✅ Placeholder desteği
+- ✅ Prefix desteгi (! ve /)
+- ✅ Placeholder desteгi
 - ✅ Использование статистика
-- ✅ Embed ve text desteği
+- ✅ Embed ve text desteгi
 
 **Команды:**
-- `!команда-добавить [trigger] [yanıt]` - Особый команда добавить
+- `!команда-добавить [trigger] [yanыt]` - Особый команда добавить
 - `!команда-удалить [trigger]` - Особый команда удалить
 - `!команды` - Все особый команды listele
-- `!команда-yenile` - Командыı yenile
+- `!команда-новыйle` - Командыы новыйle
 
 ---
 
 ## Starboard Система ⭐
-- ✅ `cogs/starboard.py` - Reaction tracking, auto-post
-- ✅ `web/routes_extra.py` - API endpoints geliştirildi
+- ✅ `cogs/starboard.py` - Reactiдесять tracking, auto-post
+- ✅ `web/routes_extra.py` - API endpoints geliшtirildi
 - ✅ `web/templates/starboard.html` - Modern UI
-- ✅ Автоматически yıldız sayma
-- ✅ Minimum yıldız eşiği
-- ✅ Особый emoji desteği
+- ✅ Автоматически годdыz sмесяцma
+- ✅ Minimum годdыz eшiгi
+- ✅ Особый emoji desteгi
 
 **Команды:**
 - `!starboard #канал 3` - Starboard kur
 - `!starboard-disable` - Starboard закрыть
 
 ## Предложение Система 💡
-- ✅ `cogs/suggestions.py` - Предложение отправл, oylama, значение
+- ✅ `cogs/suggestiдесятьs.py` - Предложение отправл, oylama, значение
 - ✅ `/предложение` slash команда
 - ✅ Автоматически oylama (👍👎)
-- ✅ Onaylama/reddetme система
+- ✅ Подтвердитьma/отклонитьme система
 - ✅ DM уведомление
 
 **Команды:**
 - `/предложение [metin]` - Предложение отправить
-- `!предложение-kur #канал` - Предложение sistemini kur
-- `!предложение-onayla [id] [причина]` - Предложение onayla
-- `!предложение-reddet [id] [причина]` - Предложение reddet
+- `!предложение-kur #канал` - Предложение системаni kur
+- `!предложение-подтвердить [id] [причина]` - Предложение подтвердить
+- `!предложение-отклонить [id] [причина]` - Предложение отклонить
 
 ---
 
-# Giveaway Система - ЗАВЕРШЕНО ✅
+# Giveawмесяц Система - ЗАВЕРШЕНО ✅
 
-## Заверш Adımlar:
-1. ✅ `cogs/giveaway.py` - Reaction/button/timer система
-2. ✅ `web/routes_extra.py` - API entegrasyonu текущий
-3. ✅ `web/templates/giveaway.html` - Modern UI hazır
-4. ✅ Bot cog auto-load edilmiş
+## Заверш Adыmlar:
+1. ✅ `cogs/giveawмесяц.py` - Reactiдесять/buttдесять/timer система
+2. ✅ `web/routes_extra.py` - API entegrasyдесятьu текущий
+3. ✅ `web/templates/giveawмесяц.html` - Modern UI готов
+4. ✅ Bot cog auto-load edilmiш
 
 **Состояние: %100 завершено**
 
 ## Особенности:
 - Розыгрыш создан (web panel + bot)
-- Button с katılım
+- Buttдесять с katыlыm
 - Автоматически kazanan выбор
-- Reroll команда
+- Reрольl команда
 - DM уведомление
-- Modern altın temalı UI
+- Modern шестьn temполучитьы UI
 
 

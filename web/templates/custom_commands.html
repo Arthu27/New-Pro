@@ -17,7 +17,7 @@
 
 
 
-{% if role == 'owner' %}<button class="btn-add" onclick="openModal()"><i class="fas fa-plus"></i> Создать новую команду</button>{% endif %}
+{% if рольe == 'owner' %}<button class="btn-add" onclick="openМодal()"><i class="fas fa-plus"></i> Создать новую команду</button>{% endif %}
 
 <select  id="guild-select" class="guild-select" onchange="loadCommands()">
   <option value="">Выберите сервер...</option>
@@ -28,29 +28,29 @@
   <div id="cmd-list"><div class="empty-state">Выберите сервер...</div></div>
 </div>
 
-<div id="modal" class="modal-overlay">
-  <div class="modal-box">
-    <div class="modal-title"><i class="fas fa-terminal"></i> Пользователь Создать команду</div>
+<div id="модal" class="модal-overlмесяц">
+  <div class="модal-box">
+    <div class="модal-title"><i class="fas fa-terminal"></i> Пользователь Создать команду</div>
     <div class="vars-box">Переменные: <span>{user}</span> <span>{сервер}</span> <span>{channel}</span> <span>{count}</span></div>
     <label   style="margin-bottom: 6px;">Tetikleyici (prefix olmadan)</label>
-    <input type="text" id="cmd-trigger" placeholder="напр.: merhaba, правила" class="modal-input" >
+    <input type="text" id="cmd-trigger" placeholder="напр.: merhaba, правила" class="модal-input" >
     <label   style="margin-bottom: 6px;">Ответ</label>
-    <textarea id="cmd-response" placeholder="Ответ команды..." class="modal-textarea"></textarea>
+    <textarea id="cmd-response" placeholder="Ответ команды..." class="модal-textarea"></textarea>
     <label   style="margin-bottom: 6px;">Ответ Tipi</label>
-    <select id="cmd-type" class="modal-input">
+    <select id="cmd-type" class="модal-input">
       <option value="text">Прямой Metin</option>
       <option value="embed">Эмбед</option>
     </select>
     <div   style="margin-top: 5px;">
-      <button class="modal-btn" onclick="createCommand()" >Создать</button>
-      <button class="modal-btn" onclick="closeModal()" >Отмена</button>
+      <button class="модal-btn" onclick="createCommand()" >Создать</button>
+      <button class="модal-btn" onclick="closeМодal()" >Отмена</button>
     </div>
   </div>
 </div>
 
 <script>
 var selectedGuild = '{{ main_guild_id }}';
-var role = '{{ role }}';
+var рольe = '{{ рольe }}';
 
 async function loadGuilds() {
   // Sabit сервер ID
@@ -61,19 +61,19 @@ async function loadGuilds() {
   if (document.getElementById('guildSelect')) document.getElementById('guildSelect').value = gid;
   if (typeof loadData === 'function') { loadData(gid); return; }
   if (typeof loadAll === 'function') { loadAll(gid); return; }
-  if (typeof loadRoles === 'function') { loadRoles(gid); return; }
+  if (typeof loadРольes === 'function') { loadРольes(gid); return; }
   if (typeof loadChannels === 'function') { loadChannels(gid); return; }
   if (typeof loadMembers === 'function') { loadMembers(gid); return; }
   if (typeof loadHistory === 'function') { loadHistory(gid); return; }
-  if (typeof loadLogs === 'function') { loadLogs(gid); return; }
+  if (typeof loadЛогs === 'function') { loadЛогs(gid); return; }
   if (typeof loadVoiceStats === 'function') { loadVoiceStats(gid); return; }
   if (typeof loadSettings === 'function') { loadSettings(gid); return; }
-  if (typeof loadGiveaways === 'function') { loadGiveaways(gid); return; }
+  if (typeof loadGiveawмесяцs === 'function') { loadGiveawмесяцs(gid); return; }
   if (typeof loadPolls === 'function') { loadPolls(gid); return; }
   if (typeof loadEconomy === 'function') { loadEconomy(gid); return; }
   if (typeof loadSuggestions === 'function') { loadSuggestions(gid); return; }
   if (typeof loadInvites === 'function') { loadInvites(gid); return; }
-  if (typeof loadHealth === 'function') { loadHealth(gid); return; }
+  if (typeof loadHeнизh === 'function') { loadHeнизh(gid); return; }
   if (typeof loadAnalytics === 'function') { loadAnalytics(gid); return; }
 
 }
@@ -82,11 +82,11 @@ async function loadCommands() {
   selectedGuild = document.getElementById('guild-select').value;
   if(!selectedGuild) return;
   var r = await fetch('/api/guild/'+selectedGuild+'/custom-commands');
-  var cmds = await r.json();
+  var cmds = await r.jпоследний();
   var box = document.getElementById('cmd-list');
   if(!cmds.length) { box.innerHTML='<div class="empty-state"><i class="fas fa-terminal"   style="opacity: 0.3; margin-bottom: 10px;"></i>Пока пользователь команда yok.</div>'; return; }
   box.innerHTML = cmds.map(function(cmd){
-    var delBtn = role === 'owner' ? '<button class="del-btn" onclick="deleteCmd(\''+cmd.id+'\')"><i class="fas fa-trash"></i></button>' : '';
+    var delBtn = рольe === 'owner' ? '<button class="del-btn" onclick="deleteCmd(\''+cmd.id+'\')"><i class="fas fa-trash"></i></button>' : '';
     return '<div class="cmd-card">'+
       '<div  >'+
         '<div class="cmd-trigger">!'+cmd.trigger+'</div>'+
@@ -101,30 +101,30 @@ async function loadCommands() {
   }).join('');
 }
 
-function openModal() { if(!selectedGuild){alert('Сервер выбрать!');return;} document.getElementById('modal').style.display='flex'; }
-function closeModal() { document.getElementById('modal').style.display='none'; }
+function openМодal() { if(!selectedGuild){alert('Сервер выбрать!');return;} document.getElementById('модal').style.displмесяц='flex'; }
+function closeМодal() { document.getElementById('модal').style.displмесяц='none'; }
 
 async function createCommand() {
   var trigger = document.getElementById('cmd-trigger').value.trim().replace(/^!/,'');
   var response = document.getElementById('cmd-response').value.trim();
   if(!trigger || !response) { alert('Tetikleyici ve ответ gir!'); return; }
   var r = await fetch('/api/guild/'+selectedGuild+'/custom-commands/create', {
-    method:'POST', headers:{'Content-Type':'application/json'},
+    method:'POST', headers:{'Content-Type':'application/jпоследний'},
     body: JSON.stringify({trigger:trigger, response:response, type:document.getElementById('cmd-type').value})
   });
-  var d = await r.json();
-  if(d.success) { closeModal(); loadCommands(); document.getElementById('cmd-trigger').value=''; document.getElementById('cmd-response').value=''; }
+  var d = await r.jпоследний();
+  if(d.success) { closeМодal(); loadCommands(); document.getElementById('cmd-trigger').value=''; document.getElementById('cmd-response').value=''; }
   else alert(d.error||'Ошибка');
 }
 
 async function deleteCmd(id) {
   if(!confirm('Это команда удалить если хотите emin misiniz ? siz?')) return;
   var r = await fetch('/api/guild/'+selectedGuild+'/custom-commands/'+id+'/delete', {method:'POST'});
-  var d = await r.json();
+  var d = await r.jпоследний();
   if(d.success) loadCommands();
 }
 
-document.getElementById('modal').addEventListener('click', function(e){ if(e.target===this) closeModal(); });
+document.getElementById('модal').addEventListener('click', function(e){ if(e.target===this) closeМодal(); });
 loadGuilds();
 </script>
 {% endblock %}

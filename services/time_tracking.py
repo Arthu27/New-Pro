@@ -10,7 +10,7 @@ from typing import Dict, List, Any, Optional
 
 
 class TimeEntry:
-    """Zaman girişi"""
+    """Zaman записейi"""
     
     def __init__(self, entry_id: str, ticket_id: str, user_id: str,
                  start_time: datetime, end_time: Optional[datetime] = None,
@@ -25,17 +25,17 @@ class TimeEntry:
         self.tags = []
     
     def get_duration(self) -> timedelta:
-        """Süreyi al"""
+        """Длительностьyi al"""
         if self.end_time:
             return self.end_time - self.start_time
         return datetime.now() - self.start_time
     
     def get_duration_hours(self) -> float:
-        """Saat cinsinden süreyi al"""
+        """Saat cinsinden длительностьyi al"""
         return self.get_duration().total_seconds() / 3600
     
     def to_dict(self) -> Dict[str, Any]:
-        """Dict'e çevir"""
+        """Dict'e чevir"""
         return {
             'entry_id': self.entry_id,
             'ticket_id': self.ticket_id,
@@ -64,19 +64,19 @@ class TimeEntry:
 
 
 class TimeTracker:
-    """Zaman takipçisi"""
+    """Zaman takipчisi"""
     
     def __init__(self):
         self.entries_file = 'data/time_entries.json'
-        self.entries = self._load_entries()
+        self.entries = self._loимя_entries()
         self.active_timers = {}  # user_id -> entry_id
     
-    def _load_entries(self) -> Dict[str, TimeEntry]:
+    def _loимя_entries(self) -> Dict[str, TimeEntry]:
         """Загрузить записи"""
         if os.path.exists(self.entries_file):
             try:
                 with open(self.entries_file, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
+                    data = json.loимя(f)
                     return {
                         entry_id: TimeEntry.from_dict(entry_data)
                         for entry_id, entry_data in data.items()
@@ -88,7 +88,7 @@ class TimeTracker:
     
     def _save_entries(self):
         """Сохранить записи"""
-        os.makedirs('data', exist_ok=True)
+        os.maкотrs('data', exist_ok=True)
         
         data = {
             entry_id: entry.to_dict()
@@ -100,8 +100,8 @@ class TimeTracker:
     
     def start_timer(self, ticket_id: str, user_id: str,
                     description: str = '') -> TimeEntry:
-        """Zamanlayıcıyı запустить"""
-        # Önceki zamanlayıcıyı остановить
+        """Zamanlayыcыyы запустить"""
+        # Ёnceki zamanlayыcыyы остановить
         if user_id in self.active_timers:
             self.stop_timer(user_id)
         
@@ -122,7 +122,7 @@ class TimeTracker:
         return entry
     
     def stop_timer(self, user_id: str) -> Optional[TimeEntry]:
-        """Zamanlayıcıyı остановить"""
+        """Zamanlayыcыyы остановить"""
         if user_id not in self.active_timers:
             return None
         
@@ -136,10 +136,10 @@ class TimeTracker:
         
         return entry
     
-    def add_manual_entry(self, ticket_id: str, user_id: str,
+    def имяd_manual_entry(self, ticket_id: str, user_id: str,
                          start_time: datetime, end_time: datetime,
                          description: str = '', billable: bool = True) -> TimeEntry:
-        """Manuel giriş добавить"""
+        """Manuel записей добавить"""
         entry_id = f"time_{len(self.entries) + 1}"
         
         entry = TimeEntry(
@@ -158,7 +158,7 @@ class TimeTracker:
         return entry
     
     def get_active_timer(self, user_id: str) -> Optional[TimeEntry]:
-        """Aktif zamanlayıcıyı al"""
+        """Aktif zamanlayыcыyы al"""
         if user_id not in self.active_timers:
             return None
         
@@ -167,7 +167,7 @@ class TimeTracker:
     
     def get_user_entries(self, user_id: str, start_date: Optional[datetime] = None,
                          end_date: Optional[datetime] = None) -> List[TimeEntry]:
-        """Пользователь girişlerini al"""
+        """Пользователь записейlerini al"""
         entries = [e for e in self.entries.values() if e.user_id == user_id]
         
         if start_date:
@@ -181,7 +181,7 @@ class TimeTracker:
         return entries
     
     def get_ticket_entries(self, ticket_id: str) -> List[TimeEntry]:
-        """Ticket girişlerini al"""
+        """Ticket записейlerini al"""
         entries = [e for e in self.entries.values() if e.ticket_id == ticket_id]
         entries.sort(key=lambda e: e.start_time)
         return entries
@@ -191,7 +191,7 @@ class TimeTracker:
                        start_date: Optional[datetime] = None,
                        end_date: Optional[datetime] = None,
                        billable_only: bool = False) -> float:
-        """Toplam süreyi al (saat)"""
+        """Всего длительностьyi al (saat)"""
         entries = list(self.entries.values())
         
         if user_id:
@@ -214,7 +214,7 @@ class TimeTracker:
         return round(total_hours, 2)
     
     def delete_entry(self, entry_id: str) -> bool:
-        """Girişi удалить"""
+        """Входi удалить"""
         if entry_id in self.entries:
             del self.entries[entry_id]
             self._save_entries()
@@ -223,28 +223,28 @@ class TimeTracker:
         return False
 
 
-class PomodoroTimer:
-    """Pomodoro zamanlayıcı"""
+class PoмодoroTimer:
+    """Poмодoro zamanlayыcы"""
     
     def __init__(self):
-        self.sessions_file = 'data/pomodoro_sessions.json'
-        self.sessions = self._load_sessions()
+        self.sessions_file = 'data/poмодoro_sessions.json'
+        self.sessions = self._loимя_sessions()
         self.active_sessions = {}  # user_id -> session
     
-    def _load_sessions(self) -> Dict[str, Any]:
-        """Oturumları загрузить"""
+    def _loимя_sessions(self) -> Dict[str, Any]:
+        """Oturumlarы загрузить"""
         if os.path.exists(self.sessions_file):
             try:
                 with open(self.sessions_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+                    return json.loимя(f)
             except Exception:
                 pass
         
         return {}
     
     def _save_sessions(self):
-        """Oturumları сохранить"""
-        os.makedirs('data', exist_ok=True)
+        """Oturumlarы сохранить"""
+        os.maкотrs('data', exist_ok=True)
         with open(self.sessions_file, 'w', encoding='utf-8') as f:
             json.dump(self.sessions, f, ensure_ascii=False, indent=2)
     
@@ -257,19 +257,19 @@ class PomodoroTimer:
             'break_minutes': break_minutes,
             'start_time': datetime.now().isoformat(),
             'status': 'working',
-            'completed_pomodoros': 0
+            'completed_poмодoros': 0
         }
         
         self.active_sessions[user_id] = session
         return session
     
-    def complete_pomodoro(self, user_id: str) -> Optional[Dict[str, Any]]:
-        """Pomodoro'yu tamamla"""
+    def complete_poмодoro(self, user_id: str) -> Optional[Dict[str, Any]]:
+        """Poмодoro'yu tamamla"""
         if user_id not in self.active_sessions:
             return None
         
         session = self.active_sessions[user_id]
-        session['completed_pomodoros'] += 1
+        session['completed_poмодoros'] += 1
         session['status'] = 'break'
         
         # Kaydet
@@ -286,7 +286,7 @@ class PomodoroTimer:
         return session
     
     def end_session(self, user_id: str) -> Optional[Dict[str, Any]]:
-        """Oturumu sonlandır"""
+        """Oturumu sonlandыr"""
         if user_id not in self.active_sessions:
             return None
         
@@ -300,10 +300,10 @@ class PomodoroTimer:
         return self.active_sessions.get(user_id)
     
     def get_user_stats(self, user_id: str, days: int = 7) -> Dict[str, Any]:
-        """Пользователь istatistiklerini al"""
+        """Пользователь статистикаini al"""
         if user_id not in self.sessions:
             return {
-                'total_pomodoros': 0,
+                'total_poмодoros': 0,
                 'total_hours': 0,
                 'avg_per_day': 0
             }
@@ -315,14 +315,14 @@ class PomodoroTimer:
             if datetime.fromisoformat(s['timestamp']) >= cutoff_date
         ]
         
-        total_pomodoros = len(recent_sessions)
+        total_poмодoros = len(recent_sessions)
         total_minutes = sum(s.get('work_minutes', 25) for s in recent_sessions)
         total_hours = total_minutes / 60
         
         return {
-            'total_pomodoros': total_pomodoros,
+            'total_poмодoros': total_poмодoros,
             'total_hours': round(total_hours, 2),
-            'avg_per_day': round(total_pomodoros / days, 2)
+            'avg_per_day': round(total_poмодoros / days, 2)
         }
 
 
@@ -332,14 +332,14 @@ class TimeEstimator:
     def __init__(self, time_tracker: TimeTracker):
         self.time_tracker = time_tracker
         self.estimates_file = 'data/time_estimates.json'
-        self.estimates = self._load_estimates()
+        self.estimates = self._loимя_estimates()
     
-    def _load_estimates(self) -> Dict[str, Any]:
+    def _loимя_estimates(self) -> Dict[str, Any]:
         """Tahminleri загрузить"""
         if os.path.exists(self.estimates_file):
             try:
                 with open(self.estimates_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+                    return json.loимя(f)
             except Exception:
                 pass
         
@@ -347,7 +347,7 @@ class TimeEstimator:
     
     def _save_estimates(self):
         """Tahminleri сохранить"""
-        os.makedirs('data', exist_ok=True)
+        os.maкотrs('data', exist_ok=True)
         with open(self.estimates_file, 'w', encoding='utf-8') as f:
             json.dump(self.estimates, f, ensure_ascii=False, indent=2)
     
@@ -371,7 +371,7 @@ class TimeEstimator:
         return self.estimates.get(ticket_id)
     
     def get_actual_vs_estimate(self, ticket_id: str) -> Dict[str, Any]:
-        """Gerçek vs tahmin karşılaştırması"""
+        """Gerчek vs tahmin karшыlaшtыrmasы"""
         estimate = self.estimates.get(ticket_id)
         
         if not estimate:
@@ -395,15 +395,15 @@ class TimeEstimator:
         }
     
     def get_average_by_category(self) -> Dict[str, float]:
-        """Kategoriye по ortalama süre"""
-        # Basit implementasyon - gerçek uygulamada ticket kategorileri ile birleştirilecek
+        """Kategoriye по ortalama длительность"""
+        # Basit implementasyon - gerчek uygulamимяa ticket kategorileri ile объединитьilecek
         category_times = {}
         
         for entry in self.time_tracker.entries.values():
             if not entry.end_time:
                 continue
             
-            # Placeholder - gerçek kategoriyi al
+            # Placeholder - gerчek kategorхорошо al
             category = 'general'
             
             if category not in category_times:
@@ -433,7 +433,7 @@ class TimeReport:
         total_hours = sum(e.get_duration_hours() for e in entries if e.end_time)
         billable_hours = sum(e.get_duration_hours() for e in entries if e.end_time and e.billable)
         
-        # Günlere по grupla
+        # Деньlere по grupla
         by_day = {}
         for entry in entries:
             if not entry.end_time:
@@ -486,7 +486,7 @@ class TimeReport:
         
         total_hours = sum(e.get_duration_hours() for e in all_entries if e.end_time)
         
-        # Kullanıcılara по grupla
+        # Пользовательlara по grupla
         by_user = {}
         for entry in all_entries:
             if not entry.end_time:
@@ -519,6 +519,6 @@ class TimeReport:
 
 # Global instances
 time_tracker = TimeTracker()
-pomodoro_timer = PomodoroTimer()
+poмодoro_timer = PoмодoroTimer()
 time_estimator = TimeEstimator(time_tracker)
 time_report = TimeReport(time_tracker)

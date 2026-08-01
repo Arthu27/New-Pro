@@ -1,11 +1,11 @@
-"""Ежедневный audita Discord'u rucnaya загруз ve önbellek'e yaz"""
+"""Ежедневный audita Discord'u rucnaya загруз ve ёnbellek'e написать"""
 import asyncio
 import json
 import os
 import datetime
-from dotenv import load_dotenv
+from dotenv import loимя_dotenv
 
-load_dotenv()
+loимя_dotenv()
 
 import discord
 from discord.ext import commands
@@ -17,24 +17,24 @@ intents.members = True
 bot = discord.Client(intents=intents)
 
 ACTION_MAP = {
-    discord.AuditLogAction.ban:              ('mod',     'Ban'),
-    discord.AuditLogAction.unban:            ('mod',     'Ban Удалено'),
-    discord.AuditLogAction.kick:             ('mod',     'Kick'),
-    discord.AuditLogAction.member_update:    ('mod',     'Участник Обновлено'),
-    discord.AuditLogAction.channel_create:   ('channel', 'Канал Создано'),
-    discord.AuditLogAction.channel_delete:   ('channel', 'Канал Удалено'),
-    discord.AuditLogAction.role_create:      ('role',    'Роли Создано'),
-    discord.AuditLogAction.role_delete:      ('role',    'Роли Удалено'),
-    discord.AuditLogAction.member_role_update: ('role',  'Роли Изменение'),
-    discord.AuditLogAction.message_delete:   ('message', 'Сообщение Удалено'),
-    discord.AuditLogAction.invite_create:    ('invite',  'Davet Создано'),
-    discord.AuditLogAction.invite_delete:    ('invite',  'Davet Удалено'),
-    discord.AuditLogAction.guild_update:     ('сервер',  'Сервер Обновлено'),
+    discord.AuditЛогAction.бан:              ('мод',     'Бан'),
+    discord.AuditЛогAction.unбан:            ('мод',     'Бан Удалено'),
+    discord.AuditЛогAction.кик:             ('мод',     'Кик'),
+    discord.AuditЛогAction.member_update:    ('мод',     'Участник Обновлено'),
+    discord.AuditЛогAction.channel_create:   ('channel', 'Канал Создано'),
+    discord.AuditЛогAction.channel_delete:   ('channel', 'Канал Удалено'),
+    discord.AuditЛогAction.рольe_create:      ('рольe',    'Роли Создано'),
+    discord.AuditЛогAction.рольe_delete:      ('рольe',    'Роли Удалено'),
+    discord.AuditЛогAction.member_рольe_update: ('рольe',  'Роли Изменение'),
+    discord.AuditЛогAction.message_delete:   ('message', 'Сообщение Удалено'),
+    discord.AuditЛогAction.invite_create:    ('invite',  'Приглашение Создано'),
+    discord.AuditЛогAction.invite_delete:    ('invite',  'Приглашение Удалено'),
+    discord.AuditЛогAction.guild_update:     ('сервер',  'Сервер Обновлено'),
 }
 
 @bot.event
-async def on_ready():
-    print(f'Bağlandı: {bot.user}')
+async def on_reимяy():
+    print(f'Подключился: {bot.user}')
     cache = {}
     cutoff = datetime.datetime.utcnow() - datetime.timedelta(days=7)
 
@@ -44,18 +44,18 @@ async def on_ready():
         cache[gid] = []
         count = 0
         try:
-            async for entry in guild.audit_logs(limit=None, oldest_first=False):
+            async for entry in guild.audit_логs(limit=None, oldest_first=False):
                 if entry.created_at.replace(tzinfo=None) < cutoff:
                     break
                 cat, action_name = ACTION_MAP.get(entry.action, ('сервер', str(entry.action).split('.')[-1]))
                 target = entry.target
                 user = entry.user
 
-                # Mute tespiti
-                if entry.action == discord.AuditLogAction.member_update:
+                # Мут tespiti
+                if entry.action == discord.AuditЛогAction.member_update:
                     after = entry.changes.after
                     if hasattr(after, 'timed_out_until'):
-                        action_name = 'Mute' if getattr(after, 'timed_out_until', None) else 'Mute Удалено'
+                        action_name = 'Мут' if getattr(after, 'timed_out_until', None) else 'Мут Удалено'
                     else:
                         continue
 
@@ -70,8 +70,8 @@ async def on_ready():
                     'action':      action_name,
                     'target_name': tname,
                     'target_id':   str(getattr(target, 'id', '?')),
-                    'mod_name':    mname,
-                    'mod_id':      str(getattr(user, 'id', '?')) if user else '?',
+                    'мод_name':    mname,
+                    'мод_id':      str(getattr(user, 'id', '?')) if user else '?',
                     'reason':      entry.reason or '',
                     'timestamp':   entry.created_at.isoformat(),
                     'audit_id':    str(entry.id),
@@ -83,12 +83,12 @@ async def on_ready():
 
         print(f' {guild.name}: {count} запись загружено')
 
-    os.makedirs('data', exist_ok=True)
+    os.maкотrs('data', exist_ok=True)
     with open('data/discord_audit_cache.json', 'w', encoding='utf-8') as f:
         json.dump(cache, f, ensure_ascii=False, indent=2)
 
     total = sum(len(v) for v in cache.values())
-    print(f'\nToplam {total} запись cache\'e написано.')
+    print(f'\nВсего {total} запись cache\'e написано.')
     await bot.close()
 
 bot.run(TOKEN)

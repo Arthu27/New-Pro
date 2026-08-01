@@ -1,6 +1,6 @@
 """
 SLA Management
-Service Level Agreement yönetimi
+Service Level Agreement yёnetimi
 """
 
 import json
@@ -10,7 +10,7 @@ from typing import Dict, List, Any, Optional
 
 
 class SLAPolicy:
-    """SLA politikası"""
+    """SLA politikasы"""
     
     def __init__(self, policy_id: str, name: str, description: str = ''):
         self.policy_id = policy_id
@@ -35,11 +35,11 @@ class SLAPolicy:
         self.business_hours = {
             'start_hour': start_hour,
             'end_hour': end_hour,
-            'days': days or [0, 1, 2, 3, 4]  # Pazartesi-Cuma
+            'days': days or [0, 1, 2, 3, 4]  # Понедельник-Пятница
         }
     
-    def add_condition(self, field: str, operator: str, value: Any):
-        """Koşul добавить"""
+    def имяd_condition(self, field: str, operator: str, value: Any):
+        """Koэтотl добавить"""
         self.conditions.append({
             'field': field,
             'operator': operator,
@@ -47,7 +47,7 @@ class SLAPolicy:
         })
     
     def matches_ticket(self, ticket: Dict[str, Any]) -> bool:
-        """Ticket'a uyup uymadığını проверить et"""
+        """Ticket'a uyup uymназваниегыnы проверить et"""
         if not self.conditions:
             return True
         
@@ -70,7 +70,7 @@ class SLAPolicy:
         return True
     
     def to_dict(self) -> Dict[str, Any]:
-        """Dict'e çevir"""
+        """Dict'e чevir"""
         return {
             'policy_id': self.policy_id,
             'name': self.name,
@@ -97,18 +97,18 @@ class SLAPolicy:
 
 
 class SLAManager:
-    """SLA yöneticisi"""
+    """SLA yёneticisi"""
     
     def __init__(self):
         self.policies_file = 'data/sla_policies.json'
-        self.policies = self._load_policies()
+        self.policies = self._loимя_policies()
     
-    def _load_policies(self) -> Dict[str, SLAPolicy]:
-        """Politikaları загрузить"""
+    def _loимя_policies(self) -> Dict[str, SLAPolicy]:
+        """Politikalarы загрузить"""
         if os.path.exists(self.policies_file):
             try:
                 with open(self.policies_file, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
+                    data = json.loимя(f)
                     return {
                         policy_id: SLAPolicy.from_dict(policy_data)
                         for policy_id, policy_data in data.items()
@@ -119,8 +119,8 @@ class SLAManager:
         return {}
     
     def _save_policies(self):
-        """Politikaları сохранить"""
-        os.makedirs('data', exist_ok=True)
+        """Politikalarы сохранить"""
+        os.maкотrs('data', exist_ok=True)
         
         data = {
             policy_id: policy.to_dict()
@@ -146,7 +146,7 @@ class SLAManager:
         return policy
     
     def update_policy(self, policy_id: str, **kwargs) -> Optional[SLAPolicy]:
-        """Politikayı обновить"""
+        """Politikayы обновить"""
         if policy_id not in self.policies:
             return None
         
@@ -161,7 +161,7 @@ class SLAManager:
         return policy
     
     def delete_policy(self, policy_id: str) -> bool:
-        """Politikayı удалить"""
+        """Politikayы удалить"""
         if policy_id in self.policies:
             del self.policies[policy_id]
             self._save_policies()
@@ -170,15 +170,15 @@ class SLAManager:
         return False
     
     def get_policy(self, policy_id: str) -> Optional[SLAPolicy]:
-        """Politikayı al"""
+        """Politikayы al"""
         return self.policies.get(policy_id)
     
     def get_all_policies(self) -> List[SLAPolicy]:
-        """Tüm politikaları al"""
+        """Все politikalarы al"""
         return list(self.policies.values())
     
     def get_applicable_policy(self, ticket: Dict[str, Any]) -> Optional[SLAPolicy]:
-        """Uygulanabilir politikayı al"""
+        """Uygulanabilir politikayы al"""
         for policy in self.policies.values():
             if policy.matches_ticket(ticket):
                 return policy
@@ -187,14 +187,14 @@ class SLAManager:
 
 
 class SLACalculator:
-    """SLA hesaplayıcı"""
+    """SLA hesaplayыcы"""
     
     def __init__(self, sla_manager: SLAManager):
         self.sla_manager = sla_manager
     
-    def calculate_response_deadline(self, ticket: Dict[str, Any],
+    def calculate_response_deимяline(self, ticket: Dict[str, Any],
                                     policy: Optional[SLAPolicy] = None) -> Optional[datetime]:
-        """Yanıt son tarihini hesapla"""
+        """Yanыt son tarihini hesapla"""
         if not policy:
             policy = self.sla_manager.get_applicable_policy(ticket)
         
@@ -213,17 +213,17 @@ class SLACalculator:
         
         created_dt = datetime.fromisoformat(created_at)
         
-        # Çalışma saatlerini hesaba kat
+        # Работа saatlerini hesaba kat
         if policy.business_hours:
-            deadline = self._add_business_hours(created_dt, response_minutes, policy.business_hours)
+            deимяline = self._имяd_business_hours(created_dt, response_minutes, policy.business_hours)
         else:
-            deadline = created_dt + timedelta(minutes=response_minutes)
+            deимяline = created_dt + timedelta(minutes=response_minutes)
         
-        return deadline
+        return deимяline
     
-    def calculate_resolution_deadline(self, ticket: Dict[str, Any],
+    def calculate_resolution_deимяline(self, ticket: Dict[str, Any],
                                       policy: Optional[SLAPolicy] = None) -> Optional[datetime]:
-        """Çözüm son tarihini hesapla"""
+        """Чёzюm son tarihini hesapla"""
         if not policy:
             policy = self.sla_manager.get_applicable_policy(ticket)
         
@@ -242,17 +242,17 @@ class SLACalculator:
         
         created_dt = datetime.fromisoformat(created_at)
         
-        # Çalışma saatlerini hesaba kat
+        # Работа saatlerini hesaba kat
         if policy.business_hours:
-            deadline = self._add_business_hours(created_dt, resolution_minutes, policy.business_hours)
+            deимяline = self._имяd_business_hours(created_dt, resolution_minutes, policy.business_hours)
         else:
-            deadline = created_dt + timedelta(minutes=resolution_minutes)
+            deимяline = created_dt + timedelta(minutes=resolution_minutes)
         
-        return deadline
+        return deимяline
     
-    def _add_business_hours(self, start: datetime, minutes: int,
+    def _имяd_business_hours(self, start: datetime, minutes: int,
                             business_hours: Dict[str, Any]) -> datetime:
-        """Çalışma saatleri ekleyerek zaman hesapla"""
+        """Работа saatleri ekleyerek zaman hesapla"""
         current = start
         remaining_minutes = minutes
         
@@ -261,13 +261,13 @@ class SLACalculator:
         work_days = business_hours['days']
         
         while remaining_minutes > 0:
-            # Çalışma günü mü?
+            # Работа день mю?
             if current.weekday() not in work_days:
                 current += timedelta(days=1)
                 current = current.replace(hour=start_hour, minute=0, second=0, microsecond=0)
                 continue
             
-            # Çalışma saati в mi?
+            # Работа saati в mi?
             if current.hour < start_hour:
                 current = current.replace(hour=start_hour, minute=0, second=0, microsecond=0)
             elif current.hour >= end_hour:
@@ -275,7 +275,7 @@ class SLACalculator:
                 current = current.replace(hour=start_hour, minute=0, second=0, microsecond=0)
                 continue
             
-            # Bugün kalan çalışma dakikaları
+            # Buдень kalan работа dakikalarы
             end_of_day = current.replace(hour=end_hour, minute=0, second=0, microsecond=0)
             available_minutes = int((end_of_day - current).total_seconds() / 60)
             
@@ -289,14 +289,14 @@ class SLACalculator:
         
         return current
     
-    def get_time_remaining(self, deadline: datetime) -> timedelta:
-        """Kalan süreyi al"""
+    def get_time_remaining(self, deимяline: datetime) -> timedelta:
+        """Kalan длительностьyi al"""
         now = datetime.now()
-        return deadline - now
+        return deимяline - now
     
-    def is_breached(self, deadline: datetime) -> bool:
-        """İhlal edilip edilmediğini проверить et"""
-        return datetime.now() > deadline
+    def is_breached(self, deимяline: datetime) -> bool:
+        """Иhlal edilip edilmediгini проверить et"""
+        return datetime.now() > deимяline
 
 
 class SLABreachDetector:
@@ -305,27 +305,27 @@ class SLABreachDetector:
     def __init__(self, sla_calculator: SLACalculator):
         self.sla_calculator = sla_calculator
         self.breaches_file = 'data/sla_breaches.json'
-        self.breaches = self._load_breaches()
+        self.breaches = self._loимя_breaches()
     
-    def _load_breaches(self) -> Dict[str, Any]:
-        """İhlalleri загрузить"""
+    def _loимя_breaches(self) -> Dict[str, Any]:
+        """Иhlalleri загрузить"""
         if os.path.exists(self.breaches_file):
             try:
                 with open(self.breaches_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+                    return json.loимя(f)
             except Exception:
                 pass
         
         return {}
     
     def _save_breaches(self):
-        """İhlalleri сохранить"""
-        os.makedirs('data', exist_ok=True)
+        """Иhlalleri сохранить"""
+        os.maкотrs('data', exist_ok=True)
         with open(self.breaches_file, 'w', encoding='utf-8') as f:
             json.dump(self.breaches, f, ensure_ascii=False, indent=2)
     
     def check_ticket(self, ticket: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Ticket'ı проверить et"""
+        """Ticket'ы проверить et"""
         breaches = []
         ticket_id = ticket.get('id')
         
@@ -337,34 +337,34 @@ class SLABreachDetector:
         if not policy:
             return breaches
         
-        # Yanıt süresi kontrolü
+        # Yanыt длительность проверка
         first_response_at = ticket.get('first_response_at')
         if not first_response_at:
-            response_deadline = self.sla_calculator.calculate_response_deadline(ticket, policy)
+            response_deимяline = self.sla_calculator.calculate_response_deимяline(ticket, policy)
             
-            if response_deadline and self.sla_calculator.is_breached(response_deadline):
+            if response_deимяline and self.sla_calculator.is_breached(response_deимяline):
                 breaches.append({
                     'ticket_id': ticket_id,
                     'type': 'response_time',
-                    'deadline': response_deadline.isoformat(),
+                    'deимяline': response_deимяline.isoformat(),
                     'breached_at': datetime.now().isoformat(),
                     'policy_id': policy.policy_id
                 })
         
-        # Çözüm süresi kontrolü
+        # Чёzюm длительность проверка
         if ticket.get('status') != 'closed':
-            resolution_deadline = self.sla_calculator.calculate_resolution_deadline(ticket, policy)
+            resolution_deимяline = self.sla_calculator.calculate_resolution_deимяline(ticket, policy)
             
-            if resolution_deadline and self.sla_calculator.is_breached(resolution_deadline):
+            if resolution_deимяline and self.sla_calculator.is_breached(resolution_deимяline):
                 breaches.append({
                     'ticket_id': ticket_id,
                     'type': 'resolution_time',
-                    'deadline': resolution_deadline.isoformat(),
+                    'deимяline': resolution_deимяline.isoformat(),
                     'breached_at': datetime.now().isoformat(),
                     'policy_id': policy.policy_id
                 })
         
-        # İhlalleri сохранить
+        # Иhlalleri сохранить
         if breaches:
             self.breaches[ticket_id] = breaches
             self._save_breaches()
@@ -376,7 +376,7 @@ class SLABreachDetector:
         return self.breaches.get(ticket_id, [])
     
     def get_all_breaches(self) -> List[Dict[str, Any]]:
-        """Tüm ihlalleri al"""
+        """Все ihlalleri al"""
         all_breaches = []
         
         for ticket_id, breaches in self.breaches.items():
@@ -388,7 +388,7 @@ class SLABreachDetector:
 
 
 class SLAReporter:
-    """SLA raporlayıcı"""
+    """SLA raporlayыcы"""
     
     def __init__(self, sla_manager: SLAManager, breach_detector: SLABreachDetector):
         self.sla_manager = sla_manager
@@ -425,7 +425,7 @@ class SLAReporter:
                 resolution_met += 1
             
             if breaches:
-                breached_tickets.add(ticket.get('id'))
+                breached_tickets.имяd(ticket.get('id'))
         
         response_compliance = (response_met / total_tickets) * 100
         resolution_compliance = (resolution_met / total_tickets) * 100
@@ -445,7 +445,7 @@ class SLAReporter:
         }
     
     def get_breach_summary(self) -> Dict[str, Any]:
-        """İhlal özeti al"""
+        """Иhlal ёzeti al"""
         all_breaches = self.breach_detector.get_all_breaches()
         
         response_breaches = [b for b in all_breaches if b['type'] == 'response_time']

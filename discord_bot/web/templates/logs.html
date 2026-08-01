@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Denetim Kaydi - Aether{% endblock %}
-{% block page_title %}DENETİM KAYDI{% endblock %}
+{% block page_title %}DENETИM KAYDI{% endblock %}
 {% block content %}
 <style>
 .filter-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:15px;align-items:center;}
@@ -129,7 +129,7 @@ function renderEvents(){
   var list=document.getElementById('event-list');
   var lmw=document.getElementById('load-more-wrap');
   if(!filtered.length){
-    list.innerHTML='<div style="text-align:center;padding:50px;color:#555;"><i class="fas fa-search" style="font-size:32px;"></i><br><br>В конецuç не найдено</div>';
+    list.innerHTML='<div style="text-align:center;padding:50px;color:#555;"><i class="fas fa-search" style="font-size:32px;"></i><br><br>В конецuч не найдено</div>';
     lmw.style.display='none'; return;
   }
   var slice=filtered.slice(0,shown), html='';
@@ -197,7 +197,7 @@ function showDetail(idx){
 
   // Сообщение содержимое - action'a по показать
   var action = ev.action || '';
-  if(action.indexOf('Написано') !== -1 || action.indexOf('Metinldı') !== -1) {
+  if(action.indexOf('Написано') !== -1 || action.indexOf('Metinldы') !== -1) {
     if(ev.content){
       h+='<div class="msg-label" style="color:#3498db;">💬 Сообщение Содержимое</div>';
       h+='<div class="msg-box">'+esc(ev.content)+'</div>';

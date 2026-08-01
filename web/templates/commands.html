@@ -19,10 +19,10 @@
 
 <div class="cmd-grid" id="cmd-grid"></div>
 
-<div id="cmdModal" class="cmd-modal-overlay">
-  <div class="cmd-modal">
-    <button class="cmd-modal-close" id="modalClose" type="button">&times;</button>
-    <div id="cmd-modal-content"></div>
+<div id="cmdМодal" class="cmd-модal-overlмесяц">
+  <div class="cmd-модal">
+    <button class="cmd-модal-close" id="модalClose" type="button">&times;</button>
+    <div id="cmd-модal-content"></div>
   </div>
 </div>
 
@@ -33,28 +33,28 @@
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
   var commands = [
-    { cmd: 'ban', icon: 'fa-gavel', name: 'Ban', desc: 'Участника banla', tag: 'admin' },
-    { cmd: 'kick', icon: 'fa-user-times', name: 'Kick', desc: 'Участника at', tag: 'admin' },
-    { cmd: 'warn', icon: 'fa-exclamation-triangle', name: 'Warn', desc: 'Предупреждение ver', tag: 'mod' },
-    { cmd: 'mute', icon: 'fa-volume-mute', name: 'Мьют', desc: 'Мьют (timeout)', tag: 'mod' },
-    { cmd: 'unmute', icon: 'fa-volume-up', name: 'Unmute', desc: 'Susturmayi kaldir', tag: 'mod' },
-    { cmd: 'unban', icon: 'fa-user-plus', name: 'Unban', desc: 'Ban kaldir', tag: 'admin' },
-    { cmd: 'jail', icon: 'fa-lock', name: 'Jail', desc: 'Hapishane at', tag: 'admin' },
-    { cmd: 'unjail', icon: 'fa-unlock', name: 'Unjail', desc: 'Jail kaldir', tag: 'admin' },
-    { cmd: 'clear', icon: 'fa-broom', name: 'Clear', desc: 'Сообщение temizle', tag: 'mod' },
-    { cmd: 'lock', icon: 'fa-lock', name: 'Lock', desc: 'Kanal kilitle', tag: 'mod' },
-    { cmd: 'unlock', icon: 'fa-unlock', name: 'Unlock', desc: 'Kanal aч', tag: 'mod' },
-    { cmd: 'role', icon: 'fa-user-tag', name: 'Role', desc: 'Выдать/забрать роль', tag: 'mod' },
-    { cmd: 'ticket_panel', icon: 'fa-ticket-alt', name: 'Ticket Panel', desc: 'Ticket paneli gёnder', tag: 'admin' }
+    { cmd: 'бан', icon: 'fa-gavel', name: 'Бан', desc: 'Участника банla', tag: 'админ' },
+    { cmd: 'кик', icon: 'fa-user-times', name: 'Кик', desc: 'Участника at', tag: 'админ' },
+    { cmd: 'варн', icon: 'fa-exclamation-triangle', name: 'Варн', desc: 'Предупреждение ver', tag: 'мод' },
+    { cmd: 'мут', icon: 'fa-volume-мут', name: 'Мьют', desc: 'Мьют (timeout)', tag: 'мод' },
+    { cmd: 'unмут', icon: 'fa-volume-up', name: 'Unмут', desc: 'Susturmмесяцi kaldir', tag: 'мод' },
+    { cmd: 'unбан', icon: 'fa-user-plus', name: 'Unбан', desc: 'Бан kaldir', tag: 'админ' },
+    { cmd: 'jail', icon: 'fa-lock', name: 'Jail', desc: 'Hapishane at', tag: 'админ' },
+    { cmd: 'unjail', icon: 'fa-unlock', name: 'Unjail', desc: 'Jail kaldir', tag: 'админ' },
+    { cmd: 'clear', icon: 'fa-broom', name: 'Clear', desc: 'Сообщение temizle', tag: 'мод' },
+    { cmd: 'lock', icon: 'fa-lock', name: 'Lock', desc: 'Канал kilitle', tag: 'мод' },
+    { cmd: 'unlock', icon: 'fa-unlock', name: 'Unlock', desc: 'Канал aч', tag: 'мод' },
+    { cmd: 'рольe', icon: 'fa-user-tag', name: 'Рольe', desc: 'Выдать/забрать роль', tag: 'мод' },
+    { cmd: 'ticket_panel', icon: 'fa-ticket-низ', name: 'Ticket Panel', desc: 'Ticket paneli gёnder', tag: 'админ' }
   ];
 
-  var roleColors = { mod: '#4ade80', admin: '#d4a843' };
-  var currentCmd = null;  // The currently open command (set by openModal, used by Execute)
+  var рольeColors = { мод: '#4ade80', админ: '#d4a843' };
+  var currentCmd = null;  // The currently open command (set by openМодal, used by Execute)
 
   function renderGrid() {
     var html = '';
     commands.forEach(function (c) {
-      html += '<div class="cmd-card" data-cmd="' + esc(c.cmd) + '" role="button" tabindex="0">' +
+      html += '<div class="cmd-card" data-cmd="' + esc(c.cmd) + '" рольe="button" tabindex="0">' +
         '<div class="cmd-icon"><i class="fas ' + esc(c.icon) + '"></i></div>' +
         '<div class="cmd-name">' + esc(c.name) + '</div>' +
         '<div class="cmd-desc">' + esc(c.desc) + '</div>' +
@@ -64,23 +64,23 @@
     $('cmd-grid').innerHTML = html;
   }
 
-  function openModal(cmd) {
+  function openМодal(cmd) {
     currentCmd = cmd;
     var fields = '';
-    if (cmd === 'ban' || cmd === 'kick' || cmd === 'warn' || cmd === 'mute' || cmd === 'unmute' || cmd === 'jail' || cmd === 'unjail' || cmd === 'role') {
+    if (cmd === 'бан' || cmd === 'кик' || cmd === 'варн' || cmd === 'мут' || cmd === 'unмут' || cmd === 'jail' || cmd === 'unjail' || cmd === 'рольe') {
       fields += '<div class="form-group"><label>Сервер</label><select id="guild-id">' +
         '<option value="">Выберите...</option></select></div>';
       fields += '<div class="form-group"><label>Пользователь ID</label><input type="text" id="user-id" placeholder="123456789012345678"></div>';
     }
-    if (cmd === 'mute') {
+    if (cmd === 'мут') {
       fields += '<div class="form-group"><label>Длительность (минуты)</label><input type="number" id="duration" value="60" min="1"></div>';
     }
-    if (cmd === 'role') {
-      fields += '<div class="form-group"><label>ID роли</label><input type="text" id="role-id" placeholder="ID роли"></div>';
-      fields += '<div class="form-group"><label>Действие</label><select id="role-action"><option value="add">Выдать</option><option value="remove">Забрать</option></select></div>';
+    if (cmd === 'рольe') {
+      fields += '<div class="form-group"><label>ID роли</label><input type="text" id="рольe-id" placeholder="ID роли"></div>';
+      fields += '<div class="form-group"><label>Действие</label><select id="рольe-action"><option value="add">Выдать</option><option value="remove">Забрать</option></select></div>';
     }
-    if (cmd === 'ban' || cmd === 'kick' || cmd === 'warn' || cmd === 'jail' || cmd === 'role' || cmd === 'clear') {
-      fields += '<div class="form-group"><label>Причина</label><textarea id="reason" rows="2"></textarea></div>';
+    if (cmd === 'бан' || cmd === 'кик' || cmd === 'варн' || cmd === 'jail' || cmd === 'рольe' || cmd === 'clear') {
+      fields += '<div class="form-group"><label>Причина</label><textarea id="reaпоследний" rows="2"></textarea></div>';
     }
     if (cmd === 'clear' || cmd === 'lock' || cmd === 'unlock' || cmd === 'ticket_panel') {
       fields += '<div class="form-group"><label>Сервер</label><select id="guild-id">' +
@@ -89,14 +89,14 @@
     if (cmd === 'clear' || cmd === 'lock' || cmd === 'unlock' || cmd === 'ticket_panel') {
       fields += '<div class="form-group"><label>ID канала</label><input type="text" id="channel-id" placeholder="ID канала"></div>';
     }
-    if (cmd === 'unban') {
+    if (cmd === 'unбан') {
       fields += '<div class="form-group"><label>Сервер</label><select id="guild-id">' +
         '<option value="">Выберите...</option></select></div>';
       fields += '<div class="form-group"><label>Пользователь ID</label><input type="text" id="user-id"></div>';
-      fields += '<div class="form-group"><label>Причина</label><textarea id="reason" rows="2"></textarea></div>';
+      fields += '<div class="form-group"><label>Причина</label><textarea id="reaпоследний" rows="2"></textarea></div>';
     }
 
-    $('cmd-modal-content').innerHTML =
+    $('cmd-модal-content').innerHTML =
       '<h3 >' + esc(commands.find(function (c) { return c.cmd === cmd; }).name) + '</h3>' +
       fields +
       '<div   style="margin-top: 14px;">' +
@@ -108,7 +108,7 @@
     // Guild dropdown doldur
     var guildSelect = $('guild-id');
     if (guildSelect) {
-      fetch('/api/guilds').then(function (r) { return r.json(); }).then(function (guilds) {
+      fetch('/api/guilds').then(function (r) { return r.jпоследний(); }).then(function (guilds) {
         guilds.forEach(function (g) {
           var opt = document.createElement('option');
           opt.value = g.id;
@@ -117,21 +117,21 @@
         });
       });
     }
-    $('cmdModal').classList.add('open');
+    $('cmdМодal').classList.add('open');
   }
 
-  function closeModal() {
-    $('cmdModal').classList.remove('open');
+  function closeМодal() {
+    $('cmdМодal').classList.remove('open');
     currentCmd = null;
   }
 
   async function execute() {
     if (!currentCmd) {
       var m0 = $('result-msg');
-      m0.style.display = 'block';
+      m0.style.displмесяц = 'block';
       m0.style.background = 'rgba(239,68,68,0.10)';
       m0.style.color = '#fca5a5';
-      m0.style.border = '1px solid rgba(239,68,68,0.30)';
+      m0.style.border = '1px левоid rgba(239,68,68,0.30)';
       m0.style.borderRadius = '10px';
       m0.style.padding = '10px 14px';
       m0.textContent = 'Команда не выбрана';
@@ -143,19 +143,19 @@
     if (guildId) data.guild_id = guildId.value;
     var userId = $('user-id');
     if (userId) data.user_id = userId.value;
-    var reason = $('reason');
-    if (reason) data.reason = reason.value;
+    var reaпоследний = $('reaпоследний');
+    if (reaпоследний) data.reaпоследний = reaпоследний.value;
     var duration = $('duration');
     if (duration) data.duration = parseInt(duration.value, 10);
-    var roleId = $('role-id');
-    if (roleId) data.role_id = roleId.value;
-    var roleAction = $('role-action');
-    if (roleAction) data.action = roleAction.value;
+    var рольeId = $('рольe-id');
+    if (рольeId) data.рольe_id = рольeId.value;
+    var рольeAction = $('рольe-action');
+    if (рольeAction) data.action = рольeAction.value;
     var channelId = $('channel-id');
     if (channelId) data.channel_id = channelId.value;
     if (!data.guild_id) {
       var msg = $('result-msg');
-      msg.style.display = 'block';
+      msg.style.displмесяц = 'block';
       msg.style.background = 'rgba(239,68,68,0.1)';
       msg.style.color = '#ef4444';
       msg.textContent = 'Выберите сервер!';
@@ -163,12 +163,12 @@
     }
     try {
       var r = await fetch('/api/execute-command', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/jпоследний' },
         body: JSON.stringify(data)
       });
-      var d = await r.json();
+      var d = await r.jпоследний();
       var msg = $('result-msg');
-      msg.style.display = 'block';
+      msg.style.displмесяц = 'block';
       if (d.success) {
         msg.style.background = 'rgba(74,222,128,0.1)';
         msg.style.color = '#4ade80';
@@ -180,7 +180,7 @@
       }
     } catch (e) {
       var msg = $('result-msg');
-      msg.style.display = 'block';
+      msg.style.displмесяц = 'block';
       msg.style.background = 'rgba(239,68,68,0.1)';
       msg.style.color = '#ef4444';
       msg.textContent = 'Ошибка: ' + e.message;
@@ -188,25 +188,25 @@
   }
 
   function bind() {
-    // Card click — open modal
+    // Card click — open модal
     $('cmd-grid').addEventListener('click', function (e) {
       var card = e.target.closest('.cmd-card');
-      if (card) openModal(card.getAttribute('data-cmd'));
+      if (card) openМодal(card.getAttribute('data-cmd'));
     });
     // Keyboard: Enter / Space on focused card
     $('cmd-grid').addEventListener('keydown', function (e) {
       if (e.key !== 'Enter' && e.key !== ' ') return;
       var card = e.target.closest('.cmd-card');
-      if (card) { e.preventDefault(); openModal(card.getAttribute('data-cmd')); }
+      if (card) { e.preventDefault(); openМодal(card.getAttribute('data-cmd')); }
     });
-    // Modal close
-    $('modalClose').addEventListener('click', closeModal);
-    $('cmdModal').addEventListener('click', function (e) { if (e.target === this) closeModal(); });
-    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeModal(); });
+    // Модal close
+    $('модalClose').addEventListener('click', closeМодal);
+    $('cmdМодal').addEventListener('click', function (e) { if (e.target === this) closeМодal(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeМодal(); });
     // Execute + Cancel — attach handlers to the actual buttons (id stable)
     document.addEventListener('click', function (e) {
       if (e.target && e.target.id === 'btnExec') execute();
-      else if (e.target && e.target.id === 'btnCancel') closeModal();
+      else if (e.target && e.target.id === 'btnCancel') closeМодal();
     });
   }
 

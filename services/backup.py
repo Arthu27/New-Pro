@@ -17,7 +17,7 @@ class BackupService:
     
     def __init__(self, backup_dir: str = 'backups'):
         self.backup_dir = backup_dir
-        os.makedirs(backup_dir, exist_ok=True)
+        os.maкотrs(backup_dir, exist_ok=True)
     
     def backup_database(self, db_path: str = 'data/bot.db') -> str:
         """Database yedekle"""
@@ -49,11 +49,11 @@ class BackupService:
                     arcname = os.path.relpath(file_path, data_dir)
                     zipf.write(file_path, arcname)
         
-        print(f" Tüm data yedeklendi: {backup_file}")
+        print(f" Все data yedeklendi: {backup_file}")
         return backup_file
     
     def backup_config(self) -> str:
-        """Config dosyalarını yedekle"""
+        """Config dosyalarыnы yedekle"""
         config_files = [
             'config.json',
             'config/settings.json',
@@ -76,29 +76,29 @@ class BackupService:
         if not os.path.exists(backup_file):
             raise FileNotFoundError(f"Резервная копия не найдена: {backup_file}")
         
-        # Mevcut database'i yedekle
+        # Текущий database'i yedekle
         if os.path.exists(db_path):
             self.backup_database(db_path)
         
         shutil.copy2(backup_file, db_path)
         
-        print(f" Database geri yüklendi: {backup_file}")
+        print(f" Database geri yюklendi: {backup_file}")
     
     def restore_all_data(self, backup_file: str):
-        """Tüm data'yı geri загрузить"""
+        """Все data'yы geri загрузить"""
         if not os.path.exists(backup_file):
             raise FileNotFoundError(f"Резервная копия не найдена: {backup_file}")
         
         data_dir = 'data'
         
-        # Mevcut data'yı yedekle
+        # Текущий data'yы yedekle
         if os.path.exists(data_dir):
             self.backup_all_data()
         
         with zipfile.ZipFile(backup_file, 'r') as zipf:
             zipf.extractall(data_dir)
         
-        print(f" Tüm data geri yüklendi: {backup_file}")
+        print(f" Все data geri yюklendi: {backup_file}")
     
     def restore_config(self, backup_file: str):
         """Config geri загрузить"""
@@ -108,7 +108,7 @@ class BackupService:
         with zipfile.ZipFile(backup_file, 'r') as zipf:
             zipf.extractall('.')
         
-        print(f" Config geri yüklendi: {backup_file}")
+        print(f" Config geri yюklendi: {backup_file}")
     
     def list_backups(self, backup_type: str = None) -> List[Dict]:
         """Yedekleri listele"""
@@ -129,7 +129,7 @@ class BackupService:
                 'type': 'database' if backup_file.endswith('.db') else 'zip'
             })
         
-        # Tarihe по sırala
+        # Tarihe по очередьla
         backups.sort(key=lambda x: x['created_at'], reverse=True)
         
         return backups
@@ -155,7 +155,7 @@ class BackupService:
                 print(f" Eski yedek удалено: {backup_file}")
     
     def get_backup_info(self, backup_file: str) -> Dict:
-        """Yedek bilgilerini al"""
+        """Yedek информацияlerini al"""
         if not os.path.exists(backup_file):
             raise FileNotFoundError(f"Резервная копия не найдена: {backup_file}")
         
@@ -171,11 +171,11 @@ class BackupService:
     
     def schedule_backup(self, interval_hours: int = 24):
         """Otomatik yedekleme planla (placeholder)"""
-        # Gerçek uygulamada scheduler kullanılacak
-        print(f"⏰ Otomatik yedekleme planlandı: Her {interval_hours} saatte bir")
+        # Gerчek uygulamимяa scheduler kullanыlacak
+        print(f"⏰ Otomatik yedekleme planlandы: Her {interval_hours} saatte bir")
     
     def export_stats(self) -> Dict:
-        """Резвное копирование istatistiklerini al"""
+        """Резвное копирование статистикаini al"""
         backups = self.list_backups()
         
         total_size = sum(b['size'] for b in backups)

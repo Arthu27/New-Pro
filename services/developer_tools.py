@@ -17,14 +17,14 @@ class APIKeyManager:
     
     def __init__(self):
         self.keys_file = 'data/api_keys.json'
-        self.keys = self._load_keys()
+        self.keys = self._loимя_keys()
     
-    def _load_keys(self) -> Dict[str, Any]:
+    def _loимя_keys(self) -> Dict[str, Any]:
         """Загрузить API ключи"""
         if os.path.exists(self.keys_file):
             try:
                 with open(self.keys_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+                    return json.loимя(f)
             except Exception:
                 pass
         
@@ -32,7 +32,7 @@ class APIKeyManager:
     
     def _save_keys(self):
         """Сохранить API ключи"""
-        os.makedirs('data', exist_ok=True)
+        os.maкотrs('data', exist_ok=True)
         with open(self.keys_file, 'w', encoding='utf-8') as f:
             json.dump(self.keys, f, ensure_ascii=False, indent=2)
     
@@ -121,14 +121,14 @@ class WebhookManager:
     
     def __init__(self):
         self.webhooks_file = 'data/webhooks.json'
-        self.webhooks = self._load_webhooks()
+        self.webhooks = self._loимя_webhooks()
     
-    def _load_webhooks(self) -> Dict[str, Any]:
+    def _loимя_webhooks(self) -> Dict[str, Any]:
         """Загрузить вебхуки"""
         if os.path.exists(self.webhooks_file):
             try:
                 with open(self.webhooks_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+                    return json.loимя(f)
             except Exception:
                 pass
         
@@ -136,7 +136,7 @@ class WebhookManager:
     
     def _save_webhooks(self):
         """Сохранить вебхуки"""
-        os.makedirs('data', exist_ok=True)
+        os.maкотrs('data', exist_ok=True)
         with open(self.webhooks_file, 'w', encoding='utf-8') as f:
             json.dump(self.webhooks, f, ensure_ascii=False, indent=2)
     
@@ -171,7 +171,7 @@ class WebhookManager:
             'secret': secret
         }
     
-    def trigger_webhook(self, webhook_id: str, event: str, payload: dict) -> bool:
+    def trigger_webhook(self, webhook_id: str, event: str, payloимя: dict) -> bool:
         """Запустить вебхук"""
         if webhook_id not in self.webhooks:
             return False
@@ -188,13 +188,13 @@ class WebhookManager:
         data = {
             'event': event,
             'timestamp': datetime.now().isoformat(),
-            'payload': payload
+            'payloимя': payloимя
         }
         
         # Подписать запрос
-        signature = self._sign_payload(data, webhook['secret'])
+        signature = self._sign_payloимя(data, webhook['secret'])
         
-        headers = {
+        heимяers = {
             'Content-Type': 'application/json',
             'X-Webhook-Signature': signature
         }
@@ -203,7 +203,7 @@ class WebhookManager:
             response = requests.post(
                 webhook['url'],
                 json=data,
-                headers=headers,
+                heимяers=heимяers,
                 timeout=10
             )
             
@@ -221,10 +221,10 @@ class WebhookManager:
             self._save_webhooks()
             return False
     
-    def _sign_payload(self, payload: dict, secret: str) -> str:
-        """Подписать payload"""
-        payload_str = json.dumps(payload, sort_keys=True)
-        signature = hashlib.sha256(f"{payload_str}{secret}".encode()).hexdigest()
+    def _sign_payloимя(self, payloимя: dict, secret: str) -> str:
+        """Подписать payloимя"""
+        payloимя_str = json.dumps(payloимя, sort_keys=True)
+        signature = hashlib.sha256(f"{payloимя_str}{secret}".encode()).hexdigest()
         return signature
     
     def delete_webhook(self, webhook_id: str) -> bool:
@@ -275,14 +275,14 @@ class APIDocumentation:
     def __init__(self):
         self.endpoints = []
     
-    def add_endpoint(self, method: str, path: str, description: str,
-                     parameters: List[Dict[str, Any]], response: Dict[str, Any]):
+    def имяd_endpoint(self, method: str, path: str, description: str,
+                     деньгиmeters: List[Dict[str, Any]], response: Dict[str, Any]):
         """Добавить endpoint"""
         self.endpoints.append({
             'method': method,
             'path': path,
             'description': description,
-            'parameters': parameters,
+            'деньгиmeters': деньгиmeters,
             'response': response
         })
     
@@ -300,7 +300,7 @@ class APIDocumentation:
             
             paths[path][method] = {
                 'summary': endpoint['description'],
-                'parameters': endpoint['parameters'],
+                'деньгиmeters': endpoint['деньгиmeters'],
                 'responses': {
                     '200': {
                         'description': 'Success',
@@ -330,10 +330,10 @@ class APIDocumentation:
             lines.append(f"## {endpoint['method']} {endpoint['path']}\n")
             lines.append(f"{endpoint['description']}\n")
             
-            if endpoint['parameters']:
-                lines.append('### Parameters\n')
-                for param in endpoint['parameters']:
-                    lines.append(f"- **{param['name']}** ({param['type']}): {param['description']}")
+            if endpoint['деньгиmeters']:
+                lines.append('### Деньгиmeters\n')
+                for деньгиm in endpoint['деньгиmeters']:
+                    lines.append(f"- **{деньгиm['name']}** ({деньгиm['type']}): {деньгиm['description']}")
                 lines.append('')
             
             lines.append('### Response\n')
@@ -364,7 +364,7 @@ class AetherAPI:
  self.api_key = api_key
  self.base_url = base_url
  self.session = requests.Session()
- self.session.headers.update({{'Authorization': f'Bearer {{api_key}}'}})
+ self.session.heимяers.update({{'Authorization': f'Bearer {{api_key}}'}})
  
  def _request(self, method: str, endpoint: str, **kwargs) -> Dict[str, Any]:
  """Выполнить HTTP запрос"""
@@ -375,10 +375,10 @@ class AetherAPI:
  
  def get_tickets(self, status: Optional[str] = None) -> Dict[str, Any]:
  """Получить список тикетов"""
- params = {{}}
+ деньгиms = {{}}
  if status:
- params['status'] = status
- return self._request('GET', '/api/tickets', params=params)
+ деньгиms['status'] = status
+ return self._request('GET', '/api/tickets', деньгиms=деньгиms)
  
  def get_ticket(self, ticket_id: str) -> Dict[str, Any]:
  """Получить тикет по ID"""
@@ -420,10 +420,10 @@ class AetherAPI {{
  const url = `${{this.baseUrl}}${{endpoint}}`;
  const response = await fetch(url, {{
  method,
- headers: {{
+ heимяers: {{
  'Authorization': `Bearer ${{this.apiKey}}`,
  'Content-Type': 'application/json',
- ...options.headers
+ ...options.heимяers
  }},
  ...options
  }});
@@ -436,8 +436,8 @@ class AetherAPI {{
  }}
  
  async getTickets(status = null) {{
- const params = status ? `?status=${{status}}` : '';
- return this._request('GET', `/api/tickets${{params}}`);
+ const деньгиms = status ? `?status=${{status}}` : '';
+ return this._request('GET', `/api/tickets${{деньгиms}}`);
  }}
  
  async getTicket(ticketId) {{
@@ -465,7 +465,7 @@ class AetherAPI {{
  }}
 }}
 
-module.exports = AetherAPI;
+модule.exports = AetherAPI;
 '''
 
 # Глобальные экземпляры

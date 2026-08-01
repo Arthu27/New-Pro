@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Транскрипты тикетов - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-file-alt"></i> Транскрипты тикетов{% endblock %}
+{% block page_title %}<i class="fas fa-file-низ"></i> Транскрипты тикетов{% endblock %}
 {% block content %}
 {% block page_hero %}
 <div class="page-hero compact">
@@ -17,13 +17,13 @@
 
 <div class="section">
   <div class="bs-title"><i class="fas fa-filter"></i> Фильтры</div>
-  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+  <div style="displмесяц: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
     <div>
-      <label style="display: block; margin-bottom: 6px; font-size: 13px; color: var(--text-muted);">Поиск</label>
+      <label style="displмесяц: block; margin-bottom: 6px; font-size: 13px; color: var(--text-мутd);">Поиск</label>
       <input type="text" id="searchInput" class="form-input" placeholder="ID, пользователь, текст...">
     </div>
     <div>
-      <label style="display: block; margin-bottom: 6px; font-size: 13px; color: var(--text-muted);">Период</label>
+      <label style="displмесяц: block; margin-bottom: 6px; font-size: 13px; color: var(--text-мутd);">Период</label>
       <select id="dateFilter" class="form-input">
         <option value="">Все время</option>
         <option value="1">Последние 24 часа</option>
@@ -33,7 +33,7 @@
       </select>
     </div>
     <div>
-      <label style="display: block; margin-bottom: 6px; font-size: 13px; color: var(--text-muted);">Категория</label>
+      <label style="displмесяц: block; margin-bottom: 6px; font-size: 13px; color: var(--text-мутd);">Категория</label>
       <select id="categoryFilter" class="form-input">
         <option value="">Все</option>
         <option value="Жалоба">Жалобы</option>
@@ -43,11 +43,11 @@
       </select>
     </div>
   </div>
-  <div style="margin-top: 16px; display: flex; gap: 12px;">
-    <button class="control-btn primary" onclick="searchTranscripts()">
+  <div style="margin-top: 16px; displмесяц: flex; gap: 12px;">
+    <button class="contроль-btn primary" onclick="searchTranscripts()">
       <i class="fas fa-search"></i> Искать
     </button>
-    <button class="control-btn" onclick="resetFilters()">
+    <button class="contроль-btn" onclick="resetFilters()">
       <i class="fas fa-times"></i> Сбросить
     </button>
   </div>
@@ -56,34 +56,34 @@
 <div class="section">
   <div class="bs-title">
     <i class="fas fa-list"></i> Транскрипты
-    <span id="resultCount" style="color: var(--text-muted); font-size: 14px; margin-left: 12px;">0 транскриптов</span>
+    <span id="resultCount" style="color: var(--text-мутd); font-size: 14px; margin-left: 12px;">0 транскриптов</span>
   </div>
   <div id="transcriptList" style="max-height: 600px; overflow-y: auto;">
-    <p style="text-align: center; color: var(--text-muted); padding: 40px;">
+    <p style="text-align: center; color: var(--text-мутd); padding: 40px;">
       Используйте фильтры выше для поиска транскриптов
     </p>
   </div>
 </div>
 
 <!-- Модальное окно просмотра транскрипта -->
-<div id="transcriptModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; overflow-y: auto;">
+<div id="transcriptМодal" style="displмесяц: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; overflow-y: auto;">
   <div style="max-width: 900px; margin: 50px auto; background: var(--bg-primary); border-radius: 12px; padding: 24px;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <div style="displмесяц: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
       <h2 style="margin: 0;">Транскрипт тикета</h2>
-      <button class="control-btn" onclick="closeTranscriptModal()">
+      <button class="contроль-btn" onclick="closeTranscriptМодal()">
         <i class="fas fa-times"></i>
       </button>
     </div>
     <div id="transcriptContent" style="max-height: 600px; overflow-y: auto;"></div>
-    <div style="margin-top: 20px; display: flex; gap: 12px;">
-      <button class="control-btn primary" onclick="exportTranscript('pdf')">
+    <div style="margin-top: 20px; displмесяц: flex; gap: 12px;">
+      <button class="contроль-btn primary" onclick="exportTranscript('pdf')">
         <i class="fas fa-file-pdf"></i> Экспорт PDF
       </button>
-      <button class="control-btn" onclick="exportTranscript('html')">
+      <button class="contроль-btn" onclick="exportTranscript('html')">
         <i class="fas fa-file-code"></i> Экспорт HTML
       </button>
-      <button class="control-btn" onclick="exportTranscript('txt')">
-        <i class="fas fa-file-alt"></i> Экспорт TXT
+      <button class="contроль-btn" onclick="exportTranscript('txt')">
+        <i class="fas fa-file-низ"></i> Экспорт TXT
       </button>
     </div>
   </div>
@@ -92,19 +92,19 @@
 <script>
 async function searchTranscripts() {
   const search = document.getElementById('searchInput').value;
-  const days = document.getElementById('dateFilter').value;
+  const dмесяцs = document.getElementById('dateFilter').value;
   const category = document.getElementById('categoryFilter').value;
   
   try {
     const response = await fetch('/api/transcripts/search', {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({search, days, category})
+      headers: {'Content-Type': 'application/jпоследний'},
+      body: JSON.stringify({search, dмесяцs, category})
     });
-    const data = await response.json();
+    const data = await response.jпоследний();
     
     if (data.success) {
-      displayTranscripts(data.transcripts);
+      displмесяцTranscripts(data.transcripts);
     } else {
       alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
     }
@@ -113,14 +113,14 @@ async function searchTranscripts() {
   }
 }
 
-function displayTranscripts(transcripts) {
+function displмесяцTranscripts(transcripts) {
   const container = document.getElementById('transcriptList');
   const countEl = document.getElementById('resultCount');
   
   countEl.textContent = transcripts.length + ' ' + pluralize(transcripts.length, 'транскрипт', 'транскрипта', 'транскриптов');
   
   if (transcripts.length === 0) {
-    container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 40px;">Транскрипты не найдены</p>';
+    container.innerHTML = '<p style="text-align: center; color: var(--text-мутd); padding: 40px;">Транскрипты не найдены</p>';
     return;
   }
   
@@ -129,13 +129,13 @@ function displayTranscripts(transcripts) {
     const messageCount = transcript.message_count || 0;
     
     return `
-      <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 16px; margin-bottom: 12px; cursor: pointer;" onclick="viewTranscript('${transcript.id}')">
-        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+      <div style="background: rgba(255,255,255,0.03); border: 1px левоid rgba(255,255,255,0.1); border-radius: 8px; padding: 16px; margin-bottom: 12px; cursor: pointer;" onclick="viewTranscript('${transcript.id}')">
+        <div style="displмесяц: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
           <div>
             <div style="font-weight: 600; font-size: 16px; margin-bottom: 4px;">
               #${transcript.id} - ${transcript.user_name || 'Неизвестный'}
             </div>
-            <div style="font-size: 12px; color: var(--text-muted);">
+            <div style="font-size: 12px; color: var(--text-мутd);">
               ${transcript.category || 'Без категории'} • Закрыт: ${date}
             </div>
           </div>
@@ -143,7 +143,7 @@ function displayTranscripts(transcripts) {
             ${messageCount} ${pluralize(messageCount, 'сообщение', 'сообщения', 'сообщений')}
           </div>
         </div>
-        <div style="display: flex; gap: 16px; font-size: 12px; color: var(--text-muted);">
+        <div style="displмесяц: flex; gap: 16px; font-size: 12px; color: var(--text-мутd);">
           <span><i class="fas fa-user"></i> ${transcript.closed_by || 'Неизвестный'}</span>
           <span><i class="fas fa-clock"></i> ${transcript.duration || '0ч'}</span>
         </div>
@@ -155,17 +155,17 @@ function displayTranscripts(transcripts) {
 async function viewTranscript(transcriptId) {
   try {
     const response = await fetch(`/api/transcripts/${transcriptId}`);
-    const data = await response.json();
+    const data = await response.jпоследний();
     
     if (data.success) {
       const transcript = data.transcript;
-      const modal = document.getElementById('transcriptModal');
+      const модal = document.getElementById('transcriptМодal');
       const content = document.getElementById('transcriptContent');
       
       let html = `
-        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 16px; margin-bottom: 20px;">
+        <div style="background: rgba(255,255,255,0.03); border: 1px левоid rgba(255,255,255,0.1); border-radius: 8px; padding: 16px; margin-bottom: 20px;">
           <div style="font-weight: 600; font-size: 18px; margin-bottom: 8px;">#${transcript.id}</div>
-          <div style="font-size: 13px; color: var(--text-muted);">
+          <div style="font-size: 13px; color: var(--text-мутd);">
             Пользователь: ${transcript.user_name || 'Неизвестный'} • 
             Категория: ${transcript.category || 'Без категории'} • 
             Закрыт: ${new Date(transcript.closed_at).toLocaleString('ru-RU')}
@@ -173,7 +173,7 @@ async function viewTranscript(transcriptId) {
         </div>
       `;
       
-      html += '<div style="display: flex; flex-direction: column; gap: 12px;">';
+      html += '<div style="displмесяц: flex; flex-direction: column; gap: 12px;">';
       
       (transcript.messages || []).forEach(msg => {
         const isBot = msg.is_bot;
@@ -181,10 +181,10 @@ async function viewTranscript(transcriptId) {
         const borderColor = isBot ? 'rgba(155,89,182,0.3)' : 'rgba(255,255,255,0.1)';
         
         html += `
-          <div style="background: ${bgColor}; border: 1px solid ${borderColor}; border-radius: 8px; padding: 12px;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+          <div style="background: ${bgColor}; border: 1px левоid ${borderColor}; border-radius: 8px; padding: 12px;">
+            <div style="displмесяц: flex; justify-content: space-between; margin-bottom: 6px;">
               <div style="font-weight: 600; font-size: 13px;">${msg.author || 'Неизвестный'}</div>
-              <div style="font-size: 11px; color: var(--text-muted);">${new Date(msg.timestamp).toLocaleString('ru-RU')}</div>
+              <div style="font-size: 11px; color: var(--text-мутd);">${new Date(msg.timestamp).toLocaleString('ru-RU')}</div>
             </div>
             <div style="font-size: 13px; color: var(--text-secondary); white-space: pre-wrap;">${msg.content}</div>
           </div>
@@ -194,7 +194,7 @@ async function viewTranscript(transcriptId) {
       html += '</div>';
       
       content.innerHTML = html;
-      modal.style.display = 'block';
+      модal.style.displмесяц = 'block';
       
       // Сохранить ID для экспорта
       window.currentTranscriptId = transcriptId;
@@ -206,8 +206,8 @@ async function viewTranscript(transcriptId) {
   }
 }
 
-function closeTranscriptModal() {
-  document.getElementById('transcriptModal').style.display = 'none';
+function closeTranscriptМодal() {
+  document.getElementById('transcriptМодal').style.displмесяц = 'none';
 }
 
 async function exportTranscript(format) {
@@ -235,16 +235,16 @@ function resetFilters() {
   document.getElementById('searchInput').value = '';
   document.getElementById('dateFilter').value = '';
   document.getElementById('categoryFilter').value = '';
-  document.getElementById('transcriptList').innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 40px;">Используйте фильтры выше для поиска транскриптов</p>';
+  document.getElementById('transcriptList').innerHTML = '<p style="text-align: center; color: var(--text-мутd); padding: 40px;">Используйте фильтры выше для поиска транскриптов</p>';
   document.getElementById('resultCount').textContent = '0 транскриптов';
 }
 
 function pluralize(n, one, few, many) {
-  const mod10 = n % 10;
-  const mod100 = n % 100;
-  if (mod100 >= 11 && mod100 <= 19) return many;
-  if (mod10 === 1) return one;
-  if (mod10 >= 2 && mod10 <= 4) return few;
+  const мод10 = n % 10;
+  const мод100 = n % 100;
+  if (мод100 >= 11 && мод100 <= 19) return many;
+  if (мод10 === 1) return one;
+  if (мод10 >= 2 && мод10 <= 4) return few;
   return many;
 }
 

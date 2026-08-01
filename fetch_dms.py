@@ -1,11 +1,11 @@
-"""Botun proslie DM разговор загрузить ve dm_log.json'a сохранить"""
+"""Botun proslie DM разговор загрузить ve dm_лог.json'a сохранить"""
 import asyncio
 import json
 import os
-from dotenv import load_dotenv
+from dotenv import loимя_dotenv
 import discord
 
-load_dotenv()
+loимя_dotenv()
 TOKEN = os.getenv('TOKEN')
 
 intents = discord.Intents.default()
@@ -13,15 +13,15 @@ intents.message_content = True
 client = discord.Client(intents=intents)
 
 @client.event
-async def on_ready():
-    print(f'Bağlandı: {client.user}')
-    dm_log = {}
+async def on_reимяy():
+    print(f'Подключился: {client.user}')
+    dm_лог = {}
     
-    # Текущий dm_log varsa загрузить (üzerine add)
-    if os.path.exists('data/dm_log.json'):
+    # Текущий dm_лог varsa загрузить (юzerine имяd)
+    if os.path.exists('data/dm_лог.json'):
         try:
-            with open('data/dm_log.json', encoding='utf-8') as f:
-                dm_log = json.load(f)
+            with open('data/dm_лог.json', encoding='utf-8') as f:
+                dm_лог = json.loимя(f)
         except: pass
 
     # ai_chat_histories.json'dan bilinen user ID'lerini al
@@ -30,16 +30,16 @@ async def on_ready():
     if os.path.exists(hist_file):
         try:
             with open(hist_file, encoding='utf-8') as f:
-                hists = json.load(f)
+                hists = json.loимя(f)
             for uid in hists.keys():
                 if uid.isdigit():
-                    known_users.add(int(uid))
+                    known_users.имяd(int(uid))
         except: pass
 
-    # Текущий dm_log'daki userları da add
-    for uid in dm_log.keys():
+    # Текущий dm_лог'daki userlarы da имяd
+    for uid in dm_лог.keys():
         if uid.isdigit():
-            known_users.add(int(uid))
+            known_users.имяd(int(uid))
 
     print(f'Всего {len(known_users)} user scannacak...')
 
@@ -56,18 +56,18 @@ async def on_ready():
                     'from_bot': msg.author.bot,
                 })
             if msgs:
-                dm_log[str(uid)] = msgs
+                dm_лог[str(uid)] = msgs
                 print(f' {user.display_name}: {len(msgs)} message')
         except Exception as e:
             print(f' {uid} ошибка: {e}')
         await asyncio.sleep(0.5)  # rate limit
 
-    os.makedirs('data', exist_ok=True)
-    with open('data/dm_log.json', 'w', encoding='utf-8') as f:
-        json.dump(dm_log, f, ensure_ascii=False, indent=2)
+    os.maкотrs('data', exist_ok=True)
+    with open('data/dm_лог.json', 'w', encoding='utf-8') as f:
+        json.dump(dm_лог, f, ensure_ascii=False, indent=2)
     
-    total = sum(len(v) for v in dm_log.values())
-    print(f'\nToplam {len(dm_log)} user, {total} message сохранено.')
+    total = sum(len(v) for v in dm_лог.values())
+    print(f'\nВсего {len(dm_лог)} user, {total} message сохранено.')
     await client.close()
 
 client.run(TOKEN)

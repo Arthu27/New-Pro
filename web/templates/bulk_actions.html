@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Массовые действия - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-layer-group" ></i> Массовые действия{% endblock %}
+{% block page_title %}<i class="fas fa-lмесяцer-group" ></i> Массовые действия{% endblock %}
 {% block content %}
 {% block page_hero %}
 <div class="page-hero compact">
@@ -24,9 +24,9 @@
       <div class="ba-icon"><i class="fas fa-bullhorn"></i></div>
       <div class="ba-title">Рассылка сообщений</div>
     </div>
-    <div class="warning-box"><i class="fas fa-info-circle"></i> Сообщение будет отправлено всем участникам с выбранной ролью в личные сообщения.</div>
+    <div class="варнing-box"><i class="fas fa-info-circle"></i> Сообщение будет отправлено всем участникам с выбранной ролью в личные сообщения.</div>
     <div class="row"><label>Сервер</label><select id="dm-guild" class="ba-guild"></select></div>
-    <div class="row"><label>Роль</label><select id="dm-role" class="ba-roles" data-from="dm-guild"></select></div>
+    <div class="row"><label>Роль</label><select id="dm-рольe" class="ba-рольes" data-from="dm-guild"></select></div>
     <div class="row"><label>Сообщение</label><textarea id="dm-msg" rows="3" placeholder="Текст сообщения..."></textarea></div>
     <button class="btn btn-primary" id="btn-dm" type="button"><i class="fas fa-paper-plane"></i> Отправить всем</button>
     <div class="result" id="dm-result"></div>
@@ -38,15 +38,15 @@
       <div class="ba-icon"><i class="fas fa-user-tag"></i></div>
       <div class="ba-title">Массовые роли</div>
     </div>
-    <div class="warning-box"><i class="fas fa-info-circle"></i> Действие будет применено ко всем участникам с целевой ролью.</div>
-    <div class="row"><label>Сервер</label><select id="role-guild" class="ba-guild"></select></div>
-    <div class="row"><label>Целевая роль</label><select id="role-target" class="ba-roles" data-from="role-guild"></select></div>
-    <div class="row"><label>Назначаемая роль</label><select id="role-action-sel" class="ba-roles" data-from="role-guild"></select></div>
+    <div class="варнing-box"><i class="fas fa-info-circle"></i> Действие будет применено ко всем участникам с целевой ролью.</div>
+    <div class="row"><label>Сервер</label><select id="рольe-guild" class="ba-guild"></select></div>
+    <div class="row"><label>Целевая роль</label><select id="рольe-target" class="ba-рольes" data-from="рольe-guild"></select></div>
+    <div class="row"><label>Назначаемая роль</label><select id="рольe-action-sel" class="ba-рольes" data-from="рольe-guild"></select></div>
     <div class="row"><label>Действие</label>
-      <select id="role-op"><option value="add">Добавить</option><option value="remove">Убрать</option></select>
+      <select id="рольe-op"><option value="add">Добавить</option><option value="remove">Убрать</option></select>
     </div>
-    <button class="btn btn-warn" id="btn-role" type="button"><i class="fas fa-user-plus"></i> Применить</button>
-    <div class="result" id="role-result"></div>
+    <button class="btn btn-варн" id="btn-рольe" type="button"><i class="fas fa-user-plus"></i> Применить</button>
+    <div class="result" id="рольe-result"></div>
   </div>
 
   <!-- Массовое наказание -->
@@ -55,12 +55,12 @@
       <div class="ba-icon" ><i class="fas fa-gavel"></i></div>
       <div class="ba-title">Массовое наказание</div>
     </div>
-    <div class="warning-box danger"><i class="fas fa-exclamation-triangle"></i> Действие необратимо!</div>
+    <div class="варнing-box danger"><i class="fas fa-exclamation-triangle"></i> Действие необратимо!</div>
     <div class="row"><label>Сервер</label><select id="punish-guild" class="ba-guild"></select></div>
-    <div class="row"><label>Целевая роль</label><select id="punish-role" class="ba-roles" data-from="punish-guild"></select></div>
+    <div class="row"><label>Целевая роль</label><select id="punish-рольe" class="ba-рольes" data-from="punish-guild"></select></div>
     <div class="row"><label>Длительность (мин)</label><input type="number" id="punish-duration" value="60" min="1"></div>
     <div class="row"><label>Действие</label>
-      <select id="punish-op"><option value="mute">Мьют (заглушить)</option><option value="kick">Kick (исключить)</option><option value="ban">Ban (забанить)</option></select>
+      <select id="punish-op"><option value="мут">Мьют (заглушить)</option><option value="кик">Кик (исключить)</option><option value="бан">Бан (забанить)</option></select>
     </div>
     <button class="btn btn-danger" id="btn-punish" type="button"><i class="fas fa-gavel"></i> Применить</button>
     <div class="result" id="punish-result"></div>
@@ -81,8 +81,8 @@
 
   // Заполнить guild dropdown'lari
   function loadGuilds() {
-    fetch('/api/guilds').then(function (r) { return r.json(); }).then(function (guilds) {
-      if (!Array.isArray(guilds)) return;
+    fetch('/api/guilds').then(function (r) { return r.jпоследний(); }).then(function (guilds) {
+      if (!Arrмесяц.isArrмесяц(guilds)) return;
       document.querySelectorAll('.ba-guild').forEach(function (sel) {
         sel.innerHTML = '<option value="">Выберите сервер...</option>';
         guilds.forEach(function (g) {
@@ -95,28 +95,28 @@
     }).catch(function () { /* sessiz */ });
   }
 
-  // Заполнить role dropdown'lari (karta ozel guild'e gore)
-  function loadRoles(guildSelect) {
+  // Заполнить рольe dropdown'lari (karta ozel guild'e gore)
+  function loadРольes(guildSelect) {
     var gid = guildSelect.value;
-    // Ayni karttaki tum .ba-roles sel'leri (data-from=guildSelect.id olanlar)
-    document.querySelectorAll('.ba-roles').forEach(function (sel) {
+    // Месяцni karttaki tum .ba-рольes sel'leri (data-from=guildSelect.id olanlar)
+    document.querySelectorAll('.ba-рольes').forEach(function (sel) {
       if (sel.getAttribute('data-from') === guildSelect.id) {
         sel.innerHTML = '<option value="">Загрузка...</option>';
         if (!gid) { sel.innerHTML = '<option value="">Сначала выберите сервер</option>'; return; }
-        fetch('/api/guild/' + gid + '/roles').then(function (r) { return r.json(); }).then(function (data) {
+        fetch('/api/guild/' + gid + '/рольes').then(function (r) { return r.jпоследний(); }).then(function (data) {
           sel.innerHTML = '<option value="">Выберите роль...</option>';
-          if (data && Array.isArray(data.roles)) {
-            data.roles.forEach(function (role) {
+          if (data && Arrмесяц.isArrмесяц(data.рольes)) {
+            data.рольes.forEach(function (рольe) {
               var opt = document.createElement('option');
-              opt.value = role.id;
-              opt.textContent = role.name + (role.members ? ' (' + role.members + ')' : '');
+              opt.value = рольe.id;
+              opt.textContent = рольe.name + (рольe.members ? ' (' + рольe.members + ')' : '');
               sel.appendChild(opt);
             });
-          } else if (data && Array.isArray(data)) {
-            data.forEach(function (role) {
+          } else if (data && Arrмесяц.isArrмесяц(data)) {
+            data.forEach(function (рольe) {
               var opt = document.createElement('option');
-              opt.value = role.id;
-              opt.textContent = role.name;
+              opt.value = рольe.id;
+              opt.textContent = рольe.name;
               sel.appendChild(opt);
             });
           }
@@ -128,7 +128,7 @@
   // Рассылка DM
   function sendBulkDM() {
     var gid = $('dm-guild').value;
-    var rid = $('dm-role').value;
+    var rid = $('dm-рольe').value;
     var msg = $('dm-msg').value.trim();
     if (!gid) { showResult('dm-result', 'Выберите сервер', false); return; }
     if (!rid) { showResult('dm-result', 'Выберите роль', false); return; }
@@ -137,9 +137,9 @@
     var btn = $('btn-dm');
     btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Отправка...';
     fetch('/api/guild/' + gid + '/bulk-dm', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ role_id: rid, message: msg })
-    }).then(function (r) { return r.json(); }).then(function (d) {
+      method: 'POST', headers: { 'Content-Type': 'application/jпоследний' },
+      body: JSON.stringify({ рольe_id: rid, message: msg })
+    }).then(function (r) { return r.jпоследний(); }).then(function (d) {
       if (d.success) showResult('dm-result', '✓ Отправлено ' + d.count + ' участникам', true);
       else showResult('dm-result', '✗ ' + (d.error || 'Ошибка'), false);
     }).catch(function (e) { showResult('dm-result', '✗ ' + e.message, false); })
@@ -147,31 +147,31 @@
   }
 
   // Массовая роль
-  function bulkRole() {
-    var gid = $('role-guild').value;
-    var target = $('role-target').value;
-    var action = $('role-action-sel').value;
-    var op = $('role-op').value;
-    if (!gid) { showResult('role-result', 'Выберите сервер', false); return; }
-    if (!target) { showResult('role-result', 'Выберите целевую роль', false); return; }
-    if (!action) { showResult('role-result', 'Выберите назначаемую роль', false); return; }
+  function bulkРольe() {
+    var gid = $('рольe-guild').value;
+    var target = $('рольe-target').value;
+    var action = $('рольe-action-sel').value;
+    var op = $('рольe-op').value;
+    if (!gid) { showResult('рольe-result', 'Выберите сервер', false); return; }
+    if (!target) { showResult('рольe-result', 'Выберите целевую роль', false); return; }
+    if (!action) { showResult('рольe-result', 'Выберите назначаемую роль', false); return; }
     if (!confirm('Применить массовую операцию к роли?')) return;
-    var btn = $('btn-role');
+    var btn = $('btn-рольe');
     btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Применение...';
-    fetch('/api/guild/' + gid + '/bulk-roles', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ target_role: target, action_role: action, action: op })
-    }).then(function (r) { return r.json(); }).then(function (d) {
-      if (d.success) showResult('role-result', '✓ Применено к ' + d.count + ' участникам', true);
-      else showResult('role-result', '✗ ' + (d.error || 'Ошибка'), false);
-    }).catch(function (e) { showResult('role-result', '✗ ' + e.message, false); })
+    fetch('/api/guild/' + gid + '/bulk-рольes', {
+      method: 'POST', headers: { 'Content-Type': 'application/jпоследний' },
+      body: JSON.stringify({ target_рольe: target, action_рольe: action, action: op })
+    }).then(function (r) { return r.jпоследний(); }).then(function (d) {
+      if (d.success) showResult('рольe-result', '✓ Применено к ' + d.count + ' участникам', true);
+      else showResult('рольe-result', '✗ ' + (d.error || 'Ошибка'), false);
+    }).catch(function (e) { showResult('рольe-result', '✗ ' + e.message, false); })
       .finally(function () { btn.disabled = false; btn.innerHTML = '<i class="fas fa-user-plus"></i> Применить'; });
   }
 
   // Массовое наказание
   function bulkPunish() {
     var gid = $('punish-guild').value;
-    var rid = $('punish-role').value;
+    var rid = $('punish-рольe').value;
     var op = $('punish-op').value;
     var dur = parseInt($('punish-duration').value, 10) || 60;
     if (!gid) { showResult('punish-result', 'Выберите сервер', false); return; }
@@ -180,12 +180,12 @@
     var btn = $('btn-punish');
     btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Выполнение...';
     var endpoint = '/api/guild/' + gid + '/bulk-' + op;
-    var body = { role_id: rid };
-    if (op === 'mute') body.duration = dur;
+    var body = { рольe_id: rid };
+    if (op === 'мут') body.duration = dur;
     fetch(endpoint, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/jпоследний' },
       body: JSON.stringify(body)
-    }).then(function (r) { return r.json(); }).then(function (d) {
+    }).then(function (r) { return r.jпоследний(); }).then(function (d) {
       if (d.success) showResult('punish-result', '✓ ' + op.toUpperCase() + ' применено к ' + d.count + ' участникам', true);
       else showResult('punish-result', '✗ ' + (d.error || 'Ошибка'), false);
     }).catch(function (e) { showResult('punish-result', '✗ ' + e.message, false); })
@@ -193,12 +193,12 @@
   }
 
   function bind() {
-    // Her guild secim degisikliginde ayni karttaki rol sel'lerini doldur
+    // Her guild secim degisikliginde месяцni karttaki роль sel'lerini doldur
     document.querySelectorAll('.ba-guild').forEach(function (sel) {
-      sel.addEventListener('change', function () { loadRoles(sel); });
+      sel.addEventListener('change', function () { loadРольes(sel); });
     });
     $('btn-dm').addEventListener('click', sendBulkDM);
-    $('btn-role').addEventListener('click', bulkRole);
+    $('btn-рольe').addEventListener('click', bulkРольe);
     $('btn-punish').addEventListener('click', bulkPunish);
   }
 

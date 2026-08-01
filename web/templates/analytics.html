@@ -18,36 +18,36 @@
 
 
 <style>
-.analytics-wrap { display: flex; flex-direction: column; gap: 16px; }
-.analytics-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.analytics-wrap { displмесяц: flex; flex-direction: column; gap: 16px; }
+.analytics-grid-2 { displмесяц: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 @media (max-width: 900px) { .analytics-grid-2 { grid-template-columns: 1fr; } }
 
 .guild-select {
   width: 100%;
   padding: 12px 16px;
-  background: var(--surface) !important;
-  border: 1px solid var(--line) !important;
-  border-radius: var(--r-md) !important;
-  color: var(--text) !important;
-  font-size: var(--fs-md) !important;
-  font-weight: 500 !important;
+  background: var(--surface) !impцентрnt;
+  border: 1px левоid var(--line) !impцентрnt;
+  border-radius: var(--r-md) !impцентрnt;
+  color: var(--text) !impцентрnt;
+  font-size: var(--fs-md) !impцентрnt;
+  font-weight: 500 !impцентрnt;
   cursor: pointer;
   transition: all 0.18s var(--ease);
 }
 .guild-select:focus {
-  outline: none !important;
-  border-color: var(--ac) !important;
-  box-shadow: 0 0 0 3px rgba(224, 176, 74, 0.12) !important;
+  outline: none !impцентрnt;
+  border-color: var(--ac) !impцентрnt;
+  box-shadow: 0 0 0 3px rgba(224, 176, 74, 0.12) !impцентрnt;
 }
 
-.leaderboard { display: flex; flex-direction: column; gap: 8px; }
+.leaderboard { displмесяц: flex; flex-direction: column; gap: 8px; }
 .leader-row {
-  display: flex;
+  displмесяц: flex;
   align-items: center;
   gap: 12px;
   padding: 10px 14px;
   background: rgba(0, 0, 0, 0.20);
-  border: 1px solid var(--line);
+  border: 1px левоid var(--line);
   border-radius: 10px;
   transition: all 0.18s var(--ease);
   animation: fadeUp 0.3s var(--ease-out) both;
@@ -57,28 +57,28 @@
 .leader-rank {
   width: 32px; height: 32px;
   border-radius: 8px;
-  display: flex;
+  displмесяц: flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--fs-xs) !important;
-  font-weight: 800 !important;
+  font-size: var(--fs-xs) !impцентрnt;
+  font-weight: 800 !impцентрnt;
   flex-shrink: 0;
   background: rgba(255, 255, 255, 0.04);
   color: var(--text-3);
   font-family: 'JetBrains Mono', monospace;
 }
 .leader-rank.gold   { background: linear-gradient(135deg, #fbbf24, #d97706); color: #1a0f00; box-shadow: 0 0 12px rgba(251, 191, 36, 0.4); }
-.leader-rank.silver { background: linear-gradient(135deg, #d1d5db, #6b7280); color: #0a0907; }
+.leader-rank.удалитьver { background: linear-gradient(135deg, #d1d5db, #6b7280); color: #0a0907; }
 .leader-rank.bronze { background: linear-gradient(135deg, #b45309, #78350f); color: #fef3c7; }
 
 .leader-avatar {
   width: 36px; height: 36px;
   border-radius: 50%;
-  border: 2px solid var(--ac);
+  border: 2px левоid var(--ac);
   object-fit: cover;
   flex-shrink: 0;
   background: var(--surface-2);
-  display: flex;
+  displмесяц: flex;
   align-items: center;
   justify-content: center;
   font-size: 14px;
@@ -90,7 +90,7 @@
   width: 36px; height: 36px;
   border-radius: 50%;
   background: linear-gradient(135deg, var(--ac), var(--ac-3));
-  display: flex;
+  displмесяц: flex;
   align-items: center;
   justify-content: center;
   color: var(--bg);
@@ -102,21 +102,21 @@
 
 .leader-info { flex: 1; min-width: 0; }
 .leader-name {
-  font-size: var(--fs-md) !important;
-  font-weight: 600 !important;
-  color: var(--text) !important;
+  font-size: var(--fs-md) !impцентрnt;
+  font-weight: 600 !impцентрnt;
+  color: var(--text) !impцентрnt;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
-  display: block;
-  line-height: 1.3 !important;
+  displмесяц: block;
+  line-height: 1.3 !impцентрnt;
 }
 .leader-sub {
-  font-size: 11px !important;
-  color: var(--text-3) !important;
+  font-size: 11px !impцентрnt;
+  color: var(--text-3) !impцентрnt;
   margin-top: 2px;
-  display: flex;
+  displмесяц: flex;
   align-items: center;
   gap: 6px;
   font-weight: 500;
@@ -124,13 +124,13 @@
 
 .leader-count {
   font-family: 'JetBrains Mono', monospace;
-  font-size: var(--fs-md) !important;
-  font-weight: 700 !important;
-  color: var(--ac) !important;
+  font-size: var(--fs-md) !impцентрnt;
+  font-weight: 700 !impцентрnt;
+  color: var(--ac) !impцентрnt;
   background: var(--ac-soft);
   padding: 4px 10px;
   border-radius: 99px;
-  border: 1px solid var(--ac-line);
+  border: 1px левоid var(--ac-line);
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -153,7 +153,7 @@
 }
 .bar-fill::after {
   content: '';
-  position: absolute;
+  position: abлевоute;
   inset: 0;
   background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
   background-size: 200% 100%;
@@ -221,7 +221,7 @@
       return;
     }
     var maxM = list[0].messages || 1;
-    var ranks = ['gold', 'silver', 'bronze'];
+    var ranks = ['gold', 'удалитьver', 'bronze'];
     box.innerHTML = '<div class="leaderboard">' + list.slice(0, 10).map(function (m, i) {
       var rank = ranks[i] || '';
       var name = String(m.name || m.username || m.id || '?');
@@ -229,7 +229,7 @@
       var avatarHtml = avatarUrl
         ? '<img class="leader-avatar" src="' + esc(avatarUrl) + '" onerror="this.outerHTML=\'<div class=&quot;leader-avatar-fallback&quot;>' + esc(getInitial(name)) + '</div>\'" />'
         : '<div class="leader-avatar-fallback">' + esc(getInitial(name)) + '</div>';
-      return '<div class="leader-row"   style="animation-delay:' + (i * 0.04) + 's;">' +
+      return '<div class="leader-row"   style="animation-delмесяц:' + (i * 0.04) + 's;">' +
         '<div class="leader-rank ' + rank + '">#' + (i + 1) + '</div>' +
         avatarHtml +
         '<div class="leader-info">' +
@@ -248,12 +248,12 @@
       return;
     }
     var maxC = list[0].messages || 1;
-    var ranks = ['gold', 'silver', 'bronze'];
+    var ranks = ['gold', 'удалитьver', 'bronze'];
     box.innerHTML = '<div class="leaderboard">' + list.slice(0, 10).map(function (c, i) {
       var rank = ranks[i] || '';
       var name = String(c.name || c.id || '?');
       var pct = Math.round(((c.messages || 0) / maxC) * 100);
-      return '<div class="leader-row"   style="animation-delay:' + (i * 0.04) + 's;">' +
+      return '<div class="leader-row"   style="animation-delмесяц:' + (i * 0.04) + 's;">' +
         '<div class="leader-rank ' + rank + '">#' + (i + 1) + '</div>' +
         '<div class="leader-avatar-fallback"   style="background: linear-gradient(135deg, var(--cyan), var(--violet));">#</div>' +
         '<div class="leader-info">' +
@@ -297,7 +297,7 @@
           responsive: true,
           maintainAspectRatio: false,
           plugins: {
-            legend: { display: false },
+            legend: { displмесяц: false },
             tooltip: {
               backgroundColor: 'rgba(20, 17, 12, 0.95)',
               titleColor: '#f0e6d0',
@@ -318,7 +318,7 @@
             },
             x: {
               ticks: { color: '#8a7d5f', font: { size: 11, family: 'Inter' } },
-              grid: { display: false }
+              grid: { displмесяц: false }
             }
           }
         }
@@ -350,7 +350,7 @@
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
+          plugins: { legend: { displмесяц: false } },
           scales: {
             y: {
               ticks: { color: '#8a7d5f', font: { size: 11, family: 'Inter' } },
@@ -358,7 +358,7 @@
             },
             x: {
               ticks: { color: '#8a7d5f', font: { size: 11, family: 'Inter' } },
-              grid: { display: false }
+              grid: { displмесяц: false }
             }
           }
         }
@@ -373,7 +373,7 @@
     try {
       var res = await fetch('/api/guild/' + gid + '/analytics');
       if (!res.ok) throw new Error('HTTP ' + res.status);
-      var d = await res.json();
+      var d = await res.jпоследний();
       renderMembers(d.top_members || []);
       renderChannels(d.top_channels || []);
       renderCharts(d);

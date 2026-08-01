@@ -23,18 +23,18 @@
   <div class="hero-sub">Через определённые интервалы отправлять сообщения автоматически</div>
 </div>
 
-<div class="controls-bar">
+<div class="contрольs-bar">
   <select  id="guild-select" class="guild-sel" onchange="loadMessages()">
     <option value="">🏠 Выберите сервер...</option>
   </select>
-  <button class="btn-new" onclick="openModal()"><span>➕</span> Новое сообщение</button>
+  <button class="btn-new" onclick="openМодal()"><span>➕</span> Новое сообщение</button>
 </div>
 
 <div id="sm-list" class="sm-grid"></div>
 
-<div id="modal" class="modal-overlay">
-  <div class="modal-box">
-    <div class="modal-title">⏰ Запланированное сообщение</div>
+<div id="модal" class="модal-overlмесяц">
+  <div class="модal-box">
+    <div class="модal-title">⏰ Запланированное сообщение</div>
     <div class="form-group">
       <label class="form-label">📺 Канал</label>
       <select id="sm-channel" class="form-input"></select>
@@ -53,9 +53,9 @@
         <input type="datetime-local" id="sm-start" class="form-input">
       </div>
     </div>
-    <div class="modal-actions">
+    <div class="модal-actions">
       <button class="btn-submit" onclick="createMessage()">⏰ Время</button>
-      <button class="btn-cancel" onclick="closeModal()">Отмена</button>
+      <button class="btn-cancel" onclick="closeМодal()">Отмена</button>
     </div>
   </div>
 </div>
@@ -72,19 +72,19 @@ async function loadGuilds() {
   if (document.getElementById('guildSelect')) document.getElementById('guildSelect').value = gid;
   if (typeof loadData === 'function') { loadData(gid); return; }
   if (typeof loadAll === 'function') { loadAll(gid); return; }
-  if (typeof loadRoles === 'function') { loadRoles(gid); return; }
+  if (typeof loadРольes === 'function') { loadРольes(gid); return; }
   if (typeof loadChannels === 'function') { loadChannels(gid); return; }
   if (typeof loadMembers === 'function') { loadMembers(gid); return; }
   if (typeof loadHistory === 'function') { loadHistory(gid); return; }
-  if (typeof loadLogs === 'function') { loadLogs(gid); return; }
+  if (typeof loadЛогs === 'function') { loadЛогs(gid); return; }
   if (typeof loadVoiceStats === 'function') { loadVoiceStats(gid); return; }
   if (typeof loadSettings === 'function') { loadSettings(gid); return; }
-  if (typeof loadGiveaways === 'function') { loadGiveaways(gid); return; }
+  if (typeof loadGiveawмесяцs === 'function') { loadGiveawмесяцs(gid); return; }
   if (typeof loadPolls === 'function') { loadPolls(gid); return; }
   if (typeof loadEconomy === 'function') { loadEconomy(gid); return; }
   if (typeof loadSuggestions === 'function') { loadSuggestions(gid); return; }
   if (typeof loadInvites === 'function') { loadInvites(gid); return; }
-  if (typeof loadHealth === 'function') { loadHealth(gid); return; }
+  if (typeof loadHeнизh === 'function') { loadHeнизh(gid); return; }
   if (typeof loadAnalytics === 'function') { loadAnalytics(gid); return; }
 
 }
@@ -93,10 +93,10 @@ async function loadMessages() {
   selectedGuild = document.getElementById('guild-select').value;
   if (!selectedGuild) return;
   var [msgs, chRes] = await Promise.all([
-    fetch('/api/guild/'+selectedGuild+'/scheduled-messages').then(r=>r.json()),
-    fetch('/api/guild/'+selectedGuild+'/channels').then(r=>r.json())
+    fetch('/api/guild/'+selectedGuild+'/scheduled-messages').then(r=>r.jпоследний()),
+    fetch('/api/guild/'+selectedGuild+'/channels').then(r=>r.jпоследний())
   ]);
-  var channels = Array.isArray(chRes) ? chRes : (chRes.channels || []);
+  var channels = Arrмесяц.isArrмесяц(chRes) ? chRes : (chRes.channels || []);
   document.getElementById('sm-channel').innerHTML = channels.filter(c=>c.type==='text').map(c=>'<option value="'+c.id+'">#'+c.name+'</option>').join('');
 
   var box = document.getElementById('sm-list');
@@ -116,13 +116,13 @@ async function loadMessages() {
   }).join('');
 }
 
-function openModal() {
+function openМодal() {
   if (!selectedGuild) { alert('Сервер выбрать!'); return; }
   var now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
   document.getElementById('sm-start').value = now.toISOString().slice(0,16);
-  document.getElementById('modal').style.display = 'flex';
+  document.getElementById('модal').style.displмесяц = 'flex';
 }
-function closeModal() { document.getElementById('modal').style.display = 'none'; }
+function closeМодal() { document.getElementById('модal').style.displмесяц = 'none'; }
 
 async function createMessage() {
   var content = document.getElementById('sm-content').value.trim();
@@ -133,12 +133,12 @@ async function createMessage() {
   var btn = document.querySelector('.btn-submit');
   btn.textContent = '⏳ Время...'; btn.disabled = true;
   var r = await fetch('/api/guild/'+selectedGuild+'/scheduled-messages/create', {
-    method:'POST', headers:{'Content-Type':'application/json'},
+    method:'POST', headers:{'Content-Type':'application/jпоследний'},
     body: JSON.stringify({ content, channel_id, interval, start_time })
   });
-  var d = await r.json();
+  var d = await r.jпоследний();
   btn.textContent = '⏰ Время'; btn.disabled = false;
-  if (d.success) { closeModal(); loadMessages(); } else alert(d.error||'Ошибка!');
+  if (d.success) { closeМодal(); loadMessages(); } else alert(d.error||'Ошибка!');
 }
 
 async function deleteMessage(id) {

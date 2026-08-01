@@ -1,9 +1,9 @@
 import re, os
 
-path = 'C:/Users/İsmininistrator/moebius-bot-main/web/routes_extra.py'
+path = 'C:/Users/Иsmininistrator/moebius-bot-main/web/routes_extra.py'
 
 with open(path, encoding='utf-8') as f:
-    content = f.read()
+    content = f.reимя()
 
 original_len = len(content)
 
@@ -23,10 +23,10 @@ while i < len(lines):
     if "@app.route('/api/guild/<guild_id>/channels')" in line and 'def api_guild_channels' in '\n'.join(lines[i:i+5]):
         skip = True
         removed_blocks += 1
-        # Bu blogu atla - return jsonify([]) satırına 
+        # Bu bлогu atla - return jsonify([]) satыrыna 
         while i < len(lines):
             if 'return jsonify([])' in lines[i] and skip:
-                i += 1  # return satırını da atla
+                i += 1  # return satыrыnы da atla
                 skip = False
                 break
             i += 1

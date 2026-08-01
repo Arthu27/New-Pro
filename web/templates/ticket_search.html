@@ -17,13 +17,13 @@
 
 <div class="section">
   <div class="bs-title"><i class="fas fa-filter"></i> Фильтры поиска</div>
-  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+  <div style="displмесяц: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
     <div>
-      <label style="display: block; margin-bottom: 6px; font-size: 13px; color: var(--text-muted);">Поиск</label>
+      <label style="displмесяц: block; margin-bottom: 6px; font-size: 13px; color: var(--text-мутd);">Поиск</label>
       <input type="text" id="searchInput" class="form-input" placeholder="ID, пользователь, текст...">
     </div>
     <div>
-      <label style="display: block; margin-bottom: 6px; font-size: 13px; color: var(--text-muted);">Статус</label>
+      <label style="displмесяц: block; margin-bottom: 6px; font-size: 13px; color: var(--text-мутd);">Статус</label>
       <select id="statusFilter" class="form-input">
         <option value="">Все</option>
         <option value="open">Открытые</option>
@@ -31,7 +31,7 @@
       </select>
     </div>
     <div>
-      <label style="display: block; margin-bottom: 6px; font-size: 13px; color: var(--text-muted);">Категория</label>
+      <label style="displмесяц: block; margin-bottom: 6px; font-size: 13px; color: var(--text-мутd);">Категория</label>
       <select id="categoryFilter" class="form-input">
         <option value="">Все</option>
         <option value="Жалоба">Жалобы</option>
@@ -41,7 +41,7 @@
       </select>
     </div>
     <div>
-      <label style="display: block; margin-bottom: 6px; font-size: 13px; color: var(--text-muted);">Период</label>
+      <label style="displмесяц: block; margin-bottom: 6px; font-size: 13px; color: var(--text-мутd);">Период</label>
       <select id="dateFilter" class="form-input">
         <option value="">Все время</option>
         <option value="1">Последние 24 часа</option>
@@ -50,11 +50,11 @@
       </select>
     </div>
   </div>
-  <div style="margin-top: 16px; display: flex; gap: 12px;">
-    <button class="control-btn primary" onclick="searchTickets()">
+  <div style="margin-top: 16px; displмесяц: flex; gap: 12px;">
+    <button class="contроль-btn primary" onclick="searchTickets()">
       <i class="fas fa-search"></i> Искать
     </button>
-    <button class="control-btn" onclick="resetFilters()">
+    <button class="contроль-btn" onclick="resetFilters()">
       <i class="fas fa-times"></i> Сбросить
     </button>
   </div>
@@ -63,10 +63,10 @@
 <div class="section">
   <div class="bs-title">
     <i class="fas fa-list"></i> Результаты поиска
-    <span id="resultCount" style="color: var(--text-muted); font-size: 14px; margin-left: 12px;">0 тикетов</span>
+    <span id="resultCount" style="color: var(--text-мутd); font-size: 14px; margin-left: 12px;">0 тикетов</span>
   </div>
   <div id="searchResults" style="max-height: 600px; overflow-y: auto;">
-    <p style="text-align: center; color: var(--text-muted); padding: 40px;">
+    <p style="text-align: center; color: var(--text-мутd); padding: 40px;">
       Используйте фильтры выше для поиска тикетов
     </p>
   </div>
@@ -77,18 +77,18 @@ async function searchTickets() {
   const search = document.getElementById('searchInput').value;
   const status = document.getElementById('statusFilter').value;
   const category = document.getElementById('categoryFilter').value;
-  const days = document.getElementById('dateFilter').value;
+  const dмесяцs = document.getElementById('dateFilter').value;
   
   try {
     const response = await fetch('/api/tickets/search', {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({search, status, category, days})
+      headers: {'Content-Type': 'application/jпоследний'},
+      body: JSON.stringify({search, status, category, dмесяцs})
     });
-    const data = await response.json();
+    const data = await response.jпоследний();
     
     if (data.success) {
-      displayResults(data.tickets);
+      displмесяцResults(data.tickets);
     } else {
       alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
     }
@@ -97,30 +97,30 @@ async function searchTickets() {
   }
 }
 
-function displayResults(tickets) {
+function displмесяцResults(tickets) {
   const container = document.getElementById('searchResults');
   const countEl = document.getElementById('resultCount');
   
   countEl.textContent = tickets.length + ' ' + pluralize(tickets.length, 'тикет', 'тикета', 'тикетов');
   
   if (tickets.length === 0) {
-    container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 40px;">Тикеты не найдены</p>';
+    container.innerHTML = '<p style="text-align: center; color: var(--text-мутd); padding: 40px;">Тикеты не найдены</p>';
     return;
   }
   
   container.innerHTML = tickets.map(ticket => {
-    const statusColor = ticket.status === 'open' ? 'var(--ok)' : 'var(--text-muted)';
+    const statusColor = ticket.status === 'open' ? 'var(--ok)' : 'var(--text-мутd)';
     const statusText = ticket.status === 'open' ? 'Открыт' : 'Закрыт';
     const date = new Date(ticket.created_at).toLocaleString('ru-RU');
     
     return `
-      <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 16px; margin-bottom: 12px;">
-        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+      <div style="background: rgba(255,255,255,0.03); border: 1px левоid rgba(255,255,255,0.1); border-radius: 8px; padding: 16px; margin-bottom: 12px;">
+        <div style="displмесяц: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
           <div>
             <div style="font-weight: 600; font-size: 16px; margin-bottom: 4px;">
               #${ticket.id} - ${ticket.user_name || 'Неизвестный'}
             </div>
-            <div style="font-size: 12px; color: var(--text-muted);">
+            <div style="font-size: 12px; color: var(--text-мутd);">
               ${ticket.category || 'Без категории'} • ${date}
             </div>
           </div>
@@ -131,7 +131,7 @@ function displayResults(tickets) {
         <div style="color: var(--text-secondary); margin-bottom: 8px;">
           ${ticket.description || 'Без описания'}
         </div>
-        <div style="display: flex; gap: 16px; font-size: 12px; color: var(--text-muted);">
+        <div style="displмесяц: flex; gap: 16px; font-size: 12px; color: var(--text-мутd);">
           <span><i class="fas fa-hashtag"></i> ${ticket.channel_name || 'Неизвестный'}</span>
           ${ticket.closed_by ? '<span><i class="fas fa-user"></i> ' + ticket.closed_by + '</span>' : ''}
         </div>
@@ -145,16 +145,16 @@ function resetFilters() {
   document.getElementById('statusFilter').value = '';
   document.getElementById('categoryFilter').value = '';
   document.getElementById('dateFilter').value = '';
-  document.getElementById('searchResults').innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 40px;">Используйте фильтры выше для поиска тикетов</p>';
+  document.getElementById('searchResults').innerHTML = '<p style="text-align: center; color: var(--text-мутd); padding: 40px;">Используйте фильтры выше для поиска тикетов</p>';
   document.getElementById('resultCount').textContent = '0 тикетов';
 }
 
 function pluralize(n, one, few, many) {
-  const mod10 = n % 10;
-  const mod100 = n % 100;
-  if (mod100 >= 11 && mod100 <= 19) return many;
-  if (mod10 === 1) return one;
-  if (mod10 >= 2 && mod10 <= 4) return few;
+  const мод10 = n % 10;
+  const мод100 = n % 100;
+  if (мод100 >= 11 && мод100 <= 19) return many;
+  if (мод10 === 1) return one;
+  if (мод10 >= 2 && мод10 <= 4) return few;
   return many;
 }
 

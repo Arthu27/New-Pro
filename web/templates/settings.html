@@ -18,11 +18,11 @@
 
 
 <div class="settings-grid">
-  <!-- Bot Durumu -->
+  <!-- Bot Статусu -->
   <div class="set-card" >
     <div class="set-head">
       <div class="set-icon"><i class="fas fa-robot"></i></div>
-      <div class="set-title">Bot Durumu</div>
+      <div class="set-title">Bot Статусu</div>
     </div>
     <div class="status-row">
       <span class="dot status-on" id="bot-dot"></span>
@@ -33,23 +33,23 @@
     <div class="kv"><span class="kv-key">Ping</span><span class="kv-val" id="stat-ping">-</span></div>
     <div class="action-row">
       <button class="btn btn-primary" id="btn-sync" type="button"><i class="fas fa-sync"></i> Sync</button>
-      <button class="btn btn-warn" id="btn-restart" type="button"><i class="fas fa-redo"></i> Restart</button>
+      <button class="btn btn-варн" id="btn-restart" type="button"><i class="fas fa-redo"></i> Restart</button>
     </div>
   </div>
 
   <!-- Gюvenlik -->
   <div class="set-card" >
     <div class="set-head">
-      <div class="set-icon"><i class="fas fa-shield-alt"></i></div>
+      <div class="set-icon"><i class="fas fa-shield-низ"></i></div>
       <div class="set-title">Gюvenlik</div>
     </div>
     <div class="status-row">
       <span class="dot status-on" id="sec-dot"></span>
       <span>Tehlike endeksi: <strong id="threat-val">-</strong>/100</span>
     </div>
-    <div class="kv"><span class="kv-key">Karantina</span><span class="kv-val" id="lockdown-state">-</span></div>
+    <div class="kv"><span class="kv-key">Kпоискntina</span><span class="kv-val" id="lockdown-state">-</span></div>
     <div class="action-row">
-      <button class="btn btn-warn" id="btn-lockdown" type="button"><i class="fas fa-lock"></i> Karantina</button>
+      <button class="btn btn-варн" id="btn-lockdown" type="button"><i class="fas fa-lock"></i> Kпоискntina</button>
     </div>
   </div>
 
@@ -66,7 +66,7 @@
     <div class="kv"><span class="kv-key">Длительность</span><span class="kv-val">30 gюn</span></div>
     <div class="kv"><span class="kv-key">CSP</span><span class="kv-val">Активный</span></div>
     <div class="action-row">
-      <button class="btn btn-danger" id="btn-logout" type="button"><i class="fas fa-sign-out-alt"></i> Выход</button>
+      <button class="btn btn-danger" id="btn-логout" type="button"><i class="fas fa-sign-out-низ"></i> Выход</button>
     </div>
   </div>
 
@@ -111,7 +111,7 @@
 
   async function loadThreat() {
     try {
-      var d = await fetch('/api/security/threat-index').then(function (r) { return r.json(); });
+      var d = await fetch('/api/security/threat-index').then(function (r) { return r.jпоследний(); });
       if (!d || !d.success) return;
       $('threat-val').textContent = d.threat_score || 15;
       $('lockdown-state').textContent = d.lockdown_active ? 'АКТИВЕН' : 'Kapali';
@@ -121,12 +121,12 @@
 
   async function loadTunnel() {
     try {
-      var d = await fetch('/api/tunnel-url').then(function (r) { return r.json(); });
+      var d = await fetch('/api/tunnel-url').then(function (r) { return r.jпоследний(); });
       if (d && d.url) {
         $('tunnel-status').textContent = 'Cloudflare Активный';
         $('tunnel-dot').className = 'dot status-on';
         var w = $('tunnel-url-wrap');
-        w.style.display = 'block';
+        w.style.displмесяц = 'block';
         w.textContent = d.url;
         w.dataset.url = d.url;
       } else {
@@ -140,7 +140,7 @@
     var btn = $('btn-sync');
     btn.disabled = true;
     try {
-      var d = await fetch('/api/bot/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).then(function (r) { return r.json(); });
+      var d = await fetch('/api/bot/sync', { method: 'POST', headers: { 'Content-Type': 'application/jпоследний' }, body: '{}' }).then(function (r) { return r.jпоследний(); });
       if (d.success) {
         btn.textContent = '✓ Synced';
         setTimeout(function () { btn.innerHTML = '<i class="fas fa-sync"></i> Sync'; }, 2000);
@@ -150,7 +150,7 @@
   }
 
   async function doRestart() {
-    if (!confirm('Botu yeniden baшlatmak istediгine emin misin?')) return;
+    if (!confirm('Botu новыйden baшlatmak istediгine emin misin?')) return;
     try {
       await fetch('/api/bot/restart', { method: 'POST' });
     } catch (e) { /* sessiz */ }
@@ -158,21 +158,21 @@
 
   async function doLockdown() {
     try {
-      await fetch('/api/security/toggle-lockdown', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+      await fetch('/api/security/toggle-lockdown', { method: 'POST', headers: { 'Content-Type': 'application/jпоследний' }, body: '{}' });
       loadThreat();
     } catch (e) { /* sessiz */ }
   }
 
-  function doLogout() {
+  function doЛогout() {
     if (!confirm('Чиkmak istediгine emin misin?')) return;
-    window.location.href = '/logout';
+    window.location.href = '/логout';
   }
 
   function bind() {
     $('btn-sync').addEventListener('click', doSync);
     $('btn-restart').addEventListener('click', doRestart);
     $('btn-lockdown').addEventListener('click', doLockdown);
-    $('btn-logout').addEventListener('click', doLogout);
+    $('btn-логout').addEventListener('click', doЛогout);
   }
 
   if (document.readyState === 'loading') {

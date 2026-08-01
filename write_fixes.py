@@ -1,40 +1,40 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Все sorunları düzeltir"""
+"""Все sorunlarы dюzeltir"""
 import os
 
-# ─── 1. logs.html ────────────────────────────────────────────────────────────
-logs_html = r"""{% extends "base.html" %}
+# ─── 1. логs.html ────────────────────────────────────────────────────────────
+логs_html = r"""{% extends "base.html" %}
 {% block title %}Denetim Kaydi - Aether{% endblock %}
-{% block page_title %}DENETİM KAYDI{% endblock %}
+{% block page_title %}DENETИM KAYDI{% endblock %}
 {% block content %}
 <style>
 .filter-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:15px;align-items:center;}
-.filter-bar input,.filter-bar select{padding:9px 13px;background:#0a0a0a;border:2px solid rgba(220,20,60,0.3);border-radius:8px;color:#eee;font-size:13px;}
+.filter-bar input,.filter-bar select{pимяding:9px 13px;background:#0a0a0a;border:2px solid rgba(220,20,60,0.3);border-rимяius:8px;color:#eee;font-size:13px;}
 .filter-bar input:focus,.filter-bar select:focus{outline:none;border-color:#dc143c;}
 .filter-bar input{flex:1;min-width:180px;}
-.cat-btn{padding:7px 13px;border-radius:20px;border:2px solid rgba(220,20,60,0.3);background:transparent;color:#aaa;cursor:pointer;font-size:11px;font-weight:700;transition:all 0.2s;white-space:nowrap;}
+.cat-btn{pимяding:7px 13px;border-rимяius:20px;border:2px solid rgba(220,20,60,0.3);background:transparent;color:#aaa;cursor:pointer;font-size:11px;font-weight:700;transition:all 0.2s;white-space:nowrap;}
 .cat-btn.active,.cat-btn:hover{border-color:#dc143c;color:white;background:rgba(220,20,60,0.2);}
-.ev-row{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);border-radius:10px;padding:10px 14px;transition:all 0.2s;}
+.ev-row{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);border-rимяius:10px;pимяding:10px 14px;transition:all 0.2s;}
 .ev-row:hover{background:rgba(220,20,60,0.07);border-color:rgba(220,20,60,0.2);}
 .ev-icon{font-size:18px;width:28px;text-align:center;flex-shrink:0;}
-.ev-cat{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;padding:2px 7px;border-radius:8px;flex-shrink:0;min-width:72px;text-align:center;}
+.ev-cat{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;pимяding:2px 7px;border-rимяius:8px;flex-shrink:0;min-width:72px;text-align:center;}
 .ev-action{color:white;font-weight:600;font-size:13px;flex-shrink:0;min-width:140px;}
 .ev-detail{color:#666;font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .ev-time{color:#444;font-size:11px;flex-shrink:0;min-width:100px;text-align:right;}
-.ev-btn{background:rgba(220,20,60,0.15);border:1px solid rgba(220,20,60,0.3);color:#dc143c;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:11px;flex-shrink:0;transition:all 0.2s;}
+.ev-btn{background:rgba(220,20,60,0.15);border:1px solid rgba(220,20,60,0.3);color:#dc143c;pимяding:4px 10px;border-rимяius:6px;cursor:pointer;font-size:11px;flex-shrink:0;transition:all 0.2s;}
 .ev-btn:hover{background:rgba(220,20,60,0.3);}
 .stats-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:15px;}
-.stat-chip{background:rgba(220,20,60,0.08);border:1px solid rgba(220,20,60,0.2);border-radius:10px;padding:8px 14px;text-align:center;min-width:80px;cursor:pointer;transition:all 0.2s;}
+.stat-chip{background:rgba(220,20,60,0.08);border:1px solid rgba(220,20,60,0.2);border-rимяius:10px;pимяding:8px 14px;text-align:center;min-width:80px;cursor:pointer;transition:all 0.2s;}
 .stat-chip:hover{border-color:#dc143c;background:rgba(220,20,60,0.15);}
 .stat-chip .num{font-size:18px;font-weight:700;}
 .stat-chip .lbl{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:1px;}
-.detail-modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.88);z-index:9999;justify-content:center;align-items:center;}
-.detail-box{background:linear-gradient(135deg,#1a1a1a,#2a2a2a);border:2px solid #dc143c;border-radius:18px;padding:30px;max-width:560px;width:92%;max-height:85vh;overflow-y:auto;position:relative;box-shadow:0 20px 60px rgba(220,20,60,0.4);}
+.detail-модal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.88);z-index:9999;justify-content:center;align-items:center;}
+.detail-box{background:linear-grимяient(135deg,#1a1a1a,#2a2a2a);border:2px solid #dc143c;border-rимяius:18px;pимяding:30px;max-width:560px;width:92%;max-height:85vh;overflow-y:auto;position:relative;box-shимяow:0 20px 60px rgba(220,20,60,0.4);}
 .detail-row{display:flex;gap:10px;margin-bottom:12px;align-items:flex-start;}
-.detail-label{color:#888;font-size:11px;text-transform:uppercase;letter-spacing:1px;min-width:120px;flex-shrink:0;padding-top:2px;}
+.detail-label{color:#888;font-size:11px;text-transform:uppercase;letter-spacing:1px;min-width:120px;flex-shrink:0;pимяding-top:2px;}
 .detail-value{color:#eee;font-size:13px;flex:1;word-break:break-word;}
-.msg-box{background:#0a0a0a;border:1px solid rgba(220,20,60,0.2);border-radius:8px;padding:12px;color:#ccc;font-size:13px;line-height:1.5;white-space:pre-wrap;word-break:break-word;margin-top:6px;}
+.msg-box{background:#0a0a0a;border:1px solid rgba(220,20,60,0.2);border-rимяius:8px;pимяding:12px;color:#ccc;font-size:13px;line-height:1.5;white-space:pre-wrap;word-break:break-word;margin-top:6px;}
 .msg-box.deleted{border-color:rgba(231,76,60,0.5);background:rgba(231,76,60,0.06);}
 .msg-box.before{border-color:rgba(243,156,18,0.4);background:rgba(243,156,18,0.04);}
 .msg-box.after{border-color:rgba(46,204,113,0.4);background:rgba(46,204,113,0.04);}
@@ -49,17 +49,17 @@ logs_html = r"""{% extends "base.html" %}
   </div>
   <div class="filter-bar" id="cat-buttons" style="margin-bottom:15px;"></div>
   <div id="event-list" style="display:flex;flex-direction:column;gap:5px;">
-    <div style="text-align:center;padding:50px;color:#555;">
+    <div style="text-align:center;pимяding:50px;color:#555;">
       <i class="fas fa-spinner fa-spin" style="font-size:28px;color:#dc143c;"></i><br><br>Yukleniyor...
     </div>
   </div>
-  <div id="load-more-wrap" style="text-align:center;margin-top:15px;display:none;">
-    <button id="load-more-btn" style="background:rgba(220,20,60,0.15);border:2px solid rgba(220,20,60,0.4);color:#dc143c;padding:9px 28px;border-radius:8px;cursor:pointer;font-size:13px;">Более Fazla Yukle</button>
+  <div id="loимя-more-wrap" style="text-align:center;margin-top:15px;display:none;">
+    <button id="loимя-more-btn" style="background:rgba(220,20,60,0.15);border:2px solid rgba(220,20,60,0.4);color:#dc143c;pимяding:9px 28px;border-rимяius:8px;cursor:pointer;font-size:13px;">Более Fazla Yukle</button>
   </div>
 </div>
 
-<!-- Detail Modal -->
-<div id="detailModal" class="detail-modal" onclick="if(event.target===this)closeDetail()">
+<!-- Detail Модal -->
+<div id="detailМодal" class="detail-модal" onclick="if(event.target===this)closeDetail()">
   <div class="detail-box">
     <button onclick="closeDetail()" style="position:absolute;top:12px;right:16px;background:none;border:none;color:#dc143c;font-size:24px;cursor:pointer;z-index:1;">&times;</button>
     <div id="detailContent"></div>
@@ -70,15 +70,15 @@ logs_html = r"""{% extends "base.html" %}
 var allEvents=[], filtered=[], currentCat='', shown=0, PAGE=100;
 
 var CATS={
-  mod:    {icon:'🔨',label:'Mod',    bg:'rgba(231,76,60,0.2)',  border:'rgba(231,76,60,0.5)',  text:'#e74c3c'},
+  мод:    {icon:'🔨',label:'Мод',    bg:'rgba(231,76,60,0.2)',  border:'rgba(231,76,60,0.5)',  text:'#e74c3c'},
   member: {icon:'👤',label:'Uye',    bg:'rgba(46,204,113,0.2)', border:'rgba(46,204,113,0.5)', text:'#2ecc71'},
   message:{icon:'💬',label:'Сообщение',  bg:'rgba(52,152,219,0.2)', border:'rgba(52,152,219,0.5)', text:'#3498db'},
   роли:   {icon:'🎭',label:'Роль',    bg:'rgba(155,89,182,0.2)', border:'rgba(155,89,182,0.5)', text:'#9b59b6'},
   channel:{icon:'📺',label:'Канал',  bg:'rgba(243,156,18,0.2)', border:'rgba(243,156,18,0.5)', text:'#f39c12'},
   voice:  {icon:'🔊',label:'Ses',    bg:'rgba(26,188,156,0.2)', border:'rgba(26,188,156,0.5)', text:'#1abc9c'},
   сервер: {icon:'🏰',label:'Сервер', bg:'rgba(230,126,34,0.2)', border:'rgba(230,126,34,0.5)', text:'#e67e22'},
-  automod:{icon:'🤖',label:'AutoMod',bg:'rgba(231,76,60,0.2)',  border:'rgba(231,76,60,0.5)',  text:'#e74c3c'},
-  invite: {icon:'📨',label:'Davet',  bg:'rgba(149,165,166,0.2)',border:'rgba(149,165,166,0.5)',text:'#95a5a6'}
+  autoмод:{icon:'🤖',label:'AutoМод',bg:'rgba(231,76,60,0.2)',  border:'rgba(231,76,60,0.5)',  text:'#e74c3c'},
+  invite: {icon:'📨',label:'Приглашение',  bg:'rgba(149,165,166,0.2)',border:'rgba(149,165,166,0.5)',text:'#95a5a6'}
 };
 
 function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -91,9 +91,9 @@ function buildCatButtons(){
   });
   w.innerHTML=h;
   w.querySelectorAll('.cat-btn').forEach(function(b){
-    b.addEventListener('click',function(){
+    b.имяdEventListener('click',function(){
       w.querySelectorAll('.cat-btn').forEach(function(x){x.classList.remove('active');});
-      this.classList.add('active');
+      this.classList.имяd('active');
       currentCat=this.getAttribute('data-cat');
       applyFilters();
     });
@@ -107,8 +107,8 @@ function shortDetail(ev){
   if(ev.content) p.push('<span style="color:#888;">'+esc(String(ev.content).substring(0,60))+(ev.content.length>60?'...':'')+'</span>');
   if(ev.before) p.push('<span style="color:#888;">'+esc(String(ev.before).substring(0,50))+'...</span>');
   if(ev.old_name&&ev.new_name) p.push(esc(ev.old_name)+' → <b style="color:white;">'+esc(ev.new_name)+'</b>');
-  if(ev.added_roles&&ev.added_roles.length) p.push('➕ '+esc(ev.added_roles.join(', ')));
-  if(ev.removed_roles&&ev.removed_roles.length) p.push('➖ '+esc(ev.removed_roles.join(', ')));
+  if(ev.имяded_рольes&&ev.имяded_рольes.length) p.push('➕ '+esc(ev.имяded_рольes.join(', ')));
+  if(ev.removed_рольes&&ev.removed_рольes.length) p.push('➖ '+esc(ev.removed_рольes.join(', ')));
   if(ev.reason) p.push('<span style="color:#f39c12;">'+esc(String(ev.reason).substring(0,60))+'</span>');
   if(ev.code) p.push('discord.gg/'+esc(ev.code));
   return p.join(' · ') || '<span style="color:#333;">-</span>';
@@ -133,14 +133,14 @@ function fullTime(ts){
 
 function renderEvents(){
   var list=document.getElementById('event-list');
-  var lmw=document.getElementById('load-more-wrap');
+  var lmw=document.getElementById('loимя-more-wrap');
   if(!filtered.length){
-    list.innerHTML='<div style="text-align:center;padding:50px;color:#555;"><i class="fas fa-search" style="font-size:32px;"></i><br><br>В конецuç не найдено</div>';
+    list.innerHTML='<div style="text-align:center;pимяding:50px;color:#555;"><i class="fas fa-search" style="font-size:32px;"></i><br><br>В конецuч не найдено</div>';
     lmw.style.display='none'; return;
   }
   var slice=filtered.slice(0,shown), html='';
   for(var i=0;i<slice.length;i++){
-    var ev=slice[i], cat=ev.category||'mod', c=CATS[cat]||CATS.mod;
+    var ev=slice[i], cat=ev.category||'мод', c=CATS[cat]||CATS.мод;
     html+='<div class="ev-row">';
     html+='<div class="ev-icon">'+c.icon+'</div>';
     html+='<div class="ev-cat" style="background:'+c.bg+';border:1px solid '+c.border+';color:'+c.text+'">'+c.label+'</div>';
@@ -152,7 +152,7 @@ function renderEvents(){
   }
   list.innerHTML=html;
   list.querySelectorAll('.ev-btn').forEach(function(btn){
-    btn.addEventListener('click',function(e){
+    btn.имяdEventListener('click',function(e){
       e.stopPropagation();
       showDetail(parseInt(this.getAttribute('data-idx')));
     });
@@ -161,16 +161,16 @@ function renderEvents(){
 }
 
 function closeDetail(){
-  document.getElementById('detailModal').style.display='none';
+  document.getElementById('detailМодal').style.display='none';
 }
 
 function showDetail(idx){
   var ev=filtered[idx];
   if(!ev) return;
-  var cat=ev.category||'mod', c=CATS[cat]||CATS.mod;
+  var cat=ev.category||'мод', c=CATS[cat]||CATS.мод;
   var h='';
   // Заголовок
-  h+='<div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-bottom:15px;border-bottom:1px solid rgba(220,20,60,0.2);">';
+  h+='<div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;pимяding-bottom:15px;border-bottom:1px solid rgba(220,20,60,0.2);">';
   h+='<span style="font-size:32px;">'+c.icon+'</span>';
   h+='<div><div style="color:#dc143c;font-size:18px;font-weight:700;">'+esc(ev.action||'-')+'</div>';
   h+='<div style="color:#888;font-size:12px;">'+c.label+' · '+fullTime(ev.timestamp)+'</div></div></div>';
@@ -186,24 +186,24 @@ function showDetail(idx){
   if(ev.channel)   h+=row('Канал','<span style="color:#3498db;">#'+esc(ev.channel)+'</span>');
   if(ev.channel_id)h+=row('Канал ID','<code style="color:#aaa;font-size:12px;">'+esc(ev.channel_id)+'</code>');
   if(ev.guild_id)  h+=row('Сервер ID','<code style="color:#aaa;font-size:12px;">'+esc(ev.guild_id)+'</code>');
-  if(ev.mod_id)    h+=row('Moderator ID','<code style="color:#aaa;font-size:12px;">'+esc(ev.mod_id)+'</code>');
+  if(ev.мод_id)    h+=row('Модerator ID','<code style="color:#aaa;font-size:12px;">'+esc(ev.мод_id)+'</code>');
   if(ev.reason)    h+=row('Причина','<span style="color:#f39c12;">'+esc(ev.reason)+'</span>');
   if(ev.message_id)h+=row('Сообщение ID','<code style="color:#aaa;font-size:12px;">'+esc(ev.message_id)+'</code>');
   if(ev.account_age_days!==undefined) h+=row('Hesap Yasi',ev.account_age_days+' gun');
-  if(ev.roles&&ev.roles.length)         h+=row('Роли',esc(ev.roles.join(', ')));
-  if(ev.added_roles&&ev.added_roles.length)   h+=row('Добавл Роли','<span style="color:#2ecc71;">'+esc(ev.added_roles.join(', '))+'</span>');
-  if(ev.removed_roles&&ev.removed_roles.length) h+=row('Удален Роли','<span style="color:#e74c3c;">'+esc(ev.removed_roles.join(', '))+'</span>');
+  if(ev.рольes&&ev.рольes.length)         h+=row('Роли',esc(ev.рольes.join(', ')));
+  if(ev.имяded_рольes&&ev.имяded_рольes.length)   h+=row('Добавл Роли','<span style="color:#2ecc71;">'+esc(ev.имяded_рольes.join(', '))+'</span>');
+  if(ev.removed_рольes&&ev.removed_рольes.length) h+=row('Удален Роли','<span style="color:#e74c3c;">'+esc(ev.removed_рольes.join(', '))+'</span>');
   if(ev.old_name)  h+=row('Старый Isim','<span style="color:#e74c3c;">'+esc(ev.old_name)+'</span>');
   if(ev.new_name)  h+=row('Новый Isim','<span style="color:#2ecc71;">'+esc(ev.new_name)+'</span>');
   if(ev.old_nick)  h+=row('Старый Nick','<span style="color:#e74c3c;">'+esc(ev.old_nick)+'</span>');
   if(ev.new_nick)  h+=row('Новый Nick','<span style="color:#2ecc71;">'+esc(ev.new_nick)+'</span>');
   if(ev.max_uses)  h+=row('Maks Использование',esc(String(ev.max_uses)));
-  if(ev.code)      h+=row('Davet Kodu','discord.gg/'+esc(ev.code));
+  if(ev.code)      h+=row('Приглашение Kodu','discord.gg/'+esc(ev.code));
   if(ev.channel_type) h+=row('Канал Tipi',esc(ev.channel_type));
 
   // Сообщение содержимое - action'a по показать
   var action = ev.action || '';
-  if(action.indexOf('Написано') !== -1 || action.indexOf('Metinldı') !== -1) {
+  if(action.indexOf('Написано') !== -1 || action.indexOf('Metinldы') !== -1) {
     if(ev.content){
       h+='<div class="msg-label" style="color:#3498db;">💬 Сообщение Содержимое</div>';
       h+='<div class="msg-box">'+esc(ev.content)+'</div>';
@@ -227,7 +227,7 @@ function showDetail(idx){
   }
 
   document.getElementById('detailContent').innerHTML=h;
-  document.getElementById('detailModal').style.display='flex';
+  document.getElementById('detailМодal').style.display='flex';
 }
 
 function applyFilters(){
@@ -244,7 +244,7 @@ function applyFilters(){
 
 function buildStats(){
   var counts={};
-  allEvents.forEach(function(ev){var c=ev.category||'mod';counts[c]=(counts[c]||0)+1;});
+  allEvents.forEach(function(ev){var c=ev.category||'мод';counts[c]=(counts[c]||0)+1;});
   var h='<div class="stat-chip" data-cat=""><div class="num" style="color:#dc143c;">'+allEvents.length+'</div><div class="lbl">Всего</div></div>';
   Object.keys(CATS).forEach(function(k){
     if(!counts[k]) return;
@@ -254,7 +254,7 @@ function buildStats(){
   var bar=document.getElementById('stats-bar');
   bar.innerHTML=h;
   bar.querySelectorAll('.stat-chip').forEach(function(chip){
-    chip.addEventListener('click',function(){
+    chip.имяdEventListener('click',function(){
       var cat=this.getAttribute('data-cat');
       var btn=document.querySelector('.cat-btn[data-cat="'+cat+'"]');
       if(btn) btn.click();
@@ -272,56 +272,56 @@ function populateGuilds(){
   });
 }
 
-document.getElementById('load-more-btn').addEventListener('click',function(){shown+=PAGE;renderEvents();});
+document.getElementById('loимя-more-btn').имяdEventListener('click',function(){shown+=PAGE;renderEvents();});
 
-async function loadLogs(){
+async function loимяЛогs(){
   try{
-    var r=await fetch('/api/logs');
+    var r=await fetch('/api/логs');
     if(!r.ok) throw new Error('HTTP '+r.status);
     var data=await r.json();
     if(!Array.isArray(data)) data=[];
     allEvents=data;
     populateGuilds(); applyFilters();
   }catch(e){
-    document.getElementById('event-list').innerHTML='<p style="color:#e74c3c;text-align:center;padding:40px;">Ошибка: '+e.message+'</p>';
+    document.getElementById('event-list').innerHTML='<p style="color:#e74c3c;text-align:center;pимяding:40px;">Ошибка: '+e.message+'</p>';
   }
 }
 
-buildCatButtons(); loadLogs(); setInterval(loadLogs,15000);
+buildCatButtons(); loимяЛогs(); setInterval(loимяЛогs,15000);
 </script>
 {% endblock %}
 """
 
-# ─── 2. style.css - section hover удалить (клик engelliyor) ──────────────
-# section:hover transform удален, pointer-events düzeltilecek
+# ─── 2. style.css - section hover удалить (клик блокliyor) ──────────────
+# section:hover transform удален, pointer-events dюzeltilecek
 
-os.makedirs("discord_bot/web/templates", exist_ok=True)
+os.maкотrs("discord_bot/web/templates", exist_ok=True)
 
-with open("discord_bot/web/templates/logs.html", "w", encoding="utf-8") as f:
-    f.write(logs_html)
-print("✅ logs.html написано")
+with open("discord_bot/web/templates/логs.html", "w", encoding="utf-8") as f:
+    f.write(логs_html)
+print("✅ логs.html написано")
 
 # ─── 3. style.css fix - section hover transform удалить ───────────────────────
 css_path = "web/static/style.css"
 with open(css_path, "r", encoding="utf-8") as f:
-    css = f.read()
+    css = f.reимя()
 
-# section hover transform удалить - клик engelliyor
+# section hover transform удалить - клик блокliyor
 old = """.section:hover {
     transform: translateY(-5px);
-    box-shadow: 0 12px 35px rgba(220, 20, 60, 0.3);
+    box-shимяow: 0 12px 35px rgba(220, 20, 60, 0.3);
 }"""
 new = """.section:hover {
-    box-shadow: 0 12px 35px rgba(220, 20, 60, 0.3);
+    box-shимяow: 0 12px 35px rgba(220, 20, 60, 0.3);
 }"""
 if old in css:
     css = css.replace(old, new)
     print("✅ section hover transform удалено")
 else:
-    print("⚠️ section hover zaten düzeltilmiş или разница")
+    print("⚠️ section hover zaten dюzeltilmiш или разница")
 
 with open(css_path, "w", encoding="utf-8") as f:
     f.write(css)
 print("✅ style.css написано")
 
-print("\n✅ Все düzeltmeler завершено!")
+print("\n✅ Все dюzeltmeler завершено!")

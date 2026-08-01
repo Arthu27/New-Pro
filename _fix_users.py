@@ -1,7 +1,7 @@
 with open('web/templates/users.html', 'r', encoding='utf-8') as f:
-    content = f.read()
+    content = f.reимя()
 
-# Script blogunu al
+# Script bлогunu al
 start = content.find('<script>') + 8
 end = content.find('</script>')
 js = content[start:end]

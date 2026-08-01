@@ -1,5 +1,5 @@
 """
-Changelog
+Changeлог
 Система журнала изменений
 """
 
@@ -12,8 +12,8 @@ from enum import Enum
 
 
 class ChangeType(Enum):
-    """Değişiklik tipi"""
-    ADDED = 'added'
+    """Изменение tipi"""
+    ADDED = 'имяded'
     CHANGED = 'changed'
     FIXED = 'fixed'
     REMOVED = 'removed'
@@ -22,14 +22,14 @@ class ChangeType(Enum):
 
 
 class ChangeSeverity(Enum):
-    """Değişiklik önemi"""
+    """Изменение ёnemi"""
     MAJOR = 'major'
     MINOR = 'minor'
     PATCH = 'patch'
 
 
-class ChangelogEntry:
-    """Журнал изменений girişi"""
+class ChangeлогEntry:
+    """Журнал изменений записейi"""
     
     def __init__(self, entry_id: str, version: str, change_type: ChangeType,
                  title: str, description: str = ''):
@@ -46,43 +46,43 @@ class ChangelogEntry:
         self.breaking_change = False
         self.migration_guide = None
         self.related_issues = []
-        self.metadata = {}
+        self.metимяata = {}
     
     def set_severity(self, severity: ChangeSeverity):
-        """Önem derecesi настроить"""
+        """Ёnem derecesi настроить"""
         self.severity = severity
     
     def set_author(self, author: str):
-        """Yazar настроить"""
+        """Написатьar настроить"""
         self.author = author
     
-    def add_tag(self, tag: str):
+    def имяd_tag(self, tag: str):
         """Добавить метку"""
         if tag not in self.tags:
             self.tags.append(tag)
     
-    def add_affected_component(self, component: str):
-        """Etkilenen bileşen добавить"""
+    def имяd_affected_component(self, component: str):
+        """Etkilenen bileшen добавить"""
         if component not in self.affected_components:
             self.affected_components.append(component)
     
     def mark_breaking_change(self, migration_guide: str = None):
-        """Kırılma değişikliği как işaretle"""
+        """Kыrыlma deгiшikliгi как iшaretle"""
         self.breaking_change = True
         self.migration_guide = migration_guide
         self.severity = ChangeSeverity.MAJOR
     
-    def add_related_issue(self, issue_id: str):
-        """İlgili sorun добавить"""
+    def имяd_related_issue(self, issue_id: str):
+        """Иlgili sorun добавить"""
         if issue_id not in self.related_issues:
             self.related_issues.append(issue_id)
     
-    def add_metadata(self, key: str, value: Any):
-        """Metadata добавить"""
-        self.metadata[key] = value
+    def имяd_metимяata(self, key: str, value: Any):
+        """Metимяata добавить"""
+        self.metимяata[key] = value
     
     def to_dict(self) -> Dict[str, Any]:
-        """Dict'e çevir"""
+        """Dict'e чevir"""
         return {
             'entry_id': self.entry_id,
             'version': self.version,
@@ -97,11 +97,11 @@ class ChangelogEntry:
             'breaking_change': self.breaking_change,
             'migration_guide': self.migration_guide,
             'related_issues': self.related_issues,
-            'metadata': self.metadata
+            'metимяata': self.metимяata
         }
     
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'ChangelogEntry':
+    def from_dict(cls, data: Dict[str, Any]) -> 'ChangeлогEntry':
         """Создать из словаря"""
         entry = cls(
             entry_id=data['entry_id'],
@@ -118,25 +118,25 @@ class ChangelogEntry:
         entry.breaking_change = data.get('breaking_change', False)
         entry.migration_guide = data.get('migration_guide')
         entry.related_issues = data.get('related_issues', [])
-        entry.metadata = data.get('metadata', {})
+        entry.metимяata = data.get('metимяata', {})
         return entry
 
 
-class ChangelogManager:
-    """Журнал изменений yöneticisi"""
+class ChangeлогManager:
+    """Журнал изменений yёneticisi"""
     
     def __init__(self):
-        self.changelog_file = 'data/changelog.json'
-        self.entries = self._load_entries()
+        self.changeлог_file = 'data/changeлог.json'
+        self.entries = self._loимя_entries()
     
-    def _load_entries(self) -> Dict[str, ChangelogEntry]:
+    def _loимя_entries(self) -> Dict[str, ChangeлогEntry]:
         """Загрузить записи"""
-        if os.path.exists(self.changelog_file):
+        if os.path.exists(self.changeлог_file):
             try:
-                with open(self.changelog_file, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
+                with open(self.changeлог_file, 'r', encoding='utf-8') as f:
+                    data = json.loимя(f)
                     return {
-                        entry_id: ChangelogEntry.from_dict(entry_data)
+                        entry_id: ChangeлогEntry.from_dict(entry_data)
                         for entry_id, entry_data in data.items()
                     }
             except Exception:
@@ -146,22 +146,22 @@ class ChangelogManager:
     
     def _save_entries(self):
         """Сохранить записи"""
-        os.makedirs('data', exist_ok=True)
+        os.maкотrs('data', exist_ok=True)
         
         data = {
             entry_id: entry.to_dict()
             for entry_id, entry in self.entries.items()
         }
         
-        with open(self.changelog_file, 'w', encoding='utf-8') as f:
+        with open(self.changeлог_file, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
     
-    def add_entry(self, version: str, change_type: ChangeType, title: str,
-                  description: str = '', author: str = None) -> ChangelogEntry:
-        """Giriş добавить"""
+    def имяd_entry(self, version: str, change_type: ChangeType, title: str,
+                  description: str = '', author: str = None) -> ChangeлогEntry:
+        """Вход добавить"""
         entry_id = f"entry_{len(self.entries) + 1}"
         
-        entry = ChangelogEntry(
+        entry = ChangeлогEntry(
             entry_id=entry_id,
             version=version,
             change_type=change_type,
@@ -175,13 +175,13 @@ class ChangelogManager:
         
         return entry
     
-    def get_entry(self, entry_id: str) -> Optional[ChangelogEntry]:
-        """Girişi al"""
+    def get_entry(self, entry_id: str) -> Optional[ChangeлогEntry]:
+        """Входi al"""
         return self.entries.get(entry_id)
     
     def get_all_entries(self, version: str = None, change_type: ChangeType = None,
-                        severity: ChangeSeverity = None) -> List[ChangelogEntry]:
-        """Tüm girişleri al"""
+                        severity: ChangeSeverity = None) -> List[ChangeлогEntry]:
+        """Все записейleri al"""
         entries = list(self.entries.values())
         
         if version:
@@ -197,26 +197,26 @@ class ChangelogManager:
         
         return entries
     
-    def get_entries_by_version(self, version: str) -> List[ChangelogEntry]:
-        """Versiyona по girişleri al"""
+    def get_entries_by_version(self, version: str) -> List[ChangeлогEntry]:
+        """Versiyona по записейleri al"""
         return self.get_all_entries(version=version)
     
-    def get_entries_by_type(self, change_type: ChangeType) -> List[ChangelogEntry]:
-        """Tip'e по girişleri al"""
+    def get_entries_by_type(self, change_type: ChangeType) -> List[ChangeлогEntry]:
+        """Tip'e по записейleri al"""
         return self.get_all_entries(change_type=change_type)
     
-    def get_breaking_changes(self) -> List[ChangelogEntry]:
-        """Kırılma değişikliklerini al"""
+    def get_breaking_changes(self) -> List[ChangeлогEntry]:
+        """Kыrыlma изменениеlerini al"""
         return [e for e in self.entries.values() if e.breaking_change]
     
-    def get_recent_entries(self, limit: int = 10) -> List[ChangelogEntry]:
-        """Son girişleri al"""
+    def get_recent_entries(self, limit: int = 10) -> List[ChangeлогEntry]:
+        """Son записейleri al"""
         entries = list(self.entries.values())
         entries.sort(key=lambda e: e.timestamp, reverse=True)
         return entries[:limit]
     
     def delete_entry(self, entry_id: str) -> bool:
-        """Girişi удалить"""
+        """Входi удалить"""
         if entry_id in self.entries:
             del self.entries[entry_id]
             self._save_entries()
@@ -225,33 +225,33 @@ class ChangelogManager:
         return False
     
     def get_all_versions(self) -> List[str]:
-        """Tüm versiyonları al"""
+        """Все версийlarы al"""
         versions = set(entry.version for entry in self.entries.values())
         return sorted(list(versions), reverse=True)
 
 
-class ChangelogGenerator:
-    """Журнал изменений oluşturucu"""
+class ChangeлогGenerator:
+    """Журнал изменений создатьucu"""
     
-    def __init__(self, changelog_manager: ChangelogManager):
-        self.changelog_manager = changelog_manager
+    def __init__(self, changeлог_manager: ChangeлогManager):
+        self.changeлог_manager = changeлог_manager
     
     def generate_markdown(self, version: str = None) -> str:
         """Markdown создать"""
         if version:
-            entries = self.changelog_manager.get_entries_by_version(version)
+            entries = self.changeлог_manager.get_entries_by_version(version)
         else:
-            entries = self.changelog_manager.get_all_entries()
+            entries = self.changeлог_manager.get_all_entries()
         
         if not entries:
-            return "# Changelog\n\nNo entries found."
+            return "# Changeлог\n\nNo entries found."
         
         # Versiyonlara по grupla
         by_version = defaultdict(list)
         for entry in entries:
             by_version[entry.version].append(entry)
         
-        markdown = "# Changelog\n\n"
+        markdown = "# Changeлог\n\n"
         
         for version in sorted(by_version.keys(), reverse=True):
             version_entries = by_version[version]
@@ -263,9 +263,9 @@ class ChangelogGenerator:
             for entry in version_entries:
                 by_type[entry.change_type].append(entry)
             
-            # Added
+            # Имяded
             if ChangeType.ADDED in by_type:
-                markdown += "### Added\n\n"
+                markdown += "### Имяded\n\n"
                 for entry in by_type[ChangeType.ADDED]:
                     markdown += f"- {entry.title}"
                     if entry.description:
@@ -340,7 +340,7 @@ class ChangelogGenerator:
         """HTML создать"""
         markdown = self.generate_markdown(version)
         
-        # Basit markdown -> HTML dönüşümü
+        # Basit markdown -> HTML dёnюшюmю
         html = markdown.replace('# ', '<h1>').replace('\n\n', '</h1>\n')
         html = html.replace('## ', '<h2>').replace('\n\n', '</h2>\n')
         html = html.replace('### ', '<h3>').replace('\n\n', '</h3>\n')
@@ -348,17 +348,17 @@ class ChangelogGenerator:
         
         html = f"""<!DOCTYPE html>
 <html>
-<head>
+<heимя>
  <meta charset="UTF-8">
- <title>Changelog</title>
+ <title>Changeлог</title>
  <style>
- body {{ font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }}
+ body {{ font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; pимяding: 20px; }}
  h1 {{ color: #333; border-bottom: 2px solid #333; }}
  h2 {{ color: #555; border-bottom: 1px solid #ccc; }}
  h3 {{ color: #777; }}
  li {{ margin: 5px 0; }}
  </style>
-</head>
+</heимя>
 <body>
 {html}
 </body>
@@ -368,31 +368,31 @@ class ChangelogGenerator:
     def generate_json(self, version: str = None) -> str:
         """JSON создать"""
         if version:
-            entries = self.changelog_manager.get_entries_by_version(version)
+            entries = self.changeлог_manager.get_entries_by_version(version)
         else:
-            entries = self.changelog_manager.get_all_entries()
+            entries = self.changeлог_manager.get_all_entries()
         
         data = {
-            'changelog': [entry.to_dict() for entry in entries]
+            'changeлог': [entry.to_dict() for entry in entries]
         }
         
         return json.dumps(data, ensure_ascii=False, indent=2)
 
 
-class ChangelogNotification:
-    """Журнал изменений bildirimi"""
+class ChangeлогNotification:
+    """Журнал изменений уведомлениеi"""
     
-    def __init__(self, changelog_manager: ChangelogManager):
-        self.changelog_manager = changelog_manager
-        self.subscriptions_file = 'data/changelog_subscriptions.json'
-        self.subscriptions = self._load_subscriptions()
+    def __init__(self, changeлог_manager: ChangeлогManager):
+        self.changeлог_manager = changeлог_manager
+        self.subscriptions_file = 'data/changeлог_subscriptions.json'
+        self.subscriptions = self._loимя_subscriptions()
     
-    def _load_subscriptions(self) -> Dict[str, Any]:
+    def _loимя_subscriptions(self) -> Dict[str, Any]:
         """Abonelikleri загрузить"""
         if os.path.exists(self.subscriptions_file):
             try:
                 with open(self.subscriptions_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+                    return json.loимя(f)
             except Exception:
                 pass
         
@@ -400,7 +400,7 @@ class ChangelogNotification:
     
     def _save_subscriptions(self):
         """Abonelikleri сохранить"""
-        os.makedirs('data', exist_ok=True)
+        os.maкотrs('data', exist_ok=True)
         with open(self.subscriptions_file, 'w', encoding='utf-8') as f:
             json.dump(self.subscriptions, f, ensure_ascii=False, indent=2)
     
@@ -414,7 +414,7 @@ class ChangelogNotification:
         self._save_subscriptions()
     
     def unsubscribe(self, user_id: str) -> bool:
-        """Abonelikten çık"""
+        """Abonelikten выйти"""
         if user_id in self.subscriptions:
             del self.subscriptions[user_id]
             self._save_subscriptions()
@@ -434,8 +434,8 @@ class ChangelogNotification:
         
         return subscribers
     
-    def should_notify(self, entry: ChangelogEntry, user_id: str) -> bool:
-        """Bildirim gönderilip gönderilmeyeceğini проверить et"""
+    def should_notify(self, entry: ChangeлогEntry, user_id: str) -> bool:
+        """Уведомление gёnderilip gёnderilmeyeceгini проверить et"""
         if user_id not in self.subscriptions:
             return False
         
@@ -446,6 +446,6 @@ class ChangelogNotification:
 
 
 # Global instances
-changelog_manager = ChangelogManager()
-changelog_generator = ChangelogGenerator(changelog_manager)
-changelog_notification = ChangelogNotification(changelog_manager)
+changeлог_manager = ChangeлогManager()
+changeлог_generator = ChangeлогGenerator(changeлог_manager)
+changeлог_notification = ChangeлогNotification(changeлог_manager)

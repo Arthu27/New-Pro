@@ -24,37 +24,37 @@ class Error:
         self.stack_trace = stack_trace
         self.endpoint = endpoint
         self.user_id = user_id
-        self.severity = severity  # debug, info, warning, error, critical
+        self.severity = severity  # debug, info, варнing, error, critical
         self.timestamp = datetime.now()
         self.occurrences = 1
         self.first_seen = datetime.now()
         self.last_seen = datetime.now()
         self.status = 'active'  # active, resolved, ignored
         self.tags = {}
-        self.metadata = {}
+        self.metимяata = {}
         self.assigned_to = None
         self.resolution = None
     
-    def add_occurrence(self):
+    def имяd_occurrence(self):
         """Добавить новую запись"""
         self.occurrences += 1
         self.last_seen = datetime.now()
     
-    def add_tag(self, key: str, value: str):
+    def имяd_tag(self, key: str, value: str):
         """Добавить метку"""
         self.tags[key] = value
     
-    def add_metadata(self, key: str, value: Any):
-        """Metadata добавить"""
-        self.metadata[key] = value
+    def имяd_metимяata(self, key: str, value: Any):
+        """Metимяata добавить"""
+        self.metимяata[key] = value
     
     def mark_resolved(self, resolution: str = None):
-        """Çözüldü как işaretle"""
+        """Чёzюldю как iшaretle"""
         self.status = 'resolved'
         self.resolution = resolution
     
     def mark_ignored(self):
-        """Yoksayıldı как işaretle"""
+        """Yokчислоldы как iшaretle"""
         self.status = 'ignored'
     
     def assign_to(self, user_id: str):
@@ -62,12 +62,12 @@ class Error:
         self.assigned_to = user_id
     
     def get_fingerprint(self) -> str:
-        """Parmak izi создать (benzer hataları gruplamak для)"""
+        """Parmak izi создать (benzer hatalarы gruplamak для)"""
         fingerprint_data = f"{self.error_type}:{self.message}:{self.stack_trace}"
         return hashlib.md5(fingerprint_data.encode()).hexdigest()
     
     def to_dict(self) -> Dict[str, Any]:
-        """Dict'e çevir"""
+        """Dict'e чevir"""
         return {
             'error_id': self.error_id,
             'error_type': self.error_type,
@@ -82,7 +82,7 @@ class Error:
             'last_seen': self.last_seen.isoformat(),
             'status': self.status,
             'tags': self.tags,
-            'metadata': self.metadata,
+            'metимяata': self.metимяata,
             'assigned_to': self.assigned_to,
             'resolution': self.resolution,
             'fingerprint': self.get_fingerprint()
@@ -106,25 +106,25 @@ class Error:
         error.last_seen = datetime.fromisoformat(data['last_seen'])
         error.status = data.get('status', 'active')
         error.tags = data.get('tags', {})
-        error.metadata = data.get('metadata', {})
+        error.metимяata = data.get('metимяata', {})
         error.assigned_to = data.get('assigned_to')
         error.resolution = data.get('resolution')
         return error
 
 
 class ErrorTracker:
-    """Ошибка takipçisi"""
+    """Ошибка takipчisi"""
     
     def __init__(self):
         self.errors_file = 'data/tracked_errors.json'
-        self.errors = self._load_errors()
+        self.errors = self._loимя_errors()
     
-    def _load_errors(self) -> Dict[str, Error]:
-        """Hataları загрузить"""
+    def _loимя_errors(self) -> Dict[str, Error]:
+        """Hatalarы загрузить"""
         if os.path.exists(self.errors_file):
             try:
                 with open(self.errors_file, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
+                    data = json.loимя(f)
                     return {
                         error_id: Error.from_dict(error_data)
                         for error_id, error_data in data.items()
@@ -135,8 +135,8 @@ class ErrorTracker:
         return {}
     
     def _save_errors(self):
-        """Hataları сохранить"""
-        os.makedirs('data', exist_ok=True)
+        """Hatalarы сохранить"""
+        os.maкотrs('data', exist_ok=True)
         
         data = {
             error_id: error.to_dict()
@@ -149,7 +149,7 @@ class ErrorTracker:
     def capture_exception(self, exception: Exception, endpoint: str = None,
                           user_id: str = None, severity: str = 'error',
                           tags: Dict[str, str] = None,
-                          metadata: Dict[str, Any] = None) -> Error:
+                          metимяata: Dict[str, Any] = None) -> Error:
         """Exception yakala"""
         error_type = type(exception).__name__
         message = str(exception)
@@ -159,7 +159,7 @@ class ErrorTracker:
         fingerprint_data = f"{error_type}:{message}:{stack_trace}"
         fingerprint = hashlib.md5(fingerprint_data.encode()).hexdigest()
         
-        # Mevcut ошибка var mı проверить et
+        # Текущий ошибка var ли проверить et
         existing_error = None
         for error in self.errors.values():
             if error.get_fingerprint() == fingerprint:
@@ -167,8 +167,8 @@ class ErrorTracker:
                 break
         
         if existing_error:
-            # Mevcut hataya новый oluşum добавить
-            existing_error.add_occurrence()
+            # Текущий hataya новый oluэтотm добавить
+            existing_error.имяd_occurrence()
             self._save_errors()
             return existing_error
         
@@ -187,28 +187,28 @@ class ErrorTracker:
         
         if tags:
             for key, value in tags.items():
-                error.add_tag(key, value)
+                error.имяd_tag(key, value)
         
-        if metadata:
-            for key, value in metadata.items():
-                error.add_metadata(key, value)
+        if metимяata:
+            for key, value in metимяata.items():
+                error.имяd_metимяata(key, value)
         
         self.errors[error_id] = error
         self._save_errors()
         
         return error
     
-    def log_error(self, error_type: str, message: str,
+    def лог_error(self, error_type: str, message: str,
                   stack_trace: str = None, endpoint: str = None,
                   user_id: str = None, severity: str = 'error',
                   tags: Dict[str, str] = None,
-                  metadata: Dict[str, Any] = None) -> Error:
-        """Ошибка logla"""
+                  metимяata: Dict[str, Any] = None) -> Error:
+        """Ошибка логla"""
         # Parmak izi создать
         fingerprint_data = f"{error_type}:{message}:{stack_trace}"
         fingerprint = hashlib.md5(fingerprint_data.encode()).hexdigest()
         
-        # Mevcut ошибка var mı проверить et
+        # Текущий ошибка var ли проверить et
         existing_error = None
         for error in self.errors.values():
             if error.get_fingerprint() == fingerprint:
@@ -216,7 +216,7 @@ class ErrorTracker:
                 break
         
         if existing_error:
-            existing_error.add_occurrence()
+            existing_error.имяd_occurrence()
             self._save_errors()
             return existing_error
         
@@ -235,11 +235,11 @@ class ErrorTracker:
         
         if tags:
             for key, value in tags.items():
-                error.add_tag(key, value)
+                error.имяd_tag(key, value)
         
-        if metadata:
-            for key, value in metadata.items():
-                error.add_metadata(key, value)
+        if metимяata:
+            for key, value in metимяata.items():
+                error.имяd_metимяata(key, value)
         
         self.errors[error_id] = error
         self._save_errors()
@@ -247,12 +247,12 @@ class ErrorTracker:
         return error
     
     def get_error(self, error_id: str) -> Optional[Error]:
-        """Hatayı al"""
+        """Hatayы al"""
         return self.errors.get(error_id)
     
     def get_all_errors(self, status: str = None, severity: str = None,
                        start_time: datetime = None, end_time: datetime = None) -> List[Error]:
-        """Tüm hataları al"""
+        """Все hatalarы al"""
         errors = list(self.errors.values())
         
         if status:
@@ -272,19 +272,19 @@ class ErrorTracker:
         return errors
     
     def get_active_errors(self) -> List[Error]:
-        """Aktif hataları al"""
+        """Aktif hatalarы al"""
         return self.get_all_errors(status='active')
     
     def get_errors_by_endpoint(self, endpoint: str) -> List[Error]:
-        """Endpoint'e по hataları al"""
+        """Endpoint'e по hatalarы al"""
         return [e for e in self.errors.values() if e.endpoint == endpoint]
     
     def get_errors_by_type(self, error_type: str) -> List[Error]:
-        """Tip'e по hataları al"""
+        """Tip'e по hatalarы al"""
         return [e for e in self.errors.values() if e.error_type == error_type]
     
     def resolve_error(self, error_id: str, resolution: str = None) -> bool:
-        """Hatayı çöz"""
+        """Hatayы чёz"""
         error = self.errors.get(error_id)
         
         if error:
@@ -295,7 +295,7 @@ class ErrorTracker:
         return False
     
     def ignore_error(self, error_id: str) -> bool:
-        """Hatayı yoksay"""
+        """Hatayы yoksay"""
         error = self.errors.get(error_id)
         
         if error:
@@ -306,7 +306,7 @@ class ErrorTracker:
         return False
     
     def assign_error(self, error_id: str, user_id: str) -> bool:
-        """Hatayı ata"""
+        """Hatayы ata"""
         error = self.errors.get(error_id)
         
         if error:
@@ -317,7 +317,7 @@ class ErrorTracker:
         return False
     
     def delete_error(self, error_id: str) -> bool:
-        """Hatayı удалить"""
+        """Hatayы удалить"""
         if error_id in self.errors:
             del self.errors[error_id]
             self._save_errors()
@@ -358,7 +358,7 @@ class ErrorGrouping:
         return dict(groups)
     
     def group_by_severity(self, errors: List[Error] = None) -> Dict[str, List[Error]]:
-        """Önem derecesine по grupla"""
+        """Ёnem derecesine по grupla"""
         if errors is None:
             errors = self.error_tracker.get_all_errors()
         
@@ -370,11 +370,11 @@ class ErrorGrouping:
         return dict(groups)
     
     def get_top_errors(self, hours: int = 24, limit: int = 10) -> List[Error]:
-        """En sık hataları al"""
+        """En sыk hatalarы al"""
         start_time = datetime.now() - timedelta(hours=hours)
         errors = self.error_tracker.get_all_errors(start_time=start_time)
         
-        # Oluşum sayısına по sırala
+        # Oluэтотm количествоna по очередьla
         errors.sort(key=lambda e: e.occurrences, reverse=True)
         
         return errors[:limit]
@@ -395,33 +395,33 @@ class ErrorGrouping:
 
 
 class ErrorNotification:
-    """Ошибка bildirimi"""
+    """Ошибка уведомлениеi"""
     
     def __init__(self, error_tracker: ErrorTracker):
         self.error_tracker = error_tracker
         self.notification_rules_file = 'data/error_notification_rules.json'
-        self.notification_rules = self._load_notification_rules()
+        self.notification_rules = self._loимя_notification_rules()
     
-    def _load_notification_rules(self) -> Dict[str, Any]:
-        """Bildirim kurallarını загрузить"""
+    def _loимя_notification_rules(self) -> Dict[str, Any]:
+        """Уведомление kurallarыnы загрузить"""
         if os.path.exists(self.notification_rules_file):
             try:
                 with open(self.notification_rules_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+                    return json.loимя(f)
             except Exception:
                 pass
         
         return {}
     
     def _save_notification_rules(self):
-        """Bildirim kurallarını сохранить"""
-        os.makedirs('data', exist_ok=True)
+        """Уведомление kurallarыnы сохранить"""
+        os.maкотrs('data', exist_ok=True)
         with open(self.notification_rules_file, 'w', encoding='utf-8') as f:
             json.dump(self.notification_rules, f, ensure_ascii=False, indent=2)
     
-    def add_notification_rule(self, rule_id: str, severity: str,
+    def имяd_notification_rule(self, rule_id: str, severity: str,
                               channels: List[str], recipients: List[str]):
-        """Bildirim kuralı добавить"""
+        """Уведомление kuralы добавить"""
         self.notification_rules[rule_id] = {
             'severity': severity,
             'channels': channels,
@@ -432,7 +432,7 @@ class ErrorNotification:
         self._save_notification_rules()
     
     def should_notify(self, error: Error) -> bool:
-        """Bildirim gönderilip gönderilmeyeceğini проверить et"""
+        """Уведомление gёnderilip gёnderilmeyeceгini проверить et"""
         for rule in self.notification_rules.values():
             if not rule.get('enabled', True):
                 continue
@@ -443,7 +443,7 @@ class ErrorNotification:
         return False
     
     def get_notification_recipients(self, error: Error) -> List[str]:
-        """Bildirim alıcılarını al"""
+        """Уведомление alыcыlarыnы al"""
         recipients = []
         
         for rule in self.notification_rules.values():
@@ -456,7 +456,7 @@ class ErrorNotification:
         return list(set(recipients))
     
     def enable_rule(self, rule_id: str) -> bool:
-        """Kuralı etkinleştir"""
+        """Kuralы включить"""
         if rule_id in self.notification_rules:
             self.notification_rules[rule_id]['enabled'] = True
             self._save_notification_rules()
@@ -465,7 +465,7 @@ class ErrorNotification:
         return False
     
     def disable_rule(self, rule_id: str) -> bool:
-        """Kuralı devre dışı bırak"""
+        """Kuralы devre dышы bыrak"""
         if rule_id in self.notification_rules:
             self.notification_rules[rule_id]['enabled'] = False
             self._save_notification_rules()
@@ -475,13 +475,13 @@ class ErrorNotification:
 
 
 class ErrorAnalytics:
-    """Ошибка analitiği"""
+    """Ошибка analitiгi"""
     
     def __init__(self, error_tracker: ErrorTracker):
         self.error_tracker = error_tracker
     
     def get_error_summary(self, hours: int = 24) -> Dict[str, Any]:
-        """Ошибка özetini al"""
+        """Ошибка ёzetini al"""
         start_time = datetime.now() - timedelta(hours=hours)
         errors = self.error_tracker.get_all_errors(start_time=start_time)
         
@@ -505,7 +505,7 @@ class ErrorAnalytics:
         }
     
     def get_error_rate(self, hours: int = 1) -> float:
-        """Ошибка oranını al (ошибка/dakika)"""
+        """Ошибка соотношениеnы al (ошибка/dakika)"""
         start_time = datetime.now() - timedelta(hours=hours)
         errors = self.error_tracker.get_all_errors(start_time=start_time)
         
@@ -514,7 +514,7 @@ class ErrorAnalytics:
         return total_occurrences / (hours * 60)  # Ошибка/dakika
     
     def get_mean_time_to_resolution(self, hours: int = 24) -> Optional[float]:
-        """Ortalama çözüm süresini al (saat)"""
+        """Ortalama чёzюm длительностьni al (saat)"""
         start_time = datetime.now() - timedelta(hours=hours)
         errors = self.error_tracker.get_all_errors(start_time=start_time)
         
@@ -533,18 +533,18 @@ class ErrorAnalytics:
     
     def get_impact_score(self, error: Error) -> float:
         """Etki skorunu hesapla"""
-        # Oluşum sayısı, önem derecesi ve çözülmeme süresine по
+        # Oluэтотm количество, ёnem derecesi ve чёzюlмем длительностьne по
         severity_weights = {
             'debug': 1,
             'info': 2,
-            'warning': 3,
+            'варнing': 3,
             'error': 5,
             'critical': 10
         }
         
         severity_weight = severity_weights.get(error.severity, 5)
         
-        # Çözülmeme süresi (saat)
+        # Чёzюlмем длительность (saat)
         hours_unresolved = (datetime.now() - error.first_seen).total_seconds() / 3600
         
         impact_score = (error.occurrences * severity_weight) + (hours_unresolved * 0.1)

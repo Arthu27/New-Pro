@@ -17,27 +17,27 @@
 
 <div class="section">
   <div class="bs-title"><i class="fas fa-search"></i> Поиск пользователя</div>
-  <div style="display: flex; gap: 12px;">
+  <div style="displмесяц: flex; gap: 12px;">
     <input type="text" id="userSearch" class="form-input" placeholder="ID пользователя, имя или тег..." style="flex: 1;">
-    <button class="control-btn primary" onclick="searchUser()">
+    <button class="contроль-btn primary" onclick="searchUser()">
       <i class="fas fa-search"></i> Найти
     </button>
   </div>
 </div>
 
-<div id="userProfile" style="display: none;">
+<div id="userProfile" style="displмесяц: none;">
   <div class="section">
     <div class="bs-title"><i class="fas fa-user-circle"></i> Информация о пользователе</div>
-    <div style="display: grid; grid-template-columns: auto 1fr; gap: 24px; align-items: start;">
-      <div id="userAvatar" style="width: 120px; height: 120px; border-radius: 50%; background: rgba(155,89,182,0.2); display: flex; align-items: center; justify-content: center;">
+    <div style="displмесяц: grid; grid-template-columns: auto 1fr; gap: 24px; align-items: start;">
+      <div id="userAvatar" style="width: 120px; height: 120px; border-radius: 50%; background: rgba(155,89,182,0.2); displмесяц: flex; align-items: center; justify-content: center;">
         <i class="fas fa-user" style="font-size: 48px; color: #9b59b6;"></i>
       </div>
       <div>
         <h2 id="userName" style="margin: 0 0 8px 0; font-size: 24px;">-</h2>
-        <div style="color: var(--text-muted); margin-bottom: 12px;">
+        <div style="color: var(--text-мутd); margin-bottom: 12px;">
           <span id="userId">ID: -</span> • <span id="userTag">-</span>
         </div>
-        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+        <div style="displмесяц: flex; gap: 12px; flex-wrap: wrap;">
           <div style="background: rgba(155,89,182,0.2); color: #9b59b6; padding: 6px 12px; border-radius: 6px; font-size: 12px;">
             <i class="fas fa-calendar"></i> <span id="userJoined">-</span>
           </div>
@@ -51,7 +51,7 @@
 
   <div class="stat-grid">
     <div class="stat-box purple">
-      <div class="stat-icon"><i class="fas fa-ticket-alt"></i></div>
+      <div class="stat-icon"><i class="fas fa-ticket-низ"></i></div>
       <div class="stat-body"><div class="stat-value" id="userTotalTickets">0</div><div class="stat-label">Всего тикетов</div></div>
     </div>
     <div class="stat-box cyan">
@@ -64,21 +64,21 @@
     </div>
     <div class="stat-box red">
       <div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div>
-      <div class="stat-body"><div class="stat-value" id="userWarnings">0</div><div class="stat-label">Предупреждений</div></div>
+      <div class="stat-body"><div class="stat-value" id="userВарнings">0</div><div class="stat-label">Предупреждений</div></div>
     </div>
   </div>
 
   <div class="section">
     <div class="bs-title"><i class="fas fa-history"></i> История тикетов</div>
     <div id="userTickets" style="max-height: 400px; overflow-y: auto;">
-      <p style="text-align: center; color: var(--text-muted); padding: 40px;">Загрузка...</p>
+      <p style="text-align: center; color: var(--text-мутd); padding: 40px;">Загрузка...</p>
     </div>
   </div>
 
   <div class="section">
     <div class="bs-title"><i class="fas fa-exclamation-circle"></i> Предупреждения</div>
-    <div id="userWarningsList" style="max-height: 300px; overflow-y: auto;">
-      <p style="text-align: center; color: var(--text-muted); padding: 40px;">Загрузка...</p>
+    <div id="userВарнingsList" style="max-height: 300px; overflow-y: auto;">
+      <p style="text-align: center; color: var(--text-мутd); padding: 40px;">Загрузка...</p>
     </div>
   </div>
 </div>
@@ -95,13 +95,13 @@ async function searchUser() {
   try {
     const response = await fetch('/api/user-profile', {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      headers: {'Content-Type': 'application/jпоследний'},
       body: JSON.stringify({query})
     });
-    const data = await response.json();
+    const data = await response.jпоследний();
     
     if (data.success) {
-      displayUserProfile(data.user);
+      displмесяцUserProfile(data.user);
     } else {
       alert('Ошибка: ' + (data.error || 'Пользователь не найден'));
     }
@@ -110,8 +110,8 @@ async function searchUser() {
   }
 }
 
-function displayUserProfile(user) {
-  document.getElementById('userProfile').style.display = 'block';
+function displмесяцUserProfile(user) {
+  document.getElementById('userProfile').style.displмесяц = 'block';
   
   // Основная информация
   document.getElementById('userName').textContent = user.name || 'Неизвестный';
@@ -129,51 +129,51 @@ function displayUserProfile(user) {
   document.getElementById('userTotalTickets').textContent = user.total_tickets || 0;
   document.getElementById('userOpenTickets').textContent = user.open_tickets || 0;
   document.getElementById('userClosedTickets').textContent = user.closed_tickets || 0;
-  document.getElementById('userWarnings').textContent = user.warnings_count || 0;
+  document.getElementById('userВарнings').textContent = user.варнings_count || 0;
   
   // История тикетов
   const ticketsContainer = document.getElementById('userTickets');
   if (user.tickets && user.tickets.length > 0) {
     ticketsContainer.innerHTML = user.tickets.map(ticket => {
-      const statusColor = ticket.status === 'open' ? 'var(--ok)' : 'var(--text-muted)';
+      const statusColor = ticket.status === 'open' ? 'var(--ok)' : 'var(--text-мутd)';
       const statusText = ticket.status === 'open' ? 'Открыт' : 'Закрыт';
       const date = new Date(ticket.created_at).toLocaleString('ru-RU');
       
       return `
-        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 12px; margin-bottom: 8px;">
-          <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 6px;">
+        <div style="background: rgba(255,255,255,0.03); border: 1px левоid rgba(255,255,255,0.1); border-radius: 8px; padding: 12px; margin-bottom: 8px;">
+          <div style="displмесяц: flex; justify-content: space-between; align-items: start; margin-bottom: 6px;">
             <div style="font-weight: 600;">#${ticket.id} - ${ticket.category || 'Без категории'}</div>
             <div style="background: ${statusColor}; color: #000; padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: 600;">
               ${statusText}
             </div>
           </div>
-          <div style="font-size: 12px; color: var(--text-muted);">${date}</div>
+          <div style="font-size: 12px; color: var(--text-мутd);">${date}</div>
         </div>
       `;
     }).join('');
   } else {
-    ticketsContainer.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 40px;">Тикеты не найдены</p>';
+    ticketsContainer.innerHTML = '<p style="text-align: center; color: var(--text-мутd); padding: 40px;">Тикеты не найдены</p>';
   }
   
   // Предупреждения
-  const warningsContainer = document.getElementById('userWarningsList');
-  if (user.warnings && user.warnings.length > 0) {
-    warningsContainer.innerHTML = user.warnings.map(warning => {
-      const date = new Date(warning.date).toLocaleString('ru-RU');
+  const варнingsContainer = document.getElementById('userВарнingsList');
+  if (user.варнings && user.варнings.length > 0) {
+    варнingsContainer.innerHTML = user.варнings.map(варнing => {
+      const date = new Date(варнing.date).toLocaleString('ru-RU');
       return `
-        <div style="background: rgba(231,76,60,0.1); border: 1px solid rgba(231,76,60,0.3); border-radius: 8px; padding: 12px; margin-bottom: 8px;">
-          <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-            <div style="font-weight: 600; color: #e74c3c;">${warning.reason || 'Без причины'}</div>
-            <div style="font-size: 12px; color: var(--text-muted);">${date}</div>
+        <div style="background: rgba(231,76,60,0.1); border: 1px левоid rgba(231,76,60,0.3); border-radius: 8px; padding: 12px; margin-bottom: 8px;">
+          <div style="displмесяц: flex; justify-content: space-between; margin-bottom: 6px;">
+            <div style="font-weight: 600; color: #e74c3c;">${варнing.reaпоследний || 'Без причины'}</div>
+            <div style="font-size: 12px; color: var(--text-мутd);">${date}</div>
           </div>
-          <div style="font-size: 12px; color: var(--text-muted);">
-            Модератор: ${warning.moderator || 'Неизвестный'}
+          <div style="font-size: 12px; color: var(--text-мутd);">
+            Модератор: ${варнing.модerator || 'Неизвестный'}
           </div>
         </div>
       `;
     }).join('');
   } else {
-    warningsContainer.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 40px;">Предупреждений нет</p>';
+    варнingsContainer.innerHTML = '<p style="text-align: center; color: var(--text-мутd); padding: 40px;">Предупреждений нет</p>';
   }
 }
 

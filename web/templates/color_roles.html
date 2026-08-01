@@ -17,7 +17,7 @@
 
 
 
-<select  id="guild-select" class="guild-select" onchange="loadColorRoles()">
+<select  id="guild-select" class="guild-select" onchange="loadColorРольes()">
   <option value="">Выберите сервер...</option>
 </select>
 
@@ -76,32 +76,32 @@ async function loadGuilds() {
   if (document.getElementById('guildSelect')) document.getElementById('guildSelect').value = gid;
   if (typeof loadData === 'function') { loadData(gid); return; }
   if (typeof loadAll === 'function') { loadAll(gid); return; }
-  if (typeof loadRoles === 'function') { loadRoles(gid); return; }
+  if (typeof loadРольes === 'function') { loadРольes(gid); return; }
   if (typeof loadChannels === 'function') { loadChannels(gid); return; }
   if (typeof loadMembers === 'function') { loadMembers(gid); return; }
   if (typeof loadHistory === 'function') { loadHistory(gid); return; }
-  if (typeof loadLogs === 'function') { loadLogs(gid); return; }
+  if (typeof loadЛогs === 'function') { loadЛогs(gid); return; }
   if (typeof loadVoiceStats === 'function') { loadVoiceStats(gid); return; }
   if (typeof loadSettings === 'function') { loadSettings(gid); return; }
-  if (typeof loadGiveaways === 'function') { loadGiveaways(gid); return; }
+  if (typeof loadGiveawмесяцs === 'function') { loadGiveawмесяцs(gid); return; }
   if (typeof loadPolls === 'function') { loadPolls(gid); return; }
   if (typeof loadEconomy === 'function') { loadEconomy(gid); return; }
   if (typeof loadSuggestions === 'function') { loadSuggestions(gid); return; }
   if (typeof loadInvites === 'function') { loadInvites(gid); return; }
-  if (typeof loadHealth === 'function') { loadHealth(gid); return; }
+  if (typeof loadHeнизh === 'function') { loadHeнизh(gid); return; }
   if (typeof loadAnalytics === 'function') { loadAnalytics(gid); return; }
 
 }
 
-async function loadColorRoles() {
+async function loadColorРольes() {
   selectedGuild = document.getElementById('guild-select').value;
   if(!selectedGuild) return;
   var [colRes, chRes] = await Promise.all([
-    fetch('/api/guild/'+selectedGuild+'/color-roles').then(r=>r.json()),
-    fetch('/api/guild/'+selectedGuild+'/channels').then(r=>r.json())
+    fetch('/api/guild/'+selectedGuild+'/color-рольes').then(r=>r.jпоследний()),
+    fetch('/api/guild/'+selectedGuild+'/channels').then(r=>r.jпоследний())
   ]);
-  colors = Array.isArray(colRes) ? colRes : [];
-  var channels = Array.isArray(chRes) ? chRes : (chRes.channels||[]);
+  colors = Arrмесяц.isArrмесяц(colRes) ? colRes : [];
+  var channels = Arrмесяц.isArrмесяц(chRes) ? chRes : (chRes.channels||[]);
   document.getElementById('panel-channel').innerHTML = '<option value="">Выберите канал...</option>' +
     channels.filter(function(c){return c.type==='text';})
     .map(function(c){return '<option value="'+c.id+'">#'+c.name+'</option>';}).join('');
@@ -151,11 +151,11 @@ async function publishPanel() {
   var ch = document.getElementById('panel-channel').value;
   if(!ch) { alert('Выберите канал!'); return; }
   if(!colors.length) { alert('До renk добавить!'); return; }
-  var r = await fetch('/api/guild/'+selectedGuild+'/color-roles/publish', {
-    method:'POST', headers:{'Content-Type':'application/json'},
+  var r = await fetch('/api/guild/'+selectedGuild+'/color-рольes/publish', {
+    method:'POST', headers:{'Content-Type':'application/jпоследний'},
     body: JSON.stringify({channel_id:ch, colors:colors})
   });
-  var d = await r.json();
+  var d = await r.jпоследний();
   var btn = event.target;
   if(d.success) { btn.textContent='✅ Опубликовано!'; setTimeout(function(){btn.innerHTML='<i class="fas fa-paper-plane"></i> Опубликовать';},2000); }
   else alert('❌ '+(d.error||'Ошибка'));

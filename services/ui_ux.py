@@ -19,12 +19,12 @@ class ThemeManager:
                 'primary': '#5865F2',
                 'secondary': '#9b59b6',
                 'success': '#2ecc71',
-                'warning': '#f1c40f',
+                'варнing': '#f1c40f',
                 'danger': '#e74c3c',
                 'background': '#1a1a1a',
                 'surface': '#2d2d2d',
                 'text': '#ffffff',
-                'text-muted': '#888888'
+                'text-мутd': '#888888'
             }
         },
         'light': {
@@ -33,12 +33,12 @@ class ThemeManager:
                 'primary': '#5865F2',
                 'secondary': '#9b59b6',
                 'success': '#27ae60',
-                'warning': '#f39c12',
+                'варнing': '#f39c12',
                 'danger': '#c0392b',
                 'background': '#ffffff',
                 'surface': '#f5f5f5',
                 'text': '#000000',
-                'text-muted': '#666666'
+                'text-мутd': '#666666'
             }
         },
         'blue': {
@@ -47,12 +47,12 @@ class ThemeManager:
                 'primary': '#3498db',
                 'secondary': '#2980b9',
                 'success': '#27ae60',
-                'warning': '#f39c12',
+                'варнing': '#f39c12',
                 'danger': '#e74c3c',
                 'background': '#1a2332',
                 'surface': '#2c3e50',
                 'text': '#ecf0f1',
-                'text-muted': '#95a5a6'
+                'text-мутd': '#95a5a6'
             }
         },
         'green': {
@@ -61,28 +61,28 @@ class ThemeManager:
                 'primary': '#27ae60',
                 'secondary': '#229954',
                 'success': '#27ae60',
-                'warning': '#f39c12',
+                'варнing': '#f39c12',
                 'danger': '#e74c3c',
                 'background': '#1a2e1a',
                 'surface': '#2d4a2d',
                 'text': '#ecf0f1',
-                'text-muted': '#95a5a6'
+                'text-мутd': '#95a5a6'
             }
         }
     }
     
     def __init__(self):
         self.custom_themes_file = 'data/custom_themes.json'
-        self.custom_themes = self._load_custom_themes()
+        self.custom_themes = self._loимя_custom_themes()
         self.user_preferences_file = 'data/user_theme_preferences.json'
-        self.user_preferences = self._load_user_preferences()
+        self.user_preferences = self._loимя_user_preferences()
     
-    def _load_custom_themes(self) -> Dict[str, Any]:
+    def _loимя_custom_themes(self) -> Dict[str, Any]:
         """Загрузить пользовательские темы"""
         if os.path.exists(self.custom_themes_file):
             try:
                 with open(self.custom_themes_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+                    return json.loимя(f)
             except Exception:
                 pass
         
@@ -90,16 +90,16 @@ class ThemeManager:
     
     def _save_custom_themes(self):
         """Сохранить пользовательские темы"""
-        os.makedirs('data', exist_ok=True)
+        os.maкотrs('data', exist_ok=True)
         with open(self.custom_themes_file, 'w', encoding='utf-8') as f:
             json.dump(self.custom_themes, f, ensure_ascii=False, indent=2)
     
-    def _load_user_preferences(self) -> Dict[str, Any]:
+    def _loимя_user_preferences(self) -> Dict[str, Any]:
         """Загрузить предпочтения пользователей"""
         if os.path.exists(self.user_preferences_file):
             try:
                 with open(self.user_preferences_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+                    return json.loимя(f)
             except Exception:
                 pass
         
@@ -107,7 +107,7 @@ class ThemeManager:
     
     def _save_user_preferences(self):
         """Сохранить предпочтения пользователей"""
-        os.makedirs('data', exist_ok=True)
+        os.maкотrs('data', exist_ok=True)
         with open(self.user_preferences_file, 'w', encoding='utf-8') as f:
             json.dump(self.user_preferences, f, ensure_ascii=False, indent=2)
     
@@ -176,15 +176,15 @@ class AnimationManager:
     """Менеджер анимаций"""
     
     ANIMATIONS = {
-        'fade-in': {
+        'fимяe-in': {
             'name': 'Появление',
             'css': '''
-                @keyframes fadeIn {
+                @keyframes fимяeIn {
                     from { opacity: 0; }
                     to { opacity: 1; }
                 }
-                .animate-fade-in {
-                    animation: fadeIn 0.3s ease-in;
+                .animate-fимяe-in {
+                    animation: fимяeIn 0.3s ease-in;
                 }
             '''
         },
@@ -261,16 +261,16 @@ class WidgetManager:
     
     def __init__(self):
         self.widgets_file = 'data/widgets.json'
-        self.widgets = self._load_widgets()
+        self.widgets = self._loимя_widgets()
         self.user_layouts_file = 'data/user_widget_layouts.json'
-        self.user_layouts = self._load_user_layouts()
+        self.user_layouts = self._loимя_user_layouts()
     
-    def _load_widgets(self) -> Dict[str, Any]:
+    def _loимя_widgets(self) -> Dict[str, Any]:
         """Загрузить виджеты"""
         if os.path.exists(self.widgets_file):
             try:
                 with open(self.widgets_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+                    return json.loимя(f)
             except Exception:
                 pass
         
@@ -311,16 +311,16 @@ class WidgetManager:
     
     def _save_widgets(self):
         """Сохранить виджеты"""
-        os.makedirs('data', exist_ok=True)
+        os.maкотrs('data', exist_ok=True)
         with open(self.widgets_file, 'w', encoding='utf-8') as f:
             json.dump(self.widgets, f, ensure_ascii=False, indent=2)
     
-    def _load_user_layouts(self) -> Dict[str, Any]:
+    def _loимя_user_layouts(self) -> Dict[str, Any]:
         """Загрузить макеты пользователей"""
         if os.path.exists(self.user_layouts_file):
             try:
                 with open(self.user_layouts_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+                    return json.loимя(f)
             except Exception:
                 pass
         
@@ -328,7 +328,7 @@ class WidgetManager:
     
     def _save_user_layouts(self):
         """Сохранить макеты пользователей"""
-        os.makedirs('data', exist_ok=True)
+        os.maкотrs('data', exist_ok=True)
         with open(self.user_layouts_file, 'w', encoding='utf-8') as f:
             json.dump(self.user_layouts, f, ensure_ascii=False, indent=2)
     
@@ -364,14 +364,14 @@ class AccessibilityManager:
     
     def __init__(self):
         self.preferences_file = 'data/accessibility_preferences.json'
-        self.preferences = self._load_preferences()
+        self.preferences = self._loимя_preferences()
     
-    def _load_preferences(self) -> Dict[str, Any]:
+    def _loимя_preferences(self) -> Dict[str, Any]:
         """Загрузить предпочтения доступности"""
         if os.path.exists(self.preferences_file):
             try:
                 with open(self.preferences_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+                    return json.loимя(f)
             except Exception:
                 pass
         
@@ -379,7 +379,7 @@ class AccessibilityManager:
     
     def _save_preferences(self):
         """Сохранить предпочтения доступности"""
-        os.makedirs('data', exist_ok=True)
+        os.maкотrs('data', exist_ok=True)
         with open(self.preferences_file, 'w', encoding='utf-8') as f:
             json.dump(self.preferences, f, ensure_ascii=False, indent=2)
     
@@ -401,7 +401,7 @@ class AccessibilityManager:
                 'high_contrast': False,
                 'large_text': False,
                 'reduce_motion': False,
-                'screen_reader': False,
+                'screen_reимяer': False,
                 'keyboard_navigation': True
             }
         

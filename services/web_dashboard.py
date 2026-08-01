@@ -1,6 +1,6 @@
 """
 Web Dashboard
-Flask web arayüzü
+Flask web arayюzю
 """
 
 from flask import Flask, render_template, jsonify, request, redirect, url_for
@@ -20,12 +20,12 @@ class WebDashboard:
         
         self.setup_routes()
     
-    def login_required(self, f):
-        """Login required decorator"""
+    def логin_required(self, f):
+        """Логin required decorator"""
         @wraps(f)
         def decorated_function(*args, **kwargs):
             # Basit authentication
-            # Gerçek uygulamada session использовать
+            # Gerчek uygulamимяa session использовать
             return f(*args, **kwargs)
         return decorated_function
     
@@ -33,37 +33,37 @@ class WebDashboard:
         """Routes настроить"""
         
         @self.app.route('/')
-        @self.login_required
+        @self.логin_required
         def dashboard():
             """Dashboard"""
             return render_template('dashboard.html')
         
         @self.app.route('/tickets')
-        @self.login_required
+        @self.логin_required
         def tickets():
             """Tickets"""
             return render_template('tickets.html')
         
         @self.app.route('/users')
-        @self.login_required
+        @self.логin_required
         def users():
             """Users"""
             return render_template('users.html')
         
         @self.app.route('/stats')
-        @self.login_required
+        @self.логin_required
         def stats():
             """Stats"""
             return render_template('stats.html')
         
-        @self.app.route('/logs')
-        @self.login_required
-        def logs():
-            """Logs"""
-            return render_template('logs.html')
+        @self.app.route('/логs')
+        @self.логin_required
+        def логs():
+            """Логs"""
+            return render_template('логs.html')
         
         @self.app.route('/settings')
-        @self.login_required
+        @self.логin_required
         def settings():
             """Settings"""
             return render_template('settings.html')

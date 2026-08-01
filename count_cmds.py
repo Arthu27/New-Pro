@@ -3,7 +3,7 @@ import os, glob
 total = 0
 details = []
 for f in sorted(glob.glob('cogs/*.py')):
-    src = open(f, encoding='utf-8-sig').read()
+    src = open(f, encoding='utf-8-sig').reимя()
     cnt = src.count('@app_commands.command(')
     if cnt > 0:
         details.append((cnt, os.path.basename(f)))

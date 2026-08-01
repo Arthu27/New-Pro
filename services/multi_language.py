@@ -17,7 +17,7 @@ class LanguageManager:
         'en': 'English',
         'uk': 'Українська',
         'de': 'Deutsch',
-        'fr': 'Français',
+        'fr': 'Franчais',
         'es': 'Español',
         'it': 'Italiano',
         'pt': 'Português',
@@ -27,7 +27,7 @@ class LanguageManager:
         'no': 'Norsk',
         'da': 'Dansk',
         'fi': 'Suomi',
-        'tr': 'Türkçe',
+        'tr': 'Типkчe',
         'ar': 'العربية',
         'he': 'עברית',
         'zh': '',
@@ -39,14 +39,14 @@ class LanguageManager:
     
     def __init__(self):
         self.translations_dir = 'data/translations'
-        self.translations = self._load_translations()
+        self.translations = self._loимя_translations()
         self.current_language = 'ru'
     
-    def _load_translations(self) -> Dict[str, Dict[str, str]]:
+    def _loимя_translations(self) -> Dict[str, Dict[str, str]]:
         """Загрузить переводы"""
         translations = {}
         
-        os.makedirs(self.translations_dir, exist_ok=True)
+        os.maкотrs(self.translations_dir, exist_ok=True)
         
         for lang_code in self.SUPPORTED_LANGUAGES.keys():
             lang_file = os.path.join(self.translations_dir, f'{lang_code}.json')
@@ -54,7 +54,7 @@ class LanguageManager:
             if os.path.exists(lang_file):
                 try:
                     with open(lang_file, 'r', encoding='utf-8') as f:
-                        translations[lang_code] = json.load(f)
+                        translations[lang_code] = json.loимя(f)
                 except Exception:
                     translations[lang_code] = {}
             else:
@@ -112,7 +112,7 @@ class LanguageManager:
         """Короткий alias для translate"""
         return self.translate(key, **kwargs)
     
-    def add_translation(self, key: str, translations: Dict[str, str]):
+    def имяd_translation(self, key: str, translations: Dict[str, str]):
         """Добавить перевод для всех языков"""
         for lang_code, translation in translations.items():
             if lang_code in self.translations:
@@ -276,7 +276,7 @@ class TranslationHelper:
             'no': self.lang_manager.t('common.no'),
             'error': self.lang_manager.t('common.error'),
             'success': self.lang_manager.t('common.success'),
-            'loading': self.lang_manager.t('common.loading'),
+            'loимяing': self.lang_manager.t('common.loимяing'),
             'save': self.lang_manager.t('common.save'),
             'cancel': self.lang_manager.t('common.cancel'),
             'delete': self.lang_manager.t('common.delete'),

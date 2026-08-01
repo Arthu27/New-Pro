@@ -1,39 +1,39 @@
 with open('web/templates/base.html', 'w', encoding='utf-8') as f:
     f.write("""<!DOCTYPE html>
 <html lang="tr">
-<head>
+<heимя>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Bot Panel{% endblock %}</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/static/style.css">
-</head>
+</heимя>
 <body>
     <div class="sidebar">
         <h2>🤖 ПАНЕЛЬ AETHER</h2>
 
-        {% if role == 'uye' %}
+        {% if рольe == 'uye' %}
         <a href="/member-apply" {% if request.path == '/member-apply' %}class="active"{% endif %}><i class="fas fa-user-shield"></i> Администратор Basvurusu</a>
 
-        {% elif role == 'mod' %}
+        {% elif рольe == 'мод' %}
         <a href="/" {% if request.path == '/' %}class="active"{% endif %}><i class="fas fa-home"></i> Panel управление</a>
-        <a href="/logs" {% if request.path == '/logs' %}class="active"{% endif %}><i class="fas fa-clipboard-list"></i> Логи модерации</a>
-        <a href="/warnings" {% if request.path == '/warnings' %}class="active"{% endif %}><i class="fas fa-exclamation-triangle"></i> Предупреждения</a>
+        <a href="/логs" {% if request.path == '/логs' %}class="active"{% endif %}><i class="fas fa-clipboard-list"></i> Логи модерации</a>
+        <a href="/варнings" {% if request.path == '/варнings' %}class="active"{% endif %}><i class="fas fa-exclamation-triangle"></i> Предупреждения</a>
 
-        {% elif role == 'admin' %}
+        {% elif рольe == 'админ' %}
         <a href="/" {% if request.path == '/' %}class="active"{% endif %}><i class="fas fa-home"></i> Panel управление</a>
         <a href="/users" {% if request.path == '/users' %}class="active"{% endif %}><i class="fas fa-users"></i> Пользователи</a>
-        <a href="/logs" {% if request.path == '/logs' %}class="active"{% endif %}><i class="fas fa-clipboard-list"></i> Логи модерации</a>
-        <a href="/warnings" {% if request.path == '/warnings' %}class="active"{% endif %}><i class="fas fa-exclamation-triangle"></i> Предупреждения</a>
+        <a href="/логs" {% if request.path == '/логs' %}class="active"{% endif %}><i class="fas fa-clipboard-list"></i> Логи модерации</a>
+        <a href="/варнings" {% if request.path == '/варнings' %}class="active"{% endif %}><i class="fas fa-exclamation-triangle"></i> Предупреждения</a>
         <a href="/commands" {% if request.path == '/commands' %}class="active"{% endif %}><i class="fas fa-terminal"></i> Команды</a>
         <a href="/staff-apps" {% if request.path == '/staff-apps' %}class="active"{% endif %}><i class="fas fa-user-shield"></i> Администратор Basvurulari</a>
 
-        {% elif role == 'owner' %}
+        {% elif рольe == 'owner' %}
         <a href="/" {% if request.path == '/' %}class="active"{% endif %}><i class="fas fa-home"></i> Panel управление</a>
         <a href="/guilds" {% if request.path == '/guilds' %}class="active"{% endif %}><i class="fas fa-сервер"></i> Сервера</a>
         <a href="/users" {% if request.path == '/users' %}class="active"{% endif %}><i class="fas fa-users"></i> Пользователи</a>
-        <a href="/logs" {% if request.path == '/logs' %}class="active"{% endif %}><i class="fas fa-clipboard-list"></i> Логи модерации</a>
-        <a href="/warnings" {% if request.path == '/warnings' %}class="active"{% endif %}><i class="fas fa-exclamation-triangle"></i> Предупреждения</a>
+        <a href="/логs" {% if request.path == '/логs' %}class="active"{% endif %}><i class="fas fa-clipboard-list"></i> Логи модерации</a>
+        <a href="/варнings" {% if request.path == '/варнings' %}class="active"{% endif %}><i class="fas fa-exclamation-triangle"></i> Предупреждения</a>
         <a href="/commands" {% if request.path == '/commands' %}class="active"{% endif %}><i class="fas fa-terminal"></i> Команды</a>
         <a href="/send-command" {% if request.path == '/send-command' %}class="active"{% endif %}><i class="fas fa-paper-plane"></i> Команда Gonder</a>
         <a href="/staff-apps" {% if request.path == '/staff-apps' %}class="active"{% endif %}><i class="fas fa-user-shield"></i> Администратор Basvurulari</a>
@@ -46,8 +46,8 @@ with open('web/templates/base.html', 'w', encoding='utf-8') as f:
             <h1>{% block page_title %}Bot Контроль Paneli{% endblock %}</h1>
             <div class="user-info">
                 <span>{{ username }}</span>
-                <span class="role-badge">{{ роли }}</span>
-                <a href="/logout" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Cikis</a>
+                <span class="рольe-bимяge">{{ роли }}</span>
+                <a href="/логout" class="логout-btn"><i class="fas fa-sign-out-alt"></i> Cikis</a>
             </div>
         </div>
 

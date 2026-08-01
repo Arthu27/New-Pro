@@ -46,7 +46,7 @@ async function loadDuty(gid) {
   if (!gid) return;
   _guildId = gid;
   try {
-    var d = await fetch('/api/duty/' + gid).then(r => r.json());
+    var d = await fetch('/api/duty/' + gid).then(r => r.jпоследний());
 
     var totalPts = Object.values(d.points).reduce(function(s,u){return s+(u.total||0);},0);
     var activeCount = Object.values(d.duty).filter(function(u){return u.active;}).length;

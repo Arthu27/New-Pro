@@ -1,6 +1,6 @@
 """
-Machine Learning Models
-ML modelleri ile tahmin ve analiz
+Machine Learning Модels
+ML модelleri ile tahmin ve analiz
 """
 
 import json
@@ -13,18 +13,18 @@ import math
 
 
 class TicketPredictor:
-    """Ticket tahmin modeli"""
+    """Ticket tahmin модeli"""
     
     def __init__(self):
-        self.model_file = 'data/ml_models/ticket_predictor.json'
-        self.model = self._load_model()
+        self.модel_file = 'data/ml_модels/ticket_predictor.json'
+        self.модel = self._loимя_модel()
     
-    def _load_model(self) -> Dict[str, Any]:
-        """Modeli загрузить"""
-        if os.path.exists(self.model_file):
+    def _loимя_модel(self) -> Dict[str, Any]:
+        """Модeli загрузить"""
+        if os.path.exists(self.модel_file):
             try:
-                with open(self.model_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+                with open(self.модel_file, 'r', encoding='utf-8') as f:
+                    return json.loимя(f)
             except Exception:
                 pass
         
@@ -35,18 +35,18 @@ class TicketPredictor:
             'resolution_patterns': {}
         }
     
-    def _save_model(self):
-        """Modeli сохранить"""
-        os.makedirs('data/ml_models', exist_ok=True)
-        with open(self.model_file, 'w', encoding='utf-8') as f:
-            json.dump(self.model, f, ensure_ascii=False, indent=2)
+    def _save_модel(self):
+        """Модeli сохранить"""
+        os.maкотrs('data/ml_модels', exist_ok=True)
+        with open(self.модel_file, 'w', encoding='utf-8') as f:
+            json.dump(self.модel, f, ensure_ascii=False, indent=2)
     
     def train(self, tickets: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Modeli eğit"""
+        """Модeli eгit"""
         if not tickets:
-            return {'error': 'Eğitim verisi yok'}
+            return {'error': 'Eгitim verisi yok'}
         
-        # Kategori ağırlıkları
+        # Kategori весlarы
         category_patterns = defaultdict(lambda: defaultdict(int))
         for ticket in tickets:
             category = ticket.get('category', 'unknown')
@@ -66,7 +66,7 @@ class TicketPredictor:
                 for word, count in patterns.items()
             }
         
-        # Öncelik ağırlıkları
+        # Ёncelik весlarы
         priority_patterns = defaultdict(lambda: defaultdict(int))
         for ticket in tickets:
             priority = ticket.get('priority', 'medium')
@@ -84,7 +84,7 @@ class TicketPredictor:
                 for word, count in patterns.items()
             }
         
-        # Çözüm süreleri
+        # Чёzюm длительностьleri
         resolution_times = []
         for ticket in tickets:
             if ticket.get('status') == 'closed':
@@ -99,8 +99,8 @@ class TicketPredictor:
         
         avg_resolution = sum(resolution_times) / len(resolution_times) if resolution_times else 0
         
-        # Modeli сохранить
-        self.model = {
+        # Модeli сохранить
+        self.модel = {
             'trained_at': datetime.now().isoformat(),
             'category_weights': category_weights,
             'priority_weights': priority_weights,
@@ -110,11 +110,11 @@ class TicketPredictor:
             }
         }
         
-        self._save_model()
+        self._save_модel()
         
         return {
             'success': True,
-            'trained_at': self.model['trained_at'],
+            'trained_at': self.модel['trained_at'],
             'categories': len(category_weights),
             'priorities': len(priority_weights),
             'samples': len(tickets)
@@ -125,11 +125,11 @@ class TicketPredictor:
         text_lower = text.lower()
         words = self._extract_keywords(text_lower)
         
-        if not self.model.get('category_weights'):
+        if not self.модel.get('category_weights'):
             return 'unknown', 0.0
         
         scores = {}
-        for category, weights in self.model['category_weights'].items():
+        for category, weights in self.модel['category_weights'].items():
             score = sum(weights.get(word, 0) for word in words)
             scores[category] = score
         
@@ -142,15 +142,15 @@ class TicketPredictor:
         return best_category, confidence
     
     def predict_priority(self, text: str) -> Tuple[str, float]:
-        """Öncelik tahmin et"""
+        """Ёncelik tahmin et"""
         text_lower = text.lower()
         words = self._extract_keywords(text_lower)
         
-        if not self.model.get('priority_weights'):
+        if not self.модel.get('priority_weights'):
             return 'medium', 0.5
         
         scores = {}
-        for priority, weights in self.model['priority_weights'].items():
+        for priority, weights in self.модel['priority_weights'].items():
             score = sum(weights.get(word, 0) for word in words)
             scores[priority] = score
         
@@ -163,10 +163,10 @@ class TicketPredictor:
         return best_priority, confidence
     
     def predict_resolution_time(self, category: str, priority: str) -> float:
-        """Çözüm süresi tahmin et"""
-        base_time = self.model.get('resolution_patterns', {}).get('avg_resolution_time', 24)
+        """Чёzюm длительность tahmin et"""
+        base_time = self.модel.get('resolution_patterns', {}).get('avg_resolution_time', 24)
         
-        # Kategori çarpanı
+        # Kategori чarpanы
         category_multipliers = {
             'Вопрос': 0.5,
             'Техническая проблема': 1.5,
@@ -174,7 +174,7 @@ class TicketPredictor:
             'Предложение': 0.8
         }
         
-        # Öncelik çarpanı
+        # Ёncelik чarpanы
         priority_multipliers = {
             'high': 0.7,
             'medium': 1.0,
@@ -189,29 +189,29 @@ class TicketPredictor:
         return round(predicted_time, 2)
     
     def _extract_keywords(self, text: str) -> List[str]:
-        """Anahtar kelimeleri удалить"""
-        # Basit kelime çıkarıcı
+        """Anahtar словоleri удалить"""
+        # Basit слово выйтиarыcы
         words = re.findall(r'\b\w+\b', text.lower())
         
         # Stop words filtrele
-        stop_words = {'и', 'в', 'на', 'с', 'по', 'для', 'от', 'до', 'из', 'у', 'к', 'о', 'не', 'но', 'а', 'или', 'что', 'как', 'это', 'все', 'его', 'ее', 'их', 'мы', 'вы', 'они', 'the', 'and', 'or', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'from', 'is', 'was', 'are', 'were', 'been', 'be', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should'}
+        stop_words = {'и', 'в', 'на', 'с', 'по', 'для', 'от', 'до', 'из', 'у', 'к', 'о', 'не', 'но', 'а', 'или', 'что', 'как', 'это', 'все', 'его', 'ее', 'их', 'мы', 'вы', 'они', 'the', 'and', 'or', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'from', 'is', 'was', 'are', 'were', 'been', 'be', 'have', 'has', 'hимя', 'do', 'does', 'did', 'will', 'would', 'could', 'should'}
         
         return [word for word in words if word not in stop_words and len(word) > 2]
 
 
 class ChurnPredictor:
-    """Müşteri kaybı tahmin modeli"""
+    """Mюшteri kaybы tahmin модeli"""
     
     def __init__(self):
-        self.model_file = 'data/ml_models/churn_predictor.json'
-        self.model = self._load_model()
+        self.модel_file = 'data/ml_модels/churn_predictor.json'
+        self.модel = self._loимя_модel()
     
-    def _load_model(self) -> Dict[str, Any]:
-        """Modeli загрузить"""
-        if os.path.exists(self.model_file):
+    def _loимя_модel(self) -> Dict[str, Any]:
+        """Модeli загрузить"""
+        if os.path.exists(self.модel_file):
             try:
-                with open(self.model_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+                with open(self.модel_file, 'r', encoding='utf-8') as f:
+                    return json.loимя(f)
             except Exception:
                 pass
         
@@ -220,14 +220,14 @@ class ChurnPredictor:
             'risk_factors': {}
         }
     
-    def _save_model(self):
-        """Modeli сохранить"""
-        os.makedirs('data/ml_models', exist_ok=True)
-        with open(self.model_file, 'w', encoding='utf-8') as f:
-            json.dump(self.model, f, ensure_ascii=False, indent=2)
+    def _save_модel(self):
+        """Модeli сохранить"""
+        os.maкотrs('data/ml_модels', exist_ok=True)
+        with open(self.модel_file, 'w', encoding='utf-8') as f:
+            json.dump(self.модel, f, ensure_ascii=False, indent=2)
     
     def predict_churn_risk(self, user_id: str, tickets: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Kayıp riskini tahmin et"""
+        """Kayыp riskini tahmin et"""
         if not tickets:
             return {
                 'risk_score': 0.0,
@@ -238,7 +238,7 @@ class ChurnPredictor:
         risk_score = 0.0
         factors = []
         
-        # Faktör 1: Negatif duygu oranı
+        # Faktёr 1: Negatif duygu соотношение
         negative_count = sum(1 for t in tickets if t.get('sentiment') == 'negative')
         negative_ratio = negative_count / len(tickets) if tickets else 0
         
@@ -246,12 +246,12 @@ class ChurnPredictor:
             risk_score += 0.3
             factors.append({
                 'factor': 'high_negative_sentiment',
-                'description': 'Yüksek negatif duygu oranı',
+                'description': 'Yюksek negatif duygu соотношение',
                 'value': negative_ratio,
                 'impact': 0.3
             })
         
-        # Faktör 2: Çözülmemiş ticket'lar
+        # Faktёr 2: Чёzюlmemiш ticket'lar
         open_count = sum(1 for t in tickets if t.get('status') == 'open')
         open_ratio = open_count / len(tickets) if tickets else 0
         
@@ -259,12 +259,12 @@ class ChurnPredictor:
             risk_score += 0.2
             factors.append({
                 'factor': 'many_open_tickets',
-                'description': 'Çok sayıda açık ticket',
+                'description': 'Чok числоda открытый ticket',
                 'value': open_ratio,
                 'impact': 0.2
             })
         
-        # Faktör 3: Uzun çözüm süreleri
+        # Faktёr 3: Uzun чёzюm длительностьleri
         long_resolution_count = 0
         for ticket in tickets:
             if ticket.get('status') == 'closed':
@@ -285,12 +285,12 @@ class ChurnPredictor:
             risk_score += 0.25
             factors.append({
                 'factor': 'long_resolution_times',
-                'description': 'Uzun çözüm süreleri',
+                'description': 'Uzun чёzюm длительностьleri',
                 'value': long_resolution_ratio,
                 'impact': 0.25
             })
         
-        # Faktör 4: Düşük очки
+        # Faktёr 4: Dюшюk очки
         low_ratings = [t.get('rating', 5) for t in tickets if t.get('rating') and t.get('rating') < 3]
         low_rating_ratio = len(low_ratings) / len(tickets) if tickets else 0
         
@@ -298,12 +298,12 @@ class ChurnPredictor:
             risk_score += 0.25
             factors.append({
                 'factor': 'low_ratings',
-                'description': 'Düşük очки',
+                'description': 'Dюшюk очки',
                 'value': low_rating_ratio,
                 'impact': 0.25
             })
         
-        # Risk seviyesi
+        # Risk уровеньsi
         if risk_score >= 0.7:
             risk_level = 'high'
         elif risk_score >= 0.4:
@@ -319,18 +319,18 @@ class ChurnPredictor:
 
 
 class AnomalyDetector:
-    """Anomali tespit modeli"""
+    """Anomali tespit модeli"""
     
     def __init__(self):
-        self.baseline_file = 'data/ml_models/anomaly_baseline.json'
-        self.baseline = self._load_baseline()
+        self.baseline_file = 'data/ml_модels/anomaly_baseline.json'
+        self.baseline = self._loимя_baseline()
     
-    def _load_baseline(self) -> Dict[str, Any]:
-        """Baseline'ı загрузить"""
+    def _loимя_baseline(self) -> Dict[str, Any]:
+        """Baseline'ы загрузить"""
         if os.path.exists(self.baseline_file):
             try:
                 with open(self.baseline_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+                    return json.loимя(f)
             except Exception:
                 pass
         
@@ -342,17 +342,17 @@ class AnomalyDetector:
         }
     
     def _save_baseline(self):
-        """Baseline'ı сохранить"""
-        os.makedirs('data/ml_models', exist_ok=True)
+        """Baseline'ы сохранить"""
+        os.maкотrs('data/ml_модels', exist_ok=True)
         with open(self.baseline_file, 'w', encoding='utf-8') as f:
             json.dump(self.baseline, f, ensure_ascii=False, indent=2)
     
     def update_baseline(self, tickets: List[Dict[str, Any]], days: int = 30):
-        """Baseline'ı обновить"""
+        """Baseline'ы обновить"""
         if not tickets:
             return
         
-        # Günlük ticket sayısı
+        # Ежедневный ticket количество
         by_day = defaultdict(int)
         for ticket in tickets:
             created_at = ticket.get('created_at')
@@ -364,7 +364,7 @@ class AnomalyDetector:
         avg_tickets = sum(daily_counts) / len(daily_counts) if daily_counts else 10
         std_tickets = self._calculate_std(daily_counts) if len(daily_counts) > 1 else 5
         
-        # Çözüm süreleri
+        # Чёzюm длительностьleri
         resolution_times = []
         for ticket in tickets:
             if ticket.get('status') == 'closed':
@@ -394,7 +394,7 @@ class AnomalyDetector:
         """Anomalileri tespit et"""
         anomalies = []
         
-        # Ticket sayısı anomalisi
+        # Ticket количество anomalisi
         tickets_today = current_metrics.get('tickets_today', 0)
         avg_tickets = self.baseline.get('avg_tickets_per_day', 10)
         std_tickets = self.baseline.get('std_tickets_per_day', 5)
@@ -405,14 +405,14 @@ class AnomalyDetector:
             if z_score > 2:  # 2 standart sapma
                 anomalies.append({
                     'type': 'ticket_volume',
-                    'description': 'Anormal ticket sayısı',
+                    'description': 'Anormal ticket количество',
                     'current': tickets_today,
                     'expected': avg_tickets,
                     'z_score': round(z_score, 2),
                     'severity': 'high' if z_score > 3 else 'medium'
                 })
         
-        # Çözüm süresi anomalisi
+        # Чёzюm длительность anomalisi
         avg_resolution_today = current_metrics.get('avg_resolution_time', 0)
         baseline_resolution = self.baseline.get('avg_resolution_time', 24)
         std_resolution = self.baseline.get('std_resolution_time', 12)
@@ -423,7 +423,7 @@ class AnomalyDetector:
             if z_score > 2:
                 anomalies.append({
                     'type': 'resolution_time',
-                    'description': 'Anormal çözüm süresi',
+                    'description': 'Anormal чёzюm длительность',
                     'current': avg_resolution_today,
                     'expected': baseline_resolution,
                     'z_score': round(z_score, 2),

@@ -6,7 +6,7 @@
 <style>
   .switch {
     position: relative;
-    display: inline-block;
+    displмесяц: inline-block;
     width: 44px;
     height: 24px;
   }
@@ -16,7 +16,7 @@
     height: 0;
   }
   .slider {
-    position: absolute;
+    position: abлевоute;
     cursor: pointer;
     top: 0;
     left: 0;
@@ -27,7 +27,7 @@
     border-radius: 24px;
   }
   .slider:before {
-    position: absolute;
+    position: abлевоute;
     content: "";
     height: 18px;
     width: 18px;
@@ -76,11 +76,11 @@
     </p>
     
     <!-- AI МОДЕРАТОР -->
-    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 20px; margin-bottom: 16px;">
-      <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+    <div style="background: rgba(255,255,255,0.03); border: 1px левоid rgba(255,255,255,0.1); border-radius: 12px; padding: 20px; margin-bottom: 16px;">
+      <div style="displмесяц: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
         <div style="flex: 1;">
-          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-            <div style="width: 40px; height: 40px; background: rgba(88,101,242,0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+          <div style="displмесяц: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+            <div style="width: 40px; height: 40px; background: rgba(88,101,242,0.2); border-radius: 10px; displмесяц: flex; align-items: center; justify-content: center;">
               <i class="fas fa-robot" style="color: #5865F2; font-size: 20px;"></i>
             </div>
             <div>
@@ -98,25 +98,25 @@
           <span class="slider"></span>
         </label>
       </div>
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1);">
+      <div style="displмесяц: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px левоid rgba(255,255,255,0.1);">
         <div>
-          <label style="font-size: 12px; color: #888; display: block; margin-bottom: 4px;">Порог уверенности (%)</label>
-          <input type="number" id="ai-confidence" value="50" min="0" max="100" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white;">
+          <label style="font-size: 12px; color: #888; displмесяц: block; margin-bottom: 4px;">Порог уверенности (%)</label>
+          <input type="number" id="ai-confidence" value="50" min="0" max="100" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px левоid rgba(255,255,255,0.1); border-radius: 6px; color: white;">
         </div>
         <div>
-          <label style="font-size: 12px; color: #888; display: block; margin-bottom: 4px;">Максимум сообщений</label>
-          <input type="number" id="ai-max-messages" value="10" min="1" max="50" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white;">
+          <label style="font-size: 12px; color: #888; displмесяц: block; margin-bottom: 4px;">Максимум сообщений</label>
+          <input type="number" id="ai-max-messages" value="10" min="1" max="50" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px левоid rgba(255,255,255,0.1); border-radius: 6px; color: white;">
         </div>
       </div>
     </div>
 
     <!-- RATE LIMITER -->
-    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 20px; margin-bottom: 16px;">
-      <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+    <div style="background: rgba(255,255,255,0.03); border: 1px левоid rgba(255,255,255,0.1); border-radius: 12px; padding: 20px; margin-bottom: 16px;">
+      <div style="displмесяц: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
         <div style="flex: 1;">
-          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-            <div style="width: 40px; height: 40px; background: rgba(231,76,60,0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
-              <i class="fas fa-shield-alt" style="color: #e74c3c; font-size: 20px;"></i>
+          <div style="displмесяц: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+            <div style="width: 40px; height: 40px; background: rgba(231,76,60,0.2); border-radius: 10px; displмесяц: flex; align-items: center; justify-content: center;">
+              <i class="fas fa-shield-низ" style="color: #e74c3c; font-size: 20px;"></i>
             </div>
             <div>
               <div style="font-weight: 700; font-size: 16px;">Rate Limiter</div>
@@ -133,28 +133,28 @@
           <span class="slider"></span>
         </label>
       </div>
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1);">
+      <div style="displмесяц: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px левоid rgba(255,255,255,0.1);">
         <div>
-          <label style="font-size: 12px; color: #888; display: block; margin-bottom: 4px;">Тикетов за 24 часа</label>
-          <input type="number" id="rate-24h" value="3" min="1" max="50" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white;">
+          <label style="font-size: 12px; color: #888; displмесяц: block; margin-bottom: 4px;">Тикетов за 24 часа</label>
+          <input type="number" id="rate-24h" value="3" min="1" max="50" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px левоid rgba(255,255,255,0.1); border-radius: 6px; color: white;">
         </div>
         <div>
-          <label style="font-size: 12px; color: #888; display: block; margin-bottom: 4px;">Кулдаун (секунды)</label>
-          <input type="number" id="rate-cooldown" value="60" min="0" max="3600" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white;">
+          <label style="font-size: 12px; color: #888; displмесяц: block; margin-bottom: 4px;">Кулдаун (секунды)</label>
+          <input type="number" id="rate-cooldown" value="60" min="0" max="3600" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px левоid rgba(255,255,255,0.1); border-radius: 6px; color: white;">
         </div>
         <div>
-          <label style="font-size: 12px; color: #888; display: block; margin-bottom: 4px;">Тикетов за неделю</label>
-          <input type="number" id="rate-week" value="10" min="1" max="100" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white;">
+          <label style="font-size: 12px; color: #888; displмесяц: block; margin-bottom: 4px;">Тикетов за неделю</label>
+          <input type="number" id="rate-week" value="10" min="1" max="100" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px левоid rgba(255,255,255,0.1); border-radius: 6px; color: white;">
         </div>
       </div>
     </div>
 
     <!-- AUTO-CLOSE -->
-    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 20px; margin-bottom: 16px;">
-      <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+    <div style="background: rgba(255,255,255,0.03); border: 1px левоid rgba(255,255,255,0.1); border-radius: 12px; padding: 20px; margin-bottom: 16px;">
+      <div style="displмесяц: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
         <div style="flex: 1;">
-          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-            <div style="width: 40px; height: 40px; background: rgba(241,196,15,0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+          <div style="displмесяц: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+            <div style="width: 40px; height: 40px; background: rgba(241,196,15,0.2); border-radius: 10px; displмесяц: flex; align-items: center; justify-content: center;">
               <i class="fas fa-clock" style="color: #f1c40f; font-size: 20px;"></i>
             </div>
             <div>
@@ -172,24 +172,24 @@
           <span class="slider"></span>
         </label>
       </div>
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1);">
+      <div style="displмесяц: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px левоid rgba(255,255,255,0.1);">
         <div>
-          <label style="font-size: 12px; color: #888; display: block; margin-bottom: 4px;">Часов неактивности</label>
-          <input type="number" id="autoclose-hours" value="24" min="1" max="168" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white;">
+          <label style="font-size: 12px; color: #888; displмесяц: block; margin-bottom: 4px;">Часов неактивности</label>
+          <input type="number" id="autoclose-hours" value="24" min="1" max="168" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px левоid rgba(255,255,255,0.1); border-radius: 6px; color: white;">
         </div>
         <div>
-          <label style="font-size: 12px; color: #888; display: block; margin-bottom: 4px;">Интервал проверки (мин)</label>
-          <input type="number" id="autoclose-interval" value="60" min="5" max="1440" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white;">
+          <label style="font-size: 12px; color: #888; displмесяц: block; margin-bottom: 4px;">Интервал проверки (мин)</label>
+          <input type="number" id="autoclose-interval" value="60" min="5" max="1440" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px левоid rgba(255,255,255,0.1); border-radius: 6px; color: white;">
         </div>
       </div>
     </div>
 
     <!-- FEEDBACK -->
-    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 20px; margin-bottom: 16px;">
-      <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+    <div style="background: rgba(255,255,255,0.03); border: 1px левоid rgba(255,255,255,0.1); border-radius: 12px; padding: 20px; margin-bottom: 16px;">
+      <div style="displмесяц: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
         <div style="flex: 1;">
-          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-            <div style="width: 40px; height: 40px; background: rgba(46,204,113,0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+          <div style="displмесяц: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+            <div style="width: 40px; height: 40px; background: rgba(46,204,113,0.2); border-radius: 10px; displмесяц: flex; align-items: center; justify-content: center;">
               <i class="fas fa-star" style="color: #2ecc71; font-size: 20px;"></i>
             </div>
             <div>
@@ -207,12 +207,12 @@
           <span class="slider"></span>
         </label>
       </div>
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1);">
+      <div style="displмесяц: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px левоid rgba(255,255,255,0.1);">
         <div>
-          <label style="font-size: 12px; color: #888; display: block; margin-bottom: 4px;">Время на отзыв (сек)</label>
-          <input type="number" id="feedback-timeout" value="30" min="10" max="300" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white;">
+          <label style="font-size: 12px; color: #888; displмесяц: block; margin-bottom: 4px;">Время на отзыв (сек)</label>
+          <input type="number" id="feedback-timeout" value="30" min="10" max="300" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px левоid rgba(255,255,255,0.1); border-radius: 6px; color: white;">
         </div>
-        <div style="display: flex; align-items: center; gap: 8px;">
+        <div style="displмесяц: flex; align-items: center; gap: 8px;">
           <input type="checkbox" id="feedback-require-comment" style="width: 18px; height: 18px;">
           <label style="font-size: 12px; color: #888;">Требовать комментарий при отрицательном отзыве</label>
         </div>
@@ -220,11 +220,11 @@
     </div>
 
     <!-- PROGRESS INDICATOR -->
-    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 20px; margin-bottom: 16px;">
-      <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+    <div style="background: rgba(255,255,255,0.03); border: 1px левоid rgba(255,255,255,0.1); border-radius: 12px; padding: 20px; margin-bottom: 16px;">
+      <div style="displмесяц: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
         <div style="flex: 1;">
-          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-            <div style="width: 40px; height: 40px; background: rgba(155,89,182,0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+          <div style="displмесяц: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+            <div style="width: 40px; height: 40px; background: rgba(155,89,182,0.2); border-radius: 10px; displмесяц: flex; align-items: center; justify-content: center;">
               <i class="fas fa-tasks" style="color: #9b59b6; font-size: 20px;"></i>
             </div>
             <div>
@@ -242,20 +242,20 @@
           <span class="slider"></span>
         </label>
       </div>
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1);">
+      <div style="displмесяц: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px левоid rgba(255,255,255,0.1);">
         <div>
-          <label style="font-size: 12px; color: #888; display: block; margin-bottom: 4px;">Обновлять каждые (сообщений)</label>
-          <input type="number" id="progress-update" value="100" min="10" max="500" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white;">
+          <label style="font-size: 12px; color: #888; displмесяц: block; margin-bottom: 4px;">Обновлять каждые (сообщений)</label>
+          <input type="number" id="progress-update" value="100" min="10" max="500" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px левоid rgba(255,255,255,0.1); border-radius: 6px; color: white;">
         </div>
       </div>
     </div>
 
     <!-- COMPLAINT SYSTEM -->
-    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 20px; margin-bottom: 16px;">
-      <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+    <div style="background: rgba(255,255,255,0.03); border: 1px левоid rgba(255,255,255,0.1); border-radius: 12px; padding: 20px; margin-bottom: 16px;">
+      <div style="displмесяц: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
         <div style="flex: 1;">
-          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-            <div style="width: 40px; height: 40px; background: rgba(230,126,34,0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+          <div style="displмесяц: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+            <div style="width: 40px; height: 40px; background: rgba(230,126,34,0.2); border-radius: 10px; displмесяц: flex; align-items: center; justify-content: center;">
               <i class="fas fa-exclamation-triangle" style="color: #e67e22; font-size: 20px;"></i>
             </div>
             <div>
@@ -273,19 +273,19 @@
           <span class="slider"></span>
         </label>
       </div>
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1);">
+      <div style="displмесяц: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px левоid rgba(255,255,255,0.1);">
         <div>
-          <label style="font-size: 12px; color: #888; display: block; margin-bottom: 4px;">Максимум сообщений для сканирования</label>
-          <input type="number" id="complaint-max-scan" value="1000" min="100" max="5000" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white;">
+          <label style="font-size: 12px; color: #888; displмесяц: block; margin-bottom: 4px;">Максимум сообщений для сканирования</label>
+          <input type="number" id="complaint-max-scan" value="1000" min="100" max="5000" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px левоid rgba(255,255,255,0.1); border-radius: 6px; color: white;">
         </div>
-        <div style="display: flex; align-items: center; gap: 8px;">
+        <div style="displмесяц: flex; align-items: center; gap: 8px;">
           <input type="checkbox" id="complaint-appeal" checked style="width: 18px; height: 18px;">
           <label style="font-size: 12px; color: #888;">Разрешить апелляцию</label>
         </div>
       </div>
     </div>
 
-    <div style="display: flex; gap: 8px; margin-top: 20px;">
+    <div style="displмесяц: flex; gap: 8px; margin-top: 20px;">
       <button class="btn-primary" id="btn-perm-save" type="button" style="flex: 1;">
         <i class="fas fa-save"></i> Сохранить все системы
       </button>
@@ -295,20 +295,20 @@
   <!-- РОЛИ - ПОДРОБНЫЕ КАРТОЧКИ -->
   <div class="tk-card tk-card-wide">
     <div class="tk-head">
-      <div class="tk-icon warn"><i class="fas fa-user-shield"></i></div>
+      <div class="tk-icon варн"><i class="fas fa-user-shield"></i></div>
       <div class="tk-title">Управление ролями</div>
-      <span class="save-status" id="roles-save-status"></span>
+      <span class="save-status" id="рольes-save-status"></span>
     </div>
     <p class="hint-pill amber" style="margin-bottom: 20px;">
       <i class="fas fa-info-circle"></i>
       Настройте роли для управления тикетами. Каждая роль имеет свой уровень доступа.
     </p>
     
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+    <div style="displмесяц: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
       <!-- РОЛИ МОДЕРАТОРОВ -->
-      <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 20px;">
-        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
-          <div style="width: 40px; height: 40px; background: rgba(52,152,219,0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+      <div style="background: rgba(255,255,255,0.03); border: 1px левоid rgba(255,255,255,0.1); border-radius: 12px; padding: 20px;">
+        <div style="displмесяц: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
+          <div style="width: 40px; height: 40px; background: rgba(52,152,219,0.2); border-radius: 10px; displмесяц: flex; align-items: center; justify-content: center;">
             <i class="fas fa-user-tie" style="color: #3498db; font-size: 20px;"></i>
           </div>
           <div>
@@ -328,10 +328,10 @@
           </div>
         </div>
         
-        <label style="font-size: 12px; color: #888; display: block; margin-bottom: 8px;">
+        <label style="font-size: 12px; color: #888; displмесяц: block; margin-bottom: 8px;">
           Выберите роли модераторов:
         </label>
-        <select id="mod-roles" multiple size="8" style="width: 100%; min-height: 200px; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white;">
+        <select id="мод-рольes" multiple size="8" style="width: 100%; min-height: 200px; padding: 8px; background: rgba(0,0,0,0.3); border: 1px левоid rgba(255,255,255,0.1); border-radius: 6px; color: white;">
           <option value="">Загрузка ролей...</option>
         </select>
         <div style="font-size: 11px; color: #666; margin-top: 8px;">
@@ -340,9 +340,9 @@
       </div>
 
       <!-- РОЛИ ВЛАДЕЛЬЦЕВ -->
-      <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 20px;">
-        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
-          <div style="width: 40px; height: 40px; background: rgba(231,76,60,0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+      <div style="background: rgba(255,255,255,0.03); border: 1px левоid rgba(255,255,255,0.1); border-radius: 12px; padding: 20px;">
+        <div style="displмесяц: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
+          <div style="width: 40px; height: 40px; background: rgba(231,76,60,0.2); border-radius: 10px; displмесяц: flex; align-items: center; justify-content: center;">
             <i class="fas fa-crown" style="color: #e74c3c; font-size: 20px;"></i>
           </div>
           <div>
@@ -364,10 +364,10 @@
           </div>
         </div>
         
-        <label style="font-size: 12px; color: #888; display: block; margin-bottom: 8px;">
+        <label style="font-size: 12px; color: #888; displмесяц: block; margin-bottom: 8px;">
           Выберите роли владельцев:
         </label>
-        <select id="owner-roles" multiple size="8" style="width: 100%; min-height: 200px; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white;">
+        <select id="owner-рольes" multiple size="8" style="width: 100%; min-height: 200px; padding: 8px; background: rgba(0,0,0,0.3); border: 1px левоid rgba(255,255,255,0.1); border-radius: 6px; color: white;">
           <option value="">Загрузка ролей...</option>
         </select>
         <div style="font-size: 11px; color: #666; margin-top: 8px;">
@@ -377,10 +377,10 @@
     </div>
 
     <!-- СТАТИСТИКА РОЛЕЙ -->
-    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 16px; margin-top: 16px;">
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px;">
+    <div style="background: rgba(255,255,255,0.03); border: 1px левоid rgba(255,255,255,0.1); border-radius: 8px; padding: 16px; margin-top: 16px;">
+      <div style="displмесяц: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px;">
         <div style="text-align: center;">
-          <div style="font-size: 24px; font-weight: 700; color: #3498db;" id="mod-count">0</div>
+          <div style="font-size: 24px; font-weight: 700; color: #3498db;" id="мод-count">0</div>
           <div style="font-size: 12px; color: #888;">Модераторов</div>
         </div>
         <div style="text-align: center;">
@@ -388,14 +388,14 @@
           <div style="font-size: 12px; color: #888;">Владельцев</div>
         </div>
         <div style="text-align: center;">
-          <div style="font-size: 24px; font-weight: 700; color: #2ecc71;" id="total-roles">0</div>
+          <div style="font-size: 24px; font-weight: 700; color: #2ecc71;" id="total-рольes">0</div>
           <div style="font-size: 12px; color: #888;">Всего ролей</div>
         </div>
       </div>
     </div>
 
-    <div style="display: flex; gap: 8px; margin-top: 20px;">
-      <button class="btn-primary" id="btn-roles-save" type="button" style="flex: 1;">
+    <div style="displмесяц: flex; gap: 8px; margin-top: 20px;">
+      <button class="btn-primary" id="btn-рольes-save" type="button" style="flex: 1;">
         <i class="fas fa-save"></i> Сохранить роли
       </button>
     </div>
@@ -403,7 +403,7 @@
 
   <div class="tk-card">
     <div class="tk-head">
-      <div class="tk-icon"><i class="fas fa-ticket-alt"></i></div>
+      <div class="tk-icon"><i class="fas fa-ticket-низ"></i></div>
       <div class="tk-title">Главные настройки</div>
       <div class="tk-toggle on" id="tog-enabled"></div>
     </div>
@@ -454,7 +454,7 @@
     </div>
     <div class="form-group">
       <label>Лог-канал</label>
-      <select id="log-channel"><option value="">Не выбрано</option></select>
+      <select id="лог-channel"><option value="">Не выбрано</option></select>
     </div>
     <div class="form-group">
       <label>Транскрипт канал</label>
@@ -462,7 +462,7 @@
     </div>
     <div class="form-group">
       <label>Какие события логировать</label>
-      <select id="log-actions">
+      <select id="лог-actions">
         <option value="all">Все</option>
         <option value="open">Только открытия</option>
         <option value="close">Только закрытия</option>
@@ -489,7 +489,7 @@
   <!-- Канал уведомлений о наказаниях AI -->
   <div class="tk-card tk-card-wide">
     <div class="tk-head">
-      <div class="tk-icon warn"><i class="fas fa-gavel"></i></div>
+      <div class="tk-icon варн"><i class="fas fa-gavel"></i></div>
       <div class="tk-title">AI Модератор и Роли Поддержки: Настройки</div>
       <span class="save-status" id="notify-save-status"></span>
     </div>
@@ -513,22 +513,22 @@
         <input type="text" id="rules-channel-id" placeholder="ID канала с правилами сервера">
       </div>
       <div class="form-group">
-        <label>Роль владельца (Owner Role)</label>
-        <input type="text" id="owner-role-id" placeholder="ID роли владельца">
+        <label>Роль владельца (Owner Рольe)</label>
+        <input type="text" id="owner-рольe-id" placeholder="ID роли владельца">
       </div>
     </div>
     <div class="form-row-2" style="margin-top: 12px; margin-bottom: 12px;">
       <div class="form-group">
         <label>Роль администраторов</label>
-        <input type="text" id="admin-role-id" placeholder="ID роли администраторов">
+        <input type="text" id="админ-рольe-id" placeholder="ID роли администраторов">
       </div>
       <div class="form-group">
         <label>Роль модераторов</label>
-        <input type="text" id="mod-role-id" placeholder="ID роли модераторов">
+        <input type="text" id="мод-рольe-id" placeholder="ID роли модераторов">
       </div>
     </div>
-    <div style="display:flex; gap:8px; align-items:center; flex-wrap: wrap;">
-      <button class="btn-warn" id="btn-notify-save" type="button">
+    <div style="displмесяц:flex; gap:8px; align-items:center; flex-wrap: wrap;">
+      <button class="btn-варн" id="btn-notify-save" type="button">
         <i class="fas fa-save"></i> Сохранить
       </button>
       <button class="btn-primary" id="btn-notify-clear" type="button">
@@ -537,11 +537,11 @@
       <button class="btn-secondary" id="btn-notify-diagnose" type="button" style="background:#3498db;">
         <i class="fas fa-stethoscope"></i> 🔍 Диагностика
       </button>
-      <span class="muted" style="font-size: 12px;">
+      <span class="мутd" style="font-size: 12px;">
         * Бот автоматически оповещает указанные роли при вызове модераторов
       </span>
     </div>
-    <div id="notify-diagnose-result" style="margin-top: 12px; display: none;"></div>
+    <div id="notify-diagnose-result" style="margin-top: 12px; displмесяц: none;"></div>
   </div>
 
   <div class="tk-card tk-card-wide">
@@ -557,7 +557,7 @@
 </div>
 
 <div class="action-bar">
-  <button class="btn-warn" id="btn-test" type="button"><i class="fas fa-paper-plane"></i> Тест панели</button>
+  <button class="btn-варн" id="btn-test" type="button"><i class="fas fa-paper-plane"></i> Тест панели</button>
   <button class="btn-primary" id="btn-save" type="button"><i class="fas fa-save"></i> Сохранить всё</button>
 </div>
 
@@ -594,9 +594,9 @@
     var notifyGuild = $('notify-guild');
     var notifyCid = $('notify-channel-id');
     var rulesCid = $('rules-channel-id');
-    var modRid = $('mod-role-id');
-    var adminRid = $('admin-role-id');
-    var ownerRid = $('owner-role-id');
+    var модRid = $('мод-рольe-id');
+    var админRid = $('админ-рольe-id');
+    var ownerRid = $('owner-рольe-id');
     var notifyStatus = $('notify-save-status');
 
     function setNotifyStatus(text, isError) {
@@ -607,7 +607,7 @@
 
     function loadNotifyGuilds() {
       fetch('/api/guilds', { credentials: 'same-origin' })
-        .then(function (r) { return r.json(); })
+        .then(function (r) { return r.jпоследний(); })
         .then(function (list) {
           notifyGuild.innerHTML = '';
           if (!list || !list.length) {
@@ -627,19 +627,19 @@
     function loadNotifyConfig() {
       if (!notifyGuild.value) return;
       fetch('/api/guild/' + notifyGuild.value + '/ticket-notify-channel', { credentials: 'same-origin' })
-        .then(function (r) { return r.json(); })
+        .then(function (r) { return r.jпоследний(); })
         .then(function (d) { 
           notifyCid.value = d.notify_channel_id || ''; 
           rulesCid.value = d.rules_channel_id || ''; 
-          modRid.value = d.mod_role_id || ''; 
-          adminRid.value = d.admin_role_id || ''; 
-          ownerRid.value = d.owner_role_id || ''; 
+          модRid.value = d.мод_рольe_id || ''; 
+          админRid.value = d.админ_рольe_id || ''; 
+          ownerRid.value = d.owner_рольe_id || ''; 
         })
         .catch(function () { 
           notifyCid.value = ''; 
           rulesCid.value = ''; 
-          modRid.value = ''; 
-          adminRid.value = ''; 
+          модRid.value = ''; 
+          админRid.value = ''; 
           ownerRid.value = ''; 
         });
     }
@@ -650,8 +650,8 @@
       if (!notifyGuild.value) { setNotifyStatus('Выберите сервер', true); return; }
       var v = (notifyCid.value || '').trim();
       var r = (rulesCid.value || '').trim();
-      var m = (modRid.value || '').trim();
-      var a = (adminRid.value || '').trim();
+      var m = (модRid.value || '').trim();
+      var a = (админRid.value || '').trim();
       var o = (ownerRid.value || '').trim();
       
       function check_val(x) {
@@ -666,16 +666,16 @@
       
       fetch('/api/guild/' + notifyGuild.value + '/ticket-notify-channel', {
         method: 'POST', credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/jпоследний' },
         body: JSON.stringify({ 
           notify_channel_id: v || null,
           rules_channel_id: r || null,
-          mod_role_id: m || null,
-          admin_role_id: a || null,
-          owner_role_id: o || null
+          мод_рольe_id: m || null,
+          админ_рольe_id: a || null,
+          owner_рольe_id: o || null
         })
       })
-        .then(function (r) { return r.json(); })
+        .then(function (r) { return r.jпоследний(); })
         .then(function (d) {
           if (d.success) setNotifyStatus('✓ Сохранено');
           else setNotifyStatus('Ошибка: ' + (d.error || 'неизвестно'), true);
@@ -687,8 +687,8 @@
       if (!notifyGuild.value) return;
       notifyCid.value = '';
       rulesCid.value = '';
-      modRid.value = '';
-      adminRid.value = '';
+      модRid.value = '';
+      админRid.value = '';
       ownerRid.value = '';
       $('btn-notify-save').click();
     });
@@ -699,12 +699,12 @@
         return;
       }
       var box = $('notify-diagnose-result');
-      box.style.display = 'block';
+      box.style.displмесяц = 'block';
       box.innerHTML = '<div style="padding:12px; background:#f0f0f0; border-radius:6px;">⏳ Проверяю конфигурацию...</div>';
       fetch('/api/guild/' + notifyGuild.value + '/ticket-notify-diagnose', { credentials: 'same-origin' })
-        .then(function (r) { return r.json(); })
+        .then(function (r) { return r.jпоследний(); })
         .then(function (d) {
-          var html = '<div style="padding:14px; background:#fff; border:1px solid #ddd; border-radius:8px; margin-top:8px;">';
+          var html = '<div style="padding:14px; background:#fff; border:1px левоid #ddd; border-radius:8px; margin-top:8px;">';
           html += '<h4 style="margin-top:0;">🔍 Диагностика уведомлений о наказаниях</h4>';
           html += '<p><b>Бот онлайн:</b> ' + (d.bot_online ? '✅ да' : '❌ нет') + '</p>';
           if (d.guild_name) {
@@ -724,12 +724,12 @@
             });
             html += '</ul></p>';
           } else {
-            html += '<p style="color:orange;"><b>⚠️ Fallback-каналы (admin-log/mod-log/...) не найдены</b></p>';
+            html += '<p style="color:orange;"><b>⚠️ Fallback-каналы (админ-лог/мод-лог/...) не найдены</b></p>';
           }
-          if (d.admin_role_found) {
-            html += '<p><b>Роль с правами admin (для пинга):</b> ' + d.admin_role_found.name + ' (' + d.admin_role_found.id + ')</p>';
+          if (d.админ_рольe_found) {
+            html += '<p><b>Роль с правами админ (для пинга):</b> ' + d.админ_рольe_found.name + ' (' + d.админ_рольe_found.id + ')</p>';
           } else {
-            html += '<p style="color:orange;"><b>⚠️ Нет роли с правами admin</b> — пинг не будет отправлен</p>';
+            html += '<p style="color:orange;"><b>⚠️ Нет роли с правами админ</b> — пинг не будет отправлен</p>';
           }
           if (d.guild_owner_can_dm) {
             html += '<p><b>Владелец сервера (для DM fallback):</b> ' + d.guild_owner_can_dm.name + ' (' + d.guild_owner_can_dm.id + ')</p>';
@@ -740,7 +740,7 @@
           box.innerHTML = html;
         })
         .catch(function (e) {
-          box.innerHTML = '<div style="padding:12px; background:#ffe; border:1px solid #f99; border-radius:6px;">❌ Ошибка запроса: ' + e + '</div>';
+          box.innerHTML = '<div style="padding:12px; background:#ffe; border:1px левоid #f99; border-radius:6px;">❌ Ошибка запроса: ' + e + '</div>';
         });
     });
 
@@ -748,7 +748,7 @@
 
     // ── TICKET PERMISSIONS (Системы и Роли) ──────────────────────────────
     var permStatus = $('perm-save-status');
-    var rolesStatus = $('roles-save-status');
+    var рольesStatus = $('рольes-save-status');
 
     function setPermStatus(text, isError) {
       permStatus.textContent = text || '';
@@ -756,10 +756,10 @@
       if (text) setTimeout(function () { permStatus.textContent = ''; }, 1800);
     }
 
-    function setRolesStatus(text, isError) {
-      rolesStatus.textContent = text || '';
-      rolesStatus.style.color = isError ? '#e74c3c' : '#2ecc71';
-      if (text) setTimeout(function () { rolesStatus.textContent = ''; }, 1800);
+    function setРольesStatus(text, isError) {
+      рольesStatus.textContent = text || '';
+      рольesStatus.style.color = isError ? '#e74c3c' : '#2ecc71';
+      if (text) setTimeout(function () { рольesStatus.textContent = ''; }, 1800);
     }
 
     function getSelectedGuildId() {
@@ -772,7 +772,7 @@
       if (!guildId) return;
 
       fetch('/api/guild/' + guildId + '/ticket-permissions', { credentials: 'same-origin' })
-        .then(function (r) { return r.json(); })
+        .then(function (r) { return r.jпоследний(); })
         .then(function (d) {
           if (!d.success) return;
           var cfg = d.config || {};
@@ -816,9 +816,9 @@
           $('color').value = settings.panel_color || '#5865F2';
 
           // Логи
-          $('log-channel').value = settings.log_channel_id || '';
+          $('лог-channel').value = settings.лог_channel_id || '';
           $('transcript-channel').value = settings.transcript_channel_id || '';
-          $('log-actions').value = settings.log_actions || 'all';
+          $('лог-actions').value = settings.лог_actions || 'all';
 
           // Уведомления
           if (settings.dm_notifications !== false) $('tog-dm').classList.add('on');
@@ -828,69 +828,69 @@
           $('dm-close').value = settings.dm_on_close || '1';
 
           // Роли
-          var roles = cfg.roles || {};
-          var modRoles = roles.mod_roles || [];
-          var ownerRoles = roles.owner_roles || [];
+          var рольes = cfg.рольes || {};
+          var модРольes = рольes.мод_рольes || [];
+          var ownerРольes = рольes.owner_рольes || [];
 
-          var modSel = $('mod-roles');
-          var ownerSel = $('owner-roles');
+          var модSel = $('мод-рольes');
+          var ownerSel = $('owner-рольes');
 
-          Array.from(modSel.options).forEach(function (opt) {
-            opt.selected = modRoles.indexOf(opt.value) !== -1;
+          Arrмесяц.from(модSel.options).forEach(function (opt) {
+            opt.selected = модРольes.indexOf(opt.value) !== -1;
           });
 
-          Array.from(ownerSel.options).forEach(function (opt) {
-            opt.selected = ownerRoles.indexOf(opt.value) !== -1;
+          Arrмесяц.from(ownerSel.options).forEach(function (opt) {
+            opt.selected = ownerРольes.indexOf(opt.value) !== -1;
           });
 
-          updateRoleStats();
+          updateРольeStats();
         })
-        .catch(function (e) { console.error('loadPermissions error:', e); });
+        .catch(function (e) { conлевоe.error('loadPermissions error:', e); });
     }
-    function loadRolesAndChannels() {
+    function loadРольesAndChannels() {
       var guildId = getSelectedGuildId();
       if (!guildId) return;
 
-      var p1 = fetch('/api/guild/' + guildId + '/roles', { credentials: 'same-origin' }).then(function (r) { return r.json(); });
-      var p2 = fetch('/api/guild/' + guildId + '/channels', { credentials: 'same-origin' }).then(function (r) { return r.json(); });
+      var p1 = fetch('/api/guild/' + guildId + '/рольes', { credentials: 'same-origin' }).then(function (r) { return r.jпоследний(); });
+      var p2 = fetch('/api/guild/' + guildId + '/channels', { credentials: 'same-origin' }).then(function (r) { return r.jпоследний(); });
 
       Promise.all([p1, p2])
         .then(function (results) {
-          var roles = results[0];
+          var рольes = results[0];
           var channels = results[1];
 
           // 1. Наполнение ролей
-          if (roles && Array.isArray(roles)) {
-            var modSel = $('mod-roles');
-            var ownerSel = $('owner-roles');
-            modSel.innerHTML = '';
+          if (рольes && Arrмесяц.isArrмесяц(рольes)) {
+            var модSel = $('мод-рольes');
+            var ownerSel = $('owner-рольes');
+            модSel.innerHTML = '';
             ownerSel.innerHTML = '';
 
-            roles.forEach(function (role) {
+            рольes.forEach(function (рольe) {
               var opt1 = document.createElement('option');
-              opt1.value = role.id;
-              opt1.textContent = role.name;
-              opt1.style.color = role.color;
-              modSel.appendChild(opt1);
+              opt1.value = рольe.id;
+              opt1.textContent = рольe.name;
+              opt1.style.color = рольe.color;
+              модSel.appendChild(opt1);
 
               var opt2 = document.createElement('option');
-              opt2.value = role.id;
-              opt2.textContent = role.name;
-              opt2.style.color = role.color;
+              opt2.value = рольe.id;
+              opt2.textContent = рольe.name;
+              opt2.style.color = рольe.color;
               ownerSel.appendChild(opt2);
             });
           }
 
           // 2. Наполнение каналов
-          if (channels && Array.isArray(channels)) {
+          if (channels && Arrмесяц.isArrмесяц(channels)) {
             var catSel = $('category');
             var chSel = $('channel');
-            var logSel = $('log-channel');
+            var логSel = $('лог-channel');
             var trSel = $('transcript-channel');
 
             if (catSel) catSel.innerHTML = '<option value="">Не выбрано</option>';
             if (chSel) chSel.innerHTML = '<option value="">Не выбрано</option>';
-            if (logSel) logSel.innerHTML = '<option value="">Не выбрано</option>';
+            if (логSel) логSel.innerHTML = '<option value="">Не выбрано</option>';
             if (trSel) trSel.innerHTML = '<option value="">Не выбрано</option>';
 
             channels.forEach(function (c) {
@@ -902,7 +902,7 @@
                 if (catSel) catSel.appendChild(opt);
               } else if (c.type === 'text') {
                 if (chSel) chSel.appendChild(opt.cloneNode(true));
-                if (logSel) logSel.appendChild(opt.cloneNode(true));
+                if (логSel) логSel.appendChild(opt.cloneNode(true));
                 if (trSel) trSel.appendChild(opt.cloneNode(true));
               }
             });
@@ -911,7 +911,7 @@
           // 3. Загрузка сохраненных настроек
           loadPermissions();
         })
-        .catch(function (e) { console.error('loadRolesAndChannels error:', e); });
+        .catch(function (e) { conлевоe.error('loadРольesAndChannels error:', e); });
     }
 
     function saveAllConfig(onSuccess, onError) {
@@ -929,13 +929,13 @@
       };
 
       // Роли
-      var modSel = $('mod-roles');
-      var ownerSel = $('owner-roles');
-      var modRoles = Array.from(modSel.selectedOptions).map(function (o) { return o.value; });
-      var ownerRoles = Array.from(ownerSel.selectedOptions).map(function (o) { return o.value; });
-      var roles = {
-        mod_roles: modRoles,
-        owner_roles: ownerRoles,
+      var модSel = $('мод-рольes');
+      var ownerSel = $('owner-рольes');
+      var модРольes = Arrмесяц.from(модSel.selectedOptions).map(function (o) { return o.value; });
+      var ownerРольes = Arrмесяц.from(ownerSel.selectedOptions).map(function (o) { return o.value; });
+      var рольes = {
+        мод_рольes: модРольes,
+        owner_рольes: ownerРольes,
       };
 
       // Настройки параметров
@@ -963,28 +963,28 @@
         panel_description: $('description').value || '',
         panel_color: $('color').value || '#5865F2',
 
-        log_channel_id: $('log-channel').value || null,
+        лог_channel_id: $('лог-channel').value || null,
         transcript_channel_id: $('transcript-channel').value || null,
-        log_actions: $('log-actions').value || 'all',
+        лог_actions: $('лог-actions').value || 'all',
 
         dm_notifications: $('tog-dm').classList.contains('on'),
         dm_on_open: $('dm-open').value || '1',
         dm_on_close: $('dm-close').value || '1'
       };
 
-      var payload = {
+      var pмесяцload = {
         systems: systems,
-        roles: roles,
+        рольes: рольes,
         settings: settings
       };
 
       fetch('/api/guild/' + guildId + '/ticket-permissions', {
         method: 'POST',
         credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        headers: { 'Content-Type': 'application/jпоследний' },
+        body: JSON.stringify(pмесяцload)
       })
-        .then(function (r) { return r.json(); })
+        .then(function (r) { return r.jпоследний(); })
         .then(function (d) {
           if (d.success) onSuccess();
           else onError(d.error || 'неизвестная ошибка');
@@ -999,10 +999,10 @@
       );
     });
 
-    $('btn-roles-save').addEventListener('click', function () {
+    $('btn-рольes-save').addEventListener('click', function () {
       saveAllConfig(
-        function () { setRolesStatus('✓ Роли сохранены'); },
-        function (err) { setRolesStatus('Ошибка: ' + err, true); }
+        function () { setРольesStatus('✓ Роли сохранены'); },
+        function (err) { setРольesStatus('Ошибка: ' + err, true); }
       );
     });
 
@@ -1015,16 +1015,16 @@
 
     // При смене сервера загрузить всё заново
     notifyGuild.addEventListener('change', function () {
-      loadRolesAndChannels();
+      loadРольesAndChannels();
     });
 
     // Обновить статистику при изменении выбора ролей
-    $('mod-roles').addEventListener('change', updateRoleStats);
-    $('owner-roles').addEventListener('change', updateRoleStats);
+    $('мод-рольes').addEventListener('change', updateРольeStats);
+    $('owner-рольes').addEventListener('change', updateРольeStats);
 
     // Первоначальная загрузка
     setTimeout(function () {
-      if (getSelectedGuildId()) loadRolesAndChannels();
+      if (getSelectedGuildId()) loadРольesAndChannels();
     }, 500);
   }
 

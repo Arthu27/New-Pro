@@ -1,18 +1,16 @@
 """
-Aether — AntiRaid / Raid Koruması
+Aether — Анти-рейд / Защита от рейдов
 ----------------------------------
-Sürüm: "Gözlemci modu" (read-only).
+Режим: "Наблюдатель" (только чтение).
 
-Davranış:
- * Panelden ayarlanan `data/antiraid_<guild_id>.json` dosyasını canlı как okur.
- * Dosya her değiştiğinde otomatik reload edilir (mtime polling).
- * `join_raid`, `bot_protection`, `age_filter` flag'lerine по davranır.
- * `raid_action` her zaman "alert" kabul edilir: bot kimseyi kick/ban/lockdown YAPMAZ,
- sadece ayarlanan alert каналу (yoksa `mod-log`) embed gönderir.
- * `whitelist` içindeki user_id'ler tüm kontrollerden muaftır.
+Поведение:
+ * Читает файл `data/antiraid_<guild_id>.json` настроенный из панели.
+ * При каждом изменении файла автоматически перезагружается (проверка mtime).
+ * Реагирует на флаги `join_raid`, `bot_protection`, `age_filter`.
+ * `raid_action` всегда считается "alert": бот никого не кикает/банит, только отправляет embed в канал алертов.
+ * Пользователи в `whitelist` освобождены от всех проверок.
 
-Tüm aksiyon kararları paneldeki /antiraid sayfasından делается; bu cog yalnızca
-"kural motoru"dur, icra yetkisi yoktur.
+Все решения принимаются в панели на странице /antiraid; этот ког — только "движок правил".
 """
 import discord
 from discord.ext import commands, tasks
@@ -22,16 +20,11 @@ import json
 import os
 import time
 import logging
-import asyncio
 
 log = logging.getLogger("aether.antiraid")
 
-# 
-# помощник: per-guild config cache (disk + mtime)
-# 
-
 class GuildAntiraidConfig:
-    """Tek bir guild для antiraid ayarlarını diskten okuyan in-memory cache."""
+    """In-memory кэш настроек анти-рейда для одной гильдии, читает с диска."""
 
     DEFAULTS = {
         "join_raid": False,
@@ -40,12 +33,12 @@ class GuildAntiraidConfig:
         "delete_protection": False,
         "age_filter": False,
         "min_age": 5,
-        "join_threshold": 5,        # kaç kişi / kaç секунд = raid
-        "join_window": 10,          # секунд
-        "raid_action": "alert",     # Sadece "alert" — diğerleri YOK sayılır
-        "alert_channel_id": None,   # panelde ayarlanabilir
-        "whitelist": [],            # user_id listesi — muaf
-        "recent_events": [],        # son 20 olay (panelde gösterilir)
+        "join_threshold": 5,
+        "join_window": 10,
+        "raid_action": "alert",
+        "alert_channel_id": None,
+        "whitelist": [],
+        "recent_events": [],
     }
 
     def __init__(self, guild_id: int):
@@ -56,7 +49,7 @@ class GuildAntiraidConfig:
         self.reload()
 
     def reload(self) -> bool:
-        """Diskten oku. Değişiklik yoksa False, değiştiyse True döndürür."""
+        """Читает с диска. Возвращает False если изменений нет, True если изменилось."""
         try:
             if not os.path.exists(self.path):
                 return False
@@ -65,7 +58,6 @@ class GuildAntiraidConfig:
                 return False
             with open(self.path, "r", encoding="utf-8") as f:
                 raw = json.load(f)
-            # bilinmeyen anahtarları da kabul et, eksik olanları default'la doldur
             merged = dict(self.DEFAULTS)
             merged.update(raw or {})
             self.data = merged
@@ -87,7 +79,6 @@ class GuildAntiraidConfig:
         events = self.data.setdefault("recent_events", [])
         events.insert(0, event)
         del events[limit:]
-        # recent_events'i diske yaz ki panel anında görsün
         try:
             with open(self.path, "w", encoding="utf-8") as f:
                 json.dump(self.data, f, indent=2, ensure_ascii=False)
@@ -96,19 +87,13 @@ class GuildAntiraidConfig:
             log.warning("antiraid event persist failed for guild=%s: %s", self.guild_id, e)
 
 
-# 
-# Ana cog
-# 
-
 class AntiRaid(commands.Cog):
-    """Gözlemci modunda AntiRaid — otomatik aksiyon yok, sadece alert."""
+    """Анти-рейд в режиме наблюдателя — никаких авто-действий, только алерты."""
 
     def __init__(self, bot):
         self.bot = bot
         self.configs: dict[int, GuildAntiraidConfig] = {}
-        # join_tracker ayrı tutulur; whitelist kontrolü для
         self.join_tracker: dict[int, list[tuple[float, int]]] = defaultdict(list)
-        # her 5 saniyede bir config dosyalarını проверить et
         self.config_watcher.start()
 
     def cog_unload(self):
@@ -116,8 +101,6 @@ class AntiRaid(commands.Cog):
             self.config_watcher.cancel()
         except Exception:
             pass
-
-    # Per-guild config helper 
 
     def get_config(self, guild_id: int) -> GuildAntiraidConfig:
         cfg = self.configs.get(guild_id)
@@ -128,22 +111,18 @@ class AntiRaid(commands.Cog):
             cfg.reload()
         return cfg
 
-    # Background: mtime polling 
-
     @tasks.loop(seconds=5.0)
     async def config_watcher(self):
-        # tüm izlenen guild'lerin dosyası değişti mi?
         for guild_id in list(self.configs.keys()):
             try:
                 self.configs[guild_id].reload()
             except Exception as e:
                 log.debug("watcher reload error guild=%s: %s", guild_id, e)
-        # data/ dizininde новый oluşmuş antiraid dosyalarını da yakala
         try:
             for name in os.listdir("data"):
                 if not (name.startswith("antiraid_") and name.endswith(".json")):
                     continue
-                if name == "antiraid.json":  # старый tek-dosya formatı, atla
+                if name == "antiraid.json":
                     continue
                 try:
                     gid = int(name[len("antiraid_"):-len(".json")])
@@ -158,12 +137,10 @@ class AntiRaid(commands.Cog):
     async def before_config_watcher(self):
         await self.bot.wait_until_ready()
 
-    # Alert gönderme помощник 
-
     async def _send_alert(self, guild: discord.Guild, cfg: GuildAntiraidConfig,
                           title: str, description: str, fields: list[tuple[str, str]] | None = None,
                           color: discord.Color = discord.Color.orange()):
-        """Alert каналу (yoksa mod-log'a, yoksa owner DM) embed отправить."""
+        """Отправка алерта в канал алертов, иначе в mod-log, иначе в ЛС владельцу."""
         target = None
         cid = cfg.data.get("alert_channel_id")
         if cid:
@@ -174,17 +151,16 @@ class AntiRaid(commands.Cog):
         if target is None:
             target = discord.utils.get(guild.text_channels, name="mod-log")
         if target is None:
-            # son çare: сервер sahibine DM
             try:
                 if guild.owner:
-                    await guild.owner.send(f" **Antiraid alert** (mod-log канал yok): {title}\n{description}")
+                    await guild.owner.send(f"⚠️ **Алерт анти-рейда** (канал mod-log не найден): {title}\n{description}")
             except Exception:
                 pass
             return
 
         embed = discord.Embed(title=title, description=description, color=color,
                               timestamp=discord.utils.utcnow())
-        embed.set_footer(text="Aether AntiRaid — Gözlemci modu (otomatik aksiyon YOK)")
+        embed.set_footer(text="Aether AntiRaid — Режим наблюдения (без авто-действий)")
         for name, value in (fields or []):
             embed.add_field(name=name, value=value, inline=False)
         try:
@@ -192,11 +168,8 @@ class AntiRaid(commands.Cog):
         except Exception as e:
             log.warning("antiraid alert send failed: %s", e)
 
-    # on_member_join 
-
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
-        # bot hesapları ve whitelist muaf
         if member.bot:
             return
         if member.guild is None:
@@ -210,25 +183,23 @@ class AntiRaid(commands.Cog):
         threshold = int(cfg.data.get("join_threshold", 5) or 5)
         window = int(cfg.data.get("join_window", 10) or 10)
 
-        # Tracker очистить
         self.join_tracker[guild_id] = [
             (t, uid) for t, uid in self.join_tracker[guild_id]
             if now - t < window
         ]
         self.join_tracker[guild_id].append((now, member.id))
 
-        # Hesap yaşı kontrolü
         account_age_days = (discord.utils.utcnow() - member.created_at).days
         min_age = int(cfg.data.get("min_age", 5) or 0)
         if cfg.data.get("age_filter") and min_age > 0 and account_age_days < min_age:
             await self._send_alert(
                 member.guild, cfg,
-                title=" Новый hesap katıldı (alert)",
+                title="👶 Новый аккаунт присоединился (алерт)",
                 description=f"{member.mention} присоединился, но аккаунт слишком новый.",
                 fields=[
-                    ("пользователь", f"{member} (`{member.id}`)"),
-                    ("Hesap yaşı", f"{account_age_days} gün (min: {min_age})"),
-                    ("Oluşturulma", member.created_at.strftime("%Y-%m-%d %H:%M UTC")),
+                    ("Пользователь", f"{member} (`{member.id}`)"),
+                    ("Возраст аккаунта", f"{account_age_days} дней (мин: {min_age})"),
+                    ("Создан", member.created_at.strftime("%Y-%m-%d %H:%M UTC")),
                 ],
                 color=discord.Color.yellow(),
             )
@@ -240,21 +211,20 @@ class AntiRaid(commands.Cog):
                 "timestamp": discord.utils.utcnow().isoformat(),
             })
 
-        # Raid kontrolü
         if cfg.data.get("join_raid"):
             count = len(self.join_tracker[guild_id])
             if count >= threshold:
                 await self._send_alert(
                     member.guild, cfg,
-                    title=" Raid benzeri katılım dalgası (alert)",
+                    title="🚨 Волна присоединений похожая на рейд (алерт)",
                     description=(
-                        f"Son {window} saniyede **{count}** kişi katıldı "
-                        f"(eşik: {threshold}). **Otomatik aksiyon devre dışı** — "
-                        f"paneldeki `/antiraid` sayfasından müdahale edebilirsiniz."
+                        f"За последние {window} секунд присоединилось **{count}** человек "
+                        f"(порог: {threshold}). **Авто-действия отключены** — "
+                        f"вы можете вмешаться через страницу `/antiraid` в панели."
                     ),
                     fields=[
-                        ("Eşik", f"{count}/{threshold} kişi / {window}sn"),
-                        ("Son katılan", f"{member} (`{member.id}`)"),
+                        ("Порог", f"{count}/{threshold} чел / {window}с"),
+                        ("Последний", f"{member} (`{member.id}`)"),
                     ],
                     color=discord.Color.dark_red(),
                 )
@@ -266,15 +236,9 @@ class AntiRaid(commands.Cog):
                     "last_user": str(member),
                     "timestamp": discord.utils.utcnow().isoformat(),
                 })
-                # sayaç resetlemesin ki Канал kirliliği olmasın; bir следующий dalgayı da yakalasın
-                # (tracker zaten window dolarsa старый kayıtları otomatik siler)
-
-    # Bot join (bot_protection) 
 
     @commands.Cog.listener()
     async def on_member_update(self, before: discord.Member, after: discord.Member):
-        # Bot eklenmesini burada yakalamak zor; on_member_join zaten yukarıda var.
-        # bot_protection aktifse ve bir bot hesabı katıldıysa, alert ver.
         if not after.bot or before.bot:
             return
         if after.guild is None:
@@ -286,11 +250,11 @@ class AntiRaid(commands.Cog):
             return
         await self._send_alert(
             after.guild, cfg,
-            title=" серверу bot добавлено (alert)",
-            description=f"{after.mention} серверу katıldı. **Otomatik kick devre dışı** — panelden проверить edin.",
+            title="🤖 На сервер добавлен бот (алерт)",
+            description=f"{after.mention} присоединился к серверу. **Авто-кик отключен** — проверьте в панели.",
             fields=[
-                ("Bot", f"{after} (`{after.id}`)"),
-                ("Sahibi", "Bilinmiyor (Если OAuth ise)"),
+                ("Бот", f"{after} (`{after.id}`)"),
+                ("Владелец", "Неизвестно"),
             ],
             color=discord.Color.purple(),
         )
@@ -300,8 +264,6 @@ class AntiRaid(commands.Cog):
             "user_tag": str(after),
             "timestamp": discord.utils.utcnow().isoformat(),
         })
-
-    # Канал toplu silme koruması (delete_protection) 
 
     @commands.Cog.listener()
     async def on_bulk_message_delete(self, messages: list[discord.Message]):
@@ -318,11 +280,11 @@ class AntiRaid(commands.Cog):
         ch = messages[0].channel
         await self._send_alert(
             guild, cfg,
-            title=" Массовая сообщение silme algılandı (alert)",
-            description=f"#{ch.name} в канале **{len(messages)}** сообщение toplu удалено.",
+            title="🗑️ Обнаружено массовое удаление сообщений (алерт)",
+            description=f"В канале #{ch.name} было массово удалено **{len(messages)}** сообщений.",
             fields=[
                 ("Канал", f"#{ch.name} (`{ch.id}`)"),
-                ("сообщение sayısı", str(len(messages))),
+                ("Количество", str(len(messages))),
             ],
             color=discord.Color.dark_grey(),
         )
@@ -333,40 +295,38 @@ class AntiRaid(commands.Cog):
             "timestamp": discord.utils.utcnow().isoformat(),
         })
 
-    # /antiraid slash komutu (Discord сторона) — sadece durumu gösterir 
-
-    @app_commands.command(name="antiraid", description="Antiraid sisteminin anlık durumunu gösterir")
+    @app_commands.command(name="antiraid", description="Показать текущий статус системы анти-рейда")
     @app_commands.checks.has_permissions(administrator=True)
     async def antiraid_status(self, interaction: discord.Interaction):
         cfg = self.get_config(interaction.guild.id)
         d = cfg.data
         e = discord.Embed(
-            title=" Antiraid — Состояние",
+            title="🛡️ Анти-рейд — Состояние",
             color=0x2ECC71 if (d.get("join_raid") or d.get("age_filter") or d.get("bot_protection")) else 0x95A5A6,
         )
         e.description = (
-            "**Gözlemci modu**: bot otomatik kick/ban/lockdown yapmaz, "
-            "sadece alert каналу bildirir.\n"
-            "Tüm Настройки paneldeki `/antiraid` sayfasından делается."
+            "**Режим наблюдения**: бот не делает авто-кик/бан/локдаун, "
+            "только уведомляет в канал алертов.\n"
+            "Все настройки делаются на странице `/antiraid` в панели."
         )
-        e.add_field(name="Raid algılama", value=" Açık" if d.get("join_raid") else " Kapalı", inline=True)
-        e.add_field(name="Hesap yaşı filtresi", value=" Açık" if d.get("age_filter") else " Kapalı", inline=True)
-        e.add_field(name="Bot koruması", value=" Açık" if d.get("bot_protection") else " Kapalı", inline=True)
-        e.add_field(name="Массовая silme koruması", value=" Açık" if d.get("delete_protection") else " Kapalı", inline=True)
-        e.add_field(name="Eşik", value=f"{d.get('join_threshold', 5)} kişi / {d.get('join_window', 10)}sn", inline=True)
-        e.add_field(name="Min hesap yaşı", value=f"{d.get('min_age', 5)} gün", inline=True)
-        e.add_field(name="Whitelist", value=f"{len(d.get('whitelist', []))} kişi", inline=True)
-        e.add_field(name="Alert канал", value=f"<#{d['alert_channel_id']}>" if d.get("alert_channel_id") else "`mod-log` (varsayılan)", inline=True)
-        e.add_field(name="Son olaylar", value=str(len(d.get("recent_events", []))), inline=True)
+        e.add_field(name="Обнаружение рейда", value="✅ Вкл" if d.get("join_raid") else "❌ Выкл", inline=True)
+        e.add_field(name="Фильтр возраста", value="✅ Вкл" if d.get("age_filter") else "❌ Выкл", inline=True)
+        e.add_field(name="Защита от ботов", value="✅ Вкл" if d.get("bot_protection") else "❌ Выкл", inline=True)
+        e.add_field(name="Защита от массового удаления", value="✅ Вкл" if d.get("delete_protection") else "❌ Выкл", inline=True)
+        e.add_field(name="Порог", value=f"{d.get('join_threshold', 5)} чел / {d.get('join_window', 10)}с", inline=True)
+        e.add_field(name="Мин. возраст", value=f"{d.get('min_age', 5)} дней", inline=True)
+        e.add_field(name="Белый список", value=f"{len(d.get('whitelist', []))} чел", inline=True)
+        e.add_field(name="Канал алертов", value=f"<#{d['alert_channel_id']}>" if d.get("alert_channel_id") else "`mod-log` (по умолчанию)", inline=True)
+        e.add_field(name="Последние события", value=str(len(d.get("recent_events", []))), inline=True)
         await interaction.response.send_message(embed=e, ephemeral=True)
 
-    @app_commands.command(name="antiraid-reload", description="Antiraid config dosyasını Сейчас yeniden загрузить")
+    @app_commands.command(name="antiraid-reload", description="Сейчас перезагрузить конфиг анти-рейда с диска")
     @app_commands.checks.has_permissions(administrator=True)
     async def antiraid_reload(self, interaction: discord.Interaction):
         cfg = self.get_config(interaction.guild.id)
         changed = cfg.reload()
         await interaction.response.send_message(
-            f" Config {'değişti, yeniden yüklendi' if changed else 'zaten güncel'}.",
+            f"🔄 Конфиг {'изменился и перезагружен' if changed else 'уже актуален'}.",
             ephemeral=True,
         )
 

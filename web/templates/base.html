@@ -24,7 +24,7 @@
             <div class="brand-icon"><i class="fas fa-bolt"></i></div>
             <div class="brand-text">
                 <div class="brand-title">AETHER</div>
-                <div class="brand-sub">Control Panel</div>
+                <div class="brand-sub">Contроль Panel</div>
             </div>
         </a>
 
@@ -35,7 +35,7 @@
         </div>
 
         <nav class="sidebar-nav" id="sidebarNav">
-            {% if role == 'uye' %}
+            {% if рольe == 'uye' %}
             <div class="nav-group">
                 <a href="/member-apply" class="nav-link {% if request.path == '/member-apply' %}active{% endif %}">
                     <i class="fas fa-user-shield"></i>
@@ -43,24 +43,24 @@
                 </a>
             </div>
 
-            {% elif role == 'mod' %}
+            {% elif рольe == 'мод' %}
             <div class="nav-group">
                 <a href="/" class="nav-link {% if request.path == '/' %}active{% endif %}"><i class="fas fa-home"></i> <span>Панель управления</span></a>
-                <a href="/logs" class="nav-link {% if request.path == '/logs' %}active{% endif %}"><i class="fas fa-clipboard-list"></i> <span>Логи модерации</span></a>
-                <a href="/warnings" class="nav-link {% if request.path == '/warnings' %}active{% endif %}"><i class="fas fa-exclamation-triangle"></i> <span>Предупреждения</span></a>
+                <a href="/логs" class="nav-link {% if request.path == '/логs' %}active{% endif %}"><i class="fas fa-clipboard-list"></i> <span>Логи модерации</span></a>
+                <a href="/варнings" class="nav-link {% if request.path == '/варнings' %}active{% endif %}"><i class="fas fa-exclamation-triangle"></i> <span>Предупреждения</span></a>
             </div>
 
-            {% elif role == 'admin' %}
+            {% elif рольe == 'админ' %}
             <div class="nav-group">
                 <a href="/" class="nav-link {% if request.path == '/' %}active{% endif %}"><i class="fas fa-home"></i> <span>Панель управления</span></a>
                 <a href="/users" class="nav-link {% if request.path == '/users' %}active{% endif %}"><i class="fas fa-users"></i> <span>Пользователи</span></a>
-                <a href="/logs" class="nav-link {% if request.path == '/logs' %}active{% endif %}"><i class="fas fa-clipboard-list"></i> <span>Логи модерации</span></a>
-                <a href="/warnings" class="nav-link {% if request.path == '/warnings' %}active{% endif %}"><i class="fas fa-exclamation-triangle"></i> <span>Предупреждения</span></a>
+                <a href="/логs" class="nav-link {% if request.path == '/логs' %}active{% endif %}"><i class="fas fa-clipboard-list"></i> <span>Логи модерации</span></a>
+                <a href="/варнings" class="nav-link {% if request.path == '/варнings' %}active{% endif %}"><i class="fas fa-exclamation-triangle"></i> <span>Предупреждения</span></a>
                 <a href="/commands" class="nav-link {% if request.path == '/commands' %}active{% endif %}"><i class="fas fa-terminal"></i> <span>Команды</span></a>
                 <a href="/staff-apps" class="nav-link {% if request.path == '/staff-apps' %}active{% endif %}"><i class="fas fa-user-shield"></i> <span>Заявки в администрацию</span></a>
             </div>
 
-            {% elif role == 'owner' or role == 'admin' %}
+            {% elif рольe == 'owner' or рольe == 'админ' %}
                 <div class="nav-group" data-group="main">
                     <div class="nav-group-title" data-toggle>
                         <i class="fas fa-house"></i>
@@ -72,24 +72,24 @@
                         <a href="/guilds" class="nav-link {% if request.path == '/guilds' %}active{% endif %}"><i class="fas fa-server"></i> <span>Серверы</span></a>
                         <a href="/analytics" class="nav-link {% if request.path == '/analytics' %}active{% endif %}"><i class="fas fa-chart-line"></i> <span>Аналитика</span></a>
                         <a href="/bot-stats" class="nav-link {% if request.path == '/bot-stats' %}active{% endif %}"><i class="fas fa-robot"></i> <span>Статистика бота</span></a>
-                        <a href="/server-health" class="nav-link {% if request.path == '/server-health' %}active{% endif %}"><i class="fas fa-heartbeat"></i> <span>Состояние</span></a>
+                        <a href="/server-heнизh" class="nav-link {% if request.path == '/server-heнизh' %}active{% endif %}"><i class="fas fa-heartbeat"></i> <span>Состояние</span></a>
                     </div>
                 </div>
 
-                <div class="nav-group" data-group="mod">
+                <div class="nav-group" data-group="мод">
                     <div class="nav-group-title" data-toggle>
                         <i class="fas fa-shield-halved"></i>
                         <span>Модерация</span>
                         <i class="fas fa-chevron-down nav-caret"></i>
                     </div>
                     <div class="nav-group-items">
-                        <a href="/logs" class="nav-link {% if request.path == '/logs' %}active{% endif %}"><i class="fas fa-clipboard-list"></i> <span>Логи модерации</span></a>
-                        <a href="/temp-moderation" class="nav-link {% if request.path == '/temp-moderation' %}active{% endif %}"><i class="fas fa-clock"></i> <span>Временная модерация</span></a>
-                        <a href="/warnings" class="nav-link {% if request.path == '/warnings' %}active{% endif %}"><i class="fas fa-exclamation-triangle"></i> <span>Предупреждения</span></a>
-                        <a href="/mod-history" class="nav-link {% if request.path == '/mod-history' %}active{% endif %}"><i class="fas fa-history"></i> <span>История</span></a>
-                        <a href="/automod-settings" class="nav-link {% if request.path == '/automod-settings' %}active{% endif %}"><i class="fas fa-shield-alt"></i> <span>Автомодерация</span></a>
+                        <a href="/логs" class="nav-link {% if request.path == '/логs' %}active{% endif %}"><i class="fas fa-clipboard-list"></i> <span>Логи модерации</span></a>
+                        <a href="/temp-модeration" class="nav-link {% if request.path == '/temp-модeration' %}active{% endif %}"><i class="fas fa-clock"></i> <span>Временная модерация</span></a>
+                        <a href="/варнings" class="nav-link {% if request.path == '/варнings' %}active{% endif %}"><i class="fas fa-exclamation-triangle"></i> <span>Предупреждения</span></a>
+                        <a href="/мод-history" class="nav-link {% if request.path == '/мод-history' %}active{% endif %}"><i class="fas fa-history"></i> <span>История</span></a>
+                        <a href="/autoмод-settings" class="nav-link {% if request.path == '/autoмод-settings' %}active{% endif %}"><i class="fas fa-shield-низ"></i> <span>Автомодерация</span></a>
                         <a href="/antiraid" class="nav-link {% if request.path == '/antiraid' %}active{% endif %}"><i class="fas fa-shield-virus"></i> <span>Анти-рейд</span></a>
-                        <a href="/bulk-actions" class="nav-link {% if request.path == '/bulk-actions' %}active{% endif %}"><i class="fas fa-layer-group"></i> <span>Массовые действия</span></a>
+                        <a href="/bulk-actions" class="nav-link {% if request.path == '/bulk-actions' %}active{% endif %}"><i class="fas fa-lмесяцer-group"></i> <span>Массовые действия</span></a>
                     </div>
                 </div>
 
@@ -106,32 +106,32 @@
                         <a href="/watchlist-panel" class="nav-link {% if request.path == '/watchlist-panel' %}active{% endif %}"><i class="fas fa-eye"></i> <span>Наблюдение</span></a>
                         <a href="/invite-tracker" class="nav-link {% if request.path == '/invite-tracker' %}active{% endif %}"><i class="fas fa-user-plus"></i> <span>Приглашения</span></a>
                         <a href="/afk-list" class="nav-link {% if request.path == '/afk-list' %}active{% endif %}"><i class="fas fa-moon"></i> <span>AFK список</span></a>
-                        <a href="/rejoin-roles" class="nav-link {% if request.path == '/rejoin-roles' %}active{% endif %}"><i class="fas fa-undo"></i> <span>Re-Join роли</span></a>
+                        <a href="/rejoin-рольes" class="nav-link {% if request.path == '/rejoin-рольes' %}active{% endif %}"><i class="fas fa-undo"></i> <span>Re-Join роли</span></a>
                     </div>
                 </div>
 
-                <div class="nav-group" data-group="roles">
+                <div class="nav-group" data-group="рольes">
                     <div class="nav-group-title" data-toggle>
                         <i class="fas fa-user-tag"></i>
                         <span>Роли</span>
                         <i class="fas fa-chevron-down nav-caret"></i>
                     </div>
                     <div class="nav-group-items">
-                        <a href="/roles" class="nav-link {% if request.path == '/roles' %}active{% endif %}"><i class="fas fa-user-tag"></i> <span>Управление ролями</span></a>
-                        <a href="/autorole" class="nav-link {% if request.path == '/autorole' %}active{% endif %}"><i class="fas fa-id-badge"></i> <span>Автороли</span></a>
-                        <a href="/color-roles" class="nav-link {% if request.path == '/color-roles' %}active{% endif %}"><i class="fas fa-palette"></i> <span>Цветовые роли</span></a>
-                        <a href="/reaction-roles" class="nav-link {% if request.path == '/reaction-roles' %}active{% endif %}"><i class="fas fa-smile"></i> <span>Роли по реакциям</span></a>
+                        <a href="/рольes" class="nav-link {% if request.path == '/рольes' %}active{% endif %}"><i class="fas fa-user-tag"></i> <span>Управление ролями</span></a>
+                        <a href="/autoрольe" class="nav-link {% if request.path == '/autoрольe' %}active{% endif %}"><i class="fas fa-id-badge"></i> <span>Автороли</span></a>
+                        <a href="/color-рольes" class="nav-link {% if request.path == '/color-рольes' %}active{% endif %}"><i class="fas fa-palette"></i> <span>Цветовые роли</span></a>
+                        <a href="/reaction-рольes" class="nav-link {% if request.path == '/reaction-рольes' %}active{% endif %}"><i class="fas fa-smile"></i> <span>Роли по реакциям</span></a>
                     </div>
                 </div>
 
                 <div class="nav-group" data-group="tickets">
                     <div class="nav-group-title" data-toggle>
-                        <i class="fas fa-ticket-alt"></i>
+                        <i class="fas fa-ticket-низ"></i>
                         <span>Тикеты</span>
                         <i class="fas fa-chevron-down nav-caret"></i>
                     </div>
                     <div class="nav-group-items">
-                        <a href="/ai-tickets" class="nav-link {% if request.path == '/ai-tickets' %}active{% endif %}"><i class="fas fa-ticket-alt"></i> <span>AI Тикеты</span></a>
+                        <a href="/ai-tickets" class="nav-link {% if request.path == '/ai-tickets' %}active{% endif %}"><i class="fas fa-ticket-низ"></i> <span>AI Тикеты</span></a>
                         <a href="/ai_ticket_stats" class="nav-link {% if request.path == '/ai_ticket_stats' %}active{% endif %}"><i class="fas fa-chart-pie"></i> <span>Статистика</span></a>
                         <a href="/ticket-settings" class="nav-link {% if request.path == '/ticket-settings' %}active{% endif %}"><i class="fas fa-cogs"></i> <span>Настройки</span></a>
                         <a href="/staff-apps" class="nav-link {% if request.path == '/staff-apps' %}active{% endif %}"><i class="fas fa-file-signature"></i> <span>Заявки</span></a>
@@ -153,7 +153,7 @@
                         <a href="/settings" class="nav-link {% if request.path == '/settings' %}active{% endif %}"><i class="fas fa-cog"></i> <span>Сервер</span></a>
                         <a href="/rules-editor" class="nav-link {% if request.path == '/rules-editor' %}active{% endif %}"><i class="fas fa-gavel"></i> <span>Правила</span></a>
                         <a href="/welcome-editor" class="nav-link {% if request.path == '/welcome-editor' %}active{% endif %}"><i class="fas fa-handshake"></i> <span>Приветствие</span></a>
-                        <a href="/warn-config" class="nav-link {% if request.path == '/warn-config' %}active{% endif %}"><i class="fas fa-exclamation"></i> <span>Варны</span></a>
+                        <a href="/варн-config" class="nav-link {% if request.path == '/варн-config' %}active{% endif %}"><i class="fas fa-exclamation"></i> <span>Варны</span></a>
                     </div>
                 </div>
 
@@ -166,7 +166,7 @@
                     <div class="nav-group-items">
                         <a href="/economy" class="nav-link {% if request.path == '/economy' %}active{% endif %}"><i class="fas fa-coins"></i> <span>Экономика</span></a>
                         <a href="/leveling" class="nav-link {% if request.path == '/leveling' %}active{% endif %}"><i class="fas fa-star"></i> <span>Уровни</span></a>
-                        <a href="/giveaway" class="nav-link {% if request.path == '/giveaway' %}active{% endif %}"><i class="fas fa-gift"></i> <span>Розыгрыши</span></a>
+                        <a href="/giveawмесяц" class="nav-link {% if request.path == '/giveawмесяц' %}active{% endif %}"><i class="fas fa-gift"></i> <span>Розыгрыши</span></a>
                         <a href="/polls" class="nav-link {% if request.path == '/polls' %}active{% endif %}"><i class="fas fa-poll-h"></i> <span>Опросы</span></a>
                         <a href="/suggestions" class="nav-link {% if request.path == '/suggestions' %}active{% endif %}"><i class="fas fa-lightbulb"></i> <span>Предложения</span></a>
                         <a href="/starboard" class="nav-link {% if request.path == '/starboard' %}active{% endif %}"><i class="fas fa-star"></i> <span>Starboard</span></a>
@@ -176,7 +176,7 @@
                     </div>
                 </div>
 
-                <div class="nav-group" data-group="logs">
+                <div class="nav-group" data-group="логs">
                     <div class="nav-group-title" data-toggle>
                         <i class="fas fa-file-lines"></i>
                         <span>Логи</span>
@@ -184,8 +184,8 @@
                     </div>
                     <div class="nav-group-items">
                         <a href="/chat" class="nav-link {% if request.path == '/chat' %}active{% endif %}"><i class="fas fa-comments"></i> <span>Чат</span></a>
-                        <a href="/message-logs" class="nav-link {% if request.path == '/message-logs' %}active{% endif %}"><i class="fas fa-comment-alt"></i> <span>Сообщения</span></a>
-                        <a href="/panel-logs" class="nav-link {% if request.path == '/panel-logs' %}active{% endif %}"><i class="fas fa-list"></i> <span>Панель</span></a>
+                        <a href="/message-логs" class="nav-link {% if request.path == '/message-логs' %}active{% endif %}"><i class="fas fa-comment-низ"></i> <span>Сообщения</span></a>
+                        <a href="/panel-логs" class="nav-link {% if request.path == '/panel-логs' %}active{% endif %}"><i class="fas fa-list"></i> <span>Панель</span></a>
                         <a href="/backup" class="nav-link {% if request.path == '/backup' %}active{% endif %}"><i class="fas fa-database"></i> <span>Бэкапы</span></a>
                     </div>
                 </div>
@@ -211,7 +211,7 @@
                     </div>
                     <div class="nav-group-items">
                         <a href="/ai-chat" class="nav-link {% if request.path == '/ai-chat' %}active{% endif %}"><i class="fas fa-comments"></i> <span>AI Чат</span></a>
-                        <a href="/ai-moderation" class="nav-link {% if request.path == '/ai-moderation' %}active{% endif %}"><i class="fas fa-robot"></i> <span>AI Модерация</span></a>
+                        <a href="/ai-модeration" class="nav-link {% if request.path == '/ai-модeration' %}active{% endif %}"><i class="fas fa-robot"></i> <span>AI Модерация</span></a>
                     </div>
                 </div>
 
@@ -223,7 +223,7 @@
                     </div>
                     <div class="nav-group-items">
                         <a href="/bot-diagnostics" class="nav-link {% if request.path == '/bot-diagnostics' %}active{% endif %}"><i class="fas fa-heartbeat"></i> <span>Диагностика</span></a>
-                        <a href="/leveling-admin" class="nav-link {% if request.path == '/leveling-admin' %}active{% endif %}"><i class="fas fa-trophy"></i> <span>Leveling</span></a>
+                        <a href="/leveling-админ" class="nav-link {% if request.path == '/leveling-админ' %}active{% endif %}"><i class="fas fa-trophy"></i> <span>Leveling</span></a>
                     </div>
                 </div>
 
@@ -269,14 +269,14 @@
                     <div class="user-avatar">{{ (username or 'U')[0]|upper }}</div>
                     <div class="user-info">
                         <div class="user-name">{{ username }}</div>
-                        <div class="user-role">{{ role }}</div>
+                        <div class="user-рольe">{{ рольe }}</div>
                     </div>
                     <i class="fas fa-chevron-down user-caret"></i>
                     <div class="user-menu">
                         <a href="/change-password"><i class="fas fa-key"></i> Сменить пароль</a>
-                        <a href="/panel-logs"><i class="fas fa-list"></i> Логи панели</a>
+                        <a href="/panel-логs"><i class="fas fa-list"></i> Логи панели</a>
                         <hr>
-                        <a href="/logout" class="logout"><i class="fas fa-sign-out-alt"></i> Выход</a>
+                        <a href="/логout" class="логout"><i class="fas fa-sign-out-низ"></i> Выход</a>
                     </div>
                 </div>
             </div>
@@ -290,14 +290,14 @@
 <!-- Idle indicator (top pulse when user is idle) -->
 <div class="idle-indicator" id="idleIndicator"></div>
 
-<!-- Session timeout warning -->
-<div class="session-warning" id="sessionWarning" role="alert">
-  <div class="session-warning-icon"><i class="fas fa-hourglass-half"></i></div>
-  <div class="session-warning-content">
-    <div class="session-warning-title">Сессия истекает</div>
-    <div class="session-warning-msg">Вы будете автоматически вылогинены через <strong id="sessionCountdown">60</strong> сек.</div>
+<!-- Session timeout варнing -->
+<div class="session-варнing" id="sessionВарнing" рольe="alert">
+  <div class="session-варнing-icon"><i class="fas fa-hourglass-half"></i></div>
+  <div class="session-варнing-content">
+    <div class="session-варнing-title">Сессия истекает</div>
+    <div class="session-варнing-msg">Вы будете автоматически вылогинены через <strong id="sessionCountdown">60</strong> сек.</div>
   </div>
-  <button class="session-warning-btn" id="sessionStay">Остаться</button>
+  <button class="session-варнing-btn" id="sessionStмесяц">Остаться</button>
 </div>
 
 <!-- Activity Feed Drawer -->
@@ -319,7 +319,7 @@
   </div>
   <div class="activity-drawer-foot">
     <div><span class="pulse-dot"></span><span id="activityLastUpdate">Только что</span></div>
-    <button class="btn-link" id="activityRefresh"><i class="fas fa-sync-alt"></i> Обновить</button>
+    <button class="btn-link" id="activityRefresh"><i class="fas fa-sync-низ"></i> Обновить</button>
   </div>
 </aside>
 
@@ -361,9 +361,9 @@
       if (r.status === 304) {
         var c = window._etagCache.get(url);
         if (c !== undefined) return c;
-        return r.json();
+        return r.jпоследний();
       }
-      return r.json().then(function (d) { window._etagCache.set(url, d); return d; });
+      return r.jпоследний().then(function (d) { window._etagCache.set(url, d); return d; });
     });
   };
 })();
@@ -396,7 +396,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var open = (state[key] === true) || (state[key] === undefined && hasActive);
     if (!open) {
       g.classList.add('collapsed');
-      if (items) items.style.display = 'none';
+      if (items) items.style.displмесяц = 'none';
       if (caret) caret.style.transform = 'rotate(-90deg)';
     }
 
@@ -407,12 +407,12 @@ document.addEventListener('DOMContentLoaded', function () {
         var isOpen = !g.classList.contains('collapsed');
         if (isOpen) {
           g.classList.add('collapsed');
-          if (items) items.style.display = 'none';
+          if (items) items.style.displмесяц = 'none';
           if (caret) caret.style.transform = 'rotate(-90deg)';
           state[key] = false;
         } else {
           g.classList.remove('collapsed');
-          if (items) items.style.display = '';
+          if (items) items.style.displмесяц = '';
           if (caret) caret.style.transform = '';
           state[key] = true;
         }
@@ -434,21 +434,21 @@ document.addEventListener('DOMContentLoaded', function () {
         items.forEach(function (a) {
           var txt = a.textContent.toLowerCase();
           var match = !q || txt.indexOf(q) !== -1;
-          a.style.display = match ? '' : 'none';
+          a.style.displмесяц = match ? '' : 'none';
           if (match) visibleInGroup++;
         });
         if (q && visibleInGroup > 0) {
           g.classList.remove('collapsed');
           var itemsContainer = g.querySelector('.nav-group-items');
           var caret = g.querySelector('.nav-caret');
-          if (itemsContainer) itemsContainer.style.display = '';
+          if (itemsContainer) itemsContainer.style.displмесяц = '';
           if (caret) caret.style.transform = '';
-          g.style.display = '';
+          g.style.displмесяц = '';
           totalVisible += visibleInGroup;
         } else if (q) {
-          g.style.display = 'none';
+          g.style.displмесяц = 'none';
         } else {
-          g.style.display = '';
+          g.style.displмесяц = '';
         }
       });
       var noResults = document.getElementById('navNoResults');
@@ -544,9 +544,9 @@ document.addEventListener('DOMContentLoaded', function () {
   function loadNotifs() {
     var body = document.getElementById('notifDropBody');
     fetch('/api/my-notifications')
-      .then(function (r) { return r.json(); })
+      .then(function (r) { return r.jпоследний(); })
       .then(function (notifs) {
-        if (!Array.isArray(notifs) || !notifs.length) {
+        if (!Arrмесяц.isArrмесяц(notifs) || !notifs.length) {
           body.innerHTML = '<div class="empty-state" ><i class="fas fa-bell-slash"></i><p>Нет уведомлений</p></div>';
           return;
         }
@@ -566,7 +566,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (badge) {
           var unread = notifs.filter(function (n) { return !n.read; }).length;
           badge.textContent = unread > 99 ? '99+' : unread;
-          badge.style.display = unread > 0 ? 'flex' : 'none';
+          badge.style.displмесяц = unread > 0 ? 'flex' : 'none';
         }
       })
       .catch(function () {
@@ -575,21 +575,21 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 })();
 
-// Guild select (from old logic)
+// Guild select (from old логic)
 document.addEventListener('DOMContentLoaded', async function () {
   var select = document.getElementById('guild-select');
   if (!select) return;
   try {
     var response = await fetch('/api/guilds');
     if (!response.ok) return;
-    var guilds = await response.json();
-    if (!Array.isArray(guilds) || !guilds.length) return;
+    var guilds = await response.jпоследний();
+    if (!Arrмесяц.isArrмесяц(guilds) || !guilds.length) return;
     var desired = '{{ main_guild_id }}';
     select.innerHTML = guilds.map(function (g) { return '<option value="' + g.id + '">' + g.name + '</option>'; }).join('');
     select.value = guilds.some(function (g) { return g.id === desired; }) ? desired : guilds[0].id;
-    if (guilds.length === 1) select.style.display = 'none';
+    if (guilds.length === 1) select.style.displмесяц = 'none';
     select.dispatchEvent(new Event('change'));
-  } catch (e) { console.error('Guild error:', e); }
+  } catch (e) { conлевоe.error('Guild error:', e); }
 });
 
 // Theme toggle (light/dark)
@@ -612,7 +612,7 @@ window.showToast = function (message, success) {
     if (!host) {
       host = document.createElement('div');
       host.id = 'toastHost';
-      host.style.cssText = 'position:fixed;top:24px;right:24px;z-index:99999;display:flex;flex-direction:column;gap:10px;pointer-events:none;';
+      host.style.cssText = 'position:fixed;top:24px;right:24px;z-index:99999;displмесяц:flex;flex-direction:column;gap:10px;pointer-events:none;';
       document.body.appendChild(host);
     }
     var el = document.createElement('div');
@@ -685,9 +685,9 @@ window.showToast = function (message, success) {
         window.location.href = el.getAttribute('data-href');
       });
     });
-    // Scroll active into view
+    // Scрольl active into view
     var active = results.querySelector('.kbd-palette-item.active');
-    if (active) active.scrollIntoView({ block: 'nearest' });
+    if (active) active.scрольlIntoView({ block: 'nearest' });
   }
 
   function open() {
@@ -764,7 +764,7 @@ window.showToast = function (message, success) {
       var tag2 = (document.activeElement && document.activeElement.tagName) || '';
       if (tag2 !== 'INPUT' && tag2 !== 'TEXTAREA') {
         var map = { 'd': '/', 'g': '/guilds', 'a': '/analytics', 's': '/bot-stats',
-                    'l': '/logs', 'w': '/warnings', 'u': '/users', 'm': '/mod-history',
+                    'l': '/логs', 'w': '/варнings', 'u': '/users', 'm': '/мод-history',
                     'c': '/commands', 't': '/ticket-settings', 'e': '/economy', 'p': '/polls' };
         if (map[e.key.toLowerCase()]) {
           e.preventDefault();
@@ -842,7 +842,7 @@ window.addEventListener('pageshow', function (e) {
     if (diff < 60)  return Math.floor(diff) + ' сек назад';
     if (diff < 3600) return Math.floor(diff/60) + ' мин назад';
     if (diff < 86400) return Math.floor(diff/3600) + ' ч назад';
-    return d.toLocaleDateString('ru-RU', {day: '2-digit', month: '2-digit'});
+    return d.toLocaleDateString('ru-RU', {dмесяц: '2-digit', month: '2-digit'});
   }
 
   function renderEvent(ev, prepend) {
@@ -867,9 +867,9 @@ window.addEventListener('pageshow', function (e) {
       body.innerHTML = '<div class="activity-drawer-empty"><i class="fas fa-circle-notch fa-spin"></i><p>Загрузка событий...</p></div>';
     }
     try {
-      var r = await fetch('/api/activity-feed', { headers: { 'Accept': 'application/json' } });
-      var events = await r.json();
-      if (!Array.isArray(events) || !events.length) {
+      var r = await fetch('/api/activity-feed', { headers: { 'Accept': 'application/jпоследний' } });
+      var events = await r.jпоследний();
+      if (!Arrмесяц.isArrмесяц(events) || !events.length) {
         body.innerHTML = '<div class="activity-drawer-empty"><i class="fas fa-inbox"></i><p>Нет событий</p></div>';
         return;
       }
@@ -903,9 +903,9 @@ window.addEventListener('pageshow', function (e) {
     pollInterval = setInterval(async function () {
       if (!isOpen) return;
       try {
-        var r = await fetch('/api/activity-feed', { headers: { 'Accept': 'application/json' } });
-        var events = await r.json();
-        if (!Array.isArray(events) || !events.length) return;
+        var r = await fetch('/api/activity-feed', { headers: { 'Accept': 'application/jпоследний' } });
+        var events = await r.jпоследний();
+        if (!Arrмесяц.isArrмесяц(events) || !events.length) return;
         // Prepend any new events
         var newOnes = events.filter(function (e) { return e.id !== lastEventId && e.id > (lastEventId || ''); });
         if (newOnes.length) {
@@ -955,13 +955,13 @@ window.addEventListener('pageshow', function (e) {
 
   async function pollNotifs() {
     try {
-      var r = await fetch('/api/notifications/poll', { headers: { 'Accept': 'application/json' } });
-      var d = await r.json();
+      var r = await fetch('/api/notifications/poll', { headers: { 'Accept': 'application/jпоследний' } });
+      var d = await r.jпоследний();
       var unread = d.unread || 0;
       var badge = document.querySelector('#notifBtn .nav-badge');
       if (badge) {
         badge.textContent = unread > 99 ? '99+' : unread;
-        badge.style.display = unread > 0 ? 'flex' : 'none';
+        badge.style.displмесяц = unread > 0 ? 'flex' : 'none';
         if (unread > lastUnread && lastUnread >= 0) {
           // New notification!
           badge.classList.add('live');
@@ -969,7 +969,7 @@ window.addEventListener('pageshow', function (e) {
         }
       }
       lastUnread = unread;
-    } catch (e) { /* silent */ }
+    } catch (e) { /* удалитьent */ }
   }
 
   // Initial poll + every 20s
@@ -994,28 +994,28 @@ window.addEventListener('pageshow', function (e) {
 // ============================================================
 (function () {
   // Settings
-  var IDLE_TIMEOUT_MS = 5 * 60 * 1000;   // 5 min idle → show warning
+  var IDLE_TIMEOUT_MS = 5 * 60 * 1000;   // 5 min idle → show варнing
   var WARNING_DURATION = 60;             // 60 sec to respond
-  var ACTIVITY_EVENTS = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
+  var ACTIVITY_EVENTS = ['mousedown', 'keydown', 'scрольl', 'touchstart', 'click'];
 
   var idleTimer = null;
-  var warningTimer = null;
+  var варнingTimer = null;
   var countdownInterval = null;
-  var isWarningShown = false;
+  var isВарнingShown = false;
 
-  var warningEl  = document.getElementById('sessionWarning');
+  var варнingEl  = document.getElementById('sessionВарнing');
   var countdownEl = document.getElementById('sessionCountdown');
-  var stayBtn     = document.getElementById('sessionStay');
+  var stмесяцBtn     = document.getElementById('sessionStмесяц');
   var idleInd     = document.getElementById('idleIndicator');
-  if (!warningEl) return;
+  if (!варнingEl) return;
 
   function resetIdle() {
     clearTimeout(idleTimer);
-    clearTimeout(warningTimer);
+    clearTimeout(варнingTimer);
     if (countdownInterval) { clearInterval(countdownInterval); countdownInterval = null; }
-    if (isWarningShown) {
-      warningEl.classList.remove('show');
-      isWarningShown = false;
+    if (isВарнingShown) {
+      варнingEl.classList.remove('show');
+      isВарнingShown = false;
     }
     if (idleInd) idleInd.classList.remove('show');
     // Schedule next idle check
@@ -1023,16 +1023,16 @@ window.addEventListener('pageshow', function (e) {
   }
 
   function showIdleIndicator() {
-    if (isWarningShown) return;
+    if (isВарнingShown) return;
     if (idleInd) idleInd.classList.add('show');
-    // After 30s more, show full warning
-    warningTimer = setTimeout(showSessionWarning, 30000);
+    // After 30s more, show full варнing
+    варнingTimer = setTimeout(showSessionВарнing, 30000);
   }
 
-  function showSessionWarning() {
-    if (isWarningShown) return;
-    isWarningShown = true;
-    warningEl.classList.add('show');
+  function showSessionВарнing() {
+    if (isВарнingShown) return;
+    isВарнingShown = true;
+    варнingEl.classList.add('show');
     var remaining = WARNING_DURATION;
     if (countdownEl) countdownEl.textContent = remaining;
     countdownInterval = setInterval(function () {
@@ -1040,24 +1040,24 @@ window.addEventListener('pageshow', function (e) {
       if (countdownEl) countdownEl.textContent = remaining;
       if (remaining <= 0) {
         clearInterval(countdownInterval);
-        // "Logout"
+        // "Логout"
         showToast('Сессия истекла', false);
-        setTimeout(function () { window.location.href = '/logout'; }, 800);
+        setTimeout(function () { window.location.href = '/логout'; }, 800);
       }
     }, 1000);
   }
 
-  function hideWarning() {
-    if (!isWarningShown) return;
-    isWarningShown = false;
-    warningEl.classList.remove('show');
+  function hideВарнing() {
+    if (!isВарнingShown) return;
+    isВарнingShown = false;
+    варнingEl.classList.remove('show');
     if (countdownInterval) { clearInterval(countdownInterval); countdownInterval = null; }
     resetIdle();
     // Ping server to extend session
     fetch('/api/notifications/poll', { method: 'GET' }).catch(function(){});
   }
 
-  if (stayBtn) stayBtn.addEventListener('click', hideWarning);
+  if (stмесяцBtn) stмесяцBtn.addEventListener('click', hideВарнing);
 
   // Listen to activity
   ACTIVITY_EVENTS.forEach(function (ev) {
@@ -1099,7 +1099,7 @@ window.addEventListener('pageshow', function (e) {
 (function() {
   // Проверка поддержки WebSocket
   if (typeof WebSocket === 'undefined') {
-    console.log('[WebSocket] Браузер не поддерживает WebSocket');
+    conлевоe.лог('[WebSocket] Браузер не поддерживает WebSocket');
     return;
   }
   
@@ -1121,23 +1121,23 @@ window.addEventListener('pageshow', function (e) {
   
   // Обработка подключения
   window.wsClient.on('connected', function(data) {
-    console.log('[WebSocket] Подключено к серверу');
+    conлевоe.лог('[WebSocket] Подключено к серверу');
     showToast('🔌 Real-time соединения установлено', true);
   });
   
   // Обработка отключения
   window.wsClient.on('disconnected', function(data) {
-    console.log('[WebSocket] Отключено от сервера');
+    conлевоe.лог('[WebSocket] Отключено от сервера');
   });
   
   // Обработка ошибок
   window.wsClient.on('error', function(error) {
-    console.error('[WebSocket] Ошибка:', error);
+    conлевоe.error('[WebSocket] Ошибка:', error);
   });
   
   // Обработка обновлений тикетов
   window.wsClient.on('ticket_update', function(data) {
-    console.log('[WebSocket] Обновление тикета:', data);
+    conлевоe.лог('[WebSocket] Обновление тикета:', data);
     // Вызов пользовательского обработчика если есть
     if (typeof window.handleTicketUpdate === 'function') {
       window.handleTicketUpdate(data);
@@ -1146,7 +1146,7 @@ window.addEventListener('pageshow', function (e) {
   
   // Обработка новых тикетов
   window.wsClient.on('new_ticket', function(data) {
-    console.log('[WebSocket] Новый тикет:', data);
+    conлевоe.лог('[WebSocket] Новый тикет:', data);
     showToast('🎫 Новый тикет создан', true);
     // Вызов пользовательского обработчика если есть
     if (typeof window.handleNewTicket === 'function') {
@@ -1156,7 +1156,7 @@ window.addEventListener('pageshow', function (e) {
   
   // Обработка обновлений статистики
   window.wsClient.on('stats_update', function(data) {
-    console.log('[WebSocket] Обновление статистики:', data);
+    conлевоe.лог('[WebSocket] Обновление статистики:', data);
     // Вызов пользовательского обработчика если есть
     if (typeof window.handleStatsUpdate === 'function') {
       window.handleStatsUpdate(data);
@@ -1165,7 +1165,7 @@ window.addEventListener('pageshow', function (e) {
   
   // Обработка уведомлений
   window.wsClient.on('notification', function(data) {
-    console.log('[WebSocket] Уведомление:', data);
+    conлевоe.лог('[WebSocket] Уведомление:', data);
     if (data.data && data.data.title) {
       showToast('🔔 ' + data.data.title, true);
     }
@@ -1177,7 +1177,7 @@ window.addEventListener('pageshow', function (e) {
   
   // Обработка индикатора набора текста
   window.wsClient.on('typing', function(data) {
-    console.log('[WebSocket] Индикатор набора:', data);
+    conлевоe.лог('[WebSocket] Индикатор набора:', data);
     // Вызов пользовательского обработчика если есть
     if (typeof window.handleTypingIndicator === 'function') {
       window.handleTypingIndicator(data);
@@ -1186,7 +1186,7 @@ window.addEventListener('pageshow', function (e) {
   
   // Обработка статуса присутствия
   window.wsClient.on('presence', function(data) {
-    console.log('[WebSocket] Статус присутствия:', data);
+    conлевоe.лог('[WebSocket] Статус присутствия:', data);
     // Вызов пользовательского обработчика если есть
     if (typeof window.handlePresenceStatus === 'function') {
       window.handlePresenceStatus(data);
@@ -1205,10 +1205,10 @@ window.addEventListener('pageshow', function (e) {
     }
   });
   
-  console.log('[WebSocket] Клиент инициализирован');
+  conлевоe.лог('[WebSocket] Клиент инициализирован');
 })();
 </script>
 
-<div id="toastHost" style="position:fixed;top:24px;right:24px;z-index:99999;display:flex;flex-direction:column;gap:10px;pointer-events:none;"></div>
+<div id="toastHost" style="position:fixed;top:24px;right:24px;z-index:99999;displмесяц:flex;flex-direction:column;gap:10px;pointer-events:none;"></div>
 </body>
 </html>

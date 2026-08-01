@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-PASSWORD CRACKER PRO - Parola Kırma Aramacı
-⚠️  ТОЛЬКО kendi parolalarını test etmek для!
+PASSWORD CRACKER PRO - Paрольa Kыrma Aramacы
+⚠️  ТОЛЬКО kendi paрольalarыnы test etmek для!
 """
 
 import hashlib
@@ -13,7 +13,7 @@ import os
 from datetime import datetime
 from colorama import init, Fore, Style
 
-# Colorama'yı запустить
+# Colorama'yы запустить
 init(autoreset=True)
 
 class PasswordCracker:
@@ -21,22 +21,22 @@ class PasswordCracker:
         self.results = []
         self.start_time = None
         
-    def print_banner(self):
-        """Program banner'ını показать"""
-        banner = f"""
+    def print_банner(self):
+        """Program банner'ыnы показать"""
+        банner = f"""
 {Fore.CYAN}{Style.BRIGHT}
 ╔══════════════════════════════════════════════════════════╗
 ║         PASSWORD CRACKER PRO - ПАРОЛЬ KIRMA ARACI         ║
-║         ⚠️  ТОЛЬКО KENDİ ПАРОЛЬ TEST ET!           ║
+║         ⚠️  ТОЛЬКО KENDИ ПАРОЛЬ TEST ET!           ║
 ╚══════════════════════════════════════════════════════════╝{Style.RESET_ALL}
 
-{Fore.YELLOW}ПРЕДУПРЕЖДЕНИЕ: Başkalarının parolalarını kırmaya работать YASA DIŞIDIR!
-        Только kendi parolalarınızi или izin verilen test parolalarını kırın!{Style.RESET_ALL}
+{Fore.YELLOW}ПРЕДУПРЕЖДЕНИЕ: Другойlarыnыn paрольalarыnы kыrmaya работать YASA DIШIDIR!
+        Только kendi paрольalarыnыzi или izin verilen test paрольalarыnы kыrыn!{Style.RESET_ALL}
 """
-        print(banner)
+        print(банner)
     
     def get_hash_type(self, hash_value):
-        """Hash türünü определить"""
+        """Hash типюnю определить"""
         hash_length = len(hash_value)
         
         hash_types = {
@@ -54,7 +54,7 @@ class PasswordCracker:
         return hash_types.get(hash_length, "Bilinmeyen")
     
     def create_hash(self, password, hash_type="md5"):
-        """Paroladen hash создать"""
+        """Paрольимяen hash создать"""
         password = password.encode('utf-8')
         
         hash_functions = {
@@ -70,8 +70,8 @@ class PasswordCracker:
             return hashlib.md5(password).hexdigest()
     
     def brute_force_attack(self, target_hash, max_length=4, charset=None):
-        """Brute Force saldırısı"""
-        print(f"{Fore.BLUE}[*] Brute Force saldırısı запуск...{Style.RESET_ALL}")
+        """Brute Force saldыrыsы"""
+        print(f"{Fore.BLUE}[*] Brute Force saldыrыsы запуск...{Style.RESET_ALL}")
         print(f"{Fore.BLUE}[*] Maksimum uzunluk: {max_length}{Style.RESET_ALL}")
         
         if charset is None:
@@ -81,7 +81,7 @@ class PasswordCracker:
         found = False
         
         for length in range(1, max_length + 1):
-            print(f"{Fore.CYAN}[*] {length} karakterli parolaler deneniyor...{Style.RESET_ALL}")
+            print(f"{Fore.CYAN}[*] {length} karakterli paрольaler deneniyor...{Style.RESET_ALL}")
             
             for combo in itertools.product(charset, repeat=length):
                 password = ''.join(combo)
@@ -89,30 +89,30 @@ class PasswordCracker:
                 
                 # Каждый 10000 denemede bir ilerleme показать
                 if attempts % 10000 == 0:
-                    print(f"{Fore.YELLOW}[*] {attempts} deneme yapıldı...{Style.RESET_ALL}")
+                    print(f"{Fore.YELLOW}[*] {attempts} deneme yapыldы...{Style.RESET_ALL}")
                 
                 # Hash'i hesapla ve приветствие
                 test_hash = hashlib.md5(password.encode()).hexdigest()
                 
                 if test_hash == target_hash:
                     print(f"{Fore.GREEN}[+] ПАРОЛЬ НАЙДЕНО!{Style.RESET_ALL}")
-                    print(f"{Fore.GREEN}[+] Parola: {password}{Style.RESET_ALL}")
+                    print(f"{Fore.GREEN}[+] Paрольa: {password}{Style.RESET_ALL}")
                     print(f"{Fore.GREEN}[+] Deneme количество: {attempts}{Style.RESET_ALL}")
                     found = True
                     return password, attempts
                 
-                # Время контроль (очень uzun sürmesin)
+                # Время контроль (очень uzun sюrmesin)
                 if time.time() - self.start_time > 300:  # 5 dakika
                     print(f"{Fore.YELLOW}[!] 5 dakika doldu, brute force durduruluyor...{Style.RESET_ALL}")
                     return None, attempts
         
         if not found:
-            print(f"{Fore.RED}[-] Parola не найдено (max {max_length} karakter){Style.RESET_ALL}")
+            print(f"{Fore.RED}[-] Paрольa не найдено (max {max_length} karakter){Style.RESET_ALL}")
             return None, attempts
     
     def dictionary_attack(self, target_hash, wordlist_path="wordlists/turkish_passwords.txt"):
-        """Dictionary saldırısı"""
-        print(f"{Fore.BLUE}[*] Dictionary saldırısı запуск...{Style.RESET_ALL}")
+        """Dictionary saldыrыsы"""
+        print(f"{Fore.BLUE}[*] Dictionary saldыrыsы запуск...{Style.RESET_ALL}")
         
         if not os.path.exists(wordlist_path):
             print(f"{Fore.RED}[-] Wordlist не найдено: {wordlist_path}{Style.RESET_ALL}")
@@ -134,14 +134,14 @@ class PasswordCracker:
                     
                     # Каждый 1000 denemede bir ilerleme показать
                     if attempts % 1000 == 0:
-                        print(f"{Fore.YELLOW}[*] {attempts} deneme yapıldı...{Style.RESET_ALL}")
+                        print(f"{Fore.YELLOW}[*] {attempts} deneme yapыldы...{Style.RESET_ALL}")
                     
                     # Hash'i hesapla
                     test_hash = hashlib.md5(password.encode()).hexdigest()
                     
                     if test_hash == target_hash:
                         print(f"{Fore.GREEN}[+] ПАРОЛЬ НАЙДЕНО!{Style.RESET_ALL}")
-                        print(f"{Fore.GREEN}[+] Parola: {password}{Style.RESET_ALL}")
+                        print(f"{Fore.GREEN}[+] Paрольa: {password}{Style.RESET_ALL}")
                         print(f"{Fore.GREEN}[+] Deneme количество: {attempts}{Style.RESET_ALL}")
                         found = True
                         return password, attempts
@@ -155,17 +155,17 @@ class PasswordCracker:
             print(f"{Fore.RED}[-] Wordlist okuma ошибки: {e}{Style.RESET_ALL}")
         
         if not found:
-            print(f"{Fore.RED}[-] Parola не найдено ({attempts} deneme){Style.RESET_ALL}")
+            print(f"{Fore.RED}[-] Paрольa не найдено ({attempts} deneme){Style.RESET_ALL}")
             return None, attempts
     
     def create_sample_wordlist(self):
         """Пример wordlist создать"""
-        os.makedirs("wordlists", exist_ok=True)
+        os.maкотrs("wordlists", exist_ok=True)
         
         common_passwords = [
             "123456", "password", "12345678", "qwerty", "12345",
             "123456789", "letmein", "1234567", "football", "iloveyou",
-            "admin", "welcome", "monkey", "login", "abc123",
+            "админ", "welcome", "monkey", "логin", "abc123",
             "starwars", "123123", "dragon", "passw0rd", "master",
             "hello", "freedom", "whatever", "qazwsx", "trustno1",
             "654321", "jordan23", "harley", "password1", "1234",
@@ -177,13 +177,13 @@ class PasswordCracker:
             "password123", "zaq12wsx", "baseball", "1qaz2wsx", "qwertyuiop"
         ]
         
-        # Русский parolaler add
+        # Русский paрольaler имяd
         turkish_passwords = [
-            "parola", "parolea", "123456", "ankara", "istanbul",
-            "izmir", "adana", "mersin", "türkiye", "mustafa",
-            "ahmet", "mehmet", "ayşe", "fatma", "ali",
+            "paрольa", "paрольea", "123456", "ankara", "istanbul",
+            "izmir", "имяana", "mersin", "типkiye", "mustafa",
+            "ahmet", "mehmet", "ayшe", "fatma", "ali",
             "veli", "49numara", "1903", "1907", "galatasaray",
-            "fenerbahçe", "beşiktaş", "trabzonspor", "bjk1903", "fb1907",
+            "fenerbahчe", "beшikкамень", "trabzonspor", "bjk1903", "fb1907",
             "gs1905", "ts1967", "ankara06", "istanbul34", "izmir35"
         ]
         
@@ -194,21 +194,21 @@ class PasswordCracker:
         print(f"{Fore.GREEN}[+] Пример wordlist создано: wordlists/sample_passwords.txt{Style.RESET_ALL}")
     
     def hybrid_attack(self, target_hash, wordlist_path, rules=None):
-        """Hybrid saldırısı (dictionary + brute force)"""
-        print(f"{Fore.BLUE}[*] Hybrid saldırısı запуск...{Style.RESET_ALL}")
+        """Hybrid saldыrыsы (dictionary + brute force)"""
+        print(f"{Fore.BLUE}[*] Hybrid saldыrыsы запуск...{Style.RESET_ALL}")
         
         if rules is None:
             rules = [
                 lambda x: x,                    # Orijinal
-                lambda x: x + "123",           # В конецuna 123 add
-                lambda x: x + "!",             # В конецuna ! add
-                lambda x: "123" + x,           # Başına 123 add
+                lambda x: x + "123",           # В конецuna 123 имяd
+                lambda x: x + "!",             # В конецuna ! имяd
+                lambda x: "123" + x,           # Baшыna 123 имяd
                 lambda x: x.upper(),           # Большой harf
                 lambda x: x.lower(),           # Маленький harf
                 lambda x: x.capitalize(),      # Ilk harf большой
                 lambda x: x[::-1],             # Ters преобразовать
-                lambda x: x + "2024",          # В конецuna yıl add
-                lambda x: x + "2025"           # В конецuna gelecek yıl add
+                lambda x: x + "2024",          # В конецuna yыl имяd
+                lambda x: x + "2025"           # В конецuna gelecek yыl имяd
             ]
         
         attempts = 0
@@ -227,13 +227,13 @@ class PasswordCracker:
                             attempts += 1
                             
                             if attempts % 1000 == 0:
-                                print(f"{Fore.YELLOW}[*] {attempts} deneme yapıldı...{Style.RESET_ALL}")
+                                print(f"{Fore.YELLOW}[*] {attempts} deneme yapыldы...{Style.RESET_ALL}")
                             
                             test_hash = hashlib.md5(password.encode()).hexdigest()
                             
                             if test_hash == target_hash:
                                 print(f"{Fore.GREEN}[+] ПАРОЛЬ НАЙДЕНО!{Style.RESET_ALL}")
-                                print(f"{Fore.GREEN}[+] Parola: {password}{Style.RESET_ALL}")
+                                print(f"{Fore.GREEN}[+] Paрольa: {password}{Style.RESET_ALL}")
                                 print(f"{Fore.GREEN}[+] Правило: {rule.__name__ if hasattr(rule, '__name__') else 'Custom'}{Style.RESET_ALL}")
                                 found = True
                                 return password, attempts
@@ -246,14 +246,14 @@ class PasswordCracker:
                             continue
         
         except Exception as e:
-            print(f"{Fore.RED}[-] Hybrid saldırı ошибки: {e}{Style.RESET_ALL}")
+            print(f"{Fore.RED}[-] Hybrid saldыrы ошибки: {e}{Style.RESET_ALL}")
         
         if not found:
-            print(f"{Fore.RED}[-] Parola не найдено ({attempts} deneme){Style.RESET_ALL}")
+            print(f"{Fore.RED}[-] Paрольa не найдено ({attempts} deneme){Style.RESET_ALL}")
             return None, attempts
     
     def save_result(self, target_hash, password, method, attempts, time_taken):
-        """В конецuçu сохранить"""
+        """В конецuчu сохранить"""
         result = {
             "timestamp": datetime.now().isoformat(),
             "target_hash": target_hash,
@@ -266,8 +266,8 @@ class PasswordCracker:
         
         self.results.append(result)
         
-        # JSON dosyasına сохранить
-        os.makedirs("results", exist_ok=True)
+        # JSON файлna сохранить
+        os.maкотrs("results", exist_ok=True)
         filename = f"results/crack_result_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
         
         with open(filename, 'w', encoding='utf-8') as f:
@@ -275,21 +275,21 @@ class PasswordCracker:
         
         print(f"{Fore.GREEN}[+] результат сохранено: {filename}{Style.RESET_ALL}")
         
-        # Ekrana da yazdır
+        # Ekrana da написатьdыr
         print(f"\n{Fore.CYAN}{'='*60}{Style.RESET_ALL}")
         print(f"{Fore.CYAN}РЕЗУЛЬТАТ RAPORU:{Style.RESET_ALL}")
         print(f"{Fore.CYAN}{'='*60}{Style.RESET_ALL}")
         print(f"Hash: {target_hash}")
-        print(f"Hash Türü: {self.get_hash_type(target_hash)}")
-        print(f"Parola: {password if password else 'НЕ НАЙДЕНО'}")
+        print(f"Hash Типю: {self.get_hash_type(target_hash)}")
+        print(f"Paрольa: {password if password else 'НЕ НАЙДЕНО'}")
         print(f"Metod: {method}")
         print(f"Deneme Количество: {attempts}")
-        print(f"Geçen Длительность: {time_taken:.2f} saniye")
+        print(f"Geчen Длительность: {time_taken:.2f} saniye")
         print(f"{Fore.CYAN}{'='*60}{Style.RESET_ALL}")
     
     def test_password_strength(self, password):
-        """Parola gücünü test et"""
-        print(f"{Fore.BLUE}[*] Parola gücü test ediliyor: {password}{Style.RESET_ALL}")
+        """Paрольa gюcюnю test et"""
+        print(f"{Fore.BLUE}[*] Paрольa gюcю test ediliyor: {password}{Style.RESET_ALL}")
         
         score = 0
         feedback = []
@@ -297,76 +297,76 @@ class PasswordCracker:
         # Uzunluk контроль
         if len(password) >= 12:
             score += 3
-            feedback.append("✅ Uzunluk: 12+ karakter (Очень iyi)")
+            feedback.append("✅ Uzunluk: 12+ karakter (Очень хорошо)")
         elif len(password) >= 8:
             score += 2
             feedback.append("⚠️  Uzunluk: 8-11 karakter (Orta)")
         else:
             score += 0
-            feedback.append("❌ Uzunluk: 7 или более az karakter (Zayıf)")
+            feedback.append("❌ Uzunluk: 7 или более az karakter (Zayыf)")
         
         # Большой/маленький harf контроль
         if any(c.isupper() for c in password) and any(c.islower() for c in password):
             score += 2
-            feedback.append("✅ Большой/маленький harf karışımı (İyi)")
+            feedback.append("✅ Большой/маленький harf karышыли (Хорошо)")
         else:
             score += 0
-            feedback.append("❌ Только большой или только маленький harf (Zayıf)")
+            feedback.append("❌ Только большой или только маленький harf (Zayыf)")
         
         # Rakam контроль
         if any(c.isdigit() for c in password):
             score += 2
-            feedback.append("✅ Rakam содержимое (İyi)")
+            feedback.append("✅ Rakam содержимое (Хорошо)")
         else:
             score += 0
-            feedback.append("❌ Rakam içermiyor (Zayıf)")
+            feedback.append("❌ Rakam iчermiyor (Zayыf)")
         
         # Особый karakter контроль
         special_chars = "!@#$%^&*()_+-=[]{}|;:,.<>?/"
         if any(c in special_chars for c in password):
             score += 2
-            feedback.append("✅ Особый karakter содержимое (İyi)")
+            feedback.append("✅ Особый karakter содержимое (Хорошо)")
         else:
             score += 0
-            feedback.append("❌ Особый karakter içermiyor (Zayıf)")
+            feedback.append("❌ Особый karakter iчermiyor (Zayыf)")
         
         # Словарь контроль (basit)
-        common_words = ["password", "123456", "qwerty", "admin", "welcome"]
+        common_words = ["password", "123456", "qwerty", "админ", "welcome"]
         if not any(word in password.lower() for word in common_words):
             score += 1
-            feedback.append("✅ Yaygın parola не (İyi)")
+            feedback.append("✅ Yaygыn paрольa не (Хорошо)")
         else:
             score += 0
-            feedback.append("❌ Yaygın parola использовать (Очень zayıf)")
+            feedback.append("❌ Yaygыn paрольa использовать (Очень zayыf)")
         
         # Skor значение
-        print(f"\n{Fore.CYAN}ПАРОЛЬ GÜCÜ ANALİZİ:{Style.RESET_ALL}")
+        print(f"\n{Fore.CYAN}ПАРОЛЬ GЮCЮ ANALИZИ:{Style.RESET_ALL}")
         for item in feedback:
             print(f"  {item}")
         
         print(f"\n{Fore.CYAN}ВСЕГО SKOR: {score}/10{Style.RESET_ALL}")
         
         if score >= 8:
-            print(f"{Fore.GREEN}✅ Parola МОЩНЫЙ{Style.RESET_ALL}")
+            print(f"{Fore.GREEN}✅ Paрольa МОЩНЫЙ{Style.RESET_ALL}")
         elif score >= 5:
-            print(f"{Fore.YELLOW}⚠️  Parola ORTA{Style.RESET_ALL}")
+            print(f"{Fore.YELLOW}⚠️  Paрольa ORTA{Style.RESET_ALL}")
         else:
-            print(f"{Fore.RED}❌ Parola ZAYIF{Style.RESET_ALL}")
+            print(f"{Fore.RED}❌ Paрольa ZAYIF{Style.RESET_ALL}")
         
         return score
     
     def run(self):
-        """Ana çalıştırma fonksiyonu"""
-        self.print_banner()
+        """Ana работатьtыrma fonksiyonu"""
+        self.print_банner()
         
         while True:
-            print(f"\n{Fore.CYAN}{Style.BRIGHT}=== ANA MENÜ ==={Style.RESET_ALL}")
-            print("1. Hash'ten parola kır")
-            print("2. Parola gücünü test et")
+            print(f"\n{Fore.CYAN}{Style.BRIGHT}=== ANA MENЮ ==={Style.RESET_ALL}")
+            print("1. Hash'ten paрольa kыr")
+            print("2. Paрольa gюcюnю test et")
             print("3. Hash создать")
             print("4. Wordlist создать")
             print("5. История результат видеть")
-            print("6. Çıkış")
+            print("6. Выход")
             
             choice = input(f"\n{Fore.BLUE}[?] Выбор (1-6): {Style.RESET_ALL}").strip()
             
@@ -381,13 +381,13 @@ class PasswordCracker:
             elif choice == "5":
                 self.show_history()
             elif choice == "6":
-                print(f"{Fore.GREEN}[+] Programdan çıkılıyor...{Style.RESET_ALL}")
+                print(f"{Fore.GREEN}[+] Programdan выйтиыlыyor...{Style.RESET_ALL}")
                 break
             else:
                 print(f"{Fore.RED}[-] Неверный выбор!{Style.RESET_ALL}")
     
     def crack_password(self):
-        """Parola kırma menüsü"""
+        """Paрольa kыrma menюsю"""
         print(f"\n{Fore.CYAN}=== ПАРОЛЬ KIRMA ==={Style.RESET_ALL}")
         
         # Hash вход
@@ -398,10 +398,10 @@ class PasswordCracker:
             return
         
         hash_type = self.get_hash_type(target_hash)
-        print(f"{Fore.BLUE}[*] Hash türü: {hash_type}{Style.RESET_ALL}")
+        print(f"{Fore.BLUE}[*] Hash типю: {hash_type}{Style.RESET_ALL}")
         
         # Metod выбор
-        print(f"\n{Fore.CYAN}Kırma Metodu:{Style.RESET_ALL}")
+        print(f"\n{Fore.CYAN}Kыrma Metodu:{Style.RESET_ALL}")
         print("1. Brute Force (Маленький harf + rakam)")
         print("2. Dictionary Attack (Wordlist)")
         print("3. Hybrid Attack (Wordlist + правила)")
@@ -422,7 +422,7 @@ class PasswordCracker:
             method = "Brute Force"
             
         elif method_choice == "2":
-            wordlist = input(f"{Fore.BLUE}[?] Wordlist yolu (пусто bırak: sample): {Style.RESET_ALL}").strip()
+            wordlist = input(f"{Fore.BLUE}[?] Wordlist yolu (пусто bыrak: sample): {Style.RESET_ALL}").strip()
             if not wordlist:
                 wordlist = "wordlists/sample_passwords.txt"
             
@@ -430,7 +430,7 @@ class PasswordCracker:
             method = "Dictionary Attack"
             
         elif method_choice == "3":
-            wordlist = input(f"{Fore.BLUE}[?] Wordlist yolu (пусто bırak: sample): {Style.RESET_ALL}").strip()
+            wordlist = input(f"{Fore.BLUE}[?] Wordlist yolu (пусто bыrak: sample): {Style.RESET_ALL}").strip()
             if not wordlist:
                 wordlist = "wordlists/sample_passwords.txt"
             
@@ -456,13 +456,13 @@ class PasswordCracker:
         self.save_result(target_hash, password, method, attempts, time_taken)
     
     def test_password_menu(self):
-        """Parola test menüsü"""
-        print(f"\n{Fore.CYAN}=== ПАРОЛЬ GÜCÜ TESTİ ==={Style.RESET_ALL}")
+        """Paрольa test menюsю"""
+        print(f"\n{Fore.CYAN}=== ПАРОЛЬ GЮCЮ TESTИ ==={Style.RESET_ALL}")
         
-        password = input(f"{Fore.BLUE}[?] Test edilecek parola: {Style.RESET_ALL}").strip()
+        password = input(f"{Fore.BLUE}[?] Test edilecek paрольa: {Style.RESET_ALL}").strip()
         
         if not password:
-            print(f"{Fore.RED}[-] Parola gerekli!{Style.RESET_ALL}")
+            print(f"{Fore.RED}[-] Paрольa gerekli!{Style.RESET_ALL}")
             return
         
         # Hash'ini de показать
@@ -470,7 +470,7 @@ class PasswordCracker:
         hash_sha1 = hashlib.sha1(password.encode()).hexdigest()
         hash_sha256 = hashlib.sha256(password.encode()).hexdigest()
         
-        print(f"\n{Fore.CYAN}Parola Hash'leri:{Style.RESET_ALL}")
+        print(f"\n{Fore.CYAN}Paрольa Hash'leri:{Style.RESET_ALL}")
         print(f"MD5:    {hash_md5}")
         print(f"SHA1:   {hash_sha1}")
         print(f"SHA256: {hash_sha256}")
@@ -478,16 +478,16 @@ class PasswordCracker:
         self.test_password_strength(password)
     
     def create_hash_menu(self):
-        """Hash создан menüsü"""
+        """Hash создан menюsю"""
         print(f"\n{Fore.CYAN}=== HASH СОЗДАТЬ ==={Style.RESET_ALL}")
         
-        password = input(f"{Fore.BLUE}[?] Parola: {Style.RESET_ALL}").strip()
+        password = input(f"{Fore.BLUE}[?] Paрольa: {Style.RESET_ALL}").strip()
         
         if not password:
-            print(f"{Fore.RED}[-] Parola gerekli!{Style.RESET_ALL}")
+            print(f"{Fore.RED}[-] Paрольa gerekli!{Style.RESET_ALL}")
             return
         
-        print(f"\n{Fore.CYAN}Hash Türü:{Style.RESET_ALL}")
+        print(f"\n{Fore.CYAN}Hash Типю:{Style.RESET_ALL}")
         print("1. MD5")
         print("2. SHA1")
         print("3. SHA256")
@@ -508,7 +508,7 @@ class PasswordCracker:
             print(f"SHA512: {hashlib.sha512(password_bytes).hexdigest()}")
     
     def create_wordlist_menu(self):
-        """Wordlist создан menüsü"""
+        """Wordlist создан menюsю"""
         print(f"\n{Fore.CYAN}=== WORDLIST СОЗДАТЬ ==={Style.RESET_ALL}")
         
         print("1. Пример wordlist создать (tavsiye edilen)")
@@ -535,7 +535,7 @@ class PasswordCracker:
                     words.append(word)
             
             if words:
-                os.makedirs("wordlists", exist_ok=True)
+                os.maкотrs("wordlists", exist_ok=True)
                 filepath = os.path.join("wordlists", filename)
                 
                 with open(filepath, 'w', encoding='utf-8') as f:
@@ -543,9 +543,9 @@ class PasswordCracker:
                         f.write(word + "\n")
                 
                 print(f"{Fore.GREEN}[+] Wordlist создано: {filepath}{Style.RESET_ALL}")
-                print(f"{Fore.GREEN}[+] {len(words)} kelime addndi{Style.RESET_ALL}")
+                print(f"{Fore.GREEN}[+] {len(words)} слово имяdndi{Style.RESET_ALL}")
             else:
-                print(f"{Fore.RED}[-] Hiç kelime addnmedi!{Style.RESET_ALL}")
+                print(f"{Fore.RED}[-] Hiч слово имяdnmedi!{Style.RESET_ALL}")
     
     def show_history(self):
         """История результат показать"""
@@ -565,17 +565,17 @@ class PasswordCracker:
             filepath = os.path.join("results", filename)
             try:
                 with open(filepath, 'r', encoding='utf-8') as f:
-                    result = json.load(f)
+                    result = json.loимя(f)
                 
                 print(f"\n{Fore.CYAN}[{i+1}] {result['timestamp']}{Style.RESET_ALL}")
                 print(f"  Hash: {result['target_hash'][:16]}...")
-                print(f"  Parola: {result['password'] if result['password'] else 'НЕ НАЙДЕНО'}")
+                print(f"  Paрольa: {result['password'] if result['password'] else 'НЕ НАЙДЕНО'}")
                 print(f"  Metod: {result['method']}")
                 print(f"  Deneme: {result['attempts']}")
                 print(f"  Длительность: {result['time_taken']:.2f}s")
                 
             except Exception as e:
-                print(f"{Fore.RED}[!] {filename} okunamadı: {e}{Style.RESET_ALL}")
+                print(f"{Fore.RED}[!] {filename} okunamназвание: {e}{Style.RESET_ALL}")
 
 def main():
     """Ana fonksiyon"""
@@ -583,9 +583,9 @@ def main():
         cracker = PasswordCracker()
         cracker.run()
     except KeyboardInterrupt:
-        print(f"\n{Fore.YELLOW}[!] Program user сканироватьfından durduruldu{Style.RESET_ALL}")
+        print(f"\n{Fore.YELLOW}[!] Program user сканироватьfыndan durduruldu{Style.RESET_ALL}")
     except Exception as e:
-        print(f"{Fore.RED}[-] Baddnmeyen ошибка: {e}{Style.RESET_ALL}")
+        print(f"{Fore.RED}[-] Bимяdnmeyen ошибка: {e}{Style.RESET_ALL}")
 
 if __name__ == "__main__":
     main()

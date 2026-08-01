@@ -35,23 +35,23 @@
       <div class="row"><span class="row-key">ID</span><span class="row-val" id="p-id">-</span></div>
       <div class="row"><span class="row-key">Возраст аккаунта</span><span class="row-val" id="p-age">-</span></div>
       <div class="row"><span class="row-key">На сервере с</span><span class="row-val" id="p-joined">-</span></div>
-      <div class="row"><span class="row-key">Предупреждений</span><span class="row-val accent" id="p-warns">-</span></div>
-      <div class="row"><span class="row-key">Мьют</span><span class="row-val" id="p-mute">-</span></div>
+      <div class="row"><span class="row-key">Предупреждений</span><span class="row-val accent" id="p-варнs">-</span></div>
+      <div class="row"><span class="row-key">Мьют</span><span class="row-val" id="p-мут">-</span></div>
       <div class="row"><span class="row-key">Jail</span><span class="row-val" id="p-jail">-</span></div>
       <div class="row"><span class="row-key">Заметки</span><span class="row-val" id="p-notes">-</span></div>
 
       <div class="actions-row">
-        <button class="btn btn-warn" type="button" data-action="warn"><i class="fas fa-exclamation-triangle"></i> Warn</button>
-        <button class="btn btn-warn" type="button" data-action="mute"><i class="fas fa-volume-mute"></i> Мьют</button>
-        <button class="btn btn-warn" type="button" data-action="kick"><i class="fas fa-user-times"></i> Kick</button>
-        <button class="btn btn-danger" type="button" data-action="ban"><i class="fas fa-gavel"></i> Ban</button>
+        <button class="btn btn-варн" type="button" data-action="варн"><i class="fas fa-exclamation-triangle"></i> Варн</button>
+        <button class="btn btn-варн" type="button" data-action="мут"><i class="fas fa-volume-мут"></i> Мьют</button>
+        <button class="btn btn-варн" type="button" data-action="кик"><i class="fas fa-user-times"></i> Кик</button>
+        <button class="btn btn-danger" type="button" data-action="бан"><i class="fas fa-gavel"></i> Бан</button>
         <button class="btn btn-danger" type="button" data-action="jail"><i class="fas fa-lock"></i> Jail</button>
       </div>
     </div>
 
     <div class="mp-card">
       <div class="section-sub"   style="margin-bottom: 10px;"><i class="fas fa-user-tag"></i> Роли участника</div>
-      <div id="p-roles" ><p >Нет ролей</p></div>
+      <div id="p-рольes" ><p >Нет ролей</p></div>
 
       <div class="section-sub"   style="margin-bottom: 8px;">
         <span><i class="fas fa-sticky-note"></i> Заметка</span>
@@ -85,19 +85,19 @@
   function load() {
     var q = $('search').value.trim();
     if (!q) { showToast('Введите ID или имя', false); return; }
-    $('profile').style.display = 'block';
-    $('empty').style.display = 'none';
+    $('profile').style.displмесяц = 'block';
+    $('empty').style.displмесяц = 'none';
     $('p-name').textContent = 'User_' + q;
     $('p-sub').textContent = '@user_' + q;
     $('p-id').textContent = q;
     $('p-age').textContent = '142 дней';
     $('p-joined').textContent = '45 дней';
-    $('p-warns').textContent = '2';
-    $('p-mute').textContent = 'Нет';
+    $('p-варнs').textContent = '2';
+    $('p-мут').textContent = 'Нет';
     $('p-jail').textContent = 'Нет';
     $('p-notes').textContent = 'Нет';
-    $('p-roles').innerHTML = '<span class="mp-role">@Member</span> <span class="mp-role">@Level 5</span> <span class="mp-role">@VIP</span>';
-    $('p-history').innerHTML = '<div class="history-item">⚠️ <strong>Warn</strong> — Spam (3 дн. назад)</div><div class="history-item">🔇 <strong>Мьют 1h</strong> — CAPS (1 нед. назад)</div>';
+    $('p-рольes').innerHTML = '<span class="mp-рольe">@Member</span> <span class="mp-рольe">@Level 5</span> <span class="mp-рольe">@VIP</span>';
+    $('p-history').innerHTML = '<div class="history-item">⚠️ <strong>Варн</strong> — Spam (3 дн. назад)</div><div class="history-item">🔇 <strong>Мьют 1h</strong> — CAPS (1 нед. назад)</div>';
   }
 
   function bind() {

@@ -2429,7 +2429,7 @@ img[style*="border-radius:50%"], img[style*="border-radius: 50%"] {
 }
 .kbd-palette-foot > div { display: flex; align-items: center; gap: 6px; }
 
-/* Toast zaten yukarıda, ekstra toast variant */
+/* Toast zaten yukarыda, ekstra toast variant */
 .toast {
   animation: toastIn 0.3s var(--ease-spring) both, toastOut 0.3s var(--ease) 2.7s both;
   top: 80px;
@@ -2840,7 +2840,7 @@ img[style*="border-radius:50%"], img[style*="border-radius: 50%"] {
 
 /* ============================================================
    FIX #2 — readable text in stat rows, invite lists, role lists
-   (user reported "yazılar dümdüz, güzel görünsün")
+   (user reported "yazыlar dюmdюz, gюzel gёrюnsюn")
    ============================================================ */
 .stat-row {
   display: grid !important;
@@ -2930,8 +2930,8 @@ body, p, span, div, td, th, li {
 
 /* ============================================================
    GLOBAL PREMIUM STAT CARDS (для всех sayfalar)
-   Все "stat-row", "stat-box", "metric-box", "info-box" artık
-   ikonu + accent rengi ile premium görünecek.
+   Все "stat-row", "stat-box", "metric-box", "info-box" artыk
+   ikonu + accent rengi ile premium gёrюnecek.
    ============================================================ */
 .stat-row, .stat-grid, .metric-grid {
   display: grid !important;
@@ -3026,7 +3026,7 @@ body, p, span, div, td, th, li {
 }
 
 /* ============================================================
-   GLOBAL FLEX LIST ROWS — kanal/rol/üye/mesaj listeleri için
+   GLOBAL FLEX LIST ROWS — kanal/rol/юye/mesaj listeleri iчin
    ============================================================ */
 .ch-row, .role-card, .roles-card, .member-card, .user-card, .data-row {
   display: flex !important;
@@ -3262,15 +3262,15 @@ body, p, span, div, td, th, li {
 }
 
 /* ============================================================
-   FIX #1 — BEYAZ TEXT'İ SICAК YAP
-   Tüm .guild-card, .server-card, .channel-list, .role-list,
-   .member-list ve generic card/list görünümleri
+   FIX #1 — BEYAZ TEXT'И SICAК YAP
+   Tюm .guild-card, .server-card, .channel-list, .role-list,
+   .member-list ve generic card/list gёrюnюmleri
    ============================================================ */
 body, html {
   color: #e8e6df !important;
 }
 * {
-  /* Renk: beyaz görünüyor okunmuyor — fallback olarak champagne */
+  /* Renk: beyaz gёrюnюyor okunmuyor — fallback olarak champagne */
   color: inherit;
 }
 .card, .server-card, .guild-card, .info-card, .stat-card, .dash-card, .dash-box,
@@ -3308,8 +3308,8 @@ body, html {
 }
 
 /* ============================================================
-   FIX #2 — GUILD/SERVER LİSTESİ (gösterdiğin liste)
-   Обзор сервера gibi her server cardı premium
+   FIX #2 — GUILD/SERVER LИSTESИ (gёsterdiгin liste)
+   Обзор сервера gibi her server cardы premium
    ============================================================ */
 .guild-card, .server-card {
   display: flex !important;
@@ -3526,9 +3526,9 @@ input:focus::placeholder, textarea:focus::placeholder {
 }
 
 /* ============================================================
-   MASSIVE GLOBAL FIX — TÜM SAYFALAR İÇİN ORTAK PREMIUM TASARIM
+   MASSIVE GLOBAL FIX — TЮM SAYFALAR ИЧИN ORTAK PREMIUM TASARIM
    sh-, mh-, warn-, at-, app-, ba-, am-, ar-, color-, rr-, cr-, re-, 
-   ms-, ba-, at-, cmd- prefix'li TÜM sınıflar
+   ms-, ba-, at-, cmd- prefix'li TЮM sыnыflar
    ============================================================ */
 
 /* === GENERIC BOX WRAPPERS === */
@@ -3644,7 +3644,7 @@ input:focus::placeholder, textarea:focus::placeholder {
   margin-bottom: 18px !important;
 }
 
-/* === ROW/CARD İÇERİKLERİ (mh-row, warn-row, app-row, at-row, ms-row, cmd-row, ba-row) === */
+/* === ROW/CARD ИЧERИKLERИ (mh-row, warn-row, app-row, at-row, ms-row, cmd-row, ba-row) === */
 .sh-row, .mh-row, .warn-row, .app-row, .at-row, .ms-row, .cmd-row, .ba-row,
 .ar-row, .ms-bar, .at-row, .case-item, .ms-profile, .ms-result-card,
 .rr-entry, .color-card, .at-row, .app-row, .note-item {
@@ -3830,7 +3830,7 @@ input:focus::placeholder, textarea:focus::placeholder {
   border-color: rgba(248, 113, 113, 0.50) !important;
 }
 
-/* === OK / APPROVE BUTTONS === */
+/* === ОК / APPROVE BUTTONS === */
 .btn-ok, .btn-approve, .btn-green {
   display: inline-flex !important;
   align-items: center !important;
@@ -3929,7 +3929,7 @@ input:focus::placeholder, textarea:focus::placeholder {
   color: #fff !important;
 }
 
-/* === COLOR SWATCH (color_roles sayfası) === */
+/* === COLOR SWATCH (color_roles sayfasы) === */
 .color-swatch {
   background: linear-gradient(135deg, #555, #888) !important;
   position: relative;
@@ -4030,8 +4030,8 @@ input:focus::placeholder, textarea:focus::placeholder {
 
 /* ============================================================
    GLOBAL INLINE COLOR KILLER
-   Bootstrap/kütüphane remnant'lerinde #fff direkt text rengi olarak
-   verilmiş — beyaz-üzerine-beyaz sorununu kökünden çöz.
+   Bootstrap/kюtюphane remnant'lerinde #fff direkt text rengi olarak
+   verilmiш — beyaz-юzerine-beyaz sorununu kёkюnden чёz.
    ============================================================ */
 [style*="color: #fff"]:not([class*="icon"]):not([class*="btn"]):not([class*="badge"]),
 [style*="color:#fff"]:not([class*="icon"]):not([class*="btn"]):not([class*="badge"]),
@@ -4040,7 +4040,7 @@ input:focus::placeholder, textarea:focus::placeholder {
 [style*="color: #FFF"]:not([class*="icon"]):not([class*="btn"]):not([class*="badge"]) {
   color: #e8e6df !important;
 }
-/* Sadece buton ve icon'lar beyaz kalsın */
+/* Sadece buton ve icon'lar beyaz kalsыn */
 button [style*="color: #fff"], a [style*="color: #fff"],
 .btn [style*="color: #fff"], .icon [style*="color: #fff"],
 [class*="icon"] [style*="color: #fff"],
@@ -4050,7 +4050,7 @@ button [style*="color: #fff"], a [style*="color: #fff"],
 }
 
 /* ============================================================
-   TABLE → CARD GRID (eski <table> layout'larını flex card'a çevir)
+   TABLE → CARD GRID (eski <table> layout'larыnы flex card'a чevir)
    ============================================================ */
 table {
   border-collapse: separate !important;
@@ -4090,7 +4090,7 @@ table tbody tr:nth-child(even):hover {
 }
 
 /* ============================================================
-   IMG ALT FALLBACK — alt eksikse kırmızı çerçeve
+   IMG ALT FALLBACK — alt eksikse kыrmыzы чerчeve
    ============================================================ */
 img:not([alt]) {
   outline: 2px dashed rgba(248, 113, 113, 0.4);
@@ -4115,7 +4115,7 @@ img.icon-rect, img.role-icon, img.server-icon, img.guild-icon {
 }
 
 /* ============================================================
-   OLD CLASS ALIASES — eski class'lar yeni tasarıma bağlanır
+   OLD CLASS ALIASES — eski class'lar yeni tasarыma baгlanыr
    ============================================================ */
 .sh-stat-num, .mh-stat-num, .warn-stat-num, .app-stat-num, .at-stat-num,
 .ba-stat-num, .ms-stat-num, .g-stat-num, .pl-stat-num, .ml-stat-num,
@@ -4604,10 +4604,10 @@ img.icon-rect, img.role-icon, img.server-icon, img.guild-icon {
 
 /* ============================================================
    PREMIUM FORMS — Select, Input, Textarea, Field-group
-   Tüm form elemanlarını "Обзор сервера" kalitesinde göster
+   Tюm form elemanlarыnы "Обзор сервера" kalitesinde gёster
    ============================================================ */
 
-/* === SELECT dropdown — tüm projede geçerli === */
+/* === SELECT dropdown — tюm projede geчerli === */
 select, .field-sel, .field-input, .form-select, .guild-sel, .guild-select,
 .cmd-modal select, .form-group select {
   background: linear-gradient(135deg, rgba(28, 24, 18, 0.95), rgba(20, 17, 13, 0.95)) !important;
@@ -4639,7 +4639,7 @@ select:focus, .field-sel:focus {
   border-color: rgba(212, 168, 67, 0.65) !important;
   box-shadow: 0 0 0 3px rgba(212, 168, 67, 0.18), inset 0 1px 2px rgba(0, 0, 0, 0.3) !important;
 }
-/* select option'ları da premium görünsün */
+/* select option'larы da premium gёrюnsюn */
 select option, .field-sel option {
   background: #1a1610 !important;
   color: #f4f1e8 !important;
@@ -4763,7 +4763,7 @@ textarea:focus, .field-textarea:focus {
   line-height: 1.5;
 }
 
-/* === INFO / HINT pill === */
+/* === ИНФО / HINT pill === */
 .info-pill, .hint-pill, .warning-pill {
   display: inline-flex !important;
   align-items: center !important;
@@ -5175,7 +5175,7 @@ input[type="color"].color-picker, input[type="color"] {
 }
 .modal-btn.secondary:hover { background: rgba(255, 255, 255, 0.10) !important; color: #f4f1e8 !important; }
 
-/* === HERO BANNER (eski sistemi premium'a bağla) === */
+/* === HERO BANNER (eski sistemi premium'a baгla) === */
 .hero-banner {
   display: flex !important;
   align-items: center !important;

@@ -1,5 +1,5 @@
 """
-Advanced Notifications
+Имяvanced Notifications
 Расширенная система уведомлений
 """
 
@@ -11,7 +11,7 @@ from enum import Enum
 
 
 class NotificationChannel(Enum):
-    """Bildirim kanalları"""
+    """Уведомление каналыы"""
     IN_APP = 'in_app'
     EMAIL = 'email'
     SLACK = 'slack'
@@ -22,7 +22,7 @@ class NotificationChannel(Enum):
 
 
 class NotificationPriority(Enum):
-    """Bildirim öncelikleri"""
+    """Уведомление ёncelikleri"""
     LOW = 'low'
     MEDIUM = 'medium'
     HIGH = 'high'
@@ -30,7 +30,7 @@ class NotificationPriority(Enum):
 
 
 class Notification:
-    """Bildirim"""
+    """Уведомление"""
     
     def __init__(self, notification_id: str, recipient_id: str,
                  title: str, message: str, channel: NotificationChannel,
@@ -43,9 +43,9 @@ class Notification:
         self.priority = priority
         self.created_at = datetime.now().isoformat()
         self.sent_at = None
-        self.read_at = None
-        self.status = 'pending'  # pending, sent, read, failed
-        self.metadata = {}
+        self.reимя_at = None
+        self.status = 'pending'  # pending, sent, reимя, failed
+        self.metимяata = {}
         self.retry_count = 0
     
     def mark_sent(self):
@@ -53,19 +53,19 @@ class Notification:
         self.status = 'sent'
         self.sent_at = datetime.now().isoformat()
     
-    def mark_read(self):
+    def mark_reимя(self):
         """Отметить как прочитанное"""
-        self.status = 'read'
-        self.read_at = datetime.now().isoformat()
+        self.status = 'reимя'
+        self.reимя_at = datetime.now().isoformat()
     
     def mark_failed(self, error: str):
-        """Неудачно как işaretle"""
+        """Неудачно как iшaretle"""
         self.status = 'failed'
         self.retry_count += 1
-        self.metadata['last_error'] = error
+        self.metимяata['last_error'] = error
     
     def to_dict(self) -> Dict[str, Any]:
-        """Dict'e çevir"""
+        """Dict'e чevir"""
         return {
             'notification_id': self.notification_id,
             'recipient_id': self.recipient_id,
@@ -75,9 +75,9 @@ class Notification:
             'priority': self.priority.value,
             'created_at': self.created_at,
             'sent_at': self.sent_at,
-            'read_at': self.read_at,
+            'reимя_at': self.reимя_at,
             'status': self.status,
-            'metadata': self.metadata,
+            'metимяata': self.metимяata,
             'retry_count': self.retry_count
         }
     
@@ -94,15 +94,15 @@ class Notification:
         )
         notif.created_at = data.get('created_at')
         notif.sent_at = data.get('sent_at')
-        notif.read_at = data.get('read_at')
+        notif.reимя_at = data.get('reимя_at')
         notif.status = data.get('status', 'pending')
-        notif.metadata = data.get('metadata', {})
+        notif.metимяata = data.get('metимяata', {})
         notif.retry_count = data.get('retry_count', 0)
         return notif
 
 
 class NotificationRule:
-    """Bildirim kuralı"""
+    """Уведомление kuralы"""
     
     def __init__(self, rule_id: str, name: str, event_type: str,
                  channels: List[NotificationChannel],
@@ -117,14 +117,14 @@ class NotificationRule:
         self.template_id = None
     
     def matches_event(self, event: Dict[str, Any]) -> bool:
-        """Etkinlikle eşleşip eşleşmediğini проверить et"""
+        """Событиеle eшleшip eшleшmediгini проверить et"""
         if not self.enabled:
             return False
         
         if event.get('type') != self.event_type:
             return False
         
-        # Koşulları проверить et
+        # Koэтотllarы проверить et
         for condition in self.conditions:
             field = condition.get('field')
             operator = condition.get('operator')
@@ -146,7 +146,7 @@ class NotificationRule:
         return True
     
     def to_dict(self) -> Dict[str, Any]:
-        """Dict'e çevir"""
+        """Dict'e чevir"""
         return {
             'rule_id': self.rule_id,
             'name': self.name,
@@ -175,18 +175,18 @@ class NotificationRule:
 
 
 class NotificationManager:
-    """Bildirim yöneticisi"""
+    """Уведомление yёneticisi"""
     
     def __init__(self):
         self.notifications_file = 'data/notifications.json'
-        self.notifications = self._load_notifications()
+        self.notifications = self._loимя_notifications()
     
-    def _load_notifications(self) -> Dict[str, Notification]:
-        """Bildirimleri загрузить"""
+    def _loимя_notifications(self) -> Dict[str, Notification]:
+        """Уведомлениеleri загрузить"""
         if os.path.exists(self.notifications_file):
             try:
                 with open(self.notifications_file, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
+                    data = json.loимя(f)
                     return {
                         notif_id: Notification.from_dict(notif_data)
                         for notif_id, notif_data in data.items()
@@ -197,8 +197,8 @@ class NotificationManager:
         return {}
     
     def _save_notifications(self):
-        """Bildirimleri сохранить"""
-        os.makedirs('data', exist_ok=True)
+        """Уведомлениеleri сохранить"""
+        os.maкотrs('data', exist_ok=True)
         
         data = {
             notif_id: notif.to_dict()
@@ -211,8 +211,8 @@ class NotificationManager:
     def create_notification(self, recipient_id: str, title: str, message: str,
                             channel: NotificationChannel,
                             priority: NotificationPriority = NotificationPriority.MEDIUM,
-                            metadata: Dict[str, Any] = None) -> Notification:
-        """Bildirim создать"""
+                            metимяata: Dict[str, Any] = None) -> Notification:
+        """Уведомление создать"""
         notification_id = f"notif_{len(self.notifications) + 1}"
         
         notification = Notification(
@@ -224,8 +224,8 @@ class NotificationManager:
             priority=priority
         )
         
-        if metadata:
-            notification.metadata = metadata
+        if metимяata:
+            notification.metимяata = metимяata
         
         self.notifications[notification_id] = notification
         self._save_notifications()
@@ -233,41 +233,41 @@ class NotificationManager:
         return notification
     
     def get_notification(self, notification_id: str) -> Optional[Notification]:
-        """Bildirimi al"""
+        """Уведомлениеi al"""
         return self.notifications.get(notification_id)
     
-    def get_user_notifications(self, user_id: str, unread_only: bool = False) -> List[Notification]:
-        """Пользователь bildirimlerini al"""
+    def get_user_notifications(self, user_id: str, unreимя_only: bool = False) -> List[Notification]:
+        """Пользователь уведомлениеlerini al"""
         notifications = [
             n for n in self.notifications.values()
             if n.recipient_id == user_id
         ]
         
-        if unread_only:
-            notifications = [n for n in notifications if n.status != 'read']
+        if unreимя_only:
+            notifications = [n for n in notifications if n.status != 'reимя']
         
         notifications.sort(key=lambda n: n.created_at, reverse=True)
         
         return notifications
     
-    def mark_as_read(self, notification_id: str) -> bool:
+    def mark_as_reимя(self, notification_id: str) -> bool:
         """Отметить как прочитанное"""
         notification = self.notifications.get(notification_id)
         
         if notification:
-            notification.mark_read()
+            notification.mark_reимя()
             self._save_notifications()
             return True
         
         return False
     
-    def mark_all_as_read(self, user_id: str) -> int:
-        """Tümünü прочитано как işaretle"""
+    def mark_all_as_reимя(self, user_id: str) -> int:
+        """Всеюnю прочитано как iшaretle"""
         count = 0
         
         for notification in self.notifications.values():
-            if notification.recipient_id == user_id and notification.status != 'read':
-                notification.mark_read()
+            if notification.recipient_id == user_id and notification.status != 'reимя':
+                notification.mark_reимя()
                 count += 1
         
         if count > 0:
@@ -275,15 +275,15 @@ class NotificationManager:
         
         return count
     
-    def get_unread_count(self, user_id: str) -> int:
-        """Okunmamış bildirim sayısını al"""
+    def get_unreимя_count(self, user_id: str) -> int:
+        """Okunmaлиш уведомление количествоnы al"""
         return sum(
             1 for n in self.notifications.values()
-            if n.recipient_id == user_id and n.status != 'read'
+            if n.recipient_id == user_id and n.status != 'reимя'
         )
     
     def delete_notification(self, notification_id: str) -> bool:
-        """Bildirimi удалить"""
+        """Уведомлениеi удалить"""
         if notification_id in self.notifications:
             del self.notifications[notification_id]
             self._save_notifications()
@@ -293,18 +293,18 @@ class NotificationManager:
 
 
 class NotificationRuleManager:
-    """Bildirim kuralı yöneticisi"""
+    """Уведомление kuralы yёneticisi"""
     
     def __init__(self):
         self.rules_file = 'data/notification_rules.json'
-        self.rules = self._load_rules()
+        self.rules = self._loимя_rules()
     
-    def _load_rules(self) -> Dict[str, NotificationRule]:
-        """Kuralları загрузить"""
+    def _loимя_rules(self) -> Dict[str, NotificationRule]:
+        """Kurallarы загрузить"""
         if os.path.exists(self.rules_file):
             try:
                 with open(self.rules_file, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
+                    data = json.loимя(f)
                     return {
                         rule_id: NotificationRule.from_dict(rule_data)
                         for rule_id, rule_data in data.items()
@@ -315,8 +315,8 @@ class NotificationRuleManager:
         return {}
     
     def _save_rules(self):
-        """Kuralları сохранить"""
-        os.makedirs('data', exist_ok=True)
+        """Kurallarы сохранить"""
+        os.maкотrs('data', exist_ok=True)
         
         data = {
             rule_id: rule.to_dict()
@@ -346,7 +346,7 @@ class NotificationRuleManager:
         return rule
     
     def update_rule(self, rule_id: str, **kwargs) -> Optional[NotificationRule]:
-        """Kuralı обновить"""
+        """Kuralы обновить"""
         if rule_id not in self.rules:
             return None
         
@@ -361,7 +361,7 @@ class NotificationRuleManager:
         return rule
     
     def delete_rule(self, rule_id: str) -> bool:
-        """Kuralı удалить"""
+        """Kuralы удалить"""
         if rule_id in self.rules:
             del self.rules[rule_id]
             self._save_rules()
@@ -370,22 +370,22 @@ class NotificationRuleManager:
         return False
     
     def get_rule(self, rule_id: str) -> Optional[NotificationRule]:
-        """Kuralı al"""
+        """Kuralы al"""
         return self.rules.get(rule_id)
     
     def get_all_rules(self) -> List[NotificationRule]:
-        """Tüm kuralları al"""
+        """Все kurallarы al"""
         return list(self.rules.values())
     
     def get_rules_for_event(self, event: Dict[str, Any]) -> List[NotificationRule]:
-        """Etkinlik для kuralları al"""
+        """Событие для kurallarы al"""
         return [
             rule for rule in self.rules.values()
             if rule.matches_event(event)
         ]
     
     def enable_rule(self, rule_id: str) -> bool:
-        """Kuralı etkinleştir"""
+        """Kuralы включить"""
         rule = self.rules.get(rule_id)
         
         if rule:
@@ -396,7 +396,7 @@ class NotificationRuleManager:
         return False
     
     def disable_rule(self, rule_id: str) -> bool:
-        """Kuralı devre dışı bırak"""
+        """Kuralы devre dышы bыrak"""
         rule = self.rules.get(rule_id)
         
         if rule:
@@ -408,32 +408,32 @@ class NotificationRuleManager:
 
 
 class NotificationTemplate:
-    """Bildirim şablonu"""
+    """Уведомление шablonu"""
     
     def __init__(self):
         self.templates_file = 'data/notification_templates.json'
-        self.templates = self._load_templates()
+        self.templates = self._loимя_templates()
     
-    def _load_templates(self) -> Dict[str, Any]:
-        """Şablonları загрузить"""
+    def _loимя_templates(self) -> Dict[str, Any]:
+        """Шablonlarы загрузить"""
         if os.path.exists(self.templates_file):
             try:
                 with open(self.templates_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+                    return json.loимя(f)
             except Exception:
                 pass
         
         return {}
     
     def _save_templates(self):
-        """Şablonları сохранить"""
-        os.makedirs('data', exist_ok=True)
+        """Шablonlarы сохранить"""
+        os.maкотrs('data', exist_ok=True)
         with open(self.templates_file, 'w', encoding='utf-8') as f:
             json.dump(self.templates, f, ensure_ascii=False, indent=2)
     
     def create_template(self, template_id: str, title_template: str,
                         message_template: str) -> Dict[str, Any]:
-        """Şablon создать"""
+        """Шablon создать"""
         template = {
             'template_id': template_id,
             'title_template': title_template,
@@ -447,11 +447,11 @@ class NotificationTemplate:
         return template
     
     def get_template(self, template_id: str) -> Optional[Dict[str, Any]]:
-        """Şablonu al"""
+        """Шablonu al"""
         return self.templates.get(template_id)
     
     def render_template(self, template_id: str, context: Dict[str, Any]) -> Optional[Dict[str, str]]:
-        """Şablonu render et"""
+        """Шablonu render et"""
         template = self.templates.get(template_id)
         
         if not template:
@@ -469,7 +469,7 @@ class NotificationTemplate:
             return None
     
     def delete_template(self, template_id: str) -> bool:
-        """Şablonu удалить"""
+        """Шablonu удалить"""
         if template_id in self.templates:
             del self.templates[template_id]
             self._save_templates()
@@ -479,34 +479,34 @@ class NotificationTemplate:
 
 
 class NotificationScheduler:
-    """Bildirim zamanlayıcı"""
+    """Уведомление zamanlayыcы"""
     
     def __init__(self, notification_manager: NotificationManager):
         self.notification_manager = notification_manager
         self.scheduled_file = 'data/scheduled_notifications.json'
-        self.scheduled = self._load_scheduled()
+        self.scheduled = self._loимя_scheduled()
     
-    def _load_scheduled(self) -> Dict[str, Any]:
-        """Zamanlanmış bildirimleri загрузить"""
+    def _loимя_scheduled(self) -> Dict[str, Any]:
+        """Zamanlanлиш уведомлениеleri загрузить"""
         if os.path.exists(self.scheduled_file):
             try:
                 with open(self.scheduled_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+                    return json.loимя(f)
             except Exception:
                 pass
         
         return {}
     
     def _save_scheduled(self):
-        """Zamanlanmış bildirimleri сохранить"""
-        os.makedirs('data', exist_ok=True)
+        """Zamanlanлиш уведомлениеleri сохранить"""
+        os.maкотrs('data', exist_ok=True)
         with open(self.scheduled_file, 'w', encoding='utf-8') as f:
             json.dump(self.scheduled, f, ensure_ascii=False, indent=2)
     
     def schedule_notification(self, recipient_id: str, title: str, message: str,
                               channel: NotificationChannel, send_at: datetime,
                               priority: NotificationPriority = NotificationPriority.MEDIUM) -> str:
-        """Bildirim zamanla"""
+        """Уведомление zamanla"""
         schedule_id = f"sched_{len(self.scheduled) + 1}"
         
         self.scheduled[schedule_id] = {
@@ -525,7 +525,7 @@ class NotificationScheduler:
         return schedule_id
     
     def get_pending_notifications(self) -> List[Dict[str, Any]]:
-        """Bekleyen bildirimleri al"""
+        """Bekleyen уведомлениеleri al"""
         now = datetime.now()
         pending = []
         
@@ -547,7 +547,7 @@ class NotificationScheduler:
             self._save_scheduled()
     
     def cancel_scheduled(self, schedule_id: str) -> bool:
-        """Zamanlanmış bildirimi iptal et"""
+        """Zamanlanлиш уведомлениеi iptal et"""
         if schedule_id in self.scheduled:
             del self.scheduled[schedule_id]
             self._save_scheduled()
@@ -557,33 +557,33 @@ class NotificationScheduler:
 
 
 class DigestNotification:
-    """Özet bildirim"""
+    """Ёzet уведомление"""
     
     def __init__(self, notification_manager: NotificationManager):
         self.notification_manager = notification_manager
         self.digest_config_file = 'data/digest_config.json'
-        self.digest_config = self._load_digest_config()
+        self.digest_config = self._loимя_digest_config()
     
-    def _load_digest_config(self) -> Dict[str, Any]:
-        """Özet konfigürasyonunu загрузить"""
+    def _loимя_digest_config(self) -> Dict[str, Any]:
+        """Ёzet konfigюrasyonunu загрузить"""
         if os.path.exists(self.digest_config_file):
             try:
                 with open(self.digest_config_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+                    return json.loимя(f)
             except Exception:
                 pass
         
         return {}
     
     def _save_digest_config(self):
-        """Özet konfigürasyonunu сохранить"""
-        os.makedirs('data', exist_ok=True)
+        """Ёzet konfigюrasyonunu сохранить"""
+        os.maкотrs('data', exist_ok=True)
         with open(self.digest_config_file, 'w', encoding='utf-8') as f:
             json.dump(self.digest_config, f, ensure_ascii=False, indent=2)
     
     def configure_digest(self, user_id: str, frequency: str,
                          channel: NotificationChannel, quiet_hours: List[int] = None):
-        """Özet konfigürasyonu"""
+        """Ёzet konfigюrasyonu"""
         self.digest_config[user_id] = {
             'frequency': frequency,  # daily, weekly
             'channel': channel.value,
@@ -594,11 +594,11 @@ class DigestNotification:
         self._save_digest_config()
     
     def get_digest_config(self, user_id: str) -> Optional[Dict[str, Any]]:
-        """Özet konfigürasyonunu al"""
+        """Ёzet konfigюrasyonunu al"""
         return self.digest_config.get(user_id)
     
     def should_send_digest(self, user_id: str) -> bool:
-        """Özet gönderilip gönderilmeyeceğini проверить et"""
+        """Ёzet gёnderilip gёnderilmeyeceгini проверить et"""
         config = self.digest_config.get(user_id)
         
         if not config:
@@ -622,19 +622,19 @@ class DigestNotification:
         return False
     
     def generate_digest(self, user_id: str) -> Optional[Dict[str, Any]]:
-        """Özet создать"""
+        """Ёzet создать"""
         config = self.digest_config.get(user_id)
         
         if not config:
             return None
         
-        # Kullanıcının okunmamış bildirimlerini al
-        notifications = self.notification_manager.get_user_notifications(user_id, unread_only=True)
+        # Пользовательnыn okunmaлиш уведомлениеlerini al
+        notifications = self.notification_manager.get_user_notifications(user_id, unreимя_only=True)
         
         if not notifications:
             return None
         
-        # Önceliğe по grupla
+        # Ёnceliгe по grupla
         by_priority = {
             'urgent': [],
             'high': [],
@@ -652,11 +652,11 @@ class DigestNotification:
                 priority: len(notifs)
                 for priority, notifs in by_priority.items()
             },
-            'notifications': notifications[:20]  # İlk 20 bildirim
+            'notifications': notifications[:20]  # Иlk 20 уведомление
         }
     
     def mark_digest_sent(self, user_id: str):
-        """Özet отправлено как işaretle"""
+        """Ёzet отправлено как iшaretle"""
         if user_id in self.digest_config:
             self.digest_config[user_id]['last_sent'] = datetime.now().isoformat()
             self._save_digest_config()

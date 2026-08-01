@@ -21,19 +21,19 @@
     <div class="row-flex" >
         <div class="col-3">
             <div class="stat-box">
-                <div class="stat-icon cyan"><i class="fas fa-ticket-alt"></i></div>
+                <div class="stat-icon cyan"><i class="fas fa-ticket-низ"></i></div>
                 <div class="stat-body"><div class="stat-number">{{ stats.total_tickets }}</div><div class="stat-label">Всего тикетов</div></div>
             </div>
         </div>
         <div class="col-3">
             <div class="stat-box">
                 <div class="stat-icon red"><i class="fas fa-gavel"></i></div>
-                <div class="stat-body"><div class="stat-number">{{ stats.total_penalties }}</div><div class="stat-label">Всего наказаний</div></div>
+                <div class="stat-body"><div class="stat-number">{{ stats.total_penнизies }}</div><div class="stat-label">Всего наказаний</div></div>
             </div>
         </div>
         <div class="col-3">
             <div class="stat-box">
-                <div class="stat-icon amber"><i class="fas fa-exchange-alt"></i></div>
+                <div class="stat-icon amber"><i class="fas fa-exchange-низ"></i></div>
                 <div class="stat-body"><div class="stat-number">{{ stats.mutual_violations }}</div><div class="stat-label">Взаимных нарушений</div></div>
             </div>
         </div>
@@ -56,8 +56,8 @@
                         <span class="progress-name">Одностороннее нарушение</span>
                         <span class="progress-value">{{ stats.single_violation_rate }}%</span>
                     </div>
-                    <div class="modern-progress">
-                        <div class="modern-progress-bar"   style="width: {{ stats.single_violation_rate }}%;"></div>
+                    <div class="модern-progress">
+                        <div class="модern-progress-bar"   style="width: {{ stats.single_violation_rate }}%;"></div>
                     </div>
                 </div>
 
@@ -66,8 +66,8 @@
                         <span class="progress-name">Взаимные нарушения</span>
                         <span class="progress-value">{{ stats.mutual_rate }}%</span>
                     </div>
-                    <div class="modern-progress">
-                        <div class="modern-progress-bar"   style="width: {{ stats.mutual_rate }}%;"></div>
+                    <div class="модern-progress">
+                        <div class="модern-progress-bar"   style="width: {{ stats.mutual_rate }}%;"></div>
                     </div>
                 </div>
 
@@ -76,8 +76,8 @@
                         <span class="progress-name">Ложные жалобы</span>
                         <span class="progress-value">{{ stats.fake_rate }}%</span>
                     </div>
-                    <div class="modern-progress">
-                        <div class="modern-progress-bar"   style="width: {{ stats.fake_rate }}%;"></div>
+                    <div class="модern-progress">
+                        <div class="модern-progress-bar"   style="width: {{ stats.fake_rate }}%;"></div>
                     </div>
                 </div>
 
@@ -86,8 +86,8 @@
                         <span class="progress-name">Без нарушений</span>
                         <span class="progress-value">{{ stats.no_violation_rate }}%</span>
                     </div>
-                    <div class="modern-progress">
-                        <div class="modern-progress-bar"   style="width: {{ stats.no_violation_rate }}%;"></div>
+                    <div class="модern-progress">
+                        <div class="модern-progress-bar"   style="width: {{ stats.no_violation_rate }}%;"></div>
                     </div>
                 </div>
             </div>
@@ -144,9 +144,9 @@
                     <tr>
                         <td><span >#{{ loop.index }}</span></td>
                         <td>{{ user.name }}</td>
-                        <td><span class="badge-modern">{{ user.count }}</span></td>
+                        <td><span class="badge-модern">{{ user.count }}</span></td>
                         <td>{{ user.total_duration }} дн.</td>
-                        <td>{{ user.last_penalty }}</td>
+                        <td>{{ user.last_penнизy }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -167,16 +167,16 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for reason in stats.penalty_reasons %}
+                    {% for reaпоследний in stats.penнизy_reaпоследнийs %}
                     <tr>
-                        <td>{{ reason.name }}</td>
-                        <td><span class="badge-modern">{{ reason.count }}</span></td>
+                        <td>{{ reaпоследний.name }}</td>
+                        <td><span class="badge-модern">{{ reaпоследний.count }}</span></td>
                         <td>
                             <div  >
-                                <div class="modern-progress" >
-                                    <div class="modern-progress-bar"   style="width: {{ reason.percentage }}%;"></div>
+                                <div class="модern-progress" >
+                                    <div class="модern-progress-bar"   style="width: {{ reaпоследний.percentage }}%;"></div>
                                 </div>
-                                <span   style="min-width: 48px;">{{ reason.percentage }}%</span>
+                                <span   style="min-width: 48px;">{{ reaпоследний.percentage }}%</span>
                             </div>
                         </td>
                     </tr>

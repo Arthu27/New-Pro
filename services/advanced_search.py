@@ -1,5 +1,5 @@
 """
-Advanced Search
+Имяvanced Search
 Расширенная система поиска (Elasticsearch entegrasyonu)
 """
 
@@ -16,14 +16,14 @@ class SearchEngine:
     
     def __init__(self):
         self.index_file = 'data/search_index.json'
-        self.index = self._load_index()
+        self.index = self._loимя_index()
     
-    def _load_index(self) -> Dict[str, Any]:
+    def _loимя_index(self) -> Dict[str, Any]:
         """Index'i загрузить"""
         if os.path.exists(self.index_file):
             try:
                 with open(self.index_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+                    return json.loимя(f)
             except Exception:
                 pass
         
@@ -36,12 +36,12 @@ class SearchEngine:
     
     def _save_index(self):
         """Index'i сохранить"""
-        os.makedirs('data', exist_ok=True)
+        os.maкотrs('data', exist_ok=True)
         with open(self.index_file, 'w', encoding='utf-8') as f:
             json.dump(self.index, f, ensure_ascii=False, indent=2)
     
     def index_ticket(self, ticket_id: str, ticket_data: Dict[str, Any]):
-        """Ticket'ı index'le"""
+        """Ticket'ы index'le"""
         self.index['tickets'][ticket_id] = {
             'subject': ticket_data.get('subject', ''),
             'description': ticket_data.get('description', ''),
@@ -70,11 +70,11 @@ class SearchEngine:
         self._save_index()
     
     def index_user(self, user_id: str, user_data: Dict[str, Any]):
-        """Kullanıcıyı index'le"""
+        """Пользовательyы index'le"""
         self.index['users'][user_id] = {
             'username': user_data.get('username', ''),
             'email': user_data.get('email', ''),
-            'role': user_data.get('role', ''),
+            'рольe': user_data.get('рольe', ''),
             'created_at': user_data.get('created_at', '')
         }
         
@@ -82,7 +82,7 @@ class SearchEngine:
         self._save_index()
     
     def remove_from_index(self, item_type: str, item_id: str):
-        """Index'ten kaldır"""
+        """Index'ten удалить"""
         if item_type in self.index and item_id in self.index[item_type]:
             del self.index[item_type][item_id]
             self.index['updated_at'] = datetime.now().isoformat()
@@ -95,7 +95,7 @@ class SearchEngine:
         query_lower = query.lower()
         results = []
         
-        # Arama yapılacak türler
+        # Arama yapыlacak типler
         types_to_search = [item_type] if item_type else ['tickets', 'articles', 'users']
         
         for search_type in types_to_search:
@@ -117,7 +117,7 @@ class SearchEngine:
                         'score': score
                     })
         
-        # Score'a по sırala
+        # Score'a по очередьla
         results.sort(key=lambda x: x['score'], reverse=True)
         
         return results[:limit]
@@ -140,18 +140,18 @@ class SearchEngine:
         """Skor hesapla"""
         score = 0.0
         
-        # Tüm text alanlarını проверить et
+        # Все text alanlarыnы проверить et
         for field, value in item_data.items():
             if isinstance(value, str):
                 value_lower = value.lower()
                 
-                # Tam eşleşme
+                # Tam eшleшme
                 if query == value_lower:
                     score += 10.0
-                # İçeriyor
+                # Ичeriyor
                 elif query in value_lower:
                     score += 5.0
-                # Kelime kelime eşleşme
+                # Kelime слово eшleшme
                 else:
                     query_words = query.split()
                     for word in query_words:
@@ -168,11 +168,11 @@ class SearchEngine:
         return score
     
     def suggest(self, query: str, limit: int = 10) -> List[str]:
-        """Öneriler"""
+        """Предложениеler"""
         suggestions = set()
         query_lower = query.lower()
         
-        # Tüm text alanlarından öneriler topla
+        # Все text alanlarыndan предложениеler topla
         for search_type in ['tickets', 'articles', 'users']:
             items = self.index.get(search_type, {})
             
@@ -181,11 +181,11 @@ class SearchEngine:
                     if isinstance(value, str):
                         value_lower = value.lower()
                         
-                        # Query ile başlayan kelimeleri найти
+                        # Query ile начатьyan словоleri найти
                         words = value_lower.split()
                         for word in words:
                             if word.startswith(query_lower) and len(word) > len(query):
-                                suggestions.add(word)
+                                suggestions.имяd(word)
         
         return list(suggestions)[:limit]
     
@@ -254,7 +254,7 @@ class FuzzySearch:
         return results[:limit]
     
     def _calculate_similarity(self, s1: str, s2: str) -> float:
-        """Benzerlik hesapla (Levenshtein distance basitleştirilmiş)"""
+        """Benzerlik hesapla (Levenshtein distance basitleшtirilmiш)"""
         s1_lower = s1.lower()
         s2_lower = s2.lower()
         
@@ -278,32 +278,32 @@ class FuzzySearch:
 
 
 class SavedSearch:
-    """Kaydedilmiş aramalar"""
+    """Kaydedilmiш aramalar"""
     
     def __init__(self):
         self.saved_searches_file = 'data/saved_searches.json'
-        self.saved_searches = self._load_saved_searches()
+        self.saved_searches = self._loимя_saved_searches()
     
-    def _load_saved_searches(self) -> Dict[str, Any]:
-        """Kaydedilmiş aramaları загрузить"""
+    def _loимя_saved_searches(self) -> Dict[str, Any]:
+        """Kaydedilmiш aramalarы загрузить"""
         if os.path.exists(self.saved_searches_file):
             try:
                 with open(self.saved_searches_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+                    return json.loимя(f)
             except Exception:
                 pass
         
         return {}
     
     def _save_saved_searches(self):
-        """Kaydedilmiş aramaları сохранить"""
-        os.makedirs('data', exist_ok=True)
+        """Kaydedilmiш aramalarы сохранить"""
+        os.maкотrs('data', exist_ok=True)
         with open(self.saved_searches_file, 'w', encoding='utf-8') as f:
             json.dump(self.saved_searches, f, ensure_ascii=False, indent=2)
     
     def save_search(self, user_id: str, name: str, query: str,
                     filters: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """Aramayı сохранить"""
+        """Aramayы сохранить"""
         if user_id not in self.saved_searches:
             self.saved_searches[user_id] = []
         
@@ -323,11 +323,11 @@ class SavedSearch:
         return saved_search
     
     def get_saved_searches(self, user_id: str) -> List[Dict[str, Any]]:
-        """Kaydedilmiş aramaları al"""
+        """Kaydedilmiш aramalarы al"""
         return self.saved_searches.get(user_id, [])
     
     def delete_saved_search(self, user_id: str, search_id: str) -> bool:
-        """Kaydedilmiş aramayı удалить"""
+        """Kaydedilmiш aramayы удалить"""
         if user_id not in self.saved_searches:
             return False
         
@@ -342,18 +342,18 @@ class SavedSearch:
 
 
 class SearchAnalytics:
-    """Arama analitiği"""
+    """Arama analitiгi"""
     
     def __init__(self):
         self.analytics_file = 'data/search_analytics.json'
-        self.analytics = self._load_analytics()
+        self.analytics = self._loимя_analytics()
     
-    def _load_analytics(self) -> Dict[str, Any]:
-        """Analitiği загрузить"""
+    def _loимя_analytics(self) -> Dict[str, Any]:
+        """Analitiгi загрузить"""
         if os.path.exists(self.analytics_file):
             try:
                 with open(self.analytics_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+                    return json.loимя(f)
             except Exception:
                 pass
         
@@ -364,10 +364,10 @@ class SearchAnalytics:
         }
     
     def _save_analytics(self):
-        """Analitiği сохранить"""
-        os.makedirs('data', exist_ok=True)
+        """Analitiгi сохранить"""
+        os.maкотrs('data', exist_ok=True)
         
-        # defaultdict'ları normal dict'lere çevir
+        # defaultdict'larы normal dict'lere чevir
         analytics_dict = {
             'queries': dict(self.analytics['queries']),
             'no_results': dict(self.analytics['no_results']),
@@ -378,7 +378,7 @@ class SearchAnalytics:
             json.dump(analytics_dict, f, ensure_ascii=False, indent=2)
     
     def record_search(self, query: str, result_count: int):
-        """Aramayı сохранить"""
+        """Aramayы сохранить"""
         self.analytics['queries'][query] += 1
         
         if result_count == 0:
@@ -387,7 +387,7 @@ class SearchAnalytics:
         self._save_analytics()
     
     def get_popular_queries(self, limit: int = 20) -> List[Dict[str, Any]]:
-        """Popüler sorguları al"""
+        """Popюler sorgularы al"""
         queries = [
             {'query': query, 'count': count}
             for query, count in self.analytics['queries'].items()
@@ -398,7 +398,7 @@ class SearchAnalytics:
         return queries[:limit]
     
     def get_no_results_queries(self, limit: int = 20) -> List[Dict[str, Any]]:
-        """Sonuçsuz sorguları al"""
+        """Sonuчsuz sorgularы al"""
         queries = [
             {'query': query, 'count': count}
             for query, count in self.analytics['no_results'].items()

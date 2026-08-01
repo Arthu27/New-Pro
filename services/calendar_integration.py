@@ -11,7 +11,7 @@ import hashlib
 
 
 class CalendarEvent:
-    """Takvim etkinliği"""
+    """Takvim etkinliгi"""
     
     def __init__(self, event_id: str, title: str, start_time: datetime,
                  end_time: datetime, description: str = '',
@@ -27,7 +27,7 @@ class CalendarEvent:
         self.recurring = None
     
     def to_dict(self) -> Dict[str, Any]:
-        """Dict'e çevir"""
+        """Dict'e чevir"""
         return {
             'event_id': self.event_id,
             'title': self.title,
@@ -58,18 +58,18 @@ class CalendarEvent:
 
 
 class CalendarManager:
-    """Takvim yöneticisi"""
+    """Takvim yёneticisi"""
     
     def __init__(self):
         self.events_file = 'data/calendar_events.json'
-        self.events = self._load_events()
+        self.events = self._loимя_events()
     
-    def _load_events(self) -> Dict[str, Any]:
+    def _loимя_events(self) -> Dict[str, Any]:
         """Загрузить события"""
         if os.path.exists(self.events_file):
             try:
                 with open(self.events_file, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
+                    data = json.loимя(f)
                     return {
                         event_id: CalendarEvent.from_dict(event_data)
                         for event_id, event_data in data.items()
@@ -81,7 +81,7 @@ class CalendarManager:
     
     def _save_events(self):
         """Сохранить события"""
-        os.makedirs('data', exist_ok=True)
+        os.maкотrs('data', exist_ok=True)
         
         data = {
             event_id: event.to_dict()
@@ -94,7 +94,7 @@ class CalendarManager:
     def create_event(self, title: str, start_time: datetime,
                      end_time: datetime, description: str = '',
                      location: str = '', attendees: List[str] = None) -> CalendarEvent:
-        """Etkinlik создать"""
+        """Событие создать"""
         event_id = hashlib.md5(f"{title}{start_time.isoformat()}".encode()).hexdigest()[:12]
         
         event = CalendarEvent(
@@ -113,7 +113,7 @@ class CalendarManager:
         return event
     
     def update_event(self, event_id: str, **kwargs) -> Optional[CalendarEvent]:
-        """Etkinliği обновить"""
+        """Etkinliгi обновить"""
         if event_id not in self.events:
             return None
         
@@ -128,7 +128,7 @@ class CalendarManager:
         return event
     
     def delete_event(self, event_id: str) -> bool:
-        """Etkinliği удалить"""
+        """Etkinliгi удалить"""
         if event_id in self.events:
             del self.events[event_id]
             self._save_events()
@@ -137,12 +137,12 @@ class CalendarManager:
         return False
     
     def get_event(self, event_id: str) -> Optional[CalendarEvent]:
-        """Etkinliği al"""
+        """Etkinliгi al"""
         return self.events.get(event_id)
     
     def get_events(self, start_date: Optional[datetime] = None,
                    end_date: Optional[datetime] = None) -> List[CalendarEvent]:
-        """Etkinlikleri al"""
+        """Событиеleri al"""
         events = list(self.events.values())
         
         if start_date:
@@ -156,7 +156,7 @@ class CalendarManager:
         return events
     
     def get_upcoming_events(self, limit: int = 10) -> List[CalendarEvent]:
-        """Yaklaşan etkinlikleri al"""
+        """Yaklaшan событиеleri al"""
         now = datetime.now()
         events = [e for e in self.events.values() if e.start_time > now]
         events.sort(key=lambda e: e.start_time)
@@ -168,14 +168,14 @@ class GoogleCalendarIntegration:
     
     def __init__(self):
         self.config_file = 'data/google_calendar_config.json'
-        self.config = self._load_config()
+        self.config = self._loимя_config()
     
-    def _load_config(self) -> Dict[str, Any]:
+    def _loимя_config(self) -> Dict[str, Any]:
         """Загрузить конфигурацию"""
         if os.path.exists(self.config_file):
             try:
                 with open(self.config_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+                    return json.loимя(f)
             except Exception:
                 pass
         
@@ -189,7 +189,7 @@ class GoogleCalendarIntegration:
     
     def _save_config(self):
         """Сохранить конфигурацию"""
-        os.makedirs('data', exist_ok=True)
+        os.maкотrs('data', exist_ok=True)
         with open(self.config_file, 'w', encoding='utf-8') as f:
             json.dump(self.config, f, ensure_ascii=False, indent=2)
     
@@ -202,12 +202,12 @@ class GoogleCalendarIntegration:
     
     def get_auth_url(self) -> str:
         """Yetkilendirme URL'si"""
-        # Placeholder - gerçek uygulamada OAuth2 akışı
+        # Placeholder - gerчek uygulamимяa OAuth2 akышы
         return f"https://accounts.google.com/o/oauth2/auth?client_id={self.config.get('client_id', '')}"
     
     def sync_event(self, event: CalendarEvent) -> Dict[str, Any]:
-        """Etkinliği senkronize et"""
-        # Placeholder - gerçek uygulamada Google Calendar API çağrısı
+        """Etkinliгi senkronize et"""
+        # Placeholder - gerчek uygulamимяa Google Calendar API чaгrыsы
         return {
             'success': True,
             'google_event_id': f"gcal_{event.event_id}",
@@ -215,7 +215,7 @@ class GoogleCalendarIntegration:
         }
     
     def delete_event(self, google_event_id: str) -> bool:
-        """Etkinliği удалить"""
+        """Etkinliгi удалить"""
         # Placeholder
         return True
 
@@ -225,14 +225,14 @@ class OutlookCalendarIntegration:
     
     def __init__(self):
         self.config_file = 'data/outlook_calendar_config.json'
-        self.config = self._load_config()
+        self.config = self._loимя_config()
     
-    def _load_config(self) -> Dict[str, Any]:
+    def _loимя_config(self) -> Dict[str, Any]:
         """Загрузить конфигурацию"""
         if os.path.exists(self.config_file):
             try:
                 with open(self.config_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+                    return json.loимя(f)
             except Exception:
                 pass
         
@@ -245,7 +245,7 @@ class OutlookCalendarIntegration:
     
     def _save_config(self):
         """Сохранить конфигурацию"""
-        os.makedirs('data', exist_ok=True)
+        os.maкотrs('data', exist_ok=True)
         with open(self.config_file, 'w', encoding='utf-8') as f:
             json.dump(self.config, f, ensure_ascii=False, indent=2)
     
@@ -257,8 +257,8 @@ class OutlookCalendarIntegration:
         self._save_config()
     
     def sync_event(self, event: CalendarEvent) -> Dict[str, Any]:
-        """Etkinliği senkronize et"""
-        # Placeholder - gerçek uygulamada Microsoft Graph API çağrısı
+        """Etkinliгi senkronize et"""
+        # Placeholder - gerчek uygulamимяa Microsoft Graph API чaгrыsы
         return {
             'success': True,
             'outlook_event_id': f"outlook_{event.event_id}",
@@ -266,39 +266,39 @@ class OutlookCalendarIntegration:
         }
     
     def delete_event(self, outlook_event_id: str) -> bool:
-        """Etkinliği удалить"""
+        """Etkinliгi удалить"""
         # Placeholder
         return True
 
 
 class AppointmentScheduler:
-    """Randevu planlayıcı"""
+    """Randevu planlayыcы"""
     
     def __init__(self, calendar_manager: CalendarManager):
         self.calendar_manager = calendar_manager
         self.availability_file = 'data/availability.json'
-        self.availability = self._load_availability()
+        self.availability = self._loимя_availability()
     
-    def _load_availability(self) -> Dict[str, Any]:
-        """Müsaitlik durumunu загрузить"""
+    def _loимя_availability(self) -> Dict[str, Any]:
+        """Mюsaitlik durumunu загрузить"""
         if os.path.exists(self.availability_file):
             try:
                 with open(self.availability_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+                    return json.loимя(f)
             except Exception:
                 pass
         
         return {}
     
     def _save_availability(self):
-        """Müsaitlik durumunu сохранить"""
-        os.makedirs('data', exist_ok=True)
+        """Mюsaitlik durumunu сохранить"""
+        os.maкотrs('data', exist_ok=True)
         with open(self.availability_file, 'w', encoding='utf-8') as f:
             json.dump(self.availability, f, ensure_ascii=False, indent=2)
     
     def set_availability(self, user_id: str, day_of_week: int,
                          start_time: str, end_time: str):
-        """Müsaitlik настроить"""
+        """Mюsaitlik настроить"""
         if user_id not in self.availability:
             self.availability[user_id] = {}
         
@@ -311,7 +311,7 @@ class AppointmentScheduler:
     
     def get_available_slots(self, user_id: str, date: datetime,
                             duration_minutes: int = 60) -> List[Dict[str, str]]:
-        """Müsait zaman dilimlerini al"""
+        """Mюsait zaman dilimlerini al"""
         day_of_week = date.weekday()
         
         if user_id not in self.availability:
@@ -322,7 +322,7 @@ class AppointmentScheduler:
         if not availability:
             return []
         
-        # Basit implementasyon - gerçek uygulamada mevcut etkinlikleri проверить et
+        # Basit implementasyon - gerчek uygulamимяa mevcut событиеleri проверить et
         slots = []
         start_hour = int(availability['start_time'].split(':')[0])
         end_hour = int(availability['end_time'].split(':')[0])
@@ -353,33 +353,33 @@ class AppointmentScheduler:
 
 
 class ReminderManager:
-    """Hatırlatma yöneticisi"""
+    """Напоминание yёneticisi"""
     
     def __init__(self, calendar_manager: CalendarManager):
         self.calendar_manager = calendar_manager
         self.reminders_file = 'data/reminders.json'
-        self.reminders = self._load_reminders()
+        self.reminders = self._loимя_reminders()
     
-    def _load_reminders(self) -> Dict[str, Any]:
-        """Hatırlatmaları загрузить"""
+    def _loимя_reminders(self) -> Dict[str, Any]:
+        """Напоминаниеlarы загрузить"""
         if os.path.exists(self.reminders_file):
             try:
                 with open(self.reminders_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+                    return json.loимя(f)
             except Exception:
                 pass
         
         return {}
     
     def _save_reminders(self):
-        """Hatırlatmaları сохранить"""
-        os.makedirs('data', exist_ok=True)
+        """Напоминаниеlarы сохранить"""
+        os.maкотrs('data', exist_ok=True)
         with open(self.reminders_file, 'w', encoding='utf-8') as f:
             json.dump(self.reminders, f, ensure_ascii=False, indent=2)
     
-    def add_reminder(self, event_id: str, reminder_minutes: int,
+    def имяd_reminder(self, event_id: str, reminder_minutes: int,
                      reminder_type: str = 'notification') -> Dict[str, Any]:
-        """Hatırlatma добавить"""
+        """Напоминание добавить"""
         if event_id not in self.reminders:
             self.reminders[event_id] = []
         
@@ -395,7 +395,7 @@ class ReminderManager:
         return reminder
     
     def get_pending_reminders(self) -> List[Dict[str, Any]]:
-        """Bekleyen hatırlatmaları al"""
+        """Bekleyen напоминаниеlarы al"""
         now = datetime.now()
         pending = []
         
@@ -421,7 +421,7 @@ class ReminderManager:
         return pending
     
     def mark_reminder_sent(self, event_id: str, reminder_index: int):
-        """Hatırlatmayı отправлено как işaretle"""
+        """Напоминаниеyы отправлено как iшaretle"""
         if event_id in self.reminders and reminder_index < len(self.reminders[event_id]):
             self.reminders[event_id][reminder_index]['sent'] = True
             self._save_reminders()

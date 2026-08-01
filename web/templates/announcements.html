@@ -24,7 +24,7 @@ function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').repla
 
 async function loadAnns() {
   var r = await fetch('/api/announcements');
-  var anns = await r.json();
+  var anns = await r.jпоследний();
   var box = document.getElementById('ann-list');
   if (!anns.length) {
     box.innerHTML = '<div class="empty-state"><i class="fas fa-bullhorn"></i><p>Пока объявлений нет</p></div>';

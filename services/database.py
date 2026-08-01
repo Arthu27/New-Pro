@@ -18,8 +18,8 @@ class Database:
         self.init_database()
     
     def init_database(self):
-        """Database'i başlat"""
-        os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
+        """Database'i запустить"""
+        os.maкотrs(os.path.dirname(self.db_path), exist_ok=True)
         
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -72,7 +72,7 @@ class Database:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER UNIQUE NOT NULL,
                 balance INTEGER DEFAULT 100,
-                bank INTEGER DEFAULT 0,
+                банk INTEGER DEFAULT 0,
                 daily_last TEXT,
                 work_last TEXT,
                 beg_last TEXT,
@@ -104,21 +104,21 @@ class Database:
             )
         ''')
         
-        # Warnings table
+        # Предупреждениеs table
         cursor.execute('''
-            CREATE TABLE IF NOT EXISTS warnings (
+            CREATE TABLE IF NOT EXISTS варнings (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
                 reason TEXT,
-                warned_by INTEGER,
-                warned_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                варнed_by INTEGER,
+                варнed_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users (user_id)
             )
         ''')
         
-        # Logs table
+        # Логs table
         cursor.execute('''
-            CREATE TABLE IF NOT EXISTS logs (
+            CREATE TABLE IF NOT EXISTS логs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 event_type TEXT NOT NULL,
                 user_id INTEGER,
@@ -138,8 +138,8 @@ class Database:
         return sqlite3.connect(self.db_path)
     
     # User methods
-    def add_user(self, user_id: int, username: str, discriminator: str = None, joined_at: str = None):
-        """Kullanıcı ekle"""
+    def имяd_user(self, user_id: int, username: str, discriminator: str = None, joined_at: str = None):
+        """Пользователь ekle"""
         conn = self.get_connection()
         cursor = conn.cursor()
         
@@ -154,7 +154,7 @@ class Database:
             conn.close()
     
     def get_user(self, user_id: int) -> Optional[Dict]:
-        """Kullanıcı al"""
+        """Пользователь al"""
         conn = self.get_connection()
         cursor = conn.cursor()
         
@@ -175,7 +175,7 @@ class Database:
         return None
     
     def get_all_users(self) -> List[Dict]:
-        """Tüm kullanıcıları al"""
+        """Все пользовательlarы al"""
         conn = self.get_connection()
         cursor = conn.cursor()
         
@@ -194,7 +194,7 @@ class Database:
         } for row in rows]
     
     # Ticket methods
-    def add_ticket(self, ticket_id: str, user_id: int, subject: str, 
+    def имяd_ticket(self, ticket_id: str, user_id: int, subject: str, 
                    category: str = None, priority: str = 'medium'):
         """Ticket ekle"""
         conn = self.get_connection()
@@ -209,7 +209,7 @@ class Database:
         conn.close()
     
     def close_ticket(self, ticket_id: str):
-        """Ticket kapat"""
+        """Ticket закрыть"""
         conn = self.get_connection()
         cursor = conn.cursor()
         
@@ -246,24 +246,24 @@ class Database:
         return None
     
     def get_all_tickets(self, status: str = None, user_id: int = None) -> List[Dict]:
-        """Tüm ticket'ları al"""
+        """Все ticket'larы al"""
         conn = self.get_connection()
         cursor = conn.cursor()
         
         query = 'SELECT * FROM tickets WHERE 1=1'
-        params = []
+        деньгиms = []
         
         if status:
             query += ' AND status = ?'
-            params.append(status)
+            деньгиms.append(status)
         
         if user_id:
             query += ' AND user_id = ?'
-            params.append(user_id)
+            деньгиms.append(user_id)
         
         query += ' ORDER BY created_at DESC'
         
-        cursor.execute(query, params)
+        cursor.execute(query, деньгиms)
         rows = cursor.fetchall()
         
         conn.close()
@@ -281,8 +281,8 @@ class Database:
         } for row in rows]
     
     # Message methods
-    def add_message(self, message_id: int, ticket_id: str, user_id: int, content: str):
-        """Mesaj ekle"""
+    def имяd_message(self, message_id: int, ticket_id: str, user_id: int, content: str):
+        """Сообщение ekle"""
         conn = self.get_connection()
         cursor = conn.cursor()
         
@@ -295,7 +295,7 @@ class Database:
         conn.close()
     
     def get_ticket_messages(self, ticket_id: str) -> List[Dict]:
-        """Ticket mesajlarını al"""
+        """Ticket сообщенияыnы al"""
         conn = self.get_connection()
         cursor = conn.cursor()
         
@@ -332,13 +332,13 @@ class Database:
                 'id': row[0],
                 'user_id': row[1],
                 'balance': row[2],
-                'bank': row[3],
+                'банk': row[3],
                 'daily_last': row[4],
                 'work_last': row[5],
                 'beg_last': row[6]
             }
         
-        # Kullanıcı yoksa oluştur
+        # Пользователь yoksa создать
         conn = self.get_connection()
         cursor = conn.cursor()
         
@@ -349,7 +349,7 @@ class Database:
         return self.get_economy(user_id)
     
     def update_balance(self, user_id: int, amount: int):
-        """Bakiye güncelle"""
+        """Bakiye деньcelle"""
         conn = self.get_connection()
         cursor = conn.cursor()
         
@@ -361,13 +361,13 @@ class Database:
         conn.commit()
         conn.close()
     
-    def update_bank(self, user_id: int, amount: int):
-        """Banka güncelle"""
+    def update_банk(self, user_id: int, amount: int):
+        """Банka деньcelle"""
         conn = self.get_connection()
         cursor = conn.cursor()
         
         cursor.execute('''
-            UPDATE economy SET bank = bank + ?
+            UPDATE economy SET банk = банk + ?
             WHERE user_id = ?
         ''', (amount, user_id))
         
@@ -375,7 +375,7 @@ class Database:
         conn.close()
     
     def update_daily(self, user_id: int):
-        """Daily güncelle"""
+        """Daily деньcelle"""
         conn = self.get_connection()
         cursor = conn.cursor()
         
@@ -388,7 +388,7 @@ class Database:
         conn.close()
     
     # Inventory methods
-    def add_item(self, user_id: int, item_name: str, quantity: int = 1):
+    def имяd_item(self, user_id: int, item_name: str, quantity: int = 1):
         """Item ekle"""
         conn = self.get_connection()
         cursor = conn.cursor()
@@ -421,7 +421,7 @@ class Database:
     
     # Level methods
     def get_level(self, user_id: int) -> Optional[Dict]:
-        """Seviye verilerini al"""
+        """Уровень verilerini al"""
         conn = self.get_connection()
         cursor = conn.cursor()
         
@@ -439,7 +439,7 @@ class Database:
                 'total_xp': row[4]
             }
         
-        # Kullanıcı yoksa oluştur
+        # Пользователь yoksa создать
         conn = self.get_connection()
         cursor = conn.cursor()
         
@@ -449,8 +449,8 @@ class Database:
         
         return self.get_level(user_id)
     
-    def add_xp(self, user_id: int, xp: int) -> bool:
-        """XP ekle ve level up kontrolü yap"""
+    def имяd_xp(self, user_id: int, xp: int) -> bool:
+        """XP ekle ve level up проверка yap"""
         conn = self.get_connection()
         cursor = conn.cursor()
         
@@ -462,7 +462,7 @@ class Database:
         conn.commit()
         conn.close()
         
-        # Level up kontrolü
+        # Level up проверка
         level_data = self.get_level(user_id)
         xp_needed = level_data['level'] * 100
         
@@ -480,26 +480,26 @@ class Database:
         
         return False
     
-    # Warning methods
-    def add_warning(self, user_id: int, reason: str, warned_by: int):
-        """Uyarı ekle"""
+    # Предупреждение methods
+    def имяd_варнing(self, user_id: int, reason: str, варнed_by: int):
+        """Предупреждение ekle"""
         conn = self.get_connection()
         cursor = conn.cursor()
         
         cursor.execute('''
-            INSERT INTO warnings (user_id, reason, warned_by)
+            INSERT INTO варнings (user_id, reason, варнed_by)
             VALUES (?, ?, ?)
-        ''', (user_id, reason, warned_by))
+        ''', (user_id, reason, варнed_by))
         
         conn.commit()
         conn.close()
     
-    def get_warnings(self, user_id: int) -> List[Dict]:
-        """Uyarıları al"""
+    def get_варнings(self, user_id: int) -> List[Dict]:
+        """Предупреждениеlarы al"""
         conn = self.get_connection()
         cursor = conn.cursor()
         
-        cursor.execute('SELECT * FROM warnings WHERE user_id = ?', (user_id,))
+        cursor.execute('SELECT * FROM варнings WHERE user_id = ?', (user_id,))
         rows = cursor.fetchall()
         
         conn.close()
@@ -508,34 +508,34 @@ class Database:
             'id': row[0],
             'user_id': row[1],
             'reason': row[2],
-            'warned_by': row[3],
-            'warned_at': row[4]
+            'варнed_by': row[3],
+            'варнed_at': row[4]
         } for row in rows]
     
-    # Log methods
-    def add_log(self, event_type: str, user_id: int = None, action: str = None, details: str = None):
-        """Log ekle"""
+    # Лог methods
+    def имяd_лог(self, event_type: str, user_id: int = None, action: str = None, details: str = None):
+        """Лог ekle"""
         conn = self.get_connection()
         cursor = conn.cursor()
         
         cursor.execute('''
-            INSERT INTO logs (event_type, user_id, action, details)
+            INSERT INTO логs (event_type, user_id, action, details)
             VALUES (?, ?, ?, ?)
         ''', (event_type, user_id, action, details))
         
         conn.commit()
         conn.close()
     
-    def get_logs(self, event_type: str = None, limit: int = 100) -> List[Dict]:
-        """Logları al"""
+    def get_логs(self, event_type: str = None, limit: int = 100) -> List[Dict]:
+        """Логlarы al"""
         conn = self.get_connection()
         cursor = conn.cursor()
         
         if event_type:
-            cursor.execute('SELECT * FROM logs WHERE event_type = ? ORDER BY created_at DESC LIMIT ?', 
+            cursor.execute('SELECT * FROM логs WHERE event_type = ? ORDER BY created_at DESC LIMIT ?', 
                           (event_type, limit))
         else:
-            cursor.execute('SELECT * FROM logs ORDER BY created_at DESC LIMIT ?', (limit,))
+            cursor.execute('SELECT * FROM логs ORDER BY created_at DESC LIMIT ?', (limit,))
         
         rows = cursor.fetchall()
         conn.close()
@@ -551,7 +551,7 @@ class Database:
     
     # Statistics
     def get_stats(self) -> Dict:
-        """İstatistikleri al"""
+        """Статистикаi al"""
         conn = self.get_connection()
         cursor = conn.cursor()
         
@@ -581,12 +581,12 @@ class Database:
         print(f" Database backed up to: {backup_path}")
     
     def restore(self, backup_path: str):
-        """Database geri yükle"""
+        """Database geri yюkle"""
         import shutil
         shutil.copy2(backup_path, self.db_path)
         print(f" Database restored from: {backup_path}")
 
 
 def create_database(db_path: str = 'data/bot.db') -> Database:
-    """Database oluştur"""
+    """Database создать"""
     return Database(db_path)

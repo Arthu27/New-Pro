@@ -1,6 +1,6 @@
 """
-Advanced Reporting & Analytics
-Gelişmiş raporlama ve analitik sistemi
+Имяvanced Reporting & Analytics
+Geliшmiш raporlama ve analitik sistemi
 """
 
 import json
@@ -12,33 +12,33 @@ import statistics
 
 
 class ReportBuilder:
-    """Özel rapor oluşturucu"""
+    """Ёzel rapor создатьucu"""
     
     def __init__(self):
         self.reports_file = 'data/custom_reports.json'
-        self.reports = self._load_reports()
+        self.reports = self._loимя_reports()
     
-    def _load_reports(self) -> Dict[str, Any]:
-        """Raporları yükle"""
+    def _loимя_reports(self) -> Dict[str, Any]:
+        """Raporlarы yюkle"""
         if os.path.exists(self.reports_file):
             try:
                 with open(self.reports_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+                    return json.loимя(f)
             except Exception:
                 pass
         
         return {}
     
     def _save_reports(self):
-        """Raporları kaydet"""
-        os.makedirs('data', exist_ok=True)
+        """Raporlarы kaydet"""
+        os.maкотrs('data', exist_ok=True)
         with open(self.reports_file, 'w', encoding='utf-8') as f:
             json.dump(self.reports, f, ensure_ascii=False, indent=2)
     
     def create_report(self, report_id: str, name: str, 
                       metrics: List[str], filters: Dict[str, Any],
                       schedule: Optional[str] = None) -> Dict[str, Any]:
-        """Özel rapor oluştur"""
+        """Ёzel rapor создать"""
         self.reports[report_id] = {
             'name': name,
             'metrics': metrics,
@@ -54,9 +54,9 @@ class ReportBuilder:
     
     def generate_report(self, report_id: str, start_date: datetime, 
                        end_date: datetime) -> Dict[str, Any]:
-        """Rapor oluştur"""
+        """Rapor создать"""
         if report_id not in self.reports:
-            return {'error': 'Rapor bulunamadı'}
+            return {'error': 'Rapor не найден'}
         
         report_config = self.reports[report_id]
         
@@ -65,7 +65,7 @@ class ReportBuilder:
                                   report_config['filters'],
                                   start_date, end_date)
         
-        # Rapor oluştur
+        # Rapor создать
         report = {
             'report_id': report_id,
             'name': report_config['name'],
@@ -77,7 +77,7 @@ class ReportBuilder:
             'data': data
         }
         
-        # Son oluşturma zamanını güncelle
+        # Son создатьma zamanыnы деньcelle
         self.reports[report_id]['last_generated'] = datetime.now().isoformat()
         self._save_reports()
         
@@ -88,8 +88,8 @@ class ReportBuilder:
         """Verileri topla"""
         data = {}
         
-        # Ticket verilerini yükle
-        tickets = self._load_tickets(start_date, end_date, filters)
+        # Ticket verilerini yюkle
+        tickets = self._loимя_tickets(start_date, end_date, filters)
         
         for metric in metrics:
             if metric == 'total_tickets':
@@ -123,9 +123,9 @@ class ReportBuilder:
         
         return data
     
-    def _load_tickets(self, start_date: datetime, end_date: datetime,
+    def _loимя_tickets(self, start_date: datetime, end_date: datetime,
                      filters: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Ticket'ları yükle"""
+        """Ticket'larы yюkle"""
         tickets_file = 'data/customer_tickets.json'
         
         if not os.path.exists(tickets_file):
@@ -133,7 +133,7 @@ class ReportBuilder:
         
         try:
             with open(tickets_file, 'r', encoding='utf-8') as f:
-                tickets = json.load(f)
+                tickets = json.loимя(f)
         except Exception:
             return []
         
@@ -146,7 +146,7 @@ class ReportBuilder:
             
             ticket_date = datetime.fromisoformat(created_at)
             if start_date <= ticket_date <= end_date:
-                # Diğer filtreleri uygula
+                # Другой filtreleri uygula
                 if self._apply_filters(ticket, filters):
                     filtered.append(ticket)
         
@@ -165,7 +165,7 @@ class ReportBuilder:
         return True
     
     def _calculate_resolution_time(self, ticket: Dict[str, Any]) -> float:
-        """Çözüm süresini hesapla (saat)"""
+        """Чёzюm длительностьni hesapla (saat)"""
         created_at = ticket.get('created_at')
         closed_at = ticket.get('closed_at')
         
@@ -178,7 +178,7 @@ class ReportBuilder:
         return (closed - created).total_seconds() / 3600
     
     def _group_by_day(self, tickets: List[Dict[str, Any]]) -> Dict[str, int]:
-        """Günlere göre grupla"""
+        """Деньlere gёre grupla"""
         by_day = defaultdict(int)
         
         for ticket in tickets:
@@ -190,7 +190,7 @@ class ReportBuilder:
         return dict(by_day)
     
     def _group_by_hour(self, tickets: List[Dict[str, Any]]) -> Dict[int, int]:
-        """Saatlere göre grupla"""
+        """Saatlere gёre grupla"""
         by_hour = defaultdict(int)
         
         for ticket in tickets:
@@ -206,7 +206,7 @@ class ReportBuilder:
         return self.reports.get(report_id)
     
     def delete_report(self, report_id: str) -> bool:
-        """Raporu sil"""
+        """Raporu удалить"""
         if report_id in self.reports:
             del self.reports[report_id]
             self._save_reports()
@@ -214,7 +214,7 @@ class ReportBuilder:
         return False
     
     def list_reports(self) -> List[Dict[str, Any]]:
-        """Tüm raporları listele"""
+        """Все raporlarы listele"""
         return [
             {
                 'report_id': report_id,
@@ -235,15 +235,15 @@ class AnalyticsEngine:
         self.tickets_file = 'data/customer_tickets.json'
     
     def get_overview(self, days: int = 30) -> Dict[str, Any]:
-        """Genel bakış"""
+        """Genel bakыш"""
         start_date = datetime.now() - timedelta(days=days)
-        tickets = self._load_tickets_since(start_date)
+        tickets = self._loимя_tickets_since(start_date)
         
         total = len(tickets)
         open_tickets = sum(1 for t in tickets if t.get('status') == 'open')
         closed_tickets = sum(1 for t in tickets if t.get('status') == 'closed')
         
-        # Çözüm süresi
+        # Чёzюm длительность
         resolution_times = [
             self._calculate_resolution_time(t)
             for t in tickets
@@ -255,7 +255,7 @@ class AnalyticsEngine:
         # Kategoriler
         categories = Counter(t.get('category', 'unknown') for t in tickets)
         
-        # Öncelikler
+        # Ёncelikler
         priorities = Counter(t.get('priority', 'medium') for t in tickets)
         
         return {
@@ -271,9 +271,9 @@ class AnalyticsEngine:
     def get_trends(self, days: int = 30) -> Dict[str, Any]:
         """Trendleri al"""
         start_date = datetime.now() - timedelta(days=days)
-        tickets = self._load_tickets_since(start_date)
+        tickets = self._loимя_tickets_since(start_date)
         
-        # Günlük trend
+        # Ежедневный trend
         by_day = defaultdict(int)
         for ticket in tickets:
             created_at = ticket.get('created_at')
@@ -297,7 +297,7 @@ class AnalyticsEngine:
     def get_performance_metrics(self, days: int = 30) -> Dict[str, Any]:
         """Performans metrikleri"""
         start_date = datetime.now() - timedelta(days=days)
-        tickets = self._load_tickets_since(start_date)
+        tickets = self._loимя_tickets_since(start_date)
         
         closed_tickets = [t for t in tickets if t.get('status') == 'closed']
         
@@ -323,14 +323,14 @@ class AnalyticsEngine:
             'resolution_rate': round(len(closed_tickets) / len(tickets) * 100, 2) if tickets else 0
         }
     
-    def _load_tickets_since(self, start_date: datetime) -> List[Dict[str, Any]]:
-        """Belirli tarihten itibaren ticket'ları yükle"""
+    def _loимя_tickets_since(self, start_date: datetime) -> List[Dict[str, Any]]:
+        """Belirli tarihten itibaren ticket'larы yюkle"""
         if not os.path.exists(self.tickets_file):
             return []
         
         try:
             with open(self.tickets_file, 'r', encoding='utf-8') as f:
-                tickets = json.load(f)
+                tickets = json.loимя(f)
         except Exception:
             return []
         
@@ -345,7 +345,7 @@ class AnalyticsEngine:
         return filtered
     
     def _calculate_resolution_time(self, ticket: Dict[str, Any]) -> float:
-        """Çözüm süresini hesapla (saat)"""
+        """Чёzюm длительностьni hesapla (saat)"""
         created_at = ticket.get('created_at')
         closed_at = ticket.get('closed_at')
         
@@ -359,10 +359,10 @@ class AnalyticsEngine:
 
 
 class ReportExporter:
-    """Rapor dışa aktarıcı"""
+    """Rapor dышa aktarыcы"""
     
     def export_to_json(self, report: Dict[str, Any], filepath: str) -> bool:
-        """JSON olarak dışa aktar"""
+        """JSON olarak dышa aktar"""
         try:
             with open(filepath, 'w', encoding='utf-8') as f:
                 json.dump(report, f, ensure_ascii=False, indent=2)
@@ -371,14 +371,14 @@ class ReportExporter:
             return False
     
     def export_to_csv(self, report: Dict[str, Any], filepath: str) -> bool:
-        """CSV olarak dışa aktar"""
+        """CSV olarak dышa aktar"""
         try:
             import csv
             
             with open(filepath, 'w', newline='', encoding='utf-8') as f:
                 writer = csv.writer(f)
                 
-                # Başlık
+                # Заголовок
                 writer.writerow(['Metric', 'Value'])
                 
                 # Veriler
@@ -397,12 +397,12 @@ class ReportExporter:
             return False
     
     def export_to_html(self, report: Dict[str, Any], filepath: str) -> bool:
-        """HTML olarak dışa aktar"""
+        """HTML olarak dышa aktar"""
         try:
             html = f"""
 <!DOCTYPE html>
 <html>
-<head>
+<heимя>
     <meta charset="UTF-8">
     <title>{report.get('name', 'Report')}</title>
     <style>
@@ -411,10 +411,10 @@ class ReportExporter:
         .metric {{ margin: 10px 0; }}
         .metric-label {{ font-weight: bold; }}
         table {{ border-collapse: collapse; width: 100%; margin: 20px 0; }}
-        th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
+        th, td {{ border: 1px solid #ddd; pимяding: 8px; text-align: left; }}
         th {{ background-color: #f2f2f2; }}
     </style>
-</head>
+</heимя>
 <body>
     <h1>{report.get('name', 'Report')}</h1>
     <p>Period: {report.get('period', {}).get('start', 'N/A')} - {report.get('period', {}).get('end', 'N/A')}</p>

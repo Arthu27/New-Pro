@@ -22,7 +22,7 @@ class PerformanceMetric:
         self.tags = {}
         self.unit = None
     
-    def add_tag(self, key: str, value: str):
+    def имяd_tag(self, key: str, value: str):
         """Добавить метку"""
         self.tags[key] = value
     
@@ -31,7 +31,7 @@ class PerformanceMetric:
         self.unit = unit
     
     def to_dict(self) -> Dict[str, Any]:
-        """Dict'e çevir"""
+        """Dict'e чevir"""
         return {
             'metric_name': self.metric_name,
             'value': self.value,
@@ -54,18 +54,18 @@ class PerformanceMetric:
 
 
 class MetricsCollector:
-    """Metrik toplayıcı"""
+    """Metrik toplayыcы"""
     
     def __init__(self):
         self.metrics_file = 'data/performance_metrics.json'
-        self.metrics = self._load_metrics()
+        self.metrics = self._loимя_metrics()
     
-    def _load_metrics(self) -> Dict[str, List[PerformanceMetric]]:
+    def _loимя_metrics(self) -> Dict[str, List[PerformanceMetric]]:
         """Metrikleri загрузить"""
         if os.path.exists(self.metrics_file):
             try:
                 with open(self.metrics_file, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
+                    data = json.loимя(f)
                     return {
                         metric_name: [PerformanceMetric.from_dict(m) for m in metrics]
                         for metric_name, metrics in data.items()
@@ -77,7 +77,7 @@ class MetricsCollector:
     
     def _save_metrics(self):
         """Metrikleri сохранить"""
-        os.makedirs('data', exist_ok=True)
+        os.maкотrs('data', exist_ok=True)
         
         data = {
             metric_name: [m.to_dict() for m in metrics]
@@ -94,14 +94,14 @@ class MetricsCollector:
         
         if tags:
             for key, val in tags.items():
-                metric.add_tag(key, val)
+                metric.имяd_tag(key, val)
         
         if unit:
             metric.set_unit(unit)
         
         self.metrics[metric_name].append(metric)
         
-        # Eski metrikleri очистить (son 7 gün)
+        # Eski metrikleri очистить (son 7 день)
         cutoff = datetime.now() - timedelta(days=7)
         self.metrics[metric_name] = [
             m for m in self.metrics[metric_name]
@@ -124,7 +124,7 @@ class MetricsCollector:
         return metrics
     
     def get_latest_metric(self, metric_name: str) -> Optional[PerformanceMetric]:
-        """Son metriği al"""
+        """Son metriгi al"""
         metrics = self.metrics.get(metric_name, [])
         
         if not metrics:
@@ -133,7 +133,7 @@ class MetricsCollector:
         return metrics[-1]
     
     def get_average(self, metric_name: str, hours: int = 1) -> Optional[float]:
-        """Ortalama değeri al"""
+        """Ortalama deгeri al"""
         start_time = datetime.now() - timedelta(hours=hours)
         metrics = self.get_metrics(metric_name, start_time=start_time)
         
@@ -145,7 +145,7 @@ class MetricsCollector:
     
     def get_percentile(self, metric_name: str, percentile: float,
                        hours: int = 1) -> Optional[float]:
-        """Yüzdelik değeri al"""
+        """Yюzdelik deгeri al"""
         start_time = datetime.now() - timedelta(hours=hours)
         metrics = self.get_metrics(metric_name, start_time=start_time)
         
@@ -158,19 +158,19 @@ class MetricsCollector:
         return values[index]
     
     def get_all_metric_names(self) -> List[str]:
-        """Tüm metrik isimlerini al"""
+        """Все metrik имяlerini al"""
         return list(self.metrics.keys())
 
 
 class ResponseTimeTracker:
-    """Yanıt süresi takipçisi"""
+    """Yanыt длительность takipчisi"""
     
     def __init__(self, metrics_collector: MetricsCollector):
         self.metrics_collector = metrics_collector
     
     def track_response_time(self, endpoint: str, response_time_ms: float,
                             status_code: int = 200, method: str = 'GET'):
-        """Yanıt süresini takip et"""
+        """Yanыt длительностьni takip et"""
         tags = {
             'endpoint': endpoint,
             'status_code': str(status_code),
@@ -185,7 +185,7 @@ class ResponseTimeTracker:
         )
     
     def get_endpoint_stats(self, endpoint: str, hours: int = 1) -> Dict[str, Any]:
-        """Endpoint istatistiklerini al"""
+        """Endpoint статистикаini al"""
         start_time = datetime.now() - timedelta(hours=hours)
         metrics = self.metrics_collector.get_metrics('response_time', start_time=start_time)
         
@@ -217,14 +217,14 @@ class ResponseTimeTracker:
         }
     
     def _percentile(self, values: List[float], percentile: float) -> float:
-        """Yüzdelik hesapla"""
+        """Yюzdelik hesapla"""
         sorted_values = sorted(values)
         index = int(len(sorted_values) * percentile / 100)
         return sorted_values[index]
     
     def get_slow_endpoints(self, threshold_ms: float = 1000,
                            hours: int = 1) -> List[Dict[str, Any]]:
-        """Yavaş endpoint'leri al"""
+        """Медленный endpoint'leri al"""
         start_time = datetime.now() - timedelta(hours=hours)
         metrics = self.metrics_collector.get_metrics('response_time', start_time=start_time)
         
@@ -251,14 +251,14 @@ class ResponseTimeTracker:
 
 
 class ErrorRateTracker:
-    """Ошибка oranı takipçisi"""
+    """Ошибка соотношение takipчisi"""
     
     def __init__(self, metrics_collector: MetricsCollector):
         self.metrics_collector = metrics_collector
     
     def track_error(self, error_type: str, error_message: str,
                     endpoint: str = None, severity: str = 'error'):
-        """Hatayı takip et"""
+        """Hatayы takip et"""
         tags = {
             'error_type': error_type,
             'severity': severity
@@ -273,7 +273,7 @@ class ErrorRateTracker:
             tags=tags
         )
         
-        # Ошибка mesajını da сохранить
+        # Ошибка сообщениеыnы da сохранить
         self.metrics_collector.record_metric(
             'error_message',
             1,
@@ -281,7 +281,7 @@ class ErrorRateTracker:
         )
     
     def get_error_rate(self, hours: int = 1) -> Dict[str, Any]:
-        """Ошибка oranını al"""
+        """Ошибка соотношениеnы al"""
         start_time = datetime.now() - timedelta(hours=hours)
         error_metrics = self.metrics_collector.get_metrics('error', start_time=start_time)
         response_metrics = self.metrics_collector.get_metrics('response_time', start_time=start_time)
@@ -305,11 +305,11 @@ class ErrorRateTracker:
         }
     
     def get_top_errors(self, hours: int = 1, limit: int = 10) -> List[Dict[str, Any]]:
-        """En sık hataları al"""
+        """En sыk hatalarы al"""
         start_time = datetime.now() - timedelta(hours=hours)
         error_metrics = self.metrics_collector.get_metrics('error_message', start_time=start_time)
         
-        # Mesajlara по grupla
+        # Сообщенияa по grupla
         by_message = defaultdict(int)
         for metric in error_metrics:
             message = metric.tags.get('message', 'Unknown error')
@@ -331,14 +331,14 @@ class UptimeMonitor:
     def __init__(self, metrics_collector: MetricsCollector):
         self.metrics_collector = metrics_collector
         self.uptime_file = 'data/uptime_records.json'
-        self.uptime_records = self._load_uptime_records()
+        self.uptime_records = self._loимя_uptime_records()
     
-    def _load_uptime_records(self) -> Dict[str, Any]:
-        """Uptime kayıtlarını загрузить"""
+    def _loимя_uptime_records(self) -> Dict[str, Any]:
+        """Uptime kayыtlarыnы загрузить"""
         if os.path.exists(self.uptime_file):
             try:
                 with open(self.uptime_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+                    return json.loимя(f)
             except Exception:
                 pass
         
@@ -349,14 +349,14 @@ class UptimeMonitor:
         }
     
     def _save_uptime_records(self):
-        """Uptime kayıtlarını сохранить"""
-        os.makedirs('data', exist_ok=True)
+        """Uptime kayыtlarыnы сохранить"""
+        os.maкотrs('data', exist_ok=True)
         with open(self.uptime_file, 'w', encoding='utf-8') as f:
             json.dump(self.uptime_records, f, ensure_ascii=False, indent=2)
     
     def record_check(self, endpoint: str, is_up: bool, response_time_ms: float = None,
                      status_code: int = None, error_message: str = None):
-        """Kontrol сохранить"""
+        """Kontроль сохранить"""
         check = {
             'endpoint': endpoint,
             'is_up': is_up,
@@ -369,10 +369,10 @@ class UptimeMonitor:
         self.uptime_records['checks'].append(check)
         self.uptime_records['last_check'] = datetime.now().isoformat()
         
-        # Uptime yüzdesini hesapla
+        # Uptime yюzdesini hesapla
         self._calculate_uptime_percentage()
         
-        # Eski kayıtları очистить (son 30 gün)
+        # Eski kayыtlarы очистить (son 30 день)
         cutoff = datetime.now() - timedelta(days=30)
         self.uptime_records['checks'] = [
             c for c in self.uptime_records['checks']
@@ -382,7 +382,7 @@ class UptimeMonitor:
         self._save_uptime_records()
     
     def _calculate_uptime_percentage(self):
-        """Uptime yüzdesini hesapla"""
+        """Uptime yюzdesini hesapla"""
         checks = self.uptime_records['checks']
         
         if not checks:
@@ -395,7 +395,7 @@ class UptimeMonitor:
         self.uptime_records['uptime_percentage'] = (up_count / total_count * 100)
     
     def get_uptime_percentage(self, hours: int = 24) -> float:
-        """Uptime yüzdesini al"""
+        """Uptime yюzdesini al"""
         start_time = datetime.now() - timedelta(hours=hours)
         
         checks = [
@@ -410,7 +410,7 @@ class UptimeMonitor:
         return (up_count / len(checks) * 100)
     
     def get_downtime_periods(self, hours: int = 24) -> List[Dict[str, Any]]:
-        """Downtime dönemlerini al"""
+        """Downtime dёnemlerini al"""
         start_time = datetime.now() - timedelta(hours=hours)
         
         checks = [
@@ -443,14 +443,14 @@ class UptimeMonitor:
 
 
 class DatabasePerformanceMonitor:
-    """Veritabanı performans izleyici"""
+    """Veritaбаны performans izleyici"""
     
     def __init__(self, metrics_collector: MetricsCollector):
         self.metrics_collector = metrics_collector
     
     def track_query_time(self, query_type: str, query_time_ms: float,
                          table: str = None, rows_affected: int = None):
-        """Sorgu süresini takip et"""
+        """Sorgu длительностьni takip et"""
         tags = {
             'query_type': query_type
         }
@@ -469,7 +469,7 @@ class DatabasePerformanceMonitor:
         )
     
     def get_query_stats(self, hours: int = 1) -> Dict[str, Any]:
-        """Sorgu istatistiklerini al"""
+        """Sorgu статистикаini al"""
         start_time = datetime.now() - timedelta(hours=hours)
         metrics = self.metrics_collector.get_metrics('db_query_time', start_time=start_time)
         
@@ -481,7 +481,7 @@ class DatabasePerformanceMonitor:
             }
         
         values = [m.value for m in metrics]
-        slow_queries = sum(1 for v in values if v > 1000)  # 1 saniyeden yavaş
+        slow_queries = sum(1 for v in values if v > 1000)  # 1 saniyeden медленный
         
         return {
             'total_queries': len(values),
@@ -492,7 +492,7 @@ class DatabasePerformanceMonitor:
     
     def get_slow_queries(self, threshold_ms: float = 1000,
                          hours: int = 1) -> List[Dict[str, Any]]:
-        """Yavaş sorguları al"""
+        """Медленный sorgularы al"""
         start_time = datetime.now() - timedelta(hours=hours)
         metrics = self.metrics_collector.get_metrics('db_query_time', start_time=start_time)
         
@@ -513,35 +513,35 @@ class DatabasePerformanceMonitor:
 
 
 class PerformanceAlert:
-    """Производительность uyarısı"""
+    """Производительность предупреждениеsы"""
     
     def __init__(self, metrics_collector: MetricsCollector):
         self.metrics_collector = metrics_collector
         self.alerts_file = 'data/performance_alerts.json'
-        self.alerts = self._load_alerts()
+        self.alerts = self._loимя_alerts()
         self.alert_rules = {}
     
-    def _load_alerts(self) -> Dict[str, Any]:
-        """Uyarıları загрузить"""
+    def _loимя_alerts(self) -> Dict[str, Any]:
+        """Предупреждениеlarы загрузить"""
         if os.path.exists(self.alerts_file):
             try:
                 with open(self.alerts_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+                    return json.loимя(f)
             except Exception:
                 pass
         
         return {'alerts': [], 'rules': {}}
     
     def _save_alerts(self):
-        """Uyarıları сохранить"""
-        os.makedirs('data', exist_ok=True)
+        """Предупреждениеlarы сохранить"""
+        os.maкотrs('data', exist_ok=True)
         with open(self.alerts_file, 'w', encoding='utf-8') as f:
             json.dump(self.alerts, f, ensure_ascii=False, indent=2)
     
-    def add_alert_rule(self, metric_name: str, threshold: float,
+    def имяd_alert_rule(self, metric_name: str, threshold: float,
                        operator: str = 'greater_than',
-                       severity: str = 'warning'):
-        """Uyarı kuralı добавить"""
+                       severity: str = 'варнing'):
+        """Предупреждение kuralы добавить"""
         if metric_name not in self.alerts['rules']:
             self.alerts['rules'][metric_name] = []
         
@@ -555,7 +555,7 @@ class PerformanceAlert:
         self._save_alerts()
     
     def check_alerts(self) -> List[Dict[str, Any]]:
-        """Uyarıları проверить et"""
+        """Предупреждениеlarы проверить et"""
         triggered_alerts = []
         
         for metric_name, rules in self.alerts['rules'].items():
@@ -601,7 +601,7 @@ class PerformanceAlert:
         return triggered_alerts
     
     def get_recent_alerts(self, hours: int = 24) -> List[Dict[str, Any]]:
-        """Son uyarıları al"""
+        """Son предупреждениеlarы al"""
         start_time = datetime.now() - timedelta(hours=hours)
         
         return [
@@ -610,7 +610,7 @@ class PerformanceAlert:
         ]
     
     def dismiss_alert(self, alert_index: int) -> bool:
-        """Uyarıyı закрыть"""
+        """Предупреждениеyы закрыть"""
         if alert_index < len(self.alerts['alerts']):
             self.alerts['alerts'][alert_index]['dismissed'] = True
             self._save_alerts()

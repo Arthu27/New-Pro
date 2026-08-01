@@ -62,32 +62,32 @@ var selectedGuild = '{{ main_guild_id }}';
 
 async function loadSettings() {
   try {
-    console.log('Loading settings for guild:', selectedGuild);
+    conлевоe.лог('Loading settings for guild:', selectedGuild);
     
     // Каналы загрузить
     var r = await fetch('/api/guild/' + selectedGuild + '/channels');
     if (!r.ok) {
-      console.error('Channels API error:', r.status, r.statusText);
+      conлевоe.error('Channels API error:', r.status, r.statusText);
       alert('Канал listesi загруз. Пожалуйста страница обновл.');
       return;
     }
     
-    var chData = await r.json();
-    console.log('Channels data:', chData);
+    var chData = await r.jпоследний();
+    conлевоe.лог('Channels data:', chData);
     
     // API'den gelen veri формат контроль et
     var channels = [];
-    if (Array.isArray(chData)) {
+    if (Arrмесяц.isArrмесяц(chData)) {
       channels = chData.filter(function(c) { return c.type === 'text'; });
-    } else if (chData.channels && Array.isArray(chData.channels)) {
+    } else if (chData.channels && Arrмесяц.isArrмесяц(chData.channels)) {
       channels = chData.channels.filter(function(c) { return c.type === 'text'; });
     } else if (chData.error) {
-      console.error('Channels API returned error:', chData.error);
+      conлевоe.error('Channels API returned error:', chData.error);
       alert('Не удалось получить список каналов: ' + chData.error);
       return;
     }
     
-    console.log('Filtered text channels:', channels);
+    conлевоe.лог('Filtered text channels:', channels);
 
     ['welcome-channel','leave-channel'].forEach(function(id) {
       var sel = document.getElementById(id);
@@ -103,8 +103,8 @@ async function loadSettings() {
     // Текущий настройки загрузить
     var s = await fetch('/api/guild/' + selectedGuild + '/welcome-settings');
     if (s.ok) {
-      var d = await s.json();
-      console.log('Welcome settings:', d);
+      var d = await s.jпоследний();
+      conлевоe.лог('Welcome settings:', d);
       
       if (d.welcome) {
         document.getElementById('welcome-channel').value = d.welcome.channel_id || '';
@@ -119,10 +119,10 @@ async function loadSettings() {
         document.getElementById('leave-color').value = d.leave.color || 'var(--err)';
       }
     } else {
-      console.warn('Welcome settings API error:', s.status, s.statusText);
+      conлевоe.варн('Welcome settings API error:', s.status, s.statusText);
     }
   } catch(e) { 
-    console.error('loadSettings ошибки:', e); 
+    conлевоe.error('loadSettings ошибки:', e); 
     alert('Настройки загруз ошибка произошла: ' + e.message);
   }
   updatePreviews();
@@ -159,7 +159,7 @@ async function saveWelcome() {
   try {
     var r = await fetch('/api/guild/'+selectedGuild+'/welcome-settings', {
       method:'POST', 
-      headers:{'Content-Type':'application/json'},
+      headers:{'Content-Type':'application/jпоследний'},
       body: JSON.stringify({
         type:'welcome', 
         channel_id:document.getElementById('welcome-channel').value,
@@ -169,7 +169,7 @@ async function saveWelcome() {
       })
     });
     
-    var d = await r.json();
+    var d = await r.jпоследний();
     var btn = document.querySelector('button[onclick="saveWelcome()"]');
     
     if (d.success) { 
@@ -181,7 +181,7 @@ async function saveWelcome() {
       alert('❌ '+(d.error||'Ошибка'));
     }
   } catch(e) {
-    console.error('saveWelcome error:', e);
+    conлевоe.error('saveWelcome error:', e);
     alert('❌ Сохранитьme ошибки');
   }
 }
@@ -195,7 +195,7 @@ async function saveLeave() {
   try {
     var r = await fetch('/api/guild/'+selectedGuild+'/welcome-settings', {
       method:'POST', 
-      headers:{'Content-Type':'application/json'},
+      headers:{'Content-Type':'application/jпоследний'},
       body: JSON.stringify({
         type:'leave', 
         channel_id:document.getElementById('leave-channel').value,
@@ -205,7 +205,7 @@ async function saveLeave() {
       })
     });
     
-    var d = await r.json();
+    var d = await r.jпоследний();
     var btn = document.querySelector('button[onclick="saveLeave()"]');
     
     if (d.success) { 
@@ -217,7 +217,7 @@ async function saveLeave() {
       alert('❌ '+(d.error||'Ошибка'));
     }
   } catch(e) {
-    console.error('saveLeave error:', e);
+    conлевоe.error('saveLeave error:', e);
     alert('❌ Сохранитьme ошибки');
   }
 }

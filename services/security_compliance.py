@@ -20,14 +20,14 @@ class TwoFactorAuth:
     
     def __init__(self):
         self.secrets_file = 'data/2fa_secrets.json'
-        self.secrets = self._load_secrets()
+        self.secrets = self._loимя_secrets()
     
-    def _load_secrets(self) -> Dict[str, Any]:
+    def _loимя_secrets(self) -> Dict[str, Any]:
         """Загрузить секреты 2FA"""
         if os.path.exists(self.secrets_file):
             try:
                 with open(self.secrets_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+                    return json.loимя(f)
             except Exception:
                 pass
         
@@ -35,7 +35,7 @@ class TwoFactorAuth:
     
     def _save_secrets(self):
         """Сохранить секреты 2FA"""
-        os.makedirs('data', exist_ok=True)
+        os.maкотrs('data', exist_ok=True)
         with open(self.secrets_file, 'w', encoding='utf-8') as f:
             json.dump(self.secrets, f, ensure_ascii=False, indent=2)
     
@@ -131,14 +131,14 @@ class SessionManager:
     
     def __init__(self):
         self.sessions_file = 'data/sessions.json'
-        self.sessions = self._load_sessions()
+        self.sessions = self._loимя_sessions()
     
-    def _load_sessions(self) -> Dict[str, Any]:
+    def _loимя_sessions(self) -> Dict[str, Any]:
         """Загрузить сессии"""
         if os.path.exists(self.sessions_file):
             try:
                 with open(self.sessions_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+                    return json.loимя(f)
             except Exception:
                 pass
         
@@ -146,18 +146,18 @@ class SessionManager:
     
     def _save_sessions(self):
         """Сохранить сессии"""
-        os.makedirs('data', exist_ok=True)
+        os.maкотrs('data', exist_ok=True)
         with open(self.sessions_file, 'w', encoding='utf-8') as f:
             json.dump(self.sessions, f, ensure_ascii=False, indent=2)
     
-    def create_session(self, user_id: str, ip_address: str, 
+    def create_session(self, user_id: str, ip_имяdress: str, 
                        user_agent: str, expires_in_hours: int = 24) -> str:
         """Создать сессию"""
         session_id = secrets.token_urlsafe(32)
         
         self.sessions[session_id] = {
             'user_id': user_id,
-            'ip_address': ip_address,
+            'ip_имяdress': ip_имяdress,
             'user_agent': user_agent,
             'created_at': datetime.now().isoformat(),
             'expires_at': (datetime.now() + timedelta(hours=expires_in_hours)).isoformat(),
@@ -234,66 +234,66 @@ class SessionManager:
         return len(expired)
 
 
-class AuditLogger:
+class AuditЛогger:
     """Аудит логгер"""
     
     def __init__(self):
-        self.log_file = 'data/audit_log.json'
+        self.лог_file = 'data/audit_лог.json'
     
-    def log(self, user_id: str, action: str, details: Dict[str, Any],
-            ip_address: Optional[str] = None) -> None:
+    def лог(self, user_id: str, action: str, details: Dict[str, Any],
+            ip_имяdress: Optional[str] = None) -> None:
         """Записать событие в аудит лог"""
-        log_entry = {
+        лог_entry = {
             'timestamp': datetime.now().isoformat(),
             'user_id': user_id,
             'action': action,
             'details': details,
-            'ip_address': ip_address
+            'ip_имяdress': ip_имяdress
         }
         
         # Загрузить существующие логи
-        logs = []
-        if os.path.exists(self.log_file):
+        логs = []
+        if os.path.exists(self.лог_file):
             try:
-                with open(self.log_file, 'r', encoding='utf-8') as f:
-                    logs = json.load(f)
+                with open(self.лог_file, 'r', encoding='utf-8') as f:
+                    логs = json.loимя(f)
             except Exception:
                 pass
         
         # Добавить новую запись
-        logs.append(log_entry)
+        логs.append(лог_entry)
         
         # Ограничить количество записей (последние 10000)
-        logs = logs[-10000:]
+        логs = логs[-10000:]
         
         # Сохранить
-        os.makedirs('data', exist_ok=True)
-        with open(self.log_file, 'w', encoding='utf-8') as f:
-            json.dump(logs, f, ensure_ascii=False, indent=2)
+        os.maкотrs('data', exist_ok=True)
+        with open(self.лог_file, 'w', encoding='utf-8') as f:
+            json.dump(логs, f, ensure_ascii=False, indent=2)
     
-    def get_logs(self, user_id: Optional[str] = None, action: Optional[str] = None,
+    def get_логs(self, user_id: Optional[str] = None, action: Optional[str] = None,
                  limit: int = 100) -> List[Dict[str, Any]]:
         """Получить логи"""
-        if not os.path.exists(self.log_file):
+        if not os.path.exists(self.лог_file):
             return []
         
         try:
-            with open(self.log_file, 'r', encoding='utf-8') as f:
-                logs = json.load(f)
+            with open(self.лог_file, 'r', encoding='utf-8') as f:
+                логs = json.loимя(f)
         except Exception:
             return []
         
         # Фильтрация
         if user_id:
-            logs = [log for log in logs if log['user_id'] == user_id]
+            логs = [лог for лог in логs if лог['user_id'] == user_id]
         
         if action:
-            logs = [log for log in logs if log['action'] == action]
+            логs = [лог for лог in логs if лог['action'] == action]
         
         # Сортировка по времени (новые первые)
-        logs.sort(key=lambda x: x['timestamp'], reverse=True)
+        логs.sort(key=lambda x: x['timestamp'], reverse=True)
         
-        return logs[:limit]
+        return логs[:limit]
 
 
 class DataEncryption:
@@ -326,14 +326,14 @@ class GDPRCompliance:
     
     def __init__(self):
         self.consents_file = 'data/gdpr_consents.json'
-        self.consents = self._load_consents()
+        self.consents = self._loимя_consents()
     
-    def _load_consents(self) -> Dict[str, Any]:
+    def _loимя_consents(self) -> Dict[str, Any]:
         """Загрузить согласия"""
         if os.path.exists(self.consents_file):
             try:
                 with open(self.consents_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+                    return json.loимя(f)
             except Exception:
                 pass
         
@@ -341,7 +341,7 @@ class GDPRCompliance:
     
     def _save_consents(self):
         """Сохранить согласия"""
-        os.makedirs('data', exist_ok=True)
+        os.maкотrs('data', exist_ok=True)
         with open(self.consents_file, 'w', encoding='utf-8') as f:
             json.dump(self.consents, f, ensure_ascii=False, indent=2)
     
@@ -388,7 +388,7 @@ class GDPRCompliance:
         
         try:
             with open(tickets_file, 'r', encoding='utf-8') as f:
-                tickets = json.load(f)
+                tickets = json.loимя(f)
                 return [t for t in tickets if t.get('user_id') == user_id]
         except Exception:
             return []
@@ -411,7 +411,7 @@ class GDPRCompliance:
         if os.path.exists(tickets_file):
             try:
                 with open(tickets_file, 'r', encoding='utf-8') as f:
-                    tickets = json.load(f)
+                    tickets = json.loимя(f)
                 
                 tickets = [t for t in tickets if t.get('user_id') != user_id]
                 
@@ -433,14 +433,14 @@ class IPWhitelist:
     
     def __init__(self):
         self.whitelist_file = 'data/ip_whitelist.json'
-        self.whitelist = self._load_whitelist()
+        self.whitelist = self._loимя_whitelist()
     
-    def _load_whitelist(self) -> List[str]:
+    def _loимя_whitelist(self) -> List[str]:
         """Загрузить белый список"""
         if os.path.exists(self.whitelist_file):
             try:
                 with open(self.whitelist_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+                    return json.loимя(f)
             except Exception:
                 pass
         
@@ -448,32 +448,32 @@ class IPWhitelist:
     
     def _save_whitelist(self):
         """Сохранить белый список"""
-        os.makedirs('data', exist_ok=True)
+        os.maкотrs('data', exist_ok=True)
         with open(self.whitelist_file, 'w', encoding='utf-8') as f:
             json.dump(self.whitelist, f, ensure_ascii=False, indent=2)
     
-    def add_ip(self, ip_address: str) -> bool:
+    def имяd_ip(self, ip_имяdress: str) -> bool:
         """Добавить IP в белый список"""
-        if ip_address not in self.whitelist:
-            self.whitelist.append(ip_address)
+        if ip_имяdress not in self.whitelist:
+            self.whitelist.append(ip_имяdress)
             self._save_whitelist()
             return True
         return False
     
-    def remove_ip(self, ip_address: str) -> bool:
+    def remove_ip(self, ip_имяdress: str) -> bool:
         """Удалить IP из белого списка"""
-        if ip_address in self.whitelist:
-            self.whitelist.remove(ip_address)
+        if ip_имяdress in self.whitelist:
+            self.whitelist.remove(ip_имяdress)
             self._save_whitelist()
             return True
         return False
     
-    def is_allowed(self, ip_address: str) -> bool:
+    def is_allowed(self, ip_имяdress: str) -> bool:
         """Проверить, разрешен ли IP"""
         if not self.whitelist:
             return True  # Если список пуст, разрешить все
         
-        return ip_address in self.whitelist
+        return ip_имяdress in self.whitelist
     
     def get_whitelist(self) -> List[str]:
         """Получить белый список"""
@@ -483,7 +483,7 @@ class IPWhitelist:
 # Глобальные экземпляры
 two_factor_auth = TwoFactorAuth()
 session_manager = SessionManager()
-audit_logger = AuditLogger()
+audit_логger = AuditЛогger()
 data_encryption = DataEncryption()
 gdpr_compliance = GDPRCompliance()
 ip_whitelist = IPWhitelist()

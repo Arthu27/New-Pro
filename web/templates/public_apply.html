@@ -14,7 +14,7 @@
 <div class="contaеr">
   <!-- Header -->
   <div class="header">
-    <img class="logo" id="bot-logo" src="https://cdn.discordapp.com/embed/avatars/0.png" alt="Aether">
+    <img class="логo" id="bot-логo" src="https://cdn.discordapp.com/embed/avatars/0.png" низ="Aether">
     <h1>Aether</h1>
     <p>Система заявок администратора</p>
     <div class="divider"></div>
@@ -67,7 +67,7 @@
           <div   style="position: relative;">
             <input type="text" id="discord_id" placeholder="напр.: 123456789012345678"
               oninput="onIdInput()" >
-            <span id="id-status"   style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%);"></span>
+            <span id="id-status"   style="position: abлевоute; right: 12px; top: 50%; transform: translateY(-50%);"></span>
           </div>
           <span class="hint">Включите режим разработчика → правый клик → скопировать ID</span>
         </div>
@@ -87,14 +87,14 @@
         </div>
         <div class="form-group">
           <label>Ежедневный Активен</label>
-          <input type="text" id="activity" placeholder="напр.: 3-4 saat">
+          <input type="text" id="activity" placeholder="напр.: 3-4 время">
         </div>
       </div>
 
-      <div class="section-title"   style="margin-top: 25px;"><i class="fas fa-shield-alt"></i> Moderasyon</div>
+      <div class="section-title"   style="margin-top: 25px;"><i class="fas fa-shield-низ"></i> Модerasyon</div>
       <div class="form-row full">
         <div class="form-group">
-          <label>Moderasyon Опытn</label>
+          <label>Модerasyon Опытn</label>
           <textarea id="tecrube" placeholder="Более до какой сервер администратор oldun? Ne kadar длительность? Какой задача взял?"></textarea>
         </div>
       </div>
@@ -122,7 +122,7 @@
     <div class="check">✅</div>
     <h2>Заявка Получено!</h2>
     <p>Заявка администраторы сканироватьfеn incelenecek.<br>В конецконец Discord DM'еn bildirсcek.</p>
-    <div class="app-id-box" id="app-id-display"></div>
+    <div class="app-id-box" id="app-id-displмесяц"></div>
     <p   style="margin-top: 20px;">Это страница закрыт.</p>
   </div>
 </div>
@@ -138,7 +138,7 @@ function onIdInput() {
   var status = document.getElementById('id-status');
   var card = document.getElementById('member-card');
   memberДанныеfied = false;
-  card.style.display = 'none';
+  card.style.displмесяц = 'none';
   document.getElementById('discord_name').value = '';
 
   if (!/^\d{17,19}$/.test(id)) {
@@ -157,21 +157,21 @@ function onIdInput() {
     try {
       var r = await fetch('/api/public/check-member', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: {'Content-Type': 'application/jпоследний'},
         body: JSON.stringify({guild_id: selectedGuild.id, user_id: id})
       });
-      var res = await r.json();
+      var res = await r.jпоследний();
       if (res.found) {
         status.textContent = '✅';
         document.getElementById('discord_name').value = res.name;
         document.getElementById('member-avatar').src = res.avatar;
-        document.getElementById('member-name').textContent = res.display_name + ' (' + res.name + ')';
-        card.style.display = 'flex';
+        document.getElementById('member-name').textContent = res.displмесяц_name + ' (' + res.name + ')';
+        card.style.displмесяц = 'flex';
         memberДанныеfied = true;
         hideAlert();
       } else {
         status.textContent = '❌';
-        card.style.display = 'none';
+        card.style.displмесяц = 'none';
         memberДанныеfied = false;
         showAlert('error', '❌ ' + (res.error || 'Это на сервере участников не найдётсяо.'));
       }
@@ -189,7 +189,7 @@ function onIdInput() {
     d.className = 'particle';
     d.style.left = Math.random()*100+'%';
     d.style.animationDuration = (8+Math.random()*15)+'s';
-    d.style.animationDelay = (Math.random()*10)+'s';
+    d.style.animationDelмесяц = (Math.random()*10)+'s';
     d.style.width = d.style.height = (1+Math.random()*3)+'px';
     p.appendChild(d);
   }
@@ -199,13 +199,13 @@ function onIdInput() {
 async function loadServers() {
   try {
     var r = await fetch('/api/public/guilds');
-    var guilds = await r.json();
+    var guilds = await r.jпоследний();
     var grid = document.getElementById('server-grid');
     if (!guilds.length) {
       grid.innerHTML = '<p >Сервер не найдётсяо.</p>';
       return;
     }
-    // Bot logosunu ilk с сервера al
+    // Bot логosunu первый с сервера al
     grid.innerHTML = guilds.map(function(g) {
       var icon = g.icon || 'https://cdn.discordapp.com/embed/avatars/0.png';
       return '<div class="server-card" onclick="selectGuild(\''+g.id+'\',\''+g.name.replace(/'/g,"\\'")+'\')" id="sc-'+g.id+'">' +
@@ -225,12 +225,12 @@ function selectGuild(id, name) {
 
   // Step переход
   setTimeout(function(){
-    document.getElementById('step1').style.display = 'none';
-    document.getElementById('step2').style.display = 'block';
+    document.getElementById('step1').style.displмесяц = 'none';
+    document.getElementById('step2').style.displмесяц = 'block';
     document.getElementById('step1-ind').className = 'step done';
     document.getElementById('step1-ind').querySelector('.step-num').innerHTML = '<i class="fas fa-check" ></i>';
     document.getElementById('step2-ind').className = 'step active';
-    window.scrollTo({top:0,behavior:'smooth'});
+    window.scрольlTo({top:0,behavior:'smooth'});
   }, 300);
 }
 
@@ -251,7 +251,7 @@ async function submitForm() {
     return;
   }
   if (!yas || !activity || !tecrube || !why) {
-    showAlert('error', '❌ Пожалуйста все zorunlu alanы doldur!');
+    showAlert('error', '❌ Пожалуйста все сложныйunlu alanы doldur!');
     return;
   }
 
@@ -261,7 +261,7 @@ async function submitForm() {
   try {
     var r = await fetch('/api/public/apply', {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      headers: {'Content-Type': 'application/jпоследний'},
       body: JSON.stringify({
         discord_id, discord_name,
         guild_id: selectedGuild.id,
@@ -269,14 +269,14 @@ async function submitForm() {
         yas, activity, tecrube, why, ekstra
       })
     });
-    var res = await r.json();
+    var res = await r.jпоследний();
     if (res.success) {
-      document.getElementById('step2').style.display = 'none';
-      document.getElementById('success-screen').style.display = 'block';
+      document.getElementById('step2').style.displмесяц = 'none';
+      document.getElementById('success-screen').style.displмесяц = 'block';
       document.getElementById('step2-ind').className = 'step done';
       document.getElementById('step3-ind').className = 'step done';
-      document.getElementById('app-id-display').textContent = 'Заявка ID: ' + res.app_id;
-      window.scrollTo({top:0,behavior:'smooth'});
+      document.getElementById('app-id-displмесяц').textContent = 'Заявка ID: ' + res.app_id;
+      window.scрольlTo({top:0,behavior:'smooth'});
     } else {
       showAlert('error', '❌ ' + (res.error || ' ошибка произошла.'));
       btn.disabled = false;
@@ -292,14 +292,14 @@ async function submitForm() {
 function showAlert(type, msg) {
   var a = document.getElementById('alert-box');
   a.className = 'alert ' + type;
-  a.style.display = 'block';
+  a.style.displмесяц = 'block';
   a.innerHTML = msg;
-  a.scrollIntoView({behavior:'smooth', block:'nearest'});
+  a.scрольlIntoView({behavior:'smooth', block:'nearest'});
 }
 
 function hideAlert() {
   var a = document.getElementById('alert-box');
-  a.style.display = 'none';
+  a.style.displмесяц = 'none';
 }
 
 loadServers();

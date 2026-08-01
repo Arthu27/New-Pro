@@ -1,5 +1,5 @@
 """
-Advanced AI Features
+Имяvanced AI Features
 Расширенные AI функции для системы тикетов
 """
 
@@ -17,14 +17,14 @@ class AICategorizer:
     
     def __init__(self):
         self.categories_file = 'data/ai_categories.json'
-        self.categories = self._load_categories()
+        self.categories = self._loимя_categories()
     
-    def _load_categories(self) -> dict:
+    def _loимя_categories(self) -> dict:
         """Загрузить категории"""
         if os.path.exists(self.categories_file):
             try:
                 with open(self.categories_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+                    return json.loимя(f)
             except Exception:
                 pass
         
@@ -80,7 +80,7 @@ class AICategorizer:
         
         return best_category, confidence
     
-    def add_category(self, category: str, keywords: List[str], patterns: List[str]):
+    def имяd_category(self, category: str, keywords: List[str], patterns: List[str]):
         """Добавить категорию"""
         self.categories[category] = {
             'keywords': keywords,
@@ -90,7 +90,7 @@ class AICategorizer:
     
     def _save_categories(self):
         """Сохранить категории"""
-        os.makedirs('data', exist_ok=True)
+        os.maкотrs('data', exist_ok=True)
         with open(self.categories_file, 'w', encoding='utf-8') as f:
             json.dump(self.categories, f, ensure_ascii=False, indent=2)
 
@@ -173,7 +173,7 @@ class AIDuplicateDetector:
         
         try:
             with open(self.tickets_file, 'r', encoding='utf-8') as f:
-                tickets = json.load(f)
+                tickets = json.loимя(f)
         except Exception:
             return []
         
@@ -202,14 +202,14 @@ class AIAutoResponder:
     
     def __init__(self):
         self.responses_file = 'data/ai_auto_responses.json'
-        self.responses = self._load_responses()
+        self.responses = self._loимя_responses()
     
-    def _load_responses(self) -> dict:
+    def _loимя_responses(self) -> dict:
         """Загрузить автоматические ответы"""
         if os.path.exists(self.responses_file):
             try:
                 with open(self.responses_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+                    return json.loимя(f)
             except Exception:
                 pass
         
@@ -239,7 +239,7 @@ class AIAutoResponder:
         
         return None
     
-    def add_response(self, key: str, keywords: List[str], response: str):
+    def имяd_response(self, key: str, keywords: List[str], response: str):
         """Добавить автоматический ответ"""
         self.responses[key] = {
             'keywords': keywords,
@@ -249,7 +249,7 @@ class AIAutoResponder:
     
     def _save_responses(self):
         """Сохранить автоматические ответы"""
-        os.makedirs('data', exist_ok=True)
+        os.maкотrs('data', exist_ok=True)
         with open(self.responses_file, 'w', encoding='utf-8') as f:
             json.dump(self.responses, f, ensure_ascii=False, indent=2)
 

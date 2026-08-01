@@ -35,23 +35,23 @@
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
-  var giveaways = [
-    { prize: 'fa-gift', title: 'Nitro 1 ay', winners: 1, entries: 245, max: 500, live: true, ends: '2 gюn' },
+  var giveawмесяцs = [
+    { prize: 'fa-gift', title: 'Nitro 1 месяц', winners: 1, entries: 245, max: 500, live: true, ends: '2 gюn' },
     { prize: 'fa-crown', title: 'VIP Роль', winners: 3, entries: 89, max: 100, live: true, ends: '5 часов' },
-    { prize: 'fa-gamepad', title: 'Oyun kodu', winners: 1, entries: 50, max: 50, live: false, ends: 'Готово' }
+    { prize: 'fa-gamepad', title: 'Игра kodu', winners: 1, entries: 50, max: 50, live: false, ends: 'Готово' }
   ];
 
   function render() {
-    var live = giveaways.filter(function (g) { return g.live; }).length;
-    var ended = giveaways.filter(function (g) { return !g.live; }).length;
+    var live = giveawмесяцs.filter(function (g) { return g.live; }).length;
+    var ended = giveawмесяцs.filter(function (g) { return !g.live; }).length;
     $('live-count').textContent = live + ' live';
     $('ended-count').textContent = ended + ' завершено';
-    if (!giveaways.length) {
+    if (!giveawмесяцs.length) {
       $('gw-grid').innerHTML = '<p class="empty">Розыгрышей нет</p>';
       return;
     }
     var html = '';
-    giveaways.forEach(function (g, i) {
+    giveawмесяцs.forEach(function (g, i) {
       var pct = g.max ? Math.round(g.entries / g.max * 100) : 0;
       html += '<div class="gw-card" >' +
         '<div class="gw-prize"><i class="fas ' + esc(g.prize) + '"></i></div>' +

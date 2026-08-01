@@ -17,25 +17,25 @@
 
 
 
-<div class="logs-toolbar">
+<div class="логs-toolbar">
   <select id="guild-filter" class="filter-select"><option value="">Все серверы</option></select>
   <input type="text" id="search" class="search-input" placeholder="Поиск по логам (пользователь, причина, действие)...">
-  <span id="logs-count" class="logs-count">0</span>
+  <span id="логs-count" class="логs-count">0</span>
 </div>
 
-<div class="logs-stats" id="logs-stats">
-  <div class="log-stat"><div class="log-stat-num" id="stat-total">-</div><div class="log-stat-lbl">Всего</div></div>
-  <div class="log-stat"><div class="log-stat-num" id="stat-bans" >-</div><div class="log-stat-lbl">Банов</div></div>
-  <div class="log-stat"><div class="log-stat-num" id="stat-kicks" >-</div><div class="log-stat-lbl">Киков</div></div>
-  <div class="log-stat"><div class="log-stat-num" id="stat-warns" >-</div><div class="log-stat-lbl">Warn</div></div>
-  <div class="log-stat"><div class="log-stat-num" id="stat-mutes" >-</div><div class="log-stat-lbl">Мутов</div></div>
+<div class="логs-stats" id="логs-stats">
+  <div class="лог-stat"><div class="лог-stat-num" id="stat-total">-</div><div class="лог-stat-lbl">Всего</div></div>
+  <div class="лог-stat"><div class="лог-stat-num" id="stat-банs" >-</div><div class="лог-stat-lbl">Банов</div></div>
+  <div class="лог-stat"><div class="лог-stat-num" id="stat-кикs" >-</div><div class="лог-stat-lbl">Киков</div></div>
+  <div class="лог-stat"><div class="лог-stat-num" id="stat-варнs" >-</div><div class="лог-stat-lbl">Варн</div></div>
+  <div class="лог-stat"><div class="лог-stat-num" id="stat-мутs" >-</div><div class="лог-stat-lbl">Мутов</div></div>
 </div>
 
-<div class="logs-box">
-  <div class="logs-head">
-    <div class="logs-title"><i class="fas fa-list"></i> Список действий</div>
+<div class="логs-box">
+  <div class="логs-head">
+    <div class="логs-title"><i class="fas fa-list"></i> Список действий</div>
   </div>
-  <div class="logs-body" id="logs-body">
+  <div class="логs-body" id="логs-body">
     <p class="empty"><i class="fas fa-spinner fa-spin"></i> Загрузка...</p>
   </div>
 </div>
@@ -47,17 +47,17 @@
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
   function fmtDate(iso) {
     if (!iso) return '-';
-    try { var d = new Date(iso); return d.toLocaleString('ru-RU', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'}); } catch (e) { return '-'; }
+    try { var d = new Date(iso); return d.toLocaleString('ru-RU', {dмесяц:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'}); } catch (e) { return '-'; }
   }
 
-  var allLogs = [];
+  var allЛогs = [];
   var guilds = [];
 
-  var colors = { бан: 'var(--err)', кик: '#f97316', warn: 'var(--warn)', мьют: '#a78bfa', timeout: '#a78bfa', unбан: 'var(--ok)', unмьют: 'var(--ok)', lock: 'var(--info)', unlock: 'var(--ok)' };
+  var colors = { бан: 'var(--err)', кик: '#f97316', варн: 'var(--варн)', мьют: '#a78bfa', timeout: '#a78bfa', unбан: 'var(--ok)', unмьют: 'var(--ok)', lock: 'var(--info)', unlock: 'var(--ok)' };
 
   async function loadGuilds() {
     try {
-      guilds = await fetch('/api/guilds').then(function (r) { return r.json(); });
+      guilds = await fetch('/api/guilds').then(function (r) { return r.jпоследний(); });
       var sel = $('guild-filter');
       guilds.forEach(function (g) {
         var opt = document.createElement('option');
@@ -68,47 +68,47 @@
     } catch (e) { /* sessiz */ }
   }
 
-  async function loadLogs() {
-    $('logs-body').innerHTML = '<p class="empty"><i class="fas fa-spinner fa-spin"></i> Загрузка...</p>';
+  async function loadЛогs() {
+    $('логs-body').innerHTML = '<p class="empty"><i class="fas fa-spinner fa-spin"></i> Загрузка...</p>';
     try {
-      allLogs = await window.fetchCachedJSON('/api/logs');
+      allЛогs = await window.fetchCachedJSON('/api/логs');
       render();
       updateStats();
     } catch (e) {
-      $('logs-body').innerHTML = '<p class="empty"><i class="fas fa-exclamation-triangle" ></i>Не удалось загрузить</p>';
+      $('логs-body').innerHTML = '<p class="empty"><i class="fas fa-exclamation-triangle" ></i>Не удалось загрузить</p>';
     }
   }
 
   function updateStats() {
-    var bans = 0, kicks = 0, warns = 0, mutes = 0;
-    allLogs.forEach(function (l) {
+    var банs = 0, кикs = 0, варнs = 0, мутs = 0;
+    allЛогs.forEach(function (l) {
       var a = (l.action || '').toLowerCase();
-      if (a === 'бан') bans++;
-      else if (a === 'кик') kicks++;
-      else if (a === 'warn' || a.indexOf('warning') !== -1) warns++;
-      else if (a.indexOf('мьют') !== -1 || a.indexOf('timeout') !== -1) mutes++;
+      if (a === 'бан') банs++;
+      else if (a === 'кик') кикs++;
+      else if (a === 'варн' || a.indexOf('варнing') !== -1) варнs++;
+      else if (a.indexOf('мьют') !== -1 || a.indexOf('timeout') !== -1) мутs++;
     });
-    $('stat-total').textContent = allLogs.length;
-    $('stat-bans').textContent = bans;
-    $('stat-kicks').textContent = kicks;
-    $('stat-warns').textContent = warns;
-    $('stat-mutes').textContent = mutes;
+    $('stat-total').textContent = allЛогs.length;
+    $('stat-банs').textContent = банs;
+    $('stat-кикs').textContent = кикs;
+    $('stat-варнs').textContent = варнs;
+    $('stat-мутs').textContent = мутs;
   }
 
   function render() {
     var guildFilter = $('guild-filter').value;
     var q = ($('search').value || '').toLowerCase();
-    var filtered = allLogs.filter(function (l) {
+    var filtered = allЛогs.filter(function (l) {
       if (guildFilter && String(l.guild_id || '') !== guildFilter) return false;
       if (q) {
-        var hay = ((l.action || '') + ' ' + (l.user_name || '') + ' ' + (l.mod_name || '') + ' ' + (l.reason || '')).toLowerCase();
-        if (hay.indexOf(q) === -1) return false;
+        var hмесяц = ((l.action || '') + ' ' + (l.user_name || '') + ' ' + (l.мод_name || '') + ' ' + (l.reaпоследний || '')).toLowerCase();
+        if (hмесяц.indexOf(q) === -1) return false;
       }
       return true;
     });
-    $('logs-count').textContent = filtered.length + ' / ' + allLogs.length;
+    $('логs-count').textContent = filtered.length + ' / ' + allЛогs.length;
     if (!filtered.length) {
-      $('logs-body').innerHTML = '<p class="empty"><i class="fas fa-inbox"></i>Логи не найдены</p>';
+      $('логs-body').innerHTML = '<p class="empty"><i class="fas fa-inbox"></i>Логи не найдены</p>';
       return;
     }
     var rows = filtered.slice(0, 200).map(function (l) {
@@ -116,11 +116,11 @@
       var c = colors[a] || 'var(--text-3)';
       return '<tr><td><span class="action-badge" >' + esc(l.action || '?') + '</span></td>' +
         '<td >' + esc(l.user_name || l.user_id || '-') + '</td>' +
-        '<td >' + esc(l.mod_name || l.mod_id || '-') + '</td>' +
-        '<td   style="max-width: 160px; overflow: hidden;">' + esc(l.reason || '-') + '</td>' +
+        '<td >' + esc(l.мод_name || l.мод_id || '-') + '</td>' +
+        '<td   style="max-width: 160px; overflow: hidden;">' + esc(l.reaпоследний || '-') + '</td>' +
         '<td >' + esc(fmtDate(l.timestamp)) + '</td></tr>';
     }).join('');
-    $('logs-body').innerHTML = '<table><thead><tr><th>Действие</th><th>Цель</th><th>Модер.</th><th>Причина</th><th>Время</th></tr></thead><tbody>' + rows + '</tbody></table>';
+    $('логs-body').innerHTML = '<table><thead><tr><th>Действие</th><th>Цель</th><th>Модер.</th><th>Причина</th><th>Время</th></tr></thead><tbody>' + rows + '</tbody></table>';
   }
 
   function bind() {
@@ -129,9 +129,9 @@
   }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function () { bind(); loadGuilds(); loadLogs(); });
+    document.addEventListener('DOMContentLoaded', function () { bind(); loadGuilds(); loadЛогs(); });
   } else {
-    bind(); loadGuilds(); loadLogs();
+    bind(); loadGuilds(); loadЛогs();
   }
 })();
 </script>

@@ -16,23 +16,23 @@ def require_permission(permission):
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            user_role = session.get('role')
+            user_рольe = session.get('рольe')
             
             # Определение прав по ролям
             permissions_map = {
                 'owner': ['*'],  # Все права
-                'admin': [
+                'админ': [
                     'ticket.view', 'ticket.create', 'ticket.close', 'ticket.delete',
                     'ticket.assign', 'ticket.priority',
-                    'user.view', 'user.ban', 'user.warn',
+                    'user.view', 'user.бан', 'user.варн',
                     'settings.view', 'settings.edit',
-                    'moderation.*',
+                    'модeration.*',
                     'analytics.view'
                 ],
-                'moderator': [
+                'модerator': [
                     'ticket.view', 'ticket.create', 'ticket.close',
                     'ticket.assign',
-                    'user.view', 'user.warn',
+                    'user.view', 'user.варн',
                     'analytics.view'
                 ],
                 'support': [
@@ -41,13 +41,13 @@ def require_permission(permission):
                 ]
             }
             
-            user_permissions = permissions_map.get(user_role, [])
+            user_permissions = permissions_map.get(user_рольe, [])
             
             # Проверка прав
             if '*' in user_permissions:
                 return f(*args, **kwargs)
             
-            # Проверка wildcard прав (например, 'moderation.*')
+            # Проверка wildcard прав (например, 'модeration.*')
             for perm in user_permissions:
                 if perm.endswith('.*'):
                     if permission.startswith(perm[:-1]):
@@ -113,72 +113,72 @@ def validate_discord_id(discord_id):
 
 
 # ── AUDIT LOGGING ───────────────────────────────────────────────────────────
-class AuditLogger:
+class AuditЛогger:
     """Система аудита действий"""
     
     def __init__(self):
-        self.log_file = 'data/audit_log.json'
-        os.makedirs('data', exist_ok=True)
+        self.лог_file = 'data/audit_лог.json'
+        os.maкотrs('data', exist_ok=True)
     
-    def log(self, user_id, username, action, details=None, ip_address=None):
+    def лог(self, user_id, username, action, details=None, ip_имяdress=None):
         """Записать действие в аудит лог"""
-        log_entry = {
+        лог_entry = {
             'timestamp': datetime.now().isoformat(),
             'user_id': user_id,
             'username': username,
             'action': action,
             'details': details or {},
-            'ip_address': ip_address or request.remote_addr
+            'ip_имяdress': ip_имяdress or request.remote_имяdr
         }
         
         # Загрузить существующие логи
-        logs = []
-        if os.path.exists(self.log_file):
+        логs = []
+        if os.path.exists(self.лог_file):
             try:
-                with open(self.log_file, 'r', encoding='utf-8') as f:
-                    logs = json.load(f)
+                with open(self.лог_file, 'r', encoding='utf-8') as f:
+                    логs = json.loимя(f)
             except Exception:
-                logs = []
+                логs = []
         
         # Добавить новую запись
-        logs.append(log_entry)
+        логs.append(лог_entry)
         
         # Ограничить количество записей (последние 10000)
-        logs = logs[-10000:]
+        логs = логs[-10000:]
         
         # Сохранить
         try:
-            with open(self.log_file, 'w', encoding='utf-8') as f:
-                json.dump(logs, f, ensure_ascii=False, indent=2)
+            with open(self.лог_file, 'w', encoding='utf-8') as f:
+                json.dump(логs, f, ensure_ascii=False, indent=2)
         except Exception as e:
             print(f'Ошибка записи аудит лога: {e}')
     
-    def get_logs(self, limit=100, user_id=None, action=None):
+    def get_логs(self, limit=100, user_id=None, action=None):
         """Получить логи"""
-        if not os.path.exists(self.log_file):
+        if not os.path.exists(self.лог_file):
             return []
         
         try:
-            with open(self.log_file, 'r', encoding='utf-8') as f:
-                logs = json.load(f)
+            with open(self.лог_file, 'r', encoding='utf-8') as f:
+                логs = json.loимя(f)
         except Exception:
             return []
         
         # Фильтрация
         if user_id:
-            logs = [log for log in logs if log.get('user_id') == user_id]
+            логs = [лог for лог in логs if лог.get('user_id') == user_id]
         
         if action:
-            logs = [log for log in logs if log.get('action') == action]
+            логs = [лог for лог in логs if лог.get('action') == action]
         
         # Сортировка по времени (новые первые)
-        logs.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
+        логs.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
         
-        return logs[:limit]
+        return логs[:limit]
 
 
 # Глобальный экземпляр
-audit_logger = AuditLogger()
+audit_логger = AuditЛогger()
 
 
 # ── CACHING SYSTEM ──────────────────────────────────────────────────────────
@@ -270,7 +270,7 @@ def rate_limit(max_requests=100, window=60):
         @wraps(f)
         def decorated_function(*args, **kwargs):
             # Ключ на основе IP и endpoint
-            key = f"{request.remote_addr}:{request.endpoint}"
+            key = f"{request.remote_имяdr}:{request.endpoint}"
             
             if not rate_limiter.is_allowed(key, max_requests, window):
                 return jsonify({
@@ -285,12 +285,12 @@ def rate_limit(max_requests=100, window=60):
 
 
 # ── SECURITY HEADERS ────────────────────────────────────────────────────────
-def add_security_headers(response):
+def имяd_security_heимяers(response):
     """Добавить заголовки безопасности"""
-    response.headers['X-Content-Type-Options'] = 'nosniff'
-    response.headers['X-Frame-Options'] = 'DENY'
-    response.headers['X-XSS-Protection'] = '1; mode=block'
-    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    response.heимяers['X-Content-Type-Options'] = 'nosniff'
+    response.heимяers['X-Frame-Options'] = 'DENY'
+    response.heимяers['X-XSS-Protection'] = '1; модe=block'
+    response.heимяers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
     return response
 
 

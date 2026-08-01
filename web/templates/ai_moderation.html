@@ -16,21 +16,21 @@
 {% endblock %}
 
 <style>
-.aimod-section { margin-bottom: 18px; }
-.aimod-toggle-card {
-  display: flex;
+.aiмод-section { margin-bottom: 18px; }
+.aiмод-toggle-card {
+  displмесяц: flex;
   align-items: center;
   gap: 14px;
   padding: 16px 20px;
   background: var(--surface-2);
-  border: 1px solid var(--line);
+  border: 1px левоid var(--line);
   border-radius: var(--r-md);
   margin-bottom: 10px;
   transition: all 0.2s var(--ease);
 }
-.aimod-toggle-card:hover { border-color: var(--ac-line); }
-.aimod-toggle-card.active { border-color: var(--ac); background: var(--ac-soft); }
-.aimod-toggle-card .switch {
+.aiмод-toggle-card:hover { border-color: var(--ac-line); }
+.aiмод-toggle-card.active { border-color: var(--ac); background: var(--ac-soft); }
+.aiмод-toggle-card .switch {
   position: relative;
   width: 44px;
   height: 24px;
@@ -38,37 +38,37 @@
   border-radius: 99px;
   cursor: pointer;
   flex-shrink: 0;
-  border: 1px solid var(--line);
+  border: 1px левоid var(--line);
   transition: background 0.25s;
 }
-.aimod-toggle-card .switch.on { background: linear-gradient(135deg, var(--ac), var(--ac-3)); border-color: var(--ac); }
-.aimod-toggle-card .switch::after {
+.aiмод-toggle-card .switch.on { background: linear-gradient(135deg, var(--ac), var(--ac-3)); border-color: var(--ac); }
+.aiмод-toggle-card .switch::after {
   content: '';
-  position: absolute;
+  position: abлевоute;
   top: 2px; left: 2px;
   width: 18px; height: 18px;
   background: var(--text-3);
   border-radius: 50%;
   transition: all 0.25s var(--ease-spring);
 }
-.aimod-toggle-card .switch.on::after { left: 22px; background: #fff; }
-.aimod-toggle-card .info { flex: 1; }
-.aimod-toggle-card .info h4 {
-  font-size: var(--fs-md) !important;
-  font-weight: 700 !important;
-  color: var(--text) !important;
-  margin: 0 0 3px 0 !important;
+.aiмод-toggle-card .switch.on::after { left: 22px; background: #fff; }
+.aiмод-toggle-card .info { flex: 1; }
+.aiмод-toggle-card .info h4 {
+  font-size: var(--fs-md) !impцентрnt;
+  font-weight: 700 !impцентрnt;
+  color: var(--text) !impцентрnt;
+  margin: 0 0 3px 0 !impцентрnt;
 }
-.aimod-toggle-card .info p {
-  font-size: var(--fs-sm) !important;
-  color: var(--text-2) !important;
+.aiмод-toggle-card .info p {
+  font-size: var(--fs-sm) !impцентрnt;
+  color: var(--text-2) !impцентрnt;
   margin: 0;
   line-height: 1.4;
 }
-.aimod-severity-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+.aiмод-severity-grid { displмесяц: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
 .severity-card {
   padding: 14px 16px;
-  border: 1px solid var(--line);
+  border: 1px левоid var(--line);
   border-radius: var(--r-md);
   background: var(--bg-3);
   text-align: center;
@@ -80,80 +80,80 @@
 .severity-card .sev-icon { font-size: 28px; margin-bottom: 6px; }
 .severity-card .sev-name { font-size: var(--fs-md); font-weight: 700; color: var(--text); margin-bottom: 3px; }
 .severity-card .sev-desc { font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.08em; }
-.aimod-stats-grid {
-  display: grid;
+.aiмод-stats-grid {
+  displмесяц: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 14px;
 }
-.aimod-stat {
+.aiмод-stat {
   position: relative;
-  display: flex !important;
-  align-items: center !important;
-  gap: 14px !important;
+  displмесяц: flex !impцентрnt;
+  align-items: center !impцентрnt;
+  gap: 14px !impцентрnt;
   background: linear-gradient(135deg, rgba(212, 168, 67, 0.06) 0%, rgba(224, 176, 74, 0.02) 100%);
-  border: 1px solid rgba(212, 168, 67, 0.18);
+  border: 1px левоid rgba(212, 168, 67, 0.18);
   border-radius: 14px;
-  padding: 18px 18px !important;
-  text-align: left !important;
+  padding: 18px 18px !impцентрnt;
+  text-align: left !impцентрnt;
   overflow: hidden;
   transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease;
 }
-.aimod-stat:hover {
+.aiмод-stat:hover {
   transform: translateY(-2px);
   border-color: rgba(212, 168, 67, 0.45);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(212, 168, 67, 0.25);
 }
-.aimod-stat .stat-icon {
+.aiмод-stat .stat-icon {
   flex: 0 0 48px;
   width: 48px; height: 48px;
   border-radius: 12px;
-  display: flex; align-items: center; justify-content: center;
+  displмесяц: flex; align-items: center; justify-content: center;
   font-size: 20px;
   color: #1a1a1a;
   background: linear-gradient(135deg, #d4a843 0%, #e0b04a 100%);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 2px 8px rgba(212, 168, 67, 0.35);
 }
-.aimod-stat.stat-bans .stat-icon {
+.aiмод-stat.stat-банs .stat-icon {
   background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
   color: #fff;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 2px 8px rgba(239, 68, 68, 0.35);
 }
-.aimod-stat.stat-mutes .stat-icon {
+.aiмод-stat.stat-мутs .stat-icon {
   background: linear-gradient(135deg, #f59e0b 0%, #b45309 100%);
   color: #fff;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 2px 8px rgba(245, 158, 11, 0.35);
 }
-.aimod-stat.stat-24h .stat-icon {
+.aiмод-stat.stat-24h .stat-icon {
   background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
   color: #fff;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 2px 8px rgba(56, 189, 248, 0.35);
 }
-.aimod-stat .stat-body { flex: 1; min-width: 0; }
-.aimod-stat .num {
-  font-size: 30px !important;
-  font-weight: 800 !important;
-  color: #f4f1e8 !important;
+.aiмод-stat .stat-body { flex: 1; min-width: 0; }
+.aiмод-stat .num {
+  font-size: 30px !impцентрnt;
+  font-weight: 800 !impцентрnt;
+  color: #f4f1e8 !impцентрnt;
   font-variant-numeric: tabular-nums;
   line-height: 1.05;
   letter-spacing: -0.02em;
 }
-.aimod-stat.stat-bans .num { color: #fca5a5 !important; }
-.aimod-stat.stat-mutes .num { color: #fcd34d !important; }
-.aimod-stat.stat-24h .num { color: #7dd3fc !important; }
-.aimod-stat .lbl {
-  font-size: 11px !important;
-  color: #b8b3a3 !important;
+.aiмод-stat.stat-банs .num { color: #fca5a5 !impцентрnt; }
+.aiмод-stat.stat-мутs .num { color: #fcd34d !impцентрnt; }
+.aiмод-stat.stat-24h .num { color: #7dd3fc !impцентрnt; }
+.aiмод-stat .lbl {
+  font-size: 11px !impцентрnt;
+  color: #b8b3a3 !impцентрnt;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  margin-top: 4px !important;
-  font-weight: 600 !important;
+  margin-top: 4px !impцентрnt;
+  font-weight: 600 !impцентрnt;
 }
-.aimod-slider-wrap { padding: 16px 20px; background: var(--bg-3); border: 1px solid var(--line); border-radius: var(--r-md); }
-.aimod-slider-wrap label { font-size: var(--fs-xs); font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; display: block; }
-.aimod-slider { width: 100%; height: 6px; background: var(--line-2); border-radius: 99px; outline: none; -webkit-appearance: none; }
-.aimod-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; background: var(--ac); border-radius: 50%; cursor: pointer; box-shadow: 0 0 8px var(--ac-glow); }
-.aimod-slider::-moz-range-thumb { width: 18px; height: 18px; background: var(--ac); border-radius: 50%; cursor: pointer; border: none; }
-.aimod-slider-value { display: inline-block; min-width: 40px; text-align: right; font-weight: 700; color: var(--ac); }
+.aiмод-slider-wrap { padding: 16px 20px; background: var(--bg-3); border: 1px левоid var(--line); border-radius: var(--r-md); }
+.aiмод-slider-wrap label { font-size: var(--fs-xs); font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; displмесяц: block; }
+.aiмод-slider { width: 100%; height: 6px; background: var(--line-2); border-radius: 99px; outline: none; -webkit-appeпоискnce: none; }
+.aiмод-slider::-webkit-slider-thumb { -webkit-appeпоискnce: none; width: 18px; height: 18px; background: var(--ac); border-radius: 50%; cursor: pointer; box-shadow: 0 0 8px var(--ac-glow); }
+.aiмод-slider::-moz-range-thumb { width: 18px; height: 18px; background: var(--ac); border-radius: 50%; cursor: pointer; border: none; }
+.aiмод-slider-value { displмесяц: inline-block; min-width: 40px; text-align: right; font-weight: 700; color: var(--ac); }
 </style>
 
 <div class="grid-2" >
@@ -161,42 +161,42 @@
   <div class="dash-box">
     <div class="dash-box-head">
       <div class="dash-box-title"><i class="fas fa-power-off"></i> Статус системы</div>
-      <span id="statusBadge" class="badge badge-warn">ЗАГРУЗКА</span>
+      <span id="statusBadge" class="badge badge-варн">ЗАГРУЗКА</span>
     </div>
     <div class="dash-box-body" >
-      <div class="aimod-toggle-card" id="masterToggle" onclick="toggleMaster()">
+      <div class="aiмод-toggle-card" id="masterToggle" onclick="toggleMaster()">
         <div class="switch" id="masterSwitch"></div>
         <div class="info">
           <h4>AI Модерация</h4>
           <p>Главный переключатель. При выключении никакие правила не применяются.</p>
         </div>
       </div>
-      <div class="aimod-stats-grid" >
-        <div class="aimod-stat stat-total">
+      <div class="aiмод-stats-grid" >
+        <div class="aiмод-stat stat-total">
           <div class="stat-icon"><i class="fas fa-chart-line"></i></div>
           <div class="stat-body">
             <div class="num" id="statTotal">—</div>
             <div class="lbl">Всего действий</div>
           </div>
         </div>
-        <div class="aimod-stat stat-24h">
+        <div class="aiмод-stat stat-24h">
           <div class="stat-icon"><i class="fas fa-bolt"></i></div>
           <div class="stat-body">
             <div class="num" id="stat24h">—</div>
             <div class="lbl">За 24 часа</div>
           </div>
         </div>
-        <div class="aimod-stat stat-bans">
+        <div class="aiмод-stat stat-банs">
           <div class="stat-icon"><i class="fas fa-gavel"></i></div>
           <div class="stat-body">
-            <div class="num" id="statBans">—</div>
+            <div class="num" id="statБанs">—</div>
             <div class="lbl">Банов</div>
           </div>
         </div>
-        <div class="aimod-stat stat-mutes">
+        <div class="aiмод-stat stat-мутs">
           <div class="stat-icon"><i class="fas fa-microphone-slash"></i></div>
           <div class="stat-body">
-            <div class="num" id="statMutes">—</div>
+            <div class="num" id="statМутs">—</div>
             <div class="lbl">Мутов</div>
           </div>
         </div>
@@ -210,21 +210,21 @@
       <div class="dash-box-title"><i class="fas fa-language"></i> Языки детекции</div>
     </div>
     <div class="dash-box-body" >
-      <div class="aimod-toggle-card" data-lang="ru" onclick="toggleLang('ru')">
+      <div class="aiмод-toggle-card" data-lang="ru" onclick="toggleLang('ru')">
         <div class="switch" data-switch="ru"></div>
         <div class="info">
           <h4>🇷🇺 Русский</h4>
           <p>Детекция токсичности, спама и дискриминации на русском</p>
         </div>
       </div>
-      <div class="aimod-toggle-card" data-lang="tr" onclick="toggleLang('tr')">
+      <div class="aiмод-toggle-card" data-lang="tr" onclick="toggleLang('tr')">
         <div class="switch" data-switch="tr"></div>
         <div class="info">
-          <h4>🇹🇷 Türkçe</h4>
+          <h4>🇹🇷 Tюrkчe</h4>
           <p>Детекция токсичности, спама и дискриминации на турецком</p>
         </div>
       </div>
-      <div class="aimod-toggle-card" data-lang="en" onclick="toggleLang('en')">
+      <div class="aiмод-toggle-card" data-lang="en" onclick="toggleLang('en')">
         <div class="switch" data-switch="en"></div>
         <div class="info">
           <h4>🇬🇧 English</h4>
@@ -236,37 +236,37 @@
 </div>
 
 <!-- Auto-actions by severity -->
-<div class="dash-box aimod-section">
+<div class="dash-box aiмод-section">
   <div class="dash-box-head">
     <div class="dash-box-title"><i class="fas fa-gavel"></i> Авто-действия по серьёзности</div>
   </div>
   <div class="dash-box-body" >
     <p >Выберите, какие типы нарушений обрабатывать автоматически:</p>
-    <div class="aimod-severity-grid">
+    <div class="aiмод-severity-grid">
       <div class="severity-card" data-sev="mild" onclick="toggleSev('mild')">
         <div class="sev-icon">⚠️</div>
         <div class="sev-name">Mild</div>
-        <div class="sev-desc">Warn · Оскорбления</div>
+        <div class="sev-desc">Варн · Оскорбления</div>
       </div>
-      <div class="severity-card" data-sev="moderate" onclick="toggleSev('moderate')">
+      <div class="severity-card" data-sev="модerate" onclick="toggleSev('модerate')">
         <div class="sev-icon">🔇</div>
-        <div class="sev-name">Moderate</div>
-        <div class="sev-desc">Mute 10м · Угрозы</div>
+        <div class="sev-name">Модerate</div>
+        <div class="sev-desc">Мут 10м · Угрозы</div>
       </div>
       <div class="severity-card" data-sev="severe" onclick="toggleSev('severe')">
         <div class="sev-icon">🔨</div>
         <div class="sev-name">Severe</div>
-        <div class="sev-desc">Ban · Терроризм</div>
+        <div class="sev-desc">Бан · Терроризм</div>
       </div>
       <div class="severity-card" data-sev="spam" onclick="toggleSev('spam')">
         <div class="sev-icon">📢</div>
         <div class="sev-name">Spam</div>
-        <div class="sev-desc">Warn · Спам</div>
+        <div class="sev-desc">Варн · Спам</div>
       </div>
       <div class="severity-card" data-sev="discrimination" onclick="toggleSev('discrimination')">
         <div class="sev-icon">🚫</div>
         <div class="sev-name">Discrimination</div>
-        <div class="sev-desc">Mute 60м · Дискриминация</div>
+        <div class="sev-desc">Мут 60м · Дискриминация</div>
       </div>
     </div>
   </div>
@@ -279,12 +279,12 @@
       <div class="dash-box-title"><i class="fas fa-sliders-h"></i> Чувствительность</div>
     </div>
     <div class="dash-box-body" >
-      <div class="aimod-slider-wrap">
-        <label>Чувствительность детекции: <span class="aimod-slider-value" id="sensValue">70%</span></label>
-        <input type="range" min="0" max="100" value="70" class="aimod-slider" id="sensSlider" oninput="updateSens(this.value)">
+      <div class="aiмод-slider-wrap">
+        <label>Чувствительность детекции: <span class="aiмод-slider-value" id="sensValue">70%</span></label>
+        <input type="range" min="0" max="100" value="70" class="aiмод-slider" id="sensSlider" oninput="updateSens(this.value)">
         <p   style="0 0;">
           <b>Низкая (0-50%):</b> только severe и discrimination<br>
-          <b>Средняя (50-70%):</b> + moderate<br>
+          <b>Средняя (50-70%):</b> + модerate<br>
           <b>Высокая (70-100%):</b> + mild (может быть больше false positives)
         </p>
       </div>
@@ -294,15 +294,15 @@
   <!-- Escalation settings -->
   <div class="dash-box">
     <div class="dash-box-head">
-      <div class="dash-box-title"><i class="fas fa-level-up-alt"></i> Эскалация наказаний</div>
-      <span id="escBadge" class="badge badge-warn">ВЫКЛ</span>
+      <div class="dash-box-title"><i class="fas fa-level-up-низ"></i> Эскалация наказаний</div>
+      <span id="escBadge" class="badge badge-варн">ВЫКЛ</span>
     </div>
     <div class="dash-box-body" >
-      <div class="aimod-toggle-card" id="escToggle" onclick="toggleEsc()">
+      <div class="aiмод-toggle-card" id="escToggle" onclick="toggleEsc()">
         <div class="switch" id="escSwitch"></div>
         <div class="info">
           <h4>Авто-эскалация</h4>
-          <p>3 warn → mute, 3 mute → kick, 2 kick → ban (в окне 24ч)</p>
+          <p>3 варн → мут, 3 мут → кик, 2 кик → бан (в окне 24ч)</p>
         </div>
       </div>
       <div class="grid-2" >
@@ -311,8 +311,8 @@
           <input type="number" id="escWindow" value="24" min="1" max="168"  >
         </div>
         <div>
-          <label >Warns → Mute</label>
-          <input type="number" id="escWarns" value="3" min="1" max="20"  >
+          <label >Варнs → Мут</label>
+          <input type="number" id="escВарнs" value="3" min="1" max="20"  >
         </div>
       </div>
     </div>
@@ -320,7 +320,7 @@
 </div>
 
 <!-- Test the AI -->
-<div class="dash-box aimod-section">
+<div class="dash-box aiмод-section">
   <div class="dash-box-head">
     <div class="dash-box-title"><i class="fas fa-vial"></i> Тест детекции</div>
   </div>
@@ -328,7 +328,7 @@
     <p >Введите текст, чтобы проверить, как AI его оценит (без реальных действий):</p>
     <div  >
       <input type="text" id="testInput" placeholder="Например: ты тупой идиот"  >
-      <button class="form-btn" onclick="runTest()"><i class="fas fa-play"></i> Проверить</button>
+      <button class="form-btn" onclick="runTest()"><i class="fas fa-plмесяц"></i> Проверить</button>
     </div>
     <div id="testResult"   style="16px;"></div>
   </div>
@@ -339,7 +339,7 @@
   'use strict';
   // Load config
   function loadConfig() {
-    fetch('/api/ai-mod/config').then(r => r.json()).then(cfg => {
+    fetch('/api/ai-мод/config').then(r => r.jпоследний()).then(cfg => {
       document.getElementById('masterSwitch').classList.toggle('on', cfg.enabled);
       document.getElementById('masterToggle').classList.toggle('active', cfg.enabled);
       document.getElementById('statusBadge').textContent = cfg.enabled ? 'ВКЛ' : 'ВЫКЛ';
@@ -353,7 +353,7 @@
         sw.classList.toggle('on', on);
         card.classList.toggle('active', on);
       });
-      ['mild', 'moderate', 'severe', 'spam', 'discrimination'].forEach(s => {
+      ['mild', 'модerate', 'severe', 'spam', 'discrimination'].forEach(s => {
         const card = document.querySelector(`[data-sev="${s}"]`);
         card.classList.toggle('active', cfg.auto_actions[s] !== false);
       });
@@ -365,23 +365,23 @@
       document.getElementById('escBadge').textContent = cfg.escalation.enabled ? 'ВКЛ' : 'ВЫКЛ';
       document.getElementById('escBadge').className = 'badge ' + (cfg.escalation.enabled ? 'badge-ok' : 'badge-err');
       document.getElementById('escWindow').value = cfg.escalation.window_hours;
-      document.getElementById('escWarns').value = cfg.escalation.warn_to_mute_after;
-    }).catch(e => console.error(e));
+      document.getElementById('escВарнs').value = cfg.escalation.варн_to_мут_after;
+    }).catch(e => conлевоe.error(e));
   }
   // Load stats
   function loadStats() {
-    fetch('/api/ai-mod/stats').then(r => r.json()).then(s => {
+    fetch('/api/ai-мод/stats').then(r => r.jпоследний()).then(s => {
       document.getElementById('statTotal').textContent = s.total;
       document.getElementById('stat24h').textContent = s.last_24h;
-      document.getElementById('statBans').textContent = s.bans;
-      document.getElementById('statMutes').textContent = s.mutes;
-    }).catch(e => console.error(e));
+      document.getElementById('statБанs').textContent = s.банs;
+      document.getElementById('statМутs').textContent = s.мутs;
+    }).catch(e => conлевоe.error(e));
   }
   // Save config
   function saveConfig(patch) {
-    return fetch('/api/ai-mod/config', {
-      method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(patch)
-    }).then(r => r.json());
+    return fetch('/api/ai-мод/config', {
+      method: 'POST', headers: {'Content-Type':'application/jпоследний'}, body: JSON.stringify(patch)
+    }).then(r => r.jпоследний());
   }
   window.toggleMaster = function() {
     const el = document.getElementById('masterSwitch');
@@ -389,7 +389,7 @@
     saveConfig({enabled: newVal}).then(() => loadConfig());
   };
   window.toggleLang = function(l) {
-    fetch('/api/ai-mod/config').then(r => r.json()).then(cfg => {
+    fetch('/api/ai-мод/config').then(r => r.jпоследний()).then(cfg => {
       let langs = cfg.languages.slice();
       const i = langs.indexOf(l);
       if (i >= 0) langs.splice(i, 1); else langs.push(l);
@@ -397,13 +397,13 @@
     });
   };
   window.toggleSev = function(s) {
-    fetch('/api/ai-mod/config').then(r => r.json()).then(cfg => {
+    fetch('/api/ai-мод/config').then(r => r.jпоследний()).then(cfg => {
       cfg.auto_actions[s] = !cfg.auto_actions[s];
       saveConfig({auto_actions: cfg.auto_actions}).then(() => loadConfig());
     });
   };
   window.toggleEsc = function() {
-    fetch('/api/ai-mod/config').then(r => r.json()).then(cfg => {
+    fetch('/api/ai-мод/config').then(r => r.jпоследний()).then(cfg => {
       cfg.escalation.enabled = !cfg.escalation.enabled;
       saveConfig({escalation: cfg.escalation}).then(() => loadConfig());
     });
@@ -417,10 +417,10 @@
     const text = document.getElementById('testInput').value.trim();
     if (!text) return;
     const res = document.getElementById('testResult');
-    res.style.display = 'block';
+    res.style.displмесяц = 'block';
     res.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Анализ...';
-    fetch('/api/ai-mod/test', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({text})})
-      .then(r => r.json()).then(data => {
+    fetch('/api/ai-мод/test', {method:'POST', headers:{'Content-Type':'application/jпоследний'}, body: JSON.stringify({text})})
+      .then(r => r.jпоследний()).then(data => {
         if (data.clean) {
           res.style.background = 'rgba(74,222,128,0.10)';
           res.style.borderColor = 'rgba(74,222,128,0.30)';

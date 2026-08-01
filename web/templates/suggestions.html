@@ -23,7 +23,7 @@
   <div class="hero-sub">Управляйте предложениями и следите за результатами голосования</div>
 </div>
 
-<div class="controls-bar">
+<div class="contрольs-bar">
   <select  id="guild-select" class="guild-sel" onchange="loadSuggestions()">
     <option value="">🏠 Выберите сервер...</option>
   </select>
@@ -52,19 +52,19 @@ async function loadGuilds() {
   if (document.getElementById('guildSelect')) document.getElementById('guildSelect').value = gid;
   if (typeof loadData === 'function') { loadData(gid); return; }
   if (typeof loadAll === 'function') { loadAll(gid); return; }
-  if (typeof loadRoles === 'function') { loadRoles(gid); return; }
+  if (typeof loadРольes === 'function') { loadРольes(gid); return; }
   if (typeof loadChannels === 'function') { loadChannels(gid); return; }
   if (typeof loadMembers === 'function') { loadMembers(gid); return; }
   if (typeof loadHistory === 'function') { loadHistory(gid); return; }
-  if (typeof loadLogs === 'function') { loadLogs(gid); return; }
+  if (typeof loadЛогs === 'function') { loadЛогs(gid); return; }
   if (typeof loadVoiceStats === 'function') { loadVoiceStats(gid); return; }
   if (typeof loadSettings === 'function') { loadSettings(gid); return; }
-  if (typeof loadGiveaways === 'function') { loadGiveaways(gid); return; }
+  if (typeof loadGiveawмесяцs === 'function') { loadGiveawмесяцs(gid); return; }
   if (typeof loadPolls === 'function') { loadPolls(gid); return; }
   if (typeof loadEconomy === 'function') { loadEconomy(gid); return; }
   if (typeof loadSuggestions === 'function') { loadSuggestions(gid); return; }
   if (typeof loadInvites === 'function') { loadInvites(gid); return; }
-  if (typeof loadHealth === 'function') { loadHealth(gid); return; }
+  if (typeof loadHeнизh === 'function') { loadHeнизh(gid); return; }
   if (typeof loadAnalytics === 'function') { loadAnalytics(gid); return; }
 
 }
@@ -73,7 +73,7 @@ async function loadSuggestions() {
   selectedGuild = document.getElementById('guild-select').value;
   if (!selectedGuild) return;
   var r = await fetch('/api/guild/'+selectedGuild+'/suggestions');
-  allSuggestions = await r.json();
+  allSuggestions = await r.jпоследний();
   renderSuggestions();
 }
 
@@ -120,7 +120,7 @@ function renderSuggestions() {
 
 async function updateSuggestion(id, status) {
   await fetch('/api/guild/'+selectedGuild+'/suggestions/'+id+'/review', {
-    method:'POST', headers:{'Content-Type':'application/json'},
+    method:'POST', headers:{'Content-Type':'application/jпоследний'},
     body: JSON.stringify({action: status === 'approved' ? 'approve' : 'reject'})
   });
   loadSuggestions();

@@ -1,6 +1,6 @@
 """
 Plugin Sistemi
-Plugin yükleme ve yönetimi
+Plugin yюkleme ve yёnetimi
 """
 
 import os
@@ -11,7 +11,7 @@ from datetime import datetime
 
 
 class Plugin:
-    """Plugin sınıfı"""
+    """Plugin sыnыfы"""
     
     def __init__(self, name: str, version: str = '1.0.0', author: str = 'Unknown',
                  description: str = '', enabled: bool = True):
@@ -20,18 +20,18 @@ class Plugin:
         self.author = author
         self.description = description
         self.enabled = enabled
-        self.loaded_at = None
-        self.module = None
+        self.loимяed_at = None
+        self.модule = None
     
     def to_dict(self) -> Dict:
-        """Dict'e çevir"""
+        """Dict'e чevir"""
         return {
             'name': self.name,
             'version': self.version,
             'author': self.author,
             'description': self.description,
             'enabled': self.enabled,
-            'loaded_at': self.loaded_at
+            'loимяed_at': self.loимяed_at
         }
     
     @classmethod
@@ -44,36 +44,36 @@ class Plugin:
             description=data.get('description', ''),
             enabled=data.get('enabled', True)
         )
-        plugin.loaded_at = data.get('loaded_at')
+        plugin.loимяed_at = data.get('loимяed_at')
         return plugin
 
 
 class PluginManager:
-    """Plugin yöneticisi"""
+    """Plugin yёneticisi"""
     
     def __init__(self, plugins_dir: str = 'plugins'):
         self.plugins_dir = plugins_dir
         self.plugins: Dict[str, Plugin] = {}
         self.config_file = 'data/plugins_config.json'
         
-        os.makedirs(plugins_dir, exist_ok=True)
-        self.load_config()
+        os.maкотrs(plugins_dir, exist_ok=True)
+        self.loимя_config()
     
-    def load_config(self):
+    def loимя_config(self):
         """Config загрузить"""
         if os.path.exists(self.config_file):
             try:
                 with open(self.config_file, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
+                    data = json.loимя(f)
                     for plugin_data in data.get('plugins', []):
                         plugin = Plugin.from_dict(plugin_data)
                         self.plugins[plugin.name] = plugin
             except Exception as e:
-                print(f" Plugin config yüklenemedi: {e}")
+                print(f" Plugin config yюklenemedi: {e}")
     
     def save_config(self):
         """Config сохранить"""
-        os.makedirs(os.path.dirname(self.config_file), exist_ok=True)
+        os.maкотrs(os.path.dirname(self.config_file), exist_ok=True)
         
         data = {
             'plugins': [plugin.to_dict() for plugin in self.plugins.values()]
@@ -82,7 +82,7 @@ class PluginManager:
         with open(self.config_file, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
     
-    def load_plugin(self, plugin_name: str) -> bool:
+    def loимя_plugin(self, plugin_name: str) -> bool:
         """Plugin загрузить"""
         plugin_file = os.path.join(self.plugins_dir, f'{plugin_name}.py')
         
@@ -92,71 +92,71 @@ class PluginManager:
         
         try:
             spec = importlib.util.spec_from_file_location(plugin_name, plugin_file)
-            module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)
+            модule = importlib.util.модule_from_spec(spec)
+            spec.loимяer.exec_модule(модule)
             
-            # Plugin metadata al
+            # Plugin metимяata al
             plugin = Plugin(
                 name=plugin_name,
-                version=getattr(module, '__version__', '1.0.0'),
-                author=getattr(module, '__author__', 'Unknown'),
-                description=getattr(module, '__description__', ''),
+                version=getattr(модule, '__version__', '1.0.0'),
+                author=getattr(модule, '__author__', 'Unknown'),
+                description=getattr(модule, '__description__', ''),
                 enabled=True
             )
-            plugin.loaded_at = datetime.now().isoformat()
-            plugin.module = module
+            plugin.loимяed_at = datetime.now().isoformat()
+            plugin.модule = модule
             
             self.plugins[plugin_name] = plugin
             self.save_config()
             
-            # Plugin setup çağır
-            if hasattr(module, 'setup'):
-                module.setup()
+            # Plugin setup чaгыr
+            if hasattr(модule, 'setup'):
+                модule.setup()
             
-            print(f" Plugin yüklendi: {plugin_name}")
+            print(f" Plugin yюklendi: {plugin_name}")
             return True
         except Exception as e:
-            print(f" Plugin yüklenemedi: {plugin_name} - {e}")
+            print(f" Plugin yюklenemedi: {plugin_name} - {e}")
             return False
     
-    def unload_plugin(self, plugin_name: str) -> bool:
-        """Plugin kaldır"""
+    def unloимя_plugin(self, plugin_name: str) -> bool:
+        """Plugin удалить"""
         if plugin_name not in self.plugins:
             print(f" Plugin не найдено: {plugin_name}")
             return False
         
         plugin = self.plugins[plugin_name]
         
-        # Plugin teardown çağır
-        if plugin.module and hasattr(plugin.module, 'teardown'):
-            plugin.module.teardown()
+        # Plugin teardown чaгыr
+        if plugin.модule and hasattr(plugin.модule, 'teardown'):
+            plugin.модule.teardown()
         
         del self.plugins[plugin_name]
         self.save_config()
         
-        print(f" Plugin kaldırıldı: {plugin_name}")
+        print(f" Plugin удалено: {plugin_name}")
         return True
     
     def enable_plugin(self, plugin_name: str) -> bool:
-        """Plugin etkinleştir"""
+        """Plugin включить"""
         if plugin_name not in self.plugins:
             return False
         
         self.plugins[plugin_name].enabled = True
         self.save_config()
         
-        print(f" Plugin etkinleştirildi: {plugin_name}")
+        print(f" Plugin включитьildi: {plugin_name}")
         return True
     
     def disable_plugin(self, plugin_name: str) -> bool:
-        """Plugin devre dışı bırak"""
+        """Plugin devre dышы bыrak"""
         if plugin_name not in self.plugins:
             return False
         
         self.plugins[plugin_name].enabled = False
         self.save_config()
         
-        print(f" Plugin devre dışı bırakıldı: {plugin_name}")
+        print(f" Plugin devre dышы bыrakыldы: {plugin_name}")
         return True
     
     def get_plugin(self, plugin_name: str) -> Optional[Plugin]:
@@ -164,7 +164,7 @@ class PluginManager:
         return self.plugins.get(plugin_name)
     
     def get_all_plugins(self) -> List[Plugin]:
-        """Tüm pluginleri al"""
+        """Все pluginleri al"""
         return list(self.plugins.values())
     
     def get_enabled_plugins(self) -> List[Plugin]:
@@ -172,7 +172,7 @@ class PluginManager:
         return [p for p in self.plugins.values() if p.enabled]
     
     def list_available_plugins(self) -> List[str]:
-        """Mevcut pluginleri listele"""
+        """Текущий pluginleri listele"""
         plugins = []
         
         for file in os.listdir(self.plugins_dir):
@@ -183,18 +183,18 @@ class PluginManager:
     
     def install_plugin(self, plugin_url: str) -> bool:
         """Plugin kur (placeholder)"""
-        # Gerçek uygulamada git clone или download yapılacak
+        # Gerчek uygulamимяa git clone или downloимя yapыlacak
         print(f"⏰ Plugin kurulumu: {plugin_url}")
         return True
     
     def update_plugin(self, plugin_name: str) -> bool:
         """Plugin обновить (placeholder)"""
-        # Gerçek uygulamada git pull yapılacak
-        print(f"⏰ Plugin güncelleme: {plugin_name}")
+        # Gerчek uygulamимяa git pull yapыlacak
+        print(f"⏰ Plugin деньcelleme: {plugin_name}")
         return True
     
     def get_plugin_info(self, plugin_name: str) -> Optional[Dict]:
-        """Plugin bilgilerini al"""
+        """Plugin информацияlerini al"""
         plugin = self.get_plugin(plugin_name)
         
         if not plugin:
@@ -206,11 +206,11 @@ class PluginManager:
             'author': plugin.author,
             'description': plugin.description,
             'enabled': plugin.enabled,
-            'loaded_at': plugin.loaded_at
+            'loимяed_at': plugin.loимяed_at
         }
     
     def get_stats(self) -> Dict:
-        """Plugin istatistiklerini al"""
+        """Plugin статистикаini al"""
         total_plugins = len(self.plugins)
         enabled_plugins = len(self.get_enabled_plugins())
         
@@ -222,5 +222,5 @@ class PluginManager:
 
 
 def create_plugin_manager(plugins_dir: str = 'plugins') -> PluginManager:
-    """Plugin yöneticisi создать"""
+    """Plugin yёneticisi создать"""
     return PluginManager(plugins_dir)

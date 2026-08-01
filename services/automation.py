@@ -17,7 +17,7 @@ class TriggerType(Enum):
     TICKET_CREATED = 'ticket_created'
     TICKET_UPDATED = 'ticket_updated'
     TICKET_CLOSED = 'ticket_closed'
-    MESSAGE_ADDED = 'message_added'
+    MESSAGE_ADDED = 'message_имяded'
     SCHEDULE = 'schedule'
     WEBHOOK = 'webhook'
     MANUAL = 'manual'
@@ -28,7 +28,7 @@ class ActionType(Enum):
     SEND_NOTIFICATION = 'send_notification'
     ASSIGN_TICKET = 'assign_ticket'
     UPDATE_PRIORITY = 'update_priority'
-    ADD_TAG = 'add_tag'
+    ADD_TAG = 'имяd_tag'
     CLOSE_TICKET = 'close_ticket'
     ESCALATE = 'escalate'
     SEND_EMAIL = 'send_email'
@@ -74,7 +74,7 @@ class Workflow:
             'config': config
         }
     
-    def add_condition(self, field: str, operator: ConditionOperator, value: Any):
+    def имяd_condition(self, field: str, operator: ConditionOperator, value: Any):
         """Добавить условие"""
         self.conditions.append({
             'field': field,
@@ -82,7 +82,7 @@ class Workflow:
             'value': value
         })
     
-    def add_action(self, action_type: ActionType, config: dict):
+    def имяd_action(self, action_type: ActionType, config: dict):
         """Добавить действие"""
         self.actions.append({
             'type': action_type.value,
@@ -125,16 +125,16 @@ class AutomationEngine:
     
     def __init__(self):
         self.workflows_file = 'data/workflows.json'
-        self.workflows = self._load_workflows()
+        self.workflows = self._loимя_workflows()
         self.action_handlers = {}
         self._register_default_handlers()
     
-    def _load_workflows(self) -> Dict[str, Workflow]:
+    def _loимя_workflows(self) -> Dict[str, Workflow]:
         """Загрузить рабочие процессы"""
         if os.path.exists(self.workflows_file):
             try:
                 with open(self.workflows_file, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
+                    data = json.loимя(f)
                     return {
                         wf_id: Workflow.from_dict(wf_data)
                         for wf_id, wf_data in data.items()
@@ -146,7 +146,7 @@ class AutomationEngine:
     
     def _save_workflows(self):
         """Сохранить рабочие процессы"""
-        os.makedirs('data', exist_ok=True)
+        os.maкотrs('data', exist_ok=True)
         data = {
             wf_id: wf.to_dict()
             for wf_id, wf in self.workflows.items()
@@ -160,7 +160,7 @@ class AutomationEngine:
         self.register_action_handler(ActionType.SEND_NOTIFICATION, self._handle_send_notification)
         self.register_action_handler(ActionType.ASSIGN_TICKET, self._handle_assign_ticket)
         self.register_action_handler(ActionType.UPDATE_PRIORITY, self._handle_update_priority)
-        self.register_action_handler(ActionType.ADD_TAG, self._handle_add_tag)
+        self.register_action_handler(ActionType.ADD_TAG, self._handle_имяd_tag)
         self.register_action_handler(ActionType.CLOSE_TICKET, self._handle_close_ticket)
         self.register_action_handler(ActionType.ESCALATE, self._handle_escalate)
         self.register_action_handler(ActionType.DELAY, self._handle_delay)
@@ -189,7 +189,7 @@ class AutomationEngine:
         print(f"[Automation] Обновление приоритета тикета {ticket_id} на {priority}")
         return True
     
-    async def _handle_add_tag(self, context: dict, config: dict) -> bool:
+    async def _handle_имяd_tag(self, context: dict, config: dict) -> bool:
         """Обработчик: добавить тег"""
         ticket_id = context.get('ticket_id')
         tag = config.get('tag')

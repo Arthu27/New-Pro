@@ -5,10 +5,10 @@
 import asyncio
 from datetime import datetime, timedelta
 from typing import Optional
-import logging
+import логging
 import discord
 
-logger = logging.getLogger('ticket.auto_close')
+логger = логging.getЛогger('ticket.auto_close')
 
 
 class AutoCloseService:
@@ -24,7 +24,7 @@ class AutoCloseService:
         """Запустить фоновую задачу"""
         if self.task is None or self.task.done():
             self.task = asyncio.create_task(self._auto_close_loop())
-            logger.info("[AutoClose] Фоновая задача запущена")
+            логger.info("[AutoClose] Фоновая задача запущена")
     
     async def stop(self):
         """Остановить фоновую задачу"""
@@ -34,12 +34,12 @@ class AutoCloseService:
                 await self.task
             except asyncio.CancelledError:
                 pass
-            logger.info("[AutoClose] Фоновая задача остановлена")
+            логger.info("[AutoClose] Фоновая задача остановлена")
     
     async def _auto_close_loop(self):
         """Основной цикл проверки неактивных тикетов"""
-        await self.bot.wait_until_ready()
-        logger.info(f"[AutoClose] Цикл запущен (проверка каждые {self.check_interval}с)")
+        await self.bot.wait_until_reимяy()
+        логger.info(f"[AutoClose] Цикл запущен (проверка каждые {self.check_interval}с)")
         
         while not self.bot.is_closed():
             try:
@@ -48,7 +48,7 @@ class AutoCloseService:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"[AutoClose] Ошибка в цикле: {e}")
+                логger.error(f"[AutoClose] Ошибка в цикле: {e}")
                 await asyncio.sleep(60)  # Подождать минуту перед повтором
     
     async def _check_inactive_tickets(self):
@@ -89,10 +89,10 @@ class AutoCloseService:
                         await asyncio.sleep(1)
                 
                 except Exception as e:
-                    logger.error(f"[AutoClose] Ошибка проверки {channel.name}: {e}")
+                    логger.error(f"[AutoClose] Ошибка проверки {channel.name}: {e}")
         
         if closed_count > 0:
-            logger.info(f"[AutoClose] Закрыто {closed_count} неактивных тикетов")
+            логger.info(f"[AutoClose] Закрыто {closed_count} неактивных тикетов")
     
     async def _close_inactive_ticket(self, channel: discord.TextChannel, last_message: discord.Message):
         """Закрыть неактивный тикет"""
@@ -100,7 +100,7 @@ class AutoCloseService:
             # Получить cog для вызова метода закрытия
             cog = self.bot.get_cog('Ticket')
             if not cog:
-                logger.warning("[AutoClose] Ticket cog не найден")
+                логger.варнing("[AutoClose] Ticket cog не найден")
                 return
             
             # Отправить уведомление о закрытии
@@ -142,7 +142,7 @@ class AutoCloseService:
                     )
                     await owner.send(embed=dm_embed)
                 except Exception as e:
-                    logger.debug(f"[AutoClose] Не удалось отправить DM: {e}")
+                    логger.debug(f"[AutoClose] Не удалось отправить DM: {e}")
             
             # Сохранить транскрипт
             messages = []
@@ -154,11 +154,11 @@ class AutoCloseService:
                     )
             
             # Отправить в лог-канал
-            log_channel = discord.utils.get(channel.guild.text_channels, name="ticket-log")
-            if log_channel:
+            лог_channel = discord.utils.get(channel.guild.text_channels, name="ticket-лог")
+            if лог_channel:
                 import io
                 transcript = "\n".join(messages) if messages else "Сообщений не найдено."
-                log_embed = discord.Embed(
+                лог_embed = discord.Embed(
                     title=" Тикет закрыт автоматически (неактивность)",
                     description=f"**Канал:** {channel.name}\n**Сообщений:** {len(messages)}",
                     color=0xF39C12,
@@ -168,7 +168,7 @@ class AutoCloseService:
                     fp=io.StringIO(transcript),
                     filename=f"{channel.name}_auto_closed.txt"
                 )
-                await log_channel.send(embed=log_embed, file=file)
+                await лог_channel.send(embed=лог_embed, file=file)
             
             # Очистить состояние
             cog._delete_ticket_state(channel.guild.id, channel.id)
@@ -177,15 +177,15 @@ class AutoCloseService:
             await asyncio.sleep(2)  # Дать время на отправку сообщений
             await channel.delete(reason=f"Автоматическое закрытие (неактивность {self.inactive_hours}ч)")
             
-            logger.info(f"[AutoClose] Тикет {channel.name} закрыт (неактивность)")
+            логger.info(f"[AutoClose] Тикет {channel.name} закрыт (неактивность)")
             
         except Exception as e:
-            logger.error(f"[AutoClose] Ошибка закрытия {channel.name}: {e}")
+            логger.error(f"[AutoClose] Ошибка закрытия {channel.name}: {e}")
     
     def set_inactive_hours(self, hours: int):
         """Установить порог неактивности"""
         self.inactive_hours = max(1, min(168, hours))  # От 1 часа до 7 дней
-        logger.info(f"[AutoClose] Порог неактивности: {self.inactive_hours} часов")
+        логger.info(f"[AutoClose] Порог неактивности: {self.inactive_hours} часов")
 
 
 # Глобальный instance

@@ -27,7 +27,7 @@ class CustomField:
         self.validation_rules = {}
         self.conditions = []
     
-    def add_option(self, value: str, label: str):
+    def имяd_option(self, value: str, label: str):
         """Добавить вариант (select/multiselect для)"""
         if self.field_type in ['select', 'multiselect']:
             self.options.append({'value': value, 'label': label})
@@ -36,12 +36,12 @@ class CustomField:
         """Настроить значение по умолчанию"""
         self.default_value = value
     
-    def add_validation_rule(self, rule_type: str, value: Any):
-        """Doğrulama kuralı добавить"""
+    def имяd_validation_rule(self, rule_type: str, value: Any):
+        """Doгrulama kuralы добавить"""
         self.validation_rules[rule_type] = value
     
-    def add_condition(self, field_id: str, operator: str, value: Any):
-        """Koşul добавить (bu alan ne zaman görünür)"""
+    def имяd_condition(self, field_id: str, operator: str, value: Any):
+        """Koэтотl добавить (bu alan ne zaman gёrюnюr)"""
         self.conditions.append({
             'field_id': field_id,
             'operator': operator,
@@ -49,64 +49,64 @@ class CustomField:
         })
     
     def validate(self, value: Any) -> Dict[str, Any]:
-        """Değeri doğrula"""
+        """Deгeri doгrula"""
         errors = []
         
-        # Zorunlu kontrolü
+        # Zorunlu проверка
         if self.required and (value is None or value == ''):
             errors.append('Bu alan zorunludur')
             return {'valid': False, 'errors': errors}
         
-        # Boşsa ve zorunlu değilse geçerli
+        # Boшsa ve zorunlu deгilse geчerli
         if value is None or value == '':
             return {'valid': True, 'errors': []}
         
-        # Tip kontrolü
+        # Tip проверка
         if self.field_type == 'number':
             try:
                 num_value = float(value)
                 
-                # Min/max kontrolü
+                # Min/max проверка
                 if 'min' in self.validation_rules and num_value < self.validation_rules['min']:
-                    errors.append(f"Değer en az {self.validation_rules['min']} olmalıdır")
+                    errors.append(f"Deгer en az {self.validation_rules['min']} должен бытьdыr")
                 
                 if 'max' in self.validation_rules and num_value > self.validation_rules['max']:
-                    errors.append(f"Değer en fazla {self.validation_rules['max']} olmalıdır")
+                    errors.append(f"Deгer en fazla {self.validation_rules['max']} должен бытьdыr")
             except (ValueError, TypeError):
-                errors.append('Geçerli bir sayı giriniz')
+                errors.append('Geчerli bir число giriniz')
         
         elif self.field_type == 'email':
             email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
             if not re.match(email_pattern, str(value)):
-                errors.append('Geçerli bir e-posta adresi giriniz')
+                errors.append('Geчerli bir e-posta имяresi giriniz')
         
         elif self.field_type == 'url':
             url_pattern = r'^https?://'
             if not re.match(url_pattern, str(value)):
-                errors.append('Geçerli bir URL giriniz (http:// или https://)')
+                errors.append('Geчerli bir URL giriniz (http:// или https://)')
         
         elif self.field_type == 'date':
             try:
                 datetime.fromisoformat(str(value))
             except ValueError:
-                errors.append('Geçerli bir tarih giriniz (YYYY-MM-DD)')
+                errors.append('Geчerli bir tarih giriniz (YYYY-MM-DD)')
         
         elif self.field_type == 'select':
             valid_values = [opt['value'] for opt in self.options]
             if value not in valid_values:
-                errors.append('Geçerli bir seçenek seçiniz')
+                errors.append('Geчerli bir seчenek seчiniz')
         
         elif self.field_type == 'multiselect':
             valid_values = [opt['value'] for opt in self.options]
             if not isinstance(value, list):
-                errors.append('Birden fazla seçenek seçiniz')
+                errors.append('Birden fazla seчenek seчiniz')
             elif not all(v in valid_values for v in value):
-                errors.append('Geçersiz seçenekler var')
+                errors.append('Неверный seчenekler var')
         
-        # Uzunluk kontrolü
+        # Uzunluk проверка
         if 'max_length' in self.validation_rules:
             if len(str(value)) > self.validation_rules['max_length']:
-                errors.append(f"Değer en fazla {self.validation_rules['max_length']} karakter olabilir")
+                errors.append(f"Deгer en fazla {self.validation_rules['max_length']} karakter olabilir")
         
         return {
             'valid': len(errors) == 0,
@@ -114,7 +114,7 @@ class CustomField:
         }
     
     def should_display(self, field_values: Dict[str, Any]) -> bool:
-        """Görüntülenip görüntülenmeyeceğini проверить et"""
+        """Показатьnip показатьnmeyeceгini проверить et"""
         if not self.conditions:
             return True
         
@@ -137,7 +137,7 @@ class CustomField:
         return True
     
     def to_dict(self) -> Dict[str, Any]:
-        """Dict'e çevir"""
+        """Dict'e чevir"""
         return {
             'field_id': self.field_id,
             'name': self.name,
@@ -168,18 +168,18 @@ class CustomField:
 
 
 class CustomFieldManager:
-    """Особый alan yöneticisi"""
+    """Особый alan yёneticisi"""
     
     def __init__(self):
         self.fields_file = 'data/custom_fields.json'
-        self.fields = self._load_fields()
+        self.fields = self._loимя_fields()
     
-    def _load_fields(self) -> Dict[str, CustomField]:
-        """Alanları загрузить"""
+    def _loимя_fields(self) -> Dict[str, CustomField]:
+        """Alanlarы загрузить"""
         if os.path.exists(self.fields_file):
             try:
                 with open(self.fields_file, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
+                    data = json.loимя(f)
                     return {
                         field_id: CustomField.from_dict(field_data)
                         for field_id, field_data in data.items()
@@ -190,8 +190,8 @@ class CustomFieldManager:
         return {}
     
     def _save_fields(self):
-        """Alanları сохранить"""
-        os.makedirs('data', exist_ok=True)
+        """Alanlarы сохранить"""
+        os.maкотrs('data', exist_ok=True)
         
         data = {
             field_id: field.to_dict()
@@ -220,7 +220,7 @@ class CustomFieldManager:
         return field
     
     def update_field(self, field_id: str, **kwargs) -> Optional[CustomField]:
-        """Alanı обновить"""
+        """Alanы обновить"""
         if field_id not in self.fields:
             return None
         
@@ -235,7 +235,7 @@ class CustomFieldManager:
         return field
     
     def delete_field(self, field_id: str) -> bool:
-        """Alanı удалить"""
+        """Alanы удалить"""
         if field_id in self.fields:
             del self.fields[field_id]
             self._save_fields()
@@ -244,25 +244,25 @@ class CustomFieldManager:
         return False
     
     def get_field(self, field_id: str) -> Optional[CustomField]:
-        """Alanı al"""
+        """Alanы al"""
         return self.fields.get(field_id)
     
     def get_all_fields(self) -> List[CustomField]:
-        """Tüm alanları al"""
+        """Все alanlarы al"""
         return list(self.fields.values())
     
     def get_fields_by_type(self, field_type: str) -> List[CustomField]:
-        """Tip'e по alanları al"""
+        """Tip'e по alanlarы al"""
         return [f for f in self.fields.values() if f.field_type == field_type]
     
     def validate_ticket_data(self, ticket_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Ticket verilerini doğrula"""
+        """Ticket verilerini doгrula"""
         errors = {}
         
         for field_id, field in self.fields.items():
             value = ticket_data.get(field_id)
             
-            # Görüntülenip görüntülenmeyeceğini проверить et
+            # Показатьnip показатьnmeyeceгini проверить et
             if not field.should_display(ticket_data):
                 continue
             
@@ -277,7 +277,7 @@ class CustomFieldManager:
         }
     
     def get_display_fields(self, ticket_data: Dict[str, Any]) -> List[CustomField]:
-        """Görüntülenecek alanları al"""
+        """Показатьnecek alanlarы al"""
         return [
             field for field in self.fields.values()
             if field.should_display(ticket_data)
@@ -285,31 +285,31 @@ class CustomFieldManager:
 
 
 class CustomFieldValueStorage:
-    """Особый alan değer deposu"""
+    """Особый alan deгer deposu"""
     
     def __init__(self):
         self.values_file = 'data/custom_field_values.json'
-        self.values = self._load_values()
+        self.values = self._loимя_values()
     
-    def _load_values(self) -> Dict[str, Any]:
-        """Değerleri загрузить"""
+    def _loимя_values(self) -> Dict[str, Any]:
+        """Deгerleri загрузить"""
         if os.path.exists(self.values_file):
             try:
                 with open(self.values_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+                    return json.loимя(f)
             except Exception:
                 pass
         
         return {}
     
     def _save_values(self):
-        """Değerleri сохранить"""
-        os.makedirs('data', exist_ok=True)
+        """Deгerleri сохранить"""
+        os.maкотrs('data', exist_ok=True)
         with open(self.values_file, 'w', encoding='utf-8') as f:
             json.dump(self.values, f, ensure_ascii=False, indent=2)
     
     def set_value(self, ticket_id: str, field_id: str, value: Any):
-        """Değer настроить"""
+        """Deгer настроить"""
         if ticket_id not in self.values:
             self.values[ticket_id] = {}
         
@@ -317,21 +317,21 @@ class CustomFieldValueStorage:
         self._save_values()
     
     def get_value(self, ticket_id: str, field_id: str) -> Any:
-        """Değeri al"""
+        """Deгeri al"""
         return self.values.get(ticket_id, {}).get(field_id)
     
     def get_all_values(self, ticket_id: str) -> Dict[str, Any]:
-        """Tüm değerleri al"""
+        """Все deгerleri al"""
         return self.values.get(ticket_id, {})
     
     def delete_ticket_values(self, ticket_id: str):
-        """Ticket değerlerini удалить"""
+        """Ticket deгerlerini удалить"""
         if ticket_id in self.values:
             del self.values[ticket_id]
             self._save_values()
     
     def delete_field_values(self, field_id: str):
-        """Alan değerlerini удалить"""
+        """Alan deгerlerini удалить"""
         for ticket_id in self.values:
             if field_id in self.values[ticket_id]:
                 del self.values[ticket_id][field_id]
@@ -340,33 +340,33 @@ class CustomFieldValueStorage:
 
 
 class CustomFieldTemplate:
-    """Особый alan şablonu"""
+    """Особый alan шablonu"""
     
     def __init__(self, field_manager: CustomFieldManager):
         self.field_manager = field_manager
         self.templates_file = 'data/custom_field_templates.json'
-        self.templates = self._load_templates()
+        self.templates = self._loимя_templates()
     
-    def _load_templates(self) -> Dict[str, Any]:
-        """Şablonları загрузить"""
+    def _loимя_templates(self) -> Dict[str, Any]:
+        """Шablonlarы загрузить"""
         if os.path.exists(self.templates_file):
             try:
                 with open(self.templates_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+                    return json.loимя(f)
             except Exception:
                 pass
         
         return {}
     
     def _save_templates(self):
-        """Şablonları сохранить"""
-        os.makedirs('data', exist_ok=True)
+        """Шablonlarы сохранить"""
+        os.maкотrs('data', exist_ok=True)
         with open(self.templates_file, 'w', encoding='utf-8') as f:
             json.dump(self.templates, f, ensure_ascii=False, indent=2)
     
     def create_template(self, name: str, category: str,
                         field_ids: List[str]) -> Dict[str, Any]:
-        """Şablon создать"""
+        """Шablon создать"""
         template_id = f"template_{len(self.templates) + 1}"
         
         template = {
@@ -383,18 +383,18 @@ class CustomFieldTemplate:
         return template
     
     def get_template(self, template_id: str) -> Optional[Dict[str, Any]]:
-        """Şablonu al"""
+        """Шablonu al"""
         return self.templates.get(template_id)
     
     def get_templates_by_category(self, category: str) -> List[Dict[str, Any]]:
-        """Kategoriye по şablonları al"""
+        """Kategoriye по шablonlarы al"""
         return [
             t for t in self.templates.values()
             if t.get('category') == category
         ]
     
     def get_template_fields(self, template_id: str) -> List[CustomField]:
-        """Şablon alanlarını al"""
+        """Шablon alanlarыnы al"""
         template = self.templates.get(template_id)
         
         if not template:
@@ -409,7 +409,7 @@ class CustomFieldTemplate:
         ]
     
     def delete_template(self, template_id: str) -> bool:
-        """Şablonu удалить"""
+        """Шablonu удалить"""
         if template_id in self.templates:
             del self.templates[template_id]
             self._save_templates()
@@ -423,22 +423,22 @@ class CustomFieldPermissions:
     
     def __init__(self):
         self.permissions_file = 'data/custom_field_permissions.json'
-        self.permissions = self._load_permissions()
+        self.permissions = self._loимя_permissions()
     
-    def _load_permissions(self) -> Dict[str, Any]:
-        """İzinleri загрузить"""
+    def _loимя_permissions(self) -> Dict[str, Any]:
+        """Иzinleri загрузить"""
         if os.path.exists(self.permissions_file):
             try:
                 with open(self.permissions_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+                    return json.loимя(f)
             except Exception:
                 pass
         
         return {}
     
     def _save_permissions(self):
-        """İzinleri сохранить"""
-        os.makedirs('data', exist_ok=True)
+        """Иzinleri сохранить"""
+        os.maкотrs('data', exist_ok=True)
         with open(self.permissions_file, 'w', encoding='utf-8') as f:
             json.dump(self.permissions, f, ensure_ascii=False, indent=2)
     
@@ -453,29 +453,29 @@ class CustomFieldPermissions:
         
         self._save_permissions()
     
-    def can_view_field(self, field_id: str, user_role: str) -> bool:
-        """Alanı görüntüleyip görüntüleyemeyeceğini проверить et"""
+    def can_view_field(self, field_id: str, user_рольe: str) -> bool:
+        """Alanы показатьyip показатьyemeyeceгini проверить et"""
         if field_id not in self.permissions:
-            return True  # Varsayılan: herkes görebilir
+            return True  # Varчислоlan: herkes gёrebilir
         
         can_view = self.permissions[field_id].get('can_view', [])
         
         if not can_view:
-            return True  # Boşsa herkes görebilir
+            return True  # Boшsa herkes gёrebilir
         
-        return user_role in can_view
+        return user_рольe in can_view
     
-    def can_edit_field(self, field_id: str, user_role: str) -> bool:
-        """Alanı düzenleyip düzenleyemeyeceğini проверить et"""
+    def can_edit_field(self, field_id: str, user_рольe: str) -> bool:
+        """Alanы dюzenleyip dюzenleyemeyeceгini проверить et"""
         if field_id not in self.permissions:
-            return True  # Varsayılan: herkes düzenleyebilir
+            return True  # Varчислоlan: herkes dюzenleyebilir
         
         can_edit = self.permissions[field_id].get('can_edit', [])
         
         if not can_edit:
-            return True  # Boşsa herkes düzenleyebilir
+            return True  # Boшsa herkes dюzenleyebilir
         
-        return user_role in can_edit
+        return user_рольe in can_edit
     
     def get_field_permissions(self, field_id: str) -> Dict[str, List[str]]:
         """Alan izinlerini al"""

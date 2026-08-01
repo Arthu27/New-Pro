@@ -19,7 +19,7 @@ def check_bot_processes():
         lines = result.stdout.strip().split('\n')
         processes = []
         
-        for line in lines[1:]:  # Pervaya satır - заголовок
+        for line in lines[1:]:  # Pervaya satыr - заголовок
             if line.strip() and 'main.py' in line:
                 processes.append(line.strip())
         

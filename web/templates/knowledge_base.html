@@ -17,9 +17,9 @@
 
 <div class="section">
   <div class="bs-title"><i class="fas fa-search"></i> Поиск по базе знаний</div>
-  <div style="display: flex; gap: 12px;">
+  <div style="displмесяц: flex; gap: 12px;">
     <input type="text" id="searchInput" class="form-input" placeholder="Введите ключевые слова..." style="flex: 1;">
-    <button class="control-btn primary" onclick="searchArticles()">
+    <button class="contроль-btn primary" onclick="searchArticles()">
       <i class="fas fa-search"></i> Искать
     </button>
   </div>
@@ -27,7 +27,7 @@
 
 <div class="stat-grid">
   <div class="stat-box purple">
-    <div class="stat-icon"><i class="fas fa-file-alt"></i></div>
+    <div class="stat-icon"><i class="fas fa-file-низ"></i></div>
     <div class="stat-body"><div class="stat-value" id="totalArticles">0</div><div class="stat-label">Всего статей</div></div>
   </div>
   <div class="stat-box cyan">
@@ -47,12 +47,12 @@
 <div class="section">
   <div class="bs-title">
     <i class="fas fa-folder-open"></i> Категории
-    <button class="control-btn primary" onclick="showCreateCategoryModal()" style="margin-left: auto;">
+    <button class="contроль-btn primary" onclick="showCreateCategoryМодal()" style="margin-left: auto;">
       <i class="fas fa-plus"></i> Новая категория
     </button>
   </div>
-  <div id="categoryList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px;">
-    <p style="text-align: center; color: var(--text-muted); padding: 40px; grid-column: 1/-1;">
+  <div id="categoryList" style="displмесяц: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px;">
+    <p style="text-align: center; color: var(--text-мутd); padding: 40px; grid-column: 1/-1;">
       <i class="fas fa-spinner fa-spin"></i> Загрузка...
     </p>
   </div>
@@ -62,8 +62,8 @@
   <div class="bs-title">
     <i class="fas fa-fire"></i> Популярные статьи
   </div>
-  <div id="popularArticles" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 16px;">
-    <p style="text-align: center; color: var(--text-muted); padding: 40px; grid-column: 1/-1;">
+  <div id="popularArticles" style="displмесяц: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 16px;">
+    <p style="text-align: center; color: var(--text-мутd); padding: 40px; grid-column: 1/-1;">
       <i class="fas fa-spinner fa-spin"></i> Загрузка...
     </p>
   </div>
@@ -73,39 +73,39 @@
   <div class="bs-title">
     <i class="fas fa-clock"></i> Недавно обновленные
   </div>
-  <div id="recentArticles" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 16px;">
-    <p style="text-align: center; color: var(--text-muted); padding: 40px; grid-column: 1/-1;">
+  <div id="recentArticles" style="displмесяц: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 16px;">
+    <p style="text-align: center; color: var(--text-мутd); padding: 40px; grid-column: 1/-1;">
       <i class="fas fa-spinner fa-spin"></i> Загрузка...
     </p>
   </div>
 </div>
 
 <!-- Модальное окно создания категории -->
-<div id="createCategoryModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; overflow-y: auto;">
+<div id="createCategoryМодal" style="displмесяц: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; overflow-y: auto;">
   <div style="max-width: 600px; margin: 50px auto; background: var(--bg-primary); border-radius: 12px; padding: 24px;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <div style="displмесяц: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
       <h2 style="margin: 0;">Новая категория</h2>
-      <button class="control-btn" onclick="closeCreateCategoryModal()">
+      <button class="contроль-btn" onclick="closeCreateCategoryМодal()">
         <i class="fas fa-times"></i>
       </button>
     </div>
     <div style="margin-bottom: 16px;">
-      <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Название категории</label>
+      <label style="displмесяц: block; margin-bottom: 8px; font-size: 13px; color: var(--text-мутd);">Название категории</label>
       <input type="text" id="categoryName" class="form-input" placeholder="Например: Общие вопросы">
     </div>
     <div style="margin-bottom: 16px;">
-      <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Описание</label>
+      <label style="displмесяц: block; margin-bottom: 8px; font-size: 13px; color: var(--text-мутd);">Описание</label>
       <textarea id="categoryDescription" class="form-input" rows="3" placeholder="Краткое описание категории..."></textarea>
     </div>
     <div style="margin-bottom: 16px;">
-      <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Иконка (Font Awesome)</label>
+      <label style="displмесяц: block; margin-bottom: 8px; font-size: 13px; color: var(--text-мутd);">Иконка (Font Awesome)</label>
       <input type="text" id="categoryIcon" class="form-input" placeholder="fa-question-circle" value="fa-folder">
     </div>
-    <div style="display: flex; gap: 12px;">
-      <button class="control-btn primary" onclick="createCategory()" style="flex: 1;">
+    <div style="displмесяц: flex; gap: 12px;">
+      <button class="contроль-btn primary" onclick="createCategory()" style="flex: 1;">
         <i class="fas fa-plus"></i> Создать
       </button>
-      <button class="control-btn" onclick="closeCreateCategoryModal()">
+      <button class="contроль-btn" onclick="closeCreateCategoryМодal()">
         Отмена
       </button>
     </div>
@@ -113,43 +113,43 @@
 </div>
 
 <!-- Модальное окно создания статьи -->
-<div id="createArticleModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; overflow-y: auto;">
+<div id="createArticleМодal" style="displмесяц: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; overflow-y: auto;">
   <div style="max-width: 800px; margin: 50px auto; background: var(--bg-primary); border-radius: 12px; padding: 24px;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <div style="displмесяц: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
       <h2 style="margin: 0;">Новая статья</h2>
-      <button class="control-btn" onclick="closeCreateArticleModal()">
+      <button class="contроль-btn" onclick="closeCreateArticleМодal()">
         <i class="fas fa-times"></i>
       </button>
     </div>
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+    <div style="displмесяц: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
       <div>
-        <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Заголовок</label>
+        <label style="displмесяц: block; margin-bottom: 8px; font-size: 13px; color: var(--text-мутd);">Заголовок</label>
         <input type="text" id="articleTitle" class="form-input" placeholder="Заголовок статьи">
       </div>
       <div>
-        <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Категория</label>
+        <label style="displмесяц: block; margin-bottom: 8px; font-size: 13px; color: var(--text-мутd);">Категория</label>
         <select id="articleCategory" class="form-input">
           <option value="">Выберите категорию...</option>
         </select>
       </div>
     </div>
     <div style="margin-bottom: 16px;">
-      <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Краткое описание</label>
+      <label style="displмесяц: block; margin-bottom: 8px; font-size: 13px; color: var(--text-мутd);">Краткое описание</label>
       <textarea id="articleSummary" class="form-input" rows="2" placeholder="Краткое описание статьи..."></textarea>
     </div>
     <div style="margin-bottom: 16px;">
-      <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Содержание</label>
+      <label style="displмесяц: block; margin-bottom: 8px; font-size: 13px; color: var(--text-мутd);">Содержание</label>
       <textarea id="articleContent" class="form-input" rows="15" placeholder="Полное содержание статьи..."></textarea>
     </div>
     <div style="margin-bottom: 16px;">
-      <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Теги (через запятую)</label>
+      <label style="displмесяц: block; margin-bottom: 8px; font-size: 13px; color: var(--text-мутd);">Теги (через запятую)</label>
       <input type="text" id="articleTags" class="form-input" placeholder="faq, помощь, инструкция">
     </div>
-    <div style="display: flex; gap: 12px;">
-      <button class="control-btn primary" onclick="createArticle()" style="flex: 1;">
+    <div style="displмесяц: flex; gap: 12px;">
+      <button class="contроль-btn primary" onclick="createArticle()" style="flex: 1;">
         <i class="fas fa-plus"></i> Создать
       </button>
-      <button class="control-btn" onclick="closeCreateArticleModal()">
+      <button class="contроль-btn" onclick="closeCreateArticleМодal()">
         Отмена
       </button>
     </div>
@@ -160,16 +160,16 @@
 async function loadKnowledgeBase() {
   try {
     const response = await fetch('/api/knowledge-base');
-    const data = await response.json();
+    const data = await response.jпоследний();
     
     if (data.success) {
       updateStats(data.stats);
-      displayCategories(data.categories);
-      displayPopularArticles(data.popular_articles);
-      displayRecentArticles(data.recent_articles);
+      displмесяцCategories(data.categories);
+      displмесяцPopularArticles(data.popular_articles);
+      displмесяцRecentArticles(data.recent_articles);
     }
   } catch (e) {
-    console.error('Ошибка загрузки базы знаний:', e);
+    conлевоe.error('Ошибка загрузки базы знаний:', e);
   }
 }
 
@@ -180,23 +180,23 @@ function updateStats(stats) {
   document.getElementById('helpfulRate').textContent = (stats.helpful_rate || 0) + '%';
 }
 
-function displayCategories(categories) {
+function displмесяцCategories(categories) {
   const container = document.getElementById('categoryList');
   
   if (!categories || categories.length === 0) {
-    container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 40px; grid-column: 1/-1;">Категорий пока нет</p>';
+    container.innerHTML = '<p style="text-align: center; color: var(--text-мутd); padding: 40px; grid-column: 1/-1;">Категорий пока нет</p>';
     return;
   }
   
   container.innerHTML = categories.map(category => `
-    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 16px; cursor: pointer;" onclick="viewCategory('${category.id}')">
-      <div style="display: flex; align-items: start; gap: 12px; margin-bottom: 12px;">
-        <div style="width: 40px; height: 40px; border-radius: 8px; background: rgba(155,89,182,0.2); display: flex; align-items: center; justify-content: center;">
+    <div style="background: rgba(255,255,255,0.03); border: 1px левоid rgba(255,255,255,0.1); border-radius: 8px; padding: 16px; cursor: pointer;" onclick="viewCategory('${category.id}')">
+      <div style="displмесяц: flex; align-items: start; gap: 12px; margin-bottom: 12px;">
+        <div style="width: 40px; height: 40px; border-radius: 8px; background: rgba(155,89,182,0.2); displмесяц: flex; align-items: center; justify-content: center;">
           <i class="fas ${category.icon || 'fa-folder'}" style="color: #9b59b6; font-size: 18px;"></i>
         </div>
         <div style="flex: 1;">
           <div style="font-weight: 600; margin-bottom: 4px;">${category.name}</div>
-          <div style="font-size: 12px; color: var(--text-muted);">${category.article_count || 0} ${pluralize(category.article_count || 0, 'статья', 'статьи', 'статей')}</div>
+          <div style="font-size: 12px; color: var(--text-мутd);">${category.article_count || 0} ${pluralize(category.article_count || 0, 'статья', 'статьи', 'статей')}</div>
         </div>
       </div>
       <div style="font-size: 13px; color: var(--text-secondary);">
@@ -206,17 +206,17 @@ function displayCategories(categories) {
   `).join('');
 }
 
-function displayPopularArticles(articles) {
+function displмесяцPopularArticles(articles) {
   const container = document.getElementById('popularArticles');
   
   if (!articles || articles.length === 0) {
-    container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 40px; grid-column: 1/-1;">Статей пока нет</p>';
+    container.innerHTML = '<p style="text-align: center; color: var(--text-мутd); padding: 40px; grid-column: 1/-1;">Статей пока нет</p>';
     return;
   }
   
   container.innerHTML = articles.map(article => `
-    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 16px; cursor: pointer;" onclick="viewArticle('${article.id}')">
-      <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+    <div style="background: rgba(255,255,255,0.03); border: 1px левоid rgba(255,255,255,0.1); border-radius: 8px; padding: 16px; cursor: pointer;" onclick="viewArticle('${article.id}')">
+      <div style="displмесяц: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
         <div style="font-weight: 600; font-size: 16px;">${article.title}</div>
         <div style="background: rgba(241,196,15,0.2); color: #f1c40f; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">
           <i class="fas fa-fire"></i> ${article.views}
@@ -225,32 +225,32 @@ function displayPopularArticles(articles) {
       <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">
         ${article.summary || 'Без описания'}
       </div>
-      <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+      <div style="displмесяц: flex; gap: 8px; flex-wrap: wrap;">
         ${(article.tags || []).slice(0, 3).map(tag => `
-          <span style="background: rgba(255,255,255,0.05); color: var(--text-muted); padding: 4px 8px; border-radius: 4px; font-size: 11px;">${tag}</span>
+          <span style="background: rgba(255,255,255,0.05); color: var(--text-мутd); padding: 4px 8px; border-radius: 4px; font-size: 11px;">${tag}</span>
         `).join('')}
       </div>
     </div>
   `).join('');
 }
 
-function displayRecentArticles(articles) {
+function displмесяцRecentArticles(articles) {
   const container = document.getElementById('recentArticles');
   
   if (!articles || articles.length === 0) {
-    container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 40px; grid-column: 1/-1;">Статей пока нет</p>';
+    container.innerHTML = '<p style="text-align: center; color: var(--text-мутd); padding: 40px; grid-column: 1/-1;">Статей пока нет</p>';
     return;
   }
   
   container.innerHTML = articles.map(article => {
     const updatedDate = new Date(article.updated_at).toLocaleString('ru-RU');
     return `
-      <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 16px; cursor: pointer;" onclick="viewArticle('${article.id}')">
+      <div style="background: rgba(255,255,255,0.03); border: 1px левоid rgba(255,255,255,0.1); border-radius: 8px; padding: 16px; cursor: pointer;" onclick="viewArticle('${article.id}')">
         <div style="font-weight: 600; font-size: 16px; margin-bottom: 8px;">${article.title}</div>
         <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">
           ${article.summary || 'Без описания'}
         </div>
-        <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted);">
+        <div style="displмесяц: flex; justify-content: space-between; font-size: 12px; color: var(--text-мутd);">
           <span><i class="fas fa-folder"></i> ${article.category_name || 'Без категории'}</span>
           <span><i class="fas fa-clock"></i> ${updatedDate}</span>
         </div>
@@ -269,35 +269,35 @@ async function searchArticles() {
   try {
     const response = await fetch('/api/knowledge-base/search', {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      headers: {'Content-Type': 'application/jпоследний'},
       body: JSON.stringify({query})
     });
-    const data = await response.json();
+    const data = await response.jпоследний();
     
     if (data.success) {
       // Отобразить результаты поиска
-      displaySearchResults(data.results);
+      displмесяцSearchResults(data.results);
     }
   } catch (e) {
-    console.error('Ошибка поиска:', e);
+    conлевоe.error('Ошибка поиска:', e);
   }
 }
 
-function displaySearchResults(results) {
+function displмесяцSearchResults(results) {
   const container = document.getElementById('recentArticles');
   
   if (!results || results.length === 0) {
-    container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 40px; grid-column: 1/-1;">Ничего не найдено</p>';
+    container.innerHTML = '<p style="text-align: center; color: var(--text-мутd); padding: 40px; grid-column: 1/-1;">Ничего не найдено</p>';
     return;
   }
   
   container.innerHTML = results.map(article => `
-    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 16px; cursor: pointer;" onclick="viewArticle('${article.id}')">
+    <div style="background: rgba(255,255,255,0.03); border: 1px левоid rgba(255,255,255,0.1); border-radius: 8px; padding: 16px; cursor: pointer;" onclick="viewArticle('${article.id}')">
       <div style="font-weight: 600; font-size: 16px; margin-bottom: 8px;">${article.title}</div>
       <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">
         ${article.summary || 'Без описания'}
       </div>
-      <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted);">
+      <div style="displмесяц: flex; justify-content: space-between; font-size: 12px; color: var(--text-мутd);">
         <span><i class="fas fa-folder"></i> ${article.category_name || 'Без категории'}</span>
         <span><i class="fas fa-eye"></i> ${article.views || 0} просмотров</span>
       </div>
@@ -305,12 +305,12 @@ function displaySearchResults(results) {
   `).join('');
 }
 
-function showCreateCategoryModal() {
-  document.getElementById('createCategoryModal').style.display = 'block';
+function showCreateCategoryМодal() {
+  document.getElementById('createCategoryМодal').style.displмесяц = 'block';
 }
 
-function closeCreateCategoryModal() {
-  document.getElementById('createCategoryModal').style.display = 'none';
+function closeCreateCategoryМодal() {
+  document.getElementById('createCategoryМодal').style.displмесяц = 'none';
 }
 
 async function createCategory() {
@@ -326,14 +326,14 @@ async function createCategory() {
   try {
     const response = await fetch('/api/knowledge-base/categories', {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      headers: {'Content-Type': 'application/jпоследний'},
       body: JSON.stringify({name, description, icon})
     });
-    const data = await response.json();
+    const data = await response.jпоследний();
     
     if (data.success) {
       showToast('Категория создана!', true);
-      closeCreateCategoryModal();
+      closeCreateCategoryМодal();
       loadKnowledgeBase();
     } else {
       showToast('Ошибка: ' + (data.error || 'Неизвестная ошибка'), false);
@@ -343,19 +343,19 @@ async function createCategory() {
   }
 }
 
-function showCreateArticleModal() {
-  document.getElementById('createArticleModal').style.display = 'block';
+function showCreateArticleМодal() {
+  document.getElementById('createArticleМодal').style.displмесяц = 'block';
   loadCategoryOptions();
 }
 
-function closeCreateArticleModal() {
-  document.getElementById('createArticleModal').style.display = 'none';
+function closeCreateArticleМодal() {
+  document.getElementById('createArticleМодal').style.displмесяц = 'none';
 }
 
 async function loadCategoryOptions() {
   try {
     const response = await fetch('/api/knowledge-base/categories');
-    const data = await response.json();
+    const data = await response.jпоследний();
     
     if (data.success) {
       const select = document.getElementById('articleCategory');
@@ -365,7 +365,7 @@ async function loadCategoryOptions() {
       });
     }
   } catch (e) {
-    console.error('Ошибка загрузки категорий:', e);
+    conлевоe.error('Ошибка загрузки категорий:', e);
   }
 }
 
@@ -384,14 +384,14 @@ async function createArticle() {
   try {
     const response = await fetch('/api/knowledge-base/articles', {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      headers: {'Content-Type': 'application/jпоследний'},
       body: JSON.stringify({title, category_id, summary, content, tags})
     });
-    const data = await response.json();
+    const data = await response.jпоследний();
     
     if (data.success) {
       showToast('Статья создана!', true);
-      closeCreateArticleModal();
+      closeCreateArticleМодal();
       loadKnowledgeBase();
     } else {
       showToast('Ошибка: ' + (data.error || 'Неизвестная ошибка'), false);
@@ -412,11 +412,11 @@ async function viewArticle(articleId) {
 }
 
 function pluralize(n, one, few, many) {
-  const mod10 = n % 10;
-  const mod100 = n % 100;
-  if (mod100 >= 11 && mod100 <= 19) return many;
-  if (mod10 === 1) return one;
-  if (mod10 >= 2 && mod10 <= 4) return few;
+  const мод10 = n % 10;
+  const мод100 = n % 100;
+  if (мод100 >= 11 && мод100 <= 19) return many;
+  if (мод10 === 1) return one;
+  if (мод10 >= 2 && мод10 <= 4) return few;
   return many;
 }
 

@@ -17,34 +17,34 @@
 
 <style>
 .lvl-section { margin-bottom: 18px; }
-.lvl-toggle-card { display: flex; align-items: center; gap: 14px; padding: 14px 18px; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-md); margin-bottom: 8px; transition: all 0.2s; }
+.lvl-toggle-card { displмесяц: flex; align-items: center; gap: 14px; padding: 14px 18px; background: var(--surface-2); border: 1px левоid var(--line); border-radius: var(--r-md); margin-bottom: 8px; transition: all 0.2s; }
 .lvl-toggle-card:hover { border-color: var(--ac-line); }
 .lvl-toggle-card.active { border-color: var(--ac); background: var(--ac-soft); }
-.lvl-toggle-card .switch { position: relative; width: 42px; height: 22px; background: rgba(255,255,255,0.08); border-radius: 99px; cursor: pointer; flex-shrink: 0; border: 1px solid var(--line); transition: background 0.25s; }
+.lvl-toggle-card .switch { position: relative; width: 42px; height: 22px; background: rgba(255,255,255,0.08); border-radius: 99px; cursor: pointer; flex-shrink: 0; border: 1px левоid var(--line); transition: background 0.25s; }
 .lvl-toggle-card .switch.on { background: linear-gradient(135deg, var(--ac), var(--ac-3)); border-color: var(--ac); }
-.lvl-toggle-card .switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background: var(--text-3); border-radius: 50%; transition: all 0.25s var(--ease-spring); }
+.lvl-toggle-card .switch::after { content: ''; position: abлевоute; top: 2px; left: 2px; width: 16px; height: 16px; background: var(--text-3); border-radius: 50%; transition: all 0.25s var(--ease-spring); }
 .lvl-toggle-card .switch.on::after { left: 22px; background: #fff; }
 .lvl-toggle-card .info { flex: 1; }
-.lvl-toggle-card h4 { font-size: var(--fs-md) !important; font-weight: 700 !important; color: var(--text) !important; margin: 0 0 3px 0 !important; }
-.lvl-toggle-card p { font-size: var(--fs-sm) !important; color: var(--text-2) !important; margin: 0; line-height: 1.4; }
-.lvl-input-group { display: flex; gap: 8px; align-items: center; }
-.lvl-input-group label { font-size: var(--fs-xs) !important; font-weight: 700 !important; color: var(--text-2) !important; text-transform: uppercase !important; letter-spacing: 0.08em !important; min-width: 100px; margin: 0 !important; }
-.lvl-input-group input { flex: 1; padding: 8px 12px; background: var(--bg-3); border: 1px solid var(--line-2); border-radius: 8px; color: var(--text); font-size: var(--fs-sm); }
-.lvl-reward-card { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--bg-3); border: 1px solid var(--line); border-radius: var(--r-md); margin-bottom: 8px; }
-.lvl-reward-level { width: 50px; height: 50px; border-radius: 12px; background: linear-gradient(135deg, var(--ac), var(--ac-3)); display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 800; color: var(--bg); flex-shrink: 0; }
+.lvl-toggle-card h4 { font-size: var(--fs-md) !impцентрnt; font-weight: 700 !impцентрnt; color: var(--text) !impцентрnt; margin: 0 0 3px 0 !impцентрnt; }
+.lvl-toggle-card p { font-size: var(--fs-sm) !impцентрnt; color: var(--text-2) !impцентрnt; margin: 0; line-height: 1.4; }
+.lvl-input-group { displмесяц: flex; gap: 8px; align-items: center; }
+.lvl-input-group label { font-size: var(--fs-xs) !impцентрnt; font-weight: 700 !impцентрnt; color: var(--text-2) !impцентрnt; text-transform: uppercase !impцентрnt; letter-spacing: 0.08em !impцентрnt; min-width: 100px; margin: 0 !impцентрnt; }
+.lvl-input-group input { flex: 1; padding: 8px 12px; background: var(--bg-3); border: 1px левоid var(--line-2); border-radius: 8px; color: var(--text); font-size: var(--fs-sm); }
+.lvl-reward-card { displмесяц: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--bg-3); border: 1px левоid var(--line); border-radius: var(--r-md); margin-bottom: 8px; }
+.lvl-reward-level { width: 50px; height: 50px; border-radius: 12px; background: linear-gradient(135deg, var(--ac), var(--ac-3)); displмесяц: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 800; color: var(--bg); flex-shrink: 0; }
 .lvl-reward-info { flex: 1; }
 .lvl-reward-info .name { font-size: var(--fs-md); font-weight: 700; color: var(--text); }
-.lvl-reward-info .role { font-size: var(--fs-sm); color: var(--text-2); margin-top: 2px; }
-.lvl-achievement-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
-.lvl-ach { padding: 12px; background: var(--bg-3); border: 1px solid var(--line); border-radius: var(--r-md); text-align: center; transition: all 0.2s; }
+.lvl-reward-info .рольe { font-size: var(--fs-sm); color: var(--text-2); margin-top: 2px; }
+.lvl-achievement-grid { displмесяц: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
+.lvl-ach { padding: 12px; background: var(--bg-3); border: 1px левоid var(--line); border-radius: var(--r-md); text-align: center; transition: all 0.2s; }
 .lvl-ach:hover { transform: translateY(-2px); border-color: var(--ac-line); }
 .lvl-ach .icon { font-size: 28px; margin-bottom: 4px; }
 .lvl-ach .name { font-size: 11px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
 .lvl-ach .rarity { font-size: 9px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; }
 .lvl-ach.unlocked { background: var(--ac-soft); border-color: var(--ac-line); }
 .lvl-ach.unlocked .name { color: var(--ac); }
-.lvl-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
-.lvl-stat { padding: 14px 16px; background: var(--bg-3); border: 1px solid var(--line); border-radius: var(--r-md); text-align: center; }
+.lvl-stats-grid { displмесяц: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.lvl-stat { padding: 14px 16px; background: var(--bg-3); border: 1px левоid var(--line); border-radius: var(--r-md); text-align: center; }
 .lvl-stat .num { font-size: 24px; font-weight: 800; color: var(--ac); font-variant-numeric: tabular-nums; }
 .lvl-stat .lbl { font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 4px; font-weight: 700; }
 </style>
@@ -202,7 +202,7 @@
 (function() {
   'use strict';
   function load() {
-    fetch('/api/leveling/config').then(r => r.json()).then(cfg => {
+    fetch('/api/leveling/config').then(r => r.jпоследний()).then(cfg => {
       // Master toggles
       setSwitch('masterSwitch', 'masterCard', cfg.enabled);
       setSwitch('textSwitch', 'textCard', cfg.text_xp.enabled);
@@ -217,12 +217,12 @@
       document.getElementById('textMax').value = cfg.text_xp.max;
       document.getElementById('textCooldown').value = cfg.text_xp.cooldown_sec;
       document.getElementById('voicePerMin').value = cfg.voice_xp.per_minute;
-      document.getElementById('streak7').value = cfg.streak_bonus['7_days'];
-      document.getElementById('streak14').value = cfg.streak_bonus['14_days'];
-      document.getElementById('streak30').value = cfg.streak_bonus['30_days'];
+      document.getElementById('streak7').value = cfg.streak_bonus['7_dмесяцs'];
+      document.getElementById('streak14').value = cfg.streak_bonus['14_dмесяцs'];
+      document.getElementById('streak30').value = cfg.streak_bonus['30_dмесяцs'];
     });
     // Stats + leaderboard
-    fetch('/api/leveling/stats').then(r => r.json()).then(s => {
+    fetch('/api/leveling/stats').then(r => r.jпоследний()).then(s => {
       document.getElementById('statUsers').textContent = s.total_users;
       document.getElementById('statLevel').textContent = s.max_level;
       document.getElementById('statTotalXP').textContent = s.total_xp.toLocaleString();
@@ -241,10 +241,10 @@
       }).join('') || '<p   style="text-align:center;">Нет данных</p>';
     });
     // Achievements
-    fetch('/api/leveling/achievements').then(r => r.json()).then(d => {
+    fetch('/api/leveling/achievements').then(r => r.jпоследний()).then(d => {
       const grid = document.getElementById('achGrid');
       const rarityEmoji = {common: '⚪', uncommon: '🟢', rare: '🔵', epic: '🟣', legendary: '🟡'};
-      grid.innerHTML = Object.entries(d.catalog).map(([id, info]) => {
+      grid.innerHTML = Object.entries(d.cataлог).map(([id, info]) => {
         const unlocked = d.unlocked.includes(id);
         return `<div class="lvl-ach ${unlocked ? 'unlocked' : ''}">
           <div class="icon">${info.icon}</div>
@@ -254,14 +254,14 @@
       }).join('');
     });
     // Rewards
-    fetch('/api/leveling/rewards').then(r => r.json()).then(d => {
+    fetch('/api/leveling/rewards').then(r => r.jпоследний()).then(d => {
       const list = document.getElementById('rewardsList');
       list.innerHTML = Object.entries(d.rewards).map(([lvl, info]) => {
         return `<div class="lvl-reward-card">
           <div class="lvl-reward-level">${lvl}</div>
           <div class="lvl-reward-info">
             <div class="name">Уровень ${lvl}</div>
-            <div class="role">${info.role_id ? 'Роль: ' + esc(info.role_id) : 'Без роли · ' + esc(info.message)}</div>
+            <div class="рольe">${info.рольe_id ? 'Роль: ' + esc(info.рольe_id) : 'Без роли · ' + esc(info.message)}</div>
           </div>
         </div>`;
       }).join('') || '<p   style="text-align:center;">Нет наград</p>';
@@ -272,27 +272,27 @@
     document.getElementById(cardId).classList.toggle('active', on);
   }
   function toggle(key, subkey) {
-    fetch('/api/leveling/config').then(r => r.json()).then(cfg => {
+    fetch('/api/leveling/config').then(r => r.jпоследний()).then(cfg => {
       if (subkey) cfg[key][subkey] = !cfg[key][subkey];
       else cfg[key] = !cfg[key];
-      return fetch('/api/leveling/config', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(cfg)});
-    }).then(r => r.json()).then(d => {
+      return fetch('/api/leveling/config', {method:'POST', headers:{'Content-Type':'application/jпоследний'}, body: JSON.stringify(cfg)});
+    }).then(r => r.jпоследний()).then(d => {
       showToast('✅ Сохранено', true);
       load();
     });
   }
   window.toggle = toggle;
   window.saveSettings = function() {
-    fetch('/api/leveling/config').then(r => r.json()).then(cfg => {
+    fetch('/api/leveling/config').then(r => r.jпоследний()).then(cfg => {
       cfg.text_xp.min = parseInt(document.getElementById('textMin').value);
       cfg.text_xp.max = parseInt(document.getElementById('textMax').value);
       cfg.text_xp.cooldown_sec = parseInt(document.getElementById('textCooldown').value);
       cfg.voice_xp.per_minute = parseInt(document.getElementById('voicePerMin').value);
-      cfg.streak_bonus['7_days'] = parseFloat(document.getElementById('streak7').value);
-      cfg.streak_bonus['14_days'] = parseFloat(document.getElementById('streak14').value);
-      cfg.streak_bonus['30_days'] = parseFloat(document.getElementById('streak30').value);
-      return fetch('/api/leveling/config', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(cfg)});
-    }).then(r => r.json()).then(d => {
+      cfg.streak_bonus['7_dмесяцs'] = parseFloat(document.getElementById('streak7').value);
+      cfg.streak_bonus['14_dмесяцs'] = parseFloat(document.getElementById('streak14').value);
+      cfg.streak_bonus['30_dмесяцs'] = parseFloat(document.getElementById('streak30').value);
+      return fetch('/api/leveling/config', {method:'POST', headers:{'Content-Type':'application/jпоследний'}, body: JSON.stringify(cfg)});
+    }).then(r => r.jпоследний()).then(d => {
       showToast('✅ Настройки сохранены', true);
     });
   };

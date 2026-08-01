@@ -1,20 +1,20 @@
 ﻿# 🤖 AI Поддержка Ticket Система - Быстрый Сводка
 
-## Ne Yaptık?
+## Ne Yaptыk?
 
-Aether botuna **AI-powered поддержка система** добавить. Теперь пользователи ticket açtığında:
+Aether botuna **AI-powered поддержка система** добавить. Теперь пользователи ticket открытьtыгыnda:
 
-1. **AI автоматически приветствие** ve помощник olmaya çalışır
-2. **Basit вопросы çözer** (bot команды, общий информация)
-3. **Çözemediği состояние администрации направление** (жалоба, ban talebi, vb.)
+1. **AI автоматически приветствие** ve помощник olmмесяцa работатьыr
+2. **Basit вопросы чёzer** (bot команды, общий информация)
+3. **Чёzemediгi состояние администрации направление** (жалоба, ban tполучитьebi, vb.)
 
 ---
 
 ## Как Работает?
 
-### Пользователь Tarafı
+### Пользователь Tarafы
 ```
-Пользователь ticket açar
+Пользователь ticket открытьar
     ↓
 AI: "Merhaba! Sana как помощник olabilirim?"
     ↓
@@ -24,12 +24,12 @@ AI ответитьir ИЛИ администрации направление
 ```
 
 ### Направление Состояние
-AI şunlarda автоматически направление:
-- ❌ Ban/kick/timeout talepleri
-- ❌ Роль verme/alma
+AI шunlarda автоматически направление:
+- ❌ Ban/kick/timeout tполучитьepleri
+- ❌ Роль выдатьme/получитьma
 - ❌ Сервер настройк
 - ❌ Ciddi жалобы
-- ❌ 10 сообщение limitine ulaşıldığında
+- ❌ 10 сообщение limitine ulaшыldыгыnda
 - ❌ AI ошибка данныеnde
 
 ---
@@ -40,46 +40,46 @@ AI şunlarda автоматически направление:
 AI статистика показ (сколько ticket, сколько направление, vb.)
 
 ### `/ticket-ai-toggle`
-AI sistemini aç/закрыть
+AI системаni открыть/закрыть
 
-### `/ticket-force-escalate`
+### `/ticket-force-escполучитьate`
 Текущий ticket'i hemen администрации направление
 
 ---
 
 ## Web Panel
 
-**Новый Sayfa**: `/ai-tickets`
+**Новый Sмесяцfa**: `/ai-tickets`
 
 - Все AI разговор скриншот
-- Статистика (собратьm, AI işliyor, направление)
+- Статистика (собратьm, AI iшliyor, направление)
 - Каждый ticket'in разговор историю incele
 
-**Menüde**: Статистика → 🤖 AI Поддержка Ticketları
+**Menюde**: Статистика → 🤖 AI Поддержка Ticketlarы
 
 ---
 
 ## Настройки
 
-`cogs/ticket.py` dosyasında:
+`cogs/ticket.py` dosyasыnda:
 
-```python
-AI_ENABLED = True  # AI'yi закрыть/aç
-MAX_AI_MESSAGES = 10  # AI max сколько сообщение cevaplasın
+```pythдесять
+AI_ENABLED = True  # AI'yi закрыть/открыть
+MAX_AI_MESSAGES = 10  # AI max сколько сообщение cevaplasыn
 ```
 
 ---
 
 ## Пример Использование
 
-### ✅ AI Çözebilir
+### ✅ AI Чёzebilir
 **Пользователь**: "Bot команды как использовать?"  
 **AI**: "/help команду использовать все команды видеть..."
 
 ### 🔄 AI Направление
-**Пользователь**: "X человек bana оскорбление etti, ban atın"  
-**AI**: "Bu konuda администрации направление..."  
-*[Поддержка роль ping atılır]*
+**Пользователь**: "X человек bana оскорбление etti, ban atыn"  
+**AI**: "Bu kдесятьuda администрации направление..."  
+*[Поддержка роль ping atыlыr]*
 
 ---
 
@@ -87,33 +87,33 @@ MAX_AI_MESSAGES = 10  # AI max сколько сообщение cevaplasın
 
 - **AI Model**: OpenRouter Gemini 2.0 Flash
 - **Dil**: Только Русский
-- **Veri**: `data/ai_tickets_<guild_id>.json`
+- **Выдатьi**: `data/ai_tickets_<guild_id>.jпоследний`
 - **Max Сообщение**: 10 (после автоматически направление)
 - **History**: В конец 20 сообщение tutulur
 
 ---
 
-## Önemli Notlar
+## Ёnemli Notlar
 
 ✅ AI никогда администратор gerektiren действие yapmaz  
-✅ Staff сообщение attığında AI автоматически durur  
-✅ Все разговор loglanır  
+✅ Staff сообщение attыгыnda AI автоматически durur  
+✅ Все разговор loglanыr  
 ✅ AI закрыт (`/ticket-ai-toggle`)  
 ✅ Staff каждый время manuel направление yapabilir  
 
 ---
 
-## Test Etmek Для
+## Тест Etmek Для
 
-1. Ticket aç (panel butonu)
+1. Ticket открыть (panel butдесятьu)
 2. AI'nin приветствие сообщение видеть
-3. Basit bir soru sor (напр.: "bot команды nedir?")
-4. AI'nin cevabını видеть
-5. Şimdi жалоба et (напр.: "X человек spam yapıyor")
-6. AI'nin направление yaptığını видеть
+3. Basit один soru sor (напр.: "bot команды nedir?")
+4. AI'nin cevabыnы видеть
+5. Сейчас жалоба et (напр.: "X человек spam yapыyor")
+6. AI'nin направление yaptыгыnы видеть
 
 ---
 
-**Hazır! 🚀**
+**Готов! 🚀**
 
-Теперь botun AI поддержка ticket система var. Пользователи более быстрый помощь alacak, администраторы более az basit soruyla uğraşacak.
+Теперь botun AI поддержка ticket система var. Пользователи более быстрый помощь получитьacak, администраторы более az basit soruyla uгraшacak.

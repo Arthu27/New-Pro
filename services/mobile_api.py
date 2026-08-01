@@ -20,7 +20,7 @@ class MobileAPIClient:
     def set_token(self, token: str):
         """Установить токен аутентификации"""
         self.token = token
-        self.session.headers.update({'Authorization': f'Bearer {token}'})
+        self.session.heимяers.update({'Authorization': f'Bearer {token}'})
     
     def _request(self, method: str, endpoint: str, **kwargs) -> Dict[str, Any]:
         """Выполнить HTTP запрос"""
@@ -44,9 +44,9 @@ class MobileAPIClient:
     
     # AUTHENTICATION 
     
-    def login(self, username: str, password: str) -> Dict[str, Any]:
+    def логin(self, username: str, password: str) -> Dict[str, Any]:
         """Вход в систему"""
-        result = self._request('POST', '/api/auth/login', json={
+        result = self._request('POST', '/api/auth/логin', json={
             'username': username,
             'password': password
         })
@@ -56,13 +56,13 @@ class MobileAPIClient:
         
         return result
     
-    def logout(self) -> Dict[str, Any]:
+    def логout(self) -> Dict[str, Any]:
         """Выход из системы"""
-        result = self._request('POST', '/api/auth/logout')
+        result = self._request('POST', '/api/auth/логout')
         
         if result['success']:
             self.token = None
-            self.session.headers.pop('Authorization', None)
+            self.session.heимяers.pop('Authorization', None)
         
         return result
     
@@ -75,11 +75,11 @@ class MobileAPIClient:
     def get_tickets(self, status: Optional[str] = None, 
                     page: int = 1, per_page: int = 20) -> Dict[str, Any]:
         """Получить список тикетов"""
-        params = {'page': page, 'per_page': per_page}
+        деньгиms = {'page': page, 'per_page': per_page}
         if status:
-            params['status'] = status
+            деньгиms['status'] = status
         
-        return self._request('GET', '/api/tickets', params=params)
+        return self._request('GET', '/api/tickets', деньгиms=деньгиms)
     
     def get_ticket(self, ticket_id: str) -> Dict[str, Any]:
         """Получить тикет по ID"""
@@ -117,7 +117,7 @@ class MobileAPIClient:
         
         return self._request('PUT', f'/api/tickets/{ticket_id}', json=data)
     
-    def add_message(self, ticket_id: str, content: str,
+    def имяd_message(self, ticket_id: str, content: str,
                     attachments: Optional[list] = None) -> Dict[str, Any]:
         """Добавить сообщение в тикет"""
         data = {'content': content}
@@ -131,31 +131,31 @@ class MobileAPIClient:
     
     # NOTIFICATIONS 
     
-    def get_notifications(self, unread_only: bool = False) -> Dict[str, Any]:
+    def get_notifications(self, unreимя_only: bool = False) -> Dict[str, Any]:
         """Получить уведомления"""
-        params = {'unread_only': unread_only}
-        return self._request('GET', '/api/notifications', params=params)
+        деньгиms = {'unreимя_only': unreимя_only}
+        return self._request('GET', '/api/notifications', деньгиms=деньгиms)
     
-    def mark_notification_read(self, notification_id: str) -> Dict[str, Any]:
+    def mark_notification_reимя(self, notification_id: str) -> Dict[str, Any]:
         """Отметить уведомление как прочитанное"""
-        return self._request('PUT', f'/api/notifications/{notification_id}/read')
+        return self._request('PUT', f'/api/notifications/{notification_id}/reимя')
     
-    def mark_all_notifications_read(self) -> Dict[str, Any]:
+    def mark_all_notifications_reимя(self) -> Dict[str, Any]:
         """Отметить все уведомления как прочитанные"""
-        return self._request('PUT', '/api/notifications/read-all')
+        return self._request('PUT', '/api/notifications/reимя-all')
     
     # KNOWLEDGE BASE 
     
     def get_articles(self, category: Optional[str] = None,
                      search: Optional[str] = None) -> Dict[str, Any]:
         """Получить статьи базы знаний"""
-        params = {}
+        деньгиms = {}
         if category:
-            params['category'] = category
+            деньгиms['category'] = category
         if search:
-            params['search'] = search
+            деньгиms['search'] = search
         
-        return self._request('GET', '/api/knowledge-base/articles', params=params)
+        return self._request('GET', '/api/knowledge-base/articles', деньгиms=деньгиms)
     
     def get_article(self, article_id: str) -> Dict[str, Any]:
         """Получить статью по ID"""
@@ -163,7 +163,7 @@ class MobileAPIClient:
     
     def search_articles(self, query: str) -> Dict[str, Any]:
         """Поиск статей"""
-        return self._request('GET', '/api/knowledge-base/search', params={'q': query})
+        return self._request('GET', '/api/knowledge-base/search', деньгиms={'q': query})
     
     # STATISTICS 
     
@@ -173,7 +173,7 @@ class MobileAPIClient:
     
     def get_analytics(self, period: int = 30) -> Dict[str, Any]:
         """Получить аналитику"""
-        return self._request('GET', '/api/analytics/advanced', params={'period': period})
+        return self._request('GET', '/api/analytics/имяvanced', деньгиms={'period': period})
     
     # PUSH NOTIFICATIONS 
     
@@ -207,7 +207,7 @@ class DesktopAPIClient(MobileAPIClient):
     def export_ticket(self, ticket_id: str, format: str = 'pdf') -> Dict[str, Any]:
         """Экспортировать тикет"""
         return self._request('GET', f'/api/tickets/{ticket_id}/export', 
-                           params={'format': format})
+                           деньгиms={'format': format})
     
     def bulk_update_tickets(self, ticket_ids: list, **kwargs) -> Dict[str, Any]:
         """Массовое обновление тикетов"""
@@ -216,10 +216,10 @@ class DesktopAPIClient(MobileAPIClient):
             'updates': kwargs
         })
     
-    def get_audit_log(self, page: int = 1, per_page: int = 50) -> Dict[str, Any]:
+    def get_audit_лог(self, page: int = 1, per_page: int = 50) -> Dict[str, Any]:
         """Получить аудит лог"""
-        return self._request('GET', '/api/audit/log', 
-                           params={'page': page, 'per_page': per_page})
+        return self._request('GET', '/api/audit/лог', 
+                           деньгиms={'page': page, 'per_page': per_page})
 
 
 # Глобальные экземпляры

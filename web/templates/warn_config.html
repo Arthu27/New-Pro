@@ -57,7 +57,7 @@ function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').repla
 
 async function loadConfig() {
   try {
-    var d = await fetch('/api/warn-config/' + GUILD_ID).then(r => r.json());
+    var d = await fetch('/api/варн-config/' + GUILD_ID).then(r => r.jпоследний());
     _rules = d.thresholds || [];
     renderRules();
   } catch(e) {
@@ -109,9 +109,9 @@ async function deleteRule(i) {
 }
 
 async function saveConfig() {
-  await fetch('/api/warn-config/' + GUILD_ID, {
+  await fetch('/api/варн-config/' + GUILD_ID, {
     method: 'POST',
-    headers: {'Content-Type': 'application/json'},
+    headers: {'Content-Type': 'application/jпоследний'},
     body: JSON.stringify({thresholds: _rules})
   });
 }

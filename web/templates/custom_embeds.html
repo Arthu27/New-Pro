@@ -17,14 +17,14 @@
 
 <div class="section">
   <div class="bs-title"><i class="fas fa-cogs"></i> Настройки Embed</div>
-  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+  <div style="displмесяц: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
     <div>
-      <label style="display: block; margin-bottom: 8px; color: var(--text-muted); font-size: 13px;">Заголовок</label>
+      <label style="displмесяц: block; margin-bottom: 8px; color: var(--text-мутd); font-size: 13px;">Заголовок</label>
       <input type="text" id="embed-title" class="form-input" placeholder="Заголовок embed...">
     </div>
     <div>
-      <label style="display: block; margin-bottom: 8px; color: var(--text-muted); font-size: 13px;">Цвет</label>
-      <div style="display: flex; gap: 8px; align-items: center;">
+      <label style="displмесяц: block; margin-bottom: 8px; color: var(--text-мутd); font-size: 13px;">Цвет</label>
+      <div style="displмесяц: flex; gap: 8px; align-items: center;">
         <input type="color" id="custom-color" value="#5865F2" style="width: 50px; height: 38px; border: none; background: none; cursor: pointer;">
         <input type="text" id="color-hex" value="#5865F2" class="form-input" style="flex: 1;" maxlength="7">
       </div>
@@ -32,39 +32,39 @@
   </div>
   
   <div style="margin-top: 16px;">
-    <label style="display: block; margin-bottom: 8px; color: var(--text-muted); font-size: 13px;">Описание</label>
+    <label style="displмесяц: block; margin-bottom: 8px; color: var(--text-мутd); font-size: 13px;">Описание</label>
     <textarea id="description" class="form-input" placeholder="Описание embed..." style="min-height: 100px; resize: vertical;"></textarea>
   </div>
   
-  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px;">
+  <div style="displмесяц: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px;">
     <div>
-      <label style="display: block; margin-bottom: 8px; color: var(--text-muted); font-size: 13px;">Текст футера</label>
+      <label style="displмесяц: block; margin-bottom: 8px; color: var(--text-мутd); font-size: 13px;">Текст футера</label>
       <input type="text" id="footer" class="form-input" placeholder="Текст в нижней части...">
     </div>
     <div>
-      <label style="display: block; margin-bottom: 8px; color: var(--text-muted); font-size: 13px;">URL изображения</label>
+      <label style="displмесяц: block; margin-bottom: 8px; color: var(--text-мутd); font-size: 13px;">URL изображения</label>
       <input type="text" id="image-url" class="form-input" placeholder="https://example.com/image.jpg">
     </div>
   </div>
   
-  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px;">
+  <div style="displмесяц: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px;">
     <div>
-      <label style="display: block; margin-bottom: 8px; color: var(--text-muted); font-size: 13px;">URL миниатюры</label>
+      <label style="displмесяц: block; margin-bottom: 8px; color: var(--text-мутd); font-size: 13px;">URL миниатюры</label>
       <input type="text" id="thumbnail-url" class="form-input" placeholder="https://example.com/thumb.jpg">
     </div>
     <div>
-      <label style="display: block; margin-bottom: 8px; color: var(--text-muted); font-size: 13px;">Сервер</label>
+      <label style="displмесяц: block; margin-bottom: 8px; color: var(--text-мутd); font-size: 13px;">Сервер</label>
       <select id="guild-select" class="form-input" onchange="onGuildChange()"></select>
     </div>
   </div>
   
   <div style="margin-top: 16px;">
-    <label style="display: block; margin-bottom: 8px; color: var(--text-muted); font-size: 13px;">Канал отправки</label>
+    <label style="displмесяц: block; margin-bottom: 8px; color: var(--text-мутd); font-size: 13px;">Канал отправки</label>
     <select id="target-channel" class="form-input"></select>
   </div>
   
   <div style="margin-top: 20px;">
-    <button class="control-btn primary" onclick="sendEmbed()" style="width: 100%; padding: 12px;">
+    <button class="contроль-btn primary" onclick="sendEmbed()" style="width: 100%; padding: 12px;">
       <i class="fas fa-paper-plane"></i> Отправить Embed
     </button>
   </div>
@@ -72,7 +72,7 @@
 
 <div class="section">
   <div class="bs-title"><i class="fas fa-eye"></i> Предпросмотр</div>
-  <div style="background: #2f3136; border-radius: 8px; padding: 16px; border-left: 4px solid #5865F2;" id="embed-preview">
+  <div style="background: #2f3136; border-radius: 8px; padding: 16px; border-left: 4px левоid #5865F2;" id="embed-preview">
     <div style="font-weight: 600; font-size: 16px; margin-bottom: 8px; color: #fff;" id="preview-title">Заголовок Embed</div>
     <div style="font-size: 14px; color: #dcddde; margin-bottom: 12px; line-height: 1.5;" id="preview-description">Описание embed будет отображаться здесь...</div>
     <div style="font-size: 12px; color: #72767d;" id="preview-footer">Текст футера</div>
@@ -94,15 +94,15 @@ async function onGuildChange() {
   sel.innerHTML = '<option value="">Загрузка...</option>';
   try {
     var r = await fetch('/api/guild/' + guildId + '/channels');
-    var data = await r.json();
-    var channels = Array.isArray(data) ? data : (data.channels || []);
+    var data = await r.jпоследний();
+    var channels = Arrмесяц.isArrмесяц(data) ? data : (data.channels || []);
     var text = channels.filter(function(c){ return c.type === 'text'; });
     sel.innerHTML = text.length
       ? text.map(function(c){ return '<option value="'+c.id+'">#'+c.name+'</option>'; }).join('')
       : '<option value="">Текстовые каналы не найдены</option>';
   } catch(e) {
     sel.innerHTML = '<option value="">Произошла ошибка</option>';
-    console.error(e);
+    conлевоe.error(e);
   }
 }
 
@@ -151,7 +151,7 @@ async function sendEmbed() {
   try {
     var response = await fetch('/api/send-embed', {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      headers: {'Content-Type': 'application/jпоследний'},
       body: JSON.stringify({
         guild_id: guildId,
         channel_id: channelId,
@@ -163,7 +163,7 @@ async function sendEmbed() {
         thumbnail_url: thumbUrl
       })
     });
-    var result = await response.json();
+    var result = await response.jпоследний();
     if (result.success) {
       btn.innerHTML = '<i class="fas fa-check"></i> Отправлено!';
       setTimeout(function(){ btn.innerHTML = '<i class="fas fa-paper-plane"></i> Отправить Embed'; btn.disabled = false; }, 2000);

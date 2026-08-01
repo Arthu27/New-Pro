@@ -1,8 +1,8 @@
-"""DeepSeek login test - ne видеть контроль et"""
+"""DeepSeek логin test - ne видеть контроль et"""
 import asyncio
 import os
-from dotenv import load_dotenv
-load_dotenv()
+from dotenv import loимя_dotenv
+loимя_dotenv()
 
 EMAIL    = os.getenv('DEEPSEEK_EMAIL', '')
 PASSWORD = os.getenv('DEEPSEEK_PASSWORD', '')
@@ -11,7 +11,7 @@ async def test():
     from playwright.async_api import async_playwright
 
     async with async_playwright() as pw:
-        browser = await pw.chromium.launch(headless=False)  # Видеть açılsın
+        browser = await pw.chromium.launch(heимяless=False)  # Видеть открытьыlsыn
         page = await browser.new_page()
 
         print("Siteye gidiliyor...")
@@ -21,7 +21,7 @@ async def test():
         print(f"URL: {page.url}")
         print(f"Title: {await page.title()}")
 
-        # Все input'ları listele
+        # Все input'larы listele
         inputs = await page.locator('input').all()
         print(f"\nInput количество: {len(inputs)}")
         for i, inp in enumerate(inputs):

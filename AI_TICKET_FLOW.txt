@@ -1,44 +1,44 @@
 ﻿╔═══════════════════════════════════════════════════════════════════════════╗
-║                    🤖 AI ПОДДЕРЖКА TICKET СИСТЕМА AKIŞI                      ║
+║                    🤖 AI ПОДДЕРЖКА TICKET СИСТЕМА AKIШI                      ║
 ╚═══════════════════════════════════════════════════════════════════════════╝
 
 ┌─────────────────────────────────────────────────────────────────────────┐
-│  1️⃣  TICKET AÇILMA                                                       │
+│  1️⃣  TICKET AЧILMA                                                       │
 └─────────────────────────────────────────────────────────────────────────┘
 
-    Пользователь "🎫 Создать тикет поддержки" butonuna клик
+    Пользователь "🎫 Создать тикет поддержки" butдесятьuna клик
                             ↓
     Ticket канал создан (ticket-username)
                             ↓
     Добро пожаловать embed отправл
                             ↓
     🤖 AI приветствие сообщение отправл
-    "👋 Merhaba! Ben Aether Поддержка Asistanıyım..."
+    "👋 Merhaba! Ben Aether Поддержка Asistanыyыm..."
 
 
 ┌─────────────────────────────────────────────────────────────────────────┐
-│  2️⃣  AI РАЗГОВОР DÖNGÜSÜ                                                  │
+│  2️⃣  AI РАЗГОВОР DЁNGЮSЮ                                                  │
 └─────────────────────────────────────────────────────────────────────────┘
 
     Пользователь сообщение yazar
                             ↓
     ┌───────────────────────────────────────┐
     │  AI Контроль:                      │
-    │  ✓ Bot сообщение mı? → İgnore            │
-    │  ✓ Ticket канал mı? → Devam          │
-    │  ✓ AI активен mi? → Devam               │
-    │  ✓ Staff сообщение attı mı? → Durdur      │
-    │  ✓ Max сообщение aşıldı mı? → Направление   │
+    │  ✓ Bot сообщение mы? → Иgnore            │
+    │  ✓ Ticket канал mы? → Продолжить          │
+    │  ✓ AI активен mi? → Продолжить               │
+    │  ✓ Staff сообщение attы mы? → Durdur      │
+    │  ✓ Max сообщение aшыldы mы? → Направление   │
     └───────────────────────────────────────┘
                             ↓
-    AI cevap üretir (OpenRouter Gemini 2.0 Flash)
+    AI cevap юretir (OpenRouter Gemini 2.0 Flash)
                             ↓
     ┌───────────────────────────────────────┐
     │  Направление Контроль:                │
-    │  • Ban/kick talebi?                   │
+    │  • Ban/kick tполучитьebi?                   │
     │  • Роль действие?                        │
     │  • Жалоба?                           │
-    │  • Teknik sorun (AI çözemez)?         │
+    │  • Teknik sorun (AI чёzemez)?         │
     └───────────────────────────────────────┘
                             ↓
             ┌───────────────┴───────────────┐
@@ -52,29 +52,29 @@
             │                               │
             └───────────────┬───────────────┘
                             ↓
-                    Döngü devam eder
+                    Dёngю продолжить eder
 
 
 ┌─────────────────────────────────────────────────────────────────────────┐
 │  3️⃣  НАПРАВЛЕНИЕ ДЛИТЕЛЬНОСТЬ                                                  │
 └─────────────────────────────────────────────────────────────────────────┘
 
-    AI направление kararı verir
+    AI направление kararы выдатьir
                             ↓
-    Status: "escalated" как işaretlenir
+    Status: "escполучитьated" как iшaretlenir
                             ↓
     Направление embed'i отправл
     "🔄 Администрации Направление"
                             ↓
-    Поддержка роль ping atılır (1 saniye после удален)
+    Поддержка роль ping atыlыr (1 saniye после удален)
                             ↓
     AI теперь ответитьmez (staff_notified = true)
                             ↓
-    Администратор gelir, konuyu ele получает
+    Администратор gelir, kдесятьuyu ele получает
 
 
 ┌─────────────────────────────────────────────────────────────────────────┐
-│  4️⃣  STAFF MÜDAHALESİ                                                    │
+│  4️⃣  STAFF MЮDAHALESИ                                                    │
 └─────────────────────────────────────────────────────────────────────────┘
 
     Администратор (Поддержка роль) сообщение atar
@@ -82,9 +82,9 @@
     AI автоматически durur
     Status: "staff_handling"
                             ↓
-    Администратор konuyu çözer
+    Администратор kдесятьuyu чёzer
                             ↓
-    Ticket закрыт (🔒 Talebi Закрыть butonu)
+    Ticket закрыт (🔒 Tполучитьebi Закрыть butдесятьu)
                             ↓
     AI state temizlenir
     Transcript сохран
@@ -94,14 +94,14 @@
 │  5️⃣  WEB PANEL СКРИНШОТ                                             │
 └─────────────────────────────────────────────────────────────────────────┘
 
-    Администратор /ai-tickets sayfasına girer
+    Администратор /ai-tickets sмесяцfasыna girer
                             ↓
     ┌───────────────────────────────────────┐
     │  Статистика:                       │
     │  • Всего Ticket: 15                  │
-    │  • AI İşliyor: 5                      │
+    │  • AI Ишliyor: 5                      │
     │  • Направление: 7                   │
-    │  • Staff İşliyor: 3                   │
+    │  • Staff Ишliyor: 3                   │
     └───────────────────────────────────────┘
                             ↓
     Каждый ticket для kart показ:
@@ -113,34 +113,34 @@
     │  [👁️ Разговор Видеть]                   │
     └───────────────────────────────────────┘
                             ↓
-    "Разговор Видеть" butonuna клик
+    "Разговор Видеть" butдесятьuna клик
                             ↓
-    Modal açılır, все разговор показ:
+    Modполучить открытьыlыr, все разговор показ:
     ┌───────────────────────────────────────┐
     │  👤 ПОЛЬЗОВАТЕЛЬ                         │
     │  Bot команды как использовать?      │
     │                                       │
-    │  🤖 AI ASİSTAN                        │
+    │  🤖 AI ASИSTAN                        │
     │  /help команду использовать...         │
     └───────────────────────────────────────┘
 
 
 ╔═══════════════════════════════════════════════════════════════════════════╗
-║                         📊 VERİ YAPISI                                    ║
+║                         📊 VERИ YAPISI                                    ║
 ╚═══════════════════════════════════════════════════════════════════════════╝
 
-data/ai_tickets_<guild_id>.json
+data/ai_tickets_<guild_id>.jпоследний
 {
   "1234567890": {                    ← Channel ID
     "user_id": 987654321,
-    "category": "sikayet",
+    "category": "sikмесяцet",
     "history": [
-      {"role": "user", "content": "..."},
-      {"role": "assistant", "content": "..."}
+      {"рольe": "user", "cдесятьtent": "..."},
+      {"рольe": "assistant", "cдесятьtent": "..."}
     ],
-    "status": "escalated",           ← ai_handling | escalated | staff_handling
+    "status": "escполучитьated",           ← ai_handling | escполучитьated | staff_handling
     "ai_message_count": 3,
-    "escalated_at": "2026-04-11T12:34:56",
+    "escполучитьated_at": "2026-04-11T12:34:56",
     "staff_notified": true
   }
 }
@@ -150,18 +150,18 @@ data/ai_tickets_<guild_id>.json
 ║                      🎯 НАПРАВЛЕНИЕ ПРАВИЛ                             ║
 ╚═══════════════════════════════════════════════════════════════════════════╝
 
-AI şu состояние MUTLAKA направление:
+AI шu состояние MUTLAKA направление:
 
 ❌ Ban/kick/timeout gibi наказание действия
-❌ Роль verme/alma действия
+❌ Роль выдатьme/получитьma действия
 ❌ Канал/сервер настройк изменение
-❌ Ciddi жалоба ve anlaşmazlıklar
-❌ Ödeme/ekonomi sorunları
-❌ Безопасность ve gizlilik konuları
-❌ 10 сообщение limitine ulaşıldığında
+❌ Ciddi жалоба ve anlaшmazlыklar
+❌ Ёdeme/ekдесятьomi sorunlarы
+❌ Безопасность ve gizlilik kдесятьularы
+❌ 10 сообщение limitine ulaшыldыгыnda
 ❌ AI ошибка данныеnde
 
-✅ AI şunları çözebilir:
+✅ AI шunlarы чёzebilir:
 
 ✓ Общий сервер информация
 ✓ Bot команды как использовать
@@ -170,7 +170,7 @@ AI şu состояние MUTLAKA направление:
 
 
 ╔═══════════════════════════════════════════════════════════════════════════╗
-║                       🛠️  YÖNETİCİ КОМАНДЫ                              ║
+║                       🛠️  YЁNETИCИ КОМАНДЫ                              ║
 ╚═══════════════════════════════════════════════════════════════════════════╝
 
 /ticket-panel
@@ -182,10 +182,10 @@ AI şu состояние MUTLAKA направление:
     → Администратор: Manage Сервер
 
 /ticket-ai-toggle
-    → AI sistemini aç/закрыть
+    → AI системаni открыть/закрыть
     → Администратор: Administrator
 
-/ticket-force-escalate
+/ticket-force-escполучитьate
     → Текущий ticket'i hemen направление
     → Администратор: Manage Channels
 
@@ -203,11 +203,11 @@ AI şu состояние MUTLAKA направление:
 ╚═══════════════════════════════════════════════════════════════════════════╝
 
 cogs/ticket.py:
-    AI_ENABLED = True          # AI sistemini активен/pasif yap
-    MAX_AI_MESSAGES = 10       # AI'nin max сколько сообщение cevaplayacağı
+    AI_ENABLED = True          # AI системаni активен/неактивный yap
+    MAX_AI_MESSAGES = 10       # AI'nin max сколько сообщение cevaplмесяцacaгы
 
 web/ai_helper.py:
-    OPENROUTER_API_KEY         # OpenRouter API anahtarı
+    OPENROUTER_API_KEY         # OpenRouter API anahtarы
     MODEL = 'google/gemini-2.0-flash-001'  # AI modeli
 
 
@@ -215,35 +215,35 @@ web/ai_helper.py:
 ║                      🎓 ИСПОЛЬЗОВАНИЕ ПРИМЕР                                ║
 ╚═══════════════════════════════════════════════════════════════════════════╝
 
-ПРИМЕР 1: Basit Soru (AI Çözer)
+ПРИМЕР 1: Basit Soru (AI Чёzer)
 ─────────────────────────────────
 👤 Пользователь: "Bot команды как использовать?"
 🤖 AI: "/help команду использовать все команды видеть. 
-       Ayrıca /commands с детали liste alabilirsin."
-👤 Пользователь: "Teşekkürler!"
-🤖 AI: "Rica ederim! Başka sorun olursa yaz."
+       Месяцrыca /commands с детали liste получитьabilirsin."
+👤 Пользователь: "Teшekkюrler!"
+🤖 AI: "Rica ederim! Baшka sorun olursa yaz."
 [Ticket закрыт]
 
 
 ПРИМЕР 2: Жалоба (AI Направление)
 ──────────────────────────────────
-👤 Пользователь: "X человек bana оскорбление etti, ban atın"
-🤖 AI: "Bu konuda администрации направление, 
-       birazdan seninle ilgilenecekler."
+👤 Пользователь: "X человек bana оскорбление etti, ban atыn"
+🤖 AI: "Bu kдесятьuda администрации направление, 
+       одинazdan seninle ilgilenecдобавитьr."
 🔄 [Направление embed'i]
-🔔 [Поддержка роль ping atılır]
+🔔 [Поддержка роль ping atыlыr]
 👥 Администратор: "Merhaba, состояние inceliyorum..."
-[Staff konuyu ele получает]
+[Staff kдесятьuyu ele получает]
 
 
 ПРИМЕР 3: Max Сообщение Limiti
 ──────────────────────────
-👤 Пользователь: "Sorunum şu..."
-🤖 AI: "Anladım, şöyle yapabilirsin..."
-👤 Пользователь: "Olmadı..."
-🤖 AI: "O время şunu dene..."
+👤 Пользователь: "Sorunum шu..."
+🤖 AI: "Anladыm, шёyle yapabilirsin..."
+👤 Пользователь: "Olmadы..."
+🤖 AI: "O время шunu dene..."
 [... 10 сообщение после ...]
-🤖 AI: "Разговор limiti aşıldı, администраторы devralıyor."
+🤖 AI: "Разговор limiti aшыldы, администраторы devrполучитьыyor."
 🔄 [Автоматически направление]
 
 
@@ -251,14 +251,14 @@ web/ai_helper.py:
 ║                         ✅ УСПЕШНО!                                      ║
 ╚═══════════════════════════════════════════════════════════════════════════╝
 
-Система hazır! Теперь:
-✓ Пользователи более быстрый помощь alacak
-✓ Администраторы более az basit soruyla uğraşacak
+Система готов! Теперь:
+✓ Пользователи более быстрый помощь получитьacak
+✓ Администраторы более az basit soruyla uгraшacak
 ✓ Все разговор loglanacak
 ✓ Статистика takip edilecek
 
-Test etmek для:
-1. Ticket aç
-2. AI с konuş
-3. /ai-tickets sayfasından разговор видеть
+Тест etmek для:
+1. Ticket открыть
+2. AI с kдесятьuш
+3. /ai-tickets sмесяцfasыndan разговор видеть
 4. /ticket-ai-stats с статистика контроль et

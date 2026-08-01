@@ -8,7 +8,7 @@ AI теперь **только sohbet botu не**, **tam администрат�
 ```
 Пользователь: "X человек bana оскорбление etti"
 AI: "Администрации направление..."
-[Поддержка роль ping atılır]
+[Поддержка роль ping atыlыr]
 ```
 
 ### Новый Система ✅
@@ -16,39 +16,39 @@ AI: "Администрации направление..."
 Пользователь: "X человек bana оскорбление etti"
 AI: "Доказательство загруз (ekran скриншот)"
 Пользователь: [Ekran скриншот загруз]
-AI: [Analiz eder, сообщение историю контроль eder]
-AI: "✅ Jail наказание verildi: 30 dakika"
-[Автоматически jail роль verilir]
+AI: [Anполучитьiz eder, сообщение историю контроль eder]
+AI: "✅ Jail наказание выдатьildi: 30 dakika"
+[Автоматически jail роль выдатьilir]
 [30 dakika после автоматически удален]
 ```
 
 ---
 
-## 🎯 Новый Yetenekler
+## 🎯 Новый Yetenдобавитьr
 
 ### 1. Доказательство Желание
-- Ekran скриншот talep eder
+- Ekran скриншот tполучитьep eder
 - Пользователь ID хочет
-- Olay детали sorar
+- Olмесяц детали sorar
 
-### 2. Analiz
+### 2. Anполучитьiz
 - Ekran скриншот inceler
 - Сообщение историю контроль eder
 - Время разница hesaplar
 
-### 3. Karar Verme
+### 3. Karar Выдатьme
 - **Hafif**: Только предупреждение
 - **Orta**: Jail 30-60 dakika
 - **Тяжелый**: Jail 120 dakika + направление
 
 ### 4. Наказание Применитьma
-- Jail роль verir (автоматически)
+- Jail роль выдатьir (автоматически)
 - Пользователю DM отправл
 - Длительность bitince автоматически удален
 
 ---
 
-## 📋 Работа Akışı
+## 📋 Работа Akышы
 
 ```
 1. Пользователь жалоба eder
@@ -57,12 +57,12 @@ AI: "✅ Jail наказание verildi: 30 dakika"
    ↓
 3. Пользователь ekran скриншот загруз
    ↓
-4. AI analiz eder:
-   • Ekran скриншот gerçek mi?
-   • Сообщение история uyuşuyor mu?
-   • Время разница 30 dakikadan az mı?
+4. AI anполучитьiz eder:
+   • Ekran скриншот gerчek mi?
+   • Сообщение история uyuшuyor mu?
+   • Время разница 30 dakikadan az mы?
    ↓
-5. AI karar verir:
+5. AI karar выдатьir:
    ├─ Hafif → Предупреждение
    ├─ Orta → Jail 30-60 dk
    └─ Тяжелый → Jail 120 dk + Направление
@@ -72,17 +72,17 @@ AI: "✅ Jail наказание verildi: 30 dakika"
 
 ---
 
-## 🛡️ Безопасность Önlemleri
+## 🛡️ Безопасность Ёnlemleri
 
-### Sahte Жалоба Koruması
+### Sahte Жалоба Защитаsы
 ✅ Сообщение история контроль  
 ✅ Время разница контроль (30+ dakika = red)  
 ✅ Sahte жалоба yapana предупреждение  
 
-### Jail Koruması
+### Jail Защитаsы
 ✅ Max jail: 120 dakika  
-✅ Все действия loglanır  
-✅ Администраторы override edebilir  
+✅ Все действия loglanыr  
+✅ Администраторы oвыдатьride edebilir  
 
 ---
 
@@ -95,26 +95,26 @@ AI: "✅ Jail наказание verildi: 30 dakika"
 
 🤖 AI: "Жалоба incelemek для:
        1️⃣ Пользователь ID
-       2️⃣ Olay описание
+       2️⃣ Olмесяц описание
        3️⃣ ДОКАЗАТЕЛЬСТВО: Ekran скриншот"
 
 👤 Пользователь: [Ekran скриншот загруз]
-              "@user123 bana 'aptal' dedi, 5 dakika до"
+              "@user123 bana 'aptполучить' dedi, 5 dakika до"
 
-🤖 AI: [Analiz ediyor...]
+🤖 AI: [Anполучитьiz ediyor...]
        [Сообщение историю контроль ediyor...]
        
-       ✅ İnceleme завершено.
+       ✅ Иnceleme завершено.
        
-       📋 KARAR: Jail наказание verildi
+       📋 KARAR: Jail наказание выдатьildi
        👤 Пользователь: @user123
        ⏱️ Длительность: 30 dakika
-       📝 Причина: Tekrarlayan оскорбление
+       📝 Причина: Tekrarlмесяцan оскорбление
        
-       Olayı çözmekte size администратор ekibimiz
-       помощник olacaktır.
+       Olмесяцы чёzmekte size администратор ekibimiz
+       помощник olacaktыr.
 
-[user123'e автоматически jail роль verilir]
+[user123'e автоматически jail роль выдатьilir]
 [30 dakika после автоматически удален]
 ```
 
@@ -122,20 +122,20 @@ AI: "✅ Jail наказание verildi: 30 dakika"
 
 ## ⚙️ Настройки
 
-```python
+```pythдесять
 # cogs/ticket.py
-AI_ENABLED = True  # AI moderator активен/pasif
+AI_ENABLED = True  # AI moderator активен/неактивный
 MAX_AI_MESSAGES = 10  # Max сообщение количество
 ```
 
 ---
 
-## 📊 Ciddiyet Seviyeleri
+## 📊 Ciddiyet Уровеньleri
 
-| Seviye | Пример | AI Aksiyonu |
+| Уровень | Пример | AI Aksiyдесятьu |
 |--------|----------|-------------|
-| 🟢 Hafif | Tek мат, маленький tartışma | Только предупреждение |
-| 🟡 Orta | Tekrarlayan оскорбление, spam | Jail 30-60 dk |
+| 🟢 Hafif | Tek мат, маленький tartышma | Только предупреждение |
+| 🟡 Orta | Tekrarlмесяцan оскорбление, spam | Jail 30-60 dk |
 | 🔴 Тяжелый | Tehdit, nefret сказатьmi | Jail 120 dk + Направление |
 
 ---
@@ -143,28 +143,28 @@ MAX_AI_MESSAGES = 10  # Max сообщение количество
 ## ✅ Avantajlar
 
 **Пользователи:**
-- ⚡ Anında moderasyon (7/24)
-- 📋 Adil ve tutarlı kararlar
+- ⚡ Anыnda moderasyдесять (7/24)
+- 📋 Adil ve tutarlы kararlar
 
 **Администраторы:**
 - 🎯 Только ciddi состояние ilgilenirler
-- 📊 Все действия loglanır
+- 📊 Все действия loglanыr
 
 **Сервер:**
-- 🛡️ Более быстрый moderasyon
+- 🛡️ Более быстрый moderasyдесять
 - 📉 Более az toksik ortam
 
 ---
 
-## 🚀 Test Et
+## 🚀 Тест Et
 
-1. Ticket aç
+1. Ticket открыть
 2. "X человек bana оскорбление etti" yaz
 3. Sahte ekran скриншот загрузить
 4. AI'nin jail данныеni видеть
 
 ---
 
-**Система Hazır! 🛡️**
+**Система Готов! 🛡️**
 
 AI теперь tam администратор модератор gibi работает!
