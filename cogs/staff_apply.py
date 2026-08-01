@@ -325,30 +325,32 @@ class StaffApply(commands.Cog):
         
         file = None
         banner_path = None
-        for p in custom_paths:
-            if os.path.exists(p):
-                banner_path = p
-                file = discord.File(p, filename="staff_banner.png")
-                break
-        
-        # Если локального баннера нет, используем оригинальную фотографию по URL.
-        # Локальные файлы выше всегда имеют приоритет и не изменяются.
-        if not file:
-            try:
-                timeout = aiohttp.ClientTimeout(total=15)
-                async with aiohttp.ClientSession(timeout=timeout) as session:
-                    async with session.get(STAFF_REMOTE_BANNER_URL) as response:
-                        if response.status == 200:
-                            remote_banner = await response.read()
-                            if remote_banner:
-                                file = discord.File(
-                                    io.BytesIO(remote_banner),
-                                    filename="staff_banner.png"
-                                )
-            except (aiohttp.ClientError, OSError) as exc:
-                log.warning("Не удалось загрузить удалённый баннер STAFF: %s", exc)
 
-        # Если удалённый баннер недоступен - сохраняем прежний резервный баннер.
+        # Сначала используем оригинальную фотографию по URL.
+        # Это намеренно имеет приоритет над старым локальным баннером.
+        try:
+            timeout = aiohttp.ClientTimeout(total=15)
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                async with session.get(STAFF_REMOTE_BANNER_URL) as response:
+                    if response.status == 200:
+                        remote_banner = await response.read()
+                        if remote_banner:
+                            file = discord.File(
+                                io.BytesIO(remote_banner),
+                                filename="staff_banner.png"
+                            )
+        except (aiohttp.ClientError, OSError) as exc:
+            log.warning("Не удалось загрузить удалённый баннер STAFF: %s", exc)
+
+        # URL erişilemezse mevcut yerel banner dosyalarını kullan.
+        if not file:
+            for p in custom_paths:
+                if os.path.exists(p):
+                    banner_path = p
+                    file = discord.File(p, filename="staff_banner.png")
+                    break
+
+        # Если удалённый и локальный баннеры недоступны - старый fallback.
         if not file:
             img_buf = await interaction.client.loop.run_in_executor(
                 None, generate_staff_panel_bytes
