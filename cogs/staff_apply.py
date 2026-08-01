@@ -110,31 +110,31 @@ def generate_staff_panel_card() -> Image.Image:
     bg = _load_bg(W, H)
     d = ImageDraw.Draw(bg)
 
-    # Тематический акцент: Synth Violet (фиолетовый, как у одной из тем /help)
-    accent = (139, 92, 246)
+    # Тематический акцент: Насыщенный Алый/Красный (как у луны и глаз персонажа!)
+    accent = (220, 38, 38)
 
-    # Наружная полупрозрачная рамка (эффект матового стекла поверх красивого фона)
-    outer_border = _rounded_panel(896, 336, radius=16, fill=(255, 255, 255, 210), outline=BLACK, ow=2)
+    # Наружная полупрозрачная рамка (эффект темного матового стекла поверх красивого фона)
+    outer_border = _rounded_panel(896, 336, radius=16, fill=(15, 15, 20, 130), outline=accent, ow=2)
     bg.alpha_composite(outer_border, (12, 12))
 
     # Внутренняя панель заголовка
-    header_box = _rounded_panel(848, 260, radius=14, fill=(255, 255, 255, 230), outline=BLACK, ow=2)
+    header_box = _rounded_panel(848, 260, radius=14, fill=(20, 20, 25, 160), outline=BLACK, ow=2)
     bg.alpha_composite(header_box, (36, 30))
 
-    # Векторная иконка щита
+    # Векторная иконка щита в алом цвете
     badge = _icon_badge(80, _icon_staff, ring_color=BLACK, ring_w=2, icon_color=accent)
     bg.alpha_composite(badge, (56, 120))
 
-    # Текстовые заголовки СТРОГО на русском языке
-    d.text((160, 110), "НАБОР В КОМАНДУ СЕРВЕРА", fill=BLACK, font=_f(True, 32))
-    d.text((160, 160), "ВЫБЕРИТЕ ЖЕЛАЕМУЮ ДОЛЖНОСТЬ В МЕНЮ НИЖЕ", fill=MUTED, font=_f(False, 20))
+    # Текстовые заголовки СТРОГО на русском языке в белом цвете
+    d.text((160, 110), "НАБОР В КОМАНДУ СЕРВЕРА", fill=WHITE, font=_f(True, 32))
+    d.text((160, 160), "ВЫБЕРИТЕ ЖЕЛАЕМУЮ ДОЛЖНОСТЬ В МЕНЮ НИЖЕ", fill=(210, 215, 220), font=_f(False, 20))
 
-    # Боковая плашка
-    pill = _rounded_panel(150, 40, radius=10, fill=WHITE, outline=accent, ow=2)
+    # Боковая плашка в стиле темного стекла
+    pill = _rounded_panel(150, 40, radius=10, fill=(20, 20, 25, 180), outline=accent, ow=2)
     bg.alpha_composite(pill, (710, 140))
     d.text((728, 150), "RECRUIT PRO", fill=accent, font=_f(True, 15))
 
-    # Угловые скобки
+    # Угловые скобки в алом цвете
     br = _corner_bracket(40, 4, color=accent)
     bg.alpha_composite(br, (6, 6))
     bg.alpha_composite(br.rotate(270), (W - 46, 6))
