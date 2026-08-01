@@ -291,7 +291,7 @@ def _fmt(n):
 
 def _fmt_t(s):
     h, m = s // 3600, (s % 3600) // 60
-    return f"{h}h {m}m" if h else f"{m}m"
+    return f"{h}ч {m}м" if h else f"{m}м"
 
 
 async def _avatar(url, sz=180, shape='square'):
@@ -378,7 +378,7 @@ def generate_profile_card(avatar, nickname, level, xp, xp_needed,
     d = ImageDraw.Draw(img)
     f_lvl_lbl = _f(bold=True, sz=17)
     f_lvl_num = _f(bold=True, sz=64)
-    lbl_txt = "LVL"
+    lbl_txt = "УР."
     lb = d.textbbox((0, 0), lbl_txt, font=f_lvl_lbl)
     num_txt = str(level)
     nb2 = d.textbbox((0, 0), num_txt, font=f_lvl_num)
@@ -418,29 +418,29 @@ def generate_profile_card(avatar, nickname, level, xp, xp_needed,
     # Section headers (comic sticker tabs)
     tab1 = _sticker(190, 40, fill=CYAN, outline=INK, outline_w=5, radius=12)
     td1 = ImageDraw.Draw(tab1)
-    tb1 = td1.textbbox((0, 0), "STATISTICS", font=f_t)
+    tb1 = td1.textbbox((0, 0), "СТАТИСТИКА", font=f_t)
     td1.text(((190 - (tb1[2] - tb1[0])) / 2 - tb1[0], (40 - (tb1[3] - tb1[1])) / 2 - tb1[1]),
-              "STATISTICS", font=f_t, fill=INK[:3])
+              "СТАТИСТИКА", font=f_t, fill=INK[:3])
     _paste_rot(img, tab1, 230, 435, angle=-3)
 
     tab2 = _sticker(190, 40, fill=PINK, outline=INK, outline_w=5, radius=12)
     td2 = ImageDraw.Draw(tab2)
-    tb2 = td2.textbbox((0, 0), "RANKINGS", font=f_t)
+    tb2 = td2.textbbox((0, 0), "РЕЙТИНГ", font=f_t)
     td2.text(((190 - (tb2[2] - tb2[0])) / 2 - tb2[0], (40 - (tb2[3] - tb2[1])) / 2 - tb2[1]),
-              "RANKINGS", font=f_t, fill=(255, 255, 255))
+              "РЕЙТИНГ", font=f_t, fill=(255, 255, 255))
     _paste_rot(img, tab2, 800, 428, angle=2)
     d = ImageDraw.Draw(img)
 
     # Honeycomb-staggered hex badges: STATISTICS (left) + RANKINGS (right)
     stat_defs = [
-        ('chat', _fmt(messages), "messages", CYAN, CYAN_DK),
-        ('voice', _fmt_t(voice_seconds), "voice time", PURPLE, PURPLE_DK),
-        ('balance', f"${_fmt(balance)}", "balance", YELLOW, YELLOW_DK),
+        ('chat', _fmt(messages), "сообщения", CYAN, CYAN_DK),
+        ('voice', _fmt_t(voice_seconds), "войс", PURPLE, PURPLE_DK),
+        ('balance', f"${_fmt(balance)}", "баланс", YELLOW, YELLOW_DK),
     ]
     rank_defs = [
-        ('chat', rank_messages, "messages"),
-        ('voice', rank_voice, "voice time"),
-        ('balance', rank_balance, "balance"),
+        ('chat', rank_messages, "сообщения"),
+        ('voice', rank_voice, "войс"),
+        ('balance', rank_balance, "баланс"),
     ]
 
     hex_d = 92
