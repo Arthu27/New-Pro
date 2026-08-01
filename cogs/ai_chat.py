@@ -1259,20 +1259,24 @@ class AIChat(commands.Cog):
             if intent:
                 return  # Intent işlendi, normal AI akışına geçme
 
-        is_ai_channel = message.channel.id in AI_CHANNELS or message.channel.id in _dynamic_channels
+        is_ticket_channel = getattr(message.channel, 'name', '').lower().startswith(('ticket-', 'тикет-', 'destek-', 'tk-', 'closed-'))
+        is_ai_channel = (
+            message.channel.id in AI_CHANNELS or
+            message.channel.id in _dynamic_channels or
+            is_ticket_channel
+        )
 
         if not (is_dm or is_ai_channel):
             return
 
-        # Канал только "moe" с başlayan или bot mention içeren messagelara ответить
-        # Динамические каналыda каждый messagea ответить
         if is_ai_channel and not is_dm:
-            is_dynamic = message.channel.id in _dynamic_channels
-            if not is_dynamic:  # Только dinamik channellarda ответить, başka hiçbir yerde
+            is_allowed_ai = (
+                message.channel.id in _dynamic_channels or
+                is_ticket_channel
+            )
+            if not is_allowed_ai:
                 return
-            # "moe" prefix'ini clear
             content = re.sub(r'^moe\s*', '', message.content, flags=re.IGNORECASE).strip()
-            # mention'ları clear
             for m in message.mentions:
                 content = content.replace(f'<@{m.id}>', '').replace(f'<@!{m.id}>', '')
             content = content.strip() or 'Здравствуйте!'
