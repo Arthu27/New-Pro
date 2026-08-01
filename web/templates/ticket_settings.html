@@ -839,15 +839,15 @@
 
       fetch('/api/guild/' + guildId + '/roles', { credentials: 'same-origin' })
         .then(function (r) { return r.json(); })
-        .then(function (d) {
-          if (!d.success || !d.roles) return;
+        .then(function (roles) {
+          if (!roles || !Array.isArray(roles)) return;
 
           var modSel = $('mod-roles');
           var ownerSel = $('owner-roles');
           modSel.innerHTML = '';
           ownerSel.innerHTML = '';
 
-          d.roles.forEach(function (role) {
+          roles.forEach(function (role) {
             var opt1 = document.createElement('option');
             opt1.value = role.id;
             opt1.textContent = role.name;

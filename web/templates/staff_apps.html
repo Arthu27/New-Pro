@@ -10,46 +10,89 @@
       <span>Заявки в администрацию</span>
     </div>
     <h1>Заявки в администрацию</h1>
-    <p>Заявки на роль модератора: рассмотрение и одобрение.</p>
+    <p>Заявки на роль модератора: детальное рассмотрение, проверка анкет и одобрение кандидатов.</p>
   </div>
 </div>
 {% endblock %}
 
-
-
 <div class="app-stats">
   <div class="app-stat">
-    <div class="app-icon"   style="background: linear-gradient(135deg, #d4a843, #e0b04a) !important;"><i class="fas fa-list"></i></div>
+    <div class="app-icon" style="background: linear-gradient(135deg, #d4a843, #e0b04a) !important;"><i class="fas fa-list"></i></div>
     <div><div class="app-stat-num" id="stat-total">-</div><div class="app-stat-lbl">Всего</div></div>
   </div>
   <div class="app-stat">
-    <div class="app-icon"   style="background: linear-gradient(135deg, #fbbf24, #b45309) !important;"><i class="fas fa-hourglass-half"></i></div>
-    <div><div class="app-stat-num" id="stat-pending">-</div><div class="app-stat-lbl">Beklemede</div></div>
+    <div class="app-icon" style="background: linear-gradient(135deg, #fbbf24, #b45309) !important;"><i class="fas fa-hourglass-half"></i></div>
+    <div><div class="app-stat-num" id="stat-pending">-</div><div class="app-stat-lbl">Ожидание</div></div>
   </div>
   <div class="app-stat">
-    <div class="app-icon"   style="background: linear-gradient(135deg, #4ade80, #16a34a) !important;"><i class="fas fa-check-circle"></i></div>
-    <div><div class="app-stat-num" id="stat-approved">-</div><div class="app-stat-lbl">Onaylanan</div></div>
+    <div class="app-icon" style="background: linear-gradient(135deg, #4ade80, #16a34a) !important;"><i class="fas fa-check-circle"></i></div>
+    <div><div class="app-stat-num" id="stat-approved">-</div><div class="app-stat-lbl">Одобрено</div></div>
   </div>
   <div class="app-stat">
-    <div class="app-icon"   style="background: linear-gradient(135deg, #ef4444, #b91c1c) !important; !important;"><i class="fas fa-times-circle"></i></div>
-    <div><div class="app-stat-num" id="stat-rejected">-</div><div class="app-stat-lbl">Reddedilen</div></div>
+    <div class="app-icon" style="background: linear-gradient(135deg, #ef4444, #b91c1c) !important;"><i class="fas fa-times-circle"></i></div>
+    <div><div class="app-stat-num" id="stat-rejected">-</div><div class="app-stat-lbl">Отклонено</div></div>
   </div>
 </div>
 
 <div class="app-tabs">
   <button class="app-tab active" data-tab="all">Все</button>
-  <button class="app-tab" data-tab="pending">Beklemede</button>
-  <button class="app-tab" data-tab="approved">Onaylanan</button>
-  <button class="app-tab" data-tab="rejected">Reddedilen</button>
+  <button class="app-tab" data-tab="pending">Ожидание</button>
+  <button class="app-tab" data-tab="approved">Одобрено</button>
+  <button class="app-tab" data-tab="rejected">Отклонено</button>
 </div>
 
 <div class="app-box">
   <div class="app-head">
-    <div class="app-title"><i class="fas fa-user-shield"></i> Baшvurular</div>
+    <div class="app-title"><i class="fas fa-user-shield"></i> Список заявок кандидатов</div>
     <span class="app-count" id="app-count">-</span>
   </div>
   <div class="app-body" id="app-body">
     <p class="empty"><i class="fas fa-spinner fa-spin"></i> Загрузка...</p>
+  </div>
+</div>
+
+<!-- Модальное окно детального просмотра заявки -->
+<div id="app-modal" class="modal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.8); align-items: center; justify-content: center;">
+  <div class="modal-content" style="background-color: #1a1a20; margin: auto; padding: 28px; border: 1px solid rgba(255,255,255,0.1); width: 90%; max-width: 650px; border-radius: 14px; color: #fff; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+    <span class="close-modal" style="color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; position: absolute; right: 20px; top: 12px;">&times;</span>
+    <h3 id="modal-user-title" style="margin-top: 0; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px; color: #139492;"><i class="fas fa-address-card"></i> Детальная анкета кандидата</h3>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px; margin-top: 14px;">
+      <div>
+        <label style="font-size: 11px; color: #888; display: block; text-transform: uppercase;">Имя пользователя</label>
+        <span id="modal-username" style="font-weight: bold; font-size: 17px; color: #fff;"></span>
+      </div>
+      <div>
+        <label style="font-size: 11px; color: #888; display: block; text-transform: uppercase;">Желаемая должность</label>
+        <span id="modal-role" class="badge-role" style="background-color: #139492; padding: 4px 12px; border-radius: 6px; font-weight: bold; font-size: 13px; display: inline-block; margin-top: 4px;"></span>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px; background: rgba(255,255,255,0.03); padding: 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+      <div>
+        <label style="font-size: 11px; color: #888; display: block; text-transform: uppercase;">Возраст кандидата</label>
+        <span id="modal-age" style="font-weight: bold; font-size: 15px; color: #3498db;"></span>
+      </div>
+      <div>
+        <label style="font-size: 11px; color: #888; display: block; text-transform: uppercase;">Активность на сервере</label>
+        <span id="modal-activity" style="font-weight: bold; font-size: 15px; color: #2ecc71;"></span>
+      </div>
+    </div>
+
+    <div style="margin-bottom: 18px;">
+      <label style="font-size: 11px; color: #888; display: block; margin-bottom: 6px; text-transform: uppercase;">Опыт модерации и администрирования</label>
+      <div id="modal-experience" style="background: rgba(0,0,0,0.3); padding: 14px; border-radius: 8px; font-size: 14px; border: 1px solid rgba(255,255,255,0.08); white-space: pre-wrap; max-height: 120px; overflow-y: auto; line-height: 1.5; color: #e2e8f0;"></div>
+    </div>
+
+    <div style="margin-bottom: 24px;">
+      <label style="font-size: 11px; color: #888; display: block; margin-bottom: 6px; text-transform: uppercase;">Почему выбирает именно наш сервер?</label>
+      <div id="modal-reason" style="background: rgba(0,0,0,0.3); padding: 14px; border-radius: 8px; font-size: 14px; border: 1px solid rgba(255,255,255,0.08); white-space: pre-wrap; max-height: 120px; overflow-y: auto; line-height: 1.5; color: #e2e8f0;"></div>
+    </div>
+
+    <div id="modal-decision-box" style="display: flex; gap: 12px; justify-content: flex-end; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 18px;">
+      <button class="btn btn-ok" id="btn-modal-approve" style="background: #10b981; border: none; padding: 12px 24px; border-radius: 8px; color: white; cursor: pointer; font-weight: bold; transition: background 0.2s;"><i class="fas fa-check"></i> Одобрить</button>
+      <button class="btn btn-no" id="btn-modal-reject" style="background: #ef4444; border: none; padding: 12px 24px; border-radius: 8px; color: white; cursor: pointer; font-weight: bold; transition: background 0.2s;"><i class="fas fa-times"></i> Отклонить</button>
+    </div>
   </div>
 </div>
 
@@ -58,39 +101,95 @@
   'use strict';
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
-  function fmtDate(iso) { if (!iso) return '-'; try { return new Date(iso).toLocaleDateString('ru-RU'); } catch (e) { return '-'; } }
+  function fmtDate(iso) { if (!iso) return '-'; try { return new Date(iso).toLocaleDateString('ru-RU') + ' ' + new Date(iso).toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit'}); } catch (e) { return '-'; } }
 
-  var apps = [
-    { user: 'NewMod1', status: 'pending', date: '2026-01-15', av: 'https://cdn.discordapp.com/embed/avatars/0.png' },
-    { user: 'ProGamer', status: 'approved', date: '2026-01-10', av: 'https://cdn.discordapp.com/embed/avatars/1.png' },
-    { user: 'BadUser', status: 'rejected', date: '2026-01-08', av: 'https://cdn.discordapp.com/embed/avatars/2.png' },
-    { user: 'Helper', status: 'pending', date: '2026-01-14', av: 'https://cdn.discordapp.com/embed/avatars/3.png' }
-  ];
+  var apps = [];
   var currentTab = 'all';
+  var selectedApp = null;
+
+  function loadApps() {
+    fetch('/api/staff-apps', { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        apps = data || [];
+        render();
+      })
+      .catch(function (err) {
+        console.error('Failed to load apps:', err);
+        $('app-body').innerHTML = '<p class="empty" style="color: #ef4444;"><i class="fas fa-exclamation-triangle"></i> Не удалось загрузить заявки с сервера</p>';
+      });
+  }
 
   function render() {
+    var total = apps.length;
     var pend = apps.filter(function (a) { return a.status === 'pending'; }).length;
     var appr = apps.filter(function (a) { return a.status === 'approved'; }).length;
     var rej = apps.filter(function (a) { return a.status === 'rejected'; }).length;
-    $('stat-total').textContent = apps.length;
+
+    $('stat-total').textContent = total;
     $('stat-pending').textContent = pend;
     $('stat-approved').textContent = appr;
     $('stat-rejected').textContent = rej;
 
     var list = currentTab === 'all' ? apps : apps.filter(function (a) { return a.status === currentTab; });
     $('app-count').textContent = list.length;
-    if (!list.length) { $('app-body').innerHTML = '<p class="empty">Baшvuru yok</p>'; return; }
+
+    if (!list.length) { 
+      $('app-body').innerHTML = '<p class="empty">Заявок по выбранному фильтру не найдено</p>'; 
+      return; 
+    }
+
     var html = '';
     list.forEach(function (a) {
-      var statusLabel = a.status === 'pending' ? 'Beklemede' : a.status === 'approved' ? 'Onaylandи' : 'Reddedildi';
-      var actions = a.status === 'pending'
-        ? '<div class="app-actions"><button class="btn btn-ok" data-act="approve">✓</button><button class="btn btn-no" data-act="reject">✗</button></div>'
-        : '';
-      html += '<div class="app-row"><img class="app-av" src="' + esc(a.av) + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' +
-        '<div class="app-info"><div class="app-name">' + esc(a.user) + '</div><div class="app-meta">' + fmtDate(a.date) + ' • <span class="app-status ' + a.status + '">' + statusLabel + '</span></div></div>' +
+      var statusLabel = a.status === 'pending' ? 'Ожидание' : a.status === 'approved' ? 'Одобрено' : 'Отклонено';
+      var actions = '<div class="app-actions"><button class="btn btn-secondary inspect-btn" style="background:#139492; color:white; border:none; padding:8px 16px; border-radius:6px; font-size:13px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px;" data-user-id="' + esc(a.user_id || a.username) + '"><i class="fas fa-eye"></i> Смотреть</button></div>';
+      
+      var avatar = a.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png';
+      html += '<div class="app-row" style="display:flex; justify-content:space-between; align-items:center; padding:16px; border-bottom:1px solid rgba(255,255,255,0.05);">' +
+        '<div style="display:flex; align-items:center; gap:14px;">' +
+        '<img class="app-av" src="' + esc(avatar) + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'" style="width:44px; height:44px; border-radius:50%; border:2px solid rgba(19,148,146,0.3);">' +
+        '<div class="app-info"><div class="app-name" style="font-weight:bold; font-size:16px; color:#fff;">' + esc(a.display_name || a.username) + ' <span style="font-size:12px; color:#139492; background:rgba(19,148,146,0.1); padding:2px 8px; border-radius:4px; margin-left:6px;">' + esc(a.role) + '</span></div><div class="app-meta" style="font-size:12px; color:#888; margin-top:4px;">Отправлена: ' + fmtDate(a.submitted_at || a.timestamp) + ' • Статус: <span class="app-status ' + a.status + '" style="font-weight:bold;">' + statusLabel + '</span></div></div>' +
+        '</div>' +
         actions + '</div>';
     });
     $('app-body').innerHTML = html;
+  }
+
+  function reviewApp(action) {
+    if (!selectedApp) return;
+    var note = prompt("Введите примечание для пользователя (оно будет отправлено ему ботом в личные сообщения Discord):", "");
+    if (note === null) return; // Отмена
+
+    var btnApprove = $('btn-modal-approve');
+    var btnReject = $('btn-modal-reject');
+    btnApprove.disabled = true;
+    btnReject.disabled = true;
+
+    var uid = selectedApp.user_id || selectedApp.username;
+
+    fetch('/api/staff-apps/' + uid + '/review', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: action, note: note })
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (res) {
+        if (res.error) {
+          alert('Ошибка при сохранении: ' + res.error);
+        } else {
+          showToast(action === 'approve' ? 'Заявка кандидата одобрена!' : 'Заявка кандидата отклонена!');
+          $('app-modal').style.display = 'none';
+          loadApps();
+        }
+      })
+      .catch(function (err) {
+        alert('Ошибка связи с сервером: ' + err.message);
+      })
+      .finally(function () {
+        btnApprove.disabled = false;
+        btnReject.disabled = false;
+      });
   }
 
   function bind() {
@@ -102,20 +201,55 @@
         render();
       });
     });
+
     $('app-body').addEventListener('click', function (e) {
-      var btn = e.target.closest('button[data-act]');
+      var btn = e.target.closest('.inspect-btn');
       if (!btn) return;
-      var row = btn.closest('.app-row');
-      var name = row.querySelector('.app-name').textContent;
-      var idx = apps.findIndex(function (a) { return a.user === name; });
-      if (idx < 0) return;
-      apps[idx].status = btn.getAttribute('data-act') === 'approve' ? 'approved' : 'rejected';
-      render();
+      var uid = btn.getAttribute('data-user-id');
+      selectedApp = apps.find(function (a) { return (a.user_id || a.username) == uid; });
+      if (!selectedApp) return;
+
+      // Заполнить модальное окно
+      $('modal-username').textContent = selectedApp.display_name || selectedApp.username;
+      $('modal-role').textContent = selectedApp.role || 'Не указана';
+      $('modal-age').textContent = selectedApp.age || '—';
+      $('modal-activity').textContent = selectedApp.activity || '—';
+      $('modal-experience').textContent = selectedApp.experience || 'Опыт отсутствует';
+      $('modal-reason').textContent = selectedApp.reason || 'Причина не указана';
+
+      // Скрыть кнопки если заявка уже проверена
+      if (selectedApp.status === 'pending') {
+        $('modal-decision-box').style.display = 'flex';
+      } else {
+        $('modal-decision-box').style.display = 'none';
+      }
+
+      // Открыть модальное окно с красивым флексом
+      $('app-modal').style.display = 'flex';
     });
+
+    // События закрытия модального окна
+    document.querySelector('.close-modal').addEventListener('click', function () {
+      $('app-modal').style.display = 'none';
+    });
+
+    window.addEventListener('click', function (e) {
+      if (e.target === $('app-modal')) {
+        $('app-modal').style.display = 'none';
+      }
+    });
+
+    $('btn-modal-approve').onclick = function () {
+      reviewApp('approve');
+    };
+
+    $('btn-modal-reject').onclick = function () {
+      reviewApp('reject');
+    };
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { bind(); render(); });
-  else { bind(); render(); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { bind(); loadApps(); });
+  else { bind(); loadApps(); }
 })();
 </script>
 {% endblock %}
