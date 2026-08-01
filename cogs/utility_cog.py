@@ -14,6 +14,7 @@ import math
 import asyncio
 import random
 from PIL import Image, ImageDraw, ImageFont
+from cogs.menu_bg import load_menu_bg
 
 from logger import get_logger
 log = get_logger("utility_cog")
@@ -115,7 +116,7 @@ def _rounded_panel(w, h, radius, fill=WHITE, outline=BLACK, ow=3):
 
 def generate_info_card(guild: discord.Guild, member: discord.Member = None, category: str = "server") -> Image.Image:
     W, H = 920, 520
-    bg = _load_bg(W, H)
+    bg = load_menu_bg(W, H, "blue")
     d = ImageDraw.Draw(bg)
 
     header_box = _rounded_panel(872, 72, radius=14, fill=WHITE, outline=BLACK, ow=2)

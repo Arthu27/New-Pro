@@ -16,6 +16,7 @@ import io
 import json
 import asyncio
 from PIL import Image, ImageDraw, ImageFont
+from cogs.menu_bg import load_menu_bg
 
 from config import Config
 from logger import get_logger
@@ -104,7 +105,7 @@ def _rounded_panel(w, h, radius, fill=WHITE, outline=BLACK, ow=3):
 
 def generate_ticket_panel_card() -> Image.Image:
     W, H = 920, 520
-    bg = _load_bg(W, H)
+    bg = load_menu_bg(W, H, "teal")
     d = ImageDraw.Draw(bg)
 
     # Header

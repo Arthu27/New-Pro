@@ -14,6 +14,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 from PIL import Image, ImageDraw, ImageFont
+from cogs.menu_bg import load_menu_bg
 
 ROOT = os.path.join(os.path.dirname(__file__), '..')
 FONTS = os.path.join(ROOT, 'assets', 'fonts')
@@ -189,7 +190,7 @@ def generate_leaderboard_card(guild: discord.Guild, category: str = "messages") 
     top = _get_lb_data(guild, category)
     H = max(460, 110 + len(top) * 88 + 30)
 
-    bg = _load_bg(W, H)
+    bg = load_menu_bg(W, H, "gold")
     d = ImageDraw.Draw(bg)
 
     # Top Header Panel (872x72 px)

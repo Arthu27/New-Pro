@@ -271,6 +271,7 @@ import io
 import os
 import math
 from PIL import Image, ImageDraw, ImageFont
+from cogs.menu_bg import load_menu_bg
 
 WHITE = (255, 255, 255)
 BLACK = (20, 20, 25)
@@ -370,7 +371,7 @@ def generate_economy_card(cog, member: discord.Member, category: str = "shop") -
         items = [(itm, 0) for itm in data['inventory']]
 
     H = max(520, 110 + max(3, len(items)) * 104 + 30)
-    bg = _load_bg(W, H)
+    bg = load_menu_bg(W, H, "emerald")
     d = ImageDraw.Draw(bg)
 
     # Header
