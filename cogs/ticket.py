@@ -26,12 +26,274 @@ GIF_TICKET_OPEN  = "https://media.tenor.com/3Ky6UNqMFpkAAAAC/talking-speak.gif"
 GIF_TICKET_CLOSE = "https://media.tenor.com/x8v1oNUOmg4AAAAC/ban-hammer.gif"
 GIF_PANEL        = "https://media.tenor.com/ZBDpMFBMFpkAAAAC/celebration-party.gif"
 
+from PIL import Image, ImageDraw, ImageFont
+from cogs._menu_bg import load_menu_bg
+
+ROOT = os.path.join(os.path.dirname(__file__), '..')
+FONTS = os.path.join(ROOT, 'assets', 'fonts')
+BG_PATH = os.path.join(ROOT, 'assets', 'profile_bg_pro.jpg')
+FONT_B = os.path.join(FONTS, 'Bold.ttf')
+FONT_R = os.path.join(FONTS, 'Regular.ttf')
+
+WHITE = (255, 255, 255)
+BLACK = (20, 20, 25)
+TEAL = (13, 148, 136)
+MUTED = (110, 115, 125)
+SS = 4
+
+def _f(bold=False, sz=20):
+    try:
+        return ImageFont.truetype(FONT_B if bold else FONT_R, sz)
+    except Exception:
+        return ImageFont.load_default()
+
+def _ss_render(w, h, draw_fn, scale=SS):
+    big = Image.new('RGBA', (w * scale, h * scale), (0, 0, 0, 0))
+    d = ImageDraw.Draw(big)
+    draw_fn(d, scale)
+    return big.resize((w, h), Image.Resampling.LANCZOS)
+
+def _load_bg(w, h):
+    try:
+        bg = Image.open(BG_PATH).convert('RGBA')
+        bw, bh = bg.size
+        target_ratio = w / h
+        src_ratio = bw / bh
+        if src_ratio > target_ratio:
+            new_w = int(bh * target_ratio)
+            x0 = (bw - new_w) // 2
+            bg = bg.crop((x0, 0, x0 + new_w, bh))
+        else:
+            new_h = int(bw / target_ratio)
+            y0 = (bh - new_h) // 2
+            bg = bg.crop((0, y0, bw, y0 + new_h))
+        return bg.resize((w, h), Image.Resampling.LANCZOS)
+    except Exception:
+        return Image.new('RGBA', (w, h), (255, 255, 255, 255))
+
+def _icon_ticket(d, cx, cy, s, w, color):
+    w_t, h_t = s*0.44, s*0.30
+    x0, y0 = cx - w_t, cy - h_t
+    x1, y1 = cx + w_t, cy + h_t
+    d.rounded_rectangle((x0, y0, x1, y1), radius=h_t*0.25, outline=color, width=w)
+    r = s*0.1
+    d.arc((x0 - r, cy - r, x0 + r, cy + r), -90, 90, fill=WHITE, width=w*2)
+    d.arc((x0 - r, cy - r, x0 + r, cy + r), -90, 90, fill=color, width=w)
+    d.arc((x1 - r, cy - r, x1 + r, cy + r), 90, 270, fill=WHITE, width=w*2)
+    d.arc((x1 - r, cy - r, x1 + r, cy + r), 90, 270, fill=color, width=w)
+
+def _icon_badge(diameter, glyph_fn, ring_color=BLACK, ring_w=None, icon_color=TEAL):
+    ring_w = ring_w if ring_w is not None else max(2, diameter // 22)
+    def draw(d, scale):
+        size = diameter * scale
+        rw = ring_w * scale
+        r = size * 0.22
+        d.rounded_rectangle((rw / 2, rw / 2, size - rw / 2 - 1, size - rw / 2 - 1),
+                             radius=r, fill=WHITE, outline=ring_color, width=rw)
+        glyph_fn(d, size / 2, size / 2, size * 0.60, max(2, int(size * 0.032)), icon_color)
+    return _ss_render(diameter, diameter, draw)
+
+def _corner_bracket(size, thickness, length_ratio=0.35, color=TEAL):
+    def draw(d, scale):
+        t = thickness * scale
+        L = size * scale * length_ratio
+        d.line([(0, t / 2), (L, t / 2)], fill=color, width=t)
+        d.line([(t / 2, 0), (t / 2, L)], fill=color, width=t)
+    return _ss_render(size, size, draw)
+
+def _rounded_panel(w, h, radius, fill=WHITE, outline=BLACK, ow=3):
+    def draw(d, scale):
+        r = radius * scale
+        o = ow * scale
+        d.rounded_rectangle((o / 2, o / 2, w * scale - o / 2 - 1, h * scale - o / 2 - 1),
+                             radius=r, fill=fill, outline=outline, width=o)
+    return _ss_render(w, h, draw)
+
+def generate_ticket_panel_card() -> Image.Image:
+    W, H = 920, 520
+    bg = load_menu_bg(W, H, "teal")
+    d = ImageDraw.Draw(bg)
+
+    # Header
+    header_box = _rounded_panel(872, 72, radius=14, fill=WHITE, outline=BLACK, ow=2)
+    bg.alpha_composite(header_box, (24, 20))
+
+    badge = _icon_badge(52, _icon_ticket, ring_color=BLACK, ring_w=2, icon_color=TEAL)
+    bg.alpha_composite(badge, (36, 30))
+
+    d.text((100, 26), "СЛУЖБА ПОДДЕРЖКИ СЕРВЕРА", fill=BLACK, font=_f(True, 24))
+    d.text((100, 56), "ВЫБЕРИТЕ КАТЕГОРИЮ ОБРАЩЕНИЯ В МЕНЮ НИЖЕ", fill=MUTED, font=_f(False, 15))
+
+    pill = _rounded_panel(160, 36, radius=10, fill=WHITE, outline=TEAL, ow=2)
+    bg.alpha_composite(pill, (720, 38))
+    d.text((738, 46), "SUPPORT v4.0", fill=TEAL, font=_f(True, 14))
+
+    # 4 Category cards
+    items = [
+        ("ОБЩИЕ ВОПРОСЫ", "Консультации и помощь", "Ответ до 24ч"),
+        ("ТЕХ. ПОДДЕРЖКА", "Проблемы с ботом/сервером", "Высокий приоритет"),
+        ("ЖАЛОБЫ", "Нарушения правил", "Конфиденциально"),
+        ("ЗАЯВКИ В СТАФФ", "Набор модераторов", "Отбор кандидатов")
+    ]
+    box_w, box_h = 426, 110
+    gap_x, gap_y = 20, 14
+    start_x, start_y = 24, 106
+
+    for idx, (title, sub, note) in enumerate(items):
+        c = idx % 2
+        r = idx // 2
+        bx = start_x + c * (box_w + gap_x)
+        by = start_y + r * (box_h + gap_y)
+
+        box = _rounded_panel(box_w, box_h, radius=14, fill=WHITE, outline=BLACK, ow=2)
+        bg.alpha_composite(box, (bx, by))
+
+        ibadge = _icon_badge(64, _icon_ticket, ring_color=BLACK, ring_w=2, icon_color=TEAL)
+        bg.alpha_composite(ibadge, (bx + 16, by + 23))
+
+        d.text((bx + 94, by + 18), title, fill=BLACK, font=_f(True, 23))
+        d.text((bx + 94, by + 50), sub, fill=TEAL, font=_f(True, 17))
+        d.text((bx + 94, by + 78), note, fill=MUTED, font=_f(False, 15))
+
+    br = _corner_bracket(40, 4, color=TEAL)
+    bg.alpha_composite(br, (6, 6))
+    bg.alpha_composite(br.rotate(270), (W - 46, 6))
+    bg.alpha_composite(br.rotate(90), (6, H - 46))
+    bg.alpha_composite(br.rotate(180), (W - 46, H - 46))
+
+    return bg
+
+def generate_ticket_panel_bytes() -> io.BytesIO:
+    card = generate_ticket_panel_card().convert('RGB')
+    buf = io.BytesIO()
+    card.save(buf, format='PNG', optimize=True)
+    buf.seek(0)
+    return buf
+
+
 # AI Ticket Settings
 AI_ENABLED = True  # AI-система поддержки активна
 MAX_AI_MESSAGES = 10
 
 # На этом сервере система тикетов отключена
 TICKET_DISABLED_GUILDS: set = set()
+
+
+def _get_punishment_for_quote(quote: str) -> dict:
+    q = quote.lower()
+    
+    # 1. Critical Insults or Threats -> BAN or KICK (Requires Admin Confirmation)
+    critical_keywords = [
+        'убью', 'убить', 'зарежу', 'прирежу', 'прибью', 'пристрелю', 'закопаю', 'öldüreceğim', 'öldür', 'gebert', 'vuracağım', 'keseceğim', 'kill you', 'will kill', 'murder',
+        'yosma', 'fahişe', 'orospu', 'pezevenk', 'piç', 'şerefsiz', 'namussuz', 'ублюдок', 'мраз', 'блядина', 'пидор', 'faggot', 'nigger'
+    ]
+    if any(w in q for w in critical_keywords):
+        return {
+            'action': 'BAN',
+            'duration': None,
+            'reason': f"Тяжелое оскорбление / Угрозы в логах: «{quote[:60]}»"
+        }
+
+    # 2. Medium Insults -> MUTE (1 hour)
+    medium_keywords = [
+        'amk', 'amq', 'aq', 'siktir', 'yarrak', 'yarak', 'göt', 'got', 'amcık', 'amcik', 'ibne', 'kahpe',
+        'хуй', 'хуя', 'хую', 'ебал', 'рот', 'пидорас', 'сука', 'блядь', 'блять', 'мудак', 'гондон', 'bitch', 'asshole'
+    ]
+    if any(w in q for w in medium_keywords):
+        return {
+            'action': 'MUTE',
+            'duration': 60,  # 1 hour
+            'reason': f"Оскорбление средней тяжести в логах: «{quote[:60]}»"
+        }
+
+    # 3. Mild Insults / Disrespect -> WARN (No punishment, just warning)
+    mild_keywords = [
+        'salak', 'aptal', 'gerizekalı', 'it', 'köpek', 'terbiyesiz', 'saygısız', 'saygisiz', 'lan',
+        'дурак', 'дура', 'идиот', 'тупой', 'тупица', 'дебил', 'кретин', 'придурок', 'урод', 'чмо', 'лох'
+    ]
+    if any(w in q for w in mild_keywords):
+        return {
+            'action': 'WARN',
+            'duration': 0,
+            'reason': f"Неуважительное отношение / Легкое оскорбление: «{quote[:60]}»"
+        }
+
+    # Default fallback
+    return {
+        'action': 'WARN',
+        'duration': 0,
+        'reason': f"Нарушение правил общения в логах: «{quote[:60]}»"
+    }
+
+
+class AdminApprovalView(discord.ui.View):
+    def __init__(self, target_id: int, action_type: str, reason: str):
+        super().__init__(timeout=None)
+        self.target_id = target_id
+        self.action_type = action_type.upper()
+        self.reason = reason
+
+    @discord.ui.button(
+        label="✅ Одобрить наказание",
+        style=discord.ButtonStyle.green,
+        custom_id="admin_approve_punishment"
+    )
+    async def approve(self, interaction: discord.Interaction, button: discord.ui.Button):
+        is_admin = interaction.user.guild_permissions.administrator or interaction.user.guild_permissions.manage_guild
+        if not is_admin:
+            await interaction.response.send_message("❌ Только администратор может одобрять наказания!", ephemeral=True)
+            return
+
+        await interaction.response.defer()
+        guild = interaction.guild
+        target = guild.get_member(self.target_id)
+        if not target:
+            try:
+                target = await guild.fetch_member(self.target_id)
+            except Exception:
+                pass
+
+        if not target:
+            await interaction.channel.send("❌ Нарушитель не найден на сервере.")
+            return
+
+        try:
+            if self.action_type == 'BAN':
+                await target.ban(reason=f"AI Рекомендация (одобрено {interaction.user}): {self.reason}")
+                await interaction.channel.send(f"✅ **[СУДЕБНОЕ РЕШЕНИЕ ВЫПОЛНЕНО]**: Участник **{target.display_name}** забанен администратором {interaction.user.mention}.\n**Причина:** {self.reason}")
+            elif self.action_type == 'KICK':
+                await target.kick(reason=f"AI Рекомендация (одобрено {interaction.user}): {self.reason}")
+                await interaction.channel.send(f"✅ **[СУДЕБНОЕ РЕШЕНИЕ ВЫПОЛНЕНО]**: Участник **{target.display_name}** кикнут администратором {interaction.user.mention}.\n**Причина:** {self.reason}")
+            
+            # Disable buttons
+            for child in self.children:
+                child.disabled = True
+            await interaction.message.edit(view=self)
+        except Exception as e:
+            await interaction.channel.send(f"❌ Не удалось применить наказание: {e}")
+
+    @discord.ui.button(
+        label="❌ Отклонить",
+        style=discord.ButtonStyle.red,
+        custom_id="admin_reject_punishment"
+    )
+    async def reject(self, interaction: discord.Interaction, button: discord.ui.Button):
+        is_admin = interaction.user.guild_permissions.administrator or interaction.user.guild_permissions.manage_guild
+        if not is_admin:
+            await interaction.response.send_message("❌ Только администратор может отклонять наказания!", ephemeral=True)
+            return
+
+        await interaction.response.defer()
+        guild = interaction.guild
+        target = guild.get_member(self.target_id)
+        target_name = target.display_name if target else f"ID {self.target_id}"
+
+        await interaction.channel.send(f"❌ **[РЕШЕНИЕ ОТКЛОНЕНО]**: Администратор {interaction.user.mention} отклонил рекомендацию AI на {self.action_type} для **{target_name}**.")
+        
+        # Disable buttons
+        for child in self.children:
+            child.disabled = True
+        await interaction.message.edit(view=self)
 
 
 class TicketCategorySelect(discord.ui.Select):
@@ -124,13 +386,20 @@ class TicketView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
 
-    @discord.ui.button(
-        label="Создать тикет поддержки",
-        style=discord.ButtonStyle.blurple,
-        custom_id="ticket_open"
+    @discord.ui.select(
+        placeholder="Выберите категорию обращения",
+        custom_id="ticket_category_select",
+        options=[
+            discord.SelectOption(label="Общий вопрос", value="general", description="Общие вопросы и консультации"),
+            discord.SelectOption(label="Техническая поддержка", value="technical", description="Проблемы с ботом или сервером"),
+            discord.SelectOption(label="Жалоба", value="complaint", description="Жалоба на участника или нарушение"),
+            discord.SelectOption(label="Предложение", value="suggestion", description="Предложения по улучшению сервера"),
+            discord.SelectOption(label="Заявка в команду", value="staff_apply", description="Заявка на роль модератора/хелпера"),
+        ]
     )
-    async def open_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def category_select(self, interaction: discord.Interaction, select: discord.ui.Select):
         guild = interaction.guild
+        category = select.values[0]
         
         # На этом сервере система тикетов отключена
         if guild.id in TICKET_DISABLED_GUILDS:
@@ -155,7 +424,6 @@ class TicketView(discord.ui.View):
                 f"[RateLimit] Отказано в создании тикета: user={interaction.user} "
                 f"({interaction.user.id}) reason={rate_check.reason}"
             )
-            # Красивый embed с информацией о rate limit
             rl_embed = discord.Embed(
                 color=0xE74C3C,
                 timestamp=datetime.datetime.utcnow()
@@ -166,7 +434,6 @@ class TicketView(discord.ui.View):
                 f"**Причина:** {rate_check.reason}\n\n"
             )
             if rate_check.wait_seconds > 0:
-                # Конвертировать секунды в читаемый формат
                 if rate_check.wait_seconds >= 3600:
                     wait_str = f"{rate_check.wait_seconds // 3600} ч. {(rate_check.wait_seconds % 3600) // 60} мин."
                 elif rate_check.wait_seconds >= 60:
@@ -177,22 +444,19 @@ class TicketView(discord.ui.View):
             
             rl_embed.description += (
                 f"**Осталось тикетов:** {rate_check.remaining}/{rate_check.limit} (за 24 часа)\n\n"
-                f""
             )
             rl_embed.set_footer(text="Защита от спама")
             await interaction.response.send_message(embed=rl_embed, ephemeral=True)
             return
-        #  END RATE LIMIT CHECK 
         
-        # Пауза перед отправкой ответа (правило 3 секунды Discord)
         await interaction.response.send_message(
             "Канал тикета создаётся...",
             ephemeral=True
         )
 
-        category = discord.utils.get(guild.categories, name=TICKET_CATEGORY_NAME)
-        if not category:
-            category = await guild.create_category(TICKET_CATEGORY_NAME)
+        category_group = discord.utils.get(guild.categories, name=TICKET_CATEGORY_NAME)
+        if not category_group:
+            category_group = await guild.create_category(TICKET_CATEGORY_NAME)
 
         support_role = discord.utils.get(guild.roles, name=SUPPORT_ROLE_NAME)
         overwrites = {
@@ -204,7 +468,7 @@ class TicketView(discord.ui.View):
 
         channel = await guild.create_text_channel(
             f"ticket-{interaction.user.name.lower()}",
-            category=category,
+            category=category_group,
             overwrites=overwrites,
             topic=f"Ticket sahibi: {interaction.user.id}"
         )
@@ -231,7 +495,7 @@ class TicketView(discord.ui.View):
 
                 state = {
                     'user_id': interaction.user.id,
-                    'category': None,
+                    'category': category,
                     'history': [],
                     'status': 'ai_handling',
                     'ai_message_count': 0,
@@ -241,6 +505,17 @@ class TicketView(discord.ui.View):
 
                 cog = interaction.client.get_cog('Ticket')
                 if cog:
+                    # If they chose complaint, set up the complaint flow right away
+                    if category == 'complaint':
+                        state['complaint'] = {
+                            'active': True,
+                            'step': 'ask_description',
+                            'type': None,
+                            'accused_id': None,
+                            'channel_id': None,
+                            'messages': [],
+                            'description': None,
+                        }
                     cog._save_ticket_state(guild.id, channel.id, state)
 
                 greeting = ai_ticket_greeting()
@@ -254,12 +529,13 @@ class TicketView(discord.ui.View):
                     icon_url=interaction.client.user.display_avatar.url
                 )
                 ai_embed.set_footer(text="Если я не смогу помочь — передам модератору.")
-                await channel.send(
-                    embed=ai_embed,
-                    view=TicketCategoryView(channel.id, guild.id)
-                )
-            except Exception:
-                pass
+                
+                if category == 'complaint':
+                    ai_embed.description += "\n\n**Выбрана категория: Жалоба.**\nКратко опишите, что произошло:"
+                
+                await channel.send(embed=ai_embed)
+            except Exception as _ae:
+                log.info(f"AI ticket setup error: {_ae}")
 
         # Отправить DM пользователю
         try:
@@ -272,7 +548,6 @@ class TicketView(discord.ui.View):
                 f"**Канал:** {channel.mention}\n"
                 f"**Создан:** <t:{ts}:R>\n\n"
                 f"Опишите проблему как можно подробнее для быстрого решения.\n\n"
-                f""
             )
             dm_e.set_thumbnail(url=guild.icon.url if guild.icon else None)
             if guild.icon:
@@ -283,7 +558,7 @@ class TicketView(discord.ui.View):
         except discord.Forbidden:
             pass
 
-        #  RATE LIMIT: Записать создание тикета 
+        # RATE LIMIT: Записать создание тикета 
         try:
             await rate_limiter.record_ticket_creation(guild.id, interaction.user.id)
             logger.info(
@@ -292,13 +567,14 @@ class TicketView(discord.ui.View):
             )
         except Exception as _rl_err:
             logger.error(f"[RateLimit] Ошибка записи: {_rl_err}")
-        #  END RATE LIMIT RECORD 
 
-        # Отправить followup сообщение (response уже отправлен)
+        # Отправить followup сообщение
         await interaction.followup.send(
             f"Канал тикета создан: {channel.mention}",
             ephemeral=True
         )
+
+
 
 
 class FeedbackModal(discord.ui.Modal, title="Обратная связь"):
@@ -436,6 +712,68 @@ class AILearnModal(discord.ui.Modal, title="🧠 Обучение ИИ Аэйт�
             await interaction.followup.send(f"Ошибка сохранения обучения ИИ: {e}", ephemeral=True)
 
 
+class InteractiveFeedbackView(discord.ui.View):
+    def __init__(self, channel: discord.TextChannel = None):
+        super().__init__(timeout=30)
+        self.channel = channel
+        self.clicked = False
+
+    async def on_timeout(self):
+        if not self.clicked and self.channel:
+            try:
+                await self.channel.delete()
+            except Exception:
+                pass
+
+    @discord.ui.button(label="Да (Yes)", style=discord.ButtonStyle.green, custom_id="feedback_yes")
+    async def positive_feedback(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.clicked:
+            return
+        self.clicked = True
+        await interaction.response.defer()
+        
+        # Disable buttons
+        for child in self.children:
+            child.disabled = True
+        await interaction.message.edit(view=self)
+        
+        cog = interaction.client.get_cog('Ticket')
+        if cog and self.channel:
+            state = cog._get_ticket_state(interaction.guild.id, self.channel.id)
+            state['waiting_for_feedback_text'] = True
+            state['feedback_rating'] = 'positive'
+            cog._save_ticket_state(interaction.guild.id, self.channel.id, state)
+            
+        await interaction.channel.send(
+            "🧠 **Большое спасибо!** Пожалуйста, напишите в чат краткую причину (что именно вам понравилось или как мы можем стать еще лучше?).\n"
+            "Я лично просканирую и проанализирую ваш отзыв для улучшения своего интеллекта!"
+        )
+
+    @discord.ui.button(label="Нет (No)", style=discord.ButtonStyle.red, custom_id="feedback_no")
+    async def negative_feedback(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.clicked:
+            return
+        self.clicked = True
+        await interaction.response.defer()
+        
+        # Disable buttons
+        for child in self.children:
+            child.disabled = True
+        await interaction.message.edit(view=self)
+        
+        cog = interaction.client.get_cog('Ticket')
+        if cog and self.channel:
+            state = cog._get_ticket_state(interaction.guild.id, self.channel.id)
+            state['waiting_for_feedback_text'] = True
+            state['feedback_rating'] = 'negative'
+            cog._save_ticket_state(interaction.guild.id, self.channel.id, state)
+            
+        await interaction.channel.send(
+            "⚠️ **Нам очень жаль!** Пожалуйста, напишите в чат, с какой проблемой вы столкнулись или что именно вам не понравилось?\n"
+            "Я проанализирую вашу критику, извлеку уроки и передам информацию администрации!"
+        )
+
+
 class CloseTicketView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
@@ -462,23 +800,6 @@ class CloseTicketView(discord.ui.View):
                         ephemeral=True
                     )
                     return
-            cog._delete_ticket_state(interaction.guild.id, channel.id)
-
-    @discord.ui.button(
-        label="🧠 Обучить ИИ / Указать ошибку",
-        style=discord.ButtonStyle.blurple,
-        custom_id="ticket_ai_feedback_btn"
-    )
-    async def ai_feedback_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
-        is_admin = interaction.user.guild_permissions.administrator or interaction.user.guild_permissions.manage_guild
-        if not is_admin:
-            await interaction.response.send_message("❌ Только администратор может обучать ИИ и указывать на ошибки!", ephemeral=True)
-            return
-        await interaction.response.send_modal(AILearnModal())
-
-        # Очистить состояние AI
-        cog = interaction.client.get_cog('Ticket')
-        if cog:
             cog._delete_ticket_state(interaction.guild.id, channel.id)
 
         messages = []
@@ -539,29 +860,32 @@ class CloseTicketView(discord.ui.View):
             except Exception:
                 pass
 
-        #  FEEDBACK СИСТЕМА 
+                #  FEEDBACK СИСТЕМА 
         # Показать форму обратной связи перед удалением канала
         feedback_embed = discord.Embed(
             title="Оцените качество поддержки",
-            description=(
-                "Пожалуйста, оцените работу нашей службы поддержки.\n"
-                "Ваше мнение поможет нам стать лучше!"
-            ),
+            description="Понравилась ли вам наша услуга?\nПожалуйста, нажмите кнопку ниже для оценки нашего сервиса.",
             color=0xF39C12,
             timestamp=datetime.datetime.utcnow()
         )
-        feedback_embed.set_footer(text="Тикет будет удалён через 30 секунд")
         
         await interaction.response.send_message(
             embed=feedback_embed,
-            view=FeedbackView(channel.name)
+            view=InteractiveFeedbackView(channel)
         )
-        
-        # Подождать 30 секунд для сбора обратной связи
-        await asyncio.sleep(30)
         #  END FEEDBACK СИСТЕМА 
-        
-        await channel.delete()
+
+    @discord.ui.button(
+        label="🧠 Обучить ИИ / Указать ошибку",
+        style=discord.ButtonStyle.blurple,
+        custom_id="ticket_ai_feedback_btn"
+    )
+    async def ai_feedback_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        is_admin = interaction.user.guild_permissions.administrator or interaction.user.guild_permissions.manage_guild
+        if not is_admin:
+            await interaction.response.send_message("❌ Только администратор может обучать ИИ и указывать на ошибки!", ephemeral=True)
+            return
+        await interaction.response.send_modal(AILearnModal())
 
 
 class Ticket(commands.Cog):
@@ -569,6 +893,8 @@ class Ticket(commands.Cog):
         self.bot = bot
         bot.add_view(TicketView())
         bot.add_view(CloseTicketView())
+        bot.add_view(AdminApprovalView(0, "", ""))
+        bot.add_view(InteractiveFeedbackView(None))
     
     def _get_ai_data_path(self, guild_id: int) -> str:
         """AI ticket data dosya yolu"""
@@ -741,16 +1067,20 @@ class Ticket(commands.Cog):
         lower = content.lower()
         insult_keywords = [
             'оскорб', 'мат', 'написал', 'ебал', 'рот', 'сук', 'хуй', 'дурак', 'идиот', 'обозва', 'жалоб',
-            'обзыва', 'матер', 'шлюх', 'урод', 'мраз', 'гнид', 'пидор', 'соси', 'заткнись'
+            'обзыва', 'матер', 'шлюх', 'урод', 'мраз', 'гнид', 'пидор', 'соси', 'заткнись',
+            'sikayet', 'şikayet', 'kufur', 'küfür', 'saygisiz', 'saygısız', 'hakaret', 'söv', 'sove', 'söve', 'tahrik', 'rahatsiz', 'rahatsız'
         ]
         has_kw = any(w in lower for w in insult_keywords)
-        if not (has_kw or message.mentions):
+        waiting_details = state.get('waiting_for_insult_claim_details', False)
+        
+        if not (has_kw or message.mentions or waiting_details):
             return False
 
         import re as _re
         accused = None
         ids = _re.findall(r'\b\d{17,19}\b', content)
 
+        # Поиск обвиняемого
         if message.mentions:
             accused = message.mentions[0]
         elif ids:
@@ -764,24 +1094,21 @@ class Ticket(commands.Cog):
                 if m and m.id != message.author.id:
                     accused = m
                     break
-        
-        # Если есть слова жалобы, но не указан ID/упоминание
-        if has_kw and not (accused or ids):
-            await message.channel.send(
-                "⚖️ Я готов проверить историю сообщений сервера и наказать нарушителя. Пожалуйста, укажите **Discord ID** (17–19 цифр) или **@упоминание** участника, на которого жалуетесь, а также канал инцидента (#канал)."
-            )
-            return True
 
-        # Если был указан ID, но участник не найден на сервере
-        if ids and not accused:
-            await message.channel.send(
-                f"⚠️ Участник с ID `{ids[0]}` не найден на этом сервере. Пожалуйста, проверьте правильность ID или упомяните пользователя через `@упоминание`."
-            )
-            return True
+        stored_accused_id = state.get('insult_claim_accused_id')
+        if stored_accused_id and not accused:
+            accused = message.guild.get_member(int(stored_accused_id))
+            if not accused:
+                try:
+                    accused = await message.guild.fetch_member(int(stored_accused_id))
+                except Exception:
+                    pass
 
-        if not accused or accused.id == message.author.id or accused.bot:
-            return False
+        if accused:
+            state['insult_claim_accused_id'] = str(accused.id)
+            self._save_ticket_state(message.guild.id, message.channel.id, state)
 
+        # Поиск канала
         target_ch = None
         if message.channel_mentions:
             target_ch = message.channel_mentions[0]
@@ -793,76 +1120,456 @@ class Ticket(commands.Cog):
                     target_ch = ch
                     break
 
-        async with message.channel.typing():
-            channels_to_scan = [target_ch] if target_ch else [c for c in message.guild.text_channels if c.id != message.channel.id][:10]
-            
-            found_quote = None
-            found_msg = None
-            found_ch = None
-            
-            for ch in channels_to_scan:
-                try:
-                    async for msg in ch.history(limit=500, oldest_first=False):
-                        if msg.author.id == accused.id:
-                            from cogs.ai_chat import _kufur_var_mi
-                            msg_lower = msg.content.lower()
-                            is_match = _kufur_var_mi(msg.content) or any(w in msg_lower for w in ['рот', 'ебал', 'сук', 'хуй', 'дурак', 'идиот', 'урод', 'мраз', 'пидор', 'соси'])
-                            if is_match:
-                                found_quote = msg.content
-                                found_msg = msg
-                                found_ch = ch
-                                break
-                    if found_quote:
-                        break
-                except Exception:
-                    continue
+        stored_channel_id = state.get('insult_claim_channel_id')
+        if stored_channel_id and not target_ch:
+            target_ch = message.guild.get_channel(int(stored_channel_id))
 
-            if found_quote:
-                ts_str = found_msg.created_at.strftime('%d.%m.%Y в %H:%M:%S')
+        if target_ch:
+            state['insult_claim_channel_id'] = str(target_ch.id)
+            self._save_ticket_state(message.guild.id, message.channel.id, state)
+
+        # Запрос недостающих данных
+        if not (accused and target_ch):
+            if not accused:
+                state['waiting_for_insult_claim_details'] = True
+                self._save_ticket_state(message.guild.id, message.channel.id, state)
+                await message.channel.send(
+                    "⚖️ Я готов проверить историю сообщений сервера и наказать нарушителя.\n"
+                    "Пожалуйста, укажите **Discord ID** (17–19 цифр) или **@упоминание** участника, на которого жалуетесь."
+                )
+                return True
+            elif not target_ch:
+                state['waiting_for_insult_claim_details'] = True
+                self._save_ticket_state(message.guild.id, message.channel.id, state)
+                await message.channel.send(
+                    f"⚖️ Нарушитель определен: {accused.mention} (`ID: {accused.id}`).\n"
+                    "Пожалуйста, укажите **ID канала** или **#упоминание-канала**, в котором произошёл инцидент."
+                )
+                return True
+
+        # Сброс состояния ожидания, так как все данные получены
+        state['waiting_for_insult_claim_details'] = False
+        state['insult_claim_accused_id'] = None
+        state['insult_claim_channel_id'] = None
+        self._save_ticket_state(message.guild.id, message.channel.id, state)
+
+        # Сканирование канала
+        async with message.channel.typing():
+            complainant_id = message.author.id
+            messages_to_analyze = []
+            try:
+                async for msg in target_ch.history(limit=300, oldest_first=False):
+                    if not msg.author.bot:
+                        if msg.author.id == accused.id:
+                            messages_to_analyze.append(f"[{msg.created_at.strftime('%d.%m %H:%M')}] [ОБВИНЯЕМЫЙ: {msg.author.display_name}] {msg.content}")
+                        elif msg.author.id == complainant_id:
+                            messages_to_analyze.append(f"[{msg.created_at.strftime('%d.%m %H:%M')}] [ЗАЯВИТЕЛЬ: {msg.author.display_name}] {msg.content}")
+            except Exception as e:
+                log.info(f"[SCAN ERROR]: {e}")
+                await message.channel.send(f"❌ Ошибка при сканировании истории канала: {e}")
+                return True
+
+            if not messages_to_analyze:
                 embed = discord.Embed(
-                    title="⚖️ Судебная проверка реальных логов сервера • НАРУШЕНИЕ ПОДТВЕРЖДЕНО",
+                    title="🔍 Судебная проверка реальных логов сервера • Сообщения не найдены",
                     description=(
-                        f"Я лично просканировал историю сообщений сервера в канале {found_ch.mention}.\n\n"
-                        f"• **Нарушитель:** {accused.mention} (`ID: {accused.id}`)\n"
-                        f"• **Дата и время:** `{ts_str}`\n"
-                        f"• **Точная цитата из реальных логов:**\n"
-                        f"> *«{found_quote}»*\n\n"
-                        f"**Квалификация:** Правило #1 (Оскорбление участников / Нецензурная лексика).\n"
-                        f"**Вердикт ИИ-судьи:** ВИНОВЕН (Уверенность: 100% по факту записи в логе)."
+                        f"Я тщательно просканировал последние сообщения в канале {target_ch.mention} для **{accused.display_name}** и **{message.author.display_name}**.\n\n"
+                        f"❌ **Результат:** В истории чата этого канала **не обнаружено** сообщений от указанных участников."
+                    ),
+                    color=0xE74C3C,
+                    timestamp=datetime.datetime.utcnow()
+                )
+                await message.channel.send(embed=embed)
+                return True
+
+            # Сортировка от старых к новым
+            messages_to_analyze.reverse()
+            logs_text = "\n".join(messages_to_analyze[:120])
+
+            # Использование ИИ для глубокого анализа логов на соответствие правилам
+            from web.ai_helper import _call_text
+            
+            prompt = f"""Проанализируй историю сообщений между Заявителем ({message.author.display_name}) и Обвиняемым ({accused.display_name}) в канале {target_ch.name}. 
+Определи, кто из них (или оба) нарушил официальные правила сервера.
+
+ОФИЦИАЛЬНЫЕ ПРАВИЛА СЕРВЕРА:
+Пункт — 1.1
+Запрещена реклама любых сторонних ресурсов, а также любая коммерческая деятельность без согласия с администрацией сервера.
+Наказание: Бан (на усмотрение администрации)
+
+Пункт — 1.2
+Запрещено любое распространение личной информации без согласия ее владельца, угрозы и причинение вреда на этой основе, упоминание докса/свата/деанона, а также любые мошеннические действия в сторону участников сервера.
+Наказание: Бан (Навсегда)
+
+Пункт — 1.3
+Запрещается трансляция/публикация шокирующего, порнографического и тошнотворного контента, а также изображений, демонстрирующих кровопролитие; косвенные угрозы жизни, пропаганда наркотиков, терроризма, расизма, нацизма, фашизма и тому подобных движений. Also запрещено разжигание национальной розни, дискриминация, сексизм, враждебность к любым религиозным группам и людям с ограниченными возможностями. Данное правило распространяется на активности Discord'а.
+Наказание: Бан (Навсегда)
+
+Пункт — 1.4
+Запрещены деструктивные действия по отношению к серверу, а именно: неконструктивная критика в сторону модерации/администрации, призыв покинуть сервер, попытки нарушить развитие сервера, попытки обмана администрации и т.д.
+Наказание: Пред/Бан (Навсегда)
+
+Пункт — 1.5
+Запрещено использование изображений профиля (аватарка, баннер), содержащего оскорбительный, шокирующий, сексуальный, тошнотворный или изображающий кровопролитие контент. Также запрещены изображения профиля, содержащие в себе разжигающую ненависть и иную запрещенную символику.
+Наказание: Пред/Бан (Навсегда)
+
+Пункт — 1.6
+Запрещено использование другой учетной записи (твинк) на сервере для любых целей, намеренное копирование профилей и ролей, а также оскорбительные или провокационные никнеймы статусы/роли сервера/обо мне.
+Наказание: Пред/Бан (Навсегда)
+
+Пункт — 1.7
+Запрещен капс, спам, лесенка, флуд в любых его проявлениях, беспричинное многократное упоминание участников и ролей, а также несоблюдение тематики чата (оффтоп).
+Наказание: Пред/Мут (От 4 часов до 24 часов)
+
+Пункт — 1.8
+Запрещены SoundPad и его аналоги, громкие мешающие звуки, увеличение громкости микрофона, использование программ для изменения голоса, а также программы для улучшения голоса (бас, усилок).
+Наказание: Пред/Мут (От 4 часов до 24 часов)
+
+Пункт — 1.9
+Запрещено неадекватное поведение в любом его виде: оскорбления, крики, унисон, препятствование общению и тому подобное.
+Наказание: Мут/Бан (На усмотрение администрации)
+
+
+История сообщений (Заявитель и Обвиняемый):
+{logs_text}
+
+Инструкции:
+1. Тщательно изучи сообщения ОБОИХ участников.
+2. Проверь, нарушил ли Обвиняемый правила сервера (особенно пункт 1.9 - оскорбления, мат, неадекватное поведение).
+3. Проверь, нарушил ли Заявитель правила сервера (возможно, он сам оскорблял Обвиняемого, провоцировал его или тоже неадекватно себя вел).
+4. Определи вердикт (VERDICT):
+   - GUILTY_ACCUSED (Виновен только Обвиняемый)
+   - GUILTY_COMPLAINANT (Виновен только Заявитель - ложная жалоба или нарушение с его стороны)
+   - GUILTY_BOTH (Виновны оба - обоюдные оскорбления/нарушения)
+   - INNOCENT (Никто не виновен)
+5. Для каждого виновного определи наказание (PUNISHMENT) строго на основе правил сервера:
+   - BAN или KICK (для тяжелых нарушений, таких как пункты 1.1, 1.2, 1.3, 1.4, 1.5, 1.6 или критическое неадекватное поведение по 1.9)
+   - MUTE (для мата, оскорблений по 1.9, спама/капса по 1.7). Длительность мута должна зависеть от тяжести и количества сообщений:
+     * За одиночное (единичное) оскорбление или мат: строго от 30 до 60 минут. Никогда не давай 1 день (1440 минут) за одну фразу!
+     * За множественные оскорбления (2-4 сообщения с матом): от 60 до 180 минут.
+     * За систематическую злостную ругань (5+ сообщений с жестким матом): от 180 до 360 минут.
+     * Максимальный мут за оскорбление в чате не должен превышать 360 минут (6 часов).
+   - WARN (для более легких нарушений, устных предупреждений)
+6. Все пояснения и причины пиши СТРОГО на русском языке.
+
+Формат ответа (заполни строго по шаблону, без лишнего текста):
+[VERDICT]: <GUILTY_ACCUSED / GUILTY_COMPLAINANT / GUILTY_BOTH / INNOCENT>
+[ACCUSED_PUNISHMENT]: <BAN / KICK / MUTE / WARN / NONE>
+[ACCUSED_DURATION]: <число минут или None>
+[ACCUSED_QUOTE]: <точная цитата Обвиняемого, содержащая нарушение>
+[ACCUSED_REASON]: <пункт правила и причина на русском языке>
+[COMPLAINANT_PUNISHMENT]: <BAN / KICK / MUTE / WARN / NONE>
+[COMPLAINANT_DURATION]: <число минут или None>
+[COMPLAINANT_QUOTE]: <точная цитата Заявителя, содержащая нарушение>
+[COMPLAINANT_REASON]: <пункт правила и причина на русском языке>
+"""
+
+            messages_for_llm = [
+                {"role": "system", "content": "Ты — строгий, справедливый ИИ-Судья на Discord сервере. Твоя задача — объективно анализировать логи на предмет нарушений правил сервера и выносить вердикт на русском языке."},
+                {"role": "user", "content": prompt}
+            ]
+            
+            try:
+                llm_response = await self.bot.loop.run_in_executor(
+                    None,
+                    lambda: _call_text(messages_for_llm, max_tokens=600, temperature=0.2)
+                )
+            except Exception as e:
+                log.info(f"[LLM ERROR IN VERIFICATION]: {e}")
+                llm_response = ""
+
+            verdict = "INNOCENT"
+            
+            acc_punishment = "NONE"
+            acc_duration = 0
+            acc_quote = ""
+            acc_reason = ""
+            
+            comp_punishment = "NONE"
+            comp_duration = 0
+            comp_quote = ""
+            comp_reason = ""
+
+            # Разбор ответа ИИ
+            v_match = _re.search(r'\[VERDICT\]:\s*(\w+)', llm_response)
+            if v_match:
+                verdict = v_match.group(1).strip().upper()
+
+            acc_p_match = _re.search(r'\[ACCUSED_PUNISHMENT\]:\s*(\w+)', llm_response)
+            if acc_p_match:
+                acc_punishment = acc_p_match.group(1).strip().upper()
+
+            acc_d_match = _re.search(r'\[ACCUSED_DURATION\]:\s*(\w+)', llm_response)
+            if acc_d_match:
+                d_str = acc_d_match.group(1).strip()
+                if d_str.isdigit():
+                    acc_duration = int(d_str)
+
+            acc_q_match = _re.search(r'\[ACCUSED_QUOTE\]:\s*([^\n]+)', llm_response)
+            if acc_q_match:
+                acc_quote = acc_q_match.group(1).strip()
+
+            acc_r_match = _re.search(r'\[ACCUSED_REASON\]:\s*([^\n]+)', llm_response)
+            if acc_r_match:
+                acc_reason = acc_r_match.group(1).strip()
+
+            comp_p_match = _re.search(r'\[COMPLAINANT_PUNISHMENT\]:\s*(\w+)', llm_response)
+            if comp_p_match:
+                comp_punishment = comp_p_match.group(1).strip().upper()
+
+            comp_d_match = _re.search(r'\[COMPLAINANT_DURATION\]:\s*(\w+)', llm_response)
+            if comp_d_match:
+                d_str = comp_d_match.group(1).strip()
+                if d_str.isdigit():
+                    comp_duration = int(d_str)
+
+            comp_q_match = _re.search(r'\[COMPLAINANT_QUOTE\]:\s*([^\n]+)', llm_response)
+            if comp_q_match:
+                comp_quote = comp_q_match.group(1).strip()
+
+            comp_r_match = _re.search(r'\[COMPLAINANT_REASON\]:\s*([^\n]+)', llm_response)
+            if comp_r_match:
+                comp_reason = comp_r_match.group(1).strip()
+
+            # Резервный локальный алгоритм поиска, если ИИ офлайн или выдал некорректный ответ
+            is_llm_valid = verdict in ("GUILTY_ACCUSED", "GUILTY_COMPLAINANT", "GUILTY_BOTH", "INNOCENT")
+            
+            if not is_llm_valid:
+                acc_found_quote = None
+                comp_found_quote = None
+                
+                # Поиск нарушений Обвиняемого
+                for msg_text in messages_to_analyze:
+                    if "[ОБВИНЯЕМЫЙ:" in msg_text:
+                        msg_lower = msg_text.lower()
+                        from cogs.ai_chat import _kufur_var_mi
+                        is_match = _kufur_var_mi(msg_text) or any(w in msg_lower for w in [
+                            'рот', 'ебал', 'сук', 'хуй', 'дурак', 'идиот', 'урод', 'мраз', 'пидор', 'соси',
+                            'salak', 'aptal', 'gerizekalı', 'şerefsiz', 'namussuz', 'pezevenk', 'ibne', 'lan', 'aq', 'orospu', 'piç', 'yarrak', 'göt', 'amcık', 'oç'
+                        ])
+                        if is_match:
+                            acc_found_quote = _re.sub(r'^\s*\[ОБВИНЯЕМЫЙ:[^\]]+\]\s*', '', msg_text)
+                            break
+                            
+                # Поиск нарушений Заявителя
+                for msg_text in messages_to_analyze:
+                    if "[ЗАЯВИТЕЛЬ:" in msg_text:
+                        msg_lower = msg_text.lower()
+                        from cogs.ai_chat import _kufur_var_mi
+                        is_match = _kufur_var_mi(msg_text) or any(w in msg_lower for w in [
+                            'рот', 'ебал', 'сук', 'хуй', 'дурак', 'идиот', 'урод', 'мраз', 'пидор', 'соси',
+                            'salak', 'aptal', 'gerizekalı', 'şerefsiz', 'namussuz', 'pezevenk', 'ibne', 'lan', 'aq', 'orospu', 'piç', 'yarrak', 'göt', 'amcık', 'oç'
+                        ])
+                        if is_match:
+                            comp_found_quote = _re.sub(r'^\s*\[ЗАЯВИТЕЛЬ:[^\]]+\]\s*', '', msg_text)
+                            break
+                
+                if acc_found_quote and comp_found_quote:
+                    verdict = "GUILTY_BOTH"
+                    
+                    acc_pun = _get_punishment_for_quote(acc_found_quote)
+                    acc_punishment = acc_pun['action']
+                    acc_duration = acc_pun['duration'] or 60
+                    acc_reason = f"Пункт 1.9 (Неадекватное поведение/Оскорбления): {acc_pun['reason']}"
+                    acc_quote = acc_found_quote
+                    
+                    comp_pun = _get_punishment_for_quote(comp_found_quote)
+                    comp_punishment = comp_pun['action']
+                    comp_duration = comp_pun['duration'] or 60
+                    comp_reason = f"Пункт 1.9 (Неадекватное поведение/Оскорбления): {comp_pun['reason']}"
+                    comp_quote = comp_found_quote
+                    
+                elif acc_found_quote:
+                    verdict = "GUILTY_ACCUSED"
+                    acc_pun = _get_punishment_for_quote(acc_found_quote)
+                    acc_punishment = acc_pun['action']
+                    acc_duration = acc_pun['duration'] or 60
+                    acc_reason = f"Пункт 1.9 (Неадекватное поведение/Оскорбления): {acc_pun['reason']}"
+                    acc_quote = acc_found_quote
+                    
+                elif comp_found_quote:
+                    verdict = "GUILTY_COMPLAINANT"
+                    comp_pun = _get_punishment_for_quote(comp_found_quote)
+                    comp_punishment = comp_pun['action']
+                    comp_duration = comp_pun['duration'] or 60
+                    comp_reason = f"Пункт 1.9 (Неадекватное поведение/Оскорбления): {comp_pun['reason']}"
+                    comp_quote = comp_found_quote
+                else:
+                    verdict = "INNOCENT"
+
+            complainant = message.author
+
+            # Функция выполнения наказания
+            async def execute_punishment(target, p_type, dur, p_reason, p_quote, label_ru):
+                # Проверка накопленных варнов для эскалации в BAN
+                warn_count = 0
+                try:
+                    from cogs.warnings import load_warnings
+                    warnings_data = load_warnings()
+                    user_warnings = warnings_data.get(str(message.guild.id), {}).get(str(target.id), [])
+                    warn_count = len(user_warnings)
+                except Exception:
+                    pass
+
+                if p_type == 'MUTE' and warn_count >= 2:
+                    p_type = 'BAN'
+                    p_reason = f"Превышен лимит предупреждений (3+ варна). Последнее нарушение: {p_reason}"
+
+                p_embed = discord.Embed(
+                    title=f"⚖️ Судебная проверка реальных логов сервера • НАРУШЕНИЕ ПОДТВЕРЖДЕНО",
+                    description=(
+                        f"Я лично просканировал историю сообщений сервера в канале {target_ch.mention}.\n\n"
+                        f"• **Нарушитель:** {target.mention} (`ID: {target.id}`)\n"
+                        f"• **Статус:** `{label_ru}`\n"
+                        f"• **Точная цитата из логов:**\n"
+                        f"> *«{p_quote}»*\n\n"
+                        f"**Нарушенное правило:** {p_reason}\n"
+                        f"**Вердикт ИИ-судьи:** ВИНОВЕН (Уверенность: 100% по результатам анализа)."
                     ),
                     color=0x2ECC71,
                     timestamp=datetime.datetime.utcnow()
                 )
 
-                try:
-                    import datetime as _dt
-                    until = discord.utils.utcnow() + _dt.timedelta(hours=1)
-                    await accused.timeout(until, reason=f"AI Судья: Оскорбление в логе — «{found_quote[:50]}»")
-                    embed.add_field(
-                        name="✅ [СУДЕБНОЕ РЕШЕНИЕ ВЫПОЛНЕНО]",
-                        value=f"Участнику **{accused.display_name}** выдан реальный тайм-аут (мут) на **1 час** в Discord.",
+                if p_type in ('BAN', 'KICK'):
+                    # Запрос подтверждения у администрации
+                    state['admin_only_close'] = True
+                    state['status'] = 'escalated'
+                    self._save_ticket_state(message.guild.id, message.channel.id, state)
+                    
+                    p_embed.add_field(
+                        name="⚠️ [ТРЕБУЕТСЯ ПОДТВЕРЖДЕНИЕ АДМИНИСТРАЦИИ]",
+                        value=(
+                            f"ИИ рекомендует высшую меру наказания (**{p_type}**) для **{target.display_name}**.\n"
+                            f"**Причина:** {p_reason}\n\n"
+                            f"🔒 *Решение передано администрации для одобрения. Использовать кнопки ниже.*"
+                        ),
                         inline=False
                     )
-                except Exception as e:
-                    embed.add_field(
-                        name="⚠️ [ВНИМАНИЕ МОДЕРАТОРАМ]",
-                        value=f"Не удалось выдать тайм-аут автоматически (у бота недостаточно прав над ролью участника): `{e}`",
-                        inline=False
-                    )
-                await message.channel.send(embed=embed)
+                    
+                    view = AdminApprovalView(target.id, p_type, p_reason)
+                    await message.channel.send(embed=p_embed, view=view)
+                    
+                    # Уведомление в логах
+                    try:
+                        await self._notify_admins_penalty(
+                            message.guild, penalty_type=p_type.lower(),
+                            target=target, reason=p_reason,
+                            source_channel=message.channel, moderator=message.author,
+                        )
+                    except Exception as _ne:
+                        log.info(f'[TICKET-NOTIFY] _notify_admins_penalty failed: {_ne}')
+                        
+                elif p_type == 'MUTE':
+                    try:
+                        import datetime as _dt
+                        until = discord.utils.utcnow() + _dt.timedelta(minutes=dur)
+                        await target.timeout(until, reason=f"AI Судья: {p_reason}")
+                        hours = max(1, dur // 60)
+                        p_embed.add_field(
+                            name="✅ [СУДЕБНОЕ РЕШЕНИЕ ВЫПОЛНЕНО]",
+                            value=f"Участнику **{target.display_name}** выдан реальный тайм-аут (мут) на **{hours} ч.** в Discord.",
+                            inline=False
+                        )
+                        self._record_penalty(message.guild.id, target.id, target.name, p_reason, dur)
+
+                        # Автоматическое начисление варна вместе с мутом
+                        try:
+                            warnings_cog = self.bot.get_cog('warnings')
+                            if warnings_cog:
+                                await warnings_cog.add_warning(target, message.guild.me, f"AI Наказание MUTE: {p_reason}")
+                                p_embed.add_field(
+                                    name="⚠️ [АВТОМАТИЧЕСКОЕ ПРЕДУПРЕЖДЕНИЕ]",
+                                    value=f"Участнику **{target.display_name}** также начислено 1 предупреждение (варн) за нарушение.",
+                                    inline=False
+                                )
+                        except Exception as _we:
+                            log.info(f"Failed to auto-warn: {_we}")
+                        try:
+                            await self._notify_admins_penalty(
+                                message.guild, penalty_type='mute',
+                                target=target, reason=p_reason,
+                                source_channel=message.channel, moderator=message.author,
+                            )
+                        except Exception as _ne:
+                            log.info(f'[TICKET-NOTIFY] _notify_admins_penalty failed: {_ne}')
+                    except Exception as e:
+                        p_embed.add_field(
+                            name="⚠️ [ВНИМАНИЕ МОДЕРАТОРАМ]",
+                            value=f"Не удалось выдать тайм-аут автоматически (у бота недостаточно прав над ролью участника): `{e}`",
+                            inline=False
+                        )
+                    await message.channel.send(embed=p_embed)
+                    
+                elif p_type == 'WARN':
+                    try:
+                        warnings_cog = self.bot.get_cog('warnings')
+                        if warnings_cog:
+                            await warnings_cog.add_warning(target, message.guild.me, p_reason)
+                            p_embed.add_field(
+                                name="✅ [СУДЕБНОЕ РЕШЕНИЕ ВЫПОЛНЕНО]",
+                                value=f"Участнику **{target.display_name}** вынесено официальное предупреждение.",
+                                inline=False
+                            )
+                            self._record_penalty(message.guild.id, target.id, target.name, p_reason, 0)
+                            try:
+                                await self._notify_admins_penalty(
+                                    message.guild, penalty_type='warn',
+                                    target=target, reason=p_reason,
+                                    source_channel=message.channel, moderator=message.author,
+                                )
+                            except Exception as _ne:
+                                log.info(f'[TICKET-NOTIFY] _notify_admins_penalty failed: {_ne}')
+                        else:
+                            p_embed.add_field(
+                                name="⚠️ [ОШИБКА]",
+                                value="Система предупреждений недоступна.",
+                                inline=False
+                            )
+                    except Exception as e:
+                        p_embed.add_field(
+                            name="⚠️ [ОШИБКА]",
+                            value=f"Не удалось выдать предупреждение автоматически: `{e}`",
+                            inline=False
+                        )
+                    await message.channel.send(embed=p_embed)
+
+            # Применение наказаний на основе вердикта
+            if verdict == "GUILTY_BOTH":
+                await execute_punishment(accused, acc_punishment, acc_duration, acc_reason, acc_quote, "Обвиняемый (Обоюдное нарушение)")
+                await execute_punishment(complainant, comp_punishment, comp_duration, comp_reason, comp_quote, "Заявитель (Обоюдное нарушение)")
                 return True
+                
+            elif verdict == "GUILTY_ACCUSED":
+                await execute_punishment(accused, acc_punishment, acc_duration, acc_reason, acc_quote, "Обвиняемый (Нарушитель)")
+                return True
+                
+            elif verdict == "GUILTY_COMPLAINANT":
+                await execute_punishment(complainant, comp_punishment, comp_duration, comp_reason, comp_quote, "Заявитель (Сам нарушил / Ложная жалоба)")
+                return True
+                
             else:
                 embed = discord.Embed(
                     title="🔍 Судебная проверка реальных логов сервера • Нарушение НЕ подтверждено",
                     description=(
-                        f"Я тщательно просканировал последние сообщения на сервере для **{accused.display_name}**.\n\n"
-                        f"❌ **Результат:** В реальных логах чата **не обнаружено** оскорблений или указанных вами слов от этого участника.\n\n"
+                        f"Я тщательно просканировал последние сообщения в канале {target_ch.mention} между **{complainant.display_name}** и **{accused.display_name}**.\n\n"
+                        f"❌ **Результат:** В реальных логах чата **не обнаружено** нарушений правил сервера от указанных участников.\n\n"
                         f"⚠️ *ИИ-судья принимает решения исключительно на основе фактической истории сообщений сервера. Утверждения без подтверждения в логах не являются основанием для наказания.*"
                     ),
                     color=0xE74C3C,
                     timestamp=datetime.datetime.utcnow()
                 )
                 await message.channel.send(embed=embed)
+                
+                # Уведомление в логи админов о чистой проверке
+                try:
+                    await self._notify_admins_penalty(
+                        message.guild, penalty_type='check_clean',
+                        target=accused, reason=f"Судебная проверка логов в {target_ch.name} завершилась без нарушений. Заявитель: {complainant.display_name}.",
+                        source_channel=message.channel, moderator=message.author,
+                    )
+                except Exception as _ne:
+                    log.info(f'[TICKET-NOTIFY] _notify_admins_penalty failed: {_ne}')
+                
                 return True
 
     @commands.Cog.listener()
@@ -878,6 +1585,92 @@ class Ticket(commands.Cog):
         guild_id = message.guild.id
         channel_id = message.channel.id
         state = self._get_ticket_state(guild_id, channel_id)
+
+        #  ОБРАБОТКА AI FEEDBACK / САМООБУЧЕНИЕ 
+        if state.get('waiting_for_feedback_text'):
+            state['waiting_for_feedback_text'] = False
+            rating = state.get('feedback_rating', 'positive')
+            self._save_ticket_state(guild_id, channel_id, state)
+            
+            feedback_reason = message.content.strip()
+            
+            async with message.channel.typing():
+                from web.ai_helper import _call_text
+                
+                analysis_prompt = f"""Проанализируй следующий отзыв пользователя о работе поддержки Discord бота.
+Оценка пользователя: {rating}
+Текст отзыва: {feedback_reason}
+
+Твоя задача:
+1. Определи, является ли отзыв логичным, конструктивным и полезным для улучшения ума бота (LOGICAL), или же это просто спам/оскорбления/неконструктивный бред (NOT_LOGICAL).
+2. Если отзыв логичный, напиши полезный урок или правило, которое бот должен усвоить для самообучения.
+3. Напиши ответ пользователю на русском языке.
+
+Формат ответа (строго по шаблону):
+[DECISION]: <LOGICAL или NOT_LOGICAL>
+[LESSON]: <извлеченный урок на русском языке для базы знаний>
+[RESPONSE]: <вежливый ответ пользователю на русском языке>
+"""
+                messages_for_llm = [
+                    {"role": "system", "content": "Ты — ИИ-аналитик отзывов. Твоя задача — анализировать отзывы пользователей и извлекать из них уроки для улучшения интеллекта бота."},
+                    {"role": "user", "content": analysis_prompt}
+                ]
+                
+                try:
+                    llm_resp = await self.bot.loop.run_in_executor(
+                        None,
+                        lambda: _call_text(messages_for_llm, max_tokens=400, temperature=0.2)
+                    )
+                except Exception:
+                    llm_resp = ""
+                
+                import re as _re
+                decision = "NOT_LOGICAL"
+                lesson = ""
+                user_resp = "Спасибо за ваш отзыв! Мы ценим ваше мнение и постоянно работаем над улучшением нашего сервиса."
+                
+                dec_match = _re.search(r'\[DECISION\]:\s*(\w+)', llm_resp)
+                if dec_match:
+                    decision = dec_match.group(1).strip().upper()
+                lesson_match = _re.search(r'\[LESSON\]:\s*([^\n]+)', llm_resp)
+                if lesson_match:
+                    lesson = lesson_match.group(1).strip()
+                resp_match = _re.search(r'\[RESPONSE\]:\s*([^\n]+)', llm_resp)
+                if resp_match:
+                    user_resp = resp_match.group(1).strip()
+                
+                if decision == "LOGICAL" and lesson:
+                    try:
+                        import cogs.ai_chat as ai_mod
+                        guild_key = str(guild_id)
+                        if guild_key not in ai_mod._knowledge_base:
+                            ai_mod._knowledge_base[guild_key] = []
+                        ai_mod._knowledge_base[guild_key].append({
+                            'type': 'user_feedback_learning',
+                            'question': f"Урок из отзыва пользователя ({rating}): {feedback_reason[:150]}",
+                            'info': f"Принятое правило поведения ИИ: {lesson}",
+                            'confidence': 'high',
+                            'source': 'user_feedback'
+                        })
+                        ai_mod._save_knowledge_base(ai_mod._knowledge_base)
+                    except Exception as _le:
+                        log.info(f"Failed to save feedback to knowledge base: {_le}")
+                        
+                    await message.channel.send(
+                        f"🤖 **[ОТЗЫВ ИЗУЧЕН И ПРИНЯТ]**\n"
+                        f"{user_resp}\n\n"
+                        f"_*Урок сохранен в базу знаний самообучения ИИ._"
+                    )
+                else:
+                    await message.channel.send(
+                        f"🤖 **[ОТЗЫВ ЗАПИСАН]**\n"
+                        f"{user_resp}"
+                    )
+            
+            await message.channel.send("⏱️ *Этот тикет будет автоматически удален через 10 секунд...*")
+            await asyncio.sleep(10)
+            await message.channel.delete()
+            return
 
         # Staff отправил сообщение — остановить AI
         support_role = discord.utils.get(message.guild.roles, name=SUPPORT_ROLE_NAME)
@@ -1032,15 +1825,57 @@ class Ticket(commands.Cog):
             return
 
         #  ЗАПРОС АДМИНИСТРАТОРА 
-        admin_keywords = ['поговорить с админом', 'позвать админа', 'позовите админа',
-                         'позвать модератора', 'связаться с администрацией',
-                         'хочу администратора', 'вызовите модератора',
-                         'нужен модератор', 'нужен админ']
+        admin_keywords = [
+            'поговорить с админом', 'позвать админа', 'позовите админа',
+            'позвать модератора', 'связаться с администрацией',
+            'хочу администратора', 'вызовите модератора',
+            'нужен модератор', 'нужен админ', 'позови админа', 'связь с админом',
+            'admini çağır', 'admini cagir', 'yetkili çağır', 'yetkili cagir',
+            'mod çağır', 'mod cagir', 'call admin', 'call moderator', 'call staff', 
+            'help admin', 'summon admin', 'contact admin', 'contact staff'
+        ]
         if any(kw in message.content.lower() for kw in admin_keywords):
-            support_role = discord.utils.get(message.guild.roles, name=SUPPORT_ROLE_NAME)
-            mention = support_role.mention if support_role else '@Поддержка'
+            # Проверка настроенных ролей из веб-панели
+            cfg_path = f'data/ticket_notify_{message.guild.id}.json'
+            admin_role_id = None
+            mod_role_id = None
+            owner_role_id = None
+            
+            try:
+                if os.path.exists(cfg_path):
+                    with open(cfg_path, 'r', encoding='utf-8') as f:
+                        cfg = json.load(f)
+                        admin_role_id = cfg.get('admin_role_id')
+                        mod_role_id = cfg.get('mod_role_id')
+                        owner_role_id = cfg.get('owner_role_id')
+            except Exception:
+                pass
+
+            ping_mentions = []
+            if owner_role_id:
+                role = message.guild.get_role(int(owner_role_id))
+                if role:
+                    ping_mentions.append(role.mention)
+            if admin_role_id:
+                role = message.guild.get_role(int(admin_role_id))
+                if role:
+                    ping_mentions.append(role.mention)
+            if mod_role_id:
+                role = message.guild.get_role(int(mod_role_id))
+                if role:
+                    ping_mentions.append(role.mention)
+
+            # Резервный пинг, если роли не настроены на панели
+            if not ping_mentions:
+                support_role = discord.utils.get(message.guild.roles, name=SUPPORT_ROLE_NAME)
+                if support_role:
+                    ping_mentions.append(support_role.mention)
+                else:
+                    ping_mentions.append('@Поддержка')
+
+            mention_str = " ".join(ping_mentions)
             await message.channel.send(
-                f'{mention} — {message.author.mention} хочет связаться с вами.'
+                f'{mention_str} — {message.author.mention} хочет связаться с вами.'
             )
             state['status'] = 'staff_handling'
             self._save_ticket_state(guild_id, channel_id, state)
@@ -1737,23 +2572,29 @@ class Ticket(commands.Cog):
                     state['admin_only_close'] = True
                     state['status'] = 'escalated'
                     self._save_ticket_state(guild_id, channel_id, state)
-                    await channel.send(
-                        f"⚠️ **[ТРЕБУЕТСЯ ПОДТВЕРЖДЕНИЕ АДМИНИСТРАЦИИ]**\n"
-                        f"ИИ рекомендует высшую меру наказания (**{action_type}**) для **{target.display_name}**.\n"
-                        f"**Причина:** {punishment_reason}\n\n"
-                        f"🔒 *Решение передано администрации для проверки. Тикет заблокирован для обычного закрытия.*"
+                    
+                    embed = discord.Embed(
+                        title=f"⚠️ [ТРЕБУЕТСЯ ПОДТВЕРЖДЕНИЕ АДМИНИСТРАЦИИ]",
+                        description=(
+                            f"ИИ рекомендует высшую меру наказания (**{action_type}**) для **{target.display_name}**.\n"
+                            f"**Причина:** {punishment_reason}\n\n"
+                            f"🔒 *Решение передано администрации для одобрения. Использовать кнопки ниже.*"
+                        ),
+                        color=0xE74C3C,
+                        timestamp=datetime.datetime.utcnow()
                     )
+                    view = AdminApprovalView(target.id, action_type, punishment_reason)
+                    await channel.send(embed=embed, view=view)
                     return
                 
-                elif action_type == 'MUTE' or action_type == 'TIMEOUT':
+                elif action_type in ('MUTE', 'TIMEOUT', 'MUTE_BOTH'):
                     if dur:
                         until = discord.utils.utcnow() + timedelta(minutes=dur)
                         await target.timeout(until, reason=f"AI: {punishment_reason}")
                         hours = max(1, dur // 60)
                         await channel.send(f"✅ **[СУДЕБНОЕ РЕШЕНИЕ ВЫПОЛНЕНО]**: Участнику **{target.display_name}** выдан тайм-аут на **{hours} ч.**\n**Причина:** {punishment_reason}")
                 
-                elif action_type == 'WARN':
-                    from cogs.warnings import warnings
+                elif action_type in ('WARN', 'WARN_COMPLAINANT'):
                     warnings_cog = self.bot.get_cog('warnings')
                     if warnings_cog:
                         await warnings_cog.add_warning(target, guild.me, punishment_reason)
@@ -2086,6 +2927,7 @@ class Ticket(commands.Cog):
             'ban': '',
             'kick': '',
             'mute': '',
+            'check_clean': '🔍',
         }.get(penalty_type, '')
         type_label = {
             'warn': 'Предупреждение',
@@ -2093,11 +2935,12 @@ class Ticket(commands.Cog):
             'ban': 'Бан',
             'kick': 'Кик',
             'mute': 'Мут',
+            'check_clean': 'Проверка логов (Нарушений не найдено)',
         }.get(penalty_type, penalty_type.title())
 
         embed = discord.Embed(
             title=f"{type_emoji} AI Модератор: {type_label}",
-            color=0xE74C3C if penalty_type in ('ban', 'jail') else 0xF1C40F,
+            color=0x2ECC71 if penalty_type == 'check_clean' else (0xE74C3C if penalty_type in ('ban', 'jail') else 0xF1C40F),
             timestamp=datetime.datetime.utcnow(),
         )
         embed.add_field(name="Пользователь", value=f"{target.mention} (`{target.id}`)", inline=False)
@@ -2110,7 +2953,7 @@ class Ticket(commands.Cog):
         admin_ping = ""
         try:
             admin_role = discord.utils.get(guild.roles, permissions=discord.Permissions(administrator=True))
-            if admin_role:
+            if admin_role and penalty_type != 'check_clean':
                 admin_ping = admin_role.mention + " "
                 log.info(f'[TICKET-NOTIFY] Admin role для пинга: {admin_role.name} ({admin_role.id})')
             else:
@@ -2213,7 +3056,7 @@ class Ticket(commands.Cog):
         except Exception as e:
             return f"Сообщение история контроль edilemedi: {str(e)}"
 
-    @app_commands.command(name="ai-ticket-panel", description="Отправить AI панель тикетов в канал")
+    @app_commands.command(name="ticket-panel", description="Отправить AI панель тикетов в канал")
     @app_commands.checks.has_permissions(administrator=True)
     async def ticket_panel(self, interaction: discord.Interaction):
         if interaction.guild.id in TICKET_DISABLED_GUILDS:
@@ -2227,37 +3070,23 @@ class Ticket(commands.Cog):
             if (msg.author == interaction.guild.me and
                     msg.embeds and
                     msg.components and
-                    any('ticket_open' in str(c) for c in msg.components)):
+                    any('ticket_category_select' in str(c) for c in msg.components)):
                 await interaction.response.send_message(
                     "В этом канале уже есть панель тикетов. Сначала удалите старую.",
                     ephemeral=True
                 )
                 return
-        e = discord.Embed(
-            title=" ПОДДЕРЖКА СИСТЕМА",
-            color=0x5865F2,
-            timestamp=datetime.datetime.utcnow()
+
+        # Генерируем красивую кастомную Pillow карточку пользователя
+        img_buf = await interaction.client.loop.run_in_executor(
+            None, generate_ticket_panel_bytes
         )
-        e.description = (
-            f"```ansi\n\u001b[1;34m Aether СИСТЕМА ПОДДЕРЖКИ \u001b[0m\n```\n"
-            f"{_divider()}\n\n"
-            "Возникла ли проблема на сервере?\n"
-            "Хотите что-то спросить?\n\n"
-            "**Нажмите на кнопку ниже**, чтобы создать приватный канал поддержки.\n"
-            "**AI-ассистент** сначала поможет вам!\n"
-            "При необходимости подключится наша команда. \n\n"
-            f"{_divider()}\n\n"
-            "```yaml\n"
-            "AI Поддержка    •     Быстрый ответ    •    Приватный канал\n"
-            "```"
-        )
-        e.set_image(url=GIF_PANEL)
-        e.set_footer(
-            text=f"{interaction.guild.name} • AI Поддержка Система",
-            icon_url=interaction.guild.icon.url if interaction.guild.icon else None
-        )
-        await interaction.channel.send(embed=e, view=TicketView())
-        await interaction.response.send_message("Ticket paneli отправлено.", ephemeral=True)
+        file = discord.File(img_buf, filename="ticket_panel.png")
+        
+        # Отправляем файл вместе с TicketView, содержащим кастомное Select Menu
+        await interaction.channel.send(file=file, view=TicketView())
+        await interaction.response.send_message("Панель тикетов успешно отправлена.", ephemeral=True)
+
 
     @app_commands.command(name="ticket-add", description="Добавить пользователя в тикет")
     @app_commands.checks.has_permissions(manage_channels=True)
@@ -2530,6 +3359,7 @@ class Ticket(commands.Cog):
 
 
 async def setup(bot):
+    bot.add_view(InteractiveFeedbackView(None))
     """Загрузка cog и инициализация сервисов"""
     # Загружаем Ticket cog
     await bot.add_cog(

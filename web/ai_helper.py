@@ -1024,7 +1024,7 @@ def _local_moebius_fallback(messages: List[Dict]) -> Tuple[str, str, Dict]:
         )
 
     # 19. Тикеты / Поддержка
-    if any(k in q_lower for k in ["ticket", "поддержка", "тикет", "жалоба", "sorun", "администратор", "admin", "проблема", "админ", "модератор"]):
+    if any(k in q_lower for k in ["ticket", "поддержка", "тикет", "жалоба", "sorun", "администратор", "admin", "проблема", "админ", "модератор", "sikayet", "şikayet", "kufur", "küfür"]):
         return (
             "🎫 **Система поддержки Aether AI:**\n"
             "• Вы можете легко создать тикет с помощью кнопок в канале поддержки.\n"

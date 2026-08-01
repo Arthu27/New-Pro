@@ -204,7 +204,8 @@ def smart_call(messages: List[Dict], task_type: str, max_tokens: int = 2048, tem
         response, used_model, rate_info = _call(
             messages,
             max_tokens=max_tokens,
-            temperature=temperature
+            temperature=temperature,
+            model=model_name
         )
         
         response_time = time.time() - start_time
@@ -235,7 +236,8 @@ def smart_call(messages: List[Dict], task_type: str, max_tokens: int = 2048, tem
             response, used_model, rate_info = _call(
                 messages,
                 max_tokens=max_tokens,
-                temperature=temperature
+                temperature=temperature,
+                model=fallback_model
             )
             
             response_time = time.time() - start_time

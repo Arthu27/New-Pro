@@ -1259,7 +1259,7 @@ class AIChat(commands.Cog):
             if intent:
                 return  # Intent işlendi, normal AI akışına geçme
 
-        is_ticket_channel = getattr(message.channel, 'name', '').lower().startswith(('ticket-', 'тикет-', 'destek-', 'tk-', 'closed-'))
+        is_ticket_channel = False
         is_ai_channel = (
             message.channel.id in AI_CHANNELS or
             message.channel.id in _dynamic_channels or

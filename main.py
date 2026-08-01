@@ -533,7 +533,7 @@ async def load_cogs():
         "leveling_engagement.py",  # rank/leaderboard conflicts with level_cog/gamification_cog
         "temp_moderation.py",      # unban/mute conflicts with moderation_cog
         "ticket_commands.py",      # duplicate of ticket_cog
-        "ticket.py",               # duplicate of ticket_cog (2310 lines vs 585 lines)
+        "ticket_cog.py",           # use the advanced AI ticket.py instead of ticket_cog.py
         "utility_cog.py",          # help/botinfo/avatar/userinfo conflicts with info_tools
         "music.py",                # duplicate of music_cog (requires yt-dlp)
         "economy_cmds.py",         # duplicate of economy_cog

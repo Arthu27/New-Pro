@@ -4579,25 +4579,49 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         f = f'data/ticket_notify_{guild_id}.json'
         if request.method == 'GET':
             if not os.path.exists(f):
-                return jsonify({'notify_channel_id': None})
+                return jsonify({
+                    'notify_channel_id': None,
+                    'rules_channel_id': None,
+                    'mod_role_id': None,
+                    'admin_role_id': None,
+                    'owner_role_id': None
+                })
             try:
                 with open(f, 'r', encoding='utf-8') as fp:
                     return jsonify(json.load(fp))
             except Exception:
-                return jsonify({'notify_channel_id': None})
+                return jsonify({
+                    'notify_channel_id': None,
+                    'rules_channel_id': None,
+                    'mod_role_id': None,
+                    'admin_role_id': None,
+                    'owner_role_id': None
+                })
         data = request.get_json(silent=True) or {}
         cid = data.get('notify_channel_id')
-        # Sadece sayısal string kabul et
-        if cid is not None and cid != '':
-            cid = str(cid)
-            if not (cid.isdigit() and 17 <= len(cid) <= 22):
-                return jsonify({'error': 'Geçersiz kanal ID'}), 400
-        else:
-            cid = None
+        rcid = data.get('rules_channel_id')
+        mrid = data.get('mod_role_id')
+        arid = data.get('admin_role_id')
+        orid = data.get('owner_role_id')
+        
+        def val_id(x):
+            if x is not None and x != '':
+                x = str(x).strip()
+                if x.isdigit() and 17 <= len(x) <= 22:
+                    return x
+            return None
+
+        config_data = {
+            'notify_channel_id': val_id(cid),
+            'rules_channel_id': val_id(rcid),
+            'mod_role_id': val_id(mrid),
+            'admin_role_id': val_id(arid),
+            'owner_role_id': val_id(orid)
+        }
         os.makedirs('data', exist_ok=True)
         with open(f, 'w', encoding='utf-8') as fp:
-            json.dump({'notify_channel_id': cid}, fp, indent=2, ensure_ascii=False)
-        return jsonify({'success': True, 'notify_channel_id': cid})
+            json.dump(config_data, fp, indent=2, ensure_ascii=False)
+        return jsonify({'success': True, **config_data})
 
     @app.route('/api/guild/<guild_id>/ticket-notify-diagnose', methods=['GET'])
     @login_required

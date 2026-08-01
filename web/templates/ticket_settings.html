@@ -490,14 +490,12 @@
   <div class="tk-card tk-card-wide">
     <div class="tk-head">
       <div class="tk-icon warn"><i class="fas fa-gavel"></i></div>
-      <div class="tk-title">AI Модератор: уведомления о наказаниях</div>
+      <div class="tk-title">AI Модератор и Роли Поддержки: Настройки</div>
       <span class="save-status" id="notify-save-status"></span>
     </div>
     <p class="hint-pill amber" style="margin-bottom: 12px;">
       <i class="fas fa-info-circle"></i>
-      Когда AI выдает наказание (warn, jail, mute, ban), сюда отправляется embed для администраторов.
-      Если оставить пустым, автоматически ищется канал <code>admin-log</code> / <code>mod-log</code> / <code>staff-log</code>,
-      o da yoksa sunucu sahibine DM gider.
+      Настройте каналы логов/правил и роли персонала. Все системы бота (логи, жалобы и призыв поддержки в тикетах) будут автоматически использовать эти ID!
     </p>
     <div class="form-row-2">
       <div class="form-group">
@@ -505,8 +503,28 @@
         <select id="notify-guild"><option value="">Загрузка…</option></select>
       </div>
       <div class="form-group">
-        <label>Bildirim kanal ID</label>
-        <input type="text" id="notify-channel-id" placeholder="17-22 haneli kanal ID (örn: 123456789012345678)">
+        <label>Канал уведомлений (логов)</label>
+        <input type="text" id="notify-channel-id" placeholder="ID канала (например: 123456789012345678)">
+      </div>
+    </div>
+    <div class="form-row-2" style="margin-top: 12px;">
+      <div class="form-group">
+        <label>Канал правил (Rules Channel)</label>
+        <input type="text" id="rules-channel-id" placeholder="ID канала с правилами сервера">
+      </div>
+      <div class="form-group">
+        <label>Роль владельца (Owner Role)</label>
+        <input type="text" id="owner-role-id" placeholder="ID роли владельца">
+      </div>
+    </div>
+    <div class="form-row-2" style="margin-top: 12px; margin-bottom: 12px;">
+      <div class="form-group">
+        <label>Роль администраторов</label>
+        <input type="text" id="admin-role-id" placeholder="ID роли администраторов">
+      </div>
+      <div class="form-group">
+        <label>Роль модераторов</label>
+        <input type="text" id="mod-role-id" placeholder="ID роли модераторов">
       </div>
     </div>
     <div style="display:flex; gap:8px; align-items:center; flex-wrap: wrap;">
@@ -520,7 +538,7 @@
         <i class="fas fa-stethoscope"></i> 🔍 Диагностика
       </button>
       <span class="muted" style="font-size: 12px;">
-        * Автоматически пингуются все роли с правами администратора
+        * Бот автоматически оповещает указанные роли при вызове модераторов
       </span>
     </div>
     <div id="notify-diagnose-result" style="margin-top: 12px; display: none;"></div>
@@ -575,6 +593,10 @@
     // ── Канал уведомлений о наказаниях AI ─────────────────────────────────
     var notifyGuild = $('notify-guild');
     var notifyCid = $('notify-channel-id');
+    var rulesCid = $('rules-channel-id');
+    var modRid = $('mod-role-id');
+    var adminRid = $('admin-role-id');
+    var ownerRid = $('owner-role-id');
     var notifyStatus = $('notify-save-status');
 
     function setNotifyStatus(text, isError) {
@@ -606,8 +628,20 @@
       if (!notifyGuild.value) return;
       fetch('/api/guild/' + notifyGuild.value + '/ticket-notify-channel', { credentials: 'same-origin' })
         .then(function (r) { return r.json(); })
-        .then(function (d) { notifyCid.value = d.notify_channel_id || ''; })
-        .catch(function () { notifyCid.value = ''; });
+        .then(function (d) { 
+          notifyCid.value = d.notify_channel_id || ''; 
+          rulesCid.value = d.rules_channel_id || ''; 
+          modRid.value = d.mod_role_id || ''; 
+          adminRid.value = d.admin_role_id || ''; 
+          ownerRid.value = d.owner_role_id || ''; 
+        })
+        .catch(function () { 
+          notifyCid.value = ''; 
+          rulesCid.value = ''; 
+          modRid.value = ''; 
+          adminRid.value = ''; 
+          ownerRid.value = ''; 
+        });
     }
 
     notifyGuild.addEventListener('change', loadNotifyConfig);
@@ -615,23 +649,47 @@
     $('btn-notify-save').addEventListener('click', function () {
       if (!notifyGuild.value) { setNotifyStatus('Выберите сервер', true); return; }
       var v = (notifyCid.value || '').trim();
-      if (v && (!/^\d{17,22}$/.test(v))) { setNotifyStatus('Geçersiz kanal ID (17-22 hane)', true); return; }
+      var r = (rulesCid.value || '').trim();
+      var m = (modRid.value || '').trim();
+      var a = (adminRid.value || '').trim();
+      var o = (ownerRid.value || '').trim();
+      
+      function check_val(x) {
+        if (x && !/^\d{17,22}$/.test(x)) return false;
+        return true;
+      }
+      if (!check_val(v)) { setNotifyStatus('Неверный ID канала уведомлений', true); return; }
+      if (!check_val(r)) { setNotifyStatus('Неверный ID канала правил', true); return; }
+      if (!check_val(m)) { setNotifyStatus('Неверный ID роли модераторов', true); return; }
+      if (!check_val(a)) { setNotifyStatus('Неверный ID роли администраторов', true); return; }
+      if (!check_val(o)) { setNotifyStatus('Неверный ID роли владельца', true); return; }
+      
       fetch('/api/guild/' + notifyGuild.value + '/ticket-notify-channel', {
         method: 'POST', credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notify_channel_id: v || null })
+        body: JSON.stringify({ 
+          notify_channel_id: v || null,
+          rules_channel_id: r || null,
+          mod_role_id: m || null,
+          admin_role_id: a || null,
+          owner_role_id: o || null
+        })
       })
         .then(function (r) { return r.json(); })
         .then(function (d) {
-          if (d.success) setNotifyStatus('✓ Kaydedildi');
-          else setNotifyStatus('Hata: ' + (d.error || 'bilinmiyor'), true);
+          if (d.success) setNotifyStatus('✓ Сохранено');
+          else setNotifyStatus('Ошибка: ' + (d.error || 'неизвестно'), true);
         })
-        .catch(function (e) { setNotifyStatus('Hata: ' + e.message, true); });
+        .catch(function (e) { setNotifyStatus('Ошибка: ' + e.message, true); });
     });
 
     $('btn-notify-clear').addEventListener('click', function () {
       if (!notifyGuild.value) return;
       notifyCid.value = '';
+      rulesCid.value = '';
+      modRid.value = '';
+      adminRid.value = '';
+      ownerRid.value = '';
       $('btn-notify-save').click();
     });
 
