@@ -1,6 +1,7 @@
 """
-Profile Cog — Anime/Comic pop-art card generation via Pillow
-Broken asymmetric layout, hexagon panels, halftone dots, speed-line comic vibe
+Profile Cog — Professional dashboard/ID-card style generation via Pillow
+Clean black/white/red palette, custom line-art icons, fully anti-aliased
+via supersampled rendering (no jagged pixels on curves/rotations)
 """
 import discord
 from discord.ext import commands
@@ -15,30 +16,28 @@ log = get_logger("profile")
 
 ROOT = os.path.join(os.path.dirname(__file__), '..')
 FONTS = os.path.join(ROOT, 'assets', 'fonts')
-BG_PATH = os.path.join(ROOT, 'assets', 'profile_bg_anime.jpg')
+BG_PATH = os.path.join(ROOT, 'assets', 'profile_bg_pro.jpg')
 FONT_B = os.path.join(FONTS, 'Bold.ttf')
 FONT_R = os.path.join(FONTS, 'Regular.ttf')
 
 # ═══════════════════════════════════════════════════════════════════════
-# Palette — vivid anime / comic pop-art
+# Palette — professional black / white / red
 # ═══════════════════════════════════════════════════════════════════════
-PINK       = (255, 45, 145)
-PINK_DK    = (185, 15, 105)
-CYAN       = (60, 225, 255)
-CYAN_DK    = (15, 150, 200)
-PURPLE     = (160, 70, 235)
-PURPLE_DK  = (95, 30, 175)
-YELLOW     = (255, 222, 40)
-YELLOW_DK  = (240, 160, 20)
-GOLD       = (255, 200, 60)
-SILVER     = (215, 220, 230)
-BRONZE     = (205, 140, 85)
-INK        = (16, 11, 22, 255)      # comic outline "ink" color
+BLACK      = (18, 18, 20, 255)
+INK        = (18, 18, 20, 255)
 WHITE      = (255, 255, 255, 255)
-PANEL_DARK = (14, 9, 22, 210)
-TEXT_MUTE  = (225, 210, 240, 210)
+RED        = (222, 28, 42, 255)
+RED_DK     = (168, 18, 30, 255)
+GRAY       = (128, 128, 132, 255)
+GRAY_LT    = (205, 205, 208, 255)
+GRAY_LINE  = (225, 225, 228, 255)
+GOLD_TXT   = (180, 138, 20, 255)
+SILVER_TXT = (110, 112, 118, 255)
+BRONZE_TXT = (150, 92, 46, 255)
 
-W, H = 1040, 760
+SS = 4  # supersampling factor for crisp anti-aliased vector shapes
+
+W, H = 1000, 580
 
 
 def _f(bold=False, sz=20):
@@ -49,197 +48,120 @@ def _f(bold=False, sz=20):
 
 
 # ═══════════════════════════════════════════════════════════════════════
-# Geometry helpers
+# Supersampled rendering helper — draw at 4x then downscale for
+# perfectly smooth anti-aliased edges (no jagged pixels on any shape)
 # ═══════════════════════════════════════════════════════════════════════
 
-def _hex_points(cx, cy, r, rot=-90):
-    pts = []
-    for i in range(6):
-        ang = math.radians(rot + i * 60)
-        pts.append((cx + r * math.cos(ang), cy + r * math.sin(ang)))
-    return pts
-
-
-def _star_points(cx, cy, r_out, r_in, n, rot=-90):
-    pts = []
-    for i in range(n * 2):
-        r = r_out if i % 2 == 0 else r_in
-        ang = math.radians(rot + i * (360 / (n * 2)))
-        pts.append((cx + r * math.cos(ang), cy + r * math.sin(ang)))
-    return pts
-
-
-def _grad_diag(size, color_a, color_b):
-    """Diagonal gradient square image (top-left color_a -> bottom-right color_b)."""
-    grad = Image.new('RGB', (size, size), color_a)
-    gd = ImageDraw.Draw(grad)
-    diag = size * 1.6
-    steps = int(diag)
-    for i in range(steps):
-        t = i / steps
-        r = int(color_a[0] + (color_b[0] - color_a[0]) * t)
-        g = int(color_a[1] + (color_b[1] - color_a[1]) * t)
-        b = int(color_a[2] + (color_b[2] - color_a[2]) * t)
-        gd.line([(i, 0), (0, i)], fill=(r, g, b), width=2)
-    return grad
-
-
-def _halftone_layer(size, spacing, dot_r, color):
-    layer = Image.new('RGBA', (size, size), (0, 0, 0, 0))
-    d = ImageDraw.Draw(layer)
-    row = 0
-    y = -spacing
-    while y < size + spacing:
-        offset = (spacing / 2) if row % 2 else 0
-        x = -spacing + offset
-        while x < size + spacing:
-            d.ellipse((x - dot_r, y - dot_r, x + dot_r, y + dot_r), fill=color)
-            x += spacing
-        y += spacing
-        row += 1
-    return layer
+def _ss_render(w, h, draw_fn, scale=SS):
+    """Render a transparent RGBA tile at `scale`x resolution using draw_fn(d, scale),
+    then Lanczos-downscale to (w, h) for crisp anti-aliased output."""
+    big = Image.new('RGBA', (w * scale, h * scale), (0, 0, 0, 0))
+    d = ImageDraw.Draw(big)
+    draw_fn(d, scale)
+    return big.resize((w, h), Image.Resampling.LANCZOS)
 
 
 # ═══════════════════════════════════════════════════════════════════════
-# Vector glyph icons (drawn crisp at any size, white fill)
+# Custom line-art icons — drawn in red, crisp thin strokes
 # ═══════════════════════════════════════════════════════════════════════
 
-def _glyph_chat(d, cx, cy, s):
-    w, h = s * 0.9, s * 0.68
-    x0, y0 = cx - w / 2, cy - h / 2 - s * 0.06
-    x1, y1 = cx + w / 2, cy + h / 2 - s * 0.06
-    d.rounded_rectangle((x0, y0, x1, y1), radius=h * 0.34, fill=WHITE)
-    tail = [(cx - w * 0.16, y1 - 1), (cx - w * 0.02, y1 + h * 0.28), (cx + w * 0.12, y1 - 1)]
-    d.polygon(tail, fill=WHITE)
-    r = s * 0.05
+def _icon_chat(d, cx, cy, s, w):
+    bw, bh = s * 0.62, s * 0.46
+    x0, y0 = cx - bw / 2, cy - bh / 2 - s * 0.05
+    x1, y1 = cx + bw / 2, cy + bh / 2 - s * 0.05
+    d.rounded_rectangle((x0, y0, x1, y1), radius=bh * 0.32, outline=RED, width=w)
+    tail = [(cx - bw * 0.18, y1 - w * 0.3), (cx - bw * 0.04, y1 + bh * 0.30), (cx + bw * 0.12, y1 - w * 0.3)]
+    d.line(tail, fill=RED, width=w, joint='curve')
     for i in (-1, 0, 1):
-        dx = i * s * 0.17
-        d.ellipse((cx + dx - r, cy - s * 0.06 - r, cx + dx + r, cy - s * 0.06 + r), fill=PINK_DK)
+        r = s * 0.028
+        dx = i * s * 0.13
+        d.ellipse((cx + dx - r, cy - s * 0.05 - r, cx + dx + r, cy - s * 0.05 + r), fill=RED)
 
 
-def _glyph_voice(d, cx, cy, s):
-    bx = cx - s * 0.28
-    body = [(bx - s * 0.05, cy - s * 0.14), (bx + s * 0.12, cy - s * 0.14),
-            (bx + s * 0.30, cy - s * 0.30), (bx + s * 0.30, cy + s * 0.30),
-            (bx + s * 0.12, cy + s * 0.14), (bx - s * 0.05, cy + s * 0.14)]
-    d.polygon(body, fill=WHITE)
-    for r in (s * 0.14, s * 0.24, s * 0.34):
-        bbox = (cx + s * 0.02 - r, cy - r, cx + s * 0.02 + r, cy + r)
-        d.arc(bbox, -45, 45, fill=WHITE, width=max(2, int(s * 0.05)))
+def _icon_voice(d, cx, cy, s, w):
+    bx = cx - s * 0.20
+    hw, hh = s * 0.14, s * 0.20
+    d.rounded_rectangle((bx - hw, cy - hh, bx + hw * 0.3, cy + hh), radius=hw * 0.5, outline=RED, width=w)
+    tri = [(bx + hw * 0.15, cy - hh * 0.9), (bx + s * 0.20, cy - s * 0.28), (bx + s * 0.20, cy + s * 0.28), (bx + hw * 0.15, cy + hh * 0.9)]
+    d.line(tri, fill=RED, width=w, joint='curve')
+    for r in (s * 0.11, s * 0.20, s * 0.29):
+        bbox = (cx + s * 0.05 - r, cy - r, cx + s * 0.05 + r, cy + r)
+        d.arc(bbox, -42, 42, fill=RED, width=w)
 
 
-def _glyph_wallet(d, cx, cy, s):
-    w, h = s * 0.80, s * 0.60
-    x0, y0 = cx - w / 2, cy - h / 2
-    x1, y1 = cx + w / 2, cy + h / 2
-    d.rounded_rectangle((x0, y0, x1, y1), radius=h * 0.24, outline=WHITE, width=max(2, int(s * 0.06)))
-    r = s * 0.20
-    coin_cx = x1 - r * 1.1
-    d.ellipse((coin_cx - r, cy - r, coin_cx + r, cy + r), fill=WHITE)
-    f = _f(bold=True, sz=max(10, int(r * 1.35)))
-    txt = "$"
-    bb = d.textbbox((0, 0), txt, font=f)
-    tw, th = bb[2] - bb[0], bb[3] - bb[1]
-    d.text((coin_cx - tw / 2 - bb[0], cy - th / 2 - bb[1]), txt, fill=PINK_DK, font=f)
+def _icon_wallet(d, cx, cy, s, w):
+    bw, bh = s * 0.64, s * 0.46
+    x0, y0 = cx - bw / 2, cy - bh / 2
+    x1, y1 = cx + bw / 2, cy + bh / 2
+    d.rounded_rectangle((x0, y0, x1, y1), radius=bh * 0.22, outline=RED, width=w)
+    d.line([(x0, y0 + bh * 0.32), (x1, y0 + bh * 0.32)], fill=RED, width=max(1, int(w * 0.7)))
+    r = s * 0.085
+    ccx = x1 - r * 1.5
+    ccy = y0 + bh * 0.66
+    d.ellipse((ccx - r, ccy - r, ccx + r, ccy + r), outline=RED, width=max(1, int(w * 0.8)))
 
 
-GLYPHS = {'chat': _glyph_chat, 'voice': _glyph_voice, 'balance': _glyph_wallet}
+ICON_FUNCS = {'chat': _icon_chat, 'voice': _icon_voice, 'balance': _icon_wallet}
 
 
-def _draw_crown(d, cx, cy, s, fill=YELLOW, outline=INK):
-    base_y = cy + s * 0.22
-    pts = [
-        (cx - s * 0.46, base_y), (cx - s * 0.46, cy - s * 0.02),
-        (cx - s * 0.26, cy + s * 0.14), (cx - s * 0.13, cy - s * 0.30),
-        (cx, cy + s * 0.02), (cx + s * 0.13, cy - s * 0.30),
-        (cx + s * 0.26, cy + s * 0.14), (cx + s * 0.46, cy - s * 0.02),
-        (cx + s * 0.46, base_y),
-    ]
-    d.polygon(pts, fill=fill, outline=outline, width=max(2, int(s * 0.05)))
-    d.rectangle((cx - s * 0.46, base_y, cx + s * 0.46, base_y + s * 0.10), fill=fill, outline=outline, width=max(2, int(s * 0.05)))
-    for jx in (-0.13, 0, 0.13):
-        jr = s * 0.045
-        d.ellipse((cx + jx * s - jr, cy - s * 0.06 - jr, cx + jx * s + jr, cy - s * 0.06 + jr), fill=PINK_DK)
+def _icon_badge(diameter, glyph_key, ring_color=BLACK, ring_w=None):
+    """Square badge, white fill, thin black border, red line-art icon centered."""
+    ring_w = ring_w if ring_w is not None else max(2, diameter // 22)
+
+    def draw(d, scale):
+        size = diameter * scale
+        rw = ring_w * scale
+        r = size * 0.22
+        d.rounded_rectangle((rw / 2, rw / 2, size - rw / 2 - 1, size - rw / 2 - 1),
+                             radius=r, fill=WHITE, outline=ring_color, width=rw)
+        ICON_FUNCS[glyph_key](d, size / 2, size / 2, size * 0.60, max(2, int(size * 0.032)))
+
+    return _ss_render(diameter, diameter, draw)
 
 
-# ═══════════════════════════════════════════════════════════════════════
-# Hexagon badge / avatar builders
-# ═══════════════════════════════════════════════════════════════════════
-
-def _hex_badge(diameter, color_a, color_b, glyph_key=None, outline_w=7, halftone=True):
-    """Comic-style hexagon icon badge with diagonal gradient, halftone dots and thick ink outline."""
-    size = diameter
-    cx = cy = size / 2
-    r = size / 2 - outline_w - 2
-    pts = _hex_points(cx, cy, r)
-
-    canvas = Image.new('RGBA', (size, size), (0, 0, 0, 0))
-    grad = _grad_diag(size, color_a, color_b).convert('RGBA')
-    mask = Image.new('L', (size, size), 0)
-    ImageDraw.Draw(mask).polygon(pts, fill=255)
-    canvas.paste(grad, (0, 0), mask)
-
-    if halftone:
-        dots = _halftone_layer(size, max(8, size // 9), max(1.4, size * 0.012), (255, 255, 255, 55))
-        dots_masked = Image.new('RGBA', (size, size), (0, 0, 0, 0))
-        dots_masked.paste(dots, (0, 0), mask)
-        canvas.alpha_composite(dots_masked)
-
-    d = ImageDraw.Draw(canvas)
-    d.polygon(pts, outline=INK, width=outline_w)
-    pts_inner = _hex_points(cx, cy, r - outline_w * 0.85)
-    d.polygon(pts_inner, outline=(255, 255, 255, 90), width=2)
-
-    if glyph_key:
-        GLYPHS[glyph_key](d, cx, cy, r * 1.05)
-    return canvas
+def _corner_bracket(size, thickness, length_ratio=0.30, color=RED):
+    """A single L-shaped corner bracket (top-left orientation), used rotated/flipped for other corners."""
+    def draw(d, scale):
+        t = thickness * scale
+        L = size * scale * length_ratio
+        d.line([(0, t / 2), (L, t / 2)], fill=color, width=t)
+        d.line([(t / 2, 0), (t / 2, L)], fill=color, width=t)
+    return _ss_render(size, size, draw)
 
 
-def _hex_avatar(square_avatar, diameter, outline_w=11, ring_color=WHITE):
-    size = diameter
-    cx = cy = size / 2
-    r = size / 2 - outline_w - 3
-    pts = _hex_points(cx, cy, r)
+def _rounded_panel(w, h, radius, fill=WHITE, outline=BLACK, ow=3):
+    def draw(d, scale):
+        r = radius * scale
+        o = ow * scale
+        d.rounded_rectangle((o / 2, o / 2, w * scale - o / 2 - 1, h * scale - o / 2 - 1),
+                             radius=r, fill=fill, outline=outline, width=o)
+    return _ss_render(w, h, draw)
 
+
+def _avatar_frame(square_avatar, size, radius, border=BLACK, bw=6):
+    """Rounded-square avatar with a crisp anti-aliased border/mask."""
     av = square_avatar
     if av.size != (size, size):
         av = av.resize((size, size), Image.Resampling.LANCZOS)
 
-    mask = Image.new('L', (size, size), 0)
-    ImageDraw.Draw(mask).polygon(pts, fill=255)
+    def mask_draw(d, scale):
+        r = radius * scale
+        d.rounded_rectangle((0, 0, size * scale - 1, size * scale - 1), radius=r, fill=(255, 255, 255, 255))
+    mask_big = Image.new('RGBA', (size * SS, size * SS), (0, 0, 0, 0))
+    ImageDraw.Draw(mask_big).rounded_rectangle((0, 0, size * SS - 1, size * SS - 1), radius=radius * SS, fill=(255, 255, 255, 255))
+    mask = mask_big.resize((size, size), Image.Resampling.LANCZOS).split()[-1]
 
     canvas = Image.new('RGBA', (size, size), (0, 0, 0, 0))
     canvas.paste(av, (0, 0), mask)
-    d = ImageDraw.Draw(canvas)
-    d.polygon(pts, outline=INK, width=outline_w)
-    pts_inner = _hex_points(cx, cy, r - outline_w * 0.6)
-    d.polygon(pts_inner, outline=ring_color, width=4)
+
+    def border_draw(d, scale):
+        r = radius * scale
+        o = bw * scale
+        d.rounded_rectangle((o / 2, o / 2, size * scale - o / 2 - 1, size * scale - o / 2 - 1),
+                             radius=r, outline=border, width=o)
+    border_layer = _ss_render(size, size, border_draw)
+    canvas.alpha_composite(border_layer)
     return canvas
-
-
-def _sticker(w, h, fill=WHITE, outline=INK, outline_w=6, radius=None):
-    radius = radius if radius is not None else h * 0.30
-    img = Image.new('RGBA', (w, h), (0, 0, 0, 0))
-    ow = outline_w
-    ImageDraw.Draw(img).rounded_rectangle((ow / 2, ow / 2, w - ow / 2 - 1, h - ow / 2 - 1),
-                                          radius=radius, fill=fill, outline=outline, width=outline_w)
-    return img
-
-
-def _paste_rot(base, layer, cx, cy, angle):
-    rot = layer.rotate(angle, expand=True, resample=Image.Resampling.BICUBIC)
-    x = int(cx - rot.width / 2)
-    y = int(cy - rot.height / 2)
-    base.alpha_composite(rot, (x, y))
-
-
-def _text_outline(draw, xy, text, font, fill, outline=INK, ow=3):
-    x, y = xy
-    for dx in range(-ow, ow + 1):
-        for dy in range(-ow, ow + 1):
-            if dx * dx + dy * dy <= ow * ow and (dx, dy) != (0, 0):
-                draw.text((x + dx, y + dy), text, font=font, fill=outline)
-    draw.text((x, y), text, font=font, fill=fill)
 
 
 def _text_cx(draw, text, font, x1, x2):
@@ -247,23 +169,16 @@ def _text_cx(draw, text, font, x1, x2):
     return x1 + (x2 - x1 - (bb[2] - bb[0])) // 2
 
 
-def _xp_bar(w, h, progress, color_a=YELLOW, color_b=PINK):
-    bar = Image.new('RGBA', (w, h), (0, 0, 0, 0))
-    ImageDraw.Draw(bar).rounded_rectangle((0, 0, w - 1, h - 1), radius=h // 2, fill=(30, 20, 40, 255),
-                                          outline=INK, width=4)
-    fw = max(1, int((w - 8) * min(progress, 1.0)))
-    fill = Image.new('RGBA', (max(fw, 1), h - 8), (0, 0, 0, 0))
-    fd = ImageDraw.Draw(fill)
-    for x in range(fw):
-        t = x / max(w - 9, 1)
-        r = int(color_a[0] + (color_b[0] - color_a[0]) * t)
-        g = int(color_a[1] + (color_b[1] - color_a[1]) * t)
-        b = int(color_a[2] + (color_b[2] - color_a[2]) * t)
-        fd.line([(x, 0), (x, h - 9)], fill=(r, g, b, 255))
-    fill_mask = Image.new('L', (max(fw, 1), h - 8), 0)
-    ImageDraw.Draw(fill_mask).rounded_rectangle((0, 0, fw - 1, h - 9), radius=(h - 8) // 2, fill=255)
-    bar.paste(fill, (4, 4), fill_mask)
-    return bar
+def _xp_bar(w, h, progress):
+    def draw(d, scale):
+        o = 3 * scale
+        r = 5 * scale
+        d.rounded_rectangle((o / 2, o / 2, w * scale - o / 2 - 1, h * scale - o / 2 - 1),
+                             radius=r, fill=WHITE, outline=BLACK, width=o)
+        fw = max(0, int((w * scale - o * 2) * min(progress, 1.0)))
+        if fw > 0:
+            d.rounded_rectangle((o, o, o + fw, h * scale - o - 1), radius=max(1, r - o), fill=RED)
+    return _ss_render(w, h, draw)
 
 
 def _bg(w, h):
@@ -282,7 +197,7 @@ def _bg(w, h):
             bg = bg.crop((0, y0, bw, y0 + new_h))
         return bg.resize((w, h), Image.Resampling.LANCZOS)
     except Exception:
-        return Image.new('RGBA', (w, h), (30, 10, 40, 255))
+        return Image.new('RGBA', (w, h), (255, 255, 255, 255))
 
 
 def _fmt(n):
@@ -295,22 +210,16 @@ def _fmt_t(s):
 
 
 async def _avatar(url, sz=180, shape='square'):
-    """Fetch and resize the user's avatar. shape='square' keeps a plain square
-    (for hex-cropping); shape='circle' returns a circular-masked avatar."""
     try:
         async with aiohttp.ClientSession() as s:
             async with s.get(url, timeout=aiohttp.ClientTimeout(total=10)) as r:
                 data = await r.read()
         av = Image.open(io.BytesIO(data)).convert('RGBA').resize((sz, sz), Image.Resampling.LANCZOS)
     except Exception:
-        av = Image.new('RGBA', (sz, sz), (0, 0, 0, 0))
+        av = Image.new('RGBA', (sz, sz), (235, 235, 238, 255))
         d = ImageDraw.Draw(av)
-        for yy in range(sz):
-            t = yy / sz
-            r = int(PURPLE[0] + (PINK[0] - PURPLE[0]) * t)
-            g = int(PURPLE[1] + (PINK[1] - PURPLE[1]) * t)
-            b = int(PURPLE[2] + (PINK[2] - PURPLE[2]) * t)
-            d.line([(0, yy), (sz, yy)], fill=(r, g, b, 255))
+        d.ellipse((sz * 0.28, sz * 0.16, sz * 0.72, sz * 0.56), fill=(190, 190, 195, 255))
+        d.ellipse((sz * 0.12, sz * 0.55, sz * 0.88, sz * 1.15), fill=(190, 190, 195, 255))
     if shape == 'circle':
         m = Image.new('L', (sz, sz), 0)
         ImageDraw.Draw(m).ellipse((0, 0, sz, sz), fill=255)
@@ -318,8 +227,18 @@ async def _avatar(url, sz=180, shape='square'):
     return av
 
 
+def _rank_color(rank):
+    if rank == 1:
+        return RED
+    if rank == 2:
+        return SILVER_TXT
+    if rank == 3:
+        return BRONZE_TXT
+    return BLACK
+
+
 # ═══════════════════════════════════════════════════════════════════════
-# Card Generator — asymmetric anime/comic pop-art layout
+# Card Generator — clean professional black/white/red dashboard layout
 # ═══════════════════════════════════════════════════════════════════════
 
 def generate_profile_card(avatar, nickname, level, xp, xp_needed,
@@ -327,170 +246,185 @@ def generate_profile_card(avatar, nickname, level, xp, xp_needed,
                           rank_messages, rank_voice, rank_balance):
 
     img = _bg(W, H).convert('RGBA')
+    d = ImageDraw.Draw(img)
     avg_rank = max(1, round((rank_messages + rank_voice + rank_balance) / 3))
 
-    # ─── Speed-burst accent + scattered comic hexagon confetti ─────
-    for i, (hx, hy, hr, hc) in enumerate([
-        (60, 480, 10, (*CYAN, 130)), (110, 520, 6, (*YELLOW, 150)),
-        (960, 60, 8, (*PINK, 140)), (930, 500, 12, (*PURPLE, 120)),
-        (980, 420, 6, (*WHITE[:3], 120)),
-    ]):
-        conf = Image.new('RGBA', img.size, (0, 0, 0, 0))
-        ImageDraw.Draw(conf).polygon(_hex_points(hx, hy, hr), fill=hc, outline=(*INK[:3], 160), width=2)
-        img.alpha_composite(conf)
+    PAD = 30
 
-    # ─── AVATAR — big tilted hexagon bursting off the top-left edge ─
-    av_d = 250
-    av_hex = _hex_avatar(avatar, av_d, outline_w=11, ring_color=WHITE)
-    av_cx, av_cy = 210, 175
-    _paste_rot(img, av_hex, av_cx, av_cy, angle=-9)
+    # ─── Top brand strip ─────────────────────────────────────────────
+    f_brand = _f(bold=True, sz=13)
+    f_brand_sub = _f(bold=False, sz=11)
+    d.text((PAD, 22), "AETHER", font=f_brand, fill=BLACK)
+    bb = d.textbbox((PAD, 22), "AETHER", font=f_brand)
+    d.text((bb[2] + 8, 25), "PROFILE", font=f_brand_sub, fill=GRAY)
+    tag = f"AVG RANK #{avg_rank}"
+    tb = d.textbbox((0, 0), tag, font=f_brand_sub)
+    d.text((W - PAD - (tb[2] - tb[0]), 26), tag, font=f_brand_sub, fill=_rank_color(avg_rank)[:3])
+    d.line([(PAD, 50), (W - PAD, 50)], fill=BLACK, width=2)
 
-    if avg_rank == 1:
-        crown_layer = Image.new('RGBA', (140, 110), (0, 0, 0, 0))
-        _draw_crown(ImageDraw.Draw(crown_layer), 70, 60, 100)
-        _paste_rot(img, crown_layer, av_cx + 8, av_cy - 95, angle=-9)
-
-    # ─── NICKNAME sticker — overlapping bottom-right of the avatar ──
-    f_nick = _f(bold=True, sz=26)
-    tmp = Image.new('RGBA', (10, 10))
-    td = ImageDraw.Draw(tmp)
-    nb = td.textbbox((0, 0), nickname, font=f_nick)
-    nick_w = (nb[2] - nb[0]) + 56
-    nick_h = 62
-    sticker = _sticker(nick_w, nick_h, fill=WHITE, outline=INK, outline_w=6)
-    sd = ImageDraw.Draw(sticker)
-    sd.text(((nick_w - (nb[2] - nb[0])) / 2 - nb[0], (nick_h - (nb[3] - nb[1])) / 2 - nb[1] - 2),
-            nickname, font=f_nick, fill=(*PURPLE_DK, 255))
-    nick_cx, nick_cy = 205, 300
-    _paste_rot(img, sticker, nick_cx, nick_cy, angle=5)
-
-    # ─── LEVEL burst — tilted starburst top-right ───────────────────
-    burst_d = 250
-    burst = Image.new('RGBA', (burst_d, burst_d), (0, 0, 0, 0))
-    bd = ImageDraw.Draw(burst)
-    pts = _star_points(burst_d / 2, burst_d / 2, burst_d / 2 - 10, (burst_d / 2 - 10) * 0.66, 10)
-    bd.polygon(pts, fill=YELLOW, outline=INK, width=7)
-    pts_in = _star_points(burst_d / 2, burst_d / 2, burst_d / 2 - 26, (burst_d / 2 - 26) * 0.66, 10)
-    bd.polygon(pts_in, outline=(*PINK_DK, 130), width=3)
-    burst_cx, burst_cy = 860, 175
-    _paste_rot(img, burst, burst_cx, burst_cy, angle=10)
-
+    # ─── LEFT COLUMN — avatar card ───────────────────────────────────
+    lx = PAD
+    ly = 74
+    av_size = 208
+    av_frame = _avatar_frame(avatar, av_size, radius=18, border=BLACK, bw=5)
+    img.alpha_composite(av_frame, (lx, ly))
     d = ImageDraw.Draw(img)
-    f_lvl_lbl = _f(bold=True, sz=17)
-    f_lvl_num = _f(bold=True, sz=64)
-    lbl_txt = "УР."
-    lb = d.textbbox((0, 0), lbl_txt, font=f_lvl_lbl)
-    num_txt = str(level)
-    nb2 = d.textbbox((0, 0), num_txt, font=f_lvl_num)
-    lbl_x = burst_cx - (lb[2] - lb[0]) / 2
-    _text_outline(d, (lbl_x, burst_cy - 66), lbl_txt, f_lvl_lbl, fill=PURPLE_DK, outline=WHITE, ow=2)
-    num_x = burst_cx - (nb2[2] - nb2[0]) / 2 - nb2[0]
-    num_y = burst_cy - (nb2[3] - nb2[1]) / 2 - nb2[1] - 8
-    _text_outline(d, (num_x, num_y), num_txt, f_lvl_num, fill=WHITE, outline=INK, ow=4)
 
-    # ─── XP power-meter bar, tilted, beneath the burst ──────────────
-    barw, barh = 320, 30
+    # corner brackets (viewfinder style) around avatar — red accent
+    bsz, bt, blen = 40, 4, 0.55
+    bl = _corner_bracket(bsz, bt, blen)
+    img.alpha_composite(bl, (lx - 10, ly - 10))
+    img.alpha_composite(bl.transpose(Image.FLIP_LEFT_RIGHT), (lx + av_size - bsz + 10, ly - 10))
+    img.alpha_composite(bl.transpose(Image.FLIP_TOP_BOTTOM), (lx - 10, ly + av_size - bsz + 10))
+    img.alpha_composite(bl.transpose(Image.ROTATE_180), (lx + av_size - bsz + 10, ly + av_size - bsz + 10))
+    d = ImageDraw.Draw(img)
+
+    # Nickname
+    f_nick = _f(bold=True, sz=22)
+    name_y = ly + av_size + 26
+    nick_up = nickname.upper()
+    nb = d.textbbox((0, 0), nick_up, font=f_nick)
+    while nb[2] - nb[0] > av_size + 20 and f_nick.size > 13:
+        f_nick = _f(bold=True, sz=f_nick.size - 1)
+        nb = d.textbbox((0, 0), nick_up, font=f_nick)
+    nx = lx + (av_size - (nb[2] - nb[0])) / 2 - nb[0]
+    d.text((nx, name_y), nick_up, font=f_nick, fill=BLACK)
+
+    # red underline accent
+    uy = name_y + (nb[3] - nb[1]) + 14
+    d.rectangle((lx + av_size / 2 - 24, uy, lx + av_size / 2 + 24, uy + 3), fill=RED)
+
+    # Server rank block
+    f_rl = _f(bold=True, sz=11)
+    f_rv = _f(bold=True, sz=34)
+    rl_txt = "СРЕДНИЙ РЕЙТИНГ"
+    rly = uy + 22
+    rlb = d.textbbox((0, 0), rl_txt, font=f_rl)
+    while rlb[2] - rlb[0] > av_size and f_rl.size > 8:
+        f_rl = _f(bold=True, sz=f_rl.size - 1)
+        rlb = d.textbbox((0, 0), rl_txt, font=f_rl)
+    d.text((lx + (av_size - (rlb[2] - rlb[0])) / 2, rly), rl_txt, font=f_rl, fill=GRAY)
+
+    rv_txt = f"#{avg_rank}"
+    rvb = d.textbbox((0, 0), rv_txt, font=f_rv)
+    rv_color = _rank_color(avg_rank)
+    d.text((lx + (av_size - (rvb[2] - rvb[0])) / 2 - rvb[0], rly + 20), rv_txt, font=f_rv, fill=rv_color)
+
+    # ─── RIGHT SIDE — LEVEL panel ─────────────────────────────────────
+    RX = lx + av_size + 30
+    RW = W - PAD - RX
+    top_h = 172
+    top_panel = _rounded_panel(RW, top_h, radius=16, fill=WHITE, outline=BLACK, ow=3)
+    img.alpha_composite(top_panel, (RX, ly))
+    d = ImageDraw.Draw(img)
+
+    f_lvl_lbl = _f(bold=True, sz=13)
+    f_lvl_num = _f(bold=True, sz=68)
+    d.text((RX + 26, ly + 20), "УРОВЕНЬ", font=f_lvl_lbl, fill=GRAY)
+    lvl_str = str(level)
+    d.text((RX + 24, ly + 34), lvl_str, font=f_lvl_num, fill=BLACK)
+    lvb = d.textbbox((RX + 24, ly + 34), lvl_str, font=f_lvl_num)
+
+    # thin vertical divider + XP block to the right of the big number
+    div_x = lvb[2] + 26
+    d.line([(div_x, ly + 30), (div_x, ly + top_h - 60)], fill=GRAY_LINE, width=2)
+
+    f_xp_lbl = _f(bold=True, sz=11)
+    f_xp_val = _f(bold=True, sz=20)
+    d.text((div_x + 22, ly + 34), "ОПЫТ", font=f_xp_lbl, fill=GRAY)
+    xp_val_txt = f"{_fmt(xp)}"
+    d.text((div_x + 22, ly + 52), xp_val_txt, font=f_xp_val, fill=BLACK)
+    f_xp_need = _f(bold=False, sz=12)
+    d.text((div_x + 22, ly + 80), f"из {_fmt(xp_needed)}", font=f_xp_need, fill=GRAY)
+
+    # XP progress bar across the bottom of the panel
+    barw = RW - 52
+    barh = 22
     prog = xp / xp_needed if xp_needed > 0 else 0
     bar = _xp_bar(barw, barh, prog)
-    bar_cx, bar_cy = 850, 340
-    _paste_rot(img, bar, bar_cx, bar_cy, angle=-4)
+    bar_x, bar_y = RX + 26, ly + top_h - 46
+    img.alpha_composite(bar, (bar_x, bar_y))
     d = ImageDraw.Draw(img)
+    pct_txt = f"{int(prog * 100)}%"
+    f_pct = _f(bold=True, sz=12)
+    pb = d.textbbox((0, 0), pct_txt, font=f_pct)
+    pct_w = pb[2] - pb[0]
+    fill_px = barw * min(prog, 1.0)
+    if fill_px > pct_w + 20:
+        # enough room inside the filled (red) portion — draw in white, right-aligned inside it
+        px = bar_x + fill_px - pct_w - 10
+        pct_color = WHITE
+    else:
+        # not enough room — draw just to the right of the bar in black
+        px = bar_x + barw + 10
+        pct_color = BLACK
+    d.text((px - pb[0], bar_y + (barh - (pb[3] - pb[1])) / 2 - pb[1]), pct_txt, font=f_pct, fill=pct_color)
 
-    f_xp = _f(bold=True, sz=13)
-    xp_txt = f"{_fmt(xp)} / {_fmt(xp_needed)} XP"
-    xb = d.textbbox((0, 0), xp_txt, font=f_xp)
-    _text_outline(d, (bar_cx - (xb[2] - xb[0]) / 2 - xb[0] + 8, bar_cy + 32), xp_txt, f_xp,
-                  fill=WHITE, outline=INK, ow=2)
+    # ─── BOTTOM — STATISTICS + RANKINGS panels ────────────────────────
+    by = ly + top_h + 22
+    bh_panel = H - PAD - by
+    PW = (RW - 20) // 2
 
-    # ─── Dark comic panel strip (tilted) holding the hex stat badges ─
-    panel_layer = Image.new('RGBA', (1000, 360), (0, 0, 0, 0))
-    pd = ImageDraw.Draw(panel_layer)
-    pd.rounded_rectangle((6, 6, 994, 354), radius=26, fill=PANEL_DARK, outline=INK, width=6)
-    pd.rounded_rectangle((16, 16, 984, 344), radius=20, outline=(*WHITE[:3], 60), width=2)
-    panel_cx, panel_cy = 520, 585
-    _paste_rot(img, panel_layer, panel_cx, panel_cy, angle=-1.5)
-    d = ImageDraw.Draw(img)
-
-    f_t = _f(bold=True, sz=15)
-    f_v = _f(bold=True, sz=21)
+    f_t = _f(bold=True, sz=13)
+    f_v = _f(bold=True, sz=19)
     f_l = _f(bold=False, sz=11)
 
-    # Section headers (comic sticker tabs)
-    tab1 = _sticker(190, 40, fill=CYAN, outline=INK, outline_w=5, radius=12)
-    td1 = ImageDraw.Draw(tab1)
-    tb1 = td1.textbbox((0, 0), "СТАТИСТИКА", font=f_t)
-    td1.text(((190 - (tb1[2] - tb1[0])) / 2 - tb1[0], (40 - (tb1[3] - tb1[1])) / 2 - tb1[1]),
-              "СТАТИСТИКА", font=f_t, fill=INK[:3])
-    _paste_rot(img, tab1, 230, 435, angle=-3)
+    def _stat_panel(x0, title, rows):
+        panel = _rounded_panel(PW, bh_panel, radius=16, fill=WHITE, outline=BLACK, ow=3)
+        img.alpha_composite(panel, (x0, by))
+        dd = ImageDraw.Draw(img)
+        tb = dd.textbbox((0, 0), title, font=f_t)
+        dd.text((x0 + 22, by + 16), title, font=f_t, fill=BLACK)
+        dd.line([(x0 + 22, by + 42), (x0 + PW - 22, by + 42)], fill=GRAY_LINE, width=2)
 
-    tab2 = _sticker(190, 40, fill=PINK, outline=INK, outline_w=5, radius=12)
-    td2 = ImageDraw.Draw(tab2)
-    tb2 = td2.textbbox((0, 0), "РЕЙТИНГ", font=f_t)
-    td2.text(((190 - (tb2[2] - tb2[0])) / 2 - tb2[0], (40 - (tb2[3] - tb2[1])) / 2 - tb2[1]),
-              "РЕЙТИНГ", font=f_t, fill=(255, 255, 255))
-    _paste_rot(img, tab2, 800, 428, angle=2)
-    d = ImageDraw.Draw(img)
+        row_h = (bh_panel - 54) // len(rows)
+        badge_sz = 46
+        for i, (glyph, val, label) in enumerate(rows):
+            ry = by + 50 + i * row_h
+            badge = _icon_badge(badge_sz, glyph)
+            img.alpha_composite(badge, (x0 + 20, ry + (row_h - badge_sz) // 2 - 6))
+            dd = ImageDraw.Draw(img)
+            tx = x0 + 20 + badge_sz + 16
+            dd.text((tx, ry + row_h // 2 - 24), val, font=f_v, fill=BLACK)
+            dd.text((tx, ry + row_h // 2 + 2), label, font=f_l, fill=GRAY)
+            if i < len(rows) - 1:
+                sep_y = ry + row_h - 4
+                dd.line([(x0 + 20, sep_y), (x0 + PW - 20, sep_y)], fill=GRAY_LINE, width=1)
 
-    # Honeycomb-staggered hex badges: STATISTICS (left) + RANKINGS (right)
-    stat_defs = [
-        ('chat', _fmt(messages), "сообщения", CYAN, CYAN_DK),
-        ('voice', _fmt_t(voice_seconds), "войс", PURPLE, PURPLE_DK),
-        ('balance', f"${_fmt(balance)}", "баланс", YELLOW, YELLOW_DK),
-    ]
-    rank_defs = [
+    _stat_panel(RX, "СТАТИСТИКА", [
+        ('chat', _fmt(messages), "сообщения"),
+        ('voice', _fmt_t(voice_seconds), "время в войсе"),
+        ('balance', f"${_fmt(balance)}", "баланс"),
+    ])
+
+    rkx = RX + PW + 20
+
+    def _rank_panel(x0, title, rows):
+        panel = _rounded_panel(PW, bh_panel, radius=16, fill=WHITE, outline=BLACK, ow=3)
+        img.alpha_composite(panel, (x0, by))
+        dd = ImageDraw.Draw(img)
+        dd.text((x0 + 22, by + 16), title, font=f_t, fill=BLACK)
+        dd.line([(x0 + 22, by + 42), (x0 + PW - 22, by + 42)], fill=GRAY_LINE, width=2)
+
+        row_h = (bh_panel - 54) // len(rows)
+        badge_sz = 46
+        for i, (glyph, rank, label) in enumerate(rows):
+            ry = by + 50 + i * row_h
+            badge = _icon_badge(badge_sz, glyph, ring_color=_rank_color(rank))
+            img.alpha_composite(badge, (x0 + 20, ry + (row_h - badge_sz) // 2 - 6))
+            dd = ImageDraw.Draw(img)
+            tx = x0 + 20 + badge_sz + 16
+            dd.text((tx, ry + row_h // 2 - 24), f"#{rank}", font=f_v, fill=_rank_color(rank))
+            dd.text((tx, ry + row_h // 2 + 2), label, font=f_l, fill=GRAY)
+            if i < len(rows) - 1:
+                sep_y = ry + row_h - 4
+                dd.line([(x0 + 20, sep_y), (x0 + PW - 20, sep_y)], fill=GRAY_LINE, width=1)
+
+    _rank_panel(rkx, "РЕЙТИНГ", [
         ('chat', rank_messages, "сообщения"),
-        ('voice', rank_voice, "войс"),
+        ('voice', rank_voice, "время в войсе"),
         ('balance', rank_balance, "баланс"),
-    ]
-
-    hex_d = 92
-    stat_x0 = 90
-    stat_y_positions = [520, 600, 520]
-    stat_angles = [-8, 6, -5]
-    for i, (glyph, val, label, ca, cb) in enumerate(stat_defs):
-        cx = stat_x0 + i * 118
-        cy = stat_y_positions[i]
-        badge = _hex_badge(hex_d, ca, cb, glyph_key=glyph)
-        _paste_rot(img, badge, cx, cy, angle=stat_angles[i])
-        d = ImageDraw.Draw(img)
-        f_val_bb = d.textbbox((0, 0), val, font=f_v)
-        text_cx = cx
-        _text_outline(d, (text_cx - (f_val_bb[2] - f_val_bb[0]) / 2 - f_val_bb[0], cy + hex_d / 2 - 4),
-                      val, f_v, fill=WHITE, outline=INK, ow=3)
-        lbl_bb = d.textbbox((0, 0), label, font=f_l)
-        d.text((text_cx - (lbl_bb[2] - lbl_bb[0]) / 2 - lbl_bb[0], cy + hex_d / 2 + 22),
-               label, font=f_l, fill=TEXT_MUTE)
-
-    rank_x0 = 665
-    rank_y_positions = [520, 600, 520]
-    rank_angles = [7, -6, 5]
-    for i, (glyph, rank, label) in enumerate(rank_defs):
-        cx = rank_x0 + i * 118
-        cy = rank_y_positions[i]
-        if rank == 1:
-            ca, cb = GOLD, YELLOW_DK
-        elif rank == 2:
-            ca, cb = SILVER, (150, 155, 165)
-        elif rank == 3:
-            ca, cb = BRONZE, (140, 90, 55)
-        else:
-            ca, cb = PURPLE, PURPLE_DK
-        badge = _hex_badge(hex_d, ca, cb, glyph_key=glyph)
-        _paste_rot(img, badge, cx, cy, angle=rank_angles[i])
-        d = ImageDraw.Draw(img)
-        rv_txt = f"#{rank}"
-        rv_bb = d.textbbox((0, 0), rv_txt, font=f_v)
-        _text_outline(d, (cx - (rv_bb[2] - rv_bb[0]) / 2 - rv_bb[0], cy + hex_d / 2 - 4),
-                      rv_txt, f_v, fill=WHITE, outline=INK, ow=3)
-        lbl_bb = d.textbbox((0, 0), label, font=f_l)
-        d.text((cx - (lbl_bb[2] - lbl_bb[0]) / 2 - lbl_bb[0], cy + hex_d / 2 + 22),
-               label, font=f_l, fill=TEXT_MUTE)
-
-    # Watermark sticker bottom-right
-    f_wm = _f(bold=True, sz=11)
-    wm = "AETHER"
-    wb = d.textbbox((0, 0), wm, font=f_wm)
-    _text_outline(d, (W - 26 - (wb[2] - wb[0]), H - 30), wm, f_wm, fill=WHITE, outline=INK, ow=2)
+    ])
 
     return img.convert('RGB')
 
