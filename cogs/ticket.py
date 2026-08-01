@@ -749,16 +749,36 @@ class Ticket(commands.Cog):
 
         import re as _re
         accused = None
+        ids = _re.findall(r'\b\d{17,19}\b', content)
+
         if message.mentions:
             accused = message.mentions[0]
-        else:
-            ids = _re.findall(r'\b\d{17,19}\b', content)
+        elif ids:
             for id_str in ids:
                 m = message.guild.get_member(int(id_str))
+                if not m:
+                    try:
+                        m = await message.guild.fetch_member(int(id_str))
+                    except Exception:
+                        pass
                 if m and m.id != message.author.id:
                     accused = m
                     break
         
+        # Если есть слова жалобы, но не указан ID/упоминание
+        if has_kw and not (accused or ids):
+            await message.channel.send(
+                "⚖️ Я готов проверить историю сообщений сервера и наказать нарушителя. Пожалуйста, укажите **Discord ID** (17–19 цифр) или **@упоминание** участника, на которого жалуетесь, а также канал инцидента (#канал)."
+            )
+            return True
+
+        # Если был указан ID, но участник не найден на сервере
+        if ids and not accused:
+            await message.channel.send(
+                f"⚠️ Участник с ID `{ids[0]}` не найден на этом сервере. Пожалуйста, проверьте правильность ID или упомяните пользователя через `@упоминание`."
+            )
+            return True
+
         if not accused or accused.id == message.author.id or accused.bot:
             return False
 
