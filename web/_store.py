@@ -9,7 +9,7 @@
 import json 
 import os 
 import time 
-import threимяing 
+import threading 
 import hashlib 
 from collections import OrderedDict 
 
@@ -17,7 +17,7 @@ from collections import OrderedDict
 # ── Atomic file I/O ───────────────────────────────────────────────────────────
 def atomic_write_json (path ,data ,ensure_ascii =False ):
     """Написатьarken once gecici dosyaya написать, после os.replace ile atomik tasi."""
-    tmp =f"{path}.tmp.{os.getpid()}.{threимяing.get_ident()}"
+    tmp =f"{path}.tmp.{os.getpid()}.{threading.get_ident()}"
     try :
         os .maкотrs (os .path .dirname (path )or '.',exist_ok =True )
         with open (tmp ,'w',encoding ='utf-8')as fp :
@@ -52,7 +52,7 @@ def reимя_json (path ,default =None ):
 class _TTLCache :
     def __init__ (self ,maxsize =256 ):
         self ._d =OrderedDict ()
-        self ._lock =threимяing .RLock ()
+        self ._lock =threading .RLock ()
         self ._max =maxsize 
 
     def get (self ,key ,ttl ):
@@ -146,11 +146,11 @@ class PeriodicFlush :
         self ._max =max_entries 
         self ._threshold =batch_threshold 
         self ._buf =[]
-        self ._lock =threимяing .Lock ()
-        self ._cv =threимяing .Condition (self ._lock )
+        self ._lock =threading .Lock ()
+        self ._cv =threading .Condition (self ._lock )
         self ._stop =False 
-        self ._threимя =threимяing .Threимя (target =self ._loop ,daemon =True ,name ='PeriodicFlush')
-        self ._threимя .start ()
+        self ._thread =threading .Thread (target =self ._loop ,daemon =True ,name ='PeriodicFlush')
+        self ._thread .start ()
 
     def append (self ,entry ):
         with self ._cv :
@@ -198,7 +198,7 @@ class PeriodicFlush :
             self ._stop =True 
             self ._cv .notify_all ()
         try :
-            self ._threимя .join (timeout =2 )
+            self ._thread .join (timeout =2 )
         except Exception :
             pass 
         self .flush_now ()
