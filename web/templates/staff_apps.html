@@ -142,13 +142,15 @@
     var html = '';
     list.forEach(function (a) {
       var statusLabel = a.status === 'pending' ? 'Ожидание' : a.status === 'approved' ? 'Одобрено' : 'Отклонено';
-      var actions = '<div class="app-actions"><button class="btn btn-secondary inspect-btn" style="background:#139492; color:white; border:none; padding:8px 16px; border-radius:6px; font-size:13px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px;" data-user-id="' + esc(a.user_id || a.username) + '"><i class="fas fa-eye"></i> Смотреть</button></div>';
+      var keyId = a.app_id || a.user_id;
+      var actions = '<div class="app-actions"><button class="btn btn-secondary inspect-btn" style="background:#139492; color:white; border:none; padding:8px 16px; border-radius:6px; font-size:13px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px;" data-app-key="' + esc(keyId) + '"><i class="fas fa-eye"></i> Смотреть</button></div>';
       
       var avatar = a.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png';
+      var roleName = a.role || 'Moderator';
       html += '<div class="app-row" style="display:flex; justify-content:space-between; align-items:center; padding:16px; border-bottom:1px solid rgba(255,255,255,0.05);">' +
         '<div style="display:flex; align-items:center; gap:14px;">' +
         '<img class="app-av" src="' + esc(avatar) + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'" style="width:44px; height:44px; border-radius:50%; border:2px solid rgba(19,148,146,0.3);">' +
-        '<div class="app-info"><div class="app-name" style="font-weight:bold; font-size:16px; color:#fff;">' + esc(a.display_name || a.username) + ' <span style="font-size:12px; color:#139492; background:rgba(19,148,146,0.1); padding:2px 8px; border-radius:4px; margin-left:6px;">' + esc(a.role) + '</span></div><div class="app-meta" style="font-size:12px; color:#888; margin-top:4px;">Отправлена: ' + fmtDate(a.submitted_at || a.timestamp) + ' • Статус: <span class="app-status ' + a.status + '" style="font-weight:bold;">' + statusLabel + '</span></div></div>' +
+        '<div class="app-info"><div class="app-name" style="font-weight:bold; font-size:16px; color:#fff;">' + esc(a.display_name || a.username || a.user_name) + ' <span style="font-size:12px; color:#139492; background:rgba(19,148,146,0.1); padding:2px 8px; border-radius:4px; margin-left:6px;">' + esc(roleName) + '</span></div><div class="app-meta" style="font-size:12px; color:#888; margin-top:4px;">Отправлена: ' + fmtDate(a.submitted_at || a.timestamp) + ' • Статус: <span class="app-status ' + a.status + '" style="font-weight:bold;">' + statusLabel + '</span></div></div>' +
         '</div>' +
         actions + '</div>';
     });
@@ -165,9 +167,9 @@
     btnApprove.disabled = true;
     btnReject.disabled = true;
 
-    var uid = selectedApp.user_id || selectedApp.username;
+    var appKey = selectedApp.app_id || selectedApp.user_id;
 
-    fetch('/api/staff-apps/' + uid + '/review', {
+    fetch('/api/staff-apps/' + appKey + '/review', {
       method: 'POST',
       credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json' },
@@ -205,17 +207,26 @@
     $('app-body').addEventListener('click', function (e) {
       var btn = e.target.closest('.inspect-btn');
       if (!btn) return;
-      var uid = btn.getAttribute('data-user-id');
-      selectedApp = apps.find(function (a) { return (a.user_id || a.username) == uid; });
+      var appKey = btn.getAttribute('data-app-key');
+      selectedApp = apps.find(function (a) { return (a.app_id || a.user_id) == appKey; });
       if (!selectedApp) return;
 
+      var answers = selectedApp.answers || {};
+
+      // Поддержка как пошагового бота, так и веб-форм (авто-разбор полей)
+      var age = selectedApp.age || answers.yas || '—';
+      var activity = selectedApp.activity || answers.активен || '—';
+      var experience = selectedApp.experience || answers.tecrube || 'Опыт отсутствует';
+      var reason = selectedApp.reason || answers.почему || answers.ekstra || 'Не указана';
+      var role = selectedApp.role || 'Moderator (по умолчанию)';
+
       // Заполнить модальное окно
-      $('modal-username').textContent = selectedApp.display_name || selectedApp.username;
-      $('modal-role').textContent = selectedApp.role || 'Не указана';
-      $('modal-age').textContent = selectedApp.age || '—';
-      $('modal-activity').textContent = selectedApp.activity || '—';
-      $('modal-experience').textContent = selectedApp.experience || 'Опыт отсутствует';
-      $('modal-reason').textContent = selectedApp.reason || 'Причина не указана';
+      $('modal-username').textContent = selectedApp.display_name || selectedApp.username || selectedApp.user_name;
+      $('modal-role').textContent = role;
+      $('modal-age').textContent = age;
+      $('modal-activity').textContent = activity;
+      $('modal-experience').textContent = experience;
+      $('modal-reason').textContent = reason;
 
       // Скрыть кнопки если заявка уже проверена
       if (selectedApp.status === 'pending') {
