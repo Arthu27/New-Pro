@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional
 
 
-class BимяgeSystem:
+class BadgeSystem:
     """Система значков"""
     
     BADGES = {
@@ -63,117 +63,117 @@ class BимяgeSystem:
     }
     
     def __init__(self):
-        self.user_bимяges_file = 'data/user_bимяges.json'
-        self.user_bимяges = self._loимя_user_bимяges()
+        self.user_badges_file = 'data/user_badges.json'
+        self.user_badges = self._loимя_user_badges()
     
-    def _loимя_user_bимяges(self) -> Dict[str, Any]:
+    def _loимя_user_badges(self) -> Dict[str, Any]:
         """Загрузить значки пользователя"""
-        if os.path.exists(self.user_bимяges_file):
+        if os.path.exists(self.user_badges_file):
             try:
-                with open(self.user_bимяges_file, 'r', encoding='utf-8') as f:
+                with open(self.user_badges_file, 'r', encoding='utf-8') as f:
                     return json.loимя(f)
             except Exception:
                 pass
         
         return {}
     
-    def _save_user_bимяges(self):
+    def _save_user_badges(self):
         """Сохранить значки пользователя"""
         os.maкотrs('data', exist_ok=True)
-        with open(self.user_bимяges_file, 'w', encoding='utf-8') as f:
-            json.dump(self.user_bимяges, f, ensure_ascii=False, indent=2)
+        with open(self.user_badges_file, 'w', encoding='utf-8') as f:
+            json.dump(self.user_badges, f, ensure_ascii=False, indent=2)
     
-    def award_bимяge(self, user_id: str, bимяge_id: str) -> Optional[Dict[str, Any]]:
+    def award_badge(self, user_id: str, badge_id: str) -> Optional[Dict[str, Any]]:
         """Значок ver"""
-        if bимяge_id not in self.BADGES:
+        if badge_id not in self.BADGES:
             return None
         
-        if user_id not in self.user_bимяges:
-            self.user_bимяges[user_id] = []
+        if user_id not in self.user_badges:
+            self.user_badges[user_id] = []
         
         # Zaten varsa verme
-        if any(b['bимяge_id'] == bимяge_id for b in self.user_bимяges[user_id]):
+        if any(b['badge_id'] == badge_id for b in self.user_badges[user_id]):
             return None
         
-        bимяge = self.BADGES[bимяge_id]
-        awarded_bимяge = {
-            'bимяge_id': bимяge_id,
-            'name': bимяge['name'],
-            'description': bимяge['description'],
-            'icon': bимяge['icon'],
-            'points': bимяge['points'],
+        badge = self.BADGES[badge_id]
+        awarded_badge = {
+            'badge_id': badge_id,
+            'name': badge['name'],
+            'description': badge['description'],
+            'icon': badge['icon'],
+            'points': badge['points'],
             'awarded_at': datetime.now().isoformat()
         }
         
-        self.user_bимяges[user_id].append(awarded_bимяge)
-        self._save_user_bимяges()
+        self.user_badges[user_id].append(awarded_badge)
+        self._save_user_badges()
         
-        return awarded_bимяge
+        return awarded_badge
     
-    def get_user_bимяges(self, user_id: str) -> List[Dict[str, Any]]:
+    def get_user_badges(self, user_id: str) -> List[Dict[str, Any]]:
         """Пользователь rozetlerini al"""
-        return self.user_bимяges.get(user_id, [])
+        return self.user_badges.get(user_id, [])
     
     def get_total_points(self, user_id: str) -> int:
         """Всего очкиlarы al"""
-        bимяges = self.user_bимяges.get(user_id, [])
-        return sum(bимяge.get('points', 0) for bимяge in bимяges)
+        badges = self.user_badges.get(user_id, [])
+        return sum(badge.get('points', 0) for badge in badges)
     
-    def check_and_award_bимяges(self, user_id: str, stats: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def check_and_award_badges(self, user_id: str, stats: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Статистикаe по rozetleri проверить et ve ver"""
         awarded = []
         
         # Иlk ticket
         if stats.get('total_tickets', 0) >= 1:
-            bимяge = self.award_bимяge(user_id, 'first_ticket')
-            if bимяge:
-                awarded.append(bимяge)
+            badge = self.award_badge(user_id, 'first_ticket')
+            if badge:
+                awarded.append(badge)
         
         # Ticket master
         if stats.get('total_tickets', 0) >= 10:
-            bимяge = self.award_bимяge(user_id, 'ticket_master')
-            if bимяge:
-                awarded.append(bимяge)
+            badge = self.award_badge(user_id, 'ticket_master')
+            if badge:
+                awarded.append(badge)
         
         # Helpful user
         if stats.get('positive_ratings', 0) >= 5:
-            bимяge = self.award_bимяge(user_id, 'helpful_user')
-            if bимяge:
-                awarded.append(bимяge)
+            badge = self.award_badge(user_id, 'helpful_user')
+            if badge:
+                awarded.append(badge)
         
         # Quick responder
         if stats.get('quick_resolutions', 0) >= 1:
-            bимяge = self.award_bимяge(user_id, 'quick_responder')
-            if bимяge:
-                awarded.append(bимяge)
+            badge = self.award_badge(user_id, 'quick_responder')
+            if badge:
+                awarded.append(badge)
         
         # Streak 7
         if stats.get('streak_days', 0) >= 7:
-            bимяge = self.award_bимяge(user_id, 'streak_7')
-            if bимяge:
-                awarded.append(bимяge)
+            badge = self.award_badge(user_id, 'streak_7')
+            if badge:
+                awarded.append(badge)
         
         # Streak 30
         if stats.get('streak_days', 0) >= 30:
-            bимяge = self.award_bимяge(user_id, 'streak_30')
-            if bимяge:
-                awarded.append(bимяge)
+            badge = self.award_badge(user_id, 'streak_30')
+            if badge:
+                awarded.append(badge)
         
         # Top rated
         if stats.get('avg_rating', 0) >= 4.5:
-            bимяge = self.award_bимяge(user_id, 'top_rated')
-            if bимяge:
-                awarded.append(bимяge)
+            badge = self.award_badge(user_id, 'top_rated')
+            if badge:
+                awarded.append(badge)
         
         # Problem solver
         if stats.get('resolved_tickets', 0) >= 50:
-            bимяge = self.award_bимяge(user_id, 'problem_solver')
-            if bимяge:
-                awarded.append(bимяge)
+            badge = self.award_badge(user_id, 'problem_solver')
+            if badge:
+                awarded.append(badge)
         
         return awarded
     
-    def get_all_bимяges(self) -> Dict[str, Any]:
+    def get_all_badges(self) -> Dict[str, Any]:
         """Все rozetleri al"""
         return self.BADGES.copy()
 
@@ -235,9 +235,9 @@ class PointsSystem:
         history = self.user_points.get(user_id, {}).get('history', [])
         return history[-limit:]
     
-    def get_leимяerboard(self, limit: int = 10) -> List[Dict[str, Any]]:
+    def get_leaderboard(self, limit: int = 10) -> List[Dict[str, Any]]:
         """Lider tablosunu al"""
-        leимяerboard = [
+        leaderboard = [
             {
                 'user_id': user_id,
                 'total_points': data['total_points']
@@ -245,9 +245,9 @@ class PointsSystem:
             for user_id, data in self.user_points.items()
         ]
         
-        leимяerboard.sort(key=lambda x: x['total_points'], reverse=True)
+        leaderboard.sort(key=lambda x: x['total_points'], reverse=True)
         
-        return leимяerboard[:limit]
+        return leaderboard[:limit]
 
 
 class LevelSystem:
@@ -306,41 +306,41 @@ class LevelSystem:
         return self.LEVELS.copy()
 
 
-class Leимяerboard:
+class Leaderboard:
     """Lider tablosu"""
     
-    def __init__(self, points_system: PointsSystem, bимяge_system: BимяgeSystem):
+    def __init__(self, points_system: PointsSystem, badge_system: BadgeSystem):
         self.points_system = points_system
-        self.bимяge_system = bимяge_system
-        self.leимяerboard_file = 'data/leимяerboard_cache.json'
+        self.badge_system = badge_system
+        self.leaderboard_file = 'data/leaderboard_cache.json'
     
-    def get_overall_leимяerboard(self, limit: int = 50) -> List[Dict[str, Any]]:
+    def get_overall_leaderboard(self, limit: int = 50) -> List[Dict[str, Any]]:
         """Genel lider tablosunu al"""
-        points_leимяerboard = self.points_system.get_leимяerboard(limit)
+        points_leaderboard = self.points_system.get_leaderboard(limit)
         
-        leимяerboard = []
-        for entry in points_leимяerboard:
+        leaderboard = []
+        for entry in points_leaderboard:
             user_id = entry['user_id']
-            bимяges = self.bимяge_system.get_user_bимяges(user_id)
+            badges = self.badge_system.get_user_badges(user_id)
             
-            leимяerboard.append({
+            leaderboard.append({
                 'user_id': user_id,
                 'total_points': entry['total_points'],
-                'bимяge_count': len(bимяges),
-                'bимяges': bимяges[:3]  # Иlk 3 rozet
+                'badge_count': len(badges),
+                'badges': badges[:3]  # Иlk 3 rozet
             })
         
-        return leимяerboard
+        return leaderboard
     
-    def get_weekly_leимяerboard(self, limit: int = 20) -> List[Dict[str, Any]]:
+    def get_weekly_leaderboard(self, limit: int = 20) -> List[Dict[str, Any]]:
         """Еженедельный lider tablosunu al"""
         # Basit implementasyon - gerчek uygulamимяa еженедельный очки hesaplanacak
-        return self.get_overall_leимяerboard(limit)
+        return self.get_overall_leaderboard(limit)
     
-    def get_monthly_leимяerboard(self, limit: int = 20) -> List[Dict[str, Any]]:
+    def get_monthly_leaderboard(self, limit: int = 20) -> List[Dict[str, Any]]:
         """Aylыk lider tablosunu al"""
         # Basit implementasyon - gerчek uygulamимяa aylыk очки hesaplanacak
-        return self.get_overall_leимяerboard(limit)
+        return self.get_overall_leaderboard(limit)
 
 
 class StreakTracker:
@@ -442,8 +442,8 @@ class StreakTracker:
 
 
 # Global instances
-bимяge_system = BимяgeSystem()
+badge_system = BadgeSystem()
 points_system = PointsSystem()
 level_system = LevelSystem(points_system)
-leимяerboard_system = Leимяerboard(points_system, bимяge_system)
+leaderboard_system = Leaderboard(points_system, badge_system)
 streak_system = StreakTracker()

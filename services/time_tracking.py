@@ -223,11 +223,11 @@ class TimeTracker:
         return False
 
 
-class PoмодoroTimer:
-    """Poмодoro zamanlayыcы"""
+class PomodoroTimer:
+    """Pomodoro zamanlayыcы"""
     
     def __init__(self):
-        self.sessions_file = 'data/poмодoro_sessions.json'
+        self.sessions_file = 'data/pomodoro_sessions.json'
         self.sessions = self._loимя_sessions()
         self.active_sessions = {}  # user_id -> session
     
@@ -257,19 +257,19 @@ class PoмодoroTimer:
             'break_minutes': break_minutes,
             'start_time': datetime.now().isoformat(),
             'status': 'working',
-            'completed_poмодoros': 0
+            'completed_pomodoros': 0
         }
         
         self.active_sessions[user_id] = session
         return session
     
-    def complete_poмодoro(self, user_id: str) -> Optional[Dict[str, Any]]:
-        """Poмодoro'yu tamamla"""
+    def complete_pomodoro(self, user_id: str) -> Optional[Dict[str, Any]]:
+        """Pomodoro'yu tamamla"""
         if user_id not in self.active_sessions:
             return None
         
         session = self.active_sessions[user_id]
-        session['completed_poмодoros'] += 1
+        session['completed_pomodoros'] += 1
         session['status'] = 'break'
         
         # Kaydet
@@ -303,7 +303,7 @@ class PoмодoroTimer:
         """Пользователь статистикаini al"""
         if user_id not in self.sessions:
             return {
-                'total_poмодoros': 0,
+                'total_pomodoros': 0,
                 'total_hours': 0,
                 'avg_per_day': 0
             }
@@ -315,14 +315,14 @@ class PoмодoroTimer:
             if datetime.fromisoformat(s['timestamp']) >= cutoff_date
         ]
         
-        total_poмодoros = len(recent_sessions)
+        total_pomodoros = len(recent_sessions)
         total_minutes = sum(s.get('work_minutes', 25) for s in recent_sessions)
         total_hours = total_minutes / 60
         
         return {
-            'total_poмодoros': total_poмодoros,
+            'total_pomodoros': total_pomodoros,
             'total_hours': round(total_hours, 2),
-            'avg_per_day': round(total_poмодoros / days, 2)
+            'avg_per_day': round(total_pomodoros / days, 2)
         }
 
 
@@ -519,6 +519,6 @@ class TimeReport:
 
 # Global instances
 time_tracker = TimeTracker()
-poмодoro_timer = PoмодoroTimer()
+pomodoro_timer = PomodoroTimer()
 time_estimator = TimeEstimator(time_tracker)
 time_report = TimeReport(time_tracker)

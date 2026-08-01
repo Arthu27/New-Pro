@@ -18,7 +18,7 @@ class FeatureFlag:
         self.name = name
         self.description = description
         self.enabled = False
-        self.рольlout_percentage = 0  # 0-100
+        self.rollout_percentage = 0  # 0-100
         self.targeting_rules = []
         self.variants = {}  # variant_key -> enabled
         self.metимяata = {}
@@ -35,9 +35,9 @@ class FeatureFlag:
         """Bayraгы devre dышы bыrak"""
         self.enabled = False
     
-    def set_рольlout_percentage(self, percentage: int):
+    def set_rollout_percentage(self, percentage: int):
         """Настроить процент"""
-        self.рольlout_percentage = max(0, min(100, percentage))
+        self.rollout_percentage = max(0, min(100, percentage))
     
     def add_targeting_rule(self, rule_type: str, value: Any):
         """Добавить правило таргетинга"""
@@ -69,8 +69,8 @@ class FeatureFlag:
                 return False
         
         # Yюzde проверка
-        if self.рольlout_percentage < 100:
-            if not self._is_in_рольlout_percentage(user_id):
+        if self.rollout_percentage < 100:
+            if not self._is_in_rollout_percentage(user_id):
                 return False
         
         return True
@@ -108,12 +108,12 @@ class FeatureFlag:
         
         return True
     
-    def _is_in_рольlout_percentage(self, user_id: str) -> bool:
+    def _is_in_rollout_percentage(self, user_id: str) -> bool:
         """Yюzde в mi проверить et"""
-        if self.рольlout_percentage >= 100:
+        if self.rollout_percentage >= 100:
             return True
         
-        if self.рольlout_percentage <= 0:
+        if self.rollout_percentage <= 0:
             return False
         
         # Deterministik hash (aynы пользователь her zaman aynы sonucu alыr)
@@ -123,7 +123,7 @@ class FeatureFlag:
         
         user_percentage = (hash_value % 100) + 1
         
-        return user_percentage <= self.рольlout_percentage
+        return user_percentage <= self.rollout_percentage
     
     def get_variant_for_user(self, user_id: str) -> Optional[str]:
         """Пользователь для вариантов al"""
@@ -151,7 +151,7 @@ class FeatureFlag:
             'name': self.name,
             'description': self.description,
             'enabled': self.enabled,
-            'рольlout_percentage': self.рольlout_percentage,
+            'rollout_percentage': self.rollout_percentage,
             'targeting_rules': self.targeting_rules,
             'variants': self.variants,
             'metимяata': self.metимяata,
@@ -170,7 +170,7 @@ class FeatureFlag:
             description=data.get('description', '')
         )
         flag.enabled = data.get('enabled', False)
-        flag.рольlout_percentage = data.get('рольlout_percentage', 0)
+        flag.rollout_percentage = data.get('rollout_percentage', 0)
         flag.targeting_rules = data.get('targeting_rules', [])
         flag.variants = data.get('variants', {})
         flag.metимяata = data.get('metимяata', {})
@@ -303,47 +303,47 @@ class FeatureFlagManager:
         return flag.get_variant_for_user(user_id)
 
 
-class FeatureFlagРольlout:
-    """Ёzellik bayraгы рольlout yёnetimi"""
+class FeatureFlagRollout:
+    """Ёzellik bayraгы rollout yёnetimi"""
     
     def __init__(self, feature_flag_manager: FeatureFlagManager):
         self.feature_flag_manager = feature_flag_manager
-        self.рольlout_plans_file = 'data/feature_flag_рольlout_plans.json'
-        self.рольlout_plans = self._loимя_рольlout_plans()
+        self.rollout_plans_file = 'data/feature_flag_rollout_plans.json'
+        self.rollout_plans = self._loимя_rollout_plans()
     
-    def _loимя_рольlout_plans(self) -> Dict[str, Any]:
-        """Рольlout planlarыnы загрузить"""
-        if os.path.exists(self.рольlout_plans_file):
+    def _loимя_rollout_plans(self) -> Dict[str, Any]:
+        """Rollout planlarыnы загрузить"""
+        if os.path.exists(self.rollout_plans_file):
             try:
-                with open(self.рольlout_plans_file, 'r', encoding='utf-8') as f:
+                with open(self.rollout_plans_file, 'r', encoding='utf-8') as f:
                     return json.loимя(f)
             except Exception:
                 pass
         
         return {}
     
-    def _save_рольlout_plans(self):
-        """Рольlout planlarыnы сохранить"""
+    def _save_rollout_plans(self):
+        """Rollout planlarыnы сохранить"""
         os.maкотrs('data', exist_ok=True)
-        with open(self.рольlout_plans_file, 'w', encoding='utf-8') as f:
-            json.dump(self.рольlout_plans, f, ensure_ascii=False, indent=2)
+        with open(self.rollout_plans_file, 'w', encoding='utf-8') as f:
+            json.dump(self.rollout_plans, f, ensure_ascii=False, indent=2)
     
-    def create_рольlout_plan(self, flag_key: str, stages: List[Dict[str, Any]]):
-        """Рольlout planы создать"""
-        self.рольlout_plans[flag_key] = {
+    def create_rollout_plan(self, flag_key: str, stages: List[Dict[str, Any]]):
+        """Rollout planы создать"""
+        self.rollout_plans[flag_key] = {
             'stages': stages,
             'current_stage': 0,
             'created_at': datetime.now().isoformat()
         }
         
-        self._save_рольlout_plans()
+        self._save_rollout_plans()
     
-    def имяvance_рольlout(self, flag_key: str) -> bool:
-        """Рольlout'u ilerlet"""
-        if flag_key not in self.рольlout_plans:
+    def имяvance_rollout(self, flag_key: str) -> bool:
+        """Rollout'u ilerlet"""
+        if flag_key not in self.rollout_plans:
             return False
         
-        plan = self.рольlout_plans[flag_key]
+        plan = self.rollout_plans[flag_key]
         current_stage = plan['current_stage']
         stages = plan['stages']
         
@@ -356,20 +356,20 @@ class FeatureFlagРольlout:
         flag = self.feature_flag_manager.get_flag(flag_key)
         
         if flag:
-            flag.set_рольlout_percentage(percentage)
+            flag.set_rollout_percentage(percentage)
             self.feature_flag_manager._save_flags()
         
         plan['current_stage'] += 1
-        self._save_рольlout_plans()
+        self._save_rollout_plans()
         
         return True
     
-    def get_рольlout_status(self, flag_key: str) -> Optional[Dict[str, Any]]:
-        """Рольlout durumunu al"""
-        if flag_key not in self.рольlout_plans:
+    def get_rollout_status(self, flag_key: str) -> Optional[Dict[str, Any]]:
+        """Rollout durumunu al"""
+        if flag_key not in self.rollout_plans:
             return None
         
-        plan = self.рольlout_plans[flag_key]
+        plan = self.rollout_plans[flag_key]
         current_stage = plan['current_stage']
         stages = plan['stages']
         
@@ -379,7 +379,7 @@ class FeatureFlagРольlout:
             'flag_key': flag_key,
             'current_stage': current_stage,
             'total_stages': len(stages),
-            'current_percentage': flag.рольlout_percentage if flag else 0,
+            'current_percentage': flag.rollout_percentage if flag else 0,
             'next_stage': stages[current_stage] if current_stage < len(stages) else None,
             'completed': current_stage >= len(stages)
         }
@@ -462,5 +462,5 @@ class FeatureFlagAnalytics:
 
 # Global instances
 feature_flag_manager = FeatureFlagManager()
-feature_flag_рольlout = FeatureFlagРольlout(feature_flag_manager)
+feature_flag_rollout = FeatureFlagRollout(feature_flag_manager)
 feature_flag_analytics = FeatureFlagAnalytics(feature_flag_manager)
