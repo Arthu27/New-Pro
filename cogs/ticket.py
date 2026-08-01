@@ -1138,45 +1138,82 @@ class Ticket(commands.Cog):
         """Управление потоком жалобы — пошагово"""
         content = message.content.strip()
         step = complaint.get('step')
+        from cogs._ai_card import generate_ai_dialogue_bytes
+        import re as _re
+
+        # 1. Автоматический поиск обвиняемого из упоминания или текста
+        if not complaint.get('accused_id'):
+            if message.mentions:
+                complaint['accused_id'] = str(message.mentions[0].id)
+            else:
+                ids = _re.findall(r'\b\d{17,19}\b', content)
+                for id_str in ids:
+                    if message.guild.get_member(int(id_str)) and id_str != str(message.author.id):
+                        complaint['accused_id'] = id_str
+                        break
+
+        # 2. Автоматический поиск канала инцидента из упоминания или текста
+        target_ch = None
+        if message.channel_mentions:
+            target_ch = message.channel_mentions[0]
+            complaint['channel_id'] = str(target_ch.id)
+        else:
+            c_ids = _re.findall(r'\b\d{17,19}\b', content)
+            for cid in c_ids:
+                ch = message.guild.get_channel(int(cid))
+                if ch and isinstance(ch, discord.TextChannel):
+                    target_ch = ch
+                    complaint['channel_id'] = str(ch.id)
+                    break
+
+        # Если найдены и обвиняемый, и канал — сразу переходим к проверке сообщений и анализу!
+        if complaint.get('accused_id') and complaint.get('channel_id'):
+            acc_m = message.guild.get_member(int(complaint['accused_id']))
+            acc_name = acc_m.display_name if acc_m else "Пользователь"
+            complaint['accused_name'] = acc_name
+            complaint['step'] = 'ask_messages'
+            self._save_ticket_state(guild_id, channel_id, state)
+
+            img_buf = await self.bot.loop.run_in_executor(
+                None,
+                generate_ai_dialogue_bytes,
+                f"Принято! Я запускаю судебное сканирование последних 1000 сообщений в канале для анализа инцидента с {acc_name}.",
+                "",
+                "investigate"
+            )
+            file = discord.File(img_buf, filename="gojo_dialogue.png")
+            await message.channel.send(file=file)
+            complaint['step'] = 'ask_channel'
+            content = str(complaint['channel_id'])
+            # Переходим к автоматическому сканированию сообщений ниже
 
         if step == 'ask_description':
             complaint['description'] = content
-            complaint['step'] = 'ask_type'
+            complaint['step'] = 'ask_accused'
             state['ai_message_count'] += 1
             self._save_ticket_state(guild_id, channel_id, state)
-            await message.channel.send(
-                "Жалоба принята. Какого рода проблема возникла?\n"
-                "**1** — Мат / Оскорбление\n**2** — Угроза\n**3** — Травля / Насмешка\n**4** — Другое"
+            img_buf = await self.bot.loop.run_in_executor(
+                None,
+                generate_ai_dialogue_bytes,
+                "Я принял вашу жалобу к рассмотрению. Чтобы я мог проверить историю сообщений и вынести решение, пожалуйста, укажите нарушителя (@участник или ID) и канал (#канал).",
+                "",
+                "investigate"
             )
+            file = discord.File(img_buf, filename="gojo_dialogue.png")
+            await message.channel.send(file=file)
             return
 
         if step == 'ask_type':
-            type_map = {'1': 'kufur', '2': 'tehdit', '3': 'zorbalik', '4': 'diger'}
-            complaint['type'] = type_map.get(content, 'diger')
             complaint['step'] = 'ask_accused'
-            state['ai_message_count'] += 1
-
-            # При выборе "Другое" — сразу передать модераторам
-            if complaint['type'] == 'diger':
-                state['complaint'] = {}
-                self._save_ticket_state(guild_id, channel_id, state)
-                await message.channel.send(" Передаю администрации. Ваше обращение будет рассмотрено в кратчайшие сроки.")
-                await self._escalate_ticket(message.channel, state, 'diger')
-                return
-
             self._save_ticket_state(guild_id, channel_id, state)
-            await message.channel.send(" Введите Discord ID пользователя, на которого жалуетесь:")
             return
 
         if step == 'ask_accused':
-            accused_id = content.strip()
-            # Проверка ID — принимаем упоминание, числовой ID или имя
-            import re as _re
+            accused_id = complaint.get('accused_id') or content.strip()
             mention_match = _re.search(r'<@!?(\d+)>', accused_id)
             if mention_match:
                 accused_id = mention_match.group(1)
             elif not accused_id.isdigit():
-                # Поиск пользователя по имени
                 found = discord.utils.find(
                     lambda m: m.display_name.lower() == accused_id.lower() or m.name.lower() == accused_id.lower(),
                     message.guild.members
@@ -1184,9 +1221,15 @@ class Ticket(commands.Cog):
                 if found:
                     accused_id = str(found.id)
                 else:
-                    await message.channel.send(
-                        "Пользователь не найден. Пожалуйста, введите Discord ID (17–19 цифр) или @упоминание:"
+                    img_buf = await self.bot.loop.run_in_executor(
+                        None,
+                        generate_ai_dialogue_bytes,
+                        "Участник не найден. Пожалуйста, упомяните нарушителя (@участник) или введите его Discord ID.",
+                        "",
+                        "investigate"
                     )
+                    file = discord.File(img_buf, filename="gojo_dialogue.png")
+                    await message.channel.send(file=file)
                     return
             complaint['accused_id'] = accused_id
             complaint['step'] = 'ask_channel'
