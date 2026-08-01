@@ -319,11 +319,13 @@ class StaffApply(commands.Cog):
 
         # Пути к кастомным баннерам - приоритет у пользовательской фотки
         custom_paths = [
-            os.path.join(ROOT, 'assets', 'staff_hakumo_banner.png'),  # сгенерированный баннер Gojo
+            # Пользовательская фотография имеет высший приоритет.
+            os.path.join(ROOT, 'assets', 'diting_result_8b5912208df711f1ab51e63795c09448_1.jpeg'),
             os.path.join(ROOT, 'assets', 'staff_custom.png'),
             os.path.join(ROOT, 'assets', 'staff_custom.jpg'),
             os.path.join(ROOT, 'assets', 'staff_custom.jpeg'),
             os.path.join(ROOT, 'assets', 'staff_banner_custom.png'),
+            os.path.join(ROOT, 'assets', 'staff_hakumo_banner.png'),
         ]
         
         file = None
@@ -332,6 +334,8 @@ class StaffApply(commands.Cog):
         # Сначала используем оригинальную фотографию по URL.
         # Это намеренно имеет приоритет над старым локальным баннером.
         try:
+            if any(os.path.exists(p) for p in custom_paths):
+                raise aiohttp.ClientError("локальный баннер уже доступен")
             timeout = aiohttp.ClientTimeout(total=15)
             async with aiohttp.ClientSession(timeout=timeout) as session:
                 async with session.get(STAFF_REMOTE_BANNER_URL) as response:
