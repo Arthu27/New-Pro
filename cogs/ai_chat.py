@@ -565,16 +565,16 @@ def _call_ai(question: str, user_id: int, guild=None, recent_messages: list = No
 
 
 def _get_gojo_photo(answer: str, question: str) -> str:
-    """Выбирает соответствующую фотографию Годжо по теме сообщения в тикете"""
+    """Выбирает соответствующий VTuber-аватар Годжо без фона по теме сообщения в тикете"""
     text = (answer + " " + question).lower()
-    if any(k in text for k in ["проверяю", "лог", "баз", "данные", "настройки", "сервер", "система", "контрол", "kontrol", "incele"]):
-        return "assets/ai_gojo/gojo_computer.png"
-    elif any(k in text for k in ["думаю", "возможно", "анализ", "вопрос", "почему", "как", "neden", "nasıl", "düşün"]):
-        return "assets/ai_gojo/gojo_thinking.png"
-    elif any(k in text for k in ["решение", "готово", "исправлено", "сделано", "помочь", "помощ", "решен", "çözüm", "halled", "tamam"]):
-        return "assets/ai_gojo/gojo_solution.png"
+    if any(k in text for k in ["проверяю", "лог", "баз", "данные", "настройки", "сервер", "система", "контрол", "kontrol", "incele", "жалоб", "наруш", "оскорб"]):
+        return "assets/ai_gojo/vtuber_investigating.png"
+    elif any(k in text for k in ["решение", "готово", "исправлено", "сделано", "помочь", "помощ", "решен", "çözüm", "halled", "tamam", "успех"]):
+        return "assets/ai_gojo/vtuber_solution.png"
+    elif any(k in text for k in ["вердикт", "наказан", "апелляц", "забанен", "мьют", "мут", "штраф", "суд", "verdict"]):
+        return "assets/ai_gojo/vtuber_verdict.png"
     else:
-        return "assets/ai_gojo/gojo_welcome.png"
+        return "assets/ai_gojo/vtuber_welcome.png"
 
 
 class AIChat(commands.Cog):
