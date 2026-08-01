@@ -44,7 +44,7 @@
     { cmd: 'clear', icon: 'fa-broom', name: 'Clear', desc: 'Сообщение temizle', tag: 'mod' },
     { cmd: 'lock', icon: 'fa-lock', name: 'Lock', desc: 'Kanal kilitle', tag: 'mod' },
     { cmd: 'unlock', icon: 'fa-unlock', name: 'Unlock', desc: 'Kanal aч', tag: 'mod' },
-    { cmd: 'role', icon: 'fa-user-tag', name: 'Role', desc: 'Rol ver/al', tag: 'mod' },
+    { cmd: 'role', icon: 'fa-user-tag', name: 'Role', desc: 'Выдать/забрать роль', tag: 'mod' },
     { cmd: 'ticket_panel', icon: 'fa-ticket-alt', name: 'Ticket Panel', desc: 'Ticket paneli gёnder', tag: 'admin' }
   ];
 
@@ -68,29 +68,29 @@
     currentCmd = cmd;
     var fields = '';
     if (cmd === 'ban' || cmd === 'kick' || cmd === 'warn' || cmd === 'mute' || cmd === 'unmute' || cmd === 'jail' || cmd === 'unjail' || cmd === 'role') {
-      fields += '<div class="form-group"><label>Sunucu</label><select id="guild-id">' +
+      fields += '<div class="form-group"><label>Сервер</label><select id="guild-id">' +
         '<option value="">Выберите...</option></select></div>';
       fields += '<div class="form-group"><label>Пользователь ID</label><input type="text" id="user-id" placeholder="123456789012345678"></div>';
     }
     if (cmd === 'mute') {
-      fields += '<div class="form-group"><label>Длительность (dakika)</label><input type="number" id="duration" value="60" min="1"></div>';
+      fields += '<div class="form-group"><label>Длительность (минуты)</label><input type="number" id="duration" value="60" min="1"></div>';
     }
     if (cmd === 'role') {
-      fields += '<div class="form-group"><label>Rol ID</label><input type="text" id="role-id" placeholder="Rol ID"></div>';
-      fields += '<div class="form-group"><label>Действие</label><select id="role-action"><option value="add">Ekle</option><option value="remove">Kaldиr</option></select></div>';
+      fields += '<div class="form-group"><label>ID роли</label><input type="text" id="role-id" placeholder="ID роли"></div>';
+      fields += '<div class="form-group"><label>Действие</label><select id="role-action"><option value="add">Выдать</option><option value="remove">Забрать</option></select></div>';
     }
     if (cmd === 'ban' || cmd === 'kick' || cmd === 'warn' || cmd === 'jail' || cmd === 'role' || cmd === 'clear') {
       fields += '<div class="form-group"><label>Причина</label><textarea id="reason" rows="2"></textarea></div>';
     }
     if (cmd === 'clear' || cmd === 'lock' || cmd === 'unlock' || cmd === 'ticket_panel') {
-      fields += '<div class="form-group"><label>Sunucu</label><select id="guild-id">' +
+      fields += '<div class="form-group"><label>Сервер</label><select id="guild-id">' +
         '<option value="">Выберите...</option></select></div>';
     }
     if (cmd === 'clear' || cmd === 'lock' || cmd === 'unlock' || cmd === 'ticket_panel') {
-      fields += '<div class="form-group"><label>Kanal ID</label><input type="text" id="channel-id" placeholder="Kanal ID"></div>';
+      fields += '<div class="form-group"><label>ID канала</label><input type="text" id="channel-id" placeholder="ID канала"></div>';
     }
     if (cmd === 'unban') {
-      fields += '<div class="form-group"><label>Sunucu</label><select id="guild-id">' +
+      fields += '<div class="form-group"><label>Сервер</label><select id="guild-id">' +
         '<option value="">Выберите...</option></select></div>';
       fields += '<div class="form-group"><label>Пользователь ID</label><input type="text" id="user-id"></div>';
       fields += '<div class="form-group"><label>Причина</label><textarea id="reason" rows="2"></textarea></div>';
@@ -158,7 +158,7 @@
       msg.style.display = 'block';
       msg.style.background = 'rgba(239,68,68,0.1)';
       msg.style.color = '#ef4444';
-      msg.textContent = 'Sunucu seчin!';
+      msg.textContent = 'Выберите сервер!';
       return;
     }
     try {

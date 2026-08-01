@@ -25,7 +25,7 @@ class AutoRoleLevel(commands.Cog):
         try:
             with open(f, 'r', encoding='utf-8') as fp:
                 return json.load(fp)
-        except:
+        except Exception:
             return {}
 
     def _save_xp(self, guild_id, data):
@@ -40,7 +40,7 @@ class AutoRoleLevel(commands.Cog):
         try:
             with open(f, 'r', encoding='utf-8') as fp:
                 return json.load(fp)
-        except:
+        except Exception:
             return {}
 
     @staticmethod
@@ -88,10 +88,10 @@ class AutoRoleLevel(commands.Cog):
         if new_level > old_level:
             try:
                 await message.channel.send(
-                    f'🎉 {message.author.mention}, **seviye {new_level}** dostignut!',
+                    f' {message.author.mention}, **seviye {new_level}** dostignut!',
                     delete_after=10
                 )
-            except:
+            except Exception:
                 pass
 
         # Автоматически роли контроль
@@ -106,10 +106,10 @@ class AutoRoleLevel(commands.Cog):
                 if role and role not in member.roles:
                     try:
                         await member.add_roles(role, reason=f'Уровень {required_level} — автороль')
-                    except:
+                    except Exception:
                         pass
 
-    # ── На сервер вход роли контроль ──────────────────────────────────────────
+    # На сервер вход роли контроль 
     @commands.Cog.listener()
     async def on_member_join(self, member):
         if member.bot:
@@ -131,10 +131,10 @@ class AutoRoleLevel(commands.Cog):
                 if role:
                     try:
                         await member.add_roles(role, reason=f'Уровень {required_level} — автороль при входе')
-                    except:
+                    except Exception:
                         pass
 
-    # ── Команды ───────────────────────────────────────────────────────────────
+    # Команды 
     @commands.command(name='level-роли-add')
     @commands.has_permissions(administrator=True)
     async def add_level_role(self, ctx, level: int, role: discord.Role):
@@ -151,7 +151,7 @@ class AutoRoleLevel(commands.Cog):
         with open(f, 'w', encoding='utf-8') as fp:
             json.dump(data, fp, indent=2)
 
-        await ctx.send(f'✅ Роли {role.mention} назначена для уровня **{level}**!')
+        await ctx.send(f' Роли {role.mention} назначена для уровня **{level}**!')
 
     @commands.command(name='level-роли-remove')
     @commands.has_permissions(administrator=True)
@@ -159,7 +159,7 @@ class AutoRoleLevel(commands.Cog):
         """Удалить роли для seviye"""
         f = self._level_roles_file(ctx.guild.id)
         if not os.path.exists(f):
-            await ctx.send('❌ Роли для уровней еще не настроены!')
+            await ctx.send(' Роли для уровней еще не настроены!')
             return
 
         with open(f, 'r', encoding='utf-8') as fp:
@@ -171,23 +171,23 @@ class AutoRoleLevel(commands.Cog):
             json.dump(data, fp, indent=2)
 
         if removed:
-            await ctx.send(f'✅ Роли для seviye **{level}** удалена!')
+            await ctx.send(f' Роли для seviye **{level}** удалена!')
         else:
-            await ctx.send(f'❌ Seviye **{level}** не найден!')
+            await ctx.send(f' Уровень **{level}** не найден!')
 
     @commands.command(name='level-роли')
     async def list_level_roles(self, ctx):
-        """Liste роль для seviyeler"""
+        """Liste роль для уровни"""
         data = self._get_level_roles(ctx.guild.id)
         if not data:
-            await ctx.send('❌ Роли для seviyeler более не nastroeni! Ispolzuyte `!level-роли-add <seviye> @роли`')
+            await ctx.send(' Роли для уровни более не nastroeni! Ispolzuyte `!level-роли-add <seviye> @роли`')
             return
 
-        embed = discord.Embed(title='🏆 Роли для seviyeler', color=0xFFD700)
+        embed = discord.Embed(title=' Роли для уровни', color=0xFFD700)
         for level, role_id in sorted(data.items(), key=lambda x: int(x[0])):
             role = ctx.guild.get_role(int(role_id))
             embed.add_field(
-                name=f'Seviye {level}',
+                name=f'Уровень {level}',
                 value=role.mention if role else f'Удалённая роль ({role_id})',
                 inline=False
             )

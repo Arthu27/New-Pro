@@ -4,6 +4,7 @@ from discord.ext import commands
 import time
 import re as _re
 import base64 as _b64
+import ast as _ast
 from datetime import datetime
 
 START_TIME = time.time()
@@ -18,56 +19,56 @@ class InfoTools(commands.Cog):
         d, rem = divmod(elapsed, 86400)
         h, rem = divmod(rem, 3600)
         m, s = divmod(rem, 60)
-        e = discord.Embed(title="⏱️ UPTIME", color=0xdc143c, timestamp=datetime.utcnow())
-        e.add_field(name="🕐 Работа Длительность", value=f"```{d}g {h}s {m}d {s}sn```")
+        e = discord.Embed(title="⏱ UPTIME", color=0xdc143c, timestamp=datetime.utcnow())
+        e.add_field(name=" Работа Длительность", value=f"```{d}g {h}s {m}d {s}sn```")
         e.set_thumbnail(url=self.bot.user.display_avatar.url)
         await ctx.send(embed=e)
 
     @commands.command(name="botinfo")
     async def botinfo(self, ctx):
         b = self.bot
-        e = discord.Embed(title=f"🤖 {b.user.name}", color=0xdc143c, timestamp=datetime.utcnow())
+        e = discord.Embed(title=f" {b.user.name}", color=0xdc143c, timestamp=datetime.utcnow())
         e.set_thumbnail(url=b.user.display_avatar.url)
-        e.add_field(name="🏠 Сервер", value=f"```{len(b.guilds)}```", inline=True)
-        e.add_field(name="👥 Пользователь", value=f"```{sum(g.member_count for g in b.guilds)}```", inline=True)
-        e.add_field(name="📡 Ping", value=f"```{round(b.latency*1000)}ms```", inline=True)
+        e.add_field(name=" Сервер", value=f"```{len(b.guilds)}```", inline=True)
+        e.add_field(name=" Пользователь", value=f"```{sum(g.member_count for g in b.guilds)}```", inline=True)
+        e.add_field(name=" Ping", value=f"```{round(b.latency*1000)}ms```", inline=True)
         await ctx.send(embed=e)
 
     @commands.command(name="roleinfo")
     async def role_info(self, ctx, *, role: discord.Role):
-        e = discord.Embed(title=f"🎭 РОЛЬ: {role.name}", color=role.color if role.color.value else 0xdc143c)
-        e.add_field(name="🆔 ID", value=f"```{role.id}```", inline=True)
-        e.add_field(name="👥 Участник", value=f"```{len(role.members)}```", inline=True)
-        e.add_field(name="🎨 Renk", value=f"```{role.color}```", inline=True)
-        e.add_field(name="📅 Создал", value=f"<t:{int(role.created_at.timestamp())}:R>", inline=True)
+        e = discord.Embed(title=f" РОЛЬ: {role.name}", color=role.color if role.color.value else 0xdc143c)
+        e.add_field(name=" ID", value=f"```{role.id}```", inline=True)
+        e.add_field(name=" Участник", value=f"```{len(role.members)}```", inline=True)
+        e.add_field(name=" Renk", value=f"```{role.color}```", inline=True)
+        e.add_field(name=" Создал", value=f"<t:{int(role.created_at.timestamp())}:R>", inline=True)
         await ctx.send(embed=e)
 
     @commands.command(name="channelinfo")
     async def channel_info(self, ctx, channel: discord.TextChannel = None):
         ch = channel or ctx.channel
-        e = discord.Embed(title=f"📺 КАНАЛ: #{ch.name}", color=0xdc143c)
-        e.add_field(name="🆔 ID", value=f"```{ch.id}```", inline=True)
-        e.add_field(name="📁 Kategori", value=f"```{ch.category.name if ch.category else 'Нет'}```", inline=True)
-        e.add_field(name="📅 Создал", value=f"<t:{int(ch.created_at.timestamp())}:R>", inline=True)
+        e = discord.Embed(title=f" КАНАЛ: #{ch.name}", color=0xdc143c)
+        e.add_field(name=" ID", value=f"```{ch.id}```", inline=True)
+        e.add_field(name=" Kategori", value=f"```{ch.category.name if ch.category else 'Нет'}```", inline=True)
+        e.add_field(name=" Создал", value=f"<t:{int(ch.created_at.timestamp())}:R>", inline=True)
         if ch.topic:
-            e.add_field(name="📝 Konu", value=f"```{ch.topic[:100]}```", inline=False)
+            e.add_field(name=" Konu", value=f"```{ch.topic[:100]}```", inline=False)
         await ctx.send(embed=e)
 
     @commands.command(name="emojiler")
     async def emoji_listesi(self, ctx):
         emojis = ctx.guild.emojis
         if not emojis:
-            await ctx.send("❌ Особый emoji yok!")
+            await ctx.send(" Особый emoji yok!")
             return
-        e = discord.Embed(title="😀 EMOJİ список", color=0xdc143c)
+        e = discord.Embed(title=" EMOJİ список", color=0xdc143c)
         e.description = f"Всего **{len(emojis)}** emoji\n" + ' '.join(str(em) for em in emojis[:40])
         await ctx.send(embed=e)
 
     @commands.command(name="davet")
     async def davet_link(self, ctx):
         url = discord.utils.oauth_url(self.bot.user.id, permissions=discord.Permissions(8))
-        e = discord.Embed(title="🔗 BOT DAVETİ", color=0xdc143c)
-        e.description = f"[**➜ Botu Сервер Добавлено**]({url})"
+        e = discord.Embed(title=" BOT DAVETİ", color=0xdc143c)
+        e.description = f"[** Botu Сервер Добавлено**]({url})"
         e.set_thumbnail(url=self.bot.user.display_avatar.url)
         await ctx.send(embed=e)
 
@@ -78,9 +79,9 @@ class InfoTools(commands.Cog):
             r, g, b = int(hex_kod[0:2], 16), int(hex_kod[2:4], 16), int(hex_kod[4:6], 16)
             color_int = int(hex_kod, 16)
         except (ValueError, IndexError):
-            await ctx.send("❌ Неверный hex kodu! Пример: `!color ff0000`")
+            await ctx.send(" Неверный hex kodu! Пример: `!color ff0000`")
             return
-        e = discord.Embed(title=f"🎨 #{hex_kod.upper()}", color=color_int)
+        e = discord.Embed(title=f" #{hex_kod.upper()}", color=color_int)
         e.add_field(name="HEX", value=f"```#{hex_kod.upper()}```", inline=True)
         e.add_field(name="RGB", value=f"```rgb({r}, {g}, {b})```", inline=True)
         await ctx.send(embed=e)
@@ -88,25 +89,26 @@ class InfoTools(commands.Cog):
     @commands.command(name="vakit")
     async def vakit(self, ctx):
         ts = int(datetime.utcnow().timestamp())
-        e = discord.Embed(title="🕐 ВРЕМЯ", color=0xdc143c)
+        e = discord.Embed(title=" ВРЕМЯ", color=0xdc143c)
         e.add_field(name="⏰ Краткий", value=f"<t:{ts}:t>", inline=True)
-        e.add_field(name="📅 Uzun", value=f"<t:{ts}:F>", inline=True)
-        e.add_field(name="🔄 Видеть", value=f"<t:{ts}:R>", inline=True)
+        e.add_field(name=" Uzun", value=f"<t:{ts}:F>", inline=True)
+        e.add_field(name=" Видеть", value=f"<t:{ts}:R>", inline=True)
         await ctx.send(embed=e)
 
     @commands.command(name="hesap")
     async def hesap(self, ctx, *, islem: str):
         if not _re.match(r'^[\d\s\+\-\*\/\.\(\)]+$', islem):
-            await ctx.send("❌ Используйте только цифры и операторы!")
+            await ctx.send(" Используйте только цифры и операторы!")
             return
         try:
-            sonuc = eval(islem)
-            e = discord.Embed(title="🧮 HESAP", color=0xdc143c)
+            tree = _ast.parse(islem, mode='eval')
+            sonuc = eval(compile(tree, '<string>', 'eval'), {"__builtins__": {}}, {})
+            e = discord.Embed(title=" HESAP", color=0xdc143c)
             e.add_field(name="Действие", value=f"`{islem}`")
             e.add_field(name="результат", value=f"`{sonuc}`")
             await ctx.send(embed=e)
         except Exception:
-            await ctx.send("❌ Неверный действие!")
+            await ctx.send(" Неверный действие!")
 
     @commands.command(name="base64")
     async def base64_cmd(self, ctx, islem: str, *, metin: str):
@@ -120,7 +122,7 @@ class InfoTools(commands.Cog):
             e.add_field(name="Вышел", value=f"`{sonuc[:200]}`", inline=False)
             await ctx.send(embed=e)
         except Exception:
-            await ctx.send("❌ Ошибка преобразования!")
+            await ctx.send(" Ошибка преобразования!")
 
     @commands.command(name="banner")
     async def banner(self, ctx):
@@ -148,7 +150,7 @@ class InfoTools(commands.Cog):
     async def ilk_message(self, ctx, channel: discord.TextChannel = None):
         ch = channel or ctx.channel
         async for msg in ch.history(limit=1, oldest_first=True):
-            e = discord.Embed(title="📌 Первый СООБЩЕНИЕ", color=0xdc143c,
+            e = discord.Embed(title=" Первый СООБЩЕНИЕ", color=0xdc143c,
                 description=f"[Сообщению git]({msg.jump_url})\n\n{msg.content[:200] if msg.content else '*(embed)*'}")
             await ctx.send(embed=e)
             return

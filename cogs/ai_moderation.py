@@ -18,10 +18,14 @@ import asyncio
 from datetime import datetime, timedelta
 from collections import defaultdict, Counter
 
+from logger import get_logger
+log = get_logger("ai_moderation")
+
+
 DATA_DIR = "data"
 os.makedirs(DATA_DIR, exist_ok=True)
 
-# ─── TOXIC PATTERNS (3 dil) ───────────────────────────────
+# TOXIC PATTERNS (3 dil) 
 TOXIC_PATTERNS = {
     # Severity 1 — mild (warn)
     "mild": {
@@ -106,7 +110,7 @@ class AIModeration(commands.Cog):
         # Whitelist
         self.whitelist_cache = {}  # guild_id -> set(user_ids)
 
-    # ─── DATA PERSISTENCE ─────────────────────────────────────
+    # DATA PERSISTENCE 
     def _config_file(self, guild_id):
         return f"{DATA_DIR}/ai_mod_config_{guild_id}.json"
 
@@ -168,7 +172,7 @@ class AIModeration(commands.Cog):
             "context_window": 3,  # check last 3 messages for context
         }
 
-    # ─── DETECTION ─────────────────────────────────────────────
+    # DETECTION 
     def detect_toxic(self, text, languages, sensitivity):
         """Return list of (severity, matched_pattern) tuples"""
         text_lower = text.lower()
@@ -227,7 +231,7 @@ class AIModeration(commands.Cog):
         msg_hash = hash(message_content.lower().strip())
         return self.false_positive_feedback.get(msg_hash, 0) >= 3
 
-    # ─── ACTIONS ──────────────────────────────────────────────
+    # ACTIONS 
     async def take_action(self, guild, member, severity, reason, config, message=None):
         """Take moderation action based on severity and history"""
         action_config = SEVERITY_ACTION.get(severity, SEVERITY_ACTION["mild"])
@@ -257,7 +261,7 @@ class AIModeration(commands.Cog):
             if action == "warn":
                 # Send warning
                 embed = discord.Embed(
-                    title="⚠️ Предупреждение",
+                    title=" Предупреждение",
                     description=f"{member.mention}, ваше сообщение нарушает правила сервера.\n\n**Причина:** {reason}\n\nПожалуйста, соблюдайте правила.",
                     color=0xFBBF24
                 )
@@ -274,7 +278,7 @@ class AIModeration(commands.Cog):
                 until = datetime.utcnow() + timedelta(minutes=mute_minutes)
                 await member.timeout(until, reason=f"AI Mod: {reason}")
                 embed = discord.Embed(
-                    title="🔇 Временный мут",
+                    title=" Временный мут",
                     description=f"{member.mention} замучен на **{mute_minutes} мин** за: {reason}",
                     color=0xF87171
                 )
@@ -287,7 +291,7 @@ class AIModeration(commands.Cog):
             elif action == "kick":
                 await member.kick(reason=f"AI Mod: {reason}")
                 embed = discord.Embed(
-                    title="👢 Кик",
+                    title=" Кик",
                     description=f"{member.mention} исключён за: {reason}",
                     color=0xEF4444
                 )
@@ -295,7 +299,7 @@ class AIModeration(commands.Cog):
             elif action == "ban":
                 await guild.ban(member, reason=f"AI Mod: {reason}")
                 embed = discord.Embed(
-                    title="🔨 Бан",
+                    title=" Бан",
                     description=f"{member.mention} забанен за: {reason}",
                     color=0xDC2626
                 )
@@ -303,7 +307,7 @@ class AIModeration(commands.Cog):
         except discord.Forbidden:
             pass
         except discord.HTTPException as e:
-            print(f"[ai_mod] action error: {e}")
+            log.info(f"[ai_mod] action error: {e}")
 
         # Record
         entry = {"ts": time.time(), "action": action, "severity": severity, "reason": reason, "original": original_action}
@@ -324,7 +328,7 @@ class AIModeration(commands.Cog):
         except (discord.Forbidden, discord.HTTPException):
             pass
 
-    # ─── MESSAGE LISTENER ─────────────────────────────────────
+    # MESSAGE LISTENER 
     @commands.Cog.listener()
     async def on_message(self, message):
         if message.author.bot or not message.guild:
@@ -368,19 +372,19 @@ class AIModeration(commands.Cog):
         except (discord.Forbidden, discord.NotFound):
             pass
 
-    # ─── COMMANDS ─────────────────────────────────────────────
+    # COMMANDS 
     @commands.command(name="aimod")
     @commands.has_permissions(administrator=True)
     async def aimod(self, ctx, toggle: str = None):
         """Toggle AI moderation on/off"""
         cfg = self.load_config(str(ctx.guild.id))
         if toggle is None:
-            status = "✅ ВКЛ" if cfg.get("enabled") else "❌ ВЫКЛ"
-            embed = discord.Embed(title="🤖 AI Модерация", description=f"**Статус:** {status}\n\n"
+            status = " ВКЛ" if cfg.get("enabled") else " ВЫКЛ"
+            embed = discord.Embed(title=" AI Модерация", description=f"**Статус:** {status}\n\n"
                 f"**Настройки:**\n"
                 f"• Языки: {', '.join(cfg.get('languages', []))}\n"
                 f"• Чувствительность: {cfg.get('sensitivity', 0.7):.0%}\n"
-                f"• Эскалация: {'✅' if cfg['escalation'].get('enabled') else '❌'}\n"
+                f"• Эскалация: {'' if cfg['escalation'].get('enabled') else ''}\n"
                 f"• Авто-действия: mild={cfg['auto_actions'].get('mild')}, moderate={cfg['auto_actions'].get('moderate')}, severe={cfg['auto_actions'].get('severe')}\n"
                 f"• Лог-канал: {'<#' + str(cfg.get('log_channel_id', '')) + '>' if cfg.get('log_channel_id') else 'не задан'}\n\n"
                 f"**Команды:**\n`!aimod on/off` — вкл/выкл\n`!aimod sensitivity <0-1>` — точность\n`!aimod languages ru,tr,en` — языки\n`!aimod escalate on/off` — эскалация\n`!aimod logchannel #channel` — лог-канал\n`!aimod whitelist @user` — добавить в исключения\n`!aimod test <text>` — протестировать\n`!aimod stats` — статистика", color=0xFFD700)
@@ -389,34 +393,34 @@ class AIModeration(commands.Cog):
         if toggle in ("on", "вкл", "enable", "true", "1"):
             cfg["enabled"] = True
             self.save_config(str(ctx.guild.id), cfg)
-            await ctx.send("✅ AI Модерация **ВКЛЮЧЕНА**")
+            await ctx.send(" AI Модерация **ВКЛЮЧЕНА**")
         elif toggle in ("off", "выкл", "disable", "false", "0"):
             cfg["enabled"] = False
             self.save_config(str(ctx.guild.id), cfg)
-            await ctx.send("❌ AI Модерация **ВЫКЛЮЧЕНА**")
+            await ctx.send(" AI Модерация **ВЫКЛЮЧЕНА**")
 
     @commands.command(name="aimod-sensitivity")
     @commands.has_permissions(administrator=True)
     async def aimod_sensitivity(self, ctx, value: float):
         if not 0 <= value <= 1:
-            await ctx.send("❌ Значение от 0 до 1")
+            await ctx.send(" Значение от 0 до 1")
             return
         cfg = self.load_config(str(ctx.guild.id))
         cfg["sensitivity"] = value
         self.save_config(str(ctx.guild.id), cfg)
-        await ctx.send(f"✅ Чувствительность: {value:.0%} ({'низкая' if value < 0.5 else 'средняя' if value < 0.8 else 'высокая'})")
+        await ctx.send(f" Чувствительность: {value:.0%} ({'низкая' if value < 0.5 else 'средняя' if value < 0.8 else 'высокая'})")
 
     @commands.command(name="aimod-languages")
     @commands.has_permissions(administrator=True)
     async def aimod_languages(self, ctx, *languages):
         valid = [l for l in languages if l in ("ru", "tr", "en")]
         if not valid:
-            await ctx.send("❌ Доступные языки: ru, tr, en")
+            await ctx.send(" Доступные языки: ru, tr, en")
             return
         cfg = self.load_config(str(ctx.guild.id))
         cfg["languages"] = valid
         self.save_config(str(ctx.guild.id), cfg)
-        await ctx.send(f"✅ Языки: {', '.join(valid)}")
+        await ctx.send(f" Языки: {', '.join(valid)}")
 
     @commands.command(name="aimod-escalate")
     @commands.has_permissions(administrator=True)
@@ -425,7 +429,7 @@ class AIModeration(commands.Cog):
         enabled = toggle.lower() in ("on", "true", "1", "yes", "вкл")
         cfg["escalation"]["enabled"] = enabled
         self.save_config(str(ctx.guild.id), cfg)
-        await ctx.send(f"{'✅' if enabled else '❌'} Эскалация **{'вкл' if enabled else 'выкл'}**")
+        await ctx.send(f"{'' if enabled else ''} Эскалация **{'вкл' if enabled else 'выкл'}**")
 
     @commands.command(name="aimod-logchannel")
     @commands.has_permissions(administrator=True)
@@ -434,11 +438,11 @@ class AIModeration(commands.Cog):
         if channel:
             cfg["log_channel_id"] = str(channel.id)
             self.save_config(str(ctx.guild.id), cfg)
-            await ctx.send(f"✅ Лог-канал: {channel.mention}")
+            await ctx.send(f" Лог-канал: {channel.mention}")
         else:
             cfg["log_channel_id"] = None
             self.save_config(str(ctx.guild.id), cfg)
-            await ctx.send("❌ Лог-канал убран")
+            await ctx.send(" Лог-канал убран")
 
     @commands.command(name="aimod-whitelist")
     @commands.has_permissions(administrator=True)
@@ -447,7 +451,7 @@ class AIModeration(commands.Cog):
         if str(user.id) not in cfg["whitelist_users"]:
             cfg["whitelist_users"].append(str(user.id))
             self.save_config(str(ctx.guild.id), cfg)
-        await ctx.send(f"✅ {user.mention} добавлен в whitelist")
+        await ctx.send(f" {user.mention} добавлен в whitelist")
 
     @commands.command(name="aimod-test")
     @commands.has_permissions(administrator=True)
@@ -455,23 +459,23 @@ class AIModeration(commands.Cog):
         cfg = self.load_config(str(ctx.guild.id))
         matches = self.detect_toxic(text, cfg.get("languages", ["ru", "tr", "en"]), cfg.get("sensitivity", 0.7))
         if not matches:
-            await ctx.send("✅ Текст чистый, нарушений не обнаружено.")
+            await ctx.send(" Текст чистый, нарушений не обнаружено.")
         else:
             severity_order = ["mild", "spam", "moderate", "discrimination", "severe"]
             top = max(matches, key=lambda m: severity_order.index(m[0]))
-            await ctx.send(f"⚠️ Обнаружено: **{top[0]}** ({len(matches)} совпадений)\nПаттерны: `{top[1]}`")
+            await ctx.send(f" Обнаружено: **{top[0]}** ({len(matches)} совпадений)\nПаттерны: `{top[1]}`")
 
     @commands.command(name="aimod-stats")
     @commands.has_permissions(administrator=True)
     async def aimod_stats(self, ctx):
         history = self.load_history(str(ctx.guild.id))
         if not history:
-            await ctx.send("📊 Нет данных")
+            await ctx.send(" Нет данных")
             return
         action_counter = Counter(h["action"] for h in history)
         severity_counter = Counter(h["severity"] for h in history)
         last_24h = sum(1 for h in history if time.time() - h["ts"] < 86400)
-        embed = discord.Embed(title="📊 Статистика AI Модерации", color=0xFFD700)
+        embed = discord.Embed(title=" Статистика AI Модерации", color=0xFFD700)
         embed.add_field(name="Всего действий", value=len(history), inline=True)
         embed.add_field(name="За 24 часа", value=last_24h, inline=True)
         embed.add_field(name="\u200b", value="\u200b", inline=True)
@@ -488,12 +492,12 @@ class AIModeration(commands.Cog):
         try:
             message = await ctx.channel.fetch_message(message_id)
         except (discord.NotFound, discord.HTTPException):
-            await ctx.send("❌ Сообщение не найдено")
+            await ctx.send(" Сообщение не найдено")
             return
         msg_hash = hash(message.content.lower().strip())
         self.false_positive_feedback[msg_hash] = self.false_positive_feedback.get(msg_hash, 0) + 1
         count = self.false_positive_feedback[msg_hash]
-        await ctx.send(f"📝 Отмечено как false positive ({count}/3). При достижении 3-х — будет игнорироваться.")
+        await ctx.send(f" Отмечено как false positive ({count}/3). При достижении 3-х — будет игнорироваться.")
 
 
 async def setup(bot):

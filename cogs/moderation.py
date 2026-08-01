@@ -6,7 +6,11 @@ import json
 import os
 from cogs.embed_utils import gif, now_ts, mod_dm_embed, mod_log_embed, success_embed, error_embed
 
-DIVIDER = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+from logger import get_logger
+log = get_logger("moderation")
+
+
+DIVIDER = ""
 
 
 class Moderation(commands.Cog):
@@ -35,7 +39,7 @@ class Moderation(commands.Cog):
                 json.dump(data, f, indent=2, ensure_ascii=False)
             return case_id
         except Exception as e:
-            print(f"[MOD] Ошибка sohraneniya işler: {e}")
+            log.info(f"[MOD] Ошибка sohraneniya işler: {e}")
             return 0
 
     async def send_log(self, guild, embed):
@@ -52,7 +56,7 @@ class Moderation(commands.Cog):
         flag_file = 'data/mod_notify.json'
         try:
             enabled = json.load(open(flag_file, encoding='utf-8')).get('enabled', False) if os.path.exists(flag_file) else False
-        except:
+        except Exception:
             enabled = False
         if not enabled:
             return
@@ -63,7 +67,7 @@ class Moderation(commands.Cog):
             if reason:
                 msg += f" | Причина: {reason}"
             await owner.send(msg)
-        except:
+        except Exception:
             pass
 
     async def send_dm(self, user, embed):
@@ -77,7 +81,7 @@ class Moderation(commands.Cog):
         configs = {
             "ban":       ("Ban завершено",       0xE74C3C, "забанен на время"),
             "kick":      ("Kick завершено",       0xE67E22, "isanahtaren с сервер"),
-            "timeout":   ("Mute завершено",       0xF39C12, "vremenno susturuldu"),
+            "timeout":   ("Mute завершено",       0xF39C12, "vremenno замьючен"),
             "untimeout": ("Mute удалено",           0x2ECC71, "mute удалено"),
             "unban":     ("Ban удалено",           0x2ECC71, "razbanen"),
         }
@@ -88,7 +92,7 @@ class Moderation(commands.Cog):
         desc = f"## {title}\n"
         desc += f"### **{user.display_name}** — {action_text}\n"
         desc += f"`{user.id}`\n"
-        desc += f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        desc += f"\n\n"
         desc += f"**Delo:** #{case_id}\n"
         desc += f"**Причина:** {reason or 'Не belirtildi'}\n"
         desc += f"**Модератор:** {user.mention}\n"
@@ -96,7 +100,7 @@ class Moderation(commands.Cog):
         if extra:
             desc += f"\n{extra}\n"
 
-        desc += f"\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        desc += f"\n\n"
         desc += f"> DM пользователю denhaklarınlen"
 
         e.description = desc
@@ -110,7 +114,7 @@ class Moderation(commands.Cog):
 
         return e
 
-    # ─── /moderate ──────────────────────────────────────────────────────
+    # /moderate 
 
     @app_commands.command(name="moderate", description="Модерация: бан, кик, мут, размут, разбан")
     @app_commands.choices(action=[
@@ -235,7 +239,7 @@ class Moderation(commands.Cog):
         else:
             await interaction.response.send_message(embed=error_embed(str(error)), ephemeral=True)
 
-    # ─── /utility ───────────────────────────────────────────────────────
+    # /utility 
 
     @app_commands.command(name="utility", description="Utiliti: ocistka, sloumod, blokirovka, info")
     @app_commands.choices(action=[
@@ -348,9 +352,9 @@ class Moderation(commands.Cog):
                 f"Участников: **{g.member_count}**\n"
                 f"Lyudey: **{humans}** · Botların: **{bots}**\n\n"
                 f"Metin каналы: **{len(g.text_channels)}**\n"
-                f"Ses каналы: **{len(g.voice_channels)}**\n"
+                f"Голос каналы: **{len(g.voice_channels)}**\n"
                 f"Роль: **{len(g.roles)}**\n"
-                f"Bust: Seviye {g.premium_tier} · {g.premium_subscription_count} bustov\n\n"
+                f"Bust: Уровень {g.premium_tier} · {g.premium_subscription_count} bustov\n\n"
                 f"{DIVIDER}"
             )
             if g.icon:
@@ -360,7 +364,7 @@ class Moderation(commands.Cog):
             e.set_footer(text=f"{g.name}")
             await interaction.response.send_message(embed=e)
 
-    # ─── /роли ──────────────────────────────────────────────────────────
+    # /роли 
 
     @app_commands.command(name="role", description="Выдать или забрать роль у пользователя")
     @app_commands.checks.has_permissions(manage_roles=True)
@@ -386,7 +390,7 @@ class Moderation(commands.Cog):
         e.set_footer(text=f"{guild.name}")
         await interaction.response.send_message(embed=e, ephemeral=True)
 
-    # ─── /leaveguild ────────────────────────────────────────────────────
+    # /leaveguild 
 
     @app_commands.command(name="leaveguild", description="Покинуть сервер (только владелец бота)")
     async def leave_guild(self, interaction, guild_id: str):

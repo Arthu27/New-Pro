@@ -24,7 +24,7 @@ class Archive(commands.Cog):
             filename=f"archive_{interaction.channel.name}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.html"
         )
         
-        await interaction.followup.send(f"✅ {len(messages)} сообщений заархивировано.", file=file, ephemeral=True)
+        await interaction.followup.send(f" {len(messages)} сообщений заархивировано.", file=file, ephemeral=True)
 
     def generate_html(self, messages, channel):
         html = f"""
@@ -89,7 +89,7 @@ class Archive(commands.Cog):
             filename=f"backup_{interaction.channel.name}_{datetime.utcnow().strftime('%Y%m%d')}.txt"
         )
         
-        await interaction.followup.send(f"✅ {len(messages)} message yedaddndi.", file=file, ephemeral=True)
+        await interaction.followup.send(f" {len(messages)} message yedaddndi.", file=file, ephemeral=True)
 
 async def setup(bot):
     await bot.add_cog(Archive(bot), guilds=[discord.Object(id=1421244140359909513), discord.Object(id=1107038411895881788), discord.Object(id=1498837105915330562)])

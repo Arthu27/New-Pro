@@ -62,7 +62,7 @@ class Verification(commands.Cog):
         # Sadece bilgilendirme — otomatik Роль/kick YOK
         try:
             await member.send(
-                f"👋 {guild.name} sunucusuna hoş geldin!\n"
+                f" {guild.name} sunucusuna hoş geldin!\n"
                 f"Если требуется проверка, следуйте инструкциям на сервере."
             )
         except Exception:
@@ -77,8 +77,8 @@ class Verification(commands.Cog):
         state["updated_by"] = str(interaction.user)
         _save_global_state(state)
         await interaction.response.send_message(
-            f"🔐 Verification sistemi **{'AÇIK' if enabled else 'KAPALI'}**.\n"
-            + ("⚠️ Bot otomatik captcha/Роль/kick YAPMAYACAK — sadece bilgilendirme." if enabled else "✅ Artık yeni gelenler için hiçbir otomatik операция yapılmayacak."),
+            f" Verification sistemi **{'AÇIK' if enabled else 'KAPALI'}**.\n"
+            + (" Bot otomatik captcha/Роль/kick YAPMAYACAK — sadece bilgilendirme." if enabled else " Artık yeni gelenler için hiçbir otomatik операция yapılmayacak."),
             ephemeral=True,
         )
 
@@ -86,11 +86,11 @@ class Verification(commands.Cog):
     async def verify_status(self, interaction: discord.Interaction):
         state = _load_global_state()
         e = discord.Embed(
-            title="🔐 Verification — Durum",
+            title=" Verification — Durum",
             color=0x2ECC71 if state.get("enabled") else 0x95A5A6,
         )
-        e.add_field(name="Sistem", value="✅ Açık" if state.get("enabled") else "❌ Kapalı", inline=True)
-        e.add_field(name="Otomatik aksiyon", value="❌ YOK (gözlemci modu)", inline=True)
+        e.add_field(name="Sistem", value=" Açık" if state.get("enabled") else " Kapalı", inline=True)
+        e.add_field(name="Otomatik aksiyon", value=" YOK (gözlemci modu)", inline=True)
         e.add_field(name="Son güncelleme", value=state.get("updated_by", "—"), inline=True)
         e.description = (
             "Bu cog gözlemci modunda: bot kimseye otomatik captcha/Роль/kick UYGULAMAZ. "

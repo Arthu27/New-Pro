@@ -10,139 +10,139 @@
       <span>Анти-рейд и защита</span>
     </div>
     <h1>Анти-рейд и защита</h1>
-    <p>Gözlemci modu — bot otomatik aksiyon yapmaz, sadece alert kanalına bildirir.</p>
+    <p>Режим наблюдателя — бот не выполняет автоматических действий, только отправляет уведомления в канал оповещений.</p>
   </div>
 </div>
 {% endblock %}
 
-<!-- Gözlemci modu uyarısı -->
+<!-- Баннер режима наблюдателя -->
 <div class="observer-banner" id="observer-banner">
   <i class="fas fa-eye"></i>
   <div>
-    <strong>Gözlemci modu aktif.</strong>
-    Bot hiçbir kullanıcıyı otomatik olarak <b>kick/ban/lockdown</b> yapmaz.
-    Tüm kurallar tetiklendiğinde sadece ayarladığınız alert kanalına (yoksa <code>mod-log</code>) embed gönderir.
-    İcra yetkisi sizde — aşağıdan ayarları yönetin.
+    <strong>Режим наблюдателя активен.</strong>
+    Бот не выполняет автоматических действий <b>кик/бан/блокировка</b> для пользователей.
+    При срабатывании правил отправляется embed в настроенный канал оповещений (или <code>mod-log</code>).
+    Исполнительные права у вас — управляйте настройками ниже.
   </div>
 </div>
 
-<!-- Guild seçici -->
+<!-- Выбор сервера -->
 <div class="guild-picker" id="guild-picker">
-  <label for="guild-select"><i class="fas fa-server"></i> Sunucu:</label>
-  <select id="guild-select"><option value="">Yükleniyor…</option></select>
+  <label for="guild-select"><i class="fas fa-server"></i> Сервер:</label>
+  <select id="guild-select"><option value="">Загрузка…</option></select>
   {% if role == 'owner' %}
-  <button class="btn btn-ghost" id="btn-reload" type="button" title="Config'i şimdi yeniden yükle (owner only)">
-    <i class="fas fa-sync"></i> Yenile
+  <button class="btn btn-ghost" id="btn-reload" type="button" title="Перезагрузить конфигурацию сейчас (только для владельца)">
+    <i class="fas fa-sync"></i> Обновить
   </button>
   {% endif %}
   <span class="save-status" id="save-status"></span>
 </div>
 
 <div class="ar-grid">
-  <!-- Raid algılama -->
+  <!-- Обнаружение рейда -->
   <div class="ar-card">
     <div class="ar-head">
       <div class="ar-icon danger"><i class="fas fa-exclamation-triangle"></i></div>
-      <div class="ar-title">Raid Algılama</div>
+      <div class="ar-title">Обнаружение рейда</div>
       <div class="toggle" id="tog-raid" data-key="join_raid"></div>
     </div>
-    <div class="row"><label>Kişi / süre (sn)</label>
+    <div class="row"><label>Человек / время (сек)</label>
       <div style="display:flex; gap:6px;">
         <input type="number" id="join_threshold" data-key="join_threshold" min="2" max="50" value="5">
         <input type="number" id="join_window" data-key="join_window" min="5" max="120" value="10">
       </div>
     </div>
-    <div class="row"><label>Whitelist'tekiler muaf</label>
-      <span class="muted">Aşağıdaki listeden yönet</span>
+    <div class="row"><label>Исключения из белого списка</label>
+      <span class="muted">Управляйте списком ниже</span>
     </div>
   </div>
 
-  <!-- Hesap yaşı filtresi -->
+  <!-- Фильтр возраста аккаунта -->
   <div class="ar-card">
     <div class="ar-head">
       <div class="ar-icon"><i class="fas fa-user-clock"></i></div>
-      <div class="ar-title">Hesap Yaşı Filtresi</div>
+      <div class="ar-title">Фильтр возраста аккаунта</div>
       <div class="toggle" id="tog-age" data-key="age_filter"></div>
     </div>
-    <div class="row"><label>Min yaş (gün)</label>
+    <div class="row"><label>Мин. возраст (дни)</label>
       <input type="number" id="min_age" data-key="min_age" min="0" max="365" value="5">
     </div>
-    <div class="row"><label>Açıklama</label>
-      <span class="muted">Bu eşiğin altındaki hesaplar alert oluşturur</span>
+    <div class="row"><label>Описание</label>
+      <span class="muted">Аккаунты ниже этого порога создают оповещение</span>
     </div>
   </div>
 
-  <!-- Bot koruması -->
+  <!-- Защита от ботов -->
   <div class="ar-card">
     <div class="ar-head">
       <div class="ar-icon"><i class="fas fa-robot"></i></div>
-      <div class="ar-title">Bot Koruması</div>
+      <div class="ar-title">Защита от ботов</div>
       <div class="toggle" id="tog-bot" data-key="bot_protection"></div>
     </div>
-    <div class="row"><label>Açıklama</label>
-      <span class="muted">Sunucuya eklenen botlar için alert</span>
+    <div class="row"><label>Описание</label>
+      <span class="muted">Оповещение при добавлении ботов на сервер</span>
     </div>
   </div>
 
-  <!-- Toplu silme koruması -->
+  <!-- Защита от массового удаления -->
   <div class="ar-card">
     <div class="ar-head">
       <div class="ar-icon"><i class="fas fa-trash-alt"></i></div>
-      <div class="ar-title">Toplu Silme Koruması</div>
+      <div class="ar-title">Защита от массового удаления</div>
       <div class="toggle" id="tog-delete" data-key="delete_protection"></div>
     </div>
-    <div class="row"><label>Açıklama</label>
-      <span class="muted">Tek seferde 5+ mesaj silinirse alert</span>
+    <div class="row"><label>Описание</label>
+      <span class="muted">Оповещение при удалении 5+ сообщений за раз</span>
     </div>
   </div>
 
-  <!-- Alert kanalı -->
+  <!-- Канал оповещений -->
   <div class="ar-card span-2">
     <div class="ar-head">
       <div class="ar-icon"><i class="fas fa-bell"></i></div>
-      <div class="ar-title">Alert Kanalı</div>
+      <div class="ar-title">Канал оповещений</div>
     </div>
     <div class="row">
-      <label>Kanal ID</label>
+      <label>ID канала</label>
       <input type="text" id="alert_channel_id" data-key="alert_channel_id"
-             placeholder="Boş bırakırsanız 'mod-log' kanalı kullanılır">
+             placeholder="Если оставить пустым, используется канал 'mod-log'">
     </div>
     <div class="row">
-      <label>Raid aksiyonu</label>
+      <label>Действие при рейде</label>
       <select id="raid_action" data-key="raid_action">
-        <option value="alert">Sadece alert (önerilen)</option>
+        <option value="alert">Только оповещение (рекомендуется)</option>
       </select>
-      <span class="muted" style="margin-left:8px;">Diğer aksiyonlar güvenlik gereği devre dışı.</span>
+      <span class="muted" style="margin-left:8px;">Другие действия отключены в целях безопасности.</span>
     </div>
   </div>
 
-  <!-- Whitelist -->
+  <!-- Белый список -->
   <div class="ar-card span-2">
     <div class="ar-head">
       <div class="ar-icon"><i class="fas fa-user-shield"></i></div>
-      <div class="ar-title">Whitelist (Muaf Kullanıcılar)</div>
+      <div class="ar-title">Белый список (исключенные пользователи)</div>
       <button class="btn btn-primary" id="btn-add-wl" type="button">
-        <i class="fas fa-plus"></i> Ekle
+        <i class="fas fa-plus"></i> Добавить
       </button>
     </div>
     <div class="row">
-      <label>User ID</label>
-      <input type="text" id="wl-input" placeholder="Discord user ID (17-20 haneli sayı)">
+      <label>ID пользователя</label>
+      <input type="text" id="wl-input" placeholder="ID пользователя Discord (17-20 цифр)">
     </div>
     <ul class="wl-list" id="wl-list"></ul>
   </div>
 
-  <!-- Son olaylar -->
+  <!-- Последние события -->
   <div class="ar-card span-2">
     <div class="ar-head">
       <div class="ar-icon danger"><i class="fas fa-history"></i></div>
-      <div class="ar-title">Son Tespit Edilen Olaylar</div>
+      <div class="ar-title">Последние обнаруженные события</div>
       <button class="btn btn-primary" id="btn-clear" type="button">
-        <i class="fas fa-broom"></i> Temizle
+        <i class="fas fa-broom"></i> Очистить
       </button>
     </div>
     <div class="alert-list" id="alerts">
-      <p class="muted">Henüz olay yok.</p>
+      <p class="muted">Событий пока нет.</p>
     </div>
   </div>
 </div>
@@ -237,7 +237,7 @@
     }
   }
 
-  // ── Guild listesi yükle ────────────────────────────────────────────────
+  // ── Загрузка списка серверов ──────────────────────────────────────────────
   function loadGuilds() {
     fetch('/api/guilds', { credentials: 'same-origin' })
       .then(function (r) { return r.json(); })
@@ -245,7 +245,7 @@
         var sel = $('guild-select');
         sel.innerHTML = '';
         if (!list || !list.length) {
-          sel.innerHTML = '<option value="">Sunucu bulunamadı</option>';
+          sel.innerHTML = '<option value="">Сервер не найден</option>';
           return;
         }
         list.forEach(function (g) {
@@ -258,19 +258,19 @@
         loadConfig();
       })
       .catch(function (e) {
-        $('guild-select').innerHTML = '<option value="">Yüklenemedi</option>';
+        $('guild-select').innerHTML = '<option value="">Не удалось загрузить</option>';
         console.error(e);
       });
   }
 
-  // ── Config yükle ──────────────────────────────────────────────────────
+  // ── Загрузка конфигурации ─────────────────────────────────────────────────
   function loadConfig() {
     if (!currentGuildId) return;
     fetch('/api/guild/' + currentGuildId + '/antiraid', { credentials: 'same-origin' })
       .then(function (r) { return r.json(); })
       .then(function (cfg) {
         currentConfig = cfg || {};
-        // defaults
+        // значения по умолчанию
         ['join_raid','age_filter','bot_protection','delete_protection'].forEach(function (k) {
           if (typeof currentConfig[k] !== 'boolean') currentConfig[k] = false;
         });
@@ -283,7 +283,7 @@
       })
       .catch(function (e) {
         console.error(e);
-        setSaveStatus('Yüklenemedi', true);
+        setSaveStatus('Не удалось загрузить', true);
       });
   }
 
@@ -310,13 +310,13 @@
     var ul = $('wl-list');
     ul.innerHTML = '';
     if (!currentConfig.whitelist.length) {
-      ul.innerHTML = '<li style="background:transparent;border:none;color:#7d8593;">Henüz muaf kullanıcı yok.</li>';
+      ul.innerHTML = '<li style="background:transparent;border:none;color:#7d8593;">Исключенных пользователей пока нет.</li>';
       return;
     }
     currentConfig.whitelist.forEach(function (uid, idx) {
       var li = document.createElement('li');
       li.innerHTML = '<span><i class="fas fa-user"></i> <code>' + uid + '</code></span>' +
-                     '<button type="button" title="Kaldır"><i class="fas fa-times"></i></button>';
+                     '<button type="button" title="Удалить"><i class="fas fa-times"></i></button>';
       li.querySelector('button').addEventListener('click', function () {
         currentConfig.whitelist.splice(idx, 1);
         saveConfig();
@@ -329,7 +329,7 @@
     var box = $('alerts');
     box.innerHTML = '';
     if (!currentConfig.recent_events.length) {
-      box.innerHTML = '<p class="muted">Henüz olay yok.</p>';
+      box.innerHTML = '<p class="muted">Событий пока нет.</p>';
       return;
     }
     currentConfig.recent_events.forEach(function (ev) {
@@ -338,26 +338,26 @@
       var cls = '';
       var icon = 'fas fa-exclamation-circle';
       var label = ev.type;
-      if (ev.type === 'young_account') { cls = 'young'; icon = 'fas fa-user-clock'; label = 'Yeni hesap'; }
-      else if (ev.type === 'join_raid') { cls = ''; icon = 'fas fa-exclamation-triangle'; label = 'Raid dalgası'; }
-      else if (ev.type === 'bot_join') { cls = 'bot'; icon = 'fas fa-robot'; label = 'Bot katıldı'; }
-      else if (ev.type === 'bulk_delete') { cls = 'bulk'; icon = 'fas fa-trash-alt'; label = 'Toplu silme'; }
+      if (ev.type === 'young_account') { cls = 'young'; icon = 'fas fa-user-clock'; label = 'Новый аккаунт'; }
+      else if (ev.type === 'join_raid') { cls = ''; icon = 'fas fa-exclamation-triangle'; label = 'Волна рейда'; }
+      else if (ev.type === 'bot_join') { cls = 'bot'; icon = 'fas fa-robot'; label = 'Бот присоединился'; }
+      else if (ev.type === 'bulk_delete') { cls = 'bulk'; icon = 'fas fa-trash-alt'; label = 'Массовое удаление'; }
       div.className = 'alert-item ' + cls;
 
       var main = '';
       if (ev.type === 'join_raid') {
-        main = '<b>' + (ev.count || '?') + '</b> kişi / ' + (ev.window || '?') + 'sn (eşik ' + (ev.threshold || '?') + ')';
-        if (ev.last_user) main += ' — son: ' + ev.last_user;
+        main = '<b>' + (ev.count || '?') + '</b> человек / ' + (ev.window || '?') + 'сек (порог ' + (ev.threshold || '?') + ')';
+        if (ev.last_user) main += ' — последний: ' + ev.last_user;
       } else if (ev.type === 'young_account') {
-        main = (ev.user_tag || ev.user_id) + ' — hesap yaşı: <b>' + (ev.account_age_days || '?') + ' gün</b>';
+        main = (ev.user_tag || ev.user_id) + ' — возраст аккаунта: <b>' + (ev.account_age_days || '?') + ' дней</b>';
       } else if (ev.type === 'bot_join') {
         main = ev.user_tag || ev.user_id;
       } else if (ev.type === 'bulk_delete') {
-        main = 'Kanal <code>' + (ev.channel_id || '?') + '</code> — <b>' + (ev.count || '?') + '</b> mesaj';
+        main = 'Канал <code>' + (ev.channel_id || '?') + '</code> — <b>' + (ev.count || '?') + '</b> сообщений';
       } else {
         main = JSON.stringify(ev);
       }
-      var t = ev.timestamp ? new Date(ev.timestamp).toLocaleString('tr-TR') : '';
+      var t = ev.timestamp ? new Date(ev.timestamp).toLocaleString('ru-RU') : '';
       div.innerHTML = '<i class="' + icon + '"></i>' +
                       '<span class="badge">' + label + '</span>' +
                       '<span>' + main + '</span>' +
@@ -366,10 +366,10 @@
     });
   }
 
-  // ── Config kaydet (debounced) ──────────────────────────────────────────
+  // ── Сохранение конфигурации (с задержкой) ─────────────────────────────────
   function saveConfig() {
     if (!currentGuildId || !currentConfig) return;
-    setSaveStatus('Kaydediliyor…');
+    setSaveStatus('Сохранение…');
     clearTimeout(saveTimer);
     saveTimer = setTimeout(function () {
       fetch('/api/guild/' + currentGuildId + '/antiraid', {
@@ -380,14 +380,14 @@
       })
         .then(function (r) { return r.json(); })
         .then(function (data) {
-          if (data && data.success) setSaveStatus('✓ Kaydedildi');
-          else setSaveStatus('Hata: ' + (data && data.error || 'bilinmiyor'), true);
+          if (data && data.success) setSaveStatus('✓ Сохранено');
+          else setSaveStatus('Ошибка: ' + (data && data.error || 'неизвестно'), true);
         })
-        .catch(function (e) { setSaveStatus('Hata: ' + e.message, true); });
+        .catch(function (e) { setSaveStatus('Ошибка: ' + e.message, true); });
     }, 250);
   }
 
-  // ── Event bindings ─────────────────────────────────────────────────────
+  // ── Привязка событий ──────────────────────────────────────────────────────
   function bind() {
     loadGuilds();
 
@@ -400,11 +400,11 @@
       if (!currentGuildId) return;
       fetch('/api/cogs/antiraid/reload', { method: 'POST', credentials: 'same-origin' })
         .then(function (r) { return r.json(); })
-        .then(function (d) { setSaveStatus(d && d.success ? '✓ Yenilendi' : 'Hata', !(d && d.success)); })
-        .catch(function (e) { setSaveStatus('Hata: ' + e.message, true); });
+        .then(function (d) { setSaveStatus(d && d.success ? '✓ Обновлено' : 'Ошибка', !(d && d.success)); })
+        .catch(function (e) { setSaveStatus('Ошибка: ' + e.message, true); });
     });
 
-    // toggle'lar
+    // переключатели
     ['tog-raid','tog-age','tog-bot','tog-delete'].forEach(function (id) {
       var el = $(id);
       el.addEventListener('click', function () {
@@ -416,7 +416,7 @@
       });
     });
 
-    // numeric/text alanlar
+    // числовые/текстовые поля
     ['join_threshold','join_window','min_age','alert_channel_id'].forEach(function (key) {
       var el = document.querySelector('[data-key="' + key + '"]');
       if (!el) return;
@@ -432,17 +432,17 @@
       });
     });
 
-    // whitelist ekle
+    // добавление в белый список
     $('btn-add-wl').addEventListener('click', function () {
       if (!currentConfig) return;
       var inp = $('wl-input');
       var v = (inp.value || '').trim();
       if (!/^\d{15,22}$/.test(v)) {
-        setSaveStatus('Geçersiz user ID', true);
+        setSaveStatus('Неверный ID пользователя', true);
         return;
       }
       if (currentConfig.whitelist.indexOf(v) !== -1) {
-        setSaveStatus('Zaten listede', true);
+        setSaveStatus('Уже в списке', true);
         return;
       }
       currentConfig.whitelist.push(v);
@@ -454,7 +454,7 @@
       if (e.key === 'Enter') { e.preventDefault(); $('btn-add-wl').click(); }
     });
 
-    // olayları temizle
+    // очистить события
     $('btn-clear').addEventListener('click', function () {
       if (!currentConfig) return;
       currentConfig.recent_events = [];

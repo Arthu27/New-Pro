@@ -1,6 +1,6 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 {% block title %}Заявки на модератора - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-user-shield" ></i> АДМИНИСТРАТОР ЗАЯВКА{% endblock %}
+{% block page_title %}<i class="fas fa-user-shield"></i> ЗАЯВКА НА АДМИНИСТРАТОРА{% endblock %}
 {% block content %}
 {% block page_hero %}
 <div class="page-hero compact">
@@ -101,7 +101,7 @@ var selectedGuild = '{{ main_guild_id }}';
 var memberДанныеfied = false;
 var idCheckTimer = null;
 
-async function loadSunucus() {
+async function loadServers() {
   var r = await fetch('/api/public/guilds');
   var guilds = await r.json();
   var grid = document.getElementById('server-grid');
@@ -203,6 +203,6 @@ function showAlert(type, msg) {
 }
 function hideAlert() { document.getElementById('alert-box').style.display = 'none'; }
 
-loadSunucus();
+loadServers();
 </script>
 {% endblock %}

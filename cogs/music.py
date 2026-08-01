@@ -6,6 +6,10 @@ import asyncio
 import os
 import yt_dlp
 
+from logger import get_logger
+log = get_logger("music")
+
+
 FFMPEG_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'ffmpeg-8.1-essentials_build', 'bin', 'ffmpeg.exe')
 
 YTDL_OPTS = {
@@ -58,12 +62,12 @@ async def fetch_source(query: str):
 
 def _build_player_embed(guild_id: int, title: str, webpage_url: str, requester: str, paused: bool = False) -> discord.Embed:
     mode = repeat_mode.get(guild_id, 'off')
-    mode_text = {'off': '🔇 Закрыт', 'song': '🔂 Şarkı', 'queue': '🔁 Очередь'}[mode]
+    mode_text = {'off': ' Закрыт', 'song': ' Şarkı', 'queue': ' Очередь'}[mode]
     q = get_queue(guild_id)
-    status = "⏸ Duraklatıldı" if paused else "▶️ Çalıyor"
+    status = "⏸ Duraklatıldı" if paused else " Çalıyor"
 
     e = discord.Embed(
-        title="🎵 Müzik Çalar",
+        title=" Müzik Çalar",
         description=f"**[{title}]({webpage_url})**",
         color=0xdc143c
     )
@@ -101,11 +105,11 @@ class MusicPlayerView(discord.ui.View):
     async def pause_resume(self, interaction: discord.Interaction, button: discord.ui.Button):
         vc = self._vc()
         if not vc:
-            await interaction.response.send_message("❌ Bot ses в канале не!", ephemeral=True)
+            await interaction.response.send_message(" Bot ses в канале не!", ephemeral=True)
             return
         if vc.is_playing():
             vc.pause()
-            button.emoji = "▶️"
+            button.emoji = ""
         elif vc.is_paused():
             vc.resume()
             button.emoji = "⏸"
@@ -116,7 +120,7 @@ class MusicPlayerView(discord.ui.View):
     async def skip(self, interaction: discord.Interaction, button: discord.ui.Button):
         vc = self._vc()
         if not vc or (not vc.is_playing() and not vc.is_paused()):
-            await interaction.response.send_message("❌ Сейчас ничего не воспроизводится.", ephemeral=True)
+            await interaction.response.send_message(" Сейчас ничего не воспроизводится.", ephemeral=True)
             return
         vc.stop()
         await interaction.response.defer()
@@ -125,7 +129,7 @@ class MusicPlayerView(discord.ui.View):
     async def stop(self, interaction: discord.Interaction, button: discord.ui.Button):
         vc = self._vc()
         if not vc:
-            await interaction.response.send_message("❌ Bot ses в канале не!", ephemeral=True)
+            await interaction.response.send_message(" Bot ses в канале не!", ephemeral=True)
             return
         queues[self.guild.id] = []
         current_song.pop(self.guild.id, None)
@@ -138,47 +142,47 @@ class MusicPlayerView(discord.ui.View):
         except Exception:
             pass
 
-    @discord.ui.button(emoji="🔉", style=discord.ButtonStyle.secondary, custom_id="music_vol_down", row=1)
+    @discord.ui.button(emoji="", style=discord.ButtonStyle.secondary, custom_id="music_vol_down", row=1)
     async def vol_down(self, interaction: discord.Interaction, button: discord.ui.Button):
         vc = self._vc()
         if not vc or not vc.source:
-            await interaction.response.send_message("❌ Сейчас ничего не воспроизводится.", ephemeral=True)
+            await interaction.response.send_message(" Сейчас ничего не воспроизводится.", ephemeral=True)
             return
         new_vol = max(0.0, vc.source.volume - 0.1)
         vc.source.volume = new_vol
-        await interaction.response.send_message(f"🔉 Ses: **{int(new_vol*100)}%**", ephemeral=True)
+        await interaction.response.send_message(f" Голос: **{int(new_vol*100)}%**", ephemeral=True)
 
-    @discord.ui.button(emoji="🔊", style=discord.ButtonStyle.secondary, custom_id="music_vol_up", row=1)
+    @discord.ui.button(emoji="", style=discord.ButtonStyle.secondary, custom_id="music_vol_up", row=1)
     async def vol_up(self, interaction: discord.Interaction, button: discord.ui.Button):
         vc = self._vc()
         if not vc or not vc.source:
-            await interaction.response.send_message("❌ Сейчас ничего не воспроизводится.", ephemeral=True)
+            await interaction.response.send_message(" Сейчас ничего не воспроизводится.", ephemeral=True)
             return
         new_vol = min(1.0, vc.source.volume + 0.1)
         vc.source.volume = new_vol
-        await interaction.response.send_message(f"🔊 Ses: **{int(new_vol*100)}%**", ephemeral=True)
+        await interaction.response.send_message(f" Голос: **{int(new_vol*100)}%**", ephemeral=True)
 
-    @discord.ui.button(emoji="🔁", style=discord.ButtonStyle.secondary, custom_id="music_repeat", row=1)
+    @discord.ui.button(emoji="", style=discord.ButtonStyle.secondary, custom_id="music_repeat", row=1)
     async def toggle_repeat(self, interaction: discord.Interaction, button: discord.ui.Button):
         modes = ['off', 'song', 'queue']
         current = repeat_mode.get(self.guild.id, 'off')
         next_mode = modes[(modes.index(current) + 1) % len(modes)]
         repeat_mode[self.guild.id] = next_mode
-        icons = {'off': '🔇', 'song': '🔂', 'queue': '🔁'}
+        icons = {'off': '', 'song': '', 'queue': ''}
         button.emoji = icons[next_mode]
         await interaction.response.defer()
         await self._update_embed(interaction)
 
-    @discord.ui.button(emoji="📋", style=discord.ButtonStyle.secondary, custom_id="music_queue", row=1)
+    @discord.ui.button(emoji="", style=discord.ButtonStyle.secondary, custom_id="music_queue", row=1)
     async def show_queue(self, interaction: discord.Interaction, button: discord.ui.Button):
         q = get_queue(self.guild.id)
         if not q:
-            await interaction.response.send_message("📋 Очередь пусто.", ephemeral=True)
+            await interaction.response.send_message(" Очередь пусто.", ephemeral=True)
             return
         desc = "\n".join(f"`{i+1}.` {item['title']}" for i, item in enumerate(q[:10]))
         if len(q) > 10:
             desc += f"\n*+{len(q)-10} песня более*"
-        e = discord.Embed(title="📋 Müzik Kuyruğu", description=desc, color=0xdc143c)
+        e = discord.Embed(title=" Müzik Kuyruğu", description=desc, color=0xdc143c)
         await interaction.response.send_message(embed=e, ephemeral=True)
 
 
@@ -209,7 +213,7 @@ async def play_next(guild: discord.Guild, channel: discord.TextChannel = None):
         msg = player_messages.pop(guild.id, None)
         if msg:
             try:
-                e = discord.Embed(title="✅ Очередь завершена", description="Все песни воспроизведены.", color=0x2ecc71)
+                e = discord.Embed(title=" Очередь завершена", description="Все песни воспроизведены.", color=0x2ecc71)
                 asyncio.run_coroutine_threadsafe(msg.edit(embed=e, view=None), guild._state.loop)
             except Exception:
                 pass
@@ -221,7 +225,7 @@ async def play_next(guild: discord.Guild, channel: discord.TextChannel = None):
 
         def after(err):
             if err:
-                print(f"[Music] Oynatma Ошибки: {err}")
+                log.info(f"[Music] Oynatma Ошибки: {err}")
             asyncio.run_coroutine_threadsafe(play_next(guild, channel), guild._state.loop)
 
         vc.play(source, after=after)
@@ -245,7 +249,7 @@ async def play_next(guild: discord.Guild, channel: discord.TextChannel = None):
             asyncio.run_coroutine_threadsafe(_send(), guild._state.loop)
 
     except Exception as ex:
-        print(f"Müzik Ошибки: {ex}")
+        log.info(f"Müzik Ошибки: {ex}")
         asyncio.run_coroutine_threadsafe(play_next(guild, channel), guild._state.loop)
 
 
@@ -256,7 +260,7 @@ class Music(commands.Cog):
     @app_commands.command(name="play", description="Воспроизведение музыки с YouTube")
     async def cal(self, interaction: discord.Interaction, sorgu: str):
         if not interaction.user.voice:
-            await interaction.response.send_message("❌ До bir ses в канал gir!", ephemeral=True)
+            await interaction.response.send_message(" До bir ses в канал gir!", ephemeral=True)
             return
 
         await interaction.response.defer()
@@ -272,7 +276,7 @@ class Music(commands.Cog):
         try:
             stream_url, title, webpage_url = await fetch_source(sorgu)
         except Exception as e:
-            await interaction.followup.send(f"❌ {e}")
+            await interaction.followup.send(f" {e}")
             return
 
         item = {
@@ -286,7 +290,7 @@ class Music(commands.Cog):
         if vc.is_playing() or vc.is_paused():
             q.append(item)
             e = discord.Embed(
-                title="📋 Kuyruğa Добавлено",
+                title=" Kuyruğa Добавлено",
                 description=f"**[{title}]({webpage_url})**\nSıra: #{len(q)}",
                 color=0x3498db
             )
@@ -309,20 +313,20 @@ class Music(commands.Cog):
         else:
             q.insert(0, item)
             await play_next(interaction.guild, interaction.channel)
-            await interaction.followup.send("▶️ Запуск...", delete_after=3)
+            await interaction.followup.send(" Запуск...", delete_after=3)
 
     @app_commands.command(name="leave", description="Отключить бота от голосового канала")
     async def ayril(self, interaction: discord.Interaction):
         vc = interaction.guild.voice_client
         if not vc:
-            await interaction.response.send_message("❌ Bot ses в канале не!", ephemeral=True)
+            await interaction.response.send_message(" Bot ses в канале не!", ephemeral=True)
             return
         queues[interaction.guild.id] = []
         current_song.pop(interaction.guild.id, None)
         player_messages.pop(interaction.guild.id, None)
         _inactivity_tasks.pop(interaction.guild.id, None)
         await vc.disconnect()
-        await interaction.response.send_message("👋 Покинул.")
+        await interaction.response.send_message(" Покинул.")
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member: discord.Member, before: discord.VoiceState, after: discord.VoiceState):

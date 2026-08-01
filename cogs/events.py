@@ -36,19 +36,19 @@ class Events(commands.Cog):
                 if ev.get('notified'): continue
                 try:
                     event_time = datetime.fromisoformat(ev['time'])
-                except: continue
+                except Exception: continue
 
                 diff_min = (event_time - now).total_seconds() / 60
 
                 # 60 minutes öncesi hatırlatma
                 if 55 <= diff_min <= 65 and not ev.get('reminded_1h'):
-                    await self._send_reminder(guild, ev, '1 часов')
+                    await self._send_reminder(guild, ev, '1 час')
                     events[eid]['reminded_1h'] = True
                     changed = True
 
                 # 10 minutes öncesi hatırlatma
                 if 5 <= diff_min <= 15 and not ev.get('reminded_10m'):
-                    await self._send_reminder(guild, ev, '10 minutes')
+                    await self._send_reminder(guild, ev, '10 минут')
                     events[eid]['reminded_10m'] = True
                     changed = True
 
@@ -69,11 +69,11 @@ class Events(commands.Cog):
         ch = guild.get_channel(int(ev.get('channel_id', 0)))
         if not ch: return
         embed = discord.Embed(
-            title=f'⏰ Etkinlik Hatırlatması — {time_str} kaldı!',
+            title=f'Напоминание о событии — осталось {time_str}',
             description=f'**{ev["title"]}**\n\n{ev.get("description", "")}',
-            color=0xF39C12
+            color=discord.Color.dark_grey()
         )
-        embed.add_field(name='📅 Время', value=f'<t:{int(datetime.fromisoformat(ev["time"]).timestamp())}:F>')
+        embed.add_field(name='Дата и время', value=f'<t:{int(datetime.fromisoformat(ev["time"]).timestamp())}:F>')
         mention = f'<@&{ev["role_id"]}>' if ev.get('role_id') else '@everyone'
         await ch.send(content=mention, embed=embed)
 
@@ -81,9 +81,9 @@ class Events(commands.Cog):
         ch = guild.get_channel(int(ev.get('channel_id', 0)))
         if not ch: return
         embed = discord.Embed(
-            title=f'🎉 ETKİNLİK BAŞLADI! — {ev["title"]}',
+            title=f'СОБЫТИЕ НАЧАЛОСЬ — {ev["title"]}',
             description=ev.get('description', ''),
-            color=0x2ECC71
+            color=discord.Color.dark_grey()
         )
         mention = f'<@&{ev["role_id"]}>' if ev.get('role_id') else '@everyone'
         await ch.send(content=mention, embed=embed)
@@ -104,11 +104,11 @@ class Events(commands.Cog):
         try:
             dt = datetime.strptime(f'{date} {часов}', '%d/%m/%Y %H:%M')
         except ValueError:
-            await interaction.response.send_message('❌ Неверный формат даты/времени! Пример: 25/12/2025 20:00', ephemeral=True)
+            await interaction.response.send_message('Неверный формат даты/времени. Пример: 25/12/2025 20:00', ephemeral=True)
             return
 
         if dt < datetime.utcnow():
-            await interaction.response.send_message('❌ История bir date giremezsin!', ephemeral=True)
+            await interaction.response.send_message('Нельзя создать событие в прошлом', ephemeral=True)
             return
 
         events = self._load(interaction.guild_id)
@@ -121,9 +121,9 @@ class Events(commands.Cog):
         }
         self._save(interaction.guild_id, events)
 
-        embed = discord.Embed(title=f'📅 {baslik}', description=aciklama, color=0x3498DB)
-        embed.add_field(name='⏰ Время', value=f'<t:{int(dt.timestamp())}:F>')
-        embed.add_field(name='📢 Канал', value=channel.mention)
+        embed = discord.Embed(title=f'{baslik}', description=aciklama, color=discord.Color.dark_grey())
+        embed.add_field(name='Дата и время', value=f'<t:{int(dt.timestamp())}:F>')
+        embed.add_field(name='Канал анонсов', value=channel.mention)
         embed.set_footer(text=f'Etkinlik ID: {eid}')
         await interaction.response.send_message(embed=embed)
 
@@ -136,10 +136,10 @@ class Events(commands.Cog):
         upcoming.sort(key=lambda x: x[1]['time'])
 
         if not upcoming:
-            await interaction.response.send_message('📅 Нет предстоящих событий.', ephemeral=True)
+            await interaction.response.send_message('Нет предстоящих событий', ephemeral=True)
             return
 
-        embed = discord.Embed(title='📅 Yaklaşan Etkinlikler', color=0x3498DB)
+        embed = discord.Embed(title='Предстоящие события', color=discord.Color.dark_grey())
         for eid, ev in upcoming[:10]:
             ts = int(datetime.fromisoformat(ev['time']).timestamp())
             embed.add_field(
@@ -154,12 +154,12 @@ class Events(commands.Cog):
     async def cancel_event(self, interaction: discord.Interaction, etkinlik_id: str):
         events = self._load(interaction.guild_id)
         if etkinlik_id not in events:
-            await interaction.response.send_message('❌ Etkinlik не найден!', ephemeral=True)
+            await interaction.response.send_message('Событие не найдено', ephemeral=True)
             return
         title = events[etkinlik_id]['title']
         del events[etkinlik_id]
         self._save(interaction.guild_id, events)
-        await interaction.response.send_message(f'✅ **{title}** событие отменено.')
+        await interaction.response.send_message(f'Событие {title} отменено')
 
 async def setup(bot):
     await bot.add_cog(Events(bot), guilds=[discord.Object(id=1421244140359909513), discord.Object(id=1107038411895881788), discord.Object(id=1498837105915330562)])

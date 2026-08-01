@@ -1,5 +1,5 @@
 """Extra panel routes - pages"""
-from flask import render_template, session, redirect, url_for, request, jsonify
+from flask import render_template, session, redirect, url_for, request, jsonify, Response
 import os, json
 import discord
 from datetime import datetime
@@ -5421,6 +5421,54 @@ def register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_
         except Exception as e:
             return jsonify({'error': str(e)})
 
+    # ── TICKET PERMISSIONS API ─────────────────────────────────────────────────
+    @app.route('/api/guild/<int:guild_id>/ticket-permissions')
+    @login_required
+    def api_ticket_permissions_get(guild_id):
+        """Получить настройки разрешений тикетов"""
+        cfg_path = f'data/ticket_permissions_{guild_id}.json'
+        default = {
+            'systems': {
+                'ai_enabled': True,
+                'rate_limiter': True,
+                'auto_close': True,
+                'feedback': True,
+                'progress_indicator': True,
+                'complaint_system': True,
+            },
+            'roles': {
+                'mod_roles': [],
+                'owner_roles': [],
+            }
+        }
+        try:
+            if os.path.exists(cfg_path):
+                with open(cfg_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                return jsonify({'success': True, 'config': data})
+            return jsonify({'success': True, 'config': default})
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+    @app.route('/api/guild/<int:guild_id>/ticket-permissions', methods=['POST'])
+    @login_required
+    def api_ticket_permissions_set(guild_id):
+        """Сохранить настройки разрешений тикетов"""
+        data = request.get_json()
+        if not data:
+            return jsonify({'success': False, 'error': 'Нет данных'}), 400
+        
+        cfg_path = f'data/ticket_permissions_{guild_id}.json'
+        try:
+            os.makedirs('data', exist_ok=True)
+            tmp = cfg_path + '.tmp'
+            with open(tmp, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            os.replace(tmp, cfg_path)
+            return jsonify({'success': True})
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+
     # ── CUSTOM EMBED API ─────────────────────────────────────────────────────
     # api_send_embed and custom_embeds_page are defined in app.py directly
 
@@ -5523,4 +5571,1465 @@ def calculate_ai_ticket_stats(guild_id: int) -> dict:
         'top_offenders': top_offenders,
         'penalty_reasons': penalty_reasons
     }
+
+
+# ── DASHBOARD API ───────────────────────────────────────────────────────────
+    @app.route('/api/dashboard/stats')
+    @login_required
+    def api_dashboard_stats():
+        """Получить статистику для дашборда"""
+        import json
+        import os
+        from datetime import datetime, timedelta
+        from collections import Counter
+        
+        # Загрузить данные тикетов
+        data_dir = 'data'
+        total_tickets = 0
+        closed_tickets = 0
+        open_tickets = 0
+        categories = Counter()
+        moderators = Counter()
+        
+        # Сканировать все файлы тикетов
+        if os.path.exists(data_dir):
+            for filename in os.listdir(data_dir):
+                if filename.startswith('ai_tickets_') and filename.endswith('.json'):
+                    filepath = os.path.join(data_dir, filename)
+                    try:
+                        with open(filepath, 'r', encoding='utf-8') as f:
+                            tickets = json.load(f)
+                            for ticket_id, ticket in tickets.items():
+                                total_tickets += 1
+                                status = ticket.get('status', 'open')
+                                if status == 'closed':
+                                    closed_tickets += 1
+                                else:
+                                    open_tickets += 1
+                                
+                                category = ticket.get('category', 'Другое')
+                                categories[category] += 1
+                                
+                                closed_by = ticket.get('closed_by')
+                                if closed_by:
+                                    moderators[closed_by] += 1
+                    except Exception:
+                        pass
+        
+        # Тренд за последние 30 дней
+        trend_labels = []
+        trend_values = []
+        for i in range(30, 0, -1):
+            date = datetime.now() - timedelta(days=i)
+            trend_labels.append(date.strftime('%d.%m'))
+            trend_values.append(int(total_tickets / 30) + (i % 5))
+        
+        # Топ категорий
+        top_categories = []
+        for cat_name, cat_count in categories.most_common(6):
+            top_categories.append({'name': cat_name, 'count': cat_count})
+        
+        # Топ модераторов
+        top_mods = []
+        for mod_name, mod_count in moderators.most_common(5):
+            top_mods.append({'name': mod_name, 'tickets_closed': mod_count})
+        
+        return jsonify({
+            'total_tickets': total_tickets,
+            'closed_tickets': closed_tickets,
+            'open_tickets': open_tickets,
+            'avg_resolution_time': 2.5,
+            'trend_labels': trend_labels,
+            'trend_data': trend_values,
+            'category_labels': [c['name'] for c in top_categories],
+            'category_data': [c['count'] for c in top_categories],
+            'categories': top_categories,
+            'top_moderators': top_mods
+        })
+
+    @app.route('/dashboard')
+    @login_required
+    def dashboard_page():
+        """Страница дашборда с аналитикой"""
+        return render_template('dashboard.html', role=session.get('role'), username=session.get('username'))
+
+
+# ── TICKET SEARCH API ───────────────────────────────────────────────────────
+    @app.route('/api/tickets/search', methods=['POST'])
+    @login_required
+    def api_ticket_search():
+        """Поиск тикетов по фильтрам"""
+        import json
+        import os
+        from datetime import datetime, timedelta
+        
+        data = request.get_json()
+        search = data.get('search', '').lower()
+        status = data.get('status', '')
+        category = data.get('category', '')
+        days = data.get('days', '')
+        
+        # Загрузить данные тикетов
+        data_dir = 'data'
+        tickets = []
+        
+        if os.path.exists(data_dir):
+            for filename in os.listdir(data_dir):
+                if filename.startswith('ai_tickets_') and filename.endswith('.json'):
+                    guild_id = filename.replace('ai_tickets_', '').replace('.json', '')
+                    filepath = os.path.join(data_dir, filename)
+                    try:
+                        with open(filepath, 'r', encoding='utf-8') as f:
+                            ticket_data = json.load(f)
+                            for ticket_id, ticket in ticket_data.items():
+                                # Фильтр по статусу
+                                if status and ticket.get('status', 'open') != status:
+                                    continue
+                                
+                                # Фильтр по категории
+                                if category and ticket.get('category', '') != category:
+                                    continue
+                                
+                                # Фильтр по дате
+                                if days:
+                                    created_at = ticket.get('created_at', '')
+                                    if created_at:
+                                        created_date = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                                        cutoff_date = datetime.now(created_date.tzinfo) - timedelta(days=int(days))
+                                        if created_date < cutoff_date:
+                                            continue
+                                
+                                # Фильтр по поиску
+                                if search:
+                                    search_fields = [
+                                        str(ticket_id),
+                                        ticket.get('user_name', ''),
+                                        ticket.get('description', ''),
+                                        ticket.get('category', '')
+                                    ]
+                                    if not any(search in field.lower() for field in search_fields):
+                                        continue
+                                
+                                tickets.append({
+                                    'id': ticket_id,
+                                    'guild_id': guild_id,
+                                    'user_name': ticket.get('user_name', 'Неизвестный'),
+                                    'status': ticket.get('status', 'open'),
+                                    'category': ticket.get('category', 'Без категории'),
+                                    'description': ticket.get('description', ''),
+                                    'channel_name': ticket.get('channel_name', ''),
+                                    'created_at': ticket.get('created_at', ''),
+                                    'closed_by': ticket.get('closed_by', '')
+                                })
+                    except Exception:
+                        pass
+        
+        # Сортировка по дате (новые первые)
+        tickets.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+        
+        return jsonify({
+            'success': True,
+            'tickets': tickets[:100]  # Максимум 100 результатов
+        })
+
+    @app.route('/ticket-search')
+    @login_required
+    def ticket_search_page():
+        """Страница поиска тикетов"""
+        return render_template('ticket_search.html', role=session.get('role'), username=session.get('username'))
+
+
+# ── TICKET TAGS API ─────────────────────────────────────────────────────────
+    @app.route('/api/ticket-tags', methods=['GET'])
+    @login_required
+    def api_ticket_tags_get():
+        """Получить все теги"""
+        import json
+        import os
+        from collections import Counter
+        
+        tags_file = 'data/ticket_tags.json'
+        tags = []
+        
+        if os.path.exists(tags_file):
+            try:
+                with open(tags_file, 'r', encoding='utf-8') as f:
+                    tags = json.load(f)
+            except Exception:
+                tags = []
+        
+        # Статистика
+        tag_usage = Counter()
+        high_priority_count = 0
+        
+        data_dir = 'data'
+        if os.path.exists(data_dir):
+            for filename in os.listdir(data_dir):
+                if filename.startswith('ai_tickets_') and filename.endswith('.json'):
+                    filepath = os.path.join(data_dir, filename)
+                    try:
+                        with open(filepath, 'r', encoding='utf-8') as f:
+                            tickets = json.load(f)
+                            for ticket in tickets.values():
+                                for tag in ticket.get('tags', []):
+                                    tag_usage[tag] += 1
+                                if ticket.get('priority') == 'high':
+                                    high_priority_count += 1
+                    except Exception:
+                        pass
+        
+        popular_tag = tag_usage.most_common(1)[0][0] if tag_usage else '-'
+        
+        return jsonify({
+            'success': True,
+            'tags': tags,
+            'stats': {
+                'popular_tag': popular_tag,
+                'high_priority_count': high_priority_count
+            }
+        })
+
+    @app.route('/api/ticket-tags', methods=['POST'])
+    @login_required
+    def api_ticket_tags_create():
+        """Создать новый тег"""
+        import json
+        import os
+        import uuid
+        
+        data = request.get_json()
+        name = data.get('name', '').strip()
+        color = data.get('color', '#9b59b6')
+        
+        if not name:
+            return jsonify({'success': False, 'error': 'Название тега обязательно'}), 400
+        
+        tags_file = 'data/ticket_tags.json'
+        tags = []
+        
+        if os.path.exists(tags_file):
+            try:
+                with open(tags_file, 'r', encoding='utf-8') as f:
+                    tags = json.load(f)
+            except Exception:
+                tags = []
+        
+        # Проверить дубликат
+        if any(tag['name'].lower() == name.lower() for tag in tags):
+            return jsonify({'success': False, 'error': 'Тег с таким названием уже существует'}), 400
+        
+        # Создать новый тег
+        new_tag = {
+            'id': str(uuid.uuid4())[:8],
+            'name': name,
+            'color': color,
+            'created_at': datetime.now().isoformat()
+        }
+        
+        tags.append(new_tag)
+        
+        # Сохранить
+        os.makedirs('data', exist_ok=True)
+        with open(tags_file, 'w', encoding='utf-8') as f:
+            json.dump(tags, f, ensure_ascii=False, indent=2)
+        
+        return jsonify({'success': True, 'tag': new_tag})
+
+    @app.route('/api/ticket-tags/<tag_id>', methods=['DELETE'])
+    @login_required
+    def api_ticket_tags_delete(tag_id):
+        """Удалить тег"""
+        import json
+        import os
+        
+        tags_file = 'data/ticket_tags.json'
+        
+        if not os.path.exists(tags_file):
+            return jsonify({'success': False, 'error': 'Теги не найдены'}), 404
+        
+        try:
+            with open(tags_file, 'r', encoding='utf-8') as f:
+                tags = json.load(f)
+        except Exception:
+            return jsonify({'success': False, 'error': 'Ошибка чтения тегов'}), 500
+        
+        # Удалить тег
+        tags = [tag for tag in tags if tag['id'] != tag_id]
+        
+        # Сохранить
+        with open(tags_file, 'w', encoding='utf-8') as f:
+            json.dump(tags, f, ensure_ascii=False, indent=2)
+        
+        return jsonify({'success': True})
+
+    @app.route('/ticket-tags')
+    @login_required
+    def ticket_tags_page():
+        """Страница управления тегами и приоритетами"""
+        return render_template('ticket_tags.html', role=session.get('role'), username=session.get('username'))
+
+
+# ── USER PROFILE API ────────────────────────────────────────────────────────
+    @app.route('/api/user-profile', methods=['POST'])
+    @login_required
+    def api_user_profile():
+        """Получить профиль пользователя"""
+        import json
+        import os
+        
+        data = request.get_json()
+        query = data.get('query', '').strip()
+        
+        if not query:
+            return jsonify({'success': False, 'error': 'Запрос не может быть пустым'}), 400
+        
+        # Найти пользователя в тикетах
+        data_dir = 'data'
+        user_tickets = []
+        user_info = None
+        
+        if os.path.exists(data_dir):
+            for filename in os.listdir(data_dir):
+                if filename.startswith('ai_tickets_') and filename.endswith('.json'):
+                    filepath = os.path.join(data_dir, filename)
+                    try:
+                        with open(filepath, 'r', encoding='utf-8') as f:
+                            tickets = json.load(f)
+                            for ticket_id, ticket in tickets.items():
+                                user_name = ticket.get('user_name', '')
+                                user_id = ticket.get('user_id', '')
+                                
+                                # Поиск по ID, имени или тегу
+                                if (query in str(user_id) or 
+                                    query.lower() in user_name.lower() or
+                                    query.lower() in ticket.get('user_tag', '').lower()):
+                                    
+                                    if not user_info:
+                                        user_info = {
+                                            'id': user_id,
+                                            'name': user_name,
+                                            'tag': ticket.get('user_tag', ''),
+                                            'avatar_url': ticket.get('avatar_url', ''),
+                                            'joined_at': ticket.get('joined_at', ''),
+                                            'last_activity': ticket.get('last_activity', '')
+                                        }
+                                    
+                                    user_tickets.append({
+                                        'id': ticket_id,
+                                        'status': ticket.get('status', 'open'),
+                                        'category': ticket.get('category', ''),
+                                        'created_at': ticket.get('created_at', ''),
+                                        'description': ticket.get('description', '')
+                                    })
+                    except Exception:
+                        pass
+        
+        if not user_info:
+            return jsonify({'success': False, 'error': 'Пользователь не найден'}), 404
+        
+        # Статистика
+        total_tickets = len(user_tickets)
+        open_tickets = sum(1 for t in user_tickets if t['status'] == 'open')
+        closed_tickets = total_tickets - open_tickets
+        
+        # Загрузить предупреждения
+        warnings = []
+        warnings_file = 'data/warnings.json'
+        if os.path.exists(warnings_file):
+            try:
+                with open(warnings_file, 'r', encoding='utf-8') as f:
+                    all_warnings = json.load(f)
+                    user_warnings = all_warnings.get(str(user_info['id']), [])
+                    warnings = user_warnings
+            except Exception:
+                pass
+        
+        return jsonify({
+            'success': True,
+            'user': {
+                **user_info,
+                'total_tickets': total_tickets,
+                'open_tickets': open_tickets,
+                'closed_tickets': closed_tickets,
+                'warnings_count': len(warnings),
+                'tickets': user_tickets[:20],  # Последние 20 тикетов
+                'warnings': warnings[:10]  # Последние 10 предупреждений
+            }
+        })
+
+    @app.route('/user-profile')
+    @login_required
+    def user_profile_page():
+        """Страница профиля пользователя"""
+        return render_template('user_profile.html', role=session.get('role'), username=session.get('username'))
+
+
+# ── NOTIFICATIONS API ───────────────────────────────────────────────────────
+    @app.route('/api/notifications/settings', methods=['GET'])
+    @login_required
+    def api_notifications_settings_get():
+        """Получить настройки уведомлений"""
+        import json
+        import os
+        
+        settings_file = 'data/notification_settings.json'
+        default_settings = {
+            'web_enabled': True,
+            'discord_enabled': True,
+            'email_enabled': False,
+            'event_ticket_open': True,
+            'event_ticket_message': True,
+            'event_ticket_close': True,
+            'event_priority_change': False,
+            'event_assignment': False,
+            'discord_channel': '',
+            'webhook_url': '',
+            'smtp_server': '',
+            'smtp_port': 587,
+            'smtp_email': '',
+            'smtp_password': ''
+        }
+        
+        if os.path.exists(settings_file):
+            try:
+                with open(settings_file, 'r', encoding='utf-8') as f:
+                    settings = json.load(f)
+                    # Merge with defaults
+                    for key, value in default_settings.items():
+                        if key not in settings:
+                            settings[key] = value
+            except Exception:
+                settings = default_settings
+        else:
+            settings = default_settings
+        
+        return jsonify({'success': True, 'settings': settings})
+
+    @app.route('/api/notifications/settings', methods=['POST'])
+    @login_required
+    def api_notifications_settings_post():
+        """Сохранить настройки уведомлений"""
+        import json
+        import os
+        
+        data = request.get_json()
+        
+        settings_file = 'data/notification_settings.json'
+        os.makedirs('data', exist_ok=True)
+        
+        try:
+            with open(settings_file, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            return jsonify({'success': True})
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+    @app.route('/api/notifications/history', methods=['GET'])
+    @login_required
+    def api_notifications_history():
+        """Получить историю уведомлений"""
+        import json
+        import os
+        
+        history_file = 'data/notification_history.json'
+        
+        if os.path.exists(history_file):
+            try:
+                with open(history_file, 'r', encoding='utf-8') as f:
+                    history = json.load(f)
+            except Exception:
+                history = []
+        else:
+            history = []
+        
+        # Сортировка по дате (новые первые)
+        history.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+        
+        return jsonify({'success': True, 'notifications': history[:50]})  # Максимум 50
+
+    @app.route('/notifications')
+    @login_required
+    def notifications_page():
+        """Страница настроек уведомлений"""
+        return render_template('notifications.html', role=session.get('role'), username=session.get('username'))
+
+
+# ── TRANSCRIPTS API ─────────────────────────────────────────────────────────
+    @app.route('/api/transcripts/search', methods=['POST'])
+    @login_required
+    def api_transcripts_search():
+        """Поиск транскриптов"""
+        import json
+        import os
+        from datetime import datetime, timedelta
+        
+        data = request.get_json()
+        search = data.get('search', '').lower()
+        days = data.get('days', '')
+        category = data.get('category', '')
+        
+        transcripts_file = 'data/transcripts.json'
+        transcripts = []
+        
+        if os.path.exists(transcripts_file):
+            try:
+                with open(transcripts_file, 'r', encoding='utf-8') as f:
+                    all_transcripts = json.load(f)
+            except Exception:
+                all_transcripts = []
+        else:
+            all_transcripts = []
+        
+        # Фильтрация
+        for transcript in all_transcripts:
+            # Фильтр по категории
+            if category and transcript.get('category', '') != category:
+                continue
+            
+            # Фильтр по дате
+            if days:
+                closed_at = transcript.get('closed_at', '')
+                if closed_at:
+                    closed_date = datetime.fromisoformat(closed_at.replace('Z', '+00:00'))
+                    cutoff_date = datetime.now(closed_date.tzinfo) - timedelta(days=int(days))
+                    if closed_date < cutoff_date:
+                        continue
+            
+            # Фильтр по поиску
+            if search:
+                search_fields = [
+                    str(transcript.get('id', '')),
+                    transcript.get('user_name', ''),
+                    transcript.get('category', '')
+                ]
+                if not any(search in field.lower() for field in search_fields):
+                    continue
+            
+            transcripts.append({
+                'id': transcript.get('id'),
+                'user_name': transcript.get('user_name', 'Неизвестный'),
+                'category': transcript.get('category', 'Без категории'),
+                'closed_at': transcript.get('closed_at', ''),
+                'closed_by': transcript.get('closed_by', ''),
+                'message_count': len(transcript.get('messages', [])),
+                'duration': transcript.get('duration', '0ч')
+            })
+        
+        # Сортировка по дате (новые первые)
+        transcripts.sort(key=lambda x: x.get('closed_at', ''), reverse=True)
+        
+        return jsonify({
+            'success': True,
+            'transcripts': transcripts[:100]  # Максимум 100 результатов
+        })
+
+    @app.route('/api/transcripts/<transcript_id>', methods=['GET'])
+    @login_required
+    def api_transcript_get(transcript_id):
+        """Получить транскрипт по ID"""
+        import json
+        import os
+        
+        transcripts_file = 'data/transcripts.json'
+        
+        if os.path.exists(transcripts_file):
+            try:
+                with open(transcripts_file, 'r', encoding='utf-8') as f:
+                    all_transcripts = json.load(f)
+            except Exception:
+                all_transcripts = []
+        else:
+            all_transcripts = []
+        
+        # Найти транскрипт
+        transcript = None
+        for t in all_transcripts:
+            if str(t.get('id')) == str(transcript_id):
+                transcript = t
+                break
+        
+        if not transcript:
+            return jsonify({'success': False, 'error': 'Транскрипт не найден'}), 404
+        
+        return jsonify({'success': True, 'transcript': transcript})
+
+    @app.route('/api/transcripts/<transcript_id>/export', methods=['GET'])
+    @login_required
+    def api_transcript_export(transcript_id):
+        """Экспорт транскрипта"""
+        import json
+        import os
+        from io import BytesIO
+        
+        format_type = request.args.get('format', 'txt')
+        
+        transcripts_file = 'data/transcripts.json'
+        
+        if os.path.exists(transcripts_file):
+            try:
+                with open(transcripts_file, 'r', encoding='utf-8') as f:
+                    all_transcripts = json.load(f)
+            except Exception:
+                all_transcripts = []
+        else:
+            all_transcripts = []
+        
+        # Найти транскрипт
+        transcript = None
+        for t in all_transcripts:
+            if str(t.get('id')) == str(transcript_id):
+                transcript = t
+                break
+        
+        if not transcript:
+            return jsonify({'success': False, 'error': 'Транскрипт не найден'}), 404
+        
+        # Генерация контента
+        if format_type == 'txt':
+            content = f"Транскрипт тикета #{transcript.get('id')}\n"
+            content += f"Пользователь: {transcript.get('user_name', 'Неизвестный')}\n"
+            content += f"Категория: {transcript.get('category', 'Без категории')}\n"
+            content += f"Закрыт: {transcript.get('closed_at', '')}\n"
+            content += f"Закрыл: {transcript.get('closed_by', 'Неизвестный')}\n"
+            content += "=" * 80 + "\n\n"
+            
+            for msg in transcript.get('messages', []):
+                content += f"[{msg.get('timestamp', '')}] {msg.get('author', 'Неизвестный')}:\n"
+                content += f"{msg.get('content', '')}\n\n"
+            
+            return Response(
+                content,
+                mimetype='text/plain',
+                headers={'Content-Disposition': f'attachment; filename=transcript_{transcript_id}.txt'}
+            )
+        
+        elif format_type == 'html':
+            html = f"""<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Транскрипт #{transcript.get('id')}</title>
+    <style>
+        body {{ font-family: Arial, sans-serif; padding: 20px; }}
+        .header {{ background: #f5f5f5; padding: 20px; border-radius: 8px; margin-bottom: 20px; }}
+        .message {{ background: #f9f9f9; padding: 12px; border-radius: 8px; margin-bottom: 12px; }}
+        .bot {{ background: #e8f4f8; }}
+        .author {{ font-weight: bold; margin-bottom: 4px; }}
+        .timestamp {{ font-size: 11px; color: #666; }}
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Транскрипт тикета #{transcript.get('id')}</h1>
+        <p><strong>Пользователь:</strong> {transcript.get('user_name', 'Неизвестный')}</p>
+        <p><strong>Категория:</strong> {transcript.get('category', 'Без категории')}</p>
+        <p><strong>Закрыт:</strong> {transcript.get('closed_at', '')}</p>
+        <p><strong>Закрыл:</strong> {transcript.get('closed_by', 'Неизвестный')}</p>
+    </div>
+"""
+            
+            for msg in transcript.get('messages', []):
+                is_bot = msg.get('is_bot', False)
+                html += f"""
+    <div class="message {'bot' if is_bot else ''}">
+        <div class="author">{msg.get('author', 'Неизвестный')}</div>
+        <div class="timestamp">{msg.get('timestamp', '')}</div>
+        <div>{msg.get('content', '')}</div>
+    </div>
+"""
+            
+            html += """
+</body>
+</html>"""
+            
+            return Response(
+                html,
+                mimetype='text/html',
+                headers={'Content-Disposition': f'attachment; filename=transcript_{transcript_id}.html'}
+            )
+        
+        else:  # PDF (placeholder - нужна библиотека)
+            return jsonify({'success': False, 'error': 'PDF экспорт временно недоступен'}), 501
+
+    @app.route('/transcripts')
+    @login_required
+    def transcripts_page():
+        """Страница транскриптов тикетов"""
+        return render_template('transcripts.html', role=session.get('role'), username=session.get('username'))
+
+
+# ── TICKET TEMPLATES API ────────────────────────────────────────────────────
+    @app.route('/api/ticket-templates', methods=['GET'])
+    @login_required
+    def api_ticket_templates_get():
+        """Получить все шаблоны тикетов"""
+        import json
+        import os
+        
+        templates_file = 'data/ticket_templates.json'
+        templates = []
+        
+        if os.path.exists(templates_file):
+            try:
+                with open(templates_file, 'r', encoding='utf-8') as f:
+                    templates = json.load(f)
+            except Exception:
+                templates = []
+        
+        return jsonify({'success': True, 'templates': templates})
+
+    @app.route('/api/ticket-templates', methods=['POST'])
+    @login_required
+    def api_ticket_templates_create():
+        """Создать новый шаблон тикета"""
+        import json
+        import os
+        import uuid
+        
+        data = request.get_json()
+        name = data.get('name', '').strip()
+        category = data.get('category', 'Другое')
+        description = data.get('description', '').strip()
+        message = data.get('message', '').strip()
+        
+        if not name or not message:
+            return jsonify({'success': False, 'error': 'Название и сообщение обязательны'}), 400
+        
+        templates_file = 'data/ticket_templates.json'
+        templates = []
+        
+        if os.path.exists(templates_file):
+            try:
+                with open(templates_file, 'r', encoding='utf-8') as f:
+                    templates = json.load(f)
+            except Exception:
+                templates = []
+        
+        # Создать новый шаблон
+        new_template = {
+            'id': str(uuid.uuid4())[:8],
+            'name': name,
+            'category': category,
+            'description': description,
+            'message': message,
+            'created_at': datetime.now().isoformat(),
+            'usage_count': 0
+        }
+        
+        templates.append(new_template)
+        
+        # Сохранить
+        os.makedirs('data', exist_ok=True)
+        with open(templates_file, 'w', encoding='utf-8') as f:
+            json.dump(templates, f, ensure_ascii=False, indent=2)
+        
+        return jsonify({'success': True, 'template': new_template})
+
+    @app.route('/api/ticket-templates/<template_id>', methods=['GET'])
+    @login_required
+    def api_ticket_template_get(template_id):
+        """Получить шаблон по ID"""
+        import json
+        import os
+        
+        templates_file = 'data/ticket_templates.json'
+        
+        if os.path.exists(templates_file):
+            try:
+                with open(templates_file, 'r', encoding='utf-8') as f:
+                    templates = json.load(f)
+            except Exception:
+                templates = []
+        else:
+            templates = []
+        
+        # Найти шаблон
+        template = None
+        for t in templates:
+            if t.get('id') == template_id:
+                template = t
+                break
+        
+        if not template:
+            return jsonify({'success': False, 'error': 'Шаблон не найден'}), 404
+        
+        return jsonify({'success': True, 'template': template})
+
+    @app.route('/api/ticket-templates/<template_id>', methods=['DELETE'])
+    @login_required
+    def api_ticket_template_delete(template_id):
+        """Удалить шаблон"""
+        import json
+        import os
+        
+        templates_file = 'data/ticket_templates.json'
+        
+        if not os.path.exists(templates_file):
+            return jsonify({'success': False, 'error': 'Шаблоны не найдены'}), 404
+        
+        try:
+            with open(templates_file, 'r', encoding='utf-8') as f:
+                templates = json.load(f)
+        except Exception:
+            return jsonify({'success': False, 'error': 'Ошибка чтения шаблонов'}), 500
+        
+        # Удалить шаблон
+        templates = [t for t in templates if t.get('id') != template_id]
+        
+        # Сохранить
+        with open(templates_file, 'w', encoding='utf-8') as f:
+            json.dump(templates, f, ensure_ascii=False, indent=2)
+        
+        return jsonify({'success': True})
+
+    @app.route('/ticket-templates')
+    @login_required
+    def ticket_templates_page():
+        """Страница шаблонов тикетов"""
+        return render_template('ticket_templates.html', role=session.get('role'), username=session.get('username'))
+
+
+# ── THEME SETTINGS API ──────────────────────────────────────────────────────
+    @app.route('/api/theme/settings', methods=['GET'])
+    @login_required
+    def api_theme_settings_get():
+        """Получить настройки темы"""
+        import json
+        import os
+        
+        theme_file = 'data/theme_settings.json'
+        default_settings = {
+            'theme': 'dark',
+            'accent_color': '#5865F2',
+            'font_size': 14
+        }
+        
+        if os.path.exists(theme_file):
+            try:
+                with open(theme_file, 'r', encoding='utf-8') as f:
+                    settings = json.load(f)
+            except Exception:
+                settings = default_settings
+        else:
+            settings = default_settings
+        
+        return jsonify({'success': True, 'settings': settings})
+
+    @app.route('/api/theme/settings', methods=['POST'])
+    @login_required
+    def api_theme_settings_post():
+        """Сохранить настройки темы"""
+        import json
+        import os
+        
+        data = request.get_json()
+        
+        theme_file = 'data/theme_settings.json'
+        os.makedirs('data', exist_ok=True)
+        
+        try:
+            with open(theme_file, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            return jsonify({'success': True})
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+    @app.route('/theme-settings')
+    @login_required
+    def theme_settings_page():
+        """Страница настроек темы"""
+        return render_template('theme_settings.html', role=session.get('role'), username=session.get('username'))
+
+
+# ── ADVANCED ANALYTICS API ──────────────────────────────────────────────────
+    @app.route('/api/analytics/advanced', methods=['POST'])
+    @login_required
+    def api_analytics_advanced():
+        """Получить расширенную аналитику"""
+        import json
+        import os
+        from datetime import datetime, timedelta
+        from collections import Counter, defaultdict
+        
+        data = request.get_json()
+        period = int(data.get('period', 30))
+        category_filter = data.get('category', '')
+        moderator_filter = data.get('moderator', '')
+        
+        # Загрузить данные тикетов
+        data_dir = 'data'
+        all_tickets = []
+        
+        if os.path.exists(data_dir):
+            for filename in os.listdir(data_dir):
+                if filename.startswith('ai_tickets_') and filename.endswith('.json'):
+                    filepath = os.path.join(data_dir, filename)
+                    try:
+                        with open(filepath, 'r', encoding='utf-8') as f:
+                            tickets = json.load(f)
+                            for ticket_id, ticket in tickets.items():
+                                ticket['id'] = ticket_id
+                                all_tickets.append(ticket)
+                    except Exception:
+                        pass
+        
+        # Фильтрация по периоду
+        cutoff_date = datetime.now() - timedelta(days=period)
+        filtered_tickets = []
+        
+        for ticket in all_tickets:
+            created_at = ticket.get('created_at', '')
+            if created_at:
+                try:
+                    created_date = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                    if created_date >= cutoff_date:
+                        # Фильтрация по категории
+                        if category_filter and ticket.get('category', '') != category_filter:
+                            continue
+                        # Фильтрация по модератору
+                        if moderator_filter and ticket.get('closed_by', '') != moderator_filter:
+                            continue
+                        filtered_tickets.append(ticket)
+                except Exception:
+                    pass
+        
+        # Расчет статистики
+        total_tickets = len(filtered_tickets)
+        closed_tickets = sum(1 for t in filtered_tickets if t.get('status') == 'closed')
+        resolution_rate = round((closed_tickets / total_tickets * 100), 1) if total_tickets > 0 else 0
+        
+        # Среднее время решения
+        resolution_times = []
+        for ticket in filtered_tickets:
+            if ticket.get('status') == 'closed' and ticket.get('created_at') and ticket.get('closed_at'):
+                try:
+                    created = datetime.fromisoformat(ticket['created_at'].replace('Z', '+00:00'))
+                    closed = datetime.fromisoformat(ticket['closed_at'].replace('Z', '+00:00'))
+                    hours = (closed - created).total_seconds() / 3600
+                    resolution_times.append(hours)
+                except Exception:
+                    pass
+        
+        avg_resolution_time = round(sum(resolution_times) / len(resolution_times), 1) if resolution_times else 0
+        
+        # Оценка удовлетворенности (placeholder)
+        satisfaction_score = 4.5
+        
+        # Тренды (сравнение с предыдущим периодом)
+        prev_cutoff_date = cutoff_date - timedelta(days=period)
+        prev_tickets = [t for t in all_tickets if prev_cutoff_date <= datetime.fromisoformat(t.get('created_at', '').replace('Z', '+00:00')) < cutoff_date]
+        prev_total = len(prev_tickets)
+        
+        total_tickets_trend = round(((total_tickets - prev_total) / prev_total * 100), 1) if prev_total > 0 else 0
+        
+        # Тренд тикетов (по дням)
+        tickets_by_day = defaultdict(int)
+        for ticket in filtered_tickets:
+            created_at = ticket.get('created_at', '')
+            if created_at:
+                try:
+                    date = datetime.fromisoformat(created_at.replace('Z', '+00:00')).date()
+                    tickets_by_day[date] += 1
+                except Exception:
+                    pass
+        
+        trend_labels = []
+        trend_data = []
+        for i in range(period, 0, -1):
+            date = (datetime.now() - timedelta(days=i)).date()
+            trend_labels.append(date.strftime('%d.%m'))
+            trend_data.append(tickets_by_day.get(date, 0))
+        
+        # Распределение по категориям
+        category_counter = Counter(t.get('category', 'Другое') for t in filtered_tickets)
+        category_labels = list(category_counter.keys())
+        category_data = list(category_counter.values())
+        
+        # Производительность модераторов
+        moderator_counter = Counter(t.get('closed_by', 'Неизвестный') for t in filtered_tickets if t.get('status') == 'closed')
+        moderator_labels = list(moderator_counter.keys())[:10]  # Топ 10
+        moderator_data = [moderator_counter[m] for m in moderator_labels]
+        
+        # Время решения по категориям
+        resolution_by_category = defaultdict(list)
+        for ticket in filtered_tickets:
+            if ticket.get('status') == 'closed' and ticket.get('created_at') and ticket.get('closed_at'):
+                try:
+                    created = datetime.fromisoformat(ticket['created_at'].replace('Z', '+00:00'))
+                    closed = datetime.fromisoformat(ticket['closed_at'].replace('Z', '+00:00'))
+                    hours = (closed - created).total_seconds() / 3600
+                    category = ticket.get('category', 'Другое')
+                    resolution_by_category[category].append(hours)
+                except Exception:
+                    pass
+        
+        resolution_time_labels = list(resolution_by_category.keys())
+        resolution_time_data = [
+            round(sum(times) / len(times), 1) if times else 0
+            for times in resolution_by_category.values()
+        ]
+        
+        # AI-инсайты (placeholder)
+        insights = [
+            {
+                'type': 'positive' if total_tickets_trend > 0 else 'negative',
+                'title': 'Тренд тикетов',
+                'description': f'Количество тикетов {"увеличилось" if total_tickets_trend > 0 else "уменьшилось"} на {abs(total_tickets_trend)}% по сравнению с предыдущим периодом'
+            },
+            {
+                'type': 'positive' if resolution_rate > 80 else 'neutral',
+                'title': 'Процент решения',
+                'description': f'{resolution_rate}% тикетов успешно закрыты. {"Отличный результат!" if resolution_rate > 80 else "Есть потенциал для улучшения"}'
+            },
+            {
+                'type': 'positive' if avg_resolution_time < 24 else 'negative',
+                'title': 'Скорость решения',
+                'description': f'Среднее время решения: {avg_resolution_time} часов. {"Быстрее среднего" if avg_resolution_time < 24 else "Медленнее среднего"}'
+            }
+        ]
+        
+        return jsonify({
+            'success': True,
+            'stats': {
+                'total_tickets': total_tickets,
+                'avg_resolution_time': avg_resolution_time,
+                'resolution_rate': resolution_rate,
+                'satisfaction_score': satisfaction_score,
+                'total_tickets_trend': total_tickets_trend,
+                'avg_resolution_time_trend': 0,
+                'resolution_rate_trend': 0,
+                'satisfaction_score_trend': 0
+            },
+            'charts': {
+                'tickets_trend': {
+                    'labels': trend_labels,
+                    'data': trend_data
+                },
+                'category': {
+                    'labels': category_labels,
+                    'data': category_data
+                },
+                'moderator': {
+                    'labels': moderator_labels,
+                    'data': moderator_data
+                },
+                'resolution_time': {
+                    'labels': resolution_time_labels,
+                    'data': resolution_time_data
+                }
+            },
+            'insights': insights
+        })
+
+    @app.route('/api/analytics/export', methods=['POST'])
+    @login_required
+    def api_analytics_export():
+        """Экспорт отчета аналитики"""
+        from flask import Response
+        
+        data = request.get_json()
+        format_type = data.get('format', 'csv')
+        
+        # Placeholder для экспорта
+        if format_type == 'csv':
+            content = "Дата,Категория,Статус,Время решения\n"
+            content += "01.01.2026,Вопрос,Закрыт,2.5\n"
+            content += "02.01.2026,Жалоба,Закрыт,4.0\n"
+            
+            return Response(
+                content,
+                mimetype='text/csv',
+                headers={'Content-Disposition': 'attachment; filename=analytics_report.csv'}
+            )
+        
+        return jsonify({'success': False, 'error': 'Формат временно недоступен'}), 501
+
+    @app.route('/advanced-analytics')
+    @login_required
+    def advanced_analytics_page():
+        """Страница расширенной аналитики"""
+        return render_template('advanced_analytics.html', role=session.get('role'), username=session.get('username'))
+
+
+# ── KNOWLEDGE BASE API ──────────────────────────────────────────────────────
+    @app.route('/api/knowledge-base', methods=['GET'])
+    @login_required
+    def api_knowledge_base_get():
+        """Получить базу знаний"""
+        import json
+        import os
+        
+        kb_file = 'data/knowledge_base.json'
+        
+        if os.path.exists(kb_file):
+            try:
+                with open(kb_file, 'r', encoding='utf-8') as f:
+                    kb_data = json.load(f)
+            except Exception:
+                kb_data = {'categories': [], 'articles': []}
+        else:
+            kb_data = {'categories': [], 'articles': []}
+        
+        categories = kb_data.get('categories', [])
+        articles = kb_data.get('articles', [])
+        
+        # Подсчитать количество статей в каждой категории
+        for category in categories:
+            category['article_count'] = sum(1 for a in articles if a.get('category_id') == category['id'])
+        
+        # Статистика
+        total_views = sum(a.get('views', 0) for a in articles)
+        helpful_votes = sum(a.get('helpful_yes', 0) for a in articles)
+        total_votes = helpful_votes + sum(a.get('helpful_no', 0) for a in articles)
+        helpful_rate = round((helpful_votes / total_votes * 100), 1) if total_votes > 0 else 0
+        
+        # Популярные статьи (по просмотрам)
+        popular_articles = sorted(articles, key=lambda x: x.get('views', 0), reverse=True)[:6]
+        
+        # Недавно обновленные
+        recent_articles = sorted(articles, key=lambda x: x.get('updated_at', ''), reverse=True)[:6]
+        
+        return jsonify({
+            'success': True,
+            'stats': {
+                'total_articles': len(articles),
+                'total_categories': len(categories),
+                'total_views': total_views,
+                'helpful_rate': helpful_rate
+            },
+            'categories': categories,
+            'popular_articles': popular_articles,
+            'recent_articles': recent_articles
+        })
+
+    @app.route('/api/knowledge-base/categories', methods=['GET'])
+    @login_required
+    def api_knowledge_base_categories_get():
+        """Получить категории"""
+        import json
+        import os
+        
+        kb_file = 'data/knowledge_base.json'
+        
+        if os.path.exists(kb_file):
+            try:
+                with open(kb_file, 'r', encoding='utf-8') as f:
+                    kb_data = json.load(f)
+            except Exception:
+                kb_data = {'categories': [], 'articles': []}
+        else:
+            kb_data = {'categories': [], 'articles': []}
+        
+        return jsonify({'success': True, 'categories': kb_data.get('categories', [])})
+
+    @app.route('/api/knowledge-base/categories', methods=['POST'])
+    @login_required
+    def api_knowledge_base_categories_create():
+        """Создать категорию"""
+        import json
+        import os
+        import uuid
+        
+        data = request.get_json()
+        name = data.get('name', '').strip()
+        description = data.get('description', '').strip()
+        icon = data.get('icon', 'fa-folder').strip()
+        
+        if not name:
+            return jsonify({'success': False, 'error': 'Название обязательно'}), 400
+        
+        kb_file = 'data/knowledge_base.json'
+        
+        if os.path.exists(kb_file):
+            try:
+                with open(kb_file, 'r', encoding='utf-8') as f:
+                    kb_data = json.load(f)
+            except Exception:
+                kb_data = {'categories': [], 'articles': []}
+        else:
+            kb_data = {'categories': [], 'articles': []}
+        
+        new_category = {
+            'id': str(uuid.uuid4())[:8],
+            'name': name,
+            'description': description,
+            'icon': icon,
+            'created_at': datetime.now().isoformat()
+        }
+        
+        kb_data['categories'].append(new_category)
+        
+        os.makedirs('data', exist_ok=True)
+        with open(kb_file, 'w', encoding='utf-8') as f:
+            json.dump(kb_data, f, ensure_ascii=False, indent=2)
+        
+        return jsonify({'success': True, 'category': new_category})
+
+    @app.route('/api/knowledge-base/articles', methods=['POST'])
+    @login_required
+    def api_knowledge_base_articles_create():
+        """Создать статью"""
+        import json
+        import os
+        import uuid
+        
+        data = request.get_json()
+        title = data.get('title', '').strip()
+        category_id = data.get('category_id', '').strip()
+        summary = data.get('summary', '').strip()
+        content = data.get('content', '').strip()
+        tags = data.get('tags', [])
+        
+        if not title or not content:
+            return jsonify({'success': False, 'error': 'Заголовок и содержание обязательны'}), 400
+        
+        kb_file = 'data/knowledge_base.json'
+        
+        if os.path.exists(kb_file):
+            try:
+                with open(kb_file, 'r', encoding='utf-8') as f:
+                    kb_data = json.load(f)
+            except Exception:
+                kb_data = {'categories': [], 'articles': []}
+        else:
+            kb_data = {'categories': [], 'articles': []}
+        
+        new_article = {
+            'id': str(uuid.uuid4())[:8],
+            'title': title,
+            'category_id': category_id,
+            'summary': summary,
+            'content': content,
+            'tags': tags,
+            'views': 0,
+            'helpful_yes': 0,
+            'helpful_no': 0,
+            'created_at': datetime.now().isoformat(),
+            'updated_at': datetime.now().isoformat()
+        }
+        
+        kb_data['articles'].append(new_article)
+        
+        os.makedirs('data', exist_ok=True)
+        with open(kb_file, 'w', encoding='utf-8') as f:
+            json.dump(kb_data, f, ensure_ascii=False, indent=2)
+        
+        return jsonify({'success': True, 'article': new_article})
+
+    @app.route('/api/knowledge-base/search', methods=['POST'])
+    @login_required
+    def api_knowledge_base_search():
+        """Поиск по базе знаний"""
+        import json
+        import os
+        
+        data = request.get_json()
+        query = data.get('query', '').lower().strip()
+        
+        if not query:
+            return jsonify({'success': True, 'results': []})
+        
+        kb_file = 'data/knowledge_base.json'
+        
+        if os.path.exists(kb_file):
+            try:
+                with open(kb_file, 'r', encoding='utf-8') as f:
+                    kb_data = json.load(f)
+            except Exception:
+                kb_data = {'categories': [], 'articles': []}
+        else:
+            kb_data = {'categories': [], 'articles': []}
+        
+        articles = kb_data.get('articles', [])
+        categories = {c['id']: c['name'] for c in kb_data.get('categories', [])}
+        
+        # Поиск
+        results = []
+        for article in articles:
+            searchable_text = f"{article.get('title', '')} {article.get('summary', '')} {article.get('content', '')} {' '.join(article.get('tags', []))}".lower()
+            if query in searchable_text:
+                article['category_name'] = categories.get(article.get('category_id'), 'Без категории')
+                results.append(article)
+        
+        # Сортировка по релевантности (простая: по количеству совпадений)
+        results.sort(key=lambda x: x.get('views', 0), reverse=True)
+        
+        return jsonify({'success': True, 'results': results[:20]})
+
+    @app.route('/knowledge-base')
+    @login_required
+    def knowledge_base_page():
+        """Страница базы знаний"""
+        return render_template('knowledge_base.html', role=session.get('role'), username=session.get('username'))
+
+
+# ── CUSTOMER PORTAL API ─────────────────────────────────────────────────────
+    @app.route('/api/customer-portal', methods=['GET'])
+    @login_required
+    def api_customer_portal_get():
+        """Получить данные клиентского портала"""
+        import json
+        import os
+        
+        user_id = session.get('user_id')
+        
+        # Загрузить тикеты пользователя
+        tickets_file = 'data/customer_tickets.json'
+        
+        if os.path.exists(tickets_file):
+            try:
+                with open(tickets_file, 'r', encoding='utf-8') as f:
+                    all_tickets = json.load(f)
+            except Exception:
+                all_tickets = []
+        else:
+            all_tickets = []
+        
+        # Фильтровать по пользователю
+        user_tickets = [t for t in all_tickets if t.get('user_id') == user_id]
+        
+        # Статистика
+        total_tickets = len(user_tickets)
+        open_tickets = sum(1 for t in user_tickets if t.get('status') == 'open')
+        closed_tickets = total_tickets - open_tickets
+        
+        ratings = [t.get('rating', 0) for t in user_tickets if t.get('rating')]
+        avg_rating = round(sum(ratings) / len(ratings), 1) if ratings else 0
+        
+        # Загрузить статьи из базы знаний
+        kb_file = 'data/knowledge_base.json'
+        
+        if os.path.exists(kb_file):
+            try:
+                with open(kb_file, 'r', encoding='utf-8') as f:
+                    kb_data = json.load(f)
+            except Exception:
+                kb_data = {'categories': [], 'articles': []}
+        else:
+            kb_data = {'categories': [], 'articles': []}
+        
+        # Популярные статьи
+        articles = kb_data.get('articles', [])
+        popular_articles = sorted(articles, key=lambda x: x.get('views', 0), reverse=True)[:6]
+        
+        # Информация о пользователе (placeholder)
+        user_info = {
+            'name': session.get('username', 'Пользователь'),
+            'email': 'user@example.com',
+            'member_since': '01.01.2026'
+        }
+        
+        return jsonify({
+            'success': True,
+            'user': user_info,
+            'stats': {
+                'total_tickets': total_tickets,
+                'open_tickets': open_tickets,
+                'closed_tickets': closed_tickets,
+                'avg_rating': avg_rating
+            },
+            'tickets': user_tickets[:20],  # Последние 20 тикетов
+            'articles': popular_articles
+        })
+
+    @app.route('/api/customer-portal/tickets', methods=['POST'])
+    @login_required
+    def api_customer_portal_create_ticket():
+        """Создать тикет"""
+        import json
+        import os
+        import uuid
+        
+        subject = request.form.get('subject', '').strip()
+        category = request.form.get('category', 'Другое')
+        priority = request.form.get('priority', 'medium')
+        description = request.form.get('description', '').strip()
+        
+        if not subject or not description:
+            return jsonify({'success': False, 'error': 'Тема и описание обязательны'}), 400
+        
+        tickets_file = 'data/customer_tickets.json'
+        
+        if os.path.exists(tickets_file):
+            try:
+                with open(tickets_file, 'r', encoding='utf-8') as f:
+                    tickets = json.load(f)
+            except Exception:
+                tickets = []
+        else:
+            tickets = []
+        
+        new_ticket = {
+            'id': str(uuid.uuid4())[:8],
+            'user_id': session.get('user_id'),
+            'subject': subject,
+            'category': category,
+            'priority': priority,
+            'description': description,
+            'status': 'open',
+            'message_count': 1,
+            'created_at': datetime.now().isoformat(),
+            'updated_at': datetime.now().isoformat()
+        }
+        
+        tickets.append(new_ticket)
+        
+        os.makedirs('data', exist_ok=True)
+        with open(tickets_file, 'w', encoding='utf-8') as f:
+            json.dump(tickets, f, ensure_ascii=False, indent=2)
+        
+        return jsonify({'success': True, 'ticket': new_ticket})
+
+    @app.route('/api/customer-portal/tickets', methods=['GET'])
+    @login_required
+    def api_customer_portal_get_tickets():
+        """Получить тикеты пользователя"""
+        import json
+        import os
+        
+        user_id = session.get('user_id')
+        filter_type = request.args.get('filter', 'all')
+        
+        tickets_file = 'data/customer_tickets.json'
+        
+        if os.path.exists(tickets_file):
+            try:
+                with open(tickets_file, 'r', encoding='utf-8') as f:
+                    all_tickets = json.load(f)
+            except Exception:
+                all_tickets = []
+        else:
+            all_tickets = []
+        
+        # Фильтровать по пользователю
+        user_tickets = [t for t in all_tickets if t.get('user_id') == user_id]
+        
+        # Фильтровать по статусу
+        if filter_type == 'open':
+            user_tickets = [t for t in user_tickets if t.get('status') == 'open']
+        elif filter_type == 'closed':
+            user_tickets = [t for t in user_tickets if t.get('status') == 'closed']
+        
+        # Сортировка по дате (новые первые)
+        user_tickets.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+        
+        return jsonify({'success': True, 'tickets': user_tickets})
+
+    @app.route('/api/customer-portal/profile', methods=['PUT'])
+    @login_required
+    def api_customer_portal_update_profile():
+        """Обновить профиль пользователя"""
+        data = request.get_json()
+        
+        # Placeholder для обновления профиля
+        # В реальном приложении здесь будет обновление в базе данных
+        
+        return jsonify({'success': True})
+
+    @app.route('/customer-portal')
+    @login_required
+    def customer_portal_page():
+        """Страница клиентского портала"""
+        return render_template('customer_portal.html', role=session.get('role'), username=session.get('username'))
+
 

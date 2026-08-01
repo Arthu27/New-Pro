@@ -34,12 +34,12 @@ class Webhooks(commands.Cog):
                              webhook_id: str = None, message: str = None, kullanici_adi: str = None):
         if action == "create":
             if not channel or not isim:
-                await interaction.response.send_message('❌ Канал ve isim belirtmelisin!', ephemeral=True)
+                await interaction.response.send_message(' Канал ve isim belirtmelisin!', ephemeral=True)
                 return
             try:
                 wh = await channel.create_webhook(name=isim)
             except discord.Forbidden:
-                await interaction.response.send_message('❌ Webhook создан iznim yok!', ephemeral=True)
+                await interaction.response.send_message(' Webhook создан iznim yok!', ephemeral=True)
                 return
 
             data = self._load(interaction.guild_id)
@@ -50,7 +50,7 @@ class Webhooks(commands.Cog):
             }
             self._save(interaction.guild_id, data)
 
-            embed = discord.Embed(title='✅ Webhook Создало', color=0x2ECC71)
+            embed = discord.Embed(title=' Webhook Создало', color=0x2ECC71)
             embed.add_field(name='Isim', value=isim)
             embed.add_field(name='Канал', value=channel.mention)
             embed.add_field(name='ID', value=str(wh.id))
@@ -58,12 +58,12 @@ class Webhooks(commands.Cog):
 
         elif action == "send":
             if not webhook_id or not message:
-                await interaction.response.send_message('❌ Webhook ID ve message belirtmelisin!', ephemeral=True)
+                await interaction.response.send_message(' Webhook ID ve message belirtmelisin!', ephemeral=True)
                 return
 
             data = self._load(interaction.guild_id)
             if webhook_id not in data:
-                await interaction.response.send_message('❌ Webhook не найден!', ephemeral=True)
+                await interaction.response.send_message(' Webhook не найден!', ephemeral=True)
                 return
 
             wh_data = data[webhook_id]
@@ -84,18 +84,18 @@ class Webhooks(commands.Cog):
                     if wh:
                         await wh.send(content=message, username=kullanici_adi or wh_data['name'])
                 except Exception as e2:
-                    await interaction.response.send_message(f'❌ Ошибка: {e2}', ephemeral=True)
+                    await interaction.response.send_message(f' Ошибка: {e2}', ephemeral=True)
                     return
 
-            await interaction.response.send_message('✅ Сообщение отправлено!', ephemeral=True)
+            await interaction.response.send_message(' Сообщение отправлено!', ephemeral=True)
 
         elif action == "list":
             data = self._load(interaction.guild_id)
             if not data:
-                await interaction.response.send_message('❌ Запись webhook yok!', ephemeral=True)
+                await interaction.response.send_message(' Запись webhook yok!', ephemeral=True)
                 return
 
-            embed = discord.Embed(title='🔗 Webhookler', color=0x3498DB)
+            embed = discord.Embed(title=' Webhookler', color=0x3498DB)
             for wid, wh in data.items():
                 embed.add_field(
                     name=wh['name'],
@@ -106,12 +106,12 @@ class Webhooks(commands.Cog):
 
         elif action == "delete":
             if not webhook_id:
-                await interaction.response.send_message('❌ Webhook ID belirtmelisin!', ephemeral=True)
+                await interaction.response.send_message(' Webhook ID belirtmelisin!', ephemeral=True)
                 return
 
             data = self._load(interaction.guild_id)
             if webhook_id not in data:
-                await interaction.response.send_message('❌ Webhook не найден!', ephemeral=True)
+                await interaction.response.send_message(' Webhook не найден!', ephemeral=True)
                 return
 
             # Discord'dan da удалить
@@ -122,13 +122,13 @@ class Webhooks(commands.Cog):
                     wh = discord.utils.get(webhooks, id=int(webhook_id))
                     if wh:
                         await wh.delete()
-            except:
+            except Exception:
                 pass
 
             name = data[webhook_id]['name']
             del data[webhook_id]
             self._save(interaction.guild_id, data)
-            await interaction.response.send_message(f'✅ **{name}** webhook удалена!')
+            await interaction.response.send_message(f' **{name}** webhook удалена!')
 
 async def setup(bot):
     await bot.add_cog(Webhooks(bot), guilds=[discord.Object(id=1421244140359909513), discord.Object(id=1107038411895881788), discord.Object(id=1498837105915330562)])

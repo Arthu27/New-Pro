@@ -9,7 +9,7 @@ class Utility(commands.Cog):
     @app_commands.command(name="avatar", description="Показать аватар пользователя")
     async def avatar(self, interaction: discord.Interaction, user: discord.Member = None):
         user = user or interaction.user
-        e = discord.Embed(title=f"🖼️ {user.display_name} — Avatar", color=0xdc143c, timestamp=discord.utils.utcnow())
+        e = discord.Embed(title=f" {user.display_name} — Avatar", color=0xdc143c, timestamp=discord.utils.utcnow())
         e.set_image(url=user.display_avatar.url)
         e.set_footer(text=f"Желание: {interaction.user.name}", icon_url=interaction.user.display_avatar.url)
         await interaction.response.send_message(embed=e)
@@ -20,14 +20,14 @@ class Utility(commands.Cog):
             if interaction.user.voice:
                 channel = interaction.user.voice.channel
             else:
-                await interaction.response.send_message("❌ Вы не находитесь в голосовом канале!", ephemeral=True)
+                await interaction.response.send_message(" Вы не находитесь в голосовом канале!", ephemeral=True)
                 return
         if interaction.guild.voice_client:
             await interaction.guild.voice_client.move_to(channel)
         else:
             await channel.connect()
-        e = discord.Embed(title="🔊 SES КАНАЛ", color=0x2ecc71, timestamp=discord.utils.utcnow())
-        e.add_field(name="📢 Канал", value=f"**{channel.name}**", inline=True)
+        e = discord.Embed(title=" SES КАНАЛ", color=0x2ecc71, timestamp=discord.utils.utcnow())
+        e.add_field(name=" Канал", value=f"**{channel.name}**", inline=True)
         e.set_footer(text=f"Желание: {interaction.user.name}", icon_url=interaction.user.display_avatar.url)
         await interaction.response.send_message(embed=e, ephemeral=True)
 
@@ -35,11 +35,11 @@ class Utility(commands.Cog):
     async def leave(self, interaction: discord.Interaction):
         if interaction.guild.voice_client:
             await interaction.guild.voice_client.disconnect()
-            e = discord.Embed(title="🔇 SES КАНАЛ ПОКИНУЛ", color=0xe74c3c, timestamp=discord.utils.utcnow())
+            e = discord.Embed(title=" SES КАНАЛ ПОКИНУЛ", color=0xe74c3c, timestamp=discord.utils.utcnow())
             e.set_footer(text=f"Желание: {interaction.user.name}", icon_url=interaction.user.display_avatar.url)
             await interaction.response.send_message(embed=e, ephemeral=True)
         else:
-            await interaction.response.send_message("❌ Bot zaten ses в канале не!", ephemeral=True)
+            await interaction.response.send_message(" Bot zaten ses в канале не!", ephemeral=True)
 
     @app_commands.command(name="faq-learn", description="Обучить AI новому вопросу и ответу (FAQ)")
     @app_commands.describe(question="Часто задаваемый вопрос", answer="Правильный ответ от администрации")
@@ -49,7 +49,7 @@ class Utility(commands.Cog):
         gid = interaction.guild.id if interaction.guild else 0
         learn_from_staff(question, answer, gid, staff_name=str(interaction.user))
         embed = discord.Embed(
-            title="🧠 AI успешно обучен новому FAQ",
+            title=" AI успешно обучен новому FAQ",
             color=0x2ECC71,
             description=f"**Вопрос:** {question}\n**Ответ:** {answer}"
         )
@@ -64,9 +64,9 @@ class Utility(commands.Cog):
         gid = interaction.guild.id if interaction.guild else 0
         server_faqs = [f for f in faqs if str(f.get('guild_id', '')) == str(gid) or not f.get('guild_id')]
         if not server_faqs:
-            await interaction.response.send_message("❌ В базе знаний пока нет изученных FAQ.", ephemeral=True)
+            await interaction.response.send_message(" В базе знаний пока нет изученных FAQ.", ephemeral=True)
             return
-        embed = discord.Embed(title=f"📚 База знаний AI ({len(server_faqs)} FAQ)", color=0x2B2D31)
+        embed = discord.Embed(title=f" База знаний AI ({len(server_faqs)} FAQ)", color=0x2B2D31)
         desc = ""
         for idx, item in enumerate(server_faqs[:10], 1):
             desc += f"**{idx}. {item.get('question')}**\n> {item.get('answer', '')[:100]}\n\n"

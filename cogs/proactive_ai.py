@@ -5,6 +5,10 @@ import datetime
 import os
 import json
 
+from logger import get_logger
+log = get_logger("proactive_ai")
+
+
 OWNER_ID = int(os.getenv('OWNER_ID') or '0')
 DATA_FILE = 'data/proactive_ai.json'
 
@@ -19,7 +23,7 @@ def _load() -> dict:
         try:
             with open(DATA_FILE, 'r', encoding='utf-8') as f:
                 return json.load(f)
-        except:
+        except Exception:
             pass
     return {'last_morning': None, 'last_check': None, 'asked_today': [],
             'leave_log': [], 'join_log': [], 'warn_log': []}
@@ -47,7 +51,7 @@ class ProactiveAI(commands.Cog):
             owner = await self.bot.fetch_user(OWNER_ID)
             await owner.send(message)
         except Exception as e:
-            print(f'[ProactiveAI] DM Ошибки: {e}')
+            log.info(f'[ProactiveAI] DM Ошибки: {e}')
 
     async def _think_and_ask(self):
         """Bot düşünür ve gerekirse Arthur'a soru sorar"""
@@ -141,17 +145,17 @@ class ProactiveAI(commands.Cog):
         # В конец 1 saatteki ayrılmaları контроль et
         leave_log = [t for t in data.get('leave_log', []) if t > one_hour_ago]
         if len(leave_log) >= LEAVE_ALERT_THRESHOLD:
-            alerts.append(f'⚠️ В конец 1 saatte **{len(leave_log)} человек** с сервера покинул!')
+            alerts.append(f' В конец 1 saatte **{len(leave_log)} человек** с сервера покинул!')
             data['leave_log'] = []  # Sıfırla, tekrar uyarma
 
         # В конец 1 saatteki katılımları контроль et
         join_log = [t for t in data.get('join_log', []) if t > one_hour_ago]
         if len(join_log) >= JOIN_ALERT_THRESHOLD:
-            alerts.append(f'🚨 В конец 1 saatte **{len(join_log)} новый участник** присоединился — olası raid!')
+            alerts.append(f' В конец 1 saatte **{len(join_log)} новый участник** присоединился — olası raid!')
             data['join_log'] = []
 
         if alerts:
-            msg = '**🤖 J.A.R.V.I.S. Предупреждениеsı**\n' + '\n'.join(alerts)
+            msg = '** J.A.R.V.I.S. Предупреждениеsı**\n' + '\n'.join(alerts)
             await self._send_to_owner(msg)
 
         data['leave_log'] = [t for t in data.get('leave_log', []) if t > one_hour_ago]
@@ -178,9 +182,9 @@ class ProactiveAI(commands.Cog):
             try:
                 owner = await self.bot.fetch_user(OWNER_ID)
                 await owner.send(
-                    f'📤 **{member.display_name}** `{member.guild.name}` сервер покинул.'
+                    f' **{member.display_name}** `{member.guild.name}` сервер покинул.'
                 )
-            except:
+            except Exception:
                 pass
 
 

@@ -297,7 +297,7 @@ def main():
             time.sleep(30)
 
         except KeyboardInterrupt:
-            log("[AUTO-UPDATE] Пользователь сканироватьfindan durduruldu")
+            log("[AUTO-UPDATE] Пользователь scanfindan остановлено")
             break
         except Exception as e:
             log(f"[AUTO-UPDATE] Ana dongu ошибки: {e}")

@@ -10,76 +10,76 @@
       <span>Обзор сервера — Re-Join роли</span>
     </div>
     <h1>Re-Join роли</h1>
-    <p>Sunucudan ayrılıp geri dönen üyelere otomatik rol geri ver.</p>
+    <p>Автоматическое восстановление ролей участникам, покинувшим сервер и вернувшимся.</p>
   </div>
 </div>
 {% endblock %}
 
-<!-- Gözlemci modu banner -->
+<!-- Баннер наблюдательного режима -->
 <div class="observer-banner">
   <i class="fas fa-eye"></i>
   <div>
-    <strong>Bu sistem tamamen sana bağlı.</strong> Kapalıyken hiçbir şey kayıt edilmez.
-    Açtığında aşağıdan seçtiğin roller üye ayrılırken kaydedilir ve geri döndüğünde otomatik geri verilir.
-    Listede olmayan roller (admin, özel yetkili vb.) <b>dokunulmaz</b>.
+    <strong>Эта система полностью зависит от вас.</strong> Когда отключена — ничего не записывается.
+    Когда включена — выбранные ниже роли сохраняются при выходе участника и автоматически возвращаются при повторном входе.
+    Роли, не включённые в список (администратор, специальные права и т.д.) <b>не затрагиваются</b>.
   </div>
 </div>
 
-<!-- Guild seçici + sistem aç/kapat -->
+<!-- Выбор сервера + включение/отключение системы -->
 <div class="rejoin-toolbar">
-  <label for="guild-select"><i class="fas fa-server"></i> Sunucu:</label>
-  <select id="guild-select"><option value="">Yükleniyor…</option></select>
+  <label for="guild-select"><i class="fas fa-server"></i> Сервер:</label>
+  <select id="guild-select"><option value="">Загрузка…</option></select>
 
   <div class="rejoin-switch">
-    <span>Sistem</span>
+    <span>Система</span>
     <div class="toggle" id="tog-enabled" data-key="enabled"></div>
-    <span id="enabled-label" class="muted">Kapalı</span>
+    <span id="enabled-label" class="muted">Отключена</span>
   </div>
 
   <span class="save-status" id="save-status"></span>
 </div>
 
-<!-- 3 kolon: sol = izlenen roller, sağ = geçmiş log -->
+<!-- 3 колонки: слева = отслеживаемые роли, справа = история логов -->
 <div class="rejoin-grid">
-  <!-- SOL: İzlenen roller -->
+  <!-- ЛЕВАЯ: Отслеживаемые роли -->
   <div class="rejoin-card">
     <div class="rejoin-head">
       <div class="rejoin-icon"><i class="fas fa-list-check"></i></div>
-      <div class="rejoin-title">İzlenen Roller</div>
+      <div class="rejoin-title">Отслеживаемые роли</div>
       <span class="badge-count" id="tracked-count">0</span>
     </div>
     <p class="muted small">
-      Burada seçili olan roller, üye ayrılırken kaydedilir ve geri döndüğünde otomatik geri verilir.
-      <b>@everyone</b> ve bot'tan yüksek roller (yönetici) listede görünmez.
+      Роли, выбранные здесь, сохраняются при выходе участника и автоматически возвращаются при повторном входе.
+      <b>@everyone</b> и роли выше бота (администратор) не отображаются в списке.
     </p>
     <div class="role-search">
       <i class="fas fa-search"></i>
-      <input type="text" id="role-search" placeholder="Rol ara…">
+      <input type="text" id="role-search" placeholder="Поиск роли…">
     </div>
     <div class="role-pills" id="role-pills">
-      <p class="muted small">Yükleniyor…</p>
+      <p class="muted small">Загрузка…</p>
     </div>
     <div class="role-actions">
       <button type="button" class="btn btn-ghost" id="btn-clear-roles">
-        <i class="fas fa-times"></i> Hepsini kaldır
+        <i class="fas fa-times"></i> Удалить все
       </button>
     </div>
   </div>
 
-  <!-- SAĞ: Geçmiş -->
+  <!-- ПРАВАЯ: История -->
   <div class="rejoin-card">
     <div class="rejoin-head">
       <div class="rejoin-icon warn"><i class="fas fa-clock-rotate-left"></i></div>
-      <div class="rejoin-title">Geçmiş (Son 50)</div>
+      <div class="rejoin-title">История (последние 50)</div>
       <button class="btn btn-primary" id="btn-clear-log" type="button">
-        <i class="fas fa-broom"></i> Temizle
+        <i class="fas fa-broom"></i> Очистить
       </button>
     </div>
     <p class="muted small">
-      Kim ne zaman ayrıldı, hangi rolleri vardı, geri döndü mü, başarıyla geri verildi mi.
+      Кто и когда покинул сервер, какие роли были, вернулся ли, успешно ли восстановлены роли.
     </p>
     <div class="log-list" id="log-list">
-      <p class="muted">Henüz kayıt yok.</p>
+      <p class="muted">Записей пока нет.</p>
     </div>
   </div>
 </div>
@@ -235,7 +235,7 @@
     }
   }
 
-  // ── Guild seçici ─────────────────────────────────────────────────────
+  // ── Выбор сервера ─────────────────────────────────────────────────────────
   function loadGuilds() {
     fetch('/api/guilds', { credentials: 'same-origin' })
       .then(function (r) { return r.json(); })
@@ -243,7 +243,7 @@
         var sel = $('guild-select');
         sel.innerHTML = '';
         if (!list || !list.length) {
-          sel.innerHTML = '<option value="">Sunucu bulunamadı</option>';
+          sel.innerHTML = '<option value="">Сервер не найден</option>';
           return;
         }
         list.forEach(function (g) {
@@ -256,12 +256,12 @@
         loadAll();
       })
       .catch(function (e) {
-        $('guild-select').innerHTML = '<option value="">Yüklenemedi</option>';
+        $('guild-select').innerHTML = '<option value="">Не удалось загрузить</option>';
         console.error(e);
       });
   }
 
-  // ── Hem config hem rolleri yükle ──────────────────────────────────────
+  // ── Загрузка конфига и ролей ────────────────────────────────────────────────
   function loadAll() {
     if (!currentGuildId) return;
     Promise.all([
@@ -273,7 +273,7 @@
         allRoles = (results[1] || []).filter(function (r) {
           return r && r.name && r.name !== '@everyone';
         });
-        // default'lar
+        // значения по умолчанию
         if (typeof currentConfig.enabled !== 'boolean') currentConfig.enabled = false;
         if (!Array.isArray(currentConfig.tracked_role_ids)) currentConfig.tracked_role_ids = [];
         if (!Array.isArray(currentConfig.leave_log)) currentConfig.leave_log = [];
@@ -282,27 +282,27 @@
       })
       .catch(function (e) {
         console.error(e);
-        setSaveStatus('Yüklenemedi', true);
+        setSaveStatus('Не удалось загрузить', true);
       });
   }
 
   function renderAll() {
-    // Toggle
+    // Переключатель
     var tog = $('tog-enabled');
     tog.classList.toggle('on', !!currentConfig.enabled);
-    $('enabled-label').textContent = currentConfig.enabled ? 'Açık' : 'Kapalı';
+    $('enabled-label').textContent = currentConfig.enabled ? 'Включена' : 'Отключена';
 
-    // Tracked count
+    // Количество отслеживаемых
     $('tracked-count').textContent = trackedIds.length;
 
-    // Role pills
+    // Таблетки ролей
     renderPills();
 
-    // Log
+    // Лог
     renderLog();
   }
 
-  // ── Role pills ────────────────────────────────────────────────────────
+  // ── Таблетки ролей ───────────────────────────────────────────────────────
   function renderPills() {
     var q = ($('role-search').value || '').toLowerCase().trim();
     var box = $('role-pills');
@@ -310,10 +310,10 @@
       return !q || r.name.toLowerCase().indexOf(q) !== -1;
     });
     if (!filtered.length) {
-      box.innerHTML = '<p class="muted small">Rol yok veya arama eşleşmedi.</p>';
+      box.innerHTML = '<p class="muted small">Роли не найдены или поиск не дал результатов.</p>';
       return;
     }
-    // Pozisyona göre sırala (yüksek önce)
+    // Сортировка по позиции (высшие первые)
     filtered.sort(function (a, b) { return (b.position || 0) - (a.position || 0); });
     box.innerHTML = filtered.map(function (r) {
       var isTracked = trackedIds.indexOf(r.id) !== -1;
@@ -324,7 +324,7 @@
              '<span class="x">' + (isTracked ? '<i class="fas fa-xmark"></i>' : '<i class="fas fa-plus"></i>') + '</span>' +
              '</span>';
     }).join('');
-    // Click handler
+    // Обработчик клика
     Array.prototype.forEach.call(box.querySelectorAll('.role-pill'), function (el) {
       el.addEventListener('click', function () {
         var id = el.getAttribute('data-id');
@@ -343,46 +343,46 @@
     });
   }
 
-  // ── Geçmiş log ────────────────────────────────────────────────────────
+  // ── История логов ────────────────────────────────────────────────────────
   function renderLog() {
     var box = $('log-list');
     var log = (currentConfig.leave_log || []).slice(-50).reverse();
     if (!log.length) {
-      box.innerHTML = '<p class="muted">Henüz kayıt yok. Sistem açıkken üye ayrıldığında buraya düşer.</p>';
+      box.innerHTML = '<p class="muted">Записей пока нет. Когда система включена и участник покидает сервер, запись появится здесь.</p>';
       return;
     }
     box.innerHTML = log.map(function (e) {
       var cls = 'pending';
-      var statusText = 'Bekliyor';
+      var statusText = 'Ожидает';
       var statusCls = 'pending';
       if (e.restored) {
         var fail = (e.restored_fail || []).length;
         if (fail === 0) {
           cls = 'restored';
-          statusText = 'Geri verildi';
+          statusText = 'Восстановлено';
           statusCls = 'ok';
         } else {
           cls = 'failed';
-          statusText = 'Kısmi (' + (e.restored_ok || []).length + ' OK / ' + fail + ' başarısız)';
+          statusText = 'Частично (' + (e.restored_ok || []).length + ' OK / ' + fail + ' не удалось)';
           statusCls = 'partial';
         }
       }
-      var when = e.left_at ? new Date(e.left_at).toLocaleString('tr-TR') : '?';
+      var when = e.left_at ? new Date(e.left_at).toLocaleString('ru-RU') : '?';
       var roles = (e.roles || []).map(function (r) { return '<code>' + r + '</code>'; }).join(' ');
       var name = e.user_tag || ('User#' + e.user_id);
       return '<div class="log-item ' + cls + '">' +
              '<div class="top"><span class="who">' + escapeHtml(name) + ' <span style="color:#7d8593;font-weight:400">(' + e.user_id + ')</span></span>' +
              '<span class="when">' + when + '</span></div>' +
              '<div><span class="status ' + statusCls + '">' + statusText + '</span>' +
-             '<span class="roles">' + (roles || '<i>boş</i>') + '</span></div>' +
+             '<span class="roles">' + (roles || '<i>пусто</i>') + '</span></div>' +
              '</div>';
     }).join('');
   }
 
-  // ── Kaydet (debounce) ─────────────────────────────────────────────────
+  // ── Сохранение (debounce) ───────────────────────────────────────────────
   function saveConfig() {
     if (!currentGuildId || !currentConfig) return;
-    setSaveStatus('Kaydediliyor…');
+    setSaveStatus('Сохранение…');
     clearTimeout(saveTimer);
     saveTimer = setTimeout(function () {
       var payload = {
@@ -398,14 +398,14 @@
       })
         .then(function (r) { return r.json(); })
         .then(function (data) {
-          if (data && data.success) setSaveStatus('✓ Kaydedildi');
-          else setSaveStatus('Hata: ' + (data && data.error || 'bilinmiyor'), true);
+          if (data && data.success) setSaveStatus('✓ Сохранено');
+          else setSaveStatus('Ошибка: ' + (data && data.error || 'неизвестно'), true);
         })
-        .catch(function (e) { setSaveStatus('Hata: ' + e.message, true); });
+        .catch(function (e) { setSaveStatus('Ошибка: ' + e.message, true); });
     }, 250);
   }
 
-  // ── Event binding ─────────────────────────────────────────────────────
+  // ── Привязка событий ──────────────────────────────────────────────────────
   function bind() {
     loadGuilds();
 
@@ -418,7 +418,7 @@
       if (!currentConfig) return;
       currentConfig.enabled = !currentConfig.enabled;
       this.classList.toggle('on', currentConfig.enabled);
-      $('enabled-label').textContent = currentConfig.enabled ? 'Açık' : 'Kapalı';
+      $('enabled-label').textContent = currentConfig.enabled ? 'Включена' : 'Отключена';
       saveConfig();
     });
 
@@ -426,7 +426,7 @@
 
     $('btn-clear-roles').addEventListener('click', function () {
       if (!trackedIds.length) return;
-      if (!confirm('Tüm izlenen roller kaldırılsın mı?')) return;
+      if (!confirm('Удалить все отслеживаемые роли?')) return;
       trackedIds = [];
       saveConfig();
       renderAll();
@@ -434,7 +434,7 @@
 
     $('btn-clear-log').addEventListener('click', function () {
       if (!currentConfig || !(currentConfig.leave_log || []).length) return;
-      if (!confirm('Geçmiş log tamamen temizlensin mi?')) return;
+      if (!confirm('Полностью очистить историю логов?')) return;
       currentConfig.leave_log = [];
       saveConfig();
       renderAll();

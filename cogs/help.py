@@ -1,205 +1,234 @@
+"""
+Help Cog — Select Menu
+Тёмная тема, без эмодзи, только select menu
+"""
+
+MENU_GIF = "https://media.tenor.com/x8v1oNUOmg4AAAAC/rain-dark.gif"
+
 import discord
 from discord import app_commands
 from discord.ext import commands
+from datetime import datetime
 
-PERM_ICON  = {"all": "\U0001f7e2", "mod": "\U0001f7e1", "admin": "\U0001f534", "owner": "\u2699\ufe0f"}
-PERM_LABEL = {"all": "Каждый", "mod": "Moderator", "admin": "İsminin", "owner": "Owner"}
 
 CATEGORIES = [
-    {"id": "overview", "emoji": "\u26a1", "title": "ANA MENU", "color": 0x00FFF7, "commands": []},
-    {"id": "mod",      "emoji": "\U0001f6e1\ufe0f", "title": "МОДЕРАЦИЯ",    "color": 0xFF0055, "commands": [
-        ("!ban",      "Постоянный yasakla",    "!ban @user причина",   "admin"),
-        ("!kick",     "С сервера at",      "!kick @user причина",  "admin"),
-        ("!timeout",  "Gecici sustur",     "!timeout @user 10m", "admin"),
-        ("!clear",  "Toplu message удалить",   "!clear 50",        "mod"),
-        ("!lock",     "Канал kilitle",    "!lock #channel",       "mod"),
-        ("!unlock",   "Kilidi ac",         "!unlock #channel",     "mod"),
-    ]},
-    {"id": "warn",     "emoji": "\u26a0\ufe0f", "title": "ПРЕДУПРЕЖДЕНИЕ СИСТЕМА",  "color": 0xFFD700, "commands": [
-        ("!warn",       "Предупреждение ver",           "!warn @user причина",    "mod"),
-        ("!warnings",   "Предупреждения listele",   "!warnings @user",      "mod"),
-        ("!clearwarns", "Предупреждения clear",   "!clearwarns @user",    "admin"),
-    ]},
-    {"id": "music",    "emoji": "\U0001f3b5", "title": "MUZIK",          "color": 0xBF00FF, "commands": [
-        ("!cal",    "Muzik cal",          "!cal lofi",  "all"),
-        ("!dur",    "Duraklat/devam",     "!dur",       "all"),
-        ("!atla",   "Sarkiyi atla",       "!atla",      "all"),
-        ("!kuyruk", "Kuyrugu goster",     "!kuyruk",    "all"),
-        ("!stop",   "Muzigi durdur",      "!stop",      "all"),
-    ]},
-    {"id": "fun",      "emoji": "\U0001f3ae", "title": "EGLENCE",        "color": 0xFF00CC, "commands": [
-        ("!текст",    "Текст tura at",      "!текст",     "all"),
-        ("!zar",         "Zar at",            "!zar 6",        "all"),
-        ("!число-tahmin", "Число tahmin oyunu", "!число-tahmin",  "all"),
-        ("!slot",        "Slot makinesi",     "!slot",         "all"),
-    ]},
-    {"id": "economy",  "emoji": "\U0001f4b0", "title": "EKONOMI",        "color": 0x00FF88, "commands": [
-        ("!bakiye",   "Bakiyeni gor",     "!bakiye",              "all"),
-        ("!gunluk",   "Gunluk odul al",   "!gunluk",              "all"),
-        ("!transfer", "Para gonder",      "!transfer @user 1000", "all"),
-        ("!liderlik", "Zenginler список","!liderlik",            "all"),
-    ]},
-    {"id": "utility",  "emoji": "\U0001f527", "title": "ARACLAR",        "color": 0x00BFFF, "commands": [
-        ("!сервер",    "Сервер infosi",    "!сервер",          "all"),
-        ("!пользователь", "Пользователь profili", "!пользователь @kisi",  "all"),
-        ("!avatar",    "Avatar goster",     "!avatar @kisi",     "all"),
-        ("!ping",      "Bot gecikmesi",     "!ping",             "all"),
-    ]},
+    {
+        "id": "moderation",
+        "title": "Модерация",
+        "commands": [
+            ("!ban @user [причина]", "Бан", "Админ"),
+            ("!kick @user [причина]", "Кик", "Админ"),
+            ("!mute @user [время]", "Мьют", "Мод"),
+            ("!unmute @user", "Размьют", "Мод"),
+            ("!timeout @user [время]", "Таймаут", "Мод"),
+            ("!clear [кол-во]", "Очистить сообщения", "Мод"),
+            ("!lock [#канал]", "Заблокировать канал", "Мод"),
+            ("!unlock [#канал]", "Разблокировать канал", "Мод"),
+            ("!slowmode [сек]", "Медленный режим", "Мод"),
+        ]
+    },
+    {
+        "id": "warnings",
+        "title": "Предупреждения",
+        "commands": [
+            ("/warn @user [причина]", "Выдать предупреждение", "Мод"),
+            ("/warnings @user", "Список предупреждений", "Мод"),
+            ("/clearwarns @user", "Очистить предупреждения", "Админ"),
+        ]
+    },
+    {
+        "id": "tickets",
+        "title": "Тикеты",
+        "commands": [
+            ("/ticket-panel", "Создать панель тикетов", "Админ"),
+            ("/tickets [статус]", "Список тикетов", "Все"),
+            ("/ticket-info [ID]", "Информация о тикете", "Все"),
+            ("/ticket-close [ID]", "Закрыть тикет", "Все"),
+            ("/ticket-assign [ID] @user", "Назначить тикет", "Мод"),
+        ]
+    },
+    {
+        "id": "economy",
+        "title": "Экономика",
+        "commands": [
+            ("!balance [@user]", "Баланс", "Все"),
+            ("!daily", "Ежедневная награда", "Все"),
+            ("!work", "Работать", "Все"),
+            ("!beg", "Попросить деньги", "Все"),
+            ("!rob @user", "Ограбить", "Все"),
+            ("!deposit [сумма]", "Положить в банк", "Все"),
+            ("!withdraw [сумма]", "Снять из банка", "Все"),
+            ("!transfer @user [сумма]", "Перевести", "Все"),
+            ("!shop", "Магазин", "Все"),
+            ("!buy [предмет]", "Купить", "Все"),
+            ("!inventory [@user]", "Инвентарь", "Все"),
+        ]
+    },
+    {
+        "id": "music",
+        "title": "Музыка",
+        "commands": [
+            ("!play [запрос]", "Воспроизвести", "Все"),
+            ("!pause", "Пауза", "Все"),
+            ("!resume", "Продолжить", "Все"),
+            ("!skip", "Пропустить", "Все"),
+            ("!queue", "Очередь", "Все"),
+            ("!stop", "Остановить", "Все"),
+            ("!volume [0-100]", "Громкость", "Все"),
+            ("!loop", "Зациклить", "Все"),
+            ("!shuffle", "Перемешать", "Все"),
+            ("!leave", "Покинуть канал", "Все"),
+        ]
+    },
+    {
+        "id": "levels",
+        "title": "Уровни",
+        "commands": [
+            ("!rank [@user]", "Ранг", "Все"),
+            ("!leaderboard", "Таблица лидеров", "Все"),
+            ("!rewards", "Награды за уровни", "Все"),
+            ("!setlevel @user [уровень]", "Установить уровень", "Админ"),
+        ]
+    },
+    {
+        "id": "utility",
+        "title": "Утилиты",
+        "commands": [
+            ("!ping", "Задержка бота", "Все"),
+            ("!botinfo", "О боте", "Все"),
+            ("!serverinfo", "О сервере", "Все"),
+            ("!userinfo [@user]", "О пользователе", "Все"),
+            ("!avatar [@user]", "Аватар", "Все"),
+            ("!color [hex]", "Показать цвет", "Все"),
+            ("!base64 [en/de] [текст]", "Base64", "Все"),
+            ("!hesap [выражение]", "Калькулятор", "Все"),
+        ]
+    },
+    {
+        "id": "voice",
+        "title": "Голосовые",
+        "commands": [
+            ("!voicetime [@user]", "Время в голосовых", "Все"),
+            ("!voiceleaderboard", "Топ по голосовым", "Все"),
+            ("!voiceonline", "Кто в голосовых", "Все"),
+        ]
+    },
+    {
+        "id": "fun",
+        "title": "Развлечения",
+        "commands": [
+            ("!8ball [вопрос]", "Магический шар", "Все"),
+            ("!coinflip", "Монетка", "Все"),
+            ("!dice [грани]", "Кубик", "Все"),
+            ("!meme", "Мем", "Все"),
+            ("!joke", "Шутка", "Все"),
+            ("!cat", "Кот", "Все"),
+            ("!dog", "Пёс", "Все"),
+        ]
+    },
+    {
+        "id": "giveaway",
+        "title": "Розыгрыши",
+        "commands": [
+            ("!giveaway [время] [победителей] [приз]", "Создать розыгрыш", "Админ"),
+            ("!reroll [ID]", "Перевыбрать победителя", "Админ"),
+        ]
+    },
+    {
+        "id": "profile",
+        "title": "Профиль",
+        "commands": [
+            ("!profile [@user]", "Карточка профиля", "Все"),
+            ("/profile [@user]", "Карточка профиля (slash)", "Все"),
+        ]
+    },
 ]
 
-TOTAL_PAGES = len(CATEGORIES)
-TOTAL_CMDS  = sum(len(c["commands"]) for c in CATEGORIES)
-CAT_SUMMARY = [c for c in CATEGORIES if c["id"] != "overview"]
+TOTAL_CMDS = sum(len(c["commands"]) for c in CATEGORIES)
 
-def _a(text, *codes):
-    return "\033[" + ";".join(str(x) for x in codes) + "m" + text + "\033[0m"
 
-def build_embed(page: int) -> discord.Embed:
-    cat = CATEGORIES[page]
-
-    if cat["id"] == "overview":
-        header = "\n".join([
-            _a("\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557", 1, 36),
-            _a("\u2551                                          \u2551", 36),
-            _a("\u2551    \u26a1  R A K U Z A N   B O T  \u26a1       \u2551", 1, 36),
-            _a("\u2551         КОМАНДА КОНТРОЛЬ MERKEZI            \u2551", 1, 37),
-            _a("\u2551                                          \u2551", 36),
-            _a("\u255a\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255d", 1, 36),
-        ])
-        stats = "\n".join([
-            _a("  \u25c8  Всего Команда    : ", 1, 36) + _a(str(TOTAL_CMDS), 1, 33),
-            _a("  \u25c8  Kategori Количество : ", 1, 36) + _a(str(len(CAT_SUMMARY)), 1, 33),
-            _a("  \u25c8  Prefix          : ", 1, 36) + _a("!", 1, 32),
-            _a("  \u25c8  Состояние           : ", 1, 36) + _a("\u25cf АКТИВЕН", 1, 32),
-        ])
-        cats = ""
-        for c in CAT_SUMMARY:
-            n = len(c["commands"])
-            bar = _a("\u25b0" * min(n, 8), 36) + _a("\u25b1" * (8 - min(n, 8)), 2, 36)
-            cats += "\n" + _a(f"  {c['emoji']}  {c['title']:<18}", 1, 37) + _a(f"{n} команда  ", 33) + bar
-        perms = "\n".join([
-            _a("  \U0001f7e2  Каждый    ", 1, 32) + _a("\u2500 Tum uyeler использовать", 2, 37),
-            _a("  \U0001f7e1  Moderator ", 1, 33) + _a("\u2500 Moderator роли gerekli",  2, 37),
-            _a("  \U0001f534  İsminin     ", 1, 31) + _a("\u2500 İsminin roles gerekli",      2, 37),
-            _a("  \u2699\ufe0f  Owner     ", 1, 37) + _a("\u2500 Только сервер sahibi",    2, 37),
-        ])
+def build_embed(category_id: str = None) -> discord.Embed:
+    if category_id is None:
         embed = discord.Embed(
-            description="```ansi\n" + header + "\n```" +
-                        "```ansi\n" + stats  + "\n```",
-            color=cat["color"]
+            title="Aether Bot",
+            description=(
+                f"Добро пожаловать! Здесь вы найдёте все доступные команды.\n\n"
+                f"Выберите категорию из списка ниже, чтобы увидеть список команд.\n\n"
+                f"Всего команд: **{TOTAL_CMDS}** | Префикс: **!**"
+            ),
+            color=discord.Color.dark_grey(),
+            timestamp=datetime.now()
         )
-        embed.add_field(name="\U0001f4cb  Kategoriler",      value="```ansi\n" + cats.strip()  + "\n```", inline=False)
-        embed.add_field(name="\U0001f510  Разрешение Seviyeleri", value="```ansi\n" + perms          + "\n```", inline=False)
-        embed.set_footer(text=f"Sayfa 1/{TOTAL_PAGES}  \u2022  Aether Bot  \u2022  !help")
+        embed.set_image(url=MENU_GIF)
+
         return embed
 
-    cmds = cat["commands"]
-    title_block = "\n".join([
-        _a("\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510", 1, 36),
-        _a(f"\u2502  {cat['emoji']}  {cat['title']:<40}\u2502", 1, 37),
-        _a("\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518", 1, 36),
-    ])
-    cmd_lines = []
-    for name, desc, usage, perm in cmds:
-        cmd_lines.append(_a(f"  {PERM_ICON[perm]} ", 1) + _a(f"{name:<16}", 1, 36) + _a(desc, 37))
-        cmd_lines.append(_a("     \u2514\u2500 ", 2, 36) + _a(usage, 2, 33))
-        cmd_lines.append("")
-    perm_counts = {}
-    for _, _, _, p in cmds:
-        perm_counts[p] = perm_counts.get(p, 0) + 1
-    summary = "  ".join(
-        _a(f" {PERM_ICON[k]} {PERM_LABEL[k]}: ", 1, 37) + _a(str(perm_counts[k]), 1, 33)
-        for k in ("all", "mod", "admin", "owner") if k in perm_counts
-    )
-    page_idx = CATEGORIES.index(cat)
+    cat = next((c for c in CATEGORIES if c["id"] == category_id), None)
+    if not cat:
+        return build_embed()
+
     embed = discord.Embed(
-        description="```ansi\n" + title_block + "\n```" +
-                    "```ansi\n" + "\n".join(cmd_lines).rstrip() + "\n```",
-        color=cat["color"]
+        title=cat["title"],
+        color=discord.Color.dark_grey(),
+        timestamp=datetime.now()
     )
-    embed.add_field(name="\U0001f4ca  Команда Dagilimi", value="```ansi\n" + summary + "\n```", inline=False)
-    embed.set_footer(text=f"Sayfa {page_idx+1}/{TOTAL_PAGES}  \u2022  Aether Bot  \u2022  !help")
+
+    lines = []
+    for cmd, desc, perm in cat["commands"]:
+        lines.append(f"`{cmd}` — {desc} *[{perm}]*")
+
+    embed.description = "\n".join(lines)
+    embed.set_footer(text=f"{len(cat['commands'])} команд")
+    embed.set_image(url=MENU_GIF)
+
     return embed
 
 
-class CategorySelect(discord.ui.Select):
-    def __init__(self, current_page: int):
+class HelpSelect(discord.ui.Select):
+    def __init__(self):
         options = [
             discord.SelectOption(
-                label=f"{c['emoji']}  {c['title']}",
-                value=str(i),
-                description=f"{len(c['commands'])} команда" if c["commands"] else "Ana sayfa",
-                default=(i == current_page),
+                label=c["title"],
+                value=c["id"],
+                description=f"{len(c['commands'])} команд",
             )
-            for i, c in enumerate(CATEGORIES)
+            for c in CATEGORIES
         ]
-        super().__init__(placeholder="\u26a1  Kategori sec...", options=options, custom_id="help_select")
+        super().__init__(
+            placeholder="Выберите категорию",
+            options=options,
+            custom_id="help_select_v4"
+        )
 
     async def callback(self, interaction: discord.Interaction):
-        page = int(self.values[0])
-        view = HelpView(page=page)
-        await interaction.response.edit_message(embed=build_embed(page), view=view)
+        cat_id = self.values[0]
+        view = HelpView()
+        await interaction.response.edit_message(embed=build_embed(cat_id), view=view)
 
 
 class HelpView(discord.ui.View):
-    def __init__(self, page: int = 0):
+    def __init__(self):
         super().__init__(timeout=300)
-        self.page = page
-        self.add_item(CategorySelect(page))
-        self._sync()
-
-    def _sync(self):
-        self.prev_btn.disabled  = (self.page == 0)
-        self.next_btn.disabled  = (self.page == TOTAL_PAGES - 1)
-        self.first_btn.disabled = (self.page == 0)
-        self.last_btn.disabled  = (self.page == TOTAL_PAGES - 1)
-        self.page_label.label   = f"  {self.page+1} / {TOTAL_PAGES}  "
-
-    @discord.ui.button(label="\u23ee", style=discord.ButtonStyle.blurple, row=1, custom_id="help_first")
-    async def first_btn(self, interaction, button):
-        self.page = 0; self._sync()
-        await interaction.response.edit_message(embed=build_embed(self.page), view=self)
-
-    @discord.ui.button(label="\u25c4", style=discord.ButtonStyle.grey, row=1, custom_id="help_prev")
-    async def prev_btn(self, interaction, button):
-        self.page = max(0, self.page - 1); self._sync()
-        await interaction.response.edit_message(embed=build_embed(self.page), view=self)
-
-    @discord.ui.button(label="  1 / 7  ", style=discord.ButtonStyle.green, disabled=True, row=1, custom_id="help_page")
-    async def page_label(self, interaction, button):
-        pass
-
-    @discord.ui.button(label="\u25ba", style=discord.ButtonStyle.grey, row=1, custom_id="help_next")
-    async def next_btn(self, interaction, button):
-        self.page = min(TOTAL_PAGES - 1, self.page + 1); self._sync()
-        await interaction.response.edit_message(embed=build_embed(self.page), view=self)
-
-    @discord.ui.button(label="\u23ed", style=discord.ButtonStyle.blurple, row=1, custom_id="help_last")
-    async def last_btn(self, interaction, button):
-        self.page = TOTAL_PAGES - 1; self._sync()
-        await interaction.response.edit_message(embed=build_embed(self.page), view=self)
-
-    @discord.ui.button(label="\u2716  Закрыть", style=discord.ButtonStyle.red, row=2, custom_id="help_close")
-    async def close_btn(self, interaction, button):
-        await interaction.response.defer()
-        await interaction.delete_original_response()
+        self.add_item(HelpSelect())
 
 
 class Help(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(name="help", aliases=["команды", "h", "menu"])
+    @commands.command(name="help", aliases=["h", "команды", "menu"])
     async def help_prefix(self, ctx):
         try:
             await ctx.message.delete()
         except Exception:
             pass
-        await ctx.send(embed=build_embed(0), view=HelpView(page=0))
+        await ctx.send(embed=build_embed(), view=HelpView())
 
-    @app_commands.command(name="help", description="Tum bot команды gosterir")
+    @app_commands.command(name="help", description="Справка по командам")
     async def help_slash(self, interaction: discord.Interaction):
-        await interaction.response.send_message(embed=build_embed(0), view=HelpView(page=0), ephemeral=True)
+        await interaction.response.send_message(
+            embed=build_embed(), view=HelpView(), ephemeral=True
+        )
 
 
 async def setup(bot):

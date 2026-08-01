@@ -36,10 +36,10 @@ def set_balance(guild_id: str, user_id: str, amount: int, name: str = ''):
 def get_currency(guild_id: str) -> tuple:
     f = f'{DATA_DIR}/economy_{guild_id}.json'
     if not os.path.exists(f):
-        return 'Coin', '💰'
+        return 'Coin', ''
     with open(f) as fp:
         d = json.load(fp)
-    return d.get('currency_name', 'Coin'), d.get('currency_emoji', '💰')
+    return d.get('currency_name', 'Coin'), d.get('currency_emoji', '')
 
 def _eco_embed(title: str, subtitle: str, color: int, gif_key: str = None) -> discord.Embed:
     """Minimalizm embed для ekonomiki"""
@@ -47,7 +47,7 @@ def _eco_embed(title: str, subtitle: str, color: int, gif_key: str = None) -> di
     e.description = (
         f"## {title}\n"
         f"### {subtitle}\n"
-        f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"\n\n"
     )
     if gif_key:
         e.set_image(url=gif(gif_key))
@@ -77,7 +77,7 @@ class Economy(commands.Cog):
                 f"**Пользователь:** {hedef.mention}\n"
                 f"**Bakiye:** {bal:,} {name}\n"
                 f"**Sorgu:** <t:{now_ts()}:R>\n\n"
-                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                f""
             )
             e.set_thumbnail(url=hedef.display_avatar.url)
             if interaction.guild.icon:
@@ -106,12 +106,12 @@ class Economy(commands.Cog):
                     e.description = (
                         f"## Ежедневный награда\n"
                         f"### Podojdite\n"
-                        f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                        f"\n\n"
                         f"Siz zaten aldınız ежедневный nagradu!\n"
                         f"Gerekli podojdat более değilçok.\n\n"
                         f"**Ostalos:** {h} c {m} dk\n"
                         f"**Obnovlenie:** <t:{int((last_dt + timedelta(hours=24)).timestamp())}:R>\n\n"
-                        f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                        f""
                     )
                     if interaction.guild.icon:
                         e.set_footer(text=f"{interaction.guild.name} · Ekonomi", icon_url=interaction.guild.icon.url)
@@ -136,7 +136,7 @@ class Economy(commands.Cog):
                 f"**Новый bakiye:** {bal+reward:,} {name}\n"
                 f"**Sleduyusaya награда:** <t:{int((now + timedelta(hours=24)).timestamp())}:R>\n\n"
                 f"*Не zabivayte zahodit каждый день для al nagradu!*\n\n"
-                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                f""
             )
             e.set_thumbnail(url=interaction.user.display_avatar.url)
             if interaction.guild.icon:
@@ -147,15 +147,15 @@ class Economy(commands.Cog):
 
         elif islem == "transfer":
             if not user or not miktar:
-                await interaction.response.send_message("❌ Пользователь ve miktar belirtmelisin!", ephemeral=True)
+                await interaction.response.send_message(" Пользователь ve miktar belirtmelisin!", ephemeral=True)
                 return
             if miktar <= 0 or user.bot or user == interaction.user:
-                await interaction.response.send_message("❌ Неверный действие!", ephemeral=True)
+                await interaction.response.send_message(" Неверный действие!", ephemeral=True)
                 return
             uid, tid = str(interaction.user.id), str(user.id)
             bal = get_balance(gid, uid)
             if bal < miktar:
-                await interaction.response.send_message(f"❌ Yetersiz bakiye! Bakiyen: **{bal:,}**", ephemeral=True)
+                await interaction.response.send_message(f" Yetersiz bakiye! Bakiyen: **{bal:,}**", ephemeral=True)
                 return
             set_balance(gid, uid, bal - miktar, interaction.user.display_name)
             set_balance(gid, tid, get_balance(gid, tid) + miktar, user.display_name)
@@ -168,7 +168,7 @@ class Economy(commands.Cog):
                 f"**Новый bakiye:** {get_balance(gid, tid):,} {name}\n\n"
                 f"**Всего:** {miktar:,} {name}\n"
                 f"**Дата:** <t:{now_ts()}:F>\n\n"
-                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                f""
             )
             if interaction.guild.icon:
                 e.set_footer(text=f"{interaction.guild.name} · Ekonomi", icon_url=interaction.guild.icon.url)
@@ -179,23 +179,23 @@ class Economy(commands.Cog):
         elif islem == "очередь":
             f = f'{DATA_DIR}/balance_{gid}.json'
             if not os.path.exists(f):
-                await interaction.response.send_message("❌ Пока Данные yok!", ephemeral=True)
+                await interaction.response.send_message(" Пока Данные yok!", ephemeral=True)
                 return
             with open(f) as fp:
                 data = json.load(fp)
             name, emoji = get_currency(gid)
             lb = sorted(data.items(), key=lambda x: x[1].get('balance', 0), reverse=True)[:10]
-            medals = ['🥇', '🥈', '🥉']
+            medals = ['', '', '']
             e = discord.Embed(color=0xF1C40F, timestamp=datetime.utcnow())
             e.description = (
                 f"## Очередь bogatstva\n"
                 f"### Samie bogatie участники\n"
-                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n" +
+                f"\n\n" +
                 "\n".join([
                     f"{medals[i] if i < 3 else f'**{i+1}.**'} {v.get('name', k)} — {v.get('balance', 0):,} {emoji}"
                     for i, (k, v) in enumerate(lb)
                 ]) +
-                f"\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                f"\n\n"
             )
             if interaction.guild.icon:
                 e.set_footer(text=f"{interaction.guild.name} · Ekonomi", icon_url=interaction.guild.icon.url)
@@ -234,10 +234,10 @@ class Economy(commands.Cog):
                         f"⏰ **{m} minutes** после tekrar çalışabilirsin!", ephemeral=True)
                     return
             jobs = [
-                ("👨‍💻 Metinlımcı", 60, 120), ("👨‍🍳 Aşçı", 30, 70),
-                ("🎵 Müzisyen", 40, 90), ("🎨 Ressam", 35, 80),
-                ("👨‍🏫 Öğretmen", 25, 60), ("👨‍⚕️ Doktor", 80, 150),
-                ("⚙️ Mühendis", 70, 130), ("🚗 Sürücü", 20, 50),
+                (" Metinlımcı", 60, 120), (" Aşçı", 30, 70),
+                (" Müzisyen", 40, 90), (" Ressam", 35, 80),
+                (" Öğretmen", 25, 60), (" Doktor", 80, 150),
+                (" Mühendis", 70, 130), (" Sürücü", 20, 50),
             ]
             job_name, min_earn, max_earn = random.choice(jobs)
             earned = random.randint(min_earn, max_earn)
@@ -250,13 +250,13 @@ class Economy(commands.Cog):
             e.description = (
                 f"## Работа zaversena!\n"
                 f"### Zarplata polucena\n"
-                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                f"\n\n"
                 f"{interaction.user.mention} сегодня работа как **{job_name}**!\n\n"
                 f"**Professiya:** {job_name}\n"
                 f"**Для:** +{earned:,} {name}\n"
                 f"**Общий bakiye:** {bal+earned:,} {name}\n"
                 f"**Sleduyusaya работа:** <t:{int((now + timedelta(hours=1)).timestamp())}:R>\n\n"
-                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                f""
             )
             e.set_thumbnail(url=interaction.user.display_avatar.url)
             if interaction.guild.icon:
@@ -267,11 +267,11 @@ class Economy(commands.Cog):
 
         elif oyun == "kumar":
             if not miktar or miktar <= 0:
-                await interaction.response.send_message("❌ Укажите корректную сумму!", ephemeral=True)
+                await interaction.response.send_message(" Укажите корректную сумму!", ephemeral=True)
                 return
             bal = get_balance(gid, uid)
             if bal < miktar:
-                await interaction.response.send_message(f"❌ Yetersiz bakiye! Bakiyen: **{bal:,}**", ephemeral=True)
+                await interaction.response.send_message(f" Yetersiz bakiye! Bakiyen: **{bal:,}**", ephemeral=True)
                 return
             kazandi = random.random() < 0.45
             if kazandi:
@@ -280,11 +280,11 @@ class Economy(commands.Cog):
                 e.description = (
                     f"## Kazino\n"
                     f"### Siz sizoyunmı!\n"
-                    f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                    f"\n\n"
                     f"Udaca на vasey storone! Siz sizoyunmı udvoennuyu stavku.\n\n"
                     f"**Kazanıldı:** +{miktar:,} {name}\n"
                     f"**Новый bakiye:** {bal+miktar:,} {name}\n\n"
-                    f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                    f""
                 )
                 e.set_image(url=gif("economy_win"))
             else:
@@ -293,11 +293,11 @@ class Economy(commands.Cog):
                 e.description = (
                     f"## Kazino\n"
                     f"### Siz prooyunmı\n"
-                    f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                    f"\n\n"
                     f"Udaca otvernulas den vas. Povezet в следующий kez!\n\n"
                     f"**Prooyunno:** -{miktar:,} {name}\n"
                     f"**Новый bakiye:** {bal-miktar:,} {name}\n\n"
-                    f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                    f""
                 )
                 e.set_image(url=gif("economy_lose"))
             e.set_thumbnail(url=interaction.user.display_avatar.url)
@@ -306,21 +306,21 @@ class Economy(commands.Cog):
 
         elif oyun == "slot":
             if not miktar or miktar <= 0:
-                await interaction.response.send_message("❌ Укажите корректную сумму!", ephemeral=True)
+                await interaction.response.send_message(" Укажите корректную сумму!", ephemeral=True)
                 return
             bal = get_balance(gid, uid)
             if bal < miktar:
-                await interaction.response.send_message("❌ Yetersiz bakiye!", ephemeral=True)
+                await interaction.response.send_message(" Yetersiz bakiye!", ephemeral=True)
                 return
-            semboller = ['🍒', '🍋', '🍊', '🍇', '⭐', '💎']
+            semboller = ['', '', '', '', '', '']
             s = [random.choice(semboller) for _ in range(3)]
             if s[0] == s[1] == s[2]:
-                if s[0] == '💎':
-                    kazanc, msg, color = miktar * 10, "💎 JACKPOT! 10x kazandın!", 0xF1C40F
-                elif s[0] == '⭐':
-                    kazanc, msg, color = miktar * 5, "⭐ SÜPER! 5x kazandın!", 0xF39C12
+                if s[0] == '':
+                    kazanc, msg, color = miktar * 10, " JACKPOT! 10x kazandın!", 0xF1C40F
+                elif s[0] == '':
+                    kazanc, msg, color = miktar * 5, " SÜPER! 5x kazandın!", 0xF39C12
                 else:
-                    kazanc, msg, color = miktar * 3, "🎉 3x kazandın!", 0x2ECC71
+                    kazanc, msg, color = miktar * 3, " 3x kazandın!", 0x2ECC71
                 set_balance(gid, uid, bal + kazanc, interaction.user.display_name)
                 gif_key = "economy_win"
             elif s[0] == s[1] or s[1] == s[2]:
@@ -335,11 +335,11 @@ class Economy(commands.Cog):
             e.description = (
                 f"## Slot-makine\n"
                 f"### В конецuç\n"
-                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                f"\n\n"
                 f"# {' '.join(s)}\n\n"
                 f"**В конецuç:** {msg}\n"
                 f"**Новый bakiye:** {bal+kazanc:,} {name}\n\n"
-                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                f""
             )
             e.set_image(url=gif(gif_key))
             if interaction.guild.icon:
@@ -350,16 +350,16 @@ class Economy(commands.Cog):
 
         elif oyun == "soygun":
             if not hedef:
-                await interaction.response.send_message("❌ Цель belirtmelisin!", ephemeral=True)
+                await interaction.response.send_message(" Цель belirtmelisin!", ephemeral=True)
                 return
             if hedef.bot or hedef == interaction.user:
-                await interaction.response.send_message("❌ Неверный hedef!", ephemeral=True)
+                await interaction.response.send_message(" Неверный hedef!", ephemeral=True)
                 return
             tid = str(hedef.id)
             hedef_bal = get_balance(gid, tid)
             kendi_bal = get_balance(gid, uid)
             if hedef_bal < 10:
-                await interaction.response.send_message(f"❌ {hedef.display_name} очень fakir, soyacak bir что-то yok!", ephemeral=True)
+                await interaction.response.send_message(f" {hedef.display_name} очень fakir, soyacak bir что-то yok!", ephemeral=True)
                 return
             basari = random.random() < 0.4
             if basari:
@@ -370,11 +370,11 @@ class Economy(commands.Cog):
                 e.description = (
                     f"## Soygun\n"
                     f"### Успешно!\n"
-                    f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                    f"\n\n"
                     f"{interaction.user.mention} ograbil {hedef.mention} в temnote noci!\n\n"
                     f"**Ukradeno:** {miktar_c:,} {name}\n"
                     f"**Новый bakiye:** {kendi_bal+miktar_c:,} {name}\n\n"
-                    f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                    f""
                 )
                 e.set_image(url=gif("economy_win"))
             else:
@@ -384,11 +384,11 @@ class Economy(commands.Cog):
                 e.description = (
                     f"## Soygun\n"
                     f"### Неудачно!\n"
-                    f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                    f"\n\n"
                     f"{interaction.user.mention} poyman на meste prestupleniya ve zaplatil straf!\n\n"
                     f"**Straf:** -{penalty:,} {name}\n"
                     f"**Новый bakiye:** {max(0, kendi_bal-penalty):,} {name}\n\n"
-                    f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                    f""
                 )
                 e.set_image(url=gif("economy_lose"))
             e.set_thumbnail(url=interaction.user.display_avatar.url)
@@ -401,22 +401,22 @@ class Economy(commands.Cog):
         f = f'{DATA_DIR}/shop_{gid}.json'
         name, emoji = get_currency(gid)
         if not os.path.exists(f):
-            await interaction.response.send_message("🏪 Магазин сервера пуст!", ephemeral=True)
+            await interaction.response.send_message(" Магазин сервера пуст!", ephemeral=True)
             return
         with open(f) as fp:
             items = json.load(fp)
         if not items:
-            await interaction.response.send_message("🏪 Магазин сервера пуст!", ephemeral=True)
+            await interaction.response.send_message(" Магазин сервера пуст!", ephemeral=True)
             return
         e = discord.Embed(color=0xF1C40F, timestamp=datetime.utcnow())
         e.description = (
             f"## Mağaza сервер\n"
             f"### Erişimnie ürünler\n"
-            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            f"\n\n"
         )
         for item in items[:10]:
             e.description += f"**{item.get('name','?')}** — {item.get('price',0):,} {emoji}\n*{item.get('description', '-')}*\n\n"
-        e.description += f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        e.description += f""
         if interaction.guild.icon:
             e.set_footer(text=f"{interaction.guild.name} · Ekonomi", icon_url=interaction.guild.icon.url)
         else:
@@ -429,31 +429,31 @@ class Economy(commands.Cog):
         uid = str(interaction.user.id)
         f = f'{DATA_DIR}/shop_{gid}.json'
         if not os.path.exists(f):
-            await interaction.response.send_message("❌ Магазин пуст!", ephemeral=True)
+            await interaction.response.send_message(" Магазин пуст!", ephemeral=True)
             return
         with open(f) as fp:
             items = json.load(fp)
         item = next((i for i in items if i.get('name', '').lower() == urun_adi.lower()), None)
         if not item:
-            await interaction.response.send_message(f"❌ **{urun_adi}** не найден!", ephemeral=True)
+            await interaction.response.send_message(f" **{urun_adi}** не найден!", ephemeral=True)
             return
         bal = get_balance(gid, uid)
         price = item.get('price', 0)
         name, emoji = get_currency(gid)
         if bal < price:
-            await interaction.response.send_message(f"❌ Yetersiz bakiye! Gerekli: **{price:,} {name}**", ephemeral=True)
+            await interaction.response.send_message(f" Yetersiz bakiye! Gerekli: **{price:,} {name}**", ephemeral=True)
             return
         set_balance(gid, uid, bal - price, interaction.user.display_name)
         e = discord.Embed(color=0x2ECC71, timestamp=datetime.utcnow())
         e.description = (
             f"## Pokupka\n"
             f"### Успешно!\n"
-            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            f"\n\n"
             f"**{item['name']}** успешно kuplen!\n\n"
             f"**Ürün:** {item['name']}\n"
             f"**Oplaceno:** -{price:,} {name}\n"
             f"**Ostatok:** {bal-price:,} {name}\n\n"
-            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            f""
         )
         if interaction.guild.icon:
             e.set_footer(text=f"{interaction.guild.name} · Ekonomi", icon_url=interaction.guild.icon.url)

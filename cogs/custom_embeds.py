@@ -19,7 +19,7 @@ class CustomEmbeds(commands.Cog):
         try:
             with open(f, 'r', encoding='utf-8') as fp:
                 return json.load(fp)
-        except:
+        except Exception:
             return {}
 
     def _save(self, guild_id, data):
@@ -99,12 +99,12 @@ class CustomEmbeds(commands.Cog):
             self._save(interaction.guild_id, embeds_data)
             
             await interaction.response.send_message(
-                f"✅ Embed successfully created and sent to {target_channel.mention}",
+                f" Embed successfully created and sent to {target_channel.mention}",
                 ephemeral=True
             )
         except Exception as e:
             await interaction.response.send_message(
-                f"❌ Error creating embed: {str(e)}",
+                f" Error creating embed: {str(e)}",
                 ephemeral=True
             )
 
@@ -122,7 +122,7 @@ class CustomEmbeds(commands.Cog):
         # Show last 10 embeds
         recent = history[:10]
         embed = discord.Embed(
-            title="📜 Recent Embeds",
+            title=" Recent Embeds",
             color=0x7289DA,
             timestamp=datetime.utcnow()
         )

@@ -22,6 +22,10 @@ import asyncio
 from datetime import datetime, timedelta
 from collections import defaultdict
 
+from logger import get_logger
+log = get_logger("temp_moderation")
+
+
 DATA_DIR = "data"
 os.makedirs(DATA_DIR, exist_ok=True)
 
@@ -129,7 +133,7 @@ class TempModeration(commands.Cog):
         self.check_expirations.cancel()
         self.run_scheduler.cancel()
 
-    # ─── PERSISTENCE ───────────────────────────────────────
+    #  PERSISTENCE 
     def _mutes_file(self): return f"{DATA_DIR}/temp_mutes.json"
     def _bans_file(self): return f"{DATA_DIR}/temp_bans.json"
     def _kicks_file(self): return f"{DATA_DIR}/temp_kicks.json"
@@ -160,7 +164,7 @@ class TempModeration(commands.Cog):
             with open(path, "w", encoding="utf-8") as f:
                 json.dump(getattr(self, target), f, ensure_ascii=False, indent=2)
         except Exception as e:
-            print(f"[temp_mod] save {target}: {e}")
+            log.info(f"[temp_mod] save {target}: {e}")
 
     def add_history(self, action, guild_id, user_id, mod_id, duration, reason, expires_at=None):
         try:
@@ -183,7 +187,7 @@ class TempModeration(commands.Cog):
             with open(self._history_file(), "w", encoding="utf-8") as f:
                 json.dump(history, f, ensure_ascii=False, indent=2)
         except Exception as e:
-            print(f"[temp_mod] history: {e}")
+            log.info(f"[temp_mod] history: {e}")
 
     def get_whitelist(self, guild_id):
         try:
@@ -210,7 +214,7 @@ class TempModeration(commands.Cog):
         self._cooldowns[key] = now
         return True, 0
 
-    # ─── COMMANDS ─────────────────────────────────────────
+    #  COMMANDS 
     @commands.command(name="mute", aliases=["tempmute", "времьют"])
     @commands.has_permissions(moderate_members=True)
     async def mute_cmd(self, ctx, member: discord.Member, duration: str = "1h", *, reason: str = "Без причины"):
@@ -218,16 +222,16 @@ class TempModeration(commands.Cog):
         sec = parse_duration(duration)
         if not sec:
             presets = ", ".join(f"`{label}`" for label, _ in PRESETS[:10])
-            await ctx.send(f"❌ Неверный формат времени. Примеры: `1h`, `30m`, `1д`, `2ч 30м`\nПресеты: {presets}")
+            await ctx.send(f" Неверный формат времени. Примеры: `1h`, `30m`, `1д`, `2ч 30м`\nПресеты: {presets}")
             return
         if sec > 2592000 * 6:  # max 6 months
-            await ctx.send("❌ Максимум 6 месяцев")
+            await ctx.send(" Максимум 6 месяцев")
             return
         if sec < 30:
-            await ctx.send("❌ Минимум 30 секунд")
+            await ctx.send(" Минимум 30 секунд")
             return
         if self.is_whitelisted(ctx.guild, member):
-            await ctx.send("❌ Этот пользователь в белом списке")
+            await ctx.send(" Этот пользователь в белом списке")
             return
         ok, cd = self._cooldown_ok(member.id, "mute")
         if not ok:
@@ -238,10 +242,10 @@ class TempModeration(commands.Cog):
         try:
             await member.timeout(until_dt, reason=f"[TempMod] {ctx.author}: {reason}")
         except discord.Forbidden:
-            await ctx.send("❌ Нет прав на мьют этого пользователя (роль выше)")
+            await ctx.send(" Нет прав на мьют этого пользователя (роль выше)")
             return
         except discord.HTTPException as e:
-            await ctx.send(f"❌ Ошибка Discord: {e}")
+            await ctx.send(f" Ошибка Discord: {e}")
             return
         # Record
         self._mutes.setdefault(str(ctx.guild.id), {})[str(member.id)] = {
@@ -256,7 +260,7 @@ class TempModeration(commands.Cog):
         # DM
         try:
             embed = discord.Embed(
-                title="🔇 Временный мьют",
+                title=" Временный мьют",
                 description=f"Вы были замучены на сервере **{ctx.guild.name}** на **{format_duration(sec)}**",
                 color=0xFBBF24
             )
@@ -268,7 +272,7 @@ class TempModeration(commands.Cog):
             pass
         # Confirmation
         embed = discord.Embed(
-            title="🔇 Временный мьют",
+            title=" Временный мьют",
             description=f"{member.mention} замучен на **{format_duration(sec)}**",
             color=0xFBBF24
         )
@@ -283,17 +287,17 @@ class TempModeration(commands.Cog):
         """Снять мьют досрочно"""
         guild_mutes = self._mutes.get(str(ctx.guild.id), {})
         if str(member.id) not in guild_mutes:
-            await ctx.send(f"❌ {member.mention} не имеет активного временного мьюта")
+            await ctx.send(f" {member.mention} не имеет активного временного мьюта")
             return
         try:
             await member.timeout(None, reason=f"[TempMod] Снято досрочно {ctx.author}")
         except discord.Forbidden:
-            await ctx.send("❌ Нет прав")
+            await ctx.send(" Нет прав")
             return
         del guild_mutes[str(member.id)]
         self._save("_mutes", self._mutes_file())
         embed = discord.Embed(
-            title="🔊 Мьют снят",
+            title=" Мьют снят",
             description=f"Мьют с {member.mention} снят досрочно",
             color=0x4ADE80
         )
@@ -306,16 +310,16 @@ class TempModeration(commands.Cog):
         """Временный бан: !tempban @user 7d причина"""
         sec = parse_duration(duration)
         if not sec:
-            await ctx.send("❌ Неверный формат времени. Примеры: `1d`, `7д`, `12h`")
+            await ctx.send(" Неверный формат времени. Примеры: `1d`, `7д`, `12h`")
             return
         if sec < 300:
-            await ctx.send("❌ Минимум 5 минут (для бана)")
+            await ctx.send(" Минимум 5 минут (для бана)")
             return
         if sec > 31536000:  # max 1 year
-            await ctx.send("❌ Максимум 1 год")
+            await ctx.send(" Максимум 1 год")
             return
         if self.is_whitelisted(ctx.guild, member):
-            await ctx.send("❌ Этот пользователь в белом списке")
+            await ctx.send(" Этот пользователь в белом списке")
             return
         ok, cd = self._cooldown_ok(member.id, "ban")
         if not ok:
@@ -325,7 +329,7 @@ class TempModeration(commands.Cog):
         # DM before ban
         try:
             embed = discord.Embed(
-                title="🔨 Временный бан",
+                title=" Временный бан",
                 description=f"Вы были временно забанены на сервере **{ctx.guild.name}** на **{format_duration(sec)}**",
                 color=0xEF4444
             )
@@ -339,7 +343,7 @@ class TempModeration(commands.Cog):
         try:
             await ctx.guild.ban(member, reason=f"[TempMod] {ctx.author}: {reason} ({format_duration(sec)})")
         except discord.Forbidden:
-            await ctx.send("❌ Нет прав на бан")
+            await ctx.send(" Нет прав на бан")
             return
         self._bans.setdefault(str(ctx.guild.id), {})[str(member.id)] = {
             "until": until_ts,
@@ -352,7 +356,7 @@ class TempModeration(commands.Cog):
         self._save("_bans", self._bans_file())
         self.add_history("tempban", ctx.guild.id, member.id, ctx.author.id, sec, reason, until_ts)
         embed = discord.Embed(
-            title="🔨 Временный бан",
+            title=" Временный бан",
             description=f"{member.mention} забанен на **{format_duration(sec)}**",
             color=0xEF4444
         )
@@ -367,17 +371,17 @@ class TempModeration(commands.Cog):
         """Снять временный бан досрочно: !unban 123456789"""
         guild_bans = self._bans.get(str(ctx.guild.id), {})
         if user_id not in guild_bans:
-            await ctx.send("❌ Этот пользователь не имеет активного временного бана")
+            await ctx.send(" Этот пользователь не имеет активного временного бана")
             return
         try:
             user = await self.bot.fetch_user(int(user_id))
             await ctx.guild.unban(user, reason=f"[TempMod] Снято досрочно {ctx.author}")
         except Exception as e:
-            await ctx.send(f"❌ Ошибка: {e}")
+            await ctx.send(f" Ошибка: {e}")
             return
         del guild_bans[user_id]
         self._save("_bans", self._bans_file())
-        embed = discord.Embed(title="🔓 Бан снят", description=f"Временный бан снят досрочно", color=0x4ADE80)
+        embed = discord.Embed(title=" Бан снят", description=f"Временный бан снят досрочно", color=0x4ADE80)
         embed.add_field(name="Модератор", value=ctx.author.mention, inline=True)
         await ctx.send(embed=embed)
 
@@ -387,16 +391,16 @@ class TempModeration(commands.Cog):
         """Временный кик: !tempkick @user 5m причина (пользователь сможет вернуться через N минут)"""
         sec = parse_duration(duration)
         if not sec:
-            await ctx.send("❌ Неверный формат")
+            await ctx.send(" Неверный формат")
             return
         if sec < 60:
-            await ctx.send("❌ Минимум 1 минута")
+            await ctx.send(" Минимум 1 минута")
             return
         if sec > 86400:
-            await ctx.send("❌ Максимум 24 часа")
+            await ctx.send(" Максимум 24 часа")
             return
         if self.is_whitelisted(ctx.guild, member):
-            await ctx.send("❌ В белом списке")
+            await ctx.send(" В белом списке")
             return
         ok, cd = self._cooldown_ok(member.id, "kick")
         if not ok:
@@ -406,7 +410,7 @@ class TempModeration(commands.Cog):
         # DM
         try:
             embed = discord.Embed(
-                title="👢 Временный кик",
+                title=" Временный кик",
                 description=f"Вы были кикнуты с **{ctx.guild.name}** на **{format_duration(sec)}**.\nВы сможете вернуться после истечения срока.",
                 color=0xF97316
             )
@@ -417,7 +421,7 @@ class TempModeration(commands.Cog):
         try:
             await member.kick(reason=f"[TempMod] {ctx.author}: {reason} ({format_duration(sec)})")
         except discord.Forbidden:
-            await ctx.send("❌ Нет прав")
+            await ctx.send(" Нет прав")
             return
         self._kicks.setdefault(str(ctx.guild.id), {})[str(member.id)] = {
             "until": until_ts,
@@ -430,7 +434,7 @@ class TempModeration(commands.Cog):
         self._save("_kicks", self._kicks_file())
         self.add_history("tempkick", ctx.guild.id, member.id, ctx.author.id, sec, reason, until_ts)
         embed = discord.Embed(
-            title="👢 Временный кик",
+            title=" Временный кик",
             description=f"{member.mention} кикнут на **{format_duration(sec)}**\nСможет вернуться: <t:{int(until_ts)}:R>",
             color=0xF97316
         )
@@ -438,7 +442,7 @@ class TempModeration(commands.Cog):
         embed.add_field(name="Модератор", value=ctx.author.mention, inline=True)
         await ctx.send(embed=embed)
 
-    # ─── EXPIRATION CHECKER ─────────────────────────────────
+    #  EXPIRATION CHECKER 
     @tasks.loop(seconds=30)
     async def check_expirations(self):
         """Check for expired mutes/bans every 30s"""
@@ -497,7 +501,7 @@ class TempModeration(commands.Cog):
         except Exception:
             pass
 
-    # ─── SCHEDULER ────────────────────────────────────────
+    #  SCHEDULER 
     @commands.command(name="schedule", aliases=["запланировать"])
     @commands.has_permissions(moderate_members=True)
     async def schedule_cmd(self, ctx, action: str, member: discord.Member, when: str, *, reason: str = "Запланировано"):
@@ -505,15 +509,15 @@ class TempModeration(commands.Cog):
         # Parse '2h через 1h' or '2h 1h'
         parts = when.split()
         if len(parts) < 2:
-            await ctx.send("❌ Формат: `!schedule mute @user 2h 1h` (действие через время)")
+            await ctx.send(" Формат: `!schedule mute @user 2h 1h` (действие через время)")
             return
         duration = parse_duration(parts[0])
         delay = parse_duration(parts[1])
         if not duration or not delay:
-            await ctx.send("❌ Неверный формат времени")
+            await ctx.send(" Неверный формат времени")
             return
         if action not in ("mute", "ban", "kick"):
-            await ctx.send("❌ Действие: mute / ban / kick")
+            await ctx.send(" Действие: mute / ban / kick")
             return
         run_at = time.time() + delay
         entry_id = f"sch_{int(run_at)}_{member.id}"
@@ -549,9 +553,9 @@ class TempModeration(commands.Cog):
             if e["id"] == entry_id:
                 self._scheduled.pop(i)
                 self._save("_scheduled", self._scheduled_file())
-                await ctx.send(f"✅ Запланированное `{entry_id}` отменено")
+                await ctx.send(f" Запланированное `{entry_id}` отменено")
                 return
-        await ctx.send("❌ Не найдено")
+        await ctx.send(" Не найдено")
 
     @tasks.loop(seconds=30)
     async def run_scheduler(self):
@@ -603,7 +607,7 @@ class TempModeration(commands.Cog):
     async def before_scheduler(self):
         await self.bot.wait_until_ready()
 
-    # ─── WHITELIST ─────────────────────────────────────────
+    #  WHITELIST 
     @commands.command(name="modwhitelist")
     @commands.has_permissions(administrator=True)
     async def whitelist_cmd(self, ctx, action: str = "list", user: discord.Member = None):
@@ -617,16 +621,16 @@ class TempModeration(commands.Cog):
         guild_list = data.setdefault(str(ctx.guild.id), [])
         if action == "list":
             if not guild_list:
-                await ctx.send("📋 Белый список пуст")
+                await ctx.send(" Белый список пуст")
             else:
                 lines = [f"• <@{uid}>" for uid in guild_list]
-                await ctx.send("📋 **Белый список:**\n" + "\n".join(lines))
+                await ctx.send(" **Белый список:**\n" + "\n".join(lines))
         elif action == "add" and user:
             if str(user.id) not in guild_list:
                 guild_list.append(str(user.id))
                 with open(self._whitelist_file(), "w", encoding="utf-8") as f:
                     json.dump(data, f, ensure_ascii=False, indent=2)
-                await ctx.send(f"✅ {user.mention} добавлен в белый список")
+                await ctx.send(f" {user.mention} добавлен в белый список")
             else:
                 await ctx.send("Уже в списке")
         elif action == "remove" and user:
@@ -634,13 +638,13 @@ class TempModeration(commands.Cog):
                 guild_list.remove(str(user.id))
                 with open(self._whitelist_file(), "w", encoding="utf-8") as f:
                     json.dump(data, f, ensure_ascii=False, indent=2)
-                await ctx.send(f"✅ {user.mention} удалён из белого списка")
+                await ctx.send(f" {user.mention} удалён из белого списка")
             else:
                 await ctx.send("Не в списке")
         else:
-            await ctx.send("❌ Использование: `!modwhitelist list|add|remove @user`")
+            await ctx.send(" Использование: `!modwhitelist list|add|remove @user`")
 
-    # ─── LIST / STATS ─────────────────────────────────────
+    #  LIST / STATS 
     @commands.command(name="tempmod", aliases=["tm"])
     @commands.has_permissions(moderate_members=True)
     async def tempmod_cmd(self, ctx):
@@ -650,26 +654,26 @@ class TempModeration(commands.Cog):
         bans = self._bans.get(guild_id, {})
         kicks = self._kicks.get(guild_id, {})
         if not (mutes or bans or kicks):
-            await ctx.send("📋 Нет активных временных наказаний")
+            await ctx.send(" Нет активных временных наказаний")
             return
-        embed = discord.Embed(title="⏱️ Активные временные наказания", color=0xFFD700)
+        embed = discord.Embed(title="⏱ Активные временные наказания", color=0xFFD700)
         if mutes:
             text = ""
             for uid, info in mutes.items():
                 rem = fmt_countdown(info["until"])
-                text += f"🔇 <@{uid}> — {rem}\n   └ {info['reason'][:60]}\n"
+                text += f" <@{uid}> — {rem}\n    {info['reason'][:60]}\n"
             embed.add_field(name="Мьют", value=text[:1024] or "—", inline=False)
         if bans:
             text = ""
             for uid, info in bans.items():
                 rem = fmt_countdown(info["until"])
-                text += f"🔨 <@{uid}> — {rem}\n   └ {info['reason'][:60]}\n"
+                text += f" <@{uid}> — {rem}\n    {info['reason'][:60]}\n"
             embed.add_field(name="Баны", value=text[:1024] or "—", inline=False)
         if kicks:
             text = ""
             for uid, info in kicks.items():
                 rem = fmt_countdown(info["until"])
-                text += f"👢 {info.get('user_name', uid)} — {rem}\n   └ {info['reason'][:60]}\n"
+                text += f" {info.get('user_name', uid)} — {rem}\n    {info['reason'][:60]}\n"
             embed.add_field(name="Кики", value=text[:1024] or "—", inline=False)
         await ctx.send(embed=embed)
 

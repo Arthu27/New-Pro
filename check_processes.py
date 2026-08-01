@@ -8,7 +8,7 @@ import sys
 def check_bot_processes():
     """Работа действия botun'lerini контроль et"""
     try:
-        # Python main.py process'lerini bul
+        # Python main.py process'lerini найти
         result = subprocess.run(
             'wmic process where "commandline like \'%main.py%\'" get processid,commandline',
             shell=True,
@@ -28,11 +28,11 @@ def check_bot_processes():
         if len(processes) > 1:
             print("[WARNING] Работает neskolko действия botun!")
             for i, proc in enumerate(processes, 1):
-                print(f"  {i}. {proc}")
+                print(f" {i}. {proc}")
             return True
         elif len(processes) == 1:
             print("[OK] Работает bir process botun")
-            print(f"  {processes[0]}")
+            print(f" {processes[0]}")
             return False
         else:
             print("[INFO] Действия botun не найден")

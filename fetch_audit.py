@@ -39,7 +39,7 @@ async def on_ready():
     cutoff = datetime.datetime.utcnow() - datetime.timedelta(days=7)
 
     for guild in bot.guilds:
-        print(f'  {guild.name} загруз...')
+        print(f' {guild.name} загруз...')
         gid = str(guild.id)
         cache[gid] = []
         count = 0
@@ -79,9 +79,9 @@ async def on_ready():
                 })
                 count += 1
         except Exception as e:
-            print(f'  ОШИБКА: {e}')
+            print(f' ОШИБКА: {e}')
 
-        print(f'  {guild.name}: {count} запись загружено')
+        print(f' {guild.name}: {count} запись загружено')
 
     os.makedirs('data', exist_ok=True)
     with open('data/discord_audit_cache.json', 'w', encoding='utf-8') as f:

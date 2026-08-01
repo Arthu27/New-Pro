@@ -111,3 +111,20 @@ test_server.py
 run_daemon.py
 start_bg.py
 test_server.py
+
+# Docker
+.dockerignore
+
+# Database
+data/*.db
+data/*.db-journal
+
+# Logs
+logs/
+*.log
+
+# Backups
+backups/
+
+# Plugins
+plugins/

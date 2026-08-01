@@ -7,6 +7,10 @@ import os
 import datetime
 import asyncio
 
+from logger import get_logger
+log = get_logger("meeting")
+
+
 DATA_DIR = 'data'
 
 
@@ -28,7 +32,7 @@ def _load_cfg(guild_id: int) -> dict:
         try:
             with open(path, 'r', encoding='utf-8') as f:
                 cfg.update(json.load(f))
-        except:
+        except Exception:
             pass
 
     # mod_report_config'den staff_roles'u da al (birleştir)
@@ -39,7 +43,7 @@ def _load_cfg(guild_id: int) -> dict:
                 mod_cfg = json.load(f)
             if mod_cfg.get('staff_roles'):
                 cfg['staff_roles'] = mod_cfg['staff_roles']
-        except:
+        except Exception:
             pass
 
     return cfg
@@ -83,10 +87,10 @@ async def _scan_messages(guild: discord.Guild, since: datetime.datetime) -> dict
                 uid = str(msg.author.id)
                 msg_counts[uid] = msg_counts.get(uid, 0) + 1
                 scanned += 1
-        except:
+        except Exception:
             continue
 
-    print(f'[Meeting] {guild.name}: {scanned} message сканироватьndı, {len(msg_counts)} user')
+    log.info(f'[Meeting] {guild.name}: {scanned} message сканироватьndı, {len(msg_counts)} user')
     return msg_counts
 
 
@@ -107,7 +111,7 @@ async def _scan_voice(guild: discord.Guild, since: datetime.datetime) -> dict:
             for uid, d in vs.get('users', {}).items():
                 secs = d.get('total_seconds', 0) if isinstance(d, dict) else int(d)
                 current[uid] = secs
-        except:
+        except Exception:
             pass
 
     # Snapshot — собрание başlangıcındaki значение
@@ -116,7 +120,7 @@ async def _scan_voice(guild: discord.Guild, since: datetime.datetime) -> dict:
         try:
             with open(snapshot_path, 'r', encoding='utf-8') as f:
                 snapshot = json.load(f)
-        except:
+        except Exception:
             pass
 
     # Разница = bu собрание kazanılan длительность
@@ -145,7 +149,7 @@ def _save_voice_snapshot(guild_id: int):
                 snapshot[uid] = secs
             with open(snapshot_path, 'w', encoding='utf-8') as f:
                 json.dump(snapshot, f)
-        except:
+        except Exception:
             pass
 
 
@@ -162,16 +166,16 @@ def _load_invites(guild_id: int) -> dict:
                 else:
                     result[uid] = int(val)
             return result
-        except:
+        except Exception:
             pass
     return {}
 
 
 def _bar(value: int, max_val: int, length: int = 10) -> str:
     if max_val == 0:
-        return '░' * length
+        return '' * length
     filled = int((value / max_val) * length)
-    return '█' * filled + '░' * (length - filled)
+    return '' * filled + '' * (length - filled)
 
 
 async def _build_meeting_report(guild: discord.Guild, since: datetime.datetime) -> list[discord.Embed]:
@@ -190,7 +194,7 @@ async def _build_meeting_report(guild: discord.Guild, since: datetime.datetime) 
 
     embeds = []
 
-    # ── KAPAK ────────────────────────────────────────────────────────────────
+    #  KAPAK 
     cover = discord.Embed(color=0x2B2D31)
     cover.set_author(
         name=f'{guild.name}  ·  Собрание Raporu',
@@ -198,13 +202,13 @@ async def _build_meeting_report(guild: discord.Guild, since: datetime.datetime) 
     )
     cover.description = (
         f'```ansi\n'
-        f'\u001b[1;34m╔══════════════════════════════════╗\u001b[0m\n'
-        f'\u001b[1;34m║      СОБРАНИЕ PERFORMANS RAPORU  ║\u001b[0m\n'
-        f'\u001b[1;34m╚══════════════════════════════════╝\u001b[0m\n'
+        f'\u001b[1;34m\u001b[0m\n'
+        f'\u001b[1;34m      СОБРАНИЕ PERFORMANS RAPORU  \u001b[0m\n'
+        f'\u001b[1;34m\u001b[0m\n'
         f'```\n'
-        f'> 📅 <t:{ts_since}:F> → <t:{ts_now}:F>\n'
-        f'> 👥 Всего участников: **{guild.member_count}**\n'
-        f'> 💬 Активен Пользователь: **{len(msg_counts)}**'
+        f'>  <t:{ts_since}:F> → <t:{ts_now}:F>\n'
+        f'>  Всего участников: **{guild.member_count}**\n'
+        f'>  Активен Пользователь: **{len(msg_counts)}**'
     )
     if guild.banner:
         cover.set_image(url=guild.banner.url)
@@ -213,7 +217,7 @@ async def _build_meeting_report(guild: discord.Guild, since: datetime.datetime) 
     cover.set_footer(text=f'{guild.name}  ·  Собрание Система', icon_url=guild.icon.url if guild.icon else None)
     embeds.append(cover)
 
-    # ── ОБЩИЙ ОЧЕРЕДЬ (Сообщение + Ses) ──────────────────────────────────────────────
+    #  ОБЩИЙ ОЧЕРЕДЬ (Сообщение + Ses) 
     from collections import defaultdict
     scores = defaultdict(lambda: {'msg': 0, 'voice': 0, 'inv': 0, 'score': 0})
     for uid, cnt in msg_counts.items():
@@ -230,10 +234,10 @@ async def _build_meeting_report(guild: discord.Guild, since: datetime.datetime) 
     top5 = sorted(scores.items(), key=lambda x: x[1]['score'], reverse=True)[:5]
     max_score = top5[0][1]['score'] if top5 else 1
 
-    overall = discord.Embed(title='🏆  Общий Очередь — Top 5', color=0xF1C40F)
+    overall = discord.Embed(title='  Общий Очередь — Top 5', color=0xF1C40F)
     if guild.icon:
         overall.set_thumbnail(url=guild.icon.url)
-    medals = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣']
+    medals = ['', '', '', '4', '5']
     lines = []
     for i, (uid, s) in enumerate(top5):
         m = guild.get_member(int(uid))
@@ -242,14 +246,14 @@ async def _build_meeting_report(guild: discord.Guild, since: datetime.datetime) 
         h, mn = divmod(s['voice'] // 60, 60)
         lines.append(
             f'{medals[i]} **{name}**\n'
-            f'╰ {bar} `{s["score"]:,} очков`\n'
-            f'╰ 💬 {s["msg"]:,}  🎙️ {h}s{mn}dk  📨 {s["inv"]}'
+            f' {bar} `{s["score"]:,} очков`\n'
+            f'  {s["msg"]:,}   {h}s{mn}dk   {s["inv"]}'
         )
     overall.description = '\n\n'.join(lines) or 'Данные yok.'
     overall.set_footer(text='Очки: Сообщение×1 + Звук мин×2 + Приглашение×5', icon_url=guild.icon.url if guild.icon else None)
     embeds.append(overall)
 
-    # ── РОЛЬ BAZLI TOP 4 ───────────────────────────────────────────────────────
+    #  РОЛЬ BAZLI TOP 4 
     for role_id in staff_role_ids[:8]:
         role = guild.get_role(role_id)
         if not role or role.is_default():
@@ -281,21 +285,21 @@ async def _build_meeting_report(guild: discord.Guild, since: datetime.datetime) 
         if guild.icon:
             role_embed.set_thumbnail(url=guild.icon.url)
 
-        rank_emojis = ['🥇', '🥈', '🥉', '4️⃣']
+        rank_emojis = ['', '', '', '4']
         lines = []
         for i, (member, msg, voice_secs, inv, score) in enumerate(top4):
             bar = _bar(score, max_s)
             h, mn = divmod(voice_secs // 60, 60)
             lines.append(
                 f'{rank_emojis[i]} **{member.display_name}**\n'
-                f'╰ {bar} `{score:,} puan`\n'
-                f'╰ 💬 {msg:,}  🎙️ {h}s{mn}dk  📨 {inv}'
+                f' {bar} `{score:,} puan`\n'
+                f'  {msg:,}   {h}s{mn}dk   {inv}'
             )
         role_embed.description = '\n\n'.join(lines)
         role_embed.set_footer(text=f'{role.name} • {len(role_members)} участник', icon_url=guild.icon.url if guild.icon else None)
         embeds.append(role_embed)
 
-    # ── KAPANIŞ ───────────────────────────────────────────────────────────────
+    #  KAPANIŞ 
     close = discord.Embed(color=0x57F287)
     if guild.icon:
         close.set_thumbnail(url=guild.icon.url)
@@ -330,7 +334,7 @@ class MeetingStartModal(discord.ui.Modal, title='Собрание Запусти
                 meeting_time = dt.replace(tzinfo=datetime.timezone.utc)
             except ValueError:
                 await interaction.response.send_message(
-                    '❌ Format неверно! Напр.: `12.04.2026 22:00`', ephemeral=True
+                    ' Format неверно! Напр.: `12.04.2026 22:00`', ephemeral=True
                 )
                 return
         else:
@@ -348,15 +352,15 @@ class MeetingStartModal(discord.ui.Modal, title='Собрание Запусти
                 if hasattr(item, 'custom_id') and item.custom_id == 'meeting_start':
                     item.disabled = True
             await interaction.message.edit(view=view)
-        except:
+        except Exception:
             pass
 
         ts = int(meeting_time.timestamp())
-        embed = _guild_embed_base(interaction.guild, '📋 Собрание Başladı', 0x57F287)
+        embed = _guild_embed_base(interaction.guild, ' Собрание Başladı', 0x57F287)
         embed.description = (
             f'> Собрание başlangıcı: <t:{ts}:F>\n'
             f'> Сообщения ve ses длительность bu andan itibaren число.\n\n'
-            f'Когда собрание закончится, нажмите кнопку **🏁 Собрание завершено**.'
+            f'Когда собрание закончится, нажмите кнопку ** Собрание завершено**.'
         )
         await interaction.response.send_message(embed=embed)
 
@@ -369,38 +373,38 @@ class MeetingView(discord.ui.View):
         self.guild_id = guild_id
 
     @discord.ui.button(
-        label='📋  Собрание Запустить',
+        label='  Собрание Запустить',
         style=discord.ButtonStyle.success,
         custom_id='meeting_start',
         row=0
     )
     async def start_meeting(self, interaction: discord.Interaction, button: discord.ui.Button):
         if not interaction.user.guild_permissions.administrator:
-            await interaction.response.send_message('❌ Администратор yok.', ephemeral=True)
+            await interaction.response.send_message(' Администратор yok.', ephemeral=True)
             return
 
         cfg = _load_cfg(interaction.guild.id)
         if cfg.get('active'):
-            await interaction.response.send_message('⚠️ Zaten активен bir собрание var!', ephemeral=True)
+            await interaction.response.send_message(' Zaten активен bir собрание var!', ephemeral=True)
             return
 
         # Modal aç — vakit вход
         await interaction.response.send_modal(MeetingStartModal())
 
     @discord.ui.button(
-        label='🏁  Собрание завершено',
+        label='  Собрание завершено',
         style=discord.ButtonStyle.danger,
         custom_id='meeting_end',
         row=0
     )
     async def end_meeting(self, interaction: discord.Interaction, button: discord.ui.Button):
         if not interaction.user.guild_permissions.administrator:
-            await interaction.response.send_message('❌ Администратор yok.', ephemeral=True)
+            await interaction.response.send_message(' Администратор yok.', ephemeral=True)
             return
 
         cfg = _load_cfg(interaction.guild.id)
         if not cfg.get('active'):
-            await interaction.response.send_message('⚠️ Активен собрание yok.', ephemeral=True)
+            await interaction.response.send_message(' Активен собрание yok.', ephemeral=True)
             return
 
         await interaction.response.defer()
@@ -431,14 +435,14 @@ class MeetingView(discord.ui.View):
         await interaction.message.edit(view=self)
 
     @discord.ui.button(
-        label='📊  В конец Rapor',
+        label='  В конец Rapor',
         style=discord.ButtonStyle.secondary,
         custom_id='meeting_last_report',
         row=0
     )
     async def last_report(self, interaction: discord.Interaction, button: discord.ui.Button):
         if not interaction.user.guild_permissions.manage_messages:
-            await interaction.response.send_message('❌ Администратор yok.', ephemeral=True)
+            await interaction.response.send_message(' Администратор yok.', ephemeral=True)
             return
 
         await interaction.response.defer()
@@ -446,7 +450,7 @@ class MeetingView(discord.ui.View):
 
         since_str = cfg.get('last_meeting') or cfg.get('meeting_start')
         if not since_str:
-            await interaction.followup.send('❌ Собрание еще не проводилось.')
+            await interaction.followup.send(' Собрание еще не проводилось.')
             return
 
         since = datetime.datetime.fromisoformat(since_str)
@@ -458,29 +462,29 @@ class MeetingView(discord.ui.View):
             await interaction.followup.send(embeds=embeds[i:i+10])
 
     @discord.ui.button(
-        label='➕  Роли Добавлено',
+        label='  Роли Добавлено',
         style=discord.ButtonStyle.blurple,
         custom_id='meeting_role_add',
         row=1
     )
     async def role_add(self, interaction: discord.Interaction, button: discord.ui.Button):
         if not interaction.user.guild_permissions.administrator:
-            await interaction.response.send_message('❌ Администратор yok.', ephemeral=True)
+            await interaction.response.send_message(' Администратор yok.', ephemeral=True)
             return
         await interaction.response.send_message(
-            '📝 Добавлено желание роль mention et:\n`!собрание-роли-add @Роль`',
+            ' Добавлено желание роль mention et:\n`!собрание-роли-add @Роль`',
             ephemeral=True
         )
 
     @discord.ui.button(
-        label='➖  Роли Удалить',
+        label='  Роли Удалить',
         style=discord.ButtonStyle.grey,
         custom_id='meeting_role_remove',
         row=1
     )
     async def role_remove(self, interaction: discord.Interaction, button: discord.ui.Button):
         if not interaction.user.guild_permissions.administrator:
-            await interaction.response.send_message('❌ Администратор yok.', ephemeral=True)
+            await interaction.response.send_message(' Администратор yok.', ephemeral=True)
             return
         cfg = _load_cfg(interaction.guild.id)
         role = cfg.get('staff_roles', [])
@@ -499,7 +503,7 @@ class MeetingView(discord.ui.View):
         )
 
     @discord.ui.button(
-        label='📋  Роли',
+        label='  Роли',
         style=discord.ButtonStyle.grey,
         custom_id='meeting_role_list',
         row=1
@@ -515,7 +519,7 @@ class MeetingView(discord.ui.View):
             r = interaction.guild.get_role(rid)
             if r:
                 role_list.append(f'• **{r.name}** ({len(r.members)} участник)')
-        embed = _guild_embed_base(interaction.guild, '📋 Rapora Dahil Роли', 0x5865F2)
+        embed = _guild_embed_base(interaction.guild, ' Rapora Dahil Роли', 0x5865F2)
         embed.description = '\n'.join(role_list)
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
@@ -530,12 +534,12 @@ class Meeting(commands.Cog):
         """Собрание panelini отправить: !собрание"""
         cfg = _load_cfg(ctx.guild.id)
 
-        embed = _guild_embed_base(ctx.guild, '📋  Собрание Панель управления', 0x5865F2)
+        embed = _guild_embed_base(ctx.guild, '  Собрание Панель управления', 0x5865F2)
         embed.description = (
             f'> Bu panel с собрание yönetebilirsin.\n\n'
-            f'**📋 Собрание Запустить** — Новый собрание запуск, Данные число başlar\n'
-            f'**🏁 Собрание завершено** — Собрание закрыто, отчёт отправлен\n'
-            f'**📊 В конец Rapor** — В конец собрание bu yana raporu показ'
+            f'** Собрание Запустить** — Новый собрание запуск, Данные число başlar\n'
+            f'** Собрание завершено** — Собрание закрыто, отчёт отправлен\n'
+            f'** В конец Rapor** — В конец собрание bu yana raporu показ'
         )
 
         is_active = cfg.get('active', False)
@@ -562,7 +566,7 @@ class Meeting(commands.Cog):
         if role.id not in cfg.get('staff_roles', []):
             cfg.setdefault('staff_roles', []).append(role.id)
             _save_cfg(ctx.guild.id, cfg)
-        await ctx.send(f'✅ **{role.name}** роль собрание raporuna addndi.')
+        await ctx.send(f' **{role.name}** роль собрание raporuna addndi.')
 
     @commands.command(name='собрание-роли-cikar')
     @commands.has_permissions(administrator=True)
@@ -572,7 +576,7 @@ class Meeting(commands.Cog):
         if role.id in cfg.get('staff_roles', []):
             cfg['staff_roles'].remove(role.id)
             _save_cfg(ctx.guild.id, cfg)
-        await ctx.send(f'✅ **{role.name}** роль rapordan удалить.')
+        await ctx.send(f' **{role.name}** роль rapordan удалить.')
 
     @commands.Cog.listener()
     async def on_ready(self):

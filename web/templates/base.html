@@ -1091,6 +1091,124 @@ window.addEventListener('pageshow', function (e) {
   };
 })();
 </script>
+
+<!-- WebSocket Client для real-time обновлений -->
+<script src="/static/websocket-client.js"></script>
+<script>
+// Инициализация WebSocket клиента
+(function() {
+  // Проверка поддержки WebSocket
+  if (typeof WebSocket === 'undefined') {
+    console.log('[WebSocket] Браузер не поддерживает WebSocket');
+    return;
+  }
+  
+  // Получение информации о текущем пользователе
+  const userId = '{{ session.get("user_id", "") }}';
+  const roomId = userId ? `user_${userId}` : 'global';
+  
+  // Создание WebSocket клиента
+  const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsHost = window.location.hostname || 'localhost';
+  const wsUrl = wsProtocol + '//' + wsHost + ':8765';
+
+  window.wsClient = new WebSocketClient({
+    url: wsUrl,
+    roomId: roomId,
+    userId: userId,
+    autoConnect: true
+  });
+  
+  // Обработка подключения
+  window.wsClient.on('connected', function(data) {
+    console.log('[WebSocket] Подключено к серверу');
+    showToast('🔌 Real-time соединения установлено', true);
+  });
+  
+  // Обработка отключения
+  window.wsClient.on('disconnected', function(data) {
+    console.log('[WebSocket] Отключено от сервера');
+  });
+  
+  // Обработка ошибок
+  window.wsClient.on('error', function(error) {
+    console.error('[WebSocket] Ошибка:', error);
+  });
+  
+  // Обработка обновлений тикетов
+  window.wsClient.on('ticket_update', function(data) {
+    console.log('[WebSocket] Обновление тикета:', data);
+    // Вызов пользовательского обработчика если есть
+    if (typeof window.handleTicketUpdate === 'function') {
+      window.handleTicketUpdate(data);
+    }
+  });
+  
+  // Обработка новых тикетов
+  window.wsClient.on('new_ticket', function(data) {
+    console.log('[WebSocket] Новый тикет:', data);
+    showToast('🎫 Новый тикет создан', true);
+    // Вызов пользовательского обработчика если есть
+    if (typeof window.handleNewTicket === 'function') {
+      window.handleNewTicket(data);
+    }
+  });
+  
+  // Обработка обновлений статистики
+  window.wsClient.on('stats_update', function(data) {
+    console.log('[WebSocket] Обновление статистики:', data);
+    // Вызов пользовательского обработчика если есть
+    if (typeof window.handleStatsUpdate === 'function') {
+      window.handleStatsUpdate(data);
+    }
+  });
+  
+  // Обработка уведомлений
+  window.wsClient.on('notification', function(data) {
+    console.log('[WebSocket] Уведомление:', data);
+    if (data.data && data.data.title) {
+      showToast('🔔 ' + data.data.title, true);
+    }
+    // Вызов пользовательского обработчика если есть
+    if (typeof window.handleNotification === 'function') {
+      window.handleNotification(data);
+    }
+  });
+  
+  // Обработка индикатора набора текста
+  window.wsClient.on('typing', function(data) {
+    console.log('[WebSocket] Индикатор набора:', data);
+    // Вызов пользовательского обработчика если есть
+    if (typeof window.handleTypingIndicator === 'function') {
+      window.handleTypingIndicator(data);
+    }
+  });
+  
+  // Обработка статуса присутствия
+  window.wsClient.on('presence', function(data) {
+    console.log('[WebSocket] Статус присутствия:', data);
+    // Вызов пользовательского обработчика если есть
+    if (typeof window.handlePresenceStatus === 'function') {
+      window.handlePresenceStatus(data);
+    }
+  });
+  
+  // Отправка статуса присутствия при загрузке страницы
+  window.wsClient.on('connected', function() {
+    window.wsClient.sendPresence('online');
+  });
+  
+  // Отправка статуса отсутствия при уходе со страницы
+  window.addEventListener('beforeunload', function() {
+    if (window.wsClient && window.wsClient.isConnected) {
+      window.wsClient.sendPresence('offline');
+    }
+  });
+  
+  console.log('[WebSocket] Клиент инициализирован');
+})();
+</script>
+
 <div id="toastHost" style="position:fixed;top:24px;right:24px;z-index:99999;display:flex;flex-direction:column;gap:10px;pointer-events:none;"></div>
 </body>
 </html>

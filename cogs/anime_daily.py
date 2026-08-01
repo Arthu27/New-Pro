@@ -8,6 +8,10 @@ import json
 import os
 import aiohttp
 
+from logger import get_logger
+log = get_logger("anime_daily")
+
+
 DATA_FILE = 'data/anime_daily_config.json'
 
 KATEGORILER = {
@@ -22,7 +26,7 @@ def _load() -> dict:
         try:
             with open(DATA_FILE, 'r', encoding='utf-8') as f:
                 return json.load(f)
-        except:
+        except Exception:
             pass
     return {}
 
@@ -38,20 +42,20 @@ class CeviriButonu(discord.ui.View):
         super().__init__(timeout=None)
         self.ozet = ozet
 
-    @discord.ui.button(label='🇷🇺  Перевести на русский', style=discord.ButtonStyle.primary)
+    @discord.ui.button(label='  Перевести на русский', style=discord.ButtonStyle.primary)
     async def cevir(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer(ephemeral=True)
         try:
             from deep_translator import GoogleTranslator
             if not self.ozet or self.ozet == 'Сводка не найдена.':
-                await interaction.followup.send('❌ Нет текста для перевода.', ephemeral=True)
+                await interaction.followup.send(' Нет текста для перевода.', ephemeral=True)
                 return
             ceviri = GoogleTranslator(source='en', target='tr').translate(self.ozet)
             if len(ceviri) > 1900:
                 ceviri = ceviri[:1900] + '...'
-            await interaction.followup.send(f'🎬 **Краткое содержание:**\n\n{ceviri}', ephemeral=True)
+            await interaction.followup.send(f' **Краткое содержание:**\n\n{ceviri}', ephemeral=True)
         except Exception as e:
-            await interaction.followup.send('❌ Не удалось выполнить перевод.', ephemeral=True)
+            await interaction.followup.send(' Не удалось выполнить перевод.', ephemeral=True)
 
 
 async def _anime_getir(tur_id: int = None) -> dict:
@@ -69,7 +73,7 @@ async def _anime_getir(tur_id: int = None) -> dict:
                     animeler = Данные.get('data', [])
                     if animeler:
                         return random.choice(animeler)
-    except:
+    except Exception:
         pass
     return None
 
@@ -85,7 +89,7 @@ def _embed_olustur(guild: discord.Guild, anime: dict, kategori: str = 'Rastgele'
     kisa_ozet = (ozet[:300] + '...') if len(ozet) > 300 else ozet
 
     embed = discord.Embed(
-        title=f'🎬 День Anime Predlojeniesi: {baslik}',
+        title=f' День Anime Predlojeniesi: {baslik}',
         url=link,
         description=kisa_ozet,
         color=0xED4245
@@ -94,9 +98,9 @@ def _embed_olustur(guild: discord.Guild, anime: dict, kategori: str = 'Rastgele'
         embed.set_image(url=resim)
     if guild.icon:
         embed.set_thumbnail(url=guild.icon.url)
-    embed.add_field(name='📂 Kategori', value=kategori, inline=True)
-    embed.add_field(name='⭐ Оценка', value=str(puan), inline=True)
-    embed.add_field(name='📺 Раздел', value=str(bolum), inline=True)
+    embed.add_field(name=' Kategori', value=kategori, inline=True)
+    embed.add_field(name=' Оценка', value=str(puan), inline=True)
+    embed.add_field(name=' Раздел', value=str(bolum), inline=True)
     embed.set_footer(
         text=f'{guild.name}  ·  Ежедневный Anime',
         icon_url=guild.icon.url if guild.icon else None
@@ -135,7 +139,7 @@ class AnimeDaily(commands.Cog):
                 content = f'<@&{role_id}>' if role_id else None
                 await channel.send(content=content, embed=embed, view=CeviriButonu(ozet))
             except Exception as e:
-                print(f'[AnimeDaily] {guild.name} Ошибка: {e}')
+                log.info(f'[AnimeDaily] {guild.name} Ошибка: {e}')
 
     @gunluk_anime.before_loop
     async def before_loop(self):
@@ -149,7 +153,7 @@ class AnimeDaily(commands.Cog):
         import asyncio
         await asyncio.sleep(wait)
 
-    # ── Slash команды ───────────────────────────────────────────────────────
+    #  Slash команды 
 
     @app_commands.command(name='anime-настройк', description="Настройк ежедневный предложение anime")
     @app_commands.describe(
@@ -179,12 +183,12 @@ class AnimeDaily(commands.Cog):
         }
         _save(cfg)
 
-        embed = discord.Embed(title='✅ Ежедневный Anime Настройк', color=0x57F287)
+        embed = discord.Embed(title=' Ежедневный Anime Настройк', color=0x57F287)
         if interaction.guild.icon:
             embed.set_thumbnail(url=interaction.guild.icon.url)
-        embed.add_field(name='📺 Канал', value=channel.mention, inline=True)
-        embed.add_field(name='📂 Kategori', value=tur_adi, inline=True)
-        embed.add_field(name='🔔 Роль', value=role.mention if role else 'Нет', inline=True)
+        embed.add_field(name=' Канал', value=channel.mention, inline=True)
+        embed.add_field(name=' Kategori', value=tur_adi, inline=True)
+        embed.add_field(name=' Роль', value=role.mention if role else 'Нет', inline=True)
         embed.set_footer(text='Каждый день часов 10:00\'da отправл.')
         await interaction.response.send_message(embed=embed)
 
@@ -196,7 +200,7 @@ class AnimeDaily(commands.Cog):
         if gid in cfg:
             cfg[gid]['enabled'] = False
             _save(cfg)
-        await interaction.response.send_message('✅ Ежедневный anime предложение закрыто.', ephemeral=True)
+        await interaction.response.send_message(' Ежедневный anime предложение закрыто.', ephemeral=True)
 
     @app_commands.command(name='anime', description='Al slucaynuyu предложение anime')
     @app_commands.describe(kategori='Anime kategorisi')
@@ -209,7 +213,7 @@ class AnimeDaily(commands.Cog):
         tur_adi = next((k for k, v in KATEGORILER.items() if v == tur_id), 'Rastgele')
         anime = await _anime_getir(tur_id)
         if not anime:
-            await interaction.followup.send('❌ Anime не найдено, tekrar dene.')
+            await interaction.followup.send(' Anime не найдено, tekrar dene.')
             return
         embed, ozet = _embed_olustur(interaction.guild, anime, tur_adi)
         await interaction.followup.send(embed=embed, view=CeviriButonu(ozet))
@@ -225,7 +229,7 @@ class AnimeDaily(commands.Cog):
         tur_adi = next((k for k, v in KATEGORILER.items() if v == tur_id), 'Rastgele')
         anime = await _anime_getir(tur_id)
         if not anime:
-            await interaction.followup.send('❌ Anime не найдено, tekrar dene.')
+            await interaction.followup.send(' Anime не найдено, tekrar dene.')
             return
         embed, ozet = _embed_olustur(interaction.guild, anime, tur_adi)
         await interaction.followup.send(embed=embed, view=CeviriButonu(ozet))

@@ -1,0 +1,39 @@
+{
+  "guild_id": 1421244140359909513,
+  "ticket_category_name": "Тикеты",
+  "support_role_name": "Поддержка",
+  "log_channel_name": "ticket-log",
+  "max_tickets_per_user": 1,
+  "max_ai_messages": 10,
+  "auto_close_inactive_minutes": 1440,
+  "rate_limit": {
+    "max_tickets_per_24h": 3,
+    "cooldown_seconds": 60
+  },
+  "ai": {
+    "enabled": true,
+    "model": "gemini-2.0-flash",
+    "fallback_model": "gpt-4o-mini",
+    "max_tokens": 2048,
+    "temperature": 0.7,
+    "confidence_threshold": 50
+  },
+  "penalties": {
+    "base_jail_duration_minutes": 30,
+    "max_jail_duration_minutes": 1440,
+    "escalation_multiplier": 2,
+    "max_escalations": 3
+  },
+  "notifications": {
+    "admin_channel_id": null,
+    "ping_admin_role": true,
+    "dm_owner_on_failure": true
+  },
+  "features": {
+    "complaint_flow": true,
+    "appeal_system": true,
+    "evidence_collection": true,
+    "auto_scan_messages": true,
+    "feedback_system": true
+  }
+}

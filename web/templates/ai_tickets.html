@@ -48,10 +48,10 @@
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
   var tickets = [
-    { user: 'User1', topic: 'Hesabиm чalиndи', status: 'open', time: '5 мин' },
-    { user: 'User2', topic: 'Оплата sorunu', status: 'ai', time: '15 мин' },
-    { user: 'User3', topic: 'Sunucu ёnerisi', status: 'closed', time: '2 saat' },
-    { user: 'User4', topic: 'Шifre sиfиrlama', status: 'open', time: '1 saat' }
+    { user: 'User1', topic: 'Мой аккаунт взломан', status: 'open', time: '5 мин' },
+    { user: 'User2', topic: 'Проблема с оплатой', status: 'ai', time: '15 мин' },
+    { user: 'User3', topic: 'Предложение по серверу', status: 'closed', time: '2 часа' },
+    { user: 'User4', topic: 'Сброс пароля', status: 'open', time: '1 час' }
   ];
   var currentTab = 'all';
 
@@ -62,7 +62,7 @@
     $('stat-open').textContent = tickets.filter(function (t) { return t.status === 'open'; }).length;
     $('stat-ai').textContent = tickets.filter(function (t) { return t.status === 'ai'; }).length;
     $('stat-closed').textContent = tickets.filter(function (t) { return t.status === 'closed'; }).length;
-    if (!list.length) { $('at-body').innerHTML = '<p class="empty">Ticket yok</p>'; return; }
+    if (!list.length) { $('at-body').innerHTML = '<p class="empty">Тикетов нет</p>'; return; }
     var html = '';
     list.forEach(function (t) {
       var st = t.status === 'open' ? 'Открыт' : t.status === 'ai' ? 'AI' : 'Закрыт';

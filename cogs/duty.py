@@ -1,12 +1,13 @@
 import discord
 from discord.ext import commands
+from config import Config
 from discord import app_commands
 import json, os
 from datetime import datetime, timedelta, timezone
 
 DUTY_FILE   = "data/duty_log.json"
 POINTS_FILE = "data/duty_points.json"
-REQUIRED_ROLE_ID = 1474866958758576309
+REQUIRED_ROLE_ID = Config.REQUIRED_ROLE_ID
 
 # Animasyonlu GIF'ler
 GIF_PANEL  = "https://media.giphy.com/media/xT9IgG50Lg7russbDa/giphy.gif"
@@ -14,13 +15,13 @@ GIF_START  = "https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif"
 GIF_END    = "https://media.giphy.com/media/3o7TKSjRrfIPjeiVyM/giphy.gif"
 
 TASK_DEFS = {
-    "ses":     {"label": "🔊 Seste Kal",    "desc": "3 часов ses в канале kal",  "target": 10800, "unit": "sn",  "points": 50},
-    "message":   {"label": "💬 Сообщение At",      "desc": "150 message отправить",          "target": 150,   "unit": "msg", "points": 30},
-    "invite":  {"label": "📨 Invite Тянуть",   "desc": "5 человек davet et",           "target": 5,     "unit": "inv", "points": 40},
-    "администратор": {"label": "🛡️ Администратор Тянуть", "desc": "2 администратор adayı getir",     "target": 2,     "unit": "rec", "points": 60},
+    "ses":     {"label": " Seste Kal",    "desc": "3 часов ses в канале kal",  "target": 10800, "unit": "sn",  "points": 50},
+    "message":   {"label": " Сообщение At",      "desc": "150 message отправить",          "target": 150,   "unit": "msg", "points": 30},
+    "invite":  {"label": " Invite Тянуть",   "desc": "5 человек davet et",           "target": 5,     "unit": "inv", "points": 40},
+    "администратор": {"label": " Администратор Тянуть", "desc": "2 администратор adayı getir",     "target": 2,     "unit": "rec", "points": 60},
 }
 
-# ── helpers ──────────────────────────────────────────────────────────────────
+#  helpers 
 def load_duty():
     os.makedirs("data", exist_ok=True)
     if os.path.exists(DUTY_FILE):
@@ -58,7 +59,7 @@ def add_points(guild_id, user_id, amount, reason):
 def progress_bar(current, total, length=14):
     pct = min(current / total, 1.0) if total else 0
     filled = int(pct * length)
-    bar = "█" * filled + "░" * (length - filled)
+    bar = "" * filled + "" * (length - filled)
     return f"{bar}  {int(pct*100)}%"
 
 def fmt_dur(sec):
@@ -73,7 +74,7 @@ def has_role(member):
     return role is None or role in member.roles
 
 
-# ── Задача выбор view (ephemeral, timeout'lu) ─────────────────────────────────
+#  Задача выбор view (ephemeral, timeout'lu) 
 class TaskPickView(discord.ui.View):
     def __init__(self, uid: str, gid: str):
         super().__init__(timeout=60)
@@ -92,22 +93,22 @@ class TaskPickView(discord.ui.View):
     async def _refresh(self, interaction: discord.Interaction):
         count = len(self.selected)
         self.confirm_btn.disabled = count == 0
-        self.confirm_btn.label = f"✅ Задача Başla ({count} задача)" if count else "✅ Задача Başla"
+        self.confirm_btn.label = f" Задача Başla ({count} задача)" if count else " Задача Başla"
         await interaction.response.edit_message(view=self)
 
-    @discord.ui.button(label="🔊 Seste Kal  •  50⭐",   style=discord.ButtonStyle.secondary, row=0)
+    @discord.ui.button(label=" Seste Kal  •  50",   style=discord.ButtonStyle.secondary, row=0)
     async def btn_ses(self, i, b):     self._toggle_btn("ses", b);     await self._refresh(i)
 
-    @discord.ui.button(label="💬 Сообщение At  •  30⭐",    style=discord.ButtonStyle.secondary, row=0)
+    @discord.ui.button(label=" Сообщение At  •  30",    style=discord.ButtonStyle.secondary, row=0)
     async def btn_message(self, i, b):   self._toggle_btn("message", b);   await self._refresh(i)
 
-    @discord.ui.button(label="📨 Invite Тянуть  •  40⭐",  style=discord.ButtonStyle.secondary, row=1)
+    @discord.ui.button(label=" Invite Тянуть  •  40",  style=discord.ButtonStyle.secondary, row=1)
     async def btn_invite(self, i, b):  self._toggle_btn("invite", b);  await self._refresh(i)
 
-    @discord.ui.button(label="🛡️ Администратор Тянуть  •  60⭐", style=discord.ButtonStyle.secondary, row=1)
+    @discord.ui.button(label=" Администратор Тянуть  •  60", style=discord.ButtonStyle.secondary, row=1)
     async def btn_yetkili(self, i, b): self._toggle_btn("администратор", b); await self._refresh(i)
 
-    @discord.ui.button(label="✅ Задача Başla", style=discord.ButtonStyle.success,
+    @discord.ui.button(label=" Задача Başla", style=discord.ButtonStyle.success,
                        disabled=True, row=2)
     async def confirm_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
         data = load_duty()
@@ -115,7 +116,7 @@ class TaskPickView(discord.ui.View):
 
         if data[self.gid][self.uid].get("active"):
             await interaction.response.edit_message(
-                content="⚠️ Вы уже на дежурстве! Сначала завершите смену.", view=None)
+                content=" Вы уже на дежурстве! Сначала завершите смену.", view=None)
             return
 
         tasks = list(self.selected)
@@ -141,28 +142,28 @@ class TaskPickView(discord.ui.View):
         embed.set_author(name=f"{interaction.user.display_name} задача başladı!",
                          icon_url=interaction.user.display_avatar.url)
         embed.set_thumbnail(url=GIF_START)
-        embed.description = "```ansi\n\u001b[1;32m⚡ ЗАДАЧА BAŞLADI\u001b[0m\n```\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        embed.description = "```ansi\n\u001b[1;32m ЗАДАЧА BAŞLADI\u001b[0m\n```\n"
         for t in tasks:
             td = TASK_DEFS[t]
             embed.add_field(
-                name=f"{td['label']}  ·  **{td['points']} ⭐**",
+                name=f"{td['label']}  ·  **{td['points']} **",
                 value=f"```{progress_bar(0, td['target'])}```*{td['desc']}*",
                 inline=False
             )
-        embed.set_footer(text="Задача bitirmek для paneldeki 🔴 Задача Çık butonuna bas")
+        embed.set_footer(text="Задача bitirmek для paneldeki  Задача Çık butonuna bas")
         await interaction.response.edit_message(content=None, embed=embed, view=None)
 
 
-# ── Ana panel view (persistent) ───────────────────────────────────────────────
+#  Ana panel view (persistent) 
 class DutyPanelView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
 
-    @discord.ui.button(label="⚔️ Задача Başla", style=discord.ButtonStyle.success,
+    @discord.ui.button(label=" Задача Başla", style=discord.ButtonStyle.success,
                        custom_id="duty_start_v2", row=0)
     async def start_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
         if not has_role(interaction.user):
-            await interaction.response.send_message("❌ Bu butonu использовать администратор yok.", ephemeral=True)
+            await interaction.response.send_message(" Bu butonu использовать администратор yok.", ephemeral=True)
             return
 
         data = load_duty()
@@ -170,17 +171,17 @@ class DutyPanelView(discord.ui.View):
         data.setdefault(gid, {}).setdefault(uid, {"active": None, "history": []})
 
         if data[gid][uid].get("active"):
-            await interaction.response.send_message("⚠️ Вы уже на дежурстве! Сначала завершите смену.", ephemeral=True)
+            await interaction.response.send_message(" Вы уже на дежурстве! Сначала завершите смену.", ephemeral=True)
             return
 
         pick_view = TaskPickView(uid, gid)
         await interaction.response.send_message(
-            content="**📋 Задача выбрать** *(birden fazla выбрать)*",
+            content="** Задача выбрать** *(birden fazla выбрать)*",
             view=pick_view,
             ephemeral=True
         )
 
-    @discord.ui.button(label="🔴 Задача Çık", style=discord.ButtonStyle.danger,
+    @discord.ui.button(label=" Задача Çık", style=discord.ButtonStyle.danger,
                        custom_id="duty_end_v2", row=0)
     async def end_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
         data = load_duty()
@@ -188,7 +189,7 @@ class DutyPanelView(discord.ui.View):
 
         # Данные yoksa или bozuksa düzelt
         if gid not in data or uid not in data[gid]:
-            await interaction.response.send_message("⚠️ Активен задача yok.", ephemeral=True)
+            await interaction.response.send_message(" Активен задача yok.", ephemeral=True)
             return
 
         active = data[gid][uid].get("active")
@@ -197,11 +198,11 @@ class DutyPanelView(discord.ui.View):
         if isinstance(active, str):
             data[gid][uid]["active"] = None
             save_duty(data)
-            await interaction.response.send_message("⚠️ Активен задача yok.", ephemeral=True)
+            await interaction.response.send_message(" Активен задача yok.", ephemeral=True)
             return
 
         if not active or not isinstance(active, dict):
-            await interaction.response.send_message("⚠️ Активен задача yok.", ephemeral=True)
+            await interaction.response.send_message(" Активен задача yok.", ephemeral=True)
             return
 
         start_dt = datetime.fromisoformat(active["start"])
@@ -267,27 +268,27 @@ class DutyPanelView(discord.ui.View):
                          icon_url=interaction.user.display_avatar.url)
         embed.set_thumbnail(url=GIF_END)
         embed.description = (
-            "```ansi\n\u001b[1;31m🏁 ЗАДАЧА BİTTİ\u001b[0m\n```\n"
-            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            "```ansi\n\u001b[1;31m ЗАДАЧА BİTTİ\u001b[0m\n```\n"
+            ""
         )
-        embed.add_field(name="⏱️ Длительность",       value=f"**{fmt_dur(elapsed)}**",    inline=True)
-        embed.add_field(name="⭐ Заработано",  value=f"**+{total_pts} очков**",     inline=True)
-        embed.add_field(name="🏆 Всего",     value=f"**{new_total} ⭐**",        inline=True)
-        embed.add_field(name="​", value="━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", inline=False)
+        embed.add_field(name="⏱ Длительность",       value=f"**{fmt_dur(elapsed)}**",    inline=True)
+        embed.add_field(name=" Заработано",  value=f"**+{total_pts} очков**",     inline=True)
+        embed.add_field(name=" Всего",     value=f"**{new_total} **",        inline=True)
+        embed.add_field(name="​", value="", inline=False)
 
         for t, td, cur, done in results:
             bar    = progress_bar(cur, td["target"])
-            status = "✅ OKlandı" if done else "❌ Yarıda Kaldı"
+            status = " OKlandı" if done else " Yarıda Kaldı"
             detail = f"{fmt_dur(cur)} / {fmt_dur(td['target'])}" if t == "ses" else f"{cur} / {td['target']}"
             embed.add_field(
                 name=f"{td['label']}  ·  {status}",
                 value=f"```{bar}```{detail}",
                 inline=False
             )
-        embed.set_footer(text=f"Всего puan: {new_total} ⭐  ·  Aether Задача Система")
+        embed.set_footer(text=f"Всего puan: {new_total}   ·  Aether Задача Система")
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
-    @discord.ui.button(label="📊 Puanlarım", style=discord.ButtonStyle.secondary,
+    @discord.ui.button(label=" Puanlarım", style=discord.ButtonStyle.secondary,
                        custom_id="duty_points_v2", row=0)
     async def points_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
         pts   = load_points()
@@ -296,10 +297,10 @@ class DutyPanelView(discord.ui.View):
         total = udata.get("total", 0)
         hist  = udata.get("history", [])[-5:]
 
-        embed = discord.Embed(title="⭐ Puan Состояние", color=0xF1C40F)
+        embed = discord.Embed(title=" Puan Состояние", color=0xF1C40F)
         embed.set_author(name=interaction.user.display_name,
                          icon_url=interaction.user.display_avatar.url)
-        embed.add_field(name="Всего очков", value=f"```{total} ⭐```", inline=False)
+        embed.add_field(name="Всего очков", value=f"```{total} ```", inline=False)
 
         if hist:
             lines = "\n".join([f"+{h['amount']}  {h['reason']}" for h in reversed(hist)])
@@ -324,7 +325,7 @@ class DutyPanelView(discord.ui.View):
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
-# ── Cog ───────────────────────────────────────────────────────────────────────
+#  Cog 
 class Duty(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -349,31 +350,31 @@ class Duty(commands.Cog):
         embed.set_image(url=GIF_PANEL)
         embed.description = (
             "```ansi\n"
-            "\u001b[1;31m╔══════════════════════════════════════╗\u001b[0m\n"
-            "\u001b[1;37m          ⚔️  ЗАДАЧА PANELİ  ⚔️          \u001b[0m\n"
-            "\u001b[1;31m╚══════════════════════════════════════╝\u001b[0m\n"
+            "\u001b[1;31m\u001b[0m\n"
+            "\u001b[1;37m            ЗАДАЧА PANELİ            \u001b[0m\n"
+            "\u001b[1;31m\u001b[0m\n"
             "```\n"
-            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "\n"
             "Задача başla, hedefine ulaş, **puan kazan!**\n"
-            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-            "🔊 **Seste Kal** ─────────────── **50 ⭐**\n"
-            "┗ *3 часов ses в канале активен kal*\n\n"
-            "💬 **Сообщение At** ──────────────── **30 ⭐**\n"
-            "┗ *На сервере 150 message отправить*\n\n"
-            "📨 **Invite Тянуть** ────────────── **40 ⭐**\n"
-            "┗ *5 kişiyi на сервер davet et*\n\n"
-            "🛡️ **Администратор Тянуть** ───────────── **60 ⭐**\n"
-            "┗ *2 администратор adayı getir*\n\n"
-            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-            "> 💡 Birden fazla задача выбрать!\n"
-            "> 📊 İlerleme barın задача bitişinde показ."
+            "\n\n"
+            " **Seste Kal**  **50 **\n"
+            " *3 часов ses в канале активен kal*\n\n"
+            " **Сообщение At**  **30 **\n"
+            " *На сервере 150 message отправить*\n\n"
+            " **Invite Тянуть**  **40 **\n"
+            " *5 kişiyi на сервер davet et*\n\n"
+            " **Администратор Тянуть**  **60 **\n"
+            " *2 администратор adayı getir*\n\n"
+            "\n"
+            ">  Birden fazla задача выбрать!\n"
+            ">  İlerleme barın задача bitişinde показ."
         )
         embed.set_footer(
             text="Aether Задача Система  ·  Задача Başla → OKla → Puan Kazan",
             icon_url=interaction.guild.icon.url if interaction.guild.icon else None
         )
         await interaction.channel.send(embed=embed, view=DutyPanelView())
-        await interaction.response.send_message("✅ Panel отправлено.", ephemeral=True)
+        await interaction.response.send_message(" Panel отправлено.", ephemeral=True)
 
     @app_commands.command(name="duty-stats", description="Таблица очков задач")
     @app_commands.checks.has_permissions(moderate_members=True)
@@ -384,21 +385,21 @@ class Duty(commands.Cog):
         if not gpts:
             await interaction.response.send_message("Пока нет записей очков.", ephemeral=True)
             return
-        embed = discord.Embed(title="🏆 Задача Puan Tablosu", color=0xDC143C)
+        embed = discord.Embed(title=" Задача Puan Tablosu", color=0xDC143C)
         if uye:
             uid   = str(uye.id)
             total = gpts.get(uid, {}).get("total", 0)
             embed.set_thumbnail(url=uye.display_avatar.url)
-            embed.add_field(name=uye.display_name, value=f"**{total} ⭐**", inline=False)
+            embed.add_field(name=uye.display_name, value=f"**{total} **", inline=False)
         else:
             top = sorted(gpts.items(), key=lambda x: x[1].get("total", 0), reverse=True)[:10]
-            medals = ["🥇", "🥈", "🥉"]
+            medals = ["", "", ""]
             for i, (uid, udata) in enumerate(top, 1):
                 m    = interaction.guild.get_member(int(uid))
                 name = m.display_name if m else uid
                 embed.add_field(
                     name=f"{medals[i-1] if i<=3 else f'#{i}'}  {name}",
-                    value=f"**{udata.get('total',0)} ⭐**",
+                    value=f"**{udata.get('total',0)} **",
                     inline=False
                 )
         await interaction.response.send_message(embed=embed, ephemeral=True)
@@ -424,7 +425,7 @@ class Duty(commands.Cog):
         td  = TASK_DEFS[gorev]
         cur = active["progress"][gorev]
         await interaction.response.send_message(
-            f"✅ {uye.display_name} → {td['label']}: `{progress_bar(cur, td['target'])}` ({cur}/{td['target']})",
+            f" {uye.display_name} → {td['label']}: `{progress_bar(cur, td['target'])}` ({cur}/{td['target']})",
             ephemeral=True)
 
 

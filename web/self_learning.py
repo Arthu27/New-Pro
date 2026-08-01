@@ -83,7 +83,7 @@ class SelfLearning:
         ai_response: str,
         success_type: str
     ):
-        """Сохран uspesniy cevap"""
+        """Сохран uspesniy ответ"""
         success = {
             'timestamp': datetime.utcnow().isoformat(),
             'user_message': user_message,
@@ -125,7 +125,7 @@ class SelfLearning:
             })
         
         elif feedback_type == 'correction':
-            # Korrektirovka — zapominaem правил cevap
+            # Korrektirovka — zapominaem правил ответ
             correct_response = feedback.get('details', {}).get('correction', '')
             if correct_response:
                 self._learn_from_mistake({
@@ -229,7 +229,7 @@ class SelfLearning:
             
             if matching_patterns:
                 if pattern_type.startswith('avoid_'):
-                    # Kalıplar kotorih gerekli izbegat
+                    # Kalıplar kotorih необходимо izbegat
                     context_parts.append(
                         f"\n⚠️ IZBEGAY podobnih cevapların (idi ошибки):\n"
                     )
@@ -240,7 +240,7 @@ class SelfLearning:
                             context_parts.append(f"+ Vmesto: {p['correct_response']}\n")
                 
                 elif pattern_type.startswith('repeat_'):
-                    # Kalıplar kotorie gerekli povtoryat
+                    # Kalıplar kotorie необходимо povtoryat
                     context_parts.append(
                         f"\n✅ ISPOLZUY podobnie cevaplar (idi uspesni):\n"
                     )

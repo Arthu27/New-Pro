@@ -64,7 +64,7 @@ def get_local_ip():
 
 def get_network_info():
     """Ağ информация собрать"""
-    print(f"{Colors.OKBLUE}[*] Ağ информация собратьnıyor...{Colors.ENDC}")
+    print(f"{Colors.OKBLUE}[*] Ağ информация collectnıyor...{Colors.ENDC}")
     
     info = {
         "timestamp": datetime.now().isoformat(),
@@ -96,8 +96,8 @@ def get_network_info():
     return info
 
 def scan_local_network():
-    """Yerel ağı сканироватьma (ping sweep)"""
-    print(f"{Colors.OKBLUE}[*] Yerel ağ сканироватьnıyor...{Colors.ENDC}")
+    """Yerel ağı scanma (ping sweep)"""
+    print(f"{Colors.OKBLUE}[*] Yerel ağ scannıyor...{Colors.ENDC}")
     
     local_ip = get_local_ip()
     base_ip = ".".join(local_ip.split(".")[:3]) + "."
@@ -141,8 +141,8 @@ def scan_local_network():
     return active_hosts
 
 def port_scanner(target_ip, ports="1-1000"):
-    """Port сканироватьma (basit TCP connect scan)"""
-    print(f"{Colors.OKBLUE}[*] {target_ip} для port сканироватьması yapılıyor...{Colors.ENDC}")
+    """Port scanma (basit TCP connect scan)"""
+    print(f"{Colors.OKBLUE}[*] {target_ip} для port scanması yapılıyor...{Colors.ENDC}")
     
     open_ports = []
     
@@ -283,7 +283,7 @@ def main_menu():
         print(f"\n{Colors.BOLD}=== AĞ БЕЗОПАСНОСТЬ TEST MENÜSÜ ==={Colors.ENDC}")
         print("1. Ağ информация показать")
         print("2. Yerel ağı сканировать (активен cihazlar)")
-        print("3. Port сканироватьması yap")
+        print("3. Port scanması yap")
         print("4. WiFi parolalarını показать (kendi ağların)")
         print("5. DoS Simülasyonu (EĞİTİM AMAÇLI - только localhost)")
         print("6. Все testleri çalıştır")
@@ -296,7 +296,7 @@ def main_menu():
             info = get_network_info()
         
         elif choice == "2":
-            if input(f"{Colors.WARNING}[?] Yerel ağ сканироватьnacak. Devam et? (e/h): {Colors.ENDC}").lower() == 'e':
+            if input(f"{Colors.WARNING}[?] Yerel ağ scannacak. Devam et? (e/h): {Colors.ENDC}").lower() == 'e':
                 hosts = scan_local_network()
         
         elif choice == "3":
@@ -308,7 +308,7 @@ def main_menu():
             if not ports:
                 ports = "1-1000"
             
-            if input(f"{Colors.WARNING}[?] {target} для port сканироватьması yapılacak. Devam et? (e/h): {Colors.ENDC}").lower() == 'e':
+            if input(f"{Colors.WARNING}[?] {target} для port scanması yapılacak. Devam et? (e/h): {Colors.ENDC}").lower() == 'e':
                 open_ports = port_scanner(target, ports)
         
         elif choice == "4":
@@ -321,7 +321,7 @@ def main_menu():
                 print(f"{Colors.WARNING}[!] Bu особенность şu anda только Windows'ta работает{Colors.ENDC}")
         
         elif choice == "5":
-            print(f"{Colors.WARNING}[!] DİKKAT: Bu только eğitim aматчlı bir simülasyondur!{Colors.ENDC}")
+            print(f"{Colors.WARNING}[!] DİKKAT: Bu только eğitim amatchlı bir simülasyondur!{Colors.ENDC}")
             print(f"{Colors.WARNING}[!] Только kendi infosayarınızı (localhost) test edebilirsiniz!{Colors.ENDC}")
             
             confirm = input(f"{Colors.FAIL}[?] Devam et etmek istiyor musunuz? (e/h): {Colors.ENDC}").lower()
@@ -394,7 +394,7 @@ def main():
     try:
         main_menu()
     except KeyboardInterrupt:
-        print(f"\n{Colors.OKGREEN}[+] Program user сканироватьfından durduruldu{Colors.ENDC}")
+        print(f"\n{Colors.OKGREEN}[+] Program user scanfından durduruldu{Colors.ENDC}")
     except Exception as e:
         print(f"{Colors.FAIL}[-] Baddnmeyen ошибка: {e}{Colors.ENDC}")
 

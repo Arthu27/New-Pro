@@ -15,7 +15,7 @@ class InviteTracker(commands.Cog):
         try:
             invites = await guild.invites()
             self.invite_cache[guild.id] = {inv.code: inv.uses for inv in invites}
-        except:
+        except Exception:
             pass
 
     @commands.Cog.listener()
@@ -39,7 +39,7 @@ class InviteTracker(commands.Cog):
         guild = member.guild
         try:
             new_invites = await guild.invites()
-        except:
+        except Exception:
             return
         old_cache = self.invite_cache.get(guild.id, {})
         inviter = None
@@ -107,7 +107,7 @@ class InviteTracker(commands.Cog):
     async def my_invites(self, interaction: discord.Interaction):
         f = f'data/invite_counts_{interaction.guild_id}.json'
         if not os.path.exists(f):
-            await interaction.response.send_message('❌ Пока davet данные yok!', ephemeral=True)
+            await interaction.response.send_message(' Пока davet данные yok!', ephemeral=True)
             return
         with open(f, 'r', encoding='utf-8') as fp:
             counts = json.load(fp)
@@ -115,23 +115,23 @@ class InviteTracker(commands.Cog):
         info = counts.get(uid, {'total': 0})
         total = info.get('total', 0)
 
-        e = discord.Embed(title="📨  Davet Статистика", color=0x3498DB, timestamp=datetime.utcnow())
+        e = discord.Embed(title=" Davet Статистика", color=0x3498DB, timestamp=datetime.utcnow())
         e.description = (
-            f"```ansi\n\u001b[1;34m📊 DAVET RAPORU\u001b[0m\n```\n{_divider()}"
+            f"```ansi\n\u001b[1;34m DAVET RAPORU\u001b[0m\n```\n{_divider()}"
         )
         e.set_thumbnail(url=interaction.user.display_avatar.url)
-        e.add_field(name="👤 Пользователь", value=interaction.user.mention, inline=True)
-        e.add_field(name="📨 Всего Davet", value=f"```{total} человек```", inline=True)
+        e.add_field(name=" Пользователь", value=interaction.user.mention, inline=True)
+        e.add_field(name=" Всего Davet", value=f"```{total} человек```", inline=True)
         if total >= 10:
-            rank = "🌟 Большой"
+            rank = " Большой"
         elif total >= 5:
-            rank = "⭐ Davetçi"
+            rank = " Davetçi"
         elif total >= 1:
-            rank = "📨 Новый Davetçi"
+            rank = " Новый Davetçi"
         else:
-            rank = "👤 Пока Davet Нет"
-        e.add_field(name="🏆 Unvan", value=f"```{rank}```", inline=True)
-        e.add_field(name="💡 Подсказка", value="*Более fazla человек davet ederek очередь yüksel!*", inline=False)
+            rank = " Пока Davet Нет"
+        e.add_field(name=" Unvan", value=f"```{rank}```", inline=True)
+        e.add_field(name=" Подсказка", value="*Более fazla человек davet ederek очередь yüksel!*", inline=False)
         e.set_footer(text=f"Aether • {interaction.guild.name}", icon_url=interaction.guild.icon.url if interaction.guild.icon else None)
         await interaction.response.send_message(embed=e)
 
@@ -139,21 +139,21 @@ class InviteTracker(commands.Cog):
     async def invite_leaderboard(self, interaction: discord.Interaction):
         f = f'data/invite_counts_{interaction.guild_id}.json'
         if not os.path.exists(f):
-            await interaction.response.send_message('❌ Пока davet данные yok!', ephemeral=True)
+            await interaction.response.send_message(' Пока davet данные yok!', ephemeral=True)
             return
         with open(f, 'r', encoding='utf-8') as fp:
             counts = json.load(fp)
         sorted_counts = sorted(counts.items(), key=lambda x: x[1].get('total', 0), reverse=True)[:10]
 
-        e = discord.Embed(title="📨  Davet Очередь", color=0x3498DB, timestamp=datetime.utcnow())
+        e = discord.Embed(title=" Davet Очередь", color=0x3498DB, timestamp=datetime.utcnow())
         e.description = (
-            f"```ansi\n\u001b[1;34m👑 EN İYİ DAVETÇİLER\u001b[0m\n```\n{_divider()}"
+            f"```ansi\n\u001b[1;34m EN İYİ DAVETÇİLER\u001b[0m\n```\n{_divider()}"
         )
-        medals = ['🥇', '🥈', '🥉']
+        medals = ['', '', '']
         for i, (uid, info) in enumerate(sorted_counts, 1):
             medal = medals[i-1] if i <= 3 else f'`{i}.`'
             total = info.get('total', 0)
-            bar = "█" * min(total, 10) + "░" * max(0, 10 - total)
+            bar = "" * min(total, 10) + "" * max(0, 10 - total)
             e.add_field(
                 name=f"{medal} {info.get('name', uid)}",
                 value=f"`{bar}` **{total}** davet",

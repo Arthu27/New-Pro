@@ -1,28 +1,26 @@
 """
-Aether — Re-Join Roles (с сервера çıkıp giren üyeye otomatik Роль geri verme)
-----------------------------------------------------------------------------
-Discord'da участник с сервера ayrılınca tüm роли silinir. Bu cog, panelden
-seçilen роли ayrılmadan Сначала kaydeder ve geri döndüğünde otomatik geri
-verir. Sadece sahip Разрешение verdiği (tracked) роли izlenir; diğerleri kayıt
-dışıdır.
+Aether — Re-Join Roles (автоматическое восстановление ролей при повторном входе)
+--------------------------------------------------------------------------------
+Когда участник покидает сервер, все его роли удаляются. Этот cog сохраняет
+выбранные роли перед выходом и автоматически возвращает их при повторном входе.
+Отслеживаются только роли, разрешённые администратором; остальные игнорируются.
 
-Yapı:
-  data/rejoin_<guild_id>.json
-    {
-      "enabled": bool,
-      "tracked_role_ids": [str, ...],
-      "leave_log": [
-        {"user_id": str, "roles": [str, ...], "left_at": iso, "restored": bool}
-      ]
-    }
+Структура:
+ data/rejoin_<guild_id>.json
+ {
+ "enabled": bool,
+ "tracked_role_ids": [str, ...],
+ "leave_log": [
+ {"user_id": str, "roles": [str, ...], "left_at": iso, "restored": bool}
+ ]
+ }
 
-Davranış:
-  * `enabled: false` veya `tracked_role_ids: []` ise HİÇBİR ŞEY yapılmaz.
-  * участник ayrılınca: tracked роли `leave_log`'a yazılır.
-  * участник geri gelince: leave_log'da en yeni kaydı bul, tracked роли geri ver.
-  * Geri veremediği роли (bot yetkisi yok / Роль silinmiş) alert каналу yazar.
+Поведение:
+ * Если `enabled: false` или `tracked_role_ids: []` — ничего не делается.
+ * При выходе участника: отслеживаемые роли записываются в `leave_log`.
+ * При возвращении участника: находится последняя запись в leave_log, возвращаются отслеживаемые роли.
+ * Если не удалось вернуть роли (нет прав у бота / роль удалена) — отправляется уведомление в канал оповещений.
 """
-
 import discord
 from discord.ext import commands
 from discord import app_commands
@@ -67,12 +65,12 @@ def _save(guild_id: int, data: dict):
 
 
 class ReJoinRoles(commands.Cog):
-    """с сервера ayrılıp geri dönen üyeye Роль geri verme (gözlemci + opt-in)."""
+    """Восстановление ролей участнику, покинувшему сервер и вернувшемуся (наблюдатель + opt-in)."""
 
     def __init__(self, bot):
         self.bot = bot
 
-    # ── участник ayrıldı: роли kaydet ────────────────────────────────────────
+    # участник покинул сервер: сохранить роли 
     @commands.Cog.listener()
     async def on_member_remove(self, member: discord.Member):
         if member.bot:
@@ -82,14 +80,14 @@ class ReJoinRoles(commands.Cog):
             return
 
         tracked = {str(rid) for rid in cfg["tracked_role_ids"] if str(rid).isdigit()}
-        # Üyenin şu anki tracked роли filtrele
+        # Отфильтровать текущие отслеживаемые роли участника
         kept_roles = [
             r.id for r in member.roles
-            if r.id != member.guild.id  # @everyone değil
+            if r.id != member.guild.id  # не @everyone
             and str(r.id) in tracked
         ]
         if not kept_roles:
-            return  # izlenen роль yoktu, loglama
+            return  # не было отслеживаемых ролей, не логировать
 
         cfg["leave_log"].append({
             "user_id": str(member.id),
@@ -100,7 +98,7 @@ class ReJoinRoles(commands.Cog):
         })
         _save(member.guild.id, cfg)
 
-    # ── участник geri geldi: роли geri ver ───────────────────────────────────
+    # участник вернулся: вернуть роли 
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
         if member.bot:
@@ -109,7 +107,7 @@ class ReJoinRoles(commands.Cog):
         if not cfg.get("enabled") or not cfg.get("tracked_role_ids"):
             return
 
-        # Bu пользователь için en yeni geri verilmemiş kaydı bul
+        # Найти самую новую невосстановленную запись для этого пользователя
         pending = None
         for entry in reversed(cfg["leave_log"]):
             if entry.get("user_id") == str(member.id) and not entry.get("restored"):
@@ -123,7 +121,7 @@ class ReJoinRoles(commands.Cog):
         if not to_restore_ids:
             return
 
-        # Bot'un verebileceği роли filtrele
+        # Отфильтровать роли, которые бот может выдать
         guild = member.guild
         bot_member = guild.get_member(self.bot.user.id)
         bot_top = bot_member.top_role if bot_member else None
@@ -133,35 +131,35 @@ class ReJoinRoles(commands.Cog):
         for rid in to_restore_ids:
             role = guild.get_role(int(rid))
             if not role:
-                skipped.append((rid, "Роль silinmiş"))
+                skipped.append((rid, "роль удалена"))
                 continue
             if role >= bot_top:
-                skipped.append((rid, "bot yetkisi yetersiz"))
+                skipped.append((rid, "недостаточно прав у бота"))
                 continue
             try:
-                await member.add_roles(role, reason="Re-Join Roles: otomatik geri verildi")
+                await member.add_roles(role, reason="Re-Join Roles: автоматическое восстановление")
                 restored.append(rid)
             except (discord.Forbidden, discord.HTTPException) as e:
                 skipped.append((rid, str(e)))
 
-        # Log'u güncelle
+        # Обновить лог
         pending["restored"] = True
         pending["restored_at"] = datetime.now(timezone.utc).isoformat()
         pending["restored_ok"] = restored
         pending["restored_fail"] = [{"role": r, "reason": why} for r, why in skipped]
         _save(member.guild.id, cfg)
 
-        # Канал bildirimi (varsa)
+        # Уведомление в канал (если настроен)
         if skipped and cfg.get("alert_channel_id"):
             ch = guild.get_channel(int(cfg["alert_channel_id"]))
             if ch:
                 lines = [f"• <@&{r}>: {why}" for r, why in skipped]
                 e = discord.Embed(
-                    title="♻️ Re-Join Roles — kısmi geri verim",
+                    title=" Re-Join Roles — частичное восстановление",
                     description=(
-                        f"{member.mention} geri döndü ama bazı роли verilemedi:\n"
+                        f"{member.mention} вернулся, но некоторые роли не удалось выдать:\n"
                         + "\n".join(lines)
-                        + f"\n\nVerilen: **{len(restored)}** | Başarısız: **{len(skipped)}**"
+                        + f"\n\nВыдано: **{len(restored)}** | Не удалось: **{len(skipped)}**"
                     ),
                     color=discord.Color.orange(),
                 )
@@ -170,7 +168,7 @@ class ReJoinRoles(commands.Cog):
                 except Exception:
                     pass
 
-    # ── Slash komutları ───────────────────────────────────────────────────
+    # Slash команды 
     @app_commands.command(name="rejoin-toggle", description="Включить/отключить систему Re-Join ролей")
     @app_commands.checks.has_permissions(administrator=True)
     async def rejoin_toggle(self, interaction: discord.Interaction, enabled: bool):
@@ -178,24 +176,24 @@ class ReJoinRoles(commands.Cog):
         cfg["enabled"] = enabled
         _save(interaction.guild.id, cfg)
         await interaction.response.send_message(
-            f"♻️ Re-Join Roles **{'AÇIK' if enabled else 'KAPALI'}**.",
+            f" Re-Join Roles **{'ВКЛЮЧЕНО' if enabled else 'ОТКЛЮЧЕНО'}**.",
             ephemeral=True,
         )
 
-    @app_commands.command(name="rejoin-status", description="Re-Join Roles sisteminin anlık durumu")
+    @app_commands.command(name="rejoin-status", description="Текущий статус системы Re-Join Roles")
     async def rejoin_status(self, interaction: discord.Interaction):
         cfg = _load(interaction.guild.id)
         e = discord.Embed(
-            title="♻️ Re-Join Roles — Durum",
+            title=" Re-Join Roles — Статус",
             color=0x2ECC71 if cfg.get("enabled") else 0x95A5A6,
         )
-        e.add_field(name="Sistem", value="✅ Açık" if cfg.get("enabled") else "❌ Kapalı", inline=True)
+        e.add_field(name="Система", value=" Включена" if cfg.get("enabled") else " Отключена", inline=True)
         tracked = cfg.get("tracked_role_ids", [])
-        e.add_field(name="İzlenen Роль sayısı", value=str(len(tracked)), inline=True)
+        e.add_field(name="Отслеживаемых ролей", value=str(len(tracked)), inline=True)
         log = cfg.get("leave_log", [])
         pending = sum(1 for x in log if not x.get("restored"))
-        e.add_field(name="Bekleyen", value=str(pending), inline=True)
-        e.add_field(name="Toplam kayıt", value=str(len(log)), inline=True)
+        e.add_field(name="Ожидают восстановления", value=str(pending), inline=True)
+        e.add_field(name="Всего записей", value=str(len(log)), inline=True)
         await interaction.response.send_message(embed=e, ephemeral=True)
 
 

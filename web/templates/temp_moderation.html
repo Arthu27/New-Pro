@@ -283,7 +283,17 @@
     container.innerHTML = items.map(item => type === 'scheduled' ? renderScheduled(item) : renderAction(item, type)).join('');
   }
   function load() {
-    fetch('/api/temp-mod/active').then(r => r.json()).then(data => {
+    fetch('/api/temp-mod/active').then(r => {
+      if (!r.ok) {
+        document.getElementById('mutesList').innerHTML = '<div class="tm-empty"><i class="fas fa-exclamation-triangle"></i><p>Модуль временной модерации не загружен</p></div>';
+        document.getElementById('bansList').innerHTML = '';
+        document.getElementById('kicksList').innerHTML = '';
+        document.getElementById('scheduledList').innerHTML = '';
+        return null;
+      }
+      return r.json();
+    }).then(data => {
+      if (!data) return;
       currentData = data;
       renderList(document.getElementById('mutesList'), data.mutes || [], 'mute');
       renderList(document.getElementById('bansList'), data.bans || [], 'ban');

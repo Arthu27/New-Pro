@@ -12,13 +12,21 @@ from datetime import datetime
 
 from datetime import timedelta
 
+# WebSocket импорты
+try:
+    from web.websocket_server import start_websocket_thread, notify_ticket_created, notify_ticket_updated, notify_stats_updated
+    WEBSOCKET_ENABLED = True
+except ImportError:
+    WEBSOCKET_ENABLED = False
+    print('[WebSocket] Модуль не найден, real-time отключен')
+
 import os as _os
 _BASE = _os.path.dirname(_os.path.abspath(__file__))
 app = Flask(__name__,
             template_folder=_os.path.join(_BASE, 'templates'),
             static_folder=_os.path.join(_BASE, 'static'))
 
-# Performans: atomic yazma, TTL cache, toplu (batch) log flusher
+# Производительность: atomic yazma, TTL cache, toplu (batch) log flusher
 from web import _store  # noqa: E402
 import atexit  # noqa: E402
 
@@ -30,7 +38,7 @@ app.jinja_env.auto_reload = True
 
 # Session: default Flask cookie session (itsdangerous imzali cookie).
 # Eski: flask_session filesystem (her istekte dosya IO, 50 paralel istekte darboğaz).
-# Yeni: cookie, sifir disk IO, <500 byte. Oturum boyutu kucuk oldugu icin sorun degil.
+# Новый: cookie, sifir disk IO, <500 byte. Oturum boyutu kucuk oldugu icin sorun degil.
 # Ileride Redis gerekirse SESSION_TYPE=redis eklenebilir.
 _USE_FS_SESSION = _os.getenv('USE_FS_SESSION', '0') == '1'
 if _USE_FS_SESSION:
@@ -43,7 +51,7 @@ if _USE_FS_SESSION:
 
 bot_instance = None
 
-# ── Rate Limiting ─────────────────────────────────────────────────────────────
+# Rate Limiting 
 from collections import defaultdict
 import time as _time
 
@@ -65,7 +73,7 @@ def _check_rate_limit(ip):
 def before_request():
     pass  # Rate limit удалено
 
-# ── Panel Log ─────────────────────────────────────────────────────────────────
+# Panel Log 
 def _log_login(username, roles, avatar, discord_id):
     """Вход yapan useryı сохранить."""
     try:
@@ -99,7 +107,7 @@ def _log_login(username, roles, avatar, discord_id):
     except Exception:
         pass
 
-# Toplu (batch) panel log flusher — POST/DELETE yolunu bloklamaz
+# Массовая (batch) panel log flusher — POST/DELETE yolunu bloklamaz
 _panel_log_flusher = _store.PeriodicFlush(
     'data/panel_logs.json',
     flush_interval=5.0,
@@ -171,7 +179,7 @@ def after_request(response):
     else:
         response.headers['Cache-Control'] = 'no-cache, must-revalidate'
 
-    # CSP: Cloudflare veya proxy bazen cok sikili CSP ekler; kendi
+    # CSP: Cloudflare или proxy bazen cok sikili CSP ekler; kendi
     # header'imizi koyarak 'unsafe-eval' ve 'unsafe-inline' izni veriyoruz.
     # Bu admin paneli (trusted kullanicilar) oldugu icin inline JS/eval OK.
     if not response.headers.get('Content-Security-Policy'):
@@ -181,7 +189,7 @@ def after_request(response):
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; "
             "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com data:; "
             "img-src 'self' data: https:; "
-            "connect-src 'self' https: wss:; "
+            "connect-src 'self' https: wss: ws: http:; "
             "frame-ancestors 'self'"
         )
         response.headers['Content-Security-Policy'] = csp
@@ -337,6 +345,32 @@ def favicon():
     return send_from_directory(os.path.join(app.root_path, 'static'),
                                'favicon.ico', mimetype='image/vnd.microsoft.icon')
 
+@app.route('/health')
+def health_check():
+    """Health check endpoint для Docker и мониторинга"""
+    try:
+        bot_instance = getattr(app, '_bot_instance', None)
+        if bot_instance and bot_instance.is_ready():
+            return jsonify({
+                'status': 'healthy',
+                'bot': 'ready',
+                'guilds': len(bot_instance.guilds),
+                'latency': round(bot_instance.latency * 1000, 2),
+                'timestamp': datetime.now().isoformat()
+            }), 200
+        else:
+            return jsonify({
+                'status': 'degraded',
+                'bot': 'connecting',
+                'timestamp': datetime.now().isoformat()
+            }), 503
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        }), 500
+
 @app.route('/')
 def index():
     if 'logged_in' not in session:
@@ -446,7 +480,7 @@ def _require_2fa(username, roles):
                 try:
                     user = await bot_instance.fetch_user(int(discord_id))
                     embed = discord.Embed(
-                        title='🔐 Panel Вход Проверка',
+                        title=' Panel Вход Проверка',
                         description=f'Проверка kodun: **`{code}`**\n\nBu kod 5 minutes geçerlidir.\nEğer sen вход yapmadıysan bu сообщение dikkate alma.',
                         color=0xDC143C
                     )
@@ -557,23 +591,23 @@ def register():
             try:
                 user = await bot_instance.fetch_user(int(discord_id))
                 e = discord.Embed(
-                    title="🔐  Aether Panel — Запись Проверка",
+                    title=" Aether Panel — Запись Проверка",
                     color=0xc8922a,
                     timestamp=datetime.utcnow()
                 )
                 e.description = (
-                    "```ansi\n\u001b[1;33m✦ КТО ПРОВЕРКА GEREKLİ ✦\u001b[0m\n```\n"
-                    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-                    f"Merhaba **{member_info['display_name']}**! 👋\n\n"
+                    "```ansi\n\u001b[1;33m КТО ПРОВЕРКА GEREKLİ \u001b[0m\n```\n"
+                    "\n\n"
+                    f"Merhaba **{member_info['display_name']}**! \n\n"
                     "**Aether Panel**'e запись olmak для aşağıdaki\n"
                     "проверка kodunu запись sayfasına gir:\n\n"
                     f"```fix\n{code}\n```\n\n"
-                    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                    ""
                 )
-                e.add_field(name="⏱️ Geçerlilik", value="```10 minutes```", inline=True)
-                e.add_field(name="🔒 Безопасность", value="```Tek использовать```", inline=True)
+                e.add_field(name="⏱ Geçerlilik", value="```10 minutes```", inline=True)
+                e.add_field(name=" Безопасность", value="```Tek использовать```", inline=True)
                 e.add_field(
-                    name="⚠️ Warning",
+                    name=" Warning",
                     value="*Если sen запись olmadıysan bu сообщение dikkate alma ve кто paylaşma.*",
                     inline=False
                 )
@@ -760,7 +794,7 @@ def api_send_notification():
             try:
                 user = await bot_instance.fetch_user(int(discord_id))
                 embed = discord.Embed(
-                    title=f"🔔 {title}",
+                    title=f" {title}",
                     description=message,
                     color=0xdc143c
                 )
@@ -981,7 +1015,7 @@ def api_guild_members(guild_id):
                 })
             _store._cache.set(cache_key, cached, ttl=10.0)
 
-        # Toplam sayiyi pagination meta olarak dondurmek icin basit bir sarmalayici yerine
+        # Toplam sayiyi pagination meta как dondurmek icin basit bir sarmalayici yerine
         # X-Total-Count header'i ekleyelim ki frontend tarafinda gerekirse kullanabilsin.
         total = len(cached)
         page = cached[offset:offset + limit]
@@ -1191,9 +1225,9 @@ def api_warn():
 
     # Validasyon: guild_id ve user_id numeric ve dolu olmalı
     if not guild_id or not str(guild_id).strip():
-        return jsonify({'error': 'guild_id gerekli'}), 400
+        return jsonify({'error': 'guild_id необходимо'}), 400
     if not user_id or not str(user_id).strip():
-        return jsonify({'error': 'user_id gerekli'}), 400
+        return jsonify({'error': 'user_id необходимо'}), 400
     guild_id = str(guild_id).strip()
     user_id = str(user_id).strip()
     if not (guild_id.isdigit() and user_id.isdigit()):
@@ -1201,7 +1235,7 @@ def api_warn():
     if not (17 <= len(guild_id) <= 22 and 17 <= len(user_id) <= 22):
         return jsonify({'error': 'guild_id ve user_id geçersiz (Discord ID 17-22 haneli olmalı)'}), 400
     if len(reason) > 500:
-        return jsonify({'error': 'reason çok uzun (max 500 karakter)'}), 400
+        return jsonify({'error': 'reason много uzun (max 500 karakter)'}), 400
 
     warns_file = 'data/warnings.json'
     os.makedirs('data', exist_ok=True)
@@ -1233,7 +1267,7 @@ def api_warn():
     _store.atomic_write_json(warns_file, warns)
     _store.invalidate_path(warns_file)
 
-    return jsonify({'success': True, 'message': 'Warning eklendi'})
+    return jsonify({'success': True, 'message': 'Warning добавлено'})
 
 @app.route('/api/modstats')
 @login_required
@@ -1272,7 +1306,7 @@ def api_execute_command():
     guild_id = data.get('guild_id')
     
     try:
-        # Сервер bul
+        # Сервер найти
         guild = None
         for g in bot_instance.guilds:
             if str(g.id) == str(guild_id):
@@ -1344,7 +1378,7 @@ def api_execute_command():
                         dm_msg = dm_msg.replace('{mod}', session.get('username', '?'))
                         dm_msg = dm_msg.replace('{сервер}', guild.name)
                         try:
-                            e_dm = discord.Embed(title='⚠️ Siz aldınız предупреждение', description=dm_msg, color=0xc8922a)
+                            e_dm = discord.Embed(title=' Siz aldınız предупреждение', description=dm_msg, color=0xc8922a)
                             e_dm.set_footer(text=guild.name)
                             await member.send(embed=e_dm)
                         except Exception:
@@ -1353,7 +1387,7 @@ def api_execute_command():
                 member = guild.get_member(int(data.get('user_id')))
                 if not member:
                     raise Exception('Участник на сервере не найдено')
-                # Jail роли bul
+                # Jail роли найти
                 jail_role = discord.utils.get(guild.roles, name='Jail')
                 if not jail_role:
                     raise Exception('Jail роль не найдено. До "Jail Kur" команду çalıştır.')
@@ -1378,7 +1412,7 @@ def api_execute_command():
                 await member.add_roles(jail_role, reason=data.get('reason', 'Djeyl с web-panel'))
                 # DM отправить
                 try:
-                    e_dm = discord.Embed(title='🔒 Jail Наказание', description=f'**{guild.name}** сервер jail наказание aldınız.\n**Причина:** {data.get("reason", "Не belirtildi")}', color=0xe74c3c)
+                    e_dm = discord.Embed(title=' Jail Наказание', description=f'**{guild.name}** сервер jail наказание aldınız.\n**Причина:** {data.get("reason", "Не belirtildi")}', color=0xe74c3c)
                     await member.send(embed=e_dm)
                 except Exception:
                     pass
@@ -1412,7 +1446,7 @@ def api_execute_command():
             elif command == 'unban':
                 uid = data.get('user_id')
                 if not uid:
-                    raise Exception('Пользователь ID gerekli')
+                    raise Exception('Пользователь ID необходимо')
                 user = await bot_instance.fetch_user(int(uid))
                 await guild.unban(user, reason=data.get('reason', 'Razban с web-panel'))
             elif command == 'lock':
@@ -1439,9 +1473,9 @@ def api_execute_command():
                 if not ch:
                     ch = guild.text_channels[0]
                 from cogs.embed_utils import _divider
-                e = discord.Embed(title="🎫  ПОДДЕРЖКА СИСТЕМА", color=0x5865F2)
+                e = discord.Embed(title=" ПОДДЕРЖКА СИСТЕМА", color=0x5865F2)
                 e.description = (
-                    f"```ansi\n\u001b[1;34m✦ Aether ПОДДЕРЖКА СИСТЕМА ✦\u001b[0m\n```\n"
+                    f"```ansi\n\u001b[1;34m Aether ПОДДЕРЖКА СИСТЕМА \u001b[0m\n```\n"
                     f"{_divider()}\n\n"
                     "Bir sorunla mı приветствие? Клик butona aşağıda!\n\n"
                     f"{_divider()}"
@@ -1547,7 +1581,7 @@ def api_send_message():
     message = data.get('message')
     
     try:
-        # Сервер bul
+        # Сервер найти
         guild = None
         for g in bot_instance.guilds:
             if str(g.id) == str(guild_id):
@@ -1557,7 +1591,7 @@ def api_send_message():
         if not guild:
             return jsonify({'error': 'Сервер не найдено'})
         
-        # Канал bul
+        # Канал найти
         channel = guild.get_channel(int(channel_id))
         
         if not channel or not isinstance(channel, discord.TextChannel):
@@ -1624,26 +1658,26 @@ def api_review_staff_app(app_id):
                 user = await bot_instance.fetch_user(int(app_data['user_id']))
                 if action == 'approve':
                     embed = discord.Embed(
-                        title="🎉 Заявка onaylandı!",
+                        title=" Заявка onaylandı!",
                         description="Tebrikler! Администратор заявка incelendi ve **onaylandı**.\nEn краткий длительность с администрацией iletişime geçilecek.",
                         color=0x2ecc71
                     )
-                    embed.add_field(name="👤 İnceleyen", value=session.get('username', '?'), inline=True)
-                    embed.add_field(name="📋 Заявка ID", value=f"`{app_id}`", inline=True)
+                    embed.add_field(name=" İnceleyen", value=session.get('username', '?'), inline=True)
+                    embed.add_field(name=" Заявка ID", value=f"`{app_id}`", inline=True)
                     if note:
-                        embed.add_field(name="💬 Not", value=note, inline=False)
+                        embed.add_field(name=" Not", value=note, inline=False)
                     embed.set_thumbnail(url=bot_instance.user.display_avatar.url)
                     embed.set_footer(text="Aether Panel • Заявка Система", icon_url=bot_instance.user.display_avatar.url)
                     embed.timestamp = datetime.utcnow()
                 else:
                     embed = discord.Embed(
-                        title="❌ Заявка reddedildi",
+                        title=" Заявка reddedildi",
                         description="Üzgünüz, администратор заявка bu sefer kabul edilmedi.\nDaha после tekrar başvurabilirsin.",
                         color=0xe74c3c
                     )
-                    embed.add_field(name="👤 İnceleyen", value=session.get('username', '?'), inline=True)
-                    embed.add_field(name="📋 Заявка ID", value=f"`{app_id}`", inline=True)
-                    embed.add_field(name="📝 Red Причина", value=note if note else "Не belirtildi", inline=False)
+                    embed.add_field(name=" İnceleyen", value=session.get('username', '?'), inline=True)
+                    embed.add_field(name=" Заявка ID", value=f"`{app_id}`", inline=True)
+                    embed.add_field(name=" Red Причина", value=note if note else "Не belirtildi", inline=False)
                     embed.set_thumbnail(url=bot_instance.user.display_avatar.url)
                     embed.set_footer(text="Aether Panel • Заявка Система", icon_url=bot_instance.user.display_avatar.url)
                     embed.timestamp = datetime.utcnow()
@@ -1677,7 +1711,7 @@ def _save_login_token(username, roles):
     if os.path.exists(tokens_file):
         with open(tokens_file, 'r', encoding='utf-8') as f:
             tokens = json.load(f)
-    # Пользователя текущий tokenını bul или новый создать
+    # Пользователя текущий tokenını найти или новый создать
     existing = next((t for t, v in tokens.items() if v.get('username') == username), None)
     if not existing:
         existing = ''.join(random.choices(string.ascii_letters + string.digits, k=48))
@@ -1739,7 +1773,7 @@ def api_change_password():
             return jsonify({'success': True, 'message': f'{target} parolasi обновлено'})
     return jsonify({'error': 'Пользователь не найден'})
 
-# ── PUBLIC ROUTES (вход gerektirmez) ────────────────────────────────────────
+# PUBLIC ROUTES (вход gerektirmez) 
 
 @app.route('/apply')
 def public_apply():
@@ -1749,7 +1783,7 @@ def public_apply():
 def api_check_member():
     if not bot_instance:
         # Frontend'in 503 с kırılmaması для 200 dön.
-        # Bot hazır olana kadar userya anlaşılır bir message показ.
+        # Bot hazır olana userya anlaşılır bir message показ.
         return jsonify({
             'found': False,
             'error': 'Bot пока hazır не, birkaç saniye после tekrar dene.'
@@ -1850,17 +1884,17 @@ def api_public_apply():
                 if not channel:
                     return
                 embed = discord.Embed(
-                    title="📋 НОВЫЙ АДМИНИСТРАТОР ЗАЯВКА  •  🌐 Web",
+                    title=" НОВЫЙ АДМИНИСТРАТОР ЗАЯВКА • Web",
                     color=0xDC143C,
                     timestamp=datetime.utcnow()
                 )
-                embed.add_field(name="👤 Пользователь", value=f"`{data['discord_name']}` (ID: `{uid}`)", inline=True)
-                embed.add_field(name="🎂 Yaş", value=data['yas'], inline=True)
+                embed.add_field(name=" Пользователь", value=f"`{data['discord_name']}` (ID: `{uid}`)", inline=True)
+                embed.add_field(name=" Yaş", value=data['yas'], inline=True)
                 embed.add_field(name="⏰ Активен", value=data['активен'], inline=True)
-                embed.add_field(name="🏆 Tecrübe", value=f"```{data['tecrube']}```", inline=False)
-                embed.add_field(name="💬 Почему Администратор?", value=f"```{data['почему']}```", inline=False)
+                embed.add_field(name=" Tecrübe", value=f"```{data['tecrube']}```", inline=False)
+                embed.add_field(name=" Почему Администратор?", value=f"```{data['почему']}```", inline=False)
                 if data.get('ekstra'):
-                    embed.add_field(name="📝 Ekstra", value=f"```{data['ekstra']}```", inline=False)
+                    embed.add_field(name=" Ekstra", value=f"```{data['ekstra']}```", inline=False)
                 embed.set_footer(text=f"Заявка ID: {app_id} • {guild.name}")
                 view = StaffReviewView()
                 msg = await channel.send(embed=embed, view=view)
@@ -1877,7 +1911,7 @@ def api_public_apply():
 from web.routes_extra import register_extra_routes
 register_extra_routes(app, ROLES, login_required, role_required, MAIN_GUILD_ID)
 
-# ── Роли Map API ─────────────────────────────────────────────────────────────
+# Роли Map API 
 @app.route('/api/role-map')
 @login_required
 @role_required('admin')
@@ -1930,7 +1964,7 @@ def api_delete_role_map(role_id):
         _log_panel_action('ROLE_MAP_DELETE', role_id)
     return jsonify({'success': True})
 
-# ── Discord PIN Login API ────────────────────────────────────────────────────
+# Discord PIN Login API 
 _login_pins = {}
 
 @app.route('/api/login/suggest', methods=['GET', 'POST'])
@@ -2173,7 +2207,7 @@ def api_send_embed():
     except Exception as e:
         return jsonify({'error': str(e)})
 
-# ── Bot Контроль API'leri ──────────────────────────────────────────────────────
+# Bot Контроль API'leri 
 @app.route('/api/bot/restart', methods=['POST'])
 @login_required
 @role_required('owner')
@@ -2270,7 +2304,7 @@ def api_bot_sync():
     except Exception as e:
         return jsonify({'error': str(e)})
 
-# ── Global Aramama ──────────────────────────────────────────────────────────────
+# Global Aramama 
 @app.route('/api/search')
 @login_required
 @role_required('mod')
@@ -2288,7 +2322,7 @@ def api_global_search():
                 if q in member.display_name.lower() or q in str(member.id):
                     results.append({
                         'type': 'member',
-                        'icon': '👤',
+                        'icon': '',
                         'title': member.display_name,
                         'subtitle': f'{guild.name} • ID: {member.id}',
                         'url': f'/users?search={member.id}'
@@ -2307,7 +2341,7 @@ def api_global_search():
                     if q in w.get('reason', '').lower() or q in uid:
                         results.append({
                             'type': 'warning',
-                            'icon': '⚠️',
+                            'icon': '',
                             'title': f'Warning: {w.get("reason", "?")}',
                             'subtitle': f'Пользователь: {uid}',
                             'url': '/warnings'
@@ -2326,7 +2360,7 @@ def api_global_search():
                     q in ev.get('reason', '').lower()):
                     results.append({
                         'type': 'log',
-                        'icon': '📋',
+                        'icon': '',
                         'title': f'{ev.get("action", "?")} — {ev.get("user_name", "?")}',
                         'subtitle': ev.get('reason', ''),
                         'url': '/logs'
@@ -2336,7 +2370,7 @@ def api_global_search():
 
     return jsonify(results[:15])
 
-# ── Ses Команда Endpoint (voice_listener.py для) ─────────────────────────────
+# Голос Команда Endpoint (voice_listener.py для) 
 VOICE_SECRET = os.getenv('VOICE_SECRET', 'Aether-voice-2024')
 
 @app.route('/api/voice-command', methods=['POST'])
@@ -2384,7 +2418,7 @@ def api_voice_command():
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
 
-# ── Parola Sıfırlama (login страница для) ─────────────────────────────────────
+# Parola Sıfırlama (login страница для) 
 import random as _random
 _reset_codes = {}  # {discord_id: {code, expires}}
 
@@ -2416,7 +2450,7 @@ def api_forgot_password():
     async def send_dm():
         user = await bot_instance.fetch_user(int(discord_id))
         await user.send(
-            f"🔑 **Parola Sıfırlama Kodun:** `{code}`\n"
+            f" **Parola Sıfırlama Kodun:** `{code}`\n"
             f"Bu kod 5 minutes geçerlidir. Panelde bu kodu girerek parolani sıfırlayabilirsin.\n"
             f"Если bu желание sen yapmadıysan bu сообщение игнорировать."
         )
@@ -2463,7 +2497,7 @@ def api_reset_password():
     return jsonify({'success': True})
 
 
-# ── NOTIFICATIONS & ACTIVITY FEED ──────────────────────────────────────
+# NOTIFICATIONS & ACTIVITY FEED 
 # These endpoints back the polling code in base.html so the panel can
 # surface toast notifications and the activity drawer without
 # 404-ing in the browser console.
@@ -2493,7 +2527,7 @@ def api_notifications_poll():
                         'id': f"pl-{ts}",
                         'title': entry.get('action', 'Действие'),
                         'body': entry.get('detail', ''),
-                        'icon': '🛡️',
+                        'icon': '',
                         'ts': ts,
                         'kind': 'mod',
                     })
@@ -2513,7 +2547,7 @@ def api_notifications_poll():
                         'id': f"tm-{ts}-{entry.get('user_id', '')}",
                         'title': f"Временное {entry.get('action', 'действие')}",
                         'body': entry.get('reason', ''),
-                        'icon': '⏱️',
+                        'icon': '⏱',
                         'ts': ts,
                         'kind': 'temp',
                     })
@@ -2536,7 +2570,7 @@ def api_activity_feed():
                 raw = json.load(fp)
             for e in raw[-50:]:
                 items.append({
-                    'icon': '🛡️',
+                    'icon': '',
                     'title': e.get('action', 'Действие'),
                     'user': e.get('user', ''),
                     'detail': e.get('detail', ''),
@@ -2551,7 +2585,7 @@ def api_activity_feed():
                 raw = json.load(fp)
             for e in raw[-30:]:
                 items.append({
-                    'icon': '⏱️',
+                    'icon': '⏱',
                     'title': f"Временное {e.get('action', 'действие')}",
                     'user': e.get('mod', ''),
                     'detail': e.get('reason', ''),
@@ -2561,3 +2595,14 @@ def api_activity_feed():
         pass
     items.sort(key=lambda x: x.get('ts', 0) or 0, reverse=True)
     return jsonify({'items': items[:60]})
+
+
+# WebSocket Server Initialization 
+if WEBSOCKET_ENABLED:
+    try:
+        # Запуск WebSocket сервера в отдельном потоке
+        ws_thread = start_websocket_thread(host='localhost', port=8765)
+        print('[WebSocket] Сервер инициализирован')
+    except Exception as e:
+        print(f'[WebSocket] Ошибка инициализации: {e}')
+        WEBSOCKET_ENABLED = False

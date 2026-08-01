@@ -6,11 +6,15 @@ import json
 import os
 import datetime
 
+from logger import get_logger
+log = get_logger("ai_chat")
+
+
 AI_CHANNELS = set()  # Пусто — dinamik как addnir
 # Динамические каналы — DM'den addnip удалить
 _dynamic_channels: set = set()  # DM'den /ai-channel команда addnir
 
-# ── АКТИВЕН ЗАДАЧИ (условный задача цепь) ──────────────────────────────────
+#  АКТИВЕН ЗАДАЧИ (условный задача цепь) 
 _active_tasks: list = []  # [{'id': int, 'desc': str, 'condition': str, 'action': str, 'target_id': int}]
 _task_counter: int = 0
 
@@ -20,7 +24,7 @@ def _load_tasks() -> list:
         try:
             with open(f, 'r', encoding='utf-8') as fp:
                 return json.load(fp)
-        except:
+        except Exception:
             pass
     return []
 
@@ -65,7 +69,7 @@ def _load_owner_prefs() -> dict:
         try:
             with open(OWNER_PREFS_FILE, 'r', encoding='utf-8') as f:
                 return json.load(f)
-        except:
+        except Exception:
             pass
     return {'rules': [], 'memory': {}, 'disabled_notifications': []}
 
@@ -84,7 +88,7 @@ def _load_profiles() -> dict:
         try:
             with open(PROFILES_FILE, 'r', encoding='utf-8') as f:
                 return json.load(f)
-        except:
+        except Exception:
             pass
     return {}
 
@@ -95,7 +99,7 @@ def _save_profiles(profiles: dict):
         with open(PROFILES_FILE, 'w', encoding='utf-8') as f:
             json.dump(profiles, f, ensure_ascii=False, indent=2)
     except Exception as e:
-        print(f'[AI] Profil сохран Ошибки: {e}')
+        log.info(f'[AI] Profil сохран Ошибки: {e}')
 
 
 def _update_profile(user_id: int, question: str, answer: str, profiles: dict):
@@ -144,7 +148,7 @@ def _load_histories() -> dict:
                 # String key'leri int'e преобразовать
                 return {int(k): v for k, v in data.items()}
         except Exception as e:
-            print(f'[AI] History загруз Ошибки: {e}')
+            log.info(f'[AI] History загруз Ошибки: {e}')
     return {}
 
 def _load_knowledge_base() -> dict:
@@ -154,7 +158,7 @@ def _load_knowledge_base() -> dict:
             with open(KNOWLEDGE_FILE, 'r', encoding='utf-8') as f:
                 return json.load(f)
         except Exception as e:
-            print(f'[AI] Knowledge base загруз Ошибки: {e}')
+            log.info(f'[AI] Knowledge base загруз Ошибки: {e}')
     return {}
 
 def _load_instructions() -> dict:
@@ -164,7 +168,7 @@ def _load_instructions() -> dict:
             with open(INSTRUCTIONS_FILE, 'r', encoding='utf-8') as f:
                 return json.load(f)
         except Exception as e:
-            print(f'[AI] Instructions загруз Ошибки: {e}')
+            log.info(f'[AI] Instructions загруз Ошибки: {e}')
     return {}
 
 def _save_instructions(instructions: dict):
@@ -174,7 +178,7 @@ def _save_instructions(instructions: dict):
         with open(INSTRUCTIONS_FILE, 'w', encoding='utf-8') as f:
             json.dump(instructions, f, ensure_ascii=False, indent=2)
     except Exception as e:
-        print(f'[AI] Instructions сохран Ошибки: {e}')
+        log.info(f'[AI] Instructions сохран Ошибки: {e}')
 
 def _detect_instruction(message: str, answer: str) -> dict:
     """
@@ -217,7 +221,7 @@ def _save_histories(histories: dict, force: bool = False):
         with open(HISTORY_FILE, 'w', encoding='utf-8') as f:
             json.dump(histories, f, ensure_ascii=False, indent=2)
     except Exception as e:
-        print(f'[AI] History сохран Ошибки: {e}')
+        log.info(f'[AI] History сохран Ошибки: {e}')
 
 def _save_knowledge_base(knowledge: dict):
     """Информация базу сохранить"""
@@ -226,14 +230,14 @@ def _save_knowledge_base(knowledge: dict):
         with open(KNOWLEDGE_FILE, 'w', encoding='utf-8') as f:
             json.dump(knowledge, f, ensure_ascii=False, indent=2)
     except Exception as e:
-        print(f'[AI] Knowledge base сохран Ошибки: {e}')
+        log.info(f'[AI] Knowledge base сохран Ошибки: {e}')
 
 def _extract_learned_info(question: str, answer: str) -> dict:
     """Вопрос-cevaptan обучаемый infoyi удалить"""
     q = question.lower().strip()
     
     # Web если выполнен поиск доверие низкий
-    is_web_search = '🔍 Web поиск выполнен' in answer
+    is_web_search = ' Web поиск выполнен' in answer
     confidence = 'low' if is_web_search else 'high'
     
     # "X кто" вопросы
@@ -320,7 +324,7 @@ async def _get_recent_user_messages(user_id: int, guild, limit: int = 15) -> lis
                 last_msg = await channel.history(limit=1).flatten()
                 if last_msg and (datetime.datetime.now(datetime.timezone.utc) - last_msg[0].created_at).seconds < 7200:
                     active_channels.append(channel)
-            except:
+            except Exception:
                 continue
         
         # Активен channelları сканировать — 15 message найден ca dur
@@ -336,7 +340,7 @@ async def _get_recent_user_messages(user_id: int, guild, limit: int = 15) -> lis
                         })
                         if len(recent) >= limit:  # 15 message найден ca dur
                             break
-            except:
+            except Exception:
                 continue
             
             if len(recent) >= limit:
@@ -350,7 +354,7 @@ async def _get_recent_user_messages(user_id: int, guild, limit: int = 15) -> lis
         _message_cache[cache_key] = (result, now)
         return result
     except Exception as e:
-        print(f'[AI] Сообщение собратьma Ошибки: {e}')
+        log.info(f'[AI] Сообщение собратьma Ошибки: {e}')
         return []
 
 
@@ -370,7 +374,7 @@ async def _get_channel_context(channel, limit: int = 12) -> list:
         context_messages.reverse()
         return context_messages
     except Exception as e:
-        print(f'[AI] Канал context Ошибки: {e}')
+        log.info(f'[AI] Канал context Ошибки: {e}')
         return []
 
 
@@ -417,9 +421,9 @@ def _call_ai(question: str, user_id: int, guild=None, recent_messages: list = No
                 if staff_roles:
                     context['staff_roles'] = staff_roles[:8]  # Max 8 роли
             except Exception as e:
-                print(f'[AI] Guild info Ошибки: {e}')
+                log.info(f'[AI] Guild info Ошибки: {e}')
 
-        # ── СЕРВЕР СОСТОЯНИЕ (J.A.R.V.I.S. разница) ──────────────────────
+        #  СЕРВЕР СОСТОЯНИЕ (J.A.R.V.I.S. разница) 
         if guild and str(user_id) == '987430047889637426':
             try:
                 online = [m for m in guild.members if not m.bot and m.status != discord.Status.offline]
@@ -444,15 +448,15 @@ def _call_ai(question: str, user_id: int, guild=None, recent_messages: list = No
                     'total_members': guild.member_count,
                 }
             except Exception as e:
-                print(f'[AI] Сервер status Ошибки: {e}')
+                log.info(f'[AI] Сервер status Ошибки: {e}')
 
-        # ── АКТИВЕН ЗАДАЧИ ──────────────────────────────────────────────────
+        #  АКТИВЕН ЗАДАЧИ 
         if str(user_id) == '987430047889637426':
             try:
                 from cogs.ai_chat import _active_tasks
                 if _active_tasks:
                     context['active_tasks'] = [t['desc'] for t in _active_tasks[:5]]
-            except:
+            except Exception:
                 pass
         
         # Пользователь son Discord messagelarını context'e add (только на сервере)
@@ -522,7 +526,7 @@ def _call_ai(question: str, user_id: int, guild=None, recent_messages: list = No
                     if len(_instructions[guild_key]) > 30:
                         _instructions[guild_key] = _instructions[guild_key][-30:]
                     _save_instructions(_instructions)
-                    print(f'[AI] Новый talimat сохранено: {instr["trigger"][:50]}')
+                    log.info(f'[AI] Новый talimat сохранено: {instr["trigger"][:50]}')
         
         # Öğrenilebilir infoyi удалить ve сохранить
         if guild_id:
@@ -554,10 +558,10 @@ def _call_ai(question: str, user_id: int, guild=None, recent_messages: list = No
         _histories[user_id] = new_history[-40:]
         # Dosyaya сохранить
         _save_histories(_histories)
-        return answer or 'Hmm, bir sorun oldu. Tekrar dener misin? 🤔'
+        return answer or 'Hmm, bir sorun oldu. Tekrar dener misin? '
     except Exception as e:
-        print(f'[AI] Ошибка: {e}')
-        return 'Сейчас не mogu cevapla, poprobuyte после. 😅'
+        log.info(f'[AI] Ошибка: {e}')
+        return 'Сейчас не mogu cevapla, poprobuyte после. '
 
 
 class AIChat(commands.Cog):
@@ -572,18 +576,18 @@ class AIChat(commands.Cog):
         if guild_id in _knowledge_base:
             del _knowledge_base[guild_id]
             _save_knowledge_base(_knowledge_base)
-            await ctx.send('✅ База знаний сервера AI очищена!', ephemeral=True)
+            await ctx.send(' База знаний сервера AI очищена!', ephemeral=True)
         else:
-            await ctx.send('База знаний уже пуста. 🤷', ephemeral=True)
+            await ctx.send('База знаний уже пуста. ', ephemeral=True)
     async def ai_reset(self, ctx):
         """Kendi AI sohbet историю sıfırla"""
         user_id = ctx.author.id
         if user_id in _histories:
             del _histories[user_id]
             _save_histories(_histories, force=True)
-            await ctx.send('✅ История чата сброшена! Начинаем с чистого листа. 🔄', ephemeral=True)
+            await ctx.send(' История чата сброшена! Начинаем с чистого листа. ', ephemeral=True)
         else:
-            await ctx.send('История чата уже пуста. 🤷', ephemeral=True)
+            await ctx.send('История чата уже пуста. ', ephemeral=True)
 
     @commands.hybrid_command(name='ai-sifirla', description="Sbrosit история AI cata")
     @commands.has_permissions(administrator=True)
@@ -604,7 +608,7 @@ class AIChat(commands.Cog):
                 item['confidence'] = 'high'
                 item['source'] = 'manual'
                 _save_knowledge_base(_knowledge_base)
-                await ctx.send(f'✅ Информация о **{konu}** обновлена!', ephemeral=True)
+                await ctx.send(f' Информация о **{konu}** обновлена!', ephemeral=True)
                 return
         
         # Новый info add
@@ -618,7 +622,7 @@ class AIChat(commands.Cog):
             'source': 'manual'
         })
         _save_knowledge_base(_knowledge_base)
-        await ctx.send(f'✅ Информация о **{konu}** сохранена! Теперь я буду знать правильный ответ.', ephemeral=True)
+        await ctx.send(f' Информация о **{konu}** сохранена! Теперь я буду знать правильный ответ.', ephemeral=True)
 
     @commands.hybrid_command(name='ai-info-listele', description="Liste zaregistrirovannih AI информация (Менеджер)")
     @commands.has_permissions(administrator=True)
@@ -634,12 +638,12 @@ class AIChat(commands.Cog):
         lines = []
         for i, item in enumerate(items, 1):
             name = item.get('name') or item.get('topic', '?')
-            src = '✋ Manuel' if item.get('source') == 'manual' else '🔍 Web'
-            conf = '✅' if item.get('confidence') == 'high' else '⚠️'
+            src = ' Manuel' if item.get('source') == 'manual' else ' Web'
+            conf = '' if item.get('confidence') == 'high' else ''
             lines.append(f'{conf} **{name}** ({src})')
         
         embed = discord.Embed(
-            title='🧠 AI Информация Tabanı',
+            title=' AI Информация Tabanı',
             description='\n'.join(lines[:20]),
             color=0x00D9FF
         )
@@ -675,7 +679,7 @@ class AIChat(commands.Cog):
                     break
 
         if not target_id:
-            return '❌ Кто DM atacağımı anlayamadım. ID, mention или "benimle одинаковый seste" de.'
+            return ' Кто DM atacağımı anlayamadım. ID, mention или "benimle одинаковый seste" de.'
 
         # Отправл сообщение удалить
         # "X'e особый şunu yaz: ..." или "X'e dm at как"
@@ -701,7 +705,7 @@ class AIChat(commands.Cog):
             dm_content = clean or None
 
         if not dm_content:
-            return '❌ Ne yazacağımı anlayamadım. "особый yaz: <message>" formatını использовать.'
+            return ' Ne yazacağımı anlayamadım. "особый yaz: <message>" formatını использовать.'
 
         # Участника bul ve DM at
         for guild in self.bot.guilds:
@@ -710,19 +714,19 @@ class AIChat(commands.Cog):
                 continue
             try:
                 await member.send(dm_content)
-                return f'✅ **{member.display_name}**\'e DM отправлено: *{dm_content[:100]}*'
+                return f' **{member.display_name}**\'e DM отправлено: *{dm_content[:100]}*'
             except discord.Forbidden:
-                return f'❌ **{member.display_name}** DM\'lere закрыт.'
+                return f' **{member.display_name}** DM\'lere закрыт.'
             except Exception as e:
-                return f'❌ DM отправл: {e}'
+                return f' DM отправл: {e}'
 
         # Участник guild'de найден direkt fetch dene
         try:
             user = await self.bot.fetch_user(target_id)
             await user.send(dm_content)
-            return f'✅ **{user.name}**\'e DM отправлено: *{dm_content[:100]}*'
+            return f' **{user.name}**\'e DM отправлено: *{dm_content[:100]}*'
         except Exception as e:
-            return f'❌ Пользователь не найден или DM отправл: {e}'
+            return f' Пользователь не найден или DM отправл: {e}'
 
     async def _handle_voice_move(self, text: str, message: discord.Message) -> str:
         """Ses канал movema — tek/çift adım, geri getir, channel имя desteği"""
@@ -739,7 +743,7 @@ class AIChat(commands.Cog):
         cl = text.lower()
         cl_norm = norm(text)
 
-        # ── Цель участника bul ──────────────────────────────────────────────────
+        #  Цель участника bul 
         target_id = None
         mention_match = re.search(r'<@!?(\d+)>', text)
         if mention_match:
@@ -751,12 +755,12 @@ class AIChat(commands.Cog):
         if not target_id and any(t in cl for t in ['beni', 'bana', 'benim']):
             target_id = OWNER_ID
         if not target_id:
-            return '❌ Кто moveyacağımı anlayamadım. ID или mention ver.'
+            return ' Кто moveyacağımı anlayamadım. ID или mention ver.'
 
-        # ── "geri getir" / "geri al" talebi var mı? ─────────────────────────
+        #  "geri getir" / "geri al" talebi var mı? 
         geri_var = any(t in cl_norm for t in ['geri getir', 'geri al', 'geri don', 'geri götür', 'geri gotur'])
 
-        # ── Yön ve adım количество ───────────────────────────────────────────────
+        #  Yön ve adım количество 
         yon = 0
         # Hem "верх/ust" hem "Вверх/Вверх" destadd
         yukari_words = ['верх', 'ust', 'Вверх', 'Вверх', 'yukar']
@@ -774,7 +778,7 @@ class AIChat(commands.Cog):
             elif any(w in cl_norm for w in asagi_words):
                 yon = -1
 
-        # ── "bu voice / bu channela geri getir" — hedef channel имя ──────────────
+        #  "bu voice / bu channela geri getir" — hedef channel имя 
         # "geri getir bu voice" → "bu ses" = особый bir channel имя не, orijinal channel demek
         # Ama "X в канал geri getir" gibi bir channel имя geçiyorsa onu yakala
         hedef_channel_adi = None
@@ -790,17 +794,17 @@ class AIChat(commands.Cog):
             if not member:
                 continue
             if not member.voice or not member.voice.channel:
-                results.append(f'❌ {member.display_name} şu an bir ses в канале не.')
+                results.append(f' {member.display_name} şu an bir ses в канале не.')
                 continue
 
             current_vc = member.voice.channel
             voice_channels = sorted(guild.voice_channels, key=lambda c: c.position)
             current_idx = next((i for i, c in enumerate(voice_channels) if c.id == current_vc.id), None)
             if current_idx is None:
-                results.append('❌ Текущий channel listede не найдено.')
+                results.append(' Текущий channel listede не найдено.')
                 continue
 
-            # ── Isimım 1: Taşı ────────────────────────────────────────────────
+            #  Isimım 1: Taşı 
             hedef_vc = None
             if yon != 0:
                 new_idx = max(0, min(len(voice_channels) - 1, current_idx - yon))
@@ -819,19 +823,19 @@ class AIChat(commands.Cog):
 
             if not hedef_vc or hedef_vc.id == current_vc.id:
                 if hedef_vc and hedef_vc.id == current_vc.id:
-                    results.append(f'ℹ️ Zaten o channelda: **{current_vc.name}**')
+                    results.append(f'ℹ Zaten o channelda: **{current_vc.name}**')
                 else:
                     results.append(
-                        f'❌ Цель channel не найдено. Текущий: **{current_vc.name}**\n'
+                        f' Цель channel не найдено. Текущий: **{current_vc.name}**\n'
                         f'Ses channelları: {", ".join(vc.name for vc in voice_channels)}'
                     )
                 continue
 
             try:
                 await member.move_to(hedef_vc)
-                msg = f'✅ **{member.display_name}** → **{hedef_vc.name}** movendı.'
+                msg = f' **{member.display_name}** → **{hedef_vc.name}** movendı.'
 
-                # ── Isimım 2: До getir ──────────────────────────────────────
+                #  Isimım 2: До getir 
                 if geri_var:
                     # "bu voice geri getir" = orijinal channela (current_vc) geri al
                     geri_hedef = current_vc
@@ -849,17 +853,17 @@ class AIChat(commands.Cog):
                     fresh = guild.get_member(target_id)
                     if fresh and fresh.voice:
                         await fresh.move_to(geri_hedef)
-                        msg += f'\n✅ 3 секунд после **{geri_hedef.name}** в канал geri getirildi.'
+                        msg += f'\n 3 секунд после **{geri_hedef.name}** в канал geri getirildi.'
                     else:
-                        msg += f'\n⚠️ До getirilemedi — участник ses из канала ayrılmış.'
+                        msg += f'\n До getirilemedi — участник ses из канала ayrılmış.'
 
                 results.append(msg)
             except discord.Forbidden:
-                results.append('❌ Администратор yok (Move Members разрешение gerekli).')
+                results.append(' Администратор yok (Move Members разрешение gerekli).')
             except Exception as e:
-                results.append(f'❌ Ошибка: {e}')
+                results.append(f' Ошибка: {e}')
 
-        return '\n'.join(results) if results else '❌ Участник bu сервер не найдено.'
+        return '\n'.join(results) if results else ' Участник bu сервер не найдено.'
 
     def _norm(self, s: str) -> str:
         return (s.lower()
@@ -919,12 +923,12 @@ class AIChat(commands.Cog):
         cl = text.lower()
         cn = self._norm(text)
 
-        # ── MÜZİK ────────────────────────────────────────────────────────────
+        #  MÜZİK 
         # Ses в канал gir (музыкаsiz)
         ses_gir_triggers = ['voice gir', 'voice katıl', 'voice gel', 'channela gir', 'benim voice gir',
                             'voice gir', 'ses в канал gir', 'ses в канал gir', 'yanima gel']
         if any(t in cn for t in [self._norm(x) for x in ses_gir_triggers]):
-            result_msg = '❌ Ses в канале değilsin.'
+            result_msg = ' Ses в канале değilsin.'
             for guild in self.bot.guilds:
                 member = guild.get_member(OWNER_ID)
                 if not member or not member.voice:
@@ -935,10 +939,10 @@ class AIChat(commands.Cog):
                         vc = await member.voice.channel.connect()
                     else:
                         await vc.move_to(member.voice.channel)
-                    result_msg = f'✅ **{member.voice.channel.name}** в канал girdim.'
+                    result_msg = f' **{member.voice.channel.name}** в канал girdim.'
                     break
                 except Exception as e:
-                    result_msg = f'❌ Ошибка: {e}'
+                    result_msg = f' Ошибка: {e}'
             await message.channel.send(result_msg)
             return True
 
@@ -946,12 +950,12 @@ class AIChat(commands.Cog):
         ses_cik_triggers = ['sesten çık', 'sesten cik', 'channeldan çık', 'channeldan cik',
                             'çık sesten', 'cik sesten', 'botu удалить', 'botu cikar']
         if any(t in cn for t in [self._norm(x) for x in ses_cik_triggers]):
-            result_msg = '❌ Zaten ses в канале değilim.'
+            result_msg = ' Zaten ses в канале değilim.'
             for guild in self.bot.guilds:
                 vc = guild.voice_client
                 if vc:
                     await vc.disconnect()
-                    result_msg = '✅ Ses из канала вышел.'
+                    result_msg = ' Ses из канала вышел.'
                     break
             await message.channel.send(result_msg)
             return True
@@ -962,7 +966,7 @@ class AIChat(commands.Cog):
             for t in ['çal', 'cal', 'музыка çal', 'muzik cal', 'песня çal', 'sarki cal', 'oynat', 'bana']:
                 query = query.replace(t, '').strip()
             query = query.strip() or 'lofi'
-            result_msg = '❌ Ses в канале değilsin.'
+            result_msg = ' Ses в канале değilsin.'
             for guild in self.bot.guilds:
                 member = guild.get_member(OWNER_ID)
                 if not member or not member.voice:
@@ -984,14 +988,14 @@ class AIChat(commands.Cog):
                     q = get_queue(guild.id)
                     if vc.is_playing() or vc.is_paused():
                         q.append(item)
-                        result_msg = f'✅ Kuyruğa addndi: **{title}**'
+                        result_msg = f' Kuyruğa addndi: **{title}**'
                     else:
                         q.insert(0, item)
                         await play_next(guild, text_channel)
-                        result_msg = f'🎵 Çalınıyor: **{title}**'
+                        result_msg = f' Çalınıyor: **{title}**'
                     break
                 except Exception as e:
-                    result_msg = f'❌ Müzik Ошибки: {e}'
+                    result_msg = f' Müzik Ошибки: {e}'
             await message.channel.send(result_msg)
             return True
 
@@ -1009,17 +1013,17 @@ class AIChat(commands.Cog):
                     afk_cog._remove(guild.id, OWNER_ID)
                 try:
                     nick = member.display_name
-                    if nick.startswith('😴 '):
+                    if nick.startswith(' '):
                         await member.edit(nick=nick[2:].strip() or None)
-                except:
+                except Exception:
                     pass
             from cogs.afk import _pending_mentions
             pending = _pending_mentions.pop(OWNER_ID, [])
             if pending:
                 lines = [f"• **{p['from']}**: {p['msg'][:60]}" for p in pending[-5:]]
-                await message.channel.send(f'✅ Добро пожаловать geldin! {len(pending)} человек etiketledi:\n' + '\n'.join(lines))
+                await message.channel.send(f' Добро пожаловать geldin! {len(pending)} человек etiketledi:\n' + '\n'.join(lines))
             else:
-                await message.channel.send('✅ AFK modu закрыто.')
+                await message.channel.send(' AFK modu закрыто.')
             return True
 
         # AFK aç — "закрыть" или "удалить" geçiyorsa tetikleme
@@ -1039,11 +1043,11 @@ class AIChat(commands.Cog):
                     afk_cog._set(guild.id, OWNER_ID, reason, owner_mode=True)
                 try:
                     nick = member.display_name
-                    if not nick.startswith('😴'):
-                        await member.edit(nick=f'😴 {nick[:28]}')
-                except:
+                    if not nick.startswith(''):
+                        await member.edit(nick=f' {nick[:28]}')
+                except Exception:
                     pass
-            await message.channel.send(f'😴 AFK modu активен! Причина: **{reason}**')
+            await message.channel.send(f' AFK modu активен! Причина: **{reason}**')
             return True
 
         # Ses канал movema
@@ -1060,7 +1064,7 @@ class AIChat(commands.Cog):
         if any(t in cn for t in [self._norm(x) for x in sesten_at_triggers]):
             target_id = self._extract_target(text)
             if not target_id:
-                await message.channel.send('❌ Не удалось определить пользователя для исключения.')
+                await message.channel.send(' Не удалось определить пользователя для исключения.')
                 return True
             results = []
             for guild in self.bot.guilds:
@@ -1068,16 +1072,16 @@ class AIChat(commands.Cog):
                 if not member:
                     continue
                 if not member.voice:
-                    results.append(f'❌ **{member.display_name}** zaten seste не.')
+                    results.append(f' **{member.display_name}** zaten seste не.')
                     continue
                 try:
                     await member.move_to(None)
-                    results.append(f'✅ **{member.display_name}** sesten atıldı.')
+                    results.append(f' **{member.display_name}** sesten atıldı.')
                 except discord.Forbidden:
-                    results.append('❌ Администратор yok.')
+                    results.append(' Администратор yok.')
                 except Exception as e:
-                    results.append(f'❌ Ошибка: {e}')
-            await message.channel.send('\n'.join(results) if results else '❌ Участник не найдено.')
+                    results.append(f' Ошибка: {e}')
+            await message.channel.send('\n'.join(results) if results else ' Участник не найдено.')
             return True
 
         if any(t in cl for t in ses_tasi_triggers):
@@ -1093,7 +1097,7 @@ class AIChat(commands.Cog):
             await message.channel.send(result_msg)
             return True
 
-        # ── ЗАДАЧА ZİNCİRİ ────────────────────────────────────────────────────
+        #  ЗАДАЧА ZİNCİRİ 
         # "X kişiyi izle, мат ederse ban at" gibi условный задачи
         gorev_add = ['задача add', 'gorevi add', 'izle ve', 'takip et', 'задача kur', 'gorev kur',
                       'ederse ban', 'ederse kick', 'ederse timeout', 'yaparsa ban', 'yaparsa kick']
@@ -1105,7 +1109,7 @@ class AIChat(commands.Cog):
             _active_tasks.append(task)
             _save_tasks(_active_tasks)
             await message.channel.send(
-                f'✅ Задача сохранено (#{task["id"]}): *{desc[:100]}*\n'
+                f' Задача сохранено (#{task["id"]}): *{desc[:100]}*\n'
                 f'`задача показать` с listeleyebilirsin.'
             )
             return True
@@ -1114,10 +1118,10 @@ class AIChat(commands.Cog):
                          'задача список', 'gorev список']
         if any(t in cn for t in [self._norm(x) for x in gorev_listele]):
             if not _active_tasks:
-                await message.channel.send('📋 Активен задача yok.')
+                await message.channel.send(' Активен задача yok.')
             else:
                 lines = [f'**#{t["id"]}** — {t["desc"][:80]}' for t in _active_tasks]
-                await message.channel.send('📋 **Активен Задачи:**\n' + '\n'.join(lines))
+                await message.channel.send(' **Активен Задачи:**\n' + '\n'.join(lines))
             return True
 
         gorev_sil = ['задача удалить', 'gorevi удалить', 'задача удалить', 'gorevi удалить', 'задача отмена']
@@ -1130,14 +1134,14 @@ class AIChat(commands.Cog):
                 _active_tasks[:] = [t for t in _active_tasks if t['id'] != tid]
                 _save_tasks(_active_tasks)
                 if len(_active_tasks) < before:
-                    await message.channel.send(f'✅ Задача #{tid} удалено.')
+                    await message.channel.send(f' Задача #{tid} удалено.')
                 else:
-                    await message.channel.send(f'❌ Задача #{tid} не найдена.')
+                    await message.channel.send(f' Задача #{tid} не найдена.')
             else:
-                await message.channel.send('❌ Какой задача удалить желание belirt: `задача удалить 1`')
+                await message.channel.send(' Какой задача удалить желание belirt: `задача удалить 1`')
             return True
 
-        # ── СЕРВЕР СОСТОЯНИЕ SORGULAMA ───────────────────────────────────────────
+        #  СЕРВЕР СОСТОЯНИЕ SORGULAMA 
         status_triggers = ['на сервере кто var', 'кто online', 'кто seste', 'сколько человек online',
                           'сервер statusu', 'neler oluyor', 'ne var ne yok на сервере',
                           'кто активен', 'seste кто var', 'online кто var']
@@ -1161,7 +1165,7 @@ class AIChat(commands.Cog):
                 ticket_chs = [c for c in guild.text_channels if c.name.startswith('ticket-')]
                 if ticket_chs:
                     lines.append(f'• Открыт ticket: {len(ticket_chs)}')
-            await message.channel.send('\n'.join(lines) or '❌ Не удалось получить информацию о сервере.')
+            await message.channel.send('\n'.join(lines) or ' Не удалось получить информацию о сервере.')
             return True
 
         # Mod уведомление aç/закрыть
@@ -1173,14 +1177,14 @@ class AIChat(commands.Cog):
             os.makedirs('data', exist_ok=True)
             with open('data/mod_notify.json', 'w', encoding='utf-8') as f:
                 _j.dump({'enabled': True}, f)
-            await message.channel.send('✅ Уведомления модератора включены. Вы будете получать ЛС о действиях.n.')
+            await message.channel.send(' Уведомления модератора включены. Вы будете получать ЛС о действиях.n.')
             return True
         if any(t in cn for t in [self._norm(x) for x in mod_notify_kapat]):
             import json as _j
             os.makedirs('data', exist_ok=True)
             with open('data/mod_notify.json', 'w', encoding='utf-8') as f:
                 _j.dump({'enabled': False}, f)
-            await message.channel.send('✅ Mod уведомление закрыто.')
+            await message.channel.send(' Mod уведомление закрыто.')
             return True
 
         # Hiçbir handler eşleşmedi — normal sohbete düş
@@ -1193,7 +1197,7 @@ class AIChat(commands.Cog):
 
         is_dm = isinstance(message.channel, discord.DMChannel)
 
-        # ── Owner'ın DM cevabını yakala ──────────────────────────────────────
+        #  Owner'ın DM cevabını yakala 
         if is_dm and OWNER_ID and message.author.id == OWNER_ID:
             # Owner bir messagea reply attıysa, o message baddyen soru mu?
             if message.reference and message.reference.message_id in _pending_questions:
@@ -1229,12 +1233,12 @@ class AIChat(commands.Cog):
                             user = channel.guild.get_member(user_id)
                             mention = user.mention if user else f'<@{user_id}>'
                             await channel.send(f'{mention} {answer}')
-                    await message.add_reaction('✅')
+                    await message.add_reaction('')
                 except Exception as e:
-                    await message.channel.send(f'❌ Не удалось доставить: {e}')
+                    await message.channel.send(f' Не удалось доставить: {e}')
                 return
 
-            # ── Owner'ın akıllı eylem система (AI intent detection) ──────────
+            #  Owner'ın akıllı eylem система (AI intent detection) 
             content_lower = message.content.lower().strip()
             content_raw = message.content.strip()
 
@@ -1247,7 +1251,7 @@ class AIChat(commands.Cog):
                 if len(_owner_prefs['rules']) > 50:
                     _owner_prefs['rules'] = _owner_prefs['rules'][-50:]
                 _save_owner_prefs(_owner_prefs)
-                await message.channel.send(f'✅ Сохранитьtim: **{content_raw[:100]}**')
+                await message.channel.send(f' Сохранитьtim: **{content_raw[:100]}**')
                 return
 
             # AI с intent определить
@@ -1310,7 +1314,7 @@ class AIChat(commands.Cog):
             )
 
         if _kufur_var_mi(answer):
-            answer = "Bunu сказатьyemem. 😅"
+            answer = "Bunu сказатьyemem. "
 
         # Ответ "bilmiyorum" содержимое owner'a sor
         bilmiyorum_triggers = ['bilmiyorum', 'emin değilim', 'info bulamadım', 'о infom yok']
@@ -1320,7 +1324,7 @@ class AIChat(commands.Cog):
                 guild_id = message.guild.id if message.guild else 0
                 user_name = message.author.display_name
                 embed = discord.Embed(
-                    title='❓ Вопрос, на который я не нашел ответ',
+                    title=' Вопрос, на который я не нашел ответ',
                     color=0xf59e0b,
                     description=f'**Спросил:** {user_name} (`{message.author.id}`)\n'
                                 f'**Вопрос:** {content}\n\n'
@@ -1336,7 +1340,7 @@ class AIChat(commands.Cog):
                     'is_dm': is_dm
                 }
             except Exception as e:
-                print(f'[AI] Owner DM Ошибки: {e}')
+                log.info(f'[AI] Owner DM Ошибки: {e}')
 
         if is_dm:
             # DM log'a сохранить
@@ -1366,7 +1370,7 @@ class AIChat(commands.Cog):
                 with open(_f, 'w', encoding='utf-8') as fp:
                     _j.dump(_d, fp, ensure_ascii=False, indent=2)
             except Exception as _le:
-                print(f'[DM LOG] Ошибка: {_le}')
+                log.info(f'[DM LOG] Ошибка: {_le}')
             await message.channel.send(answer)
         else:
             await message.reply(answer, mention_author=False)
@@ -1380,4 +1384,4 @@ async def setup(bot):
     @bot.event
     async def on_shutdown():
         _save_histories(_histories, force=True)
-        print('[AI] Разговор история сохранено.')
+        log.info('[AI] Разговор история сохранено.')

@@ -1,4 +1,4 @@
-# ── Автоматически Bağımlılık Kurulumu ─────────────────────────────────────────────
+# Автоматически Bağımlılık Kurulumu 
 import sys
 import os
 import subprocess
@@ -42,7 +42,7 @@ def _install_requirements():
     if missing:
         print(f"[INSTALL] {len(missing)} eksik paket kuruluyor...")
         for pkg in missing:
-            print(f"  -> {pkg}")
+            print(f" -> {pkg}")
         try:
             subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--pre'] + missing)
             print("[INSTALL] Tum paketler kuruldu!")
@@ -73,6 +73,13 @@ import atexit
 
 load_dotenv()
 
+# Централизованная конфигурация и логирование 
+from config import Config
+from logger import setup_logger, get_logger
+
+Config.ensure_dirs()
+log = setup_logger("bot", Config.LOG_FILE, Config.LOG_LEVEL)
+
 # Startup fix: duplicate endpoint'leri clear
 import subprocess as _sp, sys as _sys
 _fix = os.path.join(os.path.dirname(__file__), 'fix_dup.py')
@@ -80,17 +87,17 @@ if os.path.exists(_fix):
     _sp.run([_sys.executable, _fix], capture_output=True)
 
 intents = discord.Intents.all()
-bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
+bot = commands.Bot(command_prefix=Config.COMMAND_PREFIX, intents=intents, help_command=None)
 
 ALERT_ROLE_ID = None  # Panelden настройк
 
-# ── Web server (gunicorn subprocess) ─────────────────────────────────────────
+# Web server (gunicorn subprocess) 
 _web_server_proc = None
 _gunicorn_available = None  # cache: gunicorn kurulu mu?
 
 
 def _have_gunicorn():
-    """gunicorn kurulu mu, sh'ye gerek var mi? subprocess ucuz bir kontrol."""
+    """gunicorn kurulu mu, sh'ye gerek var mi? subprocess ucuz bir проверить."""
     global _gunicorn_available
     if _gunicorn_available is not None:
         return _gunicorn_available
@@ -138,7 +145,7 @@ def _start_web_server(app):
 
 
 def _stop_web_server():
-    """Web server'i kibarca kapat."""
+    """Web server'i kibarca закрыть."""
     global _web_server_proc
     if _web_server_proc and _web_server_proc.poll() is None:
         try:
@@ -152,14 +159,14 @@ def _stop_web_server():
         _web_server_proc = None
 
 
-# ── Cleanup functions ───────────────────────────────────────────────────────
+# Cleanup functions 
 def cleanup_on_exit():
     """Bot закрыт temizlik действия"""
     try:
         print("[CLEANUP] Bot закрыт...")
-        # Web server'i kapat
+        # Web server'i закрыть
         _stop_web_server()
-        # Ses ссылки закрыть
+        # Голос ссылки закрыть
         if hasattr(bot, 'voice_clients'):
             for vc in bot.voice_clients:
                 try:
@@ -183,7 +190,7 @@ signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
 atexit.register(cleanup_on_exit)
 
-# ── Panel link отправить ────────────────────────────────────────────────────────
+# Panel link отправить 
 async def send_panel_link(url):
     import json as _json
     tokens_file = os.path.join(os.path.dirname(__file__), 'data', 'tokens.json')
@@ -233,17 +240,17 @@ async def send_panel_link(url):
             embed.description = f"[**› Вход yap в panel**]({panel_url})"
             embed.set_image(url="https://static.klipy.com/ii/71b2873e478b9d8d0482ea3ec777ba7f/15/36/51ALUZhO.gif")
             embed.add_field(
-                name="🏰  Сервер",
+                name=" Сервер",
                 value=f"```{guild.name}```",
                 inline=True
             )
             embed.add_field(
-                name="👥  Участники",
+                name=" Участники",
                 value=f"```{guild.member_count}```",
                 inline=True
             )
             embed.add_field(
-                name="🔐  Erişim",
+                name=" Erişim",
                 value="```Автоматически как по роли Discord```",
                 inline=False
             )
@@ -256,7 +263,7 @@ async def send_panel_link(url):
         except Exception as e:
             print(f"[ERR] Panel linki gonderilemedi ({guild.name}): {e}")
 
-# ── Cloudflare tüneli ────────────────────────────────────────────────────────
+# Cloudflare tüneli 
 def _is_tunnel_alive(url):
     try:
         req = urllib.request.Request(url, method="GET")
@@ -269,7 +276,7 @@ def _is_tunnel_alive(url):
                 return False
             return True
     except urllib.error.HTTPError as e:
-        # 302/401 gibi cevaplar panel icin normal olabilir, 5xx ise olumsuz
+        # 302/401 как cevaplar panel icin normal olabilir, 5xx ise olumsuz
         return e.code < 500
     except Exception:
         return False
@@ -288,7 +295,7 @@ def _get_cloudflared_binary():
     is_win = platform.system().lower() == "windows"
 
     def is_valid_exe(path):
-        """Win32 PE dosya mı kontrol et (minimum 5MB, MZ magic)."""
+        """Win32 PE dosya mı проверить et (minimum 5MB, MZ magic)."""
         if not os.path.exists(path):
             return False
         if os.path.getsize(path) < 5 * 1024 * 1024:  # 5MB minimum
@@ -307,7 +314,7 @@ def _get_cloudflared_binary():
         if is_valid_exe(p):
             return p
         elif os.path.exists(p):
-            # Bozuk dosya, sil ki yeniden indirilsin
+            # Bozuk dosya, удалить ki yeniden indirilsin
             try: os.remove(p)
             except: pass
 
@@ -349,7 +356,7 @@ def start_tunnel():
 
     cf_path = _get_cloudflared_binary()
     if not cf_path:
-        print("⚠️ Не удалось найти или загрузить cloudflared. Туннель Cloudflare отключен.")
+        print(" Не удалось найти или загрузить cloudflared. Туннель Cloudflare отключен.")
         return
 
     protocols = ["http2", "quic", "auto"]
@@ -409,16 +416,16 @@ def start_tunnel():
             print(f"[ERR] Ошибка работы Cloudflare Tunnel ({fail_count}/{MAX_FAILS}): {e}")
             time.sleep(5)
 
-    print(f"[CLOUDFLARE] {MAX_FAILS} ardisik hata, tunnel tamamen devre disi.")
-    print(f"[CLOUDFLARE] Sorun devam ederse .env'e ekle: DISABLE_TUNNEL=1")
+    print(f"[CLOUDFLARE] {MAX_FAILS} ardisik ошибка, tunnel tamamen devre disi.")
+    print(f"[CLOUDFLARE] Sorun devam ederse .env'e добавить: DISABLE_TUNNEL=1")
 
 
-# ── on_ready ─────────────────────────────────────────────────────────────────
+# on_ready 
 _synced = False
 VOICE_CHANNEL_ID = None  # Panelden настройк
 
 async def _monitor_voice():
-    """Ses ссылка canlı tut — düştüğünde bağlan, каждый 4 dakikada удалить çal."""
+    """Голос ссылка canlı tut — düştüğünde bağlan, каждый 4 dakikada удалить çal."""
     await bot.wait_until_ready()
     await asyncio.sleep(10)
     last_ping = 0
@@ -489,16 +496,16 @@ async def on_ready():
     )
     print(f"[OK] Status: {_status} | Activity: {_activity_text}")
 
-    # Ses в канал bağlan (только ilk başlangıçta)
+    # Голос в канал bağlan (только ilk başlangıçta)
     channel = bot.get_channel(VOICE_CHANNEL_ID) if VOICE_CHANNEL_ID else None
     if channel and isinstance(channel, discord.VoiceChannel):
         vc = discord.utils.get(bot.voice_clients, guild=channel.guild)
         if not vc:
             try:
                 await channel.connect(self_deaf=False)
-                print(f"[OK] Ses в канал bağlandı: {channel.name}")
+                print(f"[OK] Голос в канал bağlandı: {channel.name}")
             except Exception as e:
-                print(f"[ERR] Ses bağlanma ошибки: {e}")
+                print(f"[ERR] Голос bağlanma ошибки: {e}")
 
     # Bot instance'ı обновить
     from web.app import set_bot_instance
@@ -516,30 +523,61 @@ async def on_ready():
         except Exception as _e:
             print(f"[ERR] Panel link отправл: {_e}")
 
-# ── Cog загрузить ────────────────────────────────────────────────────────────────
+# Cog загрузить 
 async def load_cogs():
-    SKIP_COGS = {"embed_utils.py", "__init__.py"}
+    # These cogs have duplicate commands with other cogs
+    SKIP_COGS = {
+        "embed_utils.py", "__init__.py",
+        # Duplicate cog'lar (yenileri tercih ediliyor)
+        "leveling_engagement.py",  # rank/leaderboard conflicts with level_cog/gamification_cog
+        "temp_moderation.py",      # unban/mute conflicts with moderation_cog
+        "ticket_commands.py",      # duplicate of ticket_cog
+        "ticket.py",               # duplicate of ticket_cog (2310 lines vs 585 lines)
+        "utility_cog.py",          # help/botinfo/avatar/userinfo conflicts with info_tools
+        "music.py",                # duplicate of music_cog (requires yt-dlp)
+        "economy_cmds.py",         # duplicate of economy_cog
+        "fun.py",                  # duplicate of fun_cog
+        "utility.py",              # duplicate of utility_cog
+        "automod.py",              # duplicate of automod_cog
+    }
+    
+    # Загружаем централизованный обработчик ошибок ПЕРВЫМ
+    try:
+        import error_handler
+        await error_handler.setup(bot)
+        log.info("Централизованный обработчик ошибок загружен")
+    except Exception as e:
+        log.error(f"Ошибка загрузки обработчика ошибок: {e}")
+    
     cog_files = sorted([f for f in os.listdir("./cogs") if f.endswith(".py") and f not in SKIP_COGS])
     for filename in cog_files:
         ext = f"cogs.{filename[:-3]}"
-        print(f"[LOAD] Yukleniyor: {filename}")
+        log.info(f"Загрузка: {filename}")
         try:
             await asyncio.wait_for(bot.load_extension(ext), timeout=20)
-            print(f"[LOAD] Yuklendi: {filename}")
+            log.info(f"Загружено: {filename}")
         except asyncio.TimeoutError:
-            print(f"[ERR] Cog timeout (20s): {filename}")
+            log.error(f"Cog timeout (20s): {filename}")
         except Exception as e:
             import traceback
-            print(f"[ERR] Cog yukleme ошибки ({filename}): {e}")
+            log.error(f"Ошибка загрузки cog ({filename}): {e}")
             traceback.print_exc()
 
-# ── Main ─────────────────────────────────────────────────────────────────────
+# Main 
 async def main():
     # Web paneli запустить (bot başlamadan до - только bir kez)
     from web.app import app, set_bot_instance
     set_bot_instance(bot)
     _start_web_server(app)
     print("[WEB] Web panel: http://localhost:5001")
+
+    # WebSocket сервер запустить (real-time обновления)
+    try:
+        from web.websocket_server import start_websocket_thread
+        start_websocket_thread()
+        log.info("WebSocket сервер запущен на порту 8765")
+    except Exception as e:
+        log.warning(f"WebSocket сервер не запущен: {e}")
 
     # Cloudflare tüneli запустить (Flask'ın ayağa kalkması для 3 sn badd)
     def delayed_tunnel():

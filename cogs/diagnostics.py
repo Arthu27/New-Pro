@@ -22,6 +22,10 @@ from datetime import datetime, timedelta
 from collections import defaultdict, deque
 import psutil
 
+from logger import get_logger
+log = get_logger("diagnostics")
+
+
 DATA_DIR = "data"
 os.makedirs(DATA_DIR, exist_ok=True)
 
@@ -64,7 +68,7 @@ class Diagnostics(commands.Cog):
     def cog_unload(self):
         self.health_monitor.cancel()
 
-    # ─── ERROR TRACKING ───────────────────────────────────────
+    # ERROR TRACKING 
     @commands.Cog.listener()
     async def on_command_error(self, ctx, error):
         if isinstance(error, commands.CommandNotFound):
@@ -95,7 +99,7 @@ class Diagnostics(commands.Cog):
         except Exception:
             pass
 
-    # ─── HEALTH MONITORING TASK ───────────────────────────────
+    # HEALTH MONITORING TASK 
     @tasks.loop(minutes=1)
     async def health_monitor(self):
         """Run every minute, check vitals, trigger repairs if needed"""
@@ -118,13 +122,13 @@ class Diagnostics(commands.Cog):
             # Auto-repair
             await self._auto_repair(health)
         except Exception as e:
-            print(f"[diagnostics] health_monitor error: {e}")
+            log.info(f"[diagnostics] health_monitor error: {e}")
 
     @health_monitor.before_loop
     async def before_health_monitor(self):
         await self.bot.wait_until_ready()
 
-    # ─── HEALTH SNAPSHOT ─────────────────────────────────────
+    # HEALTH SNAPSHOT 
     def get_health_snapshot(self):
         """Take a snapshot of current bot health"""
         snapshot = {
@@ -156,7 +160,7 @@ class Diagnostics(commands.Cog):
             snapshot["cpu_percent"] = 0
         return snapshot
 
-    # ─── AUTO-REPAIR ──────────────────────────────────────────
+    # AUTO-REPAIR 
     async def _auto_repair(self, health):
         """Take action when thresholds exceeded"""
         # High memory
@@ -179,7 +183,7 @@ class Diagnostics(commands.Cog):
         self.repair_count[repair_type] += 1
         action = REPAIR_ACTIONS.get(repair_type, "Unknown")
         # Log
-        print(f"[diagnostics] AUTO-REPAIR: {repair_type} ({severity}) — {action}")
+        log.info(f"[diagnostics] AUTO-REPAIR: {repair_type} ({severity}) — {action}")
         if repair_type == "high_memory":
             import gc
             gc.collect()
@@ -196,11 +200,11 @@ class Diagnostics(commands.Cog):
                 if cog_name not in ("Diagnostics", "cog_manager", "Jishaku"):
                     try:
                         await self.bot.reload_extension(f"cogs.{cog_name}")
-                        print(f"[diagnostics] reloaded cog: {cog_name}")
+                        log.info(f"[diagnostics] reloaded cog: {cog_name}")
                         # Reset error counter
                         self.cog_perf[cog_name]["errors"] = 0
                     except Exception as e:
-                        print(f"[diagnostics] reload failed for {cog_name}: {e}")
+                        log.info(f"[diagnostics] reload failed for {cog_name}: {e}")
         # Notify admin
         await self._notify_admin(repair_type, severity, action)
 
@@ -213,7 +217,7 @@ class Diagnostics(commands.Cog):
             owner = await self.bot.fetch_user(int(owner_id))
             if owner:
                 embed = discord.Embed(
-                    title=f"🔧 Auto-Repair: {repair_type}",
+                    title=f" Auto-Repair: {repair_type}",
                     description=f"**Severity:** {severity}\n**Action:** {action}",
                     color=0xFBBF24 if severity == "warn" else 0xEF4444
                 )
@@ -222,7 +226,7 @@ class Diagnostics(commands.Cog):
         except (discord.Forbidden, discord.HTTPException):
             pass
 
-    # ─── HOT-RELOAD ───────────────────────────────────────────
+    # HOT-RELOAD 
     @commands.command(name="hotreload")
     @commands.is_owner()
     async def hotreload(self, ctx, cog_name: str = None):
@@ -255,37 +259,37 @@ class Diagnostics(commands.Cog):
                 reloaded.append(cog)
             except Exception as e:
                 failed.append(f"{cog}: {e}")
-        embed = discord.Embed(title="🔥 Hot Reload", color=0x00FF7F if not failed else 0xFBBF24)
+        embed = discord.Embed(title=" Hot Reload", color=0x00FF7F if not failed else 0xFBBF24)
         if reloaded:
-            embed.add_field(name="✅ Перезагружены", value=", ".join(reloaded) or "—", inline=False)
+            embed.add_field(name=" Перезагружены", value=", ".join(reloaded) or "—", inline=False)
         if failed:
-            embed.add_field(name="❌ Ошибки", value="\n".join(failed) or "—", inline=False)
+            embed.add_field(name=" Ошибки", value="\n".join(failed) or "—", inline=False)
         if not reloaded and not failed:
             embed.description = "Нет изменений в файлах"
         await ctx.send(embed=embed)
 
-    # ─── COMMANDS ─────────────────────────────────────────────
+    # COMMANDS 
     @commands.command(name="health", aliases=["diag", "status"])
     async def health_cmd(self, ctx):
         """Show current bot health"""
         h = self.get_health_snapshot()
-        embed = discord.Embed(title="🩺 Bot Health", color=self._health_color(h))
+        embed = discord.Embed(title=" Bot Health", color=self._health_color(h))
         # Status indicator
-        status_emoji = "🟢" if h["latency_ms"] < 300 and h["memory_mb"] < 700 else "🟡" if h["latency_ms"] < 800 and h["memory_mb"] < 1000 else "🔴"
+        status_emoji = "🟢" if h["latency_ms"] < 300 and h["memory_mb"] < 700 else "🟡" if h["latency_ms"] < 800 and h["memory_mb"] < 1000 else ""
         embed.description = f"{status_emoji} **Bot Online** · Uptime: {self._fmt_uptime(h['uptime_sec'])}"
         # Vitals
-        mem_status = "🟢" if h["memory_mb"] < 400 else "🟡" if h["memory_mb"] < 700 else "🔴"
-        cpu_status = "🟢" if h["cpu_percent"] < 60 else "🟡" if h["cpu_percent"] < 85 else "🔴"
-        lat_status = "🟢" if h["latency_ms"] < 300 else "🟡" if h["latency_ms"] < 800 else "🔴"
-        embed.add_field(name="💾 Память", value=f"{mem_status} {h['memory_mb']} MB", inline=True)
-        embed.add_field(name="⚙️ CPU", value=f"{cpu_status} {h['cpu_percent']}%", inline=True)
-        embed.add_field(name="📡 Latency", value=f"{lat_status} {h['latency_ms']}ms", inline=True)
-        embed.add_field(name="🌐 Серверов", value=h["guilds"], inline=True)
-        embed.add_field(name="👥 Пользователей", value=f"{h['users']:,}", inline=True)
-        embed.add_field(name="🔌 Cogs", value=f"{h['cogs_loaded']} / {h['commands']} команд", inline=True)
-        embed.add_field(name="❌ Ошибок/мин", value=h["errors_last_min"], inline=True)
-        embed.add_field(name="🧵 Потоки", value=h["threads"], inline=True)
-        embed.add_field(name="📁 Открытых файлов", value=h["open_files"], inline=True)
+        mem_status = "🟢" if h["memory_mb"] < 400 else "🟡" if h["memory_mb"] < 700 else ""
+        cpu_status = "🟢" if h["cpu_percent"] < 60 else "🟡" if h["cpu_percent"] < 85 else ""
+        lat_status = "🟢" if h["latency_ms"] < 300 else "🟡" if h["latency_ms"] < 800 else ""
+        embed.add_field(name=" Память", value=f"{mem_status} {h['memory_mb']} MB", inline=True)
+        embed.add_field(name=" CPU", value=f"{cpu_status} {h['cpu_percent']}%", inline=True)
+        embed.add_field(name=" Latency", value=f"{lat_status} {h['latency_ms']}ms", inline=True)
+        embed.add_field(name=" Серверов", value=h["guilds"], inline=True)
+        embed.add_field(name=" Пользователей", value=f"{h['users']:,}", inline=True)
+        embed.add_field(name=" Cogs", value=f"{h['cogs_loaded']} / {h['commands']} команд", inline=True)
+        embed.add_field(name=" Ошибок/мин", value=h["errors_last_min"], inline=True)
+        embed.add_field(name=" Потоки", value=h["threads"], inline=True)
+        embed.add_field(name=" Открытых файлов", value=h["open_files"], inline=True)
         embed.timestamp = datetime.utcnow()
         await ctx.send(embed=embed)
 
@@ -296,36 +300,36 @@ class Diagnostics(commands.Cog):
         h = self.get_health_snapshot()
         issues = []
         if h["memory_mb"] > THRESHOLDS["memory_mb"]["warn"]:
-            issues.append(f"⚠️ Высокая память: {h['memory_mb']}MB (порог {THRESHOLDS['memory_mb']['warn']}MB)")
+            issues.append(f" Высокая память: {h['memory_mb']}MB (порог {THRESHOLDS['memory_mb']['warn']}MB)")
         if h["cpu_percent"] > THRESHOLDS["cpu_percent"]["warn"]:
-            issues.append(f"⚠️ Высокий CPU: {h['cpu_percent']}% (порог {THRESHOLDS['cpu_percent']['warn']}%)")
+            issues.append(f" Высокий CPU: {h['cpu_percent']}% (порог {THRESHOLDS['cpu_percent']['warn']}%)")
         if h["latency_ms"] > THRESHOLDS["latency_ms"]["warn"]:
-            issues.append(f"⚠️ Высокий Latency: {h['latency_ms']}ms (порог {THRESHOLDS['latency_ms']['warn']}ms)")
+            issues.append(f" Высокий Latency: {h['latency_ms']}ms (порог {THRESHOLDS['latency_ms']['warn']}ms)")
         if h["errors_last_min"] > THRESHOLDS["error_rate_per_min"]["warn"]:
-            issues.append(f"⚠️ Много ошибок: {h['errors_last_min']}/мин")
+            issues.append(f" Много ошибок: {h['errors_last_min']}/мин")
         # Cog perf
         worst_cogs = sorted(self.cog_perf.items(), key=lambda x: x[1]["errors"], reverse=True)[:3]
-        embed = discord.Embed(title="🔍 Диагностика", color=0xFFD700)
+        embed = discord.Embed(title=" Диагностика", color=0xFFD700)
         if issues:
-            embed.add_field(name="🚨 Проблемы", value="\n".join(issues), inline=False)
+            embed.add_field(name=" Проблемы", value="\n".join(issues), inline=False)
         else:
-            embed.add_field(name="✅ Всё в порядке", value="Никаких проблем не обнаружено", inline=False)
+            embed.add_field(name=" Всё в порядке", value="Никаких проблем не обнаружено", inline=False)
         # Cog performance
         if worst_cogs:
             cog_text = "\n".join(f"**{name}:** {perf['errors']} ошибок, {perf['calls']} вызовов" for name, perf in worst_cogs if perf['errors'] > 0)
             if cog_text:
-                embed.add_field(name="🔌 Проблемные cog'и", value=cog_text, inline=False)
+                embed.add_field(name=" Проблемные cog'и", value=cog_text, inline=False)
         # Recent errors
         recent = list(self.error_log)[-5:]
         if recent:
             err_text = "\n".join(f"`{e['ts']:.0f}` {e['error_type']} в `{e['command']}`: {e['error_msg'][:80]}" for e in recent)
-            embed.add_field(name="📋 Последние ошибки", value=err_text[:1024], inline=False)
+            embed.add_field(name=" Последние ошибки", value=err_text[:1024], inline=False)
         # Repair actions
         if self.repair_count:
             repair_text = "\n".join(f"**{r}:** {c} раз" for r, c in self.repair_count.items())
-            embed.add_field(name="🔧 Auto-Repairs", value=repair_text, inline=False)
+            embed.add_field(name=" Auto-Repairs", value=repair_text, inline=False)
         # Quick actions
-        embed.add_field(name="⚡ Быстрые действия", value=
+        embed.add_field(name=" Быстрые действия", value=
             "`!hotreload` — перезагрузить изменённые cog'и\n"
             "`!cog perf` — статистика по cog'ам\n"
             "`!cog errors` — последние ошибки\n"
@@ -340,19 +344,19 @@ class Diagnostics(commands.Cog):
         before = sum(1 for _ in gc.get_objects())
         collected = gc.collect()
         after = sum(1 for _ in gc.get_objects())
-        await ctx.send(f"🧹 GC: собрано **{collected}** объектов, {before} → {after}")
+        await ctx.send(f" GC: собрано **{collected}** объектов, {before} → {after}")
 
     @commands.group(name="cog", invoke_without_command=True)
     @commands.is_owner()
     async def cog(self, ctx):
         """Cog management"""
-        embed = discord.Embed(title="🔌 Cog Менеджер", color=0xFFD700)
+        embed = discord.Embed(title=" Cog Менеджер", color=0xFFD700)
         loaded = sorted(self.bot.cogs.keys())
         embed.add_field(name=f"Загружено ({len(loaded)})", value=", ".join(loaded) or "—", inline=False)
         # Performance
         if self.cog_perf:
             perf_text = "\n".join(f"**{name}:** {p['calls']} вызовов, {p['errors']} ошибок, {p['total_time']:.2f}s" for name, p in sorted(self.cog_perf.items(), key=lambda x: x[1]['calls'], reverse=True)[:10])
-            embed.add_field(name="📊 Производительность", value=perf_text or "—", inline=False)
+            embed.add_field(name=" Производительность", value=perf_text or "—", inline=False)
         embed.add_field(name="Команды", value="`!cog perf` — производительность\n`!cog errors [n]` — последние N ошибок", inline=False)
         await ctx.send(embed=embed)
 
@@ -368,7 +372,7 @@ class Diagnostics(commands.Cog):
         for name, p in sorted_perf[:20]:
             avg = p["total_time"] / p["calls"] if p["calls"] else 0
             text += f"**{name}** — {p['calls']} calls, {p['errors']} errs, avg {avg*1000:.1f}ms\n"
-        embed = discord.Embed(title="📊 Cog Производительность", description=text, color=0xFFD700)
+        embed = discord.Embed(title=" Cog Производительность", description=text, color=0xFFD700)
         await ctx.send(embed=embed)
 
     @cog.command(name="errors")
@@ -377,16 +381,16 @@ class Diagnostics(commands.Cog):
         """Last N errors"""
         errors = list(self.error_log)[-limit:]
         if not errors:
-            await ctx.send("Нет ошибок ✨")
+            await ctx.send("Нет ошибок ")
             return
         text = ""
         for e in errors:
             ago = int((time.time() - e["ts"]) / 60)
             text += f"`{ago}м` **{e['error_type']}** в `{e['command']}`: {e['error_msg'][:80]}\n"
-        embed = discord.Embed(title=f"❌ Последние {len(errors)} ошибок", description=text[:2000], color=0xEF4444)
+        embed = discord.Embed(title=f" Последние {len(errors)} ошибок", description=text[:2000], color=0xEF4444)
         await ctx.send(embed=embed)
 
-    # ─── HELPERS ──────────────────────────────────────────────
+    # HELPERS 
     def _health_color(self, h):
         if h["latency_ms"] < 300 and h["memory_mb"] < 700 and h["errors_last_min"] < 5:
             return 0x4ADE80  # green

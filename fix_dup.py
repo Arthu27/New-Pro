@@ -7,7 +7,7 @@ with open(path, encoding='utf-8') as f:
 
 original_len = len(content)
 
-# api_guild_channels endpoint'ini bul ve удалить
+# api_guild_channels endpoint'ini найти ve удалить
 # Indented version (inside register_extra_routes function)
 lines = content.split('\n')
 new_lines = []
@@ -19,11 +19,11 @@ removed_blocks = 0
 while i < len(lines):
     line = lines[i]
     
-    # api_guild_channels decorator'unu bul
+    # api_guild_channels decorator'unu найти
     if "@app.route('/api/guild/<guild_id>/channels')" in line and 'def api_guild_channels' in '\n'.join(lines[i:i+5]):
         skip = True
         removed_blocks += 1
-        # Bu blogu atla - return jsonify([]) satırına kadar
+        # Bu blogu atla - return jsonify([]) satırına 
         while i < len(lines):
             if 'return jsonify([])' in lines[i] and skip:
                 i += 1  # return satırını da atla

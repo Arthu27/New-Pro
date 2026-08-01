@@ -63,7 +63,7 @@ class Stats(commands.Cog):
                 await interaction.response.send_message(f"{moderator.mention} еще не выполнял действий модерации.", ephemeral=True)
                 return
             
-            e = discord.Embed(title=f"📊 {moderator.name} - Статистика", color=discord.Color.blue())
+            e = discord.Embed(title=f" {moderator.name} - Статистика", color=discord.Color.blue())
             e.set_thumbnail(url=moderator.display_avatar.url)
             
             total = sum(stats.values())
@@ -80,7 +80,7 @@ class Stats(commands.Cog):
                 await interaction.response.send_message("Пока статистика yok.", ephemeral=True)
                 return
             
-            e = discord.Embed(title="📊 Модератор Статистика", color=discord.Color.blue())
+            e = discord.Embed(title=" Модератор Статистика", color=discord.Color.blue())
             
             sorted_mods = sorted(
                 guild_stats.items(),
@@ -97,7 +97,7 @@ class Stats(commands.Cog):
                         value=f"Всего: {total} действие",
                         inline=False
                     )
-                except:
+                except Exception:
                     pass
             
             await interaction.response.send_message(embed=e, ephemeral=True)
@@ -113,8 +113,8 @@ class Stats(commands.Cog):
             return
         
         e = discord.Embed(
-            title="🏆 EN АКТИВЕН МОДЕРАТОРЫ",
-            description="╔═══════════════════════════╗\n║  Liderlik Tablosu  ║\n╚═══════════════════════════╝",
+            title=" EN АКТИВЕН МОДЕРАТОРЫ",
+            description="\n Liderlik Tablosu \n",
             color=0xF1C40F
         )
         
@@ -124,7 +124,7 @@ class Stats(commands.Cog):
             reverse=True
         )[:10]
         
-        medals = ["🥇", "🥈", "🥉"]
+        medals = ["", "", ""]
         for i, (mod_id, stats) in enumerate(sorted_mods, 1):
             try:
                 mod = await self.bot.fetch_user(int(mod_id))
@@ -137,7 +137,7 @@ class Stats(commands.Cog):
                     value=f"```yaml\nToplam: {total} действие\n{actions}\n```",
                     inline=False
                 )
-            except:
+            except Exception:
                 pass
         
         e.set_footer(text="Moderasyon Статистика", icon_url=interaction.guild.icon.url if interaction.guild.icon else None)

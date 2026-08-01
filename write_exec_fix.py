@@ -23,21 +23,21 @@ content = '''{% extends "base.html" %}
 </style>
 
 <div class="cmd-grid">
-  <div class="cmd-card" onclick="openCmd(\'ban\')"><div class="cmd-icon">🔨</div><h3><i class="fas fa-ban"></i> Ban</h3><p>Пользователя постоянный yasakla</p></div>
-  <div class="cmd-card" onclick="openCmd(\'kick\')"><div class="cmd-icon">👢</div><h3><i class="fas fa-user-slash"></i> Kick</h3><p>Пользователя с сервера at</p></div>
-  <div class="cmd-card" onclick="openCmd(\'timeout\')"><div class="cmd-icon">⏱️</div><h3><i class="fas fa-clock"></i> Mute</h3><p>Gecici sustur</p></div>
-  <div class="cmd-card" onclick="openCmd(\'warn\')"><div class="cmd-icon">⚠️</div><h3><i class="fas fa-exclamation-triangle"></i> Warning</h3><p>Warning ver</p></div>
-  <div class="cmd-card" onclick="openCmd(\'clear\')"><div class="cmd-icon">🗑️</div><h3><i class="fas fa-trash"></i> Temizle</h3><p>Toplu message удалить</p></div>
-  <div class="cmd-card" onclick="openCmd(\'роли\')"><div class="cmd-icon">🏷️</div><h3><i class="fas fa-user-tag"></i> Роли Ver/Al</h3><p>Роли add или cıkar</p></div>
+ <div class="cmd-card" onclick="openCmd(\'ban\')"><div class="cmd-icon">🔨</div><h3><i class="fas fa-ban"></i> Ban</h3><p>Пользователя постоянный забанить</p></div>
+ <div class="cmd-card" onclick="openCmd(\'kick\')"><div class="cmd-icon">👢</div><h3><i class="fas fa-user-slash"></i> Kick</h3><p>Пользователя с сервера at</p></div>
+ <div class="cmd-card" onclick="openCmd(\'timeout\')"><div class="cmd-icon">⏱️</div><h3><i class="fas fa-clock"></i> Mute</h3><p>Gecici sustur</p></div>
+ <div class="cmd-card" onclick="openCmd(\'warn\')"><div class="cmd-icon">⚠️</div><h3><i class="fas fa-exclamation-triangle"></i> Warning</h3><p>Warning ver</p></div>
+ <div class="cmd-card" onclick="openCmd(\'clear\')"><div class="cmd-icon">🗑️</div><h3><i class="fas fa-trash"></i> Temizle</h3><p>Массовая message удалить</p></div>
+ <div class="cmd-card" onclick="openCmd(\'роли\')"><div class="cmd-icon">🏷️</div><h3><i class="fas fa-user-tag"></i> Роли Ver/Al</h3><p>Роли add или cıkar</p></div>
 </div>
 
 <div id="execModal" class="modal-overlay">
-  <div class="modal-box">
-    <button onclick="closeCmd()" style="position:absolute;top:15px;right:20px;background:none;border:none;color:#dc143c;font-size:26px;cursor:pointer;">&times;</button>
-    <h2 id="execTitle">Команда</h2>
-    <div id="execForm"></div>
-    <div id="exec-result"></div>
-  </div>
+ <div class="modal-box">
+ <button onclick="closeCmd()" style="position:absolute;top:15px;right:20px;background:none;border:none;color:#dc143c;font-size:26px;cursor:pointer;">&times;</button>
+ <h2 id="execTitle">Команда</h2>
+ <div id="execForm"></div>
+ <div id="exec-result"></div>
+ </div>
 </div>
 
 <script>
@@ -45,94 +45,94 @@ var guilds = [];
 var currentCmd = \'\';
 
 async function loadGuilds() {
-  var r = await fetch(\'/api/guilds\');
-  guilds = await r.json();
+ var r = await fetch(\'/api/guilds\');
+ guilds = await r.json();
 }
 
 function guildOptions() {
-  return guilds.map(function(g){return \'<option value="\'+g.id+\'">\'+g.name+\'</option>\';}).join(\'\');
+ return guilds.map(function(g){return \'<option value="\'+g.id+\'">\'+g.name+\'</option>\';}).join(\'\');
 }
 
 async function loadChannels(selId) {
-  var gid = document.getElementById(\'guild-sel\').value;
-  if (!gid) return;
-  var r = await fetch(\'/api/guild/\'+gid+\'/channels\');
-  var data = await r.json();
-  var chs = Array.isArray(data) ? data : (data.channels || []);
-  var sel = document.getElementById(selId);
-  sel.innerHTML = chs.filter(function(c){return c.type===\'text\';}).map(function(c){return \'<option value="\'+c.id+\'">#\'+c.name+\'</option>\';}).join(\'\');
+ var gid = document.getElementById(\'guild-sel\').value;
+ if (!gid) return;
+ var r = await fetch(\'/api/guild/\'+gid+\'/channels\');
+ var data = await r.json();
+ var chs = Array.isArray(data) ? data : (data.channels || []);
+ var sel = document.getElementById(selId);
+ sel.innerHTML = chs.filter(function(c){return c.type===\'text\';}).map(function(c){return \'<option value="\'+c.id+\'">#\'+c.name+\'</option>\';}).join(\'\');
 }
 
 async function loadMembers(selId) {
-  var gid = document.getElementById(\'guild-sel\').value;
-  if (!gid) return;
-  var r = await fetch(\'/api/guild/\'+gid+\'/members\');
-  var members = await r.json();
-  if (!Array.isArray(members)) members = [];
-  var sel = document.getElementById(selId);
-  sel.innerHTML = members.filter(function(m){return !m.bot;}).map(function(m){
-    return \'<option value="\'+m.id+\'">\'+m.display_name+\' (\'+m.name+\')</option>\';
-  }).join(\'\');
+ var gid = document.getElementById(\'guild-sel\').value;
+ if (!gid) return;
+ var r = await fetch(\'/api/guild/\'+gid+\'/members\');
+ var members = await r.json();
+ if (!Array.isArray(members)) members = [];
+ var sel = document.getElementById(selId);
+ sel.innerHTML = members.filter(function(m){return !m.bot;}).map(function(m){
+ return \'<option value="\'+m.id+\'">\'+m.display_name+\' (\'+m.name+\')</option>\';
+ }).join(\'\');
 }
 
 async function loadRoles(selId) {
-  var gid = document.getElementById(\'guild-sel\').value;
-  if (!gid) return;
-  var r = await fetch(\'/api/guild/\'+gid+\'/роли\');
-  var role = await r.json();
-  if (!Array.isArray(roles)) role = [];
-  var sel = document.getElementById(selId);
-  sel.innerHTML = roles.map(function(ro){return \'<option value="\'+ro.id+\'">\'+ro.name+\'</option>\';}).join(\'\');
+ var gid = document.getElementById(\'guild-sel\').value;
+ if (!gid) return;
+ var r = await fetch(\'/api/guild/\'+gid+\'/роли\');
+ var role = await r.json();
+ if (!Array.isArray(roles)) role = [];
+ var sel = document.getElementById(selId);
+ sel.innerHTML = roles.map(function(ro){return \'<option value="\'+ro.id+\'">\'+ro.name+\'</option>\';}).join(\'\');
 }
 
 async function loadRolesAndMembers() {
-  await Promise.all([loadRoles(\'роли-sel\'), loadMembers(\'member-sel\')]);
+ await Promise.all([loadRoles(\'роли-sel\'), loadMembers(\'member-sel\')]);
 }
 
 function openCmd(cmd) {
-  currentCmd = cmd;
-  document.getElementById(\'execTitle\').textContent = cmd.toUpperCase();
-  document.getElementById(\'exec-result\').style.display = \'none\';
-  var forms = {
-    ban: \'<div class="form-group"><label>Сервер</label><select id="guild-sel">\'+guildOptions()+\'</select></div><div class="form-group"><label>Пользователь ID</label><input type="text" id="user_id" placeholder="123456789"></div><div class="form-group"><label>Причина</label><input type="text" id="reason" placeholder="Ban причина"></div><button class="btn-exec" onclick="execCmd()">BAN</button><button class="btn-cancel" onclick="closeCmd()">Отмена</button>\',
-    kick: \'<div class="form-group"><label>Сервер</label><select id="guild-sel">\'+guildOptions()+\'</select></div><div class="form-group"><label>Пользователь ID</label><input type="text" id="user_id" placeholder="123456789"></div><div class="form-group"><label>Причина</label><input type="text" id="reason" placeholder="Kick причина"></div><button class="btn-exec" onclick="execCmd()">KICK</button><button class="btn-cancel" onclick="closeCmd()">Отмена</button>\',
-    timeout: \'<div class="form-group"><label>Сервер</label><select id="guild-sel">\'+guildOptions()+\'</select></div><div class="form-group"><label>Пользователь ID</label><input type="text" id="user_id" placeholder="123456789"></div><div class="form-group"><label>Sure (dakika)</label><input type="number" id="duration" value="60"></div><div class="form-group"><label>Причина</label><input type="text" id="reason" placeholder="Mute причина"></div><button class="btn-exec" onclick="execCmd()">TIMEOUT</button><button class="btn-cancel" onclick="closeCmd()">Отмена</button>\',
-    warn: \'<div class="form-group"><label>Сервер</label><select id="guild-sel">\'+guildOptions()+\'</select></div><div class="form-group"><label>Пользователь ID</label><input type="text" id="user_id" placeholder="123456789"></div><div class="form-group"><label>Причина</label><input type="text" id="reason" placeholder="Предупреждение причина"></div><button class="btn-exec" onclick="execCmd()">WARN</button><button class="btn-cancel" onclick="closeCmd()">Отмена</button>\',
-    clear: \'<div class="form-group"><label>Сервер</label><select id="guild-sel" onchange="loadChannels(&quot;channel-sel&quot;)">\'+guildOptions()+\'</select></div><div class="form-group"><label>Канал</label><select id="channel-sel"><option>Yukleniyor...</option></select></div><div class="form-group"><label>Сообщение Количество</label><input type="number" id="amount" value="10"></div><button class="btn-exec" onclick="execCmd()">TEMİZLE</button><button class="btn-cancel" onclick="closeCmd()">Отмена</button>\',
-    роли: \'<div class="form-group"><label>Сервер</label><select id="guild-sel" onchange="loadRolesAndMembers()">\'+guildOptions()+\'</select></div><div class="form-group"><label>Участник</label><select id="member-sel"><option>Загрузка...</option></select></div><div class="form-group"><label>Роль</label><select id="роли-sel"><option>Загрузка...</option></select></div><button class="btn-exec" onclick="execCmd()">ПРИМЕН</button><button class="btn-cancel" onclick="closeCmd()">Отмена</button>\'
-  };
-  document.getElementById(\'execForm\').innerHTML = forms[cmd];
-  document.getElementById(\'execModal\').style.display = \'flex\';
-  setTimeout(function() {
-    if (cmd === \'clear\') loadChannels(\'channel-sel\');
-    if (cmd === \'роли\') loadRolesAndMembers();
-  }, 50);
+ currentCmd = cmd;
+ document.getElementById(\'execTitle\').textContent = cmd.toUpperCase();
+ document.getElementById(\'exec-result\').style.display = \'none\';
+ var forms = {
+ ban: \'<div class="form-group"><label>Сервер</label><select id="guild-sel">\'+guildOptions()+\'</select></div><div class="form-group"><label>Пользователь ID</label><input type="text" id="user_id" placeholder="123456789"></div><div class="form-group"><label>Причина</label><input type="text" id="reason" placeholder="Ban причина"></div><button class="btn-exec" onclick="execCmd()">BAN</button><button class="btn-cancel" onclick="closeCmd()">Отмена</button>\',
+ kick: \'<div class="form-group"><label>Сервер</label><select id="guild-sel">\'+guildOptions()+\'</select></div><div class="form-group"><label>Пользователь ID</label><input type="text" id="user_id" placeholder="123456789"></div><div class="form-group"><label>Причина</label><input type="text" id="reason" placeholder="Kick причина"></div><button class="btn-exec" onclick="execCmd()">KICK</button><button class="btn-cancel" onclick="closeCmd()">Отмена</button>\',
+ timeout: \'<div class="form-group"><label>Сервер</label><select id="guild-sel">\'+guildOptions()+\'</select></div><div class="form-group"><label>Пользователь ID</label><input type="text" id="user_id" placeholder="123456789"></div><div class="form-group"><label>Sure (dakika)</label><input type="number" id="duration" value="60"></div><div class="form-group"><label>Причина</label><input type="text" id="reason" placeholder="Mute причина"></div><button class="btn-exec" onclick="execCmd()">TIMEOUT</button><button class="btn-cancel" onclick="closeCmd()">Отмена</button>\',
+ warn: \'<div class="form-group"><label>Сервер</label><select id="guild-sel">\'+guildOptions()+\'</select></div><div class="form-group"><label>Пользователь ID</label><input type="text" id="user_id" placeholder="123456789"></div><div class="form-group"><label>Причина</label><input type="text" id="reason" placeholder="Предупреждение причина"></div><button class="btn-exec" onclick="execCmd()">WARN</button><button class="btn-cancel" onclick="closeCmd()">Отмена</button>\',
+ clear: \'<div class="form-group"><label>Сервер</label><select id="guild-sel" onchange="loadChannels(&quot;channel-sel&quot;)">\'+guildOptions()+\'</select></div><div class="form-group"><label>Канал</label><select id="channel-sel"><option>Yukleniyor...</option></select></div><div class="form-group"><label>Сообщение Количество</label><input type="number" id="amount" value="10"></div><button class="btn-exec" onclick="execCmd()">TEMİZLE</button><button class="btn-cancel" onclick="closeCmd()">Отмена</button>\',
+ роли: \'<div class="form-group"><label>Сервер</label><select id="guild-sel" onchange="loadRolesAndMembers()">\'+guildOptions()+\'</select></div><div class="form-group"><label>Участник</label><select id="member-sel"><option>Загрузка...</option></select></div><div class="form-group"><label>Роль</label><select id="роли-sel"><option>Загрузка...</option></select></div><button class="btn-exec" onclick="execCmd()">ПРИМЕН</button><button class="btn-cancel" onclick="closeCmd()">Отмена</button>\'
+ };
+ document.getElementById(\'execForm\').innerHTML = forms[cmd];
+ document.getElementById(\'execModal\').style.display = \'flex\';
+ setTimeout(function() {
+ if (cmd === \'clear\') loadChannels(\'channel-sel\');
+ if (cmd === \'роли\') loadRolesAndMembers();
+ }, 50);
 }
 
 function closeCmd() { document.getElementById(\'execModal\').style.display = \'none\'; }
 
 async function execCmd() {
-  var data = { command: currentCmd, guild_id: document.getElementById(\'guild-sel\').value };
-  var uid = document.getElementById(\'user_id\'); if (uid) data.user_id = uid.value;
-  var msel = document.getElementById(\'member-sel\'); if (msel) data.user_id = msel.value;
-  var rsn = document.getElementById(\'reason\'); if (rsn) data.reason = rsn.value;
-  var dur = document.getElementById(\'duration\'); if (dur) data.duration = dur.value;
-  var amt = document.getElementById(\'amount\'); if (amt) data.amount = amt.value;
-  var chs = document.getElementById(\'channel-sel\'); if (chs) data.channel_id = chs.value;
-  var rls = document.getElementById(\'роли-sel\'); if (rls) data.role_id = rls.value;
+ var data = { command: currentCmd, guild_id: document.getElementById(\'guild-sel\').value };
+ var uid = document.getElementById(\'user_id\'); if (uid) data.user_id = uid.value;
+ var msel = document.getElementById(\'member-sel\'); if (msel) data.user_id = msel.value;
+ var rsn = document.getElementById(\'reason\'); if (rsn) data.reason = rsn.value;
+ var dur = document.getElementById(\'duration\'); if (dur) data.duration = dur.value;
+ var amt = document.getElementById(\'amount\'); if (amt) data.amount = amt.value;
+ var chs = document.getElementById(\'channel-sel\'); if (chs) data.channel_id = chs.value;
+ var rls = document.getElementById(\'роли-sel\'); if (rls) data.role_id = rls.value;
 
-  var r = await fetch(\'/api/execute-command\', { method:\'POST\', headers:{\'Content-Type\':\'application/json\'}, body:JSON.stringify(data) });
-  var res = await r.json();
-  var msg = document.getElementById(\'exec-result\');
-  msg.style.display = \'block\';
-  if (res.success) {
-    msg.style.cssText = \'display:block;background:rgba(46,204,113,0.2);border:1px solid #2ecc71;color:#2ecc71;padding:12px;border-radius:8px;margin-top:15px;\';
-    msg.textContent = \'✅ Команда успешно calistirildi!\';
-    setTimeout(closeCmd, 2000);
-  } else {
-    msg.style.cssText = \'display:block;background:rgba(220,20,60,0.2);border:1px solid #dc143c;color:#ff6b6b;padding:12px;border-radius:8px;margin-top:15px;\';
-    msg.textContent = \'❌ Ошибка: \' + res.error;
-  }
+ var r = await fetch(\'/api/execute-command\', { method:\'POST\', headers:{\'Content-Type\':\'application/json\'}, body:JSON.stringify(data) });
+ var res = await r.json();
+ var msg = document.getElementById(\'exec-result\');
+ msg.style.display = \'block\';
+ if (res.success) {
+ msg.style.cssText = \'display:block;background:rgba(46,204,113,0.2);border:1px solid #2ecc71;color:#2ecc71;padding:12px;border-radius:8px;margin-top:15px;\';
+ msg.textContent = \'✅ Команда успешно calistirildi!\';
+ setTimeout(closeCmd, 2000);
+ } else {
+ msg.style.cssText = \'display:block;background:rgba(220,20,60,0.2);border:1px solid #dc143c;color:#ff6b6b;padding:12px;border-radius:8px;margin-top:15px;\';
+ msg.textContent = \'❌ Ошибка: \' + res.error;
+ }
 }
 
 document.getElementById(\'execModal\').addEventListener(\'click\', function(e) { if (e.target === this) closeCmd(); });
@@ -140,7 +140,6 @@ loadGuilds();
 </script>
 {% endblock %}
 '''
-
 with open('discord_bot/web/templates/execute_command.html', 'w', encoding='utf-8') as f:
     f.write(content)
 print("execute_command.html написано")

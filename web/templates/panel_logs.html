@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% block title %}Panel Logs - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-list" ></i> Логи панели{% endblock %}
+{% block title %}Логи панели - Aether{% endblock %}
+{% block page_title %}<i class="fas fa-list"></i> Логи панели{% endblock %}
 {% block content %}
 {% block page_hero %}
 <div class="page-hero compact">
@@ -15,45 +15,45 @@
 </div>
 {% endblock %}
 
-
-
-<div class="pl-filters">
-  <input type="text" id="search" class="pl-search" placeholder="Ara... (eylem, kullanиcи, IP)">
-  <select id="filter" class="pl-select">
-    <option value="">Все aksiyonlar</option>
-    <option>POST</option>
-    <option>DELETE</option>
-    <option>GET</option>
-  </select>
-  <button class="btn-primary" id="btn-clear" type="button" >Temizle</button>
-</div>
-
-<div class="stat-row" id="pl-stats">
-  <div class="stat-box">
-    <div class="stat-icon gold"><i class="fas fa-list"></i></div>
-    <div class="stat-body"><div class="stat-val" id="stat-total">-</div><div class="stat-lbl">Всего</div></div>
+<div class="stat-grid" id="pl-stats">
+  <div class="stat-box gold">
+    <div class="stat-icon"><i class="fas fa-list"></i></div>
+    <div class="stat-body"><div class="stat-value" id="stat-total">-</div><div class="stat-label">Всего</div></div>
   </div>
-  <div class="stat-box">
-    <div class="stat-icon cyan"><i class="fas fa-calendar-day"></i></div>
-    <div class="stat-body"><div class="stat-val" id="stat-today">-</div><div class="stat-lbl">Сегодня</div></div>
+  <div class="stat-box cyan">
+    <div class="stat-icon"><i class="fas fa-calendar-day"></i></div>
+    <div class="stat-body"><div class="stat-value" id="stat-today">-</div><div class="stat-label">Сегодня</div></div>
   </div>
-  <div class="stat-box">
-    <div class="stat-icon green"><i class="fas fa-plus-circle"></i></div>
-    <div class="stat-body"><div class="stat-val" id="stat-post">-</div><div class="stat-lbl">POST</div></div>
+  <div class="stat-box green">
+    <div class="stat-icon"><i class="fas fa-plus-circle"></i></div>
+    <div class="stat-body"><div class="stat-value" id="stat-post">-</div><div class="stat-label">POST</div></div>
   </div>
-  <div class="stat-box">
-    <div class="stat-icon red"><i class="fas fa-trash"></i></div>
-    <div class="stat-body"><div class="stat-val" id="stat-delete">-</div><div class="stat-lbl">DELETE</div></div>
+  <div class="stat-box red">
+    <div class="stat-icon"><i class="fas fa-trash"></i></div>
+    <div class="stat-body"><div class="stat-value" id="stat-delete">-</div><div class="stat-label">DELETE</div></div>
   </div>
 </div>
 
-<div class="pl-box">
-  <div class="pl-head">
-    <div class="pl-title"><i class="fas fa-list"></i> Последний Panel Ишlemleri</div>
-    <span class="pl-count" id="pl-count">-</span>
+<div class="section">
+  <div class="bs-title"><i class="fas fa-filter"></i> Фильтры</div>
+  <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+    <input type="text" id="search" class="form-input" placeholder="Поиск... (действие, пользователь, IP)" style="flex: 1; min-width: 200px;">
+    <select id="filter" class="form-input" style="width: 150px;">
+      <option value="">Все действия</option>
+      <option>POST</option>
+      <option>DELETE</option>
+      <option>GET</option>
+    </select>
+    <button class="control-btn danger" id="btn-clear" type="button">
+      <i class="fas fa-trash"></i> Очистить
+    </button>
   </div>
-  <div class="pl-body" id="pl-body">
-    <p class="empty"><i class="fas fa-spinner fa-spin"></i></p>
+</div>
+
+<div class="section">
+  <div class="bs-title"><i class="fas fa-list"></i> Последние действия <span id="pl-count" style="color: var(--accent); font-size: 14px;">-</span></div>
+  <div id="pl-body" style="max-height: 600px; overflow-y: auto;">
+    <p style="text-align: center; color: var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> Загрузка...</p>
   </div>
 </div>
 
@@ -64,11 +64,11 @@
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
   var logs = [
-    { action: 'POST /api/guild/.../ticket-settings', user: 'Owner', role: 'owner', ip: '127.0.0.1', time: '2 min ёnce', method: 'POST' },
-    { action: 'POST /api/command/ban', user: 'Администратор', role: 'admin', ip: '127.0.0.1', time: '5 min ёnce', method: 'POST' },
-    { action: 'GET /api/guilds', user: 'Owner', role: 'owner', ip: '127.0.0.1', time: '10 min ёnce', method: 'GET' },
-    { action: 'POST /api/warn', user: 'Mod', role: 'mod', ip: '127.0.0.1', time: '15 min ёnce', method: 'POST' },
-    { action: 'DELETE /api/guild/.../channels/...', user: 'Администратор', role: 'admin', ip: '127.0.0.1', time: '1 saat ёnce', method: 'DELETE' }
+    { action: 'POST /api/guild/.../ticket-settings', user: 'Owner', role: 'owner', ip: '127.0.0.1', time: '2 мин назад', method: 'POST' },
+    { action: 'POST /api/command/ban', user: 'Администратор', role: 'admin', ip: '127.0.0.1', time: '5 мин назад', method: 'POST' },
+    { action: 'GET /api/guilds', user: 'Owner', role: 'owner', ip: '127.0.0.1', time: '10 мин назад', method: 'GET' },
+    { action: 'POST /api/warn', user: 'Mod', role: 'mod', ip: '127.0.0.1', time: '15 мин назад', method: 'POST' },
+    { action: 'DELETE /api/guild/.../channels/...', user: 'Администратор', role: 'admin', ip: '127.0.0.1', time: '1 час назад', method: 'DELETE' }
   ];
   var roleColor = { owner: 'var(--err)', admin: '#c8922a', mod: 'var(--ok)' };
 
@@ -85,15 +85,21 @@
     $('stat-today').textContent = logs.length;
     $('stat-post').textContent = logs.filter(function (l) { return l.method === 'POST'; }).length;
     $('stat-delete').textContent = logs.filter(function (l) { return l.method === 'DELETE'; }).length;
-    if (!list.length) { $('pl-body').innerHTML = '<p class="empty">Лог yok</p>'; return; }
+    if (!list.length) { $('pl-body').innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 20px;">Логи не найдены</p>'; return; }
     var html = '';
     list.forEach(function (l) {
       var icon = l.method === 'POST' ? 'fa-plus' : l.method === 'DELETE' ? 'fa-trash' : 'fa-eye';
-      html += '<div class="pl-item"><div class="pl-icon"><i class="fas ' + icon + '"></i></div>' +
-        '<div class="pl-action">' + esc(l.action) + '</div>' +
-        '<div class="pl-user" >' + esc(l.user) + '</div>' +
-        '<div class="pl-ip">' + esc(l.ip) + '</div>' +
-        '<div class="pl-time">' + esc(l.time) + '</div></div>';
+      var color = roleColor[l.role] || 'var(--text-muted)';
+      html += '<div style="display: flex; align-items: center; padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); gap: 12px;">' +
+        '<div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center;"><i class="fas ' + icon + '" style="color: ' + color + ';"></i></div>' +
+        '<div style="flex: 1;">' +
+          '<div style="font-weight: 500; margin-bottom: 4px;">' + esc(l.action) + '</div>' +
+          '<div style="font-size: 12px; color: var(--text-muted);">' + esc(l.user) + ' • ' + esc(l.ip) + '</div>' +
+        '</div>' +
+        '<div style="text-align: right;">' +
+          '<div style="font-size: 12px; color: var(--text-muted);">' + esc(l.time) + '</div>' +
+        '</div>' +
+      '</div>';
     });
     $('pl-body').innerHTML = html;
   }
@@ -102,7 +108,7 @@
     $('search').addEventListener('input', render);
     $('filter').addEventListener('change', render);
     $('btn-clear').addEventListener('click', function () {
-      if (confirm('Все panel loglarиnи temizle?')) { logs = []; render(); }
+      if (confirm('Очистить все логи панели?')) { logs = []; render(); }
     });
   }
 

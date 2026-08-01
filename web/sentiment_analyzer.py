@@ -32,7 +32,7 @@ class SentimentAnalyzer:
             r'[:\(]+|[:\[]+|[😢😭😡🤬💔👎]+',
         ],
         'neutral': [
-            r'\b(soru|podskajite|obyasnite|rasskajite)\b',
+            r'\b(вопрос|podskajite|obyasnite|rasskajite)\b',
             r'\b(interesno|lyubopitno|hm|hmm)\b',
         ],
     }

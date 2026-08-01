@@ -14,3 +14,5 @@ aiohttp>=3.9.0
 colorama>=0.4.6
 requests>=2.31.0
 yt-dlp>=2023.12.30
+websockets>=11.0
+Pillow>=10.0.0

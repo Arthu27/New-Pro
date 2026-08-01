@@ -6,7 +6,7 @@ import discord
 import random
 from datetime import datetime, timezone
 
-DIVIDER = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+DIVIDER = ""
 
 GIFS = {
     "ban": ["https://media.tenor.com/x8v1oNUOmg4AAAAC/ban-hammer.gif", "https://media.tenor.com/deECPGRKlmYAAAAC/ban-banned.gif"],
@@ -40,7 +40,7 @@ def _divider() -> str:
     return DIVIDER
 
 
-# ─── DM Embed (отправл пользователю) ────────────────────────────────────
+#  DM Embed (отправл пользователю) 
 
 def mod_dm_embed(action, guild, moderator, reason=None, extra_fields=None, gif_key=None):
     """DM сообщение пользователю — minimalizm stil"""
@@ -94,7 +94,7 @@ def mod_dm_embed(action, guild, moderator, reason=None, extra_fields=None, gif_k
 
     desc = f"## {cfg['title']}\n"
     desc += f"### {cfg['text']}\n"
-    desc += f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+    desc += f"\n\n"
     desc += f"**Сервер:** {guild.name}\n"
     desc += f"**Модератор:** {moderator.display_name}\n"
     desc += f"**Причина:** {reason or 'Не belirtildi'}\n"
@@ -104,7 +104,7 @@ def mod_dm_embed(action, guild, moderator, reason=None, extra_fields=None, gif_k
         for name, value, inline in extra_fields:
             desc += f"**{name}:** {value}\n"
 
-    desc += f"\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+    desc += f"\n\n"
     desc += f"> {cfg['note']}"
 
     e.description = desc
@@ -123,7 +123,7 @@ def mod_dm_embed(action, guild, moderator, reason=None, extra_fields=None, gif_k
     return e
 
 
-# ─── Mod Log Embed (отправл в mod-log канал) ────────────────────────────
+#  Mod Log Embed (отправл в mod-log канал) 
 
 def mod_log_embed(action, title, color, user, moderator, guild, reason=None, case_id=None, extra_fields=None):
     """Embed для mod-log канал — minimalizm stil"""
@@ -146,7 +146,7 @@ def mod_log_embed(action, title, color, user, moderator, guild, reason=None, cas
     return e
 
 
-# ─── Общий Embed'i ────────────────────────────────────────────────────────────
+#  Общий Embed'i 
 
 def success_embed(title, description, guild=None, gif_key=None, fields=None):
     """Успешно действие"""

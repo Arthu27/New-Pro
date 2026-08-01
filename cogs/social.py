@@ -16,8 +16,8 @@ EVENT_FILE  = 'data/events_{guild_id}.json'
 MATCH_FILE  = 'data/matchmaking_{guild_id}.json'
 
 # Emoji bar для
-BAR_FULL  = '█'
-BAR_EMPTY = '░'
+BAR_FULL  = ''
+BAR_EMPTY = ''
 
 def _bar(ratio: float, length: int = 12) -> str:
     filled = round(ratio * length)
@@ -32,16 +32,16 @@ def _save(path, data):
         json.dump(data, f, indent=2, ensure_ascii=False)
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# 
 # POLL VIEW
-# ══════════════════════════════════════════════════════════════════════════════
+# 
 class PollView(discord.ui.View):
     def __init__(self, poll_id: str, options: list, anonymous: bool, guild_id: str):
         super().__init__(timeout=None)
         self.poll_id = poll_id
         self.guild_id = guild_id
         self.anonymous = anonymous
-        emojis = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟']
+        emojis = ['1','2','3','4','5','6','7','8','9','']
         for i, opt in enumerate(options[:10]):
             btn = discord.ui.Button(
                 label=opt[:80],
@@ -58,10 +58,10 @@ class PollView(discord.ui.View):
             data = _load(path)
             poll = data.get(self.poll_id)
             if not poll:
-                await interaction.response.send_message("❌ Anket не найдено.", ephemeral=True)
+                await interaction.response.send_message(" Anket не найдено.", ephemeral=True)
                 return
             if poll.get('ended'):
-                await interaction.response.send_message("❌ Bu anket sona erdi.", ephemeral=True)
+                await interaction.response.send_message(" Bu anket sona erdi.", ephemeral=True)
                 return
 
             uid = str(interaction.user.id)
@@ -70,12 +70,12 @@ class PollView(discord.ui.View):
             # Одинаковый выбрать tekrar клик oyu geri al
             if votes.get(uid) == idx:
                 del votes[uid]
-                await interaction.response.send_message("🗑️ Игра отменена.", ephemeral=True)
+                await interaction.response.send_message(" Игра отменена.", ephemeral=True)
             else:
                 votes[uid] = idx
                 opt_name = poll['options'][idx]
                 await interaction.response.send_message(
-                    f"✅ **{opt_name}** выбрать oy verdin!" + (" (anonim)" if self.anonymous else ""),
+                    f" **{opt_name}** выбрать oy verdin!" + (" (anonim)" if self.anonymous else ""),
                     ephemeral=True
                 )
 
@@ -93,7 +93,7 @@ async def _update_poll_embed(message: discord.Message, poll: dict):
 
     e = message.embeds[0] if message.embeds else discord.Embed()
     e.clear_fields()
-    emojis = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟']
+    emojis = ['1','2','3','4','5','6','7','8','9','']
     for i, (opt, cnt) in enumerate(zip(options, counts)):
         ratio = cnt / total if total > 0 else 0
         bar = _bar(ratio)
@@ -103,44 +103,44 @@ async def _update_poll_embed(message: discord.Message, poll: dict):
             value=f"`{bar}` **{pct}** ({cnt} oy)",
             inline=False
         )
-    e.set_footer(text=f"📊 Всего {total} oy • Одинаковый butona клик oyunu geri alabilirsin")
+    e.set_footer(text=f" Всего {total} oy • Одинаковый butona клик oyunu geri alabilirsin")
     try:
         await message.edit(embed=e)
     except Exception:
         pass
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# 
 # EVENT VIEW
-# ══════════════════════════════════════════════════════════════════════════════
+# 
 class EventJoinView(discord.ui.View):
     def __init__(self, event_id: str, guild_id: str):
         super().__init__(timeout=None)
         self.event_id = event_id
         self.guild_id = guild_id
 
-    @discord.ui.button(label="Katıl", emoji="✅", style=discord.ButtonStyle.success, custom_id="event_join")
+    @discord.ui.button(label="Katıl", emoji="", style=discord.ButtonStyle.success, custom_id="event_join")
     async def join(self, interaction: discord.Interaction, button: discord.ui.Button):
         path = EVENT_FILE.format(guild_id=self.guild_id)
         data = _load(path)
         event = data.get(self.event_id)
         if not event:
-            await interaction.response.send_message("❌ Etkinlik не найдено.", ephemeral=True)
+            await interaction.response.send_message(" Etkinlik не найдено.", ephemeral=True)
             return
         uid = str(interaction.user.id)
         participants = event.setdefault('participants', [])
         if uid in participants:
             participants.remove(uid)
-            msg = "❌ Etkinlikten покинул."
+            msg = " Etkinlikten покинул."
         else:
             participants.append(uid)
-            msg = f"✅ **{event['title']}** etkinliğine присоединился!"
+            msg = f" **{event['title']}** etkinliğine присоединился!"
         _save(path, data)
         await interaction.response.send_message(msg, ephemeral=True)
         # Embed обновить
         await _update_event_embed(interaction.message, event)
 
-    @discord.ui.button(label="Участники", emoji="👥", style=discord.ButtonStyle.secondary, custom_id="event_list")
+    @discord.ui.button(label="Участники", emoji="", style=discord.ButtonStyle.secondary, custom_id="event_list")
     async def list_participants(self, interaction: discord.Interaction, button: discord.ui.Button):
         path = EVENT_FILE.format(guild_id=self.guild_id)
         data = _load(path)
@@ -151,7 +151,7 @@ class EventJoinView(discord.ui.View):
             return
         mentions = [f"<@{uid}>" for uid in participants[:20]]
         await interaction.response.send_message(
-            f"**👥 Участники ({len(participants)}):**\n" + ", ".join(mentions),
+            f"** Участники ({len(participants)}):**\n" + ", ".join(mentions),
             ephemeral=True
         )
 
@@ -161,7 +161,7 @@ async def _update_event_embed(message: discord.Message, event: dict):
     e = message.embeds[0] if message.embeds else discord.Embed()
     # Katılımcı число обновить
     for i, field in enumerate(e.fields):
-        if '👥' in field.name:
+        if '' in field.name:
             e.set_field_at(i, name=field.name, value=f"`{len(participants)} человек`", inline=field.inline)
             break
     try:
@@ -170,9 +170,9 @@ async def _update_event_embed(message: discord.Message, event: dict):
         pass
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# 
 # MATCHMAKING VIEW
-# ══════════════════════════════════════════════════════════════════════════════
+# 
 class MatchView(discord.ui.View):
     def __init__(self, match_id: str, guild_id: str, max_players: int):
         super().__init__(timeout=None)
@@ -180,34 +180,34 @@ class MatchView(discord.ui.View):
         self.guild_id = guild_id
         self.max_players = max_players
 
-    @discord.ui.button(label="Katıl", emoji="🎮", style=discord.ButtonStyle.success, custom_id="match_join")
+    @discord.ui.button(label="Katıl", emoji="", style=discord.ButtonStyle.success, custom_id="match_join")
     async def join(self, interaction: discord.Interaction, button: discord.ui.Button):
         path = MATCH_FILE.format(guild_id=self.guild_id)
         data = _load(path)
         match = data.get(self.match_id)
         if not match:
-            await interaction.response.send_message("❌ Матч не найден.", ephemeral=True)
+            await interaction.response.send_message(" Матч не найден.", ephemeral=True)
             return
         uid = str(interaction.user.id)
         players = match.setdefault('players', [])
         if uid in players:
             players.remove(uid)
-            await interaction.response.send_message("❌ Вы покинули матч.", ephemeral=True)
+            await interaction.response.send_message(" Вы покинули матч.", ephemeral=True)
         elif len(players) >= self.max_players:
-            await interaction.response.send_message("❌ Матч заполнен!", ephemeral=True)
+            await interaction.response.send_message(" Матч заполнен!", ephemeral=True)
             return
         else:
             players.append(uid)
-            await interaction.response.send_message(f"✅ **{match['game']}** — вы присоединились к матчу!", ephemeral=True)
+            await interaction.response.send_message(f" **{match['game']}** — вы присоединились к матчу!", ephemeral=True)
         _save(path, data)
         await _update_match_embed(interaction.message, match, self.max_players)
 
         # Takım doldu mu?
         if len(players) >= self.max_players:
             await interaction.channel.send(
-                f"🎮 **{match['game']}** командаı doldu! "
+                f" **{match['game']}** командаı doldu! "
                 + " ".join(f"<@{p}>" for p in players)
-                + "\nHaydi oynayın! 🚀"
+                + "\nHaydi oynayın! "
             )
 
 
@@ -215,7 +215,7 @@ async def _update_match_embed(message: discord.Message, match: dict, max_players
     players = match.get('players', [])
     e = message.embeds[0] if message.embeds else discord.Embed()
     for i, field in enumerate(e.fields):
-        if '👥' in field.name:
+        if '' in field.name:
             e.set_field_at(i, name=field.name, value=f"`{len(players)}/{max_players}`", inline=field.inline)
             break
     try:
@@ -224,9 +224,9 @@ async def _update_match_embed(message: discord.Message, match: dict, max_players
         pass
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# 
 # MAIN COG
-# ══════════════════════════════════════════════════════════════════════════════
+# 
 class Social(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -237,7 +237,7 @@ class Social(commands.Cog):
         self.poll_checker.cancel()
         self.event_reminder.cancel()
 
-    # ── ANKET ─────────────────────────────────────────────────────────────────
+    #  ANKET 
     @app_commands.command(name="anket", description="Создать новый опрос")
     @app_commands.describe(
         soru="Anket sorusu",
@@ -251,7 +251,7 @@ class Social(commands.Cog):
                           sure: int = 0, anonim: bool = False):
         options = [o.strip() for o in secenaddr.split(',') if o.strip()][:10]
         if len(options) < 2:
-            await interaction.response.send_message("❌ En az 2 выбрать gir!", ephemeral=True)
+            await interaction.response.send_message(" En az 2 выбрать gir!", ephemeral=True)
             return
 
         guild_id = str(interaction.guild.id)
@@ -276,18 +276,18 @@ class Social(commands.Cog):
         data[poll_id] = poll
         _save(path, data)
 
-        emojis = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟']
+        emojis = ['1','2','3','4','5','6','7','8','9','']
         e = discord.Embed(
-            title=f"📊 {soru}",
+            title=f" {soru}",
             color=0x3498db,
             timestamp=datetime.now(timezone.utc)
         )
-        e.description = f"{'🔒 Anonim oylama' if anonim else '👁️ Открыт oylama'}"
+        e.description = f"{' Anonim oylama' if anonim else ' Открыт oylama'}"
         for i, opt in enumerate(options):
-            e.add_field(name=f"{emojis[i]} {opt}", value=f"`{'░'*12}` **0%** (0 oy)", inline=False)
+            e.add_field(name=f"{emojis[i]} {opt}", value=f"`{''*12}` **0%** (0 oy)", inline=False)
         if ends_at:
             e.add_field(name="⏰ Окончание", value=f"<t:{int(datetime.fromisoformat(ends_at).timestamp())}:R>", inline=True)
-        e.set_footer(text=f"📊 Всего 0 oy • Одинаковый butona клик oyunu geri alabilirsin")
+        e.set_footer(text=f" Всего 0 oy • Одинаковый butona клик oyunu geri alabilirsin")
         e.set_author(name=interaction.user.display_name, icon_url=interaction.user.display_avatar.url)
 
         view = PollView(poll_id, options, anonim, guild_id)
@@ -307,11 +307,11 @@ class Social(commands.Cog):
         data = _load(path)
         poll = data.get(anket_id)
         if not poll:
-            await interaction.response.send_message("❌ Anket не найдено.", ephemeral=True)
+            await interaction.response.send_message(" Anket не найдено.", ephemeral=True)
             return
         poll['ended'] = True
         _save(path, data)
-        await interaction.response.send_message(f"✅ Anket `{anket_id}` заверш.", ephemeral=True)
+        await interaction.response.send_message(f" Anket `{anket_id}` заверш.", ephemeral=True)
 
     @tasks.loop(minutes=1)
     async def poll_checker(self):
@@ -338,13 +338,13 @@ class Social(commands.Cog):
                             counts = [sum(1 for v in votes.values() if v == i) for i in range(len(options))]
                             winner_idx = counts.index(max(counts)) if counts else 0
                             e = discord.Embed(
-                                title=f"📊 Anket результат: {poll['question']}",
+                                title=f" Anket результат: {poll['question']}",
                                 color=0x2ecc71
                             )
-                            emojis = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟']
+                            emojis = ['1','2','3','4','5','6','7','8','9','']
                             for i, (opt, cnt) in enumerate(zip(options, counts)):
                                 ratio = cnt / total if total > 0 else 0
-                                winner_mark = " 🏆" if i == winner_idx else ""
+                                winner_mark = " " if i == winner_idx else ""
                                 e.add_field(
                                     name=f"{emojis[i]} {opt}{winner_mark}",
                                     value=f"`{_bar(ratio)}` **{ratio:.0%}** ({cnt} oy)",
@@ -361,7 +361,7 @@ class Social(commands.Cog):
     async def before_poll_checker(self):
         await self.bot.wait_until_ready()
 
-    # ── ETKİNLİK ─────────────────────────────────────────────────────────────
+    #  ETKİNLİK 
     @app_commands.command(name="etkinlik", description="Создать новое событие")
     @app_commands.describe(
         baslik="Etkinlik başlığı",
@@ -377,7 +377,7 @@ class Social(commands.Cog):
             event_dt = datetime.strptime(date, '%d.%m.%Y %H:%M').replace(tzinfo=timezone.utc)
         except ValueError:
             await interaction.response.send_message(
-                "❌ Неверный формат даты! Пример: `25.12.2025 20:00`", ephemeral=True
+                " Неверный формат даты! Пример: `25.12.2025 20:00`", ephemeral=True
             )
             return
 
@@ -402,16 +402,16 @@ class Social(commands.Cog):
         _save(path, data)
 
         e = discord.Embed(
-            title=f"🎉 {baslik}",
+            title=f" {baslik}",
             description=aciklama,
             color=0x9b59b6,
             timestamp=datetime.now(timezone.utc)
         )
-        e.add_field(name="📅 Дата", value=f"<t:{int(event_dt.timestamp())}:F>", inline=True)
+        e.add_field(name=" Дата", value=f"<t:{int(event_dt.timestamp())}:F>", inline=True)
         e.add_field(name="⏰ Когда", value=f"<t:{int(event_dt.timestamp())}:R>", inline=True)
-        e.add_field(name="👥 Участники", value="`0 человек`" + (f" / {max_katilimci}" if max_katilimci else ""), inline=True)
+        e.add_field(name=" Участники", value="`0 человек`" + (f" / {max_katilimci}" if max_katilimci else ""), inline=True)
         e.set_author(name=interaction.user.display_name, icon_url=interaction.user.display_avatar.url)
-        e.set_footer(text=f"🎉 Aether Event Система • ID: {event_id}")
+        e.set_footer(text=f" Aether Event Система • ID: {event_id}")
 
         view = EventJoinView(event_id, guild_id)
         await interaction.response.send_message(embed=e, view=view)
@@ -431,14 +431,14 @@ class Social(commands.Cog):
             key=lambda x: x['date']
         )
 
-        e = discord.Embed(title="📅 Yaklaşan Etkinlikler", color=0x9b59b6, timestamp=now)
+        e = discord.Embed(title=" Yaklaşan Etkinlikler", color=0x9b59b6, timestamp=now)
         if not upcoming:
             e.description = "Yaklaşan etkinlik yok."
         else:
             for ev in upcoming[:8]:
                 dt = datetime.fromisoformat(ev['date'])
                 e.add_field(
-                    name=f"🎉 {ev['title']}",
+                    name=f" {ev['title']}",
                     value=f"<t:{int(dt.timestamp())}:F> • {len(ev.get('participants', []))} katılımcı",
                     inline=False
                 )
@@ -477,7 +477,7 @@ class Social(commands.Cog):
     async def before_event_reminder(self):
         await self.bot.wait_until_ready()
 
-    # ── MATCHMAKING ───────────────────────────────────────────────────────────
+    #  MATCHMAKING 
     @app_commands.command(name="oyun-ara", description="Поиск напарников для игры")
     @app_commands.describe(
         oyun="Игра имя",
@@ -488,7 +488,7 @@ class Social(commands.Cog):
                                   oyun: str, max_oyuncu: int = 5,
                                   not_: Optional[str] = None):
         if max_oyuncu < 2 or max_oyuncu > 20:
-            await interaction.response.send_message("❌ Количество игроков должно быть от 2 до 20!", ephemeral=True)
+            await interaction.response.send_message(" Количество игроков должно быть от 2 до 20!", ephemeral=True)
             return
 
         guild_id = str(interaction.guild.id)
@@ -509,16 +509,16 @@ class Social(commands.Cog):
         _save(path, data)
 
         e = discord.Embed(
-            title=f"🎮 {oyun} — Играcu Aramanıyor",
+            title=f" {oyun} — Играcu Aramanıyor",
             color=0x1abc9c,
             timestamp=datetime.now(timezone.utc)
         )
-        e.add_field(name="👥 Игроки", value=f"`1/{max_oyuncu}`", inline=True)
-        e.add_field(name="🎯 Игра", value=f"`{oyun}`", inline=True)
+        e.add_field(name=" Игроки", value=f"`1/{max_oyuncu}`", inline=True)
+        e.add_field(name=" Игра", value=f"`{oyun}`", inline=True)
         if not_:
-            e.add_field(name="📝 Not", value=f"`{not_}`", inline=True)
-        e.add_field(name="👤 Создал", value=interaction.user.mention, inline=True)
-        e.set_footer(text=f"🎮 Aether Matchmaking • Takım dolunca уведомление gelir")
+            e.add_field(name=" Not", value=f"`{not_}`", inline=True)
+        e.add_field(name=" Создал", value=interaction.user.mention, inline=True)
+        e.set_footer(text=f" Aether Matchmaking • Takım dolunca уведомление gelir")
         e.set_thumbnail(url=interaction.user.display_avatar.url)
 
         view = MatchView(match_id, guild_id, max_oyuncu)
@@ -538,15 +538,15 @@ class Social(commands.Cog):
             and len(m.get('players', [])) < m['max_players']
         ]
 
-        e = discord.Embed(title="🎮 Активен Игра Aramamaları", color=0x1abc9c, timestamp=now)
+        e = discord.Embed(title=" Активен Игра Aramamaları", color=0x1abc9c, timestamp=now)
         if not active:
             e.description = "Şu an активен oyun поиск yok.\n`/oyun-ara` с новый arama запустить!"
         else:
             for m in active[:8]:
                 players = m.get('players', [])
                 e.add_field(
-                    name=f"🎮 {m['game']}",
-                    value=f"👥 `{len(players)}/{m['max_players']}` • {m.get('note', '')} • <@{m['created_by']}>",
+                    name=f" {m['game']}",
+                    value=f" `{len(players)}/{m['max_players']}` • {m.get('note', '')} • <@{m['created_by']}>",
                     inline=False
                 )
         await interaction.response.send_message(embed=e, ephemeral=True)

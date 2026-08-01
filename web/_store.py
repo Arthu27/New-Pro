@@ -16,7 +16,7 @@ from collections import OrderedDict
 
 # ── Atomic file I/O ───────────────────────────────────────────────────────────
 def atomic_write_json(path, data, ensure_ascii=False):
-    """Yazarken once gecici dosyaya yaz, sonra os.replace ile atomik tasi."""
+    """Yazarken once gecici dosyaya yaz, после os.replace ile atomik tasi."""
     tmp = f"{path}.tmp.{os.getpid()}.{threading.get_ident()}"
     try:
         os.makedirs(os.path.dirname(path) or '.', exist_ok=True)
@@ -38,7 +38,7 @@ def atomic_write_json(path, data, ensure_ascii=False):
 
 
 def read_json(path, default=None):
-    """Guvenli okuma. Hata durumunda default dondurur."""
+    """Guvenli okuma. Ошибка durumunda default dondurur."""
     if not os.path.exists(path):
         return default
     try:
@@ -88,7 +88,7 @@ _cache = _TTLCache(maxsize=512)
 
 
 def cached_read_json(path, ttl=5.0, default=None):
-    """Dosyayi TTL kadar onbellekle. Sure doldugunda yeniden okur."""
+    """Dosyayi TTL onbellekle. Sure doldugunda yeniden okur."""
     if ttl <= 0:
         return read_json(path, default)
     key = ('json', os.path.abspath(path), os.path.getmtime(path) if os.path.exists(path) else 0)
@@ -101,7 +101,7 @@ def cached_read_json(path, ttl=5.0, default=None):
 
 
 def invalidate_path(path):
-    """Belirli bir dosya ile ilgili cache girdilerini temizle."""
+    """Belirli bir dosya ile ilgili cache girdilerini очистить."""
     abspath = os.path.abspath(path)
     with _cache._lock:
         for k in list(_cache._d.keys()):
@@ -122,7 +122,7 @@ def make_etag(payload):
                 _etag_hash_item(h, (k, payload[k]))
         else:
             _etag_hash_item(h, payload)
-        # Werkzeug'un set_etag'i "W/<etag>" veya "<etag>" seklinde kabul eder;
+        # Werkzeug'un set_etag'i "W/<etag>" или "<etag>" seklinde kabul eder;
         # tirnak icermeyen weak prefix kullaniyoruz.
         return 'W/' + h.hexdigest()
     except Exception:
@@ -159,7 +159,7 @@ class PeriodicFlush:
                 self._cv.notify_all()
 
     def maybe_notify(self):
-        """Tetiklemeli olarak uyandirma (esik degilse de doluysa bildir)."""
+        """Tetiklemeli как uyandirma (esik degilse de doluysa bildir)."""
         with self._cv:
             if self._buf:
                 self._cv.notify_all()

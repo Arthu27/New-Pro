@@ -17,7 +17,7 @@ for fname in os.listdir(templates_dir):
     # Multiline forEach pattern
     new_content = re.sub(
         r'(guilds\.forEach\(function\(g\)\s*\{[^}]+\}\s*\);)\s*\n(\s*\})',
-        lambda m: m.group(1) + '\n  if(guilds.length > 0) { sel.value = guilds[0].id; '
+        lambda m: m.group(1) + '\n if(guilds.length > 0) { sel.value = guilds[0].id; '
                   'if(typeof loadSettings===\'function\')loadSettings();'
                   'else if(typeof loadChannels===\'function\')loadChannels();'
                   'else if(typeof loadRoles===\'function\')loadRoles(); }\n' + m.group(2),

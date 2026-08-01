@@ -17,17 +17,17 @@ try:
     print('JSON zaten gecerli, sorun yok.')
 except json.JSONDecodeError as e:
     print(f'Ошибка: {e}')
-    # Bozuk noktaya kadar olan kısmı kurtarmaya çalış
+    # Bozuk noktaya olan kısmı kurtarmaya çalış
     # Каждый guild_id key'ini ayrı ayrı parse et
     data = {}
-    # Guild ID pattern'leri bul
+    # Guild ID pattern'leri найти
     guild_pattern = re.compile(r'"(\d{17,20})"\s*:\s*\[')
     matches = list(guild_pattern.finditer(raw))
     
     for i, m in enumerate(matches):
         guild_id = m.group(1)
         start = m.start()
-        # Вперед guild'in başına kadar al
+        # Вперед guild'in başına al
         end = matches[i+1].start() - 1 if i+1 < len(matches) else len(raw)
         chunk = '{' + raw[start:end].rstrip(',\n ') + '}'
         try:
@@ -35,7 +35,7 @@ except json.JSONDecodeError as e:
             data[guild_id] = parsed[guild_id]
             print(f'Guild {guild_id}: {len(data[guild_id])} event kurtarildi')
         except Exception as ex:
-            # В конец geçerli ] bul
+            # В конец geçerli ] найти
             arr_start = m.end() - 1
             depth = 0
             pos = arr_start

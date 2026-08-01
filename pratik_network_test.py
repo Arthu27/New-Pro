@@ -20,7 +20,7 @@ def test_1_local_network_discovery():
     """Test 1: Yerel Ağ Keşfi"""
     print_header("TEST 1: YEREL AĞ KEŞFİ")
     
-    # Kendi IP adresini bul
+    # Kendi IP adresini найти
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.connect(("8.8.8.8", 80))
@@ -62,7 +62,7 @@ def test_2_open_ports_check():
     """Test 2: Открыт Port Контроль (Только Kendi Информация)"""
     print_header("TEST 2: ОТКРЫТ PORT КОНТРОЛЬ")
     
-    print("🔍 Kendi infosayarınızdaki открыт portlar сканироватьnıyor...")
+    print("🔍 Kendi infosayarınızdaki открыт portlar scannıyor...")
     
     # Yaygın portlar
     common_ports = {
@@ -90,11 +90,11 @@ def test_2_open_ports_check():
             
             if result == 0:
                 open_ports.append((port, service))
-                print(f"⚠️  ОТКРЫТ: Port {port} ({service})")
+                print(f"⚠️ ОТКРЫТ: Port {port} ({service})")
             else:
                 print(f"✅ ЗАКРЫТ: Port {port} ({service})")
         except:
-            print(f"❌ ОШИБКА: Port {port} сканироватьnamadı")
+            print(f"❌ ОШИБКА: Port {port} scannamadı")
     
     if open_ports:
         print(f"\n🚨 {len(open_ports)} открыт port найдено!")
@@ -109,7 +109,7 @@ def test_3_wifi_security():
     print_header("TEST 3: WİFİ БЕЗОПАСНОСТЬ КОНТРОЛЬ")
     
     if platform.system() != "Windows":
-        print("ℹ️  Bu test только Windows для geçerlidir")
+        print("ℹ️ Bu test только Windows для geçerlidir")
         return []
     
     try:
@@ -137,14 +137,14 @@ def test_3_wifi_security():
                         security = line.split(":")[1].strip()
                         break
                 
-                print(f"   • {profile}: {security}")
+                print(f" • {profile}: {security}")
                 wifi_info.append({"ssid": profile, "security": security})
                 
             except:
-                print(f"   • {profile}: Контроль edilemedi")
+                print(f" • {profile}: Контроль edilemedi")
         
         if len(profiles) > 5:
-            print(f"   ... ve {len(profiles)-5} более")
+            print(f" ... ve {len(profiles)-5} более")
         
         return wifi_info
         
@@ -187,14 +187,14 @@ def test_4_dns_security():
                 result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
                 
                 if "Isimdress" in result.stdout or "answer" in result.stdout.lower():
-                    print(f"   ✅ {domain}: Erişilebilir")
+                    print(f" ✅ {domain}: Erişilebilir")
                 else:
-                    print(f"   ❌ {domain}: Erişilemez")
+                    print(f" ❌ {domain}: Erişilemez")
                     
             except subprocess.MuteExpired:
-                print(f"   ⏱️  {domain}: Mute")
+                print(f" ⏱️ {domain}: Mute")
             except:
-                print(f"   ❌ {domain}: Ошибка")
+                print(f" ❌ {domain}: Ошибка")
     
     print("\n💡 İpucu: Доверие DNS (1.1.1.1 или 8.8.8.8) использовать")
 
@@ -202,7 +202,7 @@ def test_5_firewall_check():
     """Test 5: Firewall Состояние"""
     print_header("TEST 5: FIREWALL КОНТРОЛЬ")
     
-    print("🛡️  Firewall statusu контроль ediliyor...")
+    print("🛡️ Firewall statusu контроль ediliyor...")
     
     if platform.system() == "Windows":
         try:
@@ -212,7 +212,7 @@ def test_5_firewall_check():
             if "State ON" in result.stdout:
                 print("✅ Windows Firewall: АКТИВЕН")
             elif "State OFF" in result.stdout:
-                print("⚠️  Windows Firewall: PASİF")
+                print("⚠️ Windows Firewall: PASİF")
             else:
                 print("❌ Firewall statusu belirlenemedi")
                 
@@ -220,17 +220,17 @@ def test_5_firewall_check():
             print("❌ Firewall контроль yapılamadı")
     
     else:
-        print("ℹ️  Bu test только Windows для")
+        print("ℹ️ Bu test только Windows для")
         # Linux для alternatif
         try:
             result = subprocess.run(["sudo", "ufw", "status"], 
                                   capture_output=True, text=True)
             if "inactive" in result.stdout.lower():
-                print("⚠️  UFW Firewall: PASİF")
+                print("⚠️ UFW Firewall: PASİF")
             else:
                 print("✅ UFW Firewall: АКТИВЕН")
         except:
-            print("ℹ️  UFW контроль edilemedi")
+            print("ℹ️ UFW контроль edilemedi")
 
 def test_6_system_hardening():
     """Test 6: Система Sertleştirme Predlojenieleri"""
@@ -246,10 +246,10 @@ def test_6_system_hardening():
         "✅ Gereksiz programları удален: Использовать написано",
         "✅ Guest hesabını закрыт: Windows'ta misafir hesabı",
         "✅ Remote Desktop'ı закрыт: Если использовать",
-        "✅ Paylaşımı лимит: Только gerekli dosyaları paylaşın"
+        "✅ Paylaşımı лимит: Только необходимо dosyaları paylaşın"
     ]
     
-    print("🛡️  Безопасность predlojenieleri:\n")
+    print("🛡️ Безопасность predlojenieleri:\n")
     for i, rec in enumerate(recommendations, 1):
         print(f"{i:2d}. {rec}")
 
@@ -284,7 +284,7 @@ def generate_report(test_results):
     if test_results.get('open_ports'):
         print("\n🚨 DİKKAT: Открыт portlar найдено!")
         for port, service in test_results['open_ports']:
-            print(f"   - Port {port} ({service})")
+            print(f" - Port {port} ({service})")
     
     print("\n🔒 SONRAKİ ADIMLAR:")
     print("1. Открыт portları закрыт")
@@ -296,7 +296,7 @@ def generate_report(test_results):
 def main():
     """Ana fonksiyon"""
     print("🔐 AĞ БЕЗОПАСНОСТЬ TEST ARACI - PRATİK ПРИМЕР")
-    print("⚠️  Только kendi ağınızı test etmek для использовать!\n")
+    print("⚠️ Только kendi ağınızı test etmek для использовать!\n")
     
     test_results = {}
     
@@ -342,12 +342,12 @@ def main():
     print("🎉 TESTLER ЗАВЕРШЕНО!")
     print("="*60)
     print("\n💡 Unutmayın: Безопасность bir длительность, bir kerelik iş не.")
-    print("   Düzenli как test yapın ve обновл kalın.\n")
+    print(" Düzenli как test yapın ve обновл kalın.\n")
 
 if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print("\n\n⏹️  Testler user сканироватьfından durduruldu.")
+        print("\n\n⏹️ Testler user scanfından остановлено.")
     except Exception as e:
         print(f"\n\n❌ Baddnmeyen ошибка: {e}")

@@ -1,12 +1,13 @@
 import discord
 from discord.ext import commands
+from config import Config
 import re, json, os
 from collections import defaultdict
 import time
 from datetime import timedelta
 
-DIV = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-LOG_CHANNEL_ID = 1491145640900558979  # Наказание messageları bu channela gider
+DIV = ""
+LOG_CHANNEL_ID = Config.LOG_CHANNEL_ID  # Наказание messageları bu channela gider
 
 def _load_cfg(guild_id):
     f = f'data/automod_{guild_id}.json'
@@ -80,15 +81,15 @@ class AutoMod(commands.Cog):
         if log_ch:
             e = discord.Embed(title=title, color=color, timestamp=discord.utils.utcnow())
             e.description = (
-                f"```ansi\n\u001b[1;31m⚡ АВТОМАТИЧЕСКАЯ МОДЕРАЦИЯ\u001b[0m\n```\n"
+                f"```ansi\n\u001b[1;31m АВТОМАТИЧЕСКАЯ МОДЕРАЦИЯ\u001b[0m\n```\n"
                 f"{DIV}\n\n{desc}\n\n{DIV}"
             )
             e.set_thumbnail(url=member.display_avatar.url)
-            e.add_field(name="👤 Пользователь", value=f"{member.mention}\n`{member.id}`", inline=True)
-            e.add_field(name="📺 Канал", value=channel.mention, inline=True)
+            e.add_field(name=" Пользователь", value=f"{member.mention}\n`{member.id}`", inline=True)
+            e.add_field(name=" Канал", value=channel.mention, inline=True)
             if action == 'timeout':
                 e.add_field(name="⏳ Наказание", value=f"```{duration_min} minutes mute```", inline=True)
-            e.set_footer(text="🤖 Aether AutoMod")
+            e.set_footer(text=" Aether AutoMod")
             await log_ch.send(embed=e)
 
     @commands.Cog.listener()
@@ -159,8 +160,8 @@ class AutoMod(commands.Cog):
             if word.lower() in content_lower:
                 await self._punish(
                     message,
-                    "🚫  YASAKLI KELİME",
-                    f"{message.author.mention} zapresennoe kelime ispolzovano!\n**📋 Причина:** `{word}` kelimesi zapreseno",
+                    "  YASAKLI KELİME",
+                    f"{message.author.mention} zapresennoe kelime ispolzovano!\n** Причина:** `{word}` kelimesi zapreseno",
                     0xe74c3c
                 )
                 return True
@@ -195,8 +196,8 @@ class AutoMod(commands.Cog):
         if ratio > 0.7:
             await self._punish(
                 message,
-                "🔠  CAPS LOCK ПРЕДУПРЕЖДЕНИЕ",
-                f"{message.author.mention} aşırı большой harf использовать!\n**📋 Причина:** CAPS filtresi нарушение",
+                "  CAPS LOCK ПРЕДУПРЕЖДЕНИЕ",
+                f"{message.author.mention} aşırı большой harf использовать!\n** Причина:** CAPS filtresi нарушение",
                 0xf39c12
             )
             return True
@@ -207,8 +208,8 @@ class AutoMod(commands.Cog):
             return False
         await self._punish(
             message,
-            "🔗  LİNK ENGELLENDİ",
-            f"{message.author.mention} link paylaşma администратор yok!\n**📋 Причина:** Link filtresi нарушение",
+            "  LİNK ENGELLENDİ",
+            f"{message.author.mention} link paylaşma администратор yok!\n** Причина:** Link filtresi нарушение",
             0xe67e22
         )
         return True
@@ -218,8 +219,8 @@ class AutoMod(commands.Cog):
             return False
         await self._punish(
             message,
-            "📨  DAVET LİNKİ ENGELLENDİ",
-            f"{message.author.mention} davet linki paylaşamazsın!\n**📋 Причина:** Davet filtresi нарушение",
+            "  DAVET LİNKİ ENGELLENDİ",
+            f"{message.author.mention} davet linki paylaşamazsın!\n** Причина:** Davet filtresi нарушение",
             0xe74c3c
         )
         return True
@@ -236,7 +237,7 @@ class AutoMod(commands.Cog):
             self.duplicate_tracker[uid].clear()
             await self._punish(
                 message,
-                "🔁  TEKRAR СООБЩЕНИЕ ПРЕДУПРЕЖДЕНИЕ",
+                "  TEKRAR СООБЩЕНИЕ ПРЕДУПРЕЖДЕНИЕ",
                 f"{message.author.mention} одинаковый сообщение tekrarlama!\n**⏳ Наказание:** 10 minutes mute",
                 0xe74c3c,
                 action='timeout',
@@ -254,7 +255,7 @@ class AutoMod(commands.Cog):
         if count >= 8:
             await self._punish(
                 message,
-                "📢  TOPLU MENTİON ПРЕДУПРЕЖДЕНИЕ",
+                "  TOPLU MENTİON ПРЕДУПРЕЖДЕНИЕ",
                 f"{message.author.mention} toplu mention zapresenotır!\n**⏳ Наказание:** 15 minutes mute",
                 0xe74c3c,
                 action='timeout',
@@ -268,8 +269,8 @@ class AutoMod(commands.Cog):
         if count >= 10:
             await self._punish(
                 message,
-                "😵  EMOJİ SPAM ПРЕДУПРЕЖДЕНИЕ",
-                f"{message.author.mention} очень fazla emoji использовать!\n**📋 Причина:** Emoji spam нарушение",
+                "  EMOJİ SPAM ПРЕДУПРЕЖДЕНИЕ",
+                f"{message.author.mention} очень fazla emoji использовать!\n** Причина:** Emoji spam нарушение",
                 0xf39c12
             )
             return True

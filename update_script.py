@@ -25,7 +25,7 @@ def update_bot():
     try:
         print("[UPDATE] Обновл başlıyor...")
         
-        # Текущий botu durdur (process kill)
+        # Текущий botu остановить (process kill)
         subprocess.run("taskkill /f /im python.exe", shell=True, capture_output=True)
         time.sleep(3)
         
@@ -44,7 +44,7 @@ def update_bot():
         if response.status_code != 200:
             raise Exception(f"Indirme ошибки: {response.status_code}")
         
-        # ZIP'i сохранить ve aç
+        # ZIP'i сохранить ve открыть
         zip_path = "C:/Users/İsmininistrator/Aether-update.zip"
         with open(zip_path, "wb") as f:
             f.write(response.content)
@@ -53,7 +53,7 @@ def update_bot():
         if os.path.exists(BOT_DIR):
             shutil.rmtree(BOT_DIR)
         
-        # ZIP'i aç
+        # ZIP'i открыть
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
             zip_ref.extractall("C:/Users/İsmininistrator/")
         

@@ -9,21 +9,25 @@ import threading
 import queue
 from typing import Dict, Any
 
+from logger import get_logger
+log = get_logger("logs")
+
+
 AUDIT_FILE = "data/audit_log.json"
 
 CATEGORIES = {
-    'mod':     {'label': 'Модерация',  'emoji': '🔨', 'color': 0xE74C3C, 'channel': 'moderasyon'},
-    'member':  {'label': 'Участники',   'emoji': '👤', 'color': 0x2ECC71, 'channel': 'участники'},
-    'message': {'label': 'Сообщения',   'emoji': '💬', 'color': 0x3498DB, 'channel': 'сообщения'},
-    'role':    {'label': 'Роли',        'emoji': '🎭', 'color': 0x9B59B6, 'channel': 'сервер'},
-    'channel': {'label': 'Каналы',      'emoji': '📺', 'color': 0xF39C12, 'channel': 'сервер'},
-    'voice':   {'label': 'Ses',       'emoji': '🔊', 'color': 0x1ABC9C, 'channel': 'ses'},
-    'сервер':  {'label': 'Сервер',      'emoji': '🏰', 'color': 0xE67E22, 'channel': 'сервер'},
-    'automod': {'label': 'Автоматически',     'emoji': '🤖', 'color': 0xE74C3C, 'channel': 'moderasyon'},
-    'invite':  {'label': 'Priglaseniya', 'emoji': '📨', 'color': 0x95A5A6, 'channel': 'сервер'},
+    'mod':     {'label': 'Модерация',  'emoji': '', 'color': 0xE74C3C, 'channel': 'moderasyon'},
+    'member':  {'label': 'Участники',   'emoji': '', 'color': 0x2ECC71, 'channel': 'участники'},
+    'message': {'label': 'Сообщения',   'emoji': '', 'color': 0x3498DB, 'channel': 'сообщения'},
+    'role':    {'label': 'Роли',        'emoji': '', 'color': 0x9B59B6, 'channel': 'сервер'},
+    'channel': {'label': 'Каналы',      'emoji': '', 'color': 0xF39C12, 'channel': 'сервер'},
+    'voice':   {'label': 'Голос',       'emoji': '', 'color': 0x1ABC9C, 'channel': 'ses'},
+    'сервер':  {'label': 'Сервер',      'emoji': '', 'color': 0xE67E22, 'channel': 'сервер'},
+    'automod': {'label': 'Автоматически',     'emoji': '', 'color': 0xE74C3C, 'channel': 'moderasyon'},
+    'invite':  {'label': 'Priglaseniya', 'emoji': '', 'color': 0x95A5A6, 'channel': 'сервер'},
 }
 
-DIV = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+DIV = ""
 
 # Önbellek сообщение — для znat soderjanie удален
 _msg_cache: dict = {}
@@ -43,7 +47,7 @@ def _audit_worker():
         try:
             _write_audit_event(event_data)
         except Exception as e:
-            print(f"[AUDIT-WORKER] Ошибка запись: {e}")
+            log.info(f"[AUDIT-WORKER] Ошибка запись: {e}")
         finally:
             _audit_queue.task_done()
 
@@ -89,12 +93,12 @@ def _write_audit_event(event_data: Dict[str, Any]):
             except PermissionError:
                 time.sleep(0.2)
     except Exception as e:
-        print(f"[AUDIT] Ошибка запись: {e}")
+        log.info(f"[AUDIT] Ошибка запись: {e}")
     finally:
         try:
             if os.path.exists(tmp):
                 os.remove(tmp)
-        except:
+        except Exception:
             pass
 
 def _ensure_worker():
@@ -117,13 +121,13 @@ def save_event(guild_id, category, action, details: dict):
 
 # Imena log-каналы
 LOG_CHANNELS = {
-    'moderasyon':  '🔨-модерация',
-    'участники':  '👤-участники',
-    'сообщения':  '💬-сообщения',
-    'ses':      '🔊-ses',
-    'сервер':     '⚙️-сервер',
+    'moderasyon':  '-модерация',
+    'участники':  '-участники',
+    'сообщения':  '-сообщения',
+    'ses':      '-ses',
+    'сервер':     '-сервер',
 }
-LOG_CATEGORY_NAME = '📋 Loglar'
+LOG_CATEGORY_NAME = ' Loglar'
 
 
 class Logs(commands.Cog):
@@ -149,7 +153,7 @@ class Logs(commands.Cog):
         ch = discord.utils.get(guild.text_channels, name="aether-logs")
         return ch
 
-    # ─── КОМАНДА: СОЗДАТЬ LOG-КАНАЛЫ ─────────────────────────────────
+    # КОМАНДА: СОЗДАТЬ LOG-КАНАЛЫ 
 
     @app_commands.command(name="setup-logs", description="Создать kategori ve каналы для logların")
     @app_commands.checks.has_permissions(administrator=True)
@@ -209,46 +213,46 @@ class Logs(commands.Cog):
                 created.append(ch_name)
 
         # Создал канал для приветствие если yok
-        welcome_ch = discord.utils.get(guild.text_channels, name="👋-приветствие")
+        welcome_ch = discord.utils.get(guild.text_channels, name="-приветствие")
         if not welcome_ch:
             welcome_ch = await guild.create_text_channel(
-                "👋-приветствие",
+                "-приветствие",
                 category=existing_cat,
                 reason="Aether: канал приветствие",
                 topic="Приветствие ve prosaniya с участник"
             )
-            created.append("👋-приветствие")
+            created.append("-приветствие")
         else:
-            already.append("👋-приветствие")
+            already.append("-приветствие")
 
         result_lines = []
         if created:
-            result_lines.append(f"✅ **Создало ({len(created)}):**\n" + "\n".join(f"• {c}" for c in created))
+            result_lines.append(f" **Создало ({len(created)}):**\n" + "\n".join(f"• {c}" for c in created))
         if already:
-            result_lines.append(f"📌 **Zaten susestvuyut ({len(already)}):**\n" + "\n".join(f"• {a}" for a in already))
+            result_lines.append(f" **Zaten susestvuyut ({len(already)}):**\n" + "\n".join(f"• {a}" for a in already))
 
         e = discord.Embed(
-            title="📋 Система logların nastroena",
+            title=" Система logların nastroena",
             description="\n\n".join(result_lines),
             color=0x2ECC71,
             timestamp=datetime.datetime.utcnow()
         )
         e.add_field(
-            name="📂 Каналы",
+            name=" Каналы",
             value=(
-                "🔨 **-moderasyon** — bani, kiki, muti, предупреждения\n"
-                "👤 **-участники** — вход, çıkış, smena nika\n"
-                "💬 **-сообщения** — удалить, redaktirovanie\n"
-                "🔊 **-ses** — вход/çıkış den ses\n"
-                "⚙️ **-сервер** — каналы, roles, invayti, сервер\n"
-                "👋 **-приветствие** — приветствие ve prosaniya"
+                " **-moderasyon** — bani, kiki, muti, предупреждения\n"
+                " **-участники** — вход, çıkış, smena nika\n"
+                " **-сообщения** — удалить, redaktirovanie\n"
+                " **-ses** — вход/çıkış den ses\n"
+                " **-сервер** — каналы, roles, invayti, сервер\n"
+                " **-приветствие** — приветствие ve prosaniya"
             ),
             inline=False
         )
         e.set_footer(text=f"Aether • {guild.name}", icon_url=guild.icon.url if guild.icon else None)
         await interaction.followup.send(embed=e, ephemeral=True)
 
-    # ─── УЧАСТНИКИ ────────────────────────────────────────────────────
+    # УЧАСТНИКИ 
 
     @commands.Cog.listener()
     async def on_member_join(self, member):
@@ -277,7 +281,7 @@ class Logs(commands.Cog):
                         e.set_thumbnail(url=member.display_avatar.url)
                         await wch.send(embed=e)
         except Exception as _e:
-            print(f'[WELCOME] Ошибка: {_e}')
+            log.info(f'[WELCOME] Ошибка: {_e}')
 
         ch = await self.get_log_channel(member.guild, 'member')
         if not ch:
@@ -285,7 +289,7 @@ class Logs(commands.Cog):
 
         # Hesap yaşı formatı
         if age_days < 7:
-            age_text = f"⚠️ новый hesap ({age_days} dn.)"
+            age_text = f" новый hesap ({age_days} dn.)"
         elif age_days < 30:
             age_text = f"{age_days} день"
         elif age_days < 365:
@@ -303,13 +307,13 @@ class Logs(commands.Cog):
         e.description = (
             f"## Добро пожаловать добро пожаловать geldiniz!\n"
             f"### {member.mention} prisoedinilsya e на сервер\n"
-            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            f"\n\n"
             f"**Пользователь** — {member.display_name}\n"
             f"**ID** — `{member.id}`\n"
             f"**Hesap** — {age_text}\n"
             f"**Участник** — {member_count}-y на на сервере\n"
             f"**Prisoedinilsya** — <t:{join_ts}:R>\n\n"
-            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            f""
         )
         e.set_thumbnail(url=member.display_avatar.url)
 
@@ -355,7 +359,7 @@ class Logs(commands.Cog):
                         e.set_thumbnail(url=member.display_avatar.url)
                         await lch.send(embed=e)
         except Exception as _e:
-            print(f'[LEAVE] Ошибка: {_e}')
+            log.info(f'[LEAVE] Ошибка: {_e}')
 
         ch = await self.get_log_channel(member.guild, 'member')
         if not ch:
@@ -382,13 +386,13 @@ class Logs(commands.Cog):
         e.description = (
             f"## Участник visel\n"
             f"### {member.display_name} pokinul сервер\n"
-            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            f"\n\n"
             f"**Пользователь** — {member.display_name}\n"
             f"**ID** — `{member.id}`\n"
             f"**Bil на на сервере** — {joined_ago}\n"
             f"**Роли** — {roles_str[:200]}\n"
             f"**Участников** — {member_count}\n\n"
-            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            f""
         )
         e.set_thumbnail(url=member.display_avatar.url)
 
@@ -474,7 +478,7 @@ class Logs(commands.Cog):
                     with open(_f, 'w', encoding='utf-8') as fp:
                         json.dump(_d, fp, indent=2, ensure_ascii=False)
                 except Exception as _e:
-                    print(f'[LOGS] Ошибка запись mute: {_e}')
+                    log.info(f'[LOGS] Ошибка запись mute: {_e}')
             else:
                 save_event(before.guild.id, 'mod', 'Mute удалено', {
                     'user_id': str(after.id),
@@ -502,7 +506,7 @@ class Logs(commands.Cog):
                 e.set_footer(text=f"{before.guild.name}")
                 await ch.send(embed=e)
 
-    # ─── СООБЩЕНИЯ ────────────────────────────────────────────────────
+    # СООБЩЕНИЯ 
 
     @commands.Cog.listener()
     async def on_message(self, message):
@@ -554,7 +558,7 @@ class Logs(commands.Cog):
             with open(f, 'w', encoding='utf-8') as fp:
                 _json.dump(logs, fp, ensure_ascii=False)
         except Exception as e:
-            print(f'[LOG] save_message_log error: {e}')
+            log.info(f'[LOG] save_message_log error: {e}')
 
     @commands.Cog.listener()
     async def on_message_delete(self, message):
@@ -608,7 +612,7 @@ class Logs(commands.Cog):
         e.set_footer(text=f"{before.guild.name}")
         await ch.send(embed=e)
 
-    # ─── SES КАНАЛЫ ────────────────────────────────────────────
+    # SES КАНАЛЫ 
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):
@@ -618,13 +622,13 @@ class Logs(commands.Cog):
             action = 'Vosel в ses'
             detail = {'channel': after.channel.name}
             color = 0x1ABC9C
-            icon = "🔊"
+            icon = ""
             desc = f"**{member.display_name}** podanahtarilsya e seste канал."
         else:
             action = 'Visel den ses'
             detail = {'channel': before.channel.name}
             color = 0x95A5A6
-            icon = "🔇"
+            icon = ""
             desc = f"**{member.display_name}** bağlandı den ses канал."
 
         save_event(member.guild.id, 'voice', action, {
@@ -645,7 +649,7 @@ class Logs(commands.Cog):
         e.set_footer(text=f"{member.guild.name}")
         await ch.send(embed=e)
 
-    # ─── КАНАЛЫ ───────────────────────────────────────────────────────
+    # КАНАЛЫ 
 
     @commands.Cog.listener()
     async def on_guild_channel_create(self, channel):
@@ -694,7 +698,7 @@ class Logs(commands.Cog):
                 'new_name': after.name,
             })
 
-    # ─── ROLES ─────────────────────────────────────────────────────────
+    # ROLES 
 
     @commands.Cog.listener()
     async def on_guild_role_create(self, roles):
@@ -719,7 +723,7 @@ class Logs(commands.Cog):
                 'new_name': after.name,
             })
 
-    # ─── PRIGLASENIYa ──────────────────────────────────────────────────
+    # PRIGLASENIYa 
 
     @commands.Cog.listener()
     async def on_invite_create(self, invite):
@@ -738,7 +742,7 @@ class Logs(commands.Cog):
             'channel': invite.channel.name if invite.channel else '?',
         })
 
-    # ─── СЕРВЕР ───────────────────────────────────────────────────────
+    # СЕРВЕР 
 
     @commands.Cog.listener()
     async def on_guild_update(self, before, after):
@@ -748,7 +752,7 @@ class Logs(commands.Cog):
                 'new_name': after.name,
             })
 
-    # ─── DISCORD AUDIT LOG SYNC ───────────────────────────────────────
+    # DISCORD AUDIT LOG SYNC 
 
     async def _sync_discord_audit_log(self):
         seen_file = 'data/audit_seen.json'
@@ -757,7 +761,7 @@ class Logs(commands.Cog):
             try:
                 with open(seen_file, 'r', encoding='utf-8') as f:
                     seen = json.load(f)
-            except:
+            except Exception:
                 pass
 
         action_map = {
@@ -775,7 +779,7 @@ class Logs(commands.Cog):
             discord.AuditLogAction.invite_create:      ('invite',  'Davet создано'),
             discord.AuditLogAction.invite_delete:      ('invite',  'Davet удалено'),
             discord.AuditLogAction.message_delete:     ('message', 'Сообщение удалено'),
-            discord.AuditLogAction.message_bulk_delete:('message', 'Toplu удалить'),
+            discord.AuditLogAction.message_bulk_delete:('message', 'Массовая удалить'),
             discord.AuditLogAction.guild_update:       ('сервер',  'Сервер обновлено'),
             discord.AuditLogAction.webhook_create:     ('сервер',  'Vebhuk создано'),
             discord.AuditLogAction.webhook_delete:     ('сервер',  'Vebhuk удалено'),
@@ -787,7 +791,7 @@ class Logs(commands.Cog):
             try:
                 with open(cache_file, 'r', encoding='utf-8') as f:
                     cache = json.load(f)
-            except:
+            except Exception:
                 pass
 
         for guild in self.bot.guilds:
@@ -809,7 +813,7 @@ class Logs(commands.Cog):
             except discord.Forbidden:
                 continue
             except Exception as e:
-                print(f'[LOGS] Ошибка audit log ({guild.name}): {e}')
+                log.info(f'[LOGS] Ошибка audit log ({guild.name}): {e}')
                 continue
 
             if not new_entries:
@@ -871,12 +875,12 @@ class Logs(commands.Cog):
             with open(cache_file, 'w', encoding='utf-8') as f:
                 json.dump(cache, f, ensure_ascii=False, indent=2)
         except Exception as e:
-            print(f'[LOGS] Ошибка запись kesa: {e}')
+            log.info(f'[LOGS] Ошибка запись kesa: {e}')
 
         try:
             with open(seen_file, 'w', encoding='utf-8') as f:
                 json.dump(seen, f)
-        except:
+        except Exception:
             pass
 
     @commands.Cog.listener()
@@ -896,7 +900,7 @@ class Logs(commands.Cog):
             except Exception as e:
                 fail_count += 1
                 wait = min(60 * fail_count, 300)
-                print(f'[LOGS] Ошибка sync ({fail_count}): {e} — jdem {wait}с')
+                log.info(f'[LOGS] Ошибка sync ({fail_count}): {e} — jdem {wait}с')
                 await asyncio.sleep(wait)
 
 

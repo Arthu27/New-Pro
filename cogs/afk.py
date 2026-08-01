@@ -48,7 +48,7 @@ class AFK(commands.Cog):
             icon_url=interaction.user.display_avatar.url
         )
         e.description = (
-            f"```\n😴  AFK MODU АКТИВЕН\n```\n"
+            f"```\n  AFK MODU АКТИВЕН\n```\n"
             f"> **Причина:** {reason}\n"
             f"> **Başlangıç:** <t:{ts}:R>\n\n"
             f"*Biri seni mention edince уведомление alacaklar.*"
@@ -57,11 +57,11 @@ class AFK(commands.Cog):
         e.set_footer(text="AFK'dan çıkmak для: /afk-удалить")
         await interaction.response.send_message(embed=e)
 
-        # Nick'e 😴 add
+        # Nick'e  add
         try:
             nick = interaction.user.display_name
-            if not nick.startswith("😴"):
-                await interaction.user.edit(nick=f"😴 {nick[:28]}")
+            if not nick.startswith(""):
+                await interaction.user.edit(nick=f" {nick[:28]}")
         except Exception:
             pass
 
@@ -72,12 +72,12 @@ class AFK(commands.Cog):
             await interaction.response.send_message("Вы не в режиме AFK.", ephemeral=True)
             return
         self._remove(interaction.guild_id, interaction.user.id)
-        # Nick'ten 😴 удалить
+        # Nick'ten  удалить
         try:
             nick = interaction.user.display_name
-            if nick.startswith("😴 "):
+            if nick.startswith(" "):
                 await interaction.user.edit(nick=nick[2:].strip() or None)
-        except:
+        except Exception:
             pass
         # Baddyen mention'ları показать
         uid = interaction.user.id
@@ -87,13 +87,13 @@ class AFK(commands.Cog):
             for p in pending[-10:]:
                 lines.append(f"• **{p['from']}** — {p['guild']} #{p['channel']}\n  > {p['msg'][:100]}")
             embed = discord.Embed(
-                title=f'👋 Добро пожаловать geldin! {len(pending)} человек seni etiketledi',
+                title=f' Добро пожаловать geldin! {len(pending)} человек seni etiketledi',
                 description='\n\n'.join(lines),
                 color=0x57F287
             )
             await interaction.response.send_message(embed=embed)
         else:
-            await interaction.response.send_message('✅ AFK modu закрыто! Кто seni etiketlemedi.')
+            await interaction.response.send_message(' AFK modu закрыто! Кто seni etiketlemedi.')
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -118,10 +118,10 @@ class AFK(commands.Cog):
             )
             e.description = f"> Нетtu: **{dur}**\n> Причина: *{afk_data['reason']}*"
             await message.channel.send(embed=e, delete_after=8)
-            # Nick'ten 😴 удалить
+            # Nick'ten  удалить
             try:
                 nick = message.author.display_name
-                if nick.startswith("😴 "):
+                if nick.startswith(" "):
                     await message.author.edit(nick=nick[2:].strip() or None)
             except Exception:
                 pass
@@ -144,7 +144,7 @@ class AFK(commands.Cog):
             if data.get('owner_mode') and OWNER_ID and mentioned.id == OWNER_ID:
                 e = discord.Embed(color=0x5865F2, timestamp=datetime.now(timezone.utc))
                 e.set_author(
-                    name=f"{mentioned.display_name} şu an uyuyor 😴",
+                    name=f"{mentioned.display_name} şu an uyuyor ",
                     icon_url=mentioned.display_avatar.url
                 )
                 e.description = (
@@ -182,29 +182,29 @@ class AFK(commands.Cog):
                         description=(
                             f'**{message.author.display_name}** seni etiketledi ve şunu sordu:\n\n'
                             f'> {follow.content[:500]}\n\n'
-                            f'📍 {message.guild.name} — #{message.channel.name}'
+                            f' {message.guild.name} — #{message.channel.name}'
                         )
                     )
                     dm_embed.set_author(
-                        name='Uyurken seni etiketlediler 😴',
+                        name='Uyurken seni etiketlediler ',
                         icon_url=message.author.display_avatar.url
                     )
                     await owner.send(embed=dm_embed)
                     # Канал bildir
                     await message.channel.send(
-                        f'✅ Сообщения Arthur\'a iletildi! Uyanınca ответитьecek.',
+                        f' Сообщения Arthur\'a iletildi! Uyanınca ответитьecek.',
                         delete_after=10
                     )
                     # Pending'e add
                     _pending_mentions[OWNER_ID][-1]['follow_msg'] = follow.content
-                except:
+                except Exception:
                     pass
 
             else:
                 # Normal AFK уведомление
                 e = discord.Embed(color=0x5865F2, timestamp=datetime.now(timezone.utc))
                 e.set_author(
-                    name=f"{mentioned.display_name} şu an AFK 😴",
+                    name=f"{mentioned.display_name} şu an AFK ",
                     icon_url=mentioned.display_avatar.url
                 )
                 e.description = (
@@ -223,15 +223,15 @@ class AFK(commands.Cog):
                             description=(
                                 f'**{message.author.display_name}** seni etiketledi:\n\n'
                                 f'> {message.content[:500]}\n\n'
-                                f'📍 {message.guild.name} — #{message.channel.name}'
+                                f' {message.guild.name} — #{message.channel.name}'
                             )
                         )
                         dm_embed.set_author(
-                            name='Seni etiketlediler (AFK modundasın) 😴',
+                            name='Seni etiketlediler (AFK modundasın) ',
                             icon_url=message.author.display_avatar.url
                         )
                         await owner.send(embed=dm_embed)
-                    except:
+                    except Exception:
                         pass
 
 

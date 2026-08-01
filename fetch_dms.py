@@ -41,7 +41,7 @@ async def on_ready():
         if uid.isdigit():
             known_users.add(int(uid))
 
-    print(f'Всего {len(known_users)} user сканироватьnacak...')
+    print(f'Всего {len(known_users)} user scannacak...')
 
     for uid in known_users:
         try:
@@ -57,9 +57,9 @@ async def on_ready():
                 })
             if msgs:
                 dm_log[str(uid)] = msgs
-                print(f'  {user.display_name}: {len(msgs)} message')
+                print(f' {user.display_name}: {len(msgs)} message')
         except Exception as e:
-            print(f'  {uid} ошибка: {e}')
+            print(f' {uid} ошибка: {e}')
         await asyncio.sleep(0.5)  # rate limit
 
     os.makedirs('data', exist_ok=True)

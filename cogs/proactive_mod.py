@@ -12,6 +12,10 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 import asyncio
 
+from logger import get_logger
+log = get_logger("proactive_mod")
+
+
 
 class ProactiveModeration(commands.Cog):
     """AI kotoriy kendi sledit для catom"""
@@ -111,7 +115,7 @@ class ProactiveModeration(commands.Cog):
             await alert_channel.send(embed=e)
             
         except Exception as e:
-            print(f"[SENTIMENT] Ошибка denhaklarınki предупреждение: {e}")
+            log.info(f"[SENTIMENT] Ошибка denhaklarınki предупреждение: {e}")
     
     async def _check_toxicity(self, message: discord.Message):
         """Контроль ediyor на toksisite"""
@@ -219,7 +223,7 @@ class ProactiveModeration(commands.Cog):
             await alert_channel.send(embed=e)
             
         except Exception as e:
-            print(f"[PROACTIVE] Ошибка уведомления: {e}")
+            log.info(f"[PROACTIVE] Ошибка уведомления: {e}")
     
     @commands.command(name="proactive-stats")
     @commands.has_permissions(kick_members=True)

@@ -53,7 +53,7 @@ def _score_label(score):
     if score >= 80: return "🟢 Mükemmel", 0x2ecc71
     if score >= 60: return "🟡 İyi", 0xf1c40f
     if score >= 40: return "🟠 Orta", 0xe67e22
-    return "🔴 Kötü", 0xe74c3c
+    return " Kötü", 0xe74c3c
 
 
 class Health(commands.Cog):
@@ -134,23 +134,23 @@ class Health(commands.Cog):
         score = _calc_score(data, interaction.guild)
         label, color = _score_label(score)
 
-        e = discord.Embed(title=f"🏥 {interaction.guild.name} — состояние Puanlamau", color=color)
+        e = discord.Embed(title=f" {interaction.guild.name} — состояние Puanlamau", color=color)
         e.set_thumbnail(url=interaction.guild.icon.url if interaction.guild.icon else None)
 
         bar_filled = round(score / 10)
-        bar = "█" * bar_filled + "░" * (10 - bar_filled)
+        bar = "" * bar_filled + "" * (10 - bar_filled)
         e.add_field(name="Puanlama", value=f"`{bar}` **{score}/100** {label}", inline=False)
 
-        e.add_field(name="🔨 Ban", value=str(data.get('ban_count', 0)), inline=True)
-        e.add_field(name="👢 Kick", value=str(data.get('kick_count', 0)), inline=True)
-        e.add_field(name="⚠️ Spam", value=str(data.get('spam_count', 0)), inline=True)
+        e.add_field(name=" Ban", value=str(data.get('ban_count', 0)), inline=True)
+        e.add_field(name=" Kick", value=str(data.get('kick_count', 0)), inline=True)
+        e.add_field(name=" Spam", value=str(data.get('spam_count', 0)), inline=True)
 
         # En активен channellar
         ch_msgs = data.get('channel_messages', {})
         top = sorted(ch_msgs.values(), key=lambda x: x.get('total', 0), reverse=True)[:3]
         if top:
             ch_text = "\n".join(f"#{c['name']}: {c['total']} message" for c in top)
-            e.add_field(name="📊 En Активен Каналы", value=ch_text, inline=False)
+            e.add_field(name=" En Активен Каналы", value=ch_text, inline=False)
 
         e.set_footer(text="Puanlama: ban/kick/spam oranı ve активен по hesaplanır")
         await interaction.response.send_message(embed=e)
@@ -162,17 +162,17 @@ class Health(commands.Cog):
         ch_msgs = data.get('channel_messages', {})
 
         if not ch_msgs:
-            await interaction.response.send_message("❌ Пока Данные yok.", ephemeral=True)
+            await interaction.response.send_message(" Пока Данные yok.", ephemeral=True)
             return
 
         top = sorted(ch_msgs.values(), key=lambda x: x.get('total', 0), reverse=True)[:10]
         max_val = top[0]['total'] if top else 1
 
-        e = discord.Embed(title="📊 Канал Статистика", color=0x3498db)
+        e = discord.Embed(title=" Канал Статистика", color=0x3498db)
         lines = []
         for i, c in enumerate(top, 1):
             pct = round(c['total'] / max_val * 20)
-            bar = "█" * pct + "░" * (20 - pct)
+            bar = "" * pct + "" * (20 - pct)
             lines.append(f"`{i:2}.` #{c['name']}\n`{bar}` {c['total']}")
         e.description = "\n\n".join(lines)
         await interaction.response.send_message(embed=e)

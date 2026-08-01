@@ -15,14 +15,14 @@ for fname in os.listdir(templates_dir):
     if 'guilds.length > 0' in content or 'guilds[0]' in content:
         continue
     
-    # loadGuilds fonksiyonunu bul ve düzelt
+    # loadGuilds fonksiyonunu найти ve düzelt
     # Pattern: guilds.forEach(...); } (son satır) -> guilds.forEach(...); if(guilds.length>0){sel.value=guilds[0].id; loadSettings();}
     
     # Разница pattern'ler dene
     patterns = [
         # Pattern 1: forEach sonrası kapanış
         (r'(guilds\.forEach\([^;]+;\s*\n\s*\})',
-         r'\1\n  if(guilds.length > 0) { document.getElementById(\'guild-select\').value = guilds[0].id; if(typeof loadSettings === \'function\') loadSettings(); else if(typeof loadChannels === \'function\') loadChannels(); }'),
+         r'\1\n if(guilds.length > 0) { document.getElementById(\'guild-select\').value = guilds[0].id; if(typeof loadSettings === \'function\') loadSettings(); else if(typeof loadChannels === \'function\') loadChannels(); }'),
     ]
     
     new_content = content

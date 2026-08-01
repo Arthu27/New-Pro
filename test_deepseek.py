@@ -29,7 +29,7 @@ async def test():
                 t = await inp.get_attribute('type')
                 p = await inp.get_attribute('placeholder')
                 n = await inp.get_attribute('name')
-                print(f"  [{i}] type={t} placeholder={p} name={n}")
+                print(f" [{i}] type={t} placeholder={p} name={n}")
             except:
                 pass
 
@@ -39,7 +39,7 @@ async def test():
         for i, btn in enumerate(buttons[:10]):
             try:
                 txt = await btn.inner_text()
-                print(f"  [{i}] {txt[:50]}")
+                print(f" [{i}] {txt[:50]}")
             except:
                 pass
 

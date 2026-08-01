@@ -18,80 +18,84 @@ import time
 from datetime import datetime, timedelta
 from collections import defaultdict
 
+from logger import get_logger
+log = get_logger("leveling_engagement")
+
+
 DATA_DIR = "data"
 os.makedirs(DATA_DIR, exist_ok=True)
 
-# ─── ACHIEVEMENTS CATALOG (50+) ────────────────────────────────
+# ACHIEVEMENTS CATALOG (50+) 
 ACHIEVEMENTS = {
     # Milestone achievements
-    "first_message":   {"name": "Первые шаги",        "desc": "Отправить первое сообщение",        "icon": "👋", "rarity": "common"},
-    "messages_100":    {"name": "Болтун",              "desc": "100 сообщений",                      "icon": "💬", "rarity": "common"},
-    "messages_500":    {"name": "Активист",            "desc": "500 сообщений",                      "icon": "📢", "rarity": "common"},
-    "messages_1000":   {"name": "Душа компании",       "desc": "1,000 сообщений",                    "icon": "🎭", "rarity": "uncommon"},
-    "messages_5000":   {"name": "Легенда чата",        "desc": "5,000 сообщений",                    "icon": "👑", "rarity": "rare"},
-    "messages_10000":  {"name": "Миф сервера",         "desc": "10,000 сообщений",                   "icon": "🏆", "rarity": "epic"},
-    "messages_50000":  {"name": "Бог дискорда",        "desc": "50,000 сообщений",                   "icon": "⚡", "rarity": "legendary"},
+    "first_message":   {"name": "Первые шаги",        "desc": "Отправить первое сообщение",        "icon": "", "rarity": "common"},
+    "messages_100":    {"name": "Болтун",              "desc": "100 сообщений",                      "icon": "", "rarity": "common"},
+    "messages_500":    {"name": "Активист",            "desc": "500 сообщений",                      "icon": "", "rarity": "common"},
+    "messages_1000":   {"name": "Душа компании",       "desc": "1,000 сообщений",                    "icon": "", "rarity": "uncommon"},
+    "messages_5000":   {"name": "Легенда чата",        "desc": "5,000 сообщений",                    "icon": "", "rarity": "rare"},
+    "messages_10000":  {"name": "Миф сервера",         "desc": "10,000 сообщений",                   "icon": "", "rarity": "epic"},
+    "messages_50000":  {"name": "Бог дискорда",        "desc": "50,000 сообщений",                   "icon": "", "rarity": "legendary"},
 
     # Voice achievements
-    "first_voice":     {"name": "Голос",               "desc": "Зайти в голосовой канал",            "icon": "🎙️", "rarity": "common"},
-    "voice_1h":        {"name": "Чат-компаньон",       "desc": "1 час в голосе",                     "icon": "🎤", "rarity": "common"},
-    "voice_10h":       {"name": "Завсегдатай",         "desc": "10 часов в голосе",                  "icon": "📻", "rarity": "uncommon"},
-    "voice_50h":       {"name": "Радиоведущий",        "desc": "50 часов в голосе",                  "icon": "🎧", "rarity": "rare"},
-    "voice_100h":      {"name": "Голосовой мастер",    "desc": "100 часов в голосе",                 "icon": "🌟", "rarity": "epic"},
-    "voice_500h":      {"name": "DJ сервера",          "desc": "500 часов в голосе",                 "icon": "💿", "rarity": "legendary"},
+    "first_voice":     {"name": "Голос",               "desc": "Зайти в голосовой канал",            "icon": "", "rarity": "common"},
+    "voice_1h":        {"name": "Чат-компаньон",       "desc": "1 час в голосе",                     "icon": "", "rarity": "common"},
+    "voice_10h":       {"name": "Завсегдатай",         "desc": "10 часов в голосе",                  "icon": "", "rarity": "uncommon"},
+    "voice_50h":       {"name": "Радиоведущий",        "desc": "50 часов в голосе",                  "icon": "", "rarity": "rare"},
+    "voice_100h":      {"name": "Голосовой мастер",    "desc": "100 часов в голосе",                 "icon": "", "rarity": "epic"},
+    "voice_500h":      {"name": "DJ сервера",          "desc": "500 часов в голосе",                 "icon": "", "rarity": "legendary"},
 
     # Level achievements
-    "level_5":         {"name": "Новичок+",            "desc": "Достичь 5 уровня",                   "icon": "🌱", "rarity": "common"},
-    "level_10":        {"name": "Участник",            "desc": "Достичь 10 уровня",                  "icon": "🌿", "rarity": "common"},
-    "level_25":        {"name": "Ветеран",             "desc": "Достичь 25 уровня",                  "icon": "🌳", "rarity": "uncommon"},
-    "level_50":        {"name": "Элита",               "desc": "Достичь 50 уровня",                  "icon": "⭐", "rarity": "rare"},
-    "level_75":        {"name": "Магистр",             "desc": "Достичь 75 уровня",                  "icon": "✨", "rarity": "epic"},
-    "level_100":       {"name": "Легенда",             "desc": "Достичь 100 уровня",                 "icon": "💎", "rarity": "legendary"},
+    "level_5":         {"name": "Новичок+",            "desc": "Достичь 5 уровня",                   "icon": "", "rarity": "common"},
+    "level_10":        {"name": "Участник",            "desc": "Достичь 10 уровня",                  "icon": "", "rarity": "common"},
+    "level_25":        {"name": "Ветеран",             "desc": "Достичь 25 уровня",                  "icon": "", "rarity": "uncommon"},
+    "level_50":        {"name": "Элита",               "desc": "Достичь 50 уровня",                  "icon": "", "rarity": "rare"},
+    "level_75":        {"name": "Магистр",             "desc": "Достичь 75 уровня",                  "icon": "", "rarity": "epic"},
+    "level_100":       {"name": "Легенда",             "desc": "Достичь 100 уровня",                 "icon": "", "rarity": "legendary"},
 
     # Streak achievements
-    "streak_3":        {"name": "Регулярный",          "desc": "3 дня подряд активности",            "icon": "🔥", "rarity": "common"},
-    "streak_7":        {"name": "Постоянный",          "desc": "7 дней подряд",                      "icon": "🔥", "rarity": "uncommon"},
-    "streak_14":       {"name": "Зависимый",           "desc": "14 дней подряд",                     "icon": "🔥", "rarity": "rare"},
-    "streak_30":       {"name": "Фанат сервера",       "desc": "30 дней подряд",                     "icon": "🔥", "rarity": "epic"},
-    "streak_100":      {"name": "Житель сервера",      "desc": "100 дней подряд",                    "icon": "💯", "rarity": "legendary"},
+    "streak_3":        {"name": "Регулярный",          "desc": "3 дня подряд активности",            "icon": "", "rarity": "common"},
+    "streak_7":        {"name": "Постоянный",          "desc": "7 дней подряд",                      "icon": "", "rarity": "uncommon"},
+    "streak_14":       {"name": "Зависимый",           "desc": "14 дней подряд",                     "icon": "", "rarity": "rare"},
+    "streak_30":       {"name": "Фанат сервера",       "desc": "30 дней подряд",                     "icon": "", "rarity": "epic"},
+    "streak_100":      {"name": "Житель сервера",      "desc": "100 дней подряд",                    "icon": "", "rarity": "legendary"},
 
     # Social achievements
-    "first_invite":    {"name": "Амбассадор",          "desc": "Пригласить первого друга",           "icon": "📨", "rarity": "common"},
-    "invites_5":       {"name": "Вербовщик",           "desc": "5 приглашений",                      "icon": "👋", "rarity": "common"},
-    "invites_25":      {"name": "Маркетолог",          "desc": "25 приглашений",                     "icon": "📢", "rarity": "uncommon"},
-    "invites_100":     {"name": "Магнит для людей",    "desc": "100 приглашений",                    "icon": "🧲", "rarity": "rare"},
-    "invites_500":     {"name": "Рекрутер",            "desc": "500 приглашений",                    "icon": "👑", "rarity": "legendary"},
+    "first_invite":    {"name": "Амбассадор",          "desc": "Пригласить первого друга",           "icon": "", "rarity": "common"},
+    "invites_5":       {"name": "Вербовщик",           "desc": "5 приглашений",                      "icon": "", "rarity": "common"},
+    "invites_25":      {"name": "Маркетолог",          "desc": "25 приглашений",                     "icon": "", "rarity": "uncommon"},
+    "invites_100":     {"name": "Магнит для людей",    "desc": "100 приглашений",                    "icon": "", "rarity": "rare"},
+    "invites_500":     {"name": "Рекрутер",            "desc": "500 приглашений",                    "icon": "", "rarity": "legendary"},
 
     # Moderation achievements
-    "first_warn":      {"name": "Под наблюдением",     "desc": "Получить первое предупреждение",     "icon": "⚠️", "rarity": "common"},
-    "no_warn_year":    {"name": "Безупречный",         "desc": "Год без предупреждений",             "icon": "🛡️", "rarity": "epic"},
+    "first_warn":      {"name": "Под наблюдением",     "desc": "Получить первое предупреждение",     "icon": "", "rarity": "common"},
+    "no_warn_year":    {"name": "Безупречный",         "desc": "Год без предупреждений",             "icon": "", "rarity": "epic"},
 
     # Fun achievements
-    "first_reaction":  {"name": "Эмоциональный",       "desc": "Поставить первую реакцию",           "icon": "😀", "rarity": "common"},
-    "night_owl":       {"name": "Сова",                "desc": "Написать сообщение после 3 ночи",    "icon": "🦉", "rarity": "uncommon"},
-    "early_bird":      {"name": "Жаворонок",           "desc": "Написать сообщение до 6 утра",       "icon": "🐦", "rarity": "uncommon"},
-    "birthday":        {"name": "Именинник",           "desc": "Отпраздновать день рождения",        "icon": "🎂", "rarity": "uncommon"},
+    "first_reaction":  {"name": "Эмоциональный",       "desc": "Поставить первую реакцию",           "icon": "", "rarity": "common"},
+    "night_owl":       {"name": "Сова",                "desc": "Написать сообщение после 3 ночи",    "icon": "", "rarity": "uncommon"},
+    "early_bird":      {"name": "Жаворонок",           "desc": "Написать сообщение до 6 утра",       "icon": "", "rarity": "uncommon"},
+    "birthday":        {"name": "Именинник",           "desc": "Отпраздновать день рождения",        "icon": "", "rarity": "uncommon"},
 
     # Special achievements
-    "first_command":   {"name": "Командующий",         "desc": "Использовать первую команду",        "icon": "🤖", "rarity": "common"},
-    "help_seeker":     {"name": "Любопытный",          "desc": "Открыть /help",                      "icon": "📚", "rarity": "common"},
-    "pollster":        {"name": "Демократ",            "desc": "Участвовать в опросе",               "icon": "🗳️", "rarity": "common"},
-    "trivia_win":      {"name": "Эрудит",              "desc": "Выиграть в викторине",               "icon": "🧠", "rarity": "uncommon"},
-    "giveaway_winner": {"name": "Счастливчик",         "desc": "Выиграть розыгрыш",                  "icon": "🎁", "rarity": "uncommon"},
-    "economy_rich":    {"name": "Богач",               "desc": "Заработать 10,000 монет",            "icon": "💰", "rarity": "rare"},
-    "ticket_creator":  {"name": "Инициатор",           "desc": "Открыть первый тикет",               "icon": "🎫", "rarity": "common"},
-    "afk_artist":      {"name": "Творец AFK",          "desc": "Побывать в AFK 10 раз",              "icon": "💤", "rarity": "common"},
+    "first_command":   {"name": "Командующий",         "desc": "Использовать первую команду",        "icon": "", "rarity": "common"},
+    "help_seeker":     {"name": "Любопытный",          "desc": "Открыть /help",                      "icon": "", "rarity": "common"},
+    "pollster":        {"name": "Демократ",            "desc": "Участвовать в опросе",               "icon": "", "rarity": "common"},
+    "trivia_win":      {"name": "Эрудит",              "desc": "Выиграть в викторине",               "icon": "", "rarity": "uncommon"},
+    "giveaway_winner": {"name": "Счастливчик",         "desc": "Выиграть розыгрыш",                  "icon": "", "rarity": "uncommon"},
+    "economy_rich":    {"name": "Богач",               "desc": "Заработать 10,000 монет",            "icon": "", "rarity": "rare"},
+    "ticket_creator":  {"name": "Инициатор",           "desc": "Открыть первый тикет",               "icon": "", "rarity": "common"},
+    "afk_artist":      {"name": "Творец AFK",          "desc": "Побывать в AFK 10 раз",              "icon": "", "rarity": "common"},
 
     # Event achievements
-    "event_attendee":  {"name": "Участник события",    "desc": "Принять участие в ивенте",           "icon": "🎪", "rarity": "common"},
-    "event_host":      {"name": "Организатор",         "desc": "Создать событие",                    "icon": "🎯", "rarity": "uncommon"},
-    "first_boost":     {"name": "Бустер",              "desc": "Забустить сервер",                   "icon": "🚀", "rarity": "rare"},
-    "boost_3":         {"name": "Мега-бустер",         "desc": "3 активных буста",                   "icon": "💎", "rarity": "epic"},
+    "event_attendee":  {"name": "Участник события",    "desc": "Принять участие в ивенте",           "icon": "", "rarity": "common"},
+    "event_host":      {"name": "Организатор",         "desc": "Создать событие",                    "icon": "", "rarity": "uncommon"},
+    "first_boost":     {"name": "Бустер",              "desc": "Забустить сервер",                   "icon": "", "rarity": "rare"},
+    "boost_3":         {"name": "Мега-бустер",         "desc": "3 активных буста",                   "icon": "", "rarity": "epic"},
 
     # Time-based
-    "member_30d":      {"name": "Адаптировался",       "desc": "30 дней на сервере",                 "icon": "📅", "rarity": "common"},
-    "member_1y":       {"name": "Старожил",            "desc": "1 год на сервере",                   "icon": "🏛️", "rarity": "epic"},
-    "member_3y":       {"name": "Памятник",            "desc": "3 года на сервере",                  "icon": "🗿", "rarity": "legendary"},
+    "member_30d":      {"name": "Адаптировался",       "desc": "30 дней на сервере",                 "icon": "", "rarity": "common"},
+    "member_1y":       {"name": "Старожил",            "desc": "1 год на сервере",                   "icon": "", "rarity": "epic"},
+    "member_3y":       {"name": "Памятник",            "desc": "3 года на сервере",                  "icon": "", "rarity": "legendary"},
 }
 
 # XP curve: level n requires n² * 100 XP
@@ -107,7 +111,7 @@ def level_from_xp(xp):
     nxt = xp_for_level(level + 1)
     return level, xp - cur, nxt - cur
 
-# ─── COG ───────────────────────────────────────────────────────
+# COG 
 class LevelingEngagement(commands.Cog):
     """Level/engagement system with achievements, streaks, leaderboards"""
 
@@ -121,7 +125,7 @@ class LevelingEngagement(commands.Cog):
         self.engagement_dm_sent = {}  # user_id -> last_dm_time
         self.bulk_save_pending = False
 
-    # ─── DATA PERSISTENCE ─────────────────────────────────────
+    # DATA PERSISTENCE 
     def _xp_file(self, guild_id):
         return f"{DATA_DIR}/xp_{guild_id}.json"
 
@@ -149,7 +153,7 @@ class LevelingEngagement(commands.Cog):
             with open(self._xp_file(guild_id), "w", encoding="utf-8") as fp:
                 json.dump(data, fp, ensure_ascii=False, indent=2)
         except Exception as e:
-            print(f"[leveling] save error: {e}")
+            log.info(f"[leveling] save error: {e}")
 
     def load_config(self, guild_id):
         f = self._config_file(guild_id)
@@ -172,14 +176,14 @@ class LevelingEngagement(commands.Cog):
             "voice_xp": {"enabled": True, "per_minute": 5, "min_online_sec": 60},
             "streak_bonus": {"enabled": True, "7_days": 2.0, "14_days": 3.0, "30_days": 5.0},
             "level_rewards": {
-                "5":  {"role_id": None, "message": "🌱 Вы достигли 5 уровня!"},
-                "10": {"role_id": None, "message": "🌿 10 уровень — вы ветеран!"},
-                "25": {"role_id": None, "message": "🌳 25 уровень — почетный участник!"},
-                "50": {"role_id": None, "message": "⭐ 50 уровень — элита сервера!"},
-                "100":{"role_id": None, "message": "💎 100 уровень — ЛЕГЕНДА!"},
+                "5":  {"role_id": None, "message": " Вы достигли 5 уровня!"},
+                "10": {"role_id": None, "message": " 10 уровень — вы ветеран!"},
+                "25": {"role_id": None, "message": " 25 уровень — почетный участник!"},
+                "50": {"role_id": None, "message": " 50 уровень — элита сервера!"},
+                "100":{"role_id": None, "message": " 100 уровень — ЛЕГЕНДА!"},
             },
             "achievements_enabled": True,
-            "engagement_dm": {"enabled": True, "after_inactive_hours": 48, "message": "👋 Скучаем по тебе на сервере! Заходи пообщаться."},
+            "engagement_dm": {"enabled": True, "after_inactive_hours": 48, "message": " Скучаем по тебе на сервере! Заходи пообщаться."},
         }
 
     def load_streaks(self):
@@ -197,9 +201,9 @@ class LevelingEngagement(commands.Cog):
             with open(self._streaks_file(), "w", encoding="utf-8") as fp:
                 json.dump(data, fp, ensure_ascii=False, indent=2)
         except Exception as e:
-            print(f"[leveling] streaks save error: {e}")
+            log.info(f"[leveling] streaks save error: {e}")
 
-    # ─── STREAK TRACKING ──────────────────────────────────────
+    # STREAK TRACKING 
     def update_streak(self, guild_id, user_id):
         """Update daily streak for a user. Returns current streak count and multiplier."""
         data = self.load_streaks()
@@ -230,7 +234,7 @@ class LevelingEngagement(commands.Cog):
             elif info["count"] >= 7: mult = sb.get("7_days", 2.0)
         return info["count"], mult
 
-    # ─── XP GIVING ────────────────────────────────────────────
+    # XP GIVING 
     async def add_xp(self, guild_id, user_id, amount, source="text"):
         """Add XP, check level up, return event info"""
         data = self.load_xp(guild_id)
@@ -281,7 +285,7 @@ class LevelingEngagement(commands.Cog):
         try:
             if reward and reward.get("message"):
                 embed = discord.Embed(
-                    title=f"🎉 Уровень {new_level}!",
+                    title=f" Уровень {new_level}!",
                     description=reward["message"],
                     color=0xFFD700
                 )
@@ -296,7 +300,7 @@ class LevelingEngagement(commands.Cog):
         if new_level in achievement_map:
             await self.grant_achievement(guild_id, user_id, achievement_map[new_level])
 
-    # ─── ACHIEVEMENTS ─────────────────────────────────────────
+    # ACHIEVEMENTS 
     async def grant_achievement(self, guild_id, user_id, achievement_id):
         cfg = self.load_config(guild_id)
         if not cfg.get("achievements_enabled", True):
@@ -321,7 +325,7 @@ class LevelingEngagement(commands.Cog):
             return True
         try:
             embed = discord.Embed(
-                title=f"🏆 Достижение: {ach['name']}",
+                title=f" Достижение: {ach['name']}",
                 description=f"{ach['icon']} {ach['desc']}",
                 color=0xFFD700
             )
@@ -330,7 +334,7 @@ class LevelingEngagement(commands.Cog):
             pass
         return True
 
-    # ─── TEXT XP ──────────────────────────────────────────────
+    # TEXT XP 
     @commands.Cog.listener()
     async def on_message(self, message):
         if message.author.bot or not message.guild:
@@ -379,7 +383,7 @@ class LevelingEngagement(commands.Cog):
         if 3 <= hour < 6:  await self.grant_achievement(guild_id, user_id, "night_owl")
         if hour < 6:        await self.grant_achievement(guild_id, user_id, "early_bird")
 
-    # ─── VOICE XP ─────────────────────────────────────────────
+    # VOICE XP 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):
         if member.bot or not member.guild:
@@ -442,7 +446,7 @@ class LevelingEngagement(commands.Cog):
     async def before_voice_loop(self):
         await self.bot.wait_until_ready()
 
-    # ─── COMMANDS ─────────────────────────────────────────────
+    # COMMANDS 
     @commands.command(name="rank", aliases=["level", "xp"])
     async def rank(self, ctx, member: discord.Member = None):
         """Show your or someone else's rank card"""
@@ -451,7 +455,7 @@ class LevelingEngagement(commands.Cog):
         data = self.load_xp(guild_id)
         u = data.get("users", {}).get(str(target.id))
         if not u:
-            await ctx.send(f"❌ {target.mention} ещё не набрал XP.")
+            await ctx.send(f" {target.mention} ещё не набрал XP.")
             return
         level, xp_into, xp_needed = level_from_xp(u["xp"])
         # Leaderboard position
@@ -460,21 +464,21 @@ class LevelingEngagement(commands.Cog):
         # Progress bar (20 chars)
         pct = xp_into / xp_needed if xp_needed else 1
         filled = int(pct * 20)
-        bar = "█" * filled + "░" * (20 - filled)
-        embed = discord.Embed(title=f"📊 Ранг {target.display_name}", color=0xFFD700)
+        bar = "" * filled + "" * (20 - filled)
+        embed = discord.Embed(title=f" Ранг {target.display_name}", color=0xFFD700)
         embed.set_thumbnail(url=target.display_avatar.url)
         embed.add_field(name="Уровень", value=f"**{level}**", inline=True)
         embed.add_field(name="Всего XP", value=f"**{u['xp']:,}**", inline=True)
         embed.add_field(name="Позиция", value=f"#{pos}", inline=True)
         embed.add_field(name="Прогресс", value=f"`{bar}` {int(pct*100)}%\n{xp_into}/{xp_needed} XP до уровня {level+1}", inline=False)
-        embed.add_field(name="💬 Сообщений", value=u.get("messages", 0), inline=True)
-        embed.add_field(name="🎙️ Минут в войсе", value=u.get("voice_minutes", 0), inline=True)
-        embed.add_field(name="🔥 Streak", value=f"{u.get('streak', 0)} дн.", inline=True)
+        embed.add_field(name=" Сообщений", value=u.get("messages", 0), inline=True)
+        embed.add_field(name=" Минут в войсе", value=u.get("voice_minutes", 0), inline=True)
+        embed.add_field(name=" Streak", value=f"{u.get('streak', 0)} дн.", inline=True)
         # Achievements
         achs = data.get("achievements", {}).get(str(target.id), [])
         if achs:
             ach_text = " ".join(ACHIEVEMENTS[a]["icon"] for a in achs[-12:])
-            embed.add_field(name=f"🏆 Достижения ({len(achs)})", value=ach_text or "—", inline=False)
+            embed.add_field(name=f" Достижения ({len(achs)})", value=ach_text or "—", inline=False)
         await ctx.send(embed=embed)
 
     @commands.command(name="leaderboard", aliases=["lb", "top"])
@@ -485,16 +489,16 @@ class LevelingEngagement(commands.Cog):
         users = data.get("users", {})
         sorted_users = sorted(users.items(), key=lambda x: x[1].get("xp", 0), reverse=True)[:10]
         if not sorted_users:
-            await ctx.send("📊 Лидерборд пуст.")
+            await ctx.send(" Лидерборд пуст.")
             return
         lines = []
-        medals = ["🥇", "🥈", "🥉"] + ["🏅"] * 7
+        medals = ["", "", ""] + [""] * 7
         for i, (uid, u) in enumerate(sorted_users):
             member = ctx.guild.get_member(int(uid))
             name = member.display_name if member else f"User#{uid}"
             level, _, _ = level_from_xp(u.get("xp", 0))
             lines.append(f"{medals[i]} **{name}** — Ур.{level} · {u.get('xp', 0):,} XP")
-        embed = discord.Embed(title="🏆 Топ-10 сервера", description="\n".join(lines), color=0xFFD700)
+        embed = discord.Embed(title=" Топ-10 сервера", description="\n".join(lines), color=0xFFD700)
         await ctx.send(embed=embed)
 
     @commands.command(name="achievements", aliases=["ach", "badges"])
@@ -509,13 +513,13 @@ class LevelingEngagement(commands.Cog):
         for aid, info in ACHIEVEMENTS.items():
             unlocked = aid in achs
             by_rarity[info["rarity"]].append((aid, info, unlocked))
-        embed = discord.Embed(title=f"🏆 Достижения {target.display_name}", color=0xFFD700)
-        rarity_emoji = {"common": "⚪", "uncommon": "🟢", "rare": "🔵", "epic": "🟣", "legendary": "🟡"}
+        embed = discord.Embed(title=f" Достижения {target.display_name}", color=0xFFD700)
+        rarity_emoji = {"common": "", "uncommon": "🟢", "rare": "", "epic": "🟣", "legendary": "🟡"}
         for rarity in ["legendary", "epic", "rare", "uncommon", "common"]:
             items = by_rarity[rarity]
             unlocked_count = sum(1 for _, _, u in items if u)
             text = "\n".join(
-                f"{'✅' if u else '⬜'} {info['icon']} **{info['name']}** — {info['desc']}"
+                f"{'' if u else ''} {info['icon']} **{info['name']}** — {info['desc']}"
                 for aid, info, u in items[:6]
             ) or "—"
             embed.add_field(
@@ -540,7 +544,7 @@ class LevelingEngagement(commands.Cog):
             if days >= 30: mult = sb.get("30_days", 5.0)
             elif days >= 14: mult = sb.get("14_days", 3.0)
             elif days >= 7:  mult = sb.get("7_days", 2.0)
-        embed = discord.Embed(title=f"🔥 Streak {target.display_name}", color=0xFF6B35)
+        embed = discord.Embed(title=f" Streak {target.display_name}", color=0xFF6B35)
         embed.add_field(name="Дней подряд", value=f"**{days}**", inline=True)
         embed.add_field(name="XP множитель", value=f"**x{mult}**", inline=True)
         embed.add_field(name="Последний день", value=info.get("last_day", "—"), inline=True)
@@ -550,7 +554,7 @@ class LevelingEngagement(commands.Cog):
         elif days < 14: next_milestone = (14, "x3")
         elif days < 30: next_milestone = (30, "x5")
         if next_milestone:
-            embed.add_field(name="🎯 Следующий бонус", value=f"x{next_milestone[1]} через {next_milestone[0]-days} дн.", inline=False)
+            embed.add_field(name=" Следующий бонус", value=f"x{next_milestone[1]} через {next_milestone[0]-days} дн.", inline=False)
         await ctx.send(embed=embed)
 
     @commands.command(name="toggle-leveling")
@@ -560,8 +564,8 @@ class LevelingEngagement(commands.Cog):
         cfg = self.load_config(str(ctx.guild.id))
         cfg["enabled"] = not cfg.get("enabled", True)
         self.save_config(str(ctx.guild.id), cfg)
-        status = "✅ ВКЛЮЧЕН" if cfg["enabled"] else "❌ ВЫКЛЮЧЕН"
-        await ctx.send(f"📊 Система уровней: **{status}**")
+        status = " ВКЛЮЧЕН" if cfg["enabled"] else " ВЫКЛЮЧЕН"
+        await ctx.send(f" Система уровней: **{status}**")
 
     @commands.group(name="levelset", invoke_without_command=True)
     @commands.has_permissions(administrator=True)
@@ -569,14 +573,14 @@ class LevelingEngagement(commands.Cog):
         """Configure leveling system"""
         cfg = self.load_config(str(ctx.guild.id))
         text = (
-            f"⚙️ **Настройки уровней**\n\n"
-            f"📊 Система: {'✅' if cfg.get('enabled') else '❌'}\n"
-            f"💬 Text XP: {cfg['text_xp']['min']}-{cfg['text_xp']['max']} (cooldown {cfg['text_xp']['cooldown_sec']}s)\n"
-            f"🎙️ Voice XP: {cfg['voice_xp']['per_minute']}/мин\n"
-            f"🔥 Streak bonus: {'✅' if cfg['streak_bonus'].get('enabled') else '❌'} "
+            f" **Настройки уровней**\n\n"
+            f" Система: {'' if cfg.get('enabled') else ''}\n"
+            f" Text XP: {cfg['text_xp']['min']}-{cfg['text_xp']['max']} (cooldown {cfg['text_xp']['cooldown_sec']}s)\n"
+            f" Voice XP: {cfg['voice_xp']['per_minute']}/мин\n"
+            f" Streak bonus: {'' if cfg['streak_bonus'].get('enabled') else ''} "
             f"(7д=x{cfg['streak_bonus'].get('7_days',2)}, 14д=x{cfg['streak_bonus'].get('14_days',3)}, 30д=x{cfg['streak_bonus'].get('30_days',5)})\n"
-            f"🏆 Достижения: {'✅' if cfg.get('achievements_enabled') else '❌'}\n"
-            f"📨 Auto-DM: {'✅' if cfg['engagement_dm'].get('enabled') else '❌'} "
+            f" Достижения: {'' if cfg.get('achievements_enabled') else ''}\n"
+            f" Auto-DM: {'' if cfg['engagement_dm'].get('enabled') else ''} "
             f"({cfg['engagement_dm'].get('after_inactive_hours',48)}ч inactive)\n\n"
             f"**Команды:**\n"
             f"`!levelset text <min> <max> <cooldown>`\n"
@@ -592,7 +596,7 @@ class LevelingEngagement(commands.Cog):
         cfg = self.load_config(str(ctx.guild.id))
         cfg["text_xp"] = {"enabled": True, "min": min_xp, "max": max_xp, "cooldown_sec": cooldown}
         self.save_config(str(ctx.guild.id), cfg)
-        await ctx.send(f"✅ Text XP: {min_xp}-{max_xp} каждые {cooldown}s")
+        await ctx.send(f" Text XP: {min_xp}-{max_xp} каждые {cooldown}s")
 
     @levelset.command(name="voice")
     async def levelset_voice(self, ctx, per_minute: int):
@@ -600,14 +604,14 @@ class LevelingEngagement(commands.Cog):
         cfg["voice_xp"]["enabled"] = True
         cfg["voice_xp"]["per_minute"] = per_minute
         self.save_config(str(ctx.guild.id), cfg)
-        await ctx.send(f"✅ Voice XP: {per_minute} в минуту")
+        await ctx.send(f" Voice XP: {per_minute} в минуту")
 
     @levelset.command(name="streak")
     async def levelset_streak(self, ctx, d7: float, d14: float, d30: float):
         cfg = self.load_config(str(ctx.guild.id))
         cfg["streak_bonus"] = {"enabled": True, "7_days": d7, "14_days": d14, "30_days": d30}
         self.save_config(str(ctx.guild.id), cfg)
-        await ctx.send(f"✅ Streak bonus: 7д=x{d7}, 14д=x{d14}, 30д=x{d30}")
+        await ctx.send(f" Streak bonus: 7д=x{d7}, 14д=x{d14}, 30д=x{d30}")
 
     @levelset.command(name="achievement")
     async def levelset_ach(self, ctx, toggle: str):
@@ -615,14 +619,14 @@ class LevelingEngagement(commands.Cog):
         enabled = toggle.lower() in ("on", "true", "1", "yes", "вкл")
         cfg["achievements_enabled"] = enabled
         self.save_config(str(ctx.guild.id), cfg)
-        await ctx.send(f"🏆 Достижения: {'✅ ВКЛ' if enabled else '❌ ВЫКЛ'}")
+        await ctx.send(f" Достижения: {' ВКЛ' if enabled else ' ВЫКЛ'}")
 
     @levelset.command(name="reward")
     async def levelset_reward(self, ctx, level: int, role: discord.Role):
         cfg = self.load_config(str(ctx.guild.id))
-        cfg.setdefault("level_rewards", {})[str(level)] = {"role_id": str(role.id), "message": f"🎉 Достигнут уровень {level}! Роль: {role.name}"}
+        cfg.setdefault("level_rewards", {})[str(level)] = {"role_id": str(role.id), "message": f" Достигнут уровень {level}! Роль: {role.name}"}
         self.save_config(str(ctx.guild.id), cfg)
-        await ctx.send(f"✅ За уровень {level} будет выдаваться роль {role.mention}")
+        await ctx.send(f" За уровень {level} будет выдаваться роль {role.mention}")
 
 
 async def setup(bot):

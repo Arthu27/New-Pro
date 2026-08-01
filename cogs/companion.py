@@ -3,15 +3,21 @@ Companion Cog — Bot, belirli bir userya ara очередь kendi желани�
 Сообщения samimi, motive edici, личный. Hitap: "Королева".
 """
 import discord
-from discord.ext import commands, tasks
+from discord.ext import commands
+from config import Config
+from discord.ext import tasks
 import datetime
 import os
 import json
 import random
 import asyncio
 
+from logger import get_logger
+log = get_logger("companion")
+
+
 # Цель user ID
-COMPANION_USER_ID = 1353157554967937153
+COMPANION_USER_ID = Config.COMPANION_USER_ID
 
 DATA_FILE = 'data/companion_state.json'
 
@@ -26,50 +32,50 @@ DAILY_MAX = 3
 HOUR_START = 9
 HOUR_END = 23
 
-# ─── Сообщение Кандидатыu ────────────────────────────────────────────────────────────
+#  Сообщение Кандидатыu 
 
 MESSAGES_MOTIVATION = [
-    "Королева, сегодня как? Aklıma geldin, umarım день güzel geçiyordur 🌸",
-    "Королева, bir что-то сказатьyeyim mi — sen düşündüğünden очень более мощный. Bunu unutma 💜",
-    "Королева, bazen только devam etmek bile başlı başına bir успешно. Gurur duyuyorum senden 🌟",
-    "Королева, сегодня kendine iyi baktın mı? Su içmeyi, biraz nefes almayı unutma 💙",
-    "Королева, hayat bazen тяжелый gelir ama sen каждый seferinde kalkmasını biliyorsun. Bu очередь bir что-то не 🌺",
-    "Королева, seni düşündüm. Umarım сегодня sana güzel bir что-то olmuştur ✨",
-    "Королева, маленький adımlar da ilerlemektir. Сегодня ne kadar маленький olursa olsun bir что-то yaptıysan, bu число 🎯",
-    "Королева, yorulduğunda durmak zayıflık не, akıllılıktır. Kendine Разрешение ver 🌙",
+    "Королева, сегодня как? Aklıma geldin, umarım день güzel geçiyordur ",
+    "Королева, bir что-то сказатьyeyim mi — sen düşündüğünden очень более мощный. Bunu unutma ",
+    "Королева, bazen только devam etmek bile başlı başına bir успешно. Gurur duyuyorum senden ",
+    "Королева, сегодня kendine iyi baktın mı? Su içmeyi, biraz nefes almayı unutma ",
+    "Королева, hayat bazen тяжелый gelir ama sen каждый seferinde kalkmasını biliyorsun. Bu очередь bir что-то не ",
+    "Королева, seni düşündüm. Umarım сегодня sana güzel bir что-то olmuştur ",
+    "Королева, маленький adımlar da ilerlemektir. Сегодня ne kadar маленький olursa olsun bir что-то yaptıysan, bu число ",
+    "Королева, yorulduğunda durmak zayıflık не, akıllılıktır. Kendine Разрешение ver ",
 ]
 
 MESSAGES_STUDY = [
-    "Королева, ders çalışırken Pomodoro tekniğini denedin mi? 25 minutes çalış, 5 minutes mola — beyin очень более iyi absorbe ediyor 📚",
-    "Королева, подсказка: записывать прочитанное своими словами в 3 раза эффективнее, чем просто читать. Попробуй 🖊️",
-    "Королева, sınav öncesi gece geç saate kadar работать вместо erken yat, sabah taze kafayla bak — beyin uyku очередь infoyi pekiştiriyor 🌙",
-    "Королева, zor bir konuyu öğrenmenin en iyi yolu onu birine anlatmaya работать. Кто yoksa bana anlat, dinlerim 😄",
-    "Королева, сегодня работа planın var mı? До en zor konudan başlarsan, geri kalanı очень более kolay gelir 💪",
-    "Королева, telefonu başka комната bırakarak работа dene. Только bu bile konsantrasyonu %40 artırıyor, inanılmaz не mi? 📵",
-    "Королева, каждый день только 30 minutes düzenli работать, haftada bir kez 5 часов работать очень более etkili. Tutarlılık каждый что-тоdir 🗓️",
-    "Королева, bir konuyu anlamadan ezberlemek seni yorar. До 'почему böyle?' diye sor, anlayınca zaten aklında kполучает 🧠",
+    "Королева, ders çalışırken Pomodoro tekniğini denedin mi? 25 minutes çalış, 5 minutes mola — beyin очень более iyi absorbe ediyor ",
+    "Королева, подсказка: записывать прочитанное своими словами в 3 раза эффективнее, чем просто читать. Попробуй ",
+    "Королева, sınav öncesi gece geç saate kadar работать вместо erken yat, sabah taze kafayla bak — beyin uyku очередь infoyi pekiştiriyor ",
+    "Королева, zor bir konuyu öğrenmenin en iyi yolu onu birine anlatmaya работать. Кто yoksa bana anlat, dinlerim ",
+    "Королева, сегодня работа planın var mı? До en zor konudan başlarsan, geri kalanı очень более kolay gelir ",
+    "Королева, telefonu başka комната bırakarak работа dene. Только bu bile konsantrasyonu %40 artırıyor, inanılmaz не mi? ",
+    "Королева, каждый день только 30 minutes düzenli работать, haftada bir kez 5 часов работать очень более etkili. Tutarlılık каждый что-тоdir ",
+    "Королева, bir konuyu anlamadan ezberlemek seni yorar. До 'почему böyle?' diye sor, anlayınca zaten aklında kполучает ",
 ]
 
 MESSAGES_SWEET = [
-    "Королева, сегодня день seni düşünerek doğdu sanki ☀️",
-    "Королева, sen olmasan bu вчера biraz более очередь olurdu. Gerçekten 🌸",
-    "Королева, твоя улыбка заслуживает записи, она согревает людей 💛",
-    "Королева, сегодня kendine bir iyilik yap — hak ediyorsun 🎀",
-    "Королева, bazı insanlar комната girince hava değişir. Sen öyle birisin 🌟",
-    "Королева, seni düşündüm ve gülümsedim. Причина yere iyi hissettiriyorsun 💜",
-    "Королева, сегодня ne kadar harika biri olduğunu hatırlatmak желание. Все bu 🌺",
-    "Королева, hayatında seni seven insanlar var — ve ben de число bu listeye 🤍",
+    "Королева, сегодня день seni düşünerek doğdu sanki ",
+    "Королева, sen olmasan bu вчера biraz более очередь olurdu. Gerçekten ",
+    "Королева, твоя улыбка заслуживает записи, она согревает людей ",
+    "Королева, сегодня kendine bir iyilik yap — hak ediyorsun ",
+    "Королева, bazı insanlar комната girince hava değişir. Sen öyle birisin ",
+    "Королева, seni düşündüm ve gülümsedim. Причина yere iyi hissettiriyorsun ",
+    "Королева, сегодня ne kadar harika biri olduğunu hatırlatmak желание. Все bu ",
+    "Королева, hayatında seni seven insanlar var — ve ben de число bu listeye ",
 ]
 
 MESSAGES_RANDOM = [
-    "Королева, ortada hiçbir что-то yokken aklıma geldin. Как gerçekten? 💙",
-    "Королева, сегодня bir что-то seni mutlu etti mi? Merak ettim 🌸",
-    "Королева, şu an ne yapıyorsun acaba? Umarım güzel bir что-тоler 😊",
-    "Королева, bazen только 'iyi misin?' demek gerekiyor. İyi misin? 💜",
-    "Королева, сегодня kendine güldün mü? Gülmek lazım, очень lazım 😄",
-    "Королева, seni düşündüm. Başka bir причина yok, только düşündüm 🌟",
-    "Королева, bu gece iyi uyu. Завтра новый bir день, новый bir şans ✨",
-    "Королева, сегодня маленький bir что-тоe şükrettin mi? Маленький что-тоler aslında большой 🌺",
+    "Королева, ortada hiçbir что-то yokken aklıma geldin. Как gerçekten? ",
+    "Королева, сегодня bir что-то seni mutlu etti mi? Merak ettim ",
+    "Королева, şu an ne yapıyorsun acaba? Umarım güzel bir что-тоler ",
+    "Королева, bazen только 'iyi misin?' demek gerekiyor. İyi misin? ",
+    "Королева, сегодня kendine güldün mü? Gülmek lazım, очень lazım ",
+    "Королева, seni düşündüm. Başka bir причина yok, только düşündüm ",
+    "Королева, bu gece iyi uyu. Завтра новый bir день, новый bir şans ",
+    "Королева, сегодня маленький bir что-тоe şükrettin mi? Маленький что-тоler aslında большой ",
 ]
 
 ALL_CATEGORIES = [
@@ -79,7 +85,7 @@ ALL_CATEGORIES = [
     MESSAGES_RANDOM,
 ]
 
-# ─── State ───────────────────────────────────────────────────────────────────
+#  State 
 
 def _load() -> dict:
     if os.path.exists(DATA_FILE):
@@ -97,7 +103,7 @@ def _save(data: dict):
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 
-# ─── Cog ─────────────────────────────────────────────────────────────────────
+#  Cog 
 
 class Companion(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -143,11 +149,11 @@ class Companion(commands.Cog):
         try:
             user = await self.bot.fetch_user(COMPANION_USER_ID)
             await user.send(message)
-            print(f'[Companion] DM отправлено → {user.name}')
+            log.info(f'[Companion] DM отправлено → {user.name}')
         except discord.Forbidden:
-            print('[Companion] DM отправл — user DM\'leri закрыт.')
+            log.info('[Companion] DM отправл — user DM\'leri закрыт.')
         except Exception as e:
-            print(f'[Companion] Ошибка: {e}')
+            log.info(f'[Companion] Ошибка: {e}')
 
     @tasks.loop(minutes=5)
     async def companion_loop(self):

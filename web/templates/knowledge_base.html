@@ -1,0 +1,425 @@
+{% extends "base.html" %}
+{% block title %}База знаний - Aether{% endblock %}
+{% block page_title %}<i class="fas fa-book"></i> База знаний{% endblock %}
+{% block content %}
+{% block page_hero %}
+<div class="page-hero compact">
+  <div class="page-hero-content">
+    <div class="page-hero-greeting">
+      <span class="dot"></span>
+      <span>База знаний</span>
+    </div>
+    <h1>База знаний</h1>
+    <p>FAQ, статьи и руководства для пользователей и модераторов.</p>
+  </div>
+</div>
+{% endblock %}
+
+<div class="section">
+  <div class="bs-title"><i class="fas fa-search"></i> Поиск по базе знаний</div>
+  <div style="display: flex; gap: 12px;">
+    <input type="text" id="searchInput" class="form-input" placeholder="Введите ключевые слова..." style="flex: 1;">
+    <button class="control-btn primary" onclick="searchArticles()">
+      <i class="fas fa-search"></i> Искать
+    </button>
+  </div>
+</div>
+
+<div class="stat-grid">
+  <div class="stat-box purple">
+    <div class="stat-icon"><i class="fas fa-file-alt"></i></div>
+    <div class="stat-body"><div class="stat-value" id="totalArticles">0</div><div class="stat-label">Всего статей</div></div>
+  </div>
+  <div class="stat-box cyan">
+    <div class="stat-icon"><i class="fas fa-folder"></i></div>
+    <div class="stat-body"><div class="stat-value" id="totalCategories">0</div><div class="stat-label">Категорий</div></div>
+  </div>
+  <div class="stat-box green">
+    <div class="stat-icon"><i class="fas fa-eye"></i></div>
+    <div class="stat-body"><div class="stat-value" id="totalViews">0</div><div class="stat-label">Просмотров</div></div>
+  </div>
+  <div class="stat-box gold">
+    <div class="stat-icon"><i class="fas fa-thumbs-up"></i></div>
+    <div class="stat-body"><div class="stat-value" id="helpfulRate">0%</div><div class="stat-label">Полезность</div></div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="bs-title">
+    <i class="fas fa-folder-open"></i> Категории
+    <button class="control-btn primary" onclick="showCreateCategoryModal()" style="margin-left: auto;">
+      <i class="fas fa-plus"></i> Новая категория
+    </button>
+  </div>
+  <div id="categoryList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px;">
+    <p style="text-align: center; color: var(--text-muted); padding: 40px; grid-column: 1/-1;">
+      <i class="fas fa-spinner fa-spin"></i> Загрузка...
+    </p>
+  </div>
+</div>
+
+<div class="section">
+  <div class="bs-title">
+    <i class="fas fa-fire"></i> Популярные статьи
+  </div>
+  <div id="popularArticles" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 16px;">
+    <p style="text-align: center; color: var(--text-muted); padding: 40px; grid-column: 1/-1;">
+      <i class="fas fa-spinner fa-spin"></i> Загрузка...
+    </p>
+  </div>
+</div>
+
+<div class="section">
+  <div class="bs-title">
+    <i class="fas fa-clock"></i> Недавно обновленные
+  </div>
+  <div id="recentArticles" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 16px;">
+    <p style="text-align: center; color: var(--text-muted); padding: 40px; grid-column: 1/-1;">
+      <i class="fas fa-spinner fa-spin"></i> Загрузка...
+    </p>
+  </div>
+</div>
+
+<!-- Модальное окно создания категории -->
+<div id="createCategoryModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; overflow-y: auto;">
+  <div style="max-width: 600px; margin: 50px auto; background: var(--bg-primary); border-radius: 12px; padding: 24px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+      <h2 style="margin: 0;">Новая категория</h2>
+      <button class="control-btn" onclick="closeCreateCategoryModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div style="margin-bottom: 16px;">
+      <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Название категории</label>
+      <input type="text" id="categoryName" class="form-input" placeholder="Например: Общие вопросы">
+    </div>
+    <div style="margin-bottom: 16px;">
+      <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Описание</label>
+      <textarea id="categoryDescription" class="form-input" rows="3" placeholder="Краткое описание категории..."></textarea>
+    </div>
+    <div style="margin-bottom: 16px;">
+      <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Иконка (Font Awesome)</label>
+      <input type="text" id="categoryIcon" class="form-input" placeholder="fa-question-circle" value="fa-folder">
+    </div>
+    <div style="display: flex; gap: 12px;">
+      <button class="control-btn primary" onclick="createCategory()" style="flex: 1;">
+        <i class="fas fa-plus"></i> Создать
+      </button>
+      <button class="control-btn" onclick="closeCreateCategoryModal()">
+        Отмена
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Модальное окно создания статьи -->
+<div id="createArticleModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; overflow-y: auto;">
+  <div style="max-width: 800px; margin: 50px auto; background: var(--bg-primary); border-radius: 12px; padding: 24px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+      <h2 style="margin: 0;">Новая статья</h2>
+      <button class="control-btn" onclick="closeCreateArticleModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+      <div>
+        <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Заголовок</label>
+        <input type="text" id="articleTitle" class="form-input" placeholder="Заголовок статьи">
+      </div>
+      <div>
+        <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Категория</label>
+        <select id="articleCategory" class="form-input">
+          <option value="">Выберите категорию...</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin-bottom: 16px;">
+      <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Краткое описание</label>
+      <textarea id="articleSummary" class="form-input" rows="2" placeholder="Краткое описание статьи..."></textarea>
+    </div>
+    <div style="margin-bottom: 16px;">
+      <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Содержание</label>
+      <textarea id="articleContent" class="form-input" rows="15" placeholder="Полное содержание статьи..."></textarea>
+    </div>
+    <div style="margin-bottom: 16px;">
+      <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Теги (через запятую)</label>
+      <input type="text" id="articleTags" class="form-input" placeholder="faq, помощь, инструкция">
+    </div>
+    <div style="display: flex; gap: 12px;">
+      <button class="control-btn primary" onclick="createArticle()" style="flex: 1;">
+        <i class="fas fa-plus"></i> Создать
+      </button>
+      <button class="control-btn" onclick="closeCreateArticleModal()">
+        Отмена
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+async function loadKnowledgeBase() {
+  try {
+    const response = await fetch('/api/knowledge-base');
+    const data = await response.json();
+    
+    if (data.success) {
+      updateStats(data.stats);
+      displayCategories(data.categories);
+      displayPopularArticles(data.popular_articles);
+      displayRecentArticles(data.recent_articles);
+    }
+  } catch (e) {
+    console.error('Ошибка загрузки базы знаний:', e);
+  }
+}
+
+function updateStats(stats) {
+  document.getElementById('totalArticles').textContent = stats.total_articles || 0;
+  document.getElementById('totalCategories').textContent = stats.total_categories || 0;
+  document.getElementById('totalViews').textContent = stats.total_views || 0;
+  document.getElementById('helpfulRate').textContent = (stats.helpful_rate || 0) + '%';
+}
+
+function displayCategories(categories) {
+  const container = document.getElementById('categoryList');
+  
+  if (!categories || categories.length === 0) {
+    container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 40px; grid-column: 1/-1;">Категорий пока нет</p>';
+    return;
+  }
+  
+  container.innerHTML = categories.map(category => `
+    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 16px; cursor: pointer;" onclick="viewCategory('${category.id}')">
+      <div style="display: flex; align-items: start; gap: 12px; margin-bottom: 12px;">
+        <div style="width: 40px; height: 40px; border-radius: 8px; background: rgba(155,89,182,0.2); display: flex; align-items: center; justify-content: center;">
+          <i class="fas ${category.icon || 'fa-folder'}" style="color: #9b59b6; font-size: 18px;"></i>
+        </div>
+        <div style="flex: 1;">
+          <div style="font-weight: 600; margin-bottom: 4px;">${category.name}</div>
+          <div style="font-size: 12px; color: var(--text-muted);">${category.article_count || 0} ${pluralize(category.article_count || 0, 'статья', 'статьи', 'статей')}</div>
+        </div>
+      </div>
+      <div style="font-size: 13px; color: var(--text-secondary);">
+        ${category.description || 'Без описания'}
+      </div>
+    </div>
+  `).join('');
+}
+
+function displayPopularArticles(articles) {
+  const container = document.getElementById('popularArticles');
+  
+  if (!articles || articles.length === 0) {
+    container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 40px; grid-column: 1/-1;">Статей пока нет</p>';
+    return;
+  }
+  
+  container.innerHTML = articles.map(article => `
+    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 16px; cursor: pointer;" onclick="viewArticle('${article.id}')">
+      <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+        <div style="font-weight: 600; font-size: 16px;">${article.title}</div>
+        <div style="background: rgba(241,196,15,0.2); color: #f1c40f; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">
+          <i class="fas fa-fire"></i> ${article.views}
+        </div>
+      </div>
+      <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">
+        ${article.summary || 'Без описания'}
+      </div>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        ${(article.tags || []).slice(0, 3).map(tag => `
+          <span style="background: rgba(255,255,255,0.05); color: var(--text-muted); padding: 4px 8px; border-radius: 4px; font-size: 11px;">${tag}</span>
+        `).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function displayRecentArticles(articles) {
+  const container = document.getElementById('recentArticles');
+  
+  if (!articles || articles.length === 0) {
+    container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 40px; grid-column: 1/-1;">Статей пока нет</p>';
+    return;
+  }
+  
+  container.innerHTML = articles.map(article => {
+    const updatedDate = new Date(article.updated_at).toLocaleString('ru-RU');
+    return `
+      <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 16px; cursor: pointer;" onclick="viewArticle('${article.id}')">
+        <div style="font-weight: 600; font-size: 16px; margin-bottom: 8px;">${article.title}</div>
+        <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">
+          ${article.summary || 'Без описания'}
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted);">
+          <span><i class="fas fa-folder"></i> ${article.category_name || 'Без категории'}</span>
+          <span><i class="fas fa-clock"></i> ${updatedDate}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function searchArticles() {
+  const query = document.getElementById('searchInput').value.trim();
+  if (!query) {
+    showToast('Введите поисковый запрос', false);
+    return;
+  }
+  
+  try {
+    const response = await fetch('/api/knowledge-base/search', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({query})
+    });
+    const data = await response.json();
+    
+    if (data.success) {
+      // Отобразить результаты поиска
+      displaySearchResults(data.results);
+    }
+  } catch (e) {
+    console.error('Ошибка поиска:', e);
+  }
+}
+
+function displaySearchResults(results) {
+  const container = document.getElementById('recentArticles');
+  
+  if (!results || results.length === 0) {
+    container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 40px; grid-column: 1/-1;">Ничего не найдено</p>';
+    return;
+  }
+  
+  container.innerHTML = results.map(article => `
+    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 16px; cursor: pointer;" onclick="viewArticle('${article.id}')">
+      <div style="font-weight: 600; font-size: 16px; margin-bottom: 8px;">${article.title}</div>
+      <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">
+        ${article.summary || 'Без описания'}
+      </div>
+      <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted);">
+        <span><i class="fas fa-folder"></i> ${article.category_name || 'Без категории'}</span>
+        <span><i class="fas fa-eye"></i> ${article.views || 0} просмотров</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function showCreateCategoryModal() {
+  document.getElementById('createCategoryModal').style.display = 'block';
+}
+
+function closeCreateCategoryModal() {
+  document.getElementById('createCategoryModal').style.display = 'none';
+}
+
+async function createCategory() {
+  const name = document.getElementById('categoryName').value.trim();
+  const description = document.getElementById('categoryDescription').value.trim();
+  const icon = document.getElementById('categoryIcon').value.trim() || 'fa-folder';
+  
+  if (!name) {
+    showToast('Введите название категории', false);
+    return;
+  }
+  
+  try {
+    const response = await fetch('/api/knowledge-base/categories', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({name, description, icon})
+    });
+    const data = await response.json();
+    
+    if (data.success) {
+      showToast('Категория создана!', true);
+      closeCreateCategoryModal();
+      loadKnowledgeBase();
+    } else {
+      showToast('Ошибка: ' + (data.error || 'Неизвестная ошибка'), false);
+    }
+  } catch (e) {
+    showToast('Ошибка соединения', false);
+  }
+}
+
+function showCreateArticleModal() {
+  document.getElementById('createArticleModal').style.display = 'block';
+  loadCategoryOptions();
+}
+
+function closeCreateArticleModal() {
+  document.getElementById('createArticleModal').style.display = 'none';
+}
+
+async function loadCategoryOptions() {
+  try {
+    const response = await fetch('/api/knowledge-base/categories');
+    const data = await response.json();
+    
+    if (data.success) {
+      const select = document.getElementById('articleCategory');
+      select.innerHTML = '<option value="">Выберите категорию...</option>';
+      data.categories.forEach(category => {
+        select.innerHTML += `<option value="${category.id}">${category.name}</option>`;
+      });
+    }
+  } catch (e) {
+    console.error('Ошибка загрузки категорий:', e);
+  }
+}
+
+async function createArticle() {
+  const title = document.getElementById('articleTitle').value.trim();
+  const category_id = document.getElementById('articleCategory').value;
+  const summary = document.getElementById('articleSummary').value.trim();
+  const content = document.getElementById('articleContent').value.trim();
+  const tags = document.getElementById('articleTags').value.split(',').map(t => t.trim()).filter(t => t);
+  
+  if (!title || !content) {
+    showToast('Заполните заголовок и содержание', false);
+    return;
+  }
+  
+  try {
+    const response = await fetch('/api/knowledge-base/articles', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({title, category_id, summary, content, tags})
+    });
+    const data = await response.json();
+    
+    if (data.success) {
+      showToast('Статья создана!', true);
+      closeCreateArticleModal();
+      loadKnowledgeBase();
+    } else {
+      showToast('Ошибка: ' + (data.error || 'Неизвестная ошибка'), false);
+    }
+  } catch (e) {
+    showToast('Ошибка соединения', false);
+  }
+}
+
+async function viewCategory(categoryId) {
+  // Перенаправить на страницу категории
+  window.location.href = `/knowledge-base/category/${categoryId}`;
+}
+
+async function viewArticle(articleId) {
+  // Перенаправить на страницу статьи
+  window.location.href = `/knowledge-base/article/${articleId}`;
+}
+
+function pluralize(n, one, few, many) {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod100 >= 11 && mod100 <= 19) return many;
+  if (mod10 === 1) return one;
+  if (mod10 >= 2 && mod10 <= 4) return few;
+  return many;
+}
+
+document.addEventListener('DOMContentLoaded', loadKnowledgeBase);
+</script>
+{% endblock %}

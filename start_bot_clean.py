@@ -15,7 +15,7 @@ def kill_existing_processes():
         # Python main.py process'lerini заверш
         subprocess.run('taskkill /f /im python.exe', shell=True, capture_output=True)
         
-        # Cloudflared process'lerini заверш  
+        # Cloudflared process'lerini заверш 
         subprocess.run('taskkill /f /im cloudflared.exe', shell=True, capture_output=True)
         
         # WMIC с spesifik команда satırı olan process'leri заверш
