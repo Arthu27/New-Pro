@@ -12,13 +12,156 @@ from discord.ext import commands
 from discord import app_commands
 from datetime import datetime
 import os
+import io
 import json
 import asyncio
+from PIL import Image, ImageDraw, ImageFont
 
 from config import Config
 from logger import get_logger
 
 log = get_logger("ticket")
+
+ROOT = os.path.join(os.path.dirname(__file__), '..')
+FONTS = os.path.join(ROOT, 'assets', 'fonts')
+BG_PATH = os.path.join(ROOT, 'assets', 'profile_bg_pro.jpg')
+FONT_B = os.path.join(FONTS, 'Bold.ttf')
+FONT_R = os.path.join(FONTS, 'Regular.ttf')
+
+WHITE = (255, 255, 255)
+BLACK = (20, 20, 25)
+TEAL = (13, 148, 136)
+MUTED = (110, 115, 125)
+SS = 4
+
+def _f(bold=False, sz=20):
+    try:
+        return ImageFont.truetype(FONT_B if bold else FONT_R, sz)
+    except Exception:
+        return ImageFont.load_default()
+
+def _ss_render(w, h, draw_fn, scale=SS):
+    big = Image.new('RGBA', (w * scale, h * scale), (0, 0, 0, 0))
+    d = ImageDraw.Draw(big)
+    draw_fn(d, scale)
+    return big.resize((w, h), Image.Resampling.LANCZOS)
+
+def _load_bg(w, h):
+    try:
+        bg = Image.open(BG_PATH).convert('RGBA')
+        bw, bh = bg.size
+        target_ratio = w / h
+        src_ratio = bw / bh
+        if src_ratio > target_ratio:
+            new_w = int(bh * target_ratio)
+            x0 = (bw - new_w) // 2
+            bg = bg.crop((x0, 0, x0 + new_w, bh))
+        else:
+            new_h = int(bw / target_ratio)
+            y0 = (bh - new_h) // 2
+            bg = bg.crop((0, y0, bw, y0 + new_h))
+        return bg.resize((w, h), Image.Resampling.LANCZOS)
+    except Exception:
+        return Image.new('RGBA', (w, h), (255, 255, 255, 255))
+
+def _icon_ticket(d, cx, cy, s, w, color):
+    w_t, h_t = s*0.44, s*0.30
+    x0, y0 = cx - w_t, cy - h_t
+    x1, y1 = cx + w_t, cy + h_t
+    d.rounded_rectangle((x0, y0, x1, y1), radius=h_t*0.25, outline=color, width=w)
+    r = s*0.1
+    d.arc((x0 - r, cy - r, x0 + r, cy + r), -90, 90, fill=WHITE, width=w*2)
+    d.arc((x0 - r, cy - r, x0 + r, cy + r), -90, 90, fill=color, width=w)
+    d.arc((x1 - r, cy - r, x1 + r, cy + r), 90, 270, fill=WHITE, width=w*2)
+    d.arc((x1 - r, cy - r, x1 + r, cy + r), 90, 270, fill=color, width=w)
+
+def _icon_badge(diameter, glyph_fn, ring_color=BLACK, ring_w=None, icon_color=TEAL):
+    ring_w = ring_w if ring_w is not None else max(2, diameter // 22)
+    def draw(d, scale):
+        size = diameter * scale
+        rw = ring_w * scale
+        r = size * 0.22
+        d.rounded_rectangle((rw / 2, rw / 2, size - rw / 2 - 1, size - rw / 2 - 1),
+                             radius=r, fill=WHITE, outline=ring_color, width=rw)
+        glyph_fn(d, size / 2, size / 2, size * 0.60, max(2, int(size * 0.032)), icon_color)
+    return _ss_render(diameter, diameter, draw)
+
+def _corner_bracket(size, thickness, length_ratio=0.35, color=TEAL):
+    def draw(d, scale):
+        t = thickness * scale
+        L = size * scale * length_ratio
+        d.line([(0, t / 2), (L, t / 2)], fill=color, width=t)
+        d.line([(t / 2, 0), (t / 2, L)], fill=color, width=t)
+    return _ss_render(size, size, draw)
+
+def _rounded_panel(w, h, radius, fill=WHITE, outline=BLACK, ow=3):
+    def draw(d, scale):
+        r = radius * scale
+        o = ow * scale
+        d.rounded_rectangle((o / 2, o / 2, w * scale - o / 2 - 1, h * scale - o / 2 - 1),
+                             radius=r, fill=fill, outline=outline, width=o)
+    return _ss_render(w, h, draw)
+
+def generate_ticket_panel_card() -> Image.Image:
+    W, H = 920, 520
+    bg = _load_bg(W, H)
+    d = ImageDraw.Draw(bg)
+
+    # Header
+    header_box = _rounded_panel(872, 72, radius=14, fill=WHITE, outline=BLACK, ow=2)
+    bg.alpha_composite(header_box, (24, 20))
+
+    badge = _icon_badge(52, _icon_ticket, ring_color=BLACK, ring_w=2, icon_color=TEAL)
+    bg.alpha_composite(badge, (36, 30))
+
+    d.text((100, 26), "СЛУЖБА ПОДДЕРЖКИ СЕРВЕРА", fill=BLACK, font=_f(True, 24))
+    d.text((100, 56), "ВЫБЕРИТЕ КАТЕГОРИЮ ОБРАЩЕНИЯ В МЕНЮ НИЖЕ", fill=MUTED, font=_f(False, 15))
+
+    pill = _rounded_panel(160, 36, radius=10, fill=WHITE, outline=TEAL, ow=2)
+    bg.alpha_composite(pill, (720, 38))
+    d.text((738, 46), "SUPPORT v4.0", fill=TEAL, font=_f(True, 14))
+
+    # 4 Category cards
+    items = [
+        ("ОБЩИЕ ВОПРОСЫ", "Консультации и помощь", "Ответ до 24ч"),
+        ("ТЕХ. ПОДДЕРЖКА", "Проблемы с ботом/сервером", "Высокий приоритет"),
+        ("ЖАЛОБЫ", "Нарушения правил", "Конфиденциально"),
+        ("ЗАЯВКИ В СТАФФ", "Набор модераторов", "Отбор кандидатов")
+    ]
+    box_w, box_h = 426, 110
+    gap_x, gap_y = 20, 14
+    start_x, start_y = 24, 106
+
+    for idx, (title, sub, note) in enumerate(items):
+        c = idx % 2
+        r = idx // 2
+        bx = start_x + c * (box_w + gap_x)
+        by = start_y + r * (box_h + gap_y)
+
+        box = _rounded_panel(box_w, box_h, radius=14, fill=WHITE, outline=BLACK, ow=2)
+        bg.alpha_composite(box, (bx, by))
+
+        ibadge = _icon_badge(64, _icon_ticket, ring_color=BLACK, ring_w=2, icon_color=TEAL)
+        bg.alpha_composite(ibadge, (bx + 16, by + 23))
+
+        d.text((bx + 94, by + 18), title, fill=BLACK, font=_f(True, 23))
+        d.text((bx + 94, by + 50), sub, fill=TEAL, font=_f(True, 17))
+        d.text((bx + 94, by + 78), note, fill=MUTED, font=_f(False, 15))
+
+    br = _corner_bracket(40, 4, color=TEAL)
+    bg.alpha_composite(br, (6, 6))
+    bg.alpha_composite(br.rotate(270), (W - 46, 6))
+    bg.alpha_composite(br.rotate(90), (6, H - 46))
+    bg.alpha_composite(br.rotate(180), (W - 46, H - 46))
+
+    return bg
+
+def generate_ticket_panel_bytes() -> io.BytesIO:
+    card = generate_ticket_panel_card().convert('RGB')
+    buf = io.BytesIO()
+    card.save(buf, format='PNG', optimize=True)
+    buf.seek(0)
+    return buf
 
 
 class TicketDB:
@@ -389,18 +532,13 @@ class TicketCog(commands.Cog):
     @app_commands.command(name='ticket-panel', description='Создать панель для тикетов (только для администрации)')
     @app_commands.checks.has_permissions(manage_guild=True)
     async def ticket_panel(self, interaction: discord.Interaction):
-        """Создать embed-панель для создания тикетов"""
-        embed = discord.Embed(
-            title="Служба поддержки",
-            description="Выберите категорию обращения из списка ниже.\n\nНаша команда ответит вам в кратчайшие сроки.",
-            color=discord.Color.dark_grey(),
-            timestamp=datetime.now()
+        """Создать профессиональную карточку-панель для создания тикетов"""
+        img_buf = await interaction.client.loop.run_in_executor(
+            None, generate_ticket_panel_bytes
         )
-        embed.add_field(name="Время ответа", value="До 24 часов", inline=True)
-        embed.add_field(name="Максимум тикетов", value=f"{Config.TICKET_MAX_OPEN} на участника", inline=True)
-        
+        file = discord.File(img_buf, filename="ticket_panel.png")
         view = TicketView(self)
-        await interaction.response.send_message(embed=embed, view=view)
+        await interaction.response.send_message(file=file, view=view)
         log.info(f"Ticket panel создана в {interaction.channel}")
     
     @app_commands.command(name='tickets', description='Список ваших тикетов')
