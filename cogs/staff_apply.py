@@ -314,6 +314,9 @@ class StaffApply(commands.Cog):
     @app_commands.checks.has_permissions(manage_guild=True)
     async def staff_panel(self, interaction: discord.Interaction):
         """Отправляет баннер STAFF HAKUMO с меню выбора роли"""
+        # Сразу подтверждаем interaction: загрузка удалённого баннера может занять больше 3 секунд.
+        await interaction.response.defer(ephemeral=True)
+
         # Пути к кастомным баннерам - приоритет у пользовательской фотки
         custom_paths = [
             os.path.join(ROOT, 'assets', 'staff_hakumo_banner.png'),  # сгенерированный баннер Gojo
@@ -378,7 +381,7 @@ class StaffApply(commands.Cog):
         embed.set_footer(text="Hakumo • Staff Recruitment", icon_url=interaction.guild.icon.url if interaction.guild and interaction.guild.icon else None)
         
         await interaction.channel.send(embed=embed, file=file, view=view)
-        await interaction.response.send_message("✅ Панель STAFF HAKUMO успешно создана!", ephemeral=True)
+        await interaction.followup.send("✅ Панель STAFF HAKUMO успешно создана!", ephemeral=True)
 
     @commands.Cog.listener()
     async def on_ready(self):
