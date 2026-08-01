@@ -306,18 +306,56 @@ class StaffApply(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @app_commands.command(name="staff-panel", description="Создать красивую панель набора в команду")
+    @app_commands.command(name="staff-panel", description="Создать панель STAFF HAKUMO с баннером")
     @app_commands.checks.has_permissions(manage_guild=True)
     async def staff_panel(self, interaction: discord.Interaction):
-        """Создать профессиональную карточку-панель для набора"""
-        # Генерируем красивую кастомную Pillow карточку набора с новым золотистым фоном
-        img_buf = await interaction.client.loop.run_in_executor(
-            None, generate_staff_panel_bytes
-        )
-        file = discord.File(img_buf, filename="staff_panel.png")
+        """Отправляет баннер STAFF HAKUMO с меню выбора роли"""
+        # Пути к кастомным баннерам - приоритет у пользовательской фотки
+        custom_paths = [
+            os.path.join(ROOT, 'assets', 'staff_hakumo_banner.png'),  # сгенерированный баннер Gojo
+            os.path.join(ROOT, 'assets', 'staff_custom.png'),
+            os.path.join(ROOT, 'assets', 'staff_custom.jpg'),
+            os.path.join(ROOT, 'assets', 'staff_custom.jpeg'),
+            os.path.join(ROOT, 'assets', 'staff_banner_custom.png'),
+        ]
+        
+        file = None
+        banner_path = None
+        for p in custom_paths:
+            if os.path.exists(p):
+                banner_path = p
+                file = discord.File(p, filename="staff_banner.png")
+                break
+        
+        # Если кастомного баннера нет - генерируем старый
+        if not file:
+            img_buf = await interaction.client.loop.run_in_executor(
+                None, generate_staff_panel_bytes
+            )
+            file = discord.File(img_buf, filename="staff_panel.png")
+        
         view = StaffApplyView()
-        await interaction.channel.send(file=file, view=view)
-        await interaction.response.send_message("Панель набора в команду успешно создана.", ephemeral=True)
+        
+        # Красивый embed с баннером
+        embed = discord.Embed(
+            title="STAFF • HAKUMO",
+            description=(
+                "```ansi\n"
+                "\u001b[1;37m ⭐ ДОБРО ПОЖАЛОВАТЬ В КОМАНДУ HAKUMO ⭐ \u001b[0m\n"
+                "```\n"
+                "**Выберите желаемую должность в меню ниже:**\n\n"
+                "🛡️ `Moderator` — Модерация сервера и участников\n"
+                "💬 `Chat Control` — Контроль чатов и порядка\n"
+                "🤝 `Helper` — Помощь участникам сервера\n"
+                "\n*Нажмите на меню чтобы подать заявку*"
+            ),
+            color=0x0a0a0a
+        )
+        embed.set_image(url="attachment://staff_banner.png")
+        embed.set_footer(text="Hakumo • Staff Recruitment", icon_url=interaction.guild.icon.url if interaction.guild and interaction.guild.icon else None)
+        
+        await interaction.channel.send(embed=embed, file=file, view=view)
+        await interaction.response.send_message("✅ Панель STAFF HAKUMO успешно создана!", ephemeral=True)
 
     @commands.Cog.listener()
     async def on_ready(self):
