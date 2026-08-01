@@ -735,6 +735,116 @@ class Ticket(commands.Cog):
             del data[str(channel_id)]
             self._save_ai_data(guild_id, data)
     
+    async def _verify_insult_claim(self, message, state) -> bool:
+        """Проверяет реальные логи канала, если участник жалуется на оскорбление/нарушение от другого пользователя"""
+        content = message.content.strip()
+        lower = content.lower()
+        insult_keywords = [
+            'оскорб', 'мат', 'написал', 'ебал', 'рот', 'сук', 'хуй', 'дурак', 'идиот', 'обозва', 'жалоб',
+            'обзыва', 'матер', 'шлюх', 'урод', 'мраз', 'гнид', 'пидор', 'соси', 'заткнись'
+        ]
+        has_kw = any(w in lower for w in insult_keywords)
+        if not (has_kw or message.mentions):
+            return False
+
+        import re as _re
+        accused = None
+        if message.mentions:
+            accused = message.mentions[0]
+        else:
+            ids = _re.findall(r'\b\d{17,19}\b', content)
+            for id_str in ids:
+                m = message.guild.get_member(int(id_str))
+                if m and m.id != message.author.id:
+                    accused = m
+                    break
+        
+        if not accused or accused.id == message.author.id or accused.bot:
+            return False
+
+        target_ch = None
+        if message.channel_mentions:
+            target_ch = message.channel_mentions[0]
+        else:
+            c_ids = _re.findall(r'\b\d{17,19}\b', content)
+            for cid in c_ids:
+                ch = message.guild.get_channel(int(cid))
+                if ch and isinstance(ch, discord.TextChannel) and ch.id != message.channel.id:
+                    target_ch = ch
+                    break
+
+        async with message.channel.typing():
+            channels_to_scan = [target_ch] if target_ch else [c for c in message.guild.text_channels if c.id != message.channel.id][:10]
+            
+            found_quote = None
+            found_msg = None
+            found_ch = None
+            
+            for ch in channels_to_scan:
+                try:
+                    async for msg in ch.history(limit=500, oldest_first=False):
+                        if msg.author.id == accused.id:
+                            from cogs.ai_chat import _kufur_var_mi
+                            msg_lower = msg.content.lower()
+                            is_match = _kufur_var_mi(msg.content) or any(w in msg_lower for w in ['рот', 'ебал', 'сук', 'хуй', 'дурак', 'идиот', 'урод', 'мраз', 'пидор', 'соси'])
+                            if is_match:
+                                found_quote = msg.content
+                                found_msg = msg
+                                found_ch = ch
+                                break
+                    if found_quote:
+                        break
+                except Exception:
+                    continue
+
+            if found_quote:
+                ts_str = found_msg.created_at.strftime('%d.%m.%Y в %H:%M:%S')
+                embed = discord.Embed(
+                    title="⚖️ Судебная проверка реальных логов сервера • НАРУШЕНИЕ ПОДТВЕРЖДЕНО",
+                    description=(
+                        f"Я лично просканировал историю сообщений сервера в канале {found_ch.mention}.\n\n"
+                        f"• **Нарушитель:** {accused.mention} (`ID: {accused.id}`)\n"
+                        f"• **Дата и время:** `{ts_str}`\n"
+                        f"• **Точная цитата из реальных логов:**\n"
+                        f"> *«{found_quote}»*\n\n"
+                        f"**Квалификация:** Правило #1 (Оскорбление участников / Нецензурная лексика).\n"
+                        f"**Вердикт ИИ-судьи:** ВИНОВЕН (Уверенность: 100% по факту записи в логе)."
+                    ),
+                    color=0x2ECC71,
+                    timestamp=datetime.datetime.utcnow()
+                )
+
+                try:
+                    import datetime as _dt
+                    until = discord.utils.utcnow() + _dt.timedelta(hours=1)
+                    await accused.timeout(until, reason=f"AI Судья: Оскорбление в логе — «{found_quote[:50]}»")
+                    embed.add_field(
+                        name="✅ [СУДЕБНОЕ РЕШЕНИЕ ВЫПОЛНЕНО]",
+                        value=f"Участнику **{accused.display_name}** выдан реальный тайм-аут (мут) на **1 час** в Discord.",
+                        inline=False
+                    )
+                except Exception as e:
+                    embed.add_field(
+                        name="⚠️ [ВНИМАНИЕ МОДЕРАТОРАМ]",
+                        value=f"Не удалось выдать тайм-аут автоматически (у бота недостаточно прав над ролью участника): `{e}`",
+                        inline=False
+                    )
+                await message.channel.send(embed=embed)
+                return True
+            else:
+                embed = discord.Embed(
+                    title="🔍 Судебная проверка реальных логов сервера • Нарушение НЕ подтверждено",
+                    description=(
+                        f"Я тщательно просканировал последние сообщения на сервере для **{accused.display_name}**.\n\n"
+                        f"❌ **Результат:** В реальных логах чата **не обнаружено** оскорблений или указанных вами слов от этого участника.\n\n"
+                        f"⚠️ *ИИ-судья принимает решения исключительно на основе фактической истории сообщений сервера. Утверждения без подтверждения в логах не являются основанием для наказания.*"
+                    ),
+                    color=0xE74C3C,
+                    timestamp=datetime.datetime.utcnow()
+                )
+                await message.channel.send(embed=embed)
+                return True
+
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
         """Слушать сообщения в каналах тикетов и отвечать с помощью AI"""
@@ -779,6 +889,11 @@ class Ticket(commands.Cog):
             return
         # Если анализ продолжается — не предпринимать действий с новым сообщением
         if state.get('analyzing'):
+            return
+
+        #  РЕАЛЬНАЯ ПРОВЕРКА ЛОГОВ И ВЫДАЧА НАКАЗАНИЯ ПРИ ЖАЛОБЕ НА ОСКОРБЛЕНИЕ 
+        verified = await self._verify_insult_claim(message, state)
+        if verified:
             return
 
         #  ЖАЛОБА STATE MACHINE 

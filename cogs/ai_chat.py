@@ -1276,6 +1276,11 @@ class AIChat(commands.Cog):
             )
             if not is_allowed_ai:
                 return
+            if is_ticket_channel:
+                lower_msg = message.content.lower()
+                insult_kws = ['оскорб', 'мат', 'написал', 'ебал', 'рот', 'сук', 'хуй', 'дурак', 'идиот', 'обозва', 'жалоб', 'матер', 'шлюх', 'урод', 'мраз', 'гнид', 'пидор', 'соси']
+                if any(w in lower_msg for w in insult_kws) or message.mentions:
+                    return  # cogs/ticket.py выполняет реальную судебную проверку логов и наказывает!
             content = re.sub(r'^moe\s*', '', message.content, flags=re.IGNORECASE).strip()
             for m in message.mentions:
                 content = content.replace(f'<@{m.id}>', '').replace(f'<@!{m.id}>', '')
