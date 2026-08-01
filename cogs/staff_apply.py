@@ -366,24 +366,10 @@ class StaffApply(commands.Cog):
         
         view = StaffApplyView()
         
-        # Красивый embed с баннером
-        embed = discord.Embed(
-            title="STAFF • HAKUMO",
-            description=(
-                "```ansi\n"
-                "\u001b[1;37m ⭐ ДОБРО ПОЖАЛОВАТЬ В КОМАНДУ HAKUMO ⭐ \u001b[0m\n"
-                "```\n"
-                "**Выберите желаемую должность в меню ниже:**\n\n"
-                "🛡️ `Moderator` — Модерация сервера и участников\n"
-                "💬 `Chat Control` — Контроль чатов и порядка\n"
-                "🤝 `Helper` — Помощь участникам сервера\n"
-                "\n*Нажмите на меню чтобы подать заявку*"
-            ),
-            color=0x0a0a0a
-        )
+        # Отправляем только большую фотографию и меню, без лишнего текста.
+        embed = discord.Embed(color=0x0a0a0a)
         embed.set_image(url="attachment://staff_banner.png")
-        embed.set_footer(text="Hakumo • Staff Recruitment", icon_url=interaction.guild.icon.url if interaction.guild and interaction.guild.icon else None)
-        
+
         await interaction.channel.send(embed=embed, file=file, view=view)
         await interaction.followup.send("✅ Панель STAFF HAKUMO успешно создана!", ephemeral=True)
 
