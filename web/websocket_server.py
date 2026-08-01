@@ -242,10 +242,10 @@ def start_websocket_thread(host: str = 'localhost', port: int = 8765):
         except Exception as e:
             print(f'[WebSocket] Сервер не запущен: {e}')
     
-    threимя = threading.Threимя(target=run_server, daemon=True)
-    threимя.start()
+    thread = threading.Thread(target=run_server, daemon=True)
+    thread.start()
     print(f'[WebSocket] Сервер запущен в отдельном потоке')
-    return threимя
+    return thread
 
 
 # ── UTILITY FUNCTIONS ───────────────────────────────────────────────────────
