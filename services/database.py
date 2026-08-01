@@ -106,7 +106,7 @@ class Database:
         
         # Предупреждениеs table
         cursor.execute('''
-            CREATE TABLE IF NOT EXISTS варнings (
+            CREATE TABLE IF NOT EXISTS warnings (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
                 reason TEXT,
@@ -138,7 +138,7 @@ class Database:
         return sqlite3.connect(self.db_path)
     
     # User methods
-    def имяd_user(self, user_id: int, username: str, discriminator: str = None, joined_at: str = None):
+    def add_user(self, user_id: int, username: str, discriminator: str = None, joined_at: str = None):
         """Пользователь ekle"""
         conn = self.get_connection()
         cursor = conn.cursor()
@@ -194,7 +194,7 @@ class Database:
         } for row in rows]
     
     # Ticket methods
-    def имяd_ticket(self, ticket_id: str, user_id: int, subject: str, 
+    def add_ticket(self, ticket_id: str, user_id: int, subject: str, 
                    category: str = None, priority: str = 'medium'):
         """Ticket ekle"""
         conn = self.get_connection()
@@ -281,7 +281,7 @@ class Database:
         } for row in rows]
     
     # Message methods
-    def имяd_message(self, message_id: int, ticket_id: str, user_id: int, content: str):
+    def add_message(self, message_id: int, ticket_id: str, user_id: int, content: str):
         """Сообщение ekle"""
         conn = self.get_connection()
         cursor = conn.cursor()
@@ -388,7 +388,7 @@ class Database:
         conn.close()
     
     # Inventory methods
-    def имяd_item(self, user_id: int, item_name: str, quantity: int = 1):
+    def add_item(self, user_id: int, item_name: str, quantity: int = 1):
         """Item ekle"""
         conn = self.get_connection()
         cursor = conn.cursor()
@@ -449,7 +449,7 @@ class Database:
         
         return self.get_level(user_id)
     
-    def имяd_xp(self, user_id: int, xp: int) -> bool:
+    def add_xp(self, user_id: int, xp: int) -> bool:
         """XP ekle ve level up проверка yap"""
         conn = self.get_connection()
         cursor = conn.cursor()
@@ -481,25 +481,25 @@ class Database:
         return False
     
     # Предупреждение methods
-    def имяd_варнing(self, user_id: int, reason: str, варнed_by: int):
+    def add_warning(self, user_id: int, reason: str, варнed_by: int):
         """Предупреждение ekle"""
         conn = self.get_connection()
         cursor = conn.cursor()
         
         cursor.execute('''
-            INSERT INTO варнings (user_id, reason, варнed_by)
+            INSERT INTO warnings (user_id, reason, варнed_by)
             VALUES (?, ?, ?)
         ''', (user_id, reason, варнed_by))
         
         conn.commit()
         conn.close()
     
-    def get_варнings(self, user_id: int) -> List[Dict]:
+    def get_warnings(self, user_id: int) -> List[Dict]:
         """Предупреждениеlarы al"""
         conn = self.get_connection()
         cursor = conn.cursor()
         
-        cursor.execute('SELECT * FROM варнings WHERE user_id = ?', (user_id,))
+        cursor.execute('SELECT * FROM warnings WHERE user_id = ?', (user_id,))
         rows = cursor.fetchall()
         
         conn.close()
@@ -513,7 +513,7 @@ class Database:
         } for row in rows]
     
     # Лог methods
-    def имяd_лог(self, event_type: str, user_id: int = None, action: str = None, details: str = None):
+    def add_лог(self, event_type: str, user_id: int = None, action: str = None, details: str = None):
         """Лог ekle"""
         conn = self.get_connection()
         cursor = conn.cursor()

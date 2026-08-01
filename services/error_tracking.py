@@ -24,7 +24,7 @@ class Error:
         self.stack_trace = stack_trace
         self.endpoint = endpoint
         self.user_id = user_id
-        self.severity = severity  # debug, info, варнing, error, critical
+        self.severity = severity  # debug, info, warning, error, critical
         self.timestamp = datetime.now()
         self.occurrences = 1
         self.first_seen = datetime.now()
@@ -35,16 +35,16 @@ class Error:
         self.assigned_to = None
         self.resolution = None
     
-    def имяd_occurrence(self):
+    def add_occurrence(self):
         """Добавить новую запись"""
         self.occurrences += 1
         self.last_seen = datetime.now()
     
-    def имяd_tag(self, key: str, value: str):
+    def add_tag(self, key: str, value: str):
         """Добавить метку"""
         self.tags[key] = value
     
-    def имяd_metимяata(self, key: str, value: Any):
+    def add_metимяata(self, key: str, value: Any):
         """Metимяata добавить"""
         self.metимяata[key] = value
     
@@ -168,7 +168,7 @@ class ErrorTracker:
         
         if existing_error:
             # Текущий hataya новый oluэтотm добавить
-            existing_error.имяd_occurrence()
+            existing_error.add_occurrence()
             self._save_errors()
             return existing_error
         
@@ -187,11 +187,11 @@ class ErrorTracker:
         
         if tags:
             for key, value in tags.items():
-                error.имяd_tag(key, value)
+                error.add_tag(key, value)
         
         if metимяata:
             for key, value in metимяata.items():
-                error.имяd_metимяata(key, value)
+                error.add_metимяata(key, value)
         
         self.errors[error_id] = error
         self._save_errors()
@@ -216,7 +216,7 @@ class ErrorTracker:
                 break
         
         if existing_error:
-            existing_error.имяd_occurrence()
+            existing_error.add_occurrence()
             self._save_errors()
             return existing_error
         
@@ -235,11 +235,11 @@ class ErrorTracker:
         
         if tags:
             for key, value in tags.items():
-                error.имяd_tag(key, value)
+                error.add_tag(key, value)
         
         if metимяata:
             for key, value in metимяata.items():
-                error.имяd_metимяata(key, value)
+                error.add_metимяata(key, value)
         
         self.errors[error_id] = error
         self._save_errors()
@@ -419,7 +419,7 @@ class ErrorNotification:
         with open(self.notification_rules_file, 'w', encoding='utf-8') as f:
             json.dump(self.notification_rules, f, ensure_ascii=False, indent=2)
     
-    def имяd_notification_rule(self, rule_id: str, severity: str,
+    def add_notification_rule(self, rule_id: str, severity: str,
                               channels: List[str], recipients: List[str]):
         """Уведомление kuralы добавить"""
         self.notification_rules[rule_id] = {
@@ -537,7 +537,7 @@ class ErrorAnalytics:
         severity_weights = {
             'debug': 1,
             'info': 2,
-            'варнing': 3,
+            'warning': 3,
             'error': 5,
             'critical': 10
         }

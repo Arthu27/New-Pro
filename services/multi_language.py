@@ -112,7 +112,7 @@ class LanguageManager:
         """Короткий alias для translate"""
         return self.translate(key, **kwargs)
     
-    def имяd_translation(self, key: str, translations: Dict[str, str]):
+    def add_translation(self, key: str, translations: Dict[str, str]):
         """Добавить перевод для всех языков"""
         for lang_code, translation in translations.items():
             if lang_code in self.translations:

@@ -275,7 +275,7 @@ class APIDocumentation:
     def __init__(self):
         self.endpoints = []
     
-    def имяd_endpoint(self, method: str, path: str, description: str,
+    def add_endpoint(self, method: str, path: str, description: str,
                      деньгиmeters: List[Dict[str, Any]], response: Dict[str, Any]):
         """Добавить endpoint"""
         self.endpoints.append({

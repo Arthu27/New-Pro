@@ -47,7 +47,7 @@ class BulkOperation:
         self.completed_at = datetime.now().isoformat()
         self.results['error'] = error
     
-    def имяd_success(self, ticket_id: str, result: Any = None):
+    def add_success(self, ticket_id: str, result: Any = None):
         """Успешно sonuч добавить"""
         self.results['success'].append({
             'ticket_id': ticket_id,
@@ -56,7 +56,7 @@ class BulkOperation:
         })
         self._update_progress()
     
-    def имяd_failure(self, ticket_id: str, error: str):
+    def add_failure(self, ticket_id: str, error: str):
         """Неудачно sonuч добавить"""
         self.results['failed'].append({
             'ticket_id': ticket_id,
@@ -203,15 +203,15 @@ class BulkUpdater:
                 ticket = tickets.get(ticket_id)
                 
                 if not ticket:
-                    operation.имяd_failure(ticket_id, 'Тикет не найден')
+                    operation.add_failure(ticket_id, 'Тикет не найден')
                     continue
                 
                 ticket['status'] = new_status
                 ticket['updated_at'] = datetime.now().isoformat()
                 
-                operation.имяd_success(ticket_id, {'new_status': new_status})
+                operation.add_success(ticket_id, {'new_status': new_status})
             except Exception as e:
-                operation.имяd_failure(ticket_id, str(e))
+                operation.add_failure(ticket_id, str(e))
         
         operation.mark_completed()
         self.operation_manager.update_operation(operation.operation_id)
@@ -236,29 +236,29 @@ class BulkUpdater:
                 ticket = tickets.get(ticket_id)
                 
                 if not ticket:
-                    operation.имяd_failure(ticket_id, 'Тикет не найден')
+                    operation.add_failure(ticket_id, 'Тикет не найден')
                     continue
                 
                 ticket['assigned_to'] = assignee_id
                 ticket['updated_at'] = datetime.now().isoformat()
                 
-                operation.имяd_success(ticket_id, {'assignee_id': assignee_id})
+                operation.add_success(ticket_id, {'assignee_id': assignee_id})
             except Exception as e:
-                operation.имяd_failure(ticket_id, str(e))
+                operation.add_failure(ticket_id, str(e))
         
         operation.mark_completed()
         self.operation_manager.update_operation(operation.operation_id)
         
         return operation
     
-    async def bulk_имяd_tags(self, ticket_ids: List[str], tags: List[str],
-                            имяded_by: str, tickets: Dict[str, Dict[str, Any]]) -> BulkOperation:
+    async def bulk_add_tags(self, ticket_ids: List[str], tags: List[str],
+                            added_by: str, tickets: Dict[str, Dict[str, Any]]) -> BulkOperation:
         """Массовая упоминание ekleme"""
         operation = self.operation_manager.create_operation(
-            operation_type='имяd_tags',
+            operation_type='add_tags',
             ticket_ids=ticket_ids,
             деньгиmeters={'tags': tags},
-            initiated_by=имяded_by
+            initiated_by=added_by
         )
         
         operation.mark_started()
@@ -269,7 +269,7 @@ class BulkUpdater:
                 ticket = tickets.get(ticket_id)
                 
                 if not ticket:
-                    operation.имяd_failure(ticket_id, 'Тикет не найден')
+                    operation.add_failure(ticket_id, 'Тикет не найден')
                     continue
                 
                 existing_tags = ticket.get('tags', [])
@@ -277,9 +277,9 @@ class BulkUpdater:
                 ticket['tags'] = new_tags
                 ticket['updated_at'] = datetime.now().isoformat()
                 
-                operation.имяd_success(ticket_id, {'tags': new_tags})
+                operation.add_success(ticket_id, {'tags': new_tags})
             except Exception as e:
-                operation.имяd_failure(ticket_id, str(e))
+                operation.add_failure(ticket_id, str(e))
         
         operation.mark_completed()
         self.operation_manager.update_operation(operation.operation_id)
@@ -304,15 +304,15 @@ class BulkUpdater:
                 ticket = tickets.get(ticket_id)
                 
                 if not ticket:
-                    operation.имяd_failure(ticket_id, 'Тикет не найден')
+                    operation.add_failure(ticket_id, 'Тикет не найден')
                     continue
                 
                 ticket['priority'] = new_priority
                 ticket['updated_at'] = datetime.now().isoformat()
                 
-                operation.имяd_success(ticket_id, {'new_priority': new_priority})
+                operation.add_success(ticket_id, {'new_priority': new_priority})
             except Exception as e:
-                operation.имяd_failure(ticket_id, str(e))
+                operation.add_failure(ticket_id, str(e))
         
         operation.mark_completed()
         self.operation_manager.update_operation(operation.operation_id)
@@ -344,11 +344,11 @@ class BulkCloser:
                 ticket = tickets.get(ticket_id)
                 
                 if not ticket:
-                    operation.имяd_failure(ticket_id, 'Тикет не найден')
+                    operation.add_failure(ticket_id, 'Тикет не найден')
                     continue
                 
                 if ticket.get('status') == 'closed':
-                    operation.имяd_failure(ticket_id, 'Ticket zaten закрытый')
+                    operation.add_failure(ticket_id, 'Ticket zaten закрытый')
                     continue
                 
                 ticket['status'] = 'closed'
@@ -357,9 +357,9 @@ class BulkCloser:
                 ticket['close_reason'] = close_reason
                 ticket['updated_at'] = datetime.now().isoformat()
                 
-                operation.имяd_success(ticket_id, {'closed_at': ticket['closed_at']})
+                operation.add_success(ticket_id, {'closed_at': ticket['closed_at']})
             except Exception as e:
-                operation.имяd_failure(ticket_id, str(e))
+                operation.add_failure(ticket_id, str(e))
         
         operation.mark_completed()
         self.operation_manager.update_operation(operation.operation_id)
@@ -393,13 +393,13 @@ class BulkExporter:
                 ticket = tickets.get(ticket_id)
                 
                 if not ticket:
-                    operation.имяd_failure(ticket_id, 'Тикет не найден')
+                    operation.add_failure(ticket_id, 'Тикет не найден')
                     continue
                 
                 exported_tickets.append(ticket)
-                operation.имяd_success(ticket_id)
+                operation.add_success(ticket_id)
             except Exception as e:
-                operation.имяd_failure(ticket_id, str(e))
+                operation.add_failure(ticket_id, str(e))
         
         # Dosyaya сохранить
         if exported_tickets:
@@ -437,13 +437,13 @@ class BulkExporter:
                 ticket = tickets.get(ticket_id)
                 
                 if not ticket:
-                    operation.имяd_failure(ticket_id, 'Тикет не найден')
+                    operation.add_failure(ticket_id, 'Тикет не найден')
                     continue
                 
                 exported_tickets.append(ticket)
-                operation.имяd_success(ticket_id)
+                operation.add_success(ticket_id)
             except Exception as e:
-                operation.имяd_failure(ticket_id, str(e))
+                operation.add_failure(ticket_id, str(e))
         
         # CSV файлna сохранить
         if exported_tickets:
@@ -510,9 +510,9 @@ class BulkImporter:
             try:
                 ticket_id = ticket_ids[i]
                 # Burимяa ticket'ы сохранить
-                operation.имяd_success(ticket_id, ticket_data)
+                operation.add_success(ticket_id, ticket_data)
             except Exception as e:
-                operation.имяd_failure(ticket_ids[i], str(e))
+                operation.add_failure(ticket_ids[i], str(e))
         
         operation.mark_completed()
         self.operation_manager.update_operation(operation.operation_id)

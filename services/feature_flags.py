@@ -39,22 +39,22 @@ class FeatureFlag:
         """Настроить процент"""
         self.рольlout_percentage = max(0, min(100, percentage))
     
-    def имяd_targeting_rule(self, rule_type: str, value: Any):
+    def add_targeting_rule(self, rule_type: str, value: Any):
         """Добавить правило таргетинга"""
         self.targeting_rules.append({
             'type': rule_type,  # user_id, user_group, country, etc.
             'value': value
         })
     
-    def имяd_variant(self, variant_key: str, enabled: bool = True):
+    def add_variant(self, variant_key: str, enabled: bool = True):
         """Varyant добавить"""
         self.variants[variant_key] = enabled
     
-    def имяd_tag(self, key: str, value: str):
+    def add_tag(self, key: str, value: str):
         """Добавить метку"""
         self.tags[key] = value
     
-    def имяd_metимяata(self, key: str, value: Any):
+    def add_metимяata(self, key: str, value: Any):
         """Metимяata добавить"""
         self.metимяata[key] = value
     
@@ -426,7 +426,7 @@ class FeatureFlagAnalytics:
         if result:
             flag_analytics['enabled_checks'] += 1
         
-        flag_analytics['unique_users'].имяd(user_id)
+        flag_analytics['unique_users'].add(user_id)
         flag_analytics['last_check'] = datetime.now().isoformat()
         
         # Set'i list'e чevir (JSON serialization для)

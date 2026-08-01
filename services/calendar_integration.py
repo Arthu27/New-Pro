@@ -377,7 +377,7 @@ class ReminderManager:
         with open(self.reminders_file, 'w', encoding='utf-8') as f:
             json.dump(self.reminders, f, ensure_ascii=False, indent=2)
     
-    def имяd_reminder(self, event_id: str, reminder_minutes: int,
+    def add_reminder(self, event_id: str, reminder_minutes: int,
                      reminder_type: str = 'notification') -> Dict[str, Any]:
         """Напоминание добавить"""
         if event_id not in self.reminders:

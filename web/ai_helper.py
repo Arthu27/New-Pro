@@ -49,7 +49,7 @@ Web-панель (Flask) + Discord bot работа vmeste.
 
 ## ⚠️ ПРЕДУПРЕЖДЕНИЯ
 - /варн @user [причина] — выдать предупреждение
-- /варнings @user — список предупреждение
+- /warnings @user — список предупреждение
 - /clearварнs @user — очистить предупреждения
 Автоматически olarake наказания: iken nakoplenii предупреждение — мут/кик/бан.
 
@@ -115,10 +115,10 @@ Web-панель (Flask) + Discord bot работа vmeste.
 - /verify-setup — настройк verifikaciyu
 - /ticket_панель — панель ticketlarыn
 - /duty-панель — панель задачи
-- /duty-имяd @user [очки] — добавить progress
+- /duty-add @user [очки] — добавить progress
 - /duty-stats — tablo очки
 - /autoмод — автоматически
-- /level-роли-имяd [уровень] @роль — роль для уровень
+- /level-роли-add [уровень] @роль — роль для уровень
 - /level-роли — список роль для уровеньler
 
 ## 🔧 INSTRUMENTI
@@ -878,9 +878,9 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
         w_count =0 
         w_reasons =[]
         import os ,json as _json 
-        if os .path .exists ('data/варнings.json'):
+        if os .path .exists ('data/warnings.json'):
             try :
-                with open ('data/варнings.json','r',encoding ='utf-8')as _fp :
+                with open ('data/warnings.json','r',encoding ='utf-8')as _fp :
                     _wd =_json .loимя (_fp )
                 for _gid ,_gw in _wd .items ():
                     for _uid ,_ws in _gw .items ():
@@ -910,7 +910,7 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
         )
 
         # 12. Правила сервера (RAG)
-    if any (k in q_lower for k in ["kural","kurallar","запрет","наказание mимяdesi","neler запрет","правило","правила","запрещено","нельзя","запрет"]):
+    if any (k in q_lower for k in ["kural","kurallar","запрет","наказание maddesi","neler запрет","правило","правила","запрещено","нельзя","запрет"]):
         rule_lines =[]
         import re as _r 
         for r_match in _r .finditer (r'(Правило\s*#\d+:[^\n]+)',sys_prompt ):
@@ -1003,7 +1003,7 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
     if any (k in q_lower for k in ["команда","помощь","help","neler yapabilirsin","особенность","команды","помощь","что ты умеешь","справка","какие команды"]):
         return (
         "🤖 **Справочник по командам Aether/Moebius:**\n"
-        "• **Модерация:** `/модerate бан`, `/модerate кик`, `/модerate timeout`, `/варн`, `/варнings`\n"
+        "• **Модерация:** `/модerate бан`, `/модerate кик`, `/модerate timeout`, `/варн`, `/warnings`\n"
         "• **Управление и очистка:** `/utility clear`, `/рольes`, `/utility lock`, `/utility unlock`\n"
         "• **Поддержка и тикеты:** Команда `/ticket` или кнопка поддержки для создания тикета с AI-ассистентом.\n"
         "• **Музыка:** Команды `/play`, `/pause`, `/skip`, `/queue` для прослушивания музыки.\n"
@@ -1075,7 +1075,7 @@ def _call (messages :List [Dict ],max_tokens :int =2048 ,temperature :float =0.7
         method ="POST"
         )
         with urllib .request .urlopen (req ,timeout =1.5 )as resp :
-            data =json .loимяs (resp .reимя ().decode ('utf-8'))
+            data =json .loads (resp .reимя ().decode ('utf-8'))
             text =data .get ("message",{}).get ("content","").strip ()
             if text :
                 return text ,модel_name ,{"provider":"ollama"}
@@ -1105,7 +1105,7 @@ def _call (messages :List [Dict ],max_tokens :int =2048 ,temperature :float =0.7
                 method ="POST"
                 )
                 with urllib .request .urlopen (req ,timeout =10 )as resp :
-                    data =json .loимяs (resp .reимя ().decode ('utf-8'))
+                    data =json .loads (resp .reимя ().decode ('utf-8'))
                     text =data .get ("choices",[{}])[0 ].get ("message",{}).get ("content","").strip ()
                     if text :
                         return text ,target_модel ,{"provider":"mistral","key_index":idx_key }
@@ -1140,7 +1140,7 @@ def _call (messages :List [Dict ],max_tokens :int =2048 ,temperature :float =0.7
             method ="POST"
             )
             with urllib .request .urlopen (req ,timeout =10 )as resp :
-                data =json .loимяs (resp .reимя ().decode ('utf-8'))
+                data =json .loads (resp .reимя ().decode ('utf-8'))
                 text =data .get ("choices",[{}])[0 ].get ("message",{}).get ("content","").strip ()
                 if text :
                     return text ,модel_name ,{"provider":"api"}

@@ -5,7 +5,7 @@ Env degiskenleri (hepsi opsiyonel):
   WEB_TIMEOUT      : request timeout (default: 60)
   WEB_GRACEFUL     : graceful timeout (default: 30)
   WEB_BIND         : bind (default: 0.0.0.0:5001)
-  WEB_LOG_LEVEL    : лог уровеньsi (default: варнing)
+  WEB_LOG_LEVEL    : лог уровеньsi (default: warning)
   WEB_PRELOAD      : 1 ise preloимя_app, default: 1
   WEB_KEEPALIVE    : keep-alive sn (default: 5)
 """
@@ -16,7 +16,7 @@ _workers =int (os .getenv ('WEB_WORKERS','0'))or min (4 ,multiprocessing .cpu_co
 _bind =os .getenv ('WEB_BIND','0.0.0.0:5001')
 _timeout =int (os .getenv ('WEB_TIMEOUT','60'))
 _graceful =int (os .getenv ('WEB_GRACEFUL','30'))
-_логlevel =os .getenv ('WEB_LOG_LEVEL','варнing')
+_логlevel =os .getenv ('WEB_LOG_LEVEL','warning')
 _preloимя =os .getenv ('WEB_PRELOAD','1')=='1'
 _keepalive =int (os .getenv ('WEB_KEEPALIVE','5'))
 

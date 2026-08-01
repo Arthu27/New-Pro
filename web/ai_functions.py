@@ -14,7 +14,7 @@ class AIFunctions :
     def __init__ (self ,bot :discord .Client ):
         self .bot =bot 
         self .functions ={
-        'get_user_варнings':self .get_user_варнings ,
+        'get_user_warnings':self .get_user_warnings ,
         'get_user_info':self .get_user_info ,
         'get_user_рольes':self .get_user_рольes ,
         'check_message_history':self .check_message_history ,
@@ -33,9 +33,9 @@ class AIFunctions :
         return """
 ERIШIMNIE FONKSIYONLAR (vizivay ne время gerekli):
 
-1. get_user_варнings(user_id: int)
+1. get_user_warnings(user_id: int)
    Получить история предупреждение пользователь
-   Пример: get_user_варнings(123456789)
+   Пример: get_user_warnings(123456789)
 
 2. get_user_info(user_id: int)
    Получить информация о у пользователя (имя, дата registracii, время на на сервере)
@@ -97,7 +97,7 @@ FORMAT VIZOVA:
 [FUNC:function_name(деньгиm1=value1, деньгиm2=value2)]
 
 ПРИМЕР:
-[FUNC:get_user_варнings(user_id=123456789)]
+[FUNC:get_user_warnings(user_id=123456789)]
 """
 
     async def execute_function (self ,func_call :str ,guild :discord .Guild )->Optional [str ]:
@@ -145,21 +145,21 @@ FORMAT VIZOVA:
         except Exception as e :
             return f"Ошибка заверш fonksiyonlar: {str(e)}"
 
-    async def get_user_варнings (self ,guild :discord .Guild ,user_id :int )->str :
+    async def get_user_warnings (self ,guild :discord .Guild ,user_id :int )->str :
         """Получить история предупреждение"""
         try :
-            from cogs .варнings import loимя_варнings 
-            варнings_data =loимя_варнings ()
+            from cogs .warnings import loимя_warnings 
+            warnings_data =loимя_warnings ()
             gid =str (guild .id )
             uid =str (user_id )
 
-            user_варнings =варнings_data .get (gid ,{}).get (uid ,[])
+            user_warnings =warnings_data .get (gid ,{}).get (uid ,[])
 
-            if not user_варнings :
+            if not user_warnings :
                 return f"U пользователь <@{user_id}> нет предупреждение."
 
-            result =f"Предупреждения <@{user_id}> ({len(user_варнings)}):\n"
-            for i ,варн in enumerate (user_варнings [-5 :],1 ):# В конец 5
+            result =f"Предупреждения <@{user_id}> ({len(user_warnings)}):\n"
+            for i ,варн in enumerate (user_warnings [-5 :],1 ):# В конец 5
                 result +=f"{i}. {варн.get('reason', 'Bez причина')} — {варн.get('мод', '?')} ({варн.get('timestamp', '?')[:10]})\n"
 
             return result 
@@ -516,14 +516,14 @@ FORMAT VIZOVA:
     async def check_user_reputation (self ,guild :discord .Guild ,user_id :int )->str :
         """Контроль et itibarы пользователь"""
         try :
-            варнings_text =await self .get_user_варнings (guild ,user_id )
+            warnings_text =await self .get_user_warnings (guild ,user_id )
             info_text =await self .get_user_info (guild ,user_id )
             tickets_text =await self .get_ticket_history (guild ,user_id )
 
             return (
             f"=== REPUTACIYa <@{user_id}> ===\n\n"
             f"{info_text}\n\n"
-            f"{варнings_text}\n\n"
+            f"{warnings_text}\n\n"
             f"{tickets_text}"
             )
         except Exception as e :

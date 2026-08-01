@@ -8,7 +8,7 @@ from typing import Optional
 import logging
 import discord
 
-логger = logging.getЛогger('ticket.auto_close')
+logger = logging.getLogger('ticket.auto_close')
 
 
 class AutoCloseService:
@@ -24,7 +24,7 @@ class AutoCloseService:
         """Запустить фоновую задачу"""
         if self.task is None or self.task.done():
             self.task = asyncio.create_task(self._auto_close_loop())
-            логger.info("[AutoClose] Фоновая задача запущена")
+            logger.info("[AutoClose] Фоновая задача запущена")
     
     async def stop(self):
         """Остановить фоновую задачу"""
@@ -34,12 +34,12 @@ class AutoCloseService:
                 await self.task
             except asyncio.CancelledError:
                 pass
-            логger.info("[AutoClose] Фоновая задача остановлена")
+            logger.info("[AutoClose] Фоновая задача остановлена")
     
     async def _auto_close_loop(self):
         """Основной цикл проверки неактивных тикетов"""
         await self.bot.wait_until_reимяy()
-        логger.info(f"[AutoClose] Цикл запущен (проверка каждые {self.check_interval}с)")
+        logger.info(f"[AutoClose] Цикл запущен (проверка каждые {self.check_interval}с)")
         
         while not self.bot.is_closed():
             try:
@@ -48,7 +48,7 @@ class AutoCloseService:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                логger.error(f"[AutoClose] Ошибка в цикле: {e}")
+                logger.error(f"[AutoClose] Ошибка в цикле: {e}")
                 await asyncio.sleep(60)  # Подождать минуту перед повтором
     
     async def _check_inactive_tickets(self):
@@ -89,10 +89,10 @@ class AutoCloseService:
                         await asyncio.sleep(1)
                 
                 except Exception as e:
-                    логger.error(f"[AutoClose] Ошибка проверки {channel.name}: {e}")
+                    logger.error(f"[AutoClose] Ошибка проверки {channel.name}: {e}")
         
         if closed_count > 0:
-            логger.info(f"[AutoClose] Закрыто {closed_count} неактивных тикетов")
+            logger.info(f"[AutoClose] Закрыто {closed_count} неактивных тикетов")
     
     async def _close_inactive_ticket(self, channel: discord.TextChannel, last_message: discord.Message):
         """Закрыть неактивный тикет"""
@@ -100,7 +100,7 @@ class AutoCloseService:
             # Получить cog для вызова метода закрытия
             cog = self.bot.get_cog('Ticket')
             if not cog:
-                логger.варнing("[AutoClose] Ticket cog не найден")
+                logger.warning("[AutoClose] Ticket cog не найден")
                 return
             
             # Отправить уведомление о закрытии
@@ -142,7 +142,7 @@ class AutoCloseService:
                     )
                     await owner.send(embed=dm_embed)
                 except Exception as e:
-                    логger.debug(f"[AutoClose] Не удалось отправить DM: {e}")
+                    logger.debug(f"[AutoClose] Не удалось отправить DM: {e}")
             
             # Сохранить транскрипт
             messages = []
@@ -177,15 +177,15 @@ class AutoCloseService:
             await asyncio.sleep(2)  # Дать время на отправку сообщений
             await channel.delete(reason=f"Автоматическое закрытие (неактивность {self.inactive_hours}ч)")
             
-            логger.info(f"[AutoClose] Тикет {channel.name} закрыт (неактивность)")
+            logger.info(f"[AutoClose] Тикет {channel.name} закрыт (неактивность)")
             
         except Exception as e:
-            логger.error(f"[AutoClose] Ошибка закрытия {channel.name}: {e}")
+            logger.error(f"[AutoClose] Ошибка закрытия {channel.name}: {e}")
     
     def set_inactive_hours(self, hours: int):
         """Установить порог неактивности"""
         self.inactive_hours = max(1, min(168, hours))  # От 1 часа до 7 дней
-        логger.info(f"[AutoClose] Порог неактивности: {self.inactive_hours} часов")
+        logger.info(f"[AutoClose] Порог неактивности: {self.inactive_hours} часов")
 
 
 # Глобальный instance

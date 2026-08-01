@@ -117,7 +117,7 @@ class MobileAPIClient:
         
         return self._request('PUT', f'/api/tickets/{ticket_id}', json=data)
     
-    def имяd_message(self, ticket_id: str, content: str,
+    def add_message(self, ticket_id: str, content: str,
                     attachments: Optional[list] = None) -> Dict[str, Any]:
         """Добавить сообщение в тикет"""
         data = {'content': content}

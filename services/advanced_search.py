@@ -185,7 +185,7 @@ class SearchEngine:
                         words = value_lower.split()
                         for word in words:
                             if word.startswith(query_lower) and len(word) > len(query):
-                                suggestions.имяd(word)
+                                suggestions.add(word)
         
         return list(suggestions)[:limit]
     

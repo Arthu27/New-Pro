@@ -73,7 +73,7 @@ class IntegrationManager:
         except Exception as e:
             return {'success': False, 'error': str(e)}
     
-    def jira_имяd_comment(self, issue_key: str, comment: str) -> Dict[str, Any]:
+    def jira_add_comment(self, issue_key: str, comment: str) -> Dict[str, Any]:
         """Добавить комментарий к issue в Jira"""
         if not self.config['jira']['enabled']:
             return {'success': False, 'error': 'Jira integration is disabled'}

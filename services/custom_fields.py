@@ -27,7 +27,7 @@ class CustomField:
         self.validation_rules = {}
         self.conditions = []
     
-    def имяd_option(self, value: str, label: str):
+    def add_option(self, value: str, label: str):
         """Добавить вариант (select/multiselect для)"""
         if self.field_type in ['select', 'multiselect']:
             self.options.append({'value': value, 'label': label})
@@ -36,11 +36,11 @@ class CustomField:
         """Настроить значение по умолчанию"""
         self.default_value = value
     
-    def имяd_validation_rule(self, rule_type: str, value: Any):
+    def add_validation_rule(self, rule_type: str, value: Any):
         """Doгrulama kuralы добавить"""
         self.validation_rules[rule_type] = value
     
-    def имяd_condition(self, field_id: str, operator: str, value: Any):
+    def add_condition(self, field_id: str, operator: str, value: Any):
         """Koэтотl добавить (bu alan ne zaman gёrюnюr)"""
         self.conditions.append({
             'field_id': field_id,

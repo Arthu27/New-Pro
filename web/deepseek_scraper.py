@@ -2,7 +2,7 @@
 DeepSeek web scraper — API olmимяan chat.deepseek.com использовать.
 Gereksinim: pip install playwright && python -m playwright install chromium
 
-Использование: .env'e имяd:
+Использование: .env'e add:
   DEEPSEEK_EMAIL=email@gmail.com
   DEEPSEEK_PASSWORD=sifren
 """
@@ -70,7 +70,7 @@ async def _ensure_логin ():
         submit =_page .locator ('button[type="submit"]').first 
         await submit .click (timeout =5000 )
 
-        # Вход заверш kимяar bимяd
+        # Вход заверш kимяar badd
         await _page .wait_for_url ('**/chat**',timeout =20000 )
         await _page .wait_for_timeout (2000 )
 
@@ -113,10 +113,10 @@ async def _ask_deepseek_async (prompt :str ,timeout :int =60 )->str :
         # Отправить (Enter или buton)
         await textarea .press ('Enter')
 
-        # Cevabыn gelmesini bимяd — "dюшюnюyor" animasyonu bitene kимяar
+        # Cevabыn gelmesini badd — "dюшюnюyor" animasyonu bitene kимяar
         await _page .wait_for_timeout (2000 )
 
-        # Cevap elementini bимяd
+        # Cevap elementini badd
         start =datetime .utcnow ()
         last_text =''
         stable_count =0 

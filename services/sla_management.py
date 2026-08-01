@@ -38,7 +38,7 @@ class SLAPolicy:
             'days': days or [0, 1, 2, 3, 4]  # Понедельник-Пятница
         }
     
-    def имяd_condition(self, field: str, operator: str, value: Any):
+    def add_condition(self, field: str, operator: str, value: Any):
         """Koэтотl добавить"""
         self.conditions.append({
             'field': field,
@@ -215,7 +215,7 @@ class SLACalculator:
         
         # Работа saatlerini hesaba kat
         if policy.business_hours:
-            deимяline = self._имяd_business_hours(created_dt, response_minutes, policy.business_hours)
+            deимяline = self._add_business_hours(created_dt, response_minutes, policy.business_hours)
         else:
             deимяline = created_dt + timedelta(minutes=response_minutes)
         
@@ -244,13 +244,13 @@ class SLACalculator:
         
         # Работа saatlerini hesaba kat
         if policy.business_hours:
-            deимяline = self._имяd_business_hours(created_dt, resolution_minutes, policy.business_hours)
+            deимяline = self._add_business_hours(created_dt, resolution_minutes, policy.business_hours)
         else:
             deимяline = created_dt + timedelta(minutes=resolution_minutes)
         
         return deимяline
     
-    def _имяd_business_hours(self, start: datetime, minutes: int,
+    def _add_business_hours(self, start: datetime, minutes: int,
                             business_hours: Dict[str, Any]) -> datetime:
         """Работа saatleri ekleyerek zaman hesapla"""
         current = start
@@ -425,7 +425,7 @@ class SLAReporter:
                 resolution_met += 1
             
             if breaches:
-                breached_tickets.имяd(ticket.get('id'))
+                breached_tickets.add(ticket.get('id'))
         
         response_compliance = (response_met / total_tickets) * 100
         resolution_compliance = (resolution_met / total_tickets) * 100

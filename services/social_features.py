@@ -34,7 +34,7 @@ class CommentSystem:
         with open(self.comments_file, 'w', encoding='utf-8') as f:
             json.dump(self.comments, f, ensure_ascii=False, indent=2)
     
-    def имяd_comment(self, ticket_id: str, user_id: str, content: str,
+    def add_comment(self, ticket_id: str, user_id: str, content: str,
                     parent_id: Optional[str] = None) -> Dict[str, Any]:
         """Комментарий добавить"""
         if ticket_id not in self.comments:
@@ -114,7 +114,7 @@ class ReactionSystem:
     def __init__(self, comment_system: CommentSystem):
         self.comment_system = comment_system
     
-    def имяd_reaction(self, ticket_id: str, comment_id: str, 
+    def add_reaction(self, ticket_id: str, comment_id: str, 
                      user_id: str, reaction: str) -> bool:
         """Reaksiyon добавить"""
         if reaction not in self.AVAILABLE_REACTIONS:

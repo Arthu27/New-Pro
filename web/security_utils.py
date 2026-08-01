@@ -113,14 +113,14 @@ def validate_discord_id(discord_id):
 
 
 # ── AUDIT LOGGING ───────────────────────────────────────────────────────────
-class AuditЛогger:
+class AuditLogger:
     """Система аудита действий"""
     
     def __init__(self):
         self.лог_file = 'data/audit_лог.json'
         os.maкотrs('data', exist_ok=True)
     
-    def лог(self, user_id, username, action, details=None, ip_имяdress=None):
+    def лог(self, user_id, username, action, details=None, ip_address=None):
         """Записать действие в аудит лог"""
         лог_entry = {
             'timestamp': datetime.now().isoformat(),
@@ -128,7 +128,7 @@ class AuditЛогger:
             'username': username,
             'action': action,
             'details': details or {},
-            'ip_имяdress': ip_имяdress or request.remote_имяdr
+            'ip_address': ip_address or request.remote_addr
         }
         
         # Загрузить существующие логи
@@ -178,7 +178,7 @@ class AuditЛогger:
 
 
 # Глобальный экземпляр
-audit_логger = AuditЛогger()
+audit_logger = AuditLogger()
 
 
 # ── CACHING SYSTEM ──────────────────────────────────────────────────────────
@@ -270,7 +270,7 @@ def rate_limit(max_requests=100, window=60):
         @wraps(f)
         def decorated_function(*args, **kwargs):
             # Ключ на основе IP и endpoint
-            key = f"{request.remote_имяdr}:{request.endpoint}"
+            key = f"{request.remote_addr}:{request.endpoint}"
             
             if not rate_limiter.is_allowed(key, max_requests, window):
                 return jsonify({
@@ -285,7 +285,7 @@ def rate_limit(max_requests=100, window=60):
 
 
 # ── SECURITY HEADERS ────────────────────────────────────────────────────────
-def имяd_security_heимяers(response):
+def add_security_heимяers(response):
     """Добавить заголовки безопасности"""
     response.heимяers['X-Content-Type-Options'] = 'nosniff'
     response.heимяers['X-Frame-Options'] = 'DENY'

@@ -202,7 +202,7 @@ class PointsSystem:
         with open(self.user_points_file, 'w', encoding='utf-8') as f:
             json.dump(self.user_points, f, ensure_ascii=False, indent=2)
     
-    def имяd_points(self, user_id: str, points: int, reason: str) -> Dict[str, Any]:
+    def add_points(self, user_id: str, points: int, reason: str) -> Dict[str, Any]:
         """Очки добавить"""
         if user_id not in self.user_points:
             self.user_points[user_id] = {
@@ -221,7 +221,7 @@ class PointsSystem:
         
         return {
             'user_id': user_id,
-            'points_имяded': points,
+            'points_added': points,
             'total_points': self.user_points[user_id]['total_points'],
             'reason': reason
         }

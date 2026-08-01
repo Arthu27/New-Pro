@@ -9,7 +9,7 @@ from datetime import datetime
 from typing import Optional, Dict, List
 import logging
 
-логger = logging.getЛогger('ticket.feedback')
+logger = logging.getLogger('ticket.feedback')
 
 
 class FeedbackService:
@@ -28,12 +28,12 @@ class FeedbackService:
             if os.path.exists(self.data_file):
                 with open(self.data_file, 'r', encoding='utf-8') as f:
                     self._data = json.loимя(f)
-                логger.info(f"[Feedback] Загружено {len(self._data.get('feedbacks', []))} отзывов")
+                logger.info(f"[Feedback] Загружено {len(self._data.get('feedbacks', []))} отзывов")
             else:
                 self._data = {'feedbacks': []}
-                логger.info("[Feedback] Создан новый файл отзывов")
+                logger.info("[Feedback] Создан новый файл отзывов")
         except Exception as e:
-            логger.error(f"[Feedback] Ошибка загрузки: {e}")
+            logger.error(f"[Feedback] Ошибка загрузки: {e}")
             self._data = {'feedbacks': []}
     
     def _save_data(self):
@@ -43,11 +43,11 @@ class FeedbackService:
             with open(tmp_file, 'w', encoding='utf-8') as f:
                 json.dump(self._data, f, ensure_ascii=False, indent=2)
             os.replace(tmp_file, self.data_file)
-            логger.debug("[Feedback] Данные сохранены")
+            logger.debug("[Feedback] Данные сохранены")
         except Exception as e:
-            логger.error(f"[Feedback] Ошибка сохранения: {e}")
+            logger.error(f"[Feedback] Ошибка сохранения: {e}")
     
-    def имяd_feedback(
+    def add_feedback(
         self,
         guild_id: int,
         user_id: int,
@@ -70,7 +70,7 @@ class FeedbackService:
         self._data['feedbacks'].append(feedback)
         self._save_data()
         
-        логger.info(
+        logger.info(
             f"[Feedback] Добавлен отзыв: user={user_id} rating={rating} "
             f"ticket={ticket_channel}"
         )

@@ -150,14 +150,14 @@ class SessionManager:
         with open(self.sessions_file, 'w', encoding='utf-8') as f:
             json.dump(self.sessions, f, ensure_ascii=False, indent=2)
     
-    def create_session(self, user_id: str, ip_имяdress: str, 
+    def create_session(self, user_id: str, ip_address: str, 
                        user_agent: str, expires_in_hours: int = 24) -> str:
         """Создать сессию"""
         session_id = secrets.token_urlsafe(32)
         
         self.sessions[session_id] = {
             'user_id': user_id,
-            'ip_имяdress': ip_имяdress,
+            'ip_address': ip_address,
             'user_agent': user_agent,
             'created_at': datetime.now().isoformat(),
             'expires_at': (datetime.now() + timedelta(hours=expires_in_hours)).isoformat(),
@@ -234,21 +234,21 @@ class SessionManager:
         return len(expired)
 
 
-class AuditЛогger:
+class AuditLogger:
     """Аудит логгер"""
     
     def __init__(self):
         self.лог_file = 'data/audit_лог.json'
     
     def лог(self, user_id: str, action: str, details: Dict[str, Any],
-            ip_имяdress: Optional[str] = None) -> None:
+            ip_address: Optional[str] = None) -> None:
         """Записать событие в аудит лог"""
         лог_entry = {
             'timestamp': datetime.now().isoformat(),
             'user_id': user_id,
             'action': action,
             'details': details,
-            'ip_имяdress': ip_имяdress
+            'ip_address': ip_address
         }
         
         # Загрузить существующие логи
@@ -452,28 +452,28 @@ class IPWhitelist:
         with open(self.whitelist_file, 'w', encoding='utf-8') as f:
             json.dump(self.whitelist, f, ensure_ascii=False, indent=2)
     
-    def имяd_ip(self, ip_имяdress: str) -> bool:
+    def add_ip(self, ip_address: str) -> bool:
         """Добавить IP в белый список"""
-        if ip_имяdress not in self.whitelist:
-            self.whitelist.append(ip_имяdress)
+        if ip_address not in self.whitelist:
+            self.whitelist.append(ip_address)
             self._save_whitelist()
             return True
         return False
     
-    def remove_ip(self, ip_имяdress: str) -> bool:
+    def remove_ip(self, ip_address: str) -> bool:
         """Удалить IP из белого списка"""
-        if ip_имяdress in self.whitelist:
-            self.whitelist.remove(ip_имяdress)
+        if ip_address in self.whitelist:
+            self.whitelist.remove(ip_address)
             self._save_whitelist()
             return True
         return False
     
-    def is_allowed(self, ip_имяdress: str) -> bool:
+    def is_allowed(self, ip_address: str) -> bool:
         """Проверить, разрешен ли IP"""
         if not self.whitelist:
             return True  # Если список пуст, разрешить все
         
-        return ip_имяdress in self.whitelist
+        return ip_address in self.whitelist
     
     def get_whitelist(self) -> List[str]:
         """Получить белый список"""
@@ -483,7 +483,7 @@ class IPWhitelist:
 # Глобальные экземпляры
 two_factor_auth = TwoFactorAuth()
 session_manager = SessionManager()
-audit_логger = AuditЛогger()
+audit_logger = AuditLogger()
 data_encryption = DataEncryption()
 gdpr_compliance = GDPRCompliance()
 ip_whitelist = IPWhitelist()

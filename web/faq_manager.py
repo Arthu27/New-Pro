@@ -7,7 +7,7 @@ Dosyalar:
 
 Управление:
   - learned_faq.json'u верно redaktirovatyebilirsin
-  - unknown_questions.json'daki вопросы inceleyip learned_faq.json'a имяdyebilirsin
+  - unknown_questions.json'daki вопросы inceleyip learned_faq.json'a addyebilirsin
   - Bir FAQ'ы devre dышы bыrakmak для "active": false yap
 """
 import os 
@@ -55,7 +55,7 @@ def _similarity (a :str ,b :str )->float :
     # ─── Bilinmeyen Soru Сохранить ───────────────────────────────────────────────────
 
 def save_unknown_question (question :str ,guild_id :int ,channel_id :int ,history :list ):
-    """Escalate olan soruyu unknown_questions.json'a имяd."""
+    """Escalate olan soruyu unknown_questions.json'a add."""
     items =_loимя (UNKNOWN_FILE )
 
     # Zaten benzer bir soru есть ли? Sayacы artыr
@@ -87,7 +87,7 @@ def save_unknown_question (question :str ,guild_id :int ,channel_id :int ,histor
 
 def learn_from_staff (question :str ,answer :str ,guild_id :int ,staff_name :str ='Администратор'):
     """
-    Staff'ыn ticket'ta данные cevabы learned_faq.json'a имяd.
+    Staff'ыn ticket'ta данные cevabы learned_faq.json'a add.
     Benzer soru zaten varsa обновл.
     """
     faq =_loимя (FAQ_FILE )

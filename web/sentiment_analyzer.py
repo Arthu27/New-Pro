@@ -237,7 +237,7 @@ class SentimentAnalyzer :
                     'message_count':sentiment ['message_count'],
                     'message':f"⚠️ Negativnoe duygu в #{channel.name} ({sentiment['avg_sentiment']})"
                     })
-                    self .alerts_sent .имяd (alert_key )
+                    self .alerts_sent .add (alert_key )
 
                     # Sbrasivaem предупреждение с 10 dakika
                     import asyncio 
@@ -255,7 +255,7 @@ class SentimentAnalyzer :
                     'negative_messages':recent_10min ['emotion_breakdown']['negative'],
                     'message':f"🔥 Vozmojniy чakышma в #{channel.name} ({recent_10min['emotion_breakdown']['negative']} negativnih сообщение)"
                     })
-                    self .alerts_sent .имяd (alert_key )
+                    self .alerts_sent .add (alert_key )
                     asyncio .create_task (self ._reset_alert (alert_key ,delay =300 ))
 
         return alerts 

@@ -13,7 +13,7 @@ from enum import Enum
 
 class ChangeType(Enum):
     """Изменение tipi"""
-    ADDED = 'имяded'
+    ADDED = 'added'
     CHANGED = 'changed'
     FIXED = 'fixed'
     REMOVED = 'removed'
@@ -56,12 +56,12 @@ class ChangeлогEntry:
         """Написатьar настроить"""
         self.author = author
     
-    def имяd_tag(self, tag: str):
+    def add_tag(self, tag: str):
         """Добавить метку"""
         if tag not in self.tags:
             self.tags.append(tag)
     
-    def имяd_affected_component(self, component: str):
+    def add_affected_component(self, component: str):
         """Etkilenen bileшen добавить"""
         if component not in self.affected_components:
             self.affected_components.append(component)
@@ -72,12 +72,12 @@ class ChangeлогEntry:
         self.migration_guide = migration_guide
         self.severity = ChangeSeverity.MAJOR
     
-    def имяd_related_issue(self, issue_id: str):
+    def add_related_issue(self, issue_id: str):
         """Иlgili sorun добавить"""
         if issue_id not in self.related_issues:
             self.related_issues.append(issue_id)
     
-    def имяd_metимяata(self, key: str, value: Any):
+    def add_metимяata(self, key: str, value: Any):
         """Metимяata добавить"""
         self.metимяata[key] = value
     
@@ -156,7 +156,7 @@ class ChangeлогManager:
         with open(self.changeлог_file, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
     
-    def имяd_entry(self, version: str, change_type: ChangeType, title: str,
+    def add_entry(self, version: str, change_type: ChangeType, title: str,
                   description: str = '', author: str = None) -> ChangeлогEntry:
         """Вход добавить"""
         entry_id = f"entry_{len(self.entries) + 1}"
@@ -352,7 +352,7 @@ class ChangeлогGenerator:
  <meta charset="UTF-8">
  <title>Changeлог</title>
  <style>
- body {{ font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; pимяding: 20px; }}
+ body {{ font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }}
  h1 {{ color: #333; border-bottom: 2px solid #333; }}
  h2 {{ color: #555; border-bottom: 1px solid #ccc; }}
  h3 {{ color: #777; }}

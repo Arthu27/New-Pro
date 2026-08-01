@@ -22,7 +22,7 @@ class PerformanceMetric:
         self.tags = {}
         self.unit = None
     
-    def имяd_tag(self, key: str, value: str):
+    def add_tag(self, key: str, value: str):
         """Добавить метку"""
         self.tags[key] = value
     
@@ -94,7 +94,7 @@ class MetricsCollector:
         
         if tags:
             for key, val in tags.items():
-                metric.имяd_tag(key, val)
+                metric.add_tag(key, val)
         
         if unit:
             metric.set_unit(unit)
@@ -538,9 +538,9 @@ class PerformanceAlert:
         with open(self.alerts_file, 'w', encoding='utf-8') as f:
             json.dump(self.alerts, f, ensure_ascii=False, indent=2)
     
-    def имяd_alert_rule(self, metric_name: str, threshold: float,
+    def add_alert_rule(self, metric_name: str, threshold: float,
                        operator: str = 'greater_than',
-                       severity: str = 'варнing'):
+                       severity: str = 'warning'):
         """Предупреждение kuralы добавить"""
         if metric_name not in self.alerts['rules']:
             self.alerts['rules'][metric_name] = []

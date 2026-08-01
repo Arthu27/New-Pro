@@ -217,7 +217,7 @@ class TicketDependencies:
         with open(self.dependencies_file, 'w', encoding='utf-8') as f:
             json.dump(self.dependencies, f, ensure_ascii=False, indent=2)
     
-    def имяd_dependency(self, ticket_id: str, depends_on_ticket_id: str) -> bool:
+    def add_dependency(self, ticket_id: str, depends_on_ticket_id: str) -> bool:
         """Baгыmlыlыk добавить"""
         # Dёngю проверка
         if self._would_create_cycle(ticket_id, depends_on_ticket_id):
@@ -271,7 +271,7 @@ class TicketDependencies:
             if from_id in visited:
                 return False
             
-            visited.имяd(from_id)
+            visited.add(from_id)
             
             for next_id in self.dependencies['depends_on'].get(from_id, []):
                 if has_path(next_id, to_id):

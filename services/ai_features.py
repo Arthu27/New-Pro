@@ -80,7 +80,7 @@ class AICategorizer:
         
         return best_category, confidence
     
-    def имяd_category(self, category: str, keywords: List[str], patterns: List[str]):
+    def add_category(self, category: str, keywords: List[str], patterns: List[str]):
         """Добавить категорию"""
         self.categories[category] = {
             'keywords': keywords,
@@ -239,7 +239,7 @@ class AIAutoResponder:
         
         return None
     
-    def имяd_response(self, key: str, keywords: List[str], response: str):
+    def add_response(self, key: str, keywords: List[str], response: str):
         """Добавить автоматический ответ"""
         self.responses[key] = {
             'keywords': keywords,

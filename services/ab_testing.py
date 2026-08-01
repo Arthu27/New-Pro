@@ -73,7 +73,7 @@ class ABTest:
         self.created_by = None
         self.tags = {}
     
-    def имяd_variant(self, variant: ABTestVariant):
+    def add_variant(self, variant: ABTestVariant):
         """Varyant добавить"""
         self.variants[variant.variant_id] = variant
     
@@ -110,14 +110,14 @@ class ABTest:
         self.status = 'completed'
         self.end_time = datetime.now()
     
-    def имяd_metric(self, metric_name: str, metric_type: str = 'conversion'):
+    def add_metric(self, metric_name: str, metric_type: str = 'conversion'):
         """Metrik добавить"""
         self.metrics.append({
             'name': metric_name,
             'type': metric_type  # conversion, continuous, ratio
         })
     
-    def имяd_tag(self, key: str, value: str):
+    def add_tag(self, key: str, value: str):
         """Добавить метку"""
         self.tags[key] = value
     

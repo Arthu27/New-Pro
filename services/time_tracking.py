@@ -136,7 +136,7 @@ class TimeTracker:
         
         return entry
     
-    def имяd_manual_entry(self, ticket_id: str, user_id: str,
+    def add_manual_entry(self, ticket_id: str, user_id: str,
                          start_time: datetime, end_time: datetime,
                          description: str = '', billable: bool = True) -> TimeEntry:
         """Manuel записей добавить"""

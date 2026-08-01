@@ -411,7 +411,7 @@ class ReportExporter:
         .metric {{ margin: 10px 0; }}
         .metric-label {{ font-weight: bold; }}
         table {{ border-collapse: collapse; width: 100%; margin: 20px 0; }}
-        th, td {{ border: 1px solid #ddd; pимяding: 8px; text-align: left; }}
+        th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
         th {{ background-color: #f2f2f2; }}
     </style>
 </heимя>

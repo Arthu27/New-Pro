@@ -133,18 +133,18 @@ class ComplaintAnalyzer :
 
     async def _get_reputation (self ,guild :discord .Guild ,user_id :int )->Dict :
         """Получить itibarы пользователь"""
-        from cogs .варнings import loимя_варнings 
+        from cogs .warnings import loимя_warnings 
 
-        варнings_data =loимя_варнings ()
-        guild_варнings =варнings_data .get (str (guild .id ),{}).get (str (user_id ),[])
+        warnings_data =loимя_warnings ()
+        guild_warnings =warnings_data .get (str (guild .id ),{}).get (str (user_id ),[])
 
         # Scitaem предупреждения для raznie periodi
         now =datetime .now (timezone .utc )
-        варнings_7d =0 
-        варнings_30d =0 
-        варнings_total =len (guild_варнings )
+        warnings_7d =0 
+        warnings_30d =0 
+        warnings_total =len (guild_warnings )
 
-        for варн in guild_варнings :
+        for варн in guild_warnings :
             варн_date_raw =варн .get ('timestamp',now .isoformat ())
             try :
                 варн_date =datetime .fromisoformat (варн_date_raw )
@@ -156,9 +156,9 @@ class ComplaintAnalyzer :
             days_ago =(now -варн_date ).days 
 
             if days_ago <=7 :
-                варнings_7d +=1 
+                warnings_7d +=1 
             if days_ago <=30 :
-                варнings_30d +=1 
+                warnings_30d +=1 
 
                 # Контроль ediyoruz история банov/mutov
         мод_data_file ='data/мод_data.json'
@@ -179,12 +179,12 @@ class ComplaintAnalyzer :
         мутs =sum (1 for case in мод_history if case .get ('action')in ['timeout','мут'])
 
         return {
-        'варнings_total':варнings_total ,
-        'варнings_7d':варнings_7d ,
-        'варнings_30d':варнings_30d ,
+        'warnings_total':warnings_total ,
+        'warnings_7d':warnings_7d ,
+        'warnings_30d':warnings_30d ,
         'банs':банs ,
         'мутs':мутs ,
-        'recent_варнings':guild_варнings [-5 :]if guild_варнings else [],
+        'recent_warnings':guild_warnings [-5 :]if guild_warnings else [],
         }
 
     def _analyze_provided_messages (self ,messages :List [str ])->Dict :
@@ -365,10 +365,10 @@ class ComplaintAnalyzer :
             confidence =40 
 
             # Корректируем доверие на основе репутации
-        if accused_rep ['варнings_7d']>=3 :
+        if accused_rep ['warnings_7d']>=3 :
             if verdict =='GUILTY':
                 confidence +=10 
-        elif complainant_rep ['варнings_7d']>=3 :
+        elif complainant_rep ['warnings_7d']>=3 :
             if verdict =='FALSE_COMPLAINT':
                 confidence +=10 
 
@@ -394,8 +394,8 @@ class ComplaintAnalyzer :
         'mutual_toxicity':provided_analysis ['mutual_toxicity'],
         'complainer_toxic':provided_analysis ['complainer_toxic'],
         'accused_toxic':provided_analysis ['accused_toxic'],
-        'accused_варнings':accused_rep ['варнings_total'],
-        'complainer_варнings':complainant_rep ['варнings_total'],
+        'accused_warnings':accused_rep ['warnings_total'],
+        'complainer_warnings':complainant_rep ['warnings_total'],
         'hимя_provocation':context_analysis ['hимя_provocation'],
         },
         'recommendation':recommendation ,
@@ -419,7 +419,7 @@ class ComplaintAnalyzer :
                 'reason':'Угрозы и оскорбления — критическое нарушение'
                 }
             elif severity =='HIGH':
-                if accused_rep ['варнings_total']>=3 :
+                if accused_rep ['warnings_total']>=3 :
                     return {
                     'action':'BAN',
                     'duration':7 *24 *60 ,# 7 дней
@@ -582,7 +582,7 @@ class ComplaintAnalyzer :
         )
 
         # 📊 Главный блок
-        embed .имяd_field (
+        embed .add_field (
         name ="━━━━━━━━━━━━━━━━━━━━",
         value =(
         f"**🎯 Вердикт:** {verdict_text}\n"
@@ -594,27 +594,27 @@ class ComplaintAnalyzer :
         )
 
         # 👤 Участники
-        embed .имяd_field (
+        embed .add_field (
         name ="👤 Обвиняемый",
         value =(
         f"**{accused_name}** (`{accused_id}`)\n"
         f"├ Возраст аккаунта: `{accused_account_age} дн.`\n"
         f"├ На сервере: `{accused_days} дн.`\n"
-        f"└ Предупреждений: `{evidence.get('accused_варнings', 0)}`"
+        f"└ Предупреждений: `{evidence.get('accused_warnings', 0)}`"
         ),
         inline =True ,
         )
 
-        embed .имяd_field (
+        embed .add_field (
         name ="📝 Жалобщик",
         value =(
         f"**{complainer_name}** (`{complainer_id}`)\n"
-        f"└ Предупреждений: `{evidence.get('complainer_варнings', 0)}`"
+        f"└ Предупреждений: `{evidence.get('complainer_warnings', 0)}`"
         ),
         inline =True ,
         )
 
-        embed .имяd_field (
+        embed .add_field (
         name ="\u200b",# невидимый разделитель
         value ="\u200b",
         inline =False ,
@@ -627,7 +627,7 @@ class ComplaintAnalyzer :
         f"├ 🔄 Взаимная токсичность: **`{'⚠️ Да' if evidence.get('mutual_toxicity') else '✅ Нет'}`**\n"
         f"└ 🎭 Провокация: **`{'⚠️ Была' if evidence.get('hимя_provocation') else '✅ Нет'}`**"
         )
-        embed .имяd_field (
+        embed .add_field (
         name ="🔍 Доказательства",
         value =f"```\n{evidence_text}\n```",
         inline =False ,
@@ -642,14 +642,14 @@ class ComplaintAnalyzer :
                 complainer_insult_block +=f"↳ Обвиняемый тоже отвечал ({accused_toxic} токсичных) — это **взаимная вина**\n"
             else :
                 complainer_insult_block +="↳ Обвиняемый не отвечал — это **ложная жалоба**\n"
-            embed .имяd_field (
+            embed .add_field (
             name ="⚠️ ВАЖНАЯ ИНФОРМАЦИЯ",
             value =complainer_insult_block ,
             inline =False ,
             )
 
             # 💡 Рекомендация AI
-        embed .имяd_field (
+        embed .add_field (
         name ="💡 Рекомендация AI для модератора",
         value =(
         f"**Действие:** {action_text}\n"
@@ -678,7 +678,7 @@ class ComplaintAnalyzer :
         else :
             conclusion ="❓ Недостаточно данных для принятия решения. Передаётся модератору."
 
-        embed .имяd_field (
+        embed .add_field (
         name ="📝 Заключение",
         value =conclusion ,
         inline =False ,
