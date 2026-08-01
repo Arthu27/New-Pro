@@ -393,6 +393,49 @@ class FeedbackView(discord.ui.View):
         await interaction.message.edit(view=self)
 
 
+class AILearnModal(discord.ui.Modal, title="🧠 Обучение ИИ Аэйтера"):
+    err_input = discord.ui.TextInput(
+        label="В чем ошибся ИИ?",
+        placeholder="Например: ИИ не заметил провокацию со стороны заявителя...",
+        style=discord.TextStyle.paragraph,
+        required=True
+    )
+    corr_input = discord.ui.TextInput(
+        label="Каким должно быть правильное решение?",
+        placeholder="Например: выдать обоюдный мут или отклонить жалобу...",
+        style=discord.TextStyle.paragraph,
+        required=True
+    )
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+        try:
+            import cogs.ai_chat as ai_mod
+            guild_key = str(interaction.guild_id)
+            if guild_key not in ai_mod._knowledge_base:
+                ai_mod._knowledge_base[guild_key] = []
+            ai_mod._knowledge_base[guild_key].append({
+                'type': 'admin_correction',
+                'question': f"Ошибка модерации: {self.err_input.value}",
+                'info': f"Правильное правило от админа: {self.corr_input.value}",
+                'confidence': 'high',
+                'source': 'admin_correction'
+            })
+            ai_mod._save_knowledge_base(ai_mod._knowledge_base)
+            from cogs._ai_card import generate_ai_dialogue_bytes
+            img_buf = await interaction.client.loop.run_in_executor(
+                None,
+                generate_ai_dialogue_bytes,
+                "Спасибо, Администратор! Я сохранил ваше исправление в базу знаний. Мои алгоритмы прокачаны и больше не допустят эту ошибку!",
+                self.err_input.value,
+                "solution"
+            )
+            file = discord.File(img_buf, filename="gojo_dialogue.png")
+            await interaction.channel.send(file=file)
+        except Exception as e:
+            await interaction.followup.send(f"Ошибка сохранения обучения ИИ: {e}", ephemeral=True)
+
+
 class CloseTicketView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
@@ -407,6 +450,31 @@ class CloseTicketView(discord.ui.View):
         if not channel.name.startswith("ticket-"):
             await interaction.response.send_message("Это не канал тикета.", ephemeral=True)
             return
+
+        cog = interaction.client.get_cog('Ticket')
+        if cog:
+            state = cog._get_ticket_state(interaction.guild.id, channel.id)
+            if state.get('admin_only_close'):
+                is_admin = interaction.user.guild_permissions.administrator or interaction.user.guild_permissions.manage_guild
+                if not is_admin:
+                    await interaction.response.send_message(
+                        "❌ Этот тикет находится под контролем администрации. Только администратор может закрыть его!",
+                        ephemeral=True
+                    )
+                    return
+            cog._delete_ticket_state(interaction.guild.id, channel.id)
+
+    @discord.ui.button(
+        label="🧠 Обучить ИИ / Указать ошибку",
+        style=discord.ButtonStyle.blurple,
+        custom_id="ticket_ai_feedback_btn"
+    )
+    async def ai_feedback_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        is_admin = interaction.user.guild_permissions.administrator or interaction.user.guild_permissions.manage_guild
+        if not is_admin:
+            await interaction.response.send_message("❌ Только администратор может обучать ИИ и указывать на ошибки!", ephemeral=True)
+            return
+        await interaction.response.send_modal(AILearnModal())
 
         # Очистить состояние AI
         cog = interaction.client.get_cog('Ticket')
@@ -1449,31 +1517,29 @@ class Ticket(commands.Cog):
             log.info(f"[COMPLAINT] embed build error: {_ee}")
             embed = None
 
-        # Если уверенность низкая — передать модератору
+        # Если уверенность низкая — передать модератору (без наказания)
         if confidence < 50:
-            if embed:
-                embed.add_field(
-                    name="Внимание",
-                    value=f"**Уверенность слишком низкая ({confidence}%)** — передаю модератору для ручной проверки.",
-                    inline=False,
-                )
-                await channel.send(embed=embed)
-            else:
-                await channel.send(
-                    f"{analysis_text}\n\n"
-                    f"**Уверенность слишком низкая ({confidence}%)** — передаю модератору для ручной проверки."
-                )
+            from cogs._ai_card import generate_ai_dialogue_bytes
+            low_text = f"Уверенность анализа слишком низкая ({confidence}%). Автоматическое наказание отменено, тикет передан модератору для проверки."
+            img_buf = await self.bot.loop.run_in_executor(
+                None, generate_ai_dialogue_bytes, low_text, "", "investigate"
+            )
+            file = discord.File(img_buf, filename="gojo_dialogue.png")
+            await channel.send(file=file)
             await self._escalate_ticket(channel, state, 'low_confidence')
             state['complaint'] = {}
             state['analyzing'] = False
             self._save_ticket_state(guild_id, channel_id, state)
             return
 
-        # Отправляем embed с результатом анализа
-        if embed:
-            await channel.send(embed=embed)
-        else:
-            await channel.send(analysis_text)
+        # Отправляем карточку визуальной новеллы Годжо с анализом (БЕЗ текста снизу)
+        from cogs._ai_card import generate_ai_dialogue_bytes
+        dialogue_text = f"ВЕРДИКТ ИИ ({confidence}%): {verdict}\n\n{analysis_text[:300]}"
+        img_buf = await self.bot.loop.run_in_executor(
+            None, generate_ai_dialogue_bytes, dialogue_text, "", "verdict"
+        )
+        file = discord.File(img_buf, filename="gojo_dialogue.png")
+        await channel.send(file=file)
         
         # Применяем рекомендацию на основе вердикта
         action = recommendation['action']
@@ -1492,52 +1558,65 @@ class Ticket(commands.Cog):
         # Функция для применения наказания к пользователю
         async def apply_punishment(target, target_name, action_type, dur, punishment_reason):
             if not target:
-                await channel.send(f"Не удалось найти пользователя {target_name}")
                 return
             
             try:
-                if action_type == 'BAN':
-                    await target.ban(reason=f"AI: {punishment_reason}")
-                    await channel.send(f"**{target.display_name}** забанен. Причина: {punishment_reason}")
+                if action_type in ('BAN', 'KICK'):
+                    # Для бана и кика — не наказываем сразу, а отправляем админам и блокируем тикет для обычного закрытия
+                    state['admin_only_close'] = True
+                    state['status'] = 'escalated'
+                    self._save_ticket_state(guild_id, channel_id, state)
+                    alert_text = f"РЕКОМЕНДАЦИЯ ИИ: {action_type} для {target.display_name}. Причина: {punishment_reason}. Решение передано администрации для проверки. Тикет заблокирован для обычного закрытия."
+                    img_buf = await self.bot.loop.run_in_executor(
+                        None, generate_ai_dialogue_bytes, alert_text, "", "verdict"
+                    )
+                    file = discord.File(img_buf, filename="gojo_dialogue.png")
+                    await channel.send(file=file)
+                    return
                 
-                elif action_type == 'MUTE':
+                elif action_type == 'MUTE' or action_type == 'TIMEOUT':
                     if dur:
                         until = discord.utils.utcnow() + timedelta(minutes=dur)
                         await target.timeout(until, reason=f"AI: {punishment_reason}")
-                        hours = dur // 60
-                        await channel.send(f"**{target.display_name}** заглушён на {hours} ч. Причина: {punishment_reason}")
+                        hours = max(1, dur // 60)
+                        success_text = f"Судебное решение выполнено. Участник {target.display_name} заглушен на {hours}ч. Причина: {punishment_reason}."
+                        img_buf = await self.bot.loop.run_in_executor(
+                            None, generate_ai_dialogue_bytes, success_text, "", "verdict"
+                        )
+                        file = discord.File(img_buf, filename="gojo_dialogue.png")
+                        await channel.send(file=file)
                 
                 elif action_type == 'WARN':
                     from cogs.warnings import warnings
                     warnings_cog = self.bot.get_cog('warnings')
                     if warnings_cog:
                         await warnings_cog.add_warning(target, guild.me, punishment_reason)
-                        await channel.send(f"**{target.display_name}** получил предупреждение. Причина: {punishment_reason}")
+                        success_text = f"Судебное решение выполнено. Участник {target.display_name} получил предупреждение. Причина: {punishment_reason}."
+                        img_buf = await self.bot.loop.run_in_executor(
+                            None, generate_ai_dialogue_bytes, success_text, "", "verdict"
+                        )
+                        file = discord.File(img_buf, filename="gojo_dialogue.png")
+                        await channel.send(file=file)
             except Exception as e:
-                await channel.send(f"Не удалось применить наказание к {target.display_name}: {e}")
+                log.error(f"[AI Punishment Error]: {e}")
         
         # Применяем наказание на основе вердикта
         if 'GUILTY' in verdict_upper and 'NOT' not in verdict_upper:
-            # Обвиняемый виновен
             await apply_punishment(accused, "обвиняемого", action, duration, reason)
-        
         elif 'INNOCENT' in verdict_upper or 'NOT GUILTY' in verdict_upper or 'FALSE' in verdict_upper:
-            # Заявитель виновен (ложная жалоба)
             false_reason = f"Ложная жалоба. {reason}"
             await apply_punishment(complainant, "заявителя", action, duration, false_reason)
-        
         elif 'BOTH' in verdict_upper or 'MUTUAL' in verdict_upper:
-            # Оба виновны
             both_reason = f"Обоюдное нарушение. {reason}"
             await apply_punishment(accused, "обвиняемого", action, duration, both_reason)
             await apply_punishment(complainant, "заявителя", action, duration, both_reason)
-        
         elif 'NO_VIOLATION' in verdict_upper or 'NO ACTION' in verdict_upper:
-            # Никто не виновен
-            await channel.send("Нарушений не обнаружено. Жалоба отклонена.")
-        
+            img_buf = await self.bot.loop.run_in_executor(
+                None, generate_ai_dialogue_bytes, "Нарушений не обнаружено. Жалоба отклонена по результатам проверки логов.", "", "solution"
+            )
+            file = discord.File(img_buf, filename="gojo_dialogue.png")
+            await channel.send(file=file)
         else:
-            # По умолчанию применяем к обвиняемому (старая логика)
             await apply_punishment(accused, "обвиняемого", action, duration, reason)
         
         # Очищаем состояние
