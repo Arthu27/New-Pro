@@ -580,7 +580,67 @@ class HelpSelect(discord.ui.Select):
 class HelpView(discord.ui.View):
     def __init__(self, current_cat=None):
         super().__init__(timeout=300)
+        self.current_cat = current_cat
         self.add_item(HelpSelect(current_cat=current_cat))
+
+        # Интерактивные кнопки навигации ("живое" управление меню)
+        cat_ids = [c["id"] for c in CATEGORIES]
+        idx = cat_ids.index(current_cat) if current_cat in cat_ids else -1
+
+        prev_btn = discord.ui.Button(
+            style=discord.ButtonStyle.secondary,
+            label="⬅️ Назад",
+            disabled=(idx == -1),
+            custom_id="help_btn_prev"
+        )
+        home_btn = discord.ui.Button(
+            style=discord.ButtonStyle.primary if idx == -1 else discord.ButtonStyle.secondary,
+            label="🏠 Главная",
+            disabled=(idx == -1),
+            custom_id="help_btn_home"
+        )
+        next_btn = discord.ui.Button(
+            style=discord.ButtonStyle.secondary,
+            label="➡️ Вперед",
+            disabled=(idx == -1),
+            custom_id="help_btn_next"
+        )
+
+        async def prev_cb(interaction: discord.Interaction):
+            await interaction.response.defer()
+            new_idx = (idx - 1) % len(cat_ids)
+            new_cat = cat_ids[new_idx]
+            img_buf = await interaction.client.loop.run_in_executor(
+                None, generate_help_card_bytes, new_cat
+            )
+            file = discord.File(img_buf, filename="help_card.png")
+            await interaction.edit_original_response(embed=None, attachments=[file], view=HelpView(current_cat=new_cat))
+
+        async def home_cb(interaction: discord.Interaction):
+            await interaction.response.defer()
+            img_buf = await interaction.client.loop.run_in_executor(
+                None, generate_help_card_bytes, None
+            )
+            file = discord.File(img_buf, filename="help_card.png")
+            await interaction.edit_original_response(embed=None, attachments=[file], view=HelpView(current_cat=None))
+
+        async def next_cb(interaction: discord.Interaction):
+            await interaction.response.defer()
+            new_idx = (idx + 1) % len(cat_ids)
+            new_cat = cat_ids[new_idx]
+            img_buf = await interaction.client.loop.run_in_executor(
+                None, generate_help_card_bytes, new_cat
+            )
+            file = discord.File(img_buf, filename="help_card.png")
+            await interaction.edit_original_response(embed=None, attachments=[file], view=HelpView(current_cat=new_cat))
+
+        prev_btn.callback = prev_cb
+        home_btn.callback = home_cb
+        next_btn.callback = next_cb
+
+        self.add_item(prev_btn)
+        self.add_item(home_btn)
+        self.add_item(next_btn)
 
 
 class Help(commands.Cog):
