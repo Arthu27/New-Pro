@@ -1392,20 +1392,25 @@ class AIChat(commands.Cog):
         else:
             is_ticket_ch = getattr(message.channel, 'name', '').lower().startswith(('ticket-', 'тикет-', 'destek-', 'tk-', 'closed-'))
             if is_ticket_ch:
-                photo_rel = _get_gojo_photo(answer, content)
-                photo_path = os.path.join(ROOT, photo_rel)
-                if os.path.exists(photo_path):
-                    embed = discord.Embed(
-                        title="🤖 Aether AI • Ассистент Поддержки",
-                        description=answer,
-                        color=0x00FFF7,
-                        timestamp=datetime.utcnow()
-                    )
-                    embed.set_author(name="Satoru AI Support", icon_url="attachment://gojo_ai.png")
-                    embed.set_thumbnail(url="attachment://gojo_ai.png")
-                    file = discord.File(photo_path, filename="gojo_ai.png")
-                    await message.reply(embed=embed, file=file, mention_author=False)
-                else:
+                try:
+                    root_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
+                    photo_rel = _get_gojo_photo(answer, content)
+                    photo_path = os.path.join(root_dir, photo_rel)
+                    if os.path.exists(photo_path):
+                        embed = discord.Embed(
+                            title="🤖 Aether AI • Ассистент Поддержки",
+                            description=answer[:4000],
+                            color=0x00FFF7,
+                            timestamp=datetime.utcnow()
+                        )
+                        embed.set_author(name="Satoru AI Support", icon_url="attachment://gojo_ai.png")
+                        embed.set_thumbnail(url="attachment://gojo_ai.png")
+                        file = discord.File(photo_path, filename="gojo_ai.png")
+                        await message.reply(embed=embed, file=file, mention_author=False)
+                    else:
+                        await message.reply(answer, mention_author=False)
+                except Exception as e:
+                    log.error(f"[AI Ticket Photo Error]: {e}")
                     await message.reply(answer, mention_author=False)
             else:
                 await message.reply(answer, mention_author=False)
