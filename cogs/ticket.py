@@ -1573,17 +1573,28 @@ class Ticket(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
-        """Слушать сообщения в каналах тикетов и отвечать с помощью AI"""
+        """Слушать сообщения во всех каналах для судебной проверки и в тикетах для поддержки"""
         if message.author.bot:
             return
-        if not message.channel.name.startswith("ticket-"):
-            return
-        if not AI_ENABLED:
+        if not message.guild:
             return
 
         guild_id = message.guild.id
         channel_id = message.channel.id
         state = self._get_ticket_state(guild_id, channel_id)
+
+        #  РЕАЛЬНАЯ ПРОВЕРКА ЛОГОВ И ВЫДАЧА НАКАЗАНИЯ ПРИ ЖАЛОБЕ НА ОСКОРБЛЕНИЕ (РАБОТАЕТ ГЛОБАЛЬНО НА ВСЕМ СЕРВЕРЕ!)
+        if AI_ENABLED:
+            verified = await self._verify_insult_claim(message, state)
+            if verified:
+                return
+
+        # Для обычных каналов (не тикетов) на этом обработка заканчивается
+        if not message.channel.name.startswith("ticket-"):
+            return
+            
+        if not AI_ENABLED:
+            return
 
         #  ОБРАБОТКА AI FEEDBACK / САМООБУЧЕНИЕ 
         if state.get('waiting_for_feedback_text'):
@@ -1703,10 +1714,7 @@ class Ticket(commands.Cog):
         if state.get('analyzing'):
             return
 
-        #  РЕАЛЬНАЯ ПРОВЕРКА ЛОГОВ И ВЫДАЧА НАКАЗАНИЯ ПРИ ЖАЛОБЕ НА ОСКОРБЛЕНИЕ 
-        verified = await self._verify_insult_claim(message, state)
-        if verified:
-            return
+
 
         #  ЖАЛОБА STATE MACHINE 
         complaint = state.get('complaint', {})
