@@ -762,6 +762,19 @@
       if (text) setTimeout(function () { rolesStatus.textContent = ''; }, 1800);
     }
 
+    function updateRoleStats() {
+      var modSel = $('mod-roles');
+      var ownerSel = $('owner-roles');
+      var modCount = modSel ? Array.from(modSel.selectedOptions).length : 0;
+      var ownerCount = ownerSel ? Array.from(ownerSel.selectedOptions).length : 0;
+      var mc = $('mod-count');
+      var oc = $('owner-count');
+      var tr = $('total-roles');
+      if (mc) mc.textContent = modCount;
+      if (oc) oc.textContent = ownerCount;
+      if (tr) tr.textContent = modCount + ownerCount;
+    }
+
     function getSelectedGuildId() {
       var sel = $('notify-guild');
       return sel ? sel.value : null;
