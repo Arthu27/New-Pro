@@ -493,7 +493,7 @@
         box.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><p>Пока действий нет</p></div>';
         return;
       }
-      var rows = logs.slice(0, 12).map(function (лог) {
+      var rows = logs.slice(0, 12).map(function (log) {
         var a = (log.action || '?').toLowerCase();
         var cls = a === 'ban' ? 'action-badge-err' : (a === 'warn' || a.indexOf('mute') !== -1) ? 'action-badge-warn' : (a.indexOf('unban') !== -1 || a.indexOf('unmute') !== -1) ? 'action-badge-ok' : 'action-badge-info';
         var tg = log.user_name || log.target_name || log.user_id || '—';
