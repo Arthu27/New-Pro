@@ -285,8 +285,12 @@ class VoiceCommands(commands.Cog):
     def _get_whisper_model(self):
         """Загрузить модель faster-whisper один раз и кэшировать (потокобезопасно).
 
-        Размер модели берётся из WHISPER_MODEL (tiny/base/small) — tiny скачивается
+        Размер модели берётся из WHISPER_MODEL (tiny/base/small). tiny скачивается
         и работает быстрее. По умолчанию base.
+
+        Стабильность скачивания:
+          - отключаем Xet (новый ненадёжный бэкенд HF) → классическая загрузка;
+          - поддерживаем зеркало hf-mirror.com через HF_ENDPOINT (для РФ/Китая).
         """
         if self._whisper_model is not None:
             return self._whisper_model
@@ -294,16 +298,36 @@ class VoiceCommands(commands.Cog):
             if self._whisper_model is not None:
                 return self._whisper_model
             try:
+                # Отключаем Xet-бэкенд HuggingFace (частый источник CAS-ошибок).
+                os.environ.setdefault("HF_HUB_DISABLE_XET", "1")
+                # Если пользователь указал зеркало (HF_ENDPOINT) — huggingface_hub
+                # подхватит его автоматически.
                 from faster_whisper import WhisperModel
                 model_name = os.getenv("WHISPER_MODEL", "base").strip().lower()
                 if model_name not in ("tiny", "base", "small"):
                     model_name = "base"
                 os.makedirs(self.whisper_models_dir, exist_ok=True)
                 log.info(f"Загрузка модели Whisper '{model_name}' (первый запуск)...")
-                self._whisper_model = WhisperModel(
-                    model_name, device="cpu", compute_type="int8",
-                    download_root=self.whisper_models_dir,
-                )
+
+                # Пробуем загрузить с повторными попытками (сеть может падать).
+                model = None
+                endpoint = os.getenv("HF_ENDPOINT") or "HuggingFace (по умолчанию)"
+                for attempt in range(1, 4):
+                    try:
+                        model = WhisperModel(
+                            model_name, device="cpu", compute_type="int8",
+                            download_root=self.whisper_models_dir,
+                        )
+                        break
+                    except Exception as e:
+                        log.error(f"Попытка {attempt}/3 загрузки Whisper не удалась ({endpoint}): {e}")
+                        import time
+                        time.sleep(2)
+                if model is None:
+                    self._whisper_model = None
+                    return None
+
+                self._whisper_model = model
                 self.whisper_model_name = model_name
                 log.info(f"Whisper модель '{model_name}' загружена (dir={self.whisper_models_dir})")
             except Exception as e:
@@ -506,9 +530,9 @@ class VoiceCommands(commands.Cog):
             if not text or len(text.strip()) < 3:
                 if self.whisper_available and self._whisper_model is None:
                     await status.edit(
-                        content="❌ Не удалось загрузить модель Whisper (нет доступа к HuggingFace). "
-                                "Проверьте интернет или добавьте `HF_TOKEN` в .env "
-                                "(https://huggingface.co/settings/tokens)."
+                        content="❌ Не удалось скачать модель Whisper. Добавьте в .env:\n"
+                                "```\nHF_ENDPOINT=https://hf-mirror.com\nHF_TOKEN=<токен>\nWHISPER_MODEL=tiny\n```\n"
+                                "и перезапустите бота."
                     )
                 else:
                     await status.edit(content="⚠️ В видео не распознана речь (или видео без звука).")
@@ -645,9 +669,9 @@ class VoiceCommands(commands.Cog):
             if not text or len(text.strip()) < 3:
                 if self.whisper_available and self._whisper_model is None:
                     await status.edit(
-                        content="❌ Не удалось загрузить модель Whisper (нет доступа к HuggingFace). "
-                                "Проверьте интернет или добавьте `HF_TOKEN` в .env "
-                                "(https://huggingface.co/settings/tokens)."
+                        content="❌ Не удалось скачать модель Whisper. Добавьте в .env:\n"
+                                "```\nHF_ENDPOINT=https://hf-mirror.com\nHF_TOKEN=<токен>\nWHISPER_MODEL=tiny\n```\n"
+                                "и перезапустите бота."
                     )
                 else:
                     await status.edit(content="⚠️ В видео не удалось распознать речь (или видео без звука).")
