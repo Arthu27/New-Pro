@@ -122,14 +122,18 @@ class _EconomyExtra (commands .Cog ):
         data =self ._migrate (ctx .author .id ,self ._get (ctx .author .id ))
         rate =0.02 +0.01 *(data .get ('bank_level',1 )-1 )
         cap =50000 *data .get ('bank_level',1 )
-        e =discord .Embed (title ="🏦 Банк",color =0x95A5A6 ,timestamp =datetime .now ())
-        e .add_field (name ="Счёт",value =f"${data['bank']:,}",inline =True )
-        e .add_field (name ="Процент",value =f"{rate*100:.1f}%",inline =True )
-        e .add_field (name ="Лимит",value =f"${cap:,}",inline =True )
-        e .add_field (name ="Уровень",value =f"{data['bank_level']}",inline =True )
-        e .add_field (name ="Улучшить",value ="`!bankup`",inline =True )
-        e .add_field (name ="Начисление",value ="`!interest`",inline =True )
-        await ctx .send (embed =e )
+        rows =[
+        ("Счёт",f"${data['bank']:,}"),
+        ("Процент",f"{rate*100:.1f}%"),
+        ("Лимит",f"${cap:,}"),
+        ("Уровень банка",str (data ['bank_level'])),
+        ("Улучшить","!bankup"),
+        ("Проценты","!interest"),
+        ]
+        img =await self .bot .loop .run_in_executor (
+        None ,generate_eco_bytes ,"Банк",f"Профиль • {ctx.author.display_name}",rows ,(0 ,150 ,136 )
+        )
+        await ctx .send (file =discord .File (img ,filename ="bank.png" ))
 
     @commands .command (name ='bankup',aliases =['банк-улучшить'])
     async def bankup (self ,ctx ):
@@ -214,9 +218,18 @@ class _EconomyExtra (commands .Cog ):
             await ctx .send ("Вы без работы! Выберите: `!job программист` / `!job фермер` ...")
             return 
         j =JOBS [data ['job']]
-        e =discord .Embed (title =f"{j['icon']} {data['job'].capitalize()}",color =0x95A5A6 ,
-        description =f"Уровень: **{data['job_level']}** · Опыт: {data['job_xp']}/100\nЗарплата: ${j['pay'][0]}-{j['pay'][1]}")
-        await ctx .send (embed =e )
+        rows =[
+        ("Профессия",data ['job'].capitalize ()),
+        ("Уровень",str (data ['job_level'])),
+        ("Опыт",f"{data['job_xp']}/100"),
+        ("Зарплата",f"${j['pay'][0]}-{j['pay'][1]}"),
+        ("Крит. шанс",f"{j['crit_chance']*100:.0f}%"),
+        ("Бонус питомца",f"+{ITEM_DETAILS.get(data.get('equipped_pet'),{}).get('pet_bonus',0)}%"),
+        ]
+        img =await self .bot .loop .run_in_executor (
+        None ,generate_eco_bytes ,"Работа",f"{data['job'].capitalize()} • {ctx.author.display_name}",rows ,(52 ,211 ,153 )
+        )
+        await ctx .send (file =discord .File (img ,filename ="job.png" ))
 
     @commands .command (name ='jobs',aliases =['профессии'])
     async def jobs_list (self ,ctx ):
@@ -350,9 +363,16 @@ class _EconomyExtra (commands .Cog ):
         if not my_pets :
             await ctx .send ("У вас нет питомцев. Купите в магазине: `!buy кошка`")
             return 
-        lines =[f"{'⭐' if p==equipped else ' '} **{p.capitalize()}** (+{ITEM_DETAILS[p].get('pet_bonus',0)}%)"for p in my_pets ]
-        e =discord .Embed (title ="🐾 Ваши питомцы",color =0x95A5A6 ,description ="\n".join (lines ))
-        await ctx .send (embed =e )
+        lines =[]
+        for p in my_pets :
+            mark ="⭐"if p ==equipped else "•"
+            lines .append ((f"{mark} {p.capitalize()}",f"+{ITEM_DETAILS[p].get('pet_bonus',0)}% к работе"))
+        if not lines :
+            lines =[("Питомцы","Нет")]
+        img =await self .bot .loop .run_in_executor (
+        None ,generate_eco_bytes ,"Питомцы",f"Профиль • {ctx.author.display_name}",lines ,(155 ,89 ,182 )
+        )
+        await ctx .send (file =discord .File (img ,filename ="pets.png" ))
 
     # ── КАЗИНО ──────────────────────────────────────────────
     @commands .command (name ='slots',aliases =['слоты'])
@@ -586,16 +606,18 @@ class _EconomyExtra (commands .Cog ):
             return 
         medals =['🥇','🥈','🥉']
         lines =[]
-        for i ,(uid ,val )in enumerate (rows [:10 ],1 ):
+        for i ,(uid ,val )in enumerate (rows [:8 ],1 ):
             try :
                 u =await self .bot .fetch_user (int (uid ))
                 name =u .name 
             except Exception :
                 name =str (uid )[:12 ]
             medal =medals [i -1 ]if i <=3 else f"#{i}"
-            lines .append (f"{medal} **{name}** — ${val:,}")
-        e =discord .Embed (title =f"🏆 Топ по {field}",color =0xF1C40F ,description ="\n".join (lines ))
-        await ctx .send (embed =e )
+            lines .append ((f"{medal} {name}",f"${val:,}"))
+        img =await self .bot .loop .run_in_executor (
+        None ,generate_eco_bytes ,"Топ",f"Рейтинг по {field}",lines ,(241 ,196 ,15 )
+        )
+        await ctx .send (file =discord .File (img ,filename ="top.png" ))
 
     # ── МАГАЗИН / ПОКУПКА / ИНВЕНТАРЬ / ПЕРЕВОД ─────────────
     @commands .command (name ='shop',aliases =['магазин','maгaza'])
@@ -685,16 +707,22 @@ class EconomyCog (_EconomyExtra ,commands .Cog ):
         """Показать баланс"""
         member =member or ctx .author 
         data =self ._get (member .id )
+        data =self ._migrate (member .id ,data )
 
-        embed =discord .Embed (
-        title =f"Баланс — {member.display_name}",
-        color =discord .Color .dark_grey (),
-        timestamp =datetime .now ()
+        job_name =data .get ('job')or 'Нет'
+        pet =data .get ('equipped_pet')or 'Нет'
+        rows =[
+        ("Кошелёк",f"${data['balance']:,}"),
+        ("Банк",f"${data['bank']:,}"),
+        ("Итого",f"${data['balance']+data['bank']:,}"),
+        ("Профессия",job_name .capitalize ()),
+        ("Уровень работы",str (data .get ('job_level',1 ))),
+        ("Питомец",pet .capitalize ()),
+        ]
+        img =await self .bot .loop .run_in_executor (
+        None ,generate_eco_bytes ,"Баланс",f"Профиль • {member.display_name}",rows ,(16 ,185 ,129 )
         )
-        embed .add_field (name ="Кошелёк",value =f"${data['balance']:,}",inline =True )
-        embed .add_field (name ="Банк",value =f"${data['bank']:,}",inline =True )
-        embed .add_field (name ="Итого",value =f"${data['balance'] + data['bank']:,}",inline =True )
-        await ctx .send (embed =embed )
+        await ctx .send (file =discord .File (img ,filename ="balance.png" ))
 
         # ── daily ────────────────────────────────────────────────────────────
     @commands .command (name ='daily',aliases =['gюnlюk','ежедневная'])
@@ -1059,6 +1087,53 @@ def generate_economy_bytes (cog ,member :discord .Member ,category :str ="shop")
     card .save (buf ,format ='PNG',optimize =True )
     buf .seek (0 )
     return buf 
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  ГЕНЕРАТОР УНИВЕРСАЛЬНОЙ ЭКОНОМИЧЕСКОЙ КАРТОЧКИ (в стиле !help)
+# ═══════════════════════════════════════════════════════════════════
+def generate_eco_card (title :str ,subtitle :str ,rows :list ,accent :tuple =EMERALD )->Image .Image :
+    """Универсальная карточка: заголовок + строки (name: value) + акцент.
+    rows: список (label, value) пар."""
+    W =920 
+    H =max (520 ,130 +len (rows )*54 +30 )
+    bg =load_menu_bg (W ,H ,"emerald")
+    d =ImageDraw .Draw (bg )
+
+    # Header
+    header_box =_rounded_panel (872 ,72 ,radius =14 ,fill =WHITE ,outline =BLACK ,ow =2 )
+    bg .alpha_composite (header_box ,(24 ,20 ))
+    badge =_icon_badge (52 ,_icon_wallet ,ring_color =BLACK ,ring_w =2 ,icon_color =accent )
+    bg .alpha_composite (badge ,(36 ,30 ))
+    d .text ((100 ,26 ),title .upper (),fill =BLACK ,font =_f (True ,24 ))
+    d .text ((100 ,56 ),subtitle .upper (),fill =MUTED ,font =_f (False ,15 ))
+
+    pill =_rounded_panel (156 ,36 ,radius =10 ,fill =WHITE ,outline =accent ,ow =2 )
+    bg .alpha_composite (pill ,(724 ,38 ))
+    d .text ((742 ,46 ),"ECONOMY v5.0",fill =accent ,font =_f (True ,14 ))
+
+    y =110 
+    for label ,value in rows :
+        box =_rounded_panel (872 ,46 ,radius =10 ,fill =WHITE ,outline =BLACK ,ow =1 )
+        bg .alpha_composite (box ,(24 ,y ))
+        d .text ((44 ,y +11 ),str (label ),fill =MUTED ,font =_f (False ,20 ))
+        d .text ((460 ,y +10 ),str (value )[:38 ],fill =BLACK ,font =_f (True ,20 ))
+        y +=56
+
+    br =_corner_bracket (40 ,4 ,color =accent )
+    bg .alpha_composite (br ,(6 ,6 ))
+    bg .alpha_composite (br .rotate (270 ),(W -46 ,6 ))
+    bg .alpha_composite (br .rotate (90 ),(6 ,H -46 ))
+    bg .alpha_composite (br .rotate (180 ),(W -46 ,H -46 ))
+    return bg
+
+
+def generate_eco_bytes (title ,subtitle ,rows ,accent =EMERALD )->io .BytesIO :
+    card =generate_eco_card (title ,subtitle ,rows ,accent ).convert ('RGB')
+    buf =io .BytesIO ()
+    card .save (buf ,format ='PNG',optimize =True )
+    buf .seek (0 )
+    return buf
 
 
 class EconomySelect (discord .ui .Select ):
