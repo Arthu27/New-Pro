@@ -2,6 +2,31 @@
 {% block title %}Поиск участников — Aether{% endblock %}
 {% block page_title %}<i class="fas fa-search" ></i> Поиск участников{% endblock %}
 {% block content %}
+<style>
+.ms-bar { display: flex; gap: 8px; margin-bottom: 16px; max-width: 560px; }
+.ms-bar input[type="text"] { flex: 1; background: rgba(0,0,0,0.3); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 10px 14px; color: var(--text); font-size: 13px; outline: none; }
+.ms-bar input[type="text"]:focus { border-color: var(--ac); box-shadow: 0 0 0 3px var(--ac-soft); }
+.ms-bar .btn { background: linear-gradient(135deg, var(--ac), #c8972f); color: #1a1405; border: none; border-radius: var(--r-sm); padding: 0 18px; font-weight: var(--fw-bold); cursor: pointer; }
+.ms-results { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.ms-result-card { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); cursor: pointer; transition: all .15s var(--ease); }
+.ms-result-card:hover { border-color: var(--ac); background: rgba(224,176,74,0.05); }
+.ms-result-card img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: var(--ac-soft); }
+.ms-result-card .name { font-weight: var(--fw-semibold); font-size: 14px; }
+.ms-result-card .id { font-size: 11px; color: #8a8374; margin-top: 2px; }
+.ms-profile { display: none; grid-template-columns: 1fr 1fr; gap: 12px; }
+.ms-profile > div { display: flex; flex-direction: column; gap: 12px; }
+.ms-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 16px; }
+.ms-card h2 { font-size: 13px; font-weight: var(--fw-bold); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.ms-card h2 i { color: var(--ac); }
+.ms-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 12.5px; }
+.ms-row:last-child { border-bottom: none; }
+.ms-key { color: #8a8374; }
+.ms-val.ok { color: var(--ok); font-weight: var(--fw-semibold); }
+.ms-val.danger { color: var(--err); font-weight: var(--fw-bold); }
+.warn-item, .case-item { font-size: 12.5px; padding: 7px 0; border-bottom: 1px solid var(--line); }
+.warn-item:last-child, .case-item:last-child { border-bottom: none; }
+@media (max-width: 720px) { .ms-profile { grid-template-columns: 1fr; } }
+</style>
 {% block page_hero %}
 <div class="page-hero compact">
   <div class="page-hero-content">
