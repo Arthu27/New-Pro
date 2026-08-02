@@ -558,7 +558,7 @@ async def main():
         await load_cogs()
         while True:
             try:
-                _token = os.getenv("TOKEN", "").strip()
+                _token = (os.getenv("TOKEN", "") or os.getenv("TОКEN", "")).strip()
                 if not _token:
                     raise RuntimeError(
                         "Токен не найден! Добавьте токен в .env файл (строка TOKEN=ваш_токен) "

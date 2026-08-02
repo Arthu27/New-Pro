@@ -5,8 +5,9 @@ import os
 from dotenv import load_dotenv
 import discord
 
-load_dotenv()
-TOKEN = os.getenv('TOKEN')
+_BASE = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(_BASE, ".env"), override=True)
+TOKEN = os.getenv('TOKEN') or os.getenv('TОКEN')
 
 intents = discord.Intents.default()
 intents.message_content = True

@@ -11,11 +11,18 @@ _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 load_dotenv(os.path.join(_BASE_DIR, ".env"), override=True)
 
 
+def _get_token():
+    """Токен из .env. Учитывает и ошибочный вариант с кириллической буквой
+    (TОКEN), если он остался в файле от старого шаблона."""
+    t = os.getenv("TOKEN", "") or os.getenv("TОКEN", "")
+    return t.strip()
+
+
 class Config:
     """Основной класс конфигурации"""
     
     # === Discord ===
-    TOKEN: str = os.getenv("TOKEN", "")
+    TOKEN: str = _get_token()
     OWNER_ID: int = int(os.getenv("OWNER_ID", "0"))
     MAIN_GUILD_ID: int = int(os.getenv("MAIN_GUILD_ID", "0"))
     COMMAND_PREFIX: str = "!"

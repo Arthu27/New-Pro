@@ -5,7 +5,8 @@ import os
 import datetime
 from dotenv import load_dotenv
 
-load_dotenv()
+_BASE = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(_BASE, ".env"), override=True)
 
 import discord
 from discord.ext import commands
