@@ -675,23 +675,78 @@ class Logs (commands .Cog ):
 
     @commands .Cog .listener ()
     async def on_guild_channel_delete (self ,channel ):
-        # Кто удалил канал (из audit log)
+        # Кто удалил канал (из audit log) — с retry, т.к. audit log появляется с задержкой.
         mod_name =None 
         mod_id =None 
+        mod_is_bot =False 
         try :
-            async for entry in channel .guild .audit_logs (limit =5 ,action =discord .AuditLogAction .channel_delete ):
-                if entry .target .id ==channel .id :
-                    mod_name =entry .user .display_name if entry .user else None 
-                    mod_id =entry .user .id if entry .user else None 
+            import asyncio as _ai 
+            guild =channel .guild 
+            # Проверяем право на чтение audit log — без него мы не сможем узнать, кто удалил.
+            can_view =False 
+            try :
+                me =guild .me 
+                can_view =bool (me .guild_permissions .view_audit_log )
+            except Exception :
+                pass
+            if not can_view :
+                save_event (guild .id ,'channel','Канал удален',{
+                'channel_id':str (channel .id ),
+                'channel_name':getattr (channel ,'name','?'),
+                'channel_type':str (getattr (channel ,'type','?')),
+                'mod_name':'?',
+                'mod_id':None ,
+                'warning':'Нет права View Audit Log — не удалось определить, кто удалил канал',
+                })
+                ch =await self .get_log_channel (guild ,'channel')
+                if ch :
+                    e =discord .Embed (color =0xE74C3C ,timestamp =datetime .datetime .utcnow ())
+                    e .description =(
+                    f"## Канал удален\n"
+                    f"**{getattr(channel, 'name', '?')}** · `{channel.id}`\n\n"
+                    f"⚠️ **Боту не выдано право `Просмотр журнала аудита` (View Audit Log).**\n"
+                    f"Невозможно определить, кто удалил канал.\n\n"
+                    f"Дайте боту это право в настройках сервера."
+                    )
+                    e .set_footer (text =f"{guild.name}")
+                    await ch .send (embed =e )
+                return
+            # Retry-цикл: audit log может прийти с задержкой
+            for attempt in range (6 ):
+                try :
+                    async for entry in guild .audit_logs (limit =10 ,action =discord .AuditLogAction .channel_delete ):
+                        tid =getattr (entry .target ,'id',None )
+                        if tid is not None and tid ==channel .id :
+                            u =entry .user 
+                            if u is not None :
+                                mod_name =getattr (u ,'display_name',None )or str (u )
+                                mod_id =u .id 
+                                mod_is_bot =bool (getattr (u ,'bot',False ))
+                            break 
+                except discord .Forbidden :
                     break 
+                except Exception :
+                    pass
+                if mod_id is not None :
+                    break 
+                await _ai .sleep (1.0 )  # ждём появления записи в audit log
         except Exception :
-            pass 
+            pass
+
+        extra_warning =''
+        if mod_id is not None and mod_is_bot :
+            extra_warning =(' ⚠️ **ВНИМАНИЕ:** канал удалён через аккаунт бота! '
+                           'Это означает утечку/компрометацию токена бота или использование '
+                           'его вебхука/интеграции. Проверьте безопасность токена!')
+
         save_event (channel .guild .id ,'channel','Канал удален',{
         'channel_id':str (channel .id ),
         'channel_name':getattr (channel ,'name','?'),
         'channel_type':str (getattr (channel ,'type','?')),
         'mod_name':mod_name or '—',
         'mod_id':str (mod_id )if mod_id else None ,
+        'mod_is_bot':mod_is_bot ,
+        'source':'event',
         })
         ch =await self .get_log_channel (channel .guild ,'channel')
         if not ch :
@@ -701,8 +756,11 @@ class Logs (commands .Cog ):
         f"## Канал удален\n"
         f"**{getattr(channel, 'name', '?')}** · `{channel.id}`\n\n"
         f"Тип: {str(getattr(channel, 'type', '?'))}\n"
-        f"Удалил: **{mod_name or '—'}** `{mod_id or ''}`"
+        f"Удалил: **{mod_name or '—'}** `{mod_id or ''}`\n"
+        f"Это бот: {'Да' if mod_is_bot else 'Нет'}"
         )
+        if extra_warning :
+            e .description +=f"\n\n{extra_warning}"
         e .set_footer (text =f"{channel.guild.name}")
         await ch .send (embed =e )
 
