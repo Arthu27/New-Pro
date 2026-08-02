@@ -346,7 +346,7 @@
   // ── История логов ────────────────────────────────────────────────────────
   function renderLog() {
     var box = $('log-list');
-    var лог = (currentConfig.leave_log || []).slice(-50).reverse();
+    var log = (currentConfig.leave_log || []).slice(-50).reverse();
     if (!log.length) {
       box.innerHTML = '<p class="muted">Записей пока нет. Когда система включена и участник покидает сервер, запись появится здесь.</p>';
       return;

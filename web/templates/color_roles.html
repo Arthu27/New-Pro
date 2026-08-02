@@ -1,4 +1,4 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 {% block title %}Цвет Роли - Aether{% endblock %}
 {% block page_title %}<i class="fas fa-palette" ></i> Цвет Роли{% endblock %}
 {% block content %}
@@ -25,11 +25,11 @@
   <div class="cr-title"><i class="fas fa-plus"></i> Добавить цвет</div>
   <div class="grid3" >
     <div>
-      <label class="field-label">Цвет Isim</label>
+      <label class="field-label">Цвет</label>
       <input type="text" id="color-name" placeholder="напр.: Красный" class="field-input">
     </div>
     <div>
-      <label class="field-label">Цвет Kodu</label>
+      <label class="field-label">Код цвета</label>
       <div  >
         <input type="color" id="color-picker" value="#c8922a"   style="width: 42px; height: 38px;">
         <input type="text" id="color-hex" placeholder="#c8922a" class="field-input"  oninput="syncColor(this.value)">
@@ -44,7 +44,7 @@
 </div>
 
 <div class="cr-box">
-  <div class="cr-title"><i class="fas fa-palette"></i> Текущий Цветler</div>
+  <div class="cr-title"><i class="fas fa-palette"></i> Текущие цвета</div>
   <div class="colors-grid" id="color-list">
     <p >Выберите сервер...</p>
   </div>
@@ -120,11 +120,11 @@ document.addEventListener('DOMContentLoaded', function(){
 
 function renderColors() {
   var box = document.getElementById('color-list');
-  if(!colors.length) { box.innerHTML='<p >Пока renk добавл.</p>'; return; }
+  if(!colors.length) { box.innerHTML='<p >Цветов пока нет</p>'; return; }
   box.innerHTML = colors.map(function(c,i){
     return '<div class="color-card">'+
       '<button class="del-btn" onclick="removeColor('+i+')">×</button>'+
-      '<div class="color-swatch" ></div>'+
+      '<div class="color-swatch" style="--swatch-color:' + c.hex + '"></div>'+
       '<div   style="margin-bottom: 4px;">'+(c.emoji||'🎨')+'</div>'+
       '<div class="color-name">'+c.name+'</div>'+
       '<div class="color-hex">'+c.hex+'</div>'+
@@ -134,7 +134,7 @@ function renderColors() {
 
 function addColor() {
   var name = document.getElementById('color-name').value.trim();
-  if(!name) { alert('Цвет имя gir!'); return; }
+  if(!name) { alert('Введите название цвета!'); return; }
   var hex = document.getElementById('color-hex').value.trim() || document.getElementById('color-picker').value;
   if(!/^#[0-9a-fA-F]{6}$/.test(hex)) hex = document.getElementById('color-picker').value;
   var emoji = document.getElementById('color-emoji').value.trim() || '🎨';
@@ -150,7 +150,7 @@ async function publishPanel() {
   if(!selectedGuild) { alert('Сервер выбрать!'); return; }
   var ch = document.getElementById('panel-channel').value;
   if(!ch) { alert('Выберите канал!'); return; }
-  if(!colors.length) { alert('До renk добавить!'); return; }
+  if(!colors.length) { alert('Сначала добавьте цвета!'); return; }
   var r = await fetch('/api/guild/'+selectedGuild+'/color-roles/publish', {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({channel_id:ch, colors:colors})
