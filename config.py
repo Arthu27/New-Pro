@@ -31,6 +31,27 @@ class Config:
     OWNER_ID: int = int(os.getenv("OWNER_ID", "0"))
     MAIN_GUILD_ID: int = int(os.getenv("MAIN_GUILD_ID", "0"))
     COMMAND_PREFIX: str = "!"
+
+    # Дополнительные серверы для slash-команд (через запятую в .env: EXTRA_GUILD_IDS=111,222)
+    EXTRA_GUILD_IDS: list = [
+        int(x.strip()) for x in os.getenv("EXTRA_GUILD_IDS", "").split(",") if x.strip()
+    ]
+
+    @classmethod
+    def guild_objects(cls):
+        """Список discord.Object серверов для регистрации guild-команд.
+
+        Только сервер(ы) из .env: MAIN_GUILD_ID + EXTRA_GUILD_IDS.
+        Если MAIN_GUILD_ID не задан — fallback на старые hardcoded ID.
+        """
+        import discord
+        ids = []
+        if cls.MAIN_GUILD_ID:
+            ids.append(cls.MAIN_GUILD_ID)
+        ids.extend(cls.EXTRA_GUILD_IDS)
+        if not ids:
+            ids = [1421244140359909513, 1107038411895881788, 1498837105915330562]
+        return [discord.Object(id=g) for g in ids]
     
     # === Web Panel ===
     PORT: int = int(os.getenv("PORT", "5001"))

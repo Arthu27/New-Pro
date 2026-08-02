@@ -3,6 +3,7 @@ from discord .ext import commands
 from discord import app_commands 
 import io 
 from datetime import datetime 
+from config import Config 
 
 class Archive (commands .Cog ):
     def __init__ (self ,bot ):
@@ -92,4 +93,4 @@ class Archive (commands .Cog ):
         await interaction .followup .send (f" {len(messages)} message yedaddndi.",file =file ,ephemeral =True )
 
 async def setup (bot ):
-    await bot .add_cog (Archive (bot ),guilds =[discord .Object (id =1421244140359909513 ),discord .Object (id =1107038411895881788 ),discord .Object (id =1498837105915330562 )])
+    await bot .add_cog (Archive (bot ),guilds =Config .guild_objects ())

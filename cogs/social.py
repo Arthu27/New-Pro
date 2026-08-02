@@ -10,6 +10,7 @@ from discord import app_commands
 import json ,os 
 from datetime import datetime ,timezone ,timedelta 
 from typing import Optional 
+from config import Config 
 
 POLL_FILE ='data/polls_{guild_id}.json'
 EVENT_FILE ='data/events_{guild_id}.json'
@@ -553,4 +554,4 @@ class Social (commands .Cog ):
 
 
 async def setup (bot ):
-    await bot .add_cog (Social (bot ),guilds =[discord .Object (id =1421244140359909513 ),discord .Object (id =1107038411895881788 ),discord .Object (id =1498837105915330562 )])
+    await bot .add_cog (Social (bot ),guilds =Config .guild_objects ())

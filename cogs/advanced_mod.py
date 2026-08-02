@@ -6,6 +6,7 @@ import os
 from datetime import datetime 
 from cogs .embed_utils import _divider ,now_ts ,error_embed 
 from logger import get_logger 
+from config import Config 
 
 class AdvancedMod (commands .Cog ):
     def __init__ (self ,bot ):
@@ -378,4 +379,4 @@ class AdvancedMod (commands .Cog ):
 
 
 async def setup (bot ):
-    await bot .add_cog (AdvancedMod (bot ),guilds =[discord .Object (id =1421244140359909513 ),discord .Object (id =1107038411895881788 ),discord .Object (id =1498837105915330562 )])
+    await bot .add_cog (AdvancedMod (bot ),guilds =Config .guild_objects ())

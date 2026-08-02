@@ -4,6 +4,7 @@ from discord.ext import commands
 from discord import app_commands
 import random
 from cogs.embed_utils import _divider
+from config import Config 
 
 _DICE = {1: "⚀", 2: "⚁", 3: "⚂", 4: "⚃", 5: "⚄", 6: "⚅"}
 
@@ -188,4 +189,4 @@ class MiniGames(commands.Cog):
 
 
 async def setup(bot):
-    await bot.add_cog(MiniGames(bot), guilds=[discord.Object(id=1421244140359909513), discord.Object(id=1107038411895881788), discord.Object(id=1498837105915330562)])
+    await bot.add_cog(MiniGames(bot), guilds=Config.guild_objects())

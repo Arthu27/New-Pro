@@ -6,6 +6,7 @@ import json
 import os 
 from datetime import datetime ,timezone ,date 
 from collections import defaultdict 
+from config import Config 
 
 def _health_file (guild_id ):
     return f'data/health_{guild_id}.json'
@@ -179,4 +180,4 @@ class Health (commands .Cog ):
 
 
 async def setup (bot ):
-    await bot .add_cog (Health (bot ),guilds =[discord .Object (id =1421244140359909513 ),discord .Object (id =1107038411895881788 ),discord .Object (id =1498837105915330562 )])
+    await bot .add_cog (Health (bot ),guilds =Config .guild_objects ())

@@ -3,6 +3,7 @@ import discord
 from discord .ext import commands 
 from discord import app_commands 
 import json ,os 
+from config import Config 
 
 class Webhooks (commands .Cog ):
     def __init__ (self ,bot ):
@@ -131,4 +132,4 @@ class Webhooks (commands .Cog ):
             await interaction .response .send_message (f' **{name}** webhook удалена!')
 
 async def setup (bot ):
-    await bot .add_cog (Webhooks (bot ),guilds =[discord .Object (id =1421244140359909513 ),discord .Object (id =1107038411895881788 ),discord .Object (id =1498837105915330562 )])
+    await bot .add_cog (Webhooks (bot ),guilds =Config .guild_objects ())

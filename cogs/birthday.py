@@ -5,6 +5,7 @@ import json
 import os 
 from datetime import datetime ,timezone 
 from cogs .embed_utils import _divider ,now_ts 
+from config import Config 
 
 GIF_BIRTHDAY ="https://media.tenor.com/ZBDpMFBMFpkAAAAC/celebration-party.gif"
 
@@ -267,4 +268,4 @@ class Birthday (commands .Cog ):
 
 
 async def setup (bot ):
-    await bot .add_cog (Birthday (bot ),guilds =[discord .Object (id =1421244140359909513 ),discord .Object (id =1107038411895881788 ),discord .Object (id =1498837105915330562 )])
+    await bot .add_cog (Birthday (bot ),guilds =Config .guild_objects ())

@@ -4,6 +4,7 @@ from discord .ext import commands ,tasks
 from discord import app_commands 
 import json ,os 
 from datetime import datetime ,timedelta 
+from config import Config 
 
 class Events (commands .Cog ):
     def __init__ (self ,bot ):
@@ -162,4 +163,4 @@ class Events (commands .Cog ):
         await interaction .response .send_message (f'Событие {title} отменено')
 
 async def setup (bot ):
-    await bot .add_cog (Events (bot ),guilds =[discord .Object (id =1421244140359909513 ),discord .Object (id =1107038411895881788 ),discord .Object (id =1498837105915330562 )])
+    await bot .add_cog (Events (bot ),guilds =Config .guild_objects ())

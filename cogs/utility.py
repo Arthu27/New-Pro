@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
+from config import Config
 
 class Utility(commands.Cog):
     def __init__(self, bot):
@@ -74,4 +75,4 @@ class Utility(commands.Cog):
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
 async def setup(bot):
-    await bot.add_cog(Utility(bot), guilds=[discord.Object(id=1421244140359909513), discord.Object(id=1107038411895881788), discord.Object(id=1498837105915330562)])
+    await bot.add_cog(Utility(bot), guilds=Config.guild_objects())

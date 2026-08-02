@@ -4,6 +4,7 @@ from discord .ext import commands
 from discord import app_commands 
 from datetime import datetime ,timezone 
 import os 
+from config import Config 
 
 OWNER_ID =int (os .getenv ('OWNER_ID')or '0')
 
@@ -236,4 +237,4 @@ class AFK (commands .Cog ):
 
 
 async def setup (bot ):
-    await bot .add_cog (AFK (bot ),guilds =[discord .Object (id =1421244140359909513 ),discord .Object (id =1107038411895881788 ),discord .Object (id =1498837105915330562 )])
+    await bot .add_cog (AFK (bot ),guilds =Config .guild_objects ())

@@ -5,6 +5,7 @@ import json
 import os 
 from datetime import datetime 
 from cogs .embed_utils import _divider ,now_ts 
+from config import Config 
 
 class InviteTracker (commands .Cog ):
     def __init__ (self ,bot ):
@@ -164,4 +165,4 @@ class InviteTracker (commands .Cog ):
 
 
 async def setup (bot ):
-    await bot .add_cog (InviteTracker (bot ),guilds =[discord .Object (id =1421244140359909513 ),discord .Object (id =1107038411895881788 ),discord .Object (id =1498837105915330562 )])
+    await bot .add_cog (InviteTracker (bot ),guilds =Config .guild_objects ())

@@ -7,6 +7,7 @@ import json
 import os 
 from datetime import datetime ,timedelta 
 from cogs .embed_utils import _divider ,now_ts ,gif 
+from config import Config 
 
 DATA_DIR ='data'
 
@@ -463,4 +464,4 @@ class Economy (commands .Cog ):
 
 
 async def setup (bot ):
-    await bot .add_cog (Economy (bot ),guilds =[discord .Object (id =1421244140359909513 ),discord .Object (id =1107038411895881788 ),discord .Object (id =1498837105915330562 )])
+    await bot .add_cog (Economy (bot ),guilds =Config .guild_objects ())
