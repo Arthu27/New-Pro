@@ -15,12 +15,12 @@ with open('web/templates/base.html', 'w', encoding='utf-8') as f:
         {% if role == 'uye' %}
         <a href="/member-apply" {% if request.path == '/member-apply' %}class="active"{% endif %}><i class="fas fa-user-shield"></i> Администратор Basvurusu</a>
 
-        {% elif role == 'mod' %}
+        {% elif role == 'мод' %}
         <a href="/" {% if request.path == '/' %}class="active"{% endif %}><i class="fas fa-home"></i> Panel управление</a>
         <a href="/logs" {% if request.path == '/logs' %}class="active"{% endif %}><i class="fas fa-clipboard-list"></i> Логи модерации</a>
         <a href="/warnings" {% if request.path == '/warnings' %}class="active"{% endif %}><i class="fas fa-exclamation-triangle"></i> Предупреждения</a>
 
-        {% elif role == 'admin' %}
+        {% elif role == 'админ' %}
         <a href="/" {% if request.path == '/' %}class="active"{% endif %}><i class="fas fa-home"></i> Panel управление</a>
         <a href="/users" {% if request.path == '/users' %}class="active"{% endif %}><i class="fas fa-users"></i> Пользователи</a>
         <a href="/logs" {% if request.path == '/logs' %}class="active"{% endif %}><i class="fas fa-clipboard-list"></i> Логи модерации</a>
@@ -30,7 +30,7 @@ with open('web/templates/base.html', 'w', encoding='utf-8') as f:
 
         {% elif role == 'owner' %}
         <a href="/" {% if request.path == '/' %}class="active"{% endif %}><i class="fas fa-home"></i> Panel управление</a>
-        <a href="/guilds" {% if request.path == '/guilds' %}class="active"{% endif %}><i class="fas fa-сервер"></i> Сервера</a>
+        <a href="/guilds" {% if request.path == '/guilds' %}class="active"{% endif %}><i class="fas fa-server"></i> Сервера</a>
         <a href="/users" {% if request.path == '/users' %}class="active"{% endif %}><i class="fas fa-users"></i> Пользователи</a>
         <a href="/logs" {% if request.path == '/logs' %}class="active"{% endif %}><i class="fas fa-clipboard-list"></i> Логи модерации</a>
         <a href="/warnings" {% if request.path == '/warnings' %}class="active"{% endif %}><i class="fas fa-exclamation-triangle"></i> Предупреждения</a>

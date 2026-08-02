@@ -1,238 +1,138 @@
 {% extends "base.html" %}
-{% block title %}Denetim Kaydi - Aether{% endblock %}
-{% block page_title %}ЖУРНАЛ ДЕЙСТВИЙ{% endblock %}
+{% block title %}Логи - Aether{% endblock %}
+{% block page_title %}<i class="fas fa-clipboard-list" ></i> Логи модерации{% endblock %}
 {% block content %}
-<style>
-.filter-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:15px;align-items:center;}
-.filter-bar input,.filter-bar select{padding:9px 13px;background:#0a0a0a;border:2px solid rgba(220,20,60,0.3);border-radius:8px;color:#eee;font-size:13px;}
-.filter-bar input:focus,.filter-bar select:focus{outline:none;border-color:#dc143c;}
-.filter-bar input{flex:1;min-width:180px;}
-.cat-btn{padding:7px 13px;border-radius:20px;border:2px solid rgba(220,20,60,0.3);background:transparent;color:#aaa;cursor:pointer;font-size:11px;font-weight:700;transition:all 0.2s;white-space:nowrap;}
-.cat-btn.active,.cat-btn:hover{border-color:#dc143c;color:white;background:rgba(220,20,60,0.2);}
-.ev-row{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);border-radius:10px;padding:10px 14px;transition:all 0.2s;}
-.ev-row:hover{background:rgba(220,20,60,0.07);border-color:rgba(220,20,60,0.2);}
-.ev-icon{font-size:18px;width:28px;text-align:center;flex-shrink:0;}
-.ev-cat{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;padding:2px 7px;border-radius:8px;flex-shrink:0;min-width:72px;text-align:center;}
-.ev-action{color:white;font-weight:600;font-size:13px;flex-shrink:0;min-width:140px;}
-.ev-detail{color:#666;font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.ev-time{color:#444;font-size:11px;flex-shrink:0;min-width:100px;text-align:right;}
-.ev-btn{background:rgba(220,20,60,0.15);border:1px solid rgba(220,20,60,0.3);color:#dc143c;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:11px;flex-shrink:0;transition:all 0.2s;}
-.ev-btn:hover{background:rgba(220,20,60,0.3);}
-.stats-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:15px;}
-.stat-chip{background:rgba(220,20,60,0.08);border:1px solid rgba(220,20,60,0.2);border-radius:10px;padding:8px 14px;text-align:center;min-width:80px;cursor:pointer;transition:all 0.2s;}
-.stat-chip:hover{border-color:#dc143c;background:rgba(220,20,60,0.15);}
-.stat-chip .num{font-size:18px;font-weight:700;}
-.stat-chip .lbl{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:1px;}
-.detail-modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.88);z-index:9999;justify-content:center;align-items:center;}
-.detail-box{background:linear-gradient(135deg,#1a1a1a,#2a2a2a);border:2px solid #dc143c;border-radius:18px;padding:30px;max-width:560px;width:92%;max-height:85vh;overflow-y:auto;position:relative;box-shadow:0 20px 60px rgba(220,20,60,0.4);}
-.detail-row{display:flex;gap:10px;margin-bottom:12px;align-items:flex-start;}
-.detail-label{color:#888;font-size:11px;text-transform:uppercase;letter-spacing:1px;min-width:110px;flex-shrink:0;padding-top:2px;}
-.detail-value{color:#eee;font-size:13px;flex:1;word-break:break-word;}
-.msg-box{background:#0a0a0a;border:1px solid rgba(220,20,60,0.2);border-radius:8px;padding:12px;color:#ccc;font-size:13px;line-height:1.5;white-space:pre-wrap;word-break:break-word;}
-.msg-box.deleted{border-color:rgba(231,76,60,0.4);background:rgba(231,76,60,0.05);}
-.msg-box.edited-before{border-color:rgba(243,156,18,0.3);background:rgba(243,156,18,0.03);}
-.msg-box.edited-after{border-color:rgba(46,204,113,0.3);background:rgba(46,204,113,0.03);}
-</style>
-
-<div class="stats-bar" id="stats-bar"></div>
-<div class="section">
-  <div class="filter-bar">
-    <input type="text" id="search" placeholder="Пользователь, channel, message ara..." oninput="applyFilters()">
-    <select id="guild-filter" onchange="applyFilters()"><option value="">Все серверы</option></select>
-  </div>
-  <div class="filter-bar" id="cat-buttons" style="margin-bottom:15px;"></div>
-  <div id="event-list" style="display:flex;flex-direction:column;gap:5px;"><div style="text-align:center;padding:50px;color:#555;"><i class="fas fa-spinner fa-spin" style="font-size:28px;color:#dc143c;"></i><br><br>Yukleniyor...</div></div>
-  <div id="load-more-wrap" style="text-align:center;margin-top:15px;display:none;">
-    <button id="load-more-btn" style="background:rgba(220,20,60,0.15);border:2px solid rgba(220,20,60,0.4);color:#dc143c;padding:9px 28px;border-radius:8px;cursor:pointer;font-size:13px;">Более Fazla Yukle</button>
+{% block page_hero %}
+<div class="page-hero compact">
+  <div class="page-hero-content">
+    <div class="page-hero-greeting">
+      <span class="dot"></span>
+      <span>Логи модерации</span>
+    </div>
+    <h1>Логи модерации</h1>
+    <p>Журнал всех действий модерации и бота.</p>
   </div>
 </div>
+{% endblock %}
 
-<div id="detailModal" class="detail-modal">
-  <div class="detail-box">
-    <button id="closeDetail" style="position:absolute;top:12px;right:16px;background:none;border:none;color:#dc143c;font-size:24px;cursor:pointer;">&times;</button>
-    <div id="detailContent"></div>
+
+
+<div class="logs-toolbar">
+  <select id="guild-filter" class="filter-select"><option value="">Все серверы</option></select>
+  <input type="text" id="search" class="search-input" placeholder="Поиск по логам (пользователь, причина, действие)...">
+  <span id="logs-count" class="logs-count">0</span>
+</div>
+
+<div class="logs-stats" id="logs-stats">
+  <div class="log-stat"><div class="log-stat-num" id="stat-total">-</div><div class="log-stat-lbl">Всего</div></div>
+  <div class="log-stat"><div class="log-stat-num" id="stat-bans" >-</div><div class="log-stat-lbl">Банов</div></div>
+  <div class="log-stat"><div class="log-stat-num" id="stat-kicks" >-</div><div class="log-stat-lbl">Киков</div></div>
+  <div class="log-stat"><div class="log-stat-num" id="stat-warns" >-</div><div class="log-stat-lbl">Варн</div></div>
+  <div class="log-stat"><div class="log-stat-num" id="stat-muts" >-</div><div class="log-stat-lbl">Мутов</div></div>
+</div>
+
+<div class="logs-box">
+  <div class="logs-head">
+    <div class="logs-title"><i class="fas fa-list"></i> Список действий</div>
+  </div>
+  <div class="logs-body" id="logs-body">
+    <p class="empty"><i class="fas fa-spinner fa-spin"></i> Загрузка...</p>
   </div>
 </div>
 
 <script>
-var allEvents=[], filtered=[], currentCat="", shown=0, PAGE=100;
+(function () {
+  'use strict';
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function fmtDate(iso) {
+    if (!iso) return '-';
+    try { var d = new Date(iso); return d.toLocaleString('ru-RU', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'}); } catch (e) { return '-'; }
+  }
 
-var CATS={
-  mod:    {icon:"🔨",label:"Mod",    bg:"rgba(231,76,60,0.2)", border:"rgba(231,76,60,0.5)", text:"#e74c3c"},
-  member: {icon:"👤",label:"Uye",    bg:"rgba(46,204,113,0.2)",border:"rgba(46,204,113,0.5)",text:"#2ecc71"},
-  message:{icon:"💬",label:"Сообщение",  bg:"rgba(52,152,219,0.2)",border:"rgba(52,152,219,0.5)",text:"#3498db"},
-  роли:   {icon:"🎭",label:"Роль",    bg:"rgba(155,89,182,0.2)",border:"rgba(155,89,182,0.5)",text:"#9b59b6"},
-  channel:{icon:"📺",label:"Канал",  bg:"rgba(243,156,18,0.2)",border:"rgba(243,156,18,0.5)",text:"#f39c12"},
-  voice:  {icon:"🔊",label:"Ses",    bg:"rgba(26,188,156,0.2)",border:"rgba(26,188,156,0.5)",text:"#1abc9c"},
-  сервер: {icon:"🏰",label:"Сервер", bg:"rgba(230,126,34,0.2)",border:"rgba(230,126,34,0.5)",text:"#e67e22"},
-  automod:{icon:"🤖",label:"AutoMod",bg:"rgba(231,76,60,0.2)", border:"rgba(231,76,60,0.5)", text:"#e74c3c"},
-  invite: {icon:"📨",label:"Приглашение",  bg:"rgba(149,165,166,0.2)",border:"rgba(149,165,166,0.5)",text:"#95a5a6"}
-};
+  var allLogs = [];
+  var guilds = [];
 
-function buildCatButtons(){
-  var w=document.getElementById("cat-buttons");
-  var h="<button class=\"cat-btn active\" data-cat=\"\">Всеu</button> ";
-  Object.keys(CATS).forEach(function(k){h+="<button class=\"cat-btn\" data-cat=\""+k+"\">"+CATS[k].icon+" "+CATS[k].label+"</button> ";});
-  w.innerHTML=h;
-  w.querySelectorAll(".cat-btn").forEach(function(b){
-    b.addEventListener("click",function(){
-      w.querySelectorAll(".cat-btn").forEach(function(x){x.classList.remove("active");});
-      this.classList.add("active");
-      currentCat=this.getAttribute("data-cat");
-      applyFilters();
+  var colors = { ban: 'var(--err)', kick: '#f97316', warn: 'var(--warn)', mute: '#a78bfa', timeout: '#a78bfa', unban: 'var(--ok)', unmute: 'var(--ok)', lock: 'var(--info)', unlock: 'var(--ok)' };
+
+  async function loadGuilds() {
+    try {
+      guilds = await fetch('/api/guilds').then(function (r) { return r.json(); });
+      var sel = $('guild-filter');
+      guilds.forEach(function (g) {
+        var opt = document.createElement('option');
+        opt.value = g.id;
+        opt.textContent = g.name;
+        sel.appendChild(opt);
+      });
+    } catch (e) { /* sessiz */ }
+  }
+
+  async function loadLogs() {
+    $('logs-body').innerHTML = '<p class="empty"><i class="fas fa-spinner fa-spin"></i> Загрузка...</p>';
+    try {
+      allLogs = await window.fetchCachedJSON('/api/logs');
+      render();
+      updateStats();
+    } catch (e) {
+      $('logs-body').innerHTML = '<p class="empty"><i class="fas fa-exclamation-triangle" ></i>Не удалось загрузить</p>';
+    }
+  }
+
+  function updateStats() {
+    var bans = 0, kicks = 0, warns = 0, muts = 0;
+    allLogs.forEach(function (l) {
+      var a = (l.action || '').toLowerCase();
+      if (a === 'ban') bans++;
+      else if (a === 'kick') kicks++;
+      else if (a === 'warn' || a.indexOf('warning') !== -1) warns++;
+      else if (a.indexOf('mute') !== -1 || a.indexOf('timeout') !== -1) muts++;
     });
-  });
-}
-
-function shortDetail(ev){
-  var p=[];
-  if(ev.user_name) p.push("<span style=\"color:#dc143c;\">@"+ev.user_name+"</span>");
-  if(ev.channel) p.push("<span style=\"color:#3498db;\">#"+ev.channel+"</span>");
-  if(ev.content) p.push("<span style=\"color:#666;\">"+String(ev.content).substring(0,60)+(ev.content.length>60?"...":"")+"</span>");
-  if(ev.before) p.push("<span style=\"color:#666;\">"+String(ev.before).substring(0,50)+"...</span>");
-  if(ev.old_name&&ev.new_name) p.push(ev.old_name+" → <b style=\"color:white;\">"+ev.new_name+"</b>");
-  if(ev.added_roles&&ev.added_roles.length) p.push("➕ "+ev.added_roles.join(", "));
-  if(ev.removed_roles&&ev.removed_roles.length) p.push("➖ "+ev.removed_roles.join(", "));
-  if(ev.reason) p.push("<span style=\"color:#f39c12;\">"+String(ev.reason).substring(0,60)+"</span>");
-  if(ev.code) p.push("discord.gg/"+ev.code);
-  return p.join(" · ") || "<span style=\"color:#333;\">-</span>";
-}
-
-function formatTime(ts){
-  if(!ts) return "-";
-  var d=new Date(ts), diff=Math.floor((Date.now()-d)/1000);
-  if(diff<60) return diff+"s once";
-  if(diff<3600) return Math.floor(diff/60)+"dk once";
-  if(diff<86400) return Math.floor(diff/3600)+"sa once";
-  return d.toLocaleDateString("tr-TR")+" "+d.toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit"});
-}
-
-function fullTime(ts){
-  if(!ts) return "-";
-  var d=new Date(ts);
-  return d.toLocaleDateString("tr-TR",{weekday:"long",year:"numeric",month:"long",day:"numeric"})+" "+d.toLocaleTimeString("tr-TR");
-}
-
-function renderEvents(){
-  var list=document.getElementById("event-list");
-  var lmw=document.getElementById("load-more-wrap");
-  if(!filtered.length){
-    list.innerHTML="<div style=\"text-align:center;padding:50px;color:#555;\"><i class=\"fas fa-search\" style=\"font-size:32px;\"></i><br><br>Ничего не найдено</div>";
-    lmw.style.display="none"; return;
+    $('stat-total').textContent = allLogs.length;
+    $('stat-bans').textContent = bans;
+    $('stat-kicks').textContent = kicks;
+    $('stat-warns').textContent = warns;
+    $('stat-muts').textContent = muts;
   }
-  var slice=filtered.slice(0,shown), html="";
-  for(var i=0;i<slice.length;i++){
-    var ev=slice[i], cat=ev.category||"mod", c=CATS[cat]||CATS.mod;
-    html+="<div class=\"ev-row\">";
-    html+="<div class=\"ev-icon\">"+c.icon+"</div>";
-    html+="<div class=\"ev-cat\" style=\"background:"+c.bg+";border:1px solid "+c.border+";color:"+c.text+"\">"+c.label+"</div>";
-    html+="<div class=\"ev-action\">"+(ev.action||"-")+"</div>";
-    html+="<div class=\"ev-detail\">"+shortDetail(ev)+"</div>";
-    html+="<div class=\"ev-time\">"+formatTime(ev.timestamp)+"</div>";
-    html+="<button class=\"ev-btn\" data-idx=\""+filtered.indexOf(ev)+"\">Детали</button>";
-    html+="</div>";
-  }
-  list.innerHTML=html;
-  list.querySelectorAll(".ev-btn").forEach(function(btn){
-    btn.addEventListener("click",function(){showDetail(parseInt(this.getAttribute("data-idx")));});
-  });
-  lmw.style.display=shown<filtered.length?"block":"none";
-}
 
-function showDetail(idx){
-  var ev=filtered[idx];
-  if(!ev) return;
-  var cat=ev.category||"mod", c=CATS[cat]||CATS.mod;
-  var h="";
-  h+="<div style=\"display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-bottom:15px;border-bottom:1px solid rgba(220,20,60,0.2);\">";
-  h+="<span style=\"font-size:32px;\">"+c.icon+"</span>";
-  h+="<div><div style=\"color:#dc143c;font-size:18px;font-weight:700;\">"+(ev.action||"-")+"</div>";
-  h+="<div style=\"color:#888;font-size:12px;\">"+c.label+" · "+fullTime(ev.timestamp)+"</div></div></div>";
-  function row(label,val){
-    if(!val&&val!==0) return "";
-    return "<div class=\"detail-row\"><div class=\"detail-label\">"+label+"</div><div class=\"detail-value\">"+val+"</div></div>";
-  }
-  if(ev.user_name) h+=row("Пользователь","<span style=\"color:#dc143c;font-weight:700;\">@"+ev.user_name+"</span>");
-  if(ev.user_id) h+=row("Пользователь ID","<code style=\"color:#aaa;font-size:12px;\">"+ev.user_id+"</code>");
-  if(ev.channel) h+=row("Канал","<span style=\"color:#3498db;\">#"+ev.channel+"</span>");
-  if(ev.channel_id) h+=row("Канал ID","<code style=\"color:#aaa;font-size:12px;\">"+ev.channel_id+"</code>");
-  if(ev.guild_id) h+=row("Сервер ID","<code style=\"color:#aaa;font-size:12px;\">"+ev.guild_id+"</code>");
-  if(ev.mod_id) h+=row("ID модератора","<code style=\"color:#aaa;font-size:12px;\">"+ev.mod_id+"</code>");
-  if(ev.reason) h+=row("Причина","<span style=\"color:#f39c12;\">"+ev.reason+"</span>");
-  if(ev.message_id) h+=row("Сообщение ID","<code style=\"color:#aaa;font-size:12px;\">"+ev.message_id+"</code>");
-  if(ev.account_age_days!==undefined) h+=row("Возраст аккаунта",ev.account_age_days+" дн.");
-  if(ev.roles&&ev.roles.length) h+=row("Роли",ev.roles.join(", "));
-  if(ev.added_roles&&ev.added_roles.length) h+=row("Добавленные роли","<span style=\"color:#2ecc71;\">"+ev.added_roles.join(", ")+"</span>");
-  if(ev.removed_roles&&ev.removed_roles.length) h+=row("Удален Роли","<span style=\"color:#e74c3c;\">"+ev.removed_roles.join(", ")+"</span>");
-  if(ev.old_name) h+=row("Старое имя","<span style=\"color:#e74c3c;\">"+ev.old_name+"</span>");
-  if(ev.new_name) h+=row("Новое имя","<span style=\"color:#2ecc71;\">"+ev.new_name+"</span>");
-  if(ev.old_nick) h+=row("Старый Nick","<span style=\"color:#e74c3c;\">"+ev.old_nick+"</span>");
-  if(ev.new_nick) h+=row("Новый Nick","<span style=\"color:#2ecc71;\">"+ev.new_nick+"</span>");
-  if(ev.max_uses) h+=row("Макс. использований",ev.max_uses);
-  if(ev.code) h+=row("Код приглашения","discord.gg/"+ev.code);
-  // Сообщение icerikы
-  if(ev.content&&ev.action==="Сообщение написано") h+="<div style=\"margin-top:15px;\"><div style=\"color:#888;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;\">Текст сообщения</div><div class=\"msg-box\">"+ev.content+"</div></div>";
-  if(ev.content&&ev.action==="Сообщение удалено") h+="<div style=\"margin-top:15px;\"><div style=\"color:#e74c3c;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;\">🗑️ Удалённое сообщение</div><div class=\"msg-box deleted\">"+ev.content+"</div></div>";
-  if(ev.before) h+="<div style=\"margin-top:15px;\"><div style=\"color:#f39c12;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;\">✏️ Предыдущее сообщение</div><div class=\"msg-box edited-before\">"+ev.before+"</div></div>";
-  if(ev.after) h+="<div style=\"margin-top:8px;\"><div style=\"color:#2ecc71;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;\">✅ Новый Сообщение</div><div class=\"msg-box edited-after\">"+ev.after+"</div></div>";
-  document.getElementById("detailContent").innerHTML=h;
-  document.getElementById("detailModal").style.display="flex";
-}
-
-function applyFilters(){
-  var q=document.getElementById("search").value.toLowerCase();
-  var gid=document.getElementById("guild-filter").value;
-  filtered=allEvents.filter(function(ev){
-    if(currentCat&&ev.category!==currentCat) return false;
-    if(gid&&ev.guild_id!==gid) return false;
-    if(q&&!JSON.stringify(ev).toLowerCase().includes(q)) return false;
-    return true;
-  });
-  shown=PAGE; renderEvents(); buildStats();
-}
-
-function buildStats(){
-  var counts={};
-  allEvents.forEach(function(ev){var c=ev.category||"mod";counts[c]=(counts[c]||0)+1;});
-  var h="<div class=\"stat-chip\" data-cat=\"\"><div class=\"num\" style=\"color:#dc143c;\">"+allEvents.length+"</div><div class=\"lbl\">Всего</div></div>";
-  Object.keys(CATS).forEach(function(k){
-    if(!counts[k]) return;
-    var c=CATS[k];
-    h+="<div class=\"stat-chip\" data-cat=\""+k+"\" style=\"border-color:"+c.border+";\"><div class=\"num\" style=\"color:"+c.text+"\">"+counts[k]+"</div><div class=\"lbl\">"+c.icon+" "+c.label+"</div></div>";
-  });
-  var bar=document.getElementById("stats-bar");
-  bar.innerHTML=h;
-  bar.querySelectorAll(".stat-chip").forEach(function(chip){
-    chip.addEventListener("click",function(){
-      var cat=this.getAttribute("data-cat");
-      var btn=document.querySelector(".cat-btn[data-cat=\""+cat+"\"]");
-      if(btn) btn.click();
+  function render() {
+    var guildFilter = $('guild-filter').value;
+    var q = ($('search').value || '').toLowerCase();
+    var filtered = allLogs.filter(function (l) {
+      if (guildFilter && String(l.guild_id || '') !== guildFilter) return false;
+      if (q) {
+        var hay = ((l.action || '') + ' ' + (l.user_name || '') + ' ' + (l.mod_name || '') + ' ' + (l.reason || '')).toLowerCase();
+        if (hay.indexOf(q) === -1) return false;
+      }
+      return true;
     });
-  });
-}
-
-function populateGuilds(){
-  var guilds={};
-  allEvents.forEach(function(ev){if(ev.guild_id) guilds[ev.guild_id]=true;});
-  var sel=document.getElementById("guild-filter");
-  sel.innerHTML="<option value=\"\">Все серверы</option>";
-  Object.keys(guilds).forEach(function(gid){sel.innerHTML+="<option value=\""+gid+"\">"+gid+"</option>";});
-}
-
-document.getElementById("load-more-btn").addEventListener("click",function(){shown+=PAGE;renderEvents();});
-document.getElementById("closeDetail").addEventListener("click",function(){document.getElementById("detailModal").style.display="none";});
-document.getElementById("detailModal").addEventListener("click",function(e){if(e.target===this) this.style.display="none";});
-
-async function loadLogs(){
-  try{
-    var r=await fetch("/api/logs");
-    allEvents=await r.json();
-    populateGuilds(); applyFilters();
-  }catch(e){
-    document.getElementById("event-list").innerHTML="<p style=\"color:#e74c3c;text-align:center;padding:40px;\">Ошибка: "+e.message+"</p>";
+    $('logs-count').textContent = filtered.length + ' / ' + allLogs.length;
+    if (!filtered.length) {
+      $('logs-body').innerHTML = '<p class="empty"><i class="fas fa-inbox"></i>Логи не найдены</p>';
+      return;
+    }
+    var rows = filtered.slice(0, 200).map(function (l) {
+      var a = (l.action || '?').toLowerCase();
+      var c = colors[a] || 'var(--text-3)';
+      return '<tr><td><span class="action-badge" >' + esc(l.action || '?') + '</span></td>' +
+        '<td >' + esc(l.user_name || l.user_id || '-') + '</td>' +
+        '<td >' + esc(l.mod_name || l.mod_id || '-') + '</td>' +
+        '<td   style="max-width: 160px; overflow: hidden;">' + esc(l.reason || '-') + '</td>' +
+        '<td >' + esc(fmtDate(l.timestamp)) + '</td></tr>';
+    }).join('');
+    $('logs-body').innerHTML = '<table><thead><tr><th>Действие</th><th>Цель</th><th>Модер.</th><th>Причина</th><th>Время</th></tr></thead><tbody>' + rows + '</tbody></table>';
   }
-}
 
-buildCatButtons(); loadLogs(); setInterval(loadLogs,15000);
+  function bind() {
+    $('guild-filter').addEventListener('change', render);
+    $('search').addEventListener('input', render);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () { bind(); loadGuilds(); loadLogs(); });
+  } else {
+    bind(); loadGuilds(); loadLogs();
+  }
+})();
 </script>
 {% endblock %}

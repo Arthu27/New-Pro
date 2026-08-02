@@ -1,118 +1,171 @@
 {% extends "base.html" %}
 {% block title %}Пользователи - Aether{% endblock %}
-{% block page_title %}ПОЛЬЗОВАТЕЛИ{% endblock %}
+{% block page_title %}<i class="fas fa-users" ></i> Пользователи{% endblock %}
 {% block content %}
-<div class="section">
-<h2><i class="fas fa-server"></i> Сервер Sec</h2>
-<select id="guild-select" onchange="loadMembers()" style="width:100%;padding:12px;background:#0a0a0a;border:2px solid #dc143c;border-radius:8px;color:#eee;font-size:15px;margin-bottom:10px;"><option value="">Сервер secin...</option></select>
-<input type="text" id="search" placeholder="Участник ara..." oninput="filterMembers()" >
+{% block page_hero %}
+<div class="page-hero compact">
+  <div class="page-hero-content">
+    <div class="page-hero-greeting">
+      <span class="dot"></span>
+      <span>Пользователи</span>
+    </div>
+    <h1>Пользователи</h1>
+    <p>Полный список участников сервера с фильтрами и поиском.</p>
+  </div>
 </div>
-<div class="section" id="members-section" >
-<h2><i class="fas fa-users"></i> Участникler - <span id="member-count">0</span> kisi</h2>
-<div id="members-list"></div>
-</div>
-<div id="modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;justify-content:center;align-items:center;">
-<div style="background:linear-gradient(135deg,#1a1a1a,#2a2a2a);border:2px solid #dc143c;border-radius:20px;padding:40px;max-width:550px;width:90%;position:relative;box-shadow:0 20px 60px rgba(220,20,60,0.5);max-height:90vh;overflow-y:auto;">
-<button onclick="closeModal()" style="position:absolute;top:15px;right:20px;background:none;border:none;color:#dc143c;font-size:28px;cursor:pointer;">&times;</button>
-<div id="modal-content"></div>
-</div>
-</div>
-<script>
-var allMembers = [];
+{% endblock %}
 
-async function loadGuilds() {
-    var res = await fetch('/api/guilds');
-    var guilds = await res.json();
-    var sel = document.getElementById('guild-select');
-    guilds.forEach(function(g) {
+
+
+<div class="users-toolbar">
+  <select id="guild-select" class="guild-select"><option value="">Выберите сервер...</option></select>
+  <input type="text" id="search" class="search-input" placeholder="Поиск участника...">
+  <span class="users-count" id="member-count">0</span>
+</div>
+
+<div id="members-section">
+  <div id="members-list"><div class="empty-state"><i class="fas fa-user-friends"></i><p>Выберите сервер для просмотра участников</p></div></div>
+</div>
+
+<!-- Modal -->
+<div id="modal" class="member-modal-overlay">
+  <div class="member-modal">
+    <button class="member-modal-close" id="modalClose" type="button">&times;</button>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+  var allMembers = [];
+  var statusClass = { online: 'status-online', idle: 'status-idle', dnd: 'status-dnd' };
+  var statusLabel = { online: 'В сети', idle: 'Неактивен', dnd: 'Не беспокоить', offline: 'Не в сети' };
+
+  async function loadGuilds() {
+    try {
+      var guilds = await fetch('/api/guilds').then(function (r) { return r.json(); });
+      var sel = $('guild-select');
+      guilds.forEach(function (g) {
         var opt = document.createElement('option');
         opt.value = g.id;
         opt.textContent = g.name;
         sel.appendChild(opt);
-    });
-}
+      });
+    } catch (e) { /* sessiz */ }
+  }
 
-async function loadMembers() {
-    var guildId = document.getElementById('guild-select').value;
-    if (!guildId) return;
-    document.getElementById('members-section').style.display = 'block';
-    document.getElementById('search').style.display = 'block';
-    document.getElementById('members-list').innerHTML = '<p style="text-align:center;color:#aaa;padding:40px;"><i class="fas fa-spinner fa-spin" style="font-size:30px;color:#dc143c;"></i><br><br>Yukleniyor...</p>';
-    var res = await fetch('/api/guild/' + guildId + '/members');
-    allMembers = await res.json();
-    document.getElementById('member-count').textContent = allMembers.length;
-    renderMembers(allMembers);
-}
-
-function renderMembers(members) {
-    if (!members.length) {
-        document.getElementById('members-list').innerHTML = '<p style="color:#aaa;text-align:center;padding:40px;">Участник не найден</p>';
-        return;
+  async function loadMembers() {
+    var guildId = $('guild-select').value;
+    if (!guildId) {
+      $('members-list').innerHTML = '<div class="empty-state"><i class="fas fa-user-friends"></i><p>Выберите сервер для просмотра участников</p></div>';
+      return;
     }
-    var contaеr = document.createElement('div');
-    contaеr.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:15px;';
-    members.forEach(function(m, i) {
-        var sc = m.status === 'online' ? '#2ecc71' : m.status === 'idle' ? '#f39c12' : m.status === 'dnd' ? '#e74c3c' : '#555';
-        var card = document.createElement('div');
-        card.style.cssText = 'background:linear-gradient(135deg,#1a1a1a,#2a2a2a);border:1px solid rgba(220,20,60,0.3);border-radius:12px;padding:20px;cursor:pointer;text-align:center;transition:all 0.3s;';
-        card.onmouseover = function() { this.style.borderColor = '#dc143c'; this.style.transform = 'translateY(-5px)'; };
-        card.onmouseout = function() { this.style.borderColor = 'rgba(220,20,60,0.3)'; this.style.transform = 'none'; };
-        card.onclick = function() { showDetail(i); };
-        card.innerHTML = '<div style="position:relative;display:inline-block;margin-bottom:12px;">' +
-            '<img src="' + m.avatar + '" style="width:60px;height:60px;border-radius:50%;border:3px solid #dc143c;">' +
-            '<div style="position:absolute;bottom:2px;right:2px;width:14px;height:14px;background:' + sc + ';border-radius:50%;border:2px solid #1a1a1a;"></div>' +
-            '</div>' +
-            '<div style="font-weight:700;color:white;font-size:14px;margin-bottom:4px;">' + m.display_name + '</div>' +
-            '<div style="color:#888;font-size:12px;">' + m.name + '</div>' +
-            (m.bot ? '<span style="background:#dc143c;padding:2px 8px;border-radius:10px;font-size:10px;margin-top:6px;display:inline-block;">BOT</span>' : '');
-        contaеr.appendChild(card);
+    $('members-list').innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin" ></i><p>Загрузка...</p></div>';
+    try {
+      var res = await fetch('/api/guild/' + guildId + '/members?limit=500');
+      allMembers = await res.json();
+      $('member-count').textContent = allMembers.length + ' чел.';
+      renderMembers(allMembers);
+    } catch (e) {
+      $('members-list').innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle" ></i><p >Не удалось загрузить: ' + esc(e.message) + '</p></div>';
+    }
+  }
+
+  function renderMembers(members) {
+    if (!members.length) {
+      $('members-list').innerHTML = '<div class="empty-state"><i class="fas fa-user-slash"></i><p>Участники не найдены</p></div>';
+      return;
+    }
+    var html = '';
+    members.forEach(function (m, i) {
+      var sc = statusClass[m.status] || 'status-offline';
+      // Use m.id as the data-id so filtering doesn't break the click handler.
+      // Previously we used `data-idx="i"` which was the FILTERED array's
+      // index, but showDetail() looked up `allMembers[i]` — so clicking a
+      // filtered card always opened the wrong member.
+      html += '<div class="member-card" data-id="' + esc(m.id) + '">' +
+        '<div class="av-wrap">' +
+          '<img class="av" src="' + esc(m.avatar) + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' +
+          '<span class="status-dot ' + sc + '"></span>' +
+        '</div>' +
+        '<div class="member-name">' + esc(m.display_name) + '</div>' +
+        '<div class="member-username">@' + esc(m.name) + '</div>' +
+        (m.bot ? '<span class="bot-badge">BOT</span>' : '') +
+      '</div>';
     });
-    document.getElementById('members-list').innerHTML = '';
-    document.getElementById('members-list').appendChild(contaеr);
-}
+    $('members-list').innerHTML = '<div class="members-grid">' + html + '</div>';
+  }
 
-function showDetail(i) {
-    var m = allMembers[i];
+  function showDetail(idOrIdx) {
+    // Accept either a Discord id (string) or a numeric index into allMembers.
+    var m = null;
+    if (typeof idOrIdx === 'string' || (typeof idOrIdx === 'number' && idOrIdx > 1000000000000000)) {
+      // Treat as Discord id
+      var wantedId = String(idOrIdx);
+      m = allMembers.find(function (x) { return String(x.id) === wantedId; });
+    } else {
+      // Legacy index lookup
+      m = allMembers[idOrIdx];
+    }
+    if (!m) return;
     var cr = new Date(m.created_at);
-    var jo = m.joеd_at ? new Date(m.joеd_at) : null;
-    var sc = m.status === 'online' ? '#2ecc71' : m.status === 'idle' ? '#f39c12' : m.status === 'dnd' ? '#e74c3c' : '#555';
-    var st = m.status === 'online' ? 'В сети' : m.status === 'idle' ? 'Неактивен' : m.status === 'dnd' ? 'Не беспокоить' : 'Не в сети';
-    var roles = m.roles.map(function(r) {
-        return '<span style="background:rgba(220,20,60,0.2);border:1px solid rgba(220,20,60,0.4);padding:3px 10px;border-radius:10px;font-size:12px;margin:3px;display:inline-block;">' + r.name + '</span>';
+    var jo = m.joined_at ? new Date(m.joined_at) : null;
+    var st = statusLabel[m.status] || 'Не в сети';
+    var sc = statusClass[m.status] || 'status-offline';
+    var roles = (m.roles || []).map(function (r) {
+      var color = r.color ? '#' + r.color.toString(16).padStart(6, '0') : 'var(--ac)';
+      return '<span class="role-chip" >' + esc(r.name) + '</span>';
     }).join('');
-    var mc = document.getElementById('modal-content');
-    mc.innerHTML = '';
-    var h = document.createElement('div');
-    h.innerHTML =
-        '<div style="text-align:center;margin-bottom:20px;">' +
-        '<img src="' + m.avatar + '" style="width:100px;height:100px;border-radius:50%;border:4px solid #dc143c;box-shadow:0 0 20px rgba(220,20,60,0.5);margin-bottom:15px;">' +
-        '<h2 style="color:white;margin-bottom:5px;">' + m.display_name + '</h2>' +
-        (m.nick ? '<p style="color:#888;font-size:13px;">Nick: ' + m.nick + '</p>' : '') +
-        '<p style="color:#888;margin-bottom:10px;">' + m.name + '</p>' +
-        '<span style="background:' + sc + ';padding:4px 12px;border-radius:10px;font-size:12px;color:white;">' + st + '</span>' +
-        (m.bot ? '<span style="background:#dc143c;padding:4px 12px;border-radius:10px;font-size:12px;color:white;margin-left:8px;">BOT</span>' : '') +
-        '</div>' +
-        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:20px 0;">' +
-        '<div style="background:rgba(220,20,60,0.1);border:1px solid rgba(220,20,60,0.3);padding:12px;border-radius:10px;text-align:center;"><i class="fas fa-id-card" style="color:#dc143c;"></i><br><small style="color:#888;">ID</small><br><code style="color:#dc143c;font-size:11px;">' + m.id + '</code></div>' +
-        '<div style="background:rgba(220,20,60,0.1);border:1px solid rgba(220,20,60,0.3);padding:12px;border-radius:10px;text-align:center;"><i class="fas fa-calendar-plus" style="color:#dc143c;"></i><br><small style="color:#888;">Hesap Acildi</small><br><span style="color:white;font-size:13px;">' + cr.toLocaleDateString('tr-TR') + '</span><br><small style="color:#888;">' + cr.toLocaleTimeString('tr-TR') + '</small></div>' +
-        '<div style="background:rgba(220,20,60,0.1);border:1px solid rgba(220,20,60,0.3);padding:12px;border-radius:10px;text-align:center;"><i class="fas fa-sign-in-alt" style="color:#dc143c;"></i><br><small style="color:#888;">Вход на сервер</small><br><span style="color:white;font-size:13px;">' + (jo ? jo.toLocaleDateString('tr-TR') : 'Неизвестно') + '</span>' + (jo ? '<br><small style="color:#888;">' + jo.toLocaleTimeString('tr-TR') + '</small>' : '') + '</div>' +
-        '<div style="background:rgba(220,20,60,0.1);border:1px solid rgba(220,20,60,0.3);padding:12px;border-radius:10px;text-align:center;"><i class="fas fa-crown" style="color:#dc143c;"></i><br><small style="color:#888;">En Yuksek Роль</small><br><span style="color:white;font-size:13px;">' + (m.top_role || 'Yok') + '</span></div>' +
-        '</div>' +
-        (m.roles.length ? '<div><small style="color:#888;text-transform:uppercase;letter-spacing:1px;">Роли (' + m.roles.length + ')</small><br><br>' + roles + '</div>' : '');
-    mc.appendChild(h);
-    document.getElementById('modal').style.display = 'flex';
-}
+    $('modal-content').innerHTML =
+      '<div class="member-detail-info">' +
+        '<img class="member-detail-av" src="' + esc(m.avatar) + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' +
+        '<div class="member-detail-name">' + esc(m.display_name) + '</div>' +
+        (m.nick ? '<div class="member-detail-sub">Nick: ' + esc(m.nick) + '</div>' : '') +
+        '<div class="member-detail-sub">@' + esc(m.name) + '</div>' +
+        '<div><span class="status-dot ' + sc + '"   style="position: static; margin-right: 6px; width: 9px; height: 9px;"></span> ' + st + (m.bot ? ' <span class="bot-badge"   style="margin-left: 6px;">BOT</span>' : '') + '</div>' +
+      '</div>' +
+      '<div class="detail-grid">' +
+        '<div class="detail-cell"><i class="fas fa-id-card"></i><div class="detail-cell-label">ID</div><div class="detail-cell-val">' + esc(m.id) + '</div></div>' +
+        '<div class="detail-cell"><i class="fas fa-crown"></i><div class="detail-cell-label">Главная роль</div><div class="detail-cell-val">' + esc(m.top_role || 'Нет') + '</div></div>' +
+        '<div class="detail-cell"><i class="fas fa-calendar-plus"></i><div class="detail-cell-label">Аккаунт создан</div><div class="detail-cell-val">' + cr.toLocaleDateString('ru-RU') + '</div></div>' +
+        '<div class="detail-cell"><i class="fas fa-sign-in-alt"></i><div class="detail-cell-label">Вход на сервер</div><div class="detail-cell-val">' + (jo ? jo.toLocaleDateString('ru-RU') : '—') + '</div></div>' +
+      '</div>' +
+      ((m.roles || []).length ? '<div><div class="roles-section-title">Роли (' + m.roles.length + ')</div>' + roles + '</div>' : '');
+    $('modal').classList.add('open');
+  }
 
-function closeModal() { document.getElementById('modal').style.display = 'none'; }
+  function closeModal() { $('modal').classList.remove('open'); }
 
-function filterMembers() {
-    var q = document.getElementById('search').value.toLowerCase();
-    renderMembers(allMembers.filter(function(m) {
-        return m.name.toLowerCase().includes(q) || m.display_name.toLowerCase().includes(q) || m.id.includes(q);
+  function filterMembers() {
+    var q = $('search').value.toLowerCase();
+    renderMembers(allMembers.filter(function (m) {
+      return (m.name || '').toLowerCase().indexOf(q) !== -1 ||
+             (m.display_name || '').toLowerCase().indexOf(q) !== -1 ||
+             (m.id || '').toString().indexOf(q) !== -1;
     }));
-}
+  }
 
-document.getElementById('modal').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
-loadGuilds();
+  function bind() {
+    $('guild-select').addEventListener('change', loadMembers);
+    $('search').addEventListener('input', filterMembers);
+    $('modalClose').addEventListener('click', closeModal);
+    $('modal').addEventListener('click', function (e) { if (e.target === this) closeModal(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeModal(); });
+    $('members-list').addEventListener('click', function (e) {
+      var card = e.target.closest('.member-card');
+      if (card) showDetail(card.getAttribute('data-id'));
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () { bind(); loadGuilds(); });
+  } else {
+    bind(); loadGuilds();
+  }
+})();
 </script>
 {% endblock %}

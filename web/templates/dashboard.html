@@ -1,321 +1,579 @@
 {% extends "base.html" %}
-{% block title %}Панель - Aether{% endblock %}
-{% block page_title %}Панель управления{% endblock %}
+{% block title %}Панель — Aether{% endblock %}
+{% block page_title %}<i class="fas fa-home" ></i> Панель управления{% endblock %}
 {% block content %}
+
 <style>
-.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:22px;}
-.stat-card{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.1);border-radius:14px;padding:22px 24px;transition:border-color 0.2s,transform 0.2s;backdrop-filter:blur(4px);}
-.stat-card:hover{border-color:rgba(212,168,67,0.22);transform:translateY(-2px);}
-.stat-icon{width:36px;height:36px;border-radius:9px;background:rgba(212,168,67,0.1);border:1px solid rgba(212,168,67,0.2);display:flex;align-items:center;justify-content:center;margin-bottom:14px;}
-.stat-icon i{color:#c8922a;font-size:15px;}
-.stat-val{font-size:30px;font-weight:900;color:#f0e8d0;letter-spacing:-0.04em;line-height:1;margin-bottom:4px;}
-.stat-lbl{font-size:10px;color:#5a5040;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;}
-.dash-box{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.1);border-radius:14px;padding:22px;margin-bottom:16px;backdrop-filter:blur(4px);}
-.dash-title{font-size:10px;font-weight:700;color:rgba(240,232,208,0.4);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:18px;display:flex;align-items:center;gap:8px;padding-bottom:12px;border-bottom:1px solid rgba(212,168,67,0.07);}
-.dash-title i{color:#c8922a;font-size:11px;}
-.quick-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;}
-.quick-item{background:rgba(255,255,255,0.03);border:1px solid rgba(212,168,67,0.08);border-radius:14px;padding:16px;text-align:center;transition:border-color 0.15s;}
-.quick-item:hover{border-color:rgba(212,168,67,0.18);}
-.quick-item h3{font-size:26px;font-weight:900;color:#f0e8d0;letter-spacing:-0.04em;margin-bottom:4px;}
-.quick-item p{font-size:10px;color:#5a5040;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;}
-table{width:100%;border-collapse:collapse;}
-th,td{padding:11px 16px;text-align:left;border-bottom:1px solid rgba(212,168,67,0.06);font-size:12px;}
-th{background:rgba(212,168,67,0.04);color:rgba(240,232,208,0.35);font-weight:600;text-transform:uppercase;letter-spacing:0.08em;font-size:10px;}
-tr:hover td{background:rgba(212,168,67,0.04);}
-.action-badge{padding:3px 8px;border-radius:5px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;}
-.notif-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;}
-.form-label{color:rgba(240,232,208,0.4);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:5px;}
-.form-input{width:100%;padding:10px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(212,168,67,0.12);border-radius:8px;color:#f0e8d0;font-size:13px;box-sizing:border-box;font-family:Inter,sans-serif;margin:0 0 10px;transition:border-color 0.15s;}
-.form-input:focus{outline:none;border-color:rgba(212,168,67,0.45);}
-.form-btn{width:100%;padding:11px;background:#c8922a;color:#100e08;border:none;border-radius:99px;cursor:pointer;font-weight:700;font-size:13px;font-family:Inter,sans-serif;transition:background 0.15s;}
-.form-btn:hover{background:#e0a830;}
-@keyframes up{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-.stat-card{animation:up 0.3s ease-out both;}
-.stat-card:nth-child(1){animation-delay:0.05s}
-.stat-card:nth-child(2){animation-delay:0.1s}
-.stat-card:nth-child(3){animation-delay:0.15s}
-.stat-card:nth-child(4){animation-delay:0.2s}
+/* Dashboard — uses .page-hero (defined globally in style.css) */
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 18px;
+}
+@media (max-width: 1100px) { .stat-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 600px)  { .stat-grid { grid-template-columns: 1fr; } }
+
+.stat-card-big {
+  background: var(--surface) !important;
+  border: 1px solid var(--line) !important;
+  border-radius: var(--r-lg) !important;
+  padding: 20px 22px !important;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.25s var(--ease) !important;
+  animation: fadeUp 0.45s var(--ease-out) both;
+}
+.stat-card-big::after {
+  content: '';
+  position: absolute;
+  top: 0; right: 0;
+  width: 140px; height: 140px;
+  background: radial-gradient(circle at top right, var(--ac-soft), transparent 70%);
+  pointer-events: none;
+}
+.stat-card-big:hover { transform: translateY(-3px); border-color: var(--ac-line) !important; box-shadow: var(--shadow-md), 0 0 30px rgba(224, 176, 74, 0.12) !important; }
+.stat-card-big .stat-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: var(--fs-xs) !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.10em !important;
+  text-transform: uppercase !important;
+  color: var(--text-3) !important;
+  margin-bottom: 12px;
+  position: relative;
+  z-index: 1;
+}
+.stat-card-big .stat-label i { font-size: 14px; }
+.stat-card-big.purple .stat-label i { color: var(--violet); }
+.stat-card-big.pink   .stat-label i { color: var(--pink); }
+.stat-card-big.cyan   .stat-label i { color: var(--cyan); }
+.stat-card-big.green  .stat-label i { color: var(--emerald); }
+.stat-card-big .stat-value {
+  font-size: 32px !important;
+  font-weight: 800 !important;
+  line-height: 1 !important;
+  letter-spacing: -0.025em !important;
+  color: var(--text) !important;
+  font-variant-numeric: tabular-nums !important;
+  position: relative;
+  z-index: 1;
+}
+.stat-card-big .stat-value small { font-size: 14px !important; color: var(--text-3) !important; font-weight: 600 !important; margin-left: 2px; }
+.stat-card-big.green .stat-value { font-size: 24px !important; }
+.stat-card-big .stat-trend {
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  color: var(--text-3) !important;
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  position: relative;
+  z-index: 1;
+}
+.stat-card-big .stat-trend i.ok { color: var(--ok); }
+
+/* Threat index bar */
+.threat-card {
+  background: var(--surface-2) !important;
+  border: 1px solid var(--ac-line) !important;
+  border-radius: var(--r-lg) !important;
+  padding: 20px 22px !important;
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.threat-icon {
+  width: 46px; height: 46px;
+  border-radius: 12px;
+  background: var(--ac-soft);
+  border: 1px solid var(--ok);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: var(--ok);
+  flex-shrink: 0;
+  transition: all 0.3s var(--ease);
+}
+.threat-body { flex: 1; min-width: 220px; }
+.threat-label {
+  font-size: var(--fs-xs) !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.10em !important;
+  color: var(--text-2) !important;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.threat-score-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.threat-score {
+  font-size: 22px !important;
+  font-weight: 800 !important;
+  color: var(--text) !important;
+  font-variant-numeric: tabular-nums !important;
+  letter-spacing: -0.02em !important;
+}
+.threat-badge {
+  font-size: var(--fs-xs) !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.06em !important;
+  padding: 3px 10px;
+  border-radius: 99px;
+  background: rgba(74, 222, 128, 0.12);
+  color: var(--ok);
+  border: 1px solid rgba(74, 222, 128, 0.30);
+}
+.threat-bar-track {
+  height: 6px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.threat-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--ok), #22c55e);
+  border-radius: 99px;
+  transition: width 0.6s var(--ease-out), background 0.3s;
+}
+.lockdown-btn {
+  padding: 11px 20px;
+  border-radius: 99px;
+  font-size: var(--fs-sm) !important;
+  font-weight: 700 !important;
+  cursor: pointer;
+  background: linear-gradient(135deg, #4ade80, #22c55e);
+  color: var(--bg);
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(74, 222, 128, 0.30);
+  transition: all 0.2s var(--ease);
+}
+.lockdown-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 22px rgba(74, 222, 128, 0.40); filter: brightness(1.05); }
+.lockdown-btn.danger { background: linear-gradient(135deg, var(--err), #dc2626); color: #fff; box-shadow: 0 4px 14px rgba(248, 113, 113, 0.30); }
+
+/* Quick grid */
+.quick-grid-loading, .quick-grid-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 20px;
+  color: var(--text-3);
+  font-size: var(--fs-md);
+}
+
+/* Two-column layout for recent activity + login лог */
+.dash-cols {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+@media (max-width: 900px) { .dash-cols { grid-template-columns: 1fr; } }
+
+/* Quick action cards */
+.quick-action {
+  padding: 22px !important;
+}
+.quick-action .form-input { width: 100%; }
+
+/* Animation delays */
+.stat-card-big:nth-child(1) { animation-delay: 0.04s; }
+.stat-card-big:nth-child(2) { animation-delay: 0.08s; }
+.stat-card-big:nth-child(3) { animation-delay: 0.12s; }
+.stat-card-big:nth-child(4) { animation-delay: 0.16s; }
+.threat-card { animation: fadeUp 0.45s var(--ease-out) 0.2s both; }
+.dash-box { animation: fadeUp 0.45s var(--ease-out) 0.24s both; }
+.grid-2 { animation: fadeUp 0.45s var(--ease-out) 0.28s both; }
+
+/* Centered spinner */
+.centered-spinner {
+  text-align: center;
+  padding: 20px;
+  color: var(--text-3);
+}
+.centered-spinner i { color: var(--ac); font-size: 18px; }
+
+/* Action badge variant colors */
+.action-badge-err { color: var(--err) !important; }
+.action-badge-warn { color: var(--warn) !important; }
+.action-badge-ok { color: var(--ok) !important; }
+.action-badge-info { color: var(--info) !important; }
 </style>
 
-<!-- Информация о сервере -->
-<div id="guild-info-bar" style="display:none;background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.08);border-radius:14px;padding:16px 20px;margin-bottom:18px;">
-    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
-        <img id="guild-icon" src="" style="width:42px;height:42px;border-radius:14px;border:1px solid rgba(212,168,67,0.16);display:none;object-fit:cover;">
-        <div style="flex:1;min-width:140px;">
-            <div id="guild-name" style="font-size:15px;font-weight:700;color:#f0e8d0;"></div>
-            <div id="guild-meta" style="color:#5a5040;font-size:11px;margin-top:2px;"></div>
-        </div>
-        <div id="guild-stats-row" style="display:flex;gap:20px;flex-wrap:wrap;"></div>
+<!-- Hero section -->
+<div class="page-hero">
+  <div class="page-hero-content">
+    <div class="page-hero-greeting">
+      <span class="dot"></span>
+      <span id="heroGreeting">Добро пожаловать, {{ username }}</span>
     </div>
+    <h1>Центр управления сервером</h1>
+    <p>Полный обзор активности, модерации и состояния вашего Discord-сообщества в реальном времени.</p>
+  </div>
 </div>
 
-<!-- Угроза Endeksi & Карантин Widget -->
-<div class="dash-box" id="threatDashboard" style="background:rgba(26,22,16,0.85);border:1px solid rgba(212,168,67,0.25);margin-bottom:20px;">
-    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
-        <div style="display:flex;align-items:center;gap:14px;">
-            <div id="threatIconWrap" style="width:46px;height:46px;border-radius:12px;background:rgba(46,204,113,0.15);border:1px solid #2ECC71;display:flex;align-items:center;justify-content:center;font-size:20px;">
-                <i class="fas fa-shield-alt" id="threatIcon" style="color:#2ECC71;"></i>
-            </div>
-            <div>
-                <div style="font-size:11px;color:#8c7b58;font-weight:700;text-transform:uppercase;letter-spacing:1px;">🛡️ Индекс угрозы сервера</div>
-                <div style="display:flex;align-items:baseline;gap:10px;margin-top:4px;">
-                    <span id="threatScoreVal" style="font-size:26px;font-weight:900;color:#f0e8d0;">15/100</span>
-                    <span id="threatLevelBadge" style="font-size:13px;font-weight:700;color:#2ECC71;background:rgba(46,204,113,0.12);padding:4px 10px;border-radius:99px;border:1px solid rgba(46,204,113,0.35);">Низкая угроза (Спокойно)</span>
-                </div>
-            </div>
-        </div>
-        <div>
-            <button id="btnLockdown" type="button" style="padding:10px 18px;border-radius:99px;font-size:13px;font-weight:700;cursor:pointer;background:#2ECC71;color:#100e08;border:none;transition:all 0.2s;display:flex;align-items:center;gap:8px;">
-                <i class="fas fa-lock"></i>
-                <span id="btnLockdownText">Включить карантин (Lockdown)</span>
-            </button>
-        </div>
+<!-- 4 stat cards -->
+<div class="stat-grid">
+  <div class="stat-card-big purple">
+    <div class="stat-label">
+      <i class="fas fa-server"></i>
+      <span>Сервера</span>
     </div>
+    <div class="stat-value" id="guild-count">—</div>
+    <div class="stat-trend"><i class="fas fa-circle ok"></i> Активных подключений</div>
+  </div>
+  <div class="stat-card-big pink">
+    <div class="stat-label">
+      <i class="fas fa-users"></i>
+      <span>Пользователи</span>
+    </div>
+    <div class="stat-value" id="user-count">—</div>
+    <div class="stat-trend"><i class="fas fa-chart-line ok"></i> В кэше бота</div>
+  </div>
+  <div class="stat-card-big cyan">
+    <div class="stat-label">
+      <i class="fas fa-signal"></i>
+      <span>Ping</span>
+    </div>
+    <div class="stat-value" id="latency">—<small>ms</small></div>
+    <div class="stat-trend"><i class="fas fa-wave-square"></i> Задержка API</div>
+  </div>
+  <div class="stat-card-big green">
+    <div class="stat-label">
+      <i class="fas fa-heartbeat"></i>
+      <span>Состояние</span>
+    </div>
+    <div class="stat-value" id="status">ОНЛАЙН</div>
+    <div class="stat-trend"><i class="fas fa-check ok"></i> Система работает</div>
+  </div>
 </div>
 
-<div class="stats-grid">
-    <div class="stat-card"><div class="stat-icon"><i class="fas fa-server"></i></div><div class="stat-val" id="guild-count">-</div><div class="stat-lbl">Сервера</div></div>
-    <div class="stat-card"><div class="stat-icon"><i class="fas fa-users"></i></div><div class="stat-val" id="user-count">-</div><div class="stat-lbl">Пользователи</div></div>
-    <div class="stat-card"><div class="stat-icon"><i class="fas fa-signal"></i></div><div class="stat-val" id="latency">-</div><div class="stat-lbl">Ping (ms)</div></div>
-    <div class="stat-card"><div class="stat-icon"><i class="fas fa-circle" style="color:#4ade80;font-size:10px;"></i></div><div class="stat-val" id="status" style="font-size:18px;color:#4ade80;">ОНЛАЙН</div><div class="stat-lbl">Состояние бота</div></div>
+<!-- Threat index -->
+<div class="threat-card">
+  <div class="threat-icon" id="threatIconWrap">
+    <i class="fas fa-shield-alt" id="threatIcon"></i>
+  </div>
+  <div class="threat-body">
+    <div class="threat-label"><i class="fas fa-shield-halved"></i> Индекс угрозы</div>
+    <div class="threat-score-row">
+      <span class="threat-score" id="threatScoreVal">15/100</span>
+      <span class="threat-badge" id="threatLevelBadge">Низкая</span>
+    </div>
+    <div class="threat-bar-track">
+      <div class="threat-bar-fill" id="threatFill"   style="width: 15%;"></div>
+    </div>
+  </div>
+  <button class="lockdown-btn" id="btnLockdown" type="button">
+    <i class="fas fa-lock"></i>
+    <span id="btnLockdownText">Lockdown</span>
+  </button>
 </div>
 
+<!-- Quick stats -->
 <div class="dash-box">
-    <div class="dash-title"><i class="fas fa-chart-line"></i> Быстрая статистика</div>
-    <div id="quick-stats" style="text-align:center;padding:24px;color:#5a5040;"><i class="fas fa-spinner fa-spin" style="color:#c8922a;"></i></div>
+  <div class="dash-box-head">
+    <div class="dash-box-title"><i class="fas fa-chart-line"></i> Быстрая статистика</div>
+    <span class="text-mut text-xs fw-700" >в реальном времени</span>
+  </div>
+  <div class="dash-box-body" >
+    <div class="quick-grid" id="quick-stats">
+      <div class="quick-grid-loading">
+        <i class="fas fa-spinner fa-spin"></i>
+      </div>
+    </div>
+  </div>
 </div>
 
-<div class="dash-box">
-    <div class="dash-title"><i class="fas fa-history"></i> Последние действия</div>
-    <div id="recent-activity" style="text-align:center;padding:24px;color:#5a5040;"><i class="fas fa-spinner fa-spin" style="color:#c8922a;"></i></div>
+<!-- Two columns: Recent activity + Login лог -->
+<div class="dash-cols">
+  <div class="dash-box">
+    <div class="dash-box-head">
+      <div class="dash-box-title"><i class="fas fa-history"></i> Последние действия</div>
+      <a href="/logs" class="text-accent text-xs fw-700" >Все →</a>
+    </div>
+    <div class="dash-box-body" id="recent-activity">
+      <div class="centered-spinner"><i class="fas fa-spinner fa-spin"></i></div>
+    </div>
+  </div>
+
+  {% if role == 'owner' %}
+  <div class="dash-box">
+    <div class="dash-box-head">
+      <div class="dash-box-title"><i class="fas fa-sign-in-alt"></i> Входы в панель</div>
+      <a href="/panel-logs" class="text-accent text-xs fw-700" >Все →</a>
+    </div>
+    <div class="dash-box-body" id="login-log">
+      <div class="centered-spinner"><i class="fas fa-spinner fa-spin"></i></div>
+    </div>
+  </div>
+  {% endif %}
 </div>
 
 {% if role == 'owner' %}
-<div class="dash-box" style="margin-top:16px;">
-    <div class="dash-title" style="justify-content:space-between;">
-        <span><i class="fas fa-sign-in-alt"></i> Последние входы в панель</span>
-        <a href="/panel-logs" style="font-size:11px;color:#c8922a;text-decoration:none;">Показать все →</a>
-    </div>
-    <div id="login-log" style="text-align:center;padding:20px;color:#5a5040;"><i class="fas fa-spinner fa-spin" style="color:#c8922a;"></i></div>
-</div>
-
-<div class="notif-grid">
-    <div class="dash-box" style="margin-bottom:0;">
-        <div class="dash-title"><i class="fas fa-bell"></i> Отправить уведомление</div>
-        <label class="form-label">Discord ID</label><input type="text" id="notif-discord-id" placeholder="123456789012345678" class="form-input">
-        <label class="form-label">Заголовок</label><input type="text" id="notif-title" placeholder="Заголовок уведомления" class="form-input">
-        <label class="form-label">Сообщение</label><textarea id="notif-message" class="form-input" style="resize:vertical;min-height:64px;"></textarea>
-        <button type="button" id="btnSendNotif" class="form-btn">Отправить</button>
-        <div id="notif-result" style="margin-top:8px;display:none;font-size:12px;"></div>
-    </div>
-    <div class="dash-box" style="margin-bottom:0;">
-        <div class="dash-title"><i class="fas fa-bullhorn"></i> Опубликовать объявление</div>
-        <label class="form-label">Заголовок</label><input type="text" id="ann-title" placeholder="Заголовок объявления" class="form-input">
-        <label class="form-label">Содержание</label><textarea id="ann-message" class="form-input" style="resize:vertical;min-height:64px;"></textarea>
-        <button type="button" id="btnSendAnn" class="form-btn">Опубликовать</button>
-        <div id="ann-result" style="margin-top:8px;display:none;font-size:12px;"></div>
-    </div>
+<!-- Send notification + announcement (owner only) -->
+<div class="grid-2">
+  <div class="dash-card quick-action">
+    <div class="dash-box-title" ><i class="fas fa-bell"></i> Отправить уведомление</div>
+    <label class="form-label">Discord ID</label>
+    <input type="text" id="notif-discord-id" placeholder="123456789012345678" class="form-input">
+    <label class="form-label">Заголовок</label>
+    <input type="text" id="notif-title" placeholder="Заголовок" class="form-input">
+    <label class="form-label">Сообщение</label>
+    <textarea id="notif-message" class="form-input"   style="min-height: 70px;"></textarea>
+    <button type="button" id="btnSendNotif" class="form-btn"><i class="fas fa-paper-plane"></i> Отправить</button>
+    <div id="notif-result" class="result-msg"></div>
+  </div>
+  <div class="dash-card quick-action">
+    <div class="dash-box-title" ><i class="fas fa-bullhorn"></i> Опубликовать объявление</div>
+    <label class="form-label">Заголовок</label>
+    <input type="text" id="ann-title" placeholder="Заголовок" class="form-input">
+    <label class="form-label">Содержание</label>
+    <textarea id="ann-message" class="form-input"   style="min-height: 70px;"></textarea>
+    <button type="button" id="btnSendAnn" class="form-btn"><i class="fas fa-bullhorn"></i> Опубликовать</button>
+    <div id="ann-result" class="result-msg"></div>
+  </div>
 </div>
 {% endif %}
+
+<style>
+/* Result message */
+.result-msg {
+  margin-top: 8px;
+  display: none;
+  font-size: var(--fs-sm) !important;
+  font-weight: 600 !important;
+  padding: 8px 12px;
+  border-radius: 8px;
+}
+.result-msg.show { display: block; }
+.result-msg.ok  { background: rgba(74, 222, 128, 0.10); color: var(--ok); border: 1px solid rgba(74, 222, 128, 0.30); }
+.result-msg.err { background: rgba(248, 113, 113, 0.10); color: var(--err); border: 1px solid rgba(248, 113, 113, 0.30); }
+</style>
 
 <script>
 (function () {
   'use strict';
 
-  // ── Вспомогательные функции ─────────────────────────────────────────────────────────────
   function $(id) { return document.getElementById(id); }
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
   function fmtDate(iso) {
-    if (!iso) return '-';
-    try { return new Date(iso).toLocaleString('tr-TR'); } catch (e) { return '-'; }
+    if (!iso) return '—';
+    try {
+      var d = new Date(iso);
+      var now = new Date();
+      var diff = (now - d) / 1000;
+      if (diff < 60) return 'только что';
+      if (diff < 3600) return Math.floor(diff / 60) + ' мин назад';
+      if (diff < 86400) return Math.floor(diff / 3600) + ' ч назад';
+      return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
+    } catch (e) { return '—'; }
+  }
+  function animateNumber(el, target) {
+    if (!el) return;
+    var start = parseInt((el.textContent || '0').replace(/\D/g, ''), 10) || 0;
+    if (start === target) { el.firstChild ? el.firstChild.nodeValue = target.toLocaleString() : el.textContent = target.toLocaleString(); return; }
+    var duration = 800;
+    var startTime = null;
+    function step(ts) {
+      if (!startTime) startTime = ts;
+      var p = Math.min(1, (ts - startTime) / duration);
+      var eased = 1 - Math.pow(1 - p, 3);
+      var val = Math.round(start + (target - start) * eased);
+      if (el.firstChild) el.firstChild.nodeValue = val.toLocaleString();
+      else el.textContent = val.toLocaleString();
+      if (p < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
   }
   function showToast(msg, ok) {
     var t = document.createElement('div');
     t.className = 'toast ' + (ok ? 'ok' : 'err');
     t.textContent = msg;
-    t.style.cssText = 'position:fixed;top:20px;right:20px;padding:12px 22px;border-radius:10px;font-weight:700;z-index:99999;font-size:13px;background:' + (ok ? 'linear-gradient(135deg,#27ae60,#2ecc71)' : 'linear-gradient(135deg,#c0392b,#e74c3c)') + ';color:#fff;';
     document.body.appendChild(t);
-    setTimeout(function () { t.remove(); }, 2500);
+    setTimeout(function () {
+      t.style.transition = 'all 0.3s ease';
+      t.style.opacity = '0';
+      t.style.transform = 'translateX(20px)';
+      setTimeout(function () { t.remove(); }, 300);
+    }, 2200);
+  }
+  function setResult(el, ok, msg) {
+    if (!el) return;
+    el.className = 'result-msg show ' + (ok ? 'ok' : 'err');
+    el.textContent = msg;
+    setTimeout(function () { el.className = 'result-msg'; }, 3000);
   }
 
-  // ── Ana istatistikler ────────────────────────────────────────────────────────
+  // ── Greeting by time ──
+  function setGreeting() {
+    var h = new Date().getHours();
+    var g = h < 6 ? 'Доброй ночи' : h < 12 ? 'Доброе утро' : h < 18 ? 'Добрый день' : 'Добрый вечер';
+    var el = $('heroGreeting');
+    if (el) el.innerHTML = '<span class="dot"></span> ' + g + ', {{ username }}';
+  }
+
+  // ── Main stats ──
   async function loadStats() {
     try {
-      var d = await fetch('/api/stats').then(function (r) { return r.json(); });
-      $('guild-count').textContent = d.guilds != null ? d.guilds : '-';
-      $('user-count').textContent = (d.users || 0).toLocaleString();
-      $('latency').textContent = (d.latency || 0) + 'ms';
-      var s = $('status');
-      if (d.error) { s.textContent = 'ОФЛАЙН'; s.style.color = '#ef4444'; }
-      else { s.textContent = 'ОНЛАЙН'; s.style.color = '#4ade80'; }
+      var d = await window.fetchCachedJSON('/api/stats');
+      var gEl = $('guild-count');
+      var uEl = $('user-count');
+      var lEl = $('latency');
+      var sEl = $('status');
+
+      animateNumber(gEl, d.guilds || 0);
+      animateNumber(uEl, d.users || 0);
+      var lat = d.latency || 0;
+      lEl.innerHTML = lat.toLocaleString() + '<small>ms</small>';
+
+      if (d.error) {
+        sEl.textContent = 'ОФФЛАЙН';
+        sEl.style.color = 'var(--err)';
+      } else {
+        sEl.textContent = 'ОНЛАЙН';
+        sEl.style.color = 'var(--ok)';
+      }
     } catch (e) {
-      $('status').textContent = 'ОФЛАЙН';
-      $('status').style.color = '#ef4444';
+      var sEl2 = $('status');
+      if (sEl2) {
+        sEl2.textContent = 'ОФФЛАЙН';
+        sEl2.style.color = 'var(--err)';
+      }
     }
   }
 
-  // ── Быстрая статистика ──────────────────────────────────────────────────────
+  // ── Quick stats ──
   async function loadQuickStats() {
     try {
-      var logs = await fetch('/api/logs').then(function (r) { return r.json(); }).catch(function () { return []; });
-      var warns = await fetch('/api/warnings').then(function (r) { return r.json(); }).catch(function () { return []; });
-      var банs = logs.filter(function (l) { return (l.action || '').toLowerCase() === 'бан'; }).length;
-      var кикs = logs.filter(function (l) { return (l.action || '').toLowerCase() === 'кик'; }).length;
-      var мьютs = logs.filter(function (l) { var a = (l.action || '').toLowerCase(); return a.indexOf('мьют') !== -1 || a.indexOf('timeout') !== -1; }).length;
+      var logs = await window.fetchCachedJSON('/api/logs').catch(function () { return []; });
+      var warns = await window.fetchCachedJSON('/api/warnings').catch(function () { return []; });
+      var bans = logs.filter(function (l) { return (l.action || '').toLowerCase() === 'ban'; }).length;
+      var kicks = logs.filter(function (l) { return (l.action || '').toLowerCase() === 'kick'; }).length;
+      var muts = logs.filter(function (l) {
+        var a = (l.action || '').toLowerCase();
+        return a.indexOf('mute') !== -1 || a.indexOf('timeout') !== -1;
+      }).length;
       $('quick-stats').innerHTML =
-        '<div class="quick-grid">' +
-        '<div class="quick-item"><h3>' + logs.length + '</h3><p>Мод Действий</p></div>' +
-        '<div class="quick-item"><h3>' + warns.length + '</h3><p>Предупреждений</p></div>' +
-        '<div class="quick-item"><h3>' + банs + '</h3><p>Банов</p></div>' +
-        '<div class="quick-item"><h3>' + кикs + '</h3><p>Киков</p></div>' +
-        '<div class="quick-item"><h3>' + мьютs + '</h3><p>Мутов</p></div>' +
-        '<div class="quick-item"><h3>' + (logs.length > 0 ? '✓' : '-') + '</h3><p>Активен</p></div>' +
-        '</div>';
+        '<div class="quick-item"><h3>' + logs.length + '</h3><p>Мод. действий</p></div>' +
+        '<div class="quick-item"><h3>' + warns.length + '</h3><p>Предупр.</p></div>' +
+        '<div class="quick-item"><h3>' + bans + '</h3><p>Банов</p></div>' +
+        '<div class="quick-item"><h3>' + kicks + '</h3><p>Киков</p></div>' +
+        '<div class="quick-item"><h3>' + muts + '</h3><p>Мутов</p></div>' +
+        '<div class="quick-item"><h3 >✓</h3><p>Активен</p></div>';
     } catch (e) {
-      $('quick-stats').innerHTML = '<p style="color:#ef4444">Не удалось загрузить</p>';
+      $('quick-stats').innerHTML = '<div class="quick-grid-empty" >Не удалось загрузить</div>';
     }
   }
 
-  // ── Последний действия ─────────────────────────────────────────────────────────────
+  // ── Recent activity ──
   async function loadRecentActivity() {
     try {
-      var logs = await fetch('/api/logs').then(function (r) { return r.json(); }).catch(function () { return []; });
+      var logs = await window.fetchCachedJSON('/api/logs').catch(function () { return []; });
       var box = $('recent-activity');
-      if (!logs.length) { box.innerHTML = '<p style="color:#5a5040;text-align:center;padding:20px">Пока действий нет.</p>'; return; }
-      var colors = { бан: '#ef4444', кик: '#f97316', warn: '#c8922a', мьют: '#c8922a', timeout: '#c8922a', unбан: '#4ade80', unмьют: '#4ade80', lock: '#60a5fa', unlock: '#4ade80' };
-      var rows = logs.slice(0, 15).map(function (log) {
-        var a = (log.action || '?').toLowerCase(), c = colors[a] || '#5a5040';
-        var t = log.timestamp ? fmtDate(log.timestamp) : '-';
-        var tg = log.user_name || log.target_name || log.user_id || '-';
-        var m = log.mod_name || log.mod_id || '-';
-        var r = log.reason || '-';
-        return '<tr><td><span class="action-badge" style="background:' + c + '18;color:' + c + ';border:1px solid ' + c + '33">' + (log.action || '?') + '</span></td><td>' + tg + '</td><td style="color:rgba(240,232,208,0.55)">' + m + '</td><td style="color:#5a5040;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + r + '</td><td style="color:#5a5040;font-size:11px">' + t + '</td></tr>';
+      if (!logs.length) {
+        box.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><p>Пока действий нет</p></div>';
+        return;
+      }
+      var rows = logs.slice(0, 12).map(function (log) {
+        var a = (log.action || '?').toLowerCase();
+        var cls = a === 'ban' ? 'action-badge-err' : (a === 'warn' || a.indexOf('mute') !== -1) ? 'action-badge-warn' : (a.indexOf('unban') !== -1 || a.indexOf('unmute') !== -1) ? 'action-badge-ok' : 'action-badge-info';
+        var tg = log.user_name || log.target_name || log.user_id || '—';
+        var m = log.mod_name || log.mod_id || '—';
+        var r = log.reason || '—';
+        return '<tr><td><span class="action-badge ' + cls + '">' + esc(log.action || '?') + '</span></td>' +
+               '<td>' + esc(tg) + '</td>' +
+               '<td class="text-2">' + esc(m) + '</td>' +
+               '<td class="text-3"   style="max-width: 160px; overflow: hidden;">' + esc(r) + '</td>' +
+               '<td class="text-3" >' + esc(fmtDate(log.timestamp)) + '</td></tr>';
       }).join('');
-      box.innerHTML = '<table><thead><tr><th>Действие</th><th>Цель</th><th>Модератор</th><th>Причина</th><th>Время</th></tr></thead><tbody>' + rows + '</tbody></table>';
+      box.innerHTML = '<table><thead><tr><th>Действие</th><th>Цель</th><th>Модер.</th><th>Причина</th><th>Время</th></tr></thead><tbody>' + rows + '</tbody></table>';
     } catch (e) {
-      $('recent-activity').innerHTML = '<p style="color:#ef4444;text-align:center;padding:20px">Не удалось загрузить</p>';
+      $('recent-activity').innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle" ></i><p >Не удалось загрузить</p></div>';
     }
   }
 
-  // ── Информация о сервере ────────────────────────────────────────────────────────
-  async function loadGuildInfo() {
-    try {
-      var guilds = await fetch('/api/guilds').then(function (r) { return r.json(); });
-      if (!guilds.length) return;
-      var guild = guilds[0];
-      $('guild-info-bar').style.display = 'block';
-      if (guild.icon) { var ic = $('guild-icon'); ic.src = guild.icon; ic.style.display = 'block'; }
-      $('guild-name').textContent = guild.name;
-      $('guild-meta').textContent = 'ID: ' + guild.id;
-      var items = [{ val: guild.members ? guild.members.toLocaleString() : '-', lbl: 'Участники' }];
-      $('guild-stats-row').innerHTML = items.map(function (s) {
-        return '<div style="text-align:center"><div style="font-size:16px;font-weight:700;color:#c8922a">' + s.val + '</div><div style="color:#5a5040;font-size:10px;text-transform:uppercase">' + s.lbl + '</div></div>';
-      }).join('');
-    } catch (e) { /* yoksay */ }
-  }
-
-  // ── Отправка уведомления ──────────────────────────────────────────────────────────
-  async function sendNotification() {
-    var id = $('notif-discord-id').value.trim();
-    var title = $('notif-title').value.trim();
-    var msg = $('notif-message').value.trim();
-    var el = $('notif-result');
-    if (!id || !msg) { showToast('Discord ID и сообщение обязательны!', false); return; }
-    try {
-      var d = await fetch('/api/send-notification', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ discord_id: id, title: title, message: msg })
-      }).then(function (r) { return r.json(); });
-      el.style.display = 'block';
-      el.innerHTML = d.success
-        ? '<span style="color:#4ade80">Уведомление отправлено!</span>'
-        : '<span style="color:#ef4444">' + (d.error || 'Hata') + '</span>';
-      setTimeout(function () { el.style.display = 'none'; }, 3000);
-    } catch (e) { showToast('Ошибка: ' + e.message, false); }
-  }
-
-  // ── Публикация объявления ────────────────────────────────────────────────────────────
-  async function sendAnnouncement() {
-    var title = $('ann-title').value.trim();
-    var msg = $('ann-message').value.trim();
-    var el = $('ann-result');
-    if (!title || !msg) { showToast('Заголовок и содержание обязательны!', false); return; }
-    try {
-      var d = await fetch('/api/send-announcement', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: title, message: msg })
-      }).then(function (r) { return r.json(); });
-      el.style.display = 'block';
-      el.innerHTML = d.success
-        ? '<span style="color:#4ade80">Объявление опубликовано!</span>'
-        : '<span style="color:#ef4444">' + (d.error || 'Hata') + '</span>';
-      setTimeout(function () { el.style.display = 'none'; }, 3000);
-    } catch (e) { showToast('Ошибка: ' + e.message, false); }
-  }
-
-  // ── Вход logы ────────────────────────────────────────────────────────────
+  // ── Login лог ──
   async function loadLoginLog() {
+    var box = $('login-log');
+    if (!box) return;
     try {
-      var logs = await fetch('/api/login-log').then(function (r) { return r.json(); });
-      var box = $('login-log');
-      if (!box) return;
-      if (!logs.length) { box.innerHTML = '<p style="color:#5a5040;text-align:center;padding:16px">Пока входов нет.</p>'; return; }
-      var roleColors = { owner: '#e05555', admin: '#c8922a', mod: '#2ecc71', uye: '#5a5040' };
-      box.innerHTML = '<div style="display:flex;flex-direction:column;gap:8px;">' +
-        logs.slice(0, 20).map(function (l) {
-          var t = l.timestamp ? fmtDate(l.timestamp) : '-';
-          var rc = roleColors[l.roles] || '#5a5040';
-          var avatar = l.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png';
-          return '<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:rgba(0,0,0,0.3);border-radius:12px;border:1px solid rgba(255,255,255,0.04);">' +
-            '<img src="' + avatar + '" style="width:36px;height:36px;border-radius:50%;border:2px solid ' + rc + ';object-fit:cover;" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' +
-            '<div style="flex:1;min-width:0;">' +
-              '<div style="font-weight:700;font-size:13px;color:#f0e8d0;">' + l.username + '</div>' +
-              '<div style="font-size:11px;color:#5a5040;">' + t + '</div>' +
-            '</div>' +
-            '<span style="padding:3px 9px;border-radius:99px;font-size:10px;font-weight:700;background:' + rc + '18;color:' + rc + ';border:1px solid ' + rc + '44;">' + (l.roles || '').toUpperCase() + '</span>' +
-          '</div>';
-        }).join('') + '</div>';
-    } catch (e) { /* yoksay */ }
+      var logs = await window.fetchCachedJSON('/api/login-log');
+      if (!logs.length) {
+        box.innerHTML = '<div class="empty-state"><i class="fas fa-user-clock"></i><p>Пока входов нет</p></div>';
+        return;
+      }
+      var roleColors = { owner: 'var(--err)', админ: 'var(--ac)', мод: 'var(--ok)', uye: 'var(--text-3)' };
+      box.innerHTML = logs.slice(0, 15).map(function (l) {
+        var t = fmtDate(l.timestamp);
+        var rc = roleColors[l.roles] || 'var(--text-3)';
+        var avatar = l.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png';
+        return '<div class="login-item">' +
+          '<img src="' + esc(avatar) + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' +
+          '<div class="login-item-info">' +
+            '<div class="login-item-name">' + esc(l.username) + '</div>' +
+            '<div class="login-item-time">' + esc(t) + '</div>' +
+          '</div>' +
+          '<span class="role-chip" >' + esc((l.roles || '').toUpperCase()) + '</span>' +
+        '</div>';
+      }).join('');
+    } catch (e) { /* skip */ }
   }
 
-  // ── Угроза endeksi (lockdown) ────────────────────────────────────────────────
+  // ── Threat index ──
   async function loadThreatIndex() {
     try {
       var res = await fetch('/api/security/threat-index');
       var d = await res.json();
       if (!d || !d.success) return;
       var score = d.threat_score || 15;
-      var level = d.threat_level || 'Низкая угроза (Спокойно)';
-      var color = d.threat_color || '#2ECC71';
+      var level = d.threat_level || 'Низкая';
+      var color = d.threat_color || '#4ade80';
       var active = d.lockdown_active || false;
 
       $('threatScoreVal').textContent = score + '/100';
       var badge = $('threatLevelBadge');
       badge.textContent = level;
       badge.style.color = color;
-      badge.style.borderColor = color;
-      badge.style.background = color + '22';
+      badge.style.borderColor = color + '55';
+      badge.style.background = color + '15';
 
-      var wrap = $('threatIconWrap');
-      wrap.style.borderColor = color;
-      wrap.style.background = color + '22';
+      $('threatIconWrap').style.borderColor = color;
+      $('threatIconWrap').style.background = color + '15';
       $('threatIcon').style.color = color;
+      $('threatFill').style.width = Math.min(100, score) + '%';
+      $('threatFill').style.background = color;
 
       var btn = $('btnLockdown');
       var btnText = $('btnLockdownText');
       if (active) {
-        btn.style.background = '#E74C3C';
-        btn.style.color = '#fff';
-        btnText.textContent = 'Отключить карантин (АКТИВЕН)';
+        btn.classList.add('danger');
+        btnText.textContent = 'Активен ✓';
       } else {
-        btn.style.background = '#2ECC71';
-        btn.style.color = '#100e08';
-        btnText.textContent = 'Включить карантин (Lockdown)';
+        btn.classList.remove('danger');
+        btnText.textContent = 'Lockdown';
       }
-    } catch (e) { /* yoksay */ }
+    } catch (e) { /* skip */ }
   }
 
-  // toggleLockdown: теперь в одном глобальном IIFE scope'unda определено, butona
-  // addEventListener (CSP не блокирует inline-обработчики)
   async function toggleLockdown() {
     var btn = $('btnLockdown');
     if (!btn) return;
@@ -330,13 +588,42 @@ tr:hover td{background:rgba(212,168,67,0.04);}
         showToast(d.message || 'Статус карантина изменён', true);
         loadThreatIndex();
       } else {
-        showToast((d && d.error) || 'Hata', false);
+        showToast((d && d.error) || 'Ошибка', false);
       }
     } catch (e) { showToast('Ошибка: ' + e.message, false); }
     btn.disabled = false;
   }
 
-  // ── Привязка кнопок (CSP-совместимо, без inline onclick) ─────────────────────────
+  // ── Send notification ──
+  async function sendNotification() {
+    var id = $('notif-discord-id').value.trim();
+    var title = $('notif-title').value.trim();
+    var msg = $('notif-message').value.trim();
+    var el = $('notif-result');
+    if (!id || !msg) { showToast('Discord ID и сообщение обязательны!', false); return; }
+    try {
+      var d = await fetch('/api/send-notification', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ discord_id: id, title: title, message: msg })
+      }).then(function (r) { return r.json(); });
+      setResult(el, d.success, d.success ? '✓ Уведомление отправлено!' : ('✗ ' + (d.error || 'Ошибка')));
+    } catch (e) { showToast('Ошибка: ' + e.message, false); }
+  }
+
+  async function sendAnnouncement() {
+    var title = $('ann-title').value.trim();
+    var msg = $('ann-message').value.trim();
+    var el = $('ann-result');
+    if (!title || !msg) { showToast('Заголовок и содержание обязательны!', false); return; }
+    try {
+      var d = await fetch('/api/send-announcement', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: title, message: msg })
+      }).then(function (r) { return r.json(); });
+      setResult(el, d.success, d.success ? '✓ Объявление опубликовано!' : ('✗ ' + (d.error || 'Ошибка')));
+    } catch (e) { showToast('Ошибка: ' + e.message, false); }
+  }
+
   function bindButtons() {
     var bl = $('btnLockdown');
     if (bl) bl.addEventListener('click', toggleLockdown);
@@ -346,27 +633,24 @@ tr:hover td{background:rgba(212,168,67,0.04);}
     if (ba) ba.addEventListener('click', sendAnnouncement);
   }
 
-  // ── Запуск после готовности DOM ───────────────────────────────────────────
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
-  }
   function init() {
+    setGreeting();
     bindButtons();
     loadStats();
     loadQuickStats();
     loadRecentActivity();
-    loadGuildInfo();
     loadLoginLog();
     loadThreatIndex();
     setInterval(loadStats, 5000);
     setInterval(loadRecentActivity, 10000);
     setInterval(loadLoginLog, 10000);
     setInterval(loadThreatIndex, 15000);
+    setInterval(setGreeting, 60000);
   }
 
-  // toggleLockdown вынесен наружу, чтобы старые inline onclick тоже работали
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+
   window.toggleLockdown = toggleLockdown;
 })();
 </script>

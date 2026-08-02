@@ -1,8 +1,8 @@
-# Tüm Python process'lerini öldür
+# Tюm Python process'lerini ёldюr
 Get-Process python -ErrorAction SilentlyContinue | Stop-Process -Force
 
-# 2 saniye bekle
+# 2 секунд bekle
 Start-Sleep -Seconds 2
 
-# Yeni botu başlat
+# Yeni botu baшlat
 python main.py

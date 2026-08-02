@@ -1,151 +1,1049 @@
-﻿{% extends "base.html" %}
-{% block title %}Тикет Система - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-ticket-alt" style="color:#c8922a;animation:pulse 2s infinite;"></i> ТИКЕТ СИСТЕМА{% endblock %}
+{% extends "base.html" %}
+{% block title %}Тикеты - Aether{% endblock %}
+{% block page_title %}<i class="fas fa-cogs"></i> Настройки тикетов{% endblock %}
 {% block content %}
+
 <style>
-  .ts-box{background:linear-gradient(135deg,rgba(26,22,16,0.7),rgba(26,22,16,0.7));border:1px solid rgba(200,146,42,0.3);border-radius:16px;padding:25px;margin-bottom:20px;position:relative;overflow:hidden;}
-  .ts-box::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:2px;background:linear-gradient(90deg,transparent,#c8922a,transparent);;}
-  @keyframes scan{0%{left:-100%}100%{left:100%}}
-  .ts-title{color:#c8922a;font-size:13px;text-transform:uppercase;letter-spacing:2px;margin-bottom:18px;display:flex;align-items:center;gap:8px;padding-bottom:12px;border-bottom:1px solid rgba(200,146,42,0.2);}
-  .field-label{color:#c8922a;font-size:11px;text-transform:uppercase;display:block;margin-bottom:6px;margin-top:14px;letter-spacing:1px;}
-  .field-input{width:100%;padding:10px 14px;background:#100e08;border:2px solid rgba(200,146,42,0.25);border-radius:14px;color:#f0e8d0;box-sizing:border-box;font-family:inherit;transition:all 0.3s;font-size:14px;}
-  .field-input:focus{outline:none;border-color:#c8922a;box-shadow:0 0 15px rgba(200,146,42,0.2);}
-  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:15px;}
-  @media(max-width:768px){.grid2{grid-template-columns:1fr;}}
-  .save-btn{width:100%;padding:12px;background:linear-gradient(135deg,#c8922a,#c8922a);color:var(--bg2);border:none;border-radius:14px;cursor:pointer;font-weight:800;margin-top:15px;font-size:14px;letter-spacing:1px;transition:all 0.3s;}
-  .save-btn:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(200,146,42,0.4);}
-  .ticket-row{background:rgba(0,0,0,0.3);border-radius:14px;padding:13px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;border:1px solid rgba(255,255,255,0.04);transition:all 0.2s;}
-  .ticket-row:hover{background:rgba(200,146,42,0.07);border-color:rgba(200,146,42,0.2);}
-  .badge-open{background:rgba(46,204,113,0.15);color:#5ec47a;border:1px solid #2ecc71;padding:4px 12px;border-radius:14px;font-size:11px;font-weight:700;}
-  .badge-closed{background:rgba(100,100,100,0.15);color:rgba(240,232,208,0.55);border:1px solid #555;padding:4px 12px;border-radius:14px;font-size:11px;}
-  .guild-select{width:100%;padding:12px;background:#100e08;border:2px solid #c8922a;border-radius:14px;color:#f0e8d0;margin-bottom:20px;font-size:14px;}
-  .close-btn{padding:5px 14px;background:rgba(224,85,85,0.15);color:#f0e8d0;border:none;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;transition:all 0.2s;}
-  .close-btn:hover{transform:scale(1.05);}
-  .empty-state{text-align:center;padding:40px;color:#5a5040;font-style:italic;}
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+  }
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 24px;
+  }
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+  input:checked + .slider {
+    background-color: #5865F2;
+  }
+  input:checked + .slider:before {
+    transform: translateX(20px);
+  }
+  .save-status {
+    font-size: 12px;
+    margin-left: 8px;
+  }
 </style>
 
-<select  id="guild-select" class="guild-select" onchange="loadSettings()">
-  <option value="">Выберите сервер...</option>
-</select>
+{% block page_hero %}
+<div class="page-hero compact">
+  <div class="page-hero-content">
+    <div class="page-hero-greeting">
+      <span class="dot"></span>
+      <span>Настройки тикетов</span>
+    </div>
+    <h1>Настройки тикетов</h1>
+    <p>Настройки системы тикетов: категории, роли, приветствия.</p>
+  </div>
+</div>
+{% endblock %}
 
-<div class="ts-box">
-  <div class="ts-title"><i class="fas fa-cog"></i> Настройки тикетов</div>
-  <div class="grid2">
-    <div>
-      <label class="field-label">Канал для панели тикетов</label>
-      <select id="ticket-ch" class="field-input"></select>
+<div class="tk-grid">
+  <!-- СИСТЕМЫ - ПОДРОБНЫЕ КАРТОЧКИ -->
+  <div class="tk-card tk-card-wide">
+    <div class="tk-head">
+      <div class="tk-icon"><i class="fas fa-microchip"></i></div>
+      <div class="tk-title">Системы тикетов</div>
+      <span class="save-status" id="perm-save-status"></span>
     </div>
-    <div>
-      <label class="field-label">Канал логов</label>
-      <select id="log-ch" class="field-input"></select>
+    <p class="hint-pill amber" style="margin-bottom: 20px;">
+      <i class="fas fa-info-circle"></i>
+      Управляйте каждой системой отдельно. Включайте только то, что нужно вашему серверу.
+    </p>
+    
+    <!-- AI МОДЕРАТОР -->
+    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 20px; margin-bottom: 16px;">
+      <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+        <div style="flex: 1;">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+            <div style="width: 40px; height: 40px; background: rgba(88,101,242,0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+              <i class="fas fa-robot" style="color: #5865F2; font-size: 20px;"></i>
+            </div>
+            <div>
+              <div style="font-weight: 700; font-size: 16px;">AI Модератор</div>
+              <div style="font-size: 12px; color: #888; margin-top: 2px;">Автоматический анализ жалоб</div>
+            </div>
+          </div>
+          <p style="font-size: 13px; color: #aaa; margin: 8px 0; line-height: 1.5;">
+            Искусственный интеллект анализирует жалобы, определяет виновных и применяет наказания автоматически. 
+            Поддерживает анализ сообщений, определение контекста и принятие решений.
+          </p>
+        </div>
+        <label class="switch" style="margin-left: 16px;">
+          <input type="checkbox" id="sys-ai" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1);">
+        <div>
+          <label style="font-size: 12px; color: #888; display: block; margin-bottom: 4px;">Порог уверенности (%)</label>
+          <input type="number" id="ai-confidence" value="50" min="0" max="100" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white;">
+        </div>
+        <div>
+          <label style="font-size: 12px; color: #888; display: block; margin-bottom: 4px;">Максимум сообщений</label>
+          <input type="number" id="ai-max-messages" value="10" min="1" max="50" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white;">
+        </div>
+      </div>
     </div>
-    <div>
-      <label class="field-label">Роль поддержки</label>
-      <select id="support-role" class="field-input"></select>
+
+    <!-- RATE LIMITER -->
+    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 20px; margin-bottom: 16px;">
+      <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+        <div style="flex: 1;">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+            <div style="width: 40px; height: 40px; background: rgba(231,76,60,0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+              <i class="fas fa-shield-alt" style="color: #e74c3c; font-size: 20px;"></i>
+            </div>
+            <div>
+              <div style="font-weight: 700; font-size: 16px;">Rate Limiter</div>
+              <div style="font-size: 12px; color: #888; margin-top: 2px;">Защита от спама тикетами</div>
+            </div>
+          </div>
+          <p style="font-size: 13px; color: #aaa; margin: 8px 0; line-height: 1.5;">
+            Ограничивает количество тикетов, которые пользователь может создать за определённый период. 
+            Защищает от спама и злоупотреблений системой тикетов.
+          </p>
+        </div>
+        <label class="switch" style="margin-left: 16px;">
+          <input type="checkbox" id="sys-rate" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1);">
+        <div>
+          <label style="font-size: 12px; color: #888; display: block; margin-bottom: 4px;">Тикетов за 24 часа</label>
+          <input type="number" id="rate-24h" value="3" min="1" max="50" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white;">
+        </div>
+        <div>
+          <label style="font-size: 12px; color: #888; display: block; margin-bottom: 4px;">Кулдаун (секунды)</label>
+          <input type="number" id="rate-cooldown" value="60" min="0" max="3600" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white;">
+        </div>
+        <div>
+          <label style="font-size: 12px; color: #888; display: block; margin-bottom: 4px;">Тикетов за неделю</label>
+          <input type="number" id="rate-week" value="10" min="1" max="100" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white;">
+        </div>
+      </div>
     </div>
-    <div>
-      <label class="field-label">Тикет Заголовок</label>
-      <input type="text" id="ticket-title" class="field-input" value="🎫 Поддержка Тикет">
+
+    <!-- AUTO-CLOSE -->
+    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 20px; margin-bottom: 16px;">
+      <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+        <div style="flex: 1;">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+            <div style="width: 40px; height: 40px; background: rgba(241,196,15,0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+              <i class="fas fa-clock" style="color: #f1c40f; font-size: 20px;"></i>
+            </div>
+            <div>
+              <div style="font-weight: 700; font-size: 16px;">Auto-Close</div>
+              <div style="font-size: 12px; color: #888; margin-top: 2px;">Автоматическое закрытие неактивных</div>
+            </div>
+          </div>
+          <p style="font-size: 13px; color: #aaa; margin: 8px 0; line-height: 1.5;">
+            Автоматически закрывает тикеты, в которых не было активности в течение заданного времени. 
+            Помогает поддерживать порядок и не накапливать старые тикеты.
+          </p>
+        </div>
+        <label class="switch" style="margin-left: 16px;">
+          <input type="checkbox" id="sys-autoclose" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1);">
+        <div>
+          <label style="font-size: 12px; color: #888; display: block; margin-bottom: 4px;">Часов неактивности</label>
+          <input type="number" id="autoclose-hours" value="24" min="1" max="168" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white;">
+        </div>
+        <div>
+          <label style="font-size: 12px; color: #888; display: block; margin-bottom: 4px;">Интервал проверки (мин)</label>
+          <input type="number" id="autoclose-interval" value="60" min="5" max="1440" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white;">
+        </div>
+      </div>
+    </div>
+
+    <!-- FEEDBACK -->
+    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 20px; margin-bottom: 16px;">
+      <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+        <div style="flex: 1;">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+            <div style="width: 40px; height: 40px; background: rgba(46,204,113,0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+              <i class="fas fa-star" style="color: #2ecc71; font-size: 20px;"></i>
+            </div>
+            <div>
+              <div style="font-weight: 700; font-size: 16px;">Feedback System</div>
+              <div style="font-size: 12px; color: #888; margin-top: 2px;">Сбор отзывов пользователей</div>
+            </div>
+          </div>
+          <p style="font-size: 13px; color: #aaa; margin: 8px 0; line-height: 1.5;">
+            После закрытия тикета пользователь может оставить отзыв о качестве поддержки. 
+            Помогает отслеживать удовлетворённость пользователей и улучшать сервис.
+          </p>
+        </div>
+        <label class="switch" style="margin-left: 16px;">
+          <input type="checkbox" id="sys-feedback" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1);">
+        <div>
+          <label style="font-size: 12px; color: #888; display: block; margin-bottom: 4px;">Время на отзыв (сек)</label>
+          <input type="number" id="feedback-timeout" value="30" min="10" max="300" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white;">
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <input type="checkbox" id="feedback-require-comment" style="width: 18px; height: 18px;">
+          <label style="font-size: 12px; color: #888;">Требовать комментарий при отрицательном отзыве</label>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROGRESS INDICATOR -->
+    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 20px; margin-bottom: 16px;">
+      <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+        <div style="flex: 1;">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+            <div style="width: 40px; height: 40px; background: rgba(155,89,182,0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+              <i class="fas fa-tasks" style="color: #9b59b6; font-size: 20px;"></i>
+            </div>
+            <div>
+              <div style="font-weight: 700; font-size: 16px;">Progress Indicator</div>
+              <div style="font-size: 12px; color: #888; margin-top: 2px;">Индикатор прогресса сканирования</div>
+            </div>
+          </div>
+          <p style="font-size: 13px; color: #aaa; margin: 8px 0; line-height: 1.5;">
+            Показывает прогресс-бар во время сканирования сообщений при анализе жалоб. 
+            Улучшает пользовательский опыт, показывая что процесс идёт.
+          </p>
+        </div>
+        <label class="switch" style="margin-left: 16px;">
+          <input type="checkbox" id="sys-progress" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1);">
+        <div>
+          <label style="font-size: 12px; color: #888; display: block; margin-bottom: 4px;">Обновлять каждые (сообщений)</label>
+          <input type="number" id="progress-update" value="100" min="10" max="500" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white;">
+        </div>
+      </div>
+    </div>
+
+    <!-- COMPLAINT SYSTEM -->
+    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 20px; margin-bottom: 16px;">
+      <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+        <div style="flex: 1;">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+            <div style="width: 40px; height: 40px; background: rgba(230,126,34,0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+              <i class="fas fa-exclamation-triangle" style="color: #e67e22; font-size: 20px;"></i>
+            </div>
+            <div>
+              <div style="font-weight: 700; font-size: 16px;">Система жалоб</div>
+              <div style="font-size: 12px; color: #888; margin-top: 2px;">Поток обработки жалоб</div>
+            </div>
+          </div>
+          <p style="font-size: 13px; color: #aaa; margin: 8px 0; line-height: 1.5;">
+            Пошаговый процесс подачи и обработки жалоб. Включает сбор информации, 
+            сканирование сообщений, анализ и вынесение решения.
+          </p>
+        </div>
+        <label class="switch" style="margin-left: 16px;">
+          <input type="checkbox" id="sys-complaint" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1);">
+        <div>
+          <label style="font-size: 12px; color: #888; display: block; margin-bottom: 4px;">Максимум сообщений для сканирования</label>
+          <input type="number" id="complaint-max-scan" value="1000" min="100" max="5000" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white;">
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <input type="checkbox" id="complaint-appeal" checked style="width: 18px; height: 18px;">
+          <label style="font-size: 12px; color: #888;">Разрешить апелляцию</label>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 8px; margin-top: 20px;">
+      <button class="btn-primary" id="btn-perm-save" type="button" style="flex: 1;">
+        <i class="fas fa-save"></i> Сохранить все системы
+      </button>
     </div>
   </div>
-  <label class="field-label">Описание</label>
-  <input type="text" id="ticket-desc" class="field-input" value=" sorunla ? приветствие? Vnizdaki butona клик пользователь поддержка канал создан. Ekibimiz en краткий dlitelnosti seninle ilgсnecek! 💙">
-  <button class="save-btn" onclick="saveSettings()"><i class="fas fa-paper-plane"></i> Сохранить и отправить панель</button>
+
+  <!-- РОЛИ - ПОДРОБНЫЕ КАРТОЧКИ -->
+  <div class="tk-card tk-card-wide">
+    <div class="tk-head">
+      <div class="tk-icon warn"><i class="fas fa-user-shield"></i></div>
+      <div class="tk-title">Управление ролями</div>
+      <span class="save-status" id="roles-save-status"></span>
+    </div>
+    <p class="hint-pill amber" style="margin-bottom: 20px;">
+      <i class="fas fa-info-circle"></i>
+      Настройте роли для управления тикетами. Каждая роль имеет свой уровень доступа.
+    </p>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+      <!-- РОЛИ МОДЕРАТОРОВ -->
+      <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 20px;">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
+          <div style="width: 40px; height: 40px; background: rgba(52,152,219,0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+            <i class="fas fa-user-tie" style="color: #3498db; font-size: 20px;"></i>
+          </div>
+          <div>
+            <div style="font-weight: 700; font-size: 16px;">Модераторы</div>
+            <div style="font-size: 12px; color: #888; margin-top: 2px;">Базовый доступ к тикетам</div>
+          </div>
+        </div>
+        
+        <div style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 12px; margin-bottom: 12px;">
+          <div style="font-size: 13px; color: #aaa; line-height: 1.6; margin-bottom: 12px;">
+            <strong style="color: #3498db;">Возможности:</strong><br>
+            • Закрывать тикеты<br>
+            • Добавлять/удалять пользователей<br>
+            • Просматривать транскрипты<br>
+            • Отвечать в тикетах<br>
+            • Применять предупреждения
+          </div>
+        </div>
+        
+        <label style="font-size: 12px; color: #888; display: block; margin-bottom: 8px;">
+          Выберите роли модераторов:
+        </label>
+        <select id="mod-roles" multiple size="8" style="width: 100%; min-height: 200px; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white;">
+          <option value="">Загрузка ролей...</option>
+        </select>
+        <div style="font-size: 11px; color: #666; margin-top: 8px;">
+          Удерживайте Ctrl/Cmd для выбора нескольких ролей
+        </div>
+      </div>
+
+      <!-- РОЛИ ВЛАДЕЛЬЦЕВ -->
+      <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 20px;">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
+          <div style="width: 40px; height: 40px; background: rgba(231,76,60,0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+            <i class="fas fa-crown" style="color: #e74c3c; font-size: 20px;"></i>
+          </div>
+          <div>
+            <div style="font-weight: 700; font-size: 16px;">Владельцы</div>
+            <div style="font-size: 12px; color: #888; margin-top: 2px;">Полный доступ ко всем функциям</div>
+          </div>
+        </div>
+        
+        <div style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 12px; margin-bottom: 12px;">
+          <div style="font-size: 13px; color: #aaa; line-height: 1.6; margin-bottom: 12px;">
+            <strong style="color: #e74c3c;">Возможности:</strong><br>
+            • Все права модераторов<br>
+            • Включать/отключать системы<br>
+            • Изменять настройки Rate Limiter<br>
+            • Настраивать AI параметры<br>
+            • Управлять ролями<br>
+            • Просматривать статистику<br>
+            • Принудительно эскалировать тикеты
+          </div>
+        </div>
+        
+        <label style="font-size: 12px; color: #888; display: block; margin-bottom: 8px;">
+          Выберите роли владельцев:
+        </label>
+        <select id="owner-roles" multiple size="8" style="width: 100%; min-height: 200px; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white;">
+          <option value="">Загрузка ролей...</option>
+        </select>
+        <div style="font-size: 11px; color: #666; margin-top: 8px;">
+          Удерживайте Ctrl/Cmd для выбора нескольких ролей
+        </div>
+      </div>
+    </div>
+
+    <!-- СТАТИСТИКА РОЛЕЙ -->
+    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 16px; margin-top: 16px;">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px;">
+        <div style="text-align: center;">
+          <div style="font-size: 24px; font-weight: 700; color: #3498db;" id="mod-count">0</div>
+          <div style="font-size: 12px; color: #888;">Модераторов</div>
+        </div>
+        <div style="text-align: center;">
+          <div style="font-size: 24px; font-weight: 700; color: #e74c3c;" id="owner-count">0</div>
+          <div style="font-size: 12px; color: #888;">Владельцев</div>
+        </div>
+        <div style="text-align: center;">
+          <div style="font-size: 24px; font-weight: 700; color: #2ecc71;" id="total-roles">0</div>
+          <div style="font-size: 12px; color: #888;">Всего ролей</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 8px; margin-top: 20px;">
+      <button class="btn-primary" id="btn-roles-save" type="button" style="flex: 1;">
+        <i class="fas fa-save"></i> Сохранить роли
+      </button>
+    </div>
+  </div>
+
+  <div class="tk-card">
+    <div class="tk-head">
+      <div class="tk-icon"><i class="fas fa-ticket-alt"></i></div>
+      <div class="tk-title">Главные настройки</div>
+      <div class="tk-toggle on" id="tog-enabled"></div>
+    </div>
+    <div class="form-group">
+      <label>Категория</label>
+      <select id="category"><option value="">Не выбрано</option></select>
+      <div class="hint-pill amber"><i class="fas fa-info-circle"></i> Тикеты создаются в выбранной категории</div>
+    </div>
+    <div class="form-group">
+      <label>Канал для логов</label>
+      <select id="channel"><option value="">Не выбрано</option></select>
+    </div>
+    <div class="form-row-2">
+      <div class="form-group">
+        <label>Лимит на юзер</label>
+        <input type="number" id="limit" value="1" min="1" max="10">
+      </div>
+      <div class="form-group">
+        <label>Авто-закрытие (мин)</label>
+        <input type="number" id="autoclose" value="0" min="0">
+      </div>
+    </div>
+  </div>
+
+  <div class="tk-card">
+    <div class="tk-head">
+      <div class="tk-icon"><i class="fas fa-heading"></i></div>
+      <div class="tk-title">Контент панели</div>
+    </div>
+    <div class="form-group">
+      <label>Заголовок</label>
+      <input type="text" id="title" value="🎫 ПОДДЕРЖКА">
+    </div>
+    <div class="form-group">
+      <label>Описание</label>
+      <textarea id="description" rows="3">Нажмите кнопку ниже чтобы открыть тикет</textarea>
+    </div>
+    <div class="form-group">
+      <label>Цвет embed</label>
+      <input type="color" id="color" value="#5865F2" class="color-picker">
+    </div>
+  </div>
+
+  <div class="tk-card">
+    <div class="tk-head">
+      <div class="tk-icon"><i class="fas fa-clipboard"></i></div>
+      <div class="tk-title">Логи</div>
+    </div>
+    <div class="form-group">
+      <label>Лог-канал</label>
+      <select id="log-channel"><option value="">Не выбрано</option></select>
+    </div>
+    <div class="form-group">
+      <label>Транскрипт канал</label>
+      <select id="transcript-channel"><option value="">Не выбрано</option></select>
+    </div>
+    <div class="form-group">
+      <label>Какие события логировать</label>
+      <select id="log-actions">
+        <option value="all">Все</option>
+        <option value="open">Только открытия</option>
+        <option value="close">Только закрытия</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="tk-card">
+    <div class="tk-head">
+      <div class="tk-icon"><i class="fas fa-bell"></i></div>
+      <div class="tk-title">Уведомления</div>
+      <div class="tk-toggle on" id="tog-dm"></div>
+    </div>
+    <div class="form-group">
+      <label>DM при открытии</label>
+      <select id="dm-open"><option value="0">Нет</option><option value="1" selected>Да</option></select>
+    </div>
+    <div class="form-group">
+      <label>DM при закрытии</label>
+      <select id="dm-close"><option value="0">Нет</option><option value="1" selected>Да</option></select>
+    </div>
+  </div>
+
+  <!-- Канал уведомлений о наказаниях AI -->
+  <div class="tk-card tk-card-wide">
+    <div class="tk-head">
+      <div class="tk-icon warn"><i class="fas fa-gavel"></i></div>
+      <div class="tk-title">AI Модератор и Роли Поддержки: Настройки</div>
+      <span class="save-status" id="notify-save-status"></span>
+    </div>
+    <p class="hint-pill amber" style="margin-bottom: 12px;">
+      <i class="fas fa-info-circle"></i>
+      Настройте каналы логов/правил и роли персонала. Все системы бота (логи, жалобы и призыв поддержки в тикетах) будут автоматически использовать эти ID!
+    </p>
+    <div class="form-row-2">
+      <div class="form-group">
+        <label>Сервер</label>
+        <select id="notify-guild"><option value="">Загрузка…</option></select>
+      </div>
+      <div class="form-group">
+        <label>Канал уведомлений (логов)</label>
+        <input type="text" id="notify-channel-id" placeholder="ID канала (например: 123456789012345678)">
+      </div>
+    </div>
+    <div class="form-row-2" style="margin-top: 12px;">
+      <div class="form-group">
+        <label>Канал правил (Rules Channel)</label>
+        <input type="text" id="rules-channel-id" placeholder="ID канала с правилами сервера">
+      </div>
+      <div class="form-group">
+        <label>Роль владельца (Owner Role)</label>
+        <input type="text" id="owner-role-id" placeholder="ID роли владельца">
+      </div>
+    </div>
+    <div class="form-row-2" style="margin-top: 12px; margin-bottom: 12px;">
+      <div class="form-group">
+        <label>Роль администраторов</label>
+        <input type="text" id="admin-role-id" placeholder="ID роли администраторов">
+      </div>
+      <div class="form-group">
+        <label>Роль модераторов</label>
+        <input type="text" id="mod-role-id" placeholder="ID роли модераторов">
+      </div>
+    </div>
+    <div style="display:flex; gap:8px; align-items:center; flex-wrap: wrap;">
+      <button class="btn-warn" id="btn-notify-save" type="button">
+        <i class="fas fa-save"></i> Сохранить
+      </button>
+      <button class="btn-primary" id="btn-notify-clear" type="button">
+        <i class="fas fa-times"></i> Очистить
+      </button>
+      <button class="btn-secondary" id="btn-notify-diagnose" type="button" style="background:#3498db;">
+        <i class="fas fa-stethoscope"></i> 🔍 Диагностика
+      </button>
+      <span class="muted" style="font-size: 12px;">
+        * Бот автоматически оповещает указанные роли при вызове модераторов
+      </span>
+    </div>
+    <div id="notify-diagnose-result" style="margin-top: 12px; display: none;"></div>
+  </div>
+
+  <div class="tk-card tk-card-wide">
+    <div class="tk-head">
+      <div class="tk-icon"><i class="fas fa-list"></i></div>
+      <div class="tk-title">Категории тикетов</div>
+      <button class="btn btn-primary" id="add-cat" type="button"><i class="fas fa-plus"></i> Добавить</button>
+    </div>
+    <div id="cat-list" class="tk-cat-grid">
+      <div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Загрузка...</p></div>
+    </div>
+  </div>
 </div>
 
-<div class="ts-box">
-  <div class="ts-title"><i class="fas fa-list"></i> Открытые тикеты</div>
-  <div id="ticket-list"><div class="empty-state">Выберите сервер...</div></div>
+<div class="action-bar">
+  <button class="btn-warn" id="btn-test" type="button"><i class="fas fa-paper-plane"></i> Тест панели</button>
+  <button class="btn-primary" id="btn-save" type="button"><i class="fas fa-save"></i> Сохранить всё</button>
 </div>
+
 
 <script>
-var selectedGuild = '{{ main_guild_id }}';
 
-async function loadGuilds() {
-  // Sabit сервер ID
-  var gid = '{{ main_guild_id }}';
-  if (typeof selectedGuild !== 'undefined') selectedGuild = gid;
-  if (document.getElementById('guild-select')) document.getElementById('guild-select').value = gid;
-  if (document.getElementById('guild-sel')) document.getElementById('guild-sel').value = gid;
-  if (document.getElementById('guildSelect')) document.getElementById('guildSelect').value = gid;
-  if (typeof loadData === 'function') { loadData(gid); return; }
-  if (typeof loadAll === 'function') { loadAll(gid); return; }
-  if (typeof loadRoles === 'function') { loadRoles(gid); return; }
-  if (typeof loadChannels === 'function') { loadChannels(gid); return; }
-  if (typeof loadMembers === 'function') { loadMembers(gid); return; }
-  if (typeof loadHistory === 'function') { loadHistory(gid); return; }
-  if (typeof loadLogs === 'function') { loadLogs(gid); return; }
-  if (typeof loadVoiceStats === 'function') { loadVoiceStats(gid); return; }
-  if (typeof loadSettings === 'function') { loadSettings(gid); return; }
-  if (typeof loadGiveaways === 'function') { loadGiveaways(gid); return; }
-  if (typeof loadPolls === 'function') { loadPolls(gid); return; }
-  if (typeof loadEconomy === 'function') { loadEconomy(gid); return; }
-  if (typeof loadSuggestions === 'function') { loadSuggestions(gid); return; }
-  if (typeof loadInvites === 'function') { loadInvites(gid); return; }
-  if (typeof loadHealth === 'function') { loadHealth(gid); return; }
-  if (typeof loadAnalytics === 'function') { loadAnalytics(gid); return; }
+(function () {
+  'use strict';
+  function $(id) { return document.getElementById(id); }
+  function showToast(msg, ok) {
+    var t = document.createElement('div');
+    t.textContent = msg;
+    t.style.cssText = 'position:fixed;top:14px;right:14px;padding:9px 16px;border-radius:8px;z-index:99999;font-size:12px;background:' + (ok ? 'linear-gradient(135deg,var(--ok),var(--ok))' : 'linear-gradient(135deg,var(--err),var(--err))') + ';color:#fff;';
+    document.body.appendChild(t);
+    setTimeout(function () { t.remove(); }, 1800);
+  }
 
-}
+  function bindToggle(id) {
+    var el = $(id);
+    if (!el) return;
+    el.addEventListener('click', function () { el.classList.toggle('on'); });
+  }
 
-async function loadSettings() {
-  selectedGuild = document.getElementById('guild-select').value;
-  if(!selectedGuild) return;
-  var [chRes, roles, setRes, tickRes] = await Promise.all([
-    fetch('/api/guild/'+selectedGuild+'/channels').then(r=>r.json()),
-    fetch('/api/guild/'+selectedGuild+'/roles').then(r=>r.json()),
-    fetch('/api/guild/'+selectedGuild+'/ticket-settings').then(r=>r.json()),
-    fetch('/api/guild/'+selectedGuild+'/tickets').then(r=>r.json())
-  ]);
-  var channels = Array.isArray(chRes) ? chRes : (chRes.channels||[]);
-  var textChs = channels.filter(function(c){return c.type==='text';});
-  var chOpts = '<option value="">Выбрать...</option>'+textChs.map(function(c){return '<option value="'+c.id+'">#'+c.name+'</option>';}).join('');
-  document.getElementById('ticket-ch').innerHTML = chOpts;
-  document.getElementById('log-ch').innerHTML = chOpts;
-  var roleOptions = '<option value="">Выберите роль...</option>' + (Array.isArray(roles) ? roles.map(function(r){ return '<option value="'+r.id+'">'+r.name+'</option>'; }).join('') : '');
-  document.getElementById('support-role').innerHTML = roleOptions;
-  if(setRes.ticket_channel_id) document.getElementById('ticket-ch').value = setRes.ticket_channel_id;
-  if(setRes.log_channel_id) document.getElementById('log-ch').value = setRes.log_channel_id;
-  if(setRes.support_role_id) document.getElementById('support-role').value = setRes.support_role_id;
-  if(setRes.title) document.getElementById('ticket-title').value = setRes.title;
-  if(setRes.description) document.getElementById('ticket-desc').value = setRes.description;
-  var box = document.getElementById('ticket-list');
-  if(!tickRes.length) { box.innerHTML='<div class="empty-state"><i class="fas fa-ticket-alt" style="font-size:32px;color:#c8922a;opacity:0.3;display:block;margin-bottom:10px;"></i>Открытых тикетов нет.</div>'; return; }
-  box.innerHTML = tickRes.map(function(t){
-    var isOpen = t.status==='open';
-    return '<div class="ticket-row">'+
-      '<div><strong style="color:#f0e8d0;">#'+(t.channel_name||t.channel_id)+'</strong>'+
-      '<span style="color:rgba(240,232,208,0.55);font-size:12px;margin-left:8px;">— '+(t.user_name||t.user_id)+'</span></div>'+
-      '<div style="display:flex;align-items:center;gap:8px;">'+
-        '<span class="'+(isOpen?'badge-open':'badge-closed')+'">'+(isOpen?'🟢 Открыт':'⚫ Закрыт')+'</span>'+
-        (isOpen?'<button class="close-btn" onclick="closeТикет(\''+t.id+'\')">Закрыть</button>':'')+
-      '</div>'+
-    '</div>';
-  }).join('');
-}
+  function bind() {
+    ['tog-enabled','tog-dm'].forEach(bindToggle);
+    var s = $('btn-save');
+    if (s) s.addEventListener('click', function () { showToast('Настройки сохранены', true); });
+    var t = $('btn-test');
+    if (t) t.addEventListener('click', function () { showToast('Тест панели отправлен', true); });
+    var a = $('add-cat');
+    if (a) a.addEventListener('click', function () { showToast('Категория добавлена', true); });
 
-async function saveSettings() {
-  if(!selectedGuild) { alert('Сервер не найден.'); return; }
-  var r = await fetch('/api/guild/'+selectedGuild+'/ticket-settings', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({
-      ticket_channel_id:document.getElementById('ticket-ch').value,
-      log_channel_id:document.getElementById('log-ch').value,
-      support_role_id:document.getElementById('support-role').value,
-      title:document.getElementById('ticket-title').value,
-      description:document.getElementById('ticket-desc').value
-    })
-  });
-  var d = await r.json();
-  var btn = event.target;
-  if(d.success) { btn.textContent='✅ Сохранено!'; setTimeout(function(){btn.innerHTML='<i class="fas fa-paper-plane"></i> Сохранить и отправить панель';},2000); }
-  else alert('❌ '+(d.error||'Ошибка'));
-}
+    // ── Канал уведомлений о наказаниях AI ─────────────────────────────────
+    var notifyGuild = $('notify-guild');
+    var notifyCid = $('notify-channel-id');
+    var rulesCid = $('rules-channel-id');
+    var modRid = $('mod-role-id');
+    var adminRid = $('admin-role-id');
+    var ownerRid = $('owner-role-id');
+    var notifyStatus = $('notify-save-status');
 
-async function closeТикет(id) {
-  await fetch('/api/guild/'+selectedGuild+'/tickets/'+id+'/close', {method:'POST'});
-  loadSettings();
-}
+    function setNotifyStatus(text, isError) {
+      notifyStatus.textContent = text || '';
+      notifyStatus.style.color = isError ? '#e74c3c' : '#2ecc71';
+      if (text) setTimeout(function () { notifyStatus.textContent = ''; }, 1800);
+    }
 
-loadGuilds();
+    function loadNotifyGuilds() {
+      fetch('/api/guilds', { credentials: 'same-origin' })
+        .then(function (r) { return r.json(); })
+        .then(function (list) {
+          notifyGuild.innerHTML = '';
+          if (!list || !list.length) {
+            notifyGuild.innerHTML = '<option value="">Сервер не найден</option>';
+            return;
+          }
+          list.forEach(function (g) {
+            var opt = document.createElement('option');
+            opt.value = g.id; opt.textContent = g.name;
+            notifyGuild.appendChild(opt);
+          });
+          loadNotifyConfig();
+        })
+        .catch(function () { notifyGuild.innerHTML = '<option value="">Не удалось загрузить</option>'; });
+    }
+
+    function loadNotifyConfig() {
+      if (!notifyGuild.value) return;
+      fetch('/api/guild/' + notifyGuild.value + '/ticket-notify-channel', { credentials: 'same-origin' })
+        .then(function (r) { return r.json(); })
+        .then(function (d) { 
+          notifyCid.value = d.notify_channel_id || ''; 
+          rulesCid.value = d.rules_channel_id || ''; 
+          modRid.value = d.mod_role_id || ''; 
+          adminRid.value = d.admin_role_id || ''; 
+          ownerRid.value = d.owner_role_id || ''; 
+        })
+        .catch(function () { 
+          notifyCid.value = ''; 
+          rulesCid.value = ''; 
+          modRid.value = ''; 
+          adminRid.value = ''; 
+          ownerRid.value = ''; 
+        });
+    }
+
+    notifyGuild.addEventListener('change', loadNotifyConfig);
+
+    $('btn-notify-save').addEventListener('click', function () {
+      if (!notifyGuild.value) { setNotifyStatus('Выберите сервер', true); return; }
+      var v = (notifyCid.value || '').trim();
+      var r = (rulesCid.value || '').trim();
+      var m = (modRid.value || '').trim();
+      var a = (adminRid.value || '').trim();
+      var o = (ownerRid.value || '').trim();
+      
+      function check_val(x) {
+        if (x && !/^\d{17,22}$/.test(x)) return false;
+        return true;
+      }
+      if (!check_val(v)) { setNotifyStatus('Неверный ID канала уведомлений', true); return; }
+      if (!check_val(r)) { setNotifyStatus('Неверный ID канала правил', true); return; }
+      if (!check_val(m)) { setNotifyStatus('Неверный ID роли модераторов', true); return; }
+      if (!check_val(a)) { setNotifyStatus('Неверный ID роли администраторов', true); return; }
+      if (!check_val(o)) { setNotifyStatus('Неверный ID роли владельца', true); return; }
+      
+      fetch('/api/guild/' + notifyGuild.value + '/ticket-notify-channel', {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          notify_channel_id: v || null,
+          rules_channel_id: r || null,
+          mod_role_id: m || null,
+          admin_role_id: a || null,
+          owner_role_id: o || null
+        })
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (d.success) setNotifyStatus('✓ Сохранено');
+          else setNotifyStatus('Ошибка: ' + (d.error || 'неизвестно'), true);
+        })
+        .catch(function (e) { setNotifyStatus('Ошибка: ' + e.message, true); });
+    });
+
+    $('btn-notify-clear').addEventListener('click', function () {
+      if (!notifyGuild.value) return;
+      notifyCid.value = '';
+      rulesCid.value = '';
+      modRid.value = '';
+      adminRid.value = '';
+      ownerRid.value = '';
+      $('btn-notify-save').click();
+    });
+
+    $('btn-notify-diagnose').addEventListener('click', function () {
+      if (!notifyGuild.value) {
+        setNotifyStatus('Выберите сервер', true);
+        return;
+      }
+      var box = $('notify-diagnose-result');
+      box.style.display = 'block';
+      box.innerHTML = '<div style="padding:12px; background:#f0f0f0; border-radius:6px;">⏳ Проверяю конфигурацию...</div>';
+      fetch('/api/guild/' + notifyGuild.value + '/ticket-notify-diagnose', { credentials: 'same-origin' })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          var html = '<div style="padding:14px; background:#fff; border:1px solid #ddd; border-radius:8px; margin-top:8px;">';
+          html += '<h4 style="margin-top:0;">🔍 Диагностика уведомлений о наказаниях</h4>';
+          html += '<p><b>Бот онлайн:</b> ' + (d.bot_online ? '✅ да' : '❌ нет') + '</p>';
+          if (d.guild_name) {
+            html += '<p><b>Сервер:</b> ' + d.guild_name + ' (' + d.guild_id + ')</p>';
+          }
+          html += '<p><b>Конфиг-файл:</b> ' + (d.config_file_exists ? '✅ существует' : '❌ НЕ найден') + '</p>';
+          html += '<p><b>notify_channel_id в конфиге:</b> ' + (d.config_notify_channel_id || '(пусто)') + '</p>';
+          if (d.config_target_channel) {
+            html += '<p style="color:green;"><b>✅ Канал из конфига:</b> #' + d.config_target_channel_name + ' (' + d.config_target_channel + ')</p>';
+          } else if (d.config_notify_channel_id) {
+            html += '<p style="color:red;"><b>❌ Канал из конфига не найден на сервере!</b> ' + (d.config_target_channel_error || '') + '</p>';
+          }
+          if (d.fallback_channels_found && d.fallback_channels_found.length) {
+            html += '<p><b>Fallback-каналы (по имени):</b><ul>';
+            d.fallback_channels_found.forEach(function (c) {
+              html += '<li>✅ #' + c.name + ' (' + c.id + ')</li>';
+            });
+            html += '</ul></p>';
+          } else {
+            html += '<p style="color:orange;"><b>⚠️ Fallback-каналы (админ-лог/мод-лог/...) не найдены</b></p>';
+          }
+          if (d.admin_role_found) {
+            html += '<p><b>Роль с правами админ (для пинга):</b> ' + d.admin_role_found.name + ' (' + d.admin_role_found.id + ')</p>';
+          } else {
+            html += '<p style="color:orange;"><b>⚠️ Нет роли с правами админ</b> — пинг не будет отправлен</p>';
+          }
+          if (d.guild_owner_can_dm) {
+            html += '<p><b>Владелец сервера (для DM fallback):</b> ' + d.guild_owner_can_dm.name + ' (' + d.guild_owner_can_dm.id + ')</p>';
+          }
+          html += '<hr><p style="background:#fff8dc; padding:10px; border-radius:6px;"><b>💡 Рекомендация:</b><br>' + d.recommendation + '</p>';
+          html += '<p style="font-size:12px; color:#666; margin-top:8px;">Для подробностей ищите в логах бота строки <code>[TICKET-NOTIFY]</code></p>';
+          html += '</div>';
+          box.innerHTML = html;
+        })
+        .catch(function (e) {
+          box.innerHTML = '<div style="padding:12px; background:#ffe; border:1px solid #f99; border-radius:6px;">❌ Ошибка запроса: ' + e + '</div>';
+        });
+    });
+
+    loadNotifyGuilds();
+
+    // ── TICKET PERMISSIONS (Системы и Роли) ──────────────────────────────
+    var permStatus = $('perm-save-status');
+    var rolesStatus = $('roles-save-status');
+
+    function setPermStatus(text, isError) {
+      permStatus.textContent = text || '';
+      permStatus.style.color = isError ? '#e74c3c' : '#2ecc71';
+      if (text) setTimeout(function () { permStatus.textContent = ''; }, 1800);
+    }
+
+    function setRolesStatus(text, isError) {
+      rolesStatus.textContent = text || '';
+      rolesStatus.style.color = isError ? '#e74c3c' : '#2ecc71';
+      if (text) setTimeout(function () { rolesStatus.textContent = ''; }, 1800);
+    }
+
+    function updateRoleStats() {
+      var modSel = $('mod-roles');
+      var ownerSel = $('owner-roles');
+      var modCount = modSel ? Array.from(modSel.selectedOptions).length : 0;
+      var ownerCount = ownerSel ? Array.from(ownerSel.selectedOptions).length : 0;
+      var mc = $('mod-count');
+      var oc = $('owner-count');
+      var tr = $('total-roles');
+      if (mc) mc.textContent = modCount;
+      if (oc) oc.textContent = ownerCount;
+      if (tr) tr.textContent = modCount + ownerCount;
+    }
+
+    function getSelectedGuildId() {
+      var sel = $('notify-guild');
+      return sel ? sel.value : null;
+    }
+
+    function loadPermissions() {
+      var guildId = getSelectedGuildId();
+      if (!guildId) return;
+
+      fetch('/api/guild/' + guildId + '/ticket-permissions', { credentials: 'same-origin' })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (!d.success) return;
+          var cfg = d.config || {};
+          var sys = cfg.systems || {};
+          var settings = cfg.settings || {};
+
+          // Системы
+          $('sys-ai').checked = sys.ai_enabled !== false;
+          $('sys-rate').checked = sys.rate_limiter !== false;
+          $('sys-autoclose').checked = sys.auto_close !== false;
+          $('sys-feedback').checked = sys.feedback !== false;
+          $('sys-progress').checked = sys.progress_indicator !== false;
+          $('sys-complaint').checked = sys.complaint_system !== false;
+
+          // Настройки параметров
+          $('ai-confidence').value = settings.ai_confidence || 50;
+          $('ai-max-messages').value = settings.ai_max_messages || 10;
+          $('rate-24h').value = settings.rate_24h || 3;
+          $('rate-cooldown').value = settings.rate_cooldown || 60;
+          $('rate-week').value = settings.rate_week || 10;
+          $('autoclose-hours').value = settings.autoclose_hours || 24;
+          $('autoclose-interval').value = settings.autoclose_interval || 60;
+          $('feedback-timeout').value = settings.feedback_timeout || 30;
+          $('feedback-require-comment').checked = settings.feedback_require_comment || false;
+          $('progress-update').value = settings.progress_update || 100;
+          $('complaint-max-scan').value = settings.complaint_max_scan || 1000;
+          $('complaint-appeal').checked = settings.complaint_appeal !== false;
+
+          // Главные настройки
+          if (settings.enabled !== false) $('tog-enabled').classList.add('on');
+          else $('tog-enabled').classList.remove('on');
+
+          $('category').value = settings.category_id || '';
+          $('channel').value = settings.channel_id || '';
+          $('limit').value = settings.limit_per_user || 1;
+          $('autoclose').value = settings.autoclose_mins || 0;
+
+          // Контент панели
+          $('title').value = settings.panel_title || '🎫 ПОДДЕРЖКА';
+          $('description').value = settings.panel_description || 'Нажмите кнопку ниже чтобы открыть тикет';
+          $('color').value = settings.panel_color || '#5865F2';
+
+          // Логи
+          $('log-channel').value = settings.log_channel_id || '';
+          $('transcript-channel').value = settings.transcript_channel_id || '';
+          $('log-actions').value = settings.log_actions || 'all';
+
+          // Уведомления
+          if (settings.dm_notifications !== false) $('tog-dm').classList.add('on');
+          else $('tog-dm').classList.remove('on');
+
+          $('dm-open').value = settings.dm_on_open || '1';
+          $('dm-close').value = settings.dm_on_close || '1';
+
+          // Роли
+          var roles = cfg.roles || {};
+          var modRoles = roles.mod_roles || [];
+          var ownerRoles = roles.owner_roles || [];
+
+          var modSel = $('mod-roles');
+          var ownerSel = $('owner-roles');
+
+          Array.from(modSel.options).forEach(function (opt) {
+            opt.selected = modRoles.indexOf(opt.value) !== -1;
+          });
+
+          Array.from(ownerSel.options).forEach(function (opt) {
+            opt.selected = ownerRoles.indexOf(opt.value) !== -1;
+          });
+
+          updateRoleStats();
+        })
+        .catch(function (e) { console.error('loadPermissions error:', e); });
+    }
+    function loadRolesAndChannels() {
+      var guildId = getSelectedGuildId();
+      if (!guildId) return;
+
+      var p1 = fetch('/api/guild/' + guildId + '/roles', { credentials: 'same-origin' }).then(function (r) { return r.json(); });
+      var p2 = fetch('/api/guild/' + guildId + '/channels', { credentials: 'same-origin' }).then(function (r) { return r.json(); });
+
+      Promise.all([p1, p2])
+        .then(function (results) {
+          var roles = results[0];
+          var channels = results[1];
+
+          // 1. Наполнение ролей
+          if (roles && Array.isArray(roles)) {
+            var modSel = $('mod-roles');
+            var ownerSel = $('owner-roles');
+            modSel.innerHTML = '';
+            ownerSel.innerHTML = '';
+
+            roles.forEach(function (role) {
+              var opt1 = document.createElement('option');
+              opt1.value = role.id;
+              opt1.textContent = role.name;
+              opt1.style.color = role.color;
+              modSel.appendChild(opt1);
+
+              var opt2 = document.createElement('option');
+              opt2.value = role.id;
+              opt2.textContent = role.name;
+              opt2.style.color = role.color;
+              ownerSel.appendChild(opt2);
+            });
+          }
+
+          // 2. Наполнение каналов
+          if (channels && Array.isArray(channels)) {
+            var catSel = $('category');
+            var chSel = $('channel');
+            var logSel = $('log-channel');
+            var trSel = $('transcript-channel');
+
+            if (catSel) catSel.innerHTML = '<option value="">Не выбрано</option>';
+            if (chSel) chSel.innerHTML = '<option value="">Не выбрано</option>';
+            if (logSel) logSel.innerHTML = '<option value="">Не выбрано</option>';
+            if (trSel) trSel.innerHTML = '<option value="">Не выбрано</option>';
+
+            channels.forEach(function (c) {
+              var opt = document.createElement('option');
+              opt.value = c.id;
+              opt.textContent = c.name;
+
+              if (c.type === 'category') {
+                if (catSel) catSel.appendChild(opt);
+              } else if (c.type === 'text') {
+                if (chSel) chSel.appendChild(opt.cloneNode(true));
+                if (logSel) logSel.appendChild(opt.cloneNode(true));
+                if (trSel) trSel.appendChild(opt.cloneNode(true));
+              }
+            });
+          }
+
+          // 3. Загрузка сохраненных настроек
+          loadPermissions();
+        })
+        .catch(function (e) { console.error('loadRolesAndChannels error:', e); });
+    }
+
+    function saveAllConfig(onSuccess, onError) {
+      var guildId = getSelectedGuildId();
+      if (!guildId) { onError('Выберите сервер'); return; }
+
+      // Системы
+      var systems = {
+        ai_enabled: $('sys-ai').checked,
+        rate_limiter: $('sys-rate').checked,
+        auto_close: $('sys-autoclose').checked,
+        feedback: $('sys-feedback').checked,
+        progress_indicator: $('sys-progress').checked,
+        complaint_system: $('sys-complaint').checked,
+      };
+
+      // Роли
+      var modSel = $('mod-roles');
+      var ownerSel = $('owner-roles');
+      var modRoles = Array.from(modSel.selectedOptions).map(function (o) { return o.value; });
+      var ownerRoles = Array.from(ownerSel.selectedOptions).map(function (o) { return o.value; });
+      var roles = {
+        mod_roles: modRoles,
+        owner_roles: ownerRoles,
+      };
+
+      // Настройки параметров
+      var settings = {
+        enabled: $('tog-enabled').classList.contains('on'),
+        category_id: $('category').value || null,
+        channel_id: $('channel').value || null,
+        limit_per_user: parseInt($('limit').value) || 1,
+        autoclose_mins: parseInt($('autoclose').value) || 0,
+
+        ai_confidence: parseInt($('ai-confidence').value) || 50,
+        ai_max_messages: parseInt($('ai-max-messages').value) || 10,
+        rate_24h: parseInt($('rate-24h').value) || 3,
+        rate_cooldown: parseInt($('rate-cooldown').value) || 60,
+        rate_week: parseInt($('rate-week').value) || 10,
+        autoclose_hours: parseInt($('autoclose-hours').value) || 24,
+        autoclose_interval: parseInt($('autoclose-interval').value) || 60,
+        feedback_timeout: parseInt($('feedback-timeout').value) || 30,
+        feedback_require_comment: $('feedback-require-comment').checked,
+        progress_update: parseInt($('progress-update').value) || 100,
+        complaint_max_scan: parseInt($('complaint-max-scan').value) || 1000,
+        complaint_appeal: $('complaint-appeal').checked,
+
+        panel_title: $('title').value || '',
+        panel_description: $('description').value || '',
+        panel_color: $('color').value || '#5865F2',
+
+        log_channel_id: $('log-channel').value || null,
+        transcript_channel_id: $('transcript-channel').value || null,
+        log_actions: $('log-actions').value || 'all',
+
+        dm_notifications: $('tog-dm').classList.contains('on'),
+        dm_on_open: $('dm-open').value || '1',
+        dm_on_close: $('dm-close').value || '1'
+      };
+
+      var payload = {
+        systems: systems,
+        roles: roles,
+        settings: settings
+      };
+
+      fetch('/api/guild/' + guildId + '/ticket-permissions', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (d.success) onSuccess();
+          else onError(d.error || 'неизвестная ошибка');
+        })
+        .catch(function (e) { onError(e.message); });
+    }
+
+    $('btn-perm-save').addEventListener('click', function () {
+      saveAllConfig(
+        function () { setPermStatus('✓ Системы и параметры сохранены'); },
+        function (err) { setPermStatus('Ошибка: ' + err, true); }
+      );
+    });
+
+    $('btn-roles-save').addEventListener('click', function () {
+      saveAllConfig(
+        function () { setRolesStatus('✓ Роли сохранены'); },
+        function (err) { setRolesStatus('Ошибка: ' + err, true); }
+      );
+    });
+
+    $('btn-save').addEventListener('click', function () {
+      saveAllConfig(
+        function () { showToast('Все настройки успешно сохранены!', true); },
+        function (err) { showToast('Ошибка: ' + err, false); }
+      );
+    });
+
+    // При смене сервера загрузить всё заново
+    notifyGuild.addEventListener('change', function () {
+      loadRolesAndChannels();
+    });
+
+    // Обновить статистику при изменении выбора ролей
+    $('mod-roles').addEventListener('change', updateRoleStats);
+    $('owner-roles').addEventListener('change', updateRoleStats);
+
+    // Первоначальная загрузка
+    setTimeout(function () {
+      if (getSelectedGuildId()) loadRolesAndChannels();
+    }, 500);
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind);
+  else bind();
+})();
+
 </script>
 {% endblock %}

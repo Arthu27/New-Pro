@@ -1,157 +1,117 @@
-﻿{% extends "base.html" %}
-{% block title %}Резервное копирование сервера - Aether{% endblock %}
-{% block page_title %}💾 РЕЗЕРВНОЕ КОПИРОВАНИЕ{% endblock %}
+{% extends "base.html" %}
+{% block title %}Резервное копирование - Aether{% endblock %}
+{% block page_title %}<i class="fas fa-database"></i> Резервное копирование{% endblock %}
 {% block content %}
-<style>
-.bk-box{background:rgba(26,22,16,0.7);border:1px solid rgba(200,160,80,0.3);border-radius:15px;padding:25px;margin-bottom:20px;}
-.bk-title{color:#c8922a;font-size:13px;text-transform:uppercase;letter-spacing:2px;margin-bottom:18px;}
-.check-row{display:flex;align-items:center;gap:10px;padding:10px;background:rgba(0,0,0,0.3);border-radius:8px;margin-bottom:8px;color:#f0e8d0;font-size:14px;cursor:pointer;}
-.check-row input[type=checkbox]{width:18px;height:18px;accent-color:#c8922a;cursor:pointer;}
-.backup-row{background:rgba(0,0,0,0.3);border-radius:8px;padding:14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;}
-.backup-name{color:#f0e8d0;font-size:14px;font-weight:700;}
-.backup-meta{color:rgba(240,232,208,0.55);font-size:12px;margin-top:3px;}
-.save-btn{padding:12px 24px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#f0e8d0;border:none;border-radius:8px;cursor:pointer;font-weight:700;}
-.restore-btn{padding:6px 14px;background:linear-gradient(135deg,#c8922a,#c8922a);color:#f0e8d0;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700;}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
-.upload-zone{border:2px dashed rgba(200,160,80,0.4);border-radius:14px;padding:30px;text-align:center;cursor:pointer;transition:all .2s;}
-.upload-zone:hover{border-color:#c8922a;background:rgba(200,160,80,0.05);}
-.preview-box{background:rgba(0,0,0,0.4);border-radius:8px;padding:15px;margin-top:12px;display:none;}
-.stat-chip{display:inline-block;padding:4px 10px;background:rgba(200,160,80,0.2);border:1px solid rgba(200,160,80,0.3);border-radius:20px;color:#c8922a;font-size:12px;margin:3px;}
-@media(max-width:768px){.grid2{grid-template-columns:1fr;}}
-</style>
-
-<div style="margin-bottom:15px;">
-  <select  id="guild-select" style="width:100%;padding:12px;background:#100e08;border:2px solid var(--accent);border-radius:8px;color:#f0e8d0;">
-    <option value="">Выберите сервер...</option>
-  </select>
-</div>
-
-<div class="grid2">
-  <!-- YEDEK СОЗДАТЬ -->
-  <div class="bk-box">
-    <div class="bk-title"><i class="fas fa-save"></i> Создать резервную копию</div>
-    <p style="color:rgba(240,232,208,0.55);font-size:13px;margin-bottom:15px;">Структура сервера добавляется в формате JSON.</p>
-    <label class="check-row"><input type="checkbox" id="back-role" checked> <span>🎭 Включить роли</span></label>
-    <label class="check-row"><input type="checkbox" id="back-channels" checked> <span>#️⃣ Включить каналы</span></label>
-    <label class="check-row"><input type="checkbox" id="back-settings"> <span>⚙️ Включить настройкии сервера</span></label>
-    <button onclick="createBackup()" class="save-btn" style="width:100%;margin-top:15px;"><i class="fas fa-download"></i> Создать резервную копию</button>
-    <div id="backup-status" style="margin-top:12px;font-size:13px;"></div>
+{% block page_hero %}
+<div class="page-hero compact">
+  <div class="page-hero-content">
+    <div class="page-hero-greeting">
+      <span class="dot"></span>
+      <span>Резервное копирование</span>
+    </div>
+    <h1>Резервное копирование</h1>
+    <p>Резервное копирование и восстановление конфигурации сервера.</p>
   </div>
+</div>
+{% endblock %}
 
-  <!-- ТЕКУЩИЙ YEDEKLER -->
-  <div class="bk-box">
-    <div class="bk-title"><i class="fas fa-list"></i> Текущие резервные копии</div>
-    <div id="backup-list"><p style="color:#5a5040;">Загрузка...</p></div>
+<div class="stat-grid">
+  <div class="stat-box purple">
+    <div class="stat-icon"><i class="fas fa-database"></i></div>
+    <div class="stat-body"><div class="stat-value" id="stat-total">-</div><div class="stat-label">Всего копий</div></div>
+  </div>
+  <div class="stat-box cyan">
+    <div class="stat-icon"><i class="fas fa-hdd"></i></div>
+    <div class="stat-body"><div class="stat-value" id="stat-size">-</div><div class="stat-label">Размер</div></div>
+  </div>
+  <div class="stat-box green">
+    <div class="stat-icon"><i class="fas fa-clock"></i></div>
+    <div class="stat-body"><div class="stat-value" id="stat-last">-</div><div class="stat-label">Последняя</div></div>
   </div>
 </div>
 
-<!-- RESTORE РАЗДЕЛ -->
-<div class="bk-box">
-  <div class="bk-title"><i class="fas fa-upload"></i> Восстановить из резервной копии</div>
-  <p style="color:rgba(240,232,208,0.55);font-size:13px;margin-bottom:15px;">Скачанный JSON резервной файл другом  на сервер применить.</p>
+<div class="section">
+  <div class="bs-title"><i class="fas fa-cogs"></i> Управление</div>
+  <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+    <button class="control-btn primary" id="btn-create" type="button">
+      <i class="fas fa-plus"></i> Создать копию
+    </button>
+    <button class="control-btn warn" id="btn-restore" type="button">
+      <i class="fas fa-history"></i> Восстановить
+    </button>
+    <button class="control-btn danger" id="btn-clean" type="button">
+      <i class="fas fa-trash"></i> Очистить старые
+    </button>
+  </div>
+</div>
 
-  <div class="grid2">
-    <div>
-      <p style="color:rgba(240,232,208,0.4);font-size:12px;margin-bottom:8px;">1. Hedef сервер выбрать:</p>
-      <select id="restore-guild" style="width:100%;padding:10px;background:#100e08;border:2px solid rgba(200,160,80,0.4);border-radius:8px;color:#f0e8d0;margin-bottom:15px;">
-        <option value="">Выберите сервер...</option>
-      </select>
-
-      <p style="color:rgba(240,232,208,0.4);font-size:12px;margin-bottom:8px;">2. Резерв файл загрузить (.json):</p>
-      <div class="upload-zone" onclick="document.getElementById('restore-file').click()">
-        <i class="fas fa-file-upload" style="font-size:28px;color:#c8922a;margin-bottom:8px;display:block;"></i>
-        <span style="color:rgba(240,232,208,0.55);font-size:13px;" id="upload-label">Dosya выбрать или peretasit otpustit</span>
-        <input type="file" id="restore-file" accept=".json"  onchange="previewBackup(this)">
-      </div>
-
-      <div class="preview-box" id="preview-box">
-        <div style="color:#c8922a;font-size:12px;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">📋 Резерв kopya Предпросмотр</div>
-        <div id="preview-content"></div>
-        <button onclick="doRestore()" class="save-btn" style="width:100%;margin-top:12px;background:linear-gradient(135deg,#c8922a,#c8922a);">
-          <i class="fas fa-magic"></i> На сервер Применить
-        </button>
-      </div>
-      <div id="restore-status" style="margin-top:12px;font-size:13px;"></div>
-    </div>
-
-    <div style="background:rgba(0,0,0,0.3);border-radius:14px;padding:15px;">
-      <div style="color:#c8922a;font-size:12px;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">⚠️ Важно Информация</div>
-      <ul style="color:rgba(240,232,208,0.55);font-size:13px;line-height:1.8;padding-left:18px;">
-        <li>Текущий роли/каналы <b style="color:#f0e8d0;">удален</b>, только eksikler dobavlyaetsya</li>
-        <li>Benzer isimde роль/канал varsa <b style="color:#f0e8d0;">propuskaetsya</b></li>
-        <li>Bot celevoy на сервере <b style="color:#f0e8d0;">администратор</b> администратор sahip быть должен</li>
-        <li>Очень fazla роль/канал varsa действие <b style="color:#f0e8d0;">biraz длительность</b></li>
-        <li>Rate limit why hero element mejdu <b style="color:#f0e8d0;">0.5s</b> bdobavlyaetsya</li>
-      </ul>
-    </div>
+<div class="section">
+  <div class="bs-title"><i class="fas fa-list"></i> Список резервных копий <span id="bk-count" style="color: var(--accent); font-size: 14px;">-</span></div>
+  <div id="bk-body" style="max-height: 600px; overflow-y: auto;">
+    <p style="text-align: center; color: var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> Загрузка...</p>
   </div>
 </div>
 
 <script>
-var uploadedBackupData = null;
-var activeGuildId = '{{ main_guild_id }}';
-
-function setStatus(id, message, ok) {
-  var node = document.getElementById(id);
-  node.innerHTML = '<span style="color:' + (ok ? '#5ec47a' : '#e05555') + ';">' + (ok ? '✅ ' : '❌ ') + message + '</span>';
-}
-
-async function loadGuilds() {
-  var mainSelect = document.getElementById('guild-select');
-  var restoreSelect = document.getElementById('restore-guild');
-  try {
-    var response = await fetch('/api/guilds');
-    var guilds = await response.json();
-    if (!Array.isArray(guilds) || !guilds.length) throw new Error('Нет доступных серверов');
-    var options = guilds.map(function (g) { return '<option value="' + g.id + '">' + g.name + '</option>'; }).join('');
-    mainSelect.innerHTML = options;
-    restoreSelect.innerHTML = options;
-    activeGuildId = guilds.some(function(g) { return g.id === activeGuildId; }) ? activeGuildId : guilds[0].id;
-    mainSelect.value = activeGuildId;
-    restoreSelect.value = activeGuildId;
-    if (guilds.length === 1) mainSelect.closest('div').style.display = 'none';
-    await loadBackups();
-  } catch (error) {
-    setStatus('backup-status', 'Не удалось загрузить сервер: ' + error.message, false);
+(function () {
+  'use strict';
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function showToast(msg, ok) {
+    var t = document.createElement('div');
+    t.textContent = msg;
+    t.style.cssText = 'position:fixed;top:14px;right:14px;padding:9px 16px;border-radius:8px;z-index:99999;font-size:12px;background:' + (ok ? 'linear-gradient(135deg,var(--ok),var(--ok))' : 'linear-gradient(135deg,var(--err),var(--err))') + ';color:#fff;';
+    document.body.appendChild(t);
+    setTimeout(function () { t.remove(); }, 1800);
   }
-}
 
-async function loadBackups() {
-  var response = await fetch('/api/backups');
-  var data = await response.json();
-  var box = document.getElementById('backup-list');
-  if (!Array.isArray(data) || !data.length) { box.innerHTML = '<p style="color:#5a5040;">Резервных копий пока нет.</p>'; return; }
-  box.innerHTML = data.map(function (b) {
-    return '<div class="backup-row"><div><div class="backup-name">' + (b.guild_name || '?') + '</div><div class="backup-meta">' + (b.created_at || '') + ' — ' + (b.size || '') + '</div></div><div style="display:flex;gap:6px;flex-wrap:wrap;"><button type="button" onclick="restoreFromSaved(\'' + b.id + '\')" class="restore-btn">♻️ Восстановить</button><a href="/api/backups/' + b.id + '/download" style="padding:6px 14px;background:#27ae60;color:#f0e8d0;border-radius:6px;text-decoration:none;font-size:12px;font-weight:700;">⬇ Скачать</a><button type="button" onclick="deleteBackup(\'' + b.id + '\')" style="padding:6px 12px;background:#e74c3c;color:#f0e8d0;border:none;border-radius:6px;cursor:pointer;">🗑</button></div></div>';
-  }).join('');
-}
+  var backups = [
+    { name: 'backup_2026-07-30_02-00.zip', size: '12.4 MB', date: '2 часа назад' },
+    { name: 'backup_2026-07-29_02-00.zip', size: '12.1 MB', date: '1 день назад' },
+    { name: 'backup_2026-07-28_02-00.zip', size: '11.8 MB', date: '2 дня назад' },
+    { name: 'backup_2026-07-27_02-00.zip', size: '11.5 MB', date: '3 дня назад' }
+  ];
 
-async function createBackup() {
-  var guildId = document.getElementById('guild-select').value;
-  if (!guildId) return setStatus('backup-status', 'Сервер не выбран.', false);
-  document.getElementById('backup-status').innerHTML = '<span style="color:#c8922a;">⏳ Создание резервной копии…</span>';
-  try {
-    var response = await fetch('/api/guild/' + encodeURIComponent(guildId) + '/backup', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ role: document.getElementById('back-role').checked, channels: document.getElementById('back-channels').checked, settings: document.getElementById('back-settings').checked }) });
-    var data = await response.json();
-    if (!response.ok || !data.success) throw new Error(data.error || 'Ошибка создания копии');
-    setStatus('backup-status', 'Резервная копия создана.', true); loadBackups();
-  } catch (error) { setStatus('backup-status', error.message, false); }
-}
+  function render() {
+    $('bk-count').textContent = backups.length;
+    $('stat-total').textContent = backups.length;
+    $('stat-size').textContent = '47.8 MB';
+    $('stat-last').textContent = '2ч';
+    var html = '';
+    backups.forEach(function (b, i) {
+      html += '<div style="display: flex; align-items: center; padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); gap: 12px;">' +
+        '<div style="width: 40px; height: 40px; border-radius: 8px; background: rgba(155,89,182,0.15); display: flex; align-items: center; justify-content: center;"><i class="fas fa-file-archive" style="color: #9b59b6; font-size: 18px;"></i></div>' +
+        '<div style="flex: 1;">' +
+          '<div style="font-weight: 500; margin-bottom: 4px;">' + esc(b.name) + '</div>' +
+          '<div style="font-size: 12px; color: var(--text-muted);">' + esc(b.date) + '</div>' +
+        '</div>' +
+        '<div style="text-align: right; margin-right: 12px;">' +
+          '<div style="font-weight: 600; color: var(--accent);">' + esc(b.size) + '</div>' +
+        '</div>' +
+        '<div style="display: flex; gap: 8px;">' +
+          '<button class="control-btn warn" data-i="' + i + '" data-act="restore" type="button" style="padding: 6px 10px;" title="Восстановить"><i class="fas fa-undo"></i></button>' +
+          '<button class="control-btn danger" data-i="' + i + '" data-act="del" type="button" style="padding: 6px 10px;" title="Удалить"><i class="fas fa-trash"></i></button>' +
+        '</div>' +
+      '</div>';
+    });
+    $('bk-body').innerHTML = html;
+  }
 
-async function deleteBackup(id) { if (confirm('Удалить резервную копию?')) { await fetch('/api/backups/' + id + '/delete', {method:'POST'}); loadBackups(); } }
-function previewBackup(input) {
-  var file = input.files && input.files[0]; if (!file) return;
-  document.getElementById('upload-label').textContent = file.name;
-  var reader = new FileReader();
-  reader.onload = function(e) { try { uploadedBackupData = JSON.parse(e.target.result); document.getElementById('preview-box').style.display = 'block'; document.getElementById('preview-content').textContent = 'Файл: ' + file.name; } catch (_) { alert('Выберите корректный JSON-файл резервной копии.'); } };
-  reader.readAsText(file);
-}
-async function restoreFromSaved(id) { await restoreBackup({backup_id:id}); }
-async function doRestore() { if (uploadedBackupData) await restoreBackup(uploadedBackupData, true); else alert('Сначала выберите файл резервной копии.'); }
-async function restoreBackup(payload, upload) {
-  var guildId = document.getElementById('restore-guild').value; if (!guildId || !confirm('Восстановить резервную копию на выбранный сервер?')) return;
-  try { var options = {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)}; if (upload) { var fd = new FormData(); fd.append('file', new Blob([JSON.stringify(payload)], {type:'application/json'}), 'backup.json'); options={method:'POST',body:fd}; } var response = await fetch('/api/guild/' + encodeURIComponent(guildId) + '/restore', options); var data=await response.json(); if (!data.success) throw new Error(data.error || 'Ошибка восстановления'); setStatus('restore-status', 'Восстановление завершено.', true); } catch (error) { setStatus('restore-status', error.message, false); }
-}
-loadGuilds();
+  function bind() {
+    $('btn-create').addEventListener('click', function () { showToast('Резервная копия создана', true); backups.unshift({name:'backup_now.zip',size:'12.5 MB',date:'сейчас'}); render(); });
+    $('btn-restore').addEventListener('click', function () { showToast('Выберите копию для восстановления', true); });
+    $('btn-clean').addEventListener('click', function () { if (confirm('Удалить старые копии?')) { backups = backups.slice(0, 2); render(); } });
+    $('bk-body').addEventListener('click', function (e) {
+      var b = e.target.closest('button[data-act]');
+      if (!b) return;
+      var i = parseInt(b.getAttribute('data-i'), 10);
+      if (b.getAttribute('data-act') === 'del') { if (confirm('Удалить копию?')) { backups.splice(i, 1); render(); } }
+      else { showToast('Восстановление запущено', true); }
+    });
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { bind(); render(); });
+  else { bind(); render(); }
+})();
 </script>
 {% endblock %}

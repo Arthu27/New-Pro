@@ -1,99 +1,25 @@
 {% extends "base.html" %}
 {% block title %}Канал Управление — Aether{% endblock %}
-{% block page_title %}Канал Управление{% endblock %}
+{% block page_title %}<i class="fas fa-hashtag" ></i> Канал Управление{% endblock %}
 {% block content %}
-<style>
-/* ── Toolbar ── */
-.ch-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap;}
-.ch-select{flex:1;min-width:200px;padding:9px 12px;background:rgba(255,255,255,0.03);border:1px solid rgba(212,168,67,0.16);border-radius:8px;color:#f0e8d0;font-size:13px;font-family:Inter,sans-serif;}
-.ch-select:focus{outline:none;border-color:#c8922a;box-shadow:0 0 0 3px var(--accent-dim);}
-.btn-new{display:inline-flex;align-items:center;gap:7px;padding:9px 18px;background:#c8922a;color:#100e08;border:none;border-radius:99px;cursor:pointer;font-weight:700;font-size:13px;font-family:Inter,sans-serif;transition:all 0.15s;white-space:nowrap;}
-.btn-new:hover{background:#e0a830;transform:translateY(-1px);box-shadow:0 4px 16px var(--accent-glow);}
+{% block page_hero %}
+<div class="page-hero compact">
+  <div class="page-hero-content">
+    <div class="page-hero-greeting">
+      <span class="dot"></span>
+      <span>Канал Управление</span>
+    </div>
+    <h1>Канал Управление</h1>
+    <p>Управление каналами сервера: создание, удаление, изменение.</p>
+  </div>
+</div>
+{% endblock %}
 
-/* ── Stats row ── */
-.ch-stats{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;}
-.ch-stat{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.08);border-radius:14px;padding:12px 18px;display:flex;align-items:center;gap:10px;flex:1;min-width:120px;}
-.ch-stat-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}
-.ch-stat-val{font-size:20px;font-weight:800;color:#f0e8d0;letter-spacing:-0.02em;line-height:1;}
-.ch-stat-lbl{font-size:10px;color:#5a5040;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;}
 
-/* ── Channel list ── */
-.ch-box{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.08);border-radius:14px;overflow:hidden;margin-bottom:16px;}
-.ch-box-header{padding:14px 18px;border-bottom:1px solid rgba(212,168,67,0.07);display:flex;align-items:center;justify-content:space-between;}
-.ch-box-title{font-size:12px;font-weight:600;color:rgba(240,232,208,0.55);text-transform:uppercase;letter-spacing:0.08em;display:flex;align-items:center;gap:7px;}
-.ch-box-count{font-size:11px;color:#5a5040;background:rgba(212,168,67,0.04);padding:2px 8px;border-radius:99px;}
-
-/* Category group */
-.cat-group{border-bottom:1px solid rgba(212,168,67,0.07);overflow-anchor:none;}
-.cat-group:last-child{border-bottom:none;}
-.cat-header{padding:10px 18px;background:rgba(212,168,67,0.04);display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;}
-.cat-header:hover{background:var(--surface2);}
-.cat-name{font-size:11px;font-weight:700;color:rgba(240,232,208,0.55);text-transform:uppercase;letter-spacing:0.1em;flex:1;}
-.cat-toggle{color:#5a5040;font-size:10px;transition:transform 0.2s;}
-.cat-toggle.open{transform:rotate(90deg);}
-.cat-channels{display:none;}
-.cat-channels.open{display:block;}
-
-/* Channel row */
-.ch-row{display:flex;align-items:center;justify-content:space-between;padding:10px 18px 10px 28px;border-bottom:1px solid rgba(212,168,67,0.07);transition:background 0.1s;}
-.ch-row:last-child{border-bottom:none;}
-.ch-row:hover{background:rgba(212,168,67,0.1);}
-.ch-row-left{display:flex;align-items:center;gap:10px;}
-.ch-type-icon{width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;}
-.icon-text{background:rgba(106,176,224,0.12);color:var(--blue);}
-.icon-voice{background:rgba(94,196,122,0.12);color:var(--green);}
-.icon-forum{background:rgba(212,168,67,0.12);color:#c8922a;}
-.ch-name{font-size:13px;font-weight:500;color:#f0e8d0;}
-.ch-badge{font-size:10px;font-weight:600;padding:2px 7px;border-radius:99px;text-transform:uppercase;letter-spacing:0.05em;}
-.badge-text{background:rgba(106,176,224,0.1);color:var(--blue);border:1px solid rgba(106,176,224,0.2);}
-.badge-voice{background:rgba(94,196,122,0.1);color:var(--green);border:1px solid rgba(94,196,122,0.2);}
-.badge-forum{background:rgba(212,168,67,0.1);color:#c8922a;border:1px solid rgba(212,168,67,0.2);}
-.del-btn{width:28px;height:28px;display:flex;align-items:center;justify-content:center;background:transparent;border:1px solid transparent;border-radius:7px;cursor:pointer;color:#5a5040;font-size:11px;transition:all 0.15s;opacity:0;}
-.ch-row:hover .del-btn{opacity:1;}
-.del-btn:hover{background:rgba(224,85,85,0.12);border-color:rgba(224,85,85,0.25);color:var(--red);}
-
-/* Uncategorized rows (no еnt) */
-.ch-row-root{padding-left:18px;}
-
-/* Empty */
-.ch-empty{padding:40px;text-align:center;color:#5a5040;}
-.ch-empty i{font-size:28px;opacity:0.3;display:block;margin-bottom:10px;}
-
-/* ── Category drawer: fixed overlay, does not change page height or scroll ── */
-.category-drawer{display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.65);backdrop-filter:blur(3px);}
-.category-drawer.open{display:block;}
-.category-drawer-panel{position:absolute;right:0;top:0;height:100%;width:min(460px,92vw);overflow-y:auto;background:#1a1610;border-left:1px solid rgba(212,168,67,.3);box-shadow:-18px 0 50px rgba(0,0,0,.55);padding:22px;}
-.category-drawer-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-bottom:16px;margin-bottom:10px;border-bottom:1px solid rgba(212,168,67,.16);color:#f0e8d0;font-weight:700;}
-.category-drawer-close{background:transparent;border:1px solid rgba(212,168,67,.25);color:#f0e8d0;border-radius:8px;width:32px;height:32px;cursor:pointer;}
-.category-drawer .cat-channels{display:block;}
-/* ── Modal pencere ── */
-.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(6px);z-index:9999;align-items:center;justify-content:center;}
-.modal-overlay.open{display:flex;}
-.modal-card{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.16);border-radius:14px;padding:28px;width:420px;max-width:92vw;box-shadow:0 24px 80px rgba(0,0,0,0.6);}
-.modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;}
-.modal-head h3{font-size:16px;font-weight:700;color:#f0e8d0;letter-spacing:-0.02em;}
-.modal-close{width:28px;height:28px;display:flex;align-items:center;justify-content:center;background:transparent;border:1px solid rgba(212,168,67,0.08);border-radius:7px;cursor:pointer;color:#5a5040;font-size:13px;transition:all 0.15s;}
-.modal-close:hover{background:rgba(212,168,67,0.04);color:#f0e8d0;}
-.field-label{font-size:11px;font-weight:600;color:rgba(240,232,208,0.55);text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:6px;}
-.field-input{width:100%;padding:9px 12px;background:rgba(255,255,255,0.03);border:1px solid rgba(212,168,67,0.16);border-radius:8px;color:#f0e8d0;font-size:13px;font-family:Inter,sans-serif;margin-bottom:14px;box-sizing:border-box;transition:border-color 0.15s;}
-.field-input:focus{outline:none;border-color:#c8922a;box-shadow:0 0 0 3px var(--accent-dim);}
-.type-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:18px;}
-.type-opt{padding:10px 8px;background:rgba(255,255,255,0.03);border:1px solid rgba(212,168,67,0.16);border-radius:9px;cursor:pointer;text-align:center;transition:all 0.15s;}
-.type-opt:hover{border-color:rgba(212,168,67,0.2);background:rgba(212,168,67,0.04);}
-.type-opt.selected{border-color:#c8922a;background:rgba(212,168,67,0.1);}
-.type-opt-icon{font-size:18px;margin-bottom:5px;}
-.type-opt-lbl{font-size:11px;font-weight:600;color:rgba(240,232,208,0.55);}
-.type-opt.selected .type-opt-lbl{color:#e0a830;}
-.modal-actions{display:flex;gap:8px;}
-.btn-confirm{flex:1;padding:10px;background:#c8922a;color:#100e08;border:none;border-radius:99px;cursor:pointer;font-weight:700;font-size:13px;font-family:Inter,sans-serif;transition:all 0.15s;}
-.btn-confirm:hover{background:#e0a830;}
-.btn-cancel{flex:1;padding:10px;background:transparent;color:rgba(240,232,208,0.55);border:1px solid rgba(212,168,67,0.08);border-radius:99px;cursor:pointer;font-weight:600;font-size:13px;font-family:Inter,sans-serif;transition:all 0.15s;}
-.btn-cancel:hover{background:rgba(212,168,67,0.04);color:#f0e8d0;}
-</style>
 
 <!-- Toolbar -->
 <div class="ch-toolbar">
-  <select id="guild-select"  class="ch-select">
+  <select id="guild-select" class="ch-select">
     <option value="">Выберите сервер...</option>
   </select>
   <button class="btn-new" id="btnNewChannel" type="button">
@@ -102,7 +28,7 @@
 </div>
 
 <!-- Stats -->
-<div class="ch-stats" id="ch-stats" >
+<div class="ch-stats" id="ch-stats">
   <div class="ch-stat">
     <div class="ch-stat-icon icon-text"><i class="fas fa-hashtag"></i></div>
     <div><div class="ch-stat-val" id="stat-text">0</div><div class="ch-stat-lbl">Текст</div></div>
@@ -112,16 +38,16 @@
     <div><div class="ch-stat-val" id="stat-voice">0</div><div class="ch-stat-lbl">Голос</div></div>
   </div>
   <div class="ch-stat">
-    <div class="ch-stat-icon" style="background:rgba(212,168,67,0.12);color:#c8922a;"><i class="fas fa-folder"></i></div>
+    <div class="ch-stat-icon" ><i class="fas fa-folder"></i></div>
     <div><div class="ch-stat-val" id="stat-cat">0</div><div class="ch-stat-lbl">Категория</div></div>
   </div>
   <div class="ch-stat">
-    <div class="ch-stat-icon" style="background:rgba(212,168,67,0.1);color:#e0a830;"><i class="fas fa-layer-group"></i></div>
+    <div class="ch-stat-icon" ><i class="fas fa-layer-group"></i></div>
     <div><div class="ch-stat-val" id="stat-total">0</div><div class="ch-stat-lbl">Всего</div></div>
   </div>
 </div>
 
-<!-- Channel list -->
+<!-- Канал listesi — kitap gibi, kategoriler collapsed, scroll'suz -->
 <div class="ch-box" id="ch-box">
   <div class="ch-box-header">
     <div class="ch-box-title"><i class="fas fa-list"></i> Список каналов</div>
@@ -133,17 +59,10 @@
 </div>
 
 <!-- Modal pencere -->
-<div id="category-drawer" class="category-drawer" aria-hidden="true">
-  <aside class="category-drawer-panel" role="dialog" aria-modal="true" aria-label="Каналы категории">
-    <div class="category-drawer-head"><span id="category-drawer-title">Каналы категории</span><button type="button" class="category-drawer-close" id="category-drawer-close"><i class="fas fa-times"></i></button></div>
-    <div id="category-drawer-content"></div>
-  </aside>
-</div>
-
 <div id="modal" class="modal-overlay">
   <div class="modal-card">
     <div class="modal-head">
-      <h3><i class="fas fa-plus-circle" style="color:#c8922a;margin-right:8px;"></i>Новый Канал</h3>
+      <h3><i class="fas fa-plus-circle"   style="margin-right: 8px;"></i>Новый Канал</h3>
       <button class="modal-close" id="btnCloseModal" type="button"><i class="fas fa-times"></i></button>
     </div>
     <label class="field-label">Название канала</label>
@@ -178,20 +97,15 @@
   var MAIN_GID = '{{ main_guild_id }}';
   var selectedGuild = MAIN_GID;
 
-  // Scroll restore для: data attribute с sakla
-  // The panel itself is scrollable on desktop, while mobile uses window scroll.
-  // Preserve both positions whenever a channel list is rendered.
-  function getScroll() {
-    var mc = document.getElementById('main-content');
-    return { panel: mc ? mc.scrollTop : 0, page: window.scrollY || window.pageYOffset || 0 };
-  }
-  function setScroll(position) {
-    var mc = document.getElementById('main-content');
-    if (mc) mc.scrollTop = position.panel;
-    window.scrollTo(0, position.page);
+  function $(id) { return document.getElementById(id); }
+
+  function escapeAttr(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/'/g, '&#39;').replace(/"/g, '&quot;');
   }
 
-  function $(id) { return document.getElementById(id); }
+  function escapeHtml(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
 
   function selectType(val, el) {
     document.querySelectorAll('.type-opt').forEach(function (o) { o.classList.remove('selected'); });
@@ -199,12 +113,28 @@
     $('ch-type').value = val;
   }
 
-  async function loadChannels(preserveScroll) {
-    if (!selectedGuild) return;
+  function renderRow(ch, isRoot) {
+    var icon, iconClass, badgeClass, badgeLabel;
+    if (ch.type === 'text') {
+      icon = 'fa-hashtag'; iconClass = 'icon-text'; badgeClass = 'badge-text'; badgeLabel = 'Текст';
+    } else if (ch.type === 'voice') {
+      icon = 'fa-volume-up'; iconClass = 'icon-voice'; badgeClass = 'badge-voice'; badgeLabel = 'Голос';
+    } else {
+      icon = 'fa-comments'; iconClass = 'icon-forum'; badgeClass = 'badge-forum'; badgeLabel = 'Forum';
+    }
+    var rootClass = isRoot ? ' ch-row-root' : '';
+    return '<div class="ch-row' + rootClass + '">' +
+      '<div class="ch-row-left">' +
+        '<div class="ch-type-icon ' + iconClass + '"><i class="fas ' + icon + '"></i></div>' +
+        '<span class="ch-name">' + escapeHtml(ch.name) + '</span>' +
+        '<span class="ch-badge ' + badgeClass + '">' + badgeLabel + '</span>' +
+      '</div>' +
+      '<button class="del-btn" data-action="delete-ch" data-id="' + ch.id + '" data-name="' + escapeAttr(ch.name) + '" type="button"><i class="fas fa-trash"></i></button>' +
+    '</div>';
+  }
 
-    // Сохраняем текущую позицию скролла ПЕРЕД любым рендером,
-    // чтобы избежать скачка наверх при list.innerHTML = html
-    var restoreY = preserveScroll ? getScroll() : 0;
+  async function loadChannels() {
+    if (!selectedGuild) return;
 
     var list = $('channel-list');
     list.innerHTML = '<div class="ch-empty"><i class="fas fa-spinner fa-spin"></i><p>Загрузка...</p></div>';
@@ -230,7 +160,7 @@
         return;
       }
 
-      // Группировка по категориям
+      // Kategorilere gore grupla
       var cats = channels.filter(function (c) { return c.type === 'category'; });
       var grouped = {};
       cats.forEach(function (c) { grouped[c.name] = []; });
@@ -246,109 +176,69 @@
         }
       });
 
+      // Hangi kategorinin acik olacagini localStorage'dan hatirla
+      var openState = {};
+      try {
+        var saved = localStorage.getItem('ch_open_cats_' + selectedGuild);
+        if (saved) openState = JSON.parse(saved) || {};
+      } catch (e) {}
+
       var html = '';
 
-      // Каналы без категории
+      // Kategorisiz каналlar (root)
       if (uncategorized.length) {
-        uncategorized.forEach(function (ch) {
-          html += renderRow(ch, true);
-        });
+        uncategorized.forEach(function (ch) { html += renderRow(ch, true); });
       }
 
-      // Категории с каналами
+      // Kategoriler
       cats.forEach(function (cat) {
         var children = grouped[cat.name] || [];
-        html += '<div class="cat-group">';
-        html += '<div class="cat-header">';
-        html += '<i class="fas fa-folder" style="color:#c8922a;font-size:11px;"></i>';
-        html += '<span class="cat-name">' + cat.name + '</span>';
-        html += '<span style="font-size:10px;color:#5a5040;margin-right:8px;">' + children.length + '</span>';
-        html += '<i class="fas fa-chevron-right cat-toggle open"></i>';
-        html += '<button class="del-btn" data-action="delete-cat" data-id="' + cat.id + '" data-name="' + escapeAttr(cat.name) + '" style="opacity:1;margin-left:4px;" type="button"><i class="fas fa-trash"></i></button>';
+        var isOpen = openState[cat.name] !== false; // default acik
+        var collapsed = isOpen ? '' : ' collapsed';
+        html += '<div class="cat-group' + collapsed + '" data-cat-name="' + escapeAttr(cat.name) + '">';
+        html += '<div class="cat-header" data-toggle-cat>';
+        html += '<i class="fas fa-chevron-down cat-icon"></i>';
+        html += '<span class="cat-name">' + escapeHtml(cat.name) + '</span>';
+        html += '<span class="cat-count">' + children.length + '</span>';
+        html += '<button class="del-btn" data-action="delete-cat" data-id="' + cat.id + '" data-name="' + escapeAttr(cat.name) + '" type="button" onclick="event.stopPropagation()"><i class="fas fa-trash"></i></button>';
         html += '</div>';
         html += '<div class="cat-channels">';
         if (children.length) {
           children.forEach(function (ch) { html += renderRow(ch, false); });
         } else {
-          html += '<div style="padding:10px 28px;font-size:12px;color:#5a5040;font-style:italic;">Пустая категория</div>';
+          html += '<div >Пустая категория</div>';
         }
         html += '</div></div>';
       });
 
-      // Рендер через DocumentFragment, чтобы избежать промежуточного состояния
-      // (когда list пуст между очисткой и заполнением, браузер скроллит вверх)
+      // Tek seferde DOM'a bas (layout titremesi olmasin)
       var frag = document.createDocumentFragment();
       var tmp = document.createElement('div');
       tmp.innerHTML = html;
       while (tmp.firstChild) frag.appendChild(tmp.firstChild);
       list.innerHTML = '';
       list.appendChild(frag);
-
-      // Scroll restore — несколько попыток, чтобы браузер не успел прыгнуть наверх
-      if (preserveScroll) {
-        setScroll(restoreY);
-        requestAnimationFrame(function () { setScroll(restoreY); });
-        requestAnimationFrame(function () {
-          requestAnimationFrame(function () { setScroll(restoreY); });
-        });
-        setTimeout(function () { setScroll(restoreY); }, 0);
-        setTimeout(function () { setScroll(restoreY); }, 30);
-        setTimeout(function () { setScroll(restoreY); }, 100);
-      }
     } catch (e) {
-      list.innerHTML = '<div class="ch-empty"><i class="fas fa-exclamation-triangle"></i><p>Ошибка: ' + e.message + '</p></div>';
+      list.innerHTML = '<div class="ch-empty"><i class="fas fa-exclamation-triangle"></i><p>Ошибка: ' + escapeHtml(e.message) + '</p></div>';
     }
-  }
-
-  function escapeAttr(s) {
-    return String(s).replace(/&/g, '&amp;').replace(/'/g, '&#39;').replace(/"/g, '&quot;');
-  }
-
-  function renderRow(ch, isRoot) {
-    var icon, iconClass, badgeClass, badgeLabel;
-    if (ch.type === 'text') {
-      icon = 'fa-hashtag'; iconClass = 'icon-text'; badgeClass = 'badge-text'; badgeLabel = 'Текст';
-    } else if (ch.type === 'voice') {
-      icon = 'fa-volume-up'; iconClass = 'icon-voice'; badgeClass = 'badge-voice'; badgeLabel = 'Голос';
-    } else {
-      icon = 'fa-comments'; iconClass = 'icon-forum'; badgeClass = 'badge-forum'; badgeLabel = 'Forum';
-    }
-    var rootClass = isRoot ? ' ch-row-root' : '';
-    return '<div class="ch-row' + rootClass + '">' +
-      '<div class="ch-row-left">' +
-        '<div class="ch-type-icon ' + iconClass + '"><i class="fas ' + icon + '"></i></div>' +
-        '<span class="ch-name">' + ch.name + '</span>' +
-        '<span class="ch-badge ' + badgeClass + '">' + badgeLabel + '</span>' +
-      '</div>' +
-      '<button class="del-btn" data-action="delete-ch" data-id="' + ch.id + '" data-name="' + escapeAttr(ch.name) + '" type="button"><i class="fas fa-trash"></i></button>' +
-    '</div>';
   }
 
   function toggleCat(header) {
-    // Book-style accordion: only the selected category is open in the list.
-    // No side drawer and no automatic scroll/navigation is used.
     var group = header.closest('.cat-group');
-    var wasOpen = group.classList.contains('active');
-    document.querySelectorAll('.cat-group.active').forEach(function (item) {
-      item.classList.remove('active');
-      var children = item.querySelector('.cat-channels');
-      var icon = item.querySelector('.cat-toggle');
-      if (children) children.classList.remove('open');
-      if (icon) icon.classList.remove('open');
-    });
-    if (!wasOpen) {
-      group.classList.add('active');
-      var channels = header.nextElementSibling;
-      var toggle = header.querySelector('.cat-toggle');
-      if (channels) channels.classList.add('open');
-      if (toggle) toggle.classList.add('open');
-    }
-  }
-
-  function closeCategoryDrawer() {
-    var drawer = $('category-drawer');
-    drawer.classList.remove('open');
-    drawer.setAttribute('aria-hidden', 'true');
+    if (!group) return;
+    group.classList.toggle('collapsed');
+    // State'i сохранить
+    try {
+      var key = 'ch_open_cats_' + selectedGuild;
+      var state = {};
+      var saved = localStorage.getItem(key);
+      if (saved) state = JSON.parse(saved) || {};
+      var name = group.getAttribute('data-cat-name');
+      if (name) {
+        state[name] = !group.classList.contains('collapsed');
+        localStorage.setItem(key, JSON.stringify(state));
+      }
+    } catch (e) {}
   }
 
   function openNameModal() {
@@ -368,7 +258,7 @@
         body: JSON.stringify({ name: name, type: type })
       });
       var d = await r.json();
-      if (d.success) { closeModal(); loadChannels(true); }
+      if (d.success) { closeModal(); loadChannels(); }
       else alert('Ошибка: ' + (d.error || 'Неизвестно'));
     } catch (e) { alert('Ошибка запроса: ' + e.message); }
   }
@@ -378,20 +268,20 @@
     try {
       var r = await fetch('/api/guild/' + selectedGuild + '/channels/' + id + '/delete', { method: 'POST' });
       var d = await r.json();
-      if (d.success) loadChannels(true);
+      if (d.success) loadChannels();
       else alert('Ошибка: ' + (d.error || 'Неизвестно'));
     } catch (e) { alert('Ошибка запроса: ' + e.message); }
   }
 
   function bindEvents() {
-    // Выбор типа канала
+    // Tur secimi
     document.querySelectorAll('.type-opt').forEach(function (el) {
       el.addEventListener('click', function () {
         selectType(el.getAttribute('data-type'), el);
       });
     });
 
-    // Кнопка нового канала
+    // Modal butonlari
     var btnNew = $('btnNewChannel');
     if (btnNew) btnNew.addEventListener('click', openNameModal);
     var btnClose = $('btnCloseModal');
@@ -401,40 +291,24 @@
     var btnCreate = $('btnCreateChannel');
     if (btnCreate) btnCreate.addEventListener('click', createChannel);
 
-    // The shared live-guild resolver dispatches this event after it has selected
-    // the bot's current guild. Do not reset the scroll position in that case.
+    // Guild degisince каналlari новыйden yukle
     var gs = $('guild-select');
     if (gs) gs.addEventListener('change', function () {
       var nextGuild = gs.value || MAIN_GID;
-      // base.html populates the selector after this page has already started its
-      // first load. Reloading the same guild created a late second render that
-      // reset the list to the top while the user was clicking a category.
       if (nextGuild === selectedGuild) return;
       selectedGuild = nextGuild;
-      loadChannels(true);
+      loadChannels();
     });
 
-    // Клик по backdrop модала
+    // Modal backdrop tiklaninca закрыть
     var modal = $('modal');
     if (modal) modal.addEventListener('click', function (e) { if (e.target === modal) closeModal(); });
-    $('category-drawer-close').addEventListener('click', closeCategoryDrawer);
-    $('category-drawer').addEventListener('click', function (e) { if (e.target === this) closeCategoryDrawer(); });
 
-    // Keep the viewport fixed when a category/channel is clicked.  Some browsers
-    // recalculate the scroll anchor after an expanded category changes height.
+    // Канал listesi: kategori toggle + удалитьme
     var list = $('channel-list');
     if (list) {
-      var clickPosition = null;
-      function restoreClickPosition() {
-        if (!clickPosition) return;
-        var position = clickPosition;
-        // Restore in the same render frame. Delayed corrections caused a visible
-        // "jump up, then back" effect, which is exactly what we must avoid.
-        setScroll(position);
-        requestAnimationFrame(function () { setScroll(position); });
-      }
-      list.addEventListener('pointerdown', function () { clickPosition = getScroll(); }, true);
       list.addEventListener('click', function (e) {
+        // Once удалитьme butonunu kontrol et (event.stopPropagation с)
         var btn = e.target.closest('button[data-action]');
         if (btn) {
           e.stopPropagation();
@@ -444,10 +318,10 @@
           if (action === 'delete-ch' || action === 'delete-cat') {
             deleteChannel(id, name);
           }
-          restoreClickPosition();
           return;
         }
-        var hdr = e.target.closest('.cat-header');
+        // Потом kategori basligini kontrol et
+        var hdr = e.target.closest('[data-toggle-cat]');
         if (hdr) toggleCat(hdr);
       });
     }
@@ -460,7 +334,7 @@
   }
   function init() {
     bindEvents();
-    loadChannels(false);  // первая загрузка: без восстановления скролла
+    loadChannels();
   }
 })();
 </script>

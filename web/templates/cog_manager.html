@@ -1,61 +1,57 @@
 {% extends "base.html" %}
-{% block title %}Модуль Управление{% endblock %}
-{% block page_title %}🧩 Модуль Управление{% endblock %}
+{% block title %}Менеджер модулей — Aether{% endblock %}
+{% block page_title %}<i class="fas fa-cubes" ></i> Менеджер модулей{% endblock %}
 {% block content %}
-<style>
-.cog-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;}
-.cog-card{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.1);border-radius:12px;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;transition:all 0.2s;}
-.cog-card:hover{border-color:rgba(212,168,67,0.22);}
-.cog-card.loaded{border-left:3px solid #2ed573;}
-.cog-card.unloaded{border-left:3px solid rgba(224,85,85,0.5);opacity:0.7;}
-.cog-name{font-size:13px;font-weight:600;color:#f0e8d0;}
-.cog-status{font-size:10px;margin-top:2px;}
-.cog-status.ok{color:#2ed573;}
-.cog-status.err{color:#e05555;}
-.toggle-btn{padding:5px 14px;border-radius:99px;font-size:11px;font-weight:700;cursor:pointer;border:none;font-family:Inter,sans-serif;transition:all 0.15s;}
-.toggle-btn.unload{background:rgba(224,85,85,0.12);color:#e05555;border:1px solid rgba(224,85,85,0.25);}
-.toggle-btn.unload:hover{background:rgba(224,85,85,0.22);}
-.toggle-btn.load{background:rgba(46,213,115,0.12);color:#2ed573;border:1px solid rgba(46,213,115,0.25);}
-.toggle-btn.load:hover{background:rgba(46,213,115,0.22);}
-.reload-btn{padding:5px 10px;border-radius:99px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid rgba(212,168,67,0.2);background:rgba(212,168,67,0.08);color:#c8922a;font-family:Inter,sans-serif;margin-right:6px;transition:all 0.15s;}
-.reload-btn:hover{background:rgba(212,168,67,0.15);}
-.top-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;}
-</style>
+{% block page_hero %}
+<div class="page-hero compact">
+  <div class="page-hero-content">
+    <div class="page-hero-greeting">
+      <span class="dot"></span>
+      <span>Менеджер модулей</span>
+    </div>
+    <h1>Менеджер модулей</h1>
+    <p>Управление модулями бота: загрузка, выгрузка, перезагрузка.</p>
+  </div>
+</div>
+{% endblock %}
+
+
 
 <div class="top-bar">
-  <div style="font-size:12px;color:rgba(240,232,208,0.4);" id="cog-summary">Загрузка...</div>
-  <button class="btn btn-primary" onclick="reloadAll()" style="font-size:12px;padding:7px 16px;">🔄 Обновить все</button>
+  <div class="summary" id="cog-summary">Загрузка...</div>
+  <button class="btn btn-primary" onclick="reloadAll()"><i class="fas fa-sync"></i> Обновить все</button>
 </div>
 
 <div class="cog-grid" id="cog-grid">
-  <div style="color:rgba(240,232,208,0.3);font-size:13px;">Загрузка...</div>
+  <div >Загрузка...</div>
 </div>
 
 <script>
 var _cogs = [];
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
 async function loadCogs() {
   try {
     var d = await fetch('/api/cogs').then(r => r.json());
     _cogs = d;
     var loaded = d.filter(c => c.loaded).length;
-    document.getElementById('cog-summary').textContent = loaded + ' / ' + d.length + ' модуль загруз';
+    document.getElementById('cog-summary').textContent = loaded + ' / ' + d.length + ' модулей загружено';
     document.getElementById('cog-grid').innerHTML = d.map(function(c) {
-      return '<div class="cog-card ' + (c.loaded ? 'loaded' : 'unloaded') + '" id="cog-' + c.name + '">' +
+      return '<div class="cog-card ' + (c.loaded ? 'loaded' : 'unloaded') + '" id="cog-' + esc(c.name) + '">' +
         '<div>' +
-          '<div class="cog-name">📦 ' + c.name + '</div>' +
-          '<div class="cog-status ' + (c.loaded ? 'ok' : 'err') + '">' + (c.loaded ? '● Загруз' : '○ Загруз Не') + '</div>' +
+          '<div class="cog-name"><i class="fas fa-cube"></i> ' + esc(c.name) + '</div>' +
+          '<div class="cog-status ' + (c.loaded ? 'ok' : 'err') + '"><i class="fas fa-circle"   style="margin-right: 4px;"></i>' + (c.loaded ? 'Загружен' : 'Не загружен') + '</div>' +
         '</div>' +
-        '<div style="display:flex;align-items:center;">' +
-          (c.loaded ? '<button class="reload-btn" onclick="reloadCog(\'' + c.name + '\')">↺</button>' : '') +
-          '<button class="toggle-btn ' + (c.loaded ? 'unload' : 'load') + '" onclick="toggleCog(\'' + c.name + '\',' + c.loaded + ')">' +
-            (c.loaded ? 'Закрыть' : 'Открыть') +
+        '<div  >' +
+          (c.loaded ? '<button class="reload-btn" onclick="reloadCog(\'' + esc(c.name) + '\')" title="Перезагрузить"><i class="fas fa-redo"></i></button>' : '') +
+          '<button class="toggle-btn ' + (c.loaded ? 'unload' : 'load') + '" onclick="toggleCog(\'' + esc(c.name) + '\',' + c.loaded + ')">' +
+            (c.loaded ? 'Выкл.' : 'Вкл.') +
           '</button>' +
         '</div>' +
       '</div>';
     }).join('');
   } catch(e) {
-    document.getElementById('cog-grid').innerHTML = '<div style="color:#e05555;">Загруз: ' + e.message + '</div>';
+    document.getElementById('cog-grid').innerHTML = '<div >Ошибка: ' + esc(e.message) + '</div>';
   }
 }
 
@@ -68,7 +64,7 @@ async function toggleCog(name, isLoaded) {
       body: JSON.stringify({name: 'cogs.' + name})
     }).then(r => r.json());
     if (r.ok) loadCogs();
-    else alert('Ошибка: ' + (r.error || 'Bilinmeyen'));
+    else alert('Ошибка: ' + (r.error || 'Неизвестно'));
   } catch(e) { alert('Ошибка соединения'); }
 }
 
@@ -80,13 +76,13 @@ async function reloadCog(name) {
       body: JSON.stringify({name: 'cogs.' + name})
     }).then(r => r.json());
     if (r.ok) loadCogs();
-    else alert('Ошибка: ' + (r.error || 'Bilinmeyen'));
+    else alert('Ошибка: ' + (r.error || 'Неизвестно'));
   } catch(e) { alert('Ошибка соединения'); }
 }
 
 async function reloadAll() {
   try {
-    var r = await fetch('/api/cogs/reload-all', {method:'POST'}).then(r => r.json());
+    await fetch('/api/cogs/reload-all', {method:'POST'}).then(r => r.json());
     loadCogs();
   } catch(e) {}
 }

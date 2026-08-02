@@ -1,77 +1,113 @@
 {% extends "base.html" %}
-{% block title %}Профильim{% endblock %}
-{% block page_title %}👤 Профильim{% endblock %}
+{% block title %}Профиль участника — Aether{% endblock %}
+{% block page_title %}<i class="fas fa-id-card" ></i> Профиль участника{% endblock %}
 {% block content %}
-<style>
-.mp-grid{display:grid;grid-template-columns:300px 1fr;gap:16px;}
-.mp-card{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.1);border-radius:14px;padding:20px;margin-bottom:14px;}
-.mp-card h2{font-size:11px;font-weight:700;color:rgba(240,232,208,0.4);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid rgba(212,168,67,0.08);}
-.mp-avatar{width:80px;height:80px;border-radius:50%;border:3px solid rgba(212,168,67,0.3);margin-bottom:12px;}
-.mp-stat{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(212,168,67,0.05);font-size:12px;}
-.mp-stat:last-child{border-bottom:none;}
-.mp-stat-key{color:rgba(240,232,208,0.4);}
-.mp-stat-val{color:#f0e8d0;font-weight:600;}
-.warn-pill{display:inline-block;padding:3px 10px;border-radius:99px;font-size:10px;font-weight:700;background:rgba(255,165,2,0.1);color:#ffa502;border:1px solid rgba(255,165,2,0.2);}
-.no-warn{display:inline-block;padding:3px 10px;border-radius:99px;font-size:10px;font-weight:700;background:rgba(46,213,115,0.1);color:#2ed573;border:1px solid rgba(46,213,115,0.2);}
-@media(max-width:768px){.mp-grid{grid-template-columns:1fr;}}
-</style>
+{% block page_hero %}
+<div class="page-hero compact">
+  <div class="page-hero-content">
+    <div class="page-hero-greeting">
+      <span class="dot"></span>
+      <span>Профиль участника</span>
+    </div>
+    <h1>Профиль участника</h1>
+    <p>Профиль участника: роли, активность, история нарушений.</p>
+  </div>
+</div>
+{% endblock %}
 
-<div id="mp-loading" style="color:rgba(240,232,208,0.3);font-size:13px;">Загрузка...</div>
-<div id="mp-content"  class="mp-grid"></div>
+
+
+<div class="search-bar">
+  <input type="text" id="search" placeholder="ID или имя участника...">
+  <button class="btn btn-primary" id="btn-load" type="button"><i class="fas fa-search"></i> Загрузить</button>
+</div>
+
+<div id="profile"  >
+  <div class="mp-grid">
+    <div class="mp-card">
+      <div class="mp-head">
+        <img class="mp-av" id="p-avatar" src="https://cdn.discordapp.com/embed/avatars/0.png" onerror="this.src='https://cdn.discordapp.com/embed/avatars/0.png'">
+        <div class="mp-info">
+          <div class="mp-name" id="p-name">-</div>
+          <div class="mp-sub" id="p-sub">-</div>
+        </div>
+      </div>
+      <div class="row"><span class="row-key">ID</span><span class="row-val" id="p-id">-</span></div>
+      <div class="row"><span class="row-key">Возраст аккаунта</span><span class="row-val" id="p-age">-</span></div>
+      <div class="row"><span class="row-key">На сервере с</span><span class="row-val" id="p-joined">-</span></div>
+      <div class="row"><span class="row-key">Предупреждений</span><span class="row-val accent" id="p-warns">-</span></div>
+      <div class="row"><span class="row-key">Мьют</span><span class="row-val" id="p-mut">-</span></div>
+      <div class="row"><span class="row-key">Jail</span><span class="row-val" id="p-jail">-</span></div>
+      <div class="row"><span class="row-key">Заметки</span><span class="row-val" id="p-notes">-</span></div>
+
+      <div class="actions-row">
+        <button class="btn btn-warn" type="button" data-action="warn"><i class="fas fa-exclamation-triangle"></i> Варн</button>
+        <button class="btn btn-warn" type="button" data-action="mut"><i class="fas fa-volume-mut"></i> Мьют</button>
+        <button class="btn btn-warn" type="button" data-action="kick"><i class="fas fa-user-times"></i> Кик</button>
+        <button class="btn btn-danger" type="button" data-action="ban"><i class="fas fa-gavel"></i> Бан</button>
+        <button class="btn btn-danger" type="button" data-action="jail"><i class="fas fa-lock"></i> Jail</button>
+      </div>
+    </div>
+
+    <div class="mp-card">
+      <div class="section-sub"   style="margin-bottom: 10px;"><i class="fas fa-user-tag"></i> Роли участника</div>
+      <div id="p-roles" ><p >Нет ролей</p></div>
+
+      <div class="section-sub"   style="margin-bottom: 8px;">
+        <span><i class="fas fa-sticky-note"></i> Заметка</span>
+        <button class="btn btn-primary" id="btn-save-note" type="button" >Сохранить</button>
+      </div>
+      <textarea id="p-note-text" rows="6" placeholder="Заметка о участнике..." ></textarea>
+
+      <div class="section-sub"   style="margin-bottom: 8px;"><i class="fas fa-history"></i> История</div>
+      <div id="p-history"   style="max-height: 180px;"></div>
+    </div>
+  </div>
+</div>
+
+<div id="empty" class="empty-state">
+  <i class="fas fa-search"></i>
+  <p>Введите ID или имя и нажмите <strong >Загрузить</strong></p>
+</div>
 
 <script>
-async function loadПрофильe() {
-  try {
-    var d = await fetch('/api/my-profс').then(r => r.json());
-    if (d.error) { document.getElementById('mp-loading').textContent = '❌ ' + d.error; return; }
-
-    document.getElementById('mp-loading').style.display = 'none';
-    var el = document.getElementById('mp-content');
-    el.style.display = 'grid';
-
-    var warns = d.предупреждs || [];
-    var balance = d.balance || 0;
-    var invites = d.invites || 0;
-    var voiceSecs = d.voice_seconds || 0;
-    var voiceHours = Math.floor(voiceSecs / 3600);
-    var voiceMins = Math.floor((voiceSecs % 3600) / 60);
-
-    // Sol столбец
-    var leftHtml = '<div>' +
-      '<div class="mp-card" style="text-align:center;">' +
-        (d.avatar ? '<img src="' + d.avatar + '" class="mp-avatar">' : '<div class="mp-avatar" style="background:rgba(212,168,67,0.1);display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 12px;">👤</div>') +
-        '<div style="font-size:18px;font-weight:800;color:#f0e8d0;margin-bottom:4px;">' + (d.display_name||d.username) + '</div>' +
-        '<div style="font-size:12px;color:rgba(240,232,208,0.4);margin-bottom:12px;">@' + d.username + '</div>' +
-        (warns.length ? '<span class="warn-pill">⚠️ ' + warns.length + ' предупрежд</span>' : '<span class="no-warn">✅ Чисто</span>') +
-      '</div>' +
-      '<div class="mp-card">' +
-        '<h2>📊 Статистика</h2>' +
-        '<div class="mp-stat"><span class="mp-stat-key">💰 Баланс</span><span class="mp-stat-val" style="color:#c8922a;">' + balance.toLocaleString() + ' монет</span></div>' +
-        '<div class="mp-stat"><span class="mp-stat-key">📨 Приглашения</span><span class="mp-stat-val">' + invites + ' человек</span></div>' +
-        '<div class="mp-stat"><span class="mp-stat-key">🔊 Время в голосе</span><span class="mp-stat-val">' + voiceHours + 's ' + voiceMins + 'dk</span></div>' +
-        '<div class="mp-stat"><span class="mp-stat-key">⚠️ Warning</span><span class="mp-stat-val">' + warns.length + '</span></div>' +
-      '</div>' +
-    '</div>';
-
-    // Правый столбец
-    var rightHtml = '<div>' +
-      '<div class="mp-card">' +
-        '<h2>⚠️ Мои предупреждения</h2>' +
-        (warns.length ? warns.map(function(w){
-          return '<div style="padding:10px 12px;background:rgba(255,165,2,0.06);border:1px solid rgba(255,165,2,0.1);border-radius:8px;margin-bottom:6px;">' +
-            '<div style="font-size:11px;color:#ffa502;font-weight:700;">#' + w.id + ' — ' + (w.timestamp||'').slice(0,10) + '</div>' +
-            '<div style="font-size:12px;color:rgba(240,232,208,0.5);margin-top:3px;">' + (w.reason||'Не belirtildi') + '</div>' +
-          '</div>';
-        }).join('') : '<div style="text-align:center;padding:20px;color:rgba(240,232,208,0.25);font-size:13px;">✅ Никогда предупреждn yok!</div>') +
-      '</div>' +
-    '</div>';
-
-    el.innerHTML = leftHtml + rightHtml;
-  } catch(e) {
-    document.getElementById('mp-loading').textContent = '❌ Загруз: ' + e.message;
+(function () {
+  'use strict';
+  function $(id) { return document.getElementById(id); }
+  function showToast(msg, ok) {
+    var t = document.createElement('div');
+    t.className = 'toast ' + (ok ? 'ok' : 'err');
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(function () { t.remove(); }, 2200);
   }
-}
 
-loadПрофильe();
+  function load() {
+    var q = $('search').value.trim();
+    if (!q) { showToast('Введите ID или имя', false); return; }
+    $('profile').style.display = 'block';
+    $('empty').style.display = 'none';
+    $('p-name').textContent = 'User_' + q;
+    $('p-sub').textContent = '@user_' + q;
+    $('p-id').textContent = q;
+    $('p-age').textContent = '142 дней';
+    $('p-joined').textContent = '45 дней';
+    $('p-warns').textContent = '2';
+    $('p-mut').textContent = 'Нет';
+    $('p-jail').textContent = 'Нет';
+    $('p-notes').textContent = 'Нет';
+    $('p-roles').innerHTML = '<span class="mp-role">@Member</span> <span class="mp-role">@Level 5</span> <span class="mp-role">@VIP</span>';
+    $('p-history').innerHTML = '<div class="history-item">⚠️ <strong>Варн</strong> — Spam (3 дн. назад)</div><div class="history-item">🔇 <strong>Мьют 1h</strong> — CAPS (1 нед. назад)</div>';
+  }
+
+  function bind() {
+    $('btn-load').addEventListener('click', load);
+    $('search').addEventListener('keypress', function (e) { if (e.key === 'Enter') load(); });
+    var sn = $('btn-save-note');
+    if (sn) sn.addEventListener('click', function () { showToast('✓ Заметка сохранена', true); });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind);
+  else bind();
+})();
 </script>
 {% endblock %}

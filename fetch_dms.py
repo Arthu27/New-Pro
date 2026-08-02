@@ -5,8 +5,9 @@ import os
 from dotenv import load_dotenv
 import discord
 
-load_dotenv()
-TOKEN = os.getenv('TOKEN')
+_BASE = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(_BASE, ".env"), override=True)
+TOKEN = os.getenv('TOKEN') or os.getenv('TОКEN')
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -14,10 +15,10 @@ client = discord.Client(intents=intents)
 
 @client.event
 async def on_ready():
-    print(f'Bağlandı: {client.user}')
+    print(f'Подключился: {client.user}')
     dm_log = {}
     
-    # Текущий dm_log varsa загрузить (üzerine add)
+    # Текущий dm_log varsa загрузить (юzerine add)
     if os.path.exists('data/dm_log.json'):
         try:
             with open('data/dm_log.json', encoding='utf-8') as f:
@@ -36,12 +37,12 @@ async def on_ready():
                     known_users.add(int(uid))
         except: pass
 
-    # Текущий dm_log'daki userları da add
+    # Текущий dm_log'daki userlarы da add
     for uid in dm_log.keys():
         if uid.isdigit():
             known_users.add(int(uid))
 
-    print(f'Всего {len(known_users)} user сканироватьnacak...')
+    print(f'Всего {len(known_users)} user scannacak...')
 
     for uid in known_users:
         try:
@@ -57,9 +58,9 @@ async def on_ready():
                 })
             if msgs:
                 dm_log[str(uid)] = msgs
-                print(f'  {user.display_name}: {len(msgs)} message')
+                print(f' {user.display_name}: {len(msgs)} message')
         except Exception as e:
-            print(f'  {uid} ошибка: {e}')
+            print(f' {uid} ошибка: {e}')
         await asyncio.sleep(0.5)  # rate limit
 
     os.makedirs('data', exist_ok=True)
@@ -67,7 +68,7 @@ async def on_ready():
         json.dump(dm_log, f, ensure_ascii=False, indent=2)
     
     total = sum(len(v) for v in dm_log.values())
-    print(f'\nToplam {len(dm_log)} user, {total} message сохранено.')
+    print(f'\nВсего {len(dm_log)} user, {total} message сохранено.')
     await client.close()
 
 client.run(TOKEN)

@@ -1,113 +1,611 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Панель Aether{% endblock %}</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/style.css?v=6">
+    <script>
+      // Apply theme before render to prevent FOUC
+      (function(){
+        try {
+          var t = localStorage.getItem('aether_theme') || 'dark';
+          document.documentElement.setAttribute('data-theme', t);
+        } catch(e) {}
+      })();
+    </script>
 </head>
 <body>
-    <div class="sidebar">
-        <h2>🤖 ПАНЕЛЬ AETHER</h2>
-
-        {% if role == 'uye' %}
-        <a href="/member-apply" {% if request.path == '/member-apply' %}class="active"{% endif %}><i class="fas fa-user-shield"></i> Заявка в администрацию</a>
-
-        {% elif role == 'mod' %}
-        <a href="/" {% if request.path == '/' %}class="active"{% endif %}><i class="fas fa-home"></i> Панель управления</a>
-        <a href="/logs" {% if request.path == '/logs' %}class="active"{% endif %}><i class="fas fa-clipboard-list"></i> Логи модерации</a>
-        <a href="/warnings" {% if request.path == '/warnings' %}class="active"{% endif %}><i class="fas fa-exclamation-triangle"></i> Предупреждения</a>
-
-        {% elif role == 'admin' %}
-        <a href="/" {% if request.path == '/' %}class="active"{% endif %}><i class="fas fa-home"></i> Панель управления</a>
-        <a href="/users" {% if request.path == '/users' %}class="active"{% endif %}><i class="fas fa-users"></i> Пользователи</a>
-        <a href="/logs" {% if request.path == '/logs' %}class="active"{% endif %}><i class="fas fa-clipboard-list"></i> Логи модерации</a>
-        <a href="/warnings" {% if request.path == '/warnings' %}class="active"{% endif %}><i class="fas fa-exclamation-triangle"></i> Предупреждения</a>
-        <a href="/commands" {% if request.path == '/commands' %}class="active"{% endif %}><i class="fas fa-terminal"></i> Команды</a>
-        <a href="/staff-apps" {% if request.path == '/staff-apps' %}class="active"{% endif %}><i class="fas fa-user-shield"></i> Заявки в администрацию</a>
-
-                {% elif role == 'owner' or role == 'admin' %}
-        <div style="font-size:10px;color:#8c7b58;font-weight:700;text-transform:uppercase;margin:12px 0 6px 14px;letter-spacing:1px;">🏠 ОСНОВНОЕ</div>
-        <a href="/" {% if request.path == '/' %}class="active"{% endif %}><i class="fas fa-home"></i> Обзор сервера</a>
-        <a href="/guilds" {% if request.path == '/guilds' %}class="active"{% endif %}><i class="fas fa-server"></i> Серверы</a>
-        <a href="/analytics" {% if request.path == '/analytics' %}class="active"{% endif %}><i class="fas fa-chart-line"></i> Аналитика сервера</a>
-        <a href="/bot-stats" {% if request.path == '/bot-stats' %}class="active"{% endif %}><i class="fas fa-robot"></i> Статистика бота</a>
-        <a href="/server-health" {% if request.path == '/server-health' %}class="active"{% endif %}><i class="fas fa-heartbeat"></i> Состояние сервера</a>
-
-        <div style="font-size:10px;color:#8c7b58;font-weight:700;text-transform:uppercase;margin:14px 0 6px 14px;letter-spacing:1px;">🛡️ МОДЕРАЦИЯ И ЗАЩИТА</div>
-        <a href="/logs" {% if request.path == '/logs' %}class="active"{% endif %}><i class="fas fa-clipboard-list"></i> Логи модерации</a>
-        <a href="/warnings" {% if request.path == '/warnings' %}class="active"{% endif %}><i class="fas fa-exclamation-triangle"></i> Предупреждения</a>
-        <a href="/mod-history" {% if request.path == '/mod-history' %}class="active"{% endif %}><i class="fas fa-history"></i> История модерации</a>
-        <a href="/automod-settings" {% if request.path == '/automod-settings' %}class="active"{% endif %}><i class="fas fa-shield-alt"></i> Автомодерация</a>
-        <a href="/antiraid" {% if request.path == '/antiraid' %}class="active"{% endif %}><i class="fas fa-user-shield"></i> Анти-рейд и защита</a>
-        <a href="/member-notes" {% if request.path == '/member-notes' %}class="active"{% endif %}><i class="fas fa-sticky-note"></i> Заметки об участниках</a>
-        <a href="/watchlist-panel" {% if request.path == '/watchlist-panel' %}class="active"{% endif %}><i class="fas fa-eye"></i> Панель наблюдения</a>
-        <a href="/bulk-actions" {% if request.path == '/bulk-actions' %}class="active"{% endif %}><i class="fas fa-layer-group"></i> Массовые действия</a>
-
-        <div style="font-size:10px;color:#8c7b58;font-weight:700;text-transform:uppercase;margin:14px 0 6px 14px;letter-spacing:1px;">👥 УЧАСТНИКИ И РОЛИ</div>
-        <a href="/users" {% if request.path == '/users' %}class="active"{% endif %}><i class="fas fa-users"></i> Пользователи</a>
-        <a href="/roles" {% if request.path == '/roles' %}class="active"{% endif %}"><i class="fas fa-user-tag"></i> Управление ролями</a>
-        <a href="/autorole" {% if request.path == '/autorole' %}class="active"{% endif %}><i class="fas fa-id-badge"></i> Автороли и уровни</a>
-        <a href="/color-roles" {% if request.path == '/color-roles' %}class="active"{% endif %}><i class="fas fa-palette"></i> Цветовые роли</a>
-        <a href="/reaction-roles" {% if request.path == '/reaction-roles' %}class="active"{% endif %}><i class="fas fa-smile"></i> Роли по реакциям</a>
-        <a href="/member-search" {% if request.path == '/member-search' %}class="active"{% endif %}><i class="fas fa-search"></i> Поиск участников</a>
-        <a href="/invite-tracker" {% if request.path == '/invite-tracker' %}class="active"{% endif %}><i class="fas fa-user-plus"></i> Трекер приглашений</a>
-        <a href="/afk-list" {% if request.path == '/afk-list' %}class="active"{% endif %}><i class="fas fa-moon"></i> Список AFK</a>
-
-        <div style="font-size:10px;color:#8c7b58;font-weight:700;text-transform:uppercase;margin:14px 0 6px 14px;letter-spacing:1px;">🎫 ПОДДЕРЖКА И ТИКЕТЫ</div>
-        <a href="/ai-tickets" {% if request.path == '/ai-tickets' %}class="active"{% endif %}><i class="fas fa-ticket-alt"></i> AI Тикеты</a>
-        <a href="/ai_ticket_stats" {% if request.path == '/ai_ticket_stats' %}class="active"{% endif %}><i class="fas fa-chart-pie"></i> Статистика тикетов</a>
-        <a href="/ticket-settings" {% if request.path == '/ticket-settings' %}class="active"{% endif %}><i class="fas fa-cogs"></i> Настройки тикетов</a>
-        <a href="/staff-apps" {% if request.path == '/staff-apps' %}class="active"{% endif %}><i class="fas fa-file-signature"></i> Заявки в модераторы</a>
-
-        <div style="font-size:10px;color:#8c7b58;font-weight:700;text-transform:uppercase;margin:14px 0 6px 14px;letter-spacing:1px;">🤖 КОМАНДЫ И НАСТРОЙКИ</div>
-        <a href="/commands" {% if request.path == '/commands' %}class="active"{% endif %}><i class="fas fa-terminal"></i> Команды бота</a>
-        <a href="/custom-commands" {% if request.path == '/custom-commands' %}class="active"{% endif %}><i class="fas fa-code"></i> Пользовательские команды</a>
-        <a href="/send-command" {% if request.path == '/send-command' %}class="active"{% endif %}><i class="fas fa-paper-plane"></i> Отправить команду</a>
-        <a href="/bot-settings" {% if request.path == '/bot-settings' %}class="active"{% endif %}><i class="fas fa-sliders-h"></i> Настройки бота</a>
-        <a href="/cog-manager" {% if request.path == '/cog-manager' %}class="active"{% endif %}><i class="fas fa-cubes"></i> Менеджер модулей</a>
-        <a href="/settings" {% if request.path == '/settings' %}class="active"{% endif %}><i class="fas fa-cog"></i> Настройки сервера</a>
-        <a href="/rules-editor" {% if request.path == '/rules-editor' %}class="active"{% endif %}><i class="fas fa-gavel"></i> Редактор правил</a>
-        <a href="/welcome-editor" {% if request.path == '/welcome-editor' %}class="active"{% endif %}><i class="fas fa-handshake"></i> Редактор приветствия</a>
-        <a href="/warn-config" {% if request.path == '/warn-config' %}class="active"{% endif %}><i class="fas fa-exclamation"></i> Настройки предупреждений</a>
-
-        <div style="font-size:10px;color:#8c7b58;font-weight:700;text-transform:uppercase;margin:14px 0 6px 14px;letter-spacing:1px;">🎮 ИНТЕРАКТИВ И СТАТИСТИКА</div>
-        <a href="/economy" {% if request.path == '/economy' %}class="active"{% endif %}><i class="fas fa-coins"></i> Экономика сервера</a>
-        <a href="/leveling" {% if request.path == '/leveling' %}class="active"{% endif %}><i class="fas fa-star"></i> Рейтинг и уровни Опыт</a>
-        <a href="/giveaway" {% if request.path == '/giveaway' %}class="active"{% endif %}><i class="fas fa-gift"></i> Розыгрыши</a>
-        <a href="/polls" {% if request.path == '/polls' %}class="active"{% endif %}><i class="fas fa-poll"></i> Опросы</a>
-        <a href="/suggestions" {% if request.path == '/suggestions' %}class="active"{% endif %}><i class="fas fa-lightbulb"></i> Предложения</a>
-        <a href="/starboard" {% if request.path == '/starboard' %}class="active"{% endif %}><i class="fas fa-star"></i> Starboard</a>
-        <a href="/voice-stats" {% if request.path == '/voice-stats' %}class="active"{% endif %}><i class="fas fa-microphone"></i> Голосовая статистика</a>
-        <a href="/duty-panel-web" {% if request.path == '/duty-panel-web' %}class="active"{% endif %}><i class="fas fa-user-clock"></i> Панель дежурств</a>
-        <a href="/scheduled-messages" {% if request.path == '/scheduled-messages' %}class="active"{% endif %}><i class="fas fa-clock"></i> Запланированные сообщения</a>
-
-        <div style="font-size:10px;color:#8c7b58;font-weight:700;text-transform:uppercase;margin:14px 0 6px 14px;letter-spacing:1px;">📜 ЛОГИ И ОБСЛУЖИВАНИЕ</div>
-        <a href="/chat" {% if request.path == '/chat' %}class="active"{% endif %}><i class="fas fa-comments"></i> Чат и логи сообщений</a>
-        <a href="/message-logs" {% if request.path == '/message-logs' %}class="active"{% endif %}><i class="fas fa-comment-alt"></i> Логи сообщений</a>
-        <a href="/panel-logs" {% if request.path == '/panel-logs' %}class="active"{% endif %}><i class="fas fa-list"></i> Логи панели</a>
-        <a href="/backup" {% if request.path == '/backup' %}class="active"{% endif %}><i class="fas fa-database"></i> Резервное копирование</a>
-        <a href="/todo" {% if request.path == '/todo' %}class="active"{% endif %}><i class="fas fa-check-square"></i> Список задач</a>
-        <a href="/yardim" {% if request.path == '/yardim' %}class="active"{% endif %}><i class="fas fa-question-circle"></i> Справка и руководство</a>
-        {% endif %}
+    <!-- Futuristic ambient background layer -->
+    <div class="bg-ambient" aria-hidden="true">
+        <span class="orb orb-1"></span>
+        <span class="orb orb-2"></span>
+        <span class="orb orb-3"></span>
+        <span class="orb orb-4"></span>
+        <div class="bg-grid-plane"></div>
     </div>
 
-    <div id="main-content" class="main-content">
+    <button class="mobile-menu" id="mobileMenu" aria-label="Меню"><i class="fas fa-bars"></i></button>
+
+    <aside class="sidebar" id="sidebar">
+        <a href="/" class="brand">
+            <div class="brand-icon"><i class="fas fa-bolt"></i></div>
+            <div class="brand-text">
+                <div class="brand-title">AETHER</div>
+                <div class="brand-sub">Control Panel</div>
+            </div>
+        </a>
+
+        <div class="sidebar-search">
+            <i class="fas fa-search"></i>
+            <input type="text" id="sidebarSearch" placeholder="Быстрый поиск...">
+            <kbd>⌘K</kbd>
+        </div>
+
+        <nav class="sidebar-nav" id="sidebarNav">
+            {% if role == 'uye' %}
+            <div class="nav-group">
+                <a href="/member-apply" class="nav-link {% if request.path == '/member-apply' %}active{% endif %}">
+                    <i class="fas fa-user-shield"></i>
+                    <span>Заявка в администрацию</span>
+                </a>
+            </div>
+
+            {% elif role == 'мод' %}
+            <div class="nav-group">
+                <a href="/" class="nav-link {% if request.path == '/' %}active{% endif %}"><i class="fas fa-home"></i> <span>Панель управления</span></a>
+                <a href="/logs" class="nav-link {% if request.path == '/logs' %}active{% endif %}"><i class="fas fa-clipboard-list"></i> <span>Логи модерации</span></a>
+                <a href="/warnings" class="nav-link {% if request.path == '/warnings' %}active{% endif %}"><i class="fas fa-exclamation-triangle"></i> <span>Предупреждения</span></a>
+            </div>
+
+            {% elif role == 'админ' %}
+            <div class="nav-group">
+                <a href="/" class="nav-link {% if request.path == '/' %}active{% endif %}"><i class="fas fa-home"></i> <span>Панель управления</span></a>
+                <a href="/users" class="nav-link {% if request.path == '/users' %}active{% endif %}"><i class="fas fa-users"></i> <span>Пользователи</span></a>
+                <a href="/logs" class="nav-link {% if request.path == '/logs' %}active{% endif %}"><i class="fas fa-clipboard-list"></i> <span>Логи модерации</span></a>
+                <a href="/warnings" class="nav-link {% if request.path == '/warnings' %}active{% endif %}"><i class="fas fa-exclamation-triangle"></i> <span>Предупреждения</span></a>
+                <a href="/commands" class="nav-link {% if request.path == '/commands' %}active{% endif %}"><i class="fas fa-terminal"></i> <span>Команды</span></a>
+                <a href="/staff-apps" class="nav-link {% if request.path == '/staff-apps' %}active{% endif %}"><i class="fas fa-user-shield"></i> <span>Заявки в администрацию</span></a>
+            </div>
+
+            {% elif role == 'owner' or role == 'админ' %}
+                <div class="nav-group" data-group="main">
+                    <div class="nav-group-title" data-toggle>
+                        <i class="fas fa-house"></i>
+                        <span>Основное</span>
+                        <i class="fas fa-chevron-down nav-caret"></i>
+                    </div>
+                    <div class="nav-group-items">
+                        <a href="/" class="nav-link {% if request.path == '/' %}active{% endif %}"><i class="fas fa-home"></i> <span>Обзор сервера</span></a>
+                        <a href="/guilds" class="nav-link {% if request.path == '/guilds' %}active{% endif %}"><i class="fas fa-server"></i> <span>Серверы</span></a>
+                        <a href="/analytics" class="nav-link {% if request.path == '/analytics' %}active{% endif %}"><i class="fas fa-chart-line"></i> <span>Аналитика</span></a>
+                        <a href="/bot-stats" class="nav-link {% if request.path == '/bot-stats' %}active{% endif %}"><i class="fas fa-robot"></i> <span>Статистика бота</span></a>
+                        <a href="/server-health" class="nav-link {% if request.path == '/server-health' %}active{% endif %}"><i class="fas fa-heartbeat"></i> <span>Состояние</span></a>
+                    </div>
+                </div>
+
+                <div class="nav-group" data-group="мод">
+                    <div class="nav-group-title" data-toggle>
+                        <i class="fas fa-shield-halved"></i>
+                        <span>Модерация</span>
+                        <i class="fas fa-chevron-down nav-caret"></i>
+                    </div>
+                    <div class="nav-group-items">
+                        <a href="/logs" class="nav-link {% if request.path == '/logs' %}active{% endif %}"><i class="fas fa-clipboard-list"></i> <span>Логи модерации</span></a>
+                        <a href="/temp-moderation" class="nav-link {% if request.path == '/temp-moderation' %}active{% endif %}"><i class="fas fa-clock"></i> <span>Временная модерация</span></a>
+                        <a href="/warnings" class="nav-link {% if request.path == '/warnings' %}active{% endif %}"><i class="fas fa-exclamation-triangle"></i> <span>Предупреждения</span></a>
+                        <a href="/mod-history" class="nav-link {% if request.path == '/mod-history' %}active{% endif %}"><i class="fas fa-history"></i> <span>История</span></a>
+                        <a href="/automod-settings" class="nav-link {% if request.path == '/automod-settings' %}active{% endif %}"><i class="fas fa-shield-alt"></i> <span>Автомодерация</span></a>
+                        <a href="/antiraid" class="nav-link {% if request.path == '/antiraid' %}active{% endif %}"><i class="fas fa-shield-virus"></i> <span>Анти-рейд</span></a>
+                        <a href="/bulk-actions" class="nav-link {% if request.path == '/bulk-actions' %}active{% endif %}"><i class="fas fa-layer-group"></i> <span>Массовые действия</span></a>
+                    </div>
+                </div>
+
+                <div class="nav-group" data-group="members">
+                    <div class="nav-group-title" data-toggle>
+                        <i class="fas fa-users"></i>
+                        <span>Участники</span>
+                        <i class="fas fa-chevron-down nav-caret"></i>
+                    </div>
+                    <div class="nav-group-items">
+                        <a href="/users" class="nav-link {% if request.path == '/users' %}active{% endif %}"><i class="fas fa-users"></i> <span>Пользователи</span></a>
+                        <a href="/member-search" class="nav-link {% if request.path == '/member-search' %}active{% endif %}"><i class="fas fa-search"></i> <span>Поиск</span></a>
+                        <a href="/member-notes" class="nav-link {% if request.path == '/member-notes' %}active{% endif %}"><i class="fas fa-sticky-note"></i> <span>Заметки</span></a>
+                        <a href="/watchlist-panel" class="nav-link {% if request.path == '/watchlist-panel' %}active{% endif %}"><i class="fas fa-eye"></i> <span>Наблюдение</span></a>
+                        <a href="/invite-tracker" class="nav-link {% if request.path == '/invite-tracker' %}active{% endif %}"><i class="fas fa-user-plus"></i> <span>Приглашения</span></a>
+                        <a href="/afk-list" class="nav-link {% if request.path == '/afk-list' %}active{% endif %}"><i class="fas fa-moon"></i> <span>AFK список</span></a>
+                        <a href="/rejoin-roles" class="nav-link {% if request.path == '/rejoin-roles' %}active{% endif %}"><i class="fas fa-undo"></i> <span>Re-Join роли</span></a>
+                    </div>
+                </div>
+
+                <div class="nav-group" data-group="roles">
+                    <div class="nav-group-title" data-toggle>
+                        <i class="fas fa-user-tag"></i>
+                        <span>Роли</span>
+                        <i class="fas fa-chevron-down nav-caret"></i>
+                    </div>
+                    <div class="nav-group-items">
+                        <a href="/roles" class="nav-link {% if request.path == '/roles' %}active{% endif %}"><i class="fas fa-user-tag"></i> <span>Управление ролями</span></a>
+                        <a href="/autorole" class="nav-link {% if request.path == '/autorole' %}active{% endif %}"><i class="fas fa-id-badge"></i> <span>Автороли</span></a>
+                        <a href="/color-roles" class="nav-link {% if request.path == '/color-roles' %}active{% endif %}"><i class="fas fa-palette"></i> <span>Цветовые роли</span></a>
+                        <a href="/reaction-roles" class="nav-link {% if request.path == '/reaction-roles' %}active{% endif %}"><i class="fas fa-smile"></i> <span>Роли по реакциям</span></a>
+                    </div>
+                </div>
+
+                <div class="nav-group" data-group="tickets">
+                    <div class="nav-group-title" data-toggle>
+                        <i class="fas fa-ticket-alt"></i>
+                        <span>Тикеты</span>
+                        <i class="fas fa-chevron-down nav-caret"></i>
+                    </div>
+                    <div class="nav-group-items">
+                        <a href="/ai-tickets" class="nav-link {% if request.path == '/ai-tickets' %}active{% endif %}"><i class="fas fa-ticket-alt"></i> <span>AI Тикеты</span></a>
+                        <a href="/ai_ticket_stats" class="nav-link {% if request.path == '/ai_ticket_stats' %}active{% endif %}"><i class="fas fa-chart-pie"></i> <span>Статистика</span></a>
+                        <a href="/ticket-settings" class="nav-link {% if request.path == '/ticket-settings' %}active{% endif %}"><i class="fas fa-cogs"></i> <span>Настройки</span></a>
+                        <a href="/staff-apps" class="nav-link {% if request.path == '/staff-apps' %}active{% endif %}"><i class="fas fa-file-signature"></i> <span>Заявки</span></a>
+                    </div>
+                </div>
+
+                <div class="nav-group" data-group="bot">
+                    <div class="nav-group-title" data-toggle>
+                        <i class="fas fa-robot"></i>
+                        <span>Бот</span>
+                        <i class="fas fa-chevron-down nav-caret"></i>
+                    </div>
+                    <div class="nav-group-items">
+                        <a href="/commands" class="nav-link {% if request.path == '/commands' %}active{% endif %}"><i class="fas fa-terminal"></i> <span>Команды</span></a>
+                        <a href="/custom-commands" class="nav-link {% if request.path == '/custom-commands' %}active{% endif %}"><i class="fas fa-code"></i> <span>Свои команды</span></a>
+                        <a href="/send-command" class="nav-link {% if request.path == '/send-command' %}active{% endif %}"><i class="fas fa-paper-plane"></i> <span>Отправить</span></a>
+                        <a href="/bot-settings" class="nav-link {% if request.path == '/bot-settings' %}active{% endif %}"><i class="fas fa-sliders-h"></i> <span>Настройки</span></a>
+                        <a href="/cog-manager" class="nav-link {% if request.path == '/cog-manager' %}active{% endif %}"><i class="fas fa-cubes"></i> <span>Модули</span></a>
+                        <a href="/settings" class="nav-link {% if request.path == '/settings' %}active{% endif %}"><i class="fas fa-cog"></i> <span>Сервер</span></a>
+                        <a href="/rules-editor" class="nav-link {% if request.path == '/rules-editor' %}active{% endif %}"><i class="fas fa-gavel"></i> <span>Правила</span></a>
+                        <a href="/welcome-editor" class="nav-link {% if request.path == '/welcome-editor' %}active{% endif %}"><i class="fas fa-handshake"></i> <span>Приветствие</span></a>
+                        <a href="/warn-config" class="nav-link {% if request.path == '/warn-config' %}active{% endif %}"><i class="fas fa-exclamation"></i> <span>Варны</span></a>
+                    </div>
+                </div>
+
+                <div class="nav-group" data-group="community">
+                    <div class="nav-group-title" data-toggle>
+                        <i class="fas fa-gamepad"></i>
+                        <span>Сообщество</span>
+                        <i class="fas fa-chevron-down nav-caret"></i>
+                    </div>
+                    <div class="nav-group-items">
+                        <a href="/economy" class="nav-link {% if request.path == '/economy' %}active{% endif %}"><i class="fas fa-coins"></i> <span>Экономика</span></a>
+                        <a href="/leveling" class="nav-link {% if request.path == '/leveling' %}active{% endif %}"><i class="fas fa-star"></i> <span>Уровни</span></a>
+                        <a href="/giveaway" class="nav-link {% if request.path == '/giveaway' %}active{% endif %}"><i class="fas fa-gift"></i> <span>Розыгрыши</span></a>
+                        <a href="/polls" class="nav-link {% if request.path == '/polls' %}active{% endif %}"><i class="fas fa-poll-h"></i> <span>Опросы</span></a>
+                        <a href="/suggestions" class="nav-link {% if request.path == '/suggestions' %}active{% endif %}"><i class="fas fa-lightbulb"></i> <span>Предложения</span></a>
+                        <a href="/starboard" class="nav-link {% if request.path == '/starboard' %}active{% endif %}"><i class="fas fa-star"></i> <span>Starboard</span></a>
+                        <a href="/voice-stats" class="nav-link {% if request.path == '/voice-stats' %}active{% endif %}"><i class="fas fa-microphone"></i> <span>Голосовая</span></a>
+                        <a href="/duty-panel-web" class="nav-link {% if request.path == '/duty-panel-web' %}active{% endif %}"><i class="fas fa-user-clock"></i> <span>Дежурства</span></a>
+                        <a href="/scheduled-messages" class="nav-link {% if request.path == '/scheduled-messages' %}active{% endif %}"><i class="fas fa-clock"></i> <span>Расписание</span></a>
+                    </div>
+                </div>
+
+                <div class="nav-group" data-group="logs">
+                    <div class="nav-group-title" data-toggle>
+                        <i class="fas fa-file-lines"></i>
+                        <span>Логи</span>
+                        <i class="fas fa-chevron-down nav-caret"></i>
+                    </div>
+                    <div class="nav-group-items">
+                        <a href="/chat" class="nav-link {% if request.path == '/chat' %}active{% endif %}"><i class="fas fa-comments"></i> <span>Чат</span></a>
+                        <a href="/message-logs" class="nav-link {% if request.path == '/message-logs' %}active{% endif %}"><i class="fas fa-comment-alt"></i> <span>Сообщения</span></a>
+                        <a href="/panel-logs" class="nav-link {% if request.path == '/panel-logs' %}active{% endif %}"><i class="fas fa-list"></i> <span>Панель</span></a>
+                        <a href="/backup" class="nav-link {% if request.path == '/backup' %}active{% endif %}"><i class="fas fa-database"></i> <span>Бэкапы</span></a>
+                    </div>
+                </div>
+
+                <div class="nav-group" data-group="content">
+                    <div class="nav-group-title" data-toggle>
+                        <i class="fas fa-palette"></i>
+                        <span>Контент</span>
+                        <i class="fas fa-chevron-down nav-caret"></i>
+                    </div>
+                    <div class="nav-group-items">
+                        <a href="/custom-embeds" class="nav-link {% if request.path == '/custom-embeds' %}active{% endif %}"><i class="fas fa-palette"></i> <span>Embed-ы</span></a>
+                        <a href="/channels" class="nav-link {% if request.path == '/channels' %}active{% endif %}"><i class="fas fa-hashtag"></i> <span>Каналы</span></a>
+                        <a href="/execute-command" class="nav-link {% if request.path == '/execute-command' %}active{% endif %}"><i class="fas fa-bolt"></i> <span>Команда</span></a>
+                    </div>
+                </div>
+
+                <div class="nav-group" data-group="ai">
+                    <div class="nav-group-title" data-toggle>
+                        <i class="fas fa-brain"></i>
+                        <span>AI</span>
+                        <i class="fas fa-chevron-down nav-caret"></i>
+                    </div>
+                    <div class="nav-group-items">
+                        <a href="/ai-chat" class="nav-link {% if request.path == '/ai-chat' %}active{% endif %}"><i class="fas fa-comments"></i> <span>AI Чат</span></a>
+                        <a href="/ai-moderation" class="nav-link {% if request.path == '/ai-moderation' %}active{% endif %}"><i class="fas fa-robot"></i> <span>AI Модерация</span></a>
+                    </div>
+                </div>
+
+                <div class="nav-group" data-group="ops">
+                    <div class="nav-group-title" data-toggle>
+                        <i class="fas fa-server"></i>
+                        <span>Система</span>
+                        <i class="fas fa-chevron-down nav-caret"></i>
+                    </div>
+                    <div class="nav-group-items">
+                        <a href="/bot-diagnostics" class="nav-link {% if request.path == '/bot-diagnostics' %}active{% endif %}"><i class="fas fa-heartbeat"></i> <span>Диагностика</span></a>
+                        <a href="/leveling-admin" class="nav-link {% if request.path == '/leveling-admin' %}active{% endif %}"><i class="fas fa-trophy"></i> <span>Leveling</span></a>
+                    </div>
+                </div>
+
+                <div class="nav-group" data-group="utility">
+                    <div class="nav-group-title" data-toggle>
+                        <i class="fas fa-toolbox"></i>
+                        <span>Утилиты</span>
+                        <i class="fas fa-chevron-down nav-caret"></i>
+                    </div>
+                    <div class="nav-group-items">
+                        <a href="/todo" class="nav-link {% if request.path == '/todo' %}active{% endif %}"><i class="fas fa-check-square"></i> <span>Задачи</span></a>
+                        <a href="/yardim" class="nav-link {% if request.path == '/yardim' %}active{% endif %}"><i class="fas fa-question-circle"></i> <span>Справка</span></a>
+                    </div>
+                </div>
+            {% endif %}
+        </nav>
+
+        <div class="sidebar-foot">
+            <div class="sys-status">
+                <div class="sys-status-row">
+                    <span class="sys-dot"></span>
+                    <span class="sys-label">Система</span>
+                    <span class="sys-val">Online</span>
+                </div>
+                <div class="sys-status-row">
+                    <i class="fas fa-microchip sys-ico"></i>
+                    <span class="sys-label">Uptime</span>
+                    <span class="sys-val mono" id="sysUptime">00:00:00</span>
+                </div>
+                <div class="sys-status-row">
+                    <i class="fas fa-clock sys-ico"></i>
+                    <span class="sys-label">Время</span>
+                    <span class="sys-val mono" id="sysClock">--:--:--</span>
+                </div>
+            </div>
+            <div class="sidebar-version">
+                <i class="fas fa-bolt" ></i>
+                AETHER <span class="mono">v2.0</span> · Core
+            </div>
+        </div>
+    </aside>
+
+    <main id="main-content" class="main-content">
         <div class="navbar">
-            <h1>{% block page_title %}Панель управления ботом{% endblock %}</h1>
-            <div class="user-info">
-                <span>{{ username }}</span>
-                <span class="role-badge">{{ role }}</span>
-                <a href="/logout" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Выход</a>
+            <div class="navbar-left">
+                <h1>{% block page_title %}Панель управления{% endblock %}</h1>
+            </div>
+            <div class="navbar-right">
+                <div class="navbar-clock" title="Текущее время">
+                    <i class="fas fa-clock"></i>
+                    <span id="navClock">--:--:--</span>
+                </div>
+                <button class="nav-icon-btn" title="Поиск (Ctrl+K)" id="globalSearchBtn"><i class="fas fa-search"></i></button>
+                <button class="activity-btn" title="Лента активности" id="activityBtn" aria-label="Activity">
+                    <i class="fas fa-stream"></i>
+                </button>
+                <button class="theme-toggle" title="Сменить тему" id="themeToggle" aria-label="Theme">
+                    <i class="fas fa-sun icon-sun icon-swap" ></i>
+                    <i class="fas fa-moon icon-moon icon-swap" ></i>
+                </button>
+                <button class="nav-icon-btn" title="Уведомления" id="notifBtn"><i class="fas fa-bell"></i><span class="nav-badge live">3</span></button>
+                <button class="nav-icon-btn" title="Полный экран" id="fullscreenBtn"><i class="fas fa-expand"></i></button>
+                <div class="user-pill">
+                    <div class="user-avatar">{{ (username or 'U')[0]|upper }}</div>
+                    <div class="user-info">
+                        <div class="user-name">{{ username }}</div>
+                        <div class="user-role">{{ role }}</div>
+                    </div>
+                    <i class="fas fa-chevron-down user-caret"></i>
+                    <div class="user-menu">
+                        <a href="/change-password"><i class="fas fa-key"></i> Сменить пароль</a>
+                        <a href="/panel-logs"><i class="fas fa-list"></i> Логи панели</a>
+                        <hr>
+                        <a href="/logout" class="logout"><i class="fas fa-sign-out-alt"></i> Выход</a>
+                    </div>
+                </div>
             </div>
         </div>
 
-        {% block content %}{% endblock %}
+        {% block content %}
+{% block page_hero %}{% endblock %}
+{% endblock %}
+    </main>
+
+<!-- Idle indicator (top pulse when user is idle) -->
+<div class="idle-indicator" id="idleIndicator"></div>
+
+<!-- Session timeout warning -->
+<div class="session-warning" id="sessionWarning" role="alert">
+  <div class="session-warning-icon"><i class="fas fa-hourglass-half"></i></div>
+  <div class="session-warning-content">
+    <div class="session-warning-title">Сессия истекает</div>
+    <div class="session-warning-msg">Вы будете автоматически вылогинены через <strong id="sessionCountdown">60</strong> сек.</div>
+  </div>
+  <button class="session-warning-btn" id="sessionStay">Остаться</button>
+</div>
+
+<!-- Activity Feed Drawer -->
+<div class="drawer-backdrop" id="drawerBackdrop"></div>
+<aside class="activity-drawer" id="activityDrawer" aria-label="Лента активности">
+  <div class="activity-drawer-head">
+    <h3>
+      <i class="fas fa-stream"></i>
+      Активность
+      <span class="live-pill"><span class="dot"></span>LIVE</span>
+    </h3>
+    <button class="activity-drawer-close" id="activityClose" title="Закрыть"><i class="fas fa-times"></i></button>
+  </div>
+  <div class="activity-drawer-body" id="activityBody">
+    <div class="activity-drawer-empty">
+      <i class="fas fa-circle-notch fa-spin"></i>
+      <p>Загрузка событий...</p>
     </div>
+  </div>
+  <div class="activity-drawer-foot">
+    <div><span class="pulse-dot"></span><span id="activityLastUpdate">Только что</span></div>
+    <button class="btn-link" id="activityRefresh"><i class="fas fa-sync-alt"></i> Обновить</button>
+  </div>
+</aside>
+
+<!-- Keyboard shortcut palette -->
+<div class="kbd-palette" id="kbdPalette">
+  <div class="kbd-palette-panel">
+    <div class="kbd-palette-search">
+      <i class="fas fa-search"></i>
+      <input type="text" id="kbdPaletteInput" placeholder="Введите команду или название страницы..." autocomplete="off">
+      <span class="kbd-hint">ESC</span>
+    </div>
+    <div class="kbd-palette-results" id="kbdPaletteResults"></div>
+    <div class="kbd-palette-foot">
+      <div><span class="kbd-hint">↑↓</span> Навигация</div>
+      <div><span class="kbd-hint">↵</span> Открыть</div>
+      <div><span class="kbd-hint">Ctrl K</span> Вызов</div>
+    </div>
+  </div>
+</div>
+
 <script>
-// Resolve server selection once from the connected bot. On single-server bots no
-// manual server selection is needed; page loaders receive the only live guild.
+// ETag fetch cache
+(function () {
+  var _etagStore = {};
+  window.fetchCached = function (url, opts) {
+    opts = opts || {};
+    var _init = Object.assign({}, opts);
+    _init.headers = Object.assign({}, opts.headers || {});
+    if (_etagStore[url]) _init.headers['If-None-Match'] = _etagStore[url];
+    return fetch(url, _init).then(function (r) {
+      var et = r.headers.get('ETag');
+      if (et) _etagStore[url] = et;
+      return r;
+    });
+  };
+  window._etagCache = { _d: {}, get: function (u) { return this._d[u]; }, set: function (u, d) { this._d[u] = d; return d; } };
+  window.fetchCachedJSON = function (url, opts) {
+    return window.fetchCached(url, opts).then(function (r) {
+      if (r.status === 304) {
+        var c = window._etagCache.get(url);
+        if (c !== undefined) return c;
+        return r.json();
+      }
+      return r.json().then(function (d) { window._etagCache.set(url, d); return d; });
+    });
+  };
+})();
+
+// Mobile menu
+document.addEventListener('DOMContentLoaded', function () {
+  var btn = document.getElementById('mobileMenu');
+  var sb  = document.getElementById('sidebar');
+  if (btn && sb) {
+    btn.addEventListener('click', function (e) { e.stopPropagation(); sb.classList.toggle('open'); });
+    document.addEventListener('click', function (e) {
+      if (sb.classList.contains('open') && !sb.contains(e.target) && e.target !== btn) sb.classList.remove('open');
+    });
+  }
+});
+
+// Collapsible sidebar groups (with localStorage persistence)
+(function () {
+  var KEY = 'aether_sidebar_state';
+  var state = {};
+  try { state = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch(e) { state = {}; }
+
+  document.querySelectorAll('.nav-group').forEach(function (g) {
+    var key = g.getAttribute('data-group');
+    if (!key) return;
+    var items = g.querySelector('.nav-group-items');
+    var caret = g.querySelector('.nav-caret');
+    var hasActive = !!g.querySelector('.nav-link.active');
+    // Default: open if state[key] === true OR state[key] undefined AND has active child
+    var open = (state[key] === true) || (state[key] === undefined && hasActive);
+    if (!open) {
+      g.classList.add('collapsed');
+      if (items) items.style.display = 'none';
+      if (caret) caret.style.transform = 'rotate(-90deg)';
+    }
+
+    var toggle = g.querySelector('[data-toggle]');
+    if (toggle) {
+      toggle.addEventListener('click', function (e) {
+        e.preventDefault();
+        var isOpen = !g.classList.contains('collapsed');
+        if (isOpen) {
+          g.classList.add('collapsed');
+          if (items) items.style.display = 'none';
+          if (caret) caret.style.transform = 'rotate(-90deg)';
+          state[key] = false;
+        } else {
+          g.classList.remove('collapsed');
+          if (items) items.style.display = '';
+          if (caret) caret.style.transform = '';
+          state[key] = true;
+        }
+        try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(err) {}
+      });
+    }
+  });
+
+  // Search filter in sidebar
+  var search = document.getElementById('sidebarSearch');
+  if (search) {
+    function applySidebarFilter() {
+      var q = search.value.toLowerCase().trim();
+      var groups = document.querySelectorAll('.nav-group');
+      var totalVisible = 0;
+      groups.forEach(function (g) {
+        var items = g.querySelectorAll('.nav-link');
+        var visibleInGroup = 0;
+        items.forEach(function (a) {
+          var txt = a.textContent.toLowerCase();
+          var match = !q || txt.indexOf(q) !== -1;
+          a.style.display = match ? '' : 'none';
+          if (match) visibleInGroup++;
+        });
+        if (q && visibleInGroup > 0) {
+          g.classList.remove('collapsed');
+          var itemsContainer = g.querySelector('.nav-group-items');
+          var caret = g.querySelector('.nav-caret');
+          if (itemsContainer) itemsContainer.style.display = '';
+          if (caret) caret.style.transform = '';
+          g.style.display = '';
+          totalVisible += visibleInGroup;
+        } else if (q) {
+          g.style.display = 'none';
+        } else {
+          g.style.display = '';
+        }
+      });
+      var noResults = document.getElementById('navNoResults');
+      if (q && totalVisible === 0) {
+        if (!noResults) {
+          noResults = document.createElement('div');
+          noResults.id = 'navNoResults';
+          noResults.className = 'nav-no-results';
+          noResults.innerHTML = '<i class="fas fa-search"></i><div>Ничего не найдено</div>';
+          var nav = document.getElementById('sidebarNav');
+          if (nav) nav.appendChild(noResults);
+        }
+      } else if (noResults) {
+        noResults.remove();
+      }
+    }
+    search.addEventListener('input', applySidebarFilter);
+    search.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); applySidebarFilter(); }
+    });
+    document.addEventListener('keydown', function (e) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        search.focus();
+        search.select();
+      }
+      if (e.key === 'Escape' && document.activeElement === search) {
+        search.value = '';
+        applySidebarFilter();
+        search.blur();
+      }
+    });
+  }
+})();
+
+// User menu dropdown
+(function () {
+  var pill = document.querySelector('.user-pill');
+  if (pill) {
+    pill.addEventListener('click', function (e) {
+      e.stopPropagation();
+      pill.classList.toggle('open');
+    });
+    document.addEventListener('click', function () { pill.classList.remove('open'); });
+  }
+})();
+
+// Fullscreen toggle
+(function () {
+  var btn = document.getElementById('fullscreenBtn');
+  if (btn) btn.addEventListener('click', function () {
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+    else document.exitFullscreen();
+  });
+})();
+
+// Notifications dropdown
+(function () {
+  var btn = document.getElementById('notifBtn');
+  if (!btn) return;
+
+  // Create dropdown panel once
+  var panel = document.createElement('div');
+  panel.className = 'notif-dropdown';
+  panel.innerHTML =
+    '<div class="notif-dropdown-head">' +
+      '<span>Уведомления</span>' +
+      '<a href="/notifications" >Все →</a>' +
+    '</div>' +
+    '<div class="notif-dropdown-body" id="notifDropBody">' +
+      '<div class="empty-state" ><i class="fas fa-spinner fa-spin"></i><p>Загрузка...</p></div>' +
+    '</div>';
+  document.body.appendChild(panel);
+
+  function position() {
+    var r = btn.getBoundingClientRect();
+    panel.style.top = (r.bottom + 8) + 'px';
+    panel.style.right = (window.innerWidth - r.right) + 'px';
+  }
+
+  btn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    position();
+    panel.classList.toggle('open');
+    if (panel.classList.contains('open')) loadNotifs();
+  });
+  document.addEventListener('click', function (e) {
+    if (!panel.contains(e.target) && e.target !== btn) panel.classList.remove('open');
+  });
+
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+  function loadNotifs() {
+    var body = document.getElementById('notifDropBody');
+    fetch('/api/my-notifications')
+      .then(function (r) { return r.json(); })
+      .then(function (notifs) {
+        if (!Array.isArray(notifs) || !notifs.length) {
+          body.innerHTML = '<div class="empty-state" ><i class="fas fa-bell-slash"></i><p>Нет уведомлений</p></div>';
+          return;
+        }
+        body.innerHTML = notifs.slice(0, 8).map(function (n) {
+          var d = new Date(n.created_at);
+          var unread = !n.read;
+          return '<div class="notif-dropdown-item' + (unread ? ' unread' : '') + '">' +
+            '<div class="notif-dropdown-icon"><i class="fas fa-bell"></i></div>' +
+            '<div style="flex: 1; min-width: 0">' +
+              '<div class="notif-dropdown-title">' + esc(n.title) + '</div>' +
+              '<div class="notif-dropdown-msg">' + esc(n.message) + '</div>' +
+              '<div class="notif-dropdown-time">' + d.toLocaleString('ru-RU') + '</div>' +
+            '</div>' +
+          '</div>';
+        }).join('');
+        var badge = btn.querySelector('.nav-badge');
+        if (badge) {
+          var unread = notifs.filter(function (n) { return !n.read; }).length;
+          badge.textContent = unread > 99 ? '99+' : unread;
+          badge.style.display = unread > 0 ? 'flex' : 'none';
+        }
+      })
+      .catch(function () {
+        body.innerHTML = '<div class="empty-state" ><i class="fas fa-exclamation-triangle"></i><p>Ошибка загрузки</p></div>';
+      });
+  }
+})();
+
+// Guild select (from old logic)
 document.addEventListener('DOMContentLoaded', async function () {
   var select = document.getElementById('guild-select');
   if (!select) return;
@@ -117,14 +615,660 @@ document.addEventListener('DOMContentLoaded', async function () {
     var guilds = await response.json();
     if (!Array.isArray(guilds) || !guilds.length) return;
     var desired = '{{ main_guild_id }}';
-    select.innerHTML = guilds.map(function (guild) {
-      return '<option value="' + guild.id + '">' + guild.name + '</option>';
-    }).join('');
-    select.value = guilds.some(function (guild) { return guild.id === desired; }) ? desired : guilds[0].id;
+    select.innerHTML = guilds.map(function (g) { return '<option value="' + g.id + '">' + g.name + '</option>'; }).join('');
+    select.value = guilds.some(function (g) { return g.id === desired; }) ? desired : guilds[0].id;
     if (guilds.length === 1) select.style.display = 'none';
     select.dispatchEvent(new Event('change'));
-  } catch (error) { console.error('Не удалось определить сервер:', error); }
+  } catch (e) { console.error('Guild error:', e); }
 });
+
+// Theme toggle (light/dark)
+(function () {
+  var btn = document.getElementById('themeToggle');
+  if (!btn) return;
+  btn.addEventListener('click', function () {
+    var current = document.documentElement.getAttribute('data-theme') || 'dark';
+    var next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try { localStorage.setItem('aether_theme', next); } catch (e) {}
+    showToast(next === 'light' ? '☀️ Светлая тема' : '🌙 Тёмная тема', true);
+  });
+})();
+
+// Global toast notification (used everywhere in the panel)
+window.showToast = function (message, success) {
+  try {
+    var host = document.getElementById('toastHost');
+    if (!host) {
+      host = document.createElement('div');
+      host.id = 'toastHost';
+      host.style.cssText = 'position:fixed;top:24px;right:24px;z-index:99999;display:flex;flex-direction:column;gap:10px;pointer-events:none;';
+      document.body.appendChild(host);
+    }
+    var el = document.createElement('div');
+    var bg = success === false
+      ? 'linear-gradient(135deg,#dc2626,#b91c1c)'
+      : 'linear-gradient(135deg,#d4a843,#e0b04a)';
+    var fg = success === false ? '#fff' : '#1a1a1a';
+    el.style.cssText = 'background:' + bg + ';color:' + fg + ';padding:12px 18px;border-radius:10px;font-size:14px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,0.4);min-width:240px;max-width:380px;pointer-events:auto;animation:toastIn .25s ease;';
+    el.textContent = message;
+    host.appendChild(el);
+    setTimeout(function () {
+      el.style.transition = 'opacity .3s, transform .3s';
+      el.style.opacity = '0';
+      el.style.transform = 'translateX(20px)';
+      setTimeout(function () { el.remove(); }, 300);
+    }, 3200);
+  } catch (e) { /* toast host unavailable */ }
+};
+
+// Keyboard shortcut palette (Ctrl+K / Cmd+K)
+(function () {
+  var palette = document.getElementById('kbdPalette');
+  var input   = document.getElementById('kbdPaletteInput');
+  var results = document.getElementById('kbdPaletteResults');
+  if (!palette || !input || !results) return;
+
+  // Build list of pages from sidebar links
+  function getPages() {
+    var items = [];
+    document.querySelectorAll('.sidebar-nav .nav-link').forEach(function (a) {
+      var href = a.getAttribute('href');
+      if (!href || href === '#' || href.startsWith('javascript')) return;
+      var span = a.querySelector('span');
+      var title = span ? span.textContent.trim() : a.textContent.trim();
+      var icon = a.querySelector('i');
+      var iconClass = icon ? icon.className : 'fas fa-circle';
+      // Find group
+      var groupEl = a.closest('.nav-group');
+      var groupTitle = '';
+      if (groupEl) {
+        var gt = groupEl.querySelector('.nav-group-title span');
+        if (gt) groupTitle = gt.textContent.trim();
+      }
+      items.push({ href: href, title: title, group: groupTitle, icon: iconClass });
+    });
+    return items;
+  }
+
+  var pages = getPages();
+  var filtered = pages.slice();
+  var activeIdx = 0;
+
+  function render() {
+    if (!filtered.length) {
+      results.innerHTML = '<div class="empty-state"><i class="fas fa-search"></i><p>Ничего не найдено</p></div>';
+      return;
+    }
+    results.innerHTML = filtered.map(function (p, i) {
+      return '<div class="kbd-palette-item' + (i === activeIdx ? ' active' : '') + '" data-href="' + p.href + '">' +
+        '<div class="kbd-palette-icon"><i class="' + p.icon + '"></i></div>' +
+        '<div class="kbd-palette-text">' +
+          '<div class="kbd-palette-title">' + p.title + '</div>' +
+          '<div class="kbd-palette-group">' + (p.group || 'Страница') + '</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+    // Click handlers
+    results.querySelectorAll('.kbd-palette-item').forEach(function (el) {
+      el.addEventListener('click', function () {
+        window.location.href = el.getAttribute('data-href');
+      });
+    });
+    // Scroll active into view
+    var active = results.querySelector('.kbd-palette-item.active');
+    if (active) active.scrollIntoView({ block: 'nearest' });
+  }
+
+  function open() {
+    palette.classList.add('open');
+    input.value = '';
+    input.focus();
+    filtered = pages.slice();
+    activeIdx = 0;
+    render();
+  }
+  function close() {
+    palette.classList.remove('open');
+    input.blur();
+  }
+
+  input.addEventListener('input', function () {
+    var q = input.value.toLowerCase().trim();
+    if (!q) {
+      filtered = pages.slice();
+    } else {
+      filtered = pages.filter(function (p) {
+        return p.title.toLowerCase().indexOf(q) !== -1 ||
+               p.group.toLowerCase().indexOf(q) !== -1 ||
+               p.href.toLowerCase().indexOf(q) !== -1;
+      });
+    }
+    activeIdx = 0;
+    render();
+  });
+
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      activeIdx = Math.min(activeIdx + 1, filtered.length - 1);
+      render();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      activeIdx = Math.max(activeIdx - 1, 0);
+      render();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      var target = filtered[activeIdx];
+      if (target) window.location.href = target.href;
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      close();
+    }
+  });
+
+  // Click outside to close
+  palette.addEventListener('click', function (e) {
+    if (e.target === palette) close();
+  });
+
+  // Global shortcuts
+  document.addEventListener('keydown', function (e) {
+    // Ctrl/Cmd + K — open palette
+    if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {
+      e.preventDefault();
+      if (palette.classList.contains('open')) close(); else open();
+      return;
+    }
+    // "/" — open palette (when not in input)
+    if (e.key === '/' && !palette.classList.contains('open')) {
+      var tag = (document.activeElement && document.activeElement.tagName) || '';
+      if (tag !== 'INPUT' && tag !== 'TEXTAREA' && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+        open();
+      }
+    }
+    // G + key navigation (vim-style): gd= dashboard, ga=analytics, etc.
+    // Only when not typing
+    if (window.__aetherGPressed) {
+      var tag2 = (document.activeElement && document.activeElement.tagName) || '';
+      if (tag2 !== 'INPUT' && tag2 !== 'TEXTAREA') {
+        var map = { 'd': '/', 'g': '/guilds', 'a': '/analytics', 's': '/bot-stats',
+                    'l': '/logs', 'w': '/warnings', 'u': '/users', 'm': '/mod-history',
+                    'c': '/commands', 't': '/ticket-settings', 'e': '/economy', 'p': '/polls' };
+        if (map[e.key.toLowerCase()]) {
+          e.preventDefault();
+          window.location.href = map[e.key.toLowerCase()];
+        }
+      }
+      window.__aetherGPressed = false;
+    } else if (e.key === 'g' && !palette.classList.contains('open')) {
+      var tag3 = (document.activeElement && document.activeElement.tagName) || '';
+      if (tag3 !== 'INPUT' && tag3 !== 'TEXTAREA') {
+        window.__aetherGPressed = true;
+        setTimeout(function() { window.__aetherGPressed = false; }, 1200);
+      }
+    }
+    // ? — show help (only when not typing)
+    if (e.key === '?' && !e.shiftKey === false) {
+      var tag4 = (document.activeElement && document.activeElement.tagName) || '';
+      if (tag4 !== 'INPUT' && tag4 !== 'TEXTAREA' && !palette.classList.contains('open')) {
+        // optional: show shortcut help
+      }
+    }
+  });
+})();
+
+// Global keyboard shortcut: ? to show help toast
+(function () {
+  document.addEventListener('keydown', function (e) {
+    if (e.key === '?' && !e.shiftKey) return;
+    if (e.key === '?' && e.shiftKey) {
+      var tag = (document.activeElement && document.activeElement.tagName) || '';
+      if (tag !== 'INPUT' && tag !== 'TEXTAREA') {
+        e.preventDefault();
+        showToast('⌨️ Ctrl+K: Поиск · T: Тема · G+D: Главная · G+A: Аналитика', true);
+      }
+    }
+  });
+})();
+
+// Smooth page enter animation (already in CSS, but trigger on load)
+window.addEventListener('pageshow', function (e) {
+  if (e.persisted) {
+    document.querySelector('.main-content').style.animation = 'none';
+    void document.querySelector('.main-content').offsetWidth;
+    document.querySelector('.main-content').style.animation = '';
+  }
+});
+
+// ============================================================
+// ACTIVITY FEED DRAWER + REAL-TIME POLLING
+// ============================================================
+(function () {
+  var btn      = document.getElementById('activityBtn');
+  var drawer   = document.getElementById('activityDrawer');
+  var backdrop = document.getElementById('drawerBackdrop');
+  var closeBtn = document.getElementById('activityClose');
+  var body     = document.getElementById('activityBody');
+  var refresh  = document.getElementById('activityRefresh');
+  var lastUpd  = document.getElementById('activityLastUpdate');
+  if (!btn || !drawer) return;
+
+  var lastEventId = null;
+  var pollInterval = null;
+  var isOpen = false;
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function fmtTime(ts) {
+    if (!ts) return '';
+    var d = new Date(ts * 1000);
+    var now = new Date();
+    var diff = (now - d) / 1000;
+    if (diff < 5)   return 'только что';
+    if (diff < 60)  return Math.floor(diff) + ' сек назад';
+    if (diff < 3600) return Math.floor(diff/60) + ' мин назад';
+    if (diff < 86400) return Math.floor(diff/3600) + ' ч назад';
+    return d.toLocaleDateString('ru-RU', {day: '2-digit', month: '2-digit'});
+  }
+
+  function renderEvent(ev, prepend) {
+    var live = ev.live ? ' live' : '';
+    var html = '<div class="activity-event ' + esc(ev.type || 'system') + live + '">' +
+      '<div class="activity-event-icon"><i class="fas ' + esc(ev.icon || 'fa-circle') + '"></i></div>' +
+      '<div class="activity-event-content">' +
+        '<div class="activity-event-text"><strong>' + esc(ev.user || 'system') + '</strong> ' + esc(ev.action || '') + ' <strong>' + esc(ev.target || '') + '</strong></div>' +
+        (ev.detail ? '<div class="activity-event-detail">' + esc(ev.detail) + '</div>' : '') +
+        '<div class="activity-event-time"><i class="fas fa-clock"></i> ' + esc(fmtTime(ev.timestamp)) + '</div>' +
+      '</div>' +
+    '</div>';
+    if (prepend && body.firstChild) {
+      body.insertAdjacentHTML('afterbegin', html);
+    } else {
+      body.insertAdjacentHTML('beforeend', html);
+    }
+  }
+
+  async function loadFeed(showLoader) {
+    if (showLoader) {
+      body.innerHTML = '<div class="activity-drawer-empty"><i class="fas fa-circle-notch fa-spin"></i><p>Загрузка событий...</p></div>';
+    }
+    try {
+      var r = await fetch('/api/activity-feed', { headers: { 'Accept': 'application/json' } });
+      var events = await r.json();
+      if (!Array.isArray(events) || !events.length) {
+        body.innerHTML = '<div class="activity-drawer-empty"><i class="fas fa-inbox"></i><p>Нет событий</p></div>';
+        return;
+      }
+      body.innerHTML = '';
+      events.forEach(function (ev) { renderEvent(ev, false); });
+      lastEventId = events[0] ? events[0].id : null;
+      if (lastUpd) lastUpd.textContent = 'Только что';
+    } catch (e) {
+      body.innerHTML = '<div class="activity-drawer-empty"><i class="fas fa-exclamation-triangle" style="color: var(--err);"></i><p>Ошибка загрузки</p></div>';
+    }
+  }
+
+  function open() {
+    isOpen = true;
+    drawer.classList.add('open');
+    backdrop.classList.add('open');
+    btn.classList.add('active');
+    loadFeed(true);
+    startPolling();
+  }
+  function close() {
+    isOpen = false;
+    drawer.classList.remove('open');
+    backdrop.classList.remove('open');
+    btn.classList.remove('active');
+    stopPolling();
+  }
+
+  function startPolling() {
+    stopPolling();
+    pollInterval = setInterval(async function () {
+      if (!isOpen) return;
+      try {
+        var r = await fetch('/api/activity-feed', { headers: { 'Accept': 'application/json' } });
+        var events = await r.json();
+        if (!Array.isArray(events) || !events.length) return;
+        // Prepend any new events
+        var newOnes = events.filter(function (e) { return e.id !== lastEventId && e.id > (lastEventId || ''); });
+        if (newOnes.length) {
+          newOnes.reverse().forEach(function (ev) { renderEvent(ev, true); });
+          lastEventId = newOnes[0].id;
+          // Limit total events in DOM to 50
+          var all = body.querySelectorAll('.activity-event');
+          if (all.length > 50) {
+            for (var i = 50; i < all.length; i++) all[i].remove();
+          }
+        }
+        if (lastUpd) lastUpd.textContent = 'Только что';
+      } catch (e) { /* ignore */ }
+    }, 15000); // 15s polling
+  }
+  function stopPolling() {
+    if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+  }
+
+  btn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    if (isOpen) close(); else open();
+  });
+  if (closeBtn) closeBtn.addEventListener('click', close);
+  if (backdrop) backdrop.addEventListener('click', close);
+  if (refresh) refresh.addEventListener('click', function () { loadFeed(true); });
+
+  // Global shortcut: Shift+A
+  document.addEventListener('keydown', function (e) {
+    if (e.shiftKey && (e.key === 'A' || e.key === 'a') && !e.ctrlKey && !e.metaKey) {
+      var tag = (document.activeElement && document.activeElement.tagName) || '';
+      if (tag !== 'INPUT' && tag !== 'TEXTAREA') {
+        e.preventDefault();
+        if (isOpen) close(); else open();
+      }
+    }
+    if (e.key === 'Escape' && isOpen) close();
+  });
+})();
+
+// ============================================================
+// REAL-TIME NOTIFICATIONS POLLING (badge + toast on new)
+// ============================================================
+(function () {
+  var lastUnread = -1;
+  var pollInterval = null;
+
+  async function pollNotifs() {
+    try {
+      var r = await fetch('/api/notifications/poll', { headers: { 'Accept': 'application/json' } });
+      var d = await r.json();
+      var unread = d.unread || 0;
+      var badge = document.querySelector('#notifBtn .nav-badge');
+      if (badge) {
+        badge.textContent = unread > 99 ? '99+' : unread;
+        badge.style.display = unread > 0 ? 'flex' : 'none';
+        if (unread > lastUnread && lastUnread >= 0) {
+          // New notification!
+          badge.classList.add('live');
+          setTimeout(function () { badge.classList.remove('live'); }, 5000);
+        }
+      }
+      lastUnread = unread;
+    } catch (e) { /* удалитьent */ }
+  }
+
+  // Initial poll + every 20s
+  pollNotifs();
+  pollInterval = setInterval(pollNotifs, 20000);
+
+  // Cleanup on page hide
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) {
+      if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+    } else {
+      if (!pollInterval) {
+        pollNotifs();
+        pollInterval = setInterval(pollNotifs, 20000);
+      }
+    }
+  });
+})();
+
+// ============================================================
+// SESSION TIMEOUT & IDLE DETECTION
+// ============================================================
+(function () {
+  // Settings
+  var IDLE_TIMEOUT_MS = 5 * 60 * 1000;   // 5 min idle → show warning
+  var WARNING_DURATION = 60;             // 60 sec to respond
+  var ACTIVITY_EVENTS = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
+
+  var idleTimer = null;
+  var warningTimer = null;
+  var countdownInterval = null;
+  var isWarningShown = false;
+
+  var warningEl  = document.getElementById('sessionWarning');
+  var countdownEl = document.getElementById('sessionCountdown');
+  var stayBtn     = document.getElementById('sessionStay');
+  var idleInd     = document.getElementById('idleIndicator');
+  if (!warningEl) return;
+
+  function resetIdle() {
+    clearTimeout(idleTimer);
+    clearTimeout(warningTimer);
+    if (countdownInterval) { clearInterval(countdownInterval); countdownInterval = null; }
+    if (isWarningShown) {
+      warningEl.classList.remove('show');
+      isWarningShown = false;
+    }
+    if (idleInd) idleInd.classList.remove('show');
+    // Schedule next idle check
+    idleTimer = setTimeout(showIdleIndicator, IDLE_TIMEOUT_MS);
+  }
+
+  function showIdleIndicator() {
+    if (isWarningShown) return;
+    if (idleInd) idleInd.classList.add('show');
+    // After 30s more, show full warning
+    warningTimer = setTimeout(showSessionWarning, 30000);
+  }
+
+  function showSessionWarning() {
+    if (isWarningShown) return;
+    isWarningShown = true;
+    warningEl.classList.add('show');
+    var remaining = WARNING_DURATION;
+    if (countdownEl) countdownEl.textContent = remaining;
+    countdownInterval = setInterval(function () {
+      remaining--;
+      if (countdownEl) countdownEl.textContent = remaining;
+      if (remaining <= 0) {
+        clearInterval(countdownInterval);
+        // "Logout"
+        showToast('Сессия истекла', false);
+        setTimeout(function () { window.location.href = '/logout'; }, 800);
+      }
+    }, 1000);
+  }
+
+  function hideWarning() {
+    if (!isWarningShown) return;
+    isWarningShown = false;
+    warningEl.classList.remove('show');
+    if (countdownInterval) { clearInterval(countdownInterval); countdownInterval = null; }
+    resetIdle();
+    // Ping server to extend session
+    fetch('/api/notifications/poll', { method: 'GET' }).catch(function(){});
+  }
+
+  if (stayBtn) stayBtn.addEventListener('click', hideWarning);
+
+  // Listen to activity
+  ACTIVITY_EVENTS.forEach(function (ev) {
+    document.addEventListener(ev, resetIdle, { passive: true });
+  });
+
+  // Start
+  resetIdle();
+})();
+
+// ============================================================
+// LIVE CLOCK + SESSION UPTIME
+// ============================================================
+(function () {
+  var pageStart = Date.now();
+  var navClock = document.getElementById('navClock');
+  var sysClock = document.getElementById('sysClock');
+  var sysUp = document.getElementById('sysUptime');
+
+  function pad(n) { return n < 10 ? '0' + n : '' + n; }
+
+  function tick() {
+    var now = new Date();
+    var hh = pad(now.getHours());
+    var mm = pad(now.getMinutes());
+    var ss = pad(now.getSeconds());
+    var str = hh + ':' + mm + ':' + ss;
+    if (navClock) navClock.textContent = str;
+    if (sysClock) sysClock.textContent = str;
+
+    var up = Math.floor((Date.now() - pageStart) / 1000);
+    var h = Math.floor(up / 3600);
+    var m = Math.floor((up % 3600) / 60);
+    var s = up % 60;
+    if (sysUp) sysUp.textContent = pad(h) + ':' + pad(m) + ':' + pad(s);
+  }
+  tick();
+  setInterval(tick, 1000);
+})();
+
+// ============================================================
+// RATE LIMITING (client-side safety net for AI chat etc.)
+// ============================================================
+(function () {
+  var BUDGET = {}; // { endpoint: { count, windowStart } }
+  var WINDOW_MS = 60000; // 1 min
+
+  window.__rateLimit = function (endpoint, maxPerMin) {
+    maxPerMin = maxPerMin || 10;
+    var now = Date.now();
+    var b = BUDGET[endpoint];
+    if (!b || (now - b.windowStart) > WINDOW_MS) {
+      BUDGET[endpoint] = { count: 1, windowStart: now };
+      return { allowed: true, remaining: maxPerMin - 1 };
+    }
+    b.count++;
+    if (b.count > maxPerMin) {
+      return { allowed: false, remaining: 0, retryAfter: Math.ceil((WINDOW_MS - (now - b.windowStart)) / 1000) };
+    }
+    return { allowed: true, remaining: maxPerMin - b.count };
+  };
+})();
 </script>
+
+<!-- WebSocket Client для real-time обновлений -->
+<script src="/static/websocket-client.js"></script>
+<script>
+// Инициализация WebSocket клиента
+(function() {
+  // Проверка поддержки WebSocket
+  if (typeof WebSocket === 'undefined') {
+    console.log('[WebSocket] Браузер не поддерживает WebSocket');
+    return;
+  }
+  
+  // Получение информации о текущем пользователе
+  const userId = '{{ session.get("user_id", "") }}';
+  const roomId = userId ? `user_${userId}` : 'global';
+  
+  // Создание WebSocket клиента
+  const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsHost = window.location.hostname || 'localhost';
+  const wsUrl = wsProtocol + '//' + wsHost + ':8765';
+
+  window.wsClient = new WebSocketClient({
+    url: wsUrl,
+    roomId: roomId,
+    userId: userId,
+    autoConnect: true
+  });
+  
+  // Обработка подключения
+  window.wsClient.on('connected', function(data) {
+    console.log('[WebSocket] Подключено к серверу');
+    showToast('🔌 Real-time соединения установлено', true);
+  });
+  
+  // Обработка отключения
+  window.wsClient.on('disconnected', function(data) {
+    console.log('[WebSocket] Отключено от сервера');
+  });
+  
+  // Обработка ошибок
+  window.wsClient.on('error', function(error) {
+    console.error('[WebSocket] Ошибка:', error);
+  });
+  
+  // Обработка обновлений тикетов
+  window.wsClient.on('ticket_update', function(data) {
+    console.log('[WebSocket] Обновление тикета:', data);
+    // Вызов пользовательского обработчика если есть
+    if (typeof window.handleTicketUpdate === 'function') {
+      window.handleTicketUpdate(data);
+    }
+  });
+  
+  // Обработка новых тикетов
+  window.wsClient.on('new_ticket', function(data) {
+    console.log('[WebSocket] Новый тикет:', data);
+    showToast('🎫 Новый тикет создан', true);
+    // Вызов пользовательского обработчика если есть
+    if (typeof window.handleNewTicket === 'function') {
+      window.handleNewTicket(data);
+    }
+  });
+  
+  // Обработка обновлений статистики
+  window.wsClient.on('stats_update', function(data) {
+    console.log('[WebSocket] Обновление статистики:', data);
+    // Вызов пользовательского обработчика если есть
+    if (typeof window.handleStatsUpdate === 'function') {
+      window.handleStatsUpdate(data);
+    }
+  });
+  
+  // Обработка уведомлений
+  window.wsClient.on('notification', function(data) {
+    console.log('[WebSocket] Уведомление:', data);
+    if (data.data && data.data.title) {
+      showToast('🔔 ' + data.data.title, true);
+    }
+    // Вызов пользовательского обработчика если есть
+    if (typeof window.handleNotification === 'function') {
+      window.handleNotification(data);
+    }
+  });
+  
+  // Обработка индикатора набора текста
+  window.wsClient.on('typing', function(data) {
+    console.log('[WebSocket] Индикатор набора:', data);
+    // Вызов пользовательского обработчика если есть
+    if (typeof window.handleTypingIndicator === 'function') {
+      window.handleTypingIndicator(data);
+    }
+  });
+  
+  // Обработка статуса присутствия
+  window.wsClient.on('presence', function(data) {
+    console.log('[WebSocket] Статус присутствия:', data);
+    // Вызов пользовательского обработчика если есть
+    if (typeof window.handlePresenceStatus === 'function') {
+      window.handlePresenceStatus(data);
+    }
+  });
+  
+  // Отправка статуса присутствия при загрузке страницы
+  window.wsClient.on('connected', function() {
+    window.wsClient.sendPresence('online');
+  });
+  
+  // Отправка статуса отсутствия при уходе со страницы
+  window.addEventListener('beforeunload', function() {
+    if (window.wsClient && window.wsClient.isConnected) {
+      window.wsClient.sendPresence('offline');
+    }
+  });
+  
+  console.log('[WebSocket] Клиент инициализирован');
+})();
+</script>
+
+<div id="toastHost" style="position:fixed;top:24px;right:24px;z-index:99999;display:flex;flex-direction:column;gap:10px;pointer-events:none;"></div>
 </body>
 </html>

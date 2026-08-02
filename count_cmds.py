@@ -10,5 +10,5 @@ for f in sorted(glob.glob('cogs/*.py')):
         total += cnt
 
 for cnt, name in sorted(details, reverse=True):
-    print(f'{cnt:3d}  {name}')
+    print(f'{cnt:3d} {name}')
 print(f'\nTOPLAM: {total}')

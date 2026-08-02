@@ -2,32 +2,32 @@
 
 ## 🎯 Система Сводка
 
-**Aether AI Moderator** теперь только sohbet botu не, **tam администратор bir модератор** gibi работает:
+**Aether AI Moderator** теперь только sohbet botu не, **tam администратор один модератор** gibi работает:
 
 ✅ Жалоба dinler ve **доказательство хочет**  
-✅ Ekran скриншот analiz eder  
+✅ Ekran скриншот anполучитьiz eder  
 ✅ Сообщение историю контроль eder  
-✅ **Jail наказание verebilir** (автоматически)  
-✅ Только gerçekten gerektiğinde администрации направление  
+✅ **Jail наказание выдатьebilir** (автоматически)  
+✅ Только gerчekten gerektiгinde администрации направление  
 
 ---
 
-## 🔄 Новый Работа Akışı
+## 🔄 Новый Работа Akышы
 
-### 1️⃣ Пользователь Ticket Açar
+### 1️⃣ Пользователь Ticket Открытьar
 
 ```
-Пользователь: [Ticket açar]
+Пользователь: [Ticket открытьar]
     ↓
-AI Moderator: "Merhabalar, ben Aether Moderator.
-               Sorununuzu детали açıklayınız.
+AI Moderator: "Merhabполучитьar, ben Aether Moderator.
+               Sorununuzu детали открытьыklмесяцыnыz.
                
                Жалоба для:
                1️⃣ Пользователь: @пользователь
-               2️⃣ Olay описание
+               2️⃣ Olмесяц описание
                3️⃣ ДОКАЗАТЕЛЬСТВО: Ekran скриншот
                
-               ⚠️ Доказательство жалобы действие alınmaz."
+               ⚠️ Доказательство жалобы действие получитьыnmaz."
 ```
 
 ### 2️⃣ Пользователь Жалоба Eder
@@ -36,7 +36,7 @@ AI Moderator: "Merhabalar, ben Aether Moderator.
 Пользователь: "X человек bana оскорбление etti"
     ↓
 AI Moderator: "Жалоба incelemek для:
-               • Пользователь ID'si или @mention
+               • Пользователь ID'si или @mentiдесять
                • Ekran скриншот загруз
                • Ne время oldu belirtiniz"
 ```
@@ -45,88 +45,88 @@ AI Moderator: "Жалоба incelemek для:
 
 ```
 Пользователь: [Ekran скриншот загруз]
-           "@user123 bana 'aptal' dedi, 10 dakika до"
+           "@user123 bana 'aptполучить' dedi, 10 dakika до"
     ↓
-AI Moderator: [Ekran скриншот analiz eder]
+AI Moderator: [Ekran скриншот anполучитьiz eder]
               [Сообщение историю контроль eder]
               [Время разница контроль eder]
 ```
 
-### 4️⃣ AI Karar Verir
+### 4️⃣ AI Karar Выдатьir
 
 **Senaryo A: Hafif Нарушение**
 ```
-AI Moderator: "✅ İnceleme завершено.
+AI Moderator: "✅ Иnceleme завершено.
                
                Выдать предупреждение пользователюildi.
-               Tekrar ederse более тяжелый наказание alacaktır."
+               Tekrar ederse более тяжелый наказание получитьacaktыr."
 ```
 
-**Senaryo B: Orta Seviye Нарушение (Jail)**
+**Senaryo B: Orta Уровень Нарушение (Jail)**
 ```
-AI Moderator: "✅ İnceleme завершено.
+AI Moderator: "✅ Иnceleme завершено.
                
-               📋 KARAR: Jail наказание verildi
+               📋 KARAR: Jail наказание выдатьildi
                👤 Пользователь: @user123
                ⏱️ Длительность: 30 dakika
-               📝 Причина: Tekrarlayan оскорбление
+               📝 Причина: Tekrarlмесяцan оскорбление
                
-               Olayı çözmekte size администратор ekibimiz
-               помощник olacaktır."
+               Olмесяцы чёzmekte size администратор ekibimiz
+               помощник olacaktыr."
                
-[Пользователю автоматически jail роль verilir]
+[Пользователю автоматически jail роль выдатьilir]
 [30 dakika после автоматически удален]
 ```
 
 **Senaryo C: Тяжелый Нарушение (Jail + Направление)**
 ```
-AI Moderator: "✅ İnceleme завершено.
+AI Moderator: "✅ Иnceleme завершено.
                
-               📋 KARAR: Jail наказание verildi
+               📋 KARAR: Jail наказание выдатьildi
                👤 Пользователь: @user123
                ⏱️ Длительность: 120 dakika
                📝 Причина: Тяжелый оскорбление ve tehdit
                
                🔄 Администрации направление..."
                
-[Jail verilir + Поддержка роль ping atılır]
+[Jail выдатьilir + Поддержка роль ping atыlыr]
 ```
 
 **Senaryo D: Доказательство Yetersiz**
 ```
-AI Moderator: "❌ Жалоба reddedildi.
+AI Moderator: "❌ Жалоба отклонено.
                
                📋 ПРИЧИНА:
-               - Сообщения uyuşmuyor
+               - Сообщения uyuшmuyor
                - Время разница очень fazla (30+ dakika)
                - Ciddi нарушение tespit edilemedi
                
-               ⚠️ Sahte жалоба наказание alabilir."
+               ⚠️ Sahte жалоба наказание получитьabilir."
 ```
 
 ---
 
-## 🎯 AI Moderator Yetenekleri
+## 🎯 AI Moderator Yetenдобавитьri
 
-### ✅ Yapabilecekleri
+### ✅ Yapabilecдобавитьri
 
 1. **Доказательство Желание**
-   - Ekran скриншот talep eder
-   - Пользователь ID/mention хочет
-   - Olay детали sorar
+   - Ekran скриншот tполучитьep eder
+   - Пользователь ID/mentiдесять хочет
+   - Olмесяц детали sorar
 
-2. **Analiz**
+2. **Anполучитьiz**
    - Ekran скриншот inceler
    - Сообщение историю контроль eder
    - Время разница hesaplar (30+ dakika = red)
 
-3. **Karar Verme**
+3. **Karar Выдатьme**
    - Hafif: Только предупреждение
    - Orta: Jail 30-60 dakika
    - Тяжелый: Jail 120 dakika + направление
 
 4. **Наказание Применитьma**
-   - Jail роль verir (автоматически)
+   - Jail роль выдатьir (автоматически)
    - Пользователю DM отправл
    - Длительность bitince автоматически удален
 
@@ -135,39 +135,39 @@ AI Moderator: "❌ Жалоба reddedildi.
    - Mod log'a сохран
    - Web panel'de скриншот
 
-### ❌ Yapamayacakları
+### ❌ Yapamмесяцacaklarы
 
 - **Ban/Kick** (только администраторы)
-- **Роль verme/alma** (jail hariç)
+- **Роль выдатьme/получитьma** (jail hariч)
 - **Канал/сервер настройк**
-- **Ekonomi действия**
+- **Ekдесятьomi действия**
 
 ---
 
-## 📊 Ciddiyet Seviyeleri
+## 📊 Ciddiyet Уровеньleri
 
-### 🟢 Hafif Seviye (Только Предупреждение)
+### 🟢 Hafif Уровень (Только Предупреждение)
 - Tek seferlik мат
-- Маленький tartışma
+- Маленький tartышma
 - Spam (1-2 сообщение)
 
-**AI Aksiyonu**: Предупреждение сообщение
+**AI Aksiyдесятьu**: Предупреждение сообщение
 
-### 🟡 Orta Seviye (Jail 30-60 dakika)
-- Tekrarlayan оскорбление
-- Маленький düşürme
-- Orta seviye spam
-- Длительность rahatsız etme
+### 🟡 Orta Уровень (Jail 30-60 dakika)
+- Tekrarlмесяцan оскорбление
+- Маленький dюшюrme
+- Orta уровень spam
+- Длительность rahatsыz etme
 
-**AI Aksiyonu**: Jail + описание
+**AI Aksiyдесятьu**: Jail + описание
 
-### 🔴 Тяжелый Seviye (Jail 120 dakika + Направление)
+### 🔴 Тяжелый Уровень (Jail 120 dakika + Направление)
 - Тяжелый оскорбление, tehdit
-- Irkçılık, nefret сказатьmi
+- Irkчыlыk, nefret сказатьmi
 - Cinsel taciz
 - Длительность spam/raid
 
-**AI Aksiyonu**: Jail + администрации направление
+**AI Aksiyдесятьu**: Jail + администрации направление
 
 ---
 
@@ -177,40 +177,40 @@ AI Moderator: "❌ Жалоба reddedildi.
 
 **Jail Роль:**
 - Автоматически создан (yoksa)
-- Все в каналах `send_messages: False`
+- Все в каналах `send_messages: Fполучитьse`
 - Gri renk
 
 **Jail Длительность:**
-```python
-1. Jail роль ver
+```pythдесять
+1. Jail роль выдать
 2. Пользователю DM отправить
 3. Ticket'e bildir
 4. Mod log'a сохранить
-5. X dakika bekle
+5. X dakika bдобавить
 6. Jail роль удалить
 7. Пользователю DM отправить (serbest)
 ```
 
 ### Сообщение История Контроль
 
-```python
-1. В конец 50 сообщение al
+```pythдесять
+1. В конец 50 сообщение получить
 2. Bot сообщение filtrele
-3. Время damgalarını контроль et
+3. Время damgполучитьarыnы контроль et
 4. Жалоба edilen пользователя сообщение bul
 5. Ekran скриншот с приветствие
 6. Время разница 30+ dakika ise → RED
 ```
 
-### AI Action Parsing
+### AI Actiдесять Parsing
 
-AI cevabında особый tag'ler:
+AI cevabыnda особый tag'ler:
 
 ```
 [JAIL]
 user_id: 123456789
-duration: 30
-reason: Tekrarlayan оскорбление
+duratiдесять: 30
+reaпоследний: Tekrarlмесяцan оскорбление
 ```
 
 ```
@@ -220,13 +220,13 @@ reason: Tekrarlayan оскорбление
 
 ```
 [ANALYZE_IMAGE]
-→ Ekran скриншот analiz et
+→ Ekran скриншот anполучитьiz et
 ```
 
 ```
 [ESCALATE]
-Kategori: agir_ihlal
-Aciklama: Tehdit içeren сообщения
+Kategori: agir_ihlполучить
+Aciklama: Tehdit iчeren сообщения
 ```
 
 ---
@@ -234,8 +234,8 @@ Aciklama: Tehdit içeren сообщения
 ## 🎮 Новый Команды
 
 ### Пользователь Для
-- Ticket aç → AI Moderator автоматически приветствие
-- Доказательство загрузить → AI analiz eder
+- Ticket открыть → AI Moderator автоматически приветствие
+- Доказательство загрузить → AI anполучитьiz eder
 - Апелляция et → Администрации направление
 
 ### Администратор Для
@@ -244,12 +244,12 @@ Aciklama: Tehdit içeren сообщения
 AI moderator статистика показ
 - Всего jail количество
 - Reddedilen жалобы
-- Ortalama решение длительность
+- Ortполучитьama решение длительность
 
 #### `/ticket-ai-toggle`
-AI moderator sistemini aç/закрыть
+AI moderator системаni открыть/закрыть
 
-#### `/ticket-force-escalate`
+#### `/ticket-force-escполучитьate`
 Текущий ticket'i hemen администрации направление
 
 ---
@@ -261,11 +261,11 @@ AI moderator sistemini aç/закрыть
 ```
 👤 Пользователь: "X человек bana оскорбление etti"
 🤖 AI: "Доказательство загруз"
-👤 Пользователь: [Ekran скриншот] "@user123 bana aptal dedi"
-🤖 AI: [Analiz ediyor...]
+👤 Пользователь: [Ekran скриншот] "@user123 bana aptполучить dedi"
+🤖 AI: [Anполучитьiz ediyor...]
        [Сообщение историю контроль ediyor...]
-       ✅ "Jail наказание verildi: 30 dakika"
-[user123'e jail роль verilir]
+       ✅ "Jail наказание выдатьildi: 30 dakika"
+[user123'e jail роль выдатьilir]
 [30 dakika после автоматически удален]
 ```
 
@@ -274,22 +274,22 @@ AI moderator sistemini aç/закрыть
 ```
 👤 Пользователь: "X человек bana оскорбление etti"
 🤖 AI: "Доказательство загруз"
-👤 Пользователь: [Ekran скриншот] "2 saat до böyle dedi"
-🤖 AI: [Analiz ediyor...]
+👤 Пользователь: [Ekran скриншот] "2 время до bёyle dedi"
+🤖 AI: [Anполучитьiz ediyor...]
        [Сообщение историю контроль ediyor...]
-       ❌ "Жалоба reddedildi: Время разница очень fazla"
+       ❌ "Жалоба отклонено: Время разница очень fazla"
 ```
 
 ### Senaryo 3: Тяжелый Нарушение
 
 ```
-👤 Пользователь: "X человек bana ölümle tehdit etti"
+👤 Пользователь: "X человек bana ёlюmle tehdit etti"
 🤖 AI: "Доказательство загруз"
-👤 Пользователь: [Ekran скриншот] "Seni öldüreceğim dedi"
-🤖 AI: [Analiz ediyor...]
-       ✅ "Jail наказание verildi: 120 dakika"
+👤 Пользователь: [Ekran скриншот] "Seni ёldюreceгim dedi"
+🤖 AI: [Anполучитьiz ediyor...]
+       ✅ "Jail наказание выдатьildi: 120 dakika"
        🔄 "Администрации направление..."
-[Jail verilir + Поддержка роль ping atılır]
+[Jail выдатьilir + Поддержка роль ping atыlыr]
 ```
 
 ---
@@ -298,15 +298,15 @@ AI moderator sistemini aç/закрыть
 
 ### `cogs/ticket.py`
 
-```python
-AI_ENABLED = True  # AI moderator активен/pasif
+```pythдесять
+AI_ENABLED = True  # AI moderator активен/неактивный
 MAX_AI_MESSAGES = 10  # Max сообщение количество
 ```
 
 ### Jail Длительность
 
-```python
-# web/ai_helper.py в AI prompt'ta tanımlı:
+```pythдесять
+# web/ai_helper.py в AI prompt'ta tanыmlы:
 Hafif: Jail yok (только предупреждение)
 Orta: 30-60 dakika
 Тяжелый: 120 dakika
@@ -314,19 +314,19 @@ Orta: 30-60 dakika
 
 ---
 
-## 🔒 Безопасность Önlemleri
+## 🔒 Безопасность Ёnlemleri
 
-### Sahte Жалоба Koruması
+### Sahte Жалоба Защитаsы
 - Сообщение история контроль
 - Время разница контроль (30+ dakika = red)
 - Sahte жалоба yapana предупреждение
 
-### Jail Kötüye Использование Koruması
+### Jail Kёtучастник Использование Защитаsы
 - Max jail длительность: 120 dakika
-- Все jail'ler loglanır
-- Администраторы каждый время override edebilir
+- Все jail'ler loglanыr
+- Администраторы каждый время oвыдатьride edebilir
 
-### Апелляция Mekanizması
+### Апелляция Mekanizmasы
 - Пользователь апелляция ederse → автоматически направление
 - Администраторы jail'i manuel удален
 
@@ -334,71 +334,71 @@ Orta: 30-60 dakika
 
 ## 📊 Web Panel
 
-### AI Moderator Logları
+### AI Moderator Loglarы
 **URL**: `/ai-tickets`
 
 **Показ**:
-- Все AI moderator kararları
+- Все AI moderator kararlarы
 - Jail наказание
 - Reddedilen жалобы
 - Разговор история
 
 ---
 
-## 🚀 Test Etmek Для
+## 🚀 Тест Etmek Для
 
-### Test 1: Успешно Jail
-1. Ticket aç
+### Тест 1: Успешно Jail
+1. Ticket открыть
 2. "X человек bana оскорбление etti" yaz
 3. Sahte ekran скриншот загрузить
 4. AI'nin jail данныеni видеть
 
-### Test 2: Reddedilen Жалоба
-1. Ticket aç
-2. "2 saat до X человек böyle dedi" yaz
-3. AI'nin reddettiğini видеть
+### Тест 2: Reddedilen Жалоба
+1. Ticket открыть
+2. "2 время до X человек bёyle dedi" yaz
+3. AI'nin отклонитьtiгini видеть
 
-### Test 3: Направление
-1. Ticket aç
-2. "X человек bana ölümle tehdit etti" yaz
-3. AI'nin jail verip направление видеть
+### Тест 3: Направление
+1. Ticket открыть
+2. "X человек bana ёlюmle tehdit etti" yaz
+3. AI'nin jail выдатьip направление видеть
 
 ---
 
 ## ✅ Avantajlar
 
 **Пользователи Для:**
-- ⚡ Anında moderasyon
+- ⚡ Anыnda moderasyдесять
 - 🤖 7/24 активен
-- 📋 Adil ve tutarlı kararlar
+- 📋 Adil ve tutarlы kararlar
 
 **Администраторы Для:**
 - 🎯 Только ciddi состояние ilgilenirler
-- 📊 Все действия loglanır
-- 🔄 Желание время override edebilirler
+- 📊 Все действия loglanыr
+- 🔄 Желание время oвыдатьride edebilirler
 
 **Сервер Для:**
-- 🛡️ Более быстрый moderasyon
+- 🛡️ Более быстрый moderasyдесять
 - 📉 Более az toksik ortam
 - 📈 Более fazla пользователь memnuniyeti
 
 ---
 
-## 🎓 Önemli Notlar
+## 🎓 Ёnemli Notlar
 
 ⚠️ **AI Moderator**:
-- Только jail verebilir (ban/kick не)
-- Доказательство olmadan наказание vermez
+- Только jail выдатьebilir (ban/kick не)
+- Доказательство olmadan наказание выдатьmez
 - Время разница контроль eder
 - Тяжелый состояние администрации направление
 
 ✅ **Администраторы**:
-- Каждый время AI'yi override edebilir
+- Каждый время AI'yi oвыдатьride edebilir
 - Jail'i manuel удален
-- AI'yi tamamen закрыт
+- AI'yi готовоen закрыт
 
 ---
 
-**Система Hazır! 🛡️**
+**Система Готов! 🛡️**
 
-Теперь AI Moderator tam администратор gibi работает. Жалоба dinliyor, доказательство istiyor, analiz ediyor ve jail наказание verebiliyor!
+Теперь AI Moderator tam администратор gibi работает. Жалоба dinliyor, доказательство istiyor, anполучитьiz ediyor ve jail наказание выдатьebiliyor!

@@ -1,29 +1,29 @@
+"""
+Warnings Cog
+Система предупреждений — database (SQLite)
+Тёмная тема, русский язык
+"""
 import discord
 from discord.ext import commands
 from discord import app_commands
-import json, os
 from datetime import datetime, timezone, timedelta
+
 from cogs.embed_utils import mod_dm_embed, DIVIDER
+from logger import get_logger
+from db import GuildData
 
-WARNINGS_FILE = "data/warnings.json"
+log = get_logger("warnings")
 
-def load_warnings():
-    os.makedirs("data", exist_ok=True)
-    if os.path.exists(WARNINGS_FILE):
-        with open(WARNINGS_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return {}
-
-def save_warnings(data):
-    with open(WARNINGS_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
 
 def load_warn_config(guild_id):
+    """Загрузить конфигурацию наказаний (пока JSON, потом DB)"""
+    import json, os
     f = f'data/warn_config_{guild_id}.json'
     if os.path.exists(f):
         with open(f, 'r', encoding='utf-8') as fp:
             return json.load(fp)
     return {'steps': []}
+
 
 def duration_to_minutes(duration, unit):
     if unit == 'hour':
@@ -36,6 +36,16 @@ def duration_to_minutes(duration, unit):
 class warnings(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.db = GuildData("warnings")
+
+    def _get_warns(self, guild_id: int, user_id: int) -> list:
+        return self.db.get(guild_id, str(user_id), [])
+
+    def _save_warns(self, guild_id: int, user_id: int, warns: list):
+        self.db.set(guild_id, str(user_id), warns)
+
+    def _clear_warns(self, guild_id: int, user_id: int):
+        self.db.set(guild_id, str(user_id), [])
 
     async def send_dm(self, user, embed):
         try:
@@ -44,7 +54,7 @@ class warnings(commands.Cog):
             pass
 
     async def apply_warn_punishment(self, guild, member, warn_count):
-        """Автоматически наказание по kolicestvu предупреждение"""
+        """Автоматическое наказание по количеству предупреждений"""
         cfg = load_warn_config(str(guild.id))
         steps = cfg.get('steps', [])
         if not steps:
@@ -66,39 +76,37 @@ class warnings(commands.Cog):
         try:
             if action in ('mute', 'timeout'):
                 until = discord.utils.utcnow() + timedelta(minutes=minutes)
-                await member.timeout(until, reason=f'Автоматически-наказание: {warn_count} предупреждение')
-                return f'Mute {duration} {unit}'
+                await member.timeout(until, reason=f'Авто-наказание: {warn_count} предупреждений')
+                return f'Мьют {duration} {unit}'
             elif action == 'kick':
-                await member.kick(reason=f'Автоматически-наказание: {warn_count} предупреждение')
-                return 'Kick'
+                await member.kick(reason=f'Авто-наказание: {warn_count} предупреждений')
+                return 'Кик'
             elif action == 'ban':
-                await member.ban(reason=f'Автоматически-наказание: {warn_count} предупреждение')
-                return 'Ban'
+                await member.ban(reason=f'Авто-наказание: {warn_count} предупреждений')
+                return 'Бан'
         except Exception as e:
-            print(f'[WARN] Ошибка автоматически-наказания: {e}')
+            log.error(f'Ошибка авто-наказания: {e}')
         return None
 
-    # ─── /warn ─────────────────────────────────────────────────────────
-
-    @app_commands.command(name="warn", description="Выдать предупреждение пользователю")
+    # ── /warn ────────────────────────────────────────────────────────────
+    @app_commands.command(name="warn", description="Выдать предупреждение")
     @app_commands.checks.has_permissions(moderate_members=True)
     async def warn(self, interaction, user: discord.Member, reason: str = None):
         guild = interaction.guild
-        data = load_warnings()
-        gid, uid = str(guild.id), str(user.id)
-        data.setdefault(gid, {}).setdefault(uid, [])
-        warn_id = len(data[gid][uid]) + 1
-        data[gid][uid].append({
+        warns = self._get_warns(guild.id, user.id)
+        warn_id = len(warns) + 1
+        warns.append({
             "id": warn_id,
-            "reason": reason or "Не belirtildi",
+            "reason": reason or "Не указана",
             "mod": str(interaction.user),
             "mod_id": str(interaction.user.id),
             "timestamp": datetime.now(timezone.utc).isoformat()
         })
-        save_warnings(data)
-        total = len(data[gid][uid])
+        self._save_warns(guild.id, user.id, warns)
+        total = len(warns)
 
         # DM пользователю
+        import json, os
         dm_file = f'data/warn_dm_{guild.id}.json'
         custom_dm = None
         if os.path.exists(dm_file):
@@ -107,15 +115,15 @@ class warnings(commands.Cog):
             custom_dm = dm_cfg.get('message')
 
         if custom_dm:
-            msg = custom_dm.replace('{user}', user.display_name).replace('{reason}', reason or 'Не belirtildi').replace('{mod}', interaction.user.display_name).replace('{сервер}', guild.name)
-            dm_embed = discord.Embed(color=0xFF6B6B, timestamp=datetime.now(timezone.utc))
+            msg = custom_dm.replace('{user}', user.display_name).replace('{reason}', reason or 'Не указана').replace('{mod}', interaction.user.display_name).replace('{сервер}', guild.name)
+            dm_embed = discord.Embed(color=discord.Color.dark_grey(), timestamp=datetime.now(timezone.utc))
             dm_embed.description = (
                 f"## Предупреждение #{warn_id}\n"
                 f"{msg}\n\n"
                 f"Сервер: **{guild.name}**\n"
                 f"Модератор: **{interaction.user.display_name}**\n"
-                f"Всего предупреждение: **{total}**\n"
-                f"Причина: {reason or 'Не belirtildi'}"
+                f"Всего предупреждений: **{total}**\n"
+                f"Причина: {reason or 'Не указана'}"
             )
             dm_embed.set_thumbnail(url=guild.icon.url if guild.icon else None)
             dm_embed.set_footer(text=f"{guild.name}")
@@ -123,42 +131,39 @@ class warnings(commands.Cog):
         else:
             await self.send_dm(user, mod_dm_embed("warn", guild, interaction.user, reason))
 
-        # Автоматически-наказание
+        # Авто-наказание
         punishment_result = await self.apply_warn_punishment(guild, user, total)
 
-        # Embed onay для модератора
-        e = discord.Embed(color=0xFF6B6B, timestamp=datetime.now(timezone.utc))
+        # Ответ модератору
+        e = discord.Embed(color=discord.Color.dark_grey(), timestamp=datetime.now(timezone.utc))
         desc = (
-            f"## Предупреждение verildi\n"
+            f"## Предупреждение выдано\n"
             f"**{user.display_name}** · `{user.id}`\n\n"
             f"Предупреждение: **#{warn_id}**\n"
             f"Всего: **{total}**\n"
-            f"Причина: {reason or 'Не belirtildi'}\n"
+            f"Причина: {reason or 'Не указана'}\n"
             f"Модератор: {interaction.user.mention}"
         )
         if punishment_result:
-            desc += f"\nOtomatik-наказание: **{punishment_result}**"
+            desc += f"\nАвто-наказание: **{punishment_result}**"
         desc += f"\n\n{DIVIDER}"
         e.description = desc
         e.set_footer(text=f"{guild.name}")
         await interaction.response.send_message(embed=e, ephemeral=True)
 
-    # ─── /warnings ─────────────────────────────────────────────────────
-
-    @app_commands.command(name="warnings", description="Показать предупреждения пользователя")
+    # ── /warnings ────────────────────────────────────────────────────────
+    @app_commands.command(name="warnings", description="Предупреждения пользователя")
     @app_commands.checks.has_permissions(moderate_members=True)
     async def warnings_list(self, interaction, user: discord.Member):
-        data = load_warnings()
-        gid, uid = str(interaction.guild.id), str(user.id)
-        warns = data.get(gid, {}).get(uid, [])
+        warns = self._get_warns(interaction.guild.id, user.id)
 
-        e = discord.Embed(color=0xFF6B6B, timestamp=datetime.now(timezone.utc))
+        e = discord.Embed(color=discord.Color.dark_grey(), timestamp=datetime.now(timezone.utc))
 
         if not warns:
             e.description = (
                 f"## Предупреждения\n"
                 f"**{user.display_name}** · `{user.id}`\n\n"
-                f"Предупреждение yok.\n\n"
+                f"Предупреждений нет.\n\n"
                 f"{DIVIDER}"
             )
         else:
@@ -176,28 +181,61 @@ class warnings(commands.Cog):
         e.set_footer(text=f"{interaction.guild.name}")
         await interaction.response.send_message(embed=e, ephemeral=True)
 
-    # ─── /clearwarns ───────────────────────────────────────────────────
-
-    @app_commands.command(name="clearwarns", description="Очистить все предупреждения пользователя")
+    # ── /clearwarns ──────────────────────────────────────────────────────
+    @app_commands.command(name="clearwarns", description="Очистить все предупреждения")
     @app_commands.checks.has_permissions(administrator=True)
     async def clearwarns(self, interaction, user: discord.Member):
-        data = load_warnings()
-        gid, uid = str(interaction.guild.id), str(user.id)
-        count = len(data.get(gid, {}).get(uid, []))
-        data.setdefault(gid, {})[uid] = []
-        save_warnings(data)
+        warns = self._get_warns(interaction.guild.id, user.id)
+        count = len(warns)
+        self._clear_warns(interaction.guild.id, user.id)
 
-        e = discord.Embed(color=0x2ECC71, timestamp=datetime.now(timezone.utc))
+        e = discord.Embed(color=discord.Color.dark_grey(), timestamp=datetime.now(timezone.utc))
         e.description = (
-            f"## Предупреждения ociseni\n"
+            f"## Предупреждения очищены\n"
             f"**{user.display_name}** · `{user.id}`\n\n"
-            f"Удалено: **{count}** предупреждение\n"
+            f"Удалено: **{count}** предупреждений\n"
             f"Модератор: {interaction.user.mention}\n\n"
             f"{DIVIDER}"
         )
         e.set_footer(text=f"{interaction.guild.name}")
         await interaction.response.send_message(embed=e, ephemeral=True)
 
+    # ── add_warning (для AI-modератора, без interaction) ─────────────────
+    async def add_warning(self, user: discord.Member, moderator: discord.Member, reason: str = None):
+        """Добавить предупреждение без interaction"""
+        guild = user.guild
+        warns = self._get_warns(guild.id, user.id)
+        warn_id = len(warns) + 1
+        warns.append({
+            "id": warn_id,
+            "reason": reason or "Не указана",
+            "mod": str(moderator),
+            "mod_id": str(moderator.id),
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        })
+        self._save_warns(guild.id, user.id, warns)
+        total = len(warns)
+
+        # DM
+        try:
+            dm_embed = discord.Embed(color=discord.Color.dark_grey(), timestamp=datetime.now(timezone.utc))
+            dm_embed.description = (
+                f"## Предупреждение #{warn_id}\n"
+                f"**Сервер:** {guild.name}\n"
+                f"**Причина:** {reason or 'Не указана'}\n"
+                f"**Модератор:** {moderator.display_name}\n"
+                f"**Всего предупреждений:** {total}"
+            )
+            if guild.icon:
+                dm_embed.set_footer(text=f"{guild.name}", icon_url=guild.icon.url)
+            await user.send(embed=dm_embed)
+        except Exception:
+            pass
+
+        await self.apply_warn_punishment(guild, user, total)
+        return warn_id, total
+
 
 async def setup(bot):
     await bot.add_cog(warnings(bot))
+    log.info("Warnings загружен (database)")

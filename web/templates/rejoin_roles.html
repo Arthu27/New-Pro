@@ -1,0 +1,448 @@
+{% extends "base.html" %}
+{% block title %}Re-Join роли — Aether{% endblock %}
+{% block page_title %}<i class="fas fa-undo"></i> Re-Join роли{% endblock %}
+{% block content %}
+{% block page_hero %}
+<div class="page-hero compact">
+  <div class="page-hero-content">
+    <div class="page-hero-greeting">
+      <span class="dot"></span>
+      <span>Обзор сервера — Re-Join роли</span>
+    </div>
+    <h1>Re-Join роли</h1>
+    <p>Автоматическое восстановление ролей участникам, покинувшим сервер и вернувшимся.</p>
+  </div>
+</div>
+{% endblock %}
+
+<!-- Баннер наблюдательного режима -->
+<div class="observer-banner">
+  <i class="fas fa-eye"></i>
+  <div>
+    <strong>Эта система полностью зависит от вас.</strong> Когда отключена — ничего не записывается.
+    Когда включена — выбранные ниже роли сохраняются при выходе участника и автоматически возвращаются при повторном входе.
+    Роли, не включённые в список (администратор, специальные права и т.д.) <b>не затрагиваются</b>.
+  </div>
+</div>
+
+<!-- Выбор сервера + включение/отключение системы -->
+<div class="rejoin-toolbar">
+  <label for="guild-select"><i class="fas fa-server"></i> Сервер:</label>
+  <select id="guild-select"><option value="">Загрузка…</option></select>
+
+  <div class="rejoin-switch">
+    <span>Система</span>
+    <div class="toggle" id="tog-enabled" data-key="enabled"></div>
+    <span id="enabled-label" class="muted">Отключена</span>
+  </div>
+
+  <span class="save-status" id="save-status"></span>
+</div>
+
+<!-- 3 колонки: слева = отслеживаемые роли, справа = история логов -->
+<div class="rejoin-grid">
+  <!-- ЛЕВАЯ: Отслеживаемые роли -->
+  <div class="rejoin-card">
+    <div class="rejoin-head">
+      <div class="rejoin-icon"><i class="fas fa-list-check"></i></div>
+      <div class="rejoin-title">Отслеживаемые роли</div>
+      <span class="badge-count" id="tracked-count">0</span>
+    </div>
+    <p class="muted small">
+      Роли, выбранные здесь, сохраняются при выходе участника и автоматически возвращаются при повторном входе.
+      <b>@everyone</b> и роли выше бота (администратор) не отображаются в списке.
+    </p>
+    <div class="role-search">
+      <i class="fas fa-search"></i>
+      <input type="text" id="role-search" placeholder="Поиск роли…">
+    </div>
+    <div class="role-pills" id="role-pills">
+      <p class="muted small">Загрузка…</p>
+    </div>
+    <div class="role-actions">
+      <button type="button" class="btn btn-ghost" id="btn-clear-roles">
+        <i class="fas fa-times"></i> Удалить все
+      </button>
+    </div>
+  </div>
+
+  <!-- ПРАВАЯ: История -->
+  <div class="rejoin-card">
+    <div class="rejoin-head">
+      <div class="rejoin-icon warn"><i class="fas fa-clock-rotate-left"></i></div>
+      <div class="rejoin-title">История (последние 50)</div>
+      <button class="btn btn-primary" id="btn-clear-log" type="button">
+        <i class="fas fa-broom"></i> Очистить
+      </button>
+    </div>
+    <p class="muted small">
+      Кто и когда покинул сервер, какие роли были, вернулся ли, успешно ли восстановлены роли.
+    </p>
+    <div class="log-list" id="log-list">
+      <p class="muted">Записей пока нет.</p>
+    </div>
+  </div>
+</div>
+
+<style>
+  .observer-banner {
+    display: flex; gap: 14px; align-items: flex-start;
+    background: linear-gradient(135deg, rgba(46,204,113,0.12), rgba(52,152,219,0.12));
+    border: 1px solid rgba(46,204,113,0.4);
+    border-left: 4px solid #2ecc71;
+    border-radius: 10px; padding: 14px 18px; margin: 18px 0 8px;
+    color: #e6e9ef; font-size: 14px; line-height: 1.55;
+  }
+  .observer-banner i { color: #2ecc71; font-size: 20px; margin-top: 2px; }
+
+  .rejoin-toolbar {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px; padding: 12px 16px; margin: 8px 0 18px;
+  }
+  .rejoin-toolbar label { color: #cfd6e4; font-weight: 600; font-size: 13px; }
+  .rejoin-toolbar select {
+    background: #1f2530; color: #e6e9ef; border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 6px; padding: 6px 10px; min-width: 220px; font-size: 14px;
+  }
+  .rejoin-toolbar .save-status { color: #2ecc71; font-size: 13px; }
+  .rejoin-toolbar .save-status.error { color: #e74c3c; }
+  .rejoin-switch { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+  .rejoin-switch span { font-size: 13px; color: #cfd6e4; }
+  .rejoin-switch .muted { color: #7d8593; font-size: 12px; }
+
+  .rejoin-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 900px) { .rejoin-grid { grid-template-columns: 1fr; } }
+
+  .rejoin-card {
+    background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px; padding: 18px;
+  }
+  .rejoin-head {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+  }
+  .rejoin-icon {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: rgba(212, 168, 67, 0.18);
+    color: #d4a843; display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+  .rejoin-icon.warn { background: rgba(231, 76, 60, 0.18); color: #e74c3c; }
+  .rejoin-title { font-size: 16px; font-weight: 700; color: #e6e9ef; flex: 1; }
+  .badge-count {
+    background: rgba(212, 168, 67, 0.22); color: #d4a843;
+    padding: 2px 10px; border-radius: 99px; font-size: 12px; font-weight: 600;
+  }
+  .muted { color: #7d8593; }
+  .small { font-size: 12.5px; line-height: 1.5; margin: 6px 0 14px; }
+
+  .role-search {
+    position: relative; margin-bottom: 10px;
+  }
+  .role-search i {
+    position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+    color: #7d8593; font-size: 13px;
+  }
+  .role-search input {
+    width: 100%; padding: 9px 12px 9px 34px;
+    background: #1a1f29; color: #e6e9ef;
+    border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;
+    font-size: 13.5px;
+  }
+  .role-search input:focus {
+    outline: none; border-color: #d4a843;
+  }
+  .role-pills {
+    max-height: 320px; overflow-y: auto; padding: 4px;
+    display: flex; flex-wrap: wrap; gap: 6px;
+  }
+  .role-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 12px; border-radius: 99px; font-size: 12.5px;
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.10);
+    color: #b0b6c1; cursor: pointer; transition: all 0.15s;
+    user-select: none;
+  }
+  .role-pill:hover { background: rgba(255,255,255,0.10); }
+  .role-pill.tracked {
+    background: rgba(46, 204, 113, 0.18);
+    border-color: rgba(46, 204, 113, 0.45);
+    color: #2ecc71;
+  }
+  .role-pill .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+  .role-pill .x { opacity: 0.4; font-size: 10px; }
+  .role-pill.tracked .x { color: #e74c3c; opacity: 0.7; }
+
+  .role-actions { margin-top: 12px; display: flex; gap: 8px; }
+  .btn {
+    padding: 7px 12px; border-radius: 7px; font-size: 13px; cursor: pointer;
+    border: 1px solid rgba(255,255,255,0.12);
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, #d4a843, #b88728); color: #0a0907;
+    border: none; font-weight: 600;
+  }
+  .btn-ghost { background: transparent; color: #cfd6e4; }
+  .btn-ghost:hover { background: rgba(255,255,255,0.06); }
+
+  .log-list { max-height: 460px; overflow-y: auto; }
+  .log-item {
+    background: rgba(0,0,0,0.20); border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 8px; padding: 10px 12px; margin-bottom: 8px;
+    font-size: 12.5px;
+  }
+  .log-item.restored { border-left: 3px solid #2ecc71; }
+  .log-item.pending { border-left: 3px solid #f1c40f; }
+  .log-item.failed { border-left: 3px solid #e74c3c; }
+  .log-item .top {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 4px;
+  }
+  .log-item .who { color: #e6e9ef; font-weight: 600; }
+  .log-item .when { color: #7d8593; font-size: 11.5px; }
+  .log-item .roles { color: #b0b6c1; font-size: 12px; }
+  .log-item .roles code {
+    background: rgba(255,255,255,0.06); padding: 1px 5px;
+    border-radius: 3px; font-size: 11.5px; margin-right: 3px;
+  }
+  .log-item .status {
+    display: inline-block; padding: 1px 8px; border-radius: 4px;
+    font-size: 11px; font-weight: 600; margin-right: 6px;
+  }
+  .log-item .status.ok { background: rgba(46,204,113,0.18); color: #2ecc71; }
+  .log-item .status.pending { background: rgba(241,196,15,0.18); color: #f1c40f; }
+  .log-item .status.partial { background: rgba(230,126,34,0.18); color: #e67e22; }
+</style>
+
+<script>
+(function () {
+  'use strict';
+  var currentGuildId = null;
+  var currentConfig = null;
+  var allRoles = [];        // [{id, name, color, position}]
+  var trackedIds = [];      // [str]
+  var saveTimer = null;
+
+  function $(id) { return document.getElementById(id); }
+  function setSaveStatus(text, isError) {
+    var el = $('save-status');
+    el.textContent = text || '';
+    el.classList.toggle('error', !!isError);
+    if (text) {
+      clearTimeout(setSaveStatus._t);
+      setSaveStatus._t = setTimeout(function () { el.textContent = ''; }, 1800);
+    }
+  }
+
+  // ── Выбор сервера ─────────────────────────────────────────────────────────
+  function loadGuilds() {
+    fetch('/api/guilds', { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (list) {
+        var sel = $('guild-select');
+        sel.innerHTML = '';
+        if (!list || !list.length) {
+          sel.innerHTML = '<option value="">Сервер не найден</option>';
+          return;
+        }
+        list.forEach(function (g) {
+          var opt = document.createElement('option');
+          opt.value = g.id;
+          opt.textContent = g.name;
+          sel.appendChild(opt);
+        });
+        currentGuildId = sel.value;
+        loadAll();
+      })
+      .catch(function (e) {
+        $('guild-select').innerHTML = '<option value="">Не удалось загрузить</option>';
+        console.error(e);
+      });
+  }
+
+  // ── Загрузка конфига и ролей ────────────────────────────────────────────────
+  function loadAll() {
+    if (!currentGuildId) return;
+    Promise.all([
+      fetch('/api/guild/' + currentGuildId + '/rejoin-roles', { credentials: 'same-origin' }).then(function (r) { return r.json(); }),
+      fetch('/api/guild/' + currentGuildId + '/roles', { credentials: 'same-origin' }).then(function (r) { return r.json(); })
+    ])
+      .then(function (results) {
+        currentConfig = results[0] || {};
+        allRoles = (results[1] || []).filter(function (r) {
+          return r && r.name && r.name !== '@everyone';
+        });
+        // значения по умолчанию
+        if (typeof currentConfig.enabled !== 'boolean') currentConfig.enabled = false;
+        if (!Array.isArray(currentConfig.tracked_role_ids)) currentConfig.tracked_role_ids = [];
+        if (!Array.isArray(currentConfig.leave_log)) currentConfig.leave_log = [];
+        trackedIds = currentConfig.tracked_role_ids.slice();
+        renderAll();
+      })
+      .catch(function (e) {
+        console.error(e);
+        setSaveStatus('Не удалось загрузить', true);
+      });
+  }
+
+  function renderAll() {
+    // Переключатель
+    var tog = $('tog-enabled');
+    tog.classList.toggle('on', !!currentConfig.enabled);
+    $('enabled-label').textContent = currentConfig.enabled ? 'Включена' : 'Отключена';
+
+    // Количество отслеживаемых
+    $('tracked-count').textContent = trackedIds.length;
+
+    // Таблетки ролей
+    renderPills();
+
+    // Лог
+    renderLog();
+  }
+
+  // ── Таблетки ролей ───────────────────────────────────────────────────────
+  function renderPills() {
+    var q = ($('role-search').value || '').toLowerCase().trim();
+    var box = $('role-pills');
+    var filtered = allRoles.filter(function (r) {
+      return !q || r.name.toLowerCase().indexOf(q) !== -1;
+    });
+    if (!filtered.length) {
+      box.innerHTML = '<p class="muted small">Роли не найдены или поиск не дал результатов.</p>';
+      return;
+    }
+    // Сортировка по позиции (высшие первые)
+    filtered.sort(function (a, b) { return (b.position || 0) - (a.position || 0); });
+    box.innerHTML = filtered.map(function (r) {
+      var isTracked = trackedIds.indexOf(r.id) !== -1;
+      var color = r.color && r.color !== '#000000' ? r.color : '#7d8593';
+      return '<span class="role-pill ' + (isTracked ? 'tracked' : '') + '" data-id="' + r.id + '">' +
+             '<span class="dot" style="background:' + color + '"></span>' +
+             '<span>' + escapeHtml(r.name) + '</span>' +
+             '<span class="x">' + (isTracked ? '<i class="fas fa-xmark"></i>' : '<i class="fas fa-plus"></i>') + '</span>' +
+             '</span>';
+    }).join('');
+    // Обработчик клика
+    Array.prototype.forEach.call(box.querySelectorAll('.role-pill'), function (el) {
+      el.addEventListener('click', function () {
+        var id = el.getAttribute('data-id');
+        var idx = trackedIds.indexOf(id);
+        if (idx === -1) trackedIds.push(id);
+        else trackedIds.splice(idx, 1);
+        saveConfig();
+        renderAll();
+      });
+    });
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  // ── История логов ────────────────────────────────────────────────────────
+  function renderLog() {
+    var box = $('log-list');
+    var log = (currentConfig.leave_log || []).slice(-50).reverse();
+    if (!log.length) {
+      box.innerHTML = '<p class="muted">Записей пока нет. Когда система включена и участник покидает сервер, запись появится здесь.</p>';
+      return;
+    }
+    box.innerHTML = log.map(function (e) {
+      var cls = 'pending';
+      var statusText = 'Ожидает';
+      var statusCls = 'pending';
+      if (e.restored) {
+        var fail = (e.restored_fail || []).length;
+        if (fail === 0) {
+          cls = 'restored';
+          statusText = 'Восстановлено';
+          statusCls = 'ok';
+        } else {
+          cls = 'failed';
+          statusText = 'Частично (' + (e.restored_ok || []).length + ' OK / ' + fail + ' не удалось)';
+          statusCls = 'partial';
+        }
+      }
+      var when = e.left_at ? new Date(e.left_at).toLocaleString('ru-RU') : '?';
+      var roles = (e.roles || []).map(function (r) { return '<code>' + r + '</code>'; }).join(' ');
+      var name = e.user_tag || ('User#' + e.user_id);
+      return '<div class="log-item ' + cls + '">' +
+             '<div class="top"><span class="who">' + escapeHtml(name) + ' <span style="color:#7d8593;font-weight:400">(' + e.user_id + ')</span></span>' +
+             '<span class="when">' + when + '</span></div>' +
+             '<div><span class="status ' + statusCls + '">' + statusText + '</span>' +
+             '<span class="roles">' + (roles || '<i>пусто</i>') + '</span></div>' +
+             '</div>';
+    }).join('');
+  }
+
+  // ── Сохранение (debounce) ───────────────────────────────────────────────
+  function saveConfig() {
+    if (!currentGuildId || !currentConfig) return;
+    setSaveStatus('Сохранение…');
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(function () {
+      var payload = {
+        enabled: currentConfig.enabled,
+        tracked_role_ids: trackedIds,
+        leave_log: currentConfig.leave_log
+      };
+      fetch('/api/guild/' + currentGuildId + '/rejoin-roles', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (data && data.success) setSaveStatus('✓ Сохранено');
+          else setSaveStatus('Ошибка: ' + (data && data.error || 'неизвестно'), true);
+        })
+        .catch(function (e) { setSaveStatus('Ошибка: ' + e.message, true); });
+    }, 250);
+  }
+
+  // ── Привязка событий ──────────────────────────────────────────────────────
+  function bind() {
+    loadGuilds();
+
+    $('guild-select').addEventListener('change', function () {
+      currentGuildId = this.value;
+      loadAll();
+    });
+
+    $('tog-enabled').addEventListener('click', function () {
+      if (!currentConfig) return;
+      currentConfig.enabled = !currentConfig.enabled;
+      this.classList.toggle('on', currentConfig.enabled);
+      $('enabled-label').textContent = currentConfig.enabled ? 'Включена' : 'Отключена';
+      saveConfig();
+    });
+
+    $('role-search').addEventListener('input', function () { renderPills(); });
+
+    $('btn-clear-roles').addEventListener('click', function () {
+      if (!trackedIds.length) return;
+      if (!confirm('Удалить все отслеживаемые роли?')) return;
+      trackedIds = [];
+      saveConfig();
+      renderAll();
+    });
+
+    $('btn-clear-log').addEventListener('click', function () {
+      if (!currentConfig || !(currentConfig.leave_log || []).length) return;
+      if (!confirm('Полностью очистить историю логов?')) return;
+      currentConfig.leave_log = [];
+      saveConfig();
+      renderAll();
+    });
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind);
+  else bind();
+})();
+</script>
+{% endblock %}

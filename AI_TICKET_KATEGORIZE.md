@@ -1,46 +1,46 @@
 # AI Ticket Система - Kategorize Поддержка
 
-## 🎯 Новый Особенность: Akıllı Kategorizasyon
+## 🎯 Новый Особенность: Akыllы Kategorizasyдесять
 
-AI теперь пользователя сообщение автоматически как kategorize ediyor ve ona по davranıyor:
+AI теперь пользователя сообщение автоматически как kategorize ediyor ve десятьa по davranыyor:
 
 ### Kategoriler
 
 1. **Жалоба** 🛡️
    - Доказательство хочет
    - Сообщение историю контроль eder
-   - Jail наказание verebilir
+   - Jail наказание выдатьebilir
    - Тяжелый состояние направление
 
 2. **Soru** 💡
    - Panel, запись, команды
-   - Роли, ekonomi, level
+   - Роли, ekдесятьomi, level
    - Общий информация
    - Краткий ve net cevaplar
 
 3. **Teknik** 🔧
-   - Bot çalışmıyor
-   - Müzik/ses sorunları
-   - Ticket açılmıyor
-   - Panel sorunları
+   - Bot работатьmыyor
+   - Mюzik/ses sorunlarы
+   - Ticket открытьыlmыyor
+   - Panel sorunlarы
    - Решение комната
 
-4. **Diğer** 📋
+4. **Diгer** 📋
    - Belirsiz состояние
    - Общий помощь
    - Kategori tespiti
 
-## 🔄 Как Çalışır?
+## 🔄 Как Работатьыr?
 
 ```
 Пользователь сообщение
        ↓
 Kategori Tespiti
-(anahtar kelime analizi)
+(anahtar kelime anполучитьizi)
        ↓
   ┌────────────┬────────────┬────────────┐
   ↓            ↓            ↓            ↓
-Жалоба      Soru        Teknik       Diğer
+Жалоба      Soru        Teknik       Diгer
 Prompt       Prompt      Prompt       Prompt
   ↓            ↓            ↓            ↓
 Доказательство желание   Cevapla     Решение sun    Направление
@@ -59,7 +59,7 @@ AI: [Жалоба prompt'u активен]
 ```
 Пользователь: "Panel как использовать?"
 AI: [Soru prompt'u активен]
-    "🌐 Panel adresi duyurularda paylaşılır.
+    "🌐 Panel adresi duyurularda pмесяцlaшыlыr.
     Discord с вход yapabilirsin..."
 ```
 
@@ -73,36 +73,36 @@ AI: [Teknik prompt'u активен]
 
 ## 🎨 Avantajlar
 
-✅ **Более Tutarlı**: Каждый kategori kendi prompt'una комната
-✅ **Более Быстрый**: AI kafası karışmaz, direkt ответитьir
-✅ **Более Akıllı**: Kategori история korunur
-✅ **Более Esnek**: Новый kategoriler kolayca добавл
+✅ **Более Tutarlы**: Каждый kategori kendi prompt'una комната
+✅ **Более Быстрый**: AI kafasы karышmaz, direkt ответитьir
+✅ **Более Akыllы**: Kategori история korunur
+✅ **Более Esnek**: Новый kategoriler kolмесяцca добавл
 
 ## 🛠️ Teknik Детали
 
-### Новый Fonksiyonlar
+### Новый Fдесятьksiyдесятьlar
 
 - `_detect_category(message, history)` → Kategori tespiti
-- `_prompt_sikayet()` → Жалоба prompt'u
+- `_prompt_sikмесяцet()` → Жалоба prompt'u
 - `_prompt_soru()` → Soru prompt'u
 - `_prompt_teknik()` → Teknik prompt'u
 - `_prompt_diger()` → Общий prompt
 - `_get_prompt_by_category(category)` → Prompt выбрать
 
-### Обновл Fonksiyonlar
+### Обновл Fдесятьksiyдесятьlar
 
-- `ai_ticket_response()` → Теперь kategoriye по prompt использовать
+- `ai_ticket_respдесятьse()` → Теперь kategoriye по prompt использовать
 - `ai_ticket_greeting()` → Более общий приветствие сообщение
 
 ## 🚀 Использование
 
-Hiçbir изменение gerekmez! `ticket.py` одинаковый şekilde работа devam eder.
+Hiчодин изменение gerekmez! `ticket.py` одинаковый шekilde работа продолжить eder.
 
-```python
-response, should_escalate, category, history = ai_ticket_response(
-    user_message=message.content,
+```pythдесять
+respдесятьse, should_escполучитьate, category, history = ai_ticket_respдесятьse(
+    user_message=message.cдесятьtent,
     history=state.get('history', []),
-    guild_context={'guild_name': guild.name}
+    guild_cдесятьtext={'guild_name': guild.name}
 )
 ```
 
@@ -111,14 +111,14 @@ AI автоматически как kategoriyi tespit edip верно prompt'u 
 ## 📊 Kategori Anahtar Kelimeleri
 
 **Жалоба:**
-- жалоба, оскорбление, мат, tehdit, taciz, zorbalık, saldırı, rapor, ihbar
+- жалоба, оскорбление, мат, tehdit, taciz, zorbполучитьыk, sполучитьdыrы, rapor, ihbar
 
 **Вопрос:**
-- как, panel, запись, вход, где, команда, помощь, информация, öğrenmek
+- как, panel, запись, вход, где, команда, помощь, информация, ёгrenmek
 
 **Teknik:**
-- çalışmıyor, ошибка, bug, sorun, bozuk, açılmıyor, музыка, ses, voice
+- работатьmыyor, ошибка, bug, sorun, bozuk, открытьыlmыyor, музыка, ses, voice
 
-## 🎯 В конецuç
+## 🎯 В конецuч
 
-AI теперь hem жалоба çözüyor, hem sorulara ответитьiyor, hem de teknik поддержка sağlıyor — hepsi одинаковый ticket sisteminde!
+AI теперь hem жалоба чёzюyor, hem sorulara ответитьiyor, hem de teknik поддержка saгlыyor — hepsi одинаковый ticket системаnde!

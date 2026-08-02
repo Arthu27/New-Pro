@@ -1,136 +1,110 @@
-import discord
-from discord.ext import commands
-from discord import app_commands
-import random
-import string
-from cogs.embed_utils import _divider, now_ts
+"""
+Aether — Doгrulama (Данныеfication) — Gёzlemci / opt-in modu
+---------------------------------------------------------
+Varsayыlan: KAPALI. Новый gelen kullanыcыlara otomatik hiчbir шey YAPILMAZ:
+  * Captcha kodu gёsterilmez
+  * "Проверка" / "Подтвердитьndы" роль VERILMEZ
+  * Zaman aшыmыnda KICK YAPILMAZ
+  * сервер sahibi panelden aчmadыkчa система sessiz kalыr
 
-class VerificationView(discord.ui.View):
-    def __init__(self, code):
-        super().__init__(timeout=300)
-        self.code = code
-        self.verified = False
+Aчmak iчin: `/verify-toggle enabled:true` ya da panelden.
+"""
 
-    @discord.ui.button(label="✅ Проверка", style=discord.ButtonStyle.green, custom_id="verify_btn")
-    async def verify_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        modal = VerificationModal(self.code)
-        await interaction.response.send_modal(modal)
-        await modal.wait()
-        if modal.verified:
-            self.verified = True
-            self.stop()
+import discord 
+from discord .ext import commands 
+from discord import app_commands 
+import json 
+import os 
 
-class VerificationModal(discord.ui.Modal, title="Проверка"):
-    def __init__(self, correct_code):
-        super().__init__()
-        self.correct_code = correct_code
-        self.verified = False
 
-    code_input = discord.ui.TextInput(
-        label="Проверка Kodu",
-        placeholder="Vverhdaki kodu buraya yaz",
-        required=True,
-        max_length=6
+VERIFY_CONFIG_FILE ="data/verification_config.json"
+
+
+def _load_global_state ()->dict :
+    """Global olarak verification системаi aчыk mы kapalы mы?"""
+    if not os .path .exists (VERIFY_CONFIG_FILE ):
+        return {"enabled":False ,"kick_timeout_minutes":0 }# 0 = kick нет
+    try :
+        with open (VERIFY_CONFIG_FILE ,"r",encoding ="utf-8")as f :
+            data =json .load (f )
+        if not isinstance (data ,dict ):
+            return {"enabled":False ,"kick_timeout_minutes":0 }
+        return data 
+    except Exception :
+        return {"enabled":False ,"kick_timeout_minutes":0 }
+
+
+def _save_global_state (state :dict ):
+    os .makedirs ("data",exist_ok =True )
+    with open (VERIFY_CONFIG_FILE ,"w",encoding ="utf-8")as f :
+        json .dump (state ,f ,indent =2 ,ensure_ascii =False )
+
+
+class Verification (commands .Cog ):
+    """Иsteгe baгlы captcha/Rol системаi. Varsayыlan KAPALI."""
+
+    def __init__ (self ,bot ):
+        self .bot =bot 
+
+    @commands .Cog .listener ()
+    async def on_member_join (self ,member :discord .Member ):
+        state =_load_global_state ()
+        # KAPALI ise hiчbir шey yapma
+        if not state .get ("enabled",False ):
+            return 
+        if member .bot :
+            return 
+
+        guild =member .guild 
+        unverified_role =discord .utils .get (guild .roles ,name ="Проверка")
+        verified_role =discord .utils .get (guild .roles ,name ="Подтвердитьndы")
+
+        # Sadece bilgilendirme — otomatik Rol/kick YOK
+        try :
+            await member .send (
+            f" {guild.name} serversuna hoш geldin!\n"
+            f"Если требуется проверка, следуйте инструкциям на сервере."
+            )
+        except Exception :
+            pass 
+            # Not: kick/Rol-atama/Канал-oluшturma gibi hiчbir otomatik aksiyon YOK.
+
+    @app_commands .command (name ="verify-toggle",description ="Включить/отключить систему верификации (режим наблюдателя)")
+    @app_commands .checks .has_permissions (administrator =True )
+    async def verify_toggle (self ,interaction :discord .Interaction ,enabled :bool ):
+        state =_load_global_state ()
+        state ["enabled"]=enabled 
+        state ["updated_by"]=str (interaction .user )
+        _save_global_state (state )
+        await interaction .response .send_message (
+        f" Данныеfication системаi **{'AЧIK' if enabled else 'KAPALI'}**.\n"
+        +(" Bot otomatik captcha/Rol/kick YAPMAYACAK — sadece bilgilendirme."if enabled else " Artыk новый gelenler iчin hiчbir otomatik операция yapыlmayacak."),
+        ephemeral =True ,
+        )
+
+    @app_commands .command (name ="verify-status",description ="Данныеfication системаinin anlыk статусunu gёsterir")
+    async def verify_status (self ,interaction :discord .Interaction ):
+        state =_load_global_state ()
+        e =discord .Embed (
+        title =" Данныеfication — Статус",
+        color =0x2ECC71 if state .get ("enabled")else 0x95A5A6 ,
+        )
+        e .add_field (name ="Система",value =" Aчыk"if state .get ("enabled")else " Kapalы",inline =True )
+        e .add_field (name ="Otomatik aksiyon",value =" YOK (gёzlemci modu)",inline =True )
+        e .add_field (name ="Son gюncelleme",value =state .get ("updated_by","—"),inline =True )
+        e .description =(
+        "Bu cog gёzlemci modunda: bot kimseye otomatik captcha/Rol/kick UYGULAMAZ. "
+        "Sadece sen `/verify-toggle enabled:true` dersen bilgilendirme DM'i atar."
+        )
+        await interaction .response .send_message (embed =e ,ephemeral =True )
+
+
+async def setup (bot ):
+    await bot .add_cog (
+    Verification (bot ),
+    guilds =[
+    discord .Object (id =1421244140359909513 ),
+    discord .Object (id =1498837105915330562 ),
+    discord .Object (id =1107038411895881788 ),
+    ],
     )
-
-    async def on_submit(self, interaction: discord.Interaction):
-        if self.code_input.value.upper() == self.correct_code:
-            verified_role = discord.utils.get(interaction.guild.roles, name="Проверка")
-            if verified_role:
-                await interaction.user.add_roles(verified_role)
-            
-            unverified_role = discord.utils.get(interaction.guild.roles, name="Проверка")
-            if unverified_role and unverified_role in interaction.user.roles:
-                await interaction.user.remove_roles(unverified_role)
-            
-            await interaction.response.send_message("✅ Успешно проверка!", ephemeral=True)
-            self.verified = True
-        else:
-            await interaction.response.send_message("❌ Неверно kod! Tekrar dene.", ephemeral=True)
-
-class Verification(commands.Cog):
-    def __init__(self, bot):
-        self.bot = bot
-
-    @commands.Cog.listener()
-    async def on_member_join(self, member):
-        verify_channel = discord.utils.get(member.guild.text_channels, name="проверка")
-        if not verify_channel:
-            return
-
-        unverified_role = discord.utils.get(member.guild.roles, name="Проверка")
-        if unverified_role:
-            await member.add_roles(unverified_role)
-
-        code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
-
-        e = discord.Embed(
-            title="🔐  КТО ПРОВЕРКА",
-            color=0x5865F2,
-            timestamp=discord.utils.utcnow()
-        )
-        e.description = (
-            f"```ansi\n\u001b[1;34m🔐 ПРОВЕРКА GEREKLİ\u001b[0m\n```\n"
-            f"{_divider()}\n\n"
-            f"Добро пожаловать geldin {member.mention}! 👋\n\n"
-            f"**{member.guild.name}** сервер erişmek для кто проверка gerekiyor.\n\n"
-            "aşağıdaki kodu kopyalayıp **✅ Проверка** butonuna bas:\n\n"
-            f"```fix\n{code}\n```\n\n"
-            f"{_divider()}"
-        )
-        e.set_thumbnail(url=member.display_avatar.url)
-        e.set_image(url="https://media.tenor.com/3Ky6UNqMFpkAAAAC/talking-speak.gif")
-        e.add_field(name="⏱️ Длительность", value="```5 minutes```", inline=True)
-        e.add_field(name="⚠️ Предупреждение", value="```Длительность dolarsa atılırsın```", inline=True)
-        e.add_field(name="💡 Подсказка", value="*Kodu kopyalayıp butona клик, после yapıştır.*", inline=False)
-        e.set_footer(
-            text=f"{member.guild.name} • Проверка Система",
-            icon_url=member.guild.icon.url if member.guild.icon else None
-        )
-
-        view = VerificationView(code)
-        msg = await verify_channel.send(f"{member.mention}", embed=e, view=view)
-        
-        await view.wait()
-        if not view.verified:
-            try:
-                await member.kick(reason="Проверка длительность doldu")
-                await msg.edit(content=f"~~{member.mention}~~ проверка ve atıldı.", embed=None, view=None)
-            except:
-                pass
-        else:
-            await msg.delete()
-
-    @app_commands.command(name="verify-setup", description="Установить систему верификации")
-    @app_commands.checks.has_permissions(administrator=True)
-    async def verify_setup(self, interaction: discord.Interaction):
-        guild = interaction.guild
-        
-        # Роли создать
-        verified_role = discord.utils.get(guild.roles, name="Проверка")
-        if not verified_role:
-            verified_role = await guild.create_role(name="Проверка", color=discord.Color.green())
-        
-        unverified_role = discord.utils.get(guild.roles, name="Проверка")
-        if not unverified_role:
-            unverified_role = await guild.create_role(name="Проверка", color=discord.Color.red())
-        
-        # Проверка канал
-        verify_channel = discord.utils.get(guild.text_channels, name="проверка")
-        if not verify_channel:
-            overwrites = {
-                guild.default_role: discord.PermissionOverwrite(read_messages=False),
-                unverified_role: discord.PermissionOverwrite(read_messages=True, send_messages=False),
-                verified_role: discord.PermissionOverwrite(read_messages=False)
-            }
-            verify_channel = await guild.create_text_channel("проверка", overwrites=overwrites)
-        
-        await interaction.response.send_message(
-            f"✅ Проверка система kuruldu!\n"
-            f"Роли: {verified_role.mention}, {unverified_role.mention}\n"
-            f"Канал: {verify_channel.mention}",
-            ephemeral=True
-        )
-
-async def setup(bot):
-    await bot.add_cog(Verification(bot), guilds=[discord.Object(id=1421244140359909513), discord.Object(id=1107038411895881788)])

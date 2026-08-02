@@ -1,79 +1,62 @@
 @echo off
-title Moebius Bot - Baslatiliyor...
-color 0A
+chcp 65001 >nul 2>&1
+title Aether Bot
 
-echo.
-echo  ╔═══════════════════════════════════════╗
-echo  ║       MOEBIUS BOT BASLATILIYOR        ║
-echo  ╚═══════════════════════════════════════╝
+echo ============================================================
+echo   AETHER BOT - Starting...
+echo ============================================================
 echo.
 
-REM Python kontrolu
+:: Check Python
 python --version >nul 2>&1
 if errorlevel 1 (
-    echo  [HATA] Python bulunamadi!
-    echo  Lutfen Python 3.8+ yukleyin: https://python.org
-    echo.
+    echo [ERROR] Python not found!
+    echo Install Python from https://python.org
+    echo Make sure to check "Add Python to PATH"
     pause
     exit /b 1
 )
 
-echo  [OK] Python bulundu
-echo.
-
-REM .env dosyasi kontrolu
-if not exist .env (
-    echo  [UYARI] .env dosyasi bulunamadi!
-    echo.
-    echo  Lutfen .env dosyasini olusturun ve asagidaki bilgileri ekleyin:
-    echo.
-    echo  TOKEN=your_discord_bot_token
-    echo  MAIN_GUILD_ID=your_server_id
-    echo  OWNER_ID=your_discord_id
-    echo  MISTRAL_API_KEY=your_mistral_api_key
-    echo  OPENROUTER_API_KEY=your_openrouter_api_key
-    echo  GITHUB_TOKEN=your_github_token
-    echo  VOICE_SECRET=Aether-voice-2024
-    echo.
-    echo  .env ornegi olusturuluyor...
-    (
-        echo # Discord Bot Token
-        echo TOKEN=YOUR_BOT_TOKEN_HERE
-        echo.
-        echo # Ana Sunucu ID
-        echo MAIN_GUILD_ID=YOUR_SERVER_ID
-        echo.
-        echo # Bot Sahibi Discord ID
-        echo OWNER_ID=YOUR_DISCORD_ID
-        echo.
-        echo # AI API Keys
-        echo MISTRAL_API_KEY=YOUR_MISTRAL_KEY
-        echo.
-        echo # OpenRouter API Keys
-        echo OPENROUTER_API_KEY=YOUR_OPENROUTER_KEY
-        echo.
-        echo # GitHub Token
-        echo GITHUB_TOKEN=YOUR_GITHUB_TOKEN
-        echo.
-        echo # Sesli Komut
-        echo VOICE_SECRET=Aether-voice-2024
-    ) > .env
-    echo.
-    echo  [OK] .env ornegi olusturuldu!
-    echo  Lutfen .env dosyasini acip kendi bilgilerini yaz.
-    echo.
-    pause
-    exit /b 0
+:: Install dependencies
+echo [1/3] Installing dependencies...
+pip install -r requirements.txt --quiet 2>nul
+if errorlevel 1 (
+    echo [WARN] Some packages failed, trying with --pre...
+    pip install -r requirements.txt --pre --quiet 2>nul
 )
-
-echo  [OK] .env dosyasi bulundu
+echo [OK] Dependencies installed
 echo.
-echo  [INFO] Bot baslatiliyor...
+
+:: Check .env
+echo [2/3] Checking configuration...
+if not exist ".env" (
+    if exist ".env.example" (
+        copy ".env.example" ".env" >nul
+        echo [WARN] .env created from .env.example
+        echo Please fill in TOKEN and other settings in .env
+        echo.
+        notepad ".env"
+        echo After filling .env, run start.bat again
+        pause
+        exit /b 0
+    ) else (
+        echo [ERROR] .env not found!
+        pause
+        exit /b 1
+    )
+)
+echo [OK] Configuration found
+echo.
+
+:: Start bot
+echo [3/3] Starting bot...
+echo ============================================================
 echo.
 python main.py
 
-if errorlevel 1 (
-    echo.
-    echo  [HATA] Bot beklenmedik sekilde kapandi!
-    pause
-)
+:: If bot crashed
+echo.
+echo ============================================================
+echo [ERROR] Bot stopped!
+echo ============================================================
+pause

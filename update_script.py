@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 GitHub Webhook Auto-Update Script
-GitHub'a push edildiğinde VDS'deki botu автоматически обновл
+GitHub'a push edildiгinde VDS'deki botu автоматически обновл
 """
 import os
 import subprocess
@@ -14,18 +14,18 @@ import time
 
 app = Flask(__name__)
 
-# Konfigürasyon
+# Konfigюrasyon
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
 REPO_URL = "https://github.com/Arthu27/Aether-bot"
-BOT_DIR = "C:/Users/İsmininistrator/Aether-bot-main"
-BACKUP_DIR = "C:/Users/İsmininistrator/Aether-bot-backup"
+BOT_DIR = "C:/Users/Иsmininistrator/Aether-bot-main"
+BACKUP_DIR = "C:/Users/Иsmininistrator/Aether-bot-backup"
 
 def update_bot():
     """Botu обновить"""
     try:
-        print("[UPDATE] Обновл başlıyor...")
+        print("[UPDATE] Обновл baшlыyor...")
         
-        # Текущий botu durdur (process kill)
+        # Текущий botu остановить (process kill)
         subprocess.run("taskkill /f /im python.exe", shell=True, capture_output=True)
         time.sleep(3)
         
@@ -36,7 +36,7 @@ def update_bot():
             shutil.copytree(BOT_DIR, BACKUP_DIR)
             print("[UPDATE] Backup создано")
         
-        # Новый versiyonu indir
+        # Новый версийu indir
         zip_url = f"{REPO_URL}/archive/refs/heads/main.zip"
         headers = {"Authorization": f"token {GITHUB_TOKEN}"}
         
@@ -44,20 +44,20 @@ def update_bot():
         if response.status_code != 200:
             raise Exception(f"Indirme ошибки: {response.status_code}")
         
-        # ZIP'i сохранить ve aç
-        zip_path = "C:/Users/İsmininistrator/Aether-update.zip"
+        # ZIP'i сохранить ve открыть
+        zip_path = "C:/Users/Иsmininistrator/Aether-update.zip"
         with open(zip_path, "wb") as f:
             f.write(response.content)
         
-        # Старый klasörü удалить
+        # Старый klasёrю удалить
         if os.path.exists(BOT_DIR):
             shutil.rmtree(BOT_DIR)
         
-        # ZIP'i aç
+        # ZIP'i открыть
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-            zip_ref.extractall("C:/Users/İsmininistrator/")
+            zip_ref.extractall("C:/Users/Иsmininistrator/")
         
-        # .env dosyasını geri kopyala (backup'tan или template'ten)
+        # .env файл geri kopyala (backup'tan или template'ten)
         env_template = """TOKEN=YOUR_BOT_TOKEN_HERE
 GROQ_API_KEY=YOUR_GROQ_API_KEY
 MISTRAL_API_KEY=YOUR_MISTRAL_API_KEY
@@ -99,9 +99,9 @@ def github_webhook():
             
             # main branch'e push контроль
             if payload.get('ref') == 'refs/heads/main':
-                print("[WEBHOOK] Push algılandı, обновл запуск...")
+                print("[WEBHOOK] Push algыlandы, обновл запуск...")
                 
-                # Обновл ayrı thread'de çalıştır
+                # Обновл отдельно thread'de работатьtыr
                 threading.Thread(target=update_bot, daemon=True).start()
                 
                 return jsonify({"status": "success", "message": "Update started"}), 200

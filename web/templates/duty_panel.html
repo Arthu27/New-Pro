@@ -1,49 +1,44 @@
 {% extends "base.html" %}
-{% block title %}Задача Система{% endblock %}
-{% block page_title %}⚔️ Задача Система{% endblock %}
+{% block title %}Система задач — Aether{% endblock %}
+{% block page_title %}<i class="fas fa-swords" ></i> Система задач{% endblock %}
 {% block content %}
-<style>
-.dp-stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:24px;}
-.dp-stat{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.1);border-radius:12px;padding:16px;text-align:center;}
-.dp-stat-val{font-size:24px;font-weight:800;color:#c8922a;letter-spacing:-0.03em;}
-.dp-stat-lbl{font-size:10px;color:rgba(240,232,208,0.35);text-transform:uppercase;letter-spacing:0.08em;margin-top:4px;}
-.dp-table{width:100%;border-collapse:collapse;}
-.dp-table th{padding:10px 14px;text-align:left;font-size:10px;font-weight:700;color:rgba(240,232,208,0.3);text-transform:uppercase;letter-spacing:0.08em;border-bottom:1px solid rgba(212,168,67,0.08);background:rgba(212,168,67,0.04);}
-.dp-table td{padding:11px 14px;font-size:12px;border-bottom:1px solid rgba(212,168,67,0.05);}
-.dp-table tr:hover td{background:rgba(212,168,67,0.04);}
-.bar{height:6px;background:rgba(212,168,67,0.1);border-radius:99px;overflow:hidden;margin-top:4px;}
-.bar-fill{height:100%;background:linear-gradient(90deg,#c8922a,#e0a830);border-radius:99px;transition:width 0.3s;}
-.active-badge{display:inline-block;padding:2px 8px;border-radius:99px;font-size:9px;font-weight:700;background:rgba(46,213,115,0.12);color:#2ed573;border:1px solid rgba(46,213,115,0.25);}
-.card{background:rgba(26,22,16,0.7);border:1px solid rgba(212,168,67,0.1);border-radius:14px;padding:20px;margin-bottom:16px;}
-.card h2{font-size:11px;font-weight:700;color:rgba(240,232,208,0.4);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid rgba(212,168,67,0.08);}
-</style>
-
-<div style="margin-bottom:16px;">
-  <div style="font-size:12px;color:rgba(240,232,208,0.4);">Сервер: <strong style="color:#c8922a;">{{ guild_id }}</strong></div>
+{% block page_hero %}
+<div class="page-hero compact">
+  <div class="page-hero-content">
+    <div class="page-hero-greeting">
+      <span class="dot"></span>
+      <span>Система задач</span>
+    </div>
+    <h1>Система задач</h1>
+    <p>Система задач и дежурств для модераторов.</p>
+  </div>
 </div>
+{% endblock %}
 
-<!-- Stats -->
+
+
+<div class="guild-info">Сервер: <strong>{{ guild_id }}</strong></div>
+
 <div class="dp-stats" id="dp-stats">
   <div class="dp-stat"><div class="dp-stat-val">—</div><div class="dp-stat-lbl">Всего очков</div></div>
   <div class="dp-stat"><div class="dp-stat-val">—</div><div class="dp-stat-lbl">Активных задач</div></div>
-  <div class="dp-stat"><div class="dp-stat-val">—</div><div class="dp-stat-lbl">OKlanan</div></div>
-  <div class="dp-stat"><div class="dp-stat-val">—</div><div class="dp-stat-lbl">Подключившихся</div></div>
+  <div class="dp-stat"><div class="dp-stat-val">—</div><div class="dp-stat-lbl">Завершено</div></div>
+  <div class="dp-stat"><div class="dp-stat-val">—</div><div class="dp-stat-lbl">Участников</div></div>
 </div>
 
-<!-- Таблица очков -->
-<div class="card">
-  <h2>🏆 Таблица очков</h2>
-  <div id="leaderboard" style="color:rgba(240,232,208,0.3);font-size:13px;">Выберите сервер...</div>
+<div class="section">
+  <h2><i class="fas fa-trophy"></i> Таблица лидеров</h2>
+  <div id="leaderboard"><div class="empty-state">Выберите сервер...</div></div>
 </div>
 
-<!-- Активен Задачи -->
-<div class="card">
-  <h2>⚡ Активен Задачи</h2>
-  <div id="active-duties" style="color:rgba(240,232,208,0.3);font-size:13px;">Выберите сервер...</div>
+<div class="section">
+  <h2><i class="fas fa-bolt"></i> Активные задачи</h2>
+  <div id="active-duties"><div class="empty-state">Выберите сервер...</div></div>
 </div>
 
 <script>
 var _guildId = '{{ guild_id }}';
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
 window.addEventListener('load', function(){ loadDuty(_guildId); });
 
@@ -53,7 +48,6 @@ async function loadDuty(gid) {
   try {
     var d = await fetch('/api/duty/' + gid).then(r => r.json());
 
-    // Stats
     var totalPts = Object.values(d.points).reduce(function(s,u){return s+(u.total||0);},0);
     var activeCount = Object.values(d.duty).filter(function(u){return u.active;}).length;
     var histCount = Object.values(d.duty).reduce(function(s,u){return s+(u.history||[]).length;},0);
@@ -62,10 +56,9 @@ async function loadDuty(gid) {
     document.getElementById('dp-stats').innerHTML =
       stat(totalPts + ' ⭐', 'Всего очков') +
       stat(activeCount, 'Активных задач') +
-      stat(histCount, 'OKlanan') +
-      stat(participants, 'Подключившихся');
+      stat(histCount, 'Завершено') +
+      stat(participants, 'Участников');
 
-    // Leaderboard
     var sorted = Object.entries(d.points).sort(function(a,b){return (b[1].total||0)-(a[1].total||0);}).slice(0,15);
     var maxPts = sorted.length ? (sorted[0][1].total || 1) : 1;
     var medals = ['🥇','🥈','🥉'];
@@ -73,29 +66,28 @@ async function loadDuty(gid) {
       '<table class="dp-table"><thead><tr><th>#</th><th>Пользователь</th><th>Очки</th><th>Прогресс</th></tr></thead><tbody>' +
       sorted.map(function(e,i){
         var pct = Math.round((e[1].total||0)/maxPts*100);
-        return '<tr><td>' + (medals[i]||('#'+(i+1))) + '</td>' +
-          '<td style="color:#f0e8d0;font-weight:600;">' + (e[1].name||e[0]) + '</td>' +
-          '<td style="color:#c8922a;font-weight:700;">' + (e[1].total||0) + ' ⭐</td>' +
-          '<td style="min-width:120px;"><div class="bar"><div class="bar-fill" style="width:'+pct+'%"></div></div></td></tr>';
+        return '<tr><td><span class="dp-rank-medal">' + (medals[i]||'') + '</span><span class="dp-rank-num">#' + (i+1) + '</span></td>' +
+          '<td >' + esc(e[1].name||e[0]) + '</td>' +
+          '<td >' + (e[1].total||0) + ' ⭐</td>' +
+          '<td   style="min-width: 140px;"><div class="dp-bar"><div class="dp-bar-fill"   style="width: '+pct+'%;"></div></div></td></tr>';
       }).join('') + '</tbody></table>'
-      : '<div style="color:rgba(240,232,208,0.3);">Пока puan yok.</div>';
+      : '<div class="empty-state">Пока очков нет</div>';
 
-    // Active duties
     var actives = Object.entries(d.duty).filter(function(e){return e[1].active;});
     document.getElementById('active-duties').innerHTML = actives.length ?
       '<table class="dp-table"><thead><tr><th>Пользователь</th><th>Задачи</th><th>Начало</th></tr></thead><tbody>' +
       actives.map(function(e){
-        var uid = e[0], u = e[1].active;
+        var u = e[1].active;
         var tasks = (u.tasks||[]).join(', ');
-        var since = u.start ? new Date(u.start).toLocaleString('tr-TR') : '?';
-        return '<tr><td style="color:#f0e8d0;">' + (u.user_name||uid) + ' <span class="active-badge">АКТИВЕН</span></td>' +
-          '<td style="color:#c8922a;">' + tasks + '</td>' +
-          '<td style="color:rgba(240,232,208,0.4);">' + since + '</td></tr>';
+        var since = u.start ? new Date(u.start).toLocaleString('ru-RU') : '?';
+        return '<tr><td >' + esc(u.user_name||e[0]) + ' <span class="active-badge">Активен</span></td>' +
+          '<td >' + esc(tasks) + '</td>' +
+          '<td >' + since + '</td></tr>';
       }).join('') + '</tbody></table>'
-      : '<div style="color:rgba(240,232,208,0.3);">Сейчас нет активных задач.</div>';
+      : '<div class="empty-state">Сейчас нет активных задач</div>';
 
   } catch(e) {
-    document.getElementById('leaderboard').innerHTML = '<div style="color:#e05555;">Загруз.</div>';
+    document.getElementById('leaderboard').innerHTML = '<div class="empty-state" >Ошибка загрузки</div>';
   }
 }
 

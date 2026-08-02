@@ -1,172 +1,266 @@
-﻿{% extends "base.html" %}
-{% block title %}Заявки в модераторы - Aether{% endblock %}
-{% block page_title %}📋 АДМИНИСТРАТОР ЗАЯВКА{% endblock %}
+{% extends "base.html" %}
+{% block title %}Заявки - Aether{% endblock %}
+{% block page_title %}<i class="fas fa-user-shield" ></i> Заявки в администрацию{% endblock %}
 {% block content %}
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
-.sa-box{background:rgba(26,22,16,0.7);border:1px solid rgba(200,160,80,0.3);border-radius:15px;padding:25px;margin-bottom:20px;position:relative;overflow:hidden;}
-.sa-box::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);;}
-@keyframes scan{0%{left:-100%}100%{left:100%}}
-.filter-bar{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;}
-.filter-btn{padding:8px 20px;border:2px solid rgba(200,160,80,0.4);background:transparent;color:rgba(240,232,208,0.55);border-radius:20px;cursor:pointer;transition:all 0.3s;font-size:13px;font-family:Inter,sans-serif;}
-.filter-btn.active,.filter-btn:hover{background:#c8922a;border-color:#c8922a;color:#f0e8d0;}
-.app-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:20px;}
-.app-card{background:linear-gradient(135deg,var(--bg),var(--bg2));border:1px solid rgba(200,160,80,0.25);border-radius:15px;padding:20px;transition:all 0.3s;position:relative;overflow:hidden;}
-.app-card::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);animation:scan 4s infinite;}
-.app-card:hover{border-color:#c8922a;box-shadow:0 8px 30px rgba(200,160,80,0.2);}
-.app-card.approved{border-color:rgba(46,204,113,0.5);}
-.app-card.rejected{border-color:rgba(231,76,60,0.3);opacity:0.7;}
-.app-header{display:flex;align-items:center;gap:12px;margin-bottom:15px;}
-.app-avatar{width:50px;height:50px;border-radius:50%;border:2px solid var(--accent);}
-.app-name{font-size:15px;font-weight:700;color:#f0e8d0;font-family:Inter,sans-serif;}
-.app-tag{font-size:11px;color:rgba(240,232,208,0.55);margin-top:2px;}
-.status-badge{padding:3px 10px;border-radius:14px;font-size:11px;font-weight:700;margin-left:auto;white-space:nowrap;}
-.status-pending{background:rgba(212,168,67,0.2);color:#c8922a;border:1px solid #c8922a;}
-.status-approved{background:rgba(46,204,113,0.2);color:#5ec47a;border:1px solid #2ecc71;}
-.status-rejected{background:rgba(231,76,60,0.2);color:#e05555;border:1px solid #e74c3c;}
-.app-field{margin-bottom:10px;}
-.app-field label{display:block;color:#c8922a;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;font-family:Inter,sans-serif;}
-.app-field p{color:rgba(240,232,208,0.55);font-size:13px;background:rgba(0,0,0,0.3);padding:8px 10px;border-radius:6px;margin:0;line-height:1.5;}
-.app-actions{display:flex;gap:8px;margin-top:15px;}
-.btn-approve{flex:1;padding:9px;background:rgba(94,196,122,0.8);color:#f0e8d0;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:13px;transition:all 0.3s;}
-.btn-approve:hover{box-shadow:0 4px 15px rgba(46,204,113,0.4);transform:translateY(-2px);}
-.btn-reject{flex:1;padding:9px;background:rgba(224,85,85,0.15);color:#f0e8d0;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:13px;transition:all 0.3s;}
-.btn-reject:hover{box-shadow:0 4px 15px rgba(231,76,60,0.4);transform:translateY(-2px);}
-.empty-state{text-align:center;padding:60px;color:#5a5040;}
-.empty-state i{font-size:48px;margin-bottom:15px;color:#c8922a;opacity:0.3;}
-.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.88);z-index:9999;justify-content:center;align-items:center;}
-.modal-box{background:linear-gradient(135deg,var(--bg2),var(--surface));border:2px solid var(--accent);border-radius:20px;padding:30px;max-width:420px;width:90%;}
-.modal-box h3{color:#c8922a;margin-bottom:15px;font-family:Inter,sans-serif;}
-.modal-box textarea{width:100%;padding:10px;background:#100e08;border:2px solid rgba(200,160,80,0.3);border-radius:8px;color:#f0e8d0;font-size:14px;resize:vertical;min-height:80px;box-sizing:border-box;}
-.modal-box textarea:focus{outline:none;border-color:#c8922a;}
-.stats-bar{display:flex;gap:15px;margin-bottom:20px;flex-wrap:wrap;}
-.stat-chip{background:rgba(200,160,80,0.08);border:1px solid rgba(200,160,80,0.2);border-radius:14px;padding:10px 18px;text-align:center;}
-.stat-chip .num{font-size:22px;font-weight:700;color:#c8922a;font-family:Inter,sans-serif;}
-.stat-chip .lbl{font-size:11px;color:rgba(240,232,208,0.55);}
-</style>
+{% block page_hero %}
+<div class="page-hero compact">
+  <div class="page-hero-content">
+    <div class="page-hero-greeting">
+      <span class="dot"></span>
+      <span>Заявки в администрацию</span>
+    </div>
+    <h1>Заявки в администрацию</h1>
+    <p>Заявки на роль модератора: детальное рассмотрение, проверка анкет и одобрение кандидатов.</p>
+  </div>
+</div>
+{% endblock %}
 
-<div class="stats-bar" id="stats-bar"></div>
-<div class="filter-bar">
-  <button class="filter-btn active" onclick="setFilter('pending',this)">⏳ Ожидающие</button>
-  <button class="filter-btn" onclick="setFilter('approved',this)">✅ Подтверждённые</button>
-  <button class="filter-btn" onclick="setFilter('rejected',this)">❌ Reddedсnler</button>
-  <button class="filter-btn" onclick="setFilter('all',this)">📋 Все</button>
+<div class="app-stats">
+  <div class="app-stat">
+    <div class="app-icon" style="background: linear-gradient(135deg, #d4a843, #e0b04a) !important;"><i class="fas fa-list"></i></div>
+    <div><div class="app-stat-num" id="stat-total">-</div><div class="app-stat-lbl">Всего</div></div>
+  </div>
+  <div class="app-stat">
+    <div class="app-icon" style="background: linear-gradient(135deg, #fbbf24, #b45309) !important;"><i class="fas fa-hourglass-half"></i></div>
+    <div><div class="app-stat-num" id="stat-pending">-</div><div class="app-stat-lbl">Ожидание</div></div>
+  </div>
+  <div class="app-stat">
+    <div class="app-icon" style="background: linear-gradient(135deg, #4ade80, #16a34a) !important;"><i class="fas fa-check-circle"></i></div>
+    <div><div class="app-stat-num" id="stat-approved">-</div><div class="app-stat-lbl">Одобрено</div></div>
+  </div>
+  <div class="app-stat">
+    <div class="app-icon" style="background: linear-gradient(135deg, #ef4444, #b91c1c) !important;"><i class="fas fa-times-circle"></i></div>
+    <div><div class="app-stat-num" id="stat-rejected">-</div><div class="app-stat-lbl">Отклонено</div></div>
+  </div>
 </div>
 
-<div class="app-grid" id="app-grid">
-  <div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Загрузка...</p></div>
+<div class="app-tabs">
+  <button class="app-tab active" data-tab="all">Все</button>
+  <button class="app-tab" data-tab="pending">Ожидание</button>
+  <button class="app-tab" data-tab="approved">Одобрено</button>
+  <button class="app-tab" data-tab="rejected">Отклонено</button>
 </div>
 
-<div id="rejectModal" class="modal-overlay">
-  <div class="modal-box">
-    <h3>❌ Red Причина</h3>
-    <textarea id="reject-reason" placeholder="Red причина напишите..."></textarea>
-    <div style="display:flex;gap:10px;margin-top:15px;">
-      <button onclick="confirmReject()" style="flex:1;padding:10px;background:rgba(224,85,85,0.15);color:#f0e8d0;border:none;border-radius:8px;cursor:pointer;font-weight:700;">Отклонить</button>
-      <button onclick="closeReject()" style="flex:1;padding:10px;background:#333;color:rgba(240,232,208,0.55);border:none;border-radius:8px;cursor:pointer;">Отмена</button>
+<div class="app-box">
+  <div class="app-head">
+    <div class="app-title"><i class="fas fa-user-shield"></i> Список заявок кандидатов</div>
+    <span class="app-count" id="app-count">-</span>
+  </div>
+  <div class="app-body" id="app-body">
+    <p class="empty"><i class="fas fa-spinner fa-spin"></i> Загрузка...</p>
+  </div>
+</div>
+
+<!-- Модальное окно детального просмотра заявки -->
+<div id="app-modal" class="modal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.8); align-items: center; justify-content: center;">
+  <div class="modal-content" style="background-color: #1a1a20; margin: auto; padding: 28px; border: 1px solid rgba(255,255,255,0.1); width: 90%; max-width: 650px; border-radius: 14px; color: #fff; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+    <span class="close-modal" style="color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; position: absolute; right: 20px; top: 12px;">&times;</span>
+    <h3 id="modal-user-title" style="margin-top: 0; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px; color: #139492;"><i class="fas fa-address-card"></i> Детальная анкета кандидата</h3>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px; margin-top: 14px;">
+      <div>
+        <label style="font-size: 11px; color: #888; display: block; text-transform: uppercase;">Имя пользователя</label>
+        <span id="modal-username" style="font-weight: bold; font-size: 17px; color: #fff;"></span>
+      </div>
+      <div>
+        <label style="font-size: 11px; color: #888; display: block; text-transform: uppercase;">Желаемая должность</label>
+        <span id="modal-role" class="badge-role" style="background-color: #139492; padding: 4px 12px; border-radius: 6px; font-weight: bold; font-size: 13px; display: inline-block; margin-top: 4px;"></span>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px; background: rgba(255,255,255,0.03); padding: 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+      <div>
+        <label style="font-size: 11px; color: #888; display: block; text-transform: uppercase;">Возраст кандидата</label>
+        <span id="modal-age" style="font-weight: bold; font-size: 15px; color: #3498db;"></span>
+      </div>
+      <div>
+        <label style="font-size: 11px; color: #888; display: block; text-transform: uppercase;">Активность на сервере</label>
+        <span id="modal-activity" style="font-weight: bold; font-size: 15px; color: #2ecc71;"></span>
+      </div>
+    </div>
+
+    <div style="margin-bottom: 18px;">
+      <label style="font-size: 11px; color: #888; display: block; margin-bottom: 6px; text-transform: uppercase;">Опыт модерации и администрирования</label>
+      <div id="modal-experience" style="background: rgba(0,0,0,0.3); padding: 14px; border-radius: 8px; font-size: 14px; border: 1px solid rgba(255,255,255,0.08); white-space: pre-wrap; max-height: 120px; overflow-y: auto; line-height: 1.5; color: #e2e8f0;"></div>
+    </div>
+
+    <div style="margin-bottom: 24px;">
+      <label style="font-size: 11px; color: #888; display: block; margin-bottom: 6px; text-transform: uppercase;">Почему выбирает именно наш сервер?</label>
+      <div id="modal-reason" style="background: rgba(0,0,0,0.3); padding: 14px; border-radius: 8px; font-size: 14px; border: 1px solid rgba(255,255,255,0.08); white-space: pre-wrap; max-height: 120px; overflow-y: auto; line-height: 1.5; color: #e2e8f0;"></div>
+    </div>
+
+    <div id="modal-decision-box" style="display: flex; gap: 12px; justify-content: flex-end; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 18px;">
+      <button class="btn btn-ok" id="btn-modal-approve" style="background: #10b981; border: none; padding: 12px 24px; border-radius: 8px; color: white; cursor: pointer; font-weight: bold; transition: background 0.2s;"><i class="fas fa-check"></i> Одобрить</button>
+      <button class="btn btn-no" id="btn-modal-reject" style="background: #ef4444; border: none; padding: 12px 24px; border-radius: 8px; color: white; cursor: pointer; font-weight: bold; transition: background 0.2s;"><i class="fas fa-times"></i> Отклонить</button>
     </div>
   </div>
 </div>
 
 <script>
-var allApps = [], currentFilter = 'pending', pendingRejectId = null;
+(function () {
+  'use strict';
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function fmtDate(iso) { if (!iso) return '-'; try { return new Date(iso).toLocaleDateString('ru-RU') + ' ' + new Date(iso).toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit'}); } catch (e) { return '-'; } }
 
-async function loadApps() {
-  var r = await fetch('/api/staff-apps');
-  allApps = await r.json();
-  updateStats(); renderApps();
-}
+  var apps = [];
+  var currentTab = 'all';
+  var selectedApp = null;
 
-function updateStats() {
-  var pending = allApps.filter(function(a){return a.status==='pending';}).length;
-  var approved = allApps.filter(function(a){return a.status==='approved';}).length;
-  var rejected = allApps.filter(function(a){return a.status==='rejected';}).length;
-  document.getElementById('stats-bar').innerHTML =
-    '<div class="stat-chip"><div class="num">'+allApps.length+'</div><div class="lbl">Всего</div></div>' +
-    '<div class="stat-chip"><div class="num" style="color:#c8922a;">'+pending+'</div><div class="lbl">⏳ Ожидающие</div></div>' +
-    '<div class="stat-chip"><div class="num" style="color:#5ec47a;">'+approved+'</div><div class="lbl">✅ Подтверждённые</div></div>' +
-    '<div class="stat-chip"><div class="num" style="color:#e05555;">'+rejected+'</div><div class="lbl">❌ Reddedсnler</div></div>';
-}
-
-function setFilter(f, btn) {
-  currentFilter = f;
-  document.querySelectorAll('.filter-btn').forEach(function(b){b.classList.remove('active');});
-  btn.classList.add('active');
-  renderApps();
-}
-
-function timeAgo(iso) {
-  var d = new Date(iso), diff = Math.floor((Date.now()-d.getTime())/1000);
-  if(diff<60) return diff+'sn до';
-  if(diff<3600) return Math.floor(diff/60)+'dk до';
-  if(diff<86400) return Math.floor(diff/3600)+'sa до';
-  return Math.floor(diff/86400)+'день до';
-}
-
-function renderApps() {
-  var filtered = currentFilter==='all' ? allApps : allApps.filter(function(a){return a.status===currentFilter;});
-  var grid = document.getElementById('app-grid');
-  if (!filtered.length) {
-    grid.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><p style="color:#5a5040;margin-top:10px;">Bu kategoride заявка yok.</p></div>';
-    return;
+  function loadApps() {
+    fetch('/api/staff-apps', { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        apps = data || [];
+        render();
+      })
+      .catch(function (err) {
+        console.error('Failed to load apps:', err);
+        $('app-body').innerHTML = '<p class="empty" style="color: #ef4444;"><i class="fas fa-exclamation-triangle"></i> Не удалось загрузить заявки с сервера</p>';
+      });
   }
-  grid.innerHTML = filtered.map(function(app) {
-    var sc = app.status==='approved'?'status-approved':app.status==='rejected'?'status-rejected':'status-pending';
-    var st = app.status==='approved'?'✅ Подтверждено':app.status==='rejected'?'❌ Отклонено':'⏳ Bдобавитьme';
-    var cc = app.status==='approved'?'app-card approved':app.status==='rejected'?'app-card rejected':'app-card';
-    var ans = app.answers || {};
-    var actions = app.status==='pending'
-      ? '<div class="app-actions"><button class="btn-approve" onclick="approveApp(\''+app.app_id+'\')">✅ Подтвердить</button><button class="btn-reject" onclick="openReject(\''+app.app_id+'\')">❌ Отклонить</button></div>'
-      : (app.reviewed_by ? '<div style="color:#666;font-size:12px;margin-top:10px;">Проверитьyen: '+app.reviewed_by+(app.review_note?' • '+app.review_note:'')+'</div>' : '');
-    return '<div class="'+cc+'">' +
-      '<div class="app-header">' +
-        '<img class="app-avatar" src="'+app.avatar+'" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' +
-        '<div><div class="app-name">'+app.display_name+'</div><div class="app-tag">'+app.user_name+' • '+timeAgo(app.timestamp)+'</div></div>' +
-        '<span class="status-badge '+sc+'">'+st+'</span>' +
-      '</div>' +
-      '<div class="app-field"><label>🎂 Возраст</label><p>'+(ans.yas||'-')+'</p></div>' +
-      '<div class="app-field"><label>⏰ Активен</label><p>'+(ans.activity||'-')+'</p></div>' +
-      '<div class="app-field"><label>🏆 Опыт</label><p>'+(ans.tecrube||'-')+'</p></div>' +
-      '<div class="app-field"><label>💬 Почему Администратор?</label><p>'+(ans.why||'-')+'</p></div>' +
-      (ans.ekstra&&ans.ekstra!=='—' ? '<div class="app-field"><label>📝 Ekstra</label><p>'+ans.ekstra+'</p></div>' : '') +
-      actions +
-    '</div>';
-  }).join('');
-}
 
-async function approveApp(appId) {
-  var r = await fetch('/api/staff-apps/'+appId+'/review', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({action:'approve'})
-  });
-  var res = await r.json();
-  if (res.success) loadApps();
-}
+  function render() {
+    var total = apps.length;
+    var pend = apps.filter(function (a) { return a.status === 'pending'; }).length;
+    var appr = apps.filter(function (a) { return a.status === 'approved'; }).length;
+    var rej = apps.filter(function (a) { return a.status === 'rejected'; }).length;
 
-function openReject(appId) {
-  pendingRejectId = appId;
-  document.getElementById('reject-reason').value = '';
-  document.getElementById('rejectModal').style.display = 'flex';
-}
+    $('stat-total').textContent = total;
+    $('stat-pending').textContent = pend;
+    $('stat-approved').textContent = appr;
+    $('stat-rejected').textContent = rej;
 
-function closeReject() {
-  document.getElementById('rejectModal').style.display = 'none';
-  pendingRejectId = null;
-}
+    var list = currentTab === 'all' ? apps : apps.filter(function (a) { return a.status === currentTab; });
+    $('app-count').textContent = list.length;
 
-async function confirmReject() {
-  if (!pendingRejectId) return;
-  var note = document.getElementById('reject-reason').value;
-  var r = await fetch('/api/staff-apps/'+pendingRejectId+'/review', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({action:'reject', note:note})
-  });
-  var res = await r.json();
-  if (res.success) { closeReject(); loadApps(); }
-}
+    if (!list.length) { 
+      $('app-body').innerHTML = '<p class="empty">Заявок по выбранному фильтру не найдено</p>'; 
+      return; 
+    }
 
-document.getElementById('rejectModal').addEventListener('click', function(e){ if(e.target===this) closeReject(); });
-loadApps();
-setInterval(loadApps, 1000);
+    var html = '';
+    list.forEach(function (a) {
+      var statusLabel = a.status === 'pending' ? 'Ожидание' : a.status === 'approved' ? 'Одобрено' : 'Отклонено';
+      var keyId = a.app_id || a.user_id;
+      var actions = '<div class="app-actions"><button class="btn btn-secondary inspect-btn" style="background:#139492; color:white; border:none; padding:8px 16px; border-radius:6px; font-size:13px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px;" data-app-key="' + esc(keyId) + '"><i class="fas fa-eye"></i> Смотреть</button></div>';
+      
+      var avatar = a.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png';
+      var roleName = a.role || 'Moderator';
+      html += '<div class="app-row" style="display:flex; justify-content:space-between; align-items:center; padding:16px; border-bottom:1px solid rgba(255,255,255,0.05);">' +
+        '<div style="display:flex; align-items:center; gap:14px;">' +
+        '<img class="app-av" src="' + esc(avatar) + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'" style="width:44px; height:44px; border-radius:50%; border:2px solid rgba(19,148,146,0.3);">' +
+        '<div class="app-info"><div class="app-name" style="font-weight:bold; font-size:16px; color:#fff;">' + esc(a.display_name || a.username || a.user_name) + ' <span style="font-size:12px; color:#139492; background:rgba(19,148,146,0.1); padding:2px 8px; border-radius:4px; margin-left:6px;">' + esc(roleName) + '</span></div><div class="app-meta" style="font-size:12px; color:#888; margin-top:4px;">Отправлена: ' + fmtDate(a.submitted_at || a.timestamp) + ' • Статус: <span class="app-status ' + a.status + '" style="font-weight:bold;">' + statusLabel + '</span></div></div>' +
+        '</div>' +
+        actions + '</div>';
+    });
+    $('app-body').innerHTML = html;
+  }
+
+  function reviewApp(action) {
+    if (!selectedApp) return;
+    var note = prompt("Введите примечание для пользователя (оно будет отправлено ему ботом в личные сообщения Discord):", "");
+    if (note === null) return; // Отмена
+
+    var btnApprove = $('btn-modal-approve');
+    var btnReject = $('btn-modal-reject');
+    btnApprove.disabled = true;
+    btnReject.disabled = true;
+
+    var appKey = selectedApp.app_id || selectedApp.user_id;
+
+    fetch('/api/staff-apps/' + appKey + '/review', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: action, note: note })
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (res) {
+        if (res.error) {
+          alert('Ошибка при сохранении: ' + res.error);
+        } else {
+          showToast(action === 'approve' ? 'Заявка кандидата одобрена!' : 'Заявка кандидата отклонена!');
+          $('app-modal').style.display = 'none';
+          loadApps();
+        }
+      })
+      .catch(function (err) {
+        alert('Ошибка связи с сервером: ' + err.message);
+      })
+      .finally(function () {
+        btnApprove.disabled = false;
+        btnReject.disabled = false;
+      });
+  }
+
+  function bind() {
+    document.querySelectorAll('.app-tab').forEach(function (t) {
+      t.addEventListener('click', function () {
+        document.querySelectorAll('.app-tab').forEach(function (x) { x.classList.remove('active'); });
+        t.classList.add('active');
+        currentTab = t.getAttribute('data-tab');
+        render();
+      });
+    });
+
+    $('app-body').addEventListener('click', function (e) {
+      var btn = e.target.closest('.inspect-btn');
+      if (!btn) return;
+      var appKey = btn.getAttribute('data-app-key');
+      selectedApp = apps.find(function (a) { return (a.app_id || a.user_id) == appKey; });
+      if (!selectedApp) return;
+
+      var answers = selectedApp.answers || {};
+
+      // Поддержка как пошагового бота, так и веб-форм (авто-разбор полей)
+      var age = selectedApp.age || answers.yas || '—';
+      var activity = selectedApp.activity || answers.активен || '—';
+      var experience = selectedApp.experience || answers.tecrube || 'Опыт отсутствует';
+      var reason = selectedApp.reason || answers.почему || answers.ekstra || 'Не указана';
+      var role = selectedApp.role || 'Moderator (по умолчанию)';
+
+      // Заполнить модальное окно
+      $('modal-username').textContent = selectedApp.display_name || selectedApp.username || selectedApp.user_name;
+      $('modal-role').textContent = role;
+      $('modal-age').textContent = age;
+      $('modal-activity').textContent = activity;
+      $('modal-experience').textContent = experience;
+      $('modal-reason').textContent = reason;
+
+      // Скрыть кнопки если заявка уже проверена
+      if (selectedApp.status === 'pending') {
+        $('modal-decision-box').style.display = 'flex';
+      } else {
+        $('modal-decision-box').style.display = 'none';
+      }
+
+      // Открыть модальное окно с красивым флексом
+      $('app-modal').style.display = 'flex';
+    });
+
+    // События закрытия модального окна
+    document.querySelector('.close-modal').addEventListener('click', function () {
+      $('app-modal').style.display = 'none';
+    });
+
+    window.addEventListener('click', function (e) {
+      if (e.target === $('app-modal')) {
+        $('app-modal').style.display = 'none';
+      }
+    });
+
+    $('btn-modal-approve').onclick = function () {
+      reviewApp('approve');
+    };
+
+    $('btn-modal-reject').onclick = function () {
+      reviewApp('reject');
+    };
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { bind(); loadApps(); });
+  else { bind(); loadApps(); }
+})();
 </script>
 {% endblock %}

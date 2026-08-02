@@ -39,3 +39,104 @@ data/backups/
 data/dm_log.json
 data/ai_chat_histories.json
 data/proactive_ai.json
+
+# Hassas / kullanıcı-özgü veri — public repoya sızmasın
+data/tokens.json
+data/panel_logs.json
+data/login_log.json
+data/warnings.json
+data/member_notes.json
+data/backups.json
+data/sys_history.json
+data/bot_config.json
+
+# Tüm guild'e özel runtime veri dosyaları (test ve gerçek)
+data/*_<guild_id>.json
+data/antiraid_*.json
+data/automod_*.json
+data/warn_config_*.json
+data/warn_dm_*.json
+data/economy_*.json
+data/leveling_*.json
+data/shop_*.json
+data/color_roles_*.json
+data/rules_*.json
+data/lockdown_*.json
+data/sug_settings_*.json
+data/starboard_settings_*.json
+data/ticket_settings_*.json
+data/rejoin_*.json
+data/ticket_notify_*.json
+data/health_*.json
+data/voice_stats_*.json
+data/invite_*.json
+data/balance_*.json
+data/leaderboard_*.json
+data/custom_embeds_*.json
+data/meeting_*.json
+data/ai_tickets_*.json
+data/badges_*.json
+data/welcome_*.json
+data/scheduled_*.json
+data/rr_*.json
+data/polls_*.json
+data/giveaways_*.json
+data/custom_cmds_*.json
+data/xp_*.json
+data/webhooks_*.json
+data/events_*.json
+data/announcements.json
+data/anime_daily_config.json
+data/afk_*.json
+data/mod_*.json
+data/audit_log_backup.json
+data/bot_health.json
+data/error_log.json
+data/cog_perf.json
+data/diag_perf.json
+data/cog_errors.json
+data/diag_errors.json
+data/verification_config.json
+data/message_log_*.json
+
+# Python venv
+.venv/
+
+# Local preview server artifacts
+_previews/
+_previews_server.py
+
+# Test server (temporary)
+test_server.py
+run_daemon.py
+start_bg.py
+test_server.py
+
+# Docker
+.dockerignore
+
+# Database
+data/*.db
+data/*.db-journal
+
+# Logs
+logs/
+*.log
+
+# Backups
+backups/
+
+# Plugins
+plugins/
+
+# Preview tests
+*_test.png
+test_help_*.py
+*_big.png
+*_enli.png
+*_huge.png
+*_themed.png
+help_overview_animated.gif
+*_bg_style.png
+anime_boy.png
+assets/ai_gojo/

@@ -1,0 +1,60 @@
+# ============================================================
+#   AETHER BOT — Docker Compose
+# ============================================================
+# Запуск:  docker compose up -d
+# Логи:    docker compose logs -f
+# Останов: docker compose down
+# ============================================================
+
+version: "3.8"
+
+services:
+  bot:
+    build: .
+    container_name: aether-bot
+    restart: unless-stopped
+    
+    # Переменные окружения из .env файла
+    env_file:
+      - .env
+    environment:
+      - DISABLE_TUNNEL=1
+      - PYTHONUNBUFFERED=1
+      - LOG_LEVEL=INFO
+    
+    # Порты
+    ports:
+      - "5001:5001"
+    
+    # Томы для данных
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./backups:/app/backups
+      - ./plugins:/app/plugins
+      - ./.env:/app/.env:ro
+    
+    # Ресурсы (лимиты)
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "1.0"
+        reservations:
+          memory: 256M
+          cpus: "0.25"
+    
+    # Healthcheck
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5001/health', timeout=5)"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    
+    # Логирование
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"

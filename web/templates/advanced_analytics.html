@@ -1,0 +1,405 @@
+{% extends "base.html" %}
+{% block title %}Расширенная аналитика - Aether{% endblock %}
+{% block page_title %}<i class="fas fa-chart-line"></i> Расширенная аналитика{% endblock %}
+{% block content %}
+{% block page_hero %}
+<div class="page-hero compact">
+  <div class="page-hero-content">
+    <div class="page-hero-greeting">
+      <span class="dot"></span>
+      <span>Расширенная аналитика</span>
+    </div>
+    <h1>Расширенная аналитика</h1>
+    <p>Глубокий анализ данных, тренды и AI-powered инсайты.</p>
+  </div>
+</div>
+{% endblock %}
+
+<div class="section">
+  <div class="bs-title"><i class="fas fa-filter"></i> Фильтры и период</div>
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+    <div>
+      <label style="display: block; margin-bottom: 6px; font-size: 13px; color: var(--text-muted);">Период</label>
+      <select id="periodFilter" class="form-input" onchange="loadAnalytics()">
+        <option value="7">Последние 7 дней</option>
+        <option value="30" selected>Последние 30 дней</option>
+        <option value="90">Последние 90 дней</option>
+        <option value="365">Последний год</option>
+        <option value="custom">Пользовательский период</option>
+      </select>
+    </div>
+    <div>
+      <label style="display: block; margin-bottom: 6px; font-size: 13px; color: var(--text-muted);">Категория</label>
+      <select id="categoryFilter" class="form-input" onchange="loadAnalytics()">
+        <option value="">Все категории</option>
+        <option value="Жалоба">Жалобы</option>
+        <option value="Вопрос">Вопросы</option>
+        <option value="Техническая проблема">Тех. проблемы</option>
+        <option value="Другое">Другое</option>
+      </select>
+    </div>
+    <div>
+      <label style="display: block; margin-bottom: 6px; font-size: 13px; color: var(--text-muted);">Модератор</label>
+      <select id="moderatorFilter" class="form-input" onchange="loadAnalytics()">
+        <option value="">Все модераторы</option>
+      </select>
+    </div>
+  </div>
+  <div id="customDateRange" style="display: none; margin-top: 12px; grid-template-columns: 1fr 1fr; gap: 12px;">
+    <div>
+      <label style="display: block; margin-bottom: 6px; font-size: 13px; color: var(--text-muted);">Дата начала</label>
+      <input type="date" id="startDate" class="form-input">
+    </div>
+    <div>
+      <label style="display: block; margin-bottom: 6px; font-size: 13px; color: var(--text-muted);">Дата окончания</label>
+      <input type="date" id="endDate" class="form-input">
+    </div>
+  </div>
+</div>
+
+<div class="stat-grid">
+  <div class="stat-box purple">
+    <div class="stat-icon"><i class="fas fa-ticket-alt"></i></div>
+    <div class="stat-body">
+      <div class="stat-value" id="totalTickets">0</div>
+      <div class="stat-label">Всего тикетов</div>
+      <div class="stat-trend" id="totalTicketsTrend"></div>
+    </div>
+  </div>
+  <div class="stat-box cyan">
+    <div class="stat-icon"><i class="fas fa-clock"></i></div>
+    <div class="stat-body">
+      <div class="stat-value" id="avgResolutionTime">0ч</div>
+      <div class="stat-label">Среднее время решения</div>
+      <div class="stat-trend" id="avgResolutionTimeTrend"></div>
+    </div>
+  </div>
+  <div class="stat-box green">
+    <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+    <div class="stat-body">
+      <div class="stat-value" id="resolutionRate">0%</div>
+      <div class="stat-label">Процент решения</div>
+      <div class="stat-trend" id="resolutionRateTrend"></div>
+    </div>
+  </div>
+  <div class="stat-box gold">
+    <div class="stat-icon"><i class="fas fa-star"></i></div>
+    <div class="stat-body">
+      <div class="stat-value" id="satisfactionScore">0</div>
+      <div class="stat-label">Оценка удовлетворенности</div>
+      <div class="stat-trend" id="satisfactionScoreTrend"></div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="bs-title">
+    <i class="fas fa-chart-area"></i> Тренд тикетов
+    <button class="control-btn" onclick="exportChart('tickets-trend')" style="margin-left: auto;">
+      <i class="fas fa-download"></i> Экспорт
+    </button>
+  </div>
+  <canvas id="ticketsTrendChart" style="max-height: 300px;"></canvas>
+</div>
+
+<div class="section">
+  <div class="bs-title"><i class="fas fa-chart-pie"></i> Распределение по категориям</div>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+    <canvas id="categoryChart" style="max-height: 300px;"></canvas>
+    <div id="categoryList" style="max-height: 300px; overflow-y: auto;"></div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="bs-title"><i class="fas fa-chart-bar"></i> Производительность модераторов</div>
+  <canvas id="moderatorChart" style="max-height: 300px;"></canvas>
+</div>
+
+<div class="section">
+  <div class="bs-title"><i class="fas fa-clock"></i> Время решения по категориям</div>
+  <canvas id="resolutionTimeChart" style="max-height: 300px;"></canvas>
+</div>
+
+<div class="section">
+  <div class="bs-title"><i class="fas fa-brain"></i> AI-инсайты</div>
+  <div id="aiInsights" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px;">
+    <p style="text-align: center; color: var(--text-muted); padding: 40px; grid-column: 1/-1;">
+      <i class="fas fa-spinner fa-spin"></i> Загрузка инсайтов...
+    </p>
+  </div>
+</div>
+
+<div class="section">
+  <div class="bs-title"><i class="fas fa-file-export"></i> Экспорт отчетов</div>
+  <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+    <button class="control-btn primary" onclick="exportReport('pdf')">
+      <i class="fas fa-file-pdf"></i> PDF отчет
+    </button>
+    <button class="control-btn" onclick="exportReport('excel')">
+      <i class="fas fa-file-excel"></i> Excel отчет
+    </button>
+    <button class="control-btn" onclick="exportReport('csv')">
+      <i class="fas fa-file-csv"></i> CSV данные
+    </button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+let ticketsTrendChart, categoryChart, moderatorChart, resolutionTimeChart;
+
+async function loadAnalytics() {
+  const period = document.getElementById('periodFilter').value;
+  const category = document.getElementById('categoryFilter').value;
+  const moderator = document.getElementById('moderatorFilter').value;
+  
+  // Показать/скрыть пользовательский период
+  const customDateRange = document.getElementById('customDateRange');
+  if (period === 'custom') {
+    customDateRange.style.display = 'grid';
+  } else {
+    customDateRange.style.display = 'none';
+  }
+  
+  try {
+    const response = await fetch('/api/analytics/advanced', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({period, category, moderator})
+    });
+    const data = await response.json();
+    
+    if (data.success) {
+      updateStats(data.stats);
+      updateCharts(data.charts);
+      updateInsights(data.insights);
+    } else {
+      alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+    }
+  } catch (e) {
+    console.error('Ошибка загрузки аналитики:', e);
+    alert('Ошибка соединения');
+  }
+}
+
+function updateStats(stats) {
+  document.getElementById('totalTickets').textContent = stats.total_tickets || 0;
+  document.getElementById('avgResolutionTime').textContent = (stats.avg_resolution_time || 0) + 'ч';
+  document.getElementById('resolutionRate').textContent = (stats.resolution_rate || 0) + '%';
+  document.getElementById('satisfactionScore').textContent = stats.satisfaction_score || 0;
+  
+  // Обновить тренды
+  updateTrend('totalTicketsTrend', stats.total_tickets_trend);
+  updateTrend('avgResolutionTimeTrend', stats.avg_resolution_time_trend);
+  updateTrend('resolutionRateTrend', stats.resolution_rate_trend);
+  updateTrend('satisfactionScoreTrend', stats.satisfaction_score_trend);
+}
+
+function updateTrend(elementId, trend) {
+  const element = document.getElementById(elementId);
+  if (!trend) {
+    element.innerHTML = '';
+    return;
+  }
+  
+  const isPositive = trend > 0;
+  const icon = isPositive ? 'fa-arrow-up' : 'fa-arrow-down';
+  const color = isPositive ? 'var(--ok)' : 'var(--err)';
+  
+  element.innerHTML = `<span style="color: ${color};"><i class="fas ${icon}"></i> ${Math.abs(trend)}%</span>`;
+}
+
+function updateCharts(charts) {
+  // Тренд тикетов
+  if (ticketsTrendChart) ticketsTrendChart.destroy();
+  ticketsTrendChart = new Chart(document.getElementById('ticketsTrendChart'), {
+    type: 'line',
+    data: {
+      labels: charts.tickets_trend.labels,
+      datasets: [{
+        label: 'Тикетов',
+        data: charts.tickets_trend.data,
+        borderColor: '#9b59b6',
+        backgroundColor: 'rgba(155,89,182,0.1)',
+        tension: 0.4,
+        fill: true
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { labels: { color: '#fff' } }
+      },
+      scales: {
+        y: { ticks: { color: '#888' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+        x: { ticks: { color: '#888' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+      }
+    }
+  });
+  
+  // Распределение по категориям
+  if (categoryChart) categoryChart.destroy();
+  categoryChart = new Chart(document.getElementById('categoryChart'), {
+    type: 'doughnut',
+    data: {
+      labels: charts.category.labels,
+      datasets: [{
+        data: charts.category.data,
+        backgroundColor: ['#9b59b6', '#3498db', '#2ecc71', '#f1c40f', '#e74c3c', '#1abc9c']
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false }
+      }
+    }
+  });
+  
+  // Список категорий
+  const categoryList = document.getElementById('categoryList');
+  const total = charts.category.data.reduce((a, b) => a + b, 0);
+  categoryList.innerHTML = charts.category.labels.map((label, i) => {
+    const count = charts.category.data[i];
+    const percent = ((count / total) * 100).toFixed(1);
+    const colors = ['#9b59b6', '#3498db', '#2ecc71', '#f1c40f', '#e74c3c', '#1abc9c'];
+    const color = colors[i % colors.length];
+    return `
+      <div style="display: flex; align-items: center; padding: 8px; gap: 12px;">
+        <div style="width: 12px; height: 12px; border-radius: 50%; background: ${color};"></div>
+        <div style="flex: 1;">
+          <div style="font-weight: 500;">${label}</div>
+          <div style="font-size: 12px; color: var(--text-muted);">${count} (${percent}%)</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+  
+  // Производительность модераторов
+  if (moderatorChart) moderatorChart.destroy();
+  moderatorChart = new Chart(document.getElementById('moderatorChart'), {
+    type: 'bar',
+    data: {
+      labels: charts.moderator.labels,
+      datasets: [{
+        label: 'Закрыто тикетов',
+        data: charts.moderator.data,
+        backgroundColor: '#9b59b6'
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { labels: { color: '#fff' } }
+      },
+      scales: {
+        y: { ticks: { color: '#888' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+        x: { ticks: { color: '#888' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+      }
+    }
+  });
+  
+  // Время решения по категориям
+  if (resolutionTimeChart) resolutionTimeChart.destroy();
+  resolutionTimeChart = new Chart(document.getElementById('resolutionTimeChart'), {
+    type: 'bar',
+    data: {
+      labels: charts.resolution_time.labels,
+      datasets: [{
+        label: 'Среднее время (часы)',
+        data: charts.resolution_time.data,
+        backgroundColor: '#3498db'
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { labels: { color: '#fff' } }
+      },
+      scales: {
+        y: { ticks: { color: '#888' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+        x: { ticks: { color: '#888' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+      }
+    }
+  });
+}
+
+function updateInsights(insights) {
+  const container = document.getElementById('aiInsights');
+  
+  if (!insights || insights.length === 0) {
+    container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 40px; grid-column: 1/-1;">Инсайтов пока нет</p>';
+    return;
+  }
+  
+  container.innerHTML = insights.map(insight => {
+    const iconMap = {
+      'positive': 'fa-arrow-up',
+      'negative': 'fa-arrow-down',
+      'neutral': 'fa-info-circle'
+    };
+    const colorMap = {
+      'positive': 'var(--ok)',
+      'negative': 'var(--err)',
+      'neutral': 'var(--accent-color)'
+    };
+    
+    const icon = iconMap[insight.type] || 'fa-info-circle';
+    const color = colorMap[insight.type] || 'var(--accent-color)';
+    
+    return `
+      <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 16px;">
+        <div style="display: flex; align-items: start; gap: 12px;">
+          <div style="width: 32px; height: 32px; border-radius: 8px; background: ${color}20; display: flex; align-items: center; justify-content: center;">
+            <i class="fas ${icon}" style="color: ${color};"></i>
+          </div>
+          <div style="flex: 1;">
+            <div style="font-weight: 600; margin-bottom: 4px;">${insight.title}</div>
+            <div style="font-size: 13px; color: var(--text-secondary);">${insight.description}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function exportChart(chartId) {
+  // Placeholder для экспорта графиков
+  showToast('Экспорт графика в разработке', false);
+}
+
+async function exportReport(format) {
+  const period = document.getElementById('periodFilter').value;
+  const category = document.getElementById('categoryFilter').value;
+  const moderator = document.getElementById('moderatorFilter').value;
+  
+  try {
+    const response = await fetch('/api/analytics/export', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({period, category, moderator, format})
+    });
+    
+    if (response.ok) {
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `analytics_report.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      showToast('Отчет экспортирован!', true);
+    } else {
+      showToast('Ошибка экспорта', false);
+    }
+  } catch (e) {
+    console.error('Ошибка экспорта:', e);
+    showToast('Ошибка соединения', false);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', loadAnalytics);
+</script>
+{% endblock %}

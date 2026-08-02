@@ -1,20 +1,18 @@
-# ── Автоматически Bağımlılık Kurulumu ─────────────────────────────────────────────
+# Автоматическая установка зависимостей
 import sys
 import os
 import subprocess
 
 def _install_requirements():
-    """requirements.txt'deki eksik paketleri автоматически kur"""
+    """Автоматически установить недостающие пакеты из requirements.txt"""
     req_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'requirements.txt')
     if not os.path.exists(req_file):
-        print("[WARN] requirements.txt не найдено, bagimlilik контроль atlaniyor")
+        print("[ПРЕДУПРЕЖДЕНИЕ] requirements.txt не найден, проверка зависимостей пропущена")
         return
     
-    # requirements.txt'yi oku
     with open(req_file, 'r', encoding='utf-8') as f:
         requirements = [line.strip() for line in f if line.strip() and not line.startswith('#')]
     
-    # Paket имя -> import имя eslesmesi
     _import_map = {
         'discord.py': 'discord',
         'python-dotenv': 'dotenv',
@@ -28,7 +26,6 @@ def _install_requirements():
         'PyNaCl': 'nacl',
     }
     
-    # Eksik paketleri определить
     missing = []
     for req in requirements:
         pkg_name = req.split('>=')[0].split('==')[0].split('<')[0].split('>')[0].split('~=')[0].strip()
@@ -38,22 +35,20 @@ def _install_requirements():
         except ImportError:
             missing.append(req)
     
-    # Eksik paketleri kur
     if missing:
-        print(f"[INSTALL] {len(missing)} eksik paket kuruluyor...")
+        print(f"[УСТАНОВКА] Устанавливается {len(missing)} недостающих пакетов...")
         for pkg in missing:
-            print(f"  -> {pkg}")
+            print(f" -> {pkg}")
         try:
             subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--pre'] + missing)
-            print("[INSTALL] Tum paketler kuruldu!")
+            print("[УСТАНОВКА] Все пакеты установлены!")
         except subprocess.CalledProcessError as e:
-            print(f"[ERROR] Paket kurulumu basarisiz: {e}")
-            print(f"[INFO] Manuel установка: pip install -r requirements.txt")
+            print(f"[ОШИБКА] Ошибка установки пакетов: {e}")
+            print(f"[ИНФО] Ручная установка: pip install -r requirements.txt")
             sys.exit(1)
     else:
-        print("[OK] Tum bagimliliklar текущий")
+        print("[ОК] Все зависимости актуальны")
 
-# Ilk çalıştırmada автоматически kur
 _install_requirements()
 
 import discord
@@ -62,7 +57,6 @@ warnings.filterwarnings('ignore', category=ResourceWarning)
 from discord.ext import commands
 from dotenv import load_dotenv
 import threading
-import subprocess
 import re
 import asyncio
 import urllib.request
@@ -71,49 +65,120 @@ import time
 import signal
 import atexit
 
-load_dotenv()
+# Загружаем .env из каталога скрипта (надёжно, независимо от рабочей директории)
+# и с override=True, чтобы значение из .env всегда применялось.
+_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(_BASE_DIR, ".env"), override=True)
 
-# Startup fix: duplicate endpoint'leri clear
+# Централизованная конфигурация и логирование 
+from config import Config
+from logger import setup_logger, get_logger
+
+Config.ensure_dirs()
+log = setup_logger("bot", Config.LOG_FILE, Config.LOG_LEVEL)
+
+# Стартовый фикс: очистка дублирующих эндпоинтов
 import subprocess as _sp, sys as _sys
 _fix = os.path.join(os.path.dirname(__file__), 'fix_dup.py')
 if os.path.exists(_fix):
     _sp.run([_sys.executable, _fix], capture_output=True)
 
 intents = discord.Intents.all()
-bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
+bot = commands.Bot(command_prefix=Config.COMMAND_PREFIX, intents=intents, help_command=None)
 
-ALERT_ROLE_ID = None  # Panelden настройк
+ALERT_ROLE_ID = None
 
-# ── Cleanup functions ───────────────────────────────────────────────────────
-def cleanup_on_exit():
-    """Bot закрыт temizlik действия"""
+_web_server_proc = None
+_gunicorn_available = None
+
+
+def _have_gunicorn():
+    """Проверка установлен ли gunicorn"""
+    global _gunicorn_available
+    if _gunicorn_available is not None:
+        return _gunicorn_available
     try:
-        print("[CLEANUP] Bot закрыт...")
-        # Ses ссылки закрыть
+        subprocess.run(
+            [sys.executable, '-m', 'gunicorn', '--version'],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True,
+            timeout=5,
+        )
+        _gunicorn_available = True
+    except Exception:
+        _gunicorn_available = False
+    return _gunicorn_available
+
+
+def _start_web_server(app):
+    """Запуск подпроцесса Gunicorn. Если не получится — fallback на Werkzeug."""
+    global _web_server_proc
+    if _have_gunicorn():
+        try:
+            cmd = [
+                sys.executable, '-m', 'gunicorn',
+                '--config', 'web/gunicorn_conf.py',
+                'web.wsgi:application',
+            ]
+            _web_server_proc = subprocess.Popen(
+                cmd,
+                stdout=sys.stdout, stderr=subprocess.STDOUT,
+                preexec_fn=os.setsid if hasattr(os, 'setsid') else None,
+            )
+            print(f"[ВЕБ] Gunicorn запущен (pid={_web_server_proc.pid})")
+            return
+        except Exception as e:
+            print(f"[ВЕБ] Не удалось запустить Gunicorn, fallback на Werkzeug: {e}")
+
+    import logging
+    logging.getLogger('werkzeug').setLevel(logging.WARNING)
+    threading.Thread(
+        target=lambda: app.run(host='0.0.0.0', port=5001, debug=False, use_reloader=False),
+        daemon=True
+    ).start()
+    print("[ВЕБ] Werkzeug (fallback) запущен")
+
+
+def _stop_web_server():
+    """Корректно закрыть веб-сервер."""
+    global _web_server_proc
+    if _web_server_proc and _web_server_proc.poll() is None:
+        try:
+            _web_server_proc.terminate()
+            try:
+                _web_server_proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                _web_server_proc.kill()
+        except Exception as e:
+            print(f"[ВЕБ] Ошибка закрытия: {e}")
+        _web_server_proc = None
+
+
+def cleanup_on_exit():
+    """Действия очистки при закрытии бота"""
+    try:
+        print("[ОЧИСТКА] Бот закрывается...")
+        _stop_web_server()
         if hasattr(bot, 'voice_clients'):
             for vc in bot.voice_clients:
                 try:
                     asyncio.run_coroutine_threadsafe(vc.disconnect(), bot.loop)
                 except Exception:
                     pass
-        # Bot'u закрыть
         if not bot.is_closed():
             asyncio.run_coroutine_threadsafe(bot.close(), bot.loop)
     except Exception as e:
-        print(f"[CLEANUP] Temizlik ошибки: {e}")
+        print(f"[ОЧИСТКА] Ошибка очистки: {e}")
 
 def signal_handler(signum, frame):
-    """Signal handler for graceful shutdown"""
-    print(f"[SIGNAL] Signal {signum} alindi, temizlik yapiliyor...")
+    """Обработчик сигналов для корректного выключения"""
+    print(f"[СИГНАЛ] Получен сигнал {signum}, выполняется очистка...")
     cleanup_on_exit()
     sys.exit(0)
 
-# Signal handler'ları сохранить
 signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
 atexit.register(cleanup_on_exit)
 
-# ── Panel link отправить ────────────────────────────────────────────────────────
 async def send_panel_link(url):
     import json as _json
     tokens_file = os.path.join(os.path.dirname(__file__), 'data', 'tokens.json')
@@ -130,10 +195,8 @@ async def send_panel_link(url):
 
     for guild in bot.guilds:
         try:
-            # Маленький harf с ara — Discord channel isimleri маленький harf
             panel_ch = discord.utils.get(guild.text_channels, name="aether-panel")
             if not panel_ch:
-                # Старый isimli channelları da контроль et
                 for old_name in ["panel-link", "aether-panel", "Aether-panel"]:
                     panel_ch = discord.utils.get(guild.text_channels, name=old_name)
                     if panel_ch:
@@ -148,7 +211,7 @@ async def send_panel_link(url):
                     if role:
                         overwrites[role] = discord.PermissionOverwrite(read_messages=True)
                     panel_ch = await guild.create_text_channel("aether-panel", overwrites=overwrites)
-                    print(f"[INFO] aether-panel канал olusturuldu: {guild.name}")
+                    print(f"[ИНФО] Канал aether-panel создан: {guild.name}")
             async for msg in panel_ch.history(limit=10):
                 if msg.author == bot.user:
                     await msg.delete()
@@ -157,36 +220,35 @@ async def send_panel_link(url):
                 timestamp=discord.utils.utcnow()
             )
             embed.set_author(
-                name="Aether — Panel управление",
+                name="Aether — Управление панелью",
                 icon_url=guild.icon.url if guild.icon else None
             )
-            embed.description = f"[**› Вход yap в panel**]({panel_url})"
+            embed.description = f"[**› Войти в панель**]({panel_url})"
             embed.set_image(url="https://static.klipy.com/ii/71b2873e478b9d8d0482ea3ec777ba7f/15/36/51ALUZhO.gif")
             embed.add_field(
-                name="🏰  Сервер",
+                name="🖥 Сервер",
                 value=f"```{guild.name}```",
                 inline=True
             )
             embed.add_field(
-                name="👥  Участники",
+                name="👥 Участники",
                 value=f"```{guild.member_count}```",
                 inline=True
             )
             embed.add_field(
-                name="🔐  Erişim",
-                value="```Автоматически как по роли Discord```",
+                name="🔓 Доступ",
+                value="```Автоматически по роли Discord```",
                 inline=False
             )
             embed.set_footer(
-                text="Aether Panel • Obnovlyaetsya iken kajdom zapuske",
+                text="Aether Panel • Обновляется при каждом запуске",
                 icon_url=guild.icon.url if guild.icon else None
             )
             await panel_ch.send(embed=embed)
-            print(f"[OK] Panel linki {guild.name} сервер gonderildi")
+            print(f"[ОК] Ссылка на панель отправлена: {guild.name}")
         except Exception as e:
-            print(f"[ERR] Panel linki gonderilemedi ({guild.name}): {e}")
+            print(f"[ОШИБКА] Не удалось отправить ссылку на панель ({guild.name}): {e}")
 
-# ── Cloudflare tüneli ────────────────────────────────────────────────────────
 def _is_tunnel_alive(url):
     try:
         req = urllib.request.Request(url, method="GET")
@@ -199,7 +261,6 @@ def _is_tunnel_alive(url):
                 return False
             return True
     except urllib.error.HTTPError as e:
-        # 302/401 gibi cevaplar panel icin normal olabilir, 5xx ise olumsuz
         return e.code < 500
     except Exception:
         return False
@@ -215,40 +276,77 @@ def _write_and_broadcast_tunnel_url(url):
 def _get_cloudflared_binary():
     import shutil, platform, urllib.request
     base_dir = os.path.dirname(os.path.abspath(__file__))
+    is_win = platform.system().lower() == "windows"
+
+    def is_valid_exe(path):
+        if not os.path.exists(path):
+            return False
+        if os.path.getsize(path) < 5 * 1024 * 1024:
+            return False
+        try:
+            with open(path, 'rb') as f:
+                magic = f.read(2)
+                if magic != b'MZ':
+                    return False
+            return True
+        except Exception:
+            return False
+
     for name in ["cloudflared.exe", "cloudflared_new.exe", "cloudflared"]:
         p = os.path.join(base_dir, name)
-        if os.path.exists(p):
+        if is_valid_exe(p):
             return p
+        elif os.path.exists(p):
+            try: os.remove(p)
+            except: pass
+
     sys_cf = shutil.which("cloudflared") or shutil.which("cloudflared.exe")
-    if sys_cf:
+    if sys_cf and is_valid_exe(sys_cf):
         return sys_cf
+
+    if os.getenv('DISABLE_TUNNEL', '0') == '1':
+        print("[CLOUDFLARE] DISABLE_TUNNEL=1, туннель пропущен")
+        return None
+
     try:
         print("[CLOUDFLARE] Исполняемый файл cloudflared не найден. Начинаем автоматическую загрузку...")
-        is_win = platform.system().lower() == "windows"
         url = "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe" if is_win else "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64"
         dest_name = "cloudflared.exe" if is_win else "cloudflared"
         dest_path = os.path.join(base_dir, dest_name)
         urllib.request.urlretrieve(url, dest_path)
         if not is_win:
             os.chmod(dest_path, 0o755)
-        print(f"[CLOUDFLARE] Успешно загружен cloudflared в: {dest_path}")
-        return dest_path
+        if is_valid_exe(dest_path):
+            print(f"[CLOUDFLARE] Успешно загружен cloudflared в: {dest_path}")
+            return dest_path
+        else:
+            print(f"[CLOUDFLARE] Загруженный файл невалиден. Удален: {dest_path}")
+            try: os.remove(dest_path)
+            except: pass
+            return None
     except Exception as _e:
         print(f"[CLOUDFLARE] Ошибка автоматической загрузки cloudflared: {_e}")
         return None
 
 def start_tunnel():
     import time
+    if os.getenv('DISABLE_TUNNEL', '0') == '1':
+        print("[CLOUDFLARE] DISABLE_TUNNEL=1, туннель не запускается")
+        return
+
     cf_path = _get_cloudflared_binary()
     if not cf_path:
-        print("⚠️ Не удалось найти или загрузить cloudflared. Туннель Cloudflare отключен.")
+        print(" Не удалось найти или загрузить cloudflared. Туннель Cloudflare отключен.")
         return
+
     protocols = ["http2", "quic", "auto"]
     proto_idx = 0
-    while True:
+    fail_count = 0
+    MAX_FAILS = 3
+    while fail_count < MAX_FAILS:
         try:
             proto = protocols[proto_idx % len(protocols)]
-            print(f"[INFO] Запуск туннеля Cloudflare (протокол: {proto})...")
+            print(f"[ИНФО] Запуск туннеля Cloudflare (протокол: {proto})...")
             cmd = [cf_path, "tunnel", "--no-autoupdate"]
             if proto != "auto":
                 cmd.extend(["--protocol", proto])
@@ -262,7 +360,7 @@ def start_tunnel():
                 m = re.search(r'https://[a-z0-9\-]+\.trycloudflare\.com', line)
                 if m:
                     url = m.group(0)
-                    print(f"[LINK] Публичная ссылка Cloudflare: {url}")
+                    print(f"[ССЫЛКА] Публичная ссылка Cloudflare: {url}")
                     _tunnel_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tunnel_url.txt")
                     with open(_tunnel_path, "w", encoding="utf-8") as f:
                         f.write(url)
@@ -274,25 +372,39 @@ def start_tunnel():
                                     asyncio.run_coroutine_threadsafe(send_panel_link(u), bot.loop).result(timeout=15)
                                     return
                             except Exception as e:
-                                print(f"[ERR] Ошибка отправки ссылки в Discord: {e}")
+                                print(f"[ОШИБКА] Ошибка отправки ссылки в Discord: {e}")
                                 return
                             _t.sleep(1)
                     threading.Thread(target=_send_when_ready, args=(url,), daemon=True).start()
+                    fail_count = 0
             proc.wait()
-            proto_idx += 1
-            print("[WARN] Туннель отключился. Повторный запуск через 4 секунды с другим протоколом...")
+            if proc.returncode != 0:
+                fail_count += 1
+                print(f"[ПРЕДУПРЕЖДЕНИЕ] Туннель отключился (код={proc.returncode}, попытка {fail_count}/{MAX_FAILS})")
+            else:
+                print("[ПРЕДУПРЕЖДЕНИЕ] Туннель отключился. Повторный запуск через 4 секунды...")
+                fail_count = 0
             time.sleep(4)
+            proto_idx += 1
+        except FileNotFoundError as e:
+            fail_count += 1
+            print(f"[ОШИБКА] Бинарь Cloudflare не найден: {e}")
+            print(f"[ОШИБКА] Туннель отключен ({fail_count}/{MAX_FAILS}).")
+            time.sleep(5)
         except Exception as e:
-            print(f"[ERR] Ошибка работы Cloudflare Tunnel: {e}")
-            time.sleep(10)
+            fail_count += 1
+            print(f"[ОШИБКА] Ошибка работы Cloudflare Tunnel ({fail_count}/{MAX_FAILS}): {e}")
+            time.sleep(5)
+
+    print(f"[CLOUDFLARE] {MAX_FAILS} подряд ошибок, туннель полностью отключен.")
+    print(f"[CLOUDFLARE] Если проблема продолжается, добавьте в .env: DISABLE_TUNNEL=1")
 
 
-# ── on_ready ─────────────────────────────────────────────────────────────────
 _synced = False
-VOICE_CHANNEL_ID = None  # Panelden настройк
+VOICE_CHANNEL_ID = None
 
 async def _monitor_voice():
-    """Ses ссылка canlı tut — düştüğünde bağlan, каждый 4 dakikada удалить çal."""
+    """Держим голосовое подключение живым — переподключаемся при падении, каждые 4 минуты играем тишину."""
     await bot.wait_until_ready()
     await asyncio.sleep(10)
     last_ping = 0
@@ -303,20 +415,17 @@ async def _monitor_voice():
             continue
         vc = discord.utils.get(bot.voice_clients, guild=channel.guild)
         
-        # Bağlı değilse bağlan
         if not vc or not vc.is_connected():
             try:
                 vc = await channel.connect(self_deaf=False)
                 last_ping = time.time()
             except Exception:
                 pass
-        # Bağlıysa ve 4 dakika geçtiyse удалить ping at
         elif time.time() - last_ping > 240:
             try:
                 if not vc.is_playing():
-                    # 1 saniyelik sessiz ses
                     import io
-                    delete = io.BytesIO(b'\x00' * 3840)  # 20ms PCM удалить
+                    delete = io.BytesIO(b'\x00' * 3840)
                     source = discord.PCMAudio(delete)
                     vc.play(source)
                 last_ping = time.time()
@@ -327,19 +436,17 @@ async def _monitor_voice():
 async def on_ready():
     global _synced
     if not _synced:
-        # Guild-specific sync — anında активен olur
         for guild in bot.guilds:
             try:
                 await bot.tree.sync(guild=guild)
-                print(f'[SYNC] Slash команды sync edildi: {guild.name}')
+                print(f'[СИНХРОНИЗАЦИЯ] Slash команды синхронизированы: {guild.name}')
             except Exception as e:
-                print(f'[SYNC] Ошибка {guild.name}: {e}')
-        await bot.tree.sync()  # Global sync de yap
+                print(f'[СИНХРОНИЗАЦИЯ] Ошибка {guild.name}: {e}')
+        await bot.tree.sync()
         _synced = True
         bot.loop.create_task(_monitor_voice())
-    print(f"[OK] {bot.user} активен | {len(bot.guilds)} сервер")
+    print(f"[ОК] {bot.user} активен | {len(bot.guilds)} серверов")
 
-    # Bot config'den status/activity oku — КАЖДЫЙ on_ready'de çalışır
     import json as _j
     _cfg_file = 'data/bot_config.json'
     _status = discord.Status.idle
@@ -361,24 +468,21 @@ async def on_ready():
         activity=discord.Activity(type=_activity_type, name=_activity_text),
         status=_status
     )
-    print(f"[OK] Status: {_status} | Activity: {_activity_text}")
+    print(f"[ОК] Статус: {_status} | Активность: {_activity_text}")
 
-    # Ses в канал bağlan (только ilk başlangıçta)
     channel = bot.get_channel(VOICE_CHANNEL_ID) if VOICE_CHANNEL_ID else None
     if channel and isinstance(channel, discord.VoiceChannel):
         vc = discord.utils.get(bot.voice_clients, guild=channel.guild)
         if not vc:
             try:
                 await channel.connect(self_deaf=False)
-                print(f"[OK] Ses в канал bağlandı: {channel.name}")
+                print(f"[ОК] Подключен к голосовому каналу: {channel.name}")
             except Exception as e:
-                print(f"[ERR] Ses bağlanma ошибки: {e}")
+                print(f"[ОШИБКА] Ошибка подключения к голосу: {e}")
 
-    # Bot instance'ı обновить
     from web.app import set_bot_instance
     set_bot_instance(bot)
 
-    # Panel channelını контроль et — tunnel URL varsa отправить (только bir kez)
     _tunnel_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tunnel_url.txt")
     if not getattr(bot, '_panel_link_sent', False) and os.path.exists(_tunnel_path):
         try:
@@ -388,59 +492,82 @@ async def on_ready():
                 await send_panel_link(_url)
                 bot._panel_link_sent = True
         except Exception as _e:
-            print(f"[ERR] Panel link отправл: {_e}")
+            print(f"[ОШИБКА] Отправка ссылки панели: {_e}")
 
-# ── Cog загрузить ────────────────────────────────────────────────────────────────
 async def load_cogs():
-    SKIP_COGS = {"embed_utils.py", "__init__.py"}
+    SKIP_COGS = {
+        "embed_utils.py", "__init__.py",
+        "help_card.py", "_card_style.py",
+        "leveling_engagement.py",
+        "temp_moderation.py",
+        "ticket_commands.py",
+        "ticket_cog.py",
+        "utility_cog.py",
+        "music.py",
+        "economy_cmds.py",
+        "fun.py",
+        "utility.py",
+        "automod.py",
+    }
+    
+    try:
+        import error_handler
+        await error_handler.setup(bot)
+        log.info("Централизованный обработчик ошибок загружен")
+    except Exception as e:
+        log.error(f"Ошибка загрузки обработчика ошибок: {e}")
+    
+    bot.remove_command('help')
+
     cog_files = sorted([f for f in os.listdir("./cogs") if f.endswith(".py") and f not in SKIP_COGS])
     for filename in cog_files:
         ext = f"cogs.{filename[:-3]}"
-        print(f"[LOAD] Yukleniyor: {filename}")
+        log.info(f"Загрузка: {filename}")
         try:
             await asyncio.wait_for(bot.load_extension(ext), timeout=20)
-            print(f"[LOAD] Yuklendi: {filename}")
+            log.info(f"Загружено: {filename}")
         except asyncio.TimeoutError:
-            print(f"[ERR] Cog timeout (20s): {filename}")
+            log.error(f"Таймаут кога (20с): {filename}")
         except Exception as e:
             import traceback
-            print(f"[ERR] Cog yukleme ошибки ({filename}): {e}")
+            log.error(f"Ошибка загрузки кога ({filename}): {e}")
             traceback.print_exc()
 
-# ── Main ─────────────────────────────────────────────────────────────────────
 async def main():
-    # Web paneli запустить (bot başlamadan до - только bir kez)
     from web.app import app, set_bot_instance
     set_bot_instance(bot)
-    # Werkzeug terminal colorlerini закрыть
-    import logging
-    log = logging.getLogger('werkzeug')
-    log.setLevel(logging.WARNING)
-    threading.Thread(
-        target=lambda: app.run(host='0.0.0.0', port=5001, debug=False, use_reloader=False),
-        daemon=True
-    ).start()
-    print("[WEB] Web panel: http://localhost:5001")
+    _start_web_server(app)
+    print("[ВЕБ] Веб панель: http://localhost:5001")
 
-    # Cloudflare tüneli запустить (Flask'ın ayağa kalkması для 3 sn badd)
+    try:
+        from web.websocket_server import start_websocket_thread
+        start_websocket_thread()
+        log.info("WebSocket сервер запущен на порту 8765")
+    except Exception as e:
+        log.warning(f"WebSocket сервер не запущен: {e}")
+
     def delayed_tunnel():
         import time
         time.sleep(3)
         start_tunnel()
     threading.Thread(target=delayed_tunnel, daemon=True).start()
 
-    print("[BOT] Baslatiliyor... (cog yukleme -> Discord giris)")
+    print("[БОТ] Запускается... (загрузка когов -> вход в Discord)")
     async with bot:
-        print("[BOT] Cog'lar yukleniyor...")
+        print("[БОТ] Коги загружаются...")
         await load_cogs()
         while True:
             try:
-                print("[BOT] Discord'a baglaniliyor...")
-                await bot.start(os.getenv("TOKEN"))
+                _token = (os.getenv("TOKEN", "") or os.getenv("TОКEN", "")).strip()
+                if not _token:
+                    raise RuntimeError(
+                        "Токен не найден! Добавьте токен в .env файл (строка TOKEN=ваш_токен) "
+                        "из https://discord.com/developers/applications"
+                    )
+                print("[БОТ] Подключение к Discord...")
+                await bot.start(_token)
             except Exception as e:
-                # Ağ/Discord доступ anlık düşerse panel de ayakta kalsın diye
-                # botu öldürmüyoruz; краткий baddyip tekrar deniyoruz.
-                print(f"[ERR] Bot baslatma ошибки: {e}")
+                print(f"[ОШИБКА] Ошибка запуска бота: {e}")
                 await asyncio.sleep(10)
 
 if __name__ == "__main__":

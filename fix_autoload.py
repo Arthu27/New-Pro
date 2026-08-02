@@ -1,4 +1,4 @@
-"""Vo все sablonah loadGuilds sonrası ilk сервер автоматически как vibirat"""
+"""Vo все sablonah loadGuilds после ilk сервер автоматически как vibirat"""
 import os, re
 
 templates_dir = "web/templates"
@@ -11,18 +11,18 @@ for fname in os.listdir(templates_dir):
     with open(path, 'r', encoding='utf-8') as f:
         content = f.read()
     
-    # Zaten düzeltilmiş mi?
+    # Zaten dюzeltilmiш mi?
     if 'guilds.length > 0' in content or 'guilds[0]' in content:
         continue
     
-    # loadGuilds fonksiyonunu bul ve düzelt
-    # Pattern: guilds.forEach(...); } (son satır) -> guilds.forEach(...); if(guilds.length>0){sel.value=guilds[0].id; loadSettings();}
+    # loadGuilds fonksiyonunu найти ve dюzelt
+    # Pattern: guilds.forEach(...); } (son satыr) -> guilds.forEach(...); if(guilds.length>0){sel.value=guilds[0].id; loadSettings();}
     
     # Разница pattern'ler dene
     patterns = [
-        # Pattern 1: forEach sonrası kapanış
+        # Pattern 1: forEach после закрытие
         (r'(guilds\.forEach\([^;]+;\s*\n\s*\})',
-         r'\1\n  if(guilds.length > 0) { document.getElementById(\'guild-select\').value = guilds[0].id; if(typeof loadSettings === \'function\') loadSettings(); else if(typeof loadChannels === \'function\') loadChannels(); }'),
+         r'\1\n if(guilds.length > 0) { document.getElementById(\'guild-select\').value = guilds[0].id; if(typeof loadSettings === \'function\') loadSettings(); else if(typeof loadChannels === \'function\') loadChannels(); }'),
     ]
     
     new_content = content
@@ -32,7 +32,7 @@ for fname in os.listdir(templates_dir):
     if new_content != content:
         with open(path, 'w', encoding='utf-8') as f:
             f.write(new_content)
-        print(f"✅ Haklarıkuruldu: {fname}")
+        print(f"✅ Haklarыkuruldu: {fname}")
         fixed += 1
 
-print(f"\nToplam {fixed} dosya haklarıkuruldu.")
+print(f"\nВсего {fixed} dosya haklarыkuruldu.")

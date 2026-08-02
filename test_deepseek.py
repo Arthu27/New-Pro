@@ -11,7 +11,7 @@ async def test():
     from playwright.async_api import async_playwright
 
     async with async_playwright() as pw:
-        browser = await pw.chromium.launch(headless=False)  # Видеть açılsın
+        browser = await pw.chromium.launch(headless=False)  # Видеть открытьыlsыn
         page = await browser.new_page()
 
         print("Siteye gidiliyor...")
@@ -21,7 +21,7 @@ async def test():
         print(f"URL: {page.url}")
         print(f"Title: {await page.title()}")
 
-        # Все input'ları listele
+        # Все input'larы listele
         inputs = await page.locator('input').all()
         print(f"\nInput количество: {len(inputs)}")
         for i, inp in enumerate(inputs):
@@ -29,7 +29,7 @@ async def test():
                 t = await inp.get_attribute('type')
                 p = await inp.get_attribute('placeholder')
                 n = await inp.get_attribute('name')
-                print(f"  [{i}] type={t} placeholder={p} name={n}")
+                print(f" [{i}] type={t} placeholder={p} name={n}")
             except:
                 pass
 
@@ -39,7 +39,7 @@ async def test():
         for i, btn in enumerate(buttons[:10]):
             try:
                 txt = await btn.inner_text()
-                print(f"  [{i}] {txt[:50]}")
+                print(f" [{i}] {txt[:50]}")
             except:
                 pass
 

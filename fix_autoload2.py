@@ -1,4 +1,4 @@
-"""loadGuilds fonksiyonunda forEach sonrası автоматически ilk сервер выбор add"""
+"""loadGuilds fonksiyonunda forEach после автоматически ilk сервер выбор add"""
 import os, re
 
 templates_dir = "web/templates"
@@ -17,7 +17,7 @@ for fname in os.listdir(templates_dir):
     # Multiline forEach pattern
     new_content = re.sub(
         r'(guilds\.forEach\(function\(g\)\s*\{[^}]+\}\s*\);)\s*\n(\s*\})',
-        lambda m: m.group(1) + '\n  if(guilds.length > 0) { sel.value = guilds[0].id; '
+        lambda m: m.group(1) + '\n if(guilds.length > 0) { sel.value = guilds[0].id; '
                   'if(typeof loadSettings===\'function\')loadSettings();'
                   'else if(typeof loadChannels===\'function\')loadChannels();'
                   'else if(typeof loadRoles===\'function\')loadRoles(); }\n' + m.group(2),
@@ -30,4 +30,4 @@ for fname in os.listdir(templates_dir):
         print(f"✅ {fname}")
         fixed += 1
 
-print(f"\nToplam {fixed} dosya.")
+print(f"\nВсего {fixed} dosya.")

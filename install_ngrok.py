@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ngrok'u indirir ve token'ı настройки"""
+"""ngrok'u indirir ve token'ы настройки"""
 import urllib.request
 import zipfile
 import os

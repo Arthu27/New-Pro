@@ -1,210 +1,81 @@
-﻿{% extends "base.html" %}
-{% block title %}Custom Эмбед Builder - Aether{% endblock %}
-{% block page_title %}CUSTOM EMBED BUILDER{% endblock %}
+{% extends "base.html" %}
+{% block title %}Конструктор Embed - Aether{% endblock %}
+{% block page_title %}<i class="fas fa-palette"></i> Конструктор Embed сообщений{% endblock %}
 {% block content %}
-<style>
-.embed-builder {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-  margin-bottom: 20px;
-}
-
-.builder-form {
-  background: rgba(10, 10, 10, 0.7);
-  border-radius: 12px;
-  padding: 20px;
-  border: 1px solid rgba(200,160,80, 0.3);
-}
-
-.builder-preview {
-  background: rgba(10, 10, 10, 0.7);
-  border-radius: 12px;
-  padding: 20px;
-  border: 1px solid rgba(200,160,80, 0.3);
-  min-height: 400px;
-}
-
-.form-group {
-  margin-bottom: 15px;
-}
-
-.form-label {
-  display: block;
-  margin-bottom: 5px;
-  color: #ddd;
-  font-size: 13px;
-}
-
-.form-input, .form-textarea {
-  width: 100%;
-  padding: 10px;
-  background: rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(200,160,80, 0.3);
-  border-radius: 6px;
-  color: var(--text);
-  font-size: 13px;
-}
-
-.form-textarea {
-  height: 100px;
-  resize: vertical;
-}
-
-.btn-send {
-  background: linear-gradient(135deg, var(--accent), var(--accent2));
-  color: white;
-  border: none;
-  padding: 12px 20px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: bold;
-  width: 100%;
-  font-size: 14px;
-  transition: all 0.3s;
-}
-
-.btn-send:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(200,160,80, 0.4);
-}
-
-.preview-contaеr {
-  background: #2f3136;
-  border-radius: 4px;
-  padding: 15px;
-  margin-top: 10px;
-  min-height: 300px;
-}
-
-.embed-contaеr {
-  background: #36393f;
-  border-radius: 4px;
-  padding: 10px 15px;
-  max-width: 400px;
-  margin: 10px 0;
-}
-
-.embed-color-bar {
-  width: 100%;
-  height: 4px;
-  border-radius: 4px 4px 0 0;
-  margin: -15px -15px 10px -15px;
-  background: var(--accent);
-}
-
-.embed-title {
-  color: #fff;
-  font-weight: bold;
-  margin-bottom: 5px;
-  font-size: 16px;
-}
-
-.embed-description {
-  color: #dcddde;
-  font-size: 14px;
-  line-height: 1.2;
-}
-
-.embed-footer {
-  color: #72767d;
-  font-size: 12px;
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid #4f545c;
-}
-
-.color-picker {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.color-option {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  cursor: pointer;
-  border: 2px solid transparent;
-  transition: all 0.2s;
-}
-
-.color-option:hover, .color-option.selected {
-  transform: scale(1.1);
-  border-color: white;
-}
-
-#custom-color {
-  width: 80px;
-  padding: 5px;
-}
-</style>
-
-<div class="embed-builder">
-  <div class="builder-form">
-    <h3 style="color:#c8922a;margin-top:0;">Настройки эмбеда</h3>
-    
-    <div class="form-group">
-      <label class="form-label">Title</label>
-      <input type="text" id="embed-title" class="form-input" placeholder="Эмбед title...">
+{% block page_hero %}
+<div class="page-hero compact">
+  <div class="page-hero-content">
+    <div class="page-hero-greeting">
+      <span class="dot"></span>
+      <span>Конструктор Embed</span>
     </div>
-    
-    <div class="form-group">
-      <label class="form-label">Description</label>
-      <textarea id="description" class="form-textarea" placeholder="Эмбед description..."></textarea>
+    <h1>Конструктор Embed сообщений</h1>
+    <p>Создавайте красивые embed-сообщения для Discord.</p>
+  </div>
+</div>
+{% endblock %}
+
+<div class="section">
+  <div class="bs-title"><i class="fas fa-cogs"></i> Настройки Embed</div>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+    <div>
+      <label style="display: block; margin-bottom: 8px; color: var(--text-muted); font-size: 13px;">Заголовок</label>
+      <input type="text" id="embed-title" class="form-input" placeholder="Заголовок embed...">
     </div>
-    
-    <div class="form-group">
-      <label class="form-label">Color</label>
-      <div class="color-picker">
-        <div class="color-option" style="background:#c8922a;" data-color="var(--accent)"></div>
-        <div class="color-option" style="background:#2ecc71;" data-color="#2ecc71"></div>
-        <div class="color-option" style="background:#c8922a;" data-color="#c8922a"></div>
-        <div class="color-option" style="background:#c8922a;" data-color="#c8922a"></div>
-        <div class="color-option" style="background:#c8922a;" data-color="#c8922a"></div>
-        <div class="color-option" style="background:#c8922a;" data-color="#c8922a"></div>
-        <input type="text" id="custom-color" value="#c8922a" maxlength="20">
+    <div>
+      <label style="display: block; margin-bottom: 8px; color: var(--text-muted); font-size: 13px;">Цвет</label>
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <input type="color" id="custom-color" value="#5865F2" style="width: 50px; height: 38px; border: none; background: none; cursor: pointer;">
+        <input type="text" id="color-hex" value="#5865F2" class="form-input" style="flex: 1;" maxlength="7">
       </div>
     </div>
-    
-    <div class="form-group">
-      <label class="form-label">Footer Text</label>
-      <input type="text" id="footer" class="form-input" placeholder="Footer text...">
-    </div>
-    
-    <div class="form-group">
-      <label class="form-label">Image URL</label>
-      <input type="text" id="image-url" class="form-input" placeholder="https://example.com/image.jpg">
-    </div>
-    
-    <div class="form-group">
-      <label class="form-label">Thumbnail URL</label>
-      <input type="text" id="thumbnail-url" class="form-input" placeholder="https://example.com/thumb.jpg">
-    </div>
-    
-    <div class="form-group">
-      <label class="form-label">Guild</label>
-      <select  id="guild-select" class="form-input" onchange="onGuildChange()"></select>
-    </div>
-    
-    <div class="form-group">
-      <label class="form-label">Target Channel</label>
-      <select id="target-channel" class="form-input"></select>
-    </div>
-    
-    <button class="btn-send" onclick="sendEmbed()">📤 Отправить эмбед</button>
   </div>
   
-  <div class="builder-preview">
-    <h3 style="color:#c8922a;margin-top:0;">Preview</h3>
-    <div class="preview-contaеr">
-      <div class="embed-contaеr" id="embed-preview">
-        <div class="embed-color-bar" id="preview-color-bar" style="background:#c8922a;"></div>
-        <div class="embed-title" id="preview-title">Your embed title</div>
-        <div class="embed-description" id="preview-description">Your embed description will appear hero...</div>
-        <div class="embed-footer" id="preview-footer">Footer text</div>
-      </div>
+  <div style="margin-top: 16px;">
+    <label style="display: block; margin-bottom: 8px; color: var(--text-muted); font-size: 13px;">Описание</label>
+    <textarea id="description" class="form-input" placeholder="Описание embed..." style="min-height: 100px; resize: vertical;"></textarea>
+  </div>
+  
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px;">
+    <div>
+      <label style="display: block; margin-bottom: 8px; color: var(--text-muted); font-size: 13px;">Текст футера</label>
+      <input type="text" id="footer" class="form-input" placeholder="Текст в нижней части...">
     </div>
+    <div>
+      <label style="display: block; margin-bottom: 8px; color: var(--text-muted); font-size: 13px;">URL изображения</label>
+      <input type="text" id="image-url" class="form-input" placeholder="https://example.com/image.jpg">
+    </div>
+  </div>
+  
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px;">
+    <div>
+      <label style="display: block; margin-bottom: 8px; color: var(--text-muted); font-size: 13px;">URL миниатюры</label>
+      <input type="text" id="thumbnail-url" class="form-input" placeholder="https://example.com/thumb.jpg">
+    </div>
+    <div>
+      <label style="display: block; margin-bottom: 8px; color: var(--text-muted); font-size: 13px;">Сервер</label>
+      <select id="guild-select" class="form-input" onchange="onGuildChange()"></select>
+    </div>
+  </div>
+  
+  <div style="margin-top: 16px;">
+    <label style="display: block; margin-bottom: 8px; color: var(--text-muted); font-size: 13px;">Канал отправки</label>
+    <select id="target-channel" class="form-input"></select>
+  </div>
+  
+  <div style="margin-top: 20px;">
+    <button class="control-btn primary" onclick="sendEmbed()" style="width: 100%; padding: 12px;">
+      <i class="fas fa-paper-plane"></i> Отправить Embed
+    </button>
+  </div>
+</div>
+
+<div class="section">
+  <div class="bs-title"><i class="fas fa-eye"></i> Предпросмотр</div>
+  <div style="background: #2f3136; border-radius: 8px; padding: 16px; border-left: 4px solid #5865F2;" id="embed-preview">
+    <div style="font-weight: 600; font-size: 16px; margin-bottom: 8px; color: #fff;" id="preview-title">Заголовок Embed</div>
+    <div style="font-size: 14px; color: #dcddde; margin-bottom: 12px; line-height: 1.5;" id="preview-description">Описание embed будет отображаться здесь...</div>
+    <div style="font-size: 12px; color: #72767d;" id="preview-footer">Текст футера</div>
   </div>
 </div>
 
@@ -228,7 +99,7 @@ async function onGuildChange() {
     var text = channels.filter(function(c){ return c.type === 'text'; });
     sel.innerHTML = text.length
       ? text.map(function(c){ return '<option value="'+c.id+'">#'+c.name+'</option>'; }).join('')
-      : '<option value="">Metin канал не найдено./option>';
+      : '<option value="">Текстовые каналы не найдены</option>';
   } catch(e) {
     sel.innerHTML = '<option value="">Произошла ошибка</option>';
     console.error(e);
@@ -246,30 +117,24 @@ async function loadGuilds() {
 }
 
 function updatePreview() {
-  var title = document.getElementById('embed-title').value || 'Эмбед заголовок';
-  var desc = document.getElementById('description').value || 'Эмбед описание здесь видеть...';
-  var footer = document.getElementById('footer').value || 'Footer metni';
-  var color = document.getElementById('custom-color').value || '#c8922a';
+  var title = document.getElementById('embed-title').value || 'Заголовок Embed';
+  var desc = document.getElementById('description').value || 'Описание embed будет отображаться здесь...';
+  var footer = document.getElementById('footer').value || 'Текст футера';
+  var color = document.getElementById('custom-color').value || '#5865F2';
+  
   document.getElementById('preview-title').textContent = title;
   document.getElementById('preview-description').textContent = desc;
   document.getElementById('preview-footer').textContent = footer;
-  document.getElementById('preview-color-bar').style.background = color;
+  document.getElementById('embed-preview').style.borderLeftColor = color;
+  
+  // Sync color hex input
+  document.getElementById('color-hex').value = color;
 }
-
-document.querySelectorAll('.color-option').forEach(function(el) {
-  el.addEventListener('click', function() {
-    var color = this.getAttribute('data-color');
-    document.getElementById('custom-color').value = color;
-    document.querySelectorAll('.color-option').forEach(function(o){ o.classList.remove('selected'); });
-    this.classList.add('selected');
-    updatePreview();
-  });
-});
 
 async function sendEmbed() {
   var title = document.getElementById('embed-title').value.trim();
   var desc = document.getElementById('description').value.trim();
-  var color = document.getElementById('custom-color').value || '#c8922a';
+  var color = document.getElementById('custom-color').value || '#5865F2';
   var footer = document.getElementById('footer').value.trim();
   var imageUrl = document.getElementById('image-url').value.trim();
   var thumbUrl = document.getElementById('thumbnail-url').value.trim();
@@ -277,11 +142,11 @@ async function sendEmbed() {
   var guildId = document.getElementById('guild-select').value;
 
   if (!channelId) { alert('Выберите канал!'); return; }
-  if (!guildId) { alert('Сервер выбрать!'); return; }
+  if (!guildId) { alert('Выберите сервер!'); return; }
 
-  var btn = document.querySelector('.btn-send');
+  var btn = event.target.closest('button');
   btn.disabled = true;
-  btn.textContent = '⏳ Отправл...';
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Отправка...';
 
   try {
     var response = await fetch('/api/send-embed', {
@@ -300,16 +165,16 @@ async function sendEmbed() {
     });
     var result = await response.json();
     if (result.success) {
-      btn.textContent = '✅ Отправлено!';
-      setTimeout(function(){ btn.textContent = '📤 Отправить эмбед'; btn.disabled = false; }, 2000);
+      btn.innerHTML = '<i class="fas fa-check"></i> Отправлено!';
+      setTimeout(function(){ btn.innerHTML = '<i class="fas fa-paper-plane"></i> Отправить Embed'; btn.disabled = false; }, 2000);
     } else {
-      alert('Ошибка: ' + (result.error || 'Bilinmeyen ошибка'));
-      btn.textContent = '📤 Отправить эмбед';
+      alert('Ошибка: ' + (result.error || 'Неизвестная ошибка'));
+      btn.innerHTML = '<i class="fas fa-paper-plane"></i> Отправить Embed';
       btn.disabled = false;
     }
   } catch(e) {
     alert('Ошибка соединения');
-    btn.textContent = '📤 Отправить эмбед';
+    btn.innerHTML = '<i class="fas fa-paper-plane"></i> Отправить Embed';
     btn.disabled = false;
   }
 }
@@ -317,9 +182,19 @@ async function sendEmbed() {
 document.addEventListener('DOMContentLoaded', function() {
   loadGuilds();
   updatePreview();
+  
   ['embed-title','description','footer','custom-color'].forEach(function(id) {
     var el = document.getElementById(id);
     if (el) el.addEventListener('input', updatePreview);
+  });
+  
+  // Sync color picker with hex input
+  document.getElementById('color-hex').addEventListener('input', function() {
+    var val = this.value;
+    if (/^#[0-9A-F]{6}$/i.test(val)) {
+      document.getElementById('custom-color').value = val;
+      updatePreview();
+    }
   });
 });
 </script>

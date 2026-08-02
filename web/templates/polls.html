@@ -1,556 +1,76 @@
 {% extends "base.html" %}
-{% block title %}Опросы - Aether{% endblock %}
-{% block page_title %}📊 МЕНЕДЖЕР ОПРОСОВ{% endblock %}
+{% block title %}Опросы — Aether{% endblock %}
+{% block page_title %}<i class="fas fa-poll-h" ></i> Опросы{% endblock %}
 {% block content %}
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap');
-
-.polls-hero {
-  background: linear-gradient(135deg, #100e08, #100e08, #100e08);
-  border: 1px solid rgba(200,160,80,0.4);
-  border-radius: 20px;
-  padding: 32px 30px;
-  margin-bottom: 24px;
-  text-align: center;
-  position: relative;
-  overflow: hidden;
-}
-.polls-hero::before {
-  content: '';
-  position: absolute;
-  top: 0; left: -100%;
-  width: 100%; height: 3px;
-  background: linear-gradient(90deg, transparent, var(--accent), transparent);
-  animation: scan-line 3s linear infinite;
-}
-.polls-hero::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(ellipse at 50% 0%, rgba(200,160,80,0.07) 0%, transparent 70%);
-  pointer-events: none;
-}
-@keyframes scan-line { 0%{left:-100%} 100%{left:100%} }
-
-.hero-icon { font-size: 60px; margin-bottom: 10px; display: block; filter: drop-shadow(0 0 18px rgba(200,160,80,0.6)); animation: float 3s ease-in-out infinite; }
-@keyframes float { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-7px);} }
-.hero-title {
-  font-family: 'Inter', sans-serif;
-  font-size: 22px;
-  font-weight: 900;
-  background: linear-gradient(135deg, #c8922a, var(--accent), var(--accent2));
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  letter-spacing: 3px;
-  margin-bottom: 6px;
-}
-.hero-sub { color: #888; font-size: 13px; letter-spacing: 0.5px; }
-
-.controls-bar { display: flex; gap: 12px; margin-bottom: 22px; flex-wrap: wrap; }
-.guild-sel {
-  flex: 1; min-width: 200px;
-  padding: 12px 16px;
-  background: rgba(0,0,0,0.7);
-  border: 2px solid rgba(200,160,80,0.3);
-  border-radius: 12px;
-  color: var(--text); font-size: 14px;
-  transition: all .2s;
-}
-.guild-sel:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 12px rgba(200,160,80,0.2); }
-
-.btn-new {
-  padding: 12px 24px;
-  background: linear-gradient(135deg, rgba(26,22,16,0.7), var(--accent), var(--accent2));
-  color: white;
-  border: none;
-  border-radius: 12px;
-  cursor: pointer;
-  font-weight: 700;
-  font-size: 14px;
-  font-family: 'Inter', sans-serif;
-  letter-spacing: 1px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: all .25s;
-  box-shadow: 0 4px 20px rgba(200,160,80,0.35);
-}
-.btn-new:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(200,160,80,0.55); }
-
-.poll-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 20px; }
-
-.poll-card {
-  background: linear-gradient(145deg, #100e08, #100e08, #100e08);
-  border: 1px solid rgba(200,160,80,0.2);
-  border-radius: 20px;
-  padding: 24px;
-  position: relative;
-  overflow: hidden;
-  transition: all .3s cubic-bezier(.4,0,.2,1);
-  animation: fadeInUp .4s ease both;
-}
-.poll-card:hover {
-  border-color: rgba(200,160,80,0.6);
-  transform: translateY(-4px);
-  box-shadow: 0 12px 40px rgba(200,160,80,0.18);
-}
-.poll-card::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, rgba(26,22,16,0.7), var(--accent), #c8922a, var(--accent), rgba(26,22,16,0.7));
-  background-size: 300% 100%;
-  animation: shimmer 3s linear infinite;
-}
-@keyframes shimmer { 0%{background-position:200% 0;} 100%{background-position:-200% 0;} }
-@keyframes fadeInUp { from{opacity:0;transform:translateY(20px);} to{opacity:1;transform:translateY(0);} }
-
-.poll-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 18px; }
-.poll-icon {
-  width: 44px; height: 44px;
-  background: linear-gradient(135deg, rgba(200,160,80,0.25), rgba(232,184,109,0.15));
-  border: 1px solid rgba(200,160,80,0.4);
-  border-radius: 12px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 22px; flex-shrink: 0;
-}
-.poll-question { font-size: 15px; font-weight: 700; color: #fff; line-height: 1.4; }
-.poll-meta { color: var(--text3); font-size: 11px; margin-top: 4px; }
-
-.poll-option { margin-bottom: 10px; animation: fadeInUp .3s ease both; }
-.opt-header { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
-.opt-emoji { font-size: 18px; width: 26px; text-align: center; }
-.opt-text { color: #ddd; font-size: 13px; flex: 1; }
-.opt-votes { color: var(--accent); font-size: 12px; font-weight: 700; font-family: 'Inter', sans-serif; }
-.opt-pct { color: var(--text3); font-size: 11px; }
-
-.bar-track { height: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden; }
-.bar-fill {
-  height: 100%;
-  border-radius: 4px;
-  transition: width 1s cubic-bezier(.4,0,.2,1);
-  position: relative;
-  overflow: hidden;
-}
-.bar-fill::after {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
-  animation: bar-shе 2.5s ease-in-out infinite;
-}
-@keyframes bar-shе { 0%{transform:translateX(-100%);} 100%{transform:translateX(100%);} }
-
-.bar-red    { background: linear-gradient(90deg, rgba(26,22,16,0.7), var(--accent)); }
-.bar-green  { background: linear-gradient(90deg, rgba(26,22,16,0.7), #2ecc71); }
-.bar-blue   { background: linear-gradient(90deg, rgba(26,22,16,0.7), #c8922a); }
-.bar-purple { background: linear-gradient(90deg, rgba(26,22,16,0.7), #c8922a); }
-.bar-orange { background: linear-gradient(90deg, rgba(26,22,16,0.7), #c8922a); }
-.bar-teal   { background: linear-gradient(90deg, rgba(26,22,16,0.7), #c8922a); }
-
-.btn-vote {
-  padding: 6px 14px;
-  background: rgba(200,160,80,0.12);
-  border: 1px solid rgba(200,160,80,0.35);
-  color: var(--accent);
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 11px;
-  font-weight: 700;
-  font-family: 'Inter', sans-serif;
-  letter-spacing: 0.5px;
-  transition: all .2s;
-  margin-top: 4px;
-}
-.btn-vote:hover { background: rgba(200,160,80,0.25); transform: translateY(-1px); }
-.btn-vote.voted { background: rgba(200,160,80,0.3); border-color: var(--accent); color: #c8922a; cursor: default; }
-
-.poll-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 15px;
-  padding-top: 12px;
-  border-top: 1px solid rgba(255,255,255,0.05);
-}
-.total-badge {
-  background: rgba(200,160,80,0.12);
-  border: 1px solid rgba(200,160,80,0.3);
-  border-radius: 20px;
-  padding: 4px 12px;
-  color: var(--accent);
-  font-size: 11px;
-  font-weight: 700;
-  font-family: 'Inter', sans-serif;
-}
-
-.modal-overlay {
-  display: none;
-  position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background: rgba(0,0,0,0.92);
-  z-index: 9999;
-  justify-content: center;
-  align-items: center;
-  backdrop-filter: blur(6px);
-}
-.modal-box {
-  background: linear-gradient(145deg, #100e08, #100e08, #100e08);
-  border: 2px solid rgba(200,160,80,0.5);
-  border-radius: 24px;
-  padding: 34px;
-  max-width: 520px;
-  width: 92%;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 24px 80px rgba(200,160,80,0.25);
-  animation: modalIn .35s cubic-bezier(.34,1.56,.64,1);
-  position: relative;
-  overflow: hidden;
-}
-.modal-box::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, rgba(26,22,16,0.7), var(--accent), #c8922a, var(--accent), rgba(26,22,16,0.7));
-  background-size: 300% 100%;
-  animation: shimmer 3s linear infinite;
-}
-@keyframes modalIn { from{opacity:0;transform:scale(0.85) translateY(20px);} to{opacity:1;transform:scale(1) translateY(0);} }
-
-.modal-title {
-  font-family: 'Inter', sans-serif;
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--accent);
-  margin-bottom: 24px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  letter-spacing: 1px;
-}
-.form-group { margin-bottom: 16px; }
-.form-label {
-  display: block;
-  color: var(--accent);
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  margin-bottom: 8px;
-  font-weight: 700;
-  font-family: 'Inter', sans-serif;
-}
-.form-input {
-  width: 100%;
-  padding: 11px 14px;
-  background: rgba(0,0,0,0.6);
-  border: 2px solid rgba(200,160,80,0.2);
-  border-radius: 10px;
-  color: var(--text);
-  font-size: 14px;
-  transition: all .2s;
-  box-sizing: border-box;
-}
-.form-input:focus { outline: none; border-color: var(--accent); background: rgba(200,160,80,0.04); }
-
-.opt-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; animation: fadeInUp .2s ease; }
-.opt-emoji-input {
-  width: 52px; padding: 10px 6px;
-  background: rgba(0,0,0,0.6);
-  border: 2px solid rgba(200,160,80,0.2);
-  border-radius: 10px;
-  color: var(--text); text-align: center; font-size: 20px;
-  transition: border-color .2s;
-}
-.opt-emoji-input:focus { outline: none; border-color: var(--accent); }
-.opt-text-input {
-  flex: 1; padding: 10px 12px;
-  background: rgba(0,0,0,0.6);
-  border: 2px solid rgba(200,160,80,0.2);
-  border-radius: 10px;
-  color: var(--text); font-size: 14px;
-  transition: border-color .2s;
-}
-.opt-text-input:focus { outline: none; border-color: var(--accent); }
-.opt-del {
-  width: 36px; height: 36px;
-  background: rgba(231,76,60,0.15);
-  border: 1px solid rgba(231,76,60,0.35);
-  border-radius: 8px;
-  color: #e74c3c;
-  cursor: pointer; font-size: 16px;
-  display: flex; align-items: center; justify-content: center;
-  transition: all .2s; flex-shrink: 0;
-}
-.opt-del:hover { background: rgba(231,76,60,0.3); }
-
-.btn-add-opt {
-  width: 100%; padding: 9px;
-  background: rgba(200,160,80,0.08);
-  color: var(--accent);
-  border: 1px dashed rgba(200,160,80,0.35);
-  border-radius: 10px;
-  cursor: pointer; font-size: 13px;
-  margin-bottom: 18px;
-  transition: all .2s;
-}
-.btn-add-opt:hover { background: rgba(200,160,80,0.18); border-style: solid; }
-
-.modal-actions { display: flex; gap: 10px; }
-.btn-submit {
-  flex: 1; padding: 13px;
-  background: linear-gradient(135deg, rgba(26,22,16,0.7), var(--accent), var(--accent2));
-  color: white; border: none;
-  border-radius: 12px; cursor: pointer;
-  font-weight: 700; font-size: 14px;
-  font-family: 'Inter', sans-serif;
-  letter-spacing: 1px;
-  transition: all .2s;
-}
-.btn-submit:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(200,160,80,0.45); }
-.btn-submit:disabled { opacity: .6; cursor: not-allowed; }
-.btn-cancel {
-  padding: 13px 20px;
-  background: rgba(255,255,255,0.04);
-  color: #888;
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 12px; cursor: pointer;
-  transition: all .2s;
-}
-.btn-cancel:hover { background: rgba(255,255,255,0.08); color: #ccc; }
-
-.empty-state { text-align: center; padding: 70px 20px; color: #555; grid-column: 1/-1; }
-.toast{position:fixed;top:20px;right:20px;padding:12px 22px;border-radius:10px;font-weight:700;z-index:99999;animation:slideIn .3s;font-size:13px;}
-.toast.ok{background:linear-gradient(135deg,#27ae60,#2ecc71);color:#fff;}
-.toast.err{background:linear-gradient(135deg,#c0392b,#e74c3c);color:#fff;}
-@keyframes slideIn{from{transform:translateX(120%);opacity:0;}to{transform:translateX(0);opacity:1;}}
-@media(max-width:600px) { .poll-grid { grid-template-columns: 1fr; } }
-</style>
-
-<div class="polls-hero">
-  <span class="hero-icon">📊</span>
-  <div class="hero-title">МЕНЕДЖЕР ОПРОСОВ</div>
-  <div class="hero-sub">Создавайте опросы и следите за результатами в реальном времени</div>
-</div>
-
-<div class="controls-bar">
-  <select id="guild-select"  class="guild-sel" onchange="loadPolls()">
-    <option value="">🏠 Выберите сервер...</option>
-  </select>
-  {% if role == 'owner' %}
-  <button class="btn-new" onclick="openModal()">
-    <span>📊</span> НОВЫЙ ОПРОС
-  </button>
-  {% endif %}
-</div>
-
-<div id="poll-list" class="poll-grid"></div>
-
-{% if role == 'owner' %}
-<div id="modal" class="modal-overlay">
-  <div class="modal-box">
-    <div class="modal-title">📊 Создать опрос</div>
-    <div class="form-group">
-      <label class="form-label">📺 Канал</label>
-      <select id="poll-channel" class="form-input"></select>
+{% block page_hero %}
+<div class="page-hero compact">
+  <div class="page-hero-content">
+    <div class="page-hero-greeting">
+      <span class="dot"></span>
+      <span>Опросы</span>
     </div>
-    <div class="form-group">
-      <label class="form-label">❓ Soru</label>
-      <input type="text" id="poll-question" class="form-input" placeholder="Введите вопрос опроса...">
-    </div>
-    <label class="form-label" style="margin-bottom:10px;">🗳️ Выбор</label>
-    <div id="poll-options"></div>
-    <button class="btn-add-opt" onclick="addOption()">＋ Добавить вариант</button>
-    <div class="modal-actions">
-      <button class="btn-submit" onclick="createPoll()">📊 ОТПРАВИТЬ</button>
-      <button class="btn-cancel" onclick="closeModal()">Отмена</button>
-    </div>
+    <h1>Опросы</h1>
+    <p>Создание опросов и голосований для участников.</p>
   </div>
 </div>
-{% endif %}
+{% endblock %}
+
+
+
+<div class="poll-toolbar">
+  <div class="poll-counters">
+    <span class="poll-counter active"><i class="fas fa-circle" ></i> <span id="active-count">0 активных</span></span>
+    <span class="poll-counter ended"><i class="fas fa-check"></i> <span id="ended-count">0 завершённых</span></span>
+  </div>
+  <button class="btn btn-primary" id="btn-new" type="button"><i class="fas fa-plus"></i> Новый опрос</button>
+</div>
+
+<div class="poll-grid" id="poll-grid">
+  <p class="empty-state"><i class="fas fa-inbox"></i>Опросов пока нет</p>
+</div>
 
 <script>
-var MAIN_GID = '{{ main_guild_id }}';
-var selectedGuild = MAIN_GID;
-var barColors = ['bar-red','bar-green','bar-blue','bar-purple','bar-orange','bar-teal'];
-var userRole = '{{ role }}';
+(function () {
+  'use strict';
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
-function toast(msg, ok) {
-  var t = document.createElement('div');
-  t.className = 'toast ' + (ok ? 'ok' : 'err');
-  t.textContent = msg;
-  document.body.appendChild(t);
-  setTimeout(function () { t.remove(); }, 2500);
-}
+  var polls = [
+    { q: 'Какая игра вам нравится больше всего?', opts: [{t:'Minecraft',v:120},{t:'LOL',v:85},{t:'Valorant',v:64}], active: true, voters: 269 },
+    { q: 'Какую новую функцию добавить?', opts: [{t:'Музыка',v:45},{t:'Мини-игры',v:32}], active: true, voters: 77 },
+    { q: 'Старый опрос', opts: [{t:'A',v:10}], active: false, voters: 10 }
+  ];
 
-async function loadPolls() {
-  var box = document.getElementById('poll-list');
-  if (!selectedGuild) {
-    box.innerHTML = '<div class="empty-state">Сервер не выбран.</div>';
-    return;
-  }
-  try {
-    var [pollsRes, chRes] = await Promise.all([
-      fetch('/api/guild/' + selectedGuild + '/polls').then(function (r) { return r.json(); }),
-      fetch('/api/guild/' + selectedGuild + '/channels').then(function (r) { return r.json(); })
-    ]);
-    var polls = Array.isArray(pollsRes) ? pollsRes : [];
-    var channels = Array.isArray(chRes) ? chRes : (chRes && chRes.channels ? chRes.channels : []);
-
-    var chSel = document.getElementById('poll-channel');
-    if (chSel) {
-      var textChannels = channels.filter(function (c) { return c.type === 'text'; });
-      chSel.innerHTML = textChannels.length
-        ? textChannels.map(function (c) { return '<option value="' + c.id + '">#' + c.name + '</option>'; }).join('')
-        : '<option value="">Текстовые каналы не найдены</option>';
-    }
-
-    if (polls.length === 0) {
-      box.innerHTML = '<div class="empty-state"><div style="font-size:64px;margin-bottom:16px;opacity:.4;">📊</div><p style="font-family:Inter,sans-serif;font-size:12px;letter-spacing:2px;color:#555;">ОПРОСОВ ПОКА НЕТ</p></div>';
+  function render() {
+    var act = polls.filter(function (p) { return p.active; }).length;
+    var end = polls.filter(function (p) { return !p.active; }).length;
+    $('active-count').textContent = act + ' активных';
+    $('ended-count').textContent = end + ' завершённых';
+    if (!polls.length) {
+      $('poll-grid').innerHTML = '<p class="empty-state"><i class="fas fa-inbox"></i>Опросов пока нет</p>';
       return;
     }
-
-    box.innerHTML = polls.map(function (p, pi) {
-      var opts = Array.isArray(p.options) ? p.options : [];
-      var total = opts.reduce(function (s, o) { return s + (o.votes || 0); }, 0);
-      var divider = total > 0 ? total : 1;
-      var optsHtml = opts.map(function (o, i) {
-        var votes = o.votes || 0;
-        var pct = Math.round(votes / divider * 100);
-        var color = barColors[i % barColors.length];
-        var voteBtn = (userRole === 'mod' || userRole === 'admin' || userRole === 'owner')
-          ? '<button class="btn-vote" onclick="voteOption(\'' + p.id + '\',' + i + ',this)">OY VER</button>'
-          : '';
-        return '<div class="poll-option" style="animation-delay:' + (i * 0.05) + 's">' +
-          '<div class="opt-header">' +
-            '<span class="opt-emoji">' + (o.emoji || '▪️') + '</span>' +
-            '<span class="opt-text">' + (o.text || '') + '</span>' +
-            '<span class="opt-votes">' + votes + '</span>' +
-            '<span class="opt-pct" style="margin-left:4px;">%' + pct + '</span>' +
-          '</div>' +
-          '<div class="bar-track"><div class="bar-fill ' + color + '" style="width:0%" data-pct="' + pct + '"></div></div>' +
-          voteBtn +
-        '</div>';
-      }).join('');
-
-      var dateStr = '';
-      try { dateStr = new Date(p.created_at).toLocaleString('tr-TR'); } catch (e) { dateStr = ''; }
-
-      return '<div class="poll-card" style="animation-delay:' + (pi * 0.07) + 's">' +
-        '<div class="poll-header">' +
-          '<div class="poll-icon">📊</div>' +
-          '<div>' +
-            '<div class="poll-question">' + (p.question || '(sorusuz)') + '</div>' +
-            '<div class="poll-meta">🕐 ' + dateStr + ' • ' + opts.length + ' вариант</div>' +
-          '</div>' +
-        '</div>' +
-        optsHtml +
-        '<div class="poll-footer">' +
-          '<span class="total-badge">🗳️ ' + total + ' OY</span>' +
-          '<span style="color:#555;font-size:11px;font-family:monospace;">ID: ' + p.id + '</span>' +
-        '</div>' +
-      '</div>';
-    }).join('');
-
-    setTimeout(function () {
-      document.querySelectorAll('.bar-fill').forEach(function (el) {
-        el.style.width = el.dataset.pct + '%';
+    var html = '';
+    polls.forEach(function (p, i) {
+      var total = p.opts.reduce(function (a, b) { return a + b.v; }, 0);
+      html += '<div class="poll-card" >' +
+        '<div class="poll-q">' + esc(p.q) + '</div>';
+      p.opts.forEach(function (o) {
+        var pct = total ? Math.round(o.v / total * 100) : 0;
+        html += '<div class="poll-opt"><span class="name">' + esc(o.t) + '</span><div class="poll-bar"><div class="poll-bar-fill"   style="width: ' + pct + '%;"></div></div><span class="poll-votes">' + pct + '%</span></div>';
       });
-    }, 100);
-  } catch (e) {
-    box.innerHTML = '<div class="empty-state">Опросы не удалось загрузить: ' + e.message + '</div>';
-  }
-}
-
-async function voteOption(pollId, optionIndex, btn) {
-  if (btn.classList.contains('voted')) return;
-  try {
-    var r = await fetch('/api/guild/' + selectedGuild + '/polls/' + pollId + '/vote', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ option_еx: optionIndex })
+      html += '<div class="poll-foot"><span class="voters"><i class="fas fa-users"></i> ' + p.voters + ' голосов</span><span class="poll-counter ' + (p.active ? 'active' : 'ended') + '">' + (p.active ? 'Активен' : 'Завершён') + '</span></div></div>';
     });
-    var d = await r.json();
-    if (d.success) {
-      btn.textContent = '✅ ГОЛОС ПРИНЯТ';
-      btn.classList.add('voted');
-      toast('✅ Голос сохранён!', true);
-      setTimeout(function () { loadPolls(); }, 800);
-    } else {
-      toast('Ошибка: ' + (d.error || 'Неизвестная ошибка'), false);
-    }
-  } catch (e) {
-    toast('Запрос ошибка: ' + e.message, false);
+    $('poll-grid').innerHTML = html;
   }
-}
 
-function addOption() {
-  var n = document.querySelectorAll('.opt-row').length + 1;
-  var defaultEmojis = ['✅','❌','🔥','💯','👍','👎','⭐','🎯'];
-  var emoji = defaultEmojis[(n - 1) % defaultEmojis.length];
-  var div = document.createElement('div');
-  div.className = 'opt-row';
-  div.innerHTML =
-    '<input type="text" class="opt-emoji-input" value="' + emoji + '" maxlength="2">' +
-    '<input type="text" class="opt-text-input" placeholder="Вариант ' + n + '">' +
-    '<button class="opt-del" onclick="this.parentElement.remove()">×</button>';
-  document.getElementById('poll-options').appendChild(div);
-}
-
-function openModal() {
-  if (!selectedGuild) { alert('Сначала выберите сервер!'); return; }
-  document.getElementById('poll-options').innerHTML = '';
-  document.getElementById('poll-question').value = '';
-  addOption(); addOption();
-  document.getElementById('modal').style.display = 'flex';
-}
-function closeModal() { document.getElementById('modal').style.display = 'none'; }
-
-async function createPoll() {
-  var question = document.getElementById('poll-question').value.trim();
-  var options = [];
-  document.querySelectorAll('.opt-row').forEach(function (row) {
-    var emoji = (row.querySelector('.opt-emoji-input').value || '').trim() || '▪️';
-    var text = (row.querySelector('.opt-text-input').value || '').trim();
-    if (text) options.push({ emoji: emoji, text: text });
-  });
-  if (!question) { toast('Soru gir!', false); return; }
-  if (options.length < 2) { toast('Минимум 2 варианта!', false); return; }
-
-  var btn = document.querySelector('.btn-submit');
-  btn.textContent = '⏳ ОТПРАВКА...';
-  btn.disabled = true;
-
-  try {
-    var r = await fetch('/api/guild/' + selectedGuild + '/polls/create', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        channel_id: document.getElementById('poll-channel').value,
-        question: question,
-        options: options
-      })
-    });
-    var d = await r.json();
-    if (d.success) {
-      closeModal();
-      toast('✅ Опрос создан!', true);
-      loadPolls();
-    } else {
-      toast('Ошибка: ' + (d.error || 'Неизвестная ошибка'), false);
-    }
-  } catch (e) {
-    toast('Запрос ошибка: ' + e.message, false);
-  } finally {
-    btn.textContent = '📊 ОТПРАВИТЬ';
-    btn.disabled = false;
+  function bind() {
+    var b = $('btn-new');
+    if (b) b.addEventListener('click', function () { alert('Форма нового опроса будет здесь'); });
   }
-}
 
-window.addEventListener('load', function () { loadPolls(); });
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { bind(); render(); });
+  else { bind(); render(); }
+})();
 </script>
 {% endblock %}

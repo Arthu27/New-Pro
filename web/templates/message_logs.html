@@ -1,208 +1,21 @@
 {% extends "base.html" %}
-{% block title %}Сообщение Logы - Aether{% endblock %}
-{% block page_title %}💬 ЛОГИ СООБЩЕНИЙ{% endblock %}
+{% block title %}Сообщение Логы - Aether{% endblock %}
+{% block page_title %}<i class="fas fa-comment-alt" ></i> 💬 ЛОГИ СООБЩЕНИЙ{% endblock %}
 {% block content %}
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+{% block page_hero %}
+<div class="page-hero compact">
+  <div class="page-hero-content">
+    <div class="page-hero-greeting">
+      <span class="dot"></span>
+      <span>💬 ЛОГИ СООБЩЕНИЙ</span>
+    </div>
+    <h1>💬 ЛОГИ СООБЩЕНИЙ</h1>
+    <p>Логи отправленных, отредактированных и удалённых сообщений.</p>
+  </div>
+</div>
+{% endblock %}
 
-.ml-hero {
-  background: linear-gradient(135deg, #100e08, #100e08, #100e08);
-  border: 1px solid rgba(200,146,42,0.4);
-  border-radius: 20px;
-  padding: 30px;
-  margin-bottom: 22px;
-  text-align: center;
-  position: relative;
-  overflow: hidden;
-}
-.ml-hero::before {
-  content: '';
-  position: absolute;
-  top: 0; left: -100%;
-  width: 100%; height: 3px;
-  background: linear-gradient(90deg, transparent, #c8922a, transparent);
-  animation: scan-line 3s linear infinite;
-}
-.ml-hero::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(ellipse at 50% 0%, rgba(200,146,42,0.07) 0%, transparent 70%);
-  pointer-events: none;
-}
-@keyframes scan-line { 0%{left:-100%} 100%{left:100%} }
 
-.hero-icon { font-size: 56px; margin-bottom: 10px; display: block; filter: drop-shadow(0 0 16px rgba(200,146,42,0.6)); }
-.hero-title {
-  font-family: 'Inter', sans-serif;
-  font-size: 22px;
-  font-weight: 900;
-  background: linear-gradient(135deg, #c8922a, #c8922a, #c8922a);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  letter-spacing: 3px;
-  margin-bottom: 6px;
-}
-.hero-sub { color: #666; font-size: 12px; letter-spacing: 1px; }
-
-/* STATS */
-.ml-stats { display: flex; gap: 14px; margin-bottom: 20px; flex-wrap: wrap; }
-.ml-stat {
-  flex: 1; min-width: 90px;
-  background: rgba(0,0,0,0.5);
-  border: 1px solid rgba(200,146,42,0.2);
-  border-radius: 14px;
-  padding: 14px;
-  text-align: center;
-  position: relative;
-  overflow: hidden;
-  transition: border-color .2s;
-}
-.ml-stat:hover { border-color: rgba(200,146,42,0.5); }
-.ml-stat::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, #c8922a, transparent);
-}
-.ml-stat-num { font-family: 'Inter', sans-serif; font-size: 24px; font-weight: 700; }
-.ml-stat-lbl { color: var(--text3); font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; margin-top: 5px; }
-
-/* FILTER BOX */
-.ml-filter-box {
-  background: linear-gradient(135deg, #100e08, #100e08);
-  border: 1px solid rgba(200,146,42,0.25);
-  border-radius: 16px;
-  padding: 20px;
-  margin-bottom: 20px;
-  position: relative;
-  overflow: hidden;
-}
-.ml-filter-box::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, #c8922a, transparent);
-}
-.filter-row { display: flex; gap: 12px; flex-wrap: wrap; }
-.field-input {
-  padding: 11px 14px;
-  background: rgba(0,0,0,0.6);
-  border: 2px solid rgba(200,146,42,0.25);
-  border-radius: 10px;
-  color: var(--text);
-  font-size: 13px;
-  transition: all .2s;
-}
-.field-input:focus { outline: none; border-color: #c8922a; box-shadow: 0 0 12px rgba(200,146,42,0.2); background: rgba(200,146,42,0.04); }
-
-/* LOG BOX */
-.ml-log-box {
-  background: linear-gradient(135deg, #100e08, #100e08);
-  border: 1px solid rgba(200,146,42,0.2);
-  border-radius: 16px;
-  padding: 22px;
-  position: relative;
-  overflow: hidden;
-}
-.ml-log-box::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, #c8922a, transparent);
-}
-.box-title {
-  font-family: 'Inter', sans-serif;
-  color: #c8922a;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 2.5px;
-  margin-bottom: 18px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-/* LOG ROWS */
-.log-row {
-  background: rgba(0,0,0,0.4);
-  border-radius: 12px;
-  padding: 14px 16px;
-  margin-bottom: 10px;
-  border: 1px solid rgba(255,255,255,0.04);
-  transition: all .25s;
-  animation: fadeInUp .3s ease both;
-  position: relative;
-  overflow: hidden;
-}
-.log-row:hover { background: rgba(200,146,42,0.06); transform: translateX(4px); border-color: rgba(200,146,42,0.2); }
-.log-deleted { border-left: 3px solid #e74c3c; }
-.log-edited  { border-left: 3px solid #c8922a; }
-@keyframes fadeInUp { from{opacity:0;transform:translateY(8px);} to{opacity:1;transform:translateY(0);} }
-
-.log-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 6px; }
-.log-user-wrap { display: flex; align-items: center; gap: 8px; }
-.log-user {
-  color: #fff;
-  font-weight: 700;
-  font-size: 13px;
-  font-family: 'Inter', sans-serif;
-  letter-spacing: 0.5px;
-}
-.log-channel {
-  color: #c8922a;
-  font-size: 12px;
-  background: rgba(200,146,42,0.1);
-  border: 1px solid rgba(200,146,42,0.2);
-  border-radius: 6px;
-  padding: 2px 8px;
-}
-.log-time { color: #333; font-size: 11px; font-family: 'Inter', sans-serif; }
-
-.type-badge {
-  padding: 3px 10px;
-  border-radius: 8px;
-  font-size: 10px;
-  font-weight: 700;
-  font-family: 'Inter', sans-serif;
-  letter-spacing: 0.5px;
-}
-.badge-del { background: rgba(231,76,60,0.15); border: 1px solid rgba(231,76,60,0.4); color: #e74c3c; }
-.badge-edit { background: rgba(200,146,42,0.15); border: 1px solid rgba(200,146,42,0.4); color: #c8922a; }
-
-.log-content {
-  color: #bbb;
-  font-size: 13px;
-  background: rgba(0,0,0,0.35);
-  padding: 10px 12px;
-  border-radius: 8px;
-  line-height: 1.6;
-  border: 1px solid rgba(255,255,255,0.04);
-}
-.log-before {
-  color: var(--text2);
-  font-size: 12px;
-  background: rgba(200,146,42,0.05);
-  padding: 8px 12px;
-  border-radius: 8px;
-  border-left: 2px solid #c8922a;
-  margin-bottom: 6px;
-  line-height: 1.5;
-}
-.log-after {
-  color: var(--text2);
-  font-size: 13px;
-  background: rgba(200,146,42,0.05);
-  padding: 10px 12px;
-  border-radius: 8px;
-  border-left: 2px solid #c8922a;
-  line-height: 1.6;
-}
-</style>
 
 <!-- КАЖДЫЙ -->
 <div class="ml-hero">
@@ -212,18 +25,18 @@
 </div>
 
 <!-- STATS -->
-<div class="ml-stats">
-  <div class="ml-stat">
-    <div class="ml-stat-num" style="color:#c8922a;" id="total-count">0</div>
-    <div class="ml-stat-lbl">Всего</div>
+<div class="stat-row">
+  <div class="stat-box">
+    <div class="stat-icon gold"><i class="fas fa-comments"></i></div>
+    <div class="stat-body"><div class="stat-val" id="total-count">0</div><div class="stat-lbl">Всего</div></div>
   </div>
-  <div class="ml-stat">
-    <div class="ml-stat-num" style="color:#e05555;" id="deleted-count">0</div>
-    <div class="ml-stat-lbl">Удалённые</div>
+  <div class="stat-box">
+    <div class="stat-icon red"><i class="fas fa-trash"></i></div>
+    <div class="stat-body"><div class="stat-val" id="deleted-count">0</div><div class="stat-lbl">Удалённые</div></div>
   </div>
-  <div class="ml-stat">
-    <div class="ml-stat-num" style="color:#c8922a;" id="edited-count">0</div>
-    <div class="ml-stat-lbl">Изменённые</div>
+  <div class="stat-box">
+    <div class="stat-icon amber"><i class="fas fa-edit"></i></div>
+    <div class="stat-body"><div class="stat-val" id="edited-count">0</div><div class="stat-lbl">Изменённые</div></div>
   </div>
 </div>
 
@@ -238,14 +51,14 @@
       <option value="deleted">🗑 Удалённые</option>
       <option value="edited">✏️ Изменённые</option>
     </select>
-    <input type="text" id="user-filter" placeholder="🔍 Поиск пользователя..." class="field-input" style="flex:1;min-width:160px;" oninput="filterLogs()">
+    <input type="text" id="user-filter" placeholder="🔍 Поиск пользователя..." class="field-input"   style="min-width: 160px;" oninput="filterLogs()">
   </div>
 </div>
 
 <!-- LOG LIST -->
 <div class="ml-log-box">
   <div class="box-title"><i class="fas fa-comment-slash"></i> Журнал сообщений</div>
-  <div id="log-list"><p style="color:#333;text-align:center;padding:50px;font-family:Inter,sans-serif;font-size:12px;letter-spacing:2px;">ВЫБЕРИТЕ СЕРВЕР...</p></div>
+  <div id="log-list"><p >ВЫБЕРИТЕ СЕРВЕР...</p></div>
 </div>
 
 <script>
@@ -262,7 +75,7 @@ async function loadLogs() {
     renderLogs([]);
     return;
   }
-  document.getElementById('log-list').innerHTML = '<p style="color:#333;text-align:center;padding:50px;"><i class="fas fa-spinner fa-spin" style="font-size:28px;color:#c8922a;"></i></p>';
+  document.getElementById('log-list').innerHTML = '<p ><i class="fas fa-spinner fa-spin" ></i></p>';
   try {
     var r = await fetch('/api/guild/' + encodeURIComponent(guildId) + '/message-logs?type=' + encodeURIComponent(type));
     if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -274,7 +87,7 @@ async function loadLogs() {
     console.error('Не удалось загрузить логи сообщений:', error);
     allLogs = [];
     updateStats();
-    document.getElementById('log-list').innerHTML = '<p style="color:#e05555;text-align:center;padding:50px;">Не удалось загрузить логи сообщений.</p>';
+    document.getElementById('log-list').innerHTML = '<p >Не удалось загрузить логи сообщений.</p>';
   }
 }
 
@@ -294,7 +107,7 @@ function filterLogs() {
 function renderLogs(logs) {
   var box = document.getElementById('log-list');
   if (!logs.length) {
-    box.innerHTML = '<p style="color:#333;text-align:center;padding:50px;font-family:\'Orbitron\',sans-serif;font-size:12px;letter-spacing:2px;">LOG НЕ НАЙДЕНО</p>';
+    box.innerHTML = '<p >LOG НЕ НАЙДЕНО</p>';
     return;
   }
   box.innerHTML = logs.slice(0, 100).map(function(l, i) {
@@ -304,9 +117,9 @@ function renderLogs(logs) {
       ? '<span class="type-badge badge-del">🗑 УДАЛЕНО</span>'
       : '<span class="type-badge badge-edit">✏️ РЕДАКТИРОВАТЬ</span>';
     var content = isDel
-      ? '<div class="log-content" style="border-left:2px solid #e74c3c;">' + (l.content || '<em style="color:#5a5040;">(soderjimoe yok)</em>') + '</div>'
+      ? '<div class="log-content" >' + (l.content || '<em >(soderjimoe yok)</em>') + '</div>'
       : '<div class="log-before">До: ' + (l.before || '') + '</div><div class="log-after">В конецra: ' + (l.after || '') + '</div>';
-    return '<div class="log-row ' + cls + '" style="animation-delay:' + (i * 0.03) + 's">' +
+    return '<div class="log-row ' + cls + '" >' +
       '<div class="log-header">' +
         '<div class="log-user-wrap">' +
           badge +

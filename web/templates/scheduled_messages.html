@@ -1,54 +1,24 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 {% block title %}Запланированные сообщения - Aether{% endblock %}
-{% block page_title %}⏰ ВРЕМЯ СООБЩЕНИЯ{% endblock %}
+{% block page_title %}<i class="fas fa-clock"></i> ⏰ ЗАПЛАНИРОВАННЫЕ СООБЩЕНИЯ{% endblock %}
 {% block content %}
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&display=swap');
-.sm-hero{background:linear-gradient(135deg,#100e08,rgba(26,22,16,0.7),#100e08);border:1px solid rgba(212,168,67,0.3);border-radius:20px;padding:30px;margin-bottom:25px;text-align:center;position:relative;overflow:hidden;}
-.sm-hero::before{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(ellipse at center,rgba(200,146,42,0.06) 0%,transparent 60%);animation:pulse-bg 4s ease-in-out infinite;}
-@keyframes pulse-bg{0%,100%{opacity:.5;}50%{opacity:1;}}
-.hero-title{font-family:Rajdhani,sans-serif;font-size:28px;font-weight:700;background:linear-gradient(135deg,#c8922a,#c8922a,#c8922a);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px;}
-.hero-sub{color:rgba(240,232,208,0.55);font-size:13px;}
-.controls-bar{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;}
-.guild-sel{flex:1;min-width:200px;padding:12px 16px;background:rgba(0,0,0,0.6);border:1px solid rgba(212,168,67,0.3);border-radius:14px;color:#f0e8d0;font-size:14px;}
-.guild-sel:focus{outline:none;border-color:#c8922a;}
-.btn-new{padding:12px 24px;background:#c8922a;color:#f0e8d0;border:none;border-radius:14px;cursor:pointer;font-weight:700;font-size:14px;display:flex;align-items:center;gap:8px;transition:all .2s;box-shadow:0 4px 15px rgba(200,146,42,0.3);}
-.btn-new:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(200,146,42,0.5);}
-.sm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:20px;}
-.sm-card{background:linear-gradient(135deg,#100e08,rgba(26,22,16,0.7));border:1px solid rgba(212,168,67,0.2);border-radius:18px;padding:22px;position:relative;overflow:hidden;transition:all .3s;animation:fadeInUp .4s ease both;}
-.sm-card:hover{border-color:rgba(200,146,42,0.5);transform:translateY(-3px);box-shadow:0 8px 30px rgba(200,146,42,0.15);}
-.sm-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#c8922a,#c8922a,#c8922a);background-size:200% 100%;animation:shimmer 2s linear infinite;}
-@keyframes shimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
-@keyframes fadeInUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
-.sm-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;margin-bottom:12px;}
-.badge-active{background:rgba(46,204,113,0.2);border:1px solid rgba(46,204,113,0.4);color:#5ec47a;}
-.badge-inactive{background:rgba(127,140,141,0.2);border:1px solid rgba(127,140,141,0.4);color:#c8922a;}
-.sm-content{color:rgba(240,232,208,0.7);font-size:13px;line-height:1.6;margin-bottom:14px;background:rgba(0,0,0,0.3);border-radius:14px;padding:12px;border-left:3px solid rgba(200,146,42,0.5);}
-.sm-info{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;}
-.sm-info-item{background:rgba(212,168,67,0.08);border:1px solid rgba(212,168,67,0.15);border-radius:8px;padding:8px;text-align:center;}
-.sm-info-val{color:#c8922a;font-size:13px;font-weight:700;}
-.sm-info-lbl{color:#5a5040;font-size:10px;margin-top:2px;}
-.sm-footer{display:flex;justify-content:space-between;align-items:center;}
-.btn-del{padding:6px 14px;background:rgba(231,76,60,0.2);border:1px solid rgba(231,76,60,0.4);color:#e05555;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;transition:all .2s;}
-.btn-del:hover{background:rgba(231,76,60,0.4);}
-.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:9999;justify-content:center;align-items:center;backdrop-filter:blur(4px);}
-.modal-box{background:linear-gradient(135deg,#100e08,rgba(26,22,16,0.7),#100e08);border:1px solid rgba(212,168,67,0.4);border-radius:24px;padding:32px;max-width:500px;width:92%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(200,146,42,0.2);animation:modalIn .3s cubic-bezier(.34,1.56,.64,1);}
-@keyframes modalIn{from{opacity:0;transform:scale(0.8);}to{opacity:1;transform:scale(1);}}
-.modal-title{font-family:Rajdhani,sans-serif;font-size:22px;font-weight:700;color:#c8922a;margin-bottom:20px;display:flex;align-items:center;gap:10px;}
-.form-group{margin-bottom:14px;}
-.form-label{display:block;color:#c8922a;font-size:11px;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:7px;font-weight:600;}
-.form-input{width:100%;padding:11px 14px;background:rgba(0,0,0,0.5);border:1px solid rgba(212,168,67,0.25);border-radius:14px;color:#f0e8d0;font-size:14px;transition:border-color .2s;box-sizing:border-box;}
-.form-input:focus{outline:none;border-color:#c8922a;}
-.modal-actions{display:flex;gap:10px;margin-top:20px;}
-.btn-submit{flex:1;padding:12px;background:#c8922a;color:#f0e8d0;border:none;border-radius:14px;cursor:pointer;font-weight:700;font-size:15px;transition:all .2s;}
-.btn-submit:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(200,146,42,0.4);}
-.btn-cancel{padding:12px 20px;background:rgba(255,255,255,0.05);color:rgba(240,232,208,0.55);border:1px solid rgba(255,255,255,0.1);border-radius:14px;cursor:pointer;}
-.btn-cancel:hover{background:rgba(255,255,255,0.1);color:rgba(240,232,208,0.55);}
-.empty-state{text-align:center;padding:60px 20px;color:#444;grid-column:1/-1;}
-</style>
+{% block page_hero %}
+<div class="page-hero compact">
+  <div class="page-hero-content">
+    <div class="page-hero-greeting">
+      <span class="dot"></span>
+      <span>⏰ ВРЕМЯ СООБЩЕНИЯ</span>
+    </div>
+    <h1>⏰ ВРЕМЯ СООБЩЕНИЯ</h1>
+    <p>Отложенные сообщения: настройка расписания авто-постинга.</p>
+  </div>
+</div>
+{% endblock %}
+
+
 
 <div class="sm-hero">
-  <div style="font-size:60px;margin-bottom:10px;">⏰</div>
+  <div   style="margin-bottom: 10px;">⏰</div>
   <div class="hero-title">⏰ Запланированные сообщения</div>
   <div class="hero-sub">Через определённые интервалы отправлять сообщения автоматически</div>
 </div>
@@ -71,9 +41,9 @@
     </div>
     <div class="form-group">
       <label class="form-label">💬 Текст сообщения</label>
-      <textarea id="sm-content" class="form-input" rows="4" placeholder="Отправл сообщение..." style="resize:vertical;"></textarea>
+      <textarea id="sm-content" class="form-input" rows="4" placeholder="Отправл сообщение..." ></textarea>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+    <div   style="grid-template-columns: 1fr 1fr;">
       <div class="form-group">
         <label class="form-label">⏱️ Периодичность (мин)</label>
         <input type="number" id="sm-interval" class="form-input" value="60" min="1">
@@ -130,18 +100,18 @@ async function loadMessages() {
   document.getElementById('sm-channel').innerHTML = channels.filter(c=>c.type==='text').map(c=>'<option value="'+c.id+'">#'+c.name+'</option>').join('');
 
   var box = document.getElementById('sm-list');
-  if (!msgs.length) { box.innerHTML='<div class="empty-state"><div style="font-size:60px;margin-bottom:16px;">⏰</div><p>Пока нет запланированных сообщений.</p></div>'; return; }
+  if (!msgs.length) { box.innerHTML='<div class="empty-state"><div >⏰</div><p>Пока нет запланированных сообщений.</p></div>'; return; }
   box.innerHTML = msgs.map(function(m, i) {
     var nextRun = '';
     try { nextRun = new Date(m.next_run).toLocaleString('tr-TR'); } catch(e) {}
-    return '<div class="sm-card" style="animation-delay:'+(i*0.08)+'s">'+
+    return '<div class="sm-card" >'+
       '<span class="sm-badge '+(m.active ? 'badge-active' : 'badge-inactive')+'">'+(m.active ? '🟢 Активен' : '⚫ Неактивно')+'</span>'+
       '<div class="sm-content">'+m.content+'</div>'+
       '<div class="sm-info">'+
         '<div class="sm-info-item"><div class="sm-info-val">'+m.interval+'dk</div><div class="sm-info-lbl">Периодичность</div></div>'+
-        '<div class="sm-info-item"><div class="sm-info-val" style="font-size:11px;">'+nextRun+'</div><div class="sm-info-lbl">Вперед</div></div>'+
+        '<div class="sm-info-item"><div class="sm-info-val" >'+nextRun+'</div><div class="sm-info-lbl">Вперед</div></div>'+
       '</div>'+
-      '<div class="sm-footer"><span style="color:#5a5040;font-size:11px;">ID: '+m.id+'</span>'+
+      '<div class="sm-footer"><span >ID: '+m.id+'</span>'+
       '<button class="btn-del" onclick="deleteMessage(\''+m.id+'\')">🗑 Удалить</button></div></div>';
   }).join('');
 }

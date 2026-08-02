@@ -1,221 +1,470 @@
 {% extends "base.html" %}
-{% block title %}Antiraid - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-shield-alt" style="color:#c8922a;animation:pulse 2s infinite;"></i> АНТИРАЙД ЗАЩИТЫ{% endblock %}
+{% block title %}Анти-рейд - Aether{% endblock %}
+{% block page_title %}<i class="fas fa-shield-virus"></i> Анти-рейд и защита{% endblock %}
 {% block content %}
-<style>
-  .ar-box{background:linear-gradient(135deg,rgba(26,22,16,0.7),rgba(26,22,16,0.7));border:1px solid rgba(212,168,67,0.3);border-radius:16px;padding:25px;margin-bottom:20px;position:relative;overflow:hidden;}
-  .ar-box::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:2px;background:linear-gradient(90deg,transparent,#c8922a,transparent);;}
-  @keyframes scan{0%{left:-100%}100%{left:100%}}
-  .ar-title{color:#c8922a;font-size:13px;text-transform:uppercase;letter-spacing:2px;margin-bottom:18px;display:flex;align-items:center;gap:8px;padding-bottom:12px;border-bottom:1px solid rgba(200,146,42,0.2);}
-  .toggle-row{display:flex;justify-content:space-between;align-items:center;padding:13px 15px;background:rgba(0,0,0,0.3);border-radius:14px;margin-bottom:8px;border:1px solid rgba(255,255,255,0.04);transition:all 0.2s;}
-  .toggle-row:hover{background:rgba(212,168,67,0.07);border-color:rgba(200,146,42,0.2);}
-  .toggle-label{color:#f0e8d0;font-size:14px;}
-  .toggle-sub{color:rgba(240,232,208,0.55);font-size:11px;margin-top:2px;}
-  .toggle{position:relative;display:inline-block;width:48px;height:26px;}
-  .toggle input{opacity:0;width:0;height:0;}
-  .slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#222;border-radius:26px;transition:.3s;}
-  .slider:before{position:absolute;content:"";height:20px;width:20px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s;}
-  input:checked+.slider{background:#c8922a;}
-  input:checked+.slider:before{transform:translateX(22px);}
-  .field-label{color:#c8922a;font-size:11px;text-transform:uppercase;display:block;margin-bottom:6px;margin-top:14px;letter-spacing:1px;}
-  .field-input{width:100%;padding:10px 14px;background:#100e08;border:1px solid rgba(212,168,67,0.25);border-radius:14px;color:#f0e8d0;box-sizing:border-box;transition:all 0.3s;font-size:14px;}
-  .field-input:focus{outline:none;border-color:#c8922a;box-shadow:0 0 0 3px rgba(212,168,67,0.1);}
-  .save-btn{width:100%;padding:12px;background:#c8922a;color:#f0e8d0;border:none;border-radius:14px;cursor:pointer;font-weight:700;margin-top:15px;font-size:14px;letter-spacing:1px;transition:all 0.3s;}
-  .save-btn:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(212,168,67,0.2);}
-  .event-row{background:rgba(212,168,67,0.08);border-left:3px solid #c8922a;border-radius:0 8px 8px 0;padding:10px 14px;margin-bottom:8px;}
-  .wl-tag{display:inline-flex;align-items:center;gap:6px;background:rgba(46,204,113,0.12);border:1px solid rgba(46,204,113,0.35);border-radius:20px;padding:5px 12px;margin:3px;font-size:13px;color:#f0e8d0;}
-  .wl-tag button{background:none;border:none;color:#e05555;cursor:pointer;font-size:15px;padding:0;}
-  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
-  @media(max-width:900px){.grid2{grid-template-columns:1fr;}}
-  .guild-select{width:100%;padding:12px;background:#100e08;border:1px solid rgba(212,168,67,0.3);border-radius:14px;color:#f0e8d0;margin-bottom:20px;font-size:14px;}
-  .wl-add-row{display:flex;gap:8px;margin-bottom:12px;}
-  .wl-add-row input{flex:1;padding:10px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(94,196,122,0.25);border-radius:14px;color:#f0e8d0;font-size:14px;}
-  .wl-add-row button{padding:10px 16px;background:rgba(94,196,122,0.8);color:#f0e8d0;border:none;border-radius:14px;cursor:pointer;font-weight:700;white-space:nowrap;}
-  .toast{position:fixed;top:20px;right:20px;padding:12px 22px;border-radius:10px;font-weight:700;z-index:99999;animation:slideIn .3s;font-size:13px;}
-  .toast.ok{background:linear-gradient(135deg,#27ae60,#2ecc71);color:#fff;}
-  .toast.err{background:linear-gradient(135deg,#c0392b,#e74c3c);color:#fff;}
-  @keyframes slideIn{from{transform:translateX(120%);opacity:0;}to{transform:translateX(0);opacity:1;}}
-</style>
+{% block page_hero %}
+<div class="page-hero compact">
+  <div class="page-hero-content">
+    <div class="page-hero-greeting">
+      <span class="dot"></span>
+      <span>Анти-рейд и защита</span>
+    </div>
+    <h1>Анти-рейд и защита</h1>
+    <p>Режим наблюдателя — бот не выполняет автоматических действий, только отправляет уведомления в канал оповещений.</p>
+  </div>
+</div>
+{% endblock %}
 
-<select id="guild-select"  class="guild-select">
-  <option value="">Выберите сервер...</option>
-</select>
+<!-- Баннер режима наблюдателя -->
+<div class="observer-banner" id="observer-banner">
+  <i class="fas fa-eye"></i>
+  <div>
+    <strong>Режим наблюдателя активен.</strong>
+    Бот не выполняет автоматических действий <b>кик/бан/блокировка</b> для пользователей.
+    При срабатывании правил отправляется embed в настроенный канал оповещений (или <code>мод-лог</code>).
+    Исполнительные права у вас — управляйте настройками ниже.
+  </div>
+</div>
 
-<div class="grid2">
-  <div class="ar-box">
-    <div class="ar-title"><i class="fas fa-shield-alt"></i> Настройки защиты</div>
-    <div class="toggle-row">
-      <div><div class="toggle-label">🚪 Защита от рейд-джоинов</div><div class="toggle-sub">Блокировать присоединение множества пользователей за короткое время</div></div>
-      <label class="toggle"><input type="checkbox" id="join-raid"><span class="slider"></span></label>
+<!-- Выбор сервера -->
+<div class="guild-picker" id="guild-picker">
+  <label for="guild-select"><i class="fas fa-server"></i> Сервер:</label>
+  <select id="guild-select"><option value="">Загрузка…</option></select>
+  {% if role == 'owner' %}
+  <button class="btn btn-ghost" id="btn-reload" type="button" title="Перезагрузить конфигурацию сейчас (только для владельца)">
+    <i class="fas fa-sync"></i> Обновить
+  </button>
+  {% endif %}
+  <span class="save-status" id="save-status"></span>
+</div>
+
+<div class="ar-grid">
+  <!-- Обнаружение рейда -->
+  <div class="ar-card">
+    <div class="ar-head">
+      <div class="ar-icon danger"><i class="fas fa-exclamation-triangle"></i></div>
+      <div class="ar-title">Обнаружение рейда</div>
+      <div class="toggle" id="tog-raid" data-key="join_raid"></div>
     </div>
-    <div class="toggle-row">
-      <div><div class="toggle-label">🤖 Bot Защита</div><div class="toggle-sub">Запретить добавление ботов без прав администратора</div></div>
-      <label class="toggle"><input type="checkbox" id="bot-prot"><span class="slider"></span></label>
+    <div class="row"><label>Человек / время (сек)</label>
+      <div style="display:flex; gap:6px;">
+        <input type="number" id="join_threshold" data-key="join_threshold" min="2" max="50" value="5">
+        <input type="number" id="join_window" data-key="join_window" min="5" max="120" value="10">
+      </div>
     </div>
-    <div class="toggle-row">
-      <div><div class="toggle-label">🔨 Защита вебхуков</div><div class="toggle-sub">Запретить создание вебхуков без прав администратора</div></div>
-      <label class="toggle"><input type="checkbox" id="webhook-prot"><span class="slider"></span></label>
+    <div class="row"><label>Исключения из белого списка</label>
+      <span class="muted">Управляйте списком ниже</span>
     </div>
-    <div class="toggle-row">
-      <div><div class="toggle-label">📛 Канал/Роль Удалитьme Защита</div><div class="toggle-sub">Toplu удалить вход блокировать</div></div>
-      <label class="toggle"><input type="checkbox" id="delete-prot"><span class="slider"></span></label>
-    </div>
-    <div class="toggle-row">
-      <div><div class="toggle-label">👤 Фильтр по возрасту аккаунта</div><div class="toggle-sub">Новый hesapы автоматически at</div></div>
-      <label class="toggle"><input type="checkbox" id="age-prot"><span class="slider"></span></label>
-    </div>
-    <label class="field-label">Min. Возраст аккаунта (дни)</label>
-    <input type="number" id="min-age" value="7" min="0" max="365" class="field-input">
-    <label class="field-label">Порог входа (X участников/мин)</label>
-    <input type="number" id="join-threshold" value="10" min="2" max="100" class="field-input">
-    <label class="field-label">Raid Aksiyonu</label>
-    <select id="raid-action" class="field-input">
-      <option value="lockdown">🔒 Сервер Kilitle</option>
-      <option value="кик">👢 Новый Участник At</option>
-      <option value="бан">🔨 Новый Участник Банla</option>
-      <option value="alert">🔔 Только Uyar</option>
-    </select>
-    <button class="save-btn" id="btnSaveAntiraid" type="button"><i class="fas fa-save"></i> Сохранить</button>
   </div>
 
-  <div>
-    <div class="ar-box">
-      <div class="ar-title"><i class="fas fa-exclamation-triangle"></i> В конец Raid Sobitiya</div>
-      <div id="raid-events"><p style="color:#5a5040;font-size:13px;font-style:italic;">Выберите сервер...</p></div>
+  <!-- Фильтр возраста аккаунта -->
+  <div class="ar-card">
+    <div class="ar-head">
+      <div class="ar-icon"><i class="fas fa-user-clock"></i></div>
+      <div class="ar-title">Фильтр возраста аккаунта</div>
+      <div class="toggle" id="tog-age" data-key="age_filter"></div>
     </div>
-    <div class="ar-box">
-      <div class="ar-title"><i class="fas fa-check-circle" style="color:#5ec47a;"></i> Whitelist</div>
-      <div class="wl-add-row">
-        <input type="text" id="whitelist-id" placeholder="Пользователь/Bot ID...">
-        <button type="button" id="btnAddWl"><i class="fas fa-plus"></i> Добавить</button>
-      </div>
-      <div id="whitelist-items"></div>
+    <div class="row"><label>Мин. возраст (дни)</label>
+      <input type="number" id="min_age" data-key="min_age" min="0" max="365" value="5">
+    </div>
+    <div class="row"><label>Описание</label>
+      <span class="muted">Аккаунты ниже этого порога создают оповещение</span>
+    </div>
+  </div>
+
+  <!-- Защита от ботов -->
+  <div class="ar-card">
+    <div class="ar-head">
+      <div class="ar-icon"><i class="fas fa-robot"></i></div>
+      <div class="ar-title">Защита от ботов</div>
+      <div class="toggle" id="tog-bot" data-key="bot_protection"></div>
+    </div>
+    <div class="row"><label>Описание</label>
+      <span class="muted">Оповещение при добавлении ботов на сервер</span>
+    </div>
+  </div>
+
+  <!-- Защита от массового удаления -->
+  <div class="ar-card">
+    <div class="ar-head">
+      <div class="ar-icon"><i class="fas fa-trash-alt"></i></div>
+      <div class="ar-title">Защита от массового удаления</div>
+      <div class="toggle" id="tog-delete" data-key="delete_protection"></div>
+    </div>
+    <div class="row"><label>Описание</label>
+      <span class="muted">Оповещение при удалении 5+ сообщений за раз</span>
+    </div>
+  </div>
+
+  <!-- Канал оповещений -->
+  <div class="ar-card span-2">
+    <div class="ar-head">
+      <div class="ar-icon"><i class="fas fa-bell"></i></div>
+      <div class="ar-title">Канал оповещений</div>
+    </div>
+    <div class="row">
+      <label>ID канала</label>
+      <input type="text" id="alert_channel_id" data-key="alert_channel_id"
+             placeholder="Если оставить пустым, используется канал 'мод-лог'">
+    </div>
+    <div class="row">
+      <label>Действие при рейде</label>
+      <select id="raid_action" data-key="raid_action">
+        <option value="alert">Только оповещение (рекомендуется)</option>
+      </select>
+      <span class="muted" style="margin-left:8px;">Другие действия отключены в целях безопасности.</span>
+    </div>
+  </div>
+
+  <!-- Белый список -->
+  <div class="ar-card span-2">
+    <div class="ar-head">
+      <div class="ar-icon"><i class="fas fa-user-shield"></i></div>
+      <div class="ar-title">Белый список (исключенные пользователи)</div>
+      <button class="btn btn-primary" id="btn-add-wl" type="button">
+        <i class="fas fa-plus"></i> Добавить
+      </button>
+    </div>
+    <div class="row">
+      <label>ID пользователя</label>
+      <input type="text" id="wl-input" placeholder="ID пользователя Discord (17-20 цифр)">
+    </div>
+    <ul class="wl-list" id="wl-list"></ul>
+  </div>
+
+  <!-- Последние события -->
+  <div class="ar-card span-2">
+    <div class="ar-head">
+      <div class="ar-icon danger"><i class="fas fa-history"></i></div>
+      <div class="ar-title">Последние обнаруженные события</div>
+      <button class="btn btn-primary" id="btn-clear" type="button">
+        <i class="fas fa-broom"></i> Очистить
+      </button>
+    </div>
+    <div class="alert-list" id="alerts">
+      <p class="muted">Событий пока нет.</p>
     </div>
   </div>
 </div>
 
+<style>
+  .observer-banner {
+    display: flex; gap: 14px; align-items: flex-start;
+    background: linear-gradient(135deg, rgba(46,204,113,0.12), rgba(52,152,219,0.12));
+    border: 1px solid rgba(46,204,113,0.4);
+    border-left: 4px solid #2ecc71;
+    border-radius: 10px; padding: 14px 18px; margin: 18px 0 8px;
+    color: #e6e9ef; font-size: 14px; line-height: 1.55;
+  }
+  .observer-banner i { color: #2ecc71; font-size: 20px; margin-top: 2px; }
+  .observer-banner code { background: rgba(255,255,255,0.07); padding: 1px 6px; border-radius: 4px; }
+
+  .guild-picker {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px; padding: 10px 14px; margin: 8px 0 18px;
+  }
+  .guild-picker label { color: #cfd6e4; font-weight: 600; }
+  .guild-picker select {
+    background: #1f2530; color: #e6e9ef; border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 6px; padding: 6px 10px; min-width: 220px; font-size: 14px;
+  }
+  .guild-picker .save-status { color: #2ecc71; font-size: 13px; min-width: 80px; }
+  .guild-picker .save-status.error { color: #e74c3c; }
+  .btn-ghost {
+    background: transparent; color: #cfd6e4; border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 6px; padding: 6px 10px; cursor: pointer; font-size: 13px;
+  }
+  .btn-ghost:hover { background: rgba(255,255,255,0.06); }
+
+  .ar-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  .ar-card.span-2 { grid-column: span 2; }
+  @media (max-width: 800px) {
+    .ar-grid { grid-template-columns: 1fr; }
+    .ar-card.span-2 { grid-column: span 1; }
+  }
+
+  .ar-card .row { display: flex; align-items: center; gap: 10px; margin: 8px 0; }
+  .ar-card .row label { min-width: 130px; color: #b0b6c1; font-size: 13px; }
+  .ar-card .row input[type="text"], .ar-card .row input[type="number"], .ar-card .row select {
+    flex: 1; background: #1a1f29; color: #e6e9ef; border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px; padding: 6px 10px; font-size: 14px;
+  }
+  .ar-card .row .muted { color: #7d8593; font-size: 12px; }
+
+  .wl-list { list-style: none; padding: 0; margin: 10px 0 0; }
+  .wl-list li {
+    display: flex; align-items: center; justify-content: space-between;
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 6px; padding: 6px 10px; margin: 4px 0; font-size: 13px;
+  }
+  .wl-list li button {
+    background: transparent; border: none; color: #e74c3c; cursor: pointer; font-size: 14px;
+  }
+  .wl-list li button:hover { color: #ff1744; }
+
+  .alert-list .alert-item {
+    display: flex; align-items: center; gap: 10px;
+    background: rgba(231,76,60,0.07); border-left: 3px solid #e74c3c;
+    border-radius: 6px; padding: 8px 12px; margin: 4px 0; font-size: 13px;
+  }
+  .alert-list .alert-item .alert-time { color: #7d8593; font-size: 12px; margin-left: auto; }
+  .alert-list .alert-item.young { border-left-color: #f1c40f; background: rgba(241,196,15,0.07); }
+  .alert-list .alert-item.bot { border-left-color: #9b59b6; background: rgba(155,89,182,0.07); }
+  .alert-list .alert-item.bulk { border-left-color: #95a5a6; background: rgba(149,165,166,0.07); }
+  .alert-list .alert-item .badge {
+    display: inline-block; padding: 1px 8px; border-radius: 4px;
+    background: rgba(255,255,255,0.08); color: #cfd6e4; font-size: 11px; margin-right: 6px;
+  }
+</style>
+
 <script>
 (function () {
   'use strict';
-  var MAIN_GID = '{{ main_guild_id }}';
-  var selectedGuild = MAIN_GID;
-  var whitelist = [];
+
+  var currentGuildId = null;
+  var currentConfig = null;
+  var saveTimer = null;
 
   function $(id) { return document.getElementById(id); }
-  function toast(msg, ok) {
-    var t = document.createElement('div');
-    t.className = 'toast ' + (ok ? 'ok' : 'err');
-    t.textContent = msg;
-    document.body.appendChild(t);
-    setTimeout(function () { t.remove(); }, 2500);
+  function setSaveStatus(text, isError) {
+    var el = $('save-status');
+    el.textContent = text || '';
+    el.classList.toggle('error', !!isError);
+    if (text) {
+      clearTimeout(setSaveStatus._t);
+      setSaveStatus._t = setTimeout(function () { el.textContent = ''; }, 1800);
+    }
   }
 
-  async function loadAntiraid(gid) {
-    selectedGuild = gid || MAIN_GID;
-    if (!selectedGuild) return;
-    try {
-      var r = await fetch('/api/guild/' + selectedGuild + '/antiraid');
-      var data = await r.json();
-      $('join-raid').checked    = data.join_raid || false;
-      $('bot-prot').checked     = data.bot_protection || false;
-      $('webhook-prot').checked = data.webhook_protection || false;
-      $('delete-prot').checked  = data.delete_protection || false;
-      $('age-prot').checked     = data.age_filter || false;
-      $('min-age').value        = data.min_age || 7;
-      $('join-threshold').value = data.join_threshold || 10;
-      $('raid-action').value    = data.raid_action || 'lockdown';
-      whitelist = data.whitelist || [];
-      renderWhitelist();
-      var evts = data.recent_events || [];
-      $('raid-events').innerHTML = evts.length
-        ? evts.map(function (e) {
-            return '<div class="event-row"><span style="color:#c8922a;font-weight:700;">⚠️ ' + e.type + '</span>' +
-              '<span style="color:rgba(240,232,208,0.55);font-size:11px;margin-left:8px;">' + e.timestamp + '</span>' +
-              '<div style="color:rgba(240,232,208,0.4);font-size:12px;margin-top:4px;">' + e.description + '</div></div>';
-          }).join('')
-        : '<p style="color:#5a5040;font-size:13px;font-style:italic;">Raid sobitie yok.</p>';
-    } catch (e) {
-      toast('Не удалось загрузить: ' + e.message, false);
-    }
+  // ── Загрузка списка серверов ──────────────────────────────────────────────
+  function loadGuilds() {
+    fetch('/api/guilds', { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (list) {
+        var sel = $('guild-select');
+        sel.innerHTML = '';
+        if (!list || !list.length) {
+          sel.innerHTML = '<option value="">Сервер не найден</option>';
+          return;
+        }
+        list.forEach(function (g) {
+          var opt = document.createElement('option');
+          opt.value = g.id;
+          opt.textContent = g.name;
+          sel.appendChild(opt);
+        });
+        currentGuildId = sel.value;
+        loadConfig();
+      })
+      .catch(function (e) {
+        $('guild-select').innerHTML = '<option value="">Не удалось загрузить</option>';
+        console.error(e);
+      });
+  }
+
+  // ── Загрузка конфигурации ─────────────────────────────────────────────────
+  function loadConfig() {
+    if (!currentGuildId) return;
+    fetch('/api/guild/' + currentGuildId + '/antiraid', { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (cfg) {
+        currentConfig = cfg || {};
+        // значения по умолчанию
+        ['join_raid','age_filter','bot_protection','delete_protection'].forEach(function (k) {
+          if (typeof currentConfig[k] !== 'boolean') currentConfig[k] = false;
+        });
+        if (typeof currentConfig.join_threshold !== 'number') currentConfig.join_threshold = 5;
+        if (typeof currentConfig.join_window !== 'number') currentConfig.join_window = 10;
+        if (typeof currentConfig.min_age !== 'number') currentConfig.min_age = 5;
+        if (!Array.isArray(currentConfig.whitelist)) currentConfig.whitelist = [];
+        if (!Array.isArray(currentConfig.recent_events)) currentConfig.recent_events = [];
+        renderUI();
+      })
+      .catch(function (e) {
+        console.error(e);
+        setSaveStatus('Не удалось загрузить', true);
+      });
+  }
+
+  function renderUI() {
+    if (!currentConfig) return;
+    // toggles
+    ['tog-raid','tog-age','tog-bot','tog-delete'].forEach(function (id) {
+      var el = $(id); if (!el) return;
+      var key = el.getAttribute('data-key');
+      el.classList.toggle('on', !!currentConfig[key]);
+    });
+    // numeric/text
+    ['join_threshold','join_window','min_age','alert_channel_id'].forEach(function (key) {
+      var el = document.querySelector('[data-key="' + key + '"]');
+      if (el) el.value = currentConfig[key] != null ? currentConfig[key] : '';
+    });
+    $('raid_action').value = 'alert';
+
+    renderWhitelist();
+    renderEvents();
   }
 
   function renderWhitelist() {
-    var box = $('whitelist-items');
-    if (!whitelist.length) { box.innerHTML = '<p style="color:#5a5040;font-size:13px;font-style:italic;">Whitelist пусто.</p>'; return; }
-    box.innerHTML = whitelist.map(function (id, i) {
-      return '<span class="wl-tag">' + id + '<button data-wl-idx="' + i + '" type="button">×</button></span>';
-    }).join('');
-  }
-
-  function addWhitelist() {
-    var id = $('whitelist-id').value.trim();
-    if (!id) return;
-    whitelist.push(id);
-    renderWhitelist();
-    $('whitelist-id').value = '';
-  }
-
-  function removeWhitelist(i) {
-    whitelist.splice(i, 1);
-    renderWhitelist();
-  }
-
-  async function saveAntiraid() {
-    if (!selectedGuild) { toast('Сервер выбрать!', false); return; }
-    try {
-      var r = await fetch('/api/guild/' + selectedGuild + '/antiraid', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          join_raid: $('join-raid').checked,
-          bot_protection: $('bot-prot').checked,
-          webhook_protection: $('webhook-prot').checked,
-          delete_protection: $('delete-prot').checked,
-          age_filter: $('age-prot').checked,
-          min_age: parseInt($('min-age').value, 10),
-          join_threshold: parseInt($('join-threshold').value, 10),
-          raid_action: $('raid-action').value,
-          whitelist: whitelist
-        })
-      });
-      var d = await r.json();
-      if (d.success) {
-        toast('✅ Сохранено!', true);
-      } else {
-        toast('❌ ' + (d.error || 'Hata'), false);
-      }
-    } catch (e) {
-      toast('Запрос ошибка: ' + e.message, false);
+    var ul = $('wl-list');
+    ul.innerHTML = '';
+    if (!currentConfig.whitelist.length) {
+      ul.innerHTML = '<li style="background:transparent;border:none;color:#7d8593;">Исключенных пользователей пока нет.</li>';
+      return;
     }
-  }
-
-  function bindEvents() {
-    var btnSave = $('btnSaveAntiraid');
-    if (btnSave) btnSave.addEventListener('click', saveAntiraid);
-    var btnAdd = $('btnAddWl');
-    if (btnAdd) btnAdd.addEventListener('click', addWhitelist);
-    var gs = $('guild-select');
-    if (gs) gs.addEventListener('change', function () { loadAntiraid(gs.value); });
-    // Whitelist silme butonы (event delegation)
-    var wlBox = $('whitelist-items');
-    if (wlBox) wlBox.addEventListener('click', function (e) {
-      var btn = e.target.closest('button[data-wl-idx]');
-      if (btn) removeWhitelist(parseInt(btn.getAttribute('data-wl-idx'), 10));
-    });
-    var wlInput = $('whitelist-id');
-    if (wlInput) wlInput.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') { e.preventDefault(); addWhitelist(); }
+    currentConfig.whitelist.forEach(function (uid, idx) {
+      var li = document.createElement('li');
+      li.innerHTML = '<span><i class="fas fa-user"></i> <code>' + uid + '</code></span>' +
+                     '<button type="button" title="Удалить"><i class="fas fa-times"></i></button>';
+      li.querySelector('button').addEventListener('click', function () {
+        currentConfig.whitelist.splice(idx, 1);
+        saveConfig();
+      });
+      ul.appendChild(li);
     });
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
+  function renderEvents() {
+    var box = $('alerts');
+    box.innerHTML = '';
+    if (!currentConfig.recent_events.length) {
+      box.innerHTML = '<p class="muted">Событий пока нет.</p>';
+      return;
+    }
+    currentConfig.recent_events.forEach(function (ev) {
+      var div = document.createElement('div');
+      div.className = 'alert-item';
+      var cls = '';
+      var icon = 'fas fa-exclamation-circle';
+      var label = ev.type;
+      if (ev.type === 'young_account') { cls = 'young'; icon = 'fas fa-user-clock'; label = 'Новый аккаунт'; }
+      else if (ev.type === 'join_raid') { cls = ''; icon = 'fas fa-exclamation-triangle'; label = 'Волна рейда'; }
+      else if (ev.type === 'bot_join') { cls = 'bot'; icon = 'fas fa-robot'; label = 'Бот присоединился'; }
+      else if (ev.type === 'bulk_delete') { cls = 'bulk'; icon = 'fas fa-trash-alt'; label = 'Массовое удаление'; }
+      div.className = 'alert-item ' + cls;
+
+      var main = '';
+      if (ev.type === 'join_raid') {
+        main = '<b>' + (ev.count || '?') + '</b> человек / ' + (ev.window || '?') + 'сек (порог ' + (ev.threshold || '?') + ')';
+        if (ev.last_user) main += ' — последний: ' + ev.last_user;
+      } else if (ev.type === 'young_account') {
+        main = (ev.user_tag || ev.user_id) + ' — возраст аккаунта: <b>' + (ev.account_age_days || '?') + ' дней</b>';
+      } else if (ev.type === 'bot_join') {
+        main = ev.user_tag || ev.user_id;
+      } else if (ev.type === 'bulk_delete') {
+        main = 'Канал <code>' + (ev.channel_id || '?') + '</code> — <b>' + (ev.count || '?') + '</b> сообщений';
+      } else {
+        main = JSON.stringify(ev);
+      }
+      var t = ev.timestamp ? new Date(ev.timestamp).toLocaleString('ru-RU') : '';
+      div.innerHTML = '<i class="' + icon + '"></i>' +
+                      '<span class="badge">' + label + '</span>' +
+                      '<span>' + main + '</span>' +
+                      '<span class="alert-time">' + t + '</span>';
+      box.appendChild(div);
+    });
   }
-  function init() {
-    bindEvents();
-    loadAntiraid(MAIN_GID);
+
+  // ── Сохранение конфигурации (с задержкой) ─────────────────────────────────
+  function saveConfig() {
+    if (!currentGuildId || !currentConfig) return;
+    setSaveStatus('Сохранение…');
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(function () {
+      fetch('/api/guild/' + currentGuildId + '/antiraid', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(currentConfig),
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (data && data.success) setSaveStatus('✓ Сохранено');
+          else setSaveStatus('Ошибка: ' + (data && data.error || 'неизвестно'), true);
+        })
+        .catch(function (e) { setSaveStatus('Ошибка: ' + e.message, true); });
+    }, 250);
   }
+
+  // ── Привязка событий ──────────────────────────────────────────────────────
+  function bind() {
+    loadGuilds();
+
+    $('guild-select').addEventListener('change', function () {
+      currentGuildId = this.value;
+      loadConfig();
+    });
+
+    $('btn-reload').addEventListener('click', function () {
+      if (!currentGuildId) return;
+      fetch('/api/cogs/antiraid/reload', { method: 'POST', credentials: 'same-origin' })
+        .then(function (r) { return r.json(); })
+        .then(function (d) { setSaveStatus(d && d.success ? '✓ Обновлено' : 'Ошибка', !(d && d.success)); })
+        .catch(function (e) { setSaveStatus('Ошибка: ' + e.message, true); });
+    });
+
+    // переключатели
+    ['tog-raid','tog-age','tog-bot','tog-delete'].forEach(function (id) {
+      var el = $(id);
+      el.addEventListener('click', function () {
+        if (!currentConfig) return;
+        var key = this.getAttribute('data-key');
+        currentConfig[key] = !this.classList.contains('on');
+        this.classList.toggle('on', currentConfig[key]);
+        saveConfig();
+      });
+    });
+
+    // числовые/текстовые поля
+    ['join_threshold','join_window','min_age','alert_channel_id'].forEach(function (key) {
+      var el = document.querySelector('[data-key="' + key + '"]');
+      if (!el) return;
+      el.addEventListener('change', function () {
+        if (!currentConfig) return;
+        var v = this.value;
+        if (key === 'alert_channel_id') {
+          currentConfig[key] = v ? String(v) : null;
+        } else {
+          currentConfig[key] = parseInt(v, 10) || 0;
+        }
+        saveConfig();
+      });
+    });
+
+    // добавление в белый список
+    $('btn-add-wl').addEventListener('click', function () {
+      if (!currentConfig) return;
+      var inp = $('wl-input');
+      var v = (inp.value || '').trim();
+      if (!/^\d{15,22}$/.test(v)) {
+        setSaveStatus('Неверный ID пользователя', true);
+        return;
+      }
+      if (currentConfig.whitelist.indexOf(v) !== -1) {
+        setSaveStatus('Уже в списке', true);
+        return;
+      }
+      currentConfig.whitelist.push(v);
+      inp.value = '';
+      renderWhitelist();
+      saveConfig();
+    });
+    $('wl-input').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); $('btn-add-wl').click(); }
+    });
+
+    // очистить события
+    $('btn-clear').addEventListener('click', function () {
+      if (!currentConfig) return;
+      currentConfig.recent_events = [];
+      renderEvents();
+      saveConfig();
+    });
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind);
+  else bind();
 })();
 </script>
 {% endblock %}

@@ -15,10 +15,10 @@ def kill_existing_processes():
         # Python main.py process'lerini заверш
         subprocess.run('taskkill /f /im python.exe', shell=True, capture_output=True)
         
-        # Cloudflared process'lerini заверш  
+        # Cloudflared process'lerini заверш 
         subprocess.run('taskkill /f /im cloudflared.exe', shell=True, capture_output=True)
         
-        # WMIC с spesifik команда satırı olan process'leri заверш
+        # WMIC с spesifik команда satыrы olan process'leri заверш
         subprocess.run('wmic process where "commandline like \'%main.py%\'" delete', shell=True, capture_output=True)
         
         print("[CLEANUP] Process'ler завершено")
@@ -27,8 +27,8 @@ def kill_existing_processes():
         print(f"[ERROR] Ошибка заверш действие: {e}")
 
 def wait_for_cleanup():
-    """Process'lerin tamamen kapanmasını badd"""
-    print("[WAIT] Process'lerin kapanması ojidaetsya...")
+    """Process'lerin tamamen kapanmasыnы badd"""
+    print("[WAIT] Process'lerin kapanmasы ojidaetsya...")
     time.sleep(5)
 
 def start_bot():

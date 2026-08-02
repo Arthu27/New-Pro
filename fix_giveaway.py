@@ -29,10 +29,10 @@ def fix():
     
     async def send():
         ch = bot.get_channel(int(channel_id))
-        embed = discord.Embed(title=f'🎉 {prize}', description='**Katılmak для butona bas!**', color=0xffd700)
+        embed = discord.Embed(title=f'🎉 {prize}', description='**Присоединитьсяmak для butona bas!**', color=0xffd700)
         embed.add_field(name='Kazanan', value=winners, inline=True)
-        embed.add_field(name='Katılımcı', value='0/{}'.format(winners), inline=True)
-        embed.add_field(name='Bitiş', value=f'<t:{int(datetime.utcnow().timestamp())+duration*60}:R>', inline=True)
+        embed.add_field(name='Участник', value='0/{}'.format(winners), inline=True)
+        embed.add_field(name='Bitiш', value=f'<t:{int(datetime.utcnow().timestamp())+duration*60}:R>', inline=True)
         embed.set_footer(text=f'{gw_id}')
         view = GiveawayView(gw_id, guild_id)
         msg = await ch.send(embed=embed, view=view)

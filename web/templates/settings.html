@@ -1,76 +1,185 @@
 {% extends "base.html" %}
 {% block title %}Настройки - Aether{% endblock %}
-{% block page_title %}PANEL НАСТРОЙК{% endblock %}
+{% block page_title %}<i class="fas fa-cog"></i> Настройки{% endblock %}
 {% block content %}
-<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(400px,1fr));gap:20px;">
-  <div class="section">
-    <h2><i class="fas fa-shield-alt" style="color:#dc143c;"></i> Роли Администратор</h2>
-    <table style="width:100%;border-collapse:collapse;">
-      <tr style="border-bottom:2px solid rgba(220,20,60,0.3);"><th style="padding:10px;text-align:left;color:#dc143c;">Роль</th><th style="padding:10px;text-align:left;color:#dc143c;">Уровень</th><th style="padding:10px;text-align:left;color:#dc143c;">Администратор</th></tr>
-      <tr style="border-bottom:1px solid rgba(255,255,255,0.05);"><td style="padding:10px;color:#ffd700;font-weight:700;">Owner</td><td style="padding:10px;color:#dc143c;">3</td><td style="padding:10px;color:#ccc;">Все права администратора</td></tr>
-      <tr style="border-bottom:1px solid rgba(255,255,255,0.05);"><td style="padding:10px;color:#e67e22;font-weight:700;">Твоё имя</td><td style="padding:10px;color:#dc143c;">2</td><td style="padding:10px;color:#ccc;">Команды, пользователи, логи</td></tr>
-      <tr><td style="padding:10px;color:#3498db;font-weight:700;">Mod</td><td style="padding:10px;color:#dc143c;">1</td><td style="padding:10px;color:#ccc;">Серверы, логи, предупреждения</td></tr>
-    </table>
-  </div>
-  <div class="section">
-    <h2><i class="fas fa-users-cog" style="color:#dc143c;"></i> Panel Пользователь</h2>
-    <div style="background:rgba(220,20,60,0.1);border:1px solid rgba(220,20,60,0.3);border-radius:10px;padding:15px;margin-bottom:10px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;">
-        <span style="color:#ffd700;font-weight:700;">owner</span>
-        <span style="background:#dc143c;padding:3px 10px;border-radius:10px;font-size:12px;color:white;">OWNER</span>
-      </div>
-      <div style="color:#888;font-size:12px;margin-top:5px;">Sifre: owner123</div>
+{% block page_hero %}
+<div class="page-hero compact">
+  <div class="page-hero-content">
+    <div class="page-hero-greeting">
+      <span class="dot"></span>
+      <span>Настройки</span>
     </div>
-    <div style="background:rgba(220,20,60,0.1);border:1px solid rgba(220,20,60,0.3);border-radius:10px;padding:15px;margin-bottom:10px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;">
-        <span style="color:#e67e22;font-weight:700;">admin</span>
-        <span style="background:#e67e22;padding:3px 10px;border-radius:10px;font-size:12px;color:white;">ADMIN</span>
-      </div>
-      <div style="color:#888;font-size:12px;margin-top:5px;">Sifre: admin123</div>
-    </div>
-    <div style="background:rgba(220,20,60,0.1);border:1px solid rgba(220,20,60,0.3);border-radius:10px;padding:15px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;">
-        <span style="color:#3498db;font-weight:700;">mod</span>
-        <span style="background:#3498db;padding:3px 10px;border-radius:10px;font-size:12px;color:white;">MOD</span>
-      </div>
-      <div style="color:#888;font-size:12px;margin-top:5px;">Sifre: mod123</div>
-    </div>
-    <div style="margin-top:15px;padding:12px;background:rgba(243,156,18,0.1);border:1px solid rgba(243,156,18,0.3);border-radius:8px;color:#f39c12;font-size:13px;">
-      <i class="fas fa-exclamation-triangle"></i> Production ortaminda bu информация degistirin!
-    </div>
-  </div>
-  <div class="section">
-    <h2><i class="fas fa-robot" style="color:#dc143c;"></i> Bot Статистика</h2>
-    <div id="bot-stats" style="color:#aaa;text-align:center;padding:20px;"><i class="fas fa-spinner fa-spin" style="color:#dc143c;"></i> Yukleniyor...</div>
-  </div>
-  <div class="section">
-    <h2><i class="fas fa-info-circle" style="color:#dc143c;"></i> Система Информация</h2>
-    <div style="display:grid;gap:10px;">
-      <div style="background:rgba(220,20,60,0.1);border:1px solid rgba(220,20,60,0.2);border-radius:8px;padding:12px;display:flex;justify-content:space-between;">
-        <span style="color:#888;">Panel Versiyonu</span><span style="color:#ffd700;font-weight:700;">v2.0 Aether</span>
-      </div>
-      <div style="background:rgba(220,20,60,0.1);border:1px solid rgba(220,20,60,0.2);border-radius:8px;padding:12px;display:flex;justify-content:space-between;">
-        <span style="color:#888;">Framework</span><span style="color:#ccc;">Flask + Discord.py</span>
-      </div>
-      <div style="background:rgba(220,20,60,0.1);border:1px solid rgba(220,20,60,0.2);border-radius:8px;padding:12px;display:flex;justify-content:space-between;">
-        <span style="color:#888;">Port</span><span style="color:#ccc;">5001</span>
-      </div>
-    </div>
+    <h1>Настройки</h1>
+    <p>Глобальные настройки панели и сервера.</p>
   </div>
 </div>
+{% endblock %}
+
+
+
+<div class="settings-grid">
+  <!-- Bot Статусu -->
+  <div class="set-card" >
+    <div class="set-head">
+      <div class="set-icon"><i class="fas fa-robot"></i></div>
+      <div class="set-title">Bot Статусu</div>
+    </div>
+    <div class="status-row">
+      <span class="dot status-on" id="bot-dot"></span>
+      <span id="bot-status">Загрузка...</span>
+    </div>
+    <div class="kv"><span class="kv-key">Сервер</span><span class="kv-val" id="stat-guilds">-</span></div>
+    <div class="kv"><span class="kv-key">Пользователь</span><span class="kv-val" id="stat-users">-</span></div>
+    <div class="kv"><span class="kv-key">Ping</span><span class="kv-val" id="stat-ping">-</span></div>
+    <div class="action-row">
+      <button class="btn btn-primary" id="btn-sync" type="button"><i class="fas fa-sync"></i> Sync</button>
+      <button class="btn btn-warn" id="btn-restart" type="button"><i class="fas fa-redo"></i> Restart</button>
+    </div>
+  </div>
+
+  <!-- Gюvenlik -->
+  <div class="set-card" >
+    <div class="set-head">
+      <div class="set-icon"><i class="fas fa-shield-alt"></i></div>
+      <div class="set-title">Gюvenlik</div>
+    </div>
+    <div class="status-row">
+      <span class="dot status-on" id="sec-dot"></span>
+      <span>Tehlike endeksi: <strong id="threat-val">-</strong>/100</span>
+    </div>
+    <div class="kv"><span class="kv-key">Kпоискntina</span><span class="kv-val" id="lockdown-state">-</span></div>
+    <div class="action-row">
+      <button class="btn btn-warn" id="btn-lockdown" type="button"><i class="fas fa-lock"></i> Kпоискntina</button>
+    </div>
+  </div>
+
+  <!-- Panel Gюvenlik -->
+  <div class="set-card" >
+    <div class="set-head">
+      <div class="set-icon"><i class="fas fa-user-shield"></i></div>
+      <div class="set-title">Panel</div>
+    </div>
+    <div class="status-row">
+      <span class="dot status-on"></span>
+      <span>Session: Cookie (gюvenli)</span>
+    </div>
+    <div class="kv"><span class="kv-key">Длительность</span><span class="kv-val">30 gюn</span></div>
+    <div class="kv"><span class="kv-key">CSP</span><span class="kv-val">Активный</span></div>
+    <div class="action-row">
+      <button class="btn btn-danger" id="btn-logout" type="button"><i class="fas fa-sign-out-alt"></i> Выход</button>
+    </div>
+  </div>
+
+  <!-- Cloudflare -->
+  <div class="set-card" >
+    <div class="set-head">
+      <div class="set-icon"><i class="fas fa-globe"></i></div>
+      <div class="set-title">Tюnel</div>
+    </div>
+    <div class="status-row">
+      <span class="dot" id="tunnel-dot"></span>
+      <span id="tunnel-status">Загрузка...</span>
+    </div>
+    <div id="tunnel-url-wrap"   style="margin-top: 8px;" onclick="navigator.clipboard.writeText(this.textContent);this.textContent='✓ Kopyalandи';setTimeout(()=>this.textContent=this.dataset.url,1500)" data-url=""></div>
+  </div>
+</div>
+
 <script>
-async function loadStats() {
-  var r = await fetch('/api/stats');
-  var d = await r.json();
-  if (d.error) { document.getElementById('bot-stats').innerHTML = '<p style="color:#e74c3c;">'+d.error+'</p>'; return; }
-  document.getElementById('bot-stats').innerHTML =
-    '<div style="display:grid;gap:10px;">' +
-    '<div style="background:rgba(220,20,60,0.1);border:1px solid rgba(220,20,60,0.2);border-radius:8px;padding:12px;display:flex;justify-content:space-between;"><span style="color:#888;">Сервер Количество</span><span style="color:#ffd700;font-weight:700;">'+d.guilds+'</span></div>' +
-    '<div style="background:rgba(220,20,60,0.1);border:1px solid rgba(220,20,60,0.2);border-radius:8px;padding:12px;display:flex;justify-content:space-between;"><span style="color:#888;">Пользователь Количество</span><span style="color:#ffd700;font-weight:700;">'+d.users+'</span></div>' +
-    '<div style="background:rgba(220,20,60,0.1);border:1px solid rgba(220,20,60,0.2);border-radius:8px;padding:12px;display:flex;justify-content:space-between;"><span style="color:#888;">Ping</span><span style="color:#2ecc71;font-weight:700;">'+d.latency+'ms</span></div>' +
-    '<div style="background:rgba(220,20,60,0.1);border:1px solid rgba(220,20,60,0.2);border-radius:8px;padding:12px;display:flex;justify-content:space-between;"><span style="color:#888;">Состояние</span><span style="color:#2ecc71;font-weight:700;">● ONLINE</span></div>' +
-    '</div>';
-}
-loadStats();
+(function () {
+  'use strict';
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+  async function loadStats() {
+    try {
+      var d = await window.fetchCachedJSON('/api/stats');
+      if (d.error) {
+        $('bot-status').textContent = 'ОФЛАЙН';
+        $('bot-dot').className = 'dot status-off';
+      } else {
+        $('bot-status').textContent = 'ОНЛАЙН';
+        $('bot-dot').className = 'dot status-on';
+      }
+      $('stat-guilds').textContent = d.guilds != null ? d.guilds : '-';
+      $('stat-users').textContent = (d.users || 0).toLocaleString();
+      $('stat-ping').textContent = (d.latency || 0) + 'ms';
+    } catch (e) {
+      $('bot-status').textContent = 'ОФЛАЙН';
+      $('bot-dot').className = 'dot status-off';
+    }
+  }
+
+  async function loadThreat() {
+    try {
+      var d = await fetch('/api/security/threat-index').then(function (r) { return r.json(); });
+      if (!d || !d.success) return;
+      $('threat-val').textContent = d.threat_score || 15;
+      $('lockdown-state').textContent = d.lockdown_active ? 'АКТИВЕН' : 'Kapali';
+      $('lockdown-state').style.color = d.lockdown_active ? '#ef4444' : '#4ade80';
+    } catch (e) { /* sessiz */ }
+  }
+
+  async function loadTunnel() {
+    try {
+      var d = await fetch('/api/tunnel-url').then(function (r) { return r.json(); });
+      if (d && d.url) {
+        $('tunnel-status').textContent = 'Cloudflare Активный';
+        $('tunnel-dot').className = 'dot status-on';
+        var w = $('tunnel-url-wrap');
+        w.style.display = 'block';
+        w.textContent = d.url;
+        w.dataset.url = d.url;
+      } else {
+        $('tunnel-status').textContent = 'Kapali';
+        $('tunnel-dot').className = 'dot status-off';
+      }
+    } catch (e) { /* sessiz */ }
+  }
+
+  async function doSync() {
+    var btn = $('btn-sync');
+    btn.disabled = true;
+    try {
+      var d = await fetch('/api/bot/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).then(function (r) { return r.json(); });
+      if (d.success) {
+        btn.textContent = '✓ Synced';
+        setTimeout(function () { btn.innerHTML = '<i class="fas fa-sync"></i> Sync'; }, 2000);
+      }
+    } catch (e) { /* sessiz */ }
+    btn.disabled = false;
+  }
+
+  async function doRestart() {
+    if (!confirm('Botu новыйden baшlatmak istediгine emin misin?')) return;
+    try {
+      await fetch('/api/bot/restart', { method: 'POST' });
+    } catch (e) { /* sessiz */ }
+  }
+
+  async function doLockdown() {
+    try {
+      await fetch('/api/security/toggle-lockdown', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+      loadThreat();
+    } catch (e) { /* sessiz */ }
+  }
+
+  function doLogout() {
+    if (!confirm('Чиkmak istediгine emin misin?')) return;
+    window.location.href = '/logout';
+  }
+
+  function bind() {
+    $('btn-sync').addEventListener('click', doSync);
+    $('btn-restart').addEventListener('click', doRestart);
+    $('btn-lockdown').addEventListener('click', doLockdown);
+    $('btn-logout').addEventListener('click', doLogout);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () { bind(); loadStats(); loadThreat(); loadTunnel(); });
+  } else {
+    bind(); loadStats(); loadThreat(); loadTunnel();
+  }
+})();
 </script>
 {% endblock %}

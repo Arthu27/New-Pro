@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Помощь sayfasini yeniden yazar
+# Помощь sayfasini yeniden написатьar
 content = r"""{% extends "base.html" %}
 {% block title %}Команда Руководство — Aether{% endblock %}
 {% block page_title %}{% endblock %}
@@ -80,7 +80,7 @@ content = r"""{% extends "base.html" %}
 .pb{font-size:9px;font-weight:700;padding:2px 7px;border-radius:99px;text-transform:uppercase;letter-spacing:0.08em;white-space:nowrap;flex-shrink:0;}
 .pb-all{background:rgba(46,213,115,0.1);color:var(--g);border:1px solid rgba(46,213,115,0.25);}
 .pb-mod{background:rgba(255,165,2,0.1);color:var(--y);border:1px solid rgba(255,165,2,0.25);}
-.pb-admin{background:rgba(255,71,87,0.1);color:var(--r);border:1px solid rgba(255,71,87,0.25);}
+.pb-админ{background:rgba(255,71,87,0.1);color:var(--r);border:1px solid rgba(255,71,87,0.25);}
 .yr-empty{text-align:center;padding:60px 20px;color:rgba(240,232,208,0.2);font-size:13px;position:relative;z-index:1;}
 .yr-empty i{font-size:32px;margin-bottom:12px;display:block;opacity:0.3;}
 @media(max-width:768px){.yr-grid{grid-template-columns:1fr;}.yr-stats{flex-direction:column;}}
@@ -93,7 +93,7 @@ content = r"""{% extends "base.html" %}
 <div class="yr-каждый">
   <div class="yr-badge">Aether Bot</div>
   <h1>Команда Руководство</h1>
-  <p class="yr-каждый-sub">Tum команды, kategoriler ve izin seviyeleri</p>
+  <p class="yr-каждый-sub">Tum команды, kategoriler ve izin уровеньleri</p>
 </div>
 
 <div class="yr-stats">
@@ -122,10 +122,10 @@ content = r"""{% extends "base.html" %}
   </div>
   <div class="yr-tabs" id="yr-tabs">
     <button class="yr-tab active" data-c="" onclick="yrTab('all',this)">Tumu</button>
-    <button class="yr-tab" data-c="r" onclick="yrTab('mod',this)">Mod</button>
-    <button class="yr-tab" data-c="y" onclick="yrTab('warn',this)">Предупреждение</button>
+    <button class="yr-tab" data-c="r" onclick="yrTab('мод',this)">Мод</button>
+    <button class="yr-tab" data-c="y" onclick="yrTab('варн',this)">Предупреждение</button>
     <button class="yr-tab" data-c="g" onclick="yrTab('music',this)">Muzik</button>
-    <button class="yr-tab" data-c="p" onclick="yrTab('fun',this)">Oyun</button>
+    <button class="yr-tab" data-c="p" onclick="yrTab('fun',this)">Игра</button>
     <button class="yr-tab" data-c="гол" onclick="yrTab('eco',this)">Ekonomi</button>
     <button class="yr-tab" data-c="b" onclick="yrTab('util',this)">Aramaclar</button>
   </div>
@@ -135,57 +135,57 @@ content = r"""{% extends "base.html" %}
 
 <script>
 var YR_CATS=[
-  {id:'mod',color:'r',title:'Moderasyon',cmds:[
-    {n:'/moderate ban',d:'Пользователя постоянный yasakla',u:'/moderate ban @user причина',p:'admin'},
-    {n:'/moderate kick',d:'С сервера at',u:'/moderate kick @user причина',p:'admin'},
-    {n:'/moderate timeout',d:'Gecici sustur',u:'/moderate timeout @user 10m',p:'admin'},
-    {n:'/moderate untimeout',d:'Susturmayi удалить',u:'/moderate untimeout @user',p:'admin'},
-    {n:'/moderate unban',d:'Bani удалить',u:'/moderate unban user_id',p:'admin'},
-    {n:'/utility clear',d:'Toplu message удалить',u:'/utility clear 50',p:'admin'},
-    {n:'/utility lock',d:'Канал kilitle',u:'/utility lock',p:'mod'},
-    {n:'/utility unlock',d:'Канал kilidini удалить',u:'/utility unlock',p:'mod'},
-    {n:'/utility userinfo',d:'Пользователь infosi',u:'/utility userinfo @user',p:'mod'},
-    {n:'/роли',d:'Роли ver / al',u:'/роли @user @роли',p:'admin'},
+  {id:'мод',color:'r',title:'Moderasyon',cmds:[
+    {n:'/moderate бан',d:'Пользователя постоянный запретla',u:'/moderate бан @user причина',p:'админ'},
+    {n:'/moderate кик',d:'С сервера at',u:'/moderate кик @user причина',p:'админ'},
+    {n:'/moderate timeout',d:'Gecici sustur',u:'/moderate timeout @user 10m',p:'админ'},
+    {n:'/moderate untimeout',d:'Susturmayi удалить',u:'/moderate untimeout @user',p:'админ'},
+    {n:'/moderate unban',d:'Bani удалить',u:'/moderate unban user_id',p:'админ'},
+    {n:'/utility clear',d:'Toplu message удалить',u:'/utility clear 50',p:'админ'},
+    {n:'/utility lock',d:'Канал заблокировать',u:'/utility lock',p:'мод'},
+    {n:'/utility unlock',d:'Канал замокni удалить',u:'/utility unlock',p:'мод'},
+    {n:'/utility userinfo',d:'Пользователь infosi',u:'/utility userinfo @user',p:'мод'},
+    {n:'/роли',d:'Роли ver / al',u:'/роли @user @роли',p:'админ'},
   ]},
-  {id:'warn',color:'y',title:'Предупреждение Система',cmds:[
-    {n:'/warn',d:'Предупреждение ver',u:'/warn @user причина',p:'mod'},
-    {n:'/warnings',d:'Предупреждения listele',u:'/warnings @user',p:'mod'},
-    {n:'/clearwarns',d:'Tum предупреждения clear',u:'/clearwarns @user',p:'admin'},
+  {id:'варн',color:'y',title:'Предупреждение Система',cmds:[
+    {n:'/варн',d:'Предупреждение ver',u:'/варн @user причина',p:'мод'},
+    {n:'/warnings',d:'Предупреждения listele',u:'/warnings @user',p:'мод'},
+    {n:'/clearwarns',d:'Tum предупреждения clear',u:'/clearwarns @user',p:'админ'},
   ]},
   {id:'music',color:'g',title:'Muzik',cmds:[
     {n:'/cal',d:"YouTube'dan muzik cal",u:'/cal lofi hip hop',p:'all'},
     {n:'/dur',d:'Duraklat / devam',u:'/dur',p:'all'},
-    {n:'/atla',d:'Sarkiyi atla',u:'/atla',p:'all'},
+    {n:'/atla',d:'Sarkхорошо atla',u:'/atla',p:'all'},
     {n:'/kuyruk',d:'Kuyrugu goster',u:'/kuyruk',p:'all'},
-    {n:'/ses',d:'Ses seviyesi (0-100)',u:'/ses 80',p:'all'},
+    {n:'/ses',d:'Ses уровеньsi (0-100)',u:'/ses 80',p:'all'},
     {n:'/clear-kuyruk',d:'Kuyrugu clear',u:'/clear-kuyruk',p:'all'},
     {n:'/ayril',d:'Ses из канала cik',u:'/ayril',p:'all'},
     {n:'/join',d:'Ses в канал katil',u:'/join',p:'all'},
   ]},
-  {id:'fun',color:'p',title:'Eglence ve Oyun',cmds:[
-    {n:'/текст',d:'Текст tura at',u:'/текст',p:'all'},
-    {n:'/zar-at',d:'Zar at (1-5 adet)',u:'/zar-at 2',p:'all'},
-    {n:'/tas-kagit-makas',d:'Tas kagit makas',u:'/tas-kagit-makas',p:'all'},
-    {n:'/oyun-baslat',d:'Число tahmin oyunu',u:'/oyun-baslat',p:'all'},
-    {n:'/oyun-tahmin',d:'Tahmin et',u:'/oyun-tahmin 42',p:'all'},
+  {id:'fun',color:'p',title:'Eglence ve Игра',cmds:[
+    {n:'/текст',d:'Текст орёл at',u:'/текст',p:'all'},
+    {n:'/кубик-at',d:'Бросить кубик (1-5 adet)',u:'/кубик-at 2',p:'all'},
+    {n:'/tas-kagit-ножницы',d:'Tas kagit ножницы',u:'/tas-kagit-ножницы',p:'all'},
+    {n:'/игра-baslat',d:'Число tahmin играu',u:'/игра-baslat',p:'all'},
+    {n:'/игра-tahmin',d:'Tahmin et',u:'/игра-tahmin 42',p:'all'},
     {n:'/sihirli-top',d:'Sihirli 8 top',u:'/sihirli-top soru',p:'all'},
-    {n:'/oyun-rastgele-uye',d:'Rastgele uye sec',u:'/oyun-rastgele-uye',p:'all'},
+    {n:'/игра-rastgele-uye',d:'Rastgele uye sec',u:'/игра-rastgele-uye',p:'all'},
   ]},
   {id:'eco',color:'гол',title:'Ekonomi ve Ozellikler',cmds:[
     {n:'/dogumgunu',d:'Dogum gununu сохранить',u:'/dogumgunu 15.03',p:'all'},
     {n:'/dogumgunleri',d:'Yaklasan dogum gunleri',u:'/dogumgunleri',p:'all'},
-    {n:'/duty-panel',d:'Gorev panelini gonder',u:'/duty-panel #channel',p:'admin'},
-    {n:'/duty-add',d:'Manuel ilerleme add',u:'/duty-add @user 10',p:'mod'},
-    {n:'/ticket_panel',d:'Ticket panelini gonder',u:'/ticket_panel',p:'admin'},
-    {n:'/webhook',d:'Webhook islemleri',u:'/webhook olustur',p:'admin'},
+    {n:'/duty-panel',d:'Gorev panelini gonder',u:'/duty-panel #channel',p:'админ'},
+    {n:'/duty-add',d:'Manuel ilerleme add',u:'/duty-add @user 10',p:'мод'},
+    {n:'/ticket_panel',d:'Ticket panelini gonder',u:'/ticket_panel',p:'админ'},
+    {n:'/webhook',d:'Webhook islemleri',u:'/webhook olustur',p:'админ'},
   ]},
   {id:'util',color:'b',title:'Помощник Aramaclar',cmds:[
-    {n:'/modstats',d:'Moderator статистика',u:'/modstats',p:'mod'},
-    {n:'/activemods',d:'En активен moderatorler',u:'/activemods',p:'mod'},
+    {n:'/modstats',d:'Moderator статистика',u:'/modstats',p:'мод'},
+    {n:'/activemods',d:'En активен moderatorler',u:'/activemods',p:'мод'},
     {n:'/saglik',d:'Сервер saglik skoru',u:'/saglik',p:'all'},
     {n:'/channel-статистика',d:'Канал message istatistigi',u:'/channel-статистика',p:'all'},
-    {n:'/duty-stats',d:'Gorev puan tablosu',u:'/duty-stats',p:'mod'},
-    {n:'/verify-setup',d:'Dogrulama sistemini kur',u:'/verify-setup',p:'admin'},
+    {n:'/duty-stats',d:'Gorev очки tablosu',u:'/duty-stats',p:'мод'},
+    {n:'/verify-setup',d:'Dogrulama sistemini kur',u:'/verify-setup',p:'админ'},
   ]},
 ];
 var CM={
@@ -198,8 +198,8 @@ var CM={
 };
 var yrTab_='all',yrQ_='';
 function pb(p){
-  if(p==='admin')return '<span class="pb pb-admin">İsminin</span>';
-  if(p==='mod')return '<span class="pb pb-mod">Mod</span>';
+  if(p==='админ')return '<span class="pb pb-админ">Иsminin</span>';
+  if(p==='мод')return '<span class="pb pb-mod">Мод</span>';
   return '<span class="pb pb-all">Каждый</span>';
 }
 function yrFilter(){yrQ_=document.getElementById('cmd-search').value.toLowerCase().trim();yrRender();}
@@ -235,7 +235,7 @@ function yrRender(){
     });
     html+='</div></div>';
   });
-  if(!html)html='<div class="yr-empty"><i class="fas fa-search"></i>В конецuç не найдено.</div>';
+  if(!html)html='<div class="yr-empty"><i class="fas fa-search"></i>В конецuч не найдено.</div>';
   c.innerHTML=html;
   document.getElementById('filtered-count').textContent=shown;
 }

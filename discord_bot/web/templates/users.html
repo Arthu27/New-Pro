@@ -134,7 +134,7 @@ function filterMembers(){
 
 function renderM(members){
   var c=document.getElementById('membersContainer');
-  if(!members.length){c.innerHTML='<div class="empty">В конецuç не найдено</div>';return;}
+  if(!members.length){c.innerHTML='<div class="empty">В конецuч не найдено</div>';return;}
   var h='<div class="mgrid">';
   members.forEach(function(m){
     var sc=m.status==='online'?'son':m.status==='idle'?'sidle':m.status==='dnd'?'sdnd':'soff';
@@ -167,7 +167,7 @@ function openM(m){
   document.getElementById('mRoles').innerHTML=m.roles.map(function(r){
     var col=r.color==='#000000'?'#555':r.color;
     return '<span class="rbadge" style="border-color:'+col+';color:'+col+'">'+r.name+'</span>';
-  }).join('')||'<span style="color:rgba(155,89,182,.4);font-size:.7rem">Роль yok</span>';
+  }).join('')||'<span style="color:rgba(155,89,182,.4);font-size:.7rem">Роль нет</span>';
   var role='{{ роли }}',acts='';
   if(role==='admin'||role==='owner'){
     acts+='<button class="btn bwarn" onclick="doAct(\'warn\')">UYAR</button>';
@@ -189,7 +189,7 @@ async function doAct(action){
   var reason=prompt('Причина:')||'Web panel';
   var r=await fetch('/api/command/'+action,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({guild_id:curG,user_id:curM.id,reason:reason})});
   var d=await r.json();
-  showToast(d.success?'OK: '+(d.message||'Basarili'):'ОШИБКА: '+(d.error||'?'));
+  showToast(d.success?'ОК: '+(d.message||'Basarili'):'ОШИБКА: '+(d.error||'?'));
   if(d.success&&action!=='warn')closeModal();
 }
 

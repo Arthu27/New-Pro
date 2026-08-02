@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Все sorunları düzeltir"""
+"""Все sorunlarы dюzeltir"""
 import os
 
 # ─── 1. logs.html ────────────────────────────────────────────────────────────
 logs_html = r"""{% extends "base.html" %}
 {% block title %}Denetim Kaydi - Aether{% endblock %}
-{% block page_title %}DENETİM KAYDI{% endblock %}
+{% block page_title %}DENETИM KAYDI{% endblock %}
 {% block content %}
 <style>
 .filter-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:15px;align-items:center;}
@@ -70,7 +70,7 @@ logs_html = r"""{% extends "base.html" %}
 var allEvents=[], filtered=[], currentCat='', shown=0, PAGE=100;
 
 var CATS={
-  mod:    {icon:'🔨',label:'Mod',    bg:'rgba(231,76,60,0.2)',  border:'rgba(231,76,60,0.5)',  text:'#e74c3c'},
+  мод:    {icon:'🔨',label:'Мод',    bg:'rgba(231,76,60,0.2)',  border:'rgba(231,76,60,0.5)',  text:'#e74c3c'},
   member: {icon:'👤',label:'Uye',    bg:'rgba(46,204,113,0.2)', border:'rgba(46,204,113,0.5)', text:'#2ecc71'},
   message:{icon:'💬',label:'Сообщение',  bg:'rgba(52,152,219,0.2)', border:'rgba(52,152,219,0.5)', text:'#3498db'},
   роли:   {icon:'🎭',label:'Роль',    bg:'rgba(155,89,182,0.2)', border:'rgba(155,89,182,0.5)', text:'#9b59b6'},
@@ -78,7 +78,7 @@ var CATS={
   voice:  {icon:'🔊',label:'Ses',    bg:'rgba(26,188,156,0.2)', border:'rgba(26,188,156,0.5)', text:'#1abc9c'},
   сервер: {icon:'🏰',label:'Сервер', bg:'rgba(230,126,34,0.2)', border:'rgba(230,126,34,0.5)', text:'#e67e22'},
   automod:{icon:'🤖',label:'AutoMod',bg:'rgba(231,76,60,0.2)',  border:'rgba(231,76,60,0.5)',  text:'#e74c3c'},
-  invite: {icon:'📨',label:'Davet',  bg:'rgba(149,165,166,0.2)',border:'rgba(149,165,166,0.5)',text:'#95a5a6'}
+  invite: {icon:'📨',label:'Приглашение',  bg:'rgba(149,165,166,0.2)',border:'rgba(149,165,166,0.5)',text:'#95a5a6'}
 };
 
 function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -135,12 +135,12 @@ function renderEvents(){
   var list=document.getElementById('event-list');
   var lmw=document.getElementById('load-more-wrap');
   if(!filtered.length){
-    list.innerHTML='<div style="text-align:center;padding:50px;color:#555;"><i class="fas fa-search" style="font-size:32px;"></i><br><br>В конецuç не найдено</div>';
+    list.innerHTML='<div style="text-align:center;padding:50px;color:#555;"><i class="fas fa-search" style="font-size:32px;"></i><br><br>В конецuч не найдено</div>';
     lmw.style.display='none'; return;
   }
   var slice=filtered.slice(0,shown), html='';
   for(var i=0;i<slice.length;i++){
-    var ev=slice[i], cat=ev.category||'mod', c=CATS[cat]||CATS.mod;
+    var ev=slice[i], cat=ev.category||'мод', c=CATS[cat]||CATS.mod;
     html+='<div class="ev-row">';
     html+='<div class="ev-icon">'+c.icon+'</div>';
     html+='<div class="ev-cat" style="background:'+c.bg+';border:1px solid '+c.border+';color:'+c.text+'">'+c.label+'</div>';
@@ -167,7 +167,7 @@ function closeDetail(){
 function showDetail(idx){
   var ev=filtered[idx];
   if(!ev) return;
-  var cat=ev.category||'mod', c=CATS[cat]||CATS.mod;
+  var cat=ev.category||'мод', c=CATS[cat]||CATS.mod;
   var h='';
   // Заголовок
   h+='<div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-bottom:15px;border-bottom:1px solid rgba(220,20,60,0.2);">';
@@ -198,12 +198,12 @@ function showDetail(idx){
   if(ev.old_nick)  h+=row('Старый Nick','<span style="color:#e74c3c;">'+esc(ev.old_nick)+'</span>');
   if(ev.new_nick)  h+=row('Новый Nick','<span style="color:#2ecc71;">'+esc(ev.new_nick)+'</span>');
   if(ev.max_uses)  h+=row('Maks Использование',esc(String(ev.max_uses)));
-  if(ev.code)      h+=row('Davet Kodu','discord.gg/'+esc(ev.code));
+  if(ev.code)      h+=row('Приглашение Kodu','discord.gg/'+esc(ev.code));
   if(ev.channel_type) h+=row('Канал Tipi',esc(ev.channel_type));
 
   // Сообщение содержимое - action'a по показать
   var action = ev.action || '';
-  if(action.indexOf('Написано') !== -1 || action.indexOf('Metinldı') !== -1) {
+  if(action.indexOf('Написано') !== -1 || action.indexOf('Metinldы') !== -1) {
     if(ev.content){
       h+='<div class="msg-label" style="color:#3498db;">💬 Сообщение Содержимое</div>';
       h+='<div class="msg-box">'+esc(ev.content)+'</div>';
@@ -244,7 +244,7 @@ function applyFilters(){
 
 function buildStats(){
   var counts={};
-  allEvents.forEach(function(ev){var c=ev.category||'mod';counts[c]=(counts[c]||0)+1;});
+  allEvents.forEach(function(ev){var c=ev.category||'мод';counts[c]=(counts[c]||0)+1;});
   var h='<div class="stat-chip" data-cat=""><div class="num" style="color:#dc143c;">'+allEvents.length+'</div><div class="lbl">Всего</div></div>';
   Object.keys(CATS).forEach(function(k){
     if(!counts[k]) return;
@@ -292,8 +292,8 @@ buildCatButtons(); loadLogs(); setInterval(loadLogs,15000);
 {% endblock %}
 """
 
-# ─── 2. style.css - section hover удалить (клик engelliyor) ──────────────
-# section:hover transform удален, pointer-events düzeltilecek
+# ─── 2. style.css - section hover удалить (клик блокliyor) ──────────────
+# section:hover transform удален, pointer-events dюzeltilecek
 
 os.makedirs("discord_bot/web/templates", exist_ok=True)
 
@@ -306,7 +306,7 @@ css_path = "web/static/style.css"
 with open(css_path, "r", encoding="utf-8") as f:
     css = f.read()
 
-# section hover transform удалить - клик engelliyor
+# section hover transform удалить - клик блокliyor
 old = """.section:hover {
     transform: translateY(-5px);
     box-shadow: 0 12px 35px rgba(220, 20, 60, 0.3);
@@ -318,10 +318,10 @@ if old in css:
     css = css.replace(old, new)
     print("✅ section hover transform удалено")
 else:
-    print("⚠️ section hover zaten düzeltilmiş или разница")
+    print("⚠️ section hover zaten dюzeltilmiш или разница")
 
 with open(css_path, "w", encoding="utf-8") as f:
     f.write(css)
 print("✅ style.css написано")
 
-print("\n✅ Все düzeltmeler завершено!")
+print("\n✅ Все dюzeltmeler завершено!")

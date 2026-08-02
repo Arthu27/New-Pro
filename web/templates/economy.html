@@ -1,192 +1,153 @@
-﻿{% extends "base.html" %}
-{% block title %}Ekonomi - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-coins" style="color:#c8922a;animation:pulse 2s infinite;"></i> ЭКОНОМИКА СИСТЕМА{% endblock %}
+{% extends "base.html" %}
+{% block title %}Экономика - Aether{% endblock %}
+{% block page_title %}<i class="fas fa-coins" ></i> Экономика сервера{% endblock %}
 {% block content %}
-<style>
-  .eco-box{background:linear-gradient(135deg,rgba(26,22,16,0.7),rgba(26,22,16,0.7));border:1px solid rgba(200,146,42,0.3);border-radius:16px;padding:25px;margin-bottom:20px;position:relative;overflow:hidden;}
-  .eco-box::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:2px;background:linear-gradient(90deg,transparent,#c8922a,transparent);;}
-  @keyframes scan{0%{left:-100%}100%{left:100%}}
-  .eco-title{color:#c8922a;font-size:13px;text-transform:uppercase;letter-spacing:2px;margin-bottom:18px;display:flex;align-items:center;gap:8px;padding-bottom:12px;border-bottom:1px solid rgba(200,146,42,0.2);}
-  .shop-item{display:flex;justify-content:space-between;align-items:center;padding:13px 16px;background:rgba(0,0,0,0.3);border-radius:14px;margin-bottom:10px;border:1px solid rgba(200,146,42,0.1);transition:all 0.2s;}
-  .shop-item:hover{background:rgba(200,146,42,0.07);border-color:rgba(200,146,42,0.3);}
-  .item-name{color:#f0e8d0;font-size:14px;font-weight:700;}
-  .item-price{color:#c8922a;font-size:14px;font-weight:700;}
-  .item-desc{color:rgba(240,232,208,0.55);font-size:12px;margin-top:3px;}
-  .rich-item{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid rgba(200,146,42,0.08);transition:all 0.2s;}
-  .rich-item:hover{background:rgba(200,146,42,0.05);}
-  .rich-rank{color:#c8922a;font-weight:700;min-width:24px;}
-  .save-btn{padding:12px 24px;background:linear-gradient(135deg,#c8922a,#c8922a);color:var(--bg2);border:none;border-radius:14px;cursor:pointer;font-weight:800;margin-top:15px;font-size:14px;letter-spacing:1px;transition:all 0.3s;}
-  .save-btn:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(200,146,42,0.4);}
-  .field-label{color:#c8922a;font-size:11px;text-transform:uppercase;display:block;margin-bottom:6px;letter-spacing:1px;}
-  .field-input{width:100%;padding:10px 14px;background:#100e08;border:2px solid rgba(200,146,42,0.25);border-radius:14px;color:#f0e8d0;box-sizing:border-box;transition:all 0.3s;font-size:14px;}
-  .field-input:focus{outline:none;border-color:#c8922a;box-shadow:0 0 15px rgba(200,146,42,0.2);}
-  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
-  @media(max-width:900px){.grid2{grid-template-columns:1fr;}}
-  .guild-select{width:100%;padding:12px;background:#100e08;border:2px solid #c8922a;border-radius:14px;color:#f0e8d0;margin-bottom:20px;font-size:14px;}
-  .del-btn{padding:5px 12px;background:rgba(224,85,85,0.15);color:#f0e8d0;border:none;border-radius:8px;cursor:pointer;font-size:12px;transition:all 0.2s;}
-  .del-btn:hover{transform:scale(1.05);}
-  .add-section{margin-top:15px;padding-top:15px;border-top:1px solid rgba(200,146,42,0.15);}
-  .add-section h4{color:#c8922a;margin-bottom:12px;font-size:13px;text-transform:uppercase;letter-spacing:1px;}
-  .add-btn{width:100%;padding:10px;background:linear-gradient(135deg,#c8922a,#c8922a);color:var(--bg2);border:none;border-radius:14px;cursor:pointer;font-weight:800;transition:all 0.3s;}
-  .add-btn:hover{transform:translateY(-2px);box-shadow:0 6px 15px rgba(200,146,42,0.4);}
-  .empty-state{text-align:center;padding:30px;color:#5a5040;font-style:italic;}
-</style>
-
-<select  id="guild-select" class="guild-select" onchange="loadEconomy()">
-  <option value="">Выберите сервер...</option>
-</select>
-
-<div class="grid2">
-  <div>
-    <div class="eco-box">
-      <div class="eco-title"><i class="fas fa-cog"></i> Настройки экономики</div>
-      <div style="margin-bottom:12px;">
-        <label class="field-label">День Birimi Isim</label>
-        <input type="text" id="currency-name" placeholder="напр.: Coin, Золотые" class="field-input">
-      </div>
-      <div style="margin-bottom:12px;">
-        <label class="field-label">День Birimi Emojisi</label>
-        <input type="text" id="currency-emoji" placeholder="💰" class="field-input">
-      </div>
-      <div style="margin-bottom:12px;">
-        <label class="field-label">Начальный баланс</label>
-        <input type="number" id="start-balance" value="100" class="field-input">
-      </div>
-      <div style="margin-bottom:12px;">
-        <label class="field-label">Ежедневная награда</label>
-        <input type="number" id="daily-reward" value="50" class="field-input">
-      </div>
-      <button class="save-btn" onclick="saveSettings()"><i class="fas fa-save"></i> Сохранить</button>
+{% block page_hero %}
+<div class="page-hero compact">
+  <div class="page-hero-content">
+    <div class="page-hero-greeting">
+      <span class="dot"></span>
+      <span>Экономика сервера</span>
     </div>
+    <h1>Экономика сервера</h1>
+    <p>Настройки экономики: валюта, магазин, ежедневные награды.</p>
+  </div>
+</div>
+{% endblock %}
 
-    <div class="eco-box">
-      <div class="eco-title"><i class="fas fa-crown"></i> En Zenginler</div>
-      <div id="rich-list"><div class="empty-state">Выберите сервер...</div></div>
-    </div>
+
+
+<div class="eco-tabs">
+  <button class="eco-tab active" data-tab="leaderboard"><i class="fas fa-trophy"></i> Топ</button>
+  <button class="eco-tab" data-tab="shop"><i class="fas fa-shopping-cart"></i> Магазин</button>
+  <button class="eco-tab" data-tab="rich"><i class="fas fa-gem"></i> Богатые</button>
+</div>
+
+<div id="tab-leaderboard" class="tab-content">
+  <div class="eco-grid">
+    <div class="eco-card"><div class="eco-icon"><i class="fas fa-coins"></i></div><div class="eco-val" id="stat-total">-</div><div class="eco-lbl">В обращении</div></div>
+    <div class="eco-card"><div class="eco-icon"><i class="fas fa-users"></i></div><div class="eco-val" id="stat-users">-</div><div class="eco-lbl">Участников</div></div>
+    <div class="eco-card"><div class="eco-icon"><i class="fas fa-crown"></i></div><div class="eco-val" id="stat-richest" >-</div><div class="eco-lbl">Топ 1</div></div>
   </div>
 
   <div class="eco-box">
-    <div class="eco-title"><i class="fas fa-store"></i> Управление магазином</div>
-    <div id="shop-items"><div class="empty-state">Выберите сервер...</div></div>
-    <div class="add-section">
-      <h4><i class="fas fa-plus"></i> Новый Продукт Добавить</h4>
-      <div style="margin-bottom:8px;">
-        <label class="field-label">Продукт Isim</label>
-        <input type="text" id="item-name" placeholder="Продукт имя" class="field-input">
-      </div>
-      <div style="margin-bottom:8px;">
-        <label class="field-label">Описание</label>
-        <input type="text" id="item-desc" placeholder="Описание" class="field-input">
-      </div>
-      <div style="margin-bottom:10px;">
-        <label class="field-label">Fiyat</label>
-        <input type="number" id="item-price" placeholder="Fiyat" class="field-input">
-      </div>
-      <button onclick="addShopItem()" class="add-btn"><i class="fas fa-plus"></i> Добавить</button>
+    <div class="eco-head">
+      <div class="eco-title"><i class="fas fa-trophy"></i> Таблица лидеров</div>
+      <span class="eco-count" id="lb-count">-</span>
+    </div>
+    <div class="eco-body" id="lb-body">
+      <p ><i class="fas fa-spinner fa-spin"></i></p>
+    </div>
+  </div>
+</div>
+
+<div id="tab-shop" class="tab-content"  >
+  <div class="eco-box">
+    <div class="eco-head">
+      <div class="eco-title"><i class="fas fa-shopping-cart"></i> Магазин</div>
+      <button class="btn btn-primary" id="add-item"><i class="fas fa-plus"></i> Добавить</button>
+    </div>
+    <div class="shop-grid" id="shop-grid">
+      <p >Магазин не найден</p>
+    </div>
+  </div>
+</div>
+
+<div id="tab-rich" class="tab-content"  >
+  <div class="eco-box">
+    <div class="eco-head">
+      <div class="eco-title"><i class="fas fa-gem"></i> Богатые участники</div>
+    </div>
+    <div class="eco-body" id="rich-body">
+      <p ><i class="fas fa-spinner fa-spin"></i></p>
     </div>
   </div>
 </div>
 
 <script>
-var selectedGuild = '{{ main_guild_id }}';
-var currencyEmoji = '💰';
+(function () {
+  'use strict';
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
-async function loadGuilds() {
-  // Sabit сервер ID
-  var gid = '{{ main_guild_id }}';
-  if (typeof selectedGuild !== 'undefined') selectedGuild = gid;
-  if (document.getElementById('guild-select')) document.getElementById('guild-select').value = gid;
-  if (document.getElementById('guild-sel')) document.getElementById('guild-sel').value = gid;
-  if (document.getElementById('guildSelect')) document.getElementById('guildSelect').value = gid;
-  if (typeof loadData === 'function') { loadData(gid); return; }
-  if (typeof loadAll === 'function') { loadAll(gid); return; }
-  if (typeof loadRoles === 'function') { loadRoles(gid); return; }
-  if (typeof loadChannels === 'function') { loadChannels(gid); return; }
-  if (typeof loadMembers === 'function') { loadMembers(gid); return; }
-  if (typeof loadHistory === 'function') { loadHistory(gid); return; }
-  if (typeof loadLogs === 'function') { loadLogs(gid); return; }
-  if (typeof loadVoiceStats === 'function') { loadVoiceStats(gid); return; }
-  if (typeof loadSettings === 'function') { loadSettings(gid); return; }
-  if (typeof loadGiveaways === 'function') { loadGiveaways(gid); return; }
-  if (typeof loadPolls === 'function') { loadPolls(gid); return; }
-  if (typeof loadEconomy === 'function') { loadEconomy(gid); return; }
-  if (typeof loadSuggestions === 'function') { loadSuggestions(gid); return; }
-  if (typeof loadInvites === 'function') { loadInvites(gid); return; }
-  if (typeof loadHealth === 'function') { loadHealth(gid); return; }
-  if (typeof loadAnalytics === 'function') { loadAnalytics(gid); return; }
-
-}
-
-async function loadEconomy() {
-  selectedGuild = document.getElementById('guild-select').value;
-  if(!selectedGuild) return;
-  var [settings, shop, rich] = await Promise.all([
-    fetch('/api/guild/'+selectedGuild+'/economy').then(r=>r.json()),
-    fetch('/api/guild/'+selectedGuild+'/economy/shop').then(r=>r.json()),
-    fetch('/api/guild/'+selectedGuild+'/economy/rich').then(r=>r.json())
-  ]);
-  document.getElementById('currency-name').value = settings.currency_name||'Coin';
-  document.getElementById('currency-emoji').value = settings.currency_emoji||'💰';
-  document.getElementById('start-balance').value = settings.start_balance||100;
-  document.getElementById('daily-reward').value = settings.daily_reward||50;
-  currencyEmoji = settings.currency_emoji||'💰';
-
-  document.getElementById('shop-items').innerHTML = shop.length ?
-    shop.map(function(item){
-      return '<div class="shop-item">'+
-        '<div><div class="item-name">'+item.name+'</div><div class="item-desc">'+item.description+'</div></div>'+
-        '<div style="display:flex;align-items:center;gap:10px;">'+
-          '<span class="item-price">'+item.price+' '+currencyEmoji+'</span>'+
-          '<button class="del-btn" onclick="removeItem(\''+item.id+'\')"><i class="fas fa-trash"></i></button>'+
-        '</div>'+
-      '</div>';
-    }).join('') :
-    '<div class="empty-state">Магазин пусто.</div>';
-
-  var medals = ['🥇','🥈','🥉'];
-  document.getElementById('rich-list').innerHTML = rich.slice(0,10).length ?
-    rich.slice(0,10).map(function(u,i){
-      return '<div class="rich-item">'+
-        '<span class="rich-rank">'+(medals[i]||'#'+(i+1))+'</span>'+
-        '<span style="color:#f0e8d0;flex:1;">'+u.name+'</span>'+
-        '<span style="color:#c8922a;font-weight:700;">'+u.balance+' '+currencyEmoji+'</span>'+
-      '</div>';
-    }).join('') :
-    '<div class="empty-state">Нет данных.</div>';
-}
-
-async function saveSettings() {
-  var r = await fetch('/api/guild/'+selectedGuild+'/economy', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({
-      currency_name:document.getElementById('currency-name').value,
-      currency_emoji:document.getElementById('currency-emoji').value,
-      start_balance:parseInt(document.getElementById('start-balance').value),
-      daily_reward:parseInt(document.getElementById('daily-reward').value)
-    })
+  // Tabs
+  document.querySelectorAll('.eco-tab').forEach(function (t) {
+    t.addEventListener('click', function () {
+      document.querySelectorAll('.eco-tab').forEach(function (x) { x.classList.remove('active'); });
+      t.classList.add('active');
+      var tab = t.getAttribute('data-tab');
+      document.querySelectorAll('.tab-content').forEach(function (c) { c.style.display = 'none'; });
+      $('tab-' + tab).style.display = 'block';
+    });
   });
-  var d = await r.json();
-  var btn = event.target;
-  if(d.success) { btn.textContent='✅ Сохранено!'; setTimeout(function(){btn.innerHTML='<i class="fas fa-save"></i> Сохранить';},2000); }
-  else alert('❌ '+(d.error||'Ошибка'));
-}
 
-async function addShopItem() {
-  var r = await fetch('/api/guild/'+selectedGuild+'/economy/shop/add', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({name:document.getElementById('item-name').value, description:document.getElementById('item-desc').value, price:parseInt(document.getElementById('item-price').value)})
-  });
-  var d = await r.json();
-  if(d.success) { document.getElementById('item-name').value=''; document.getElementById('item-desc').value=''; document.getElementById('item-price').value=''; loadEconomy(); }
-  else alert(d.error||'Ошибка');
-}
+  // Mock data (gercek API'lar добавитьnebilir)
+  var lbData = [
+    { rank: 1, name: 'TopUser', coins: 50000 },
+    { rank: 2, name: 'ProGamer', coins: 35000 },
+    { rank: 3, name: 'Newbie', coins: 12000 }
+  ];
+  var shopItems = [
+    { icon: 'fa-crown', name: 'VIP Роль', price: 5000 },
+    { icon: 'fa-palette', name: 'Цвет ник', price: 1500 },
+    { icon: 'fa-gift', name: 'Подарок', price: 800 }
+  ];
 
-async function removeItem(id) {
-  var r = await fetch('/api/guild/'+selectedGuild+'/economy/shop/'+id+'/remove', {method:'POST'});
-  var d = await r.json();
-  if(d.success) loadEconomy();
-}
+  function renderLeaderboard() {
+    $('lb-count').textContent = lbData.length;
+    var html = '<table><thead><tr><th>#</th><th>Участник</th><th>Баланс</th><th>Уровень</th></tr></thead><tbody>';
+    var max = lbData[0] ? lbData[0].coins : 1;
+    lbData.forEach(function (u) {
+      var pct = Math.round(u.coins / max * 100);
+      html += '<tr><td><span >#' + u.rank + '</span></td>' +
+        '<td >' + esc(u.name) + '</td>' +
+        '<td><span class="coin">' + u.coins.toLocaleString() + '</span><div class="bar"><div class="bar-fill"   style="width: ' + pct + '%;"></div></div></td>' +
+        '<td >' + Math.floor(u.coins / 1000) + '</td></tr>';
+    });
+    html += '</tbody></table>';
+    $('lb-body').innerHTML = html;
+    $('stat-total').textContent = lbData.reduce(function (a, b) { return a + b.coins; }, 0).toLocaleString();
+    $('stat-users').textContent = lbData.length;
+    $('stat-richest').textContent = lbData[0] ? lbData[0].coins.toLocaleString() : '-';
+  }
 
-loadGuilds();
+  function renderShop() {
+    if (!shopItems.length) {
+      $('shop-grid').innerHTML = '<p >Магазин не найден</p>';
+      return;
+    }
+    var html = '';
+    shopItems.forEach(function (i) {
+      html += '<div class="shop-item">' +
+        '<div class="shop-icon"><i class="fas ' + i.icon + '"></i></div>' +
+        '<div class="shop-name">' + esc(i.name) + '</div>' +
+        '<div class="shop-price">' + i.price.toLocaleString() + ' <i class="fas fa-coins" ></i></div>' +
+      '</div>';
+    });
+    $('shop-grid').innerHTML = html;
+  }
+
+  function renderRich() {
+    var html = '<table><thead><tr><th>#</th><th>Участник</th><th>Баланс</th><th>% от total</th></tr></thead><tbody>';
+    var total = lbData.reduce(function (a, b) { return a + b.coins; }, 0);
+    lbData.forEach(function (u, i) {
+      var pct = total ? Math.round(u.coins / total * 100) : 0;
+      html += '<tr><td>' + (i + 1) + '</td><td >' + esc(u.name) + '</td>' +
+        '<td><span class="coin">' + u.coins.toLocaleString() + '</span></td>' +
+        '<td><div  ><div class="bar" ><div class="bar-fill"   style="width: ' + pct + '%;"></div></div><span >' + pct + '%</span></div></td></tr>';
+    });
+    html += '</tbody></table>';
+    $('rich-body').innerHTML = html;
+  }
+
+  function init() {
+    renderLeaderboard();
+    renderShop();
+    renderRich();
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
 </script>
 {% endblock %}

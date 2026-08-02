@@ -1,0 +1,311 @@
+{% extends "base.html" %}
+{% block title %}Leveling & Engagement — Aether{% endblock %}
+{% block page_title %}<i class="fas fa-trophy" ></i> Leveling &amp; Engagement{% endblock %}
+{% block content %}
+{% block page_hero %}
+<div class="page-hero">
+  <div class="page-hero-content">
+    <div class="page-hero-greeting">
+      <span class="dot" id="heroDot"></span>
+      <span id="heroStatus">Загрузка...</span>
+    </div>
+    <h1>Leveling &amp; Engagement</h1>
+    <p>XP-система с голосовым XP, streak-бонусами, 50+ достижениями, ролями за уровни и автоматическим engagement.</p>
+  </div>
+</div>
+{% endblock %}
+
+<style>
+.lvl-section { margin-bottom: 18px; }
+.lvl-toggle-card { display: flex; align-items: center; gap: 14px; padding: 14px 18px; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-md); margin-bottom: 8px; transition: all 0.2s; }
+.lvl-toggle-card:hover { border-color: var(--ac-line); }
+.lvl-toggle-card.active { border-color: var(--ac); background: var(--ac-soft); }
+.lvl-toggle-card .switch { position: relative; width: 42px; height: 22px; background: rgba(255,255,255,0.08); border-radius: 99px; cursor: pointer; flex-shrink: 0; border: 1px solid var(--line); transition: background 0.25s; }
+.lvl-toggle-card .switch.on { background: linear-gradient(135deg, var(--ac), var(--ac-3)); border-color: var(--ac); }
+.lvl-toggle-card .switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background: var(--text-3); border-radius: 50%; transition: all 0.25s var(--ease-spring); }
+.lvl-toggle-card .switch.on::after { left: 22px; background: #fff; }
+.lvl-toggle-card .info { flex: 1; }
+.lvl-toggle-card h4 { font-size: var(--fs-md) !important; font-weight: 700 !important; color: var(--text) !important; margin: 0 0 3px 0 !important; }
+.lvl-toggle-card p { font-size: var(--fs-sm) !important; color: var(--text-2) !important; margin: 0; line-height: 1.4; }
+.lvl-input-group { display: flex; gap: 8px; align-items: center; }
+.lvl-input-group label { font-size: var(--fs-xs) !important; font-weight: 700 !important; color: var(--text-2) !important; text-transform: uppercase !important; letter-spacing: 0.08em !important; min-width: 100px; margin: 0 !important; }
+.lvl-input-group input { flex: 1; padding: 8px 12px; background: var(--bg-3); border: 1px solid var(--line-2); border-radius: 8px; color: var(--text); font-size: var(--fs-sm); }
+.lvl-reward-card { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--bg-3); border: 1px solid var(--line); border-radius: var(--r-md); margin-bottom: 8px; }
+.lvl-reward-level { width: 50px; height: 50px; border-radius: 12px; background: linear-gradient(135deg, var(--ac), var(--ac-3)); display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 800; color: var(--bg); flex-shrink: 0; }
+.lvl-reward-info { flex: 1; }
+.lvl-reward-info .name { font-size: var(--fs-md); font-weight: 700; color: var(--text); }
+.lvl-reward-info .role { font-size: var(--fs-sm); color: var(--text-2); margin-top: 2px; }
+.lvl-achievement-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
+.lvl-ach { padding: 12px; background: var(--bg-3); border: 1px solid var(--line); border-radius: var(--r-md); text-align: center; transition: all 0.2s; }
+.lvl-ach:hover { transform: translateY(-2px); border-color: var(--ac-line); }
+.lvl-ach .icon { font-size: 28px; margin-bottom: 4px; }
+.lvl-ach .name { font-size: 11px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+.lvl-ach .rarity { font-size: 9px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; }
+.lvl-ach.unlocked { background: var(--ac-soft); border-color: var(--ac-line); }
+.lvl-ach.unlocked .name { color: var(--ac); }
+.lvl-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.lvl-stat { padding: 14px 16px; background: var(--bg-3); border: 1px solid var(--line); border-radius: var(--r-md); text-align: center; }
+.lvl-stat .num { font-size: 24px; font-weight: 800; color: var(--ac); font-variant-numeric: tabular-nums; }
+.lvl-stat .lbl { font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 4px; font-weight: 700; }
+</style>
+
+<div class="grid-2" >
+  <!-- Master + Text XP -->
+  <div class="dash-box">
+    <div class="dash-box-head">
+      <div class="dash-box-title"><i class="fas fa-power-off"></i> Управление системой</div>
+    </div>
+    <div class="dash-box-body" >
+      <div class="lvl-toggle-card" id="masterCard" onclick="toggle('enabled', null)">
+        <div class="switch" id="masterSwitch"></div>
+        <div class="info">
+          <h4>Система уровней</h4>
+          <p>Главный переключатель. При выключении XP не начисляется.</p>
+        </div>
+      </div>
+      <div class="lvl-toggle-card" id="textCard" onclick="toggle('text_xp', 'enabled')">
+        <div class="switch" id="textSwitch"></div>
+        <div class="info">
+          <h4>💬 Text XP</h4>
+          <p>Начисление XP за сообщения в чате</p>
+        </div>
+      </div>
+      <div class="lvl-toggle-card" id="voiceCard" onclick="toggle('voice_xp', 'enabled')">
+        <div class="switch" id="voiceSwitch"></div>
+        <div class="info">
+          <h4>🎙️ Voice XP</h4>
+          <p>Начисление XP за время в голосовых каналах (без мьют/афк)</p>
+        </div>
+      </div>
+      <div class="lvl-toggle-card" id="streakCard" onclick="toggle('streak_bonus', 'enabled')">
+        <div class="switch" id="streakSwitch"></div>
+        <div class="info">
+          <h4>🔥 Streak Bonus</h4>
+          <p>Бонус-множитель за ежедневную активность (7д=x2, 14д=x3, 30д=x5)</p>
+        </div>
+      </div>
+      <div class="lvl-toggle-card" id="achCard" onclick="toggle('achievements_enabled', null)">
+        <div class="switch" id="achSwitch"></div>
+        <div class="info">
+          <h4>🏆 Достижения</h4>
+          <p>50+ достижений за активность, разблокировка + DM-уведомление</p>
+        </div>
+      </div>
+      <div class="lvl-toggle-card" id="dmCard" onclick="toggle('engagement_dm', 'enabled')">
+        <div class="switch" id="dmSwitch"></div>
+        <div class="info">
+          <h4>📨 Auto-Engagement DM</h4>
+          <p>Автоматическое DM неактивным пользователям (48ч по умолчанию)</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings -->
+  <div class="dash-box">
+    <div class="dash-box-head">
+      <div class="dash-box-title"><i class="fas fa-sliders-h"></i> Параметры</div>
+    </div>
+    <div class="dash-box-body" >
+      <h5  >Text XP</h5>
+      <div class="lvl-input-group"   style="margin-bottom: 8px;">
+        <label>Мин XP</label>
+        <input type="number" id="textMin" value="15" min="1" max="100">
+      </div>
+      <div class="lvl-input-group"   style="margin-bottom: 8px;">
+        <label>Макс XP</label>
+        <input type="number" id="textMax" value="25" min="1" max="100">
+      </div>
+      <div class="lvl-input-group" >
+        <label>Cooldown (s)</label>
+        <input type="number" id="textCooldown" value="60" min="5" max="600">
+      </div>
+      <h5  >Voice XP</h5>
+      <div class="lvl-input-group" >
+        <label>XP / минута</label>
+        <input type="number" id="voicePerMin" value="5" min="1" max="50">
+      </div>
+      <h5  >Streak Bonus</h5>
+      <div   style="grid-template-columns: 1fr 1fr 1fr;">
+        <div>
+          <label   style="margin-bottom: 4px;">7 дней</label>
+          <input type="number" id="streak7" value="2" step="0.5" min="1" max="10"  >
+        </div>
+        <div>
+          <label   style="margin-bottom: 4px;">14 дней</label>
+          <input type="number" id="streak14" value="3" step="0.5" min="1" max="10"  >
+        </div>
+        <div>
+          <label   style="margin-bottom: 4px;">30 дней</label>
+          <input type="number" id="streak30" value="5" step="0.5" min="1" max="10"  >
+        </div>
+      </div>
+      <button class="form-btn" onclick="saveSettings()"  ><i class="fas fa-save"></i> Сохранить настройки</button>
+    </div>
+  </div>
+</div>
+
+<!-- Stats + Achievements -->
+<div class="grid-2" >
+  <!-- Stats -->
+  <div class="dash-box">
+    <div class="dash-box-head">
+      <div class="dash-box-title"><i class="fas fa-chart-bar"></i> Статистика сервера</div>
+    </div>
+    <div class="dash-box-body" >
+      <div class="lvl-stats-grid">
+        <div class="lvl-stat"><div class="num" id="statUsers">—</div><div class="lbl">С XP</div></div>
+        <div class="lvl-stat"><div class="num" id="statLevel">—</div><div class="lbl">Макс уровень</div></div>
+        <div class="lvl-stat"><div class="num" id="statTotalXP">—</div><div class="lbl">Всего XP</div></div>
+        <div class="lvl-stat"><div class="num" id="statAchs">—</div><div class="lbl">Достижений</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Level rewards -->
+  <div class="dash-box">
+    <div class="dash-box-head">
+      <div class="dash-box-title"><i class="fas fa-gift"></i> Награды за уровни</div>
+    </div>
+    <div class="dash-box-body"  id="rewardsList">
+      <p   style="text-align: center;">
+        <i class="fas fa-circle-notch fa-spin"></i> Загрузка...
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- All achievements -->
+<div class="dash-box lvl-section">
+  <div class="dash-box-head">
+    <div class="dash-box-title"><i class="fas fa-trophy"></i> Все достижения (50+)</div>
+    <span id="achCount" class="badge badge-gold">—</span>
+  </div>
+  <div class="dash-box-body" >
+    <div class="lvl-achievement-grid" id="achGrid">
+      <p   style="text-align: center; grid-column: 1/-1;">Загрузка...</p>
+    </div>
+  </div>
+</div>
+
+<!-- Top 10 leaderboard -->
+<div class="dash-box lvl-section">
+  <div class="dash-box-head">
+    <div class="dash-box-title"><i class="fas fa-crown"></i> Топ-10 пользователей</div>
+  </div>
+  <div class="dash-box-body" id="leaderboardList"  >
+    <p   style="text-align: center;">Загрузка...</p>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+  function load() {
+    fetch('/api/leveling/config').then(r => r.json()).then(cfg => {
+      // Master toggles
+      setSwitch('masterSwitch', 'masterCard', cfg.enabled);
+      setSwitch('textSwitch', 'textCard', cfg.text_xp.enabled);
+      setSwitch('voiceSwitch', 'voiceCard', cfg.voice_xp.enabled);
+      setSwitch('streakSwitch', 'streakCard', cfg.streak_bonus.enabled);
+      setSwitch('achSwitch', 'achCard', cfg.achievements_enabled);
+      setSwitch('dmSwitch', 'dmCard', cfg.engagement_dm.enabled);
+      document.getElementById('heroDot').className = 'dot ' + (cfg.enabled ? 'ok' : 'err');
+      document.getElementById('heroStatus').textContent = cfg.enabled ? 'Система активна' : 'Система выключена';
+      // Settings
+      document.getElementById('textMin').value = cfg.text_xp.min;
+      document.getElementById('textMax').value = cfg.text_xp.max;
+      document.getElementById('textCooldown').value = cfg.text_xp.cooldown_sec;
+      document.getElementById('voicePerMin').value = cfg.voice_xp.per_minute;
+      document.getElementById('streak7').value = cfg.streak_bonus['7_days'];
+      document.getElementById('streak14').value = cfg.streak_bonus['14_days'];
+      document.getElementById('streak30').value = cfg.streak_bonus['30_days'];
+    });
+    // Stats + leaderboard
+    fetch('/api/leveling/stats').then(r => r.json()).then(s => {
+      document.getElementById('statUsers').textContent = s.total_users;
+      document.getElementById('statLevel').textContent = s.max_level;
+      document.getElementById('statTotalXP').textContent = s.total_xp.toLocaleString();
+      document.getElementById('statAchs').textContent = s.total_achievements + ' / ' + s.total_ach_available;
+      document.getElementById('achCount').textContent = s.total_ach_available + ' доступно';
+      // Leaderboard
+      const medals = ['🥇', '🥈', '🥉'];
+      document.getElementById('leaderboardList').innerHTML = s.top.map((u, i) => {
+        const medal = i < 3 ? medals[i] : '<span >' + (i+1) + '</span>';
+        return `<div class="kv"   style="20px;">
+          <div class="kv-key"   style="min-width: 40px;">${medal}</div>
+          <div class="kv-val"   style="text-align: left;">${esc(u.name)}</div>
+          <div class="kv-key"   style="font-weight: 700;">Ур.${u.level}</div>
+          <div class="kv-val"   style="min-width: 80px;">${u.xp.toLocaleString()} XP</div>
+        </div>`;
+      }).join('') || '<p   style="text-align:center;">Нет данных</p>';
+    });
+    // Achievements
+    fetch('/api/leveling/achievements').then(r => r.json()).then(d => {
+      const grid = document.getElementById('achGrid');
+      const rarityEmoji = {common: '⚪', uncommon: '🟢', rare: '🔵', epic: '🟣', legendary: '🟡'};
+      grid.innerHTML = Object.entries(d.catalog).map(([id, info]) => {
+        const unlocked = d.unlocked.includes(id);
+        return `<div class="lvl-ach ${unlocked ? 'unlocked' : ''}">
+          <div class="icon">${info.icon}</div>
+          <div class="name">${info.name}</div>
+          <div class="rarity">${rarityEmoji[info.rarity]} ${info.rarity}</div>
+        </div>`;
+      }).join('');
+    });
+    // Rewards
+    fetch('/api/leveling/rewards').then(r => r.json()).then(d => {
+      const list = document.getElementById('rewardsList');
+      list.innerHTML = Object.entries(d.rewards).map(([lvl, info]) => {
+        return `<div class="lvl-reward-card">
+          <div class="lvl-reward-level">${lvl}</div>
+          <div class="lvl-reward-info">
+            <div class="name">Уровень ${lvl}</div>
+            <div class="role">${info.role_id ? 'Роль: ' + esc(info.role_id) : 'Без роли · ' + esc(info.message)}</div>
+          </div>
+        </div>`;
+      }).join('') || '<p   style="text-align:center;">Нет наград</p>';
+    });
+  }
+  function setSwitch(swId, cardId, on) {
+    document.getElementById(swId).classList.toggle('on', on);
+    document.getElementById(cardId).classList.toggle('active', on);
+  }
+  function toggle(key, subkey) {
+    fetch('/api/leveling/config').then(r => r.json()).then(cfg => {
+      if (subkey) cfg[key][subkey] = !cfg[key][subkey];
+      else cfg[key] = !cfg[key];
+      return fetch('/api/leveling/config', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(cfg)});
+    }).then(r => r.json()).then(d => {
+      showToast('✅ Сохранено', true);
+      load();
+    });
+  }
+  window.toggle = toggle;
+  window.saveSettings = function() {
+    fetch('/api/leveling/config').then(r => r.json()).then(cfg => {
+      cfg.text_xp.min = parseInt(document.getElementById('textMin').value);
+      cfg.text_xp.max = parseInt(document.getElementById('textMax').value);
+      cfg.text_xp.cooldown_sec = parseInt(document.getElementById('textCooldown').value);
+      cfg.voice_xp.per_minute = parseInt(document.getElementById('voicePerMin').value);
+      cfg.streak_bonus['7_days'] = parseFloat(document.getElementById('streak7').value);
+      cfg.streak_bonus['14_days'] = parseFloat(document.getElementById('streak14').value);
+      cfg.streak_bonus['30_days'] = parseFloat(document.getElementById('streak30').value);
+      return fetch('/api/leveling/config', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(cfg)});
+    }).then(r => r.json()).then(d => {
+      showToast('✅ Настройки сохранены', true);
+    });
+  };
+  function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function showToast(msg, ok) {
+    const t = document.createElement('div');
+    t.className = 'toast ' + (ok ? 'ok' : 'err');
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 2500);
+  }
+  load();
+  setInterval(load, 30000);
+})();
+</script>
+{% endblock %}

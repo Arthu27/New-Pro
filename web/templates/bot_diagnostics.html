@@ -1,0 +1,304 @@
+{% extends "base.html" %}
+{% block title %}Bot Диагностика — Aether{% endblock %}
+{% block page_title %}<i class="fas fa-heartbeat" ></i> Bot Диагностика{% endblock %}
+{% block content %}
+{% block page_hero %}
+<div class="page-hero">
+  <div class="page-hero-content">
+    <div class="page-hero-greeting">
+      <span class="dot" id="healthDot"></span>
+      <span id="healthStatus">Загрузка...</span>
+    </div>
+    <h1>Bot Диагностика &amp; Auto-Repair</h1>
+    <p>Real-time мониторинг здоровья бота, автоматический ремонт при сбоях, hot-reload cog'ов и агрегация ошибок.</p>
+  </div>
+</div>
+{% endblock %}
+
+<style>
+.diag-vital { display: flex; flex-direction: column; gap: 8px; padding: 18px 20px; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-md); position: relative; overflow: hidden; transition: all 0.2s; }
+.diag-vital:hover { transform: translateY(-2px); border-color: var(--ac-line); }
+.diag-vital-header { display: flex; align-items: center; justify-content: space-between; }
+.diag-vital-icon { width: 32px; height: 32px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 13px; background: var(--ac-soft); color: var(--ac); border: 1px solid var(--ac-line); }
+.diag-vital-status { width: 10px; height: 10px; border-radius: 50%; }
+.diag-vital.ok { border-color: rgba(74,222,128,0.30); }
+.diag-vital.ok .diag-vital-status { background: var(--ok); box-shadow: 0 0 6px var(--ok); }
+.diag-vital.ok .diag-vital-icon { background: rgba(74,222,128,0.12); color: var(--ok); border-color: rgba(74,222,128,0.30); }
+.diag-vital.warn { border-color: rgba(251,191,36,0.30); }
+.diag-vital.warn .diag-vital-status { background: var(--warn); box-shadow: 0 0 6px var(--warn); }
+.diag-vital.warn .diag-vital-icon { background: rgba(251,191,36,0.12); color: var(--warn); border-color: rgba(251,191,36,0.30); }
+.diag-vital.crit { border-color: rgba(248,113,113,0.30); animation: critPulse 2s ease-in-out infinite; }
+.diag-vital.crit .diag-vital-status { background: var(--err); box-shadow: 0 0 8px var(--err); }
+.diag-vital.crit .diag-vital-icon { background: rgba(248,113,113,0.12); color: var(--err); border-color: rgba(248,113,113,0.30); }
+@keyframes critPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(248,113,113,0.0); } 50% { box-shadow: 0 0 0 6px rgba(248,113,113,0.10); } }
+.diag-vital-val { font-size: 24px; font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; }
+.diag-vital-unit { font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; }
+.diag-vital-thresh { font-size: 10px; color: var(--text-3); margin-top: 4px; }
+.diag-chart { padding: 16px 18px; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-md); }
+.diag-chart h4 { font-size: var(--fs-xs) !important; font-weight: 700 !important; color: var(--text-2) !important; text-transform: uppercase !important; letter-spacing: 0.08em !important; margin: 0 0 12px 0 !important; display: flex; align-items: center; gap: 6px; }
+.diag-chart h4 i { color: var(--ac); }
+.diag-spark { display: flex; align-items: end; gap: 2px; height: 60px; }
+.diag-spark-bar { flex: 1; background: var(--ac); border-radius: 2px; min-height: 2px; transition: all 0.3s; position: relative; }
+.diag-spark-bar:hover { background: var(--ac-2); }
+.diag-spark-bar.warn { background: var(--warn); }
+.diag-spark-bar.crit { background: var(--err); }
+.diag-action { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--bg-3); border: 1px solid var(--line); border-radius: var(--r-md); margin-bottom: 8px; transition: all 0.2s; }
+.diag-action:hover { border-color: var(--ac-line); }
+.diag-action .icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: var(--ac-soft); color: var(--ac); font-size: 13px; flex-shrink: 0; }
+.diag-action.danger .icon { background: rgba(248,113,113,0.12); color: var(--err); }
+.diag-action.warn .icon { background: rgba(251,191,36,0.12); color: var(--warn); }
+.diag-action .text { flex: 1; font-size: var(--fs-sm); color: var(--text); }
+.diag-action .text small { display: block; font-size: 11px; color: var(--text-3); margin-top: 2px; }
+.diag-action button { padding: 7px 12px; font-size: var(--fs-xs); border-radius: 8px; border: none; cursor: pointer; background: var(--ac-soft); color: var(--ac); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; transition: all 0.15s; }
+.diag-action button:hover { background: var(--ac); color: var(--bg); }
+.diag-error-row { display: flex; gap: 12px; padding: 10px 14px; border-bottom: 1px solid var(--line); font-size: var(--fs-sm); }
+.diag-error-row:hover { background: rgba(248,113,113,0.04); }
+.diag-error-row .ago { color: var(--text-3); font-size: 11px; min-width: 60px; font-variant-numeric: tabular-nums; }
+.diag-error-row .type { color: var(--err); font-weight: 700; min-width: 140px; }
+.diag-error-row .cmd { color: var(--text-2); font-family: 'JetBrains Mono', monospace; }
+.diag-error-row .msg { color: var(--text-2); flex: 1; }
+</style>
+
+<!-- Vital signs grid -->
+<div class="grid-4"  >
+  <div class="diag-vital" id="vital-mem">
+    <div class="diag-vital-header">
+      <div class="diag-vital-icon"><i class="fas fa-memory"></i></div>
+      <div class="diag-vital-status"></div>
+    </div>
+    <div class="diag-vital-val" id="memVal">—</div>
+    <div class="diag-vital-unit">RAM (MB)</div>
+    <div class="diag-vital-thresh" id="memThresh">Варн: 400 · Crit: 700</div>
+  </div>
+  <div class="diag-vital" id="vital-cpu">
+    <div class="diag-vital-header">
+      <div class="diag-vital-icon"><i class="fas fa-microchip"></i></div>
+      <div class="diag-vital-status"></div>
+    </div>
+    <div class="diag-vital-val" id="cpuVal">—</div>
+    <div class="diag-vital-unit">CPU %</div>
+    <div class="diag-vital-thresh" id="cpuThresh">Варн: 60 · Crit: 85</div>
+  </div>
+  <div class="diag-vital" id="vital-lat">
+    <div class="diag-vital-header">
+      <div class="diag-vital-icon"><i class="fas fa-signal"></i></div>
+      <div class="diag-vital-status"></div>
+    </div>
+    <div class="diag-vital-val" id="latVal">—</div>
+    <div class="diag-vital-unit">Ping (ms)</div>
+    <div class="diag-vital-thresh" id="latThresh">Варн: 300 · Crit: 800</div>
+  </div>
+  <div class="diag-vital" id="vital-err">
+    <div class="diag-vital-header">
+      <div class="diag-vital-icon"><i class="fas fa-bug"></i></div>
+      <div class="diag-vital-status"></div>
+    </div>
+    <div class="diag-vital-val" id="errVal">—</div>
+    <div class="diag-vital-unit">Ошибок/мин</div>
+    <div class="diag-vital-thresh" id="errThresh">Варн: 5 · Crit: 15</div>
+  </div>
+</div>
+
+<div class="grid-2" >
+  <!-- Bot status -->
+  <div class="dash-box">
+    <div class="dash-box-head">
+      <div class="dash-box-title"><i class="fas fa-robot"></i> Статус бота</div>
+      <span id="botOnlineBadge" class="badge badge-ok">ОНЛАЙН</span>
+    </div>
+    <div class="dash-box-body" >
+      <div class="kv"><div class="kv-key">Uptime</div><div class="kv-val" id="uptimeVal">—</div></div>
+      <div class="kv"><div class="kv-key">Guilds</div><div class="kv-val" id="guildsVal">—</div></div>
+      <div class="kv"><div class="kv-key">Users</div><div class="kv-val" id="usersVal">—</div></div>
+      <div class="kv"><div class="kv-key">Cogs Loaded</div><div class="kv-val" id="cogsVal">—</div></div>
+      <div class="kv"><div class="kv-key">Commands</div><div class="kv-val" id="cmdsVal">—</div></div>
+      <div class="kv"><div class="kv-key">Threads</div><div class="kv-val" id="threadsVal">—</div></div>
+    </div>
+  </div>
+
+  <!-- Performance chart -->
+  <div class="diag-chart">
+    <h4><i class="fas fa-chart-area"></i> Производительность (60 мин)</h4>
+    <div class="diag-spark" id="memChart"></div>
+    <h4   style="margin-top: 14px;"><i class="fas fa-tachometer-alt"></i> Latency (60 мин)</h4>
+    <div class="diag-spark" id="latChart"></div>
+    <h4   style="margin-top: 14px;"><i class="fas fa-exclamation-triangle"></i> Ошибки (60 мин)</h4>
+    <div class="diag-spark" id="errChart"></div>
+  </div>
+</div>
+
+<!-- Actions -->
+<div class="dash-box aimod-section">
+  <div class="dash-box-head">
+    <div class="dash-box-title"><i class="fas fa-tools"></i> Действия</div>
+  </div>
+  <div class="dash-box-body" >
+    <div class="diag-action">
+      <div class="icon"><i class="fas fa-fire"></i></div>
+      <div class="text">Hot Reload Cogs
+        <small>Перезагрузить все cog'ы, чьи файлы изменились с последней загрузки</small>
+      </div>
+      <button onclick="hotReload()">Reload</button>
+    </div>
+    <div class="diag-action warn">
+      <div class="icon"><i class="fas fa-broom"></i></div>
+      <div class="text">Garbage Collect
+        <small>Принудительная очистка памяти Python (освобождает ~50-200MB)</small>
+      </div>
+      <button onclick="gc()">GC</button>
+    </div>
+    <div class="diag-action">
+      <div class="icon"><i class="fas fa-search"></i></div>
+      <div class="text">Полная диагностика
+        <small>Проверить все системы и автоматически починить что можно</small>
+      </div>
+      <button onclick="diagnose()">Запустить</button>
+    </div>
+    <div class="diag-action danger">
+      <div class="icon"><i class="fas fa-power-off"></i></div>
+      <div class="text">Перезагрузить весь бот
+        <small>⚠️ Прервёт работу бота на ~5-15 секунд. Только для критических случаев.</small>
+      </div>
+      <button onclick="confirmRestart()">Restart</button>
+    </div>
+  </div>
+</div>
+
+<!-- Recent errors -->
+<div class="dash-box aimod-section">
+  <div class="dash-box-head">
+    <div class="dash-box-title"><i class="fas fa-list"></i> Последние ошибки</div>
+    <button onclick="loadErrors()"   style="background: none; border-radius: 6px;"><i class="fas fa-sync"></i> Обновить</button>
+  </div>
+  <div class="dash-box-body" id="errorsBox"   style="max-height: 300px; overflow-y: auto;">
+    <div   style="text-align: center;">
+      <i class="fas fa-circle-notch fa-spin"></i> Загрузка...
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+  function load() {
+    fetch('/api/bot/health').then(r => r.json()).then(data => {
+      const h = data.current;
+      // Vitals
+      const memEl = document.getElementById('memVal');
+      memEl.textContent = h.memory_mb || 0;
+      setVital('vital-mem', h.memory_mb, 400, 700);
+      document.getElementById('cpuVal').textContent = h.cpu_percent || 0;
+      setVital('vital-cpu', h.cpu_percent, 60, 85);
+      document.getElementById('latVal').textContent = h.latency_ms || 0;
+      setVital('vital-lat', h.latency_ms, 300, 800);
+      document.getElementById('errVal').textContent = h.errors_last_min || 0;
+      setVital('vital-err', h.errors_last_min, 5, 15);
+      // Bot info
+      document.getElementById('uptimeVal').textContent = formatUptime(h.uptime_sec);
+      document.getElementById('guildsVal').textContent = h.guilds;
+      document.getElementById('usersVal').textContent = h.users.toLocaleString();
+      document.getElementById('cogsVal').textContent = h.cogs_loaded;
+      document.getElementById('cmdsVal').textContent = h.commands;
+      document.getElementById('threadsVal').textContent = h.threads;
+      // Status
+      const isOk = h.latency_ms < 300 && h.memory_mb < 700 && h.errors_last_min < 5;
+      document.getElementById('botOnlineBadge').textContent = isOk ? 'ОНЛАЙН' : 'ПРОБЛЕМЫ';
+      document.getElementById('botOnlineBadge').className = 'badge ' + (isOk ? 'badge-ok' : 'badge-warn');
+      document.getElementById('healthDot').className = 'dot ' + (isOk ? 'ok' : 'warn');
+      document.getElementById('healthStatus').textContent = isOk ? 'Всё в порядке' : 'Есть проблемы';
+      // Charts
+      renderChart('memChart', data.history.map(h => h.memory_mb), 400, 700);
+      renderChart('latChart', data.history.map(h => h.latency_ms), 300, 800);
+      renderChart('errChart', data.history.map(h => h.errors_last_min), 5, 15);
+    }).catch(e => console.error(e));
+  }
+  function setVital(id, val, warn, crit) {
+    const el = document.getElementById(id);
+    el.classList.remove('ok', 'warn', 'crit');
+    if (val >= crit) el.classList.add('crit');
+    else if (val >= warn) el.classList.add('warn');
+    else el.classList.add('ok');
+  }
+  function renderChart(id, values, warn, crit) {
+    const max = Math.max(...values, crit * 1.2, 1);
+    const html = values.slice(-60).map(v => {
+      const pct = (v / max) * 100;
+      let cls = '';
+      if (v >= crit) cls = 'crit';
+      else if (v >= warn) cls = 'warn';
+      return `<div class="diag-spark-bar ${cls}"   style="height: ${pct}%;" title="${v.toFixed(1)}"></div>`;
+    }).join('');
+    document.getElementById(id).innerHTML = html || '<div  >Нет данных</div>';
+  }
+  function formatUptime(sec) {
+    const d = Math.floor(sec / 86400);
+    const h = Math.floor((sec % 86400) / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    if (d > 0) return d + 'д ' + h + 'ч';
+    if (h > 0) return h + 'ч ' + m + 'м';
+    return m + 'м';
+  }
+  window.hotReload = function() {
+    showToast('Hot reload...', true);
+    fetch('/api/bot/hot-reload', {method:'POST'}).then(r => r.json()).then(d => {
+      if (d.reloaded && d.reloaded.length) showToast('✅ Перезагружено: ' + d.reloaded.join(', '), true);
+      else showToast('Нет изменений', true);
+      load();
+    });
+  };
+  window.gc = function() {
+    fetch('/api/bot/gc', {method:'POST'}).then(r => r.json()).then(d => {
+      showToast('🧹 GC: собрано ' + d.collected + ' объектов', true);
+      load();
+    });
+  };
+  window.diagnose = function() {
+    fetch('/api/bot/diagnose', {method:'POST'}).then(r => r.json()).then(d => {
+      if (d.issues && d.issues.length) {
+        showToast('⚠️ ' + d.issues.length + ' проблем обнаружено', false);
+      } else {
+        showToast('✅ Всё в порядке', true);
+      }
+      load();
+    });
+  };
+  window.confirmRestart = function() {
+    if (confirm('Точно перезагрузить весь бот? Это прервёт работу на 5-15 секунд.')) {
+      fetch('/api/bot/restart', {method:'POST'}).then(r => r.json()).then(d => {
+        showToast('🔄 Бот перезагружается...', true);
+      });
+    }
+  };
+  function loadErrors() {
+    fetch('/api/bot/errors').then(r => r.json()).then(errs => {
+      const box = document.getElementById('errorsBox');
+      if (!errs.length) {
+        box.innerHTML = '<div   style="text-align: center;"><i class="fas fa-check-circle"></i> Нет ошибок ✨</div>';
+        return;
+      }
+      box.innerHTML = errs.slice(0, 15).map(e => {
+        const ago = Math.floor((Date.now()/1000 - e.ts) / 60);
+        return `<div class="diag-error-row">
+          <div class="ago">${ago}м</div>
+          <div class="type">${esc(e.error_type)}</div>
+          <div class="cmd">!${esc(e.command)}</div>
+          <div class="msg">${esc(e.error_msg)}</div>
+        </div>`;
+      }).join('');
+    });
+  }
+  function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function showToast(msg, ok) {
+    const t = document.createElement('div');
+    t.className = 'toast ' + (ok ? 'ok' : 'err');
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3000);
+  }
+  load();
+  loadErrors();
+  setInterval(load, 15000);  // refresh every 15s
+  setInterval(loadErrors, 30000);
+})();
+</script>
+{% endblock %}

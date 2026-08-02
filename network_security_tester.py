@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Ağ Безопасность Test Aramacı - White Hat Perspektifi
-Только kendi ağınızı test etmek для использовать.
+Aг Безопасность Test Aramacы - White Hat Perspektifi
+Только kendi aгыnыzы test etmek для использовать.
 """
 
 import os
@@ -27,25 +27,25 @@ class Colors:
     UNDERLINE = '\033[4m'
 
 def print_banner():
-    """Program başlığını показать"""
+    """Program baшlыгыnы показать"""
     banner = f"""
 {Colors.HEADER}{Colors.BOLD}
 ╔══════════════════════════════════════════════════════════╗
-║         AĞ БЕЗОПАСНОСТЬ TEST ARACI - WHITE HAT               ║
-║         Только kendi ağınızı test etmek для             ║
+║         AГ БЕЗОПАСНОСТЬ TEST ARACI - WHITE HAT               ║
+║         Только kendi aгыnыzы test etmek для             ║
 ╚══════════════════════════════════════════════════════════╝{Colors.ENDC}
 
-{Colors.WARNING}⚠️  ПРЕДУПРЕЖДЕНИЕ: Bu araç только kendi ağınızı test etmek для.
-    Başkalarının ağlarına без разрешения erişim yasa dışıdır!{Colors.ENDC}
+{Colors.WARNING}⚠️  ПРЕДУПРЕЖДЕНИЕ: Bu arоткрыть только kendi aгыnыzы test etmek для.
+    Другойlarыnыn aгlarыna без разрешения доступ yasa dышыdыr!{Colors.ENDC}
 """
     print(banner)
 
-def check_admin():
-    """Yönetici администратор контроль et"""
+def check_админ():
+    """Yёnetici администратор контроль et"""
     if platform.system() == "Windows":
         try:
             import ctypes
-            return ctypes.windll.shell32.IsUserAnİsminin() != 0
+            return ctypes.windll.shell32.IsUserAnИsminin() != 0
         except:
             return False
     else:
@@ -63,8 +63,8 @@ def get_local_ip():
         return "127.0.0.1"
 
 def get_network_info():
-    """Ağ информация собрать"""
-    print(f"{Colors.OKBLUE}[*] Ağ информация собратьnıyor...{Colors.ENDC}")
+    """Aг информация собрать"""
+    print(f"{Colors.OKBLUE}[*] Aг информация collectnыyor...{Colors.ENDC}")
     
     info = {
         "timestamp": datetime.now().isoformat(),
@@ -78,26 +78,26 @@ def get_network_info():
         # Windows для ipconfig
         if platform.system() == "Windows":
             result = subprocess.run(["ipconfig", "/all"], capture_output=True, text=True, encoding='utf-8', errors='ignore')
-            print(f"{Colors.OKGREEN}[+] Ağ konfigürasyonu:{Colors.ENDC}")
+            print(f"{Colors.OKGREEN}[+] Aг konfigюrasyonu:{Colors.ENDC}")
             print(result.stdout[:1000])  # Ilk 1000 karakteri показать
         else:
             # Linux/Mac для ifconfig или ip
             try:
                 result = subprocess.run(["ip", "addr"], capture_output=True, text=True)
-                print(f"{Colors.OKGREEN}[+] Ağ konfigürasyonu:{Colors.ENDC}")
+                print(f"{Colors.OKGREEN}[+] Aг konfigюrasyonu:{Colors.ENDC}")
                 print(result.stdout[:1000])
             except:
                 result = subprocess.run(["ifconfig"], capture_output=True, text=True)
-                print(f"{Colors.OKGREEN}[+] Ağ konfigürasyonu:{Colors.ENDC}")
+                print(f"{Colors.OKGREEN}[+] Aг konfigюrasyonu:{Colors.ENDC}")
                 print(result.stdout[:1000])
     except Exception as e:
-        print(f"{Colors.FAIL}[-] Ağ infosi alınamadı: {e}{Colors.ENDC}")
+        print(f"{Colors.FAIL}[-] Aг infosi alыnamназвание: {e}{Colors.ENDC}")
     
     return info
 
 def scan_local_network():
-    """Yerel ağı сканироватьma (ping sweep)"""
-    print(f"{Colors.OKBLUE}[*] Yerel ağ сканироватьnıyor...{Colors.ENDC}")
+    """Yerel aгы scanma (ping sweep)"""
+    print(f"{Colors.OKBLUE}[*] Yerel aг scannыyor...{Colors.ENDC}")
     
     local_ip = get_local_ip()
     base_ip = ".".join(local_ip.split(".")[:3]) + "."
@@ -141,12 +141,12 @@ def scan_local_network():
     return active_hosts
 
 def port_scanner(target_ip, ports="1-1000"):
-    """Port сканироватьma (basit TCP connect scan)"""
-    print(f"{Colors.OKBLUE}[*] {target_ip} для port сканироватьması yapılıyor...{Colors.ENDC}")
+    """Port scanma (basit TCP connect scan)"""
+    print(f"{Colors.OKBLUE}[*] {target_ip} для port scanmasы yapыlыyor...{Colors.ENDC}")
     
     open_ports = []
     
-    # Port aralığını parse et
+    # Port aralыгыnы parse et
     if "-" in ports:
         start_port, end_port = map(int, ports.split("-"))
     else:
@@ -185,8 +185,8 @@ def port_scanner(target_ip, ports="1-1000"):
     return open_ports
 
 def check_wifi_passwords():
-    """Запись WiFi parolalarını показать (только kendi ağların)"""
-    print(f"{Colors.OKBLUE}[*] Запись WiFi ağları контроль ediliyor...{Colors.ENDC}")
+    """Запись WiFi parolalarыnы показать (только kendi aгlarыn)"""
+    print(f"{Colors.OKBLUE}[*] Запись WiFi aгlarы контроль ediliyor...{Colors.ENDC}")
     
     wifi_info = []
     
@@ -222,19 +222,19 @@ def check_wifi_passwords():
                     pass
                     
         except Exception as e:
-            print(f"{Colors.FAIL}[-] WiFi infosi alınamadı: {e}{Colors.ENDC}")
+            print(f"{Colors.FAIL}[-] WiFi infosi alыnamназвание: {e}{Colors.ENDC}")
     else:
-        print(f"{Colors.WARNING}[!] Bu особенность şu anda только Windows'ta работает{Colors.ENDC}")
+        print(f"{Colors.WARNING}[!] Bu особенность сейчасda только Windows'ta работает{Colors.ENDC}")
     
     return wifi_info
 
 def dos_simulation(target_ip, target_port=80, duration=5):
-    """DoS simülasyonu (EĞİTİM AMAÇLI - только localhost)"""
-    print(f"{Colors.WARNING}[!] DoS Simülasyonu запуск (EĞİTİM AMAÇLI){Colors.ENDC}")
+    """DoS simюlasyonu (EГИTИM AMAЧLI - только localhost)"""
+    print(f"{Colors.WARNING}[!] DoS Simюlasyonu запуск (EГИTИM AMAЧLI){Colors.ENDC}")
     print(f"{Colors.WARNING}[!] Hedef: {target_ip}:{target_port} - Длительность: {duration}s{Colors.ENDC}")
     
     if target_ip not in ["127.0.0.1", "localhost", get_local_ip()]:
-        print(f"{Colors.FAIL}[-] DoS simülasyonu только kendi makinenizde yapılabilir!{Colors.ENDC}")
+        print(f"{Colors.FAIL}[-] DoS simюlasyonu только kendi makinenizde можно сделать!{Colors.ENDC}")
         return
     
     packets_sent = 0
@@ -254,7 +254,7 @@ def dos_simulation(target_ip, target_port=80, duration=5):
                 pass
     
     threads = []
-    for _ in range(10):  # 10 thread с simülasyon
+    for _ in range(10):  # 10 thread с simюlasyon
         thread = threading.Thread(target=send_packets)
         threads.append(thread)
         thread.start()
@@ -265,11 +265,11 @@ def dos_simulation(target_ip, target_port=80, duration=5):
     for thread in threads:
         thread.join()
     
-    print(f"{Colors.OKGREEN}[+] DoS simülasyonu завершено: {packets_sent} paket отправлено{Colors.ENDC}")
-    print(f"{Colors.WARNING}[!] Bu только bir simülasyondur. Geri загрузить DoS saldırısı yasa dışıdır!{Colors.ENDC}")
+    print(f"{Colors.OKGREEN}[+] DoS simюlasyonu завершено: {packets_sent} paket отправлено{Colors.ENDC}")
+    print(f"{Colors.WARNING}[!] Bu только bir simюlasyondur. Geri загрузить DoS saldыrыsы yasa dышыdыr!{Colors.ENDC}")
 
 def save_report(data, filename="network_security_report.json"):
-    """Raporu JSON dosyasına сохранить"""
+    """Raporu JSON файлna сохранить"""
     try:
         with open(filename, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
@@ -278,17 +278,17 @@ def save_report(data, filename="network_security_report.json"):
         print(f"{Colors.FAIL}[-] Rapor сохран: {e}{Colors.ENDC}")
 
 def main_menu():
-    """Ana menü"""
+    """Ana menю"""
     while True:
-        print(f"\n{Colors.BOLD}=== AĞ БЕЗОПАСНОСТЬ TEST MENÜSÜ ==={Colors.ENDC}")
-        print("1. Ağ информация показать")
-        print("2. Yerel ağı сканировать (активен cihazlar)")
-        print("3. Port сканироватьması yap")
-        print("4. WiFi parolalarını показать (kendi ağların)")
-        print("5. DoS Simülasyonu (EĞİTİM AMAÇLI - только localhost)")
-        print("6. Все testleri çalıştır")
+        print(f"\n{Colors.BOLD}=== AГ БЕЗОПАСНОСТЬ TEST MENЮSЮ ==={Colors.ENDC}")
+        print("1. Aг информация показать")
+        print("2. Yerel aгы сканировать (активен cihazlar)")
+        print("3. Port scanmasы yap")
+        print("4. WiFi parolalarыnы показать (kendi aгlarыn)")
+        print("5. DoS Simюlasyonu (EГИTИM AMAЧLI - только localhost)")
+        print("6. Все testleri работатьtыr")
         print("7. Rapor создать")
-        print("8. Çıkış")
+        print("8. Выход")
         
         choice = input(f"\n{Colors.OKBLUE}[?] Выбор (1-8): {Colors.ENDC}").strip()
         
@@ -296,39 +296,39 @@ def main_menu():
             info = get_network_info()
         
         elif choice == "2":
-            if input(f"{Colors.WARNING}[?] Yerel ağ сканироватьnacak. Devam et? (e/h): {Colors.ENDC}").lower() == 'e':
+            if input(f"{Colors.WARNING}[?] Yerel aг scannacak. Devam et? (e/h): {Colors.ENDC}").lower() == 'e':
                 hosts = scan_local_network()
         
         elif choice == "3":
-            target = input(f"{Colors.OKBLUE}[?] Hedef IP (пусто bırakırsanız kendi IP'niz): {Colors.ENDC}").strip()
+            target = input(f"{Colors.OKBLUE}[?] Hedef IP (пусто bыrakыrsanыz kendi IP'niz): {Colors.ENDC}").strip()
             if not target:
                 target = get_local_ip()
             
-            ports = input(f"{Colors.OKBLUE}[?] Port aralığı (напр.: 1-1000 или 80): {Colors.ENDC}").strip()
+            ports = input(f"{Colors.OKBLUE}[?] Port aralыгы (напр.: 1-1000 или 80): {Colors.ENDC}").strip()
             if not ports:
                 ports = "1-1000"
             
-            if input(f"{Colors.WARNING}[?] {target} для port сканироватьması yapılacak. Devam et? (e/h): {Colors.ENDC}").lower() == 'e':
+            if input(f"{Colors.WARNING}[?] {target} для port scanmasы yapыlacak. Devam et? (e/h): {Colors.ENDC}").lower() == 'e':
                 open_ports = port_scanner(target, ports)
         
         elif choice == "4":
             if platform.system() == "Windows":
-                if check_admin():
+                if check_админ():
                     wifi = check_wifi_passwords()
                 else:
-                    print(f"{Colors.FAIL}[-] Bu действие для yönetici администратор gerekli!{Colors.ENDC}")
+                    print(f"{Colors.FAIL}[-] Bu действие для yёnetici администратор gerekli!{Colors.ENDC}")
             else:
-                print(f"{Colors.WARNING}[!] Bu особенность şu anda только Windows'ta работает{Colors.ENDC}")
+                print(f"{Colors.WARNING}[!] Bu особенность сейчасda только Windows'ta работает{Colors.ENDC}")
         
         elif choice == "5":
-            print(f"{Colors.WARNING}[!] DİKKAT: Bu только eğitim aматчlı bir simülasyondur!{Colors.ENDC}")
-            print(f"{Colors.WARNING}[!] Только kendi infosayarınızı (localhost) test edebilirsiniz!{Colors.ENDC}")
+            print(f"{Colors.WARNING}[!] DИKKAT: Bu только eгitim amatchlы bir simюlasyondur!{Colors.ENDC}")
+            print(f"{Colors.WARNING}[!] Только kendi infosнастройкаыnыzы (localhost) test edebilirsiniz!{Colors.ENDC}")
             
             confirm = input(f"{Colors.FAIL}[?] Devam et etmek istiyor musunuz? (e/h): {Colors.ENDC}").lower()
             if confirm == 'e':
                 target = input(f"{Colors.OKBLUE}[?] Hedef IP (только 127.0.0.1 или localhost): {Colors.ENDC}").strip()
                 if target not in ["127.0.0.1", "localhost"]:
-                    print(f"{Colors.FAIL}[-] Только kendi infosayarınızı test edebilirsiniz!{Colors.ENDC}")
+                    print(f"{Colors.FAIL}[-] Только kendi infosнастройкаыnыzы test edebilirsiniz!{Colors.ENDC}")
                     continue
                 
                 port = input(f"{Colors.OKBLUE}[?] Hedef port (напр.: 80): {Colors.ENDC}").strip()
@@ -346,12 +346,12 @@ def main_menu():
                 dos_simulation(target, port, duration)
         
         elif choice == "6":
-            print(f"{Colors.OKBLUE}[*] Все testler çalıştırılıyor...{Colors.ENDC}")
+            print(f"{Colors.OKBLUE}[*] Все testler работатьtыrыlыyor...{Colors.ENDC}")
             
             report = {
                 "network_info": get_network_info(),
                 "local_scan": scan_local_network(),
-                "wifi_passwords": check_wifi_passwords() if platform.system() == "Windows" and check_admin() else [],
+                "wifi_passwords": check_wifi_passwords() if platform.system() == "Windows" and check_админ() else [],
                 "timestamp": datetime.now().isoformat()
             }
             
@@ -375,7 +375,7 @@ def main_menu():
             save_report(report, filename)
         
         elif choice == "8":
-            print(f"{Colors.OKGREEN}[+] Programdan çıkılıyor...{Colors.ENDC}")
+            print(f"{Colors.OKGREEN}[+] Programdan выйтиыlыyor...{Colors.ENDC}")
             break
         
         else:
@@ -385,16 +385,16 @@ def main():
     """Ana fonksiyon"""
     print_banner()
     
-    # Yönetici контроль
-    if not check_admin():
-        print(f"{Colors.WARNING}[!] Bazı особенности для yönetici администратор gerekebilir{Colors.ENDC}")
-        print(f"{Colors.WARNING}[!] Programı yönetici как çalıştırmanız predlojenielir{Colors.ENDC}")
+    # Yёnetici контроль
+    if not check_админ():
+        print(f"{Colors.WARNING}[!] Bazы особенности для yёnetici администратор gerekebilir{Colors.ENDC}")
+        print(f"{Colors.WARNING}[!] Prograли yёnetici как работатьtыrmanыz predlojenielir{Colors.ENDC}")
     
-    # Ana menüyü запустить
+    # Ana menюyю запустить
     try:
         main_menu()
     except KeyboardInterrupt:
-        print(f"\n{Colors.OKGREEN}[+] Program user сканироватьfından durduruldu{Colors.ENDC}")
+        print(f"\n{Colors.OKGREEN}[+] Program user scanfыndan durduruldu{Colors.ENDC}")
     except Exception as e:
         print(f"{Colors.FAIL}[-] Baddnmeyen ошибка: {e}{Colors.ENDC}")
 

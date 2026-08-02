@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+{% block title %}Профиль пользователя - Aether{% endblock %}
+{% block page_title %}<i class="fas fa-user"></i> Профиль пользователя{% endblock %}
+{% block content %}
+{% block page_hero %}
+<div class="page-hero compact">
+  <div class="page-hero-content">
+    <div class="page-hero-greeting">
+      <span class="dot"></span>
+      <span>Профиль пользователя</span>
+    </div>
+    <h1>Профиль пользователя</h1>
+    <p>Детальная информация о пользователе и его активности.</p>
+  </div>
+</div>
+{% endblock %}
+
+<div class="section">
+  <div class="bs-title"><i class="fas fa-search"></i> Поиск пользователя</div>
+  <div style="display: flex; gap: 12px;">
+    <input type="text" id="userSearch" class="form-input" placeholder="ID пользователя, имя или тег..." style="flex: 1;">
+    <button class="control-btn primary" onclick="searchUser()">
+      <i class="fas fa-search"></i> Найти
+    </button>
+  </div>
+</div>
+
+<div id="userProfile" style="display: none;">
+  <div class="section">
+    <div class="bs-title"><i class="fas fa-user-circle"></i> Информация о пользователе</div>
+    <div style="display: grid; grid-template-columns: auto 1fr; gap: 24px; align-items: start;">
+      <div id="userAvatar" style="width: 120px; height: 120px; border-radius: 50%; background: rgba(155,89,182,0.2); display: flex; align-items: center; justify-content: center;">
+        <i class="fas fa-user" style="font-size: 48px; color: #9b59b6;"></i>
+      </div>
+      <div>
+        <h2 id="userName" style="margin: 0 0 8px 0; font-size: 24px;">-</h2>
+        <div style="color: var(--text-muted); margin-bottom: 12px;">
+          <span id="userId">ID: -</span> • <span id="userTag">-</span>
+        </div>
+        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+          <div style="background: rgba(155,89,182,0.2); color: #9b59b6; padding: 6px 12px; border-radius: 6px; font-size: 12px;">
+            <i class="fas fa-calendar"></i> <span id="userJoined">-</span>
+          </div>
+          <div style="background: rgba(46,204,113,0.2); color: #2ecc71; padding: 6px 12px; border-radius: 6px; font-size: 12px;">
+            <i class="fas fa-clock"></i> Последняя активность: <span id="userLastActivity">-</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat-box purple">
+      <div class="stat-icon"><i class="fas fa-ticket-alt"></i></div>
+      <div class="stat-body"><div class="stat-value" id="userTotalTickets">0</div><div class="stat-label">Всего тикетов</div></div>
+    </div>
+    <div class="stat-box cyan">
+      <div class="stat-icon"><i class="fas fa-folder-open"></i></div>
+      <div class="stat-body"><div class="stat-value" id="userOpenTickets">0</div><div class="stat-label">Открытых</div></div>
+    </div>
+    <div class="stat-box green">
+      <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+      <div class="stat-body"><div class="stat-value" id="userClosedTickets">0</div><div class="stat-label">Закрытых</div></div>
+    </div>
+    <div class="stat-box red">
+      <div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div>
+      <div class="stat-body"><div class="stat-value" id="userWarnings">0</div><div class="stat-label">Предупреждений</div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="bs-title"><i class="fas fa-history"></i> История тикетов</div>
+    <div id="userTickets" style="max-height: 400px; overflow-y: auto;">
+      <p style="text-align: center; color: var(--text-muted); padding: 40px;">Загрузка...</p>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="bs-title"><i class="fas fa-exclamation-circle"></i> Предупреждения</div>
+    <div id="userWarningsList" style="max-height: 300px; overflow-y: auto;">
+      <p style="text-align: center; color: var(--text-muted); padding: 40px;">Загрузка...</p>
+    </div>
+  </div>
+</div>
+
+<script>
+async function searchUser() {
+  const query = document.getElementById('userSearch').value.trim();
+  
+  if (!query) {
+    alert('Введите ID, имя или тег пользователя');
+    return;
+  }
+  
+  try {
+    const response = await fetch('/api/user-profile', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({query})
+    });
+    const data = await response.json();
+    
+    if (data.success) {
+      displayUserProfile(data.user);
+    } else {
+      alert('Ошибка: ' + (data.error || 'Пользователь не найден'));
+    }
+  } catch (e) {
+    alert('Ошибка соединения');
+  }
+}
+
+function displayUserProfile(user) {
+  document.getElementById('userProfile').style.display = 'block';
+  
+  // Основная информация
+  document.getElementById('userName').textContent = user.name || 'Неизвестный';
+  document.getElementById('userId').textContent = 'ID: ' + (user.id || '-');
+  document.getElementById('userTag').textContent = user.tag || '-';
+  document.getElementById('userJoined').textContent = user.joined_at ? new Date(user.joined_at).toLocaleDateString('ru-RU') : '-';
+  document.getElementById('userLastActivity').textContent = user.last_activity ? new Date(user.last_activity).toLocaleString('ru-RU') : '-';
+  
+  // Аватар
+  if (user.avatar_url) {
+    document.getElementById('userAvatar').innerHTML = `<img src="${user.avatar_url}" style="width: 100%; height: 100%; border-radius: 50%;">`;
+  }
+  
+  // Статистика
+  document.getElementById('userTotalTickets').textContent = user.total_tickets || 0;
+  document.getElementById('userOpenTickets').textContent = user.open_tickets || 0;
+  document.getElementById('userClosedTickets').textContent = user.closed_tickets || 0;
+  document.getElementById('userWarnings').textContent = user.warnings_count || 0;
+  
+  // История тикетов
+  const ticketsContainer = document.getElementById('userTickets');
+  if (user.tickets && user.tickets.length > 0) {
+    ticketsContainer.innerHTML = user.tickets.map(ticket => {
+      const statusColor = ticket.status === 'open' ? 'var(--ok)' : 'var(--text-muted)';
+      const statusText = ticket.status === 'open' ? 'Открыт' : 'Закрыт';
+      const date = new Date(ticket.created_at).toLocaleString('ru-RU');
+      
+      return `
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 12px; margin-bottom: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 6px;">
+            <div style="font-weight: 600;">#${ticket.id} - ${ticket.category || 'Без категории'}</div>
+            <div style="background: ${statusColor}; color: #000; padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: 600;">
+              ${statusText}
+            </div>
+          </div>
+          <div style="font-size: 12px; color: var(--text-muted);">${date}</div>
+        </div>
+      `;
+    }).join('');
+  } else {
+    ticketsContainer.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 40px;">Тикеты не найдены</p>';
+  }
+  
+  // Предупреждения
+  const warningsContainer = document.getElementById('userWarningsList');
+  if (user.warnings && user.warnings.length > 0) {
+    warningsContainer.innerHTML = user.warnings.map(warning => {
+      const date = new Date(warning.date).toLocaleString('ru-RU');
+      return `
+        <div style="background: rgba(231,76,60,0.1); border: 1px solid rgba(231,76,60,0.3); border-radius: 8px; padding: 12px; margin-bottom: 8px;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+            <div style="font-weight: 600; color: #e74c3c;">${warning.reason || 'Без причины'}</div>
+            <div style="font-size: 12px; color: var(--text-muted);">${date}</div>
+          </div>
+          <div style="font-size: 12px; color: var(--text-muted);">
+            Модератор: ${warning.moderator || 'Неизвестный'}
+          </div>
+        </div>
+      `;
+    }).join('');
+  } else {
+    warningsContainer.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 40px;">Предупреждений нет</p>';
+  }
+}
+
+// Поиск по Enter
+document.getElementById('userSearch').addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') searchUser();
+});
+</script>
+{% endblock %}

@@ -1,181 +1,128 @@
 {% extends "base.html" %}
-
-{% block title %}AI Поддержка Ticketы{% endblock %}
-{% block page_title %}🤖 AI Поддержка Ticketы{% endblock %}
-
+{% block title %}AI Тикеты - Aether{% endblock %}
+{% block page_title %}<i class="fas fa-ticket-alt" ></i> AI Тикеты{% endblock %}
 {% block content %}
 <style>
-.ticket-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;margin-bottom:24px;}
-.ticket-card{background:rgba(255,255,255,0.02);border:1px solid rgba(212,168,67,0.08);border-radius:12px;padding:16px;transition:all 0.2s;}
-.ticket-card:hover{background:rgba(255,255,255,0.04);border-color:rgba(212,168,67,0.15);transform:translateY(-2px);}
-.ticket-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
-.ticket-title{font-size:14px;font-weight:700;color:#f0e8d0;display:flex;align-items:center;gap:8px;}
-.ticket-status{padding:4px 10px;border-radius:99px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;}
-.status-ai{background:rgba(0,217,255,0.15);color:#00d9ff;border:1px solid rgba(0,217,255,0.3);}
-.status-escalated{background:rgba(243,156,18,0.15);color:#f39c12;border:1px solid rgba(243,156,18,0.3);}
-.status-staff{background:rgba(46,204,113,0.15);color:#2ecc71;border:1px solid rgba(46,204,113,0.3);}
-.ticket-info{display:flex;flex-direction:column;gap:6px;margin-bottom:12px;}
-.ticket-info-row{display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(240,232,208,0.5);}
-.ticket-info-row i{width:14px;color:#c8922a;opacity:0.6;}
-.ticket-info-row strong{color:#f0e8d0;font-weight:600;}
-.ticket-actions{display:flex;gap:8px;margin-top:12px;}
-.ticket-btn{flex:1;padding:6px 12px;background:rgba(212,168,67,0.1);border:1px solid rgba(212,168,67,0.2);color:#c8922a;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;font-family:Inter,sans-serif;transition:all 0.15s;}
-.ticket-btn:hover{background:rgba(212,168,67,0.2);border-color:rgba(212,168,67,0.35);}
-.ticket-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:28px;}
-.stat-card{background:rgba(255,255,255,0.02);border:1px solid rgba(212,168,67,0.08);border-radius:12px;padding:16px;text-align:center;}
-.stat-value{font-size:32px;font-weight:800;color:#c8922a;margin-bottom:4px;}
-.stat-label{font-size:11px;font-weight:600;color:rgba(240,232,208,0.4);text-transform:uppercase;letter-spacing:0.06em;}
-.conversation-modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:10000;align-items:center;justify-content:center;backdrop-filter:blur(8px);}
-.conversation-modal.open{display:flex;}
-.conversation-content{background:rgba(20,16,8,0.98);border:1px solid rgba(212,168,67,0.2);border-radius:16px;max-width:700px;width:90%;max-height:80vh;overflow:hidden;display:flex;flex-direction:column;}
-.conversation-hdr{padding:16px 20px;border-bottom:1px solid rgba(212,168,67,0.08);display:flex;align-items:center;justify-content:space-between;}
-.conversation-hdr h3{font-size:16px;font-weight:700;color:#f0e8d0;margin:0;}
-.conversation-close{background:none;border:none;color:rgba(240,232,208,0.3);cursor:pointer;font-size:20px;padding:0;}
-.conversation-close:hover{color:#f0e8d0;}
-.conversation-body{padding:20px;overflow-y:auto;flex:1;}
-.conv-msg{margin-bottom:16px;display:flex;flex-direction:column;gap:4px;}
-.conv-msg-role{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:rgba(240,232,208,0.35);}
-.conv-msg-content{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:12px 14px;font-size:13px;color:rgba(240,232,208,0.85);line-height:1.6;white-space:pre-wrap;}
-.conv-msg.user .conv-msg-role{color:#00d9ff;}
-.conv-msg.user .conv-msg-content{background:rgba(0,217,255,0.08);border-color:rgba(0,217,255,0.2);}
-.empty-state{text-align:center;padding:60px 20px;color:rgba(240,232,208,0.3);}
-.empty-state i{font-size:48px;margin-bottom:16px;opacity:0.3;}
-.empty-state p{font-size:14px;font-weight:500;}
+.tk-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: var(--r-sm); background: rgba(255,255,255,0.02); border: 1px solid transparent; transition: all .15s var(--ease); }
+.tk-item:hover { background: rgba(224,176,74,0.05); border-color: var(--line); }
+.tk-av { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; background: var(--ac-soft); flex: 0 0 38px; }
+.tk-info { flex: 1; min-width: 0; }
+.tk-name { font-weight: var(--fw-semibold); font-size: 13.5px; }
+.tk-topic { font-size: 12px; color: #8a8374; margin-top: 2px; }
+.tk-ai-count { color: var(--ac); }
+.tk-status { font-size: 11px; padding: 3px 10px; border-radius: 20px; white-space: nowrap; }
+.tk-status.open { background: rgba(96,165,250,0.15); color: var(--info); }
+.tk-status.ai { background: rgba(224,176,74,0.15); color: var(--ac); }
+.tk-status.closed { background: rgba(100,90,75,0.2); color: #8a8374; }
+.at-tabs { display: flex; gap: 6px; margin: 14px 0; flex-wrap: wrap; }
+.at-tab { background: transparent; border: 1px solid var(--line); color: var(--text); padding: 7px 14px; border-radius: var(--r-sm); cursor: pointer; font-size: 12.5px; transition: all .15s; }
+.at-tab:hover { border-color: var(--ac); }
+.at-tab.active { background: var(--ac-soft); border-color: var(--ac); color: var(--ac); font-weight: var(--fw-semibold); }
+.at-box { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; }
+.at-head { display: flex; align-items: center; justify-content: space-between; padding: 13px 16px; border-bottom: 1px solid var(--line); background: rgba(224,176,74,0.04); }
+.at-title { font-weight: var(--fw-bold); font-size: 14px; }
+.at-count { background: var(--ac-soft); color: var(--ac); padding: 2px 10px; border-radius: 20px; font-size: 12px; }
+.at-body { padding: 12px; display: flex; flex-direction: column; gap: 6px; min-height: 120px; }
+.at-body p.empty { text-align: center; color: #8a8374; padding: 30px 0; }
+.at-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 4px; }
+.at-stat { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 16px; text-align: center; }
+.at-stat-num { font-size: 26px; font-weight: var(--fw-bold); color: var(--ac); }
+.at-stat-lbl { font-size: 11px; color: #8a8374; margin-top: 4px; }
 </style>
 
-{% if tickets|length == 0 %}
-<div class="empty-state">
-    <i class="fas fa-robot"></i>
-    <p>Пока AI поддержка тикетов пока отсутствует</p>
+{% block page_hero %}
+<div class="page-hero compact">
+  <div class="page-hero-content">
+    <div class="page-hero-greeting">
+      <span class="dot"></span>
+      <span>AI Тикеты</span>
+    </div>
+    <h1>AI Тикеты</h1>
+    <p>История AI-тикетов: автоматические ответы, эскалации и помощь пользователям.</p>
+  </div>
 </div>
-{% else %}
+{% endblock %}
 
-<!-- Статистика -->
-<div class="ticket-stats">
-    <div class="stat-card">
-        <div class="stat-value">{{ tickets|length }}</div>
-        <div class="stat-label">Всего Ticket</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-value">{{ tickets|selectattr('status', 'equalto', 'ai_handling')|list|length }}</div>
-        <div class="stat-label">AI Obrabativaetsya</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-value">{{ tickets|selectattr('status', 'equalto', 'escalated')|list|length }}</div>
-        <div class="stat-label">На</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-value">{{ tickets|selectattr('status', 'equalto', 'staff_handling')|list|length }}</div>
-        <div class="stat-label">Модераторы Obrabativaetsya</div>
-    </div>
+
+
+<div class="at-stats">
+  <div class="at-stat"><div class="at-stat-num" id="stat-total">-</div><div class="at-stat-lbl">Всего</div></div>
+  <div class="at-stat"><div class="at-stat-num" id="stat-open" >-</div><div class="at-stat-lbl">Открытых</div></div>
+  <div class="at-stat"><div class="at-stat-num" id="stat-ai" >-</div><div class="at-stat-lbl">AI Сечас</div></div>
+  <div class="at-stat"><div class="at-stat-num" id="stat-closed">-</div><div class="at-stat-lbl">Закрытых</div></div>
 </div>
 
-<!-- Ticket kartpuan -->
-<div class="ticket-grid">
-    {% for ticket in tickets %}
-    <div class="ticket-card">
-        <div class="ticket-hdr">
-            <div class="ticket-title">
-                <i class="fas fa-ticket-alt"></i>
-                {{ ticket.channel_name }}
-            </div>
-            <span class="ticket-status {% if ticket.status == 'ai_handling' %}status-ai{% elif ticket.status == 'escalated' %}status-escalated{% else %}status-staff{% endif %}">
-                {% if ticket.status == 'ai_handling' %}🤖 AI{% elif ticket.status == 'escalated' %}🔄 На{% else %}👥 Модераторы{% endif %}
-            </span>
-        </div>
-        
-        <div class="ticket-info">
-            <div class="ticket-info-row">
-                <i class="fas fa-user"></i>
-                <strong>{{ ticket.user_name }}</strong>
-            </div>
-            <div class="ticket-info-row">
-                <i class="fas fa-tag"></i>
-                Категория: <strong>{{ ticket.category or 'Общий' }}</strong>
-            </div>
-            <div class="ticket-info-row">
-                <i class="fas fa-comments"></i>
-                AI Сообщение: <strong>{{ ticket.ai_message_count }}</strong>
-            </div>
-            {% if ticket.escalated_at %}
-            <div class="ticket-info-row">
-                <i class="fas fa-clock"></i>
-                На: <strong>{{ ticket.escalated_at[:16] }}</strong>
-            </div>
-            {% endif %}
-        </div>
-        
-        <div class="ticket-actions">
-            <button class="ticket-btn" onclick="viewConversation({{ ticket.channel_id }})">
-                <i class="fas fa-eye"></i> Разговор Posmotret
-            </button>
-        </div>
-    </div>
-    {% endfor %}
+<div class="at-tabs">
+  <button class="at-tab active" data-tab="all">Все</button>
+  <button class="at-tab" data-tab="open">Открытые</button>
+  <button class="at-tab" data-tab="ai">AI активные</button>
+  <button class="at-tab" data-tab="closed">Закрытые</button>
 </div>
 
-{% endif %}
-
-<!-- Разговор Modal pencere -->
-<div class="conversation-modal" id="conv-modal">
-    <div class="conversation-content">
-        <div class="conversation-hdr">
-            <h3 id="conv-title">Разговор</h3>
-            <button class="conversation-close" onclick="closeConversation()">✕</button>
-        </div>
-        <div class="conversation-body" id="conv-body">
-            <!-- Dinamik soderjimoe -->
-        </div>
-    </div>
+<div class="at-box">
+  <div class="at-head">
+    <div class="at-title"><i class="fas fa-ticket-alt"></i> Тикеты</div>
+    <span class="at-count" id="at-count">-</span>
+  </div>
+  <div class="at-body" id="at-body">
+    <p class="empty"><i class="fas fa-spinner fa-spin"></i> Загрузка...</p>
+  </div>
 </div>
 
 <script>
-// Ticket verсrini JS'e aktar
-const ticketsData = {{ (tickets or [])|tojson|safe }};
+(function () {
+  'use strict';
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
-function viewConversation(channelId) {
-    const ticket = ticketsData.find(t => t.channel_id == channelId);
-    if (!ticket) return;
-    
-    document.getElementById('conv-title').textContent = `💬 ${ticket.channel_name} — ${ticket.user_name}`;
-    
-    const body = document.getElementById('conv-body');
-    if (!ticket.history || ticket.history.length === 0) {
-        body.innerHTML = '<div class="empty-state"><i class="fas fa-comment-slash"></i><p>Пока сообщение yok</p></div>';
-    } else {
-        body.innerHTML = ticket.history.map(msg => {
-            const isUser = msg.roles === 'user';
-            return `
-                <div class="conv-msg ${isUser ? 'user' : 'assistant'}">
-                    <div class="conv-msg-role">${isUser ? '👤 Пользователь' : '🤖 AI Asistan'}</div>
-                    <div class="conv-msg-content">${escapeHtml(msg.content)}</div>
-                </div>
-            `;
-        }).join('');
-    }
-    
-    document.getElementById('conv-modal').classList.add('open');
-}
+  var tickets = {{ tickets|tojson }};
+  var currentTab = 'all';
 
-function closeConversation() {
-    document.getElementById('conv-modal').classList.remove('open');
-}
+  function resolveStatus(t) {
+    if (t.status === 'closed' || t.status === 'resolved' || t.status === 'solved') return 'closed';
+    if (t.status === 'ai' || (t.ai_message_count || 0) > 0 && t.status !== 'open') return 'ai';
+    return 'open';
+  }
 
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
+  function statusLabel(s) { return s === 'open' ? 'Открыт' : s === 'ai' ? 'AI' : 'Закрыт'; }
 
-// ESC klavisa с с закрыть
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') closeConversation();
-});
+  function render() {
+    var list = currentTab === 'all' ? tickets : tickets.filter(function (t) { return resolveStatus(t) === currentTab; });
+    $('at-count').textContent = list.length;
+    $('stat-total').textContent = tickets.length;
+    $('stat-open').textContent = tickets.filter(function (t) { return resolveStatus(t) === 'open'; }).length;
+    $('stat-ai').textContent = tickets.filter(function (t) { return resolveStatus(t) === 'ai'; }).length;
+    $('stat-closed').textContent = tickets.filter(function (t) { return resolveStatus(t) === 'closed'; }).length;
+    if (!list.length) { $('at-body').innerHTML = '<p class="empty">Тикетов нет</p>'; return; }
+    var html = '';
+    list.forEach(function (t) {
+      var st = resolveStatus(t);
+      var label = statusLabel(st);
+      var topic = (t.channel_name || '') + ' • ' + (t.category || 'общий');
+      var meta = t.ai_message_count ? esc(t.ai_message_count + ' AI') : '';
+      var av = 'https://cdn.discordapp.com/embed/avatars/0.png';
+      html += '<div class="tk-item">' +
+        '<img class="tk-av" src="' + av + '" onerror="this.src=\'' + av + '\'">' +
+        '<div class="tk-info"><div class="tk-name">' + esc(t.user_name || t.user_id || '—') + '</div>' +
+        '<div class="tk-topic">' + esc(topic) + (meta ? ' • <span class="tk-ai-count">' + meta + '</span>' : '') + '</div></div>' +
+        '<span class="tk-status ' + st + '">' + label + '</span></div>';
+    });
+    $('at-body').innerHTML = html;
+  }
 
-// Modal pencere vne iken клик закрыть
-document.getElementById('conv-modal').addEventListener('click', function(e) {
-    if (e.target === this) closeConversation();
-});
+  function bind() {
+    document.querySelectorAll('.at-tab').forEach(function (t) {
+      t.addEventListener('click', function () {
+        document.querySelectorAll('.at-tab').forEach(function (x) { x.classList.remove('active'); });
+        t.classList.add('active');
+        currentTab = t.getAttribute('data-tab');
+        render();
+      });
+    });
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { bind(); render(); });
+  else { bind(); render(); }
+})();
 </script>
-
 {% endblock %}
