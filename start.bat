@@ -1,6 +1,7 @@
 @echo off
 chcp 65001 >nul 2>&1
 title Aether Bot
+cd /d "%~dp0"
 
 echo ============================================================
 echo   AETHER BOT - Starting...

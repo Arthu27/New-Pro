@@ -46,7 +46,7 @@ class Config:
     AI_MODEL: str = os.getenv("AI_MODEL", "qwen2.5:3b")
     
     # === Database ===
-    DB_PATH: str = os.getenv("DB_PATH", "data/bot.db")
+    DB_PATH: str = os.path.join(_BASE_DIR, os.getenv("DB_PATH", "data/bot.db"))
     
     # === Logging ===
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
@@ -63,10 +63,10 @@ class Config:
     WEB_MAX_REQUESTS: int = int(os.getenv("WEB_MAX_REQUESTS", "1000"))
     
     # === Paths ===
-    DATA_DIR: str = "data"
-    LOGS_DIR: str = "logs"
-    BACKUPS_DIR: str = "backups"
-    PLUGINS_DIR: str = "plugins"
+    DATA_DIR: str = os.path.join(_BASE_DIR, "data")
+    LOGS_DIR: str = os.path.join(_BASE_DIR, "logs")
+    BACKUPS_DIR: str = os.path.join(_BASE_DIR, "backups")
+    PLUGINS_DIR: str = os.path.join(_BASE_DIR, "plugins")
     
     # === Bot Settings ===
     BOT_STATUS: str = "idle"  # online, idle, dnd, invisible
