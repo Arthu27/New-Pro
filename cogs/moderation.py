@@ -4,6 +4,7 @@ from discord import app_commands
 from datetime import datetime ,timedelta ,timezone 
 import json 
 import os 
+import time 
 from cogs .embed_utils import gif ,now_ts ,mod_dm_embed ,mod_log_embed ,success_embed ,error_embed 
 
 from logger import get_logger 
@@ -435,7 +436,7 @@ class Moderation (commands .Cog ):
         """Выполнить выбранное действие модерации."""
         guild =interaction .guild
 
-        if action in ("ban","kick","timeout","untimeout","vmute","vunmute"):
+        if action in ("ban","kick","timeout","mute_chat","untimeout","vmute","vunmute"):
             uid =self ._parse_target_id (target )
             user =discord .utils .get (guild .members ,id =uid ) if uid else None
             if not user :
@@ -456,11 +457,16 @@ class Moderation (commands .Cog ):
                 elif action =="kick":
                     await user .kick (reason =reason )
                     msg ="пользователь исключён"
-                elif action =="timeout":
+                elif action in ("timeout","mute_chat"):
                     minutes =max (1 ,int (amount )or 5 )
                     until =discord .utils .utcnow ()+timedelta (minutes =minutes )
                     await user .timeout (until ,reason =reason )
-                    msg =f"чат-мьют (timeout) на {minutes} мин"
+                    if action =="mute_chat":
+                        msg =f"чат закрыт на {minutes} мин (timeout)"
+                    else :
+                        msg =f"чат и voice закрыты на {minutes} мин (timeout)"
+                    # 2 mute → 1 неделя в watchlist
+                    await self._maybe_watchlist_after_mute (interaction ,user ,reason )
                 elif action =="vmute":
                     if not user .voice or not user .voice .channel :
                         await interaction .response .send_message (
@@ -474,7 +480,7 @@ class Moderation (commands .Cog ):
                     msg ="микрофон включён"
                 else :  # untimeout
                     await user .timeout (None )
-                    msg ="чат-мьют снят"
+                    msg ="timeout снят (чат + voice открыты)"
 
                 case_id =self .save_case (guild .id ,action ,user .id ,interaction .user .id ,reason )
                 dm =mod_dm_embed (action ,guild ,interaction .user ,reason )
@@ -524,6 +530,47 @@ class Moderation (commands .Cog ):
             guild =guild )
             await interaction .response .send_message (embed =confirm ,ephemeral =True )
 
+    async def _maybe_watchlist_after_mute (self ,interaction ,user ,reason ):
+        """Если пользователь получил 2+ мьюта — добавить в watchlist на 1 неделю.
+
+        Считаем мьюты (timeout) из mod_data.json. При достижении 2-го мьюта
+        добавляем в mod_advanced_data.json (watchlist) с меткой until (+7 дней).
+        """
+        try :
+            import datetime as _dt
+            # 1) Считаем мьюты пользователя
+            os .makedirs ('data',exist_ok =True )
+            mod_file ='data/mod_data.json'
+            mute_count =0
+            if os .path .exists (mod_file ):
+                with open (mod_file ,'r',encoding ='utf-8')as f :
+                    data =json .load (f )
+                cases =data .get ('cases',{}).get (str (interaction .guild .id ),[])
+                for c in cases :
+                    if str (c .get ('user_id',''))==str (user .id )and c .get ('action')in ('timeout','mute_chat','vmute'):
+                        mute_count +=1
+            # 2) Добавляем в watchlist (advanced_mod) на 1 неделю
+            adv_file ='data/mod_advanced_data.json'
+            adv ={}
+            if os .path .exists (adv_file ):
+                with open (adv_file ,'r',encoding ='utf-8')as f :
+                    adv =json .load (f )
+            adv .setdefault ('watchlist',{})
+            gid =str (interaction .guild .id )
+            adv ['watchlist'].setdefault (gid ,{})
+            until =int (time .time ())+7 *86400  # +7 дней
+            adv ['watchlist'][gid ][str (user .id )]={
+                "reason":f"Автоматически: {mute_count}-й мьют. {reason or ''}",
+                "added_by":str (interaction .user ),
+                "timestamp":datetime .now (timezone .utc ).isoformat (),
+                "until":until ,
+                "auto":True ,
+            }
+            with open (adv_file ,'w',encoding ='utf-8')as f :
+                json .dump (adv ,f ,indent =2 ,ensure_ascii =False )
+        except Exception as ex :
+            log .warning (f"[watchlist auto] {ex}")
+
     @app_commands .command (name ="leaveguild",description ="Покинуть сервер (только владелец бота)")
     async def leave_guild (self ,interaction ,guild_id :str ):
         app_info =await self .bot .application_info ()
@@ -559,11 +606,12 @@ class ModActionSelect(discord.ui.Select):
         options = [
             discord.SelectOption(label="Ban", value="ban", description="Забанить участника"),
             discord.SelectOption(label="Kick", value="kick", description="Выгнать участника"),
-            discord.SelectOption(label="Timeout (Chat Mute)", value="timeout", description="Временный мут чата (timeout)"),
-            discord.SelectOption(label="Voice Mute", value="vmute", description="Заглушить микрофон в голосовом канале"),
+            discord.SelectOption(label="Mute (Chat + Voice)", value="timeout", description="Timeout — закрыть и чат, и голосовой"),
+            discord.SelectOption(label="Mute (Только чат)", value="mute_chat", description="Закрыть только чат (timeout)"),
+            discord.SelectOption(label="Mute (Только voice)", value="vmute", description="Заглушить микрофон (чат не трогает)"),
             discord.SelectOption(label="Unban", value="unban", description="Разбанить участника (по ID)"),
             discord.SelectOption(label="Очистить сообщения", value="clear", description="Удалить N сообщений"),
-            discord.SelectOption(label="Unmute (Chat)", value="untimeout", description="Снять мут чата с участника"),
+            discord.SelectOption(label="Unmute (Chat + Voice)", value="untimeout", description="Снять timeout с участника"),
             discord.SelectOption(label="Unmute (Voice)", value="vunmute", description="Включить микрофон участника"),
         ]
         super().__init__(

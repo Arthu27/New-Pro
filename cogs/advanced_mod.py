@@ -38,6 +38,21 @@ class AdvancedMod (commands .Cog ):
             ch =discord .utils .get (guild .text_channels ,name ="moderasyon")
         return ch
 
+    def _cleanup_expired_watchlist (self ,guild_id ,watch ):
+        """Удалить из watchlist записи с истёкшим сроком (until). Возвращает обновлённый список."""
+        import time as _t
+        now =_t .time ()
+        changed =False
+        for uid ,info in list (watch .items ()):
+            until =info .get ( "until" )if isinstance (info ,dict )else None
+            if until and float (until )<=now :
+                del watch [uid ]
+                changed =True
+        if changed :
+            self .data [ "watchlist" ][guild_id ]=watch
+            self .save_data ()
+        return watch
+
     @commands .Cog .listener ()
     async def on_message (self ,message :discord .Message ):
         """Отслеживание пользователей из списка наблюдения (watchlist)."""
@@ -46,6 +61,8 @@ class AdvancedMod (commands .Cog ):
         guild_id =str (message .guild .id )
         user_id =str (message .author .id )
         watch =self .data [ "watchlist" ].get (guild_id ,{})
+        # Убираем истёкшие (1-недельные) автоматические записи
+        watch =self ._cleanup_expired_watchlist (guild_id ,watch )
         if user_id not in watch :
             return
 
@@ -283,14 +300,17 @@ class AdvancedMod (commands .Cog ):
     async def watchlist_show (self ,interaction :discord .Interaction ):
         guild_id =str (interaction .guild .id )
         watchlist =self .data ["watchlist"].get (guild_id ,{})
+        watchlist =self ._cleanup_expired_watchlist (guild_id ,watchlist )
 
         if not watchlist :
             await interaction .response .send_message (
             embed =discord .Embed (description =" Liste наблюдение шu an пусто.",color =0x3498DB ),
             ephemeral =True 
             )
-            return 
+            return
 
+        import time as _t
+        now =_t .time ()
         e =discord .Embed (title =" Иzleme список",color =0xF39C12 ,timestamp =datetime .utcnow ())
         e .description =(
         f"```ansi\n\u001b[1;33m ИZLEMEDEKИ ПОЛЬЗОВАТЕЛИ\u001b[0m\n```\n{_divider()}"
@@ -302,9 +322,17 @@ class AdvancedMod (commands .Cog ):
                 avatar =user .display_avatar .url 
             except Exception :
                 name ,avatar =user_id ,None 
+            until =data .get ("until")if isinstance (data ,dict )else None
+            extra =""
+            if until :
+                rem =int (float (until ))-int (now )
+                if rem >0 :
+                    extra =f"\n*Авто-снятие: через {rem // 86400}д {(rem % 86400) // 3600}ч*"
+                else :
+                    extra ="\n*Истекает сейчас*"
             e .add_field (
             name =f" {name}",
-            value =f" `{data['reason']}`\n *{data['added_by']}*\n `{data['timestamp'][:10]}`",
+            value =f" `{data['reason']}`\n *{data['added_by']}*\n `{data['timestamp'][:10]}`{extra}",
             inline =False 
             )
         e .set_footer (
