@@ -464,7 +464,10 @@ class Logs (commands .Cog ):
                     _d ={'cases':{}}
                     if os .path .exists (_f ):
                         with open (_f ,'r',encoding ='utf-8')as fp :
-                            _d =json .load (fp )
+                            _loaded =json .load (fp )
+                        if isinstance (_loaded ,dict ):
+                            _d =_loaded
+                    _d .setdefault ('cases',{})
                     _gid =str (before .guild .id )
                     _d ['cases'].setdefault (_gid ,[])
                     _d ['cases'][_gid ].append ({

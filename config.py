@@ -95,6 +95,16 @@ class Config:
     APPLY_CHANNEL_ID: int = int(os.getenv('APPLY_CHANNEL_ID', '1484308081302306846'))
 
     @classmethod
+    def data_path(cls, *parts: str) -> str:
+        """Абсолютный путь к файлу в data/ независимо от рабочей директории.
+
+        Коги часто пишут в относительный 'data/...', что ломается, если бот
+        запущен из другого каталога (cwd). Эта функция всегда резолвит путь
+        к единому data-каталогу.
+        """
+        return os.path.join(cls.DATA_DIR, *parts)
+
+    @classmethod
     def ensure_dirs(cls):
         """Создать необходимые директории"""
         for d in [cls.DATA_DIR, cls.LOGS_DIR, cls.BACKUPS_DIR, cls.PLUGINS_DIR]:

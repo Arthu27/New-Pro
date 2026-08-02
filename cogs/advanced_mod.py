@@ -9,16 +9,25 @@ from cogs .embed_utils import _divider ,now_ts ,error_embed
 class AdvancedMod (commands .Cog ):
     def __init__ (self ,bot ):
         self .bot =bot 
-        self .data_file ="data/mod_data.json"
+        self .data_file ="data/mod_advanced_data.json"
         self .load_data ()
 
     def load_data (self ):
         os .makedirs ("data",exist_ok =True )
+        loaded ={}
         if os .path .exists (self .data_file ):
-            with open (self .data_file ,"r",encoding ="utf-8")as f :
-                self .data =json .load (f )
-        else :
-            self .data ={"case":{},"notes":{},"watchlist":{}}
+            try :
+                with open (self .data_file ,"r",encoding ="utf-8")as f :
+                    loaded =json .load (f )
+            except Exception :
+                loaded ={}
+        if not isinstance (loaded ,dict ):
+            loaded ={}
+        # Гарантируем ключи, чтобы не ловить KeyError
+        loaded .setdefault ("case",{})
+        loaded .setdefault ("notes",{})
+        loaded .setdefault ("watchlist",{})
+        self .data =loaded
 
     def save_data (self ):
         with open (self .data_file ,"w",encoding ="utf-8")as f :

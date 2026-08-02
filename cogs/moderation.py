@@ -24,7 +24,13 @@ class Moderation (commands .Cog ):
             data ={'cases':{}}
             if os .path .exists (filepath ):
                 with open (filepath ,'r',encoding ='utf-8')as f :
-                    data =json .load (f )
+                    loaded =json .load (f )
+                # Устойчивость: файл могли записать другие коги с другой схемой
+                # (например, {'case': ..., 'notes': ...}). Не теряем их записи,
+                # а лишь гарантируем ключ 'cases'.
+                if isinstance (loaded ,dict ):
+                    data =loaded
+                data .setdefault ('cases',{})
             gid =str (guild_id )
             if gid not in data ['cases']:
                 data ['cases'][gid ]=[]

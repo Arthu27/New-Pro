@@ -75,6 +75,13 @@ logging.getLogger("dotenv").setLevel(logging.ERROR)
 _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 load_dotenv(os.path.join(_BASE_DIR, ".env"), override=True)
 
+# КРИТИЧНО: фиксируем рабочую директорию на корень проекта.
+# Коги пишут в относительные пути 'data/...' (mod_data.json, warnings и т.д.).
+# Если бот запущен из другого каталога (например, из /home или через systemd),
+# данные пишутся в другое место и "теряются" после перезапуска.
+# os.chdir решает это глобально — все относительные пути резолвятся к корню.
+os.chdir(_BASE_DIR)
+
 # Централизованная конфигурация и логирование 
 from config import Config
 from logger import setup_logger, get_logger
