@@ -367,11 +367,9 @@ class StaffApply(commands.Cog):
         
         view = StaffApplyView()
         
-        # Отправляем только большую фотографию и меню, без лишнего текста.
-        embed = discord.Embed(color=0x0a0a0a)
-        embed.set_image(url="attachment://staff_banner.png")
-
-        await interaction.channel.send(embed=embed, file=file, view=view)
+        # Отправляем сам файл напрямую: без embed-контейнера и лишнего текста.
+        # Так Discord показывает фотографию в полном размере, а меню остаётся снизу.
+        await interaction.channel.send(file=file, view=view)
         await interaction.followup.send("✅ Панель STAFF HAKUMO успешно создана!", ephemeral=True)
 
     @commands.Cog.listener()
