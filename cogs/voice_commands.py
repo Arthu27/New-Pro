@@ -10,6 +10,7 @@ import re
 import json
 import subprocess
 import tempfile
+import threading
 from typing import Optional
 
 from logger import get_logger
@@ -168,6 +169,11 @@ class VoiceCommands(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.whisper_available = self._check_whisper()
+        # Кэш модели Whisper: загружается один раз и переиспользуется.
+        self._whisper_model = None
+        self._whisper_model_lock = threading.Lock()
+        # Расположение скачанных моделей (чтобы не качать каждый раз).
+        self.whisper_models_dir = os.path.join("data", "whisper_models")
 
     def _check_whisper(self) -> bool:
         """Проверить доступность Whisper (faster-whisper или openai-whisper)"""
@@ -274,17 +280,44 @@ class VoiceCommands(commands.Cog):
             log.error(f"Whisper ошибка: {e}")
             return None
 
+    def _get_whisper_model(self):
+        """Загрузить модель faster-whisper один раз и кэшировать (потокобезопасно)."""
+        if self._whisper_model is not None:
+            return self._whisper_model
+        with self._whisper_model_lock:
+            if self._whisper_model is not None:
+                return self._whisper_model
+            try:
+                from faster_whisper import WhisperModel
+                os.makedirs(self.whisper_models_dir, exist_ok=True)
+                self._whisper_model = WhisperModel(
+                    "base", device="cpu", compute_type="int8",
+                    download_root=self.whisper_models_dir,
+                )
+                log.info(f"Whisper модель загружена (dir={self.whisper_models_dir})")
+            except Exception as e:
+                log.error(f"Whisper model load error: {e}")
+                self._whisper_model = None
+        return self._whisper_model
+
     async def _transcribe_with_faster_whisper(self, audio_path: str) -> Optional[str]:
-        """Распознавание речи через faster-whisper (CTranslate2)."""
+        """Распознавание речи через faster-whisper (CTranslate2). Выполняется в потоке."""
+        loop = self.bot.loop
         try:
-            from faster_whisper import WhisperModel
-            model = WhisperModel("base", device="cpu", compute_type="int8")
-            segments, _info = model.transcribe(
-                audio_path,
-                language="ru",
-                vad_filter=True,
-            )
-            text = " ".join(seg.text.strip() for seg in segments).strip()
+            model = await loop.run_in_executor(None, self._get_whisper_model)
+            if model is None:
+                return None
+
+            def _run():
+                segments, _info = model.transcribe(
+                    audio_path,
+                    language="ru",
+                    vad_filter=True,
+                    beam_size=5,
+                )
+                return " ".join(seg.text.strip() for seg in segments).strip()
+
+            text = await loop.run_in_executor(None, _run)
             return text or None
         except Exception as e:
             log.error(f"faster-whisper ошибка: {e}")
@@ -435,7 +468,13 @@ class VoiceCommands(commands.Cog):
                 return
 
             # Распознаём речь
-            await status.edit(content="🗣️ Распознаю речь (Whisper)...")
+            if self._whisper_model is None and self.whisper_available:
+                await status.edit(
+                    content="🔄 Первый запуск: загружаю модель Whisper (~150 МБ). "
+                            "Это происходит один раз и может занять минуту, пожалуйста, подождите..."
+                )
+            else:
+                await status.edit(content="🗣️ Распознаю речь (Whisper)...")
             text = None
             if self.whisper_available:
                 text = await self._transcribe_with_whisper(tmp_audio)
@@ -560,6 +599,13 @@ class VoiceCommands(commands.Cog):
                 await status.edit(content="🗣️ Распознаю речь (Whisper)...")
 
             # Распознаём речь
+            if self._whisper_model is None and self.whisper_available:
+                await status.edit(
+                    content="🔄 Первый запуск: загружаю модель Whisper (~150 МБ). "
+                            "Это происходит один раз и может занять минуту, пожалуйста, подождите..."
+                )
+            else:
+                await status.edit(content="🗣️ Распознаю речь (Whisper)...")
             text = None
             if self.whisper_available:
                 text = await self._transcribe_with_whisper(tmp_audio)
