@@ -6,6 +6,9 @@
 import discord
 from discord.ext import commands
 import os
+import re
+import json
+import subprocess
 import tempfile
 from typing import Optional
 
@@ -33,7 +36,7 @@ class VoiceCommands(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
-        """Обработка голосовых сообщений"""
+        """Обработка голосовых сообщений и автоматический анализ видео"""
         if message.author.bot or not message.guild:
             return
 
@@ -41,14 +44,20 @@ class VoiceCommands(commands.Cog):
             return
 
         for attachment in message.attachments:
-            if not self._is_audio_file(attachment.filename):
-                continue
-            await self._process_voice_message(message, attachment)
+            if self._is_video_file(attachment.filename):
+                await self._process_video_message(message, attachment)
+            elif self._is_audio_file(attachment.filename):
+                await self._process_voice_message(message, attachment)
 
     def _is_audio_file(self, filename: str) -> bool:
         """Проверить, является ли файл аудио"""
         audio_extensions = ['.ogg', '.mp3', '.wav', '.m4a', '.opus']
         return any(filename.lower().endswith(ext) for ext in audio_extensions)
+
+    def _is_video_file(self, filename: str) -> bool:
+        """Проверить, является ли файл видео"""
+        video_extensions = ['.mp4', '.mov', '.mkv', '.webm', '.avi', '.m4v', '.mpg', '.mpeg']
+        return any(filename.lower().endswith(ext) for ext in video_extensions)
 
     async def _process_voice_message(self, message: discord.Message, attachment: discord.Attachment):
         """Обработать голосовое сообщение"""
@@ -172,7 +181,162 @@ class VoiceCommands(commands.Cog):
         await ctx.send(embed=embed)
 
     # ═══════════════════════════════════════════════════════════════
-    #  АНАЛИЗ ВИДЕО (видео → звук → текст → AI-обзор)
+    #  АВТОМАТИЧЕСКИЙ АНАЛИЗ ВИДЕО (видео → звук → текст → AI-обзор)
+    #  Срабатывает сам, когда пользователь прикрепляет видео. Результат
+    #  отправляется в отдельный канал (по умолчанию #video-analiz).
+    # ═══════════════════════════════════════════════════════════════
+    CONFIG_FILE = os.path.join("data", "video_analiz_config.json")
+    DEFAULT_MAX_DURATION = 600  # 10 минут
+
+    def _load_config(self) -> dict:
+        """Загрузить настройки видео-анализа по серверам."""
+        if os.path.exists(self.CONFIG_FILE):
+            try:
+                with open(self.CONFIG_FILE, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except Exception as e:
+                log.error(f"video config load error: {e}")
+        return {}
+
+    def _save_config(self, config: dict):
+        """Сохранить настройки видео-анализа."""
+        try:
+            os.makedirs(os.path.dirname(self.CONFIG_FILE), exist_ok=True)
+            with open(self.CONFIG_FILE, "w", encoding="utf-8") as f:
+                json.dump(config, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            log.error(f"video config save error: {e}")
+
+    def _get_guild_cfg(self, guild) -> dict:
+        cfg = self._load_config()
+        return cfg.get(str(guild.id), {})
+
+    def _set_guild_cfg(self, guild, key, value):
+        cfg = self._load_config()
+        gid = str(guild.id)
+        cfg.setdefault(gid, {})
+        cfg[gid][key] = value
+        self._save_config(cfg)
+
+    def _get_max_duration(self, guild) -> int:
+        return int(self._get_guild_cfg(guild).get("max_duration_seconds", self.DEFAULT_MAX_DURATION))
+
+    async def _get_analiz_channel(self, guild) -> discord.TextChannel:
+        """Найти канал для результатов. Сначала назначенный, потом #video-analiz, иначе создать."""
+        cid = self._get_guild_cfg(guild).get("channel_id")
+        if cid:
+            ch = guild.get_channel(cid)
+            if ch and isinstance(ch, discord.TextChannel):
+                return ch
+        ch = discord.utils.get(guild.text_channels, name="video-analiz")
+        if ch:
+            return ch
+        overwrites = {
+            guild.default_role: discord.PermissionOverwrite(read_messages=True, send_messages=False),
+            guild.me: discord.PermissionOverwrite(read_messages=True, send_messages=True),
+        }
+        return await guild.create_text_channel("video-analiz", overwrites=overwrites)
+
+    def _get_video_duration(self, path: str) -> Optional[int]:
+        """Получить длительность видео в секундах через ffmpeg."""
+        ffmpeg = self._find_ffmpeg()
+        if not ffmpeg:
+            return None
+        try:
+            result = subprocess.run([ffmpeg, "-i", path], capture_output=True, text=True, timeout=15)
+            m = re.search(r"Duration:\s*(\d+):(\d+):(\d+)", result.stderr or "")
+            if m:
+                h, mn, s = map(int, m.groups())
+                return h * 3600 + mn * 60 + s
+        except Exception as e:
+            log.warning(f"get video duration error: {e}")
+        return None
+
+    async def _process_video_message(self, message: discord.Message, attachment: discord.Attachment):
+        """Автоматически проанализировать видео и отправить результат в отдельный канал."""
+        tmp_video = None
+        tmp_audio = None
+        status = None
+        try:
+            status = await message.channel.send("⏳ Видео обнаружено, анализирую...")
+            tmp_video = os.path.join(
+                tempfile.gettempdir(),
+                f"auto_{attachment.id}_{attachment.filename.replace(' ', '_')}",
+            )
+            await attachment.save(tmp_video)
+
+            # Проверка длительности
+            dur = self._get_video_duration(tmp_video)
+            max_dur = self._get_max_duration(message.guild)
+            if dur and max_dur and dur > max_dur:
+                await status.edit(
+                    content=f"⏱️ Видео **{dur // 60} мин** — дольше лимита (**{max_dur // 60} мин**). Не анализировал."
+                )
+                return
+
+            # Извлекаем звук
+            ffmpeg = self._find_ffmpeg()
+            if not ffmpeg:
+                await status.edit(content="❌ ffmpeg не найден. Установите ffmpeg для анализа видео.")
+                return
+            await status.edit(content="🎵 Извлекаю звук из видео...")
+            tmp_audio = os.path.join(tempfile.gettempdir(), f"auto_{attachment.id}.wav")
+            subprocess.run(
+                [ffmpeg, "-y", "-i", tmp_video, "-vn", "-ar", "16000", "-ac", "1", tmp_audio],
+                capture_output=True, timeout=180,
+            )
+            if not os.path.exists(tmp_audio):
+                await status.edit(content="❌ Не удалось извлечь звук из видео.")
+                return
+
+            # Распознаём речь
+            await status.edit(content="🗣️ Распознаю речь (Whisper)...")
+            text = None
+            if self.whisper_available:
+                text = await self._transcribe_with_whisper(tmp_audio)
+            if not text or len(text.strip()) < 3:
+                await status.edit(content="⚠️ В видео не распознана речь (или видео без звука).")
+                return
+
+            # AI-обзор
+            await status.edit(content="🤖 Составляю AI-обзор...")
+            summary = await self._ai_summarize(text)
+
+            # Отправляем результат в отдельный канал
+            target = await self._get_analiz_channel(message.guild)
+            embed = discord.Embed(
+                title="🎬 Автоматический анализ видео",
+                color=0x3498DB,
+                timestamp=discord.utils.utcnow(),
+            )
+            embed.set_author(name=message.author.display_name, icon_url=message.author.display_avatar.url)
+            embed.add_field(name="📝 Транскрипт", value=f"```{text[:1500]}```", inline=False)
+            if summary and summary != text:
+                embed.add_field(name="🤖 AI-обзор", value=summary[:1500], inline=False)
+            embed.add_field(name="🔗 Видео", value=attachment.url, inline=False)
+            embed.set_footer(text=message.guild.name)
+            await target.send(embed=embed)
+            await status.edit(content=f"✅ Готово! Результат в канале {target.mention}")
+
+        except Exception as e:
+            log.error(f"Auto video analyze error: {e}")
+            import traceback
+            traceback.print_exc()
+            if status:
+                try:
+                    await status.edit(content=f"❌ Ошибка анализа видео: {str(e)[:120]}")
+                except Exception:
+                    pass
+        finally:
+            for p in (tmp_video, tmp_audio):
+                try:
+                    if p and os.path.exists(p):
+                        os.remove(p)
+                except Exception:
+                    pass
+
+    # ═══════════════════════════════════════════════════════════════
+    #  АНАЛИЗ ВИДЕО ПО КОМАНДЕ (видео → звук → текст → AI-обзор)
     # ═══════════════════════════════════════════════════════════════
     def _find_ffmpeg(self) -> Optional[str]:
         """Найти ffmpeg (из пути музыки или из PATH)"""
@@ -289,6 +453,55 @@ class VoiceCommands(commands.Cog):
                         os.remove(p)
                 except Exception:
                     pass
+
+    @commands.command(name="video-kanal", aliases=["video-channel", "video-kanal-ayarla"])
+    @commands.has_permissions(manage_messages=True)
+    async def video_kanal(self, ctx, channel: discord.TextChannel = None):
+        """Назначить канал для результатов автоматического анализа видео."""
+        channel = channel or ctx.channel
+        self._set_guild_cfg(ctx.guild, "channel_id", channel.id)
+        embed = discord.Embed(
+            title="🎬 Канал результатов",
+            color=discord.Color.green(),
+            timestamp=discord.utils.utcnow(),
+        )
+        embed.description = f"Результаты анализа видео теперь отправляются в {channel.mention}"
+        await ctx.send(embed=embed)
+
+    @commands.command(name="video-sure", aliases=["video-limit", "video-sure-siniri"])
+    @commands.has_permissions(manage_messages=True)
+    async def video_sure(self, ctx, minutes: int = 10):
+        """Установить лимит длительности видео для авто-анализа (в минутах)."""
+        if minutes < 1:
+            await ctx.send("❌ Лимит должен быть хотя бы 1 минута.")
+            return
+        seconds = minutes * 60
+        self._set_guild_cfg(ctx.guild, "max_duration_seconds", seconds)
+        embed = discord.Embed(
+            title="⏱️ Лимит длительности",
+            color=discord.Color.green(),
+            timestamp=discord.utils.utcnow(),
+        )
+        embed.description = f"Авто-анализ обрабатывает видео длиной до **{minutes} мин**."
+        await ctx.send(embed=embed)
+
+    @commands.command(name="video-ayar", aliases=["video-settings"])
+    @commands.has_permissions(manage_messages=True)
+    async def video_ayar(self, ctx):
+        """Показать настройки автоматического анализа видео."""
+        cfg = self._get_guild_cfg(ctx.guild)
+        cid = cfg.get("channel_id")
+        max_sec = int(cfg.get("max_duration_seconds", self.DEFAULT_MAX_DURATION))
+        ch = ctx.guild.get_channel(cid) if cid else None
+        embed = discord.Embed(
+            title="🎬 Настройки авто-анализа видео",
+            color=discord.Color.blurple(),
+            timestamp=discord.utils.utcnow(),
+        )
+        embed.add_field(name="📂 Канал результатов", value=ch.mention if ch else "Не назначен (по умолчанию #video-analiz)", inline=False)
+        embed.add_field(name="⏱️ Максимальная длительность", value=f"{max_sec // 60} мин", inline=False)
+        embed.add_field(name="ℹ️ Команды", value="`!video-kanal #канал` — сменить канал\n`!video-sure <минут>` — сменить лимит", inline=False)
+        await ctx.send(embed=embed)
 
     async def _ai_summarize(self, text: str) -> str:
         """Отправить текст в AI для получения обзора"""
