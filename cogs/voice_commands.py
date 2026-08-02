@@ -8,6 +8,7 @@ from discord.ext import commands
 import os
 import re
 import json
+import asyncio
 import subprocess
 import tempfile
 import threading
@@ -171,6 +172,7 @@ class VoiceCommands(commands.Cog):
         self.whisper_available = self._check_whisper()
         # Кэш модели Whisper: загружается один раз и переиспользуется.
         self._whisper_model = None
+        self.whisper_model_name = None
         self._whisper_model_lock = threading.Lock()
         # Расположение скачанных моделей (чтобы не качать каждый раз).
         self.whisper_models_dir = os.path.join("data", "whisper_models")
@@ -281,7 +283,11 @@ class VoiceCommands(commands.Cog):
             return None
 
     def _get_whisper_model(self):
-        """Загрузить модель faster-whisper один раз и кэшировать (потокобезопасно)."""
+        """Загрузить модель faster-whisper один раз и кэшировать (потокобезопасно).
+
+        Размер модели берётся из WHISPER_MODEL (tiny/base/small) — tiny скачивается
+        и работает быстрее. По умолчанию base.
+        """
         if self._whisper_model is not None:
             return self._whisper_model
         with self._whisper_model_lock:
@@ -289,16 +295,34 @@ class VoiceCommands(commands.Cog):
                 return self._whisper_model
             try:
                 from faster_whisper import WhisperModel
+                model_name = os.getenv("WHISPER_MODEL", "base").strip().lower()
+                if model_name not in ("tiny", "base", "small"):
+                    model_name = "base"
                 os.makedirs(self.whisper_models_dir, exist_ok=True)
+                log.info(f"Загрузка модели Whisper '{model_name}' (первый запуск)...")
                 self._whisper_model = WhisperModel(
-                    "base", device="cpu", compute_type="int8",
+                    model_name, device="cpu", compute_type="int8",
                     download_root=self.whisper_models_dir,
                 )
-                log.info(f"Whisper модель загружена (dir={self.whisper_models_dir})")
+                self.whisper_model_name = model_name
+                log.info(f"Whisper модель '{model_name}' загружена (dir={self.whisper_models_dir})")
             except Exception as e:
-                log.error(f"Whisper model load error: {e}")
+                log.error(f"Whisper model load error: {e}", exc_info=True)
                 self._whisper_model = None
         return self._whisper_model
+
+    async def _preload_whisper_model(self):
+        """Предзагрузить модель Whisper в фоне сразу после старта бота,
+        чтобы первый видео-анализ не заставлял пользователя ждать скачивание."""
+        try:
+            await asyncio.sleep(3)  # дать боту дочитаться
+            await self.bot.loop.run_in_executor(None, self._get_whisper_model)
+            if self._whisper_model is not None:
+                log.info("Whisper модель предзагружена в фоне")
+            else:
+                log.warning("Whisper модель не смогла предзагрузиться (будет попытка при анализе)")
+        except Exception as e:
+            log.error(f"Предзагрузка Whisper не удалась: {e}")
 
     async def _transcribe_with_faster_whisper(self, audio_path: str) -> Optional[str]:
         """Распознавание речи через faster-whisper (CTranslate2). Выполняется в потоке."""
@@ -468,18 +492,26 @@ class VoiceCommands(commands.Cog):
                 return
 
             # Распознаём речь
-            if self._whisper_model is None and self.whisper_available:
-                await status.edit(
-                    content="🔄 Первый запуск: загружаю модель Whisper (~150 МБ). "
-                            "Это происходит один раз и может занять минуту, пожалуйста, подождите..."
-                )
-            else:
-                await status.edit(content="🗣️ Распознаю речь (Whisper)...")
+            if self.whisper_available:
+                if self._whisper_model is None:
+                    await status.edit(
+                        content="🔄 Загружаю модель Whisper. Это первый запуск, скачивание "
+                                "может занять 1–3 минуты. Подождите, пожалуйста..."
+                    )
+                else:
+                    await status.edit(content="🗣️ Распознаю речь (Whisper)...")
             text = None
             if self.whisper_available:
                 text = await self._transcribe_with_whisper(tmp_audio)
             if not text or len(text.strip()) < 3:
-                await status.edit(content="⚠️ В видео не распознана речь (или видео без звука).")
+                if self.whisper_available and self._whisper_model is None:
+                    await status.edit(
+                        content="❌ Не удалось загрузить модель Whisper (нет доступа к HuggingFace). "
+                                "Проверьте интернет или добавьте `HF_TOKEN` в .env "
+                                "(https://huggingface.co/settings/tokens)."
+                    )
+                else:
+                    await status.edit(content="⚠️ В видео не распознана речь (или видео без звука).")
                 return
 
             # AI-обзор
@@ -599,18 +631,26 @@ class VoiceCommands(commands.Cog):
                 await status.edit(content="🗣️ Распознаю речь (Whisper)...")
 
             # Распознаём речь
-            if self._whisper_model is None and self.whisper_available:
-                await status.edit(
-                    content="🔄 Первый запуск: загружаю модель Whisper (~150 МБ). "
-                            "Это происходит один раз и может занять минуту, пожалуйста, подождите..."
-                )
-            else:
-                await status.edit(content="🗣️ Распознаю речь (Whisper)...")
+            if self.whisper_available:
+                if self._whisper_model is None:
+                    await status.edit(
+                        content="🔄 Загружаю модель Whisper. Это первый запуск, скачивание "
+                                "может занять 1–3 минуты. Подождите, пожалуйста..."
+                    )
+                else:
+                    await status.edit(content="🗣️ Распознаю речь (Whisper)...")
             text = None
             if self.whisper_available:
                 text = await self._transcribe_with_whisper(tmp_audio)
             if not text or len(text.strip()) < 3:
-                await status.edit(content="⚠️ В видео не удалось распознать речь (или видео без звука).")
+                if self.whisper_available and self._whisper_model is None:
+                    await status.edit(
+                        content="❌ Не удалось загрузить модель Whisper (нет доступа к HuggingFace). "
+                                "Проверьте интернет или добавьте `HF_TOKEN` в .env "
+                                "(https://huggingface.co/settings/tokens)."
+                    )
+                else:
+                    await status.edit(content="⚠️ В видео не удалось распознать речь (или видео без звука).")
                 return
 
             # AI-обзор текста
@@ -741,5 +781,12 @@ class VoiceCommands(commands.Cog):
 
 
 async def setup(bot):
-    await bot.add_cog(VoiceCommands(bot))
+    cog = VoiceCommands(bot)
+    await bot.add_cog(cog)
+    # Предзагружаем модель Whisper в фоне, чтобы первый анализ не заставлял ждать скачивание.
+    if cog.whisper_available:
+        try:
+            bot.loop.create_task(cog._preload_whisper_model())
+        except Exception as e:
+            log.warning(f"Не удалось запустить предзагрузку Whisper: {e}")
     log.info("VoiceCommands загружен")
