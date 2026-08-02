@@ -3,7 +3,12 @@
 Все настройки в одном месте
 """
 import os
+import logging
 from dotenv import load_dotenv
+
+# python-dotenv yorum satırlarını (Rusça, uzun çizgili vb.) uyarı olarak basabiliyor.
+# Bunlar zararsızdır — uyarıları gizleyip değerleri yine de okumaya devam ediyoruz.
+logging.getLogger("dotenv").setLevel(logging.ERROR)
 
 # Загружаем .env из каталога этого файла (надёжно, независимо от рабочей директории)
 # и с override=True, чтобы значение из .env всегда применялось.
