@@ -173,6 +173,7 @@ class VoiceCommands(commands.Cog):
         # Кэш модели Whisper: загружается один раз и переиспользуется.
         self._whisper_model = None
         self.whisper_model_name = None
+        self._whisper_load_error = None
         self._whisper_model_lock = threading.Lock()
         # Расположение скачанных моделей (чтобы не качать каждый раз).
         self.whisper_models_dir = os.path.join("data", "whisper_models")
@@ -258,9 +259,12 @@ class VoiceCommands(commands.Cog):
     async def _transcribe_with_whisper(self, audio_path: str) -> Optional[str]:
         """Распознавание речи через Whisper.
 
-        Сначала пробует faster-whisper (он в requirements.txt), затем openai-whisper.
+        Порядок:
+        1) локальная faster-whisper модель (если скачана);
+        2) openai-whisper (если установлен);
+        3) облачный OpenAI Whisper API (если есть OPENAI_API_KEY) — без скачивания модели.
         """
-        # faster-whisper — предпочтительный бэкенд (уже в requirements.txt)
+        # 1) faster-whisper — предпочтительный бэкенд (уже в requirements.txt)
         try:
             text = await self._transcribe_with_faster_whisper(audio_path)
             if text:
@@ -268,7 +272,7 @@ class VoiceCommands(commands.Cog):
         except Exception as e:
             log.warning(f"faster-whisper не сработал, пробуем openai-whisper: {e}")
 
-        # fallback: openai-whisper
+        # 2) fallback: openai-whisper (локальная библиотека)
         try:
             import whisper
             model = whisper.load_model("base")
@@ -279,8 +283,41 @@ class VoiceCommands(commands.Cog):
             )
             return result.get("text", "").strip()
         except Exception as e:
-            log.error(f"Whisper ошибка: {e}")
-            return None
+            log.warning(f"openai-whisper не сработал: {e}")
+
+        # 3) fallback: облачный OpenAI Whisper API — не требует скачивания модели
+        text = await self._transcribe_with_cloud_api(audio_path)
+        if text:
+            return text
+
+        log.error("Все способы распознавания речи не сработали")
+        return None
+
+    async def _transcribe_with_cloud_api(self, audio_path: str) -> Optional[str]:
+        """Распознавание речи через облачный OpenAI Whisper API (whisper-1).
+
+        Работает без скачивания локальной модели — достаточно OPENAI_API_KEY.
+        """
+        try:
+            import requests
+            api_url = os.getenv("OPENAI_AUDIO_URL", "https://api.openai.com/v1/audio/transcriptions")
+            api_key = os.getenv("OPENAI_API_KEY")
+            if not api_key:
+                return None
+            with open(audio_path, "rb") as f:
+                resp = requests.post(
+                    api_url,
+                    headers={"Authorization": f"Bearer {api_key}"},
+                    data={"model": "whisper-1", "language": "ru", "response_format": "text"},
+                    files={"file": (os.path.basename(audio_path), f, "audio/wav")},
+                    timeout=180,
+                )
+            if resp.status_code == 200 and resp.text.strip():
+                return resp.text.strip()
+            log.error(f"Cloud Whisper ошибка {resp.status_code}: {resp.text[:200]}")
+        except Exception as e:
+            log.error(f"Cloud Whisper исключение: {e}")
+        return None
 
     def _get_whisper_model(self):
         """Загрузить модель faster-whisper один раз и кэшировать (потокобезопасно).
@@ -297,6 +334,7 @@ class VoiceCommands(commands.Cog):
         with self._whisper_model_lock:
             if self._whisper_model is not None:
                 return self._whisper_model
+            self._whisper_load_error = None
             try:
                 # Отключаем Xet-бэкенд HuggingFace (частый источник CAS-ошибок).
                 os.environ.setdefault("HF_HUB_DISABLE_XET", "1")
@@ -320,6 +358,7 @@ class VoiceCommands(commands.Cog):
                         )
                         break
                     except Exception as e:
+                        self._whisper_load_error = str(e)
                         log.error(f"Попытка {attempt}/3 загрузки Whisper не удалась ({endpoint}): {e}")
                         import time
                         time.sleep(2)
@@ -331,6 +370,7 @@ class VoiceCommands(commands.Cog):
                 self.whisper_model_name = model_name
                 log.info(f"Whisper модель '{model_name}' загружена (dir={self.whisper_models_dir})")
             except Exception as e:
+                self._whisper_load_error = str(e)
                 log.error(f"Whisper model load error: {e}", exc_info=True)
                 self._whisper_model = None
         return self._whisper_model
@@ -528,11 +568,13 @@ class VoiceCommands(commands.Cog):
             if self.whisper_available:
                 text = await self._transcribe_with_whisper(tmp_audio)
             if not text or len(text.strip()) < 3:
-                if self.whisper_available and self._whisper_model is None:
+                if self.whisper_available and self._whisper_model is None and not os.getenv("OPENAI_API_KEY"):
                     await status.edit(
-                        content="❌ Не удалось скачать модель Whisper. Добавьте в .env:\n"
-                                "```\nHF_ENDPOINT=https://hf-mirror.com\nHF_TOKEN=<токен>\nWHISPER_MODEL=tiny\n```\n"
-                                "и перезапустите бота."
+                        content="❌ Не удалось скачать модель Whisper и нет OPENAI_API_KEY для облачной "
+                                "расшифровки. Добавьте в .env один из вариантов:\n"
+                                "```\nOPENAI_API_KEY=<токен>   # облачная расшифровка (рекомендую)\n"
+                                "# или\nHF_ENDPOINT=https://hf-mirror.com\nWHISPER_MODEL=tiny\n```\n"
+                                f"Последняя ошибка: `{str(self._whisper_load_error)[:120] or 'нет'}`"
                     )
                 else:
                     await status.edit(content="⚠️ В видео не распознана речь (или видео без звука).")
@@ -667,11 +709,13 @@ class VoiceCommands(commands.Cog):
             if self.whisper_available:
                 text = await self._transcribe_with_whisper(tmp_audio)
             if not text or len(text.strip()) < 3:
-                if self.whisper_available and self._whisper_model is None:
+                if self.whisper_available and self._whisper_model is None and not os.getenv("OPENAI_API_KEY"):
                     await status.edit(
-                        content="❌ Не удалось скачать модель Whisper. Добавьте в .env:\n"
-                                "```\nHF_ENDPOINT=https://hf-mirror.com\nHF_TOKEN=<токен>\nWHISPER_MODEL=tiny\n```\n"
-                                "и перезапустите бота."
+                        content="❌ Не удалось скачать модель Whisper и нет OPENAI_API_KEY для облачной "
+                                "расшифровки. Добавьте в .env один из вариантов:\n"
+                                "```\nOPENAI_API_KEY=<токен>   # облачная расшифровка (рекомендую)\n"
+                                "# или\nHF_ENDPOINT=https://hf-mirror.com\nWHISPER_MODEL=tiny\n```\n"
+                                f"Последняя ошибка: `{str(self._whisper_load_error)[:120] or 'нет'}`"
                     )
                 else:
                     await status.edit(content="⚠️ В видео не удалось распознать речь (или видео без звука).")
