@@ -122,6 +122,7 @@ class TempModeration(commands.Cog):
         self._mutes = {}     # guild_id -> {user_id: {until, reason, mod_id}}
         self._bans = {}      # guild_id -> {user_id: {until, reason, mod_id}}
         self._kicks = {}     # guild_id -> {user_id: {until (rejoin_time), reason, mod_id}}
+        self._vmutes = {}    # guild_id -> {user_id: {until, reason, mod_id}} (VOICE mute)
         self._scheduled = [] # [{id, action, guild_id, user_id, mod_id, run_at, duration, reason}]
         self._cooldowns = {} # (user_id, action) -> last_time (anti-spam)
         self._load_state()
@@ -138,6 +139,7 @@ class TempModeration(commands.Cog):
     def _bans_file(self): return f"{DATA_DIR}/temp_bans.json"
     def _kicks_file(self): return f"{DATA_DIR}/temp_kicks.json"
     def _scheduled_file(self): return f"{DATA_DIR}/temp_scheduled.json"
+    def _vmutes_file(self): return f"{DATA_DIR}/temp_vmutes.json"
     def _history_file(self): return f"{DATA_DIR}/temp_history.json"
     def _whitelist_file(self): return f"{DATA_DIR}/temp_whitelist.json"
 
@@ -147,6 +149,7 @@ class TempModeration(commands.Cog):
             (self._mutes_file(), "_mutes"),
             (self._bans_file(), "_bans"),
             (self._kicks_file(), "_kicks"),
+            (self._vmutes_file(), "_vmutes"),
         ]:
             try:
                 with open(path, "r", encoding="utf-8") as f:
@@ -299,6 +302,102 @@ class TempModeration(commands.Cog):
         embed = discord.Embed(
             title=" Мьют снят",
             description=f"Мьют с {member.mention} снят досрочно",
+            color=0x4ADE80
+        )
+        embed.add_field(name="Модератор", value=ctx.author.mention, inline=True)
+        await ctx.send(embed=embed)
+
+    #  VOICE MUTE (отдельно от chat mute/timeout) 
+    @commands.command(name="vmute", aliases=["voicemute", "голосьют", "v-mute"])
+    @commands.has_permissions(mute_members=True)
+    async def vmute_cmd(self, ctx, member: discord.Member, duration: str = "5m", *, reason: str = "Без причины"):
+        """Голосовой мьют (только микрофон в голосовом канале, чат не трогает): !vmute @user 5m причина"""
+        sec = parse_duration(duration)
+        if not sec:
+            await ctx.send(" Неверный формат времени. Примеры: `5m`, `30m`, `1h`")
+            return
+        if sec > 2592000 * 6:
+            await ctx.send(" Максимум 6 месяцев")
+            return
+        if sec < 30:
+            await ctx.send(" Минимум 30 секунд")
+            return
+        if self.is_whitelisted(ctx.guild, member):
+            await ctx.send(" Этот пользователь в белом списке")
+            return
+        ok, cd = self._cooldown_ok(member.id, "vmute")
+        if not ok:
+            await ctx.send(f"⏳ Подождите {cd}с перед повторным голосовым мьютом этого пользователя")
+            return
+
+        # Голосовой мьют требует, чтобы участник был в голосовом канале
+        if not member.voice or not member.voice.channel:
+            await ctx.send(" Участник не находится в голосовом канале. Голосовой мьют невозможен.")
+            return
+
+        until_ts = time.time() + sec
+        try:
+            await member.edit(mute=True)
+        except discord.Forbidden:
+            await ctx.send(" Нет прав на голосовой мьют (нужно право 'Заглушать участников' / Mute Members)")
+            return
+        except discord.HTTPException as e:
+            await ctx.send(f" Ошибка Discord: {e}")
+            return
+        # Record
+        self._vmutes.setdefault(str(ctx.guild.id), {})[str(member.id)] = {
+            "until": until_ts,
+            "reason": reason,
+            "mod_id": str(ctx.author.id),
+            "created_at": time.time(),
+            "duration": sec,
+        }
+        self._save("_vmutes", self._vmutes_file())
+        self.add_history("vmute", ctx.guild.id, member.id, ctx.author.id, sec, reason, until_ts)
+        # DM
+        try:
+            embed = discord.Embed(
+                title=" Голосовой мьют",
+                description=f"Ваш микрофон был заглушён на сервере **{ctx.guild.name}** на **{format_duration(sec)}**",
+                color=0x818CF8
+            )
+            embed.add_field(name="Причина", value=reason, inline=False)
+            embed.add_field(name="Модератор", value=ctx.author.display_name, inline=True)
+            embed.add_field(name="Истекает", value=f"<t:{int(until_ts)}:R>", inline=True)
+            await member.send(embed=embed)
+        except discord.Forbidden:
+            pass
+        # Confirmation
+        embed = discord.Embed(
+            title=" Голосовой мьют",
+            description=f"{member.mention} заглушён (микрофон) на **{format_duration(sec)}**",
+            color=0x818CF8
+        )
+        embed.add_field(name="Причина", value=reason, inline=False)
+        embed.add_field(name="Истекает", value=f"<t:{int(until_ts)}:F> (<t:{int(until_ts)}:R>)", inline=False)
+        embed.add_field(name="Модератор", value=ctx.author.mention, inline=True)
+        await ctx.send(embed=embed)
+
+    @commands.command(name="vunmute", aliases=["voiceunmute", "голосснять", "v-unmute"])
+    @commands.has_permissions(mute_members=True)
+    async def vunmute_cmd(self, ctx, member: discord.Member):
+        """Снять голосовой мьют досрочно: !vunmute @user"""
+        guild_vmutes = self._vmutes.get(str(ctx.guild.id), {})
+        if str(member.id) not in guild_vmutes:
+            await ctx.send(f" {member.mention} не имеет активного голосового мьюта")
+            return
+        try:
+            await member.edit(mute=False)
+        except discord.Forbidden:
+            await ctx.send(" Нет прав")
+            return
+        except discord.HTTPException:
+            pass
+        del guild_vmutes[str(member.id)]
+        self._save("_vmutes", self._vmutes_file())
+        embed = discord.Embed(
+            title=" Голосовой мьют снят",
+            description=f"Микрофон {member.mention} снова включён",
             color=0x4ADE80
         )
         embed.add_field(name="Модератор", value=ctx.author.mention, inline=True)
@@ -477,9 +576,25 @@ class TempModeration(commands.Cog):
                         pass
                     del bans[user_id]
                     self._update_history_status(guild_id, user_id, "tempban", "expired")
+        # Voice mutes
+        for guild_id, vmutes in list(self._vmutes.items()):
+            guild = self.bot.get_guild(int(guild_id))
+            if not guild:
+                continue
+            for user_id, info in list(vmutes.items()):
+                if info["until"] <= now:
+                    member = guild.get_member(int(user_id))
+                    if member and member.voice and member.voice.mute:
+                        try:
+                            await member.edit(mute=False)
+                        except (discord.Forbidden, discord.HTTPException):
+                            pass
+                    del vmutes[user_id]
+                    self._update_history_status(guild_id, user_id, "vmute", "expired")
         # Save
         self._save("_mutes", self._mutes_file())
         self._save("_bans", self._bans_file())
+        self._save("_vmutes", self._vmutes_file())
 
     @check_expirations.before_loop
     async def before_check(self):
@@ -653,7 +768,8 @@ class TempModeration(commands.Cog):
         mutes = self._mutes.get(guild_id, {})
         bans = self._bans.get(guild_id, {})
         kicks = self._kicks.get(guild_id, {})
-        if not (mutes or bans or kicks):
+        vmutes = self._vmutes.get(guild_id, {})
+        if not (mutes or bans or kicks or vmutes):
             await ctx.send(" Нет активных временных наказаний")
             return
         embed = discord.Embed(title="⏱ Активные временные наказания", color=0xFFD700)
@@ -675,6 +791,12 @@ class TempModeration(commands.Cog):
                 rem = fmt_countdown(info["until"])
                 text += f" {info.get('user_name', uid)} — {rem}\n    {info['reason'][:60]}\n"
             embed.add_field(name="Кики", value=text[:1024] or "—", inline=False)
+        if vmutes:
+            text = ""
+            for uid, info in vmutes.items():
+                rem = fmt_countdown(info["until"])
+                text += f" <@{uid}> — {rem}\n    {info['reason'][:60]}\n"
+            embed.add_field(name="Голосовой мьют", value=text[:1024] or "—", inline=False)
         await ctx.send(embed=embed)
 
 

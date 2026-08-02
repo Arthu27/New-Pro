@@ -435,7 +435,7 @@ class Moderation (commands .Cog ):
         """Выполнить выбранное действие модерации."""
         guild =interaction .guild
 
-        if action in ("ban","kick","timeout","untimeout"):
+        if action in ("ban","kick","timeout","untimeout","vmute","vunmute"):
             uid =self ._parse_target_id (target )
             user =discord .utils .get (guild .members ,id =uid ) if uid else None
             if not user :
@@ -460,10 +460,21 @@ class Moderation (commands .Cog ):
                     minutes =max (1 ,int (amount )or 5 )
                     until =discord .utils .utcnow ()+timedelta (minutes =minutes )
                     await user .timeout (until ,reason =reason )
-                    msg =f"пользователь замьючен на {minutes} мин"
+                    msg =f"чат-мьют (timeout) на {minutes} мин"
+                elif action =="vmute":
+                    if not user .voice or not user .voice .channel :
+                        await interaction .response .send_message (
+                        embed =error_embed ("Участник не в голосовом канале. Голосовой мьют невозможен."),
+                        ephemeral =True )
+                        return
+                    await user .edit (mute =True )
+                    msg ="микрофон заглушён (голосовой мьют)"
+                elif action =="vunmute":
+                    await user .edit (mute =False )
+                    msg ="микрофон включён"
                 else :  # untimeout
                     await user .timeout (None )
-                    msg ="мьют снят"
+                    msg ="чат-мьют снят"
 
                 case_id =self .save_case (guild .id ,action ,user .id ,interaction .user .id ,reason )
                 dm =mod_dm_embed (action ,guild ,interaction .user ,reason )
@@ -548,10 +559,12 @@ class ModActionSelect(discord.ui.Select):
         options = [
             discord.SelectOption(label="Ban", value="ban", description="Забанить участника"),
             discord.SelectOption(label="Kick", value="kick", description="Выгнать участника"),
-            discord.SelectOption(label="Timeout (Mute)", value="timeout", description="Временный мут"),
+            discord.SelectOption(label="Timeout (Chat Mute)", value="timeout", description="Временный мут чата (timeout)"),
+            discord.SelectOption(label="Voice Mute", value="vmute", description="Заглушить микрофон в голосовом канале"),
             discord.SelectOption(label="Unban", value="unban", description="Разбанить участника (по ID)"),
             discord.SelectOption(label="Очистить сообщения", value="clear", description="Удалить N сообщений"),
-            discord.SelectOption(label="Unmute", value="untimeout", description="Снять мут с участника"),
+            discord.SelectOption(label="Unmute (Chat)", value="untimeout", description="Снять мут чата с участника"),
+            discord.SelectOption(label="Unmute (Voice)", value="vunmute", description="Включить микрофон участника"),
         ]
         super().__init__(
             placeholder="Выберите действие модерации...",
