@@ -2645,7 +2645,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                 cpu =0 
                 ram =0 
                 uptime_sec =0 
-            h ,m =divmod (uptime_sec //60 ,60 )
+            h =uptime_sec //3600 
+            m =(uptime_sec %3600 )//60 
             uptime =f"{h}sa {m}dk"
             history_file ='data/sys_history.json'
             os .makedirs ('data',exist_ok =True )

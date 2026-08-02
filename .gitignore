@@ -26,6 +26,9 @@ ffmpeg-*-essentials_build/
 # Flask sessions
 data/flask_sessions/
 
+# Runtime data — tüm bot verileri (loglar, kayıtlar, leaderboard'lar) repo'ya girmez
+data/
+
 # Log files
 *.log
 

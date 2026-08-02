@@ -672,19 +672,33 @@ class Logs (commands .Cog ):
 
     @commands .Cog .listener ()
     async def on_guild_channel_delete (self ,channel ):
-        save_event (channel .guild .id ,'channel','Канал удалено',{
+        # Кто удалил канал (из audit log)
+        mod_name =None 
+        mod_id =None 
+        try :
+            async for entry in channel .guild .audit_logs (limit =5 ,action =discord .AuditLogAction .channel_delete ):
+                if entry .target .id ==channel .id :
+                    mod_name =entry .user .display_name if entry .user else None 
+                    mod_id =entry .user .id if entry .user else None 
+                    break 
+        except Exception :
+            pass 
+        save_event (channel .guild .id ,'channel','Канал удален',{
         'channel_id':str (channel .id ),
-        'channel_name':channel .name ,
-        'channel_type':str (channel .type ),
+        'channel_name':getattr (channel ,'name','?'),
+        'channel_type':str (getattr (channel ,'type','?')),
+        'mod_name':mod_name or '—',
+        'mod_id':str (mod_id )if mod_id else None ,
         })
         ch =await self .get_log_channel (channel .guild ,'channel')
         if not ch :
             return 
         e =discord .Embed (color =0xE74C3C ,timestamp =datetime .datetime .utcnow ())
         e .description =(
-        f"## Канал удалено\n"
-        f"**{channel.name}** · `{channel.id}`\n\n"
-        f"Tюr: {str(channel.type)}"
+        f"## Канал удален\n"
+        f"**{getattr(channel, 'name', '?')}** · `{channel.id}`\n\n"
+        f"Тип: {str(getattr(channel, 'type', '?'))}\n"
+        f"Удалил: **{mod_name or '—'}** `{mod_id or ''}`"
         )
         e .set_footer (text =f"{channel.guild.name}")
         await ch .send (embed =e )
