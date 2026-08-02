@@ -29,7 +29,7 @@ class CogManager (commands .Cog ):
         )
         await ctx .send (embed =embed )
 
-    @modul_group .command (name ='загрузить')
+    @modul_group .command (name ='yukle')
     @commands .is_owner ()
     async def load_cog (self ,ctx ,cog_name :str ):
         """Cog загрузить"""
@@ -39,7 +39,7 @@ class CogManager (commands .Cog ):
         except Exception as e :
             await ctx .send (f' Ошибка: `{e}`')
 
-    @modul_group .command (name ='удалить')
+    @modul_group .command (name ='kaldir')
     @commands .is_owner ()
     async def unload_cog (self ,ctx ,cog_name :str ):
         """Cog удалить"""
@@ -52,7 +52,7 @@ class CogManager (commands .Cog ):
         except Exception as e :
             await ctx .send (f' Ошибка: `{e}`')
 
-    @modul_group .command (name ='обновить')
+    @modul_group .command (name ='yenile')
     @commands .is_owner ()
     async def reload_cog (self ,ctx ,cog_name :str ):
         """Cog обновить"""

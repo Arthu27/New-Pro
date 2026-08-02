@@ -383,7 +383,7 @@ class _EconomyExtra (commands .Cog ):
         description =f"{r1} {r2} {r3}\n\n{result}\nБаланс: ${data['balance']:,}")
         await ctx .send (embed =e )
 
-    @commands .command (name ='coinflip',aliases =['монетка'])
+    @commands .command (name ='casino-coinflip',aliases =['монетка'])
     async def coinflip (self ,ctx ,bet :int ,choice :str ='орел'):
         """Казино: монетка"""
         data =self ._migrate (ctx .author .id ,self ._get (ctx .author .id ))
@@ -407,7 +407,7 @@ class _EconomyExtra (commands .Cog ):
         e =discord .Embed (title ="🪙 Казино",color =0x95A5A6 ,description =desc )
         await ctx .send (embed =e )
 
-    @commands .command (name ='dice',aliases =['кость'])
+    @commands .command (name ='casino-dice',aliases =['кость'])
     async def dice (self ,ctx ,bet :int =100 ,prediction :str ='higher'):
         """Казино: угадай 4+ (higher) или 3- (lower)"""
         data =self ._migrate (ctx .author .id ,self ._get (ctx .author .id ))

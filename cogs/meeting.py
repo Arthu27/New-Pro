@@ -96,8 +96,8 @@ async def _scan_messages (guild :discord .Guild ,since :datetime .datetime )->di
 
 async def _scan_voice (guild :discord .Guild ,since :datetime .datetime )->dict :
     """
-    voice_stats dosyasыndan собрание sonrasы ses данные al.
-    Примечание: voice_tracker показывает мгновенное число, собрание основано на snapshot.
+    voice_stats dosyasыndan toplanti sonrasы ses данные al.
+    Примечание: voice_tracker показывает мгновенное число, toplanti основано на snapshot.
     Returns: {user_id: seconds}
     """
     vs_path =f'{DATA_DIR}/voice_stats_{guild.id}.json'
@@ -114,7 +114,7 @@ async def _scan_voice (guild :discord .Guild ,since :datetime .datetime )->dict 
         except Exception :
             pass 
 
-            # Snapshot — собрание baшlangыcыndaki значение
+            # Snapshot — toplanti baшlangыcыndaki значение
     snapshot ={}
     if os .path .exists (snapshot_path ):
         try :
@@ -123,7 +123,7 @@ async def _scan_voice (guild :discord .Guild ,since :datetime .datetime )->dict 
         except Exception :
             pass 
 
-            # Разница = bu собрание kazanыlan длительность
+            # Разница = bu toplanti kazanыlan длительность
     result ={}
     for uid ,secs in current .items ():
         prev =snapshot .get (uid ,0 )
@@ -305,7 +305,7 @@ async def _build_meeting_report (guild :discord .Guild ,since :datetime .datetim
         close .set_thumbnail (url =guild .icon .url )
     close .description =(
     f'> Rapor dёnemi: <t:{ts_since}:D> → <t:{ts_now}:D>\n'
-    f'> Bir следующий собрание kadar veriler birikmeye продолжить edecek.\n\n'
+    f'> Bir следующий toplanti kadar veriler birikmeye продолжить edecek.\n\n'
     f'-# Aether  ·  Собрание Система'
     )
     close .set_footer (text =f'{guild.name}',icon_url =guild .icon .url if guild .icon else None )
@@ -360,7 +360,7 @@ class MeetingStartModal (discord .ui .Modal ,title ='Собрание Запус
         embed .description =(
         f'> Собрание baшlangыcы: <t:{ts}:F>\n'
         f'> Сообщения ve ses длительность bu andan itibaren число.\n\n'
-        f'Когда собрание закончится, нажмите кнопку ** Собрание завершено**.'
+        f'Когда toplanti закончится, нажмите кнопку ** Собрание завершено**.'
         )
         await interaction .response .send_message (embed =embed )
 
@@ -385,7 +385,7 @@ class MeetingView (discord .ui .View ):
 
         cfg =_load_cfg (interaction .guild .id )
         if cfg .get ('active'):
-            await interaction .response .send_message (' Zaten активен bir собрание есть!',ephemeral =True )
+            await interaction .response .send_message (' Zaten активен bir toplanti есть!',ephemeral =True )
             return 
 
             # Modal aч — vakit вход
@@ -404,7 +404,7 @@ class MeetingView (discord .ui .View ):
 
         cfg =_load_cfg (interaction .guild .id )
         if not cfg .get ('active'):
-            await interaction .response .send_message (' Активен собрание нет.',ephemeral =True )
+            await interaction .response .send_message (' Активен toplanti нет.',ephemeral =True )
             return 
 
         await interaction .response .defer ()
@@ -472,7 +472,7 @@ class MeetingView (discord .ui .View ):
             await interaction .response .send_message (' Администратор нет.',ephemeral =True )
             return 
         await interaction .response .send_message (
-        ' Добавлено желание роль mention et:\n`!собрание-роли-add @Роль`',
+        ' Добавлено желание роль mention et:\n`!toplanti-rol-add @Роль`',
         ephemeral =True 
         )
 
@@ -498,7 +498,7 @@ class MeetingView (discord .ui .View ):
                 role_list .append (f'• {r.name}')
         await interaction .response .send_message (
         f'**Текущий роли:**\n'+'\n'.join (role_list )+
-        f'\n\nЧыkarmak для: `!собрание-роли-cikar @Роль`',
+        f'\n\nЧыkarmak для: `!toplanti-rol-cikar @Роль`',
         ephemeral =True 
         )
 
@@ -528,18 +528,18 @@ class Meeting (commands .Cog ):
     def __init__ (self ,bot ):
         self .bot =bot 
 
-    @commands .command (name ='собрание')
+    @commands .command (name ='toplanti')
     @commands .has_permissions (administrator =True )
     async def meeting_panel (self ,ctx ):
-        """Собрание panelini отправить: !собрание"""
+        """Собрание panelini отправить: !toplanti"""
         cfg =_load_cfg (ctx .guild .id )
 
         embed =_guild_embed_base (ctx .guild ,'  Собрание Панель управления',0x5865F2 )
         embed .description =(
-        f'> Bu panel с собрание yёnetebilirsin.\n\n'
-        f'** Собрание Запустить** — Новый собрание запуск, Данные число baшlar\n'
+        f'> Bu panel с toplanti yёnetebilirsin.\n\n'
+        f'** Собрание Запустить** — Новый toplanti запуск, Данные число baшlar\n'
         f'** Собрание завершено** — Собрание закрыто, отчёт отправлен\n'
-        f'** В конец Rapor** — В конец собрание bu yana raporu показ'
+        f'** В конец Rapor** — В конец toplanti bu yana raporu показ'
         )
 
         is_active =cfg .get ('active',False )
@@ -558,20 +558,20 @@ class Meeting (commands .Cog ):
         cfg ['panel_message']=msg .id 
         _save_cfg (ctx .guild .id ,cfg )
 
-    @commands .command (name ='собрание-роли-add')
+    @commands .command (name ='toplanti-rol-add')
     @commands .has_permissions (administrator =True )
     async def add_role (self ,ctx ,role :discord .Role ):
-        """Rapora администратор роль add: !собрание-роли-add @Роль"""
+        """Rapora администратор роль add: !toplanti-rol-add @Роль"""
         cfg =_load_cfg (ctx .guild .id )
         if role .id not in cfg .get ('staff_roles',[]):
             cfg .setdefault ('staff_roles',[]).append (role .id )
             _save_cfg (ctx .guild .id ,cfg )
-        await ctx .send (f' **{role.name}** роль собрание raporuna addndi.')
+        await ctx .send (f' **{role.name}** роль toplanti raporuna addndi.')
 
-    @commands .command (name ='собрание-роли-cikar')
+    @commands .command (name ='toplanti-rol-cikar')
     @commands .has_permissions (administrator =True )
     async def remove_role (self ,ctx ,role :discord .Role ):
-        """Роль rapordan удалить: !собрание-роли-cikar @Роль"""
+        """Роль rapordan удалить: !toplanti-rol-cikar @Роль"""
         cfg =_load_cfg (ctx .guild .id )
         if role .id in cfg .get ('staff_roles',[]):
             cfg ['staff_roles'].remove (role .id )

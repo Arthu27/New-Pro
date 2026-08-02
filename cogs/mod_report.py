@@ -1,4 +1,4 @@
-"""Модератор Rapor Система — неделяlыk собрание raporu"""
+"""Модератор Rapor Система — неделяlыk toplanti raporu"""
 import discord 
 from discord .ext import commands ,tasks 
 from discord import app_commands 
@@ -33,7 +33,7 @@ def _load_cfg (guild_id :int )->dict :
     'day':0 ,
     'hour':9 ,
     'staff_roles':[],
-    'last_meeting':None # В конец собрание date (ISO format)
+    'last_meeting':None # В конец toplanti date (ISO format)
     }
 
 
@@ -127,7 +127,7 @@ def _bar (value :int ,max_val :int ,length :int =12 )->str :
 
 
 async def _build_weekly_report (guild :discord .Guild ,days :int =7 ,force_cutoff :datetime .datetime =None )->list [discord .Embed ]:
-    """Неделяlыk собрание raporu — все embed'ler"""
+    """Неделяlыk toplanti raporu — все embed'ler"""
     now =datetime .datetime .now (datetime .timezone .utc )
     cfg =_load_cfg (guild .id )
 
@@ -470,9 +470,9 @@ class ModReportView (discord .ui .View ):
         embed .add_field (name ='День/Время',value =f'{gun_names[cfg.get("day", 0)]} {cfg.get("hour", 9):02d}:00',inline =True )
         embed .description =(
         '**Команды:**\n'
-        '`!rapor-настройк #channel [день] [часов]`\n'
-        '`!rapor-роли-add @Роль`\n'
-        '`!rapor-роли-cikar @Роль`'
+        '`!rapor-ayar #channel [день] [часов]`\n'
+        '`!rapor-rol-add @Роль`\n'
+        '`!rapor-rol-cikar @Роль`'
         )
         await interaction .response .send_message (embed =embed ,ephemeral =True )
 
@@ -539,19 +539,19 @@ class ModReport (commands .Cog ):
         )
         await ctx .send (embed =embed ,view =ModReportView ())
 
-    @commands .command (name ='неделяlik-rapor',aliases =['rapor','report'])
+    @commands .command (name ='haftalik-rapor',aliases =['rapor','report'])
     @commands .has_permissions (manage_messages =True )
     async def weekly_report (self ,ctx ,gun :int =7 ):
-        """Неделяlыk собрание raporunu показать: !неделяlik-rapor [день]"""
+        """Неделяlыk toplanti raporunu показать: !haftalik-rapor [день]"""
         async with ctx .typing ():
             embeds =await _build_weekly_report (ctx .guild ,days =gun )
             for i in range (0 ,len (embeds ),10 ):
                 await ctx .send (embeds =embeds [i :i +10 ])
 
-    @commands .command (name ='rapor-настройк')
+    @commands .command (name ='rapor-ayar')
     @commands .has_permissions (administrator =True )
     async def setup_report (self ,ctx ,channel :discord .TextChannel ,gun :int =0 ,часов :int =9 ):
-        """Автоматически неделяlыk raporu настройк: !rapor-настройк #channel [день] [часов]"""
+        """Автоматически неделяlыk raporu настройк: !rapor-ayar #channel [день] [часов]"""
         cfg =_load_cfg (ctx .guild .id )
         cfg .update ({'enabled':True ,'channel_id':channel .id ,'day':gun ,'hour':часов })
         _save_cfg (ctx .guild .id ,cfg )
@@ -566,30 +566,30 @@ class ModReport (commands .Cog ):
         )
         await ctx .send (embed =embed )
 
-    @commands .command (name ='rapor-роли-add')
+    @commands .command (name ='rapor-rol-add')
     @commands .has_permissions (administrator =True )
     async def add_staff_role (self ,ctx ,role :discord .Role ):
-        """Rapora администратор роль add: !rapor-роли-add @Роль"""
+        """Rapora администратор роль add: !rapor-rol-add @Роль"""
         cfg =_load_cfg (ctx .guild .id )
         if role .id not in cfg .get ('staff_roles',[]):
             cfg .setdefault ('staff_roles',[]).append (role .id )
             _save_cfg (ctx .guild .id ,cfg )
         await ctx .send (f' **{role.name}** роль rapora addndi.')
 
-    @commands .command (name ='rapor-роли-cikar')
+    @commands .command (name ='rapor-rol-cikar')
     @commands .has_permissions (administrator =True )
     async def remove_staff_role (self ,ctx ,role :discord .Role ):
-        """Роль rapordan удалить: !rapor-роли-cikar @Роль"""
+        """Роль rapordan удалить: !rapor-rol-cikar @Роль"""
         cfg =_load_cfg (ctx .guild .id )
         if role .id in cfg .get ('staff_roles',[]):
             cfg ['staff_roles'].remove (role .id )
             _save_cfg (ctx .guild .id ,cfg )
         await ctx .send (f' **{role.name}** роль rapordan удалить.')
 
-    @commands .command (name ='собрание-запустить')
+    @commands .command (name ='toplanti-baslat')
     @commands .has_permissions (administrator =True )
     async def start_meeting (self ,ctx ,date :str =None ):
-        """Собрание запустить: !собрание-запустить [GG.AA.YYYY]"""
+        """Собрание запустить: !toplanti-baslat [GG.AA.YYYY]"""
         cfg =_load_cfg (ctx .guild .id )
 
         # Дата parse et
@@ -598,7 +598,7 @@ class ModReport (commands .Cog ):
                 dt =datetime .datetime .strptime (date ,'%d.%m.%Y')
                 meeting_time =dt .replace (tzinfo =datetime .timezone .utc )
             except ValueError :
-                await ctx .send (' Неверный формат даты! Напр.: `!собрание-запустить 12.04.2026`')
+                await ctx .send (' Неверный формат даты! Напр.: `!toplanti-baslat 12.04.2026`')
                 return 
         else :
             meeting_time =datetime .datetime .now (datetime .timezone .utc )
@@ -617,12 +617,12 @@ class ModReport (commands .Cog ):
         ts =int (meeting_time .timestamp ())
         await ctx .send (f' Собрание date настройк: <t:{ts}:F>\nBir следующий rapor bu date itibaren sayacak.')
 
-    @commands .command (name ='собрание-sayac')
+    @commands .command (name ='toplanti-sayac')
     async def meeting_counter (self ,ctx ):
-        """В конец собрание сколько день geчti: !собрание-sayac"""
+        """В конец toplanti сколько день geчti: !toplanti-sayac"""
         cfg =_load_cfg (ctx .guild .id )
         if not cfg .get ('last_meeting'):
-            await ctx .send (' Пока собрание запуск. `!собрание-запустить` использовать.')
+            await ctx .send (' Пока toplanti запуск. `!toplanti-baslat` использовать.')
             return 
         try :
             last =datetime .datetime .fromisoformat (cfg ['last_meeting'])
@@ -635,7 +635,7 @@ class ModReport (commands .Cog ):
             title =' Собрание Sayacы',
             color =0x5865F2 ,
             description =(
-            f'В конец собрание: <t:{ts}:F>\n'
+            f'В конец toplanti: <t:{ts}:F>\n'
             f'Geчen длительность: **{days} день**'
             )
             )
@@ -643,10 +643,10 @@ class ModReport (commands .Cog ):
         except Exception as e :
             await ctx .send (f' Ошибка: {e}')
 
-    @commands .command (name ='mod-статистика',aliases =['modstats'])
+    @commands .command (name ='mod-stats',aliases =['modstats'])
     @commands .has_permissions (manage_messages =True )
     async def mod_stats (self ,ctx ,moderator :discord .Member =None ):
-        """Модератор статистика: !mod-статистика [@человек]"""
+        """Модератор статистика: !mod-stats [@человек]"""
         target =moderator or ctx .author 
         data =_load_mod_data ()
         gid =str (ctx .guild .id )

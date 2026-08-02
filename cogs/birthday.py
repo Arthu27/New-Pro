@@ -209,7 +209,7 @@ class Birthday (commands .Cog ):
         e .set_footer (text =f"Aether • {interaction.guild.name}",icon_url =interaction .guild .icon .url if interaction .guild .icon else None )
         await interaction .response .send_message (embed =e )
 
-    @app_commands .command (name ='dogumgunu-удалить',description ='Удалить zapis день рождение')
+    @app_commands .command (name ='dogumgunu-sil',description ='Удалить zapis день рождение')
     async def delete_birthday (self ,interaction :discord .Interaction ):
         data =self .get_data (interaction .guild_id )
         uid =str (interaction .user .id )
@@ -238,7 +238,7 @@ class Birthday (commands .Cog ):
         e .set_footer (text =f"Aether • {ctx.guild.name}",icon_url =ctx .guild .icon .url if ctx .guild .icon else None )
         await ctx .send (embed =e )
 
-    @app_commands .command (name ='dogumgunu-настройк',description ="Настройк система день рождение (Менеджер)")
+    @app_commands .command (name ='dogumgunu-ayar',description ="Настройк система день рождение (Менеджер)")
     @app_commands .describe (
     channel ='Kutlama канал',
     role ='Рождение день роль (opsiyonel)',

@@ -419,7 +419,7 @@ class Social (commands .Cog ):
         data [event_id ]['message_id']=str (msg .id )
         _save (path ,data )
 
-    @app_commands .command (name ="etkinlik-список",description ="Показать предстоящие события")
+    @app_commands .command (name ="etkinlik-liste",description ="Показать предстоящие события")
     async def event_list (self ,interaction :discord .Interaction ):
         guild_id =str (interaction .guild .id )
         path =EVENT_FILE .format (guild_id =guild_id )
@@ -524,7 +524,7 @@ class Social (commands .Cog ):
         view =MatchView (match_id ,guild_id ,max_oyuncu )
         await interaction .response .send_message (embed =e ,view =view )
 
-    @app_commands .command (name ="oyun-список",description ="Показать активные поиски игроков")
+    @app_commands .command (name ="oyun-liste",description ="Показать активные поиски игроков")
     async def matchmaking_list (self ,interaction :discord .Interaction ):
         guild_id =str (interaction .guild .id )
         path =MATCH_FILE .format (guild_id =guild_id )

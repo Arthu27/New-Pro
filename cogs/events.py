@@ -88,7 +88,7 @@ class Events (commands .Cog ):
         mention =f'<@&{ev["role_id"]}>'if ev .get ('role_id')else '@everyone'
         await ch .send (content =mention ,embed =embed )
 
-    @app_commands .command (name ='etkinlik-создать',description ='Создать новое событие')
+    @app_commands .command (name ='etkinlik-olustur',description ='Создать новое событие')
     @app_commands .describe (
     baslik ='Событие baшlыгы',
     aciklama ='Событие описание',
@@ -149,7 +149,7 @@ class Events (commands .Cog ):
             )
         await interaction .response .send_message (embed =embed )
 
-    @app_commands .command (name ='etkinlik-отмена',description ='Etkinliгi отмена et')
+    @app_commands .command (name ='etkinlik-iptal',description ='Etkinliгi отмена et')
     @app_commands .checks .has_permissions (manage_events =True )
     async def cancel_event (self ,interaction :discord .Interaction ,etkinlik_id :str ):
         events =self ._load (interaction .guild_id )

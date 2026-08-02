@@ -155,7 +155,7 @@ class AnimeDaily (commands .Cog ):
 
         #  Slash команды 
 
-    @app_commands .command (name ='anime-настройк',description ="Настройк ежедневный предложение anime")
+    @app_commands .command (name ='anime-ayar',description ="Настройк ежедневный предложение anime")
     @app_commands .describe (
     channel ='Anime predlojenielerinin отправл channel',
     kategori ='Anime kategorisi (пусто = rastgele)',
@@ -192,7 +192,7 @@ class AnimeDaily (commands .Cog ):
         embed .set_footer (text ='Каждый день часов 10:00\'da отправл.')
         await interaction .response .send_message (embed =embed )
 
-    @app_commands .command (name ='anime-закрыть',description ="Denanahtarit ежедневный предложение anime")
+    @app_commands .command (name ='anime-kapat',description ="Denanahtarit ежедневный предложение anime")
     @app_commands .checks .has_permissions (manage_channels =True )
     async def anime_disable (self ,interaction :discord .Interaction ):
         cfg =_load ()

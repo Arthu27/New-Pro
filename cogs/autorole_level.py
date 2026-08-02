@@ -135,10 +135,10 @@ class AutoRoleLevel (commands .Cog ):
                         pass 
 
                         # Команды 
-    @commands .command (name ='level-роли-add')
+    @commands .command (name ='level-rol-add')
     @commands .has_permissions (administrator =True )
     async def add_level_role (self ,ctx ,level :int ,role :discord .Role ):
-        """Naznacit роли для opredelenniy уровень. Использование: !level-роли-add 5 @Роль"""
+        """Naznacit роли для opredelenniy уровень. Использование: !level-rol-add 5 @Роль"""
         f =self ._level_roles_file (ctx .guild .id )
         os .makedirs ('data',exist_ok =True )
         data ={}
@@ -153,7 +153,7 @@ class AutoRoleLevel (commands .Cog ):
 
         await ctx .send (f' Роли {role.mention} назначена для уровня **{level}**!')
 
-    @commands .command (name ='level-роли-remove')
+    @commands .command (name ='level-rol-remove')
     @commands .has_permissions (administrator =True )
     async def remove_level_role (self ,ctx ,level :int ):
         """Удалить роли для уровень"""
@@ -175,12 +175,12 @@ class AutoRoleLevel (commands .Cog ):
         else :
             await ctx .send (f' Уровень **{level}** не найден!')
 
-    @commands .command (name ='level-роли')
+    @commands .command (name ='level-rol')
     async def list_level_roles (self ,ctx ):
         """Liste роль для уровни"""
         data =self ._get_level_roles (ctx .guild .id )
         if not data :
-            await ctx .send (' Роли для уровни более не nastroeni! Ispolzuyte `!level-роли-add <уровень> @роли`')
+            await ctx .send (' Роли для уровни более не nastroeni! Ispolzuyte `!level-rol-add <уровень> @роли`')
             return 
 
         embed =discord .Embed (title =' Роли для уровни',color =0xFFD700 )

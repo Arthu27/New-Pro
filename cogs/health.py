@@ -155,7 +155,7 @@ class Health (commands .Cog ):
         e .set_footer (text ="Очкиlama: ban/kick/spam oranы ve активен по hesaplanыr")
         await interaction .response .send_message (embed =e )
 
-    @app_commands .command (name ="channel-статистика",description ="Канал основанный на message статистика показ")
+    @app_commands .command (name ="channel-stats",description ="Канал основанный на message статистика показ")
     async def channel_istatistik (self ,interaction :discord .Interaction ):
         gid =str (interaction .guild .id )
         data =_load_health (gid )
