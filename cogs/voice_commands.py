@@ -17,6 +17,151 @@ from logger import get_logger
 log = get_logger("voice_commands")
 
 
+# ═══════════════════════════════════════════════════════════════════
+#  SELECT-ПАНЕЛЬ ВИДЕО (dropdown-меню)
+# ═══════════════════════════════════════════════════════════════════
+VIDEO_PANEL_COLOR = 0x3498DB
+
+VIDEO_MAIN_OPTIONS = [
+    discord.SelectOption(label="🎬 Анализ видео", value="analyze",
+                         description="Прикрепите видео в канал — бот сам сделает анализ и обзор"),
+    discord.SelectOption(label="📂 Канал результатов", value="channel",
+                         description="Куда отправлять готовые обзоры видео"),
+    discord.SelectOption(label="⏱️ Лимит длительности", value="duration",
+                         description="Максимальная длина видео для авто-анализа"),
+    discord.SelectOption(label="⚙️ Текущие настройки", value="settings",
+                         description="Посмотреть текущие настройки видео-анализа"),
+]
+
+DURATION_OPTIONS = [
+    discord.SelectOption(label="1 мин", value="1", description="Только короткие ролики"),
+    discord.SelectOption(label="3 мин", value="3", description="Клипы и короткие видео"),
+    discord.SelectOption(label="5 мин", value="5", description="Средние видео"),
+    discord.SelectOption(label="10 мин", value="10", description="Стандартный лимит (по умолчанию)"),
+    discord.SelectOption(label="15 мин", value="15", description="Длинные видео"),
+    discord.SelectOption(label="30 мин", value="30", description="Очень длинные видео (медленно)"),
+]
+
+
+def _panel_footer_embed(title: str, description: str, color=VIDEO_PANEL_COLOR) -> discord.Embed:
+    """Общий стиль embed для видео-панели."""
+    embed = discord.Embed(
+        title=title,
+        description=description,
+        color=color,
+        timestamp=discord.utils.utcnow(),
+    )
+    embed.set_footer(text="Видео-анализ • Aether")
+    return embed
+
+
+class VideoMainSelect(discord.ui.Select):
+    """Главный dropdown с выбором действия."""
+
+    def __init__(self, cog):
+        super().__init__(
+            placeholder="Выберите действие...",
+            options=VIDEO_MAIN_OPTIONS,
+            min_values=1,
+            max_values=1,
+        )
+        self.cog = cog
+
+    async def callback(self, interaction: discord.Interaction):
+        value = self.values[0]
+        guild = interaction.guild
+
+        if value == "analyze":
+            embed = _panel_footer_embed(
+                "🎬 Как анализировать видео",
+                "Просто **прикрепите видеофайл** в любой текстовый канал сервера.\n"
+                "Бот **сам** его скачает, извлечёт речь и пришлёт AI-обзор.\n\n"
+                "**Поддерживаемые форматы:** mp4, mov, mkv, webm, avi, m4v\n\n"
+                "Результат появится в канале результатов (см. меню «📂 Канал результатов»).",
+            )
+            await interaction.response.edit_message(embed=embed, view=VideoPanelView(self.cog))
+
+        elif value == "channel":
+            view = VideoPanelView(self.cog)
+            view.add_item(VideoChannelSelect(self.cog))
+            embed = _panel_footer_embed(
+                "📂 Выберите канал для результатов",
+                "Выберите текстовый канал, куда бот будет отправлять готовые обзоры видео.",
+            )
+            await interaction.response.edit_message(embed=embed, view=view)
+
+        elif value == "duration":
+            view = VideoPanelView(self.cog)
+            view.add_item(VideoDurationSelect(self.cog))
+            cur = self.cog._get_max_duration(guild) // 60
+            embed = _panel_footer_embed(
+                "⏱️ Выберите лимит длительности",
+                f"Сейчас лимит: **{cur} мин**.\nВидео длиннее лимита не анализируются (чтобы не грузить бота).",
+            )
+            await interaction.response.edit_message(embed=embed, view=view)
+
+        elif value == "settings":
+            embed = self.cog._video_settings_embed(guild)
+            await interaction.response.edit_message(embed=embed, view=VideoPanelView(self.cog))
+
+
+class VideoChannelSelect(discord.ui.ChannelSelect):
+    """Выбор канала для результатов."""
+
+    def __init__(self, cog):
+        super().__init__(
+            placeholder="Выберите текстовый канал...",
+            channel_types=[discord.ChannelType.text],
+        )
+        self.cog = cog
+
+    async def callback(self, interaction: discord.Interaction):
+        channel = self.values[0]
+        self.cog._set_guild_cfg(interaction.guild, "channel_id", channel.id)
+        embed = _panel_footer_embed(
+            "✅ Канал назначен",
+            f"Готовые обзоры видео теперь отправляются в {channel.mention}.",
+            color=discord.Color.green(),
+        )
+        await interaction.response.edit_message(embed=embed, view=VideoPanelView(self.cog))
+
+
+class VideoDurationSelect(discord.ui.Select):
+    """Выбор лимита длительности."""
+
+    def __init__(self, cog):
+        super().__init__(
+            placeholder="Выберите лимит...",
+            options=DURATION_OPTIONS,
+            min_values=1,
+            max_values=1,
+        )
+        self.cog = cog
+
+    async def callback(self, interaction: discord.Interaction):
+        minutes = int(self.values[0])
+        self.cog._set_guild_cfg(interaction.guild, "max_duration_seconds", minutes * 60)
+        embed = _panel_footer_embed(
+            "✅ Лимит установлен",
+            f"Авто-анализ теперь обрабатывает видео длиной до **{minutes} мин**.",
+            color=discord.Color.green(),
+        )
+        await interaction.response.edit_message(embed=embed, view=VideoPanelView(self.cog))
+
+
+class VideoPanelView(discord.ui.View):
+    """Главный view панели: dropdown + кнопка закрытия."""
+
+    def __init__(self, cog):
+        super().__init__(timeout=300)
+        self.cog = cog
+        self.add_item(VideoMainSelect(cog))
+
+    @discord.ui.button(label="Закрыть", style=discord.ButtonStyle.secondary, emoji="✖", row=1)
+    async def close(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.edit_message(content="Панель закрыта.", embed=None, view=None)
+
+
 class VoiceCommands(commands.Cog):
     """Распознавание голосовых сообщений"""
 
@@ -485,23 +630,45 @@ class VoiceCommands(commands.Cog):
         embed.description = f"Авто-анализ обрабатывает видео длиной до **{minutes} мин**."
         await ctx.send(embed=embed)
 
+    def _video_settings_embed(self, guild) -> discord.Embed:
+        """Embed с текущими настройками видео-анализа."""
+        cfg = self._get_guild_cfg(guild)
+        cid = cfg.get("channel_id")
+        max_sec = int(cfg.get("max_duration_seconds", self.DEFAULT_MAX_DURATION))
+        ch = guild.get_channel(cid) if cid else None
+        embed = _panel_footer_embed(
+            "⚙️ Настройки видео-анализа",
+            "Текущие настройки автоматического анализа видео.",
+        )
+        embed.add_field(name="📂 Канал результатов",
+                        value=ch.mention if ch else "Не назначен (по умолчанию #video-analiz)", inline=False)
+        embed.add_field(name="⏱️ Максимальная длительность",
+                        value=f"**{max_sec // 60} мин**", inline=True)
+        embed.add_field(name="🎬 Форматы",
+                        value="`mp4, mov, mkv, webm, avi, m4v`", inline=True)
+        return embed
+
+    @commands.command(name="video", aliases=["video-panel", "video-menu", "video-panel-ac"])
+    async def video_panel(self, ctx):
+        """🎬 Открыть панель видео-анализа (меню)."""
+        embed = _panel_footer_embed(
+            "🎬 Видео-анализ",
+            "Добро пожаловать в панель видео-анализа!\n\n"
+            "**Что это?** Бот автоматически анализирует видео, которые участники "
+            "прикрепляют в каналы: извлекает речь и делает AI-обзор.\n\n"
+            "Выберите действие в меню ниже.",
+        )
+        embed.add_field(name="📌 Быстрый старт",
+                        value="Просто **прикрепите видео** в любой канал — бот сам пришлёт обзор в канал результатов.",
+                        inline=False)
+        view = VideoPanelView(self)
+        await ctx.send(embed=embed, view=view)
+
     @commands.command(name="video-ayar", aliases=["video-settings"])
     @commands.has_permissions(manage_messages=True)
     async def video_ayar(self, ctx):
         """Показать настройки автоматического анализа видео."""
-        cfg = self._get_guild_cfg(ctx.guild)
-        cid = cfg.get("channel_id")
-        max_sec = int(cfg.get("max_duration_seconds", self.DEFAULT_MAX_DURATION))
-        ch = ctx.guild.get_channel(cid) if cid else None
-        embed = discord.Embed(
-            title="🎬 Настройки авто-анализа видео",
-            color=discord.Color.blurple(),
-            timestamp=discord.utils.utcnow(),
-        )
-        embed.add_field(name="📂 Канал результатов", value=ch.mention if ch else "Не назначен (по умолчанию #video-analiz)", inline=False)
-        embed.add_field(name="⏱️ Максимальная длительность", value=f"{max_sec // 60} мин", inline=False)
-        embed.add_field(name="ℹ️ Команды", value="`!video-kanal #канал` — сменить канал\n`!video-sure <минут>` — сменить лимит", inline=False)
-        await ctx.send(embed=embed)
+        await ctx.send(embed=self._video_settings_embed(ctx.guild))
 
     async def _ai_summarize(self, text: str) -> str:
         """Отправить текст в AI для получения обзора"""
