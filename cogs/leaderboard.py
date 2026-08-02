@@ -354,7 +354,7 @@ class Leaderboard(commands.Cog):
                     with open(path, 'w', encoding='utf-8') as f:
                         json.dump(vs, f, ensure_ascii=False, indent=2)
 
-    @commands.command(name="leaderboard", aliases=["rank", "top", "лб", "рейтинг"])
+    @commands.command(name="leaderboard", aliases=["rank", "лб", "рейтинг"])
     async def leaderboard_cmd(self, ctx, category: str = "messages"):
         try:
             await ctx.message.delete()

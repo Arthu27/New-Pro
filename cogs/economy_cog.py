@@ -407,7 +407,7 @@ class _EconomyExtra (commands .Cog ):
         e =discord .Embed (title ="🪙 Казино",color =0x95A5A6 ,description =desc )
         await ctx .send (embed =e )
 
-    @commands .command (name ='casino-dice',aliases =['кость'])
+    @commands .command (name ='casino-dice',aliases =['casino-zar'])
     async def dice (self ,ctx ,bet :int =100 ,prediction :str ='higher'):
         """Казино: угадай 4+ (higher) или 3- (lower)"""
         data =self ._migrate (ctx .author .id ,self ._get (ctx .author .id ))
@@ -438,7 +438,7 @@ class _EconomyExtra (commands .Cog ):
     'легендарный':{'price':25000 ,'pool':['эпический','легендарный']},
     }
 
-    @commands .command (name ='case',aliases =['кейс'])
+    @commands .command (name ='kasa',aliases =['кейс'])
     async def case (self ,ctx ,case :str ='обычный'):
         """Открыть кейс"""
         key =case .lower ().strip ()
@@ -538,7 +538,7 @@ class _EconomyExtra (commands .Cog ):
         await ctx .send (embed =e )
 
     # ── ИСТОРИЯ ─────────────────────────────────────────────
-    @commands .command (name ='history',aliases =['история'])
+    @commands .command (name ='eko-gecmis',aliases =['история'])
     async def history (self ,ctx ):
         """История операций"""
         data =self ._migrate (ctx .author .id ,self ._get (ctx .author .id ))
