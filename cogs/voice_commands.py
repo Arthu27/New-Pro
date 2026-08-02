@@ -8,7 +8,6 @@ from discord.ext import commands
 import os
 import tempfile
 from typing import Optional
-from datetime import datetime
 
 from logger import get_logger
 
@@ -23,12 +22,14 @@ class VoiceCommands(commands.Cog):
         self.whisper_available = self._check_whisper()
 
     def _check_whisper(self) -> bool:
-        """Проверить доступность Whisper"""
-        try:
-            import whisper
-            return True
-        except ImportError:
-            return False
+        """Проверить доступность Whisper (faster-whisper или openai-whisper)"""
+        for lib in ("faster_whisper", "whisper"):
+            try:
+                __import__(lib)
+                return True
+            except ImportError:
+                continue
+        return False
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -93,7 +94,19 @@ class VoiceCommands(commands.Cog):
                     pass
 
     async def _transcribe_with_whisper(self, audio_path: str) -> Optional[str]:
-        """Распознавание речи через Whisper"""
+        """Распознавание речи через Whisper.
+
+        Сначала пробует faster-whisper (он в requirements.txt), затем openai-whisper.
+        """
+        # faster-whisper — предпочтительный бэкенд (уже в requirements.txt)
+        try:
+            text = await self._transcribe_with_faster_whisper(audio_path)
+            if text:
+                return text
+        except Exception as e:
+            log.warning(f"faster-whisper не сработал, пробуем openai-whisper: {e}")
+
+        # fallback: openai-whisper
         try:
             import whisper
             model = whisper.load_model("base")
@@ -105,6 +118,22 @@ class VoiceCommands(commands.Cog):
             return result.get("text", "").strip()
         except Exception as e:
             log.error(f"Whisper ошибка: {e}")
+            return None
+
+    async def _transcribe_with_faster_whisper(self, audio_path: str) -> Optional[str]:
+        """Распознавание речи через faster-whisper (CTranslate2)."""
+        try:
+            from faster_whisper import WhisperModel
+            model = WhisperModel("base", device="cpu", compute_type="int8")
+            segments, _info = model.transcribe(
+                audio_path,
+                language="ru",
+                vad_filter=True,
+            )
+            text = " ".join(seg.text.strip() for seg in segments).strip()
+            return text or None
+        except Exception as e:
+            log.error(f"faster-whisper ошибка: {e}")
             return None
 
     async def _transcribe_with_api(self, audio_path: str) -> Optional[str]:
@@ -136,7 +165,7 @@ class VoiceCommands(commands.Cog):
         else:
             embed.description += (
                 "Для работы голосовых команд установите Whisper:\n"
-                "```bash\npip install openai-whisper\n```"
+                "```bash\npip install faster-whisper   # рекомендуется\n# или\npip install openai-whisper\n```"
             )
 
         embed.set_footer(text=ctx.guild.name)
@@ -165,7 +194,6 @@ class VoiceCommands(commands.Cog):
     async def video_analiz(self, ctx, link: str = None):
         """Анализ видео: прикрепите файл или дайте ссылку. Извлекает речь и делает AI-обзор."""
         import subprocess
-        import shutil
 
         attachment = ctx.message.attachments[0] if ctx.message.attachments else None
         if not link and not attachment:
@@ -238,7 +266,7 @@ class VoiceCommands(commands.Cog):
             embed = discord.Embed(
                 title="🎬 Анализ видео",
                 color=0x3498DB,
-                timestamp=datetime.now()
+                timestamp=discord.utils.utcnow()
             )
             embed.add_field(name="📝 Транскрипт", value=f"```{text[:1500]}```", inline=False)
             if summary and summary != text:
