@@ -5599,3 +5599,256 @@ input[type="color"].color-picker, input[type="color"] {
   margin: 0 2px;
   box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.25);
 }
+
+/* ============================================================
+   AETHER PANEL — V6 FUSION UPGRADE
+   Futuristic ambient UI · live ambient background · premium polish
+   "Year 2400" interface layer (not cyberpunk — clean, luminous, precise)
+   ============================================================ */
+
+/* ── Ambient background layer ──────────────────────────────── */
+.bg-ambient {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.bg-ambient .orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  opacity: 0.55;
+  will-change: transform;
+}
+.orb-1 {
+  width: 620px; height: 620px;
+  background: radial-gradient(circle, rgba(224,176,74,0.28), transparent 70%);
+  top: -180px; left: -120px;
+  animation: orbFloat1 26s ease-in-out infinite alternate;
+}
+.orb-2 {
+  width: 520px; height: 520px;
+  background: radial-gradient(circle, rgba(167,139,250,0.22), transparent 70%);
+  top: 10%; right: -160px;
+  animation: orbFloat2 30s ease-in-out infinite alternate;
+}
+.orb-3 {
+  width: 480px; height: 480px;
+  background: radial-gradient(circle, rgba(6,182,212,0.16), transparent 70%);
+  bottom: -140px; left: 30%;
+  animation: orbFloat3 34s ease-in-out infinite alternate;
+}
+.orb-4 {
+  width: 380px; height: 380px;
+  background: radial-gradient(circle, rgba(244,114,182,0.12), transparent 70%);
+  bottom: 8%; right: 14%;
+  animation: orbFloat4 22s ease-in-out infinite alternate;
+}
+@keyframes orbFloat1 {
+  0%   { transform: translate(0,0) scale(1); }
+  100% { transform: translate(140px,90px) scale(1.18); }
+}
+@keyframes orbFloat2 {
+  0%   { transform: translate(0,0) scale(1); }
+  100% { transform: translate(-120px,120px) scale(0.9); }
+}
+@keyframes orbFloat3 {
+  0%   { transform: translate(0,0) scale(1); }
+  100% { transform: translate(-160px,-90px) scale(1.22); }
+}
+@keyframes orbFloat4 {
+  0%   { transform: translate(0,0) scale(1); }
+  100% { transform: translate(90px,-110px) scale(1.1); }
+}
+/* Scrolling holographic grid plane */
+.bg-grid-plane {
+  position: absolute;
+  left: -50%; right: -50%; bottom: -10%;
+  height: 45vh;
+  background-image:
+    linear-gradient(rgba(224,176,74,0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(224,176,74,0.05) 1px, transparent 1px);
+  background-size: 46px 46px;
+  transform: perspective(600px) rotateX(58deg);
+  transform-origin: 50% 0%;
+  animation: gridScroll 14s linear infinite;
+  mask-image: linear-gradient(to top, rgba(0,0,0,0.9), transparent 85%);
+  -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,0.9), transparent 85%);
+}
+@keyframes gridScroll {
+  from { background-position: 0 0; }
+  to   { background-position: 0 46px; }
+}
+/* main content sits above the ambient layer */
+.main-content, .sidebar { z-index: 2; }
+body > .bg-ambient + button,
+body > .bg-ambient + aside { position: relative; }
+
+/* ── Sidebar status panel ──────────────────────────────────── */
+.sys-status {
+  margin: 0 14px 14px;
+  padding: 11px 13px;
+  border-radius: 12px;
+  background: linear-gradient(160deg, rgba(224,176,74,0.10), rgba(224,176,74,0.02));
+  border: 1px solid var(--ac-line);
+}
+.sys-status-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+  font-size: 11px;
+}
+.sys-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--ok);
+  box-shadow: 0 0 10px var(--ok);
+  animation: pulse 2s ease-in-out infinite;
+}
+.sys-ico { color: var(--ac); font-size: 10px; width: 12px; text-align: center; }
+.sys-label { color: var(--text-3); flex: 1; }
+.sys-val { color: var(--ok); font-weight: 600; }
+.mono { font-family: 'JetBrains Mono', monospace; }
+.sys-val.mono, .navbar-clock span { color: var(--ac-2); }
+
+/* ── Navbar clock ──────────────────────────────────────────── */
+.navbar-clock {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 14px;
+  border-radius: 10px;
+  background: rgba(224,176,74,0.08);
+  border: 1px solid var(--ac-line);
+  font-size: 12.5px;
+  color: var(--ac-2);
+}
+.navbar-clock i { font-size: 12px; color: var(--ac); }
+[data-theme="light"] .navbar-clock { background: rgba(224,176,74,0.14); }
+
+/* ── Brand upgrade ─────────────────────────────────────────── */
+.brand {
+  position: relative;
+  overflow: hidden;
+}
+.brand::after {
+  content: '';
+  position: absolute;
+  bottom: -1px; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--ac), transparent);
+}
+.brand-icon {
+  box-shadow: 0 6px 20px var(--ac-glow), inset 0 1px 0 rgba(255,255,255,0.25),
+              0 0 0 1px rgba(255,255,255,0.06);
+}
+
+/* ── Card hover glow ───────────────────────────────────────── */
+.card, .panel, .stat-card, .dash-card, .dash-box, .info-card, .server-card,
+.guild-card, .log-card, .logs-box, .warn-box, .ch-box, .setting-card,
+.bulk-card, .cr-box, .rr-card, .at-box, .td-card, .gt-card, .note-card,
+.ms-card, .roles-card, .modal-box, .kbd-palette-panel, .activity-drawer,
+.notif-dropdown {
+  transition: transform 0.25s var(--ease), box-shadow 0.25s var(--ease),
+              border-color 0.25s var(--ease), background 0.25s var(--ease);
+}
+.card:hover, .panel:hover, .stat-card:hover, .dash-card:hover, .dash-box:hover,
+.info-card:hover, .server-card:hover, .guild-card:hover, .setting-card:hover,
+.cr-box:hover, .rr-card:hover, .at-box:hover, .note-card:hover, .ms-card:hover,
+.roles-card:hover, .bulk-card:hover, .td-card:hover, .gt-card:hover {
+  border-color: var(--ac-line);
+  box-shadow: 0 10px 40px rgba(0,0,0,0.4), 0 0 24px var(--ac-glow);
+}
+
+/* ── Buttons sheen + press ─────────────────────────────────── */
+.btn, .btn-primary, .btn-success, .btn-submit, .save-btn, .btn-new,
+.send-btn, .search-btn, .add-note-btn, .btn-add-entry, .btn-exec {
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.15s var(--ease), box-shadow 0.25s var(--ease),
+              filter 0.2s var(--ease);
+}
+.btn::after, .btn-primary::after, .btn-success::after, .btn-submit::after,
+.save-btn::after, .btn-new::after, .send-btn::after, .search-btn::after {
+  content: '';
+  position: absolute;
+  top: 0; left: -80%;
+  width: 50%; height: 100%;
+  background: linear-gradient(120deg, transparent, rgba(255,255,255,0.35), transparent);
+  transform: skewX(-20deg);
+  transition: left 0.6s var(--ease);
+  pointer-events: none;
+}
+.btn:hover::after, .btn-primary:hover::after, .btn-success:hover::after,
+.btn-submit:hover::after, .save-btn:hover::after, .btn-new:hover::after,
+.send-btn:hover::after, .search-btn:hover::after { left: 130%; }
+.btn:active, .btn-primary:active, .btn-submit:active, .send-btn:active,
+.btn-new:active { transform: translateY(1px) scale(0.985); }
+
+/* ── Nav link active glint ─────────────────────────────────── */
+.nav-link { position: relative; }
+.nav-link.active::before {
+  width: 3px;
+  background: linear-gradient(180deg, var(--ac), var(--ac-3));
+  box-shadow: 0 0 12px var(--ac-glow);
+}
+.nav-link:hover i { text-shadow: 0 0 8px var(--ac-glow); }
+.nav-link.active { background: linear-gradient(90deg, var(--ac-soft), transparent); }
+
+/* ── Scrollbar polish ──────────────────────────────────────── */
+*::-webkit-scrollbar { width: 9px; height: 9px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--ac-line), var(--line-2));
+  border-radius: 99px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, var(--ac), var(--ac-3)); }
+
+/* ── Inputs focus glow ─────────────────────────────────────── */
+input[type="text"], input[type="number"], input[type="password"],
+input[type="search"], input[type="email"], textarea, select, .form-input,
+.field-input, .search-input, .form-control {
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+input[type="text"]:focus, input[type="number"]:focus, input[type="password"]:focus,
+textarea:focus, select:focus, .form-input:focus, .field-input:focus,
+.search-input:focus {
+  border-color: var(--ac);
+  box-shadow: 0 0 0 3px var(--ac-soft), 0 0 18px var(--ac-glow);
+}
+
+/* ── Table rows ────────────────────────────────────────────── */
+tbody tr { transition: background 0.2s var(--ease); }
+tbody tr:hover { background: rgba(224,176,74,0.05); }
+
+/* ── Headings ambient glow ─────────────────────────────────── */
+.page-hero h1 {
+  filter: drop-shadow(0 0 18px rgba(224,176,74,0.18));
+}
+
+/* ── Toast polish ──────────────────────────────────────────── */
+#toastHost > div {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.12);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+}
+
+/* ── Reduced motion safety ─────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .bg-ambient .orb, .bg-grid-plane { animation: none !important; }
+  .btn::after { display: none; }
+}
+
+/* ── Light theme adjustments for ambient layer ─────────────── */
+[data-theme="light"] .orb-1 { background: radial-gradient(circle, rgba(224,176,74,0.18), transparent 70%); }
+[data-theme="light"] .orb-2 { background: radial-gradient(circle, rgba(167,139,250,0.14), transparent 70%); }
+[data-theme="light"] .bg-grid-plane {
+  background-image:
+    linear-gradient(rgba(176,138,46,0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(176,138,46,0.07) 1px, transparent 1px);
+}
+[data-theme="light"] .card:hover, [data-theme="light"] .dash-card:hover,
+[data-theme="light"] .setting-card:hover {
+  box-shadow: 0 10px 34px rgba(176,138,46,0.16), 0 0 20px var(--ac-glow);
+}

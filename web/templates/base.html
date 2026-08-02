@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Панель Aether{% endblock %}</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/static/style.css?v=5">
+    <link rel="stylesheet" href="/static/style.css?v=6">
     <script>
       // Apply theme before render to prevent FOUC
       (function(){
@@ -17,6 +17,15 @@
     </script>
 </head>
 <body>
+    <!-- Futuristic ambient background layer -->
+    <div class="bg-ambient" aria-hidden="true">
+        <span class="orb orb-1"></span>
+        <span class="orb orb-2"></span>
+        <span class="orb orb-3"></span>
+        <span class="orb orb-4"></span>
+        <div class="bg-grid-plane"></div>
+    </div>
+
     <button class="mobile-menu" id="mobileMenu" aria-label="Меню"><i class="fas fa-bars"></i></button>
 
     <aside class="sidebar" id="sidebar">
@@ -242,9 +251,26 @@
         </nav>
 
         <div class="sidebar-foot">
+            <div class="sys-status">
+                <div class="sys-status-row">
+                    <span class="sys-dot"></span>
+                    <span class="sys-label">Система</span>
+                    <span class="sys-val">Online</span>
+                </div>
+                <div class="sys-status-row">
+                    <i class="fas fa-microchip sys-ico"></i>
+                    <span class="sys-label">Uptime</span>
+                    <span class="sys-val mono" id="sysUptime">00:00:00</span>
+                </div>
+                <div class="sys-status-row">
+                    <i class="fas fa-clock sys-ico"></i>
+                    <span class="sys-label">Время</span>
+                    <span class="sys-val mono" id="sysClock">--:--:--</span>
+                </div>
+            </div>
             <div class="sidebar-version">
-                <i class="fas fa-circle" ></i>
-                v2.0 · Online
+                <i class="fas fa-bolt" ></i>
+                AETHER <span class="mono">v2.0</span> · Core
             </div>
         </div>
     </aside>
@@ -255,6 +281,10 @@
                 <h1>{% block page_title %}Панель управления{% endblock %}</h1>
             </div>
             <div class="navbar-right">
+                <div class="navbar-clock" title="Текущее время">
+                    <i class="fas fa-clock"></i>
+                    <span id="navClock">--:--:--</span>
+                </div>
                 <button class="nav-icon-btn" title="Поиск (Ctrl+K)" id="globalSearchBtn"><i class="fas fa-search"></i></button>
                 <button class="activity-btn" title="Лента активности" id="activityBtn" aria-label="Activity">
                     <i class="fas fa-stream"></i>
@@ -1066,6 +1096,36 @@ window.addEventListener('pageshow', function (e) {
 
   // Start
   resetIdle();
+})();
+
+// ============================================================
+// LIVE CLOCK + SESSION UPTIME
+// ============================================================
+(function () {
+  var pageStart = Date.now();
+  var navClock = document.getElementById('navClock');
+  var sysClock = document.getElementById('sysClock');
+  var sysUp = document.getElementById('sysUptime');
+
+  function pad(n) { return n < 10 ? '0' + n : '' + n; }
+
+  function tick() {
+    var now = new Date();
+    var hh = pad(now.getHours());
+    var mm = pad(now.getMinutes());
+    var ss = pad(now.getSeconds());
+    var str = hh + ':' + mm + ':' + ss;
+    if (navClock) navClock.textContent = str;
+    if (sysClock) sysClock.textContent = str;
+
+    var up = Math.floor((Date.now() - pageStart) / 1000);
+    var h = Math.floor(up / 3600);
+    var m = Math.floor((up % 3600) / 60);
+    var s = up % 60;
+    if (sysUp) sysUp.textContent = pad(h) + ':' + pad(m) + ':' + pad(s);
+  }
+  tick();
+  setInterval(tick, 1000);
 })();
 
 // ============================================================
