@@ -115,7 +115,7 @@
       var a = (l.action || '?').toLowerCase();
       var c = colors[a] || 'var(--text-3)';
       return '<tr><td><span class="action-badge" >' + esc(l.action || '?') + '</span></td>' +
-        '<td >' + esc(l.user_name || l.user_id || '-') + '</td>' +
+        '<td >' + esc(l.user_name || l.channel_name || l.role_name || l.user_id || '-') + '</td>' +
         '<td >' + esc(l.mod_name || l.mod_id || '-') + '</td>' +
         '<td   style="max-width: 160px; overflow: hidden;">' + esc(l.reason || '-') + '</td>' +
         '<td >' + esc(fmtDate(l.timestamp)) + '</td></tr>';

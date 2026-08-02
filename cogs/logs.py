@@ -715,15 +715,15 @@ class Logs (commands .Cog ):
             # ROLES 
 
     @commands .Cog .listener ()
-    async def on_guild_role_create (self ,roles ):
-        save_event (role .guild .id ,'role','Роль создан',{
+    async def on_guild_role_create (self ,role ):
+        save_event (role .guild .id ,'role','Роль создана',{
         'role_id':str (role .id ),
         'role_name':role .name ,
         })
 
     @commands .Cog .listener ()
-    async def on_guild_role_delete (self ,roles ):
-        save_event (role .guild .id ,'role','Роль удалено',{
+    async def on_guild_role_delete (self ,role ):
+        save_event (role .guild .id ,'role','Роль удалена',{
         'role_id':str (role .id ),
         'role_name':role .name ,
         })
