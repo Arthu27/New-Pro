@@ -400,6 +400,119 @@ class Moderation (commands .Cog ):
 
         # /leaveguild 
 
+    # ═══════════════════════════════════════════════════════════════════
+    #  /modpanel — панель модерации через select-меню
+    # ═══════════════════════════════════════════════════════════════════
+    @app_commands .command (name ="modpanel",description ="Панель модерации (выпадающее меню)")
+    @app_commands .checks .has_permissions (moderate_members =True )
+    async def modpanel (self ,interaction ):
+        embed =discord .Embed (
+        title ="🛡 Модерация",
+        description =(
+        "Выберите действие в выпадающем меню ниже.\n"
+        "После выбора откроется окно для ввода цели и причины."
+        ),
+        color =0x3498DB ,
+        timestamp =datetime .now (timezone .utc )
+        )
+        if interaction .guild .icon :
+            embed .set_footer (text =f"{interaction.guild.name} · Модерация",icon_url =interaction .guild .icon .url )
+        else :
+            embed .set_footer (text =f"{interaction.guild.name} · Модерация")
+        await interaction .response .send_message (embed =embed ,view =ModPanelView (self ))
+
+    def _parse_target_id (self ,target :str ):
+        """Из '@упоминание' или '123456789' вернуть int ID (или None)."""
+        if not target :
+            return None
+        import re as _re
+        m =_re .search (r'(\d{15,20})',target )
+        if m :
+            return int (m .group (1 ))
+        return None
+
+    async def _execute_mod_action (self ,interaction ,action ,target ,reason ,amount ):
+        """Выполнить выбранное действие модерации."""
+        guild =interaction .guild
+
+        if action in ("ban","kick","timeout","untimeout"):
+            uid =self ._parse_target_id (target )
+            user =discord .utils .get (guild .members ,id =uid ) if uid else None
+            if not user :
+                try :
+                    user =await self .bot .fetch_user (uid ) if uid else None
+                except Exception :
+                    user =None
+            if not user :
+                await interaction .response .send_message (
+                embed =error_embed ("Пользователь не найден. Укажите корректный ID или упоминание."),
+                ephemeral =True )
+                return
+
+            try :
+                if action =="ban":
+                    await user .ban (reason =reason )
+                    msg ="пользователь забанен"
+                elif action =="kick":
+                    await user .kick (reason =reason )
+                    msg ="пользователь исключён"
+                elif action =="timeout":
+                    minutes =max (1 ,int (amount )or 5 )
+                    until =discord .utils .utcnow ()+timedelta (minutes =minutes )
+                    await user .timeout (until ,reason =reason )
+                    msg =f"пользователь замьючен на {minutes} мин"
+                else :  # untimeout
+                    await user .timeout (None )
+                    msg ="мьют снят"
+
+                case_id =self .save_case (guild .id ,action ,user .id ,interaction .user .id ,reason )
+                dm =mod_dm_embed (action ,guild ,interaction .user ,reason )
+                await self .send_dm (user ,dm )
+                log =mod_log_embed (action ,action .capitalize (),0x3498DB ,user ,interaction .user ,guild ,reason ,case_id )
+                await self .send_log (guild ,log )
+
+                confirm =success_embed (
+                f"Действие выполнено",
+                f"**{user.display_name}** · `{user.id}`\n{msg}\n**Причина:** {reason}\n**Дело:** #{case_id}",
+                guild =guild )
+                await interaction .response .send_message (embed =confirm ,ephemeral =True )
+            except discord .Forbidden :
+                await interaction .response .send_message (
+                embed =error_embed ("Недостаточно прав для этого действия."),ephemeral =True )
+            except Exception as ex :
+                await interaction .response .send_message (embed =error_embed (str (ex )),ephemeral =True )
+
+        elif action =="unban":
+            uid =self ._parse_target_id (target )
+            if not uid :
+                await interaction .response .send_message (
+                embed =error_embed ("Укажите ID пользователя для разбана."),ephemeral =True )
+                return
+            try :
+                fetched =await self .bot .fetch_user (uid )
+                await guild .unban (fetched )
+                case_id =self .save_case (guild .id ,"unban",fetched .id ,interaction .user .id ,reason )
+                confirm =success_embed (
+                "Разбан",
+                f"**{fetched.name}** · `{fetched.id}`\nПользователь разбанен.\n**Дело:** #{case_id}",
+                guild =guild )
+                await self .send_log (guild ,confirm )
+                await interaction .response .send_message (embed =confirm ,ephemeral =True )
+            except Exception as ex :
+                await interaction .response .send_message (embed =error_embed (str (ex )),ephemeral =True )
+
+        elif action =="clear":
+            try :
+                count =max (1 ,min (int (amount )or 10 ,200 ))
+            except Exception :
+                count =10
+            deleted =await interaction .channel .purge (limit =count )
+            confirm =success_embed (
+            "Сообщения удалены",
+            f"Удалено **{len(deleted)}** сообщений в {interaction.channel.mention}",
+            guild =guild )
+            await interaction .response .send_message (embed =confirm ,ephemeral =True )
+
     @app_commands .command (name ="leaveguild",description ="Покинуть сервер (только владелец бота)")
     async def leave_guild (self ,interaction ,guild_id :str ):
         app_info =await self .bot .application_info ()
@@ -423,6 +536,78 @@ class Moderation (commands .Cog ):
             await interaction .response .send_message (embed =error_embed ("Неверный ID сервер."),ephemeral =True )
         except Exception as ex :
             await interaction .response .send_message (embed =error_embed (str (ex )),ephemeral =True )
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  SELECT-МЕНЮ МОДЕРАЦИИ (без кнопок/эмодзи — только выпадающие меню)
+# ═══════════════════════════════════════════════════════════════════
+class ModActionSelect(discord.ui.Select):
+    """Выбор действия модерации."""
+
+    def __init__(self, cog):
+        options = [
+            discord.SelectOption(label="Ban", value="ban", description="Забанить участника"),
+            discord.SelectOption(label="Kick", value="kick", description="Выгнать участника"),
+            discord.SelectOption(label="Timeout (Mute)", value="timeout", description="Временный мут"),
+            discord.SelectOption(label="Unban", value="unban", description="Разбанить участника (по ID)"),
+            discord.SelectOption(label="Очистить сообщения", value="clear", description="Удалить N сообщений"),
+            discord.SelectOption(label="Unmute", value="untimeout", description="Снять мут с участника"),
+        ]
+        super().__init__(
+            placeholder="Выберите действие модерации...",
+            options=options,
+            min_values=1,
+            max_values=1,
+        )
+        self.cog = cog
+
+    async def callback(self, interaction: discord.Interaction):
+        action = self.values[0]
+        modal = ModActionModal(self.cog, action)
+        await interaction.response.send_modal(modal)
+
+
+class ModActionModal(discord.ui.Modal):
+    """Модальное окно ввода данных для выбранного действия."""
+
+    def __init__(self, cog, action):
+        self.cog = cog
+        self.action = action
+        title = "Модерация"
+        super().__init__(title=title)
+
+        self.target = discord.ui.TextInput(
+            label="Цель (ID или @упоминание)", required=False,
+            placeholder="123456789012345678 или @пользователь",
+        )
+        self.reason = discord.ui.TextInput(
+            label="Причина", required=False, default="Не указана",
+            style=discord.TextStyle.short,
+        )
+        self.amount = discord.ui.TextInput(
+            label="Минут (timeout) / количество (clear)", required=False,
+            default="5",
+        )
+        self.add_item(self.target)
+        self.add_item(self.reason)
+        self.add_item(self.amount)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await self.cog._execute_mod_action(
+            interaction,
+            self.action,
+            self.target.value or "",
+            self.reason.value or "",
+            self.amount.value or "5",
+        )
+
+
+class ModPanelView(discord.ui.View):
+    """View панели: только выпадающее меню, без кнопок."""
+
+    def __init__(self, cog):
+        super().__init__(timeout=300)
+        self.add_item(ModActionSelect(cog))
 
 
 async def setup (bot ):
