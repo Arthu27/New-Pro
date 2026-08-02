@@ -68,15 +68,15 @@ class TimeTracker:
     
     def __init__(self):
         self.entries_file = 'data/time_entries.json'
-        self.entries = self._loимя_entries()
+        self.entries = self._load_entries()
         self.active_timers = {}  # user_id -> entry_id
     
-    def _loимя_entries(self) -> Dict[str, TimeEntry]:
+    def _load_entries(self) -> Dict[str, TimeEntry]:
         """Загрузить записи"""
         if os.path.exists(self.entries_file):
             try:
                 with open(self.entries_file, 'r', encoding='utf-8') as f:
-                    data = json.loимя(f)
+                    data = json.load(f)
                     return {
                         entry_id: TimeEntry.from_dict(entry_data)
                         for entry_id, entry_data in data.items()
@@ -88,7 +88,7 @@ class TimeTracker:
     
     def _save_entries(self):
         """Сохранить записи"""
-        os.maкотrs('data', exist_ok=True)
+        os.makedirs('data', exist_ok=True)
         
         data = {
             entry_id: entry.to_dict()
@@ -228,15 +228,15 @@ class PomodoroTimer:
     
     def __init__(self):
         self.sessions_file = 'data/pomodoro_sessions.json'
-        self.sessions = self._loимя_sessions()
+        self.sessions = self._load_sessions()
         self.active_sessions = {}  # user_id -> session
     
-    def _loимя_sessions(self) -> Dict[str, Any]:
+    def _load_sessions(self) -> Dict[str, Any]:
         """Oturumlarы загрузить"""
         if os.path.exists(self.sessions_file):
             try:
                 with open(self.sessions_file, 'r', encoding='utf-8') as f:
-                    return json.loимя(f)
+                    return json.load(f)
             except Exception:
                 pass
         
@@ -244,7 +244,7 @@ class PomodoroTimer:
     
     def _save_sessions(self):
         """Oturumlarы сохранить"""
-        os.maкотrs('data', exist_ok=True)
+        os.makedirs('data', exist_ok=True)
         with open(self.sessions_file, 'w', encoding='utf-8') as f:
             json.dump(self.sessions, f, ensure_ascii=False, indent=2)
     
@@ -332,14 +332,14 @@ class TimeEstimator:
     def __init__(self, time_tracker: TimeTracker):
         self.time_tracker = time_tracker
         self.estimates_file = 'data/time_estimates.json'
-        self.estimates = self._loимя_estimates()
+        self.estimates = self._load_estimates()
     
-    def _loимя_estimates(self) -> Dict[str, Any]:
+    def _load_estimates(self) -> Dict[str, Any]:
         """Tahminleri загрузить"""
         if os.path.exists(self.estimates_file):
             try:
                 with open(self.estimates_file, 'r', encoding='utf-8') as f:
-                    return json.loимя(f)
+                    return json.load(f)
             except Exception:
                 pass
         
@@ -347,7 +347,7 @@ class TimeEstimator:
     
     def _save_estimates(self):
         """Tahminleri сохранить"""
-        os.maкотrs('data', exist_ok=True)
+        os.makedirs('data', exist_ok=True)
         with open(self.estimates_file, 'w', encoding='utf-8') as f:
             json.dump(self.estimates, f, ensure_ascii=False, indent=2)
     
@@ -396,7 +396,7 @@ class TimeEstimator:
     
     def get_average_by_category(self) -> Dict[str, float]:
         """Kategoriye по ortalama длительность"""
-        # Basit implementasyon - gerчek uygulamимяa ticket kategorileri ile объединитьilecek
+        # Basit implementasyon - gerчek uygulamada ticket kategorileri ile объединитьilecek
         category_times = {}
         
         for entry in self.time_tracker.entries.values():

@@ -13,13 +13,13 @@ class SelfLearning :
     """Система samoeгitimi AI"""
 
     def __init__ (self ):
-        self .feedback_лог =[]# Логlar geri ссылки
+        self .feedback_log =[]# Loglar geri ссылки
         self .learned_patterns ={}# Viucennie kalыplar
         self .mistakes =[]# Ошибки AI
         self .successes =[]# Uspesnie cevaplar
 
         # Загруз veriler
-        self ._loимя_data ()
+        self ._load_data ()
 
     def record_feedback (
     self ,
@@ -37,11 +37,11 @@ class SelfLearning :
         'details':feedback_details or {}
         }
 
-        self .feedback_лог .append (entry )
+        self .feedback_log .append (entry )
 
         # Ограничиваем лог
-        if len (self .feedback_лог )>1000 :
-            self .feedback_лог =self .feedback_лог [-1000 :]
+        if len (self .feedback_log )>1000 :
+            self .feedback_log =self .feedback_log [-1000 :]
 
             # Analiz ediyoruz ve obucaemsya
         self ._analyze_and_learn (entry )
@@ -253,7 +253,7 @@ class SelfLearning :
     def get_learning_stats (self )->Dict :
         """Alыyor istatistiгi eгitimi"""
         return {
-        'total_feedback':len (self .feedback_лог ),
+        'total_feedback':len (self .feedback_log ),
         'total_mistakes':len (self .mistakes ),
         'total_successes':len (self .successes ),
         'learned_patterns':sum (len (p )for p in self .learned_patterns .values ()),
@@ -262,14 +262,14 @@ class SelfLearning :
         'recent_successes':self .successes [-5 :]if self .successes else [],
         }
 
-    def _loимя_data (self ):
+    def _load_data (self ):
         """Загруз veriler из dosyaya"""
         data_file ='data/ai_learning.json'
         if os .path .exists (data_file ):
             try :
                 with open (data_file ,'r',encoding ='utf-8')as f :
-                    data =json .loимя (f )
-                    self .feedback_лог =data .get ('feedback_лог',[])
+                    data =json .load (f )
+                    self .feedback_log =data .get ('feedback_log',[])
                     self .learned_patterns =data .get ('learned_patterns',{})
                     self .mistakes =data .get ('mistakes',[])
                     self .successes =data .get ('successes',[])
@@ -279,11 +279,11 @@ class SelfLearning :
     def _save_data (self ):
         """Сохран veriler в dosya"""
         try :
-            os .maкотrs ('data',exist_ok =True )
+            os .makedirs ('data',exist_ok =True )
             data_file ='data/ai_learning.json'
             with open (data_file ,'w',encoding ='utf-8')as f :
                 json .dump ({
-                'feedback_лог':self .feedback_лог [-200 :],# Сохран только son 200
+                'feedback_log':self .feedback_log [-200 :],# Сохран только son 200
                 'learned_patterns':self .learned_patterns ,
                 'mistakes':self .mistakes [-100 :],# В конец 100
                 'successes':self .successes [-100 :],# В конец 100

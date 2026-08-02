@@ -385,7 +385,7 @@ class TempModeration(commands.Cog):
         embed.add_field(name="Модератор", value=ctx.author.mention, inline=True)
         await ctx.send(embed=embed)
 
-    @commands.command(name="tempkick", aliases=["softkick", "мягкий_кик"])
+    @commands.command(name="tempkick", aliases=["softkick", "мягкий_kick"])
     @commands.has_permissions(kick_members=True)
     async def tempkick_cmd(self, ctx, member: discord.Member, duration: str = "5m", *, reason: str = "Без причины"):
         """Временный кик: !tempkick @user 5m причина (пользователь сможет вернуться через N минут)"""

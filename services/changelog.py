@@ -46,7 +46,7 @@ class ChangelogEntry:
         self.breaking_change = False
         self.migration_guide = None
         self.related_issues = []
-        self.metимяata = {}
+        self.metadata = {}
     
     def set_severity(self, severity: ChangeSeverity):
         """Ёnem derecesi настроить"""
@@ -77,9 +77,9 @@ class ChangelogEntry:
         if issue_id not in self.related_issues:
             self.related_issues.append(issue_id)
     
-    def add_metимяata(self, key: str, value: Any):
-        """Metимяata добавить"""
-        self.metимяata[key] = value
+    def add_metadata(self, key: str, value: Any):
+        """Metadata добавить"""
+        self.metadata[key] = value
     
     def to_dict(self) -> Dict[str, Any]:
         """Dict'e чevir"""
@@ -97,7 +97,7 @@ class ChangelogEntry:
             'breaking_change': self.breaking_change,
             'migration_guide': self.migration_guide,
             'related_issues': self.related_issues,
-            'metимяata': self.metимяata
+            'metadata': self.metadata
         }
     
     @classmethod
@@ -118,7 +118,7 @@ class ChangelogEntry:
         entry.breaking_change = data.get('breaking_change', False)
         entry.migration_guide = data.get('migration_guide')
         entry.related_issues = data.get('related_issues', [])
-        entry.metимяata = data.get('metимяata', {})
+        entry.metadata = data.get('metadata', {})
         return entry
 
 
@@ -127,14 +127,14 @@ class ChangelogManager:
     
     def __init__(self):
         self.changelog_file = 'data/changelog.json'
-        self.entries = self._loимя_entries()
+        self.entries = self._load_entries()
     
-    def _loимя_entries(self) -> Dict[str, ChangelogEntry]:
+    def _load_entries(self) -> Dict[str, ChangelogEntry]:
         """Загрузить записи"""
         if os.path.exists(self.changelog_file):
             try:
                 with open(self.changelog_file, 'r', encoding='utf-8') as f:
-                    data = json.loимя(f)
+                    data = json.load(f)
                     return {
                         entry_id: ChangelogEntry.from_dict(entry_data)
                         for entry_id, entry_data in data.items()
@@ -146,7 +146,7 @@ class ChangelogManager:
     
     def _save_entries(self):
         """Сохранить записи"""
-        os.maкотrs('data', exist_ok=True)
+        os.makedirs('data', exist_ok=True)
         
         data = {
             entry_id: entry.to_dict()
@@ -348,7 +348,7 @@ class ChangelogGenerator:
         
         html = f"""<!DOCTYPE html>
 <html>
-<heимя>
+<head>
  <meta charset="UTF-8">
  <title>Changelog</title>
  <style>
@@ -358,7 +358,7 @@ class ChangelogGenerator:
  h3 {{ color: #777; }}
  li {{ margin: 5px 0; }}
  </style>
-</heимя>
+</head>
 <body>
 {html}
 </body>
@@ -385,14 +385,14 @@ class ChangelogNotification:
     def __init__(self, changelog_manager: ChangelogManager):
         self.changelog_manager = changelog_manager
         self.subscriptions_file = 'data/changelog_subscriptions.json'
-        self.subscriptions = self._loимя_subscriptions()
+        self.subscriptions = self._load_subscriptions()
     
-    def _loимя_subscriptions(self) -> Dict[str, Any]:
+    def _load_subscriptions(self) -> Dict[str, Any]:
         """Abonelikleri загрузить"""
         if os.path.exists(self.subscriptions_file):
             try:
                 with open(self.subscriptions_file, 'r', encoding='utf-8') as f:
-                    return json.loимя(f)
+                    return json.load(f)
             except Exception:
                 pass
         
@@ -400,7 +400,7 @@ class ChangelogNotification:
     
     def _save_subscriptions(self):
         """Abonelikleri сохранить"""
-        os.maкотrs('data', exist_ok=True)
+        os.makedirs('data', exist_ok=True)
         with open(self.subscriptions_file, 'w', encoding='utf-8') as f:
             json.dump(self.subscriptions, f, ensure_ascii=False, indent=2)
     

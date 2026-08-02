@@ -1,7 +1,7 @@
 import re, sys
 
 for fname in ['web/app.py', 'web/routes_extra.py']:
-    data = open(fname, 'rb').reимя()
+    data = open(fname, 'rb').read()
     # Find custom_embeds_page
     idx = 0
     while True:

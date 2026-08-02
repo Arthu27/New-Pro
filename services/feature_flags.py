@@ -21,7 +21,7 @@ class FeatureFlag:
         self.rollout_percentage = 0  # 0-100
         self.targeting_rules = []
         self.variants = {}  # variant_key -> enabled
-        self.metимяata = {}
+        self.metadata = {}
         self.created_at = datetime.now()
         self.created_by = None
         self.tags = {}
@@ -54,9 +54,9 @@ class FeatureFlag:
         """Добавить метку"""
         self.tags[key] = value
     
-    def add_metимяata(self, key: str, value: Any):
-        """Metимяata добавить"""
-        self.metимяata[key] = value
+    def add_metadata(self, key: str, value: Any):
+        """Metadata добавить"""
+        self.metadata[key] = value
     
     def is_enabled_for_user(self, user_id: str, user_context: Dict[str, Any] = None) -> bool:
         """Пользователь для etkin mi проверить et"""
@@ -154,7 +154,7 @@ class FeatureFlag:
             'rollout_percentage': self.rollout_percentage,
             'targeting_rules': self.targeting_rules,
             'variants': self.variants,
-            'metимяata': self.metимяata,
+            'metadata': self.metadata,
             'created_at': self.created_at.isoformat(),
             'created_by': self.created_by,
             'tags': self.tags,
@@ -173,7 +173,7 @@ class FeatureFlag:
         flag.rollout_percentage = data.get('rollout_percentage', 0)
         flag.targeting_rules = data.get('targeting_rules', [])
         flag.variants = data.get('variants', {})
-        flag.metимяata = data.get('metимяata', {})
+        flag.metadata = data.get('metadata', {})
         flag.created_at = datetime.fromisoformat(data['created_at'])
         flag.created_by = data.get('created_by')
         flag.tags = data.get('tags', {})
@@ -186,14 +186,14 @@ class FeatureFlagManager:
     
     def __init__(self):
         self.flags_file = 'data/feature_flags.json'
-        self.flags = self._loимя_flags()
+        self.flags = self._load_flags()
     
-    def _loимя_flags(self) -> Dict[str, FeatureFlag]:
+    def _load_flags(self) -> Dict[str, FeatureFlag]:
         """Bayraklarы загрузить"""
         if os.path.exists(self.flags_file):
             try:
                 with open(self.flags_file, 'r', encoding='utf-8') as f:
-                    data = json.loимя(f)
+                    data = json.load(f)
                     return {
                         flag_key: FeatureFlag.from_dict(flag_data)
                         for flag_key, flag_data in data.items()
@@ -205,7 +205,7 @@ class FeatureFlagManager:
     
     def _save_flags(self):
         """Bayraklarы сохранить"""
-        os.maкотrs('data', exist_ok=True)
+        os.makedirs('data', exist_ok=True)
         
         data = {
             flag_key: flag.to_dict()
@@ -309,14 +309,14 @@ class FeatureFlagRollout:
     def __init__(self, feature_flag_manager: FeatureFlagManager):
         self.feature_flag_manager = feature_flag_manager
         self.rollout_plans_file = 'data/feature_flag_rollout_plans.json'
-        self.rollout_plans = self._loимя_rollout_plans()
+        self.rollout_plans = self._load_rollout_plans()
     
-    def _loимя_rollout_plans(self) -> Dict[str, Any]:
+    def _load_rollout_plans(self) -> Dict[str, Any]:
         """Rollout planlarыnы загрузить"""
         if os.path.exists(self.rollout_plans_file):
             try:
                 with open(self.rollout_plans_file, 'r', encoding='utf-8') as f:
-                    return json.loимя(f)
+                    return json.load(f)
             except Exception:
                 pass
         
@@ -324,7 +324,7 @@ class FeatureFlagRollout:
     
     def _save_rollout_plans(self):
         """Rollout planlarыnы сохранить"""
-        os.maкотrs('data', exist_ok=True)
+        os.makedirs('data', exist_ok=True)
         with open(self.rollout_plans_file, 'w', encoding='utf-8') as f:
             json.dump(self.rollout_plans, f, ensure_ascii=False, indent=2)
     
@@ -338,7 +338,7 @@ class FeatureFlagRollout:
         
         self._save_rollout_plans()
     
-    def имяvance_rollout(self, flag_key: str) -> bool:
+    def advance_rollout(self, flag_key: str) -> bool:
         """Rollout'u ilerlet"""
         if flag_key not in self.rollout_plans:
             return False
@@ -391,14 +391,14 @@ class FeatureFlagAnalytics:
     def __init__(self, feature_flag_manager: FeatureFlagManager):
         self.feature_flag_manager = feature_flag_manager
         self.analytics_file = 'data/feature_flag_analytics.json'
-        self.analytics = self._loимя_analytics()
+        self.analytics = self._load_analytics()
     
-    def _loимя_analytics(self) -> Dict[str, Any]:
+    def _load_analytics(self) -> Dict[str, Any]:
         """Analitiгi загрузить"""
         if os.path.exists(self.analytics_file):
             try:
                 with open(self.analytics_file, 'r', encoding='utf-8') as f:
-                    return json.loимя(f)
+                    return json.load(f)
             except Exception:
                 pass
         
@@ -406,7 +406,7 @@ class FeatureFlagAnalytics:
     
     def _save_analytics(self):
         """Analitiгi сохранить"""
-        os.maкотrs('data', exist_ok=True)
+        os.makedirs('data', exist_ok=True)
         with open(self.analytics_file, 'w', encoding='utf-8') as f:
             json.dump(self.analytics, f, ensure_ascii=False, indent=2)
     

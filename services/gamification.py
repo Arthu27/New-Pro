@@ -64,14 +64,14 @@ class BadgeSystem:
     
     def __init__(self):
         self.user_badges_file = 'data/user_badges.json'
-        self.user_badges = self._loимя_user_badges()
+        self.user_badges = self._load_user_badges()
     
-    def _loимя_user_badges(self) -> Dict[str, Any]:
+    def _load_user_badges(self) -> Dict[str, Any]:
         """Загрузить значки пользователя"""
         if os.path.exists(self.user_badges_file):
             try:
                 with open(self.user_badges_file, 'r', encoding='utf-8') as f:
-                    return json.loимя(f)
+                    return json.load(f)
             except Exception:
                 pass
         
@@ -79,7 +79,7 @@ class BadgeSystem:
     
     def _save_user_badges(self):
         """Сохранить значки пользователя"""
-        os.maкотrs('data', exist_ok=True)
+        os.makedirs('data', exist_ok=True)
         with open(self.user_badges_file, 'w', encoding='utf-8') as f:
             json.dump(self.user_badges, f, ensure_ascii=False, indent=2)
     
@@ -183,14 +183,14 @@ class PointsSystem:
     
     def __init__(self):
         self.user_points_file = 'data/user_points.json'
-        self.user_points = self._loимя_user_points()
+        self.user_points = self._load_user_points()
     
-    def _loимя_user_points(self) -> Dict[str, Any]:
+    def _load_user_points(self) -> Dict[str, Any]:
         """Загрузить очки пользователя"""
         if os.path.exists(self.user_points_file):
             try:
                 with open(self.user_points_file, 'r', encoding='utf-8') as f:
-                    return json.loимя(f)
+                    return json.load(f)
             except Exception:
                 pass
         
@@ -198,7 +198,7 @@ class PointsSystem:
     
     def _save_user_points(self):
         """Сохранить очки пользователя"""
-        os.maкотrs('data', exist_ok=True)
+        os.makedirs('data', exist_ok=True)
         with open(self.user_points_file, 'w', encoding='utf-8') as f:
             json.dump(self.user_points, f, ensure_ascii=False, indent=2)
     
@@ -334,12 +334,12 @@ class Leaderboard:
     
     def get_weekly_leaderboard(self, limit: int = 20) -> List[Dict[str, Any]]:
         """Еженедельный lider tablosunu al"""
-        # Basit implementasyon - gerчek uygulamимяa еженедельный очки hesaplanacak
+        # Basit implementasyon - gerчek uygulamada еженедельный очки hesaplanacak
         return self.get_overall_leaderboard(limit)
     
     def get_monthly_leaderboard(self, limit: int = 20) -> List[Dict[str, Any]]:
         """Aylыk lider tablosunu al"""
-        # Basit implementasyon - gerчek uygulamимяa aylыk очки hesaplanacak
+        # Basit implementasyon - gerчek uygulamada aylыk очки hesaplanacak
         return self.get_overall_leaderboard(limit)
 
 
@@ -348,14 +348,14 @@ class StreakTracker:
     
     def __init__(self):
         self.streaks_file = 'data/user_streaks.json'
-        self.streaks = self._loимя_streaks()
+        self.streaks = self._load_streaks()
     
-    def _loимя_streaks(self) -> Dict[str, Any]:
+    def _load_streaks(self) -> Dict[str, Any]:
         """Serileri загрузить"""
         if os.path.exists(self.streaks_file):
             try:
                 with open(self.streaks_file, 'r', encoding='utf-8') as f:
-                    return json.loимя(f)
+                    return json.load(f)
             except Exception:
                 pass
         
@@ -363,7 +363,7 @@ class StreakTracker:
     
     def _save_streaks(self):
         """Serileri сохранить"""
-        os.maкотrs('data', exist_ok=True)
+        os.makedirs('data', exist_ok=True)
         with open(self.streaks_file, 'w', encoding='utf-8') as f:
             json.dump(self.streaks, f, ensure_ascii=False, indent=2)
     

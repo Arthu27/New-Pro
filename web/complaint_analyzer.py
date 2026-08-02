@@ -31,7 +31,7 @@ class ComplaintAnalyzer :
         r'\b(siktir\s*git|defol|ibne|top\s*senin|gёt\s*veren)\b',
         r'\b(lan|aq|aлиna|koyim|amcыгыnы|yarram)\w*',
         # === АНГЛИЙСКИЙ ===
-        r'\b(stupid|idiot|moron|fool|dumb|loser|asshole|jerk|dickheимя)\b',
+        r'\b(stupid|idiot|moron|fool|dumb|loser|asshole|jerk|dickhead)\b',
         r'\b(shut\s*up|fuck\s*you|go\s*to\s*hell|piece\s*of\s*shit)\b',
         r'\b(bastard|bitch|whore|slut|cunt|wanker)\b',
         r'\b(nigger|faggot|retard)\w*',
@@ -103,9 +103,9 @@ class ComplaintAnalyzer :
         'id':user_id ,
         'name':member .display_name ,
         'joined_at':member .joined_at .isoformat ()if member .joined_at else None ,
-        'days_on_сервер':(datetime .now (timezone .utc )-member .joined_at ).days if member .joined_at else 0 ,
-        'рольe':[рольe .name for рольe in member .рольes if рольe .name !="@everyone"],
-        'is_модerator':member .guild_permissions .кик_members or member .guild_permissions .бан_members ,
+        'days_on_server':(datetime .now (timezone .utc )-member .joined_at ).days if member .joined_at else 0 ,
+        'role':[role .name for role in member .roles if role .name !="@everyone"],
+        'is_moderator':member .guild_permissions .kick_members or member .guild_permissions .ban_members ,
         'account_age':(datetime .now (timezone .utc )-member .created_at ).days ,
         }
 
@@ -117,7 +117,7 @@ class ComplaintAnalyzer :
     limit :int =100 
     )->List [Dict ]:
         """Получить история сообщение mejdu dvumya пользователь"""
-        from cogs .логs import _msg_cache 
+        from cogs .logs import _msg_cache 
 
         # Ищем сообщения из каждый ikisi в kese
         messages =[]
@@ -133,9 +133,9 @@ class ComplaintAnalyzer :
 
     async def _get_reputation (self ,guild :discord .Guild ,user_id :int )->Dict :
         """Получить itibarы пользователь"""
-        from cogs .warnings import loимя_warnings 
+        from cogs .warnings import load_warnings 
 
-        warnings_data =loимя_warnings ()
+        warnings_data =load_warnings ()
         guild_warnings =warnings_data .get (str (guild .id ),{}).get (str (user_id ),[])
 
         # Scitaem предупреждения для raznie periodi
@@ -145,44 +145,44 @@ class ComplaintAnalyzer :
         warnings_total =len (guild_warnings )
 
         for варн in guild_warnings :
-            варн_date_raw =варн .get ('timestamp',now .isoformat ())
+            warn_date_raw =варн .get ('timestamp',now .isoformat ())
             try :
-                варн_date =datetime .fromisoformat (варн_date_raw )
+                warn_date =datetime .fromisoformat (warn_date_raw )
             except (ValueError ,TypeError ):
                 continue 
                 # Если naive — делаем aware (UTC)
-            if варн_date .tzinfo is None :
-                варн_date =варн_date .replace (tzinfo =timezone .utc )
-            days_ago =(now -варн_date ).days 
+            if warn_date .tzinfo is None :
+                warn_date =warn_date .replace (tzinfo =timezone .utc )
+            days_ago =(now -warn_date ).days 
 
             if days_ago <=7 :
                 warnings_7d +=1 
             if days_ago <=30 :
                 warnings_30d +=1 
 
-                # Контроль ediyoruz история банov/mutov
-        мод_data_file ='data/мод_data.json'
-        мод_history =[]
-        if os .path .exists (мод_data_file ):
+                # Контроль ediyoruz история banov/mutov
+        mod_data_file ='data/mod_data.json'
+        mod_history =[]
+        if os .path .exists (mod_data_file ):
             try :
-                with open (мод_data_file ,'r',encoding ='utf-8')as f :
-                    мод_data =json .loимя (f )
-                    guild_модs =мод_data .get ('cases',{}).get (str (guild .id ),[])
-                    мод_history =[
-                    case for case in guild_модs 
+                with open (mod_data_file ,'r',encoding ='utf-8')as f :
+                    mod_data =json .load (f )
+                    guild_mods =mod_data .get ('cases',{}).get (str (guild .id ),[])
+                    mod_history =[
+                    case for case in guild_mods 
                     if case .get ('user_id')==str (user_id )
                     ]
             except :
                 pass 
 
-        банs =sum (1 for case in мод_history if case .get ('action')=='бан')
-        мутs =sum (1 for case in мод_history if case .get ('action')in ['timeout','мут'])
+        bans =sum (1 for case in mod_history if case .get ('action')=='бан')
+        мутs =sum (1 for case in mod_history if case .get ('action')in ['timeout','мут'])
 
         return {
         'warnings_total':warnings_total ,
         'warnings_7d':warnings_7d ,
         'warnings_30d':warnings_30d ,
-        'банs':банs ,
+        'bans':bans ,
         'мутs':мутs ,
         'recent_warnings':guild_warnings [-5 :]if guild_warnings else [],
         }
@@ -211,7 +211,7 @@ class ComplaintAnalyzer :
         'ibne','lan','aq','amcыk',
         # Английский
         'stupid','idiot','moron','fool','dumb','loser','asshole','jerk',
-        'dickheимя','bastard','bitch','whore','slut','cunt','wanker',
+        'dickhead','bastard','bitch','whore','slut','cunt','wanker',
         'nigger','faggot','retard','scum',
         }
         offensive_set =set (offensive_words )
@@ -311,7 +311,7 @@ class ComplaintAnalyzer :
         'context_messages_count':len (context_messages ),
         'provocation_indicators':provocation_count ,
         'first_aggressor':first_aggressor ,
-        'hимя_provocation':provocation_count >0 ,
+        'had_provocation':provocation_count >0 ,
         }
 
     def _assess_severity (self ,provided_analysis :Dict ,context_analysis :Dict )->str :
@@ -396,7 +396,7 @@ class ComplaintAnalyzer :
         'accused_toxic':provided_analysis ['accused_toxic'],
         'accused_warnings':accused_rep ['warnings_total'],
         'complainer_warnings':complainant_rep ['warnings_total'],
-        'hимя_provocation':context_analysis ['hимя_provocation'],
+        'had_provocation':context_analysis ['had_provocation'],
         },
         'recommendation':recommendation ,
         'analysis':analysis_text ,
@@ -507,7 +507,7 @@ class ComplaintAnalyzer :
         f"• Взаимная токсичность: **{'⚠️ Да' if provided_analysis['mutual_toxicity'] else '✅ Нет'}**\n\n",
 
         f"### 🔍 Контекст:\n",
-        f"• Была провокация: **{'⚠️ Да' if context_analysis['hимя_provocation'] else '✅ Нет'}**\n",
+        f"• Была провокация: **{'⚠️ Да' if context_analysis['had_provocation'] else '✅ Нет'}**\n",
         f"• Первый агрессор: **{context_analysis.get('first_aggressor') or 'Не определён'}**\n",
         f"• Сообщений в контексте: **{context_analysis['context_messages_count']}**\n\n",
         ]
@@ -563,7 +563,7 @@ class ComplaintAnalyzer :
         accused_name =accused_info .get ('name',f"ID {accused_info.get('id', '?')}")
         accused_id =accused_info .get ('id','?')
         accused_account_age =accused_info .get ('account_age',0 )
-        accused_days =accused_info .get ('days_on_сервер',0 )
+        accused_days =accused_info .get ('days_on_server',0 )
 
         # Жалобщик (complainant)
         complainer_name =complainant_info .get ('name',f"ID {complainant_info.get('id', '?')}")
@@ -625,7 +625,7 @@ class ComplaintAnalyzer :
         f"├ 💬 Токсичных сообщений: **`{evidence.get('toxic_messages', 0)}`**\n"
         f"├ ⚠️ Угроз: **`{evidence.get('threats', 0)}`**\n"
         f"├ 🔄 Взаимная токсичность: **`{'⚠️ Да' if evidence.get('mutual_toxicity') else '✅ Нет'}`**\n"
-        f"└ 🎭 Провокация: **`{'⚠️ Была' if evidence.get('hимя_provocation') else '✅ Нет'}`**"
+        f"└ 🎭 Провокация: **`{'⚠️ Была' if evidence.get('had_provocation') else '✅ Нет'}`**"
         )
         embed .add_field (
         name ="🔍 Доказательства",

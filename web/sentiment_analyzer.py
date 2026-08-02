@@ -18,13 +18,13 @@ class SentimentAnalyzer :
     EMOTION_PATTERNS ={
     'positive':[
     r'\b(teшekkюrler|blagodaryu|отлично|kruto|супер|klass|zdorovo|prekrasno|zamesohbettelno)\b',
-    r'\b(хорошо|normal|ok|oky|lимяno|ponyal|prinyal)\b',
+    r'\b(хорошо|normal|ok|oky|ladno|ponyal|prinyal)\b',
     r'\b(lyublyu|nravitsya|obojayu|kayf|vostorg)\b',
-    r'\b(rимя|rимяa|scastliv|scastliva|dovolen|dovolna)\b',
+    r'\b(rad|rada|scastliv|scastliva|dovolen|dovolna)\b',
     r'[:\)]+|[:D]+|[❤️💖😊😄🎉👍]+',
     ],
     'negative':[
-    r'\b(besit|zlyus|nenaviju|razdrajaet|dostalo|zимяolbalo)\b',
+    r'\b(besit|zlyus|nenaviju|razdrajaet|dostalo|zadolbalo)\b',
     r'\b(kёtю|ujasno|otvratitelno|kosmar|jvar)\b',
     r'\b(grustno|pecalno|tosklivo|biroko|depressiya)\b',
     r'\b(ustal|ustala|vimotalsya|vimotalas|bez удалить)\b',
@@ -50,7 +50,7 @@ class SentimentAnalyzer :
         self .alerts_sent =set ()# Predotvrasenie spama предупреждение
 
         # Загруз история
-        self ._loимя_history ()
+        self ._load_history ()
 
     def analyze_message (self ,message :discord .Message )->Dict :
         """Analiz ediyor bir сообщение"""
@@ -127,7 +127,7 @@ class SentimentAnalyzer :
             'trend':'stable'
             }
 
-            # Hesaplыyoruz центрlama duygu
+            # Hesaplыyoruz ortalama duygu
         avg_sentiment =sum (msg ['sentiment_score']for msg in recent )/len (recent )
 
         # Podscitivaem duygular
@@ -164,7 +164,7 @@ class SentimentAnalyzer :
 
         return result 
 
-    def get_сервер_sentiment (self ,guild :discord .Guild ,window_minutes :int =60 )->Dict :
+    def get_server_sentiment (self ,guild :discord .Guild ,window_minutes :int =60 )->Dict :
         """Alыyor общий duygu сервер"""
         channel_sentiments =[]
 
@@ -184,7 +184,7 @@ class SentimentAnalyzer :
             'channels':{}
             }
 
-            # Hesaplыyoruz центрlama по на сервер
+            # Hesaplыyoruz ortalama по на сервер
         total_messages =sum (s ['message_count']for s in channel_sentiments )
         avg_sentiment =sum (
         s ['avg_sentiment']*s ['message_count']for s in channel_sentiments 
@@ -266,13 +266,13 @@ class SentimentAnalyzer :
         await asyncio .sleep (delay )
         self .alerts_sent .discard (alert_key )
 
-    def _loимя_history (self ):
+    def _load_history (self ):
         """Загруз история из dosyaya"""
         history_file ='data/sentiment_history.json'
         if os .path .exists (history_file ):
             try :
                 with open (history_file ,'r',encoding ='utf-8')as f :
-                    data =json .loимя (f )
+                    data =json .load (f )
                     for channel_id ,messages in data .items ():
                         self .message_buffer [int (channel_id )]=messages 
             except :
@@ -281,7 +281,7 @@ class SentimentAnalyzer :
     def _save_history (self ):
         """Сохран история в dosya"""
         try :
-            os .maкотrs ('data',exist_ok =True )
+            os .makedirs ('data',exist_ok =True )
             history_file ='data/sentiment_history.json'
 
             # Сохран только son 50 сообщение на канал

@@ -46,7 +46,7 @@ def mod_dm_embed (action ,guild ,moderator ,reason =None ,extra_fields =None ,gi
     """DM сообщение пользователю — minimalizm stil"""
     configs ={
     "ban":{
-    "title":"Siz забаненi",
+    "title":"Siz заbanенi",
     "color":0xE74C3C ,
     "text":f"Siz idi **на время** udaleni с сервер **{guild.name}**.",
     "note":"Если siz scitaete bu решение osibocnim — iletiшime geчin с управление.",

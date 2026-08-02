@@ -31,7 +31,7 @@ class CustomMenu:
         'dark': 0x2C2F33,         # Koyu gri
     }
     
-    # Dekorasyonlar (эмодзи yok, sимяece чizgiler)
+    # Dekorasyonlar (эмодзи yok, sadece чizgiler)
     BORDERS = {
         'single': '' * 40,
         'double': '' * 40,
@@ -156,12 +156,12 @@ class CustomMenu:
         self.add_section(title=title, content=content)
         return self
     
-    def add_seденьгиtor(self, style: str = 'single'):
+    def add_separator(self, style: str = 'single'):
         """Ayыrыcы ekle"""
-        seденьгиtor = self.BORDERS.get(style, self.border)
+        separator = self.BORDERS.get(style, self.border)
         self.sections.append({
             'title': None,
-            'content': seденьгиtor,
+            'content': separator,
             'inline': False
         })
         return self
@@ -182,7 +182,7 @@ class CustomMenu:
         # Bёlюmler
         for section in self.sections:
             if section['title'] is None:
-                # Seденьгиtor
+                # Separator
                 embed.add_field(
                     name="\u200b",  # Zero-width space
                     value=section['content'],
@@ -221,15 +221,15 @@ class TicketMenu:
         """Ticket добро пожаловать menюsю"""
         menu = CustomMenu(
             title="Тикет открыт",
-            description=f"Добро пожаловать, {user.упоминание}!\n\nОпишите вашу проблему, и мы поможем вам как можно скорее.",
+            description=f"Добро пожаловать, {user.mention}!\n\nОпишите вашу проблему, и мы поможем вам как можно скорее.",
             color='primary'
         )
         
-        menu.add_section("Пользователь", user.упоминание, inline=True)
-        menu.add_section("Канал", channel.упоминание, inline=True)
+        menu.add_section("Пользователь", user.mention, inline=True)
+        menu.add_section("Канал", channel.mention, inline=True)
         menu.add_section("Создан", discord.utils.format_dt(discord.utils.utcnow(), style='R'), inline=True)
         
-        menu.add_seденьгиtor()
+        menu.add_separator()
         
         menu.add_section(
             "Что дальше?",
@@ -249,11 +249,11 @@ class TicketMenu:
             color='success'
         )
         
-        menu.add_section("Пользователь", user.упоминание, inline=True)
-        menu.add_section("Закрыл", closed_by.упоминание, inline=True)
+        menu.add_section("Пользователь", user.mention, inline=True)
+        menu.add_section("Закрыл", closed_by.mention, inline=True)
         menu.add_section("Время", discord.utils.format_dt(discord.utils.utcnow(), style='R'), inline=True)
         
-        menu.add_seденьгиtor()
+        menu.add_separator()
         
         menu.add_section(
             "Спасибо!",
@@ -281,7 +281,7 @@ class StatsMenu:
             {'label': 'Передано', 'value': escalated},
         ], layout='grid')
         
-        menu.add_seденьгиtor()
+        menu.add_separator()
         
         # AI успех соотношение
         if total > 0:
@@ -306,7 +306,7 @@ class StatsMenu:
             {'label': 'Отрицательных', 'value': negative},
         ], layout='grid')
         
-        menu.add_seденьгиtor()
+        menu.add_separator()
         
         # Ortalama очки
         menu.add_section("Средняя оценка", f"```{avg_rating:.2f}/5.00```", inline=True)
@@ -318,7 +318,7 @@ class StatsMenu:
         
         # Son yorumlar
         if recent_comments:
-            menu.add_seденьгиtor()
+            menu.add_separator()
             menu.add_list("Последние отзывы", recent_comments[-5:], numbered=False)
         
         return menu.build()
@@ -344,7 +344,7 @@ class HelpMenu:
             "4. Дождитесь ответа"
         )
         
-        menu.add_seденьгиtor()
+        menu.add_separator()
         
         menu.add_section(
             "Команды",

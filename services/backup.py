@@ -17,7 +17,7 @@ class BackupService:
     
     def __init__(self, backup_dir: str = 'backups'):
         self.backup_dir = backup_dir
-        os.maкотrs(backup_dir, exist_ok=True)
+        os.makedirs(backup_dir, exist_ok=True)
     
     def backup_database(self, db_path: str = 'data/bot.db') -> str:
         """Database yedekle"""
@@ -171,7 +171,7 @@ class BackupService:
     
     def schedule_backup(self, interval_hours: int = 24):
         """Otomatik yedekleme planla (placeholder)"""
-        # Gerчek uygulamимяa scheduler kullanыlacak
+        # Gerчek uygulamada scheduler kullanыlacak
         print(f"⏰ Otomatik yedekleme planlandы: Her {interval_hours} saatte bir")
     
     def export_stats(self) -> Dict:

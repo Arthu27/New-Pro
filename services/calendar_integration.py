@@ -62,14 +62,14 @@ class CalendarManager:
     
     def __init__(self):
         self.events_file = 'data/calendar_events.json'
-        self.events = self._loимя_events()
+        self.events = self._load_events()
     
-    def _loимя_events(self) -> Dict[str, Any]:
+    def _load_events(self) -> Dict[str, Any]:
         """Загрузить события"""
         if os.path.exists(self.events_file):
             try:
                 with open(self.events_file, 'r', encoding='utf-8') as f:
-                    data = json.loимя(f)
+                    data = json.load(f)
                     return {
                         event_id: CalendarEvent.from_dict(event_data)
                         for event_id, event_data in data.items()
@@ -81,7 +81,7 @@ class CalendarManager:
     
     def _save_events(self):
         """Сохранить события"""
-        os.maкотrs('data', exist_ok=True)
+        os.makedirs('data', exist_ok=True)
         
         data = {
             event_id: event.to_dict()
@@ -168,14 +168,14 @@ class GoogleCalendarIntegration:
     
     def __init__(self):
         self.config_file = 'data/google_calendar_config.json'
-        self.config = self._loимя_config()
+        self.config = self._load_config()
     
-    def _loимя_config(self) -> Dict[str, Any]:
+    def _load_config(self) -> Dict[str, Any]:
         """Загрузить конфигурацию"""
         if os.path.exists(self.config_file):
             try:
                 with open(self.config_file, 'r', encoding='utf-8') as f:
-                    return json.loимя(f)
+                    return json.load(f)
             except Exception:
                 pass
         
@@ -189,7 +189,7 @@ class GoogleCalendarIntegration:
     
     def _save_config(self):
         """Сохранить конфигурацию"""
-        os.maкотrs('data', exist_ok=True)
+        os.makedirs('data', exist_ok=True)
         with open(self.config_file, 'w', encoding='utf-8') as f:
             json.dump(self.config, f, ensure_ascii=False, indent=2)
     
@@ -202,12 +202,12 @@ class GoogleCalendarIntegration:
     
     def get_auth_url(self) -> str:
         """Yetkilendirme URL'si"""
-        # Placeholder - gerчek uygulamимяa OAuth2 akышы
+        # Placeholder - gerчek uygulamada OAuth2 akышы
         return f"https://accounts.google.com/o/oauth2/auth?client_id={self.config.get('client_id', '')}"
     
     def sync_event(self, event: CalendarEvent) -> Dict[str, Any]:
         """Etkinliгi senkronize et"""
-        # Placeholder - gerчek uygulamимяa Google Calendar API чaгrыsы
+        # Placeholder - gerчek uygulamada Google Calendar API чaгrыsы
         return {
             'success': True,
             'google_event_id': f"gcal_{event.event_id}",
@@ -225,14 +225,14 @@ class OutlookCalendarIntegration:
     
     def __init__(self):
         self.config_file = 'data/outlook_calendar_config.json'
-        self.config = self._loимя_config()
+        self.config = self._load_config()
     
-    def _loимя_config(self) -> Dict[str, Any]:
+    def _load_config(self) -> Dict[str, Any]:
         """Загрузить конфигурацию"""
         if os.path.exists(self.config_file):
             try:
                 with open(self.config_file, 'r', encoding='utf-8') as f:
-                    return json.loимя(f)
+                    return json.load(f)
             except Exception:
                 pass
         
@@ -245,7 +245,7 @@ class OutlookCalendarIntegration:
     
     def _save_config(self):
         """Сохранить конфигурацию"""
-        os.maкотrs('data', exist_ok=True)
+        os.makedirs('data', exist_ok=True)
         with open(self.config_file, 'w', encoding='utf-8') as f:
             json.dump(self.config, f, ensure_ascii=False, indent=2)
     
@@ -258,7 +258,7 @@ class OutlookCalendarIntegration:
     
     def sync_event(self, event: CalendarEvent) -> Dict[str, Any]:
         """Etkinliгi senkronize et"""
-        # Placeholder - gerчek uygulamимяa Microsoft Graph API чaгrыsы
+        # Placeholder - gerчek uygulamada Microsoft Graph API чaгrыsы
         return {
             'success': True,
             'outlook_event_id': f"outlook_{event.event_id}",
@@ -277,14 +277,14 @@ class AppointmentScheduler:
     def __init__(self, calendar_manager: CalendarManager):
         self.calendar_manager = calendar_manager
         self.availability_file = 'data/availability.json'
-        self.availability = self._loимя_availability()
+        self.availability = self._load_availability()
     
-    def _loимя_availability(self) -> Dict[str, Any]:
+    def _load_availability(self) -> Dict[str, Any]:
         """Mюsaitlik durumunu загрузить"""
         if os.path.exists(self.availability_file):
             try:
                 with open(self.availability_file, 'r', encoding='utf-8') as f:
-                    return json.loимя(f)
+                    return json.load(f)
             except Exception:
                 pass
         
@@ -292,7 +292,7 @@ class AppointmentScheduler:
     
     def _save_availability(self):
         """Mюsaitlik durumunu сохранить"""
-        os.maкотrs('data', exist_ok=True)
+        os.makedirs('data', exist_ok=True)
         with open(self.availability_file, 'w', encoding='utf-8') as f:
             json.dump(self.availability, f, ensure_ascii=False, indent=2)
     
@@ -322,7 +322,7 @@ class AppointmentScheduler:
         if not availability:
             return []
         
-        # Basit implementasyon - gerчek uygulamимяa mevcut событиеleri проверить et
+        # Basit implementasyon - gerчek uygulamada mevcut событиеleri проверить et
         slots = []
         start_hour = int(availability['start_time'].split(':')[0])
         end_hour = int(availability['end_time'].split(':')[0])
@@ -358,14 +358,14 @@ class ReminderManager:
     def __init__(self, calendar_manager: CalendarManager):
         self.calendar_manager = calendar_manager
         self.reminders_file = 'data/reminders.json'
-        self.reminders = self._loимя_reminders()
+        self.reminders = self._load_reminders()
     
-    def _loимя_reminders(self) -> Dict[str, Any]:
+    def _load_reminders(self) -> Dict[str, Any]:
         """Напоминаниеlarы загрузить"""
         if os.path.exists(self.reminders_file):
             try:
                 with open(self.reminders_file, 'r', encoding='utf-8') as f:
-                    return json.loимя(f)
+                    return json.load(f)
             except Exception:
                 pass
         
@@ -373,7 +373,7 @@ class ReminderManager:
     
     def _save_reminders(self):
         """Напоминаниеlarы сохранить"""
-        os.maкотrs('data', exist_ok=True)
+        os.makedirs('data', exist_ok=True)
         with open(self.reminders_file, 'w', encoding='utf-8') as f:
             json.dump(self.reminders, f, ensure_ascii=False, indent=2)
     

@@ -1,6 +1,6 @@
 """
-RAG (Retrieval Augmented Generation) — arama по taбанda информация сервер
-AI olabilir iskat в правил, FAQ, логah ticketlarыn, dokumentacii
+RAG (Retrieval Augmented Generation) — arama по tabanda информация сервер
+AI olabilir iskat в правил, FAQ, logah ticketlarыn, dokumentacii
 """
 import os 
 import json 
@@ -10,34 +10,34 @@ from datetime import datetime
 
 
 class KnowledgeBase :
-    """Данныеtaбаны информация сервер с aramaom"""
+    """Данныеtabanы информация сервер с aramaom"""
 
     def __init__ (self ,guild_id :int ):
         self .guild_id =guild_id 
         self .documents =[]
-        self ._loимя_documents ()
+        self ._load_documents ()
 
-    def _loимя_documents (self ):
+    def _load_documents (self ):
         """Загруз все dokumenti в pamyat"""
         # 1. Правила сервер (Особый правило yoksa Стандартные правила Aether загруз)
-        rules_loимяed =False 
+        rules_loaded =False 
         for rf in [f"data/rules_{self.guild_id}.json","data/rules.json"]:
             if os .path .exists (rf ):
                 try :
                     with open (rf ,'r',encoding ='utf-8')as f :
-                        rules_data =json .loимя (f )
+                        rules_data =json .load (f )
                         for rule in rules_data .get ('rules',[]):
                             self .documents .append ({
                             'type':'rule',
                             'content':rule .get ('text',''),
-                            'metимяata':{'id':rule .get ('id',0 )}
+                            'metadata':{'id':rule .get ('id',0 )}
                             })
-                            rules_loимяed =True 
-                    if rules_loимяed :
+                            rules_loaded =True 
+                    if rules_loaded :
                         break 
                 except :
                     pass 
-        if not rules_loимяed :
+        if not rules_loaded :
             default_rules =[
             "Правило #1: Уважение и вежливость — Запрещены оскорбления, мат, унижения и язык вражды.",
             "Правило #2: Спам и Флуд — Запрещена массовая отправка сообщений, реклама и ссылки без разрешения.",
@@ -49,7 +49,7 @@ class KnowledgeBase :
                 self .documents .append ({
                 'type':'rule',
                 'content':rtext ,
-                'metимяata':{'id':idx }
+                'metadata':{'id':idx }
                 })
 
                 # 2. FAQ (Изученные ответы из тикетов и команды /faq-learn)
@@ -57,24 +57,24 @@ class KnowledgeBase :
             if os .path .exists (faq_file ):
                 try :
                     with open (faq_file ,'r',encoding ='utf-8')as f :
-                        faq_data =json .loимя (f )
+                        faq_data =json .load (f )
                     items =faq_data if isinstance (faq_data ,list )else faq_data .get (str (self .guild_id ),[])
                     for faq in items :
                         if isinstance (faq ,dict )and faq .get ('question')and faq .get ('answer'):
                             self .documents .append ({
                             'type':'faq',
                             'content':f"ВОПРОС: {faq.get('question', '')}\nОТВЕТ АДМИНИСТРАЦИИ: {faq.get('answer', '')}",
-                            'metимяata':{'id':faq .get ('id',''),'score':1.0 }
+                            'metadata':{'id':faq .get ('id',''),'score':1.0 }
                             })
                 except :
                     pass 
 
-                    # 3. Логlar ticketlarыn (son 50)
+                    # 3. Loglar ticketlarыn (son 50)
         tickets_file =f"data/tickets_{self.guild_id}.json"
         if os .path .exists (tickets_file ):
             try :
                 with open (tickets_file ,'r',encoding ='utf-8')as f :
-                    tickets_data =json .loимя (f )
+                    tickets_data =json .load (f )
                     for ticket in tickets_data .get ('tickets',[])[-50 :]:
                     # Удалить anahtar momenti из ticketin
                         summary =f"Ticket: {ticket.get('category', '?')} — {ticket.get('status', '?')}"
@@ -84,7 +84,7 @@ class KnowledgeBase :
                         self .documents .append ({
                         'type':'ticket',
                         'content':summary ,
-                        'metимяata':{
+                        'metadata':{
                         'user_id':ticket .get ('user_id',0 ),
                         'created_at':ticket .get ('created_at','')
                         }
@@ -97,14 +97,14 @@ class KnowledgeBase :
         if os .path .exists (notes_file ):
             try :
                 with open (notes_file ,'r',encoding ='utf-8')as f :
-                    notes_data =json .loимя (f )
+                    notes_data =json .load (f )
                     guild_notes =notes_data .get (str (self .guild_id ),{})
                     for user_id ,notes in guild_notes .items ():
                         for note in notes :
                             self .documents .append ({
                             'type':'note',
                             'content':note .get ('text',''),
-                            'metимяata':{
+                            'metadata':{
                             'user_id':int (user_id ),
                             'author':note .get ('author','?'),
                             'timestamp':note .get ('timestamp','')
@@ -114,7 +114,7 @@ class KnowledgeBase :
                 pass 
 
     def search (self ,query :str ,max_results :int =5 )->List [Dict ]:
-        """Arama по taбанda информация (prostoy keyword-based)"""
+        """Arama по tabanda информация (prostoy keyword-based)"""
         query_lower =query .lower ()
         query_words =set (re .findall (r'\w+',query_lower ))
 
@@ -122,7 +122,7 @@ class KnowledgeBase :
         for doc in self .documents :
             content_lower =doc ['content'].lower ()
 
-            # Podscet sovpимяeniy
+            # Podscet sovpadeniy
             matches =sum (1 for word in query_words if word in content_lower )
 
             if matches >0 :
@@ -182,7 +182,7 @@ class ConversationAnalyzer :
 
         for msg in messages :
             content =msg .get ('content','')
-            if msg .get ('рольe')!='user':
+            if msg .get ('role')!='user':
                 continue 
 
             for pattern ,template in patterns :

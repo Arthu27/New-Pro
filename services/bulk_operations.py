@@ -14,12 +14,12 @@ class BulkOperation:
     """Массовая операция"""
     
     def __init__(self, operation_id: str, operation_type: str,
-                 ticket_ids: List[str], деньгиmeters: Dict[str, Any],
+                 ticket_ids: List[str], parameters: Dict[str, Any],
                  initiated_by: str):
         self.operation_id = operation_id
         self.operation_type = operation_type
         self.ticket_ids = ticket_ids
-        self.деньгиmeters = деньгиmeters
+        self.parameters = parameters
         self.initiated_by = initiated_by
         self.started_at = datetime.now().isoformat()
         self.completed_at = None
@@ -77,7 +77,7 @@ class BulkOperation:
             'operation_id': self.operation_id,
             'operation_type': self.operation_type,
             'ticket_ids': self.ticket_ids,
-            'деньгиmeters': self.деньгиmeters,
+            'parameters': self.parameters,
             'initiated_by': self.initiated_by,
             'started_at': self.started_at,
             'completed_at': self.completed_at,
@@ -93,7 +93,7 @@ class BulkOperation:
             operation_id=data['operation_id'],
             operation_type=data['operation_type'],
             ticket_ids=data['ticket_ids'],
-            деньгиmeters=data['деньгиmeters'],
+            parameters=data['parameters'],
             initiated_by=data['initiated_by']
         )
         op.started_at = data.get('started_at')
@@ -109,14 +109,14 @@ class BulkOperationManager:
     
     def __init__(self):
         self.operations_file = 'data/bulk_operations.json'
-        self.operations = self._loимя_operations()
+        self.operations = self._load_operations()
     
-    def _loимя_operations(self) -> Dict[str, BulkOperation]:
+    def _load_operations(self) -> Dict[str, BulkOperation]:
         """Ишlemleri загрузить"""
         if os.path.exists(self.operations_file):
             try:
                 with open(self.operations_file, 'r', encoding='utf-8') as f:
-                    data = json.loимя(f)
+                    data = json.load(f)
                     return {
                         op_id: BulkOperation.from_dict(op_data)
                         for op_id, op_data in data.items()
@@ -128,7 +128,7 @@ class BulkOperationManager:
     
     def _save_operations(self):
         """Ишlemleri сохранить"""
-        os.maкотrs('data', exist_ok=True)
+        os.makedirs('data', exist_ok=True)
         
         data = {
             op_id: op.to_dict()
@@ -139,7 +139,7 @@ class BulkOperationManager:
             json.dump(data, f, ensure_ascii=False, indent=2)
     
     def create_operation(self, operation_type: str, ticket_ids: List[str],
-                         деньгиmeters: Dict[str, Any],
+                         parameters: Dict[str, Any],
                          initiated_by: str) -> BulkOperation:
         """Ишlem создать"""
         operation_id = f"bulk_{len(self.operations) + 1}"
@@ -148,7 +148,7 @@ class BulkOperationManager:
             operation_id=operation_id,
             operation_type=operation_type,
             ticket_ids=ticket_ids,
-            деньгиmeters=деньгиmeters,
+            parameters=parameters,
             initiated_by=initiated_by
         )
         
@@ -191,7 +191,7 @@ class BulkUpdater:
         operation = self.operation_manager.create_operation(
             operation_type='update_status',
             ticket_ids=ticket_ids,
-            деньгиmeters={'new_status': new_status},
+            parameters={'new_status': new_status},
             initiated_by=updated_by
         )
         
@@ -224,7 +224,7 @@ class BulkUpdater:
         operation = self.operation_manager.create_operation(
             operation_type='assign',
             ticket_ids=ticket_ids,
-            деньгиmeters={'assignee_id': assignee_id},
+            parameters={'assignee_id': assignee_id},
             initiated_by=assigned_by
         )
         
@@ -257,7 +257,7 @@ class BulkUpdater:
         operation = self.operation_manager.create_operation(
             operation_type='add_tags',
             ticket_ids=ticket_ids,
-            деньгиmeters={'tags': tags},
+            parameters={'tags': tags},
             initiated_by=added_by
         )
         
@@ -292,7 +292,7 @@ class BulkUpdater:
         operation = self.operation_manager.create_operation(
             operation_type='update_priority',
             ticket_ids=ticket_ids,
-            деньгиmeters={'new_priority': new_priority},
+            parameters={'new_priority': new_priority},
             initiated_by=updated_by
         )
         
@@ -332,7 +332,7 @@ class BulkCloser:
         operation = self.operation_manager.create_operation(
             operation_type='close',
             ticket_ids=ticket_ids,
-            деньгиmeters={'close_reason': close_reason},
+            parameters={'close_reason': close_reason},
             initiated_by=closed_by
         )
         
@@ -379,7 +379,7 @@ class BulkExporter:
         operation = self.operation_manager.create_operation(
             operation_type='export_json',
             ticket_ids=ticket_ids,
-            деньгиmeters={},
+            parameters={},
             initiated_by=exported_by
         )
         
@@ -403,14 +403,14 @@ class BulkExporter:
         
         # Dosyaya сохранить
         if exported_tickets:
-            os.maкотrs('data/exports', exist_ok=True)
+            os.makedirs('data/exports', exist_ok=True)
             filename = f"export_{operation.operation_id}.json"
             filepath = f"data/exports/{filename}"
             
             with open(filepath, 'w', encoding='utf-8') as f:
                 json.dump(exported_tickets, f, ensure_ascii=False, indent=2)
             
-            operation.деньгиmeters['export_file'] = filename
+            operation.parameters['export_file'] = filename
         
         operation.mark_completed()
         self.operation_manager.update_operation(operation.operation_id)
@@ -423,7 +423,7 @@ class BulkExporter:
         operation = self.operation_manager.create_operation(
             operation_type='export_csv',
             ticket_ids=ticket_ids,
-            деньгиmeters={},
+            parameters={},
             initiated_by=exported_by
         )
         
@@ -449,21 +449,21 @@ class BulkExporter:
         if exported_tickets:
             import csv
             
-            os.maкотrs('data/exports', exist_ok=True)
+            os.makedirs('data/exports', exist_ok=True)
             filename = f"export_{operation.operation_id}.csv"
             filepath = f"data/exports/{filename}"
             
             if exported_tickets:
                 # Заголовокlarы al
-                heимяers = set()
+                headers = set()
                 for ticket in exported_tickets:
-                    heимяers.update(ticket.keys())
+                    headers.update(ticket.keys())
                 
-                heимяers = sorted(list(heимяers))
+                headers = sorted(list(headers))
                 
                 with open(filepath, 'w', newline='', encoding='utf-8') as f:
-                    writer = csv.DictWriter(f, fieldnames=heимяers)
-                    writer.writeheимяer()
+                    writer = csv.DictWriter(f, fieldnames=headers)
+                    writer.writeheader()
                     
                     for ticket in exported_tickets:
                         # Liste ve dict'leri string'e чevir
@@ -476,7 +476,7 @@ class BulkExporter:
                         
                         writer.writerow(row)
                 
-                operation.деньгиmeters['export_file'] = filename
+                operation.parameters['export_file'] = filename
         
         operation.mark_completed()
         self.operation_manager.update_operation(operation.operation_id)
@@ -498,18 +498,18 @@ class BulkImporter:
         operation = self.operation_manager.create_operation(
             operation_type='import_json',
             ticket_ids=ticket_ids,
-            деньгиmeters={'count': len(import_data)},
+            parameters={'count': len(import_data)},
             initiated_by=imported_by
         )
         
         operation.mark_started()
         self.operation_manager.update_operation(operation.operation_id)
         
-        # Gerчek uygulamимяa ticket'larы сохранить
+        # Gerчek uygulamada ticket'larы сохранить
         for i, ticket_data in enumerate(import_data):
             try:
                 ticket_id = ticket_ids[i]
-                # Burимяa ticket'ы сохранить
+                # Burada ticket'ы сохранить
                 operation.add_success(ticket_id, ticket_data)
             except Exception as e:
                 operation.add_failure(ticket_ids[i], str(e))

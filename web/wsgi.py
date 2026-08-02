@@ -1,7 +1,7 @@
 """
 WSGI entry point — gunicorn tarafindan yuklenir.
 - 'web.app:app' de kullanilabilir, ancak flask_session vb.
-  paketlerin правильно sirasini garanti etmek icin bu модul есть.
+  paketlerin правильно sirasini garanti etmek icin bu modul есть.
 """
 import os 
 import sys 

@@ -5,7 +5,7 @@ import zipfile
 import os
 import subprocess
 
-TOKEN = "3BB4QVP47XqrznuOoAимяg0DbzLb_4Bww5UbRdSsaUZvRKCrns"
+TOKEN = "3BB4QVP47XqrznuOoAadg0DbzLb_4Bww5UbRdSsaUZvRKCrns"
 URL = "https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip"
 
 print("ngrok indiriliyor...")
@@ -20,6 +20,6 @@ except Exception as e:
     exit(1)
 
 # Token настройк
-result = subprocess.run(["ngrok.exe", "config", "имяd-authtoken", TOKEN], capture_output=True, text=True)
+result = subprocess.run(["ngrok.exe", "config", "add-authtoken", TOKEN], capture_output=True, text=True)
 print(result.stdout or result.stderr)
 print("✅ Token настройк")

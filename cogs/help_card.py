@@ -290,7 +290,7 @@ def _draw_perm_pill (img ,d ,x ,y ,perm ):
 
 
 def _command_rows_panel (img ,x0 ,y0 ,w ,rows ,row_h ):
-    """rows: list of (cmd, desc, perm). Draws a bordered panel with seденьгиted rows."""
+    """rows: list of (cmd, desc, perm). Draws a bordered panel with separated rows."""
     h =row_h *len (rows )+16 
     panel =rounded_panel (w ,h ,radius =16 ,fill =WHITE ,outline =BLACK ,ow =2 )
     img .alpha_composite (panel ,(x0 ,y0 ))

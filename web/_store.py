@@ -19,7 +19,7 @@ def atomic_write_json (path ,data ,ensure_ascii =False ):
     """Написатьarken once gecici dosyaya написать, после os.replace ile atomik tasi."""
     tmp =f"{path}.tmp.{os.getpid()}.{threading.get_ident()}"
     try :
-        os .maкотrs (os .path .dirname (path )or '.',exist_ok =True )
+        os .makedirs (os .path .dirname (path )or '.',exist_ok =True )
         with open (tmp ,'w',encoding ='utf-8')as fp :
             json .dump (data ,fp ,ensure_ascii =False )
             fp .flush ()
@@ -137,7 +137,7 @@ def _etag_hash_item (h ,item ):
         h .update (str (type (item )).encode ())
 
 
-        # ── Periodic flush (панель_логs icin) ──────────────────────────────────────────
+        # ── Periodic flush (panel_logs icin) ──────────────────────────────────────────
 class PeriodicFlush :
     """append() быстрый, настоящий dosya написатьimini arka planda toplu yapar."""
     def __init__ (self ,path ,flush_interval =5.0 ,max_entries =1000 ,batch_threshold =50 ):
@@ -190,7 +190,7 @@ class PeriodicFlush :
             atomic_write_json (self ._path ,existing )
             invalidate_path (self ._path )
         except Exception :
-        # Sessizce yut; логlayici hatayi панельi kiramaz
+        # Sessizce yut; loglayici hatayi paneli kiramaz
             pass 
 
     def shutdown (self ):

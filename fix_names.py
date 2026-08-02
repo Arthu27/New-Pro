@@ -1,11 +1,11 @@
 import os, re
 
 files = [
-    'cogs/embed_utils.py', 'cogs/модeration.py', 'cogs/варнings.py',
+    'cogs/embed_utils.py', 'cogs/moderation.py', 'cogs/warnings.py',
     'cogs/ticket.py', 'cogs/staff_apply.py', 'cogs/verification.py',
     'cogs/giveaway.py', 'cogs/fun.py', 'cogs/minigames.py',
-    'cogs/economy_cmds.py', 'cogs/invite_tracker.py', 'cogs/autoмод.py',
-    'cogs/логs.py', 'cogs/имяvanced_мод.py', 'cogs/duty.py',
+    'cogs/economy_cmds.py', 'cogs/invite_tracker.py', 'cogs/automod.py',
+    'cogs/logs.py', 'cogs/advanced_mod.py', 'cogs/duty.py',
     'cogs/birthday.py', 'cogs/events.py', 'cogs/stats.py',
     'cogs/health.py', 'cogs/utility.py', 'cogs/info_tools.py',
 ]
@@ -18,12 +18,12 @@ replacements = [
     ('**Aether** сервер belirtilen длительность bиграca', '**{guild.name}** сервер belirtilen длительность bиграca'),
     ('**Aether** сервер susturmanыz **удалено**.', '**{guild.name}** сервер susturmanыz **удалено**.'),
     ('**Aether** сервер сервер правил нарушение ettiгiniz', '**{guild.name}** сервер сервер правил нарушение ettiгiniz'),
-    ('**Aether** сервер баныnыz **удалено**.', '**{guild.name}** сервер баныnыz **удалено**.'),
+    ('**Aether** сервер banыnыz **удалено**.', '**{guild.name}** сервер banыnыz **удалено**.'),
     ('✦ Aether ПОДДЕРЖКА СИСТЕМА ✦', '✦ Aether ПОДДЕРЖКА СИСТЕМА ✦'),
     ('Aether Ekonomi •', 'Aether Ekonomi •'),
     ('Aether Ekonomi', 'Aether Ekonomi'),
-    ('Aether Модerasyon •', 'Aether Модerasyon •'),
-    ('Aether Модerasyon', 'Aether Модerasyon'),
+    ('Aether Moderasyon •', 'Aether Moderasyon •'),
+    ('Aether Moderasyon', 'Aether Moderasyon'),
     ('Aether Поддержка Система •', 'Aether Поддержка •'),
     ('Aether Поддержка Система', 'Aether Поддержка'),
     ('Aether Поддержка •', 'Aether Поддержка •'),
@@ -48,7 +48,7 @@ for filepath in files:
     if not os.path.exists(filepath):
         continue
     with open(filepath, 'r', encoding='utf-8') as f:
-        content = f.reимя()
+        content = f.read()
     original = content
     for old, new in replacements:
         content = content.replace(old, new)

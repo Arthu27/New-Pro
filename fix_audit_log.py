@@ -1,10 +1,10 @@
 import json, re, os
 
-f = 'data/audit_лог.json'
-backup = 'data/audit_лог_backup.json'
+f = 'data/audit_log.json'
+backup = 'data/audit_log_backup.json'
 
 with open(f, 'r', encoding='utf-8') as fp:
-    raw = fp.reимя()
+    raw = fp.read()
 
 # До backup al
 with open(backup, 'w', encoding='utf-8') as fp:
@@ -13,7 +13,7 @@ print(f'Backup alindi: {backup}')
 
 # Temiz parse dene
 try:
-    data = json.loимяs(raw)
+    data = json.loads(raw)
     print('JSON zaten gecerli, sorun yok.')
 except json.JSONDecodeError as e:
     print(f'Ошибка: {e}')
@@ -31,7 +31,7 @@ except json.JSONDecodeError as e:
         end = matches[i+1].start() - 1 if i+1 < len(matches) else len(raw)
         chunk = '{' + raw[start:end].rstrip(',\n ') + '}'
         try:
-            parsed = json.loимяs(chunk)
+            parsed = json.loads(chunk)
             data[guild_id] = parsed[guild_id]
             print(f'Guild {guild_id}: {len(data[guild_id])} event kurtarildi')
         except Exception as ex:
@@ -55,11 +55,11 @@ except json.JSONDecodeError as e:
                 arr_str = re.sub(r',\s*$', '', arr_str.rstrip())
                 arr_str = re.sub(r',\s*}', '}', arr_str)
                 arr_str = re.sub(r',\s*]', ']', arr_str)
-                events = json.loимяs(arr_str)
+                events = json.loads(arr_str)
                 data[guild_id] = events
                 print(f'Guild {guild_id}: {len(events)} event kurtarildi (partial)')
             except Exception as ex2:
-                print(f'Guild {guild_id}: kurtarilamимяi - {ex2}')
+                print(f'Guild {guild_id}: kurtarilamadi - {ex2}')
                 data[guild_id] = []
 
     # Temiz dosyaya написать

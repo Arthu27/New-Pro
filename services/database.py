@@ -19,7 +19,7 @@ class Database:
     
     def init_database(self):
         """Database'i запустить"""
-        os.maкотrs(os.path.dirname(self.db_path), exist_ok=True)
+        os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
         
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -72,7 +72,7 @@ class Database:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER UNIQUE NOT NULL,
                 balance INTEGER DEFAULT 100,
-                банk INTEGER DEFAULT 0,
+                bank INTEGER DEFAULT 0,
                 daily_last TEXT,
                 work_last TEXT,
                 beg_last TEXT,
@@ -110,15 +110,15 @@ class Database:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
                 reason TEXT,
-                варнed_by INTEGER,
-                варнed_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                warned_by INTEGER,
+                warned_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users (user_id)
             )
         ''')
         
-        # Логs table
+        # Logs table
         cursor.execute('''
-            CREATE TABLE IF NOT EXISTS логs (
+            CREATE TABLE IF NOT EXISTS logs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 event_type TEXT NOT NULL,
                 user_id INTEGER,
@@ -251,19 +251,19 @@ class Database:
         cursor = conn.cursor()
         
         query = 'SELECT * FROM tickets WHERE 1=1'
-        деньгиms = []
+        params = []
         
         if status:
             query += ' AND status = ?'
-            деньгиms.append(status)
+            params.append(status)
         
         if user_id:
             query += ' AND user_id = ?'
-            деньгиms.append(user_id)
+            params.append(user_id)
         
         query += ' ORDER BY created_at DESC'
         
-        cursor.execute(query, деньгиms)
+        cursor.execute(query, params)
         rows = cursor.fetchall()
         
         conn.close()
@@ -332,7 +332,7 @@ class Database:
                 'id': row[0],
                 'user_id': row[1],
                 'balance': row[2],
-                'банk': row[3],
+                'bank': row[3],
                 'daily_last': row[4],
                 'work_last': row[5],
                 'beg_last': row[6]
@@ -361,13 +361,13 @@ class Database:
         conn.commit()
         conn.close()
     
-    def update_банk(self, user_id: int, amount: int):
-        """Банka деньcelle"""
+    def update_bank(self, user_id: int, amount: int):
+        """Banka деньcelle"""
         conn = self.get_connection()
         cursor = conn.cursor()
         
         cursor.execute('''
-            UPDATE economy SET банk = банk + ?
+            UPDATE economy SET bank = bank + ?
             WHERE user_id = ?
         ''', (amount, user_id))
         
@@ -481,15 +481,15 @@ class Database:
         return False
     
     # Предупреждение methods
-    def add_warning(self, user_id: int, reason: str, варнed_by: int):
+    def add_warning(self, user_id: int, reason: str, warned_by: int):
         """Предупреждение ekle"""
         conn = self.get_connection()
         cursor = conn.cursor()
         
         cursor.execute('''
-            INSERT INTO warnings (user_id, reason, варнed_by)
+            INSERT INTO warnings (user_id, reason, warned_by)
             VALUES (?, ?, ?)
-        ''', (user_id, reason, варнed_by))
+        ''', (user_id, reason, warned_by))
         
         conn.commit()
         conn.close()
@@ -508,34 +508,34 @@ class Database:
             'id': row[0],
             'user_id': row[1],
             'reason': row[2],
-            'варнed_by': row[3],
-            'варнed_at': row[4]
+            'warned_by': row[3],
+            'warned_at': row[4]
         } for row in rows]
     
     # Лог methods
-    def add_лог(self, event_type: str, user_id: int = None, action: str = None, details: str = None):
+    def add_log(self, event_type: str, user_id: int = None, action: str = None, details: str = None):
         """Лог ekle"""
         conn = self.get_connection()
         cursor = conn.cursor()
         
         cursor.execute('''
-            INSERT INTO логs (event_type, user_id, action, details)
+            INSERT INTO logs (event_type, user_id, action, details)
             VALUES (?, ?, ?, ?)
         ''', (event_type, user_id, action, details))
         
         conn.commit()
         conn.close()
     
-    def get_логs(self, event_type: str = None, limit: int = 100) -> List[Dict]:
-        """Логlarы al"""
+    def get_logs(self, event_type: str = None, limit: int = 100) -> List[Dict]:
+        """Loglarы al"""
         conn = self.get_connection()
         cursor = conn.cursor()
         
         if event_type:
-            cursor.execute('SELECT * FROM логs WHERE event_type = ? ORDER BY created_at DESC LIMIT ?', 
+            cursor.execute('SELECT * FROM logs WHERE event_type = ? ORDER BY created_at DESC LIMIT ?', 
                           (event_type, limit))
         else:
-            cursor.execute('SELECT * FROM логs ORDER BY created_at DESC LIMIT ?', (limit,))
+            cursor.execute('SELECT * FROM logs ORDER BY created_at DESC LIMIT ?', (limit,))
         
         rows = cursor.fetchall()
         conn.close()

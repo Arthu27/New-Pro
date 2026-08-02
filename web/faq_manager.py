@@ -21,19 +21,19 @@ UNKNOWN_FILE ='data/unknown_questions.json'
 
 # ─── Помощник ────────────────────────────────────────────────────────────────
 
-def _loимя (path :str )->list :
-    os .maкотrs ('data',exist_ok =True )
+def _load (path :str )->list :
+    os .makedirs ('data',exist_ok =True )
     if os .path .exists (path ):
         try :
             with open (path ,'r',encoding ='utf-8')as f :
-                return json .loимя (f )
+                return json .load (f )
         except Exception :
             pass 
     return []
 
 
 def _save (path :str ,data :list ):
-    os .maкотrs ('data',exist_ok =True )
+    os .makedirs ('data',exist_ok =True )
     with open (path ,'w',encoding ='utf-8')as f :
         json .dump (data ,f ,indent =2 ,ensure_ascii =False )
 
@@ -56,7 +56,7 @@ def _similarity (a :str ,b :str )->float :
 
 def save_unknown_question (question :str ,guild_id :int ,channel_id :int ,history :list ):
     """Escalate olan soruyu unknown_questions.json'a add."""
-    items =_loимя (UNKNOWN_FILE )
+    items =_load (UNKNOWN_FILE )
 
     # Zaten benzer bir soru есть ли? Sayacы artыr
     for item in items :
@@ -90,7 +90,7 @@ def learn_from_staff (question :str ,answer :str ,guild_id :int ,staff_name :str
     Staff'ыn ticket'ta данные cevabы learned_faq.json'a add.
     Benzer soru zaten varsa обновл.
     """
-    faq =_loимя (FAQ_FILE )
+    faq =_load (FAQ_FILE )
 
     # Benzer soru есть ли? Обновить
     for item in faq :
@@ -124,7 +124,7 @@ def learn_from_staff (question :str ,answer :str ,guild_id :int ,staff_name :str
 
 def _mark_unknown_learned (question :str ):
     """unknown_questions'da benzer soruyu 'learned' как iшaretle."""
-    items =_loимя (UNKNOWN_FILE )
+    items =_load (UNKNOWN_FILE )
     changed =False 
     for item in items :
         if item .get ('status')=='pending'and _similarity (question ,item .get ('question',''))>0.65 :
@@ -141,7 +141,7 @@ def find_relevant_faqs (question :str ,guild_id :int =None ,top_k :int =3 ,thres
     Soruya en benzer FAQ'larы вернуть.
     Returns: [{'question': str, 'answer': str, 'score': float}, ...]
     """
-    faq =_loимя (FAQ_FILE )
+    faq =_load (FAQ_FILE )
     results =[]
 
     for item in faq :

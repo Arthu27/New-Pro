@@ -9,7 +9,7 @@ DATA_DIR ='data'
 
 
 def _info_file (guild_id :int )->str :
-    return f'{DATA_DIR}/сервер_info_{guild_id}.json'
+    return f'{DATA_DIR}/server_info_{guild_id}.json'
 
 
 def _load_info (guild_id :int )->dict :
@@ -177,10 +177,10 @@ class ServerInfo (commands .Cog ):
     def __init__ (self ,bot ):
         self .bot =bot 
 
-    @commands .command (name ='сервер-info')
+    @commands .command (name ='server-info')
     @commands .has_permissions (administrator =True )
     async def sunucu_info_panel (self ,ctx ):
-        """Server info control paneli: !сервер-info"""
+        """Server info control paneli: !server-info"""
         embed =discord .Embed (
         title =' Server Информация Управление',
         color =0x5865F2 ,

@@ -1,5 +1,5 @@
 """
-DeepSeek web scraper — API olmимяan chat.deepseek.com использовать.
+DeepSeek web scraper — API olmadan chat.deepseek.com использовать.
 Gereksinim: pip install playwright && python -m playwright install chromium
 
 Использование: .env'e add:
@@ -15,26 +15,26 @@ from datetime import datetime
 DEEPSEEK_EMAIL =os .getenv ('DEEPSEEK_EMAIL','')
 DEEPSEEK_PASSWORD =os .getenv ('DEEPSEEK_PASSWORD','')
 
-# Oturum statusu (tek seferlik логin, после новыйden ispolzuetsya)
+# Oturum statusu (tek seferlik login, после новыйden ispolzuetsya)
 _browser =None 
 _page =None 
 _lock =threading .Lock ()
-_логged_in =False 
+_logged_in =False 
 
 
-async def _ensure_логin ():
+async def _ensure_login ():
     """Tarayыcыyы запустить ve вход yap (bir kez)."""
-    global _browser ,_page ,_логged_in 
+    global _browser ,_page ,_logged_in 
 
     from playwright .async_api import async_playwright 
 
-    if _логged_in and _page :
+    if _logged_in and _page :
         return True 
 
     try :
         pw =await async_playwright ().start ()
         _browser =await pw .chromium .launch (
-        heимяless =True ,
+        headless =True ,
         args =['--no-sandbox','--disable-dev-shm-usage']
         )
         context =await _browser .new_context (
@@ -52,8 +52,8 @@ async def _ensure_логin ():
 
         # Вход butonu
         try :
-            логin_btn =_page .locator ('text=Лог in').first 
-            await логin_btn .click (timeout =5000 )
+            login_btn =_page .locator ('text=Лог in').first 
+            await login_btn .click (timeout =5000 )
             await _page .wait_for_timeout (1000 )
         except Exception :
             pass 
@@ -62,7 +62,7 @@ async def _ensure_логin ():
         email_input =_page .locator ('input[type="email"], input[name="email"], input[placeholder*="email" i]').first 
         await email_input .fill (DEEPSEEK_EMAIL ,timeout =10000 )
 
-        # Paрольa
+        # Parola
         pass_input =_page .locator ('input[type="password"]').first 
         await pass_input .fill (DEEPSEEK_PASSWORD ,timeout =5000 )
 
@@ -70,29 +70,29 @@ async def _ensure_логin ():
         submit =_page .locator ('button[type="submit"]').first 
         await submit .click (timeout =5000 )
 
-        # Вход заверш kимяar badd
+        # Вход заверш kadar badd
         await _page .wait_for_url ('**/chat**',timeout =20000 )
         await _page .wait_for_timeout (2000 )
 
-        _логged_in =True 
+        _logged_in =True 
         print ('[DeepSeek] Вход успешно')
         return True 
 
     except Exception as e :
         print (f'[DeepSeek] Вход Ошибки: {e}')
-        _логged_in =False 
+        _logged_in =False 
         return False 
 
 
 async def _ask_deepseek_async (prompt :str ,timeout :int =60 )->str :
     """DeepSeek'e soru sor, cevabы вернуть."""
-    global _page ,_логged_in 
+    global _page ,_logged_in 
 
     if not DEEPSEEK_EMAIL or not DEEPSEEK_PASSWORD :
         return ''
 
-    if not _логged_in :
-        ok =await _ensure_логin ()
+    if not _logged_in :
+        ok =await _ensure_login ()
         if not ok :
             return ''
 
@@ -113,7 +113,7 @@ async def _ask_deepseek_async (prompt :str ,timeout :int =60 )->str :
         # Отправить (Enter или buton)
         await textarea .press ('Enter')
 
-        # Cevabыn gelmesini badd — "dюшюnюyor" animasyonu bitene kимяar
+        # Cevabыn gelmesini badd — "dюшюnюyor" animasyonu bitene kadar
         await _page .wait_for_timeout (2000 )
 
         # Cevap elementini badd
@@ -140,7 +140,7 @@ async def _ask_deepseek_async (prompt :str ,timeout :int =60 )->str :
 
     except Exception as e :
         print (f'[DeepSeek] Soru Ошибки: {e}')
-        _логged_in =False # Новыйden логin denensin
+        _logged_in =False # Новыйden login denensin
         return ''
 
 
@@ -158,9 +158,9 @@ def ask_deepseek (prompt :str ,timeout :int =60 )->str :
         try :
             loop =asyncio .get_event_loop ()
             if loop .is_running ():
-            # Discord bot loop'u в, threимя'de работатьtыr
+            # Discord bot loop'u в, thread'de работатьtыr
                 import concurrent .futures 
-                with concurrent .futures .ThreимяPoolExecutor ()as pool :
+                with concurrent .futures .ThreadPoolExecutor ()as pool :
                     future =pool .submit (asyncio .run ,_ask_deepseek_async (prompt ,timeout ))
                     return future .result (timeout =timeout +10 )
             else :

@@ -15,14 +15,14 @@ class IntegrationManager:
     
     def __init__(self):
         self.config_file = 'data/integrations_config.json'
-        self.config = self._loимя_config()
+        self.config = self._load_config()
     
-    def _loимя_config(self) -> dict:
+    def _load_config(self) -> dict:
         """Загрузить конфигурацию интеграций"""
         if os.path.exists(self.config_file):
             try:
                 with open(self.config_file, 'r', encoding='utf-8') as f:
-                    return json.loимя(f)
+                    return json.load(f)
             except Exception:
                 pass
         
@@ -36,7 +36,7 @@ class IntegrationManager:
     
     def _save_config(self):
         """Сохранить конфигурацию интеграций"""
-        os.maкотrs('data', exist_ok=True)
+        os.makedirs('data', exist_ok=True)
         with open(self.config_file, 'w', encoding='utf-8') as f:
             json.dump(self.config, f, ensure_ascii=False, indent=2)
     
@@ -51,7 +51,7 @@ class IntegrationManager:
         url = f"{self.config['jira']['url']}/rest/api/2/issue"
         auth = (self.config['jira']['username'], self.config['jira']['api_token'])
         
-        payloимя = {
+        payload = {
             "fields": {
                 "summary": summary,
                 "description": description,
@@ -61,7 +61,7 @@ class IntegrationManager:
         }
         
         try:
-            response = requests.post(url, json=payloимя, auth=auth, timeout=10)
+            response = requests.post(url, json=payload, auth=auth, timeout=10)
             response.raise_for_status()
             
             data = response.json()
@@ -81,10 +81,10 @@ class IntegrationManager:
         url = f"{self.config['jira']['url']}/rest/api/2/issue/{issue_key}/comment"
         auth = (self.config['jira']['username'], self.config['jira']['api_token'])
         
-        payloимя = {"body": comment}
+        payload = {"body": comment}
         
         try:
-            response = requests.post(url, json=payloимя, auth=auth, timeout=10)
+            response = requests.post(url, json=payload, auth=auth, timeout=10)
             response.raise_for_status()
             return {'success': True}
         except Exception as e:
@@ -100,7 +100,7 @@ class IntegrationManager:
         
         # Использовать webhook если доступен
         if self.config['slack']['webhook_url']:
-            payloимя = {
+            payload = {
                 'channel': channel,
                 'text': text,
                 'attachments': attachments or []
@@ -109,7 +109,7 @@ class IntegrationManager:
             try:
                 response = requests.post(
                     self.config['slack']['webhook_url'],
-                    json=payloимя,
+                    json=payload,
                     timeout=10
                 )
                 response.raise_for_status()
@@ -120,19 +120,19 @@ class IntegrationManager:
         # Использовать Bot Token
         if self.config['slack']['bot_token']:
             url = 'https://slack.com/api/chat.postMessage'
-            heимяers = {
+            headers = {
                 'Authorization': f"Bearer {self.config['slack']['bot_token']}",
                 'Content-Type': 'application/json'
             }
             
-            payloимя = {
+            payload = {
                 'channel': channel,
                 'text': text,
                 'attachments': attachments or []
             }
             
             try:
-                response = requests.post(url, json=payloимя, heимяers=heимяers, timeout=10)
+                response = requests.post(url, json=payload, headers=headers, timeout=10)
                 response.raise_for_status()
                 data = response.json()
                 
@@ -180,21 +180,21 @@ class IntegrationManager:
     
     # TELEGRAM INTEGRATION 
     
-    def telegram_send_message(self, text: str, parse_модe: str = 'HTML') -> Dict[str, Any]:
+    def telegram_send_message(self, text: str, parse_mode: str = 'HTML') -> Dict[str, Any]:
         """Отправить сообщение в Telegram"""
         if not self.config['telegram']['enabled']:
             return {'success': False, 'error': 'Telegram integration is disabled'}
         
         url = f"https://api.telegram.org/bot{self.config['telegram']['bot_token']}/sendMessage"
         
-        payloимя = {
+        payload = {
             'chat_id': self.config['telegram']['chat_id'],
             'text': text,
-            'parse_модe': parse_модe
+            'parse_mode': parse_mode
         }
         
         try:
-            response = requests.post(url, json=payloимя, timeout=10)
+            response = requests.post(url, json=payload, timeout=10)
             response.raise_for_status()
             data = response.json()
             
@@ -207,7 +207,7 @@ class IntegrationManager:
     
     def telegram_create_ticket_notification(self, ticket: dict) -> Dict[str, Any]:
         """Создать уведомление о новом тикете в Telegram"""
-        priority_эмодзиs = {
+        priority_эmodзиs = {
             'low': '🟢',
             'medium': '🟡',
             'high': ''
@@ -224,7 +224,7 @@ class IntegrationManager:
 
 <b>Тема:</b> {ticket.get('subject', 'Без темы')}
 <b>Категория:</b> {ticket.get('category', 'Другое')}
-<b>Приоритет:</b> {priority_эмодзиs.get(ticket.get('priority', 'medium'), '🟡')} {priority_names.get(ticket.get('priority', 'medium'), 'Средний')}
+<b>Приоритет:</b> {priority_эmodзиs.get(ticket.get('priority', 'medium'), '🟡')} {priority_names.get(ticket.get('priority', 'medium'), 'Средний')}
 <b>Пользователь:</b> {ticket.get('user_name', 'Неизвестный')}
 
 <b>Описание:</b>
@@ -240,17 +240,17 @@ class IntegrationManager:
             return {'success': False, 'error': 'Stripe integration is disabled'}
         
         url = 'https://api.stripe.com/v1/customers'
-        heимяers = {
+        headers = {
             'Authorization': f"Bearer {self.config['stripe']['api_key']}"
         }
         
-        payloимя = {
+        payload = {
             'email': email,
             'name': name
         }
         
         try:
-            response = requests.post(url, data=payloимя, heимяers=heимяers, timeout=10)
+            response = requests.post(url, data=payload, headers=headers, timeout=10)
             response.raise_for_status()
             data = response.json()
             
@@ -265,20 +265,20 @@ class IntegrationManager:
             return {'success': False, 'error': 'Stripe integration is disabled'}
         
         url = 'https://api.stripe.com/v1/payment_intents'
-        heимяers = {
+        headers = {
             'Authorization': f"Bearer {self.config['stripe']['api_key']}"
         }
         
-        payloимя = {
+        payload = {
             'amount': amount,
             'currency': currency
         }
         
         if customer_id:
-            payloимя['customer'] = customer_id
+            payload['customer'] = customer_id
         
         try:
-            response = requests.post(url, data=payloимя, heимяers=heимяers, timeout=10)
+            response = requests.post(url, data=payload, headers=headers, timeout=10)
             response.raise_for_status()
             data = response.json()
             
@@ -300,18 +300,18 @@ class IntegrationManager:
         base_url = 'https://api-m.sandbox.paypal.com' if self.config['paypal']['sandbox'] else 'https://api-m.paypal.com'
         url = f"{base_url}/v1/oauth2/token"
         
-        heимяers = {
+        headers = {
             'Accept': 'application/json',
             'Accept-Language': 'en_US'
         }
         
-        payloимя = 'grant_type=client_credentials'
+        payload = 'grant_type=client_credentials'
         
         try:
             response = requests.post(
                 url,
-                data=payloимя,
-                heимяers=heимяers,
+                data=payload,
+                headers=headers,
                 auth=(self.config['paypal']['client_id'], self.config['paypal']['client_secret']),
                 timeout=10
             )
@@ -335,12 +335,12 @@ class IntegrationManager:
         base_url = 'https://api-m.sandbox.paypal.com' if self.config['paypal']['sandbox'] else 'https://api-m.paypal.com'
         url = f"{base_url}/v2/checkout/orders"
         
-        heимяers = {
+        headers = {
             'Content-Type': 'application/json',
             'Authorization': f"Bearer {access_token}"
         }
         
-        payloимя = {
+        payload = {
             'intent': 'CAPTURE',
             'purchase_units': [{
                 'amount': {
@@ -352,7 +352,7 @@ class IntegrationManager:
         }
         
         try:
-            response = requests.post(url, json=payloимя, heимяers=heимяers, timeout=10)
+            response = requests.post(url, json=payload, headers=headers, timeout=10)
             response.raise_for_status()
             data = response.json()
             

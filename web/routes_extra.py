@@ -81,7 +81,7 @@ def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
         elif action_type =='ban':
             reason =action_data .get ('reason','AI ban')
             if not (guild and uid ):
-                return '❌ Eksik деньгиmetre'
+                return '❌ Eksik parametre'
             member =guild .get_member (int (uid ))
             if not member :
                 return '❌ Участник на сервере не найдено'
@@ -92,7 +92,7 @@ def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
         elif action_type =='kick':
             reason =action_data .get ('reason','AI kick')
             if not (guild and uid ):
-                return '❌ Eksik деньгиmetre'
+                return '❌ Eksik parametre'
             member =guild .get_member (int (uid ))
             if not member :
                 return '❌ Участник на сервере не найдено'
@@ -113,7 +113,7 @@ def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
             minutes =int (action_data .get ('minutes',10 ))
             reason =action_data .get ('reason','AI timeout')
             if not (guild and uid ):
-                return '❌ Eksik деньгиmetre'
+                return '❌ Eksik parametre'
             member =guild .get_member (int (uid ))
             if not member :
                 return '❌ Участник на сервере не найдено'
@@ -123,7 +123,7 @@ def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
         elif action_type =='add_role':
             role_id =str (action_data .get ('role_id',''))
             if not (guild and uid and role_id ):
-                return '❌ Eksik деньгиmetre'
+                return '❌ Eksik parametre'
             member =guild .get_member (int (uid ))
             role =guild .get_role (int (role_id ))
             if not (member and roles ):
@@ -134,7 +134,7 @@ def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
         elif action_type =='remove_role':
             role_id =str (action_data .get ('role_id',''))
             if not (guild and uid and role_id ):
-                return '❌ Eksik деньгиmetre'
+                return '❌ Eksik parametre'
             member =guild .get_member (int (uid ))
             role =guild .get_role (int (role_id ))
             if not (member and roles ):
@@ -186,7 +186,7 @@ def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
             message =action_data .get ('message','')
             role_id =str (action_data .get ('role_id',''))
             if not (bot and guild and message ):
-                return '❌ Eksik деньгиmetre'
+                return '❌ Eksik parametre'
             members =guild .members if not role_id else [
             m for m in guild .members if any (str (r .id )==role_id for r in m .roles )
             ]
@@ -249,7 +249,7 @@ def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
         elif action_type =='nick':
             nick =action_data .get ('nick','')
             if not (guild and uid ):
-                return '❌ Eksik деньгиmetre'
+                return '❌ Eksik parametre'
             member =guild .get_member (int (uid ))
             if not member :
                 return '❌ Участник не найдено'
@@ -258,7 +258,7 @@ def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
 
         elif action_type =='unban':
             if not (guild and uid ):
-                return '❌ Eksik деньгиmetre'
+                return '❌ Eksik parametre'
             def _unban ():
                 user =_run_async (bot .fetch_user (int (uid )))
                 _run_async (guild .unban (user ))
@@ -1012,7 +1012,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
             "  'бан' / 'забанить' → [EYLEM:BAN:user_id:причина]\n"
             "  'кик' / 'выгнать' → [EYLEM:KICK:user_id:причина]\n"
             "  'мут' / 'тайм-аут' / 'заткнуть' → [EYLEM:TIMEOUT:user_id:минуты:причина]\n"
-            "  'напиши в канал' / 'отправь сообщение' + имя_канала + текст → [EYLEM:СООБЩЕНИЕ:channel_name:text]\n"
+            "  'напиши в канал' / 'отправь сообщение' + ad_канала + текст → [EYLEM:СООБЩЕНИЕ:channel_name:text]\n"
             "  'медленный режим' / 'slowmode' → [EYLEM:KANAL_YAVAШ:channel_id:секунды]\n"
             "  'выдай роль' / 'дай роль' → [EYLEM:ROL_VER:user_id:role_id]\n"
             "  'забери роль' / 'убери роль' → [EYLEM:ROL_AL:user_id:role_id]\n"
@@ -1050,7 +1050,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
             )
 
         system =(
-        f"Ты Aether — ИИ-ассистент Discord-сервера Aether и веб-панели.\n"
+        f"Ты Aether — ИИ-ассистент Discord-serverа Aether и веб-панели.\n"
         f"Пользователь: {session.get('username')}, Роль: {user_role}\n"
         f"Время: {now.strftime('%H:%M')}, Дата: {now.strftime('%d %B %Y, %A')}\n\n"
         f"=== СОСТОЯНИЕ СЕРВЕРА ===\n"
@@ -2813,7 +2813,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                     guild =g 
                     break 
         if guild is None :
-            return jsonify ({'error':f'Bot bu серверda bulunmuyor (id={guild_id}). Bot guilds: {[str(g.id) for g in bot.guilds]}'}),404 
+            return jsonify ({'error':f'Bot bu serverda bulunmuyor (id={guild_id}). Bot guilds: {[str(g.id) for g in bot.guilds]}'}),404 
         def do ():
             color_hex =(data .get ('color')or '#dc143c').lstrip ('#')or 'dc143c'
             try :
@@ -2825,7 +2825,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
             asyncio .run_coroutine_threadsafe (do (),bot .loop ).result (timeout =10 )
             return jsonify ({'success':True })
         except discord .Forbidden :
-            return jsonify ({'error':'Bu серверda роль oluшturma yetkim нет'}),403 
+            return jsonify ({'error':'Bu serverda роль oluшturma yetkim нет'}),403 
         except discord .HTTPException as e :
             return jsonify ({'error':f'Discord hatasы: {e}'}),500 
         except Exception as e :
@@ -4975,7 +4975,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     def api_user_messages (guild_id ):
         """Kullanыcыnыn yazdыгы сообщениеlarы message_log dosyasыndan ara.
 
-        Query деньгиms:
+        Query params:
           user_id (zorunlu) — Discord user ID
           channel_id (opsiyonel) — belirli канал
           limit (opsiyonel, default 50, max 200) — kaч sonuч
@@ -6888,7 +6888,7 @@ def calculate_ai_ticket_stats (guild_id :int )->dict :
 
 
         # ── CUSTOMER PORTAL API ─────────────────────────────────────────────────────
-    @app .route ('/api/customer-pцентрl',methods =['GET'])
+    @app .route ('/api/customer-portal',methods =['GET'])
     @login_required 
     def api_customer_portal_get ():
         """Получить данные клиентского портала"""
@@ -6956,7 +6956,7 @@ def calculate_ai_ticket_stats (guild_id :int )->dict :
         'articles':popular_articles 
         })
 
-    @app .route ('/api/customer-pцентрl/tickets',methods =['POST'])
+    @app .route ('/api/customer-portal/tickets',methods =['POST'])
     @login_required 
     def api_customer_portal_create_ticket ():
         """Создать тикет"""
@@ -7004,7 +7004,7 @@ def calculate_ai_ticket_stats (guild_id :int )->dict :
 
         return jsonify ({'success':True ,'ticket':new_ticket })
 
-    @app .route ('/api/customer-pцентрl/tickets',methods =['GET'])
+    @app .route ('/api/customer-portal/tickets',methods =['GET'])
     @login_required 
     def api_customer_portal_get_tickets ():
         """Получить тикеты пользователя"""
@@ -7039,7 +7039,7 @@ def calculate_ai_ticket_stats (guild_id :int )->dict :
 
         return jsonify ({'success':True ,'tickets':user_tickets })
 
-    @app .route ('/api/customer-pцентрl/profile',methods =['PUT'])
+    @app .route ('/api/customer-portal/profile',methods =['PUT'])
     @login_required 
     def api_customer_portal_update_profile ():
         """Обновить профиль пользователя"""
@@ -7050,10 +7050,10 @@ def calculate_ai_ticket_stats (guild_id :int )->dict :
 
         return jsonify ({'success':True })
 
-    @app .route ('/customer-pцентрl')
+    @app .route ('/customer-portal')
     @login_required 
     def customer_portal_page ():
         """Страница клиентского портала"""
-        return render_template ('customer_pцентрl.html',role =session .get ('role'),username =session .get ('username'))
+        return render_template ('customer_portal.html',role =session .get ('role'),username =session .get ('username'))
 
 

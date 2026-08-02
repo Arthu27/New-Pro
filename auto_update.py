@@ -7,13 +7,13 @@ import sys
 
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
 REPO_API = "https://api.github.com/repos/Arthu27/moebius-bot/commits/main"
-ZIP_URL = "https://github.com/Arthu27/moebius-bot/archive/refs/heимяs/main.zip"
+ZIP_URL = "https://github.com/Arthu27/moebius-bot/archive/refs/heads/main.zip"
 
 # Script'in найден dizini автоматически определить (VSCode workspace)
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 BOT_DIR = SCRIPT_DIR  # VSCode workspace'ini использовать
 LAST_COMMIT_FILE = os.path.join(BOT_DIR, "last_commit.txt")
-BOT_LOG = os.path.join(BOT_DIR, "bot_output.лог")
+BOT_LOG = os.path.join(BOT_DIR, "bot_output.log")
 
 # .env содержимое теперь .env файлndan okunur, здесь hardcoded deгildir
 ENV_CONTENT = """TOKEN=YOUR_BOT_TOKEN_HERE
@@ -31,8 +31,8 @@ def лог(msg):
 def get_remote_commit():
     """GitHub API'den son commit hash'ini al"""
     try:
-        heимяers = {"Authorization": f"token {GITHUB_TOKEN}"}
-        r = requests.get(REPO_API, heимяers=heимяers, timeout=10)
+        headers = {"Authorization": f"token {GITHUB_TOKEN}"}
+        r = requests.get(REPO_API, headers=headers, timeout=10)
         if r.status_code == 200:
             return r.json()["sha"]
     except Exception as e:
@@ -99,7 +99,7 @@ def kill_bot():
 def start_bot():
     """Botu arka planda baslatir, лог dosyasina написатьar"""
     try:
-        os.maкотrs(BOT_DIR, exist_ok=True)
+        os.makedirs(BOT_DIR, exist_ok=True)
         
         # main.py'nin tam yolunu al
         main_py = os.path.join(BOT_DIR, "main.py")
@@ -109,7 +109,7 @@ def start_bot():
         
         # data/ klasёrюnю контроль et
         data_dir = os.path.join(BOT_DIR, "data")
-        os.maкотrs(data_dir, exist_ok=True)
+        os.makedirs(data_dir, exist_ok=True)
         
         # .env файл контроль et
         env_file = os.path.join(BOT_DIR, ".env")
@@ -122,21 +122,21 @@ def start_bot():
         лог(f"[AUTO-UPDATE] Python: {sys.executable}")
         лог(f"[AUTO-UPDATE] main.py: {main_py}")
         
-        лог_file = open(BOT_LOG, 'w', encoding='utf-8', errors='replace')
+        log_file = open(BOT_LOG, 'w', encoding='utf-8', errors='replace')
         env = os.environ.copy()
         env['PYTHONIOENCODING'] = 'utf-8'
         proc = subprocess.Popen(
             [sys.executable, main_py],
             cwd=BOT_DIR,
-            stdout=лог_file,
-            stderr=лог_file,
+            stdout=log_file,
+            stderr=log_file,
             stdin=subprocess.DEVNULL,
             env=env,
             creationflags=subprocess.CREATE_NEW_PROCESS_GROUP  # Signal izolasyonu
         )
         лог(f"[AUTO-UPDATE] Bot работатьtыrыldы! PID: {proc.pid} | Лог: {BOT_LOG}")
         
-        # 3 saniye bимяd ve process'in hala работатьtыгыnы контроль et
+        # 3 saniye badd ve process'in hala работатьtыгыnы контроль et
         time.sleep(3)
         if proc.poll() is not None:
             лог(f"[AUTO-UPDATE] ПРЕДУПРЕЖДЕНИЕ: Bot hemen kapandi! Exit code: {proc.returncode}")
@@ -184,11 +184,11 @@ def git_pull():
         raise Exception(f"git pull ошибки: {e}")
 
 
-def downloимя_and_extract():
+def download_and_extract():
     """GitHub'dan ZIP indir ve BOT_DIR'e ac (fallback)"""
     лог("[AUTO-UPDATE] Dosyalar indiriliyor...")
-    heимяers = {"Authorization": f"token {GITHUB_TOKEN}"}
-    r = requests.get(ZIP_URL, heимяers=heимяers, timeout=60)
+    headers = {"Authorization": f"token {GITHUB_TOKEN}"}
+    r = requests.get(ZIP_URL, headers=headers, timeout=60)
     if r.status_code != 200:
         raise Exception(f"Indirme ошибки HTTP {r.status_code}")
 
@@ -206,12 +206,12 @@ def downloимя_and_extract():
             if target.startswith("data/"):
                 continue
             if member.is_dir():
-                os.maкотrs(target_path, exist_ok=True)
+                os.makedirs(target_path, exist_ok=True)
             else:
-                os.maкотrs(os.path.dirname(target_path), exist_ok=True)
+                os.makedirs(os.path.dirname(target_path), exist_ok=True)
                 try:
                     with zf.open(member) as src, open(target_path, 'wb') as dst:
-                        dst.write(src.reимя())
+                        dst.write(src.read())
                 except Exception as e:
                     лог(f"[AUTO-UPDATE] Dosya написатьma ошибки ({target}): {e}")
 
@@ -235,7 +235,7 @@ def update_bot():
             git_pull()
         else:
             лог("[AUTO-UPDATE] .git не найдено, ZIP с guncelleniyor...")
-            downloимя_and_extract()
+            download_and_extract()
         time.sleep(2)
         start_bot()
         лог("[AUTO-UPDATE] === GUNCELLEME ЗАВЕРШЕНО ===")

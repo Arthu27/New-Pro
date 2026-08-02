@@ -15,14 +15,14 @@ class TicketMerger:
     
     def __init__(self):
         self.merge_history_file = 'data/ticket_merge_history.json'
-        self.merge_history = self._loимя_merge_history()
+        self.merge_history = self._load_merge_history()
     
-    def _loимя_merge_history(self) -> Dict[str, Any]:
+    def _load_merge_history(self) -> Dict[str, Any]:
         """Загрузить историю объединений"""
         if os.path.exists(self.merge_history_file):
             try:
                 with open(self.merge_history_file, 'r', encoding='utf-8') as f:
-                    return json.loимя(f)
+                    return json.load(f)
             except Exception:
                 pass
         
@@ -30,7 +30,7 @@ class TicketMerger:
     
     def _save_merge_history(self):
         """Сохранить историю объединений"""
-        os.maкотrs('data', exist_ok=True)
+        os.makedirs('data', exist_ok=True)
         with open(self.merge_history_file, 'w', encoding='utf-8') as f:
             json.dump(self.merge_history, f, ensure_ascii=False, indent=2)
     
@@ -77,14 +77,14 @@ class TicketSplitter:
     
     def __init__(self):
         self.split_history_file = 'data/ticket_split_history.json'
-        self.split_history = self._loимя_split_history()
+        self.split_history = self._load_split_history()
     
-    def _loимя_split_history(self) -> Dict[str, Any]:
+    def _load_split_history(self) -> Dict[str, Any]:
         """Bёlme geчmiшini загрузить"""
         if os.path.exists(self.split_history_file):
             try:
                 with open(self.split_history_file, 'r', encoding='utf-8') as f:
-                    return json.loимя(f)
+                    return json.load(f)
             except Exception:
                 pass
         
@@ -92,7 +92,7 @@ class TicketSplitter:
     
     def _save_split_history(self):
         """Bёlme geчmiшini сохранить"""
-        os.maкотrs('data', exist_ok=True)
+        os.makedirs('data', exist_ok=True)
         with open(self.split_history_file, 'w', encoding='utf-8') as f:
             json.dump(self.split_history, f, ensure_ascii=False, indent=2)
     
@@ -132,14 +132,14 @@ class TicketCloner:
     
     def __init__(self):
         self.clone_history_file = 'data/ticket_clone_history.json'
-        self.clone_history = self._loимя_clone_history()
+        self.clone_history = self._load_clone_history()
     
-    def _loимя_clone_history(self) -> Dict[str, Any]:
+    def _load_clone_history(self) -> Dict[str, Any]:
         """Klonlama geчmiшini загрузить"""
         if os.path.exists(self.clone_history_file):
             try:
                 with open(self.clone_history_file, 'r', encoding='utf-8') as f:
-                    return json.loимя(f)
+                    return json.load(f)
             except Exception:
                 pass
         
@@ -147,13 +147,13 @@ class TicketCloner:
     
     def _save_clone_history(self):
         """Klonlama geчmiшini сохранить"""
-        os.maкотrs('data', exist_ok=True)
+        os.makedirs('data', exist_ok=True)
         with open(self.clone_history_file, 'w', encoding='utf-8') as f:
             json.dump(self.clone_history, f, ensure_ascii=False, indent=2)
     
     def clone_ticket(self, original_ticket: Dict[str, Any],
                      cloned_by: str,
-                     модifications: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+                     modifications: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Ticket'ы klonla"""
         clone_id = hashlib.md5(f"{original_ticket.get('id')}{datetime.now().isoformat()}".encode()).hexdigest()[:12]
         
@@ -167,8 +167,8 @@ class TicketCloner:
         cloned_ticket['status'] = 'open'
         
         # Изменениеleri uygula
-        if модifications:
-            cloned_ticket.update(модifications)
+        if modifications:
+            cloned_ticket.update(modifications)
         
         # Kaydet
         self.clone_history[clone_id] = {
@@ -198,14 +198,14 @@ class TicketDependencies:
     
     def __init__(self):
         self.dependencies_file = 'data/ticket_dependencies.json'
-        self.dependencies = self._loимя_dependencies()
+        self.dependencies = self._load_dependencies()
     
-    def _loимя_dependencies(self) -> Dict[str, Any]:
+    def _load_dependencies(self) -> Dict[str, Any]:
         """Baгыmlыlыklarы загрузить"""
         if os.path.exists(self.dependencies_file):
             try:
                 with open(self.dependencies_file, 'r', encoding='utf-8') as f:
-                    return json.loимя(f)
+                    return json.load(f)
             except Exception:
                 pass
         
@@ -213,7 +213,7 @@ class TicketDependencies:
     
     def _save_dependencies(self):
         """Baгыmlыlыklarы сохранить"""
-        os.maкотrs('data', exist_ok=True)
+        os.makedirs('data', exist_ok=True)
         with open(self.dependencies_file, 'w', encoding='utf-8') as f:
             json.dump(self.dependencies, f, ensure_ascii=False, indent=2)
     
@@ -307,14 +307,14 @@ class SubTicketManager:
     
     def __init__(self):
         self.subtickets_file = 'data/subtickets.json'
-        self.subtickets = self._loимя_subtickets()
+        self.subtickets = self._load_subtickets()
     
-    def _loимя_subtickets(self) -> Dict[str, Any]:
+    def _load_subtickets(self) -> Dict[str, Any]:
         """Alt ticket'larы загрузить"""
         if os.path.exists(self.subtickets_file):
             try:
                 with open(self.subtickets_file, 'r', encoding='utf-8') as f:
-                    return json.loимя(f)
+                    return json.load(f)
             except Exception:
                 pass
         
@@ -322,7 +322,7 @@ class SubTicketManager:
     
     def _save_subtickets(self):
         """Alt ticket'larы сохранить"""
-        os.maкотrs('data', exist_ok=True)
+        os.makedirs('data', exist_ok=True)
         with open(self.subtickets_file, 'w', encoding='utf-8') as f:
             json.dump(self.subtickets, f, ensure_ascii=False, indent=2)
     
@@ -390,14 +390,14 @@ class CustomWorkflow:
     
     def __init__(self):
         self.workflows_file = 'data/custom_workflows.json'
-        self.workflows = self._loимя_workflows()
+        self.workflows = self._load_workflows()
     
-    def _loимя_workflows(self) -> Dict[str, Any]:
+    def _load_workflows(self) -> Dict[str, Any]:
         """Иш akышlarыnы загрузить"""
         if os.path.exists(self.workflows_file):
             try:
                 with open(self.workflows_file, 'r', encoding='utf-8') as f:
-                    return json.loимя(f)
+                    return json.load(f)
             except Exception:
                 pass
         
@@ -405,7 +405,7 @@ class CustomWorkflow:
     
     def _save_workflows(self):
         """Иш akышlarыnы сохранить"""
-        os.maкотrs('data', exist_ok=True)
+        os.makedirs('data', exist_ok=True)
         with open(self.workflows_file, 'w', encoding='utf-8') as f:
             json.dump(self.workflows, f, ensure_ascii=False, indent=2)
     

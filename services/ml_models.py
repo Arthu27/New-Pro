@@ -1,6 +1,6 @@
 """
-Machine Learning Модels
-ML модelleri ile tahmin ve analiz
+Machine Learning Models
+ML modelleri ile tahmin ve analiz
 """
 
 import json
@@ -13,18 +13,18 @@ import math
 
 
 class TicketPredictor:
-    """Ticket tahmin модeli"""
+    """Ticket tahmin modeli"""
     
     def __init__(self):
-        self.модel_file = 'data/ml_модels/ticket_predictor.json'
-        self.модel = self._loимя_модel()
+        self.model_file = 'data/ml_models/ticket_predictor.json'
+        self.model = self._load_model()
     
-    def _loимя_модel(self) -> Dict[str, Any]:
-        """Модeli загрузить"""
-        if os.path.exists(self.модel_file):
+    def _load_model(self) -> Dict[str, Any]:
+        """Modeli загрузить"""
+        if os.path.exists(self.model_file):
             try:
-                with open(self.модel_file, 'r', encoding='utf-8') as f:
-                    return json.loимя(f)
+                with open(self.model_file, 'r', encoding='utf-8') as f:
+                    return json.load(f)
             except Exception:
                 pass
         
@@ -35,14 +35,14 @@ class TicketPredictor:
             'resolution_patterns': {}
         }
     
-    def _save_модel(self):
-        """Модeli сохранить"""
-        os.maкотrs('data/ml_модels', exist_ok=True)
-        with open(self.модel_file, 'w', encoding='utf-8') as f:
-            json.dump(self.модel, f, ensure_ascii=False, indent=2)
+    def _save_model(self):
+        """Modeli сохранить"""
+        os.makedirs('data/ml_models', exist_ok=True)
+        with open(self.model_file, 'w', encoding='utf-8') as f:
+            json.dump(self.model, f, ensure_ascii=False, indent=2)
     
     def train(self, tickets: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Модeli eгit"""
+        """Modeli eгit"""
         if not tickets:
             return {'error': 'Eгitim verisi yok'}
         
@@ -99,8 +99,8 @@ class TicketPredictor:
         
         avg_resolution = sum(resolution_times) / len(resolution_times) if resolution_times else 0
         
-        # Модeli сохранить
-        self.модel = {
+        # Modeli сохранить
+        self.model = {
             'trained_at': datetime.now().isoformat(),
             'category_weights': category_weights,
             'priority_weights': priority_weights,
@@ -110,11 +110,11 @@ class TicketPredictor:
             }
         }
         
-        self._save_модel()
+        self._save_model()
         
         return {
             'success': True,
-            'trained_at': self.модel['trained_at'],
+            'trained_at': self.model['trained_at'],
             'categories': len(category_weights),
             'priorities': len(priority_weights),
             'samples': len(tickets)
@@ -125,11 +125,11 @@ class TicketPredictor:
         text_lower = text.lower()
         words = self._extract_keywords(text_lower)
         
-        if not self.модel.get('category_weights'):
+        if not self.model.get('category_weights'):
             return 'unknown', 0.0
         
         scores = {}
-        for category, weights in self.модel['category_weights'].items():
+        for category, weights in self.model['category_weights'].items():
             score = sum(weights.get(word, 0) for word in words)
             scores[category] = score
         
@@ -146,11 +146,11 @@ class TicketPredictor:
         text_lower = text.lower()
         words = self._extract_keywords(text_lower)
         
-        if not self.модel.get('priority_weights'):
+        if not self.model.get('priority_weights'):
             return 'medium', 0.5
         
         scores = {}
-        for priority, weights in self.модel['priority_weights'].items():
+        for priority, weights in self.model['priority_weights'].items():
             score = sum(weights.get(word, 0) for word in words)
             scores[priority] = score
         
@@ -164,7 +164,7 @@ class TicketPredictor:
     
     def predict_resolution_time(self, category: str, priority: str) -> float:
         """Чёzюm длительность tahmin et"""
-        base_time = self.модel.get('resolution_patterns', {}).get('avg_resolution_time', 24)
+        base_time = self.model.get('resolution_patterns', {}).get('avg_resolution_time', 24)
         
         # Kategori чarpanы
         category_multipliers = {
@@ -194,24 +194,24 @@ class TicketPredictor:
         words = re.findall(r'\b\w+\b', text.lower())
         
         # Stop words filtrele
-        stop_words = {'и', 'в', 'на', 'с', 'по', 'для', 'от', 'до', 'из', 'у', 'к', 'о', 'не', 'но', 'а', 'или', 'что', 'как', 'это', 'все', 'его', 'ее', 'их', 'мы', 'вы', 'они', 'the', 'and', 'or', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'from', 'is', 'was', 'are', 'were', 'been', 'be', 'have', 'has', 'hимя', 'do', 'does', 'did', 'will', 'would', 'could', 'should'}
+        stop_words = {'и', 'в', 'на', 'с', 'по', 'для', 'от', 'до', 'из', 'у', 'к', 'о', 'не', 'но', 'а', 'или', 'что', 'как', 'это', 'все', 'его', 'ее', 'их', 'мы', 'вы', 'они', 'the', 'and', 'or', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'from', 'is', 'was', 'are', 'were', 'been', 'be', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should'}
         
         return [word for word in words if word not in stop_words and len(word) > 2]
 
 
 class ChurnPredictor:
-    """Mюшteri kaybы tahmin модeli"""
+    """Mюшteri kaybы tahmin modeli"""
     
     def __init__(self):
-        self.модel_file = 'data/ml_модels/churn_predictor.json'
-        self.модel = self._loимя_модel()
+        self.model_file = 'data/ml_models/churn_predictor.json'
+        self.model = self._load_model()
     
-    def _loимя_модel(self) -> Dict[str, Any]:
-        """Модeli загрузить"""
-        if os.path.exists(self.модel_file):
+    def _load_model(self) -> Dict[str, Any]:
+        """Modeli загрузить"""
+        if os.path.exists(self.model_file):
             try:
-                with open(self.модel_file, 'r', encoding='utf-8') as f:
-                    return json.loимя(f)
+                with open(self.model_file, 'r', encoding='utf-8') as f:
+                    return json.load(f)
             except Exception:
                 pass
         
@@ -220,11 +220,11 @@ class ChurnPredictor:
             'risk_factors': {}
         }
     
-    def _save_модel(self):
-        """Модeli сохранить"""
-        os.maкотrs('data/ml_модels', exist_ok=True)
-        with open(self.модel_file, 'w', encoding='utf-8') as f:
-            json.dump(self.модel, f, ensure_ascii=False, indent=2)
+    def _save_model(self):
+        """Modeli сохранить"""
+        os.makedirs('data/ml_models', exist_ok=True)
+        with open(self.model_file, 'w', encoding='utf-8') as f:
+            json.dump(self.model, f, ensure_ascii=False, indent=2)
     
     def predict_churn_risk(self, user_id: str, tickets: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Kayыp riskini tahmin et"""
@@ -319,18 +319,18 @@ class ChurnPredictor:
 
 
 class AnomalyDetector:
-    """Anomali tespit модeli"""
+    """Anomali tespit modeli"""
     
     def __init__(self):
-        self.baseline_file = 'data/ml_модels/anomaly_baseline.json'
-        self.baseline = self._loимя_baseline()
+        self.baseline_file = 'data/ml_models/anomaly_baseline.json'
+        self.baseline = self._load_baseline()
     
-    def _loимя_baseline(self) -> Dict[str, Any]:
+    def _load_baseline(self) -> Dict[str, Any]:
         """Baseline'ы загрузить"""
         if os.path.exists(self.baseline_file):
             try:
                 with open(self.baseline_file, 'r', encoding='utf-8') as f:
-                    return json.loимя(f)
+                    return json.load(f)
             except Exception:
                 pass
         
@@ -343,7 +343,7 @@ class AnomalyDetector:
     
     def _save_baseline(self):
         """Baseline'ы сохранить"""
-        os.maкотrs('data/ml_модels', exist_ok=True)
+        os.makedirs('data/ml_models', exist_ok=True)
         with open(self.baseline_file, 'w', encoding='utf-8') as f:
             json.dump(self.baseline, f, ensure_ascii=False, indent=2)
     

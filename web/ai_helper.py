@@ -17,7 +17,7 @@ except ImportError :
     # ─── VERITABANI ИНФОРМАЦИЯ BOTUN ───────────────────────────────────────────────────────
 
 def _bot_knowledge_base ()->str :
-    """Polnaya veritaбаны информация о botta Aether"""
+    """Polnaya veritabanы информация о botta Aether"""
     return """
 ═══════════════════════════════════════════
 AETHER BOT — POLNAYa VERITABANI ИНФОРМАЦИЯ
@@ -25,32 +25,32 @@ AETHER BOT — POLNAYa VERITABANI ИНФОРМАЦИЯ
 
 ## NE TAKOE AETHER?
 Aether — чokfunkcionalniy Discord bot для управление сервер.
-Web-панель (Flask) + Discord bot работа vmeste.
+Web-panel (Flask) + Discord bot работа vmeste.
 Панель доступюzerinde с Cloudflare tunnel по publicnoy sудалитьke.
-Ссылка на панель nahoditsya в канал #aether-панель.
+Ссылка на панель nahoditsya в канал #aether-panel.
 
 ## 🛡️ MODERASYON
-- /модerate бан @user [причина] — permanentniy бан
-- /модerate кик @user [причина] — кик с сервер
-- /модerate timeout @user [dakika] [причина] — временный мут
-- /модerate untimeout @user — удалено мут
-- /модerate unбан [user_id] — razбан
+- /moderate бан @user [причина] — permanentniy бан
+- /moderate кик @user [причина] — кик с сервер
+- /moderate timeout @user [dakika] [причина] — временный мут
+- /moderate untimeout @user — удалено мут
+- /moderate unban [user_id] — razban
 - /utility clear [число] — toplu удалить сообщение
 - /utility lock/unlock — blokirovka/razblokirovka канал
 - /utility userinfo @user — информация о у пользователя
 - /роли @user @роль — выдать/удалено роль
-- /history @user — история модerasyonu
+- /history @user — история moderasyonu
 - /case [id] — detali iшler
 - /note @user [metin] — добавить заметку
 - /notes @user — показать notlar
 - /watchlist @user [причина] — список наблюдение
-- /банlist — запретlanлиш пользователи
-- /massрольe @роль [выдать/удалено] — toplu verme роль
+- /banlist — запретlanлиш пользователи
+- /massrole @роль [выдать/удалено] — toplu verme роль
 
 ## ⚠️ ПРЕДУПРЕЖДЕНИЯ
 - /варн @user [причина] — выдать предупреждение
 - /warnings @user — список предупреждение
-- /clearварнs @user — очистить предупреждения
+- /clearwarns @user — очистить предупреждения
 Автоматически olarake наказания: iken nakoplenii предупреждение — мут/кик/бан.
 
 ## 🎵 MЮZIK
@@ -101,8 +101,8 @@ Web-панель (Flask) + Discord bot работа vmeste.
 - !ranking messages — очередь сообщение
 - !ranking voice — рейтинг голосового времени
 - !ranking invites — очередь приглашение
-- /мод-stats @user — статистика модератор
-- /activeмодs — aktivnie модераторы
+- /mod-stats @user — статистика модератор
+- /activemods — aktivnie модераторы
 
 ## 📅 MEROPRIYaTIYa
 - /event-create [имя] — создать событие
@@ -111,13 +111,13 @@ Web-панель (Flask) + Discord bot работа vmeste.
 - /giveaway — создать розыгрыш
 
 ## ⚙️ УПРАВЛЕНИЕ СЕРВЕР
-- /setup-логs — создать лог-каналы
+- /setup-logs — создать лог-каналы
 - /verify-setup — настройк verifikaciyu
-- /ticket_панель — панель ticketlarыn
-- /duty-панель — панель задачи
+- /ticket_panel — панель ticketlarыn
+- /duty-panel — панель задачи
 - /duty-add @user [очки] — добавить progress
 - /duty-stats — tablo очки
-- /autoмод — автоматически
+- /automod — автоматически
 - /level-роли-add [уровень] @роль — роль для уровень
 - /level-роли — список роль для уровеньler
 
@@ -142,7 +142,7 @@ Web-панель (Flask) + Discord bot работа vmeste.
 
 ## 🎫 ТИКЕТЫ
 - Нажмите кнопку в канале для тикета
-- Откроется канал #ticket-вашеимя
+- Откроется канал #ticket-вашеad
 - AI-ассистент поможет решить проблему
 - Если не получится — передаст модератору
 - При закрытии — транскрипт сохраняется
@@ -170,16 +170,16 @@ Web-панель (Flask) + Discord bot работа vmeste.
 
 ## 🌐 WEB-PANEL
 Панель — web-interfeys управление сервер.
-Как вход yap: ссылка в канал #aether-панель → Discord ID + paрольa.
+Как вход yap: ссылка в канал #aether-panel → Discord ID + parola.
 Уровеньler доступ:
 - Участник: profil, заявка, день рождение
-- Модератор: логlar, предупреждения, ticketlar
-- Yёnetici: команды, каналы, рольes, автоматически
+- Модератор: loglar, предупреждения, ticketlar
+- Yёnetici: команды, каналы, roles, автоматически
 - Sahip: vse
 
 ## ❓ CASTIE SORULAR
 В: Как вход yap в панель?
-О: Ссылка в канал #aether-панель → Discord ID + paрольa.
+О: Ссылка в канал #aether-panel → Discord ID + parola.
 
 В: Музыка не oynuyor?
 О: Войдите в голосовой канал, затем /play. Если ошибка — /leave и снова /play.
@@ -199,8 +199,8 @@ Web-панель (Flask) + Discord bot работа vmeste.
 В: Как сохранить день рождение?
 О: /birthday [день] [месяц] или с панель.
 
-В: Zabil paрольa из панельi?
-О: Клик "Для paрольa?" на stranice вход → Discord ID → kod в DM.
+В: Zabil parola из paneli?
+О: Клик "Для parola?" на stranice вход → Discord ID → kod в DM.
 """
 
 
@@ -212,7 +212,7 @@ def _detect_category_ai (message :str ,history :List [Dict ])->str :
 
 KATEGORILER:
 - complaint: жалоба на drugogo пользователь (оскорбление, spam, toksisite)
-- question: soru о botta, панельi, команда, в ролях, ekonomike
+- question: soru о botta, paneli, команда, в ролях, ekonomike
 - technical: tehniceskaya sorun (не работает, ошибка, bag)
 - other: vse ostalnoe
 
@@ -228,11 +228,11 @@ Bez poyasneniy, bez tocek, bez kavicek.
 Сообщение пользователь: """
 
     messages =[
-    {'рольe':'user','content':prompt +message }
+    {'role':'user','content':prompt +message }
     ]
 
     try :
-        from web .модel_selector import smart_call 
+        from web .model_selector import smart_call 
         result ,_ ,_ =smart_call (messages ,task_type ='category_detection',max_tokens =10 ,temperature =0.1 )
         result =result .strip ().lower ()
         if result in ('complaint','question','technical','other'):
@@ -307,13 +307,13 @@ POLUCEN SORU. Senin задача:
 
 ПРАВИЛА:
 - Cevapla на 2-3 predlojeniya maksimum
-- Hимяi konkretnie команды с пример
+- Hadi konkretnie команды с пример
 - НЕ ёner "открыть ticket" — biz zaten в tickette
 - Если soru о drugom у пользователя — не raskrivay licnuyu информация
 
 ПРИМЕР HOROSIH CEVAPLARIN:
-В: Как zaбанit spamera?
-О: Ispolzuy `/модerate бан @user причина`. На: `/модerate бан @spammer Spam в sohbette`. Bot denhaklarыtutar DM пользователю ve записьet в логlar.
+В: Как zabanit spamera?
+О: Ispolzuy `/moderate бан @user причина`. На: `/moderate бан @spammer Spam в sohbette`. Bot denhaklarыtutar DM пользователю ve записьet в loglar.
 
 В: Как povisit уровень?
 О: Пишите сообщения в чате и сидите в голосовых каналах — получаете XP. Проверьте уровень: `/rank`. Топ-10: `/top-level`.
@@ -334,14 +334,14 @@ TEHNICESKAYa SORUN. Senin задача:
 
 ПРАВИЛА:
 - Nacinay с samogo prostogo reseniya
-- Hимяi posagovie instrukcii (1, 2, 3...)
+- Hadi posagovie instrukcii (1, 2, 3...)
 - Если nujna команда — ukaji tocno с пример
 - НЕ ёner "открыть ticket" — biz zaten в tickette
 - Если sorun slojnaya ve sen не emin → srazu ACTION:ESCALATE
 
 ПРИМЕР:
 В: Музыка не oynuyor
-О: Hимяi proverim:
+О: Hadi proverim:
 1. Вы в голосовом канале? (бот должен быть в том же канале)
 2. Poprobuy `/leave` после tekrar `/play [имя]`
 3. Проверьте, что у бота есть права администратора на управление голосовыми каналами
@@ -396,18 +396,18 @@ async def ai_ticket_response (user_message :str ,history :List [Dict ],guild_con
     system_prompt =_get_prompt_by_category (category )
 
     # 3. Topluyoruz baгlam
-    messages =[{'рольe':'system','content':system_prompt }]
+    messages =[{'role':'system','content':system_prompt }]
 
-    # Данныеtaбаны информация (для question/technical/other)
+    # Данныеtabanы информация (для question/technical/other)
     if category in ('question','technical','other'):
-        messages .append ({'рольe':'system','content':_bot_knowledge_base ()})
+        messages .append ({'role':'system','content':_bot_knowledge_base ()})
 
         # 4. Personalizaciya — информация о у пользователя
     user_info =[]
     if guild_context .get ('user_name'):
         user_info .append (f"Isim: {guild_context['user_name']}")
-    if guild_context .get ('user_рольes'):
-        user_info .append (f"Роли: {', '.join(guild_context['user_рольes'])}")
+    if guild_context .get ('user_roles'):
+        user_info .append (f"Роли: {', '.join(guild_context['user_roles'])}")
     if guild_context .get ('user_joined_days'):
         days =guild_context ['user_joined_days']
         if days <7 :
@@ -423,32 +423,32 @@ async def ai_ticket_response (user_message :str ,history :List [Dict ],guild_con
 
     if user_info :
         messages .append ({
-        'рольe':'system',
+        'role':'system',
         'content':"ИНФОРМАЦИЯ О У ПОЛЬЗОВАТЕЛЯ:\n"+"\n".join (user_info )
         })
 
         # 5. Baгlam сервер
-    сервер_info =[]
+    server_info =[]
     if guild_context .get ('guild_name'):
-        сервер_info .append (f"Сервер: {guild_context['guild_name']}")
+        server_info .append (f"Сервер: {guild_context['guild_name']}")
     if guild_context .get ('member_count'):
-        сервер_info .append (f"Участников: {guild_context['member_count']}")
-    if guild_context .get ('панель_url'):
-        сервер_info .append (f"URL панельi: {guild_context['панель_url']}")
+        server_info .append (f"Участников: {guild_context['member_count']}")
+    if guild_context .get ('panel_url'):
+        server_info .append (f"URL paneli: {guild_context['panel_url']}")
 
-    if сервер_info :
+    if server_info :
         messages .append ({
-        'рольe':'system',
-        'content':"BAГLAM СЕРВЕР:\n"+"\n".join (сервер_info )
+        'role':'system',
+        'content':"BAГLAM СЕРВЕР:\n"+"\n".join (server_info )
         })
 
-        # 5.5. Function calling — описание eriшимяlerin fonksiyonlarыn
+        # 5.5. Function calling — описание eriшadlerin fonksiyonlarыn
     guild =guild_context .get ('guild')
     ai_functions =None 
     if guild and AIFunctions :
         ai_functions =AIFunctions (guild .client )
         messages .append ({
-        'рольe':'system',
+        'role':'system',
         'content':ai_functions .get_available_functions ()
         })
 
@@ -459,7 +459,7 @@ async def ai_ticket_response (user_message :str ,history :List [Dict ],guild_con
         learning_context =self_learning .get_learning_context (user_message )
         if learning_context :
             messages .append ({
-            'рольe':'system',
+            'role':'system',
             'content':f"BAГLAM EГITIMI (ispolzuy для ulucseniya cevabы):\n{learning_context}"
             })
     except Exception as e :
@@ -470,10 +470,10 @@ async def ai_ticket_response (user_message :str ,history :List [Dict ],guild_con
         messages .extend (history [-20 :])
 
         # 7. Tekusee сообщение
-    messages .append ({'рольe':'user','content':user_message })
+    messages .append ({'role':'user','content':user_message })
 
     # 8. Чтяжелыйыyoruz AI с function calling (maksimum 3 iteracii)
-    # Vibiraem тип задачи для multi-модelnosti
+    # Vibiraem тип задачи для multi-modelnosti
     task_type_map ={
     'complaint':'complaint_analysis',
     'question':'technical_support',
@@ -484,14 +484,14 @@ async def ai_ticket_response (user_message :str ,history :List [Dict ],guild_con
 
     max_iterations =3 
     for iteration in range (max_iterations ):
-        from web .модel_selector import smart_call 
+        from web .model_selector import smart_call 
         response ,_ ,_ =smart_call (messages ,task_type =task_type ,max_tokens =2048 ,temperature =0.7 )
 
         # Контроль ediyoruz есть ли vizovi fonksiyonlarыn
         func_calls =re .findall (r'\[FUNC:[^\]]+\]',response )
 
         if not func_calls or not ai_functions or not guild :
-        # Нет vizovov fonksiyonlarыn или function calling deгileriшимяlerin — выходim
+        # Нет vizovov fonksiyonlarыn или function calling deгileriшadlerin — выходim
             break 
 
             # Vipolnyaem fonksiyonlar
@@ -500,7 +500,7 @@ async def ai_ticket_response (user_message :str ,history :List [Dict ],guild_con
             if result :
             # Ekliyoruz результат fonksiyonlar в baгlam
                 messages .append ({
-                'рольe':'system',
+                'role':'system',
                 'content':f"РЕЗУЛЬТАТ FONKSIYONLAR {func_call}:\n{result}"
                 })
 
@@ -514,15 +514,15 @@ async def ai_ticket_response (user_message :str ,history :List [Dict ],guild_con
         response =response .replace ('ACTION:ESCALATE','').strip ()
 
         # Удален chain-of-thought bloki если есть
-        # (re global import edildiгi для burимяa tekrar import gerekmiyor)
+        # (re global import edildiгi для burada tekrar import gerekmiyor)
 
     if not response :
         response ="Iшliyorum sizin sorgu..."
 
         # 10. Обновл история
     updated_history =history +[
-    {'рольe':'user','content':user_message },
-    {'рольe':'assistant','content':response }
+    {'role':'user','content':user_message },
+    {'role':'assistant','content':response }
     ]
 
     # Ограничиваем история 30 сообщениями
@@ -595,17 +595,17 @@ def parse_ai_actions (response :str )->Dict :
     'escalate':'ACTION:ESCALATE'in response ,
     'варн':None ,
     'тюрьма':None ,
-    'рольe_assign':None ,
+    'role_assign':None ,
     'channel_redirect':None ,
     'delete_messages':None ,
     }
 
     # WARN
-    варн_match =re .search (r'ACTION:WARN:user_id=(\d+):reason=([^\n]+)',response )
-    if варн_match :
+    warn_match =re .search (r'ACTION:WARN:user_id=(\d+):reason=([^\n]+)',response )
+    if warn_match :
         actions ['варн']={
-        'user_id':int (варн_match .group (1 )),
-        'reason':варн_match .group (2 ).strip ()
+        'user_id':int (warn_match .group (1 )),
+        'reason':warn_match .group (2 ).strip ()
         }
         response =re .sub (r'ACTION:WARN:user_id=\d+:reason=[^\n]+','',response )
 
@@ -620,13 +620,13 @@ def parse_ai_actions (response :str )->Dict :
         response =re .sub (r'ACTION:JAIL:user_id=\d+:duration=\d+:reason=[^\n]+','',response )
 
         # ROLE_ASSIGN
-    рольe_match =re .search (r'ACTION:ROLE_ASSIGN:user_id=(\d+):рольe_id=(\d+)',response )
-    if рольe_match :
-        actions ['рольe_assign']={
-        'user_id':int (рольe_match .group (1 )),
-        'рольe_id':int (рольe_match .group (2 ))
+    role_match =re .search (r'ACTION:ROLE_ASSIGN:user_id=(\d+):role_id=(\d+)',response )
+    if role_match :
+        actions ['role_assign']={
+        'user_id':int (role_match .group (1 )),
+        'role_id':int (role_match .group (2 ))
         }
-        response =re .sub (r'ACTION:ROLE_ASSIGN:user_id=\d+:рольe_id=\d+','',response )
+        response =re .sub (r'ACTION:ROLE_ASSIGN:user_id=\d+:role_id=\d+','',response )
 
         # CHANNEL_REDIRECT
     channel_match =re .search (r'ACTION:CHANNEL_REDIRECT:channel_id=(\d+)',response )
@@ -661,7 +661,7 @@ def learn_from_staff (staff_message :str ,user_question :str ,guild_id :int ):
         faqs ={}
         if os .path .exists (faq_file ):
             with open (faq_file ,'r',encoding ='utf-8')as f :
-                faqs =json .loимя (f )
+                faqs =json .load (f )
 
         guild_key =str (guild_id )
         if guild_key not in faqs :
@@ -691,7 +691,7 @@ def get_learned_faqs (guild_id :int )->List [Dict ]:
         faq_file ='data/faq_learned.json'
         if os .path .exists (faq_file ):
             with open (faq_file ,'r',encoding ='utf-8')as f :
-                faqs =json .loимя (f )
+                faqs =json .load (f )
             return faqs .get (str (guild_id ),[])
     except :
         pass 
@@ -710,9 +710,9 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
     last_msg =""
     sys_prompt =""
     for m in messages :
-        if m .get ("рольe")=="system":
+        if m .get ("role")=="system":
             sys_prompt +="\n"+str (m .get ("content",""))
-        elif m .get ("рольe")=="user":
+        elif m .get ("role")=="user":
             last_msg =str (m .get ("content","")).strip ()
 
     q_lower =last_msg .lower ()
@@ -750,18 +750,18 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
             target_str ="указанного пользователя"
 
             # Проверим, есть ли лог-файл бота (даже в офлайн-режиме)
-        лог_status ="не найден (бот ещё не записал ни одного сообщения)"
+        log_status ="не найден (бот ещё не записал ни одного сообщения)"
         try :
             import json as _jj 
             _target_gid =os .getenv ('MAIN_GUILD_ID','1498837105915330562')
-            _лог_f =f'data/message_лог_{_target_gid}.json'
-            if os .path .exists (_лог_f ):
+            _log_f =f'data/message_log_{_target_gid}.json'
+            if os .path .exists (_log_f ):
                 try :
-                    with open (_лог_f ,'r',encoding ='utf-8')as _lfp :
-                        _ldata =_jj .loимя (_lfp )
-                    лог_status =f"существует, содержит {len(_ldata)} сообщений (но я не могу их отфильтровать в офлайн-режиме)"
+                    with open (_log_f ,'r',encoding ='utf-8')as _lfp :
+                        _ldata =_jj .load (_lfp )
+                    log_status =f"существует, содержит {len(_ldata)} сообщений (но я не могу их отфильтровать в офлайн-режиме)"
                 except Exception :
-                    лог_status ="повреждён или недоступен"
+                    log_status ="повреждён или недоступен"
         except Exception :
             pass 
 
@@ -774,7 +774,7 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
         f"вызвать функцию `search_user_messages` и дать точный ответ.\n"
         f"• Или используйте веб-панель → раздел «Пользователи» для просмотра истории.\n"
         f"• Или команду `/history @пользователь` в Discord.\n\n"
-        f"**Статус лога бота:** {лог_status}\n\n"
+        f"**Статус лога бота:** {log_status}\n\n"
         f"Я не буду выдумывать содержимое сообщений — лучше честно сказать, что поиск "
         f"сейчас недоступен, чем дать вам недостоверную информацию. 🙏",
         "moebius-offline-ai",
@@ -793,7 +793,7 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
         # 3. Кто ты / Расскажи о себе
     if any (k in q_lower for k in ["кто ты","что ты такое","расскажи о себе","ты кто","что за бот","кто ты такой"]):
         return (
-        "Я Aether (Moebius) — многофункциональный AI-ассистент и защитник этого Discord-сервера! 🤖\n"
+        "Я Aether (Moebius) — многофункциональный AI-ассистент и защитник этого Discord-serverа! 🤖\n"
         "• Моя задача — охранять сервер от спама и рейдов, помогать участникам в тикетах поддержки и управлять ролями.\n"
         "• Чтобы узнать все мои возможности, просто напиши «команды» или «помощь»!",
         "moebius-offline-ai",
@@ -881,7 +881,7 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
         if os .path .exists ('data/warnings.json'):
             try :
                 with open ('data/warnings.json','r',encoding ='utf-8')as _fp :
-                    _wd =_json .loимя (_fp )
+                    _wd =_json .load (_fp )
                 for _gid ,_gw in _wd .items ():
                     for _uid ,_ws in _gw .items ():
                         if _uid ==target or target .lower ()in str (_uid ).lower ():
@@ -890,10 +890,10 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
             except :
                 pass 
         m_count =0 
-        if os .path .exists ('data/мод_data.json'):
+        if os .path .exists ('data/mod_data.json'):
             try :
-                with open ('data/мод_data.json','r',encoding ='utf-8')as _fp :
-                    _md =_json .loимя (_fp )
+                with open ('data/mod_data.json','r',encoding ='utf-8')as _fp :
+                    _md =_json .load (_fp )
                 for _case in _md .get ('case',{}).values ():
                     for _c in _case :
                         if str (_c .get ('user_id',''))==target :
@@ -922,7 +922,7 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
                 if os .path .exists (rf ):
                     try :
                         with open (rf ,'r',encoding ='utf-8')as _fp :
-                            _rd =_j .loимя (_fp )
+                            _rd =_j .load (_fp )
                             for _ritem in _rd .get ('rules',[]):
                                 rtext =_ritem .get ('text','')
                                 if rtext and f"• {rtext}"not in rule_lines :
@@ -1003,8 +1003,8 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
     if any (k in q_lower for k in ["команда","помощь","help","neler yapabilirsin","особенность","команды","помощь","что ты умеешь","справка","какие команды"]):
         return (
         "🤖 **Справочник по командам Aether/Moebius:**\n"
-        "• **Модерация:** `/модerate бан`, `/модerate кик`, `/модerate timeout`, `/варн`, `/warnings`\n"
-        "• **Управление и очистка:** `/utility clear`, `/рольes`, `/utility lock`, `/utility unlock`\n"
+        "• **Модерация:** `/moderate бан`, `/moderate кик`, `/moderate timeout`, `/варн`, `/warnings`\n"
+        "• **Управление и очистка:** `/utility clear`, `/roles`, `/utility lock`, `/utility unlock`\n"
         "• **Поддержка и тикеты:** Команда `/ticket` или кнопка поддержки для создания тикета с AI-ассистентом.\n"
         "• **Музыка:** Команды `/play`, `/pause`, `/skip`, `/queue` для прослушивания музыки.\n"
         "Я всегда на связи, обращайся в любое время! 🚀",
@@ -1046,7 +1046,7 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
     "moebius-offline-ai",
     {"provider":"fallback","latency_ms":12 }
     )
-def _call (messages :List [Dict ],max_tokens :int =2048 ,temperature :float =0.7 ,модel :str =None )->Tuple [str ,str ,Dict ]:
+def _call (messages :List [Dict ],max_tokens :int =2048 ,temperature :float =0.7 ,model :str =None )->Tuple [str ,str ,Dict ]:
     """
     Чoklu Saгlayыcы LLM API Чaгrыsы:
     1) Ollama (Yerel LLM)
@@ -1054,13 +1054,13 @@ def _call (messages :List [Dict ],max_tokens :int =2048 ,temperature :float =0.7
     3) OpenRouter / DeepSeek / OpenAI API
     4) Akыllы Yerel Aether/Moebius Чevrimdышы Fallback Motoru
     """
-    модel_name =модel or os .getenv ("AI_MODEL","mistral-large-latest")
+    model_name =model or os .getenv ("AI_MODEL","mistral-large-latest")
     ollama_url =os .getenv ("OLLAMA_URL","http://127.0.0.1:11434")
 
-    # 1. Ollama (Yerel LLM) denemesi — sимяece работатьыyorsa чok hыzlы
+    # 1. Ollama (Yerel LLM) denemesi — sadece работатьыyorsa чok hыzlы
     try :
-        payloимя =json .dumps ({
-        "модel":модel_name ,
+        payload =json .dumps ({
+        "model":model_name ,
         "messages":messages ,
         "stream":False ,
         "options":{
@@ -1070,15 +1070,15 @@ def _call (messages :List [Dict ],max_tokens :int =2048 ,temperature :float =0.7
         }).encode ('utf-8')
         req =urllib .request .Request (
         f"{ollama_url}/api/chat",
-        data =payloимя ,
-        heимяers ={"Content-Type":"application/json"},
+        data =payload ,
+        headers ={"Content-Type":"application/json"},
         method ="POST"
         )
         with urllib .request .urlopen (req ,timeout =1.5 )as resp :
-            data =json .loads (resp .reимя ().decode ('utf-8'))
+            data =json .loads (resp .read ().decode ('utf-8'))
             text =data .get ("message",{}).get ("content","").strip ()
             if text :
-                return text ,модel_name ,{"provider":"ollama"}
+                return text ,model_name ,{"provider":"ollama"}
     except Exception :
         pass 
 
@@ -1086,9 +1086,9 @@ def _call (messages :List [Dict ],max_tokens :int =2048 ,temperature :float =0.7
     mistral_env =os .getenv ("MISTRAL_API_KEY","")
     mistral_keys =[k .strip ()for k in mistral_env .split (",")if k .strip ()]
     if mistral_keys :
-        target_модel =модel_name if "mistral"in str (модel_name ).lower ()else "mistral-large-latest"
-        payloимя =json .dumps ({
-        "модel":target_модel ,
+        target_model =model_name if "mistral"in str (model_name ).lower ()else "mistral-large-latest"
+        payload =json .dumps ({
+        "model":target_model ,
         "messages":messages ,
         "max_tokens":max_tokens ,
         "temperature":temperature 
@@ -1097,18 +1097,18 @@ def _call (messages :List [Dict ],max_tokens :int =2048 ,temperature :float =0.7
             try :
                 req =urllib .request .Request (
                 "https://api.mistral.ai/v1/chat/completions",
-                data =payloимя ,
-                heимяers ={
+                data =payload ,
+                headers ={
                 "Content-Type":"application/json",
                 "Authorization":f"Bearer {mistral_key}"
                 },
                 method ="POST"
                 )
                 with urllib .request .urlopen (req ,timeout =10 )as resp :
-                    data =json .loads (resp .reимя ().decode ('utf-8'))
+                    data =json .loads (resp .read ().decode ('utf-8'))
                     text =data .get ("choices",[{}])[0 ].get ("message",{}).get ("content","").strip ()
                     if text :
-                        return text ,target_модel ,{"provider":"mistral","key_index":idx_key }
+                        return text ,target_model ,{"provider":"mistral","key_index":idx_key }
             except Exception as _me :
                 print (f"[AI API] Mistral ключ #{idx_key+1} недоступен ({_me}), пробуем следующий...")
 
@@ -1124,38 +1124,38 @@ def _call (messages :List [Dict ],max_tokens :int =2048 ,temperature :float =0.7
 
     if api_key :
         try :
-            payloимя =json .dumps ({
-            "модel":модel_name ,
+            payload =json .dumps ({
+            "model":model_name ,
             "messages":messages ,
             "max_tokens":max_tokens ,
             "temperature":temperature 
             }).encode ('utf-8')
             req =urllib .request .Request (
             api_url ,
-            data =payloимя ,
-            heимяers ={
+            data =payload ,
+            headers ={
             "Content-Type":"application/json",
             "Authorization":f"Bearer {api_key}"
             },
             method ="POST"
             )
             with urllib .request .urlopen (req ,timeout =10 )as resp :
-                data =json .loads (resp .reимя ().decode ('utf-8'))
+                data =json .loads (resp .read ().decode ('utf-8'))
                 text =data .get ("choices",[{}])[0 ].get ("message",{}).get ("content","").strip ()
                 if text :
-                    return text ,модel_name ,{"provider":"api"}
+                    return text ,model_name ,{"provider":"api"}
         except Exception as _oe :
             print (f"[AI API] Dыш API ошибка: {_oe}")
 
             # 4. Akыllы Aether/Moebius Yerel Fallback (Hiчbir LLM servisi olmasa bile никогда ошибка vermez!)
     return _local_moebius_fallback (messages )
 
-def _call_text (messages :List [Dict ],max_tokens :int =2048 ,temperature :float =0.7 ,модel :str =None )->str :
+def _call_text (messages :List [Dict ],max_tokens :int =2048 ,temperature :float =0.7 ,model :str =None )->str :
     """
     Только текст, возвращаемый LLM вызовом
     """
     try :
-        resp ,_ ,_ =_call (messages ,max_tokens =max_tokens ,temperature =temperature ,модel =модel )
+        resp ,_ ,_ =_call (messages ,max_tokens =max_tokens ,temperature =temperature ,model =model )
         if resp :
             return resp 
     except Exception as e :
@@ -1170,10 +1170,10 @@ def _call_text (messages :List [Dict ],max_tokens :int =2048 ,temperature :float
 def ai_assistant (question :str ,context :Dict =None ,history :List [Dict ]=None )->Tuple [str ,List [Dict ],str ,Dict ]:
     """
     AI Chat Asistanы ana arayюz fonksiyonu (RAG & Правило Entegrasyonlu).
-    cogs/ai_chat.py ve Web Панельi сканироватьfыndan использовать.
+    cogs/ai_chat.py ve Web Paneli сканироватьfыndan использовать.
     
     Returns:
-        (answer, updated_history, модel_name, extra_info)
+        (answer, updated_history, model_name, extra_info)
     """
     context =context or {}
     history =history or []
@@ -1201,10 +1201,10 @@ def ai_assistant (question :str ,context :Dict =None ,history :List [Dict ]=None
         sys_lines .append ("Изученная информация о сервере:\n  "+"\n  ".join (str (k )for k in context ['learned_knowledge']))
     if context .get ('guild_instructions'):
         sys_lines .append ("Особые инструкции сервера:\n  "+"\n  ".join (str (i )for i in context ['guild_instructions']))
-    if context .get ('сервер_status'):
-        s =context ['сервер_status']
+    if context .get ('server_status'):
+        s =context ['server_status']
         sys_lines .append (f"Текущее состояние сервера: {s.get('online_count', 0)} в сети, {s.get('voice_count', 0)} в голосовых.")
-    if context .get ('jarvis_модe'):
+    if context .get ('jarvis_mode'):
         sys_lines .append ("Режим J.A.R.V.I.S. активен. Помогай в выполнении команд и действий.")
     if context .get ('available_commands'):
         sys_lines .append (str (context ['available_commands']))
@@ -1220,18 +1220,18 @@ def ai_assistant (question :str ,context :Dict =None ,history :List [Dict ]=None
     except Exception as _fe :
         pass 
 
-    messages =[{"рольe":"system","content":"\n".join (sys_lines )}]
+    messages =[{"role":"system","content":"\n".join (sys_lines )}]
     for h in history [-16 :]:
         messages .append ({
-        "рольe":h .get ("рольe","user"),
+        "role":h .get ("role","user"),
         "content":h .get ("content","")
         })
-    messages .append ({"рольe":"user","content":question })
+    messages .append ({"role":"user","content":question })
 
-    answer ,модel_name ,rate_info =_call (messages ,max_tokens =1024 ,temperature =0.7 )
+    answer ,model_name ,rate_info =_call (messages ,max_tokens =1024 ,temperature =0.7 )
 
     updated_history =list (history )+[
-    {"рольe":"user","content":question },
-    {"рольe":"assistant","content":answer }
+    {"role":"user","content":question },
+    {"role":"assistant","content":answer }
     ]
-    return answer ,updated_history ,модel_name ,rate_info 
+    return answer ,updated_history ,model_name ,rate_info 

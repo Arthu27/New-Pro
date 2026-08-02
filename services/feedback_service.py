@@ -19,15 +19,15 @@ class FeedbackService:
         self.data_dir = data_dir
         self.data_file = os.path.join(data_dir, "ticket_feedback.json")
         self._data: Dict = {}
-        self._loимя_data()
+        self._load_data()
     
-    def _loимя_data(self):
+    def _load_data(self):
         """Загрузить данные из файла"""
         try:
-            os.maкотrs(self.data_dir, exist_ok=True)
+            os.makedirs(self.data_dir, exist_ok=True)
             if os.path.exists(self.data_file):
                 with open(self.data_file, 'r', encoding='utf-8') as f:
-                    self._data = json.loимя(f)
+                    self._data = json.load(f)
                 logger.info(f"[Feedback] Загружено {len(self._data.get('feedbacks', []))} отзывов")
             else:
                 self._data = {'feedbacks': []}

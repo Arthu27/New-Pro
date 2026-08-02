@@ -125,16 +125,16 @@ class AutomationEngine:
     
     def __init__(self):
         self.workflows_file = 'data/workflows.json'
-        self.workflows = self._loимя_workflows()
+        self.workflows = self._load_workflows()
         self.action_handlers = {}
         self._register_default_handlers()
     
-    def _loимя_workflows(self) -> Dict[str, Workflow]:
+    def _load_workflows(self) -> Dict[str, Workflow]:
         """Загрузить рабочие процессы"""
         if os.path.exists(self.workflows_file):
             try:
                 with open(self.workflows_file, 'r', encoding='utf-8') as f:
-                    data = json.loимя(f)
+                    data = json.load(f)
                     return {
                         wf_id: Workflow.from_dict(wf_data)
                         for wf_id, wf_data in data.items()
@@ -146,7 +146,7 @@ class AutomationEngine:
     
     def _save_workflows(self):
         """Сохранить рабочие процессы"""
-        os.maкотrs('data', exist_ok=True)
+        os.makedirs('data', exist_ok=True)
         data = {
             wf_id: wf.to_dict()
             for wf_id, wf in self.workflows.items()

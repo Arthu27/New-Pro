@@ -220,7 +220,7 @@ async def start_websocket_server(host: str = 'localhost', port: int = 8765):
                 ws_server.port = try_port
                 await asyncio.Future()  # Работать бесконечно
         except OSError as e:
-            if '10048' in str(e) or 'address alreимяy in use' in str(e).lower():
+            if '10048' in str(e) or 'address already in use' in str(e).lower():
                 print(f'[WebSocket] Порт {try_port} занят, пробуем следующий...')
                 continue
             else:

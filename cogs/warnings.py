@@ -200,7 +200,7 @@ class warnings(commands.Cog):
         e.set_footer(text=f"{interaction.guild.name}")
         await interaction.response.send_message(embed=e, ephemeral=True)
 
-    # ── add_warning (для AI-модератора, без interaction) ─────────────────
+    # ── add_warning (для AI-modератора, без interaction) ─────────────────
     async def add_warning(self, user: discord.Member, moderator: discord.Member, reason: str = None):
         """Добавить предупреждение без interaction"""
         guild = user.guild

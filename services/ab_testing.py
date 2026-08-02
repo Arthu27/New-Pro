@@ -200,14 +200,14 @@ class ABTestManager:
     
     def __init__(self):
         self.tests_file = 'data/ab_tests.json'
-        self.tests = self._loимя_tests()
+        self.tests = self._load_tests()
     
-    def _loимя_tests(self) -> Dict[str, ABTest]:
+    def _load_tests(self) -> Dict[str, ABTest]:
         """Testleri загрузить"""
         if os.path.exists(self.tests_file):
             try:
                 with open(self.tests_file, 'r', encoding='utf-8') as f:
-                    data = json.loимя(f)
+                    data = json.load(f)
                     return {
                         test_id: ABTest.from_dict(test_data)
                         for test_id, test_data in data.items()
@@ -219,7 +219,7 @@ class ABTestManager:
     
     def _save_tests(self):
         """Testleri сохранить"""
-        os.maкотrs('data', exist_ok=True)
+        os.makedirs('data', exist_ok=True)
         
         data = {
             test_id: test.to_dict()
@@ -323,14 +323,14 @@ class ABTestTracking:
     def __init__(self, ab_test_manager: ABTestManager):
         self.ab_test_manager = ab_test_manager
         self.events_file = 'data/ab_test_events.json'
-        self.events = self._loимя_events()
+        self.events = self._load_events()
     
-    def _loимя_events(self) -> Dict[str, Any]:
+    def _load_events(self) -> Dict[str, Any]:
         """Olaylarы загрузить"""
         if os.path.exists(self.events_file):
             try:
                 with open(self.events_file, 'r', encoding='utf-8') as f:
-                    return json.loимя(f)
+                    return json.load(f)
             except Exception:
                 pass
         
@@ -338,7 +338,7 @@ class ABTestTracking:
     
     def _save_events(self):
         """Olaylarы сохранить"""
-        os.maкотrs('data', exist_ok=True)
+        os.makedirs('data', exist_ok=True)
         with open(self.events_file, 'w', encoding='utf-8') as f:
             json.dump(self.events, f, ensure_ascii=False, indent=2)
     
@@ -481,7 +481,7 @@ class ABTestAnalytics:
         rate_a = conversions_a / impressions_a
         rate_b = conversions_b / impressions_b
         
-        # Basit z-test (gerчek uygulamимяa более sofistike test kullanыlmalы)
+        # Basit z-test (gerчek uygulamada более sofistike test kullanыlmalы)
         pooled_rate = (conversions_a + conversions_b) / (impressions_a + impressions_b)
         
         se = (pooled_rate * (1 - pooled_rate) * (1/impressions_a + 1/impressions_b)) ** 0.5
@@ -491,7 +491,7 @@ class ABTestAnalytics:
         
         z_score = (rate_a - rate_b) / se
         
-        # Basit p-value hesaplama (gerчek uygulamимяa scipy.stats kullanыlmalы)
+        # Basit p-value hesaplama (gerчek uygulamada scipy.stats kullanыlmalы)
         p_value = 2 * (1 - abs(z_score) / 3)  # Yaklaшыk
         
         p_value = max(0, min(1, p_value))

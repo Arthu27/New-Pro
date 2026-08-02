@@ -16,14 +16,14 @@ class SearchEngine:
     
     def __init__(self):
         self.index_file = 'data/search_index.json'
-        self.index = self._loимя_index()
+        self.index = self._load_index()
     
-    def _loимя_index(self) -> Dict[str, Any]:
+    def _load_index(self) -> Dict[str, Any]:
         """Index'i загрузить"""
         if os.path.exists(self.index_file):
             try:
                 with open(self.index_file, 'r', encoding='utf-8') as f:
-                    return json.loимя(f)
+                    return json.load(f)
             except Exception:
                 pass
         
@@ -36,7 +36,7 @@ class SearchEngine:
     
     def _save_index(self):
         """Index'i сохранить"""
-        os.maкотrs('data', exist_ok=True)
+        os.makedirs('data', exist_ok=True)
         with open(self.index_file, 'w', encoding='utf-8') as f:
             json.dump(self.index, f, ensure_ascii=False, indent=2)
     
@@ -74,7 +74,7 @@ class SearchEngine:
         self.index['users'][user_id] = {
             'username': user_data.get('username', ''),
             'email': user_data.get('email', ''),
-            'рольe': user_data.get('рольe', ''),
+            'role': user_data.get('role', ''),
             'created_at': user_data.get('created_at', '')
         }
         
@@ -282,14 +282,14 @@ class SavedSearch:
     
     def __init__(self):
         self.saved_searches_file = 'data/saved_searches.json'
-        self.saved_searches = self._loимя_saved_searches()
+        self.saved_searches = self._load_saved_searches()
     
-    def _loимя_saved_searches(self) -> Dict[str, Any]:
+    def _load_saved_searches(self) -> Dict[str, Any]:
         """Kaydedilmiш aramalarы загрузить"""
         if os.path.exists(self.saved_searches_file):
             try:
                 with open(self.saved_searches_file, 'r', encoding='utf-8') as f:
-                    return json.loимя(f)
+                    return json.load(f)
             except Exception:
                 pass
         
@@ -297,7 +297,7 @@ class SavedSearch:
     
     def _save_saved_searches(self):
         """Kaydedilmiш aramalarы сохранить"""
-        os.maкотrs('data', exist_ok=True)
+        os.makedirs('data', exist_ok=True)
         with open(self.saved_searches_file, 'w', encoding='utf-8') as f:
             json.dump(self.saved_searches, f, ensure_ascii=False, indent=2)
     
@@ -346,14 +346,14 @@ class SearchAnalytics:
     
     def __init__(self):
         self.analytics_file = 'data/search_analytics.json'
-        self.analytics = self._loимя_analytics()
+        self.analytics = self._load_analytics()
     
-    def _loимя_analytics(self) -> Dict[str, Any]:
+    def _load_analytics(self) -> Dict[str, Any]:
         """Analitiгi загрузить"""
         if os.path.exists(self.analytics_file):
             try:
                 with open(self.analytics_file, 'r', encoding='utf-8') as f:
-                    return json.loимя(f)
+                    return json.load(f)
             except Exception:
                 pass
         
@@ -365,7 +365,7 @@ class SearchAnalytics:
     
     def _save_analytics(self):
         """Analitiгi сохранить"""
-        os.maкотrs('data', exist_ok=True)
+        os.makedirs('data', exist_ok=True)
         
         # defaultdict'larы normal dict'lere чevir
         analytics_dict = {

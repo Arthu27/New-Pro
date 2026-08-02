@@ -78,7 +78,7 @@ class CustomField:
         elif self.field_type == 'email':
             email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
             if not re.match(email_pattern, str(value)):
-                errors.append('Geчerli bir e-posta имяresi giriniz')
+                errors.append('Geчerli bir e-posta adresi giriniz')
         
         elif self.field_type == 'url':
             url_pattern = r'^https?://'
@@ -172,14 +172,14 @@ class CustomFieldManager:
     
     def __init__(self):
         self.fields_file = 'data/custom_fields.json'
-        self.fields = self._loимя_fields()
+        self.fields = self._load_fields()
     
-    def _loимя_fields(self) -> Dict[str, CustomField]:
+    def _load_fields(self) -> Dict[str, CustomField]:
         """Alanlarы загрузить"""
         if os.path.exists(self.fields_file):
             try:
                 with open(self.fields_file, 'r', encoding='utf-8') as f:
-                    data = json.loимя(f)
+                    data = json.load(f)
                     return {
                         field_id: CustomField.from_dict(field_data)
                         for field_id, field_data in data.items()
@@ -191,7 +191,7 @@ class CustomFieldManager:
     
     def _save_fields(self):
         """Alanlarы сохранить"""
-        os.maкотrs('data', exist_ok=True)
+        os.makedirs('data', exist_ok=True)
         
         data = {
             field_id: field.to_dict()
@@ -289,14 +289,14 @@ class CustomFieldValueStorage:
     
     def __init__(self):
         self.values_file = 'data/custom_field_values.json'
-        self.values = self._loимя_values()
+        self.values = self._load_values()
     
-    def _loимя_values(self) -> Dict[str, Any]:
+    def _load_values(self) -> Dict[str, Any]:
         """Deгerleri загрузить"""
         if os.path.exists(self.values_file):
             try:
                 with open(self.values_file, 'r', encoding='utf-8') as f:
-                    return json.loимя(f)
+                    return json.load(f)
             except Exception:
                 pass
         
@@ -304,7 +304,7 @@ class CustomFieldValueStorage:
     
     def _save_values(self):
         """Deгerleri сохранить"""
-        os.maкотrs('data', exist_ok=True)
+        os.makedirs('data', exist_ok=True)
         with open(self.values_file, 'w', encoding='utf-8') as f:
             json.dump(self.values, f, ensure_ascii=False, indent=2)
     
@@ -345,14 +345,14 @@ class CustomFieldTemplate:
     def __init__(self, field_manager: CustomFieldManager):
         self.field_manager = field_manager
         self.templates_file = 'data/custom_field_templates.json'
-        self.templates = self._loимя_templates()
+        self.templates = self._load_templates()
     
-    def _loимя_templates(self) -> Dict[str, Any]:
+    def _load_templates(self) -> Dict[str, Any]:
         """Шablonlarы загрузить"""
         if os.path.exists(self.templates_file):
             try:
                 with open(self.templates_file, 'r', encoding='utf-8') as f:
-                    return json.loимя(f)
+                    return json.load(f)
             except Exception:
                 pass
         
@@ -360,7 +360,7 @@ class CustomFieldTemplate:
     
     def _save_templates(self):
         """Шablonlarы сохранить"""
-        os.maкотrs('data', exist_ok=True)
+        os.makedirs('data', exist_ok=True)
         with open(self.templates_file, 'w', encoding='utf-8') as f:
             json.dump(self.templates, f, ensure_ascii=False, indent=2)
     
@@ -423,14 +423,14 @@ class CustomFieldPermissions:
     
     def __init__(self):
         self.permissions_file = 'data/custom_field_permissions.json'
-        self.permissions = self._loимя_permissions()
+        self.permissions = self._load_permissions()
     
-    def _loимя_permissions(self) -> Dict[str, Any]:
+    def _load_permissions(self) -> Dict[str, Any]:
         """Иzinleri загрузить"""
         if os.path.exists(self.permissions_file):
             try:
                 with open(self.permissions_file, 'r', encoding='utf-8') as f:
-                    return json.loимя(f)
+                    return json.load(f)
             except Exception:
                 pass
         
@@ -438,7 +438,7 @@ class CustomFieldPermissions:
     
     def _save_permissions(self):
         """Иzinleri сохранить"""
-        os.maкотrs('data', exist_ok=True)
+        os.makedirs('data', exist_ok=True)
         with open(self.permissions_file, 'w', encoding='utf-8') as f:
             json.dump(self.permissions, f, ensure_ascii=False, indent=2)
     
@@ -453,7 +453,7 @@ class CustomFieldPermissions:
         
         self._save_permissions()
     
-    def can_view_field(self, field_id: str, user_рольe: str) -> bool:
+    def can_view_field(self, field_id: str, user_role: str) -> bool:
         """Alanы показатьyip показатьyemeyeceгini проверить et"""
         if field_id not in self.permissions:
             return True  # Varчислоlan: herkes gёrebilir
@@ -463,9 +463,9 @@ class CustomFieldPermissions:
         if not can_view:
             return True  # Boшsa herkes gёrebilir
         
-        return user_рольe in can_view
+        return user_role in can_view
     
-    def can_edit_field(self, field_id: str, user_рольe: str) -> bool:
+    def can_edit_field(self, field_id: str, user_role: str) -> bool:
         """Alanы dюzenleyip dюzenleyemeyeceгini проверить et"""
         if field_id not in self.permissions:
             return True  # Varчислоlan: herkes dюzenleyebilir
@@ -475,7 +475,7 @@ class CustomFieldPermissions:
         if not can_edit:
             return True  # Boшsa herkes dюzenleyebilir
         
-        return user_рольe in can_edit
+        return user_role in can_edit
     
     def get_field_permissions(self, field_id: str) -> Dict[str, List[str]]:
         """Alan izinlerini al"""

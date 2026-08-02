@@ -31,7 +31,7 @@ class Error:
         self.last_seen = datetime.now()
         self.status = 'active'  # active, resolved, ignored
         self.tags = {}
-        self.metимяata = {}
+        self.metadata = {}
         self.assigned_to = None
         self.resolution = None
     
@@ -44,9 +44,9 @@ class Error:
         """Добавить метку"""
         self.tags[key] = value
     
-    def add_metимяata(self, key: str, value: Any):
-        """Metимяata добавить"""
-        self.metимяata[key] = value
+    def add_metadata(self, key: str, value: Any):
+        """Metadata добавить"""
+        self.metadata[key] = value
     
     def mark_resolved(self, resolution: str = None):
         """Чёzюldю как iшaretle"""
@@ -82,7 +82,7 @@ class Error:
             'last_seen': self.last_seen.isoformat(),
             'status': self.status,
             'tags': self.tags,
-            'metимяata': self.metимяata,
+            'metadata': self.metadata,
             'assigned_to': self.assigned_to,
             'resolution': self.resolution,
             'fingerprint': self.get_fingerprint()
@@ -106,7 +106,7 @@ class Error:
         error.last_seen = datetime.fromisoformat(data['last_seen'])
         error.status = data.get('status', 'active')
         error.tags = data.get('tags', {})
-        error.metимяata = data.get('metимяata', {})
+        error.metadata = data.get('metadata', {})
         error.assigned_to = data.get('assigned_to')
         error.resolution = data.get('resolution')
         return error
@@ -117,14 +117,14 @@ class ErrorTracker:
     
     def __init__(self):
         self.errors_file = 'data/tracked_errors.json'
-        self.errors = self._loимя_errors()
+        self.errors = self._load_errors()
     
-    def _loимя_errors(self) -> Dict[str, Error]:
+    def _load_errors(self) -> Dict[str, Error]:
         """Hatalarы загрузить"""
         if os.path.exists(self.errors_file):
             try:
                 with open(self.errors_file, 'r', encoding='utf-8') as f:
-                    data = json.loимя(f)
+                    data = json.load(f)
                     return {
                         error_id: Error.from_dict(error_data)
                         for error_id, error_data in data.items()
@@ -136,7 +136,7 @@ class ErrorTracker:
     
     def _save_errors(self):
         """Hatalarы сохранить"""
-        os.maкотrs('data', exist_ok=True)
+        os.makedirs('data', exist_ok=True)
         
         data = {
             error_id: error.to_dict()
@@ -149,7 +149,7 @@ class ErrorTracker:
     def capture_exception(self, exception: Exception, endpoint: str = None,
                           user_id: str = None, severity: str = 'error',
                           tags: Dict[str, str] = None,
-                          metимяata: Dict[str, Any] = None) -> Error:
+                          metadata: Dict[str, Any] = None) -> Error:
         """Exception yakala"""
         error_type = type(exception).__name__
         message = str(exception)
@@ -189,21 +189,21 @@ class ErrorTracker:
             for key, value in tags.items():
                 error.add_tag(key, value)
         
-        if metимяata:
-            for key, value in metимяata.items():
-                error.add_metимяata(key, value)
+        if metadata:
+            for key, value in metadata.items():
+                error.add_metadata(key, value)
         
         self.errors[error_id] = error
         self._save_errors()
         
         return error
     
-    def лог_error(self, error_type: str, message: str,
+    def log_error(self, error_type: str, message: str,
                   stack_trace: str = None, endpoint: str = None,
                   user_id: str = None, severity: str = 'error',
                   tags: Dict[str, str] = None,
-                  metимяata: Dict[str, Any] = None) -> Error:
-        """Ошибка логla"""
+                  metadata: Dict[str, Any] = None) -> Error:
+        """Ошибка logla"""
         # Parmak izi создать
         fingerprint_data = f"{error_type}:{message}:{stack_trace}"
         fingerprint = hashlib.md5(fingerprint_data.encode()).hexdigest()
@@ -237,9 +237,9 @@ class ErrorTracker:
             for key, value in tags.items():
                 error.add_tag(key, value)
         
-        if metимяata:
-            for key, value in metимяata.items():
-                error.add_metимяata(key, value)
+        if metadata:
+            for key, value in metadata.items():
+                error.add_metadata(key, value)
         
         self.errors[error_id] = error
         self._save_errors()
@@ -400,14 +400,14 @@ class ErrorNotification:
     def __init__(self, error_tracker: ErrorTracker):
         self.error_tracker = error_tracker
         self.notification_rules_file = 'data/error_notification_rules.json'
-        self.notification_rules = self._loимя_notification_rules()
+        self.notification_rules = self._load_notification_rules()
     
-    def _loимя_notification_rules(self) -> Dict[str, Any]:
+    def _load_notification_rules(self) -> Dict[str, Any]:
         """Уведомление kurallarыnы загрузить"""
         if os.path.exists(self.notification_rules_file):
             try:
                 with open(self.notification_rules_file, 'r', encoding='utf-8') as f:
-                    return json.loимя(f)
+                    return json.load(f)
             except Exception:
                 pass
         
@@ -415,7 +415,7 @@ class ErrorNotification:
     
     def _save_notification_rules(self):
         """Уведомление kurallarыnы сохранить"""
-        os.maкотrs('data', exist_ok=True)
+        os.makedirs('data', exist_ok=True)
         with open(self.notification_rules_file, 'w', encoding='utf-8') as f:
             json.dump(self.notification_rules, f, ensure_ascii=False, indent=2)
     

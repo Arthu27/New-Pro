@@ -6,7 +6,7 @@ Env degiskenleri (hepsi opsiyonel):
   WEB_GRACEFUL     : graceful timeout (default: 30)
   WEB_BIND         : bind (default: 0.0.0.0:5001)
   WEB_LOG_LEVEL    : лог уровеньsi (default: warning)
-  WEB_PRELOAD      : 1 ise preloимя_app, default: 1
+  WEB_PRELOAD      : 1 ise preload_app, default: 1
   WEB_KEEPALIVE    : keep-alive sn (default: 5)
 """
 import os 
@@ -16,8 +16,8 @@ _workers =int (os .getenv ('WEB_WORKERS','0'))or min (4 ,multiprocessing .cpu_co
 _bind =os .getenv ('WEB_BIND','0.0.0.0:5001')
 _timeout =int (os .getenv ('WEB_TIMEOUT','60'))
 _graceful =int (os .getenv ('WEB_GRACEFUL','30'))
-_логlevel =os .getenv ('WEB_LOG_LEVEL','warning')
-_preloимя =os .getenv ('WEB_PRELOAD','1')=='1'
+_loglevel =os .getenv ('WEB_LOG_LEVEL','warning')
+_preload =os .getenv ('WEB_PRELOAD','1')=='1'
 _keepalive =int (os .getenv ('WEB_KEEPALIVE','5'))
 
 # Gunicorn приватный degiskenleri (config dosyasi olarak okunur)
@@ -27,14 +27,14 @@ worker_class ='sync'
 timeout =_timeout 
 graceful_timeout =_graceful 
 keepalive =_keepalive 
-логlevel =_логlevel 
-preloимя_app =_preloимя 
-accessлог =os .getenv ('WEB_ACCESS_LOG','-')# stdout
-errorлог =os .getenv ('WEB_ERROR_LOG','-')# stdout
+loglevel =_loglevel 
+preload_app =_preload 
+accesslog =os .getenv ('WEB_ACCESS_LOG','-')# stdout
+errorlog =os .getenv ('WEB_ERROR_LOG','-')# stdout
 # Gunicorn 26+ ile uyumlu, basit access лог formati
-access_лог_format ='%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"'
+access_log_format ='%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"'
 
-# Process имяleri (ps/top'ta gorunur)
+# Process adleri (ps/top'ta gorunur)
 proc_name ='moebius-web'
 
 # Maksimum istek sayisi sonrasi worker'i новыйle (memory leak korunmasi)
@@ -49,9 +49,9 @@ if _worker_class_env =='gevent':
     try :
         import gevent # noqa: F401
         worker_class ='gevent'
-        # gevent ile connection basina threимя olmимяigindan worker basina daha
+        # gevent ile connection basina thread olmadigindan worker basina daha
         # fazla eszamanli istek kaldirir.
         if int (os .getenv ('WEB_WORKERS','0')or 0 )<=1 :
-            workers =int (os .getenv ('WEB_THREADS','2'))# threимяs yerine worker
+            workers =int (os .getenv ('WEB_THREADS','2'))# threads yerine worker
     except ImportError :
         worker_class ='sync'

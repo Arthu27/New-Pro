@@ -37,10 +37,10 @@ def update_bot():
             print("[UPDATE] Backup создано")
         
         # Новый версийu indir
-        zip_url = f"{REPO_URL}/archive/refs/heимяs/main.zip"
-        heимяers = {"Authorization": f"token {GITHUB_TOKEN}"}
+        zip_url = f"{REPO_URL}/archive/refs/heads/main.zip"
+        headers = {"Authorization": f"token {GITHUB_TOKEN}"}
         
-        response = requests.get(zip_url, heимяers=heимяers)
+        response = requests.get(zip_url, headers=headers)
         if response.status_code != 200:
             raise Exception(f"Indirme ошибки: {response.status_code}")
         
@@ -94,15 +94,15 @@ def github_webhook():
     """GitHub webhook endpoint"""
     try:
         # GitHub signature проверка (basit)
-        if request.heимяers.get('X-GitHub-Event') == 'push':
-            payloимя = request.get_json()
+        if request.headers.get('X-GitHub-Event') == 'push':
+            payload = request.get_json()
             
             # main branch'e push контроль
-            if payloимя.get('ref') == 'refs/heимяs/main':
+            if payload.get('ref') == 'refs/heads/main':
                 print("[WEBHOOK] Push algыlandы, обновл запуск...")
                 
-                # Обновл отдельно threимя'de работатьtыr
-                threading.Threимя(target=update_bot, daemon=True).start()
+                # Обновл отдельно thread'de работатьtыr
+                threading.Thread(target=update_bot, daemon=True).start()
                 
                 return jsonify({"status": "success", "message": "Update started"}), 200
             else:
@@ -125,7 +125,7 @@ def status():
 @app.route('/manual-update', methods=['POST'])
 def manual_update():
     """Manuel обновл"""
-    threading.Threимя(target=update_bot, daemon=True).start()
+    threading.Thread(target=update_bot, daemon=True).start()
     return jsonify({"status": "success", "message": "Manual update started"})
 
 if __name__ == '__main__':

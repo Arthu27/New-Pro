@@ -38,7 +38,7 @@ class AutoCloseService:
     
     async def _auto_close_loop(self):
         """Основной цикл проверки неактивных тикетов"""
-        await self.bot.wait_until_reимяy()
+        await self.bot.wait_until_ready()
         logger.info(f"[AutoClose] Цикл запущен (проверка каждые {self.check_interval}с)")
         
         while not self.bot.is_closed():
@@ -154,11 +154,11 @@ class AutoCloseService:
                     )
             
             # Отправить в лог-канал
-            лог_channel = discord.utils.get(channel.guild.text_channels, name="ticket-лог")
-            if лог_channel:
+            log_channel = discord.utils.get(channel.guild.text_channels, name="ticket-log")
+            if log_channel:
                 import io
                 transcript = "\n".join(messages) if messages else "Сообщений не найдено."
-                лог_embed = discord.Embed(
+                log_embed = discord.Embed(
                     title=" Тикет закрыт автоматически (неактивность)",
                     description=f"**Канал:** {channel.name}\n**Сообщений:** {len(messages)}",
                     color=0xF39C12,
@@ -168,7 +168,7 @@ class AutoCloseService:
                     fp=io.StringIO(transcript),
                     filename=f"{channel.name}_auto_closed.txt"
                 )
-                await лог_channel.send(embed=лог_embed, file=file)
+                await log_channel.send(embed=log_embed, file=file)
             
             # Очистить состояние
             cog._delete_ticket_state(channel.guild.id, channel.id)

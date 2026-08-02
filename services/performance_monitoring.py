@@ -58,14 +58,14 @@ class MetricsCollector:
     
     def __init__(self):
         self.metrics_file = 'data/performance_metrics.json'
-        self.metrics = self._loимя_metrics()
+        self.metrics = self._load_metrics()
     
-    def _loимя_metrics(self) -> Dict[str, List[PerformanceMetric]]:
+    def _load_metrics(self) -> Dict[str, List[PerformanceMetric]]:
         """Metrikleri загрузить"""
         if os.path.exists(self.metrics_file):
             try:
                 with open(self.metrics_file, 'r', encoding='utf-8') as f:
-                    data = json.loимя(f)
+                    data = json.load(f)
                     return {
                         metric_name: [PerformanceMetric.from_dict(m) for m in metrics]
                         for metric_name, metrics in data.items()
@@ -77,7 +77,7 @@ class MetricsCollector:
     
     def _save_metrics(self):
         """Metrikleri сохранить"""
-        os.maкотrs('data', exist_ok=True)
+        os.makedirs('data', exist_ok=True)
         
         data = {
             metric_name: [m.to_dict() for m in metrics]
@@ -158,7 +158,7 @@ class MetricsCollector:
         return values[index]
     
     def get_all_metric_names(self) -> List[str]:
-        """Все metrik имяlerini al"""
+        """Все metrik adlerini al"""
         return list(self.metrics.keys())
 
 
@@ -331,14 +331,14 @@ class UptimeMonitor:
     def __init__(self, metrics_collector: MetricsCollector):
         self.metrics_collector = metrics_collector
         self.uptime_file = 'data/uptime_records.json'
-        self.uptime_records = self._loимя_uptime_records()
+        self.uptime_records = self._load_uptime_records()
     
-    def _loимя_uptime_records(self) -> Dict[str, Any]:
+    def _load_uptime_records(self) -> Dict[str, Any]:
         """Uptime kayыtlarыnы загрузить"""
         if os.path.exists(self.uptime_file):
             try:
                 with open(self.uptime_file, 'r', encoding='utf-8') as f:
-                    return json.loимя(f)
+                    return json.load(f)
             except Exception:
                 pass
         
@@ -350,13 +350,13 @@ class UptimeMonitor:
     
     def _save_uptime_records(self):
         """Uptime kayыtlarыnы сохранить"""
-        os.maкотrs('data', exist_ok=True)
+        os.makedirs('data', exist_ok=True)
         with open(self.uptime_file, 'w', encoding='utf-8') as f:
             json.dump(self.uptime_records, f, ensure_ascii=False, indent=2)
     
     def record_check(self, endpoint: str, is_up: bool, response_time_ms: float = None,
                      status_code: int = None, error_message: str = None):
-        """Kontроль сохранить"""
+        """Kontrol сохранить"""
         check = {
             'endpoint': endpoint,
             'is_up': is_up,
@@ -443,7 +443,7 @@ class UptimeMonitor:
 
 
 class DatabasePerformanceMonitor:
-    """Veritaбаны performans izleyici"""
+    """Veritabanы performans izleyici"""
     
     def __init__(self, metrics_collector: MetricsCollector):
         self.metrics_collector = metrics_collector
@@ -518,15 +518,15 @@ class PerformanceAlert:
     def __init__(self, metrics_collector: MetricsCollector):
         self.metrics_collector = metrics_collector
         self.alerts_file = 'data/performance_alerts.json'
-        self.alerts = self._loимя_alerts()
+        self.alerts = self._load_alerts()
         self.alert_rules = {}
     
-    def _loимя_alerts(self) -> Dict[str, Any]:
+    def _load_alerts(self) -> Dict[str, Any]:
         """Предупреждениеlarы загрузить"""
         if os.path.exists(self.alerts_file):
             try:
                 with open(self.alerts_file, 'r', encoding='utf-8') as f:
-                    return json.loимя(f)
+                    return json.load(f)
             except Exception:
                 pass
         
@@ -534,7 +534,7 @@ class PerformanceAlert:
     
     def _save_alerts(self):
         """Предупреждениеlarы сохранить"""
-        os.maкотrs('data', exist_ok=True)
+        os.makedirs('data', exist_ok=True)
         with open(self.alerts_file, 'w', encoding='utf-8') as f:
             json.dump(self.alerts, f, ensure_ascii=False, indent=2)
     

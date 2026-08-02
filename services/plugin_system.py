@@ -20,8 +20,8 @@ class Plugin:
         self.author = author
         self.description = description
         self.enabled = enabled
-        self.loимяed_at = None
-        self.модule = None
+        self.loaded_at = None
+        self.module = None
     
     def to_dict(self) -> Dict:
         """Dict'e чevir"""
@@ -31,7 +31,7 @@ class Plugin:
             'author': self.author,
             'description': self.description,
             'enabled': self.enabled,
-            'loимяed_at': self.loимяed_at
+            'loaded_at': self.loaded_at
         }
     
     @classmethod
@@ -44,7 +44,7 @@ class Plugin:
             description=data.get('description', ''),
             enabled=data.get('enabled', True)
         )
-        plugin.loимяed_at = data.get('loимяed_at')
+        plugin.loaded_at = data.get('loaded_at')
         return plugin
 
 
@@ -56,15 +56,15 @@ class PluginManager:
         self.plugins: Dict[str, Plugin] = {}
         self.config_file = 'data/plugins_config.json'
         
-        os.maкотrs(plugins_dir, exist_ok=True)
-        self.loимя_config()
+        os.makedirs(plugins_dir, exist_ok=True)
+        self.load_config()
     
-    def loимя_config(self):
+    def load_config(self):
         """Config загрузить"""
         if os.path.exists(self.config_file):
             try:
                 with open(self.config_file, 'r', encoding='utf-8') as f:
-                    data = json.loимя(f)
+                    data = json.load(f)
                     for plugin_data in data.get('plugins', []):
                         plugin = Plugin.from_dict(plugin_data)
                         self.plugins[plugin.name] = plugin
@@ -73,7 +73,7 @@ class PluginManager:
     
     def save_config(self):
         """Config сохранить"""
-        os.maкотrs(os.path.dirname(self.config_file), exist_ok=True)
+        os.makedirs(os.path.dirname(self.config_file), exist_ok=True)
         
         data = {
             'plugins': [plugin.to_dict() for plugin in self.plugins.values()]
@@ -82,7 +82,7 @@ class PluginManager:
         with open(self.config_file, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
     
-    def loимя_plugin(self, plugin_name: str) -> bool:
+    def load_plugin(self, plugin_name: str) -> bool:
         """Plugin загрузить"""
         plugin_file = os.path.join(self.plugins_dir, f'{plugin_name}.py')
         
@@ -92,26 +92,26 @@ class PluginManager:
         
         try:
             spec = importlib.util.spec_from_file_location(plugin_name, plugin_file)
-            модule = importlib.util.модule_from_spec(spec)
-            spec.loимяer.exec_модule(модule)
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
             
-            # Plugin metимяata al
+            # Plugin metadata al
             plugin = Plugin(
                 name=plugin_name,
-                version=getattr(модule, '__version__', '1.0.0'),
-                author=getattr(модule, '__author__', 'Unknown'),
-                description=getattr(модule, '__description__', ''),
+                version=getattr(module, '__version__', '1.0.0'),
+                author=getattr(module, '__author__', 'Unknown'),
+                description=getattr(module, '__description__', ''),
                 enabled=True
             )
-            plugin.loимяed_at = datetime.now().isoformat()
-            plugin.модule = модule
+            plugin.loaded_at = datetime.now().isoformat()
+            plugin.module = module
             
             self.plugins[plugin_name] = plugin
             self.save_config()
             
             # Plugin setup чaгыr
-            if hasattr(модule, 'setup'):
-                модule.setup()
+            if hasattr(module, 'setup'):
+                module.setup()
             
             print(f" Plugin yюklendi: {plugin_name}")
             return True
@@ -119,7 +119,7 @@ class PluginManager:
             print(f" Plugin yюklenemedi: {plugin_name} - {e}")
             return False
     
-    def unloимя_plugin(self, plugin_name: str) -> bool:
+    def unload_plugin(self, plugin_name: str) -> bool:
         """Plugin удалить"""
         if plugin_name not in self.plugins:
             print(f" Plugin не найдено: {plugin_name}")
@@ -128,8 +128,8 @@ class PluginManager:
         plugin = self.plugins[plugin_name]
         
         # Plugin teardown чaгыr
-        if plugin.модule and hasattr(plugin.модule, 'teardown'):
-            plugin.модule.teardown()
+        if plugin.module and hasattr(plugin.module, 'teardown'):
+            plugin.module.teardown()
         
         del self.plugins[plugin_name]
         self.save_config()
@@ -183,13 +183,13 @@ class PluginManager:
     
     def install_plugin(self, plugin_url: str) -> bool:
         """Plugin kur (placeholder)"""
-        # Gerчek uygulamимяa git clone или downloимя yapыlacak
+        # Gerчek uygulamada git clone или download yapыlacak
         print(f"⏰ Plugin kurulumu: {plugin_url}")
         return True
     
     def update_plugin(self, plugin_name: str) -> bool:
         """Plugin обновить (placeholder)"""
-        # Gerчek uygulamимяa git pull yapыlacak
+        # Gerчek uygulamada git pull yapыlacak
         print(f"⏰ Plugin деньcelleme: {plugin_name}")
         return True
     
@@ -206,7 +206,7 @@ class PluginManager:
             'author': plugin.author,
             'description': plugin.description,
             'enabled': plugin.enabled,
-            'loимяed_at': plugin.loимяed_at
+            'loaded_at': plugin.loaded_at
         }
     
     def get_stats(self) -> Dict:

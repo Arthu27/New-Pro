@@ -43,9 +43,9 @@ class Notification:
         self.priority = priority
         self.created_at = datetime.now().isoformat()
         self.sent_at = None
-        self.reимя_at = None
-        self.status = 'pending'  # pending, sent, reимя, failed
-        self.metимяata = {}
+        self.read_at = None
+        self.status = 'pending'  # pending, sent, read, failed
+        self.metadata = {}
         self.retry_count = 0
     
     def mark_sent(self):
@@ -53,16 +53,16 @@ class Notification:
         self.status = 'sent'
         self.sent_at = datetime.now().isoformat()
     
-    def mark_reимя(self):
+    def mark_read(self):
         """Отметить как прочитанное"""
-        self.status = 'reимя'
-        self.reимя_at = datetime.now().isoformat()
+        self.status = 'read'
+        self.read_at = datetime.now().isoformat()
     
     def mark_failed(self, error: str):
         """Неудачно как iшaretle"""
         self.status = 'failed'
         self.retry_count += 1
-        self.metимяata['last_error'] = error
+        self.metadata['last_error'] = error
     
     def to_dict(self) -> Dict[str, Any]:
         """Dict'e чevir"""
@@ -75,9 +75,9 @@ class Notification:
             'priority': self.priority.value,
             'created_at': self.created_at,
             'sent_at': self.sent_at,
-            'reимя_at': self.reимя_at,
+            'read_at': self.read_at,
             'status': self.status,
-            'metимяata': self.metимяata,
+            'metadata': self.metadata,
             'retry_count': self.retry_count
         }
     
@@ -94,9 +94,9 @@ class Notification:
         )
         notif.created_at = data.get('created_at')
         notif.sent_at = data.get('sent_at')
-        notif.reимя_at = data.get('reимя_at')
+        notif.read_at = data.get('read_at')
         notif.status = data.get('status', 'pending')
-        notif.metимяata = data.get('metимяata', {})
+        notif.metadata = data.get('metadata', {})
         notif.retry_count = data.get('retry_count', 0)
         return notif
 
@@ -179,14 +179,14 @@ class NotificationManager:
     
     def __init__(self):
         self.notifications_file = 'data/notifications.json'
-        self.notifications = self._loимя_notifications()
+        self.notifications = self._load_notifications()
     
-    def _loимя_notifications(self) -> Dict[str, Notification]:
+    def _load_notifications(self) -> Dict[str, Notification]:
         """Уведомлениеleri загрузить"""
         if os.path.exists(self.notifications_file):
             try:
                 with open(self.notifications_file, 'r', encoding='utf-8') as f:
-                    data = json.loимя(f)
+                    data = json.load(f)
                     return {
                         notif_id: Notification.from_dict(notif_data)
                         for notif_id, notif_data in data.items()
@@ -198,7 +198,7 @@ class NotificationManager:
     
     def _save_notifications(self):
         """Уведомлениеleri сохранить"""
-        os.maкотrs('data', exist_ok=True)
+        os.makedirs('data', exist_ok=True)
         
         data = {
             notif_id: notif.to_dict()
@@ -211,7 +211,7 @@ class NotificationManager:
     def create_notification(self, recipient_id: str, title: str, message: str,
                             channel: NotificationChannel,
                             priority: NotificationPriority = NotificationPriority.MEDIUM,
-                            metимяata: Dict[str, Any] = None) -> Notification:
+                            metadata: Dict[str, Any] = None) -> Notification:
         """Уведомление создать"""
         notification_id = f"notif_{len(self.notifications) + 1}"
         
@@ -224,8 +224,8 @@ class NotificationManager:
             priority=priority
         )
         
-        if metимяata:
-            notification.metимяata = metимяata
+        if metadata:
+            notification.metadata = metadata
         
         self.notifications[notification_id] = notification
         self._save_notifications()
@@ -236,38 +236,38 @@ class NotificationManager:
         """Уведомлениеi al"""
         return self.notifications.get(notification_id)
     
-    def get_user_notifications(self, user_id: str, unreимя_only: bool = False) -> List[Notification]:
+    def get_user_notifications(self, user_id: str, unread_only: bool = False) -> List[Notification]:
         """Пользователь уведомлениеlerini al"""
         notifications = [
             n for n in self.notifications.values()
             if n.recipient_id == user_id
         ]
         
-        if unreимя_only:
-            notifications = [n for n in notifications if n.status != 'reимя']
+        if unread_only:
+            notifications = [n for n in notifications if n.status != 'read']
         
         notifications.sort(key=lambda n: n.created_at, reverse=True)
         
         return notifications
     
-    def mark_as_reимя(self, notification_id: str) -> bool:
+    def mark_as_read(self, notification_id: str) -> bool:
         """Отметить как прочитанное"""
         notification = self.notifications.get(notification_id)
         
         if notification:
-            notification.mark_reимя()
+            notification.mark_read()
             self._save_notifications()
             return True
         
         return False
     
-    def mark_all_as_reимя(self, user_id: str) -> int:
+    def mark_all_as_read(self, user_id: str) -> int:
         """Всеюnю прочитано как iшaretle"""
         count = 0
         
         for notification in self.notifications.values():
-            if notification.recipient_id == user_id and notification.status != 'reимя':
-                notification.mark_reимя()
+            if notification.recipient_id == user_id and notification.status != 'read':
+                notification.mark_read()
                 count += 1
         
         if count > 0:
@@ -275,11 +275,11 @@ class NotificationManager:
         
         return count
     
-    def get_unreимя_count(self, user_id: str) -> int:
+    def get_unread_count(self, user_id: str) -> int:
         """Okunmaлиш уведомление количествоnы al"""
         return sum(
             1 for n in self.notifications.values()
-            if n.recipient_id == user_id and n.status != 'reимя'
+            if n.recipient_id == user_id and n.status != 'read'
         )
     
     def delete_notification(self, notification_id: str) -> bool:
@@ -297,14 +297,14 @@ class NotificationRuleManager:
     
     def __init__(self):
         self.rules_file = 'data/notification_rules.json'
-        self.rules = self._loимя_rules()
+        self.rules = self._load_rules()
     
-    def _loимя_rules(self) -> Dict[str, NotificationRule]:
+    def _load_rules(self) -> Dict[str, NotificationRule]:
         """Kurallarы загрузить"""
         if os.path.exists(self.rules_file):
             try:
                 with open(self.rules_file, 'r', encoding='utf-8') as f:
-                    data = json.loимя(f)
+                    data = json.load(f)
                     return {
                         rule_id: NotificationRule.from_dict(rule_data)
                         for rule_id, rule_data in data.items()
@@ -316,7 +316,7 @@ class NotificationRuleManager:
     
     def _save_rules(self):
         """Kurallarы сохранить"""
-        os.maкотrs('data', exist_ok=True)
+        os.makedirs('data', exist_ok=True)
         
         data = {
             rule_id: rule.to_dict()
@@ -412,14 +412,14 @@ class NotificationTemplate:
     
     def __init__(self):
         self.templates_file = 'data/notification_templates.json'
-        self.templates = self._loимя_templates()
+        self.templates = self._load_templates()
     
-    def _loимя_templates(self) -> Dict[str, Any]:
+    def _load_templates(self) -> Dict[str, Any]:
         """Шablonlarы загрузить"""
         if os.path.exists(self.templates_file):
             try:
                 with open(self.templates_file, 'r', encoding='utf-8') as f:
-                    return json.loимя(f)
+                    return json.load(f)
             except Exception:
                 pass
         
@@ -427,7 +427,7 @@ class NotificationTemplate:
     
     def _save_templates(self):
         """Шablonlarы сохранить"""
-        os.maкотrs('data', exist_ok=True)
+        os.makedirs('data', exist_ok=True)
         with open(self.templates_file, 'w', encoding='utf-8') as f:
             json.dump(self.templates, f, ensure_ascii=False, indent=2)
     
@@ -484,14 +484,14 @@ class NotificationScheduler:
     def __init__(self, notification_manager: NotificationManager):
         self.notification_manager = notification_manager
         self.scheduled_file = 'data/scheduled_notifications.json'
-        self.scheduled = self._loимя_scheduled()
+        self.scheduled = self._load_scheduled()
     
-    def _loимя_scheduled(self) -> Dict[str, Any]:
+    def _load_scheduled(self) -> Dict[str, Any]:
         """Zamanlanлиш уведомлениеleri загрузить"""
         if os.path.exists(self.scheduled_file):
             try:
                 with open(self.scheduled_file, 'r', encoding='utf-8') as f:
-                    return json.loимя(f)
+                    return json.load(f)
             except Exception:
                 pass
         
@@ -499,7 +499,7 @@ class NotificationScheduler:
     
     def _save_scheduled(self):
         """Zamanlanлиш уведомлениеleri сохранить"""
-        os.maкотrs('data', exist_ok=True)
+        os.makedirs('data', exist_ok=True)
         with open(self.scheduled_file, 'w', encoding='utf-8') as f:
             json.dump(self.scheduled, f, ensure_ascii=False, indent=2)
     
@@ -562,14 +562,14 @@ class DigestNotification:
     def __init__(self, notification_manager: NotificationManager):
         self.notification_manager = notification_manager
         self.digest_config_file = 'data/digest_config.json'
-        self.digest_config = self._loимя_digest_config()
+        self.digest_config = self._load_digest_config()
     
-    def _loимя_digest_config(self) -> Dict[str, Any]:
+    def _load_digest_config(self) -> Dict[str, Any]:
         """Ёzet konfigюrasyonunu загрузить"""
         if os.path.exists(self.digest_config_file):
             try:
                 with open(self.digest_config_file, 'r', encoding='utf-8') as f:
-                    return json.loимя(f)
+                    return json.load(f)
             except Exception:
                 pass
         
@@ -577,7 +577,7 @@ class DigestNotification:
     
     def _save_digest_config(self):
         """Ёzet konfigюrasyonunu сохранить"""
-        os.maкотrs('data', exist_ok=True)
+        os.makedirs('data', exist_ok=True)
         with open(self.digest_config_file, 'w', encoding='utf-8') as f:
             json.dump(self.digest_config, f, ensure_ascii=False, indent=2)
     
@@ -629,7 +629,7 @@ class DigestNotification:
             return None
         
         # Пользовательnыn okunmaлиш уведомлениеlerini al
-        notifications = self.notification_manager.get_user_notifications(user_id, unreимя_only=True)
+        notifications = self.notification_manager.get_user_notifications(user_id, unread_only=True)
         
         if not notifications:
             return None

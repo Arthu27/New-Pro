@@ -144,8 +144,8 @@ class Logs (commands .Cog ):
         if ch :
             return ch 
 
-            # Fallback: arыyoruz старый сервер-log
-        ch =discord .utils .get (guild .text_channels ,name ="сервер-log")
+            # Fallback: arыyoruz старый server-log
+        ch =discord .utils .get (guild .text_channels ,name ="server-log")
         if ch :
             return ch 
 
@@ -376,11 +376,11 @@ class Logs (commands .Cog ):
             elif days_on_sunucu ==1 :
                 joined_ago ="1 день"
             elif days_on_sunucu <30 :
-                joined_ago =f"{days_on_сервер} dn."
+                joined_ago =f"{days_on_server} dn."
             elif days_on_sunucu <365 :
-                joined_ago =f"{days_on_сервер // 30} mes."
+                joined_ago =f"{days_on_server // 30} mes."
             else :
-                joined_ago =f"{days_on_сервер // 365} g. {days_on_сервер % 365 // 30} mes."
+                joined_ago =f"{days_on_server // 365} g. {days_on_server % 365 // 30} mes."
 
         e =discord .Embed (color =0xE74C3C ,timestamp =datetime .datetime .utcnow ())
         e .description =(
@@ -531,7 +531,7 @@ class Logs (commands .Cog ):
         self ._save_message_log (message .guild .id ,msg_data )
 
     def _save_message_log (self ,guild_id :int ,msg_data :dict ):
-        """Сохранить сообщение в per-guild JSON-лог (для AI-поиска)."""
+        """Сохранить сообщение в per-guild JSON-log (для AI-поиска)."""
         import json as _json 
         try :
             f =f'data/message_log_{guild_id}.json'

@@ -9,17 +9,17 @@ from typing import Dict ,List ,Optional ,Any
 
 
 class AIFunctions :
-    """Nabor fonksiyonlarыn eriшимяlerin AI"""
+    """Nabor fonksiyonlarыn eriшadlerin AI"""
 
     def __init__ (self ,bot :discord .Client ):
         self .bot =bot 
         self .functions ={
         'get_user_warnings':self .get_user_warnings ,
         'get_user_info':self .get_user_info ,
-        'get_user_рольes':self .get_user_рольes ,
+        'get_user_roles':self .get_user_roles ,
         'check_message_history':self .check_message_history ,
         'search_rules':self .search_rules ,
-        'get_сервер_stats':self .get_сервер_stats ,
+        'get_server_stats':self .get_server_stats ,
         'get_ticket_history':self .get_ticket_history ,
         'remember_fact':self .remember_fact ,
         'recall_facts':self .recall_facts ,
@@ -29,7 +29,7 @@ class AIFunctions :
         }
 
     def get_available_functions (self )->str :
-        """Vozvrasaet описание eriшимяlerin fonksiyonlarыn для AI"""
+        """Vozvrasaet описание eriшadlerin fonksiyonlarыn для AI"""
         return """
 ERIШIMNIE FONKSIYONLAR (vizivay ne время gerekli):
 
@@ -41,9 +41,9 @@ ERIШIMNIE FONKSIYONLAR (vizivay ne время gerekli):
    Получить информация о у пользователя (имя, дата registracii, время на на сервере)
    Пример: get_user_info(123456789)
 
-3. get_user_рольes(user_id: int)
+3. get_user_roles(user_id: int)
    Получить список роль пользователь
-   Пример: get_user_рольes(123456789)
+   Пример: get_user_roles(123456789)
 
 4. check_message_history(user_id: int, limit: int = 10)
    Контроль et son сообщения пользователь
@@ -53,9 +53,9 @@ ERIШIMNIE FONKSIYONLAR (vizivay ne время gerekli):
    Arama по правил сервер
    Пример: search_rules("spam")
 
-6. get_сервер_stats()
+6. get_server_stats()
    Получить istatistiгi сервер (участники, onlayn, каналы)
-   Пример: get_сервер_stats()
+   Пример: get_server_stats()
 
 7. get_ticket_history(user_id: int)
    Получить история ticketlarыn пользователь
@@ -70,31 +70,31 @@ ERIШIMNIE FONKSIYONLAR (vizivay ne время gerekli):
    Пример: recall_facts(123456789)
 
 10. check_user_reputation(user_id: int)
-    Контроль et itibarы пользователь (предупреждения, muti, банi)
+    Контроль et itibarы пользователь (предупреждения, muti, bani)
     Пример: check_user_reputation(123456789)
 
 11. search_knowledge_base(query: str)
-    Arama по taбанda информация сервер (правила, FAQ, ticketlar, notlar)
+    Arama по tabanda информация сервер (правила, FAQ, ticketlar, notlar)
     Пример: search_knowledge_base("spam")
 
 12. search_user_messages(user_id: int, channel_id: int = 0, limit: int = 20)
     ОБЯЗАТЕЛЬНО вызывай эту функцию каждый раз, когда пользователь
     просит ПОКАЗАТЬ/НАЙТИ/ВЫВЕСТИ сообщения другого пользователя или себя.
     ГИБРИДНЫЙ поиск: сначала Discord API (channel.history), потом fallback
-    на data/message_лог_<guild_id>.json (когда бот offline).
+    на data/message_log_<guild_id>.json (когда бот offline).
     channel_id=0 — искать во всех каналах, иначе только в указанном.
 
     КРИТИЧЕСКИ ВАЖНО: если тебя просят показать сообщения пользователя —
     СРАЗУ вызывай [FUNC:search_user_messages(user_id=<id>, limit=20)].
     НЕ говори "Discord API недоступен" — у тебя ЕСТЬ лог в
-    data/message_лог_<guild_id>.json, и Discord API часто работает.
+    data/message_log_<guild_id>.json, и Discord API часто работает.
 
     Пример: [FUNC:search_user_messages(user_id=123456789, limit=20)]
     Или только в конкретном канале:
     [FUNC:search_user_messages(user_id=123456789, channel_id=987654321, limit=10)]
 
 FORMAT VIZOVA:
-[FUNC:function_name(деньгиm1=value1, деньгиm2=value2)]
+[FUNC:function_name(param1=value1, param2=value2)]
 
 ПРИМЕР:
 [FUNC:get_user_warnings(user_id=123456789)]
@@ -103,25 +103,25 @@ FORMAT VIZOVA:
     async def execute_function (self ,func_call :str ,guild :discord .Guild )->Optional [str ]:
         """Vipolnyaet funkciyu из vizova AI"""
         try :
-        # Отдельношtыrыyoruz vizov: [FUNC:name(деньгиm1=value1, деньгиm2=value2)]
+        # Отдельношtыrыyoruz vizov: [FUNC:name(param1=value1, param2=value2)]
             if not func_call .startswith ('[FUNC:')or not func_call .endswith (']'):
                 return None 
 
             func_call =func_call [6 :-1 ]# Удален [FUNC: ve ]
 
-            # Отдельношtыrыyoruz имя fonksiyonlar ve деньгиmetri
+            # Отдельношtыrыyoruz имя fonksiyonlar ve parametri
             if '('not in func_call or ')'not in func_call :
                 return None 
 
             func_name =func_call .split ('(')[0 ].strip ()
-            деньгиms_str =func_call .split ('(')[1 ].rsplit (')',1 )[0 ].strip ()
+            params_str =func_call .split ('(')[1 ].rsplit (')',1 )[0 ].strip ()
 
-            # Отдельношtыrыyoruz деньгиmetri
-            деньгиms ={}
-            if деньгиms_str :
-                for деньгиm in деньгиms_str .split (','):
-                    if '='in деньгиm :
-                        key ,value =деньгиm .split ('=',1 )
+            # Отдельношtыrыyoruz parametri
+            params ={}
+            if params_str :
+                for param in params_str .split (','):
+                    if '='in param :
+                        key ,value =param .split ('=',1 )
                         key =key .strip ()
                         value =value .strip ()
 
@@ -133,13 +133,13 @@ FORMAT VIZOVA:
                         elif value .lower ()in ('true','false'):
                             value =value .lower ()=='true'
 
-                        деньгиms [key ]=value 
+                        params [key ]=value 
 
                         # Чтяжелыйыyoruz funkciyu
             if func_name not in self .functions :
                 return f"Ошибка: funkciya {func_name} не найден"
 
-            result =await self .functions [func_name ](guild =guild ,**деньгиms )
+            result =await self .functions [func_name ](guild =guild ,**params )
             return str (result )
 
         except Exception as e :
@@ -148,8 +148,8 @@ FORMAT VIZOVA:
     async def get_user_warnings (self ,guild :discord .Guild ,user_id :int )->str :
         """Получить история предупреждение"""
         try :
-            from cogs .warnings import loимя_warnings 
-            warnings_data =loимя_warnings ()
+            from cogs .warnings import load_warnings 
+            warnings_data =load_warnings ()
             gid =str (guild .id )
             uid =str (user_id )
 
@@ -160,7 +160,7 @@ FORMAT VIZOVA:
 
             result =f"Предупреждения <@{user_id}> ({len(user_warnings)}):\n"
             for i ,варн in enumerate (user_warnings [-5 :],1 ):# В конец 5
-                result +=f"{i}. {варн.get('reason', 'Bez причина')} — {варн.get('мод', '?')} ({варн.get('timestamp', '?')[:10]})\n"
+                result +=f"{i}. {warn.get('reason', 'Bez причина')} — {warn.get('мод', '?')} ({warn.get('timestamp', '?')[:10]})\n"
 
             return result 
         except Exception as e :
@@ -175,38 +175,38 @@ FORMAT VIZOVA:
 
             created =member .created_at .strftime ("%d.%m.%Y")
             joined =member .joined_at .strftime ("%d.%m.%Y")if member .joined_at else "?"
-            days_on_сервер =(datetime .utcnow ()-member .joined_at ).days if member .joined_at else 0 
+            days_on_server =(datetime .utcnow ()-member .joined_at ).days if member .joined_at else 0 
 
             return (
             f"Информация о <@{user_id}>:\n"
             f"Isim: {member.display_name}\n"
             f"ID: {user_id}\n"
             f"Кубикegistrirovan: {created}\n"
-            f"На на сервере: {joined} ({days_on_сервер} день)\n"
-            f"Роль: {len(member.рольes)}"
+            f"На на сервере: {joined} ({days_on_server} день)\n"
+            f"Роль: {len(member.roles)}"
             )
         except Exception as e :
             return f"Ошибка: {str(e)}"
 
-    async def get_user_рольes (self ,guild :discord .Guild ,user_id :int )->str :
+    async def get_user_roles (self ,guild :discord .Guild ,user_id :int )->str :
         """Получить роли пользователь"""
         try :
             member =guild .get_member (user_id )
             if not member :
                 return f"Пользователь <@{user_id}> не найдено."
 
-            рольes =[r .name for r in member .рольes if r .name !="@everyone"]
-            if not рольes :
+            roles =[r .name for r in member .roles if r .name !="@everyone"]
+            if not roles :
                 return f"У <@{user_id}> нет ролей."
 
-            return f"Роли <@{user_id}>: {', '.join(рольes)}"
+            return f"Роли <@{user_id}>: {', '.join(roles)}"
         except Exception as e :
             return f"Ошибка: {str(e)}"
 
     async def check_message_history (self ,guild :discord .Guild ,user_id :int ,limit :int =10 )->str :
         """Контроль et son сообщения пользователь"""
         try :
-            from cogs .логs import _msg_cache 
+            from cogs .logs import _msg_cache 
 
             user_messages =[
             msg for msg in _msg_cache .values ()
@@ -232,7 +232,7 @@ FORMAT VIZOVA:
         Гибридный подход:
         1) Discord API (channel.history + search) — самый полный, но требует
            прав message_history и работает только когда бот онлайн.
-        2) data/message_лог_<guild_id>.json — fallback на случай офлайна/недоступности.
+        2) data/message_log_<guild_id>.json — fallback на случай офлайна/недоступности.
 
         Параметры:
             user_id — Discord user ID
@@ -258,7 +258,7 @@ FORMAT VIZOVA:
                     if ch is not None :
                     # Проверяем права бота
                         perms =ch .permissions_for (guild .me )
-                        if perms .reимя_message_history and perms .reимя_messages :
+                        if perms .read_message_history and perms .read_messages :
                             async for msg in ch .history (limit =500 ):
                                 if msg .author .id ==uid :
                                     api_msgs .append ({
@@ -276,7 +276,7 @@ FORMAT VIZOVA:
                     for ch in text_channels :
                         try :
                             perms =ch .permissions_for (guild .me )
-                            if not (perms .reимя_message_history and perms .reимя_messages ):
+                            if not (perms .read_message_history and perms .read_messages ):
                                 continue 
                                 # Her каналda en son 500 сообщениеы tara (каналda
                                 # mrxway'in написатьdыгы her шeyi bulmak для)
@@ -301,26 +301,26 @@ FORMAT VIZOVA:
                 api_msgs =[]
 
                 # ── 2) FALLBACK: BOT LOG'U ──────────────────────────────────
-            лог_msgs =[]
-            лог_error =None 
-            f =f'data/message_лог_{guild.id}.json'
+            log_msgs =[]
+            log_error =None 
+            f =f'data/message_log_{guild.id}.json'
             if os .path .exists (f ):
                 try :
                     with open (f ,'r',encoding ='utf-8')as fp :
-                        логs =_json .loимя (fp )or []
+                        logs =_json .load (fp )or []
                 except (OSError ,_json .JSONDecodeError ,ValueError ):
-                    логs =[]
+                    logs =[]
                 cid_filter =str (channel_id )if channel_id and int (channel_id )else None 
-                лог_msgs =[m for m in логs 
+                log_msgs =[m for m in logs 
                 if str (m .get ('author_id',''))==str (uid )
                 and (cid_filter is None or str (m .get ('channel_id',''))==cid_filter )]
 
                 # ── 3) BИRLEШTИR + SIRALA ─────────────────────────────────
-                # Ёnce Discord API sonuчlarы (en новый), sonra лог-only olanlar
+                # Ёnce Discord API sonuчlarы (en новый), sonra log-only olanlar
             api_keys ={(m .get ('channel_id',''),m .get ('timestamp',''),m .get ('content','')[:100 ])
             for m in api_msgs }
             merged =list (api_msgs )
-            for m in лог_msgs :
+            for m in log_msgs :
                 key =(m .get ('channel_id',''),m .get ('timestamp',''),(m .get ('content')or '')[:100 ])
                 if key not in api_keys :
                     merged .append (m )
@@ -338,8 +338,8 @@ FORMAT VIZOVA:
             result_lines =[f"Найдено {len(merged)} сообщений от <@{uid}>"]
             if api_msgs :
                 result_lines .append (f"Источник: Discord API ({len(api_msgs)} записей)")
-            if лог_msgs :
-                not_in_api =sum (1 for m in лог_msgs if (m .get ('channel_id',''),m .get ('timestamp',''),(m .get ('content')or '')[:100 ])not in api_keys )
+            if log_msgs :
+                not_in_api =sum (1 for m in log_msgs if (m .get ('channel_id',''),m .get ('timestamp',''),(m .get ('content')or '')[:100 ])not in api_keys )
                 if not_in_api :
                     result_lines .append (f"Из лога бота (только бот был офлайн): ещё {not_in_api} сообщений")
             result_lines .append ("")
@@ -355,8 +355,8 @@ FORMAT VIZOVA:
 
             if api_error :
                 result_lines .append (f"\n⚠️ Discord API недоступен: {api_error}")
-            if лог_error :
-                result_lines .append (f"\n⚠️ Ошибка чтения лога: {лог_error}")
+            if log_error :
+                result_lines .append (f"\n⚠️ Ошибка чтения лога: {log_error}")
 
             return "\n".join (result_lines )
         except Exception as e :
@@ -389,7 +389,7 @@ FORMAT VIZOVA:
                 return "Правила сервер не найден."
 
             with open (rules_file ,'r',encoding ='utf-8')as f :
-                rules_data =json .loимя (f )
+                rules_data =json .load (f )
 
             rules =rules_data .get ('rules',[])
             query_lower =query .lower ()
@@ -410,21 +410,21 @@ FORMAT VIZOVA:
         except Exception as e :
             return f"Ошибка: {str(e)}"
 
-    async def get_сервер_stats (self ,guild :discord .Guild )->str :
+    async def get_server_stats (self ,guild :discord .Guild )->str :
         """Получить istatistiгi сервер"""
         try :
             total_members =guild .member_count 
             online_members =len ([m for m in guild .members if m .status ==discord .Status .online ])
             text_channels =len (guild .text_channels )
             voice_channels =len (guild .voice_channels )
-            рольe =len (guild .рольes )
+            role =len (guild .roles )
 
             return (
             f"Статистика сервер {guild.name}:\n"
             f"Участников: {total_members} (onlayn: {online_members})\n"
             f"Metin каналы: {text_channels}\n"
             f"Ses каналы: {voice_channels}\n"
-            f"Ролей: {len(guild.рольes)}"
+            f"Ролей: {len(guild.roles)}"
             )
         except Exception as e :
             return f"Ошибка: {str(e)}"
@@ -437,7 +437,7 @@ FORMAT VIZOVA:
                 return f"U <@{user_id}> нет istorii ticketlarыn."
 
             with open (ticket_file ,'r',encoding ='utf-8')as f :
-                tickets_data =json .loимя (f )
+                tickets_data =json .load (f )
 
             user_tickets =[
             t for t in tickets_data .get ('tickets',[])
@@ -466,7 +466,7 @@ FORMAT VIZOVA:
 
             if os .path .exists (memory_file ):
                 with open (memory_file ,'r',encoding ='utf-8')as f :
-                    memory =json .loимя (f )
+                    memory =json .load (f )
 
             user_key =str (user_id )
             if user_key not in memory :
@@ -496,7 +496,7 @@ FORMAT VIZOVA:
                 return f"Нет sohranennih gerчдобавитьr о <@{user_id}>."
 
             with open (memory_file ,'r',encoding ='utf-8')as f :
-                memory =json .loимя (f )
+                memory =json .load (f )
 
             user_key =str (user_id )
             facts =memory .get (user_key ,[])
@@ -530,7 +530,7 @@ FORMAT VIZOVA:
             return f"Ошибка: {str(e)}"
 
     async def search_knowledge_base (self ,guild :discord .Guild ,query :str )->str :
-        """Arama по taбанda информация сервер (правила, FAQ, ticketlar, notlar)"""
+        """Arama по tabanda информация сервер (правила, FAQ, ticketlar, notlar)"""
         try :
             from web .ai_rag import get_knowledge_base 
 
@@ -538,8 +538,8 @@ FORMAT VIZOVA:
             context =kb .get_context_for_query (query )
 
             if not context :
-                return f"Не найдено informacii в taбанda информация по sorguyu: {query}"
+                return f"Не найдено informacii в tabanda информация по sorguyu: {query}"
 
             return context 
         except Exception as e :
-            return f"Ошибка aramaa в taбанda информация: {str(e)}"
+            return f"Ошибка aramaa в tabanda информация: {str(e)}"

@@ -3,7 +3,7 @@ from discord import app_commands
 from discord.ext import commands
 
 PERM_ICON = {"all": "\U0001f7e2", "мод": "\U0001f7e1", "админ": "\U0001f534", "owner": "\u2699\ufe0f"}
-PERM_LABEL = {"all": "Каждый", "мод": "Модerator", "админ": "Иsminin", "owner": "Owner"}
+PERM_LABEL = {"all": "Каждый", "мод": "Moderator", "админ": "Иsminin", "owner": "Owner"}
 
 CATEGORIES = [
  {"id": "overview", "эмодзи": "\u26a1", "title": "ANA MENU", "color": 0x00FFF7, "commands": []},
@@ -17,8 +17,8 @@ CATEGORIES = [
  ]},
  {"id": "варн", "эмодзи": "\u26a0\ufe0f", "title": "ПРЕДУПРЕЖДЕНИЕ СИСТЕМА", "color": 0xFFD700, "commands": [
  ("!варн", "Предупреждение ver", "!варн @user причина", "мод"),
- ("!варнings", "Предупреждения listele", "!варнings @user", "мод"),
- ("!clearварнs", "Предупреждения clear", "!clearварнs @user", "админ"),
+ ("!warnings", "Предупреждения listele", "!warnings @user", "мод"),
+ ("!clearwarns", "Предупреждения clear", "!clearwarns @user", "админ"),
  ]},
  {"id": "music", "эмодзи": "\U0001f3b5", "title": "MUZIK", "color": 0xBF00FF, "commands": [
  ("!cal", "Muzik cal", "!cal lofi", "all"),
@@ -58,7 +58,7 @@ def build_embed(page: int) -> discord.Embed:
  cat = CATEGORIES[page]
 
  if cat["id"] == "overview":
- heимяer = "\n".join([
+ header = "\n".join([
  _a("\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557", 1, 36),
  _a("\u2551 \u2551", 36),
  _a("\u2551 \u26a1 R A K U Z A N B O T \u26a1 \u2551", 1, 36),
@@ -79,17 +79,17 @@ def build_embed(page: int) -> discord.Embed:
  cats += "\n" + _a(f" {c['эмодзи']} {c['title']:<18}", 1, 37) + _a(f"{n} команда ", 33) + bar
  perms = "\n".join([
  _a(" \U0001f7e2 Каждый ", 1, 32) + _a("\u2500 Tum uyeler использовать", 2, 37),
- _a(" \U0001f7e1 Модerator ", 1, 33) + _a("\u2500 Требуется роль модератора", 2, 37),
+ _a(" \U0001f7e1 Moderator ", 1, 33) + _a("\u2500 Требуется роль модератора", 2, 37),
  _a(" \U0001f534 Иsminin ", 1, 31) + _a("\u2500 Требуется роль администратора", 2, 37),
  _a(" \u2699\ufe0f Owner ", 1, 37) + _a("\u2500 Только сервер sahibi", 2, 37),
  ])
  embed = discord.Embed(
- description="```ansi\n" + heимяer + "\n```" +
+ description="```ansi\n" + header + "\n```" +
  "```ansi\n" + stats + "\n```",
  color=cat["color"]
  )
- embed.имяd_field(name="\U0001f4cb Kategoriler", value="```ansi\n" + cats.strip() + "\n```", inline=False)
- embed.имяd_field(name="\U0001f510 Izin Уровеньleri", value="```ansi\n" + perms + "\n```", inline=False)
+ embed.add_field(name="\U0001f4cb Kategoriler", value="```ansi\n" + cats.strip() + "\n```", inline=False)
+ embed.add_field(name="\U0001f510 Izin Уровеньleri", value="```ansi\n" + perms + "\n```", inline=False)
  embed.set_footer(text=f"Sayfa 1/{TOTAL_PAGES} \u2022 Aether Bot \u2022 !помощь")
  return embed
 
@@ -117,7 +117,7 @@ def build_embed(page: int) -> discord.Embed:
  "```ansi\n" + "\n".join(cmd_lines).rstrip() + "\n```",
  color=cat["color"]
  )
- embed.имяd_field(name="\U0001f4ca Команда Dagilimi", value="```ansi\n" + summary + "\n```", inline=False)
+ embed.add_field(name="\U0001f4ca Команда Dagilimi", value="```ansi\n" + summary + "\n```", inline=False)
  embed.set_footer(text=f"Sayfa {page_idx+1}/{TOTAL_PAGES} \u2022 Aether Bot \u2022 !помощь")
  return embed
 
@@ -145,7 +145,7 @@ class HelpView(discord.ui.View):
  def __init__(self, page: int = 0):
  super().__init__(timeout=300)
  self.page = page
- self.имяd_item(CategorySelect(page))
+ self.add_item(CategorySelect(page))
  self._sync()
 
  def _sync(self):
@@ -203,7 +203,7 @@ class Help(commands.Cog):
 
 
 async def setup(bot):
- await bot.имяd_cog(Help(bot))
+ await bot.add_cog(Help(bot))
 '''
 import ast
 ast.parse(code)  # syntax check

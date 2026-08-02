@@ -20,14 +20,14 @@ class TwoFactorAuth:
     
     def __init__(self):
         self.secrets_file = 'data/2fa_secrets.json'
-        self.secrets = self._loимя_secrets()
+        self.secrets = self._load_secrets()
     
-    def _loимя_secrets(self) -> Dict[str, Any]:
+    def _load_secrets(self) -> Dict[str, Any]:
         """Загрузить секреты 2FA"""
         if os.path.exists(self.secrets_file):
             try:
                 with open(self.secrets_file, 'r', encoding='utf-8') as f:
-                    return json.loимя(f)
+                    return json.load(f)
             except Exception:
                 pass
         
@@ -35,7 +35,7 @@ class TwoFactorAuth:
     
     def _save_secrets(self):
         """Сохранить секреты 2FA"""
-        os.maкотrs('data', exist_ok=True)
+        os.makedirs('data', exist_ok=True)
         with open(self.secrets_file, 'w', encoding='utf-8') as f:
             json.dump(self.secrets, f, ensure_ascii=False, indent=2)
     
@@ -131,14 +131,14 @@ class SessionManager:
     
     def __init__(self):
         self.sessions_file = 'data/sessions.json'
-        self.sessions = self._loимя_sessions()
+        self.sessions = self._load_sessions()
     
-    def _loимя_sessions(self) -> Dict[str, Any]:
+    def _load_sessions(self) -> Dict[str, Any]:
         """Загрузить сессии"""
         if os.path.exists(self.sessions_file):
             try:
                 with open(self.sessions_file, 'r', encoding='utf-8') as f:
-                    return json.loимя(f)
+                    return json.load(f)
             except Exception:
                 pass
         
@@ -146,7 +146,7 @@ class SessionManager:
     
     def _save_sessions(self):
         """Сохранить сессии"""
-        os.maкотrs('data', exist_ok=True)
+        os.makedirs('data', exist_ok=True)
         with open(self.sessions_file, 'w', encoding='utf-8') as f:
             json.dump(self.sessions, f, ensure_ascii=False, indent=2)
     
@@ -238,12 +238,12 @@ class AuditLogger:
     """Аудит логгер"""
     
     def __init__(self):
-        self.лог_file = 'data/audit_лог.json'
+        self.log_file = 'data/audit_log.json'
     
     def лог(self, user_id: str, action: str, details: Dict[str, Any],
             ip_address: Optional[str] = None) -> None:
         """Записать событие в аудит лог"""
-        лог_entry = {
+        log_entry = {
             'timestamp': datetime.now().isoformat(),
             'user_id': user_id,
             'action': action,
@@ -252,48 +252,48 @@ class AuditLogger:
         }
         
         # Загрузить существующие логи
-        логs = []
-        if os.path.exists(self.лог_file):
+        logs = []
+        if os.path.exists(self.log_file):
             try:
-                with open(self.лог_file, 'r', encoding='utf-8') as f:
-                    логs = json.loимя(f)
+                with open(self.log_file, 'r', encoding='utf-8') as f:
+                    logs = json.load(f)
             except Exception:
                 pass
         
         # Добавить новую запись
-        логs.append(лог_entry)
+        logs.append(log_entry)
         
         # Ограничить количество записей (последние 10000)
-        логs = логs[-10000:]
+        logs = logs[-10000:]
         
         # Сохранить
-        os.maкотrs('data', exist_ok=True)
-        with open(self.лог_file, 'w', encoding='utf-8') as f:
-            json.dump(логs, f, ensure_ascii=False, indent=2)
+        os.makedirs('data', exist_ok=True)
+        with open(self.log_file, 'w', encoding='utf-8') as f:
+            json.dump(logs, f, ensure_ascii=False, indent=2)
     
-    def get_логs(self, user_id: Optional[str] = None, action: Optional[str] = None,
+    def get_logs(self, user_id: Optional[str] = None, action: Optional[str] = None,
                  limit: int = 100) -> List[Dict[str, Any]]:
         """Получить логи"""
-        if not os.path.exists(self.лог_file):
+        if not os.path.exists(self.log_file):
             return []
         
         try:
-            with open(self.лог_file, 'r', encoding='utf-8') as f:
-                логs = json.loимя(f)
+            with open(self.log_file, 'r', encoding='utf-8') as f:
+                logs = json.load(f)
         except Exception:
             return []
         
         # Фильтрация
         if user_id:
-            логs = [лог for лог in логs if лог['user_id'] == user_id]
+            logs = [лог for лог in logs if лог['user_id'] == user_id]
         
         if action:
-            логs = [лог for лог in логs if лог['action'] == action]
+            logs = [лог for лог in logs if лог['action'] == action]
         
         # Сортировка по времени (новые первые)
-        логs.sort(key=lambda x: x['timestamp'], reverse=True)
+        logs.sort(key=lambda x: x['timestamp'], reverse=True)
         
-        return логs[:limit]
+        return logs[:limit]
 
 
 class DataEncryption:
@@ -326,14 +326,14 @@ class GDPRCompliance:
     
     def __init__(self):
         self.consents_file = 'data/gdpr_consents.json'
-        self.consents = self._loимя_consents()
+        self.consents = self._load_consents()
     
-    def _loимя_consents(self) -> Dict[str, Any]:
+    def _load_consents(self) -> Dict[str, Any]:
         """Загрузить согласия"""
         if os.path.exists(self.consents_file):
             try:
                 with open(self.consents_file, 'r', encoding='utf-8') as f:
-                    return json.loимя(f)
+                    return json.load(f)
             except Exception:
                 pass
         
@@ -341,7 +341,7 @@ class GDPRCompliance:
     
     def _save_consents(self):
         """Сохранить согласия"""
-        os.maкотrs('data', exist_ok=True)
+        os.makedirs('data', exist_ok=True)
         with open(self.consents_file, 'w', encoding='utf-8') as f:
             json.dump(self.consents, f, ensure_ascii=False, indent=2)
     
@@ -388,7 +388,7 @@ class GDPRCompliance:
         
         try:
             with open(tickets_file, 'r', encoding='utf-8') as f:
-                tickets = json.loимя(f)
+                tickets = json.load(f)
                 return [t for t in tickets if t.get('user_id') == user_id]
         except Exception:
             return []
@@ -411,7 +411,7 @@ class GDPRCompliance:
         if os.path.exists(tickets_file):
             try:
                 with open(tickets_file, 'r', encoding='utf-8') as f:
-                    tickets = json.loимя(f)
+                    tickets = json.load(f)
                 
                 tickets = [t for t in tickets if t.get('user_id') != user_id]
                 
@@ -433,14 +433,14 @@ class IPWhitelist:
     
     def __init__(self):
         self.whitelist_file = 'data/ip_whitelist.json'
-        self.whitelist = self._loимя_whitelist()
+        self.whitelist = self._load_whitelist()
     
-    def _loимя_whitelist(self) -> List[str]:
+    def _load_whitelist(self) -> List[str]:
         """Загрузить белый список"""
         if os.path.exists(self.whitelist_file):
             try:
                 with open(self.whitelist_file, 'r', encoding='utf-8') as f:
-                    return json.loимя(f)
+                    return json.load(f)
             except Exception:
                 pass
         
@@ -448,7 +448,7 @@ class IPWhitelist:
     
     def _save_whitelist(self):
         """Сохранить белый список"""
-        os.maкотrs('data', exist_ok=True)
+        os.makedirs('data', exist_ok=True)
         with open(self.whitelist_file, 'w', encoding='utf-8') as f:
             json.dump(self.whitelist, f, ensure_ascii=False, indent=2)
     

@@ -41,7 +41,7 @@ def _save_global_state (state :dict ):
 
 
 class Verification (commands .Cog ):
-    """Иsteгe baгlы captcha/Роль системаi. Varsayыlan KAPALI."""
+    """Иsteгe baгlы captcha/Rol системаi. Varsayыlan KAPALI."""
 
     def __init__ (self ,bot ):
         self .bot =bot 
@@ -59,15 +59,15 @@ class Verification (commands .Cog ):
         unverified_role =discord .utils .get (guild .roles ,name ="Проверка")
         verified_role =discord .utils .get (guild .roles ,name ="Подтвердитьndы")
 
-        # Sadece bilgilendirme — otomatik Роль/kick YOK
+        # Sadece bilgilendirme — otomatik Rol/kick YOK
         try :
             await member .send (
-            f" {guild.name} серверsuna hoш geldin!\n"
+            f" {guild.name} serversuna hoш geldin!\n"
             f"Если требуется проверка, следуйте инструкциям на сервере."
             )
         except Exception :
             pass 
-            # Not: kick/Роль-atama/Канал-oluшturma gibi hiчbir otomatik aksiyon YOK.
+            # Not: kick/Rol-atama/Канал-oluшturma gibi hiчbir otomatik aksiyon YOK.
 
     @app_commands .command (name ="verify-toggle",description ="Включить/отключить систему верификации (режим наблюдателя)")
     @app_commands .checks .has_permissions (administrator =True )
@@ -78,7 +78,7 @@ class Verification (commands .Cog ):
         _save_global_state (state )
         await interaction .response .send_message (
         f" Данныеfication системаi **{'AЧIK' if enabled else 'KAPALI'}**.\n"
-        +(" Bot otomatik captcha/Роль/kick YAPMAYACAK — sadece bilgilendirme."if enabled else " Artыk новый gelenler iчin hiчbir otomatik операция yapыlmayacak."),
+        +(" Bot otomatik captcha/Rol/kick YAPMAYACAK — sadece bilgilendirme."if enabled else " Artыk новый gelenler iчin hiчbir otomatik операция yapыlmayacak."),
         ephemeral =True ,
         )
 
@@ -93,7 +93,7 @@ class Verification (commands .Cog ):
         e .add_field (name ="Otomatik aksiyon",value =" YOK (gёzlemci modu)",inline =True )
         e .add_field (name ="Son gюncelleme",value =state .get ("updated_by","—"),inline =True )
         e .description =(
-        "Bu cog gёzlemci modunda: bot kimseye otomatik captcha/Роль/kick UYGULAMAZ. "
+        "Bu cog gёzlemci modunda: bot kimseye otomatik captcha/Rol/kick UYGULAMAZ. "
         "Sadece sen `/verify-toggle enabled:true` dersen bilgilendirme DM'i atar."
         )
         await interaction .response .send_message (embed =e ,ephemeral =True )

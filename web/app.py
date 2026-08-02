@@ -37,7 +37,7 @@ app .config ['PERMANENT_SESSION_LIFETIME']=timedelta (days =30 )
 app .jinja_env .auto_reload =True 
 
 # Session: default Flask cookie session (itsdangerous imzali cookie).
-# Старый: flask_session filesystem (her istekte dosya IO, 50 деньгиlel istekte darboгaz).
+# Старый: flask_session filesystem (her istekte dosya IO, 50 paralel istekte darboгaz).
 # Новый: cookie, sifir disk IO, <500 byte. Oturum boyutu маленький oldugu icin sorun degil.
 # Ileride Redis gerekirse SESSION_TYPE=redis eklenebilir.
 _USE_FS_SESSION =_os .getenv ('USE_FS_SESSION','0')=='1'
@@ -1792,7 +1792,7 @@ def api_check_member ():
     guild_id =str (data .get ('guild_id',''))
     user_id =str (data .get ('user_id',''))
     if not guild_id or not user_id :
-        return jsonify ({'error':'Yetersiz деньгиmetrov'}),400 
+        return jsonify ({'error':'Yetersiz parametrov'}),400 
     try :
         guild =discord .utils .get (bot_instance .guilds ,id =int (guild_id ))
         if not guild :

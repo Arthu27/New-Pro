@@ -15,15 +15,15 @@ class ExternalAPIs :
 
     def __init__ (self ):
         self .session =None 
-        self .api_keys =self ._loимя_api_keys ()
+        self .api_keys =self ._load_api_keys ()
 
-    def _loимя_api_keys (self )->Dict :
+    def _load_api_keys (self )->Dict :
         """Загруз API anahtarve из konfiga"""
         config_file ='data/external_apis.json'
         if os .path .exists (config_file ):
             try :
                 with open (config_file ,'r',encoding ='utf-8')as f :
-                    return json .loимя (f )
+                    return json .load (f )
             except :
                 pass 
         return {}
@@ -74,9 +74,9 @@ class ExternalAPIs :
         try :
             session =await self ._get_session ()
             url =f"https://discordrep.com/api/v4/user/{user_id}"
-            heимяers ={'Authorization':self .api_keys ['discordrep_key']}
+            headers ={'Authorization':self .api_keys ['discordrep_key']}
 
-            async with session .get (url ,heимяers =heимяers ,timeout =10 )as resp :
+            async with session .get (url ,headers =headers ,timeout =10 )as resp :
                 if resp .status ==200 :
                     data =await resp .json ()
                     return {
@@ -93,10 +93,10 @@ class ExternalAPIs :
         try :
             session =await self ._get_session ()
             url ="https://phish.sinking.yachts/v2/check"
-            heимяers ={'Content-Type':'application/json'}
-            payloимя ={'domain':username }
+            headers ={'Content-Type':'application/json'}
+            payload ={'domain':username }
 
-            async with session .post (url ,heимяers =heимяers ,json =payloимя ,timeout =10 )as resp :
+            async with session .post (url ,headers =headers ,json =payload ,timeout =10 )as resp :
                 if resp .status ==200 :
                     data =await resp .json ()
                     return {'match':data .get ('match',False )}
@@ -124,7 +124,7 @@ class ExternalAPIs :
                 results ['confidence']=nsfw_data .get ('confidence',0.0 )
                 results ['categories']=nsfw_data .get ('categories',[])
 
-                # 2. Fallback — контроль по hesu (если есть veritaбаны)
+                # 2. Fallback — контроль по hesu (если есть veritabanы)
         if not results ['is_nsfw']:
             hash_check =await self ._check_image_hash (image_url )
             if hash_check :
@@ -139,14 +139,14 @@ class ExternalAPIs :
         try :
             session =await self ._get_session ()
             url ="https://api.sightengine.com/1.0/check.json"
-            деньгиms ={
-            'модels':'nudity-2.1,sexual-activity-2.0,offensive-2.0',
+            params ={
+            'models':'nudity-2.1,sexual-activity-2.0,offensive-2.0',
             'url':image_url ,
             'api_user':self .api_keys ['sightengine_user'],
             'api_secret':self .api_keys ['sightengine_secret']
             }
 
-            async with session .get (url ,деньгиms =деньгиms ,timeout =10 )as resp :
+            async with session .get (url ,params =params ,timeout =10 )as resp :
                 if resp .status ==200 :
                     data =await resp .json ()
 
@@ -188,20 +188,20 @@ class ExternalAPIs :
         return None 
 
     async def _check_image_hash (self ,image_url :str )->bool :
-        """Контроль ediyor hes izobrajeniya в taбанda"""
+        """Контроль ediyor hes izobrajeniya в tabanda"""
         try :
         # Загруз izobrajenie
             session =await self ._get_session ()
             async with session .get (image_url ,timeout =10 )as resp :
                 if resp .status ==200 :
-                    image_data =await resp .reимя ()
+                    image_data =await resp .read ()
                     image_hash =hashlib .md5 (image_data ).hexdigest ()
 
-                    # Контроль ediyoruz в taбанda
+                    # Контроль ediyoruz в tabanda
                     hash_db_file ='data/nsfw_hashes.json'
                     if os .path .exists (hash_db_file ):
                         with open (hash_db_file ,'r',encoding ='utf-8')as f :
-                            hash_db =json .loимя (f )
+                            hash_db =json .load (f )
                             return image_hash in hash_db 
         except Exception as e :
             print (f"[EXTERNAL API] Hash check error: {e}")
@@ -255,7 +255,7 @@ class ExternalAPIs :
             session =await self ._get_session ()
             api_url =f"https://safebrowsing.googleapis.com/v4/threatMatches:find?key={self.api_keys['google_safebrowsing_key']}"
 
-            payloимя ={
+            payload ={
             "client":{
             "clientId":"aether-bot",
             "clientVersion":"1.0"
@@ -268,7 +268,7 @@ class ExternalAPIs :
             }
             }
 
-            async with session .post (api_url ,json =payloимя ,timeout =10 )as resp :
+            async with session .post (api_url ,json =payload ,timeout =10 )as resp :
                 if resp .status ==200 :
                     data =await resp .json ()
                     matches =data .get ('matches',[])
@@ -291,9 +291,9 @@ class ExternalAPIs :
             # До alыyoruz rapor
             url_id =hashlib .sha256 (url .encode ()).hexdigest ()
             api_url =f"https://www.virustotal.com/api/v3/urls/{url_id}"
-            heимяers ={'x-apikey':self .api_keys ['virustotal_key']}
+            headers ={'x-apikey':self .api_keys ['virustotal_key']}
 
-            async with session .get (api_url ,heимяers =heимяers ,timeout =10 )as resp :
+            async with session .get (api_url ,headers =headers ,timeout =10 )as resp :
                 if resp .status ==200 :
                     data =await resp .json ()
                     stats =data .get ('data',{}).get ('attributes',{}).get ('last_analysis_stats',{})
@@ -313,9 +313,9 @@ class ExternalAPIs :
         try :
             session =await self ._get_session ()
             api_url ="https://urlhaus-api.abuse.ch/v1/url/"
-            payloимя ={'url':url }
+            payload ={'url':url }
 
-            async with session .post (api_url ,data =payloимя ,timeout =10 )as resp :
+            async with session .post (api_url ,data =payload ,timeout =10 )as resp :
                 if resp .status ==200 :
                     data =await resp .json ()
                     return data 

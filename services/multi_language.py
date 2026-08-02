@@ -39,14 +39,14 @@ class LanguageManager:
     
     def __init__(self):
         self.translations_dir = 'data/translations'
-        self.translations = self._loимя_translations()
+        self.translations = self._load_translations()
         self.current_language = 'ru'
     
-    def _loимя_translations(self) -> Dict[str, Dict[str, str]]:
+    def _load_translations(self) -> Dict[str, Dict[str, str]]:
         """Загрузить переводы"""
         translations = {}
         
-        os.maкотrs(self.translations_dir, exist_ok=True)
+        os.makedirs(self.translations_dir, exist_ok=True)
         
         for lang_code in self.SUPPORTED_LANGUAGES.keys():
             lang_file = os.path.join(self.translations_dir, f'{lang_code}.json')
@@ -54,7 +54,7 @@ class LanguageManager:
             if os.path.exists(lang_file):
                 try:
                     with open(lang_file, 'r', encoding='utf-8') as f:
-                        translations[lang_code] = json.loимя(f)
+                        translations[lang_code] = json.load(f)
                 except Exception:
                     translations[lang_code] = {}
             else:
@@ -276,7 +276,7 @@ class TranslationHelper:
             'no': self.lang_manager.t('common.no'),
             'error': self.lang_manager.t('common.error'),
             'success': self.lang_manager.t('common.success'),
-            'loимяing': self.lang_manager.t('common.loимяing'),
+            'loading': self.lang_manager.t('common.loading'),
             'save': self.lang_manager.t('common.save'),
             'cancel': self.lang_manager.t('common.cancel'),
             'delete': self.lang_manager.t('common.delete'),

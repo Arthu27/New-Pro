@@ -2045,7 +2045,7 @@ class Ticket (commands .Cog ):
                 self ._save_ticket_state (guild_id ,channel_id ,state )
 
             except Exception as e :
-                log .info (f"Ошибка AI-модератора: {e}")
+                log .info (f"Ошибка AI-modератора: {e}")
                 import traceback 
                 traceback .print_exc ()
                 await self ._escalate_ticket (message .channel ,state ,'ai_error')
@@ -2057,7 +2057,7 @@ class Ticket (commands .Cog ):
 
         appeal_reason =state .get ('appeal_reason','')
 
-        prompt =f"""Пользователь подаёт апелляцию на решение AI-модератора.
+        prompt =f"""Пользователь подаёт апелляцию на решение AI-modератора.
 
 === НАКАЗАНИЕ ИНФОРМАЦИЯ ===
 Наказание: {penalty['reason']}
@@ -2678,7 +2678,7 @@ class Ticket (commands .Cog ):
         self ._save_ticket_state (channel .guild .id ,channel .id ,state )
 
     async def _apply_jail (self ,channel :discord .TextChannel ,user_id :int ,duration :int ,reason :str ,complainant :discord .Member ):
-        """Применить наказание Jail от AI-модератора"""
+        """Применить наказание Jail от AI-modератора"""
         try :
             guild =channel .guild 
             target_user =guild .get_member (user_id )

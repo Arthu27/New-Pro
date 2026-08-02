@@ -16,14 +16,14 @@ class ReportBuilder:
     
     def __init__(self):
         self.reports_file = 'data/custom_reports.json'
-        self.reports = self._loимя_reports()
+        self.reports = self._load_reports()
     
-    def _loимя_reports(self) -> Dict[str, Any]:
+    def _load_reports(self) -> Dict[str, Any]:
         """Raporlarы yюkle"""
         if os.path.exists(self.reports_file):
             try:
                 with open(self.reports_file, 'r', encoding='utf-8') as f:
-                    return json.loимя(f)
+                    return json.load(f)
             except Exception:
                 pass
         
@@ -31,7 +31,7 @@ class ReportBuilder:
     
     def _save_reports(self):
         """Raporlarы kaydet"""
-        os.maкотrs('data', exist_ok=True)
+        os.makedirs('data', exist_ok=True)
         with open(self.reports_file, 'w', encoding='utf-8') as f:
             json.dump(self.reports, f, ensure_ascii=False, indent=2)
     
@@ -89,7 +89,7 @@ class ReportBuilder:
         data = {}
         
         # Ticket verilerini yюkle
-        tickets = self._loимя_tickets(start_date, end_date, filters)
+        tickets = self._load_tickets(start_date, end_date, filters)
         
         for metric in metrics:
             if metric == 'total_tickets':
@@ -123,7 +123,7 @@ class ReportBuilder:
         
         return data
     
-    def _loимя_tickets(self, start_date: datetime, end_date: datetime,
+    def _load_tickets(self, start_date: datetime, end_date: datetime,
                      filters: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Ticket'larы yюkle"""
         tickets_file = 'data/customer_tickets.json'
@@ -133,7 +133,7 @@ class ReportBuilder:
         
         try:
             with open(tickets_file, 'r', encoding='utf-8') as f:
-                tickets = json.loимя(f)
+                tickets = json.load(f)
         except Exception:
             return []
         
@@ -237,7 +237,7 @@ class AnalyticsEngine:
     def get_overview(self, days: int = 30) -> Dict[str, Any]:
         """Genel bakыш"""
         start_date = datetime.now() - timedelta(days=days)
-        tickets = self._loимя_tickets_since(start_date)
+        tickets = self._load_tickets_since(start_date)
         
         total = len(tickets)
         open_tickets = sum(1 for t in tickets if t.get('status') == 'open')
@@ -271,7 +271,7 @@ class AnalyticsEngine:
     def get_trends(self, days: int = 30) -> Dict[str, Any]:
         """Trendleri al"""
         start_date = datetime.now() - timedelta(days=days)
-        tickets = self._loимя_tickets_since(start_date)
+        tickets = self._load_tickets_since(start_date)
         
         # Ежедневный trend
         by_day = defaultdict(int)
@@ -297,7 +297,7 @@ class AnalyticsEngine:
     def get_performance_metrics(self, days: int = 30) -> Dict[str, Any]:
         """Performans metrikleri"""
         start_date = datetime.now() - timedelta(days=days)
-        tickets = self._loимя_tickets_since(start_date)
+        tickets = self._load_tickets_since(start_date)
         
         closed_tickets = [t for t in tickets if t.get('status') == 'closed']
         
@@ -323,14 +323,14 @@ class AnalyticsEngine:
             'resolution_rate': round(len(closed_tickets) / len(tickets) * 100, 2) if tickets else 0
         }
     
-    def _loимя_tickets_since(self, start_date: datetime) -> List[Dict[str, Any]]:
+    def _load_tickets_since(self, start_date: datetime) -> List[Dict[str, Any]]:
         """Belirli tarihten itibaren ticket'larы yюkle"""
         if not os.path.exists(self.tickets_file):
             return []
         
         try:
             with open(self.tickets_file, 'r', encoding='utf-8') as f:
-                tickets = json.loимя(f)
+                tickets = json.load(f)
         except Exception:
             return []
         
@@ -402,7 +402,7 @@ class ReportExporter:
             html = f"""
 <!DOCTYPE html>
 <html>
-<heимя>
+<head>
     <meta charset="UTF-8">
     <title>{report.get('name', 'Report')}</title>
     <style>
@@ -414,7 +414,7 @@ class ReportExporter:
         th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
         th {{ background-color: #f2f2f2; }}
     </style>
-</heимя>
+</head>
 <body>
     <h1>{report.get('name', 'Report')}</h1>
     <p>Period: {report.get('period', {}).get('start', 'N/A')} - {report.get('period', {}).get('end', 'N/A')}</p>

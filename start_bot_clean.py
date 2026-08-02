@@ -27,7 +27,7 @@ def kill_existing_processes():
         print(f"[ERROR] Ошибка заверш действие: {e}")
 
 def wait_for_cleanup():
-    """Process'lerin tamamen kapanmasыnы bимяd"""
+    """Process'lerin tamamen kapanmasыnы badd"""
     print("[WAIT] Process'lerin kapanmasы ojidaetsya...")
     time.sleep(5)
 
@@ -55,7 +55,7 @@ def main():
     # 1. Текущий process'leri заверш
     kill_existing_processes()
     
-    # 2. Temizlik для bимяd
+    # 2. Temizlik для badd
     wait_for_cleanup()
     
     # 3. Bot'u запустить

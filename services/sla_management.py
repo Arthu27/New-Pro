@@ -101,14 +101,14 @@ class SLAManager:
     
     def __init__(self):
         self.policies_file = 'data/sla_policies.json'
-        self.policies = self._loимя_policies()
+        self.policies = self._load_policies()
     
-    def _loимя_policies(self) -> Dict[str, SLAPolicy]:
+    def _load_policies(self) -> Dict[str, SLAPolicy]:
         """Politikalarы загрузить"""
         if os.path.exists(self.policies_file):
             try:
                 with open(self.policies_file, 'r', encoding='utf-8') as f:
-                    data = json.loимя(f)
+                    data = json.load(f)
                     return {
                         policy_id: SLAPolicy.from_dict(policy_data)
                         for policy_id, policy_data in data.items()
@@ -120,7 +120,7 @@ class SLAManager:
     
     def _save_policies(self):
         """Politikalarы сохранить"""
-        os.maкотrs('data', exist_ok=True)
+        os.makedirs('data', exist_ok=True)
         
         data = {
             policy_id: policy.to_dict()
@@ -192,7 +192,7 @@ class SLACalculator:
     def __init__(self, sla_manager: SLAManager):
         self.sla_manager = sla_manager
     
-    def calculate_response_deимяline(self, ticket: Dict[str, Any],
+    def calculate_response_deadline(self, ticket: Dict[str, Any],
                                     policy: Optional[SLAPolicy] = None) -> Optional[datetime]:
         """Yanыt son tarihini hesapla"""
         if not policy:
@@ -215,13 +215,13 @@ class SLACalculator:
         
         # Работа saatlerini hesaba kat
         if policy.business_hours:
-            deимяline = self._add_business_hours(created_dt, response_minutes, policy.business_hours)
+            deadline = self._add_business_hours(created_dt, response_minutes, policy.business_hours)
         else:
-            deимяline = created_dt + timedelta(minutes=response_minutes)
+            deadline = created_dt + timedelta(minutes=response_minutes)
         
-        return deимяline
+        return deadline
     
-    def calculate_resolution_deимяline(self, ticket: Dict[str, Any],
+    def calculate_resolution_deadline(self, ticket: Dict[str, Any],
                                       policy: Optional[SLAPolicy] = None) -> Optional[datetime]:
         """Чёzюm son tarihini hesapla"""
         if not policy:
@@ -244,11 +244,11 @@ class SLACalculator:
         
         # Работа saatlerini hesaba kat
         if policy.business_hours:
-            deимяline = self._add_business_hours(created_dt, resolution_minutes, policy.business_hours)
+            deadline = self._add_business_hours(created_dt, resolution_minutes, policy.business_hours)
         else:
-            deимяline = created_dt + timedelta(minutes=resolution_minutes)
+            deadline = created_dt + timedelta(minutes=resolution_minutes)
         
-        return deимяline
+        return deadline
     
     def _add_business_hours(self, start: datetime, minutes: int,
                             business_hours: Dict[str, Any]) -> datetime:
@@ -289,14 +289,14 @@ class SLACalculator:
         
         return current
     
-    def get_time_remaining(self, deимяline: datetime) -> timedelta:
+    def get_time_remaining(self, deadline: datetime) -> timedelta:
         """Kalan длительностьyi al"""
         now = datetime.now()
-        return deимяline - now
+        return deadline - now
     
-    def is_breached(self, deимяline: datetime) -> bool:
+    def is_breached(self, deadline: datetime) -> bool:
         """Иhlal edilip edilmediгini проверить et"""
-        return datetime.now() > deимяline
+        return datetime.now() > deadline
 
 
 class SLABreachDetector:
@@ -305,14 +305,14 @@ class SLABreachDetector:
     def __init__(self, sla_calculator: SLACalculator):
         self.sla_calculator = sla_calculator
         self.breaches_file = 'data/sla_breaches.json'
-        self.breaches = self._loимя_breaches()
+        self.breaches = self._load_breaches()
     
-    def _loимя_breaches(self) -> Dict[str, Any]:
+    def _load_breaches(self) -> Dict[str, Any]:
         """Иhlalleri загрузить"""
         if os.path.exists(self.breaches_file):
             try:
                 with open(self.breaches_file, 'r', encoding='utf-8') as f:
-                    return json.loимя(f)
+                    return json.load(f)
             except Exception:
                 pass
         
@@ -320,7 +320,7 @@ class SLABreachDetector:
     
     def _save_breaches(self):
         """Иhlalleri сохранить"""
-        os.maкотrs('data', exist_ok=True)
+        os.makedirs('data', exist_ok=True)
         with open(self.breaches_file, 'w', encoding='utf-8') as f:
             json.dump(self.breaches, f, ensure_ascii=False, indent=2)
     
@@ -340,26 +340,26 @@ class SLABreachDetector:
         # Yanыt длительность проверка
         first_response_at = ticket.get('first_response_at')
         if not first_response_at:
-            response_deимяline = self.sla_calculator.calculate_response_deимяline(ticket, policy)
+            response_deadline = self.sla_calculator.calculate_response_deadline(ticket, policy)
             
-            if response_deимяline and self.sla_calculator.is_breached(response_deимяline):
+            if response_deadline and self.sla_calculator.is_breached(response_deadline):
                 breaches.append({
                     'ticket_id': ticket_id,
                     'type': 'response_time',
-                    'deимяline': response_deимяline.isoformat(),
+                    'deadline': response_deadline.isoformat(),
                     'breached_at': datetime.now().isoformat(),
                     'policy_id': policy.policy_id
                 })
         
         # Чёzюm длительность проверка
         if ticket.get('status') != 'closed':
-            resolution_deимяline = self.sla_calculator.calculate_resolution_deимяline(ticket, policy)
+            resolution_deadline = self.sla_calculator.calculate_resolution_deadline(ticket, policy)
             
-            if resolution_deимяline and self.sla_calculator.is_breached(resolution_deимяline):
+            if resolution_deadline and self.sla_calculator.is_breached(resolution_deadline):
                 breaches.append({
                     'ticket_id': ticket_id,
                     'type': 'resolution_time',
-                    'deимяline': resolution_deимяline.isoformat(),
+                    'deadline': resolution_deadline.isoformat(),
                     'breached_at': datetime.now().isoformat(),
                     'policy_id': policy.policy_id
                 })

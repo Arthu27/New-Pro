@@ -11,7 +11,7 @@ import socket
 import json
 import time
 import threading
-import ipимяdress
+import ipaddress
 from datetime import datetime
 import platform
 
@@ -26,9 +26,9 @@ class Colors:
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
 
-def print_банner():
+def print_banner():
     """Program baшlыгыnы показать"""
-    банner = f"""
+    banner = f"""
 {Colors.HEADER}{Colors.BOLD}
 ╔══════════════════════════════════════════════════════════╗
 ║         AГ БЕЗОПАСНОСТЬ TEST ARACI - WHITE HAT               ║
@@ -38,7 +38,7 @@ def print_банner():
 {Colors.WARNING}⚠️  ПРЕДУПРЕЖДЕНИЕ: Bu arоткрыть только kendi aгыnыzы test etmek для.
     Другойlarыnыn aгlarыna без разрешения доступ yasa dышыdыr!{Colors.ENDC}
 """
-    print(банner)
+    print(banner)
 
 def check_админ():
     """Yёnetici администратор контроль et"""
@@ -52,7 +52,7 @@ def check_админ():
         return os.geteuid() == 0
 
 def get_local_ip():
-    """Yerel IP имяresini al"""
+    """Yerel IP adresini al"""
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.connect(("8.8.8.8", 80))
@@ -83,7 +83,7 @@ def get_network_info():
         else:
             # Linux/Mac для ifconfig или ip
             try:
-                result = subprocess.run(["ip", "имяdr"], capture_output=True, text=True)
+                result = subprocess.run(["ip", "addr"], capture_output=True, text=True)
                 print(f"{Colors.OKGREEN}[+] Aг konfigюrasyonu:{Colors.ENDC}")
                 print(result.stdout[:1000])
             except:
@@ -121,20 +121,20 @@ def scan_local_network():
         except:
             pass
     
-    threимяs = []
+    threads = []
     for i in range(1, 255):
         ip = base_ip + str(i)
-        threимя = threading.Threимя(target=ping_host, args=(ip,))
-        threимяs.append(threимя)
-        threимя.start()
+        thread = threading.Thread(target=ping_host, args=(ip,))
+        threads.append(thread)
+        thread.start()
         
-        # Очень fazla threимя создан для
-        if len(threимяs) >= 50:
-            for t in threимяs:
+        # Очень fazla thread создан для
+        if len(threads) >= 50:
+            for t in threads:
                 t.join()
-            threимяs = []
+            threads = []
     
-    for t in threимяs:
+    for t in threads:
         t.join()
     
     print(f"{Colors.OKGREEN}[+] Всего {len(active_hosts)} активен host найдено{Colors.ENDC}")
@@ -168,24 +168,24 @@ def port_scanner(target_ip, ports="1-1000"):
         except:
             pass
     
-    threимяs = []
+    threads = []
     for port in range(start_port, end_port + 1):
-        threимя = threading.Threимя(target=scan_port, args=(port,))
-        threимяs.append(threимя)
-        threимя.start()
+        thread = threading.Thread(target=scan_port, args=(port,))
+        threads.append(thread)
+        thread.start()
         
-        if len(threимяs) >= 100:
-            for t in threимяs:
+        if len(threads) >= 100:
+            for t in threads:
                 t.join()
-            threимяs = []
+            threads = []
     
-    for t in threимяs:
+    for t in threads:
         t.join()
     
     return open_ports
 
 def check_wifi_passwords():
-    """Запись WiFi paрольalarыnы показать (только kendi aгlarыn)"""
+    """Запись WiFi parolalarыnы показать (только kendi aгlarыn)"""
     print(f"{Colors.OKBLUE}[*] Запись WiFi aгlarы контроль ediliyor...{Colors.ENDC}")
     
     wifi_info = []
@@ -215,9 +215,9 @@ def check_wifi_passwords():
                     
                     if password:
                         wifi_info.append({"ssid": profile, "password": password})
-                        print(f"{Colors.OKGREEN}[+] WiFi: {profile} - Paрольa: {password}{Colors.ENDC}")
+                        print(f"{Colors.OKGREEN}[+] WiFi: {profile} - Parola: {password}{Colors.ENDC}")
                     else:
-                        print(f"{Colors.WARNING}[!] WiFi: {profile} - Paрольa не найдено{Colors.ENDC}")
+                        print(f"{Colors.WARNING}[!] WiFi: {profile} - Parola не найдено{Colors.ENDC}")
                 except:
                     pass
                     
@@ -253,17 +253,17 @@ def dos_simulation(target_ip, target_port=80, duration=5):
             except:
                 pass
     
-    threимяs = []
-    for _ in range(10):  # 10 threимя с simюlasyon
-        threимя = threading.Threимя(target=send_packets)
-        threимяs.append(threимя)
-        threимя.start()
+    threads = []
+    for _ in range(10):  # 10 thread с simюlasyon
+        thread = threading.Thread(target=send_packets)
+        threads.append(thread)
+        thread.start()
     
     time.sleep(duration)
     stop_flag = True
     
-    for threимя in threимяs:
-        threимя.join()
+    for thread in threads:
+        thread.join()
     
     print(f"{Colors.OKGREEN}[+] DoS simюlasyonu завершено: {packets_sent} paket отправлено{Colors.ENDC}")
     print(f"{Colors.WARNING}[!] Bu только bir simюlasyondur. Geri загрузить DoS saldыrыsы yasa dышыdыr!{Colors.ENDC}")
@@ -284,7 +284,7 @@ def main_menu():
         print("1. Aг информация показать")
         print("2. Yerel aгы сканировать (активен cihazlar)")
         print("3. Port scanmasы yap")
-        print("4. WiFi paрольalarыnы показать (kendi aгlarыn)")
+        print("4. WiFi parolalarыnы показать (kendi aгlarыn)")
         print("5. DoS Simюlasyonu (EГИTИM AMAЧLI - только localhost)")
         print("6. Все testleri работатьtыr")
         print("7. Rapor создать")
@@ -383,7 +383,7 @@ def main_menu():
 
 def main():
     """Ana fonksiyon"""
-    print_банner()
+    print_banner()
     
     # Yёnetici контроль
     if not check_админ():
@@ -396,7 +396,7 @@ def main():
     except KeyboardInterrupt:
         print(f"\n{Colors.OKGREEN}[+] Program user scanfыndan durduruldu{Colors.ENDC}")
     except Exception as e:
-        print(f"{Colors.FAIL}[-] Bимяdnmeyen ошибка: {e}{Colors.ENDC}")
+        print(f"{Colors.FAIL}[-] Baddnmeyen ошибка: {e}{Colors.ENDC}")
 
 if __name__ == "__main__":
     main()

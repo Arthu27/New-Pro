@@ -3,8 +3,8 @@ import os, re
 GUILD_ID = '1384282749317152878'
 TEMPLATES_DIR = 'web/templates'
 
-# Каждый dosyимяa kalan старый loимяGuilds kцитатаlarыnы clear
-# Pattern: loимяGuilds fonksiyonu в kalan старый API чaгrыsы теперь
+# Каждый dosyada kalan старый loadGuilds kцитатаlarыnы clear
+# Pattern: loadGuilds fonksiyonu в kalan старый API чaгrыsы теперь
 
 changed = []
 for fname in os.listdir(TEMPLATES_DIR):
@@ -12,7 +12,7 @@ for fname in os.listdir(TEMPLATES_DIR):
         continue
     fpath = os.path.join(TEMPLATES_DIR, fname)
     with open(fpath, 'r', encoding='utf-8') as f:
-        content = f.reимя()
+        content = f.read()
     original = content
 
     # selectedGuild = null -> selectedGuild = 'GUILD_ID'
@@ -22,9 +22,9 @@ for fname in os.listdir(TEMPLATES_DIR):
         content
     )
 
-    # Kalan старый loимяGuilds bloklarыnы (API чaгrыsы iчerenler) clear
+    # Kalan старый loadGuilds bloklarыnы (API чaгrыsы iчerenler) clear
     # Bunlar script'in юrettiгi ama hâlâ старый satыrlar iчeren bloklar
-    # Pattern: loимяGuilds fonksiyonu в }); if(guilds... как теперь
+    # Pattern: loadGuilds fonksiyonu в }); if(guilds... как теперь
     content = re.sub(
         r'\}\);\s*\n\s*if\s*\(\s*guilds\.length[^\n]*\n',
         '\n',

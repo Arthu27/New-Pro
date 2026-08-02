@@ -439,7 +439,7 @@ def _call_ai (question :str ,user_id :int ,guild =None ,recent_messages :list =N
                 if not m .bot and m .joined_at and m .joined_at >cutoff ]
                 # Открыт ticket channellarы
                 ticket_channels =[c for c in guild .text_channels if c .name .startswith ('ticket-')]
-                context ['сервер_status']={
+                context ['server_status']={
                 'online_count':len (online ),
                 'voice_count':len (in_voice ),
                 'voice_members':in_voice [:5 ],

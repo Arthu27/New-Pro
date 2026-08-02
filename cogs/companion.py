@@ -68,7 +68,7 @@ MESSAGES_SWEET =[
 ]
 
 MESSAGES_RANDOM =[
-"Королева, центрda hiчbir что-то yokken aklыma geldin. Как gerчekten? ",
+"Королева, ortada hiчbir что-то yokken aklыma geldin. Как gerчekten? ",
 "Королева, сегодня bir что-то seni mutlu etti mi? Merak ettim ",
 "Королева, шu an ne yapыyorsun acaba? Umarыm gюzel bir что-тоler ",
 "Королева, bazen только 'iyi misin?' demek gerekiyor. Иyi misin? ",

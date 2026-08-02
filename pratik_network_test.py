@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Pratik Aг Test Ёrnимяdri - Только Kendi Aгыnыz Для
+Pratik Aг Test Ёrnaddri - Только Kendi Aгыnыz Для
 """
 
 import socket
@@ -10,7 +10,7 @@ import os
 import json
 from datetime import datetime
 
-def print_heимяer(text):
+def print_header(text):
     """Заголовок написатьdыr"""
     print("\n" + "="*60)
     print(f" {text}")
@@ -18,9 +18,9 @@ def print_heимяer(text):
 
 def test_1_local_network_discovery():
     """Test 1: Yerel Aг Keшfi"""
-    print_heимяer("TEST 1: YEREL AГ KEШFИ")
+    print_header("TEST 1: YEREL AГ KEШFИ")
     
-    # Kendi IP имяresini найти
+    # Kendi IP adresini найти
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.connect(("8.8.8.8", 80))
@@ -60,7 +60,7 @@ def test_1_local_network_discovery():
 
 def test_2_open_ports_check():
     """Test 2: Открыт Port Контроль (Только Kendi Информация)"""
-    print_heимяer("TEST 2: ОТКРЫТ PORT КОНТРОЛЬ")
+    print_header("TEST 2: ОТКРЫТ PORT КОНТРОЛЬ")
     
     print("🔍 Kendi infosнастройкаыnыzdaki открыт portlar scannыyor...")
     
@@ -106,7 +106,7 @@ def test_2_open_ports_check():
 
 def test_3_wifi_security():
     """Test 3: WiFi Безопасность Контроль (Windows)"""
-    print_heимяer("TEST 3: WИFИ БЕЗОПАСНОСТЬ КОНТРОЛЬ")
+    print_header("TEST 3: WИFИ БЕЗОПАСНОСТЬ КОНТРОЛЬ")
     
     if platform.system() != "Windows":
         print("ℹ️ Bu test только Windows для geчerlidir")
@@ -154,9 +154,9 @@ def test_3_wifi_security():
 
 def test_4_dns_security():
     """Test 4: DNS Безопасность Testi"""
-    print_heимяer("TEST 4: DNS БЕЗОПАСНОСТЬ TESTИ")
+    print_header("TEST 4: DNS БЕЗОПАСНОСТЬ TESTИ")
     
-    dns_серверs = [
+    dns_servers = [
         ("Google DNS", "8.8.8.8"),
         ("Cloudflare DNS", "1.1.1.1"),
         ("Yandex DNS", "77.88.8.8"),
@@ -173,7 +173,7 @@ def test_4_dns_security():
     print("🌐 DNS сервер test ediliyor...")
     
     results = []
-    for dns_name, dns_ip in dns_серверs:
+    for dns_name, dns_ip in dns_servers:
         print(f"\n{dns_name} ({dns_ip}):")
         
         for domain in test_domains:
@@ -200,13 +200,13 @@ def test_4_dns_security():
 
 def test_5_firewall_check():
     """Test 5: Firewall Состояние"""
-    print_heимяer("TEST 5: FIREWALL КОНТРОЛЬ")
+    print_header("TEST 5: FIREWALL КОНТРОЛЬ")
     
     print("🛡️ Firewall statusu контроль ediliyor...")
     
     if platform.system() == "Windows":
         try:
-            result = subprocess.run(["netsh", "имяvfirewall", "show", "allprofiles"], 
+            result = subprocess.run(["netsh", "advfirewall", "show", "allprofiles"], 
                                   capture_output=True, text=True)
             
             if "State ON" in result.stdout:
@@ -234,15 +234,15 @@ def test_5_firewall_check():
 
 def test_6_system_hardening():
     """Test 6: Система Sertleшtirme Predlojenieleri"""
-    print_heимяer("TEST 6: СИСТЕМА SERTLEШTИRME ПРЕДЛОЖЕНИЕ")
+    print_header("TEST 6: СИСТЕМА SERTLEШTИRME ПРЕДЛОЖЕНИЕ")
     
     recommendations = [
         "✅ Обновл загруз: Windows Update или apt/yum update",
         "✅ Antivirюs kurun: Windows Defender или ючюncю parti",
         "✅ Firewall'ы открытьыn: Windows Firewall или UFW",
-        "✅ Paрольa yёneticisi использовать: LastPass, Bitwarden",
+        "✅ Parola yёneticisi использовать: LastPass, Bitwarden",
         "✅ 2FA включитьin: Google, GitHub, Discord hesaplarыnыzda",
-        "✅ Yedимяdme yapыn: Ёnemli dosyalarы cloud'a или harici diske",
+        "✅ Yedaddme yapыn: Ёnemli dosyalarы cloud'a или harici diske",
         "✅ Gereksiz programlarы удален: Использовать написано",
         "✅ Guest hesabыnы закрыт: Windows'ta misafir hesabы",
         "✅ Remote Desktop'ы закрыт: Если использовать",
@@ -255,7 +255,7 @@ def test_6_system_hardening():
 
 def generate_report(test_results):
     """Test raporu создать"""
-    print_heимяer("📊 TEST RAPORU")
+    print_header("📊 TEST RAPORU")
     
     report = {
         "test_tarihi": datetime.now().isoformat(),
@@ -290,7 +290,7 @@ def generate_report(test_results):
     print("1. Открыт portlarы закрыт")
     print("2. Firewall'ы контроль edin")
     print("3. Обновл загруз")
-    print("4. Мощный paрольaler использовать")
+    print("4. Мощный parolaler использовать")
     print("5. Dюzenli yedek alыn")
 
 def main():
@@ -350,4 +350,4 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\n\n⏹️ Testler user scanfыndan остановлено.")
     except Exception as e:
-        print(f"\n\n❌ Bимяdnmeyen ошибка: {e}")
+        print(f"\n\n❌ Baddnmeyen ошибка: {e}")
