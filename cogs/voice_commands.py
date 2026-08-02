@@ -325,9 +325,11 @@ class VoiceCommands(commands.Cog):
         Размер модели берётся из WHISPER_MODEL (tiny/base/small). tiny скачивается
         и работает быстрее. По умолчанию base.
 
-        Стабильность скачивания:
-          - отключаем Xet (новый ненадёжный бэкенд HF) → классическая загрузка;
-          - поддерживаем зеркало hf-mirror.com через HF_ENDPOINT (для РФ/Китая).
+        Скачивание устойчивое:
+          - отключаем Xet-бэкенд HF (частый источник CAS-ошибок);
+          - если default HF недоступен — автоматически пробуем зеркало hf-mirror.com
+            (без необходимости править .env);
+          - повторные попытки с паузами.
         """
         if self._whisper_model is not None:
             return self._whisper_model
@@ -336,32 +338,40 @@ class VoiceCommands(commands.Cog):
                 return self._whisper_model
             self._whisper_load_error = None
             try:
-                # Отключаем Xet-бэкенд HuggingFace (частый источник CAS-ошибок).
                 os.environ.setdefault("HF_HUB_DISABLE_XET", "1")
-                # Если пользователь указал зеркало (HF_ENDPOINT) — huggingface_hub
-                # подхватит его автоматически.
                 from faster_whisper import WhisperModel
                 model_name = os.getenv("WHISPER_MODEL", "base").strip().lower()
                 if model_name not in ("tiny", "base", "small"):
                     model_name = "base"
                 os.makedirs(self.whisper_models_dir, exist_ok=True)
-                log.info(f"Загрузка модели Whisper '{model_name}' (первый запуск)...")
 
-                # Пробуем загрузить с повторными попытками (сеть может падать).
+                # Список эндпоинтов для попыток: заданный в .env, затем HF, затем зеркало.
+                endpoints = []
+                custom = (os.getenv("HF_ENDPOINT") or "").strip()
+                if custom:
+                    endpoints.append(("заданный HF_ENDPOINT", custom))
+                endpoints.append(("HuggingFace (по умолчанию)", "https://huggingface.co"))
+                endpoints.append(("зеркало hf-mirror.com", "https://hf-mirror.com"))
+
                 model = None
-                endpoint = os.getenv("HF_ENDPOINT") or "HuggingFace (по умолчанию)"
-                for attempt in range(1, 4):
-                    try:
-                        model = WhisperModel(
-                            model_name, device="cpu", compute_type="int8",
-                            download_root=self.whisper_models_dir,
-                        )
+                for label, endpoint in endpoints:
+                    if model is not None:
                         break
-                    except Exception as e:
-                        self._whisper_load_error = str(e)
-                        log.error(f"Попытка {attempt}/3 загрузки Whisper не удалась ({endpoint}): {e}")
-                        import time
-                        time.sleep(2)
+                    os.environ["HF_ENDPOINT"] = endpoint
+                    for attempt in range(1, 3):
+                        try:
+                            log.info(f"Загрузка Whisper '{model_name}' через: {label} (попытка {attempt})...")
+                            model = WhisperModel(
+                                model_name, device="cpu", compute_type="int8",
+                                download_root=self.whisper_models_dir,
+                            )
+                            break
+                        except Exception as e:
+                            self._whisper_load_error = str(e)
+                            log.error(f"Не удалось через {label} (попытка {attempt}): {e}")
+                            import time
+                            time.sleep(1)
+
                 if model is None:
                     self._whisper_model = None
                     return None
