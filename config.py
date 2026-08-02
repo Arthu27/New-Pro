@@ -5,7 +5,10 @@
 import os
 from dotenv import load_dotenv
 
-load_dotenv()
+# Загружаем .env из каталога этого файла (надёжно, независимо от рабочей директории)
+# и с override=True, чтобы значение из .env всегда применялось.
+_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(_BASE_DIR, ".env"), override=True)
 
 
 class Config:

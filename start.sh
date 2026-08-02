@@ -17,10 +17,10 @@ fi
 echo "  [ОК] Python найден: $(python3 --version)"
 echo ""
 
-# .env dosyasы kontrolю
+# .env dosyası kontrolü
 if [ ! -f .env ]; then
     echo "  [ПРЕДУПРЕЖДЕНИЕ] .env файл не найден!"
-    echo "  Пожалуйста .env создайте файл .env и добавьте TОКEN."
+    echo "  Пожалуйста создайте .env файл и добавьте TOKEN."
     echo ""
 fi
 

@@ -65,7 +65,10 @@ import time
 import signal
 import atexit
 
-load_dotenv()
+# Загружаем .env из каталога скрипта (надёжно, независимо от рабочей директории)
+# и с override=True, чтобы значение из .env всегда применялось.
+_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(_BASE_DIR, ".env"), override=True)
 
 # Централизованная конфигурация и логирование 
 from config import Config
@@ -555,8 +558,14 @@ async def main():
         await load_cogs()
         while True:
             try:
+                _token = os.getenv("TOKEN", "").strip()
+                if not _token:
+                    raise RuntimeError(
+                        "Токен не найден! Добавьте токен в .env файл (строка TOKEN=ваш_токен) "
+                        "из https://discord.com/developers/applications"
+                    )
                 print("[БОТ] Подключение к Discord...")
-                await bot.start(os.getenv("TOKEN"))
+                await bot.start(_token)
             except Exception as e:
                 print(f"[ОШИБКА] Ошибка запуска бота: {e}")
                 await asyncio.sleep(10)
