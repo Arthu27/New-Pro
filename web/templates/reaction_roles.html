@@ -2,6 +2,19 @@
 {% block title %}Роли по реакциям - Aether{% endblock %}
 {% block page_title %}<i class="fas fa-smile"></i> 🎭 РОЛИ ПО РЕАКЦИЯМ{% endblock %}
 {% block content %}
+<style>
+.rr-type-hint { background: rgba(224,176,74,0.07); border: 1px solid var(--ac-line); border-radius: var(--r-sm); padding: 10px 14px; font-size: 12.5px; color: #d8d0bb; margin: 10px 0 16px; }
+.rr-type-badge { display: inline-block; font-size: 10.5px; padding: 2px 9px; border-radius: 20px; margin-bottom: 8px; font-weight: var(--fw-semibold); }
+.rr-type-badge.emoji { background: rgba(96,165,250,0.15); color: var(--info); }
+.rr-type-badge.select { background: rgba(224,176,74,0.15); color: var(--ac); }
+.rr-badge { color: var(--ac); }
+.entry-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+.entry-emoji { width: 90px; background: rgba(0,0,0,0.3); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 8px 10px; color: var(--text); font-size: 13px; text-align: center; }
+.entry-role { flex: 1; }
+.entry-del { background: transparent; border: none; color: var(--err); cursor: pointer; font-size: 18px; }
+.btn-add-entry { background: var(--ac-soft); color: var(--ac); border: 1px solid var(--ac-line); border-radius: var(--r-sm); padding: 8px 14px; cursor: pointer; font-size: 12.5px; }
+.btn-add-entry:hover { background: var(--ac-glow); }
+</style>
 {% block page_hero %}
 <div class="page-hero compact">
   <div class="page-hero-content">
@@ -30,6 +43,11 @@
   <button class="btn-new" onclick="openModal()"><span>➕</span> Новая панель</button>
 </div>
 
+<div class="rr-type-hint">
+  💡 Панель можно создать как <b>emoji-реакции</b> (нажал на реакцию — получил роль) или как
+  <b>select-menu</b> (выпадающий список, в котором выбирают роль).
+</div>
+
 <div id="rr-list" class="rr-grid"></div>
 
 <div id="modal" class="modal-overlay">
@@ -41,13 +59,21 @@
     </div>
     <div class="form-group">
       <label class="form-label">📝 Заголовок</label>
-      <input type="text" id="rr-title" class="form-input" placeholder="Роль выбор сообщение заголовок...">
+      <input type="text" id="rr-title" class="form-input" placeholder="Заголовок сообщения...">
     </div>
-    <label class="form-label"   style="margin-bottom: 10px;">🎭 Emoji → Роль Совпадениеы</label>
+    <div class="form-group">
+      <label class="form-label">🔘 Тип панели</label>
+      <select id="rr-type" class="form-input" onchange="setType(this.value)">
+        <option value="emoji">😀 Emoji-реакции</option>
+        <option value="select">📋 Select-menu (выпадающий список)</option>
+      </select>
+    </div>
+    <div id="rr-emoji-label" class="form-label" style="margin-bottom: 10px;">🎭 Emoji → Роль</div>
+    <div id="rr-select-label" class="form-label" style="margin-bottom: 10px; display:none;">📋 Роль (для select-menu)</div>
     <div id="rr-entries"></div>
-    <button class="btn-add-entry" onclick="addEntry()">➕ Совпадение Добавить</button>
+    <button class="btn-add-entry" onclick="addEntry()">➕ Добавить роль</button>
     <div class="modal-actions">
-      <button class="btn-submit" onclick="createRR()">🎭 Создать ve Отправить</button>
+      <button class="btn-submit" onclick="createRR()">🎭 Создать и Отправить</button>
       <button class="btn-cancel" onclick="closeModal()">Отмена</button>
     </div>
   </div>
@@ -56,6 +82,15 @@
 <script>
 var selectedGuild = '{{ main_guild_id }}';
 var allRoles = [];
+var rrType = 'emoji';
+
+function setType(v) {
+  rrType = v;
+  document.getElementById('rr-emoji-label').style.display = v === 'emoji' ? '' : 'none';
+  document.getElementById('rr-select-label').style.display = v === 'select' ? '' : 'none';
+  document.getElementById('rr-entries').innerHTML = '';
+  addEntry();
+}
 
 async function loadGuilds() {
   // Sabit сервер ID
@@ -96,13 +131,15 @@ async function loadRR() {
   document.getElementById('rr-channel').innerHTML = channels.filter(c=>c.type==='text').map(c=>'<option value="'+c.id+'">#'+c.name+'</option>').join('');
 
   var box = document.getElementById('rr-list');
-  if (!rrs.length) { box.innerHTML='<div class="empty-state"><div >🎭</div><p>Пока reaksiyon роль yok.</p></div>'; return; }
+  if (!rrs.length) { box.innerHTML='<div class="empty-state"><div >🎭</div><p>Панелей пока нет.</p></div>'; return; }
   box.innerHTML = rrs.map(function(rr, i) {
+    var isSelect = rr.type === 'select';
     var entries = (rr.entries||[]).map(function(e) {
-      return '<div class="rr-entry"><span class="rr-emoji">'+e.emoji+'</span><span class="rr-arrow">→</span><span class="rr-role">@'+e.role_name+'</span></div>';
+      var left = isSelect ? '<span class="rr-badge">📋</span>' : '<span class="rr-emoji">'+(e.emoji||'🎭')+'</span><span class="rr-arrow">→</span>';
+      return '<div class="rr-entry">'+left+'<span class="rr-role">@'+e.role_name+'</span></div>';
     }).join('');
     return '<div class="rr-card" >'+
-      '<div class="rr-title">🎭 '+rr.title+'</div>'+entries+
+      '<div class="rr-title">🎭 '+rr.title+'</div>'+ (isSelect ? '<span class="rr-type-badge select">📋 Select-menu</span>' : '<span class="rr-type-badge emoji">😀 Реакции</span>') + entries +
       '<div class="rr-footer"><span >'+rr.entries.length+' роль</span>'+
       '<button class="btn-del" onclick="deleteRR(\''+rr.id+'\')">🗑 Удалить</button></div></div>';
   }).join('');
@@ -112,17 +149,25 @@ function addEntry() {
   var div = document.createElement('div');
   div.className = 'entry-row';
   var roles = allRoles.map(r=>'<option value="'+r.id+'">@'+r.name+'</option>').join('');
-  div.innerHTML = '<input type="text" class="entry-emoji" value="🎭" maxlength="2">'+
+  var field;
+  if (rrType === 'select') {
+    field = '<input type="text" class="entry-emoji" placeholder="🎭 (необязательно)" maxlength="2">';
+  } else {
+    field = '<input type="text" class="entry-emoji" value="🎭" maxlength="2">';
+  }
+  div.innerHTML = field +
     '<select class="entry-role form-input" >'+roles+'</select>'+
     '<button class="entry-del" onclick="this.parentElement.remove()">×</button>';
   document.getElementById('rr-entries').appendChild(div);
 }
 
 function openModal() {
-  if (!selectedGuild) { alert('Сервер выбрать!'); return; }
+  if (!selectedGuild) { alert('Выберите сервер!'); return; }
+  rrType = document.getElementById('rr-type').value;
   document.getElementById('rr-entries').innerHTML = '';
   document.getElementById('rr-title').value = '';
-  addEntry(); addEntry();
+  setType(rrType);
+  addEntry();
   document.getElementById('modal').style.display = 'flex';
 }
 function closeModal() { document.getElementById('modal').style.display = 'none'; }
@@ -130,26 +175,35 @@ function closeModal() { document.getElementById('modal').style.display = 'none';
 async function createRR() {
   var title = document.getElementById('rr-title').value.trim();
   var channel_id = document.getElementById('rr-channel').value;
+  var type = document.getElementById('rr-type').value;
   var entries = [];
   document.querySelectorAll('.entry-row').forEach(function(row) {
     var emoji = row.querySelector('.entry-emoji').value.trim();
     var sel = row.querySelector('.entry-role');
-    if (emoji && sel.value) entries.push({ emoji, role_id: sel.value });
+    if (!sel.value) return;
+    if (type === 'select') {
+      entries.push({ emoji: emoji || '', role_id: sel.value });
+    } else {
+      if (emoji) entries.push({ emoji: emoji, role_id: sel.value });
+    }
   });
-  if (!title || entries.length < 1) { alert('Заголовок ve en az 1 совпадение gir!'); return; }
+  if (!title || entries.length < 1) {
+    alert(type === 'select' ? 'Введите заголовок и добавьте минимум 1 роль!' : 'Введите заголовок и добавьте минимум 1 совпадение!');
+    return;
+  }
   var btn = document.querySelector('.btn-submit');
-  btn.textContent = '⏳ Создан...'; btn.disabled = true;
+  btn.textContent = '⏳ Создание...'; btn.disabled = true;
   var r = await fetch('/api/guild/'+selectedGuild+'/reaction-roles/create', {
     method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ title, channel_id, entries })
+    body: JSON.stringify({ title: title, channel_id: channel_id, type: type, entries: entries })
   });
   var d = await r.json();
-  btn.textContent = '🎭 Создать ve Отправить'; btn.disabled = false;
+  btn.textContent = '🎭 Создать и Отправить'; btn.disabled = false;
   if (d.success) { closeModal(); loadRR(); } else alert(d.error||'Ошибка!');
 }
 
 async function deleteRR(id) {
-  if (!confirm('Удалитьmek если хотите emin misiniz ? siz?')) return;
+  if (!confirm('Удалить эту панель?')) return;
   await fetch('/api/guild/'+selectedGuild+'/reaction-roles/'+id+'/delete', {method:'POST'});
   loadRR();
 }

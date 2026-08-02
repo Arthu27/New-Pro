@@ -4422,21 +4422,33 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         if os .path .exists (f ):
             with open (f )as fp :rrs =json .load (fp )
         guild =bot .get_guild (int (guild_id ))
+        ptype =data .get ('type','emoji')# 'emoji' or 'select'
         entries_with_names =[]
         for e in data .get ('entries',[]):
             role =guild .get_role (int (e ['role_id']))if guild else None 
-            entries_with_names .append ({'emoji':e ['emoji'],'role_id':e ['role_id'],'role_name':role .name if role else e ['role_id']})
-        rrs [rr_id ]={'id':rr_id ,'title':data ['title'],'channel_id':data ['channel_id'],'entries':entries_with_names }
+            entries_with_names .append ({'emoji':e .get ('emoji',''),'role_id':e ['role_id'],'role_name':role .name if role else e ['role_id']})
+        rrs [rr_id ]={'id':rr_id ,'title':data ['title'],'channel_id':data ['channel_id'],'type':ptype ,'entries':entries_with_names ,'guild_id':str (guild_id )}
         with open (f ,'w')as fp :json .dump (rrs ,fp ,indent =2 )
         def send ():
             ch =bot .get_channel (int (data ['channel_id']))
             if ch :
-                desc ='\n'.join ([f"{e['emoji']} → **{e['role_name']}**"for e in entries_with_names ])
+                desc ='\n'.join ([f"**{e['role_name']}**"for e in entries_with_names ])
                 embed =discord .Embed (title =data ['title'],description =desc ,color =0xdc143c )
-                msg =_run_async (ch .send (embed =embed ))
-                for e in entries_with_names :
-                    try :_run_async (msg .add_reaction (e ['emoji']))
-                    except :pass 
+                if ptype =='select':
+                    # Select-menu panel: attach a persistent View via the cog
+                    msg =_run_async (ch .send (embed =embed ))
+                    try :
+                        cog =bot .get_cog ('ReactionRolesCog')
+                        if cog and hasattr (cog ,'register_select_panel'):
+                            _run_async (cog .register_select_panel (int (msg .id ),rrs [rr_id ]))
+                    except Exception :
+                        pass 
+                else :
+                    msg =_run_async (ch .send (embed =embed ))
+                    for e in entries_with_names :
+                        if e ['emoji']:
+                            try :_run_async (msg .add_reaction (e ['emoji']))
+                            except :pass 
                 rrs [rr_id ]['message_id']=str (msg .id )
                 with open (f ,'w')as fp2 :json .dump (rrs ,fp2 ,indent =2 )
         asyncio .run_coroutine_threadsafe (send (),bot .loop )
