@@ -17,24 +17,24 @@
 
 <div class="section">
   <div class="bs-title"><i class="fas fa-user"></i> Профиль пользователя</div>
-  <div style="displмесяц: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
     <div>
-      <div style="displмесяц: flex; align-items: center; gap: 16px; margin-bottom: 16px;">
-        <div id="userAvatar" style="width: 80px; height: 80px; border-radius: 50%; background: rgba(155,89,182,0.2); displмесяц: flex; align-items: center; justify-content: center;">
+      <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 16px;">
+        <div id="userAvatar" style="width: 80px; height: 80px; border-radius: 50%; background: rgba(155,89,182,0.2); display: flex; align-items: center; justify-content: center;">
           <i class="fas fa-user" style="font-size: 32px; color: #9b59b6;"></i>
         </div>
         <div>
           <h2 id="userName" style="margin: 0 0 4px 0; font-size: 20px;">-</h2>
-          <div style="font-size: 13px; color: var(--text-мутd);" id="userEmail">-</div>
-          <div style="font-size: 12px; color: var(--text-мутd); margin-top: 4px;" id="userMemberSince">-</div>
+          <div style="font-size: 13px; color: var(--text-muted);" id="userEmail">-</div>
+          <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;" id="userMemberSince">-</div>
         </div>
       </div>
     </div>
     <div>
-      <button class="contроль-btn" onclick="showEditProfileМодal()" style="width: 100%;">
+      <button class="control-btn" onclick="showEditProfileModal()" style="width: 100%;">
         <i class="fas fa-edit"></i> Редактировать профиль
       </button>
-      <button class="contроль-btn" onclick="showChangePasswordМодal()" style="width: 100%; margin-top: 8px;">
+      <button class="control-btn" onclick="showChangePasswordModal()" style="width: 100%; margin-top: 8px;">
         <i class="fas fa-key"></i> Сменить пароль
       </button>
     </div>
@@ -43,7 +43,7 @@
 
 <div class="stat-grid">
   <div class="stat-box purple">
-    <div class="stat-icon"><i class="fas fa-ticket-низ"></i></div>
+    <div class="stat-icon"><i class="fas fa-ticket-alt"></i></div>
     <div class="stat-body"><div class="stat-value" id="totalTickets">0</div><div class="stat-label">Всего тикетов</div></div>
   </div>
   <div class="stat-box cyan">
@@ -64,14 +64,14 @@
   <div class="bs-title">
     <i class="fas fa-plus-circle"></i> Создать новый тикет
   </div>
-  <button class="contроль-btn primary" onclick="showCreateTicketМодal()" style="width: 100%; padding: 12px;">
+  <button class="control-btn primary" onclick="showCreateTicketModal()" style="width: 100%; padding: 12px;">
     <i class="fas fa-plus"></i> Создать тикет
   </button>
 </div>
 
 <div class="section">
   <div class="bs-title">
-    <i class="fas fa-ticket-низ"></i> Мои тикеты
+    <i class="fas fa-ticket-alt"></i> Мои тикеты
     <select id="ticketFilter" class="form-input" onchange="loadTickets()" style="margin-left: auto; width: 200px;">
       <option value="all">Все тикеты</option>
       <option value="open">Открытые</option>
@@ -79,7 +79,7 @@
     </select>
   </div>
   <div id="ticketList" style="max-height: 600px; overflow-y: auto;">
-    <p style="text-align: center; color: var(--text-мутd); padding: 40px;">
+    <p style="text-align: center; color: var(--text-muted); padding: 40px;">
       <i class="fas fa-spinner fa-spin"></i> Загрузка...
     </p>
   </div>
@@ -89,28 +89,28 @@
   <div class="bs-title">
     <i class="fas fa-book"></i> Полезные статьи
   </div>
-  <div id="helpfulArticles" style="displмесяц: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
-    <p style="text-align: center; color: var(--text-мутd); padding: 40px; grid-column: 1/-1;">
+  <div id="helpfulArticles" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
+    <p style="text-align: center; color: var(--text-muted); padding: 40px; grid-column: 1/-1;">
       <i class="fas fa-spinner fa-spin"></i> Загрузка...
     </p>
   </div>
 </div>
 
 <!-- Модальное окно создания тикета -->
-<div id="createTicketМодal" style="displмесяц: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; overflow-y: auto;">
+<div id="createTicketModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; overflow-y: auto;">
   <div style="max-width: 700px; margin: 50px auto; background: var(--bg-primary); border-radius: 12px; padding: 24px;">
-    <div style="displмесяц: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
       <h2 style="margin: 0;">Создать новый тикет</h2>
-      <button class="contроль-btn" onclick="closeCreateTicketМодal()">
+      <button class="control-btn" onclick="closeCreateTicketModal()">
         <i class="fas fa-times"></i>
       </button>
     </div>
     <div style="margin-bottom: 16px;">
-      <label style="displмесяц: block; margin-bottom: 8px; font-size: 13px; color: var(--text-мутd);">Тема</label>
+      <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Тема</label>
       <input type="text" id="ticketSubject" class="form-input" placeholder="Кратко опишите проблему">
     </div>
     <div style="margin-bottom: 16px;">
-      <label style="displмесяц: block; margin-bottom: 8px; font-size: 13px; color: var(--text-мутd);">Категория</label>
+      <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Категория</label>
       <select id="ticketCategory" class="form-input">
         <option value="Вопрос">Вопрос</option>
         <option value="Техническая проблема">Техническая проблема</option>
@@ -120,7 +120,7 @@
       </select>
     </div>
     <div style="margin-bottom: 16px;">
-      <label style="displмесяц: block; margin-bottom: 8px; font-size: 13px; color: var(--text-мутd);">Приоритет</label>
+      <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Приоритет</label>
       <select id="ticketPriority" class="form-input">
         <option value="low">Низкий</option>
         <option value="medium" selected>Средний</option>
@@ -128,18 +128,18 @@
       </select>
     </div>
     <div style="margin-bottom: 16px;">
-      <label style="displмесяц: block; margin-bottom: 8px; font-size: 13px; color: var(--text-мутd);">Описание</label>
+      <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Описание</label>
       <textarea id="ticketDescription" class="form-input" rows="8" placeholder="Подробно опишите вашу проблему..."></textarea>
     </div>
     <div style="margin-bottom: 16px;">
-      <label style="displмесяц: block; margin-bottom: 8px; font-size: 13px; color: var(--text-мутd);">Прикрепить файлы</label>
+      <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Прикрепить файлы</label>
       <input type="file" id="ticketFiles" class="form-input" multiple>
     </div>
-    <div style="displмесяц: flex; gap: 12px;">
-      <button class="contроль-btn primary" onclick="createTicket()" style="flex: 1;">
+    <div style="display: flex; gap: 12px;">
+      <button class="control-btn primary" onclick="createTicket()" style="flex: 1;">
         <i class="fas fa-paper-plane"></i> Отправить
       </button>
-      <button class="contроль-btn" onclick="closeCreateTicketМодal()">
+      <button class="control-btn" onclick="closeCreateTicketModal()">
         Отмена
       </button>
     </div>
@@ -147,27 +147,27 @@
 </div>
 
 <!-- Модальное окно редактирования профиля -->
-<div id="editProfileМодal" style="displмесяц: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; overflow-y: auto;">
+<div id="editProfileModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; overflow-y: auto;">
   <div style="max-width: 500px; margin: 50px auto; background: var(--bg-primary); border-radius: 12px; padding: 24px;">
-    <div style="displмесяц: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
       <h2 style="margin: 0;">Редактировать профиль</h2>
-      <button class="contроль-btn" onclick="closeEditProfileМодal()">
+      <button class="control-btn" onclick="closeEditProfileModal()">
         <i class="fas fa-times"></i>
       </button>
     </div>
     <div style="margin-bottom: 16px;">
-      <label style="displмесяц: block; margin-bottom: 8px; font-size: 13px; color: var(--text-мутd);">Имя</label>
+      <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Имя</label>
       <input type="text" id="editName" class="form-input">
     </div>
     <div style="margin-bottom: 16px;">
-      <label style="displмесяц: block; margin-bottom: 8px; font-size: 13px; color: var(--text-мутd);">Email</label>
+      <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Email</label>
       <input type="email" id="editEmail" class="form-input">
     </div>
-    <div style="displмесяц: flex; gap: 12px;">
-      <button class="contроль-btn primary" onclick="updateProfile()" style="flex: 1;">
+    <div style="display: flex; gap: 12px;">
+      <button class="control-btn primary" onclick="updateProfile()" style="flex: 1;">
         <i class="fas fa-save"></i> Сохранить
       </button>
-      <button class="contроль-btn" onclick="closeEditProfileМодal()">
+      <button class="control-btn" onclick="closeEditProfileModal()">
         Отмена
       </button>
     </div>
@@ -175,19 +175,19 @@
 </div>
 
 <script>
-async function loadPцентрl() {
+async function loadPortal() {
   try {
-    const response = await fetch('/api/customer-pцентрl');
-    const data = await response.jпоследний();
+    const response = await fetch('/api/customer-portal');
+    const data = await response.json();
     
     if (data.success) {
       updateProfile(data.user);
       updateStats(data.stats);
-      displмесяцTickets(data.tickets);
-      displмесяцHelpfulArticles(data.articles);
+      displayTickets(data.tickets);
+      displayHelpfulArticles(data.articles);
     }
   } catch (e) {
-    conлевоe.error('Ошибка загрузки портала:', e);
+    console.error('Ошибка загрузки портала:', e);
   }
 }
 
@@ -208,33 +208,33 @@ function updateStats(stats) {
   document.getElementById('avgRating').textContent = stats.avg_rating || '0';
 }
 
-function displмесяцTickets(tickets) {
+function displayTickets(tickets) {
   const container = document.getElementById('ticketList');
   
   if (!tickets || tickets.length === 0) {
-    container.innerHTML = '<p style="text-align: center; color: var(--text-мутd); padding: 40px;">Тикетов пока нет</p>';
+    container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 40px;">Тикетов пока нет</p>';
     return;
   }
   
   container.innerHTML = tickets.map(ticket => {
-    const statusColor = ticket.status === 'open' ? 'var(--ok)' : 'var(--text-мутd)';
+    const statusColor = ticket.status === 'open' ? 'var(--ok)' : 'var(--text-muted)';
     const statusText = ticket.status === 'open' ? 'Открыт' : 'Закрыт';
     const priorityColor = ticket.priority === 'high' ? 'var(--err)' : ticket.priority === 'medium' ? '#f1c40f' : 'var(--ok)';
     const priorityText = ticket.priority === 'high' ? 'Высокий' : ticket.priority === 'medium' ? 'Средний' : 'Низкий';
     const createdDate = new Date(ticket.created_at).toLocaleString('ru-RU');
     
     return `
-      <div style="background: rgba(255,255,255,0.03); border: 1px левоid rgba(255,255,255,0.1); border-radius: 8px; padding: 16px; margin-bottom: 12px; cursor: pointer;" onclick="viewTicket('${ticket.id}')">
-        <div style="displмесяц: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+      <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 16px; margin-bottom: 12px; cursor: pointer;" onclick="viewTicket('${ticket.id}')">
+        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
           <div style="flex: 1;">
             <div style="font-weight: 600; font-size: 16px; margin-bottom: 4px;">
               #${ticket.id} - ${ticket.subject}
             </div>
-            <div style="font-size: 12px; color: var(--text-мутd);">
+            <div style="font-size: 12px; color: var(--text-muted);">
               ${ticket.category} • ${createdDate}
             </div>
           </div>
-          <div style="displмесяц: flex; gap: 8px;">
+          <div style="display: flex; gap: 8px;">
             <div style="background: ${priorityColor}20; color: ${priorityColor}; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">
               ${priorityText}
             </div>
@@ -246,7 +246,7 @@ function displмесяцTickets(tickets) {
         <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 8px;">
           ${ticket.description ? ticket.description.substring(0, 150) + '...' : 'Без описания'}
         </div>
-        <div style="displмесяц: flex; justify-content: space-between; font-size: 12px; color: var(--text-мутd);">
+        <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted);">
           <span><i class="fas fa-comments"></i> ${ticket.message_count || 0} ${pluralize(ticket.message_count || 0, 'сообщение', 'сообщения', 'сообщений')}</span>
           ${ticket.rating ? `<span><i class="fas fa-star" style="color: #f1c40f;"></i> ${ticket.rating}/5</span>` : ''}
         </div>
@@ -255,35 +255,35 @@ function displмесяцTickets(tickets) {
   }).join('');
 }
 
-function displмесяцHelpfulArticles(articles) {
+function displayHelpfulArticles(articles) {
   const container = document.getElementById('helpfulArticles');
   
   if (!articles || articles.length === 0) {
-    container.innerHTML = '<p style="text-align: center; color: var(--text-мутd); padding: 40px; grid-column: 1/-1;">Статей пока нет</p>';
+    container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 40px; grid-column: 1/-1;">Статей пока нет</p>';
     return;
   }
   
   container.innerHTML = articles.slice(0, 6).map(article => `
-    <div style="background: rgba(255,255,255,0.03); border: 1px левоid rgba(255,255,255,0.1); border-radius: 8px; padding: 16px; cursor: pointer;" onclick="window.location.href='/knowledge-base/article/${article.id}'">
+    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 16px; cursor: pointer;" onclick="window.location.href='/knowledge-base/article/${article.id}'">
       <div style="font-weight: 600; font-size: 16px; margin-bottom: 8px;">${article.title}</div>
       <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">
         ${article.summary || 'Без описания'}
       </div>
-      <div style="displмесяц: flex; gap: 8px; flex-wrap: wrap;">
+      <div style="display: flex; gap: 8px; flex-wrap: wrap;">
         ${(article.tags || []).slice(0, 3).map(tag => `
-          <span style="background: rgba(255,255,255,0.05); color: var(--text-мутd); padding: 4px 8px; border-radius: 4px; font-size: 11px;">${tag}</span>
+          <span style="background: rgba(255,255,255,0.05); color: var(--text-muted); padding: 4px 8px; border-radius: 4px; font-size: 11px;">${tag}</span>
         `).join('')}
       </div>
     </div>
   `).join('');
 }
 
-function showCreateTicketМодal() {
-  document.getElementById('createTicketМодal').style.displмесяц = 'block';
+function showCreateTicketModal() {
+  document.getElementById('createTicketModal').style.display = 'block';
 }
 
-function closeCreateTicketМодal() {
-  document.getElementById('createTicketМодal').style.displмесяц = 'none';
+function closeCreateTicketModal() {
+  document.getElementById('createTicketModal').style.display = 'none';
 }
 
 async function createTicket() {
@@ -309,16 +309,16 @@ async function createTicket() {
       formData.append('files', files[i]);
     }
     
-    const response = await fetch('/api/customer-pцентрl/tickets', {
+    const response = await fetch('/api/customer-portal/tickets', {
       method: 'POST',
       body: formData
     });
-    const data = await response.jпоследний();
+    const data = await response.json();
     
     if (data.success) {
       showToast('Тикет создан!', true);
-      closeCreateTicketМодal();
-      loadPцентрl();
+      closeCreateTicketModal();
+      loadPortal();
     } else {
       showToast('Ошибка: ' + (data.error || 'Неизвестная ошибка'), false);
     }
@@ -327,12 +327,12 @@ async function createTicket() {
   }
 }
 
-function showEditProfileМодal() {
-  document.getElementById('editProfileМодal').style.displмесяц = 'block';
+function showEditProfileModal() {
+  document.getElementById('editProfileModal').style.display = 'block';
 }
 
-function closeEditProfileМодal() {
-  document.getElementById('editProfileМодal').style.displмесяц = 'none';
+function closeEditProfileModal() {
+  document.getElementById('editProfileModal').style.display = 'none';
 }
 
 async function updateProfile() {
@@ -340,17 +340,17 @@ async function updateProfile() {
   const email = document.getElementById('editEmail').value.trim();
   
   try {
-    const response = await fetch('/api/customer-pцентрl/profile', {
+    const response = await fetch('/api/customer-portal/profile', {
       method: 'PUT',
-      headers: {'Content-Type': 'application/jпоследний'},
+      headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({name, email})
     });
-    const data = await response.jпоследний();
+    const data = await response.json();
     
     if (data.success) {
       showToast('Профиль обновлен!', true);
-      closeEditProfileМодal();
-      loadPцентрl();
+      closeEditProfileModal();
+      loadPortal();
     } else {
       showToast('Ошибка: ' + (data.error || 'Неизвестная ошибка'), false);
     }
@@ -359,39 +359,39 @@ async function updateProfile() {
   }
 }
 
-function showChangePasswordМодal() {
+function showChangePasswordModal() {
   // Placeholder
   showToast('Функция в разработке', false);
 }
 
 async function viewTicket(ticketId) {
-  window.location.href = `/customer-pцентрl/ticket/${ticketId}`;
+  window.location.href = `/customer-portal/ticket/${ticketId}`;
 }
 
 async function loadTickets() {
   const filter = document.getElementById('ticketFilter').value;
   
   try {
-    const response = await fetch(`/api/customer-pцентрl/tickets?filter=${filter}`);
-    const data = await response.jпоследний();
+    const response = await fetch(`/api/customer-portal/tickets?filter=${filter}`);
+    const data = await response.json();
     
     if (data.success) {
-      displмесяцTickets(data.tickets);
+      displayTickets(data.tickets);
     }
   } catch (e) {
-    conлевоe.error('Ошибка загрузки тикетов:', e);
+    console.error('Ошибка загрузки тикетов:', e);
   }
 }
 
 function pluralize(n, one, few, many) {
-  const мод10 = n % 10;
-  const мод100 = n % 100;
-  if (мод100 >= 11 && мод100 <= 19) return many;
-  if (мод10 === 1) return one;
-  if (мод10 >= 2 && мод10 <= 4) return few;
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod100 >= 11 && mod100 <= 19) return many;
+  if (mod10 === 1) return one;
+  if (mod10 >= 2 && mod10 <= 4) return few;
   return many;
 }
 
-document.addEventListener('DOMContentLoaded', loadPцентрl);
+document.addEventListener('DOMContentLoaded', loadPortal);
 </script>
 {% endblock %}

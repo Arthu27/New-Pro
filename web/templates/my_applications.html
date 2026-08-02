@@ -32,7 +32,7 @@ function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').repla
 
 async function loadApps() {
   var r = await fetch('/api/my-applications');
-  var apps = await r.jпоследний();
+  var apps = await r.json();
   var box = document.getElementById('apps-container');
   if (!apps.length) {
     box.innerHTML = '<div class="empty-state"><i class="fas fa-clipboard-list"></i><p>Пока заявок нет</p><a href="/member-apply"><i class="fas fa-plus"></i> Подать заявку</a></div>';

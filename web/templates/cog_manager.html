@@ -32,7 +32,7 @@ function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').repla
 
 async function loadCogs() {
   try {
-    var d = await fetch('/api/cogs').then(r => r.jпоследний());
+    var d = await fetch('/api/cogs').then(r => r.json());
     _cogs = d;
     var loaded = d.filter(c => c.loaded).length;
     document.getElementById('cog-summary').textContent = loaded + ' / ' + d.length + ' модулей загружено';
@@ -60,9 +60,9 @@ async function toggleCog(name, isLoaded) {
   try {
     var r = await fetch('/api/cogs/' + action, {
       method: 'POST',
-      headers: {'Content-Type': 'application/jпоследний'},
+      headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({name: 'cogs.' + name})
-    }).then(r => r.jпоследний());
+    }).then(r => r.json());
     if (r.ok) loadCogs();
     else alert('Ошибка: ' + (r.error || 'Неизвестно'));
   } catch(e) { alert('Ошибка соединения'); }
@@ -72,9 +72,9 @@ async function reloadCog(name) {
   try {
     var r = await fetch('/api/cogs/reload', {
       method: 'POST',
-      headers: {'Content-Type': 'application/jпоследний'},
+      headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({name: 'cogs.' + name})
-    }).then(r => r.jпоследний());
+    }).then(r => r.json());
     if (r.ok) loadCogs();
     else alert('Ошибка: ' + (r.error || 'Неизвестно'));
   } catch(e) { alert('Ошибка соединения'); }
@@ -82,7 +82,7 @@ async function reloadCog(name) {
 
 async function reloadAll() {
   try {
-    await fetch('/api/cogs/reload-all', {method:'POST'}).then(r => r.jпоследний());
+    await fetch('/api/cogs/reload-all', {method:'POST'}).then(r => r.json());
     loadCogs();
   } catch(e) {}
 }

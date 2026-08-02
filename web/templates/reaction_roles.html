@@ -23,18 +23,18 @@
   <div class="hero-sub">Автоматически выдавать роль по клику на эмодзи</div>
 </div>
 
-<div class="contрольs-bar">
+<div class="controls-bar">
   <select  id="guild-select" class="guild-sel" onchange="loadRR()">
     <option value="">🏠 Выберите сервер...</option>
   </select>
-  <button class="btn-new" onclick="openМодal()"><span>➕</span> Новая панель</button>
+  <button class="btn-new" onclick="openModal()"><span>➕</span> Новая панель</button>
 </div>
 
 <div id="rr-list" class="rr-grid"></div>
 
-<div id="модal" class="модal-overlмесяц">
-  <div class="модal-box">
-    <div class="модal-title">🎭 Роль по реакции Создать</div>
+<div id="modal" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-title">🎭 Роль по реакции Создать</div>
     <div class="form-group">
       <label class="form-label">📺 Канал</label>
       <select id="rr-channel" class="form-input"></select>
@@ -46,16 +46,16 @@
     <label class="form-label"   style="margin-bottom: 10px;">🎭 Emoji → Роль Совпадениеы</label>
     <div id="rr-entries"></div>
     <button class="btn-add-entry" onclick="addEntry()">➕ Совпадение Добавить</button>
-    <div class="модal-actions">
+    <div class="modal-actions">
       <button class="btn-submit" onclick="createRR()">🎭 Создать ve Отправить</button>
-      <button class="btn-cancel" onclick="closeМодal()">Отмена</button>
+      <button class="btn-cancel" onclick="closeModal()">Отмена</button>
     </div>
   </div>
 </div>
 
 <script>
 var selectedGuild = '{{ main_guild_id }}';
-var allРольes = [];
+var allRoles = [];
 
 async function loadGuilds() {
   // Sabit сервер ID
@@ -66,19 +66,19 @@ async function loadGuilds() {
   if (document.getElementById('guildSelect')) document.getElementById('guildSelect').value = gid;
   if (typeof loadData === 'function') { loadData(gid); return; }
   if (typeof loadAll === 'function') { loadAll(gid); return; }
-  if (typeof loadРольes === 'function') { loadРольes(gid); return; }
+  if (typeof loadRoles === 'function') { loadRoles(gid); return; }
   if (typeof loadChannels === 'function') { loadChannels(gid); return; }
   if (typeof loadMembers === 'function') { loadMembers(gid); return; }
   if (typeof loadHistory === 'function') { loadHistory(gid); return; }
-  if (typeof loadЛогs === 'function') { loadЛогs(gid); return; }
+  if (typeof loadLogs === 'function') { loadLogs(gid); return; }
   if (typeof loadVoiceStats === 'function') { loadVoiceStats(gid); return; }
   if (typeof loadSettings === 'function') { loadSettings(gid); return; }
-  if (typeof loadGiveawмесяцs === 'function') { loadGiveawмесяцs(gid); return; }
+  if (typeof loadGiveaways === 'function') { loadGiveaways(gid); return; }
   if (typeof loadPolls === 'function') { loadPolls(gid); return; }
   if (typeof loadEconomy === 'function') { loadEconomy(gid); return; }
   if (typeof loadSuggestions === 'function') { loadSuggestions(gid); return; }
   if (typeof loadInvites === 'function') { loadInvites(gid); return; }
-  if (typeof loadHeнизh === 'function') { loadHeнизh(gid); return; }
+  if (typeof loadHealth === 'function') { loadHealth(gid); return; }
   if (typeof loadAnalytics === 'function') { loadAnalytics(gid); return; }
 
 }
@@ -86,20 +86,20 @@ async function loadGuilds() {
 async function loadRR() {
   selectedGuild = document.getElementById('guild-select').value;
   if (!selectedGuild) return;
-  var [rrs, chRes, рольes] = await Promise.all([
-    fetch('/api/guild/'+selectedGuild+'/reaction-рольes').then(r=>r.jпоследний()),
-    fetch('/api/guild/'+selectedGuild+'/channels').then(r=>r.jпоследний()),
-    fetch('/api/guild/'+selectedGuild+'/рольes').then(r=>r.jпоследний())
+  var [rrs, chRes, roles] = await Promise.all([
+    fetch('/api/guild/'+selectedGuild+'/reaction-roles').then(r=>r.json()),
+    fetch('/api/guild/'+selectedGuild+'/channels').then(r=>r.json()),
+    fetch('/api/guild/'+selectedGuild+'/roles').then(r=>r.json())
   ]);
-  var channels = Arrмесяц.isArrмесяц(chRes) ? chRes : (chRes.channels || []);
-  allРольes = рольes;
+  var channels = Array.isArray(chRes) ? chRes : (chRes.channels || []);
+  allRoles = roles;
   document.getElementById('rr-channel').innerHTML = channels.filter(c=>c.type==='text').map(c=>'<option value="'+c.id+'">#'+c.name+'</option>').join('');
 
   var box = document.getElementById('rr-list');
   if (!rrs.length) { box.innerHTML='<div class="empty-state"><div >🎭</div><p>Пока reaksiyon роль yok.</p></div>'; return; }
   box.innerHTML = rrs.map(function(rr, i) {
     var entries = (rr.entries||[]).map(function(e) {
-      return '<div class="rr-entry"><span class="rr-emoji">'+e.emoji+'</span><span class="rr-arrow">→</span><span class="rr-рольe">@'+e.рольe_name+'</span></div>';
+      return '<div class="rr-entry"><span class="rr-emoji">'+e.emoji+'</span><span class="rr-arrow">→</span><span class="rr-role">@'+e.role_name+'</span></div>';
     }).join('');
     return '<div class="rr-card" >'+
       '<div class="rr-title">🎭 '+rr.title+'</div>'+entries+
@@ -111,21 +111,21 @@ async function loadRR() {
 function addEntry() {
   var div = document.createElement('div');
   div.className = 'entry-row';
-  var рольes = allРольes.map(r=>'<option value="'+r.id+'">@'+r.name+'</option>').join('');
+  var roles = allRoles.map(r=>'<option value="'+r.id+'">@'+r.name+'</option>').join('');
   div.innerHTML = '<input type="text" class="entry-emoji" value="🎭" maxlength="2">'+
-    '<select class="entry-рольe form-input" >'+рольes+'</select>'+
+    '<select class="entry-role form-input" >'+roles+'</select>'+
     '<button class="entry-del" onclick="this.parentElement.remove()">×</button>';
   document.getElementById('rr-entries').appendChild(div);
 }
 
-function openМодal() {
+function openModal() {
   if (!selectedGuild) { alert('Сервер выбрать!'); return; }
   document.getElementById('rr-entries').innerHTML = '';
   document.getElementById('rr-title').value = '';
   addEntry(); addEntry();
-  document.getElementById('модal').style.displмесяц = 'flex';
+  document.getElementById('modal').style.display = 'flex';
 }
-function closeМодal() { document.getElementById('модal').style.displмесяц = 'none'; }
+function closeModal() { document.getElementById('modal').style.display = 'none'; }
 
 async function createRR() {
   var title = document.getElementById('rr-title').value.trim();
@@ -133,24 +133,24 @@ async function createRR() {
   var entries = [];
   document.querySelectorAll('.entry-row').forEach(function(row) {
     var emoji = row.querySelector('.entry-emoji').value.trim();
-    var sel = row.querySelector('.entry-рольe');
-    if (emoji && sel.value) entries.push({ emoji, рольe_id: sel.value });
+    var sel = row.querySelector('.entry-role');
+    if (emoji && sel.value) entries.push({ emoji, role_id: sel.value });
   });
   if (!title || entries.length < 1) { alert('Заголовок ve en az 1 совпадение gir!'); return; }
   var btn = document.querySelector('.btn-submit');
   btn.textContent = '⏳ Создан...'; btn.disabled = true;
-  var r = await fetch('/api/guild/'+selectedGuild+'/reaction-рольes/create', {
-    method:'POST', headers:{'Content-Type':'application/jпоследний'},
+  var r = await fetch('/api/guild/'+selectedGuild+'/reaction-roles/create', {
+    method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({ title, channel_id, entries })
   });
-  var d = await r.jпоследний();
+  var d = await r.json();
   btn.textContent = '🎭 Создать ve Отправить'; btn.disabled = false;
-  if (d.success) { closeМодal(); loadRR(); } else alert(d.error||'Ошибка!');
+  if (d.success) { closeModal(); loadRR(); } else alert(d.error||'Ошибка!');
 }
 
 async function deleteRR(id) {
   if (!confirm('Удалитьmek если хотите emin misiniz ? siz?')) return;
-  await fetch('/api/guild/'+selectedGuild+'/reaction-рольes/'+id+'/delete', {method:'POST'});
+  await fetch('/api/guild/'+selectedGuild+'/reaction-roles/'+id+'/delete', {method:'POST'});
   loadRR();
 }
 

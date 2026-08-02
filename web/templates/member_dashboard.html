@@ -52,7 +52,7 @@ function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').repla
 
 async function loadNotifs() {
   var r = await fetch('/api/my-notifications');
-  var notifs = await r.jпоследний();
+  var notifs = await r.json();
   var unread = notifs.filter(function(n){return !n.read;}).length;
   if (unread > 0) {
     var badge = document.getElementById('notif-count');

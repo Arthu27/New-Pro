@@ -51,7 +51,7 @@ async function loadVoiceStats(gid_деньгиm) {
   try {
     var r = await fetch('/api/guild/'+encodeURIComponent(gid)+'/voice-stats');
     if (!r.ok) throw new Error('HTTP ' + r.status);
-    var data = await r.jпоследний();
+    var data = await r.json();
 
   document.getElementById('stat-cards').innerHTML =
     '<div class="stat-box">'+
@@ -60,7 +60,7 @@ async function loadVoiceStats(gid_деньгиm) {
     '</div>'+
     '<div class="stat-box">'+
       '<div class="stat-icon green"><i class="fas fa-users"></i></div>'+
-      '<div class="stat-body"><div class="stat-val">'+(data.todмесяц_users||0)+'</div><div class="stat-lbl">Голосовая активность сегодня</div></div>'+
+      '<div class="stat-body"><div class="stat-val">'+(data.today_users||0)+'</div><div class="stat-lbl">Голосовая активность сегодня</div></div>'+
     '</div>'+
     '<div class="stat-box">'+
       '<div class="stat-icon purple"><i class="fas fa-stopwatch"></i></div>'+
@@ -86,7 +86,7 @@ async function loadVoiceStats(gid_деньгиm) {
     '</div>';
   }).join('');
   } catch (error) {
-    conлевоe.error('Не удалось загрузить голосовую статистику:', error);
+    console.error('Не удалось загрузить голосовую статистику:', error);
     document.getElementById('vc-leaderboard').innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>Не удалось загрузить статистику. Повторите попытку позже.</p></div>';
   }
 }
@@ -96,13 +96,13 @@ async function initialiseGuildSelector() {
   if (!selector) return;
   try {
     var response = await fetch('/api/guilds');
-    var guilds = await response.jпоследний();
-    if (!Arrмесяц.isArrмесяц(guilds)) return;
+    var guilds = await response.json();
+    if (!Array.isArray(guilds)) return;
     selector.innerHTML = '<option value="">Выберите сервер...</option>' + guilds.map(function(g) {
       return '<option value="' + g.id + '">' + g.name + '</option>';
     }).join('');
     selector.value = MAIN_GID || (guilds[0] && guilds[0].id) || '';
-  } catch (error) { conлевоe.error('Не удалось загрузить список серверов:', error); }
+  } catch (error) { console.error('Не удалось загрузить список серверов:', error); }
   loadVoiceStats();
 }
 

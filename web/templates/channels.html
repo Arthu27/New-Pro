@@ -42,12 +42,12 @@
     <div><div class="ch-stat-val" id="stat-cat">0</div><div class="ch-stat-lbl">Категория</div></div>
   </div>
   <div class="ch-stat">
-    <div class="ch-stat-icon" ><i class="fas fa-lмесяцer-group"></i></div>
+    <div class="ch-stat-icon" ><i class="fas fa-layer-group"></i></div>
     <div><div class="ch-stat-val" id="stat-total">0</div><div class="ch-stat-lbl">Всего</div></div>
   </div>
 </div>
 
-<!-- Канал listesi — kitap gibi, kategoriler collapsed, scрольl'suz -->
+<!-- Канал listesi — kitap gibi, kategoriler collapsed, scroll'suz -->
 <div class="ch-box" id="ch-box">
   <div class="ch-box-header">
     <div class="ch-box-title"><i class="fas fa-list"></i> Список каналов</div>
@@ -58,12 +58,12 @@
   </div>
 </div>
 
-<!-- Модal pencere -->
-<div id="модal" class="модal-overlмесяц">
-  <div class="модal-card">
-    <div class="модal-head">
+<!-- Modal pencere -->
+<div id="modal" class="modal-overlay">
+  <div class="modal-card">
+    <div class="modal-head">
       <h3><i class="fas fa-plus-circle"   style="margin-right: 8px;"></i>Новый Канал</h3>
-      <button class="модal-close" id="btnCloseМодal" type="button"><i class="fas fa-times"></i></button>
+      <button class="modal-close" id="btnCloseModal" type="button"><i class="fas fa-times"></i></button>
     </div>
     <label class="field-label">Название канала</label>
     <input type="text" id="ch-name" placeholder="канал-имя" class="field-input">
@@ -83,7 +83,7 @@
       </div>
     </div>
     <input type="hidden" id="ch-type" value="text">
-    <div class="модal-actions">
+    <div class="modal-actions">
       <button class="btn-confirm" id="btnCreateChannel" type="button">Создать</button>
       <button class="btn-cancel" id="btnCancelChannel" type="button">Отмена</button>
     </div>
@@ -141,8 +141,8 @@
 
     try {
       var r = await fetch('/api/guild/' + selectedGuild + '/channels');
-      var chData = await r.jпоследний();
-      var channels = Arrмесяц.isArrмесяц(chData) ? chData : (chData.channels || []);
+      var chData = await r.json();
+      var channels = Array.isArray(chData) ? chData : (chData.channels || []);
 
       // Stats
       var textCount  = channels.filter(function (c) { return c.type === 'text'; }).length;
@@ -153,7 +153,7 @@
       $('stat-cat').textContent   = catCount;
       $('stat-total').textContent = channels.length;
       $('ch-count').textContent   = channels.length + ' канал';
-      $('ch-stats').style.displмесяц = 'flex';
+      $('ch-stats').style.display = 'flex';
 
       if (!channels.length) {
         list.innerHTML = '<div class="ch-empty"><i class="fas fa-hashtag"></i><p>Канал не найдено.</p></div>';
@@ -211,7 +211,7 @@
         html += '</div></div>';
       });
 
-      // Tek seferde DOM'a bas (lмесяцout titremesi olmasin)
+      // Tek seferde DOM'a bas (layout titremesi olmasin)
       var frag = document.createDocumentFragment();
       var tmp = document.createElement('div');
       tmp.innerHTML = html;
@@ -241,12 +241,12 @@
     } catch (e) {}
   }
 
-  function openNameМодal() {
+  function openNameModal() {
     $('ch-name').value = '';
-    $('модal').classList.add('open');
+    $('modal').classList.add('open');
     setTimeout(function () { $('ch-name').focus(); }, 50);
   }
-  function closeМодal() { $('модal').classList.remove('open'); }
+  function closeModal() { $('modal').classList.remove('open'); }
 
   async function createChannel() {
     var name = $('ch-name').value.trim();
@@ -254,11 +254,11 @@
     if (!name) { alert('Введите имя канала!'); return; }
     try {
       var r = await fetch('/api/guild/' + selectedGuild + '/channels/create', {
-        method: 'POST', headers: { 'Content-Type': 'application/jпоследний' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: name, type: type })
       });
-      var d = await r.jпоследний();
-      if (d.success) { closeМодal(); loadChannels(); }
+      var d = await r.json();
+      if (d.success) { closeModal(); loadChannels(); }
       else alert('Ошибка: ' + (d.error || 'Неизвестно'));
     } catch (e) { alert('Ошибка запроса: ' + e.message); }
   }
@@ -267,7 +267,7 @@
     if (!confirm('"' + name + '" канал будет удалён. Продолжить?')) return;
     try {
       var r = await fetch('/api/guild/' + selectedGuild + '/channels/' + id + '/delete', { method: 'POST' });
-      var d = await r.jпоследний();
+      var d = await r.json();
       if (d.success) loadChannels();
       else alert('Ошибка: ' + (d.error || 'Неизвестно'));
     } catch (e) { alert('Ошибка запроса: ' + e.message); }
@@ -281,13 +281,13 @@
       });
     });
 
-    // Модal butonlari
+    // Modal butonlari
     var btnNew = $('btnNewChannel');
-    if (btnNew) btnNew.addEventListener('click', openNameМодal);
-    var btnClose = $('btnCloseМодal');
-    if (btnClose) btnClose.addEventListener('click', closeМодal);
+    if (btnNew) btnNew.addEventListener('click', openNameModal);
+    var btnClose = $('btnCloseModal');
+    if (btnClose) btnClose.addEventListener('click', closeModal);
     var btnCancel = $('btnCancelChannel');
-    if (btnCancel) btnCancel.addEventListener('click', closeМодal);
+    if (btnCancel) btnCancel.addEventListener('click', closeModal);
     var btnCreate = $('btnCreateChannel');
     if (btnCreate) btnCreate.addEventListener('click', createChannel);
 
@@ -300,15 +300,15 @@
       loadChannels();
     });
 
-    // Модal backdrop tiklaninca закрыть
-    var модal = $('модal');
-    if (модal) модal.addEventListener('click', function (e) { if (e.target === модal) closeМодal(); });
+    // Modal backdrop tiklaninca закрыть
+    var modal = $('modal');
+    if (modal) modal.addEventListener('click', function (e) { if (e.target === modal) closeModal(); });
 
     // Канал listesi: kategori toggle + удалитьme
     var list = $('channel-list');
     if (list) {
       list.addEventListener('click', function (e) {
-        // Once удалитьme butonunu kontроль et (event.stopPropagation с)
+        // Once удалитьme butonunu kontrol et (event.stopPropagation с)
         var btn = e.target.closest('button[data-action]');
         if (btn) {
           e.stopPropagation();
@@ -320,7 +320,7 @@
           }
           return;
         }
-        // Потом kategori basligini kontроль et
+        // Потом kategori basligini kontrol et
         var hdr = e.target.closest('[data-toggle-cat]');
         if (hdr) toggleCat(hdr);
       });

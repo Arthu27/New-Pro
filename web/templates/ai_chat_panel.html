@@ -19,51 +19,51 @@
 
 <style>
 .chat-wrap {
-  displмесяц: flex;
+  display: flex;
   flex-direction: column;
   height: calc(100vh - 180px);
   min-height: 500px;
-  background: var(--surface) !impцентрnt;
-  border: 1px левоid var(--line) !impцентрnt;
-  border-radius: var(--r-lg) !impцентрnt;
+  background: var(--surface) !important;
+  border: 1px solid var(--line) !important;
+  border-radius: var(--r-lg) !important;
   overflow: hidden;
-  box-shadow: var(--shadow-sm) !impцентрnt;
+  box-shadow: var(--shadow-sm) !important;
 }
 
 .chat-header {
-  displмесяц: flex;
+  display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  border-bottom: 1px левоid var(--line);
+  border-bottom: 1px solid var(--line);
   background: linear-gradient(180deg, rgba(212, 168, 67, 0.06), transparent);
 }
 
 .chat-header h2 {
-  font-size: 16px !impцентрnt;
-  !impцентрnt;
-  color: var(--text) !impцентрnt;
-  margin: 0 !impцентрnt;
-  padding: 0 !impцентрnt;
-  border: none !impцентрnt;
-  displмесяц: flex !impцентрnt;
+  font-size: 16px !important;
+  !important;
+  color: var(--text) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  display: flex !important;
   align-items: center;
   gap: 10px;
-  text-transform: none !impцентрnt;
-  letter-spacing: 0 !impцентрnt;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
 }
 
-.модel-badge {
-  displмесяц: inline-flex;
+.model-badge {
+  display: inline-flex;
   align-items: center;
   gap: 5px;
   padding: 4px 12px;
   background: linear-gradient(135deg, rgba(212, 168, 67, 0.18), rgba(212, 168, 67, 0.06));
-  border: 1px левоid var(--ac-line);
+  border: 1px solid var(--ac-line);
   border-radius: 99px;
-  font-size: 11px !impцентрnt;
-  !impцентрnt;
-  color: var(--ac) !impцентрnt;
+  font-size: 11px !important;
+  !important;
+  color: var(--ac) !important;
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -72,7 +72,7 @@
   flex: 1;
   overflow-y: auto;
   padding: 20px;
-  displмесяц: flex;
+  display: flex;
   flex-direction: column;
   gap: 14px;
   background: rgba(10, 9, 7, 0.3);
@@ -91,21 +91,21 @@
   background-clip: text;
   -webkit-text-fill-color: transparent;
   margin-bottom: 14px;
-  displмесяц: block;
+  display: block;
 }
 
 .welcome-msg p {
-  font-size: 14px !impцентрnt;
-  color: var(--text-2) !impцентрnt;
-  margin: 0 !impцентрnt;
+  font-size: 14px !important;
+  color: var(--text-2) !important;
+  margin: 0 !important;
 }
 
 .welcome-msg strong {
-  color: var(--ac) !impцентрnt;
+  color: var(--ac) !important;
 }
 
 .msg {
-  displмесяц: flex;
+  display: flex;
   gap: 12px;
   max-width: 80%;
   animation: msgIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
@@ -129,7 +129,7 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  displмесяц: flex;
+  display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
@@ -150,28 +150,28 @@
 .msg-bubble {
   padding: 12px 16px;
   border-radius: 14px;
-  font-size: 13.5px !impцентрnt;
-  color: var(--text) !impцентрnt;
+  font-size: 13.5px !important;
+  color: var(--text) !important;
   word-wrap: break-word;
   word-break: break-word;
 }
 
 .msg.bot .msg-bubble {
   background: var(--surface-2);
-  border: 1px левоid var(--line);
+  border: 1px solid var(--line);
   border-top-left-radius: 4px;
 }
 
 .msg.user .msg-bubble {
   background: linear-gradient(135deg, rgba(139, 92, 246, 0.18), rgba(6, 182, 212, 0.12));
-  border: 1px левоid rgba(139, 92, 246, 0.25);
+  border: 1px solid rgba(139, 92, 246, 0.25);
   border-top-right-radius: 4px;
-  color: var(--text) !impцентрnt;
+  color: var(--text) !important;
 }
 
 .msg-time {
-  font-size: 10.5px !impцентрnt;
-  color: var(--text-3) !impцентрnt;
+  font-size: 10.5px !important;
+  color: var(--text-3) !important;
   margin-top: 5px;
   padding: 0 4px;
   }
@@ -180,12 +180,12 @@
   }
 
 .typing {
-  displмесяц: inline-flex;
+  display: inline-flex;
   align-items: center;
   gap: 5px;
   padding: 12px 16px;
   background: var(--surface-2);
-  border: 1px левоid var(--line);
+  border: 1px solid var(--line);
   border-radius: 14px;
   border-top-left-radius: 4px;
 }
@@ -198,8 +198,8 @@
   animation: typingBounce 1.4s ease-in-out infinite;
 }
 
-.typing span:nth-child(2) { animation-delмесяц: 0.2s; }
-.typing span:nth-child(3) { animation-delмесяц: 0.4s; }
+.typing span:nth-child(2) { animation-delay: 0.2s; }
+.typing span:nth-child(3) { animation-delay: 0.4s; }
 
 @keyframes typingBounce {
   0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
@@ -207,34 +207,34 @@
 }
 
 .chat-input-wrap {
-  displмесяц: flex;
+  display: flex;
   align-items: flex-end;
   gap: 8px;
   padding: 14px 16px;
-  border-top: 1px левоid var(--line);
+  border-top: 1px solid var(--line);
   background: rgba(10, 9, 7, 0.5);
 }
 
 .chat-input {
   flex: 1;
-  resize: none !impцентрnt;
-  min-height: 42px !impцентрnt;
-  max-height: 120px !impцентрnt;
-  background: rgba(10, 9, 7, 0.7) !impцентрnt;
-  border: 1px левоid var(--line-2) !impцентрnt;
-  border-radius: 12px !impцентрnt;
-  padding: 11px 14px !impцентрnt;
-  font-size: 13.5px !impцентрnt;
-  color: var(--text) !impцентрnt;
+  resize: none !important;
+  min-height: 42px !important;
+  max-height: 120px !important;
+  background: rgba(10, 9, 7, 0.7) !important;
+  border: 1px solid var(--line-2) !important;
+  border-radius: 12px !important;
+  padding: 11px 14px !important;
+  font-size: 13.5px !important;
+  color: var(--text) !important;
 }
 
 .chat-input:focus {
-  border-color: var(--ac) !impцентрnt;
-  box-shadow: 0 0 0 3px rgba(212, 168, 67, 0.12) !impцентрnt;
-  background: rgba(10, 9, 7, 0.85) !impцентрnt;
+  border-color: var(--ac) !important;
+  box-shadow: 0 0 0 3px rgba(212, 168, 67, 0.12) !important;
+  background: rgba(10, 9, 7, 0.85) !important;
 }
 
-.chat-input::placeholder { color: var(--text-4) !impцентрnt; }
+.chat-input::placeholder { color: var(--text-4) !important; }
 
 .clear-btn,
 .send-btn {
@@ -244,7 +244,7 @@
   border-radius: 12px;
   border: none;
   cursor: pointer;
-  displмесяц: inline-flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   font-size: 14px;
@@ -254,7 +254,7 @@
 .clear-btn {
   background: rgba(248, 113, 113, 0.10);
   color: var(--err);
-  border: 1px левоid rgba(248, 113, 113, 0.25);
+  border: 1px solid rgba(248, 113, 113, 0.25);
 }
 
 .clear-btn:hover {
@@ -288,7 +288,7 @@
 <div class="chat-wrap">
   <div class="chat-header">
     <h2><i class="fas fa-robot" ></i> Aether AI</h2>
-    <span class="модel-badge" id="модel-badge">Mistral</span>
+    <span class="model-badge" id="model-badge">Mistral</span>
   </div>
 
   <div class="chat-box" id="chat-box">
@@ -327,7 +327,7 @@
     return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
-  function addMsg(text, type, модel) {
+  function addMsg(text, type, model) {
     if (!chatBox) return;
     var welcome = chatBox.querySelector('.welcome-msg');
     if (welcome) welcome.remove();
@@ -335,7 +335,7 @@
     // Boш backtick'leri ve gereksiz markdown'ы temizle
     if (text) {
       text = text.replace(/`{3,}/g, '');           // ``` kod bloklarыnы kaldыr
-      text = text.replace(/^`+|`+$/gm, '');         // satыr baшы/последнийu boш backtick'leri kaldыr
+      text = text.replace(/^`+|`+$/gm, '');         // satыr baшы/sonu boш backtick'leri kaldыr
       text = text.replace(/\*\*([^*]+)\*\*/g, '$1'); // **bold** -> bold
       text = text.replace(/\*([^*]+)\*/g, '$1');     // *italic* -> italic
       text = text.trim();
@@ -348,10 +348,10 @@
       '<div class="msg-avatar"><i class="fas ' + icon + '"></i></div>' +
       '<div>' +
         '<div class="msg-bubble">' + esc(text).replace(/\n/g, '<br>') + '</div>' +
-        '<div class="msg-time">' + getTime() + (модel ? ' · ' + esc(модel) : '') + '</div>' +
+        '<div class="msg-time">' + getTime() + (model ? ' · ' + esc(model) : '') + '</div>' +
       '</div>';
     chatBox.appendChild(div);
-    chatBox.scрольlTop = chatBox.scрольlHeight;
+    chatBox.scrollTop = chatBox.scrollHeight;
   }
 
   function showTyping() {
@@ -363,7 +363,7 @@
       '<div class="msg-avatar"><i class="fas fa-robot"></i></div>' +
       '<div class="typing"><span></span><span></span><span></span></div>';
     chatBox.appendChild(div);
-    chatBox.scрольlTop = chatBox.scрольlHeight;
+    chatBox.scrollTop = chatBox.scrollHeight;
   }
 
   function removeTyping() {
@@ -393,18 +393,18 @@
     try {
       var r = await fetch('/api/ai-chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/jпоследний' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: msg })
       });
-      var d = await r.jпоследний();
+      var d = await r.json();
       removeTyping();
       if (d.error) {
         addMsg('⚠ ' + d.error, 'bot');
       } else {
-        addMsg(d.answer || '(пустой ответ)', 'bot', d.модel);
-        if (d.модel) {
-          var mb = $('модel-badge');
-          if (mb) mb.textContent = d.модel;
+        addMsg(d.answer || '(пустой ответ)', 'bot', d.model);
+        if (d.model) {
+          var mb = $('model-badge');
+          if (mb) mb.textContent = d.model;
         }
       }
     } catch (e) {
@@ -437,7 +437,7 @@
   // Auto-grow textarea
   input.addEventListener('input', function () {
     input.style.height = 'auto';
-    input.style.height = Math.min(input.scрольlHeight, 120) + 'px';
+    input.style.height = Math.min(input.scrollHeight, 120) + 'px';
   });
 
   // Expose to onclick

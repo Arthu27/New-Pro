@@ -38,7 +38,7 @@ function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').repla
 
 async function loadAFK(gid) {
   try {
-    var d = await fetch('/api/afk/' + gid).then(r => r.jпоследний());
+    var d = await fetch('/api/afk/' + gid).then(r => r.json());
     var el = document.getElementById('afk-grid');
     document.getElementById('afk-count').textContent = d.length + ' человек AFK';
     if (!d.length) {
@@ -51,7 +51,7 @@ async function loadAFK(gid) {
           (u.avatar ? '<img src="' + esc(u.avatar) + '" class="afk-avatar" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' : '<div class="afk-avatar"  >💤</div>') +
           '<div   style="min-width: 0;"><div class="afk-name">💤 ' + esc(u.name) + '</div><div class="afk-id">' + esc(u.id) + '</div></div>' +
         '</div>' +
-        '<div class="afk-reaпоследний">' + esc(u.reaпоследний || 'AFK') + '</div>' +
+        '<div class="afk-reason">' + esc(u.reason || 'AFK') + '</div>' +
         '<span class="afk-time"><i class="fas fa-clock"></i> ' + timeSince(u.since) + '</span>' +
       '</div>';
     }).join('');

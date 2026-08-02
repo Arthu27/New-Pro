@@ -32,14 +32,14 @@
 
 <div class="section">
   <div class="bs-title"><i class="fas fa-cogs"></i> Управление</div>
-  <div style="displмесяц: flex; gap: 12px; flex-wrap: wrap;">
-    <button class="contроль-btn primary" id="btn-create" type="button">
+  <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+    <button class="control-btn primary" id="btn-create" type="button">
       <i class="fas fa-plus"></i> Создать копию
     </button>
-    <button class="contроль-btn варн" id="btn-restore" type="button">
+    <button class="control-btn warn" id="btn-restore" type="button">
       <i class="fas fa-history"></i> Восстановить
     </button>
-    <button class="contроль-btn danger" id="btn-clean" type="button">
+    <button class="control-btn danger" id="btn-clean" type="button">
       <i class="fas fa-trash"></i> Очистить старые
     </button>
   </div>
@@ -48,7 +48,7 @@
 <div class="section">
   <div class="bs-title"><i class="fas fa-list"></i> Список резервных копий <span id="bk-count" style="color: var(--accent); font-size: 14px;">-</span></div>
   <div id="bk-body" style="max-height: 600px; overflow-y: auto;">
-    <p style="text-align: center; color: var(--text-мутd);"><i class="fas fa-spinner fa-spin"></i> Загрузка...</p>
+    <p style="text-align: center; color: var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> Загрузка...</p>
   </div>
 </div>
 
@@ -79,18 +79,18 @@
     $('stat-last').textContent = '2ч';
     var html = '';
     backups.forEach(function (b, i) {
-      html += '<div style="displмесяц: flex; align-items: center; padding: 12px; border-bottom: 1px левоid rgba(255,255,255,0.05); gap: 12px;">' +
-        '<div style="width: 40px; height: 40px; border-radius: 8px; background: rgba(155,89,182,0.15); displмесяц: flex; align-items: center; justify-content: center;"><i class="fas fa-file-archive" style="color: #9b59b6; font-size: 18px;"></i></div>' +
+      html += '<div style="display: flex; align-items: center; padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); gap: 12px;">' +
+        '<div style="width: 40px; height: 40px; border-radius: 8px; background: rgba(155,89,182,0.15); display: flex; align-items: center; justify-content: center;"><i class="fas fa-file-archive" style="color: #9b59b6; font-size: 18px;"></i></div>' +
         '<div style="flex: 1;">' +
           '<div style="font-weight: 500; margin-bottom: 4px;">' + esc(b.name) + '</div>' +
-          '<div style="font-size: 12px; color: var(--text-мутd);">' + esc(b.date) + '</div>' +
+          '<div style="font-size: 12px; color: var(--text-muted);">' + esc(b.date) + '</div>' +
         '</div>' +
         '<div style="text-align: right; margin-right: 12px;">' +
           '<div style="font-weight: 600; color: var(--accent);">' + esc(b.size) + '</div>' +
         '</div>' +
-        '<div style="displмесяц: flex; gap: 8px;">' +
-          '<button class="contроль-btn варн" data-i="' + i + '" data-act="restore" type="button" style="padding: 6px 10px;" title="Восстановить"><i class="fas fa-undo"></i></button>' +
-          '<button class="contроль-btn danger" data-i="' + i + '" data-act="del" type="button" style="padding: 6px 10px;" title="Удалить"><i class="fas fa-trash"></i></button>' +
+        '<div style="display: flex; gap: 8px;">' +
+          '<button class="control-btn warn" data-i="' + i + '" data-act="restore" type="button" style="padding: 6px 10px;" title="Восстановить"><i class="fas fa-undo"></i></button>' +
+          '<button class="control-btn danger" data-i="' + i + '" data-act="del" type="button" style="padding: 6px 10px;" title="Удалить"><i class="fas fa-trash"></i></button>' +
         '</div>' +
       '</div>';
     });

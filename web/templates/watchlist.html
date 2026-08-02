@@ -42,17 +42,17 @@ function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').repla
 
 async function loadWatchlist(gid) {
   try {
-    var d = await fetch('/api/watchlist/' + gid).then(r => r.jпоследний());
+    var d = await fetch('/api/watchlist/' + gid).then(r => r.json());
     var tbody = document.getElementById('wl-body');
     document.getElementById('wl-count').textContent = d.length + ' пользователей';
     if (!d.length) {
-      tbody.innerHTML = '<tr><td colspan="4" class="empty-state"><i class="fas fa-shield-низ"></i>Список наблюдения пуст</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="4" class="empty-state"><i class="fas fa-shield-alt"></i>Список наблюдения пуст</td></tr>';
       return;
     }
     tbody.innerHTML = d.map(function(u) {
       return '<tr>' +
         '<td><div >👤 ' + esc(u.name) + '</div><div class="wl-meta">' + esc(u.id) + '</div></td>' +
-        '<td >' + esc(u.reaпоследний||'—') + '</td>' +
+        '<td >' + esc(u.reason||'—') + '</td>' +
         '<td >' + esc(u.added_by||'—') + '</td>' +
         '<td >' + esc((u.timestamp||'').slice(0,10)) + '</td>' +
       '</tr>';

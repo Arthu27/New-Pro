@@ -51,8 +51,8 @@ async function loadChannels() {
   cs.innerHTML = '<option value="">Загрузка...</option>';
   try {
     var r = await fetch('/api/guild/' + GUILD_ID + '/channels');
-    var data = await r.jпоследний();
-    var channels = Arrмесяц.isArrмесяц(data) ? data : (data.channels || []);
+    var data = await r.json();
+    var channels = Array.isArray(data) ? data : (data.channels || []);
     cs.innerHTML = '<option value="">Выберите канал...</option>';
     channels.filter(function(c) { return c.type === 'text'; }).forEach(function(c) {
       var o = document.createElement('option');
@@ -70,10 +70,10 @@ async function sendMessage() {
   btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Отправка...';
   try {
     var r = await fetch('/api/send-message', {
-      method: 'POST', headers: {'Content-Type': 'application/jпоследний'},
+      method: 'POST', headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({guild_id: GUILD_ID, channel_id: cid, message: msg})
     });
-    var d = await r.jпоследний();
+    var d = await r.json();
     btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Отправить';
     if (d.success) { showResult('✓ Сообщение отправлено!', true); document.getElementById('message-input').value = ''; }
     else showResult('✗ ' + (d.error || 'Неизвестная ошибка'), false);
@@ -85,12 +85,12 @@ async function sendMessage() {
 
 function showResult(msg, ok) {
   var box = document.getElementById('result');
-  box.style.displмесяц = 'block';
+  box.style.display = 'block';
   box.style.background = ok ? 'rgba(52,211,153,0.10)' : 'rgba(248,113,113,0.10)';
-  box.style.border = '1px левоid ' + (ok ? 'rgba(52,211,153,0.30)' : 'rgba(248,113,113,0.30)');
+  box.style.border = '1px solid ' + (ok ? 'rgba(52,211,153,0.30)' : 'rgba(248,113,113,0.30)');
   box.style.color = ok ? 'var(--ok)' : 'var(--err)';
   box.textContent = msg;
-  setTimeout(function() { box.style.displмесяц = 'none'; }, 5000);
+  setTimeout(function() { box.style.display = 'none'; }, 5000);
 }
 
 loadChannels();

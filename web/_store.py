@@ -1,7 +1,7 @@
 """
 Центрk performans yardimcisi.
 - atomic_write_json: gecici dosya + os.replace ile atomik написатьma (yaris статусu нет, indent нет).
-- reимя_json: dosya yoksa None; JSON bozuksa None (uyarхорошо bir key написатьdirir).
+- read_json: dosya yoksa None; JSON bozuksa None (uyarхорошо bir key написатьdirir).
 - ttl_cache: basit TTL onbellegi; sыk okunan JSON dosyalari icin.
 - PeriodicFlush: лог написатьimini toplu (batch) ve periyodik yapar; onyuzde bloklama нет.
 - make_etag: JSON dump etmeden быстрый (weak) ETag uretir.
@@ -37,13 +37,13 @@ def atomic_write_json (path ,data ,ensure_ascii =False ):
         raise 
 
 
-def reимя_json (path ,default =None ):
+def read_json (path ,default =None ):
     """Guvenli okuma. Ошибка статусunda default dondurur."""
     if not os .path .exists (path ):
         return default 
     try :
         with open (path ,'r',encoding ='utf-8')as fp :
-            return json .loимя (fp )
+            return json .load (fp )
     except Exception :
         return default 
 
@@ -87,14 +87,14 @@ class _TTLCache :
 _cache =_TTLCache (maxsize =512 )
 
 
-def cached_reимя_json (path ,ttl =5.0 ,default =None ):
+def cached_read_json (path ,ttl =5.0 ,default =None ):
     """Dosyayi TTL onbellдобавить. Длительность doldugunda новыйden okur."""
     if ttl <=0 :
-        return reимя_json (path ,default )
+        return read_json (path ,default )
     key =('json',os .path .abspath (path ),os .path .getmtime (path )if os .path .exists (path )else 0 )
     v =_cache .get (key ,ttl )
     if v is None :
-        v =reимя_json (path ,default )
+        v =read_json (path ,default )
         if v is not None :
             _cache .set (key ,v ,ttl )
     return v 
@@ -110,18 +110,18 @@ def invalidate_path (path ):
 
 
                 # ── ETag helpers (saf, Flask'siz) ─────────────────────────────────────────────
-def make_etag (payloимя ):
+def make_etag (payload ):
     """Слабый (weak) ETag создать. JSON dump etmeden быстрый sekilde."""
     try :
         h =hashlib .md5 ()
-        if isinstance (payloимя ,(list ,tuple )):
-            for item in payloимя :
+        if isinstance (payload ,(list ,tuple )):
+            for item in payload :
                 _etag_hash_item (h ,item )
-        elif isinstance (payloимя ,dict ):
-            for k in sorted (payloимя .keys ()):
-                _etag_hash_item (h ,(k ,payloимя [k ]))
+        elif isinstance (payload ,dict ):
+            for k in sorted (payload .keys ()):
+                _etag_hash_item (h ,(k ,payload [k ]))
         else :
-            _etag_hash_item (h ,payloимя )
+            _etag_hash_item (h ,payload )
             # Werkzeug'un set_etag'i "W/<etag>" или "<etag>" seklinde принять eder;
             # tirnak icermeyen weak prefix kullaniyoruz.
         return 'W/'+h .hexdigest ()
@@ -182,7 +182,7 @@ class PeriodicFlush :
 
     def _flush (self ,items ):
         try :
-            existing =reимя_json (self ._path ,default =[])
+            existing =read_json (self ._path ,default =[])
             if not isinstance (existing ,list ):
                 existing =[]
             existing .extend (items )

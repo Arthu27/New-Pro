@@ -44,7 +44,7 @@ var selectedGuild = '{{ main_guild_id }}';
 
 async function init() {
   var r = await fetch('/api/guilds');
-  var guilds = await r.jпоследний();
+  var guilds = await r.json();
   if(guilds.length) selectedGuild = guilds[0].id;
   loadAllNotes();
 }
@@ -53,22 +53,22 @@ async function searchMember() {
   var q = document.getElementById('search-id').value.trim();
   if(!q || !selectedGuild) return;
   var r = await fetch('/api/guild/'+selectedGuild+'/members');
-  var members = await r.jпоследний();
+  var members = await r.json();
   var found = members.find(function(m){
-    return m.id===q || m.name.toLowerCase().includes(q.toLowerCase()) || m.displмесяц_name.toLowerCase().includes(q.toLowerCase());
+    return m.id===q || m.name.toLowerCase().includes(q.toLowerCase()) || m.display_name.toLowerCase().includes(q.toLowerCase());
   });
   if(!found) { alert('Участник не найдено.'); return; }
   currentMemberId = found.id;
   document.getElementById('res-avatar').src = found.avatar;
-  document.getElementById('res-name').textContent = found.displмесяц_name;
+  document.getElementById('res-name').textContent = found.display_name;
   document.getElementById('res-id').textContent = found.id;
-  document.getElementById('member-result').style.displмесяц = 'block';
+  document.getElementById('member-result').style.display = 'block';
   loadNotes(found.id);
 }
 
 async function loadNotes(id) {
   var r = await fetch('/api/member-notes/'+id);
-  var notes = await r.jпоследний();
+  var notes = await r.json();
   document.getElementById('notes-list').innerHTML = notes.length ?
     notes.map(function(n){
       return '<div class="note-item"><div class="note-text">'+n.text+'</div>'+
@@ -82,23 +82,23 @@ async function addNote() {
   var text = document.getElementById('new-note').value.trim();
   if(!text || !currentMemberId) return;
   var r = await fetch('/api/member-notes/'+currentMemberId+'/add', {
-    method:'POST', headers:{'Content-Type':'application/jпоследний'},
+    method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({text:text})
   });
-  var d = await r.jпоследний();
+  var d = await r.json();
   if(d.success) { document.getElementById('new-note').value=''; loadNotes(currentMemberId); loadAllNotes(); }
   else alert('❌ '+(d.error||'Ошибка'));
 }
 
 async function deleteNote(noteId, memberId) {
   var r = await fetch('/api/member-notes/'+memberId+'/'+noteId+'/delete', {method:'POST'});
-  var d = await r.jпоследний();
+  var d = await r.json();
   if(d.success) loadNotes(memberId);
 }
 
 async function loadAllNotes() {
   var r = await fetch('/api/member-notes');
-  var all = await r.jпоследний();
+  var all = await r.json();
   var box = document.getElementById('all-notes');
   if(!all.length) { box.innerHTML='<div class="empty-state"><i class="fas fa-sticky-note"   style="opacity: 0.3; margin-bottom: 10px;"></i>Пока заметок нет.</div>'; return; }
   box.innerHTML = all.map(function(entry){

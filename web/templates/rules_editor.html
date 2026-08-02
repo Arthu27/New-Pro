@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Редактор правил - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-scрольl"   style="animation: pulse 2s infinite;"></i> ПРАВИЛА СЕРВЕРА{% endblock %}
+{% block page_title %}<i class="fas fa-scroll"   style="animation: pulse 2s infinite;"></i> ПРАВИЛА СЕРВЕРА{% endblock %}
 {% block content %}
 {% block page_hero %}
 <div class="page-hero compact">
@@ -55,19 +55,19 @@ async function loadGuilds() {
   if (document.getElementById('guildSelect')) document.getElementById('guildSelect').value = gid;
   if (typeof loadData === 'function') { loadData(gid); return; }
   if (typeof loadAll === 'function') { loadAll(gid); return; }
-  if (typeof loadРольes === 'function') { loadРольes(gid); return; }
+  if (typeof loadRoles === 'function') { loadRoles(gid); return; }
   if (typeof loadChannels === 'function') { loadChannels(gid); return; }
   if (typeof loadMembers === 'function') { loadMembers(gid); return; }
   if (typeof loadHistory === 'function') { loadHistory(gid); return; }
-  if (typeof loadЛогs === 'function') { loadЛогs(gid); return; }
+  if (typeof loadLogs === 'function') { loadLogs(gid); return; }
   if (typeof loadVoiceStats === 'function') { loadVoiceStats(gid); return; }
   if (typeof loadSettings === 'function') { loadSettings(gid); return; }
-  if (typeof loadGiveawмесяцs === 'function') { loadGiveawмесяцs(gid); return; }
+  if (typeof loadGiveaways === 'function') { loadGiveaways(gid); return; }
   if (typeof loadPolls === 'function') { loadPolls(gid); return; }
   if (typeof loadEconomy === 'function') { loadEconomy(gid); return; }
   if (typeof loadSuggestions === 'function') { loadSuggestions(gid); return; }
   if (typeof loadInvites === 'function') { loadInvites(gid); return; }
-  if (typeof loadHeнизh === 'function') { loadHeнизh(gid); return; }
+  if (typeof loadHealth === 'function') { loadHealth(gid); return; }
   if (typeof loadAnalytics === 'function') { loadAnalytics(gid); return; }
 
 }
@@ -76,13 +76,13 @@ async function loadRules() {
   selectedGuild = document.getElementById('guild-select').value;
   if(!selectedGuild) return;
   var [rRes, chRes] = await Promise.all([
-    fetch('/api/guild/'+selectedGuild+'/rules').then(r=>r.jпоследний()),
-    fetch('/api/guild/'+selectedGuild+'/channels').then(r=>r.jпоследний())
+    fetch('/api/guild/'+selectedGuild+'/rules').then(r=>r.json()),
+    fetch('/api/guild/'+selectedGuild+'/channels').then(r=>r.json())
   ]);
-  rules = Arrмесяц.isArrмесяц(rRes) ? rRes : [];
+  rules = Array.isArray(rRes) ? rRes : [];
   var chSel = document.getElementById('rules-channel');
   chSel.innerHTML = '<option value="">Выберите канал...</option>';
-  var channels = Arrмесяц.isArrмесяц(chRes) ? chRes : (chRes.channels||[]);
+  var channels = Array.isArray(chRes) ? chRes : (chRes.channels||[]);
   channels.filter(function(c){return c.type==='text';}).forEach(function(c){
     chSel.innerHTML += '<option value="'+c.id+'">#'+c.name+'</option>';
   });
@@ -117,7 +117,7 @@ function removeRule(i) { rules.splice(i,1); renderRules(); }
 function updatePreview() {
   var box = document.getElementById('preview');
   if(!rules.length) { box.innerHTML='<p >Правило yok.</p>'; return; }
-  box.innerHTML = '<div ><i class="fas fa-scрольl"></i> Сервер Правила</div>'+
+  box.innerHTML = '<div ><i class="fas fa-scroll"></i> Сервер Правила</div>'+
     rules.map(function(r,i){
       return '<div class="preview-rule"><span>'+(i+1)+'.</span>'+r+'</div>';
     }).join('');
@@ -126,10 +126,10 @@ function updatePreview() {
 async function saveRules() {
   if(!selectedGuild) { alert('Сервер выбрать!'); return; }
   var r = await fetch('/api/guild/'+selectedGuild+'/rules', {
-    method:'POST', headers:{'Content-Type':'application/jпоследний'},
+    method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify(rules)
   });
-  var d = await r.jпоследний();
+  var d = await r.json();
   var btn = event.target;
   if(d.success) { btn.textContent='✅ Сохранено!'; setTimeout(function(){btn.innerHTML='<i class="fas fa-save"></i> Сохранить';},2000); }
 }
@@ -140,10 +140,10 @@ async function publishRules() {
   if(!ch) { alert('Выберите канал!'); return; }
   if(!rules.length) { alert('До правило добавить!'); return; }
   var r = await fetch('/api/guild/'+selectedGuild+'/rules/publish', {
-    method:'POST', headers:{'Content-Type':'application/jпоследний'},
+    method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({channel_id:ch, rules:rules})
   });
-  var d = await r.jпоследний();
+  var d = await r.json();
   var btn = event.target;
   if(d.success) { btn.textContent='✅ Опубликовано!'; setTimeout(function(){btn.innerHTML='<i class="fas fa-paper-plane"></i> Discord\'a Опубликовать';},2000); }
   else alert('❌ '+(d.error||'Ошибка'));

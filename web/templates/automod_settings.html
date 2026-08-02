@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Автомодерация — Aether{% endblock %}
-{% block page_title %}<i class="fas fa-shield-низ" ></i> Автомодерация{% endblock %}
+{% block page_title %}<i class="fas fa-shield-alt" ></i> Автомодерация{% endblock %}
 {% block content %}
 {% block page_hero %}
 <div class="page-hero compact">
@@ -17,20 +17,20 @@
 
 
 
-<div class="autoмод-grid">
+<div class="automod-grid">
   <div class="am-card">
     <div class="am-head">
-      <div class="am-icon"><i class="fas fa-бан"></i></div>
+      <div class="am-icon"><i class="fas fa-ban"></i></div>
       <div class="am-title">Запрещённые слова</div>
       <div class="am-toggle on" id="tog-badwords"></div>
     </div>
     <div class="form-row">
       <label>Действие</label>
       <select id="action-badwords">
-        <option value="варн">Варн</option>
-        <option value="мут">Мьют</option>
-        <option value="кик">Кик</option>
-        <option value="бан">Бан</option>
+        <option value="warn">Варн</option>
+        <option value="mut">Мьют</option>
+        <option value="kick">Кик</option>
+        <option value="ban">Бан</option>
       </select>
     </div>
     <label class="form-label"   style="margin-top: 6px;">Список слов (по одному в строке)</label>
@@ -50,9 +50,9 @@
     <div class="form-row"><label>За (сек)</label><input type="number" id="spam-window" value="10" min="1"></div>
     <div class="form-row"><label>Действие</label>
       <select id="spam-action">
-        <option value="варн">Варн</option>
-        <option value="мут">Мьют (10 min)</option>
-        <option value="кик">Кик</option>
+        <option value="warn">Варн</option>
+        <option value="mut">Мьют (10 min)</option>
+        <option value="kick">Кик</option>
       </select>
     </div>
     <div class="am-actions">
@@ -69,8 +69,8 @@
     <div class="form-row"><label>Действие</label>
       <select id="antilink-action">
         <option value="delete">Удалить + Варн</option>
-        <option value="мут">Мьют</option>
-        <option value="бан">Бан</option>
+        <option value="mut">Мьют</option>
+        <option value="ban">Бан</option>
       </select>
     </div>
     <div class="form-row"><label>Whitelist</label>
@@ -90,7 +90,7 @@
     <div class="form-row"><label>Макс % caps</label><input type="number" id="caps-percent" value="70" min="20" max="100"></div>
     <div class="form-row"><label>Мин. длина</label><input type="number" id="caps-minlen" value="10" min="3"></div>
     <div class="form-row"><label>Действие</label>
-      <select id="caps-action"><option value="варн">Варн</option><option value="мут">Мьют</option></select>
+      <select id="caps-action"><option value="warn">Варн</option><option value="mut">Мьют</option></select>
     </div>
     <div class="am-actions">
       <button class="btn btn-primary" id="save-anticaps" type="button"><i class="fas fa-save"></i> Сохранить</button>
@@ -105,9 +105,9 @@
     </div>
     <div class="form-row"><label>Действие</label>
       <select id="antiinvite-action">
-        <option value="варн">Варн</option>
-        <option value="мут">Мьют</option>
-        <option value="бан">Бан</option>
+        <option value="warn">Варн</option>
+        <option value="mut">Мьют</option>
+        <option value="ban">Бан</option>
       </select>
     </div>
     <div class="form-row"><label>Whitelist</label>

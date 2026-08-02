@@ -30,9 +30,9 @@
 
 <div class="mh-stats">
   <div class="mh-stat"><div class="mh-stat-num total" id="stat-total">-</div><div class="mh-stat-lbl">Всего</div></div>
-  <div class="mh-stat"><div class="mh-stat-num danger" id="stat-банs">-</div><div class="mh-stat-lbl">Банов</div></div>
-  <div class="mh-stat"><div class="mh-stat-num accent" id="mh-кикs">-</div><div class="mh-stat-lbl">Киков</div></div>
-  <div class="mh-stat"><div class="mh-stat-num варн" id="mh-варнs">-</div><div class="mh-stat-lbl">Варнов</div></div>
+  <div class="mh-stat"><div class="mh-stat-num danger" id="stat-bans">-</div><div class="mh-stat-lbl">Банов</div></div>
+  <div class="mh-stat"><div class="mh-stat-num accent" id="mh-kicks">-</div><div class="mh-stat-lbl">Киков</div></div>
+  <div class="mh-stat"><div class="mh-stat-num warn" id="mh-warns">-</div><div class="mh-stat-lbl">Варнов</div></div>
 </div>
 
 <div class="mh-box">
@@ -52,34 +52,34 @@
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
   var cases = [
-    { id: 1, action: 'Бан', user: 'User1', мод: 'Мод1', reaпоследний: 'Реклама', date: '2 дн назад' },
-    { id: 2, action: 'Варн', user: 'User2', мод: 'Мод2', reaпоследний: 'Спам', date: '3 дн назад' },
-    { id: 3, action: 'Кик', user: 'User3', мод: 'Мод1', reaпоследний: 'Оскорбление', date: '4 дн назад' },
-    { id: 4, action: 'Мьют', user: 'User4', мод: 'Мод2', reaпоследний: 'CAPS', date: '5 дн назад' }
+    { id: 1, action: 'Бан', user: 'User1', мод: 'Mod1', reason: 'Реклама', date: '2 дн назад' },
+    { id: 2, action: 'Варн', user: 'User2', мод: 'Mod2', reason: 'Спам', date: '3 дн назад' },
+    { id: 3, action: 'Кик', user: 'User3', мод: 'Mod1', reason: 'Оскорбление', date: '4 дн назад' },
+    { id: 4, action: 'Мьют', user: 'User4', мод: 'Mod2', reason: 'CAPS', date: '5 дн назад' }
   ];
-  var colorMap = { Бан: 'var(--err)', Кик: 'var(--orange)', Варн: 'var(--варн)', Мьют: 'var(--варн)' };
+  var colorMap = { Бан: 'var(--err)', Кик: 'var(--orange)', Варн: 'var(--warn)', Мьют: 'var(--warn)' };
 
   function render() {
     var q = ($('search').value || '').toLowerCase();
     var f = $('filter').value;
     var list = cases.filter(function (c) {
       if (f && c.action !== f) return false;
-      if (q && ((c.user + ' ' + c.мод + ' ' + c.reaпоследний).toLowerCase().indexOf(q) === -1)) return false;
+      if (q && ((c.user + ' ' + c.mod + ' ' + c.reason).toLowerCase().indexOf(q) === -1)) return false;
       return true;
     });
     $('mh-count').textContent = list.length + ' / ' + cases.length;
     $('stat-total').textContent = cases.length;
-    $('stat-банs').textContent = cases.filter(function (c) { return c.action === 'Бан'; }).length;
-    $('mh-кикs').textContent = cases.filter(function (c) { return c.action === 'Кик'; }).length;
-    $('mh-варнs').textContent = cases.filter(function (c) { return c.action === 'Варн'; }).length;
+    $('stat-bans').textContent = cases.filter(function (c) { return c.action === 'Бан'; }).length;
+    $('mh-kicks').textContent = cases.filter(function (c) { return c.action === 'Кик'; }).length;
+    $('mh-warns').textContent = cases.filter(function (c) { return c.action === 'Варн'; }).length;
     if (!list.length) { $('mh-body').innerHTML = '<p class="empty"><i class="fas fa-inbox"></i>Кейсов нет</p>'; return; }
     var rows = list.map(function (c) {
       var c1 = colorMap[c.action] || 'var(--text-3)';
       return '<tr><td><span class="case-badge" >#' + c.id + '</span></td>' +
         '<td><span class="case-badge" >' + c.action + '</span></td>' +
         '<td >' + esc(c.user) + '</td>' +
-        '<td >' + esc(c.мод) + '</td>' +
-        '<td   style="max-width: 180px; overflow: hidden;">' + esc(c.reaпоследний) + '</td>' +
+        '<td >' + esc(c.mod) + '</td>' +
+        '<td   style="max-width: 180px; overflow: hidden;">' + esc(c.reason) + '</td>' +
         '<td >' + esc(c.date) + '</td></tr>';
     }).join('');
     $('mh-body').innerHTML = '<table><thead><tr><th>ID</th><th>Действие</th><th>Пользователь</th><th>Модер.</th><th>Причина</th><th>Дата</th></tr></thead><tbody>' + rows + '</tbody></table>';

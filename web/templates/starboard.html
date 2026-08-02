@@ -33,35 +33,35 @@
 <div class="section">
   <div class="bs-title"><i class="fas fa-cogs"></i> Настройки Starboard</div>
   
-  <div style="displмесяц: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
     <div>
-      <label style="displмесяц: block; margin-bottom: 8px; color: var(--text-мутd); font-size: 13px;">Статус</label>
-      <label style="displмесяц: flex; align-items: center; gap: 12px; cursor: pointer;">
+      <label style="display: block; margin-bottom: 8px; color: var(--text-muted); font-size: 13px;">Статус</label>
+      <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
         <input type="checkbox" id="sb-enabled" style="width: 20px; height: 20px; cursor: pointer;">
         <span style="color: var(--text-primary);">Включить Starboard</span>
       </label>
     </div>
     
     <div>
-      <label style="displмесяц: block; margin-bottom: 8px; color: var(--text-мутd); font-size: 13px;">Канал Starboard</label>
+      <label style="display: block; margin-bottom: 8px; color: var(--text-muted); font-size: 13px;">Канал Starboard</label>
       <select id="sb-channel" class="form-input"></select>
     </div>
   </div>
   
-  <div style="displмесяц: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px;">
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px;">
     <div>
-      <label style="displмесяц: block; margin-bottom: 8px; color: var(--text-мутd); font-size: 13px;">Минимальное число звёзд</label>
+      <label style="display: block; margin-bottom: 8px; color: var(--text-muted); font-size: 13px;">Минимальное число звёзд</label>
       <input type="number" id="sb-threshold" class="form-input" value="3" min="1">
     </div>
     
     <div>
-      <label style="displмесяц: block; margin-bottom: 8px; color: var(--text-мутd); font-size: 13px;">Эмодзи звезды</label>
+      <label style="display: block; margin-bottom: 8px; color: var(--text-muted); font-size: 13px;">Эмодзи звезды</label>
       <input type="text" id="sb-emoji" class="form-input" value="⭐" maxlength="2">
     </div>
   </div>
   
   <div style="margin-top: 20px;">
-    <button class="contроль-btn primary" onclick="saveStarboard()" style="width: 100%; padding: 12px;">
+    <button class="control-btn primary" onclick="saveStarboard()" style="width: 100%; padding: 12px;">
       <i class="fas fa-save"></i> Сохранить настройки
     </button>
     <div id="sb-status" style="margin-top: 10px; text-align: center;"></div>
@@ -71,7 +71,7 @@
 <div class="section">
   <div class="bs-title"><i class="fas fa-trophy"></i> Самые звёздные сообщения</div>
   <div id="star-list" style="max-height: 600px; overflow-y: auto;">
-    <p style="text-align: center; color: var(--text-мутd); padding: 40px;">
+    <p style="text-align: center; color: var(--text-muted); padding: 40px;">
       <i class="fas fa-spinner fa-spin"></i> Загрузка...
     </p>
   </div>
@@ -92,12 +92,12 @@ async function loadStarboard() {
   if (!selectedGuild) return;
   
   var [settings, entries, chRes] = await Promise.all([
-    fetch('/api/guild/'+selectedGuild+'/starboard/settings').then(r=>r.jпоследний()),
-    fetch('/api/guild/'+selectedGuild+'/starboard').then(r=>r.jпоследний()),
-    fetch('/api/guild/'+selectedGuild+'/channels').then(r=>r.jпоследний())
+    fetch('/api/guild/'+selectedGuild+'/starboard/settings').then(r=>r.json()),
+    fetch('/api/guild/'+selectedGuild+'/starboard').then(r=>r.json()),
+    fetch('/api/guild/'+selectedGuild+'/channels').then(r=>r.json())
   ]);
   
-  var channels = Arrмесяц.isArrмесяц(chRes) ? chRes : (chRes.channels || []);
+  var channels = Array.isArray(chRes) ? chRes : (chRes.channels || []);
   document.getElementById('sb-channel').innerHTML = channels.filter(c=>c.type==='text').map(c=>'<option value="'+c.id+'"'+(settings.channel_id==c.id?' selected':'')+'">#'+c.name+'</option>').join('');
   document.getElementById('sb-enabled').checked = settings.enabled || false;
   document.getElementById('sb-threshold').value = settings.min_stars || settings.threshold || 3;
@@ -114,22 +114,22 @@ async function loadStarboard() {
 
   var box = document.getElementById('star-list');
   if (!entries || !entries.length) {
-    box.innerHTML = '<p style="text-align: center; color: var(--text-мутd); padding: 40px;">Пока нет звёздных сообщений</p>';
+    box.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 40px;">Пока нет звёздных сообщений</p>';
     return;
   }
   
   box.innerHTML = entries.slice(0,10).map(function(e, i) {
-    return '<div style="displмесяц: flex; align-items: start; padding: 16px; border-bottom: 1px левоid rgba(255,255,255,0.05); gap: 12px;">' +
-      '<div style="width: 50px; height: 50px; border-radius: 8px; background: linear-gradient(135deg, #ffd700, #ffed4e); displмесяц: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0;">⭐</div>' +
+    return '<div style="display: flex; align-items: start; padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.05); gap: 12px;">' +
+      '<div style="width: 50px; height: 50px; border-radius: 8px; background: linear-gradient(135deg, #ffd700, #ffed4e); display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0;">⭐</div>' +
       '<div style="flex: 1;">' +
-        '<div style="displмесяц: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">' +
+        '<div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">' +
           '<div style="font-weight: 600; color: var(--text-primary);">' + (e.author || 'Неизвестный') + '</div>' +
           '<div style="background: rgba(255,215,0,0.2); color: #ffd700; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">⭐ ' + (e.count || 0) + ' ' + pluralize(e.count || 0, 'звезда', 'звезды', 'звёзд') + '</div>' +
         '</div>' +
         '<div style="color: var(--text-secondary); margin-bottom: 8px; line-height: 1.5;">' + (e.content || '*[Вложение/Embed]*') + '</div>' +
-        '<div style="displмесяц: flex; gap: 16px; font-size: 12px; color: var(--text-мутd);">' +
+        '<div style="display: flex; gap: 16px; font-size: 12px; color: var(--text-muted);">' +
           '<span><i class="fas fa-hashtag"></i> ' + (e.channel || 'Неизвестный') + '</span>' +
-          (e.jump_url ? '<a href="' + e.jump_url + '" target="_blank" style="color: var(--accent); text-decoration: none;"><i class="fas fa-external-link-низ"></i> Перейти к сообщению</a>' : '') +
+          (e.jump_url ? '<a href="' + e.jump_url + '" target="_blank" style="color: var(--accent); text-decoration: none;"><i class="fas fa-external-link-alt"></i> Перейти к сообщению</a>' : '') +
         '</div>' +
       '</div>' +
     '</div>';
@@ -137,11 +137,11 @@ async function loadStarboard() {
 }
 
 function pluralize(n, one, few, many) {
-  var мод10 = n % 10;
-  var мод100 = n % 100;
-  if (мод100 >= 11 && мод100 <= 19) return many;
-  if (мод10 === 1) return one;
-  if (мод10 >= 2 && мод10 <= 4) return few;
+  var mod10 = n % 10;
+  var mod100 = n % 100;
+  if (mod100 >= 11 && mod100 <= 19) return many;
+  if (mod10 === 1) return one;
+  if (mod10 >= 2 && mod10 <= 4) return few;
   return many;
 }
 
@@ -152,7 +152,7 @@ async function saveStarboard() {
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Сохранение...';
   
   var r = await fetch('/api/guild/'+selectedGuild+'/starboard/settings', {
-    method:'POST', headers:{'Content-Type':'application/jпоследний'},
+    method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({
       enabled: document.getElementById('sb-enabled').checked,
       channel_id: document.getElementById('sb-channel').value,
@@ -160,7 +160,7 @@ async function saveStarboard() {
       emoji: document.getElementById('sb-emoji').value
     })
   });
-  var d = await r.jпоследний();
+  var d = await r.json();
   btn.innerHTML = '<i class="fas fa-save"></i> Сохранить настройки';
   btn.disabled = false;
   

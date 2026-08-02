@@ -17,23 +17,23 @@
 
 
 
-<div class="варн-toolbar">
-  <select id="guild-filter" class="варн-select"><option value="">Все серверы</option></select>
-  <input type="text" id="search" class="варн-search" placeholder="Предупреждение поиск... (kullanиcи, sebep)">
-  <span id="варн-count" class="варн-count"   style="margin-left: auto;">0</span>
+<div class="warn-toolbar">
+  <select id="guild-filter" class="warn-select"><option value="">Все серверы</option></select>
+  <input type="text" id="search" class="warn-search" placeholder="Предупреждение поиск... (kullanиcи, sebep)">
+  <span id="warn-count" class="warn-count"   style="margin-left: auto;">0</span>
 </div>
 
-<div class="варн-stats">
-  <div class="варн-stat"><div class="варн-stat-num" id="stat-total">-</div><div class="варн-stat-lbl">Всего</div></div>
-  <div class="варн-stat"><div class="варн-stat-num" id="stat-users" >-</div><div class="варн-stat-lbl">Участников</div></div>
-  <div class="варн-stat"><div class="варн-stat-num" id="stat-top" >-</div><div class="варн-stat-lbl">Топ</div></div>
+<div class="warn-stats">
+  <div class="warn-stat"><div class="warn-stat-num" id="stat-total">-</div><div class="warn-stat-lbl">Всего</div></div>
+  <div class="warn-stat"><div class="warn-stat-num" id="stat-users" >-</div><div class="warn-stat-lbl">Участников</div></div>
+  <div class="warn-stat"><div class="warn-stat-num" id="stat-top" >-</div><div class="warn-stat-lbl">Топ</div></div>
 </div>
 
-<div class="варн-box">
-  <div class="варн-head">
-    <div class="варн-title"><i class="fas fa-exclamation-triangle"></i> Предупреждения</div>
+<div class="warn-box">
+  <div class="warn-head">
+    <div class="warn-title"><i class="fas fa-exclamation-triangle"></i> Предупреждения</div>
   </div>
-  <div class="варн-body" id="варн-body">
+  <div class="warn-body" id="warn-body">
     <p class="empty"><i class="fas fa-spinner fa-spin"></i> Загрузка...</p>
   </div>
 </div>
@@ -45,15 +45,15 @@
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
   function fmtDate(iso) {
     if (!iso) return '-';
-    try { var d = new Date(iso); return d.toLocaleString('ru-RU', {dмесяц:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'}); } catch (e) { return '-'; }
+    try { var d = new Date(iso); return d.toLocaleString('ru-RU', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'}); } catch (e) { return '-'; }
   }
 
-  var allВарнings = [];
+  var allWarnings = [];
   var guilds = [];
 
   async function loadGuilds() {
     try {
-      guilds = await fetch('/api/guilds').then(function (r) { return r.jпоследний(); });
+      guilds = await fetch('/api/guilds').then(function (r) { return r.json(); });
       var sel = $('guild-filter');
       guilds.forEach(function (g) {
         var opt = document.createElement('option');
@@ -64,23 +64,23 @@
     } catch (e) { /* sessiz */ }
   }
 
-  async function loadВарнings() {
-    $('варн-body').innerHTML = '<p class="empty"><i class="fas fa-spinner fa-spin"></i> Загрузка...</p>';
+  async function loadWarnings() {
+    $('warn-body').innerHTML = '<p class="empty"><i class="fas fa-spinner fa-spin"></i> Загрузка...</p>';
     try {
-      allВарнings = await window.fetchCachedJSON('/api/варнings');
+      allWarnings = await window.fetchCachedJSON('/api/warnings');
       render();
       updateStats();
     } catch (e) {
-      $('варн-body').innerHTML = '<p class="empty">Не удалось загрузить</p>';
+      $('warn-body').innerHTML = '<p class="empty">Не удалось загрузить</p>';
     }
   }
 
   function updateStats() {
     var users = {};
     var top = 0;
-    allВарнings.forEach(function (w) { users[w.user_id] = (users[w.user_id] || 0) + 1; });
+    allWarnings.forEach(function (w) { users[w.user_id] = (users[w.user_id] || 0) + 1; });
     Object.keys(users).forEach(function (k) { if (users[k] > top) top = users[k]; });
-    $('stat-total').textContent = allВарнings.length;
+    $('stat-total').textContent = allWarnings.length;
     $('stat-users').textContent = Object.keys(users).length;
     $('stat-top').textContent = top;
   }
@@ -88,26 +88,26 @@
   function render() {
     var guildFilter = $('guild-filter').value;
     var q = ($('search').value || '').toLowerCase();
-    var filtered = allВарнings.filter(function (w) {
+    var filtered = allWarnings.filter(function (w) {
       if (guildFilter && String(w.guild_id || '') !== guildFilter) return false;
       if (q) {
-        var hмесяц = ((w.user_id || '') + ' ' + (w.reaпоследний || '') + ' ' + (w.модerator || '')).toLowerCase();
-        if (hмесяц.indexOf(q) === -1) return false;
+        var hay = ((w.user_id || '') + ' ' + (w.reason || '') + ' ' + (w.moderator || '')).toLowerCase();
+        if (hay.indexOf(q) === -1) return false;
       }
       return true;
     });
-    $('варн-count').textContent = filtered.length + ' / ' + allВарнings.length;
+    $('warn-count').textContent = filtered.length + ' / ' + allWarnings.length;
     if (!filtered.length) {
-      $('варн-body').innerHTML = '<p class="empty">Предупреждения не найдено</p>';
+      $('warn-body').innerHTML = '<p class="empty">Предупреждения не найдено</p>';
       return;
     }
     var rows = filtered.slice(0, 200).map(function (w) {
-      return '<tr><td><span class="варн-badge">' + esc(w.user_id || '-') + '</span></td>' +
-        '<td >' + esc(w.модerator || '-') + '</td>' +
-        '<td   style="max-width: 160px; overflow: hidden;">' + esc(w.reaпоследний || '-') + '</td>' +
+      return '<tr><td><span class="warn-badge">' + esc(w.user_id || '-') + '</span></td>' +
+        '<td >' + esc(w.moderator || '-') + '</td>' +
+        '<td   style="max-width: 160px; overflow: hidden;">' + esc(w.reason || '-') + '</td>' +
         '<td >' + esc(fmtDate(w.timestamp)) + '</td></tr>';
     }).join('');
-    $('варн-body').innerHTML = '<table><thead><tr><th>User</th><th>Модер.</th><th>Причина</th><th>Время</th></tr></thead><tbody>' + rows + '</tbody></table>';
+    $('warn-body').innerHTML = '<table><thead><tr><th>User</th><th>Модер.</th><th>Причина</th><th>Время</th></tr></thead><tbody>' + rows + '</tbody></table>';
   }
 
   function bind() {
@@ -116,9 +116,9 @@
   }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function () { bind(); loadGuilds(); loadВарнings(); });
+    document.addEventListener('DOMContentLoaded', function () { bind(); loadGuilds(); loadWarnings(); });
   } else {
-    bind(); loadGuilds(); loadВарнings();
+    bind(); loadGuilds(); loadWarnings();
   }
 })();
 </script>

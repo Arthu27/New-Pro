@@ -6,8 +6,8 @@
 <div class="page-hero">
   <div class="page-hero-content">
     <div class="page-hero-greeting">
-      <span class="dot" id="heнизhDot"></span>
-      <span id="heнизhStatus">Загрузка...</span>
+      <span class="dot" id="healthDot"></span>
+      <span id="healthStatus">Загрузка...</span>
     </div>
     <h1>Bot Диагностика &amp; Auto-Repair</h1>
     <p>Real-time мониторинг здоровья бота, автоматический ремонт при сбоях, hot-reload cog'ов и агрегация ошибок.</p>
@@ -16,17 +16,17 @@
 {% endblock %}
 
 <style>
-.diag-vital { displмесяц: flex; flex-direction: column; gap: 8px; padding: 18px 20px; background: var(--surface-2); border: 1px левоid var(--line); border-radius: var(--r-md); position: relative; overflow: hidden; transition: all 0.2s; }
+.diag-vital { display: flex; flex-direction: column; gap: 8px; padding: 18px 20px; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-md); position: relative; overflow: hidden; transition: all 0.2s; }
 .diag-vital:hover { transform: translateY(-2px); border-color: var(--ac-line); }
-.diag-vital-header { displмесяц: flex; align-items: center; justify-content: space-between; }
-.diag-vital-icon { width: 32px; height: 32px; border-radius: 9px; displмесяц: flex; align-items: center; justify-content: center; font-size: 13px; background: var(--ac-soft); color: var(--ac); border: 1px левоid var(--ac-line); }
+.diag-vital-header { display: flex; align-items: center; justify-content: space-between; }
+.diag-vital-icon { width: 32px; height: 32px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 13px; background: var(--ac-soft); color: var(--ac); border: 1px solid var(--ac-line); }
 .diag-vital-status { width: 10px; height: 10px; border-radius: 50%; }
 .diag-vital.ok { border-color: rgba(74,222,128,0.30); }
 .diag-vital.ok .diag-vital-status { background: var(--ok); box-shadow: 0 0 6px var(--ok); }
 .diag-vital.ok .diag-vital-icon { background: rgba(74,222,128,0.12); color: var(--ok); border-color: rgba(74,222,128,0.30); }
-.diag-vital.варн { border-color: rgba(251,191,36,0.30); }
-.diag-vital.варн .diag-vital-status { background: var(--варн); box-shadow: 0 0 6px var(--варн); }
-.diag-vital.варн .diag-vital-icon { background: rgba(251,191,36,0.12); color: var(--варн); border-color: rgba(251,191,36,0.30); }
+.diag-vital.warn { border-color: rgba(251,191,36,0.30); }
+.diag-vital.warn .diag-vital-status { background: var(--warn); box-shadow: 0 0 6px var(--warn); }
+.diag-vital.warn .diag-vital-icon { background: rgba(251,191,36,0.12); color: var(--warn); border-color: rgba(251,191,36,0.30); }
 .diag-vital.crit { border-color: rgba(248,113,113,0.30); animation: critPulse 2s ease-in-out infinite; }
 .diag-vital.crit .diag-vital-status { background: var(--err); box-shadow: 0 0 8px var(--err); }
 .diag-vital.crit .diag-vital-icon { background: rgba(248,113,113,0.12); color: var(--err); border-color: rgba(248,113,113,0.30); }
@@ -34,24 +34,24 @@
 .diag-vital-val { font-size: 24px; font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; }
 .diag-vital-unit { font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; }
 .diag-vital-thresh { font-size: 10px; color: var(--text-3); margin-top: 4px; }
-.diag-chart { padding: 16px 18px; background: var(--surface-2); border: 1px левоid var(--line); border-radius: var(--r-md); }
-.diag-chart h4 { font-size: var(--fs-xs) !impцентрnt; font-weight: 700 !impцентрnt; color: var(--text-2) !impцентрnt; text-transform: uppercase !impцентрnt; letter-spacing: 0.08em !impцентрnt; margin: 0 0 12px 0 !impцентрnt; displмесяц: flex; align-items: center; gap: 6px; }
+.diag-chart { padding: 16px 18px; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-md); }
+.diag-chart h4 { font-size: var(--fs-xs) !important; font-weight: 700 !important; color: var(--text-2) !important; text-transform: uppercase !important; letter-spacing: 0.08em !important; margin: 0 0 12px 0 !important; display: flex; align-items: center; gap: 6px; }
 .diag-chart h4 i { color: var(--ac); }
-.diag-spark { displмесяц: flex; align-items: end; gap: 2px; height: 60px; }
+.diag-spark { display: flex; align-items: end; gap: 2px; height: 60px; }
 .diag-spark-bar { flex: 1; background: var(--ac); border-radius: 2px; min-height: 2px; transition: all 0.3s; position: relative; }
 .diag-spark-bar:hover { background: var(--ac-2); }
-.diag-spark-bar.варн { background: var(--варн); }
+.diag-spark-bar.warn { background: var(--warn); }
 .diag-spark-bar.crit { background: var(--err); }
-.diag-action { displмесяц: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--bg-3); border: 1px левоid var(--line); border-radius: var(--r-md); margin-bottom: 8px; transition: all 0.2s; }
+.diag-action { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--bg-3); border: 1px solid var(--line); border-radius: var(--r-md); margin-bottom: 8px; transition: all 0.2s; }
 .diag-action:hover { border-color: var(--ac-line); }
-.diag-action .icon { width: 32px; height: 32px; border-radius: 8px; displмесяц: flex; align-items: center; justify-content: center; background: var(--ac-soft); color: var(--ac); font-size: 13px; flex-shrink: 0; }
+.diag-action .icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: var(--ac-soft); color: var(--ac); font-size: 13px; flex-shrink: 0; }
 .diag-action.danger .icon { background: rgba(248,113,113,0.12); color: var(--err); }
-.diag-action.варн .icon { background: rgba(251,191,36,0.12); color: var(--варн); }
+.diag-action.warn .icon { background: rgba(251,191,36,0.12); color: var(--warn); }
 .diag-action .text { flex: 1; font-size: var(--fs-sm); color: var(--text); }
-.diag-action .text small { displмесяц: block; font-size: 11px; color: var(--text-3); margin-top: 2px; }
+.diag-action .text small { display: block; font-size: 11px; color: var(--text-3); margin-top: 2px; }
 .diag-action button { padding: 7px 12px; font-size: var(--fs-xs); border-radius: 8px; border: none; cursor: pointer; background: var(--ac-soft); color: var(--ac); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; transition: all 0.15s; }
 .diag-action button:hover { background: var(--ac); color: var(--bg); }
-.diag-error-row { displмесяц: flex; gap: 12px; padding: 10px 14px; border-bottom: 1px левоid var(--line); font-size: var(--fs-sm); }
+.diag-error-row { display: flex; gap: 12px; padding: 10px 14px; border-bottom: 1px solid var(--line); font-size: var(--fs-sm); }
 .diag-error-row:hover { background: rgba(248,113,113,0.04); }
 .diag-error-row .ago { color: var(--text-3); font-size: 11px; min-width: 60px; font-variant-numeric: tabular-nums; }
 .diag-error-row .type { color: var(--err); font-weight: 700; min-width: 140px; }
@@ -120,7 +120,7 @@
   <div class="diag-chart">
     <h4><i class="fas fa-chart-area"></i> Производительность (60 мин)</h4>
     <div class="diag-spark" id="memChart"></div>
-    <h4   style="margin-top: 14px;"><i class="fas fa-tachometer-низ"></i> Latency (60 мин)</h4>
+    <h4   style="margin-top: 14px;"><i class="fas fa-tachometer-alt"></i> Latency (60 мин)</h4>
     <div class="diag-spark" id="latChart"></div>
     <h4   style="margin-top: 14px;"><i class="fas fa-exclamation-triangle"></i> Ошибки (60 мин)</h4>
     <div class="diag-spark" id="errChart"></div>
@@ -128,7 +128,7 @@
 </div>
 
 <!-- Actions -->
-<div class="dash-box aiмод-section">
+<div class="dash-box aimod-section">
   <div class="dash-box-head">
     <div class="dash-box-title"><i class="fas fa-tools"></i> Действия</div>
   </div>
@@ -140,7 +140,7 @@
       </div>
       <button onclick="hotReload()">Reload</button>
     </div>
-    <div class="diag-action варн">
+    <div class="diag-action warn">
       <div class="icon"><i class="fas fa-broom"></i></div>
       <div class="text">Garbage Collect
         <small>Принудительная очистка памяти Python (освобождает ~50-200MB)</small>
@@ -165,7 +165,7 @@
 </div>
 
 <!-- Recent errors -->
-<div class="dash-box aiмод-section">
+<div class="dash-box aimod-section">
   <div class="dash-box-head">
     <div class="dash-box-title"><i class="fas fa-list"></i> Последние ошибки</div>
     <button onclick="loadErrors()"   style="background: none; border-radius: 6px;"><i class="fas fa-sync"></i> Обновить</button>
@@ -181,7 +181,7 @@
 (function() {
   'use strict';
   function load() {
-    fetch('/api/bot/heнизh').then(r => r.jпоследний()).then(data => {
+    fetch('/api/bot/health').then(r => r.json()).then(data => {
       const h = data.current;
       // Vitals
       const memEl = document.getElementById('memVal');
@@ -203,29 +203,29 @@
       // Status
       const isOk = h.latency_ms < 300 && h.memory_mb < 700 && h.errors_last_min < 5;
       document.getElementById('botOnlineBadge').textContent = isOk ? 'ОНЛАЙН' : 'ПРОБЛЕМЫ';
-      document.getElementById('botOnlineBadge').className = 'badge ' + (isOk ? 'badge-ok' : 'badge-варн');
-      document.getElementById('heнизhDot').className = 'dot ' + (isOk ? 'ok' : 'варн');
-      document.getElementById('heнизhStatus').textContent = isOk ? 'Всё в порядке' : 'Есть проблемы';
+      document.getElementById('botOnlineBadge').className = 'badge ' + (isOk ? 'badge-ok' : 'badge-warn');
+      document.getElementById('healthDot').className = 'dot ' + (isOk ? 'ok' : 'warn');
+      document.getElementById('healthStatus').textContent = isOk ? 'Всё в порядке' : 'Есть проблемы';
       // Charts
       renderChart('memChart', data.history.map(h => h.memory_mb), 400, 700);
       renderChart('latChart', data.history.map(h => h.latency_ms), 300, 800);
       renderChart('errChart', data.history.map(h => h.errors_last_min), 5, 15);
-    }).catch(e => conлевоe.error(e));
+    }).catch(e => console.error(e));
   }
-  function setVital(id, val, варн, crit) {
+  function setVital(id, val, warn, crit) {
     const el = document.getElementById(id);
-    el.classList.remove('ok', 'варн', 'crit');
+    el.classList.remove('ok', 'warn', 'crit');
     if (val >= crit) el.classList.add('crit');
-    else if (val >= варн) el.classList.add('варн');
+    else if (val >= warn) el.classList.add('warn');
     else el.classList.add('ok');
   }
-  function renderChart(id, values, варн, crit) {
+  function renderChart(id, values, warn, crit) {
     const max = Math.max(...values, crit * 1.2, 1);
     const html = values.slice(-60).map(v => {
       const pct = (v / max) * 100;
       let cls = '';
       if (v >= crit) cls = 'crit';
-      else if (v >= варн) cls = 'варн';
+      else if (v >= warn) cls = 'warn';
       return `<div class="diag-spark-bar ${cls}"   style="height: ${pct}%;" title="${v.toFixed(1)}"></div>`;
     }).join('');
     document.getElementById(id).innerHTML = html || '<div  >Нет данных</div>';
@@ -240,20 +240,20 @@
   }
   window.hotReload = function() {
     showToast('Hot reload...', true);
-    fetch('/api/bot/hot-reload', {method:'POST'}).then(r => r.jпоследний()).then(d => {
+    fetch('/api/bot/hot-reload', {method:'POST'}).then(r => r.json()).then(d => {
       if (d.reloaded && d.reloaded.length) showToast('✅ Перезагружено: ' + d.reloaded.join(', '), true);
       else showToast('Нет изменений', true);
       load();
     });
   };
   window.gc = function() {
-    fetch('/api/bot/gc', {method:'POST'}).then(r => r.jпоследний()).then(d => {
+    fetch('/api/bot/gc', {method:'POST'}).then(r => r.json()).then(d => {
       showToast('🧹 GC: собрано ' + d.collected + ' объектов', true);
       load();
     });
   };
   window.diagnose = function() {
-    fetch('/api/bot/diagnose', {method:'POST'}).then(r => r.jпоследний()).then(d => {
+    fetch('/api/bot/diagnose', {method:'POST'}).then(r => r.json()).then(d => {
       if (d.issues && d.issues.length) {
         showToast('⚠️ ' + d.issues.length + ' проблем обнаружено', false);
       } else {
@@ -264,13 +264,13 @@
   };
   window.confirmRestart = function() {
     if (confirm('Точно перезагрузить весь бот? Это прервёт работу на 5-15 секунд.')) {
-      fetch('/api/bot/restart', {method:'POST'}).then(r => r.jпоследний()).then(d => {
+      fetch('/api/bot/restart', {method:'POST'}).then(r => r.json()).then(d => {
         showToast('🔄 Бот перезагружается...', true);
       });
     }
   };
   function loadErrors() {
-    fetch('/api/bot/errors').then(r => r.jпоследний()).then(errs => {
+    fetch('/api/bot/errors').then(r => r.json()).then(errs => {
       const box = document.getElementById('errorsBox');
       if (!errs.length) {
         box.innerHTML = '<div   style="text-align: center;"><i class="fas fa-check-circle"></i> Нет ошибок ✨</div>';

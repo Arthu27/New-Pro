@@ -17,19 +17,19 @@
 
 <div class="app-stats">
   <div class="app-stat">
-    <div class="app-icon" style="background: linear-gradient(135deg, #d4a843, #e0b04a) !impцентрnt;"><i class="fas fa-list"></i></div>
+    <div class="app-icon" style="background: linear-gradient(135deg, #d4a843, #e0b04a) !important;"><i class="fas fa-list"></i></div>
     <div><div class="app-stat-num" id="stat-total">-</div><div class="app-stat-lbl">Всего</div></div>
   </div>
   <div class="app-stat">
-    <div class="app-icon" style="background: linear-gradient(135deg, #fbbf24, #b45309) !impцентрnt;"><i class="fas fa-hourglass-half"></i></div>
+    <div class="app-icon" style="background: linear-gradient(135deg, #fbbf24, #b45309) !important;"><i class="fas fa-hourglass-half"></i></div>
     <div><div class="app-stat-num" id="stat-pending">-</div><div class="app-stat-lbl">Ожидание</div></div>
   </div>
   <div class="app-stat">
-    <div class="app-icon" style="background: linear-gradient(135deg, #4ade80, #16a34a) !impцентрnt;"><i class="fas fa-check-circle"></i></div>
+    <div class="app-icon" style="background: linear-gradient(135deg, #4ade80, #16a34a) !important;"><i class="fas fa-check-circle"></i></div>
     <div><div class="app-stat-num" id="stat-approved">-</div><div class="app-stat-lbl">Одобрено</div></div>
   </div>
   <div class="app-stat">
-    <div class="app-icon" style="background: linear-gradient(135deg, #ef4444, #b91c1c) !impцентрnt;"><i class="fas fa-times-circle"></i></div>
+    <div class="app-icon" style="background: linear-gradient(135deg, #ef4444, #b91c1c) !important;"><i class="fas fa-times-circle"></i></div>
     <div><div class="app-stat-num" id="stat-rejected">-</div><div class="app-stat-lbl">Отклонено</div></div>
   </div>
 </div>
@@ -52,46 +52,46 @@
 </div>
 
 <!-- Модальное окно детального просмотра заявки -->
-<div id="app-модal" class="модal" style="displмесяц: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.8); align-items: center; justify-content: center;">
-  <div class="модal-content" style="background-color: #1a1a20; margin: auto; padding: 28px; border: 1px левоid rgba(255,255,255,0.1); width: 90%; max-width: 650px; border-radius: 14px; color: #fff; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
-    <span class="close-модal" style="color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; position: abлевоute; right: 20px; top: 12px;">&times;</span>
-    <h3 id="модal-user-title" style="margin-top: 0; border-bottom: 1px левоid rgba(255,255,255,0.1); padding-bottom: 12px; color: #139492;"><i class="fas fa-address-card"></i> Детальная анкета кандидата</h3>
+<div id="app-modal" class="modal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.8); align-items: center; justify-content: center;">
+  <div class="modal-content" style="background-color: #1a1a20; margin: auto; padding: 28px; border: 1px solid rgba(255,255,255,0.1); width: 90%; max-width: 650px; border-radius: 14px; color: #fff; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+    <span class="close-modal" style="color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; position: absolute; right: 20px; top: 12px;">&times;</span>
+    <h3 id="modal-user-title" style="margin-top: 0; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px; color: #139492;"><i class="fas fa-address-card"></i> Детальная анкета кандидата</h3>
     
-    <div style="displмесяц: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px; margin-top: 14px;">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px; margin-top: 14px;">
       <div>
-        <label style="font-size: 11px; color: #888; displмесяц: block; text-transform: uppercase;">Имя пользователя</label>
-        <span id="модal-username" style="font-weight: bold; font-size: 17px; color: #fff;"></span>
+        <label style="font-size: 11px; color: #888; display: block; text-transform: uppercase;">Имя пользователя</label>
+        <span id="modal-username" style="font-weight: bold; font-size: 17px; color: #fff;"></span>
       </div>
       <div>
-        <label style="font-size: 11px; color: #888; displмесяц: block; text-transform: uppercase;">Желаемая должность</label>
-        <span id="модal-рольe" class="badge-рольe" style="background-color: #139492; padding: 4px 12px; border-radius: 6px; font-weight: bold; font-size: 13px; displмесяц: inline-block; margin-top: 4px;"></span>
+        <label style="font-size: 11px; color: #888; display: block; text-transform: uppercase;">Желаемая должность</label>
+        <span id="modal-role" class="badge-role" style="background-color: #139492; padding: 4px 12px; border-radius: 6px; font-weight: bold; font-size: 13px; display: inline-block; margin-top: 4px;"></span>
       </div>
     </div>
 
-    <div style="displмесяц: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px; background: rgba(255,255,255,0.03); padding: 14px; border-radius: 8px; border: 1px левоid rgba(255,255,255,0.05);">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px; background: rgba(255,255,255,0.03); padding: 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
       <div>
-        <label style="font-size: 11px; color: #888; displмесяц: block; text-transform: uppercase;">Возраст кандидата</label>
-        <span id="модal-age" style="font-weight: bold; font-size: 15px; color: #3498db;"></span>
+        <label style="font-size: 11px; color: #888; display: block; text-transform: uppercase;">Возраст кандидата</label>
+        <span id="modal-age" style="font-weight: bold; font-size: 15px; color: #3498db;"></span>
       </div>
       <div>
-        <label style="font-size: 11px; color: #888; displмесяц: block; text-transform: uppercase;">Активность на сервере</label>
-        <span id="модal-activity" style="font-weight: bold; font-size: 15px; color: #2ecc71;"></span>
+        <label style="font-size: 11px; color: #888; display: block; text-transform: uppercase;">Активность на сервере</label>
+        <span id="modal-activity" style="font-weight: bold; font-size: 15px; color: #2ecc71;"></span>
       </div>
     </div>
 
     <div style="margin-bottom: 18px;">
-      <label style="font-size: 11px; color: #888; displмесяц: block; margin-bottom: 6px; text-transform: uppercase;">Опыт модерации и администрирования</label>
-      <div id="модal-experience" style="background: rgba(0,0,0,0.3); padding: 14px; border-radius: 8px; font-size: 14px; border: 1px левоid rgba(255,255,255,0.08); white-space: pre-wrap; max-height: 120px; overflow-y: auto; line-height: 1.5; color: #e2e8f0;"></div>
+      <label style="font-size: 11px; color: #888; display: block; margin-bottom: 6px; text-transform: uppercase;">Опыт модерации и администрирования</label>
+      <div id="modal-experience" style="background: rgba(0,0,0,0.3); padding: 14px; border-radius: 8px; font-size: 14px; border: 1px solid rgba(255,255,255,0.08); white-space: pre-wrap; max-height: 120px; overflow-y: auto; line-height: 1.5; color: #e2e8f0;"></div>
     </div>
 
     <div style="margin-bottom: 24px;">
-      <label style="font-size: 11px; color: #888; displмесяц: block; margin-bottom: 6px; text-transform: uppercase;">Почему выбирает именно наш сервер?</label>
-      <div id="модal-reaпоследний" style="background: rgba(0,0,0,0.3); padding: 14px; border-radius: 8px; font-size: 14px; border: 1px левоid rgba(255,255,255,0.08); white-space: pre-wrap; max-height: 120px; overflow-y: auto; line-height: 1.5; color: #e2e8f0;"></div>
+      <label style="font-size: 11px; color: #888; display: block; margin-bottom: 6px; text-transform: uppercase;">Почему выбирает именно наш сервер?</label>
+      <div id="modal-reason" style="background: rgba(0,0,0,0.3); padding: 14px; border-radius: 8px; font-size: 14px; border: 1px solid rgba(255,255,255,0.08); white-space: pre-wrap; max-height: 120px; overflow-y: auto; line-height: 1.5; color: #e2e8f0;"></div>
     </div>
 
-    <div id="модal-decision-box" style="displмесяц: flex; gap: 12px; justify-content: flex-end; border-top: 1px левоid rgba(255,255,255,0.1); padding-top: 18px;">
-      <button class="btn btn-ok" id="btn-модal-approve" style="background: #10b981; border: none; padding: 12px 24px; border-radius: 8px; color: white; cursor: pointer; font-weight: bold; transition: background 0.2s;"><i class="fas fa-check"></i> Одобрить</button>
-      <button class="btn btn-no" id="btn-модal-reject" style="background: #ef4444; border: none; padding: 12px 24px; border-radius: 8px; color: white; cursor: pointer; font-weight: bold; transition: background 0.2s;"><i class="fas fa-times"></i> Отклонить</button>
+    <div id="modal-decision-box" style="display: flex; gap: 12px; justify-content: flex-end; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 18px;">
+      <button class="btn btn-ok" id="btn-modal-approve" style="background: #10b981; border: none; padding: 12px 24px; border-radius: 8px; color: white; cursor: pointer; font-weight: bold; transition: background 0.2s;"><i class="fas fa-check"></i> Одобрить</button>
+      <button class="btn btn-no" id="btn-modal-reject" style="background: #ef4444; border: none; padding: 12px 24px; border-radius: 8px; color: white; cursor: pointer; font-weight: bold; transition: background 0.2s;"><i class="fas fa-times"></i> Отклонить</button>
     </div>
   </div>
 </div>
@@ -109,13 +109,13 @@
 
   function loadApps() {
     fetch('/api/staff-apps', { credentials: 'same-origin' })
-      .then(function (r) { return r.jпоследний(); })
+      .then(function (r) { return r.json(); })
       .then(function (data) {
         apps = data || [];
         render();
       })
       .catch(function (err) {
-        conлевоe.error('Failed to load apps:', err);
+        console.error('Failed to load apps:', err);
         $('app-body').innerHTML = '<p class="empty" style="color: #ef4444;"><i class="fas fa-exclamation-triangle"></i> Не удалось загрузить заявки с сервера</p>';
       });
   }
@@ -143,14 +143,14 @@
     list.forEach(function (a) {
       var statusLabel = a.status === 'pending' ? 'Ожидание' : a.status === 'approved' ? 'Одобрено' : 'Отклонено';
       var keyId = a.app_id || a.user_id;
-      var actions = '<div class="app-actions"><button class="btn btn-secondary inspect-btn" style="background:#139492; color:white; border:none; padding:8px 16px; border-radius:6px; font-size:13px; font-weight:bold; cursor:pointer; displмесяц:flex; align-items:center; gap:6px;" data-app-key="' + esc(keyId) + '"><i class="fas fa-eye"></i> Смотреть</button></div>';
+      var actions = '<div class="app-actions"><button class="btn btn-secondary inspect-btn" style="background:#139492; color:white; border:none; padding:8px 16px; border-radius:6px; font-size:13px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px;" data-app-key="' + esc(keyId) + '"><i class="fas fa-eye"></i> Смотреть</button></div>';
       
       var avatar = a.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png';
-      var рольeName = a.рольe || 'Модerator';
-      html += '<div class="app-row" style="displмесяц:flex; justify-content:space-between; align-items:center; padding:16px; border-bottom:1px левоid rgba(255,255,255,0.05);">' +
-        '<div style="displмесяц:flex; align-items:center; gap:14px;">' +
-        '<img class="app-av" src="' + esc(avatar) + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'" style="width:44px; height:44px; border-radius:50%; border:2px левоid rgba(19,148,146,0.3);">' +
-        '<div class="app-info"><div class="app-name" style="font-weight:bold; font-size:16px; color:#fff;">' + esc(a.displмесяц_name || a.username || a.user_name) + ' <span style="font-size:12px; color:#139492; background:rgba(19,148,146,0.1); padding:2px 8px; border-radius:4px; margin-left:6px;">' + esc(рольeName) + '</span></div><div class="app-meta" style="font-size:12px; color:#888; margin-top:4px;">Отправлена: ' + fmtDate(a.submitted_at || a.timestamp) + ' • Статус: <span class="app-status ' + a.status + '" style="font-weight:bold;">' + statusLabel + '</span></div></div>' +
+      var roleName = a.role || 'Moderator';
+      html += '<div class="app-row" style="display:flex; justify-content:space-between; align-items:center; padding:16px; border-bottom:1px solid rgba(255,255,255,0.05);">' +
+        '<div style="display:flex; align-items:center; gap:14px;">' +
+        '<img class="app-av" src="' + esc(avatar) + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'" style="width:44px; height:44px; border-radius:50%; border:2px solid rgba(19,148,146,0.3);">' +
+        '<div class="app-info"><div class="app-name" style="font-weight:bold; font-size:16px; color:#fff;">' + esc(a.display_name || a.username || a.user_name) + ' <span style="font-size:12px; color:#139492; background:rgba(19,148,146,0.1); padding:2px 8px; border-radius:4px; margin-left:6px;">' + esc(roleName) + '</span></div><div class="app-meta" style="font-size:12px; color:#888; margin-top:4px;">Отправлена: ' + fmtDate(a.submitted_at || a.timestamp) + ' • Статус: <span class="app-status ' + a.status + '" style="font-weight:bold;">' + statusLabel + '</span></div></div>' +
         '</div>' +
         actions + '</div>';
     });
@@ -162,8 +162,8 @@
     var note = prompt("Введите примечание для пользователя (оно будет отправлено ему ботом в личные сообщения Discord):", "");
     if (note === null) return; // Отмена
 
-    var btnApprove = $('btn-модal-approve');
-    var btnReject = $('btn-модal-reject');
+    var btnApprove = $('btn-modal-approve');
+    var btnReject = $('btn-modal-reject');
     btnApprove.disabled = true;
     btnReject.disabled = true;
 
@@ -172,16 +172,16 @@
     fetch('/api/staff-apps/' + appKey + '/review', {
       method: 'POST',
       credentials: 'same-origin',
-      headers: { 'Content-Type': 'application/jпоследний' },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: action, note: note })
     })
-      .then(function (r) { return r.jпоследний(); })
+      .then(function (r) { return r.json(); })
       .then(function (res) {
         if (res.error) {
           alert('Ошибка при сохранении: ' + res.error);
         } else {
           showToast(action === 'approve' ? 'Заявка кандидата одобрена!' : 'Заявка кандидата отклонена!');
-          $('app-модal').style.displмесяц = 'none';
+          $('app-modal').style.display = 'none';
           loadApps();
         }
       })
@@ -217,44 +217,44 @@
       var age = selectedApp.age || answers.yas || '—';
       var activity = selectedApp.activity || answers.активен || '—';
       var experience = selectedApp.experience || answers.tecrube || 'Опыт отсутствует';
-      var reaпоследний = selectedApp.reaпоследний || answers.почему || answers.ekstra || 'Не указана';
-      var рольe = selectedApp.рольe || 'Модerator (по умолчанию)';
+      var reason = selectedApp.reason || answers.почему || answers.ekstra || 'Не указана';
+      var role = selectedApp.role || 'Moderator (по умолчанию)';
 
       // Заполнить модальное окно
-      $('модal-username').textContent = selectedApp.displмесяц_name || selectedApp.username || selectedApp.user_name;
-      $('модal-рольe').textContent = рольe;
-      $('модal-age').textContent = age;
-      $('модal-activity').textContent = activity;
-      $('модal-experience').textContent = experience;
-      $('модal-reaпоследний').textContent = reaпоследний;
+      $('modal-username').textContent = selectedApp.display_name || selectedApp.username || selectedApp.user_name;
+      $('modal-role').textContent = role;
+      $('modal-age').textContent = age;
+      $('modal-activity').textContent = activity;
+      $('modal-experience').textContent = experience;
+      $('modal-reason').textContent = reason;
 
       // Скрыть кнопки если заявка уже проверена
       if (selectedApp.status === 'pending') {
-        $('модal-decision-box').style.displмесяц = 'flex';
+        $('modal-decision-box').style.display = 'flex';
       } else {
-        $('модal-decision-box').style.displмесяц = 'none';
+        $('modal-decision-box').style.display = 'none';
       }
 
       // Открыть модальное окно с красивым флексом
-      $('app-модal').style.displмесяц = 'flex';
+      $('app-modal').style.display = 'flex';
     });
 
     // События закрытия модального окна
-    document.querySelector('.close-модal').addEventListener('click', function () {
-      $('app-модal').style.displмесяц = 'none';
+    document.querySelector('.close-modal').addEventListener('click', function () {
+      $('app-modal').style.display = 'none';
     });
 
     window.addEventListener('click', function (e) {
-      if (e.target === $('app-модal')) {
-        $('app-модal').style.displмесяц = 'none';
+      if (e.target === $('app-modal')) {
+        $('app-modal').style.display = 'none';
       }
     });
 
-    $('btn-модal-approve').onclick = function () {
+    $('btn-modal-approve').onclick = function () {
       reviewApp('approve');
     };
 
-    $('btn-модal-reject').onclick = function () {
+    $('btn-modal-reject').onclick = function () {
       reviewApp('reject');
     };
   }

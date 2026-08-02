@@ -29,27 +29,27 @@
 
 <div class="action-bar">
   <div class="info-pill"><i class="fas fa-user-tag"></i> Все роли этого сервера</div>
-  <button class="btn-add" onclick="openNameМодal()"><i class="fas fa-plus"></i> Создать новую роль</button>
+  <button class="btn-add" onclick="openNameModal()"><i class="fas fa-plus"></i> Создать новую роль</button>
 </div>
 
-<div id="рольes-list">
+<div id="roles-list">
   <div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Загрузка...</p></div>
 </div>
 
-<div id="модal" class="модal-overlмесяц">
-  <div class="модal-box">
+<div id="modal" class="modal-overlay">
+  <div class="modal-box">
     <h3><i class="fas fa-plus-circle"></i> Создать роль</h3>
     <div class="form-group">
       <label>Название роли</label>
-      <input type="text" id="рольe-name" class="field-input" placeholder="Название роли">
+      <input type="text" id="role-name" class="field-input" placeholder="Название роли">
     </div>
     <div class="form-group">
       <label>Цвет роли</label>
-      <input type="color" id="рольe-color" class="color-picker" value="#d4a843">
+      <input type="color" id="role-color" class="color-picker" value="#d4a843">
     </div>
-    <div class="модal-actions">
-      <button onclick="createРольe()" class="btn-exec"><i class="fas fa-check"></i> Создать</button>
-      <button onclick="closeМодal()" class="btn-cancel">Отмена</button>
+    <div class="modal-actions">
+      <button onclick="createRole()" class="btn-exec"><i class="fas fa-check"></i> Создать</button>
+      <button onclick="closeModal()" class="btn-cancel">Отмена</button>
     </div>
   </div>
 </div>
@@ -59,25 +59,25 @@ var MAIN_GID = '{{ main_guild_id }}';
 var selectedGuild = MAIN_GID;
 function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
-async function loadРольes() {
-  var box = document.getElementById('рольes-list');
+async function loadRoles() {
+  var box = document.getElementById('roles-list');
   if (!selectedGuild) { box.innerHTML = '<div class="empty-msg">Сервер не выбран</div>'; return; }
   try {
-    var r = await fetch('/api/guild/' + selectedGuild + '/рольes');
-    var рольes = await r.jпоследний();
-    if (!Arrмесяц.isArrмесяц(рольes) || рольes.length === 0) {
+    var r = await fetch('/api/guild/' + selectedGuild + '/roles');
+    var roles = await r.json();
+    if (!Array.isArray(roles) || roles.length === 0) {
       box.innerHTML = '<div class="empty-msg"><i class="fas fa-user-tag"></i>На этом сервере ролей нет</div>';
       return;
     }
-    box.innerHTML = рольes.map(function(рольe) {
-      return '<div class="рольes-card">' +
+    box.innerHTML = roles.map(function(role) {
+      return '<div class="roles-card">' +
         '<div  >' +
-          '<div class="рольes-color" ></div>' +
-          '<div><div class="рольes-name">' + esc(рольe.name) + '</div><div class="рольes-members"><i class="fas fa-users"></i> ' + (рольe.members || 0) + ' участников</div></div>' +
+          '<div class="roles-color" ></div>' +
+          '<div><div class="roles-name">' + esc(role.name) + '</div><div class="roles-members"><i class="fas fa-users"></i> ' + (role.members || 0) + ' участников</div></div>' +
         '</div>' +
-        '<div class="рольes-actions">' +
-          '<button class="btn-sm btn-edit" onclick="editРольe(\'' + рольe.id + '\')" title="Редактировать"><i class="fas fa-edit"></i></button>' +
-          '<button class="btn-sm btn-delete" onclick="deleteРольe(\'' + рольe.id + '\',\'' + esc(рольe.name).replace(/'/g, "\\'") + '\')" title="Удалить"><i class="fas fa-trash"></i></button>' +
+        '<div class="roles-actions">' +
+          '<button class="btn-sm btn-edit" onclick="editRole(\'' + role.id + '\')" title="Редактировать"><i class="fas fa-edit"></i></button>' +
+          '<button class="btn-sm btn-delete" onclick="deleteRole(\'' + role.id + '\',\'' + esc(role.name).replace(/'/g, "\\'") + '\')" title="Удалить"><i class="fas fa-trash"></i></button>' +
         '</div>' +
       '</div>';
     }).join('');
@@ -86,37 +86,37 @@ async function loadРольes() {
   }
 }
 
-function openNameМодal() { document.getElementById('модal').classList.add('open'); }
-function closeМодal() { document.getElementById('модal').classList.remove('open'); }
-document.getElementById('модal').addEventListener('click', function(e) { if (e.target === this) closeМодal(); });
+function openNameModal() { document.getElementById('modal').classList.add('open'); }
+function closeModal() { document.getElementById('modal').classList.remove('open'); }
+document.getElementById('modal').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
 
-async function createРольe() {
-  var name = document.getElementById('рольe-name').value.trim();
-  var color = document.getElementById('рольe-color').value;
+async function createRole() {
+  var name = document.getElementById('role-name').value.trim();
+  var color = document.getElementById('role-color').value;
   if (!name) { alert('Введите название роли!'); return; }
   try {
-    var r = await fetch('/api/guild/' + selectedGuild + '/рольes/create', {
-      method: 'POST', headers: { 'Content-Type': 'application/jпоследний' },
+    var r = await fetch('/api/guild/' + selectedGuild + '/roles/create', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: name, color: color })
     });
-    var d = await r.jпоследний();
-    if (d.success) { closeМодal(); document.getElementById('рольe-name').value = ''; loadРольes(); }
+    var d = await r.json();
+    if (d.success) { closeModal(); document.getElementById('role-name').value = ''; loadRoles(); }
     else alert('Ошибка: ' + (d.error || 'Неизвестно'));
   } catch (e) { alert('Ошибка запроса: ' + e.message); }
 }
 
-async function deleteРольe(id, name) {
+async function deleteRole(id, name) {
   if (!confirm('Удалить роль "' + name + '"?')) return;
   try {
-    var r = await fetch('/api/guild/' + selectedGuild + '/рольes/' + id + '/delete', { method: 'POST' });
-    var d = await r.jпоследний();
-    if (d.success) loadРольes();
+    var r = await fetch('/api/guild/' + selectedGuild + '/roles/' + id + '/delete', { method: 'POST' });
+    var d = await r.json();
+    if (d.success) loadRoles();
     else alert('Ошибка: ' + (d.error || 'Неизвестно'));
   } catch (e) { alert('Ошибка запроса: ' + e.message); }
 }
 
-function editРольe(id) { alert('Редактирование ролей скоро будет добавлено (ID: ' + id + ')'); }
+function editRole(id) { alert('Редактирование ролей скоро будет добавлено (ID: ' + id + ')'); }
 
-loadРольes();
+loadRoles();
 </script>
 {% endblock %}

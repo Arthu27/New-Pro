@@ -5,14 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aether — Вход в панель управления</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&displмесяц=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
         html, body {
             min-height: 100%;
             background: #0a0907;
             color: #f5ecd2;
-            displмесяц: flex;
+            display: flex;
             align-items: center;
             justify-content: center;
             padding: 20px;
@@ -30,7 +30,7 @@
         }
         .aurora::before, .aurora::after {
             content: '';
-            position: abлевоute;
+            position: absolute;
             border-radius: 50%;
             filter: blur(120px);
             opacity: 0.4;
@@ -40,13 +40,13 @@
             width: 600px; height: 600px;
             background: radial-gradient(circle, #8b5cf6 0%, transparent 70%);
             top: -150px; left: 10%;
-            animation-delмесяц: 0s;
+            animation-delay: 0s;
         }
         .aurora::after {
             width: 700px; height: 700px;
             background: radial-gradient(circle, #ec4899 0%, transparent 70%);
             bottom: -200px; right: 5%;
-            animation-delмесяц: -6s;
+            animation-delay: -6s;
         }
         .aurora-extra {
             position: fixed;
@@ -67,7 +67,7 @@
             66% { transform: translate(-60px, 60px) scale(0.9); }
         }
 
-        /* Grid overlмесяц */
+        /* Grid overlay */
         body::before {
             content: '';
             position: fixed;
@@ -91,7 +91,7 @@
             overflow: hidden;
         }
         .particle {
-            position: abлевоute;
+            position: absolute;
             width: 3px; height: 3px;
             background: rgba(212, 168, 67, 0.6);
             border-radius: 50%;
@@ -105,7 +105,7 @@
             100% { transform: translateY(-100px) scale(1); opacity: 0; }
         }
 
-        .логin-wrapper {
+        .login-wrapper {
             position: relative;
             z-index: 10;
             width: 100%;
@@ -129,12 +129,12 @@
             from { opacity: 0; transform: scale(0.94); }
             to   { opacity: 1; transform: scale(1); }
         }
-        .hero-логo {
+        .hero-logo {
             width: 68px; height: 68px;
             margin: 0 auto 16px;
             border-radius: 20px;
             background: linear-gradient(135deg, #d4a843, #b88728);
-            displмесяц: flex;
+            display: flex;
             align-items: center;
             justify-content: center;
             font-size: 28px;
@@ -143,9 +143,9 @@
             position: relative;
             animation: float 4s ease-in-out infinite;
         }
-        .hero-логo::before {
+        .hero-logo::before {
             content: '';
-            position: abлевоute;
+            position: absolute;
             inset: -3px;
             border-radius: 23px;
             background: linear-gradient(135deg, #d4a843, #ec4899, #06b6d4, #d4a843);
@@ -182,7 +182,7 @@
         /* Auth card */
         .auth-card {
             background: rgba(26, 22, 16, 0.85);
-            border: 1px левоid rgba(212, 168, 67, 0.22);
+            border: 1px solid rgba(212, 168, 67, 0.22);
             border-radius: 24px;
             padding: 32px;
             box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.04);
@@ -193,7 +193,7 @@
         }
         .auth-card::before {
             content: '';
-            position: abлевоute;
+            position: absolute;
             top: -1px; left: 25%; right: 25%;
             height: 2px;
             background: linear-gradient(90deg, transparent, #d4a843, transparent);
@@ -201,7 +201,7 @@
         }
         .auth-card::after {
             content: '';
-            position: abлевоute;
+            position: absolute;
             top: 0; right: 0;
             width: 180px; height: 180px;
             background: radial-gradient(circle at top right, rgba(212, 168, 67, 0.08), transparent 70%);
@@ -211,9 +211,9 @@
 
         /* Tab switcher */
         .tab-switcher {
-            displмесяц: flex;
+            display: flex;
             background: rgba(10, 9, 7, 0.7);
-            border: 1px левоid rgba(212, 168, 67, 0.18);
+            border: 1px solid rgba(212, 168, 67, 0.18);
             border-radius: 14px;
             padding: 5px;
             margin-bottom: 26px;
@@ -229,7 +229,7 @@
             font-size: 13px;
             cursor: pointer;
             transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-            displмесяц: flex;
+            display: flex;
             align-items: center;
             justify-content: center;
             gap: 7px;
@@ -244,11 +244,11 @@
         .tab-btn i { font-size: 14px; }
 
         /* Form */
-        #formPass { displмесяц: block; }
-        #formPin { displмесяц: none; }
+        #formPass { display: block; }
+        #formPin { display: none; }
         .form-group { margin-bottom: 18px; position: relative; }
         .form-label {
-            displмесяц: block;
+            display: block;
             font-size: 11.5px;
             color: #b6a47b;
             margin-bottom: 8px;
@@ -257,7 +257,7 @@
         }
         .form-input-wrap { position: relative; }
         .form-input-wrap > i {
-            position: abлевоute;
+            position: absolute;
             left: 16px;
             top: 50%;
             transform: translateY(-50%);
@@ -270,7 +270,7 @@
             width: 100%;
             padding: 13px 14px 13px 44px;
             background: rgba(10, 9, 7, 0.85);
-            border: 1px левоid rgba(212, 168, 67, 0.25);
+            border: 1px solid rgba(212, 168, 67, 0.25);
             border-radius: 12px;
             color: #f5ecd2;
             font-size: 14px;
@@ -288,11 +288,11 @@
 
         /* Autocomplete dropdown */
         .autocomplete-popup {
-            position: abлевоute;
+            position: absolute;
             top: 100%;
             left: 0; right: 0;
             background: rgba(20, 17, 12, 0.98);
-            border: 1px левоid rgba(212, 168, 67, 0.35);
+            border: 1px solid rgba(212, 168, 67, 0.35);
             border-radius: 12px;
             box-shadow: 0 12px 36px rgba(0, 0, 0, 0.85);
             margin-top: 6px;
@@ -302,12 +302,12 @@
             backdrop-filter: blur(20px);
         }
         .suggest-item {
-            displмесяц: flex;
+            display: flex;
             align-items: center;
             gap: 12px;
             padding: 11px 14px;
             cursor: pointer;
-            border-bottom: 1px левоid rgba(255, 255, 255, 0.04);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
             transition: background 0.15s;
         }
         .suggest-item:last-child { border-bottom: none; }
@@ -315,7 +315,7 @@
         .suggest-avatar {
             width: 32px; height: 32px;
             border-radius: 50%;
-            border: 2px левоid #c8922a;
+            border: 2px solid #c8922a;
             object-fit: cover;
         }
         .suggest-name { font-size: 13.5px; color: #f5ecd2; }
@@ -332,7 +332,7 @@
             font-size: 14px;
             cursor: pointer;
             transition: all 0.2s;
-            displмесяц: flex;
+            display: flex;
             align-items: center;
             justify-content: center;
             gap: 8px;
@@ -343,7 +343,7 @@
         }
         .btn-submit::before {
             content: '';
-            position: abлевоute;
+            position: absolute;
             top: 0; left: -100%;
             width: 100%; height: 100%;
             background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
@@ -363,7 +363,7 @@
             padding: 12px;
             background: transparent;
             color: #b6a47b;
-            border: 1px левоid rgba(212, 168, 67, 0.20);
+            border: 1px solid rgba(212, 168, 67, 0.20);
             border-radius: 12px;
             font-size: 13.5px;
             cursor: pointer;
@@ -382,19 +382,19 @@
             border-radius: 10px;
             margin-bottom: 18px;
             font-size: 13px;
-            displмесяц: flex;
+            display: flex;
             align-items: center;
             gap: 10px;
             animation: fadeUp 0.3s ease-out both;
         }
         .alert-err {
             background: rgba(248, 113, 113, 0.10);
-            border: 1px левоid rgba(248, 113, 113, 0.30);
+            border: 1px solid rgba(248, 113, 113, 0.30);
             color: #fca5a5;
         }
         .alert-ok {
             background: rgba(52, 211, 153, 0.10);
-            border: 1px левоid rgba(52, 211, 153, 0.30);
+            border: 1px solid rgba(52, 211, 153, 0.30);
             color: #6ee7b7;
         }
 
@@ -413,7 +413,7 @@
             background: rgba(0,0,0,0.4);
             padding: 2px 7px;
             border-radius: 5px;
-            border: 1px левоid rgba(212, 168, 67, 0.15);
+            border: 1px solid rgba(212, 168, 67, 0.15);
         }
 
         /* Progress */
@@ -423,9 +423,9 @@
             border-radius: 99px;
             overflow: hidden;
             margin-bottom: 18px;
-            displмесяц: none;
+            display: none;
         }
-        .progress-bar.active { displмесяц: block; }
+        .progress-bar.active { display: block; }
         .progress-fill {
             height: 100%;
             background: linear-gradient(90deg, #d4a843, #f0c75e);
@@ -434,20 +434,20 @@
             box-shadow: 0 0 8px rgba(212, 168, 67, 0.5);
         }
 
-        /* Тест list */
+        /* Test list */
         .test-list {
             margin-bottom: 18px;
-            displмесяц: flex;
+            display: flex;
             flex-direction: column;
             gap: 8px;
         }
         .test-item {
-            displмесяц: flex;
+            display: flex;
             align-items: center;
             justify-content: space-between;
             padding: 10px 12px;
             background: rgba(0,0,0,0.35);
-            border: 1px левоid rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.04);
             border-radius: 10px;
             font-size: 13px;
             animation: fadeUp 0.3s ease-out both;
@@ -457,19 +457,19 @@
 
         /* User card */
         .user-card {
-            displмесяц: flex;
+            display: flex;
             align-items: center;
             gap: 12px;
             padding: 14px;
             background: rgba(212, 168, 67, 0.06);
-            border: 1px левоid rgba(212, 168, 67, 0.20);
+            border: 1px solid rgba(212, 168, 67, 0.20);
             border-radius: 12px;
             margin-bottom: 18px;
         }
         .user-avatar {
             width: 48px; height: 48px;
             border-radius: 50%;
-            border: 2px левоid #d4a843;
+            border: 2px solid #d4a843;
             box-shadow: 0 0 0 3px rgba(0,0,0,0.4);
         }
         .user-name { font-size: 14px; color: #f5ecd2; }
@@ -477,7 +477,7 @@
 
         /* Mobile */
         @media (max-width: 480px) {
-            .логin-wrapper { max-width: 100%; }
+            .login-wrapper { max-width: 100%; }
             .auth-card { padding: 24px 20px; }
             .hero h1 { font-size: 24px; }
         }
@@ -489,9 +489,9 @@
 <div class="aurora-extra"></div>
 <div class="particles" id="particles"></div>
 
-<div class="логin-wrapper">
+<div class="login-wrapper">
     <div class="hero">
-        <div class="hero-логo"><i class="fas fa-robot"></i></div>
+        <div class="hero-logo"><i class="fas fa-robot"></i></div>
         <h1>Aether Panel</h1>
         <p>Центр управления Discord-сервером</p>
     </div>
@@ -514,7 +514,7 @@
         {% endif %}
 
         <!-- TAB 1: USERNAME / PASSWORD FORM -->
-        <form id="formPass" method="POST" action="/логin">
+        <form id="formPass" method="POST" action="/login">
             <div class="form-group">
                 <label class="form-label">Логин или Discord ID</label>
                 <div class="form-input-wrap">
@@ -533,7 +533,7 @@
             </div>
 
             <button type="submit" class="btn-submit">
-                <i class="fas fa-sign-in-низ"></i> Войти
+                <i class="fas fa-sign-in-alt"></i> Войти
             </button>
 
             <div class="helper-note">
@@ -569,7 +569,7 @@
                 <div class="form-group">
                     <label class="form-label">6-значный PIN-код из ЛС</label>
                     <div class="form-input-wrap">
-                        <i class="fas fa-shield-низ"></i>
+                        <i class="fas fa-shield-alt"></i>
                         <input type="text" id="pinInput" class="form-input" placeholder="000000" maxlength="6" autocomplete="one-time-code">
                     </div>
                 </div>
@@ -594,13 +594,13 @@
         p.className = 'particle';
         p.style.left = Math.random() * 100 + '%';
         p.style.animationDuration = (8 + Math.random() * 12) + 's';
-        p.style.animationDelмесяц = (-Math.random() * 20) + 's';
+        p.style.animationDelay = (-Math.random() * 20) + 's';
         p.style.opacity = (0.3 + Math.random() * 0.5);
         container.appendChild(p);
     }
 })();
 
-// Sмесяцfa yюklendiгinde: URL hash'te pin varsa PIN tab'ыnы открыть, yoksa pass (default)
+// Sayfa yюklendiгinde: URL hash'te pin varsa PIN tab'ыnы открыть, yoksa pass (default)
 (function () {
     var initialTab = 'pass';
     try {
@@ -613,15 +613,15 @@
 let _discordId = '';
 let _suggestTimer = null;
 
-function switchTab(модe) {
-    if (модe === 'pass') {
-        document.getElementById('formPass').style.displмесяц = 'block';
-        document.getElementById('formPin').style.displмесяц = 'none';
+function switchTab(mode) {
+    if (mode === 'pass') {
+        document.getElementById('formPass').style.display = 'block';
+        document.getElementById('formPin').style.display = 'none';
         document.getElementById('tabBtnPass').classList.add('active');
         document.getElementById('tabBtnPin').classList.remove('active');
     } else {
-        document.getElementById('formPass').style.displмесяц = 'none';
-        document.getElementById('formPin').style.displмесяц = 'block';
+        document.getElementById('formPass').style.display = 'none';
+        document.getElementById('formPin').style.display = 'block';
         document.getElementById('tabBtnPass').classList.remove('active');
         document.getElementById('tabBtnPin').classList.add('active');
         resetAll();
@@ -630,9 +630,9 @@ function switchTab(модe) {
 }
 
 function resetAll() {
-    document.getElementById('step1').style.displмесяц = 'block';
-    document.getElementById('step2').style.displмесяц = 'none';
-    document.getElementById('step3').style.displмесяц = 'none';
+    document.getElementById('step1').style.display = 'block';
+    document.getElementById('step2').style.display = 'none';
+    document.getElementById('step3').style.display = 'none';
     document.getElementById('progressBar').classList.remove('active');
     document.getElementById('progressFill').style.width = '0%';
     document.getElementById('testList').innerHTML = '';
@@ -644,7 +644,7 @@ function resetAll() {
 
 function showStep(n) {
     ['step1', 'step2', 'step3'].forEach((s, i) => {
-        document.getElementById(s).style.displмесяц = (i + 1 === n) ? 'block' : 'none';
+        document.getElementById(s).style.display = (i + 1 === n) ? 'block' : 'none';
     });
 }
 
@@ -660,7 +660,7 @@ function addTestItem(name, status, detail) {
     let iconHtml = '<i class="fas fa-spinner fa-spin" ></i>';
     if (status === 'ok') iconHtml = '<i class="fas fa-check-circle" ></i>';
     else if (status === 'fail') iconHtml = '<i class="fas fa-times-circle" ></i>';
-    else if (status === 'варн') iconHtml = '<i class="fas fa-exclamation-circle" ></i>';
+    else if (status === 'warn') iconHtml = '<i class="fas fa-exclamation-circle" ></i>';
     item.innerHTML = '<div>' + iconHtml + ' <span class="test-name"   style="margin-left: 6px;">' + name + '</span></div><span class="test-detail">' + (detail || '') + '</span>';
     list.appendChild(item);
     return item;
@@ -669,8 +669,8 @@ function addTestItem(name, status, detail) {
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 function hideAllSuggest() {
-    document.getElementById('passPopup').style.displмесяц = 'none';
-    document.getElementById('pinPopup').style.displмесяц = 'none';
+    document.getElementById('passPopup').style.display = 'none';
+    document.getElementById('pinPopup').style.display = 'none';
 }
 
 document.addEventListener('click', function(e) {
@@ -685,11 +685,11 @@ function showSuggest(inputEl, popupId) {
         const q = inputEl.value.trim();
         const popup = document.getElementById(popupId);
         try {
-            const res = await fetch('/api/логin/suggest?q=' + encodeURIComponent(q));
-            const d = await res.jпоследний();
+            const res = await fetch('/api/login/suggest?q=' + encodeURIComponent(q));
+            const d = await res.json();
             if (d.success && d.suggestions && d.suggestions.length) {
                 popup.innerHTML = d.suggestions.map(item => {
-                    const disp = item.displмесяц_name || item.name;
+                    const disp = item.display_name || item.name;
                     const mentionVal = (item.name === 'Owner' || item.name === 'owner') ? 'owner' : '@' + item.name;
                     const idVal = item.id;
                     return `<div class="suggest-item" onclick="selectSuggestItem('${inputEl.id}', '${popupId}', '${mentionVal}', '${idVal}')">
@@ -700,19 +700,19 @@ function showSuggest(inputEl, popupId) {
                         </div>
                     </div>`;
                 }).join('');
-                popup.style.displмесяц = 'block';
+                popup.style.display = 'block';
             } else {
-                popup.style.displмесяц = 'none';
+                popup.style.display = 'none';
             }
         } catch (err) {
-            popup.style.displмесяц = 'none';
+            popup.style.display = 'none';
         }
     }, 150);
 }
 
 function selectSuggestItem(inputId, popupId, mentionVal, idVal) {
     const inputEl = document.getElementById(inputId);
-    document.getElementById(popupId).style.displмесяц = 'none';
+    document.getElementById(popupId).style.display = 'none';
     inputEl.value = idVal || mentionVal;
     if (inputId === 'passUsername') {
         document.querySelector('#formPass input[name="password"]').focus();
@@ -739,10 +739,10 @@ async function doCheck() {
     try {
         const r = await fetch('/api/discord-check', {
             method: 'POST',
-            headers: {'Content-Type': 'application/jпоследний'},
+            headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({query: query})
         });
-        const d = await r.jпоследний();
+        const d = await r.json();
 
         list.innerHTML = '';
         setProgress(60);
@@ -768,7 +768,7 @@ async function doCheck() {
         await sleep(500);
 
         const card = document.getElementById('userCard');
-        card.innerHTML = '<img class="user-avatar" src="' + (d.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png') + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'"><div><div class="user-name">' + d.displмесяц_name + '</div><div class="user-id">Discord ID: ' + d.discord_id + '</div></div>';
+        card.innerHTML = '<img class="user-avatar" src="' + (d.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png') + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'"><div><div class="user-name">' + d.display_name + '</div><div class="user-id">Discord ID: ' + d.discord_id + '</div></div>';
         showStep(3);
         document.getElementById('progressBar').classList.remove('active');
         document.getElementById('pinInput').focus();
@@ -793,12 +793,12 @@ async function doPin() {
     const pinBtn = document.getElementById('btnPin');
     pinBtn.disabled = true;
     try {
-        const r = await fetch('/api/discord-логin', {
+        const r = await fetch('/api/discord-login', {
             method: 'POST',
-            headers: {'Content-Type': 'application/jпоследний'},
+            headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({discord_id: _discordId, pin: pin})
         });
-        const d = await r.jпоследний();
+        const d = await r.json();
         if (d.success) {
             document.getElementById('step3-error').innerHTML = '<div class="alert alert-ok"><i class="fas fa-check-circle"></i> Успешный вход, перенаправление...</div>';
             setTimeout(() => { window.location.href = d.redirect || '/'; }, 600);

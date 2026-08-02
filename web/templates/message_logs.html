@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Сообщение Логы - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-comment-низ" ></i> 💬 ЛОГИ СООБЩЕНИЙ{% endblock %}
+{% block page_title %}<i class="fas fa-comment-alt" ></i> 💬 ЛОГИ СООБЩЕНИЙ{% endblock %}
 {% block content %}
 {% block page_hero %}
 <div class="page-hero compact">
@@ -43,90 +43,90 @@
 <!-- FILTERS -->
 <div class="ml-filter-box">
   <div class="filter-row">
-    <select id="guild-select" onchange="loadЛогs()" class="field-input" aria-label="Сервер">
+    <select id="guild-select" onchange="loadLogs()" class="field-input" aria-label="Сервер">
       <option value="{{ main_guild_id }}">Текущий сервер</option>
     </select>
-    <select id="лог-type" onchange="loadЛогs()" class="field-input">
+    <select id="log-type" onchange="loadLogs()" class="field-input">
       <option value="all">📋 Все</option>
       <option value="deleted">🗑 Удалённые</option>
       <option value="edited">✏️ Изменённые</option>
     </select>
-    <input type="text" id="user-filter" placeholder="🔍 Поиск пользователя..." class="field-input"   style="min-width: 160px;" oninput="filterЛогs()">
+    <input type="text" id="user-filter" placeholder="🔍 Поиск пользователя..." class="field-input"   style="min-width: 160px;" oninput="filterLogs()">
   </div>
 </div>
 
 <!-- LOG LIST -->
-<div class="ml-лог-box">
+<div class="ml-log-box">
   <div class="box-title"><i class="fas fa-comment-slash"></i> Журнал сообщений</div>
-  <div id="лог-list"><p >ВЫБЕРИТЕ СЕРВЕР...</p></div>
+  <div id="log-list"><p >ВЫБЕРИТЕ СЕРВЕР...</p></div>
 </div>
 
 <script>
-var allЛогs = [];
+var allLogs = [];
 
 async function loadGuilds() {
-  loadЛогs();
+  loadLogs();
 }
 
-async function loadЛогs() {
-  var type = document.getElementById('лог-type').value;
+async function loadLogs() {
+  var type = document.getElementById('log-type').value;
   var guildId = document.getElementById('guild-select').value;
   if (!guildId) {
-    renderЛогs([]);
+    renderLogs([]);
     return;
   }
-  document.getElementById('лог-list').innerHTML = '<p ><i class="fas fa-spinner fa-spin" ></i></p>';
+  document.getElementById('log-list').innerHTML = '<p ><i class="fas fa-spinner fa-spin" ></i></p>';
   try {
-    var r = await fetch('/api/guild/' + encodeURIComponent(guildId) + '/message-логs?type=' + encodeURIComponent(type));
+    var r = await fetch('/api/guild/' + encodeURIComponent(guildId) + '/message-logs?type=' + encodeURIComponent(type));
     if (!r.ok) throw new Error('HTTP ' + r.status);
-    allЛогs = await r.jпоследний();
-    if (!Arrмесяц.isArrмесяц(allЛогs)) allЛогs = [];
+    allLogs = await r.json();
+    if (!Array.isArray(allLogs)) allLogs = [];
     updateStats();
-    renderЛогs(allЛогs);
+    renderLogs(allLogs);
   } catch (error) {
-    conлевоe.error('Не удалось загрузить логи сообщений:', error);
-    allЛогs = [];
+    console.error('Не удалось загрузить логи сообщений:', error);
+    allLogs = [];
     updateStats();
-    document.getElementById('лог-list').innerHTML = '<p >Не удалось загрузить логи сообщений.</p>';
+    document.getElementById('log-list').innerHTML = '<p >Не удалось загрузить логи сообщений.</p>';
   }
 }
 
 function updateStats() {
-  document.getElementById('total-count').textContent = allЛогs.length;
-  document.getElementById('deleted-count').textContent = allЛогs.filter(function(l){return l.action==='Сообщение Удалитьindi'||l.type==='deleted';}).length;
-  document.getElementById('edited-count').textContent = allЛогs.filter(function(l){return l.action==='Сообщение Редактироватьndi'||l.type==='edited';}).length;
+  document.getElementById('total-count').textContent = allLogs.length;
+  document.getElementById('deleted-count').textContent = allLogs.filter(function(l){return l.action==='Сообщение Удалитьindi'||l.type==='deleted';}).length;
+  document.getElementById('edited-count').textContent = allLogs.filter(function(l){return l.action==='Сообщение Редактироватьndi'||l.type==='edited';}).length;
 }
 
-function filterЛогs() {
+function filterLogs() {
   var q = document.getElementById('user-filter').value.toLowerCase();
-  renderЛогs(allЛогs.filter(function(l) {
+  renderLogs(allLogs.filter(function(l) {
     return (l.user_name||'').toLowerCase().includes(q) || (l.user_id||'').includes(q);
   }));
 }
 
-function renderЛогs(логs) {
-  var box = document.getElementById('лог-list');
-  if (!логs.length) {
+function renderLogs(logs) {
+  var box = document.getElementById('log-list');
+  if (!logs.length) {
     box.innerHTML = '<p >LOG НЕ НАЙДЕНО</p>';
     return;
   }
-  box.innerHTML = логs.slice(0, 100).map(function(l, i) {
+  box.innerHTML = logs.slice(0, 100).map(function(l, i) {
     var isDel = l.action==='Сообщение Удалитьindi'||l.type==='deleted';
-    var cls = isDel ? 'лог-deleted' : 'лог-edited';
+    var cls = isDel ? 'log-deleted' : 'log-edited';
     var badge = isDel
       ? '<span class="type-badge badge-del">🗑 УДАЛЕНО</span>'
       : '<span class="type-badge badge-edit">✏️ РЕДАКТИРОВАТЬ</span>';
     var content = isDel
-      ? '<div class="лог-content" >' + (l.content || '<em >(soderjimoe yok)</em>') + '</div>'
-      : '<div class="лог-before">До: ' + (l.before || '') + '</div><div class="лог-after">В конецra: ' + (l.after || '') + '</div>';
-    return '<div class="лог-row ' + cls + '" >' +
-      '<div class="лог-header">' +
-        '<div class="лог-user-wrap">' +
+      ? '<div class="log-content" >' + (l.content || '<em >(soderjimoe yok)</em>') + '</div>'
+      : '<div class="log-before">До: ' + (l.before || '') + '</div><div class="log-after">В конецra: ' + (l.after || '') + '</div>';
+    return '<div class="log-row ' + cls + '" >' +
+      '<div class="log-header">' +
+        '<div class="log-user-wrap">' +
           badge +
-          '<span class="лог-user">' + (l.user_name || l.user_id || '?') + '</span>' +
-          '<span class="лог-channel">#' + (l.channel_name || l.channel_id || '?') + '</span>' +
+          '<span class="log-user">' + (l.user_name || l.user_id || '?') + '</span>' +
+          '<span class="log-channel">#' + (l.channel_name || l.channel_id || '?') + '</span>' +
         '</div>' +
-        '<span class="лог-time">' + (l.timestamp || '') + '</span>' +
+        '<span class="log-time">' + (l.timestamp || '') + '</span>' +
       '</div>' +
       content +
     '</div>';

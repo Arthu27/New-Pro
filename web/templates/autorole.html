@@ -31,40 +31,40 @@
   <div class="ar-box">
     <div class="ar-title"><i class="fas fa-user-plus"></i> Авто-роль для новых участников</div>
     <div class="ar-desc">Входящим на сервер участникам автоматически выдаётся роли:</div>
-    <div id="member-рольes-list"></div>
+    <div id="member-roles-list"></div>
     <div class="add-row">
-      <select id="member-рольe-add"></select>
-      <button onclick="addРольe('member')"><i class="fas fa-plus"></i> Добавить</button>
+      <select id="member-role-add"></select>
+      <button onclick="addRole('member')"><i class="fas fa-plus"></i> Добавить</button>
     </div>
     <button class="save-btn" onclick="saveSettings('member')"><i class="fas fa-save"></i> Сохранить</button>
   </div>
   <div class="ar-box">
     <div class="ar-title"><i class="fas fa-venus" ></i> Авто-роль для девушек</div>
     <div class="ar-desc">Роль для новых участниц (женская) — выдаётся автоматически:</div>
-    <div id="girl-рольes-list"></div>
+    <div id="girl-roles-list"></div>
     <div class="add-row">
-      <select id="girl-рольe-add"></select>
-      <button onclick="addРольe('girl')"><i class="fas fa-plus"></i> Добавить</button>
+      <select id="girl-role-add"></select>
+      <button onclick="addRole('girl')"><i class="fas fa-plus"></i> Добавить</button>
     </div>
     <button class="save-btn" onclick="saveSettings('girl')"><i class="fas fa-save"></i> Сохранить</button>
   </div>
   <div class="ar-box">
     <div class="ar-title"><i class="fas fa-mars" ></i> Мужчина Участник Авто-роль</div>
     <div class="ar-desc">Роль для новых участников (Мужская): участник выдаётся роли:</div>
-    <div id="boy-рольes-list"></div>
+    <div id="boy-roles-list"></div>
     <div class="add-row">
-      <select id="boy-рольe-add"></select>
-      <button onclick="addРольe('boy')"><i class="fas fa-plus"></i> Добавить</button>
+      <select id="boy-role-add"></select>
+      <button onclick="addRole('boy')"><i class="fas fa-plus"></i> Добавить</button>
     </div>
     <button class="save-btn" onclick="saveSettings('boy')"><i class="fas fa-save"></i> Сохранить</button>
   </div>
   <div class="ar-box">
     <div class="ar-title"><i class="fas fa-robot"></i> Бот Авто-роль</div>
     <div class="ar-desc">На сервер добавл botlпоиск автоматически выдаётся роли:</div>
-    <div id="bot-рольes-list"></div>
+    <div id="bot-roles-list"></div>
     <div class="add-row">
-      <select id="bot-рольe-add"></select>
-      <button onclick="addРольe('bot')"><i class="fas fa-plus"></i> Добавить</button>
+      <select id="bot-role-add"></select>
+      <button onclick="addRole('bot')"><i class="fas fa-plus"></i> Добавить</button>
     </div>
     <button class="save-btn" onclick="saveSettings('bot')"><i class="fas fa-save"></i> Сохранить</button>
   </div>
@@ -73,8 +73,8 @@
 <script>
 var MAIN_GID = '{{ main_guild_id }}';
 var selectedGuild = MAIN_GID;
-var allРольes = [];
-var currentРольes = { member: [], girl: [], boy: [], bot: [] };
+var allRoles = [];
+var currentRoles = { member: [], girl: [], boy: [], bot: [] };
 
 function toast(msg, ok) {
   var t = document.createElement('div');
@@ -88,35 +88,35 @@ async function loadSettings(gid) {
   selectedGuild = gid || MAIN_GID;
   if (!selectedGuild) return;
   try {
-    var рольesRes = await fetch('/api/guild/' + selectedGuild + '/рольes');
-    var рольes = await рольesRes.jпоследний();
-    allРольes = Arrмесяц.isArrмесяц(рольes) ? рольes : [];
+    var rolesRes = await fetch('/api/guild/' + selectedGuild + '/roles');
+    var roles = await rolesRes.json();
+    allRoles = Array.isArray(roles) ? roles : [];
 
-    var setRes = await fetch('/api/guild/' + selectedGuild + '/autoрольe');
-    var settings = await setRes.jпоследний();
+    var setRes = await fetch('/api/guild/' + selectedGuild + '/autorole');
+    var settings = await setRes.json();
 
-    // Not: allРольes dizisini override etmiyoruz (старый kodda "рольes" diye override ediliyordu ve bug выходил)
-    var memberSel = settings.member_рольes || [];
-    var girlSel   = settings.girl_рольes   || [];
-    var boySel    = settings.boy_рольes    || [];
-    var botSel    = settings.bot_рольes    || [];
+    // Not: allRoles dizisini override etmiyoruz (старый kodda "roles" diye override ediliyordu ve bug выходил)
+    var memberSel = settings.member_roles || [];
+    var girlSel   = settings.girl_roles   || [];
+    var boySel    = settings.boy_roles    || [];
+    var botSel    = settings.bot_roles    || [];
 
-    // allРольes'tan id'ye по фильтрle (удалитьеn роли падает)
-    var validIds = allРольes.map(function (r) { return r.id; });
-    currentРольes.member = memberSel.filter(function (id) { return validIds.indexOf(id) !== -1; });
-    currentРольes.girl   = girlSel.filter(function (id) { return validIds.indexOf(id) !== -1; });
-    currentРольes.boy    = boySel.filter(function (id) { return validIds.indexOf(id) !== -1; });
-    currentРольes.bot    = botSel.filter(function (id) { return validIds.indexOf(id) !== -1; });
+    // allRoles'tan id'ye по фильтрle (удалитьеn роли падает)
+    var validIds = allRoles.map(function (r) { return r.id; });
+    currentRoles.member = memberSel.filter(function (id) { return validIds.indexOf(id) !== -1; });
+    currentRoles.girl   = girlSel.filter(function (id) { return validIds.indexOf(id) !== -1; });
+    currentRoles.boy    = boySel.filter(function (id) { return validIds.indexOf(id) !== -1; });
+    currentRoles.bot    = botSel.filter(function (id) { return validIds.indexOf(id) !== -1; });
 
     // Her kutunun "роль добавить" select'ini doldur
     ['member', 'girl', 'boy', 'bot'].forEach(function (t) {
-      var sel = document.getElementById(t + '-рольe-add');
+      var sel = document.getElementById(t + '-role-add');
       if (!sel) return;
-      if (allРольes.length === 0) {
+      if (allRoles.length === 0) {
         sel.innerHTML = '<option value="">На этом сервере роли yok</option>';
       } else {
         sel.innerHTML = '<option value="">— Выберите роль —</option>' +
-          allРольes.map(function (r) { return '<option value="' + r.id + '">' + r.name + '</option>'; }).join('');
+          allRoles.map(function (r) { return '<option value="' + r.id + '">' + r.name + '</option>'; }).join('');
       }
     });
 
@@ -131,47 +131,47 @@ function renderAll() {
 }
 
 function renderType(type) {
-  var box = document.getElementById(type + '-рольes-list');
+  var box = document.getElementById(type + '-roles-list');
   if (!box) return;
-  var ids = currentРольes[type] || [];
+  var ids = currentRoles[type] || [];
   if (ids.length === 0) {
     box.innerHTML = '<p class="empty-msg">Пока роль добавл.</p>';
     return;
   }
   box.innerHTML = ids.map(function (id) {
-    var рольe = allРольes.find(function (r) { return r.id === id; });
-    var name = рольe ? рольe.name : ('(удалён: ' + id + ')');
-    return '<span class="рольe-tag">' + name +
-      '<button onclick="removeРольe(\'' + type + '\',\'' + id + '\')">×</button></span>';
+    var role = allRoles.find(function (r) { return r.id === id; });
+    var name = role ? role.name : ('(удалён: ' + id + ')');
+    return '<span class="role-tag">' + name +
+      '<button onclick="removeRole(\'' + type + '\',\'' + id + '\')">×</button></span>';
   }).join('');
 }
 
-function addРольe(type) {
-  var sel = document.getElementById(type + '-рольe-add');
+function addRole(type) {
+  var sel = document.getElementById(type + '-role-add');
   if (!sel) return;
   var v = sel.value;
-  if (v && currentРольes[type].indexOf(v) === -1) {
-    currentРольes[type].push(v);
+  if (v && currentRoles[type].indexOf(v) === -1) {
+    currentRoles[type].push(v);
     renderType(type);
   }
 }
 
-function removeРольe(type, id) {
-  currentРольes[type] = currentРольes[type].filter(function (r) { return r !== id; });
+function removeRole(type, id) {
+  currentRoles[type] = currentRoles[type].filter(function (r) { return r !== id; });
   renderType(type);
 }
 
 async function saveSettings(type) {
-  var keyMap = { member: 'member_рольes', girl: 'girl_рольes', boy: 'boy_рольes', bot: 'bot_рольes' };
+  var keyMap = { member: 'member_roles', girl: 'girl_roles', boy: 'boy_roles', bot: 'bot_roles' };
   var key = keyMap[type];
   try {
-    var r = await fetch('/api/guild/' + selectedGuild + '/autoрольe', {
+    var r = await fetch('/api/guild/' + selectedGuild + '/autorole', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/jпоследний' },
-      // Backend принимает и 'рольe', и 'рольes', поэтому отправляем оба
-      body: JSON.stringify({ type: type, рольes: currentРольes[type], рольe: currentРольes[type] })
+      headers: { 'Content-Type': 'application/json' },
+      // Backend принимает и 'role', и 'roles', поэтому отправляем оба
+      body: JSON.stringify({ type: type, roles: currentRoles[type], role: currentRoles[type] })
     });
-    var d = await r.jпоследний();
+    var d = await r.json();
     if (d.success) {
       toast('✅ Сохранено!', true);
     } else {

@@ -11,7 +11,7 @@
   <!-- Sidebar -->
   <div class="chat-sidebar">
     <div class="sidebar-guild-name" id="sidebar-guild-name">Выберите сервер</div>
-    <div class="sidebar-scрольl">
+    <div class="sidebar-scroll">
       <div class="sidebar-section">
         <span>Текстовые каналы</span>
       </div>
@@ -35,7 +35,7 @@
       <div class="chat-header-sep" id="ch-sep" ></div>
       <span class="chat-header-topic" id="ch-topic"></span>
       <div class="chat-header-actions">
-        <button class="hdr-btn" onclick="loadMessages()"><i class="fas fa-sync-низ"></i></button>
+        <button class="hdr-btn" onclick="loadMessages()"><i class="fas fa-sync-alt"></i></button>
       </div>
     </div>
 
@@ -76,32 +76,32 @@
   <!-- Участник Список Panel -->
   <div class="members-panel" id="members-panel">
     <div class="members-panel-hdr">Участники — <span id="members-count">0</span></div>
-    <div class="members-scрольl" id="members-scрольl"></div>
+    <div class="members-scroll" id="members-scroll"></div>
   </div>
 </div>
 
 <!-- Профиль Popup -->
-<div class="profс-popup" id="profс-popup">
-  <div class="profс-банner"></div>
+<div class="profs-popup" id="profs-popup">
+  <div class="profs-banner"></div>
   <div   style="position: relative; height: 32px;">
     <div id="pp-avatar"></div>
   </div>
-  <div class="profс-body">
-    <div class="profс-displмесяцname" id="pp-displмесяцname"></div>
-    <div class="profс-username" id="pp-username"></div>
-    <div id="pp-status-badge" class="profс-status-badge"></div>
-    <div class="profс-divider"></div>
-    <div class="profс-section-title">Роли</div>
-    <div class="profс-рольe" id="pp-рольe"></div>
-    <div class="profс-divider"></div>
-    <div class="profс-section-title">Takma Isim</div>
-    <div class="profс-nick-row">
-      <input class="profс-nick-input" id="pp-nick-input" placeholder="Takma ad yok">
-      <button class="profс-nick-btn" onclick="saveNick()">Сохранить</button>
+  <div class="profs-body">
+    <div class="profs-displayname" id="pp-displayname"></div>
+    <div class="profs-username" id="pp-username"></div>
+    <div id="pp-status-badge" class="profs-status-badge"></div>
+    <div class="profs-divider"></div>
+    <div class="profs-section-title">Роли</div>
+    <div class="profs-role" id="pp-role"></div>
+    <div class="profs-divider"></div>
+    <div class="profs-section-title">Takma Isim</div>
+    <div class="profs-nick-row">
+      <input class="profs-nick-input" id="pp-nick-input" placeholder="Takma ad yok">
+      <button class="profs-nick-btn" onclick="saveNick()">Сохранить</button>
     </div>
-    <div class="profс-action-row">
-      <button class="profс-action-btn dm" onclick="dmFromПрофильe()"><i class="fas fa-envelope"></i> DM</button>
-      <button class="profс-action-btn" onclick="etiketFromПрофильe()"><i class="fas fa-at"></i> Mention</button>
+    <div class="profs-action-row">
+      <button class="profs-action-btn dm" onclick="dmFromprofile()"><i class="fas fa-envelope"></i> DM</button>
+      <button class="profs-action-btn" onclick="etiketFromprofile()"><i class="fas fa-at"></i> Mention</button>
     </div>
   </div>
 </div>
@@ -114,7 +114,7 @@
 <script>
 var _activeGuildId = '{{ guild_id }}';
 var _guilds = [];
-var _channelId = null, _dmМодe = false, _dmUserId = null;
+var _channelId = null, _dmMode = false, _dmUserId = null;
 var _members = [], _mentionIdx = 0, _mentionMatches = [];
 var _lastMsgId = null, _autoRefresh = null, _replyTo = null, _fetchSeq = 0;
 
@@ -132,8 +132,8 @@ function escJs(s) {
 async function loadGuilds() {
   try {
     var response = await fetch('/api/guilds');
-    _guilds = await response.jпоследний();
-    _guilds = Arrмесяц.isArrмесяц(_guilds) ? _guilds : [];
+    _guilds = await response.json();
+    _guilds = Array.isArray(_guilds) ? _guilds : [];
     if (!_guilds.length) return;
     if (!_activeGuildId || !_guilds.some(function(g) { return g.id === _activeGuildId; })) _activeGuildId = _guilds[0].id;
     document.getElementById('guild-bar').innerHTML = _guilds.map(function(g, i) {
@@ -143,7 +143,7 @@ async function loadGuilds() {
       return (i ? '<div class="guild-sep"></div>' : '') + '<div class="guild-icon' + active + '" id="gi-' + g.id + '" onclick="selectGuild(\'' + g.id + '\', true)" title="' + escHtml(g.name) + '">' + image + '</div>';
     }).join('');
     selectGuild(_activeGuildId, true);
-  } catch (e) { conлевоe.error('Ошибка загрузки серверов:', e); }
+  } catch (e) { console.error('Ошибка загрузки серверов:', e); }
 }
 
 function selectGuild(gid, sсnt) {
@@ -153,14 +153,14 @@ function selectGuild(gid, sсnt) {
   if (gi) gi.classList.add('active');
   var g = _guilds.find(function(x){ return x.id === gid; });
   document.getElementById('sidebar-guild-name').textContent = g ? g.name : gid;
-  _channelId = null; _dmМодe = false; _lastMsgId = null; _fetchSeq++;
+  _channelId = null; _dmMode = false; _lastMsgId = null; _fetchSeq++;
   if (_autoRefresh) { clearInterval(_autoRefresh); _autoRefresh = null; }
   document.getElementById('ch-list').innerHTML = '';
   document.getElementById('dm-list').innerHTML = '';
   document.getElementById('chat-messages').innerHTML = '<div class="chat-empty"><i class="fas fa-comments"></i>Выберите канал</div>';
   document.getElementById('ch-name').textContent = 'Выберите канал';
   document.getElementById('ch-topic').textContent = '';
-  document.getElementById('ch-sep').style.displмесяц = 'none';
+  document.getElementById('ch-sep').style.display = 'none';
   document.getElementById('chat-input').disabled = true;
   document.getElementById('send-btn').disabled = true;
   loadChannels(gid);
@@ -172,7 +172,7 @@ function selectGuild(gid, sсnt) {
 // ── КАНАЛЫ ──────────────────────────────────────────────────────────────
 async function loadChannels(gid) {
   try {
-    var chs = await fetch('/api/guild/' + gid + '/channels').then(r => r.jпоследний());
+    var chs = await fetch('/api/guild/' + gid + '/channels').then(r => r.json());
     var text = chs.filter(function(c){ return c.type === 'text'; });
     var el = document.getElementById('ch-list');
     el.innerHTML = text.map(function(c) {
@@ -184,18 +184,18 @@ async function loadChannels(gid) {
 }
 
 async function loadMembers(gid) {
-  try { _members = await fetch('/api/chat/' + gid + '/members').then(r => r.jпоследний()); } catch(e) {}
+  try { _members = await fetch('/api/chat/' + gid + '/members').then(r => r.json()); } catch(e) {}
 }
 
 function selectChannel(id, name) {
-  _channelId = id; _dmМодe = false; _lastMsgId = null; _fetchSeq++;
+  _channelId = id; _dmMode = false; _lastMsgId = null; _fetchSeq++;
   document.querySelectorAll('.ch-item').forEach(function(el){ el.classList.remove('active'); });
   var el = document.getElementById('ch-' + id);
   if (el) el.classList.add('active');
   document.getElementById('ch-icon').innerHTML = '<i class="fas fa-hashtag"></i>';
   document.getElementById('ch-name').textContent = '#' + name;
   document.getElementById('ch-topic').textContent = '';
-  document.getElementById('ch-sep').style.displмесяц = 'none';
+  document.getElementById('ch-sep').style.display = 'none';
   document.getElementById('chat-input').disabled = false;
   document.getElementById('chat-input').placeholder = '#' + name + ' канал сообщение напишите...';
   document.getElementById('send-btn').disabled = false;
@@ -208,19 +208,19 @@ function selectChannel(id, name) {
 
 // ── СООБЩЕНИЯ ──────────────────────────────────────────────────────────────
 async function loadMessages() {
-  if (!_channelId || _dmМодe) return;
+  if (!_channelId || _dmMode) return;
   var mySeq = _fetchSeq, myCh = _channelId;
   try {
-    var msgs = await fetch('/api/chat/' + _activeGuildId + '/' + myCh + '/messages').then(r => r.jпоследний());
+    var msgs = await fetch('/api/chat/' + _activeGuildId + '/' + myCh + '/messages').then(r => r.json());
     if (mySeq !== _fetchSeq || myCh !== _channelId) return;
     if (msgs.error) return;
     var el = document.getElementById('chat-messages');
-    var atBottom = el.scрольlHeight - el.scрольlTop - el.clientHeight < 100;
+    var atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 100;
     var lastId = msgs.length ? msgs[msgs.length-1].id : null;
     if (lastId === _lastMsgId) return;
     _lastMsgId = lastId;
     el.innerHTML = msgs.length ? renderMsgList(msgs) : '<div class="chat-empty"><i class="fas fa-comment-slash"></i>Пока сообщение yok</div>';
-    if (atBottom) el.scрольlTop = el.scрольlHeight;
+    if (atBottom) el.scrollTop = el.scrollHeight;
   } catch(e) {}
 }
 
@@ -228,7 +228,7 @@ function renderMsgList(msgs) {
   var html = '', prevAuthor = null, prevDate = null;
   msgs.forEach(function(m) {
     var d = new Date(m.timestamp);
-    var dateStr = d.toLocaleDateString('tr-TR', {dмесяц:'numeric',month:'long',year:'numeric'});
+    var dateStr = d.toLocaleDateString('tr-TR', {day:'numeric',month:'long',year:'numeric'});
     if (dateStr !== prevDate) {
       html += '<div class="date-divider">' + dateStr + '</div>';
       prevDate = dateStr; prevAuthor = null;
@@ -333,7 +333,7 @@ var _sending = false;
 
 async function sendMessage() {
   if (_sending) return;
-  if (_dmМодe) { await sendDmMessage(); return; }
+  if (_dmMode) { await sendDmMessage(); return; }
   var inp = document.getElementById('chat-input');
   var content = inp.value.trim();
   if (!content || !_channelId) return;
@@ -346,12 +346,12 @@ async function sendMessage() {
   cancelReply();
   try {
     await fetch('/api/chat/' + _activeGuildId + '/' + _channelId + '/send', {
-      method:'POST', headers:{'Content-Type':'application/jпоследний'},
+      method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({content: finalContent})
     });
     _lastMsgId = null;
     await loadMessages();
-    document.getElementById('chat-messages').scрольlTop = 999999;
+    document.getElementById('chat-messages').scrollTop = 999999;
   } catch(e) {
     // Ошибка olursa сообщение geri koy
     inp.value = content;
@@ -372,7 +372,7 @@ async function deleteMsg(msgId) {
 // ── DM ────────────────────────────────────────────────────────────────────
 async function loadRecentDms(gid) {
   try {
-    var r = await fetch('/api/dm/' + gid + '/recent').then(r => r.jпоследний());
+    var r = await fetch('/api/dm/' + gid + '/recent').then(r => r.json());
     var dmList = document.getElementById('dm-list');
     dmList.innerHTML = r.length ? r.map(function(u) {
       return '<div class="ch-item" id="dm-' + u.id + '" onclick="openDm(\'' + u.id + '\',\'' + escJs(u.name) + '\')">' +
@@ -386,20 +386,20 @@ async function searchDmUser(q) {
   var res = document.getElementById('dm-search-results');
   if (!q || q.length < 2) { res.innerHTML = ''; return; }
   try {
-    var members = await fetch('/api/guild/' + _activeGuildId + '/members').then(r => r.jпоследний());
+    var members = await fetch('/api/guild/' + _activeGuildId + '/members').then(r => r.json());
     var filtered = members.filter(function(m) {
-      return (m.displмесяц_name||'').toLowerCase().includes(q.toLowerCase()) || (m.name||'').toLowerCase().includes(q.toLowerCase());
+      return (m.display_name||'').toLowerCase().includes(q.toLowerCase()) || (m.name||'').toLowerCase().includes(q.toLowerCase());
     }).slice(0, 8);
     res.innerHTML = filtered.map(function(m) {
-      return '<div class="ch-item" onclick="openDm(\'' + m.id + '\',\'' + escJs(m.displмесяц_name) + '\')">' +
+      return '<div class="ch-item" onclick="openDm(\'' + m.id + '\',\'' + escJs(m.display_name) + '\')">' +
         (m.avatar ? '<img src="' + m.avatar + '"   style="width: 20px; height: 20px;">' : '<i class="fas fa-user ch-icon"></i>') +
-        '<span class="ch-name">' + escHtml(m.displмесяц_name) + '</span></div>';
+        '<span class="ch-name">' + escHtml(m.display_name) + '</span></div>';
     }).join('');
   } catch(e) {}
 }
 
 async function openDm(userId, userName) {
-  _dmМодe = true; _dmUserId = userId; _channelId = null; _lastMsgId = null; _fetchSeq++;
+  _dmMode = true; _dmUserId = userId; _channelId = null; _lastMsgId = null; _fetchSeq++;
   document.getElementById('dm-search').value = '';
   document.getElementById('dm-search-results').innerHTML = '';
   document.querySelectorAll('.ch-item').forEach(function(el){ el.classList.remove('active'); });
@@ -413,7 +413,7 @@ async function openDm(userId, userName) {
   } else { existing.classList.add('active'); }
   document.getElementById('ch-icon').innerHTML = '<i class="fas fa-user"></i>';
   document.getElementById('ch-name').textContent = userName;
-  document.getElementById('ch-sep').style.displмесяц = '';
+  document.getElementById('ch-sep').style.display = '';
   document.getElementById('ch-topic').textContent = 'Direkt Сообщение';
   document.getElementById('chat-input').disabled = false;
   document.getElementById('chat-input').placeholder = userName + ' личный сообщение напишите...';
@@ -425,12 +425,12 @@ async function openDm(userId, userName) {
 }
 
 async function loadDmMessages() {
-  if (!_dmМодe || !_dmUserId) return;
+  if (!_dmMode || !_dmUserId) return;
   try {
-    var data = await fetch('/api/dm/' + _activeGuildId + '/' + _dmUserId + '/messages').then(r => r.jпоследний());
-    if (!Arrмесяц.isArrмесяц(data)) return;
+    var data = await fetch('/api/dm/' + _activeGuildId + '/' + _dmUserId + '/messages').then(r => r.json());
+    if (!Array.isArray(data)) return;
     var el = document.getElementById('chat-messages');
-    var atBottom = el.scрольlHeight - el.scрольlTop - el.clientHeight < 100;
+    var atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 100;
     el.innerHTML = data.length ? data.map(function(m) {
       var d = new Date(m.timestamp);
       var time = d.toLocaleTimeString('tr-TR', {hour:'2-digit',minute:'2-digit'});
@@ -446,7 +446,7 @@ async function loadDmMessages() {
         '<span class="msg-time">' + time + '</span></div>' +
         '<div class="msg-content">' + parseContent(m.content) + '</div>' + inlineMedia + '</div></div>';
     }).join('') : '<div class="chat-empty"><i class="fas fa-comment-slash"></i>Пока сообщение yok</div>';
-    if (atBottom) el.scрольlTop = el.scрольlHeight;
+    if (atBottom) el.scrollTop = el.scrollHeight;
   } catch(e) {}
 }
 
@@ -461,11 +461,11 @@ async function sendDmMessage() {
   inp.value = ''; inp.style.height = 'auto';
   try {
     await fetch('/api/dm/' + _activeGuildId + '/' + _dmUserId + '/send', {
-      method:'POST', headers:{'Content-Type':'application/jпоследний'},
+      method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({content})
     });
     await loadDmMessages();
-    document.getElementById('chat-messages').scрольlTop = 999999;
+    document.getElementById('chat-messages').scrollTop = 999999;
   } catch(e) {
     inp.value = content;
   }
@@ -477,7 +477,7 @@ async function sendDmMessage() {
 // ── INPUT ─────────────────────────────────────────────────────────────────
 function handleKey(e) {
   var popup = document.getElementById('etiket-popup');
-  if (popup.style.displмесяц === 'block') {
+  if (popup.style.display === 'block') {
     if (e.key === 'ArrowDown') { e.preventDefault(); _mentionIdx = Math.min(_mentionIdx+1, _mentionMatches.length-1); renderMentionPopup(); return; }
     if (e.key === 'ArrowUp')   { e.preventDefault(); _mentionIdx = Math.max(_mentionIdx-1, 0); renderMentionPopup(); return; }
     if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); selectMention(_mentionIdx); return; }
@@ -488,8 +488,8 @@ function handleKey(e) {
 
 function handleInput(el) {
   el.style.height = 'auto';
-  el.style.height = Math.min(el.scрольlHeight, 140) + 'px';
-  if (_dmМодe) return;
+  el.style.height = Math.min(el.scrollHeight, 140) + 'px';
+  if (_dmMode) return;
   var before = el.value.substring(0, el.selectionStart);
   var match = before.match(/@(\w*)$/);
   if (match) {
@@ -503,7 +503,7 @@ function handleInput(el) {
 
 function renderMentionPopup() {
   var popup = document.getElementById('etiket-popup');
-  popup.style.displмесяц = 'block';
+  popup.style.display = 'block';
   popup.innerHTML = _mentionMatches.map(function(m, i) {
     var av = m.avatar ? '<img src="' + m.avatar + '">' : '<i class="fas fa-user"   style="opacity: .5;"></i>';
     return '<div class="mention-item' + (i===_mentionIdx?' selected':'') + '" onclick="selectMention(' + i + ')">' + av + escHtml(m.name) + '</div>';
@@ -521,7 +521,7 @@ function selectMention(idx) {
 }
 
 function closeMentionPopup() {
-  document.getElementById('etiket-popup').style.displмесяц = 'none';
+  document.getElementById('etiket-popup').style.display = 'none';
   _mentionMatches = [];
 }
 
@@ -541,11 +541,11 @@ document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeLigh
 
 // ── UYE LISTESI ──────────────────────────────────────────────────────────
 var _allMembers = [];
-var _profсMember = null;
+var _profsMember = null;
 
 async function loadMemberList(gid) {
   try {
-    var data = await fetch('/api/guild/' + gid + '/members').then(r => r.jпоследний());
+    var data = await fetch('/api/guild/' + gid + '/members').then(r => r.json());
     _allMembers = data;
     renderMemberList(data);
   } catch(e) {}
@@ -560,40 +560,40 @@ function renderMemberList(members) {
   if (online.length) { html += '<div class="member-section">В сети - ' + online.length + '</div>'; html += online.map(renderMemberItem).join(''); }
   if (bots.length) { html += '<div class="member-section">Botlar - ' + bots.length + '</div>'; html += bots.map(renderMemberItem).join(''); }
   if (offline.length) { html += '<div class="member-section">Не в сети - ' + offline.length + '</div>'; html += offline.map(renderMemberItem).join(''); }
-  document.getElementById('members-scрольl').innerHTML = html || '<div >Uye yok</div>';
+  document.getElementById('members-scroll').innerHTML = html || '<div >Uye yok</div>';
 }
 
 function renderMemberItem(m) {
   var av = m.avatar ? '<img class="member-av" src="' + m.avatar + '" onerror="this.outerHTML=\'<div class=member-av-placeholder>\u{1F464}</div>\'">': '<div class="member-av-placeholder">' + (m.bot ? '\u{1F916}' : '\u{1F464}') + '</div>';
   var st = m.status === 'online' ? 'online' : m.status === 'idle' ? 'idle' : m.status === 'dnd' ? 'dnd' : 'offline';
-  var dn = m.nick || m.displмесяц_name || m.name;
-  return '<div class="member-item" id="mi-' + m.id + '" onclick="openПрофильe(event,\'' + m.id + '\')">' +
+  var dn = m.nick || m.display_name || m.name;
+  return '<div class="member-item" id="mi-' + m.id + '" onclick="openprofile(event,\'' + m.id + '\')">' +
     '<div class="member-avatar-wrap">' + av + '<span class="status-dot ' + st + '"></span></div>' +
     '<span class="member-name' + (m.bot ? ' is-bot' : '') + '">' + dn + '</span></div>';
 }
 
-function openПрофильe(event, memberId) {
+function openprofile(event, memberId) {
   event.stopPropagation();
   var m = _allMembers.find(function(x){ return x.id === memberId; });
   if (!m) return;
-  _profсMember = m;
-  var popup = document.getElementById('profс-popup');
-  var dn = m.nick || m.displмесяц_name || m.name;
-  var avHtml = m.avatar ? '<img src="' + m.avatar + '" class="profс-av">' : '<div class="profс-av-placeholder">\u{1F464}</div>';
+  _profsMember = m;
+  var popup = document.getElementById('profs-popup');
+  var dn = m.nick || m.display_name || m.name;
+  var avHtml = m.avatar ? '<img src="' + m.avatar + '" class="profs-av">' : '<div class="profs-av-placeholder">\u{1F464}</div>';
   document.getElementById('pp-avatar').innerHTML = avHtml;
-  document.getElementById('pp-displмесяцname').textContent = dn;
+  document.getElementById('pp-displayname').textContent = dn;
   document.getElementById('pp-username').textContent = '@' + m.name + (m.discriminator && m.discriminator !== '0' ? '#' + m.discriminator : '');
   var stLabels = {online:'В сети', idle:'Неактивен', dnd:'Не беспокоить', offline:'Не в сети'};
   var stDots = {online:'\u25CF', idle:'\u25D0', dnd:'\u2298', offline:'\u25CB'};
   var st = m.status || 'offline';
   var badge = document.getElementById('pp-status-badge');
-  badge.className = 'profс-status-badge ' + st;
+  badge.className = 'profs-status-badge ' + st;
   badge.textContent = stDots[st] + ' ' + (stLabels[st] || st);
-  var рольe = (m.рольes || []).slice(0,8).map(function(r) {
+  var role = (m.roles || []).slice(0,8).map(function(r) {
     var c = r.color && r.color !== '#000000' ? r.color : 'rgba(212,168,67,0.4)';
-    return '<span class="profс-рольe-badge" >' + r.name + '</span>';
+    return '<span class="profs-role-badge" >' + r.name + '</span>';
   }).join('');
-  document.getElementById('pp-рольe').innerHTML = рольes || '<span >Роль yok</span>';
+  document.getElementById('pp-role').innerHTML = roles || '<span >Роль yok</span>';
   document.getElementById('pp-nick-input').value = m.nick || '';
   var rect = event.currentTarget.getBoundingClientRect();
   var left = rect.right + 8, top = rect.top;
@@ -604,45 +604,45 @@ function openПрофильe(event, memberId) {
   popup.classList.add('show');
 }
 
-function closeПрофильe() {
-  document.getElementById('profс-popup').classList.remove('show');
-  _profсMember = null;
+function closeprofile() {
+  document.getElementById('profs-popup').classList.remove('show');
+  _profsMember = null;
 }
 
 async function saveNick() {
-  if (!_profсMember) return;
+  if (!_profsMember) return;
   var nick = document.getElementById('pp-nick-input').value.trim();
   try {
-    var r = await fetch('/api/guild/' + _activeGuildId + '/member/' + _profсMember.id + '/nick', {
-      method:'POST', headers:{'Content-Type':'application/jпоследний'},
+    var r = await fetch('/api/guild/' + _activeGuildId + '/member/' + _profsMember.id + '/nick', {
+      method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({nick: nick})
-    }).then(r => r.jпоследний());
+    }).then(r => r.json());
     if (r.ok) {
-      var idx = _allMembers.findIndex(function(m){ return m.id === _profсMember.id; });
+      var idx = _allMembers.findIndex(function(m){ return m.id === _profsMember.id; });
       if (idx >= 0) _allMembers[idx].nick = nick || null;
       renderMemberList(_allMembers);
-      closeПрофильe();
+      closeprofile();
     } else { alert('Ошибка: ' + (r.error || 'Bilinmeyen ошибка')); }
   } catch(e) { alert('Baglanti ошибки'); }
 }
 
-function dmFromПрофильe() {
-  if (!_profсMember) return;
-  var name = _profсMember.nick || _profсMember.displмесяц_name || _profсMember.name;
-  closeПрофильe();
-  openDm(_profсMember.id, name);
+function dmFromprofile() {
+  if (!_profsMember) return;
+  var name = _profsMember.nick || _profsMember.display_name || _profsMember.name;
+  closeprofile();
+  openDm(_profsMember.id, name);
 }
 
-function etiketFromПрофильe() {
-  if (!_profсMember) return;
+function etiketFromprofile() {
+  if (!_profsMember) return;
   var inp = document.getElementById('chat-input');
-  inp.value += '<@' + _profсMember.id + '> ';
+  inp.value += '<@' + _profsMember.id + '> ';
   inp.focus();
-  closeПрофильe();
+  closeprofile();
 }
 
 document.addEventListener('click', function(e) {
-  if (!e.target.closest('.profс-popup') && !e.target.closest('.member-item')) closeПрофильe();
+  if (!e.target.closest('.profs-popup') && !e.target.closest('.member-item')) closeprofile();
 });
 
 loadGuilds();

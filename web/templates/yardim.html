@@ -39,8 +39,8 @@
 
 <div class="yd-grid" id="yd-grid">
   <div class="yd-card"><div class="yd-icon"><i class="fas fa-users"></i></div><div class="yd-title">Пользователи</div><div class="yd-desc">Просмотр участников сервера, изменение никнеймов, массовые действия</div><span class="yd-cat">Управление</span></div>
-  <div class="yd-card"><div class="yd-icon"><i class="fas fa-shield-низ"></i></div><div class="yd-title">Анти-рейд</div><div class="yd-desc">Защита от массовых атак, фильтр новых аккаунтов, карантин</div><span class="yd-cat">Безопасность</span></div>
-  <div class="yd-card"><div class="yd-icon"><i class="fas fa-ticket-низ"></i></div><div class="yd-title">AI Тикеты</div><div class="yd-desc">Автоматическая поддержка пользователей с помощью AI</div><span class="yd-cat">Поддержка</span></div>
+  <div class="yd-card"><div class="yd-icon"><i class="fas fa-shield-alt"></i></div><div class="yd-title">Анти-рейд</div><div class="yd-desc">Защита от массовых атак, фильтр новых аккаунтов, карантин</div><span class="yd-cat">Безопасность</span></div>
+  <div class="yd-card"><div class="yd-icon"><i class="fas fa-ticket-alt"></i></div><div class="yd-title">AI Тикеты</div><div class="yd-desc">Автоматическая поддержка пользователей с помощью AI</div><span class="yd-cat">Поддержка</span></div>
   <div class="yd-card"><div class="yd-icon"><i class="fas fa-coins"></i></div><div class="yd-title">Экономика</div><div class="yd-desc">Виртуальная валюта, магазин, лидерборд, уровни</div><span class="yd-cat">Игры</span></div>
   <div class="yd-card"><div class="yd-icon"><i class="fas fa-bullhorn"></i></div><div class="yd-title">Опросы</div><div class="yd-desc">Голосования и опросы для участников</div><span class="yd-cat">Интерактив</span></div>
   <div class="yd-card"><div class="yd-icon"><i class="fas fa-gift"></i></div><div class="yd-title">Розыгрыши</div><div class="yd-desc">Автоматические розыгрыши призов</div><span class="yd-cat">Интерактив</span></div>
@@ -56,7 +56,7 @@
   <h3><i class="fas fa-question-circle"></i> Часто задаваемые вопросы</h3>
   <p><strong>Бот не отвечает на команды?</strong> Проверьте что бот онлайн и у него есть нужные права в каналах.</p>
   <p><strong>Как сбросить пароль?</strong> Используйте <code>/change-password</code> или обратитесь к owner.</p>
-  <p><strong>Где хранятся данные?</strong> В файлах <code>data/*.jпоследний</code>. Регулярно создавайте бэкапы.</p>
+  <p><strong>Где хранятся данные?</strong> В файлах <code>data/*.json</code>. Регулярно создавайте бэкапы.</p>
   <p><strong>Как связаться с поддержкой?</strong> Создайте тикет через <code>/ai-tickets</code> или Discord сервер поддержки.</p>
 </div>
 
@@ -73,7 +73,7 @@
       var q = s.value.toLowerCase();
       document.querySelectorAll('.yd-card').forEach(function (c) {
         var text = c.textContent.toLowerCase();
-        c.style.displмесяц = text.indexOf(q) === -1 ? 'none' : '';
+        c.style.display = text.indexOf(q) === -1 ? 'none' : '';
       });
     });
   }

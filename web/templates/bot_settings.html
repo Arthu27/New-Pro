@@ -27,7 +27,7 @@
       <select id="bot-status"><option value="online">🟢 Online</option><option value="idle" selected>🟡 Idle</option><option value="dnd">🔴 DND</option><option value="invisible">⚫ Invisible</option></select>
     </div>
     <div class="row"><label>Активность</label>
-      <select id="bot-activity"><option value="listening" selected>Слушает</option><option value="plмесяцing">Играет</option><option value="watching">Смотрит</option><option value="competing">Соревнуется</option></select>
+      <select id="bot-activity"><option value="listening" selected>Слушает</option><option value="playing">Играет</option><option value="watching">Смотрит</option><option value="competing">Соревнуется</option></select>
     </div>
     <div class="row"><label>Текст</label><input type="text" id="bot-text" value=".gg/Aether"></div>
   </div>
@@ -58,7 +58,7 @@
       <div class="toggle on" id="tog-dm"></div>
     </div>
     <div class="row"><label>Модель</label>
-      <select id="ai-модel"><option>Mistral</option><option>GPT-4</option><option>Claude</option></select>
+      <select id="ai-model"><option>Mistral</option><option>GPT-4</option><option>Claude</option></select>
     </div>
   </div>
 
@@ -67,10 +67,10 @@
       <div class="bs-icon"><i class="fas fa-clipboard-list"></i></div>
       <div class="bs-title">Логирование</div>
     </div>
-    <div class="row with-toggle"><label>Мод-логи</label><div class="toggle on" id="tog-модлог"></div></div>
-    <div class="row with-toggle"><label>Сообщения</label><div class="toggle on" id="tog-msgлог"></div></div>
-    <div class="row with-toggle"><label>Голос</label><div class="toggle" id="tog-voiceлог"></div></div>
-    <div class="row"><label>Канал</label><input type="text" id="лог-channel" placeholder="ID канала"></div>
+    <div class="row with-toggle"><label>Мод-логи</label><div class="toggle on" id="tog-modlog"></div></div>
+    <div class="row with-toggle"><label>Сообщения</label><div class="toggle on" id="tog-msglog"></div></div>
+    <div class="row with-toggle"><label>Голос</label><div class="toggle" id="tog-voicelog"></div></div>
+    <div class="row"><label>Канал</label><input type="text" id="log-channel" placeholder="ID канала"></div>
   </div>
 
   <div class="bs-card">
@@ -106,7 +106,7 @@
     if (el) el.addEventListener('click', function () { el.classList.toggle('on'); });
   }
   function bind() {
-    ['tog-ai','tog-dm','tog-модлог','tog-msgлог','tog-voiceлог','tog-backup'].forEach(bindToggle);
+    ['tog-ai','tog-dm','tog-modlog','tog-msglog','tog-voicelog','tog-backup'].forEach(bindToggle);
     var s = $('btn-save');
     if (s) s.addEventListener('click', function () { showToast('✓ Настройки сохранены', true); });
     var sy = $('sync-slash');

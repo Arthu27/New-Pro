@@ -29,14 +29,14 @@
   <canvas id="sysChart" height="80"></canvas>
 </div>
 
-{% if рольe == 'owner' or рольe == 'админ' %}
+{% if role == 'owner' or role == 'админ' %}
 <div class="section" >
   <div class="bs-title" ><i class="fas fa-power-off"></i> Управление ботом</div>
   <div  >
-    <button onclick="restartBot()" class="contроль-btn danger">
+    <button onclick="restartBot()" class="control-btn danger">
       <i class="fas fa-redo"></i> Перезапустить бот
     </button>
-    <button onclick="syncCommands()" class="contроль-btn primary">
+    <button onclick="syncCommands()" class="control-btn primary">
       <i class="fas fa-sync"></i> Синхронизировать команды
     </button>
   </div>
@@ -50,7 +50,7 @@ var sysChart;
 
 async function loadStats() {
   var r = await fetch('/api/bot-stats');
-  var d = await r.jпоследний();
+  var d = await r.json();
   if (d.error) return;
 
   document.getElementById('stats').innerHTML =
@@ -89,9 +89,9 @@ setInterval(loadStats, 5000);
 
 function showStatus(msg, ok) {
   var el = document.getElementById('restart-status');
-  el.style.displмесяц = 'block';
+  el.style.display = 'block';
   el.style.background = ok ? 'rgba(52,211,153,0.10)' : 'rgba(248,113,113,0.10)';
-  el.style.border = '1px левоid ' + (ok ? 'rgba(52,211,153,0.30)' : 'rgba(248,113,113,0.30)');
+  el.style.border = '1px solid ' + (ok ? 'rgba(52,211,153,0.30)' : 'rgba(248,113,113,0.30)');
   el.style.color = ok ? '#6ee7b7' : '#fca5a5';
   el.innerHTML = (ok ? '✓ ' : '✗ ') + msg;
 }
@@ -102,7 +102,7 @@ async function restartBot() {
   btn.disabled = true;
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Перезапуск...';
   var r = await fetch('/api/bot/restart', {method: 'POST'});
-  var d = await r.jпоследний();
+  var d = await r.json();
   showStatus(d.success ? 'Бот перезапускается... 10-15 секунд.' : (d.error || 'Ошибка'), d.success);
   setTimeout(function() { btn.disabled = false; btn.innerHTML = '<i class="fas fa-redo"></i> Перезапустить бот'; }, 15000);
 }
@@ -112,7 +112,7 @@ async function syncCommands() {
   btn.disabled = true;
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Синхронизация...';
   var r = await fetch('/api/bot/sync', {method: 'POST'});
-  var d = await r.jпоследний();
+  var d = await r.json();
   showStatus(d.success ? 'Команды синхронизированы!' : (d.error || 'Ошибка'), d.success);
   btn.disabled = false;
   btn.innerHTML = '<i class="fas fa-sync"></i> Синхронизировать команды';
