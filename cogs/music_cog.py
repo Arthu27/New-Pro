@@ -7,6 +7,7 @@ import discord
 from discord .ext import commands 
 from datetime import datetime 
 import asyncio 
+import random 
 
 from logger import get_logger 
 log =get_logger ("music_cog")
