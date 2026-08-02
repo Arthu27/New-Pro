@@ -104,7 +104,7 @@ class _EconomyExtra (commands .Cog ):
         data ['history']=data ['history'][-50 :]
         self ._save (user_id ,data )
 
-    async def _migrate (self ,user_id :int ,data :dict )->dict :
+    def _migrate (self ,user_id :int ,data :dict )->dict :
         """Добавить недостающие поля в старые данные"""
         changed =False 
         for k ,v in DEFAULT_DATA .items ():
