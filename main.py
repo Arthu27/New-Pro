@@ -55,6 +55,7 @@ import discord
 import warnings
 warnings.filterwarnings('ignore', category=ResourceWarning)
 from discord.ext import commands
+import logging
 from dotenv import load_dotenv
 import threading
 import re
@@ -64,6 +65,10 @@ import urllib.error
 import time
 import signal
 import atexit
+
+# python-dotenv yorum satırlarını (Rusça, uzun çizgili vb.) uyarı olarak basabiliyor.
+# Bunlar zararsızdır — uyarıları gizleyip değerleri yine de okumaya devam ediyoruz.
+logging.getLogger("dotenv").setLevel(logging.ERROR)
 
 # Загружаем .env из каталога скрипта (надёжно, независимо от рабочей директории)
 # и с override=True, чтобы значение из .env всегда применялось.
