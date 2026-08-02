@@ -200,6 +200,41 @@ class warnings(commands.Cog):
         e.set_footer(text=f"{interaction.guild.name}")
         await interaction.response.send_message(embed=e, ephemeral=True)
 
+    # ── /unwarn ─────────────────────────────────────────────────────────
+    @app_commands.command(name="unwarn", description="Снять последнее предупреждение у пользователя")
+    @app_commands.checks.has_permissions(moderate_members=True)
+    async def unwarn(self, interaction, user: discord.Member):
+        """Снять последнее предупреждение у пользователя"""
+        warns = self._get_warns(interaction.guild.id, user.id)
+        if not warns:
+            e = discord.Embed(color=discord.Color.dark_grey(), timestamp=datetime.now(timezone.utc))
+            e.description = (
+                f"## Снятие предупреждения\n"
+                f"**{user.display_name}** · `{user.id}`\n\n"
+                f"У пользователя нет предупреждений.\n\n"
+                f"{DIVIDER}"
+            )
+            e.set_footer(text=f"{interaction.guild.name}")
+            await interaction.response.send_message(embed=e, ephemeral=True)
+            return
+
+        removed = warns.pop()
+        self._save_warns(interaction.guild.id, user.id, warns)
+        total = len(warns)
+
+        e = discord.Embed(color=discord.Color.dark_grey(), timestamp=datetime.now(timezone.utc))
+        e.description = (
+            f"## Снятие предупреждения\n"
+            f"**{user.display_name}** · `{user.id}`\n\n"
+            f"Снято: **#{removed.get('id')}** — {removed.get('reason', 'Не указана')}\n"
+            f"Осталось: **{total}**\n"
+            f"Модератор: {interaction.user.mention}\n\n"
+            f"{DIVIDER}"
+        )
+        e.set_thumbnail(url=user.display_avatar.url)
+        e.set_footer(text=f"{interaction.guild.name}")
+        await interaction.response.send_message(embed=e, ephemeral=True)
+
     # ── add_warning (для AI-modератора, без interaction) ─────────────────
     async def add_warning(self, user: discord.Member, moderator: discord.Member, reason: str = None):
         """Добавить предупреждение без interaction"""

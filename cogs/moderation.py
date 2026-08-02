@@ -76,8 +76,9 @@ class Moderation (commands .Cog ):
         except discord .Forbidden :
             pass 
 
-    def _confirm_embed (self ,action ,user ,guild ,reason ,case_id ,extra =""):
+    def _confirm_embed (self ,action ,user ,guild ,reason ,case_id ,extra ="" ,moderator =None ):
         """Embed onay для модератора — professionalniy stil"""
+        moderator =moderator or (guild .me if guild else None )
         configs ={
         "ban":("Ban завершено",0xE74C3C ,"забанен на время"),
         "kick":("Kick завершено",0xE67E22 ,"isanahtaren с сервер"),
@@ -95,7 +96,7 @@ class Moderation (commands .Cog ):
         desc +=f"\n\n"
         desc +=f"**Delo:** #{case_id}\n"
         desc +=f"**Причина:** {reason or 'Не belirtildi'}\n"
-        desc +=f"**Модератор:** {user.mention}\n"
+        desc +=f"**Модератор:** {moderator.mention if moderator else chr(8212)}\n"
 
         if extra :
             desc +=f"\n{extra}\n"
@@ -141,7 +142,7 @@ class Moderation (commands .Cog ):
                 case_id =self .save_case (guild .id ,'ban',user .id ,interaction .user .id ,reason )
                 log =mod_log_embed ("ban","Ban",0xE74C3C ,user ,interaction .user ,guild ,reason ,case_id )
                 await self .send_log (guild ,log )
-                confirm =self ._confirm_embed ("ban",user ,guild ,reason ,case_id )
+                confirm =self ._confirm_embed ("ban",user ,guild ,reason ,case_id ,moderator =interaction .user )
                 await interaction .response .send_message (embed =confirm ,ephemeral =True )
                 await self ._notify_owner ('ban',user ,interaction .user ,reason )
             except discord .Forbidden :
@@ -160,7 +161,7 @@ class Moderation (commands .Cog ):
                 case_id =self .save_case (guild .id ,'kick',user .id ,interaction .user .id ,reason )
                 log =mod_log_embed ("kick","Kick",0xE67E22 ,user ,interaction .user ,guild ,reason ,case_id )
                 await self .send_log (guild ,log )
-                confirm =self ._confirm_embed ("kick",user ,guild ,reason ,case_id )
+                confirm =self ._confirm_embed ("kick",user ,guild ,reason ,case_id ,moderator =interaction .user )
                 await interaction .response .send_message (embed =confirm ,ephemeral =True )
                 await self ._notify_owner ('kick',user ,interaction .user ,reason )
             except discord .Forbidden :
@@ -176,15 +177,16 @@ class Moderation (commands .Cog ):
             try :
                 until =discord .utils .utcnow ()+timedelta (minutes =sure )
                 dm =mod_dm_embed ("timeout",guild ,interaction .user ,reason ,
-                extra_fields =[("Длительность",f"**{длительность} dk.**",True )])
+                extra_fields =[("Длительность",f"**{sure} dk.**",True )])
                 await self .send_dm (user ,dm )
                 await user .timeout (until ,reason =reason )
                 case_id =self .save_case (guild .id ,'timeout',user .id ,interaction .user .id ,reason )
                 log =mod_log_embed ("timeout","Mute",0xF39C12 ,user ,interaction .user ,guild ,reason ,case_id ,
-                extra_fields =[("Длительность",f"{длительность} dk.",True )])
+                extra_fields =[("Длительность",f"{sure} dk.",True )])
                 await self .send_log (guild ,log )
                 confirm =self ._confirm_embed ("timeout",user ,guild ,reason ,case_id ,
-                extra =f"Длительность: **{длительность} dk.** · Snimetsya: <t:{int(until.timestamp())}:R>")
+                extra =f"Длительность: **{sure} dk.** · Snimetsya: <t:{int(until.timestamp())}:R>",
+                moderator =interaction .user )
                 await interaction .response .send_message (embed =confirm ,ephemeral =True )
                 await self ._notify_owner ('timeout',user ,interaction .user ,reason )
             except discord .Forbidden :
@@ -202,7 +204,7 @@ class Moderation (commands .Cog ):
                 await self .send_dm (user ,dm )
                 log =mod_log_embed ("untimeout","Mute удалено",0x2ECC71 ,user ,interaction .user ,guild )
                 await self .send_log (guild ,log )
-                confirm =self ._confirm_embed ("untimeout",user ,guild ,reason ,0 )
+                confirm =self ._confirm_embed ("untimeout",user ,guild ,reason ,0 ,moderator =interaction .user )
                 await interaction .response .send_message (embed =confirm ,ephemeral =True )
             except Exception as ex :
                 await interaction .response .send_message (embed =error_embed (str (ex )),ephemeral =True )

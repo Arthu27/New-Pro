@@ -175,6 +175,9 @@ def generate_ticket_panel_bytes ()->io .BytesIO :
 AI_ENABLED =True # AI-система поддержки активна
 MAX_AI_MESSAGES =10 
 
+# AI по серверам (guild) — глобально включено, можно отключить для конкретного сервера
+AI_DISABLED_GUILDS :set =set ()
+
 # На этом сервере система тикетов отключена
 TICKET_DISABLED_GUILDS :set =set ()
 
@@ -227,11 +230,13 @@ def _get_punishment_for_quote (quote :str )->dict :
 
 
 class AdminApprovalView (discord .ui .View ):
-    def __init__ (self ,target_id :int ,action_type :str ,reason :str ):
+    def __init__ (self ,target_id :int ,action_type :str ,reason :str ,guild_id :int =0 ,quote :str =''):
         super ().__init__ (timeout =None )
         self .target_id =target_id 
         self .action_type =action_type .upper ()
         self .reason =reason 
+        self .guild_id =guild_id 
+        self .quote =quote 
 
     @discord .ui .button (
     label ="✅ Одобрить наказание",
@@ -264,6 +269,17 @@ class AdminApprovalView (discord .ui .View ):
             elif self .action_type =='KICK':
                 await target .kick (reason =f"AI Рекомендация (одобрено {interaction.user}): {self.reason}")
                 await interaction .channel .send (f"✅ **[СУДЕБНОЕ РЕШЕНИЕ ВЫПОЛНЕНО]**: Участник **{target.display_name}** кикнут администратором {interaction.user.mention}.\n**Причина:** {self.reason}")
+
+                # ЗАЩИТА ОТ ДВОЙНОГО НАКАЗАНИЯ: сохраняем одобренное наказание, чтобы не наказывать повторно.
+            try :
+                cog =interaction .client .get_cog ('Ticket')
+                if cog and self .guild_id :
+                    cog ._record_penalty (
+                    int (self .guild_id ),int (self .target_id ),target .name ,
+                    self .reason ,0 ,self .quote
+                    )
+            except Exception :
+                pass 
 
                 # Disable buttons
             for child in self .children :
@@ -489,7 +505,7 @@ class TicketView (discord .ui .View ):
         )
 
         # Отправить приветственное сообщение от AI
-        if AI_ENABLED :
+        if self ._ai_enabled (channel .guild .id ):
             try :
                 from web .ai_helper import ai_ticket_greeting 
 
@@ -895,11 +911,14 @@ class Ticket (commands .Cog ):
         bot .add_view (CloseTicketView ())
         bot .add_view (AdminApprovalView (0 ,"",""))
 
+    def _ai_enabled (self ,guild_id ):
+        """Статус AI по серверам: глобально включено, можно отключить для конкретного сервера."""
+        return bool (AI_ENABLED )and int (guild_id )not in AI_DISABLED_GUILDS 
     def _get_ai_data_path (self ,guild_id :int )->str :
         """AI ticket data dosya yolu"""
         return f"data/ai_tickets_{guild_id}.json"
 
-    def _record_penalty (self ,guild_id :int ,user_id :int ,user_name :str ,reason :str ,duration :int ):
+    def _record_penalty (self ,guild_id :int ,user_id :int ,user_name :str ,reason :str ,duration :int ,quote :str =''):
         """Записать наказание в глобальный файл штрафов"""
         try :
             _penalty_file ='data/ticket_penalties.json'
@@ -923,6 +942,7 @@ class Ticket (commands .Cog ):
             'reason':reason ,
             'date':datetime .datetime .utcnow ().isoformat (),
             'duration':duration ,
+            'quote':quote [:300 ],
             })
 
             os .makedirs ('data',exist_ok =True )
@@ -930,6 +950,38 @@ class Ticket (commands .Cog ):
                 json .dump (_penalties ,_f ,ensure_ascii =False ,indent =2 )
         except Exception as _pe :
             log .info (f'[TICKET] Ошибка записи наказания: {_pe}')
+
+    def _already_punished_for_quote (self ,guild_id :int ,user_id :int ,quote :str ,days :int =14 )->bool :
+        """Aynı suç (quote) için bu kullanıcının son days gün içinde cezalandırılıp
+        cezalandırılmadığını kontrol et — tekrar ceza (çifte ceza) önlemek için."""
+        try :
+            if not quote or not quote .strip ():
+                return False 
+            _penalty_file ='data/ticket_penalties.json'
+            if not os .path .exists (_penalty_file ):
+                return False 
+            with open (_penalty_file ,'r',encoding ='utf-8')as _f :
+                _penalties =json .load (_f )
+            guild_str =str (guild_id )
+            user_str =str (user_id )
+            if guild_str not in _penalties or user_str not in _penalties [guild_str ]:
+                return False 
+            cutoff =datetime .datetime .utcnow ()-datetime .timedelta (days =days )
+            target =quote .strip ().lower ()
+            for p in _penalties [guild_str ][user_str ]:
+                p_quote =str (p .get ('quote','')or '').strip ().lower ()
+                if p_quote and target and p_quote ==target :
+                    # Это же нарушение уже было наказано
+                    try :
+                        p_date =datetime .datetime .fromisoformat (p ['date'])
+                        if p_date >cutoff :
+                            return True 
+                    except Exception :
+                        return True 
+            return False 
+        except Exception as e :
+            log .info (f'[TICKET] already_punished Ошибки: {e}')
+            return False 
 
     def _get_penalty_history (self ,guild_id :int ,user_id :int ,days :int =7 )->list :
         """В конец X день в наказание историю getir"""
@@ -1400,6 +1452,14 @@ class Ticket (commands .Cog ):
 
             # Функция выполнения наказания
             async def execute_punishment (target ,p_type ,dur ,p_reason ,p_quote ,label_ru ):
+                # ÇİFTE CEZA KORUMASI: aynı suç (quote) bu kullanıcı için son günlerde zaten
+                # cezalandırıldıysa tekrar ceza verme — sadece bilgilendir ve dur.
+                if self ._already_punished_for_quote (message .guild .id ,target .id ,p_quote ):
+                    await message .channel .send (
+                    f"⚖️ **{target.display_name}** для этого нарушения уже было вынесено наказание ранее. "
+                    f"Повторное наказание за одно и то же сообщение не применяется."
+                    )
+                    return 
             # Проверка накопленных варнов для эскалации в BAN
                 warn_count =0 
                 try :
@@ -1445,7 +1505,7 @@ class Ticket (commands .Cog ):
                     inline =False 
                     )
 
-                    view =AdminApprovalView (target .id ,p_type ,p_reason )
+                    view =AdminApprovalView (target .id ,p_type ,p_reason ,message .guild .id ,p_quote )
                     await message .channel .send (embed =p_embed ,view =view )
 
                     # Уведомление в логах
@@ -1469,7 +1529,7 @@ class Ticket (commands .Cog ):
                         value =f"Участнику **{target.display_name}** выдан реальный тайм-аут (мут) на **{hours} ч.** в Discord.",
                         inline =False 
                         )
-                        self ._record_penalty (message .guild .id ,target .id ,target .name ,p_reason ,dur )
+                        self ._record_penalty (message .guild .id ,target .id ,target .name ,p_reason ,dur ,p_quote )
 
                         # Автоматическое начисление варна вместе с мутом
                         try :
@@ -1509,7 +1569,7 @@ class Ticket (commands .Cog ):
                             value =f"Участнику **{target.display_name}** вынесено официальное предупреждение.",
                             inline =False 
                             )
-                            self ._record_penalty (message .guild .id ,target .id ,target .name ,p_reason ,0 )
+                            self ._record_penalty (message .guild .id ,target .id ,target .name ,p_reason ,0 ,p_quote )
                             try :
                                 await self ._notify_admins_penalty (
                                 message .guild ,penalty_type ='warn',
@@ -1583,17 +1643,16 @@ class Ticket (commands .Cog ):
         channel_id =message .channel .id 
         state =self ._get_ticket_state (guild_id ,channel_id )
 
-        #  РЕАЛЬНАЯ ПРОВЕРКА ЛОГОВ И ВЫДАЧА НАКАЗАНИЯ ПРИ ЖАЛОБЕ НА ОСКОРБЛЕНИЕ (РАБОТАЕТ ГЛОБАЛЬНО НА ВСЕМ СЕРВЕРЕ!)
-        if AI_ENABLED :
-            verified =await self ._verify_insult_claim (message ,state )
-            if verified :
-                return 
-
-                # Для обычных каналов (не тикетов) на этом обработка заканчивается
+        # Обычные (не ticket) каналы AI не обрабатываются.
         if not message .channel .name .startswith ("ticket-"):
             return 
 
-        if not AI_ENABLED :
+        if not self ._ai_enabled (guild_id ):
+            return 
+
+            #  РЕАЛЬНАЯ ПРОВЕРКА ЛОГОВ И ВЫДАЧА НАКАЗАНИЯ ПРИ ЖАЛОБЕ НА ОСКОРБЛЕНИЕ (ТОЛЬКО В ТИКЕТАХ)
+        verified =await self ._verify_insult_claim (message ,state )
+        if verified :
             return 
 
             #  ОБРАБОТКА AI FEEDBACK / САМООБУЧЕНИЕ 
@@ -2573,6 +2632,20 @@ class Ticket (commands .Cog ):
             if not target :
                 return 
 
+            # ЗАЩИТА ОТ ДВОЙНОГО НАКАЗАНИЯ — не наказывать повторно за то же нарушение.
+            quote_key =punishment_reason or ''
+            try :
+                if complaint .get ('messages'):
+                    quote_key =str (complaint ['messages'][0 ])[:200 ]
+            except Exception :
+                pass 
+            if self ._already_punished_for_quote (guild_id ,target .id ,quote_key ):
+                await channel .send (
+                f"⚖️ Для **{target.display_name}** по этому нарушению уже было вынесено наказание ранее. "
+                f"Повторное наказание за одно и то же нарушение не применяется."
+                )
+                return 
+
             try :
                 if action_type in ('BAN','KICK'):
                 # Для бана и кика — не наказываем сразу, а отправляем админам и блокируем тикет для обычного закрытия
@@ -2590,7 +2663,7 @@ class Ticket (commands .Cog ):
                     color =0xE74C3C ,
                     timestamp =datetime .datetime .utcnow ()
                     )
-                    view =AdminApprovalView (target .id ,action_type ,punishment_reason )
+                    view =AdminApprovalView (target .id ,action_type ,punishment_reason ,guild_id ,quote_key )
                     await channel .send (embed =embed ,view =view )
                     return 
 
@@ -2600,12 +2673,14 @@ class Ticket (commands .Cog ):
                         await target .timeout (until ,reason =f"AI: {punishment_reason}")
                         hours =max (1 ,dur //60 )
                         await channel .send (f"✅ **[СУДЕБНОЕ РЕШЕНИЕ ВЫПОЛНЕНО]**: Участнику **{target.display_name}** выдан тайм-аут на **{hours} ч.**\n**Причина:** {punishment_reason}")
+                        self ._record_penalty (guild_id ,target .id ,target .name ,punishment_reason ,dur ,quote_key )
 
                 elif action_type in ('WARN','WARN_COMPLAINANT'):
                     warnings_cog =self .bot .get_cog ('warnings')
                     if warnings_cog :
                         await warnings_cog .add_warning (target ,guild .me ,punishment_reason )
                         await channel .send (f"✅ **[СУДЕБНОЕ РЕШЕНИЕ ВЫПОЛНЕНО]**: Участнику **{target.display_name}** вынесено официальное предупреждение.\n**Причина:** {punishment_reason}")
+                        self ._record_penalty (guild_id ,target .id ,target .name ,punishment_reason ,0 ,quote_key )
             except Exception as e :
                 log .error (f"[AI Punishment Error]: {e}")
                 await channel .send (f"❌ Не удалось применить наказание к {target.display_name}: {e}")
@@ -2857,7 +2932,7 @@ class Ticket (commands .Cog ):
             if warnings_cog :
             # Вызвать метод add_warning напрямую (без interaction)
                 await warnings_cog .add_warning (target_user ,moderator ,reason )
-                await channel .send (f"Предупреждение verildi {target_user.mention}: {reason}")
+                await channel .send (f"Предупреждение выдано {target_user.mention}: {reason}")
                 # Уведомить администраторов
                 log .info (f'[TICKET-NOTIFY] === WARN ВЫЗОВ === target={target_user} ({target_user.id}) reason={reason[:80]}')
                 try :
@@ -3061,7 +3136,7 @@ class Ticket (commands .Cog ):
             return summary 
 
         except Exception as e :
-            return f"Сообщение история контроль edilemedi: {str(e)}"
+            return f"Не удалось проверить историю сообщений: {str(e)}"
 
     @app_commands .command (name ="ticket-panel",description ="Отправить AI панель тикетов в канал")
     @app_commands .checks .has_permissions (administrator =True )
@@ -3145,17 +3220,23 @@ class Ticket (commands .Cog ):
     @app_commands .command (name ="ticket-ai-toggle",description ="Включить/отключить AI-поддержку тикетов")
     @app_commands .checks .has_permissions (administrator =True )
     async def ticket_ai_toggle (self ,interaction :discord .Interaction ):
-        """Включить/отключить AI-поддержку тикетов"""
-        global AI_ENABLED 
-        AI_ENABLED =not AI_ENABLED 
+        """Включить/отключить AI-поддержку тикетов (только для этого сервера)"""
+        gid =int (interaction .guild .id )
+        if gid in AI_DISABLED_GUILDS :
+            AI_DISABLED_GUILDS .discard (gid )
+            enabled =True 
+        else :
+            AI_DISABLED_GUILDS .add (gid )
+            enabled =False 
 
-        status ="Активна"if AI_ENABLED else "Отключена"
+        status =("Активна"if enabled else "Отключена")
         e =discord .Embed (
         title =" AI Поддержка Система",
-        description =f"AI-система поддержки сейчас: **{status}**",
-        color =0x2ECC71 if AI_ENABLED else 0xE74C3C 
+        description =f"AI-система поддержки на **{interaction.guild.name}**: **{status}**",
+        color =0x2ECC71 if enabled else 0xE74C3C 
         )
         await interaction .response .send_message (embed =e )
+
 
     @app_commands .command (name ="ticket-force-escalate",description ="Перенаправить текущий тикет администрации")
     @app_commands .checks .has_permissions (manage_channels =True )
@@ -3329,8 +3410,8 @@ class Ticket (commands .Cog ):
         footer_icon =interaction .guild .icon .url if interaction .guild .icon else None 
         )
 
-        # Ana настройкаlar (3'lю grid)
-        ai_status ="Активна"if AI_ENABLED else "Отключена"
+        # Основные настройки (сетка 3)
+        ai_status =("Активна"if self ._ai_enabled (interaction .guild .id )else "Отключена")
         menu .add_stats ([
         {'label':'AI-поддержка','value':ai_status ,'emoji':''},
         {'label':'Автозакрытие','value':f"{auto_close.inactive_hours}ч",'emoji':'⏰'},
@@ -3348,7 +3429,7 @@ class Ticket (commands .Cog ):
 
         menu .add_separator ()
 
-        # Команды listesi
+        # Список команд
         menu .add_list (
         title ="Команды управления",
         items =[

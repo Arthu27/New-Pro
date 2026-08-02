@@ -1,194 +1,240 @@
 """
 Fun Cog
-Eгlence командыы cog'u
+Развлекательные команды
 """
 
-import discord 
-from discord .ext import commands 
-from datetime import datetime 
-import random 
-import aiohttp 
+import discord
+from discord.ext import commands
+from datetime import datetime
+import random
+import aiohttp
 
-from logger import get_logger 
-log =get_logger ("fun_cog")
+from logger import get_logger
+log = get_logger("fun_cog")
 
 
+def _embed(title, desc, color=discord.Color.dark_grey(), footer=None, author=None):
+    """Создаёт красивый развлекательный embed"""
+    e = discord.Embed(
+        title=title,
+        description=desc,
+        color=color,
+        timestamp=datetime.now()
+    )
+    if author:
+        e.set_author(name=author.display_name, icon_url=author.display_avatar.url)
+    if footer:
+        e.set_footer(text=footer)
+    return e
 
-class FunCog (commands .Cog ):
-    """Eгlence командыы cog'u"""
 
-    def __init__ (self ,bot ):
-        self .bot =bot 
+class FunCog(commands.Cog):
+    """Развлекательные команды"""
 
-    @commands .command (name ='8ball',aliases =['8top'])
-    async def eightball (self ,ctx ,*,question :str ):
-        """8 ball"""
-        responses =[
-        "Kesinlikle evet.",
-        "Kesinlikle.",
-        "Шюphesiz.",
-        "Evet, kesinlikle.",
-        "Buna gюvenebilirsiniz.",
-        "Gёrdюгюm kadarыyla evet.",
-        "Muhtemelen.",
-        "Evet.",
-        "Ишaretler evet'i gёsteriyor.",
-        "Yanыt bulanыk, tekrar dene.",
-        "Daha sonra sor.",
-        "Шimdi sёylemesem daha iyi.",
-        "Шu anda tahmin edemiyorum.",
-        "Konsantre ol ve tekrar sor.",
-        "Buna gюvenme.",
-        "Cevabыm hayыr.",
-        "Kaynaklarыm hayыr diyor.",
-        "Gёrюnюшe gёre hayыr.",
-        "Чok шюpheli.",
-        "Hayыr."
+    def __init__(self, bot):
+        self.bot = bot
+
+    @commands.command(name='8ball', aliases=['шар'])
+    async def eightball(self, ctx, *, question: str):
+        """Магический шар — ответит на твой вопрос"""
+        responses = [
+            "Определённо да.",
+            "Точно да.",
+            "Несомненно.",
+            "Да, однозначно.",
+            "Можешь быть уверен.",
+            "Судя по всему, да.",
+            "Скорее всего.",
+            "Да.",
+            "Знаки говорят — да.",
+            "Ответ неясен, попробуй ещё.",
+            "Спроси позже.",
+            "Лучше сейчас не говорить.",
+            "Пока не могу предсказать.",
+            "Сосредоточься и спроси снова.",
+            "Не рассчитывай на это.",
+            "Мой ответ — нет.",
+            "Источники говорят — нет.",
+            "Судя по всему, нет.",
+            "Очень сомнительно.",
+            "Нет."
         ]
-
-        response =random .choice (responses )
-
-        embed =discord .Embed (
-        title =" 8 Ball",
-        color =discord .Color .dark_grey (),
-        timestamp =datetime .now ()
+        e = _embed(
+            "🎱 Магический шар",
+            f"**Вопрос:** {question}\n\n**Ответ:** {random.choice(responses)}",
+            discord.Color.dark_grey(),
+            author=ctx.author
         )
+        await ctx.send(embed=e)
 
-        embed .add_field (name ="Soru",value =question ,inline =False )
-        embed .add_field (name ="Cevap",value =response ,inline =False )
-
-        await ctx .send (embed =embed )
-
-    @commands .command (name ='coinflip',aliases =['yazыtura','coin'])
-    async def coinflip (self ,ctx ):
-        """Yazы tura"""
-        result =random .choice (["Yazы","Tura"])
-
-        embed =discord .Embed (
-        title =" Yazы Tura",
-        description =f"**Sonuч:** {result}",
-        color =discord .Color .dark_grey (),
-        timestamp =datetime .now ()
+    @commands.command(name='coinflip', aliases=['монета'])
+    async def coinflip(self, ctx):
+        """Подбросить монету"""
+        result = random.choice(["Орёл", "Решка"])
+        e = _embed(
+            "🪙 Монетка",
+            f"**Результат:** {result}",
+            discord.Color.dark_grey(),
+            footer="Попробуй удачу!",
+            author=ctx.author
         )
+        await ctx.send(embed=e)
 
-        await ctx .send (embed =embed )
+    @commands.command(name='dice', aliases=['кость'])
+    async def dice(self, ctx, sides: int = 6):
+        """Бросить кость"""
+        if sides < 2:
+            await ctx.send("🎲 Кость должна быть минимум 2-х гранная!")
+            return
+        if sides > 10000:
+            await ctx.send("🎲 Кость максимум 10000 гранная!")
+            return
 
-    @commands .command (name ='dice',aliases =['zar'])
-    async def dice (self ,ctx ,sides :int =6 ):
-        """Zar at"""
-        if sides <2 :
-            await ctx .send (" Zar en az 2 yюzlю olmalы!")
-            return 
-
-        result =random .randint (1 ,sides )
-
-        embed =discord .Embed (
-        title =" Zar Atышы",
-        description =f"**{sides} yюzlю zar:** {result}",
-        color =discord .Color .dark_grey (),
-        timestamp =datetime .now ()
+        result = random.randint(1, sides)
+        e = _embed(
+            "🎲 Бросок кости",
+            f"**Кость с {sides} гранями:** `{result}`",
+            discord.Color.dark_grey(),
+            footer="Удачи!",
+            author=ctx.author
         )
+        await ctx.send(embed=e)
 
-        await ctx .send (embed =embed )
+    async def _fetch_json(self, url):
+        """Безопасно получает данные из API"""
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+                if resp.status != 200:
+                    return None
+                return await resp.json(content_type=None)
 
-    @commands .command (name ='meme')
-    async def meme (self ,ctx ):
-        """Rastgele meme"""
-        # Placeholder - gerчek API entegrasyonu yapыlabilir
-        embed =discord .Embed (
-        title =" Rastgele Meme",
-        description ="Meme yюkleniyor...",
-        color =discord .Color .dark_grey (),
-        timestamp =datetime .now ()
-        )
+    @commands.command(name='meme')
+    async def meme(self, ctx):
+        """Случайный мем"""
+        try:
+            data = await self._fetch_json("https://meme-api.com/gimme")
+            if not data or not data.get('url'):
+                raise ValueError("Мем не получен")
+            e = _embed(
+                f"😂 {data.get('title', 'Случайный мем')}",
+                f"**Сабреддит:** r/{data.get('subreddit', '?')}  ·  **👍** {data.get('ups', 0)}",
+                discord.Color.dark_grey(),
+                footer=f"Просил: {ctx.author}",
+                author=ctx.author
+            )
+            e.set_image(url=data['url'])
+        except Exception:
+            e = _embed(
+                "😂 Случайный мем",
+                "Не удалось загрузить мем, попробуй ещё!",
+                discord.Color.red(),
+                author=ctx.author
+            )
+        await ctx.send(embed=e)
 
-        await ctx .send (embed =embed )
-
-    @commands .command (name ='joke',aliases =['шaka'])
-    async def joke (self ,ctx ):
-        """Rastgele шaka"""
-        jokes =[
-        "Programcы neden gёzlюk takar? Чюnkю C# gёremez!",
-        "Bir SQL sorgusu bara girer, iki tabloya yaklaшыr ve sorar: 'JOIN olabilir miyim?'",
-        "99 bug vardы, dюzelttim birini. 127 bug oldu.",
-        "Bir programcы neden karanlыkta чalышыr? Чюnkю light bugs!",
-        "Bir programcы karыsыnы terk etti чюnkю onunla interface yapamыyordu.",
-        "Bir programcы neden gёzlюk takar? Чюnkю C# gёremez!",
-        "Bir programcы neden evden чalышыr? Чюnkю evde daha fazla cache есть!",
-        "Bir programcы neden bilgisнастройкаыnы sevdi? Чюnkю onunla byte'larы paylaшabiliyordu!",
-        "Bir programcы neden bilgisнастройкаыyla evlendi? Чюnkю onunla чok iyi anlaшыyordu!",
-        "Bir programcы neden bilgisнастройкаыyla kavga etti? Чюnkю onunla чok fazla conflict vardы!"
+    @commands.command(name='joke', aliases=['шутка'])
+    async def joke(self, ctx):
+        """Случайная шутка"""
+        jokes = [
+            "Почему программист носит очки? Потому что не видит C#!",
+            "SQL-запрос заходит в бар, подходит к двум таблицам и спрашивает: 'Можно JOIN?'",
+            "Было 99 багов, исправил один — стало 127.",
+            "Почему программист работает в темноте? Потому что светлые баги!",
+            "Программист бросил жену, потому что не мог с ней сделать интерфейс.",
+            "Почему программисты любят отладку? Потому что жизнь полна решений.",
+            "Почему программист работает из дома? Потому что дома больше кэша!",
+            "Почему пользователи Python счастливее? Потому что всё решается через import!",
+            "Программист женился на компьютере — потому что хорошо ладили!",
+            "Почему программисты плохо спят? Потому что видят null и пустые строки."
         ]
-
-        joke =random .choice (jokes )
-
-        embed =discord .Embed (
-        title =" Rastgele Шaka",
-        description =joke ,
-        color =discord .Color .dark_grey (),
-        timestamp =datetime .now ()
+        e = _embed(
+            "😄 Случайная шутка",
+            f"```{random.choice(jokes)}```",
+            discord.Color.dark_grey(),
+            footer="Смех бесплатный!",
+            author=ctx.author
         )
+        await ctx.send(embed=e)
 
-        await ctx .send (embed =embed )
+    @commands.command(name='cat', aliases=['кот'])
+    async def cat(self, ctx):
+        """Случайная фотография кота"""
+        try:
+            data = await self._fetch_json("https://aws.random.cat/meow")
+            if not data or not data.get('file'):
+                raise ValueError("Кот не получен")
+            e = _embed(
+                "🐱 Случайный кот",
+                "Вот тебе милый котик!",
+                discord.Color.dark_grey(),
+                footer=f"Просил: {ctx.author}",
+                author=ctx.author
+            )
+            e.set_image(url=data['file'])
+        except Exception:
+            e = _embed(
+                "🐱 Случайный кот",
+                "Не удалось загрузить кота, попробуй ещё!",
+                discord.Color.red(),
+                author=ctx.author
+            )
+        await ctx.send(embed=e)
 
-    @commands .command (name ='cat',aliases =['kedi'])
-    async def cat (self ,ctx ):
-        """Rastgele kedi resmi"""
-        # Placeholder - gerчek API entegrasyonu yapыlabilir
-        embed =discord .Embed (
-        title =" Rastgele Kedi",
-        description ="Kedi resmi yюkleniyor...",
-        color =discord .Color .dark_grey (),
-        timestamp =datetime .now ()
-        )
+    @commands.command(name='dog', aliases=['собака'])
+    async def dog(self, ctx):
+        """Случайная фотография собаки"""
+        try:
+            data = await self._fetch_json("https://dog.ceo/api/breeds/image/random")
+            if not data or not data.get('message'):
+                raise ValueError("Собака не получена")
+            e = _embed(
+                "🐶 Случайная собака",
+                "Вот тебе милый пёсик!",
+                discord.Color.dark_grey(),
+                footer=f"Просил: {ctx.author}",
+                author=ctx.author
+            )
+            e.set_image(url=data['message'])
+        except Exception:
+            e = _embed(
+                "🐶 Случайная собака",
+                "Не удалось загрузить собаку, попробуй ещё!",
+                discord.Color.red(),
+                author=ctx.author
+            )
+        await ctx.send(embed=e)
 
-        await ctx .send (embed =embed )
-
-    @commands .command (name ='dog',aliases =['kёpek'])
-    async def dog (self ,ctx ):
-        """Rastgele kёpek resmi"""
-        # Placeholder - gerчek API entegrasyonu yapыlabilir
-        embed =discord .Embed (
-        title =" Rastgele Kёpek",
-        description ="Kёpek resmi yюkleniyor...",
-        color =discord .Color .dark_grey (),
-        timestamp =datetime .now ()
-        )
-
-        await ctx .send (embed =embed )
-
-    @commands .command (name ='quote',aliases =['alыntы'])
-    async def quote (self ,ctx ):
-        """Rastgele alыntы"""
-        quotes =[
-        "Hayat kыsa, sanat длинный.",
-        "Bilgi gючtюr.",
-        "Baшarы, hazыrlыkla fыrsatыn buluшtuгu yerdir.",
-        "Gelecek, bugюnюn hazыrlыгыna baгlыdыr.",
-        "Baшarыsыzlыk, baшarыnыn baharatыdыr.",
-        "Hayal edebiliyorsan, yapabilirsin.",
-        "Baшarы, kючюk чabalarыn her gюn tekrarlanmasыdыr.",
-        "Zorluklar, bizi gючlendirir.",
-        "Baшarы, pes etmemektir.",
-        "Hayat, bir yolculuktur, varыш noktasы deгil."
+    @commands.command(name='quote', aliases=['цитата'])
+    async def quote(self, ctx):
+        """Случайная цитата"""
+        quotes = [
+            "Жизнь коротка, искусство вечно.",
+            "Знание — сила.",
+            "Успех — это встреча подготовки с возможностью.",
+            "Будущее зависит от сегодняшней подготовки.",
+            "Неудача — приправа к успеху.",
+            "Если можешь мечтать, можешь сделать.",
+            "Успех — это повторение маленьких усилий каждый день.",
+            "Трудности делают нас сильнее.",
+            "Успех — это не сдаваться.",
+            "Жизнь — это путешествие, а не пункт назначения.",
+            "Лучшая месть — огромный успех.",
+            "Сомнение — начало мудрости."
         ]
-
-        quote =random .choice (quotes )
-
-        embed =discord .Embed (
-        title =" Rastgele Alыntы",
-        description =f"*{quote}*",
-        color =discord .Color .dark_grey (),
-        timestamp =datetime .now ()
+        e = _embed(
+            "💭 Случайная цитата",
+            f"*\"{random.choice(quotes)}\"*",
+            discord.Color.dark_grey(),
+            footer=f"Просил: {ctx.author}",
+            author=ctx.author
         )
+        await ctx.send(embed=e)
 
-        await ctx .send (embed =embed )
-
-    @commands .Cog .listener ()
-    async def on_ready (self ):
-        """Bot hazыr olduгunda"""
-        log .info (f" FunCog loaded")
+    @commands.Cog.listener()
+    async def on_ready(self):
+        """Когда бот готов"""
+        log.info("FunCog loaded")
 
 
-async def setup (bot ):
-    await bot .add_cog (FunCog (bot ))
+async def setup(bot):
+    await bot.add_cog(FunCog(bot))

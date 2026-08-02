@@ -119,6 +119,7 @@ atexit .register (_panel_log_flusher .shutdown )
 
 def _log_panel_action (action ,detail =''):
     try :
+        import time as _t 
         _panel_log_flusher .append ({
         'username':session .get ('username','?'),
         'role':session .get ('role','?'),
@@ -126,6 +127,7 @@ def _log_panel_action (action ,detail =''):
         'detail':detail ,
         'ip':request .remote_addr ,
         'timestamp':datetime .utcnow ().isoformat (),
+        'ts':int (_t .time ()),
         })
     except Exception :
         pass 

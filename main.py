@@ -499,7 +499,7 @@ async def load_cogs():
         "embed_utils.py", "__init__.py",
         "help_card.py", "_card_style.py",
         "leveling_engagement.py",
-        "temp_moderation.py",
+        # temp_moderation.py artık yükleniyor (kalıcı zamanlı mute/ban/kick + schedule + unwarn)
         "ticket_commands.py",
         "ticket_cog.py",
         "utility_cog.py",

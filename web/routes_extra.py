@@ -74,7 +74,7 @@ def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
         if action_type =='warn':
             reason =action_data .get ('reason','AI asistan warn')
             if not uid :
-                return '❌ Пользователь ID не найдено'
+                return '❌ Пользователь ID не найден'
                 # AI asistan никогда автоматически warn не может отправить — только predlojenie предлагает
             return f'⚠️ AI warn предложение: {uid} usersыna "{reason}" причина warn. Подтвердитьmak для /moderate команду использовать.'
 
@@ -84,7 +84,7 @@ def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
                 return '❌ Eksik parametre'
             member =guild .get_member (int (uid ))
             if not member :
-                return '❌ Участник на сервере не найдено'
+                return '❌ Участник на сервере не найден'
                 # AI ban предложение — автоматически примен
             return f'⚠️ AI ban предложение: {member.display_name} ({uid}) — Причина: "{reason}". Подтвердитьmak для /moderate ban команду использовать.'
             return f'✅ Ban применено (user_id: {uid})'
@@ -95,14 +95,14 @@ def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
                 return '❌ Eksik parametre'
             member =guild .get_member (int (uid ))
             if not member :
-                return '❌ Участник на сервере не найдено'
+                return '❌ Участник на сервере не найден'
                 # AI kick предложение — автоматически примен
             return f'⚠️ AI kick предложение: {member.display_name} ({uid}) — Причина: "{action_data.get("reason", "AI kick")}". Подтвердитьmak для /moderate kick команду использовать.'
 
         elif action_type =='dm':
             message =action_data .get ('message','')
             if not (bot and uid and message ):
-                return '❌ Пользователь ID или message eksik'
+                return '❌ Пользователь ID или сообщение отсутствует'
             def _send_dm ():
                 user =_run_async (bot .fetch_user (int (uid )))
                 _run_async (user .send (message ))
@@ -116,7 +116,7 @@ def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
                 return '❌ Eksik parametre'
             member =guild .get_member (int (uid ))
             if not member :
-                return '❌ Участник на сервере не найдено'
+                return '❌ Участник на сервере не найден'
                 # AI timeout предложение — автоматически примен
             return f'⚠️ AI timeout предложение: {member.display_name} ({uid}) — {minutes} minutes, Причина: "{reason}". Подтвердитьmak для /moderate timeout команду использовать.'
 
@@ -127,7 +127,7 @@ def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
             member =guild .get_member (int (uid ))
             role =guild .get_role (int (role_id ))
             if not (member and roles ):
-                return '❌ Участник или роли не найдено'
+                return '❌ Участник или роль не найдены'
             _asyncio .run_coroutine_threadsafe (member .add_roles (role ),bot .loop ).result (timeout =10 )
             return f'✅ Роли addndi: {role.name}'
 
@@ -138,7 +138,7 @@ def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
             member =guild .get_member (int (uid ))
             role =guild .get_role (int (role_id ))
             if not (member and roles ):
-                return '❌ Участник или роли не найдено'
+                return '❌ Участник или роль не найдены'
             _asyncio .run_coroutine_threadsafe (member .remove_roles (role ),bot .loop ).result (timeout =10 )
             return f'✅ Роли alыndы: {role.name}'
 
@@ -146,10 +146,10 @@ def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
             channel_id =str (action_data .get ('channel_id',''))
             message =action_data .get ('message','')
             if not (bot and channel_id and message ):
-                return '❌ Канал ID или message eksik'
+                return '❌ Kanal ID veya mesaj eksik'
             channel =bot .get_channel (int (channel_id ))
             if not channel :
-                return '❌ Канал не найдено'
+                return '❌ Канал не найден'
             _asyncio .run_coroutine_threadsafe (channel .send (message ),bot .loop ).result (timeout =10 )
             return f'✅ Сообщение отправлено → #{channel.name}'
 
@@ -161,7 +161,7 @@ def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
             def _del_msg ():
                 ch =bot .get_channel (int (channel_id ))
                 if not ch :
-                    return '❌ Канал не найдено'
+                    return '❌ Канал не найден'
                 msg =_run_async (ch .fetch_message (int (message_id )))
                 _run_async (msg .delete ())
                 return '✅ Сообщение удалено'
@@ -173,10 +173,10 @@ def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
             description =action_data .get ('description','')
             color =int (action_data .get ('color',0xc8922a ))
             if not (bot and channel_id ):
-                return '❌ Канал ID eksik'
+                return '❌ Kanal ID eksik'
             channel =bot .get_channel (int (channel_id ))
             if not channel :
-                return '❌ Канал не найдено'
+                return '❌ Канал не найден'
             import discord as _discord 
             embed =_discord .Embed (title =title ,description =description ,color =color )
             _asyncio .run_coroutine_threadsafe (channel .send (embed =embed ),bot .loop ).result (timeout =10 )
@@ -207,7 +207,7 @@ def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
             name =action_data .get ('name','новый-channel')
             category_id =action_data .get ('category_id')
             if not (bot and guild ):
-                return '❌ Guild не найдено'
+                return '❌ Сервер не найден'
             def _create_ch ():
                 cat =guild .get_channel (int (category_id ))if category_id else None 
                 return _run_async (guild .create_text_channel (name ,category =cat ))
@@ -217,10 +217,10 @@ def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
         elif action_type =='delete_channel':
             channel_id =str (action_data .get ('channel_id',''))
             if not (bot and channel_id ):
-                return '❌ Канал ID eksik'
+                return '❌ Kanal ID eksik'
             channel =bot .get_channel (int (channel_id ))
             if not channel :
-                return '❌ Канал не найдено'
+                return '❌ Канал не найден'
             _asyncio .run_coroutine_threadsafe (channel .delete (),bot .loop ).result (timeout =10 )
             return f'✅ Канал удалено: #{channel.name}'
 
@@ -230,7 +230,7 @@ def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
             import discord as _discord 
             color_obj =_discord .Color (int (color_hex ,16 ))if color_hex else _discord .Color .default ()
             if not (bot and guild ):
-                return '❌ Guild не найдено'
+                return '❌ Сервер не найден'
             role =_asyncio .run_coroutine_threadsafe (
             guild .create_role (name =name ,color =color_obj ),bot .loop 
             ).result (timeout =10 )
@@ -242,7 +242,7 @@ def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
                 return '❌ Роли ID eksik'
             role =guild .get_role (int (role_id ))
             if not role :
-                return '❌ Роли не найдено'
+                return '❌ Роль не найдена'
             _asyncio .run_coroutine_threadsafe (role .delete (),bot .loop ).result (timeout =10 )
             return f'✅ Роли удалено: {role.name}'
 
@@ -252,7 +252,7 @@ def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
                 return '❌ Eksik parametre'
             member =guild .get_member (int (uid ))
             if not member :
-                return '❌ Участник не найдено'
+                return '❌ Участник не найден'
             _asyncio .run_coroutine_threadsafe (member .edit (nick =nick or None ),bot .loop ).result (timeout =10 )
             return f'✅ Nickname изменено → {nick or "(sыfыrlandы)"}'
 
@@ -267,10 +267,10 @@ def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
 
         elif action_type =='user_info':
             if not (guild and uid ):
-                return '❌ Пользователь ID eksik'
+                return '❌ Пользователь ID отсутствует'
             member =guild .get_member (int (uid ))
             if not member :
-                return f'❌ Участник на сервере не найдено (ID: {uid})'
+                return f'❌ Участник на сервере не найден (ID: {uid})'
             role =[r .name for r in member .roles if r .name !='@everyone']
             warns_file ='data/warnings.json'
             warn_count =0 
@@ -310,7 +310,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         import web .app as _app 
         bot =_app .bot_instance 
         if not bot or not getattr (bot ,'loop',None ):
-            raise RuntimeError ('Bot заметок running')
+            raise RuntimeError ('Бот не работает')
         future =_aio .run_coroutine_threadsafe (coro ,bot .loop )
         return future .result (timeout =timeout )
 
@@ -610,13 +610,13 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         new_pass =data .get ('new_password','').strip ()
 
         if not old_pass or not new_pass or len (new_pass )<6 :
-            return jsonify ({'error':'Неверный veri'})
+            return jsonify ({'error':'Неверные данные'})
 
             # Owner контроль (USERS dict'inden)
         username =session .get ('username')
         if username in USERS :
             if USERS [username ]['password']!=old_pass :
-                return jsonify ({'error':'Текущий parola неверно'})
+                return jsonify ({'error':'Текущий пароль неверен'})
             USERS [username ]['password']=new_pass 
             return jsonify ({'success':True })
 
@@ -642,7 +642,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         if not member_key :
             return jsonify ({'error':'Пользователь не найден'})
         if members [member_key ].get ('password')!=old_pass :
-            return jsonify ({'error':'Текущий parola неверно'})
+            return jsonify ({'error':'Текущий пароль неверен'})
 
         members [member_key ]['password']=new_pass 
         with open (members_file ,'w',encoding ='utf-8')as f :
@@ -672,7 +672,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         d =request .get_json (silent =True )or {}
         question =d .get ('message','').strip ()
         if not question :
-            return jsonify ({'error':'Сообщение пустое'}),400 
+            return jsonify ({'error':'Сообщение пусто'}),400 
 
         history_key =f'ai_history_{session.get("username", "anon")}'
         history =session .get (history_key ,[])
@@ -850,7 +850,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                     user_info_block +=(
                     f"\n=== ПОЛЬЗОВАТЕЛЬ ИНФОРМАЦИЯ: {member.display_name} (ID: {uid_str}) ===\n"
                     f"  Сервер: {g.name}\n"
-                    f"  Пользователь имя: {member.name}\n"
+                    f"  Имя пользователя: {member.name}\n"
                     f"  Состояние: {str(member.status)}\n"
                     f"  Mute: {timed_out}\n"
                     f"  Katыlma: {joined}\n"
@@ -1082,13 +1082,13 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                 answer ,model_name ,_ =_local_moebius_fallback (messages )
             except Exception as _fe :
                 print (f"[AI-CHAT] fallback exception: {_fe}")
-                return jsonify ({'error':'AI servisi шu an kullanыlamыyor. Daha sonra tekrar deneyin.'}),503 
+                return jsonify ({'error':'AI сервис сейчас недоступен. Попробуйте позже.'}),503 
         if not answer :
             from web .ai_helper import _local_moebius_fallback 
             try :
                 answer ,model_name ,_ =_local_moebius_fallback (messages )
             except Exception :
-                return jsonify ({'error':'AI boш yanыt dёndю.'}),502 
+                return jsonify ({'error':'AI вернул пустой ответ.'}),502 
 
                 # ── FUNC ИШLE (function calling) — выполнение [FUNC:...] от AI ──────────
         import re as _re 
@@ -1355,7 +1355,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
             try :
                 def do_action ():
                     guild =bot .get_guild (int (MAIN_GUILD_ID ))
-                    if not guild :return '❌ Сервер не найдено'
+                    if not guild :return '❌ Сервер не найден'
                     _owner_id =int (os .getenv ('OWNER_ID','987430047889637426'))
 
                     def resolve_channel (val ):
@@ -1447,7 +1447,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                                     return f'✅ {m.display_name} usersыna DM отправлено'
                                 except discord .Forbidden :
                                     return f'❌ {m.display_name} DM\'lere закрыт'
-                        return '❌ Участник не найдено'
+                        return '❌ Участник не найден'
                     elif tip =='SESTEN_AT'and len (parts )>1 :
                         m =resolve_member (parts [1 ])
                         if m and m .voice :
@@ -1470,7 +1470,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                             return '❌ Участник seste не'
                         vcs =sorted (guild .voice_channels ,key =lambda c :c .position )
                         idx =next ((i for i ,c in enumerate (vcs )if c .id ==m .voice .channel .id ),None )
-                        if idx is None :return '❌ Канал не найдено'
+                        if idx is None :return '❌ Канал не найден'
                         orijinal =m .voice .channel 
                         hedef_idx =max (0 ,idx -adim )
                         hedef =vcs [hedef_idx ]
@@ -1491,7 +1491,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                             return '❌ Участник seste не'
                         vcs =sorted (guild .voice_channels ,key =lambda c :c .position )
                         idx =next ((i for i ,c in enumerate (vcs )if c .id ==m .voice .channel .id ),None )
-                        if idx is None :return '❌ Канал не найдено'
+                        if idx is None :return '❌ Канал не найден'
                         orijinal =m .voice .channel 
                         hedef_idx =min (len (vcs )-1 ,idx +adim )
                         hedef =vcs [hedef_idx ]
@@ -1511,7 +1511,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                                 return f'❌ {m.display_name} шu an ses в канале не, susturulamaz'
                             _run_async (m .edit (mute =True ))
                             return f'✅ {m.display_name} susturuldu'
-                        return '❌ Участник не найдено'
+                        return '❌ Участник не найден'
                     elif tip =='SUSTUR_KALDIR'and len (parts )>1 :
                         m =resolve_member (parts [1 ])
                         if m :
@@ -1519,7 +1519,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                                 return f'❌ {m.display_name} шu an ses в канале не'
                             _run_async (m .edit (mute =False ))
                             return f'✅ {m.display_name} susturma удалено'
-                        return '❌ Участник не найдено'
+                        return '❌ Участник не найден'
                     elif tip =='KULAKLIK_KAPAT'and len (parts )>1 :
                         m =resolve_member (parts [1 ])
                         if m :
@@ -2131,8 +2131,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     def api_bot_prefix ():
         d =request .get_json (silent =True )or {}
         prefix =d .get ('prefix','!').strip ()
-        if not prefix :return jsonify ({'error':'Пусто prefix'}),400 
-        if len (prefix )>10 :return jsonify ({'error':'prefix чok длинный'}),400 
+        if not prefix :return jsonify ({'error':'Пустой префикс'}),400 
+        if len (prefix )>10 :return jsonify ({'error':'префикс слишком длинный'}),400 
         os .makedirs ('data',exist_ok =True )
         cfg_file ='data/bot_config.json'
         cfg ={}
@@ -2434,7 +2434,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         if not discord_id :return jsonify ({'error':'Пользователь не найден'}),404 
         d =request .get_json (silent =True )or {}
         day ,month ,year =d .get ('day'),d .get ('month'),d .get ('year')
-        if not day or not month :return jsonify ({'error':'День ve месяц zorunlu'}),400 
+        if not day or not month :return jsonify ({'error':'День и месяц обязательны'}),400 
         os .makedirs ('data',exist_ok =True )
         bf =f'data/birthdays_{guild_id}.json'
         bdata ={}
@@ -2517,11 +2517,11 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
 
         guild =bot .get_guild (int (guild_id ))
         if not guild :
-            return jsonify ({'error':'Сервер не найдено'}),404 
+            return jsonify ({'error':'Сервер не найден'}),404 
 
         channel =guild .get_channel (int (channel_id ))
         if not channel :
-            return jsonify ({'error':'Канал не найдено'}),404 
+            return jsonify ({'error':'Канал не найден'}),404 
 
         ends_at =datetime .utcnow ()+timedelta (minutes =minutes )
         gw_id =str (int (ends_at .timestamp ()))
@@ -2577,7 +2577,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         with open (f ,encoding ='utf-8')as fp :
             gws =json .load (fp )
         if gw_id not in gws :
-            return jsonify ({'error':'Giveaway нет'}),404 
+            return jsonify ({'error':'Розыгрыш не найден'}),404 
         gws [gw_id ]['status']='ended'
         with open (f ,'w',encoding ='utf-8')as fp :
             json .dump (gws ,fp ,indent =2 ,ensure_ascii =False )
@@ -2605,7 +2605,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
             return jsonify ({'error':'Bot offline'})
         guild =bot .get_guild (int (guild_id ))
         if not guild :
-            return jsonify ({'error':'Guild заметок found'})
+            return jsonify ({'error':'Сервер не найден'})
         return jsonify ({
         'id':str (guild .id ),
         'name':guild .name ,
@@ -2707,7 +2707,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                         'target_name':uid ,
                         'target_id':uid ,
                         'mod_name':mid ,
-                        'reason':case .get ('reason','Не belirtildi'),
+                        'reason':case .get ('reason','Belirtilmedi'),
                         'created_at':case .get ('timestamp',''),
                         'source':'bot',
                         })
@@ -2808,12 +2808,12 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         data =request .get_json (silent =True )or {}
         name =(data .get ('name')or '').strip ()
         if not name :
-            return jsonify ({'error':'Роль adы gerekli'}),400 
+            return jsonify ({'error':'Требуется название роли'}),400 
             # Bot'un sahip olduгu guild'lerden biri mi проверка et
         try :
             gid =int (guild_id )
         except (TypeError ,ValueError ):
-            return jsonify ({'error':'Geчersiz сервер ID'}),400 
+            return jsonify ({'error':'Неверный ID сервера'}),400 
         guild =bot .get_guild (gid )if bot else None 
         if guild is None and bot is not None :
         # Fallback: id'yi string olarak karшыlaшtыr
@@ -2834,7 +2834,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
             asyncio .run_coroutine_threadsafe (do (),bot .loop ).result (timeout =10 )
             return jsonify ({'success':True })
         except discord .Forbidden :
-            return jsonify ({'error':'Bu serverda роль oluшturma yetkim нет'}),403 
+            return jsonify ({'error':'У меня нет прав создавать роли на этом сервере'}),403 
         except discord .HTTPException as e :
             return jsonify ({'error':f'Discord hatasы: {e}'}),500 
         except Exception as e :
@@ -2886,13 +2886,57 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         try :
             for c in guild .channels :
                 ch_type =type_map .get (c .type ,str (c .type ).split ('.')[-1 ])
+                # Zengin kanal bilgisi — panelin detayli gosterebilmesi icin
+                topic =''
+                nsfw =False
+                slowmode =0
+                bitrate =0
+                user_limit =0
+                news =False
+                stage =False
+                forum =False
+                connected =0
+                if hasattr (c ,'topic'):
+                    topic =c .topic or ''
+                if hasattr (c ,'nsfw'):
+                    nsfw =bool (c .nsfw )
+                if hasattr (c ,'slowmode_delay'):
+                    slowmode =int (c .slowmode_delay or 0 )
+                if hasattr (c ,'bitrate'):
+                    bitrate =int ((c .bitrate or 0 )// 1000 )
+                if hasattr (c ,'user_limit'):
+                    user_limit =int (c .user_limit or 0 )
+                if hasattr (c ,'type'):
+                    if c .type ==discord .ChannelType .news :
+                        news =True 
+                    if c .type ==discord .ChannelType .stage_voice :
+                        stage =True 
+                    if c .type ==discord .ChannelType .forum :
+                        forum =True 
+                if hasattr (c ,'members'):
+                    try :
+                        connected =len ([m for m in c .members if not getattr (m ,'bot',False )])
+                    except Exception :
+                        connected =0 
                 channels_data .append ({
                 'id':str (c .id ),
                 'name':c .name ,
                 'type':ch_type ,
                 'position':getattr (c ,'position',0 ),
                 'category':c .category .name if hasattr (c ,'category')and c .category else None ,
-                'category_pos':c .category .position if hasattr (c ,'category')and c .category else -1 
+                'category_id':str (c .category .id ) if hasattr (c ,'category')and c .category else None ,
+                'category_pos':c .category .position if hasattr (c ,'category')and c .category else -1 ,
+                'topic':topic ,
+                'nsfw':nsfw ,
+                'slowmode':slowmode ,
+                'bitrate':bitrate ,
+                'user_limit':user_limit ,
+                'news':news ,
+                'stage':stage ,
+                'forum':forum ,
+                'connected':connected ,
+                'created_at':c .created_at .isoformat () if getattr (c ,'created_at',None )else None ,
+                'mention':getattr (c ,'mention','')
                 })
         except Exception as e :
             print (f'[WEB][ERR] channels error: {e}')
@@ -3019,7 +3063,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         d =request .get_json (silent =True )or {}
         message =d .get ('message','').strip ()
         if not message :
-            return jsonify ({'error':'Сообщение пустое'}),400 
+            return jsonify ({'error':'Сообщение пусто'}),400 
         username =session .get ('username','anon')
         history_key =f'ai_history_{username}'
         history =session .get (history_key ,[])
@@ -3045,7 +3089,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         d =request .get_json (silent =True )or {}
         message =d .get ('message','').strip ()
         if not message :
-            return jsonify ({'error':'Сообщение пустое'}),400 
+            return jsonify ({'error':'Сообщение пусто'}),400 
         username =session .get ('username','anon')
         history_key =f'ai_history_{username}'
         history =session .get (history_key ,[])
@@ -3144,7 +3188,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         import asyncio 
         if not bot :return jsonify ({'error':'Bot offline'}),503 
         channel =bot .get_channel (int (channel_id ))
-        if not channel :return jsonify ({'error':'Канал не найдено'}),404 
+        if not channel :return jsonify ({'error':'Канал не найден'}),404 
         async def _fetch ():
             msgs =[]
             async for m in channel .history (limit =50 ,oldest_first =False ):
@@ -3175,10 +3219,10 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         import asyncio 
         if not bot :return jsonify ({'error':'Bot offline'}),503 
         channel =bot .get_channel (int (channel_id ))
-        if not channel :return jsonify ({'error':'Канал не найдено'}),404 
+        if not channel :return jsonify ({'error':'Канал не найден'}),404 
         d =request .get_json (silent =True )or {}
         content =d .get ('content','').strip ()
-        if not content :return jsonify ({'error':'Сообщение пустое'}),400 
+        if not content :return jsonify ({'error':'Сообщение пусто'}),400 
         def _send ():
             _run_async (channel .send (content ))
         try :
@@ -3195,7 +3239,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         import asyncio 
         if not bot :return jsonify ({'error':'Bot offline'}),503 
         channel =bot .get_channel (int (channel_id ))
-        if not channel :return jsonify ({'error':'Канал не найдено'}),404 
+        if not channel :return jsonify ({'error':'Канал не найден'}),404 
         def _delete ():
             msg =_run_async (channel .fetch_message (int (message_id )))
             _run_async (msg .delete ())
@@ -3282,7 +3326,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         if not bot :return jsonify ({'error':'Bot offline'}),503 
         data =request .get_json (silent =True )or {}
         content =data .get ('content','').strip ()
-        if not content :return jsonify ({'error':'Сообщение пустое'}),400 
+        if not content :return jsonify ({'error':'Сообщение пусто'}),400 
 
         def do ():
             user =_run_async (bot .fetch_user (int (user_id )))
@@ -3316,11 +3360,103 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         def do ():
             guild =bot .get_guild (int (guild_id ))
             t =data .get ('type','text')
-            if t =='text':_run_async (guild .create_text_channel (data ['name']))
-            elif t =='voice':_run_async (guild .create_voice_channel (data ['name']))
-            elif t =='category':_run_async (guild .create_category (data ['name']))
-        asyncio .run_coroutine_threadsafe (do (),bot .loop ).result (timeout =10 )
-        return jsonify ({'success':True })
+            name =str (data .get ('name','') or '').strip ()
+            if not name :
+                raise ValueError ('Kanal adi bos olamaz')
+            kwargs ={}
+            cat_name =data .get ('category','')
+            if cat_name :
+                cat =None 
+                for c in guild .channels :
+                    if c .type ==discord .ChannelType .category and c .name ==cat_name :
+                        cat =c 
+                        break 
+                if cat is None :
+                    cat =_run_async (guild .create_category (cat_name ))
+                kwargs ['category']=cat 
+            topic =data .get ('topic','')
+            if topic :
+                kwargs ['topic']=str (topic )[:1024 ]
+            slowmode =data .get ('slowmode',0 )
+            if slowmode :
+                kwargs ['slowmode_delay']=int (slowmode )
+            nsfw =data .get ('nsfw',False )
+            if nsfw :
+                kwargs ['nsfw']=True 
+            if t =='text':
+                _run_async (guild .create_text_channel (name ,**kwargs ))
+            elif t =='voice':
+                vkw =dict (kwargs )
+                bitrate =data .get ('bitrate',0 )
+                if bitrate :
+                    vkw ['bitrate']=min (int (bitrate )* 1000 ,guild .bitrate_limit )
+                ulimit =data .get ('user_limit',0 )
+                if ulimit :
+                    vkw ['user_limit']=int (ulimit )
+                _run_async (guild .create_voice_channel (name ,**vkw ))
+            elif t =='category':
+                _run_async (guild .create_category (name ))
+        try :
+            asyncio .run_coroutine_threadsafe (do (),bot .loop ).result (timeout =10 )
+            return jsonify ({'success':True })
+        except Exception as e :
+            return jsonify ({'success':False ,'error':str (e )})
+
+    @app .route ('/api/guild/<guild_id>/channels/<channel_id>/update',methods =['POST'])
+    @login_required 
+    @role_required ('admin')
+    def api_update_channel (guild_id ,channel_id ):
+        import web .app as _app ;bot =_app .bot_instance 
+        import asyncio ,discord 
+        if not bot :return jsonify ({'error':'Bot offline'})
+        data =request .get_json (silent =True )or {}
+        def do ():
+            guild =bot .get_guild (int (guild_id ))
+            ch =guild .get_channel (int (channel_id ))
+            if not ch :
+                raise ValueError ('Kanal bulunamadi')
+            # Yeniden adlandir
+            if 'name' in data and data ['name']:
+                _run_async (ch .edit (name =str (data ['name'])[:100 ]))
+            # Konu / topic (metin kanallari)
+            if 'topic' in data :
+                _run_async (ch .edit (topic =str (data ['topic'] or '')[:1024 ]))
+            # NSFW
+            if 'nsfw' in data :
+                _run_async (ch .edit (nsfw =bool (data ['nsfw'])))
+            # Slowmode (metin kanallari)
+            if 'slowmode' in data :
+                _run_async (ch .edit (slowmode_delay =int (data ['slowmode'] or 0 )))
+            # Bitrate (ses kanallari)
+            if 'bitrate' in data :
+                br =min (int (data ['bitrate'] or 0 )* 1000 ,guild .bitrate_limit )
+                _run_async (ch .edit (bitrate =br ))
+            # Kullanicilimit (ses kanallari)
+            if 'user_limit' in data :
+                _run_async (ch .edit (user_limit =int (data ['user_limit'] or 0 )))
+            # Kategoriye tasi
+            if 'category' in data :
+                cat_name =data ['category']
+                if cat_name :
+                    cat =None 
+                    for c in guild .channels :
+                        if c .type ==discord .ChannelType .category and c .name ==cat_name :
+                            cat =c 
+                            break 
+                    if cat is None :
+                        cat =_run_async (guild .create_category (cat_name ))
+                    _run_async (ch .edit (category =cat ))
+                else :
+                    _run_async (ch .edit (category =None ))
+            # Konum (position)
+            if 'position' in data :
+                _run_async (ch .edit (position =int (data ['position'])))
+        try :
+            asyncio .run_coroutine_threadsafe (do (),bot .loop ).result (timeout =10 )
+            return jsonify ({'success':True })
+        except Exception as e :
+            return jsonify ({'success':False ,'error':str (e )})
+
 
     @app .route ('/api/guild/<guild_id>/channels/<channel_id>/delete',methods =['POST'])
     @login_required 
@@ -4564,7 +4700,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
             def send_panel ():
                 ch =bot .get_channel (int (data ['ticket_channel_id']))
                 if not ch :
-                    raise ValueError (f"Канал не найдено: {data['ticket_channel_id']}")
+                    raise ValueError (f"Канал не найден: {data['ticket_channel_id']}")
                 embed =discord .Embed (
                 title =data .get ('title','🎫  ПОДДЕРЖКА СИСТЕМА'),
                 description =(
@@ -4809,7 +4945,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         import web .app as _app ;bot =_app .bot_instance 
         if not bot :return jsonify ({'error':'Bot offline'})
         guild =bot .get_guild (int (guild_id ))
-        if not guild :return jsonify ({'error':'Сервер не найдено'})
+        if not guild :return jsonify ({'error':'Сервер не найден'})
         data =request .get_json (silent =True )or {}
         backup ={'guild_name':guild .name ,'guild_id':str (guild .id ),
         'created_at':datetime .utcnow ().strftime ('%Y-%m-%d %H:%M'),'size':'0 KB'}
@@ -5042,7 +5178,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     def api_restore_upload ():
         """Upload edilen JSON'dan backup_data вернуть (ёnizleme для)"""
         f =request .files .get ('file')
-        if not f :return jsonify ({'error':'Dosya нет'})
+        if not f :return jsonify ({'error':'Dosya yok'})
         try :
             data =json .loads (f .read ().decode ('utf-8'))
             return jsonify ({
@@ -5369,7 +5505,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         import web .app as _app ;bot =_app .bot_instance 
         if not bot :return jsonify ({'error':'Bot offline'})
         guild =bot .get_guild (int (guild_id ))
-        if not guild :return jsonify ({'error':'Сервер не найдено'})
+        if not guild :return jsonify ({'error':'Сервер не найден'})
         return jsonify ({
         'id':str (guild .id ),
         'name':guild .name ,

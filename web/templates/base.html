@@ -882,7 +882,7 @@ window.addEventListener('pageshow', function (e) {
       '<div class="activity-event-content">' +
         '<div class="activity-event-text"><strong>' + esc(ev.user || 'system') + '</strong> ' + esc(ev.action || '') + ' <strong>' + esc(ev.target || '') + '</strong></div>' +
         (ev.detail ? '<div class="activity-event-detail">' + esc(ev.detail) + '</div>' : '') +
-        '<div class="activity-event-time"><i class="fas fa-clock"></i> ' + esc(fmtTime(ev.timestamp)) + '</div>' +
+        '<div class="activity-event-time"><i class="fas fa-clock"></i> ' + esc(fmtTime(ev.ts)) + '</div>' +
       '</div>' +
     '</div>';
     if (prepend && body.firstChild) {
@@ -898,8 +898,9 @@ window.addEventListener('pageshow', function (e) {
     }
     try {
       var r = await fetch('/api/activity-feed', { headers: { 'Accept': 'application/json' } });
-      var events = await r.json();
-      if (!Array.isArray(events) || !events.length) {
+      var data = await r.json();
+      var events = (data && data.items) ? data.items : [];
+      if (!events.length) {
         body.innerHTML = '<div class="activity-drawer-empty"><i class="fas fa-inbox"></i><p>Нет событий</p></div>';
         return;
       }
@@ -934,8 +935,9 @@ window.addEventListener('pageshow', function (e) {
       if (!isOpen) return;
       try {
         var r = await fetch('/api/activity-feed', { headers: { 'Accept': 'application/json' } });
-        var events = await r.json();
-        if (!Array.isArray(events) || !events.length) return;
+        var data = await r.json();
+        var events = (data && data.items) ? data.items : [];
+        if (!events.length) return;
         // Prepend any new events
         var newOnes = events.filter(function (e) { return e.id !== lastEventId && e.id > (lastEventId || ''); });
         if (newOnes.length) {
