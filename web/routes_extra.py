@@ -2635,38 +2635,47 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         if not bot :
             return jsonify ({'error':'Bot offline'})
         try :
-            import psutil 
-            proc =psutil .Process ()
-            cpu =psutil .cpu_percent (interval =0.1 )
-            ram =round (proc .memory_info ().rss /1024 /1024 ,1 )
-            uptime_sec =int (time .time ()-proc .create_time ())
-        except ImportError :
-            cpu =0 
-            ram =0 
-            uptime_sec =0 
-        h ,m =divmod (uptime_sec //60 ,60 )
-        uptime =f"{h}sa {m}dk"
-        history_file ='data/sys_history.json'
-        os .makedirs ('data',exist_ok =True )
-        history =[]
-        if os .path .exists (history_file ):
-            with open (history_file )as f :
-                history =json .load (f )
-        now =datetime .utcnow ().strftime ('%H:%M')
-        history .append ({'time':now ,'cpu':cpu ,'ram':ram })
-        history =history [-20 :]
-        with open (history_file ,'w')as f :
-            json .dump (history ,f )
-        return jsonify ({
-        'guilds':len (bot .guilds ),
-        'users':sum (g .member_count for g in bot .guilds ),
-        'latency':round (bot .latency *1000 ),
-        'uptime':uptime ,
-        'cpu':cpu ,
-        'ram':ram ,
-        'history':history ,
-        'guild_list':[{'name':g .name ,'members':g .member_count }for g in bot .guilds ]
-        })
+            try :
+                import psutil 
+                proc =psutil .Process ()
+                cpu =psutil .cpu_percent (interval =0.1 )
+                ram =round (proc .memory_info ().rss /1024 /1024 ,1 )
+                uptime_sec =int (time .time ()-proc .create_time ())
+            except Exception :
+                cpu =0 
+                ram =0 
+                uptime_sec =0 
+            h ,m =divmod (uptime_sec //60 ,60 )
+            uptime =f"{h}sa {m}dk"
+            history_file ='data/sys_history.json'
+            os .makedirs ('data',exist_ok =True )
+            history =[]
+            if os .path .exists (history_file ):
+                try :
+                    with open (history_file )as f :
+                        history =json .load (f )
+                except Exception :
+                    history =[]
+            now =datetime .utcnow ().strftime ('%H:%M')
+            history .append ({'time':now ,'cpu':cpu ,'ram':ram })
+            history =history [-20 :]
+            try :
+                with open (history_file ,'w')as f :
+                    json .dump (history ,f )
+            except Exception :
+                pass 
+            return jsonify ({
+            'guilds':len (bot .guilds ),
+            'users':sum (g .member_count for g in bot .guilds ),
+            'latency':round (bot .latency *1000 ),
+            'uptime':uptime ,
+            'cpu':cpu ,
+            'ram':ram ,
+            'history':history ,
+            'guild_list':[{'name':g .name ,'members':g .member_count }for g in bot .guilds ]
+            })
+        except Exception as e :
+            return jsonify ({'error':str (e ),'guilds':len (bot .guilds )if bot else 0 ,'history':[]}),200
 
     @app .route ('/api/mod-history')
     @login_required 

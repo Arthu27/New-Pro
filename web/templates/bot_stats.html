@@ -50,8 +50,9 @@ var sysChart;
 
 async function loadStats() {
   var r = await fetch('/api/bot-stats');
-  var d = await r.json();
-  if (d.error) return;
+  var d;
+  try { d = await r.json(); } catch (e) { return; }
+  if (!r.ok || d.error) return;
 
   document.getElementById('stats').innerHTML =
     '<div class="stat-box purple"><div class="stat-icon"><i class="fas fa-server"></i></div><div class="stat-body"><div class="stat-value">'+d.guilds+'</div><div class="stat-label">Серверов</div></div></div>' +
