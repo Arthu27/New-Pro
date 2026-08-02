@@ -5,6 +5,7 @@ import json
 import os 
 from datetime import datetime 
 from cogs .embed_utils import _divider ,now_ts ,error_embed 
+from logger import get_logger 
 
 class AdvancedMod (commands .Cog ):
     def __init__ (self ,bot ):
@@ -28,6 +29,54 @@ class AdvancedMod (commands .Cog ):
         loaded .setdefault ("notes",{})
         loaded .setdefault ("watchlist",{})
         self .data =loaded
+
+    async def _mod_log_channel (self ,guild ):
+        """Найти канал модерации (mod-log или moderasyon)."""
+        ch =discord .utils .get (guild .text_channels ,name ="mod-log")
+        if not ch :
+            ch =discord .utils .get (guild .text_channels ,name ="moderasyon")
+        return ch
+
+    @commands .Cog .listener ()
+    async def on_message (self ,message :discord .Message ):
+        """Отслеживание пользователей из списка наблюдения (watchlist)."""
+        if message .author .bot or not message .guild :
+            return
+        guild_id =str (message .guild .id )
+        user_id =str (message .author .id )
+        watch =self .data [ "watchlist" ].get (guild_id ,{})
+        if user_id not in watch :
+            return
+
+        # Anti-спам: не спамим алерты чаще, чем раз в 60 сек на пользователя
+        import time as _time
+        now =_time .time ()
+        last =self .data .setdefault ( "watch_alerts",{ }).setdefault (user_id ,0)
+        if now -last < 60 :
+            return
+        self .data [ "watch_alerts" ][user_id ]=now
+
+        target =await self ._mod_log_channel (message .guild )
+        if not target :
+            return
+        info =watch [user_id ]
+        content =message .content or ( "(вложение/файл)" )
+        e =discord .Embed (
+        title ="👁 Извещение из списка наблюдения",
+        color =0xF39C12 ,
+        timestamp =datetime .utcnow ()
+        )
+        e .set_author (name =message .author .display_name ,icon_url =message .author .display_avatar .url )
+        e .add_field (name ="Пользователь",value =f"{message.author.mention}\n`{message.author.id}`",inline =True )
+        e .add_field (name ="Канал",value =message .channel .mention ,inline =True )
+        e .add_field (name ="Причина",value =f"```{info.get('reason','Не указана')}```",inline =False )
+        e .add_field (name ="Сообщение",value =f"{content[:900] or '(пусто)'}",inline =False )
+        e .add_field (name ="Ссылка",value =f"[Перейти]({message.jump_url})",inline =False )
+        e .set_footer (text ="Aether Модерация • watchlist",icon_url =message .guild .icon .url if message .guild .icon else None )
+        try :
+            await target .send (embed =e )
+        except Exception as ex :
+            log .error (f"watchlist alert error: {ex}")
 
     def save_data (self ):
         with open (self .data_file ,"w",encoding ="utf-8")as f :
