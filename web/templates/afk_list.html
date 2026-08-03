@@ -15,13 +15,27 @@
 </div>
 {% endblock %}
 
+<style>
+/* AFK список — premium gold */
+.afk-toolbar{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.afk-count-pill{background:var(--ac-soft);color:var(--ac-2);border:1px solid var(--ac-line);padding:6px 16px;border-radius:99px;font-size:13px;font-weight:700}
+.afk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.afk-card{background:linear-gradient(165deg,rgba(224,176,74,.04),rgba(20,18,14,.7));border:1px solid var(--line-2);border-radius:14px;padding:16px;backdrop-filter:blur(14px);transition:all .2s var(--ease)}
+.afk-card:hover{border-color:var(--ac-line);transform:translateY(-3px)}
+.afk-head{display:flex;align-items:center;gap:11px;margin-bottom:10px}
+.afk-avatar{width:40px;height:40px;border-radius:50%;border:1.5px solid var(--ac-line);object-fit:cover;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--ac-soft);font-size:18px}
+.afk-name{font-weight:600;color:var(--text);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.afk-id{font-size:11px;color:var(--text-3);font-family:'JetBrains Mono',monospace}
+.afk-reason{font-size:13px;color:var(--text-2);line-height:1.5;background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:10px;word-break:break-word}
+.afk-time{font-size:12px;color:var(--text-3);display:inline-flex;align-items:center;gap:6px}
+.afk-time i{color:var(--ac)}
+</style>
 
-
-<div class="afk-toolbar">
-  <div class="afk-count-pill" id="afk-count">0 человек AFK</div>
+<div class="afk-toolbar" data-reveal="up">
+  <div class="afk-count-pill" id="afk-count" data-countup>0 человек AFK</div>
 </div>
 
-<div class="afk-grid" id="afk-grid">
+<div class="afk-grid" id="afk-grid" data-reveal="up">
   <div class="empty-state"><i class="fas fa-spinner fa-spin"></i>Загрузка...</div>
 </div>
 
@@ -60,7 +74,12 @@ async function loadAFK(gid) {
   }
 }
 
-setInterval(function(){ loadAFK(_guildId); }, 30000);
-loadAFK(_guildId);
+function start() {
+  loadAFK(_guildId);
+  if (window.setLiveRefresh) window.setLiveRefresh(function(){ loadAFK(_guildId); }, 5000);
+  else setInterval(function(){ loadAFK(_guildId); }, 30000);
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+else start();
 </script>
 {% endblock %}
