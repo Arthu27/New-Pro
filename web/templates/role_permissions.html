@@ -161,14 +161,23 @@ function renderCategories(){
     var catAllowed = allowedRoles(cat);
     var catOn = catAllowed.indexOf(selectedRoleId) !== -1;
     var checked = catOn ? 'checked' : '';
+    var catLocked = (ACL[cat] && ACL[cat].length>0);
     return '<div class="cat-box '+(catOn?'open':'')+'" id="cat-'+cat+'">'
       + '<div class="cat-head">'
       + '<label class="tgl"><input type="checkbox" '+(checked)+' onchange="toggleCategory(\''+cat+'\', this.checked)"><span class="sl"></span></label>'
       + '<span class="cat-title">'+cat+'</span>'
       + '<span class="cat-count">'+cmds.length+' команд</span>'
-      + '<span style="cursor:pointer;font-size:12px;" onclick="document.getElementById(\'cat-'+cat+'\').classList.toggle(\'open\')"><i class="fas fa-chevron-down"></i></span>'
+      + '<button class="preset-btn everyone-btn" style="margin-left:auto;" title="Открыть эту категорию для всех (снять ограничения)" onclick="categoryEveryone(\''+cat+'\')"><i class="fas fa-users"></i> Всем</button>'
+      + '<span style="cursor:pointer;font-size:12px;margin-left:6px;" onclick="document.getElementById(\'cat-'+cat+'\').classList.toggle(\'open\')"><i class="fas fa-chevron-down"></i></span>'
       + '</div>'
       + '<div class="cat-body">'
+      + '<div class="bulk-row" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">'
+      + '<span style="font-size:12px;opacity:.7;">Топливо-назначение ролей:</span>'
+      + '<select class="bulk-roles" multiple style="min-width:200px;padding:6px;border-radius:8px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);color:#fff;font-size:12px;">'
+      + ALL_ROLES.map(function(r){ return '<option value="'+r.id+'">'+r.name+'</option>'; }).join('')
+      + '</select>'
+      + '<button class="preset-btn" onclick="categoryAssign(\''+cat+'\', this)"><i class="fas fa-check-double"></i> Дать этой категории</button>'
+      + '</div>'
       + '<div class="cmd-grid">'
       + cmds.map(function(cmd){
           var roles = allowedRoles(cmd);
@@ -233,6 +242,38 @@ function applyPreset(preset){
   }).then(function(r){ return r.json(); }).then(function(d){
     if(d.success){ toast('Пресет применён', true); loadRoles(); }
     else toast(d.error||'Ошибка', false);
+  });
+}
+
+function categoryEveryone(cat){
+  if(!confirm('Открыть категорию «'+cat+'» для ВСЕХ? Все ограничения на её команды будут сняты.')) return;
+  var gid='{{ guild_id }}';
+  fetch('/api/role-permissions/'+gid+'/category/everyone',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({category:cat})
+  }).then(function(r){ return r.json(); }).then(function(d){
+    if(d.success){
+      toast('Категория «'+cat+'» открыта для всех ('+d.commands_cleared+' команд)', true);
+      loadRoles();
+    } else toast(d.error||'Ошибка', false);
+  });
+}
+
+function categoryAssign(cat, btn){
+  var sel = btn.parentElement.querySelector('.bulk-roles');
+  var roleIds = Array.prototype.slice.call(sel.selectedOptions).map(function(o){ return o.value; });
+  if(!roleIds.length){ toast('Выберите хотя бы одну роль', false); return; }
+  var gid='{{ guild_id }}';
+  fetch('/api/role-permissions/'+gid+'/category/assign',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({category:cat, role_ids:roleIds})
+  }).then(function(r){ return r.json(); }).then(function(d){
+    if(d.success){
+      toast('Категория «'+cat+'» выдана ролям ('+d.commands+' команд)', true);
+      loadRoles();
+    } else toast(d.error||'Ошибка', false);
   });
 }
 

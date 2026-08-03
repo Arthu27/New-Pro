@@ -5752,6 +5752,48 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         save_acl (int (guild_id ),acl )
         return jsonify ({'success':True ,'preset':preset })
 
+    @app .route ('/api/role-permissions/<guild_id>/category/everyone',methods =['POST'])
+    @login_required
+    @role_required ('owner')
+    def api_role_permissions_category_everyone (guild_id ):
+        """Открыть категорию для всех: снять ограничения с категории и всех её команд."""
+        from services .permission_acl import COMMAND_CATEGORIES ,load_acl ,save_acl
+        data =request .get_json (silent =True )or {}
+        category =data .get ('category','').strip ()
+        if not category :
+            return jsonify ({'success':False ,'error':'Не указана категория'}),400
+        cmds =COMMAND_CATEGORIES .get (category ,[])
+        acl =load_acl (int (guild_id ))
+        acl .pop (category ,None )   # снять ограничение с категории
+        for c in cmds :
+            acl .pop (c ,None )      # снять ограничение с каждой команды
+        save_acl (int (guild_id ),acl )
+        return jsonify ({'success':True ,'category':category ,'commands_cleared':len (cmds )})
+
+    @app .route ('/api/role-permissions/<guild_id>/category/assign',methods =['POST'])
+    @login_required
+    @role_required ('owner')
+    def api_role_permissions_category_assign (guild_id ):
+        """Топливо: назначить несколько ролей сразу на целую категорию (все её команды)."""
+        from services .permission_acl import COMMAND_CATEGORIES ,load_acl ,save_acl
+        data =request .get_json (silent =True )or {}
+        category =data .get ('category','').strip ()
+        role_ids =[str (r )for r in (data .get ('role_ids',[]) or [])]
+        if not category :
+            return jsonify ({'success':False ,'error':'Не указана категория'}),400
+        cmds =COMMAND_CATEGORIES .get (category ,[])
+        acl =load_acl (int (guild_id ))
+        if role_ids :
+            acl [category ]=role_ids
+            for c in cmds :
+                acl [c ]=role_ids
+        else :
+            acl .pop (category ,None )
+            for c in cmds :
+                acl .pop (c ,None )
+        save_acl (int (guild_id ),acl )
+        return jsonify ({'success':True ,'category':category ,'role_ids':role_ids ,'commands':len (cmds )})
+
 
             # ── CUSTOM EMBED API ─────────────────────────────────────────────────────
             # api_send_embed and custom_embeds_page are defined in app.py directly
