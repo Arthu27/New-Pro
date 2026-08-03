@@ -5794,6 +5794,132 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         save_acl (int (guild_id ),acl )
         return jsonify ({'success':True ,'category':category ,'role_ids':role_ids ,'commands':len (cmds )})
 
+    # ═══════════════════════════════════════════════════════════════════
+    #  ДОСТУП К КАНАЛАМ (Channel Visibility) — какие роли видят какие каналы
+    # ═══════════════════════════════════════════════════════════════════
+    @app .route ('/channel-access')
+    @login_required
+    @role_required ('owner')
+    def channel_access_page ():
+        return render_template (
+        'channel_access.html',
+        role =session .get ('role'),
+        username =session .get ('username'),
+        guild_id =active_guild_id ()
+        )
+
+    @app .route ('/api/channel-access/<guild_id>')
+    @login_required
+    @role_required ('owner')
+    def api_channel_access_get (guild_id ):
+        """Вернуть роли + категории и каналы с текущей видимостью для каждой роли."""
+        import web .app as _app
+        bot =_app .bot_instance
+        guild =None
+        if bot :
+            guild =bot .get_guild (int (guild_id ))
+            if guild is None :
+                for g in bot .guilds :
+                    if str (g .id )==str (guild_id ):
+                        guild =g
+                        break
+        if not guild :
+            return jsonify ({'success':False ,'error':'Сервер не найден'}),404
+
+        roles =[
+        {'id':str (r .id ),'name':r .name ,'color':str (r .color ),'position':r .position,
+         'permissions':r .permissions .value ,'managed':r .managed ,'hoist':r .hoist}
+        for r in guild .roles if not r .is_default ()
+        ]
+        roles .sort (key =lambda x :x ['position'],reverse =True )
+
+        # Категории и каналы (текст/голос/категории)
+        cats =[]
+        seen_cat_ids =set ()
+        for cat in guild .categories :
+            seen_cat_ids .add (cat .id )
+            chans =[]
+            for ch in cat .channels :
+                ov =ch .overwrites_for (discord .Object (id =0 ))  # заглушка, ниже переберём роли
+                chans .append ({
+                'id':str (ch .id ),'name':ch .name ,
+                'type':'text' if isinstance (ch ,discord .TextChannel )
+                         else 'voice' if isinstance (ch ,discord .VoiceChannel )
+                         else 'other',
+                'category_id':str (cat .id ),
+                'overwrites':{str (r .id ): _role_overwrite(ch ,r ) for r in roles}
+                })
+            cats .append ({'id':str (cat .id ),'name':cat .name ,'channels':chans })
+
+        # Каналы без категории
+        uncat =[]
+        for ch in guild .channels :
+            if getattr (ch ,'category_id',None ) in seen_cat_ids or getattr (ch ,'category_id',None ) is None :
+                if isinstance (ch ,(discord .TextChannel ,discord .VoiceChannel )):
+                    uncat .append ({
+                    'id':str (ch .id ),'name':ch .name ,
+                    'type':'text' if isinstance (ch ,discord .TextChannel ) else 'voice',
+                    'category_id':None ,
+                    'overwrites':{str (r .id ): _role_overwrite(ch ,r ) for r in roles}
+                    })
+        return jsonify ({'success':True ,'roles':roles ,'categories':cats ,'uncategorized':uncat })
+
+    @app .route ('/api/channel-access/<guild_id>/set',methods =['POST'])
+    @login_required
+    @role_required ('owner')
+    def api_channel_access_set (guild_id ):
+        """Изменить видимость канала/категории для роли (View Channel on/off)."""
+        import web .app as _app
+        bot =_app .bot_instance
+        if not bot :
+            return jsonify ({'success':False ,'error':'Бот не в сети'}),503
+        guild =bot .get_guild (int (guild_id ))
+        if not guild :
+            return jsonify ({'success':False ,'error':'Сервер не найден'}),404
+        data =request .get_json (silent =True )or {}
+        role_id =str (data .get ('role_id','')).strip ()
+        target_id =str (data .get ('target_id','')).strip ()   # канал или категория
+        visible =bool (data .get ('visible',True ))
+        apply_to_children =bool (data .get ('apply_to_children',False ))
+        if not role_id or not target_id :
+            return jsonify ({'success':False ,'error':'role_id и target_id обязательны'}),400
+        role =guild .get_role (int (role_id ))
+        if not role :
+            return jsonify ({'success':False ,'error':'Роль не найдена'}),404
+
+        targets =[]
+        obj =guild .get_channel (int (target_id ))
+        if obj is None :
+            return jsonify ({'success':False ,'error':'Канал не найден'}),404
+        targets .append (obj )
+        # Если это категория и apply_to_children — добавляем все её каналы
+        if isinstance (obj ,discord .CategoryChannel ) and apply_to_children :
+            targets .extend (obj .channels )
+
+        async def apply ():
+            for ch in targets :
+                await ch .set_permissions (role ,read_messages =visible ,view_channel =visible ,
+                    reason =f'[Panel] Доступ к каналу: {role.name} → {visible}')
+        try :
+            _run_async (apply ())
+            return jsonify ({'success':True ,'applied':len (targets )})
+        except Exception as e :
+            return jsonify ({'success':False ,'error':str (e )}),400
+
+
+def _role_overwrite (channel ,role ):
+    """Определить, видит ли роль канал: True/False/None (наследует)."""
+    try :
+        ov =channel .overwrites_for (role )
+        if ov .view_channel is not None :
+            return bool (ov .view_channel )
+        # fallback на read_messages
+        if ov .read_messages is not None :
+            return bool (ov .read_messages )
+    except Exception :
+        pass
+    return None
+
 
             # ── CUSTOM EMBED API ─────────────────────────────────────────────────────
             # api_send_embed and custom_embeds_page are defined in app.py directly
