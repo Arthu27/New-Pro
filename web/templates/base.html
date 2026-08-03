@@ -844,6 +844,67 @@ window.showToast = function (message, success) {
   });
 })();
 
+// ============================================================
+// GLOBAL SCROLL PRESERVATION — no more page jumping to top
+// Удерживает позицию прокрутки при любых перерисовках DOM,
+// кликах по якорным ссылкам и открытии/закрытии меню.
+// ============================================================
+(function () {
+  var KEY = 'aether_scroll_pos';
+  var pageKey = location.pathname;
+
+  // 1) Save scroll on unload (full reloads)
+  window.addEventListener('beforeunload', function () {
+    try {
+      var store = JSON.parse(sessionStorage.getItem(KEY) || '{}');
+      store[pageKey] = { x: window.scrollX, y: window.scrollY };
+      sessionStorage.setItem(KEY, JSON.stringify(store));
+    } catch (e) {}
+  });
+
+  // 2) Restore scroll after load / bfcache
+  function restore() {
+    try {
+      var store = JSON.parse(sessionStorage.getItem(KEY) || '{}');
+      var pos = store[pageKey];
+      if (pos && (pos.y > 0 || pos.x > 0)) {
+        // дать DOM дорисоваться (картинки/списки)
+        requestAnimationFrame(function () {
+          window.scrollTo(pos.x, pos.y);
+        });
+        setTimeout(function () { window.scrollTo(pos.x, pos.y); }, 100);
+        setTimeout(function () { window.scrollTo(pos.x, pos.y); }, 400);
+      }
+    } catch (e) {}
+  }
+  window.addEventListener('pageshow', restore);
+  if (document.readyState === 'complete') restore();
+  else window.addEventListener('DOMContentLoaded', restore);
+
+  // 3) При любом клике по якорю '#' не прыгать вверх (а остаться на месте)
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest ? e.target.closest('a[href="#"]') : null;
+    if (a) { e.preventDefault(); }
+  });
+
+  // 4) Универсальный хелпер: перерисовать контент, сохранив scroll.
+  //    Любая страница может вызывать window.keepScroll(fn).
+  window.keepScroll = function (renderFn) {
+    var y = window.scrollY, x = window.scrollX;
+    if (typeof renderFn === 'function') renderFn();
+    requestAnimationFrame(function () {
+      window.scrollTo(x, y);
+      // сохраним на всякий случай
+      try {
+        var store = JSON.parse(sessionStorage.getItem(KEY) || '{}');
+        store[pageKey] = { x: x, y: y };
+        sessionStorage.setItem(KEY, JSON.stringify(store));
+      } catch (err) {}
+    });
+  };
+})();
+
+
 // Smooth page enter animation (already in CSS, but trigger on load)
 window.addEventListener('pageshow', function (e) {
   if (e.persisted) {
