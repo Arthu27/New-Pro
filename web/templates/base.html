@@ -52,14 +52,14 @@
                 </a>
             </div>
 
-            {% elif role == 'мод' %}
+            {% elif role == 'mod' %}
             <div class="nav-group">
                 <a href="/" class="nav-link {% if request.path == '/' %}active{% endif %}"><i class="fas fa-home"></i> <span>Панель управления</span></a>
                 <a href="/logs" class="nav-link {% if request.path == '/logs' %}active{% endif %}"><i class="fas fa-clipboard-list"></i> <span>Логи модерации</span></a>
                 <a href="/warnings" class="nav-link {% if request.path == '/warnings' %}active{% endif %}"><i class="fas fa-exclamation-triangle"></i> <span>Предупреждения</span></a>
             </div>
 
-            {% elif role == 'админ' %}
+            {% elif role == 'admin' %}
             <div class="nav-group">
                 <a href="/" class="nav-link {% if request.path == '/' %}active{% endif %}"><i class="fas fa-home"></i> <span>Панель управления</span></a>
                 <a href="/users" class="nav-link {% if request.path == '/users' %}active{% endif %}"><i class="fas fa-users"></i> <span>Пользователи</span></a>
@@ -69,7 +69,7 @@
                 <a href="/staff-apps" class="nav-link {% if request.path == '/staff-apps' %}active{% endif %}"><i class="fas fa-user-shield"></i> <span>Заявки в администрацию</span></a>
             </div>
 
-            {% elif role == 'owner' or role == 'админ' %}
+            {% elif role == 'owner' or role == 'admin' %}
                 <div class="nav-group" data-group="main">
                     <div class="nav-group-title" data-toggle>
                         <i class="fas fa-house"></i>

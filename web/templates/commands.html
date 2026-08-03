@@ -33,19 +33,19 @@
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
   var commands = [
-    { cmd: 'ban', icon: 'fa-gavel', name: 'Бан', desc: 'Участника banla', tag: 'админ' },
-    { cmd: 'kick', icon: 'fa-user-times', name: 'Кик', desc: 'Участника at', tag: 'админ' },
-    { cmd: 'warn', icon: 'fa-exclamation-triangle', name: 'Варн', desc: 'Предупреждение ver', tag: 'мод' },
-    { cmd: 'mut', icon: 'fa-volume-mut', name: 'Мьют', desc: 'Мьют (timeout)', tag: 'мод' },
-    { cmd: 'unmut', icon: 'fa-volume-up', name: 'Unmut', desc: 'Susturmayi kaldir', tag: 'мод' },
-    { cmd: 'unban', icon: 'fa-user-plus', name: 'Unban', desc: 'Бан kaldir', tag: 'админ' },
-    { cmd: 'jail', icon: 'fa-lock', name: 'Jail', desc: 'Hapishane at', tag: 'админ' },
-    { cmd: 'unjail', icon: 'fa-unlock', name: 'Unjail', desc: 'Jail kaldir', tag: 'админ' },
-    { cmd: 'clear', icon: 'fa-broom', name: 'Clear', desc: 'Сообщение temizle', tag: 'мод' },
-    { cmd: 'lock', icon: 'fa-lock', name: 'Lock', desc: 'Канал kilitle', tag: 'мод' },
-    { cmd: 'unlock', icon: 'fa-unlock', name: 'Unlock', desc: 'Канал aч', tag: 'мод' },
-    { cmd: 'role', icon: 'fa-user-tag', name: 'Role', desc: 'Выдать/забрать роль', tag: 'мод' },
-    { cmd: 'ticket_panel', icon: 'fa-ticket-alt', name: 'Ticket Panel', desc: 'Ticket paneli gёnder', tag: 'админ' }
+    { cmd: 'ban', icon: 'fa-gavel', name: 'Бан', desc: 'Участника banla', tag: 'admin' },
+    { cmd: 'kick', icon: 'fa-user-times', name: 'Кик', desc: 'Участника at', tag: 'admin' },
+    { cmd: 'warn', icon: 'fa-exclamation-triangle', name: 'Варн', desc: 'Предупреждение ver', tag: 'mod' },
+    { cmd: 'mut', icon: 'fa-volume-mut', name: 'Мьют', desc: 'Мьют (timeout)', tag: 'mod' },
+    { cmd: 'unmut', icon: 'fa-volume-up', name: 'Unmut', desc: 'Susturmayi kaldir', tag: 'mod' },
+    { cmd: 'unban', icon: 'fa-user-plus', name: 'Unban', desc: 'Бан kaldir', tag: 'admin' },
+    { cmd: 'jail', icon: 'fa-lock', name: 'Jail', desc: 'Hapishane at', tag: 'admin' },
+    { cmd: 'unjail', icon: 'fa-unlock', name: 'Unjail', desc: 'Jail kaldir', tag: 'admin' },
+    { cmd: 'clear', icon: 'fa-broom', name: 'Clear', desc: 'Сообщение temizle', tag: 'mod' },
+    { cmd: 'lock', icon: 'fa-lock', name: 'Lock', desc: 'Канал kilitle', tag: 'mod' },
+    { cmd: 'unlock', icon: 'fa-unlock', name: 'Unlock', desc: 'Канал aч', tag: 'mod' },
+    { cmd: 'role', icon: 'fa-user-tag', name: 'Role', desc: 'Выдать/забрать роль', tag: 'mod' },
+    { cmd: 'ticket_panel', icon: 'fa-ticket-alt', name: 'Ticket Panel', desc: 'Ticket paneli gёnder', tag: 'admin' }
   ];
 
   var roleColors = { мод: '#4ade80', админ: '#d4a843' };
