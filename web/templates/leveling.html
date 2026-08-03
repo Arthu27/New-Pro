@@ -1,4 +1,4 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 {% block title %}Leveling - Aether{% endblock %}
 {% block page_title %}<i class="fas fa-star" ></i> ⭐ СИСТЕМА УРОВНЕЙ{% endblock %}
 {% block content %}
@@ -15,12 +15,38 @@
 </div>
 {% endblock %}
 
+<style>
+/* Система уровней — premium gold */
+.lv-hero{display:flex;align-items:center;gap:16px;padding:20px 24px;background:linear-gradient(135deg,rgba(224,176,74,.10),rgba(224,176,74,.03));border:1px solid var(--ac-line);border-radius:16px;margin-bottom:18px}
+.lv-hero .hero-icon{font-size:30px;width:54px;height:54px;border-radius:14px;background:linear-gradient(135deg,var(--ac-2),var(--ac-3));display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 6px 18px var(--ac-glow)}
+.lv-hero .hero-title{font-family:'Poppins',sans-serif;font-size:19px;font-weight:800;color:var(--text);text-transform:uppercase}
+.lv-hero .hero-sub{font-size:13px;color:var(--text-2);margin-top:3px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:900px){.grid2{grid-template-columns:1fr}}
+.lv-box{background:linear-gradient(165deg,rgba(224,176,74,.03),rgba(20,18,14,.6));border:1px solid var(--line-2);border-radius:16px;padding:20px;backdrop-filter:blur(14px)}
+.lv-box .box-title{font-size:14px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:9px;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.toggle-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);margin-bottom:12px}
+.toggle-label{font-size:13.5px;color:var(--text-2);font-weight:500}
+.toggle{position:relative;width:44px;height:24px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;inset:0;background:rgba(255,255,255,.12);border-radius:22px;transition:.2s;cursor:pointer}
+.toggle-slider:before{content:"";position:absolute;height:18px;width:18px;left:3px;top:3px;background:#1a1a1a;border-radius:50%;transition:.2s}
+.toggle input:checked + .toggle-slider{background:linear-gradient(90deg,var(--ac),var(--ac-3))}
+.toggle input:checked + .toggle-slider:before{transform:translateX(20px);background:#fff}
+.lb-row{display:flex;align-items:center;gap:12px;padding:11px 13px;background:linear-gradient(160deg,rgba(255,255,255,.02),transparent);border:1px solid var(--line);border-radius:11px;margin-bottom:8px;transition:all .16s var(--ease)}
+.lb-row:hover{border-color:var(--ac-line);transform:translateX(2px)}
+.lb-rank{font-size:20px;width:32px;text-align:center;flex-shrink:0}
+.lb-avatar{width:38px;height:38px;border-radius:50%;border:1.5px solid var(--ac-line);object-fit:cover;flex-shrink:0}
+.lb-name{font-weight:700;color:var(--text);font-size:14px}
+.lb-level{font-size:11px;color:var(--ac-2);font-weight:700;margin-left:8px;padding:2px 8px;border-radius:6px;background:var(--ac-soft);border:1px solid var(--ac-line)}
+.lb-xp{font-size:11.5px;color:var(--text-3);margin-left:8px}
+.xp-bar-track{height:6px;background:rgba(255,255,255,.05);border-radius:99px;overflow:hidden;margin-top:7px}
+.xp-bar-fill{height:100%;background:linear-gradient(90deg,var(--ac),var(--ac-2));border-radius:99px;width:0;transition:width .8s var(--ease-out)}
+</style>
 
-
-<!-- КАЖДЫЙ -->
-<div class="lv-hero">
+<div class="lv-hero" data-reveal="up">
   <span class="hero-icon">⭐</span>
-  <div class="hero-title">СИСТЕМА УРОВНЕЙ</div>
+  <div class="hero-title">Система уровней</div>
   <div class="hero-sub">Настройка получения опыта, канал уведомлений и таблица лидеров</div>
 </div>
 
@@ -65,7 +91,7 @@
     </div>
     <div class="form-group">
       <label class="form-label">Сообщение о повышении уровня</label>
-      <input type="text" id="lv-msg" class="form-input" placeholder="{user} уровень {level} oldu! 🎉">
+      <input type="text" id="lv-msg" class="form-input" placeholder="{user} достиг уровня {level}! 🎉">
     </div>
 
     <button class="btn-save" onclick="saveLeveling()">💾 СОХРАНИТЬ</button>
@@ -75,7 +101,7 @@
   <!-- LEADERBOARD -->
   <div class="lv-box">
     <div class="box-title">🏆 Таблица лидеров</div>
-    <div id="lb-list"><p >ВЫБЕРИТЕ СЕРВЕР...</p></div>
+    <div id="lb-list"><p >Выберите сервер...</p></div>
   </div>
 </div>
 
@@ -140,7 +166,7 @@ async function loadLeveling() {
   var medals = ['🥇','🥈','🥉'];
   var box = document.getElementById('lb-list');
   if (!lb.length) {
-    box.innerHTML = '<p >ДАННЫЕ YOK</p>';
+    box.innerHTML = '<p >Данные отсутствуют</p>';
     return;
   }
   box.innerHTML = lb.map(function(u, i) {
