@@ -15,6 +15,7 @@ from datetime import datetime
 log = logging.getLogger('dm_logger')
 
 DM_LOG_FILE = 'data/dm_log.json'
+DM_WHITELIST_FILE = 'data/dm_whitelist.json'
 MAX_PER_USER = 200
 
 
@@ -29,6 +30,25 @@ def _load_dm_log():
     return {}
 
 
+def _load_dm_whitelist():
+    """Разрешённые пользователи, которым можно писать боту в ЛС.
+    Формат: список объектов {'id': '...', 'note': '...'} или список строк-ID."""
+    try:
+        if os.path.exists(DM_WHITELIST_FILE):
+            with open(DM_WHITELIST_FILE, 'r', encoding='utf-8') as f:
+                d = json.load(f)
+            ids = []
+            for item in d if isinstance(d, list) else []:
+                if isinstance(item, dict):
+                    ids.append(str(item.get('id', '')))
+                elif isinstance(item, (str, int)):
+                    ids.append(str(item))
+            return set(x for x in ids if x)
+    except Exception:
+        pass
+    return set()
+
+
 def _save_dm_log(data):
     try:
         os.makedirs('data', exist_ok=True)
@@ -41,6 +61,7 @@ def _save_dm_log(data):
 class DMLogger(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.whitelist = _load_dm_whitelist()
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -58,16 +79,20 @@ class DMLogger(commands.Cog):
             uid = str(message.author.id)
             if uid not in data or not isinstance(data[uid], list):
                 data[uid] = []
+            # Для разрешённых (whitelist) пользователей записываем ВСЕ сообщения всегда.
+            is_whitelisted = uid in self.whitelist
             # Защита от дублей: не записываем, если это та же запись (по времени/содержимому)
-            prev = data[uid][-1] if data[uid] else None
-            if prev and prev.get('from_bot') is False and prev.get('content') == content:
-                try:
-                    t_prev = datetime.fromisoformat(prev.get('timestamp', ''))
-                    t_new = message.created_at.replace(tzinfo=t_prev.tzinfo)
-                    if abs((t_new - t_prev).total_seconds()) < 2:
-                        return
-                except Exception:
-                    pass
+            # — НЕ применяем к whitelist, чтобы их сообщения не терялись.
+            if not is_whitelisted:
+                prev = data[uid][-1] if data[uid] else None
+                if prev and prev.get('from_bot') is False and prev.get('content') == content:
+                    try:
+                        t_prev = datetime.fromisoformat(prev.get('timestamp', ''))
+                        t_new = message.created_at.replace(tzinfo=t_prev.tzinfo)
+                        if abs((t_new - t_prev).total_seconds()) < 2:
+                            return
+                    except Exception:
+                        pass
             data[uid].append({
                 'author': message.author.display_name,
                 'content': content,
