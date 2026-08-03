@@ -916,6 +916,27 @@ window.askConfirm = function (title, desc, onOk, opts) {
   });
   mo.observe(document.body, { subtree: true, childList: true });
 })();
+
+// ============================================================
+// MOUSE PARALLAX — лёгкое движение ambient-фона за курсором
+// (GSAP/Apple-style parallax feel; безопасно, весь фон)
+// ============================================================
+(function () {
+  var layers = [].slice.call(document.querySelectorAll('.bg-ambient'));
+  var layer = layers.filter(function (el) { return !(el.closest && el.closest('#welcomeScreen')); })[0];
+  if (!layer) return;
+  var mx = 0, my = 0, tx = 0, ty = 0;
+  document.addEventListener('mousemove', function (e) {
+    tx = (e.clientX / window.innerWidth - 0.5) * 24;
+    ty = (e.clientY / window.innerHeight - 0.5) * 16;
+  }, { passive: true });
+  (function raf() {
+    mx += (tx - mx) * 0.06;
+    my += (ty - my) * 0.06;
+    layer.style.transform = 'translate(' + mx.toFixed(2) + 'px,' + my.toFixed(2) + 'px)';
+    requestAnimationFrame(raf);
+  })();
+})();
 // Удерживает позицию прокрутки при любых перерисовках DOM,
 // кликах по якорным ссылкам и открытии/закрытии меню.
 // ============================================================
