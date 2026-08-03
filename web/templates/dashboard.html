@@ -228,17 +228,40 @@
 .action-badge-warn { color: var(--warn) !important; }
 .action-badge-ok { color: var(--ok) !important; }
 .action-badge-info { color: var(--info) !important; }
+
+/* Welcome hero — о сервере */
+.welcome-hero{ position:relative; overflow:hidden; }
+.hero-guild-row{ display:flex; align-items:center; gap:18px; margin-bottom:14px; }
+.hero-guild-av{ width:64px; height:64px; border-radius:16px; background:linear-gradient(135deg,var(--ac-2),var(--ac-3)); display:flex; align-items:center; justify-content:center; font-size:30px; color:#1a1a1a; flex-shrink:0; box-shadow:0 8px 24px var(--ac-glow); position:relative; }
+.hero-guild-av img{ width:100%; height:100%; border-radius:16px; object-fit:cover; }
+.hero-guild-row h1{ margin-bottom:6px !important; }
+.hero-guild-row p{ margin:0 !important; }
+.hero-welcome-msg{ display:flex; align-items:flex-start; gap:11px; padding:13px 16px; background:linear-gradient(90deg,var(--ac-soft),transparent); border:1px solid var(--ac-line); border-radius:13px; font-size:13.5px; color:var(--text-2); line-height:1.6; margin-top:4px; }
+.hero-welcome-msg i{ color:var(--ac); margin-top:2px; }
+@media (max-width:560px){
+  .hero-guild-row{ flex-direction:column; align-items:flex-start; gap:12px; }
+  .hero-guild-av{ width:52px; height:52px; font-size:24px; }
+}
 </style>
 
-<!-- Hero section -->
-<div class="page-hero">
+<!-- Hero section — приветствие + о сервере -->
+<div class="page-hero welcome-hero" id="dashHero">
   <div class="page-hero-content">
     <div class="page-hero-greeting">
       <span class="dot"></span>
       <span id="heroGreeting">Добро пожаловать, {{ username }}</span>
     </div>
-    <h1>Центр управления сервером</h1>
-    <p>Полный обзор активности, модерации и состояния вашего Discord-сообщества в реальном времени.</p>
+    <div class="hero-guild-row">
+      <div class="hero-guild-av" id="heroGuildAv">⚡</div>
+      <div>
+        <h1 id="heroTitle">Центр управления сервером</h1>
+        <p id="heroDesc">Полный обзор активности, модерации и состояния вашего Discord-сообщества в реальном времени.</p>
+      </div>
+    </div>
+    <div class="hero-welcome-msg">
+      <i class="fas fa-heart"></i>
+      <span id="heroWelcomeMsg">Добро пожаловать в наше сообщество! Это по-настоящему уютное и дружелюбное место, где каждый найдёт себе друзей и интересное общение. Мы рады, что ты с нами!</span>
+    </div>
   </div>
 </div>
 
@@ -470,6 +493,26 @@
     var g = h < 6 ? 'Доброй ночи' : h < 12 ? 'Доброе утро' : h < 18 ? 'Добрый день' : 'Добрый вечер';
     var el = $('heroGreeting');
     if (el) el.innerHTML = '<span class="dot"></span> ' + g + ', {{ username }}';
+  }
+
+  // ── Load main guild info into hero (name, icon, welcome msg) ──
+  async function loadGuildInfo() {
+    try {
+      var guilds = await window.fetchCachedJSON('/api/guilds');
+      if (!Array.isArray(guilds) || !guilds.length) return;
+      var main = '{{ main_guild_id }}';
+      var g = null;
+      for (var i = 0; i < guilds.length; i++) {
+        if (String(guilds[i].id) === String(main)) { g = guilds[i]; break; }
+      }
+      if (!g) g = guilds[0];
+      var t = $('heroTitle');
+      if (t && g.name) t.textContent = 'Добро пожаловать в ' + g.name;
+      var av = $('heroGuildAv');
+      if (av && g.icon) av.innerHTML = '<img src="' + esc(g.icon) + '" onerror="this.parentNode.textContent=\'⚡\'">';
+      var m = $('heroWelcomeMsg');
+      if (m) m.textContent = 'Добро пожаловать в наше сообщество! ' + (g.name||'') + ' — это по-настоящему уютное и дружелюбное место, где каждый найдёт себе друзей, интересное общение и помощь. Мы рады, что ты с нами!';
+    } catch (e) { /* keep defaults */ }
   }
 
   // ── Main stats ──
@@ -729,6 +772,7 @@
   function init() {
     setGreeting();
     bindButtons();
+    loadGuildInfo();
     loadStats();
     loadQuickStats();
     loadRecentActivity();
