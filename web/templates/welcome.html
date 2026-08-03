@@ -29,39 +29,97 @@
             overflow-x: hidden;
         }
 
-        /* ===== Атмосферный фон ===== */
+        /* ============ ФОН ============ */
+        /* Звёзды (генерируются JS) */
+        .bg-stars { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+        .bg-stars .star {
+            position: absolute; border-radius: 50%; background: #f0d9a0;
+            animation: twinkle var(--dur, 3s) ease-in-out var(--delay, 0s) infinite;
+        }
+        @keyframes twinkle { 0%, 100% { opacity: 0.12; } 50% { opacity: 0.85; } }
+
+        /* Аврора-орбы */
         .aurora { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
-        .aurora::before, .aurora::after {
-            content: ''; position: absolute; border-radius: 50%;
-            filter: blur(120px); opacity: 0.35;
-            animation: auroraFloat 18s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+        .aurora .orb { position: absolute; border-radius: 50%; filter: blur(110px); }
+        .aurora .orb-1 {
+            width: 640px; height: 640px; left: -140px; top: -180px;
+            background: radial-gradient(circle, rgba(139, 92, 246, 0.4), transparent 70%);
+            animation: orbDrift1 22s ease-in-out infinite;
         }
-        .aurora::before {
-            width: 620px; height: 620px;
-            background: radial-gradient(circle, #8b5cf6 0%, transparent 70%);
-            top: -160px; left: 8%;
+        .aurora .orb-2 {
+            width: 720px; height: 720px; right: -180px; bottom: -220px;
+            background: radial-gradient(circle, rgba(212, 168, 67, 0.42), transparent 70%);
+            animation: orbDrift2 26s ease-in-out infinite;
         }
-        .aurora::after {
-            width: 720px; height: 720px;
-            background: radial-gradient(circle, rgba(212,168,67,0.55) 0%, transparent 70%);
-            bottom: -220px; right: 4%;
-            animation-delay: -6s;
+        .aurora .orb-3 {
+            width: 480px; height: 480px; left: 55%; top: 30%;
+            background: radial-gradient(circle, rgba(236, 72, 153, 0.22), transparent 70%);
+            animation: orbDrift3 30s ease-in-out infinite;
         }
-        @keyframes auroraFloat {
+        .aurora .orb-4 {
+            width: 420px; height: 420px; left: 12%; bottom: -140px;
+            background: radial-gradient(circle, rgba(6, 182, 212, 0.18), transparent 70%);
+            animation: orbDrift1 34s ease-in-out -8s infinite;
+        }
+        @keyframes orbDrift1 {
             0%, 100% { transform: translate(0, 0) scale(1); }
-            33% { transform: translate(40px, -30px) scale(1.08); }
-            66% { transform: translate(-30px, 25px) scale(0.95); }
+            50% { transform: translate(70px, 40px) scale(1.12); }
         }
+        @keyframes orbDrift2 {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(-60px, -50px) scale(1.08); }
+        }
+        @keyframes orbDrift3 {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(50px, -40px) scale(1.1); }
+            66% { transform: translate(-40px, 30px) scale(0.92); }
+        }
+
+        /* Перспективная сетка-пол */
         .bg-grid {
+            position: fixed; left: 0; right: 0; bottom: 0; height: 46vh; z-index: 0; pointer-events: none;
+            background-image: linear-gradient(rgba(212,168,67,0.10) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(212,168,67,0.10) 1px, transparent 1px);
+            background-size: 54px 54px;
+            transform: perspective(600px) rotateX(62deg) scale(1.6);
+            transform-origin: bottom;
+            mask-image: linear-gradient(to top, #000 10%, transparent 85%);
+            -webkit-mask-image: linear-gradient(to top, #000 10%, transparent 85%);
+            animation: gridScroll 6s linear infinite;
+        }
+        @keyframes gridScroll { from { background-position-y: 0; } to { background-position-y: 54px; } }
+
+        /* Верхняя тонкая сетка */
+        .bg-grid-top {
             position: fixed; inset: 0; z-index: 0; pointer-events: none;
             background-image: linear-gradient(rgba(212,168,67,0.05) 1px, transparent 1px),
                               linear-gradient(90deg, rgba(212,168,67,0.05) 1px, transparent 1px);
             background-size: 56px 56px;
-            mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 30%, transparent 75%);
-            -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 30%, transparent 75%);
+            mask-image: radial-gradient(ellipse 80% 55% at 50% 0%, #000 25%, transparent 72%);
+            -webkit-mask-image: radial-gradient(ellipse 80% 55% at 50% 0%, #000 25%, transparent 72%);
         }
 
-        /* ===== Верхняя навигация ===== */
+        /* Летящие частицы (генерируются JS) */
+        .bg-particles { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+        .bg-particles .pt {
+            position: absolute; bottom: -12px; border-radius: 50%;
+            background: radial-gradient(circle, var(--ac-2), rgba(212,168,67,0.1));
+            animation: rise var(--dur, 14s) linear var(--delay, 0s) infinite;
+        }
+        @keyframes rise {
+            0% { transform: translateY(0) translateX(0); opacity: 0; }
+            8% { opacity: 0.9; }
+            85% { opacity: 0.4; }
+            100% { transform: translateY(-108vh) translateX(var(--sway, 40px)); opacity: 0; }
+        }
+
+        /* Мягкая виньетка */
+        .bg-vignette {
+            position: fixed; inset: 0; z-index: 0; pointer-events: none;
+            background: radial-gradient(ellipse 120% 90% at 50% 40%, transparent 55%, rgba(0,0,0,0.5) 100%);
+        }
+
+        /* ============ Верхняя навигация ============ */
         .topnav {
             position: fixed; top: 0; left: 0; right: 0; z-index: 100;
             backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
@@ -80,9 +138,7 @@
             color: #1a1a1a; font-size: 15px;
             box-shadow: 0 6px 18px rgba(212, 168, 67, 0.35);
         }
-        .nav-logo-name {
-            font-size: 16px; font-weight: 800; letter-spacing: 3px; color: var(--text);
-        }
+        .nav-logo-name { font-size: 16px; font-weight: 800; letter-spacing: 3px; color: var(--text); }
         .nav-links { display: flex; gap: 4px; margin-left: 12px; }
         .nav-links a {
             color: var(--text-2); text-decoration: none; font-size: 14px; font-weight: 500;
@@ -110,58 +166,195 @@
             margin-left: auto;
         }
 
-        /* ===== Hero ===== */
+        /* ============ HERO ============ */
         .hero {
             position: relative; z-index: 1;
             min-height: 100vh;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            text-align: center; padding: 130px 24px 70px;
+            display: flex; align-items: center; justify-content: center;
+            padding: 120px 24px 80px;
         }
+        .hero-inner {
+            max-width: 1200px; width: 100%;
+            display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 56px; align-items: center;
+        }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+
         .hero-eyebrow {
             display: inline-flex; align-items: center; gap: 8px;
             font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
-            color: var(--ac-2); margin-bottom: 22px; padding: 7px 17px; border-radius: 99px;
+            color: var(--ac-2); margin-bottom: 20px; padding: 7px 17px; border-radius: 99px;
             background: rgba(212, 168, 67, 0.10); border: 1px solid var(--line-2);
-            animation: fadeDown 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+            animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
         }
         .hero-eyebrow .dot {
             width: 7px; height: 7px; background: var(--ok); border-radius: 50%;
             box-shadow: 0 0 8px var(--ok); animation: dotPulse 2s infinite;
         }
         @keyframes dotPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
-        .hero-title {
-            font-size: clamp(54px, 11vw, 110px); font-weight: 900; letter-spacing: clamp(4px, 1.2vw, 12px);
-            line-height: 1.05;
-            background: linear-gradient(135deg, var(--ac-2) 0%, var(--ac) 45%, var(--ac-3) 100%);
-            -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
-            margin-bottom: 22px;
-            animation: fadeDown 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.08s both;
-        }
-        .hero-sub {
-            font-size: clamp(15px, 2vw, 18px); color: var(--text-2); line-height: 1.65;
-            max-width: 620px; font-weight: 500;
-            animation: fadeDown 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.16s both;
-        }
-        .hero-tag {
-            margin-top: 20px; font-size: 12.5px; color: var(--text-3);
-            letter-spacing: 0.16em; text-transform: uppercase; font-weight: 600;
-            animation: fadeDown 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.22s both;
-        }
-        .hero-actions {
-            margin-top: 38px; display: flex; gap: 14px; flex-wrap: wrap; justify-content: center;
-            animation: fadeDown 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both;
-        }
-        .hero-actions .btn-gold { padding: 15px 32px; font-size: 15px; border-radius: 14px; }
-        .hero-actions .btn-ghost { padding: 15px 32px; font-size: 15px; border-radius: 14px; }
-        .hero-hint {
-            margin-top: 54px; font-size: 12px; color: var(--text-3);
-            animation: fadeDown 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.42s both, hintBounce 2.2s 1s ease-in-out infinite;
-        }
-        .hero-hint i { display: block; margin-bottom: 6px; font-size: 14px; color: var(--ac); }
-        @keyframes fadeDown { from { opacity: 0; transform: translateY(-18px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes hintBounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(7px); } }
 
-        /* ===== Секции ===== */
+        .hero-brand { display: flex; align-items: center; gap: 20px; margin-bottom: 20px; animation: fadeUp 0.6s 0.06s cubic-bezier(0.16,1,0.3,1) both; }
+        .logo-orb {
+            position: relative; width: 84px; height: 84px; flex-shrink: 0;
+            border-radius: 26px;
+            background: linear-gradient(135deg, var(--ac-2), var(--ac-3));
+            display: flex; align-items: center; justify-content: center;
+            font-size: 34px; color: #1a1a1a;
+            box-shadow: 0 14px 40px rgba(212, 168, 67, 0.4), inset 0 1px 0 rgba(255,255,255,0.25);
+        }
+        .logo-orb::before {
+            content: ''; position: absolute; inset: -7px; border-radius: 32px;
+            border: 1.5px solid rgba(212, 168, 67, 0.45);
+            animation: ringPulse 2.8s ease-out infinite;
+        }
+        .logo-orb::after {
+            content: ''; position: absolute; inset: -7px; border-radius: 32px;
+            border: 1.5px solid rgba(212, 168, 67, 0.3);
+            animation: ringPulse 2.8s ease-out 1.4s infinite;
+        }
+        @keyframes ringPulse {
+            0% { transform: scale(1); opacity: 0.8; }
+            100% { transform: scale(1.45); opacity: 0; }
+        }
+        .hero-title {
+            font-size: clamp(62px, 8.5vw, 104px); font-weight: 900; letter-spacing: clamp(4px, 0.9vw, 10px);
+            line-height: 1;
+            background: linear-gradient(120deg, var(--ac-2) 10%, #fff3d6 35%, var(--ac) 55%, var(--ac-3) 90%);
+            background-size: 200% 100%;
+            -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+            animation: shimmer 5.5s ease-in-out infinite;
+        }
+        @keyframes shimmer { 0%, 100% { background-position: 0% 0; } 50% { background-position: 100% 0; } }
+
+        .hero-sub {
+            font-size: clamp(16px, 2vw, 19px); color: var(--text-2); line-height: 1.65;
+            max-width: 560px; font-weight: 500;
+            animation: fadeUp 0.6s 0.12s cubic-bezier(0.16,1,0.3,1) both;
+        }
+        .ticker-wrap {
+            display: inline-block; position: relative; vertical-align: bottom;
+            min-width: 190px; text-align: left;
+        }
+        .ticker {
+            display: inline-block; font-weight: 800; color: var(--ac-2);
+            border-bottom: 2px dashed rgba(212, 168, 67, 0.5); padding-bottom: 1px;
+            transition: opacity 0.28s ease, transform 0.28s ease;
+        }
+        .ticker.out { opacity: 0; transform: translateY(7px); }
+
+        .hero-chips {
+            display: flex; gap: 9px; flex-wrap: wrap; margin-top: 22px;
+            animation: fadeUp 0.6s 0.18s cubic-bezier(0.16,1,0.3,1) both;
+        }
+        .chip {
+            display: inline-flex; align-items: center; gap: 7px;
+            font-size: 12.5px; font-weight: 600; color: var(--text-2);
+            padding: 7px 13px; border-radius: 99px;
+            background: rgba(255, 255, 255, 0.03); border: 1px solid var(--line);
+        }
+        .chip i { color: var(--ac-2); font-size: 11px; }
+        .chip .chip-dot {
+            width: 7px; height: 7px; border-radius: 50%; background: var(--ok);
+            box-shadow: 0 0 7px var(--ok); animation: dotPulse 2s infinite;
+        }
+
+        .hero-actions {
+            margin-top: 30px; display: flex; gap: 13px; flex-wrap: wrap;
+            animation: fadeUp 0.6s 0.24s cubic-bezier(0.16,1,0.3,1) both;
+        }
+        .hero-actions .btn-gold { padding: 16px 30px; font-size: 15px; border-radius: 14px; }
+        .hero-actions .btn-ghost { padding: 16px 30px; font-size: 15px; border-radius: 14px; }
+
+        .hero-hint {
+            margin-top: 44px; font-size: 12px; color: var(--text-3);
+            animation: fadeUp 0.6s 0.3s cubic-bezier(0.16,1,0.3,1) both, hintBounce 2.2s 1.2s ease-in-out infinite;
+        }
+        .hero-hint i { display: inline-block; margin-right: 7px; font-size: 13px; color: var(--ac); }
+        @keyframes hintBounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(6px); } }
+
+        /* ----- Превью-карточка справа ----- */
+        .hero-visual { position: relative; animation: fadeUp 0.7s 0.2s cubic-bezier(0.16,1,0.3,1) both; }
+        .preview-card {
+            position: relative;
+            background: linear-gradient(165deg, rgba(212, 168, 67, 0.10), rgba(26, 22, 16, 0.88));
+            border: 1px solid var(--line-2);
+            border-radius: 24px;
+            padding: 22px;
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            box-shadow: 0 30px 70px rgba(0, 0, 0, 0.55);
+        }
+        .pc-head { display: flex; align-items: center; gap: 7px; margin-bottom: 18px; }
+        .pc-dot { width: 10px; height: 10px; border-radius: 50%; }
+        .pc-title { margin-left: 9px; font-size: 13px; font-weight: 700; color: var(--text-2); }
+        .pc-live {
+            margin-left: auto; display: inline-flex; align-items: center; gap: 6px;
+            font-size: 10.5px; font-weight: 800; letter-spacing: 0.1em; color: var(--ok);
+        }
+        .pc-live .chip-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 6px var(--ok); animation: dotPulse 1.6s infinite; }
+
+        .pc-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin-bottom: 16px; }
+        .pc-stat {
+            background: rgba(0, 0, 0, 0.28); border: 1px solid var(--line);
+            border-radius: 13px; padding: 12px 10px; text-align: center;
+        }
+        .pc-stat .v {
+            font-family: 'JetBrains Mono', monospace; font-size: 17px; font-weight: 700;
+            color: var(--ac-2);
+        }
+        .pc-stat .k { font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.07em; margin-top: 3px; font-weight: 700; }
+
+        .pc-chart {
+            display: flex; align-items: flex-end; gap: 6px; height: 74px;
+            background: rgba(0, 0, 0, 0.28); border: 1px solid var(--line);
+            border-radius: 13px; padding: 10px 12px; margin-bottom: 16px;
+        }
+        .pc-chart .bar {
+            flex: 1; border-radius: 5px;
+            background: linear-gradient(to top, var(--ac-3), var(--ac-2));
+            box-shadow: 0 0 12px rgba(212, 168, 67, 0.25);
+            animation: barGrow 3.4s ease-in-out var(--d, 0s) infinite alternate;
+            transform-origin: bottom;
+        }
+        @keyframes barGrow { 0% { height: 28%; } 50% { height: 88%; } 100% { height: 48%; } }
+        .pc-chart-label { font-size: 10.5px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; margin-bottom: 10px; }
+
+        .pc-member { display: flex; align-items: center; gap: 10px; padding: 9px 4px; }
+        .pc-member + .pc-member { border-top: 1px solid rgba(212, 168, 67, 0.08); }
+        .pc-av {
+            width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 12px; font-weight: 800; color: #1a1a1a;
+        }
+        .pc-member .n { font-size: 13px; font-weight: 600; }
+        .pc-member .r { font-size: 11px; color: var(--text-3); }
+        .pc-role {
+            margin-left: auto; font-size: 10.5px; font-weight: 700;
+            padding: 4px 10px; border-radius: 99px;
+        }
+        .pc-role.admin { background: rgba(236, 72, 153, 0.14); color: #f9a8d4; border: 1px solid rgba(236, 72, 153, 0.3); }
+        .pc-role.mod { background: rgba(212, 168, 67, 0.12); color: var(--ac-2); border: 1px solid var(--line-2); }
+        .pc-role.user { background: rgba(139, 92, 246, 0.12); color: #c4b5fd; border: 1px solid rgba(139, 92, 246, 0.3); }
+
+        /* Летающие бейджи вокруг карточки */
+        .float-badge {
+            position: absolute; z-index: 2;
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 9px 15px; border-radius: 14px;
+            background: rgba(20, 17, 12, 0.92); border: 1px solid var(--line-2);
+            font-size: 12.5px; font-weight: 700; color: var(--text);
+            box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(12px);
+            animation: floatY 5s ease-in-out infinite;
+        }
+        .float-badge i { font-size: 13px; }
+        .float-badge.fb-1 { top: -18px; right: 26px; }
+        .float-badge.fb-1 i { color: var(--ok); }
+        .float-badge.fb-2 { bottom: 34px; left: -26px; animation-delay: -2.5s; }
+        .float-badge.fb-2 i { color: var(--ac-2); }
+        .float-badge.fb-3 { bottom: -16px; right: -14px; animation-delay: -1.2s; }
+        .float-badge.fb-3 i { color: #8b5cf6; }
+        @keyframes floatY { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-11px); } }
+
+        /* ============ Секции ============ */
         section { position: relative; z-index: 1; max-width: 1200px; margin: 0 auto; padding: 84px 24px; }
         .sec-eyebrow {
             font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
@@ -171,7 +364,6 @@
         .sec-title { font-size: clamp(26px, 4vw, 38px); font-weight: 800; letter-spacing: -0.02em; margin-bottom: 14px; }
         .sec-sub { color: var(--text-2); font-size: 15.5px; max-width: 640px; line-height: 1.65; }
 
-        /* Возможности */
         .feat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 42px; }
         .feat-card {
             background: var(--surface); border: 1px solid var(--line); border-radius: 18px;
@@ -194,16 +386,11 @@
         .feat-card h3 { font-size: 16.5px; font-weight: 700; margin-bottom: 8px; }
         .feat-card p { font-size: 13.5px; color: var(--text-2); line-height: 1.6; }
 
-        /* Статистика */
-        .stats-band {
-            margin-top: 30px;
-            display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
-        }
+        .stats-band { margin-top: 30px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
         .stat-card {
             text-align: center; padding: 30px 18px;
             background: linear-gradient(165deg, rgba(212, 168, 67, 0.07), rgba(26, 22, 16, 0.75));
-            border: 1px solid var(--line); border-radius: 18px;
-            transition: 0.25s;
+            border: 1px solid var(--line); border-radius: 18px; transition: 0.25s;
         }
         .stat-card:hover { border-color: var(--line-2); transform: translateY(-3px); }
         .stat-val {
@@ -214,7 +401,6 @@
         }
         .stat-lbl { margin-top: 8px; font-size: 12.5px; color: var(--text-3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; }
 
-        /* О системе */
         .about-wrap { display: grid; grid-template-columns: 1.1fr 1fr; gap: 44px; align-items: center; }
         .about-list { display: flex; flex-direction: column; gap: 14px; margin-top: 26px; }
         .about-item { display: flex; gap: 13px; align-items: flex-start; }
@@ -236,7 +422,6 @@
         .mock-cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 18px; }
         .mock-col { height: 64px; border-radius: 12px; background: rgba(212, 168, 67, 0.07); border: 1px solid var(--line); }
 
-        /* CTA */
         .cta-band {
             text-align: center; padding: 70px 28px; border-radius: 26px;
             background: linear-gradient(165deg, rgba(212, 168, 67, 0.13), rgba(26, 22, 16, 0.8));
@@ -244,9 +429,8 @@
         }
         .cta-band h2 { font-size: clamp(24px, 3.6vw, 34px); font-weight: 800; margin-bottom: 12px; }
         .cta-band p { color: var(--text-2); font-size: 15px; margin-bottom: 30px; }
-        .cta-band .hero-actions { margin-top: 0; }
+        .cta-band .hero-actions { margin-top: 0; justify-content: center; }
 
-        /* Подвал */
         footer {
             position: relative; z-index: 1;
             border-top: 1px solid rgba(212, 168, 67, 0.12);
@@ -256,14 +440,18 @@
         footer .nav-logo { justify-content: center; margin-bottom: 12px; }
         footer a { color: var(--text-2); text-decoration: none; }
         footer a:hover { color: var(--ac-2); }
-        footer .foot-links { margin-top: 10px; display: flex; gap: 22px; justify-content: center; }
+        footer .foot-links { margin-top: 10px; display: flex; gap: 22px; justify-content: center; flex-wrap: wrap; }
 
-        /* Плавное появление секций */
         .reveal { opacity: 0; transform: translateY(28px); transition: opacity 0.7s cubic-bezier(0.16,1,0.3,1), transform 0.7s cubic-bezier(0.16,1,0.3,1); }
         .reveal.in { opacity: 1; transform: none; }
 
-        /* Mobile */
-        @media (max-width: 900px) {
+        /* ============ Mobile ============ */
+        @media (max-width: 980px) {
+            .hero-inner { grid-template-columns: 1fr; gap: 60px; text-align: center; }
+            .hero-brand { justify-content: center; }
+            .hero-sub { margin: 0 auto; }
+            .hero-chips, .hero-actions { justify-content: center; }
+            .ticker-wrap { text-align: center; }
             .feat-grid { grid-template-columns: repeat(2, 1fr); }
             .stats-band { grid-template-columns: repeat(2, 1fr); }
             .about-wrap { grid-template-columns: 1fr; }
@@ -279,13 +467,26 @@
             .feat-grid { grid-template-columns: 1fr; }
             .nav-actions .btn-ghost { display: none; }
             section { padding: 60px 18px; }
+            .logo-orb { width: 64px; height: 64px; font-size: 26px; border-radius: 20px; }
+            .hero { padding-top: 110px; }
+            .float-badge { display: none; }
         }
     </style>
 </head>
 <body>
 
-<div class="aurora"></div>
+<!-- ===== Фон: звёзды, аврора, перспективная сетка, частицы ===== -->
+<div class="bg-stars" id="bgStars"></div>
+<div class="aurora">
+    <span class="orb orb-1"></span>
+    <span class="orb orb-2"></span>
+    <span class="orb orb-3"></span>
+    <span class="orb orb-4"></span>
+</div>
 <div class="bg-grid"></div>
+<div class="bg-grid-top"></div>
+<div class="bg-particles" id="bgParticles"></div>
+<div class="bg-vignette"></div>
 
 <!-- ===== Верхняя навигация ===== -->
 <nav class="topnav">
@@ -307,17 +508,93 @@
     </div>
 </nav>
 
-<!-- ===== Hero ===== -->
+<!-- ===== HERO ===== -->
 <header class="hero">
-    <div class="hero-eyebrow"><span class="dot"></span> Панель управления Discord-сервером</div>
-    <h1 class="hero-title">AETHER</h1>
-    <p class="hero-sub">Умная система модерации, аналитики и автоматизации<br>для вашего Discord-сообщества</p>
-    <div class="hero-tag">Модерация · Аналитика · AI · Автоматизация</div>
-    <div class="hero-actions">
-        <a href="/login" class="btn-gold"><i class="fas fa-arrow-right"></i> Войти в панель</a>
-        <a href="/register" class="btn-ghost"><i class="fas fa-user-plus"></i> Создать аккаунт</a>
+    <div class="hero-inner">
+        <!-- Слева: текст -->
+        <div class="hero-text">
+            <div class="hero-eyebrow"><span class="dot"></span> Панель управления Discord-сервером</div>
+            <div class="hero-brand">
+                <div class="logo-orb"><i class="fas fa-bolt"></i></div>
+                <h1 class="hero-title">AETHER</h1>
+            </div>
+            <p class="hero-sub">
+                Умная система
+                <span class="ticker-wrap"><span class="ticker" id="ticker">модерации</span></span><br>
+                для вашего Discord-сообщества
+            </p>
+            <div class="hero-chips">
+                <span class="chip"><span class="chip-dot"></span> Онлайн 24/7</span>
+                <span class="chip"><i class="fas fa-terminal"></i> 70+ команд</span>
+                <span class="chip"><i class="fas fa-language"></i> Полностью на русском</span>
+                <span class="chip"><i class="fas fa-lock"></i> Безопасный вход</span>
+            </div>
+            <div class="hero-actions">
+                <a href="/login" class="btn-gold"><i class="fas fa-arrow-right"></i> Войти в панель</a>
+                <a href="/register" class="btn-ghost"><i class="fas fa-user-plus"></i> Создать аккаунт</a>
+            </div>
+            <div class="hero-hint"><i class="fas fa-chevron-down"></i> прокрутите вниз — покажем всё, что умеет бот</div>
+        </div>
+
+        <!-- Справа: живая превью-карточка -->
+        <div class="hero-visual">
+            <div class="float-badge fb-1"><i class="fas fa-shield-halved"></i> Антирейд активен</div>
+            <div class="float-badge fb-2"><i class="fas fa-robot"></i> AI онлайн</div>
+            <div class="float-badge fb-3"><i class="fas fa-bolt"></i> Ответ < 1 сек</div>
+
+            <div class="preview-card">
+                <div class="pc-head">
+                    <span class="pc-dot" style="background:#ef4444;"></span>
+                    <span class="pc-dot" style="background:#f59e0b;"></span>
+                    <span class="pc-dot" style="background:#22c55e;"></span>
+                    <span class="pc-title">Панель управления</span>
+                    <span class="pc-live"><span class="chip-dot"></span> LIVE</span>
+                </div>
+
+                <div class="pc-stats">
+                    <div class="pc-stat">
+                        <div class="v">248</div>
+                        <div class="k">Участников</div>
+                    </div>
+                    <div class="pc-stat">
+                        <div class="v">36</div>
+                        <div class="k">Каналов</div>
+                    </div>
+                    <div class="pc-stat">
+                        <div class="v">12</div>
+                        <div class="k">Тикетов</div>
+                    </div>
+                </div>
+
+                <div class="pc-chart-label"><i class="fas fa-chart-column" style="color:var(--ac-2);"></i> Активность за неделю</div>
+                <div class="pc-chart">
+                    <span class="bar" style="--d:0s; height:40%;"></span>
+                    <span class="bar" style="--d:-.5s; height:65%;"></span>
+                    <span class="bar" style="--d:-1s; height:50%;"></span>
+                    <span class="bar" style="--d:-1.5s; height:80%;"></span>
+                    <span class="bar" style="--d:-2s; height:58%;"></span>
+                    <span class="bar" style="--d:-2.5s; height:72%;"></span>
+                    <span class="bar" style="--d:-3s; height:92%;"></span>
+                </div>
+
+                <div class="pc-member">
+                    <div class="pc-av" style="background:linear-gradient(135deg,#f9a8d4,#ec4899);">A</div>
+                    <div><div class="n">Anya</div><div class="r">сейчас в сети</div></div>
+                    <span class="pc-role admin">Админ</span>
+                </div>
+                <div class="pc-member">
+                    <div class="pc-av" style="background:linear-gradient(135deg,#f0c75e,#d4a843);">K</div>
+                    <div><div class="n">Kira</div><div class="r">модерирует тикеты</div></div>
+                    <span class="pc-role mod">Модератор</span>
+                </div>
+                <div class="pc-member">
+                    <div class="pc-av" style="background:linear-gradient(135deg,#c4b5fd,#8b5cf6);">D</div>
+                    <div><div class="n">Den</div><div class="r">новый участник</div></div>
+                    <span class="pc-role user">Участник</span>
+                </div>
+            </div>
+        </div>
     </div>
-    <div class="hero-hint"><i class="fas fa-chevron-down"></i> прокрутите вниз, чтобы узнать больше</div>
 </header>
 
 <!-- ===== Возможности ===== -->
@@ -369,7 +646,7 @@
     </div>
     <div class="stats-band">
         <div class="stat-card reveal">
-            <div class="stat-val" data-count="70">0</div>
+            <div class="stat-val" data-count="70" data-suffix="+">0</div>
             <div class="stat-lbl">Команд бота</div>
         </div>
         <div class="stat-card reveal">
@@ -462,12 +739,61 @@
 </footer>
 
 <script>
-// Бургер-меню (мобильные)
+// ===== Мобильное меню =====
 document.getElementById('navBurger').addEventListener('click', function () {
     document.getElementById('navLinks').classList.toggle('open');
 });
 
-// Плавное появление секций при скролле
+// ===== Звёздное небо =====
+(function () {
+    var wrap = document.getElementById('bgStars');
+    for (var i = 0; i < 70; i++) {
+        var s = document.createElement('span');
+        s.className = 'star';
+        var size = Math.random() * 2.2 + 0.8;
+        s.style.width = size + 'px';
+        s.style.height = size + 'px';
+        s.style.left = (Math.random() * 100) + '%';
+        s.style.top = (Math.random() * 100) + '%';
+        s.style.setProperty('--dur', (2 + Math.random() * 4).toFixed(2) + 's');
+        s.style.setProperty('--delay', (Math.random() * 4).toFixed(2) + 's');
+        wrap.appendChild(s);
+    }
+})();
+
+// ===== Золотые частицы, поднимающиеся вверх =====
+(function () {
+    var wrap = document.getElementById('bgParticles');
+    for (var i = 0; i < 16; i++) {
+        var p = document.createElement('span');
+        p.className = 'pt';
+        var size = Math.random() * 4 + 2;
+        p.style.width = size + 'px';
+        p.style.height = size + 'px';
+        p.style.left = (Math.random() * 100) + '%';
+        p.style.setProperty('--dur', (10 + Math.random() * 10).toFixed(2) + 's');
+        p.style.setProperty('--delay', (-Math.random() * 16).toFixed(2) + 's');
+        p.style.setProperty('--sway', ((Math.random() - 0.5) * 120).toFixed(0) + 'px');
+        wrap.appendChild(p);
+    }
+})();
+
+// ===== Вращающееся слово в подзаголовке =====
+(function () {
+    var words = ['модерации', 'аналитики', 'AI-поддержки', 'автоматизации'];
+    var el = document.getElementById('ticker');
+    var idx = 0;
+    setInterval(function () {
+        el.classList.add('out');
+        setTimeout(function () {
+            idx = (idx + 1) % words.length;
+            el.textContent = words[idx];
+            el.classList.remove('out');
+        }, 280);
+    }, 2600);
+})();
+
+// ===== Плавное появление секций =====
 var observer = new IntersectionObserver(function (entries) {
     entries.forEach(function (e) {
         if (e.isIntersecting) { e.target.classList.add('in'); observer.unobserve(e.target); }
@@ -475,7 +801,7 @@ var observer = new IntersectionObserver(function (entries) {
 }, { threshold: 0.12 });
 document.querySelectorAll('.reveal').forEach(function (el) { observer.observe(el); });
 
-// Анимированные счётчики статистики
+// ===== Анимированные счётчики =====
 function animateCount(el) {
     var target = parseInt(el.getAttribute('data-count'), 10);
     var suffix = el.getAttribute('data-suffix') || '';
