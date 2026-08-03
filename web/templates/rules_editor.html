@@ -138,7 +138,7 @@ async function publishRules() {
   if(!selectedGuild) { alert('Сервер выбрать!'); return; }
   var ch = document.getElementById('rules-channel').value;
   if(!ch) { alert('Выберите канал!'); return; }
-  if(!rules.length) { alert('До правило добавить!'); return; }
+  if(!rules.length) { showToast('Сначала добавьте правила!', false); return; }
   var r = await fetch('/api/guild/'+selectedGuild+'/rules/publish', {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({channel_id:ch, rules:rules})

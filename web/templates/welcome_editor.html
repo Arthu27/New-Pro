@@ -1,4 +1,4 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 {% block title %}Приветствие Редактор - Aether{% endblock %}
 {% block page_title %}<i class="fas fa-handshake" ></i> Приветствие / Пока Пока{% endblock %}
 {% block content %}
@@ -68,7 +68,7 @@ async function loadSettings() {
     var r = await fetch('/api/guild/' + selectedGuild + '/channels');
     if (!r.ok) {
       console.error('Channels API error:', r.status, r.statusText);
-      alert('Канал listesi загруз. Пожалуйста страница обновл.');
+      showToast('Список каналов загружается. Обновите страницу.', false);
       return;
     }
     
@@ -182,7 +182,7 @@ async function saveWelcome() {
     }
   } catch(e) {
     console.error('saveWelcome error:', e);
-    alert('❌ Сохранитьme ошибки');
+    showToast('❌ Ошибка сохранения', false);
   }
 }
 
@@ -218,7 +218,7 @@ async function saveLeave() {
     }
   } catch(e) {
     console.error('saveLeave error:', e);
-    alert('❌ Сохранитьme ошибки');
+    showToast('❌ Ошибка сохранения', false);
   }
 }
 </script>
