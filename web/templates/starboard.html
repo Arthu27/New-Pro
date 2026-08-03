@@ -146,7 +146,7 @@ function pluralize(n, one, few, many) {
 }
 
 async function saveStarboard() {
-  if (!selectedGuild) { alert('Выберите сервер!'); return; }
+  if (!selectedGuild) { showToast('Выберите сервер!', false); return; }
   var btn = event.target.closest('button');
   btn.disabled = true;
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Сохранение...';

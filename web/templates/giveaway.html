@@ -66,7 +66,7 @@
 
   function bind() {
     var b = $('btn-new');
-    if (b) b.addEventListener('click', function () { alert('Новый розыгрыш — form burada olacak'); });
+    if (b) b.addEventListener('click', function () { showToast('Новый розыгрыш — форма появится здесь', true); });
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { bind(); render(); });

@@ -167,7 +167,7 @@ async function loadLeveling() {
 }
 
 async function saveLeveling() {
-  if (!selectedGuild) { alert('Сервер выбрать!'); return; }
+  if (!selectedGuild) { showToast('Выберите сервер!', false); return; }
   var btn = document.querySelector('.btn-save');
   btn.textContent = '⏳ СОХРАН...';
   btn.disabled = true;
