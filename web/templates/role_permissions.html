@@ -56,6 +56,8 @@
   .cat-body { padding:14px 16px 16px; display:none; border-top:1px solid rgba(255,255,255,0.06); }
   .cat-box.open .cat-body { display:block; }
 
+  .role-actions { display:flex; gap:8px; margin:0 0 10px; flex-wrap:wrap; }
+  .rp-btn-small { padding:6px 11px; font-size:11.5px; }
   .rp-btn { padding:8px 14px; border-radius:10px; border:1px solid rgba(255,255,255,0.16); background:rgba(255,255,255,0.05); cursor:pointer; font-size:12.5px; transition:.15s; display:inline-flex; align-items:center; gap:7px; }
   .rp-btn:hover { background:var(--accent,#5865F2); color:#fff; border-color:transparent; }
   .rp-btn i { font-size:12px; }
@@ -101,6 +103,10 @@
   <div class="rp-roles">
     <h3><i class="fas fa-users-cog"></i> РОЛИ</h3>
     <p class="sel-hint">Отметьте роли — можно несколько</p>
+    <div class="role-actions">
+      <button class="rp-btn rp-btn-small" onclick="selectAllRoles()"><i class="fas fa-check-double"></i> Выбрать все</button>
+      <button class="rp-btn rp-btn-small" onclick="clearAllRoles()"><i class="fas fa-times"></i> Сбросить</button>
+    </div>
     <div class="sel-count" id="sel-count">Выбрано: 0</div>
     <div id="role-list"></div>
   </div>
@@ -222,6 +228,19 @@ function toggleRole(id){
   var i = selectedRoleIds.indexOf(id);
   if(i===-1) selectedRoleIds.push(id); else selectedRoleIds.splice(i,1);
   refresh(function(){ renderRoles(); renderCategories(); });
+}
+
+function selectAllRoles(){
+  if(!ALL_ROLES.length){ toast('Роли не загружены', false); return; }
+  selectedRoleIds = ALL_ROLES.map(function(r){ return r.id; });
+  refresh(function(){ renderRoles(); renderCategories(); });
+  toast('Выбраны все роли ('+selectedRoleIds.length+')', true);
+}
+
+function clearAllRoles(){
+  selectedRoleIds = [];
+  refresh(function(){ renderRoles(); renderCategories(); });
+  toast('Выбор ролей сброшен', true);
 }
 
 function allowedRoles(key){ return ACL[key] || []; }
