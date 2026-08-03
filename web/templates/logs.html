@@ -15,15 +15,30 @@
 </div>
 {% endblock %}
 
+<style>
+/* Логи модерации — premium gold */
+.logs-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.logs-toolbar .filter-select{flex:1;min-width:150px}
+.logs-count{background:var(--ac-soft);color:var(--ac-2);border:1px solid var(--ac-line);padding:5px 14px;border-radius:99px;font-size:13px;font-weight:700;margin-left:auto;font-variant-numeric:tabular-nums}
+.logs-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:16px}
+.log-stat{background:linear-gradient(160deg,rgba(224,176,74,.05),rgba(224,176,74,.01));border:1px solid var(--line-2);border-radius:14px;padding:14px;text-align:center;transition:border-color .2s var(--ease)}
+.log-stat:hover{border-color:var(--ac-line)}
+.log-stat-num{font-size:26px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;font-family:'Poppins',sans-serif}
+.log-stat-lbl{font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;margin-top:4px;font-weight:600}
+.logs-box{background:linear-gradient(165deg,rgba(224,176,74,.03),rgba(20,18,14,.6));border:1px solid var(--line-2);border-radius:16px;padding:16px;backdrop-filter:blur(14px)}
+.logs-head{margin-bottom:12px}
+.logs-title{font-size:14px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:9px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.logs-title i{color:var(--ac)}
+.logs-body{}
+</style>
 
-
-<div class="logs-toolbar">
+<div class="logs-toolbar" data-reveal="up">
   <select id="guild-filter" class="filter-select"><option value="">Все серверы</option></select>
   <input type="text" id="search" class="search-input" placeholder="Поиск по логам (пользователь, причина, действие)...">
   <span id="logs-count" class="logs-count">0</span>
 </div>
 
-<div class="logs-stats" id="logs-stats">
+<div class="logs-stats" id="logs-stats" data-reveal="up">
   <div class="log-stat"><div class="log-stat-num" id="stat-total" data-countup>-</div><div class="log-stat-lbl">Всего</div></div>
   <div class="log-stat"><div class="log-stat-num" id="stat-bans" data-countup>-</div><div class="log-stat-lbl">Банов</div></div>
   <div class="log-stat"><div class="log-stat-num" id="stat-kicks" data-countup>-</div><div class="log-stat-lbl">Киков</div></div>
@@ -31,7 +46,7 @@
   <div class="log-stat"><div class="log-stat-num" id="stat-muts" data-countup>-</div><div class="log-stat-lbl">Мутов</div></div>
 </div>
 
-<div class="logs-box">
+<div class="logs-box" data-reveal="up">
   <div class="logs-head">
     <div class="logs-title"><i class="fas fa-list"></i> Список действий</div>
   </div>
