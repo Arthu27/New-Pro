@@ -21,8 +21,9 @@
   .info-bar i { color:var(--accent,#5865F2); margin-top:1px; }
 
   .pm-tabs { display:flex; gap:10px; margin-bottom:18px; flex-wrap:wrap; }
-  .pm-tab { padding:10px 20px; border-radius:11px; cursor:pointer; font-size:13.5px; font-weight:600; border:1px solid rgba(255,255,255,0.14); background:rgba(255,255,255,0.04); display:inline-flex; align-items:center; gap:8px; transition:.15s; }
-  .pm-tab.active { background:var(--accent,#5865F2); color:#fff; border-color:transparent; }
+  .pm-tab { padding:11px 20px; border-radius:12px; cursor:pointer; font-size:13.5px; font-weight:700; border:1px solid rgba(255,255,255,0.14); background:rgba(255,255,255,0.04); display:inline-flex; align-items:center; gap:9px; transition:.15s; }
+  .pm-tab:hover { border-color:var(--accent,#5865F2); }
+  .pm-tab.active { background:var(--accent,#5865F2); color:#fff; border-color:transparent; box-shadow:0 6px 18px rgba(88,101,242,0.35); }
   .pm-tab .pico { width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:14px; }
 
   .pm-panel { background: linear-gradient(160deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015)); border:1px solid rgba(255,255,255,0.09); border-radius:16px; padding:20px; }
@@ -31,36 +32,48 @@
   .pm-head h2 i { color:var(--accent,#5865F2); }
   .pm-head .sub { font-size:12px; opacity:.55; margin-top:4px; }
 
-  .pm-actions { display:flex; gap:10px; align-items:center; }
-  .pm-btn { padding:9px 16px; border-radius:10px; border:1px solid rgba(255,255,255,0.16); background:rgba(255,255,255,0.05); cursor:pointer; font-size:12.5px; transition:.15s; display:inline-flex; align-items:center; gap:7px; }
+  .pm-actions { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  .pm-search { position:relative; }
+  .pm-search i { position:absolute; left:11px; top:50%; transform:translateY(-50%); opacity:.5; font-size:12px; }
+  .pm-search input { background:#1b1b22; color:#e6e6e6; border:1px solid rgba(255,255,255,0.16); border-radius:10px; padding:9px 12px 9px 30px; font-size:13px; outline:none; width:190px; }
+  .pm-search input:focus { border-color:var(--accent,#5865F2); }
+
+  .pm-btn { padding:9px 15px; border-radius:10px; border:1px solid rgba(255,255,255,0.16); background:rgba(255,255,255,0.05); cursor:pointer; font-size:12.5px; font-weight:600; transition:.15s; display:inline-flex; align-items:center; gap:7px; }
   .pm-btn:hover { background:var(--accent,#5865F2); color:#fff; border-color:transparent; }
-  .pm-btn-green { border-color:rgba(46,204,113,0.35); color:#2ecc71; }
-  .pm-btn-green:hover { background:#2ecc71; color:#fff; }
-  .pm-btn-red { color:#ff6b6b; border-color:rgba(231,76,60,0.35); }
+  .pm-btn-green { border-color:rgba(46,204,113,0.4); color:#2ecc71; }
+  .pm-btn-green:hover { background:#2ecc71; color:#fff; box-shadow:0 5px 16px rgba(46,204,113,0.35); }
+  .pm-btn-red { color:#ff6b6b; border-color:rgba(231,76,60,0.4); }
   .pm-btn-red:hover { background:#e74c3c; color:#fff; }
+  .pm-btn-blue { color:#8ea3ff; border-color:rgba(88,101,242,0.4); }
+  .pm-btn-blue:hover { background:var(--accent,#5865F2); color:#fff; }
 
   .pm-group { border:1px solid rgba(255,255,255,0.09); border-radius:13px; margin-bottom:12px; overflow:hidden; background:rgba(0,0,0,0.12); }
-  .pm-group-head { display:flex; align-items:center; gap:12px; padding:12px 14px; background:rgba(255,255,255,0.03); cursor:pointer; user-select:none; }
-  .pm-group-head .gio { width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:13px; background:rgba(88,101,242,0.15); color:#8ea3ff; border:1px solid rgba(88,101,242,0.3); flex-shrink:0; }
-  .pm-group-head .gname { flex:1; font-size:14px; font-weight:600; }
-  .pm-group-head .gcount { font-size:11px; opacity:.5; }
-  .pm-group-body { display:none; padding:12px 14px; border-top:1px solid rgba(255,255,255,0.06); }
-  .pm-group.open .pm-group-body { display:block; }
+  .pm-group.open { border-color:rgba(88,101,242,0.3); }
+  .pm-group-head { display:flex; align-items:center; gap:12px; padding:13px 15px; background:rgba(255,255,255,0.03); cursor:pointer; user-select:none; transition:.12s; }
+  .pm-group-head:hover { background:rgba(88,101,242,0.08); }
+  .pm-group-head .gio { width:32px; height:32px; border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:14px; background:rgba(88,101,242,0.15); color:#8ea3ff; border:1px solid rgba(88,101,242,0.3); flex-shrink:0; }
+  .pm-group-head .gname { flex:1; font-size:14px; font-weight:700; }
+  .pm-group-head .gcount { font-size:11px; opacity:.6; padding:3px 10px; border-radius:20px; background:rgba(255,255,255,0.07); white-space:nowrap; }
+  .pm-group-head .gcaret { transition:.15s; opacity:.6; }
   .pm-group.open .pm-group-head .gcaret { transform:rotate(180deg); }
-  .gcaret { transition:.15s; opacity:.6; }
+  .pm-group-body { display:none; padding:13px 15px; border-top:1px solid rgba(255,255,255,0.06); }
+  .pm-group.open .pm-group-body { display:block; }
 
-  .pm-item { display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:9px; margin-bottom:5px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); }
-  .pm-item .pname { flex:1; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .pm-item .pname i { margin-right:7px; opacity:.7; font-size:12px; }
+  .pm-item { display:flex; align-items:center; gap:11px; padding:9px 11px; border-radius:10px; margin-bottom:6px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); transition:.12s; }
+  .pm-item:hover { background:rgba(255,255,255,0.05); }
+  .pm-item .pname { flex:1; font-size:13px; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .pm-item .pname i { margin-right:8px; opacity:.7; font-size:12px; }
   .pm-item .ppath { font-size:11px; opacity:.4; font-family:monospace; }
 
-  .switch { position:relative; width:40px; height:20px; flex-shrink:0; }
+  .switch { position:relative; width:42px; height:22px; flex-shrink:0; }
   .switch input { opacity:0; width:0; height:0; }
-  .switch .sl { position:absolute; inset:0; background:rgba(255,255,255,0.15); border-radius:20px; transition:.2s; cursor:pointer; }
-  .switch .sl:before { content:""; position:absolute; height:14px; width:14px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.2s; }
-  .switch input:checked + .sl { background:#2ecc71; }
+  .switch .sl { position:absolute; inset:0; background:rgba(255,255,255,0.15); border-radius:22px; transition:.2s; cursor:pointer; }
+  .switch .sl:before { content:""; position:absolute; height:16px; width:16px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.2s; box-shadow:0 2px 6px rgba(0,0,0,0.4); }
+  .switch input:checked + .sl { background:linear-gradient(90deg,#2ecc71,#27ae60); }
   .switch input:checked + .sl:before { transform:translateX(20px); }
 
+  .pm-empty { text-align:center; opacity:.5; padding:50px 0; }
+  .pm-empty i { font-size:30px; display:block; margin-bottom:12px; }
   .pm-toast { position:fixed; bottom:26px; left:50%; transform:translateX(-50%) translateY(130%); background:rgba(18,18,22,0.95); border:1px solid rgba(255,255,255,0.16); padding:13px 22px; border-radius:12px; font-size:13px; z-index:999; transition:.3s; box-shadow:0 10px 34px rgba(0,0,0,0.55); }
   .pm-toast.show { transform:translateX(-50%) translateY(0); }
   .pm-toast.ok { border-color:#2ecc71; }
@@ -69,7 +82,7 @@
 
 <div class="pm-wrap">
   <div class="info-bar">
-    <i class="fas fa-info-circle"></i> <b>Как это работает:</b> выберите панель и отметьте нужные разделы (категории) и страницы (комнаты). Владелец всегда видит всё. Снимите галочку с раздела, чтобы скрыть его целиком; внутри раздела можно скрыть отдельные страницы. Нажмите «Сохранить».
+    <i class="fas fa-info-circle"></i> <b>Как это работает:</b> выберите панель и отметьте нужные разделы (категории) и страницы (комнаты). Владелец всегда видит всё. Нажмите «Сохранить» внизу.
   </div>
 
   <div class="pm-tabs">
@@ -90,10 +103,18 @@
         <div class="sub" id="pm-sub">Отметьте разделы и страницы для этой панели</div>
       </div>
       <div class="pm-actions">
-        <button class="pm-btn pm-btn-green" onclick="savePanel()"><i class="fas fa-save"></i> Сохранить</button>
+        <div class="pm-search">
+          <i class="fas fa-search"></i>
+          <input type="text" id="pm-search-input" placeholder="Поиск страницы..." oninput="render()">
+        </div>
       </div>
     </div>
     <div id="pm-list"></div>
+    <div class="pm-actions" style="margin-top:18px; justify-content:flex-end;">
+      <button class="pm-btn pm-btn-blue" onclick="selectAll()"><i class="fas fa-check-double"></i> Выбрать всё</button>
+      <button class="pm-btn pm-btn-red" onclick="clearAll()"><i class="fas fa-times"></i> Сбросить</button>
+      <button class="pm-btn pm-btn-green" onclick="savePanel()"><i class="fas fa-save"></i> Сохранить</button>
+    </div>
   </div>
 </div>
 
@@ -105,6 +126,7 @@ var CFG = {};
 var curRole = 'mod';
 var checkedGroups = {};
 var checkedItems = {};
+var openGroups = {};
 
 function toast(msg, ok){
   var t = document.getElementById('pm-toast');
@@ -122,6 +144,11 @@ function refreshState(){
   checkedItems = {};
   gs.forEach(function(k){ checkedGroups[k] = true; });
   its.forEach(function(p){ checkedItems[p] = true; });
+  // по умолчанию открыть группы, где есть хотя бы один пункт
+  MENU.forEach(function(g){
+    if(g.pages.some(function(it){ return checkedItems[it.path]; })) openGroups[g.key] = true;
+    else if(openGroups[g.key] === undefined) openGroups[g.key] = false;
+  });
 }
 
 function selectPanel(role){
@@ -131,18 +158,32 @@ function selectPanel(role){
   var isMod = role==='mod';
   document.getElementById('pm-title').innerHTML = '<i class="fas '+(isMod?'fa-shield-halved':'fa-user-tie')+'"></i> Панель '+(isMod?'Модератора':'Администратора');
   document.getElementById('pm-sub').textContent = 'Отметьте разделы и страницы для панели '+(isMod?'Модератора':'Администратора');
+  openGroups = {};
   refreshState();
   render();
 }
 
+function groupVisible(g, q){
+  if(!q) return true;
+  return g.group.toLowerCase().indexOf(q) !== -1
+      || g.pages.some(function(it){ return it.label.toLowerCase().indexOf(q) !== -1 || it.path.indexOf(q) !== -1; });
+}
+
 function render(){
   var el = document.getElementById('pm-list');
-  if(!MENU.length){ el.innerHTML = '<div class="pa-empty" style="text-align:center;opacity:.5;padding:50px 0;"><i class="fas fa-spinner fa-spin"></i>Загрузка...</div>'; return; }
-  el.innerHTML = MENU.map(function(g, gi){
-    var items = g.pages;
+  if(!MENU.length){ el.innerHTML = '<div class="pm-empty"><i class="fas fa-spinner fa-spin"></i>Загрузка...</div>'; return; }
+  var q = (document.getElementById('pm-search-input').value || '').toLowerCase().trim();
+  var html = '';
+  MENU.forEach(function(g){
+    if(!groupVisible(g, q)) return;
+    var items = g.pages.filter(function(it){
+      if(!q) return true;
+      return it.label.toLowerCase().indexOf(q) !== -1 || it.path.indexOf(q) !== -1;
+    });
     var groupOn = !!checkedGroups[g.key];
     var onCount = items.filter(function(it){ return checkedItems[it.path]; }).length;
-    var gHtml = items.map(function(it){
+    var open = !!openGroups[g.key];
+    var itemsHtml = items.map(function(it){
       var on = !!checkedItems[it.path];
       return '<div class="pm-item">'
         + '<label class="switch" title="'+(on?'Видно':'Скрыто')+'"><input type="checkbox" '+(on?'checked':'')+' data-path="'+it.path+'" data-group="'+g.key+'" onchange="toggleItem(this)"><span class="sl"></span></label>'
@@ -150,19 +191,22 @@ function render(){
         + '<span class="ppath">'+it.path+'</span>'
         + '</div>';
     }).join('');
-    return '<div class="pm-group '+(groupOn?'open':'')+'" id="pmg-'+g.key+'">'
+    html += '<div class="pm-group '+(open?'open':'')+'" id="pmg-'+g.key+'">'
       + '<div class="pm-group-head" onclick="toggleGroupOpen(\''+g.key+'\')">'
       + '<span class="gio"><i class="fas '+g.icon+'"></i></span>'
       + '<span class="gname">'+g.group+'</span>'
       + '<span class="gcount">'+onCount+'/'+items.length+'</span>'
       + '<span class="gcaret"><i class="fas fa-chevron-down"></i></span>'
       + '</div>'
-      + '<div class="pm-group-body">'+gHtml+'</div>'
+      + '<div class="pm-group-body">'+itemsHtml+'</div>'
       + '</div>';
-  }).join('');
+  });
+  if(!html) html = '<div class="pm-empty"><i class="fas fa-search"></i>Ничего не найдено</div>';
+  el.innerHTML = html;
 }
 
 function toggleGroupOpen(key){
+  openGroups[key] = !openGroups[key];
   var g = document.getElementById('pmg-'+key);
   if(g) g.classList.toggle('open');
 }
@@ -172,18 +216,30 @@ function toggleItem(cb){
   var gkey = cb.getAttribute('data-group');
   if(cb.checked){
     checkedItems[path] = true;
-    checkedGroups[gkey] = true;   // включить группу, если отмечен хотя бы один пункт
-    var g = document.getElementById('pmg-'+gkey);
-    if(g) g.classList.add('open');
+    checkedGroups[gkey] = true;
+    openGroups[gkey] = true;
   } else {
     delete checkedItems[path];
-    // пересчитать: если в группе больше ничего не отмечено — скрыть группу
     var g2 = MENU.find(function(x){ return x.key === gkey; });
     if(g2 && !g2.pages.some(function(it){ return checkedItems[it.path]; })){
       delete checkedGroups[gkey];
     }
   }
+  var y = window.scrollY;
   render();
+  window.scrollTo(0, y);
+}
+
+function selectAll(){
+  MENU.forEach(function(g){ checkedGroups[g.key] = true; g.pages.forEach(function(it){ checkedItems[it.path] = true; }); });
+  render();
+  toast('Выбрано всё', true);
+}
+function clearAll(){
+  checkedGroups = {};
+  checkedItems = {};
+  render();
+  toast('Выбор сброшен', true);
 }
 
 function savePanel(){
@@ -207,6 +263,7 @@ function load(){
       if(!d.success){ toast('Не удалось загрузить', false); return; }
       MENU = d.menu || [];
       CFG = d.config || {};
+      openGroups = {};
       refreshState();
       render();
     })
