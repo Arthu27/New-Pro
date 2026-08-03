@@ -25,8 +25,8 @@
     <div>
       <label style="display: block; margin-bottom: 8px; color: var(--text-muted); font-size: 13px;">Цвет</label>
       <div style="display: flex; gap: 8px; align-items: center;">
-        <input type="color" id="custom-color" value="#5865F2" style="width: 50px; height: 38px; border: none; background: none; cursor: pointer;">
-        <input type="text" id="color-hex" value="#5865F2" class="form-input" style="flex: 1;" maxlength="7">
+        <input type="color" id="custom-color" value="var(--ac)" style="width: 50px; height: 38px; border: none; background: none; cursor: pointer;">
+        <input type="text" id="color-hex" value="var(--ac)" class="form-input" style="flex: 1;" maxlength="7">
       </div>
     </div>
   </div>
@@ -72,7 +72,7 @@
 
 <div class="section">
   <div class="bs-title"><i class="fas fa-eye"></i> Предпросмотр</div>
-  <div style="background: #2f3136; border-radius: 8px; padding: 16px; border-left: 4px solid #5865F2;" id="embed-preview">
+  <div style="background: #2f3136; border-radius: 8px; padding: 16px; border-left: 4px solid var(--ac);" id="embed-preview">
     <div style="font-weight: 600; font-size: 16px; margin-bottom: 8px; color: #fff;" id="preview-title">Заголовок Embed</div>
     <div style="font-size: 14px; color: #dcddde; margin-bottom: 12px; line-height: 1.5;" id="preview-description">Описание embed будет отображаться здесь...</div>
     <div style="font-size: 12px; color: #72767d;" id="preview-footer">Текст футера</div>
@@ -120,7 +120,7 @@ function updatePreview() {
   var title = document.getElementById('embed-title').value || 'Заголовок Embed';
   var desc = document.getElementById('description').value || 'Описание embed будет отображаться здесь...';
   var footer = document.getElementById('footer').value || 'Текст футера';
-  var color = document.getElementById('custom-color').value || '#5865F2';
+  var color = document.getElementById('custom-color').value || 'var(--ac)';
   
   document.getElementById('preview-title').textContent = title;
   document.getElementById('preview-description').textContent = desc;
@@ -134,15 +134,15 @@ function updatePreview() {
 async function sendEmbed() {
   var title = document.getElementById('embed-title').value.trim();
   var desc = document.getElementById('description').value.trim();
-  var color = document.getElementById('custom-color').value || '#5865F2';
+  var color = document.getElementById('custom-color').value || 'var(--ac)';
   var footer = document.getElementById('footer').value.trim();
   var imageUrl = document.getElementById('image-url').value.trim();
   var thumbUrl = document.getElementById('thumbnail-url').value.trim();
   var channelId = document.getElementById('target-channel').value;
   var guildId = document.getElementById('guild-select').value;
 
-  if (!channelId) { alert('Выберите канал!'); return; }
-  if (!guildId) { alert('Выберите сервер!'); return; }
+  if (!channelId) { showToast('Выберите канал!', false); return; }
+  if (!guildId) { showToast('Выберите сервер!', false); return; }
 
   var btn = event.target.closest('button');
   btn.disabled = true;
@@ -168,12 +168,12 @@ async function sendEmbed() {
       btn.innerHTML = '<i class="fas fa-check"></i> Отправлено!';
       setTimeout(function(){ btn.innerHTML = '<i class="fas fa-paper-plane"></i> Отправить Embed'; btn.disabled = false; }, 2000);
     } else {
-      alert('Ошибка: ' + (result.error || 'Неизвестная ошибка'));
+      showToast('Ошибка: ' + (result.error || 'Неизвестная ошибка'), false);
       btn.innerHTML = '<i class="fas fa-paper-plane"></i> Отправить Embed';
       btn.disabled = false;
     }
   } catch(e) {
-    alert('Ошибка соединения');
+    showToast('Ошибка соединения', false);
     btn.innerHTML = '<i class="fas fa-paper-plane"></i> Отправить Embed';
     btn.disabled = false;
   }

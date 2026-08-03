@@ -1518,7 +1518,7 @@ window.addEventListener('pageshow', function (e) {
     document.getElementById('acTitle').textContent = title || 'Подтверждение';
     document.getElementById('acDesc').textContent = desc || '';
     ok.textContent = opts.okText || 'Подтвердить';
-    ok.style.background = opts.danger ? 'rgba(231,76,60,0.15)' : 'var(--ac,#5865F2)';
+    ok.style.background = opts.danger ? 'rgba(231,76,60,0.15)' : 'var(--ac, #e0b04a)';
     ok.style.color = opts.danger ? '#ff6b6b' : '#fff';
     ok.style.borderColor = opts.danger ? 'rgba(231,76,60,0.4)' : 'transparent';
     cb = onOk || null;
