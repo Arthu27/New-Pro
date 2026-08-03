@@ -38,7 +38,7 @@
     border-radius: 50%;
   }
   input:checked + .slider {
-    background-color: #5865F2;
+    background-color: var(--ac);
   }
   input:checked + .slider:before {
     transform: translateX(20px);
@@ -80,8 +80,8 @@
       <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
         <div style="flex: 1;">
           <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-            <div style="width: 40px; height: 40px; background: rgba(88,101,242,0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
-              <i class="fas fa-robot" style="color: #5865F2; font-size: 20px;"></i>
+            <div style="width: 40px; height: 40px; background: rgba(224,176,74,0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+              <i class="fas fa-robot" style="color: var(--ac); font-size: 20px;"></i>
             </div>
             <div>
               <div style="font-weight: 700; font-size: 16px;">AI Модератор</div>
@@ -443,7 +443,7 @@
     </div>
     <div class="form-group">
       <label>Цвет embed</label>
-      <input type="color" id="color" value="#5865F2" class="color-picker">
+      <input type="color" id="color" value="var(--ac)" class="color-picker">
     </div>
   </div>
 
@@ -826,7 +826,7 @@
           // Контент панели
           $('title').value = settings.panel_title || '🎫 ПОДДЕРЖКА';
           $('description').value = settings.panel_description || 'Нажмите кнопку ниже чтобы открыть тикет';
-          $('color').value = settings.panel_color || '#5865F2';
+          $('color').value = settings.panel_color || 'var(--ac)';
 
           // Логи
           $('log-channel').value = settings.log_channel_id || '';
@@ -974,7 +974,7 @@
 
         panel_title: $('title').value || '',
         panel_description: $('description').value || '',
-        panel_color: $('color').value || '#5865F2',
+        panel_color: $('color').value || 'var(--ac)',
 
         log_channel_id: $('log-channel').value || null,
         transcript_channel_id: $('transcript-channel').value || null,

@@ -178,7 +178,7 @@
       .then(function (r) { return r.json(); })
       .then(function (res) {
         if (res.error) {
-          alert('Ошибка при сохранении: ' + res.error);
+          showToast('Ошибка при сохранении: ' + res.error, false);
         } else {
           showToast(action === 'approve' ? 'Заявка кандидата одобрена!' : 'Заявка кандидата отклонена!');
           $('app-modal').style.display = 'none';
@@ -186,7 +186,7 @@
         }
       })
       .catch(function (err) {
-        alert('Ошибка связи с сервером: ' + err.message);
+        showToast('Ошибка связи с сервером: ' + err.message, false);
       })
       .finally(function () {
         btnApprove.disabled = false;
