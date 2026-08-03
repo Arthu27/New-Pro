@@ -52,213 +52,23 @@
                 </a>
             </div>
 
-            {% elif role == 'mod' %}
-            <div class="nav-group">
-                <a href="/" class="nav-link {% if request.path == '/' %}active{% endif %}"><i class="fas fa-home"></i> <span>Панель управления</span></a>
-                <a href="/logs" class="nav-link {% if request.path == '/logs' %}active{% endif %}"><i class="fas fa-clipboard-list"></i> <span>Логи модерации</span></a>
-                <a href="/warnings" class="nav-link {% if request.path == '/warnings' %}active{% endif %}"><i class="fas fa-exclamation-triangle"></i> <span>Предупреждения</span></a>
-            </div>
-
-            {% elif role == 'admin' %}
-            <div class="nav-group">
-                <a href="/" class="nav-link {% if request.path == '/' %}active{% endif %}"><i class="fas fa-home"></i> <span>Панель управления</span></a>
-                <a href="/users" class="nav-link {% if request.path == '/users' %}active{% endif %}"><i class="fas fa-users"></i> <span>Пользователи</span></a>
-                <a href="/logs" class="nav-link {% if request.path == '/logs' %}active{% endif %}"><i class="fas fa-clipboard-list"></i> <span>Логи модерации</span></a>
-                <a href="/warnings" class="nav-link {% if request.path == '/warnings' %}active{% endif %}"><i class="fas fa-exclamation-triangle"></i> <span>Предупреждения</span></a>
-                <a href="/commands" class="nav-link {% if request.path == '/commands' %}active{% endif %}"><i class="fas fa-terminal"></i> <span>Команды</span></a>
-                <a href="/staff-apps" class="nav-link {% if request.path == '/staff-apps' %}active{% endif %}"><i class="fas fa-user-shield"></i> <span>Заявки в администрацию</span></a>
-            </div>
-
-            {% elif role == 'owner' or role == 'admin' %}
-                <div class="nav-group" data-group="main">
+            {% elif role == 'owner' or role == 'admin' or role == 'mod' %}
+            {% for grp in panel_menu %}
+                {% if grp.items %}
+                <div class="nav-group" data-group="{{ grp.key }}">
                     <div class="nav-group-title" data-toggle>
-                        <i class="fas fa-house"></i>
-                        <span>Основное</span>
+                        <i class="fas {{ grp.icon }}"></i>
+                        <span>{{ grp.group }}</span>
                         <i class="fas fa-chevron-down nav-caret"></i>
                     </div>
                     <div class="nav-group-items">
-                        <a href="/" class="nav-link {% if request.path == '/' %}active{% endif %}"><i class="fas fa-home"></i> <span>Обзор сервера</span></a>
-                        <a href="/guilds" class="nav-link {% if request.path == '/guilds' %}active{% endif %}"><i class="fas fa-server"></i> <span>Серверы</span></a>
-                        <a href="/analytics" class="nav-link {% if request.path == '/analytics' %}active{% endif %}"><i class="fas fa-chart-line"></i> <span>Аналитика</span></a>
-                        <a href="/bot-stats" class="nav-link {% if request.path == '/bot-stats' %}active{% endif %}"><i class="fas fa-robot"></i> <span>Статистика бота</span></a>
-                        <a href="/server-health" class="nav-link {% if request.path == '/server-health' %}active{% endif %}"><i class="fas fa-heartbeat"></i> <span>Состояние</span></a>
+                        {% for it in grp.items %}
+                        <a href="{{ it.path }}" class="nav-link {% if request.path == it.path %}active{% endif %}"><i class="fas {{ it.icon }}"></i> <span>{{ it.label }}</span></a>
+                        {% endfor %}
                     </div>
                 </div>
-
-                <div class="nav-group" data-group="мод">
-                    <div class="nav-group-title" data-toggle>
-                        <i class="fas fa-shield-halved"></i>
-                        <span>Модерация</span>
-                        <i class="fas fa-chevron-down nav-caret"></i>
-                    </div>
-                    <div class="nav-group-items">
-                        <a href="/logs" class="nav-link {% if request.path == '/logs' %}active{% endif %}"><i class="fas fa-clipboard-list"></i> <span>Логи модерации</span></a>
-                        <a href="/temp-moderation" class="nav-link {% if request.path == '/temp-moderation' %}active{% endif %}"><i class="fas fa-clock"></i> <span>Временная модерация</span></a>
-                        <a href="/warnings" class="nav-link {% if request.path == '/warnings' %}active{% endif %}"><i class="fas fa-exclamation-triangle"></i> <span>Предупреждения</span></a>
-                        <a href="/mod-history" class="nav-link {% if request.path == '/mod-history' %}active{% endif %}"><i class="fas fa-history"></i> <span>История</span></a>
-                        <a href="/automod-settings" class="nav-link {% if request.path == '/automod-settings' %}active{% endif %}"><i class="fas fa-shield-alt"></i> <span>Автомодерация</span></a>
-                        <a href="/antiraid" class="nav-link {% if request.path == '/antiraid' %}active{% endif %}"><i class="fas fa-shield-virus"></i> <span>Анти-рейд</span></a>
-                        <a href="/bulk-actions" class="nav-link {% if request.path == '/bulk-actions' %}active{% endif %}"><i class="fas fa-layer-group"></i> <span>Массовые действия</span></a>
-                    </div>
-                </div>
-
-                <div class="nav-group" data-group="members">
-                    <div class="nav-group-title" data-toggle>
-                        <i class="fas fa-users"></i>
-                        <span>Участники</span>
-                        <i class="fas fa-chevron-down nav-caret"></i>
-                    </div>
-                    <div class="nav-group-items">
-                        <a href="/users" class="nav-link {% if request.path == '/users' %}active{% endif %}"><i class="fas fa-users"></i> <span>Пользователи</span></a>
-                        <a href="/member-search" class="nav-link {% if request.path == '/member-search' %}active{% endif %}"><i class="fas fa-search"></i> <span>Поиск</span></a>
-                        <a href="/member-notes" class="nav-link {% if request.path == '/member-notes' %}active{% endif %}"><i class="fas fa-sticky-note"></i> <span>Заметки</span></a>
-                        <a href="/watchlist-panel" class="nav-link {% if request.path == '/watchlist-panel' %}active{% endif %}"><i class="fas fa-eye"></i> <span>Наблюдение</span></a>
-                        <a href="/invite-tracker" class="nav-link {% if request.path == '/invite-tracker' %}active{% endif %}"><i class="fas fa-user-plus"></i> <span>Приглашения</span></a>
-                        <a href="/afk-list" class="nav-link {% if request.path == '/afk-list' %}active{% endif %}"><i class="fas fa-moon"></i> <span>AFK список</span></a>
-                        <a href="/rejoin-roles" class="nav-link {% if request.path == '/rejoin-roles' %}active{% endif %}"><i class="fas fa-undo"></i> <span>Re-Join роли</span></a>
-                    </div>
-                </div>
-
-                <div class="nav-group" data-group="roles">
-                    <div class="nav-group-title" data-toggle>
-                        <i class="fas fa-user-tag"></i>
-                        <span>Роли</span>
-                        <i class="fas fa-chevron-down nav-caret"></i>
-                    </div>
-                    <div class="nav-group-items">
-                        <a href="/roles" class="nav-link {% if request.path == '/roles' %}active{% endif %}"><i class="fas fa-user-tag"></i> <span>Управление ролями</span></a>
-                        <a href="/autorole" class="nav-link {% if request.path == '/autorole' %}active{% endif %}"><i class="fas fa-id-badge"></i> <span>Автороли</span></a>
-                        <a href="/color-roles" class="nav-link {% if request.path == '/color-roles' %}active{% endif %}"><i class="fas fa-palette"></i> <span>Цветовые роли</span></a>
-                        <a href="/reaction-roles" class="nav-link {% if request.path == '/reaction-roles' %}active{% endif %}"><i class="fas fa-smile"></i> <span>Роли по реакциям</span></a>
-                    </div>
-                </div>
-
-                <div class="nav-group" data-group="access">
-                    <div class="nav-group-title" data-toggle>
-                        <i class="fas fa-shield-alt"></i>
-                        <span>Доступ</span>
-                        <i class="fas fa-chevron-down nav-caret"></i>
-                    </div>
-                    <div class="nav-group-items">
-                        <a href="/panel-access" class="nav-link {% if request.path == '/panel-access' %}active{% endif %}"><i class="fas fa-user-shield"></i> <span>Доступ к панелям</span></a>
-                        <a href="/role-permissions" class="nav-link {% if request.path == '/role-permissions' %}active{% endif %}"><i class="fas fa-user-lock"></i> <span>Доступ к командам</span></a>
-                    </div>
-                </div>
-
-                <div class="nav-group" data-group="tickets">
-                    <div class="nav-group-title" data-toggle>
-                        <i class="fas fa-ticket-alt"></i>
-                        <span>Тикеты</span>
-                        <i class="fas fa-chevron-down nav-caret"></i>
-                    </div>
-                    <div class="nav-group-items">
-                        <a href="/ai-tickets" class="nav-link {% if request.path == '/ai-tickets' %}active{% endif %}"><i class="fas fa-ticket-alt"></i> <span>AI Тикеты</span></a>
-                        <a href="/ai_ticket_stats" class="nav-link {% if request.path == '/ai_ticket_stats' %}active{% endif %}"><i class="fas fa-chart-pie"></i> <span>Статистика</span></a>
-                        <a href="/ticket-settings" class="nav-link {% if request.path == '/ticket-settings' %}active{% endif %}"><i class="fas fa-cogs"></i> <span>Настройки</span></a>
-                        <a href="/staff-apps" class="nav-link {% if request.path == '/staff-apps' %}active{% endif %}"><i class="fas fa-file-signature"></i> <span>Заявки</span></a>
-                    </div>
-                </div>
-
-                <div class="nav-group" data-group="bot">
-                    <div class="nav-group-title" data-toggle>
-                        <i class="fas fa-robot"></i>
-                        <span>Бот</span>
-                        <i class="fas fa-chevron-down nav-caret"></i>
-                    </div>
-                    <div class="nav-group-items">
-                        <a href="/commands" class="nav-link {% if request.path == '/commands' %}active{% endif %}"><i class="fas fa-terminal"></i> <span>Команды</span></a>
-                        <a href="/custom-commands" class="nav-link {% if request.path == '/custom-commands' %}active{% endif %}"><i class="fas fa-code"></i> <span>Свои команды</span></a>
-                        <a href="/send-command" class="nav-link {% if request.path == '/send-command' %}active{% endif %}"><i class="fas fa-paper-plane"></i> <span>Отправить</span></a>
-                        <a href="/bot-settings" class="nav-link {% if request.path == '/bot-settings' %}active{% endif %}"><i class="fas fa-sliders-h"></i> <span>Настройки</span></a>
-                        <a href="/cog-manager" class="nav-link {% if request.path == '/cog-manager' %}active{% endif %}"><i class="fas fa-cubes"></i> <span>Модули</span></a>
-                        <a href="/settings" class="nav-link {% if request.path == '/settings' %}active{% endif %}"><i class="fas fa-cog"></i> <span>Сервер</span></a>
-                        <a href="/rules-editor" class="nav-link {% if request.path == '/rules-editor' %}active{% endif %}"><i class="fas fa-gavel"></i> <span>Правила</span></a>
-                        <a href="/welcome-editor" class="nav-link {% if request.path == '/welcome-editor' %}active{% endif %}"><i class="fas fa-handshake"></i> <span>Приветствие</span></a>
-                        <a href="/warn-config" class="nav-link {% if request.path == '/warn-config' %}active{% endif %}"><i class="fas fa-exclamation"></i> <span>Варны</span></a>
-                    </div>
-                </div>
-
-                <div class="nav-group" data-group="community">
-                    <div class="nav-group-title" data-toggle>
-                        <i class="fas fa-gamepad"></i>
-                        <span>Сообщество</span>
-                        <i class="fas fa-chevron-down nav-caret"></i>
-                    </div>
-                    <div class="nav-group-items">
-                        <a href="/economy" class="nav-link {% if request.path == '/economy' %}active{% endif %}"><i class="fas fa-coins"></i> <span>Экономика</span></a>
-                        <a href="/leveling" class="nav-link {% if request.path == '/leveling' %}active{% endif %}"><i class="fas fa-star"></i> <span>Уровни</span></a>
-                        <a href="/giveaway" class="nav-link {% if request.path == '/giveaway' %}active{% endif %}"><i class="fas fa-gift"></i> <span>Розыгрыши</span></a>
-                        <a href="/polls" class="nav-link {% if request.path == '/polls' %}active{% endif %}"><i class="fas fa-poll-h"></i> <span>Опросы</span></a>
-                        <a href="/suggestions" class="nav-link {% if request.path == '/suggestions' %}active{% endif %}"><i class="fas fa-lightbulb"></i> <span>Предложения</span></a>
-                        <a href="/starboard" class="nav-link {% if request.path == '/starboard' %}active{% endif %}"><i class="fas fa-star"></i> <span>Starboard</span></a>
-                        <a href="/voice-stats" class="nav-link {% if request.path == '/voice-stats' %}active{% endif %}"><i class="fas fa-microphone"></i> <span>Голосовая</span></a>
-                        <a href="/duty-panel-web" class="nav-link {% if request.path == '/duty-panel-web' %}active{% endif %}"><i class="fas fa-user-clock"></i> <span>Дежурства</span></a>
-                        <a href="/scheduled-messages" class="nav-link {% if request.path == '/scheduled-messages' %}active{% endif %}"><i class="fas fa-clock"></i> <span>Расписание</span></a>
-                    </div>
-                </div>
-
-                <div class="nav-group" data-group="logs">
-                    <div class="nav-group-title" data-toggle>
-                        <i class="fas fa-file-lines"></i>
-                        <span>Логи</span>
-                        <i class="fas fa-chevron-down nav-caret"></i>
-                    </div>
-                    <div class="nav-group-items">
-                        <a href="/chat" class="nav-link {% if request.path == '/chat' %}active{% endif %}"><i class="fas fa-comments"></i> <span>Чат</span></a>
-                        <a href="/message-logs" class="nav-link {% if request.path == '/message-logs' %}active{% endif %}"><i class="fas fa-comment-alt"></i> <span>Сообщения</span></a>
-                        <a href="/panel-logs" class="nav-link {% if request.path == '/panel-logs' %}active{% endif %}"><i class="fas fa-list"></i> <span>Панель</span></a>
-                        <a href="/backup" class="nav-link {% if request.path == '/backup' %}active{% endif %}"><i class="fas fa-database"></i> <span>Бэкапы</span></a>
-                    </div>
-                </div>
-
-                <div class="nav-group" data-group="content">
-                    <div class="nav-group-title" data-toggle>
-                        <i class="fas fa-palette"></i>
-                        <span>Контент</span>
-                        <i class="fas fa-chevron-down nav-caret"></i>
-                    </div>
-                    <div class="nav-group-items">
-                        <a href="/custom-embeds" class="nav-link {% if request.path == '/custom-embeds' %}active{% endif %}"><i class="fas fa-palette"></i> <span>Embed-ы</span></a>
-                        <a href="/channels" class="nav-link {% if request.path == '/channels' %}active{% endif %}"><i class="fas fa-hashtag"></i> <span>Каналы</span></a>
-                        <a href="/execute-command" class="nav-link {% if request.path == '/execute-command' %}active{% endif %}"><i class="fas fa-bolt"></i> <span>Команда</span></a>
-                    </div>
-                </div>
-
-                <div class="nav-group" data-group="ai">
-                    <div class="nav-group-title" data-toggle>
-                        <i class="fas fa-brain"></i>
-                        <span>AI</span>
-                        <i class="fas fa-chevron-down nav-caret"></i>
-                    </div>
-                    <div class="nav-group-items">
-                        <a href="/ai-chat" class="nav-link {% if request.path == '/ai-chat' %}active{% endif %}"><i class="fas fa-comments"></i> <span>AI Чат</span></a>
-                        <a href="/ai-moderation" class="nav-link {% if request.path == '/ai-moderation' %}active{% endif %}"><i class="fas fa-robot"></i> <span>AI Модерация</span></a>
-                    </div>
-                </div>
-
-                <div class="nav-group" data-group="ops">
-                    <div class="nav-group-title" data-toggle>
-                        <i class="fas fa-server"></i>
-                        <span>Система</span>
-                        <i class="fas fa-chevron-down nav-caret"></i>
-                    </div>
-                    <div class="nav-group-items">
-                        <a href="/bot-diagnostics" class="nav-link {% if request.path == '/bot-diagnostics' %}active{% endif %}"><i class="fas fa-heartbeat"></i> <span>Диагностика</span></a>
-                        <a href="/leveling-admin" class="nav-link {% if request.path == '/leveling-admin' %}active{% endif %}"><i class="fas fa-trophy"></i> <span>Leveling</span></a>
-                    </div>
-                </div>
-
-                <div class="nav-group" data-group="utility">
-                    <div class="nav-group-title" data-toggle>
-                        <i class="fas fa-toolbox"></i>
-                        <span>Утилиты</span>
-                        <i class="fas fa-chevron-down nav-caret"></i>
-                    </div>
-                    <div class="nav-group-items">
-                        <a href="/todo" class="nav-link {% if request.path == '/todo' %}active{% endif %}"><i class="fas fa-check-square"></i> <span>Задачи</span></a>
-                        <a href="/yardim" class="nav-link {% if request.path == '/yardim' %}active{% endif %}"><i class="fas fa-question-circle"></i> <span>Справка</span></a>
-                    </div>
-                </div>
+                {% endif %}
+            {% endfor %}
             {% endif %}
         </nav>
 

@@ -5678,6 +5678,19 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         guild_id =active_guild_id ()
         )
 
+    @app .route ('/panel-menu')
+    @login_required
+    @role_required ('owner')
+    def panel_menu_page ():
+        """Доступ к меню: какие категории (группы) и страницы (комнаты)
+        видны в панели Модератора и Администратора."""
+        return render_template (
+        'panel_menu.html',
+        role =session .get ('role'),
+        username =session .get ('username'),
+        guild_id =active_guild_id ()
+        )
+
     @app .route ('/api/role-permissions/<guild_id>')
     @login_required
     @role_required ('owner')

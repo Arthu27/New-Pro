@@ -1722,7 +1722,7 @@ def _save_login_token (username ,roles ):
         json .dump (tokens ,f ,indent =2 ,ensure_ascii =False )
     return existing 
 
-@app .context_processor 
+@app .context_processor
 def inject_guild_id ():
     """Expose the active guild to templates without hard-coding an ID."""
     configured =str (MAIN_GUILD_ID or '')
@@ -1734,6 +1734,14 @@ def inject_guild_id ():
     else :
         gid =configured 
     return {'main_guild_id':gid ,'MAIN_GUILD_ID':gid }
+
+@app .context_processor
+def inject_panel_menu ():
+    """Expose the visible sidebar menu for the current panel role."""
+    from services .panel_menu import panel_groups_for
+    role =session .get ('role','uye')
+    menu =panel_groups_for (role )if role in ('owner','admin','mod')else []
+    return {'panel_menu':menu ,'panel_role':role }
 
 def set_bot_instance (bot ):
     global bot_instance 
@@ -1969,6 +1977,41 @@ def api_delete_role_map (role_id ):
         del DISCORD_ROLE_MAP [role_id ]
         _save_role_map ()
         _log_panel_action ('ROLE_MAP_DELETE',role_id )
+    return jsonify ({'success':True })
+
+# ── Panel menu visibility (sidebar categories & rooms per panel) ──
+@app .route ('/api/panel-menu')
+@login_required
+@role_required ('owner')
+def api_panel_menu_get ():
+    """Return the full MENU + current visibility config for mod/admin panels."""
+    from services .panel_menu import MENU ,get_config ,CONFIGURABLE
+    cfg =get_config ()
+    return jsonify ({
+    'success':True ,
+    'menu':MENU ,
+    'config':cfg ,
+    'configurable':list (CONFIGURABLE ),
+    })
+
+@app .route ('/api/panel-menu',methods =['POST'])
+@login_required
+@role_required ('owner')
+def api_panel_menu_set ():
+    """Save per-panel visibility: {role: {groups:[...], items:[...]}}."""
+    from services .panel_menu import get_config ,save_config ,CONFIGURABLE
+    data =request .get_json (silent =True )or {}
+    role =str (data .get ('role','')).strip ()
+    if role not in CONFIGURABLE :
+        return jsonify ({'success':False ,'error':'Неверная роль'}),400
+    groups =data .get ('groups',[])
+    items =data .get ('items',[])
+    if not isinstance (groups ,list )or not isinstance (items ,list ):
+        return jsonify ({'success':False ,'error':'Неверный формат'}),400
+    cfg =get_config ()
+    cfg [role ]={'groups':[str (g )for g in groups ],'items':[str (i )for i in items ]}
+    save_config (cfg )
+    _log_panel_action ('PANEL_MENU_SET',f'{role} → {len(groups)} групп, {len(items)} страниц')
     return jsonify ({'success':True })
 
     # Discord PIN Login API 
