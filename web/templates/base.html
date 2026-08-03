@@ -864,23 +864,37 @@ window.showToast = function (message, success) {
   });
 
   // 2) Restore scroll after load / bfcache
+  //    Повторяем несколько раз, т.к. контент страниц часто подгружается
+  //    асинхронно (fetch) уже ПОСЛЕ DOMContentLoaded — scroll иначе теряется.
   function restore() {
     try {
       var store = JSON.parse(sessionStorage.getItem(KEY) || '{}');
       var pos = store[pageKey];
-      if (pos && (pos.y > 0 || pos.x > 0)) {
-        // дать DOM дорисоваться (картинки/списки)
-        requestAnimationFrame(function () {
+      if (!pos || !(pos.y > 0 || pos.x > 0)) return;
+      var attempts = [0, 50, 150, 350, 700, 1200, 2000, 3000];
+      attempts.forEach(function (delay) {
+        setTimeout(function () {
+          // Восстанавливаем только если пользователь сам не начал скроллить.
+          if (window.__userScrolled) return;
           window.scrollTo(pos.x, pos.y);
-        });
-        setTimeout(function () { window.scrollTo(pos.x, pos.y); }, 100);
-        setTimeout(function () { window.scrollTo(pos.x, pos.y); }, 400);
-      }
+        }, delay);
+      });
+      // сбрасываем флаг через пару секунд после рестайла
+      setTimeout(function () { window.__userScrolled = false; }, 3500);
     } catch (e) {}
   }
   window.addEventListener('pageshow', restore);
   if (document.readyState === 'complete') restore();
   else window.addEventListener('DOMContentLoaded', restore);
+
+  // Помечаем, что пользователь начал скроллить сам (не мешаем ему).
+  window.addEventListener('wheel', function () { window.__userScrolled = true; }, { passive: true });
+  window.addEventListener('touchmove', function () { window.__userScrolled = true; }, { passive: true });
+  document.addEventListener('keydown', function (e) {
+    if (['ArrowDown','ArrowUp','PageDown','PageUp','Home','End'].indexOf(e.key) !== -1) {
+      window.__userScrolled = true;
+    }
+  });
 
   // 3) При любом клике по якорю '#' не прыгать вверх (а остаться на месте)
   document.addEventListener('click', function (e) {

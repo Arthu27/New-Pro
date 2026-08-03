@@ -66,6 +66,23 @@
   .ca-toast.show { transform:translateX(-50%) translateY(0); }
   .ca-toast.ok { border-color:#2ecc71; }
   .ca-toast.err { border-color:#e74c3c; }
+
+  /* Модальное подтверждение */
+  .ca-modal { position:fixed; inset:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); display:none; align-items:center; justify-content:center; z-index:1000; }
+  .ca-modal.show { display:flex; }
+  .ca-modal-box { background:linear-gradient(165deg,#1f1f26,#16161b); border:1px solid rgba(255,255,255,0.12); border-radius:18px; padding:26px 28px; max-width:420px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,0.6); text-align:center; }
+  .ca-modal-icon { font-size:36px; margin-bottom:10px; }
+  .ca-modal-title { font-size:17px; font-weight:700; margin-bottom:8px; }
+  .ca-modal-desc { font-size:13px; opacity:.75; margin-bottom:20px; line-height:1.5; }
+  .ca-modal-btns { display:flex; gap:10px; justify-content:center; }
+  .ca-modal-btns .ca-btn { min-width:110px; justify-content:center; font-size:13px; padding:10px 14px; }
+
+  /* Сводные счётчики */
+  .ca-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:20px; }
+  .ca-stat { background:linear-gradient(160deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02)); border:1px solid rgba(255,255,255,0.09); border-radius:13px; padding:14px 16px; display:flex; align-items:center; gap:12px; }
+  .ca-stat .ico { width:38px; height:38px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:16px; background:rgba(88,101,242,0.15); color:#8ea3ff; border:1px solid rgba(88,101,242,0.3); flex-shrink:0; }
+  .ca-stat .num { font-size:20px; font-weight:700; }
+  .ca-stat .lbl { font-size:11.5px; opacity:.6; margin-top:1px; }
 </style>
 
 <div class="info-bar">
@@ -90,6 +107,19 @@
 </div>
 
 <div class="ca-toast" id="ca-toast"></div>
+
+<!-- Модальное подтверждение -->
+<div class="ca-modal" id="ca-modal">
+  <div class="ca-modal-box">
+    <div class="ca-modal-icon">⚠️</div>
+    <div class="ca-modal-title" id="ca-modal-title">Подтверждение</div>
+    <div class="ca-modal-desc" id="ca-modal-desc"></div>
+    <div class="ca-modal-btns">
+      <button class="ca-btn" onclick="closeModal()">Отмена</button>
+      <button class="ca-btn ca-btn-green" id="ca-modal-confirm">Подтвердить</button>
+    </div>
+  </div>
+</div>
 
 <script>
 var CA_ROLES = [];
@@ -138,8 +168,8 @@ function renderRoles(){
 
 function selectRole(id){
   caSelectedRole = id;
-  renderRoles();
-  renderContent();
+  var re = function(){ renderRoles(); renderContent(); };
+  window.keepScroll ? window.keepScroll(re) : re();
 }
 
 function visOf(ov, roleId){
@@ -156,7 +186,20 @@ function renderContent(){
   document.getElementById('ca-role-name').innerHTML = '<i class="fas fa-user-tag"></i> '+ (role?role.name:'Роль');
   document.getElementById('ca-role-sub').textContent = 'Видимость каналов для роли «'+(role?role.name:'')+'»';
 
+  // Подсчёт видимых/скрытых
+  var visibleCount = 0, totalCh = 0;
+  function countOver(ov){ var v = visOf(ov, caSelectedRole); totalCh++; if(v===true) visibleCount++; }
+  CA_CATS.forEach(function(cat){ cat.channels.forEach(function(ch){ countOver(ch.overwrites); }); });
+  CA_UNCAT.forEach(function(ch){ countOver(ch.overwrites); });
+
   var html = '';
+  html += '<div class="ca-stats">'
+    + '<div class="ca-stat"><div class="ico"><i class="fas fa-user-tag"></i></div><div><div class="num">'+CA_ROLES.length+'</div><div class="lbl">Ролей</div></div></div>'
+    + '<div class="ca-stat"><div class="ico"><i class="fas fa-folder"></i></div><div><div class="num">'+CA_CATS.length+'</div><div class="lbl">Категорий</div></div></div>'
+    + '<div class="ca-stat"><div class="ico"><i class="fas fa-hashtag"></i></div><div><div class="num">'+totalCh+'</div><div class="lbl">Каналов</div></div></div>'
+    + '<div class="ca-stat"><div class="ico"><i class="fas fa-eye" style="color:#2ecc71;background:rgba(46,204,113,0.15);border-color:rgba(46,204,113,0.3);"></i></div><div><div class="num" style="color:#2ecc71;">'+visibleCount+'</div><div class="lbl">Видит</div></div></div>'
+    + '<div class="ca-stat"><div class="ico"><i class="fas fa-eye-slash" style="color:#ff6b6b;background:rgba(231,76,60,0.15);border-color:rgba(231,76,60,0.3);"></i></div><div><div class="num" style="color:#ff6b6b;">'+(totalCh-visibleCount)+'</div><div class="lbl">Не видит</div></div></div>'
+    + '</div>';
 
   // Категории с каналами
   CA_CATS.forEach(function(cat){
@@ -206,22 +249,44 @@ function setChannel(chId, visible){
     body: JSON.stringify({role_id:caSelectedRole, target_id:chId, visible:visible, apply_to_children:false})
   }).then(function(r){ return r.json(); }).then(function(d){
     caToast(d.success ? (visible?'Канал открыт для роли':'Канал скрыт от роли') : (d.error||'Ошибка'), d.success);
-    if(d.success){ loadCA(); }
+    // keepScroll сохраняет позицию прокрутки после перерисовки
+    if(d.success){ window.keepScroll ? window.keepScroll(loadCA) : loadCA(); }
   });
 }
 
 function applyAll(catId, visible){
   if(!caSelectedRole) return;
-  if(!confirm((visible?'Открыть':'Скрыть')+' все каналы категории для выбранной роли?')) return;
-  var gid='{{ guild_id }}';
-  fetch('/api/channel-access/'+gid+'/set',{
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({role_id:caSelectedRole, target_id:catId, visible:visible, apply_to_children:true})
-  }).then(function(r){ return r.json(); }).then(function(d){
-    caToast(d.success ? ('Применено к '+d.applied+' каналам') : (d.error||'Ошибка'), d.success);
-    if(d.success){ loadCA(); }
-  });
+  showModal((visible?'Открыть':'Скрыть')+' все каналы категории?',
+    'Применить «'+(visible?'видимый':'скрытый')+'» ко всем каналам этой категории для выбранной роли?', function(){
+      var gid='{{ guild_id }}';
+      fetch('/api/channel-access/'+gid+'/set',{
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({role_id:caSelectedRole, target_id:catId, visible:visible, apply_to_children:true})
+      }).then(function(r){ return r.json(); }).then(function(d){
+        caToast(d.success ? ('Применено к '+d.applied+' каналам') : (d.error||'Ошибка'), d.success);
+        if(d.success){ window.keepScroll ? window.keepScroll(loadCA) : loadCA(); }
+      });
+    });
 }
+
+// Красивый модальный confirm вместо браузерного
+var _caModalCb = null;
+function showModal(title, desc, cb){
+  document.getElementById('ca-modal-title').textContent = title;
+  document.getElementById('ca-modal-desc').textContent = desc;
+  _caModalCb = cb;
+  document.getElementById('ca-modal').classList.add('show');
+}
+function closeModal(){
+  document.getElementById('ca-modal').classList.remove('show');
+  _caModalCb = null;
+}
+document.getElementById('ca-modal') && document.getElementById('ca-modal').addEventListener('click', function(e){
+  if(e.target === this) closeModal();
+});
+document.getElementById('ca-modal-confirm') && document.getElementById('ca-modal-confirm').addEventListener('click', function(){
+  var cb = _caModalCb; closeModal(); if(cb) cb();
+});
 
 loadCA();
 </script>
