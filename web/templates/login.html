@@ -112,9 +112,10 @@
             max-width: 460px;
         }
 
-        /* Hero / brand */
+        /* Hero / brand — welcome hero stili */
         .hero {
-            margin-bottom: 24px;
+            margin-bottom: 26px;
+            text-align: center;
             animation: fadeDown 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
         }
         @keyframes fadeDown {
@@ -129,55 +130,33 @@
             from { opacity: 0; transform: scale(0.94); }
             to   { opacity: 1; transform: scale(1); }
         }
-        .hero-logo {
-            width: 68px; height: 68px;
-            margin: 0 auto 16px;
-            border-radius: 20px;
-            background: linear-gradient(135deg, #d4a843, #b88728);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 28px;
-            color: #0a0907;
-            box-shadow: 0 12px 40px rgba(212, 168, 67, 0.35), inset 0 1px 0 rgba(255,255,255,0.2);
-            position: relative;
-            animation: float 4s ease-in-out infinite;
+        @keyframes heroDotPulse {
+            0%, 100% { opacity: 1; }
+            50%      { opacity: 0.35; }
         }
-        .hero-logo::before {
-            content: '';
-            position: absolute;
-            inset: -3px;
-            border-radius: 23px;
-            background: linear-gradient(135deg, #d4a843, #ec4899, #06b6d4, #d4a843);
-            background-size: 300% 300%;
-            z-index: -1;
-            animation: gradientShift 6s ease infinite;
-            opacity: 0.6;
-            filter: blur(10px);
+        .hero-eyebrow {
+            display: inline-flex; align-items: center; gap: 8px;
+            font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+            color: #f0c75e; margin-bottom: 18px; padding: 6px 16px; border-radius: 99px;
+            background: rgba(212, 168, 67, 0.10); border: 1px solid rgba(212, 168, 67, 0.30);
         }
-        @keyframes float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-6px); }
+        .hero-eyebrow .dot {
+            width: 7px; height: 7px; background: #22c55e; border-radius: 50%;
+            box-shadow: 0 0 8px #22c55e; animation: heroDotPulse 2s infinite;
         }
-        @keyframes gradientShift {
-            0%   { background-position: 0% 50%; }
-            50%  { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-        .hero h1 {
-            font-size: 28px;
-            color: #f5ecd2;
-            letter-spacing: -0.025em;
-            margin: 0 0 6px 0;
+        .hero-title {
+            font-size: 58px; font-weight: 800; letter-spacing: 8px; line-height: 1.1;
             background: linear-gradient(135deg, #f0c75e 0%, #d4a843 50%, #b88728 100%);
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
+            -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+            margin-bottom: 14px;
         }
-        .hero p {
-            font-size: 13.5px;
-            color: #b6a47b;
-            }
+        .hero-sub {
+            font-size: 15px; color: #b6a47b; line-height: 1.65; font-weight: 500;
+        }
+        .hero-tag {
+            margin-top: 16px; font-size: 12px; color: #8c7b58;
+            letter-spacing: 0.14em; text-transform: uppercase; font-weight: 600;
+        }
 
         /* Auth card */
         .auth-card {
@@ -479,7 +458,8 @@
         @media (max-width: 480px) {
             .login-wrapper { max-width: 100%; }
             .auth-card { padding: 24px 20px; }
-            .hero h1 { font-size: 24px; }
+            .hero-title { font-size: 38px; letter-spacing: 5px; }
+            .hero-sub br { display: none; }
         }
     </style>
 </head>
@@ -491,9 +471,10 @@
 
 <div class="login-wrapper">
     <div class="hero">
-        <div class="hero-logo"><i class="fas fa-robot"></i></div>
-        <h1>Aether Panel</h1>
-        <p>Центр управления Discord-сервером</p>
+        <div class="hero-eyebrow"><span class="dot"></span> Панель управления сервером</div>
+        <div class="hero-title">AETHER</div>
+        <p class="hero-sub">Умная система модерации, аналитики и автоматизации<br>для вашего Discord-сообщества</p>
+        <div class="hero-tag">Модерация · Аналитика · AI · Автоматизация</div>
     </div>
 
     <div class="auth-card">
@@ -537,7 +518,7 @@
             </button>
 
             <div class="helper-note">
-                💡 <strong>Подсказка:</strong> По умолчанию для входа владельца используйте логин <code>owner</code> и пароль <code>123</code>.
+                💡 <strong>Подсказка:</strong> Логин и пароль владельца задаются в <code>.env</code> (<code>PANEL_USER</code> / <code>PANEL_PASSWORD</code>). Без настройки действует стандартная пара <code>owner</code> / <code>123</code> — не забудьте сменить после входа.
             </div>
         </form>
 
