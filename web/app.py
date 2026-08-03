@@ -403,7 +403,7 @@ def health_check ():
 @app .route ('/')
 def index ():
     if 'logged_in'not in session :
-        return redirect (url_for ('login'))
+        return render_template ('welcome.html')
     if session .get ('role')=='uye':
         return render_template ('member_dashboard.html',role =session .get ('role'),username =session .get ('username'))
     return render_template ('dashboard.html',role =session .get ('role'),username =session .get ('username'))

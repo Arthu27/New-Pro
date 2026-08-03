@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aether — Умная панель для Discord-сервера</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0907;
+            --surface: rgba(26, 22, 16, 0.72);
+            --line: rgba(212, 168, 67, 0.18);
+            --line-2: rgba(212, 168, 67, 0.32);
+            --text: #f5ecd2;
+            --text-2: #b6a47b;
+            --text-3: #8c7b58;
+            --ac: #d4a843;
+            --ac-2: #f0c75e;
+            --ac-3: #b88728;
+            --ok: #22c55e;
+        }
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', system-ui, sans-serif;
+            overflow-x: hidden;
+        }
+
+        /* ===== Атмосферный фон ===== */
+        .aurora { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+        .aurora::before, .aurora::after {
+            content: ''; position: absolute; border-radius: 50%;
+            filter: blur(120px); opacity: 0.35;
+            animation: auroraFloat 18s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+        }
+        .aurora::before {
+            width: 620px; height: 620px;
+            background: radial-gradient(circle, #8b5cf6 0%, transparent 70%);
+            top: -160px; left: 8%;
+        }
+        .aurora::after {
+            width: 720px; height: 720px;
+            background: radial-gradient(circle, rgba(212,168,67,0.55) 0%, transparent 70%);
+            bottom: -220px; right: 4%;
+            animation-delay: -6s;
+        }
+        @keyframes auroraFloat {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(40px, -30px) scale(1.08); }
+            66% { transform: translate(-30px, 25px) scale(0.95); }
+        }
+        .bg-grid {
+            position: fixed; inset: 0; z-index: 0; pointer-events: none;
+            background-image: linear-gradient(rgba(212,168,67,0.05) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(212,168,67,0.05) 1px, transparent 1px);
+            background-size: 56px 56px;
+            mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 30%, transparent 75%);
+            -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 30%, transparent 75%);
+        }
+
+        /* ===== Верхняя навигация ===== */
+        .topnav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+            backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+            background: rgba(10, 9, 7, 0.72);
+            border-bottom: 1px solid rgba(212, 168, 67, 0.12);
+        }
+        .topnav-inner {
+            max-width: 1200px; margin: 0 auto; padding: 14px 24px;
+            display: flex; align-items: center; gap: 28px;
+        }
+        .nav-logo { display: flex; align-items: center; gap: 11px; text-decoration: none; }
+        .nav-logo-mark {
+            width: 36px; height: 36px; border-radius: 11px;
+            background: linear-gradient(135deg, var(--ac-2), var(--ac-3));
+            display: flex; align-items: center; justify-content: center;
+            color: #1a1a1a; font-size: 15px;
+            box-shadow: 0 6px 18px rgba(212, 168, 67, 0.35);
+        }
+        .nav-logo-name {
+            font-size: 16px; font-weight: 800; letter-spacing: 3px; color: var(--text);
+        }
+        .nav-links { display: flex; gap: 4px; margin-left: 12px; }
+        .nav-links a {
+            color: var(--text-2); text-decoration: none; font-size: 14px; font-weight: 500;
+            padding: 8px 14px; border-radius: 9px; transition: 0.2s;
+        }
+        .nav-links a:hover { color: var(--text); background: rgba(212, 168, 67, 0.10); }
+        .nav-actions { margin-left: auto; display: flex; gap: 10px; align-items: center; }
+        .btn-ghost {
+            padding: 9px 18px; border-radius: 10px; font-size: 14px; font-weight: 600;
+            color: var(--text-2); background: transparent; border: 1px solid var(--line);
+            cursor: pointer; text-decoration: none; transition: 0.2s; display: inline-flex; align-items: center; gap: 8px;
+        }
+        .btn-ghost:hover { color: var(--text); border-color: var(--line-2); background: rgba(212, 168, 67, 0.08); }
+        .btn-gold {
+            padding: 9px 20px; border-radius: 10px; font-size: 14px; font-weight: 700;
+            color: #1a1a1a; background: linear-gradient(135deg, var(--ac-2), var(--ac));
+            border: none; cursor: pointer; text-decoration: none;
+            box-shadow: 0 8px 22px rgba(212, 168, 67, 0.30);
+            display: inline-flex; align-items: center; gap: 8px; transition: 0.25s;
+        }
+        .btn-gold:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(212, 168, 67, 0.45); }
+        .nav-burger {
+            display: none; background: none; border: 1px solid var(--line); color: var(--text-2);
+            width: 40px; height: 40px; border-radius: 10px; cursor: pointer; font-size: 15px;
+            margin-left: auto;
+        }
+
+        /* ===== Hero ===== */
+        .hero {
+            position: relative; z-index: 1;
+            min-height: 100vh;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; padding: 130px 24px 70px;
+        }
+        .hero-eyebrow {
+            display: inline-flex; align-items: center; gap: 8px;
+            font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+            color: var(--ac-2); margin-bottom: 22px; padding: 7px 17px; border-radius: 99px;
+            background: rgba(212, 168, 67, 0.10); border: 1px solid var(--line-2);
+            animation: fadeDown 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+        .hero-eyebrow .dot {
+            width: 7px; height: 7px; background: var(--ok); border-radius: 50%;
+            box-shadow: 0 0 8px var(--ok); animation: dotPulse 2s infinite;
+        }
+        @keyframes dotPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+        .hero-title {
+            font-size: clamp(54px, 11vw, 110px); font-weight: 900; letter-spacing: clamp(4px, 1.2vw, 12px);
+            line-height: 1.05;
+            background: linear-gradient(135deg, var(--ac-2) 0%, var(--ac) 45%, var(--ac-3) 100%);
+            -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+            margin-bottom: 22px;
+            animation: fadeDown 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.08s both;
+        }
+        .hero-sub {
+            font-size: clamp(15px, 2vw, 18px); color: var(--text-2); line-height: 1.65;
+            max-width: 620px; font-weight: 500;
+            animation: fadeDown 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.16s both;
+        }
+        .hero-tag {
+            margin-top: 20px; font-size: 12.5px; color: var(--text-3);
+            letter-spacing: 0.16em; text-transform: uppercase; font-weight: 600;
+            animation: fadeDown 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.22s both;
+        }
+        .hero-actions {
+            margin-top: 38px; display: flex; gap: 14px; flex-wrap: wrap; justify-content: center;
+            animation: fadeDown 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both;
+        }
+        .hero-actions .btn-gold { padding: 15px 32px; font-size: 15px; border-radius: 14px; }
+        .hero-actions .btn-ghost { padding: 15px 32px; font-size: 15px; border-radius: 14px; }
+        .hero-hint {
+            margin-top: 54px; font-size: 12px; color: var(--text-3);
+            animation: fadeDown 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.42s both, hintBounce 2.2s 1s ease-in-out infinite;
+        }
+        .hero-hint i { display: block; margin-bottom: 6px; font-size: 14px; color: var(--ac); }
+        @keyframes fadeDown { from { opacity: 0; transform: translateY(-18px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes hintBounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(7px); } }
+
+        /* ===== Секции ===== */
+        section { position: relative; z-index: 1; max-width: 1200px; margin: 0 auto; padding: 84px 24px; }
+        .sec-eyebrow {
+            font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+            color: var(--ac-2); margin-bottom: 14px; display: inline-flex; align-items: center; gap: 8px;
+        }
+        .sec-eyebrow::before { content: ''; width: 26px; height: 1px; background: var(--ac); }
+        .sec-title { font-size: clamp(26px, 4vw, 38px); font-weight: 800; letter-spacing: -0.02em; margin-bottom: 14px; }
+        .sec-sub { color: var(--text-2); font-size: 15.5px; max-width: 640px; line-height: 1.65; }
+
+        /* Возможности */
+        .feat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 42px; }
+        .feat-card {
+            background: var(--surface); border: 1px solid var(--line); border-radius: 18px;
+            padding: 26px 24px; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+            transition: 0.25s cubic-bezier(0.16, 1, 0.3, 1); position: relative; overflow: hidden;
+        }
+        .feat-card::after {
+            content: ''; position: absolute; top: -40px; right: -40px; width: 120px; height: 120px;
+            background: radial-gradient(circle, rgba(212, 168, 67, 0.14), transparent 70%);
+            pointer-events: none; transition: 0.3s; opacity: 0;
+        }
+        .feat-card:hover { transform: translateY(-4px); border-color: var(--line-2); }
+        .feat-card:hover::after { opacity: 1; }
+        .feat-icon {
+            width: 46px; height: 46px; border-radius: 13px; margin-bottom: 16px;
+            background: linear-gradient(135deg, var(--ac-2), var(--ac-3));
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px; color: #1a1a1a; box-shadow: 0 8px 20px rgba(212, 168, 67, 0.28);
+        }
+        .feat-card h3 { font-size: 16.5px; font-weight: 700; margin-bottom: 8px; }
+        .feat-card p { font-size: 13.5px; color: var(--text-2); line-height: 1.6; }
+
+        /* Статистика */
+        .stats-band {
+            margin-top: 30px;
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+        }
+        .stat-card {
+            text-align: center; padding: 30px 18px;
+            background: linear-gradient(165deg, rgba(212, 168, 67, 0.07), rgba(26, 22, 16, 0.75));
+            border: 1px solid var(--line); border-radius: 18px;
+            transition: 0.25s;
+        }
+        .stat-card:hover { border-color: var(--line-2); transform: translateY(-3px); }
+        .stat-val {
+            font-size: clamp(26px, 4vw, 40px); font-weight: 800;
+            font-family: 'JetBrains Mono', monospace;
+            background: linear-gradient(135deg, var(--ac-2), var(--ac));
+            -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .stat-lbl { margin-top: 8px; font-size: 12.5px; color: var(--text-3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; }
+
+        /* О системе */
+        .about-wrap { display: grid; grid-template-columns: 1.1fr 1fr; gap: 44px; align-items: center; }
+        .about-list { display: flex; flex-direction: column; gap: 14px; margin-top: 26px; }
+        .about-item { display: flex; gap: 13px; align-items: flex-start; }
+        .about-item i {
+            width: 30px; height: 30px; border-radius: 9px; flex-shrink: 0;
+            background: rgba(212, 168, 67, 0.12); border: 1px solid var(--line);
+            color: var(--ac-2); display: flex; align-items: center; justify-content: center; font-size: 12px;
+        }
+        .about-item div b { display: block; font-size: 14.5px; margin-bottom: 3px; }
+        .about-item div span { font-size: 13.5px; color: var(--text-2); line-height: 1.55; }
+        .about-visual {
+            background: var(--surface); border: 1px solid var(--line); border-radius: 22px;
+            padding: 26px; backdrop-filter: blur(14px);
+        }
+        .about-visual .mock-bar { display: flex; gap: 6px; margin-bottom: 18px; }
+        .about-visual .mock-dot { width: 10px; height: 10px; border-radius: 50%; }
+        .mock-line { height: 11px; border-radius: 6px; margin-bottom: 12px; background: rgba(212, 168, 67, 0.10); }
+        .mock-line.gold { background: linear-gradient(90deg, rgba(240, 199, 94, 0.35), rgba(212, 168, 67, 0.10)); }
+        .mock-cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 18px; }
+        .mock-col { height: 64px; border-radius: 12px; background: rgba(212, 168, 67, 0.07); border: 1px solid var(--line); }
+
+        /* CTA */
+        .cta-band {
+            text-align: center; padding: 70px 28px; border-radius: 26px;
+            background: linear-gradient(165deg, rgba(212, 168, 67, 0.13), rgba(26, 22, 16, 0.8));
+            border: 1px solid var(--line-2);
+        }
+        .cta-band h2 { font-size: clamp(24px, 3.6vw, 34px); font-weight: 800; margin-bottom: 12px; }
+        .cta-band p { color: var(--text-2); font-size: 15px; margin-bottom: 30px; }
+        .cta-band .hero-actions { margin-top: 0; }
+
+        /* Подвал */
+        footer {
+            position: relative; z-index: 1;
+            border-top: 1px solid rgba(212, 168, 67, 0.12);
+            padding: 30px 24px; text-align: center;
+            color: var(--text-3); font-size: 13px;
+        }
+        footer .nav-logo { justify-content: center; margin-bottom: 12px; }
+        footer a { color: var(--text-2); text-decoration: none; }
+        footer a:hover { color: var(--ac-2); }
+        footer .foot-links { margin-top: 10px; display: flex; gap: 22px; justify-content: center; }
+
+        /* Плавное появление секций */
+        .reveal { opacity: 0; transform: translateY(28px); transition: opacity 0.7s cubic-bezier(0.16,1,0.3,1), transform 0.7s cubic-bezier(0.16,1,0.3,1); }
+        .reveal.in { opacity: 1; transform: none; }
+
+        /* Mobile */
+        @media (max-width: 900px) {
+            .feat-grid { grid-template-columns: repeat(2, 1fr); }
+            .stats-band { grid-template-columns: repeat(2, 1fr); }
+            .about-wrap { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 640px) {
+            .nav-links { display: none; }
+            .nav-burger { display: inline-flex; align-items: center; justify-content: center; }
+            .nav-links.open {
+                display: flex; position: absolute; top: 64px; left: 12px; right: 12px;
+                flex-direction: column; padding: 12px; border-radius: 14px;
+                background: rgba(10, 9, 7, 0.97); border: 1px solid var(--line-2);
+            }
+            .feat-grid { grid-template-columns: 1fr; }
+            .nav-actions .btn-ghost { display: none; }
+            section { padding: 60px 18px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="aurora"></div>
+<div class="bg-grid"></div>
+
+<!-- ===== Верхняя навигация ===== -->
+<nav class="topnav">
+    <div class="topnav-inner">
+        <a href="/" class="nav-logo">
+            <div class="nav-logo-mark"><i class="fas fa-bolt"></i></div>
+            <span class="nav-logo-name">AETHER</span>
+        </a>
+        <div class="nav-links" id="navLinks">
+            <a href="#features">Возможности</a>
+            <a href="#stats">Статистика</a>
+            <a href="#about">О системе</a>
+        </div>
+        <button class="nav-burger" id="navBurger" aria-label="Меню"><i class="fas fa-bars"></i></button>
+        <div class="nav-actions">
+            <a href="/login" class="btn-ghost"><i class="fas fa-arrow-right-to-bracket"></i> Войти</a>
+            <a href="/register" class="btn-gold"><i class="fas fa-user-plus"></i> Создать аккаунт</a>
+        </div>
+    </div>
+</nav>
+
+<!-- ===== Hero ===== -->
+<header class="hero">
+    <div class="hero-eyebrow"><span class="dot"></span> Панель управления Discord-сервером</div>
+    <h1 class="hero-title">AETHER</h1>
+    <p class="hero-sub">Умная система модерации, аналитики и автоматизации<br>для вашего Discord-сообщества</p>
+    <div class="hero-tag">Модерация · Аналитика · AI · Автоматизация</div>
+    <div class="hero-actions">
+        <a href="/login" class="btn-gold"><i class="fas fa-arrow-right"></i> Войти в панель</a>
+        <a href="/register" class="btn-ghost"><i class="fas fa-user-plus"></i> Создать аккаунт</a>
+    </div>
+    <div class="hero-hint"><i class="fas fa-chevron-down"></i> прокрутите вниз, чтобы узнать больше</div>
+</header>
+
+<!-- ===== Возможности ===== -->
+<section id="features">
+    <div class="reveal">
+        <div class="sec-eyebrow">Возможности</div>
+        <h2 class="sec-title">Всё для управления сервером в одном месте</h2>
+        <p class="sec-sub">От модерации до полноценного AI-ассистента — инструменты, которые обычно собирают из пяти разных ботов.</p>
+    </div>
+    <div class="feat-grid">
+        <div class="feat-card reveal">
+            <div class="feat-icon"><i class="fas fa-shield-halved"></i></div>
+            <h3>Модерация</h3>
+            <p>Варны, мьюты, баны, временные наказания, история действий и карточки нарушителей — на русском языке.</p>
+        </div>
+        <div class="feat-card reveal">
+            <div class="feat-icon"><i class="fas fa-robot"></i></div>
+            <h3>AI-ассистент</h3>
+            <p>Отвечает на вопросы участников, принимает жалобы с доказательствами и готовит резюме для персонала.</p>
+        </div>
+        <div class="feat-card reveal">
+            <div class="feat-icon"><i class="fas fa-ticket-alt"></i></div>
+            <h3>AI-тикеты</h3>
+            <p>Умная категоризация обращений, многосторонний разбор конфликтов и эскалация к staff с контекстом.</p>
+        </div>
+        <div class="feat-card reveal">
+            <div class="feat-icon"><i class="fas fa-chart-line"></i></div>
+            <h3>Аналитика</h3>
+            <p>Живая статистика сервера, графики активности, индекс угрозы и отчёты по модерации в реальном времени.</p>
+        </div>
+        <div class="feat-card reveal">
+            <div class="feat-icon"><i class="fas fa-coins"></i></div>
+            <h3>Экономика и уровни</h3>
+            <p>Валюта, магазин, ежедневные награды, уровни и таблицы лидеров — вовлечение участников на автопилоте.</p>
+        </div>
+        <div class="feat-card reveal">
+            <div class="feat-icon"><i class="fas fa-shield-virus"></i></div>
+            <h3>Антирейд и автомод</h3>
+            <p>Автоматическая защита от рейдов, флуда и спама с гибкой настройкой чувствительности под ваш сервер.</p>
+        </div>
+    </div>
+</section>
+
+<!-- ===== Статистика ===== -->
+<section id="stats">
+    <div class="reveal">
+        <div class="sec-eyebrow">Статистика</div>
+        <h2 class="sec-title">Растём вместе с вашим сообществом</h2>
+    </div>
+    <div class="stats-band">
+        <div class="stat-card reveal">
+            <div class="stat-val" data-count="70">0</div>
+            <div class="stat-lbl">Команд бота</div>
+        </div>
+        <div class="stat-card reveal">
+            <div class="stat-val" data-count="62">0</div>
+            <div class="stat-lbl">Модулей системы</div>
+        </div>
+        <div class="stat-card reveal">
+            <div class="stat-val" data-count="84">0</div>
+            <div class="stat-lbl">Страниц веб-панели</div>
+        </div>
+        <div class="stat-card reveal">
+            <div class="stat-val" data-count="24" data-suffix="/7">0</div>
+            <div class="stat-lbl">Онлайн-контроль</div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== О системе ===== -->
+<section id="about">
+    <div class="about-wrap">
+        <div class="reveal">
+            <div class="sec-eyebrow">О системе</div>
+            <h2 class="sec-title">Сделано для администраторов</h2>
+            <p class="sec-sub">Aether объединяет бота и веб-панель в единую экосистему. Всё на русском языке, с продуманными деталями.</p>
+            <div class="about-list">
+                <div class="about-item">
+                    <i class="fas fa-bolt"></i>
+                    <div><b>Мгновенный отклик</b><span>Slash-команды, кнопки и меню — быстрая работа без задержек.</span></div>
+                </div>
+                <div class="about-item">
+                    <i class="fas fa-lock"></i>
+                    <div><b>Безопасность</b><span>Хешированные пароли, роли доступа и детальные логи каждого действия.</span></div>
+                </div>
+                <div class="about-item">
+                    <i class="fas fa-puzzle-piece"></i>
+                    <div><b>Модульность</b><span>62 независимых модуля — включайте только то, что нужно вашему серверу.</span></div>
+                </div>
+                <div class="about-item">
+                    <i class="fas fa-language"></i>
+                    <div><b>Полностью на русском</b><span>Интерфейс бота и все 84 страницы веб-панели — на русском языке.</span></div>
+                </div>
+            </div>
+        </div>
+        <div class="about-visual reveal">
+            <div class="mock-bar">
+                <span class="mock-dot" style="background:#ef4444;"></span>
+                <span class="mock-dot" style="background:#f59e0b;"></span>
+                <span class="mock-dot" style="background:#22c55e;"></span>
+            </div>
+            <div class="mock-line gold" style="width: 62%;"></div>
+            <div class="mock-line" style="width: 88%;"></div>
+            <div class="mock-line" style="width: 45%;"></div>
+            <div class="mock-line gold" style="width: 74%;"></div>
+            <div class="mock-line" style="width: 55%;"></div>
+            <div class="mock-cols">
+                <div class="mock-col"></div>
+                <div class="mock-col"></div>
+                <div class="mock-col"></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== CTA ===== -->
+<section>
+    <div class="cta-band reveal">
+        <h2>Готовы взять сервер под контроль?</h2>
+        <p>Войдите в панель или создайте аккаунт через Discord — займёт меньше минуты.</p>
+        <div class="hero-actions">
+            <a href="/login" class="btn-gold"><i class="fas fa-arrow-right"></i> Войти в панель</a>
+            <a href="/register" class="btn-ghost"><i class="fas fa-user-plus"></i> Создать аккаунт</a>
+        </div>
+    </div>
+</section>
+
+<!-- ===== Подвал ===== -->
+<footer>
+    <a href="/" class="nav-logo">
+        <div class="nav-logo-mark"><i class="fas fa-bolt"></i></div>
+        <span class="nav-logo-name">AETHER</span>
+    </a>
+    <div>Умная система модерации, аналитики и автоматизации</div>
+    <div class="foot-links">
+        <a href="#features">Возможности</a>
+        <a href="#stats">Статистика</a>
+        <a href="#about">О системе</a>
+        <a href="/login">Войти</a>
+        <a href="/register">Создать аккаунт</a>
+    </div>
+</footer>
+
+<script>
+// Бургер-меню (мобильные)
+document.getElementById('navBurger').addEventListener('click', function () {
+    document.getElementById('navLinks').classList.toggle('open');
+});
+
+// Плавное появление секций при скролле
+var observer = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+        if (e.isIntersecting) { e.target.classList.add('in'); observer.unobserve(e.target); }
+    });
+}, { threshold: 0.12 });
+document.querySelectorAll('.reveal').forEach(function (el) { observer.observe(el); });
+
+// Анимированные счётчики статистики
+function animateCount(el) {
+    var target = parseInt(el.getAttribute('data-count'), 10);
+    var suffix = el.getAttribute('data-suffix') || '';
+    var start = null, dur = 1400;
+    function step(ts) {
+        if (!start) start = ts;
+        var p = Math.min((ts - start) / dur, 1);
+        var eased = 1 - Math.pow(1 - p, 3);
+        el.textContent = Math.round(target * eased) + (p === 1 ? suffix : '');
+        if (p < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+}
+var statObserver = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+        if (e.isIntersecting) { animateCount(e.target); statObserver.unobserve(e.target); }
+    });
+}, { threshold: 0.4 });
+document.querySelectorAll('.stat-val').forEach(function (el) { statObserver.observe(el); });
+</script>
+
+</body>
+</html>
