@@ -150,10 +150,9 @@
   }
 
   async function doRestart() {
-    if (!confirm('Botu новыйden baшlatmak istediгine emin misin?')) return;
-    try {
-      await fetch('/api/bot/restart', { method: 'POST' });
-    } catch (e) { /* sessiz */ }
+    window.askConfirm('Перезапустить бота', 'Перезапустить бота? Это прервёт работу на несколько секунд.', function () {
+      fetch('/api/bot/restart', { method: 'POST' }).catch(function (e) { /* sessiz */ });
+    }, { icon: '🔄', okText: 'Перезапустить', danger: true });
   }
 
   async function doLockdown() {
@@ -164,8 +163,7 @@
   }
 
   function doLogout() {
-    if (!confirm('Чиkmak istediгine emin misin?')) return;
-    window.location.href = '/logout';
+    window.askConfirm('Выход', 'Вы уверены, что хотите выйти из панели?', function () { window.location.href = '/logout'; }, { okText: 'Выйти', icon: '🚪' });
   }
 
   function bind() {

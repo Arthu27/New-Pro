@@ -106,16 +106,17 @@ async function createRole() {
 }
 
 async function deleteRole(id, name) {
-  if (!confirm('Удалить роль "' + name + '"?')) return;
-  try {
-    var r = await fetch('/api/guild/' + selectedGuild + '/roles/' + id + '/delete', { method: 'POST' });
-    var d = await r.json();
-    if (d.success) loadRoles();
-    else alert('Ошибка: ' + (d.error || 'Неизвестно'));
-  } catch (e) { alert('Ошибка запроса: ' + e.message); }
+  window.askConfirm('Удалить роль', 'Удалить роль «' + name + '»? Это действие необратимо.', async function () {
+    try {
+      var r = await fetch('/api/guild/' + selectedGuild + '/roles/' + id + '/delete', { method: 'POST' });
+      var d = await r.json();
+      if (d.success) { loadRoles(); showToast('Роль удалена', true); }
+      else showToast('Ошибка: ' + (d.error || 'Неизвестно'), false);
+    } catch (e) { showToast('Ошибка запроса: ' + e.message, false); }
+  }, { okText: 'Удалить', danger: true, icon: '🗑️' });
 }
 
-function editRole(id) { alert('Редактирование ролей скоро будет добавлено (ID: ' + id + ')'); }
+function editRole(id) { showToast('Редактирование ролей скоро будет добавлено', true); }
 
 loadRoles();
 </script>

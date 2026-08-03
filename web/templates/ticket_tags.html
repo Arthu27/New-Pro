@@ -182,20 +182,16 @@ async function createTag() {
 }
 
 async function deleteTag(tagId) {
-  if (!confirm('Удалить этот тег?')) return;
-  
-  try {
-    const response = await fetch(`/api/ticket-tags/${tagId}`, {method: 'DELETE'});
-    const data = await response.json();
-    
-    if (data.success) {
-      loadTags();
-    } else {
-      alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+  window.askConfirm('Удалить тег', 'Удалить этот тег?', async function () {
+    try {
+      const response = await fetch(`/api/ticket-tags/${tagId}`, {method: 'DELETE'});
+      const data = await response.json();
+      if (data.success) { loadTags(); showToast('Тег удалён', true); }
+      else showToast('Ошибка: ' + (data.error || 'Неизвестная ошибка'), false);
+    } catch (e) {
+      showToast('Ошибка соединения', false);
     }
-  } catch (e) {
-    alert('Ошибка соединения');
-  }
+  }, { okText: 'Удалить', danger: true, icon: '🗑️' });
 }
 
 document.addEventListener('DOMContentLoaded', loadTags);

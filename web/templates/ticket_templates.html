@@ -157,20 +157,16 @@ async function createTemplate() {
 }
 
 async function deleteTemplate(templateId) {
-  if (!confirm('Удалить этот шаблон?')) return;
-  
-  try {
-    const response = await fetch(`/api/ticket-templates/${templateId}`, {method: 'DELETE'});
-    const data = await response.json();
-    
-    if (data.success) {
-      loadTemplates();
-    } else {
-      alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+  window.askConfirm('Удалить шаблон', 'Удалить этот шаблон?', async function () {
+    try {
+      const response = await fetch(`/api/ticket-templates/${templateId}`, {method: 'DELETE'});
+      const data = await response.json();
+      if (data.success) { loadTemplates(); showToast('Шаблон удалён', true); }
+      else showToast('Ошибка: ' + (data.error || 'Неизвестная ошибка'), false);
+    } catch (e) {
+      showToast('Ошибка соединения', false);
     }
-  } catch (e) {
-    alert('Ошибка соединения');
-  }
+  }, { okText: 'Удалить', danger: true, icon: '🗑️' });
 }
 
 async function editTemplate(templateId) {

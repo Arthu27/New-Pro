@@ -426,18 +426,20 @@
 
     $('btn-clear-roles').addEventListener('click', function () {
       if (!trackedIds.length) return;
-      if (!confirm('Удалить все отслеживаемые роли?')) return;
-      trackedIds = [];
-      saveConfig();
-      renderAll();
+      window.askConfirm('Сброс ролей', 'Удалить все отслеживаемые роли?', function () {
+        trackedIds = [];
+        saveConfig();
+        renderAll();
+      }, { okText: 'Удалить', danger: true, icon: '🗑️' });
     });
 
     $('btn-clear-log').addEventListener('click', function () {
       if (!currentConfig || !(currentConfig.leave_log || []).length) return;
-      if (!confirm('Полностью очистить историю логов?')) return;
-      currentConfig.leave_log = [];
-      saveConfig();
-      renderAll();
+      window.askConfirm('Очистить логи', 'Полностью очистить историю логов? Действие необратимо.', function () {
+        currentConfig.leave_log = [];
+        saveConfig();
+        renderAll();
+      }, { okText: 'Очистить', danger: true, icon: '🧹' });
     });
   }
 

@@ -573,8 +573,7 @@ document.addEventListener('DOMContentLoaded', async function () {
 })();
 
 // Global toast notification (used everywhere in the panel)
-window.showToast = function (message, success) {
-  try {
+window.showToast = function (message, success) {  try {
     var host = document.getElementById('toastHost');
     if (!host) {
       host = document.createElement('div');
@@ -600,6 +599,34 @@ window.showToast = function (message, success) {
 };
 
 // Keyboard shortcut palette (Ctrl+K / Cmd+K)
+// ============================================================
+// GLOBAL: замена нативного alert() на красивый toast во всём панели
+// ============================================================
+(function () {
+  var nativeAlert = window.alert;
+  window.alert = function (msg) {
+    try {
+      if (typeof window.showToast === 'function') { window.showToast(String(msg == null ? '' : msg), false); return; }
+      if (window.__pendingAlerts) { window.__pendingAlerts.push(String(msg)); return; }
+    } catch (e) {}
+    // Fallback: нативный alert, если showToast ещё не готов
+    nativeAlert(msg);
+  };
+})();
+
+// ============================================================
+// GLOBAL: удобная обёртка для подтверждения действий.
+// Использует красивый confirmAction-модал; fallback на confirm().
+// ============================================================
+window.askConfirm = function (title, desc, onOk, opts) {
+  opts = opts || {};
+  if (typeof window.confirmAction === 'function') {
+    window.confirmAction(title, desc, onOk, opts);
+  } else if (window.confirm(desc)) {
+    if (typeof onOk === 'function') onOk();
+  }
+};
+
 (function () {
   var palette = document.getElementById('kbdPalette');
   var input   = document.getElementById('kbdPaletteInput');

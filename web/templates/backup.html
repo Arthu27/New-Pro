@@ -100,12 +100,12 @@
   function bind() {
     $('btn-create').addEventListener('click', function () { showToast('Резервная копия создана', true); backups.unshift({name:'backup_now.zip',size:'12.5 MB',date:'сейчас'}); render(); });
     $('btn-restore').addEventListener('click', function () { showToast('Выберите копию для восстановления', true); });
-    $('btn-clean').addEventListener('click', function () { if (confirm('Удалить старые копии?')) { backups = backups.slice(0, 2); render(); } });
+    $('btn-clean').addEventListener('click', function () { window.askConfirm('Очистка', 'Удалить старые копии?', function () { backups = backups.slice(0, 2); render(); }, { okText: 'Удалить', danger: true }); });
     $('bk-body').addEventListener('click', function (e) {
       var b = e.target.closest('button[data-act]');
       if (!b) return;
       var i = parseInt(b.getAttribute('data-i'), 10);
-      if (b.getAttribute('data-act') === 'del') { if (confirm('Удалить копию?')) { backups.splice(i, 1); render(); } }
+      if (b.getAttribute('data-act') === 'del') { window.askConfirm('Удалить копию', 'Удалить эту копию бэкапа?', function () { backups.splice(i, 1); render(); }, { okText: 'Удалить', danger: true }); }
       else { showToast('Восстановление запущено', true); }
     });
   }

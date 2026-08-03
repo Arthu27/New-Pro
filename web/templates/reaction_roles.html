@@ -203,9 +203,11 @@ async function createRR() {
 }
 
 async function deleteRR(id) {
-  if (!confirm('Удалить эту панель?')) return;
-  await fetch('/api/guild/'+selectedGuild+'/reaction-roles/'+id+'/delete', {method:'POST'});
-  loadRR();
+  window.askConfirm('Удалить панель', 'Удалить эту панель реакций? Действие необратимо.', function () {
+    fetch('/api/guild/'+selectedGuild+'/reaction-roles/'+id+'/delete', {method:'POST'})
+      .then(r => r.json()).then(d => { if(d.success) loadRR(); })
+      .catch(e => showToast('Ошибка: '+e.message, false));
+  }, { okText: 'Удалить', danger: true, icon: '🗑️' });
 }
 
 loadGuilds();

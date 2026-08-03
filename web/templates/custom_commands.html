@@ -1,4 +1,4 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 {% block title %}Пользовательские команды - Aether{% endblock %}
 {% block page_title %}<i class="fas fa-terminal"   style="animation: pulse 2s infinite;"></i> ОСОБЫЙ КОМАНДЫ{% endblock %}
 {% block content %}
@@ -118,10 +118,11 @@ async function createCommand() {
 }
 
 async function deleteCmd(id) {
-  if(!confirm('Это команда удалить если хотите emin misiniz ? siz?')) return;
-  var r = await fetch('/api/guild/'+selectedGuild+'/custom-commands/'+id+'/delete', {method:'POST'});
-  var d = await r.json();
-  if(d.success) loadCommands();
+  window.askConfirm('Удалить команду', 'Вы уверены, что хотите удалить эту команду? Действие необратимо.', function () {
+    fetch('/api/guild/'+selectedGuild+'/custom-commands/'+id+'/delete', {method:'POST'})
+      .then(r => r.json()).then(d => { if(d.success) { loadCommands(); showToast('Команда удалена', true); } })
+      .catch(e => showToast('Ошибка: '+e.message, false));
+  }, { okText: 'Удалить', danger: true, icon: '🗑️' });
 }
 
 document.getElementById('modal').addEventListener('click', function(e){ if(e.target===this) closeModal(); });

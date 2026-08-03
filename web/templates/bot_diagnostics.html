@@ -263,11 +263,11 @@
     });
   };
   window.confirmRestart = function() {
-    if (confirm('Точно перезагрузить весь бот? Это прервёт работу на 5-15 секунд.')) {
+    window.askConfirm('Перезагрузка бота', 'Точно перезагрузить весь бот? Это прервёт работу на 5–15 секунд.', function () {
       fetch('/api/bot/restart', {method:'POST'}).then(r => r.json()).then(d => {
         showToast('🔄 Бот перезагружается...', true);
       });
-    }
+    }, { icon: '🔄', okText: 'Перезапустить', danger: true });
   };
   function loadErrors() {
     fetch('/api/bot/errors').then(r => r.json()).then(errs => {
