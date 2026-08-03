@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Панель Aether{% endblock %}</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/static/style.css?v=7">
+    <link rel="stylesheet" href="/static/style.css?v=8">
     <script>
       // Apply theme before render to prevent FOUC
       (function(){
@@ -771,7 +771,94 @@ window.showToast = function (message, success) {
 })();
 
 // ============================================================
-// GLOBAL SCROLL PRESERVATION — no more page jumping to top
+// VISUAL POLISH — button ripple + count-up + donut gauges
+// ============================================================
+(function () {
+  // ── Button ripple (по клику по .btn / button с классом) ──
+  document.addEventListener('pointerdown', function (e) {
+    var t = e.target;
+    var btn = t.closest ? t.closest('.btn, button, .icon-btn, .tab-btn') : null;
+    if (!btn || btn.disabled) return;
+    if (btn.classList.contains('no-ripple')) return;
+    var rect = btn.getBoundingClientRect();
+    var d = Math.max(rect.width, rect.height) * 1.2;
+    var span = document.createElement('span');
+    span.className = 'ripple-ink';
+    span.style.width = span.style.height = d + 'px';
+    span.style.left = (e.clientX - rect.left - d / 2) + 'px';
+    span.style.top = (e.clientY - rect.top - d / 2) + 'px';
+    btn.style.position = 'relative';
+    btn.style.overflow = 'hidden';
+    btn.appendChild(span);
+    setTimeout(function () { span.remove(); }, 700);
+  });
+
+  // ── Count-up: плавная анимация чисел для [data-countup] ──
+  // (один раз при первом появлении числа — безопасно для live-refresh)
+  function numOf(v) { var n = parseFloat(String(v == null ? '' : v).replace(/[^\d.\-]/g, '')); return isNaN(n) ? null : n; }
+  function animateOnce(el) {
+    if (el.getAttribute('data-counted') === '1') return;
+    var n = numOf(el.textContent);
+    if (n == null) return;
+    var suffix = (String(el.textContent).match(/[^\d.\-]+$/) || [''])[0];
+    el.setAttribute('data-counted', '1');
+    var t0 = null, dur = 850;
+    function step(ts) {
+      if (t0 == null) t0 = ts;
+      var p = Math.min((ts - t0) / dur, 1);
+      var e = 1 - Math.pow(1 - p, 3);
+      el.textContent = Math.round(n * e) + suffix;
+      if (p < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+  var obs = new MutationObserver(function (muts) {
+    muts.forEach(function (mu) {
+      if (mu.type === 'characterData') {
+        var p = mu.target.parentElement;
+        if (p && p.matches && p.matches('[data-countup]')) animateOnce(p);
+      } else if (mu.addedNodes) {
+        mu.addedNodes.forEach(function (n) {
+          if (n && n.nodeType === 1 && n.querySelectorAll) {
+            n.querySelectorAll('[data-countup]').forEach(animateOnce);
+            if (n.matches && n.matches('[data-countup]')) animateOnce(n);
+          }
+        });
+      }
+    });
+  });
+  if (document.body) obs.observe(document.body, { subtree: true, characterData: true, childList: true });
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('[data-countup]').forEach(animateOnce);
+  });
+
+  // ── Donut gauge: window.drawDonut(el, percent, color) ──
+  window.drawDonut = function (el, percent, color) {
+    if (!el) return;
+    var r = 15.9155, c = 2 * Math.PI * r;
+    var size = el.getAttribute('data-size') || '96';
+    var p = Math.max(0, Math.min(100, percent));
+    el.innerHTML =
+      '<svg viewBox="0 0 36 36" style="width:' + size + 'px;height:' + size + 'px;transform:rotate(-90deg)">' +
+      '<circle cx="18" cy="18" r="' + r + '" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="3.4"/>' +
+      '<circle class="donut-fill" cx="18" cy="18" r="' + r + '" fill="none" stroke="' + (color || '#e0b04a') + '" stroke-width="3.4" stroke-linecap="round" stroke-dasharray="' + c + '" stroke-dashoffset="' + c + '"/>' +
+      '</svg>';
+    var fill = el.querySelector('.donut-fill');
+    if (!fill) return;
+    var cur = parseFloat(el.getAttribute('data-val')) || 0;
+    var t0 = null, dur = 900;
+    function step(ts) {
+      if (t0 == null) t0 = ts;
+      var pr = Math.min((ts - t0) / dur, 1);
+      var e = 1 - Math.pow(1 - pr, 3);
+      var v = cur + (p - cur) * e;
+      fill.style.strokeDashoffset = c * (1 - v / 100);
+      if (pr < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+    el.setAttribute('data-val', p);
+  };
+})();
 // Удерживает позицию прокрутки при любых перерисовках DOM,
 // кликах по якорным ссылкам и открытии/закрытии меню.
 // ============================================================

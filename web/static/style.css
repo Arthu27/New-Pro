@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 /* ============================================================
    Aether Panel — Premium UI v5.0
@@ -6195,3 +6195,104 @@ body.welcome-lock{ overflow: hidden; height: 100vh; }
   .welcome-title{ font-size: 34px; letter-spacing: 3px; }
   .welcome-btn{ padding: 13px 26px; }
 }
+
+/* ============================================================
+   VISUAL POLISH — glassmorphism, neon accents, skeleton,
+   micro-animations, donut gauges, typography
+   ============================================================ */
+
+/* ── Typography: Poppins for display numbers / hero ─────────── */
+.page-hero h1, .dash-card-val, .stat-value, .stat-val, .dash-card-val,
+.stat-card-big .stat-value, .quick-item h3, .welcome-title {
+  font-family: 'Poppins', 'Inter', sans-serif;
+  letter-spacing: -0.02em;
+}
+
+/* ── Glassmorphism depth on cards ───────────────────────────── */
+.section, .box, .panel, .card, .stat-card, .dash-card, .dash-box,
+.ch-box, .logs-box, .warn-box, .setting-card, .bulk-card, .ms-card,
+.roles-card, .modal-card, .modal-box, .kbd-palette-panel {
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  background-image: linear-gradient(165deg, rgba(255,255,255,0.025), transparent 40%) !important;
+  box-shadow: 0 12px 44px rgba(0,0,0,0.40), inset 0 1px 0 rgba(255,255,255,0.05) !important;
+  position: relative;
+}
+/* Inner top sheen line for glass depth */
+.section::before, .box::before, .panel::before, .card::before, .dash-card::before {
+  content: '';
+  position: absolute; top: 0; left: 6%; right: 6%; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+  pointer-events: none;
+}
+
+/* ── Neon accent utilities (thin glowing buttons/lines) ─────── */
+.btn-neon{
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 18px; border-radius: 11px;
+  background: rgba(255,255,255,0.02);
+  font-size: 13px; font-weight: 700; cursor: pointer; border: none;
+  transition: all 0.22s var(--ease);
+}
+.btn-neon:hover{ transform: translateY(-2px); }
+.btn-neon.violet{ color:#c4b5fd; box-shadow:0 0 0 1.5px rgba(167,139,250,0.5), 0 6px 20px rgba(167,139,250,0.18); }
+.btn-neon.violet:hover{ background:rgba(167,139,250,0.12); box-shadow:0 0 0 1.5px #a78bfa, 0 8px 26px rgba(167,139,250,0.35); }
+.btn-neon.cyan{ color:#7dd3fc; box-shadow:0 0 0 1.5px rgba(56,189,248,0.5), 0 6px 20px rgba(56,189,248,0.18); }
+.btn-neon.cyan:hover{ background:rgba(56,189,248,0.12); box-shadow:0 0 0 1.5px #38bdf8, 0 8px 26px rgba(56,189,248,0.35); }
+.btn-neon.green{ color:#86efac; box-shadow:0 0 0 1.5px rgba(74,222,128,0.5), 0 6px 20px rgba(74,222,128,0.18); }
+.btn-neon.green:hover{ background:rgba(74,222,128,0.12); box-shadow:0 0 0 1.5px #4ade80, 0 8px 26px rgba(74,222,128,0.35); }
+
+.neon-line{ height:1px; border:none; margin:14px 0; background:linear-gradient(90deg,transparent,rgba(167,139,250,0.6),rgba(56,189,248,0.4),transparent); }
+
+/* ── Skeleton loading ───────────────────────────────────────── */
+.skeleton, .skeleton-row, .skeleton-card, .skeleton-circle {
+  background: linear-gradient(90deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.09) 50%, rgba(255,255,255,0.04) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease infinite;
+  border-radius: 10px;
+}
+.skeleton{ height: 12px; }
+.skeleton-row{ height: 46px; margin-bottom: 8px; border-radius: 10px; }
+.skeleton-card{ height: 110px; border-radius: 14px; }
+.skeleton-circle{ width: 44px; height: 44px; border-radius: 50%; }
+.skeleton-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; margin-bottom:14px; }
+
+/* ── Micro-animations: card lift, press, ripple ─────────────── */
+.section, .box, .panel, .card, .stat-card, .dash-card, .dash-box,
+.guild-card, .server-card, .setting-card, .ms-card, .roles-card {
+  transition: transform 0.22s var(--ease), box-shadow 0.22s var(--ease),
+              border-color 0.22s var(--ease);
+}
+.section:hover, .box:hover, .panel:hover, .card:hover, .stat-card:hover,
+.dash-card:hover, .guild-card:hover, .server-card:hover {
+  transform: translateY(-3px);
+}
+.btn:active, button:active{ transform: translateY(1px) scale(0.98); }
+
+/* Ripple element injected by JS */
+.ripple-ink{
+  position: absolute; border-radius: 50%;
+  transform: scale(0); background: rgba(255,255,255,0.35);
+  animation: rippleAnim 0.6s var(--ease-out); pointer-events: none;
+}
+@keyframes rippleAnim { to { transform: scale(3); opacity: 0; } }
+
+/* ── Donut gauge ────────────────────────────────────────────── */
+.donut-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; margin-bottom:18px; }
+.donut-card{
+  background: linear-gradient(165deg, rgba(224,176,74,0.05), rgba(224,176,74,0.01));
+  border: 1px solid var(--line-2); border-radius: 16px; padding: 20px;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  backdrop-filter: blur(16px);
+}
+.donut-card:hover{ border-color: var(--ac-line); transform: translateY(-2px); }
+.donut{ position: relative; display: inline-flex; align-items: center; justify-content: center; }
+.donut svg{ display:block; }
+.donut-center{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; line-height:1; }
+.donut-center b{ font-size:19px; font-weight:800; color:var(--text); font-family:'Poppins',sans-serif; }
+.donut-center span{ font-size:10px; color:var(--text-3); text-transform:uppercase; letter-spacing:.08em; margin-top:3px; }
+.donut-cap{ font-size:12px; color:var(--text-2); font-weight:600; }
+.donut-cap.ok{ color:var(--ok); } .donut-cap.warn{ color:var(--warn); } .donut-cap.bad{ color:var(--err); }
+
+/* Live pulse dot for gauges */
+.live-dot{ width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:6px; background:var(--ok); box-shadow:0 0 8px var(--ok); animation:pulse 1.6s ease-in-out infinite; }

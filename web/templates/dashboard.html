@@ -265,6 +265,14 @@
   </div>
 </div>
 
+<!-- Живой датчик пинга -->
+<div class="donut-grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));margin-top:16px">
+  <div class="donut-card">
+    <div class="donut" id="pingDonut" data-size="96"></div>
+    <div class="donut-cap" id="pingCap">—</div>
+  </div>
+</div>
+
 <!-- Threat index -->
 <div class="threat-card">
   <div class="threat-icon" id="threatIconWrap">
@@ -444,6 +452,14 @@
       animateNumber(uEl, d.users || 0);
       var lat = d.latency || 0;
       lEl.innerHTML = lat.toLocaleString() + '<small>ms</small>';
+
+      // Живой датчик пинга
+      if (window.drawDonut) {
+        var ppct = Math.max(0, Math.min(100, Math.round(lat / 200 * 100)));
+        window.drawDonut(document.getElementById('pingDonut'), ppct, lat < 80 ? '#4ade80' : lat < 150 ? '#fbbf24' : '#f87171');
+        var pcap = document.getElementById('pingCap');
+        if (pcap) { pcap.textContent = lat + ' ms'; pcap.className = 'donut-cap ' + (lat < 80 ? 'ok' : lat < 150 ? 'warn' : 'bad'); }
+      }
 
       if (d.error) {
         sEl.textContent = 'ОФФЛАЙН';
