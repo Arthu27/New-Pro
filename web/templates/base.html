@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Панель Aether{% endblock %}</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/static/style.css?v=8">
+    <link rel="stylesheet" href="/static/style.css?v=9">
     <script>
       // Apply theme before render to prevent FOUC
       (function(){
@@ -858,6 +858,36 @@ window.showToast = function (message, success) {
     requestAnimationFrame(step);
     el.setAttribute('data-val', p);
   };
+})();
+
+// ============================================================
+// SCROLL REVEAL — элементы с [data-reveal] появляются при прокрутке
+// Поддерживает динамически добавленные элементы (live-refresh).
+// ============================================================
+(function () {
+  if (!('IntersectionObserver' in window)) {
+    document.querySelectorAll('[data-reveal]').forEach(function (e) { e.classList.add('in'); });
+    return;
+  }
+  function revealEl(el) { el.classList.add('in'); io.unobserve(el); }
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (en) { if (en.isIntersecting) revealEl(en.target); });
+  }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+
+  function observe(el) { if (el && !el.classList.contains('in')) io.observe(el); }
+  document.querySelectorAll('[data-reveal]').forEach(observe);
+
+  // Live-refresh: наблюдать за новыми элементами
+  var mo = new MutationObserver(function (muts) {
+    muts.forEach(function (mu) {
+      (mu.addedNodes || []).forEach(function (n) {
+        if (n.nodeType !== 1) return;
+        if (n.matches && n.matches('[data-reveal]')) observe(n);
+        if (n.querySelectorAll) n.querySelectorAll('[data-reveal]').forEach(observe);
+      });
+    });
+  });
+  mo.observe(document.body, { subtree: true, childList: true });
 })();
 // Удерживает позицию прокрутки при любых перерисовках DOM,
 // кликах по якорным ссылкам и открытии/закрытии меню.
