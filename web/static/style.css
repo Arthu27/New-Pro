@@ -6344,3 +6344,78 @@ body.welcome-lock{ overflow: hidden; height: 100vh; }
 .modal-title{font-size:16px;font-weight:700;color:var(--text);margin-bottom:14px;display:flex;align-items:center;gap:9px}
 .modal-title i{color:var(--ac)}
 .modal-content{color:var(--text)}
+
+/* ============================================================
+   MOBILE FULL COMPATIBILITY — phones & small screens
+   ============================================================ */
+/* Prevent horizontal scroll on all pages */
+html, body { max-width: 100%; overflow-x: hidden; }
+*, *::before, *::after { max-width: 100%; box-sizing: border-box; }
+
+/* Responsive grid collapses */
+@media (max-width: 900px) {
+  .emb-grid, .editor-grid, .mp-grid, .grid2, .analytics-grid-2, .dash-cols,
+  .pa-role-grid, .form-row-2, .form-row-3, .donut-grid, .sh-grid, .role-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .stat-grid { grid-template-columns: 1fr 1fr !important; }
+}
+@media (max-width: 560px) {
+  .stat-grid { grid-template-columns: 1fr !important; }
+  .stat-row, .sh-stats, .mh-stats, .warn-stats, .log-stats, .g-stats, .tm-stats,
+  .dp-stats, .stats-grid, .eco-grid, .ld-grid, .aw-grid, .give-grid, .shop-grid,
+  .g-grid, .cmd-grid, .quick-grid, .donut-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+}
+@media (max-width: 400px) {
+  .stat-row, .sh-stats, .mh-stats, .warn-stats, .log-stats, .g-stats, .tm-stats,
+  .dp-stats, .stats-grid, .eco-grid, .ld-grid, .aw-grid, .give-grid, .shop-grid,
+  .g-grid, .cmd-grid, .quick-grid, .donut-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Tables → scrollable on mobile (no overflow/break) */
+@media (max-width: 760px) {
+  .table-scroll, table, .data-table, .logs-body, .mh-body, .warn-body {
+    display: block !important;
+    width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+  }
+}
+
+/* Cards/rows: allow wrap, reduce padding */
+@media (max-width: 600px) {
+  .section, .box, .panel, .card, .stat-card, .dash-card, .dash-box,
+  .premium-card, .wc-card, .lv-box, .emb-box, .editor-box, .glass-card {
+    padding: 15px 14px !important;
+  }
+  .main-content { padding: 60px 12px 40px !important; }
+  .page-hero { padding: 18px 16px !important; }
+  .page-hero h1 { font-size: 18px !important; }
+  .ch-toolbar, .logs-toolbar, .warn-toolbar, .mh-toolbar, .users-toolbar,
+  .inv-toolbar, .afk-toolbar, .wl-toolbar, .controls-bar, .filter-toolbar {
+    flex-direction: column !important; align-items: stretch !important;
+  }
+  .ch-toolbar input, .ch-toolbar select, .logs-toolbar select, .warn-toolbar input,
+  .warn-toolbar select, .mh-toolbar input, .mh-toolbar select, .users-toolbar select,
+  .users-toolbar input, .inv-toolbar select, .afk-toolbar, .wl-toolbar {
+    width: 100% !important; min-width: 0 !important;
+  }
+  .btn, .btn-primary, .control-btn, .save-btn, .btn-add, .btn-new, .form-btn {
+    width: 100% !important; justify-content: center !important;
+  }
+  .action-bar { flex-direction: column; align-items: stretch; }
+  .action-bar button { width: 100%; }
+  .donut-card { padding: 16px 12px; }
+  .sum-item { padding: 13px 14px; }
+  .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr !important; }
+  .stats-grid { grid-template-columns: 1fr !important; }
+  .modal-card, .modal-box, .member-modal, .cmd-modal { width: 94vw !important; max-height: 88vh; }
+  .notif-dropdown { width: calc(100vw - 20px) !important; left: 10px; right: 10px !important; }
+  .activity-drawer { width: 100vw !important; }
+  .kbd-palette-panel { width: calc(100vw - 20px) !important; }
+}
