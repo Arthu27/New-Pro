@@ -16,72 +16,96 @@
 {% endblock %}
 
 <style>
-  .rp-wrap { display:grid; grid-template-columns: 300px 1fr; gap:18px; padding:6px 2px 30px; }
+  .rp-wrap { display:grid; grid-template-columns: 310px 1fr; gap:20px; padding:6px 2px 34px; }
   @media (max-width: 900px){ .rp-wrap{ grid-template-columns:1fr; } }
-  .rp-roles { background: rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:16px; align-self:start; position:sticky; top:10px; }
-  .rp-roles h3 { margin:0 0 12px; font-size:14px; letter-spacing:1px; opacity:.8; }
-  .rp-role { display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:9px; cursor:pointer; margin-bottom:4px; border:1px solid transparent; transition:.15s; }
-  .rp-role:hover { background:rgba(255,255,255,0.05); }
-  .rp-role.active { background:rgba(255,255,255,0.08); border-color:var(--accent, #5865F2); }
-  .rp-role .swatch { width:16px; height:16px; border-radius:50%; flex-shrink:0; border:1px solid rgba(255,255,255,0.2); }
+
+  .rp-roles { background: linear-gradient(160deg, rgba(255,255,255,0.045), rgba(255,255,255,0.015)); border:1px solid rgba(255,255,255,0.09); border-radius:16px; padding:18px; align-self:start; position:sticky; top:12px; backdrop-filter:blur(6px); }
+  .rp-roles h3 { margin:0 0 14px; font-size:13px; letter-spacing:1.5px; opacity:.75; display:flex; align-items:center; gap:8px; }
+  .rp-roles h3 i { color:var(--accent,#5865F2); }
+  #role-list { max-height:66vh; overflow:auto; padding-right:4px; }
+  #role-list::-webkit-scrollbar{ width:6px; } #role-list::-webkit-scrollbar-thumb{ background:rgba(255,255,255,0.15); border-radius:6px; }
+  .rp-role { display:flex; align-items:center; gap:11px; padding:10px 12px; border-radius:10px; cursor:pointer; margin-bottom:5px; border:1px solid transparent; transition:.15s; }
+  .rp-role:hover { background:rgba(255,255,255,0.06); }
+  .rp-role.active { background:linear-gradient(90deg, rgba(88,101,242,0.18), rgba(88,101,242,0.04)); border-color:var(--accent,#5865F2); }
+  .rp-role .swatch { width:18px; height:18px; border-radius:6px; flex-shrink:0; border:1px solid rgba(255,255,255,0.25); }
   .rp-role .rname { flex:1; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .rp-role .cnt { font-size:11px; opacity:.5; }
-  .rp-panel { background: rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:18px; }
-  .rp-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:6px; }
-  .rp-head h2 { margin:0; font-size:18px; }
-  .rp-head .sub { font-size:12px; opacity:.6; margin-top:3px; }
-  .preset-row { display:flex; gap:8px; flex-wrap:wrap; margin:14px 0 18px; }
-  .preset-btn { padding:9px 14px; border-radius:9px; border:1px solid rgba(255,255,255,0.15); background:rgba(255,255,255,0.04); cursor:pointer; font-size:12.5px; transition:.15s; }
-  .preset-btn:hover { background:var(--accent,#5865F2); color:#fff; }
-  .cat-box { border:1px solid rgba(255,255,255,0.08); border-radius:12px; margin-bottom:12px; overflow:hidden; }
-  .cat-head { display:flex; align-items:center; gap:12px; padding:12px 14px; background:rgba(255,255,255,0.03); }
-  .cat-head .tgl { position:relative; width:42px; height:22px; flex-shrink:0; }
+  .rp-role .cnt { font-size:11px; opacity:.45; font-family:monospace; }
+
+  .rp-panel { background: linear-gradient(160deg, rgba(255,255,255,0.045), rgba(255,255,255,0.015)); border:1px solid rgba(255,255,255,0.09); border-radius:16px; padding:20px; backdrop-filter:blur(6px); }
+  .rp-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:8px; }
+  .rp-head h2 { margin:0; font-size:19px; display:flex; align-items:center; gap:9px; }
+  .rp-head h2 i { color:var(--accent,#5865F2); }
+  .rp-head .sub { font-size:12px; opacity:.55; margin-top:4px; }
+
+  .preset-row { display:flex; gap:9px; flex-wrap:wrap; margin:16px 0 20px; }
+  .preset-btn { padding:9px 15px; border-radius:10px; border:1px solid rgba(255,255,255,0.16); background:rgba(255,255,255,0.05); cursor:pointer; font-size:12.5px; transition:.15s; display:inline-flex; align-items:center; gap:7px; }
+  .preset-btn:hover { background:var(--accent,#5865F2); color:#fff; border-color:transparent; transform:translateY(-1px); }
+  .preset-btn i { font-size:12px; }
+
+  .cat-box { border:1px solid rgba(255,255,255,0.09); border-radius:14px; margin-bottom:14px; overflow:hidden; background:rgba(0,0,0,0.12); }
+  .cat-box.open { border-color:rgba(88,101,242,0.35); }
+  .cat-head { display:flex; align-items:center; gap:14px; padding:14px 16px; background:rgba(255,255,255,0.03); }
+  .cat-head .tgl { position:relative; width:44px; height:24px; flex-shrink:0; }
   .cat-head .tgl input { opacity:0; width:0; height:0; }
-  .cat-head .tgl .sl { position:absolute; inset:0; background:rgba(255,255,255,0.15); border-radius:22px; transition:.2s; cursor:pointer; }
-  .cat-head .tgl .sl:before { content:""; position:absolute; height:16px; width:16px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.2s; }
+  .cat-head .tgl .sl { position:absolute; inset:0; background:rgba(255,255,255,0.16); border-radius:24px; transition:.2s; cursor:pointer; }
+  .cat-head .tgl .sl:before { content:""; position:absolute; height:18px; width:18px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.2s; box-shadow:0 2px 6px rgba(0,0,0,0.4); }
   .cat-head .tgl input:checked + .sl { background:var(--accent,#5865F2); }
   .cat-head .tgl input:checked + .sl:before { transform:translateX(20px); }
-  .cat-title { font-size:14px; font-weight:600; flex:1; }
-  .cat-count { font-size:11.5px; opacity:.55; }
-  .cat-body { padding:10px 14px 14px; display:none; }
+  .cat-title { font-size:14.5px; font-weight:700; flex:1; letter-spacing:.3px; }
+  .cat-count { font-size:11.5px; opacity:.5; padding:3px 9px; border-radius:20px; background:rgba(255,255,255,0.07); }
+  .everyone-btn { margin-left:auto; }
+  .cat-body { padding:12px 16px 16px; display:none; border-top:1px solid rgba(255,255,255,0.06); }
   .cat-box.open .cat-body { display:block; }
-  .cmd-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:8px; }
-  .cmd-item { display:flex; align-items:center; justify-content:space-between; gap:8px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:8px 10px; font-size:12.5px; }
-  .cmd-item .cname { font-family:monospace; }
-  .cmd-item .cbtn { font-size:11px; padding:4px 9px; border-radius:6px; cursor:pointer; border:1px solid rgba(255,255,255,0.15); background:rgba(255,255,255,0.03); }
-  .cmd-item .cbtn.grant { background:var(--accent,#5865F2); color:#fff; }
-  .info-bar { background:rgba(88,101,242,0.12); border:1px solid rgba(88,101,242,0.3); border-radius:10px; padding:11px 13px; font-size:12.5px; margin-bottom:16px; }
-  .rp-toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(120%); background:#111; border:1px solid rgba(255,255,255,0.15); padding:12px 20px; border-radius:10px; font-size:13px; z-index:999; transition:.3s; box-shadow:0 8px 30px rgba(0,0,0,0.4); }
+
+  .bulk-row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:14px; padding:10px 12px; border-radius:10px; background:rgba(88,101,242,0.07); border:1px dashed rgba(88,101,242,0.25); }
+  .bulk-row .bulk-label { font-size:12px; opacity:.75; display:flex; align-items:center; gap:7px; }
+  .bulk-row .bulk-label i { color:var(--accent,#5865F2); }
+  .bulk-roles { min-width:220px; padding:7px; border-radius:9px; background:rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.14); color:#fff; font-size:12px; }
+  .bulk-roles option { background:#1a1a1f; }
+
+  .cmd-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(215px,1fr)); gap:9px; }
+  .cmd-item { display:flex; align-items:center; justify-content:space-between; gap:8px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-radius:9px; padding:9px 11px; font-size:12.5px; transition:.15s; }
+  .cmd-item:hover { background:rgba(255,255,255,0.05); }
+  .cmd-item .cname { font-family:monospace; color:#9ad0ff; font-size:12px; }
+  .cmd-item .cbtn { font-size:11px; padding:5px 10px; border-radius:7px; cursor:pointer; border:1px solid rgba(255,255,255,0.15); background:rgba(255,255,255,0.04); transition:.15s; display:inline-flex; align-items:center; gap:5px; }
+  .cmd-item .cbtn:hover { background:rgba(255,255,255,0.1); }
+  .cmd-item .cbtn.grant { background:var(--accent,#5865F2); color:#fff; border-color:transparent; }
+
+  .info-bar { background:linear-gradient(90deg, rgba(88,101,242,0.14), rgba(88,101,242,0.05)); border:1px solid rgba(88,101,242,0.3); border-radius:12px; padding:13px 16px; font-size:12.5px; margin-bottom:20px; display:flex; gap:10px; align-items:flex-start; }
+  .info-bar i { color:var(--accent,#5865F2); margin-top:1px; }
+
+  .rp-toast { position:fixed; bottom:26px; left:50%; transform:translateX(-50%) translateY(130%); background:rgba(18,18,22,0.95); border:1px solid rgba(255,255,255,0.16); padding:13px 22px; border-radius:12px; font-size:13px; z-index:999; transition:.3s; box-shadow:0 10px 34px rgba(0,0,0,0.55); backdrop-filter:blur(8px); }
   .rp-toast.show { transform:translateX(-50%) translateY(0); }
   .rp-toast.ok { border-color:#2ecc71; }
   .rp-toast.err { border-color:#e74c3c; }
-  .clear-all { color:#e74c3c; border-color:rgba(231,76,60,0.4); }
+  .clear-all { color:#ff6b6b; border-color:rgba(231,76,60,0.35); }
+  .clear-all:hover { background:#e74c3c; }
 </style>
 
 <div class="info-bar">
-  <i class="fas fa-info-circle"></i> <b>Как это работает:</b> выберите роль слева → отметьте категории/команды, к которым у неё должен быть доступ. Кнопка <b>«Открыть»</b> разрешает команду для выбранной роли, <b>«Всем»</b> — снимает ограничение (команда доступна всем). Если для команды не задано ограничений — она доступна всем. Администраторы имеют доступ ко всему.
+  <i class="fas fa-info-circle"></i> <b>Как это работает:</b> выберите роль слева → отметьте категории и команды, к которым у неё должен быть доступ. Кнопка <b>«Открыть»</b> даёт доступ к команде для выбранной роли, <b>«Всем»</b> — снимает ограничения (команда доступна всем). Если для команды нет ограничений — она доступна всем. Администраторы имеют доступ ко всему автоматически.
 </div>
 
 <div class="rp-wrap">
   <div class="rp-roles">
     <h3><i class="fas fa-users-cog"></i> РОЛИ СЕРВЕРА</h3>
-    <div id="role-list" style="max-height:65vh;overflow:auto;"></div>
+    <div id="role-list"></div>
   </div>
 
   <div class="rp-panel">
     <div class="rp-head">
       <div>
-        <h2 id="sel-role-name">Выберите роль</h2>
-        <div class="sub" id="sel-role-sub">Нажмите на роль в списке слева</div>
+        <h2 id="sel-role-name"><i class="fas fa-user-tag"></i> Выберите роль</h2>
+        <div class="sub" id="sel-role-sub">Нажмите на роль в списке слева, чтобы настроить её доступ</div>
       </div>
-      <button class="preset-btn clear-all" onclick="resetAll()"><i class="fas fa-undo"></i> Сбросить все ограничения</button>
+      <button class="preset-btn clear-all" onclick="resetAll()"><i class="fas fa-undo-alt"></i> Сбросить все ограничения</button>
     </div>
 
     <div class="preset-row">
       <span style="font-size:12px;opacity:.6;align-self:center;">Быстрые пресеты для выбранной роли:</span>
       <button class="preset-btn" onclick="applyPreset('mod')"><i class="fas fa-user-shield"></i> Только модерация</button>
       <button class="preset-btn" onclick="applyPreset('staff')"><i class="fas fa-toolbox"></i> Модерация + Сервер</button>
-      <button class="preset-btn" onclick="applyPreset('all')"><i class="fas fa-lock"></i> Всё закрыть (только эта роль)</button>
+      <button class="preset-btn" onclick="applyPreset('all')"><i class="fas fa-lock"></i> Закрыть всё</button>
     </div>
 
     <div id="category-list"></div>
@@ -101,7 +125,7 @@ function toast(msg, ok){
   t.textContent = msg;
   t.className = 'rp-toast show ' + (ok ? 'ok' : 'err');
   clearTimeout(t._timer);
-  t._timer = setTimeout(function(){ t.className='rp-toast'; }, 2200);
+  t._timer = setTimeout(function(){ t.className='rp-toast'; }, 2400);
 }
 
 function hexToRgba(hex, a){
@@ -152,7 +176,7 @@ function allowedRoles(key){
 function renderCategories(){
   if(!selectedRoleId){ return; }
   var role = ALL_ROLES.find(function(r){ return r.id===selectedRoleId; });
-  document.getElementById('sel-role-name').textContent = '⚙️ ' + (role?role.name:'Роль');
+  document.getElementById('sel-role-name').innerHTML = '<i class="fas fa-user-tag"></i> ' + (role?role.name:'Роль');
   document.getElementById('sel-role-sub').textContent = 'Настройка доступа к командам';
 
   var el = document.getElementById('category-list');
@@ -161,19 +185,18 @@ function renderCategories(){
     var catAllowed = allowedRoles(cat);
     var catOn = catAllowed.indexOf(selectedRoleId) !== -1;
     var checked = catOn ? 'checked' : '';
-    var catLocked = (ACL[cat] && ACL[cat].length>0);
     return '<div class="cat-box '+(catOn?'open':'')+'" id="cat-'+cat+'">'
       + '<div class="cat-head">'
       + '<label class="tgl"><input type="checkbox" '+(checked)+' onchange="toggleCategory(\''+cat+'\', this.checked)"><span class="sl"></span></label>'
       + '<span class="cat-title">'+cat+'</span>'
       + '<span class="cat-count">'+cmds.length+' команд</span>'
-      + '<button class="preset-btn everyone-btn" style="margin-left:auto;" title="Открыть эту категорию для всех (снять ограничения)" onclick="categoryEveryone(\''+cat+'\')"><i class="fas fa-users"></i> Всем</button>'
-      + '<span style="cursor:pointer;font-size:12px;margin-left:6px;" onclick="document.getElementById(\'cat-'+cat+'\').classList.toggle(\'open\')"><i class="fas fa-chevron-down"></i></span>'
+      + '<button class="preset-btn everyone-btn" title="Открыть категорию для всех (снять ограничения)" onclick="categoryEveryone(\''+cat+'\')"><i class="fas fa-users"></i> Всем</button>'
+      + '<span style="cursor:pointer;font-size:12px;opacity:.6;" onclick="document.getElementById(\'cat-'+cat+'\').classList.toggle(\'open\')"><i class="fas fa-chevron-down"></i></span>'
       + '</div>'
       + '<div class="cat-body">'
-      + '<div class="bulk-row" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">'
-      + '<span style="font-size:12px;opacity:.7;">Топливо-назначение ролей:</span>'
-      + '<select class="bulk-roles" multiple style="min-width:200px;padding:6px;border-radius:8px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);color:#fff;font-size:12px;">'
+      + '<div class="bulk-row">'
+      + '<span class="bulk-label"><i class="fas fa-users"></i> Массовое назначение ролей:</span>'
+      + '<select class="bulk-roles" multiple title="Зажмите Ctrl для выбора нескольких ролей">'
       + ALL_ROLES.map(function(r){ return '<option value="'+r.id+'">'+r.name+'</option>'; }).join('')
       + '</select>'
       + '<button class="preset-btn" onclick="categoryAssign(\''+cat+'\', this)"><i class="fas fa-check-double"></i> Дать этой категории</button>'
@@ -182,12 +205,11 @@ function renderCategories(){
       + cmds.map(function(cmd){
           var roles = allowedRoles(cmd);
           var granted = roles.indexOf(selectedRoleId) !== -1;
-          var restricted = roles.length>0;
           return '<div class="cmd-item">'
             + '<span class="cname">'+cmd+'</span>'
             + '<button class="cbtn '+(granted?'grant':'')+'" '
             + 'onclick="toggleCommand(\''+cat+'\',\''+cmd+'\', \''+(granted?'off':'on')+'\')">'
-            + (granted?'✓ Доступ':'<i class="fas fa-lock-open"></i> Открыть')
+            + (granted?'<i class="fas fa-check"></i> Доступ':'<i class="fas fa-lock-open"></i> Открыть')
             + '</button>'
             + '</div>';
         }).join('')
