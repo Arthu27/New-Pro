@@ -19,14 +19,14 @@
 
 <div class="warn-toolbar">
   <select id="guild-filter" class="warn-select"><option value="">Все серверы</option></select>
-  <input type="text" id="search" class="warn-search" placeholder="Предупреждение поиск... (kullanиcи, sebep)">
+  <input type="text" id="search" class="warn-search" placeholder="Поиск (пользователь, причина)...">
   <span id="warn-count" class="warn-count"   style="margin-left: auto;">0</span>
 </div>
 
 <div class="warn-stats">
-  <div class="warn-stat"><div class="warn-stat-num" id="stat-total">-</div><div class="warn-stat-lbl">Всего</div></div>
-  <div class="warn-stat"><div class="warn-stat-num" id="stat-users" >-</div><div class="warn-stat-lbl">Участников</div></div>
-  <div class="warn-stat"><div class="warn-stat-num" id="stat-top" >-</div><div class="warn-stat-lbl">Топ</div></div>
+  <div class="warn-stat"><div class="warn-stat-num" id="stat-total" data-countup>-</div><div class="warn-stat-lbl">Всего</div></div>
+  <div class="warn-stat"><div class="warn-stat-num" id="stat-users" data-countup>-</div><div class="warn-stat-lbl">Участников</div></div>
+  <div class="warn-stat"><div class="warn-stat-num" id="stat-top" data-countup>-</div><div class="warn-stat-lbl">Топ</div></div>
 </div>
 
 <div class="warn-box">
@@ -64,14 +64,14 @@
     } catch (e) { /* sessiz */ }
   }
 
-  async function loadWarnings() {
-    $('warn-body').innerHTML = '<p class="empty"><i class="fas fa-spinner fa-spin"></i> Загрузка...</p>';
+  async function loadWarnings(live) {
+    if (!live) $('warn-body').innerHTML = '<p class="empty"><i class="fas fa-spinner fa-spin"></i> Загрузка...</p>';
     try {
       allWarnings = await window.fetchCachedJSON('/api/warnings');
-      render();
+      if (window.keepScroll) window.keepScroll(render); else render();
       updateStats();
     } catch (e) {
-      $('warn-body').innerHTML = '<p class="empty">Не удалось загрузить</p>';
+      if (!live) $('warn-body').innerHTML = '<p class="empty">Не удалось загрузить</p>';
     }
   }
 
@@ -98,7 +98,7 @@
     });
     $('warn-count').textContent = filtered.length + ' / ' + allWarnings.length;
     if (!filtered.length) {
-      $('warn-body').innerHTML = '<p class="empty">Предупреждения не найдено</p>';
+      $('warn-body').innerHTML = '<p class="empty">Предупреждения не найдены</p>';
       return;
     }
     var rows = filtered.slice(0, 200).map(function (w) {
@@ -116,9 +116,13 @@
   }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function () { bind(); loadGuilds(); loadWarnings(); });
+    document.addEventListener('DOMContentLoaded', function () { bind(); loadGuilds(); loadWarnings(); startLive(); });
   } else {
-    bind(); loadGuilds(); loadWarnings();
+    bind(); loadGuilds(); loadWarnings(); startLive();
+  }
+  function startLive() {
+    if (window.setLiveRefresh) window.setLiveRefresh(function () { loadWarnings(true); }, 2500);
+    else setInterval(function () { loadWarnings(true); }, 2500);
   }
 })();
 </script>

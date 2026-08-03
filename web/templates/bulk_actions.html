@@ -133,17 +133,20 @@
     if (!gid) { showResult('dm-result', 'Выберите сервер', false); return; }
     if (!rid) { showResult('dm-result', 'Выберите роль', false); return; }
     if (!msg) { showResult('dm-result', 'Введите текст сообщения', false); return; }
-    if (!confirm('Отправить сообщение всем участникам с этой ролью?')) return;
-    var btn = $('btn-dm');
-    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Отправка...';
-    fetch('/api/guild/' + gid + '/bulk-dm', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ role_id: rid, message: msg })
-    }).then(function (r) { return r.json(); }).then(function (d) {
-      if (d.success) showResult('dm-result', '✓ Отправлено ' + d.count + ' участникам', true);
-      else showResult('dm-result', '✗ ' + (d.error || 'Ошибка'), false);
-    }).catch(function (e) { showResult('dm-result', '✗ ' + e.message, false); })
-      .finally(function () { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Отправить всем'; });
+    var doSend = function () {
+      var btn = $('btn-dm');
+      btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Отправка...';
+      fetch('/api/guild/' + gid + '/bulk-dm', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role_id: rid, message: msg })
+      }).then(function (r) { return r.json(); }).then(function (d) {
+        if (d.success) showResult('dm-result', '✓ Отправлено ' + d.count + ' участникам', true);
+        else showResult('dm-result', '✗ ' + (d.error || 'Ошибка'), false);
+      }).catch(function (e) { showResult('dm-result', '✗ ' + e.message, false); })
+        .finally(function () { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Отправить всем'; });
+    };
+    if (window.confirmAction) window.confirmAction('Рассылка DM', 'Отправить сообщение всем участникам с этой ролью?', doSend, { okText: 'Отправить', icon: '📨' });
+    else if (confirm('Отправить сообщение всем участникам с этой ролью?')) doSend();
   }
 
   // Массовая роль
@@ -155,17 +158,20 @@
     if (!gid) { showResult('role-result', 'Выберите сервер', false); return; }
     if (!target) { showResult('role-result', 'Выберите целевую роль', false); return; }
     if (!action) { showResult('role-result', 'Выберите назначаемую роль', false); return; }
-    if (!confirm('Применить массовую операцию к роли?')) return;
-    var btn = $('btn-role');
-    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Применение...';
-    fetch('/api/guild/' + gid + '/bulk-roles', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ target_role: target, action_role: action, action: op })
-    }).then(function (r) { return r.json(); }).then(function (d) {
-      if (d.success) showResult('role-result', '✓ Применено к ' + d.count + ' участникам', true);
-      else showResult('role-result', '✗ ' + (d.error || 'Ошибка'), false);
-    }).catch(function (e) { showResult('role-result', '✗ ' + e.message, false); })
-      .finally(function () { btn.disabled = false; btn.innerHTML = '<i class="fas fa-user-plus"></i> Применить'; });
+    var doApply = function () {
+      var btn = $('btn-role');
+      btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Применение...';
+      fetch('/api/guild/' + gid + '/bulk-roles', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target_role: target, action_role: action, action: op })
+      }).then(function (r) { return r.json(); }).then(function (d) {
+        if (d.success) showResult('role-result', '✓ Применено к ' + d.count + ' участникам', true);
+        else showResult('role-result', '✗ ' + (d.error || 'Ошибка'), false);
+      }).catch(function (e) { showResult('role-result', '✗ ' + e.message, false); })
+        .finally(function () { btn.disabled = false; btn.innerHTML = '<i class="fas fa-user-plus"></i> Применить'; });
+    };
+    if (window.confirmAction) window.confirmAction('Массовая операция', 'Применить массовую операцию к роли?', doApply, { okText: 'Применить', icon: '⚙️' });
+    else if (confirm('Применить массовую операцию к роли?')) doApply();
   }
 
   // Массовое наказание
@@ -176,20 +182,23 @@
     var dur = parseInt($('punish-duration').value, 10) || 60;
     if (!gid) { showResult('punish-result', 'Выберите сервер', false); return; }
     if (!rid) { showResult('punish-result', 'Выберите целевую роль', false); return; }
-    if (!confirm('⚠️ ' + op.toUpperCase() + ' — необратимое действие! Продолжить?')) return;
-    var btn = $('btn-punish');
-    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Выполнение...';
-    var endpoint = '/api/guild/' + gid + '/bulk-' + op;
-    var body = { role_id: rid };
-    if (op === 'mut') body.duration = dur;
-    fetch(endpoint, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    }).then(function (r) { return r.json(); }).then(function (d) {
-      if (d.success) showResult('punish-result', '✓ ' + op.toUpperCase() + ' применено к ' + d.count + ' участникам', true);
-      else showResult('punish-result', '✗ ' + (d.error || 'Ошибка'), false);
-    }).catch(function (e) { showResult('punish-result', '✗ ' + e.message, false); })
-      .finally(function () { btn.disabled = false; btn.innerHTML = '<i class="fas fa-gavel"></i> Применить'; });
+    var doPunish = function () {
+      var btn = $('btn-punish');
+      btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Выполнение...';
+      var endpoint = '/api/guild/' + gid + '/bulk-' + op;
+      var body = { role_id: rid };
+      if (op === 'mut') body.duration = dur;
+      fetch(endpoint, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      }).then(function (r) { return r.json(); }).then(function (d) {
+        if (d.success) showResult('punish-result', '✓ ' + op.toUpperCase() + ' применено к ' + d.count + ' участникам', true);
+        else showResult('punish-result', '✗ ' + (d.error || 'Ошибка'), false);
+      }).catch(function (e) { showResult('punish-result', '✗ ' + e.message, false); })
+        .finally(function () { btn.disabled = false; btn.innerHTML = '<i class="fas fa-gavel"></i> Применить'; });
+    };
+    if (window.confirmAction) window.confirmAction(op.toUpperCase(), op.toUpperCase() + ' — необратимое действие! Продолжить?', doPunish, { okText: 'Выполнить', icon: '⚠️', danger: true });
+    else if (confirm('⚠️ ' + op.toUpperCase() + ' — необратимое действие! Продолжить?')) doPunish();
   }
 
   function bind() {

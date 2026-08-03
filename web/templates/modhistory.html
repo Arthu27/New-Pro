@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}История модерации — Aether{% endblock %}
-{% block page_title %}<i class="fas fa-history" ></i> История модерации{% endblock %}
+{% block page_title %}<i class="fas fa-history"></i> История модерации{% endblock %}
 {% block content %}
 {% block page_hero %}
 <div class="page-hero compact">
@@ -10,38 +10,37 @@
       <span>История модерации</span>
     </div>
     <h1>История модерации</h1>
-    <p>Полная история модерационных действий на сервере.</p>
+    <p>Полная история модерационных действий на сервере (реальные данные бота).</p>
   </div>
 </div>
 {% endblock %}
 
-
-
 <div class="mh-toolbar">
-  <input type="text" id="search" class="mh-search" placeholder="Поиск по истории (пользователь, мод, причина)...">
-  <select id="filter" class="mh-search"   style="flex: 0 0 auto; min-width: 140px;">
+  <input type="text" id="search" class="mh-search" placeholder="Поиск (пользователь, модератор, причина)...">
+  <select id="filter" class="mh-search" style="flex:0 0 auto;min-width:150px;">
     <option value="">Все действия</option>
-    <option>Бан</option>
-    <option>Кик</option>
-    <option>Варн</option>
-    <option>Мьют</option>
+    <option value="ban">Бан</option>
+    <option value="kick">Кик</option>
+    <option value="warn">Варн</option>
+    <option value="mute">Мьют</option>
   </select>
+  <span id="mh-count" class="mh-count" style="margin-left:auto">0</span>
 </div>
 
 <div class="mh-stats">
-  <div class="mh-stat"><div class="mh-stat-num total" id="stat-total">-</div><div class="mh-stat-lbl">Всего</div></div>
-  <div class="mh-stat"><div class="mh-stat-num danger" id="stat-bans">-</div><div class="mh-stat-lbl">Банов</div></div>
-  <div class="mh-stat"><div class="mh-stat-num accent" id="mh-kicks">-</div><div class="mh-stat-lbl">Киков</div></div>
-  <div class="mh-stat"><div class="mh-stat-num warn" id="mh-warns">-</div><div class="mh-stat-lbl">Варнов</div></div>
+  <div class="mh-stat"><div class="mh-stat-num total" id="stat-total" data-countup>-</div><div class="mh-stat-lbl">Всего</div></div>
+  <div class="mh-stat"><div class="mh-stat-num danger" id="stat-bans" data-countup>-</div><div class="mh-stat-lbl">Банов</div></div>
+  <div class="mh-stat"><div class="mh-stat-num accent" id="mh-kicks" data-countup>-</div><div class="mh-stat-lbl">Киков</div></div>
+  <div class="mh-stat"><div class="mh-stat-num warn" id="mh-warns" data-countup>-</div><div class="mh-stat-lbl">Варнов</div></div>
 </div>
 
 <div class="mh-box">
   <div class="mh-head">
     <div class="mh-title"><i class="fas fa-history"></i> История модерации</div>
-    <span class="mh-count" id="mh-count">-</span>
+    <span class="mh-count" id="mh-count2">-</span>
   </div>
   <div class="mh-body" id="mh-body">
-    <p class="empty"><i class="fas fa-spinner fa-spin"></i></p>
+    <p class="empty"><i class="fas fa-spinner fa-spin"></i> Загрузка...</p>
   </div>
 </div>
 
@@ -50,39 +49,68 @@
   'use strict';
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function fmtDate(iso) {
+    if (!iso) return '-';
+    try { var d = new Date(iso); return d.toLocaleString('ru-RU', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}); } catch (e) { return '-'; }
+  }
 
-  var cases = [
-    { id: 1, action: 'Бан', user: 'User1', мод: 'Mod1', reason: 'Реклама', date: '2 дн назад' },
-    { id: 2, action: 'Варн', user: 'User2', мод: 'Mod2', reason: 'Спам', date: '3 дн назад' },
-    { id: 3, action: 'Кик', user: 'User3', мод: 'Mod1', reason: 'Оскорбление', date: '4 дн назад' },
-    { id: 4, action: 'Мьют', user: 'User4', мод: 'Mod2', reason: 'CAPS', date: '5 дн назад' }
-  ];
-  var colorMap = { Бан: 'var(--err)', Кик: 'var(--orange)', Варн: 'var(--warn)', Мьют: 'var(--warn)' };
+  var allCases = [];
+  var colorMap = { ban: 'var(--err)', kick: 'var(--orange)', warn: 'var(--warn)', mute: '#a78bfa', timeout: '#a78bfa', unban: 'var(--ok)', unmute: 'var(--ok)' };
+
+  function normalize(a) {
+    a = String(a || '').toLowerCase();
+    if (a.indexOf('unban') !== -1) return 'unban';
+    if (a.indexOf('unmute') !== -1) return 'unmute';
+    if (a.indexOf('ban') !== -1) return 'ban';
+    if (a.indexOf('kick') !== -1) return 'kick';
+    if (a.indexOf('warn') !== -1) return 'warn';
+    if (a.indexOf('mute') !== -1 || a.indexOf('timeout') !== -1) return 'mute';
+    return a;
+  }
+  var RU = { ban: 'Бан', kick: 'Кик', warn: 'Варн', mute: 'Мьют', timeout: 'Мьют', unban: 'Разбан', unmute: 'Размут' };
 
   function render() {
     var q = ($('search').value || '').toLowerCase();
     var f = $('filter').value;
-    var list = cases.filter(function (c) {
-      if (f && c.action !== f) return false;
-      if (q && ((c.user + ' ' + c.mod + ' ' + c.reason).toLowerCase().indexOf(q) === -1)) return false;
+    var list = allCases.filter(function (c) {
+      var cat = normalize(c.action);
+      if (f && cat !== f) return false;
+      if (q) {
+        var hay = ((c.target_name || '') + ' ' + (c.mod_name || '') + ' ' + (c.reason || '')).toLowerCase();
+        if (hay.indexOf(q) === -1) return false;
+      }
       return true;
     });
-    $('mh-count').textContent = list.length + ' / ' + cases.length;
-    $('stat-total').textContent = cases.length;
-    $('stat-bans').textContent = cases.filter(function (c) { return c.action === 'Бан'; }).length;
-    $('mh-kicks').textContent = cases.filter(function (c) { return c.action === 'Кик'; }).length;
-    $('mh-warns').textContent = cases.filter(function (c) { return c.action === 'Варн'; }).length;
-    if (!list.length) { $('mh-body').innerHTML = '<p class="empty"><i class="fas fa-inbox"></i>Кейсов нет</p>'; return; }
-    var rows = list.map(function (c) {
-      var c1 = colorMap[c.action] || 'var(--text-3)';
-      return '<tr><td><span class="case-badge" >#' + c.id + '</span></td>' +
-        '<td><span class="case-badge" >' + c.action + '</span></td>' +
-        '<td >' + esc(c.user) + '</td>' +
-        '<td >' + esc(c.mod) + '</td>' +
-        '<td   style="max-width: 180px; overflow: hidden;">' + esc(c.reason) + '</td>' +
-        '<td >' + esc(c.date) + '</td></tr>';
+    $('mh-count').textContent = list.length + ' / ' + allCases.length;
+    $('mh-count2').textContent = list.length;
+    $('stat-total').textContent = allCases.length;
+    $('stat-bans').textContent = allCases.filter(function (c) { return normalize(c.action) === 'ban'; }).length;
+    $('mh-kicks').textContent = allCases.filter(function (c) { return normalize(c.action) === 'kick'; }).length;
+    $('mh-warns').textContent = allCases.filter(function (c) { return normalize(c.action) === 'warn'; }).length;
+    if (!list.length) { $('mh-body').innerHTML = '<p class="empty"><i class="fas fa-inbox"></i>Записей нет</p>'; return; }
+    var rows = list.slice(0, 300).map(function (c) {
+      var cat = normalize(c.action);
+      var c1 = colorMap[cat] || 'var(--text-3)';
+      var label = RU[cat] || esc(c.action || '?');
+      return '<tr><td><span class="case-badge" style="border-color:' + c1 + ';color:' + c1 + '">' + label + '</span></td>' +
+        '<td>' + esc(c.target_name || c.target_id || '-') + '</td>' +
+        '<td>' + esc(c.mod_name || c.mod_id || '-') + '</td>' +
+        '<td style="max-width:200px;overflow:hidden">' + esc(c.reason || '-') + '</td>' +
+        '<td>' + esc(fmtDate(c.created_at)) + '</td></tr>';
     }).join('');
-    $('mh-body').innerHTML = '<table><thead><tr><th>ID</th><th>Действие</th><th>Пользователь</th><th>Модер.</th><th>Причина</th><th>Дата</th></tr></thead><tbody>' + rows + '</tbody></table>';
+    $('mh-body').innerHTML = '<table><thead><tr><th>Действие</th><th>Пользователь</th><th>Модератор</th><th>Причина</th><th>Время</th></tr></thead><tbody>' + rows + '</tbody></table>';
+  }
+
+  async function load(live) {
+    if (!live) $('mh-body').innerHTML = '<p class="empty"><i class="fas fa-spinner fa-spin"></i> Загрузка...</p>';
+    try {
+      var r = await fetch('/api/mod-history');
+      var d = await r.json();
+      allCases = Array.isArray(d) ? d : [];
+      if (window.keepScroll) window.keepScroll(render); else render();
+    } catch (e) {
+      if (!live) $('mh-body').innerHTML = '<p class="empty"><i class="fas fa-exclamation-triangle"></i>Не удалось загрузить</p>';
+    }
   }
 
   function bind() {
@@ -90,8 +118,14 @@
     $('filter').addEventListener('change', render);
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { bind(); render(); });
-  else { bind(); render(); }
+  function start() {
+    bind(); load();
+    if (window.setLiveRefresh) window.setLiveRefresh(function () { load(true); }, 2500);
+    else setInterval(function () { load(true); }, 2500);
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+  else start();
 })();
 </script>
 {% endblock %}

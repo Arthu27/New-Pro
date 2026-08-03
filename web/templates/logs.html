@@ -24,11 +24,11 @@
 </div>
 
 <div class="logs-stats" id="logs-stats">
-  <div class="log-stat"><div class="log-stat-num" id="stat-total">-</div><div class="log-stat-lbl">Всего</div></div>
-  <div class="log-stat"><div class="log-stat-num" id="stat-bans" >-</div><div class="log-stat-lbl">Банов</div></div>
-  <div class="log-stat"><div class="log-stat-num" id="stat-kicks" >-</div><div class="log-stat-lbl">Киков</div></div>
-  <div class="log-stat"><div class="log-stat-num" id="stat-warns" >-</div><div class="log-stat-lbl">Варн</div></div>
-  <div class="log-stat"><div class="log-stat-num" id="stat-muts" >-</div><div class="log-stat-lbl">Мутов</div></div>
+  <div class="log-stat"><div class="log-stat-num" id="stat-total" data-countup>-</div><div class="log-stat-lbl">Всего</div></div>
+  <div class="log-stat"><div class="log-stat-num" id="stat-bans" data-countup>-</div><div class="log-stat-lbl">Банов</div></div>
+  <div class="log-stat"><div class="log-stat-num" id="stat-kicks" data-countup>-</div><div class="log-stat-lbl">Киков</div></div>
+  <div class="log-stat"><div class="log-stat-num" id="stat-warns" data-countup>-</div><div class="log-stat-lbl">Варн</div></div>
+  <div class="log-stat"><div class="log-stat-num" id="stat-muts" data-countup>-</div><div class="log-stat-lbl">Мутов</div></div>
 </div>
 
 <div class="logs-box">
@@ -68,14 +68,14 @@
     } catch (e) { /* sessiz */ }
   }
 
-  async function loadLogs() {
-    $('logs-body').innerHTML = '<p class="empty"><i class="fas fa-spinner fa-spin"></i> Загрузка...</p>';
+  async function loadLogs(live) {
+    if (!live) $('logs-body').innerHTML = '<p class="empty"><i class="fas fa-spinner fa-spin"></i> Загрузка...</p>';
     try {
       allLogs = await window.fetchCachedJSON('/api/logs');
-      render();
+      if (window.keepScroll) window.keepScroll(render); else render();
       updateStats();
     } catch (e) {
-      $('logs-body').innerHTML = '<p class="empty"><i class="fas fa-exclamation-triangle" ></i>Не удалось загрузить</p>';
+      if (!live) $('logs-body').innerHTML = '<p class="empty"><i class="fas fa-exclamation-triangle"></i>Не удалось загрузить</p>';
     }
   }
 
@@ -129,9 +129,13 @@
   }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function () { bind(); loadGuilds(); loadLogs(); });
+    document.addEventListener('DOMContentLoaded', function () { bind(); loadGuilds(); loadLogs(); startLive(); });
   } else {
-    bind(); loadGuilds(); loadLogs();
+    bind(); loadGuilds(); loadLogs(); startLive();
+  }
+  function startLive() {
+    if (window.setLiveRefresh) window.setLiveRefresh(function () { loadLogs(true); }, 2500);
+    else setInterval(function () { loadLogs(true); }, 2500);
   }
 })();
 </script>
