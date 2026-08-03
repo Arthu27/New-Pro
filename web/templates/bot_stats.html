@@ -86,7 +86,8 @@ async function loadStats() {
 }
 
 loadStats();
-setInterval(loadStats, 5000);
+if (window.setLiveRefresh) window.setLiveRefresh(loadStats, 2500);
+else setInterval(loadStats, 2500);
 
 function showStatus(msg, ok) {
   var el = document.getElementById('restart-status');
@@ -98,14 +99,19 @@ function showStatus(msg, ok) {
 }
 
 async function restartBot() {
-  if (!confirm('Вы уверены, что хотите перезапустить бота?')) return;
-  var btn = event.target.closest('button');
-  btn.disabled = true;
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Перезапуск...';
+  if (window.confirmAction) {
+    window.confirmAction('Перезапустить бота?', 'Бот перезапустится на 10-15 секунд. Все системы временно отключатся.', function(){ doRestart(); }, {icon:'🔄', danger:true, okText:'Перезапустить'});
+  } else {
+    doRestart();
+  }
+}
+async function doRestart() {
+  var btn = document.querySelector('.control-btn.danger');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Перезапуск...'; }
   var r = await fetch('/api/bot/restart', {method: 'POST'});
   var d = await r.json();
   showStatus(d.success ? 'Бот перезапускается... 10-15 секунд.' : (d.error || 'Ошибка'), d.success);
-  setTimeout(function() { btn.disabled = false; btn.innerHTML = '<i class="fas fa-redo"></i> Перезапустить бот'; }, 15000);
+  setTimeout(function() { if(btn){ btn.disabled = false; btn.innerHTML = '<i class="fas fa-redo"></i> Перезапустить бот'; } }, 15000);
 }
 
 async function syncCommands() {

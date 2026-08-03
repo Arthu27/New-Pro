@@ -641,10 +641,19 @@
     loadRecentActivity();
     loadLoginLog();
     loadThreatIndex();
-    setInterval(loadStats, 5000);
-    setInterval(loadRecentActivity, 10000);
-    setInterval(loadLoginLog, 10000);
-    setInterval(loadThreatIndex, 15000);
+    if (window.setLiveRefresh) {
+      window.setLiveRefresh(loadStats, 2500);
+      window.setLiveRefresh(loadQuickStats, 5000);
+      window.setLiveRefresh(loadRecentActivity, 2500);
+      window.setLiveRefresh(loadLoginLog, 2500);
+      window.setLiveRefresh(loadThreatIndex, 5000);
+    } else {
+      setInterval(loadStats, 2500);
+      setInterval(loadQuickStats, 5000);
+      setInterval(loadRecentActivity, 2500);
+      setInterval(loadLoginLog, 2500);
+      setInterval(loadThreatIndex, 5000);
+    }
     setInterval(setGreeting, 60000);
   }
 

@@ -220,6 +220,34 @@
   };
 })();
 
+// ============================================================
+// GLOBAL LIVE REFRESH — страницы регистрируют свои загрузчики,
+// общий интервал обновляет их каждые 2.5s (без перезагрузки сервера).
+// ============================================================
+(function () {
+  var fns = [];
+  var MAX = 60;
+  window.setLiveRefresh = function (fn, ms) {
+    if (typeof fn !== 'function') return;
+    ms = ms || 2500;
+    fns.push({ fn: fn, ms: ms, last: 0 });
+    if (fns.length > MAX) fns.shift();
+  };
+  setInterval(function () {
+    var now = Date.now();
+    fns.forEach(function (e) {
+      if (now - e.last >= e.ms) { e.last = now; try { e.fn(); } catch (err) {} }
+    });
+  }, 500);
+})();
+
+// Scroll-safe re-render: обновляет контент, не двигая позицию прокрутки.
+window.renderSafe = function (renderFn) {
+  var y = window.scrollY, x = window.scrollX;
+  if (typeof renderFn === 'function') { try { renderFn(); } catch (e) {} }
+  requestAnimationFrame(function () { window.scrollTo(x, y); });
+};
+
 // Mobile menu
 document.addEventListener('DOMContentLoaded', function () {
   var btn = document.getElementById('mobileMenu');
@@ -1201,5 +1229,43 @@ window.addEventListener('pageshow', function (e) {
 </script>
 
 <div id="toastHost" style="position:fixed;top:24px;right:24px;z-index:99999;display:flex;flex-direction:column;gap:10px;pointer-events:none;"></div>
+
+<!-- Global confirm modal -->
+<div id="aetherConfirm" style="position:fixed;inset:0;background:rgba(0,0,0,0.65);display:none;align-items:center;justify-content:center;z-index:100000;padding:20px;">
+  <div style="background:linear-gradient(165deg,#1f1f26,#141419);border:1px solid rgba(255,255,255,0.12);border-radius:18px;padding:26px 28px;max-width:360px;width:100%;text-align:center;box-shadow:0 24px 70px rgba(0,0,0,0.65);">
+    <div id="acIcon" style="font-size:34px;margin-bottom:10px;">⚠️</div>
+    <div id="acTitle" style="font-size:16px;font-weight:700;margin-bottom:8px;">Подтверждение</div>
+    <div id="acDesc" style="font-size:13px;opacity:.7;margin-bottom:20px;line-height:1.5;"></div>
+    <div style="display:flex;gap:10px;justify-content:center;">
+      <button id="acCancel" style="padding:9px 16px;border-radius:10px;border:1px solid rgba(255,255,255,0.16);background:rgba(255,255,255,0.05);cursor:pointer;font-size:13px;font-weight:600;">Отмена</button>
+      <button id="acOk" style="padding:9px 16px;border-radius:10px;border:1px solid rgba(231,76,60,0.4);background:rgba(231,76,60,0.15);color:#ff6b6b;cursor:pointer;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;">Подтвердить</button>
+    </div>
+  </div>
+</div>
+<script>
+(function () {
+  var box = document.getElementById('aetherConfirm');
+  if (!box) return;
+  var ok = document.getElementById('acOk');
+  var cancel = document.getElementById('acCancel');
+  var cb = null;
+  window.confirmAction = function (title, desc, onOk, opts) {
+    opts = opts || {};
+    document.getElementById('acIcon').textContent = opts.icon || '⚠️';
+    document.getElementById('acTitle').textContent = title || 'Подтверждение';
+    document.getElementById('acDesc').textContent = desc || '';
+    ok.textContent = opts.okText || 'Подтвердить';
+    ok.style.background = opts.danger ? 'rgba(231,76,60,0.15)' : 'var(--ac,#5865F2)';
+    ok.style.color = opts.danger ? '#ff6b6b' : '#fff';
+    ok.style.borderColor = opts.danger ? 'rgba(231,76,60,0.4)' : 'transparent';
+    cb = onOk || null;
+    box.style.display = 'flex';
+  };
+  function close() { box.style.display = 'none'; cb = null; }
+  ok.addEventListener('click', function () { var f = cb; close(); if (f) f(); });
+  cancel.addEventListener('click', close);
+  box.addEventListener('click', function (e) { if (e.target === box) close(); });
+})();
+</script>
 </body>
 </html>

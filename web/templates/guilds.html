@@ -79,10 +79,16 @@
     }
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', load);
-  } else {
+  function start() {
     load();
+    if (window.setLiveRefresh) window.setLiveRefresh(load, 2500);
+    else setInterval(load, 2500);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
   }
 })();
 </script>

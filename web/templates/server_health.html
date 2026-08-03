@@ -1,70 +1,79 @@
 {% extends "base.html" %}
 {% block title %}Состояние сервера — Aether{% endblock %}
-{% block page_title %}<i class="fas fa-heartbeat" ></i> Состояние сервера{% endblock %}
+{% block page_title %}<i class="fas fa-heartbeat" style="animation: pulse 2s infinite;"></i> Состояние сервера{% endblock %}
 {% block content %}
 {% block page_hero %}
 <div class="page-hero compact">
   <div class="page-hero-content">
     <div class="page-hero-greeting">
       <span class="dot"></span>
-      <span>Состояние сервера</span>
+      <span>ЗДОРОВЬЕ СЕРВЕРА И БОТА</span>
     </div>
     <h1>Состояние сервера</h1>
-    <p>Индекс здоровья сервера: метрики активности и безопасности.</p>
+    <p>Метрики активности, нагрузки и безопасности — обновляются каждые 2.5 секунды.</p>
   </div>
 </div>
 {% endblock %}
 
+<style>
+  .sh-wrap { padding:6px 2px 34px; max-width: 1000px; }
+  .sh-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:16px; margin-bottom:20px; }
+  .sh-card { background:linear-gradient(160deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015)); border:1px solid rgba(255,255,255,0.09); border-radius:16px; padding:20px; position:relative; overflow:hidden; transition:.18s; }
+  .sh-card:hover { border-color:var(--ac-line); transform:translateY(-2px); box-shadow:0 10px 28px rgba(0,0,0,0.3); }
+  .sh-card::after { content:''; position:absolute; top:0; right:0; width:110px; height:110px; background:radial-gradient(circle at top right,var(--ac-soft),transparent 70%); pointer-events:none; }
+  .sh-icon { width:40px; height:40px; border-radius:11px; background:rgba(88,101,242,0.15); color:#8ea3ff; border:1px solid rgba(88,101,242,0.3); display:flex; align-items:center; justify-content:center; font-size:16px; margin-bottom:12px; position:relative; z-index:1; }
+  .sh-val { font-size:26px; font-weight:800; letter-spacing:-.02em; font-variant-numeric:tabular-nums; position:relative; z-index:1; }
+  .sh-val small { font-size:13px; color:var(--text-3); font-weight:600; }
+  .sh-lbl { font-size:11px; opacity:.6; text-transform:uppercase; letter-spacing:.08em; margin-top:3px; position:relative; z-index:1; }
+  .sh-bar-track { height:6px; background:rgba(255,255,255,0.05); border-radius:99px; overflow:hidden; margin-top:12px; position:relative; z-index:1; }
+  .sh-bar-fill { height:100%; background:linear-gradient(90deg,#10b981,#34d399); border-radius:99px; transition:width .6s ease-out,background .3s; }
 
+  .sh-box { background:linear-gradient(160deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015)); border:1px solid rgba(255,255,255,0.09); border-radius:16px; margin-bottom:16px; overflow:hidden; }
+  .sh-head { padding:14px 18px; font-weight:700; font-size:14px; display:flex; align-items:center; gap:9px; background:rgba(255,255,255,0.03); border-bottom:1px solid rgba(255,255,255,0.06); }
+  .sh-head i { color:var(--ac,#5865F2); }
+  .sh-body { padding:14px 18px; }
+  .status-row { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid rgba(255,255,255,0.04); font-size:13px; }
+  .status-row:last-child { border-bottom:none; }
+  .dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+  .dot-on { background:#2ecc71; box-shadow:0 0 8px rgba(46,204,113,.6); }
+  .dot-warn { background:#f39c12; box-shadow:0 0 8px rgba(243,156,18,.5); }
+  .dot-off { background:#e74c3c; box-shadow:0 0 8px rgba(231,76,60,.5); }
+  .status-badge { margin-left:auto; font-size:11px; font-weight:700; padding:3px 10px; border-radius:20px; }
+  .status-badge-online { background:rgba(46,204,113,0.15); color:#2ecc71; border:1px solid rgba(46,204,113,0.3); }
+  .status-badge-warn { background:rgba(243,156,18,0.15); color:#f39c12; border:1px solid rgba(243,156,18,0.3); }
+  .status-badge-off { background:rgba(231,76,60,0.15); color:#e74c3c; border:1px solid rgba(231,76,60,0.3); }
+  .sh-row { display:flex; align-items:center; justify-content:space-between; padding:9px 0; border-bottom:1px solid rgba(255,255,255,0.04); font-size:13px; }
+  .sh-row:last-child { border-bottom:none; }
+  .sh-key { color:var(--text-3); }
+  .sh-val2 { font-weight:600; font-variant-numeric:tabular-nums; }
+</style>
 
-<div class="sh-grid">
-  <div class="sh-card">
-    <div class="sh-icon"><i class="fas fa-microchip"></i></div>
-    <div class="sh-val" id="cpu-val">-</div>
-    <div class="sh-lbl">CPU</div>
-    <div class="sh-bar"><div class="sh-bar-fill" id="cpu-bar"   style="width: 0%;"></div></div>
+<div class="sh-wrap">
+  <div class="sh-grid">
+    <div class="sh-card"><div class="sh-icon"><i class="fas fa-microchip"></i></div><div class="sh-val" id="cpu-val">—</div><div class="sh-lbl">CPU</div><div class="sh-bar-track"><div class="sh-bar-fill" id="cpu-bar" style="width:0%"></div></div></div>
+    <div class="sh-card"><div class="sh-icon"><i class="fas fa-memory"></i></div><div class="sh-val" id="ram-val">—</div><div class="sh-lbl">RAM</div><div class="sh-bar-track"><div class="sh-bar-fill" id="ram-bar" style="width:0%"></div></div></div>
+    <div class="sh-card"><div class="sh-icon"><i class="fas fa-hdd"></i></div><div class="sh-val" id="disk-val">—</div><div class="sh-lbl">Диск</div><div class="sh-bar-track"><div class="sh-bar-fill" id="disk-bar" style="width:0%"></div></div></div>
+    <div class="sh-card"><div class="sh-icon"><i class="fas fa-signal"></i></div><div class="sh-val" id="ping-val">—</div><div class="sh-lbl">Discord Ping</div></div>
   </div>
-  <div class="sh-card">
-    <div class="sh-icon"><i class="fas fa-memory"></i></div>
-    <div class="sh-val" id="ram-val">-</div>
-    <div class="sh-lbl">RAM</div>
-    <div class="sh-bar"><div class="sh-bar-fill" id="ram-bar"   style="width: 0%;"></div></div>
-  </div>
-  <div class="sh-card">
-    <div class="sh-icon"><i class="fas fa-hdd"></i></div>
-    <div class="sh-val" id="disk-val">-</div>
-    <div class="sh-lbl">Диск</div>
-    <div class="sh-bar"><div class="sh-bar-fill" id="disk-bar"   style="width: 0%;"></div></div>
-  </div>
-  <div class="sh-card">
-    <div class="sh-icon"><i class="fas fa-signal"></i></div>
-    <div class="sh-val" id="ping-val">-</div>
-    <div class="sh-lbl">Discord Ping</div>
-  </div>
-</div>
 
-<div class="sh-box">
-  <div class="sh-head">
-    <div class="sh-title"><i class="fas fa-server"></i> Системные сервисы</div>
+  <div class="sh-box">
+    <div class="sh-head"><i class="fas fa-server"></i> Системные сервисы</div>
+    <div class="sh-body" id="svc-status">
+      <div class="status-row"><span class="dot dot-on"></span> Discord Bot <span class="status-badge status-badge-online">Online</span></div>
+      <div class="status-row"><span class="dot dot-on"></span> Web Panel <span class="status-badge status-badge-online">Online</span></div>
+      <div class="status-row"><span class="dot dot-on"></span> База данных (JSON) <span class="status-badge status-badge-online">OK</span></div>
+      <div class="status-row"><span class="dot dot-warn"></span> Cloudflare Tunnel <span class="status-badge status-badge-warn">Ожидание</span></div>
+    </div>
   </div>
-  <div class="sh-body">
-    <div class="status-row"><span class="dot dot-on"></span> Discord Bot <span class="status-badge-online">Online</span></div>
-    <div class="status-row"><span class="dot dot-on"></span> Web Panel (Gunicorn) <span class="status-badge-online">Online</span></div>
-    <div class="status-row"><span class="dot dot-on"></span> Database (JSON) <span class="status-badge-online">OK</span></div>
-    <div class="status-row"><span class="dot dot-warn"></span> Cloudflare Tunnel <span class="status-badge-warn">Ожидание</span></div>
-  </div>
-</div>
 
-<div class="sh-box">
-  <div class="sh-head">
-    <div class="sh-title"><i class="fas fa-info-circle"></i> Системная информация</div>
-  </div>
-  <div class="sh-body">
-    <div class="sh-row"><span class="sh-key">Хост</span><span class="sh-val2" id="hostname">-</span></div>
-    <div class="sh-row"><span class="sh-key">ОС</span><span class="sh-val2">-</span></div>
-    <div class="sh-row"><span class="sh-key">Python</span><span class="sh-val2">-</span></div>
-    <div class="sh-row"><span class="sh-key">Uptime</span><span class="sh-val2" id="uptime">-</span></div>
-    <div class="sh-row"><span class="sh-key">Модули</span><span class="sh-val2">-</span></div>
+  <div class="sh-box">
+    <div class="sh-head"><i class="fas fa-info-circle"></i> Системная информация</div>
+    <div class="sh-body">
+      <div class="sh-row"><span class="sh-key">Серверов</span><span class="sh-val2" id="info-guilds">—</span></div>
+      <div class="sh-row"><span class="sh-key">Участников</span><span class="sh-val2" id="info-users">—</span></div>
+      <div class="sh-row"><span class="sh-key">Ping</span><span class="sh-val2" id="info-ping">—</span></div>
+      <div class="sh-row"><span class="sh-key">Uptime</span><span class="sh-val2" id="info-uptime">—</span></div>
+    </div>
   </div>
 </div>
 
@@ -73,23 +82,41 @@
   'use strict';
   function $(id) { return document.getElementById(id); }
   function setBar(id, val) {
-    var color = val < 60 ? 'linear-gradient(90deg, #10b981, #34d399)' : val < 85 ? 'linear-gradient(90deg, var(--ac-3), var(--ac-2))' : 'linear-gradient(90deg, #f87171, #dc2626)';
-    $(id + '-bar').style.width = val + '%';
-    $(id + '-bar').style.background = color;
-    $(id + '-val').textContent = val + '%';
+    if (val == null) return;
+    val = Math.max(0, Math.min(100, Math.round(val)));
+    var color = val < 60 ? 'linear-gradient(90deg,#10b981,#34d399)'
+              : val < 85 ? 'linear-gradient(90deg,var(--ac-3),var(--ac-2))'
+              : 'linear-gradient(90deg,#f87171,#dc2626)';
+    var bar = $(id + '-bar'), v = $(id + '-val');
+    if (bar) { bar.style.width = val + '%'; bar.style.background = color; }
+    if (v) v.innerHTML = val + '<small>%</small>';
   }
-  function simulate() {
-    var cpu = Math.floor(Math.random() * 50 + 5);
-    var ram = Math.floor(Math.random() * 40 + 20);
-    var disk = Math.floor(Math.random() * 30 + 40);
-    setBar('cpu', cpu);
-    setBar('ram', ram);
-    setBar('disk', disk);
-    $('ping-val').textContent = Math.floor(Math.random() * 100 + 30) + 'ms';
-    $('uptime').textContent = '12ч 34м';
+  function fmtUptime(sec) {
+    if (!sec) return '—';
+    var h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60);
+    return (h>0? h+'ч ' : '') + m + 'м';
   }
-  simulate();
-  setInterval(simulate, 5000);
+  async function load() {
+    try {
+      var stats = {};
+      try { stats = await fetch('/api/stats').then(function(r){return r.json();}); } catch(e){}
+      var health = {};
+      try { health = await fetch('/api/bot/health').then(function(r){return r.json();}); } catch(e){}
+      var cur = health.current || health || {};
+      setBar('cpu', cur.cpu_percent != null ? cur.cpu_percent : cur.cpu);
+      setBar('ram', cur.memory_percent != null ? cur.memory_percent : cur.ram_percent);
+      setBar('disk', cur.disk_percent != null ? cur.disk_percent : cur.disk);
+      if (cur.latency != null) $('ping-val').textContent = Math.round(cur.latency) + 'ms';
+      else if (stats.latency != null) $('ping-val').textContent = Math.round(stats.latency) + 'ms';
+      $('info-guilds').textContent = stats.guilds != null ? stats.guilds : '—';
+      $('info-users').textContent = stats.users != null ? Number(stats.users).toLocaleString() : '—';
+      $('info-ping').textContent = (stats.latency != null ? Math.round(stats.latency) : '—') + (stats.latency!=null?'ms':'');
+      $('info-uptime').textContent = fmtUptime(cur.uptime_seconds || cur.uptime);
+    } catch(e) { /* keep placeholders */ }
+  }
+  load();
+  if (window.setLiveRefresh) window.setLiveRefresh(load, 2500);
+  else setInterval(load, 2500);
 })();
 </script>
 {% endblock %}
