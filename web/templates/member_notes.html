@@ -83,7 +83,7 @@ async function searchMember() {
   var found = members.find(function(m){
     return m.id===q || m.name.toLowerCase().includes(q.toLowerCase()) || m.display_name.toLowerCase().includes(q.toLowerCase());
   });
-  if(!found) { alert('Участник не найден.'); return; }
+  if(!found) { showToast('Участник не найден.', false); return; }
   currentMemberId = found.id;
   document.getElementById('res-avatar').src = found.avatar;
   document.getElementById('res-name').textContent = found.display_name;
@@ -113,7 +113,7 @@ async function addNote() {
   });
   var d = await r.json();
   if(d.success) { document.getElementById('new-note').value=''; loadNotes(currentMemberId); loadAllNotes(); }
-  else alert('❌ '+(d.error||'Ошибка'));
+  else showToast('❌ '+(d.error||'Ошибка'), false);
 }
 
 async function deleteNote(noteId, memberId) {
