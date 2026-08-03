@@ -15,6 +15,17 @@
 </div>
 {% endblock %}
 
+<style>
+
+.todo-toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+.todo-list{display:flex;flex-direction:column;gap:8px}
+.todo-item{display:flex;align-items:center;gap:12px;padding:12px 15px;background:linear-gradient(165deg,rgba(224,176,74,.03),rgba(20,18,14,.6));border:1px solid var(--line-2);border-radius:12px}
+.todo-text{flex:1;font-size:14px;color:var(--text)}
+.todo-check{width:20px;height:20px;accent-color:var(--ac);cursor:pointer}
+.todo-del{width:32px;height:32px;border-radius:8px;border:1px solid rgba(248,113,113,.3);background:rgba(248,113,113,.1);color:#fca5a5;cursor:pointer}
+
+</style>
+
 
 
 <div class="todo-stats">

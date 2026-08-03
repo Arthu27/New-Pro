@@ -15,6 +15,19 @@
 </div>
 {% endblock %}
 
+<style>
+
+.welcome-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;margin-bottom:16px}
+.welcome-card{background:linear-gradient(165deg,rgba(224,176,74,.04),rgba(20,18,14,.7));border:1px solid var(--line-2);border-radius:14px;padding:20px;backdrop-filter:blur(14px)}
+.recent-section{background:linear-gradient(165deg,rgba(224,176,74,.03),rgba(20,18,14,.6));border:1px solid var(--line-2);border-radius:14px;padding:16px}
+.recent-head{font-weight:700;color:var(--text);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.recent-head i{color:var(--ac)}
+.notif-item{display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px;color:var(--text-2)}
+.notif-body{flex:1;min-width:0}
+.notif-time{font-size:11px;color:var(--text-3);white-space:nowrap}
+
+</style>
+
 
 
 <div class="welcome-grid">
