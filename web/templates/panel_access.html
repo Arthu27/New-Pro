@@ -17,8 +17,8 @@
 
 <style>
   .pa-wrap { padding:6px 2px 34px; max-width: 980px; }
-  .info-bar { background:linear-gradient(90deg, rgba(88,101,242,0.14), rgba(88,101,242,0.05)); border:1px solid rgba(88,101,242,0.3); border-radius:12px; padding:13px 16px; font-size:12.5px; margin-bottom:20px; display:flex; gap:10px; align-items:flex-start; }
-  .info-bar i { color:var(--accent,#5865F2); margin-top:1px; }
+  .info-bar { background:linear-gradient(90deg, rgba(224,176,74,0.14), rgba(224,176,74,0.05)); border:1px solid rgba(224,176,74,0.3); border-radius:12px; padding:13px 16px; font-size:12.5px; margin-bottom:20px; display:flex; gap:10px; align-items:flex-start; }
+  .info-bar i { color:var(--ac); margin-top:1px; }
 
   .pa-legend { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:18px; }
   .pa-legend .lg { display:inline-flex; align-items:center; gap:7px; font-size:12px; font-weight:600; padding:6px 13px; border-radius:20px; border:1px solid rgba(255,255,255,0.12); background:rgba(255,255,255,0.03); }
@@ -32,22 +32,22 @@
   .p-owner { color:#f1c40f; background:rgba(241,196,15,0.16); border:1px solid rgba(241,196,15,0.35); }
   .p-admin { color:#ff7a6b; background:rgba(231,76,60,0.16); border:1px solid rgba(231,76,60,0.35); }
   .p-mod   { color:#7fe0a8; background:rgba(46,204,113,0.16); border:1px solid rgba(46,204,113,0.35); }
-  .p-uye   { color:#8ea3ff; background:rgba(88,101,242,0.16); border:1px solid rgba(88,101,242,0.35); }
+  .p-uye   { color:var(--ac-2); background:rgba(224,176,74,0.16); border:1px solid rgba(224,176,74,0.35); }
 
   .pa-panel { background: linear-gradient(160deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015)); border:1px solid rgba(255,255,255,0.09); border-radius:16px; padding:18px; }
   .pa-search { position:relative; max-width:360px; margin-bottom:16px; }
   .pa-search i { position:absolute; left:13px; top:50%; transform:translateY(-50%); opacity:.5; font-size:13px; }
   .pa-search input { width:100%; background:#1b1b22; color:#e6e6e6; border:1px solid rgba(255,255,255,0.16); border-radius:11px; padding:12px 14px 12px 36px; font-size:13.5px; outline:none; }
-  .pa-search input:focus { border-color:var(--accent,#5865F2); box-shadow:0 0 0 3px rgba(88,101,242,0.15); }
+  .pa-search input:focus { border-color:var(--ac); box-shadow:0 0 0 3px rgba(224,176,74,0.15); }
 
   .pa-role { display:flex; align-items:center; gap:13px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-radius:12px; padding:12px 14px; margin-bottom:8px; transition:.15s; }
-  .pa-role:hover { background:rgba(255,255,255,0.05); border-color:var(--accent,#5865F2); }
+  .pa-role:hover { background:rgba(255,255,255,0.05); border-color:var(--ac); }
   .pa-role .swatch { width:26px; height:26px; border-radius:8px; flex-shrink:0; border:1px solid rgba(255,255,255,0.3); box-shadow:0 0 10px rgba(0,0,0,0.3); }
   .pa-role .rname { flex:1; font-size:14px; font-weight:600; line-height:1.25; word-break:break-word; }
   .pa-role .rcount { font-size:11px; opacity:.55; padding:4px 11px; border-radius:20px; background:rgba(255,255,255,0.08); white-space:nowrap; display:inline-flex; align-items:center; gap:5px; }
   .pa-badge { font-size:11px; font-weight:700; padding:5px 12px; border-radius:20px; white-space:nowrap; display:inline-flex; align-items:center; gap:5px; }
   .pa-role select { background:#17171d; color:#e6e6e6; border:1px solid rgba(255,255,255,0.2); border-radius:9px; padding:9px 12px; font-size:13px; cursor:pointer; outline:none; min-width:168px; font-weight:600; }
-  .pa-role select:hover { border-color:var(--accent,#5865F2); }
+  .pa-role select:hover { border-color:var(--ac); }
   .pa-role select.owner { border-color:rgba(241,196,15,0.6); color:#f1c40f; }
   .pa-role select.admin { border-color:rgba(231,76,60,0.6); color:#ff8a80; }
   .pa-role select.mod   { border-color:rgba(46,204,113,0.6); color:#7fe0a8; }
@@ -102,7 +102,7 @@ var BADGE = {
 };
 
 function hexToRgba(hex, a){
-  var h = String(hex||'#5865F2').replace('#','');
+  var h = String(hex||'#e0b04a').replace('#','');
   if(h.length===3) h=h.split('').map(function(x){return x+x;}).join('');
   var n = parseInt(h,16);
   return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+a+')';
