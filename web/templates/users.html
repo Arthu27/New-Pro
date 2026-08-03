@@ -15,15 +15,40 @@
 </div>
 {% endblock %}
 
-
+<style>
+/* Пользователи — premium gold */
+.users-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.users-count{background:var(--ac-soft);color:var(--ac-2);border:1px solid var(--ac-line);padding:4px 13px;border-radius:99px;font-size:12.5px;font-weight:700;margin-left:auto;font-variant-numeric:tabular-nums}
+.members-section{}
+.members-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+.member-card{display:flex;align-items:center;gap:12px;padding:13px 15px;background:linear-gradient(165deg,rgba(224,176,74,.04),rgba(20,18,14,.6));border:1px solid var(--line-2);border-radius:13px;backdrop-filter:blur(12px);transition:all .18s var(--ease);cursor:pointer}
+.member-card:hover{transform:translateY(-2px);border-color:var(--ac-line);box-shadow:0 10px 26px rgba(0,0,0,.3)}
+.av-wrap{position:relative;flex-shrink:0}
+.av-wrap .av{width:42px;height:42px;border-radius:50%;border:1.5px solid var(--ac-line);object-fit:cover}
+.av-wrap .status-dot{position:absolute;right:-2px;bottom:-2px;width:11px;height:11px;border:2px solid var(--bg);border-radius:50%}
+.member-name{font-weight:600;color:var(--text);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
+.member-username{font-size:12px;color:var(--text-3);font-family:'JetBrains Mono',monospace}
+/* модалка деталей */
+.member-modal-overlay{position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;padding:20px}
+.member-modal-overlay.open{display:flex}
+.member-modal{background:linear-gradient(165deg,rgba(30,26,20,.98),rgba(18,15,12,.98));border:1px solid var(--ac-line);border-radius:18px;padding:26px;width:min(92vw,440px);max-height:86vh;overflow-y:auto;position:relative;box-shadow:0 24px 60px rgba(0,0,0,.7)}
+.member-modal-close{position:absolute;top:14px;right:14px;width:32px;height:32px;border-radius:8px;background:var(--surface);border:1px solid var(--line);color:var(--text-3);font-size:18px;cursor:pointer;transition:.15s}
+.member-modal-close:hover{background:rgba(239,68,68,.15);color:var(--err)}
+.member-detail-info{display:flex;flex-direction:column;align-items:center;text-align:center;margin-bottom:16px}
+.member-detail-av{width:80px;height:80px;border-radius:50%;border:2px solid var(--ac);object-fit:cover;margin-bottom:10px;box-shadow:0 6px 20px var(--ac-glow)}
+.member-detail-name{font-size:18px;font-weight:800;color:var(--text);font-family:'Poppins',sans-serif}
+.member-detail-sub{font-size:13px;color:var(--text-3);margin-top:2px}
+.roles-section-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--ac-2);margin:14px 0 8px;display:flex;align-items:center;gap:8px}
+.roles-section-title::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--ac-line),transparent)}
+</style>
 
 <div class="users-toolbar">
   <select id="guild-select" class="guild-select"><option value="">Выберите сервер...</option></select>
   <input type="text" id="search" class="search-input" placeholder="Поиск участника...">
-  <span class="users-count" id="member-count">0</span>
+  <span class="users-count" id="member-count" data-countup>0</span>
 </div>
 
-<div id="members-section">
+<div id="members-section" data-reveal="up">
   <div id="members-list"><div class="empty-state"><i class="fas fa-user-friends"></i><p>Выберите сервер для просмотра участников</p></div></div>
 </div>
 
@@ -161,10 +186,15 @@
     });
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function () { bind(); loadGuilds(); });
-  } else {
+  function start() {
     bind(); loadGuilds();
+    if (window.setLiveRefresh) window.setLiveRefresh(loadMembers, 5000);
+    else setInterval(loadMembers, 5000);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
   }
 })();
 </script>
