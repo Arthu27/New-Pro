@@ -1,47 +1,70 @@
 {% extends "base.html" %}
-{% block title %}Сообщение Логы - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-comment-alt" ></i> 💬 ЛОГИ СООБЩЕНИЙ{% endblock %}
+{% block title %}Логи сообщений — Aether{% endblock %}
+{% block page_title %}<i class="fas fa-comment-alt"></i> Логи сообщений{% endblock %}
 {% block content %}
 {% block page_hero %}
 <div class="page-hero compact">
   <div class="page-hero-content">
     <div class="page-hero-greeting">
       <span class="dot"></span>
-      <span>💬 ЛОГИ СООБЩЕНИЙ</span>
+      <span>Логи сообщений</span>
     </div>
-    <h1>💬 ЛОГИ СООБЩЕНИЙ</h1>
-    <p>Логи отправленных, отредактированных и удалённых сообщений.</p>
+    <h1>Логи сообщений</h1>
+    <p>Журнал удалённых и изменённых сообщений на сервере.</p>
   </div>
 </div>
 {% endblock %}
 
+<style>
+/* Логи сообщений — premium gold */
+.ml-hero{display:flex;align-items:center;gap:16px;padding:22px 26px;background:linear-gradient(135deg,rgba(224,176,74,.10),rgba(224,176,74,.03));border:1px solid var(--ac-line);border-radius:16px;margin-bottom:18px}
+.hero-icon{font-size:34px;width:56px;height:56px;border-radius:14px;background:linear-gradient(135deg,var(--ac-2),var(--ac-3));display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 6px 18px var(--ac-glow)}
+.hero-title{font-family:'Poppins',sans-serif;font-size:20px;font-weight:800;color:var(--text);text-transform:uppercase;letter-spacing:.02em}
+.hero-sub{font-size:13px;color:var(--text-2);margin-top:3px}
+.ml-filter-box{background:linear-gradient(165deg,rgba(224,176,74,.04),rgba(20,18,14,.6));border:1px solid var(--line-2);border-radius:14px;padding:14px 16px;margin-bottom:16px;backdrop-filter:blur(12px)}
+.filter-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.filter-row .field-input{flex:1;min-width:150px}
+.ml-log-box{background:linear-gradient(165deg,rgba(224,176,74,.03),rgba(20,18,14,.6));border:1px solid var(--line-2);border-radius:16px;padding:16px;backdrop-filter:blur(12px)}
+.box-title{font-size:14px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:9px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.box-title i{color:var(--ac)}
+/* логи */
+.log-row{background:linear-gradient(160deg,rgba(255,255,255,.02),transparent);border:1px solid var(--line);border-radius:12px;padding:13px 15px;margin-bottom:9px;transition:all .16s var(--ease)}
+.log-row:hover{border-color:var(--ac-line);transform:translateX(2px)}
+.log-row.log-deleted{border-left:3px solid var(--err)}
+.log-row.log-edited{border-left:3px solid var(--warn)}
+.log-header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+.log-user-wrap{display:flex;align-items:center;gap:9px;flex-wrap:wrap;min-width:0}
+.log-user{font-weight:700;color:var(--text);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.log-channel{font-size:12px;color:var(--text-3);background:var(--ac-soft);border:1px solid var(--line);border-radius:6px;padding:2px 8px;font-family:'JetBrains Mono',monospace}
+.log-time{font-size:11.5px;color:var(--text-3);font-family:'JetBrains Mono',monospace;white-space:nowrap}
+.type-badge{display:inline-block;padding:3px 10px;border-radius:99px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.type-badge.badge-del{background:rgba(248,113,113,.14);color:#fca5a5;border:1px solid rgba(248,113,113,.3)}
+.type-badge.badge-edit{background:rgba(251,191,36,.14);color:#fcd34d;border:1px solid rgba(251,191,36,.3)}
+.log-content{font-size:13.5px;color:var(--text-2);line-height:1.55;background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:8px;padding:9px 12px;word-break:break-word}
+.log-before{font-size:13px;color:var(--text-2);padding:8px 12px;background:rgba(248,113,113,.05);border:1px solid rgba(248,113,113,.15);border-radius:8px;margin-bottom:6px;word-break:break-word}
+.log-after{font-size:13px;color:var(--text-2);padding:8px 12px;background:rgba(74,222,128,.05);border:1px solid rgba(74,222,128,.15);border-radius:8px;word-break:break-word}
+.log-empty{text-align:center;padding:40px 20px;color:var(--text-3)}
+.log-empty i{display:block;font-size:32px;color:var(--ac);opacity:.4;margin-bottom:12px}
+</style>
 
-
-<!-- КАЖДЫЙ -->
-<div class="ml-hero">
-  <span class="hero-icon">💬</span>
-  <div class="hero-title">ЛОГИ СООБЩЕНИЙ</div>
-  <div class="hero-sub">Записи удалённых и отредактированных сообщений</div>
-</div>
-
-<!-- STATS -->
-<div class="stat-row">
+<!-- Статистика -->
+<div class="stat-row" data-reveal="up">
   <div class="stat-box">
     <div class="stat-icon gold"><i class="fas fa-comments"></i></div>
-    <div class="stat-body"><div class="stat-val" id="total-count">0</div><div class="stat-lbl">Всего</div></div>
+    <div class="stat-body"><div class="stat-val" id="total-count" data-countup>-</div><div class="stat-lbl">Всего</div></div>
   </div>
   <div class="stat-box">
     <div class="stat-icon red"><i class="fas fa-trash"></i></div>
-    <div class="stat-body"><div class="stat-val" id="deleted-count">0</div><div class="stat-lbl">Удалённые</div></div>
+    <div class="stat-body"><div class="stat-val" id="deleted-count" data-countup>-</div><div class="stat-lbl">Удалённые</div></div>
   </div>
   <div class="stat-box">
     <div class="stat-icon amber"><i class="fas fa-edit"></i></div>
-    <div class="stat-body"><div class="stat-val" id="edited-count">0</div><div class="stat-lbl">Изменённые</div></div>
+    <div class="stat-body"><div class="stat-val" id="edited-count" data-countup>-</div><div class="stat-lbl">Изменённые</div></div>
   </div>
 </div>
 
-<!-- FILTERS -->
-<div class="ml-filter-box">
+<!-- Фильтры -->
+<div class="ml-filter-box" data-reveal="up">
   <div class="filter-row">
     <select id="guild-select" onchange="loadLogs()" class="field-input" aria-label="Сервер">
       <option value="{{ main_guild_id }}">Текущий сервер</option>
@@ -51,31 +74,27 @@
       <option value="deleted">🗑 Удалённые</option>
       <option value="edited">✏️ Изменённые</option>
     </select>
-    <input type="text" id="user-filter" placeholder="🔍 Поиск пользователя..." class="field-input"   style="min-width: 160px;" oninput="filterLogs()">
+    <input type="text" id="user-filter" placeholder="🔍 Поиск пользователя..." class="field-input" style="min-width:160px" oninput="filterLogs()">
   </div>
 </div>
 
-<!-- LOG LIST -->
-<div class="ml-log-box">
+<!-- Журнал -->
+<div class="ml-log-box" data-reveal="up">
   <div class="box-title"><i class="fas fa-comment-slash"></i> Журнал сообщений</div>
-  <div id="log-list"><p >ВЫБЕРИТЕ СЕРВЕР...</p></div>
+  <div id="log-list"><div class="log-empty"><i class="fas fa-spinner fa-spin"></i>Загрузка...</div></div>
 </div>
 
 <script>
 var allLogs = [];
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-async function loadGuilds() {
-  loadLogs();
-}
+function isDeleted(l){ return /удал|delet/i.test((l.action||'')+' '+(l.type||'')); }
+function isEdited(l){ return /измен|редакт|düzenl|dюzenl|edit/i.test((l.action||'')+' '+(l.type||'')); }
 
 async function loadLogs() {
   var type = document.getElementById('log-type').value;
   var guildId = document.getElementById('guild-select').value;
-  if (!guildId) {
-    renderLogs([]);
-    return;
-  }
-  document.getElementById('log-list').innerHTML = '<p ><i class="fas fa-spinner fa-spin" ></i></p>';
+  if (!guildId) { renderLogs([]); return; }
   try {
     var r = await fetch('/api/guild/' + encodeURIComponent(guildId) + '/message-logs?type=' + encodeURIComponent(type));
     if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -83,56 +102,56 @@ async function loadLogs() {
     if (!Array.isArray(allLogs)) allLogs = [];
     updateStats();
     renderLogs(allLogs);
-  } catch (error) {
-    console.error('Не удалось загрузить логи сообщений:', error);
+  } catch (e) {
     allLogs = [];
     updateStats();
-    document.getElementById('log-list').innerHTML = '<p >Не удалось загрузить логи сообщений.</p>';
+    document.getElementById('log-list').innerHTML = '<div class="log-empty"><i class="fas fa-exclamation-triangle"></i>Не удалось загрузить логи сообщений.</div>';
   }
 }
 
 function updateStats() {
   document.getElementById('total-count').textContent = allLogs.length;
-  document.getElementById('deleted-count').textContent = allLogs.filter(function(l){return l.action==='Сообщение Удалитьindi'||l.type==='deleted';}).length;
-  document.getElementById('edited-count').textContent = allLogs.filter(function(l){return l.action==='Сообщение Редактироватьndi'||l.type==='edited';}).length;
+  document.getElementById('deleted-count').textContent = allLogs.filter(isDeleted).length;
+  document.getElementById('edited-count').textContent = allLogs.filter(isEdited).length;
 }
 
 function filterLogs() {
   var q = document.getElementById('user-filter').value.toLowerCase();
   renderLogs(allLogs.filter(function(l) {
-    return (l.user_name||'').toLowerCase().includes(q) || (l.user_id||'').includes(q);
+    return ((l.user_name||'')+' '+(l.user_id||'')).toLowerCase().includes(q);
   }));
 }
 
 function renderLogs(logs) {
   var box = document.getElementById('log-list');
-  if (!logs.length) {
-    box.innerHTML = '<p >LOG НЕ НАЙДЕНО</p>';
-    return;
-  }
-  box.innerHTML = logs.slice(0, 100).map(function(l, i) {
-    var isDel = l.action==='Сообщение Удалитьindi'||l.type==='deleted';
-    var cls = isDel ? 'log-deleted' : 'log-edited';
-    var badge = isDel
-      ? '<span class="type-badge badge-del">🗑 УДАЛЕНО</span>'
-      : '<span class="type-badge badge-edit">✏️ РЕДАКТИРОВАТЬ</span>';
-    var content = isDel
-      ? '<div class="log-content" >' + (l.content || '<em >(soderjimoe yok)</em>') + '</div>'
-      : '<div class="log-before">До: ' + (l.before || '') + '</div><div class="log-after">В конецra: ' + (l.after || '') + '</div>';
-    return '<div class="log-row ' + cls + '" >' +
+  if (!logs.length) { box.innerHTML = '<div class="log-empty"><i class="fas fa-inbox"></i>Логи не найдены</div>'; return; }
+  box.innerHTML = logs.slice(0, 150).map(function(l) {
+    var del = isDeleted(l);
+    var cls = del ? 'log-deleted' : 'log-edited';
+    var badge = del
+      ? '<span class="type-badge badge-del">🗑 Удалено</span>'
+      : '<span class="type-badge badge-edit">✏️ Изменено</span>';
+    var content = del
+      ? '<div class="log-content">' + esc(l.content || '') + '</div>'
+      : '<div class="log-before">До: ' + esc(l.before || '') + '</div><div class="log-after">После: ' + esc(l.after || '') + '</div>';
+    return '<div class="log-row ' + cls + '">' +
       '<div class="log-header">' +
-        '<div class="log-user-wrap">' +
-          badge +
-          '<span class="log-user">' + (l.user_name || l.user_id || '?') + '</span>' +
-          '<span class="log-channel">#' + (l.channel_name || l.channel_id || '?') + '</span>' +
+        '<div class="log-user-wrap">' + badge +
+          '<span class="log-user">' + esc(l.user_name || l.user_id || '?') + '</span>' +
+          '<span class="log-channel">#' + esc(l.channel_name || l.channel_id || '?') + '</span>' +
         '</div>' +
-        '<span class="log-time">' + (l.timestamp || '') + '</span>' +
-      '</div>' +
-      content +
+        '<span class="log-time">' + esc(l.timestamp || '') + '</span>' +
+      '</div>' + content +
     '</div>';
   }).join('');
 }
 
-loadGuilds();
+function start() {
+  loadLogs();
+  if (window.setLiveRefresh) window.setLiveRefresh(loadLogs, 5000);
+  else setInterval(loadLogs, 5000);
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+else start();
 </script>
 {% endblock %}
