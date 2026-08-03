@@ -2240,6 +2240,9 @@ def api_send_embed ():
     footer =data .get ('footer','')
     image_url =data .get ('image_url','')
     thumbnail_url =data .get ('thumbnail_url','')
+    author =data .get ('author','')
+    author_icon =data .get ('author_icon','')
+    fields =data .get ('fields',[]) or []
     guild =bot_instance .get_guild (guild_id )
     if not guild :return jsonify ({'error':'Сервер не найдено'})
     channel =bot_instance .get_channel (channel_id )
@@ -2248,11 +2251,21 @@ def api_send_embed ():
         try :color =discord .Color (int (color_hex ,16 ))
         except :color =discord .Color (0xdc143c )
         embed =discord .Embed (color =color )
-        if title :embed .title =title 
-        if description :embed .description =description 
+        if title :embed .title =title
+        if description :embed .description =description
         if footer :embed .set_footer (text =footer )
         if image_url :embed .set_image (url =image_url )
         if thumbnail_url :embed .set_thumbnail (url =thumbnail_url )
+        if author :
+            if author_icon :
+                embed .set_author (name =author ,icon_url =author_icon )
+            else :
+                embed .set_author (name =author )
+        if isinstance (fields ,list ):
+            for f in fields [:25 ]:
+                if not isinstance (f ,dict )or not (f .get ('name')or f .get ('value')):
+                    continue
+                embed .add_field (name =f .get ('name','')or '\u200b',value =f .get ('value','')or '\u200b',inline =bool (f .get ('inline',False )))
         await channel .send (embed =embed )
         return {'success':True }
     try :
