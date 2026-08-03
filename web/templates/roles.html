@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Управление ролями — Aether{% endblock %}
-{% block page_title %}<i class="fas fa-user-tag" ></i> Управление ролями{% endblock %}
+{% block page_title %}<i class="fas fa-user-tag"></i> Управление ролями{% endblock %}
 {% block content %}
 {% block page_hero %}
 <div class="page-hero compact">
@@ -9,31 +9,41 @@
       <span class="dot"></span>
       <span>Управление ролями</span>
     </div>
-    <h1>Управление ролями</h1>
-    <p>Управление ролями сервера: создание, удаление, изменение прав.</p>
+    <h1><i class="fas fa-user-tag"></i> Управление ролями</h1>
+    <p>Все роли сервера: создание, удаление и статистика.</p>
   </div>
 </div>
 {% endblock %}
 
-
-
-<div class="premium-card" style="margin-bottom: 14px">
+<div class="premium-card" data-reveal="up">
   <h3><i class="fas fa-server"></i> Сервер</h3>
   <div class="form-group">
     <label>Выберите сервер для просмотра ролей</label>
-    <select id="guild-select">
+    <select id="guild-select" class="field-input">
       <option value="">Выберите сервер...</option>
     </select>
   </div>
 </div>
 
-<div class="action-bar">
+<!-- Статистика ролей -->
+<div class="stat-row" data-reveal="up">
+  <div class="stat-box">
+    <div class="stat-icon gold"><i class="fas fa-user-tag"></i></div>
+    <div class="stat-body"><div class="stat-val" id="stat-roles" data-countup>-</div><div class="stat-lbl">Ролей</div></div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-icon cyan"><i class="fas fa-users"></i></div>
+    <div class="stat-body"><div class="stat-val" id="stat-members" data-countup>-</div><div class="stat-lbl">В ролях</div></div>
+  </div>
+</div>
+
+<div class="action-bar" data-reveal="up">
   <div class="info-pill"><i class="fas fa-user-tag"></i> Все роли этого сервера</div>
   <button class="btn-add" onclick="openNameModal()"><i class="fas fa-plus"></i> Создать новую роль</button>
 </div>
 
-<div id="roles-list">
-  <div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Загрузка...</p></div>
+<div id="roles-list" data-reveal="up">
+  <div class="skeleton-grid"><div class="skeleton-card"></div><div class="skeleton-card"></div><div class="skeleton-card"></div></div>
 </div>
 
 <div id="modal" class="modal-overlay">
@@ -54,55 +64,79 @@
   </div>
 </div>
 
+<style>
+.roles-card{
+  display:flex; align-items:center; gap:14px; padding:13px 16px;
+  background:linear-gradient(165deg,rgba(224,176,74,0.04),rgba(20,18,14,0.6));
+  border:1px solid var(--line-2); border-radius:12px; margin-bottom:8px;
+  backdrop-filter:blur(12px); transition:all .18s var(--ease);
+}
+.roles-card:hover{ transform:translateX(3px); border-color:var(--ac-line); }
+.roles-left{ display:flex; align-items:center; gap:12px; flex:1; min-width:0; }
+.roles-color{ width:40px; height:40px; border-radius:10px; flex-shrink:0; box-shadow:inset 0 0 0 2px rgba(255,255,255,0.08),0 2px 8px rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.1); }
+.roles-name{ font-weight:600; color:#f4f1e8; font-size:15px; }
+.roles-members{ font-size:12.5px; color:var(--text-3); margin-top:3px; display:flex; align-items:center; gap:6px; }
+.roles-members i{ color:var(--ac); font-size:11px; }
+.roles-actions{ display:flex; gap:6px; flex-shrink:0; }
+</style>
+
 <script>
 var MAIN_GID = '{{ main_guild_id }}';
 var selectedGuild = MAIN_GID;
 function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function $(id) { return document.getElementById(id); }
 
 async function loadRoles() {
-  var box = document.getElementById('roles-list');
+  var box = $('roles-list');
   if (!selectedGuild) { box.innerHTML = '<div class="empty-msg">Сервер не выбран</div>'; return; }
   try {
     var r = await fetch('/api/guild/' + selectedGuild + '/roles');
     var roles = await r.json();
     if (!Array.isArray(roles) || roles.length === 0) {
       box.innerHTML = '<div class="empty-msg"><i class="fas fa-user-tag"></i>На этом сервере ролей нет</div>';
+      $('stat-roles').textContent = '0'; $('stat-members').textContent = '0';
       return;
     }
+    var totalMembers = 0;
     box.innerHTML = roles.map(function(role) {
+      totalMembers += (role.members || 0);
+      var col = /^#([0-9a-f]{6})$/i.test(role.color || '') ? role.color : '#2b2b33';
+      if (role.color === '#000000') col = '#2b2b33';
       return '<div class="roles-card">' +
-        '<div  >' +
-          '<div class="roles-color" ></div>' +
-          '<div><div class="roles-name">' + esc(role.name) + '</div><div class="roles-members"><i class="fas fa-users"></i> ' + (role.members || 0) + ' участников</div></div>' +
+        '<div class="roles-left">' +
+          '<div class="roles-color" style="background:' + col + '"></div>' +
+          '<div style="min-width:0"><div class="roles-name">' + esc(role.name) + '</div>' +
+          '<div class="roles-members"><i class="fas fa-users"></i> ' + (role.members || 0) + ' участников</div></div>' +
         '</div>' +
         '<div class="roles-actions">' +
-          '<button class="btn-sm btn-edit" onclick="editRole(\'' + role.id + '\')" title="Редактировать"><i class="fas fa-edit"></i></button>' +
           '<button class="btn-sm btn-delete" onclick="deleteRole(\'' + role.id + '\',\'' + esc(role.name).replace(/'/g, "\\'") + '\')" title="Удалить"><i class="fas fa-trash"></i></button>' +
         '</div>' +
       '</div>';
     }).join('');
+    $('stat-roles').textContent = roles.length;
+    $('stat-members').textContent = totalMembers.toLocaleString();
   } catch (e) {
-    box.innerHTML = '<div class="empty-msg"><i class="fas fa-exclamation-triangle" ></i>Не удалось загрузить: ' + esc(e.message) + '</div>';
+    box.innerHTML = '<div class="empty-msg"><i class="fas fa-exclamation-triangle"></i>Не удалось загрузить</div>';
   }
 }
 
-function openNameModal() { document.getElementById('modal').classList.add('open'); }
-function closeModal() { document.getElementById('modal').classList.remove('open'); }
+function openNameModal() { $('modal').classList.add('open'); }
+function closeModal() { $('modal').classList.remove('open'); }
 document.getElementById('modal').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
 
 async function createRole() {
-  var name = document.getElementById('role-name').value.trim();
-  var color = document.getElementById('role-color').value;
-  if (!name) { alert('Введите название роли!'); return; }
+  var name = $('role-name').value.trim();
+  var color = $('role-color').value;
+  if (!name) { showToast('Введите название роли!', false); return; }
   try {
     var r = await fetch('/api/guild/' + selectedGuild + '/roles/create', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: name, color: color })
     });
     var d = await r.json();
-    if (d.success) { closeModal(); document.getElementById('role-name').value = ''; loadRoles(); }
-    else alert('Ошибка: ' + (d.error || 'Неизвестно'));
-  } catch (e) { alert('Ошибка запроса: ' + e.message); }
+    if (d.success) { closeModal(); $('role-name').value = ''; loadRoles(); showToast('Роль создана', true); }
+    else showToast('Ошибка: ' + (d.error || 'Неизвестно'), false);
+  } catch (e) { showToast('Ошибка запроса: ' + e.message, false); }
 }
 
 async function deleteRole(id, name) {
@@ -116,8 +150,21 @@ async function deleteRole(id, name) {
   }, { okText: 'Удалить', danger: true, icon: '🗑️' });
 }
 
-function editRole(id) { showToast('Редактирование ролей скоро будет добавлено', true); }
+function start() {
+  loadRoles();
+  if (window.setLiveRefresh) window.setLiveRefresh(loadRoles, 2500);
+  else setInterval(loadRoles, 2500);
+}
 
-loadRoles();
+// Перезагружаем роли при смене сервера
+function init() {
+  $('guild-select').addEventListener('change', function () {
+    selectedGuild = this.value || MAIN_GID;
+    loadRoles();
+  });
+  start();
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+else init();
 </script>
 {% endblock %}

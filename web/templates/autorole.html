@@ -49,8 +49,8 @@
     <button class="save-btn" onclick="saveSettings('girl')"><i class="fas fa-save"></i> Сохранить</button>
   </div>
   <div class="ar-box">
-    <div class="ar-title"><i class="fas fa-mars" ></i> Мужчина Участник Авто-роль</div>
-    <div class="ar-desc">Роль для новых участников (Мужская): участник выдаётся роли:</div>
+    <div class="ar-title"><i class="fas fa-mars"></i> Авто-роль для парней</div>
+    <div class="ar-desc">Роль для новых участников (парней) — выдаётся автоматически:</div>
     <div id="boy-roles-list"></div>
     <div class="add-row">
       <select id="boy-role-add"></select>
@@ -60,7 +60,7 @@
   </div>
   <div class="ar-box">
     <div class="ar-title"><i class="fas fa-robot"></i> Бот Авто-роль</div>
-    <div class="ar-desc">На сервер добавл botlпоиск автоматически выдаётся роли:</div>
+    <div class="ar-desc">Ботам, добавленным на сервер, автоматически выдаётся роль:</div>
     <div id="bot-roles-list"></div>
     <div class="add-row">
       <select id="bot-role-add"></select>
@@ -77,6 +77,7 @@ var allRoles = [];
 var currentRoles = { member: [], girl: [], boy: [], bot: [] };
 
 function toast(msg, ok) {
+  if (window.showToast) { window.showToast(msg, ok); return; }
   var t = document.createElement('div');
   t.className = 'toast ' + (ok ? 'ok' : 'err');
   t.textContent = msg;
@@ -113,7 +114,7 @@ async function loadSettings(gid) {
       var sel = document.getElementById(t + '-role-add');
       if (!sel) return;
       if (allRoles.length === 0) {
-        sel.innerHTML = '<option value="">На этом сервере роли yok</option>';
+        sel.innerHTML = '<option value="">На этом сервере нет ролей</option>';
       } else {
         sel.innerHTML = '<option value="">— Выберите роль —</option>' +
           allRoles.map(function (r) { return '<option value="' + r.id + '">' + r.name + '</option>'; }).join('');
@@ -135,7 +136,7 @@ function renderType(type) {
   if (!box) return;
   var ids = currentRoles[type] || [];
   if (ids.length === 0) {
-    box.innerHTML = '<p class="empty-msg">Пока роль добавл.</p>';
+    box.innerHTML = '<p class="empty-msg">Пока ничего не добавлено</p>';
     return;
   }
   box.innerHTML = ids.map(function (id) {
