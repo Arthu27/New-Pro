@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Панель Aether{% endblock %}</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/static/style.css?v=6">
+    <link rel="stylesheet" href="/static/style.css?v=7">
     <script>
       // Apply theme before render to prevent FOUC
       (function(){
@@ -17,6 +17,30 @@
     </script>
 </head>
 <body>
+    <!-- ============================================================
+         WELCOME / SPLASH SCREEN (показывается один раз за сессию)
+         Full-screen hero → переход в панель по клику/скроллу/клавише.
+         ============================================================ -->
+    <div class="welcome-screen" id="welcomeScreen" aria-hidden="true">
+      <div class="bg-ambient" aria-hidden="true">
+        <span class="orb orb-1"></span>
+        <span class="orb orb-2"></span>
+        <span class="orb orb-3"></span>
+        <span class="orb orb-4"></span>
+        <div class="bg-grid-plane"></div>
+      </div>
+      <div class="welcome-inner">
+        <div class="welcome-logo"><i class="fas fa-bolt"></i></div>
+        <div class="welcome-title">AETHER</div>
+        <div class="welcome-sub">Система управления сервером</div>
+        <div class="welcome-tag">Модерация · Аналитика · AI · Автоматизация</div>
+        <button class="welcome-btn" id="welcomeEnter" type="button">
+          <span>Войти в панель</span><i class="fas fa-arrow-right"></i>
+        </button>
+        <div class="welcome-hint"><i class="fas fa-chevron-down"></i> нажмите или прокрутите вниз</div>
+      </div>
+    </div>
+
     <!-- Futuristic ambient background layer -->
     <div class="bg-ambient" aria-hidden="true">
         <span class="orb orb-1"></span>
@@ -250,6 +274,51 @@ window.renderSafe = function (renderFn) {
   if (typeof renderFn === 'function') { try { renderFn(); } catch (e) {} }
   requestAnimationFrame(function () { window.scrollTo(x, y); });
 };
+
+// ============================================================
+// WELCOME / SPLASH SCREEN — показывается один раз за сессию.
+// body заблокирован (overflow:hidden), переход по клику / скроллу
+// / клавише → плавное скрытие + снятие блокировки скролла.
+// ============================================================
+(function () {
+  var screen = document.getElementById('welcomeScreen');
+  if (!screen) return;
+  var btn = document.getElementById('welcomeEnter');
+  var KEY = 'aether_welcome_seen';
+
+  // Уже входили в этой сессии? Не показываем снова.
+  var seen = false;
+  try { seen = sessionStorage.getItem(KEY) === '1'; } catch (e) {}
+  if (seen) { screen.remove(); return; }
+
+  // Блокируем скролл body, пока welcome открыт.
+  document.body.classList.add('welcome-lock');
+
+  var entered = false;
+  function enter() {
+    if (entered) return;
+    entered = true;
+    screen.classList.add('hide');
+    document.body.classList.remove('welcome-lock');
+    try { sessionStorage.setItem(KEY, '1'); } catch (e) {}
+    window.removeEventListener('wheel', onGesture);
+    window.removeEventListener('touchstart', onGesture);
+    document.removeEventListener('keydown', onKey);
+    // Удаляем из DOM после анимации скрытия
+    setTimeout(function () { screen.remove(); }, 600);
+  }
+  function onGesture() { enter(); }
+  function onKey(e) {
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') { e.preventDefault(); enter(); }
+  }
+
+  if (btn) btn.addEventListener('click', function (e) { e.preventDefault(); enter(); });
+  window.addEventListener('wheel', onGesture, { passive: true });
+  window.addEventListener('touchstart', onGesture, { passive: true });
+  document.addEventListener('keydown', onKey);
+  // Страховка: автопереход через 8 секунд, если пользователь не нажал.
+  setTimeout(function () { enter(); }, 8000);
+})();
 
 // Mobile menu
 document.addEventListener('DOMContentLoaded', function () {
