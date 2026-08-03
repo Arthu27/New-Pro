@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Панель Aether{% endblock %}</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/static/style.css?v=11">
+    <link rel="stylesheet" href="/static/style.css?v=12">
     <script>
       // Apply theme + accent before render to prevent FOUC
       (function(){
@@ -48,11 +48,46 @@
         <span class="orb orb-4"></span>
         <div class="bg-grid-plane"></div>
       </div>
+
+      <!-- Site-style top nav (sticky) -->
+      <nav class="welcome-nav">
+        <div class="welcome-nav-inner">
+          <div class="welcome-nav-logo">
+            <div class="welcome-nav-mark"><i class="fas fa-bolt"></i></div>
+            <span class="welcome-nav-name">AETHER</span>
+          </div>
+          <div class="welcome-nav-links" id="welcomeNavLinks">
+            <a href="#w-features" class="wn-link">Возможности</a>
+            <a href="#w-stats" class="wn-link">Статистика</a>
+            <a href="#w-about" class="wn-link">О системе</a>
+          </div>
+          <button class="welcome-nav-cta" id="welcomeEnterTop" type="button"><i class="fas fa-arrow-right"></i> Войти</button>
+          <button class="welcome-burger" id="welcomeBurger" aria-label="Меню"><i class="fas fa-bars"></i></button>
+        </div>
+      </nav>
+
+      <!-- Hero content -->
       <div class="welcome-inner">
-        <div class="welcome-logo"><i class="fas fa-bolt"></i></div>
+        <div class="welcome-eyebrow"><span class="dot"></span> Панель управления сервером</div>
         <div class="welcome-title">AETHER</div>
-        <div class="welcome-sub">Система управления сервером</div>
+        <div class="welcome-sub">Умная система модерации, аналитики и автоматизации<br>для вашего Discord-сообщества</div>
         <div class="welcome-tag">Модерация · Аналитика · AI · Автоматизация</div>
+        <div class="welcome-actions">
+          <button class="welcome-btn" id="welcomeEnter" type="button">
+            <span>Войти в панель</span><i class="fas fa-arrow-right"></i>
+          </button>
+          <a class="welcome-btn ghost" href="#w-features" data-scroll>Узнать больше</a>
+        </div>
+        <div class="welcome-hint"><i class="fas fa-chevron-down"></i> нажмите или прокрутите вниз</div>
+      </div>
+
+      <!-- Feature highlights -->
+      <div class="welcome-features" id="w-features">
+        <div class="wf-item"><i class="fas fa-shield-halved"></i><b>Модерация</b><span>Варны, баны, мьюты, автомод</span></div>
+        <div class="wf-item"><i class="fas fa-chart-line"></i><b>Аналитика</b><span>Графики и живая статистика</span></div>
+        <div class="wf-item"><i class="fas fa-robot"></i><b>AI-помощник</b><span>Автоматическая поддержка</span></div>
+      </div>
+    </div>
         <button class="welcome-btn" id="welcomeEnter" type="button">
           <span>Войти в панель</span><i class="fas fa-arrow-right"></i>
         </button>
@@ -302,7 +337,6 @@ window.renderSafe = function (renderFn) {
 (function () {
   var screen = document.getElementById('welcomeScreen');
   if (!screen) return;
-  var btn = document.getElementById('welcomeEnter');
   var KEY = 'aether_welcome_seen';
 
   // Уже входили в этой сессии? Не показываем снова.
@@ -310,7 +344,7 @@ window.renderSafe = function (renderFn) {
   try { seen = sessionStorage.getItem(KEY) === '1'; } catch (e) {}
   if (seen) { screen.remove(); return; }
 
-  // Блокируем скролл body, пока welcome открыт.
+  // Блокируем скролл body, пока welcome открыт (site-hero: только клик/кнопка).
   document.body.classList.add('welcome-lock');
 
   var entered = false;
@@ -320,23 +354,42 @@ window.renderSafe = function (renderFn) {
     screen.classList.add('hide');
     document.body.classList.remove('welcome-lock');
     try { sessionStorage.setItem(KEY, '1'); } catch (e) {}
-    window.removeEventListener('wheel', onGesture);
-    window.removeEventListener('touchstart', onGesture);
     document.removeEventListener('keydown', onKey);
-    // Удаляем из DOM после анимации скрытия
     setTimeout(function () { screen.remove(); }, 600);
   }
-  function onGesture() { enter(); }
   function onKey(e) {
     if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') { e.preventDefault(); enter(); }
   }
 
-  if (btn) btn.addEventListener('click', function (e) { e.preventDefault(); enter(); });
-  window.addEventListener('wheel', onGesture, { passive: true });
-  window.addEventListener('touchstart', onGesture, { passive: true });
+  function bind(id, fn){ var el = document.getElementById(id); if (el) el.addEventListener('click', fn); }
+  bind('welcomeEnter', function (e) { e.preventDefault(); enter(); });
+  bind('welcomeEnterTop', function (e) { e.preventDefault(); enter(); });
+
+  // Anchor links scroll within welcome hero (site-style)
+  document.querySelectorAll('#welcomeScreen a[data-scroll], #welcomeScreen .wn-link').forEach(function (a) {
+    a.addEventListener('click', function (e) {
+      var href = a.getAttribute('href') || '';
+      if (href.charAt(0) !== '#') return;
+      e.preventDefault();
+      var target = document.querySelector(href);
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  });
+
+  // Burger menu (mobile)
+  var burger = document.getElementById('welcomeBurger');
+  var nav = document.querySelector('.welcome-nav');
+  if (burger && nav) {
+    burger.addEventListener('click', function (e) {
+      e.stopPropagation();
+      nav.classList.toggle('open');
+    });
+    document.addEventListener('click', function (e) {
+      if (nav.classList.contains('open') && !nav.contains(e.target)) nav.classList.remove('open');
+    });
+  }
+
   document.addEventListener('keydown', onKey);
-  // Страховка: автопереход через 8 секунд, если пользователь не нажал.
-  setTimeout(function () { enter(); }, 8000);
 })();
 
 // Mobile menu
