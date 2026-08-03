@@ -15,7 +15,30 @@
   </div>
 </div>
 
-<div class="ai-stats-container">
+<style>
+/* AI Ticket статистика — premium gold */
+.ai-stats-container{display:flex;flex-direction:column;gap:16px}
+.row-flex{display:flex;gap:14px;flex-wrap:wrap}
+.col-3{flex:1 1 220px;min-width:200px}
+.col-6{flex:1 1 46%;min-width:300px}
+.glass-card{background:linear-gradient(165deg,rgba(224,176,74,.04),rgba(20,18,14,.7));border:1px solid var(--line-2);border-radius:16px;padding:20px;backdrop-filter:blur(14px);transition:border-color .2s var(--ease)}
+.glass-card:hover{border-color:var(--ac-line)}
+.section-title{font-size:14px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:9px;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.section-title i{color:var(--ac)}
+.stat-number{font-size:30px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;line-height:1.05;font-family:'Poppins',sans-serif}
+.progress-row{margin-bottom:14px}
+.progress-label{display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px}
+.progress-name{color:var(--text-2);font-weight:500}
+.progress-value{color:var(--ac-2);font-weight:700;font-variant-numeric:tabular-nums}
+.modern-progress{height:8px;background:rgba(255,255,255,.05);border-radius:99px;overflow:hidden}
+.modern-progress-bar{height:100%;background:linear-gradient(90deg,var(--ac),var(--ac-2));border-radius:99px;transition:width .6s var(--ease-out)}
+.metric-card{display:flex;justify-content:space-between;align-items:center;padding:11px 14px;background:rgba(0,0,0,.22);border:1px solid var(--line);border-radius:10px;margin-bottom:9px}
+.metric-label{font-size:13px;color:var(--text-2)}
+.metric-value{font-size:16px;font-weight:800;color:var(--ac-2);font-variant-numeric:tabular-nums}
+.badge-modern{display:inline-block;background:var(--ac-soft);color:var(--ac-2);border:1px solid var(--ac-line);padding:2px 10px;border-radius:99px;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}
+</style>
+
+<div class="ai-stats-container" data-reveal="up">
 
     <!-- Общая статистика -->
     <div class="row-flex" >
