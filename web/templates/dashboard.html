@@ -254,13 +254,13 @@
     <div class="hero-guild-row">
       <div class="hero-guild-av" id="heroGuildAv">⚡</div>
       <div>
-        <h1 id="heroTitle">Центр управления сервером</h1>
-        <p id="heroDesc">Полный обзор активности, модерации и состояния вашего Discord-сообщества в реальном времени.</p>
+        <h1 id="heroTitle">Добро пожаловать в Hakumo</h1>
+        <p id="heroDesc">Уютное и дружелюбное сообщество — здесь каждый найдёт себе друзей, интересное общение и помощь.</p>
       </div>
     </div>
     <div class="hero-welcome-msg">
       <i class="fas fa-heart"></i>
-      <span id="heroWelcomeMsg">Добро пожаловать в наше сообщество! Это по-настоящему уютное и дружелюбное место, где каждый найдёт себе друзей и интересное общение. Мы рады, что ты с нами!</span>
+      <span id="heroWelcomeMsg">Добро пожаловать в Hakumo! Это по-настоящему уютное и дружелюбное место, где каждый найдёт себе друзей и интересное общение. Мы рады, что ты с нами!</span>
     </div>
   </div>
 </div>
@@ -497,22 +497,25 @@
 
   // ── Load main guild info into hero (name, icon, welcome msg) ──
   async function loadGuildInfo() {
+    // Sunucu adı sabit: Hakumo
+    var gName = 'Hakumo';
     try {
       var guilds = await window.fetchCachedJSON('/api/guilds');
-      if (!Array.isArray(guilds) || !guilds.length) return;
-      var main = '{{ main_guild_id }}';
-      var g = null;
-      for (var i = 0; i < guilds.length; i++) {
-        if (String(guilds[i].id) === String(main)) { g = guilds[i]; break; }
+      if (Array.isArray(guilds) && guilds.length) {
+        var main = '{{ main_guild_id }}';
+        var g = null;
+        for (var i = 0; i < guilds.length; i++) {
+          if (String(guilds[i].id) === String(main)) { g = guilds[i]; break; }
+        }
+        if (!g) g = guilds[0];
+        var av = $('heroGuildAv');
+        if (av && g.icon) av.innerHTML = '<img src="' + esc(g.icon) + '" onerror="this.parentNode.textContent=\'⚡\'">';
       }
-      if (!g) g = guilds[0];
-      var t = $('heroTitle');
-      if (t && g.name) t.textContent = 'Добро пожаловать в ' + g.name;
-      var av = $('heroGuildAv');
-      if (av && g.icon) av.innerHTML = '<img src="' + esc(g.icon) + '" onerror="this.parentNode.textContent=\'⚡\'">';
-      var m = $('heroWelcomeMsg');
-      if (m) m.textContent = 'Добро пожаловать в наше сообщество! ' + (g.name||'') + ' — это по-настоящему уютное и дружелюбное место, где каждый найдёт себе друзей, интересное общение и помощь. Мы рады, что ты с нами!';
     } catch (e) { /* keep defaults */ }
+    var t = $('heroTitle');
+    if (t) t.textContent = 'Добро пожаловать в ' + gName;
+    var m = $('heroWelcomeMsg');
+    if (m) m.textContent = 'Добро пожаловать в ' + gName + '! Это по-настоящему уютное и дружелюбное место, где каждый найдёт себе друзей и интересное общение. Мы рады, что ты с нами!';
   }
 
   // ── Main stats ──
