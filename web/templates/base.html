@@ -62,7 +62,7 @@
                         <i class="fas fa-chevron-down nav-caret"></i>
                     </div>
                     <div class="nav-group-items">
-                        {% for it in grp.items %}
+                        {% for it in grp.pages %}
                         <a href="{{ it.path }}" class="nav-link {% if request.path == it.path %}active{% endif %}"><i class="fas {{ it.icon }}"></i> <span>{{ it.label }}</span></a>
                         {% endfor %}
                     </div>
