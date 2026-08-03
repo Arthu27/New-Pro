@@ -14,6 +14,19 @@
 .entry-del { background: transparent; border: none; color: var(--err); cursor: pointer; font-size: 18px; }
 .btn-add-entry { background: var(--ac-soft); color: var(--ac); border: 1px solid var(--ac-line); border-radius: var(--r-sm); padding: 8px 14px; cursor: pointer; font-size: 12.5px; }
 .btn-add-entry:hover { background: var(--ac-glow); }
+
+.rr-hero{display:flex;align-items:center;gap:14px;padding:18px 22px;background:linear-gradient(135deg,rgba(224,176,74,.10),rgba(224,176,74,.03));border:1px solid var(--ac-line);border-radius:14px;margin-bottom:16px}
+.rr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.rr-card{background:linear-gradient(165deg,rgba(224,176,74,.04),rgba(20,18,14,.7));border:1px solid var(--line-2);border-radius:14px;padding:16px}
+.rr-title{font-weight:700;color:var(--text);font-size:14px;margin-bottom:12px}
+.rr-type-badge{display:inline-block;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700}
+.rr-type-badge.select{background:rgba(167,139,250,.14);color:#c4b5fd;border:1px solid rgba(167,139,250,.3)}
+.rr-type-badge.emoji{background:rgba(224,176,74,.14);color:var(--ac-2);border:1px solid var(--ac-line)}
+.rr-entry{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--line);font-size:13px;color:var(--text-2)}
+.rr-emoji{font-size:18px}
+.rr-role{color:var(--ac-2);font-weight:600}
+.rr-arrow{color:var(--text-3);font-size:12px}
+.rr-footer{display:flex;justify-content:space-between;align-items:center;margin-top:10px;font-size:12px;color:var(--text-3)}
 </style>
 {% block page_hero %}
 <div class="page-hero compact">

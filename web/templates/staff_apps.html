@@ -15,6 +15,17 @@
 </div>
 {% endblock %}
 
+<style>
+
+.app-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.app-card{background:linear-gradient(165deg,rgba(224,176,74,.04),rgba(20,18,14,.7));border:1px solid var(--line-2);border-radius:14px;padding:16px}
+.app-icon{width:42px;height:42px;border-radius:11px;background:var(--ac-soft);color:var(--ac);border:1px solid var(--ac-line);display:flex;align-items:center;justify-content:center;font-size:16px}
+.app-info{font-size:13px;color:var(--text-2);line-height:1.5}
+.app-actions{display:flex;gap:9px;margin-top:12px;flex-wrap:wrap}
+.badge-role{display:inline-block;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700;background:var(--ac-soft);color:var(--ac-2);border:1px solid var(--ac-line)}
+
+</style>
+
 <div class="app-stats">
   <div class="app-stat">
     <div class="app-icon" style="background: linear-gradient(135deg, #d4a843, #e0b04a) !important;"><i class="fas fa-list"></i></div>
