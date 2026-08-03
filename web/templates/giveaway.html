@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% block title %}Розыгрыши - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-gift" ></i> Розыгрыши{% endblock %}
+{% block title %}Розыгрыши — Aether{% endblock %}
+{% block page_title %}<i class="fas fa-gift"></i> Розыгрыши{% endblock %}
 {% block content %}
 {% block page_hero %}
 <div class="page-hero compact">
@@ -9,24 +9,43 @@
       <span class="dot"></span>
       <span>Розыгрыши</span>
     </div>
-    <h1>Розыгрыши</h1>
+    <h1><i class="fas fa-gift"></i> Розыгрыши</h1>
     <p>Создание и управление розыгрышами на сервере.</p>
   </div>
 </div>
 {% endblock %}
 
+<style>
+.gw-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.gw-counters{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.gw-badge{display:inline-block;padding:4px 13px;border-radius:99px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.gw-badge.live{background:rgba(74,222,128,.14);color:#86efac;border:1px solid rgba(74,222,128,.3)}
+.gw-badge.ended{background:rgba(138,125,95,.12);color:var(--text-3);border:1px solid var(--line-2)}
+.gw-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.gw-card{background:linear-gradient(165deg,rgba(224,176,74,.04),rgba(20,18,14,.7));border:1px solid var(--line-2);border-radius:16px;padding:18px;backdrop-filter:blur(14px);transition:all .2s var(--ease)}
+.gw-card:hover{border-color:var(--ac-line);transform:translateY(-3px);box-shadow:0 12px 32px rgba(0,0,0,.3)}
+.gw-prize{width:48px;height:48px;border-radius:13px;background:linear-gradient(135deg,var(--ac-2),var(--ac-3));display:flex;align-items:center;justify-content:center;font-size:20px;color:#1a1a1a;margin-bottom:12px;box-shadow:0 6px 18px var(--ac-glow)}
+.gw-title{font-size:15.5px;font-weight:700;color:var(--text);margin-bottom:10px;line-height:1.35}
+.gw-info{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:12px}
+.gw-info span{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text-3)}
+.gw-info span i{color:var(--ac);font-size:11px}
+.gw-progress{height:7px;background:rgba(255,255,255,.05);border-radius:99px;overflow:hidden;margin-bottom:12px}
+.gw-progress-fill{height:100%;background:linear-gradient(90deg,var(--ac),var(--ac-2));border-radius:99px;transition:width .6s var(--ease-out)}
+.gw-foot{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;color:var(--text-2)}
+.gw-foot span{font-variant-numeric:tabular-nums}
+</style>
 
-
-<div  >
-  <div  >
-    <span class="gw-badge live" id="live-count">0 live</span>
+<div class="gw-toolbar" data-reveal="up">
+  <div class="gw-counters">
+    <select id="guild-select" class="guild-select" style="min-width:180px"><option value="">Выберите сервер...</option></select>
+    <span class="gw-badge live" id="live-count">0 активных</span>
     <span class="gw-badge ended" id="ended-count">0 завершено</span>
   </div>
   <button class="btn btn-primary" id="btn-new" type="button"><i class="fas fa-plus"></i> Новый розыгрыш</button>
 </div>
 
-<div class="gw-grid" id="gw-grid">
-  <p class="empty">Розыгрышей нет</p>
+<div class="gw-grid" id="gw-grid" data-reveal="up">
+  <p class="empty"><i class="fas fa-spinner fa-spin"></i>Загрузка...</p>
 </div>
 
 <script>
@@ -34,43 +53,72 @@
   'use strict';
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function isLive(g){ return (g.status||'').toLowerCase() !== 'ended'; }
 
-  var giveaways = [
-    { prize: 'fa-gift', title: 'Nitro 1 месяц', winners: 1, entries: 245, max: 500, live: true, ends: '2 gюn' },
-    { prize: 'fa-crown', title: 'VIP Роль', winners: 3, entries: 89, max: 100, live: true, ends: '5 часов' },
-    { prize: 'fa-gamepad', title: 'Игра kodu', winners: 1, entries: 50, max: 50, live: false, ends: 'Готово' }
-  ];
+  var MAIN_GID = '{{ main_guild_id }}';
+  var selectedGuild = MAIN_GID;
+  var giveaways = [];
+
+  function loadGuilds() {
+    var gs = $('guild-select');
+    fetch('/api/guilds').then(function (r) { return r.json(); }).then(function (guilds) {
+      if (!Array.isArray(guilds) || !guilds.length) return;
+      gs.innerHTML = guilds.map(function (g) {
+        return '<option value="' + esc(g.id) + '"' + (String(g.id) === selectedGuild ? ' selected' : '') + '>' + esc(g.name) + '</option>';
+      }).join('');
+      selectedGuild = gs.value || MAIN_GID;
+      load();
+    }).catch(function () { load(); });
+  }
+
+  async function load() {
+    if (!selectedGuild) return;
+    try {
+      var r = await fetch('/api/giveaway/' + selectedGuild);
+      giveaways = await r.json();
+      if (!Array.isArray(giveaways)) giveaways = [];
+    } catch (e) { giveaways = []; }
+    render();
+  }
 
   function render() {
-    var live = giveaways.filter(function (g) { return g.live; }).length;
-    var ended = giveaways.filter(function (g) { return !g.live; }).length;
-    $('live-count').textContent = live + ' live';
+    var live = giveaways.filter(isLive).length;
+    var ended = giveaways.length - live;
+    $('live-count').textContent = live + ' активных';
     $('ended-count').textContent = ended + ' завершено';
-    if (!giveaways.length) {
-      $('gw-grid').innerHTML = '<p class="empty">Розыгрышей нет</p>';
-      return;
-    }
-    var html = '';
-    giveaways.forEach(function (g, i) {
-      var pct = g.max ? Math.round(g.entries / g.max * 100) : 0;
-      html += '<div class="gw-card" >' +
-        '<div class="gw-prize"><i class="fas ' + esc(g.prize) + '"></i></div>' +
-        '<div class="gw-title">' + esc(g.title) + '</div>' +
-        '<div class="gw-info"><span><i class="fas fa-trophy"></i>' + g.winners + ' победител' + '</span><span><i class="fas fa-clock"></i>' + esc(g.ends) + '</span></div>' +
-        '<div class="gw-progress"><div class="gw-progress-fill"   style="width: ' + pct + '%;"></div></div>' +
-        '<div class="gw-foot"><span>' + g.entries + ' / ' + g.max + ' katиlиmcи</span><span class="gw-badge ' + (g.live ? 'live' : 'ended') + '">' + (g.live ? 'LIVE' : 'Готово') + '</span></div>' +
+    if (!giveaways.length) { $('gw-grid').innerHTML = '<p class="empty"><i class="fas fa-gift"></i>Розыгрышей нет</p>'; return; }
+    $('gw-grid').innerHTML = giveaways.map(function (g) {
+      var live_ = isLive(g);
+      var pct = 100;
+      var ends = '';
+      try { if (g.ends_at) ends = new Date(g.ends_at).toLocaleString('ru-RU', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}); } catch(e){}
+      return '<div class="gw-card">' +
+        '<div class="gw-prize"><i class="fas fa-gift"></i></div>' +
+        '<div class="gw-title">' + esc(g.prize || 'Розыгрыш') + '</div>' +
+        '<div class="gw-info">' +
+          '<span><i class="fas fa-trophy"></i>' + (g.winners || 1) + ' победител' + (g.winners>1?'я':'ь') + '</span>' +
+          (ends ? '<span><i class="fas fa-clock"></i>' + esc(ends) + '</span>' : '') +
+        '</div>' +
+        '<div class="gw-progress"><div class="gw-progress-fill" style="width:' + pct + '%;"></div></div>' +
+        '<div class="gw-foot"><span><i class="fas fa-users"></i> ' + (g.participants || 0) + ' участников</span>' +
+        '<span class="gw-badge ' + (live_ ? 'live' : 'ended') + '">' + (live_ ? 'LIVE' : 'Готово') + '</span></div>' +
       '</div>';
-    });
-    $('gw-grid').innerHTML = html;
+    }).join('');
   }
 
   function bind() {
+    $('guild-select').addEventListener('change', function () { selectedGuild = this.value || MAIN_GID; load(); });
     var b = $('btn-new');
-    if (b) b.addEventListener('click', function () { showToast('Новый розыгрыш — форма появится здесь', true); });
+    if (b) b.addEventListener('click', function () { showToast('Форма создания розыгрыша появится здесь', true); });
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { bind(); render(); });
-  else { bind(); render(); }
+  function start() {
+    bind(); loadGuilds();
+    if (window.setLiveRefresh) window.setLiveRefresh(load, 5000);
+    else setInterval(load, 5000);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+  else start();
 })();
 </script>
 {% endblock %}
