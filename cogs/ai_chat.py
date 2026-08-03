@@ -1351,21 +1351,16 @@ class AIChat (commands .Cog ):
                 log .info (f'[AI] Owner DM Ошибки: {e}')
 
         if is_dm :
-        # DM log'a сохранить
+        # DM log'a сохранить (входящее сообщение логгер DMLogger'a записывает,
+        # здесь только bot cevabы сохранить, чтобы не дублировать)
             try :
                 import json as _j ,os as _os ,datetime as _dt3 
                 _os .makedirs ('data',exist_ok =True )
                 _f ='data/dm_log.json'
                 _d =_j .load (open (_f ,encoding ='utf-8'))if _os .path .exists (_f )else {}
                 uid =str (message .author .id )
-                if uid not in _d :_d [uid ]=[]
-                # Gelen сообщение сохранить
-                _d [uid ].append ({
-                'author':message .author .display_name ,
-                'content':message .content ,
-                'timestamp':_dt3 .datetime .utcnow ().isoformat (),
-                'from_bot':False ,
-                })
+                if uid not in _d or not isinstance (_d [uid ],list ):
+                    _d [uid ]=[]
                 # Bot cevabыnы сохранить
                 _d [uid ].append ({
                 'author':'Aether',

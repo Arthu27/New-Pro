@@ -3294,15 +3294,20 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
             if not msgs :continue 
             last =msgs [-1 ]
             name =uid 
+            avatar =''
             if bot :
                 for g in bot .guilds :
                     try :
                         m =g .get_member (int (uid ))
-                        if m :name =m .display_name ;break 
+                        if m :
+                            name =m .display_name 
+                            avatar =str (m .display_avatar .url )if m .display_avatar else ''
+                            break 
                     except :pass 
             result .append ({
             'id':uid ,
             'name':name ,
+            'avatar':avatar ,
             'last_msg':last .get ('content','')[:50 ],
             'timestamp':last .get ('timestamp',''),
             'unread':0 ,

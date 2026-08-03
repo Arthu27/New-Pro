@@ -298,6 +298,24 @@
   .chat-wrap { grid-template-columns: 48px 1fr; height: calc(100vh - 150px); }
   .chat-sidebar { display: none; }
 }
+
+/* ── Toast ── */
+.chat-toast { position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%) translateY(130%); background: rgba(18,18,22,0.96); border: 1px solid rgba(255,255,255,0.16); padding: 13px 22px; border-radius: 12px; font-size: 13px; z-index: 400; transition: .3s; box-shadow: 0 10px 34px rgba(0,0,0,0.55); }
+.chat-toast.show { transform: translateX(-50%) translateY(0); }
+.chat-toast.ok { border-color: #2ecc71; }
+.chat-toast.err { border-color: #e74c3c; }
+/* ── Confirm modal ── */
+.chat-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.65); display: none; align-items: center; justify-content: center; z-index: 500; padding: 20px; }
+.chat-modal.show { display: flex; }
+.chat-modal-box { background: linear-gradient(165deg,#1f1f26,#141419); border: 1px solid rgba(255,255,255,0.12); border-radius: 18px; padding: 26px 28px; max-width: 360px; width: 100%; text-align: center; box-shadow: 0 24px 70px rgba(0,0,0,0.65); }
+.chat-modal-box .cm-icon { font-size: 34px; margin-bottom: 10px; }
+.chat-modal-box .cm-title { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+.chat-modal-box .cm-desc { font-size: 13px; opacity: .7; margin-bottom: 20px; line-height: 1.5; }
+.chat-modal-actions { display: flex; gap: 10px; justify-content: center; }
+.chat-modal-btn { padding: 9px 16px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.16); background: rgba(255,255,255,0.05); cursor: pointer; font-size: 13px; font-weight: 600; transition: .15s; display: inline-flex; align-items: center; gap: 6px; }
+.chat-modal-btn:hover { background: var(--ac); color: #fff; }
+.chat-modal-btn.red { color: #ff6b6b; border-color: rgba(231,76,60,0.4); }
+.chat-modal-btn.red:hover { background: #e74c3c; color: #fff; }
 </style>
 
 <div class="chat-wrap">
@@ -408,6 +426,47 @@
   <img id="lightbox-img" src="" alt="">
 </div>
 
+<!-- Toast -->
+<div class="chat-toast" id="chat-toast"></div>
+
+<!-- Confirm modal -->
+<div class="chat-modal" id="chat-confirm">
+  <div class="chat-modal-box">
+    <div class="cm-icon" id="cm-icon">🗑️</div>
+    <div class="cm-title" id="cm-title">Подтверждение</div>
+    <div class="cm-desc" id="cm-desc"></div>
+    <div class="chat-modal-actions">
+      <button class="chat-modal-btn" onclick="closeConfirmModal()">Отмена</button>
+      <button class="chat-modal-btn red" id="cm-confirm"><i class="fas fa-check"></i> Подтвердить</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var _confirmCb = null;
+function toast(msg, ok){
+  var t = document.getElementById('chat-toast');
+  t.textContent = msg;
+  t.className = 'chat-toast show ' + (ok ? 'ok' : 'err');
+  clearTimeout(t._t);
+  t._t = setTimeout(function(){ t.className='chat-toast'; }, 2600);
+}
+function confirmModal(icon, title, desc, cb){
+  document.getElementById('cm-icon').textContent = icon || '❓';
+  document.getElementById('cm-title').textContent = title;
+  document.getElementById('cm-desc').textContent = desc;
+  _confirmCb = cb;
+  document.getElementById('chat-confirm').classList.add('show');
+}
+function closeConfirmModal(){
+  document.getElementById('chat-confirm').classList.remove('show');
+  _confirmCb = null;
+}
+document.getElementById('cm-confirm').addEventListener('click', function(){
+  var cb = _confirmCb; closeConfirmModal(); if(cb) cb();
+});
+document.getElementById('chat-confirm').addEventListener('click', function(e){ if(e.target===this) closeConfirmModal(); });
+</script>
 <script>
 var _activeGuildId = '{{ guild_id }}';
 var _guilds = [];
@@ -659,7 +718,11 @@ async function sendMessage() {
 }
 
 async function deleteMsg(msgId) {
-  if (!confirm('Это сообщение удалить если хотите emin misiniz ? siz?')) return;
+  confirmModal('🗑️', 'Удалить сообщение?', 'Это действие нельзя отменить.', function(){
+    doDeleteMsg(msgId);
+  });
+}
+async function doDeleteMsg(msgId) {
   try {
     await fetch('/api/chat/' + _activeGuildId + '/' + _channelId + '/delete/' + msgId, {method:'POST'});
     _lastMsgId = null; loadMessages();
@@ -672,8 +735,16 @@ async function loadRecentDms(gid) {
     var r = await fetch('/api/dm/' + gid + '/recent').then(r => r.json());
     var dmList = document.getElementById('dm-list');
     dmList.innerHTML = r.length ? r.map(function(u) {
+      var t = '';
+      try { t = new Date(u.timestamp).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}); } catch(e){}
+      var avIcon = u.avatar ? '<img src="' + u.avatar + '" style="width:20px;height:20px;border-radius:50%;flex-shrink:0;">'
+                            : '<i class="fas fa-user ch-icon"></i>';
       return '<div class="ch-item" id="dm-' + u.id + '" onclick="openDm(\'' + u.id + '\',\'' + escJs(u.name) + '\')">' +
-        '<i class="fas fa-user ch-icon"></i><span class="ch-name">' + escHtml(u.name) + '</span>' +
+        avIcon +
+        '<span style="flex:1;min-width:0;overflow:hidden;">' +
+        '<span class="ch-name" style="display:block;">' + escHtml(u.name) + '</span>' +
+        '<span style="font-size:10.5px;opacity:.55;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escHtml(u.last_msg||'') + '</span></span>' +
+        '<span style="font-size:10px;opacity:.4;white-space:nowrap;">' + t + '</span>' +
         (u.unread ? '<span class="unread-dot"></span>' : '') + '</div>';
     }).join('') : '';
   } catch(e) {}
@@ -702,7 +773,7 @@ async function openDmFromInput() {
     var t = inp.value.trim();
     if (t && /^\d{17,20}$/.test(t)) val = t;
   }
-  if (!val) { alert('DM açmak için bir kullanıcı ID\'si veya isim girin.'); return; }
+  if (!val) { toast('Введите ID или имя пользователя для DM', false); return; }
   if (/^\d{17,20}$/.test(val)) {
     // Birebir Discord ID — member listesinde ara
     var m = _allMembers.find(function(x){ return x.id === val; });
@@ -712,7 +783,7 @@ async function openDmFromInput() {
       var found = res.find(function(x){ return x.id === val; });
       if (found) { openDm(found.id, found.nick || found.display_name || found.name); return; }
     } catch(e) {}
-    alert('Bu Discord ID bulunamadı.');
+    toast('Пользователь с таким ID не найден', false);
     return;
   }
   // İsim ara
@@ -722,7 +793,7 @@ async function openDmFromInput() {
     var hit = members.find(function(m){ return (m.display_name||'').toLowerCase()===q || (m.name||'').toLowerCase()===q; });
     if (hit) { openDm(hit.id, hit.nick || hit.display_name || hit.name); return; }
   } catch(e) {}
-  alert('Kullanıcı bulunamadı.');
+  toast('Пользователь не найден', false);
 }
 
 async function openDm(userId, userName) {
@@ -949,8 +1020,8 @@ async function saveNick() {
       if (idx >= 0) _allMembers[idx].nick = nick || null;
       renderMemberList(_allMembers);
       closeprofile();
-    } else { alert('Ошибка: ' + (r.error || 'Bilinmeyen ошибка')); }
-  } catch(e) { alert('Baglanti ошибки'); }
+    } else { toast('Ошибка: ' + (r.error || 'Неизвестная ошибка'), false); }
+  } catch(e) { toast('Ошибка сети', false); }
 }
 
 function dmFromprofile() {
