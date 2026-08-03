@@ -5473,7 +5473,18 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     def api_cogs ():
         import web .app as _app ;bot =_app .bot_instance 
         import os 
-        all_cogs =[f [:-3 ]for f in os .listdir ('./cogs')if f .endswith ('.py')]
+        # Скрыть служебные/легаси файлы, чтобы не путать пользователя:
+        #  - имена с '_' / __init__ — вспомогательные (не cog'и)
+        #  - LEGACY — старые дубли, которые намеренно не загружаются (заменены *_cog версиями)
+        LEGACY ={'embed_utils','help_card','leveling_engagement','ticket_cog','utility_cog',
+                 'music','economy_cmds','fun','utility','automod','ticket_commands'}
+        all_cogs =[]
+        for f in os .listdir ('./cogs'):
+            if not f .endswith ('.py'):continue 
+            name =f [:-3 ]
+            if name .startswith ('_')or name in LEGACY :
+                continue 
+            all_cogs .append (name )
         loaded =[ext .split ('.')[-1 ]for ext in (bot .extensions if bot else [])]
         return jsonify ([{
         'name':c ,
