@@ -2571,6 +2571,27 @@ img[style*="border-radius:50%"], img[style*="border-radius: 50%"] {
 .activity-event.ai .activity-event-icon    { background: rgba(103, 232, 249, 0.12); color: var(--cyan); border-color: rgba(103, 232, 249, 0.30); }
 .activity-event.system .activity-event-icon { background: rgba(74, 222, 128, 0.12); color: var(--ok); border-color: rgba(74, 222, 128, 0.30); }
 .activity-event.giveaway .activity-event-icon { background: rgba(244, 114, 182, 0.12); color: var(--pink); border-color: rgba(244, 114, 182, 0.30); }
+.activity-event.type-auth .activity-event-icon { background: rgba(96, 165, 250, 0.12); color: #60a5fa; border-color: rgba(96, 165, 250, 0.30); }
+.activity-event.type-mod .activity-event-icon { background: rgba(248, 113, 113, 0.12); color: var(--err); border-color: rgba(248, 113, 113, 0.30); }
+.activity-event.type-warn .activity-event-icon { background: rgba(251, 191, 36, 0.12); color: var(--warn); border-color: rgba(251, 191, 36, 0.30); }
+.activity-event.type-ticket .activity-event-icon { background: rgba(52, 211, 153, 0.12); color: #34d399; border-color: rgba(52, 211, 153, 0.30); }
+.activity-event.type-panel .activity-event-icon { background: rgba(167, 139, 250, 0.12); color: var(--violet); border-color: rgba(167, 139, 250, 0.30); }
+
+/* Новые элементы ленты */
+.activity-event-head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:3px; }
+.activity-event-type {
+  font-size:10px; font-weight:700; letter-spacing:.6px; text-transform:uppercase;
+  opacity:.7; display:inline-flex; align-items:center; gap:5px;
+}
+.type-auth .activity-event-type   { color:#60a5fa; }
+.type-mod .activity-event-type    { color:var(--err); }
+.type-warn .activity-event-type   { color:var(--warn); }
+.type-ticket .activity-event-type { color:#34d399; }
+.type-panel .activity-event-type  { color:var(--violet); }
+.activity-event-time { font-size:11px; opacity:.55; white-space:nowrap; }
+.act-emoji { font-size:17px; line-height:1; }
+.activity-event-text strong { color:var(--ac) !important; }
+.act-title { color:var(--text); font-weight:600; }
 
 .activity-event-content { flex: 1; min-width: 0; }
 .activity-event-text {

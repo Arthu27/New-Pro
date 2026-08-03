@@ -2560,43 +2560,119 @@ def api_notifications_poll ():
 
 
 @app .route ('/api/activity-feed')
-@login_required 
+@login_required
 def api_activity_feed ():
-    """Recent panel activity (newest first) for the activity drawer."""
-    import os ,json 
-    items =[]
-    try :
-        f ='data/panel_logs.json'
-        if os .path .exists (f ):
-            with open (f ,'r',encoding ='utf-8')as fp :
-                raw =json .load (fp )
-            for e in raw [-50 :]:
-                items .append ({
-                'icon':'',
-                'title':e .get ('action','Действие'),
-                'user':e .get ('user',''),
-                'detail':e .get ('detail',''),
-                'ts':e .get ('ts',0 ),
-                })
-    except Exception :
-        pass 
-    try :
-        f ='data/temp_mod_log.json'
-        if os .path .exists (f ):
-            with open (f ,'r',encoding ='utf-8')as fp :
-                raw =json .load (fp )
-            for e in raw [-30 :]:
-                items .append ({
-                'icon':'⏱',
-                'title':f"Временное {e.get('action', 'действие')}",
-                'user':e .get ('mod',''),
-                'detail':e .get ('reason',''),
-                'ts':e .get ('ts',0 ),
-                })
-    except Exception :
-        pass 
-    items .sort (key =lambda x :x .get ('ts',0 )or 0 ,reverse =True )
-    return jsonify ({'items':items [:60 ]})
+    """Rich recent panel activity (newest first) for the activity drawer.
+
+    Собирает события из нескольких источников и нормализует их в единый
+    формат с иконкой, цветом и типом — чтобы лента была информативной.
+    """
+    import os, json, time as _t
+
+    items = []
+
+    def push(icon, title, user, detail, ts, evtype='system', color=None):
+        if not ts: return
+        items.append({
+            'icon': icon, 'title': title, 'user': user or '—',
+            'detail': detail or '', 'ts': ts, 'type': evtype, 'color': color,
+        })
+
+    # 1) Логи входа в панель
+    try:
+        f = 'data/login_log.json'
+        if os.path.exists(f):
+            with open(f, 'r', encoding='utf-8') as fp:
+                raw = json.load(fp)
+            for e in raw[-20:]:
+                ts = e.get('ts', 0)
+                if not ts:
+                    try:
+                        ts = int(datetime.fromisoformat(e.get('timestamp','')).timestamp())
+                    except Exception:
+                        ts = 0
+                push('🔐', 'Вход в панель', e.get('username'), f"Роль: {e.get('role','?')}", ts, 'auth')
+    except Exception:
+        pass
+
+    # 2) Действия модерации (audit + mod_data)
+    try:
+        f = 'data/audit_log.json'
+        if os.path.exists(f):
+            with open(f, 'r', encoding='utf-8') as fp:
+                data = json.load(fp)
+            for gid, events in data.items():
+                for ev in events[-15:]:
+                    ts = 0
+                    try:
+                        ts = int(datetime.fromisoformat(ev.get('timestamp','')).timestamp())
+                    except Exception:
+                        ts = 0
+                    act = (ev.get('action') or '').lower()
+                    icon = '🛡'
+                    evtype = 'mod'
+                    if 'бан' in act or 'ban' in act: icon = '🔨'
+                    elif 'мут' in act or 'mute' in act: icon = '🔇'
+                    elif 'кик' in act or 'kick' in act: icon = '👢'
+                    elif 'роль' in act: icon = '🎭'
+                    elif 'канал' in act: icon = '📁'
+                    elif 'сообщ' in act or 'message' in act: icon = '💬'
+                    elif 'голос' in act or 'voice' in act: icon = '🎙'
+                    push(icon, ev.get('action','Действие'), ev.get('user_name') or ev.get('mod_name'),
+                         ev.get('reason',''), ts, evtype)
+    except Exception:
+        pass
+
+    # 3) Предупреждения (warnings.json)
+    try:
+        f = 'data/warnings.json'
+        if os.path.exists(f):
+            with open(f, 'r', encoding='utf-8') as fp:
+                data = json.load(fp)
+            for gid, users in data.items():
+                for uid, warns in users.items():
+                    for w in warns[-5:]:
+                        ts = 0
+                        try:
+                            ts = int(datetime.fromisoformat(w.get('timestamp','')).timestamp())
+                        except Exception:
+                            ts = 0
+                        push('⚠️', 'Предупреждение', w.get('moderator') or w.get('mod') or uid,
+                             w.get('reason',''), ts, 'warn')
+    except Exception:
+        pass
+
+    # 4) Тикеты (ai_tickets_*.json)
+    try:
+        for fn in os.listdir('data'):
+            if fn.startswith('ai_tickets_') and fn.endswith('.json'):
+                with open(os.path.join('data', fn), 'r', encoding='utf-8') as fp:
+                    data = json.load(fp)
+                for tid, tk in data.items():
+                    ts = 0
+                    try:
+                        ts = int(datetime.fromisoformat(tk.get('created_at','')).timestamp())
+                    except Exception:
+                        ts = 0
+                    push('🎫', 'Тикет: '+ (tk.get('category') or 'общий'),
+                         tk.get('user_name'), tk.get('description','')[:80], ts, 'ticket')
+    except Exception:
+        pass
+
+    # 5) Панель-логи (POST-действия)
+    try:
+        f = 'data/panel_logs.json'
+        if os.path.exists(f):
+            with open(f, 'r', encoding='utf-8') as fp:
+                raw = json.load(fp)
+            for e in raw[-40:]:
+                push('🖥', e.get('action','Действие'), e.get('username'), e.get('detail',''), e.get('ts',0), 'panel')
+    except Exception:
+        pass
+
+    # Сортировка — новые сверху
+    items.sort(key=lambda x: x.get('ts') or 0, reverse=True)
+    return jsonify({'items': items[:80]})
 
 
     # WebSocket Server Initialization 

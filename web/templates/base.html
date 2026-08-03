@@ -947,14 +947,38 @@ window.addEventListener('pageshow', function (e) {
     return d.toLocaleDateString('ru-RU', {day: '2-digit', month: '2-digit'});
   }
 
+  // Визуальные настройки типов событий (иконка уже от бэка)
+  var TYPE_STYLE = {
+    'auth':   { icon: 'fa-key',      cls: 'type-auth',   label: 'Вход' },
+    'mod':    { icon: 'fa-shield-halved', cls: 'type-mod', label: 'Модерация' },
+    'warn':   { icon: 'fa-triangle-exclamation', cls: 'type-warn', label: 'Варн' },
+    'ticket': { icon: 'fa-ticket',   cls: 'type-ticket', label: 'Тикет' },
+    'panel':  { icon: 'fa-display',  cls: 'type-panel',  label: 'Панель' },
+    'system': { icon: 'fa-circle',   cls: 'type-system', label: 'Система' }
+  };
+
   function renderEvent(ev, prepend) {
     var live = ev.live ? ' live' : '';
-    var html = '<div class="activity-event ' + esc(ev.type || 'system') + live + '">' +
-      '<div class="activity-event-icon"><i class="fas ' + esc(ev.icon || 'fa-circle') + '"></i></div>' +
+    var t = TYPE_STYLE[ev.type] || TYPE_STYLE.system;
+    // Иконка: используем emoji от бэка, иначе font-awesome по типу
+    var iconHtml;
+    if (ev.icon && !ev.icon.startsWith('fa-')) {
+      iconHtml = '<span class="act-emoji">' + esc(ev.icon) + '</span>';
+    } else {
+      iconHtml = '<i class="fas ' + esc(ev.icon && ev.icon.startsWith('fa-') ? ev.icon : t.icon) + '"></i>';
+    }
+    var html = '<div class="activity-event ' + t.cls + live + '">' +
+      '<div class="activity-event-icon">' + iconHtml + '</div>' +
       '<div class="activity-event-content">' +
-        '<div class="activity-event-text"><strong>' + esc(ev.user || 'system') + '</strong> ' + esc(ev.action || '') + ' <strong>' + esc(ev.target || '') + '</strong></div>' +
+        '<div class="activity-event-head">' +
+          '<span class="activity-event-type">' + esc(t.label) + '</span>' +
+          '<span class="activity-event-time">' + esc(fmtTime(ev.ts)) + '</span>' +
+        '</div>' +
+        '<div class="activity-event-text">' +
+          (ev.user && ev.user !== '—' ? '<strong>' + esc(ev.user) + '</strong> · ' : '') +
+          '<span class="act-title">' + esc(ev.title || '') + '</span>' +
+        '</div>' +
         (ev.detail ? '<div class="activity-event-detail">' + esc(ev.detail) + '</div>' : '') +
-        '<div class="activity-event-time"><i class="fas fa-clock"></i> ' + esc(fmtTime(ev.ts)) + '</div>' +
       '</div>' +
     '</div>';
     if (prepend && body.firstChild) {
