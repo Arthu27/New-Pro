@@ -98,6 +98,42 @@ if os.path.exists(_fix):
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix=Config.COMMAND_PREFIX, intents=intents, help_command=None)
 
+
+# ─── Ролевой контроль доступа к командам (Command ACL) ────────────────
+async def _acl_check(ctx):
+    """Prefix-команды: проверить ролевой доступ."""
+    try:
+        from services.permission_acl import has_access
+        cmd = ctx.command.name if ctx.command else None
+        if cmd:
+            if not has_access(ctx.guild.id if ctx.guild else 0, cmd, ctx.author):
+                await ctx.send("🚫 У вас нет доступа к этой команде.", delete_after=8)
+                return False
+    except Exception:
+        pass
+    return True
+
+bot.check(_acl_check)
+
+
+async def _acl_slash_check(interaction):
+    """Slash-команды: проверить ролевой доступ."""
+    try:
+        from services.permission_acl import has_access
+        cmd = getattr(interaction.command, "name", None) or \
+              (interaction.data.get("name") if interaction.data else None)
+        guild = interaction.guild
+        if cmd and guild:
+            if not has_access(guild.id, cmd, interaction.user):
+                await interaction.response.send_message(
+                    "🚫 У вас нет доступа к этой команде.", ephemeral=True)
+                return False
+    except Exception:
+        pass
+    return True
+
+bot.tree.interaction_check = _acl_slash_check
+
 ALERT_ROLE_ID = None
 
 _web_server_proc = None

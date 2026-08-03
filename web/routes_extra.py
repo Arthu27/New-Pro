@@ -5651,6 +5651,108 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         except Exception as e :
             return jsonify ({'success':False ,'error':str (e )}),500 
 
+    # ═══════════════════════════════════════════════════════════════════
+    #  РОЛИ И ДОСТУП (Command ACL) — управление доступом к командам
+    # ═══════════════════════════════════════════════════════════════════
+    @app .route ('/role-permissions')
+    @login_required
+    @role_required ('owner')
+    def role_permissions_page ():
+        return render_template (
+        'role_permissions.html',
+        role =session .get ('role'),
+        username =session .get ('username'),
+        guild_id =active_guild_id ()
+        )
+
+    @app .route ('/api/role-permissions/<guild_id>')
+    @login_required
+    @role_required ('owner')
+    def api_role_permissions_get (guild_id ):
+        """Вернуть: все роли сервера, категории команд, текущие ACL."""
+        from services .permission_acl import COMMAND_CATEGORIES ,load_acl
+        import web .app as _app
+        bot =_app .bot_instance
+        guild =None
+        if bot :
+            guild =bot .get_guild (int (guild_id ))
+            if guild is None :
+                for g in bot .guilds :
+                    if str (g .id )==str (guild_id ):
+                        guild =g
+                        break
+        roles =[]
+        if guild :
+            roles =[
+            {'id':str (r .id ),'name':r .name ,'color':str (r .color ),
+             'position':r .position ,'hoist':r .hoist ,
+             'permissions':r .permissions .value }
+            for r in guild .roles
+            ]
+            roles .sort (key =lambda x :x ['position'],reverse =True )
+        acl =load_acl (int (guild_id ))
+        return jsonify ({
+        'success':True ,
+        'roles':roles ,
+        'categories':COMMAND_CATEGORIES ,
+        'acl':acl ,
+        })
+
+    @app .route ('/api/role-permissions/<guild_id>/set',methods =['POST'])
+    @login_required
+    @role_required ('owner')
+    def api_role_permissions_set (guild_id ):
+        """Установить роли для команды/категории."""
+        from services .permission_acl import set_rule ,clear_rule
+        data =request .get_json (silent =True )or {}
+        command =data .get ('command','').strip ()
+        role_ids =data .get ('role_ids',[]) or []
+        if not command :
+            return jsonify ({'success':False ,'error':'Нет команды'}),400
+        if role_ids :
+            set_rule (int (guild_id ),command ,[str (r )for r in role_ids ])
+        else :
+            clear_rule (int (guild_id ),command )
+        return jsonify ({'success':True })
+
+    @app .route ('/api/role-permissions/<guild_id>/clear',methods =['POST'])
+    @login_required
+    @role_required ('owner')
+    def api_role_permissions_clear (guild_id ):
+        """Сбросить все ограничения (всё доступно всем)."""
+        from services .permission_acl import save_acl
+        save_acl (int (guild_id ),{})
+        return jsonify ({'success':True })
+
+    @app .route ('/api/role-permissions/<guild_id>/preset',methods =['POST'])
+    @login_required
+    @role_required ('owner')
+    def api_role_permissions_preset (guild_id ):
+        """Применить пресет: moderator / admin / member / everyone."""
+        from services .permission_acl import COMMAND_CATEGORIES ,save_acl
+        data =request .get_json (silent =True )or {}
+        preset =data .get ('preset','')
+        role_ids =[str (r )for r in (data .get ('role_ids',[]) or [])]
+        if not role_ids :
+            return jsonify ({'success':False ,'error':'Выберите хотя бы одну роль'}),400
+        acl ={}
+        if preset =='mod':
+            for cat ,cmds in COMMAND_CATEGORIES .items ():
+                if cat =='Модерация':
+                    acl [cat ]=role_ids
+        elif preset =='staff':
+            for cat ,cmds in COMMAND_CATEGORIES .items ():
+                if cat in ('Модерация','Сервер','Приглашения/Участники'):
+                    acl [cat ]=role_ids
+        elif preset =='all':
+            for cat ,cmds in COMMAND_CATEGORIES .items ():
+                acl [cat ]=role_ids
+        else :
+            return jsonify ({'success':False ,'error':'Неизвестный пресет'}),400
+        save_acl (int (guild_id ),acl )
+        return jsonify ({'success':True ,'preset':preset })
+
+
             # ── CUSTOM EMBED API ─────────────────────────────────────────────────────
             # api_send_embed and custom_embeds_page are defined in app.py directly
 

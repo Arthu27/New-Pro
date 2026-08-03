@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+{% block title %}Роли и Доступ - Aether{% endblock %}
+{% block page_title %}<i class="fas fa-shield-alt" style="animation: pulse 2s infinite;"></i> РОЛИ И ДОСТУП{% endblock %}
+{% block content %}
+{% block page_hero %}
+<div class="page-hero compact">
+  <div class="page-hero-content">
+    <div class="page-hero-greeting">
+      <span class="dot"></span>
+      <span>УПРАВЛЕНИЕ ДОСТУПОМ К КОМАНДАМ</span>
+    </div>
+    <h1>РОЛИ И ДОСТУП</h1>
+    <p>Настройте, какие роли могут использовать команды бота.</p>
+  </div>
+</div>
+{% endblock %}
+
+<style>
+  .rp-wrap { display:grid; grid-template-columns: 300px 1fr; gap:18px; padding:6px 2px 30px; }
+  @media (max-width: 900px){ .rp-wrap{ grid-template-columns:1fr; } }
+  .rp-roles { background: rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:16px; align-self:start; position:sticky; top:10px; }
+  .rp-roles h3 { margin:0 0 12px; font-size:14px; letter-spacing:1px; opacity:.8; }
+  .rp-role { display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:9px; cursor:pointer; margin-bottom:4px; border:1px solid transparent; transition:.15s; }
+  .rp-role:hover { background:rgba(255,255,255,0.05); }
+  .rp-role.active { background:rgba(255,255,255,0.08); border-color:var(--accent, #5865F2); }
+  .rp-role .swatch { width:16px; height:16px; border-radius:50%; flex-shrink:0; border:1px solid rgba(255,255,255,0.2); }
+  .rp-role .rname { flex:1; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .rp-role .cnt { font-size:11px; opacity:.5; }
+  .rp-panel { background: rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:18px; }
+  .rp-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:6px; }
+  .rp-head h2 { margin:0; font-size:18px; }
+  .rp-head .sub { font-size:12px; opacity:.6; margin-top:3px; }
+  .preset-row { display:flex; gap:8px; flex-wrap:wrap; margin:14px 0 18px; }
+  .preset-btn { padding:9px 14px; border-radius:9px; border:1px solid rgba(255,255,255,0.15); background:rgba(255,255,255,0.04); cursor:pointer; font-size:12.5px; transition:.15s; }
+  .preset-btn:hover { background:var(--accent,#5865F2); color:#fff; }
+  .cat-box { border:1px solid rgba(255,255,255,0.08); border-radius:12px; margin-bottom:12px; overflow:hidden; }
+  .cat-head { display:flex; align-items:center; gap:12px; padding:12px 14px; background:rgba(255,255,255,0.03); }
+  .cat-head .tgl { position:relative; width:42px; height:22px; flex-shrink:0; }
+  .cat-head .tgl input { opacity:0; width:0; height:0; }
+  .cat-head .tgl .sl { position:absolute; inset:0; background:rgba(255,255,255,0.15); border-radius:22px; transition:.2s; cursor:pointer; }
+  .cat-head .tgl .sl:before { content:""; position:absolute; height:16px; width:16px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.2s; }
+  .cat-head .tgl input:checked + .sl { background:var(--accent,#5865F2); }
+  .cat-head .tgl input:checked + .sl:before { transform:translateX(20px); }
+  .cat-title { font-size:14px; font-weight:600; flex:1; }
+  .cat-count { font-size:11.5px; opacity:.55; }
+  .cat-body { padding:10px 14px 14px; display:none; }
+  .cat-box.open .cat-body { display:block; }
+  .cmd-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:8px; }
+  .cmd-item { display:flex; align-items:center; justify-content:space-between; gap:8px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:8px 10px; font-size:12.5px; }
+  .cmd-item .cname { font-family:monospace; }
+  .cmd-item .cbtn { font-size:11px; padding:4px 9px; border-radius:6px; cursor:pointer; border:1px solid rgba(255,255,255,0.15); background:rgba(255,255,255,0.03); }
+  .cmd-item .cbtn.grant { background:var(--accent,#5865F2); color:#fff; }
+  .info-bar { background:rgba(88,101,242,0.12); border:1px solid rgba(88,101,242,0.3); border-radius:10px; padding:11px 13px; font-size:12.5px; margin-bottom:16px; }
+  .rp-toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(120%); background:#111; border:1px solid rgba(255,255,255,0.15); padding:12px 20px; border-radius:10px; font-size:13px; z-index:999; transition:.3s; box-shadow:0 8px 30px rgba(0,0,0,0.4); }
+  .rp-toast.show { transform:translateX(-50%) translateY(0); }
+  .rp-toast.ok { border-color:#2ecc71; }
+  .rp-toast.err { border-color:#e74c3c; }
+  .clear-all { color:#e74c3c; border-color:rgba(231,76,60,0.4); }
+</style>
+
+<div class="info-bar">
+  <i class="fas fa-info-circle"></i> <b>Как это работает:</b> выберите роль слева → отметьте категории/команды, к которым у неё должен быть доступ. Кнопка <b>«Открыть»</b> разрешает команду для выбранной роли, <b>«Всем»</b> — снимает ограничение (команда доступна всем). Если для команды не задано ограничений — она доступна всем. Администраторы имеют доступ ко всему.
+</div>
+
+<div class="rp-wrap">
+  <div class="rp-roles">
+    <h3><i class="fas fa-users-cog"></i> РОЛИ СЕРВЕРА</h3>
+    <div id="role-list" style="max-height:65vh;overflow:auto;"></div>
+  </div>
+
+  <div class="rp-panel">
+    <div class="rp-head">
+      <div>
+        <h2 id="sel-role-name">Выберите роль</h2>
+        <div class="sub" id="sel-role-sub">Нажмите на роль в списке слева</div>
+      </div>
+      <button class="preset-btn clear-all" onclick="resetAll()"><i class="fas fa-undo"></i> Сбросить все ограничения</button>
+    </div>
+
+    <div class="preset-row">
+      <span style="font-size:12px;opacity:.6;align-self:center;">Быстрые пресеты для выбранной роли:</span>
+      <button class="preset-btn" onclick="applyPreset('mod')"><i class="fas fa-user-shield"></i> Только модерация</button>
+      <button class="preset-btn" onclick="applyPreset('staff')"><i class="fas fa-toolbox"></i> Модерация + Сервер</button>
+      <button class="preset-btn" onclick="applyPreset('all')"><i class="fas fa-lock"></i> Всё закрыть (только эта роль)</button>
+    </div>
+
+    <div id="category-list"></div>
+  </div>
+</div>
+
+<div class="rp-toast" id="rp-toast"></div>
+
+<script>
+var ALL_ROLES = [];
+var ACL = {};
+var CATEGORIES = {};
+var selectedRoleId = null;
+
+function toast(msg, ok){
+  var t = document.getElementById('rp-toast');
+  t.textContent = msg;
+  t.className = 'rp-toast show ' + (ok ? 'ok' : 'err');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(function(){ t.className='rp-toast'; }, 2200);
+}
+
+function hexToRgba(hex, a){
+  var h = String(hex||'#5865F2').replace('#','');
+  if(h.length===3) h=h.split('').map(function(x){return x+x;}).join('');
+  var n = parseInt(h,16);
+  var r=(n>>16)&255, g=(n>>8)&255, b=n&255;
+  return 'rgba('+r+','+g+','+b+','+a+')';
+}
+
+function loadRoles(){
+  var gid = '{{ guild_id }}';
+  fetch('/api/role-permissions/'+gid)
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if(!d.success){ toast('Не удалось загрузить', false); return; }
+      ALL_ROLES = d.roles;
+      ACL = d.acl || {};
+      CATEGORIES = d.categories || {};
+      renderRoles();
+      renderCategories();
+    })
+    .catch(function(){ toast('Ошибка загрузки', false); });
+}
+
+function renderRoles(){
+  var el = document.getElementById('role-list');
+  el.innerHTML = ALL_ROLES.map(function(r){
+    var active = selectedRoleId === r.id;
+    return '<div class="rp-role '+(active?'active':'')+'" onclick="selectRole(\''+r.id+'\')">'
+      + '<span class="swatch" style="background:'+hexToRgba(r.color,0.9)+'"></span>'
+      + '<span class="rname">'+r.name+'</span>'
+      + '<span class="cnt">'+r.position+'</span>'
+      + '</div>';
+  }).join('');
+}
+
+function selectRole(id){
+  selectedRoleId = id;
+  renderRoles();
+  renderCategories();
+}
+
+function allowedRoles(key){
+  return ACL[key] || [];
+}
+
+function renderCategories(){
+  if(!selectedRoleId){ return; }
+  var role = ALL_ROLES.find(function(r){ return r.id===selectedRoleId; });
+  document.getElementById('sel-role-name').textContent = '⚙️ ' + (role?role.name:'Роль');
+  document.getElementById('sel-role-sub').textContent = 'Настройка доступа к командам';
+
+  var el = document.getElementById('category-list');
+  el.innerHTML = Object.keys(CATEGORIES).map(function(cat){
+    var cmds = CATEGORIES[cat];
+    var catAllowed = allowedRoles(cat);
+    var catOn = catAllowed.indexOf(selectedRoleId) !== -1;
+    var checked = catOn ? 'checked' : '';
+    return '<div class="cat-box '+(catOn?'open':'')+'" id="cat-'+cat+'">'
+      + '<div class="cat-head">'
+      + '<label class="tgl"><input type="checkbox" '+(checked)+' onchange="toggleCategory(\''+cat+'\', this.checked)"><span class="sl"></span></label>'
+      + '<span class="cat-title">'+cat+'</span>'
+      + '<span class="cat-count">'+cmds.length+' команд</span>'
+      + '<span style="cursor:pointer;font-size:12px;" onclick="document.getElementById(\'cat-'+cat+'\').classList.toggle(\'open\')"><i class="fas fa-chevron-down"></i></span>'
+      + '</div>'
+      + '<div class="cat-body">'
+      + '<div class="cmd-grid">'
+      + cmds.map(function(cmd){
+          var roles = allowedRoles(cmd);
+          var granted = roles.indexOf(selectedRoleId) !== -1;
+          var restricted = roles.length>0;
+          return '<div class="cmd-item">'
+            + '<span class="cname">'+cmd+'</span>'
+            + '<button class="cbtn '+(granted?'grant':'')+'" '
+            + 'onclick="toggleCommand(\''+cat+'\',\''+cmd+'\', \''+(granted?'off':'on')+'\')">'
+            + (granted?'✓ Доступ':'<i class="fas fa-lock-open"></i> Открыть')
+            + '</button>'
+            + '</div>';
+        }).join('')
+      + '</div>'
+      + '</div>'
+      + '</div>';
+  }).join('');
+}
+
+function setRule(key, roleIds){
+  var gid='{{ guild_id }}';
+  return fetch('/api/role-permissions/'+gid+'/set',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({command:key, role_ids:roleIds})
+  }).then(function(r){ return r.json(); });
+}
+
+function toggleCategory(cat, on){
+  if(!selectedRoleId){ toast('Сначала выберите роль',false); return; }
+  var roles = allowedRoles(cat).slice();
+  var idx = roles.indexOf(selectedRoleId);
+  if(on && idx===-1) roles.push(selectedRoleId);
+  if(!on && idx!==-1) roles.splice(idx,1);
+  setRule(cat, roles).then(function(){
+    ACL[cat] = roles;
+    toast((on?'Открыта':'Закрыта')+' категория «'+cat+'» для роли', true);
+    renderCategories();
+  });
+}
+
+function toggleCommand(cat, cmd, mode){
+  if(!selectedRoleId){ toast('Сначала выберите роль',false); return; }
+  var roles = allowedRoles(cmd).slice();
+  var idx = roles.indexOf(selectedRoleId);
+  if(mode==='on' && idx===-1) roles.push(selectedRoleId);
+  if(mode==='off' && idx!==-1) roles.splice(idx,1);
+  setRule(cmd, roles).then(function(){
+    ACL[cmd] = roles;
+    toast(mode==='on' ? 'Доступ открыт для «'+cmd+'»' : 'Ограничение снято с «'+cmd+'»', true);
+    renderCategories();
+  });
+}
+
+function applyPreset(preset){
+  if(!selectedRoleId){ toast('Сначала выберите роль',false); return; }
+  var gid='{{ guild_id }}';
+  fetch('/api/role-permissions/'+gid+'/preset',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({preset:preset, role_ids:[selectedRoleId]})
+  }).then(function(r){ return r.json(); }).then(function(d){
+    if(d.success){ toast('Пресет применён', true); loadRoles(); }
+    else toast(d.error||'Ошибка', false);
+  });
+}
+
+function resetAll(){
+  if(!confirm('Сбросить ВСЕ ограничения доступа? Все команды станут доступны всем.')) return;
+  var gid='{{ guild_id }}';
+  fetch('/api/role-permissions/'+gid+'/clear',{method:'POST'})
+    .then(function(){ toast('Все ограничения сброшены', true); ACL={}; renderCategories(); });
+}
+
+loadRoles();
+</script>
+{% endblock %}
