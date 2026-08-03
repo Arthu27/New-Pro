@@ -3839,6 +3839,19 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         with open (f ,'w')as fp :json .dump (msgs ,fp ,indent =2 )
         return jsonify ({'success':True })
 
+    @app .route ('/api/guild/<guild_id>/scheduled-messages/<msg_id>/toggle',methods =['POST'])
+    @login_required 
+    @role_required ('mod')
+    def api_toggle_scheduled_message (guild_id ,msg_id ):
+        f =f'data/scheduled_{guild_id}.json'
+        if not os .path .exists (f ):return jsonify ({'success':False ,'error':'Не найдено'}),404
+        with open (f )as fp :msgs =json .load (fp )
+        if msg_id not in msgs :
+            return jsonify ({'success':False ,'error':'Не найдено'}),404
+        msgs [msg_id ]['active']=not bool (msgs [msg_id ].get ('active',True ))
+        with open (f ,'w')as fp :json .dump (msgs ,fp ,indent =2 )
+        return jsonify ({'success':True ,'active':msgs [msg_id ]['active']})
+
     @app .route ('/api/member-notes')
     @login_required 
     @role_required ('mod')
