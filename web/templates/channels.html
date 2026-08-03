@@ -7,64 +7,68 @@
   <div class="page-hero-content">
     <div class="page-hero-greeting">
       <span class="dot"></span>
-      <span>Каналы</span>
+      <span>Управление каналами</span>
     </div>
     <h1><i class="fas fa-hashtag"></i> Каналы</h1>
-    <p>Управляй всеми каналами сервера: создание, редактирование, перемещение и удаление.</p>
+    <p>Все каналы сервера: создание, редактирование, перемещение и удаление.</p>
   </div>
 </div>
 {% endblock %}
 
-<!-- Toolbar -->
+<!-- Панель инструментов -->
 <div class="ch-toolbar">
   <div class="ch-toolbar-left">
-    <select id="guild-select" class="ch-select">
-      <option value="">Выберите сервер...</option>
-    </select>
+    <div class="ch-sel-wrap">
+      <i class="fas fa-server"></i>
+      <select id="ch-guild-select" class="ch-select">
+        <option value="">Выберите сервер...</option>
+      </select>
+    </div>
     <div class="ch-search">
       <i class="fas fa-search"></i>
-      <input type="text" id="ch-search" placeholder="Kanal ara...">
-      <kbd id="ch-search-clear" title="Temizle">&times;</kbd>
+      <input type="text" id="ch-search" placeholder="Поиск каналов...">
+      <button id="ch-search-clear" title="Очистить" class="ch-search-clear"><i class="fas fa-times"></i></button>
     </div>
   </div>
   <div class="ch-toolbar-right">
+    <span class="live-pill" id="livePill" title="Автообновление каждые 2.5 сек"><span class="dot"></span>LIVE</span>
     <button class="btn-new" id="btnNewChannel" type="button">
-      <i class="fas fa-plus"></i> Yeni Kanal
+      <i class="fas fa-plus"></i> Новый канал
     </button>
-    <button class="btn-refresh" id="btnRefresh" type="button" title="Yenile">
+    <button class="btn-refresh" id="btnRefresh" type="button" title="Обновить">
       <i class="fas fa-sync-alt"></i>
     </button>
   </div>
 </div>
 
-<!-- Stats -->
+<!-- Статистика -->
 <div class="ch-stats" id="ch-stats">
   <div class="ch-stat">
     <div class="ch-stat-icon icon-text"><i class="fas fa-hashtag"></i></div>
     <div>
       <div class="ch-stat-val" id="stat-text">0</div>
-      <div class="ch-stat-lbl">Metin</div>
+      <div class="ch-stat-lbl">Текстовые</div>
     </div>
   </div>
   <div class="ch-stat">
     <div class="ch-stat-icon icon-voice"><i class="fas fa-volume-up"></i></div>
     <div>
       <div class="ch-stat-val" id="stat-voice">0</div>
-      <div class="ch-stat-lbl">Ses</div>
+      <div class="ch-stat-lbl">Голосовые</div>
     </div>
   </div>
   <div class="ch-stat">
     <div class="ch-stat-icon icon-category"><i class="fas fa-folder"></i></div>
     <div>
       <div class="ch-stat-val" id="stat-cat">0</div>
-      <div class="ch-stat-lbl">Kategori</div>
+      <div class="ch-stat-lbl">Категории</div>
     </div>
   </div>
   <div class="ch-stat">
     <div class="ch-stat-icon icon-total"><i class="fas fa-layer-group"></i></div>
     <div>
       <div class="ch-stat-val" id="stat-total">0</div>
-      <div class="ch-stat-lbl">Toplam</div>
+      <div class="ch-stat-lbl">Всего</div>
     </div>
   </div>
   <div class="ch-stat">
@@ -83,13 +87,12 @@
   </div>
 </div>
 
-<!-- Kanal listesi -->
+<!-- Список каналов -->
 <div class="ch-box" id="ch-box">
   <div class="ch-box-header">
-    <div class="ch-box-title"><i class="fas fa-list"></i> Kanal Listesi</div>
+    <div class="ch-box-title"><i class="fas fa-list"></i> Каналы сервера</div>
     <div class="ch-box-meta">
       <span class="ch-box-count" id="ch-count">—</span>
-      <label class="ch-legend" title="Информация"><i class="fas fa-circle-info"></i></label>
     </div>
   </div>
   <div id="channel-list">
@@ -97,30 +100,30 @@
   </div>
 </div>
 
-<!-- Kanal bilgi detay paneli -->
+<!-- Панель деталей канала -->
 <div class="ch-detail" id="ch-detail" style="display:none;">
   <div class="ch-detail-head">
     <div class="ch-detail-title"><span id="detail-icon"></span> <span id="detail-name"></span></div>
-    <button class="ch-detail-close" id="btnDetailClose" type="button"><i class="fas fa-times"></i></button>
+    <button class="ch-detail-close" id="btnDetailClose" type="button" title="Закрыть"><i class="fas fa-times"></i></button>
   </div>
   <div class="ch-detail-body">
     <div class="ch-detail-grid" id="ch-detail-grid"></div>
     <div class="ch-detail-topic" id="ch-detail-topic" style="display:none;">
-      <div class="ch-detail-sub"><i class="fas fa-align-left"></i> Konu (Topic)</div>
+      <div class="ch-detail-sub"><i class="fas fa-align-left"></i> Описание</div>
       <p id="detail-topic-text"></p>
     </div>
     <div class="ch-detail-actions">
       <button class="btn-confirm" id="btnEditFromDetail" type="button"><i class="fas fa-pen"></i> Редактировать</button>
-      <button class="btn-cancel btn-red" id="btnDeleteFromDetail" type="button"><i class="fas fa-trash"></i> Sil</button>
+      <button class="btn-cancel btn-red" id="btnDeleteFromDetail" type="button"><i class="fas fa-trash"></i> Удалить</button>
     </div>
   </div>
 </div>
 
-<!-- Yeni Kanal Modal -->
+<!-- Модальное окно создания -->
 <div id="modal-create" class="modal-overlay">
   <div class="modal-card">
     <div class="modal-head">
-      <h3><i class="fas fa-plus-circle" style="margin-right: 8px;"></i>Yeni Kanal</h3>
+      <h3><i class="fas fa-plus-circle"></i>Новый канал</h3>
       <button class="modal-close" id="btnCloseCreate" type="button"><i class="fas fa-times"></i></button>
     </div>
 
@@ -128,31 +131,31 @@
     <div class="type-grid">
       <div class="type-opt selected" data-type="text" id="type-text">
         <div class="type-opt-icon">#</div>
-        <div class="type-opt-lbl">Metin</div>
+        <div class="type-opt-lbl">Текст</div>
       </div>
       <div class="type-opt" data-type="voice" id="type-voice">
-        <div class="type-opt-icon">🔊</div>
-        <div class="type-opt-lbl">Ses</div>
+        <div class="type-opt-icon"><i class="fas fa-volume-up"></i></div>
+        <div class="type-opt-lbl">Голосовой</div>
       </div>
       <div class="type-opt" data-type="category" id="type-category">
-        <div class="type-opt-icon">📁</div>
-        <div class="type-opt-lbl">Kategori</div>
+        <div class="type-opt-icon"><i class="fas fa-folder"></i></div>
+        <div class="type-opt-lbl">Категория</div>
       </div>
     </div>
     <input type="hidden" id="create-type" value="text">
 
     <label class="field-label">Название канала</label>
-    <input type="text" id="create-name" placeholder="напр.: общий-чат" class="field-input">
+    <input type="text" id="create-name" placeholder="например: общий-чат" class="field-input">
 
     <div id="create-extra">
       <div id="create-cat-row">
-        <label class="field-label">Kategori</label>
+        <label class="field-label">Категория</label>
         <select id="create-category" class="field-input">
-          <option value="">Kategorisiz</option>
+          <option value="">Без категории</option>
         </select>
       </div>
       <div id="create-topic-row">
-        <label class="field-label">Konu (Topic)</label>
+        <label class="field-label">Описание</label>
         <textarea id="create-topic" rows="2" placeholder="Описание канала..." class="field-input"></textarea>
       </div>
       <div class="form-row-2">
@@ -161,7 +164,7 @@
           <input type="number" id="create-slowmode" min="0" max="21600" value="0" class="field-input">
         </div>
         <div id="create-voice-bitrate">
-          <label class="field-label">Bitrate (kbps)</label>
+          <label class="field-label">Битрейт (kbps)</label>
           <input type="number" id="create-bitrate" min="8" value="64" class="field-input">
         </div>
       </div>
@@ -170,7 +173,7 @@
         <input type="number" id="create-user-limit" min="0" value="0" class="field-input">
       </div>
       <div class="toggle-row">
-        <label class="toggle-label" for="create-nsfw"><i class="fas fa-eye-slash"></i> NSFW (18+) kanal</label>
+        <label class="toggle-label" for="create-nsfw"><i class="fas fa-eye-slash"></i> NSFW (18+) канал</label>
         <input type="checkbox" id="create-nsfw" class="ch-toggle">
       </div>
     </div>
@@ -182,11 +185,11 @@
   </div>
 </div>
 
-<!-- Редактировать Modal -->
+<!-- Модальное окно редактирования -->
 <div id="modal-edit" class="modal-overlay">
   <div class="modal-card">
     <div class="modal-head">
-      <h3><i class="fas fa-pen" style="margin-right: 8px;"></i>Редактировать канал</h3>
+      <h3><i class="fas fa-pen"></i>Редактировать канал</h3>
       <button class="modal-close" id="btnCloseEdit" type="button"><i class="fas fa-times"></i></button>
     </div>
 
@@ -194,9 +197,9 @@
     <input type="text" id="edit-name" class="field-input">
 
     <div id="edit-cat-row">
-      <label class="field-label">Kategori</label>
+      <label class="field-label">Категория</label>
       <select id="edit-category" class="field-input">
-        <option value="">Kategorisiz</option>
+        <option value="">Без категории</option>
       </select>
     </div>
     <div id="edit-position-row">
@@ -204,7 +207,7 @@
       <input type="number" id="edit-position" min="0" class="field-input">
     </div>
     <div id="edit-topic-row">
-      <label class="field-label">Konu (Topic)</label>
+      <label class="field-label">Описание</label>
       <textarea id="edit-topic" rows="2" class="field-input"></textarea>
     </div>
     <div class="form-row-2">
@@ -213,7 +216,7 @@
         <input type="number" id="edit-slowmode" min="0" max="21600" class="field-input">
       </div>
       <div id="edit-voice-bitrate">
-        <label class="field-label">Bitrate (kbps)</label>
+        <label class="field-label">Битрейт (kbps)</label>
         <input type="number" id="edit-bitrate" min="8" class="field-input">
       </div>
     </div>
@@ -222,157 +225,150 @@
       <input type="number" id="edit-user-limit" min="0" class="field-input">
     </div>
     <div class="toggle-row">
-      <label class="toggle-label" for="edit-nsfw"><i class="fas fa-eye-slash"></i> NSFW (18+) kanal</label>
+      <label class="toggle-label" for="edit-nsfw"><i class="fas fa-eye-slash"></i> NSFW (18+) канал</label>
       <input type="checkbox" id="edit-nsfw" class="ch-toggle">
     </div>
 
     <div class="modal-actions">
-      <button class="btn-confirm" id="btnSaveEdit" type="button">Kaydet</button>
+      <button class="btn-confirm" id="btnSaveEdit" type="button">Сохранить</button>
       <button class="btn-cancel" id="btnCancelEdit" type="button">Отмена</button>
     </div>
   </div>
 </div>
 
-<!-- Модальное окно подтверждения удаления -->
-<div id="modal-confirm" class="modal-overlay">
-  <div class="modal-card modal-card-sm">
-    <div class="modal-head">
-      <h3><i class="fas fa-trash" style="margin-right: 8px; color:#ef4444;"></i>Удалить канал</h3>
-      <button class="modal-close" id="btnCloseConfirm" type="button"><i class="fas fa-times"></i></button>
-    </div>
-    <p class="confirm-text" id="confirm-text">Вы уверены, что хотите удалить этот канал?</p>
-    <p class="confirm-warn"><i class="fas fa-exclamation-triangle"></i> Это действие необратимо!</p>
-    <div class="modal-actions">
-      <button class="btn-danger" id="btnDoDelete" type="button"><i class="fas fa-trash"></i> Да, Sil</button>
-      <button class="btn-cancel" id="btnCancelConfirm" type="button">Отмена</button>
-    </div>
-  </div>
-</div>
-
-<!-- Toast -->
-<div class="toast" id="toast"></div>
-
 <style>
-/* === Расширенный стиль панели каналов === */
+/* ============================================================
+   КАНАЛЫ — Premium V2 (gold theme, live 2.5s, global toast/confirm)
+   ============================================================ */
 .ch-toolbar{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:center;margin-bottom:16px}
 .ch-toolbar-left{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .ch-toolbar-right{display:flex;gap:10px;align-items:center}
-.ch-select{background:rgba(15,15,20,.7);color:#f4f1e8;border:1.5px solid rgba(212,168,67,.25);border-radius:10px;padding:9px 14px;font-size:14px;min-width:200px;font-family:inherit}
-.ch-select:focus{outline:none;border-color:rgba(212,168,67,.6);box-shadow:0 0 0 3px rgba(212,168,67,.15)}
-.ch-search{display:flex;align-items:center;gap:8px;background:rgba(15,15,20,.7);border:1.5px solid rgba(212,168,67,.25);border-radius:10px;padding:8px 12px;min-width:220px}
-.ch-search i{color:var(--gold,#d4a843);opacity:.8}
-.ch-search input{background:transparent;border:none;outline:none;color:#f4f1e8;font-size:14px;width:100%;font-family:inherit}
-.ch-search kbd{color:#8b8377;cursor:pointer;font-size:16px;padding:0 4px}
-.ch-search kbd:hover{color:#ef4444}
-.btn-refresh{background:rgba(15,15,20,.7);border:1.5px solid rgba(212,168,67,.25);border-radius:10px;color:#d4a843;width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:.15s}
-.btn-refresh:hover{background:rgba(212,168,67,.12);transform:rotate(180deg)}
+
+.ch-sel-wrap{position:relative;display:flex;align-items:center}
+.ch-sel-wrap > i{position:absolute;left:13px;color:var(--ac);font-size:12px;pointer-events:none;z-index:1}
+.ch-select{min-width:210px;padding-left:34px !important}
+
+.ch-search{display:flex;align-items:center;gap:8px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:10px;padding:8px 10px 8px 12px;min-width:230px;transition:border-color .18s, box-shadow .18s}
+.ch-search:focus-within{border-color:var(--ac);box-shadow:0 0 0 3px var(--ac-soft)}
+.ch-search i{color:var(--text-3);font-size:13px}
+.ch-search input{background:transparent;border:none;outline:none;color:var(--text);font-size:14px;width:100%;font-family:inherit}
+.ch-search input::placeholder{color:var(--text-4)}
+.ch-search-clear{background:transparent;border:none;color:var(--text-3);cursor:pointer;font-size:13px;padding:2px 3px;border-radius:5px;display:none;transition:color .15s}
+.ch-search-clear:hover{color:var(--err)}
+
+.live-pill{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:99px;background:rgba(74,222,128,0.10);border:1px solid rgba(74,222,128,0.28);font-size:10.5px;font-weight:700;letter-spacing:.1em;color:var(--ok);text-transform:uppercase}
+.live-pill .dot{width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--ok);animation:pulse 1.6s ease-in-out infinite}
+
+.btn-refresh{background:var(--surface-2);border:1px solid var(--line-2);border-radius:10px;color:var(--ac);width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:.2s var(--ease)}
+.btn-refresh:hover{background:var(--ac-soft);transform:rotate(180deg)}
 
 .ch-stats{display:none;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:16px}
-.ch-stat{background:linear-gradient(135deg,rgba(255,255,255,.03),rgba(255,255,255,.01));border:1px solid rgba(212,168,67,.12);border-radius:14px;padding:14px;display:flex;gap:12px;align-items:center;transition:.15s}
-.ch-stat:hover{border-color:rgba(212,168,67,.35);transform:translateY(-2px)}
+.ch-stat{background:linear-gradient(135deg,rgba(224,176,74,0.05),rgba(224,176,74,0.01));border:1px solid var(--line-2);border-radius:14px;padding:14px;display:flex;gap:12px;align-items:center;transition:.2s var(--ease);position:relative;overflow:hidden}
+.ch-stat::after{content:'';position:absolute;top:-30px;right:-30px;width:80px;height:80px;background:radial-gradient(circle,var(--ac-soft),transparent 70%);pointer-events:none}
+.ch-stat:hover{border-color:var(--ac-line);transform:translateY(-2px);box-shadow:0 8px 22px rgba(0,0,0,.25)}
 .ch-stat-icon{width:40px;height:40px;border-radius:11px;display:inline-flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.2)}
-.ch-stat-icon.icon-text{background:linear-gradient(135deg,#d4a843,#e0b04a);color:#1a1a1a}
+.ch-stat-icon.icon-text{background:linear-gradient(135deg,var(--ac-2),var(--ac-3));color:#1a1a1a}
 .ch-stat-icon.icon-voice{background:linear-gradient(135deg,#38bdf8,#0284c7);color:#fff}
 .ch-stat-icon.icon-category{background:linear-gradient(135deg,#f59e0b,#b45309);color:#fff}
 .ch-stat-icon.icon-total{background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff}
 .ch-stat-icon.icon-nsfw{background:linear-gradient(135deg,#f43f5e,#be123c);color:#fff}
 .ch-stat-icon.icon-live{background:linear-gradient(135deg,#34d399,#059669);color:#fff}
-.ch-stat-val{font-size:22px;font-weight:800;color:#f4f1e8;line-height:1}
-.ch-stat-lbl{font-size:12px;color:#8b8377;margin-top:3px;letter-spacing:.03em}
+.ch-stat-val{font-size:24px;font-weight:800;color:var(--text);line-height:1;font-variant-numeric:tabular-nums}
+.ch-stat-lbl{font-size:11px;color:var(--text-3);margin-top:3px;letter-spacing:.06em;text-transform:uppercase;font-weight:600}
 
-.ch-box{background:linear-gradient(135deg,rgba(255,255,255,.02),rgba(255,255,255,.005));border:1px solid rgba(212,168,67,.14);border-radius:16px;padding:16px}
+.ch-box{background:linear-gradient(135deg,rgba(224,176,74,0.03),rgba(224,176,74,0.005));border:1px solid var(--line-2);border-radius:16px;padding:16px}
 .ch-box-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
-.ch-box-title{font-weight:700;color:#f4f1e8;font-size:15px;display:flex;align-items:center;gap:9px}
-.ch-box-title i{color:#d4a843}
+.ch-box-title{font-weight:700;color:var(--text);font-size:15px;display:flex;align-items:center;gap:9px}
+.ch-box-title i{color:var(--ac)}
 .ch-box-meta{display:flex;align-items:center;gap:10px}
-.ch-box-count{background:rgba(212,168,67,.14);color:#e0b04a;border:1px solid rgba(212,168,67,.3);padding:3px 11px;border-radius:20px;font-size:12px;font-weight:700}
-.ch-legend{color:#8b8377;cursor:help}
+.ch-box-count{background:var(--ac-soft);color:var(--ac-2);border:1px solid var(--ac-line);padding:3px 12px;border-radius:99px;font-size:12px;font-weight:700}
 
-/* Группы категорий */
-.cat-group{border:1px solid rgba(212,168,67,.12);border-radius:12px;margin-bottom:10px;overflow:hidden;background:rgba(255,255,255,.012)}
-.cat-header{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;background:rgba(212,168,67,.05);transition:.15s}
-.cat-header:hover{background:rgba(212,168,67,.1)}
-.cat-icon{color:#f59e0b;font-size:12px;transition:transform .2s;width:14px}
+/* Категории — плавная аккордеон-анимация */
+.cat-group{border:1px solid var(--line-2);border-radius:12px;margin-bottom:10px;overflow:hidden;background:rgba(255,255,255,.012)}
+.cat-header{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;background:linear-gradient(90deg,rgba(224,176,74,0.06),transparent);transition:.15s;user-select:none}
+.cat-header:hover{background:rgba(224,176,74,0.09)}
+.cat-icon{color:var(--ac-3);font-size:12px;transition:transform .3s var(--ease);width:14px}
 .cat-group.collapsed .cat-icon{transform:rotate(-90deg)}
-.cat-name{font-weight:700;color:#fcd34d;flex:1;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.cat-count{background:rgba(15,15,20,.6);color:#a78bfa;border-radius:8px;padding:2px 9px;font-size:11px;font-weight:700}
-.cat-channels{padding:8px}
-.cat-empty{color:#8b8377;font-size:13px;padding:10px;text-align:center;font-style:italic}
+.cat-name{font-weight:700;color:var(--ac-2);flex:1;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cat-count{background:rgba(167,139,250,0.12);color:var(--violet,#a78bfa);border:1px solid rgba(167,139,250,0.22);border-radius:99px;padding:2px 10px;font-size:11px;font-weight:700}
+.cat-channels{display:grid;grid-template-rows:1fr;transition:grid-template-rows .3s var(--ease)}
+.cat-channels-inner{overflow:hidden;min-height:0}
+.cat-group.collapsed .cat-channels{grid-template-rows:0fr}
+.cat-group.collapsed .cat-channels-inner{padding:0}
+.cat-channels-inner{padding:8px}
+.cat-empty{color:var(--text-3);font-size:13px;padding:10px;text-align:center;font-style:italic}
 
-/* Расширенная строка каналов */
-.ch-row{display:flex;align-items:center;gap:12px;padding:11px 14px;background:linear-gradient(135deg,rgba(255,255,255,.02),rgba(255,255,255,.008));border:1px solid rgba(212,168,67,.1);border-radius:10px;margin-bottom:6px;transition:all .15s ease}
-.ch-row:hover{background:linear-gradient(135deg,rgba(212,168,67,.08),rgba(212,168,67,.02));border-color:rgba(212,168,67,.3)}
-.ch-row-root{border-left:3px solid rgba(212,168,67,.5)}
-.ch-type-icon{width:36px;height:36px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;background:linear-gradient(135deg,#d4a843,#e0b04a);color:#1a1a1a;box-shadow:inset 0 1px 0 rgba(255,255,255,.2)}
+/* Строка канала */
+.ch-row{display:flex;align-items:center;gap:12px;padding:11px 12px;background:linear-gradient(135deg,rgba(255,255,255,.02),rgba(255,255,255,.005));border:1px solid var(--line);border-radius:10px;margin-bottom:6px;transition:all .16s var(--ease);cursor:pointer}
+.ch-row:hover{background:linear-gradient(135deg,rgba(224,176,74,0.08),rgba(224,176,74,0.02));border-color:var(--ac-line);transform:translateX(2px)}
+.ch-row-root{border-left:3px solid var(--ac)}
+.ch-type-icon{width:36px;height:36px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;background:linear-gradient(135deg,var(--ac-2),var(--ac-3));color:#1a1a1a;box-shadow:inset 0 1px 0 rgba(255,255,255,.2)}
 .ch-type-icon.icon-voice{background:linear-gradient(135deg,#38bdf8,#0284c7);color:#fff}
 .ch-type-icon.icon-category{background:linear-gradient(135deg,#f59e0b,#b45309);color:#fff}
 .ch-type-icon.icon-news{background:linear-gradient(135deg,#34d399,#059669);color:#fff}
 .ch-type-icon.icon-stage{background:linear-gradient(135deg,#c084fc,#7c3aed);color:#fff}
+.ch-type-icon.icon-forum{background:linear-gradient(135deg,#f472b6,#be185d);color:#fff}
 .ch-row-main{flex:1;min-width:0}
 .ch-row-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.ch-name{font-weight:600;color:#f4f1e8;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
-.ch-badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;border:1px solid rgba(212,168,67,.3);background:rgba(212,168,67,.15);color:#e0b04a}
-.ch-badge.badge-voice{background:rgba(56,189,248,.15);color:#7dd3fc;border-color:rgba(56,189,248,.3)}
-.ch-badge.badge-category{background:rgba(245,158,11,.15);color:#fcd34d;border-color:rgba(245,158,11,.3)}
-.ch-badge.badge-nsfw{background:rgba(244,63,94,.15);color:#fda4af;border-color:rgba(244,63,94,.3)}
-.ch-badge.badge-news{background:rgba(52,211,153,.15);color:#6ee7b7;border-color:rgba(52,211,153,.3)}
-.ch-badge.badge-slow{background:rgba(167,139,250,.15);color:#c4b5fd;border-color:rgba(167,139,250,.3)}
+.ch-name{font-weight:600;color:var(--text);font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.ch-badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;border:1px solid var(--ac-line);background:var(--ac-soft);color:var(--ac-2)}
+.ch-badge.badge-voice{background:rgba(56,189,248,.14);color:#7dd3fc;border-color:rgba(56,189,248,.3)}
+.ch-badge.badge-category{background:rgba(245,158,11,.14);color:#fcd34d;border-color:rgba(245,158,11,.3)}
+.ch-badge.badge-nsfw{background:rgba(244,63,94,.14);color:#fda4af;border-color:rgba(244,63,94,.3)}
+.ch-badge.badge-news{background:rgba(52,211,153,.14);color:#6ee7b7;border-color:rgba(52,211,153,.3)}
+.ch-badge.badge-stage{background:rgba(192,132,252,.14);color:#d8b4fe;border-color:rgba(192,132,252,.3)}
+.ch-badge.badge-forum{background:rgba(244,114,182,.14);color:#f9a8d4;border-color:rgba(244,114,182,.3)}
+.ch-badge.badge-slow{background:rgba(167,139,250,.14);color:#c4b5fd;border-color:rgba(167,139,250,.3)}
 .ch-row-meta{display:flex;align-items:center;gap:14px;margin-top:5px;flex-wrap:wrap}
-.ch-meta-item{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:#8b8377}
-.ch-meta-item i{color:#6b6459;font-size:11px}
-.ch-meta-item b{color:#b8b0a0;font-weight:600}
-.ch-topic{font-size:12.5px;color:#9a9285;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:520px;font-style:italic}
-.ch-topic i{color:#d4a843;margin-right:5px;font-style:normal}
+.ch-meta-item{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--text-3)}
+.ch-meta-item i{color:var(--text-4);font-size:11px}
+.ch-meta-item b{color:var(--text-2);font-weight:600;font-variant-numeric:tabular-nums}
+.ch-topic{font-size:12.5px;color:var(--text-3);margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:520px;font-style:italic}
+.ch-topic i{color:var(--ac);margin-right:5px;font-style:normal}
 .ch-actions{display:flex;gap:6px;align-items:center;flex-shrink:0}
-.icon-btn{width:32px;height:32px;border-radius:8px;border:1px solid rgba(212,168,67,.2);background:rgba(15,15,20,.5);color:#c9c2b4;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:.15s;font-size:13px}
-.icon-btn:hover{background:rgba(212,168,67,.15);color:#e0b04a;transform:translateY(-1px)}
-.icon-btn.danger:hover{background:rgba(239,68,68,.18);color:#f87171;border-color:rgba(239,68,68,.4)}
-.ch-empty{text-align:center;padding:44px 20px;color:#8b8377}
-.ch-empty i{font-size:38px;color:#6b6459;display:block;margin-bottom:12px;opacity:.7}
+.icon-btn{width:32px;height:32px;border-radius:8px;border:1px solid var(--line-2);background:var(--surface);color:var(--text-2);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:.15s;font-size:13px}
+.icon-btn:hover{background:var(--ac-soft);color:var(--ac-2);transform:translateY(-1px);border-color:var(--ac-line)}
+.icon-btn.danger:hover{background:rgba(239,68,68,.16);color:var(--err);border-color:rgba(239,68,68,.4)}
+.ch-empty{text-align:center;padding:44px 20px;color:var(--text-3)}
+.ch-empty i{font-size:38px;color:var(--text-4);display:block;margin-bottom:12px;opacity:.7}
 .ch-empty p{font-size:15px}
 
-/* Kanal detay paneli */
-.ch-detail{margin-top:16px;background:linear-gradient(135deg,rgba(212,168,67,.05),rgba(255,255,255,.01));border:1px solid rgba(212,168,67,.22);border-radius:16px;padding:18px}
+/* Детали */
+.ch-detail{margin-top:16px;background:linear-gradient(135deg,rgba(224,176,74,0.06),rgba(224,176,74,0.01));border:1px solid var(--ac-line);border-radius:16px;padding:18px;box-shadow:0 8px 30px rgba(0,0,0,.25)}
 .ch-detail-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
-.ch-detail-title{display:flex;align-items:center;gap:10px;font-weight:700;font-size:16px;color:#f4f1e8}
-.ch-detail-title i{color:#d4a843}
-.ch-detail-close{background:none;border:none;color:#8b8377;font-size:16px;cursor:pointer}
-.ch-detail-close:hover{color:#ef4444}
+.ch-detail-title{display:flex;align-items:center;gap:10px;font-weight:700;font-size:16px;color:var(--text)}
+.ch-detail-title i{color:var(--ac)}
+.ch-detail-close{background:var(--surface);border:1px solid var(--line);color:var(--text-3);font-size:13px;cursor:pointer;width:30px;height:30px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;transition:.15s}
+.ch-detail-close:hover{background:rgba(239,68,68,.15);color:var(--err)}
 .ch-detail-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:14px}
-.ch-detail-item{background:rgba(15,15,20,.5);border:1px solid rgba(212,168,67,.12);border-radius:10px;padding:10px 12px}
-.ch-detail-item .k{font-size:11px;color:#8b8377;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px}
-.ch-detail-item .v{font-size:15px;font-weight:700;color:#f4f1e8}
-.ch-detail-sub{font-size:12px;color:#d4a843;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
-.ch-detail-topic{background:rgba(15,15,20,.5);border:1px solid rgba(212,168,67,.12);border-radius:10px;padding:12px;margin-bottom:14px}
-.ch-detail-topic p{color:#cfc8ba;font-size:13.5px;margin:0;line-height:1.5}
+.ch-detail-item{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.ch-detail-item .k{font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px;font-weight:700}
+.ch-detail-item .v{font-size:15px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums}
+.ch-detail-sub{font-size:11px;color:var(--ac);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+.ch-detail-topic{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:14px}
+.ch-detail-topic p{color:var(--text-2);font-size:13.5px;margin:0;line-height:1.5}
 .ch-detail-actions{display:flex;gap:10px}
 
-/* Modal ekstralar */
+/* Модалки */
 .modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
-.modal-close{background:none;border:none;color:#8b8377;font-size:17px;cursor:pointer;padding:4px}
-.modal-close:hover{color:#ef4444}
-.modal-card-sm{width:min(90vw,420px)!important}
+.modal-head h3{display:flex;align-items:center;gap:9px}
+.modal-head h3 i{color:var(--ac)}
+.modal-close{background:var(--surface);border:1px solid var(--line);color:var(--text-3);font-size:14px;cursor:pointer;padding:5px;width:32px;height:32px;border-radius:8px;transition:.15s}
+.modal-close:hover{color:var(--err);background:rgba(239,68,68,.14)}
 .form-row-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
 .toggle-row{display:flex;align-items:center;gap:10px;margin-bottom:12px}
-.toggle-label{font-size:13.5px;color:#cfc8ba;cursor:pointer;display:flex;align-items:center;gap:8px}
+.toggle-label{font-size:13.5px;color:var(--text-2);cursor:pointer;display:flex;align-items:center;gap:8px}
 .toggle-label i{color:#f43f5e}
-.ch-toggle{width:18px;height:18px;accent-color:#d4a843;cursor:pointer}
+.ch-toggle{width:18px;height:18px;accent-color:var(--ac);cursor:pointer}
 .type-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
-.type-opt{border:1.5px solid rgba(212,168,67,.2);border-radius:12px;padding:12px 8px;text-align:center;cursor:pointer;transition:.15s;background:rgba(15,15,20,.4)}
-.type-opt:hover{border-color:rgba(212,168,67,.5)}
-.type-opt.selected{border-color:#d4a843;background:rgba(212,168,67,.12);box-shadow:0 0 0 3px rgba(212,168,67,.12)}
-.type-opt-icon{font-size:20px;margin-bottom:4px;color:#d4a843}
-.type-opt.selected .type-opt-icon{color:#fcd34d}
-.type-opt-lbl{font-size:12.5px;font-weight:700;color:#cfc8ba}
-.confirm-text{color:#f4f1e8;font-size:14.5px;line-height:1.5}
-.confirm-warn{color:#f87171;font-size:13px;display:flex;align-items:center;gap:8px;margin-top:8px}
-.btn-danger{background:linear-gradient(135deg,#ef4444,#dc2626);border:none;color:#fff;padding:9px 18px;border-radius:9px;font-size:14px;cursor:pointer;font-weight:600;display:inline-flex;align-items:center;gap:6px;transition:.15s}
-.btn-danger:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(239,68,68,.4)}
+.type-opt{border:1.5px solid var(--line-2);border-radius:12px;padding:12px 8px;text-align:center;cursor:pointer;transition:.18s var(--ease);background:var(--surface)}
+.type-opt:hover{border-color:var(--ac-line);transform:translateY(-1px)}
+.type-opt.selected{border-color:var(--ac);background:var(--ac-soft);box-shadow:0 0 0 3px var(--ac-soft)}
+.type-opt-icon{font-size:20px;margin-bottom:4px;color:var(--ac)}
+.type-opt.selected .type-opt-icon{color:var(--ac-2)}
+.type-opt-lbl{font-size:12.5px;font-weight:700;color:var(--text-2)}
 textarea.field-input{resize:vertical;min-height:52px}
-
-/* Toast — переопределяет базовую анимацию */
-#toast{animation:none!important;opacity:0;visibility:hidden;transition:opacity .3s,visibility .3s;top:80px;right:16px}
-#toast.show{opacity:1;visibility:visible}
+@media(max-width:600px){.form-row-2{grid-template-columns:1fr}.ch-search{min-width:0;width:100%}.ch-select{width:100%}}
 </style>
 
 <script>
@@ -383,6 +379,8 @@ textarea.field-input{resize:vertical;min-height:52px}
   var selectedGuild = MAIN_GID;
   var allChannels = [];
   var activeType = 'text';
+  var detailId = null;
+  var editingId = null;
 
   function $(id) { return document.getElementById(id); }
 
@@ -394,34 +392,19 @@ textarea.field-input{resize:vertical;min-height:52px}
     if (!iso) return '—';
     try {
       var d = new Date(iso);
-      return d.toLocaleDateString('tr-TR', { day: '2-digit', month: 'short', year: 'numeric' });
+      return d.toLocaleDateString('ru-RU', { day: '2-digit', month: 'short', year: 'numeric' });
     } catch (e) { return '—'; }
-  }
-
-  // Toast bildirimi
-  var toastTimer = null;
-  function toast(msg, ok) {
-    var t = $('toast');
-    t.textContent = msg;
-    t.className = 'toast ' + (ok ? 'ok' : 'err');
-    t.classList.add('show');
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { t.classList.remove('show'); }, 3200);
-  }
-
-  function setLoading() {
-    $('channel-list').innerHTML = '<div class="ch-empty"><i class="fas fa-spinner fa-spin"></i><p>Загрузiyor...</p></div>';
   }
 
   function typeMeta(type) {
     switch (type) {
-      case 'text':   return { icon: 'fa-hashtag', cls: 'icon-text', label: 'Metin' };
-      case 'voice':  return { icon: 'fa-volume-up', cls: 'icon-voice', label: 'Ses' };
-      case 'category': return { icon: 'fa-folder', cls: 'icon-category', label: 'Kategori' };
-      case 'news':   return { icon: 'fa-bullhorn', cls: 'icon-news', label: 'Haber' };
-      case 'stage':  return { icon: 'fa-microphone-lines', cls: 'icon-stage', label: 'Sahne' };
-      case 'forum':  return { icon: 'fa-comments', cls: 'icon-forum', label: 'Forum' };
-      default:       return { icon: 'fa-hashtag', cls: 'icon-text', label: type };
+      case 'text':     return { icon: 'fa-hashtag', cls: 'icon-text', label: 'Текст', badge: '' };
+      case 'voice':    return { icon: 'fa-volume-up', cls: 'icon-voice', label: 'Голосовой', badge: 'badge-voice' };
+      case 'category': return { icon: 'fa-folder', cls: 'icon-category', label: 'Категория', badge: 'badge-category' };
+      case 'news':     return { icon: 'fa-bullhorn', cls: 'icon-news', label: 'Новости', badge: 'badge-news' };
+      case 'stage':    return { icon: 'fa-microphone-lines', cls: 'icon-stage', label: 'Сцена', badge: 'badge-stage' };
+      case 'forum':    return { icon: 'fa-comments', cls: 'icon-forum', label: 'Форум', badge: 'badge-forum' };
+      default:         return { icon: 'fa-hashtag', cls: 'icon-text', label: 'Канал', badge: '' };
     }
   }
 
@@ -441,23 +424,20 @@ textarea.field-input{resize:vertical;min-height:52px}
   function badgeHtml(c) {
     var t = channelType(c);
     var tm = typeMeta(t);
-    var h = '<span class="ch-badge ' + (t === 'voice' ? 'badge-voice' : t === 'category' ? 'badge-category' : '') + '">' + tm.label + '</span>';
+    var h = '<span class="ch-badge ' + tm.badge + '">' + tm.label + '</span>';
     if (c.nsfw) h += '<span class="ch-badge badge-nsfw"><i class="fas fa-eye-slash"></i> NSFW</span>';
-    if (t === 'news') h += '<span class="ch-badge badge-news"><i class="fas fa-bullhorn"></i></span>';
-    if (c.slowmode > 0) h += '<span class="ch-badge badge-slow"><i class="fas fa-hourglass-half"></i> ' + c.slowmode + 'sn</span>';
+    if (c.slowmode > 0) h += '<span class="ch-badge badge-slow"><i class="fas fa-hourglass-half"></i> ' + c.slowmode + 'с</span>';
     return h;
   }
 
   function metaHtml(c) {
     var t = channelType(c);
     var h = '';
-    h += '<span class="ch-meta-item"><i class="fas fa-list-ol"></i> Konum <b>' + c.position + '</b></span>';
-    if (t === 'voice' && c.connected > 0) {
-      h += '<span class="ch-meta-item"><i class="fas fa-headset"></i> <b>' + c.connected + '</b> чел.</span>';
-    }
-    if (t === 'voice') {
+    h += '<span class="ch-meta-item"><i class="fas fa-list-ol"></i> Позиция <b>' + c.position + '</b></span>';
+    if (t === 'voice' || t === 'stage') {
       h += '<span class="ch-meta-item"><i class="fas fa-signal"></i> <b>' + c.bitrate + '</b> kbps</span>';
-      if (c.user_limit > 0) h += '<span class="ch-meta-item"><i class="fas fa-users"></i> <b>' + c.user_limit + '</b> limit</span>';
+      if (c.user_limit > 0) h += '<span class="ch-meta-item"><i class="fas fa-users"></i> <b>' + c.user_limit + '</b> лимит</span>';
+      h += '<span class="ch-meta-item"><i class="fas fa-headset"></i> <b>' + c.connected + '</b> в голосе</span>';
     }
     h += '<span class="ch-meta-item"><i class="fas fa-calendar"></i> ' + fmtDate(c.created_at) + '</span>';
     return h;
@@ -478,7 +458,7 @@ textarea.field-input{resize:vertical;min-height:52px}
       '</div>' +
       '<div class="ch-actions">' +
         '<button class="icon-btn" data-action="edit" title="Редактировать"><i class="fas fa-pen"></i></button>' +
-        '<button class="icon-btn danger" data-action="delete" title="Sil"><i class="fas fa-trash"></i></button>' +
+        '<button class="icon-btn danger" data-action="delete" title="Удалить"><i class="fas fa-trash"></i></button>' +
       '</div>' +
     '</div>';
   }
@@ -486,7 +466,7 @@ textarea.field-input{resize:vertical;min-height:52px}
   function renderList(filter) {
     var list = $('channel-list');
     if (!selectedGuild) { list.innerHTML = '<div class="ch-empty"><i class="fas fa-hashtag"></i><p>Выберите сервер</p></div>'; return; }
-    if (!allChannels.length) { list.innerHTML = '<div class="ch-empty"><i class="fas fa-hashtag"></i><p>Bu sunucuda kanal yok.</p></div>'; return; }
+    if (!allChannels.length) { list.innerHTML = '<div class="ch-empty"><i class="fas fa-hashtag"></i><p>На этом сервере нет каналов.</p></div>'; return; }
 
     var q = (filter || '').trim().toLowerCase();
     var visible = allChannels.filter(function (c) {
@@ -500,10 +480,8 @@ textarea.field-input{resize:vertical;min-height:52px}
     var uncategorized = [];
     allChannels.forEach(function (c) {
       if (c.type === 'category') return;
-      if (q) { // при поиске не ломать дерево категорий
-        if (c.name && c.name.toLowerCase().indexOf(q) !== -1 || (c.topic && c.topic.toLowerCase().indexOf(q) !== -1)) {
-          uncategorized.push(c);
-        }
+      if (q) {
+        if ((c.name && c.name.toLowerCase().indexOf(q) !== -1) || (c.topic && c.topic.toLowerCase().indexOf(q) !== -1)) uncategorized.push(c);
         return;
       }
       if (c.category) { if (!grouped[c.category]) grouped[c.category] = []; grouped[c.category].push(c); }
@@ -516,34 +494,31 @@ textarea.field-input{resize:vertical;min-height:52px}
     var html = '';
     if (q) {
       if (uncategorized.length) uncategorized.forEach(function (c) { html += renderRow(c, true); });
-      if (!uncategorized.length) html = '<div class="ch-empty"><i class="fas fa-search"></i><p>"' + esc(filter) + '" — ничего не найдено.</p></div>';
+      if (!uncategorized.length) html = '<div class="ch-empty"><i class="fas fa-search"></i><p>«' + esc(filter) + '» — ничего не найдено.</p></div>';
     } else {
-      if (uncategorized.length) uncategorized.forEach(function (ch) { html += renderRow(ch, true); });
+      if (uncategorized.length) uncategorized.forEach(function (c) { html += renderRow(c, true); });
       cats.forEach(function (cat) {
         var children = grouped[cat.name] || [];
-        if (q) { if (!children.length) return; }
         var isOpen = openState[cat.name] !== false;
         var collapsed = isOpen ? '' : ' collapsed';
         html += '<div class="cat-group' + collapsed + '" data-cat-name="' + esc(cat.name) + '">';
         html += '<div class="cat-header" data-toggle-cat>';
         html += '<i class="fas fa-chevron-down cat-icon"></i>';
-        html += '<span class="cat-name">' + esc(cat.name) + '</span>';
-        html += '<span class="cat-count">' + children.length + ' kanal</span>';
+        html += '<span class="cat-name"><i class="fas fa-folder" style="margin-right:7px;color:var(--ac-3)"></i>' + esc(cat.name) + '</span>';
+        html += '<span class="cat-count">' + children.length + ' каналов</span>';
         html += '</div>';
-        html += '<div class="cat-channels">';
+        html += '<div class="cat-channels"><div class="cat-channels-inner">';
         if (children.length) children.forEach(function (c) { html += renderRow(c, false); });
         else html += '<div class="cat-empty">Пустая категория</div>';
-        html += '</div></div>';
+        html += '</div></div></div>';
       });
     }
 
-    var frag = document.createDocumentFragment();
     var tmp = document.createElement('div');
     tmp.innerHTML = html;
-    while (tmp.firstChild) frag.appendChild(tmp.firstChild);
     list.innerHTML = '';
-    list.appendChild(frag);
-    $('ch-count').textContent = visible.length + ' kanal';
+    while (tmp.firstChild) list.appendChild(tmp.firstChild);
+    $('ch-count').textContent = visible.length + ' каналов';
   }
 
   function renderStats() {
@@ -563,39 +538,68 @@ textarea.field-input{resize:vertical;min-height:52px}
     $('ch-stats').style.display = 'grid';
   }
 
-  function populateGuildSelect() {
-    var gs = $('guild-select');
-    fetch('/api/guilds').then(function (r) { return r.json(); }).then(function (guilds) {
-      if (!Array.isArray(guilds) || !guilds.length) {
-        gs.innerHTML = '<option value="' + esc(MAIN_GID) + '">Главный сервер</option>';
-        return;
-      }
-      var opts = guilds.map(function (g) {
-        return '<option value="' + esc(g.id) + '"' + (String(g.id) === selectedGuild ? ' selected' : '') + '>' + esc(g.name) + ' (' + g.members + ' участников)</option>';
-      }).join('');
-      gs.innerHTML = opts;
-      selectedGuild = gs.value || MAIN_GID;
-      loadChannels();
-    }).catch(function () {
-      gs.innerHTML = '<option value="' + esc(MAIN_GID) + '">Главный сервер</option>';
-      selectedGuild = MAIN_GID;
-      loadChannels();
-    });
-  }
-
   function populateCategorySelects() {
     var cats = allChannels.filter(function (c) { return c.type === 'category'; });
-    var opts = '<option value="">Kategorisiz</option>' + cats.map(function (c) {
+    var opts = '<option value="">Без категории</option>' + cats.map(function (c) {
       return '<option value="' + esc(c.name) + '">' + esc(c.name) + '</option>';
     }).join('');
     $('create-category').innerHTML = opts;
     $('edit-category').innerHTML = opts;
   }
 
-  function loadChannels() {
-    if (!selectedGuild) return;
-    setLoading();
+  // Render a detail panel from a channel object
+  function renderDetail(c) {
+    var t = channelType(c);
+    var tm = typeMeta(t);
+    $('detail-icon').innerHTML = '<i class="fas ' + tm.icon + '"></i>';
+    $('detail-name').textContent = c.name;
+    var isVoice = t === 'voice' || t === 'stage';
+    var grid = '';
+    grid += item('Тип', tm.label);
+    grid += item('Позиция', String(c.position));
+    grid += item('Создан', fmtDate(c.created_at));
+    grid += item('NSFW', c.nsfw ? 'Да' : 'Нет');
+    if (t === 'text' || t === 'news' || t === 'forum') grid += item('Медленный режим', c.slowmode > 0 ? c.slowmode + ' сек.' : 'Выкл.');
+    if (isVoice) {
+      grid += item('Битрейт', c.bitrate + ' kbps');
+      grid += item('Лимит', c.user_limit > 0 ? c.user_limit : 'Без лимита');
+      grid += item('В голосе', String(c.connected));
+    }
+    $('ch-detail-grid').innerHTML = grid;
+    if (c.topic) {
+      $('detail-topic-text').textContent = c.topic;
+      $('ch-detail-topic').style.display = '';
+    } else {
+      $('ch-detail-topic').style.display = 'none';
+    }
+    $('ch-detail').style.display = '';
+  }
+  function item(k, v) {
+    return '<div class="ch-detail-item"><span class="k">' + esc(k) + '</span><span class="v">' + esc(v) + '</span></div>';
+  }
+
+  function openDetail(c) {
+    detailId = c.id;
+    renderDetail(c);
+    $('ch-detail').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function refreshOpenDetail() {
+    if (!detailId) return;
+    for (var i = 0; i < allChannels.length; i++) {
+      if (allChannels[i].id === detailId) { renderDetail(allChannels[i]); return; }
+    }
     $('ch-detail').style.display = 'none';
+    detailId = null;
+  }
+
+  function setLoading() {
+    $('channel-list').innerHTML = '<div class="ch-empty"><i class="fas fa-spinner fa-spin"></i><p>Загрузка...</p></div>';
+  }
+
+  function loadChannels(live) {
+    if (!selectedGuild) return;
+    if (!live) setLoading();
     fetch('/api/guild/' + selectedGuild + '/channels')
       .then(function (r) { return r.json(); })
       .then(function (data) {
@@ -603,13 +607,14 @@ textarea.field-input{resize:vertical;min-height:52px}
         renderStats();
         populateCategorySelects();
         renderList($('ch-search').value);
+        refreshOpenDetail();
       })
       .catch(function (e) {
-        $('channel-list').innerHTML = '<div class="ch-empty"><i class="fas fa-exclamation-triangle"></i><p>Hata: ' + esc(e.message) + '</p></div>';
+        if (!live) $('channel-list').innerHTML = '<div class="ch-empty"><i class="fas fa-exclamation-triangle"></i><p>Ошибка: ' + esc(e.message) + '</p></div>';
       });
   }
 
-  // ── Create modal ──
+  // ── Создание ──
   function openCreate() {
     $('create-name').value = '';
     $('create-topic').value = '';
@@ -640,20 +645,14 @@ textarea.field-input{resize:vertical;min-height:52px}
     $('create-voice-limit').style.display = isVoice ? '' : 'none';
     $('create-cat-row').style.display = (activeType === 'category') ? 'none' : '';
     $('create-topic-row').style.display = (activeType === 'text') ? '' : 'none';
-    // выключить slowmode/nsfw для категории
     document.getElementById('create-extra').querySelector('.form-row-2').style.display = isCat ? 'none' : '';
     $('create-nsfw').closest('.toggle-row').style.display = isCat ? 'none' : '';
   }
 
   async function createChannel() {
     var name = $('create-name').value.trim();
-    if (!name) { toast('Название канала не может быть пустым!', false); return; }
-    var payload = {
-      name: name,
-      type: activeType,
-      category: $('create-category').value,
-      nsfw: $('create-nsfw').checked
-    };
+    if (!name) { showToast('Название канала не может быть пустым!', false); return; }
+    var payload = { name: name, type: activeType, category: $('create-category').value, nsfw: $('create-nsfw').checked };
     if (activeType === 'text') {
       payload.topic = $('create-topic').value.trim();
       payload.slowmode = parseInt($('create-slowmode').value || '0', 10);
@@ -664,17 +663,15 @@ textarea.field-input{resize:vertical;min-height:52px}
     }
     try {
       var r = await fetch('/api/guild/' + selectedGuild + '/channels/create', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
       });
       var d = await r.json();
-      if (d.success) { closeCreate(); loadChannels(); toast('✅ Канал "' + name + '" создан!', true); }
-      else toast('Hata: ' + (d.error || 'Bilinmiyor'), false);
-    } catch (e) { toast('Ошибка запроса: ' + e.message, false); }
+      if (d.success) { closeCreate(); loadChannels(); showToast('Канал «' + name + '» создан!', true); }
+      else showToast('Ошибка: ' + (d.error || 'Неизвестно'), false);
+    } catch (e) { showToast('Ошибка запроса: ' + e.message, false); }
   }
 
-  // ── Edit modal ──
-  var editingId = null;
+  // ── Редактирование ──
   function openEdit(c) {
     editingId = c.id;
     $('edit-name').value = c.name || '';
@@ -705,10 +702,7 @@ textarea.field-input{resize:vertical;min-height:52px}
     for (var i = 0; i < allChannels.length; i++) { if (allChannels[i].id === editingId) { ch = allChannels[i]; break; } }
     var t = ch ? channelType(ch) : 'text';
     var isVoice = t === 'voice' || t === 'stage';
-    var payload = {
-      name: $('edit-name').value.trim(),
-      category: $('edit-category').value
-    };
+    var payload = { name: $('edit-name').value.trim(), category: $('edit-category').value };
     if (t !== 'category') {
       payload.position = parseInt($('edit-position').value || '0', 10);
       payload.nsfw = $('edit-nsfw').checked;
@@ -723,75 +717,56 @@ textarea.field-input{resize:vertical;min-height:52px}
     }
     try {
       var r = await fetch('/api/guild/' + selectedGuild + '/channels/' + editingId + '/update', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
       });
       var d = await r.json();
-      if (d.success) { closeEdit(); loadChannels(); toast('✅ Канал обновлён!', true); }
-      else toast('Hata: ' + (d.error || 'Bilinmiyor'), false);
-    } catch (e) { toast('Ошибка запроса: ' + e.message, false); }
+      if (d.success) { closeEdit(); loadChannels(); showToast('Канал обновлён!', true); }
+      else showToast('Ошибка: ' + (d.error || 'Неизвестно'), false);
+    } catch (e) { showToast('Ошибка запроса: ' + e.message, false); }
   }
 
-  // ── Delete confirm ──
-  var deletingId = null;
-  function openConfirm(name) {
-    $('confirm-text').textContent = '"' + name + '" вы уверены, что хотите удалить этот канал?';
-    $('modal-confirm').classList.add('open');
+  // ── Удаление (глобальный confirmAction) ──
+  function doDelete(id) {
+    fetch('/api/guild/' + selectedGuild + '/channels/' + id + '/delete', { method: 'POST' })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d.success) { loadChannels(); showToast('Канал удалён.', true); }
+        else showToast('Ошибка: ' + (d.error || 'Неизвестно'), false);
+      })
+      .catch(function (e) { showToast('Ошибка запроса: ' + e.message, false); });
   }
-  function closeConfirm() { $('modal-confirm').classList.remove('open'); deletingId = null; }
-
-  async function doDelete() {
-    if (!deletingId) return;
-    try {
-      var r = await fetch('/api/guild/' + selectedGuild + '/channels/' + deletingId + '/delete', { method: 'POST' });
-      var d = await r.json();
-      if (d.success) { closeConfirm(); loadChannels(); toast('🗑️ Kanal silindi.', true); }
-      else toast('Hata: ' + (d.error || 'Bilinmiyor'), false);
-    } catch (e) { toast('Ошибка запроса: ' + e.message, false); }
-  }
-
-  // ── Detay paneli ──
-  var detailId = null;
-  function openDetail(c) {
-    detailId = c.id;
-    var t = channelType(c);
-    var tm = typeMeta(t);
-    $('detail-icon').innerHTML = '<i class="fas ' + tm.icon + '"></i>';
-    $('detail-name').textContent = c.name;
-    var isVoice = t === 'voice' || t === 'stage';
-    var grid = '';
-    grid += item('Тип', tm.label);
-    grid += item('Konum', String(c.position));
-    grid += item('Создатьuldu', fmtDate(c.created_at));
-    grid += item('NSFW', c.nsfw ? 'Да' : 'Нет');
-    if (t === 'text' || t === 'news' || t === 'forum') grid += item('Медленный режим', c.slowmode > 0 ? c.slowmode + ' сек.' : 'Выкл.');
-    if (isVoice) {
-      grid += item('Bitrate', c.bitrate + ' kbps');
-      grid += item('Лимит участников', c.user_limit > 0 ? c.user_limit : 'Без лимита');
-      grid += item('В голосе', String(c.connected));
-    }
-    $('ch-detail-grid').innerHTML = grid;
-    if (c.topic) {
-      $('detail-topic-text').textContent = c.topic;
-      $('ch-detail-topic').style.display = '';
+  function askDelete(id, name) {
+    if (window.confirmAction) {
+      window.confirmAction('Удалить канал', '«' + name + '» будет удалён безвозвратно. Продолжить?', function () { doDelete(id); }, { danger: true, okText: 'Удалить', icon: '🗑️' });
     } else {
-      $('ch-detail-topic').style.display = 'none';
+      if (confirm('Удалить канал «' + name + '»?')) doDelete(id);
     }
-    $('ch-detail').style.display = '';
-    $('ch-detail').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }
-  function item(k, v) {
-    return '<div class="ch-detail-item"><span class="k">' + esc(k) + '</span><span class="v">' + esc(v) + '</span></div>';
   }
 
-  // ── Olaylar ──
+  // ── Guild select ──
+  function populateGuildSelect() {
+    var gs = $('ch-guild-select');
+    fetch('/api/guilds').then(function (r) { return r.json(); }).then(function (guilds) {
+      if (!Array.isArray(guilds) || !guilds.length) {
+        gs.innerHTML = '<option value="' + esc(MAIN_GID) + '">Главный сервер</option>';
+        selectedGuild = MAIN_GID; loadChannels(); return;
+      }
+      var opts = guilds.map(function (g) {
+        return '<option value="' + esc(g.id) + '"' + (String(g.id) === selectedGuild ? ' selected' : '') + '>' + esc(g.name) + ' (' + g.members + ')</option>';
+      }).join('');
+      gs.innerHTML = opts;
+      selectedGuild = gs.value || MAIN_GID;
+      loadChannels();
+    }).catch(function () {
+      gs.innerHTML = '<option value="' + esc(MAIN_GID) + '">Главный сервер</option>';
+      selectedGuild = MAIN_GID;
+      loadChannels();
+    });
+  }
+
   function bindEvents() {
-    // Выбор типа (создание)
     document.querySelectorAll('#modal-create .type-opt').forEach(function (el) {
-      el.addEventListener('click', function () {
-        setTypeUI(el.getAttribute('data-type'), el);
-        syncCreateTypeFields();
-      });
+      el.addEventListener('click', function () { setTypeUI(el.getAttribute('data-type'), el); syncCreateTypeFields(); });
     });
 
     $('btnNewChannel').addEventListener('click', openCreate);
@@ -805,45 +780,37 @@ textarea.field-input{resize:vertical;min-height:52px}
     $('btnSaveEdit').addEventListener('click', saveEdit);
     $('modal-edit').addEventListener('click', function (e) { if (e.target === this) closeEdit(); });
 
-    $('btnCloseConfirm').addEventListener('click', closeConfirm);
-    $('btnCancelConfirm').addEventListener('click', closeConfirm);
-    $('btnDoDelete').addEventListener('click', doDelete);
-    $('modal-confirm').addEventListener('click', function (e) { if (e.target === this) closeConfirm(); });
-
-    $('btnDetailClose').addEventListener('click', function () { $('ch-detail').style.display = 'none'; });
+    $('btnDetailClose').addEventListener('click', function () { $('ch-detail').style.display = 'none'; detailId = null; });
     $('btnEditFromDetail').addEventListener('click', function () {
       for (var i = 0; i < allChannels.length; i++) if (allChannels[i].id === detailId) { openEdit(allChannels[i]); break; }
     });
     $('btnDeleteFromDetail').addEventListener('click', function () {
-      for (var i = 0; i < allChannels.length; i++) if (allChannels[i].id === detailId) {
-        deletingId = detailId; openConfirm(allChannels[i].name); break;
-      }
+      for (var i = 0; i < allChannels.length; i++) if (allChannels[i].id === detailId) { askDelete(allChannels[i].id, allChannels[i].name); break; }
     });
 
-    // Смена сервера
-    $('guild-select').addEventListener('change', function () {
+    $('ch-guild-select').addEventListener('change', function () {
       var next = this.value || MAIN_GID;
       if (next === selectedGuild) return;
       selectedGuild = next;
       $('ch-search').value = '';
+      $('ch-detail').style.display = 'none';
+      detailId = null;
       loadChannels();
     });
 
-    // Yenile
-    $('btnRefresh').addEventListener('click', function () {
-      this.querySelector('i').style.transition = 'transform .5s';
-      loadChannels();
-    });
+    $('btnRefresh').addEventListener('click', function () { loadChannels(); showToast('Список обновлён', true); });
 
-    // Arama
-    $('ch-search').addEventListener('input', function () { renderList(this.value); });
+    $('ch-search').addEventListener('input', function () {
+      $('ch-search-clear').style.display = this.value ? 'inline-flex' : 'none';
+      renderList(this.value);
+    });
     $('ch-search-clear').addEventListener('click', function () {
       $('ch-search').value = '';
+      $('ch-search-clear').style.display = 'none';
       renderList('');
       $('ch-search').focus();
     });
 
-    // События списка каналов
     var list = $('channel-list');
     list.addEventListener('click', function (e) {
       var btn = e.target.closest('button[data-action]');
@@ -856,8 +823,7 @@ textarea.field-input{resize:vertical;min-height:52px}
         if (action === 'edit') {
           for (var i = 0; i < allChannels.length; i++) if (allChannels[i].id === id) { openEdit(allChannels[i]); break; }
         } else if (action === 'delete') {
-          deletingId = id;
-          openConfirm(name);
+          askDelete(id, name);
         }
         return;
       }
@@ -887,6 +853,13 @@ textarea.field-input{resize:vertical;min-height:52px}
     bindEvents();
     populateGuildSelect();
     if (selectedGuild) loadChannels();
+    // Живое обновление каждые 2.5 сек (без потери прокрутки)
+    if (window.setLiveRefresh) {
+      window.setLiveRefresh(function () {
+        if (document.hidden) return;
+        window.keepScroll ? window.keepScroll(function () { loadChannels(true); }) : loadChannels(true);
+      }, 2500);
+    }
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
