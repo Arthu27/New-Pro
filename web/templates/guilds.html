@@ -1,46 +1,70 @@
 {% extends "base.html" %}
-{% block title %}Сервера - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-server" ></i> Сервера{% endblock %}
+{% block title %}Серверы — Aether{% endblock %}
+{% block page_title %}<i class="fas fa-server"></i> Серверы{% endblock %}
 {% block content %}
 {% block page_hero %}
 <div class="page-hero compact">
   <div class="page-hero-content">
     <div class="page-hero-greeting">
       <span class="dot"></span>
-      <span>Сервера</span>
+      <span>Серверы</span>
     </div>
-    <h1>Сервера</h1>
-    <p>Список серверов, к которым подключён бот.</p>
+    <h1><i class="fas fa-server"></i> Серверы</h1>
+    <p>Список серверов, к которым подключён бот, и их живая статистика.</p>
   </div>
 </div>
 {% endblock %}
 
-
-
-<div class="g-hero">
-  <span class="g-hero-icon">🌐</span>
-  <div class="g-hero-info">
-    <div class="g-hero-title">Сервера</div>
-    <div class="g-hero-sub">Discord серверы, где есть бот</div>
-  </div>
-</div>
-
+<!-- Статистика -->
 <div class="stat-row" id="g-stats">
   <div class="stat-box">
     <div class="stat-icon gold"><i class="fas fa-server"></i></div>
-    <div class="stat-body"><div class="stat-val" id="stat-total">-</div><div class="stat-lbl">Всего</div></div>
+    <div class="stat-body"><div class="stat-val" id="stat-total" data-countup>-</div><div class="stat-lbl">Всего серверов</div></div>
   </div>
   <div class="stat-box">
     <div class="stat-icon cyan"><i class="fas fa-users"></i></div>
-    <div class="stat-body"><div class="stat-val" id="stat-users">-</div><div class="stat-lbl">Участники</div></div>
+    <div class="stat-body"><div class="stat-val" id="stat-users" data-countup>-</div><div class="stat-lbl">Участников</div></div>
   </div>
   <div class="stat-box">
-    <div class="stat-icon green"><i class="fas fa-check-circle"></i></div>
-    <div class="stat-body"><div class="stat-val" id="stat-bots">-</div><div class="stat-lbl">Управляю</div></div>
+    <div class="stat-icon green"><i class="fas fa-signal"></i></div>
+    <div class="stat-body"><div class="stat-val" id="stat-online" data-countup>-</div><div class="stat-lbl">Онлайн</div></div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-icon purple"><i class="fas fa-gem"></i></div>
+    <div class="stat-body"><div class="stat-val" id="stat-boosts" data-countup>-</div><div class="stat-lbl">Бустов</div></div>
   </div>
 </div>
 
-<div id="guilds-list"><p class="ld"><i class="fas fa-spinner fa-spin"></i> Загрузка...</p></div>
+<!-- Список серверов -->
+<div id="guilds-list">
+  <div class="skeleton-grid">
+    <div class="skeleton-card"></div>
+    <div class="skeleton-card"></div>
+    <div class="skeleton-card"></div>
+    <div class="skeleton-card"></div>
+  </div>
+</div>
+
+<style>
+.g-card{
+  display:flex; align-items:center; gap:16px; padding:18px 20px;
+  background:linear-gradient(165deg,rgba(224,176,74,0.05),rgba(20,18,14,0.7));
+  border:1px solid var(--line-2); border-radius:16px; margin-bottom:10px;
+  color:#e8e6df; font-size:14.5px; font-weight:500;
+  backdrop-filter:blur(14px); transition:all .2s var(--ease); cursor:pointer;
+}
+.g-card:hover{ transform:translateX(4px); border-color:var(--ac-line); box-shadow:0 10px 32px rgba(0,0,0,.35); }
+.g-icon{ width:52px; height:52px; border-radius:14px; flex-shrink:0; border:1.5px solid var(--ac-line); object-fit:cover; background:linear-gradient(135deg,#d4a843,#e0b04a); box-shadow:0 4px 14px var(--ac-soft); }
+.g-info{ flex:1; min-width:0; }
+.g-name{ font-weight:700; color:#f4f1e8; font-size:16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.g-meta{ display:flex; align-items:center; gap:16px; margin-top:8px; flex-wrap:wrap; }
+.gm{ display:inline-flex; align-items:center; gap:6px; font-size:12.5px; color:var(--text-3); }
+.gm i{ color:var(--text-4); font-size:11px; }
+.gm b{ color:var(--text-2); font-weight:600; font-variant-numeric:tabular-nums; }
+.gm.on{ color:#86efac; } .gm.on b{ color:#4ade80; } .gm.on i{ color:#4ade80; text-shadow:0 0 8px #4ade80; }
+.gm.boost{ color:#fcd34d; } .gm.boost b{ color:#fcd34d; } .gm.boost i{ color:#fbbf24; }
+.g-id{ font-size:11px; color:var(--text-4); font-family:'JetBrains Mono',monospace; background:rgba(224,176,74,.05); border:1px solid var(--line); padding:3px 9px; border-radius:6px; flex-shrink:0; }
+</style>
 
 <script>
 (function () {
@@ -51,31 +75,45 @@
   async function load() {
     try {
       var guilds = await window.fetchCachedJSON('/api/guilds');
+      var list = $('guilds-list');
       if (!guilds.length) {
-        $('guilds-list').innerHTML = '<p class="empty">Сервер не найдено</p>';
+        list.innerHTML = '<div class="empty"><i class="fas fa-server"></i><p>Серверы не найдены</p></div>';
         $('stat-total').textContent = '0';
         $('stat-users').textContent = '0';
-        $('stat-bots').textContent = '0';
+        $('stat-online').textContent = '0';
+        $('stat-boosts').textContent = '0';
         return;
       }
-      var totalUsers = 0;
+      var totalUsers = 0, totalOnline = 0, totalBoosts = 0;
       var html = '<div class="g-grid">';
-      guilds.forEach(function (g, i) {
+      guilds.forEach(function (g) {
         totalUsers += g.members || 0;
-        html += '<div class="g-card" >' +
-          '<img class="g-icon" src="' + esc(g.icon || 'https://cdn.discordapp.com/embed/avatars/0.png') + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' +
-          '<div class="g-name">' + esc(g.name) + '</div>' +
-          '<div class="g-members"><i class="fas fa-users" ></i> ' + (g.members || 0).toLocaleString() + '</div>' +
-          '<div class="g-id">' + esc(g.id) + '</div>' +
+        totalOnline += g.online || 0;
+        totalBoosts += g.boost || 0;
+        var icon = g.icon || 'https://cdn.discordapp.com/embed/avatars/0.png';
+        html += '<div class="g-card">' +
+          '<img class="g-icon" src="' + esc(icon) + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' +
+          '<div class="g-info">' +
+            '<div class="g-name">' + esc(g.name) + '</div>' +
+            '<div class="g-meta">' +
+              '<span class="gm"><i class="fas fa-users"></i> <b>' + (g.members || 0).toLocaleString() + '</b></span>' +
+              '<span class="gm on"><i class="fas fa-circle"></i> <b>' + (g.online || 0).toLocaleString() + '</b> онлайн</span>' +
+              '<span class="gm"><i class="fas fa-hashtag"></i> <b>' + (g.channels || 0) + '</b></span>' +
+              '<span class="gm"><i class="fas fa-user-tag"></i> <b>' + (g.roles || 0) + '</b></span>' +
+              '<span class="gm boost"><i class="fas fa-gem"></i> <b>' + (g.boost || 0) + '</b></span>' +
+            '</div>' +
+          '</div>' +
+          '<span class="g-id">' + esc(g.id) + '</span>' +
         '</div>';
       });
       html += '</div>';
-      $('guilds-list').innerHTML = html;
+      list.innerHTML = html;
       $('stat-total').textContent = guilds.length;
       $('stat-users').textContent = totalUsers.toLocaleString();
-      $('stat-bots').textContent = guilds.length + ' ✓';
+      $('stat-online').textContent = totalOnline.toLocaleString();
+      $('stat-boosts').textContent = totalBoosts.toLocaleString();
     } catch (e) {
-      $('guilds-list').innerHTML = '<p class="empty">Не удалось загрузить</p>';
+      $('guilds-list').innerHTML = '<div class="empty"><i class="fas fa-exclamation-triangle"></i><p>Не удалось загрузить серверы</p></div>';
     }
   }
 
@@ -85,11 +123,8 @@
     else setInterval(load, 2500);
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', start);
-  } else {
-    start();
-  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+  else start();
 })();
 </script>
 {% endblock %}

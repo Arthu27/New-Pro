@@ -68,7 +68,7 @@
   font-family: 'JetBrains Mono', monospace;
 }
 .leader-rank.gold   { background: linear-gradient(135deg, #fbbf24, #d97706); color: #1a0f00; box-shadow: 0 0 12px rgba(251, 191, 36, 0.4); }
-.leader-rank.удалитьver { background: linear-gradient(135deg, #d1d5db, #6b7280); color: #0a0907; }
+.leader-rank.silver { background: linear-gradient(135deg, #d1d5db, #6b7280); color: #0a0907; }
 .leader-rank.bronze { background: linear-gradient(135deg, #b45309, #78350f); color: #fef3c7; }
 
 .leader-avatar {
@@ -221,7 +221,7 @@
       return;
     }
     var maxM = list[0].messages || 1;
-    var ranks = ['gold', 'удалитьver', 'bronze'];
+    var ranks = ['gold', 'silver', 'bronze'];
     box.innerHTML = '<div class="leaderboard">' + list.slice(0, 10).map(function (m, i) {
       var rank = ranks[i] || '';
       var name = String(m.name || m.username || m.id || '?');
@@ -248,7 +248,7 @@
       return;
     }
     var maxC = list[0].messages || 1;
-    var ranks = ['gold', 'удалитьver', 'bronze'];
+    var ranks = ['gold', 'silver', 'bronze'];
     box.innerHTML = '<div class="leaderboard">' + list.slice(0, 10).map(function (c, i) {
       var rank = ranks[i] || '';
       var name = String(c.name || c.id || '?');
@@ -384,11 +384,19 @@
     }
   }
 
-  // Auto-load on ready
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', load);
-  } else {
+  // Auto-load on ready + live refresh (списки часто, графики реже)
+  function start() {
     load();
+    if (window.setLiveRefresh) {
+      window.setLiveRefresh(load, 5000);
+    } else {
+      setInterval(load, 5000);
+    }
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
   }
 
   // Expose for guild select

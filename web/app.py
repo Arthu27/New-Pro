@@ -919,7 +919,11 @@ def api_guilds ():
         'name':g .name ,
         'members':g .member_count ,
         'icon':str (g .icon .url )if g .icon else None ,
-        'owner_id':str (g .owner_id )
+        'owner_id':str (g .owner_id ),
+        'online':sum (1 for m in g .members if not m .bot and m .status !=discord .Status .offline ),
+        'channels':len (g .channels ),
+        'roles':len (g .roles ),
+        'boost':g .premium_subscription_count or 0 ,
         }for g in bot_instance .guilds ]
 
         return jsonify (guilds )

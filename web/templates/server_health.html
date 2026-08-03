@@ -21,7 +21,7 @@
   .sh-card { background:linear-gradient(160deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015)); border:1px solid rgba(255,255,255,0.09); border-radius:16px; padding:20px; position:relative; overflow:hidden; transition:.18s; }
   .sh-card:hover { border-color:var(--ac-line); transform:translateY(-2px); box-shadow:0 10px 28px rgba(0,0,0,0.3); }
   .sh-card::after { content:''; position:absolute; top:0; right:0; width:110px; height:110px; background:radial-gradient(circle at top right,var(--ac-soft),transparent 70%); pointer-events:none; }
-  .sh-icon { width:40px; height:40px; border-radius:11px; background:rgba(88,101,242,0.15); color:#8ea3ff; border:1px solid rgba(88,101,242,0.3); display:flex; align-items:center; justify-content:center; font-size:16px; margin-bottom:12px; position:relative; z-index:1; }
+  .sh-icon { width:40px; height:40px; border-radius:11px; background:var(--ac-soft); color:var(--ac); border:1px solid var(--ac-line); display:flex; align-items:center; justify-content:center; font-size:16px; margin-bottom:12px; position:relative; z-index:1; }
   .sh-val { font-size:26px; font-weight:800; letter-spacing:-.02em; font-variant-numeric:tabular-nums; position:relative; z-index:1; }
   .sh-val small { font-size:13px; color:var(--text-3); font-weight:600; }
   .sh-lbl { font-size:11px; opacity:.6; text-transform:uppercase; letter-spacing:.08em; margin-top:3px; position:relative; z-index:1; }
@@ -50,10 +50,10 @@
 
 <div class="sh-wrap">
   <div class="sh-grid">
-    <div class="sh-card"><div class="sh-icon"><i class="fas fa-microchip"></i></div><div class="sh-val" id="cpu-val">—</div><div class="sh-lbl">CPU</div><div class="sh-bar-track"><div class="sh-bar-fill" id="cpu-bar" style="width:0%"></div></div></div>
-    <div class="sh-card"><div class="sh-icon"><i class="fas fa-memory"></i></div><div class="sh-val" id="ram-val">—</div><div class="sh-lbl">RAM</div><div class="sh-bar-track"><div class="sh-bar-fill" id="ram-bar" style="width:0%"></div></div></div>
-    <div class="sh-card"><div class="sh-icon"><i class="fas fa-hdd"></i></div><div class="sh-val" id="disk-val">—</div><div class="sh-lbl">Диск</div><div class="sh-bar-track"><div class="sh-bar-fill" id="disk-bar" style="width:0%"></div></div></div>
-    <div class="sh-card"><div class="sh-icon"><i class="fas fa-signal"></i></div><div class="sh-val" id="ping-val">—</div><div class="sh-lbl">Discord Ping</div></div>
+    <div class="sh-card"><div class="sh-icon"><i class="fas fa-microchip"></i></div><div class="sh-val" id="cpu-val" data-countup>—</div><div class="sh-lbl">CPU</div><div class="sh-bar-track"><div class="sh-bar-fill" id="cpu-bar" style="width:0%"></div></div></div>
+    <div class="sh-card"><div class="sh-icon"><i class="fas fa-memory"></i></div><div class="sh-val" id="ram-val" data-countup>—</div><div class="sh-lbl">RAM</div><div class="sh-bar-track"><div class="sh-bar-fill" id="ram-bar" style="width:0%"></div></div></div>
+    <div class="sh-card"><div class="sh-icon"><i class="fas fa-hdd"></i></div><div class="sh-val" id="disk-val" data-countup>—</div><div class="sh-lbl">Диск</div><div class="sh-bar-track"><div class="sh-bar-fill" id="disk-bar" style="width:0%"></div></div></div>
+    <div class="sh-card"><div class="sh-icon"><i class="fas fa-signal"></i></div><div class="sh-val" id="ping-val" data-countup>—</div><div class="sh-lbl">Discord Ping</div></div>
   </div>
 
   <div class="sh-box">
@@ -69,9 +69,9 @@
   <div class="sh-box">
     <div class="sh-head"><i class="fas fa-info-circle"></i> Системная информация</div>
     <div class="sh-body">
-      <div class="sh-row"><span class="sh-key">Серверов</span><span class="sh-val2" id="info-guilds">—</span></div>
-      <div class="sh-row"><span class="sh-key">Участников</span><span class="sh-val2" id="info-users">—</span></div>
-      <div class="sh-row"><span class="sh-key">Ping</span><span class="sh-val2" id="info-ping">—</span></div>
+      <div class="sh-row"><span class="sh-key">Серверов</span><span class="sh-val2" id="info-guilds" data-countup>—</span></div>
+      <div class="sh-row"><span class="sh-key">Участников</span><span class="sh-val2" id="info-users" data-countup>—</span></div>
+      <div class="sh-row"><span class="sh-key">Ping</span><span class="sh-val2" id="info-ping" data-countup>—</span></div>
       <div class="sh-row"><span class="sh-key">Uptime</span><span class="sh-val2" id="info-uptime">—</span></div>
     </div>
   </div>
