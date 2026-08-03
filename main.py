@@ -544,18 +544,10 @@ async def on_ready():
 
 async def load_cogs():
     SKIP_COGS = {
+        # Cog değil, yardımcı modüller (başka dosyalardan import edilir)
         "embed_utils.py", "__init__.py",
-        "help_card.py", "_card_style.py",
+        "_card_style.py",
         "leveling_engagement.py",
-        # temp_moderation.py artık yükleniyor (kalıcı zamanlı mute/ban/kick + schedule + unwarn)
-        "ticket_commands.py",
-        "ticket_cog.py",
-        "utility_cog.py",
-        "music.py",
-        "economy_cmds.py",
-        "fun.py",
-        "utility.py",
-        "automod.py",
     }
     
     try:

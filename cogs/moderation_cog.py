@@ -29,17 +29,6 @@ class ModerationCog(commands.Cog):
         )
         return e
 
-    async def _add_warning(self, guild, member, reason, moderator):
-        """Интеграция с системой предупреждений (warnings cog)"""
-        try:
-            warnings_cog = self.bot.get_cog("warnings")
-            if warnings_cog:
-                await warnings_cog.add_warning(member, moderator, reason)
-                return True
-        except Exception as e:
-            log.info(f"Ошибка интеграции warn: {e}")
-        return False
-
     async def _get_mute_role(self, guild):
         """Найти или создать роль Muted и настроить все каналы"""
         mute_role = discord.utils.get(guild.roles, name=MUTE_ROLE)
@@ -54,26 +43,8 @@ class ModerationCog(commands.Cog):
                 continue
         return mute_role
 
-    @commands.command(name='warn', aliases=['предупреждение'])
-    @commands.has_permissions(manage_messages=True)
-    async def warn(self, ctx, member: discord.Member, *, reason: str = 'Причина не указана'):
-        """Выдать предупреждение пользователю"""
-        await self._add_warning(ctx.guild, member, reason, ctx.author)
-
-        embed = self._embed(
-            "Предупреждение выдано",
-            f"**Пользователь:** {member.mention}\n**Причина:** {reason}\n**Модератор:** {ctx.author.mention}",
-            discord.Color.orange(), "⚠️"
-        )
-        await ctx.send(embed=embed)
-
-        try:
-            dm = discord.Embed(title="⚠️ Вы получили предупреждение",
-                               description=f"**Сервер:** {ctx.guild.name}\n**Причина:** {reason}",
-                               color=discord.Color.orange(), timestamp=datetime.now())
-            await member.send(embed=dm)
-        except Exception:
-            pass
+    # NOT: !warn komutu buradan kaldırıldı — cogs/warnings.py içindeki
+    # /warn ile çakışıyordu ve warnings cog'unun yüklenmesini engelliyordu.
 
     @commands.command(name='mute', aliases=['замьютить'])
     @commands.has_permissions(manage_messages=True)

@@ -1,5 +1,6 @@
 import random 
 import string 
+import hashlib 
 from flask import Flask ,render_template ,request ,jsonify ,session ,redirect ,url_for ,send_from_directory 
 import discord 
 from discord .ext import commands 
@@ -221,9 +222,35 @@ ROLES ={
 'owner':3 
 }
 
+# Panel sahibi kimliği — sabit "123" yerine:
+#  1) data/panel_credentials.json (panelden değiştirilmiş, kalıcı) ← öncelikli
+#  2) .env: PANEL_USER / PANEL_PASSWORD
+#  3) Güvensiz varsayılan "123" (sadece uyarıyla)
+_OWNER_CRED_PATH ='data/panel_credentials.json'
+
+def _hash_pw (pw ):
+    return hashlib .sha256 (str (pw ).encode ('utf-8')).hexdigest ()
+
+def _load_owner_credentials ():
+    user =(os .environ .get ('PANEL_USER','owner')or 'owner').strip ()or 'owner'
+    try :
+        saved =_store .read_json (_OWNER_CRED_PATH ,default =None )
+    except Exception :
+        saved =None 
+    if isinstance (saved ,dict )and saved .get ('user')==user and saved .get ('password_hash'):
+        return user ,saved ['password_hash'],False 
+    env_pw =(os .environ .get ('PANEL_PASSWORD','')or '').strip ()
+    if env_pw :
+        return user ,_hash_pw (env_pw ),False 
+    print ('[GÜVENLİK] PANEL_PASSWORD tanımlı değil — varsayılan panel parolası "123" kullanılıyor! '
+          '.env dosyanıza PANEL_PASSWORD ekleyin.')
+    return user ,_hash_pw ('123'),True 
+
+_owner_user ,_owner_pw_hash ,_owner_using_default_pw =_load_owner_credentials ()
+
 # Только sahip fiksirovan user как kполучает
 USERS ={
-'owner':{'password':'123','role':'owner'},
+_owner_user :{'password_hash':_owner_pw_hash ,'role':'owner'},
 }
 
 def _safe_avatar_url (value ):
@@ -409,7 +436,7 @@ def login ():
         password =request .form .get ('password')
 
         # Только sahip fiksirovan user
-        if username in USERS and USERS [username ]['password']==password :
+        if username in USERS and USERS [username ].get ('password_hash')==_hash_pw (password ):
             session .permanent =True 
             session ['logged_in']=True 
             session ['username']=username 
@@ -1775,8 +1802,13 @@ def api_change_password ():
     if not target or not new_pass or len (new_pass )<4 :
         return jsonify ({'error':'Неверный veriler'})
     if target in USERS :
-        USERS [target ]['password']=new_pass 
-        return jsonify ({'success':True ,'message':f'{target} parolasi обновлено'})
+        USERS [target ]['password_hash']=_hash_pw (new_pass )
+        try :
+            os .makedirs ('data',exist_ok =True )
+            _store .atomic_write_json (_OWNER_CRED_PATH ,{'user':target ,'password_hash':USERS [target ]['password_hash']})
+        except Exception as e :
+            print (f'[UYARI] Owner parolası kalıcı kaydedilemedi: {e}')
+        return jsonify ({'success':True ,'message':f'{target} parolasi обновлено (kalıcı olarak kaydedildi)'})
         # members.json'da ara
     members_file ='data/members.json'
     if os .path .exists (members_file ):

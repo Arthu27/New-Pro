@@ -1,128 +1,53 @@
-# 🚀 AI Ticket Система - Быстрый Начало
+# 🚀 AI Ticket Sistemi — Быстрый старт
 
-## 1️⃣ Система Готов mы Контроль Et
+## 1️⃣ Проверь, что система готова
 
 ```bash
-# Bot'u запустить
-pythдесять main.py
+python main.py
 ```
 
-Bot началсягыnda шu сообщение видеть:
-```
-✅ Ticket cog loaded (AI enabled)
-```
-
----
-
-## 2️⃣ В начало Ticket Panelini Отправить
-
-Discord'da один канал git ve:
+В логе при запуске должны быть строки:
 
 ```
-/ticket-panel
+[OK] Все зависимости актуальны
+Загружено: ticket.py
 ```
 
-Panel отправлено! Теперь пользователи "🎫 Создать тикет поддержки" butдесятьuna клик.
+AI-ключ задаётся в `.env` (`MISTRAL_API_KEY` или альтернативы / Ollama).
 
----
+## 2️⃣ Отправь панель тикетов
 
-## 3️⃣ Тест Et
+В нужном канале сервера используй команду панели тикетов
+(`/ticket-panel` или из веб-панели → раздел «Тикеты»).
+Пользователи открывают тикеты кнопкой.
 
-### Тест 1: Basit Soru
-1. Ticket открыть
-2. AI'nin приветствие сообщение видеть
-3. Yaz: "bot команды nedir?"
-4. AI ответитьecek
+## 3️⃣ Протестируй
 
-### Тест 2: Направление
-1. Ticket открыть
-2. Yaz: "X человек spam yapыyor, ban atыn"
-3. AI направление ve поддержка роль ping atacak
+### Тест 1: Простой вопрос
+1. Открой тикет.
+2. Напиши вопрос, на который AI может ответить (например: «как получить роль?»).
+3. AI должен поприветствовать и ответить по существу.
 
----
+### Тест 2: Эскалация
+1. Напиши жалобу, требующую персонала («меня оскорбили, вот скриншот»).
+2. AI должен определить категорию `жалоба`, попросить доказательства
+   и при необходимости эскалировать тикет персоналу.
 
-## 4️⃣ Статистика Видеть
+## 4️⃣ Смотри статистику
 
-### Discord'da:
-```
-/ticket-ai-stats
-```
+### В Discord:
+- `/ticket-ai-stats` — общая статистика AI-тикетов сервера.
 
-### Web Panel'de:
-1. Panel'e вход yap
-2. Статистика → 🤖 AI Поддержка Ticketlarы
-3. Все разговор видеть
+### В веб-панели:
+- http://localhost:5001 → раздел **AI Тикеты** (`/ai-tickets`)
+- Подробная аналитика — **AI Ticket Stats** (`/ai-ticket-stats`).
 
----
+## 5️⃣ Настройки
 
-## 5️⃣ AI'yi Закрыть/Открыть
-
-```
-/ticket-ai-toggle
-```
-
-Каждый запуститьdыгыnda tersine чevrilir (открыт → закрыт, закрыт → открыт)
-
----
-
-## 6️⃣ Manuel Направление
-
-Один ticket в канале:
-
-```
-/ticket-force-escполучитьate
-```
-
-AI durur, поддержка роль ping atыlыr.
-
----
-
-## ⚙️ Настройкиы Deгiшtir
-
-`cogs/ticket.py` dosyasыnы открыть:
-
-```pythдесять
-AI_ENABLED = True  # Fполучитьse yap = AI готовоen закрыт
-MAX_AI_MESSAGES = 10  # 5 yap = более быстрый направление
-```
-
-Deгiшtirdikten после botu новыйden запустить.
-
----
-
-## 🐛 Sorun Giderme
-
-### AI ответитьmiyor
-- `AI_ENABLED = True` olduгundan emin ol
-- OpenRouter API key'in действительный olduгunu контроль et
-- Bot loglarыna bak (ошибка var mы?)
-
-### Поддержка роль ping atыlmыyor
-- "Поддержка" adыnda один роль olduгundan emin ol
-- Роль mentiдесять edilebilir olduгunu контроль et
-
-### Web panel'de ticket видеть
-- Ticket открытьыldыktan после en az 1 сообщение написано emin ol
-- `data/ai_tickets_<guild_id>.jпоследний` dosyasыnыn var olduгunu контроль et
-
----
-
-## 📚 Более Fazla Информация
-
-- **Детали Dokюmantasyдесять**: `AI_TICKET_SYSTEM.md`
-- **Akыш Diyagramы**: `AI_TICKET_FLOW.txt`
-- **Краткий Сводка**: `AI_TICKET_OZET.md`
-
----
-
-## ✅ Checklist
-
-- [ ] Bot работает
-- [ ] `/ticket-panel` отправлено
-- [ ] Тест ticket открытьыldы
-- [ ] AI ответитьdi
-- [ ] Направление тест edildi
-- [ ] Web panel'de скриншот
-- [ ] Статистика контроль edildi
-
-**Hepsi готовоsa, система готов! 🎉**
+| Что | Где |
+|---|---|
+| Включить/выключить AI в тикетах | `/ticket-ai-toggle` |
+| Принудительная эскалация | `/ticket-force-escalate` |
+| Категории и ключевые слова | `AI_TICKET_KATEGORIZE.md` |
+| Лимиты и защита от спама | `RATE_LIMITING_GUIDE.md` |
+| Тестовые сценарии | `AI_TICKET_TEST.md` |

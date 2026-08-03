@@ -64,7 +64,7 @@ class _TTLCache :
             if expires <time .time ():
                 self ._d .pop (key ,None )
                 return None 
-                # LRU: eriудалитьeni basa получить
+                # LRU: переместить использованный элемент в начало
             self ._d .move_to_end (key )
             return value 
 

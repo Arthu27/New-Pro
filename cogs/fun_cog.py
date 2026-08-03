@@ -34,71 +34,9 @@ class FunCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(name='8ball', aliases=['шар'])
-    async def eightball(self, ctx, *, question: str):
-        """Магический шар — ответит на твой вопрос"""
-        responses = [
-            "Определённо да.",
-            "Точно да.",
-            "Несомненно.",
-            "Да, однозначно.",
-            "Можешь быть уверен.",
-            "Судя по всему, да.",
-            "Скорее всего.",
-            "Да.",
-            "Знаки говорят — да.",
-            "Ответ неясен, попробуй ещё.",
-            "Спроси позже.",
-            "Лучше сейчас не говорить.",
-            "Пока не могу предсказать.",
-            "Сосредоточься и спроси снова.",
-            "Не рассчитывай на это.",
-            "Мой ответ — нет.",
-            "Источники говорят — нет.",
-            "Судя по всему, нет.",
-            "Очень сомнительно.",
-            "Нет."
-        ]
-        e = _embed(
-            "🎱 Магический шар",
-            f"**Вопрос:** {question}\n\n**Ответ:** {random.choice(responses)}",
-            discord.Color.dark_grey(),
-            author=ctx.author
-        )
-        await ctx.send(embed=e)
-
-    @commands.command(name='coinflip', aliases=['монета'])
-    async def coinflip(self, ctx):
-        """Подбросить монету"""
-        result = random.choice(["Орёл", "Решка"])
-        e = _embed(
-            "🪙 Монетка",
-            f"**Результат:** {result}",
-            discord.Color.dark_grey(),
-            footer="Попробуй удачу!",
-            author=ctx.author
-        )
-        await ctx.send(embed=e)
-
-    @commands.command(name='dice', aliases=['кость'])
-    async def dice(self, ctx, sides: int = 6):
-        """Бросить кость"""
-        if sides < 2:
-            await ctx.send("🎲 Кость должна быть минимум 2-х гранная!")
-            return
-        if sides > 10000:
-            await ctx.send("🎲 Кость максимум 10000 гранная!")
-            return
-
-        result = random.randint(1, sides)
-        e = _embed(
-            "🎲 Бросок кости",
-            f"**Кость с {sides} гранями:** `{result}`",
-            discord.Color.dark_grey(),
-            footer="Удачи!",
-            author=ctx.author
-        )
-        await ctx.send(embed=e)
+    # NOT: 8ball / coinflip / dice bu dosyadan kaldırıldı —
+    # aynı isimli slash komutları cogs/minigames.py ile çakışıyordu ve
+    # minigames cog'unun tamamen yüklenmemesine yol açıyordu.
 
     async def _fetch_json(self, url):
         """Безопасно получает данные из API"""

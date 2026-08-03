@@ -5473,16 +5473,15 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     def api_cogs ():
         import web .app as _app ;bot =_app .bot_instance 
         import os 
-        # Скрыть служебные/легаси файлы, чтобы не путать пользователя:
+        # Скрыть служебные файлы, чтобы не путать пользователя:
         #  - имена с '_' / __init__ — вспомогательные (не cog'и)
-        #  - LEGACY — старые дубли, которые намеренно не загружаются (заменены *_cog версиями)
-        LEGACY ={'embed_utils','help_card','leveling_engagement','ticket_cog','utility_cog',
-                 'music','economy_cmds','fun','utility','automod','ticket_commands'}
+        #  - NON_COG — модули-помощники на диске, загружаемые через import, а не как cog
+        NON_COG ={'embed_utils','leveling_engagement'}
         all_cogs =[]
         for f in os .listdir ('./cogs'):
             if not f .endswith ('.py'):continue 
             name =f [:-3 ]
-            if name .startswith ('_')or name in LEGACY :
+            if name .startswith ('_')or name in NON_COG :
                 continue 
             all_cogs .append (name )
         loaded =[ext .split ('.')[-1 ]for ext in (bot .extensions if bot else [])]
