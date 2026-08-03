@@ -16,13 +16,13 @@
 {% endblock %}
 
 <style>
-  .pa-wrap { padding:6px 2px 34px; max-width: 960px; }
+  .pa-wrap { padding:6px 2px 34px; max-width: 980px; }
   .info-bar { background:linear-gradient(90deg, rgba(88,101,242,0.14), rgba(88,101,242,0.05)); border:1px solid rgba(88,101,242,0.3); border-radius:12px; padding:13px 16px; font-size:12.5px; margin-bottom:20px; display:flex; gap:10px; align-items:flex-start; }
   .info-bar i { color:var(--accent,#5865F2); margin-top:1px; }
 
-  .pa-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; margin-bottom:20px; }
+  .pa-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; margin-bottom:22px; }
   .pa-stat { background:linear-gradient(160deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015)); border:1px solid rgba(255,255,255,0.09); border-radius:15px; padding:16px 18px; display:flex; align-items:center; gap:13px; }
-  .pa-stat .ico { width:42px; height:42px; border-radius:11px; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+  .pa-stat .ico { width:42px; height:42px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
   .pa-stat .num { font-size:22px; font-weight:700; }
   .pa-stat .lbl { font-size:12px; opacity:.6; margin-top:2px; }
   .st-owner { background:rgba(241,196,15,0.16); color:#f1c40f; border:1px solid rgba(241,196,15,0.35); }
@@ -30,28 +30,32 @@
   .st-mod   { background:rgba(46,204,113,0.16); color:#2ecc71; border:1px solid rgba(46,204,113,0.35); }
   .st-uye   { background:rgba(88,101,242,0.16); color:#8ea3ff; border:1px solid rgba(88,101,242,0.35); }
 
-  .pa-panel { background: linear-gradient(160deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015)); border:1px solid rgba(255,255,255,0.09); border-radius:16px; padding:20px; }
-  .pa-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:16px; }
-  .pa-head h2 { margin:0; font-size:18px; display:flex; align-items:center; gap:9px; }
-  .pa-head h2 i { color:var(--accent,#5865F2); }
-  .pa-head .sub { font-size:12px; opacity:.55; margin-top:4px; }
+  .pa-search { max-width:360px; margin-bottom:18px; position:relative; }
+  .pa-search i { position:absolute; left:13px; top:50%; transform:translateY(-50%); opacity:.5; font-size:13px; }
+  .pa-search input { width:100%; background:#1b1b22; color:#e6e6e6; border:1px solid rgba(255,255,255,0.16); border-radius:11px; padding:12px 14px 12px 36px; font-size:13.5px; outline:none; }
+  .pa-search input:focus { border-color:var(--accent,#5865F2); box-shadow:0 0 0 3px rgba(88,101,242,0.15); }
 
-  .pa-search { position:relative; flex:1; min-width:220px; max-width:340px; }
-  .pa-search i { position:absolute; left:12px; top:50%; transform:translateY(-50%); opacity:.5; font-size:13px; }
-  .pa-search input { width:100%; background:#1b1b22; color:#e6e6e6; border:1px solid rgba(255,255,255,0.16); border-radius:10px; padding:10px 12px 10px 34px; font-size:13px; outline:none; }
-  .pa-search input:focus { border-color:var(--accent,#5865F2); }
+  .pa-section { border-radius:16px; margin-bottom:18px; overflow:hidden; border:1px solid rgba(255,255,255,0.09); }
+  .pa-section-head { display:flex; align-items:center; gap:11px; padding:14px 18px; font-weight:700; font-size:14.5px; letter-spacing:.3px; }
+  .pa-section-head .sic { width:32px; height:32px; border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0; }
+  .pa-section-head .scnt { margin-left:auto; font-size:12px; font-weight:600; padding:3px 12px; border-radius:20px; background:rgba(255,255,255,0.08); }
+  .pa-section-body { padding:12px 16px 16px; border-top:1px solid rgba(255,255,255,0.06); }
+  .pa-section.c-owner { background:linear-gradient(170deg, rgba(241,196,15,0.08), rgba(0,0,0,0.12)); border-color:rgba(241,196,15,0.3); }
+  .pa-section.c-admin { background:linear-gradient(170deg, rgba(231,76,60,0.08), rgba(0,0,0,0.12)); border-color:rgba(231,76,60,0.3); }
+  .pa-section.c-mod   { background:linear-gradient(170deg, rgba(46,204,113,0.08), rgba(0,0,0,0.12)); border-color:rgba(46,204,113,0.3); }
+  .pa-section.c-uye   { background:linear-gradient(170deg, rgba(88,101,242,0.08), rgba(0,0,0,0.12)); border-color:rgba(88,101,242,0.3); }
 
-  .pa-role { display:flex; align-items:center; gap:13px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-radius:12px; padding:12px 14px; margin-bottom:8px; transition:.15s; }
-  .pa-role:hover { background:rgba(255,255,255,0.05); border-color:var(--accent,#5865F2); }
-  .pa-role .swatch { width:24px; height:24px; border-radius:8px; flex-shrink:0; border:1px solid rgba(255,255,255,0.25); }
+  .pa-role { display:flex; align-items:center; gap:12px; background:rgba(0,0,0,0.22); border:1px solid rgba(255,255,255,0.07); border-radius:11px; padding:11px 14px; margin-bottom:8px; transition:.15s; }
+  .pa-role:hover { background:rgba(255,255,255,0.05); transform:translateY(-1px); }
+  .pa-role .swatch { width:26px; height:26px; border-radius:8px; flex-shrink:0; border:1px solid rgba(255,255,255,0.3); box-shadow:0 0 10px rgba(0,0,0,0.3); }
   .pa-role .rname { flex:1; font-size:14px; font-weight:600; line-height:1.25; word-break:break-word; }
-  .pa-role .rname .rid { display:block; font-size:10.5px; font-weight:400; opacity:.4; font-family:monospace; margin-top:2px; }
-  .pa-role .rcount { font-size:11px; opacity:.5; padding:3px 9px; border-radius:20px; background:rgba(255,255,255,0.07); white-space:nowrap; }
-  .pa-role select { background:#1b1b22; color:#e6e6e6; border:1px solid rgba(255,255,255,0.18); border-radius:9px; padding:9px 12px; font-size:13px; cursor:pointer; outline:none; min-width:170px; }
+  .pa-role .rcount { font-size:11.5px; opacity:.55; padding:4px 11px; border-radius:20px; background:rgba(255,255,255,0.08); white-space:nowrap; display:inline-flex; align-items:center; gap:5px; }
+  .pa-role .rcount i { font-size:10px; }
+  .pa-role select { background:#17171d; color:#e6e6e6; border:1px solid rgba(255,255,255,0.2); border-radius:9px; padding:9px 12px; font-size:13px; cursor:pointer; outline:none; min-width:168px; font-weight:600; }
   .pa-role select:hover { border-color:var(--accent,#5865F2); }
-  .pa-role select.owner { border-color:rgba(241,196,15,0.6); }
-  .pa-role select.admin { border-color:rgba(231,76,60,0.6); }
-  .pa-role select.mod   { border-color:rgba(46,204,113,0.6); }
+  .pa-role select.owner { border-color:rgba(241,196,15,0.6); color:#f1c40f; }
+  .pa-role select.admin { border-color:rgba(231,76,60,0.6); color:#ff8a80; }
+  .pa-role select.mod   { border-color:rgba(46,204,113,0.6); color:#7fe0a8; }
 
   .pa-empty { text-align:center; opacity:.5; padding:50px 0; }
   .pa-empty i { font-size:30px; display:block; margin-bottom:12px; }
@@ -59,7 +63,7 @@
 
 <div class="pa-wrap">
   <div class="info-bar">
-    <i class="fas fa-info-circle"></i> <b>Как это работает:</b> выберите панель для каждой Discord-роли. Участник — базовый вход, Модератор — доступ к модерации, Администратор — управление, Владелец — полный контроль. Если роль не назначена, доступ определяется автоматически по Discord-правам. Изменения сохраняются сразу.
+    <i class="fas fa-info-circle"></i> <b>Как это работает:</b> каждая Discord-роль отнесена к одной панели. Перетащите роль в нужный раздел — просто выберите панель в меню справа. Не назначенные роли показываются в разделе «Участник (авто)» и определяются автоматически по Discord-правам.
   </div>
 
   <div class="pa-stats">
@@ -69,19 +73,12 @@
     <div class="pa-stat"><div class="ico st-uye"><i class="fas fa-user"></i></div><div><div class="num" id="cnt-uye">0</div><div class="lbl">Участник (авто)</div></div></div>
   </div>
 
-  <div class="pa-panel">
-    <div class="pa-head">
-      <div>
-        <h2><i class="fas fa-users-cog"></i> Роли сервера</h2>
-        <div class="sub">Назначение панелей для каждой роли (приоритет выше — Владелец)</div>
-      </div>
-      <div class="pa-search">
-        <i class="fas fa-search"></i>
-        <input type="text" id="pa-search-input" placeholder="Поиск роли..." oninput="renderRoles()">
-      </div>
-    </div>
-    <div id="pa-role-list"></div>
+  <div class="pa-search">
+    <i class="fas fa-search"></i>
+    <input type="text" id="pa-search-input" placeholder="Поиск роли..." oninput="renderRoles()">
   </div>
+
+  <div id="pa-list"></div>
 </div>
 
 <script>
@@ -93,6 +90,13 @@ var PANEL_OPTS = [
   {v:'mod',   label:'🛡 Модератор'},
   {v:'admin', label:'👔 Администратор'},
   {v:'owner', label:'👑 Владелец'}
+];
+
+var SECTIONS = [
+  {v:'owner', title:'ВЛАДЕЛЕЦ', icon:'fa-crown', cls:'c-owner', ic:'st-owner'},
+  {v:'admin', title:'АДМИНИСТРАТОР', icon:'fa-user-tie', cls:'c-admin', ic:'st-admin'},
+  {v:'mod',   title:'МОДЕРАТОР', icon:'fa-shield-halved', cls:'c-mod', ic:'st-mod'},
+  {v:'uye',   title:'УЧАСТНИК (авто)', icon:'fa-user', cls:'c-uye', ic:'st-uye'}
 ];
 
 function hexToRgba(hex, a){
@@ -114,32 +118,46 @@ function updateStats(){
 }
 
 function renderRoles(){
-  var el = document.getElementById('pa-role-list');
+  var host = document.getElementById('pa-list');
   if(!PA_ROLES.length){
-    el.innerHTML = '<div class="pa-empty"><i class="fas fa-spinner fa-spin"></i>Загрузка ролей...</div>';
+    host.innerHTML = '<div class="pa-empty"><i class="fas fa-spinner fa-spin"></i>Загрузка ролей...</div>';
     return;
   }
   var q = (document.getElementById('pa-search-input').value || '').toLowerCase().trim();
-  var list = PA_ROLES.filter(function(r){
+  var filtered = PA_ROLES.filter(function(r){
     if(!q) return true;
-    return (r.name||'').toLowerCase().indexOf(q) !== -1 || (r.id||'').indexOf(q) !== -1;
+    return (r.name||'').toLowerCase().indexOf(q) !== -1;
   });
-  if(!list.length){
-    el.innerHTML = '<div class="pa-empty"><i class="fas fa-search"></i>Роли не найдены</div>';
+  if(!filtered.length){
+    host.innerHTML = '<div class="pa-empty"><i class="fas fa-search"></i>Роли не найдены</div>';
     return;
   }
-  el.innerHTML = list.map(function(r){
-    var cur = panelOf(r.id);
-    var opts = PANEL_OPTS.map(function(o){
-      return '<option value="'+o.v+'"'+(o.v===cur?' selected':'')+'>'+o.label+'</option>';
+  var html = '';
+  SECTIONS.forEach(function(sec){
+    var roles = filtered.filter(function(r){ return panelOf(r.id) === sec.v; });
+    if(!roles.length) return;
+    var rows = roles.map(function(r){
+      var opts = PANEL_OPTS.map(function(o){
+        return '<option value="'+o.v+'"'+(o.v===panelOf(r.id)?' selected':'')+'>'+o.label+'</option>';
+      }).join('');
+      return '<div class="pa-role">'
+        + '<span class="swatch" style="background:'+hexToRgba(r.color,0.95)+'"></span>'
+        + '<span class="rname">'+r.name+'</span>'
+        + '<span class="rcount"><i class="fas fa-user"></i>'+r.members+'</span>'
+        + '<select class="'+panelOf(r.id)+'" data-rid="'+r.id+'" data-name="'+String(r.name||'').replace(/"/g,'&quot;')+'" onchange="saveRole(this)">'+opts+'</select>'
+        + '</div>';
     }).join('');
-    return '<div class="pa-role">'
-      + '<span class="swatch" style="background:'+hexToRgba(r.color,0.9)+'"></span>'
-      + '<div class="rname">'+r.name+'<span class="rid">ID: '+r.id+'</span></div>'
-      + '<span class="rcount">'+r.members+' чел.</span>'
-      + '<select class="'+cur+'" data-rid="'+r.id+'" data-name="'+String(r.name||'').replace(/"/g,'&quot;')+'" onchange="saveRole(this)">'+opts+'</select>'
+    html += '<div class="pa-section '+sec.cls+'">'
+      + '<div class="pa-section-head">'
+      + '<span class="sic '+sec.ic+'"><i class="fas '+sec.icon+'"></i></span>'
+      + '<span>'+sec.title+'</span>'
+      + '<span class="scnt">'+roles.length+'</span>'
+      + '</div>'
+      + '<div class="pa-section-body">'+rows+'</div>'
       + '</div>';
-  }).join('');
+  });
+  if(!html) html = '<div class="pa-empty"><i class="fas fa-search"></i>Роли не найдены</div>';
+  host.innerHTML = html;
   updateStats();
 }
 
@@ -153,10 +171,9 @@ function saveRole(sel){
   }).then(function(r){ return r.json(); }).then(function(d){
     if(d.success){
       PA_MAP[rid] = val;
-      sel.className = val;
       var label = (PANEL_OPTS.find(function(o){return o.v===val;})||{}).label || val;
       if(window.showToast) window.showToast('«'+name+'» → '+label.replace(/^\S+\s+/,''), true);
-      updateStats();
+      renderRoles();
     } else {
       if(window.showToast) window.showToast(d.error || 'Ошибка сохранения', false);
       loadPA();
@@ -175,7 +192,7 @@ function loadPA(){
       renderRoles();
     })
     .catch(function(){
-      document.getElementById('pa-role-list').innerHTML = '<div class="pa-empty"><i class="fas fa-exclamation-triangle"></i>Не удалось загрузить роли</div>';
+      document.getElementById('pa-list').innerHTML = '<div class="pa-empty"><i class="fas fa-exclamation-triangle"></i>Не удалось загрузить роли</div>';
     });
 }
 
