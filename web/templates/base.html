@@ -904,17 +904,25 @@ window.showToast = function (message, success) {
 
   // 4) Универсальный хелпер: перерисовать контент, сохранив scroll.
   //    Любая страница может вызывать window.keepScroll(fn).
+  //    ВАЖНО: renderFn часто асинхронный (fetch + перерисовка DOM уже ПОСЛЕ
+  //    возврата), поэтому простого requestAnimationFrame недостаточно — scroll
+  //    теряется, как только вернётся fetch. Повторяем scrollTo с задержками.
   window.keepScroll = function (renderFn) {
     var y = window.scrollY, x = window.scrollX;
-    if (typeof renderFn === 'function') renderFn();
-    requestAnimationFrame(function () {
-      window.scrollTo(x, y);
-      // сохраним на всякий случай
-      try {
-        var store = JSON.parse(sessionStorage.getItem(KEY) || '{}');
-        store[pageKey] = { x: x, y: y };
-        sessionStorage.setItem(KEY, JSON.stringify(store));
-      } catch (err) {}
+    try {
+      if (typeof renderFn === 'function') renderFn();
+    } catch (e) {}
+    var attempts = [0, 40, 120, 300, 600, 1000, 1800, 3000];
+    attempts.forEach(function (delay) {
+      setTimeout(function () {
+        if (window.__userScrolled) return;
+        window.scrollTo(x, y);
+        try {
+          var store = JSON.parse(sessionStorage.getItem(KEY) || '{}');
+          store[pageKey] = { x: x, y: y };
+          sessionStorage.setItem(KEY, JSON.stringify(store));
+        } catch (err) {}
+      }, delay);
     });
   };
 })();

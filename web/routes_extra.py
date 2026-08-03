@@ -5826,12 +5826,22 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         if not guild :
             return jsonify ({'success':False ,'error':'Сервер не найден'}),404
 
+        role_objs =[r for r in guild .roles if not r .is_default ()]
+        role_obj_by_id ={str (r .id ):r for r in role_objs}
+
         roles =[
         {'id':str (r .id ),'name':r .name ,'color':str (r .color ),'position':r .position,
          'permissions':r .permissions .value ,'managed':r .managed ,'hoist':r .hoist}
-        for r in guild .roles if not r .is_default ()
+        for r in role_objs
         ]
         roles .sort (key =lambda x :x ['position'],reverse =True )
+
+        def _ov_for (ch ,rid ):
+            """Return visibility (True/False/None) for a role id on a channel, using the real Role object."""
+            obj =role_obj_by_id .get (rid )
+            if obj is None :
+                return None
+            return _role_overwrite (ch ,obj )
 
         # Категории и каналы (текст/голос/категории)
         cats =[]
@@ -5840,14 +5850,13 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
             seen_cat_ids .add (cat .id )
             chans =[]
             for ch in cat .channels :
-                ov =ch .overwrites_for (discord .Object (id =0 ))  # заглушка, ниже переберём роли
                 chans .append ({
                 'id':str (ch .id ),'name':ch .name ,
                 'type':'text' if isinstance (ch ,discord .TextChannel )
                          else 'voice' if isinstance (ch ,discord .VoiceChannel )
                          else 'other',
                 'category_id':str (cat .id ),
-                'overwrites':{str (r .id ): _role_overwrite(ch ,r ) for r in roles}
+                'overwrites':{r ['id']: _ov_for (ch ,r ['id']) for r in roles}
                 })
             cats .append ({'id':str (cat .id ),'name':cat .name ,'channels':chans })
 
@@ -5860,7 +5869,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                     'id':str (ch .id ),'name':ch .name ,
                     'type':'text' if isinstance (ch ,discord .TextChannel ) else 'voice',
                     'category_id':None ,
-                    'overwrites':{str (r .id ): _role_overwrite(ch ,r ) for r in roles}
+                    'overwrites':{r ['id']: _ov_for (ch ,r ['id']) for r in roles}
                     })
         return jsonify ({'success':True ,'roles':roles ,'categories':cats ,'uncategorized':uncat })
 
