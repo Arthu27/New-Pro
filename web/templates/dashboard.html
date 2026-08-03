@@ -169,6 +169,19 @@
 .lockdown-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 22px rgba(74, 222, 128, 0.40); filter: brightness(1.05); }
 .lockdown-btn.danger { background: linear-gradient(135deg, var(--err), #dc2626); color: #fff; box-shadow: 0 4px 14px rgba(248, 113, 113, 0.30); }
 
+/* Summary strip */
+.dash-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:18px}
+.sum-item{display:flex;align-items:center;gap:12px;padding:16px 18px;background:linear-gradient(165deg,rgba(224,176,74,.05),rgba(20,18,14,.7));border:1px solid var(--line-2);border-radius:14px;backdrop-filter:blur(14px);transition:transform .2s var(--ease),border-color .2s var(--ease)}
+.sum-item:hover{transform:translateY(-2px);border-color:var(--ac-line)}
+.sum-ico{width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.sum-ico.gold{background:linear-gradient(135deg,var(--ac-2),var(--ac-3));color:#1a1a1a}
+.sum-ico.green{background:rgba(74,222,128,.14);color:#4ade80;border:1px solid rgba(74,222,128,.3)}
+.sum-ico.cyan{background:rgba(56,189,248,.14);color:#38bdf8;border:1px solid rgba(56,189,248,.3)}
+.sum-ico.red{background:rgba(248,113,113,.14);color:#f87171;border:1px solid rgba(248,113,113,.3)}
+.sum-val{font-family:'Poppins',sans-serif;font-size:24px;font-weight:800;color:var(--text);line-height:1;font-variant-numeric:tabular-nums}
+.sum-val small{font-size:13px;color:var(--text-3);font-weight:600}
+.sum-lbl{font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;margin-top:3px;font-weight:600}
+
 /* Quick grid */
 .quick-grid-loading, .quick-grid-empty {
   grid-column: 1 / -1;
@@ -229,6 +242,14 @@
   </div>
 </div>
 
+<!-- Ключевые показатели (summary strip) -->
+<div class="dash-summary" id="dashSummary" data-reveal="up">
+  <div class="sum-item"><span class="sum-ico gold"><i class="fas fa-users"></i></span><div><div class="sum-val" id="sum-members">—</div><div class="sum-lbl">Участников</div></div></div>
+  <div class="sum-item"><span class="sum-ico green"><i class="fas fa-circle"></i></span><div><div class="sum-val" id="sum-online">—</div><div class="sum-lbl">Онлайн</div></div></div>
+  <div class="sum-item"><span class="sum-ico cyan"><i class="fas fa-signal"></i></span><div><div class="sum-val" id="sum-latency">—</div><div class="sum-lbl">Ping</div></div></div>
+  <div class="sum-item"><span class="sum-ico red"><i class="fas fa-shield-halved"></i></span><div><div class="sum-val" id="sum-threat">—</div><div class="sum-lbl">Угроза</div></div></div>
+</div>
+
 <!-- 4 stat cards -->
 <div class="stat-grid">
   <div class="stat-card-big purple">
@@ -265,11 +286,23 @@
   </div>
 </div>
 
-<!-- Живой датчик пинга -->
-<div class="donut-grid" data-reveal="up" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));margin-top:16px">
+<!-- Живые датчики: пинг / CPU / RAM / онлайн -->
+<div class="donut-grid" data-reveal="up" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr));margin-top:16px">
   <div class="donut-card">
     <div class="donut" id="pingDonut" data-size="96"></div>
     <div class="donut-cap" id="pingCap">—</div>
+  </div>
+  <div class="donut-card">
+    <div class="donut" id="cpuDonut" data-size="96"></div>
+    <div class="donut-cap" id="cpuCap">—</div>
+  </div>
+  <div class="donut-card">
+    <div class="donut" id="ramDonut" data-size="96"></div>
+    <div class="donut-cap" id="ramCap">—</div>
+  </div>
+  <div class="donut-card">
+    <div class="donut" id="onlineDonut" data-size="96"></div>
+    <div class="donut-cap" id="onlineCap">—</div>
   </div>
 </div>
 
@@ -453,6 +486,12 @@
       var lat = d.latency || 0;
       lEl.innerHTML = lat.toLocaleString() + '<small>ms</small>';
 
+      // Summary strip
+      var sm = $('sum-members'), so = $('sum-online'), sl = $('sum-latency');
+      if (sm) sm.textContent = (d.users || 0).toLocaleString();
+      if (so) so.textContent = (d.online || 0).toLocaleString();
+      if (sl) sl.innerHTML = Math.round(lat) + '<small>ms</small>';
+
       // Живой датчик пинга
       if (window.drawDonut) {
         var ppct = Math.max(0, Math.min(100, Math.round(lat / 200 * 100)));
@@ -578,6 +617,8 @@
       $('threatFill').style.width = Math.min(100, score) + '%';
       $('threatFill').style.background = color;
 
+      updateThreatSummary();
+
       var btn = $('btnLockdown');
       var btnText = $('btnLockdownText');
       if (active) {
@@ -588,6 +629,42 @@
         btnText.textContent = 'Lockdown';
       }
     } catch (e) { /* skip */ }
+  }
+
+  // ── CPU / RAM / online gauges + threat summary ──
+  function updateThreatSummary() {
+    try {
+      var t = $('threatScoreVal'), s = $('sum-threat');
+      if (t && s) s.textContent = t.textContent;
+    } catch (e) {}
+  }
+  async function loadHealth() {
+    var health = {};
+    try { health = await fetch('/api/bot/health').then(function (r) { return r.json(); }); } catch (e) {}
+    var cur = health.current || health || {};
+    var cpu = cur.cpu_percent != null ? cur.cpu_percent : (cur.cpu != null ? cur.cpu : null);
+    var ram = cur.memory_percent != null ? cur.memory_percent : (cur.ram_percent != null ? cur.ram_percent : null);
+    if (window.drawDonut) {
+      if (cpu != null) {
+        window.drawDonut(document.getElementById('cpuDonut'), Math.min(100, cpu), cpu < 60 ? '#4ade80' : cpu < 85 ? '#fbbf24' : '#f87171');
+        var cc = document.getElementById('cpuCap');
+        if (cc) { cc.textContent = Math.round(cpu) + '%'; cc.className = 'donut-cap ' + (cpu < 60 ? 'ok' : cpu < 85 ? 'warn' : 'bad'); }
+      }
+      if (ram != null) {
+        window.drawDonut(document.getElementById('ramDonut'), Math.min(100, ram), ram < 70 ? '#38bdf8' : ram < 90 ? '#fbbf24' : '#f87171');
+        var rc = document.getElementById('ramCap');
+        if (rc) { rc.textContent = Math.round(ram) + '%'; rc.className = 'donut-cap ' + (ram < 70 ? 'ok' : ram < 90 ? 'warn' : 'bad'); }
+      }
+    }
+    try {
+      var st = await window.fetchCachedJSON('/api/stats');
+      if (st && st.users && window.drawDonut) {
+        var pct = Math.round((st.online || 0) / st.users * 100);
+        window.drawDonut(document.getElementById('onlineDonut'), pct, '#a78bfa');
+        var oc = document.getElementById('onlineCap');
+        if (oc) oc.textContent = pct + '%';
+      }
+    } catch (e) {}
   }
 
   async function toggleLockdown() {
@@ -657,18 +734,21 @@
     loadRecentActivity();
     loadLoginLog();
     loadThreatIndex();
+    loadHealth();
     if (window.setLiveRefresh) {
       window.setLiveRefresh(loadStats, 2500);
       window.setLiveRefresh(loadQuickStats, 5000);
       window.setLiveRefresh(loadRecentActivity, 2500);
       window.setLiveRefresh(loadLoginLog, 2500);
       window.setLiveRefresh(loadThreatIndex, 5000);
+      window.setLiveRefresh(loadHealth, 3000);
     } else {
       setInterval(loadStats, 2500);
       setInterval(loadQuickStats, 5000);
       setInterval(loadRecentActivity, 2500);
       setInterval(loadLoginLog, 2500);
       setInterval(loadThreatIndex, 5000);
+      setInterval(loadHealth, 3000);
     }
     setInterval(setGreeting, 60000);
   }

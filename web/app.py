@@ -899,10 +899,12 @@ def api_stats ():
 
     guilds =len (bot_instance .guilds )
     users =sum (g .member_count or 0 for g in bot_instance .guilds )
+    online =sum (1 for g in bot_instance .guilds for m in g .members if not m .bot and m .status !=discord .Status .offline )
 
     return jsonify ({
     'guilds':guilds ,
     'users':users ,
+    'online':online ,
     'latency':round (bot_instance .latency *1000 ,2 ),
     'status':'online'
     })
