@@ -39,14 +39,14 @@ class Moderation (commands .Cog ):
             data ['cases'][gid ].append ({
             'id':case_id ,'action':action ,
             'user_id':str (user_id ),'mod_id':str (mod_id ),
-            'reason':reason or 'Не belirtildi',
+            'reason':reason or 'Не указана',
             'timestamp':datetime .now (timezone .utc ).isoformat ()
             })
             with open (filepath ,'w',encoding ='utf-8')as f :
                 json .dump (data ,f ,indent =2 ,ensure_ascii =False )
             return case_id 
         except Exception as e :
-            log .info (f"[MOD] Ошибка sohraneniya iшler: {e}")
+            log .info (f"[MOD] Ошибка сохранения дел: {e}")
             return 0 
 
     async def send_log (self ,guild ,embed ):
@@ -84,16 +84,16 @@ class Moderation (commands .Cog ):
             pass 
 
     def _confirm_embed (self ,action ,user ,guild ,reason ,case_id ,extra ="" ,moderator =None ):
-        """Embed onay для модератора — professionalniy stil"""
+        """Embed подтверждения для модератора — профессиональный стиль"""
         moderator =moderator or (guild .me if guild else None )
         configs ={
-        "ban":("Ban завершено",0xE74C3C ,"забанен на время"),
-        "kick":("Kick завершено",0xE67E22 ,"isanahtaren с сервер"),
-        "timeout":("Mute завершено",0xF39C12 ,"vremenno замьючен"),
-        "untimeout":("Mute удалено",0x2ECC71 ,"mute удалено"),
-        "unban":("Ban удалено",0x2ECC71 ,"razbanen"),
+        "ban":("Бан выполнен",0xE74C3C ,"забанен"),
+        "kick":("Кик выполнен",0xE67E22 ,"кикнут с сервера"),
+        "timeout":("Мут выполнен",0xF39C12 ,"временно замьючен"),
+        "untimeout":("Мут снят",0x2ECC71 ,"мут снят"),
+        "unban":("Бан снят",0x2ECC71 ,"разбанен"),
         }
-        title ,color ,action_text =configs .get (action ,("Действие заверш",0x2ECC71 ,"primeneno"))
+        title ,color ,action_text =configs .get (action ,("Действие завершено",0x2ECC71 ,"применено"))
 
         e =discord .Embed (color =color ,timestamp =datetime .now (timezone .utc ))
 
@@ -101,8 +101,8 @@ class Moderation (commands .Cog ):
         desc +=f"### **{user.display_name}** — {action_text}\n"
         desc +=f"`{user.id}`\n"
         desc +=f"\n\n"
-        desc +=f"**Delo:** #{case_id}\n"
-        desc +=f"**Причина:** {reason or 'Не belirtildi'}\n"
+        desc +=f"**Дело:** #{case_id}\n"
+        desc +=f"**Причина:** {reason or 'Не указана'}\n"
         desc +=f"**Модератор:** {moderator.mention if moderator else chr(8212)}\n"
 
         if extra :
@@ -140,7 +140,7 @@ class Moderation (commands .Cog ):
 
         if action =="ban":
             if not user :
-                await interaction .response .send_message (embed =error_embed ("Belirtin пользователь для ban."),ephemeral =True )
+                await interaction .response .send_message (embed =error_embed ("Укажите пользователя для бана."),ephemeral =True )
                 return 
             try :
                 dm =mod_dm_embed ("ban",guild ,interaction .user ,reason )
@@ -159,7 +159,7 @@ class Moderation (commands .Cog ):
 
         elif action =="kick":
             if not user :
-                await interaction .response .send_message (embed =error_embed ("Belirtin пользователь для kika."),ephemeral =True )
+                await interaction .response .send_message (embed =error_embed ("Укажите пользователя для кика."),ephemeral =True )
                 return 
             try :
                 dm =mod_dm_embed ("kick",guild ,interaction .user ,reason )
@@ -178,21 +178,21 @@ class Moderation (commands .Cog ):
 
         elif action =="timeout":
             if not user :
-                await interaction .response .send_message (embed =error_embed ("Belirtin пользователь для mute."),ephemeral =True )
+                await interaction .response .send_message (embed =error_embed ("Укажите пользователя для мута."),ephemeral =True )
                 return 
             sure =minutes if minutes is not None else 5 
             try :
                 until =discord .utils .utcnow ()+timedelta (minutes =sure )
                 dm =mod_dm_embed ("timeout",guild ,interaction .user ,reason ,
-                extra_fields =[("Длительность",f"**{sure} dk.**",True )])
+                extra_fields =[("Длительность",f"**{sure} мин.**",True )])
                 await self .send_dm (user ,dm )
                 await user .timeout (until ,reason =reason )
                 case_id =self .save_case (guild .id ,'timeout',user .id ,interaction .user .id ,reason )
                 log =mod_log_embed ("timeout","Mute",0xF39C12 ,user ,interaction .user ,guild ,reason ,case_id ,
-                extra_fields =[("Длительность",f"{sure} dk.",True )])
+                extra_fields =[("Длительность",f"{sure} мин.",True )])
                 await self .send_log (guild ,log )
                 confirm =self ._confirm_embed ("timeout",user ,guild ,reason ,case_id ,
-                extra =f"Длительность: **{sure} dk.** · Snimetsya: <t:{int(until.timestamp())}:R>",
+                extra =f"Длительность: **{sure} мин.** · Снимется: <t:{int(until.timestamp())}:R>",
                 moderator =interaction .user )
                 await interaction .response .send_message (embed =confirm ,ephemeral =True )
                 await self ._notify_owner ('timeout',user ,interaction .user ,reason )
@@ -203,13 +203,13 @@ class Moderation (commands .Cog ):
 
         elif action =="untimeout":
             if not user :
-                await interaction .response .send_message (embed =error_embed ("Belirtin пользователь."),ephemeral =True )
+                await interaction .response .send_message (embed =error_embed ("Укажите пользователя."),ephemeral =True )
                 return 
             try :
                 await user .timeout (None )
                 dm =mod_dm_embed ("untimeout",guild ,interaction .user )
                 await self .send_dm (user ,dm )
-                log =mod_log_embed ("untimeout","Mute удалено",0x2ECC71 ,user ,interaction .user ,guild )
+                log =mod_log_embed ("untimeout","Мут снят",0x2ECC71 ,user ,interaction .user ,guild )
                 await self .send_log (guild ,log )
                 confirm =self ._confirm_embed ("untimeout",user ,guild ,reason ,0 ,moderator =interaction .user )
                 await interaction .response .send_message (embed =confirm ,ephemeral =True )
@@ -218,7 +218,7 @@ class Moderation (commands .Cog ):
 
         elif action =="unban":
             if not user_id :
-                await interaction .response .send_message (embed =error_embed ("Belirtin ID пользователь в pole `user_id`."),ephemeral =True )
+                await interaction .response .send_message (embed =error_embed ("Укажите ID пользователя в поле `user_id`."),ephemeral =True )
                 return 
             try :
                 fetched =await self .bot .fetch_user (int (user_id ))
@@ -226,9 +226,9 @@ class Moderation (commands .Cog ):
                 case_id =self .save_case (guild .id ,'unban',fetched .id ,interaction .user .id ,reason )
                 e =discord .Embed (color =0x2ECC71 ,timestamp =datetime .now (timezone .utc ))
                 e .description =(
-                f"## Ban удалено\n"
+                f"## Бан снят\n"
                 f"**{fetched.name}** · `{fetched.id}`\n\n"
-                f"Пользователь razbanen.\n"
+                f"Пользователь разбанен.\n"
                 f"Модератор: {interaction.user.mention}\n\n"
                 f"{DIVIDER}"
                 )
@@ -242,7 +242,7 @@ class Moderation (commands .Cog ):
     async def moderate_user_error (self ,interaction ,error ):
         if isinstance (error ,app_commands .MissingPermissions ):
             await interaction .response .send_message (
-            embed =error_embed ("Yetersiz haklarыn. Trebuetsya: **Ban участников**."),
+            embed =error_embed ("Недостаточно прав. Требуется: **Бан участников**."),
             ephemeral =True 
             )
         else :
@@ -250,7 +250,7 @@ class Moderation (commands .Cog ):
 
             # /utility 
 
-    @app_commands .command (name ="utility",description ="Utiliti: ocistka, sloumod, blokirovka, info")
+    @app_commands .command (name ="utility",description ="Утилиты: очистка, слоумод, блокировка, инфо")
     @app_commands .choices (action =[
     app_commands .Choice (name ="clear",value ="clear"),
     app_commands .Choice (name ="slowmode",value ="slowmode"),
@@ -269,7 +269,7 @@ class Moderation (commands .Cog ):
             deleted =await interaction .channel .purge (limit =adet )
             e =discord .Embed (color =0xDC143C ,timestamp =datetime .now (timezone .utc ))
             e .description =(
-            f"## Сообщения udaleni\n"
+            f"## Сообщения удалены\n"
             f"Удалено **{len(deleted)}** сообщение\n\n"
             f"Канал: {interaction.channel.mention}\n"
             f"Модератор: {interaction.user.mention}\n\n"
@@ -280,14 +280,14 @@ class Moderation (commands .Cog ):
 
         elif action =="slowmode":
             if секунд <0 or секунд >21600 :
-                await interaction .response .send_message (embed =error_embed ("Znacenie den 0 do 21600 секунд."),ephemeral =True )
+                await interaction .response .send_message (embed =error_embed ("Значение от 0 до 21600 секунд."),ephemeral =True )
                 return 
             await interaction .channel .edit (slowmode_delay =секунд )
             e =discord .Embed (color =0xF39C12 ,timestamp =datetime .now (timezone .utc ))
             e .description =(
-            f"## Medlenniy mod\n"
+            f"## Медленный режим\n"
             f"Канал: {interaction.channel.mention}\n"
-            f"Zaderjka: **{секунд} sek.**\n"
+            f"Задержка: **{секунд} сек.**\n"
             f"Модератор: {interaction.user.mention}\n\n"
             f"{DIVIDER}"
             )
@@ -298,29 +298,29 @@ class Moderation (commands .Cog ):
             await interaction .channel .set_permissions (guild .default_role ,send_messages =False )
             e =discord .Embed (color =0xE74C3C ,timestamp =datetime .now (timezone .utc ))
             e .description =(
-            f"## Канал zablokirovan\n"
+            f"## Канал заблокирован\n"
             f"{interaction.channel.mention}\n\n"
-            f"Отправл сообщение baгlandы.\n"
-            f"Zablokiroval: {interaction.user.mention}\n\n"
+            f"Отправка сообщений отключена.\n"
+            f"Заблокировал: {interaction.user.mention}\n\n"
             f"{DIVIDER}"
             )
             e .set_footer (text =f"{guild.name}")
             await interaction .channel .send (embed =e )
-            await interaction .response .send_message ("Канал zablokirovan.",ephemeral =True )
+            await interaction .response .send_message ("Канал заблокирован.",ephemeral =True )
 
         elif action =="unlock":
             await interaction .channel .set_permissions (guild .default_role ,send_messages =True )
             e =discord .Embed (color =0x2ECC71 ,timestamp =datetime .now (timezone .utc ))
             e .description =(
-            f"## Канал razblokirovan\n"
+            f"## Канал разблокирован\n"
             f"{interaction.channel.mention}\n\n"
-            f"Отправл сообщение в.\n"
-            f"Razblokiroval: {interaction.user.mention}\n\n"
+            f"Отправка сообщений включена.\n"
+            f"Разблокировал: {interaction.user.mention}\n\n"
             f"{DIVIDER}"
             )
             e .set_footer (text =f"{guild.name}")
             await interaction .channel .send (embed =e )
-            await interaction .response .send_message ("Канал razblokirovan.",ephemeral =True )
+            await interaction .response .send_message ("Канал разблокирован.",ephemeral =True )
 
         elif action =="userinfo":
             u =user or interaction .user 
@@ -336,10 +336,10 @@ class Moderation (commands .Cog ):
             e .description =(
             f"## {u.display_name}\n"
             f"`{u.id}`\n\n"
-            f"Isim: **{u.name}**\n"
+            f"Имя: **{u.name}**\n"
             f"Псевдоним: **{u.display_name}**\n"
-            f"Hesap: <t:{int(u.created_at.timestamp())}:R>\n"
-            f"На на сервере: <t:{int(u.joined_at.timestamp())}:R>\n"
+            f"Аккаунт: <t:{int(u.created_at.timestamp())}:R>\n"
+            f"На сервере: <t:{int(u.joined_at.timestamp())}:R>\n"
             f"Роли ({len(roles)}): {roles_text}\n\n"
             f"{DIVIDER}"
             )
@@ -356,14 +356,14 @@ class Moderation (commands .Cog ):
             e .description =(
             f"## {g.name}\n"
             f"`{g.id}`\n\n"
-            f"Sahip: {g.owner.mention}\n"
-            f"Создало: <t:{int(g.created_at.timestamp())}:R>\n\n"
+            f"Владелец: {g.owner.mention}\n"
+            f"Создан: <t:{int(g.created_at.timestamp())}:R>\n\n"
             f"Участников: **{g.member_count}**\n"
-            f"Lyudey: **{humans}** · Botlarыn: **{bots}**\n\n"
-            f"Metin каналы: **{len(g.text_channels)}**\n"
-            f"Голос каналы: **{len(g.voice_channels)}**\n"
-            f"Роль: **{len(g.roles)}**\n"
-            f"Bust: Уровень {g.premium_tier} · {g.premium_subscription_count} bustov\n\n"
+            f"Людей: **{humans}** · Ботов: **{bots}**\n\n"
+            f"Текстовых каналов: **{len(g.text_channels)}**\n"
+            f"Голосовых каналов: **{len(g.voice_channels)}**\n"
+            f"Ролей: **{len(g.roles)}**\n"
+            f"Буст: уровень {g.premium_tier} · {g.premium_subscription_count} бустов\n\n"
             f"{DIVIDER}"
             )
             if g .icon :
@@ -381,11 +381,11 @@ class Moderation (commands .Cog ):
         guild =interaction .guild 
         if role in user .roles :
             await user .remove_roles (role )
-            action_text ="удален"
+            action_text ="снята"
             color =0xE74C3C 
         else :
             await user .add_roles (role )
-            action_text ="vidana"
+            action_text ="выдана"
             color =0x2ECC71 
 
         e =discord .Embed (color =color ,timestamp =datetime .now (timezone .utc ))
@@ -588,7 +588,7 @@ class Moderation (commands .Cog ):
             name =target .name 
             await target .leave ()
             e =discord .Embed (color =0x2ECC71 ,timestamp =datetime .now (timezone .utc ))
-            e .description =f"## Сервер pokinut\n**{name}** · `{guild_id}`"
+            e .description =f"## Сервер покинут\n**{name}** · `{guild_id}`"
             await interaction .response .send_message (embed =e ,ephemeral =True )
         except ValueError :
             await interaction .response .send_message (embed =error_embed ("Неверный ID сервер."),ephemeral =True )

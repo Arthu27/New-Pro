@@ -8,6 +8,8 @@ from cogs .embed_utils import _divider ,now_ts ,error_embed
 from logger import get_logger 
 from config import Config 
 
+log =get_logger ("advanced_mod")
+
 class AdvancedMod (commands .Cog ):
     def __init__ (self ,bot ):
         self .bot =bot 
@@ -113,7 +115,7 @@ class AdvancedMod (commands .Cog ):
         self .save_data ()
         return case_id 
 
-    @app_commands .command (name ="history",description ="Показать история moderasyonu пользователь")
+    @app_commands .command (name ="history",description ="Показать историю модерации пользователя")
     @app_commands .checks .has_permissions (moderate_members =True )
     async def history (self ,interaction :discord .Interaction ,user :discord .Member ):
         guild_id =str (interaction .guild .id )
@@ -121,14 +123,14 @@ class AdvancedMod (commands .Cog ):
         user_case =[c for c in case if str (c ["user_id"])==str (user .id )]
 
         if not user_case :
-            e =discord .Embed (title =" Temiz История",color =0x2ECC71 ,timestamp =datetime .utcnow ())
+            e =discord .Embed (title ="📗 Чистая история",color =0x2ECC71 ,timestamp =datetime .utcnow ())
             e .description =(
-            f"```ansi\n\u001b[1;32m TEMИZ ЗАПИСЬ\u001b[0m\n```\n{_divider()}\n\n"
-            f"{user.mention} записи о модерации не найдено.\n\n{_divider()}"
+            f"```ansi\n\u001b[1;32m ЧИСТАЯ ЗАПИСЬ\u001b[0m\n```\n{_divider()}\n\n"
+            f"{user.mention} записей о модерации не найдено.\n\n{_divider()}"
             )
             e .set_thumbnail (url =user .display_avatar .url )
             e .add_field (name =" Пользователь",value =f"`{user.name}` • `{user.id}`",inline =True )
-            e .add_field (name =" Состояние",value ="```diff\n+ Ни mod действие нет\n```",inline =True )
+            e .add_field (name =" Состояние",value ="```diff\n+ Нарушений нет\n```",inline =True )
             e .set_footer (text =f"Aether Модерация • {interaction.guild.name}",icon_url =interaction .guild .icon .url if interaction .guild .icon else None )
             await interaction .response .send_message (embed =e ,ephemeral =True )
             return 
@@ -136,19 +138,19 @@ class AdvancedMod (commands .Cog ):
         action_emojis ={"ban":"","kick":"","timeout":"","warn":"","unban":""}
         action_colors ={"ban":"31","kick":"33","timeout":"33","warn":"33","unban":"32"}
 
-        e =discord .Embed (title =f" Модерация История",color =0xE74C3C ,timestamp =datetime .utcnow ())
+        e =discord .Embed (title =f"📕 История модерации",color =0xE74C3C ,timestamp =datetime .utcnow ())
         e .description =(
-        f"```ansi\n\u001b[1;31m MOD ЗАПИСЬ\u001b[0m\n```\n{_divider()}"
+        f"```ansi\n\u001b[1;31m ЗАПИСЬ МОДЕРАЦИИ\u001b[0m\n```\n{_divider()}"
         )
         e .set_thumbnail (url =user .display_avatar .url )
-        e .set_author (name =f"{user.display_name} — История Запись",icon_url =user .display_avatar .url )
+        e .set_author (name =f"{user.display_name} — история нарушений",icon_url =user .display_avatar .url )
 
         for case in user_case [-8 :]:
             act =case ['action'].lower ()
             emoji =action_emojis .get (act ,"")
             color_code =action_colors .get (act ,"37")
             e .add_field (
-            name =f"{emoji} Case #{case['id']} — {case['action'].upper()}",
+            name =f"{emoji} Дело #{case['id']} — {case['action'].upper()}",
             value =(
             f"```ansi\n\u001b[1;{color_code}m{case['action'].upper()}\u001b[0m\n```"
             f" {case['reason']}\n"
@@ -168,7 +170,7 @@ class AdvancedMod (commands .Cog ):
         )
         await interaction .response .send_message (embed =e ,ephemeral =True )
 
-    @app_commands .command (name ="case",description ="Показать konkretnoe delo")
+    @app_commands .command (name ="case",description ="Показать конкретное дело")
     @app_commands .checks .has_permissions (moderate_members =True )
     async def case (self ,interaction :discord .Interaction ,case_id :int ):
         guild_id =str (interaction .guild .id )
@@ -176,7 +178,7 @@ class AdvancedMod (commands .Cog ):
         case =next ((c for c in case if c ["id"]==case_id ),None )
 
         if not case :
-            await interaction .response .send_message (embed =error_embed (f"Case #{case_id} не найдено."),ephemeral =True )
+            await interaction .response .send_message (embed =error_embed (f"Дело #{case_id} не найдено."),ephemeral =True )
             return 
 
         try :
@@ -188,9 +190,9 @@ class AdvancedMod (commands .Cog ):
         action_emojis ={"ban":"","kick":"","timeout":"","warn":""}
         emoji =action_emojis .get (case ["action"].lower (),"")
 
-        e =discord .Embed (title =f"{emoji} Case #{case_id} Детали",color =0x3498DB ,timestamp =datetime .utcnow ())
+        e =discord .Embed (title =f"{emoji} Дело #{case_id} Детали",color =0x3498DB ,timestamp =datetime .utcnow ())
         e .description =(
-        f"```ansi\n\u001b[1;34m CASE ДЕТАЛИ\u001b[0m\n```\n{_divider()}"
+        f"```ansi\n\u001b[1;34m ДЕТАЛИ ДЕЛА\u001b[0m\n```\n{_divider()}"
         )
         if user :
             e .set_thumbnail (url =user .display_avatar .url )
@@ -205,7 +207,7 @@ class AdvancedMod (commands .Cog ):
         )
         await interaction .response .send_message (embed =e ,ephemeral =True )
 
-    @app_commands .command (name ="note",description ="Добавлено notu пользователю")
+    @app_commands .command (name ="note",description ="Добавить заметку пользователю")
     @app_commands .checks .has_permissions (moderate_members =True )
     async def note (self ,interaction :discord .Interaction ,user :discord .Member ,note :str ):
         guild_id =str (interaction .guild .id )
@@ -220,19 +222,19 @@ class AdvancedMod (commands .Cog ):
         })
         self .save_data ()
 
-        e =discord .Embed (title =" Not Добавлено",color =0xF1C40F ,timestamp =datetime .utcnow ())
+        e =discord .Embed (title ="📝 Заметка добавлена",color =0xF1C40F ,timestamp =datetime .utcnow ())
         e .description =(
-        f"```ansi\n\u001b[1;33m NOT СОХРАНЕНО\u001b[0m\n```\n{_divider()}"
+        f"```ansi\n\u001b[1;33m ЗАМЕТКА СОХРАНЕНА\u001b[0m\n```\n{_divider()}"
         )
         e .set_thumbnail (url =user .display_avatar .url )
         e .add_field (name =" Пользователь",value =f"{user.mention}\n`{user.id}`",inline =True )
-        e .add_field (name =" Добавлено",value =interaction .user .mention ,inline =True )
-        e .add_field (name =" Not",value =f"```{note}```",inline =False )
+        e .add_field (name ="✍️ Добавил",value =interaction .user .mention ,inline =True )
+        e .add_field (name ="📝 Заметка",value =f"```{note}```",inline =False )
         e .add_field (name =" Дата",value =f"<t:{now_ts()}:F>",inline =False )
         e .set_footer (text =f"Aether Модерация • {interaction.guild.name}",icon_url =interaction .guild .icon .url if interaction .guild .icon else None )
         await interaction .response .send_message (embed =e ,ephemeral =True )
 
-    @app_commands .command (name ="notes",description ="Показать notlar пользователь")
+    @app_commands .command (name ="notes",description ="Показать заметки пользователя")
     @app_commands .checks .has_permissions (moderate_members =True )
     async def notes (self ,interaction :discord .Interaction ,user :discord .Member ):
         guild_id =str (interaction .guild .id )
@@ -241,24 +243,24 @@ class AdvancedMod (commands .Cog ):
 
         if not notes :
             await interaction .response .send_message (
-            embed =discord .Embed (description =f" {user.mention} для запись заметок нет.",color =0x3498DB ),
+            embed =discord .Embed (description =f"ℹ️ У {user.mention} заметок нет.",color =0x3498DB ),
             ephemeral =True 
             )
             return 
 
-        e =discord .Embed (title =f" {user.display_name} — Notlar",color =0xF1C40F ,timestamp =datetime .utcnow ())
-        e .description =f"```ansi\n\u001b[1;33m ЗАПИСЬ NOTLAR\u001b[0m\n```\n{_divider()}"
+        e =discord .Embed (title =f" {user.display_name} — заметки",color =0xF1C40F ,timestamp =datetime .utcnow ())
+        e .description =f"```ansi\n\u001b[1;33m ЗАМЕТКИ\u001b[0m\n```\n{_divider()}"
         e .set_thumbnail (url =user .display_avatar .url )
         for i ,n in enumerate (notes ,1 ):
             e .add_field (
-            name =f" Not #{i} — `{n['timestamp'][:10]}`",
+            name =f"📝 Заметка #{i} — `{n['timestamp'][:10]}`",
             value =f"```{n['note']}```*— {n['mod']}*",
             inline =False 
             )
         e .set_footer (text =f"Всего {len(notes)} заметок • Aether Модерация",icon_url =interaction .guild .icon .url if interaction .guild .icon else None )
         await interaction .response .send_message (embed =e ,ephemeral =True )
 
-    @app_commands .command (name ="watchlist",description ="Добавлено/удалить den spiska наблюдение")
+    @app_commands .command (name ="watchlist",description ="Добавить/удалить из списка наблюдения")
     @app_commands .checks .has_permissions (moderate_members =True )
     async def watchlist (self ,interaction :discord .Interaction ,user :discord .Member ,reason :str =None ):
         guild_id =str (interaction .guild .id )
@@ -269,15 +271,15 @@ class AdvancedMod (commands .Cog ):
         if user_id in self .data ["watchlist"][guild_id ]:
             del self .data ["watchlist"][guild_id ][user_id ]
             self .save_data ()
-            e =discord .Embed (title =" Иzleme Listesinden Удалить",color =0x2ECC71 ,timestamp =datetime .utcnow ())
-            e .description =f"```ansi\n\u001b[1;32m LИSTEDEN УДАЛИТЬ\u001b[0m\n```\n{_divider()}"
+            e =discord .Embed (title ="👁 Удалён из списка наблюдения",color =0x2ECC71 ,timestamp =datetime .utcnow ())
+            e .description =f"```ansi\n\u001b[1;32m УДАЛЁН ИЗ СПИСКА\u001b[0m\n```\n{_divider()}"
             e .set_thumbnail (url =user .display_avatar .url )
             e .add_field (name =" Пользователь",value =f"{user.mention}\n`{user.id}`",inline =True )
             e .add_field (name =" Дата",value =f"<t:{now_ts()}:R>",inline =True )
             e .set_footer (text =f"Aether Модерация • {interaction.guild.name}",icon_url =interaction .guild .icon .url if interaction .guild .icon else None )
         else :
             self .data ["watchlist"][guild_id ][user_id ]={
-            "reason":reason or "Не belirtildi",
+            "reason":reason or "Не указана",
             "added_by":str (interaction .user ),
             "timestamp":datetime .utcnow ().isoformat ()
             }
@@ -289,13 +291,13 @@ class AdvancedMod (commands .Cog ):
             )
             e .set_thumbnail (url =user .display_avatar .url )
             e .add_field (name =" Пользователь",value =f"{user.mention}\n`{user.id}`",inline =True )
-            e .add_field (name =" Добавлено",value =interaction .user .mention ,inline =True )
+            e .add_field (name ="✍️ Добавил",value =interaction .user .mention ,inline =True )
             e .add_field (name =" Причина",value =f"```{reason or 'Не указана'}```",inline =False )
             e .add_field (name =" Дата",value =f"<t:{now_ts()}:F>",inline =False )
             e .set_footer (text =f"Aether Модерация • {interaction.guild.name}",icon_url =interaction .guild .icon .url if interaction .guild .icon else None )
         await interaction .response .send_message (embed =e ,ephemeral =True )
 
-    @app_commands .command (name ="watchlist-show",description ="Показать liste наблюдение")
+    @app_commands .command (name ="watchlist-show",description ="Показать список наблюдения")
     @app_commands .checks .has_permissions (moderate_members =True )
     async def watchlist_show (self ,interaction :discord .Interaction ):
         guild_id =str (interaction .guild .id )
@@ -304,16 +306,16 @@ class AdvancedMod (commands .Cog ):
 
         if not watchlist :
             await interaction .response .send_message (
-            embed =discord .Embed (description =" Liste наблюдение шu an пусто.",color =0x3498DB ),
+            embed =discord .Embed (description =" Список наблюдения сейчас пуст.",color =0x3498DB ),
             ephemeral =True 
             )
             return
 
         import time as _t
         now =_t .time ()
-        e =discord .Embed (title =" Иzleme список",color =0xF39C12 ,timestamp =datetime .utcnow ())
+        e =discord .Embed (title ="👁 Список наблюдения",color =0xF39C12 ,timestamp =datetime .utcnow ())
         e .description =(
-        f"```ansi\n\u001b[1;33m ИZLEMEDEKИ ПОЛЬЗОВАТЕЛИ\u001b[0m\n```\n{_divider()}"
+        f"```ansi\n\u001b[1;33m ПОЛЬЗОВАТЕЛИ ПОД НАБЛЮДЕНИЕМ\u001b[0m\n```\n{_divider()}"
         )
         for user_id ,data in watchlist .items ():
             try :
@@ -336,7 +338,7 @@ class AdvancedMod (commands .Cog ):
             inline =False 
             )
         e .set_footer (
-        text =f"Всего {len(watchlist)} user • Aether Модерация",
+        text =f"Всего: {len(watchlist)} пользователей • Aether Модерация",
         icon_url =interaction .guild .icon .url if interaction .guild .icon else None 
         )
         await interaction .response .send_message (embed =e ,ephemeral =True )
@@ -349,23 +351,23 @@ class AdvancedMod (commands .Cog ):
 
         if not bans :
             await interaction .followup .send (
-            embed =discord .Embed (description =" Запретlanmыш user нет.",color =0x2ECC71 ),
+            embed =discord .Embed (description =" Забаненных пользователей нет.",color =0x2ECC71 ),
             ephemeral =True 
             )
             return 
 
-        e =discord .Embed (title =f" Ban список",color =0xE74C3C ,timestamp =datetime .utcnow ())
+        e =discord .Embed (title =f"🔨 Список банов",color =0xE74C3C ,timestamp =datetime .utcnow ())
         e .description =(
-        f"```ansi\n\u001b[1;31m BANLI ПОЛЬЗОВАТЕЛИ\u001b[0m\n```\n{_divider()}"
+        f"```ansi\n\u001b[1;31m ЗАБАНЕННЫЕ ПОЛЬЗОВАТЕЛИ\u001b[0m\n```\n{_divider()}"
         )
         for entry in bans [:20 ]:
             e .add_field (
             name =f" {entry.user}",
-            value =f"`{entry.user.id}`\n *{entry.reason or 'Причина не belirtildi'}*",
+            value =f"`{entry.user.id}`\n *{entry.reason or 'Причина не указана'}*",
             inline =False 
             )
         e .set_footer (
-        text =f"Всего {len(bans)} ban • Aether Модерация",
+        text =f"Всего: {len(bans)} банов • Aether Модерация",
         icon_url =interaction .guild .icon .url if interaction .guild .icon else None 
         )
         await interaction .followup .send (embed =e ,ephemeral =True )
@@ -383,8 +385,8 @@ class AdvancedMod (commands .Cog ):
                         count +=1 
                     except Exception :
                         pass 
-            e =discord .Embed (title =" Массовая Роли Данныеldi",color =0x2ECC71 ,timestamp =datetime .utcnow ())
-            e .description =f"```ansi\n\u001b[1;32m TOPLU РОЛЬ\u001b[0m\n```\n{_divider()}"
+            e =discord .Embed (title ="✅ Роли выданы массово",color =0x2ECC71 ,timestamp =datetime .utcnow ())
+            e .description =f"```ansi\n\u001b[1;32m МАССОВАЯ ВЫДАЧА РОЛИ\u001b[0m\n```\n{_divider()}"
             e .add_field (name =" Роль",value =role .mention ,inline =True )
             e .add_field (name =" Затронуто",value =f"```{count} человек```",inline =True )
         elif action .lower ()=="al":
@@ -395,8 +397,8 @@ class AdvancedMod (commands .Cog ):
                         count +=1 
                     except Exception :
                         pass 
-            e =discord .Embed (title =" Роли сняты",color =0xE74C3C ,timestamp =datetime .utcnow ())
-            e .description =f"```ansi\n\u001b[1;31m РОЛЬ СНЯТА\u001b[0m\n```\n{_divider()}"
+            e =discord .Embed (title ="✅ Роли массово сняты",color =0xE74C3C ,timestamp =datetime .utcnow ())
+            e .description =f"```ansi\n\u001b[1;31m МАССОВОЕ СНЯТИЕ РОЛИ\u001b[0m\n```\n{_divider()}"
             e .add_field (name =" Роль",value =role .mention ,inline =True )
             e .add_field (name =" Затронуто",value =f"```{count} человек```",inline =True )
         else :

@@ -3168,7 +3168,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         d =request .get_json (silent =True )or {}
         prompt =d .get ('prompt','Правила сервера embedi')
         messages =[
-        {"role":"system","content":"Sen Discord embed tasarыmcыsы bir asistansыn. Желание konuya uygun bir embed baшlыгы ve описание юret."},
+        {"role":"system","content":"Ты ассистент-дизайнер Discord-эмбедов. Придумай подходящие теме заголовок и описание эмбеда."},
         {"role":"user","content":prompt }
         ]
         res =_call_text (messages ,max_tokens =400 )
@@ -5318,7 +5318,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                     color_hex =c ['hex'].lstrip ('#')
                     role =_run_async (guild .create_role (name =f"🎨 {c['name']}",color =discord .Color (int (color_hex ,16 ))))
             desc ='\n'.join ([f"{c.get('emoji','🎨')} **{c['name']}** — `{c['hex']}`"for c in data .get ('colors',[])])
-            embed =discord .Embed (title ="🎨 Renk Роли",description =desc +"\n\nИstediгin rengi almak для `/color` команду использовать!",color =0xdc143c )
+            embed =discord .Embed (title ="🎨 Цветовые роли",description =desc +"\n\nЧтобы получить нужный цвет, используйте команду `/color`!",color =0xdc143c )
             _run_async (ch .send (embed =embed ))
         asyncio .run_coroutine_threadsafe (send (),bot .loop )
         return jsonify ({'success':True })

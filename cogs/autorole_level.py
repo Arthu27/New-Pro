@@ -6,7 +6,7 @@ import random
 import time 
 
 class AutoRoleLevel (commands .Cog ):
-    """Система XP + автоматически verme роль по уровеньye"""
+    """Система XP + автоматическая выдача ролей за уровни"""
 
     def __init__ (self ,bot ):
         self .bot =bot 
@@ -45,7 +45,7 @@ class AutoRoleLevel (commands .Cog ):
 
     @staticmethod 
     def _level_from_xp (xp ):
-        """XP'den level hesapla: каждый level для gereken XP artar"""
+        """Расчёт уровня из XP: с каждым уровнем требуется больше XP"""
         level =0 
         required =100 
         while xp >=required :
@@ -88,7 +88,7 @@ class AutoRoleLevel (commands .Cog ):
         if new_level >old_level :
             try :
                 await message .channel .send (
-                f' {message.author.mention}, **уровень {new_level}** dostignut!',
+                f'🎉 {message.author.mention}, достигнут **уровень {new_level}**!',
                 delete_after =10 
                 )
             except Exception :
@@ -138,7 +138,7 @@ class AutoRoleLevel (commands .Cog ):
     @commands .command (name ='level-rol-add')
     @commands .has_permissions (administrator =True )
     async def add_level_role (self ,ctx ,level :int ,role :discord .Role ):
-        """Naznacit роли для opredelenniy уровень. Использование: !level-rol-add 5 @Роль"""
+        """Назначить роль за уровень. Использование: !level-rol-add 5 @Роль"""
         f =self ._level_roles_file (ctx .guild .id )
         os .makedirs ('data',exist_ok =True )
         data ={}
@@ -151,15 +151,15 @@ class AutoRoleLevel (commands .Cog ):
         with open (f ,'w',encoding ='utf-8')as fp :
             json .dump (data ,fp ,indent =2 )
 
-        await ctx .send (f' Роли {role.mention} назначена для уровня **{level}**!')
+        await ctx .send (f'✅ Роль {role.mention} назначена для уровня **{level}**!')
 
     @commands .command (name ='level-rol-remove')
     @commands .has_permissions (administrator =True )
     async def remove_level_role (self ,ctx ,level :int ):
-        """Удалить роли для уровень"""
+        """Удалить роль за уровень"""
         f =self ._level_roles_file (ctx .guild .id )
         if not os .path .exists (f ):
-            await ctx .send (' Роли для уровней еще не настроены!')
+            await ctx .send ('❌ Роли за уровни ещё не настроены!')
             return 
 
         with open (f ,'r',encoding ='utf-8')as fp :
@@ -171,19 +171,19 @@ class AutoRoleLevel (commands .Cog ):
             json .dump (data ,fp ,indent =2 )
 
         if removed :
-            await ctx .send (f' Роли для уровень **{level}** удалена!')
+            await ctx .send (f'✅ Роль для уровня **{level}** удалена!')
         else :
-            await ctx .send (f' Уровень **{level}** не найден!')
+            await ctx .send (f'❌ Уровень **{level}** не найден!')
 
     @commands .command (name ='level-rol')
     async def list_level_roles (self ,ctx ):
-        """Liste роль для уровни"""
+        """Список ролей за уровни"""
         data =self ._get_level_roles (ctx .guild .id )
         if not data :
-            await ctx .send (' Роли для уровни более не nastroeni! Ispolzuyte `!level-rol-add <уровень> @роли`')
+            await ctx .send ('❌ Роли за уровни пока не настроены! Используйте `!level-rol-add <уровень> @роль`')
             return 
 
-        embed =discord .Embed (title =' Роли для уровни',color =0xFFD700 )
+        embed =discord .Embed (title ='🏅 Роли за уровни',color =0xFFD700 )
         for level ,role_id in sorted (data .items (),key =lambda x :int (x [0 ])):
             role =ctx .guild .get_role (int (role_id ))
             embed .add_field (
