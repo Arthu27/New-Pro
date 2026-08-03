@@ -5873,3 +5873,234 @@ tbody tr:hover { background: rgba(224,176,74,0.05); }
 [data-theme="light"] .setting-card:hover {
   box-shadow: 0 10px 34px rgba(176,138,46,0.16), 0 0 20px var(--ac-glow);
 }
+
+/* ============================================================
+   MENU V7 — PREMIUM SIDEBAR / NAVIGATION UPGRADE
+   Refined gold theme · icon tiles · smooth grid-rows accordion ·
+   live search highlight · staggered entrance · polish
+   ============================================================ */
+
+/* ── Sidebar surface — deeper, cleaner ─────────────────────── */
+.sidebar {
+  background:
+    radial-gradient(120% 60% at 0% 0%, rgba(224,176,74,0.06), transparent 55%),
+    linear-gradient(180deg, rgba(16,15,11,0.98), rgba(8,7,5,0.98));
+  border-right: 1px solid var(--line);
+}
+
+/* ── Brand — refined lockup ────────────────────────────────── */
+.brand {
+  padding: 20px 16px 16px;
+  gap: 12px;
+}
+.brand-icon {
+  width: 40px; height: 40px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--ac-2), var(--ac-3));
+  box-shadow: 0 6px 20px var(--ac-glow), inset 0 1px 0 rgba(255,255,255,0.28),
+              0 0 0 1px rgba(255,255,255,0.06);
+}
+.brand-title { font-size: 15.5px !important; letter-spacing: 1.5px !important; }
+.brand-sub { letter-spacing: 2px !important; }
+
+/* ── Search — softer, focus glow ───────────────────────────── */
+.sidebar-search { margin: 0 12px 14px; }
+.sidebar-search input {
+  background: rgba(0,0,0,0.35) !important;
+  border-color: var(--line-2) !important;
+}
+.sidebar-search input:focus {
+  background: rgba(0,0,0,0.5) !important;
+}
+
+/* ── Nav group — title with icon tile + label + count ──────── */
+.nav-group { margin-bottom: 2px; }
+.nav-group-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px;
+  margin: 4px 2px 0;
+  border-radius: 10px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.18s var(--ease);
+  outline: none;
+}
+.nav-group-title:focus-visible { box-shadow: 0 0 0 2px var(--ac-soft); }
+.nav-group-title:hover { background: var(--ac-soft); }
+
+/* Override generic `.nav-group-title > span { flex:1 }` — icon & count must not stretch */
+.nav-group-title > span.nav-group-icon  { flex: 0 0 26px; }
+.nav-group-title > span.nav-group-count { flex: 0 0 auto; }
+
+.nav-group-icon {
+  width: 26px; height: 26px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px !important;
+  color: var(--ac);
+  background: rgba(224,176,74,0.08);
+  border: 1px solid rgba(224,176,74,0.14);
+  transition: all 0.18s var(--ease);
+}
+.nav-group-title:hover .nav-group-icon,
+.nav-group:has(.nav-link.active) .nav-group-icon {
+  background: var(--ac-soft);
+  border-color: var(--ac-line);
+  box-shadow: 0 0 10px var(--ac-glow);
+  color: var(--ac-2);
+}
+.nav-group-icon i { font-size: 11px !important; color: inherit !important; }
+
+.nav-group-label {
+  flex: 1;
+  min-width: 0;
+  font-size: 10.5px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.12em !important;
+  text-transform: uppercase !important;
+  color: var(--text-2) !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nav-group-title:hover .nav-group-label { color: var(--ac-2) !important; }
+
+.nav-group-count {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 99px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  color: var(--text-3) !important;
+  background: rgba(224,176,74,0.08);
+  border: 1px solid var(--line);
+  font-variant-numeric: tabular-nums;
+}
+.nav-caret {
+  font-size: 9px !important;
+  color: var(--text-3) !important;
+  transition: transform 0.3s var(--ease), color 0.2s var(--ease);
+  flex-shrink: 0;
+}
+.nav-group.collapsed .nav-caret { transform: rotate(-90deg); }
+
+/* ── Smooth accordion via grid-template-rows (no layout jump) ─ */
+.nav-group-items {
+  display: grid;
+  grid-template-rows: 1fr;
+  max-height: none !important;
+  opacity: 1;
+  margin: 2px 6px 4px 12px;
+  padding-left: 10px;
+  border-left: 1px solid var(--line);
+  transition: grid-template-rows 0.32s var(--ease), opacity 0.22s var(--ease),
+              margin 0.3s var(--ease), border-color 0.3s var(--ease);
+}
+.nav-group-inner {
+  overflow: hidden;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 2px 0;
+}
+.nav-group.collapsed .nav-group-items {
+  grid-template-rows: 0fr;
+  max-height: none !important;
+  opacity: 0;
+  margin-top: 0;
+  margin-left: 12px;
+  padding-left: 10px;
+  border-left: 1px solid var(--line);
+  border-left-color: transparent;
+}
+
+/* ── Nav links — refined hover + premium active pill ───────── */
+.nav-link {
+  gap: 11px;
+  padding: 8px 10px;
+  margin: 0;
+  border-radius: 9px;
+  font-size: var(--fs-md) !important;
+  color: var(--text-2) !important;
+  transition: all 0.16s var(--ease);
+}
+.nav-link i { font-size: 12.5px; color: var(--text-3); transition: color 0.16s, transform 0.16s; }
+.nav-link:hover {
+  background: linear-gradient(90deg, rgba(224,176,74,0.14), rgba(224,176,74,0.03));
+  color: var(--text) !important;
+  transform: translateX(2px);
+}
+.nav-link:hover i { color: var(--ac); transform: scale(1.06); }
+
+.nav-link.active {
+  background: linear-gradient(90deg, rgba(224,176,74,0.20), rgba(224,176,74,0.03));
+  color: var(--ac-2) !important;
+  border-color: rgba(224,176,74,0.32);
+  box-shadow: 0 2px 14px rgba(224,176,74,0.10), inset 0 1px 0 rgba(255,255,255,0.03);
+}
+.nav-link.active i { color: var(--ac-2); text-shadow: 0 0 8px var(--ac-glow); }
+.nav-link.active::before {
+  left: -11px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 20px;
+  border-radius: 99px;
+  background: linear-gradient(180deg, var(--ac-2), var(--ac-3));
+  box-shadow: 0 0 10px var(--ac-glow);
+}
+
+/* Search highlight <mark> inside nav labels */
+.nav-link mark {
+  background: rgba(224,176,74,0.35);
+  color: var(--text);
+  border-radius: 3px;
+  padding: 0 2px;
+  font-weight: 700;
+}
+
+/* ── Staggered entrance for groups + links ─────────────────── */
+.nav-group { animation: navGroupIn 0.35s var(--ease-out) both; }
+.nav-group:nth-of-type(1)  { animation-delay: 0.04s; }
+.nav-group:nth-of-type(2)  { animation-delay: 0.08s; }
+.nav-group:nth-of-type(3)  { animation-delay: 0.12s; }
+.nav-group:nth-of-type(4)  { animation-delay: 0.16s; }
+.nav-group:nth-of-type(5)  { animation-delay: 0.20s; }
+.nav-group:nth-of-type(6)  { animation-delay: 0.24s; }
+.nav-group:nth-of-type(7)  { animation-delay: 0.28s; }
+.nav-group:nth-of-type(8)  { animation-delay: 0.32s; }
+.nav-group:nth-of-type(9)  { animation-delay: 0.36s; }
+.nav-group:nth-of-type(10) { animation-delay: 0.40s; }
+.nav-group:nth-of-type(n+11) { animation-delay: 0.44s; }
+@keyframes navGroupIn { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: translateX(0); } }
+
+/* ── Sidebar status block ──────────────────────────────────── */
+.sys-status {
+  background: linear-gradient(160deg, rgba(224,176,74,0.08), rgba(224,176,74,0.01));
+}
+.sys-status-row { padding: 4px 0; font-size: 11.5px; }
+.sidebar-version { font-size: 10.5px !important; letter-spacing: 0.04em; color: var(--text-4) !important; }
+
+/* ── Light theme refinements ───────────────────────────────── */
+[data-theme="light"] .nav-group-icon {
+  background: rgba(224,176,74,0.14);
+  border-color: rgba(176,138,46,0.25);
+  color: var(--ac);
+}
+[data-theme="light"] .nav-group-title:hover .nav-group-icon,
+[data-theme="light"] .nav-group:has(.nav-link.active) .nav-group-icon {
+  background: var(--ac-soft);
+  box-shadow: 0 0 10px var(--ac-glow);
+}
+[data-theme="light"] .nav-link mark { background: rgba(224,176,74,0.35); color: #2a2417; }
+[data-theme="light"] .sidebar-search input { background: rgba(255,255,255,0.7) !important; }

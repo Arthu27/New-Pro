@@ -56,15 +56,18 @@
             {% for grp in panel_menu %}
                 {% if grp.items %}
                 <div class="nav-group" data-group="{{ grp.key }}">
-                    <div class="nav-group-title" data-toggle>
-                        <i class="fas {{ grp.icon }}"></i>
-                        <span>{{ grp.group }}</span>
+                    <div class="nav-group-title" data-toggle role="button" tabindex="0" aria-expanded="true">
+                        <span class="nav-group-icon"><i class="fas {{ grp.icon }}"></i></span>
+                        <span class="nav-group-label">{{ grp.group }}</span>
+                        <span class="nav-group-count" data-count></span>
                         <i class="fas fa-chevron-down nav-caret"></i>
                     </div>
                     <div class="nav-group-items">
+                        <div class="nav-group-inner">
                         {% for it in grp.pages %}
                         <a href="{{ it.path }}" class="nav-link {% if request.path == it.path %}active{% endif %}"><i class="fas {{ it.icon }}"></i> <span>{{ it.label }}</span></a>
                         {% endfor %}
+                        </div>
                     </div>
                 </div>
                 {% endif %}
@@ -271,32 +274,30 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!key) return;
     var items = g.querySelector('.nav-group-items');
     var caret = g.querySelector('.nav-caret');
+    var title = g.querySelector('[data-toggle]');
     var hasActive = !!g.querySelector('.nav-link.active');
+    var countEl = g.querySelector('[data-count]');
+    if (countEl) countEl.textContent = g.querySelectorAll('.nav-link').length;
     // Default: open if state[key] === true OR state[key] undefined AND has active child
     var open = (state[key] === true) || (state[key] === undefined && hasActive);
-    if (!open) {
-      g.classList.add('collapsed');
-      if (items) items.style.display = 'none';
-      if (caret) caret.style.transform = 'rotate(-90deg)';
-    }
+    if (!open) g.classList.add('collapsed');
+    if (title) title.setAttribute('aria-expanded', open ? 'true' : 'false');
 
     var toggle = g.querySelector('[data-toggle]');
     if (toggle) {
+      function setOpen(isOpen) {
+        g.classList.toggle('collapsed', !isOpen);
+        if (title) title.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        state[key] = isOpen;
+        try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(err) {}
+      }
       toggle.addEventListener('click', function (e) {
         e.preventDefault();
-        var isOpen = !g.classList.contains('collapsed');
-        if (isOpen) {
-          g.classList.add('collapsed');
-          if (items) items.style.display = 'none';
-          if (caret) caret.style.transform = 'rotate(-90deg)';
-          state[key] = false;
-        } else {
-          g.classList.remove('collapsed');
-          if (items) items.style.display = '';
-          if (caret) caret.style.transform = '';
-          state[key] = true;
-        }
-        try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(err) {}
+        setOpen(g.classList.contains('collapsed'));
+      });
+      // Keyboard accessibility: Enter / Space toggles
+      toggle.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpen(g.classList.contains('collapsed')); }
       });
     }
   });
@@ -304,6 +305,20 @@ document.addEventListener('DOMContentLoaded', function () {
   // Search filter in sidebar
   var search = document.getElementById('sidebarSearch');
   if (search) {
+    function escHtml(s) {
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+    // Store each link's original label once, then highlight matches on search.
+    function highlightLabel(a, q) {
+      var span = a.querySelector('span');
+      if (!span) return;
+      var orig = span.getAttribute('data-orig');
+      if (orig == null) { orig = span.textContent; span.setAttribute('data-orig', orig); }
+      if (!q) { span.textContent = orig; return; }
+      var idx = orig.toLowerCase().indexOf(q);
+      if (idx === -1) { span.textContent = orig; return; }
+      span.innerHTML = escHtml(orig.slice(0, idx)) + '<mark>' + escHtml(orig.slice(idx, idx + q.length)) + '</mark>' + escHtml(orig.slice(idx + q.length));
+    }
     function applySidebarFilter() {
       var q = search.value.toLowerCase().trim();
       var groups = document.querySelectorAll('.nav-group');
@@ -314,6 +329,7 @@ document.addEventListener('DOMContentLoaded', function () {
         items.forEach(function (a) {
           var txt = a.textContent.toLowerCase();
           var match = !q || txt.indexOf(q) !== -1;
+          highlightLabel(a, q);
           a.style.display = match ? '' : 'none';
           if (match) visibleInGroup++;
         });
@@ -323,6 +339,8 @@ document.addEventListener('DOMContentLoaded', function () {
           var caret = g.querySelector('.nav-caret');
           if (itemsContainer) itemsContainer.style.display = '';
           if (caret) caret.style.transform = '';
+          var title = g.querySelector('[data-toggle]');
+          if (title) title.setAttribute('aria-expanded', 'true');
           g.style.display = '';
           totalVisible += visibleInGroup;
         } else if (q) {
@@ -533,7 +551,7 @@ window.showToast = function (message, success) {
       var groupEl = a.closest('.nav-group');
       var groupTitle = '';
       if (groupEl) {
-        var gt = groupEl.querySelector('.nav-group-title span');
+        var gt = groupEl.querySelector('.nav-group-title .nav-group-label');
         if (gt) groupTitle = gt.textContent.trim();
       }
       items.push({ href: href, title: title, group: groupTitle, icon: iconClass });
@@ -745,23 +763,34 @@ window.showToast = function (message, success) {
   //    ВАЖНО: renderFn часто асинхронный (fetch + перерисовка DOM уже ПОСЛЕ
   //    возврата), поэтому простого requestAnimationFrame недостаточно — scroll
   //    теряется, как только вернётся fetch. Повторяем scrollTo с задержками.
-  window.keepScroll = function (renderFn) {
+  window.keepScroll = function (renderFn, opts) {
+    opts = opts || {};
     var y = window.scrollY, x = window.scrollX;
     try {
       if (typeof renderFn === 'function') renderFn();
     } catch (e) {}
-    var attempts = [0, 40, 120, 300, 600, 1000, 1800, 3000];
-    attempts.forEach(function (delay) {
-      setTimeout(function () {
-        if (window.__userScrolled) return;
-        window.scrollTo(x, y);
-        try {
-          var store = JSON.parse(sessionStorage.getItem(KEY) || '{}');
-          store[pageKey] = { x: x, y: y };
-          sessionStorage.setItem(KEY, JSON.stringify(store));
-        } catch (err) {}
-      }, delay);
-    });
+    // Repeat scrollTo over a longer window — many loaders fetch async AFTER
+    // returning, so the DOM re-renders late and wipes the scroll position.
+    var attempts = opts.attempts || [0, 40, 120, 300, 600, 1000, 1800, 3000, 5000, 8000];
+    var guard = 0;
+    function tryRestore() {
+      guard++;
+      if (window.__userScrolled || guard > 30) return;
+      window.scrollTo(x, y);
+      try {
+        var store = JSON.parse(sessionStorage.getItem(KEY) || '{}');
+        store[pageKey] = { x: x, y: y };
+        sessionStorage.setItem(KEY, JSON.stringify(store));
+      } catch (err) {}
+    }
+    attempts.forEach(function (delay) { setTimeout(tryRestore, delay); });
+    // Extra insurance: restore repeatedly while content height is still
+    // settling (covers slow fetch renders beyond the fixed schedule).
+    var interval = setInterval(function () {
+      tryRestore();
+      if (window.__userScrolled) clearInterval(interval);
+    }, 1500);
+    setTimeout(function () { clearInterval(interval); }, 12000);
   };
 })();
 
