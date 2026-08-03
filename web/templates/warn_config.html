@@ -15,14 +15,37 @@
 </div>
 {% endblock %}
 
+<style>
+/* Пороги предупреждений — premium gold */
+.wc-card{background:linear-gradient(165deg,rgba(224,176,74,.03),rgba(20,18,14,.6));border:1px solid var(--line-2);border-radius:16px;padding:20px;margin-bottom:16px;backdrop-filter:blur(14px)}
+.wc-card h2{font-size:15px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:9px;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.wc-card h2 i{color:var(--ac)}
+.rule-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:14px}
+.rule-grid .form-group label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-2);margin-bottom:6px;display:block}
+.rule-grid input,.rule-grid select{width:100%;padding:9px 12px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:10px;color:var(--text);font-size:13.5px;outline:none;font-family:inherit}
+.rule-grid input:focus,.rule-grid select:focus{border-color:var(--ac);box-shadow:0 0 0 3px var(--ac-soft)}
+.add-btn{display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border-radius:10px;background:linear-gradient(135deg,var(--ac),var(--ac-3));color:#1a1a1a;font-weight:700;font-size:13px;border:none;cursor:pointer;box-shadow:0 4px 14px var(--ac-glow);transition:.15s}
+.add-btn:hover{transform:translateY(-1px)}
+.empty-hint{text-align:center;padding:26px;color:var(--text-3);font-size:13px;line-height:1.6}
+.empty-hint i{display:block;font-size:26px;color:var(--ac);opacity:.5;margin-bottom:10px}
+.rule-item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 15px;background:linear-gradient(160deg,rgba(255,255,255,.02),transparent);border:1px solid var(--line);border-radius:11px;margin-bottom:8px;transition:all .16s var(--ease)}
+.rule-item:hover{border-color:var(--ac-line)}
+.rule-left{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.rule-count{font-size:20px;font-weight:800;color:var(--ac-2);font-variant-numeric:tabular-nums}
+.rule-label{font-size:12.5px;color:var(--text-3)}
+.rule-duration{font-size:12px;color:var(--text-2);background:var(--ac-soft);border:1px solid var(--ac-line);padding:3px 10px;border-radius:99px}
+.action-badge{display:inline-block;padding:3px 11px;border-radius:6px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.action-badge.ab-timeout{background:rgba(167,139,250,.14);color:#c4b5fd;border:1px solid rgba(167,139,250,.3)}
+.action-badge.ab-ban{background:rgba(248,113,113,.14);color:#fca5a5;border:1px solid rgba(248,113,113,.3)}
+.action-badge.ab-kick{background:rgba(251,146,60,.14);color:#fdba74;border:1px solid rgba(251,146,60,.3)}
+</style>
 
-
-<div class="wc-card">
+<div class="wc-card" data-reveal="up">
   <h2><i class="fas fa-list"></i> Текущие правила</h2>
-  <div id="rules-list" >Загрузка...</div>
+  <div id="rules-list">Загрузка...</div>
 </div>
 
-<div class="wc-card">
+<div class="wc-card" data-reveal="up">
   <h2><i class="fas fa-plus-circle"></i> Добавить новое правило</h2>
   <div class="rule-grid">
     <div class="form-group">
