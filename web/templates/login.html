@@ -105,6 +105,34 @@
             100% { transform: translateY(-100px) scale(1); opacity: 0; }
         }
 
+        /* Звёзды (welcome ile aynı) */
+        .bg-stars { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+        .bg-stars .star {
+            position: absolute; border-radius: 50%; background: #f0d9a0;
+            animation: twinkle var(--dur, 3s) ease-in-out var(--delay, 0s) infinite;
+        }
+        @keyframes twinkle { 0%, 100% { opacity: 0.12; } 50% { opacity: 0.85; } }
+
+        /* Perspektifli hareketli grid zemin */
+        .bg-grid-floor {
+            position: fixed; left: 0; right: 0; bottom: 0; height: 42vh; z-index: 0; pointer-events: none;
+            background-image: linear-gradient(rgba(212,168,67,0.09) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(212,168,67,0.09) 1px, transparent 1px);
+            background-size: 54px 54px;
+            transform: perspective(600px) rotateX(62deg) scale(1.6);
+            transform-origin: bottom;
+            mask-image: linear-gradient(to top, #000 10%, transparent 85%);
+            -webkit-mask-image: linear-gradient(to top, #000 10%, transparent 85%);
+            animation: gridScroll 6s linear infinite;
+        }
+        @keyframes gridScroll { from { background-position-y: 0; } to { background-position-y: 54px; } }
+
+        /* Yumuşak vinyetka */
+        .bg-vignette {
+            position: fixed; inset: 0; z-index: 0; pointer-events: none;
+            background: radial-gradient(ellipse 120% 90% at 50% 40%, transparent 55%, rgba(0,0,0,0.5) 100%);
+        }
+
         .login-wrapper {
             position: relative;
             z-index: 10;
@@ -447,9 +475,12 @@
 </head>
 <body>
 
+<div class="bg-stars" id="bgStars"></div>
 <div class="aurora"></div>
 <div class="aurora-extra"></div>
+<div class="bg-grid-floor"></div>
 <div class="particles" id="particles"></div>
+<div class="bg-vignette"></div>
 
 <div class="login-wrapper">
     <div class="hero">
@@ -545,6 +576,24 @@
 </div>
 
 <script>
+// Звёздное небо (как на welcome)
+(function () {
+    var wrap = document.getElementById('bgStars');
+    if (!wrap) return;
+    for (var i = 0; i < 60; i++) {
+        var s = document.createElement('span');
+        s.className = 'star';
+        var size = Math.random() * 2.2 + 0.8;
+        s.style.width = size + 'px';
+        s.style.height = size + 'px';
+        s.style.left = (Math.random() * 100) + '%';
+        s.style.top = (Math.random() * 100) + '%';
+        s.style.setProperty('--dur', (2 + Math.random() * 4).toFixed(2) + 's');
+        s.style.setProperty('--delay', (Math.random() * 4).toFixed(2) + 's');
+        wrap.appendChild(s);
+    }
+})();
+
 // Floating particles
 (function () {
     var container = document.getElementById('particles');

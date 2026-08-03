@@ -75,7 +75,7 @@ def before_request ():
     pass # Rate limit удалено
 
     # Panel Log 
-def _log_login (username ,roles ,avatar ,discord_id ):
+def _log_login (username ,role ,avatar ,discord_id ):
     """Вход yapan useryы сохранить."""
     try :
         os .makedirs ('data',exist_ok =True )
@@ -253,6 +253,17 @@ USERS ={
 _owner_user :{'password_hash':_owner_pw_hash ,'role':'owner'},
 }
 
+def _pw_is_hash (value ):
+    """64 hex karakterlik sha256 hash mi?"""
+    return isinstance (value ,str )and len (value )==64 and all (c in '0123456789abcdef'for c in value )
+
+def _pw_matches (stored ,plain ):
+    """Üye parolası kontrolü — hash'li kayıtları ve eski düz metin kayıtları destekler."""
+    stored =(stored or '')
+    if _pw_is_hash (stored ):
+        return stored ==_hash_pw (plain )
+    return stored ==plain 
+
 def _safe_avatar_url (value ):
     """Do заметок serve stale guild-profile avatar URLs stored in old JSON files."""
     if not isinstance (value ,str )or '/guilds/'in value :
@@ -415,15 +426,28 @@ def member_apply_page ():
 
 @app .route ('/login',methods =['GET','POST'])
 def login ():
-# Token с автоматически вход — только localhost'tan
+# Token ile otomatik giriş — GÜVENLİK: varsayılan KAPALI.
+    # Cloudflare Tunnel/local proxy arkasında her istek 127.0.0.1'den geliyormuş
+    # gibi göründüğü için IP kontrolü tek başına koruma sağlamaz.
+    # Etkinleştirmek için .env: ENABLE_TOKEN_LOGIN=1
     token =request .args .get ('token')or request .form .get ('token')
-    if token and request .remote_addr in ('127.0.0.1','::1'):
+    if token and os .environ .get ('ENABLE_TOKEN_LOGIN','0')=='1'and request .remote_addr in ('127.0.0.1','::1'):
         tokens_file ='data/tokens.json'
         if os .path .exists (tokens_file ):
             with open (tokens_file ,'r',encoding ='utf-8')as f :
                 tokens =json .load (f )
             if token in tokens :
                 t =tokens [token ]
+                # 14 günlük geçerlilik — eski kalıcı token'lar artık giriş yapamaz
+                _token_ok =True 
+                try :
+                    _created =datetime .fromisoformat (t .get ('created_at')or '')
+                    if (datetime .utcnow ()-_created ).days >14 :
+                        _token_ok =False 
+                except Exception :
+                    _token_ok =True 
+                if not _token_ok :
+                    return redirect (url_for ('login'))
                 session .permanent =True 
                 session ['logged_in']=True 
                 session ['username']=t ['username']
@@ -450,8 +474,13 @@ def login ():
         if os .path .exists (members_file ):
             with open (members_file ,'r',encoding ='utf-8')as f :
                 members =json .load (f )
-            if username in members and members [username ].get ('password')==password :
-                discord_id =username 
+            if username in members and _pw_matches (members [username ].get ('password'),password ):
+                discord_id =username
+                # Eski düz metin parola kaydı mı? Hash'e terfi ettir
+                if not _pw_is_hash (members [username ].get ('password')):
+                    members [username ]['password']=_hash_pw (password )
+                    with open (members_file ,'w',encoding ='utf-8')as f :
+                        json .dump (members ,f ,indent =2 ,ensure_ascii =False )
                 # members.json'da owner varsa Discord контроль yapma — роль koru
                 stored_role =members [discord_id ].get ('role','uye')
                 if stored_role =='owner':
@@ -532,10 +561,10 @@ def register ():
         if step =='2':
             code =request .form .get ('code','').strip ()
             if discord_id not in PENDING_VERIFICATIONS :
-                return render_template ('register.html',error ='Проверка длительность doldu, tekrar dene.',step =1 )
+                return render_template ('register.html',error ='Время проверки истекло, попробуйте снова.',step =1 )
             pv =PENDING_VERIFICATIONS [discord_id ]
             if pv ['code']!=code :
-                return render_template ('register.html',error ='Неверный kod!',step =2 ,
+                return render_template ('register.html',error ='Неверный код!',step =2 ,
                 discord_id =discord_id ,password =pv ['password'])
                 # Сохранить
             member_info =pv ['member_info']
@@ -562,16 +591,16 @@ def register ():
 
             # ADIM 1: Form проверка
         if not discord_id or not password :
-            return render_template ('register.html',error ='Zapolnite все polya!',step =1 )
+            return render_template ('register.html',error ='Заполните все поля!',step =1 )
         if not discord_id .isdigit ()or not (17 <=len (discord_id )<=19 ):
             return render_template ('register.html',error ='Неверный Discord ID!',step =1 )
         if password !=password2 :
-            return render_template ('register.html',error ='Paroller не sovpadayut!',step =1 )
+            return render_template ('register.html',error ='Пароли не совпадают!',step =1 )
         if len (password )<6 :
-            return render_template ('register.html',error ='Parola en az 6 karakter olmalы!',step =1 )
+            return render_template ('register.html',error ='Пароль должен быть не короче 6 символов!',step =1 )
 
         if not bot_instance :
-            return render_template ('register.html',error ='Bot шimdi oflayn, poprobuyte после.',step =1 )
+            return render_template ('register.html',error ='Бот сейчас офлайн, попробуйте позже.',step =1 )
 
             # До cache'den ara, bulamazsa fetch_member с Discord API'den тянуть
         member_info =None 
@@ -614,7 +643,7 @@ def register ():
 
                 # DM с проверка kodu отправить
         code =''.join (random .choices (string .digits ,k =6 ))
-        PENDING_VERIFICATIONS [discord_id ]={'code':code ,'password':password ,'member_info':member_info }
+        PENDING_VERIFICATIONS [discord_id ]={'code':code ,'password':_hash_pw (password ),'member_info':member_info }
 
         async def send_dm ():
             try :
@@ -682,7 +711,7 @@ def two_factor ():
     pending =PENDING_2FA [token ]
     if datetime .utcnow ().timestamp ()>pending ['expires']:
         del PENDING_2FA [token ]
-        return render_template ('login.html',error ='Проверка длительность doldu, tekrar вход yap.')
+        return render_template ('login.html',error ='Время проверки истекло, выполните вход заново.')
 
     if request .method =='POST':
         code =request .form .get ('code','').strip ()
@@ -694,7 +723,7 @@ def two_factor ():
             del PENDING_2FA [token ]
             _log_panel_action ('2FA_LOGIN',pending ['username'])
             return redirect (url_for ('index'))
-        return render_template ('login.html',two_fa =True ,token =token ,error ='Неверный kod!')
+        return render_template ('login.html',two_fa =True ,token =token ,error ='Неверный код!')
 
     return render_template ('login.html',two_fa =True ,token =token )
 
@@ -1266,9 +1295,9 @@ def api_warn ():
     guild_id =str (guild_id ).strip ()
     user_id =str (user_id ).strip ()
     if not (guild_id .isdigit ()and user_id .isdigit ()):
-        return jsonify ({'error':'guild_id ve user_id sayыsal olmalы'}),400 
+        return jsonify ({'error':'guild_id и user_id должны быть числами'}),400 
     if not (17 <=len (guild_id )<=22 and 17 <=len (user_id )<=22 ):
-        return jsonify ({'error':'guild_id ve user_id geчersiz (Discord ID 17-22 haneli olmalы)'}),400 
+        return jsonify ({'error':'guild_id и user_id недействительны (Discord ID — 17–22 цифры)'}),400 
     if len (reason )>500 :
         return jsonify ({'error':'reason много длинный (max 500 karakter)'}),400 
 
@@ -1815,7 +1844,7 @@ def api_change_password ():
         with open (members_file ,'r',encoding ='utf-8')as f :
             members =json .load (f )
         if target in members :
-            members [target ]['password']=new_pass 
+            members [target ]['password']=_hash_pw (new_pass )
             with open (members_file ,'w',encoding ='utf-8')as f :
                 json .dump (members ,f ,indent =2 ,ensure_ascii =False )
             return jsonify ({'success':True ,'message':f'{target} parolasi обновлено'})
@@ -1834,7 +1863,7 @@ def api_check_member ():
     # Bot hazыr olana userya anlaшыlыr bir message показ.
         return jsonify ({
         'found':False ,
-        'error':'Bot пока hazыr не, birkaч saniye после tekrar dene.'
+        'error':'Бот ещё не готов, повторите попытку через несколько секунд.'
         })
     data =request .get_json (silent =True )or {}
     guild_id =str (data .get ('guild_id',''))
@@ -2573,16 +2602,16 @@ def api_reset_password ():
     if not discord_id or not code or not new_pass :
         return jsonify ({'error':'Yetersiz informacii'})
     if len (new_pass )<6 :
-        return jsonify ({'error':'Parola olmalы olmak не menee 6 simvolov'})
+        return jsonify ({'error':'Пароль должен быть не короче 6 символов'})
 
     entry =_reset_codes .get (discord_id )
     if not entry :
-        return jsonify ({'error':'До sorguite kod'})
+        return jsonify ({'error':'Сначала запросите код'})
     if _time .time ()>entry ['expires']:
         del _reset_codes [discord_id ]
         return jsonify ({'error':'Kodun длительность dolmuш, tekrar talep et'})
     if entry ['code']!=code :
-        return jsonify ({'error':'Неверный kod'})
+        return jsonify ({'error':'Неверный код'})
 
         # Parolayi обновить
     members_file ='data/members.json'
@@ -2590,7 +2619,7 @@ def api_reset_password ():
         members =json .load (f )
     if discord_id not in members :
         return jsonify ({'error':'Пользователь не найден'})
-    members [discord_id ]['password']=new_pass 
+    members [discord_id ]['password']=_hash_pw (new_pass )
     with open (members_file ,'w',encoding ='utf-8')as f :
         json .dump (members ,f ,indent =2 ,ensure_ascii =False )
 

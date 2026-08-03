@@ -238,6 +238,23 @@
 .hero-guild-row p{ margin:0 !important; }
 .hero-welcome-msg{ display:flex; align-items:flex-start; gap:11px; padding:13px 16px; background:linear-gradient(90deg,var(--ac-soft),transparent); border:1px solid var(--ac-line); border-radius:13px; font-size:13.5px; color:var(--text-2); line-height:1.6; margin-top:4px; }
 .hero-welcome-msg i{ color:var(--ac); margin-top:2px; }
+
+/* Yeni welcome tasarımıyla uyumlu dokunuşlar */
+#heroTitle{
+  background:linear-gradient(120deg,var(--ac-2) 10%,#fff3d6 35%,var(--ac) 55%,var(--ac-3) 90%);
+  background-size:200% 100%;
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  animation:dashShimmer 5.5s ease-in-out infinite;
+}
+@keyframes dashShimmer{0%,100%{background-position:0% 0}50%{background-position:100% 0}}
+#heroGuildAv{animation:heroAvFloat 4s ease-in-out infinite}
+@keyframes heroAvFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+.hero-chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.hero-chips .chip{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:var(--text-2);padding:6px 12px;border-radius:99px;background:rgba(255,255,255,.03);border:1px solid var(--line)}
+.hero-chips .chip i{color:var(--ac-2);font-size:10.5px}
+.hero-chips .chip .chip-dot{width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 7px var(--ok);animation:dashDotPulse 2s infinite}
+@keyframes dashDotPulse{0%,100%{opacity:1}50%{opacity:.35}}
+
 @media (max-width:560px){
   .hero-guild-row{ flex-direction:column; align-items:flex-start; gap:12px; }
   .hero-guild-av{ width:52px; height:52px; font-size:24px; }
@@ -261,6 +278,12 @@
     <div class="hero-welcome-msg">
       <i class="fas fa-heart"></i>
       <span id="heroWelcomeMsg">Добро пожаловать в Hakumo! Это по-настоящему уютное и дружелюбное место, где каждый найдёт себе друзей и интересное общение. Мы рады, что ты с нами!</span>
+    </div>
+    <div class="hero-chips">
+      <span class="chip"><span class="chip-dot"></span> Панель онлайн 24/7</span>
+      <span class="chip"><i class="fas fa-robot"></i> AI-ассистент активен</span>
+      <span class="chip"><i class="fas fa-shield-halved"></i> Антирейд включён</span>
+      <span class="chip"><i class="fas fa-terminal"></i> 70+ команд</span>
     </div>
   </div>
 </div>
