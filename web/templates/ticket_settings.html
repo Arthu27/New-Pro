@@ -700,11 +700,11 @@
       }
       var box = $('notify-diagnose-result');
       box.style.display = 'block';
-      box.innerHTML = '<div style="padding:12px; background:#f0f0f0; border-radius:6px;">⏳ Проверяю конфигурацию...</div>';
+      box.innerHTML = '<div style="padding:12px; background:var(--surface-2); border-radius:6px;">⏳ Проверяю конфигурацию...</div>';
       fetch('/api/guild/' + notifyGuild.value + '/ticket-notify-diagnose', { credentials: 'same-origin' })
         .then(function (r) { return r.json(); })
         .then(function (d) {
-          var html = '<div style="padding:14px; background:#fff; border:1px solid #ddd; border-radius:8px; margin-top:8px;">';
+          var html = '<div style="padding:14px; background:var(--surface-2); border:1px solid var(--line); border-radius:8px; margin-top:8px;">';
           html += '<h4 style="margin-top:0;">🔍 Диагностика уведомлений о наказаниях</h4>';
           html += '<p><b>Бот онлайн:</b> ' + (d.bot_online ? '✅ да' : '❌ нет') + '</p>';
           if (d.guild_name) {
@@ -734,13 +734,13 @@
           if (d.guild_owner_can_dm) {
             html += '<p><b>Владелец сервера (для DM fallback):</b> ' + d.guild_owner_can_dm.name + ' (' + d.guild_owner_can_dm.id + ')</p>';
           }
-          html += '<hr><p style="background:#fff8dc; padding:10px; border-radius:6px;"><b>💡 Рекомендация:</b><br>' + d.recommendation + '</p>';
-          html += '<p style="font-size:12px; color:#666; margin-top:8px;">Для подробностей ищите в логах бота строки <code>[TICKET-NOTIFY]</code></p>';
+          html += '<hr><p style="background:var(--ac-soft); padding:10px; border-radius:6px;"><b>💡 Рекомендация:</b><br>' + d.recommendation + '</p>';
+          html += '<p style="font-size:12px; color:var(--text-3); margin-top:8px;">Для подробностей ищите в логах бота строки <code>[TICKET-NOTIFY]</code></p>';
           html += '</div>';
           box.innerHTML = html;
         })
         .catch(function (e) {
-          box.innerHTML = '<div style="padding:12px; background:#ffe; border:1px solid #f99; border-radius:6px;">❌ Ошибка запроса: ' + e + '</div>';
+          box.innerHTML = '<div style="padding:12px; background:rgba(248,113,113,0.10); border:1px solid rgba(248,113,113,0.30); border-radius:6px;">❌ Ошибка запроса: ' + e + '</div>';
         });
     });
 
