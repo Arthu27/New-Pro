@@ -5665,6 +5665,19 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         guild_id =active_guild_id ()
         )
 
+    @app .route ('/panel-access')
+    @login_required
+    @role_required ('owner')
+    def panel_access_page ():
+        """Доступ к панелям: какие Discord-роли получают панель
+        Владелец / Администратор / Модератор / Участник."""
+        return render_template (
+        'panel_access.html',
+        role =session .get ('role'),
+        username =session .get ('username'),
+        guild_id =active_guild_id ()
+        )
+
     @app .route ('/api/role-permissions/<guild_id>')
     @login_required
     @role_required ('owner')

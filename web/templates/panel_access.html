@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% block title %}Доступ к панелям - Aether{% endblock %}
+{% block page_title %}<i class="fas fa-user-shield" style="animation: pulse 2s infinite;"></i> ДОСТУП К ПАНЕЛЯМ{% endblock %}
+{% block content %}
+{% block page_hero %}
+<div class="page-hero compact">
+  <div class="page-hero-content">
+    <div class="page-hero-greeting">
+      <span class="dot"></span>
+      <span>НАСТРОЙКА ПАНЕЛЕЙ ПО РОЛЯМ</span>
+    </div>
+    <h1>ДОСТУП К ПАНЕЛЯМ</h1>
+    <p>Определите, какая Discord-роль какую панель видит: Участник, Модератор, Администратор или Владелец.</p>
+  </div>
+</div>
+{% endblock %}
+
+<style>
+  .pa-wrap { padding:6px 2px 34px; max-width: 960px; }
+  .info-bar { background:linear-gradient(90deg, rgba(88,101,242,0.14), rgba(88,101,242,0.05)); border:1px solid rgba(88,101,242,0.3); border-radius:12px; padding:13px 16px; font-size:12.5px; margin-bottom:20px; display:flex; gap:10px; align-items:flex-start; }
+  .info-bar i { color:var(--accent,#5865F2); margin-top:1px; }
+
+  .pa-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; margin-bottom:20px; }
+  .pa-stat { background:linear-gradient(160deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015)); border:1px solid rgba(255,255,255,0.09); border-radius:15px; padding:16px 18px; display:flex; align-items:center; gap:13px; }
+  .pa-stat .ico { width:42px; height:42px; border-radius:11px; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+  .pa-stat .num { font-size:22px; font-weight:700; }
+  .pa-stat .lbl { font-size:12px; opacity:.6; margin-top:2px; }
+  .st-owner { background:rgba(241,196,15,0.16); color:#f1c40f; border:1px solid rgba(241,196,15,0.35); }
+  .st-admin { background:rgba(231,76,60,0.16); color:#e74c3c; border:1px solid rgba(231,76,60,0.35); }
+  .st-mod   { background:rgba(46,204,113,0.16); color:#2ecc71; border:1px solid rgba(46,204,113,0.35); }
+  .st-uye   { background:rgba(88,101,242,0.16); color:#8ea3ff; border:1px solid rgba(88,101,242,0.35); }
+
+  .pa-panel { background: linear-gradient(160deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015)); border:1px solid rgba(255,255,255,0.09); border-radius:16px; padding:20px; }
+  .pa-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:16px; }
+  .pa-head h2 { margin:0; font-size:18px; display:flex; align-items:center; gap:9px; }
+  .pa-head h2 i { color:var(--accent,#5865F2); }
+  .pa-head .sub { font-size:12px; opacity:.55; margin-top:4px; }
+
+  .pa-role { display:flex; align-items:center; gap:13px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-radius:11px; padding:11px 14px; margin-bottom:8px; }
+  .pa-role .swatch { width:20px; height:20px; border-radius:7px; flex-shrink:0; border:1px solid rgba(255,255,255,0.25); }
+  .pa-role .rname { flex:1; font-size:13.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .pa-role .rcount { font-size:11px; opacity:.5; padding:3px 9px; border-radius:20px; background:rgba(255,255,255,0.07); white-space:nowrap; }
+  .pa-role select { background:#1b1b22; color:#e6e6e6; border:1px solid rgba(255,255,255,0.18); border-radius:9px; padding:8px 12px; font-size:13px; cursor:pointer; outline:none; min-width:160px; }
+  .pa-role select:hover { border-color:var(--accent,#5865F2); }
+  .pa-role select.owner { border-color:rgba(241,196,15,0.6); }
+  .pa-role select.admin { border-color:rgba(231,76,60,0.6); }
+  .pa-role select.mod   { border-color:rgba(46,204,113,0.6); }
+
+  .pa-empty { text-align:center; opacity:.5; padding:50px 0; }
+  .pa-empty i { font-size:30px; display:block; margin-bottom:12px; }
+</style>
+
+<div class="pa-wrap">
+  <div class="info-bar">
+    <i class="fas fa-info-circle"></i> <b>Как это работает:</b> выберите панель для каждой Discord-роли. Участник — базовый вход, Модератор — доступ к модерации, Администратор — управление, Владелец — полный контроль. Если роль не назначена, доступ определяется автоматически по Discord-правам. Изменения сохраняются сразу.
+  </div>
+
+  <div class="pa-stats">
+    <div class="pa-stat"><div class="ico st-owner"><i class="fas fa-crown"></i></div><div><div class="num" id="cnt-owner">0</div><div class="lbl">Владелец</div></div></div>
+    <div class="pa-stat"><div class="ico st-admin"><i class="fas fa-user-tie"></i></div><div><div class="num" id="cnt-admin">0</div><div class="lbl">Администратор</div></div></div>
+    <div class="pa-stat"><div class="ico st-mod"><i class="fas fa-shield-halved"></i></div><div><div class="num" id="cnt-mod">0</div><div class="lbl">Модератор</div></div></div>
+    <div class="pa-stat"><div class="ico st-uye"><i class="fas fa-user"></i></div><div><div class="num" id="cnt-uye">0</div><div class="lbl">Участник (авто)</div></div></div>
+  </div>
+
+  <div class="pa-panel">
+    <div class="pa-head">
+      <div>
+        <h2><i class="fas fa-users-cog"></i> Роли сервера</h2>
+        <div class="sub">Назначение панелей для каждой роли (приоритет выше — Владелец)</div>
+      </div>
+    </div>
+    <div id="pa-role-list"></div>
+  </div>
+</div>
+
+<script>
+var PA_ROLES = [];
+var PA_MAP = {};
+
+var PANEL_OPTS = [
+  {v:'uye',   label:'👤 Участник'},
+  {v:'mod',   label:'🛡 Модератор'},
+  {v:'admin', label:'👔 Администратор'},
+  {v:'owner', label:'👑 Владелец'}
+];
+
+function hexToRgba(hex, a){
+  var h = String(hex||'#5865F2').replace('#','');
+  if(h.length===3) h=h.split('').map(function(x){return x+x;}).join('');
+  var n = parseInt(h,16);
+  return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+a+')';
+}
+
+function panelOf(rid){ return PA_MAP[rid] || 'uye'; }
+
+function updateStats(){
+  var c = {uye:0, mod:0, admin:0, owner:0};
+  PA_ROLES.forEach(function(r){ c[panelOf(r.id)]++; });
+  document.getElementById('cnt-owner').textContent = c.owner;
+  document.getElementById('cnt-admin').textContent = c.admin;
+  document.getElementById('cnt-mod').textContent = c.mod;
+  document.getElementById('cnt-uye').textContent = c.uye;
+}
+
+function renderRoles(){
+  var el = document.getElementById('pa-role-list');
+  if(!PA_ROLES.length){
+    el.innerHTML = '<div class="pa-empty"><i class="fas fa-spinner fa-spin"></i>Загрузка ролей...</div>';
+    return;
+  }
+  el.innerHTML = PA_ROLES.map(function(r){
+    var cur = panelOf(r.id);
+    var opts = PANEL_OPTS.map(function(o){
+      return '<option value="'+o.v+'"'+(o.v===cur?' selected':'')+'>'+o.label+'</option>';
+    }).join('');
+    return '<div class="pa-role">'
+      + '<span class="swatch" style="background:'+hexToRgba(r.color,0.9)+'"></span>'
+      + '<span class="rname">'+r.name+'</span>'
+      + '<span class="rcount">'+r.members+' чел.</span>'
+      + '<select class="'+cur+'" data-rid="'+r.id+'" onchange="saveRole(this)">'+opts+'</select>'
+      + '</div>';
+  }).join('');
+  updateStats();
+}
+
+function saveRole(sel){
+  var rid = sel.getAttribute('data-rid');
+  var val = sel.value;
+  fetch('/api/role-map',{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({role_id:rid, panel_role:val})
+  }).then(function(r){ return r.json(); }).then(function(d){
+    if(d.success){
+      PA_MAP[rid] = val;
+      sel.className = val;
+      var label = (PANEL_OPTS.find(function(o){return o.v===val;})||{}).label || val;
+      if(window.showToast) window.showToast('Сохранено: «'+sel.getAttribute('data-name')+'» → '+label, true);
+      updateStats();
+    } else {
+      if(window.showToast) window.showToast(d.error || 'Ошибка сохранения', false);
+      loadPA();
+    }
+  }).catch(function(){
+    if(window.showToast) window.showToast('Ошибка сети', false);
+  });
+}
+
+function loadPA(){
+  fetch('/api/role-map')
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      PA_ROLES = d.guild_roles || [];
+      PA_MAP = d.role_map || {};
+      renderRoles();
+    })
+    .catch(function(){
+      document.getElementById('pa-role-list').innerHTML = '<div class="pa-empty"><i class="fas fa-exclamation-triangle"></i>Не удалось загрузить роли</div>';
+    });
+}
+
+// сохраним имя роли в атрибуте для тоста
+window.addEventListener('load', function(){
+  var i = 0;
+  var timer = setInterval(function(){
+    document.querySelectorAll('.pa-role select').forEach(function(s){
+      var r = PA_ROLES.find(function(x){ return x.id === s.getAttribute('data-rid'); });
+      if(r) s.setAttribute('data-name', r.name);
+    });
+    if(++i >= 3) clearInterval(timer);
+  }, 300);
+});
+
+loadPA();
+</script>
+{% endblock %}

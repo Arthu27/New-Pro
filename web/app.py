@@ -1944,15 +1944,20 @@ def api_get_role_map ():
 @login_required 
 @role_required ('admin')
 def api_set_role_map ():
-    """Добавить/izmenit eшleme роли"""
+    """Добавить/izmenit eшleme роли.
+    panel_role: 'uye' | 'mod' | 'admin' | 'owner'  (uye = снять eшleme, авто-определение)
+    """
     data =request .get_json (silent =True )or {}
     role_id =str (data .get ('role_id','')).strip ()
     panel_role =data .get ('panel_role','').strip ()
-    if not role_id or panel_role not in ('mod','admin','owner'):
+    if not role_id or panel_role not in ('mod','admin','owner','uye'):
         return jsonify ({'error':'Неверный veriler'}),400 
-    DISCORD_ROLE_MAP [role_id ]=panel_role 
+    if panel_role =='uye':
+        DISCORD_ROLE_MAP .pop (role_id ,None )
+    else :
+        DISCORD_ROLE_MAP [role_id ]=panel_role 
     _save_role_map ()
-    _log_panel_action ('ROLE_MAP_SET',f'{role_id} → {panel_role}')
+    _log_panel_action ('ROLE_MAP_SET',f'{role_id} → {panel_role or "uye"}'if panel_role else f'{role_id} → uye')
     return jsonify ({'success':True })
 
 @app .route ('/api/role-map/<role_id>',methods =['DELETE'])
