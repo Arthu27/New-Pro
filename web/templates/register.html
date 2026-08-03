@@ -1,82 +1,329 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Запись - Aether</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aether — Создать аккаунт</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            min-height: 100%;
+            background: #0a0907;
+            color: #f5ecd2;
+            font-family: 'Inter', system-ui, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
 
+        /* Атмосферный фон */
+        .aurora { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+        .aurora::before, .aurora::after {
+            content: ''; position: absolute; border-radius: 50%;
+            filter: blur(120px); opacity: 0.35;
+            animation: auroraFloat 18s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+        }
+        .aurora::before {
+            width: 600px; height: 600px;
+            background: radial-gradient(circle, #8b5cf6 0%, transparent 70%);
+            top: -150px; left: 10%;
+        }
+        .aurora::after {
+            width: 700px; height: 700px;
+            background: radial-gradient(circle, rgba(212, 168, 67, 0.5) 0%, transparent 70%);
+            bottom: -200px; right: 5%;
+            animation-delay: -6s;
+        }
+        .bg-grid {
+            position: fixed; inset: 0; z-index: 0; pointer-events: none;
+            background-image: linear-gradient(rgba(212,168,67,0.05) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(212,168,67,0.05) 1px, transparent 1px);
+            background-size: 56px 56px;
+            mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 30%, transparent 75%);
+            -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 30%, transparent 75%);
+        }
+        @keyframes auroraFloat {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(40px, -30px) scale(1.08); }
+            66% { transform: translate(-30px, 25px) scale(0.95); }
+        }
+
+        .reg-wrapper { position: relative; z-index: 10; width: 100%; max-width: 460px; }
+        .back-home {
+            display: inline-flex; align-items: center; gap: 7px;
+            color: #8c7b58; text-decoration: none; font-size: 13px; font-weight: 600;
+            margin-bottom: 18px; transition: 0.2s;
+        }
+        .back-home:hover { color: #f0c75e; }
+
+        /* Hero (маленький, стиль как у welcome/login) */
+        .hero { margin-bottom: 24px; text-align: center; animation: fadeDown 0.6s cubic-bezier(0.16, 1, 0.3, 1) both; }
+        @keyframes fadeDown { from { opacity: 0; transform: translateY(-16px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        @keyframes dotPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+        .hero-eyebrow {
+            display: inline-flex; align-items: center; gap: 8px;
+            font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+            color: #f0c75e; margin-bottom: 14px; padding: 6px 16px; border-radius: 99px;
+            background: rgba(212, 168, 67, 0.10); border: 1px solid rgba(212, 168, 67, 0.30);
+        }
+        .hero-eyebrow .dot {
+            width: 7px; height: 7px; background: #22c55e; border-radius: 50%;
+            box-shadow: 0 0 8px #22c55e; animation: dotPulse 2s infinite;
+        }
+        .hero-title {
+            font-size: 42px; font-weight: 800; letter-spacing: 6px; line-height: 1.1;
+            background: linear-gradient(135deg, #f0c75e 0%, #d4a843 50%, #b88728 100%);
+            -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+        .hero-sub { font-size: 14px; color: #b6a47b; }
+
+        /* Карточка */
+        .auth-card {
+            background: rgba(26, 22, 16, 0.85);
+            border: 1px solid rgba(212, 168, 67, 0.22);
+            border-radius: 24px;
+            padding: 30px 30px 26px;
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            animation: scaleIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+
+        /* Индикатор шагов */
+        .steps { display: flex; gap: 10px; margin-bottom: 22px; }
+        .step-pill {
+            flex: 1; display: flex; align-items: center; gap: 9px;
+            padding: 10px 12px; border-radius: 12px;
+            background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.06);
+            font-size: 12px; color: #8c7b58; font-weight: 600;
+        }
+        .step-pill .num {
+            width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0;
+            display: inline-flex; align-items: center; justify-content: center;
+            font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700;
+            background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .step-pill.active {
+            background: rgba(212, 168, 67, 0.08); border-color: rgba(212, 168, 67, 0.35); color: #f0c75e;
+        }
+        .step-pill.active .num {
+            background: linear-gradient(135deg, #f0c75e, #d4a843); color: #1a1a1a; border: none;
+        }
+
+        .card-title { font-size: 19px; font-weight: 700; margin-bottom: 4px; display: flex; align-items: center; gap: 9px; }
+        .card-title i { color: #d4a843; font-size: 16px; }
+        .card-sub { font-size: 13px; color: #b6a47b; margin-bottom: 20px; line-height: 1.55; }
+
+        /* Уведомления */
+        .alert {
+            display: flex; gap: 10px; align-items: flex-start;
+            padding: 12px 14px; border-radius: 12px; margin-bottom: 18px;
+            font-size: 13px; line-height: 1.5; animation: fadeDown 0.3s both;
+        }
+        .alert i { margin-top: 2px; flex-shrink: 0; }
+        .alert-err { background: rgba(239, 68, 68, 0.10); border: 1px solid rgba(239, 68, 68, 0.30); color: #fca5a5; }
+        .alert-info { background: rgba(212, 168, 67, 0.08); border: 1px solid rgba(212, 168, 67, 0.28); color: #f0c75e; }
+
+        /* Поля */
+        .form-group { margin-bottom: 16px; }
+        .form-label { display: block; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #b6a47b; margin-bottom: 7px; }
+        .input-wrap { position: relative; display: flex; align-items: center; }
+        .input-wrap > i.lead {
+            position: absolute; left: 14px; color: #d4a843; font-size: 13px; pointer-events: none; z-index: 2;
+        }
+        .form-input {
+            width: 100%; padding: 13px 14px 13px 40px;
+            background: rgba(0, 0, 0, 0.30);
+            border: 1px solid rgba(212, 168, 67, 0.18);
+            border-radius: 12px; color: #f5ecd2; font-size: 14px;
+            font-family: inherit; outline: none; transition: 0.2s;
+        }
+        .form-input::placeholder { color: #6b5d42; }
+        .form-input:focus { border-color: #d4a843; box-shadow: 0 0 0 3px rgba(212, 168, 67, 0.12); }
+        .eye {
+            position: absolute; right: 8px; width: 34px; height: 34px;
+            background: transparent; border: none; color: #8c7b58;
+            cursor: pointer; border-radius: 8px; transition: 0.2s; font-size: 13px;
+        }
+        .eye:hover { color: #f0c75e; background: rgba(212, 168, 67, 0.08); }
+        .hint { font-size: 11.5px; color: #8c7b58; margin-top: 6px; display: flex; align-items: center; gap: 6px; }
+        .hint i { font-size: 10px; color: #d4a843; }
+        .hint a { color: #b6a47b; }
+
+        /* Код подтверждения */
+        .code-input {
+            width: 100%; padding: 14px; text-align: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 26px; font-weight: 700; letter-spacing: 12px; text-indent: 12px;
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid rgba(212, 168, 67, 0.25);
+            border-radius: 12px; color: #f0c75e; outline: none; transition: 0.2s;
+        }
+        .code-input::placeholder { color: #5a4c33; }
+        .code-input:focus { border-color: #d4a843; box-shadow: 0 0 0 3px rgba(212, 168, 67, 0.12); }
+
+        /* Кнопка */
+        .btn-submit {
+            width: 100%; margin-top: 8px; padding: 14px;
+            background: linear-gradient(135deg, #f0c75e, #d4a843);
+            color: #1a1a1a; border: none; border-radius: 12px;
+            font-size: 15px; font-weight: 700; font-family: inherit;
+            cursor: pointer; transition: 0.25s;
+            display: flex; align-items: center; justify-content: center; gap: 9px;
+            box-shadow: 0 10px 26px rgba(212, 168, 67, 0.28);
+        }
+        .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 14px 34px rgba(212, 168, 67, 0.42); }
+
+        /* Подвал карточки */
+        .card-foot {
+            margin-top: 20px; padding-top: 18px; text-align: center;
+            border-top: 1px solid rgba(212, 168, 67, 0.12);
+            font-size: 13px; color: #8c7b58;
+        }
+        .card-foot a { color: #f0c75e; text-decoration: none; font-weight: 600; }
+        .card-foot a:hover { text-decoration: underline; }
+
+        @media (max-width: 480px) {
+            .reg-wrapper { max-width: 100%; }
+            .auth-card { padding: 24px 20px; }
+            .hero-title { font-size: 32px; letter-spacing: 4px; }
+            .steps { flex-direction: column; gap: 8px; }
+        }
+    </style>
 </head>
 <body>
-<div class="box">
-  <div class="logo"><i class="fas fa-user-plus"></i></div>
-  <h1>Aether</h1>
 
-  {% if error %}
-  <div class="error"><i class="fas fa-exclamation-triangle"></i> {{ error }}</div>
-  {% endif %}
+<div class="aurora"></div>
+<div class="bg-grid"></div>
 
-  {% if info %}
-  <div class="info"><i class="fas fa-envelope"></i> {{ info }}</div>
-  {% endif %}
+<div class="reg-wrapper">
+    <a href="/" class="back-home"><i class="fas fa-arrow-left"></i> На главную</a>
 
-  {% if step == 2 %}
-  <p class="subtitle">Podtverjdenie с Discord DM</p>
-  <form method="POST">
-    <input type="hidden" name="step" value="2">
-    <input type="hidden" name="discord_id" value="{{ discord_id }}">
-    <input type="hidden" name="password" value="{{ password }}">
-    <div class="form-group">
-      <label>Kod onay</label>
-      <div class="input-wrap">
-        <i class="icon fas fa-key"></i>
-        <input type="text" name="code" class="code-input" placeholder="000000" maxlength="6" autofocus required>
-      </div>
-      <div class="hint">Girin 6-znacniy kod den Discord DM</div>
+    <div class="hero">
+        <div class="hero-eyebrow"><span class="dot"></span> Регистрация участника</div>
+        <div class="hero-title">AETHER</div>
+        <p class="hero-sub">Создайте аккаунт через Discord — меньше минуты</p>
     </div>
-    <button type="submit" class="btn"><i class="fas fa-check"></i> Подтвердить и зарегистрироваться</button>
-  </form>
-  <div class="footer"><a href="/register">← До</a></div>
 
-  {% else %}
-  <p class="subtitle">Регистрация участника</p>
-  <form method="POST">
-    <input type="hidden" name="step" value="1">
-    <div class="form-group">
-      <label>Discord ID</label>
-      <div class="input-wrap">
-        <i class="icon fab fa-discord"></i>
-        <input type="text" name="discord_id" placeholder="123456789012345678" required>
-      </div>
-      <div class="hint">Режим разработчика → правый клик → скопировать ID</div>
+    <div class="auth-card">
+
+        {% if step == 2 %}
+        <!-- ШАГ 2: код из Discord DM -->
+        <div class="steps">
+            <div class="step-pill"><span class="num">1</span> Данные</div>
+            <div class="step-pill active"><span class="num">2</span> Код из DM</div>
+        </div>
+
+        <div class="card-title"><i class="fas fa-envelope-open-text"></i> Подтверждение из Discord</div>
+        <p class="card-sub">Мы отправили 6-значный код в ваши личные сообщения Discord. Введите его ниже, чтобы завершить регистрацию.</p>
+
+        {% if error %}
+        <div class="alert alert-err"><i class="fas fa-exclamation-circle"></i><span>{{ error }}</span></div>
+        {% endif %}
+        {% if info %}
+        <div class="alert alert-info"><i class="fas fa-envelope"></i><span>{{ info }}</span></div>
+        {% endif %}
+
+        <form method="POST">
+            <input type="hidden" name="step" value="2">
+            <input type="hidden" name="discord_id" value="{{ discord_id }}">
+            <input type="hidden" name="password" value="{{ password }}">
+            <div class="form-group">
+                <label class="form-label">Код подтверждения</label>
+                <input type="text" name="code" class="code-input" placeholder="______" maxlength="6" inputmode="numeric" autocomplete="one-time-code" autofocus required>
+                <div class="hint"><i class="fas fa-info-circle"></i> Введите 6-значный код из личных сообщений Discord</div>
+            </div>
+            <button type="submit" class="btn-submit"><i class="fas fa-check"></i> Подтвердить и зарегистрироваться</button>
+        </form>
+
+        <div class="card-foot"><a href="/register"><i class="fas fa-arrow-left"></i> Назад, изменить данные</a></div>
+
+        {% else %}
+        <!-- ШАГ 1: данные аккаунта -->
+        <div class="steps">
+            <div class="step-pill active"><span class="num">1</span> Данные</div>
+            <div class="step-pill"><span class="num">2</span> Код из DM</div>
+        </div>
+
+        <div class="card-title"><i class="fas fa-user-plus"></i> Новый аккаунт</div>
+        <p class="card-sub">Укажите ваш Discord ID и придумайте пароль — на него вы будете входить в панель.</p>
+
+        {% if error %}
+        <div class="alert alert-err"><i class="fas fa-exclamation-circle"></i><span>{{ error }}</span></div>
+        {% endif %}
+        {% if info %}
+        <div class="alert alert-info"><i class="fas fa-envelope"></i><span>{{ info }}</span></div>
+        {% endif %}
+
+        <form method="POST">
+            <input type="hidden" name="step" value="1">
+            <div class="form-group">
+                <label class="form-label">Discord ID</label>
+                <div class="input-wrap">
+                    <i class="lead fab fa-discord"></i>
+                    <input type="text" name="discord_id" class="form-input" placeholder="123456789012345678" inputmode="numeric" autocomplete="off" required>
+                </div>
+                <div class="hint"><i class="fas fa-info-circle"></i> Discord → Режим разработчика → правый клик по профилю → «Скопировать ID»</div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Придумайте пароль</label>
+                <div class="input-wrap">
+                    <i class="lead fas fa-lock"></i>
+                    <input type="password" name="password" id="pass1" class="form-input" placeholder="Минимум 6 символов" autocomplete="new-password" required>
+                    <button type="button" class="eye" onclick="togglePass('pass1',this)" title="Показать пароль"><i class="fas fa-eye"></i></button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Повторите пароль</label>
+                <div class="input-wrap">
+                    <i class="lead fas fa-lock"></i>
+                    <input type="password" name="password2" id="pass2" class="form-input" placeholder="Повторите пароль" autocomplete="new-password" required>
+                    <button type="button" class="eye" onclick="togglePass('pass2',this)" title="Показать пароль"><i class="fas fa-eye"></i></button>
+                </div>
+                <div class="hint" id="matchHint" style="display:none;"></div>
+            </div>
+            <button type="submit" class="btn-submit"><i class="fas fa-paper-plane"></i> Отправить код в Discord</button>
+        </form>
+
+        <div class="card-foot">Уже есть аккаунт? <a href="/login">Войти</a></div>
+        {% endif %}
     </div>
-    <div class="form-group">
-      <label>Pridumayte пароль</label>
-      <div class="input-wrap">
-        <i class="icon fas fa-lock"></i>
-        <input type="password" name="password" id="pass1" placeholder="Минимум 6 simvolov" required>
-        <button type="button" class="eye" onclick="togglePass('pass1',this)"><i class="fas fa-eye"></i></button>
-      </div>
-    </div>
-    <div class="form-group">
-      <label>Povtorite пароль</label>
-      <div class="input-wrap">
-        <i class="icon fas fa-lock"></i>
-        <input type="password" name="password2" id="pass2" placeholder="Povtorite пароль" required>
-        <button type="button" class="eye" onclick="togglePass('pass2',this)"><i class="fas fa-eye"></i></button>
-      </div>
-    </div>
-    <button type="submit" class="btn"><i class="fas fa-paper-plane"></i> Отправить kod</button>
-  </form>
-  <div class="footer">Zaten var hesap? <a href="/login">Вход yap</a></div>
-  {% endif %}
 </div>
+
 <script>
 function togglePass(id, btn) {
   var inp = document.getElementById(id);
   if (inp.type === 'password') { inp.type = 'text'; btn.innerHTML = '<i class="fas fa-eye-slash"></i>'; }
   else { inp.type = 'password'; btn.innerHTML = '<i class="fas fa-eye"></i>'; }
 }
+
+// Живая проверка совпадения паролей
+(function () {
+  var p1 = document.getElementById('pass1');
+  var p2 = document.getElementById('pass2');
+  var hint = document.getElementById('matchHint');
+  if (!p1 || !p2 || !hint) return;
+  function check() {
+    if (!p2.value) { hint.style.display = 'none'; return; }
+    hint.style.display = 'flex';
+    if (p1.value === p2.value) {
+      hint.style.color = '#22c55e';
+      hint.innerHTML = '<i class="fas fa-check-circle"></i> Пароли совпадают';
+    } else {
+      hint.style.color = '#fca5a5';
+      hint.innerHTML = '<i class="fas fa-times-circle"></i> Пароли не совпадают';
+    }
+  }
+  p1.addEventListener('input', check);
+  p2.addEventListener('input', check);
+})();
 </script>
+
 </body>
 </html>
