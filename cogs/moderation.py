@@ -412,13 +412,10 @@ class Moderation (commands .Cog ):
     @app_commands .checks .has_permissions (moderate_members =True )
     async def modpanel (self ,interaction ):
         embed =discord .Embed (
-        title ="🛡️ Панель модерации",
+        title ="🛡 Модерация",
         description =(
-        "Выберите действие в меню ниже — откроется окно\n"
-        "для ввода цели и причины.\n\n"
-        "🔨 **Бан / Кик** — наказать нарушителя\n"
-        "🔇 **Мут** — ограничить чат или голос\n"
-        "🧹 **Очистка** — удалить сообщения"
+        "Выберите действие в выпадающем меню ниже.\n"
+        "После выбора откроется окно для ввода цели и причины."
         ),
         color =0x3498DB ,
         timestamp =datetime .now (timezone .utc )
@@ -611,15 +608,15 @@ class ModActionSelect(discord.ui.Select):
 
     def __init__(self, cog):
         options = [
-            discord.SelectOption(label="Бан", value="ban", description="Забанить участника", emoji="🔨"),
-            discord.SelectOption(label="Кик", value="kick", description="Выгнать участника", emoji="👢"),
-            discord.SelectOption(label="Мут (чат + войс)", value="timeout", description="Таймаут — закрыть и чат, и голос", emoji="🔇"),
-            discord.SelectOption(label="Мут (только чат)", value="mute_chat", description="Закрыть только чат (таймаут)", emoji="💬"),
-            discord.SelectOption(label="Мут (только войс)", value="vmute", description="Заглушить микрофон (чат не трогает)", emoji="🎙️"),
-            discord.SelectOption(label="Разбан", value="unban", description="Разбанить участника (по ID)", emoji="🕊️"),
-            discord.SelectOption(label="Очистить сообщения", value="clear", description="Удалить N сообщений", emoji="🧹"),
-            discord.SelectOption(label="Размут (чат + войс)", value="untimeout", description="Снять таймаут с участника", emoji="🔊"),
-            discord.SelectOption(label="Размут (войс)", value="vunmute", description="Включить микрофон участника", emoji="🎙️"),
+            discord.SelectOption(label="Бан", value="ban", description="Забанить участника"),
+            discord.SelectOption(label="Кик", value="kick", description="Выгнать участника"),
+            discord.SelectOption(label="Мут (чат + войс)", value="timeout", description="Таймаут — закрыть и чат, и голос"),
+            discord.SelectOption(label="Мут (только чат)", value="mute_chat", description="Закрыть только чат (таймаут)"),
+            discord.SelectOption(label="Мут (только войс)", value="vmute", description="Заглушить микрофон (чат не трогает)"),
+            discord.SelectOption(label="Разбан", value="unban", description="Разбанить участника (по ID)"),
+            discord.SelectOption(label="Очистить сообщения", value="clear", description="Удалить N сообщений"),
+            discord.SelectOption(label="Размут (чат + войс)", value="untimeout", description="Снять таймаут с участника"),
+            discord.SelectOption(label="Размут (войс)", value="vunmute", description="Включить микрофон участника"),
         ]
         super().__init__(
             placeholder="Выберите действие модерации...",
@@ -642,17 +639,17 @@ class ModActionModal(discord.ui.Modal):
         self.cog = cog
         self.action = action
         titles = {
-            "ban": "🔨 Бан участника",
-            "kick": "👢 Кик участника",
-            "timeout": "🔇 Мут (чат + войс)",
-            "mute_chat": "💬 Мут чата",
-            "vmute": "🎙️ Войс-мут",
-            "unban": "🕊️ Разбан по ID",
-            "clear": "🧹 Очистка сообщений",
-            "untimeout": "🔊 Снять мут",
-            "vunmute": "🎙️ Снять войс-мут",
+            "ban": "Бан участника",
+            "kick": "Кик участника",
+            "timeout": "Мут (чат + войс)",
+            "mute_chat": "Мут чата",
+            "vmute": "Войс-мут",
+            "unban": "Разбан по ID",
+            "clear": "Очистка сообщений",
+            "untimeout": "Снять мут",
+            "vunmute": "Снять войс-мут",
         }
-        super().__init__(title=titles.get(action, "🛡️ Модерация"))
+        super().__init__(title=titles.get(action, "Модерация"))
 
         self.target = discord.ui.TextInput(
             label="Цель (ID или @упоминание)", required=False,
