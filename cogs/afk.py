@@ -52,8 +52,19 @@ class AFK (commands .Cog ):
 
         ts =int (datetime .now (timezone .utc ).timestamp ())
         e =discord .Embed (color =0x5865F2 ,timestamp =datetime .now (timezone .utc ))
+        # Сначала 💤 в ник — если прав нет, предупредить в карточке
+        nick_note =''
+        try :
+            nick =interaction .user .display_name 
+            if not nick .startswith ("💤"):
+                await interaction .user .edit (nick =f"💤 {nick[:28]}")
+        except discord .Forbidden :
+            nick_note ='\n-# ⚠️ Не смог добавить 💤 к нику — нет прав (владельцу сервера ник менять нельзя)'
+        except Exception :
+            nick_note ='\n-# ⚠️ Не смог добавить 💤 к нику'
+
         e .set_author (
-        name =f"{interaction.user.display_name} перешёл в AFK 💤",
+        name =f"💤 {interaction.user.display_name} перешёл в AFK",
         icon_url =interaction .user .display_avatar .url 
         )
         e .description =(
@@ -61,6 +72,7 @@ class AFK (commands .Cog ):
         f"> **Причина:** {причина}\n"
         f"> **Начало:** <t:{ts}:R>\n\n"
         f"*Когда кто-то упомянет тебя — придёт уведомление.*"
+        f"{nick_note}"
         )
         icon =_afk_file ()
         if icon :
@@ -72,14 +84,6 @@ class AFK (commands .Cog ):
             await interaction .response .send_message (embed =e ,file =icon )
         else :
             await interaction .response .send_message (embed =e )
-
-        # Добавить 💤 в ник
-        try :
-            nick =interaction .user .display_name 
-            if not nick .startswith ("💤"):
-                await interaction .user .edit (nick =f"💤 {nick[:28]}")
-        except Exception :
-            pass 
 
     @app_commands .command (name ="afk-remove",description ="Выйти из режима AFK")
     async def afk_remove (self ,interaction :discord .Interaction ):
@@ -129,7 +133,7 @@ class AFK (commands .Cog ):
             dur =f"{mins} мин."if mins >0 else "только что"
             e =discord .Embed (color =0x2ED573 ,timestamp =datetime .now (timezone .utc ))
             e .set_author (
-            name =f"{message.author.display_name} вернулся из AFK 👋",
+            name =f"👋 {message.author.display_name} вернулся из AFK",
             icon_url =message .author .display_avatar .url 
             )
             e .description =f"> **Длительность:** **{dur}**\n> Причина: *{afk_data['reason']}*"
@@ -160,7 +164,7 @@ class AFK (commands .Cog ):
             if data .get ('owner_mode')and OWNER_ID and mentioned .id ==OWNER_ID :
                 e =discord .Embed (color =0x5865F2 ,timestamp =datetime .now (timezone .utc ))
                 e .set_author (
-                name =f"{mentioned.display_name} сейчас спит 😴",
+                name =f"😴 {mentioned.display_name} сейчас спит",
                 icon_url =mentioned .display_avatar .url 
                 )
                 e .description =(
@@ -225,7 +229,7 @@ class AFK (commands .Cog ):
                 # Обычное AFK-уведомление
                 e =discord .Embed (color =0x5865F2 ,timestamp =datetime .now (timezone .utc ))
                 e .set_author (
-                name =f"{mentioned.display_name} сейчас в AFK 💤",
+                name =f"💤 {mentioned.display_name} сейчас в AFK",
                 icon_url =mentioned .display_avatar .url 
                 )
                 e .description =(
