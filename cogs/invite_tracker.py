@@ -104,7 +104,7 @@ class InviteTracker (commands .Cog ):
         with open (f ,'w',encoding ='utf-8')as fp :
             json .dump (counts ,fp ,indent =2 ,ensure_ascii =False )
 
-    @app_commands .command (name ='invites',description ='Сколько человек davet ettiгini показать')
+    @app_commands .command (name ='invites',description ='Показать, сколько человек ты пригласил')
     async def my_invites (self ,interaction :discord .Interaction ):
         f =f'data/invite_counts_{interaction.guild_id}.json'
         if not os .path .exists (f ):
@@ -126,13 +126,13 @@ class InviteTracker (commands .Cog ):
         if total >=10 :
             rank =" Большой"
         elif total >=5 :
-            rank =" Davetчi"
+            rank ="🎖 Мастер приглашений"
         elif total >=1 :
-            rank =" Новый Davetчi"
+            rank ="🌱 Новичок приглашений"
         else :
             rank =" Пока Davet Нет"
         e .add_field (name =" Unvan",value =f"```{rank}```",inline =True )
-        e .add_field (name =" Подсказка",value ="*Более fazla человек davet ederek очередь yюksel!*",inline =False )
+        e .add_field (name ="💡 Подсказка",value ="*Приглашай больше людей и поднимайся в рейтинге!*",inline =False )
         e .set_footer (text =f"Aether • {interaction.guild.name}",icon_url =interaction .guild .icon .url if interaction .guild .icon else None )
         await interaction .response .send_message (embed =e )
 
@@ -148,7 +148,7 @@ class InviteTracker (commands .Cog ):
 
         e =discord .Embed (title =" Davet Очередь",color =0x3498DB ,timestamp =datetime .utcnow ())
         e .description =(
-        f"```ansi\n\u001b[1;34m EN ИYИ DAVETЧИLER\u001b[0m\n```\n{_divider()}"
+        f"```ansi\n\u001b[1;34m ЛУЧШИЕ ПРИГЛАШАЮЩИЕ\u001b[0m\n```\n{_divider()}"
         )
         medals =['','','']
         for i ,(uid ,info )in enumerate (sorted_counts ,1 ):

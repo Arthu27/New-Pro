@@ -98,7 +98,7 @@ class FeatureFlagCog (commands .Cog ):
 
         await interaction .response .send_message (embed =embed )
 
-    @app_commands .command (name ='flag-enable',description ='Feature flag etkinleшtir')
+    @app_commands .command (name ='flag-enable',description ='Включить feature flag')
     @app_commands .describe (flag_key ='Flag key')
     @app_commands .checks .has_permissions (administrator =True )
     async def flag_enable (self ,interaction :discord .Interaction ,flag_key :str ):
@@ -108,14 +108,14 @@ class FeatureFlagCog (commands .Cog ):
 
         if not success :
             await interaction .response .send_message (
-            " Flag etkinleшtirilemedi!",
+            "❌ Не удалось включить флаг!",
             ephemeral =True 
             )
             return 
 
             # Embed oluшtur
         embed =discord .Embed (
-        title =" Flag Etkinleшtirildi",
+        title ="✅ Флаг включён",
         description =f"Flag: {flag_key}",
         color =discord .Color .green (),
         timestamp =datetime .now ()
@@ -133,14 +133,14 @@ class FeatureFlagCog (commands .Cog ):
 
         if not success :
             await interaction .response .send_message (
-            " Flag devre dышы bыrakыlamadы!",
+            "❌ Не удалось отключить флаг!",
             ephemeral =True 
             )
             return 
 
             # Embed oluшtur
         embed =discord .Embed (
-        title =" Flag Devre Dышы Bыrakыldы",
+        title ="⛔ Флаг отключён",
         description =f"Flag: {flag_key}",
         color =discord .Color .red (),
         timestamp =datetime .now ()
@@ -148,15 +148,15 @@ class FeatureFlagCog (commands .Cog ):
 
         await interaction .response .send_message (embed =embed )
 
-    @app_commands .command (name ='flag-rollout',description ='Feature flag rollout yюzdesini настройкаla')
-    @app_commands .describe (flag_key ='Flag key',percentage ='Rollout yюzdesi (0-100)')
+    @app_commands .command (name ='flag-rollout',description ='Настроить процент rollout флага')
+    @app_commands .describe (flag_key ='Flag key',percentage ='Процент rollout (0-100)')
     @app_commands .checks .has_permissions (administrator =True )
     async def flag_rollout (self ,interaction :discord .Interaction ,
     flag_key :str ,percentage :int ):
-        """Feature flag rollout yюzdesini настройкаla"""
+        """Настроить процент rollout флага"""
         if percentage <0 or percentage >100 :
             await interaction .response .send_message (
-            " Yюzde 0-100 arasыnda olmalы!",
+            "❌ Процент должен быть от 0 до 100!",
             ephemeral =True 
             )
             return 
@@ -177,7 +177,7 @@ class FeatureFlagCog (commands .Cog ):
 
         # Embed oluшtur
         embed =discord .Embed (
-        title =" Rollout Настройкаlandы",
+        title ="✅ Rollout обновлён",
         description =f"**Flag:** {flag_key}\n**Rollout:** {percentage}%",
         color =discord .Color .blue (),
         timestamp =datetime .now ()
@@ -185,18 +185,18 @@ class FeatureFlagCog (commands .Cog ):
 
         await interaction .response .send_message (embed =embed )
 
-    @app_commands .command (name ='flag-create',description ='Feature flag oluшtur')
+    @app_commands .command (name ='flag-create',description ='Создать feature flag')
     @app_commands .describe (flag_key ='Flag key',name ='Flag adы')
     @app_commands .checks .has_permissions (administrator =True )
     async def flag_create (self ,interaction :discord .Interaction ,
     flag_key :str ,name :str ):
-        """Feature flag oluшtur"""
+        """Создать feature flag"""
         # Flag oluшtur
         flag =feature_flag_manager .create_flag (flag_key ,name )
 
         # Embed oluшtur
         embed =discord .Embed (
-        title =" Feature Flag Oluшturuldu",
+        title ="✅ Feature flag создан",
         description =f"**Key:** {flag_key}\n**Ad:** {name}",
         color =discord .Color .green (),
         timestamp =datetime .now ()
@@ -206,7 +206,7 @@ class FeatureFlagCog (commands .Cog ):
 
     @commands .Cog .listener ()
     async def on_ready (self ):
-        """Bot hazыr olduгunda"""
+        """Бот готов"""
         log .info (f" FeatureFlagCog loaded")
 
 

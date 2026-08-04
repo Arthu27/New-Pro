@@ -22,7 +22,7 @@ class Webhooks (commands .Cog ):
         with open (self ._file (guild_id ),'w',encoding ='utf-8')as fp :
             json .dump (data ,fp ,indent =2 ,ensure_ascii =False )
 
-    @app_commands .command (name ='webhook',description ='Webhook действия: создать, отправить, listele, удалить')
+    @app_commands .command (name ='webhook',description ='Действия с вебхуками: создать, отправить, список, удалить')
     @app_commands .choices (action =[
     app_commands .Choice (name ="создать",value ="create"),
     app_commands .Choice (name ="отправить",value ="send"),
@@ -51,7 +51,7 @@ class Webhooks (commands .Cog ):
             }
             self ._save (interaction .guild_id ,data )
 
-            embed =discord .Embed (title =' Webhook Создало',color =0x2ECC71 )
+            embed =discord .Embed (title ='✅ Вебхук создан',color =0x2ECC71 )
             embed .add_field (name ='Isim',value =isim )
             embed .add_field (name ='Канал',value =channel .mention )
             embed .add_field (name ='ID',value =str (wh .id ))
@@ -96,7 +96,7 @@ class Webhooks (commands .Cog ):
                 await interaction .response .send_message (' Запись webhook нет!',ephemeral =True )
                 return 
 
-            embed =discord .Embed (title =' Webhookler',color =0x3498DB )
+            embed =discord .Embed (title ='🔗 Вебхуки',color =0x3498DB )
             for wid ,wh in data .items ():
                 embed .add_field (
                 name =wh ['name'],
@@ -129,7 +129,7 @@ class Webhooks (commands .Cog ):
             name =data [webhook_id ]['name']
             del data [webhook_id ]
             self ._save (interaction .guild_id ,data )
-            await interaction .response .send_message (f' **{name}** webhook удалена!')
+            await interaction .response .send_message (f'🗑 Вебхук **{name}** удалён!')
 
 async def setup (bot ):
     await bot .add_cog (Webhooks (bot ),guilds =Config .guild_objects ())

@@ -62,7 +62,7 @@ class Verification (commands .Cog ):
         # Sadece bilgilendirme — otomatik Rol/kick YOK
         try :
             await member .send (
-            f" {guild.name} serversuna hoш geldin!\n"
+            f"👋 Добро пожаловать на сервер {guild.name}!\n"
             f"Если требуется проверка, следуйте инструкциям на сервере."
             )
         except Exception :
@@ -77,24 +77,24 @@ class Verification (commands .Cog ):
         state ["updated_by"]=str (interaction .user )
         _save_global_state (state )
         await interaction .response .send_message (
-        f" Данныеfication системаi **{'AЧIK' if enabled else 'KAPALI'}**.\n"
-        +(" Bot otomatik captcha/Rol/kick YAPMAYACAK — sadece bilgilendirme."if enabled else " Artыk новый gelenler iчin hiчbir otomatik операция yapыlmayacak."),
+        f"🛡 Система верификации: **{'включена' if enabled else 'выключена'}**.\n"
+        +("ℹ️ Бот НЕ будет автоматически выдавать капчу/роль/кик — только информирование."if enabled else "Для новых участников больше не будет никаких автоматических действий."),
         ephemeral =True ,
         )
 
-    @app_commands .command (name ="verify-status",description ="Данныеfication системаinin anlыk статусunu gёsterir")
+    @app_commands .command (name ="verify-status",description ="Показать текущий статус системы верификации")
     async def verify_status (self ,interaction :discord .Interaction ):
         state =_load_global_state ()
         e =discord .Embed (
-        title =" Данныеfication — Статус",
+        title ="🛡 Верификация — статус",
         color =0x2ECC71 if state .get ("enabled")else 0x95A5A6 ,
         )
-        e .add_field (name ="Система",value =" Aчыk"if state .get ("enabled")else " Kapalы",inline =True )
-        e .add_field (name ="Otomatik aksiyon",value =" YOK (gёzlemci modu)",inline =True )
+        e .add_field (name ="Система",value ="✅ Вкл"if state .get ("enabled")else "⛔ Выкл",inline =True )
+        e .add_field (name ="Otomatik aksiyon",value ="🚫 Нет (режим наблюдателя)",inline =True )
         e .add_field (name ="Son gюncelleme",value =state .get ("updated_by","—"),inline =True )
         e .description =(
-        "Bu cog gёzlemci modunda: bot kimseye otomatik captcha/Rol/kick UYGULAMAZ. "
-        "Sadece sen `/verify-toggle enabled:true` dersen bilgilendirme DM'i atar."
+        "Этот модуль работает в режиме наблюдателя: бот НЕ применяет автоматическую капчу/роль/кик. "
+        "Он лишь отправляет информационное DM, если включёно через `/verify-toggle enabled:true`."
         )
         await interaction .response .send_message (embed =e ,ephemeral =True )
 

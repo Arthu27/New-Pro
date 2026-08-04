@@ -40,9 +40,9 @@ class ReportCog (commands .Cog ):
         embed .add_field (name ="Open Tickets",value =str (report ['open_tickets']),inline =True )
         embed .add_field (name ="Closed Tickets",value =str (report ['closed_tickets']),inline =True )
 
-        embed .add_field (name ="Avg Resolution Time",value =f"{report['avg_resolution_time']:.2f}h",inline =True )
+        embed .add_field (name ="⏱ Среднее время решения",value =f"{report['avg_resolution_time']:.2f} ч",inline =True )
         embed .add_field (name ="SLA Compliance",value =f"{report['sla_compliance']:.2f}%",inline =True )
-        embed .add_field (name ="Customer Satisfaction",value =f"{report['customer_satisfaction']:.2f}/5",inline =True )
+        embed .add_field (name ="⭐ Удовлетворённость",value =f"{report['customer_satisfaction']:.2f}/5",inline =True )
 
         await interaction .response .send_message (embed =embed )
 
@@ -66,9 +66,9 @@ class ReportCog (commands .Cog ):
         embed .add_field (name ="Open Tickets",value =str (report ['open_tickets']),inline =True )
         embed .add_field (name ="Closed Tickets",value =str (report ['closed_tickets']),inline =True )
 
-        embed .add_field (name ="Avg Resolution Time",value =f"{report['avg_resolution_time']:.2f}h",inline =True )
+        embed .add_field (name ="⏱ Среднее время решения",value =f"{report['avg_resolution_time']:.2f} ч",inline =True )
         embed .add_field (name ="SLA Compliance",value =f"{report['sla_compliance']:.2f}%",inline =True )
-        embed .add_field (name ="Customer Satisfaction",value =f"{report['customer_satisfaction']:.2f}/5",inline =True )
+        embed .add_field (name ="⭐ Удовлетворённость",value =f"{report['customer_satisfaction']:.2f}/5",inline =True )
 
         # Gюnlюk breakdown
         if report .get ('daily_breakdown'):
@@ -134,9 +134,9 @@ class ReportCog (commands .Cog ):
         embed .add_field (name ="Open Tickets",value =str (analytics ['open_tickets']),inline =True )
         embed .add_field (name ="Closed Tickets",value =str (analytics ['closed_tickets']),inline =True )
 
-        embed .add_field (name ="Avg Resolution Time",value =f"{analytics['avg_resolution_time']:.2f}h",inline =True )
+        embed .add_field (name ="⏱ Среднее время решения",value =f"{analytics['avg_resolution_time']:.2f} ч",inline =True )
         embed .add_field (name ="SLA Compliance",value =f"{analytics['sla_compliance']:.2f}%",inline =True )
-        embed .add_field (name ="Customer Satisfaction",value =f"{analytics['customer_satisfaction']:.2f}/5",inline =True )
+        embed .add_field (name ="⭐ Удовлетворённость",value =f"{analytics['customer_satisfaction']:.2f}/5",inline =True )
 
         # Top categories
         if analytics .get ('top_categories'):

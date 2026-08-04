@@ -1,4 +1,4 @@
-"""Событие/Event система - date belirle, hatыrlatma отправить"""
+"""Система событий — назначить дату, отправить напоминание"""
 import discord 
 from discord .ext import commands ,tasks 
 from discord import app_commands 
@@ -150,7 +150,7 @@ class Events (commands .Cog ):
             )
         await interaction .response .send_message (embed =embed )
 
-    @app_commands .command (name ='etkinlik-iptal',description ='Etkinliгi отмена et')
+    @app_commands .command (name ='etkinlik-iptal',description ='Отменить событие')
     @app_commands .checks .has_permissions (manage_events =True )
     async def cancel_event (self ,interaction :discord .Interaction ,etkinlik_id :str ):
         events =self ._load (interaction .guild_id )

@@ -1,4 +1,4 @@
-"""Собрание Система — Discord message историю сканироватьyarak gerчek Данные собратьr"""
+"""Система собраний — собирает реальные данные, сканируя историю сообщений Discord"""
 import discord 
 from discord .ext import commands 
 from discord import app_commands 
@@ -56,7 +56,7 @@ def _save_cfg (guild_id :int ,cfg :dict ):
 
 
 def _guild_embed_base (guild :discord .Guild ,title :str ,color :int )->discord .Embed :
-    """Сервер banner + pp с gюzel embed"""
+    """Красивый embed с баннером и аватаром сервера"""
     embed =discord .Embed (title =title ,color =color )
     if guild .icon :
         embed .set_thumbnail (url =guild .icon .url )
@@ -317,7 +317,7 @@ async def _build_meeting_report (guild :discord .Guild ,since :datetime .datetim
 class MeetingStartModal (discord .ui .Modal ,title ='Собрание Запустить'):
     """Собрание baшlangыч vakitы вход"""
     date_input =discord .ui .TextInput (
-    label ='Собрание Baшlangыч Время',
+    label ='Время начала собрания',
     placeholder ='GG.AA.YYYY SS:DD  (напр.: 12.04.2026 22:00)',
     required =False ,
     max_length =20 
@@ -356,7 +356,7 @@ class MeetingStartModal (discord .ui .Modal ,title ='Собрание Запус
             pass 
 
         ts =int (meeting_time .timestamp ())
-        embed =_guild_embed_base (interaction .guild ,' Собрание Baшladы',0x57F287 )
+        embed =_guild_embed_base (interaction .guild ,'📢 Собрание началось',0x57F287 )
         embed .description =(
         f'> Собрание baшlangыcы: <t:{ts}:F>\n'
         f'> Сообщения ve ses длительность bu andan itibaren число.\n\n'
@@ -498,7 +498,7 @@ class MeetingView (discord .ui .View ):
                 role_list .append (f'• {r.name}')
         await interaction .response .send_message (
         f'**Текущий роли:**\n'+'\n'.join (role_list )+
-        f'\n\nЧыkarmak для: `!toplanti-rol-cikar @Роль`',
+        f'\n\nУбрать: `!toplanti-rol-cikar @Роль`',
         ephemeral =True 
         )
 
@@ -536,7 +536,7 @@ class Meeting (commands .Cog ):
 
         embed =_guild_embed_base (ctx .guild ,'  Собрание Панель управления',0x5865F2 )
         embed .description =(
-        f'> Bu panel с toplanti yёnetebilirsin.\n\n'
+        f'> С этой панели можно управлять собранием.\n\n'
         f'** Собрание Запустить** — Новый toplanti запуск, Данные число baшlar\n'
         f'** Собрание завершено** — Собрание закрыто, отчёт отправлен\n'
         f'** В конец Rapor** — В конец toplanti bu yana raporu показ'

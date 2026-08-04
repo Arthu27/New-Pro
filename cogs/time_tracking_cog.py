@@ -20,16 +20,16 @@ class TimeTrackingCog (commands .Cog ):
         self .bot =bot 
 
     @app_commands .command (name ='time-start',description ='Запустить таймер')
-    @app_commands .describe (description ='Zamanlayыcы aчыklamasы')
+    @app_commands .describe (description ='Описание таймера')
     async def time_start (self ,interaction :discord .Interaction ,
     description :str ='Чalышma'):
         """Запустить таймер"""
-        # Zaten активный zamanlayыcы есть mы проверить et
+        # Проверить, есть ли уже активный таймер
         active_entry =time_tracker .get_active_entry (interaction .user .id )
 
         if active_entry :
             await interaction .response .send_message (
-            f"⏱ Zaten активный bir zamanlayыcыnыz есть! Baшlangыч: {active_entry['start_time'][:16]}",
+            f"⏱ Zaten активный bir zamanlayыcыnыz есть! Начат: {active_entry['start_time'][:16]}",
             ephemeral =True 
             )
             return 
@@ -42,15 +42,15 @@ class TimeTrackingCog (commands .Cog ):
 
         # Embed создать
         embed =discord .Embed (
-        title ="⏱ Zamanlayыcы Baшlatыldы",
-        description =f"**Aчыklama:** {description}\n**Baшlangыч:** {entry['start_time'][:16]}",
+        title ="⏱ Таймер запущен",
+        description =f"**Описание:** {description}\n**Начало:** {entry['start_time'][:16]}",
         color =discord .Color .green (),
         timestamp =datetime .now ()
         )
 
         await interaction .response .send_message (embed =embed )
 
-    @app_commands .command (name ='time-stop',description ='Zamanlayыcы остановить')
+    @app_commands .command (name ='time-stop',description ='Остановить таймер')
     async def time_stop (self ,interaction :discord .Interaction ):
         """Zamanlayыcы остановить"""
         # Zamanlayыcы остановить
@@ -58,7 +58,7 @@ class TimeTrackingCog (commands .Cog ):
 
         if not entry :
             await interaction .response .send_message (
-            " Активный zamanlayыcыnыz нет!",
+            "❌ У вас нет активного таймера!",
             ephemeral =True 
             )
             return 
@@ -70,15 +70,15 @@ class TimeTrackingCog (commands .Cog ):
 
         # Embed создать
         embed =discord .Embed (
-        title ="⏱ Zamanlayыcы Остановитьuldu",
-        description =f"**Aчыklama:** {entry['description']}\n**Sюre:** {hours}s {minutes}d",
+        title ="⏱ Таймер остановлен",
+        description =f"**Описание:** {entry['description']}\n**Длительность:** {hours} ч {minutes} мин",
         color =discord .Color .red (),
         timestamp =datetime .now ()
         )
 
         await interaction .response .send_message (embed =embed )
 
-    @app_commands .command (name ='time-report',description ='Zaman raporunuzu gёrюntюleyin')
+    @app_commands .command (name ='time-report',description ='Показать ваш отчёт по времени')
     @app_commands .describe (days ='Gюn sayыsы (varsayыlan: 7)')
     async def time_report (self ,interaction :discord .Interaction ,days :int =7 ):
         """Zaman raporunuzu gёrюntюleyin"""
@@ -87,14 +87,14 @@ class TimeTrackingCog (commands .Cog ):
 
         # Embed создать
         embed =discord .Embed (
-        title =f" Zaman Raporu ({days} gюn)",
+        title =f"📊 Отчёт по времени ({days} дн.)",
         color =discord .Color .blue (),
         timestamp =datetime .now ()
         )
 
-        embed .add_field (name ="⏱ Всего Sюre",value =f"{report['total_hours']:.2f} время",inline =True )
+        embed .add_field (name ="⏱ Общее время",value =f"{report['total_hours']:.2f} время",inline =True )
         embed .add_field (name =" Всего Giriш",value =str (report ['total_entries']),inline =True )
-        embed .add_field (name =" Центрlama",value =f"{report['avg_hours_per_day']:.2f} время/gюn",inline =True )
+        embed .add_field (name ="📈 Среднее в день",value =f"{report['avg_hours_per_day']:.2f}  ч/день",inline =True )
 
         # Gюnlюk breakdown
         if report ['daily_breakdown']:

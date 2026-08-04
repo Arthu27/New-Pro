@@ -65,10 +65,10 @@ class Birthday (commands .Cog ):
                 age =None 
                 if info .get ('year'):
                     age =now .year -info ['year']
-                    age_str =f" ({age} yaшыnda)"
+                    age_str =f" ({age} лет)"
 
                 embed =discord .Embed (
-                title =f" День рождения Kutlamasы!",
+                title =f"🎂 День рождения!",
                 color =0xFF69B4 ,
                 timestamp =now 
                 )
@@ -83,7 +83,7 @@ class Birthday (commands .Cog ):
                 embed .add_field (name =" День рождения",value =f"```{info['date'].replace('-', '/')}```",inline =True )
                 if age :
                     embed .add_field (name =" Возраст",value =f"```{age}```",inline =True )
-                embed .add_field (name =" Kutla!",value ="*вниз рождение день messageыnы bыrak!* ",inline =False )
+                embed .add_field (name ="🎉 Поздравь!",value ="*Оставь поздравление ниже!* ",inline =False )
                 embed .set_footer (text =f"Aether • {guild.name}",icon_url =guild .icon .url if guild .icon else None )
                 await channel .send (content =f" {member.mention}",embed =embed )
 
@@ -106,7 +106,7 @@ class Birthday (commands .Cog ):
 
     @tasks .loop (hours =1 )
     async def remove_birthday_roles (self ):
-        """Рождение день geчince роль geri al."""
+        """Забрать роль после того, как день рождения прошёл."""
         now =datetime .now (timezone .utc )
         today =f"{now.month:02d}-{now.day:02d}"
         for guild in self .bot .guilds :
@@ -128,7 +128,7 @@ class Birthday (commands .Cog ):
                         pass 
 
     async def _give_birthday_coins (self ,guild_id ,user_id ,amount ):
-        """Economy системаine рождение день hediyesi add."""
+        """Добавить подарок ко дню рождения в экономику."""
         f =f'data/economy_{guild_id}.json'
         try :
             econ ={}
@@ -150,27 +150,27 @@ class Birthday (commands .Cog ):
         await self .bot .wait_until_ready ()
 
     @app_commands .command (name ='birthday',description ='Сохранить день рождение')
-    @app_commands .describe (gun ='День (1-31)',ay ='Месяц (1-12)',yil ='Yыl (opsiyonel)')
-    async def set_birthday (self ,interaction :discord .Interaction ,gun :int ,ay :int ,yil :int =None ):
-        if not (1 <=gun <=31 and 1 <=ay <=12 ):
-            await interaction .response .send_message (' Неверный дата!',ephemeral =True )
+    @app_commands .describe (день ='День (1-31)',месяц ='Месяц (1-12)',год ='Год (необязательно)')
+    async def set_birthday (self ,interaction :discord .Interaction ,день :int ,месяц :int ,год :int =None ):
+        if not (1 <=день <=31 and 1 <=месяц <=12 ):
+            await interaction .response .send_message ('❌ Неверная дата!',ephemeral =True )
             return 
         data =self .get_data (interaction .guild_id )
         entry ={'date':f'{месяц:02d}-{день:02d}','name':interaction .user .display_name }
-        if yil :
-            entry ['year']=yil 
+        if год :
+            entry ['year']=год 
         data [str (interaction .user .id )]=entry 
         self .save_data (interaction .guild_id ,data )
 
         e =discord .Embed (title =" День рождения Сохранено!",color =0xFF69B4 ,timestamp =datetime .now (timezone .utc ))
         e .description =(
         f"```ansi\n\u001b[1;35m ЗАПИСЬ ЗАВЕРШЕНО\u001b[0m\n```\n{_divider()}\n\n"
-        f"Рождение день успешно сохранено! O день seni kutlayacaгыz. \n\n{_divider()}"
+        f"🎂 Дата рождения сохранена! В этот день мы тебя поздравим.\n\n{_divider()}"
         )
         e .set_thumbnail (url =interaction .user .display_avatar .url )
         e .add_field (name =" Дата",value =f"```{день}/{месяц}{f'/{год}' if год else ''}```",inline =True )
         e .add_field (name =" Пользователь",value =interaction .user .mention ,inline =True )
-        e .add_field (name =" Информация",value ="*Рождение день geldiгinde на сервере announcelacak!*",inline =False )
+        e .add_field (name ="ℹ️ Информация",value ="*Когда наступит день рождения — объявим на сервере!*",inline =False )
         e .set_footer (text =f"Aether • {interaction.guild.name}",icon_url =interaction .guild .icon .url if interaction .guild .icon else None )
         await interaction .response .send_message (embed =e ,ephemeral =True )
 
@@ -197,8 +197,8 @@ class Birthday (commands .Cog ):
                 continue 
         entries .sort ()
 
-        e =discord .Embed (title =" Yaklaшan День рождения",color =0xFF69B4 ,timestamp =now )
-        e .description =f"```ansi\n\u001b[1;35m РОЖДЕНИЕ ДЕНЬ TAKVИMИ\u001b[0m\n```\n{_divider()}"
+        e =discord .Embed (title ="🎂 Ближайшие дни рождения",color =0xFF69B4 ,timestamp =now )
+        e .description =f"```ansi\n\u001b[1;35m КАЛЕНДАРЬ ДНЕЙ РОЖДЕНИЯ\u001b[0m\n```\n{_divider()}"
         for diff ,d ,m ,name ,uid in entries [:15 ]:
             if diff ==0 :
                 label =" **СЕГОДНЯ!**"
@@ -243,7 +243,7 @@ class Birthday (commands .Cog ):
     @app_commands .describe (
     channel ='Kutlama канал',
     role ='Рождение день роль (opsiyonel)',
-    hediye_coin ='Рождение день verilecek coin miktarы'
+    hediye_coin ='Сколько монет дарить на день рождения'
     )
     @app_commands .checks .has_permissions (administrator =True )
     async def setup_birthday_slash (self ,interaction :discord .Interaction ,

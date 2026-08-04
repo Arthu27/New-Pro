@@ -135,7 +135,7 @@ class Logs (commands .Cog ):
         self .bot =bot 
 
     async def get_log_channel (self ,guild ,category :str ='сервер'):
-        """Bul канал для konkretnoy kategoriler loglarыn"""
+        """Найти канал для конкретной категории логов"""
         ch_name =CATEGORIES .get (category ,{}).get ('channel','сервер')
         target =LOG_CHANNELS .get (ch_name ,LOG_CHANNELS ['сервер'])
 
@@ -155,17 +155,17 @@ class Logs (commands .Cog ):
 
         # КОМАНДА: СОЗДАТЬ LOG-КАНАЛЫ 
 
-    @app_commands .command (name ="setup-logs",description ="Создать kategori ve каналы для loglarыn")
+    @app_commands .command (name ="setup-logs",description ="Создать категорию и каналы для логов")
     @app_commands .checks .has_permissions (administrator =True )
     async def setup_logs (self ,interaction :discord .Interaction ):
         guild =interaction .guild 
         await interaction .response .defer (ephemeral =True )
 
-        # Контроль ediyoruz есть mы zaten kategori
+        # Проверяем, есть ли уже категория
         existing_cat =discord .utils .get (guild .categories ,name =LOG_CATEGORY_NAME )
 
         if not existing_cat :
-        # Создал kategori с администратор
+        # Создать категорию от имени администратора
             overwrites ={
             guild .default_role :discord .PermissionOverwrite (
             read_messages =False ,
@@ -190,7 +190,7 @@ class Logs (commands .Cog ):
             existing_cat =await guild .create_category (
             LOG_CATEGORY_NAME ,
             overwrites =overwrites ,
-            reason ="Aether: oluшoluшturulanlar kategoriler loglarыn"
+            reason ="Aether: создание категории логов"
             )
 
         created =[]
@@ -199,7 +199,7 @@ class Logs (commands .Cog ):
         for ch_name in LOG_CHANNELS .values ():
             existing =discord .utils .get (guild .text_channels ,name =ch_name )
             if existing :
-            # Peremesaem в kategori если не в ney
+            # Перемещаем в категорию, если ещё не там
                 if existing .category !=existing_cat :
                     await existing .edit (category =existing_cat )
                 already .append (ch_name )
@@ -207,7 +207,7 @@ class Logs (commands .Cog ):
                 ch =await guild .create_text_channel (
                 ch_name ,
                 category =existing_cat ,
-                reason ="Aether: oluшoluшturulanlar log-канал",
+                reason ="Aether: создание канала логов",
                 topic =f"Ежедневный sobitiy: {ch_name}"
                 )
                 created .append (ch_name )
@@ -232,7 +232,7 @@ class Logs (commands .Cog ):
             result_lines .append (f" **Zaten susestvuyut ({len(already)}):**\n"+"\n".join (f"• {a}"for a in already ))
 
         e =discord .Embed (
-        title =" Система loglarыn nastroena",
+        title ="✅ Система логов настроена",
         description ="\n\n".join (result_lines ),
         color =0x2ECC71 ,
         timestamp =datetime .datetime .utcnow ()
@@ -241,9 +241,9 @@ class Logs (commands .Cog ):
         name =" Каналы",
         value =(
         " **-moderasyon** — bani, kiki, muti, предупреждения\n"
-        " **-участники** — вход, чыkыш, smena nika\n"
+        " **-участники** — вход, выход, смена ника\n"
         " **-сообщения** — удалить, redaktirovanie\n"
-        " **-ses** — вход/чыkыш den ses\n"
+        " **-ses** — вход/выход из войса\n"
         " **-сервер** — каналы, roles, invayti, сервер\n"
         " **-приветствие** — приветствие ve prosaniya"
         ),
@@ -353,7 +353,7 @@ class Logs (commands .Cog ):
                     lch =member .guild .get_channel (int (lv ['channel_id']))
                     if lch :
                         title =(lv .get ('title')or 'Do svidaniya, {user}!').replace ('{user}',member .display_name ).replace ('{сервер}',member .guild .name ).replace ('{count}',str (member .guild .member_count )).replace ('{mention}',member .mention )
-                        msg =(lv .get ('message')or '{user} pokinul сервер.').replace ('{user}',member .display_name ).replace ('{сервер}',member .guild .name ).replace ('{count}',str (member .guild .member_count )).replace ('{mention}',member .mention )
+                        msg =(lv .get ('message')or '{user} покинул сервер.').replace ('{user}',member .display_name ).replace ('{сервер}',member .guild .name ).replace ('{count}',str (member .guild .member_count )).replace ('{mention}',member .mention )
                         color =int (lv .get ('color','#e05555').lstrip ('#'),16 )
                         e =discord .Embed (title =title ,description =msg ,color =color )
                         e .set_thumbnail (url =member .display_avatar .url )
@@ -367,25 +367,25 @@ class Logs (commands .Cog ):
 
         roles_str =", ".join (r .name for r in member .roles [1 :])if member .roles [1 :]else "нет"
         member_count =member .guild .member_count 
-        # Hesaplыyoruz skolko bil на на сервере
+        # Считаем, сколько участник был на сервере
         joined_ago =""
         if member .joined_at :
-            days_on_sunucu =(datetime .datetime .utcnow ()-member .joined_at .replace (tzinfo =None )).days 
-            if days_on_sunucu ==0 :
-                joined_ago ="menee день"
-            elif days_on_sunucu ==1 :
+            days_on_server =(datetime .datetime .utcnow ()-member .joined_at .replace (tzinfo =None )).days 
+            if days_on_server ==0 :
+                joined_ago ="менее дня"
+            elif days_on_server ==1 :
                 joined_ago ="1 день"
-            elif days_on_sunucu <30 :
-                joined_ago =f"{days_on_server} dn."
-            elif days_on_sunucu <365 :
-                joined_ago =f"{days_on_server // 30} mes."
+            elif days_on_server <30 :
+                joined_ago =f"{days_on_server} дн."
+            elif days_on_server <365 :
+                joined_ago =f"{days_on_server // 30} мес."
             else :
-                joined_ago =f"{days_on_server // 365} g. {days_on_server % 365 // 30} mes."
+                joined_ago =f"{days_on_server // 365} г. {days_on_server % 365 // 30} мес."
 
         e =discord .Embed (color =0xE74C3C ,timestamp =datetime .datetime .utcnow ())
         e .description =(
-        f"## Участник visel\n"
-        f"### {member.display_name} pokinul сервер\n"
+        f"🚪 Участник вышел\n"
+        f"### {member.display_name} покинул сервер\n"
         f"\n\n"
         f"**Пользователь** — {member.display_name}\n"
         f"**ID** — `{member.id}`\n"
@@ -642,7 +642,7 @@ class Logs (commands .Cog ):
         ch =await self .get_log_channel (member .guild ,'voice')
         if not ch :
             return 
-        title_text ="Podanahtarilsya e seste"if after .channel else "Baгlandы den ses"
+        title_text ="Заговорил в войсе"if after .channel else "Подключился к войсу"
         e =discord .Embed (color =color ,timestamp =datetime .datetime .utcnow ())
         e .description =(
         f"## {title_text}\n"

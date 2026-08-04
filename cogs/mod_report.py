@@ -1,4 +1,4 @@
-"""Модератор Rapor Система — неделяlыk toplanti raporu"""
+"""Система отчётов модераторов — еженедельный отчёт к собранию"""
 import discord 
 from discord .ext import commands ,tasks 
 from discord import app_commands 
@@ -181,7 +181,7 @@ async def _build_weekly_report (guild :discord .Guild ,days :int =7 ,force_cutof
     timestamp =now 
     )
     cover .set_author (
-    name =f'{guild.name}  ·  Неделяlыk Собрание Raporu',
+    name =f'{guild.name}  ·  Еженедельный отчёт к собранию',
     icon_url =guild .icon .url if guild .icon else None 
     )
     cover .description =(
@@ -190,7 +190,7 @@ async def _build_weekly_report (guild :discord .Guild ,days :int =7 ,force_cutof
     f'\u001b[1;34m   HAFTALIK PERFORMANS RAPORU     \u001b[0m\n'
     f'\u001b[1;34m\u001b[0m\n'
     f'```\n'
-    f'>  Dёnem: **{period}**\n'
+    f'> 📅 **Период:** **{period}**\n'
     f'>  <t:{ts_cutoff}:D> → <t:{ts_now}:D>\n'
     f'>  Всего участников: **{guild.member_count}**\n'
     f'>  Mod Действие: **{len(period_case)}**'
@@ -320,7 +320,7 @@ async def _build_weekly_report (guild :discord .Guild ,days :int =7 ,force_cutof
             action_lines .append (f'{_action_emoji(action)} `{action.upper():<8}` {bar} **{count}**')
 
         mod_embed .add_field (
-        name =f' Действие Daгыlыmы ({len(period_case)} собратьm)',
+        name =f'⚖️ Распределение действий ({len(period_case)} шт.)',
         value ='\n'.join (action_lines )or 'Нет',
         inline =False 
         )
@@ -348,10 +348,10 @@ async def _build_weekly_report (guild :discord .Guild ,days :int =7 ,force_cutof
     timestamp =now 
     )
     close .description =(
-    f'```ansi\n\u001b[1;32m Rapor В конецu \u001b[0m\n```\n'
+    f'```ansi\n\u001b[1;32m КОНЕЦ ОТЧЁТА \u001b[0m\n```\n'
     f'> Bu rapor **{period}** данные kapsamaktadыr.\n'
     f'> Bir следующий rapor: <t:{ts_now + (7 - datetime.datetime.utcnow().weekday()) * 86400}:D>\n\n'
-    f'-# Aether Bot • Автоматически Неделяlыk Rapor'
+    f'-# Aether Bot • Автоматический еженедельный отчёт'
     )
     embeds .append (close )
 
@@ -364,7 +364,7 @@ class ModReportView (discord .ui .View ):
     def __init__ (self ):
         super ().__init__ (timeout =None )
 
-    @discord .ui .button (label ='  Неделяlыk Rapor',style =discord .ButtonStyle .primary ,custom_id ='modreport_weekly',row =0 )
+    @discord .ui .button (label ='📋 Еженедельный отчёт',style =discord .ButtonStyle .primary ,custom_id ='modreport_weekly',row =0 )
     async def weekly (self ,interaction :discord .Interaction ,button :discord .ui .Button ):
         if not interaction .user .guild_permissions .manage_messages :
             await interaction .response .send_message (' Администратор нет.',ephemeral =True )
@@ -456,13 +456,13 @@ class ModReportView (discord .ui .View ):
             embed .set_thumbnail (url =interaction .guild .icon .url )
         await interaction .followup .send (embed =embed )
 
-    @discord .ui .button (label ='  Настройки',style =discord .ButtonStyle .grey ,custom_id ='modreport_settings',row =1 )
+    @discord .ui .button (label ='⚙️ Настройки',style =discord .ButtonStyle .grey ,custom_id ='modreport_settings',row =1 )
     async def settings (self ,interaction :discord .Interaction ,button :discord .ui .Button ):
         if not interaction .user .guild_permissions .administrator :
             await interaction .response .send_message (' Администратор нет.',ephemeral =True )
             return 
         cfg =_load_cfg (interaction .guild .id )
-        gun_names =['Pazartesi','Salы','Чarшamba','Perшembe','Cuma','Cumartesi','Pazar']
+        gun_names =['Понедельник','Вторник','Среда','Четверг','Пятница','Суббота','Воскресенье']
         ch =interaction .guild .get_channel (cfg .get ('channel_id',0 ))
         embed =discord .Embed (title =' Rapor Настройкиы',color =0x5865F2 )
         embed .add_field (name ='Состояние',value =' Активен'if cfg .get ('enabled')else ' Закрыт',inline =True )
@@ -555,13 +555,13 @@ class ModReport (commands .Cog ):
         cfg =_load_cfg (ctx .guild .id )
         cfg .update ({'enabled':True ,'channel_id':channel .id ,'day':gun ,'hour':часов })
         _save_cfg (ctx .guild .id ,cfg )
-        gun_names =['Pazartesi','Salы','Чarшamba','Perшembe','Cuma','Cumartesi','Pazar']
+        gun_names =['Понедельник','Вторник','Среда','Четверг','Пятница','Суббота','Воскресенье']
         embed =discord .Embed (
-        title =' Неделяlыk Rapor Настройк',
+        title ='✅ Еженедельный отчёт настроен',
         color =0x57F287 ,
         description =(
-        f'Каждый **{gun_names[день]}** часов **{часов:02d}:00**\'de\n'
-        f'{channel.mention} в канал автоматически отправл.'
+        f'Каждый **{gun_names[gun]}** в **{часов:02d}:00**\n'
+        f'отчёт автоматически отправляется в канал {channel.mention}.'
         )
         )
         await ctx .send (embed =embed )

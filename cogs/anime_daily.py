@@ -1,4 +1,4 @@
-"""Ежедневный Anime Predlojeniesi — Jikan API + Русский преобразоватьi butonu"""
+"""Ежедневное аниме-предложение — Jikan API + кнопка русского перевода"""
 import discord 
 from discord .ext import commands ,tasks 
 from discord import app_commands 

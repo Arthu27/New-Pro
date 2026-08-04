@@ -95,22 +95,22 @@ class ProactiveModeration (commands .Cog ):
             )
 
             e .description =(
-            f"## AI Sentiment Alert\n"
+            f"## ⚠️ AI-анализ настроений\n"
             f"{alert['message']}\n\n"
             )
 
             if alert ['type']=='negative_sentiment':
                 e .description +=(
-                f"**Duygu:** {alert['sentiment']}\n"
+                f"**Настроение:** {alert['sentiment']}\n"
                 f"**Сообщение:** {alert['message_count']}\n"
                 )
             elif alert ['type']=='potential_conflict':
                 e .description +=(
-                f"**Negativnih сообщение:** {alert['negative_messages']}\n"
-                f"**Rekomendaciya:** Контроль et канал на чakышma\n"
+                f"**Негативных сообщений:** {alert['negative_messages']}\n"
+                f"**Рекомендация:** проконтролируйте канал на предмет конфликта\n"
                 )
 
-            e .set_footer (text =f"{guild.name} · Analiz duygu")
+            e .set_footer (text =f"{guild.name} · Анализ настроений")
 
             await alert_channel .send (embed =e )
 
@@ -127,7 +127,7 @@ class ProactiveModeration (commands .Cog ):
                 await self ._alert_moderators (
                 message .guild ,
                 'toxicity',
-                f"Obnarujena toksisite den {message.author.mention}",
+                f"Обнаружена токсичность от {message.author.mention}",
                 message 
                 )
                 break 
@@ -150,7 +150,7 @@ class ProactiveModeration (commands .Cog ):
             await self ._alert_moderators (
             message .guild ,
             'spam',
-            f"Obnarujen spam den {message.author.mention} ({len(recent_messages)} сообщение для {self.spam_window}с)",
+            f"Obnarujen spam den {message.author.mention} ({len(recent_messages)} сообщений за {self.spam_window} с)",
             message 
             )
 
@@ -170,7 +170,7 @@ class ProactiveModeration (commands .Cog ):
                         await self ._alert_moderators (
                         message .guild ,
                         'suspicious_link',
-                        f"Podozritelnaya ссылка den {message.author.mention}: {link}",
+                        f"Подозрительная ссылка от {message.author.mention}: {link}",
                         message 
                         )
                         break 
@@ -239,7 +239,7 @@ class ProactiveModeration (commands .Cog ):
         e .description =(
         f"**Каналы pod nablyudeniem:** {channels_monitored}\n"
         f"**Сообщение в panoda:** {total_messages}\n"
-        f"**Eшik spama:** {self.spam_threshold} сообщение для {self.spam_window}с"
+        f"**Порог спама:** {self.spam_threshold} сообщений за {self.spam_window} с"
         )
         e .set_footer (text =f"{ctx.guild.name}")
 

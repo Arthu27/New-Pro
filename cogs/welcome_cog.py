@@ -27,8 +27,8 @@ class WelcomeCog (commands .Cog ):
         self .welcome_message =message 
 
         embed =discord .Embed (
-        title =" Hoш Geldin Сообщениеы Настройкаlandы",
-        description =f"**Новый сообщение:** {message}",
+        title ="✅ Приветственное сообщение обновлено",
+        description =f"**Новый текст:** {message}",
         color =discord .Color .dark_grey (),
         timestamp =datetime .now ()
         )
@@ -42,7 +42,7 @@ class WelcomeCog (commands .Cog ):
         self .welcome_channel_id =channel .id 
 
         embed =discord .Embed (
-        title =" Hoш Geldin Каналы Настройкаlandы",
+        title ="✅ Канал приветствий обновлён",
         description =f"**Новый канал:** {channel.mention}",
         color =discord .Color .dark_grey (),
         timestamp =datetime .now ()
@@ -56,7 +56,7 @@ class WelcomeCog (commands .Cog ):
         message =self .welcome_message .replace ("{user}",ctx .author .mention )
 
         embed =discord .Embed (
-        title =" Hoш Geldin!",
+        title ="👋 Добро пожаловать!",
         description =message ,
         color =discord .Color .dark_grey (),
         timestamp =datetime .now ()
@@ -79,7 +79,7 @@ class WelcomeCog (commands .Cog ):
         message =self .welcome_message .replace ("{user}",member .mention )
 
         embed =discord .Embed (
-        title =" Hoш Geldin!",
+        title ="👋 Добро пожаловать!",
         description =message ,
         color =discord .Color .dark_grey (),
         timestamp =datetime .now ()

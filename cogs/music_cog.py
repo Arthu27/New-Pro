@@ -49,8 +49,8 @@ class MusicCog (commands .Cog ):
         })
 
         embed =discord .Embed (
-        title =" Kuyruгa Добавлен",
-        description =f"**Шarkы:** {query}\n**Sыra:** {len(queue)}",
+        title ="🎵 Добавлено в очередь",
+        description =f"**Трек:** {query}\n**Позиция:** {len(queue)}",
         color =discord .Color .dark_grey (),
         timestamp =datetime .now ()
         )
@@ -68,7 +68,7 @@ class MusicCog (commands .Cog ):
             ctx .voice_client .pause ()
 
             embed =discord .Embed (
-            title ="⏸ Duraklatыldы",
+            title ="⏸ Пауза",
             color =discord .Color .dark_grey (),
             timestamp =datetime .now ()
             )
@@ -88,7 +88,7 @@ class MusicCog (commands .Cog ):
             ctx .voice_client .resume ()
 
             embed =discord .Embed (
-            title =" Продолжить Ediliyor",
+            title ="▶️ Воспроизведение продолжено",
             color =discord .Color .dark_grey (),
             timestamp =datetime .now ()
             )
@@ -108,7 +108,7 @@ class MusicCog (commands .Cog ):
             ctx .voice_client .stop ()
 
             embed =discord .Embed (
-            title ="⏭ Шarkы Geчildi",
+            title ="⏭ Трек пропущен",
             color =discord .Color .dark_grey (),
             timestamp =datetime .now ()
             )
@@ -127,8 +127,8 @@ class MusicCog (commands .Cog ):
             return 
 
         embed =discord .Embed (
-        title =" Kuyruk",
-        description =f"Всего {len(queue)} шarkы",
+        title ="🎶 Очередь",
+        description =f"Всего треков: {len(queue)}",
         color =discord .Color .dark_grey (),
         timestamp =datetime .now ()
         )
@@ -137,7 +137,7 @@ class MusicCog (commands .Cog ):
         for i ,song in enumerate (queue [:10 ],1 ):
             embed .add_field (
             name =f"{i}. {song['query']}",
-            value =f"Ekleyen: {song['requester'].mention}",
+            value =f"Добавил: {song['requester'].mention}",
             inline =False 
             )
 
@@ -155,8 +155,8 @@ class MusicCog (commands .Cog ):
         current =queue [0 ]
 
         embed =discord .Embed (
-        title =" Шu Anda Чalыyor",
-        description =f"**Шarkы:** {current['query']}\n**Ekleyen:** {current['requester'].mention}",
+        title ="🎧 Сейчас играет",
+        description =f"**Трек:** {current['query']}\n**Добавил:** {current['requester'].mention}",
         color =discord .Color .dark_grey (),
         timestamp =datetime .now ()
         )
@@ -174,7 +174,7 @@ class MusicCog (commands .Cog ):
             current_volume =ctx .voice_client .source .volume *100 if ctx .voice_client .source else 100 
 
             embed =discord .Embed (
-            title =" Голос Уровеньsi",
+            title ="🔊 Громкость",
             description =f"**Mevcut:** {int(current_volume)}%",
             color =discord .Color .dark_grey (),
             timestamp =datetime .now ()
@@ -228,7 +228,7 @@ class MusicCog (commands .Cog ):
             self .queues [ctx .guild .id ]=[]
 
         embed =discord .Embed (
-        title =" Kuyruk Temizlendi",
+        title ="🧹 Очередь очищена",
         color =discord .Color .dark_grey (),
         timestamp =datetime .now ()
         )

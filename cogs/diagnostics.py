@@ -3,7 +3,7 @@ Bot Diagnostic & Auto-Repair Cog
 =================================
 - Real-time health monitoring (CPU, RAM, latency, guild count)
 - Error aggregation & feed
-- Hot-reload (cog dosyasы deгiшtiгinde otomatik reload)
+- Hot-reload (автоматическая перезагрузка при изменении файла кога)
 - Performance profiling per cog
 - Auto-restart on critical failure
 - Memory leak detection

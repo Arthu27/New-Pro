@@ -24,7 +24,7 @@ def _save_health (guild_id ,data ):
         json .dump (data ,fp ,indent =2 ,ensure_ascii =False )
 
 def _calc_score (data ,guild :discord .Guild ):
-    """0-100 arasы состояние skoru hesapla"""
+    """Расчёт оценки состояния сервера (0-100)"""
     score =100 
     total_members =max (guild .member_count ,1 )
 
@@ -51,7 +51,7 @@ def _calc_score (data ,guild :discord .Guild ):
     return max (0 ,min (100 ,round (score )))
 
 def _score_label (score ):
-    if score >=80 :return "🟢 Mюkemmel",0x2ecc71 
+    if score >=80 :return "🟢 Отлично",0x2ecc71 
     if score >=60 :return "🟡 Иyi",0xf1c40f 
     if score >=40 :return "🟠 Центр",0xe67e22 
     return " Kёtю",0xe74c3c 
@@ -128,19 +128,19 @@ class Health (commands .Cog ):
         except Exception :
             pass 
 
-    @app_commands .command (name ="health",description ="Сервера состояние skorunu показ")
+    @app_commands .command (name ="health",description ="Показать оценку состояния сервера")
     async def saglik (self ,interaction :discord .Interaction ):
         gid =str (interaction .guild .id )
         data =_load_health (gid )
         score =_calc_score (data ,interaction .guild )
         label ,color =_score_label (score )
 
-        e =discord .Embed (title =f" {interaction.guild.name} — состояние Очкиlamau",color =color )
+        e =discord .Embed (title =f"💚 {interaction.guild.name} — состояние сервера",color =color )
         e .set_thumbnail (url =interaction .guild .icon .url if interaction .guild .icon else None )
 
         bar_filled =round (score /10 )
         bar =""*bar_filled +""*(10 -bar_filled )
-        e .add_field (name ="Очкиlama",value =f"`{bar}` **{score}/100** {label}",inline =False )
+        e .add_field (name ="🩺 Оценка",value =f"`{bar}` **{score}/100** {label}",inline =False )
 
         e .add_field (name =" Ban",value =str (data .get ('ban_count',0 )),inline =True )
         e .add_field (name =" Kick",value =str (data .get ('kick_count',0 )),inline =True )
@@ -153,10 +153,10 @@ class Health (commands .Cog ):
             ch_text ="\n".join (f"#{c['name']}: {c['total']} message"for c in top )
             e .add_field (name =" En Активен Каналы",value =ch_text ,inline =False )
 
-        e .set_footer (text ="Очкиlama: ban/kick/spam oranы ve активен по hesaplanыr")
+        e .set_footer (text ="Оценка: по количеству банов/киков/спама и по активности")
         await interaction .response .send_message (embed =e )
 
-    @app_commands .command (name ="channel-stats",description ="Канал основанный на message статистика показ")
+    @app_commands .command (name ="channel-stats",description ="Показать статистику сообщений по каналам")
     async def channel_istatistik (self ,interaction :discord .Interaction ):
         gid =str (interaction .guild .id )
         data =_load_health (gid )
@@ -169,7 +169,7 @@ class Health (commands .Cog ):
         top =sorted (ch_msgs .values (),key =lambda x :x .get ('total',0 ),reverse =True )[:10 ]
         max_val =top [0 ]['total']if top else 1 
 
-        e =discord .Embed (title =" Канал Статистика",color =0x3498db )
+        e =discord .Embed (title ="📊 Статистика каналов",color =0x3498db )
         lines =[]
         for i ,c in enumerate (top ,1 ):
             pct =round (c ['total']/max_val *20 )

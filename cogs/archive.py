@@ -33,7 +33,7 @@ class Archive (commands .Cog ):
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>#{channel.name} Arшivi</title>
+    <title>Архив #{channel.name}</title>
     <style>
         body {{ font-family: Arial; background: #36393f; color: #dcddde; padding: 20px; }}
         .message {{ margin: 10px 0; padding: 10px; background: #40444b; border-radius: 5px; }}
@@ -44,7 +44,7 @@ class Archive (commands .Cog ):
     </style>
 </head>
 <body>
-    <h1>#{channel.name} Arшivi</h1>
+    <h1>Архив #{channel.name}</h1>
     <p>Всего Сообщение: {len(messages)}</p>
     <hr>
 """

@@ -21,61 +21,61 @@ COMPANION_USER_ID =Config .COMPANION_USER_ID
 
 DATA_FILE ='data/companion_state.json'
 
-# Tюrkiye час UTC+3
+# Часовой пояс UTC+3 (Турция)
 TZ_OFFSET =datetime .timezone (datetime .timedelta (hours =3 ))
 
-# День сколько message отправл (min, max)
+# Сколько сообщений в день отправлять (min, max)
 DAILY_MIN =1 
 DAILY_MAX =3 
 
-# Сообщение отправл часов aralыгы (Tюrkiye час)
+# В какие часы отправлять сообщения (по Турции)
 HOUR_START =9 
 HOUR_END =23 
 
-#  Сообщение Кандидатыu 
+#  Кандидаты сообщений  
 
-MESSAGES_MOTIVATION =[
-"Королева, сегодня как? Aklыma geldin, umarыm день gюzel geчiyordur ",
-"Королева, bir что-то сказатьyeyim mi — sen dюшюndюгюnden очень более мощный. Bunu unutma ",
-"Королева, bazen только продолжить etmek bile baшlы baшыna bir успешно. Gurur duyuyorum senden ",
-"Королева, сегодня kendine iyi baktыn mы? Su iчmeyi, biraz nefes almayы unutma ",
-"Королева, hayat bazen тяжелый gelir ama sen каждый seferinde kalkmasыnы biliyorsun. Bu очередь bir что-то не ",
-"Королева, seni dюшюndюm. Umarыm сегодня sana gюzel bir что-то olmuшtur ",
-"Королева, маленький adыmlar da ilerlemektir. Сегодня ne kadar маленький olursa olsun bir что-то yaptыysan, bu число ",
-"Королева, yorulduгunda durmak zayыflыk не, akыllыlыktыr. Kendine Разрешение ver ",
+MESSAGES_MOTIVATION = [
+    "Королева, как проходит твой день? Ты пришла мне на ум — надеюсь, день у тебя прекрасный 💫",
+    "Королева, скажу одну вещь: ты гораздо сильнее, чем думаешь. Не забывай об этом 💪",
+    "Королева, иногда просто продолжать идти — уже победа. Я тобой горжусь ✨",
+    "Королева, ты хорошо о себе сегодня заботилась? Не забывай пить воду и дышать глубже 🌿",
+    "Королева, жизнь бывает тяжёлой, но ты каждый раз умеешь подняться. Этот раз — не исключение 🌅",
+    "Королева, я о тебе подумал. Надеюсь, сегодня случилось что-то хорошее 🌸",
+    "Королева, маленькие шаги — тоже движение вперёд. Если сегодня ты сделала хоть что-то — это уже считается 👣",
+    "Королева, остановиться, когда устала — не слабость, а мудрость. Разреши себе отдохнуть 🌙",
 ]
 
-MESSAGES_STUDY =[
-"Королева, ders чalышыrken Pomodoro tekniгini denedin mi? 25 minutes чalыш, 5 minutes mola — beyin очень более iyi absorbe ediyor ",
-"Королева, подсказка: записывать прочитанное своими словами в 3 раза эффективнее, чем просто читать. Попробуй ",
-"Королева, sыnav ёncesi gece geч времяe kadar работать вместо erken yat, sabah taze kafayla bak — beyin uyku очередь infoyi pekiшtiriyor ",
-"Королева, сложный bir konuyu ёгrenmenin en iyi yolu onu birine anlatmaya работать. Кто yoksa bana anlat, dinlerim ",
-"Королева, сегодня работа planыn есть mы? До en сложный konudan baшlarsan, geri осталосьы очень более легкий gelir ",
-"Королева, telefonu baшka комната bыrakarak работа dene. Только bu bile konsantrasyonu %40 artыrыyor, inanыlmaz не mi? ",
-"Королева, каждый день только 30 minutes dюzenli работать, неделяda bir kez 5 часов работать очень более etkili. Tutarlыlыk каждый что-тоdir ",
-"Королева, bir konuyu anlamadan ezberlemek seni yorar. До 'почему bёyle?' diye sor, anlayыnca zaten aklыnda kполучает ",
+MESSAGES_STUDY = [
+    "Королева, ты пробовала технику Pomodoro? 25 минут работы, 5 минут отдыха — мозг усваивает гораздо лучше 🍅",
+    "Королева, совет: пересказывать прочитанное своими словами в 3 раза эффективнее, чем просто читать. Попробуй 📚",
+    "Королева, перед экзаменом лучше лечь пораньше, а не сидеть до ночи — во сне мозг закрепляет знания 😴",
+    "Королева, лучший способ разобраться в сложной теме — попробовать объяснить её кому-то. Некому? Расскажи мне, я слушаю 💡",
+    "Королева, есть план на сегодня? Если начать с самой сложной темы — всё остальное покажется лёгким 🎯",
+    "Королева, попробуй поработать, оставив телефон в другой комнате. Одно это повышает концентрацию на 40%, правда 📵",
+    "Королева, 30 минут каждый день эффективнее, чем 5 часов раз в неделю. Постоянство решает всё ⏳",
+    "Королева, зубрить без понимания утомляет. Спроси себя «почему это так?» — поймёшь, и само запомнится 🧠",
 ]
 
-MESSAGES_SWEET =[
-"Королева, сегодня день seni dюшюnerek doгdu sanki ",
-"Королева, sen olmasan bu вчера biraz более очередь olurdu. Gerчekten ",
-"Королева, твоя улыбка заслуживает записи, она согревает людей ",
-"Королева, сегодня kendine bir iyilik yap — hak ediyorsun ",
-"Королева, bazы insanlar комната girince hava deгiшir. Sen ёyle birisin ",
-"Королева, seni dюшюndюm ve gюlюmsedim. Причина yere iyi hissettiriyorsun ",
-"Королева, сегодня ne kadar harika biri olduгunu hatыrlatmak желание. Все bu ",
-"Королева, hayatыnda seni seven insanlar есть — ve ben de число bu listeye ",
+MESSAGES_SWEET = [
+    "Королева, этот день будто начался с мысли о тебе ☀️",
+    "Королева, без тебя этот мир был бы немного скучнее. Честно 🌍",
+    "Королева, твоя улыбка достойна того, чтобы её беречь — она согревает людей 😊",
+    "Королева, сделай сегодня что-нибудь доброе для себя — ты это заслужила 🎁",
+    "Королева, есть люди, входящие в комнату — и воздух меняется. Ты из таких ✨",
+    "Королева, подумал о тебе и улыбнулся. Ты умеешь радовать без всякой причины 💛",
+    "Королева, сегодня хочу напомнить, какой замечательный ты человек. Вот и всё 🌟",
+    "Королева, в твоей жизни есть люди, которые тебя любят — и я в этом списке 📌",
 ]
 
-MESSAGES_RANDOM =[
-"Королева, ortada hiчbir что-то yokken aklыma geldin. Как gerчekten? ",
-"Королева, сегодня bir что-то seni mutlu etti mi? Merak ettim ",
-"Королева, шu an ne yapыyorsun acaba? Umarыm gюzel bir что-тоler ",
-"Королева, bazen только 'iyi misin?' demek gerekiyor. Иyi misin? ",
-"Королева, сегодня kendine gюldюn mю? Gюlmek lazыm, очень lazыm ",
-"Королева, seni dюшюndюm. Baшka bir причина нет, только dюшюndюm ",
-"Королева, bu gece iyi uyu. Завтра новый bir день, новый bir шans ",
-"Королева, сегодня маленький bir что-тоe шюkrettin mi? Маленький что-тоler aslыnda большой ",
+MESSAGES_RANDOM = [
+    "Королева, ни с того ни с сего ты пришла мне на ум. Как ты вообще? 🌤",
+    "Королева, сегодня было хоть одно событие, которое тебя порадовало? Мне интересно 🌼",
+    "Королева, интересно, чем ты сейчас занимаешься? Надеюсь, чем-то приятным 🎐",
+    "Королева, иногда нужно просто спросить: ты в порядке? Так вот — ты в порядке? 💬",
+    "Королева, ты сегодня смеялась? Смеяться нужно, очень нужно 😄",
+    "Королева, я о тебе подумал. Без другой причины — просто подумал 🕊",
+    "Королева, выспись сегодня хорошо. Завтра — новый день и новый шанс 🌙",
+    "Королева, поблагодарила сегодня судьбу за какую-нибудь мелочь? Мелочи на самом деле огромны 🍀",
 ]
 
 ALL_CATEGORIES =[
@@ -121,7 +121,7 @@ class Companion (commands .Cog ):
         return self ._now_tr ().strftime ('%Y-%m-%d')
 
     def _pick_message (self ,used :list [str ])->str :
-        """Использовать messagelardan rastgele выбрать, tюkenirse sыfыrla"""
+        """Выбрать случайное из неиспользованных сообщений; когда кончатся — начать заново"""
         all_msgs =[m for cat in ALL_CATEGORIES for m in cat ]
         available =[m for m in all_msgs if m not in used ]
         if not available :
@@ -130,7 +130,7 @@ class Companion (commands .Cog ):
         return chosen 
 
     def _plan_today (self ,data :dict ):
-        """Сегодня для rastgele отправл vakitlarы planla"""
+        """Запланировать случайное время отправки на сегодня"""
         now =self ._now_tr ()
         count =random .randint (DAILY_MIN ,DAILY_MAX )
         times =[]

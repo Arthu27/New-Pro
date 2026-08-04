@@ -57,7 +57,7 @@ class SLACog (commands .Cog ):
                 f"• {priority}: {time} dakika"
                 for priority ,time in policy .resolution_times .items ()
                 ])
-                embed .add_field (name ="Resolution Time",value =resolution_text ,inline =False )
+                embed .add_field (name ="⏱ Время решения",value =resolution_text ,inline =False )
 
             await interaction .response .send_message (embed =embed )
         else :
@@ -123,7 +123,7 @@ class SLACog (commands .Cog ):
             embed .add_field (name ="Response Deadline",value =sla_info ['response_deadline'][:16 ],inline =True )
 
         if sla_info .get ('resolution_deadline'):
-            embed .add_field (name ="Resolution Deadline",value =sla_info ['resolution_deadline'][:16 ],inline =True )
+            embed .add_field (name ="⏰ Срок решения",value =sla_info ['resolution_deadline'][:16 ],inline =True )
 
         if sla_info .get ('time_remaining'):
             embed .add_field (name ="Time Remaining",value =sla_info ['time_remaining'],inline =True )
@@ -173,7 +173,7 @@ class SLACog (commands .Cog ):
         # Embed создать
         embed =discord .Embed (
         title =" SLA Policy Создано",
-        description =f"**Ad:** {name}\n**Aчыklama:** {description}\n**ID:** {policy.policy_id}",
+        description =f"**Название:** {name}\n**Описание:** {description}\n**ID:** {policy.policy_id}",
         color =discord .Color .green (),
         timestamp =datetime .now ()
         )

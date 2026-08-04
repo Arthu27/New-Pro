@@ -1,6 +1,6 @@
 """
 Aether Social Cog
-- Geliшmiш anket система (чoklu выбрать, vakitlы, anonim, grafik)
+- Расширенная система опросов (множественный выбор, по времени, анонимно, с графиком)
 - Event planlayыcыsы (etkinlik takvimi, katыlыmcы список, hatыrlatmalar)
 - Matchmaking система (oyun arkadaшы bulma, команда создан)
 """
@@ -68,7 +68,7 @@ class PollView (discord .ui .View ):
             uid =str (interaction .user .id )
             votes =poll .setdefault ('votes',{})
 
-            # Одинаковый выбрать tekrar клик oyu geri al
+            # Повторный клик по тому же варианту отзывает голос
             if votes .get (uid )==idx :
                 del votes [uid ]
                 await interaction .response .send_message (" Игра отменена.",ephemeral =True )
@@ -76,7 +76,7 @@ class PollView (discord .ui .View ):
                 votes [uid ]=idx 
                 opt_name =poll ['options'][idx ]
                 await interaction .response .send_message (
-                f" **{opt_name}** выбрать oy verdin!"+(" (anonim)"if self .anonymous else ""),
+                f"🗳 **{opt_name}** — голос принят!"+(" (anonim)"if self .anonymous else ""),
                 ephemeral =True 
                 )
 
@@ -104,7 +104,7 @@ async def _update_poll_embed (message :discord .Message ,poll :dict ):
         value =f"`{bar}` **{pct}** ({cnt} oy)",
         inline =False 
         )
-    e .set_footer (text =f" Всего {total} oy • Одинаковый butona клик oyunu geri alabilirsin")
+    e .set_footer (text =f"🗳 Всего голосов: {total} • Повторный клик по той же кнопке отзывает голос")
     try :
         await message .edit (embed =e )
     except Exception :
@@ -135,7 +135,7 @@ class EventJoinView (discord .ui .View ):
             msg =" Событиеten покинул."
         else :
             participants .append (uid )
-            msg =f" **{event['title']}** etkinliгine присоединился!"
+            msg =f" **{event['title']}** — ты присоединился к событию!"
         _save (path ,data )
         await interaction .response .send_message (msg ,ephemeral =True )
         # Embed обновить
@@ -206,7 +206,7 @@ class MatchView (discord .ui .View ):
         # Takыm doldu mu?
         if len (players )>=self .max_players :
             await interaction .channel .send (
-            f" **{match['game']}** командаы doldu! "
+            f" **{match['game']}** — команда набрана! "
             +" ".join (f"<@{p}>"for p in players )
             +"\nHaydi oynayыn! "
             )
