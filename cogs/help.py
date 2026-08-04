@@ -95,6 +95,12 @@ def _cat_icon(key, size):
         img = Image.new('RGBA', (size, size), (0, 0, 0, 0))
     else:
         img = img.resize((size, size), Image.Resampling.LANCZOS)
+        # Kenar beyaz cizgileri/artiklari yumusak sekilde kirp: %5 inset + yuvarlak kose mask
+        inset = max(2, size // 20)
+        img = img.crop((inset, inset, size - inset, size - inset)).resize((size, size), Image.Resampling.LANCZOS)
+        mask = Image.new('L', (size, size), 0)
+        ImageDraw.Draw(mask).rounded_rectangle((0, 0, size - 1, size - 1), radius=max(6, size // 5), fill=255)
+        img.putalpha(mask)
     _icon_cache[ckey] = img
     return img
 
@@ -242,8 +248,12 @@ CAT_ICONS = {
     "economy": "coin",
     "music": "music",
     "levels": "levelup",
+    "utility": "utility",
+    "voice": "voice",
+    "fun": "fun",
     "giveaway": "gift",
     "profile": "afk_icon",
+    "navigation": "navigation",
 }
 # Эмодзи-заглушки для select-меню, если на сервере нет кастомных aether_*
 CAT_EMOJIS_FALLBACK = {
@@ -305,7 +315,7 @@ def generate_help_card(category_id: str = None) -> Image.Image:
         bx = start_x + box_w + gap_x
         by = start_y + 5 * (box_h + gap_y)
         bg.alpha_composite(_panel(box_w, box_h, radius=16, border=(212, 175, 55, 220)), (bx, by))
-        icon = _cat_icon("aether_logo", 58)
+        icon = _cat_icon("navigation", 58)
         bg.alpha_composite(icon, (bx + 14, by + 14))
         d = ImageDraw.Draw(bg)
         d.text((bx + 86, by + 12), "НАВИГАЦИЯ", fill=TXT, font=_f(True, 21))
