@@ -419,18 +419,23 @@ CATEGORIES = [
 
 TOTAL_CMDS = sum(len(c["commands"]) for c in CATEGORIES)
 
-CAT_EMOJIS = {
-    "moderation": "🛡️",
-    "warnings": "⚠️",
-    "tickets": "🎫",
-    "economy": "💳",
-    "music": "🎵",
-    "levels": "⭐",
-    "utility": "⚙️",
-    "voice": "🎙️",
-    "fun": "🎲",
-    "giveaway": "🎁",
-    "profile": "👤",
+# Kategori -> ozel marka simgemiz (assets/icons/<name>_256.png)
+# Discord select-menu emoji'si olarak kullanilir; botun /upload-emoji komutuyla
+# sunucuya ozel emoji olarak yuklenip <:name:id> formatina cevrilebilir.
+CAT_ICONS = {
+    "moderation": "shield",
+    "warnings": "warn",
+    "tickets": "ticket",
+    "economy": "coin",
+    "music": "music",
+    "levels": "levelup",
+    "giveaway": "gift",
+    "profile": "afk_icon",
+}
+CAT_EMOJIS_FALLBACK = {
+    "moderation": "🛡", "warnings": "⚠", "tickets": "🎫", "economy": "🪙",
+    "music": "🎵", "levels": "⭐", "utility": "⚙", "voice": "🎙",
+    "fun": "🎲", "giveaway": "🎁", "profile": "👤",
 }
 
 
@@ -555,6 +560,22 @@ def generate_help_card_bytes(category_id: str = None) -> io.BytesIO:
     return buf
 
 
+CUSTOM_EMOJIS: dict = {}
+
+
+def load_custom_help_emojis(bot):
+    """Sunucudaki ozel emojileri tara; isimleri aether_<ikon> olanlari help menusune bagla.
+
+    Ikony yuklemek icin: !upload-emoji (assets/icons altindaki PNG'leri sunucuya ozel emoji olarak ekler).
+    """
+    CUSTOM_EMOJIS.clear()
+    for g in bot.guilds:
+        for e in g.emojis:
+            if e.name.startswith('aether_') and e.available:
+                key = e.name[len('aether_'):]
+                CUSTOM_EMOJIS.setdefault(key, str(e))
+
+
 class HelpSelect(discord.ui.Select):
     def __init__(self, current_cat=None):
         options = [
@@ -572,7 +593,7 @@ class HelpSelect(discord.ui.Select):
                     label=c["title"],
                     value=c["id"],
                     description=f"{len(c['commands'])} команд в категории",
-                    emoji=CAT_EMOJIS.get(c["id"], "▪️"),
+                    emoji=CUSTOM_EMOJIS.get(c["id"]) or CAT_EMOJIS_FALLBACK.get(c["id"], "▪"),
                     default=(c["id"] == current_cat)
                 )
             )
@@ -644,5 +665,54 @@ class Help(commands.Cog):
         await interaction.followup.send(file=file, view=view, ephemeral=True)
 
 
+class HelpEmojiUpload(commands.Cog):
+    """Ozel help simgelerini sunucuya ozel emoji olarak yukleme yardimcisi (tek seferlik)."""
+
+    def __init__(self, bot):
+        self.bot = bot
+
+    @commands.command(name='upload-emoji')
+    @commands.has_permissions(administrator=True)
+    async def upload_emoji(self, ctx):
+        """assets/icons altindaki simgeleri sunucuya 'aether_<isim>' ozel emojisi olarak yukler."""
+        import os as _os
+        icons_dir = _os.path.join(ROOT, 'assets', 'icons')
+        done, skipped, failed = [], [], []
+        existing = {e.name for e in ctx.guild.emojis}
+        for fn in sorted(_os.listdir(icons_dir)):
+            if not fn.endswith('_256.png'):
+                continue
+            name = 'aether_' + fn[:-len('_256.png')]
+            if name in existing:
+                skipped.append(fn)
+                continue
+            try:
+                with open(_os.path.join(icons_dir, fn), 'rb') as fp:
+                    data = fp.read()
+                await ctx.guild.create_custom_emoji(name=name, image=data)
+                done.append(fn)
+            except Exception as exc:
+                failed.append(f'{fn}: {exc}')
+        # Afk ikonu (kök assets altinda)
+        afk_p = _os.path.join(ROOT, 'assets', 'afk_icon.png')
+        if _os.path.exists(afk_p) and 'aether_afk_icon' not in existing:
+            try:
+                with open(afk_p, 'rb') as fp:
+                    await ctx.guild.create_custom_emoji(name='aether_afk_icon', image=fp.read())
+                done.append('afk_icon.png')
+            except Exception as exc:
+                failed.append(f'afk_icon.png: {exc}')
+        load_custom_help_emojis(self.bot)
+        msg = [f'Загружено: **{len(done)}**, пропущено (уже есть): **{len(skipped)}**']
+        if failed:
+            msg.append('Ошибки: ' + '; '.join(failed[:5]))
+        await ctx.send('\n'.join(msg))
+
+    @commands.Cog.listener()
+    async def on_ready(self):
+        load_custom_help_emojis(self.bot)
+
+
 async def setup(bot):
     await bot.add_cog(Help(bot))
+    await bot.add_cog(HelpEmojiUpload(bot))
