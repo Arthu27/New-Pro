@@ -27,12 +27,20 @@ TXT = (235, 238, 250)
 MUTED = (148, 156, 190)
 SS = 2
 
+# Font cache — her metin icin dosyayi tekrar acmaz (render ciddi hizlanir)
+_FONT_CACHE = {}
+
 
 def _f(bold=False, sz=20):
-    try:
-        return ImageFont.truetype(FONT_B if bold else FONT_R, sz)
-    except Exception:
-        return ImageFont.load_default()
+    key = (bold, sz)
+    f = _FONT_CACHE.get(key)
+    if f is None:
+        try:
+            f = ImageFont.truetype(FONT_B if bold else FONT_R, sz)
+        except Exception:
+            f = ImageFont.load_default()
+        _FONT_CACHE[key] = f
+    return f
 
 
 def _load_bg(w, h):
@@ -383,7 +391,7 @@ def generate_help_card(category_id: str = None) -> Image.Image:
     dd.text((sc(94), H - sc(nav_h + 24) + sc(38)), "выберите раздел — карточка обновится",
             fill=(178, 186, 212), font=_f(False, sc(16)))
     vf = _f(True, sc(16))
-    vt = "HELP v5.2"
+    vt = "HELP v5.3"
     dd.text((W - sc(24) - dd.textlength(vt, font=vf) - sc(14), H - sc(nav_h + 24) + sc(24)), vt, fill=GOLD, font=vf)
 
     # ── Золотые уголки ──
@@ -395,13 +403,32 @@ def generate_help_card(category_id: str = None) -> Image.Image:
     return bg
 
 
+# Содержимое карточек полностью статично — PNG-байты кэшируются один раз,
+# переключение страниц в select-меню становится мгновенным.
+_CARD_BYTES_CACHE = {}
+
+
 def generate_help_card_bytes(category_id: str = None) -> io.BytesIO:
-    """Kart zaten 2x native çiziliyor (R=2) — upscale bulanıklığı yok"""
-    card = generate_help_card(category_id).convert('RGB')
-    buf = io.BytesIO()
-    card.save(buf, format='PNG', optimize=True)
-    buf.seek(0)
-    return buf
+    """Kart zaten 2x native çiziliyor (R=2) — upscale bulanıklığı yok.
+    PNG-baytlar önbellekten geliyorsa sıfırdan render yapılmaz (anlık sayfa geçişi)."""
+    key = category_id or "overview"
+    data = _CARD_BYTES_CACHE.get(key)
+    if data is None:
+        card = generate_help_card(category_id).convert('RGB')
+        buf = io.BytesIO()
+        card.save(buf, format='PNG', optimize=True)
+        data = buf.getvalue()
+        _CARD_BYTES_CACHE[key] = data
+    return io.BytesIO(data)
+
+
+def prewarm_help_cards():
+    """Bot açılırken tüm sayfaları arka planda bir kez çiz — ilk seçim bile anında."""
+    for cid in [None] + [c["id"] for c in CATEGORIES]:
+        try:
+            generate_help_card_bytes(cid)
+        except Exception:
+            pass
 
 
 CUSTOM_EMOJIS: dict = {}
@@ -469,6 +496,13 @@ class HelpView(discord.ui.View):
 class Help(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+
+    async def cog_load(self):
+        """12 sayfanin tamamini hazirda bekletmek icin arka planda on-isitma."""
+        async def _warm():
+            await self.bot.wait_until_ready()
+            await self.bot.loop.run_in_executor(None, prewarm_help_cards)
+        self.bot.loop.create_task(_warm())
 
     @commands.command(name="help", aliases=["h", "команды", "menu", "yardim"])
     async def help_prefix(self, ctx, category: str = None):
