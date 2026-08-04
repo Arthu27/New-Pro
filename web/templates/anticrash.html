@@ -1,0 +1,269 @@
+{% extends "base.html" %}
+{% block title %}Анти-краш — Aether{% endblock %}
+{% block page_title %}<i class="fas fa-life-ring" style="animation: pulse 2s infinite;"></i> Анти-краш центр{% endblock %}
+{% block content %}
+{% block page_hero %}
+<div class="page-hero compact">
+  <div class="page-hero-content">
+    <div class="page-hero-greeting">
+      <span class="dot"></span>
+      <span>ЗАЩИТА ОТ ПАДЕНИЙ • МОНИТОРИНГ В РЕАЛЬНОМ ВРЕМЕНИ</span>
+    </div>
+    <h1>Анти-краш центр</h1>
+    <p>Watchdog event-loop, circuit breaker модулей, критические алерты и статистика ошибок — обновление каждые 5 секунд.</p>
+  </div>
+</div>
+{% endblock %}
+
+<style>
+  .ac-wrap { padding:6px 2px 34px; max-width: 1080px; }
+  .ac-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:14px; margin-bottom:20px; }
+  .ac-card { background:linear-gradient(160deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015)); border:1px solid rgba(255,255,255,0.09); border-radius:16px; padding:18px; position:relative; overflow:hidden; transition:.18s; }
+  .ac-card:hover { border-color:var(--ac-line); transform:translateY(-2px); box-shadow:0 10px 28px rgba(0,0,0,0.3); }
+  .ac-card::after { content:''; position:absolute; top:0; right:0; width:100px; height:100px; background:radial-gradient(circle at top right,var(--ac-soft),transparent 70%); pointer-events:none; }
+  .ac-icon { width:38px; height:38px; border-radius:11px; background:var(--ac-soft); color:var(--ac); border:1px solid var(--ac-line); display:flex; align-items:center; justify-content:center; font-size:15px; margin-bottom:10px; position:relative; z-index:1; }
+  .ac-val { font-size:24px; font-weight:800; letter-spacing:-.02em; font-variant-numeric:tabular-nums; position:relative; z-index:1; }
+  .ac-val small { font-size:12px; color:var(--text-3); font-weight:600; }
+  .ac-lbl { font-size:10.5px; opacity:.6; text-transform:uppercase; letter-spacing:.08em; margin-top:3px; position:relative; z-index:1; }
+
+  .ac-box { background:linear-gradient(160deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015)); border:1px solid rgba(255,255,255,0.09); border-radius:16px; margin-bottom:16px; overflow:hidden; }
+  .ac-head { padding:14px 18px; font-weight:700; font-size:14px; display:flex; align-items:center; gap:9px; background:rgba(255,255,255,0.03); border-bottom:1px solid rgba(255,255,255,0.06); }
+  .ac-head i { color:var(--ac, #e0b04a); }
+  .ac-head .ac-head-right { margin-left:auto; font-size:11px; opacity:.65; font-weight:600; }
+  .ac-body { padding:14px 18px; }
+
+  .ac-pill { display:inline-flex; align-items:center; gap:7px; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:700; }
+  .ac-pill-on { background:rgba(46,204,113,0.14); color:#2ecc71; border:1px solid rgba(46,204,113,0.3); }
+  .ac-pill-off { background:rgba(231,76,60,0.14); color:#e74c3c; border:1px solid rgba(231,76,60,0.3); }
+  .ac-pill-mid { background:rgba(243,156,18,0.14); color:#f39c12; border:1px solid rgba(243,156,18,0.3); }
+
+  .ac-row { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.04); font-size:13px; }
+  .ac-row:last-child { border-bottom:none; }
+  .ac-key { color:var(--text-3); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ac-val2 { font-weight:700; font-variant-numeric:tabular-nums; flex-shrink:0; }
+
+  .ac-err { display:flex; gap:10px; padding:8px 10px; border-radius:10px; font-size:12.5px; border:1px solid transparent; margin-bottom:6px; background:rgba(255,255,255,0.02); }
+  .ac-err.crit { border-color:rgba(231,76,60,0.25); background:rgba(231,76,60,0.06); }
+  .ac-err-time { color:var(--text-3); font-variant-numeric:tabular-nums; flex-shrink:0; }
+  .ac-err-type { font-weight:800; color:#f39c12; flex-shrink:0; }
+  .ac-err.crit .ac-err-type { color:#e74c3c; }
+  .ac-err-msg { opacity:.8; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+  .ac-cols { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width: 800px){ .ac-cols { grid-template-columns:1fr; } }
+
+  .ac-form-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:12px; }
+  .ac-field { background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.07); border-radius:12px; padding:12px 14px; }
+  .ac-field-top { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .ac-field-label { font-size:13px; font-weight:700; }
+  .ac-field-desc { font-size:11.5px; color:var(--text-3); margin-top:5px; line-height:1.35; }
+  .ac-field input[type=number], .ac-field input[type=text] { width:110px; background:rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.12); color:var(--text-1,#fff); border-radius:8px; padding:6px 10px; font-size:13px; font-weight:700; text-align:right; }
+  .ac-field input[type=number]:focus, .ac-field input[type=text]:focus { outline:none; border-color:var(--ac); }
+  .ac-switch { position:relative; width:46px; height:24px; flex-shrink:0; }
+  .ac-switch input { display:none; }
+  .ac-switch span { position:absolute; inset:0; background:rgba(255,255,255,0.12); border-radius:20px; transition:.2s; cursor:pointer; }
+  .ac-switch span:before { content:''; position:absolute; width:18px; height:18px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.2s; }
+  .ac-switch input:checked + span { background:var(--ac, #e0b04a); }
+  .ac-switch input:checked + span:before { transform:translateX(22px); }
+
+  .ac-actions { display:flex; gap:10px; margin-top:16px; flex-wrap:wrap; }
+  .ac-btn { padding:10px 22px; border-radius:11px; border:1px solid var(--ac-line); background:linear-gradient(160deg,var(--ac,#e0b04a),#c8922a); color:#1a1206; font-weight:800; font-size:13px; cursor:pointer; transition:.15s; }
+  .ac-btn:hover { transform:translateY(-1px); box-shadow:0 8px 20px rgba(200,146,42,0.35); }
+  .ac-btn.danger { background:linear-gradient(160deg,#e74c3c,#c0392b); color:#fff; }
+  .ac-btn.ghost { background:rgba(255,255,255,0.05); color:var(--text-1,#fff); border-color:rgba(255,255,255,0.14); }
+
+  .ac-toast { position:fixed; bottom:24px; right:24px; padding:13px 20px; border-radius:12px; font-size:13px; font-weight:700; z-index:9999; opacity:0; transform:translateY(12px); transition:.25s; pointer-events:none; }
+  .ac-toast.show { opacity:1; transform:translateY(0); }
+  .ac-toast.ok { background:rgba(46,204,113,0.95); color:#08130c; }
+  .ac-toast.bad { background:rgba(231,76,60,0.95); color:#fff; }
+
+  .ac-master-banner { display:flex; align-items:center; gap:14px; padding:14px 18px; border-radius:14px; margin-bottom:18px; border:1px solid; font-size:14px; font-weight:700; }
+  .ac-master-banner.on { background:rgba(46,204,113,0.08); border-color:rgba(46,204,113,0.25); color:#2ecc71; }
+  .ac-master-banner.off { background:rgba(231,76,60,0.08); border-color:rgba(231,76,60,0.3); color:#e74c3c; }
+  .ac-master-banner i { font-size:20px; }
+</style>
+
+<div class="ac-wrap">
+  <div class="ac-master-banner on" id="master-banner">
+    <i class="fas fa-shield-halved"></i>
+    <span id="master-text">Загрузка…</span>
+    <span style="margin-left:auto;font-size:12px;opacity:.7" id="master-sub"></span>
+  </div>
+
+  <div class="ac-grid" data-reveal="up">
+    <div class="ac-card"><div class="ac-icon"><i class="fas fa-clock"></i></div><div class="ac-val" id="v-uptime">—</div><div class="ac-lbl">Аптайм</div></div>
+    <div class="ac-card"><div class="ac-icon"><i class="fas fa-bug"></i></div><div class="ac-val" id="v-total">—</div><div class="ac-lbl">Всего ошибок</div></div>
+    <div class="ac-card"><div class="ac-icon"><i class="fas fa-chart-line"></i></div><div class="ac-val" id="v-hour">—</div><div class="ac-lbl">Ошибок / час</div></div>
+    <div class="ac-card"><div class="ac-icon"><i class="fas fa-skull"></i></div><div class="ac-val" id="v-crit">—</div><div class="ac-lbl">Критических</div></div>
+    <div class="ac-card"><div class="ac-icon"><i class="fas fa-gauge-high"></i></div><div class="ac-val" id="v-lag">—</div><div class="ac-lbl">Макс. лаг цикла</div></div>
+    <div class="ac-card"><div class="ac-icon"><i class="fas fa-bell"></i></div><div class="ac-val" id="v-alerts">—</div><div class="ac-lbl">Алертов отправлено</div></div>
+    <div class="ac-card"><div class="ac-icon"><i class="fas fa-signal"></i></div><div class="ac-val" id="v-ping">—</div><div class="ac-lbl">Discord пинг</div></div>
+  </div>
+
+  <div class="ac-box" data-reveal="up">
+    <div class="ac-head"><i class="fas fa-bolt"></i> Circuit breaker <span class="ac-head-right" id="br-state"></span></div>
+    <div class="ac-body" id="breaker-list"><div style="opacity:.55;font-size:13px">Тишина — ни одного срабатывания ✨</div></div>
+  </div>
+
+  <div class="ac-cols">
+    <div class="ac-box" data-reveal="up">
+      <div class="ac-head"><i class="fas fa-ranking-star"></i> Топ типов ошибок</div>
+      <div class="ac-body" id="top-types"><div style="opacity:.55;font-size:13px">—</div></div>
+    </div>
+    <div class="ac-box" data-reveal="up">
+      <div class="ac-head"><i class="fas fa-cubes"></i> Топ модулей по ошибкам</div>
+      <div class="ac-body" id="top-cogs"><div style="opacity:.55;font-size:13px">—</div></div>
+    </div>
+  </div>
+
+  <div class="ac-box" data-reveal="up">
+    <div class="ac-head"><i class="fas fa-list-ul"></i> Последние ошибки <span class="ac-head-right">последние 15 записей</span></div>
+    <div class="ac-body" id="last-errors"><div style="opacity:.55;font-size:13px">Ошибок пока нет</div></div>
+  </div>
+
+  <div class="ac-box" data-reveal="up">
+    <div class="ac-head"><i class="fas fa-sliders"></i> Настройки защиты <span class="ac-head-right">сохраняются в data/anticrash_config.json</span></div>
+    <div class="ac-body">
+      <div class="ac-form-grid" id="cfg-grid"><div style="opacity:.55;font-size:13px">Загрузка настроек…</div></div>
+      <div class="ac-actions">
+        <button class="ac-btn" onclick="saveConfig()"><i class="fas fa-save"></i> Сохранить настройки</button>
+        <button class="ac-btn ghost" onclick="loadConfig()"><i class="fas fa-rotate"></i> Обновить</button>
+        <button class="ac-btn danger" onclick="resetStats()"><i class="fas fa-trash"></i> Сбросить статистику</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="ac-toast" id="ac-toast"></div>
+
+<script>
+let CFG_META = {}, CFG_ORDER = [];
+
+function toast(msg, ok=true){
+  const t = document.getElementById('ac-toast');
+  t.textContent = msg;
+  t.className = 'ac-toast show ' + (ok ? 'ok' : 'bad');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fmtTs(ts){ const d = new Date(ts*1000); return d.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit',second:'2-digit'}); }
+
+async function loadOverview(){
+  try{
+    const r = await fetch('/api/anticrash/overview');
+    const d = await r.json();
+    if(!d.ok){ document.getElementById('master-text').textContent = d.error || 'Обработчик офлайн'; return; }
+    const banner = document.getElementById('master-banner');
+    banner.className = 'ac-master-banner ' + (d.master_enabled ? 'on' : 'off');
+    document.getElementById('master-text').textContent = d.master_enabled
+      ? 'Анти-краш активен — бот под защитой'
+      : 'Анти-краш ОТКЛЮЧЕН (master_enabled) — мониторинг и алерты остановлены';
+    document.getElementById('master-sub').textContent =
+      `watchdog ${d.watchdog_on?'ON':'OFF'} • breaker ${d.breaker_on?'ON':'OFF'} • auto-reload ${d.auto_reload_on?'ON':'OFF'} • канал алертов ${d.channel_configured?'задан':'не задан'}`;
+
+    document.getElementById('v-uptime').textContent = d.uptime_human;
+    document.getElementById('v-total').innerHTML = d.total_errors;
+    document.getElementById('v-hour').innerHTML = d.errors_last_hour;
+    document.getElementById('v-crit').innerHTML = d.critical;
+    document.getElementById('v-lag').innerHTML = d.loop_lag_max + ' <small>с (сейчас '+d.loop_lag_recent+')</small>';
+    document.getElementById('v-alerts').innerHTML = d.alerts_sent + ' <small>/ очередь '+d.alerts_queued+'</small>';
+    document.getElementById('v-ping').innerHTML = d.latency_ms + ' <small>мс</small>';
+
+    const bl = document.getElementById('breaker-list');
+    if(d.breakers && d.breakers.length){
+      bl.innerHTML = d.breakers.map(b =>
+        `<div class="ac-row"><span class="ac-key"><i class="fas fa-bolt" style="color:#f39c12"></i> ${esc(b.module)}</span>
+         <span class="ac-val2">${b.count}× ${b.tripped_at ? '· '+fmtTs(b.tripped_at) : ''}</span></div>`).join('');
+      document.getElementById('br-state').textContent = 'Срабатываний: ' + d.breakers.length;
+    } else {
+      bl.innerHTML = '<div style="opacity:.55;font-size:13px">Тишина — ни одного срабатывания ✨</div>';
+      document.getElementById('br-state').textContent = '';
+    }
+
+    const renderTop = (arr) => arr && arr.length
+      ? arr.map(t => `<div class="ac-row"><span class="ac-key">${esc(t.name)}</span><span class="ac-val2">${t.count}</span></div>`).join('')
+      : '<div style="opacity:.55;font-size:13px">—</div>';
+    document.getElementById('top-types').innerHTML = renderTop(d.top_types);
+    document.getElementById('top-cogs').innerHTML = renderTop(d.top_cogs);
+
+    const le = document.getElementById('last-errors');
+    if(d.last_errors && d.last_errors.length){
+      le.innerHTML = d.last_errors.map(e =>
+        `<div class="ac-err ${e.critical?'crit':''}">
+           <span class="ac-err-time">${fmtTs(e.ts)}</span>
+           <span class="ac-err-type">${esc(e.type)}</span>
+           <span class="ac-err-msg">${esc(e.where)} — ${esc(e.msg)}</span>
+         </div>`).join('');
+    } else {
+      le.innerHTML = '<div style="opacity:.55;font-size:13px">Ошибок пока нет</div>';
+    }
+  }catch(e){ /* тихо — следующая итерация */ }
+}
+
+async function loadConfig(){
+  try{
+    const r = await fetch('/api/anticrash/config');
+    const d = await r.json();
+    if(!d.ok) return;
+    CFG_META = d.meta; CFG_ORDER = d.order;
+    const grid = document.getElementById('cfg-grid');
+    grid.innerHTML = CFG_ORDER.map(k => {
+      const meta = CFG_META[k] || {label:k, desc:'', type:'text'};
+      const v = d.config[k];
+      let input;
+      if(meta.type === 'bool'){
+        input = `<label class="ac-switch"><input type="checkbox" data-cfg="${esc(k)}" ${v?'checked':''}><span></span></label>`;
+      } else if(meta.type === 'float'){
+        input = `<input type="number" step="0.5" min="0" data-cfg="${esc(k)}" value="${esc(v)}">`;
+      } else if(meta.type === 'int'){
+        input = `<input type="number" step="1" min="0" data-cfg="${esc(k)}" value="${esc(v)}">`;
+      } else {
+        input = `<input type="text" data-cfg="${esc(k)}" value="${esc(v)}">`;
+      }
+      return `<div class="ac-field">
+        <div class="ac-field-top"><div class="ac-field-label">${esc(meta.label)}</div>${input}</div>
+        <div class="ac-field-desc">${esc(meta.desc)} <code style="opacity:.6">${esc(k)}</code></div>
+      </div>`;
+    }).join('');
+  }catch(e){ toast('Не удалось загрузить настройки', false); }
+}
+
+async function saveConfig(){
+  const payload = {};
+  document.querySelectorAll('[data-cfg]').forEach(el => {
+    const k = el.getAttribute('data-cfg');
+    const meta = CFG_META[k] || {};
+    if(meta.type === 'bool') payload[k] = el.checked;
+    else if(meta.type === 'float') payload[k] = parseFloat(el.value || '0');
+    else if(meta.type === 'int') payload[k] = parseInt(el.value || '0', 10);
+    else payload[k] = el.value;
+  });
+  try{
+    const r = await fetch('/api/anticrash/config', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)
+    });
+    const d = await r.json();
+    if(d.ok){ toast('Настройки сохранены ✓'); }
+    else {
+      const errs = Object.entries(d.errors||{}).map(([k,v])=>k+': '+v).join('; ');
+      toast('Часть полей не принята: ' + errs, false);
+      loadConfig();
+    }
+  }catch(e){ toast('Ошибка сохранения', false); }
+}
+
+async function resetStats(){
+  if(!confirm('Сбросить всю статистику ошибок anti-crash?')) return;
+  try{
+    const r = await fetch('/api/anticrash/reset', {method:'POST'});
+    const d = await r.json();
+    if(d.ok){ toast('Статистика сброшена ✓'); loadOverview(); }
+    else toast('Ошибка: ' + (d.error||''), false);
+  }catch(e){ toast('Ошибка сброса', false); }
+}
+
+loadConfig();
+loadOverview();
+setInterval(loadOverview, 5000);
+</script>
+{% endblock %}

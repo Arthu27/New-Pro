@@ -364,6 +364,65 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     def sunucu_health_page ():
         return render_template ('server_health.html',role =session .get ('role'),username =session .get ('username'))
 
+    # ── ANTI-CRASH merkezi ──────────────────────────────────────────────
+    def _anticrash_handler():
+        import web.app as _app
+        bot = _app.bot_instance
+        return getattr(bot, 'error_handler', None) if bot else None
+
+    @app.route('/anticrash')
+    @login_required
+    @role_required('admin')
+    def anticrash_page():
+        return render_template('anticrash.html', role=session.get('role'), username=session.get('username'))
+
+    @app.route('/api/anticrash/overview')
+    @login_required
+    @role_required('admin')
+    def api_anticrash_overview():
+        eh = _anticrash_handler()
+        if not eh:
+            return jsonify({'ok': False, 'error': 'Обработчик офлайн (бот не запущен)'})
+        return jsonify(eh.get_overview())
+
+    @app.route('/api/anticrash/config', methods=['GET', 'POST'])
+    @login_required
+    @role_required('admin')
+    def api_anticrash_config():
+        from error_handler import CONFIG_META, DEFAULT_CONFIG
+        eh = _anticrash_handler()
+        if not eh:
+            return jsonify({'ok': False, 'error': 'Обработчик офлайн'}), 503
+        if request.method == 'GET':
+            return jsonify({
+                'ok': True,
+                'config': eh.config,
+                'order': list(DEFAULT_CONFIG.keys()),
+                'meta': {k: {'label': v[0], 'desc': v[1], 'type': v[2]} for k, v in CONFIG_META.items()},
+            })
+        data = request.get_json(silent=True) or {}
+        updated, errors = {}, {}
+        for k, v in data.items():
+            try:
+                updated[k] = eh.update_config(k, v)
+            except KeyError:
+                errors[k] = 'неизвестный ключ'
+            except (ValueError, TypeError) as e:
+                errors[k] = str(e)
+        if errors:
+            return jsonify({'ok': False, 'updated': updated, 'errors': errors}), 400
+        return jsonify({'ok': True, 'config': eh.config})
+
+    @app.route('/api/anticrash/reset', methods=['POST'])
+    @login_required
+    @role_required('admin')
+    def api_anticrash_reset():
+        eh = _anticrash_handler()
+        if not eh:
+            return jsonify({'ok': False, 'error': 'Обработчик офлайн'}), 503
+        eh.reset_stats()
+        return jsonify({'ok': True})
+
     @app .route ('/roles')
     @login_required 
     @role_required ('admin')
