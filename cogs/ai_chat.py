@@ -1292,6 +1292,7 @@ class AIChat (commands .Cog ):
             cmd_triggers =['channel aч','channel создать','message at','announce yap',
             'ban at','kick at','timeout ver','роли ver','роли al']
             if any (t in content .lower ()for t in cmd_triggers ):
+                context ={}
                 context ['jarvis_mode']=True 
                 context ['available_commands']=(
                 'Использовать команды:\n'

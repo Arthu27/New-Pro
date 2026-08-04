@@ -359,8 +359,8 @@ class HelpMenu:
 
 
 # Пример использования
-async def example_usage():
-    """Ёrnek kullanыm (эмодзи yok)"""
+async def example_usage(interaction, channel):
+    """Пример использования (без эмодзи)"""
     
     # Ticket добро пожаловать menюsю
     welcome_embed = TicketMenu.welcome(

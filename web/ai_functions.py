@@ -159,8 +159,8 @@ FORMAT VIZOVA:
                 return f"U пользователь <@{user_id}> нет предупреждение."
 
             result =f"Предупреждения <@{user_id}> ({len(user_warnings)}):\n"
-            for i ,варн in enumerate (user_warnings [-5 :],1 ):# В конец 5
-                result +=f"{i}. {warn.get('reason', 'Bez причина')} — {warn.get('мод', '?')} ({warn.get('timestamp', '?')[:10]})\n"
+            for i ,варн in enumerate (user_warnings [-5 :],1 ):# последние 5
+                result +=f"{i}. {варн.get('reason', 'Без причины')} — {варн.get('mod', '?')} ({варн.get('timestamp', '?')[:10]})\n"
 
             return result 
         except Exception as e :

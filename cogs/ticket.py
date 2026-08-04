@@ -2038,8 +2038,9 @@ class Ticket (commands .Cog ):
                     self ._save_ticket_state (guild_id ,channel_id ,state )
                     return 
 
-                    # 12. Generiruem baгlamnie podskazki для модератор
+                    # 12. Генерируем контекстные подсказки для модераторов
                 suggested_actions =[]
+                guild =message .guild
 
                 # Если у пользователя есть предупреждения
                 if guild_context .get ('user_id'):

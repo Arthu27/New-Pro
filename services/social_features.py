@@ -231,13 +231,13 @@ class MentionSystem:
         return False
     
     def mark_all_mentions_read(self, user_id: str) -> int:
-        """Все mentions'larы прочитано как iшaretle"""
+        """Отметить все упоминания пользователя прочитанными"""
         if user_id not in self.mentions:
             return 0
         
         count = 0
         for упоминание in self.mentions[user_id]:
-            if not mention.get('read', False):
+            if not упоминание.get('read', False):
                 упоминание['read'] = True
                 count += 1
         

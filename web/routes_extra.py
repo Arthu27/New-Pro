@@ -1,6 +1,7 @@
 """Extra panel routes - pages"""
 from flask import render_template ,session ,redirect ,url_for ,request ,jsonify ,Response 
 import os ,json 
+import time 
 import discord 
 from datetime import datetime 
 
@@ -42,8 +43,19 @@ def _fetch_channel_msgs_sync (bot ,channel_mentions ):
     return _asyncio3 .run (_fetch_channel_msgs_async (bot ,channel_mentions ))
 
 
+def _run_async (coro ,timeout =10 ):
+    """Run an async coroutine from sync code, return result or raise."""
+    import asyncio as _aio
+    import web .app as _app
+    bot =_app .bot_instance
+    if not bot or not getattr (bot ,'loop',None ):
+        raise RuntimeError ('Бот не работает')
+    future =_aio .run_coroutine_threadsafe (coro ,bot .loop )
+    return future .result (timeout =timeout )
+
+
 def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
-    """AI cevabыndaki <action> обрабатывает блок, результат сообщение возвращает."""
+    """Обрабатывает блок <action> из ответа AI и возвращает текст результата."""
     import re as _re ,asyncio as _asyncio ,os as _os 
     from datetime import datetime as _dt ,timedelta as _td 
 
@@ -76,28 +88,28 @@ def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
             if not uid :
                 return '❌ Пользователь ID не найден'
                 # AI asistan никогда автоматически warn не может отправить — только predlojenie предлагает
-            return f'⚠️ AI warn предложение: {uid} usersыna "{reason}" причина warn. Подтвердитьmak для /moderate команду использовать.'
+            return f'⚠️ AI warn предложение: {uid} usersыna "{reason}" причина warn. Подтвердите командой /moderate.'
 
         elif action_type =='ban':
             reason =action_data .get ('reason','AI ban')
             if not (guild and uid ):
-                return '❌ Eksik parametre'
+                return '❌ Отсутствует параметр'
             member =guild .get_member (int (uid ))
             if not member :
                 return '❌ Участник на сервере не найден'
                 # AI ban предложение — автоматически примен
-            return f'⚠️ AI ban предложение: {member.display_name} ({uid}) — Причина: "{reason}". Подтвердитьmak для /moderate ban команду использовать.'
+            return f'⚠️ AI ban предложение: {member.display_name} ({uid}) — Причина: "{reason}". Подтвердите командой /moderate ban.'
             return f'✅ Ban применено (user_id: {uid})'
 
         elif action_type =='kick':
             reason =action_data .get ('reason','AI kick')
             if not (guild and uid ):
-                return '❌ Eksik parametre'
+                return '❌ Отсутствует параметр'
             member =guild .get_member (int (uid ))
             if not member :
                 return '❌ Участник на сервере не найден'
                 # AI kick предложение — автоматически примен
-            return f'⚠️ AI kick предложение: {member.display_name} ({uid}) — Причина: "{action_data.get("reason", "AI kick")}". Подтвердитьmak для /moderate kick команду использовать.'
+            return f'⚠️ AI kick предложение: {member.display_name} ({uid}) — Причина: "{action_data.get("reason", "AI kick")}". Подтвердите командой /moderate kick.'
 
         elif action_type =='dm':
             message =action_data .get ('message','')
@@ -113,40 +125,40 @@ def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
             minutes =int (action_data .get ('minutes',10 ))
             reason =action_data .get ('reason','AI timeout')
             if not (guild and uid ):
-                return '❌ Eksik parametre'
+                return '❌ Отсутствует параметр'
             member =guild .get_member (int (uid ))
             if not member :
                 return '❌ Участник на сервере не найден'
                 # AI timeout предложение — автоматически примен
-            return f'⚠️ AI timeout предложение: {member.display_name} ({uid}) — {minutes} minutes, Причина: "{reason}". Подтвердитьmak для /moderate timeout команду использовать.'
+            return f'⚠️ AI timeout предложение: {member.display_name} ({uid}) — {minutes} мин, причина: "{reason}". Подтвердите командой /moderate timeout.'
 
         elif action_type =='add_role':
             role_id =str (action_data .get ('role_id',''))
             if not (guild and uid and role_id ):
-                return '❌ Eksik parametre'
+                return '❌ Отсутствует параметр'
             member =guild .get_member (int (uid ))
             role =guild .get_role (int (role_id ))
-            if not (member and roles ):
+            if not (member and role ):
                 return '❌ Участник или роль не найдены'
             _asyncio .run_coroutine_threadsafe (member .add_roles (role ),bot .loop ).result (timeout =10 )
-            return f'✅ Роли addndi: {role.name}'
+            return f'✅ Роль выдана: {role.name}'
 
         elif action_type =='remove_role':
             role_id =str (action_data .get ('role_id',''))
             if not (guild and uid and role_id ):
-                return '❌ Eksik parametre'
+                return '❌ Отсутствует параметр'
             member =guild .get_member (int (uid ))
             role =guild .get_role (int (role_id ))
-            if not (member and roles ):
+            if not (member and role ):
                 return '❌ Участник или роль не найдены'
             _asyncio .run_coroutine_threadsafe (member .remove_roles (role ),bot .loop ).result (timeout =10 )
-            return f'✅ Роли alыndы: {role.name}'
+            return f'✅ Роль снята: {role.name}'
 
         elif action_type =='send_message':
             channel_id =str (action_data .get ('channel_id',''))
             message =action_data .get ('message','')
             if not (bot and channel_id and message ):
-                return '❌ Kanal ID veya mesaj eksik'
+                return '❌ ID канала или сообщение отсутствует'
             channel =bot .get_channel (int (channel_id ))
             if not channel :
                 return '❌ Канал не найден'
@@ -157,7 +169,7 @@ def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
             channel_id =str (action_data .get ('channel_id',''))
             message_id =str (action_data .get ('message_id',''))
             if not (bot and channel_id and message_id ):
-                return '❌ Канал ID или message ID eksik'
+                return '❌ ID канала или ID сообщения отсутствует'
             def _del_msg ():
                 ch =bot .get_channel (int (channel_id ))
                 if not ch :
@@ -186,7 +198,7 @@ def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
             message =action_data .get ('message','')
             role_id =str (action_data .get ('role_id',''))
             if not (bot and guild and message ):
-                return '❌ Eksik parametre'
+                return '❌ Отсутствует параметр'
             members =guild .members if not role_id else [
             m for m in guild .members if any (str (r .id )==role_id for r in m .roles )
             ]
@@ -249,7 +261,7 @@ def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
         elif action_type =='nick':
             nick =action_data .get ('nick','')
             if not (guild and uid ):
-                return '❌ Eksik parametre'
+                return '❌ Отсутствует параметр'
             member =guild .get_member (int (uid ))
             if not member :
                 return '❌ Участник не найден'
@@ -258,7 +270,7 @@ def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
 
         elif action_type =='unban':
             if not (guild and uid ):
-                return '❌ Eksik parametre'
+                return '❌ Отсутствует параметр'
             def _unban ():
                 user =_run_async (bot .fetch_user (int (uid )))
                 _run_async (guild .unban (user ))
@@ -271,7 +283,7 @@ def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
             member =guild .get_member (int (uid ))
             if not member :
                 return f'❌ Участник на сервере не найден (ID: {uid})'
-            role =[r .name for r in member .roles if r .name !='@everyone']
+            roles =[r .name for r in member .roles if r .name !='@everyone']
             warns_file ='data/warnings.json'
             warn_count =0 
             if os .path .exists (warns_file ):
@@ -283,11 +295,11 @@ def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
             return (f'👤 {member.display_name} ({member.name})\n'
             f'📅 Вход: {member.joined_at.strftime("%d.%m.%Y") if member.joined_at else "?"}\n'
             f'⚠️ Warning: {warn_count}\n'
-            f'🎭 Роли: {", ".join(roles) or "Yok"}')
+            f'🎭 Роли: {", ".join(roles) or "нет"}')
 
-        return f'⚠️ Bilinmeyen action: {action_type}'
+        return f'⚠️ Неизвестное действие: {action_type}'
     except Exception as e :
-        return f'⚠️ Action Ошибки: {e}'
+        return f'⚠️ Ошибка действия: {e}'
 
 
 def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD_ID ='1384282749317152878'):
@@ -303,16 +315,6 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                 return configured 
             return str (guilds [0 ].id )
         return configured 
-
-    def _run_async (coro ,timeout =10 ):
-        """Run an async coroutine from sync code, return result or raise."""
-        import asyncio as _aio 
-        import web .app as _app 
-        bot =_app .bot_instance 
-        if not bot or not getattr (bot ,'loop',None ):
-            raise RuntimeError ('Бот не работает')
-        future =_aio .run_coroutine_threadsafe (coro ,bot .loop )
-        return future .result (timeout =timeout )
 
     def _resolve_member_async (guild ,user_id ):
         """Async helper: get cached member or fetch from API."""
@@ -1605,9 +1607,9 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                         if m :
                             yeni_nick =':'.join (parts [2 :])
                             _run_async (m .edit (nick =yeni_nick ))
-                            return f'✅ {m.name} nicki → {новый_nick}'
-                    return '⚠️ Eylem заверш — channel/участник не найдено'
-                    # do_action() senkron bir fonksiyon — direkt чaгыr (coroutine deгil)
+                            return f'✅ Ник изменён: {m.name} → {yeni_nick}'
+                    return '⚠️ Действие не завершено — канал/участник не найден'
+                    # do_action() — синхронная функция, вызываем напрямую (не coroutine)
                 action_result =do_action ()
             except Exception as ae :
                 action_result =f'❌ Eylem Ошибки: {ae}'
@@ -5852,104 +5854,6 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
             # api_send_embed and custom_embeds_page are defined in app.py directly
 
 
-def calculate_ai_ticket_stats (guild_id :int )->dict :
-    """AI ticket статистика hesapla"""
-    import json ,os 
-    from datetime import datetime 
-    from collections import Counter 
-
-    # Penalty dosyasыnы загрузить
-    penalty_file ='data/ticket_penalties.json'
-    penalties ={}
-    if os .path .exists (penalty_file ):
-        try :
-            with open (penalty_file ,'r',encoding ='utf-8')as f :
-                penalties =json .load (f )
-        except :
-            pass 
-
-    guild_penalties =penalties .get (str (guild_id ),{})
-
-    # Temel статистика
-    total_penalties =sum (len (p )if isinstance (p ,list )else 1 for p in guild_penalties .values ())
-
-    # Наказание причина say
-    reasons =[]
-    for user_penalties in guild_penalties .values ():
-        if isinstance (user_penalties ,list ):
-            for p in user_penalties :
-                reasons .append (p .get ('reason','bilinmiyor'))
-        else :
-            reasons .append (user_penalties .get ('reason','bilinmiyor'))
-
-    reason_counter =Counter (reasons )
-
-    # Взаимный нарушение, фейковый жалоба число
-    mutual_violations =reason_counter .get ('взаимный мат/оскорбление',0 )
-    fake_complaints =reason_counter .get ('фейковый жалоба + правило нарушение',0 )
-    single_violations =total_penalties -mutual_violations -fake_complaints 
-
-    # Oranlar
-    total =total_penalties if total_penalties >0 else 1 
-    mutual_rate =round ((mutual_violations /total )*100 ,1 )
-    fake_rate =round ((fake_complaints /total )*100 ,1 )
-    single_rate =round ((single_violations /total )*100 ,1 )
-    no_violation_rate =max (0 ,100 -mutual_rate -fake_rate -single_rate )
-
-    # En очень наказание alan userlar
-    top_offenders =[]
-    for user_id ,user_penalties in guild_penalties .items ():
-        if isinstance (user_penalties ,list ):
-            count =len (user_penalties )
-            total_duration =sum (p .get ('duration',0 )for p in user_penalties )
-            last_penalty =user_penalties [-1 ].get ('date','bilinmiyor')if user_penalties else 'bilinmiyor'
-            name =user_penalties [-1 ].get ('name',user_id )if user_penalties else user_id 
-        else :
-            count =1 
-            total_duration =user_penalties .get ('duration',0 )
-            last_penalty =user_penalties .get ('date','bilinmiyor')
-            name =user_penalties .get ('name',user_id )
-
-        top_offenders .append ({
-        'name':name ,
-        'count':count ,
-        'total_duration':total_duration ,
-        'last_penalty':last_penalty [:10 ]if isinstance (last_penalty ,str )else 'bilinmiyor'
-        })
-
-    top_offenders .sort (key =lambda x :x ['count'],reverse =True )
-    top_offenders =top_offenders [:10 ]
-
-    # Наказание причина
-    penalty_reasons =[]
-    for reason ,count in reason_counter .most_common ():
-        penalty_reasons .append ({
-        'name':reason ,
-        'count':count ,
-        'percentage':round ((count /total )*100 ,1 )
-        })
-
-        # AI ticket verilerini загрузить
-    ai_tickets =_load_ai_tickets (guild_id )
-    total_tickets =len (ai_tickets )
-
-    return {
-    'total_tickets':total_tickets ,
-    'total_penalties':total_penalties ,
-    'mutual_violations':mutual_violations ,
-    'fake_complaints':fake_complaints ,
-    'single_violation_rate':single_rate ,
-    'mutual_rate':mutual_rate ,
-    'fake_rate':fake_rate ,
-    'no_violation_rate':no_violation_rate ,
-    'avg_confidence':75 ,# Placeholder - gerчek hesaplama для AI response'larы saklamak gerek
-    'high_confidence_count':int (total_penalties *0.8 ),# Tahmini
-    'low_confidence_count':int (total_penalties *0.2 ),# Tahmini
-    'appeal_rate':5 ,# Placeholder
-    'appeal_success_rate':30 ,# Placeholder
-    'top_offenders':top_offenders ,
-    'penalty_reasons':penalty_reasons 
-    }
 
 
     # ── DASHBOARD API ───────────────────────────────────────────────────────────
@@ -7412,3 +7316,103 @@ def calculate_ai_ticket_stats (guild_id :int )->dict :
         return render_template ('customer_portal.html',role =session .get ('role'),username =session .get ('username'))
 
 
+
+
+def calculate_ai_ticket_stats (guild_id :int )->dict :
+    """AI ticket статистика hesapla"""
+    import json ,os 
+    from datetime import datetime 
+    from collections import Counter 
+
+    # Penalty dosyasыnы загрузить
+    penalty_file ='data/ticket_penalties.json'
+    penalties ={}
+    if os .path .exists (penalty_file ):
+        try :
+            with open (penalty_file ,'r',encoding ='utf-8')as f :
+                penalties =json .load (f )
+        except :
+            pass 
+
+    guild_penalties =penalties .get (str (guild_id ),{})
+
+    # Temel статистика
+    total_penalties =sum (len (p )if isinstance (p ,list )else 1 for p in guild_penalties .values ())
+
+    # Наказание причина say
+    reasons =[]
+    for user_penalties in guild_penalties .values ():
+        if isinstance (user_penalties ,list ):
+            for p in user_penalties :
+                reasons .append (p .get ('reason','bilinmiyor'))
+        else :
+            reasons .append (user_penalties .get ('reason','bilinmiyor'))
+
+    reason_counter =Counter (reasons )
+
+    # Взаимный нарушение, фейковый жалоба число
+    mutual_violations =reason_counter .get ('взаимный мат/оскорбление',0 )
+    fake_complaints =reason_counter .get ('фейковый жалоба + правило нарушение',0 )
+    single_violations =total_penalties -mutual_violations -fake_complaints 
+
+    # Oranlar
+    total =total_penalties if total_penalties >0 else 1 
+    mutual_rate =round ((mutual_violations /total )*100 ,1 )
+    fake_rate =round ((fake_complaints /total )*100 ,1 )
+    single_rate =round ((single_violations /total )*100 ,1 )
+    no_violation_rate =max (0 ,100 -mutual_rate -fake_rate -single_rate )
+
+    # En очень наказание alan userlar
+    top_offenders =[]
+    for user_id ,user_penalties in guild_penalties .items ():
+        if isinstance (user_penalties ,list ):
+            count =len (user_penalties )
+            total_duration =sum (p .get ('duration',0 )for p in user_penalties )
+            last_penalty =user_penalties [-1 ].get ('date','bilinmiyor')if user_penalties else 'bilinmiyor'
+            name =user_penalties [-1 ].get ('name',user_id )if user_penalties else user_id 
+        else :
+            count =1 
+            total_duration =user_penalties .get ('duration',0 )
+            last_penalty =user_penalties .get ('date','bilinmiyor')
+            name =user_penalties .get ('name',user_id )
+
+        top_offenders .append ({
+        'name':name ,
+        'count':count ,
+        'total_duration':total_duration ,
+        'last_penalty':last_penalty [:10 ]if isinstance (last_penalty ,str )else 'bilinmiyor'
+        })
+
+    top_offenders .sort (key =lambda x :x ['count'],reverse =True )
+    top_offenders =top_offenders [:10 ]
+
+    # Наказание причина
+    penalty_reasons =[]
+    for reason ,count in reason_counter .most_common ():
+        penalty_reasons .append ({
+        'name':reason ,
+        'count':count ,
+        'percentage':round ((count /total )*100 ,1 )
+        })
+
+        # AI ticket verilerini загрузить
+    ai_tickets =_load_ai_tickets (guild_id )
+    total_tickets =len (ai_tickets )
+
+    return {
+    'total_tickets':total_tickets ,
+    'total_penalties':total_penalties ,
+    'mutual_violations':mutual_violations ,
+    'fake_complaints':fake_complaints ,
+    'single_violation_rate':single_rate ,
+    'mutual_rate':mutual_rate ,
+    'fake_rate':fake_rate ,
+    'no_violation_rate':no_violation_rate ,
+    'avg_confidence':75 ,# Placeholder - gerчek hesaplama для AI response'larы saklamak gerek
+    'high_confidence_count':int (total_penalties *0.8 ),# Tahmini
+    'low_confidence_count':int (total_penalties *0.2 ),# Tahmini
+    'appeal_rate':5 ,# Placeholder
+    'appeal_success_rate':30 ,# Placeholder
+    'top_offenders':top_offenders ,
+    'penalty_reasons':penalty_reasons 
+    }
