@@ -8,7 +8,7 @@ from config import Config
 
 OWNER_ID =int (os .getenv ('OWNER_ID')or '0')
 
-AFK_ICON ='assets/afk_icon.png'
+AFK_ICON =os .path .join (os .path .dirname (os .path .dirname (__file__ )),'assets','afk_icon.png')
 
 def _afk_file ():
     """AFK simgesi — embed thumbnail'ı için dosya."""

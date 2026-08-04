@@ -2,7 +2,7 @@
 import os 
 import discord 
 
-ICONS_DIR ='assets/icons'
+ICONS_DIR =os .path .join (os .path .dirname (os .path .dirname (__file__ )),'assets','icons')
 
 # Simgenin embed'e bağlanacağı dosya adı (256px sürüm görünürlük/hız dengesi için)
 def icon_attach (name :str ):
