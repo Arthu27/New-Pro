@@ -1,19 +1,25 @@
 """
-AETHER ANTI-CRASH — централизованная защита от падений (pro-версия)
+AETHER ANTI-CRASH — централизованная защита от падений (PRO, полный набор)
 
-Возможности:
-- Перехват ошибок prefix/slash команд, событий, asyncio-задач, потоков и главного потока
-- Watchdog event-loop: ловит зависания цикла (лаг > N сек)
-- Circuit breaker по когам: если один модуль сыпет ошибками — алерт (+опц. auto-reload)
-- Детектор всплеска ошибок (rate spike)
-- Алерты в Discord-канал: очередь + периодическая сводка + лимит в час (без спама)
-- Персистентная статистика (переживает рестарт) + настраиваемый конфиг (JSON)
-- Команда !anticrash (статус/статистика/конфиг/тест) и API для веб-панели
+Карта покрытия (аналоги Node.js anti-crash):
+- Unhandled Rejection  → asyncio exception handler (задачи/колбэки)
+- Uncaught Exception   → sys.excepthook + threading.excepthook
+- Warning monitor      → перехват warnings библиотек (Deprecation и др.)
+- Webhook-лог          → мгновенная отправка ошибок в скрытый dev-канал
+- Детальный вывод      → файл:строка:функция + полный traceback (JSONL-файл)
+- Фильтр ошибок        → глушение шумных/повторяющихся ошибок (антиспам)
+- ShardError           → on_disconnect/on_shard_disconnect/on_resumed
+
++ Watchdog event-loop, circuit breaker по когам, детектор всплеска ошибок,
+  сводка алертов в канал, персистентная статистика, конфиг в JSON,
+  команда !anticrash и API для веб-панели.
 """
 import asyncio
 import os
 import json
 import time
+import warnings as _warnings
+import queue as _queue
 import discord
 from discord.ext import commands
 from discord import app_commands
@@ -29,49 +35,92 @@ log = get_logger("errors")
 
 CONFIG_PATH = 'data/anticrash_config.json'
 STATS_PATH = 'data/anticrash_stats.json'
+DETAILS_PATH = 'data/anticrash_errors.jsonl'
+DETAILS_MAX_BYTES = 5 * 1024 * 1024
 
 DEFAULT_CONFIG = {
+    # ── ядро ──
     "master_enabled": True,       # главный выключатель мониторинга
-    "log_channel_id": 0,          # ID канала для критических сводок (0 = выкл)
-    "alerts_enabled": True,       # слать ли алерты в канал
-    "max_alerts_per_hour": 6,     # лимит отправок в канал (анти-спам)
-    "alert_flush_sec": 60,        # как часто отправлять накопленную сводку
-    "loop_watchdog": True,        # следить за зависанием event-loop
-    "loop_lag_threshold": 5.0,    # лаг (сек) выше этого = зависание
-    "loop_check_interval": 2.0,   # период измерения лага (сек)
-    "health_log_interval": 600,   # период health-сводки в лог (сек)
-    "error_rate_alert": 60,       # ошибок за 60 сек → алерт о всплеске
-    "cog_breaker": True,          # circuit breaker по когам
-    "cog_error_threshold": 20,    # ошибок одного кога в окне → breaker
-    "cog_window_sec": 600,        # окно подсчёта (сек)
-    "cog_auto_reload": False,     # авто-reload кога при срабатывании breaker'а
-    "stats_persist": True,        # сохранять статистику на диск
-    "stats_save_sec": 300,        # период записи статистики
+    "log_channel_id": 0,          # ID канала критических сводок (0 = выкл)
+    "alerts_enabled": True,       # слать сводки в канал
+    "max_alerts_per_hour": 6,     # лимит сводок в час
+    "alert_flush_sec": 60,        # период отправки сводки
+    # ── watchdog event-loop ──
+    "loop_watchdog": True,
+    "loop_lag_threshold": 5.0,
+    "loop_check_interval": 2.0,
+    # ── здоровье/статистика ──
+    "health_log_interval": 600,
+    "error_rate_alert": 60,
+    "stats_persist": True,
+    "stats_save_sec": 300,
+    # ── circuit breaker ──
+    "cog_breaker": True,
+    "cog_error_threshold": 20,
+    "cog_window_sec": 600,
+    "cog_auto_reload": False,
+    # ── warning-монитор (библиотеки) ──
+    "warning_monitor": True,      # ловить warnings (Deprecation и др.)
+    "warning_dedup_sec": 600,     # одинаковый warning — раз в период
+    # ── фильтр шумных/повторных ошибок ──
+    "filter_enabled": True,
+    "filter_substrings": [
+        "Unknown Message",                 # сообщение уже удалено
+        "Unknown interaction",             # истёк interaction
+        "already been acknowledged",       # двойной ответ на interaction
+        "Unknown Channel",
+        "Cannot send messages to this user",
+        "Missing Access",
+    ],
+    "filter_suppress_repeat_sec": 600,    # повтор той же ошибки — в лог раз в период
+    # ── webhook мгновенных ошибок ──
+    "webhook_url": "",                    # URL скрытого dev-канала
+    "webhook_enabled": False,
+    "webhook_dedup_sec": 300,             # тот же тип ошибки — раз в период
+    "webhook_max_per_hour": 20,
+    # ── детальный файл ошибок ──
+    "details_log_enabled": True,          # data/anticrash_errors.jsonl
+    # ── монитор соединения (shards/websocket) ──
+    "connection_watch": True,
+    "disconnect_alert_threshold": 5,      # обрывов в окне → алерт
+    "disconnect_window_sec": 600,
 }
 
-# Метаданные для веб-панели / справки (рус.)
 CONFIG_META = {
-    "master_enabled":      ("Мастер-переключатель", "Весь мониторинг и алерты", "bool"),
-    "log_channel_id":      ("ID канала алертов", "Куда слать критические сводки (0 — выкл.)", "int"),
-    "alerts_enabled":      ("Алерты в Discord", "Разрешить отправку сводок в канал", "bool"),
-    "max_alerts_per_hour": ("Лимит алертов/час", "Анти-спам ограничение отправок", "int"),
-    "alert_flush_sec":     ("Период сводки (сек)", "Как часто отправляется накопленная сводка", "int"),
-    "loop_watchdog":       ("Watchdog цикла", "Отслеживать зависания event-loop", "bool"),
-    "loop_lag_threshold":  ("Порог лага (сек)", "Лаг выше — считается зависанием", "float"),
-    "loop_check_interval": ("Шаг замера (сек)", "Как часто мерить лаг цикла", "float"),
-    "health_log_interval": ("Health-лог (сек)", "Период записи health-сводки в лог", "int"),
-    "error_rate_alert":    ("Порог всплеска", "Ошибок/мин, при которых слать алерт", "int"),
-    "cog_breaker":         ("Circuit breaker", "Детект «бешеного» модуля по потоку ошибок", "bool"),
-    "cog_error_threshold": ("Порог ошибок кога", "Столько ошибок в окне = breaker", "int"),
-    "cog_window_sec":      ("Окно breaker (сек)", "Период подсчёта ошибок кога", "int"),
-    "cog_auto_reload":     ("Авто-reload кога", "Перезагружать модуль при срабатывании (осторожно)", "bool"),
-    "stats_persist":       ("Сохранять статистику", "Писать статистику в файл", "bool"),
-    "stats_save_sec":      ("Период записи (сек)", "Как часто сохранять статистику", "int"),
+    "master_enabled":       ("Мастер-переключатель", "Весь мониторинг и алерты", "bool"),
+    "log_channel_id":       ("ID канала алертов", "Куда слать критические сводки (0 — выкл.)", "int"),
+    "alerts_enabled":       ("Алерты в Discord", "Разрешить отправку сводок в канал", "bool"),
+    "max_alerts_per_hour":  ("Лимит алертов/час", "Анти-спам ограничение отправок", "int"),
+    "alert_flush_sec":      ("Период сводки (сек)", "Как часто отправляется накопленная сводка", "int"),
+    "loop_watchdog":        ("Watchdog цикла", "Отслеживать зависания event-loop", "bool"),
+    "loop_lag_threshold":   ("Порог лага (сек)", "Лаг выше — считается зависанием", "float"),
+    "loop_check_interval":  ("Шаг замера (сек)", "Как часто мерить лаг цикла", "float"),
+    "health_log_interval":  ("Health-лог (сек)", "Период записи health-сводки в лог", "int"),
+    "error_rate_alert":     ("Порог всплеска", "Ошибок/мин, при которых слать алерт", "int"),
+    "stats_persist":        ("Сохранять статистику", "Писать статистику в файл", "bool"),
+    "stats_save_sec":       ("Период записи (сек)", "Как часто сохранять статистику", "int"),
+    "cog_breaker":          ("Circuit breaker", "Детект «бешеного» модуля по потоку ошибок", "bool"),
+    "cog_error_threshold":  ("Порог ошибок кога", "Столько ошибок в окне = breaker", "int"),
+    "cog_window_sec":       ("Окно breaker (сек)", "Период подсчёта ошибок кога", "int"),
+    "cog_auto_reload":      ("Авто-reload кога", "Перезагружать модуль при срабатывании (осторожно)", "bool"),
+    "warning_monitor":      ("Монитор предупреждений", "Ловить warning'и библиотек (DeprecationWarning и др.)", "bool"),
+    "warning_dedup_sec":    ("Дедуп warning (сек)", "Одинаковое предупреждение — раз в период", "int"),
+    "filter_enabled":       ("Фильтр шумных ошибок", "Глушить типовой мусор Discord («Unknown Message», «Unknown interaction»...)", "bool"),
+    "filter_substrings":    ("Фразы для фильтра", "Ошибки с этими подстроками не спамят лог и алерты (по строке на фразу)", "list"),
+    "filter_suppress_repeat_sec": ("Анти-повтор (сек)", "Одна и та же ошибка пишется в лог раз в этот период", "int"),
+    "webhook_url":          ("Webhook URL", "URL скрытого dev-канала для мгновенных ошибок", "str"),
+    "webhook_enabled":      ("Webhook включён", "Мгновенно слать новые ошибки в dev-канал", "bool"),
+    "webhook_dedup_sec":    ("Дедуп webhook (сек)", "Одинаковая ошибка отправляется раз в период", "int"),
+    "webhook_max_per_hour": ("Webhook лимит/час", "Анти-спам ограничение для webhook", "int"),
+    "details_log_enabled":  ("Детальный JSONL", "Каждая ошибка с файлом:строкой → data/anticrash_errors.jsonl", "bool"),
+    "connection_watch":     ("Монитор соединения", "Обрывы WebSocket (disconnect/shard) → статистика и алерты", "bool"),
+    "disconnect_alert_threshold": ("Порог обрывов", "Столько обрывов в окне → алерт о нестабильности", "int"),
+    "disconnect_window_sec": ("Окно обрывов (сек)", "Период подсчёта обрывов соединения", "int"),
 }
 
 
 def _cast_like(default, raw):
-    """Привести строковое значение к типу дефолтного конфига."""
+    """Привести значение к типу дефолтного конфига."""
     if isinstance(default, bool):
         if isinstance(raw, bool):
             return raw
@@ -81,6 +130,19 @@ def _cast_like(default, raw):
         if s in ('0', 'false', 'off', 'нет', 'no', 'выкл'):
             return False
         raise ValueError("ожидается bool (вкл/выкл)")
+    if isinstance(default, list):
+        if isinstance(raw, list):
+            return [str(x) for x in raw if str(x).strip()]
+        s = str(raw).strip()
+        if not s:
+            return []
+        try:
+            v = json.loads(s)
+            if isinstance(v, list):
+                return [str(x) for x in v if str(x).strip()]
+        except Exception:
+            pass
+        return [x.strip() for x in s.split('\n') if x.strip()]
     if isinstance(default, int):
         v = int(float(str(raw).strip()))
         if v < 0:
@@ -91,11 +153,25 @@ def _cast_like(default, raw):
         if v < 0:
             raise ValueError("ожидается число >= 0")
         return v
-    return str(raw)
+    return str(raw).strip()
+
+
+def _loc_from_tb(tb) -> str:
+    """Кадр с местом ошибки: файл:строка (функция) — приоритет коду проекта."""
+    try:
+        frames = traceback.extract_tb(tb)
+        if not frames:
+            return ""
+        own = [f for f in frames
+               if 'site-packages' not in f.filename and os.sep + 'discord' + os.sep not in f.filename]
+        f = own[-1] if own else frames[-1]
+        return f"{os.path.basename(f.filename)}:{f.lineno} ({f.name})"
+    except Exception:
+        return ""
 
 
 class ErrorHandler:
-    """Централизованный обработчик ошибок + anti-crash мониторинг"""
+    """Централизованный обработчик ошибок + anti-crash мониторинг (PRO)"""
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -103,17 +179,26 @@ class ErrorHandler:
         self.stats = self._load_stats()
         self.error_counts = self.stats['by_type']  # совместимость со старым API
 
-        self._rate = deque(maxlen=2000)            # ts всех ошибок (для ошибок/час и всплеска)
+        self._rate = deque(maxlen=2000)            # ts ошибок (ошибки/час, всплеск)
         self._cog_windows = {}                     # module -> deque(ts)
-        self._breaker_state = {}                   # module -> {'tripped': ts, 'reload_at': ts}
-        self._alerts = []                          # очередь (title, desc, critical)
-        self._alerts_sent_ts = deque(maxlen=100)   # ts отправок (лимит/час)
+        self._breaker_state = {}                   # module -> {'tripped', 'reload_at'}
+        self._alerts = []                          # очередь сводок в канал
+        self._alerts_sent_ts = deque(maxlen=100)
         self._lag_recent = 0.0
         self._spike_alert_at = 0.0
         self._tasks = []
 
+        self._repeat = {}                          # дедуп повторных ошибок
+        self._warn_seen = {}                       # дедуп warning'ов
+        self._webhook_q = _queue.Queue(maxsize=500)  # thread-safe → consumer в loop
+        self._webhook_sent_ts = deque(maxlen=200)
+        self._webhook_seen = {}                    # дедуп отправок
+        self._webhook_session = None
+        self._disconnects = deque(maxlen=200)
+        self._disconnect_alert_at = 0.0
+
     # ────────────────────────────────────────────────────────────
-    # Конфиг и статистика (диск)
+    # Конфиг / статистика (диск)
     # ────────────────────────────────────────────────────────────
     def _load_config(self) -> dict:
         cfg = dict(DEFAULT_CONFIG)
@@ -142,7 +227,6 @@ class ErrorHandler:
             log.error(f"Anti-crash config yazılamadı: {e}")
 
     def update_config(self, key: str, value):
-        """Обновить одну настройку (приведение типа + валидация)."""
         if key not in DEFAULT_CONFIG:
             raise KeyError(f"неизвестный ключ: {key}")
         self.config[key] = _cast_like(DEFAULT_CONFIG[key], value)
@@ -154,8 +238,15 @@ class ErrorHandler:
             'started_at': time.time(),
             'total_errors': 0,
             'critical': 0,
+            'filtered': 0,
+            'repeats_hidden': 0,
+            'warnings_total': 0,
+            'warnings': {},
+            'disconnects': 0,
             'alerts_sent': 0,
             'alerts_dropped': 0,
+            'webhook_sent': 0,
+            'webhook_dropped': 0,
             'loop_lag_max': 0.0,
             'by_type': {},
             'by_command': {},
@@ -173,8 +264,8 @@ class ErrorHandler:
                     old = json.load(f)
                 for k, v in old.items():
                     if k == 'started_at':
-                        continue  # аптайм считаем с текущего запуска
-                    if k in st:
+                        continue
+                    if k in st and isinstance(st[k], type(v)):
                         st[k] = v
         except Exception:
             pass
@@ -199,18 +290,18 @@ class ErrorHandler:
         self.error_counts = self.stats['by_type']
         self._cog_windows.clear()
         self._breaker_state.clear()
+        self._repeat.clear()
         self.save_stats()
 
     # ────────────────────────────────────────────────────────────
     # Регистрация
     # ────────────────────────────────────────────────────────────
     def setup(self):
-        """Зарегистрировать обработчики"""
+        """Зарегистрировать все обработчики"""
         @self.bot.event
         async def on_command_error(ctx: commands.Context, error: commands.CommandError):
             await self.handle_command_error(ctx, error)
 
-        # Ошибки событий (on_message, on_member_join...)
         @self.bot.event
         async def on_error(event: str, *args, **kwargs):
             exc = sys.exc_info()[1]
@@ -218,6 +309,23 @@ class ErrorHandler:
                 return
             self.stats['by_event'][event] = self.stats['by_event'].get(event, 0) + 1
             self._log_error(f"Event error in '{event}': {exc}", exc, where=f"event:{event}", critical=True)
+
+        # ── монитор соединения (аналог shardError) ──
+        @self.bot.event
+        async def on_disconnect():
+            self._on_disconnect("gateway")
+
+        @self.bot.event
+        async def on_shard_disconnect(shard_id: int):
+            self._on_disconnect(f"shard:{shard_id}")
+
+        @self.bot.event
+        async def on_resumed():
+            log.info("Соединение с Discord восстановлено (session resumed)")
+
+        @self.bot.event
+        async def on_shard_resumed(shard_id: int):
+            log.info(f"Shard {shard_id} восстановил сессию")
 
         tree = self.bot.tree
 
@@ -227,8 +335,8 @@ class ErrorHandler:
         tree.on_error = on_app_command_error
 
         self._setup_anticrash()
+        self._setup_warning_monitor()
 
-        # Фоновые задачи мониторинга
         try:
             loop = asyncio.get_running_loop()
             self._tasks = [
@@ -237,24 +345,23 @@ class ErrorHandler:
                 loop.create_task(self._alert_flush_task()),
                 loop.create_task(self._health_log_task()),
                 loop.create_task(self._persist_task()),
+                loop.create_task(self._webhook_task()),
             ]
         except RuntimeError:
             pass
 
-        log.info("Anti-crash PRO активирован (watchdog, breaker, алерты, статистика)")
+        log.info("Anti-crash PRO активирован (watchdog, breaker, фильтр, webhook, warnings, shards)")
 
     async def _register_commands(self):
-        """Регистрируем !anticrash как обычный ког (настройка без правки файлов)."""
         try:
             await self.bot.add_cog(AntiCrashCog(self.bot, self))
         except Exception as e:
             log.error(f"Anti-crash komutları yüklenemedi: {e}")
 
     def _setup_anticrash(self):
-        """Перехват падений asyncio-задач, потоков и главного потока"""
+        """Uncaught Exception: asyncio-задачи, потоки, главный поток"""
         try:
-            self._loop = asyncio.get_running_loop()
-            self._loop.set_exception_handler(self._loop_exception_handler)
+            asyncio.get_running_loop().set_exception_handler(self._loop_exception_handler)
         except RuntimeError:
             pass
 
@@ -264,7 +371,8 @@ class ErrorHandler:
                 return
             t = "".join(traceback.format_exception(exc_type, exc, tb))
             log.critical(f"НЕПЕРЕХВАЧЕННОЕ ИСКЛЮЧЕНИЕ (main thread):\n{t}")
-            self._record(exc_type.__name__, "main_thread", str(exc), critical=True)
+            self._record_and_publish(exc_type.__name__, "main_thread", str(exc),
+                                     critical=True, tb_text=t, loc=_loc_from_tb(tb))
 
         sys.excepthook = _sys_hook
 
@@ -274,12 +382,13 @@ class ErrorHandler:
             t = "".join(traceback.format_exception(args.exc_type, args.exc_value, args.exc_traceback))
             tname = args.thread.name if args.thread else '?'
             log.critical(f"НЕПЕРЕХВАЧЕННОЕ ИСКЛЮЧЕНИЕ (поток {tname}):\n{t}")
-            self._record(args.exc_type.__name__, f"thread:{tname}", str(args.exc_value), critical=True)
+            self._record_and_publish(args.exc_type.__name__, f"thread:{tname}", str(args.exc_value),
+                                     critical=True, tb_text=t, loc=_loc_from_tb(args.exc_traceback))
 
         threading.excepthook = _thread_hook
 
     def _loop_exception_handler(self, loop: asyncio.AbstractEventLoop, context: dict):
-        """Ошибки фоновых asyncio-задач: логируем, цикл не останавливаем."""
+        """Unhandled Rejection: исключения asyncio-задач — логируем, цикл жив."""
         exc = context.get("exception")
         msg = context.get("message", "asyncio error")
         if exc is not None:
@@ -289,10 +398,63 @@ class ErrorHandler:
             self._record("AsyncioError", "asyncio:loop", msg)
 
     # ────────────────────────────────────────────────────────────
-    # Учёт ошибок
+    # Warning-монитор (библиотеки/система)
     # ────────────────────────────────────────────────────────────
-    def _record(self, err_type: str, where: str, message: str, critical: bool = False):
-        """Единая точка учёта: счётчики, rate, last_errors, breaker-трекер."""
+    def _setup_warning_monitor(self):
+        """Перехват warnings.warn: Deprecation/Runtime и пр. → в лог и статистику."""
+        orig = _warnings.showwarning
+
+        def _hook(message, category, filename, lineno, file=None, line=None):
+            try:
+                if self.config.get('warning_monitor', True):
+                    self._on_warning(category.__name__, str(message), filename, lineno)
+            except Exception:
+                pass
+            try:
+                orig(message, category, filename, lineno, file=file, line=line)
+            except Exception:
+                pass
+
+        _warnings.showwarning = _hook
+        self._orig_showwarning = orig
+
+    def _on_warning(self, cat: str, msg: str, filename: str, lineno: int):
+        key = f"{cat}|{msg[:80]}"
+        now = time.time()
+        last = self._warn_seen.get(key, 0)
+        if now - last < float(self.config.get('warning_dedup_sec', 600)):
+            self.stats['warnings_total'] += 1
+            return
+        self._warn_seen[key] = now
+        self.stats['warnings_total'] += 1
+        self.stats['warnings'][cat] = self.stats['warnings'].get(cat, 0) + 1
+        log.warning(f"WARNING [{cat}] {os.path.basename(filename)}:{lineno} — {msg[:300]}")
+
+    # ────────────────────────────────────────────────────────────
+    # Монитор соединения (аналог shardError)
+    # ────────────────────────────────────────────────────────────
+    def _on_disconnect(self, kind: str):
+        if not self.config.get('connection_watch', True):
+            return
+        now = time.time()
+        self.stats['disconnects'] += 1
+        self._disconnects.append(now)
+        log.warning(f"Соединение с Discord потеряно ({kind}) — всего обрывов: {self.stats['disconnects']}")
+        window = float(self.config.get('disconnect_window_sec', 600))
+        thr = int(self.config.get('disconnect_alert_threshold', 5))
+        recent = sum(1 for ts in self._disconnects if now - ts <= window)
+        if recent >= thr and now - self._disconnect_alert_at > 600:
+            self._disconnect_alert_at = now
+            self.queue_alert(
+                "Нестабильное соединение",
+                f"**{recent}** обрывов WebSocket за {int(window // 60)} мин.\n"
+                f"Discord переподключается автоматически, но проверьте сеть/хостинг.",
+            )
+
+    # ────────────────────────────────────────────────────────────
+    # Учёт ошибок (ядро)
+    # ────────────────────────────────────────────────────────────
+    def _record(self, err_type: str, where: str, message: str, critical: bool = False, loc: str = ""):
         s = self.stats
         s['total_errors'] += 1
         if critical:
@@ -300,24 +462,93 @@ class ErrorHandler:
         s['by_type'][err_type] = s['by_type'].get(err_type, 0) + 1
         self._rate.append(time.time())
         s['last_errors'].append({
-            'ts': time.time(),
-            'type': err_type,
-            'where': where,
-            'msg': (message or '')[:220],
-            'critical': bool(critical),
+            'ts': time.time(), 'type': err_type, 'where': where,
+            'loc': loc, 'msg': (message or '')[:220], 'critical': bool(critical),
         })
         del s['last_errors'][:-30]
 
+    def _is_filtered(self, text: str) -> bool:
+        if not self.config.get('filter_enabled', True):
+            return False
+        tl = text.lower()
+        return any(sub.lower() in tl for sub in self.config.get('filter_substrings', []))
+
+    def _write_details(self, rec: dict):
+        """Детальный вывод: каждая ошибка JSON-строкой (файл:строка, время, traceback)."""
+        if not self.config.get('details_log_enabled', True):
+            return
+        try:
+            os.makedirs('data', exist_ok=True)
+            if os.path.exists(DETAILS_PATH) and os.path.getsize(DETAILS_PATH) > DETAILS_MAX_BYTES:
+                os.replace(DETAILS_PATH, DETAILS_PATH + '.old')
+            with open(DETAILS_PATH, 'a', encoding='utf-8') as f:
+                f.write(json.dumps(rec, ensure_ascii=False) + '\n')
+        except Exception:
+            pass
+
+    def _record_and_publish(self, err_type, where, message, *, critical=False, tb_text="", loc=""):
+        """Единый конвейер: статистика + JSONL + webhook."""
+        self._record(err_type, where, message, critical=critical, loc=loc)
+        rec = {
+            'ts': time.time(), 'type': err_type, 'where': where, 'loc': loc,
+            'msg': (message or '')[:500], 'critical': bool(critical),
+            'traceback': (tb_text or '')[-1500:],
+        }
+        self._write_details(rec)
+        self._enqueue_webhook(rec)
+
     def _log_error(self, message: str, error: Exception, where: str = "", critical: bool = False):
-        """Залогировать ошибку с трассировкой + учёт."""
-        log.error(message)
+        """Ошибка исключения: фильтр шума → анти-повтор → лог+traceback → jsonl+webhook."""
+        raw = str(error)
+        loc = _loc_from_tb(error.__traceback__)
+
+        # 1) Фильтр шумных ошибок — только счётчик, без спама
+        if self._is_filtered(f"{raw} {message}"):
+            self.stats['filtered'] += 1
+            return
+
+        err_type = type(error).__name__
+        self._record(err_type, where, message, critical=critical, loc=loc)
+
+        # 2) Анти-повтор: полный лог — раз в filter_suppress_repeat_sec
+        key = f"{err_type}|{where}|{raw[:60]}"
+        now = time.time()
+        ent = self._repeat.get(key)
+        write_full = True
+        if ent is not None:
+            ent['count'] += 1
+            if now - ent['last_log'] < float(self.config.get('filter_suppress_repeat_sec', 600)):
+                write_full = False
+                self.stats['repeats_hidden'] += 1
+            else:
+                ent['last_log'] = now
+                log.error(f"{message}  (повторов подряд: {ent['count']})")
+                ent['count'] = 0
+        else:
+            self._repeat[key] = {'count': 0, 'last_log': now}
+
         tb = "".join(traceback.format_exception(type(error), error, error.__traceback__))
-        log.error(f"Traceback:\n{tb}")
-        self._record(type(error).__name__, where or "unknown", message, critical=critical)
+        if write_full:
+            log.error(message)
+            log.error(f"Traceback ({loc}):\n{tb}")
+
+        # 3) Детальный файл + webhook (первая/новая серия — сразу)
+        self._write_details({
+            'ts': now, 'type': err_type, 'where': where, 'loc': loc,
+            'msg': raw[:500], 'message': message[:500],
+            'critical': bool(critical), 'traceback': tb[-1500:],
+        })
+        if write_full:
+            self._enqueue_webhook({
+                'ts': now, 'type': err_type, 'where': where, 'loc': loc,
+                'msg': raw[:500], 'critical': bool(critical),
+                'traceback': tb[-1500:],
+            })
+
         if critical and self.config.get('master_enabled', True):
             self.queue_alert(
                 "Критическая ошибка",
-                f"`{type(error).__name__}` — {where or 'система'}\n{str(error)[:180]}",
+                f"`{err_type}` — {where or 'система'} · `{loc}`\n{raw[:180]}",
             )
 
     def _count(self, error_type: str):
@@ -328,10 +559,88 @@ class ErrorHandler:
         return sum(1 for ts in self._rate if now - ts <= window_sec)
 
     # ────────────────────────────────────────────────────────────
+    # Webhook мгновенных ошибок (скрытый dev-канал)
+    # ────────────────────────────────────────────────────────────
+    def _enqueue_webhook(self, rec: dict):
+        """Thread-safe постановка в очередь; реальная отправка — в loop-задаче."""
+        if not self.config.get('webhook_enabled', False):
+            return
+        if not (self.config.get('webhook_url') or '').strip():
+            return
+        key = f"{rec['type']}|{rec['where']}|{rec['msg'][:60]}"
+        now = time.time()
+        if now - self._webhook_seen.get(key, 0) < float(self.config.get('webhook_dedup_sec', 300)):
+            self.stats['webhook_dropped'] += 1
+            return
+        self._webhook_seen[key] = now
+        try:
+            self._webhook_q.put_nowait(rec)
+        except _queue.Full:
+            self.stats['webhook_dropped'] += 1
+
+    async def _webhook_task(self):
+        """Отправка очереди в webhook: дедуп уже пройден, здесь — лимит/час и сеть."""
+        import aiohttp
+        await self.bot.wait_until_ready()
+        try:
+            self._webhook_session = aiohttp.ClientSession()
+            while not self.bot.is_closed():
+                try:
+                    while not self._webhook_q.empty():
+                        rec = self._webhook_q.get_nowait()
+                        await self._send_webhook(rec)
+                except Exception as e:
+                    log.error(f"Webhook kuyruğu hatası: {e}")
+                await asyncio.sleep(3)
+        finally:
+            try:
+                if self._webhook_session and not self._webhook_session.closed:
+                    await self._webhook_session.close()
+            except Exception:
+                pass
+
+    async def _send_webhook(self, rec: dict):
+        url = (self.config.get('webhook_url') or '').strip()
+        if not url:
+            return
+        now = time.time()
+        while self._webhook_sent_ts and now - self._webhook_sent_ts[0] > 3600:
+            self._webhook_sent_ts.popleft()
+        if len(self._webhook_sent_ts) >= int(self.config.get('webhook_max_per_hour', 20)):
+            self.stats['webhook_dropped'] += 1
+            return
+        ts_str = datetime.fromtimestamp(rec['ts']).strftime('%d.%m %H:%M:%S')
+        embed = {
+            'title': f"🔥 {rec['type']}" if rec.get('critical') else f"⚠️ {rec['type']}",
+            'description': f"```\n{rec['msg'][:600]}\n```",
+            'color': 0xE74C3C if rec.get('critical') else 0xF39C12,
+            'fields': [
+                {'name': 'Контекст', 'value': f"`{rec['where']}`", 'inline': True},
+                {'name': 'Место', 'value': f"`{rec.get('loc') or '—'}`", 'inline': True},
+                {'name': 'Время', 'value': f"`{ts_str}`", 'inline': True},
+            ],
+            'footer': {'text': 'AETHER anti-crash • мгновенный webhook'},
+        }
+        tb = (rec.get('traceback') or '').strip()
+        if tb:
+            embed['fields'].append({'name': 'Traceback', 'value': f"```py\n{tb[-900:]}\n```"})
+        payload = {'username': 'AETHER ANTI-CRASH', 'embeds': [embed]}
+        try:
+            async with self._webhook_session.post(url, json=payload, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+                if resp.status in (200, 204):
+                    self._webhook_sent_ts.append(now)
+                    self.stats['webhook_sent'] += 1
+                else:
+                    self.stats['webhook_dropped'] += 1
+                    log.error(f"Webhook HTTP {resp.status}")
+        except Exception as e:
+            self.stats['webhook_dropped'] += 1
+            log.error(f"Webhook gönderilemedi: {e}")
+
+    # ────────────────────────────────────────────────────────────
     # Circuit breaker по когам
     # ────────────────────────────────────────────────────────────
     def _track_cog(self, module: str):
-        """Посчитать ошибку кога; при превышении порога — breaker (+опц. reload)."""
         if not module or not self.config.get('cog_breaker', True):
             return
         now = time.time()
@@ -342,7 +651,6 @@ class ErrorHandler:
         threshold = int(self.config.get('cog_error_threshold', 20))
         if len(recent) < threshold:
             return
-        # уже сработал? не дублируем чаще раза в 10 минут
         state = self._breaker_state.get(module)
         if state and now - state['tripped'] < window:
             return
@@ -360,7 +668,6 @@ class ErrorHandler:
             asyncio.get_event_loop().create_task(self._try_reload(module))
 
     async def _try_reload(self, module: str):
-        """Аккуратная перезагрузка кога; повтор не чаще 10 минут."""
         try:
             state = self._breaker_state.get(module)
             now = time.time()
@@ -376,7 +683,7 @@ class ErrorHandler:
             self.queue_alert("Авто-reload не удался", f"`{module}`: {str(e)[:180]}")
 
     # ────────────────────────────────────────────────────────────
-    # Алерты: очередь + сводка в Discord-канал (с лимитом)
+    # Сводки алертов в Discord-канал (очередь + лимит)
     # ────────────────────────────────────────────────────────────
     def queue_alert(self, title: str, desc: str):
         if not self.config.get('master_enabled', True):
@@ -403,7 +710,6 @@ class ErrorHandler:
             return
         ch_id = int(self.config.get('log_channel_id', 0) or 0)
         if not ch_id:
-            # канал не задан — просто забываем (всё уже в лог-файле)
             self.stats['alerts_dropped'] += len(self._alerts)
             self._alerts.clear()
             return
@@ -414,9 +720,8 @@ class ErrorHandler:
             except Exception:
                 channel = None
         if channel is None:
-            return  # канал недоступен — попробуем в следующий флаш
+            return
 
-        # лимит отправок в час
         now = time.time()
         while self._alerts_sent_ts and now - self._alerts_sent_ts[0] > 3600:
             self._alerts_sent_ts.popleft()
@@ -447,11 +752,11 @@ class ErrorHandler:
             log.error(f"Anti-crash: uyarı kanalına yazılamadı: {e}")
 
     # ────────────────────────────────────────────────────────────
-    # Watchdog event-loop (зависания)
+    # Watchdog event-loop
     # ────────────────────────────────────────────────────────────
     async def _loop_watchdog_task(self):
         await self.bot.wait_until_ready()
-        await asyncio.sleep(30)  # стартовая разминка — не тревожим при загрузке
+        await asyncio.sleep(30)
         last_alert = 0.0
         while not self.bot.is_closed():
             if not self.config.get('loop_watchdog', True):
@@ -486,11 +791,13 @@ class ErrorHandler:
             ov = self.get_overview()
             log.info(
                 f"HEALTH | uptime {ov['uptime_human']} | guilds {ov['guilds']} | "
-                f"ping {ov['latency_ms']}ms | errors total {ov['total_errors']} "
-                f"(last hour {ov['errors_last_hour']}, critical {ov['critical']}) | "
-                f"loop lag max {ov['loop_lag_max']}s | alerts {ov['alerts_sent']}"
+                f"ping {ov['latency_ms']}ms | errors {ov['total_errors']} "
+                f"(hour {ov['errors_last_hour']}, crit {ov['critical']}, "
+                f"filtered {ov['filtered']}, repeats {ov['repeats_hidden']}) | "
+                f"warn {ov['warnings_total']} | dc {ov['disconnects']} | "
+                f"webhook {ov['webhook_sent']}/{ov['webhook_dropped']} | "
+                f"lag max {ov['loop_lag_max']}s | alerts {ov['alerts_sent']}"
             )
-            # всплеск ошибок
             per_min = self._errors_in_window(60)
             if per_min >= int(self.config.get('error_rate_alert', 60)):
                 if time.time() - self._spike_alert_at > 600:
@@ -516,6 +823,7 @@ class ErrorHandler:
         top_types = sorted(self.stats['by_type'].items(), key=lambda x: -x[1])[:5]
         top_cogs = sorted(self.stats['by_cog'].items(), key=lambda x: -x[1])[:5]
         latency = getattr(self.bot, 'latency', None)
+        dc = sum(1 for ts in self._disconnects if now - ts <= 3600)
         return {
             'ok': True,
             'master_enabled': self.config.get('master_enabled', True),
@@ -524,6 +832,15 @@ class ErrorHandler:
             'total_errors': self.stats['total_errors'],
             'errors_last_hour': self._errors_in_window(3600),
             'critical': self.stats['critical'],
+            'filtered': self.stats.get('filtered', 0),
+            'repeats_hidden': self.stats.get('repeats_hidden', 0),
+            'warnings_total': self.stats.get('warnings_total', 0),
+            'warnings': dict(sorted(self.stats.get('warnings', {}).items(), key=lambda x: -x[1])[:5]),
+            'disconnects': self.stats.get('disconnects', 0),
+            'disconnects_hour': dc,
+            'webhook_sent': self.stats.get('webhook_sent', 0),
+            'webhook_dropped': self.stats.get('webhook_dropped', 0),
+            'webhook_on': bool(self.config.get('webhook_enabled') and (self.config.get('webhook_url') or '').strip()),
             'alerts_sent': self.stats['alerts_sent'],
             'alerts_dropped': self.stats['alerts_dropped'],
             'alerts_queued': len(self._alerts),
@@ -543,6 +860,9 @@ class ErrorHandler:
             'watchdog_on': self.config.get('loop_watchdog', True),
             'breaker_on': self.config.get('cog_breaker', True),
             'auto_reload_on': self.config.get('cog_auto_reload', False),
+            'filter_on': self.config.get('filter_enabled', True),
+            'connection_watch_on': self.config.get('connection_watch', True),
+            'warning_monitor_on': self.config.get('warning_monitor', True),
         }
 
     # ────────────────────────────────────────────────────────────
@@ -708,7 +1028,18 @@ class AntiCrashCog(commands.Cog):
         embed.add_field(name="Пинг", value=f"`{ov['latency_ms']} мс`", inline=True)
         embed.add_field(
             name="Ошибки",
-            value=f"Всего: **{ov['total_errors']}**\nЗа час: **{ov['errors_last_hour']}**\nКритических: **{ov['critical']}**",
+            value=(f"Всего: **{ov['total_errors']}**\nЗа час: **{ov['errors_last_hour']}**\n"
+                   f"Критических: **{ov['critical']}**"),
+            inline=True)
+        embed.add_field(
+            name="Шум / Warnings",
+            value=(f"Отфильтровано: **{ov['filtered']}**\nСкрыто повторов: **{ov['repeats_hidden']}**\n"
+                   f"Warning'ов: **{ov['warnings_total']}** {'🟢' if ov['warning_monitor_on'] else '🔴'}"),
+            inline=True)
+        embed.add_field(
+            name="Соединение",
+            value=(f"Обрывов всего: **{ov['disconnects']}**\nЗа час: **{ov['disconnects_hour']}**\n"
+                   f"Watch: {'🟢' if ov['connection_watch_on'] else '🔴'}"),
             inline=True)
         embed.add_field(
             name="Event-loop",
@@ -717,15 +1048,21 @@ class AntiCrashCog(commands.Cog):
             inline=True)
         embed.add_field(
             name="Алерты",
-            value=(f"Отправлено: **{ov['alerts_sent']}**\nВ очереди: **{ov['alerts_queued']}**\n"
-                   f"Канал: {'🟢 задан' if ov['channel_configured'] else '⚪ не задан'}"),
+            value=(f"Канал: {'🟢 задан' if ov['channel_configured'] else '⚪ не задан'} "
+                   f"(отправлено **{ov['alerts_sent']}**)\n"
+                   f"Webhook: {'🟢' if ov['webhook_on'] else '⚪ выкл'} "
+                   f"(отправлено **{ov['webhook_sent']}**, дедуп **{ov['webhook_dropped']}**)"),
+            inline=True)
+        embed.add_field(
+            name="Фильтр",
+            value=f"{'🟢 вкл' if ov['filter_on'] else '🔴 выкл'} · {len(self.h.config.get('filter_substrings', []))} фраз",
             inline=True)
         br = self.h.stats['breakers']
         br_txt = "\n".join(f"• `{m}` — {c}x" for m, c in list(br.items())[:4]) or "Тишина — ни одного срабатывания ✨"
         embed.add_field(
             name=f"⚡ Circuit breaker {'🟢' if ov['breaker_on'] else '🔴'} (auto-reload: {'🟢' if ov['auto_reload_on'] else '⚪'})",
             value=br_txt, inline=False)
-        embed.set_footer(text="!anticrash stats • config • set <ключ> <знач> • kanal • test • reset")
+        embed.set_footer(text="!anticrash stats • config • set • kanal • webhook <url> • test • test-webhook • reset")
         await ctx.send(embed=embed)
 
     @anticrash.command(name='stats', aliases=['стата', 'статистика'])
@@ -738,11 +1075,16 @@ class AntiCrashCog(commands.Cog):
         top_c = "\n".join(f"`{t['count']:>4}` — {t['name']}" for t in ov['top_cogs']) or "—"
         embed.add_field(name="Топ типов ошибок", value=top_t, inline=True)
         embed.add_field(name="Топ модулей", value=top_c, inline=True)
+        if ov['warnings']:
+            w = "\n".join(f"`{c:>4}` — {n}" for n, c in ov['warnings'].items())
+            embed.add_field(name="Типы warning'ов", value=w, inline=True)
         if ov['last_errors']:
             last = "\n".join(
                 f"`{datetime.fromtimestamp(e['ts']).strftime('%H:%M')}` **{e['type']}** · {e['where']}"
+                + (f" · `{e.get('loc')}`" if e.get('loc') else "")
                 for e in ov['last_errors'][:6])
             embed.add_field(name="Последние ошибки", value=last[:1000], inline=False)
+        embed.set_footer(text=f"Детальный файл: data/anticrash_errors.jsonl ({'вкл' if self.h.config.get('details_log_enabled') else 'выкл'})")
         await ctx.send(embed=embed)
 
     @anticrash.command(name='config', aliases=['конфиг', 'настройки'])
@@ -752,12 +1094,13 @@ class AntiCrashCog(commands.Cog):
         lines = []
         for k, v in self.h.config.items():
             label = CONFIG_META.get(k, (k,))[0]
+            if isinstance(v, list):
+                v = f"[{len(v)} фраз]"
             lines.append(f"{k} = {json.dumps(v, ensure_ascii=False)}   # {label}")
         txt = "```\n" + "\n".join(lines) + "\n```"
-        embed = discord.Embed(
-            title="🛡 Конфигурация anti-crash",
-            description=txt[:4000],
-            color=self.GOLD)
+        if len(txt) > 4000:
+            txt = txt[:3900] + "\n...```"
+        embed = discord.Embed(title="🛡 Конфигурация anti-crash", description=txt, color=self.GOLD)
         embed.set_footer(text="Изменить: !anticrash set <ключ> <значение> • Панель: /anticrash")
         await ctx.send(embed=embed)
 
@@ -774,7 +1117,8 @@ class AntiCrashCog(commands.Cog):
         except ValueError as e:
             return await ctx.send(f"❌ Неверное значение: {e}")
         label = CONFIG_META.get(key, (key,))[0]
-        await ctx.send(f"✅ **{label}** (`{key}`) → `{json.dumps(new_val, ensure_ascii=False)}`")
+        shown = f"[{len(new_val)} фраз]" if isinstance(new_val, list) else json.dumps(new_val, ensure_ascii=False)
+        await ctx.send(f"✅ **{label}** (`{key}`) → `{shown}`")
 
     @anticrash.command(name='kanal', aliases=['channel'])
     @commands.has_permissions(administrator=True)
@@ -783,6 +1127,39 @@ class AntiCrashCog(commands.Cog):
         ch = channel or ctx.channel
         self.h.update_config('log_channel_id', ch.id)
         await ctx.send(f"✅ Критические сводки anti-crash теперь будут приходить в {ch.mention}")
+
+    @anticrash.command(name='webhook')
+    @commands.has_permissions(administrator=True)
+    async def ac_webhook(self, ctx, url: str = None):
+        """Включить мгновенный webhook: !anticrash webhook <url> (или 'off')"""
+        if not url:
+            cur = (self.h.config.get('webhook_url') or '').strip()
+            state = "🟢 вкл" if self.h.config.get('webhook_enabled') else "🔴 выкл"
+            return await ctx.send(f"Webhook: {state} · URL: {'задан' if cur else 'не задан'}\n"
+                                  f"Включить: `!anticrash webhook <url>` · Выключить: `!anticrash webhook off`")
+        if url.lower() in ('off', 'выкл', '0'):
+            self.h.update_config('webhook_enabled', False)
+            return await ctx.send("✅ Мгновенный webhook **отключён** (URL сохранён).")
+        if not url.startswith(('https://discord.com/api/webhooks/', 'https://canary.discord.com/api/webhooks/')):
+            return await ctx.send("❌ Это не похоже на Discord webhook URL.\n"
+                                  "Создайте: канал → Настройки → Интеграция → Вебхуки → Скопировать URL")
+        self.h.update_config('webhook_url', url)
+        self.h.update_config('webhook_enabled', True)
+        await ctx.send("✅ Мгновенный webhook **включён**! Ошибки будут прилетать сразу.\n"
+                       "Проверка: `!anticrash test-webhook`")
+
+    @anticrash.command(name='test-webhook', aliases=['testwebhook'])
+    @commands.has_permissions(administrator=True)
+    async def ac_test_webhook(self, ctx):
+        """Тестовая отправка в webhook канал."""
+        if not (self.h.config.get('webhook_enabled') and (self.h.config.get('webhook_url') or '').strip()):
+            return await ctx.send("⚠ Сначала настройте: `!anticrash webhook <url>`")
+        self.h._enqueue_webhook({
+            'ts': time.time(), 'type': 'TestError', 'where': 'cmd:test-webhook',
+            'loc': 'error_handler.py:test', 'msg': 'Тестовая ошибка — доставка работает! ✅',
+            'critical': True, 'traceback': 'Traceback (test)',
+        })
+        await ctx.send("✅ Тестовая ошибка поставлена в очередь webhook (придёт за ~3 сек).")
 
     @anticrash.command(name='test')
     @commands.has_permissions(administrator=True)

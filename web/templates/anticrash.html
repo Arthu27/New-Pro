@@ -98,6 +98,10 @@
     <div class="ac-card"><div class="ac-icon"><i class="fas fa-gauge-high"></i></div><div class="ac-val" id="v-lag">—</div><div class="ac-lbl">Макс. лаг цикла</div></div>
     <div class="ac-card"><div class="ac-icon"><i class="fas fa-bell"></i></div><div class="ac-val" id="v-alerts">—</div><div class="ac-lbl">Алертов отправлено</div></div>
     <div class="ac-card"><div class="ac-icon"><i class="fas fa-signal"></i></div><div class="ac-val" id="v-ping">—</div><div class="ac-lbl">Discord пинг</div></div>
+    <div class="ac-card"><div class="ac-icon"><i class="fas fa-filter"></i></div><div class="ac-val" id="v-filtered">—</div><div class="ac-lbl">Фильтр / повторы</div></div>
+    <div class="ac-card"><div class="ac-icon"><i class="fas fa-triangle-exclamation"></i></div><div class="ac-val" id="v-warnings">—</div><div class="ac-lbl">Warning'ов библиотек</div></div>
+    <div class="ac-card"><div class="ac-icon"><i class="fas fa-plug-circle-xmark"></i></div><div class="ac-val" id="v-disconnects">—</div><div class="ac-lbl">Обрывов WebSocket</div></div>
+    <div class="ac-card"><div class="ac-icon"><i class="fas fa-satellite-dish"></i></div><div class="ac-val" id="v-webhook">—</div><div class="ac-lbl">Webhook доставок</div></div>
   </div>
 
   <div class="ac-box" data-reveal="up">
@@ -113,6 +117,10 @@
     <div class="ac-box" data-reveal="up">
       <div class="ac-head"><i class="fas fa-cubes"></i> Топ модулей по ошибкам</div>
       <div class="ac-body" id="top-cogs"><div style="opacity:.55;font-size:13px">—</div></div>
+    </div>
+    <div class="ac-box" data-reveal="up">
+      <div class="ac-head"><i class="fas fa-triangle-exclamation"></i> Типы warning'ов</div>
+      <div class="ac-body" id="top-warnings"><div style="opacity:.55;font-size:13px">—</div></div>
     </div>
   </div>
 
@@ -159,7 +167,7 @@ async function loadOverview(){
       ? 'Анти-краш активен — бот под защитой'
       : 'Анти-краш ОТКЛЮЧЕН (master_enabled) — мониторинг и алерты остановлены';
     document.getElementById('master-sub').textContent =
-      `watchdog ${d.watchdog_on?'ON':'OFF'} • breaker ${d.breaker_on?'ON':'OFF'} • auto-reload ${d.auto_reload_on?'ON':'OFF'} • канал алертов ${d.channel_configured?'задан':'не задан'}`;
+      `watchdog ${d.watchdog_on?'ON':'OFF'} • breaker ${d.breaker_on?'ON':'OFF'} • фильтр ${d.filter_on?'ON':'OFF'} • warning-монитор ${d.warning_monitor_on?'ON':'OFF'} • connect-watch ${d.connection_watch_on?'ON':'OFF'} • webhook ${d.webhook_on?'ON':'OFF'}`;
 
     document.getElementById('v-uptime').textContent = d.uptime_human;
     document.getElementById('v-total').innerHTML = d.total_errors;
@@ -168,6 +176,10 @@ async function loadOverview(){
     document.getElementById('v-lag').innerHTML = d.loop_lag_max + ' <small>с (сейчас '+d.loop_lag_recent+')</small>';
     document.getElementById('v-alerts').innerHTML = d.alerts_sent + ' <small>/ очередь '+d.alerts_queued+'</small>';
     document.getElementById('v-ping').innerHTML = d.latency_ms + ' <small>мс</small>';
+    document.getElementById('v-filtered').innerHTML = d.filtered + ' <small>/ скрыто '+d.repeats_hidden+'</small>';
+    document.getElementById('v-warnings').innerHTML = d.warnings_total;
+    document.getElementById('v-disconnects').innerHTML = d.disconnects + ' <small>/ час '+d.disconnects_hour+'</small>';
+    document.getElementById('v-webhook').innerHTML = d.webhook_sent + ' <small>/ дедуп '+d.webhook_dropped+'</small>';
 
     const bl = document.getElementById('breaker-list');
     if(d.breakers && d.breakers.length){
@@ -185,6 +197,10 @@ async function loadOverview(){
       : '<div style="opacity:.55;font-size:13px">—</div>';
     document.getElementById('top-types').innerHTML = renderTop(d.top_types);
     document.getElementById('top-cogs').innerHTML = renderTop(d.top_cogs);
+    const wArr = d.warnings ? Object.entries(d.warnings).map(([name,count]) => ({name,count})) : [];
+    document.getElementById('top-warnings').innerHTML = wArr.length
+      ? wArr.map(t => `<div class="ac-row"><span class="ac-key">${esc(t.name)}</span><span class="ac-val2">${t.count}</span></div>`).join('')
+      : '<div style="opacity:.55;font-size:13px">—</div>';
 
     const le = document.getElementById('last-errors');
     if(d.last_errors && d.last_errors.length){
@@ -192,7 +208,7 @@ async function loadOverview(){
         `<div class="ac-err ${e.critical?'crit':''}">
            <span class="ac-err-time">${fmtTs(e.ts)}</span>
            <span class="ac-err-type">${esc(e.type)}</span>
-           <span class="ac-err-msg">${esc(e.where)} — ${esc(e.msg)}</span>
+           <span class="ac-err-msg">${esc(e.where)}${e.loc ? ' · <code>'+esc(e.loc)+'</code>' : ''} — ${esc(e.msg)}</span>
          </div>`).join('');
     } else {
       le.innerHTML = '<div style="opacity:.55;font-size:13px">Ошибок пока нет</div>';
@@ -217,8 +233,16 @@ async function loadConfig(){
         input = `<input type="number" step="0.5" min="0" data-cfg="${esc(k)}" value="${esc(v)}">`;
       } else if(meta.type === 'int'){
         input = `<input type="number" step="1" min="0" data-cfg="${esc(k)}" value="${esc(v)}">`;
+      } else if(meta.type === 'list'){
+        input = '';
+        const ta = `<textarea data-cfg="${esc(k)}" rows="3" style="width:100%;margin-top:8px;background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.12);color:var(--text-1,#fff);border-radius:8px;padding:8px 10px;font-size:12.5px;font-family:inherit;resize:vertical;">${esc((v||[]).join('\n'))}</textarea>`;
+        return `<div class="ac-field">
+          <div class="ac-field-top"><div class="ac-field-label">${esc(meta.label)}</div></div>
+          ${ta}
+          <div class="ac-field-desc">${esc(meta.desc)} <code style="opacity:.6">${esc(k)}</code></div>
+        </div>`;
       } else {
-        input = `<input type="text" data-cfg="${esc(k)}" value="${esc(v)}">`;
+        input = `<input type="text" style="width:170px;text-align:left" data-cfg="${esc(k)}" value="${esc(v)}">`;
       }
       return `<div class="ac-field">
         <div class="ac-field-top"><div class="ac-field-label">${esc(meta.label)}</div>${input}</div>
@@ -236,6 +260,7 @@ async function saveConfig(){
     if(meta.type === 'bool') payload[k] = el.checked;
     else if(meta.type === 'float') payload[k] = parseFloat(el.value || '0');
     else if(meta.type === 'int') payload[k] = parseInt(el.value || '0', 10);
+    else if(meta.type === 'list') payload[k] = el.value.split('\n').map(s => s.trim()).filter(Boolean);
     else payload[k] = el.value;
   });
   try{
