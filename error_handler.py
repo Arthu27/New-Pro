@@ -20,6 +20,7 @@ import json
 import time
 import warnings as _warnings
 import queue as _queue
+import aiohttp
 import discord
 from discord.ext import commands
 from discord import app_commands
@@ -580,7 +581,6 @@ class ErrorHandler:
 
     async def _webhook_task(self):
         """Отправка очереди в webhook: дедуп уже пройден, здесь — лимит/час и сеть."""
-        import aiohttp
         await self.bot.wait_until_ready()
         try:
             self._webhook_session = aiohttp.ClientSession()
