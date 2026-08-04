@@ -568,7 +568,7 @@ class Logs (commands .Cog ):
         if message .author .bot or not message .guild :
             return 
         cached =_msg_cache .pop (message .id ,None )
-        content =message .content or (cached ['content']if cached else '')or '[Soderjimoe не найдено]'
+        content =message .content or (cached ['content']if cached else '')or '[Содержимое не найдено]'
         save_event (message .guild .id ,'message','Сообщение удалено',{
         'user_id':str (message .author .id ),
         'user_name':str (message .author ),
@@ -584,16 +584,35 @@ class Logs (commands .Cog ):
         f"## Сообщение удалено\n"
         f"**{message.author.display_name}** · `{message.author.id}`\n"
         f"Канал: {message.channel.mention}\n\n"
-        f"> {content[:500] or '[Vlojenie]'}"
+        f"> {content[:500] or '[Вложение]'}"
         )
         e .set_footer (text =f"{message.guild.name}")
         await ch .send (embed =e )
+
+        # 👻 GHOST PING: тегнули и сразу удалили — отдельный алерт модераторам
+        _mentioned =[m for m in message .mentions if not m .bot ]+list (message .role_mentions or [])
+        if _mentioned :
+            _targets =", ".join (m .mention for m in _mentioned [:8 ])
+            ge =discord .Embed (color =0x9B59B6 ,timestamp =datetime .datetime .utcnow ())
+            ge .description =(
+            f"## 👻 Ghost Ping\n"
+            f"**{message.author.display_name}** · `{message.author.id}`\n"
+            f"тегнул и сразу удалил сообщение\n\n"
+            f"Упомянуты: {_targets}\n"
+            f"Канал: {message.channel.mention}\n\n"
+            f"> {content[:300] or '[Вложение]'}"
+            )
+            ge .set_footer (text =f"{message.guild.name} · ghost-ping detector")
+            try:
+                await ch .send (embed =ge )
+            except Exception :
+                pass
 
     @commands .Cog .listener ()
     async def on_message_edit (self ,before ,after ):
         if before .author .bot or before .content ==after .content or not before .guild :
             return 
-        save_event (before .guild .id ,'message','Сообщение izmeneno',{
+        save_event (before .guild .id ,'message','Сообщение изменено',{
         'user_id':str (before .author .id ),
         'user_name':str (before .author ),
         'channel':before .channel .name ,
@@ -606,11 +625,11 @@ class Logs (commands .Cog ):
             return 
         e =discord .Embed (color =0x3498DB ,timestamp =datetime .datetime .utcnow ())
         e .description =(
-        f"## Сообщение izmeneno\n"
+        f"## Сообщение изменено\n"
         f"**{before.author.display_name}** · `{before.author.id}`\n"
-        f"Канал: {before.channel.mention} · [Pereyti]({after.jump_url})\n\n"
-        f"Bilo:\n> {before.content[:400] or '[Пусто]'}\n\n"
-        f"Stalo:\n> {after.content[:400] or '[Пусто]'}"
+        f"Канал: {before.channel.mention} · [Перейти]({after.jump_url})\n\n"
+        f"**Было:**\n> {before.content[:400] or '[Пусто]'}\n\n"
+        f"**Стало:**\n> {after.content[:400] or '[Пусто]'}"
         )
         e .set_footer (text =f"{before.guild.name}")
         await ch .send (embed =e )
@@ -621,33 +640,39 @@ class Logs (commands .Cog ):
     async def on_voice_state_update (self ,member ,before ,after ):
         if before .channel ==after .channel :
             return 
-        if after .channel :
-            action ='Vosel в ses'
-            detail ={'channel':after .channel .name }
-            color =0x1ABC9C 
-            icon =""
-            desc =f"**{member.display_name}** podanahtarilsya e seste канал."
+        b ,a =before .channel ,after .channel
+        if b is None and a is not None :
+            # Зашёл в голосовой канал
+            action ='Зашёл в голосовой'
+            color =0x1ABC9C
+            detail ={'channel':a .name }
+            line =f"Канал: **{a.name}**"
+        elif b is not None and a is None :
+            # Вышел из голосового
+            action ='Вышел из голосового'
+            color =0x95A5A6
+            detail ={'channel':b .name }
+            line =f"Канал: **{b.name}**"
         else :
-            action ='Visel den ses'
-            detail ={'channel':before .channel .name }
-            color =0x95A5A6 
-            icon =""
-            desc =f"**{member.display_name}** baгlandы den ses канал."
+            # Переключился на другой канал
+            action ='Переключился в другой канал'
+            color =0x3498DB
+            detail ={'channel':f'{b.name} → {a.name}','from':b .name ,'to':a .name }
+            line =f"**{b.name}** ➜ **{a.name}**"
 
         save_event (member .guild .id ,'voice',action ,{
         'user_id':str (member .id ),
         'user_name':str (member ),
-        **detail 
+        **detail
         })
         ch =await self .get_log_channel (member .guild ,'voice')
         if not ch :
-            return 
-        title_text ="Заговорил в войсе"if after .channel else "Подключился к войсу"
+            return
         e =discord .Embed (color =color ,timestamp =datetime .datetime .utcnow ())
         e .description =(
-        f"## {title_text}\n"
+        f"## {action}\n"
         f"**{member.display_name}** · `{member.id}`\n\n"
-        f"Канал: **{detail['channel']}**"
+        f"{line}"
         )
         e .set_footer (text =f"{member.guild.name}")
         await ch .send (embed =e )

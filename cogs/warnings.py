@@ -215,9 +215,13 @@ class warnings(commands.Cog):
         return None
 
     # ── /warn ────────────────────────────────────────────────────────────
-    @app_commands.command(name="warn", description="Выдать предупреждение")
-    @app_commands.checks.has_permissions(moderate_members=True)
-    async def warn(self, interaction, user: discord.Member, reason: str = None):
+    async def add_warn(self, interaction, user: discord.Member, reason: str = None):
+        """Ortak warn çekirdeği: kayıt + DM + otomatik ceza.
+
+        /warn komutu VE sağ-tık context menüleri (mod_tools) bunu kullanır.
+        Yanıt GÖNDERMEZ — çağıran taraf yanıtlar.
+        Döner: (warn_id, total, punishment_result)
+        """
         guild = interaction.guild
         warns = self._get_warns(guild.id, user.id)
         warn_id = len(warns) + 1
@@ -259,6 +263,13 @@ class warnings(commands.Cog):
 
         # Авто-наказание
         punishment_result = await self.apply_warn_punishment(guild, user, total)
+        return warn_id, total, punishment_result
+
+    @app_commands.command(name="warn", description="Выдать предупреждение")
+    @app_commands.checks.has_permissions(moderate_members=True)
+    async def warn(self, interaction, user: discord.Member, reason: str = None):
+        guild = interaction.guild
+        warn_id, total, punishment_result = await self.add_warn(interaction, user, reason)
 
         # Ответ модератору
         e = discord.Embed(color=discord.Color.dark_grey(), timestamp=datetime.now(timezone.utc))
