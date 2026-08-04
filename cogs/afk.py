@@ -8,6 +8,14 @@ from config import Config
 
 OWNER_ID =int (os .getenv ('OWNER_ID')or '0')
 
+AFK_ICON ='assets/afk_icon.png'
+
+def _afk_file ():
+    """AFK simgesi — embed thumbnail'ı için dosya."""
+    if os .path .exists (AFK_ICON ):
+        return discord .File (AFK_ICON ,filename ='afk_icon.png')
+    return None
+
 # Хранение упоминаний, пришедших во время AFK — {user_id: [{from, msg, channel, guild, time}]}
 _pending_mentions :dict ={}
 
@@ -54,9 +62,16 @@ class AFK (commands .Cog ):
         f"> **Начало:** <t:{ts}:R>\n\n"
         f"*Когда кто-то упомянет тебя — придёт уведомление.*"
         )
-        e .set_thumbnail (url =interaction .user .display_avatar .url )
-        e .set_footer (text ="Выйти из AFK: /afk-remove")
-        await interaction .response .send_message (embed =e )
+        icon =_afk_file ()
+        if icon :
+            e .set_thumbnail (url ='attachment://afk_icon.png')
+        else :
+            e .set_thumbnail (url =interaction .user .display_avatar .url )
+        e .set_footer (text ="💤 Выход из AFK: /afk-remove")
+        if icon :
+            await interaction .response .send_message (embed =e ,file =icon )
+        else :
+            await interaction .response .send_message (embed =e )
 
         # Добавить 💤 в ник
         try :
@@ -155,7 +170,12 @@ class AFK (commands .Cog ):
                 f"-# Напишите ответ — передам, когда проснётся."
                 )
                 e .set_footer (text ="Сообщение будет передано Arthur'у")
-                sent =await message .channel .send (embed =e )
+                icon =_afk_file ()
+                if icon :
+                    e .set_thumbnail (url ='attachment://afk_icon.png')
+                    sent =await message .channel .send (embed =e ,file =icon )
+                else :
+                    sent =await message .channel .send (embed =e )
 
                 # Сохранить упоминание
                 if OWNER_ID not in _pending_mentions :
@@ -213,7 +233,12 @@ class AFK (commands .Cog ):
                 f"> **Длительность:** {dur}"
                 )
                 e .set_footer (text ="В режиме AFK — сообщение не увидит")
-                await message .channel .send (embed =e ,delete_after =10 )
+                icon =_afk_file ()
+                if icon :
+                    e .set_thumbnail (url ='attachment://afk_icon.png')
+                    await message .channel .send (embed =e ,file =icon ,delete_after =10 )
+                else :
+                    await message .channel .send (embed =e ,delete_after =10 )
 
                 # Отправить owner'у в ЛС
                 if OWNER_ID and mentioned .id ==OWNER_ID :
