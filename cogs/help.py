@@ -273,118 +273,131 @@ CAT_EMOJIS_FALLBACK = {
 }
 
 
-def _header(bg, title_text, sub_text, icon_key):
-    """Шапка карточки: фирменная иконка + заголовок + правый pill"""
-    W = bg.size[0]
-    panel = _panel(872, 76, radius=16)
-    bg.alpha_composite(panel, (24, 20))
-    badge = _cat_icon(icon_key, 56)
-    bg.alpha_composite(badge, (40, 30))
-    bg.alpha_composite(_panel(168, 40, radius=12, fill=(24, 29, 60, 215), border=(212, 175, 55, 200), bw=2), (712, 38))
-    d = ImageDraw.Draw(bg)
-    d.text((112, 28), title_text, fill=GOLD_SOFT, font=_f(True, 33))
-    d.text((112, 66), sub_text, fill=MUTED, font=_f(False, 18))
-    d.text((736, 48), "✦ HELP", fill=GOLD, font=_f(True, 16))
+R = 2  # рендер-масштаб: Discord-превью ~400px, рендерим вдвое больше — текст родной и чёткий
 
 
 def generate_help_card(category_id: str = None) -> Image.Image:
-    W = 920
+    """Логический холст ~800px; физически рисуется в R раз больше (нет апскейла — нет мыла)."""
+    def sc(v):
+        return int(round(v * R))
+
+    LW = 800
     is_overview = category_id in (None, "overview")
+
     if is_overview:
-        H = 112 + 4 * 128 + 3 * 14 + 90
+        LH = 830
     else:
         cat = next((c for c in CATEGORIES if c["id"] == category_id), None)
         cmds = cat["commands"] if cat else []
-        H = max(520, 112 + len(cmds) * 91 + 90)
+        n = len(cmds)
+        col2 = n > 6
+        rows = n if not col2 else (n + 1) // 2
+        LH = 112 + rows * 99 + 88
 
+    W, H = sc(LW), sc(LH)
     bg = _load_bg(W, H).convert('RGBA')
+    d = ImageDraw.Draw(bg)
+
+    # ── Шапка ──
+    def header(title_text, sub_text, icon_key):
+        hp = _panel(sc(LW - 48), sc(88), radius=sc(16))
+        bg.alpha_composite(hp, (sc(24), sc(18)))
+        badge = _cat_icon(icon_key, sc(58))
+        bg.alpha_composite(badge, (sc(38), sc(33)))
+        pill_w, pill_h = sc(150), sc(42)
+        bg.alpha_composite(_panel(pill_w, pill_h, radius=sc(12), border=(212, 175, 55, 210)),
+                           (sc(LW - 24 - 166), sc(41)))
+        dd = ImageDraw.Draw(bg)
+        dd.text((sc(112), sc(28)), title_text, fill=GOLD_SOFT, font=_f(True, sc(31)))
+        dd.text((sc(112), sc(66)), sub_text, fill=(178, 186, 212), font=_f(False, sc(17)))
+        pf2 = _f(True, sc(17))
+        tw = dd.textlength("✦ HELP", font=pf2)
+        dd.text((sc(LW - 24 - 166) + (pill_w - tw) / 2, sc(52)), "✦ HELP", fill=GOLD, font=pf2)
 
     if is_overview:
-        _header(bg, "AETHER  ·  СПРАВКА",
-                f"{TOTAL_CMDS} КОМАНД  ·  ПРЕФИКС: !  ·  ВЫБЕРИТЕ КАТЕГОРИЮ В МЕНЮ", "aether_logo")
+        header("AETHER  ·  СПРАВКА",
+               f"{TOTAL_CMDS} КОМАНД  ·  ПРЕФИКС: !  ·  ВЫБОР КАТЕГОРИИ В МЕНЮ", "aether_logo")
 
-        # Сетка категорий 3x4 — крупные иконки, большие шрифты, тени
-        box_w, box_h, gap = 284, 128, 14
-        start_x, start_y = 24, 112
+        # ── Сетка категорий 2×6, крупно и без мелкого текста ──
+        box_w, box_h, gap_x, gap_y = (LW - 48 - 14) // 2, 96, 14, 9
+        start_x, start_y = 24, 122
         for idx, cat in enumerate(CATEGORIES):
-            c, r = idx % 3, idx // 3
-            bx = start_x + c * (box_w + gap)
-            by = start_y + r * (box_h + gap)
-            bg.alpha_composite(_panel_shadowed(box_w, box_h, radius=16), (bx - 6, by - 6))
-            icon = _cat_icon(CAT_ICONS.get(cat["id"], "aether_logo"), 84)
-            bg.alpha_composite(icon, (bx + 12, by + 22))
-            d = ImageDraw.Draw(bg)
-            title_f = _f(True, 23)
-            while d.textlength(cat["title"].upper(), font=title_f) > box_w - 116 and title_f.size > 15:
-                title_f = _f(True, title_f.size - 1)
-            d.text((bx + 108, by + 24), cat["title"].upper(), fill=TXT, font=title_f)
-            d.text((bx + 108, by + 56), f"{len(cat['commands'])} команд", fill=GOLD, font=_f(True, 18))
-            sample = " · ".join(cmd[0].split()[0] for cmd in cat["commands"][:3])
-            if len(sample) > 24:
-                sample = sample[:23] + "…"
-            d.text((bx + 108, by + 82), sample, fill=MUTED, font=_f(False, 15))
-
-        # Навигационная полоса внизу
-        bg.alpha_composite(_panel_shadowed(872, 62, radius=16, border=(212, 175, 55, 230)), (18, H - 84))
-        icon = _cat_icon("navigation", 46)
-        bg.alpha_composite(icon, (32, H - 76))
-        d = ImageDraw.Draw(bg)
-        d.text((92, H - 78), "НАВИГАЦИЯ · МЕНЮ НИЖЕ", fill=TXT, font=_f(True, 22))
-        d.text((92, H - 48), "выберите раздел — карточка обновится", fill=MUTED, font=_f(False, 16))
-        d.text((W - 190, H - 66), "HELP v5.1", fill=GOLD, font=_f(True, 16))
+            c, r = idx % 2, idx // 2
+            bx = start_x + c * (box_w + gap_x)
+            by = start_y + r * (box_h + gap_y)
+            bg.alpha_composite(_panel_shadowed(sc(box_w), sc(box_h), radius=sc(16)), (sc(bx) - sc(6), sc(by) - sc(6)))
+            icon = _cat_icon(CAT_ICONS.get(cat["id"], "aether_logo"), sc(64))
+            bg.alpha_composite(icon, (sc(bx + 14), sc(by + 16)))
+            dd = ImageDraw.Draw(bg)
+            title_f = _f(True, sc(25))
+            while dd.textlength(cat["title"].upper(), font=title_f) > sc(box_w - 104) and title_f.size > sc(14):
+                title_f = _f(True, title_f.size - sc(1))
+            dd.text((sc(bx + 90), sc(by + 20)), cat["title"].upper(), fill=TXT, font=title_f)
+            dd.text((sc(bx + 90), sc(by + 55)), f"{len(cat['commands'])} команд", fill=GOLD, font=_f(True, sc(20)))
 
     else:
         cat = next((c for c in CATEGORIES if c["id"] == category_id), None)
         cmds = cat["commands"] if cat else []
         icon_key = CAT_ICONS.get(category_id, "aether_logo")
-        _header(bg, f"КАТЕГОРИЯ · {cat['title'].upper() if cat else 'СПРАВКА'}",
-                f"{len(cmds)} КОМАНД  ·  [РОЛЬ] — КТО МОЖЕТ ИСПОЛЬЗОВАТЬ", icon_key)
+        header(f"{cat['title'].upper() if cat else 'СПРАВКА'}",
+               f"{len(cmds)} КОМАНД  ·  СПРАВКА AETHER", icon_key)
 
-        box_w, box_h, gap_y = 872, 80, 11
-        start_x, start_y = 24, 112
+        col2 = len(cmds) > 6
+        box_w = (LW - 48 - 14) // 2 if col2 else LW - 48
+        box_h, gap_y, gap_x = 88, 11, 14
+        start_x, start_y = 24, 122
         for idx, (cmd_str, desc, perm) in enumerate(cmds):
-            by = start_y + idx * (box_h + gap_y)
-            bg.alpha_composite(_panel_shadowed(box_w, box_h, radius=14), (start_x - 6, by - 6))
-            d = ImageDraw.Draw(bg)
-            # золотой ромб-буллет
-            cx, cy = start_x + 30, by + box_h // 2
-            s = 8
-            d.polygon([(cx, cy - s), (cx + s, cy), (cx, cy + s), (cx - s, cy)], fill=GOLD)
-            d.text((start_x + 54, by + 10), cmd_str, fill=TXT, font=_f(True, 28))
-            d.text((start_x + 54, by + 47), desc, fill=MUTED, font=_f(False, 21))
+            col_i, row_i = (idx % 2, idx // 2) if col2 else (0, idx)
+            bx = start_x + col_i * (box_w + gap_x)
+            by = start_y + row_i * (box_h + gap_y)
+            bg.alpha_composite(_panel_shadowed(sc(box_w), sc(box_h), radius=sc(14)), (sc(bx) - sc(6), sc(by) - sc(6)))
+            dd = ImageDraw.Draw(bg)
+            cx, cy = sc(bx + 26), sc(by + box_h // 2)
+            s8 = sc(8)
+            dd.polygon([(cx, cy - s8), (cx + s8, cy), (cx, cy + s8), (cx - s8, cy)], fill=GOLD)
+            cf = _f(True, sc(26))
+            max_cw = box_w - 64 - 110 if not col2 else box_w - 64 - 96
+            while dd.textlength(cmd_str, font=cf) > sc(max_cw) and cf.size > sc(13):
+                cf = _f(True, cf.size - sc(1))
+            dd.text((sc(bx + 46), sc(by + 12)), cmd_str, fill=TXT, font=cf)
+            dd.text((sc(bx + 46), sc(by + 50)), desc, fill=(178, 186, 212), font=_f(False, sc(19)))
+            pf = _f(True, sc(15))
             perm_txt = f" {perm} "
-            pf = _f(True, 17)
-            pw = d.textlength(perm_txt, font=pf) + 16
-            ph = 30
-            bg.alpha_composite(_panel(int(pw), ph, radius=10, fill=(24, 29, 60, 215), border=(212, 175, 55, 190), bw=2),
-                               (start_x + box_w - int(pw) - 16, by + (box_h - ph) // 2))
-            d = ImageDraw.Draw(bg)
-            d.text((start_x + box_w - 16 - pw + 8, by + (box_h - ph) // 2 + 6), perm_txt, fill=GOLD, font=pf)
+            pw = dd.textlength(perm_txt, font=pf) + sc(16)
+            ph = sc(30)
+            bg.alpha_composite(_panel(int(pw), int(ph), radius=sc(10), border=(212, 175, 55, 190)),
+                               (sc(bx + box_w) - int(pw) - sc(12), sc(by) + (sc(box_h) - ph) // 2))
+            dd = ImageDraw.Draw(bg)
+            dd.text((sc(bx + box_w) - int(pw) - sc(12) + sc(8), sc(by) + (sc(box_h) - ph) // 2 + sc(5)),
+                    perm_txt, fill=GOLD, font=pf)
 
-        # Alt navigasyon şeridi
-        bg.alpha_composite(_panel(872, 54, radius=14, border=(212, 175, 55, 210)), (24, H - 76))
-        icon = _cat_icon("navigation", 40)
-        bg.alpha_composite(icon, (36, H - 69))
-        d = ImageDraw.Draw(bg)
-        d.text((90, H - 62), "МЕНЮ НИЖЕ · выберите другую категорию", fill=TXT, font=_f(True, 19))
-        d.text((W - 170, H - 60), "HELP v5.1", fill=GOLD, font=_f(True, 15))
+    # ── Нижняя полоса навигации ──
+    nav_h = 62
+    bg.alpha_composite(_panel_shadowed(sc(LW - 48), sc(nav_h), radius=sc(16), border=(212, 175, 55, 230)),
+                       (sc(24) - sc(6), H - sc(nav_h + 24) - sc(6)))
+    icon = _cat_icon("navigation", sc(44))
+    bg.alpha_composite(icon, (sc(36), H - sc(nav_h + 24) + sc(9)))
+    dd = ImageDraw.Draw(bg)
+    dd.text((sc(94), H - sc(nav_h + 24) + sc(10)), "НАВИГАЦИЯ · МЕНЮ НИЖЕ",
+            fill=TXT, font=_f(True, sc(21)))
+    dd.text((sc(94), H - sc(nav_h + 24) + sc(38)), "выберите раздел — карточка обновится",
+            fill=(178, 186, 212), font=_f(False, sc(16)))
+    vf = _f(True, sc(16))
+    vt = "HELP v5.2"
+    dd.text((W - sc(24) - dd.textlength(vt, font=vf) - sc(14), H - sc(nav_h + 24) + sc(24)), vt, fill=GOLD, font=vf)
 
-    # Золотые уголки
-    d = ImageDraw.Draw(bg)
-    L, T = 26, 3
-    for (x, y, dx, dy) in ((8, 8, 1, 1), (W - 8, 8, -1, 1), (8, H - 8, 1, -1), (W - 8, H - 8, -1, -1)):
-        d.line([(x, y), (x + dx * L, y)], fill=GOLD, width=T)
-        d.line([(x, y), (x, y + dy * L)], fill=GOLD, width=T)
+    # ── Золотые уголки ──
+    L, T = sc(30), sc(3)
+    for (x, y, dx, dy) in ((8 * R, 8 * R, 1, 1), (W - 8 * R, 8 * R, -1, 1),
+                           (8 * R, H - 8 * R, 1, -1), (W - 8 * R, H - 8 * R, -1, -1)):
+        dd.line([(x, y), (x + dx * L, y)], fill=GOLD, width=T)
+        dd.line([(x, y), (x, y + dy * L)], fill=GOLD, width=T)
     return bg
 
 
 def generate_help_card_bytes(category_id: str = None) -> io.BytesIO:
-    """Discord önizlemesi ~400px; net görünmesi için 2x render + hafif keskinleştirme"""
-    from PIL import ImageFilter
+    """Kart zaten 2x native çiziliyor (R=2) — upscale bulanıklığı yok"""
     card = generate_help_card(category_id).convert('RGB')
-    w, h = card.size
-    card = card.resize((w * 2, h * 2), Image.Resampling.LANCZOS)
-    card = card.filter(ImageFilter.UnsharpMask(radius=2, percent=135, threshold=2))
     buf = io.BytesIO()
     card.save(buf, format='PNG', optimize=True)
     buf.seek(0)
