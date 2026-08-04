@@ -384,7 +384,7 @@ class Duty (commands .Cog ):
         if not gpts :
             await interaction .response .send_message ("Пока нет записей очков.",ephemeral =True )
             return 
-        embed =discord .Embed (title =" Задача Очки Tablosu",color =0xDC143C )
+        embed =discord .Embed (title ="⭐ Таблица очков дежурства",color =0xDC143C )
         if uye :
             uid =str (uye .id )
             total =gpts .get (uid ,{}).get ("total",0 )
@@ -392,7 +392,7 @@ class Duty (commands .Cog ):
             embed .add_field (name =uye .display_name ,value =f"**{total} **",inline =False )
         else :
             top =sorted (gpts .items (),key =lambda x :x [1 ].get ("total",0 ),reverse =True )[:10 ]
-            medals =["","",""]
+            medals =["🥇","🥈","🥉"]
             for i ,(uid ,udata )in enumerate (top ,1 ):
                 m =interaction .guild .get_member (int (uid ))
                 name =m .display_name if m else uid 
@@ -409,7 +409,7 @@ class Duty (commands .Cog ):
     uye :discord .Member ,gorev :str ,miktar :int =1 ):
         if gorev not in TASK_DEFS :
             await interaction .response .send_message (
-            f"Неверный задача. Выбрать: {', '.join(TASK_DEFS)}",ephemeral =True )
+            f"❌ Неверная задача. Выберите: {', '.join(TASK_DEFS)}",ephemeral =True )
             return 
         data =load_duty ()
         uid ,gid =str (uye .id ),str (interaction .guild .id )

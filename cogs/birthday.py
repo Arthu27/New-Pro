@@ -232,8 +232,8 @@ class Birthday (commands .Cog ):
         with open (f'data/birthday_settings_{ctx.guild.id}.json','w',encoding ='utf-8')as fp :
             json .dump (settings ,fp ,indent =2 ,ensure_ascii =False )
 
-        e =discord .Embed (title =" День рождения Система Kuruldu!",color =0x2ECC71 ,timestamp =datetime .now (timezone .utc ))
-        e .description =f"```ansi\n\u001b[1;32m СИСТЕМА АКТИВЕН\u001b[0m\n```\n{_divider()}"
+        e =discord .Embed (title ="🎂 Система дней рождения настроена!",color =0x2ECC71 ,timestamp =datetime .now (timezone .utc ))
+        e .description =f"```ansi\n\u001b[1;32m СИСТЕМА АКТИВНА\u001b[0m\n```\n{_divider()}"
         e .add_field (name =" Канал",value =channel .mention ,inline =True )
         e .add_field (name =" Роль",value =role .mention if role else "```Нет```",inline =True )
         e .set_footer (text =f"Aether • {ctx.guild.name}",icon_url =ctx .guild .icon .url if ctx .guild .icon else None )
@@ -259,7 +259,7 @@ class Birthday (commands .Cog ):
         with open (f'data/birthday_settings_{interaction.guild_id}.json','w',encoding ='utf-8')as fp :
             json .dump (settings ,fp ,indent =2 ,ensure_ascii =False )
 
-        e =discord .Embed (title =" День рождения Система Kuruldu!",color =0x2ECC71 ,timestamp =datetime .now (timezone .utc ))
+        e =discord .Embed (title ="🎂 Система дней рождения настроена!",color =0x2ECC71 ,timestamp =datetime .now (timezone .utc ))
         e .add_field (name =" Канал",value =channel .mention ,inline =True )
         e .add_field (name =" Роль",value =role .mention if role else "`Нет`",inline =True )
         e .add_field (name =" Бонусные монеты",value =f"`{hediye_coin}`"if hediye_coin else "`Нет`",inline =True )

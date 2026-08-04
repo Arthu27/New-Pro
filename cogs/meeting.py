@@ -71,7 +71,7 @@ def _guild_embed_base (guild :discord .Guild ,title :str ,color :int )->discord 
 
 async def _scan_messages (guild :discord .Guild ,since :datetime .datetime )->dict :
     """
-    Собрание bitiшinden bu yana все channellardaki messagelarы сканировать.
+Сканировать сообщения во всех каналах с момента завершения собрания.
     Returns: {user_id: message_count}
     """
     msg_counts ={}
@@ -90,14 +90,14 @@ async def _scan_messages (guild :discord .Guild ,since :datetime .datetime )->di
         except Exception :
             continue 
 
-    log .info (f'[Meeting] {guild.name}: {scanned} message сканироватьndы, {len(msg_counts)} user')
+    log .info (f'[Meeting] {guild.name}: отсканировано {scanned} сообщений, {len(msg_counts)} участников')
     return msg_counts 
 
 
 async def _scan_voice (guild :discord .Guild ,since :datetime .datetime )->dict :
     """
-    voice_stats dosyasыndan toplanti sonrasы ses данные al.
-    Примечание: voice_tracker показывает мгновенное число, toplanti основано на snapshot.
+    Получить голосовые данные из файла voice_stats после собрания.
+    Примечание: voice_tracker показывает мгновенное число, собрание основано на снимке.
     Returns: {user_id: seconds}
     """
     vs_path =f'{DATA_DIR}/voice_stats_{guild.id}.json'
@@ -114,7 +114,7 @@ async def _scan_voice (guild :discord .Guild ,since :datetime .datetime )->dict 
         except Exception :
             pass 
 
-            # Snapshot — toplanti baшlangыcыndaki значение
+            # Снимок — значение на начало собрания
     snapshot ={}
     if os .path .exists (snapshot_path ):
         try :
@@ -123,7 +123,7 @@ async def _scan_voice (guild :discord .Guild ,since :datetime .datetime )->dict 
         except Exception :
             pass 
 
-            # Разница = bu toplanti kazanыlan длительность
+            # Разница = длительность, набранная за это собрание
     result ={}
     for uid ,secs in current .items ():
         prev =snapshot .get (uid ,0 )
@@ -299,14 +299,14 @@ async def _build_meeting_report (guild :discord .Guild ,since :datetime .datetim
         role_embed .set_footer (text =f'{role.name} • {len(role_members)} участник',icon_url =guild .icon .url if guild .icon else None )
         embeds .append (role_embed )
 
-        #  KAPANIШ 
+        # ЗАВЕРШЕНИЕ СОБРАНИЯ
     close =discord .Embed (color =0x57F287 )
     if guild .icon :
         close .set_thumbnail (url =guild .icon .url )
     close .description =(
-    f'> Rapor dёnemi: <t:{ts_since}:D> → <t:{ts_now}:D>\n'
-    f'> Bir следующий toplanti kadar veriler birikmeye продолжить edecek.\n\n'
-    f'-# Aether  ·  Собрание Система'
+    f'> Период отчёта: <t:{ts_since}:D> → <t:{ts_now}:D>\n'
+    f'> До следующего собрания данные продолжат накапливаться.\n\n'
+    f'-# Aether  ·  Система собраний'
     )
     close .set_footer (text =f'{guild.name}',icon_url =guild .icon .url if guild .icon else None )
     embeds .append (close )
@@ -315,7 +315,7 @@ async def _build_meeting_report (guild :discord .Guild ,since :datetime .datetim
 
 
 class MeetingStartModal (discord .ui .Modal ,title ='Собрание Запустить'):
-    """Собрание baшlangыч vakitы вход"""
+    """Ввод времени начала собрания"""
     date_input =discord .ui .TextInput (
     label ='Время начала собрания',
     placeholder ='GG.AA.YYYY SS:DD  (напр.: 12.04.2026 22:00)',
@@ -358,53 +358,53 @@ class MeetingStartModal (discord .ui .Modal ,title ='Собрание Запус
         ts =int (meeting_time .timestamp ())
         embed =_guild_embed_base (interaction .guild ,'📢 Собрание началось',0x57F287 )
         embed .description =(
-        f'> Собрание baшlangыcы: <t:{ts}:F>\n'
-        f'> Сообщения ve ses длительность bu andan itibaren число.\n\n'
-        f'Когда toplanti закончится, нажмите кнопку ** Собрание завершено**.'
+        f'> Начало собрания: <t:{ts}:F>\n'
+        f'> Сообщения и голосовая активность считаются с этого момента.\n\n'
+        f'Когда собрание закончится, нажмите кнопку **✅ Завершить собрание**.'
         )
         await interaction .response .send_message (embed =embed )
 
 
 class MeetingView (discord .ui .View ):
-    """Собрание paneli кнопки"""
+    """Кнопки панели собрания"""
 
     def __init__ (self ,guild_id :int ):
         super ().__init__ (timeout =None )
         self .guild_id =guild_id 
 
     @discord .ui .button (
-    label ='  Собрание Запустить',
+    label ='▶️ Запустить собрание',
     style =discord .ButtonStyle .success ,
     custom_id ='meeting_start',
     row =0 
     )
     async def start_meeting (self ,interaction :discord .Interaction ,button :discord .ui .Button ):
         if not interaction .user .guild_permissions .administrator :
-            await interaction .response .send_message (' Администратор нет.',ephemeral =True )
+            await interaction .response .send_message ('❌ Недостаточно прав.',ephemeral =True )
             return 
 
         cfg =_load_cfg (interaction .guild .id )
         if cfg .get ('active'):
-            await interaction .response .send_message (' Zaten активен bir toplanti есть!',ephemeral =True )
+            await interaction .response .send_message ('⚠️ Собрание уже активно!',ephemeral =True )
             return 
 
-            # Modal aч — vakit вход
+            # Открыть модалку — ввод времени
         await interaction .response .send_modal (MeetingStartModal ())
 
     @discord .ui .button (
-    label ='  Собрание завершено',
+    label ='✅ Завершить собрание',
     style =discord .ButtonStyle .danger ,
     custom_id ='meeting_end',
     row =0 
     )
     async def end_meeting (self ,interaction :discord .Interaction ,button :discord .ui .Button ):
         if not interaction .user .guild_permissions .administrator :
-            await interaction .response .send_message (' Администратор нет.',ephemeral =True )
+            await interaction .response .send_message ('❌ Недостаточно прав.',ephemeral =True )
             return 
 
         cfg =_load_cfg (interaction .guild .id )
         if not cfg .get ('active'):
-            await interaction .response .send_message (' Активен toplanti нет.',ephemeral =True )
+            await interaction .response .send_message ('ℹ️ Нет активного собрания.',ephemeral =True )
             return 
 
         await interaction .response .defer ()
@@ -435,14 +435,14 @@ class MeetingView (discord .ui .View ):
         await interaction .message .edit (view =self )
 
     @discord .ui .button (
-    label ='  В конец Rapor',
+    label ='📊 Последний отчёт',
     style =discord .ButtonStyle .secondary ,
     custom_id ='meeting_last_report',
     row =0 
     )
     async def last_report (self ,interaction :discord .Interaction ,button :discord .ui .Button ):
         if not interaction .user .guild_permissions .manage_messages :
-            await interaction .response .send_message (' Администратор нет.',ephemeral =True )
+            await interaction .response .send_message ('❌ Недостаточно прав.',ephemeral =True )
             return 
 
         await interaction .response .defer ()
@@ -462,29 +462,29 @@ class MeetingView (discord .ui .View ):
             await interaction .followup .send (embeds =embeds [i :i +10 ])
 
     @discord .ui .button (
-    label ='  Роли Добавлено',
+    label ='➕ Добавить роль',
     style =discord .ButtonStyle .blurple ,
     custom_id ='meeting_role_add',
     row =1 
     )
     async def role_add (self ,interaction :discord .Interaction ,button :discord .ui .Button ):
         if not interaction .user .guild_permissions .administrator :
-            await interaction .response .send_message (' Администратор нет.',ephemeral =True )
+            await interaction .response .send_message ('❌ Недостаточно прав.',ephemeral =True )
             return 
         await interaction .response .send_message (
-        ' Добавлено желание роль mention et:\n`!toplanti-rol-add @Роль`',
+        '➕ Добавить роль для упоминания в отчёте:\n`!sobranie-rol-add @Роль`',
         ephemeral =True 
         )
 
     @discord .ui .button (
-    label ='  Роли Удалить',
+    label ='🗑️ Удалить роль',
     style =discord .ButtonStyle .grey ,
     custom_id ='meeting_role_remove',
     row =1 
     )
     async def role_remove (self ,interaction :discord .Interaction ,button :discord .ui .Button ):
         if not interaction .user .guild_permissions .administrator :
-            await interaction .response .send_message (' Администратор нет.',ephemeral =True )
+            await interaction .response .send_message ('❌ Недостаточно прав.',ephemeral =True )
             return 
         cfg =_load_cfg (interaction .guild .id )
         role =cfg .get ('staff_roles',[])
@@ -498,12 +498,12 @@ class MeetingView (discord .ui .View ):
                 role_list .append (f'• {r.name}')
         await interaction .response .send_message (
         f'**Текущий роли:**\n'+'\n'.join (role_list )+
-        f'\n\nУбрать: `!toplanti-rol-cikar @Роль`',
+        f'\n\nУбрать: `!sobranie-rol-remove @Роль`',
         ephemeral =True 
         )
 
     @discord .ui .button (
-    label ='  Роли',
+    label ='📋 Список ролей',
     style =discord .ButtonStyle .grey ,
     custom_id ='meeting_role_list',
     row =1 
@@ -519,7 +519,7 @@ class MeetingView (discord .ui .View ):
             r =interaction .guild .get_role (rid )
             if r :
                 role_list .append (f'• **{r.name}** ({len(r.members)} участник)')
-        embed =_guild_embed_base (interaction .guild ,' Rapora Dahil Роли',0x5865F2 )
+        embed =_guild_embed_base (interaction .guild ,'📋 Роли в отчёте',0x5865F2 )
         embed .description ='\n'.join (role_list )
         await interaction .response .send_message (embed =embed ,ephemeral =True )
 
@@ -528,18 +528,18 @@ class Meeting (commands .Cog ):
     def __init__ (self ,bot ):
         self .bot =bot 
 
-    @commands .command (name ='toplanti')
+    @commands .command (name ='sobranie',aliases =['toplanti'])
     @commands .has_permissions (administrator =True )
     async def meeting_panel (self ,ctx ):
-        """Собрание panelini отправить: !toplanti"""
+        """Отправить панель собрания: !sobranie"""
         cfg =_load_cfg (ctx .guild .id )
 
-        embed =_guild_embed_base (ctx .guild ,'  Собрание Панель управления',0x5865F2 )
+        embed =_guild_embed_base (ctx .guild ,'🎛️ Панель управления собранием',0x5865F2 )
         embed .description =(
         f'> С этой панели можно управлять собранием.\n\n'
-        f'** Собрание Запустить** — Новый toplanti запуск, Данные число baшlar\n'
-        f'** Собрание завершено** — Собрание закрыто, отчёт отправлен\n'
-        f'** В конец Rapor** — В конец toplanti bu yana raporu показ'
+        f'**▶️ Запустить собрание** — начать новое собрание, счётчики запускаются\n'
+        f'**✅ Завершить собрание** — закрыть собрание и отправить отчёт\n'
+        f'**📊 Последний отчёт** — показать данные с последнего собрания'
         )
 
         is_active =cfg .get ('active',False )
@@ -558,20 +558,20 @@ class Meeting (commands .Cog ):
         cfg ['panel_message']=msg .id 
         _save_cfg (ctx .guild .id ,cfg )
 
-    @commands .command (name ='toplanti-rol-add')
+    @commands .command (name ='sobranie-rol-add',aliases =['toplanti-rol-add'])
     @commands .has_permissions (administrator =True )
     async def add_role (self ,ctx ,role :discord .Role ):
-        """Rapora администратор роль add: !toplanti-rol-add @Роль"""
+        """Добавить роль администратора в отчёт: !sobranie-rol-add @Роль"""
         cfg =_load_cfg (ctx .guild .id )
         if role .id not in cfg .get ('staff_roles',[]):
             cfg .setdefault ('staff_roles',[]).append (role .id )
             _save_cfg (ctx .guild .id ,cfg )
-        await ctx .send (f' **{role.name}** роль toplanti raporuna addndi.')
+        await ctx .send (f'✅ Роль **{role.name}** добавлена в отчёт собрания.')
 
-    @commands .command (name ='toplanti-rol-cikar')
+    @commands .command (name ='sobranie-rol-remove',aliases =['toplanti-rol-cikar'])
     @commands .has_permissions (administrator =True )
     async def remove_role (self ,ctx ,role :discord .Role ):
-        """Роль rapordan удалить: !toplanti-rol-cikar @Роль"""
+        """Удалить роль из отчёта: !sobranie-rol-remove @Роль"""
         cfg =_load_cfg (ctx .guild .id )
         if role .id in cfg .get ('staff_roles',[]):
             cfg ['staff_roles'].remove (role .id )
@@ -580,7 +580,7 @@ class Meeting (commands .Cog ):
 
     @commands .Cog .listener ()
     async def on_ready (self ):
-        """Persistent view'larы загрузить"""
+        """Загрузить постоянные view"""
         for guild in self .bot .guilds :
             cfg =_load_cfg (guild .id )
             if cfg .get ('panel_message'):

@@ -108,7 +108,7 @@ def _save (data :dict ):
 class Companion (commands .Cog ):
     def __init__ (self ,bot :commands .Bot ):
         self .bot =bot 
-        self ._scheduled_sends :list [float ]=[]# сегодняkю planlы отправл vakitlarы (timestamp)
+        self ._scheduled_sends :list [float ]=[]# запланированные на сегодня времена отправок (timestamp)
         self .companion_loop .start ()
 
     def cog_unload (self ):

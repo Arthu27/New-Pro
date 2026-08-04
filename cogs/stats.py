@@ -164,8 +164,8 @@ class Stats (commands .Cog ):
             return 
 
         e =discord .Embed (
-        title =" EN АКТИВЕН МОДЕРАТОРЫ",
-        description ="\n Liderlik Tablosu \n",
+        title ="🏆 САМЫЕ АКТИВНЫЕ МОДЕРАТОРЫ",
+        description ="\n⭐ Таблица лидеров ⭐\n",
         color =0xF1C40F 
         )
 

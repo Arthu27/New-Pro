@@ -1,11 +1,11 @@
 """
-Aether — Doгrulama (Данныеfication) — Gёzlemci / opt-in modu
+Aether — Верификация — режим наблюдателя / opt-in
 ---------------------------------------------------------
-Varsayыlan: KAPALI. Новый gelen kullanыcыlara otomatik hiчbir шey YAPILMAZ:
-  * Captcha kodu gёsterilmez
-  * "Проверка" / "Подтвердитьndы" роль VERILMEZ
-  * Zaman aшыmыnda KICK YAPILMAZ
-  * сервер sahibi panelden aчmadыkчa система sessiz kalыr
+По умолчанию: ВЫКЛЮЧЕНО. Для новых пользователей автоматически ничего не делается:
+  * Captcha-код не показывается
+  * Роль "Проверка" / "Подтверждён" не выдаётся
+  * Кик по тайм-ауту не производится
+  * Пока владелец сервера не включит в панели — система молчит
 
 Aчmak iчin: `/verify-toggle enabled:true` ya da panelden.
 """

@@ -16,9 +16,9 @@ log =get_logger ("anime_daily")
 DATA_FILE ='data/anime_daily_config.json'
 
 KATEGORILER ={
-"Действие":1 ,"Macera":2 ,"Komedi":4 ,"Dram":8 ,
-"Fantastik":10 ,"Korku":14 ,"Romantizm":22 ,
-"Bilim Kurgu":24 ,"Gizem":7 ,"Ёncelim":41 
+"Действие":1 ,"Комедия":4 ,"Драма":8 ,
+"Фэнтези":10 ,"Ужасы":14 ,"Романтика":22 ,
+"Фантастика":24 ,"Детектив":7 ,"Триллер":41 
 }
 
 
@@ -79,7 +79,7 @@ async def _anime_getir (tur_id :int =None )->dict :
     return None 
 
 
-def _embed_olustur (guild :discord .Guild ,anime :dict ,kategori :str ='Rastgele')->tuple :
+def _embed_olustur (guild :discord .Guild ,anime :dict ,kategori :str ='Случайно')->tuple :
     """Anime embed'i создать, (embed, ozet) вернуть"""
     baslik =anime .get ('title_english')or anime .get ('title','Bilinmiyor')
     puan =anime .get ('score')or 'Не оценено'

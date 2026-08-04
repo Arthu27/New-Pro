@@ -102,7 +102,7 @@ class FeatureFlagCog (commands .Cog ):
     @app_commands .describe (flag_key ='Flag key')
     @app_commands .checks .has_permissions (administrator =True )
     async def flag_enable (self ,interaction :discord .Interaction ,flag_key :str ):
-        """Feature flag etkinleшtir"""
+        """Включить feature flag"""
         # Flag etkinleшtir
         success =feature_flag_manager .enable_flag (flag_key )
 

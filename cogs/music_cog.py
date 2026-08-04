@@ -1,6 +1,6 @@
 """
 Music Cog
-Mюzik командыы cog'u
+Музыкальные команды
 """
 
 import discord 
@@ -15,33 +15,33 @@ log =get_logger ("music_cog")
 
 
 class MusicCog (commands .Cog ):
-    """Mюzik командыы cog'u"""
+    """Музыкальные команды"""
 
     def __init__ (self ,bot ):
         self .bot =bot 
-        self .queues ={}# guild_id -> queue
+        self .queues ={}# guild_id -> очередь
 
     def get_queue (self ,guild_id :int )->list :
-        """Сервер kuyruгunu al"""
+        """Получить очередь сервера"""
         if guild_id not in self .queues :
             self .queues [guild_id ]=[]
         return self .queues [guild_id ]
 
-    @commands .command (name ='play',aliases =['чal'])
+    @commands .command (name ='play',aliases =['играй'])
     async def play (self ,ctx ,*,query :str ):
-        """Шarkы чal"""
-        # Voice channel проверкаю
+        """Включить трек"""
+        # Проверка голосового канала
         if not ctx .author .voice :
-            await ctx .send (" Сначала подключитесь к голосовому каналу!")
+            await ctx .send ("🎧 Сначала подключитесь к голосовому каналу!")
             return 
 
-            # Bot voice channel'a katыl
+            # Бот подключается к голосовому каналу
         voice_channel =ctx .author .voice .channel 
 
         if not ctx .voice_client :
             await voice_channel .connect ()
 
-            # Queue'ya добавить
+            # Добавить в очередь
         queue =self .get_queue (ctx .guild .id )
         queue .append ({
         'query':query ,
@@ -57,11 +57,11 @@ class MusicCog (commands .Cog ):
 
         await ctx .send (embed =embed )
 
-    @commands .command (name ='pause',aliases =['duraklat'])
+    @commands .command (name ='pause',aliases =['пауза'])
     async def pause (self ,ctx ):
-        """Шarkыyы duraklat"""
+        """Поставить трек на паузу"""
         if not ctx .voice_client :
-            await ctx .send (" Сейчас ничего не играет!")
+            await ctx .send ("🔇 Сейчас ничего не играет!")
             return 
 
         if ctx .voice_client .is_playing ():
@@ -75,13 +75,13 @@ class MusicCog (commands .Cog ):
 
             await ctx .send (embed =embed )
         else :
-            await ctx .send (" Сейчас ничего не играет!")
+            await ctx .send ("🔇 Сейчас ничего не играет!")
 
     @commands .command (name ='resume',aliases =['продолжить'])
     async def resume (self ,ctx ):
-        """Шarkыyы продолжить ettir"""
+        """Продолжить воспроизведение трека"""
         if not ctx .voice_client :
-            await ctx .send (" Сейчас ничего не играет!")
+            await ctx .send ("🔇 Сейчас ничего не играет!")
             return 
 
         if ctx .voice_client .is_paused ():
@@ -95,13 +95,13 @@ class MusicCog (commands .Cog ):
 
             await ctx .send (embed =embed )
         else :
-            await ctx .send (" Шu anda duraklatыlmыш bir шarkы нет!")
+            await ctx .send ("ℹ️ Сейчас нет трека на паузе!")
 
-    @commands .command (name ='skip',aliases =['geч'])
+    @commands .command (name ='skip',aliases =['дальше'])
     async def skip (self ,ctx ):
-        """Шarkыyы geч"""
+        """Пропустить трек"""
         if not ctx .voice_client :
-            await ctx .send (" Сейчас ничего не играет!")
+            await ctx .send ("🔇 Сейчас ничего не играет!")
             return 
 
         if ctx .voice_client .is_playing ():
@@ -115,15 +115,15 @@ class MusicCog (commands .Cog ):
 
             await ctx .send (embed =embed )
         else :
-            await ctx .send (" Сейчас ничего не играет!")
+            await ctx .send ("🔇 Сейчас ничего не играет!")
 
-    @commands .command (name ='queue',aliases =['kuyruk'])
+    @commands .command (name ='queue',aliases =['очередь'])
     async def queue (self ,ctx ):
-        """Kuyruгu gёster"""
+        """Показать очередь"""
         queue =self .get_queue (ctx .guild .id )
 
         if not queue :
-            await ctx .send (" Kuyruk boш!")
+            await ctx .send ("🎵 Очередь пуста!")
             return 
 
         embed =discord .Embed (
@@ -133,7 +133,7 @@ class MusicCog (commands .Cog ):
         timestamp =datetime .now ()
         )
 
-        # Иlk 10 шarkы
+        # Первые 10 треков
         for i ,song in enumerate (queue [:10 ],1 ):
             embed .add_field (
             name =f"{i}. {song['query']}",
@@ -143,13 +143,13 @@ class MusicCog (commands .Cog ):
 
         await ctx .send (embed =embed )
 
-    @commands .command (name ='nowplaying',aliases =['шimdi','np'])
+    @commands .command (name ='nowplaying',aliases =['сейчас','np'])
     async def nowplaying (self ,ctx ):
-        """Шu an чalan шarkыyы gёster"""
+        """Показать играющий трек"""
         queue =self .get_queue (ctx .guild .id )
 
         if not queue :
-            await ctx .send (" Сейчас ничего не играет!")
+            await ctx .send ("🔇 Сейчас ничего не играет!")
             return 
 
         current =queue [0 ]
@@ -163,11 +163,11 @@ class MusicCog (commands .Cog ):
 
         await ctx .send (embed =embed )
 
-    @commands .command (name ='volume',aliases =['ses'])
+    @commands .command (name ='volume',aliases =['громкость'])
     async def volume (self ,ctx ,volume :int =None ):
-        """Голос уровеньsini настроить"""
+        """Настроить уровень громкости"""
         if not ctx .voice_client :
-            await ctx .send (" Сейчас ничего не играет!")
+            await ctx .send ("🔇 Сейчас ничего не играет!")
             return 
 
         if volume is None :
@@ -175,7 +175,7 @@ class MusicCog (commands .Cog ):
 
             embed =discord .Embed (
             title ="🔊 Громкость",
-            description =f"**Mevcut:** {int(current_volume)}%",
+            description =f"**Текущая:** {int(current_volume)}%",
             color =discord .Color .dark_grey (),
             timestamp =datetime .now ()
             )
@@ -184,46 +184,46 @@ class MusicCog (commands .Cog ):
             return 
 
         if volume <0 or volume >200 :
-            await ctx .send (" Голос уровеньsi 0-200 между olmalы!")
+            await ctx .send ("⚠️ Уровень громкости должен быть от 0 до 200!")
             return 
 
         if ctx .voice_client .source :
             ctx .voice_client .source .volume =volume /100 
 
             embed =discord .Embed (
-            title =" Голос Уровеньsi Настройкаlandы",
-            description =f"**Новый Уровень:** {volume}%",
+            title ="🔊 Громкость настроена",
+            description =f"**Новый уровень:** {volume}%",
             color =discord .Color .dark_grey (),
             timestamp =datetime .now ()
             )
 
             await ctx .send (embed =embed )
 
-    @commands .command (name ='leave',aliases =['ayrыl'])
+    @commands .command (name ='leave',aliases =['выйти'])
     async def leave (self ,ctx ):
-        """Голос каналыndan ayrыl"""
+        """Выйти из голосового канала"""
         if not ctx .voice_client :
-            await ctx .send (" Шu anda bir ses каналыnda deгilim!")
+            await ctx .send ("ℹ️ Я сейчас не в голосовом канале!")
             return 
 
         await ctx .voice_client .disconnect ()
 
-        # Kuyruгu очистить
+        # Очистить очередь
         if ctx .guild .id in self .queues :
             self .queues [ctx .guild .id ]=[]
 
         embed =discord .Embed (
-        title =" Голос Каналыndan Ayrыldыm",
+        title ="👋 Вышел из голосового канала",
         color =discord .Color .dark_grey (),
         timestamp =datetime .now ()
         )
 
         await ctx .send (embed =embed )
 
-    @commands .command (name ='clearqueue',aliases =['kuyruktemizle'])
+    @commands .command (name ='clearqueue',aliases =['очиститьочередь'])
     @commands .has_permissions (manage_guild =True )
     async def clearqueue (self ,ctx ):
-        """Kuyruгu очистить"""
+        """Очистить очередь"""
         if ctx .guild .id in self .queues :
             self .queues [ctx .guild .id ]=[]
 
@@ -235,16 +235,16 @@ class MusicCog (commands .Cog ):
 
         await ctx .send (embed =embed )
 
-    @commands .command (name ='shuffle',aliases =['karышtыr'])
+    @commands .command (name ='shuffle',aliases =['перемешать'])
     async def shuffle (self ,ctx ):
-        """Kuyruгu karышtыr"""
+        """Перемешать очередь"""
         queue =self .get_queue (ctx .guild .id )
 
         if len (queue )<2 :
-            await ctx .send (" Kuyrukta en az 2 шarkы olmalы!")
+            await ctx .send ("⚠️ В очереди должно быть минимум 2 трека!")
             return 
 
-            # Иlk шarkыyы koru
+            # Сохранить первый трек
         current =queue [0 ]
         rest =queue [1 :]
 
@@ -253,30 +253,30 @@ class MusicCog (commands .Cog ):
         self .queues [ctx .guild .id ]=[current ]+rest 
 
         embed =discord .Embed (
-        title =" Kuyruk Karышtыrыldы",
-        description =f"**Всего:** {len(queue)} шarkы",
+        title ="🔀 Очередь перемешана",
+        description =f"**Всего:** {len(queue)} треков",
         color =discord .Color .dark_grey (),
         timestamp =datetime .now ()
         )
 
         await ctx .send (embed =embed )
 
-    @commands .command (name ='loop',aliases =['tekrar'])
+    @commands .command (name ='loop',aliases =['tekrar','povtor','повтор'])
     async def loop (self ,ctx ):
-        """Tekrar modunu открыть/закрыть"""
+        """Включить/выключить повтор трека"""
         queue =self .get_queue (ctx .guild .id )
 
         if not queue :
-            await ctx .send (" Kuyruk boш!")
+            await ctx .send ("🎵 Очередь пуста!")
             return 
 
-            # Basit loop - ilk шarkыyы sona добавить
+            # Простой повтор — первый трек в конец
         current =queue [0 ]
         queue .append (current )
 
         embed =discord .Embed (
-        title =" Tekrar Modu",
-        description =f"**Шarkы:** {current['query']}\nKuyruгun sonuna добавлено",
+        title ="🔁 Режим повтора",
+        description =f"**Трек:** {current['query']}\nДобавлен в конец очереди",
         color =discord .Color .dark_grey (),
         timestamp =datetime .now ()
         )
@@ -285,7 +285,7 @@ class MusicCog (commands .Cog ):
 
     @commands .Cog .listener ()
     async def on_ready (self ):
-        """Bot hazыr olduгunda"""
+        """Когда бот готов"""
         log .info (f" MusicCog loaded")
 
 

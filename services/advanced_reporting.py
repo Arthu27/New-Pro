@@ -214,7 +214,7 @@ class ReportBuilder:
         return False
     
     def list_reports(self) -> List[Dict[str, Any]]:
-        """Все raporlarы listele"""
+        """Список всех отчётов"""
         return [
             {
                 'report_id': report_id,

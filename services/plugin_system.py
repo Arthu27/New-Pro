@@ -172,7 +172,7 @@ class PluginManager:
         return [p for p in self.plugins.values() if p.enabled]
     
     def list_available_plugins(self) -> List[str]:
-        """Текущий pluginleri listele"""
+        """Список текущих плагинов"""
         plugins = []
         
         for file in os.listdir(self.plugins_dir):

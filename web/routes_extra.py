@@ -3049,7 +3049,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         with open (lockdown_file ,'w',encoding ='utf-8')as _fp :
             _json .dump ({"active":new_status ,"updated_by":session .get ('username')},_fp ,indent =2 )
 
-        status_str ="включен (Lockdown АКТИВЕН)"if new_status else "отключен (Нормальный режим)"
+        status_str ="включён (карантин активен)"if new_status else "отключён (нормальный режим)"
         return jsonify ({
         "success":True ,
         "lockdown_active":new_status ,
@@ -3288,7 +3288,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     @login_required 
     @role_required ('mod')
     def api_dm_recent (guild_id ):
-        """В конец DM разговор listele"""
+        """Список последних DM-разговоров"""
         import web .app as _app ;bot =_app .bot_instance 
         log =_load_dm_log ()
         result =[]

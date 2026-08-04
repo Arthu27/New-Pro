@@ -111,7 +111,7 @@ class BackupService:
         print(f" Config geri yюklendi: {backup_file}")
     
     def list_backups(self, backup_type: str = None) -> List[Dict]:
-        """Yedekleri listele"""
+        """Список резервных копий"""
         backups = []
         
         pattern = os.path.join(self.backup_dir, '*.db') if backup_type == 'database' else \

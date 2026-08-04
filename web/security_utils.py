@@ -166,10 +166,10 @@ class AuditLogger:
         
         # Фильтрация
         if user_id:
-            logs = [лог for лог in logs if log.get('user_id') == user_id]
+            logs = [log for log in logs if log.get('user_id') == user_id]
         
         if action:
-            logs = [лог for лог in logs if log.get('action') == action]
+            logs = [log for log in logs if log.get('action') == action]
         
         # Сортировка по времени (новые первые)
         logs.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
