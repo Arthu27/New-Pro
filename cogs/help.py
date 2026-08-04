@@ -673,11 +673,23 @@ class HelpEmojiUpload(commands.Cog):
 
     @commands.command(name='upload-emoji')
     @commands.has_permissions(administrator=True)
-    async def upload_emoji(self, ctx):
-        """assets/icons altindaki simgeleri sunucuya 'aether_<isim>' ozel emojisi olarak yukler."""
+    async def upload_emoji(self, ctx, mode: str = None):
+        """assets/icons altindaki simgeleri sunucuya 'aether_<isim>' ozel emojisi olarak yukler.
+
+        'force' verilirse mevcut aether_* emojileri silinip yenileri yuklenir (ikon seti degistiginde).
+        """
         import os as _os
         icons_dir = _os.path.join(ROOT, 'assets', 'icons')
         done, skipped, failed = [], [], []
+        # force: eski aether_* emojilerini sil
+        if mode and mode.lower() in ('force', 'yenile', 'refresh'):
+            for e in list(ctx.guild.emojis):
+                if e.name.startswith('aether_'):
+                    try:
+                        await e.delete()
+                        await ctx.send(f'🗑 Старый эмодзи удалён: `{e.name}`')
+                    except Exception:
+                        pass
         existing = {e.name for e in ctx.guild.emojis}
         for fn in sorted(_os.listdir(icons_dir)):
             if not fn.endswith('_256.png'):
