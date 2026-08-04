@@ -73,6 +73,16 @@ def _panel(w, h, radius=16, fill=PANEL, border=PANEL_BR, bw=2):
     return img.resize((w, h), Image.Resampling.LANCZOS)
 
 
+def _panel_shadowed(w, h, radius=16, border=PANEL_BR):
+    """Gölgeli panel — derinlik hissi verir"""
+    img = Image.new('RGBA', (w + 12, h + 12), (0, 0, 0, 0))
+    sh = Image.new('RGBA', (w, h), (0, 0, 0, 0))
+    ImageDraw.Draw(sh).rounded_rectangle((0, 0, w - 1, h - 1), radius=radius, fill=(0, 0, 0, 130))
+    img.alpha_composite(sh.filter(__import__('PIL.ImageFilter', fromlist=['GaussianBlur']).GaussianBlur(5)), (5, 7))
+    img.alpha_composite(_panel(w, h, radius=radius, border=border), (0, 0))
+    return img
+
+
 _icon_cache = {}
 
 
@@ -281,46 +291,47 @@ def generate_help_card(category_id: str = None) -> Image.Image:
     W = 920
     is_overview = category_id in (None, "overview")
     if is_overview:
-        H = 700
+        H = 112 + 4 * 128 + 3 * 14 + 90
     else:
         cat = next((c for c in CATEGORIES if c["id"] == category_id), None)
         cmds = cat["commands"] if cat else []
-        H = max(500, 120 + len(cmds) * 92 + 28)
+        H = max(520, 112 + len(cmds) * 91 + 90)
 
     bg = _load_bg(W, H).convert('RGBA')
 
     if is_overview:
         _header(bg, "AETHER  ·  СПРАВКА",
-                f"ВСЕГО КОМАНД: {TOTAL_CMDS}  ·  ПРЕФИКС: !  ·  ВЫБЕРИТЕ КАТЕГОРИЮ В МЕНЮ", "aether_logo")
+                f"{TOTAL_CMDS} КОМАНД  ·  ПРЕФИКС: !  ·  ВЫБЕРИТЕ КАТЕГОРИЮ В МЕНЮ", "aether_logo")
 
-        # Сетка категорий 2x6
-        box_w, box_h, gap_x, gap_y = 426, 86, 20, 12
+        # Сетка категорий 3x4 — крупные иконки, большие шрифты, тени
+        box_w, box_h, gap = 284, 128, 14
         start_x, start_y = 24, 112
         for idx, cat in enumerate(CATEGORIES):
-            c, r = idx % 2, idx // 2
-            bx = start_x + c * (box_w + gap_x)
-            by = start_y + r * (box_h + gap_y)
-            bg.alpha_composite(_panel(box_w, box_h, radius=16), (bx, by))
-            icon = _cat_icon(CAT_ICONS.get(cat["id"], "aether_logo"), 58)
-            bg.alpha_composite(icon, (bx + 14, by + 14))
+            c, r = idx % 3, idx // 3
+            bx = start_x + c * (box_w + gap)
+            by = start_y + r * (box_h + gap)
+            bg.alpha_composite(_panel_shadowed(box_w, box_h, radius=16), (bx - 6, by - 6))
+            icon = _cat_icon(CAT_ICONS.get(cat["id"], "aether_logo"), 84)
+            bg.alpha_composite(icon, (bx + 12, by + 22))
             d = ImageDraw.Draw(bg)
-            d.text((bx + 86, by + 10), cat["title"].upper(), fill=TXT, font=_f(True, 25))
-            d.text((bx + 86, by + 42), f"{len(cat['commands'])} КОМАНД", fill=GOLD, font=_f(True, 17))
+            title_f = _f(True, 23)
+            while d.textlength(cat["title"].upper(), font=title_f) > box_w - 116 and title_f.size > 15:
+                title_f = _f(True, title_f.size - 1)
+            d.text((bx + 108, by + 24), cat["title"].upper(), fill=TXT, font=title_f)
+            d.text((bx + 108, by + 56), f"{len(cat['commands'])} команд", fill=GOLD, font=_f(True, 18))
             sample = " · ".join(cmd[0].split()[0] for cmd in cat["commands"][:3])
-            if len(sample) > 30:
-                sample = sample[:29] + "…"
-            d.text((bx + 86, by + 63), sample, fill=MUTED, font=_f(False, 16))
+            if len(sample) > 24:
+                sample = sample[:23] + "…"
+            d.text((bx + 108, by + 82), sample, fill=MUTED, font=_f(False, 15))
 
-        # Навигационная плитка (12-я)
-        bx = start_x + box_w + gap_x
-        by = start_y + 5 * (box_h + gap_y)
-        bg.alpha_composite(_panel(box_w, box_h, radius=16, border=(212, 175, 55, 220)), (bx, by))
-        icon = _cat_icon("navigation", 58)
-        bg.alpha_composite(icon, (bx + 14, by + 14))
+        # Навигационная полоса внизу
+        bg.alpha_composite(_panel_shadowed(872, 62, radius=16, border=(212, 175, 55, 230)), (18, H - 84))
+        icon = _cat_icon("navigation", 46)
+        bg.alpha_composite(icon, (32, H - 76))
         d = ImageDraw.Draw(bg)
-        d.text((bx + 86, by + 10), "НАВИГАЦИЯ", fill=TXT, font=_f(True, 25))
-        d.text((bx + 86, by + 42), "МЕНЮ НИЖЕ", fill=GOLD, font=_f(True, 17))
-        d.text((bx + 86, by + 63), "выберите раздел — карточка обновится", fill=MUTED, font=_f(False, 16))
+        d.text((92, H - 78), "НАВИГАЦИЯ · МЕНЮ НИЖЕ", fill=TXT, font=_f(True, 22))
+        d.text((92, H - 48), "выберите раздел — карточка обновится", fill=MUTED, font=_f(False, 16))
+        d.text((W - 190, H - 66), "HELP v5.1", fill=GOLD, font=_f(True, 16))
 
     else:
         cat = next((c for c in CATEGORIES if c["id"] == category_id), None)
@@ -329,18 +340,18 @@ def generate_help_card(category_id: str = None) -> Image.Image:
         _header(bg, f"КАТЕГОРИЯ · {cat['title'].upper() if cat else 'СПРАВКА'}",
                 f"{len(cmds)} КОМАНД  ·  [РОЛЬ] — КТО МОЖЕТ ИСПОЛЬЗОВАТЬ", icon_key)
 
-        box_w, box_h, gap_y = 872, 80, 12
+        box_w, box_h, gap_y = 872, 80, 11
         start_x, start_y = 24, 112
         for idx, (cmd_str, desc, perm) in enumerate(cmds):
             by = start_y + idx * (box_h + gap_y)
-            bg.alpha_composite(_panel(box_w, box_h, radius=14), (start_x, by))
+            bg.alpha_composite(_panel_shadowed(box_w, box_h, radius=14), (start_x - 6, by - 6))
             d = ImageDraw.Draw(bg)
             # золотой ромб-буллет
             cx, cy = start_x + 30, by + box_h // 2
-            s = 7
+            s = 8
             d.polygon([(cx, cy - s), (cx + s, cy), (cx, cy + s), (cx - s, cy)], fill=GOLD)
-            d.text((start_x + 52, by + 10), cmd_str, fill=TXT, font=_f(True, 29))
-            d.text((start_x + 52, by + 46), desc, fill=MUTED, font=_f(False, 22))
+            d.text((start_x + 54, by + 10), cmd_str, fill=TXT, font=_f(True, 28))
+            d.text((start_x + 54, by + 47), desc, fill=MUTED, font=_f(False, 21))
             perm_txt = f" {perm} "
             pf = _f(True, 17)
             pw = d.textlength(perm_txt, font=pf) + 16
@@ -349,6 +360,14 @@ def generate_help_card(category_id: str = None) -> Image.Image:
                                (start_x + box_w - int(pw) - 16, by + (box_h - ph) // 2))
             d = ImageDraw.Draw(bg)
             d.text((start_x + box_w - 16 - pw + 8, by + (box_h - ph) // 2 + 6), perm_txt, fill=GOLD, font=pf)
+
+        # Alt navigasyon şeridi
+        bg.alpha_composite(_panel(872, 54, radius=14, border=(212, 175, 55, 210)), (24, H - 76))
+        icon = _cat_icon("navigation", 40)
+        bg.alpha_composite(icon, (36, H - 69))
+        d = ImageDraw.Draw(bg)
+        d.text((90, H - 62), "МЕНЮ НИЖЕ · выберите другую категорию", fill=TXT, font=_f(True, 19))
+        d.text((W - 170, H - 60), "HELP v5.1", fill=GOLD, font=_f(True, 15))
 
     # Золотые уголки
     d = ImageDraw.Draw(bg)
