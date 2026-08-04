@@ -596,19 +596,28 @@ async def main():
     async with bot:
         print("[БОТ] Коги загружаются...")
         await load_cogs()
+        _token = (os.getenv("TOKEN", "") or os.getenv("TОКEN", "")).strip()
+        if not _token:
+            print("[ОШИБКА] Токен не найден! Добавьте токен в .env файл (строка TOKEN=ваш_токен) "
+                  "из https://discord.com/developers/applications")
+            sys.exit(1)
+        # Anti-crash: автоперезапуск при сетевых сбоях, но с нарастающей паузой,
+        # чтобы не долбить Discord во время сбоя (5 -> 10 -> 20 ... макс. 60 сек).
+        _delay = 5
         while True:
             try:
-                _token = (os.getenv("TOKEN", "") or os.getenv("TОКEN", "")).strip()
-                if not _token:
-                    raise RuntimeError(
-                        "Токен не найден! Добавьте токен в .env файл (строка TOKEN=ваш_токен) "
-                        "из https://discord.com/developers/applications"
-                    )
                 print("[БОТ] Подключение к Discord...")
                 await bot.start(_token)
+                _delay = 5  # удачная сессия — сбросить паузу
+            except discord.LoginFailure:
+                print("[ОШИБКА] Недействительный токен Discord! Исправьте TOKEN в .env — "
+                      "перезапуск не поможет.")
+                sys.exit(1)
             except Exception as e:
-                print(f"[ОШИБКА] Ошибка запуска бота: {e}")
-                await asyncio.sleep(10)
+                print(f"[ОШИБКА] Бот отключился: {e}")
+                print(f"[БОТ] Автоперезапуск через {_delay} сек...")
+                await asyncio.sleep(_delay)
+                _delay = min(60, _delay * 2)
 
 if __name__ == "__main__":
     asyncio.run(main())
