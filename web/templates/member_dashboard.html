@@ -2,62 +2,139 @@
 {% block title %}Главная — Aether{% endblock %}
 {% block page_title %}<i class="fas fa-home" ></i> Добро пожаловать{% endblock %}
 {% block content %}
-{% block page_hero %}
-<div class="page-hero compact">
+
+<style>
+/* ── Member dashboard — единый стиль с главной админ-панелью ── */
+
+.md-hero-title{
+  background:linear-gradient(120deg,var(--ac-2) 10%,#fff3d6 35%,var(--ac) 55%,var(--ac-3) 90%);
+  background-size:200% 100%;
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  animation:mdShimmer 5.5s ease-in-out infinite;
+}
+@keyframes mdShimmer{0%,100%{background-position:0% 0}50%{background-position:100% 0}}
+.md-hero-av{animation:mdAvFloat 4s ease-in-out infinite}
+@keyframes mdAvFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+.md-chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.md-chips .chip{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:var(--text-2);padding:6px 12px;border-radius:99px;background:rgba(255,255,255,.03);border:1px solid var(--line)}
+.md-chips .chip i{color:var(--ac-2);font-size:10.5px}
+.md-chips .chip .chip-dot{width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 7px var(--ok);animation:mdDotPulse 2s infinite}
+@keyframes mdDotPulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+.welcome-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;margin-bottom:16px}
+.welcome-card{
+  position:relative;overflow:hidden;
+  background:linear-gradient(165deg,rgba(224,176,74,.04),rgba(20,18,14,.7));
+  border:1px solid var(--line-2);border-radius:14px;padding:20px;backdrop-filter:blur(14px);
+  transition:transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+.welcome-card::before{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(260px 120px at 20% 0%,rgba(224,176,74,.12),transparent 70%);
+  opacity:0;transition:opacity .2s ease;
+}
+.welcome-card:hover{transform:translateY(-3px);border-color:rgba(224,176,74,.45);box-shadow:0 10px 30px rgba(0,0,0,.35),0 0 22px rgba(224,176,74,.12)}
+.welcome-card:hover::before{opacity:1}
+.welcome-card .ico{
+  width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+  font-size:18px;color:var(--ac-2);margin-bottom:12px;
+  background:linear-gradient(145deg,rgba(224,176,74,.16),rgba(224,176,74,.05));
+  border:1px solid rgba(224,176,74,.28);box-shadow:inset 0 0 12px rgba(224,176,74,.08);
+  transition:transform .18s ease;
+}
+.welcome-card:hover .ico{transform:scale(1.08) rotate(-3deg)}
+.welcome-card h3{margin:0 0 5px;font-size:15px;font-weight:700;color:var(--text)}
+.welcome-card p{margin:0;font-size:12.5px;color:var(--text-3);line-height:1.45}
+.welcome-card .go{
+  position:absolute;top:16px;right:16px;font-size:12px;color:var(--text-3);
+  transition:color .15s ease, transform .15s ease;
+}
+.welcome-card:hover .go{color:var(--ac-2);transform:translateX(3px)}
+
+.recent-section{background:linear-gradient(165deg,rgba(224,176,74,.03),rgba(20,18,14,.6));border:1px solid var(--line-2);border-radius:14px;padding:18px 20px}
+.recent-head{font-weight:700;color:var(--text);margin-bottom:6px;display:flex;align-items:center;gap:10px;font-size:13px;letter-spacing:.4px}
+.recent-head > i{color:var(--ac);font-size:14px}
+.notif-item{display:flex;gap:12px;padding:11px 0;border-bottom:1px solid var(--line);font-size:13px;color:var(--text-2)}
+.notif-item:last-child{border-bottom:none}
+.notif-icon{
+  flex-shrink:0;width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;
+  font-size:13px;color:var(--ac-2);
+  background:linear-gradient(145deg,rgba(224,176,74,.14),rgba(224,176,74,.04));
+  border:1px solid rgba(224,176,74,.22);
+}
+.notif-body{flex:1;min-width:0}
+.notif-title{font-weight:600;color:var(--text);margin-bottom:2px}
+.notif-msg{color:var(--text-2);line-height:1.4;margin-bottom:4px}
+.notif-time{font-size:11px;color:var(--text-3);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.notif-time i{font-size:9.5px;color:var(--ac-2)}
+.notif-badge{
+  display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;
+  padding:0 5px;border-radius:99px;font-size:10.5px;font-weight:700;color:#1a1508;
+  background:linear-gradient(135deg,var(--ac-2),var(--ac));box-shadow:0 0 10px rgba(224,176,74,.5);
+  vertical-align:2px;
+}
+.notif-badge:empty{display:none}
+</style>
+
+<!-- Hero — приветствие участника -->
+<div class="page-hero welcome-hero" data-reveal="up">
   <div class="page-hero-content">
     <div class="page-hero-greeting">
       <span class="dot"></span>
-      <span>Добро пожаловать</span>
+      <span>Добро пожаловать, {{ username }}</span>
     </div>
-    <h1>Добро пожаловать</h1>
-    <p>Личный кабинет участника: профиль, статистика, настройки.</p>
+    <div class="hero-guild-row">
+      <div class="hero-guild-av md-hero-av">👋</div>
+      <div>
+        <h1 class="md-hero-title">С возвращением, {{ username }}!</h1>
+        <p>Личный кабинет участника: профиль, заявки, уведомления и объявления сервера.</p>
+      </div>
+    </div>
+    <div class="hero-welcome-msg">
+      <i class="fas fa-heart"></i>
+      <span>Рады видеть тебя снова! Здесь ты можешь подать заявку в команду, следить за своими заявками и быть в курсе всех новостей сервера.</span>
+    </div>
+    <div class="md-chips">
+      <span class="chip"><span class="chip-dot"></span> Кабинет онлайн 24/7</span>
+      <span class="chip"><i class="fas fa-user-shield"></i> Заявки на модератора</span>
+      <span class="chip"><i class="fas fa-bell"></i> Уведомления <span id="notif-count" class="notif-badge"></span></span>
+      <span class="chip"><i class="fas fa-bullhorn"></i> Объявления сервера</span>
+    </div>
   </div>
 </div>
-{% endblock %}
-
-<style>
-
-.welcome-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;margin-bottom:16px}
-.welcome-card{background:linear-gradient(165deg,rgba(224,176,74,.04),rgba(20,18,14,.7));border:1px solid var(--line-2);border-radius:14px;padding:20px;backdrop-filter:blur(14px)}
-.recent-section{background:linear-gradient(165deg,rgba(224,176,74,.03),rgba(20,18,14,.6));border:1px solid var(--line-2);border-radius:14px;padding:16px}
-.recent-head{font-weight:700;color:var(--text);margin-bottom:10px;display:flex;align-items:center;gap:8px}
-.recent-head i{color:var(--ac)}
-.notif-item{display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px;color:var(--text-2)}
-.notif-body{flex:1;min-width:0}
-.notif-time{font-size:11px;color:var(--text-3);white-space:nowrap}
-
-</style>
-
-
 
 <div class="welcome-grid">
-  <a href="/member-apply" class="welcome-card">
+  <a href="/member-apply" class="welcome-card" data-reveal="up">
+    <span class="go"><i class="fas fa-arrow-right"></i></span>
     <div class="ico"><i class="fas fa-user-shield"></i></div>
     <h3>Заявки на модератора</h3>
-    <p>Подать заявку в администрацию</p>
+    <p>Подать заявку в администрацию сервера</p>
   </a>
-  <a href="/my-applications" class="welcome-card">
+  <a href="/my-applications" class="welcome-card" data-reveal="up" data-delay="60">
+    <span class="go"><i class="fas fa-arrow-right"></i></span>
     <div class="ico"><i class="fas fa-clipboard-list"></i></div>
     <h3>Мои заявки</h3>
-    <p>Отслеживать статус заявок</p>
+    <p>Отслеживать статус своих заявок</p>
   </a>
-  <a href="/notifications" class="welcome-card" id="notif-card">
+  <a href="/notifications" class="welcome-card" data-reveal="up" data-delay="120">
+    <span class="go"><i class="fas fa-arrow-right"></i></span>
     <div class="ico"><i class="fas fa-bell"></i></div>
-    <h3>Уведомления <span id="notif-count" class="notif-badge"></span></h3>
-    <p>Сообщения от администрации</p>
+    <h3>Уведомления <span class="notif-badge" id="notif-count-2"></span></h3>
+    <p>Сообщения от администрации сервера</p>
   </a>
-  <a href="/announcements" class="welcome-card">
+  <a href="/announcements" class="welcome-card" data-reveal="up" data-delay="180">
+    <span class="go"><i class="fas fa-arrow-right"></i></span>
     <div class="ico"><i class="fas fa-bullhorn"></i></div>
     <h3>Объявления</h3>
     <p>Смотреть объявления сервера</p>
   </a>
 </div>
 
-<div class="recent-section">
+<div class="recent-section" data-reveal="up">
   <div class="recent-head">
-    <h2><i class="fas fa-bell"></i> Последние уведомления</h2>
+    <i class="fas fa-bell"></i> Последние уведомления
   </div>
-  <div id="recent-notifs"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i>Загрузка...</div></div>
+  <div id="recent-notifs"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i> Загрузка...</div></div>
 </div>
 
 <script>
@@ -70,6 +147,8 @@ async function loadNotifs() {
   if (unread > 0) {
     var badge = document.getElementById('notif-count');
     badge.textContent = unread;
+    var badge2 = document.getElementById('notif-count-2');
+    badge2.textContent = unread;
   }
   var box = document.getElementById('recent-notifs');
   var recent = notifs.slice(0,5);
@@ -78,7 +157,7 @@ async function loadNotifs() {
     var d = new Date(n.created_at);
     return '<div class="notif-item">' +
       '<div class="notif-icon"><i class="fas fa-bell"></i></div>' +
-      '<div class="notif-body"><div class="notif-title">'+esc(n.title)+'</div><div class="notif-msg">'+esc(n.message)+'</div><div class="notif-time"><i class="fas fa-user"></i> '+esc(n.from)+' <span >•</span> <i class="fas fa-clock"></i> '+d.toLocaleString('ru-RU')+'</div></div>' +
+      '<div class="notif-body"><div class="notif-title">'+esc(n.title)+'</div><div class="notif-msg">'+esc(n.message)+'</div><div class="notif-time"><i class="fas fa-user"></i> '+esc(n.from)+' <span>•</span> <i class="fas fa-clock"></i> '+d.toLocaleString('ru-RU')+'</div></div>' +
     '</div>';
   }).join('');
 }

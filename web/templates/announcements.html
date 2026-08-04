@@ -3,14 +3,30 @@
 {% block page_title %}<i class="fas fa-bullhorn" ></i> Объявления{% endblock %}
 {% block content %}
 {% block page_hero %}
-<div class="page-hero compact">
+<style>
+.ann-hero-title{
+  background:linear-gradient(120deg,var(--ac-2) 10%,#fff3d6 35%,var(--ac) 55%,var(--ac-3) 90%);
+  background-size:200% 100%;
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  animation:annShimmer 5.5s ease-in-out infinite;
+}
+@keyframes annShimmer{0%,100%{background-position:0% 0}50%{background-position:100% 0}}
+.ann-hero-av{animation:annAvFloat 4s ease-in-out infinite}
+@keyframes annAvFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+</style>
+<div class="page-hero welcome-hero" data-reveal="up">
   <div class="page-hero-content">
     <div class="page-hero-greeting">
       <span class="dot"></span>
-      <span>Объявления</span>
+      <span>Объявления сервера</span>
     </div>
-    <h1>Объявления</h1>
-    <p>Создание и управление объявлениями для всего сервера.</p>
+    <div class="hero-guild-row">
+      <div class="hero-guild-av ann-hero-av">📢</div>
+      <div>
+        <h1 class="ann-hero-title">Объявления</h1>
+        <p>Все важные новости и объявления сервера в одном месте.</p>
+      </div>
+    </div>
   </div>
 </div>
 {% endblock %}
