@@ -372,7 +372,12 @@ class AdvancedMod (commands .Cog ):
         )
         await interaction .followup .send (embed =e ,ephemeral =True )
 
-    @app_commands .command (name ="massrole",description ="Массовая выдача/удаление роли")
+    @app_commands .command (name ="massrole",description ="Массовая выдача/снятие роли")
+    @app_commands .describe (role ="Роль, которую нужно выдать или снять",action ="Действие: выдать или снять роль у всех участников")
+    @app_commands .choices (action =[
+    app_commands .Choice (name ="выдать",value ="ver"),
+    app_commands .Choice (name ="снять",value ="al")
+    ])
     @app_commands .checks .has_permissions (administrator =True )
     async def massrole (self ,interaction :discord .Interaction ,role :discord .Role ,action :str ):
         await interaction .response .defer (ephemeral =True )
@@ -387,8 +392,8 @@ class AdvancedMod (commands .Cog ):
                         pass 
             e =discord .Embed (title ="✅ Роли выданы массово",color =0x2ECC71 ,timestamp =datetime .utcnow ())
             e .description =f"```ansi\n\u001b[1;32m МАССОВАЯ ВЫДАЧА РОЛИ\u001b[0m\n```\n{_divider()}"
-            e .add_field (name =" Роль",value =role .mention ,inline =True )
-            e .add_field (name =" Затронуто",value =f"```{count} человек```",inline =True )
+            e .add_field (name ="🎭 Роль",value =role .mention ,inline =True )
+            e .add_field (name ="👥 Затронуто",value =f"```{count} человек```",inline =True )
         elif action .lower ()=="al":
             for member in interaction .guild .members :
                 if role in member .roles :
@@ -399,10 +404,10 @@ class AdvancedMod (commands .Cog ):
                         pass 
             e =discord .Embed (title ="✅ Роли массово сняты",color =0xE74C3C ,timestamp =datetime .utcnow ())
             e .description =f"```ansi\n\u001b[1;31m МАССОВОЕ СНЯТИЕ РОЛИ\u001b[0m\n```\n{_divider()}"
-            e .add_field (name =" Роль",value =role .mention ,inline =True )
-            e .add_field (name =" Затронуто",value =f"```{count} человек```",inline =True )
+            e .add_field (name ="🎭 Роль",value =role .mention ,inline =True )
+            e .add_field (name ="👥 Затронуто",value =f"```{count} человек```",inline =True )
         else :
-            await interaction .followup .send (" Неверное действие! Используйте `ver` или `al`.",ephemeral =True )
+            await interaction .followup .send ("❌ Неверное действие! Выберите «выдать» или «снять».",ephemeral =True )
             return 
         e .set_footer (text =f"Aether Модерация • {interaction.guild.name}",icon_url =interaction .guild .icon .url if interaction .guild .icon else None )
         await interaction .followup .send (embed =e ,ephemeral =True )

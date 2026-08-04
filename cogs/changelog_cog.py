@@ -21,36 +21,36 @@ class ChangelogCog (commands .Cog ):
         self .bot =bot 
 
     @app_commands .command (name ='changelog',description ='Changelog\'u gёrюntюle')
-    @app_commands .describe (version ='Versiyon (opsiyonel)')
+    @app_commands .describe (version ='Версия (необязательно)')
     async def changelog (self ,interaction :discord .Interaction ,version :str =None ):
-        """Changelog'u gёrюntюle"""
+        """Показать журнал изменений"""
         if version :
-        # Belirli versiyon
+        # Конкретная версия
             entries =changelog_manager .get_entries_by_version (version )
 
             if not entries :
                 await interaction .response .send_message (
-                f" Versiyon {version} для giriш не найдено!",
+                f"❌ Для версии {version} записей не найдено!",
                 ephemeral =True 
                 )
                 return 
 
                 # Embed создать
             embed =discord .Embed (
-            title =f" Changelog v{version}",
-            description =f"Всего {len(entries)} giriш",
+            title =f"📜 Журнал v{version}",
+            description =f"Всего записей: {len(entries)}",
             color =discord .Color .blue (),
             timestamp =datetime .now ()
             )
 
-            # Tip'e по grupla
+            # Группировка по типу
             for entry in entries [:15 ]:
                 type_emoji ={
-                'added':'',
-                'changed':'',
-                'fixed':'',
-                'removed':'',
-                'security':''
+                'added':'✨',
+                'changed':'🔄',
+                'fixed':'🔧',
+                'removed':'🗑️',
+                'security':'🔒'
                 }.get (entry .change_type .value ,'')
 
                 embed .add_field (
@@ -61,7 +61,7 @@ class ChangelogCog (commands .Cog ):
 
             await interaction .response .send_message (embed =embed )
         else :
-        # Tюm versiyonlar
+        # Все версии
             versions =changelog_manager .get_all_versions ()
 
             if not versions :
@@ -73,42 +73,42 @@ class ChangelogCog (commands .Cog ):
 
                 # Embed создать
             embed =discord .Embed (
-            title =" Changelog Versions",
-            description =f"Всего {len(versions)} versiyon",
+            title ="📜 Версии журнала",
+            description =f"Всего версий: {len(versions)}",
             color =discord .Color .blue (),
             timestamp =datetime .now ()
             )
 
-            # Versiyon listesi
+            # Список версий
             for version in versions [:10 ]:
                 entries =changelog_manager .get_entries_by_version (version )
                 embed .add_field (
                 name =f"v{version}",
-                value =f"{len(entries)} giriш\n{entries[0].timestamp[:10] if entries else 'N/A'}",
+                value =f"{len(entries)} записей\n{entries[0].timestamp[:10] if entries else 'N/A'}",
                 inline =True 
                 )
 
             await interaction .response .send_message (embed =embed )
 
     @app_commands .command (name ='changelog-add',description ='Добавить запись в журнал')
-    @app_commands .describe (version ='Versiyon',change_type ='Deгiшiklik tipi (added/changed/fixed/removed/security)',
-    title ='Baшlыk',description ='Aчыklama')
+    @app_commands .describe (version ='Версия',change_type ='Тип изменения (added/changed/fixed/removed/security)',
+    title ='Заголовок',description ='Описание')
     @app_commands .checks .has_permissions (administrator =True )
     async def changelog_add (self ,interaction :discord .Interaction ,
     version :str ,change_type :str ,title :str ,
     description :str ):
         """Добавить запись в журнал"""
-        # Change type проверкаю
+        # Проверка типа изменения
         try :
             change_type_enum =ChangeType (change_type )
         except ValueError :
             await interaction .response .send_message (
-            " Geчersiz deгiшiklik tipi! (added/changed/fixed/removed/security)",
+            "❌ Неверный тип изменения! (added/changed/fixed/removed/security)",
             ephemeral =True 
             )
             return 
 
-            # Giriш добавить
+            # Добавить запись
         entry =changelog_manager .add_entry (
         version =version ,
         change_type =change_type_enum ,
@@ -119,44 +119,44 @@ class ChangelogCog (commands .Cog ):
 
         # Embed создать
         embed =discord .Embed (
-        title =" Changelog Giriшi Добавлен",
-        description =f"**Versiyon:** {version}\n**Tip:** {change_type}\n**Baшlыk:** {title}",
+        title ="✅ Запись добавлена в журнал",
+        description =f"**Версия:** {version}\n**Тип:** {change_type}\n**Заголовок:** {title}",
         color =discord .Color .green (),
         timestamp =datetime .now ()
         )
 
         await interaction .response .send_message (embed =embed )
 
-    @app_commands .command (name ='changelog-latest',description ='En son changelog giriшlerini gёrюntюle')
-    @app_commands .describe (limit ='Giriш sayыsы (varsayыlan: 10)')
+    @app_commands .command (name ='changelog-latest',description ='Показать последние записи журнала')
+    @app_commands .describe (limit ='Количество записей (по умолчанию: 10)')
     async def changelog_latest (self ,interaction :discord .Interaction ,limit :int =10 ):
-        """En son changelog giriшlerini gёrюntюle"""
-        # Giriшler al
+        """Показать последние записи журнала"""
+        # Получить записи
         entries =changelog_manager .get_latest_entries (limit =limit )
 
         if not entries :
             await interaction .response .send_message (
-            " Changelog запись не найдена!",
+            "📜 Записей в журнале не найдено!",
             ephemeral =True 
             )
             return 
 
             # Embed создать
         embed =discord .Embed (
-        title =" Latest Changelog Entries",
-        description =f"Son {len(entries)} giriш",
+        title ="📜 Последние записи журнала",
+        description =f"Последние {len(entries)} записей",
         color =discord .Color .blue (),
         timestamp =datetime .now ()
         )
 
-        # Giriш listesi
+        # Список записей
         for entry in entries [:limit ]:
             type_emoji ={
-            'added':'',
-            'changed':'',
-            'fixed':'',
-            'removed':'',
-            'security':''
+            'added':'✨',
+            'changed':'🔄',
+            'fixed':'🔧',
+            'removed':'🗑️',
+            'security':'🔒'
             }.get (entry .change_type .value ,'')
 
             embed .add_field (
@@ -169,7 +169,7 @@ class ChangelogCog (commands .Cog ):
 
     @commands .Cog .listener ()
     async def on_ready (self ):
-        """Bot hazыr olduгunda"""
+        """Бот готов"""
         log .info (f" ChangelogCog loaded")
 
 

@@ -1,13 +1,13 @@
 """
 Leveling & Engagement System
 ============================
-- Text XP (her сообщениеda 15-25 random XP, 60s cooldown)
-- Voice XP (her минут 5 XP online, MUTE/DEAF/AFK hariч)
-- Streak bonus (7+ gюn юst юste gюnlюk сообщение = 2x XP, 14+ gюn = 3x)
+- Текстовый XP (за каждое сообщение 15-25 случайных XP, кулдаун 60 сек)
+- Голосовой XP (5 XP за каждую минуту онлайн, кроме MUTE/DEAF/AFK)
+- Бонус серии (7+ дней ежедневных сообщений подряд = 2x XP, 14+ дней = 3x)
 - 50+ Achievement badges
 - Level-up role rewards (configurable per guild)
 - Daily/weekly/monthly leaderboards
-- Auto-engagement: 24 часов inactive kullanыcыlara DM
+- Авто-вовлечение: DM пользователям, неактивным 24 часа
 """
 import discord 
 from discord .ext import commands ,tasks 
@@ -277,7 +277,7 @@ class LevelingEngagement (commands .Cog ):
             role =guild .get_role (int (reward ["role_id"]))
             if role and role not in member .roles :
                 try :
-                    await member .add_roles (role ,reason =f"Level {new_level} reward")
+                    await member .add_roles (role ,reason =f"Награда за уровень {new_level}")
                 except discord .Forbidden :
                     pass 
 
@@ -624,7 +624,7 @@ class LevelingEngagement (commands .Cog ):
     @levelset .command (name ="reward")
     async def levelset_reward (self ,ctx ,level :int ,role :discord .Role ):
         cfg =self .load_config (str (ctx .guild .id ))
-        cfg .setdefault ("level_rewards",{})[str (level )]={"role_id":str (role .id ),"message":f" Достигнут уровень {level}! Роль: {role.name}"}
+        cfg .setdefault ("level_rewards",{})[str (level )]={"role_id":str (role .id ),"message":f"🎉 Достигнут уровень {level}! Роль: {role.name}"}
         self .save_config (str (ctx .guild .id ),cfg )
         await ctx .send (f" За уровень {level} будет выдаваться роль {role.mention}")
 

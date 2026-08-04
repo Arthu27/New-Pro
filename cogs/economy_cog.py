@@ -240,7 +240,7 @@ class _EconomyExtra (commands .Cog ):
         await ctx .send (embed =e )
 
     # Переопределяем work с учётом профессии
-    @commands .command (name ='work',aliases =['чalыш','работать'])
+    @commands .command (name ='work',aliases =['работать','трудиться'])
     async def work (self ,ctx ):
         """Работать по профессии"""
         data =self ._migrate (ctx .author .id ,self ._get (ctx .author .id ))
@@ -620,7 +620,7 @@ class _EconomyExtra (commands .Cog ):
         await ctx .send (file =discord .File (img ,filename ="top.png" ))
 
     # ── МАГАЗИН / ПОКУПКА / ИНВЕНТАРЬ / ПЕРЕВОД ─────────────
-    @commands .command (name ='shop',aliases =['магазин','maгaza'])
+    @commands .command (name ='shop',aliases =['магазин','лавка'])
     async def shop (self ,ctx ):
         """Профессиональное меню магазина сервера"""
         img_buf =await self .bot .loop .run_in_executor (
@@ -630,7 +630,7 @@ class _EconomyExtra (commands .Cog ):
         view =EconomyView (self ,ctx .author ,current_cat ="shop")
         await ctx .send (file =file ,view =view )
 
-    @commands .command (name ='buy',aliases =['satыnal','купить'])
+    @commands .command (name ='buy',aliases =['купить','приобрести'])
     async def buy (self ,ctx ,*,item :str ):
         """Купить предмет из магазина"""
         key =item .lower ()
@@ -651,7 +651,7 @@ class _EconomyExtra (commands .Cog ):
         description =f"**{key.capitalize()}**\nЦена: ${price:,}\nРедкость: {det['rarity']}")
         await ctx .send (embed =e )
 
-    @commands .command (name ='inventory',aliases =['envanter','инвентарь'])
+    @commands .command (name ='inventory',aliases =['инвентарь','рюкзак'])
     async def inventory (self ,ctx ,member :discord .Member =None ):
         """Профессиональное меню инвентаря"""
         member =member or ctx .author 
@@ -662,7 +662,7 @@ class _EconomyExtra (commands .Cog ):
         view =EconomyView (self ,member ,current_cat ="inventory")
         await ctx .send (file =file ,view =view )
 
-    @commands .command (name ='transfer',aliases =['отправить','gonder'])
+    @commands .command (name ='transfer',aliases =['отправить','передать'])
     async def transfer (self ,ctx ,member :discord .Member ,amount :int ):
         """Перевести деньги"""
         if member ==ctx .author or member .bot or amount <=0 :
@@ -702,7 +702,7 @@ class EconomyCog (_EconomyExtra ,commands .Cog ):
         self .db .set (user_id ,data )
 
         # ── balance ──────────────────────────────────────────────────────────
-    @commands .command (name ='balance',aliases =['bakiye','cюzdan','деньги'])
+    @commands .command (name ='balance',aliases =['баланс','кошелёк','деньги'])
     async def balance (self ,ctx ,member :discord .Member =None ):
         """Показать баланс"""
         member =member or ctx .author 
@@ -725,7 +725,7 @@ class EconomyCog (_EconomyExtra ,commands .Cog ):
         await ctx .send (file =discord .File (img ,filename ="balance.png" ))
 
         # ── daily ────────────────────────────────────────────────────────────
-    @commands .command (name ='daily',aliases =['gюnlюk','ежедневная'])
+    @commands .command (name ='daily',aliases =['ежедневная','ежедневно'])
     async def daily (self ,ctx ):
         """Ежедневная награда со стриком"""
         data =self ._get (ctx .author .id )
@@ -774,7 +774,7 @@ class EconomyCog (_EconomyExtra ,commands .Cog ):
 
         # ── work ─────────────────────────────────────────────────────────────
         # ── beg ──────────────────────────────────────────────────────────────
-    @commands .command (name ='beg',aliases =['dilenci'])
+    @commands .command (name ='beg',aliases =['попросить'])
     async def beg (self ,ctx ):
         """Попросить деньги"""
         data =self ._get (ctx .author .id )
@@ -817,7 +817,7 @@ class EconomyCog (_EconomyExtra ,commands .Cog ):
         await ctx .send (embed =embed )
 
         # ── rob ──────────────────────────────────────────────────────────────
-    @commands .command (name ='rob',aliases =['soy'])
+    @commands .command (name ='rob',aliases =['ограбить'])
     async def rob (self ,ctx ,member :discord .Member ):
         """Ограбить пользователя"""
         if member ==ctx .author :
@@ -861,7 +861,7 @@ class EconomyCog (_EconomyExtra ,commands .Cog ):
         await ctx .send (embed =embed )
 
         # ── deposit / withdraw ───────────────────────────────────────────────
-    @commands .command (name ='deposit',aliases =['yatыr'])
+    @commands .command (name ='deposit',aliases =['вклад'])
     async def deposit (self ,ctx ,amount :int ):
         """Положить деньги в банк"""
         data =self ._get (ctx .author .id )
@@ -884,7 +884,7 @@ class EconomyCog (_EconomyExtra ,commands .Cog ):
         )
         await ctx .send (embed =embed )
 
-    @commands .command (name ='withdraw',aliases =['чek'])
+    @commands .command (name ='withdraw',aliases =['снять'])
     async def withdraw (self ,ctx ,amount :int ):
         """Снять деньги из банка"""
         data =self ._get (ctx .author .id )

@@ -109,7 +109,7 @@ class Moderation (commands .Cog ):
             desc +=f"\n{extra}\n"
 
         desc +=f"\n\n"
-        desc +=f"> DM пользователю denhaklarыnlen"
+        desc +=f"> Пользователь уведомлён в личные сообщения"
 
         e .description =desc 
         e .set_thumbnail (url =user .display_avatar .url )
@@ -126,12 +126,13 @@ class Moderation (commands .Cog ):
 
     @app_commands .command (name ="moderate",description ="Модерация: бан, кик, мут, размут, разбан")
     @app_commands .choices (action =[
-    app_commands .Choice (name ="ban",value ="ban"),
-    app_commands .Choice (name ="kick",value ="kick"),
-    app_commands .Choice (name ="timeout",value ="timeout"),
-    app_commands .Choice (name ="untimeout",value ="untimeout"),
-    app_commands .Choice (name ="unban",value ="unban")
+    app_commands .Choice (name ="бан",value ="ban"),
+    app_commands .Choice (name ="кик",value ="kick"),
+    app_commands .Choice (name ="мут",value ="timeout"),
+    app_commands .Choice (name ="размут",value ="untimeout"),
+    app_commands .Choice (name ="разбан",value ="unban")
     ])
+    @app_commands .describe (action ="Действие модерации",user ="Участник (для бана/кика/мута)",user_id ="ID пользователя (для разбана)",minutes ="Длительность мута в минутах",reason ="Причина")
     @app_commands .checks .has_permissions (ban_members =True )
     async def moderate_user (self ,interaction ,action :str ,
     user :discord .Member =None ,user_id :str =None ,
@@ -252,21 +253,22 @@ class Moderation (commands .Cog ):
 
     @app_commands .command (name ="utility",description ="Утилиты: очистка, слоумод, блокировка, инфо")
     @app_commands .choices (action =[
-    app_commands .Choice (name ="clear",value ="clear"),
-    app_commands .Choice (name ="slowmode",value ="slowmode"),
-    app_commands .Choice (name ="lock",value ="lock"),
-    app_commands .Choice (name ="unlock",value ="unlock"),
-    app_commands .Choice (name ="userinfo",value ="userinfo"),
+    app_commands .Choice (name ="очистка",value ="clear"),
+    app_commands .Choice (name ="слоумод",value ="slowmode"),
+    app_commands .Choice (name ="блокировка",value ="lock"),
+    app_commands .Choice (name ="разблокировка",value ="unlock"),
+    app_commands .Choice (name ="пользователь",value ="userinfo"),
     app_commands .Choice (name ="сервер",value ="сервер")
     ])
+    @app_commands .describe (action ="Что сделать",количество ="Сколько сообщений удалить (очистка)",секунд ="Задержка слоумода в секундах (0-21600)",user ="Участник для инфо")
     @app_commands .checks .has_permissions (manage_messages =True )
     async def utility_commands (self ,interaction ,action :str ,
-    adet :int =10 ,секунд :int =0 ,user :discord .Member =None ):
+    количество :int =10 ,секунд :int =0 ,user :discord .Member =None ):
         guild =interaction .guild 
 
         if action =="clear":
             await interaction .response .defer (ephemeral =True )
-            deleted =await interaction .channel .purge (limit =adet )
+            deleted =await interaction .channel .purge (limit =количество )
             e =discord .Embed (color =0xDC143C ,timestamp =datetime .now (timezone .utc ))
             e .description =(
             f"## Сообщения удалены\n"
@@ -376,6 +378,7 @@ class Moderation (commands .Cog ):
             # /роли 
 
     @app_commands .command (name ="role",description ="Выдать или забрать роль у пользователя")
+    @app_commands .describe (user ="Участник, у которого меняем роль",role ="Роль для выдачи/снятия")
     @app_commands .checks .has_permissions (manage_roles =True )
     async def role (self ,interaction ,user :discord .Member ,role :discord .Role ):
         guild =interaction .guild 
@@ -576,14 +579,14 @@ class Moderation (commands .Cog ):
         app_info =await self .bot .application_info ()
         if interaction .user .id !=app_info .owner .id :
             await interaction .response .send_message (
-            embed =error_embed ("Eta команда eriшimюzerinde только vladelcu botun."),
+            embed =error_embed ("Эта команда доступна только владельцу бота."),
             ephemeral =True 
             )
             return 
         try :
             target =self .bot .get_guild (int (guild_id ))
             if not target :
-                await interaction .response .send_message (embed =error_embed ("Сервер не найдено."),ephemeral =True )
+                await interaction .response .send_message (embed =error_embed ("Сервер не найден."),ephemeral =True )
                 return 
             name =target .name 
             await target .leave ()
@@ -604,15 +607,15 @@ class ModActionSelect(discord.ui.Select):
 
     def __init__(self, cog):
         options = [
-            discord.SelectOption(label="Ban", value="ban", description="Забанить участника"),
-            discord.SelectOption(label="Kick", value="kick", description="Выгнать участника"),
-            discord.SelectOption(label="Mute (Chat + Voice)", value="timeout", description="Timeout — закрыть и чат, и голосовой"),
-            discord.SelectOption(label="Mute (Только чат)", value="mute_chat", description="Закрыть только чат (timeout)"),
-            discord.SelectOption(label="Mute (Только voice)", value="vmute", description="Заглушить микрофон (чат не трогает)"),
-            discord.SelectOption(label="Unban", value="unban", description="Разбанить участника (по ID)"),
+            discord.SelectOption(label="Бан", value="ban", description="Забанить участника"),
+            discord.SelectOption(label="Кик", value="kick", description="Выгнать участника"),
+            discord.SelectOption(label="Мут (чат + войс)", value="timeout", description="Таймаут — закрыть и чат, и голос"),
+            discord.SelectOption(label="Мут (только чат)", value="mute_chat", description="Закрыть только чат (timeout)"),
+            discord.SelectOption(label="Мут (только войс)", value="vmute", description="Заглушить микрофон (чат не трогает)"),
+            discord.SelectOption(label="Разбан", value="unban", description="Разбанить участника (по ID)"),
             discord.SelectOption(label="Очистить сообщения", value="clear", description="Удалить N сообщений"),
-            discord.SelectOption(label="Unmute (Chat + Voice)", value="untimeout", description="Снять timeout с участника"),
-            discord.SelectOption(label="Unmute (Voice)", value="vunmute", description="Включить микрофон участника"),
+            discord.SelectOption(label="Размут (чат + войс)", value="untimeout", description="Снять таймаут с участника"),
+            discord.SelectOption(label="Размут (войс)", value="vunmute", description="Включить микрофон участника"),
         ]
         super().__init__(
             placeholder="Выберите действие модерации...",

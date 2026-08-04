@@ -1,9 +1,9 @@
 """
 Aether Security Cog
 - AI поддержка spam tespiti (pattern + скорость + benzerlik analizi)
-- Fake hesap tespiti (новый hesap, avatar нет, шюpheli isim)
-- Link безопасность сканироватьyыcыsы (вредоносный domain список + URL shortener)
-- Автоматически backup система (сервер настройк yedeгi)
+- Обнаружение фейковых аккаунтов (новый аккаунт, нет аватара, подозрительное имя)
+- Сканер безопасности ссылок (список вредоносных доменов + URL-сокращатели)
+- Система автоматических бэкапов (резервная копия настроек сервера)
 """
 import discord 
 from discord .ext import commands ,tasks 
@@ -25,7 +25,7 @@ MALICIOUS_DOMAINS ={
 'mediafire.com','anonfiles.com','gofile.io',
 }
 
-# Шюpheli isim pattern'leri
+# Подозрительное имя pattern'leri
 SUSPICIOUS_NAME_PATTERNS =[
 r'discord.*nitro',r'free.*nitro',r'steam.*gift',
 r'admin.*\d{4}',r'mod.*\d{4}',r'support.*\d{4}',
@@ -55,7 +55,7 @@ def _save_cfg (guild_id ,data ):
         json .dump (data ,fp ,indent =2 ,ensure_ascii =False )
 
 def _similarity (a :str ,b :str )->float :
-    """Иki string arasыndaki benzerlik oranы (0-1). Levenshtein taзапретlanmыш."""
+    """Схожесть двух строк (0-1). По расстоянию Левенштейна."""
     if not a or not b :
         return 0.0 
     a ,b =a .lower (),b .lower ()
@@ -112,7 +112,7 @@ class Security (commands .Cog ):
     def _ai_spam_score (self ,uid :int ,content :str )->tuple [float ,str ]:
         """
         Сообщение analiz et, spam skoru вернуть (0.0 - 1.0) ve причина.
-        Чoklu sinyal: скорость + benzerlik + tekrar + длинныйluk anomalisi
+        Мультисигнал: скорость + схожесть + повторы + аномалия длины
         """
         now =time .time ()
         window =8 # секунд
@@ -182,12 +182,12 @@ class Security (commands .Cog ):
             # Default avatar
         if member .display_avatar .is_animated ()is False and 'embed'in str (member .display_avatar .url ):
             score +=0.2 
-            warnings .append (" Varчислоlan avatar использовать")
+            warnings .append ("ℹ️ Используется стандартный аватар")
 
-            # Шюpheli isim
+            # Подозрительное имя
         if _is_suspicious_name (member .name )or _is_suspicious_name (member .display_name ):
             score +=0.4 
-            warnings .append (f" Шюpheli user имя: `{member.name}`")
+            warnings .append (f"⚠️ Подозрительное имя пользователя: `{member.name}`")
 
             # Discriminator 0000 (старый система bot pattern'i)
         if hasattr (member ,'discriminator')and member .discriminator =='0000':
@@ -198,7 +198,7 @@ class Security (commands .Cog ):
 
         #  Сканер ссылок 
     def _scan_links (self ,content :str )->tuple [bool ,list ]:
-        """Zararlы link есть mы? (bool, найден domainler)"""
+        """Есть ли вредоносная ссылка? (bool, найденные домены)"""
         domains =_extract_domains (content )
         found =[]
         for domain in domains :
@@ -235,13 +235,13 @@ class Security (commands .Cog ):
                 except Exception :
                     pass 
                 e =discord .Embed (
-                title =" Zararlы Link Engellendi",
+                title ="🛡️ Вредоносная ссылка заблокирована",
                 color =0xe74c3c ,
                 timestamp =datetime .now (timezone .utc )
                 )
                 e .description =(
-                f"{member.mention} вредоносный/шюpheli link paylaшtы!\n\n"
-                f"** Tespit edilen domain(ler):**\n"
+                f"{member.mention} поделился вредоносной/подозрительной ссылкой!\n\n"
+                f"**🌐 Обнаруженные домены:**\n"
                 +"\n".join (f"• `{d}`"for d in bad_domains )
                 )
                 e .set_thumbnail (url =member .display_avatar .url )
@@ -278,7 +278,7 @@ class Security (commands .Cog ):
                 color =0xe74c3c ,
                 timestamp =datetime .now (timezone .utc )
                 )
-                e .description =f"**Очкиlama:** `{score:.0%}` | **Причина:** {reason}\n**⏳ Наказание:** 5 minutes mute"
+                e .description =f"**Сканирование:** `{score:.0%}` | **Причина:** {reason}\n**⏳ Наказание:** мут на 5 минут"
                 e .set_thumbnail (url =member .display_avatar .url )
                 e .add_field (name =" Пользователь",value =f"{member.mention} `{member.id}`",inline =True )
                 e .add_field (name =" Канал",value =message .channel .mention ,inline =True )
@@ -303,7 +303,7 @@ class Security (commands .Cog ):
                 color =0xf39c12 ,
                 timestamp =datetime .now (timezone .utc )
                 )
-                e .description =f"**Очкиlama:** `{score:.0%}` | **Причина:** {reason}"
+                e .description =f"**Сканирование:** `{score:.0%}` | **Причина:** {reason}"
                 e .set_thumbnail (url =member .display_avatar .url )
                 e .add_field (name =" Пользователь",value =f"{member.mention} `{member.id}`",inline =True )
                 e .set_footer (text =" Aether AI Security")
@@ -323,7 +323,7 @@ class Security (commands .Cog ):
         action =cfg .get ('new_account_action','warn')
 
         e =discord .Embed (
-        title =" Шюpheli Hesap Tespit Edildi",
+        title ="⚠️ Обнаружен подозрительный аккаунт",
         color =0xe74c3c if score >=0.6 else 0xf39c12 ,
         timestamp =datetime .now (timezone .utc )
         )
@@ -365,7 +365,7 @@ class Security (commands .Cog ):
         e .add_field (name =" Фейковые аккаунты",value =" Активен"if cfg .get ('fake_account')else " Закрыт",inline =True )
         e .add_field (name =" Сканер ссылок",value =" Активен"if cfg .get ('link_scanner')else " Закрыт",inline =True )
         e .add_field (name =" Порог нового аккаунта",value =f"`{cfg.get('new_account_days', 7)} день`",inline =True )
-        e .add_field (name =" Новый Hesap Действиеu",value =f"`{cfg.get('new_account_action', 'warn')}`",inline =True )
+        e .add_field (name ="🆕 Действие для новых аккаунтов",value =f"`{cfg.get('new_account_action', 'warn')}`",inline =True )
         e .set_footer (text =" Aether Security")
         await interaction .response .send_message (embed =e ,ephemeral =True )
 
@@ -387,7 +387,7 @@ class Security (commands .Cog ):
         )
 
     @app_commands .command (name ="security-newaccount",description ="Настроить действие для новых аккаунтов")
-    @app_commands .describe (days ="Сколько день новый hesap шюpheli число",action ="Действие")
+    @app_commands .describe (days ="Возраст аккаунта в днях, младше которого он подозрителен",action ="Действие")
     @app_commands .choices (action =[
     app_commands .Choice (name ="Только Bildir",value ="warn"),
     app_commands .Choice (name ="Kick",value ="kick"),
@@ -409,8 +409,8 @@ class Security (commands .Cog ):
     async def scan_link (self ,interaction :discord .Interaction ,url :str ):
         has_bad ,bad_domains =self ._scan_links (url )
         if has_bad :
-            e =discord .Embed (title =" Zararlы Link!",color =0xe74c3c )
-            e .description ="Bu link вредоносный/шюpheli domain содержимое:\n"+"\n".join (f"• `{d}`"for d in bad_domains )
+            e =discord .Embed (title ="⛔ Вредоносная ссылка!",color =0xe74c3c )
+            e .description ="Эта ссылка содержит вредоносный/подозрительный домен:\n"+"\n".join (f"• `{d}`"for d in bad_domains )
         else :
             e =discord .Embed (title =" Link Temiz",color =0x2ecc71 )
             e .description ="Bu link bilinen вредоносный domain listesinde не найдено."
@@ -421,7 +421,7 @@ class Security (commands .Cog ):
         #  Автоматически Backup 
     @tasks .loop (hours =24 )
     async def backup_loop (self ):
-        """Каждый 24 времяte все серверов настройк yedadd."""
+        """Резервное копирование настроек всех серверов каждые 24 часа."""
         for guild in self .bot .guilds :
             await self ._backup_guild (guild )
 
@@ -484,32 +484,32 @@ class Security (commands .Cog ):
         x for x in os .listdir (BACKUP_DIR )
         if x .startswith (f'backup_{interaction.guild.id}_')
         ],reverse =True )
-        e =discord .Embed (title =" Yedek kopyame OKlandы",color =0x2ecc71 ,timestamp =datetime .now (timezone .utc ))
-        e .description =f"**{interaction.guild.name}** сервер yedaddndi."
+        e =discord .Embed (title ="✅ Резервная копия создана",color =0x2ecc71 ,timestamp =datetime .now (timezone .utc ))
+        e .description =f"Настройки сервера **{interaction.guild.name}** скопированы."
         e .add_field (
-        name =f" Текущий Yedek kopyar ({len(backups)})",
+        name =f"💾 Текущие копии ({len(backups)})",
         value ="\n".join (f"• `{b}`"for b in backups [:5 ])or "Нет",
         inline =False 
         )
-        e .set_footer (text =" Aether Backup Система • Ежедневный автоматически yedek активен")
+        e .set_footer (text ="💾 Aether Backup • ежедневное авто-копирование активно")
         await interaction .followup .send (embed =e ,ephemeral =True )
 
     @app_commands .command (name ="backup-list",description ="Показать список резервных копий")
     @app_commands .checks .has_permissions (administrator =True )
     async def backup_list (self ,interaction :discord .Interaction ):
         if not os .path .exists (BACKUP_DIR ):
-            await interaction .response .send_message (" Пока yedek нет.",ephemeral =True )
+            await interaction .response .send_message ("📦 Копий пока нет.",ephemeral =True )
             return 
         backups =sorted ([
         x for x in os .listdir (BACKUP_DIR )
         if x .startswith (f'backup_{interaction.guild.id}_')
         ],reverse =True )
-        e =discord .Embed (title =" Сервер Yedek kopyari",color =0x3498db ,timestamp =datetime .now (timezone .utc ))
+        e =discord .Embed (title ="💾 Резервные копии сервера",color =0x3498db ,timestamp =datetime .now (timezone .utc ))
         if not backups :
-            e .description ="Пока yedek не найдено. `/backup` с yedek создать."
+            e .description ="Копий пока не найдено. Создайте копию командой `/backup`."
         else :
             e .description ="\n".join (f"• `{b}`"for b in backups )
-        e .set_footer (text =" В конец 7 yedek saklanыr")
+        e .set_footer (text ="💾 Хранятся последние 7 копий")
         await interaction .response .send_message (embed =e ,ephemeral =True )
 
 

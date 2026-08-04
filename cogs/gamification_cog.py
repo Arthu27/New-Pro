@@ -20,7 +20,7 @@ class GamificationCog (commands .Cog ):
         self .bot =bot 
 
     @app_commands .command (name ='gprofile',description ='Профиль геймификации')
-    @app_commands .describe (user ='Пользователь (opsiyonel)')
+    @app_commands .describe (user ='Пользователь (необязательно)')
     async def profile (self ,interaction :discord .Interaction ,
     user :discord .Member =None ):
         """Profilinizi gёrюntюleyin"""
@@ -57,22 +57,22 @@ class GamificationCog (commands .Cog ):
 
         await interaction .response .send_message (embed =embed )
 
-    @app_commands .command (name ='game-leaderboard',description ='Oyun/Gamification lider tablosunu gёrюntюle')
-    @app_commands .describe (type ='Lider tablosu tipi (points/badges/level)')
+    @app_commands .command (name ='game-leaderboard',description ='Показать таблицу лидеров геймификации')
+    @app_commands .describe (type ='Тип таблицы (points/badges/level)')
     async def leaderboard (self ,interaction :discord .Interaction ,type :str ='points'):
-        """Lider tablosunu gёrюntюle"""
+        """Показать таблицу лидеров"""
         if type =='points':
             leaders =leaderboard_system .get_top_users ('points',limit =10 )
-            title =" Очки Lider Tablosu"
+            title ="🏆 Таблица лидеров по очкам"
         elif type =='badges':
             leaders =leaderboard_system .get_top_users ('badges',limit =10 )
-            title =" Значок Lider Tablosu"
+            title ="🏅 Таблица лидеров по значкам"
         elif type =='level':
             leaders =leaderboard_system .get_top_users ('level',limit =10 )
-            title =" Уровень Lider Tablosu"
+            title ="📈 Таблица лидеров по уровням"
         else :
             await interaction .response .send_message (
-            " Geчersiz lider tablosu tipi! (points/badges/level)",
+            "❌ Неверный тип таблицы! (points/badges/level)",
             ephemeral =True 
             )
             return 
@@ -106,11 +106,11 @@ class GamificationCog (commands .Cog ):
 
         await interaction .response .send_message (embed =embed )
 
-    @app_commands .command (name ='badges',description ='Rozetlerinizi gёrюntюleyin')
-    @app_commands .describe (user ='Пользователь (opsiyonel)')
+    @app_commands .command (name ='badges',description ='Показать ваши значки')
+    @app_commands .describe (user ='Пользователь (необязательно)')
     async def badges (self ,interaction :discord .Interaction ,
     user :discord .Member =None ):
-        """Rozetlerinizi gёrюntюleyin"""
+        """Показать ваши значки"""
         target_user =user or interaction .user 
 
         # Rozetler al
@@ -118,7 +118,7 @@ class GamificationCog (commands .Cog ):
 
         if not badges :
             await interaction .response .send_message (
-            f" {target_user.display_name} henюz hiч rozet kazanmadы!",
+            f"😶 У {target_user.display_name} пока нет значков!",
             ephemeral =True 
             )
             return 
@@ -135,7 +135,7 @@ class GamificationCog (commands .Cog ):
         for badge in badges [:10 ]:
             embed .add_field (
             name =f"{badge['name']}",
-            value =f"{badge.get('description', 'Aчыklama yok')}\nKazanыldы: {badge['earned_at'][:10]}",
+            value =f"{badge.get('description', 'Нет описания')}\nПолучен: {badge['earned_at'][:10]}",
             inline =False 
             )
 
@@ -152,7 +152,7 @@ class GamificationCog (commands .Cog ):
             minutes =int ((time_left .total_seconds ()%3600 )/60 )
 
             await interaction .response .send_message (
-            f"⏰ Gюnlюk ёdюlюnюzю zaten aldыnыz! {hours}s {minutes}d после tekrar deneyin.",
+            f"⏰ Вы уже забрали ежедневную награду! Попробуйте снова через {hours} ч {minutes} мин.",
             ephemeral =True 
             )
             return 
@@ -163,7 +163,7 @@ class GamificationCog (commands .Cog ):
         # Embed создать
         embed =discord .Embed (
         title =" Gюnlюk Ёdюl",
-        description =f"**Kazanыlan Очки:** {points}\n\nYarыn tekrar gel!",
+        description =f"**Получено очков:** {points}\n\nВозвращайтесь завтра!",
         color =discord .Color .green (),
         timestamp =datetime .now ()
         )
@@ -192,21 +192,21 @@ class GamificationCog (commands .Cog ):
 
     @commands .Cog .listener ()
     async def on_message (self ,message :discord .Message ):
-        """Сообщение geldiгinde XP ver"""
+        """Начислить XP за сообщение"""
         if message .author .bot :
             return 
 
             # XP ver
         xp_gained =points_system .add_xp (message .author .id ,1 )
 
-        # Level-up проверкаю
+        # Проверка повышения уровня
         if xp_gained :
             level =level_system .get_level (message .author .id )
 
-            # Level-up bildirimi
+            # Уведомление о повышении уровня
             embed =discord .Embed (
-            title =" Level Up!",
-            description =f"**{message.author.mention}** уровень **{level['level']}**'e yюkseldi!\n\nНовый уровень: **{level['name']}**",
+            title ="🎉 Новый уровень!",
+            description =f"**{message.author.mention}** поднялся до **{level['level']}** уровня!\n\nНовый ранг: **{level['name']}**",
             color =discord .Color .gold (),
             timestamp =datetime .now ()
             )
@@ -215,7 +215,7 @@ class GamificationCog (commands .Cog ):
 
     @commands .Cog .listener ()
     async def on_ready (self ):
-        """Bot hazыr olduгunda"""
+        """Бот готов"""
         log .info (f" GamificationCog loaded")
 
 
