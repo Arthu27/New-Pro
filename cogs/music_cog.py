@@ -55,7 +55,8 @@ class MusicCog (commands .Cog ):
         timestamp =datetime .now ()
         )
 
-        await ctx .send (embed =embed )
+        from cogs .icons import send_with_icon 
+        await send_with_icon (ctx ,embed ,'music')
 
     @commands .command (name ='pause',aliases =['пауза'])
     async def pause (self ,ctx ):
@@ -161,7 +162,8 @@ class MusicCog (commands .Cog ):
         timestamp =datetime .now ()
         )
 
-        await ctx .send (embed =embed )
+        from cogs .icons import send_with_icon 
+        await send_with_icon (ctx ,embed ,'music')
 
     @commands .command (name ='volume',aliases =['громкость'])
     async def volume (self ,ctx ,volume :int =None ):

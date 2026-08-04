@@ -211,7 +211,8 @@ class GamificationCog (commands .Cog ):
             timestamp =datetime .now ()
             )
 
-            await message .channel .send (embed =embed )
+            from cogs .icons import send_with_icon 
+            await send_with_icon (message .channel ,embed ,'levelup')
 
     @commands .Cog .listener ()
     async def on_ready (self ):

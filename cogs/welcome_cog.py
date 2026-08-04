@@ -62,9 +62,8 @@ class WelcomeCog (commands .Cog ):
         timestamp =datetime .now ()
         )
 
-        embed .set_thumbnail (url =ctx .author .display_avatar .url )
-
-        await ctx .send (embed =embed )
+        from cogs .icons import send_with_icon 
+        await send_with_icon (ctx ,embed ,'welcome')
 
     @commands .Cog .listener ()
     async def on_member_join (self ,member ):
@@ -85,9 +84,8 @@ class WelcomeCog (commands .Cog ):
         timestamp =datetime .now ()
         )
 
-        embed .set_thumbnail (url =member .display_avatar .url )
-
-        await channel .send (embed =embed )
+        from cogs .icons import send_with_icon 
+        await send_with_icon (channel ,embed ,'welcome')
 
     @commands .Cog .listener ()
     async def on_ready (self ):
