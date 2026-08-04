@@ -272,8 +272,8 @@ def _header(bg, title_text, sub_text, icon_key):
     bg.alpha_composite(badge, (40, 30))
     bg.alpha_composite(_panel(168, 40, radius=12, fill=(24, 29, 60, 215), border=(212, 175, 55, 200), bw=2), (712, 38))
     d = ImageDraw.Draw(bg)
-    d.text((112, 30), title_text, fill=GOLD_SOFT, font=_f(True, 28))
-    d.text((112, 64), sub_text, fill=MUTED, font=_f(False, 15))
+    d.text((112, 28), title_text, fill=GOLD_SOFT, font=_f(True, 33))
+    d.text((112, 66), sub_text, fill=MUTED, font=_f(False, 18))
     d.text((736, 48), "✦ HELP", fill=GOLD, font=_f(True, 16))
 
 
@@ -304,12 +304,12 @@ def generate_help_card(category_id: str = None) -> Image.Image:
             icon = _cat_icon(CAT_ICONS.get(cat["id"], "aether_logo"), 58)
             bg.alpha_composite(icon, (bx + 14, by + 14))
             d = ImageDraw.Draw(bg)
-            d.text((bx + 86, by + 12), cat["title"].upper(), fill=TXT, font=_f(True, 21))
-            d.text((bx + 86, by + 40), f"{len(cat['commands'])} КОМАНД", fill=GOLD, font=_f(True, 15))
+            d.text((bx + 86, by + 10), cat["title"].upper(), fill=TXT, font=_f(True, 25))
+            d.text((bx + 86, by + 42), f"{len(cat['commands'])} КОМАНД", fill=GOLD, font=_f(True, 17))
             sample = " · ".join(cmd[0].split()[0] for cmd in cat["commands"][:3])
             if len(sample) > 30:
                 sample = sample[:29] + "…"
-            d.text((bx + 86, by + 61), sample, fill=MUTED, font=_f(False, 14))
+            d.text((bx + 86, by + 63), sample, fill=MUTED, font=_f(False, 16))
 
         # Навигационная плитка (12-я)
         bx = start_x + box_w + gap_x
@@ -318,9 +318,9 @@ def generate_help_card(category_id: str = None) -> Image.Image:
         icon = _cat_icon("navigation", 58)
         bg.alpha_composite(icon, (bx + 14, by + 14))
         d = ImageDraw.Draw(bg)
-        d.text((bx + 86, by + 12), "НАВИГАЦИЯ", fill=TXT, font=_f(True, 21))
-        d.text((bx + 86, by + 40), "МЕНЮ НИЖЕ", fill=GOLD, font=_f(True, 15))
-        d.text((bx + 86, by + 61), "выберите раздел — карточка обновится", fill=MUTED, font=_f(False, 14))
+        d.text((bx + 86, by + 10), "НАВИГАЦИЯ", fill=TXT, font=_f(True, 25))
+        d.text((bx + 86, by + 42), "МЕНЮ НИЖЕ", fill=GOLD, font=_f(True, 17))
+        d.text((bx + 86, by + 63), "выберите раздел — карточка обновится", fill=MUTED, font=_f(False, 16))
 
     else:
         cat = next((c for c in CATEGORIES if c["id"] == category_id), None)
@@ -339,10 +339,10 @@ def generate_help_card(category_id: str = None) -> Image.Image:
             cx, cy = start_x + 30, by + box_h // 2
             s = 7
             d.polygon([(cx, cy - s), (cx + s, cy), (cx, cy + s), (cx - s, cy)], fill=GOLD)
-            d.text((start_x + 52, by + 13), cmd_str, fill=TXT, font=_f(True, 25))
-            d.text((start_x + 52, by + 47), desc, fill=MUTED, font=_f(False, 20))
+            d.text((start_x + 52, by + 10), cmd_str, fill=TXT, font=_f(True, 29))
+            d.text((start_x + 52, by + 46), desc, fill=MUTED, font=_f(False, 22))
             perm_txt = f" {perm} "
-            pf = _f(True, 15)
+            pf = _f(True, 17)
             pw = d.textlength(perm_txt, font=pf) + 16
             ph = 30
             bg.alpha_composite(_panel(int(pw), ph, radius=10, fill=(24, 29, 60, 215), border=(212, 175, 55, 190), bw=2),
@@ -360,7 +360,12 @@ def generate_help_card(category_id: str = None) -> Image.Image:
 
 
 def generate_help_card_bytes(category_id: str = None) -> io.BytesIO:
+    """Discord önizlemesi ~400px; net görünmesi için 2x render + hafif keskinleştirme"""
+    from PIL import ImageFilter
     card = generate_help_card(category_id).convert('RGB')
+    w, h = card.size
+    card = card.resize((w * 2, h * 2), Image.Resampling.LANCZOS)
+    card = card.filter(ImageFilter.UnsharpMask(radius=2, percent=135, threshold=2))
     buf = io.BytesIO()
     card.save(buf, format='PNG', optimize=True)
     buf.seek(0)
