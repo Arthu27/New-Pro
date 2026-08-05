@@ -71,7 +71,7 @@ def _save_json(path, data):
             json.dump(data, f, ensure_ascii=False, indent=2)
         os.replace(tmp, path)
     except Exception as e:
-        log.error(f"[TAGJAIL] kayıt hatası {path}: {e}")
+        log.error(f"[TAGJAIL] ошибка записи {path}: {e}")
 
 
 class TagJail(commands.Cog):
@@ -200,7 +200,7 @@ class TagJail(commands.Cog):
                 await self._log(guild, self._err_embed("Нет прав!", f"{member.mention}\n{ROLE_EDIT_ERR}"))
                 return False
             except Exception as e:
-                log.error(f"[TAGJAIL] add_roles hatası: {e}")
+                log.error(f"[TAGJAIL] ошибка add_roles: {e}")
                 return False
 
         if not rec:
@@ -264,7 +264,7 @@ class TagJail(commands.Cog):
                     await member.add_roles(*to_restore, reason=f"[TagJail] {reason}")
                     restored = len(to_restore)
                 except Exception as e:
-                    log.error(f"[TAGJAIL] rol iade hatası: {e}")
+                    log.error(f"[TAGJAIL] ошибка возврата ролей: {e}")
             self._del_jail_rec(guild.id, member.id)
 
         e = discord.Embed(color=GREEN, timestamp=datetime.now(timezone.utc))
@@ -320,7 +320,7 @@ class TagJail(commands.Cog):
         try:
             await self.evaluate(member, "вход на сервер")
         except Exception as e:
-            log.error(f"[TAGJAIL] on_member_join hatası: {e}")
+            log.error(f"[TAGJAIL] ошибка on_member_join: {e}")
 
     @commands.Cog.listener()
     async def on_member_update(self, before: discord.Member, after: discord.Member):
@@ -332,7 +332,7 @@ class TagJail(commands.Cog):
         try:
             await self.evaluate(after, "смена ника")
         except Exception as e:
-            log.error(f"[TAGJAIL] on_member_update hatası: {e}")
+            log.error(f"[TAGJAIL] ошибка on_member_update: {e}")
 
     @commands.Cog.listener()
     async def on_user_update(self, before: discord.User, after: discord.User):
@@ -346,7 +346,7 @@ class TagJail(commands.Cog):
                 try:
                     await self.evaluate(member, "смена имени профиля")
                 except Exception as e:
-                    log.error(f"[TAGJAIL] on_user_update hatası: {e}")
+                    log.error(f"[TAGJAIL] ошибка on_user_update: {e}")
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -377,7 +377,7 @@ class TagJail(commands.Cog):
             f"Статус: {'🟢 **ВКЛ**' if c['enabled'] else '🔴 **ВЫКЛ**'}\n"
             f"Запрещённых тегов: **{len(tags)}**"
             + (f"\nТеги: {' · '.join('`' + t + '`' for t in tags[:15])}" if tags
-               else "\nТеги: — *(добавьте: /tagjail tag-ekle)*")
+               else "\nТеги: — *(добавьте: /tagjail add-tag)*")
             + f"\n{DIVIDER}\n"
             f"Jail-роль: {jail_role}\n"
             f"Лог-канал: {log_ch}\n"
@@ -390,34 +390,34 @@ class TagJail(commands.Cog):
         e.set_footer(text=f"{guild.name} · сейчас в джейле: {len(self._jailed.get(str(guild.id), {}))}")
         return e
 
-    @tagjail.command(name="durum", description="Текущие настройки tag jail")
+    @tagjail.command(name="status", description="Текущие настройки tag jail")
     @app_commands.checks.has_permissions(administrator=True)
     async def tj_durum(self, interaction: discord.Interaction):
         await interaction.response.send_message(embed=self._cfg_embed(interaction.guild), ephemeral=True)
 
-    @tagjail.command(name="ac", description="Включить tag jail")
+    @tagjail.command(name="on", description="Включить tag jail")
     @app_commands.checks.has_permissions(administrator=True)
     async def tj_ac(self, interaction: discord.Interaction):
         c = self.cfg(interaction.guild.id)
         if not c.get('jail_role_id'):
             return await interaction.response.send_message(
-                "⚠ Сначала задайте jail-роль: `/tagjail jail-rol`", ephemeral=True)
+                "⚠ Сначала задайте jail-роль: `/tagjail jail-role`", ephemeral=True)
         if not c.get('banned_tags'):
             return await interaction.response.send_message(
-                "⚠ Сначала добавьте запрещённые теги: `/tagjail tag-ekle`", ephemeral=True)
+                "⚠ Сначала добавьте запрещённые теги: `/tagjail add-tag`", ephemeral=True)
         self.set_cfg(interaction.guild.id, 'enabled', True)
         await interaction.response.send_message(
             "✅ **Tag Jail включён.** У кого запрещённый тег в имени — отправится в джейл автоматически.\n"
-            "Проверить всех сразу: `/tagjail tara`", ephemeral=True)
+            "Проверить всех сразу: `/tagjail scan`", ephemeral=True)
 
-    @tagjail.command(name="kapat", description="Выключить tag jail")
+    @tagjail.command(name="off", description="Выключить tag jail")
     @app_commands.checks.has_permissions(administrator=True)
     async def tj_kapat(self, interaction: discord.Interaction):
         self.set_cfg(interaction.guild.id, 'enabled', False)
         await interaction.response.send_message(
             "🔴 **Tag Jail выключен.** Текущие заключённые не тронуты.", ephemeral=True)
 
-    @tagjail.command(name="tag-ekle", description="Запретить тег/строку в имени (тег чужого сервера, '.gg/', 'discord.gg'...)")
+    @tagjail.command(name="add-tag", description="Запретить тег/строку в имени (тег чужого сервера, '.gg/', 'discord.gg'...)")
     @app_commands.describe(текст="Тег или строка, запрещённая в имени (без учёта регистра)")
     @app_commands.checks.has_permissions(administrator=True)
     async def tj_tag_ekle(self, interaction: discord.Interaction, текст: str):
@@ -431,7 +431,7 @@ class TagJail(commands.Cog):
             f"✅ Запрещённый тег добавлен: `{текст}` (всего {len(tags)})\n"
             f"Все, у кого он в нике/имени, отправятся в джейл.", ephemeral=True)
 
-    @tagjail.command(name="tag-sil", description="Убрать тег из запрещённых")
+    @tagjail.command(name="del-tag", description="Убрать тег из запрещённых")
     @app_commands.describe(текст="Тег для удаления из списка")
     @app_commands.checks.has_permissions(administrator=True)
     async def tj_tag_sil(self, interaction: discord.Interaction, текст: str):
@@ -443,19 +443,19 @@ class TagJail(commands.Cog):
         await interaction.response.send_message(
             f"✅ Тег `{текст}` убран из запрещённых (осталось {len(tags)}).", ephemeral=True)
 
-    @tagjail.command(name="taglar", description="Список запрещённых тегов")
+    @tagjail.command(name="tags", description="Список запрещённых тегов")
     @app_commands.checks.has_permissions(administrator=True)
     async def tj_taglar(self, interaction: discord.Interaction):
         tags = self.cfg(interaction.guild.id).get('banned_tags', [])
         if not tags:
             return await interaction.response.send_message(
-                "Список пуст. Добавьте: `/tagjail tag-ekle`", ephemeral=True)
+                "Список пуст. Добавьте: `/tagjail add-tag`", ephemeral=True)
         e = discord.Embed(color=GOLD)
         e.description = "## ⛔ Запрещённые теги\n" + "\n".join(
             f"`{i}.` **{t}**" for i, t in enumerate(tags, 1))
         await interaction.response.send_message(embed=e, ephemeral=True)
 
-    @tagjail.command(name="jail-rol", description="Задать jail-роль (её права вы настраиваете: закрыть каналы и т.д.)")
+    @tagjail.command(name="jail-role", description="Задать jail-роль (её права вы настраиваете: закрыть каналы и т.д.)")
     @app_commands.describe(роль="Роль заключённых")
     @app_commands.checks.has_permissions(administrator=True)
     async def tj_jail_rol(self, interaction: discord.Interaction, роль: discord.Role):
@@ -467,31 +467,31 @@ class TagJail(commands.Cog):
             f"✅ Jail-роль: {роль.mention}\n"
             f"💡 Совет: в настройках каналов закройте этой роли всё, кроме одного канала джейла.", ephemeral=True)
 
-    @tagjail.command(name="log-kanal", description="Канал для логов tag jail")
+    @tagjail.command(name="log-channel", description="Канал для логов tag jail")
     @app_commands.describe(канал="Текстовый канал для логов")
     @app_commands.checks.has_permissions(administrator=True)
     async def tj_log_kanal(self, interaction: discord.Interaction, канал: discord.TextChannel):
         self.set_cfg(interaction.guild.id, 'log_channel_id', канал.id)
         await interaction.response.send_message(f"✅ Логи tag jail → {канал.mention}", ephemeral=True)
 
-    @tagjail.command(name="oto-serbest", description="Авто-освобождение, когда тег убран из имени")
-    @app_commands.describe(режим="ac — выходит сам, kapat — выпускает только модератор")
+    @tagjail.command(name="auto-release", description="Авто-освобождение, когда тег убран из имени")
+    @app_commands.describe(режим="вкл — выходит сам, выкл — выпускает только модератор")
     @app_commands.choices(режим=[
-        app_commands.Choice(name="ac (сам выходит, убрав тег)", value="ac"),
-        app_commands.Choice(name="kapat (только через /unjail)", value="kapat"),
+        app_commands.Choice(name="вкл (сам выходит, убрав тег)", value="on"),
+        app_commands.Choice(name="выкл (только через /unjail)", value="off"),
     ])
     @app_commands.checks.has_permissions(administrator=True)
     async def tj_oto_serbest(self, interaction: discord.Interaction, режим: str):
-        self.set_cfg(interaction.guild.id, 'auto_release', режим == 'ac')
-        txt = ("включено — убрал тег, вышел автоматически" if режим == 'ac'
+        self.set_cfg(interaction.guild.id, 'auto_release', режим == 'on')
+        txt = ("включено — убрал тег, вышел автоматически" if режим == 'on'
                else "выключено — выпускает только модератор (/unjail)")
         await interaction.response.send_message(f"✅ Авто-освобождение: **{txt}**", ephemeral=True)
 
-    @tagjail.command(name="stil", description="Режим джейла: снимать роли или оставлять")
+    @tagjail.command(name="style", description="Режим джейла: снимать роли или оставлять")
     @app_commands.describe(стиль="remove — роли снимаются, keep — только jail-роль сверху")
     @app_commands.choices(стиль=[
-        app_commands.Choice(name="rolleri-al (настоящий джейл, роли вернутся при выходе)", value="remove"),
-        app_commands.Choice(name="rolleri-tut (добавляется только jail-роль)", value="keep"),
+        app_commands.Choice(name="снимать роли (настоящий джейл, роли вернутся при выходе)", value="remove"),
+        app_commands.Choice(name="оставить роли (добавляется только jail-роль)", value="keep"),
     ])
     @app_commands.checks.has_permissions(administrator=True)
     async def tj_stil(self, interaction: discord.Interaction, стиль: str):
@@ -500,7 +500,7 @@ class TagJail(commands.Cog):
                else "роли остаются, сверху только jail-роль")
         await interaction.response.send_message(f"✅ Режим джейла: **{txt}**", ephemeral=True)
 
-    @tagjail.command(name="muaf-rol", description="Роль-исключение: tag jail её не трогает (добавить/убрать)")
+    @tagjail.command(name="exempt-role", description="Роль-исключение: tag jail её не трогает (добавить/убрать)")
     @app_commands.describe(роль="Роль-исключение")
     @app_commands.checks.has_permissions(administrator=True)
     async def tj_muaf_rol(self, interaction: discord.Interaction, роль: discord.Role):
@@ -514,7 +514,7 @@ class TagJail(commands.Cog):
         self.set_cfg(interaction.guild.id, 'exempt_roles', lst)
         await interaction.response.send_message(msg, ephemeral=True)
 
-    @tagjail.command(name="muaf-uye", description="Пользователь-исключение: tag jail его не трогает (добавить/убрать)")
+    @tagjail.command(name="exempt-user", description="Пользователь-исключение: tag jail его не трогает (добавить/убрать)")
     @app_commands.describe(пользователь="Участник-исключение")
     @app_commands.checks.has_permissions(administrator=True)
     async def tj_muaf_uye(self, interaction: discord.Interaction, пользователь: discord.Member):
@@ -546,14 +546,14 @@ class TagJail(commands.Cog):
                         jailed_now += 1
                     await asyncio.sleep(0.8)  # щадим rate-limit
             except Exception as e:
-                log.error(f"[TAGJAIL] sweep hatası ({member}): {e}")
+                log.error(f"[TAGJAIL] ошибка обхода ({member}): {e}")
         return checked, jailed_now
 
-    @tagjail.command(name="tara", description="Проверить ВСЕХ участников прямо сейчас (обход сервера)")
+    @tagjail.command(name="scan", description="Проверить ВСЕХ участников прямо сейчас (обход сервера)")
     @app_commands.checks.has_permissions(administrator=True)
     async def tj_tara(self, interaction: discord.Interaction):
         if not self.cfg(interaction.guild.id).get('enabled'):
-            return await interaction.response.send_message("⚠ Система выключена: `/tagjail ac`", ephemeral=True)
+            return await interaction.response.send_message("⚠ Система выключена: `/tagjail on`", ephemeral=True)
         await interaction.response.defer(ephemeral=True)
         checked, jailed_now = await self._sweep_guild(interaction.guild)
         await interaction.followup.send(
@@ -578,7 +578,7 @@ class TagJail(commands.Cog):
             await interaction.response.send_message(f"⛔ **{пользователь.display_name}** отправлен в джейл.", ephemeral=True)
         else:
             await interaction.response.send_message(
-                "❌ Не получилось — проверьте jail-роль (`/tagjail jail-rol`) и права бота.", ephemeral=True)
+                "❌ Не получилось — проверьте jail-роль (`/tagjail jail-role`) и права бота.", ephemeral=True)
 
     @app_commands.command(name="unjail", description="Освободить участника из джейла (роли вернутся)")
     @app_commands.describe(пользователь="Кого освободить", причина="Причина")

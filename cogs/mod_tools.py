@@ -124,7 +124,7 @@ class ModTools(commands.Cog):
         try:
             warn_id, total, punishment = await wcog.add_warn(inter, member, reason)
         except Exception as e:
-            log.error(f"[MOD_TOOLS] warn ctx hatası: {e}")
+            log.error(f"[MOD_TOOLS] ошибка warn ctx: {e}")
             return await inter.response.send_message(f"Не удалось выдать варн: {e}", ephemeral=True)
 
         # В дела модерации тоже — для /cases

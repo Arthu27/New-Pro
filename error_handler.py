@@ -214,7 +214,7 @@ class ErrorHandler:
                         except Exception:
                             pass
         except Exception as e:
-            log.error(f"Anti-crash config okunamadı, varsayılanlar: {e}")
+            log.error(f"Anti-crash: не удалось прочитать конфиг, используются значения по умолчанию: {e}")
         return cfg
 
     def save_config(self):
@@ -225,7 +225,7 @@ class ErrorHandler:
                 json.dump(self.config, f, ensure_ascii=False, indent=2)
             os.replace(tmp, CONFIG_PATH)
         except Exception as e:
-            log.error(f"Anti-crash config yazılamadı: {e}")
+            log.error(f"Anti-crash: не удалось записать конфиг: {e}")
 
     def update_config(self, key: str, value):
         if key not in DEFAULT_CONFIG:
@@ -357,7 +357,7 @@ class ErrorHandler:
         try:
             await self.bot.add_cog(AntiCrashCog(self.bot, self))
         except Exception as e:
-            log.error(f"Anti-crash komutları yüklenemedi: {e}")
+            log.error(f"Anti-crash: не удалось загрузить команды: {e}")
 
     def _setup_anticrash(self):
         """Uncaught Exception: asyncio-задачи, потоки, главный поток"""
@@ -590,7 +590,7 @@ class ErrorHandler:
                         rec = self._webhook_q.get_nowait()
                         await self._send_webhook(rec)
                 except Exception as e:
-                    log.error(f"Webhook kuyruğu hatası: {e}")
+                    log.error(f"Ошибка очереди webhook: {e}")
                 await asyncio.sleep(3)
         finally:
             try:
@@ -635,7 +635,7 @@ class ErrorHandler:
                     log.error(f"Webhook HTTP {resp.status}")
         except Exception as e:
             self.stats['webhook_dropped'] += 1
-            log.error(f"Webhook gönderilemedi: {e}")
+            log.error(f"Webhook не доставлен: {e}")
 
     # ────────────────────────────────────────────────────────────
     # Circuit breaker по когам
@@ -699,7 +699,7 @@ class ErrorHandler:
             try:
                 await self._flush_alerts()
             except Exception as e:
-                log.error(f"Alert flush hatası: {e}")
+                log.error(f"Ошибка отправки сводки алертов: {e}")
 
     async def _flush_alerts(self):
         if not self._alerts:
@@ -749,7 +749,7 @@ class ErrorHandler:
             self._alerts_sent_ts.append(now)
             self.stats['alerts_sent'] += 1
         except Exception as e:
-            log.error(f"Anti-crash: uyarı kanalına yazılamadı: {e}")
+            log.error(f"Anti-crash: не удалось отправить в канал алертов: {e}")
 
     # ────────────────────────────────────────────────────────────
     # Watchdog event-loop
