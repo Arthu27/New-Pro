@@ -27,6 +27,7 @@ MENU = [
         {'path': '/mod-history', 'label': 'История', 'icon': 'fa-history'},
         {'path': '/automod-settings', 'label': 'Автомодерация', 'icon': 'fa-shield-alt'},
         {'path': '/antiraid', 'label': 'Анти-рейд', 'icon': 'fa-shield-virus'},
+        {'path': '/tagjail', 'label': 'Tag Jail', 'icon': 'fa-lock'},
         {'path': '/bulk-actions', 'label': 'Массовые действия', 'icon': 'fa-layer-group'},
     ]},
     {'group': 'Участники', 'key': 'members', 'icon': 'fa-users', 'pages': [

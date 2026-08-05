@@ -45,6 +45,8 @@ DEFAULT_CFG = {
     "exempt_users": [],         # id пользователей-исключений
     "dm_notify": True,          # DM пользователю о джейле/освобождении
     "scan_on_boot": False,      # полный обход участников при запуске бота
+    "min_account_days": 0,      # возрастная граница аккаунта (0 = выкл)
+    "age_action": "kick",       # kick | jail — что делать с новичками
 }
 
 ROLE_EDIT_ERR = (
@@ -312,12 +314,57 @@ class TagJail(commands.Cog):
     # ────────────────────────────────────────────────────────────
     # События
     # ────────────────────────────────────────────────────────────
+    async def _check_account_age(self, member: discord.Member, cfg: dict):
+        """Возрастная граница: слишком новые аккаунты — kick или jail."""
+        limit = int(cfg.get('min_account_days', 0) or 0)
+        if limit <= 0 or self.is_exempt(member, cfg):
+            return
+        try:
+            age_days = (discord.utils.utcnow() - member.created_at).days
+        except Exception:
+            return
+        if age_days >= limit:
+            return
+        reason = f"Аккаунт слишком новый ({age_days} дн. < {limit} дн.)"
+        if cfg.get('age_action', 'kick') == 'jail':
+            await self.jail(member, reason)
+            return
+        # Auto-kick
+        if cfg.get('dm_notify'):
+            dm = discord.Embed(color=RED, timestamp=datetime.now(timezone.utc))
+            dm.description = (
+                f"## ⛔ Ваш аккаунт слишком новый\n"
+                f"Сервер: **{member.guild.name}**\n"
+                f"Возраст аккаунта: **{age_days} дн.** — требуется минимум **{limit} дн.**\n"
+                f"Возвращайтесь, когда аккаунту исполнится {limit} дней. 🙂"
+            )
+            dm.set_footer(text=member.guild.name)
+            await self._dm(member, dm)
+        try:
+            await member.guild.kick(member, reason=f"[TagJail] {reason}")
+        except discord.Forbidden:
+            await self._log(member.guild, self._err_embed(
+                "Нет прав!", f"{member.mention} — не могу кикнуть новый аккаунт (нужно право Kick Members)."))
+            return
+        except Exception as e:
+            log.error(f"[TAGJAIL] age-kick hatası: {e}")
+            return
+        e = discord.Embed(color=RED, timestamp=datetime.now(timezone.utc))
+        e.description = (
+            f"## 🚪 Авто-кик: новый аккаунт\n"
+            f"**{member.display_name}** · `{member.id}`\n\n"
+            f"Возраст аккаунта: **{age_days} дн.** (лимит **{limit}**)\n{DIVIDER}"
+        )
+        e.set_footer(text=f"{member.guild.name} · age-gate")
+        await self._log(member.guild, e)
+
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
         cfg = self.cfg(member.guild.id)
         if not cfg.get('enabled') or not cfg.get('on_join'):
             return
         try:
+            await self._check_account_age(member, cfg)
             await self.evaluate(member, "вход на сервер")
         except Exception as e:
             log.error(f"[TAGJAIL] ошибка on_member_join: {e}")
@@ -371,6 +418,8 @@ class TagJail(commands.Cog):
         tags = c.get('banned_tags', [])
         jail_role = f"<@&{c['jail_role_id']}>" if c['jail_role_id'] else "⚠ не задана"
         log_ch = f"<#{c['log_channel_id']}>" if c['log_channel_id'] else "⚪ не задан"
+        age_txt = (f"**{c.get('min_account_days')} дн.** (действие: {c.get('age_action', 'kick')})"
+                   if c.get('min_account_days') else "⚪ выкл")
         e = discord.Embed(color=GOLD, timestamp=datetime.now(timezone.utc))
         e.description = (
             f"## ⛔ Tag Jail — Настройки\n"
@@ -385,7 +434,8 @@ class TagJail(commands.Cog):
             f"Авто-освобождение: {'🟢 вкл' if c['auto_release'] else '🔴 выкл'}\n"
             f"Проверка входов: {'🟢' if c['on_join'] else '🔴'} · смен имён: {'🟢' if c['on_name_change'] else '🔴'}\n"
             f"Исключения: админы {'🟢' if c['exempt_admins'] else '🔴'} · "
-            f"ролей: {len(c['exempt_roles'])} · юзеров: {len(c['exempt_users'])}"
+            f"ролей: {len(c['exempt_roles'])} · юзеров: {len(c['exempt_users'])}\n"
+            f"Возрастная граница: {age_txt}"
         )
         e.set_footer(text=f"{guild.name} · сейчас в джейле: {len(self._jailed.get(str(guild.id), {}))}")
         return e
@@ -559,6 +609,34 @@ class TagJail(commands.Cog):
         await interaction.followup.send(
             f"✅ Обход завершён: проверено **{checked}**, в джейл отправлено: **{jailed_now}**.",
             ephemeral=True)
+
+    @tagjail.command(name="age-limit", description="Возрастная граница: мин. возраст аккаунта в днях (0 = выкл)")
+    @app_commands.describe(дней="Минимальный возраст аккаунта. 0 — выключить проверку")
+    @app_commands.checks.has_permissions(administrator=True)
+    async def tj_age_limit(self, interaction: discord.Interaction, дней: int):
+        if дней < 0:
+            return await interaction.response.send_message("❌ Число не может быть отрицательным.", ephemeral=True)
+        self.set_cfg(interaction.guild.id, 'min_account_days', дней)
+        if дней == 0:
+            await interaction.response.send_message("✅ Возрастная граница **выключена**.", ephemeral=True)
+        else:
+            action = self.cfg(interaction.guild.id).get('age_action', 'kick')
+            await interaction.response.send_message(
+                f"✅ Возрастная граница: аккаунты моложе **{дней} дн.** → **{action}** при входе.\n"
+                f"Изменить действие: `/tagjail age-action`", ephemeral=True)
+
+    @tagjail.command(name="age-action", description="Что делать со слишком новыми аккаунтами")
+    @app_commands.describe(действие="kick — выгнать, jail — посадить в джейл")
+    @app_commands.choices(действие=[
+        app_commands.Choice(name="kick — выгнать с сервера", value="kick"),
+        app_commands.Choice(name="jail — посадить в джейл", value="jail"),
+    ])
+    @app_commands.checks.has_permissions(administrator=True)
+    async def tj_age_action(self, interaction: discord.Interaction, действие: str):
+        self.set_cfg(interaction.guild.id, 'age_action', действие)
+        txt = ("выгонять с сервера (с DM-предупреждением)" if действие == 'kick'
+               else "сажать в джейл (выпускает модератор)")
+        await interaction.response.send_message(f"✅ Новые аккаунты теперь: **{txt}**", ephemeral=True)
 
     # ────────────────────────────────────────────────────────────
     # Ручные команды модераторов

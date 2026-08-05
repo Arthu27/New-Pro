@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+{% block title %}Tag Jail — Aether{% endblock %}
+{% block page_title %}<i class="fas fa-lock"></i> Tag Jail{% endblock %}
+{% block content %}
+{% block page_hero %}
+<div class="page-hero compact">
+  <div class="page-hero-content">
+    <div class="page-hero-greeting">
+      <span class="dot"></span>
+      <span>ЗАПРЕЩЁННЫЕ ТЕГИ • АВТО-ДЖЕЙЛ • ВОЗРАСТНАЯ ГРАНИЦА</span>
+    </div>
+    <h1>Tag Jail</h1>
+    <p>Все, у кого запрещённый тег в нике — автоматически в джейл. Убрал тег — вышел. Управление в реальном времени.</p>
+  </div>
+</div>
+{% endblock %}
+
+<style>
+  .tj-wrap { padding:6px 2px 34px; max-width: 1000px; }
+  .tj-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:14px; margin-bottom:20px; }
+  .tj-card { background:linear-gradient(160deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015)); border:1px solid rgba(255,255,255,0.09); border-radius:16px; padding:18px; position:relative; overflow:hidden; transition:.18s; }
+  .tj-card:hover { border-color:var(--ac-line); transform:translateY(-2px); box-shadow:0 10px 28px rgba(0,0,0,0.3); }
+  .tj-card::after { content:''; position:absolute; top:0; right:0; width:100px; height:100px; background:radial-gradient(circle at top right,var(--ac-soft),transparent 70%); pointer-events:none; }
+  .tj-icon { width:38px; height:38px; border-radius:11px; background:var(--ac-soft); color:var(--ac); border:1px solid var(--ac-line); display:flex; align-items:center; justify-content:center; font-size:15px; margin-bottom:10px; position:relative; z-index:1; }
+  .tj-val { font-size:24px; font-weight:800; letter-spacing:-.02em; font-variant-numeric:tabular-nums; position:relative; z-index:1; }
+  .tj-val small { font-size:12px; color:var(--text-3); font-weight:600; }
+  .tj-lbl { font-size:10.5px; opacity:.6; text-transform:uppercase; letter-spacing:.08em; margin-top:3px; position:relative; z-index:1; }
+
+  .tj-box { background:linear-gradient(160deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015)); border:1px solid rgba(255,255,255,0.09); border-radius:16px; margin-bottom:16px; overflow:hidden; }
+  .tj-head { padding:14px 18px; font-weight:700; font-size:14px; display:flex; align-items:center; gap:9px; background:rgba(255,255,255,0.03); border-bottom:1px solid rgba(255,255,255,0.06); }
+  .tj-head i { color:var(--ac, #e0b04a); }
+  .tj-head .tj-head-right { margin-left:auto; font-size:11px; opacity:.65; font-weight:600; }
+  .tj-body { padding:14px 18px; }
+
+  .tj-chip { display:inline-flex; align-items:center; gap:8px; background:rgba(231,76,60,0.1); border:1px solid rgba(231,76,60,0.3); color:#ff9d94; padding:6px 12px; border-radius:20px; font-size:13px; font-weight:700; margin:0 8px 8px 0; }
+  .tj-chip b { cursor:pointer; opacity:.7; font-size:15px; line-height:1; }
+  .tj-chip b:hover { opacity:1; }
+  .tj-add-row { display:flex; gap:8px; margin-top:6px; }
+  .tj-input { flex:1; background:rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.12); color:var(--text-1,#fff); border-radius:10px; padding:9px 13px; font-size:13px; }
+  .tj-input:focus { outline:none; border-color:var(--ac); }
+
+  .tj-form-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:12px; }
+  .tj-field { background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.07); border-radius:12px; padding:12px 14px; }
+  .tj-field-top { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .tj-field-label { font-size:13px; font-weight:700; }
+  .tj-field-desc { font-size:11.5px; color:var(--text-3); margin-top:5px; line-height:1.35; }
+  .tj-field input[type=number] { width:100px; background:rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.12); color:var(--text-1,#fff); border-radius:8px; padding:6px 10px; font-size:13px; font-weight:700; text-align:right; }
+  .tj-field select { background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.12); color:var(--text-1,#fff); border-radius:8px; padding:6px 10px; font-size:12.5px; }
+  .tj-switch { position:relative; width:46px; height:24px; flex-shrink:0; }
+  .tj-switch input { display:none; }
+  .tj-switch span { position:absolute; inset:0; background:rgba(255,255,255,0.12); border-radius:20px; transition:.2s; cursor:pointer; }
+  .tj-switch span:before { content:''; position:absolute; width:18px; height:18px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.2s; }
+  .tj-switch input:checked + span { background:var(--ac, #e0b04a); }
+  .tj-switch input:checked + span:before { transform:translateX(22px); }
+
+  .tj-actions { display:flex; gap:10px; margin-top:16px; flex-wrap:wrap; }
+  .tj-btn { padding:10px 22px; border-radius:11px; border:1px solid var(--ac-line); background:linear-gradient(160deg,var(--ac,#e0b04a),#c8922a); color:#1a1206; font-weight:800; font-size:13px; cursor:pointer; transition:.15s; }
+  .tj-btn:hover { transform:translateY(-1px); box-shadow:0 8px 20px rgba(200,146,42,0.35); }
+  .tj-btn.danger { background:linear-gradient(160deg,#e74c3c,#c0392b); color:#fff; }
+  .tj-btn.ghost { background:rgba(255,255,255,0.05); color:var(--text-1,#fff); border-color:rgba(255,255,255,0.14); }
+  .tj-btn.small { padding:5px 13px; font-size:12px; border-radius:8px; }
+
+  .tj-jrow { display:flex; align-items:center; gap:12px; padding:10px 12px; border:1px solid rgba(255,255,255,0.06); border-radius:12px; margin-bottom:8px; background:rgba(255,255,255,0.02); font-size:13px; }
+  .tj-jname { font-weight:800; }
+  .tj-jmeta { color:var(--text-3); font-size:12px; }
+  .tj-jtag { color:#ff9d94; font-weight:700; }
+
+  .tj-toast { position:fixed; bottom:24px; right:24px; padding:13px 20px; border-radius:12px; font-size:13px; font-weight:700; z-index:9999; opacity:0; transform:translateY(12px); transition:.25s; pointer-events:none; }
+  .tj-toast.show { opacity:1; transform:translateY(0); }
+  .tj-toast.ok { background:rgba(46,204,113,0.95); color:#08130c; }
+  .tj-toast.bad { background:rgba(231,76,60,0.95); color:#fff; }
+
+  .tj-pill { display:inline-flex; align-items:center; gap:7px; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:700; }
+  .tj-pill-on { background:rgba(46,204,113,0.14); color:#2ecc71; border:1px solid rgba(46,204,113,0.3); }
+  .tj-pill-off { background:rgba(231,76,60,0.14); color:#e74c3c; border:1px solid rgba(231,76,60,0.3); }
+</style>
+
+<div class="tj-wrap">
+  <div class="tj-grid" data-reveal="up">
+    <div class="tj-card"><div class="tj-icon"><i class="fas fa-power-off"></i></div><div class="tj-val" id="v-status">—</div><div class="tj-lbl">Статус системы</div></div>
+    <div class="tj-card"><div class="tj-icon"><i class="fas fa-lock"></i></div><div class="tj-val" id="v-jailed">—</div><div class="tj-lbl">В джейле сейчас</div></div>
+    <div class="tj-card"><div class="tj-icon"><i class="fas fa-tags"></i></div><div class="tj-val" id="v-tags">—</div><div class="tj-lbl">Запрещённых тегов</div></div>
+    <div class="tj-card"><div class="tj-icon"><i class="fas fa-baby"></i></div><div class="tj-val" id="v-age">—</div><div class="tj-lbl">Возрастная граница</div></div>
+  </div>
+
+  <div class="tj-box" data-reveal="up">
+    <div class="tj-head"><i class="fas fa-tags"></i> Запрещённые теги <span class="tj-head-right">ник с тегом → автоджейл</span></div>
+    <div class="tj-body">
+      <div id="tag-chips"><span style="opacity:.55;font-size:13px">Загрузка…</span></div>
+      <div class="tj-add-row">
+        <input class="tj-input" id="new-tag" placeholder="Тег чужого сервера, .gg/, discord.gg …" maxlength="50">
+        <button class="tj-btn" onclick="addTag()"><i class="fas fa-plus"></i> Добавить</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tj-box" data-reveal="up">
+    <div class="tj-head"><i class="fas fa-sliders"></i> Настройки <span class="tj-head-right">data/tag_jail.json</span></div>
+    <div class="tj-body">
+      <div class="tj-form-grid" id="cfg-grid"><div style="opacity:.55;font-size:13px">Загрузка…</div></div>
+      <div class="tj-actions">
+        <button class="tj-btn" onclick="saveConfig()"><i class="fas fa-save"></i> Сохранить</button>
+        <button class="tj-btn ghost" onclick="loadState()"><i class="fas fa-rotate"></i> Обновить</button>
+        <button class="tj-btn danger" onclick="runScan()"><i class="fas fa-radar"></i> Обход сервера</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tj-box" data-reveal="up">
+    <div class="tj-head"><i class="fas fa-users-slash"></i> Сейчас в джейле <span class="tj-head-right" id="jail-count"></span></div>
+    <div class="tj-body" id="jail-list"><div style="opacity:.55;font-size:13px">Загрузка…</div></div>
+  </div>
+</div>
+
+<div class="tj-toast" id="tj-toast"></div>
+
+<script>
+let TJ = { config: {}, jailed: [] };
+function toast(msg, ok=true){
+  const t = document.getElementById('tj-toast');
+  t.textContent = msg;
+  t.className = 'tj-toast show ' + (ok ? 'ok' : 'bad');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function ago(ts){ const d = Math.max(0, Date.now()/1000 - ts);
+  if(d < 3600) return Math.floor(d/60) + ' мин назад';
+  if(d < 86400) return Math.floor(d/3600) + ' ч назад';
+  return Math.floor(d/86400) + ' дн назад'; }
+
+const FIELDS = [
+  {k:'enabled', l:'Система ВКЛ', t:'bool', d:'Авто-джейл и возрастная граница активны'},
+  {k:'auto_release', l:'Авто-освобождение', t:'bool', d:'Убрал тег из ника — выходит сам'},
+  {k:'on_join', l:'Проверка входов', t:'bool', d:'Проверять при входе на сервер'},
+  {k:'on_name_change', l:'Проверка смен имён', t:'bool', d:'Следить за ником и именем профиля'},
+  {k:'dm_notify', l:'DM-уведомления', t:'bool', d:'Писать пользователю в личку'},
+  {k:'jail_style', l:'Режим джейла', t:'select', opts:[['remove','снимать роли'],['keep','только jail-роль']], d:'remove — роли сохраняются и вернутся'},
+  {k:'age_action', l:'Действие к новичкам', t:'select', opts:[['kick','kick — выгнать'],['jail','jail — посадить']], d:'Если аккаунт младше лимита'},
+  {k:'min_account_days', l:'Возраст аккаунта (дн)', t:'num', d:'0 — проверка выключена'},
+  {k:'jail_role_id', l:'ID jail-роли', t:'num', d:'ID роли заключённых (правый клик по роли → копировать ID)'},
+  {k:'log_channel_id', l:'ID лог-канала', t:'num', d:'Куда слать логи джейла'},
+];
+
+async function loadState(){
+  try{
+    const r = await fetch('/api/tagjail/state');
+    const d = await r.json();
+    if(!d.ok){ toast(d.error || 'Модуль офлайн', false); return; }
+    TJ = d;
+    document.getElementById('v-status').innerHTML = d.config.enabled
+      ? '<span class="tj-pill tj-pill-on">ВКЛ</span>' : '<span class="tj-pill tj-pill-off">ВЫКЛ</span>';
+    document.getElementById('v-jailed').textContent = d.jailed.length;
+    document.getElementById('v-tags').textContent = (d.config.banned_tags||[]).length;
+    document.getElementById('v-age').innerHTML = d.config.min_account_days > 0
+      ? d.config.min_account_days + ' <small>дн · ' + esc(d.config.age_action) + '</small>' : '<small>выкл</small>';
+
+    renderChips();
+    renderForm();
+    renderJail();
+  }catch(e){ toast('Ошибка загрузки', false); }
+}
+
+function renderChips(){
+  const tags = TJ.config.banned_tags || [];
+  document.getElementById('tag-chips').innerHTML = tags.length
+    ? tags.map(t => `<span class="tj-chip">${esc(t)} <b onclick="delTag('${encodeURIComponent(t)}')" title="Удалить">×</b></span>`).join('')
+    : '<span style="opacity:.55;font-size:13px">Список пуст — добавьте хотя бы один тег.</span>';
+}
+
+async function addTag(){
+  const inp = document.getElementById('new-tag');
+  const tag = inp.value.trim();
+  if(!tag) return;
+  const r = await fetch('/api/tagjail/tag', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({action:'add', tag})});
+  const d = await r.json();
+  if(d.ok){ inp.value=''; toast('Тег добавлен ✓'); loadState(); }
+  else toast('Ошибка: ' + (d.error||''), false);
+}
+async function delTag(enc){
+  const tag = decodeURIComponent(enc);
+  if(!confirm(`Убрать тег «${tag}» из запрещённых?`)) return;
+  const r = await fetch('/api/tagjail/tag', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({action:'del', tag})});
+  const d = await r.json();
+  if(d.ok){ toast('Тег удалён ✓'); loadState(); }
+  else toast('Ошибка: ' + (d.error||''), false);
+}
+
+function renderForm(){
+  document.getElementById('cfg-grid').innerHTML = FIELDS.map(f => {
+    const v = TJ.config[f.k];
+    let input;
+    if(f.t === 'bool'){
+      input = `<label class="tj-switch"><input type="checkbox" data-cfg="${f.k}" ${v?'checked':''}><span></span></label>`;
+    } else if(f.t === 'select'){
+      input = `<select data-cfg="${f.k}">` + f.opts.map(([val,lbl]) =>
+        `<option value="${val}" ${v===val?'selected':''}>${lbl}</option>`).join('') + `</select>`;
+    } else {
+      input = `<input type="number" min="0" data-cfg="${f.k}" value="${esc(v ?? 0)}">`;
+    }
+    return `<div class="tj-field">
+      <div class="tj-field-top"><div class="tj-field-label">${f.l}</div>${input}</div>
+      <div class="tj-field-desc">${f.d} <code style="opacity:.6">${f.k}</code></div>
+    </div>`;
+  }).join('');
+}
+
+async function saveConfig(){
+  const payload = {};
+  document.querySelectorAll('[data-cfg]').forEach(el => {
+    const k = el.getAttribute('data-cfg');
+    if(el.type === 'checkbox') payload[k] = el.checked;
+    else if(el.tagName === 'SELECT') payload[k] = el.value;
+    else payload[k] = parseInt(el.value || '0', 10);
+  });
+  const r = await fetch('/api/tagjail/config', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(payload)});
+  const d = await r.json();
+  if(d.ok) toast('Настройки сохранены ✓');
+  else toast('Ошибка: ' + Object.values(d.errors||{e:d.error}).join('; '), false);
+  loadState();
+}
+
+function renderJail(){
+  const list = TJ.jailed || [];
+  document.getElementById('jail-count').textContent = list.length + ' чел.';
+  document.getElementById('jail-list').innerHTML = list.length
+    ? list.map(j => `
+      <div class="tj-jrow">
+        <div style="flex:1">
+          <div class="tj-jname">${esc(j.name)} ${j.in_guild ? '' : '<span style="color:#e74c3c">(покинул)</span>'}</div>
+          <div class="tj-jmeta">${ago(j.since)} · ролей сохранено: ${j.roles_saved}
+            ${j.tag ? ' · тег <span class="tj-jtag">'+esc(j.tag)+'</span>' : ''}</div>
+        </div>
+        <button class="tj-btn small ghost" onclick="unjail('${j.user_id}')"><i class="fas fa-door-open"></i> Выпустить</button>
+      </div>`).join('')
+    : '<div style="opacity:.55;font-size:13px">Джейл пуст — чисто ✨</div>';
+}
+
+async function unjail(uid){
+  const r = await fetch('/api/tagjail/unjail', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({user_id: uid})});
+  const d = await r.json();
+  if(d.ok){ toast('Освобождён ✓'); loadState(); }
+  else toast('Ошибка: ' + (d.error||''), false);
+}
+
+async function runScan(){
+  if(!confirm('Проверить ВСЕХ участников сервера? Тегнутых отправит в джейл.')) return;
+  const r = await fetch('/api/tagjail/scan', {method:'POST'});
+  const d = await r.json();
+  if(d.ok){ toast('Обход запущен — результаты в лог-канале'); setTimeout(loadState, 6000); }
+  else toast('Ошибка: ' + (d.error||''), false);
+}
+
+loadState();
+setInterval(loadState, 10000);
+</script>
+{% endblock %}
