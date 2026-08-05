@@ -423,6 +423,26 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         eh.reset_stats()
         return jsonify({'ok': True})
 
+    # ── Живая консоль логов ──────────────────────────────────────────────
+    @app.route('/konsol')
+    @login_required
+    @role_required('admin')
+    def konsol_page():
+        return render_template('konsol.html', role=session.get('role'), username=session.get('username'))
+
+    @app.route('/api/live-logs')
+    @login_required
+    @role_required('admin')
+    def api_live_logs():
+        try:
+            from logger import get_live_logs
+            after = request.args.get('after', 0, type=int) or 0
+            items = get_live_logs(after_id=after, limit=250)
+            last_id = items[-1]['id'] if items else after
+            return jsonify({'ok': True, 'items': items, 'last_id': last_id})
+        except Exception as e:
+            return jsonify({'ok': False, 'error': str(e)}), 500
+
     # ── TAG JAIL paneli ──────────────────────────────────────────────
     def _tagjail_ctx():
         import web.app as _app

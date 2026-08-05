@@ -255,6 +255,7 @@ class ErrorHandler:
             'by_event': {},
             'breakers': {},
             'last_errors': [],
+            'daily': {},
         }
 
     def _load_stats(self) -> dict:
@@ -461,6 +462,16 @@ class ErrorHandler:
         if critical:
             s['critical'] += 1
         s['by_type'][err_type] = s['by_type'].get(err_type, 0) + 1
+        # Дневные корзины для графика за 7 дней (храним до 14)
+        try:
+            day = time.strftime('%Y-%m-%d', time.localtime())
+            daily = s.setdefault('daily', {})
+            daily[day] = daily.get(day, 0) + 1
+            if len(daily) > 14:
+                for old_day in sorted(daily.keys())[:-14]:
+                    daily.pop(old_day, None)
+        except Exception:
+            pass
         self._rate.append(time.time())
         s['last_errors'].append({
             'ts': time.time(), 'type': err_type, 'where': where,
@@ -824,6 +835,12 @@ class ErrorHandler:
         top_cogs = sorted(self.stats['by_cog'].items(), key=lambda x: -x[1])[:5]
         latency = getattr(self.bot, 'latency', None)
         dc = sum(1 for ts in self._disconnects if now - ts <= 3600)
+        # График за последние 7 дней (с нулевым заполнением пропусков)
+        daily_src = self.stats.get('daily') or {}
+        daily7 = []
+        for i in range(6, -1, -1):
+            dkey = time.strftime('%Y-%m-%d', time.localtime(now - i * 86400))
+            daily7.append({'day': dkey, 'count': int(daily_src.get(dkey, 0))})
         return {
             'ok': True,
             'master_enabled': self.config.get('master_enabled', True),
@@ -854,6 +871,7 @@ class ErrorHandler:
                 for mod, cnt in self.stats['breakers'].items()
             ],
             'last_errors': list(reversed(self.stats['last_errors'][-15:])),
+            'daily7': daily7,
             'guilds': len(self.bot.guilds) if self.bot else 0,
             'latency_ms': round(latency * 1000) if latency is not None else 0,
             'channel_configured': bool(int(self.config.get('log_channel_id', 0) or 0)),

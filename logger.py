@@ -1,15 +1,49 @@
 """
 Централизованная система логирования
 Файл + консоль, ротация, форматирование
++ живой буфер для веб-консоли панели (/konsol)
 """
 import logging
 import os
 import sys
+import time
+import itertools
+from collections import deque
 from logging.handlers import RotatingFileHandler
 from datetime import datetime
 
 
 _initialized = False
+
+# ── Живой буфер для веб-консоли (последние 300 строк, только в памяти) ──
+_live_buffer = deque(maxlen=300)
+_live_counter = itertools.count(1)
+
+
+class _LiveLogHandler(logging.Handler):
+    """Складывает записи логов в кольцевой буфер для панели."""
+
+    def emit(self, record: logging.LogRecord):
+        try:
+            _live_buffer.append({
+                'id': next(_live_counter),
+                'ts': time.time(),
+                'level': record.levelname,
+                'name': record.name,
+                'msg': str(record.getMessage())[:500],
+            })
+        except Exception:
+            pass
+
+
+def get_live_logs(after_id: int = 0, limit: int = 200) -> list:
+    """Записи живого буфера с id > after_id (максимум limit, по порядку)."""
+    try:
+        after_id = int(after_id)
+    except Exception:
+        after_id = 0
+    items = [r for r in _live_buffer if r['id'] > after_id]
+    return items[-limit:]
 
 
 def setup_logger(name: str = "bot", log_file: str = None, level: str = None) -> logging.Logger:
@@ -75,7 +109,13 @@ def setup_logger(name: str = "bot", log_file: str = None, level: str = None) -> 
     error_handler.setLevel(logging.ERROR)
     error_handler.setFormatter(fmt)
     logger.addHandler(error_handler)
-    
+
+    # Живой буфер для веб-консоли (один хендлер на логгер, чтобы не было дублей)
+    if not any(isinstance(h, _LiveLogHandler) for h in logger.handlers):
+        live = _LiveLogHandler()
+        live.setLevel(logging.DEBUG)
+        logger.addHandler(live)
+
     _initialized = True
     return logger
 

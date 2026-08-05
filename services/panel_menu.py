@@ -62,6 +62,7 @@ MENU = [
         {'path': '/send-command', 'label': 'Отправить', 'icon': 'fa-paper-plane'},
         {'path': '/bot-settings', 'label': 'Настройки', 'icon': 'fa-sliders-h'},
         {'path': '/anticrash', 'label': 'Анти-краш', 'icon': 'fa-life-ring'},
+        {'path': '/konsol', 'label': 'Консоль', 'icon': 'fa-terminal'},
         {'path': '/cog-manager', 'label': 'Модули', 'icon': 'fa-cubes'},
         {'path': '/settings', 'label': 'Сервер', 'icon': 'fa-cog'},
         {'path': '/rules-editor', 'label': 'Правила', 'icon': 'fa-gavel'},

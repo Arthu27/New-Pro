@@ -607,6 +607,13 @@ class Logs (commands .Cog ):
                 await ch .send (embed =ge )
             except Exception :
                 pass
+            save_event (message .guild .id ,'message','Ghost Ping',{
+            'author_id':message .author .id ,
+            'author':str (message .author ),
+            'channel_id':message .channel .id ,
+            'channel':getattr (message .channel ,'name','?'),
+            'targets':[getattr (m ,'id',0)for m in _mentioned [:8 ]],
+            })
 
     @commands .Cog .listener ()
     async def on_message_edit (self ,before ,after ):

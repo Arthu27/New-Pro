@@ -51,6 +51,12 @@
 
   .ac-cols { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
   @media (max-width: 800px){ .ac-cols { grid-template-columns:1fr; } }
+  .ac-chart { display:flex; align-items:flex-end; gap:14px; height:150px; padding:6px 4px 0; }
+  .ac-chart .bar-wrap { flex:1; display:flex; flex-direction:column; align-items:center; gap:6px; height:100%; justify-content:flex-end; }
+  .ac-chart .bar-val { font-size:12px; font-weight:700; color:var(--ac-gold,#D4AF37); opacity:.9; min-height:14px; }
+  .ac-chart .bar { width:100%; max-width:44px; border-radius:8px 8px 3px 3px; background:linear-gradient(180deg, rgba(212,175,55,.95), rgba(212,175,55,.35)); box-shadow:0 0 14px rgba(212,175,55,.25); transition:height .5s ease; min-height:3px; position:relative; }
+  .ac-chart .bar.zero { background:rgba(255,255,255,.07); box-shadow:none; }
+  .ac-chart .bar-lbl { font-size:11px; opacity:.6; letter-spacing:.4px; }
 
   .ac-form-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:12px; }
   .ac-field { background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.07); border-radius:12px; padding:12px 14px; }
@@ -102,6 +108,15 @@
     <div class="ac-card"><div class="ac-icon"><i class="fas fa-triangle-exclamation"></i></div><div class="ac-val" id="v-warnings">—</div><div class="ac-lbl">Warning'ов библиотек</div></div>
     <div class="ac-card"><div class="ac-icon"><i class="fas fa-plug-circle-xmark"></i></div><div class="ac-val" id="v-disconnects">—</div><div class="ac-lbl">Обрывов WebSocket</div></div>
     <div class="ac-card"><div class="ac-icon"><i class="fas fa-satellite-dish"></i></div><div class="ac-val" id="v-webhook">—</div><div class="ac-lbl">Webhook доставок</div></div>
+  </div>
+
+  <div class="ac-box" data-reveal="up">
+    <div class="ac-head"><i class="fas fa-chart-column"></i> Ошибки за 7 дней <span class="ac-head-right" id="daily-total"></span></div>
+    <div class="ac-body">
+      <div class="ac-chart" id="daily-chart">
+        <div style="opacity:.55;font-size:13px">Загрузка графика…</div>
+      </div>
+    </div>
   </div>
 
   <div class="ac-box" data-reveal="up">
@@ -180,6 +195,22 @@ async function loadOverview(){
     document.getElementById('v-warnings').innerHTML = d.warnings_total;
     document.getElementById('v-disconnects').innerHTML = d.disconnects + ' <small>/ час '+d.disconnects_hour+'</small>';
     document.getElementById('v-webhook').innerHTML = d.webhook_sent + ' <small>/ дедуп '+d.webhook_dropped+'</small>';
+
+    // График за 7 дней
+    const dchart = document.getElementById('daily-chart');
+    if(d.daily7 && d.daily7.length){
+      const mx = Math.max(1, ...d.daily7.map(x => x.count));
+      const total7 = d.daily7.reduce((a, x) => a + x.count, 0);
+      const DOW = ['ВС','ПН','ВТ','СР','ЧТ','ПТ','СБ'];
+      dchart.innerHTML = d.daily7.map(x => {
+        const dt = new Date(x.day + 'T12:00:00');
+        const h = Math.max(3, Math.round(x.count / mx * 105));
+        return `<div class="bar-wrap"><div class="bar-val">${x.count || ''}</div>` +
+               `<div class="bar ${x.count ? '' : 'zero'}" style="height:${h}px" title="${x.day}: ${x.count}"></div>` +
+               `<div class="bar-lbl">${DOW[dt.getDay()]} ${dt.getDate()}</div></div>`;
+      }).join('');
+      document.getElementById('daily-total').textContent = 'всего за неделю: ' + total7;
+    }
 
     const bl = document.getElementById('breaker-list');
     if(d.breakers && d.breakers.length){
