@@ -10,7 +10,7 @@ Night Summary — автоматическая ежедневная сводка
   • ошибок бота за день (anti-crash)
   • модератор дня
 
-Предпросмотр: /svodka now (админ).
+Предпросмотр: /summary now (админ).
 """
 import os
 import io
@@ -378,9 +378,9 @@ class NightSummary(commands.Cog):
         await self.bot.wait_until_ready()
 
     # ────────────────────────────────────────────────────────────
-    # Slash: /svodka
+    # Slash: /summary
     # ────────────────────────────────────────────────────────────
-    svodka = app_commands.Group(name="svodka", description="Ежедневная сводка сервера")
+    svodka = app_commands.Group(name="summary", description="Ежедневная сводка сервера")
 
     @svodka.command(name="now", description="Сгенерировать сводку за сегодня (предпросмотр)")
     @app_commands.checks.has_permissions(administrator=True)

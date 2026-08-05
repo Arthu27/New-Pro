@@ -5,7 +5,7 @@ Welcome Card — роскошная карточка приветствия (т�
 «ДОБРО ПОЖАЛОВАТЬ · Имя · ты N-й участник сервера».
 Опционально — карта «ДО СВИДАНИЯ» при выходе.
 
-Команды: /wcard ... (админ).
+Команды: /welcome ... (админ).
 Хранилище: data/welcome_card.json
 """
 import os
@@ -220,7 +220,7 @@ class WelcomeCard(commands.Cog):
             await self._send_card(member.guild, member, 'goodbye')
 
     # ────────────────────────────────────────────────────────────
-    wcard = app_commands.Group(name="wcard", description="Карточки приветствия (картинка)")
+    wcard = app_commands.Group(name="welcome", description="Карточки приветствия (картинка)")
 
     def _status_embed(self, guild: discord.Guild) -> discord.Embed:
         cfg = self.cfg(guild.id)

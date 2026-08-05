@@ -4,10 +4,10 @@ Zhaloba — линия жалоб на DM-рекламу / скаутинг.
 Игроки, которым в личку пишут рекламщики и «скауты» чужих серверов,
 жалуются одной командой:
 
-  /zhaloba @нарушитель [детали]
+  /report @нарушитель [детали]
 
 3 жалобы от РАЗНЫХ людей за 7 дней → автоматический таймаут 60 минут.
-Модераторы разбирают очередь: /zhaloby, /zhaloba-ok №, /zhaloba-no №.
+Модераторы разбирают очередь: /reports, /report-ok №, /report-no №.
 Одобренная жалоба автоматически превращается в варн нарушителю.
 
 Хранилище: data/dm_reports.json
@@ -143,13 +143,13 @@ class DMReport(commands.Cog):
                 pass
 
     # ────────────────────────────────────────────────────────────
-    # /zhaloba — подать жалобу (все игроки)
+    # /report — подать жалобу (все игроки)
     # ────────────────────────────────────────────────────────────
-    @app_commands.command(name="zhaloba", description="Пожаловаться на DM-рекламу / скаутинг")
+    @app_commands.command(name="report", description="Пожаловаться на DM-рекламу / скаутинг")
     @app_commands.describe(
         нарушитель="Кто прислал рекламу в личку",
         детали="Что именно прислал (текст, ссылка) — не обязательно")
-    async def zhaloba(self, interaction: discord.Interaction,
+    async def report(self, interaction: discord.Interaction,
                       нарушитель: discord.User, детали: str = None):
         guild = interaction.guild
         if нарушитель.id == interaction.user.id:
@@ -169,7 +169,7 @@ class DMReport(commands.Cog):
                 try:
                     await member.timeout(
                         discord.utils.utcnow() + timedelta(minutes=AUTO_TIMEOUT_MIN),
-                        reason=f"[Zhaloba] {total} жалоб на DM-рекламу")
+                        reason=f"[DMREPORT] {total} жалоб на DM-рекламу")
                     self._set_status(guild.id, rec['id'], 'auto', self.bot.user.id if self.bot.user else 0)
                     auto_txt = f"\n🟠 **{total} жалобы от разных людей → автоматический таймаут {AUTO_TIMEOUT_MIN} мин**"
                 except Exception as e:
@@ -188,20 +188,20 @@ class DMReport(commands.Cog):
             + (f"\n> {детали[:300]}" if детали else "")
             + f"\n\nЖалоб на него за неделю: **{total}**{auto_txt}\n{DIVIDER}"
         )
-        e.set_footer(text=f"{guild.name} · zhaloba")
+        e.set_footer(text=f"{guild.name} · dm-report")
         await self._log(guild, e)
 
     # ────────────────────────────────────────────────────────────
     # /zhaloby — очередь (модераторы)
     # ────────────────────────────────────────────────────────────
-    @app_commands.command(name="zhaloby", description="Очередь жалоб (модераторы)")
+    @app_commands.command(name="reports", description="Очередь жалоб (модераторы)")
     @app_commands.describe(фильтр="Какие показать")
     @app_commands.choices(фильтр=[
         app_commands.Choice(name="Открытые", value="open"),
         app_commands.Choice(name="Все", value="all"),
     ])
     @app_commands.checks.has_permissions(moderate_members=True)
-    async def zhaloby(self, interaction: discord.Interaction,
+    async def reports(self, interaction: discord.Interaction,
                       фильтр: app_commands.Choice[str] = None):
         mode = фильтр.value if фильтр else 'open'
         items = self._g(interaction.guild.id)['items']
@@ -220,18 +220,18 @@ class DMReport(commands.Cog):
                 lines.append(
                     f"**#{r['id']}** {STATUS_LABEL.get(r['status'], r['status'])} · {ts}\n"
                     f"Нарушитель: <@{r['target_id']}> `{r['target_id']}` · от: <@{r['reporter_id']}>{details}")
-            lines.append(f"\nРазбор: `/zhaloba-ok №` / `/zhaloba-no №`\n{DIVIDER}")
+            lines.append(f"\nРазбор: `/report-ok №` / `/report-no №`\n{DIVIDER}")
             e.description = "\n\n".join(lines)
-        e.set_footer(text=f"{interaction.guild.name} · zhaloba")
+        e.set_footer(text=f"{interaction.guild.name} · dm-report")
         await interaction.response.send_message(embed=e, ephemeral=True)
 
     # ────────────────────────────────────────────────────────────
-    # /zhaloba-ok — подтвердить → варн нарушителю
+    # /report-ok — подтвердить → варн нарушителю
     # ────────────────────────────────────────────────────────────
-    @app_commands.command(name="zhaloba-ok", description="Подтвердить жалобу (варн нарушителю)")
-    @app_commands.describe(номер="Номер жалобы из /zhaloby")
+    @app_commands.command(name="report-ok", description="Подтвердить жалобу (варн нарушителю)")
+    @app_commands.describe(номер="Номер жалобы из /reports")
     @app_commands.checks.has_permissions(moderate_members=True)
-    async def zhaloba_ok(self, interaction: discord.Interaction, номер: int):
+    async def report_ok(self, interaction: discord.Interaction, номер: int):
         guild = interaction.guild
         rec = self._get(guild.id, номер)
         if not rec:
@@ -280,17 +280,17 @@ class DMReport(commands.Cog):
             f"## 📨 Жалоба #{номер} — 🟢 подтверждена\n"
             f"Нарушитель: <@{rec['target_id']}> `{rec['target_id']}`{warn_txt}\n"
             f"Модератор: {interaction.user.mention}\n{DIVIDER}")
-        e.set_footer(text=f"{guild.name} · zhaloba")
+        e.set_footer(text=f"{guild.name} · dm-report")
         await self._log(guild, e)
 
     # ────────────────────────────────────────────────────────────
-    # /zhaloba-no — отклонить
+    # /report-no — отклонить
     # ────────────────────────────────────────────────────────────
-    @app_commands.command(name="zhaloba-no", description="Отклонить жалобу")
-    @app_commands.describe(номер="Номер жалобы из /zhaloby",
+    @app_commands.command(name="report-no", description="Отклонить жалобу")
+    @app_commands.describe(номер="Номер жалобы из /reports",
                            причина="Почему отклонена — не обязательно")
     @app_commands.checks.has_permissions(moderate_members=True)
-    async def zhaloba_no(self, interaction: discord.Interaction, номер: int, причина: str = None):
+    async def report_no(self, interaction: discord.Interaction, номер: int, причина: str = None):
         guild = interaction.guild
         rec = self._get(guild.id, номер)
         if not rec:
@@ -311,7 +311,7 @@ class DMReport(commands.Cog):
             f"Модератор: {interaction.user.mention}"
             + (f"\nПричина: {причина[:200]}" if причина else "")
             + f"\n{DIVIDER}")
-        e.set_footer(text=f"{guild.name} · zhaloba")
+        e.set_footer(text=f"{guild.name} · dm-report")
         await self._log(guild, e)
 
 
