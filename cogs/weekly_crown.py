@@ -191,7 +191,7 @@ class WeeklyCrown(commands.Cog):
         if ch:
             e = discord.Embed(color=GOLD, timestamp=datetime.now(timezone.utc))
             e.description = (
-                f"## 👑 КОРОНАЦИЯ НЕДЕЛИ\n"
+                "## 👑 КОРОНАЦИЯ НЕДЕЛИ\n"
                 f"Самый активный участник недели — {member.mention}!\n\n"
                 f"За неделю: **{dm}** сообщений · **{dv}** минут в войсе\n"
                 f"Титул {role.mention if role else '👑 Чемпион недели'} теперь его — до следующего понедельника!\n{DIVIDER}")
@@ -249,7 +249,7 @@ class WeeklyCrown(commands.Cog):
         e = discord.Embed(color=GOLD if cfg.get('enabled') else 0x95A5A6,
                           timestamp=datetime.now(timezone.utc))
         e.description = (
-            f"## 👑 Weekly Crown\n"
+            "## 👑 Weekly Crown\n"
             f"Система: **{'🟢 вкл' if cfg.get('enabled') else '🔴 выкл'}**\n"
             f"Текущий чемпион: {holder.mention if holder else '`никого`'}\n"
             f"Роль короны: {role.mention if role else '`создастся автоматически`'}\n"

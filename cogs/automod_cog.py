@@ -100,7 +100,7 @@ class AutoModCog (commands .Cog ):
     @commands .Cog .listener ()
     async def on_ready (self ):
         """Бот готов"""
-        log .info (f" AutoModCog loaded")
+        log .info (" AutoModCog loaded")
 
 
 async def setup (bot ):

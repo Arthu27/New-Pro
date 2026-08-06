@@ -47,7 +47,7 @@ class ProactiveModeration (commands .Cog ):
         # Analiz duygu
         from web .sentiment_analyzer import get_sentiment_analyzer 
         sentiment_analyzer =get_sentiment_analyzer ()
-        sentiment_result =sentiment_analyzer .analyze_message (message )
+        sentiment_analyzer .analyze_message (message )
 
         # Ekliyoruz в pano
         if channel_id not in self .message_buffer :
@@ -95,7 +95,7 @@ class ProactiveModeration (commands .Cog ):
             )
 
             e .description =(
-            f"## ⚠️ AI-анализ настроений\n"
+            "## ⚠️ AI-анализ настроений\n"
             f"{alert['message']}\n\n"
             )
 
@@ -107,7 +107,7 @@ class ProactiveModeration (commands .Cog ):
             elif alert ['type']=='potential_conflict':
                 e .description +=(
                 f"**Негативных сообщений:** {alert['negative_messages']}\n"
-                f"**Рекомендация:** проконтролируйте канал на предмет конфликта\n"
+                "**Рекомендация:** проконтролируйте канал на предмет конфликта\n"
                 )
 
             e .set_footer (text =f"{guild.name} · Анализ настроений")

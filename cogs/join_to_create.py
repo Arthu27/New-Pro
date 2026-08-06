@@ -273,7 +273,7 @@ class JoinToCreate(commands.Cog):
         e = discord.Embed(color=GOLD if cfg.get('enabled') and lobby else GRAY,
                           timestamp=datetime.now(timezone.utc))
         e.description = (
-            f"## 🔊 Join-to-Create\n"
+            "## 🔊 Join-to-Create\n"
             f"Система: **{'🟢 вкл' if cfg.get('enabled') else '🔴 выкл'}**\n"
             f"Лобби: {lobby.mention if lobby else '`не задано — /j2c lobby`'}\n"
             f"Категория: {cat.mention if cat else '`как у лобби`'}\n"

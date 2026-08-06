@@ -573,7 +573,7 @@ class LevelingEngagement (commands .Cog ):
         """Configure leveling system"""
         cfg =self .load_config (str (ctx .guild .id ))
         text =(
-        f" **Настройки уровней**\n\n"
+        " **Настройки уровней**\n\n"
         f" Система: {'' if cfg.get('enabled') else ''}\n"
         f" Text XP: {cfg['text_xp']['min']}-{cfg['text_xp']['max']} (cooldown {cfg['text_xp']['cooldown_sec']}s)\n"
         f" Voice XP: {cfg['voice_xp']['per_minute']}/мин\n"
@@ -582,12 +582,12 @@ class LevelingEngagement (commands .Cog ):
         f" Достижения: {'' if cfg.get('achievements_enabled') else ''}\n"
         f" Auto-DM: {'' if cfg['engagement_dm'].get('enabled') else ''} "
         f"({cfg['engagement_dm'].get('after_inactive_hours',48)}ч inactive)\n\n"
-        f"**Команды:**\n"
-        f"`!levelset text <min> <max> <cooldown>`\n"
-        f"`!levelset voice <per_minute>`\n"
-        f"`!levelset streak <7d> <14d> <30d>`\n"
-        f"`!levelset achievement <on|off>`\n"
-        f"`!levelset reward <level> <@role>` — задать роль за уровень\n"
+        "**Команды:**\n"
+        "`!levelset text <min> <max> <cooldown>`\n"
+        "`!levelset voice <per_minute>`\n"
+        "`!levelset streak <7d> <14d> <30d>`\n"
+        "`!levelset achievement <on|off>`\n"
+        "`!levelset reward <level> <@role>` — задать роль за уровень\n"
         )
         await ctx .send (text )
 

@@ -208,7 +208,7 @@ class ABCog (commands .Cog ):
     @commands .Cog .listener ()
     async def on_ready (self ):
         """Бот готов"""
-        log .info (f" ABCog loaded")
+        log .info (" ABCog loaded")
 
 
 async def setup (bot ):

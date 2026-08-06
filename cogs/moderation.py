@@ -100,7 +100,7 @@ class Moderation (commands .Cog ):
         desc =f"## {title}\n"
         desc +=f"### **{user.display_name}** — {action_text}\n"
         desc +=f"`{user.id}`\n"
-        desc +=f"\n\n"
+        desc +="\n\n"
         desc +=f"📁 **Дело:** #{case_id}\n"
         desc +=f"📝 **Причина:** {reason or 'Не указана'}\n"
         desc +=f"🛡️ **Модератор:** {moderator.mention if moderator else chr(8212)}\n"
@@ -109,7 +109,7 @@ class Moderation (commands .Cog ):
             desc +=f"\n{extra}\n"
 
         desc +=f"\n{DIVIDER}\n"
-        desc +=f"> 💬 Пользователь уведомлён в личные сообщения"
+        desc +="> 💬 Пользователь уведомлён в личные сообщения"
 
         e .description =desc 
         e .set_thumbnail (url =user .display_avatar .url )
@@ -227,9 +227,9 @@ class Moderation (commands .Cog ):
                 case_id =self .save_case (guild .id ,'unban',fetched .id ,interaction .user .id ,reason )
                 e =discord .Embed (color =0x2ECC71 ,timestamp =datetime .now (timezone .utc ))
                 e .description =(
-                f"## 🕊️ Бан снят\n"
+                "## 🕊️ Бан снят\n"
                 f"**{fetched.name}** · `{fetched.id}`\n\n"
-                f"✅ Пользователь разбанен.\n"
+                "✅ Пользователь разбанен.\n"
                 f"🛡️ **Модератор:** {interaction.user.mention}\n\n"
                 f"{DIVIDER}"
                 )
@@ -271,7 +271,7 @@ class Moderation (commands .Cog ):
             deleted =await interaction .channel .purge (limit =количество )
             e =discord .Embed (color =0xDC143C ,timestamp =datetime .now (timezone .utc ))
             e .description =(
-            f"## 🧹 Сообщения удалены\n"
+            "## 🧹 Сообщения удалены\n"
             f"Удалено **{len(deleted)}** сообщений\n\n"
             f"📺 **Канал:** {interaction.channel.mention}\n"
             f"🛡️ **Модератор:** {interaction.user.mention}\n\n"
@@ -287,7 +287,7 @@ class Moderation (commands .Cog ):
             await interaction .channel .edit (slowmode_delay =секунд )
             e =discord .Embed (color =0xF39C12 ,timestamp =datetime .now (timezone .utc ))
             e .description =(
-            f"## 🐌 Медленный режим\n"
+            "## 🐌 Медленный режим\n"
             f"📺 **Канал:** {interaction.channel.mention}\n"
             f"⏱️ **Задержка:** **{секунд} сек.**\n"
             f"🛡️ **Модератор:** {interaction.user.mention}\n\n"
@@ -300,9 +300,9 @@ class Moderation (commands .Cog ):
             await interaction .channel .set_permissions (guild .default_role ,send_messages =False )
             e =discord .Embed (color =0xE74C3C ,timestamp =datetime .now (timezone .utc ))
             e .description =(
-            f"## 🔒 Канал заблокирован\n"
+            "## 🔒 Канал заблокирован\n"
             f"{interaction.channel.mention}\n\n"
-            f"🚫 Отправка сообщений отключена.\n"
+            "🚫 Отправка сообщений отключена.\n"
             f"🛡️ **Заблокировал:** {interaction.user.mention}\n\n"
             f"{DIVIDER}"
             )
@@ -314,9 +314,9 @@ class Moderation (commands .Cog ):
             await interaction .channel .set_permissions (guild .default_role ,send_messages =True )
             e =discord .Embed (color =0x2ECC71 ,timestamp =datetime .now (timezone .utc ))
             e .description =(
-            f"## 🔓 Канал разблокирован\n"
+            "## 🔓 Канал разблокирован\n"
             f"{interaction.channel.mention}\n\n"
-            f"✅ Отправка сообщений включена.\n"
+            "✅ Отправка сообщений включена.\n"
             f"🛡️ **Разблокировал:** {interaction.user.mention}\n\n"
             f"{DIVIDER}"
             )
@@ -493,7 +493,7 @@ class Moderation (commands .Cog ):
                 await self .send_log (guild ,log )
 
                 confirm =success_embed (
-                f"Действие выполнено",
+                "Действие выполнено",
                 f"**{user.display_name}** · `{user.id}`\n{msg}\n**Причина:** {reason}\n**Дело:** #{case_id}",
                 guild =guild )
                 await interaction .response .send_message (embed =confirm ,ephemeral =True )

@@ -93,7 +93,7 @@ class MiniGames(commands.Cog):
         e = discord.Embed(title="🔢 Игра «Угадай число» началась!", color=0x3498DB, timestamp=discord.utils.utcnow())
         e.description = (
             f"```ansi\n\u001b[1;34m ИГРА НАЧАЛАСЬ\u001b[0m\n```\n{_divider()}\n\n"
-            f"Я загадал число от 1 до 100!\n"
+            "Я загадал число от 1 до 100!\n"
             f"Угадай через `/guess [число]`.\n\n{_divider()}"
         )
         e.set_thumbnail(url=interaction.user.display_avatar.url)

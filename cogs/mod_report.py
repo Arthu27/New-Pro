@@ -185,11 +185,11 @@ async def _build_weekly_report (guild :discord .Guild ,days :int =7 ,force_cutof
     icon_url =guild .icon .url if guild .icon else None 
     )
     cover .description =(
-    f'```ansi\n'
-    f'\u001b[1;34m\u001b[0m\n'
-    f'\u001b[1;34m   HAFTALIK PERFORMANS RAPORU     \u001b[0m\n'
-    f'\u001b[1;34m\u001b[0m\n'
-    f'```\n'
+    '```ansi\n'
+    '\u001b[1;34m\u001b[0m\n'
+    '\u001b[1;34m   HAFTALIK PERFORMANS RAPORU     \u001b[0m\n'
+    '\u001b[1;34m\u001b[0m\n'
+    '```\n'
     f'> 📅 **Период:** **{period}**\n'
     f'>  <t:{ts_cutoff}:D> → <t:{ts_now}:D>\n'
     f'>  Всего участников: **{guild.member_count}**\n'
@@ -230,10 +230,10 @@ async def _build_weekly_report (guild :discord .Guild ,days :int =7 ,force_cutof
         lines .append (
         f'{medals[i]} **{name}**\n'
         f' {bar} `{s["score"]:,} очков`\n'
-        f'  {s["msg"]:,} message   {h}s{mn}dk   {s["inv"]} davet'
+        f'  {s["msg"]:,} сообщ.   {h}ч{mn}м   {s["inv"]} пригл.'
         )
     overall_embed .description ='\n\n'.join (lines )or 'Данные нет.'
-    overall_embed .set_footer (text =f'Очки: Сообщение×1 + Звук мин×2 + Приглашение×5')
+    overall_embed .set_footer (text ='Очки: сообщение×1 + минута голоса×2 + приглашение×5')
     embeds .append (overall_embed )
 
     # 
@@ -289,8 +289,8 @@ async def _build_weekly_report (guild :discord .Guild ,days :int =7 ,force_cutof
             h ,mn =divmod (voice ,60 )
             lines .append (
             f'{rank_emojis[i]} **{member.display_name}**\n'
-            f' {bar} `{score:,} очки`\n'
-            f'  {msg:,}   {h}s{mn}dk   {inv}'
+            f' {bar} `{score:,} очков`\n'
+            f'  {msg:,}   {h}ч{mn}м   {inv}'
             )
 
         role_embed .description ='\n\n'.join (lines )
@@ -348,10 +348,10 @@ async def _build_weekly_report (guild :discord .Guild ,days :int =7 ,force_cutof
     timestamp =now 
     )
     close .description =(
-    f'```ansi\n\u001b[1;32m КОНЕЦ ОТЧЁТА \u001b[0m\n```\n'
+    '```ansi\n\u001b[1;32m КОНЕЦ ОТЧЁТА \u001b[0m\n```\n'
     f'> Этот отчёт содержит данные за **{period}**.\n'
     f'> Bir следующий rapor: <t:{ts_now + (7 - datetime.datetime.utcnow().weekday()) * 86400}:D>\n\n'
-    f'-# Aether Bot • Автоматический еженедельный отчёт'
+    '-# Aether Bot • Автоматический еженедельный отчёт'
     )
     embeds .append (close )
 
@@ -420,13 +420,13 @@ class ModReportView (discord .ui .View ):
         embed .add_field (
         name ='🛡 Модерация',
         value =(
-        f'```yaml\n'
+        '```yaml\n'
         f'Всего : {len(mod_case)}\n'
         f'Ban    : {action_counts.get("ban", 0)}\n'
         f'Kick   : {action_counts.get("kick", 0)}\n'
         f'Mute: {action_counts.get("timeout", 0)}\n'
         f'Предупреждение  : {action_counts.get("warn", 0)}\n'
-        f'```'
+        '```'
         ),
         inline =True 
         )
@@ -436,7 +436,6 @@ class ModReportView (discord .ui .View ):
     async def leaderboard (self ,interaction :discord .Interaction ,button :discord .ui .Button ):
         await interaction .response .defer ()
         lb =_load_lb (interaction .guild .id )
-        inv =_load_invites (interaction .guild .id )
         from collections import defaultdict as dd 
         scores =dd (int )
         for uid ,cnt in lb .get ('messages',{}).items ():
@@ -450,7 +449,7 @@ class ModReportView (discord .ui .View ):
             m =interaction .guild .get_member (int (uid ))
             name =m .display_name if m else f'<@{uid}>'
             medal =medals [i ]if i <3 else f'`#{i+1}`'
-            lines .append (f'{medal} **{name}** — {score:,} очки')
+            lines .append (f'{medal} **{name}** — {score:,} очков')
         embed =discord .Embed (title ='🏆 Общий рейтинг',description ='\n'.join (lines )or 'Данных нет.',color =0xF1C40F )
         if interaction .guild .icon :
             embed .set_thumbnail (url =interaction .guild .icon .url )
@@ -465,8 +464,8 @@ class ModReportView (discord .ui .View ):
         gun_names =['Понедельник','Вторник','Среда','Четверг','Пятница','Суббота','Воскресенье']
         ch =interaction .guild .get_channel (cfg .get ('channel_id',0 ))
         embed =discord .Embed (title ='⚙️ Настройки отчётов',color =0x5865F2 )
-        embed .add_field (name ='Состояние',value =' Активен'if cfg .get ('enabled')else ' Закрыт',inline =True )
-        embed .add_field (name ='Канал',value =ch .mention if ch else 'Настройк',inline =True )
+        embed .add_field (name ='Состояние',value =' Включён'if cfg .get ('enabled')else ' Выключен',inline =True )
+        embed .add_field (name ='Канал',value =ch .mention if ch else 'Не задан',inline =True )
         embed .add_field (name ='День/Время',value =f'{gun_names[cfg.get("day", 0)]} {cfg.get("hour", 9):02d}:00',inline =True )
         embed .description =(
         '**Команды:**\n'
@@ -676,13 +675,13 @@ class ModReport (commands .Cog ):
         embed .add_field (
         name ='🛡 Модерация',
         value =(
-        f'```yaml\n'
+        '```yaml\n'
         f'Всего : {len(mod_case)}\n'
         f'Ban    : {action_counts.get("ban", 0)}\n'
         f'Kick   : {action_counts.get("kick", 0)}\n'
         f'Mute: {action_counts.get("timeout", 0)}\n'
         f'Предупреждение  : {action_counts.get("warn", 0)}\n'
-        f'```'
+        '```'
         ),
         inline =True 
         )

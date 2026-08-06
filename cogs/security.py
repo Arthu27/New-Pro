@@ -241,7 +241,7 @@ class Security (commands .Cog ):
                 )
                 e .description =(
                 f"{member.mention} поделился вредоносной/подозрительной ссылкой!\n\n"
-                f"**🌐 Обнаруженные домены:**\n"
+                "**🌐 Обнаруженные домены:**\n"
                 +"\n".join (f"• `{d}`"for d in bad_domains )
                 )
                 e .set_thumbnail (url =member .display_avatar .url )

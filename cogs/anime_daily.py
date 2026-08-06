@@ -51,16 +51,16 @@ class CeviriButonu (discord .ui .View ):
             if not self .ozet or self .ozet =='Сводка не найдена.':
                 await interaction .followup .send (' Нет текста для перевода.',ephemeral =True )
                 return 
-            ceviri =GoogleTranslator (source ='en',target ='tr').translate (self .ozet )
+            ceviri =GoogleTranslator (source ='en',target ='ru').translate (self .ozet )
             if len (ceviri )>1900 :
                 ceviri =ceviri [:1900 ]+'...'
             await interaction .followup .send (f' **Краткое содержание:**\n\n{ceviri}',ephemeral =True )
-        except Exception as e :
+        except Exception :
             await interaction .followup .send (' Не удалось выполнить перевод.',ephemeral =True )
 
 
 async def _anime_getir (tur_id :int =None )->dict :
-    """Jikan API'den rastgele anime al"""
+    """Случайное аниме из Jikan API"""
     sayfa =random .randint (1 ,4 )
     if tur_id :
         url =f'https://api.jikan.moe/v4/anime?genres={tur_id}&sfw=true&type=tv&min_score=6.5&order_by=popularity&page={sayfa}'
@@ -80,17 +80,17 @@ async def _anime_getir (tur_id :int =None )->dict :
 
 
 def _embed_olustur (guild :discord .Guild ,anime :dict ,kategori :str ='Случайно')->tuple :
-    """Anime embed'i создать, (embed, ozet) вернуть"""
+    """Создать embed аниме, вернуть (embed, ozet)"""
     baslik =anime .get ('title_english')or anime .get ('title','Bilinmiyor')
     puan =anime .get ('score')or 'Не оценено'
     resim =anime .get ('images',{}).get ('jpg',{}).get ('large_image_url','')
     link =anime .get ('url','')
-    bolum =anime .get ('episodes')or 'Bilinmiyor'
-    ozet =anime .get ('synopsis','Сводка не найдено.')
+    bolum =anime .get ('episodes')or 'Неизвестно'
+    ozet =anime .get ('synopsis','Сводка не найдена.')
     kisa_ozet =(ozet [:300 ]+'...')if len (ozet )>300 else ozet 
 
     embed =discord .Embed (
-    title =f' День Anime Predlojeniesi: {baslik}',
+    title =f' Аниме-предложение дня: {baslik}',
     url =link ,
     description =kisa_ozet ,
     color =0xED4245 
@@ -99,11 +99,11 @@ def _embed_olustur (guild :discord .Guild ,anime :dict ,kategori :str ='Случ
         embed .set_image (url =resim )
     if guild .icon :
         embed .set_thumbnail (url =guild .icon .url )
-    embed .add_field (name =' Kategori',value =kategori ,inline =True )
+    embed .add_field (name =' Категория',value =kategori ,inline =True )
     embed .add_field (name =' Оценка',value =str (puan ),inline =True )
-    embed .add_field (name =' Раздел',value =str (bolum ),inline =True )
+    embed .add_field (name =' Эпизодов',value =str (bolum ),inline =True )
     embed .set_footer (
-    text =f'{guild.name}  ·  Ежедневный Anime',
+    text =f'{guild.name}  ·  Ежедневное аниме',
     icon_url =guild .icon .url if guild .icon else None 
     )
     return embed ,ozet 
@@ -119,7 +119,7 @@ class AnimeDaily (commands .Cog ):
 
     @tasks .loop (hours =24 )
     async def gunluk_anime (self ):
-        """Каждый день часов 10:00'da anime предложение отправить"""
+        """Каждый день в 10:00 отправляет предложение аниме"""
         cfg =_load ()
         for guild in self .bot .guilds :
             gid =str (guild .id )
@@ -131,7 +131,7 @@ class AnimeDaily (commands .Cog ):
                 continue 
             try :
                 tur_id =gcfg .get ('tur_id')
-                tur_adi =gcfg .get ('tur_adi','Rastgele')
+                tur_adi =gcfg .get ('tur_adi','Случайно')
                 anime =await _anime_getir (tur_id )
                 if not anime :
                     continue 
@@ -145,7 +145,7 @@ class AnimeDaily (commands .Cog ):
     @gunluk_anime .before_loop 
     async def before_loop (self ):
         await self .bot .wait_until_ready ()
-        # Время 10:00'a kadar badd
+        # ждём до 10:00
         now =datetime .datetime .now ()
         target =now .replace (hour =10 ,minute =0 ,second =0 ,microsecond =0 )
         if now >=target :
@@ -156,15 +156,15 @@ class AnimeDaily (commands .Cog ):
 
         #  Slash команды 
 
-    @app_commands .command (name ='anime-ayar',description ="Настройк ежедневный предложение anime")
+    @app_commands .command (name ='anime-setup',description ="Настройка ежедневных предложений аниме")
     @app_commands .describe (
-    channel ='Anime predlojenielerinin отправл channel',
-    kategori ='Anime kategorisi (пусто = rastgele)',
-    role ='Etiketlenecek роли (opsiyonel)',
+    channel ='Канал для ежедневных предложений аниме',
+    kategori ='Категория аниме (пусто = случайная)',
+    role ='Роль для упоминания (необязательно)',
     )
     @app_commands .choices (kategori =[
     app_commands .Choice (name =k ,value =str (v ))for k ,v in KATEGORILER .items ()
-    ]+[app_commands .Choice (name ='Rastgele',value ='0')])
+    ]+[app_commands .Choice (name ='Случайно',value ='0')])
     @app_commands .checks .has_permissions (manage_channels =True )
     async def anime_setup (self ,interaction :discord .Interaction ,
     channel :discord .TextChannel ,
@@ -173,7 +173,7 @@ class AnimeDaily (commands .Cog ):
         cfg =_load ()
         gid =str (interaction .guild .id )
         tur_id =int (kategori )if kategori !='0'else None 
-        tur_adi =next ((k for k ,v in KATEGORILER .items ()if v ==tur_id ),'Rastgele')
+        tur_adi =next ((k for k ,v in KATEGORILER .items ()if v ==tur_id ),'Случайно')
 
         cfg [gid ]={
         'enabled':True ,
@@ -184,16 +184,16 @@ class AnimeDaily (commands .Cog ):
         }
         _save (cfg )
 
-        embed =discord .Embed (title =' Ежедневный Anime Настройк',color =0x57F287 )
+        embed =discord .Embed (title =' Настройки ежедневного аниме',color =0x57F287 )
         if interaction .guild .icon :
             embed .set_thumbnail (url =interaction .guild .icon .url )
         embed .add_field (name =' Канал',value =channel .mention ,inline =True )
-        embed .add_field (name =' Kategori',value =tur_adi ,inline =True )
+        embed .add_field (name =' Категория',value =tur_adi ,inline =True )
         embed .add_field (name =' Роль',value =role .mention if role else 'Нет',inline =True )
-        embed .set_footer (text ='Каждый день часов 10:00\'da отправл.')
+        embed .set_footer (text ='Ежедневная отправка в 10:00')
         await interaction .response .send_message (embed =embed )
 
-    @app_commands .command (name ='anime-kapat',description ="Denanahtarit ежедневный предложение anime")
+    @app_commands .command (name ='anime-off',description ="Отключить ежедневные предложения аниме")
     @app_commands .checks .has_permissions (manage_channels =True )
     async def anime_disable (self ,interaction :discord .Interaction ):
         cfg =_load ()
@@ -201,36 +201,36 @@ class AnimeDaily (commands .Cog ):
         if gid in cfg :
             cfg [gid ]['enabled']=False 
             _save (cfg )
-        await interaction .response .send_message (' Ежедневный anime предложение закрыто.',ephemeral =True )
+        await interaction .response .send_message (' Ежедневные предложения аниме отключены.',ephemeral =True )
 
-    @app_commands .command (name ='anime',description ='Al slucaynuyu предложение anime')
-    @app_commands .describe (kategori ='Anime kategorisi')
+    @app_commands .command (name ='anime',description ='Случайное предложение аниме')
+    @app_commands .describe (kategori ='Категория аниме')
     @app_commands .choices (kategori =[
     app_commands .Choice (name =k ,value =str (v ))for k ,v in KATEGORILER .items ()
-    ]+[app_commands .Choice (name ='Rastgele',value ='0')])
+    ]+[app_commands .Choice (name ='Случайно',value ='0')])
     async def anime_oner (self ,interaction :discord .Interaction ,kategori :str ='0'):
         await interaction .response .defer ()
         tur_id =int (kategori )if kategori !='0'else None 
-        tur_adi =next ((k for k ,v in KATEGORILER .items ()if v ==tur_id ),'Rastgele')
+        tur_adi =next ((k for k ,v in KATEGORILER .items ()if v ==tur_id ),'Случайно')
         anime =await _anime_getir (tur_id )
         if not anime :
-            await interaction .followup .send (' Anime не найдено, tekrar dene.')
+            await interaction .followup .send (' Аниме не найдено, попробуйте ещё раз.')
             return 
         embed ,ozet =_embed_olustur (interaction .guild ,anime ,tur_adi )
         await interaction .followup .send (embed =embed ,view =CeviriButonu (ozet ))
 
-    @app_commands .command (name ='anime-oner',description ="Al slucaynuyu или kategoriynuyu предложение anime")
-    @app_commands .describe (kategori ='Anime kategorisi (пусто = rastgele)')
+    @app_commands .command (name ='anime-suggest',description ="Случайное или категорийное предложение аниме")
+    @app_commands .describe (kategori ='Категория аниме (пусто = случайная)')
     @app_commands .choices (kategori =[
     app_commands .Choice (name =k ,value =str (v ))for k ,v in KATEGORILER .items ()
-    ]+[app_commands .Choice (name ='Rastgele',value ='0')])
+    ]+[app_commands .Choice (name ='Случайно',value ='0')])
     async def anime_oner2 (self ,interaction :discord .Interaction ,kategori :str ='0'):
         await interaction .response .defer ()
         tur_id =int (kategori )if kategori !='0'else None 
-        tur_adi =next ((k for k ,v in KATEGORILER .items ()if v ==tur_id ),'Rastgele')
+        tur_adi =next ((k for k ,v in KATEGORILER .items ()if v ==tur_id ),'Случайно')
         anime =await _anime_getir (tur_id )
         if not anime :
-            await interaction .followup .send (' Anime не найдено, tekrar dene.')
+            await interaction .followup .send (' Аниме не найдено, попробуйте ещё раз.')
             return 
         embed ,ozet =_embed_olustur (interaction .guild ,anime ,tur_adi )
         await interaction .followup .send (embed =embed ,view =CeviriButonu (ozet ))

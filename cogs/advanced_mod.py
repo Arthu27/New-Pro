@@ -138,7 +138,7 @@ class AdvancedMod (commands .Cog ):
         action_emojis ={"ban":"","kick":"","timeout":"","warn":"","unban":""}
         action_colors ={"ban":"31","kick":"33","timeout":"33","warn":"33","unban":"32"}
 
-        e =discord .Embed (title =f"📕 История модерации",color =0xE74C3C ,timestamp =datetime .utcnow ())
+        e =discord .Embed (title ="📕 История модерации",color =0xE74C3C ,timestamp =datetime .utcnow ())
         e .description =(
         f"```ansi\n\u001b[1;31m ЗАПИСЬ МОДЕРАЦИИ\u001b[0m\n```\n{_divider()}"
         )
@@ -321,9 +321,8 @@ class AdvancedMod (commands .Cog ):
             try :
                 user =await self .bot .fetch_user (int (user_id ))
                 name =str (user )
-                avatar =user .display_avatar .url 
             except Exception :
-                name ,avatar =user_id ,None 
+                name =user_id 
             until =data .get ("until")if isinstance (data ,dict )else None
             extra =""
             if until :
@@ -356,7 +355,7 @@ class AdvancedMod (commands .Cog ):
             )
             return 
 
-        e =discord .Embed (title =f"🔨 Список банов",color =0xE74C3C ,timestamp =datetime .utcnow ())
+        e =discord .Embed (title ="🔨 Список банов",color =0xE74C3C ,timestamp =datetime .utcnow ())
         e .description =(
         f"```ansi\n\u001b[1;31m ЗАБАНЕННЫЕ ПОЛЬЗОВАТЕЛИ\u001b[0m\n```\n{_divider()}"
         )

@@ -156,9 +156,9 @@ class StaffStats(commands.Cog):
             per = summarize(actions, дней)
             if not per:
                 e.description = (
-                    f"## 📊 Staff Stats\n"
+                    "## 📊 Staff Stats\n"
                     f"За последние **{дней} дн.** действий не найдено.\n"
-                    f"(Читаются: mod_data.json, temp_history.json, варны из базы)"
+                    "(Читаются: mod_data.json, temp_history.json, варны из базы)"
                 )
             else:
                 top = sorted(per.items(), key=lambda x: -x[1]['total'])[:10]
@@ -172,7 +172,7 @@ class StaffStats(commands.Cog):
                         f"⠀{_breakdown(ent['by'])[:90]}"
                     )
                 e.description = (
-                    f"## 📊 Staff Stats — Топ модераторов\n"
+                    "## 📊 Staff Stats — Топ модераторов\n"
                     f"Период: **{дней} дн.** · действий всего: **{sum(e2['total'] for e2 in per.values())}**\n"
                     f"{DIVIDER}\n\n" + "\n\n".join(lines)
                 )

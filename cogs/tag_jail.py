@@ -216,14 +216,14 @@ class TagJail(commands.Cog):
         if cfg.get('dm_notify'):
             dm = discord.Embed(color=RED, timestamp=datetime.now(timezone.utc))
             dm.description = (
-                f"## ⛔ Вы в джейле\n"
+                "## ⛔ Вы в джейле\n"
                 f"Сервер: **{guild.name}**\n"
                 f"Причина: {reason}\n"
             )
             if tag_found:
                 dm.description += (
                     f"\nВ вашем имени найден запрещённый тег: `{tag_found}`\n"
-                    f"Уберите его из ника — и вы будете освобождены"
+                    "Уберите его из ника — и вы будете освобождены"
                     f"{' автоматически' if cfg.get('auto_release') else ' после проверки модератором'}."
                 )
             dm.set_footer(text=guild.name)
@@ -231,7 +231,7 @@ class TagJail(commands.Cog):
 
         e = discord.Embed(color=RED, timestamp=datetime.now(timezone.utc))
         e.description = (
-            f"## ⛔ Tag Jail\n"
+            "## ⛔ Tag Jail\n"
             f"**{member.display_name}** · `{member.id}`\n\n"
             f"Причина: {reason}"
             + (f"\nНайденный тег: `{tag_found}`" if tag_found else "")
@@ -271,7 +271,7 @@ class TagJail(commands.Cog):
 
         e = discord.Embed(color=GREEN, timestamp=datetime.now(timezone.utc))
         e.description = (
-            f"## ✅ Освобождён из джейла\n"
+            "## ✅ Освобождён из джейла\n"
             f"**{member.display_name}** · `{member.id}`\n\n"
             f"Причина: {reason}\n"
             f"Ролей возвращено: **{restored}**"
@@ -284,7 +284,7 @@ class TagJail(commands.Cog):
         if self.cfg(guild.id).get('dm_notify'):
             dm = discord.Embed(color=GREEN, timestamp=datetime.now(timezone.utc))
             dm.description = (
-                f"## ✅ Вы освобождены\n"
+                "## ✅ Вы освобождены\n"
                 f"Сервер: **{guild.name}**\n"
                 f"Причина: {reason}\n"
                 f"Ваши роли возвращены ({restored}). Добро пожаловать обратно!"
@@ -333,7 +333,7 @@ class TagJail(commands.Cog):
         if cfg.get('dm_notify'):
             dm = discord.Embed(color=RED, timestamp=datetime.now(timezone.utc))
             dm.description = (
-                f"## ⛔ Ваш аккаунт слишком новый\n"
+                "## ⛔ Ваш аккаунт слишком новый\n"
                 f"Сервер: **{member.guild.name}**\n"
                 f"Возраст аккаунта: **{age_days} дн.** — требуется минимум **{limit} дн.**\n"
                 f"Возвращайтесь, когда аккаунту исполнится {limit} дней. 🙂"
@@ -351,7 +351,7 @@ class TagJail(commands.Cog):
             return
         e = discord.Embed(color=RED, timestamp=datetime.now(timezone.utc))
         e.description = (
-            f"## 🚪 Авто-кик: новый аккаунт\n"
+            "## 🚪 Авто-кик: новый аккаунт\n"
             f"**{member.display_name}** · `{member.id}`\n\n"
             f"Возраст аккаунта: **{age_days} дн.** (лимит **{limit}**)\n{DIVIDER}"
         )
@@ -422,7 +422,7 @@ class TagJail(commands.Cog):
                    if c.get('min_account_days') else "⚪ выкл")
         e = discord.Embed(color=GOLD, timestamp=datetime.now(timezone.utc))
         e.description = (
-            f"## ⛔ Tag Jail — Настройки\n"
+            "## ⛔ Tag Jail — Настройки\n"
             f"Статус: {'🟢 **ВКЛ**' if c['enabled'] else '🔴 **ВЫКЛ**'}\n"
             f"Запрещённых тегов: **{len(tags)}**"
             + (f"\nТеги: {' · '.join('`' + t + '`' for t in tags[:15])}" if tags
@@ -479,7 +479,7 @@ class TagJail(commands.Cog):
         self.set_cfg(interaction.guild.id, 'banned_tags', tags)
         await interaction.response.send_message(
             f"✅ Запрещённый тег добавлен: `{текст}` (всего {len(tags)})\n"
-            f"Все, у кого он в нике/имени, отправятся в джейл.", ephemeral=True)
+            "Все, у кого он в нике/имени, отправятся в джейл.", ephemeral=True)
 
     @tagjail.command(name="del-tag", description="Убрать тег из запрещённых")
     @app_commands.describe(текст="Тег для удаления из списка")
@@ -515,7 +515,7 @@ class TagJail(commands.Cog):
         self.set_cfg(interaction.guild.id, 'jail_role_id', роль.id)
         await interaction.response.send_message(
             f"✅ Jail-роль: {роль.mention}\n"
-            f"💡 Совет: в настройках каналов закройте этой роли всё, кроме одного канала джейла.", ephemeral=True)
+            "💡 Совет: в настройках каналов закройте этой роли всё, кроме одного канала джейла.", ephemeral=True)
 
     @tagjail.command(name="log-channel", description="Канал для логов tag jail")
     @app_commands.describe(канал="Текстовый канал для логов")
@@ -623,7 +623,7 @@ class TagJail(commands.Cog):
             action = self.cfg(interaction.guild.id).get('age_action', 'kick')
             await interaction.response.send_message(
                 f"✅ Возрастная граница: аккаунты моложе **{дней} дн.** → **{action}** при входе.\n"
-                f"Изменить действие: `/tagjail age-action`", ephemeral=True)
+                "Изменить действие: `/tagjail age-action`", ephemeral=True)
 
     @tagjail.command(name="age-action", description="Что делать со слишком новыми аккаунтами")
     @app_commands.describe(действие="kick — выгнать, jail — посадить в джейл")

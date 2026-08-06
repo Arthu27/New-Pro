@@ -222,8 +222,8 @@ def smart_call (messages :List [Dict ],task_type :str ,max_tokens :int =2048 ,te
 
         return response ,model_name ,info 
 
-    except Exception as e :
-    # Сохран neudacu
+    except Exception :
+    # Сохраняем неудачу
         selector .record_failure (model_name )
 
         # Probuem yedek model
@@ -254,4 +254,4 @@ def smart_call (messages :List [Dict ],task_type :str ,max_tokens :int =2048 ,te
             return response ,fallback_model ,info 
 
         except Exception as e2 :
-            raise Exception (f"Obe modelleri upali: {model_name}, {fallback_model}")
+            raise Exception (f"Оба модели упали: {model_name}, {fallback_model}") from e2 

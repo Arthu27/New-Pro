@@ -225,7 +225,7 @@ class StaffApplyModal(discord.ui.Modal, title="Заявка в команду"):
             title="Заявка отправлена",
             description=(
                 f"Ваша заявка на роль **{self.role_name}** успешно отправлена.\n"
-                f"Ожидайте рассмотрения администрацией."
+                "Ожидайте рассмотрения администрацией."
             ),
             color=discord.Color.dark_grey(),
             timestamp=datetime.now()
@@ -330,7 +330,6 @@ class StaffApply(commands.Cog):
         ]
         
         file = None
-        banner_path = None
 
         # Сначала используем оригинальную фотографию по URL.
         # Это намеренно имеет приоритет над старым локальным баннером.
@@ -354,7 +353,6 @@ class StaffApply(commands.Cog):
         if not file:
             for p in custom_paths:
                 if os.path.exists(p):
-                    banner_path = p
                     file = discord.File(p, filename="staff_banner.png")
                     break
 

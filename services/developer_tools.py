@@ -349,7 +349,7 @@ class SDKGenerator:
     
     def generate_python_sdk(self, api_base_url: str) -> str:
         """Генерировать Python SDK"""
-        return f'''"""
+        return '''"""
 Aether API Python SDK
 """
 

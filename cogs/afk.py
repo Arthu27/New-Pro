@@ -68,10 +68,10 @@ class AFK (commands .Cog ):
         icon_url =interaction .user .display_avatar .url 
         )
         e .description =(
-        f"```\n  РЕЖИМ AFK АКТИВЕН\n```\n"
+        "```\n  РЕЖИМ AFK АКТИВЕН\n```\n"
         f"> **Причина:** {причина}\n"
         f"> **Начало:** <t:{ts}:R>\n\n"
-        f"*Когда кто-то упомянет тебя — придёт уведомление.*"
+        "*Когда кто-то упомянет тебя — придёт уведомление.*"
         f"{nick_note}"
         )
         icon =_afk_file ()
@@ -170,16 +170,16 @@ class AFK (commands .Cog ):
                 e .description =(
                 f"> **Причина:** {data['reason']}\n"
                 f"> **Длительность:** {dur}\n\n"
-                f"Могу передать это Arthur'у. **Что хотите спросить?**\n"
-                f"-# Напишите ответ — передам, когда проснётся."
+                "Могу передать это Arthur'у. **Что хотите спросить?**\n"
+                "-# Напишите ответ — передам, когда проснётся."
                 )
                 e .set_footer (text ="Сообщение будет передано Arthur'у")
                 icon =_afk_file ()
                 if icon :
                     e .set_thumbnail (url ='attachment://afk_icon.png')
-                    sent =await message .channel .send (embed =e ,file =icon )
+                    await message .channel .send (embed =e ,file =icon )
                 else :
-                    sent =await message .channel .send (embed =e )
+                    await message .channel .send (embed =e )
 
                 # Сохранить упоминание
                 if OWNER_ID not in _pending_mentions :
@@ -217,7 +217,7 @@ class AFK (commands .Cog ):
                     await owner .send (embed =dm_embed )
                     # Сообщить в канал
                     await message .channel .send (
-                    f'📨 Сообщение передано Arthur\'у! Ответит, когда проснётся.',
+                    '📨 Сообщение передано Arthur\'у! Ответит, когда проснётся.',
                     delete_after =10 
                     )
                     # Добавить в ожидающие

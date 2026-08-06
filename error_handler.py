@@ -450,7 +450,7 @@ class ErrorHandler:
             self.queue_alert(
                 "Нестабильное соединение",
                 f"**{recent}** обрывов WebSocket за {int(window // 60)} мин.\n"
-                f"Discord переподключается автоматически, но проверьте сеть/хостинг.",
+                "Discord переподключается автоматически, но проверьте сеть/хостинг.",
             )
 
     # ────────────────────────────────────────────────────────────
@@ -787,7 +787,7 @@ class ErrorHandler:
                     self.queue_alert(
                         "Зависание event-loop",
                         f"Цикл не отвечал **{drift:.1f} сек** — команды и ивенты в это время стояли.\n"
-                        f"Частая причина: тяжёлая синхронная операция (сеть/диск/CPU) в async-коде.",
+                        "Частая причина: тяжёлая синхронная операция (сеть/диск/CPU) в async-коде.",
                     )
 
     # ────────────────────────────────────────────────────────────
@@ -1154,7 +1154,7 @@ class AntiCrashCog(commands.Cog):
             cur = (self.h.config.get('webhook_url') or '').strip()
             state = "🟢 вкл" if self.h.config.get('webhook_enabled') else "🔴 выкл"
             return await ctx.send(f"Webhook: {state} · URL: {'задан' if cur else 'не задан'}\n"
-                                  f"Включить: `!anticrash webhook <url>` · Выключить: `!anticrash webhook off`")
+                                  "Включить: `!anticrash webhook <url>` · Выключить: `!anticrash webhook off`")
         if url.lower() in ('off', 'выкл', '0'):
             self.h.update_config('webhook_enabled', False)
             return await ctx.send("✅ Мгновенный webhook **отключён** (URL сохранён).")

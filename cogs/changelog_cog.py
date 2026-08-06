@@ -109,7 +109,7 @@ class ChangelogCog (commands .Cog ):
             return 
 
             # Добавить запись
-        entry =changelog_manager .add_entry (
+        changelog_manager .add_entry (
         version =version ,
         change_type =change_type_enum ,
         title =title ,
@@ -170,7 +170,7 @@ class ChangelogCog (commands .Cog ):
     @commands .Cog .listener ()
     async def on_ready (self ):
         """Бот готов"""
-        log .info (f" ChangelogCog loaded")
+        log .info (" ChangelogCog loaded")
 
 
 async def setup (bot ):

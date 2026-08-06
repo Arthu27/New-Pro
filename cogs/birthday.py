@@ -68,14 +68,14 @@ class Birthday (commands .Cog ):
                     age_str =f" ({age} лет)"
 
                 embed =discord .Embed (
-                title =f"🎂 День рождения!",
+                title ="🎂 День рождения!",
                 color =0xFF69B4 ,
                 timestamp =now 
                 )
                 embed .description =(
                 f"```ansi\n\u001b[1;35m С ДНЁМ РОЖДЕНИЯ!\u001b[0m\n```\n{_divider()}\n\n"
                 f"🎂 У {member.mention} сегодня день рождения{age_str}!\n\n"
-                f"> Все ждём твоих поздравлений! 💌\n\n"
+                "> Все ждём твоих поздравлений! 💌\n\n"
                 f"{_divider()}"
                 )
                 embed .set_thumbnail (url =member .display_avatar .url )

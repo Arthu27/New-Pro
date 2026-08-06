@@ -373,7 +373,6 @@ rank_messages ,rank_voice ,rank_balance ):
         panel =_rounded_panel (PW ,bh_panel ,radius =16 ,fill =WHITE ,outline =BLACK ,ow =3 )
         img .alpha_composite (panel ,(x0 ,by ))
         dd =ImageDraw .Draw (img )
-        tb =dd .textbbox ((0 ,0 ),title ,font =f_t )
         dd .text ((x0 +22 ,by +16 ),title ,font =f_t ,fill =BLACK )
         dd .line ([(x0 +22 ,by +42 ),(x0 +PW -22 ,by +42 )],fill =GRAY_LINE ,width =2 )
 

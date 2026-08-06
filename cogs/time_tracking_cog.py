@@ -113,7 +113,7 @@ class TimeTrackingCog (commands .Cog ):
     work_minutes :int =25 ,break_minutes :int =5 ):
         """Pomodoro timer запустить"""
         # Pomodoro запустить
-        session =pomodoro_timer .start_session (
+        pomodoro_timer .start_session (
         user_id =interaction .user .id ,
         work_minutes =work_minutes ,
         break_minutes =break_minutes 

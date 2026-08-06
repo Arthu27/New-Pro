@@ -304,7 +304,6 @@ def generate_help_card(category_id: str = None) -> Image.Image:
 
     W, H = sc(LW), sc(LH)
     bg = _load_bg(W, H).convert('RGBA')
-    d = ImageDraw.Draw(bg)
 
     # ── Шапка ──
     def header(title_text, sub_text, icon_key):

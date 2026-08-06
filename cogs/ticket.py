@@ -445,8 +445,8 @@ class TicketView (discord .ui .View ):
             timestamp =datetime .datetime .utcnow ()
             )
             rl_embed .description =(
-            f"## Ограничение на создание тикетов\n"
-            f"\n\n"
+            "## Ограничение на создание тикетов\n"
+            "\n\n"
             f"**Причина:** {rate_check.reason}\n\n"
             )
             if rate_check .wait_seconds >0 :
@@ -557,13 +557,13 @@ class TicketView (discord .ui .View ):
         try :
             dm_e =discord .Embed (color =0x5865F2 ,timestamp =datetime .datetime .utcnow ())
             dm_e .description =(
-            f"## Тикет создан\n"
-            f"### Ваш запрос принят\n"
-            f"\n\n"
+            "## Тикет создан\n"
+            "### Ваш запрос принят\n"
+            "\n\n"
             f"**Сервер:** {guild.name}\n"
             f"**Канал:** {channel.mention}\n"
             f"**Создан:** <t:{ts}:R>\n\n"
-            f"Опишите проблему как можно подробнее для быстрого решения.\n\n"
+            "Опишите проблему как можно подробнее для быстрого решения.\n\n"
             )
             dm_e .set_thumbnail (url =guild .icon .url if guild .icon else None )
             if guild .icon :
@@ -837,13 +837,13 @@ class CloseTicketView (discord .ui .View ):
         if log_ch :
             log_e =discord .Embed (color =0xE74C3C ,timestamp =datetime .datetime .utcnow ())
             log_e .description =(
-            f"## Тикет закрыт\n"
+            "## Тикет закрыт\n"
             f"### {channel.name}\n"
-            f"\n\n"
+            "\n\n"
             f"**Закрыл:** {interaction.user.mention}\n"
             f"**Дата:** <t:{ts}:F>\n"
             f"**Сообщений:** {len(messages)}\n\n"
-            f""
+            ""
             )
             if interaction .guild .icon :
                 log_e .set_footer (text =f"{interaction.guild.name} · Логи",icon_url =interaction .guild .icon .url )
@@ -857,15 +857,15 @@ class CloseTicketView (discord .ui .View ):
                 owner =await interaction .guild .fetch_member (owner_id )
                 dm_e =discord .Embed (color =0xE74C3C ,timestamp =datetime .datetime .utcnow ())
                 dm_e .description =(
-                f"## Тикет закрыт\n"
-                f"### Ваш запрос завершён\n"
-                f"\n\n"
+                "## Тикет закрыт\n"
+                "### Ваш запрос завершён\n"
+                "\n\n"
                 f"**Сервер:** {interaction.guild.name}\n"
                 f"**Закрыл:** {interaction.user.display_name}\n"
                 f"**Закрыт:** <t:{ts}:R>\n"
                 f"**Сообщений:** {len(messages)}\n\n"
-                f"Если у вас возникнут новые вопросы — создайте новый тикет.\n\n"
-                f""
+                "Если у вас возникнут новые вопросы — создайте новый тикет.\n\n"
+                ""
                 )
                 dm_e .set_thumbnail (url =interaction .guild .icon .url if interaction .guild .icon else None )
                 if interaction .guild .icon :
@@ -1225,7 +1225,7 @@ class Ticket (commands .Cog ):
                 title ="🔍 Судебная проверка реальных логов сервера • Сообщения не найдены",
                 description =(
                 f"Я тщательно просканировал последние сообщения в канале {target_ch.mention} для **{accused.display_name}** и **{message.author.display_name}**.\n\n"
-                f"❌ **Результат:** В истории чата этого канала **не обнаружено** сообщений от указанных участников."
+                "❌ **Результат:** В истории чата этого канала **не обнаружено** сообщений от указанных участников."
                 ),
                 color =0xE74C3C ,
                 timestamp =datetime .datetime .utcnow ()
@@ -1457,7 +1457,7 @@ class Ticket (commands .Cog ):
                 if self ._already_punished_for_quote (message .guild .id ,target .id ,p_quote ):
                     await message .channel .send (
                     f"⚖️ **{target.display_name}** для этого нарушения уже было вынесено наказание ранее. "
-                    f"Повторное наказание за одно и то же сообщение не применяется."
+                    "Повторное наказание за одно и то же сообщение не применяется."
                     )
                     return 
             # Проверка накопленных варнов для эскалации в BAN
@@ -1475,15 +1475,15 @@ class Ticket (commands .Cog ):
                     p_reason =f"Превышен лимит предупреждений (3+ варна). Последнее нарушение: {p_reason}"
 
                 p_embed =discord .Embed (
-                title =f"⚖️ Судебная проверка реальных логов сервера • НАРУШЕНИЕ ПОДТВЕРЖДЕНО",
+                title ="⚖️ Судебная проверка реальных логов сервера • НАРУШЕНИЕ ПОДТВЕРЖДЕНО",
                 description =(
                 f"Я лично просканировал историю сообщений сервера в канале {target_ch.mention}.\n\n"
                 f"• **Нарушитель:** {target.mention} (`ID: {target.id}`)\n"
                 f"• **Статус:** `{label_ru}`\n"
-                f"• **Точная цитата из логов:**\n"
+                "• **Точная цитата из логов:**\n"
                 f"> *«{p_quote}»*\n\n"
                 f"**Нарушенное правило:** {p_reason}\n"
-                f"**Вердикт ИИ-судьи:** ВИНОВЕН (Уверенность: 100% по результатам анализа)."
+                "**Вердикт ИИ-судьи:** ВИНОВЕН (Уверенность: 100% по результатам анализа)."
                 ),
                 color =0x2ECC71 ,
                 timestamp =datetime .datetime .utcnow ()
@@ -1500,7 +1500,7 @@ class Ticket (commands .Cog ):
                     value =(
                     f"ИИ рекомендует высшую меру наказания (**{p_type}**) для **{target.display_name}**.\n"
                     f"**Причина:** {p_reason}\n\n"
-                    f"🔒 *Решение передано администрации для одобрения. Использовать кнопки ниже.*"
+                    "🔒 *Решение передано администрации для одобрения. Использовать кнопки ниже.*"
                     ),
                     inline =False 
                     )
@@ -1611,8 +1611,8 @@ class Ticket (commands .Cog ):
                 title ="🔍 Судебная проверка реальных логов сервера • Нарушение НЕ подтверждено",
                 description =(
                 f"Я тщательно просканировал последние сообщения в канале {target_ch.mention} между **{complainant.display_name}** и **{accused.display_name}**.\n\n"
-                f"❌ **Результат:** В реальных логах чата **не обнаружено** нарушений правил сервера от указанных участников.\n\n"
-                f"⚠️ *ИИ-судья принимает решения исключительно на основе фактической истории сообщений сервера. Утверждения без подтверждения в логах не являются основанием для наказания.*"
+                "❌ **Результат:** В реальных логах чата **не обнаружено** нарушений правил сервера от указанных участников.\n\n"
+                "⚠️ *ИИ-судья принимает решения исключительно на основе фактической истории сообщений сервера. Утверждения без подтверждения в логах не являются основанием для наказания.*"
                 ),
                 color =0xE74C3C ,
                 timestamp =datetime .datetime .utcnow ()
@@ -1726,13 +1726,13 @@ class Ticket (commands .Cog ):
                         log .info (f"Failed to save feedback to knowledge base: {_le}")
 
                     await message .channel .send (
-                    f"🤖 **[ОТЗЫВ ИЗУЧЕН И ПРИНЯТ]**\n"
+                    "🤖 **[ОТЗЫВ ИЗУЧЕН И ПРИНЯТ]**\n"
                     f"{user_resp}\n\n"
-                    f"_*Урок сохранен в базу знаний самообучения ИИ._"
+                    "_*Урок сохранен в базу знаний самообучения ИИ._"
                     )
                 else :
                     await message .channel .send (
-                    f"🤖 **[ОТЗЫВ ЗАПИСАН]**\n"
+                    "🤖 **[ОТЗЫВ ЗАПИСАН]**\n"
                     f"{user_resp}"
                     )
 
@@ -1854,7 +1854,7 @@ class Ticket (commands .Cog ):
                 self ._save_ticket_state (guild_id ,channel_id ,state )
 
                 await message .channel .send (
-                f"**Апелляция принята!**\n\n"
+                "**Апелляция принята!**\n\n"
                 f"Последнее наказание: **{last_penalty['reason']}** ({last_penalty['duration']} мин.)\n"
                 f"Причина апелляции: {message.content[:200]}\n\n"
                 "Апелляция повторно рассматривается AI..."
@@ -2327,7 +2327,7 @@ class Ticket (commands .Cog ):
                                 try :
                                     await progress_msg .edit (
                                     content =(
-                                    f"**Сканирование сообщений...**\n\n"
+                                    "**Сканирование сообщений...**\n\n"
                                     f"```[{bar}] {percent}%```\n"
                                     f"Обработано: {total_scanned} сообщений"
                                     )
@@ -2388,8 +2388,8 @@ class Ticket (commands .Cog ):
                         try :
                             await progress_msg .edit (
                             content =(
-                            f"**Сканирование завершено!**\n\n"
-                            f"```[] 100%```\n"
+                            "**Сканирование завершено!**\n\n"
+                            "```[] 100%```\n"
                             f"Найдено: {len(msgs)} релевантных сообщений"
                             )
                             )
@@ -2607,7 +2607,7 @@ class Ticket (commands .Cog ):
         if confidence <50 :
             await channel .send (
             f"⚠️ **Уверенность ИИ ниже порога безопасности ({confidence}% < 50%)**.\n"
-            f"Анализ инцидента завершен, но автоматическое наказание не применяется."
+            "Анализ инцидента завершен, но автоматическое наказание не применяется."
             )
             state ['complaint']={}
             state ['analyzing']=False 
@@ -2643,7 +2643,7 @@ class Ticket (commands .Cog ):
             if self ._already_punished_for_quote (guild_id ,target .id ,quote_key ):
                 await channel .send (
                 f"⚖️ Для **{target.display_name}** по этому нарушению уже было вынесено наказание ранее. "
-                f"Повторное наказание за одно и то же нарушение не применяется."
+                "Повторное наказание за одно и то же нарушение не применяется."
                 )
                 return 
 
@@ -2655,11 +2655,11 @@ class Ticket (commands .Cog ):
                     self ._save_ticket_state (guild_id ,channel_id ,state )
 
                     embed =discord .Embed (
-                    title =f"⚠️ [ТРЕБУЕТСЯ ПОДТВЕРЖДЕНИЕ АДМИНИСТРАЦИИ]",
+                    title ="⚠️ [ТРЕБУЕТСЯ ПОДТВЕРЖДЕНИЕ АДМИНИСТРАЦИИ]",
                     description =(
                     f"ИИ рекомендует высшую меру наказания (**{action_type}**) для **{target.display_name}**.\n"
                     f"**Причина:** {punishment_reason}\n\n"
-                    f"🔒 *Решение передано администрации для одобрения. Использовать кнопки ниже.*"
+                    "🔒 *Решение передано администрации для одобрения. Использовать кнопки ниже.*"
                     ),
                     color =0xE74C3C ,
                     timestamp =datetime .datetime .utcnow ()
@@ -2730,11 +2730,11 @@ class Ticket (commands .Cog ):
         }
 
         e .description =(
-        f"## Передано модератору\n"
-        f"\n\n"
+        "## Передано модератору\n"
+        "\n\n"
         f"**Причина:** {reason_text.get(reason, 'Модераторы получают управление')}\n\n"
-        f"Наша команда поддержки свяжется с вами в ближайшее время.\n\n"
-        f""
+        "Наша команда поддержки свяжется с вами в ближайшее время.\n\n"
+        ""
         )
         if channel .guild .icon :
             e .set_footer (text =f"{channel.guild.name} · Модерация",icon_url =channel .guild .icon .url )
@@ -2791,15 +2791,15 @@ class Ticket (commands .Cog ):
             try :
                 dm_embed =discord .Embed (color =0xE74C3C ,timestamp =datetime .datetime .utcnow ())
                 dm_embed .description =(
-                f"## Наказание: Заключение\n"
-                f"### Вы получили заключение\n"
-                f"\n\n"
+                "## Наказание: Заключение\n"
+                "### Вы получили заключение\n"
+                "\n\n"
                 f"**Сервер:** {guild.name}\n"
                 f"**Длительность:** {duration} минут\n"
                 f"**Причина:** {reason}\n\n"
-                f"По окончании срока роль заключения будет автоматически снята.\n"
-                f"Если хотите оспорить — напишите в тикет.\n\n"
-                f""
+                "По окончании срока роль заключения будет автоматически снята.\n"
+                "Если хотите оспорить — напишите в тикет.\n\n"
+                ""
                 )
                 if guild .icon :
                     dm_embed .set_footer (text =f"{guild.name} · Модерация",icon_url =guild .icon .url )
@@ -2812,15 +2812,15 @@ class Ticket (commands .Cog ):
                 # Канал bildir
             jail_embed =discord .Embed (color =0x2ECC71 ,timestamp =datetime .datetime .utcnow ())
             jail_embed .description =(
-            f"## Заключение применено\n"
-            f"### Наказание назначено\n"
-            f"\n\n"
+            "## Заключение применено\n"
+            "### Наказание назначено\n"
+            "\n\n"
             f"**Пользователь:** {target_user.mention}\n"
             f"**Длительность:** {duration} минут\n"
             f"**Причина:** {reason}\n\n"
-            f"Наша команда модераторов поможет решить проблему.\n"
-            f"Если хотите оспорить — оставьте этот тикет открытым.\n\n"
-            f""
+            "Наша команда модераторов поможет решить проблему.\n"
+            "Если хотите оспорить — оставьте этот тикет открытым.\n\n"
+            ""
             )
             if channel .guild .icon :
                 jail_embed .set_footer (text =f"{channel.guild.name} · Модерация",icon_url =channel .guild .icon .url )
@@ -2886,7 +2886,7 @@ class Ticket (commands .Cog ):
                     # Роль Jail всё ещё существует?
             fresh_role =guild .get_role (jail_role .id )
             if not fresh_role :
-                log .info (f'[TICKET] Unjail: Роль Jail удалена')
+                log .info ('[TICKET] Unjail: Роль Jail удалена')
                 return 
 
             if fresh_role in fresh_member .roles :
@@ -2894,13 +2894,13 @@ class Ticket (commands .Cog ):
                 try :
                     dm_embed =discord .Embed (color =0x2ECC71 ,timestamp =datetime .datetime .utcnow ())
                     dm_embed .description =(
-                    f"## Заключение снято\n"
-                    f"### Наказание завершено\n"
-                    f"\n\n"
+                    "## Заключение снято\n"
+                    "### Наказание завершено\n"
+                    "\n\n"
                     f"**Сервер:** {guild.name}\n\n"
-                    f"Ваш срок заключения истёк. Теперь вы можете пользоваться сервером как обычно.\n"
-                    f"Пожалуйста, продолжайте соблюдать правила сервера.\n\n"
-                    f""
+                    "Ваш срок заключения истёк. Теперь вы можете пользоваться сервером как обычно.\n"
+                    "Пожалуйста, продолжайте соблюдать правила сервера.\n\n"
+                    ""
                     )
                     if guild .icon :
                         dm_embed .set_footer (text =f"{guild.name} · Модерация",icon_url =guild .icon .url )
@@ -2964,7 +2964,7 @@ class Ticket (commands .Cog ):
         """
         import traceback 
         #  ДИАГНОСТИКА: детальный print на каждом шаге 
-        log .info (f'[TICKET-NOTIFY] === ВЫЗОВ УВЕДОМЛЕНИЯ ===')
+        log .info ('[TICKET-NOTIFY] === ВЫЗОВ УВЕДОМЛЕНИЯ ===')
         log .info (f'[TICKET-NOTIFY] guild={guild.id} ({guild.name}) type={penalty_type}')
         log .info (f'[TICKET-NOTIFY] target={target} ({getattr(target, "id", "?")}) reason={reason[:80] if reason else "(пусто)"}')
         log .info (f'[TICKET-NOTIFY] source_channel={getattr(source_channel, "id", "?")} moderator={getattr(moderator, "id", "?")}')
@@ -3040,7 +3040,7 @@ class Ticket (commands .Cog ):
                 admin_ping =admin_role .mention +" "
                 log .info (f'[TICKET-NOTIFY] Admin role для пинга: {admin_role.name} ({admin_role.id})')
             else :
-                log .info (f'[TICKET-NOTIFY] Admin role не найдена (нет роли с правами admin)')
+                log .info ('[TICKET-NOTIFY] Admin role не найдена (нет роли с правами admin)')
         except Exception as e :
             log .info (f'[TICKET-NOTIFY] Ошибка поиска admin role: {e}')
 
@@ -3061,13 +3061,13 @@ class Ticket (commands .Cog ):
                 if guild .owner and not guild .owner .bot :
                     log .info (f'[TICKET-NOTIFY] Fallback: отправляю DM владельцу {guild.owner} ({guild.owner.id})...')
                     await guild .owner .send (content =admin_ping ,embed =embed )
-                    log .info (f'[TICKET-NOTIFY] DM отправлено владельцу')
+                    log .info ('[TICKET-NOTIFY] DM отправлено владельцу')
                 else :
-                    log .info (f'[TICKET-NOTIFY] Нет владельца сервера — уведомление НИКУДА не доставлено!')
+                    log .info ('[TICKET-NOTIFY] Нет владельца сервера — уведомление НИКУДА не доставлено!')
             except Exception as e :
                 log .info (f'[TICKET-NOTIFY] Ошибка отправки DM владельцу: {e}')
-                log .info (f'[TICKET-NOTIFY] УВЕДОМЛЕНИЕ ПОТЕРЯНО!')
-        log .info (f'[TICKET-NOTIFY] === КОНЕЦ ===\n')
+                log .info ('[TICKET-NOTIFY] УВЕДОМЛЕНИЕ ПОТЕРЯНО!')
+        log .info ('[TICKET-NOTIFY] === КОНЕЦ ===\n')
 
     async def _assign_role (self ,guild :discord .Guild ,user_id :int ,role_id :int ):
         """Назначить роль от AI"""

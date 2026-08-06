@@ -495,18 +495,18 @@ class ComplaintAnalyzer :
         }.get (severity ,severity )
 
         analysis_parts =[
-        f"## 📋 Анализ жалобы\n",
-        f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n",
+        "## 📋 Анализ жалобы\n",
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n",
         f"**Вердикт:** {verdict_ru}\n",
         f"**Уверенность:** {confidence}%\n",
         f"**Серьёзность:** {severity_ru}\n\n",
 
-        f"### 📊 Доказательства:\n",
+        "### 📊 Доказательства:\n",
         f"• Токсичных сообщений: **{provided_analysis['toxic_messages']}**\n",
         f"• Угроз: **{provided_analysis['threats']}**\n",
         f"• Взаимная токсичность: **{'⚠️ Да' if provided_analysis['mutual_toxicity'] else '✅ Нет'}**\n\n",
 
-        f"### 🔍 Контекст:\n",
+        "### 🔍 Контекст:\n",
         f"• Была провокация: **{'⚠️ Да' if context_analysis['had_provocation'] else '✅ Нет'}**\n",
         f"• Первый агрессор: **{context_analysis.get('first_aggressor') or 'Не определён'}**\n",
         f"• Сообщений в контексте: **{context_analysis['context_messages_count']}**\n\n",
@@ -588,7 +588,7 @@ class ComplaintAnalyzer :
         f"**🎯 Вердикт:** {verdict_text}\n"
         f"**📈 Уверенность AI:** {confidence}%\n"
         f"**⚠️ Серьёзность:** {severity_text}\n"
-        f"━━━━━━━━━━━━━━━━━━━━"
+        "━━━━━━━━━━━━━━━━━━━━"
         ),
         inline =False ,
         )

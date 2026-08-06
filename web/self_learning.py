@@ -231,7 +231,7 @@ class SelfLearning :
                 if pattern_type .startswith ('avoid_'):
                 # Kalыplar kotorih необходимо izbegat
                     context_parts .append (
-                    f"\n⚠️ IZBEGAY podobnih cevaplarыn (idi ошибки):\n"
+                    "\n⚠️ IZBEGAY podobnih cevaplarыn (idi ошибки):\n"
                     )
                     for p in matching_patterns [:3 ]:# Maksimum 3
                         if p .get ('wrong_response'):
@@ -242,7 +242,7 @@ class SelfLearning :
                 elif pattern_type .startswith ('repeat_'):
                 # Kalыplar kotorie необходимо povtoryat
                     context_parts .append (
-                    f"\n✅ ISPOLZUY podobnie cevaplar (idi uspesni):\n"
+                    "\n✅ ISPOLZUY podobnie cevaplar (idi uspesni):\n"
                     )
                     for p in matching_patterns [:3 ]:# Maksimum 3
                         if p .get ('response'):

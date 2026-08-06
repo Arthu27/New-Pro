@@ -228,7 +228,7 @@ class WelcomeCard(commands.Cog):
         e = discord.Embed(color=GOLD if cfg.get('enabled') else 0x95A5A6,
                           timestamp=datetime.now(timezone.utc))
         e.description = (
-            f"## 🖼 Welcome Card\n"
+            "## 🖼 Welcome Card\n"
             f"Система: **{'🟢 вкл' if cfg.get('enabled') else '🔴 выкл'}**\n"
             f"Карта входа: **{'вкл' if cfg.get('welcome') else 'выкл'}**\n"
             f"Карта прощания: **{'вкл' if cfg.get('goodbye') else 'выкл'}**\n"

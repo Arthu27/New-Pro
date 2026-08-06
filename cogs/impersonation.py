@@ -310,19 +310,19 @@ class AntiFake(commands.Cog):
 
         dm = discord.Embed(color=RED, timestamp=datetime.now(timezone.utc))
         dm.description = (
-            f"## 🛡️ Защита сервера\n"
+            "## 🛡️ Защита сервера\n"
             f"Сервер: **{guild.name}**\n"
-            f"Ваше имя/аватар похожи на имя администрации сервера.\n"
+            "Ваше имя/аватар похожи на имя администрации сервера.\n"
             f"Действие: **{ACTIONS_META.get(done, done)}**\n"
             f"{'Похоже на: `' + str(target_name) + '`' if target_name else ''}\n"
-            f"Смените имя, если вы не администратор."
+            "Смените имя, если вы не администратор."
         )
         dm.set_footer(text=guild.name)
         await self._dm(member, dm)
 
         e = discord.Embed(color=RED, timestamp=datetime.now(timezone.utc))
         e.description = (
-            f"## 🎭 Подделка засечена\n"
+            "## 🎭 Подделка засечена\n"
             f"**{member.display_name}** · `{member.id}`\n\n"
             f"{reason}\n"
             f"Действие: **{ACTIONS_META.get(done, done)}**"
@@ -422,17 +422,17 @@ class AntiFake(commands.Cog):
 
         dm = discord.Embed(color=ORANGE, timestamp=datetime.now(timezone.utc))
         dm.description = (
-            f"## ⚠️ Реклама замаскированными буквами\n"
+            "## ⚠️ Реклама замаскированными буквами\n"
             f"Сервер: **{message.guild.name}**\n"
             f"Ваше сообщение удалено (страйк **{total}/{STRIKE_LIMIT}**){punished}.\n"
-            f"Реклама без разрешения запрещена."
+            "Реклама без разрешения запрещена."
         )
         dm.set_footer(text=message.guild.name)
         await self._dm(member, dm)
 
         e = discord.Embed(color=ORANGE, timestamp=datetime.now(timezone.utc))
         e.description = (
-            f"## 🕵️ Замаскированная реклама\n"
+            "## 🕵️ Замаскированная реклама\n"
             f"**{member.display_name}** · `{member.id}`\n"
             f"Канал: {message.channel.mention}\n\n"
             f"> {(content[:300] or '[вложение]')}\n\n"
@@ -452,7 +452,7 @@ class AntiFake(commands.Cog):
                           timestamp=datetime.now(timezone.utc))
         ch = guild.get_channel(int(cfg.get('log_channel_id', 0) or 0))
         e.description = (
-            f"## 🎭 AntiFake\n"
+            "## 🎭 AntiFake\n"
             f"Система: **{'🟢 вкл' if cfg.get('enabled') else '🔴 выкл'}**\n"
             f"Действие: **{ACTIONS_META.get(cfg.get('action'), cfg.get('action'))}**\n"
             f"Порог похожести: **{int(float(cfg.get('threshold', 0.85)) * 100)}%**\n"

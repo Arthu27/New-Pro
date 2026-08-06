@@ -107,10 +107,10 @@ class AutoCloseService:
             embed = discord.Embed(
                 title="⏰ Тикет закрыт автоматически",
                 description=(
-                    f"Этот тикет был закрыт из-за неактивности.\n\n"
+                    "Этот тикет был закрыт из-за неактивности.\n\n"
                     f"**Последнее сообщение:** {last_message.created_at.strftime('%d.%m.%Y %H:%M')}\n"
                     f"**Неактивен:** более {self.inactive_hours} часов\n\n"
-                    f"Если ваша проблема не решена, создайте новый тикет."
+                    "Если ваша проблема не решена, создайте новый тикет."
                 ),
                 color=0xF39C12,
                 timestamp=datetime.utcnow()
@@ -135,7 +135,7 @@ class AutoCloseService:
                         description=(
                             f"Ваш тикет **{channel.name}** был автоматически закрыт "
                             f"из-за неактивности (более {self.inactive_hours} часов).\n\n"
-                            f"Если проблема не решена, создайте новый тикет."
+                            "Если проблема не решена, создайте новый тикет."
                         ),
                         color=0xF39C12,
                         timestamp=datetime.utcnow()

@@ -86,7 +86,7 @@ async def _ensure_login ():
 
 async def _ask_deepseek_async (prompt :str ,timeout :int =60 )->str :
     """DeepSeek'e soru sor, cevabы вернуть."""
-    global _page ,_logged_in 
+    global _logged_in 
 
     if not DEEPSEEK_EMAIL or not DEEPSEEK_PASSWORD :
         return ''

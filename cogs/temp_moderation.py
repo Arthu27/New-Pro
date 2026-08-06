@@ -480,7 +480,7 @@ class TempModeration(commands.Cog):
             return
         del guild_bans[user_id]
         self._save("_bans", self._bans_file())
-        embed = discord.Embed(title=" Бан снят", description=f"Временный бан снят досрочно", color=0x4ADE80)
+        embed = discord.Embed(title=" Бан снят", description="Временный бан снят досрочно", color=0x4ADE80)
         embed.add_field(name="Модератор", value=ctx.author.mention, inline=True)
         await ctx.send(embed=embed)
 

@@ -394,7 +394,7 @@ class NightSummary(commands.Cog):
         file = discord.File(buf, filename="svodka_preview.png")
         e = discord.Embed(color=GOLD, timestamp=datetime.now(timezone.utc))
         e.description = (
-            f"## 🌙 Сводка за сегодня (предпросмотр)\n"
+            "## 🌙 Сводка за сегодня (предпросмотр)\n"
             f"Варнов **{stats['warns']}** · банов **{stats['bans']}** · киков **{stats['kicks']}** · "
             f"мьютов **{stats['mutes']}**\n"
             f"Tag Jail: **{stats['tagjail']}** · ghost-ping: **{stats['ghost']}** · "

@@ -288,7 +288,7 @@ class MusicCog (commands .Cog ):
     @commands .Cog .listener ()
     async def on_ready (self ):
         """Когда бот готов"""
-        log .info (f" MusicCog loaded")
+        log .info (" MusicCog loaded")
 
 
 async def setup (bot ):

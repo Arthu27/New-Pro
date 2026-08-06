@@ -274,7 +274,7 @@ class warnings(commands.Cog):
         # Ответ модератору
         e = discord.Embed(color=discord.Color.dark_grey(), timestamp=datetime.now(timezone.utc))
         desc = (
-            f"## Предупреждение выдано\n"
+            "## Предупреждение выдано\n"
             f"**{user.display_name}** · `{user.id}`\n\n"
             f"Предупреждение: **#{warn_id}**\n"
             f"Всего: **{total}**\n"
@@ -298,14 +298,14 @@ class warnings(commands.Cog):
 
         if not warns:
             e.description = (
-                f"## Предупреждения\n"
+                "## Предупреждения\n"
                 f"**{user.display_name}** · `{user.id}`\n\n"
-                f"Предупреждений нет.\n\n"
+                "Предупреждений нет.\n\n"
                 f"{DIVIDER}"
             )
         else:
             desc = (
-                f"## Предупреждения\n"
+                "## Предупреждения\n"
                 f"**{user.display_name}** · `{user.id}`\n"
                 f"Всего: **{len(warns)}**\n\n"
             )
@@ -328,7 +328,7 @@ class warnings(commands.Cog):
 
         e = discord.Embed(color=discord.Color.dark_grey(), timestamp=datetime.now(timezone.utc))
         e.description = (
-            f"## Предупреждения очищены\n"
+            "## Предупреждения очищены\n"
             f"**{user.display_name}** · `{user.id}`\n\n"
             f"Удалено: **{count}** предупреждений\n"
             f"Модератор: {interaction.user.mention}\n\n"
@@ -346,9 +346,9 @@ class warnings(commands.Cog):
         if not warns:
             e = discord.Embed(color=discord.Color.dark_grey(), timestamp=datetime.now(timezone.utc))
             e.description = (
-                f"## Снятие предупреждения\n"
+                "## Снятие предупреждения\n"
                 f"**{user.display_name}** · `{user.id}`\n\n"
-                f"У пользователя нет предупреждений.\n\n"
+                "У пользователя нет предупреждений.\n\n"
                 f"{DIVIDER}"
             )
             e.set_footer(text=f"{interaction.guild.name}")
@@ -361,7 +361,7 @@ class warnings(commands.Cog):
 
         e = discord.Embed(color=discord.Color.dark_grey(), timestamp=datetime.now(timezone.utc))
         e.description = (
-            f"## Снятие предупреждения\n"
+            "## Снятие предупреждения\n"
             f"**{user.display_name}** · `{user.id}`\n\n"
             f"Снято: **#{removed.get('id')}** — {removed.get('reason', 'Не указана')}\n"
             f"Осталось: **{total}**\n"
@@ -545,7 +545,7 @@ class PWCategorySelect(discord.ui.Select):
                 f"**Оценка: {score}/100 — {st}**\n\n"
                 f"• Предупреждения: **{len(self.warns)}** (каждое −12)\n"
                 f"• Наказания: **{len(self.cases)}** (мут/кик −18, бан −25)\n\n"
-                f"Шкала:\n• 80–100 — Хорошо\n• 50–79 — Удовлетворительно\n• 25–49 — Плохо\n• 0–24 — Очень плохо"
+                "Шкала:\n• 80–100 — Хорошо\n• 50–79 — Удовлетворительно\n• 25–49 — Плохо\n• 0–24 — Очень плохо"
             )
 
         await interaction.response.edit_message(embed=e, view=PWView(self.cog, self.user, self.warns, self.cases, self.notes))

@@ -50,10 +50,10 @@ def _win_dm_embed(prize: str, guild_name: str, guild_icon_url: str) -> discord.E
     e = discord.Embed(
         title="Поздравляем!",
         description=(
-            f"Вы выиграли в розыгрыше!\n\n"
+            "Вы выиграли в розыгрыше!\n\n"
             f"**Сервер:** {guild_name}\n"
             f"**Приз:** {prize}\n\n"
-            f"Свяжитесь с администрацией для получения приза."
+            "Свяжитесь с администрацией для получения приза."
         ),
         color=discord.Color.dark_grey(),
         timestamp=datetime.now()
@@ -250,7 +250,7 @@ class GiveawayCog(commands.Cog):
                 f"**Приз:** {prize}\n"
                 f"**Победителей:** {winners}\n"
                 f"**Завершение:** {discord.utils.format_dt(ends_at, 'R')}\n\n"
-                f"Нажмите кнопку ниже для участия."
+                "Нажмите кнопку ниже для участия."
             ),
             color=discord.Color.dark_grey(),
             timestamp=datetime.now()

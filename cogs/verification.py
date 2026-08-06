@@ -56,14 +56,12 @@ class Verification (commands .Cog ):
             return 
 
         guild =member .guild 
-        unverified_role =discord .utils .get (guild .roles ,name ="Проверка")
-        verified_role =discord .utils .get (guild .roles ,name ="Подтвердитьndы")
 
-        # Sadece bilgilendirme — otomatik Rol/kick YOK
+        # Только информирование — автоматических ролей/киков нет
         try :
             await member .send (
             f"👋 Добро пожаловать на сервер {guild.name}!\n"
-            f"Если требуется проверка, следуйте инструкциям на сервере."
+            "Если требуется проверка, следуйте инструкциям на сервере."
             )
         except Exception :
             pass 

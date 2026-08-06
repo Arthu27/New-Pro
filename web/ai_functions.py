@@ -327,8 +327,8 @@ FORMAT VIZOVA:
 
             if not merged :
                 return (f"Сообщения от <@{user_id}> не найдены ни в Discord API, ни в логе бота.\n"
-                f"Возможные причины: пользователь ничего не писал, бот ещё не записал "
-                f"его сообщения, или у бота нет прав на чтение истории каналов.")
+                "Возможные причины: пользователь ничего не писал, бот ещё не записал "
+                "его сообщения, или у бота нет прав на чтение истории каналов.")
 
                 # Новый → старый
             merged .sort (key =lambda x :x .get ('timestamp',''),reverse =True )
@@ -371,14 +371,14 @@ FORMAT VIZOVA:
             print (f'[AI-FUNC] search_user_messages CRASH: {err_type}: {err_msg}')
             print (f'[AI-FUNC] Traceback (last 5):\n{tb_short}')
             return (
-            f"⚠️ Ошибка в функции поиска сообщений\n\n"
+            "⚠️ Ошибка в функции поиска сообщений\n\n"
             f"**Тип:** `{err_type}`\n"
             f"**Текст:** {err_msg[:200]}\n\n"
-            f"Возможные причины:\n"
-            f"• Бот не имеет прав на чтение истории каналов\n"
-            f"• Указанный пользователь не найден на сервере\n"
-            f"• Внутренняя ошибка бота (проверьте логи на [AI-FUNC])\n\n"
-            f"Подробности в логах бота: ищите строки `[AI-FUNC]`."
+            "Возможные причины:\n"
+            "• Бот не имеет прав на чтение истории каналов\n"
+            "• Указанный пользователь не найден на сервере\n"
+            "• Внутренняя ошибка бота (проверьте логи на [AI-FUNC])\n\n"
+            "Подробности в логах бота: ищите строки `[AI-FUNC]`."
             )
 
     async def search_rules (self ,guild :discord .Guild ,query :str )->str :
@@ -417,13 +417,12 @@ FORMAT VIZOVA:
             online_members =len ([m for m in guild .members if m .status ==discord .Status .online ])
             text_channels =len (guild .text_channels )
             voice_channels =len (guild .voice_channels )
-            role =len (guild .roles )
-
             return (
-            f"Статистика сервер {guild.name}:\n"
-            f"Участников: {total_members} (onlayn: {online_members})\n"
-            f"Metin каналы: {text_channels}\n"
-            f"Ses каналы: {voice_channels}\n"
+            f"Статистика сервера {guild.name}:\n"
+            f"Участников: {total_members} (в сети: {online_members})\n"
+            f"Текстовых каналов: {text_channels}\n"
+            f"Голосовых каналов: {voice_channels}\n"
+            f"Ролей: {len (guild .roles )}\n"
             f"Ролей: {len(guild.roles)}"
             )
         except Exception as e :

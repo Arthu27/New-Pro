@@ -161,12 +161,12 @@ class WebSocketServer:
                     data = json.loads(message)
                     await self.handle_message(websocket, room_id, data)
                 except json.JSONDecodeError:
-                    print(f'[WebSocket] Некорректное JSON сообщение')
+                    print('[WebSocket] Некорректное JSON сообщение')
                 except Exception as e:
                     print(f'[WebSocket] Ошибка обработки сообщения: {e}')
         
         except websockets.exceptions.ConnectionClosed:
-            print(f'[WebSocket] Соединение закрыто')
+            print('[WebSocket] Соединение закрыто')
         except Exception as e:
             print(f'[WebSocket] Ошибка: {e}')
         finally:
@@ -229,7 +229,7 @@ async def start_websocket_server(host: str = 'localhost', port: int = 8765):
             print(f'[WebSocket] Ошибка запуска: {e}')
             return
     
-    print(f'[WebSocket] Не удалось запустить сервер — все порты заняты')
+    print('[WebSocket] Не удалось запустить сервер — все порты заняты')
 
 
 def start_websocket_thread(host: str = 'localhost', port: int = 8765):
@@ -244,7 +244,7 @@ def start_websocket_thread(host: str = 'localhost', port: int = 8765):
     
     thread = threading.Thread(target=run_server, daemon=True)
     thread.start()
-    print(f'[WebSocket] Сервер запущен в отдельном потоке')
+    print('[WebSocket] Сервер запущен в отдельном потоке')
     return thread
 
 

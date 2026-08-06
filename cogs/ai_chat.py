@@ -178,7 +178,7 @@ def _save_instructions (instructions :dict ):
         with open (INSTRUCTIONS_FILE ,'w',encoding ='utf-8')as f :
             json .dump (instructions ,f ,ensure_ascii =False ,indent =2 )
     except Exception as e :
-        log .info (f'[AI] Instructions сохран Ошибки: {e}')
+        log .info (f'[AI] Ошибка сохранения инструкций: {e}')
 
 def _detect_instruction (message :str ,answer :str )->dict :
     """
@@ -197,9 +197,12 @@ def _detect_instruction (message :str ,answer :str )->dict :
     r'bundan после .{3,50} (dersen|sorarsa)',
     # "X на вопрос Y ответить"
     r'.{3,30} на вопрос .{3,50} (ответить|de|сказать)',
+    # Чисто русские формулировки
+    r'если (?:кто-нибудь |кто-то )?спросит .{3,60}',
+    r'всем (?:говори|отвечай|пиши) .{3,50}',
+    r'на вопрос .{3,50} (?:отвечай|ответь|пиши)',
     ]
 
-    import re 
     for pattern in patterns :
         if re .search (pattern ,m ):
             return {
@@ -221,7 +224,7 @@ def _save_histories (histories :dict ,force :bool =False ):
         with open (HISTORY_FILE ,'w',encoding ='utf-8')as f :
             json .dump (histories ,f ,ensure_ascii =False ,indent =2 )
     except Exception as e :
-        log .info (f'[AI] History сохран Ошибки: {e}')
+        log .info (f'[AI] Ошибка сохранения истории: {e}')
 
 def _save_knowledge_base (knowledge :dict ):
     """Информация базу сохранить"""
@@ -230,7 +233,7 @@ def _save_knowledge_base (knowledge :dict ):
         with open (KNOWLEDGE_FILE ,'w',encoding ='utf-8')as f :
             json .dump (knowledge ,f ,ensure_ascii =False ,indent =2 )
     except Exception as e :
-        log .info (f'[AI] Knowledge base сохран Ошибки: {e}')
+        log .info (f'[AI] Ошибка сохранения базы знаний: {e}')
 
 def _extract_learned_info (question :str ,answer :str )->dict :
     """Вопрос-cevaptan обучаемый infoyi удалить"""
@@ -249,7 +252,6 @@ def _extract_learned_info (question :str ,answer :str )->dict :
         r'кто\s+o\s+(\w+(?:\s+\w+)*)'
         ]
         for pattern in name_patterns :
-            import re 
             match =re .search (pattern ,q )
             if match :
                 name =match .group (1 ).strip ()
@@ -270,7 +272,6 @@ def _extract_learned_info (question :str ,answer :str )->dict :
         r'ne\s+bu\s+(\w+(?:\s+\w+)*)'
         ]
         for pattern in topic_patterns :
-            import re 
             match =re .search (pattern ,q )
             if match :
                 topic =match .group (1 ).strip ()
@@ -846,23 +847,23 @@ class AIChat (commands .Cog ):
                                 geri_hedef =vc 
                                 break 
 
-                    await asyncio .sleep (3 )# 3 секунд badd
-                    # Участник hâlâ ses в канале mы контроль et
+                    await asyncio .sleep (3 )# ждём 3 секунды
+                    # Участник всё ещё в голосовом канале?
                     await member .guild .chunk ()# cache обновить
                     fresh =guild .get_member (target_id )
                     if fresh and fresh .voice :
                         await fresh .move_to (geri_hedef )
-                        msg +=f'\n 3 секунд после **{geri_hedef.name}** в канал geri getirildi.'
+                        msg +=f'\n Через 3 секунды возвращён в канал **{geri_hedef.name}**.'
                     else :
-                        msg +=f'\n До getirilemedi — участник ses из канала ayrыlmыш.'
+                        msg +='\n Не удалось вернуть — участник вышел из голосового канала.'
 
                 results .append (msg )
             except discord .Forbidden :
-                results .append (' Администратор нет (Move Members разрешение gerekli).')
+                results .append (' Нет прав (требуется разрешение «Перемещение участников»).')
             except Exception as e :
                 results .append (f' Ошибка: {e}')
 
-        return '\n'.join (results )if results else ' Участник bu сервер не найдено.'
+        return '\n'.join (results )if results else ' Пользователь не найден на этом сервере.'
 
     def _norm (self ,s :str )->str :
         return (s .lower ()
@@ -1109,7 +1110,7 @@ class AIChat (commands .Cog ):
             _save_tasks (_active_tasks )
             await message .channel .send (
             f' Задача сохранено (#{task["id"]}): *{desc[:100]}*\n'
-            f'`задача показать` с listeleyebilirsin.'
+            '`задача показать` с listeleyebilirsin.'
             )
             return True 
 
@@ -1337,7 +1338,7 @@ class AIChat (commands .Cog ):
                 color =0xf59e0b ,
                 description =f'**Спросил:** {user_name} (`{message.author.id}`)\n'
                 f'**Вопрос:** {content}\n\n'
-                f'**Ответlamak для bu messagea reply at.**'
+                '**Ответlamak для bu messagea reply at.**'
                 )
                 embed .set_footer (text =f'Сервер: {message.guild.name if message.guild else "DM"}')
                 dm_msg =await owner .send (embed =embed )

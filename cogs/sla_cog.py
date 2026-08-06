@@ -183,7 +183,7 @@ class SLACog (commands .Cog ):
     @commands .Cog .listener ()
     async def on_ready (self ):
         """Bot hazыr olduгunda"""
-        log .info (f" SLACog loaded")
+        log .info (" SLACog loaded")
 
 
 async def setup (bot ):

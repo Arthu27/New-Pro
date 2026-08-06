@@ -170,7 +170,7 @@ class ModTools(commands.Cog):
             try:
                 dm = discord.Embed(color=discord.Color.dark_grey(), timestamp=datetime.now(timezone.utc))
                 dm.description = (
-                    f"## Бан\n"
+                    "## Бан\n"
                     f"Сервер: **{inter.guild.name}**\n"
                     f"Модератор: **{inter.user.display_name}**\n"
                     f"Причина: {reason_txt}"
@@ -203,7 +203,7 @@ class ModTools(commands.Cog):
 
             e = discord.Embed(color=0xE74C3C, timestamp=datetime.now(timezone.utc))
             e.description = (
-                f"## Бан выдан (ПКМ)\n"
+                "## Бан выдан (ПКМ)\n"
                 f"**{member.display_name}** · `{member.id}`\n\n"
                 f"Причина: {reason_txt}\n"
                 f"Модератор: {inter.user.mention}\n"

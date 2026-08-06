@@ -76,7 +76,7 @@ class Webhooks (commands .Cog ):
                     content =message ,
                     username =kullanici_adi or wh_data ['name']
                     )
-            except Exception as e :
+            except Exception :
             # Если aiohttp нет — попробовать штатным методом discord.py
                 try :
                     channel =interaction .guild .get_channel (int (wh_data ['channel_id']))

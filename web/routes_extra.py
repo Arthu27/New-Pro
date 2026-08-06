@@ -79,7 +79,6 @@ def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
     }
     action_type =_aliases .get (action_type ,action_type )
     uid =str (action_data .get ('user_id',''))
-    gid =str (guild_id )
     guild =bot .get_guild (int (guild_id ))if bot else None 
 
     try :
@@ -1242,7 +1241,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                 _fetch_channel_msgs_sync (bot ,channel_mentions ),bot .loop 
                 ).result (timeout =8 )
                 if ch_lines :
-                    channel_messages_block =f"\n=== КАНАЛ СООБЩЕНИЯ ===\n"+'\n'.join (ch_lines [:30 ])
+                    channel_messages_block ="\n=== КАНАЛ СООБЩЕНИЯ ===\n"+'\n'.join (ch_lines [:30 ])
             except :pass 
         recent_logs =[]
         cache_file_logs ='data/discord_audit_cache.json'
@@ -1415,10 +1414,10 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
             )
 
         system =(
-        f"Ты Aether — ИИ-ассистент Discord-serverа Aether и веб-панели.\n"
+        "Ты Aether — ИИ-ассистент Discord-serverа Aether и веб-панели.\n"
         f"Пользователь: {session.get('username')}, Роль: {user_role}\n"
         f"Время: {now.strftime('%H:%M')}, Дата: {now.strftime('%d %B %Y, %A')}\n\n"
-        f"=== СОСТОЯНИЕ СЕРВЕРА ===\n"
+        "=== СОСТОЯНИЕ СЕРВЕРА ===\n"
         f"{chr(10).join(guild_data) if guild_data else 'Бот не в сети'}\n\n"
         f"=== СТАТИСТИКА МОДЕРАЦИИ ===\n{mod_stats}\n\n"
         f"{f'=== СОСТОЯНИЕ ЗДОРОВЬЯ ==={chr(10)}{health_info}{chr(10)}{chr(10)}' if health_info else ''}"
@@ -1559,7 +1558,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                             # Сохраняем в func_results_text с type + repr
                             func_results_text +=(
                             f"\n--- РЕЗУЛЬТАТ {fc} ---\n"
-                            f"⚠️ Ошибка в функции поиска\n\n"
+                            "⚠️ Ошибка в функции поиска\n\n"
                             f"**Тип:** `{err_type}`\n"
                             f"**repr:** `{err_repr}`\n"
                             f"**str:** {err_str[:200]}\n\n"
@@ -1583,21 +1582,21 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                 _gid_check =str (session .get ('selected_guild')or MAIN_GUILD_ID or '0')
                 _log_path =f'data/message_log_{_gid_check}.json'
                 if os .path .exists (_log_path ):
-                    _log_status =f"существует, но функция поиска сейчас недоступна (бот offline?)"
+                    _log_status ="существует, но функция поиска сейчас недоступна (бот offline?)"
             except Exception :
                 pass 
             answer =_re .sub (r'\[FUNC:[^\]]+\]','',answer ).strip ()
             answer =(
             f"🔍 Поиск сообщений {_tgt_str}:\n\n"
-            f"В данный момент функция поиска сообщений через Discord API недоступна "
-            f"(бот возможно offline или нет связи с Discord).\n\n"
+            "В данный момент функция поиска сообщений через Discord API недоступна "
+            "(бот возможно offline или нет связи с Discord).\n\n"
             f"**Статус лога:** {_log_status}\n\n"
-            f"**Что можно сделать:**\n"
-            f"• Если бот только что перезапускался — подождите 1-2 минуты и попробуйте снова.\n"
-            f"• Проверьте что бот онлайн и имеет права на чтение истории каналов.\n"
-            f"• Используйте Discord-команду `/history @пользователь` для просмотра модерационной истории.\n\n"
-            f"Я не буду выдумывать содержимое сообщений — лучше честно сказать, что поиск "
-            f"сейчас недоступен."
+            "**Что можно сделать:**\n"
+            "• Если бот только что перезапускался — подождите 1-2 минуты и попробуйте снова.\n"
+            "• Проверьте что бот онлайн и имеет права на чтение истории каналов.\n"
+            "• Используйте Discord-команду `/history @пользователь` для просмотра модерационной истории.\n\n"
+            "Я не буду выдумывать содержимое сообщений — лучше честно сказать, что поиск "
+            "сейчас недоступен."
             )
         elif func_results_text :
         # Вырежем [FUNC:...] маркеры из ответа
@@ -1639,32 +1638,32 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                 # Пустая ошибка (e без текста) — даём детальный диагноз
                     answer =(
                     f"🔍 Поиск сообщений {_tuid_str}:\n\n"
-                    f"⚠️ **Функция поиска упала без описания ошибки.**\n\n"
-                    f"Возможные причины:\n"
-                    f"• Бот offline или перезапускается\n"
-                    f"• Бот не имеет прав на чтение истории каналов\n"
-                    f"• Внутренняя ошибка в `search_user_messages`\n\n"
-                    f"Проверьте:\n"
-                    f"• Статус бота в Discord (Online?)\n"
-                    f"• Логи бота — ищите строки `[AI-FUNC] search_user_messages CRASH`\n"
-                    f"• Права бота: VIEW_CHANNEL + READ_MESSAGE_HISTORY\n\n"
-                    f"— Я не буду выдумывать содержимое сообщений."
+                    "⚠️ **Функция поиска упала без описания ошибки.**\n\n"
+                    "Возможные причины:\n"
+                    "• Бот offline или перезапускается\n"
+                    "• Бот не имеет прав на чтение истории каналов\n"
+                    "• Внутренняя ошибка в `search_user_messages`\n\n"
+                    "Проверьте:\n"
+                    "• Статус бота в Discord (Online?)\n"
+                    "• Логи бота — ищите строки `[AI-FUNC] search_user_messages CRASH`\n"
+                    "• Права бота: VIEW_CHANNEL + READ_MESSAGE_HISTORY\n\n"
+                    "— Я не буду выдумывать содержимое сообщений."
                     )
                 elif is_real_error :
                 # Реальная ошибка с описанием — покажем как есть + предупреждение
                     answer =(
                     f"🔍 Поиск сообщений {_tuid_str}:\n\n"
                     f"{clean_result}\n\n"
-                    f"— Это **диагностическое сообщение** от функции поиска, не результат. "
-                    f"Поиск сейчас не работает. Подробности в логах бота (`[AI-FUNC]`)."
+                    "— Это **диагностическое сообщение** от функции поиска, не результат. "
+                    "Поиск сейчас не работает. Подробности в логах бота (`[AI-FUNC]`)."
                     )
                 elif is_negative :
                 # Реальный «пустой» результат («не найдены», «0 записей»)
                     answer =(
                     f"🔍 Поиск сообщений {_tuid_str}:\n\n"
                     f"{clean_result}\n\n"
-                    f"— Это реальные данные. Я не буду перефразировать или дополнять их, "
-                    f"чтобы не исказить информацию."
+                    "— Это реальные данные. Я не буду перефразировать или дополнять их, "
+                    "чтобы не исказить информацию."
                     )
                 else :
                 # Положительный результат (например, "Найдено 3 сообщения...")
@@ -1672,8 +1671,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                     answer =(
                     f"🔍 Результат поиска сообщений {_tuid_str}:\n\n"
                     f"{clean_result}\n\n"
-                    f"— Данные из Discord API / лога бота. Если нужно искать в конкретном "
-                    f"канале — уточни имя (например, «покажи сообщения mrxway в #teyit-chat»)."
+                    "— Данные из Discord API / лога бота. Если нужно искать в конкретном "
+                    "канале — уточни имя (например, «покажи сообщения mrxway в #teyit-chat»)."
                     )
             else :
             # Для ДРУГИХ функций (не search_user_messages) — попросим LLM
@@ -1818,7 +1817,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                         if m and m .voice :
                             _run_async (m .move_to (None ))
                             return f'✅ {m.display_name} sesten atыldы'
-                        return f'❌ Участник seste не или не найдено'
+                        return '❌ Участник seste не или не найдено'
                     elif tip =='SESE_TAS'and len (parts )>2 :
                         m =resolve_member (parts [1 ])
                         ch =discord .utils .find (lambda c :parts [2 ].lower ()in c .name .lower (),guild .voice_channels )
@@ -2244,7 +2243,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                         else :
                             asyncio .run_coroutine_threadsafe (bot .load_extension (ext ),bot .loop ).result (timeout =10 )
                         reloaded .append (cog_name )
-                    except Exception as e :
+                    except Exception :
                         pass 
                 cog .cog_hash_cache [cog_name ]=h 
         return jsonify ({'reloaded':reloaded })
@@ -2628,7 +2627,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     @role_required ('admin')
     def api_duty_data (guild_id ):
         duty_f ='data/duty_log.json'
-        pts_f =f'data/duty_points.json'
+        pts_f ='data/duty_points.json'
         duty ={}
         pts ={}
         if os .path .exists (duty_f ):
@@ -2899,7 +2898,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
             )
             embed .description =(
             f"**🏆 Награда:** `{prize}`\n\n"
-            f"Katыlmak для **🎉 Katыl** butonuna bas!\n"
+            "Katыlmak для **🎉 Katыl** butonuna bas!\n"
             f"Giveaway <t:{int(ends_at.timestamp())}:R> sona eriyor."
             )
             embed .add_field (name ="👥 Katыlыmcы",value =f"0/{winners}",inline =True )
@@ -3226,7 +3225,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         import web .app as _app ;bot =_app .bot_instance 
         import discord as _discord 
         if not bot :
-            print (f'[WEB][WARN] /channels: bot is None')
+            print ('[WEB][WARN] /channels: bot is None')
             return jsonify ({'error':'Bot offline','channels':[]})
 
         guild =bot .get_guild (int (guild_id ))
@@ -3705,7 +3704,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
             return str (user )
 
         try :
-            username =_asyncio .run_coroutine_threadsafe (do (),bot .loop ).result (timeout =10 )
+            _asyncio .run_coroutine_threadsafe (do (),bot .loop ).result (timeout =10 )
             # Loгa сохранить
             log =_load_dm_log ()
             if user_id not in log :log [user_id ]=[]
@@ -4031,13 +4030,13 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                 title ='🎉 ✨ HARIKA BИR РОЗЫГРЫШ BAШLADI! ✨ 🎉',
                 description =(
                 f"\n🏆 **НАГРАДА:** `{data['prize']}`\n"
-                f"\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                f"🎟️ **Katыlmak Для:** aшaгыdaki 🎉 **`Katыl`** Butonuna Клик\n"
-                f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                "\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                "🎟️ **Katыlmak Для:** aшaгыdaki 🎉 **`Katыl`** Butonuna Клик\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
                 f"\n⏳ **Bitiш Время:** <t:{end_ts}:R>\n"
                 f"📅 **Tam Время:** <t:{end_ts}:f>\n"
-                f"\n✅ Katыlmak OKen **ЮCRETSИZ** ve **ОТКРЫТ**!\n"
-                f"🍀 Шanslы ol ve **KAZAN**! 🍀\n"
+                "\n✅ Katыlmak OKen **ЮCRETSИZ** ve **ОТКРЫТ**!\n"
+                "🍀 Шanslы ol ve **KAZAN**! 🍀\n"
                 ),
                 color =0xFFD700 
                 )
@@ -4559,8 +4558,6 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     @app .route ('/api/guild/<guild_id>/health')
     @login_required 
     def api_guild_health (guild_id ):
-        import web .app as _app ;bot =_app .bot_instance 
-
         ban_count =0 
         kick_count =0 
         warn_count =0 
@@ -5258,22 +5255,22 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
             # 8. Рекомендация
         if result ['config_target_channel']:
             result ['recommendation']=(
-            f'✅ Конфиг установлен. Уведомления должны идти в канал '
+            '✅ Конфиг установлен. Уведомления должны идти в канал '
             f'#{result["config_target_channel_name"]} ({result["config_target_channel"]}). '
-            f'Если уведомлений нет — проверь логи бота (ищи "[TICKET-NOTIFY]").'
+            'Если уведомлений нет — проверь логи бота (ищи "[TICKET-NOTIFY]").'
             )
         elif result ['fallback_channels_found']:
             ch =result ['fallback_channels_found'][0 ]
             result ['recommendation']=(
             f'⚠️ Конфиг пустой, но найден fallback-канал #{ch["name"]} ({ch["id"]}). '
-            f'Уведомления должны идти туда.'
+            'Уведомления должны идти туда.'
             )
         elif result ['guild_owner_can_dm']and not result ['guild_owner_can_dm'].get ('bot'):
             result ['recommendation']=(
-            f'⚠️ Ни конфиг, ни fallback каналы не найдены. Уведомления пойдут в DM '
+            '⚠️ Ни конфиг, ни fallback каналы не найдены. Уведомления пойдут в DM '
             f'владельцу {result["guild_owner_can_dm"]["name"]}. '
-            f'Но лучше создать канал "admin-log" или "mod-log" ИЛИ установить '
-            f'notify_channel_id в настройках выше.'
+            'Но лучше создать канал "admin-log" или "mod-log" ИЛИ установить '
+            'notify_channel_id в настройках выше.'
             )
         else :
             result ['recommendation']=(

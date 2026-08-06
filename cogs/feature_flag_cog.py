@@ -186,18 +186,18 @@ class FeatureFlagCog (commands .Cog ):
         await interaction .response .send_message (embed =embed )
 
     @app_commands .command (name ='flag-create',description ='Создать feature flag')
-    @app_commands .describe (flag_key ='Flag key',name ='Flag adы')
+    @app_commands .describe (flag_key ='Ключ флага',name ='Название флага')
     @app_commands .checks .has_permissions (administrator =True )
     async def flag_create (self ,interaction :discord .Interaction ,
     flag_key :str ,name :str ):
         """Создать feature flag"""
         # Flag oluшtur
-        flag =feature_flag_manager .create_flag (flag_key ,name )
+        feature_flag_manager .create_flag (flag_key ,name )
 
         # Embed oluшtur
         embed =discord .Embed (
         title ="✅ Feature flag создан",
-        description =f"**Key:** {flag_key}\n**Ad:** {name}",
+        description =f"**Key:** {flag_key}\n**Название:** {name}",
         color =discord .Color .green (),
         timestamp =datetime .now ()
         )
@@ -207,7 +207,7 @@ class FeatureFlagCog (commands .Cog ):
     @commands .Cog .listener ()
     async def on_ready (self ):
         """Бот готов"""
-        log .info (f" FeatureFlagCog loaded")
+        log .info (" FeatureFlagCog loaded")
 
 
 async def setup (bot ):

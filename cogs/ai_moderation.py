@@ -381,13 +381,13 @@ class AIModeration (commands .Cog ):
         if toggle is None :
             status =" ВКЛ"if cfg .get ("enabled")else " ВЫКЛ"
             embed =discord .Embed (title =" AI Модерация",description =f"**Статус:** {status}\n\n"
-            f"**Настройки:**\n"
+            "**Настройки:**\n"
             f"• Языки: {', '.join(cfg.get('languages', []))}\n"
             f"• Чувствительность: {cfg.get('sensitivity', 0.7):.0%}\n"
             f"• Эскалация: {'' if cfg['escalation'].get('enabled') else ''}\n"
             f"• Авто-действия: mild={cfg['auto_actions'].get('mild')}, moderate={cfg['auto_actions'].get('moderate')}, severe={cfg['auto_actions'].get('severe')}\n"
             f"• Лог-канал: {'<#' + str(cfg.get('log_channel_id', '')) + '>' if cfg.get('log_channel_id') else 'не задан'}\n\n"
-            f"**Команды:**\n`!aimod on/off` — вкл/выкл\n`!aimod sensitivity <0-1>` — точность\n`!aimod languages ru,tr,en` — языки\n`!aimod escalate on/off` — эскалация\n`!aimod logchannel #channel` — лог-канал\n`!aimod whitelist @user` — добавить в исключения\n`!aimod test <text>` — протестировать\n`!aimod stats` — статистика",color =0xFFD700 )
+            "**Команды:**\n`!aimod on/off` — вкл/выкл\n`!aimod sensitivity <0-1>` — точность\n`!aimod languages ru,tr,en` — языки\n`!aimod escalate on/off` — эскалация\n`!aimod logchannel #channel` — лог-канал\n`!aimod whitelist @user` — добавить в исключения\n`!aimod test <text>` — протестировать\n`!aimod stats` — статистика",color =0xFFD700 )
             await ctx .send (embed =embed )
             return 
         if toggle in ("on","вкл","enable","true","1"):

@@ -220,7 +220,7 @@ class AntiRaid(commands.Cog):
                     description=(
                         f"За последние {window} секунд присоединилось **{count}** человек "
                         f"(порог: {threshold}). **Авто-действия отключены** — "
-                        f"вы можете вмешаться через страницу `/antiraid` в панели."
+                        "вы можете вмешаться через страницу `/antiraid` в панели."
                     ),
                     fields=[
                         ("Порог", f"{count}/{threshold} чел / {window}с"),

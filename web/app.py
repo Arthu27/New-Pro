@@ -222,10 +222,10 @@ ROLES ={
 'owner':3 
 }
 
-# Panel sahibi kimliği — sabit "123" yerine:
-#  1) data/panel_credentials.json (panelden değiştirilmiş, kalıcı) ← öncelikli
+# Учётные данные владельца панели — приоритет:
+#  1) data/panel_credentials.json (сменённый через панель, постоянный)
 #  2) .env: PANEL_USER / PANEL_PASSWORD
-#  3) Güvensiz varsayılan "123" (sadece uyarıyla)
+#  3) Автогенерация надёжного случайного пароля (раньше был небезопасный "123")
 _OWNER_CRED_PATH ='data/panel_credentials.json'
 
 def _hash_pw (pw ):
@@ -242,9 +242,31 @@ def _load_owner_credentials ():
     env_pw =(os .environ .get ('PANEL_PASSWORD','')or '').strip ()
     if env_pw :
         return user ,_hash_pw (env_pw ),False 
-    print ('[БЕЗОПАСНОСТЬ] PANEL_PASSWORD не задан — используется небезопасный пароль по умолчанию "123"! '
-          'Добавьте PANEL_PASSWORD в ваш .env файл.')
-    return user ,_hash_pw ('123'),True 
+    # Ничего не задано — генерируем надёжный случайный пароль и сохраняем его
+    # (раньше здесь был небезопасный пароль по умолчанию "123").
+    import secrets as _secrets 
+    gen =_secrets .token_urlsafe (12 )
+    pw_hash =_hash_pw (gen )
+    try :
+        _store .atomic_write_json (_OWNER_CRED_PATH ,{'user':user ,'password_hash':pw_hash })
+        _store .invalidate_path (_OWNER_CRED_PATH )
+        os .makedirs ('data',exist_ok =True )
+        with open ('data/panel_credentials.txt','w',encoding ='utf-8')as f :
+            f .write (f'Aether Panel — первый вход\nПользователь: {user}\nПароль: {gen}\n'
+                      'После входа смените пароль в панели или задайте PANEL_PASSWORD в .env\n')
+        try :
+            os .chmod ('data/panel_credentials.txt',0o600 )
+        except OSError :
+            pass 
+    except Exception as _e :
+        print (f'[БЕЗОПАСНОСТЬ] Не удалось сохранить сгенерированный пароль: {_e}')
+    print ('='*70 )
+    print ('[БЕЗОПАСНОСТЬ] PANEL_PASSWORD не задан — сгенерирован надёжный пароль:')
+    print (f'[БЕЗОПАСНОСТЬ]   Пользователь: {user}')
+    print (f'[БЕЗОПАСНОСТЬ]   Пароль: {gen}')
+    print ('[БЕЗОПАСНОСТЬ] Он также записан в data/panel_credentials.txt')
+    print ('='*70 )
+    return user ,pw_hash ,False 
 
 _owner_user ,_owner_pw_hash ,_owner_using_default_pw =_load_owner_credentials ()
 
@@ -1096,7 +1118,6 @@ def api_guild_members (guild_id ):
 @login_required 
 @role_required ('mod')
 def api_logs ():
-    audit_file ='data/audit_log.json'
     mod_file ='data/mod_data.json'
     all_events =[]
     filter_guild =request .args .get ('guild_id','')
@@ -1539,7 +1560,7 @@ def api_execute_command ():
                 from cogs .embed_utils import _divider 
                 e =discord .Embed (title =" ПОДДЕРЖКА СИСТЕМА",color =0x5865F2 )
                 e .description =(
-                f"```ansi\n\u001b[1;34m Aether ПОДДЕРЖКА СИСТЕМА \u001b[0m\n```\n"
+                "```ansi\n\u001b[1;34m Aether ПОДДЕРЖКА СИСТЕМА \u001b[0m\n```\n"
                 f"{_divider()}\n\n"
                 "Bir sorunla mы приветствие? Клик butona aшaгыda!\n\n"
                 f"{_divider()}"
@@ -2234,7 +2255,7 @@ def api_discord_check ():
             await u .send (embed =embed )
         asyncio .run_coroutine_threadsafe (send_pin (),bot_instance .loop ).result (timeout =10 )
         tests .append ({'name':'Отправка PIN-кода','status':'ok','detail':'Отправлено в ЛС'})
-    except Exception as e :
+    except Exception :
         tests .append ({'name':'Отправка PIN-кода','status':'fail','detail':'DM failed'})
         return jsonify ({'success':False ,'tests':tests ,'error':'Не удалось отправить PIN-код: личные сообщения закрыты или бот заблокирован.'})
     return jsonify ({'success':True ,'discord_id':discord_id ,'display_name':member_info ['display_name'],'avatar':member_info ['avatar'],'tests':tests })
@@ -2581,8 +2602,8 @@ def api_forgot_password ():
         user =await bot_instance .fetch_user (int (discord_id ))
         await user .send (
         f" **Parola Sыfыrlama Kodun:** `{code}`\n"
-        f"Bu kod 5 minutes geчerlidir. Panelde bu kodu girerek parolani sыfыrlayabilirsin.\n"
-        f"Если bu желание sen yapmadыysan bu сообщение игнорировать."
+        "Bu kod 5 minutes geчerlidir. Panelde bu kodu girerek parolani sыfыrlayabilirsin.\n"
+        "Если bu желание sen yapmadыysan bu сообщение игнорировать."
         )
     try :
         asyncio .run_coroutine_threadsafe (send_dm (),bot_instance .loop ).result (timeout =10 )

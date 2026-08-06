@@ -201,11 +201,11 @@ async def _build_meeting_report (guild :discord .Guild ,since :datetime .datetim
     icon_url =guild .icon .url if guild .icon else None 
     )
     cover .description =(
-    f'```ansi\n'
-    f'\u001b[1;34m\u001b[0m\n'
-    f'\u001b[1;34m      СОБРАНИЕ PERFORMANS RAPORU  \u001b[0m\n'
-    f'\u001b[1;34m\u001b[0m\n'
-    f'```\n'
+    '```ansi\n'
+    '\u001b[1;34m\u001b[0m\n'
+    '\u001b[1;34m      СОБРАНИЕ PERFORMANS RAPORU  \u001b[0m\n'
+    '\u001b[1;34m\u001b[0m\n'
+    '```\n'
     f'>  <t:{ts_since}:F> → <t:{ts_now}:F>\n'
     f'>  Всего участников: **{guild.member_count}**\n'
     f'>  Активен Пользователь: **{len(msg_counts)}**'
@@ -305,8 +305,8 @@ async def _build_meeting_report (guild :discord .Guild ,since :datetime .datetim
         close .set_thumbnail (url =guild .icon .url )
     close .description =(
     f'> Период отчёта: <t:{ts_since}:D> → <t:{ts_now}:D>\n'
-    f'> До следующего собрания данные продолжат накапливаться.\n\n'
-    f'-# Aether  ·  Система собраний'
+    '> До следующего собрания данные продолжат накапливаться.\n\n'
+    '-# Aether  ·  Система собраний'
     )
     close .set_footer (text =f'{guild.name}',icon_url =guild .icon .url if guild .icon else None )
     embeds .append (close )
@@ -359,8 +359,8 @@ class MeetingStartModal (discord .ui .Modal ,title ='Собрание Запус
         embed =_guild_embed_base (interaction .guild ,'📢 Собрание началось',0x57F287 )
         embed .description =(
         f'> Начало собрания: <t:{ts}:F>\n'
-        f'> Сообщения и голосовая активность считаются с этого момента.\n\n'
-        f'Когда собрание закончится, нажмите кнопку **✅ Завершить собрание**.'
+        '> Сообщения и голосовая активность считаются с этого момента.\n\n'
+        'Когда собрание закончится, нажмите кнопку **✅ Завершить собрание**.'
         )
         await interaction .response .send_message (embed =embed )
 
@@ -497,8 +497,8 @@ class MeetingView (discord .ui .View ):
             if r :
                 role_list .append (f'• {r.name}')
         await interaction .response .send_message (
-        f'**Текущий роли:**\n'+'\n'.join (role_list )+
-        f'\n\nУбрать: `!sobranie-rol-remove @Роль`',
+        '**Текущий роли:**\n'+'\n'.join (role_list )+
+        '\n\nУбрать: `!sobranie-rol-remove @Роль`',
         ephemeral =True 
         )
 
@@ -536,10 +536,10 @@ class Meeting (commands .Cog ):
 
         embed =_guild_embed_base (ctx .guild ,'🎛️ Панель управления собранием',0x5865F2 )
         embed .description =(
-        f'> С этой панели можно управлять собранием.\n\n'
-        f'**▶️ Запустить собрание** — начать новое собрание, счётчики запускаются\n'
-        f'**✅ Завершить собрание** — закрыть собрание и отправить отчёт\n'
-        f'**📊 Последний отчёт** — показать данные с последнего собрания'
+        '> С этой панели можно управлять собранием.\n\n'
+        '**▶️ Запустить собрание** — начать новое собрание, счётчики запускаются\n'
+        '**✅ Завершить собрание** — закрыть собрание и отправить отчёт\n'
+        '**📊 Последний отчёт** — показать данные с последнего собрания'
         )
 
         is_active =cfg .get ('active',False )

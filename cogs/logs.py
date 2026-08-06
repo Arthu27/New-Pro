@@ -208,7 +208,7 @@ class Logs (commands .Cog ):
                     await existing .edit (category =existing_cat )
                 already .append (ch_name )
             else :
-                ch =await guild .create_text_channel (
+                await guild .create_text_channel (
                 ch_name ,
                 category =existing_cat ,
                 reason ="Aether: создание канала логов",
@@ -309,15 +309,15 @@ class Logs (commands .Cog ):
 
         e =discord .Embed (color =0xC8922A ,timestamp =datetime .datetime .utcnow ())
         e .description =(
-        f"## Добро пожаловать добро пожаловать geldiniz!\n"
+        "## Добро пожаловать добро пожаловать geldiniz!\n"
         f"### {member.mention} prisoedinilsya e на сервер\n"
-        f"\n\n"
+        "\n\n"
         f"**Пользователь** — {member.display_name}\n"
         f"**ID** — `{member.id}`\n"
         f"**Hesap** — {age_text}\n"
         f"**Участник** — {member_count}-y на на сервере\n"
         f"**Prisoedinilsya** — <t:{join_ts}:R>\n\n"
-        f""
+        ""
         )
         e .set_thumbnail (url =member .display_avatar .url )
 
@@ -388,15 +388,15 @@ class Logs (commands .Cog ):
 
         e =discord .Embed (color =0xE74C3C ,timestamp =datetime .datetime .utcnow ())
         e .description =(
-        f"🚪 Участник вышел\n"
+        "🚪 Участник вышел\n"
         f"### {member.display_name} покинул сервер\n"
-        f"\n\n"
+        "\n\n"
         f"**Пользователь** — {member.display_name}\n"
         f"**ID** — `{member.id}`\n"
         f"**Bil на на сервере** — {joined_ago}\n"
         f"**Роли** — {roles_str[:200]}\n"
         f"**Участников** — {member_count}\n\n"
-        f""
+        ""
         )
         e .set_thumbnail (url =member .display_avatar .url )
 
@@ -505,7 +505,7 @@ class Logs (commands .Cog ):
             if ch :
                 e =discord .Embed (color =0x3498DB ,timestamp =datetime .datetime .utcnow ())
                 e .description =(
-                f"## Псевдоним изменён\n"
+                "## Псевдоним изменён\n"
                 f"**{before.display_name}** · `{before.id}`\n\n"
                 f"Было: `{before.nick or before.name}`\n"
                 f"Стало: `{after.nick or after.name}`"
@@ -519,7 +519,6 @@ class Logs (commands .Cog ):
     async def on_message (self ,message ):
         if message .author .bot or not message .guild :
             return 
-        content =message .content [:500 ]if message .content else '[Vlojenie/Embed]'
         msg_data ={
         'content':message .content or '',
         'author_id':message .author .id ,
@@ -585,7 +584,7 @@ class Logs (commands .Cog ):
             return 
         e =discord .Embed (color =0xE74C3C ,timestamp =datetime .datetime .utcnow ())
         e .description =(
-        f"## Сообщение удалено\n"
+        "## Сообщение удалено\n"
         f"**{message.author.display_name}** · `{message.author.id}`\n"
         f"Канал: {message.channel.mention}\n\n"
         f"> {content[:500] or '[Вложение]'}"
@@ -599,9 +598,9 @@ class Logs (commands .Cog ):
             _targets =", ".join (m .mention for m in _mentioned [:8 ])
             ge =discord .Embed (color =0x9B59B6 ,timestamp =datetime .datetime .utcnow ())
             ge .description =(
-            f"## 👻 Ghost Ping\n"
+            "## 👻 Ghost Ping\n"
             f"**{message.author.display_name}** · `{message.author.id}`\n"
-            f"тегнул и сразу удалил сообщение\n\n"
+            "тегнул и сразу удалил сообщение\n\n"
             f"Упомянуты: {_targets}\n"
             f"Канал: {message.channel.mention}\n\n"
             f"> {content[:300] or '[Вложение]'}"
@@ -636,7 +635,7 @@ class Logs (commands .Cog ):
             return 
         e =discord .Embed (color =0x3498DB ,timestamp =datetime .datetime .utcnow ())
         e .description =(
-        f"## Сообщение изменено\n"
+        "## Сообщение изменено\n"
         f"**{before.author.display_name}** · `{before.author.id}`\n"
         f"Канал: {before.channel.mention} · [Перейти]({after.jump_url})\n\n"
         f"**Было:**\n> {before.content[:400] or '[Пусто]'}\n\n"
@@ -702,7 +701,7 @@ class Logs (commands .Cog ):
             return 
         e =discord .Embed (color =0x2ECC71 ,timestamp =datetime .datetime .utcnow ())
         e .description =(
-        f"## Канал создано\n"
+        "## Канал создано\n"
         f"**{channel.name}** · `{channel.id}`\n\n"
         f"Тип: {str(channel.type)}"
         )
@@ -738,11 +737,11 @@ class Logs (commands .Cog ):
                 if ch :
                     e =discord .Embed (color =0xE74C3C ,timestamp =datetime .datetime .utcnow ())
                     e .description =(
-                    f"## Канал удален\n"
+                    "## Канал удален\n"
                     f"**{getattr(channel, 'name', '?')}** · `{channel.id}`\n\n"
-                    f"⚠️ **Боту не выдано право `Просмотр журнала аудита` (View Audit Log).**\n"
-                    f"Невозможно определить, кто удалил канал.\n\n"
-                    f"Дайте боту это право в настройках сервера."
+                    "⚠️ **Боту не выдано право `Просмотр журнала аудита` (View Audit Log).**\n"
+                    "Невозможно определить, кто удалил канал.\n\n"
+                    "Дайте боту это право в настройках сервера."
                     )
                     e .set_footer (text =f"{guild.name}")
                     await ch .send (embed =e )
@@ -789,7 +788,7 @@ class Logs (commands .Cog ):
             return 
         e =discord .Embed (color =0xE74C3C ,timestamp =datetime .datetime .utcnow ())
         e .description =(
-        f"## Канал удален\n"
+        "## Канал удален\n"
         f"**{getattr(channel, 'name', '?')}** · `{channel.id}`\n\n"
         f"Тип: {str(getattr(channel, 'type', '?'))}\n"
         f"Удалил: **{mod_name or '—'}** `{mod_id or ''}`\n"

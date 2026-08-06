@@ -159,7 +159,7 @@ class ReportCog (commands .Cog ):
     @commands .Cog .listener ()
     async def on_ready (self ):
         """Bot hazыr olduгunda"""
-        log .info (f" ReportCog loaded")
+        log .info (" ReportCog loaded")
 
 
 async def setup (bot ):

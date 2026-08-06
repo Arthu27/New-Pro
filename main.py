@@ -44,7 +44,7 @@ def _install_requirements():
             print("[УСТАНОВКА] Все пакеты установлены!")
         except subprocess.CalledProcessError as e:
             print(f"[ОШИБКА] Ошибка установки пакетов: {e}")
-            print(f"[ИНФО] Ручная установка: pip install -r requirements.txt")
+            print("[ИНФО] Ручная установка: pip install -r requirements.txt")
             sys.exit(1)
     else:
         print("[ОК] Все зависимости актуальны")
@@ -229,16 +229,6 @@ atexit.register(cleanup_on_exit)
 
 async def send_panel_link(url):
     import json as _json
-    tokens_file = os.path.join(os.path.dirname(__file__), 'data', 'tokens.json')
-    owner_token = None
-    if os.path.exists(tokens_file):
-        with open(tokens_file, 'r', encoding='utf-8') as _f:
-            _tokens = _json.load(_f)
-        for t, v in _tokens.items():
-            if v.get('username') == 'owner':
-                owner_token = t
-                break
-
     panel_url = url
 
     for guild in bot.guilds:
@@ -445,7 +435,7 @@ def start_tunnel():
             time.sleep(5)
 
     print(f"[CLOUDFLARE] {MAX_FAILS} подряд ошибок, туннель полностью отключен.")
-    print(f"[CLOUDFLARE] Если проблема продолжается, добавьте в .env: DISABLE_TUNNEL=1")
+    print("[CLOUDFLARE] Если проблема продолжается, добавьте в .env: DISABLE_TUNNEL=1")
 
 
 _synced = False
