@@ -98,7 +98,7 @@ function renderRules() {
   box.innerHTML = rules.map(function(r,i){
     return '<div class="rule-row">'+
       '<span class="rule-num">'+(i+1)+'.</span>'+
-      '<input class="rule-input" value="'+r.replace(/"/g,'&quot;')+'" oninput="rules['+i+']=this.value;updatePreview()">'+
+      '<input class="rule-input" name="rule-input" value="'+r.replace(/"/g,'&quot;')+'" oninput="rules['+i+']=this.value;updatePreview()">'+
       '<button class="rule-del" onclick="removeRule('+i+')">×</button>'+
     '</div>';
   }).join('');

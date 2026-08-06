@@ -186,7 +186,7 @@ function render(){
     var itemsHtml = items.map(function(it){
       var on = !!checkedItems[it.path];
       return '<div class="pm-item">'
-        + '<label class="switch" title="'+(on?'Видно':'Скрыто')+'"><input type="checkbox" '+(on?'checked':'')+' data-path="'+it.path+'" data-group="'+g.key+'" onchange="toggleItem(this)"><span class="sl"></span></label>'
+        + '<label class="switch" title="'+(on?'Видно':'Скрыто')+'"><input type="checkbox" name="pm-cog-toggle" '+(on?'checked':'')+' data-path="'+it.path+'" data-group="'+g.key+'" onchange="toggleItem(this)"><span class="sl"></span></label>'
         + '<span class="pname"><i class="fas '+it.icon+'"></i>'+it.label+'</span>'
         + '<span class="ppath">'+it.path+'</span>'
         + '</div>';

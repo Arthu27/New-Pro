@@ -164,12 +164,12 @@ function addEntry() {
   var roles = allRoles.map(r=>'<option value="'+r.id+'">@'+r.name+'</option>').join('');
   var field;
   if (rrType === 'select') {
-    field = '<input type="text" class="entry-emoji" placeholder="🎭 (необязательно)" maxlength="2" aria-label="🎭 (необязательно)">';
+    field = '<input type="text" class="entry-emoji" name="entry-emoji" placeholder="🎭 (необязательно)" maxlength="2" aria-label="🎭 (необязательно)">';
   } else {
-    field = '<input type="text" class="entry-emoji" value="🎭" maxlength="2" aria-label="Эмодзи">';
+    field = '<input type="text" class="entry-emoji" name="entry-emoji" value="🎭" maxlength="2" aria-label="Эмодзи">';
   }
   div.innerHTML = field +
-    '<select class="entry-role form-input" aria-label="Роль">'+roles+'</select>'+
+    '<select class="entry-role form-input" name="entry-role" aria-label="Роль">'+roles+'</select>'+
     '<button class="entry-del" onclick="this.parentElement.remove()">×</button>';
   document.getElementById('rr-entries').appendChild(div);
 }

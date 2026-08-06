@@ -119,7 +119,7 @@ function renderFields(){
   host.innerHTML = fields.map(function(f,i){
     return '<div class="field-item">'
       + '<input class="emb-input" placeholder="Название" value="'+esc(f.name)+'" oninput="fields['+i+'].name=this.value;updatePreview()">'
-      + '<input class="emb-input" placeholder="Значение" value="'+esc(f.value)+'" oninput="fields['+i+'].value=this.value;updatePreview()">'
+      + '<input class="emb-input" placeholder="Значение" name="emb-field-value" value="'+esc(f.value)+'" oninput="fields['+i+'].value=this.value;updatePreview()">'
       + '<button class="field-del" onclick="removeField('+i+')" title="Удалить"><i class="fas fa-trash"></i></button>'
       + '</div>';
   }).join('');
