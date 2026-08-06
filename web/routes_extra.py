@@ -939,6 +939,12 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     def member_search_page ():
         return render_template ('member_search.html',role =session .get ('role'),username =session .get ('username'),guild_id =active_guild_id ())
 
+    @app .route ('/afk-list')
+    @login_required 
+    @role_required ('mod')
+    def afk_list_page ():
+        return render_template ('afk_list.html',role =session .get ('role'),username =session .get ('username'),guild_id =active_guild_id ())
+
     @app .route ('/watchlist-panel')
     @login_required 
     @role_required ('mod')
@@ -2628,6 +2634,28 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         if os .path .exists (pts_f ):
             with open (pts_f ,encoding ='utf-8')as f :pts =json .load (f ).get (guild_id ,{})
         return jsonify ({'duty':duty ,'points':pts })
+
+    @app .route ('/api/afk/<guild_id>',methods =['GET'])
+    @login_required 
+    @role_required ('mod')
+    def api_afk_list (guild_id ):
+        import web .app as _app ;bot =_app .bot_instance 
+        if not bot :return jsonify ([])
+        afk_cog =bot .get_cog ('AFK')
+        if not afk_cog :return jsonify ([])
+        guild_afk =afk_cog ._afk .get (str (guild_id ),{})
+        result =[]
+        guild =bot .get_guild (int (guild_id ))
+        for uid ,data in guild_afk .items ():
+            member =guild .get_member (int (uid ))if guild else None 
+            result .append ({
+            'id':uid ,
+            'name':member .display_name if member else uid ,
+            'avatar':str (member .display_avatar .url )if member else None ,
+            'reason':data .get ('reason','AFK'),
+            'since':data .get ('since','')
+            })
+        return jsonify (result )
 
     @app .route ('/api/watchlist/<guild_id>',methods =['GET'])
     @login_required 

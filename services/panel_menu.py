@@ -36,6 +36,7 @@ MENU = [
         {'path': '/member-notes', 'label': 'Заметки', 'icon': 'fa-sticky-note'},
         {'path': '/watchlist-panel', 'label': 'Наблюдение', 'icon': 'fa-eye'},
         {'path': '/invite-tracker', 'label': 'Приглашения', 'icon': 'fa-user-plus'},
+        {'path': '/afk-list', 'label': 'AFK список', 'icon': 'fa-moon'},
         {'path': '/rejoin-roles', 'label': 'Re-Join роли', 'icon': 'fa-undo'},
     ]},
     {'group': 'Роли', 'key': 'roles', 'icon': 'fa-user-tag', 'pages': [
