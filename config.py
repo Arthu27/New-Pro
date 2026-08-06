@@ -42,7 +42,7 @@ class Config:
         """Список discord.Object серверов для регистрации guild-команд.
 
         Только сервер(ы) из .env: MAIN_GUILD_ID + EXTRA_GUILD_IDS.
-        Если MAIN_GUILD_ID не задан — fallback на старые hardcoded ID.
+        Если MAIN_GUILD_ID не задан — команды регистрируются глобально (любой сервер).
         """
         import discord
         ids = []
@@ -50,7 +50,8 @@ class Config:
             ids.append(cls.MAIN_GUILD_ID)
         ids.extend(cls.EXTRA_GUILD_IDS)
         if not ids:
-            ids = [1421244140359909513, 1107038411895881788, 1498837105915330562]
+            # .env пуст — глобальная регистрация (работает на любом сервере)
+            return []
         return [discord.Object(id=g) for g in ids]
     
     # === Web Panel ===

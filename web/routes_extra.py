@@ -4050,8 +4050,6 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                 embed .add_field (name ='🏅 Количество победителей',value =f'**{data["winners"]} ЧЕЛОВЕК ВЫИГРАЕТ!** 👑',inline =False )
                 embed .add_field (name ='👥 Текущие участники',value =f'**0/{data["winners"]}** 🔥',inline =True )
                 embed .add_field (name ='📊 Статистика',value ='Открывается...',inline =True )
-                embed .set_thumbnail (url ='https://media.discordapp.net/attachments/1107038411895881788/1110305847399120916/gifty.gif')
-                embed .set_image (url ='https://media.discordapp.net/attachments/1107038411895881788/1110305847399120916/gifty.gif')
                 embed .set_footer (text =f'🎯 Giveaway ID: {gw_id} | Система: Bot Giveaway v2')
                 view =GiveawayView (gw_id ,guild_id )
                 msg =_run_async (ch .send (embed =embed ,view =view ))

@@ -212,7 +212,7 @@ def _handle_unexpected_error (e ):
     return ("Internal Сервер Error",500 )
 
     # Фиксированный ID сервера — используется первый найденный ботом сервер; меняется в панели
-MAIN_GUILD_ID =os .getenv ('MAIN_GUILD_ID','1498837105915330562')
+MAIN_GUILD_ID =os .getenv ('MAIN_GUILD_ID','')  # задаётся в .env; без него контекст берёт первый сервер бота
 
 # Роли администратор (den nizkogo e visokomu)
 ROLES ={

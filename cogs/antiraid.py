@@ -332,11 +332,9 @@ class AntiRaid(commands.Cog):
 
 
 async def setup(bot):
+    # Серверы для slash-команд — из .env (MAIN_GUILD_ID + EXTRA_GUILD_IDS)
+    from config import Config
     await bot.add_cog(
         AntiRaid(bot),
-        guilds=[
-            discord.Object(id=1421244140359909513),
-            discord.Object(id=1498837105915330562),
-            discord.Object(id=1107038411895881788),
-        ],
+        guilds=Config.guild_objects(),
     )

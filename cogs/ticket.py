@@ -3449,14 +3449,11 @@ class Ticket (commands .Cog ):
 
 async def setup (bot ):
     """Загрузка cog и инициализация сервисов"""
-    # Загружаем Ticket cog
+    # Загружаем Ticket cog (серверы для slash-команд — из .env: MAIN_GUILD_ID + EXTRA_GUILD_IDS)
+    from config import Config
     await bot .add_cog (
     Ticket (bot ),
-    guilds =[
-    discord .Object (id =1421244140359909513 ),
-    discord .Object (id =1107038411895881788 ),
-    discord .Object (id =1498837105915330562 )
-    ]
+    guilds =Config .guild_objects ()
     )
 
     #  AUTO-CLOSE СЕРВИС 

@@ -690,7 +690,7 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
         log_status ="не найден (бот ещё не записал ни одного сообщения)"
         try :
             import json as _jj 
-            _target_gid =os .getenv ('MAIN_GUILD_ID','1498837105915330562')
+            _target_gid =os .getenv ('MAIN_GUILD_ID','')or 'unknown'
             _log_f =f'data/message_log_{_target_gid}.json'
             if os .path .exists (_log_f ):
                 try :
@@ -855,7 +855,7 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
                 rule_lines .append (f"• {r_match.group(1)}")
         if not rule_lines :
             import os ,json as _j 
-            for rf in ["data/rules_1421244140359909513.json","data/rules.json"]:
+            for rf in [f"data/rules_{os .getenv ('MAIN_GUILD_ID','0')}.json","data/rules.json"]:
                 if os .path .exists (rf ):
                     try :
                         with open (rf ,'r',encoding ='utf-8')as _fp :
@@ -1127,7 +1127,7 @@ def ai_assistant (question :str ,context :Dict =None ,history :List [Dict ]=None
         # RAG: Правил ve Benzer Решение Автоматически Добавить
     try :
         from web .ai_rag import get_knowledge_base 
-        gid_val =int (context .get ('guild_id')or os .getenv ('MAIN_GUILD_ID','1421244140359909513'))
+        gid_val =int (context .get ('guild_id')or os .getenv ('MAIN_GUILD_ID','0'))
         rag_ctx =get_knowledge_base (gid_val ).get_context_for_query (question )
         if rag_ctx :
             sys_lines .append (rag_ctx )
@@ -1149,7 +1149,7 @@ def ai_assistant (question :str ,context :Dict =None ,history :List [Dict ]=None
         # 1. RAG & Self-Learning FAQ: Автоматически подгружаем изученные ответы модераторов
     try :
         from web .faq_manager import find_relevant_faqs 
-        gid_val =int (context .get ('guild_id')or os .getenv ('MAIN_GUILD_ID','1421244140359909513'))
+        gid_val =int (context .get ('guild_id')or os .getenv ('MAIN_GUILD_ID','0'))
         relevant_faqs =find_relevant_faqs (question ,guild_id =gid_val ,top_k =2 ,threshold =0.35 )
         if relevant_faqs :
             faq_texts =[f"ВОПРОС: {fitem['question']}\nОТВЕТ АДМИНИСТРАЦИИ: {fitem['answer']}"for fitem in relevant_faqs ]
