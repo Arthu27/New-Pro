@@ -208,6 +208,7 @@ class Scheduler(commands.Cog):
         now = time.time()
         for guild in list(self.bot.guilds):
             try:
+                await self._legacy_tick(guild, now)
                 g = self._g(guild.id)
                 changed = False
                 for item in list(g['items']):
@@ -239,6 +240,61 @@ class Scheduler(commands.Cog):
     @_loop.before_loop
     async def _before_loop(self):
         await self.bot.wait_until_ready()
+
+    # ────────────────────────────────────────────────────────────
+    # Устаревшая панель «Запланированные сообщения»
+    # (data/scheduled_{gid}.json, интервал в минутах) — теперь
+    # эти сообщения тоже реально отправляются.
+    # ────────────────────────────────────────────────────────────
+    async def _legacy_tick(self, guild: discord.Guild, now: float):
+        path = f'data/scheduled_{guild.id}.json'
+        if not os.path.exists(path):
+            return
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                msgs = json.load(f)
+        except Exception:
+            return
+        if not isinstance(msgs, dict) or not msgs:
+            return
+        changed = False
+        for msg_id, rec in msgs.items():
+            try:
+                if not rec.get('active', True):
+                    continue
+                nxt = rec.get('next_run') or ''
+                try:
+                    nxt_ts = datetime.fromisoformat(str(nxt).replace('Z', '+00:00')).timestamp()
+                except Exception:
+                    nxt_ts = 0
+                if nxt_ts and now < nxt_ts:
+                    continue
+                ch = guild.get_channel(int(rec.get('channel_id', 0) or 0))
+                content = (rec.get('content') or '').strip()
+                if ch is not None and content:
+                    try:
+                        await ch.send(content)
+                        log.info(f"[SCHED/legacy] {guild.name}: сообщение #{msg_id} отправлено")
+                    except Exception as e:
+                        log.warning(f"[SCHED/legacy] {guild.name}: отправка #{msg_id}: {e}")
+                # следующий запуск: сейчас + интервал минут (догон без завала)
+                try:
+                    interval_min = max(1, int(rec.get('interval', 60) or 60))
+                except Exception:
+                    interval_min = 60
+                rec['next_run'] = datetime.fromtimestamp(
+                    now + interval_min * 60, tz=timezone.utc).isoformat()
+                changed = True
+            except Exception as e:
+                log.error(f"[SCHED/legacy] ошибка записи #{msg_id}: {e}")
+        if changed:
+            try:
+                tmp = path + '.tmp'
+                with open(tmp, 'w', encoding='utf-8') as f:
+                    json.dump(msgs, f, ensure_ascii=False, indent=2)
+                os.replace(tmp, path)
+            except Exception as e:
+                log.error(f"[SCHED/legacy] ошибка записи файла: {e}")
 
     # ────────────────────────────────────────────────────────────
     # Slash: /schedule

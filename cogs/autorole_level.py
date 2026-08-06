@@ -59,6 +59,19 @@ class AutoRoleLevel (commands .Cog ):
         if message .author .bot or not message .guild :
             return 
 
+        # Настройки из панели (/leveling): выключено? диапазон XP?
+        _xp_min ,_xp_max =15 ,25
+        try :
+            import json as _j ,os as _o
+            _lf =f'data/leveling_{message.guild.id}.json'
+            _cfg =_j .load (open (_lf ,'r',encoding ='utf-8'))if _o .path .exists (_lf )else {}
+            if _cfg and not _cfg .get ('enabled',True ):
+                return 
+            _xp_min =int (_cfg .get ('xp_min',15 )or 15 )
+            _xp_max =max (_xp_min ,int (_cfg .get ('xp_max',25 )or 25 ))
+        except Exception :
+            pass
+
         uid =str (message .author .id )
         now =time .time ()
 
@@ -69,7 +82,7 @@ class AutoRoleLevel (commands .Cog ):
         self ._cooldowns [uid ]=now 
 
         # XP ver (15-25 arasы rastgele)
-        xp_gain =random .randint (15 ,25 )
+        xp_gain =random .randint (_xp_min ,_xp_max )
 
         xp_data =self ._load_xp (message .guild .id )
         user_data =xp_data .get (uid ,{'xp':0 ,'level':0 })
