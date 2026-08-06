@@ -713,7 +713,8 @@ def my_applications ():
 @app .route ('/notifications')
 @login_required 
 def notifications ():
-    if session .get ('role')!='uye':
+    # Админская страница настроек уведомлений — только для персонала (mod+).
+    if ROLES .get (session .get ('role'),-1 )<ROLES .get ('mod',999 ):
         return redirect (url_for ('index'))
     return render_template ('notifications.html',role =session .get ('role'),username =session .get ('username'))
 
@@ -820,7 +821,7 @@ def api_my_notifications ():
     with open (notif_file ,'r',encoding ='utf-8')as f :
         notifs =json .load (f )
     my =notifs .get (discord_id ,[])
-    # Okundu iшaretle
+    # Отмечаем прочитанными
     for n in my :
         n ['read']=True 
     notifs [discord_id ]=my 
@@ -848,7 +849,7 @@ def api_send_notification ():
     message =data .get ('message','').strip ()
     title =data .get ('title','Уведомление').strip ()
     if not discord_id or not message :
-        return jsonify ({'error':'Yetersiz verilerin'})
+        return jsonify ({'error':'Недостаточно данных'})
 
     notif_file ='data/notifications.json'
     os .makedirs ('data',exist_ok =True )

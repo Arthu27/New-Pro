@@ -6700,7 +6700,9 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     @app .route ('/notifications')
     @login_required 
     def notifications_page ():
-        """Страница настроек уведомлений"""
+        """Страница настроек уведомлений (только персонал)"""
+        if ROLES .get (session .get ('role'),-1 )<ROLES .get ('mod',999 ):
+            return redirect (url_for ('index'))
         return render_template ('notifications.html',role =session .get ('role'),username =session .get ('username'))
 
 
