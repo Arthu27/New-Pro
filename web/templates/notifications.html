@@ -78,11 +78,12 @@
     <div>
       <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Канал для уведомлений</label>
       <select id="discord-channel" class="form-input" aria-label="Discord-канал">
-        <option value="">Выберите канал...</option>
+        <option value="">Загрузка каналов...</option>
       </select>
+      <div style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">Если webhook не задан — бот отправит уведомление в выбранный канал</div>
     </div>
     <div>
-      <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Webhook URL (опционально)</label>
+      <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Webhook URL (опционально, приоритетнее канала)</label>
       <input type="text" id="webhook-url" class="form-input" placeholder="https://discord.com/api/webhooks/..." aria-label="https://discord.com/api/webhooks/...">
     </div>
   </div>
@@ -118,79 +119,130 @@
 </div>
 
 <div class="section">
-  <button class="control-btn primary" onclick="saveNotificationSettings()" style="width: 100%; padding: 12px;">
-    <i class="fas fa-save"></i> Сохранить настройки
-  </button>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+    <button class="control-btn primary" onclick="saveNotificationSettings()" style="padding: 12px;">
+      <i class="fas fa-save"></i> Сохранить настройки
+    </button>
+    <button class="control-btn" id="testNotifBtn" onclick="sendTestNotification()" style="padding: 12px;">
+      <i class="fas fa-paper-plane"></i> Тестовое уведомление
+    </button>
+  </div>
+  <div id="testResult" style="margin-top: 12px; display: none;"></div>
 </div>
 
 <script>
+function escNotif(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function notifToast(msg, ok) {
+  if (typeof window.showToast === 'function') { window.showToast(msg, ok !== false); }
+  else { alert(msg); }
+}
+
 async function loadNotificationSettings() {
   try {
     const response = await fetch('/api/notifications/settings');
     const data = await response.json();
-    
+
     if (data.success) {
       const settings = data.settings;
-      
+
       // Каналы
       document.getElementById('notify-web').checked = settings.web_enabled || false;
       document.getElementById('notify-discord').checked = settings.discord_enabled || false;
       document.getElementById('notify-email').checked = settings.email_enabled || false;
-      
+
       // События
       document.getElementById('event-ticket-open').checked = settings.event_ticket_open || false;
       document.getElementById('event-ticket-message').checked = settings.event_ticket_message || false;
       document.getElementById('event-ticket-close').checked = settings.event_ticket_close || false;
       document.getElementById('event-priority-change').checked = settings.event_priority_change || false;
       document.getElementById('event-assignment').checked = settings.event_assignment || false;
-      
+
       // Discord
-      document.getElementById('discord-channel').value = settings.discord_channel || '';
+      window._savedNotifChannel = settings.discord_channel || '';
       document.getElementById('webhook-url').value = settings.webhook_url || '';
-      
+
       // Email
       document.getElementById('smtp-server').value = settings.smtp_server || '';
       document.getElementById('smtp-port').value = settings.smtp_port || 587;
       document.getElementById('smtp-email').value = settings.smtp_email || '';
-      
-      // История
+
+      // Список каналов сервера и история
+      loadDiscordChannels();
       loadNotificationHistory();
     }
   } catch (e) {
-    console.error('Load notification settings error:', e);
+    console.error('Ошибка загрузки настроек уведомлений:', e);
   }
+}
+
+async function loadDiscordChannels() {
+  const select = document.getElementById('discord-channel');
+  try {
+    const gResp = await fetch('/api/guilds');
+    const guilds = await gResp.json();
+    if (!Array.isArray(guilds) || !guilds.length) throw new Error('нет серверов');
+    const gid = guilds[0].id;
+    const cResp = await fetch('/api/guild/' + gid + '/channels');
+    const cData = await cResp.json();
+    const channels = Array.isArray(cData) ? cData : (cData.channels || []);
+    const textChans = channels.filter(c => c.type === 'text');
+    if (!textChans.length) throw new Error('нет каналов');
+    select.innerHTML = '<option value="">— Не выбран —</option>' +
+      textChans.map(c => '<option value="' + escNotif(c.id) + '">#' + escNotif(c.name) + '</option>').join('');
+    select.value = window._savedNotifChannel || '';
+  } catch (e) {
+    select.innerHTML = '<option value="">Бот офлайн — укажите webhook ниже</option>';
+  }
+}
+
+function channelChip(label, state) {
+  let color, mark;
+  if (state === true) { color = '#2ecc71'; mark = '✓'; }
+  else if (state === false) { color = '#e74c3c'; mark = '✗'; }
+  else { color = 'var(--text-muted)'; mark = '—'; }
+  return '<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:' +
+    color + ';border:1px solid ' + color + '33;border-radius:6px;padding:2px 7px;margin-right:6px;">' +
+    escNotif(label) + ' ' + mark + '</span>';
 }
 
 async function loadNotificationHistory() {
   try {
     const response = await fetch('/api/notifications/history');
     const data = await response.json();
-    
+
     if (data.success) {
       const container = document.getElementById('notificationHistory');
       const notifications = data.notifications || [];
-      
+
       if (notifications.length === 0) {
         container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 40px;">Уведомлений пока нет</p>';
         return;
       }
-      
+
       container.innerHTML = notifications.map(notif => {
         const date = new Date(notif.created_at).toLocaleString('ru-RU');
-        const icon = notif.type === 'ticket_open' ? 'fa-ticket-alt' : 
-                     notif.type === 'ticket_message' ? 'fa-comment' :
-                     notif.type === 'ticket_close' ? 'fa-check-circle' : 'fa-bell';
-        
+        const icon = notif.icon || '🔔';
+        const body = notif.body != null ? notif.body : (notif.message || '');
+        let chips = '';
+        if (notif.channels && typeof notif.channels === 'object') {
+          chips = channelChip('Веб', notif.channels.web) +
+                  channelChip('Discord', notif.channels.discord) +
+                  channelChip('Email', notif.channels.email);
+        } else if (notif.channel) {
+          chips = '<span style="font-size:12px;color:var(--text-muted);">' + escNotif(notif.channel) + '</span>';
+        }
+
         return `
           <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 12px; margin-bottom: 8px;">
             <div style="display: flex; align-items: start; gap: 12px;">
-              <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(155,89,182,0.2); display: flex; align-items: center; justify-content: center;">
-                <i class="fas ${icon}" style="color: #9b59b6;"></i>
-              </div>
-              <div style="flex: 1;">
-                <div style="font-weight: 600; margin-bottom: 4px;">${notif.title}</div>
-                <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 4px;">${notif.message}</div>
-                <div style="font-size: 12px; color: var(--text-muted);">${date} • ${notif.channel}</div>
+              <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(200,146,42,0.15); display: flex; align-items: center; justify-content: center; font-size: 16px;">${icon}</div>
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-weight: 600; margin-bottom: 4px;">${escNotif(notif.title)}</div>
+                <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 6px;">${escNotif(body)}</div>
+                <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 4px;">${chips}<span style="font-size: 12px; color: var(--text-muted);">${date}</span></div>
               </div>
             </div>
           </div>
@@ -198,7 +250,7 @@ async function loadNotificationHistory() {
       }).join('');
     }
   } catch (e) {
-    console.error('Load notification history error:', e);
+    console.error('Ошибка загрузки истории уведомлений:', e);
   }
 }
 
@@ -215,11 +267,11 @@ async function saveNotificationSettings() {
     discord_channel: document.getElementById('discord-channel').value,
     webhook_url: document.getElementById('webhook-url').value,
     smtp_server: document.getElementById('smtp-server').value,
-    smtp_port: parseInt(document.getElementById('smtp-port').value),
+    smtp_port: parseInt(document.getElementById('smtp-port').value) || 587,
     smtp_email: document.getElementById('smtp-email').value,
     smtp_password: document.getElementById('smtp-password').value
   };
-  
+
   try {
     const response = await fetch('/api/notifications/settings', {
       method: 'POST',
@@ -227,14 +279,40 @@ async function saveNotificationSettings() {
       body: JSON.stringify(settings)
     });
     const data = await response.json();
-    
+
     if (data.success) {
-      alert('Настройки сохранены!');
+      notifToast('✅ Настройки уведомлений сохранены');
     } else {
-      alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+      notifToast('Ошибка: ' + (data.error || 'Неизвестная ошибка'), false);
     }
   } catch (e) {
-    alert('Ошибка соединения');
+    notifToast('Ошибка соединения', false);
+  }
+}
+
+async function sendTestNotification() {
+  const btn = document.getElementById('testNotifBtn');
+  const resultBox = document.getElementById('testResult');
+  btn.disabled = true;
+  resultBox.style.display = 'block';
+  resultBox.innerHTML = '<span style="color: var(--text-muted); font-size: 13px;"><i class="fas fa-spinner fa-spin"></i> Отправка тестового уведомления...</span>';
+  try {
+    const response = await fetch('/api/notifications/test', { method: 'POST' });
+    const data = await response.json();
+    if (data.success) {
+      const ch = data.channels || {};
+      resultBox.innerHTML =
+        '<div style="font-size: 13px; margin-bottom: 6px; font-weight: 600;">Результат доставки:</div>' +
+        channelChip('Веб', ch.web) + channelChip('Discord', ch.discord) + channelChip('Email', ch.email) +
+        '<div style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">✓ — доставлено · ✗ — ошибка · — — канал не настроен. Событие записано в историю ниже.</div>';
+      loadNotificationHistory();
+    } else {
+      resultBox.innerHTML = '<span style="color: #e74c3c; font-size: 13px;">Ошибка: ' + escNotif(data.error || 'неизвестная') + '</span>';
+    }
+  } catch (e) {
+    resultBox.innerHTML = '<span style="color: #e74c3c; font-size: 13px;">Ошибка соединения</span>';
+  } finally {
+    btn.disabled = false;
   }
 }
 

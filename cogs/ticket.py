@@ -229,6 +229,33 @@ def _get_punishment_for_quote (quote :str )->dict :
     }
 
 
+def _notify_panel_ticket_event (interaction ,event ,title ,body ):
+    """Уведомить панель о событии тикета по настроенным каналам (веб/Discord/email).
+
+    Полностью fail-safe: выполняется в фоне и никогда не роняет поток тикета.
+    """
+    try :
+        import asyncio as _asyncio
+        from services .notification_dispatcher import notify_event as _notify_event
+        loop =asyncio .get_running_loop ()
+        client =interaction .client
+
+        def _sender (cid ,title_ ,body_ ):
+            try :
+                ch =client .get_channel (int (cid ))
+                if not ch :
+                    return False
+                emb =discord .Embed (title =title_ ,description =(body_ or '')[:4000 ],color =0xC8922A )
+                _asyncio .run_coroutine_threadsafe (ch .send (embed =emb ),loop ).result (timeout =10 )
+                return True
+            except Exception :
+                return False
+
+        loop .run_in_executor (None ,lambda :_notify_event (event ,title ,body ,discord_sender =_sender ))
+    except Exception :
+        pass
+
+
 class AdminApprovalView (discord .ui .View ):
     def __init__ (self ,target_id :int ,action_type :str ,reason :str ,guild_id :int =0 ,quote :str =''):
         super ().__init__ (timeout =None )
@@ -488,6 +515,12 @@ class TicketView (discord .ui .View ):
         overwrites =overwrites ,
         topic =f"Ticket sahibi: {interaction.user.id}"
         )
+
+        # Уведомление панели о новом тикете (веб/Discord/email — в фоне)
+        _notify_panel_ticket_event (
+        interaction ,'ticket_open',
+        f"Новый тикет: {channel .name }",
+        f"{interaction .user .display_name } · категория: {category }")
 
         ts =int (datetime .datetime .utcnow ().timestamp ())
 
@@ -817,6 +850,12 @@ class CloseTicketView (discord .ui .View ):
                     )
                     return 
             cog ._delete_ticket_state (interaction .guild .id ,channel .id )
+
+        # Уведомление панели о закрытии тикета (веб/Discord/email — в фоне)
+        _notify_panel_ticket_event (
+        interaction ,'ticket_close',
+        f"Тикет закрыт: {channel .name }",
+        f"Закрыл: {interaction .user .display_name }")
 
         messages =[]
         async for msg in channel .history (limit =200 ,oldest_first =True ):

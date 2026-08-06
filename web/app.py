@@ -812,6 +812,9 @@ def api_my_applications ():
 @app .route ('/api/my-notifications')
 @login_required 
 def api_my_notifications ():
+    import time as _t 
+    # Открытие списка означает «всё просмотрено» — сбрасываем бейдж опроса
+    session ['notif_seen_ts']=int (_t .time ())
     discord_id =session .get ('discord_id')
     if not discord_id :
         return jsonify ([])
@@ -821,13 +824,15 @@ def api_my_notifications ():
     with open (notif_file ,'r',encoding ='utf-8')as f :
         notifs =json .load (f )
     my =notifs .get (discord_id ,[])
+    # Снимок с исходными флагами — клиент должен увидеть, что было непрочитанным
+    snapshot =[dict (n )for n in my ]
     # Отмечаем прочитанными
     for n in my :
         n ['read']=True 
     notifs [discord_id ]=my 
     with open (notif_file ,'w',encoding ='utf-8')as f :
         json .dump (notifs ,f ,indent =2 ,ensure_ascii =False )
-    return jsonify (list (reversed (my )))
+    return jsonify (list (reversed (snapshot )))
 
 @app .route ('/api/announcements')
 @login_required 
@@ -2712,37 +2717,50 @@ def api_reset_password ():
 @app .route ('/api/notifications/poll')
 @login_required 
 def api_notifications_poll ():
-    """Lightweight poll for unread panel notifications for the current user."""
+    """Опрос непрочитанных уведомлений панели для текущего пользователя.
+
+    Возвращает список событий (системные broadcast-уведомления + действия
+    самого пользователя) и счётчик непрочитанных для бейджа колокольчика.
+    Отметка «просмотрено» ставится при открытии выпадающего списка
+    (/api/my-notifications) через session['notif_seen_ts'].
+    """
+    import os ,json ,time as _t 
     username =session .get ('username','anon')
     cutoff_ts =request .args .get ('since',0 )
     try :
         cutoff_ts =int (cutoff_ts )
     except (TypeError ,ValueError ):
         cutoff_ts =0 
-    notifs =[]
-    # 1) panel_logs.json -> recent mod-style actions attributed to the user
     try :
-        import os ,json ,time as _t 
+        seen_ts =int (session .get ('notif_seen_ts',0 )or 0 )
+    except (TypeError ,ValueError ):
+        seen_ts =0 
+    notifs =[]
+    # 1) panel_logs.json -> действия пользователя + broadcast-уведомления всему персоналу
+    try :
         f ='data/panel_logs.json'
         if os .path .exists (f ):
             with open (f ,'r',encoding ='utf-8')as fp :
                 raw =json .load (fp )
-            for entry in raw [-30 :]:
+            for entry in raw [-50 :]:
                 ts =entry .get ('ts',0 )or 0 
-                if ts >cutoff_ts and (entry .get ('user')==username or entry .get ('target_user')==username ):
+                if ts <=cutoff_ts :
+                    continue 
+                is_mine =(entry .get ('username')or entry .get ('user')or '')==username 
+                is_broadcast =bool (entry .get ('broadcast'))
+                if is_mine or is_broadcast :
                     notifs .append ({
-                    'id':f"pl-{ts}",
+                    'id':f"pl-{ts}-{len(notifs)}",
                     'title':entry .get ('action','Действие'),
                     'body':entry .get ('detail',''),
                     'icon':'',
                     'ts':ts ,
-                    'kind':'mod',
+                    'kind':'notify' if is_broadcast else 'mod',
                     })
     except Exception :
         pass 
         # 2) temp moderation activity
     try :
-        import os ,json ,time as _t 
         f ='data/temp_mod_log.json'
         if os .path .exists (f ):
             with open (f ,'r',encoding ='utf-8')as fp :
@@ -2760,8 +2778,20 @@ def api_notifications_poll ():
                     })
     except Exception :
         pass 
+    # 3) личные уведомления (notifications.json по discord_id)
+    personal_unread =0 
+    try :
+        discord_id =session .get ('discord_id')
+        nf ='data/notifications.json'
+        if discord_id and os .path .exists (nf ):
+            with open (nf ,'r',encoding ='utf-8')as fp :
+                pers =json .load (fp ).get (discord_id ,[])
+            personal_unread =len ([n for n in pers if not n .get ('read')])
+    except Exception :
+        pass 
     notifs .sort (key =lambda x :x .get ('ts',0 ),reverse =True )
-    return jsonify ({'notifications':notifs [:20 ],'ts':int (__import__ ('time').time ()*1000 )})
+    unread =len ([n for n in notifs if n .get ('ts',0 )>seen_ts ])+personal_unread 
+    return jsonify ({'notifications':notifs [:20 ],'unread':unread ,'ts':int (_t .time ()*1000 )})
 
 
 @app .route ('/api/activity-feed')

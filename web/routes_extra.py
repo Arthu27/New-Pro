@@ -54,6 +54,34 @@ def _run_async (coro ,timeout =10 ):
     return future .result (timeout =timeout )
 
 
+def _notify_discord_sender (channel_id ,title ,body ):
+    """Отправить уведомление в Discord-канал через бота (для диспетчера уведомлений)."""
+    try :
+        import asyncio as _aio
+        import web .app as _app
+        bot =_app .bot_instance
+        if not bot or not getattr (bot ,'loop',None ):
+            return False
+        channel =bot .get_channel (int (channel_id ))
+        if not channel :
+            return False
+        import discord as _discord
+        embed =_discord .Embed (title =title ,description =(body or '')[:4000 ],color =0xC8922A )
+        _aio .run_coroutine_threadsafe (channel .send (embed =embed ),bot .loop ).result (timeout =10 )
+        return True
+    except Exception :
+        return False
+
+
+def _fire_panel_notification (event ,title ,body ):
+    """Вызвать диспетчер уведомлений, не прерывая основной обработчик."""
+    try :
+        from services .notification_dispatcher import notify_event
+        return notify_event (event ,title ,body ,discord_sender =_notify_discord_sender )
+    except Exception :
+        return {}
+
+
 def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
     """Обрабатывает блок <action> из ответа AI и возвращает текст результата."""
     import re as _re ,asyncio as _asyncio ,os as _os 
@@ -5303,6 +5331,12 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         if ticket_id in tickets :
             tickets [ticket_id ]['status']='closed'
             with open (f ,'w')as fp :json .dump (tickets ,fp ,indent =2 )
+            _t =tickets [ticket_id ]
+            # Уведомление персонала по настроенным каналам (веб/Discord/email)
+            _fire_panel_notification (
+            'ticket_close',
+            f"Тикет закрыт: {_t .get ('name') or _t .get ('subject') or ticket_id}",
+            f"{session .get ('username','Модератор')} закрыл тикет {ticket_id}")
         return jsonify ({'success':True })
 
     @app .route ('/api/guild/<guild_id>/automod',methods =['GET','POST'])
@@ -6674,6 +6708,17 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         except Exception as e :
             return jsonify ({'success':False ,'error':str (e )}),500 
 
+    @app .route ('/api/notifications/test',methods =['POST'])
+    @login_required 
+    def api_notifications_test ():
+        """Отправить тестовое уведомление по всем настроенным каналам"""
+        try :
+            from services .notification_dispatcher import send_test
+            channels =send_test (discord_sender =_notify_discord_sender )
+            return jsonify ({'success':True ,'channels':channels })
+        except Exception as e :
+            return jsonify ({'success':False ,'error':str (e )}),500 
+
     @app .route ('/api/notifications/history',methods =['GET'])
     @login_required 
     def api_notifications_history ():
@@ -7629,6 +7674,12 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         os .makedirs ('data',exist_ok =True )
         with open (tickets_file ,'w',encoding ='utf-8')as f :
             json .dump (tickets ,f ,ensure_ascii =False ,indent =2 )
+
+        # Уведомление персонала по настроенным каналам (веб/Discord/email)
+        _fire_panel_notification (
+        'ticket_open',
+        f"Новый тикет #{new_ticket['id']}: {subject}",
+        f"{session .get ('username','Пользователь')} · категория: {category} · приоритет: {priority}")
 
         return jsonify ({'success':True ,'ticket':new_ticket })
 
