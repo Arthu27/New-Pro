@@ -362,21 +362,21 @@ class HelpMenu:
 async def example_usage(interaction, channel):
     """Пример использования (без эмодзи)"""
     
-    # Ticket добро пожаловать menюsю
+    # Приветственное меню тикета
     welcome_embed = TicketMenu.welcome(
         user=interaction.user,
         guild=interaction.guild,
         channel=channel
     )
     
-    # Статистика menюsю
+    # Меню статистики
     stats_embed = StatsMenu.ticket_stats(
         total=150,
         ai_handled=120,
         escalated=18
     )
     
-    # Feedback menюsю
+    # Меню отзывов
     feedback_embed = StatsMenu.feedback_stats(
         total=89,
         positive=76,
@@ -385,10 +385,10 @@ async def example_usage(interaction, channel):
         recent_comments=["Отлично!", "Быстро помогли", "Спасибо!"]
     )
     
-    # Помощь menюsю
+    # Меню помощи
     help_embed = HelpMenu.ticket_help()
     
-    # Ёzel menю создатьma
+    # Создать своё меню
     custom_menu = CustomMenu(
         title="Моё меню",
         description="Это моё кастомное меню без эмодзи",

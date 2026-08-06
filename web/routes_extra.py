@@ -223,7 +223,7 @@ def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
                 cat =guild .get_channel (int (category_id ))if category_id else None 
                 return _run_async (guild .create_text_channel (name ,category =cat ))
             ch =_asyncio .run_coroutine_threadsafe (_create_ch (),bot .loop ).result (timeout =10 )
-            return f'✅ Канал создано: #{ch.name} (ID: {ch.id})'
+            return f'✅ Канал создан: #{ch.name} (ID: {ch.id})'
 
         elif action_type =='delete_channel':
             channel_id =str (action_data .get ('channel_id',''))
@@ -245,7 +245,7 @@ def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
             role =_asyncio .run_coroutine_threadsafe (
             guild .create_role (name =name ,color =color_obj ),bot .loop 
             ).result (timeout =10 )
-            return f'✅ Роли создано: {role.name} (ID: {role.id})'
+            return f'✅ Роль создана: {role.name} (ID: {role.id})'
 
         elif action_type =='delete_role':
             role_id =str (action_data .get ('role_id',''))
@@ -1289,7 +1289,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                         elif ev_date ==str (yesterday ):
                             yesterday_actions .append (entry )
             except Exception as _fe :
-                print (f'[AI] Cache okuma Ошибки: {_fe}')
+                print (f'[AI] Ошибка чтения кэша: {_fe}')
 
         def fmt_actions (actions ):
             if not actions :
@@ -1793,7 +1793,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                             metin =':'.join (parts [2 :])
                             if metin :
                                 _run_async (ch .send (metin ))
-                                return f'✅ #{ch.name} в канал message отправлено'
+                                return f'✅ Сообщение отправлено в канал #{ch.name}'
                             return '❌ Сообщение содержимое пусто'
                     elif tip =='KANAL_YAVAШ'and len (parts )>2 :
                         ch =resolve_channel (parts [1 ])
@@ -1937,21 +1937,21 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                     elif tip =='KANAL_OLUSTUR'and len (parts )>1 :
                         channel_name ='-'.join (parts [1 :]).lower ().replace (' ','-')
                         ch =_run_async (guild .create_text_channel (channel_name ))
-                        return f'✅ #{ch.name} канал создано'
+                        return f'✅ Канал #{ch.name} создан'
                     elif tip =='SES_KANAL_OLUSTUR'and len (parts )>1 :
                         channel_name =' '.join (parts [1 :])
                         ch =_run_async (guild .create_voice_channel (channel_name ))
-                        return f'✅ 🔊 {ch.name} ses канал создано'
+                        return f'✅ 🔊 Голосовой канал {ch.name} создан'
                     elif tip =='ROL_OLUSTUR'and len (parts )>1 :
                         channel_name =' '.join (parts [1 :])
                         r =_run_async (guild .create_role (name =channel_name ))
-                        return f'✅ @{r.name} роль создано'
+                        return f'✅ Роль @{r.name} создана'
                     elif tip =='DUYURU'and len (parts )>2 :
                         ch =resolve_channel (parts [1 ])
                         metin =':'.join (parts [2 :])
                         if ch and metin :
-                            _run_async (ch .send (f'📢 **DUYURU**\n\n{metin}'))
-                            return f'✅ #{ch.name} в канал announce отправлено'
+                            _run_async (ch .send (f'📢 **ОБЪЯВЛЕНИЕ**\n\n{metin}'))
+                            return f'✅ Объявление отправлено в канал #{ch.name}'
                     elif tip =='ROL_VER'and len (parts )>2 :
                         m =resolve_member (parts [1 ])
                         r =resolve_role (parts [2 ])
@@ -1974,9 +1974,9 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                     # do_action() — синхронная функция, вызываем напрямую (не coroutine)
                 action_result =do_action ()
             except Exception as ae :
-                action_result =f'❌ Eylem Ошибки: {ae}'
+                action_result =f'❌ Ошибка действия: {ae}'
 
-                # Eylem tag'ini cevaptan clear
+                # Убрать тег действия из ответа
             answer =_re .sub (r'\[EYLEM:[^\]]+\]','',answer ).strip ()
             if action_result :
                 answer =f"{answer}\n\n`{action_result}`"if answer else f"`{action_result}`"
@@ -2076,7 +2076,6 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         # Find user's unlocked achievements
         unlocked =[]
         for uid ,achs in data .get ('achievements',{}).items ():
-            member =None 
             try :
                 g =bot .get_guild (int (guild_id ))
                 if g :
@@ -3077,7 +3076,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                         'source':'bot',
                         })
             except Exception as _e :
-                print (f'[MOD-HISTORY] mod_data Ошибки: {_e}')
+                print (f'[MOD-HISTORY] Ошибка данных модерации: {_e}')
 
                 # ── 2. Discord Audit Cache ────────────────────────────────────────────
         cache_file ='data/discord_audit_cache.json'
@@ -3484,11 +3483,11 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     def api_ai_announcement ():
         from web .ai_helper import _call_text 
         d =request .get_json (silent =True )or {}
-        topic =d .get ('topic','Общий duyuru')
-        tone =d .get ('tone','resmi')
+        topic =d .get ('topic','Общее объявление')
+        tone =d .get ('tone','официальный')
         prompt = (
             f"Напиши профессиональное объявление для Discord-сервера на тему '{topic}', "
-            f"официальным тоном. Добавь заголовок и эмодзи. До 200 слов."
+            f"тон: {tone}. Добавь заголовок и эмодзи. До 200 слов."
         )
         messages =[
         {"role":"system","content":"Ты — ассистент, пишущий эффектные объявления для Discord-сервера Aether. Пиши только текст объявления, без пояснений."},
