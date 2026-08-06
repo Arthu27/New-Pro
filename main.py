@@ -66,8 +66,8 @@ import time
 import signal
 import atexit
 
-# python-dotenv yorum satırlarını (Rusça, uzun çizgili vb.) uyarı olarak basabiliyor.
-# Bunlar zararsızdır — uyarıları gizleyip değerleri yine de okumaya devam ediyoruz.
+# python-dotenv может печатать предупреждения о строках-комментариях (русские, с длинным тире и т.п.).
+# Они безвредны — скрываем предупреждения, но продолжаем читать значения.
 logging.getLogger("dotenv").setLevel(logging.ERROR)
 
 # Загружаем .env из каталога скрипта (надёжно, независимо от рабочей директории)

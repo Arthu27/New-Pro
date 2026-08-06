@@ -1,6 +1,6 @@
 """
-Plugin Sistemi
-Plugin yюkleme ve yёnetimi
+Система плагинов
+Загрузка и управление плагинами
 """
 
 import os
@@ -145,7 +145,7 @@ class PluginManager:
         self.plugins[plugin_name].enabled = True
         self.save_config()
         
-        print(f" Plugin включитьildi: {plugin_name}")
+        print(f" Плагин включён: {plugin_name}")
         return True
     
     def disable_plugin(self, plugin_name: str) -> bool:

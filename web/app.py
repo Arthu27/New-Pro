@@ -37,10 +37,10 @@ app .config ['SESSION_PERMANENT']=True
 app .config ['PERMANENT_SESSION_LIFETIME']=timedelta (days =30 )
 app .jinja_env .auto_reload =True 
 
-# Session: default Flask cookie session (itsdangerous imzali cookie).
-# Старый: flask_session filesystem (her istekte dosya IO, 50 paralel istekte darboгaz).
-# Новый: cookie, sifir disk IO, <500 byte. Oturum boyutu маленький oldugu icin sorun degil.
-# Ileride Redis gerekirse SESSION_TYPE=redis eklenebilir.
+# Сессия: стандартная Flask cookie session (подписанная itsdangerous cookie).
+# Старый: flask_session filesystem (файловый IO на каждый запрос, узкое место при 50 параллельных).
+# Новый: cookie, нулевой дисковый IO, <500 байт. Размер сессии мал, поэтому проблем нет.
+# Позже, если понадобится Redis, можно добавить SESSION_TYPE=redis.
 _USE_FS_SESSION =_os .getenv ('USE_FS_SESSION','0')=='1'
 if _USE_FS_SESSION :
     app .config ['SESSION_TYPE']='filesystem'

@@ -1,6 +1,6 @@
 """
-Merkezi Database Helper
-Cog'lar icin basit JSON -> DB gecis API'si
+Центральный Database Helper
+Простой API перехода JSON -> DB для когов
 """
 import sqlite3
 import os
@@ -16,10 +16,10 @@ log = get_logger("db_helper")
 
 class GuildData:
     """
-    Her cog icin basit key-value storage.
-    JSON dosyalarinin yerine gecer.
-    
-    Kullanim:
+    Простое key-value хранилище для каждого кога.
+    Заменяет JSON-файлы.
+
+    Использование:
         db = GuildData("economy")
         db.set(guild_id, user_id, {"balance": 1000})
         data = db.get(guild_id, user_id)

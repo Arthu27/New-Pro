@@ -181,14 +181,14 @@ def get_model_selector ()->ModelSelector :
 
 def smart_call (messages :List [Dict ],task_type :str ,max_tokens :int =2048 ,temperature :float =0.7 )->Tuple [str ,str ,Dict ]:
     """
-    Umniy vizov AI с автоматически olarakm выбор modelleri
-    
+    Умный вызов AI с автоматическим выбором модели
+
     Args:
-        messages: Список сообщение
+        messages: Список сообщений
         task_type: Тип задачи (greeting, complaint_analysis, etc.)
-        max_tokens: Maksimum tokenov
-        temperature: Temperaорёл
-    
+        max_tokens: Максимум токенов
+        temperature: Температура
+
     Returns:
         (response, model_name, info)
     """

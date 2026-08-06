@@ -41,7 +41,7 @@ proc_name ='moebius-web'
 max_requests =int (os .getenv ('WEB_MAX_REQUESTS','1000'))
 max_requests_jitter =int (os .getenv ('WEB_MAX_REQUESTS_JITTER','100'))
 
-# Worker sinifi: sync (default) veya gevent (cok baglantili I/O icin).
+# Класс воркера: sync (по умолчанию) или gevent (для I/O с большим числом соединений).
 # Flask + flask_session (filesystem) ile 'sync' yeterli; высокий RPS isteniyorsa
 # 'gevent' secilebilir (gevent kurulu olmali).
 _worker_class_env =os .getenv ('WEB_WORKER_CLASS','sync').lower ()

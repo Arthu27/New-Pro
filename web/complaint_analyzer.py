@@ -1,6 +1,6 @@
 """
-Супер-umniy analiz жалоба на оскорбление
-Glubokiy analiz istorii, reputacii, контекстn, dokazatelstv
+Супер-умный анализ жалоб на оскорбления
+Глубокий анализ истории, репутации, контекста, доказательств
 """
 import discord 
 import json 

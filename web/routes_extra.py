@@ -7,7 +7,7 @@ from datetime import datetime
 
 
 def _load_ai_tickets (guild_id :int )->dict :
-    """AI ticket verilerini yukle"""
+    """Загрузить данные AI-тикетов"""
     path =f"data/ai_tickets_{guild_id}.json"
     if os .path .exists (path ):
         try :
@@ -3251,7 +3251,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         try :
             for c in guild .channels :
                 ch_type =type_map .get (c .type ,str (c .type ).split ('.')[-1 ])
-                # Zengin kanal bilgisi — panelin detayli gosterebilmesi icin
+                # Подробная информация о канале — для детального отображения в панели
                 topic =''
                 nsfw =False
                 slowmode =0
@@ -5697,7 +5697,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         existing ={}
         if os .path .exists (f ):
             with open (f )as fp :existing =json .load (fp )
-            # recent_events: payload'da varsa kullan, yoksa diskten koru
+            # recent_events: если есть в payload — использовать, иначе сохранить с диска
         if 'recent_events'not in data :
             data ['recent_events']=existing .get ('recent_events',[])
             # whitelist: sadece geчerli 17-22 haneli sayыsal user_id'leri принять et

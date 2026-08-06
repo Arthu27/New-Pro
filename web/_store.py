@@ -139,7 +139,7 @@ def _etag_hash_item (h ,item ):
 
         # ── Periodic flush (panel_logs icin) ──────────────────────────────────────────
 class PeriodicFlush :
-    """append() быстрый, настоящий dosya написатьimini arka planda toplu yapar."""
+    """append() быстрый, реальную запись в файл выполняет в фоне пакетно."""
     def __init__ (self ,path ,flush_interval =5.0 ,max_entries =1000 ,batch_threshold =50 ):
         self ._path =path 
         self ._interval =flush_interval 
@@ -190,7 +190,7 @@ class PeriodicFlush :
             atomic_write_json (self ._path ,existing )
             invalidate_path (self ._path )
         except Exception :
-        # Sessizce yut; loglayici hatayi paneli kiramaz
+        # Молча проглотить; логгер не должен ломать панель
             pass 
 
     def shutdown (self ):

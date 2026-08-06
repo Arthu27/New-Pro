@@ -1,6 +1,6 @@
 """
 Ticket AI — продвинутая система поддержки
-Chain-of-thought reasoning, personalizaciya, proактивныйe povedenie, function calling
+Chain-of-thought reasoning, персонализация, проактивное поведение, function calling
 """
 import os 
 import json 
@@ -14,200 +14,138 @@ try :
 except ImportError :
     AIFunctions =None 
 
-    # ─── VERITABANI ИНФОРМАЦИЯ BOTUN ───────────────────────────────────────────────────────
+    # ─── БАЗА ЗНАНИЙ О БОТЕ ───────────────────────────────────────────────────────
 
 def _bot_knowledge_base ()->str :
-    """Polnaya veritabanы информация о botta Aether"""
-    return """
-═══════════════════════════════════════════
-AETHER BOT — POLNAYa VERITABANI ИНФОРМАЦИЯ
-═══════════════════════════════════════════
+    """Полная база знаний о боте Aether (Discord)"""
+    return """ПОЛНАЯ БАЗА ЗНАНИЙ О БОТЕ AETHER (Discord)
+═══════════════════════════════════════════════════
 
-## NE TAKOE AETHER?
-Aether — чokfunkcionalniy Discord bot для управление сервер.
-Web-panel (Flask) + Discord bot работа vmeste.
-Панель доступюzerinde с Cloudflare tunnel по publicnoy sудалитьke.
-Ссылка на панель nahoditsya в канал #aether-panel.
+## ОСНОВНЫЕ КОМАНДЫ (ВСЕ НА АНГЛИЙСКОМ)
 
-## 🛡️ MODERASYON
-- /moderate бан @user [причина] — permanentniy бан
-- /moderate кик @user [причина] — кик с сервер
-- /moderate timeout @user [dakika] [причина] — временный мут
-- /moderate untimeout @user — удалено мут
-- /moderate unban [user_id] — razban
-- /utility clear [число] — toplu удалить сообщение
-- /utility lock/unlock — blokirovka/razblokirovka канал
-- /utility userinfo @user — информация о у пользователя
-- /роли @user @роль — выдать/удалено роль
-- /history @user — история moderasyonu
-- /case [id] — detali iшler
-- /note @user [metin] — добавить заметку
-- /notes @user — показать notlar
-- /watchlist @user [причина] — список наблюдение
-- /banlist — запретlanлиш пользователи
-- /massrole @роль [выдать/удалено] — toplu verme роль
-
-## ⚠️ ПРЕДУПРЕЖДЕНИЯ
-- /варн @user [причина] — выдать предупреждение
-- /warnings @user — список предупреждение
+**Модерация** (только модераторы):
+- /moderate ban @user причина — забанить
+- /moderate kick @user причина — кикнуть
+- /moderate timeout @user минуты причина — мут
+- /moderate untimeout @user — снять мут
+- /moderate unban user_id — разбанить
+- /warn @user причина — предупреждение
+- /unwarn @user id — снять предупреждение
+- /warnings @user — посмотреть предупреждения
 - /clearwarns @user — очистить предупреждения
-Автоматически olarake наказания: iken nakoplenii предупреждение — мут/кик/бан.
+- /utility clear количество — очистить сообщения
+- /utility slowmode секунды — медленный режим
+- /utility lock / /utility unlock — закрыть/открыть канал
+- /utility userinfo @user — информация о пользователе
+- /note @user текст — заметка о пользователе (видят только модераторы)
+- /notes @user — посмотреть заметки
+- /history @user — история нарушений
+- /case id — детали случая
+- /role @user @роль — выдать/снять роль (только роли ниже бота)
+- /massrole give/remove @роль — выдать/снять роль всем
+- /watchlist add @user причина — в список наблюдения
+- /watchlist remove @user — убрать из списка
+- /watchlist-show — показать список наблюдения
+- /jail @user причина — изолировать (тег в нике + джейл-роль)
+- /unjail @user — снять изоляцию
+- /activemods — активные модераторы
+- /modpanel — открыть мод-панель (веб)
 
-## 🎵 MЮZIK
-- /play [имя/ссылка] — vosproizvesti
-- /pause — pauza/продолжить et
-- /skip — propustit trek
-- /queue — kuyruk
-- /volume [0-100] — gromkost
-- /clear-queue — очистить kuyruk
-- /leave — покинуть голосовой канал
-- /join — prisoedinitsya e канал
+**Экономика** (префикс ! !очень важно):
+- !balance [@user] — баланс монет
+- !daily — ежедневная награда (раз в 20 часов)
+- !weekly — еженедельная награда
+- !work — заработать (раз в час)
+- !job — выбрать профессию
+- !jobs — список профессий
+- !shop — магазин
+- !buy предмет — купить предмет
+- !inventory — инвентарь
+- !sell предмет — продать предмет
+- !use предмет — использовать предмет
+- !transfer @user сумма — перевести монеты
+- !bank — положить в банк / состояние
+- !bankup — улучшить банк
+- !interest — собрать проценты
+- !vault — сейф
+- !stock — акции
+- !trade @user — обмен
+- !eco-history — история операций
+- !slots сумма — слоты
+- !casino-coinflip сумма сторона — монетка
+- !casino-dice сумма — кости
+- !beg — попросить милостыню
+- !pets — питомцы
+- !top — топ богачей
 
-## 💰 EKONOMI
-- /economy balance — bakiye
-- /economy daily — ежедневный награда (50 monet, 24c)
-- /economy transfer @user [собратьm] — perevesti moneti
-- /economy ranking — en хорошо bogacey
-- /games gamble [собратьm] — aкубикtnaya игра
-- /games slot [собратьm] — slot-makine
-- /games heist @user — soygun
-- /shop — магазин
-- /buy [predmet] — kupit юrюn
+**Уровни и опыт**:
+- /leaderboard — таблица лидеров (XP + голос)
+- !xp-rank [@user] — твой ранг и уровень
+- !xp-leaderboard — топ по уровню
+- /profile — карточка профиля
+- /badges — значки
+- /streak — серия дней
 
-## 🎮 RAZVLECENIYa
-- /coinflip — monetka
-- /роль [число] — brosit kubik
-- /rps — kamen-nojnici-bumaga
-- /guess-start — ugкандидат число
-- /guess [число] — vvesti число
-- /8ball [soru] — magicesi sar
-- /random-member — slucтот жеy участник
-- /fun [dice] — razvlekatelnie
-- /poll [soru] — bistriy опрос
+**Тикеты**:
+- /ticket создать тикет (кнопкой на панели /ticket-panel)
+- /ticket-add @user — добавить пользователя в тикет
+- /ticket-remove @user — удалить пользователя из тикета
+- /ticket-close — закрыть тикет
 
-## 👥 SOCIALNOE
-- /birthday [день] [месяц] — сохранить день рождение
-- /birthdays — blijaysie день рождение
-- /afk [причина] — мод AFK
-- /staff-apply — заявка модератора
-- /profile — sizin profil
-- /invites — статистика приглашение
-- /invite-ranking — en хорошо приглашение edenler
+**Утилиты и информация**:
+- /help — все команды
+- /userinfo [@user] — информация о пользователе
+- /archive — архив сообщений канала
+- /invite [код] — информация о приглашении
+- /invites — топ по приглашениям
+- /invite-ranking — рейтинг пригласивших
+- /emojis — эмодзи сервера
+- !time — время
+- !account — информация об аккаунте
+- !firstmessage — первое сообщение канала
+- /color — выбрать цвет ника
+- /report — пожаловаться на пользователя
 
-## 🏆 ОЧЕРЕДЬ
-- /rank — sizin уровень ve XP
-- /top-level — en хорошо-10 по уровеньye
-- !ranking — общий очередь
-- !ranking messages — очередь сообщение
-- !ranking voice — рейтинг голосового времени
-- !ranking invites — очередь приглашение
-- /mod-stats @user — статистика модератор
-- /activemods — aktivnie модераторы
+**Верификация**:
+- При входе на сервер новичок ждёт в канале ожидания
+- Модератор выдаёт роль кнопкой или командой
+- /verify-toggle, /verify-status — настройка (модераторы)
 
-## 📅 MEROPRIYaTIYa
-- /event-create [имя] — создать событие
-- /events — aktivnie meropriyatiya
-- /event-cancel [id] — otmenit событие
-- /giveaway — создать розыгрыш
+**Дни рождения**:
+- /birthday-set 15 8 — установить дату (день месяц)
+- /birthdays — ближайшие дни рождения
+- /birthday-delete — удалить свою дату
+- /birthday-setup — настроить канал поздравлений (модераторы)
 
-## ⚙️ УПРАВЛЕНИЕ СЕРВЕР
-- /setup-logs — создать лог-каналы
-- /verify-setup — настройк verifikaciyu
-- /ticket_panel — панель ticketlarыn
-- /duty-panel — панель задачи
-- /duty-add @user [очки] — добавить progress
-- /duty-stats — tablo очки
-- /automod — автоматически
-- /level-роли-add [уровень] @роль — роль для уровень
-- /level-роли — список роль для уровеньler
+**Роли за уровень** (модераторы, префикс !):
+- !level-role-add 5 @роль — роль за уровень 5
+- !level-role-remove @роль — убрать
+- !level-role — список
 
-## 🔧 INSTRUMENTI
-- /botinfo — информация о botta
-- /сервер — сервер информация
-- /uptime — время работа botun
-- /health — состояние сервер
-- /avatar @user — avatar пользователь
-- /channel-stats — статистика канал
-- /archive [число] — arhiv сообщение
-- /ai-reset — sbrosit история AI
-- /ai-learn [tema] [metin] — obucit AI
-- /color [#HEX] — информация о renkte
-- /announce #канал [metin] — создать объявление
+**Автоматика бота**:
+- Автомодерация (флуд, капс, ссылки, плохие слова) — страйки
+- Автороль при входе (настраивается в панели)
+- Реакционные роли (настраиваются в панели)
+- Логирование действий в каналы Логи
+- AI-помощник: упомяни бота или напиши ? вопрос — отвечу
+- Дежурства модераторов: /duty-panel, /duty-add, /duty-stats
 
-## 🤖 AI ASSISTENT
-- Напишите в канал с AI — on cevapit
-- /ai-reset — sbrosit история разговор
-- /ai-learn [tema] [metin] — naucit AI novomu faktu
-- AI pomogaet в ticketlarda автоматически как
+**Веб-панель Aether Panel**:
+- Полное управление ботом через браузер
+- Адрес даёт владелец (/health — статус)
+- Роли доступа: owner / admin / mod / uye
 
-## 🎫 ТИКЕТЫ
-- Нажмите кнопку в канале для тикета
-- Откроется канал #ticket-вашеad
-- AI-ассистент поможет решить проблему
-- Если не получится — передаст модератору
-- При закрытии — транскрипт сохраняется
+**Правила сервера**: /rules — действующие правила
 
-## ✅ VERIFIKACIYa
-- Girin в канал verifikacii
-- Клик butona или ispolzuyte /verify
-- Posle verifikacii — polucite роль участник
-
-## 😴 AFK
-- /afk [причина] — вход yap в мод AFK
-- Takma имя menyaetsya на 💤 [sizin takma имя]
-- Iken upominanii — bot soobsaet ne siz AFK
-- Iken denhaklarыnke сообщения — AFK snimaetsya автоматически как
-
-## 🎂 ДЕНЬ РОЖДЕНИЕ
-- /birthday [день] [месяц] — сохранить
-- /birthdays — blijaysie день рождение
-- В день рождение — bot pozdravlyaet автоматически как
-
-## 📨 PRIGLASENIYa
-- /invites — vasa статистика
-- /invite-ranking — en хорошо приглашение edenler
-- Уровеньler: Posol / Priglasayusiy / Новый priglasayusiy
-
-## 🌐 WEB-PANEL
-Панель — web-interfeys управление сервер.
-Как вход yap: ссылка в канал #aether-panel → Discord ID + parola.
-Уровеньler доступ:
-- Участник: profil, заявка, день рождение
-- Модератор: loglar, предупреждения, ticketlar
-- Yёnetici: команды, каналы, roles, автоматически
-- Sahip: vse
-
-## ❓ CASTIE SORULAR
-В: Как вход yap в панель?
-О: Ссылка в канал #aether-panel → Discord ID + parola.
-
-В: Музыка не oynuyor?
-О: Войдите в голосовой канал, затем /play. Если ошибка — /leave и снова /play.
-
-В: Как povisit уровень?
-О: Пишите сообщения и сидите в голосовых каналах. /rank — ваш уровень.
-
-В: Как открыть ticket?
-О: Buton в канал ticketlarыn → "Создать ticket".
-
-В: Как получить роль?
-О: Канал выбор роль или /color-роли.
-
-В: Как podat zayavku модератора?
-О: /staff-apply или с панель.
-
-В: Как сохранить день рождение?
-О: /birthday [день] [месяц] или с панель.
-
-В: Zabil parola из paneli?
-О: Клик "Для parola?" на stranice вход → Discord ID → kod в DM.
+═══════════════════════════════════════════════════
+ОТВЕЧАЙ КРАТКО И ТОЧНО. ЕСЛИ НЕ ЗНАЕШЬ КОМАНДУ — НЕ ВЫДУМЫВАЙ.
 """
 
 
-    # ─── OPREDELENIE KATEGORILER (AI) ─────────────────────────────────────────────
+    # ─── ОПРЕДЕЛЕНИЕ КАТЕГОРИИ (AI) ─────────────────────────────────────────────
 
 def _detect_category_ai (message :str ,history :List [Dict ])->str :
-    """Opredelenie kategoriler с с AI (не keyword-based)"""
+    """Определение категории через AI (не по ключевым словам)"""
     prompt ="""Opredeli kategori obraseniya пользователь в Discord tickette.
 
 KATEGORILER:
@@ -245,7 +183,7 @@ Bez poyasneniy, bez tocek, bez kavicek.
 
 
 def _detect_category_fallback (message :str )->str :
-    """Fallback: keyword-based opredelenie kategoriler"""
+    """Fallback: определение категории по ключевым словам"""
     msg =message .lower ()
     complaint_words =['жалоба','oskorblyaet','spamit','toksicniy','materitsya','ugrojaet','travit']
     technical_words =['не работает','ошибка','bag','sloazs','vidaet ошибка','не mogu']
@@ -321,7 +259,7 @@ POLUCEN SORU. Senin задача:
 
 
 def _prompt_technical ()->str :
-    """Prompt для tehnicстарыйh problem — chain-of-thought"""
+    """Промпт для технических проблем — chain-of-thought"""
     return """Sen — AI tehподдержка Discord сервер. Cevapla на русский.
 
 TEHNICESKAYa SORUN. Senin задача:
@@ -380,11 +318,11 @@ def _get_prompt_by_category (category :str )->str :
     return prompts .get (category ,_prompt_other ())
 
 
-    # ─── GLAVNAYa FUNKCIYa — AI TICKET RESPONSE ───────────────────────────────────
+    # ─── ГЛАВНАЯ ФУНКЦИЯ — AI TICKET RESPONSE ───────────────────────────────────
 
 async def ai_ticket_response (user_message :str ,history :List [Dict ],guild_context :Dict )->Tuple [str ,bool ,str ,List [Dict ],str ]:
     """
-    Glavnaya funkciya AI cevabы в tickette.
+    Главная функция AI-ответа в тикете.
 
     Returns:
         (response, should_escalate, escalation_category, updated_history, detected_category)
@@ -439,7 +377,7 @@ async def ai_ticket_response (user_message :str ,history :List [Dict ],guild_con
     if server_info :
         messages .append ({
         'role':'system',
-        'content':"BAГLAM СЕРВЕР:\n"+"\n".join (server_info )
+        'content':"КОНТЕКСТ СЕРВЕРА:\n"+"\n".join (server_info )
         })
 
         # 5.5. Function calling — описание eriшadlerin fonksiyonlarыn
@@ -460,7 +398,7 @@ async def ai_ticket_response (user_message :str ,history :List [Dict ],guild_con
         if learning_context :
             messages .append ({
             'role':'system',
-            'content':f"BAГLAM EГITIMI (ispolzuy для ulucseniya cevabы):\n{learning_context}"
+            'content':f"КОНТЕКСТ ОБУЧЕНИЯ (используй для улучшения ответа):\n{learning_context}"
             })
     except Exception as e :
         print (f"[AI] Ошибка zagruzki контекстn eгitimi: {e}")
@@ -541,7 +479,7 @@ async def ai_ticket_response (user_message :str ,history :List [Dict ],guild_con
                     for fact in facts [:2 ]:# Maksimum 2 fakta для kez
                         await ai_functions .remember_fact (guild ,user_id ,fact )
         except Exception as e :
-            print (f"[AI] Ошибка izvleceniya gerчдобавитьr: {e}")
+            print (f"[AI] Ошибка извлечения фактов: {e}")
 
             # 12. Сохран cevap для samoeгitimi (olacak proanalizirovan после)
     try :
@@ -1048,11 +986,11 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
     )
 def _call (messages :List [Dict ],max_tokens :int =2048 ,temperature :float =0.7 ,model :str =None )->Tuple [str ,str ,Dict ]:
     """
-    Чoklu Saгlayыcы LLM API Чaгrыsы:
-    1) Ollama (Yerel LLM)
-    2) Mistral AI API (MISTRAL_API_KEY varsa mistral-large/medium/small)
+    Мультпровайдерный вызов LLM API:
+    1) Ollama (локальная LLM)
+    2) Mistral AI API (MISTRAL_API_KEY: mistral-large/medium/small)
     3) OpenRouter / DeepSeek / OpenAI API
-    4) Akыllы Yerel Aether/Moebius Чevrimdышы Fallback Motoru
+    4) Умный локальный офлайн-движок Aether/Moebius (fallback)
     """
     model_name =model or os .getenv ("AI_MODEL","mistral-large-latest")
     ollama_url =os .getenv ("OLLAMA_URL","http://127.0.0.1:11434")
@@ -1169,8 +1107,8 @@ def _call_text (messages :List [Dict ],max_tokens :int =2048 ,temperature :float
 
 def ai_assistant (question :str ,context :Dict =None ,history :List [Dict ]=None )->Tuple [str ,List [Dict ],str ,Dict ]:
     """
-    AI Chat Asistanы ana arayюz fonksiyonu (RAG & Правило Entegrasyonlu).
-    cogs/ai_chat.py ve Web Paneli сканироватьfыndan использовать.
+    Главная функция AI-ассистента чата (RAG + интеграция правил).
+    Используется из cogs/ai_chat.py и веб-панели.
     
     Returns:
         (answer, updated_history, model_name, extra_info)

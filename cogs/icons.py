@@ -1,10 +1,10 @@
-"""Aether — özel marka simgeleri (assets/icons/) — embed thumbnail yardımcısı"""
+"""Aether — фирменные иконки (assets/icons/) — помощник embed-миниатюр"""
 import os 
 import discord 
 
 ICONS_DIR =os .path .join (os .path .dirname (os .path .dirname (__file__ )),'assets','icons')
 
-# Simgenin embed'e bağlanacağı dosya adı (256px sürüm görünürlük/hız dengesi için)
+# Имя файла, к которому привяжется иконка в embed (256px — баланс видимости/скорости)
 def icon_attach (name :str ):
     """Embed'e bağlanacak (dosya adı, discord.File) döndürür. Yoksa (None, None).
 

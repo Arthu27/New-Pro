@@ -9,7 +9,7 @@ from typing import Dict ,List ,Optional ,Any
 
 
 class AIFunctions :
-    """Nabor fonksiyonlarыn eriшadlerin AI"""
+    """Набор функций, доступных AI"""
 
     def __init__ (self ,bot :discord .Client ):
         self .bot =bot 
@@ -31,74 +31,63 @@ class AIFunctions :
     def get_available_functions (self )->str :
         """Vozvrasaet описание eriшadlerin fonksiyonlarыn для AI"""
         return """
-ERIШIMNIE FONKSIYONLAR (vizivay ne время gerekli):
+ДОСТУПНЫЕ ФУНКЦИИ (вызывай при необходимости):
 
 1. get_user_warnings(user_id: int)
-   Получить история предупреждение пользователь
+   Получить историю предупреждений пользователя
    Пример: get_user_warnings(123456789)
 
 2. get_user_info(user_id: int)
-   Получить информация о у пользователя (имя, дата registracii, время на на сервере)
+   Получить информацию о пользователе (имя, дата регистрации, время на сервере)
    Пример: get_user_info(123456789)
 
 3. get_user_roles(user_id: int)
-   Получить список роль пользователь
+   Получить список ролей пользователя
    Пример: get_user_roles(123456789)
 
 4. check_message_history(user_id: int, limit: int = 10)
-   Контроль et son сообщения пользователь
+   Проверить последние сообщения пользователя
    Пример: check_message_history(123456789, 20)
 
 5. search_rules(query: str)
-   Arama по правил сервер
+   Поиск по правилам сервера
    Пример: search_rules("spam")
 
 6. get_server_stats()
-   Получить istatistiгi сервер (участники, onlayn, каналы)
+   Получить статистику сервера (участники, онлайн, каналы)
    Пример: get_server_stats()
 
 7. get_ticket_history(user_id: int)
-   Получить история ticketlarыn пользователь
+   Получить историю тикетов пользователя
    Пример: get_ticket_history(123456789)
 
 8. remember_fact(user_id: int, fact: str)
-   Zapomnit vajniy fakt о у пользователя
-   Пример: remember_fact(123456789, "Predpocitaet kratkie cevaplar")
+   Запомнить важный факт о пользователе
+   Пример: remember_fact(123456789, "Предпочитает краткие ответы")
 
 9. recall_facts(user_id: int)
-   Vspomnit все fakti о у пользователя
+   Вспомнить все факты о пользователе
    Пример: recall_facts(123456789)
 
 10. check_user_reputation(user_id: int)
-    Контроль et itibarы пользователь (предупреждения, muti, bani)
+    Проверить репутацию пользователя (предупреждения, муты, баны)
     Пример: check_user_reputation(123456789)
 
 11. search_knowledge_base(query: str)
-    Arama по tabanda информация сервер (правила, FAQ, ticketlar, notlar)
-    Пример: search_knowledge_base("spam")
+    Поиск по базе информации сервера (правила, FAQ, тикеты, заметки)
+    Пример: search_knowledge_base("как войти в панель")
 
-12. search_user_messages(user_id: int, channel_id: int = 0, limit: int = 20)
-    ОБЯЗАТЕЛЬНО вызывай эту функцию каждый раз, когда пользователь
-    просит ПОКАЗАТЬ/НАЙТИ/ВЫВЕСТИ сообщения другого пользователя или себя.
-    ГИБРИДНЫЙ поиск: сначала Discord API (channel.history), потом fallback
-    на data/message_log_<guild_id>.json (когда бот offline).
-    channel_id=0 — искать во всех каналах, иначе только в указанном.
+12. search_user_messages(user_id: str, query: str, limit: int = 5)
+    Поиск по сообщениям пользователя (архив, до 48 часов)
+    Пример: search_user_messages(user_id="123456789", query="mute")
 
-    КРИТИЧЕСКИ ВАЖНО: если тебя просят показать сообщения пользователя —
-    СРАЗУ вызывай [FUNC:search_user_messages(user_id=<id>, limit=20)].
-    НЕ говори "Discord API недоступен" — у тебя ЕСТЬ лог в
-    data/message_log_<guild_id>.json, и Discord API часто работает.
-
-    Пример: [FUNC:search_user_messages(user_id=123456789, limit=20)]
-    Или только в конкретном канале:
-    [FUNC:search_user_messages(user_id=123456789, channel_id=987654321, limit=10)]
-
-FORMAT VIZOVA:
-[FUNC:function_name(param1=value1, param2=value2)]
+ФОРМАТ ВЫЗОВА ФУНКЦИИ:
+[FUNC:название_функции(параметр1=значение, параметр2=значение)]
 
 ПРИМЕР:
 [FUNC:get_user_warnings(user_id=123456789)]
 """
+
 
     async def execute_function (self ,func_call :str ,guild :discord .Guild )->Optional [str ]:
         """Vipolnyaet funkciyu из vizova AI"""
@@ -411,7 +400,7 @@ FORMAT VIZOVA:
             return f"Ошибка: {str(e)}"
 
     async def get_server_stats (self ,guild :discord .Guild )->str :
-        """Получить istatistiгi сервер"""
+        """Получить статистику сервера"""
         try :
             total_members =guild .member_count 
             online_members =len ([m for m in guild .members if m .status ==discord .Status .online ])
@@ -429,11 +418,11 @@ FORMAT VIZOVA:
             return f"Ошибка: {str(e)}"
 
     async def get_ticket_history (self ,guild :discord .Guild ,user_id :int )->str :
-        """Получить история ticketlarыn"""
+        """Получить историю тикетов"""
         try :
             ticket_file =f"data/tickets_{guild.id}.json"
             if not os .path .exists (ticket_file ):
-                return f"U <@{user_id}> нет istorii ticketlarыn."
+                return f"У <@{user_id}> нет истории тикетов."
 
             with open (ticket_file ,'r',encoding ='utf-8')as f :
                 tickets_data =json .load (f )
@@ -444,7 +433,7 @@ FORMAT VIZOVA:
             ]
 
             if not user_tickets :
-                return f"U <@{user_id}> нет ticketlarыn."
+                return f"У <@{user_id}> нет тикетов."
 
             result =f"Ticketlar <@{user_id}> ({len(user_tickets)}):\n"
             for ticket in user_tickets [-5 :]:# В конец 5
@@ -492,7 +481,7 @@ FORMAT VIZOVA:
         try :
             memory_file ='data/ai_memory.json'
             if not os .path .exists (memory_file ):
-                return f"Нет sohranennih gerчдобавитьr о <@{user_id}>."
+                return f"Нет сохранённых фактов о <@{user_id}>."
 
             with open (memory_file ,'r',encoding ='utf-8')as f :
                 memory =json .load (f )
@@ -501,7 +490,7 @@ FORMAT VIZOVA:
             facts =memory .get (user_key ,[])
 
             if not facts :
-                return f"Нет sohranennih gerчдобавитьr о <@{user_id}>."
+                return f"Нет сохранённых фактов о <@{user_id}>."
 
             result =f"Fakti о <@{user_id}> ({len(facts)}):\n"
             for fact_data in facts [-10 :]:# В конец 10
@@ -513,7 +502,7 @@ FORMAT VIZOVA:
             return f"Ошибка: {str(e)}"
 
     async def check_user_reputation (self ,guild :discord .Guild ,user_id :int )->str :
-        """Контроль et itibarы пользователь"""
+        """Проверить репутацию пользователя"""
         try :
             warnings_text =await self .get_user_warnings (guild ,user_id )
             info_text =await self .get_user_info (guild ,user_id )

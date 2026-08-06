@@ -146,8 +146,8 @@ async def _ask_deepseek_async (prompt :str ,timeout :int =60 )->str :
 
 def ask_deepseek (prompt :str ,timeout :int =60 )->str :
     """
-    Sync wrapper — ai_helper.py'из чaгrыlыr.
-    DeepSeek'e soru sorar, cevabы string как вернуть.
+    Sync-обёртка — вызывается из ai_helper.py.
+    Задаёт вопрос DeepSeek, возвращает ответ строкой.
     Неудачно olursa пусто string возвращает.
     """
     if not DEEPSEEK_EMAIL or not DEEPSEEK_PASSWORD :

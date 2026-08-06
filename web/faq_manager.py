@@ -1,9 +1,9 @@
 """
-FAQ / Ёгrenme Система — Dosya taзапретlanлиш
+FAQ / Система обучения — основана на файлах
 
-Dosyalar:
-  data/learned_faq.json      — Ёгrenilen soru-cevaplar (bot использовать)
-  data/unknown_questions.json — Cevaplanamayan sorular (sen inceliyorsun)
+Файлы:
+  data/learned_faq.json      — изученные вопросы-ответы (использует бот)
+  data/unknown_questions.json — вопросы без ответа (проверяешь ты)
 
 Управление:
   - learned_faq.json'u верно redaktirovatyebilirsin
@@ -83,12 +83,12 @@ def save_unknown_question (question :str ,guild_id :int ,channel_id :int ,histor
     return new_id 
 
 
-    # ─── Staff Cevabыndan Ёгren ───────────────────────────────────────────────────
+    # ─── Обучение из ответов модераторов ───────────────────────────────────────────────────
 
 def learn_from_staff (question :str ,answer :str ,guild_id :int ,staff_name :str ='Администратор'):
     """
-    Staff'ыn ticket'ta данные cevabы learned_faq.json'a add.
-    Benzer soru zaten varsa обновл.
+    Добавить ответ модератора из тикета в learned_faq.json.
+    Если похожий вопрос уже есть — обновить.
     """
     faq =_load (FAQ_FILE )
 
@@ -138,7 +138,7 @@ def _mark_unknown_learned (question :str ):
 
 def find_relevant_faqs (question :str ,guild_id :int =None ,top_k :int =3 ,threshold :float =0.25 )->list :
     """
-    Soruya en benzer FAQ'larы вернуть.
+    Вернуть наиболее похожие FAQ на вопрос.
     Returns: [{'question': str, 'answer': str, 'score': float}, ...]
     """
     faq =_load (FAQ_FILE )

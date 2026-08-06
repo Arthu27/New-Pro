@@ -27,7 +27,7 @@ TXT = (235, 238, 250)
 MUTED = (148, 156, 190)
 SS = 2
 
-# Font cache — her metin icin dosyayi tekrar acmaz (render ciddi hizlanir)
+# Кэш шрифтов — не открывает файл заново для каждого текста (рендер заметно быстрее)
 _FONT_CACHE = {}
 
 
@@ -113,7 +113,7 @@ def _cat_icon(key, size):
         img = Image.new('RGBA', (size, size), (0, 0, 0, 0))
     else:
         img = img.resize((size, size), Image.Resampling.LANCZOS)
-        # Kenar beyaz cizgileri/artiklari yumusak sekilde kirp: %5 inset + yuvarlak kose mask
+        # Мягко обрезать белые полосы/остатки по краям: inset 5% + маска со скруглёнными углами
         inset = max(2, size // 20)
         img = img.crop((inset, inset, size - inset, size - inset)).resize((size, size), Image.Resampling.LANCZOS)
         mask = Image.new('L', (size, size), 0)
@@ -587,7 +587,7 @@ class HelpEmojiUpload(commands.Cog):
                 done.append('afk_icon.png')
             except Exception as exc:
                 failed.append(f'afk_icon.png: {exc}')
-        # Marka logosu (kart basligi icin)
+        # Логотип бренда (для заголовка карточки)
         logo_p = _os.path.join(icons_dir, 'aether_logo.png')
         if _os.path.exists(logo_p) and 'aether_aether_logo' not in existing:
             try:
