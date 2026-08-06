@@ -146,24 +146,24 @@ def _bot_knowledge_base ()->str :
 
 def _detect_category_ai (message :str ,history :List [Dict ])->str :
     """Определение категории через AI (не по ключевым словам)"""
-    prompt ="""Opredeli kategori obraseniya пользователь в Discord tickette.
+    prompt ="""Определи категорию обращения пользователя в Discord-тикете.
 
-KATEGORILER:
-- complaint: жалоба на drugogo пользователь (оскорбление, spam, toksisite)
-- question: soru о botta, paneli, команда, в ролях, ekonomike
-- technical: tehniceskaya sorun (не работает, ошибка, bag)
-- other: vse ostalnoe
+КАТЕГОРИИ:
+- complaint: жалоба на другого пользователя (оскорбления, спам, токсичность)
+- question: вопрос о боте, панели, командах, ролях, экономике
+- technical: техническая проблема (что-то не работает, ошибка)
+- other: всё остальное (болтовня, приветствие, неясное)
 
 ПРАВИЛА:
-- Если пользователь jaluetsya на DRUGOGO пользователь → complaint
-- Если sprasivaet как ne-to ileiшlert → question
-- Если ne-to не работает или vidaet ошибка → technical
-- Если prosto boltaet или neponyatno → other
+- Если «мне пишут гадости в ЛС» — это complaint
+- Если «как сделать X?» — это question
+- Если «что-то не работает или выдаёт ошибку» — это technical
+- Если просто болтает или непонятно — это other
 
-Cevap ТОЛЬКО birine slovom: complaint, question, technical или other.
-Bez poyasneniy, bez tocek, bez kavicek.
+Ответь ТОЛЬКО одним словом: complaint, question, technical или other.
+Без пояснений, без точек, без кавычек.
 
-Сообщение пользователь: """
+Сообщение пользователя: """
 
     messages =[
     {'role':'user','content':prompt +message }
@@ -202,108 +202,107 @@ def _detect_category_fallback (message :str )->str :
 
 def _prompt_complaint ()->str :
     """Prompt для жалоба — chain-of-thought"""
-    return """Sen — AI модератор Discord сервер. Cevapla на русский.
+    return """Ты — AI-модератор Discord-сервера. Отвечай на русском.
 
-POLUCENA ЖАЛОБА. Senin задача:
-1. PROANALIZIRUY situaciyu (кто, ne, ne время)
-2. SOBERI информация:
-   - Sprosi кто narusitel (Discord ID или @упоминание)
-   - Sprosi в kakom канал proizoslo
-   - Pопросve dokazatelstva (skrinsoti, ссылка на сообщения)
-3. OCENI ciddiyet:
-   - Legkoe нарушение (spam, flud) → predupredi
-   - Центрlama (оскорбление) → ACTION:WARN:user_id=X:reason=Y
-   - Tyajeloe (tehditler, travlya) → ACTION:JAIL:user_id=X:duration=60:reason=Y ACTION:ESCALATE
-4. USPOKOY пользователь, skaji ne razberemsya
+ПОЛУЧЕНА ЖАЛОБА. Твоя задача:
+1. ПРОАНАЛИЗИРУЙ ситуацию (кто, что, когда)
+2. СОБЕРИ информацию:
+   - Спроси, кто нарушитель (Discord ID или @упоминание)
+   - Спроси, в каком канале произошло
+   - Попроси доказательства (скриншоты, ссылки на сообщения)
+3. ОЦЕНИ серьёзность:
+   - Лёгкое нарушение (спам, флуд) → предупреди устно
+   - Среднее (оскорбления) → ACTION:WARN:user_id=X:reason=Y
+   - Тяжёлое (угрозы, травля) → ACTION:JAIL:user_id=X:duration=60:reason=Y ACTION:ESCALATE
+4. УСПОКОЙ пользователя, скажи, что разберёмся
 
 ПРАВИЛА:
-- НЕ prosi skrinsoti если ih zaten dali
-- НЕ ёner "открыть ticket" — biz zaten в tickette
-- Bud empaticnim, no professionalnim
-- Если нарушение tyajeloe — deystvuy bistro
+- НЕ проси скриншоты, если их уже прислали
+- НЕ предлагай «открыть тикет» — мы уже в тикете
+- Будь эмпатичным, но профессиональным
+- При тяжёлом нарушении действуй быстро
 
-FORMAT CEVABI:
-До cevap пользователю (metinle).
-В конецra, если gerekli записей — на novoy satыre:
+ФОРМАТ ОТВЕТА:
+Сначала ответ пользователю (текстом).
+В конце, если нужны действия — на новой строке:
 ACTION:WARN:user_id=123456:reason=оскорбление
 или
-ACTION:JAIL:user_id=123456:duration=60:reason=travlya ACTION:ESCALATE
+ACTION:JAIL:user_id=123456:duration=60:reason=травля ACTION:ESCALATE
 """
 
 
 def _prompt_question ()->str :
     """Prompt для soruov — chain-of-thought"""
-    return """Sen — AI pomosnik Discord сервер. Cevapla на русский.
+    return """Ты — AI-помощник Discord-сервера. Отвечай на русском.
 
-POLUCEN SORU. Senin задача:
-1. PONYaI soru (о cem imenno sprasivayut)
-2. PROVER veriбазу информация (biliyorsun ли cevap)
-3. CEVAP cetko ve kratko:
-   - Если biliyorsun → day cevap + пример ispolzovaniya
-   - Если не emin → skaji "Не emin, no..." + lucsee predpolojenie
-   - Если не biliyorsun → ACTION:ESCALATE (на e модератор)
+ПОЛУЧЕН ВОПРОС. Твоя задача:
+1. ПОЙМИ вопрос (о чём именно спрашивают)
+2. ПРОВЕРЬ базу знаний (знаешь ли ответ)
+3. ОТВЕТЬ чётко и кратко:
+   - Знаешь → дай ответ + пример использования
+   - Не уверен → скажи «Не уверен, но…» + лучшее предположение
+   - Не знаешь → ACTION:ESCALATE (передать модератору)
 
 ПРАВИЛА:
-- Cevapla на 2-3 predlojeniya maksimum
-- Hadi konkretnie команды с пример
-- НЕ ёner "открыть ticket" — biz zaten в tickette
-- Если soru о drugom у пользователя — не raskrivay licnuyu информация
+- Отвечай максимум в 2-3 предложения
+- Давай конкретные команды с примером
+- НЕ предлагай «открыть тикет» — мы уже в тикете
+- Если вопрос о другом пользователе — не раскрывай личную информацию
 
-ПРИМЕР HOROSIH CEVAPLARIN:
-В: Как zabanit spamera?
-О: Ispolzuy `/moderate бан @user причина`. На: `/moderate бан @spammer Spam в sohbette`. Bot denhaklarыtutar DM пользователю ve записьet в loglar.
+ПРИМЕР ХОРОШИХ ОТВЕТОВ:
+В: Как забанить спамера?
+О: Используй `/moderate ban @user причина`. Например: `/moderate ban @spammer Спам в чате`. Бот отправит DM пользователю и запишет в логи.
 
-В: Как povisit уровень?
-О: Пишите сообщения в чате и сидите в голосовых каналах — получаете XP. Проверьте уровень: `/rank`. Топ-10: `/top-level`.
+В: Как повысить уровень?
+О: Пиши сообщения в чате и сиди в голосовых каналах — получаешь XP. Проверь уровень: `!xp-rank`. Топ-10: `!xp-leaderboard`.
 """
 
 
 def _prompt_technical ()->str :
     """Промпт для технических проблем — chain-of-thought"""
-    return """Sen — AI tehподдержка Discord сервер. Cevapla на русский.
+    return """Ты — AI техподдержки Discord-сервера. Отвечай на русском.
 
-TEHNICESKAYa SORUN. Senin задача:
-1. DIAGNOSTIRUY sorunu (ne imenno не работает)
-2. PREDLOJI reseniya (minimum 2 varianta):
-   - Samoe veroyatnoe решение
-   - Alternativnoe решение
-3. POSAGOVO obyasni как vipolnit решение
-4. Если не pomoglo → ACTION:ESCALATE
+ТЕХНИЧЕСКАЯ ПРОБЛЕМА. Твоя задача:
+1. ДИАГНОСТИРУЙ проблему (что именно не работает)
+2. ПРЕДЛОЖИ решения (минимум 2 варианта):
+   - Самое вероятное решение
+   - Альтернативное решение
+3. ПОШАГОВО объясни, как выполнить решение
+4. Если не помогло → ACTION:ESCALATE
 
 ПРАВИЛА:
-- Nacinay с samogo prostogo reseniya
-- Hadi posagovie instrukcii (1, 2, 3...)
-- Если nujna команда — ukaji tocno с пример
-- НЕ ёner "открыть ticket" — biz zaten в tickette
-- Если sorun slojnaya ve sen не emin → srazu ACTION:ESCALATE
+- Начиная с самого простого решения
+- Давай пошаговые инструкции (1, 2, 3...)
+- Если нужна команда — укажи точно с примером
+- НЕ предлагай «открыть тикет» — мы уже в тикете
+- Если проблема сложная и ты не уверен → сразу ACTION:ESCALATE
 
 ПРИМЕР:
-В: Музыка не oynuyor
-О: Hadi proverim:
-1. Вы в голосовом канале? (бот должен быть в том же канале)
-2. Poprobuy `/leave` после tekrar `/play [имя]`
-3. Проверьте, что у бота есть права администратора на управление голосовыми каналами
+В: Музыка не играет
+О: Давай проверим:
+1. Ты в голосовом канале? (бот должен быть в том же канале)
+2. Попробуй `!leave`, затем снова `!play [название]`
+3. Проверь, что у бота есть права на управление голосовыми каналами
 
-Если не pomoglo — направление e модератор.
+Если не помогло — передаю модератору.
 """
 
 
 def _prompt_other ()->str :
     """Prompt для drugih obraseniy — chain-of-thought"""
-    return """Sen — AI pomosnik Discord сервер. Cevapla на русский.
+    return """Ты — AI-помощник Discord-сервера. Отвечай на русском.
 
-OBRASENIE НЕ YaSNO. Senin задача:
-1. POYMI ne hocet пользователь
-2. UTOCNI если neponyatno (zкандидат 1 soru)
-3. POMOGI если mojes
-4. Если не mojes → ACTION:ESCALATE
+ОБРАЩЕНИЕ НЕЯСНО. Твоя задача:
+1. ПОЙМИ, чего хочет пользователь
+2. УТОЧНИ, если непонятно (задай 1 вопрос)
+3. ПОМОГИ, если можешь
+4. Если не можешь → ACTION:ESCALATE
 
 ПРАВИЛА:
-- Bud drujelyubnim
-- Zкандидат maksimum 1 utocnyayusiy soru
-- Если пользователь prosto boltaet — podderji разговор
-- Если sorun sereznaya — на e модератор
-- НЕ ёner "открыть ticket" — biz zaten в tickette
+- Будь дружелюбным
+- Задавай максимум 1 уточняющий вопрос
+- Если пользователь просто болтает — поддержи разговор
+- Если проблема серьёзная — передай модератору
 """
 
 
@@ -442,7 +441,7 @@ async def ai_ticket_response (user_message :str ,history :List [Dict ],guild_con
                 'content':f"РЕЗУЛЬТАТ FONKSIYONLAR {func_call}:\n{result}"
                 })
 
-                # Удален vizovi fonksiyonlarыn из cevabы
+                # Убрать вызовы функций из ответа
     response =re .sub (r'\[FUNC:[^\]]+\]','',response ).strip ()
 
     # 9. Отдельношtыrыyoruz записейler
@@ -455,7 +454,7 @@ async def ai_ticket_response (user_message :str ,history :List [Dict ],guild_con
         # (re global import edildiгi для burada tekrar import gerekmiyor)
 
     if not response :
-        response ="Iшliyorum sizin sorgu..."
+        response ="Обрабатываю ваш запрос..."
 
         # 10. Обновл история
     updated_history =history +[
@@ -486,7 +485,7 @@ async def ai_ticket_response (user_message :str ,history :List [Dict ],guild_con
         from web .self_learning import get_self_learning 
         self_learning =get_self_learning ()
 
-        # Контроль ediyoruz длинныйluгu cevabы — если очень korotkiy, vozmюmkюn sorun
+        # Проверяем длину ответа — если очень короткий, возможна проблема
         if len (response )<10 :
             self_learning .record_mistake (
             user_message =user_message ,
@@ -526,7 +525,7 @@ def ai_ticket_greeting (category :str =None )->str :
     # ─── PARSING ДЕЙСТВИЕ ───────────────────────────────────────────────────────
 
 def parse_ai_actions (response :str )->Dict :
-    """Parsing записей из cevabы AI"""
+    """Разбор записей из ответа AI"""
     import re 
 
     actions ={
@@ -593,7 +592,7 @@ def parse_ai_actions (response :str )->Dict :
     # ─── OBUCENIE DEN CEVAPLARIN МОДЕРАТОР ────────────────────────────────────────
 
 def learn_from_staff (staff_message :str ,user_question :str ,guild_id :int ):
-    """Автоматически obucenie из cevaplarыn модератор"""
+    """Автоматическое обучение из ответов модератора"""
     try :
         faq_file ='data/faq_learned.json'
         faqs ={}
@@ -1083,7 +1082,7 @@ def _call (messages :List [Dict ],max_tokens :int =2048 ,temperature :float =0.7
                 if text :
                     return text ,model_name ,{"provider":"api"}
         except Exception as _oe :
-            print (f"[AI API] Dыш API ошибка: {_oe}")
+            print (f"[AI API] Внешняя API ошибка: {_oe}")
 
             # 4. Akыllы Aether/Moebius Yerel Fallback (Hiчbir LLM servisi olmasa bile никогда ошибка vermez!)
     return _local_moebius_fallback (messages )
@@ -1098,7 +1097,7 @@ def _call_text (messages :List [Dict ],max_tokens :int =2048 ,temperature :float
             return resp 
     except Exception as e :
         print (f"[AI] _call_text exception, fallback: {e}")
-        # Fallback: yerel Moebius cevabы
+        # Fallback: локальный ответ Moebius
     try :
         fallback ,_ ,_ =_local_moebius_fallback (messages )
         return fallback 
