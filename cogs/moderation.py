@@ -426,6 +426,28 @@ class Moderation (commands .Cog ):
             embed .set_footer (text =f"{interaction.guild.name} · Модерация")
         await interaction .response .send_message (embed =embed ,view =ModPanelView (self ))
 
+    # ═══════════════════════════════════════════════════════════════════
+    #  !moderate — та же панель, но префиксной командой (без slash-синхронизации)
+    # ═══════════════════════════════════════════════════════════════════
+    @commands .command (name ="moderate",aliases =["modpanel"])
+    @commands .has_permissions (moderate_members =True )
+    async def moderate_prefix (self ,ctx ):
+        """Открыть панель модерации (select-меню) префиксной командой."""
+        embed =discord .Embed (
+        title ="🛡 Модерация",
+        description =(
+        "Выберите действие в выпадающем меню ниже.\n"
+        "После выбора откроется окно для ввода цели и причины."
+        ),
+        color =0x3498DB ,
+        timestamp =datetime .now (timezone .utc )
+        )
+        if ctx .guild .icon :
+            embed .set_footer (text =f"{ctx.guild.name} · Модерация",icon_url =ctx .guild .icon .url )
+        else :
+            embed .set_footer (text =f"{ctx.guild.name} · Модерация")
+        await ctx .send (embed =embed ,view =ModPanelView (self ))
+
     def _parse_target_id (self ,target :str ):
         """Из '@упоминание' или '123456789' вернуть int ID (или None)."""
         if not target :
@@ -683,6 +705,15 @@ class ModPanelView(discord.ui.View):
     def __init__(self, cog):
         super().__init__(timeout=300)
         self.add_item(ModActionSelect(cog))
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        """Панель модерации — только для модераторов (сообщение публичное)."""
+        if not interaction.user.guild_permissions.moderate_members:
+            await interaction.response.send_message(
+                embed=error_embed("Недостаточно прав: нужно право «Модерация участников»."),
+                ephemeral=True)
+            return False
+        return True
 
 
 async def setup (bot ):
