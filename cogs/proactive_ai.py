@@ -109,7 +109,7 @@ class ProactiveAI (commands .Cog ):
             'Спроси, как прошёл день, и поинтересуйся планами на завтра. '
             'Максимум 3 предложения. Тепло и естественно.'
             )},
-            {'role':'user','content':f'Сервера: {", ".join(stats)}. Akшam сводка yaz.'}
+            {'role':'user','content':f'Сервер: {", ".join(stats)}. Напиши вечернюю сводку.'}
             ],max_tokens =150 )
 
             await self ._send_to_owner (evening_msg )

@@ -62,7 +62,7 @@ class CogManager (commands .Cog ):
         except Exception as e :
             await ctx .send (f' Ошибка: `{e}`')
 
-    @module_group .command (name ='reload-all',aliases =['hepsini-обновить'])
+    @module_group .command (name ='reload-all',aliases =['hepsini-yenile'])
     @commands .is_owner ()
     async def reload_all (self ,ctx ):
         """Перезагрузить все модули"""

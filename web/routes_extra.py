@@ -1189,10 +1189,10 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                                 cdata2 =json .load (fp )
                             for gid_c ,evs in cdata2 .items ():
                                 for ev in evs :
-                                    if str (ev .get ('target_id',''))==uid_str and ev .get ('action')=='Роли Изменение':
+                                    if str (ev .get ('target_id',''))==uid_str and ev .get ('action')=='Изменение ролей':
                                         ts =ev .get ('timestamp','')[:16 ].replace ('T',' ')
                                         role_gecmisi .append (
-                                        f"{ts} Роли Изменение — Mod: {ev.get('mod_name','?')} — {ev.get('reason','') or ev.get('before','') or ''}"
+                                        f"{ts} Изменение ролей — Мод: {ev.get('mod_name','?')} — {ev.get('reason','') or ev.get('before','') or ''}"
                                         )
                         except :pass 
                     role_gecmisi .sort ()
@@ -1270,7 +1270,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
             try :
                 with open (cache_file_mod ,'r',encoding ='utf-8')as fp :
                     cache_data =json .load (fp )
-                mod_action_types ={'Ban','Kick','Mute','Unban','Ban Удалено','Mute Удалено'}
+                mod_action_types ={'Бан','Кик','Мут','Unban','Бан снят','Мут снят'}
                 for gid ,evs in cache_data .items ():
                     for ev in evs :
                         ts =ev .get ('timestamp','')
@@ -1300,9 +1300,9 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
             for a in actions 
             )
 
-        t_ban =sum (1 for c in today_actions if c ['action']=='Ban')
-        t_kick =sum (1 for c in today_actions if c ['action']=='Kick')
-        t_to =sum (1 for c in today_actions if c ['action']=='Mute')
+        t_ban =sum (1 for c in today_actions if c ['action']=='Бан')
+        t_kick =sum (1 for c in today_actions if c ['action']=='Кик')
+        t_to =sum (1 for c in today_actions if c ['action']=='Мут')
 
         # Сегодняшние предупреждения — прочитать из warnings.json
         today_warns =[]
@@ -3085,7 +3085,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
             try :
                 with open (cache_file ,'r',encoding ='utf-8')as fp :
                     cache =json .load (fp )
-                mod_cats ={'Ban','Ban Удалено','Kick','Mute','Mute Удалено',
+                mod_cats ={'Бан','Бан снят','Кик','Мут','Мут снят',
                 'ban','kick','timeout','unban','warn','mute'}
                 for gid ,events in cache .items ():
                     if guild_id and gid !=guild_id :
@@ -4504,7 +4504,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                         except Exception :
                             pass 
 
-                            # Если audit_log'da message yoksa, message_logs dosyasыna bak
+                            # Если в audit_log нет сообщений — смотреть файл message_logs
         msg_log_file =f'data/message_logs_{guild_id}.json'
         if not member_msg_counts and os .path .exists (msg_log_file ):
             with open (msg_log_file ,'r',encoding ='utf-8')as fp :

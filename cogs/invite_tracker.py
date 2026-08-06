@@ -108,7 +108,7 @@ class InviteTracker (commands .Cog ):
     async def my_invites (self ,interaction :discord .Interaction ):
         f =f'data/invite_counts_{interaction.guild_id}.json'
         if not os .path .exists (f ):
-            await interaction .response .send_message (' Пока davet данные нет!',ephemeral =True )
+            await interaction .response .send_message (' Пока нет данных о приглашениях!',ephemeral =True )
             return 
         with open (f ,'r',encoding ='utf-8')as fp :
             counts =json .load (fp )
@@ -116,13 +116,13 @@ class InviteTracker (commands .Cog ):
         info =counts .get (uid ,{'total':0 })
         total =info .get ('total',0 )
 
-        e =discord .Embed (title =" Davet Статистика",color =0x3498DB ,timestamp =datetime .utcnow ())
+        e =discord .Embed (title =" Статистика приглашений",color =0x3498DB ,timestamp =datetime .utcnow ())
         e .description =(
         f"```ansi\n\u001b[1;34m DAVET RAPORU\u001b[0m\n```\n{_divider()}"
         )
         e .set_thumbnail (url =interaction .user .display_avatar .url )
         e .add_field (name =" Пользователь",value =interaction .user .mention ,inline =True )
-        e .add_field (name =" Всего Davet",value =f"```{total} человек```",inline =True )
+        e .add_field (name =" Всего приглашений",value =f"```{total} человек```",inline =True )
         if total >=10 :
             rank =" Большой"
         elif total >=5 :
@@ -130,23 +130,23 @@ class InviteTracker (commands .Cog ):
         elif total >=1 :
             rank ="🌱 Новичок приглашений"
         else :
-            rank =" Пока Davet Нет"
+            rank =" Пока нет приглашений"
         e .add_field (name =" Unvan",value =f"```{rank}```",inline =True )
         e .add_field (name ="💡 Подсказка",value ="*Приглашай больше людей и поднимайся в рейтинге!*",inline =False )
         e .set_footer (text =f"Aether • {interaction.guild.name}",icon_url =interaction .guild .icon .url if interaction .guild .icon else None )
         await interaction .response .send_message (embed =e )
 
-    @app_commands .command (name ='invite-ranking',description ='Davet очередь показать')
+    @app_commands .command (name ='invite-ranking',description ='Рейтинг приглашений')
     async def invite_leaderboard (self ,interaction :discord .Interaction ):
         f =f'data/invite_counts_{interaction.guild_id}.json'
         if not os .path .exists (f ):
-            await interaction .response .send_message (' Пока davet данные нет!',ephemeral =True )
+            await interaction .response .send_message (' Пока нет данных о приглашениях!',ephemeral =True )
             return 
         with open (f ,'r',encoding ='utf-8')as fp :
             counts =json .load (fp )
         sorted_counts =sorted (counts .items (),key =lambda x :x [1 ].get ('total',0 ),reverse =True )[:10 ]
 
-        e =discord .Embed (title =" Davet Очередь",color =0x3498DB ,timestamp =datetime .utcnow ())
+        e =discord .Embed (title =" Рейтинг приглашений",color =0x3498DB ,timestamp =datetime .utcnow ())
         e .description =(
         f"```ansi\n\u001b[1;34m ЛУЧШИЕ ПРИГЛАШАЮЩИЕ\u001b[0m\n```\n{_divider()}"
         )
@@ -157,7 +157,7 @@ class InviteTracker (commands .Cog ):
             bar =""*min (total ,10 )+""*max (0 ,10 -total )
             e .add_field (
             name =f"{medal} {info.get('name', uid)}",
-            value =f"`{bar}` **{total}** davet",
+            value =f"`{bar}` **{total}** приглашений",
             inline =False 
             )
         e .set_footer (text =f"Aether • {interaction.guild.name}",icon_url =interaction .guild .icon .url if interaction .guild .icon else None )

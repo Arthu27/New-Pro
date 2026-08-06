@@ -280,7 +280,7 @@ class Logs (commands .Cog ):
                     wch =member .guild .get_channel (int (w ['channel_id']))
                     if wch :
                         title =(w .get ('title')or 'Добро пожаловать добро пожаловать geldiniz, {user}!').replace ('{user}',member .display_name ).replace ('{сервер}',member .guild .name ).replace ('{count}',str (member .guild .member_count )).replace ('{mention}',member .mention )
-                        msg =(w .get ('message')or '{mention} добро пожаловать добро пожаловать geldiniz на сервер!').replace ('{user}',member .display_name ).replace ('{сервер}',member .guild .name ).replace ('{count}',str (member .guild .member_count )).replace ('{mention}',member .mention )
+                        msg =(w .get ('message')or '{mention} добро пожаловать на сервер!').replace ('{user}',member .display_name ).replace ('{сервер}',member .guild .name ).replace ('{count}',str (member .guild .member_count )).replace ('{mention}',member .mention )
                         color =int (w .get ('color','#c8922a').lstrip ('#'),16 )
                         e =discord .Embed (title =title ,description =msg ,color =color )
                         e .set_thumbnail (url =member .display_avatar .url )
@@ -412,7 +412,7 @@ class Logs (commands .Cog ):
 
     @commands .Cog .listener ()
     async def on_member_ban (self ,guild ,user ):
-        save_event (guild .id ,'mod','Ban',{
+        save_event (guild .id ,'mod','Бан',{
         'user_id':str (user .id ),
         'user_name':str (user ),
         'avatar':str (user .display_avatar .url ),
@@ -420,7 +420,7 @@ class Logs (commands .Cog ):
 
     @commands .Cog .listener ()
     async def on_member_unban (self ,guild ,user ):
-        save_event (guild .id ,'mod','Ban удалено',{
+        save_event (guild .id ,'mod','Бан снят',{
         'user_id':str (user .id ),
         'user_name':str (user ),
         })
@@ -432,7 +432,7 @@ class Logs (commands .Cog ):
             added =[r for r in after .roles if r not in before .roles ]
             removed =[r for r in before .roles if r not in after .roles ]
             if added or removed :
-                save_event (before .guild .id ,'role','Роли изменено',{
+                save_event (before .guild .id ,'role','Изменение ролей',{
                 'user_id':str (before .id ),
                 'user_name':str (before ),
                 'added_roles':[r .name for r in added ],
@@ -441,7 +441,7 @@ class Logs (commands .Cog ):
                 ch =await self .get_log_channel (before .guild ,'role')
                 if ch :
                     e =discord .Embed (color =0x9B59B6 ,timestamp =datetime .datetime .utcnow ())
-                    desc =f"## Роли изменено\n**{before.display_name}** · `{before.id}`\n\n"
+                    desc =f"## Изменение ролей\n**{before.display_name}** · `{before.id}`\n\n"
                     if added :
                         desc +=f"Dobavleni: {', '.join(r.mention for r in added)}\n"
                     if removed :
@@ -455,7 +455,7 @@ class Logs (commands .Cog ):
         after_to =getattr (after ,'timed_out_until',None )
         if before_to !=after_to :
             if after_to :
-                save_event (before .guild .id ,'mod','Mute',{
+                save_event (before .guild .id ,'mod','Мут',{
                 'user_id':str (after .id ),
                 'user_name':after .display_name ,
                 'action':'timeout',
@@ -488,7 +488,7 @@ class Logs (commands .Cog ):
                 except Exception as _e :
                     log .info (f'[LOGS] Ошибка запись mute: {_e}')
             else :
-                save_event (before .guild .id ,'mod','Mute удалено',{
+                save_event (before .guild .id ,'mod','Мут снят',{
                 'user_id':str (after .id ),
                 'user_name':after .display_name ,
                 'action':'untimeout',
@@ -692,7 +692,7 @@ class Logs (commands .Cog ):
 
     @commands .Cog .listener ()
     async def on_guild_channel_create (self ,channel ):
-        save_event (channel .guild .id ,'channel','Канал создано',{
+        save_event (channel .guild .id ,'channel','Канал создан',{
         'channel_id':str (channel .id ),
         'channel_name':channel .name ,
         'channel_type':str (channel .type ),
@@ -726,7 +726,7 @@ class Logs (commands .Cog ):
             except Exception :
                 pass
             if not can_view :
-                save_event (guild .id ,'channel','Канал удален',{
+                save_event (guild .id ,'channel','Канал удалён',{
                 'channel_id':str (channel .id ),
                 'channel_name':getattr (channel ,'name','?'),
                 'channel_type':str (getattr (channel ,'type','?')),
@@ -775,7 +775,7 @@ class Logs (commands .Cog ):
                            'Это означает утечку/компрометацию токена бота или использование '
                            'его вебхука/интеграции. Проверьте безопасность токена!')
 
-        save_event (channel .guild .id ,'channel','Канал удален',{
+        save_event (channel .guild .id ,'channel','Канал удалён',{
         'channel_id':str (channel .id ),
         'channel_name':getattr (channel ,'name','?'),
         'channel_type':str (getattr (channel ,'type','?')),
@@ -828,7 +828,7 @@ class Logs (commands .Cog ):
     @commands .Cog .listener ()
     async def on_guild_role_update (self ,before ,after ):
         if before .name !=after .name :
-            save_event (before .guild .id ,'role','Роль pereimenovana',{
+            save_event (before .guild .id ,'role','Роль переименована',{
             'role_id':str (before .id ),
             'old_name':before .name ,
             'new_name':after .name ,
@@ -838,7 +838,7 @@ class Logs (commands .Cog ):
 
     @commands .Cog .listener ()
     async def on_invite_create (self ,invite ):
-        save_event (invite .guild .id ,'invite','Davet создано',{
+        save_event (invite .guild .id ,'invite','Приглашение создано',{
         'user_id':str (invite .inviter .id )if invite .inviter else '?',
         'user_name':str (invite .inviter )if invite .inviter else '?',
         'code':invite .code ,
@@ -848,7 +848,7 @@ class Logs (commands .Cog ):
 
     @commands .Cog .listener ()
     async def on_invite_delete (self ,invite ):
-        save_event (invite .guild .id ,'invite','Davet удалено',{
+        save_event (invite .guild .id ,'invite','Приглашение удалено',{
         'code':invite .code ,
         'channel':invite .channel .name if invite .channel else '?',
         })
@@ -876,24 +876,24 @@ class Logs (commands .Cog ):
                 pass 
 
         action_map ={
-        discord .AuditLogAction .ban :('mod','Ban'),
-        discord .AuditLogAction .unban :('mod','Ban удалено'),
-        discord .AuditLogAction .kick :('mod','Kick'),
-        discord .AuditLogAction .member_update :('mod','Участник обновлено'),
-        discord .AuditLogAction .channel_create :('channel','Канал создано'),
-        discord .AuditLogAction .channel_delete :('channel','Канал удалено'),
-        discord .AuditLogAction .channel_update :('channel','Канал обновлено'),
-        discord .AuditLogAction .role_create :('role','Роль создан'),
-        discord .AuditLogAction .role_delete :('role','Роль удалено'),
-        discord .AuditLogAction .role_update :('role','Роль obnovlena'),
-        discord .AuditLogAction .member_role_update :('role','Роли изменено'),
-        discord .AuditLogAction .invite_create :('invite','Davet создано'),
-        discord .AuditLogAction .invite_delete :('invite','Davet удалено'),
+        discord .AuditLogAction .ban :('mod','Бан'),
+        discord .AuditLogAction .unban :('mod','Бан снят'),
+        discord .AuditLogAction .kick :('mod','Кик'),
+        discord .AuditLogAction .member_update :('mod','Участник обновлён'),
+        discord .AuditLogAction .channel_create :('channel','Канал создан'),
+        discord .AuditLogAction .channel_delete :('channel','Канал удалён'),
+        discord .AuditLogAction .channel_update :('channel','Канал обновлён'),
+        discord .AuditLogAction .role_create :('role','Роль создана'),
+        discord .AuditLogAction .role_delete :('role','Роль удалена'),
+        discord .AuditLogAction .role_update :('role','Роль обновлена'),
+        discord .AuditLogAction .member_role_update :('role','Изменение ролей'),
+        discord .AuditLogAction .invite_create :('invite','Приглашение создано'),
+        discord .AuditLogAction .invite_delete :('invite','Приглашение удалено'),
         discord .AuditLogAction .message_delete :('message','Сообщение удалено'),
-        discord .AuditLogAction .message_bulk_delete :('message','Массовая удалить'),
-        discord .AuditLogAction .guild_update :('сервер','Сервер обновлено'),
-        discord .AuditLogAction .webhook_create :('сервер','Vebhuk создано'),
-        discord .AuditLogAction .webhook_delete :('сервер','Vebhuk удалено'),
+        discord .AuditLogAction .message_bulk_delete :('message','Массовое удаление'),
+        discord .AuditLogAction .guild_update :('сервер','Сервер обновлён'),
+        discord .AuditLogAction .webhook_create :('сервер','Вебхук создан'),
+        discord .AuditLogAction .webhook_delete :('сервер','Вебхук удалён'),
         }
 
         cache_file ='data/discord_audit_cache.json'
@@ -943,7 +943,7 @@ class Logs (commands .Cog ):
                 if entry .action ==discord .AuditLogAction .member_update :
                     after_attr =entry .changes .after 
                     if hasattr (after_attr ,'timed_out_until'):
-                        action_name ='Mute'if getattr (after_attr ,'timed_out_until',None )else 'Mute удалено'
+                        action_name ='Мут'if getattr (after_attr ,'timed_out_until',None )else 'Мут снят'
                     else :
                         continue 
 

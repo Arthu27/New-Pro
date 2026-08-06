@@ -2831,7 +2831,7 @@ class Ticket (commands .Cog ):
             # Автоматически снять Jail по истечении срока (в минутах)
             await self ._schedule_unjail (guild ,target_user ,jail_role ,duration )
 
-            # Mod log'a сохранить
+            # Сохранить в мод-лог
             from cogs .logs import save_event 
             save_event (
             guild .id ,

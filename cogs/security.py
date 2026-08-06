@@ -372,8 +372,8 @@ class Security (commands .Cog ):
     @app_commands .command (name ="security-toggle",description ="Включить/отключить функцию безопасности")
     @app_commands .describe (feature ="Функция",enabled ="Вкл/Выкл")
     @app_commands .choices (feature =[
-    app_commands .Choice (name ="AI Антиспам Tespiti",value ="ai_spam"),
-    app_commands .Choice (name ="Фейковые аккаунты Tespiti",value ="fake_account"),
+    app_commands .Choice (name ="AI-детект спама",value ="ai_spam"),
+    app_commands .Choice (name ="Детект фейковых аккаунтов",value ="fake_account"),
     app_commands .Choice (name ="Сканер ссылок",value ="link_scanner"),
     ])
     @app_commands .checks .has_permissions (administrator =True )
@@ -412,8 +412,8 @@ class Security (commands .Cog ):
             e =discord .Embed (title ="⛔ Вредоносная ссылка!",color =0xe74c3c )
             e .description ="Эта ссылка содержит вредоносный/подозрительный домен:\n"+"\n".join (f"• `{d}`"for d in bad_domains )
         else :
-            e =discord .Embed (title =" Link Temiz",color =0x2ecc71 )
-            e .description ="Bu link bilinen вредоносный domain listesinde не найдено."
+            e =discord .Embed (title =" Ссылка чиста",color =0x2ecc71 )
+            e .description ="Эта ссылка не найдена в списках известных вредоносных доменов."
         e .add_field (name =" URL",value =f"`{url[:100]}`",inline =False )
         e .set_footer (text =" Aether Сканер ссылок")
         await interaction .response .send_message (embed =e ,ephemeral =True )
