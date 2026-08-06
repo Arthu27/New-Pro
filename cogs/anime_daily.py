@@ -39,19 +39,19 @@ def _save (data :dict ):
 
 
 class CeviriButonu (discord .ui .View ):
-    def __init__ (self ,ozet :str ):
+    def __init__ (self ,summary :str ):
         super ().__init__ (timeout =None )
-        self .ozet =ozet 
+        self .summary =summary 
 
     @discord .ui .button (label ='  Перевести на русский',style =discord .ButtonStyle .primary )
     async def cevir (self ,interaction :discord .Interaction ,button :discord .ui .Button ):
         await interaction .response .defer (ephemeral =True )
         try :
             from deep_translator import GoogleTranslator 
-            if not self .ozet or self .ozet =='Сводка не найдена.':
+            if not self .summary or self .summary =='Сводка не найдена.':
                 await interaction .followup .send (' Нет текста для перевода.',ephemeral =True )
                 return 
-            ceviri =GoogleTranslator (source ='en',target ='ru').translate (self .ozet )
+            ceviri =GoogleTranslator (source ='en',target ='ru').translate (self .summary )
             if len (ceviri )>1900 :
                 ceviri =ceviri [:1900 ]+'...'
             await interaction .followup .send (f' **Краткое содержание:**\n\n{ceviri}',ephemeral =True )
@@ -79,20 +79,20 @@ async def _anime_getir (tur_id :int =None )->dict :
     return None 
 
 
-def _embed_olustur (guild :discord .Guild ,anime :dict ,kategori :str ='Случайно')->tuple :
-    """Создать embed аниме, вернуть (embed, ozet)"""
-    baslik =anime .get ('title_english')or anime .get ('title','Bilinmiyor')
+def _embed_build (guild :discord .Guild ,anime :dict ,kategori :str ='Случайно')->tuple :
+    """Создать embed аниме, вернуть (embed, summary)"""
+    title =anime .get ('title_english')or anime .get ('title','Неизвестно')
     puan =anime .get ('score')or 'Не оценено'
     resim =anime .get ('images',{}).get ('jpg',{}).get ('large_image_url','')
     link =anime .get ('url','')
     bolum =anime .get ('episodes')or 'Неизвестно'
-    ozet =anime .get ('synopsis','Сводка не найдена.')
-    kisa_ozet =(ozet [:300 ]+'...')if len (ozet )>300 else ozet 
+    summary =anime .get ('synopsis','Сводка не найдена.')
+    short_summary =(summary [:300 ]+'...')if len (summary )>300 else summary 
 
     embed =discord .Embed (
-    title =f' Аниме-предложение дня: {baslik}',
+    title =f' Аниме-предложение дня: {title}',
     url =link ,
-    description =kisa_ozet ,
+    description =short_summary ,
     color =0xED4245 
     )
     if resim :
@@ -106,7 +106,7 @@ def _embed_olustur (guild :discord .Guild ,anime :dict ,kategori :str ='Случ
     text =f'{guild.name}  ·  Ежедневное аниме',
     icon_url =guild .icon .url if guild .icon else None 
     )
-    return embed ,ozet 
+    return embed ,summary 
 
 
 class AnimeDaily (commands .Cog ):
@@ -131,14 +131,14 @@ class AnimeDaily (commands .Cog ):
                 continue 
             try :
                 tur_id =gcfg .get ('tur_id')
-                tur_adi =gcfg .get ('tur_adi','Случайно')
+                category =gcfg .get ('tur_adi','Случайно')
                 anime =await _anime_getir (tur_id )
                 if not anime :
                     continue 
-                embed ,ozet =_embed_olustur (guild ,anime ,tur_adi )
+                embed ,summary =_embed_build (guild ,anime ,category )
                 role_id =gcfg .get ('role_id')
                 content =f'<@&{role_id}>'if role_id else None 
-                await channel .send (content =content ,embed =embed ,view =CeviriButonu (ozet ))
+                await channel .send (content =content ,embed =embed ,view =CeviriButonu (summary ))
             except Exception as e :
                 log .info (f'[AnimeDaily] {guild.name} Ошибка: {e}')
 
@@ -173,13 +173,13 @@ class AnimeDaily (commands .Cog ):
         cfg =_load ()
         gid =str (interaction .guild .id )
         tur_id =int (kategori )if kategori !='0'else None 
-        tur_adi =next ((k for k ,v in KATEGORILER .items ()if v ==tur_id ),'Случайно')
+        category =next ((k for k ,v in KATEGORILER .items ()if v ==tur_id ),'Случайно')
 
         cfg [gid ]={
         'enabled':True ,
         'channel_id':channel .id ,
         'tur_id':tur_id ,
-        'tur_adi':tur_adi ,
+        'tur_adi':category ,
         'role_id':role .id if role else None ,
         }
         _save (cfg )
@@ -188,7 +188,7 @@ class AnimeDaily (commands .Cog ):
         if interaction .guild .icon :
             embed .set_thumbnail (url =interaction .guild .icon .url )
         embed .add_field (name =' Канал',value =channel .mention ,inline =True )
-        embed .add_field (name =' Категория',value =tur_adi ,inline =True )
+        embed .add_field (name =' Категория',value =category ,inline =True )
         embed .add_field (name =' Роль',value =role .mention if role else 'Нет',inline =True )
         embed .set_footer (text ='Ежедневная отправка в 10:00')
         await interaction .response .send_message (embed =embed )
@@ -211,13 +211,13 @@ class AnimeDaily (commands .Cog ):
     async def anime_oner (self ,interaction :discord .Interaction ,kategori :str ='0'):
         await interaction .response .defer ()
         tur_id =int (kategori )if kategori !='0'else None 
-        tur_adi =next ((k for k ,v in KATEGORILER .items ()if v ==tur_id ),'Случайно')
+        category =next ((k for k ,v in KATEGORILER .items ()if v ==tur_id ),'Случайно')
         anime =await _anime_getir (tur_id )
         if not anime :
             await interaction .followup .send (' Аниме не найдено, попробуйте ещё раз.')
             return 
-        embed ,ozet =_embed_olustur (interaction .guild ,anime ,tur_adi )
-        await interaction .followup .send (embed =embed ,view =CeviriButonu (ozet ))
+        embed ,summary =_embed_build (interaction .guild ,anime ,category )
+        await interaction .followup .send (embed =embed ,view =CeviriButonu (summary ))
 
     @app_commands .command (name ='anime-suggest',description ="Случайное или категорийное предложение аниме")
     @app_commands .describe (kategori ='Категория аниме (пусто = случайная)')
@@ -227,13 +227,13 @@ class AnimeDaily (commands .Cog ):
     async def anime_oner2 (self ,interaction :discord .Interaction ,kategori :str ='0'):
         await interaction .response .defer ()
         tur_id =int (kategori )if kategori !='0'else None 
-        tur_adi =next ((k for k ,v in KATEGORILER .items ()if v ==tur_id ),'Случайно')
+        category =next ((k for k ,v in KATEGORILER .items ()if v ==tur_id ),'Случайно')
         anime =await _anime_getir (tur_id )
         if not anime :
             await interaction .followup .send (' Аниме не найдено, попробуйте ещё раз.')
             return 
-        embed ,ozet =_embed_olustur (interaction .guild ,anime ,tur_adi )
-        await interaction .followup .send (embed =embed ,view =CeviriButonu (ozet ))
+        embed ,summary =_embed_build (interaction .guild ,anime ,category )
+        await interaction .followup .send (embed =embed ,view =CeviriButonu (summary ))
 
 
 async def setup (bot ):

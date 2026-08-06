@@ -236,7 +236,7 @@ def _save_knowledge_base (knowledge :dict ):
         log .info (f'[AI] Ошибка сохранения базы знаний: {e}')
 
 def _extract_learned_info (question :str ,answer :str )->dict :
-    """Вопрос-cevaptan обучаемый infoyi удалить"""
+    """Удалить обученную информацию из вопроса-ответа"""
     q =question .lower ().strip ()
 
     # Web если выполнен поиск доверие низкий
@@ -555,14 +555,14 @@ def _call_ai (question :str ,user_id :int ,guild =None ,recent_messages :list =N
 
                 _save_knowledge_base (_knowledge_base )
 
-                # В конец 40 сообщение tut (20 soru-cevap чifti) — более длинный hafыza
+                # В конце держим 40 сообщений (20 пар вопрос-ответ) — более длинная память
         _histories [user_id ]=new_history [-40 :]
         # Dosyaya сохранить
         _save_histories (_histories )
         return answer or 'Hmm, bir sorun oldu. Tekrar dener misin? '
     except Exception as e :
         log .info (f'[AI] Ошибка: {e}')
-        return 'Сейчас не mogu cevapla, poprobuyte после. '
+        return 'Сейчас не могу ответить, попробуйте позже. '
 
 
 class AIChat (commands .Cog ):
@@ -766,11 +766,11 @@ class AIChat (commands .Cog ):
         yukari_words =['верх','верх','Вверх','Вверх','yukar']
         asagi_words =['Низ','вниз','asagi','asag']
 
-        sayi_match =re .search (r'(\d+)\s*('+
+        count_match =re .search (r'(\d+)\s*('+
         '|'.join (yukari_words +asagi_words )+r')',cl_norm )
-        if sayi_match :
-            yon =int (sayi_match .group (1 ))
-            if any (w in sayi_match .group (2 )for w in norm ('|'.join (asagi_words )).split ('|')):
+        if count_match :
+            yon =int (count_match .group (1 ))
+            if any (w in count_match .group (2 )for w in norm ('|'.join (asagi_words )).split ('|')):
                 yon =-yon 
         else :
             if any (w in cl_norm for w in yukari_words ):
@@ -815,7 +815,7 @@ class AIChat (commands .Cog ):
                         hedef_vc =vc 
                         break 
             else :
-            # Канал имя direkt geчiyor mu metinde?
+            # Имя канала встречается прямо в тексте?
                 for vc in voice_channels :
                     if norm (vc .name )in cl_norm :
                         hedef_vc =vc 
@@ -872,7 +872,7 @@ class AIChat (commands .Cog ):
         .replace ('И','i').replace ('Ю','u').replace ('Ш','s'))
 
     def _extract_target (self ,text :str ):
-        """Metinden hedef участник ID'sini удалить. (mention, raw ID, 'beni', isim)"""
+        """Извлечь ID целевого участника из текста (mention, raw ID, 'я', имя)"""
         import re 
         m =re .search (r'<@!?(\d+)>',text )
         if m :return int (m .group (1 ))
@@ -882,7 +882,7 @@ class AIChat (commands .Cog ):
         if any (t in cl for t in ['beni','bana','benim','ben ']):
             return OWNER_ID 
             # Isim с ara — все сервер участник ara
-            # Команда kelimelerini clear, осталось kыsыm isim может быть
+            # Убрать слова команды — оставшаяся часть может быть именем
         stop_words =['sesten at','voice al','voice тянуть','ban at','kick at',
         'timeout ver','uyar','роли ver','роли al','bu arkadasi',
         'bu arkadasin','bu kisiyi','bu участника','bu uyeyi',
@@ -1028,8 +1028,8 @@ class AIChat (commands .Cog ):
 
             # AFK aч — "закрыть" или "удалить" geчiyorsa tetikleme
         afk_ac_triggers =['afk','uykum есть','uyuyacaгыm','gidiyorum','yokum']
-        afk_engel =['закрыть','удалить','удалить','bitir','удалить','отмена','modunu','modu']
-        if any (t in cl for t in afk_ac_triggers )and not any (e in cl for e in afk_engel ):
+        afk_block =['закрыть','удалить','удалить','bitir','удалить','отмена','modunu','modu']
+        if any (t in cl for t in afk_ac_triggers )and not any (e in cl for e in afk_block ):
             reason =text 
             for t in ['afk at','afk ol','afk yap','afk','beni']:
                 reason =reason .replace (t ,'').strip ()

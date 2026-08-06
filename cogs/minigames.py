@@ -156,11 +156,11 @@ class MiniGames(commands.Cog):
             ('Определённо нет.', 0xE74C3C),
             ('Судя по всему, нет.', 0xE74C3C),
         ]
-        cevap, color = random.choice(responses)
+        answer, color = random.choice(responses)
         e = discord.Embed(title="🎱 Магический шар", color=color, timestamp=discord.utils.utcnow())
         e.description = f"```ansi\n\u001b[1;35m ОТВЕТ ПОЯВЛЯЕТСЯ...\u001b[0m\n```\n{_divider()}"
         e.add_field(name="Вопрос", value=f"*{вопрос}*", inline=False)
-        e.add_field(name="Ответ", value=f"```{cevap}```", inline=False)
+        e.add_field(name="Ответ", value=f"```{answer}```", inline=False)
         e.set_footer(text=f"Просил: {interaction.user.name}", icon_url=interaction.user.display_avatar.url)
         await interaction.response.send_message(embed=e)
 

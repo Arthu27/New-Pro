@@ -31,28 +31,28 @@ class Webhooks (commands .Cog ):
     ])
     @app_commands .checks .has_permissions (manage_webhooks =True )
     async def webhook_action (self ,interaction :discord .Interaction ,action :str ,
-    channel :discord .TextChannel =None ,isim :str =None ,
-    webhook_id :str =None ,message :str =None ,kullanici_adi :str =None ):
+    channel :discord .TextChannel =None ,name :str =None ,
+    webhook_id :str =None ,message :str =None ,username :str =None ):
         if action =="create":
-            if not channel or not isim :
+            if not channel or not name :
                 await interaction .response .send_message ('❌ Укажите канал и имя!',ephemeral =True )
                 return 
             try :
-                wh =await channel .create_webhook (name =isim )
+                wh =await channel .create_webhook (name =name )
             except discord .Forbidden :
                 await interaction .response .send_message ('❌ Нет прав на создание вебхука!',ephemeral =True )
                 return 
 
             data =self ._load (interaction .guild_id )
             data [str (wh .id )]={
-            'id':str (wh .id ),'name':isim ,
+            'id':str (wh .id ),'name':name ,
             'url':wh .url ,'channel_id':str (channel .id ),
             'channel_name':channel .name 
             }
             self ._save (interaction .guild_id ,data )
 
             embed =discord .Embed (title ='✅ Вебхук создан',color =0x2ECC71 )
-            embed .add_field (name ='Имя',value =isim )
+            embed .add_field (name ='Имя',value =name )
             embed .add_field (name ='Канал',value =channel .mention )
             embed .add_field (name ='ID',value =str (wh .id ))
             await interaction .response .send_message (embed =embed ,ephemeral =True )
@@ -74,7 +74,7 @@ class Webhooks (commands .Cog ):
                     wh =discord .Webhook .from_url (wh_data ['url'],session =session )
                     await wh .send (
                     content =message ,
-                    username =kullanici_adi or wh_data ['name']
+                    username =username or wh_data ['name']
                     )
             except Exception :
             # Если aiohttp нет — попробовать штатным методом discord.py
@@ -83,7 +83,7 @@ class Webhooks (commands .Cog ):
                     webhooks =await channel .webhooks ()
                     wh =discord .utils .get (webhooks ,id =int (webhook_id ))
                     if wh :
-                        await wh .send (content =message ,username =kullanici_adi or wh_data ['name'])
+                        await wh .send (content =message ,username =username or wh_data ['name'])
                 except Exception as e2 :
                     await interaction .response .send_message (f' Ошибка: {e2}',ephemeral =True )
                     return 

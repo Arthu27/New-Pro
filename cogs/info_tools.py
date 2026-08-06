@@ -120,30 +120,30 @@ class InfoTools(commands.Cog):
         await ctx.send(embed=e)
 
     @commands.command(name="account", aliases=["hesap"])
-    async def hesap(self, ctx, *, islem: str):
-        if not _re.match(r'^[\d\s\+\-\*\/\.\(\)]+$', islem):
+    async def hesap(self, ctx, *, op: str):
+        if not _re.match(r'^[\d\s\+\-\*\/\.\(\)]+$', op):
             await ctx.send("Используйте только цифры и операторы!")
             return
         try:
-            tree = _ast.parse(islem, mode='eval')
-            sonuc = eval(compile(tree, '<string>', 'eval'), {"__builtins__": {}}, {})
+            tree = _ast.parse(op, mode='eval')
+            result = eval(compile(tree, '<string>', 'eval'), {"__builtins__": {}}, {})
             e = self._embed("ВЫЧИСЛЕНИЕ", "🧮")
-            e.add_field(name="Действие", value=f"`{islem}`")
-            e.add_field(name="Результат", value=f"`{sonuc}`")
+            e.add_field(name="Действие", value=f"`{op}`")
+            e.add_field(name="Результат", value=f"`{result}`")
             await ctx.send(embed=e)
         except Exception:
             await ctx.send("Неверное действие!")
 
     @commands.command(name="base64")
-    async def base64_cmd(self, ctx, islem: str, *, metin: str):
+    async def base64_cmd(self, ctx, op: str, *, msg_text: str):
         try:
-            if islem.lower() == "encode":
-                sonuc = _b64.b64encode(metin.encode()).decode()
+            if op.lower() == "encode":
+                result = _b64.b64encode(msg_text.encode()).decode()
             else:
-                sonuc = _b64.b64decode(metin.encode()).decode()
-            e = self._embed(f"BASE64 {islem.upper()}", "🔐")
-            e.add_field(name="Вход", value=f"`{metin[:100]}`", inline=False)
-            e.add_field(name="Выход", value=f"`{sonuc[:200]}`", inline=False)
+                result = _b64.b64decode(msg_text.encode()).decode()
+            e = self._embed(f"BASE64 {op.upper()}", "🔐")
+            e.add_field(name="Вход", value=f"`{msg_text[:100]}`", inline=False)
+            e.add_field(name="Выход", value=f"`{result[:200]}`", inline=False)
             await ctx.send(embed=e)
         except Exception:
             await ctx.send("Ошибка преобразования!")
@@ -183,8 +183,8 @@ class InfoTools(commands.Cog):
 
     @commands.command(name="announce")
     @commands.has_permissions(administrator=True)
-    async def announce(self, ctx, channel: discord.TextChannel, baslik: str, *, icerik: str):
-        e = discord.Embed(title=baslik, description=icerik, color=ACCENT)
+    async def announce(self, ctx, channel: discord.TextChannel, title: str, *, content: str):
+        e = discord.Embed(title=title, description=content, color=ACCENT)
         e.set_footer(text=f"Объявил: {ctx.author.display_name}", icon_url=ctx.author.display_avatar.url)
         e.timestamp = datetime.utcnow()
         await channel.send(embed=e)

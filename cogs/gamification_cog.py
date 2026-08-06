@@ -26,13 +26,13 @@ class GamificationCog (commands .Cog ):
         """Показать ваш профиль"""
         target_user =user or interaction .user 
 
-        # Очки al
+        # Получить очки
         points =points_system .get_points (target_user .id )
 
-        # Уровень al
+        # Получить уровень
         level =level_system .get_level (target_user .id )
 
-        # Rozetler al
+        # Получить значки
         badges =badge_system .get_user_badges (target_user .id )
 
         # Embed создать
@@ -46,12 +46,12 @@ class GamificationCog (commands .Cog ):
 
         embed .add_field (name =" Очки",value =f"{points:,}",inline =True )
         embed .add_field (name =" Уровень",value =f"{level['level']} - {level['name']}",inline =True )
-        embed .add_field (name =" Rozetler",value =str (len (badges )),inline =True )
+        embed .add_field (name =" Значки",value =str (len (badges )),inline =True )
 
         # Значок listesi
         if badges :
             badge_list ="\n".join ([f"• {badge['name']}"for badge in badges [:5 ]])
-            embed .add_field (name ="Rozetler",value =badge_list ,inline =False )
+            embed .add_field (name ="Значки",value =badge_list ,inline =False )
 
         embed .set_footer (text =f"User ID: {target_user.id}")
 
@@ -94,7 +94,7 @@ class GamificationCog (commands .Cog ):
             if type =='points':
                 value =f"{leader['points']:,} очки"
             elif type =='badges':
-                value =f"{leader['badges']} rozet"
+                value =f"Значков: {leader['badges']}"
             else :
                 value =f"Уровень {leader['level']}"
 
@@ -113,7 +113,7 @@ class GamificationCog (commands .Cog ):
         """Показать ваши значки"""
         target_user =user or interaction .user 
 
-        # Rozetler al
+        # Получить значки
         badges =badge_system .get_user_badges (target_user .id )
 
         if not badges :
@@ -126,7 +126,7 @@ class GamificationCog (commands .Cog ):
             # Embed создать
         embed =discord .Embed (
         title =f" {target_user.display_name}'s Badges",
-        description =f"Всего {len(badges)} rozet",
+        description =f"Всего значков: {len(badges)}",
         color =discord .Color .gold (),
         timestamp =datetime .now ()
         )
@@ -175,7 +175,7 @@ class GamificationCog (commands .Cog ):
         """Ваша серия дней"""
         from services .gamification import streak_system 
 
-        # Seri информация al
+        # Информация о серии
         streak_info =streak_system .get_streak (interaction .user .id )
 
         # Embed создать

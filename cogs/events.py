@@ -91,15 +91,15 @@ class Events (commands .Cog ):
 
     @app_commands .command (name ='event-create',description ='Создать новое событие')
     @app_commands .describe (
-    baslik ='Название события',
-    aciklama ='Событие описание',
+    title ='Название события',
+    description ='Событие описание',
     date ='Дата (GG/AA/YYYY)',
     часов ='Время (SS:DD)',
     channel ='Duyuru канал'
     )
     @app_commands .checks .has_permissions (manage_events =True )
     async def create_event (self ,interaction :discord .Interaction ,
-    baslik :str ,aciklama :str ,
+    title :str ,description :str ,
     date :str ,часов :str ,
     channel :discord .TextChannel ):
         try :
@@ -115,14 +115,14 @@ class Events (commands .Cog ):
         events =self ._load (interaction .guild_id )
         eid =str (int (dt .timestamp ()))
         events [eid ]={
-        'id':eid ,'title':baslik ,'description':aciklama ,
+        'id':eid ,'title':title ,'description':description ,
         'time':dt .isoformat (),'channel_id':str (channel .id ),
         'created_by':str (interaction .user .id ),
         'notified':False ,'reminded_1h':False ,'reminded_10m':False 
         }
         self ._save (interaction .guild_id ,events )
 
-        embed =discord .Embed (title =f'{baslik}',description =aciklama ,color =discord .Color .dark_grey ())
+        embed =discord .Embed (title =f'{title}',description =description ,color =discord .Color .dark_grey ())
         embed .add_field (name ='Дата и время',value =f'<t:{int(dt.timestamp())}:F>')
         embed .add_field (name ='Канал анонсов',value =channel .mention )
         embed .set_footer (text =f'Событие ID: {eid}')

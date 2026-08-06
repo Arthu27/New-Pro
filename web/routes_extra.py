@@ -1054,17 +1054,17 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                     if mems :in_voice .append (f"{vc.name}: {', '.join(mems)}")
                 channels =[f"#{c.name}(id={c.id})"for c in g .text_channels [:20 ]]
                 role =[r .name for r in g .roles if not r .is_default ()][:15 ]
-                # Участник список (eylemler для isim→ID eшleшtirmesi)
+                # Список участников (для сопоставления имя→ID в действиях)
                 members_list =[f"{m.display_name}(id={m.id})"for m in g .members if not m .bot ][:50 ]
 
-                # На сервер ait все data читать файлы
-                sunucu_configs =[]
+                # Прочитать все data-файлы сервера
+                server_configs =[]
                 config_files ={
-                f'data/automod_{g.id}.json':'Automod настройк',
-                f'data/antiraid_{g.id}.json':'Anti-raid настройк',
-                f'data/health_{g.id}.json':'Сервер состояние',
-                f'data/badges_{g.id}.json':'Rozetler',
-                f'data/warn_config_{g.id}.json':'Warning limitleri',
+                f'data/automod_{g.id}.json':'Настройки Automod',
+                f'data/antiraid_{g.id}.json':'Настройки Anti-raid',
+                f'data/health_{g.id}.json':'Состояние сервера',
+                f'data/badges_{g.id}.json':'Значки',
+                f'data/warn_config_{g.id}.json':'Лимиты предупреждений',
                 }
                 for fpath ,flabel in config_files .items ():
                     if os .path .exists (fpath ):
@@ -1072,18 +1072,18 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                             with open (fpath ,'r',encoding ='utf-8')as fp :
                                 fdata =json .load (fp )
                                 # Только сводка info отправить (token tasarrufu)
-                            if flabel =='Сервер состояние':
+                            if flabel =='Состояние сервера':
                                 score =fdata .get ('score',fdata .get ('health_score','?'))
                                 label =fdata .get ('label',fdata .get ('status','?'))
-                                sunucu_configs .append (f"{flabel}: {score}/100 ({label})")
-                            elif flabel =='Automod настройк':
+                                server_configs .append (f"{flabel}: {score}/100 ({label})")
+                            elif flabel =='Настройки Automod':
                                 enabled =[k for k ,v in fdata .items ()if isinstance (v ,dict )and v .get ('enabled')]
-                                sunucu_configs .append (f"{flabel}: {', '.join(enabled) or 'Yok'}")
-                            elif flabel =='Warning limitleri':
+                                server_configs .append (f"{flabel}: {', '.join(enabled) or 'Нет'}")
+                            elif flabel =='Лимиты предупреждений':
                                 thresholds =fdata .get ('thresholds',[])
-                                sunucu_configs .append (f"{flabel}: {thresholds}")
+                                server_configs .append (f"{flabel}: {thresholds}")
                             else :
-                                sunucu_configs .append (f"{flabel}: текущий")
+                                server_configs .append (f"{flabel}: текущий")
                         except :pass 
 
                         # Warning число
@@ -1112,15 +1112,15 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                 f"  Роли: {', '.join(role)}\n"
                 f"  Участники: {', '.join(members_list)}\n"
                 +(f"  Предупреждения: {warn_summary}\n"if warn_summary else '')
-                +('\n'.join (f'  {c}'for c in sunucu_configs ))
+                +('\n'.join (f'  {c}'for c in server_configs ))
                 )
 
                 # ── ПОЛЬЗОВАТЕЛЬ ID TESPИT ET VE ИНФОРМАЦИЯ ТЯНУТЬ ─────────────────────────────
         import re as _re2 
         user_info_block =''
         id_matches =_re2 .findall (r'\b(\d{17,20})\b',question )
-        # Isim поиск — только кавычки в или belirgin isimler
-        name_matches =_re2 .findall (r'"([^"]+)"',question )# кавычки в isimler
+        # Поиск имени — только в кавычках или явные имена
+        name_matches =_re2 .findall (r'"([^"]+)"',question )# имена в кавычках
         if not id_matches and bot and name_matches :
             for name_q in name_matches [:2 ]:
                 for g in bot .guilds :
@@ -1221,7 +1221,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                     f"  Аккаунт создан: {created}\n"
                     f"  Роли: {', '.join(member_roles) or 'Нет'}\n"
                     f"  Warning количество: {warn_count}\n"
-                    f"  Warninglar: {'; '.join([w.get('reason','?') for w in warn_list[-5:]]) or 'Yok'}\n"
+                    f"  Warninglar: {'; '.join([w.get('reason','?') for w in warn_list[-5:]]) or 'Нет'}\n"
                     f"  Mod история ({len(mod_history)} запись):\n"
                     )
                     user_info_block +=('\n'.join (f'    {h}'for h in mod_history )if mod_history else '    Temiz')+'\n'
@@ -1439,7 +1439,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         try :
             answer ,model_name ,_ =_call (messages ,max_tokens =1024 )
         except Exception as e :
-        # Fallback: yerel cevap
+        # Fallback: локальный ответ
             print (f"[AI-CHAT] _call exception: {e}")
             from web .ai_helper import _local_moebius_fallback 
             try :
@@ -1751,7 +1751,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                         )
 
                     def resolve_role (val ):
-                        """ID или isimden роли вернуть"""
+                        """Вернуть роль по ID или имени"""
                         if val .isdigit ():
                             return guild .get_role (int (val ))
                         return discord .utils .find (
@@ -1790,9 +1790,9 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                     elif tip =='СООБЩЕНИЕ'and len (parts )>2 :
                         ch =resolve_channel (parts [1 ])
                         if ch :
-                            metin =':'.join (parts [2 :])
-                            if metin :
-                                _run_async (ch .send (metin ))
+                            msg_text =':'.join (parts [2 :])
+                            if msg_text :
+                                _run_async (ch .send (msg_text ))
                                 return f'✅ Сообщение отправлено в канал #{ch.name}'
                             return '❌ Сообщение содержимое пусто'
                     elif tip =='KANAL_YAVAШ'and len (parts )>2 :
@@ -1804,10 +1804,10 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                     elif tip =='DM'and len (parts )>2 :
                         m =resolve_member (parts [1 ])
                         if m :
-                            metin =':'.join (parts [2 :])
-                            if metin :
+                            msg_text =':'.join (parts [2 :])
+                            if msg_text :
                                 try :
-                                    _run_async (m .send (metin ))
+                                    _run_async (m .send (msg_text ))
                                     return f'✅ DM отправлено пользователю {m.display_name}'
                                 except discord .Forbidden :
                                     return f'❌ ЛС у {m.display_name} закрыты'
@@ -1948,9 +1948,9 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                         return f'✅ Роль @{r.name} создана'
                     elif tip =='DUYURU'and len (parts )>2 :
                         ch =resolve_channel (parts [1 ])
-                        metin =':'.join (parts [2 :])
-                        if ch and metin :
-                            _run_async (ch .send (f'📢 **ОБЪЯВЛЕНИЕ**\n\n{metin}'))
+                        msg_text =':'.join (parts [2 :])
+                        if ch and msg_text :
+                            _run_async (ch .send (f'📢 **ОБЪЯВЛЕНИЕ**\n\n{msg_text}'))
                             return f'✅ Объявление отправлено в канал #{ch.name}'
                     elif tip =='ROL_VER'and len (parts )>2 :
                         m =resolve_member (parts [1 ])
@@ -1967,9 +1967,9 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                     elif tip =='NICK'and len (parts )>2 :
                         m =resolve_member (parts [1 ])
                         if m :
-                            yeni_nick =':'.join (parts [2 :])
-                            _run_async (m .edit (nick =yeni_nick ))
-                            return f'✅ Ник изменён: {m.name} → {yeni_nick}'
+                            new_nick =':'.join (parts [2 :])
+                            _run_async (m .edit (nick =new_nick ))
+                            return f'✅ Ник изменён: {m.name} → {new_nick}'
                     return '⚠️ Действие не завершено — канал/участник не найден'
                     # do_action() — синхронная функция, вызываем напрямую (не coroutine)
                 action_result =do_action ()
@@ -3795,13 +3795,13 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
             # Yeniden adlandir
             if 'name' in data and data ['name']:
                 _run_async (ch .edit (name =str (data ['name'])[:100 ]))
-            # Konu / topic (metin kanallari)
+            # Тема / topic (текстовые каналы)
             if 'topic' in data :
                 _run_async (ch .edit (topic =str (data ['topic'] or '')[:1024 ]))
             # NSFW
             if 'nsfw' in data :
                 _run_async (ch .edit (nsfw =bool (data ['nsfw'])))
-            # Slowmode (metin kanallari)
+            # Slowmode (текстовые каналы)
             if 'slowmode' in data :
                 _run_async (ch .edit (slowmode_delay =int (data ['slowmode'] or 0 )))
             # Bitrate (ses kanallari)

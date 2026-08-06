@@ -244,18 +244,18 @@ class Birthday (commands .Cog ):
     @app_commands .describe (
     channel ='Канал для поздравлений',
     role ='Роль на день рождения (необязательно)',
-    hediye_coin ='Сколько монет дарить на день рождения'
+    gift_coins ='Сколько монет дарить на день рождения'
     )
     @app_commands .checks .has_permissions (administrator =True )
     async def setup_birthday_slash (self ,interaction :discord .Interaction ,
     channel :discord .TextChannel ,
     role :discord .Role =None ,
-    hediye_coin :int =0 ):
+    gift_coins :int =0 ):
         settings =self .get_settings (interaction .guild_id )
         settings ['channel_id']=str (channel .id )
         if role :
             settings ['role_id']=str (role .id )
-        settings ['gift_coins']=hediye_coin 
+        settings ['gift_coins']=gift_coins 
         os .makedirs ('data',exist_ok =True )
         with open (f'data/birthday_settings_{interaction.guild_id}.json','w',encoding ='utf-8')as fp :
             json .dump (settings ,fp ,indent =2 ,ensure_ascii =False )
@@ -263,7 +263,7 @@ class Birthday (commands .Cog ):
         e =discord .Embed (title ="🎂 Система дней рождения настроена!",color =0x2ECC71 ,timestamp =datetime .now (timezone .utc ))
         e .add_field (name ="📢 Канал",value =channel .mention ,inline =True )
         e .add_field (name =" Роль",value =role .mention if role else "`Нет`",inline =True )
-        e .add_field (name =" Бонусные монеты",value =f"`{hediye_coin}`"if hediye_coin else "`Нет`",inline =True )
+        e .add_field (name =" Бонусные монеты",value =f"`{gift_coins}`"if gift_coins else "`Нет`",inline =True )
         e .set_footer (text =f"Aether • {interaction.guild.name}")
         await interaction .response .send_message (embed =e ,ephemeral =True )
 

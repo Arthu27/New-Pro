@@ -30,7 +30,7 @@ def _save_info (guild_id :int ,data :dict ):
 
 
 def get_sunucu_context (guild_id :int )->str :
-    """AI для сервер info metnini создать"""
+    """Создать текст информации о сервере для AI"""
     info =_load_info (guild_id )
     if not info :
         return ''
@@ -55,18 +55,18 @@ class ServerModal (discord .ui .Modal ):
         super ().__init__ (title =title )
         self .field =field 
         self .guild_id =guild_id 
-        self .metin =discord .ui .TextInput (
+        self .input_text =discord .ui .TextInput (
         label ='Информация',
         style =discord .TextStyle .paragraph ,
-        placeholder ='Buraya yaz...',
+        placeholder ='Пишите здесь...',
         max_length =1000 ,
         required =True 
         )
-        self .add_item (self .metin )
+        self .add_item (self .input_text )
 
     async def on_submit (self ,interaction :discord .Interaction ):
         info =_load_info (self .guild_id )
-        info [self .field ]=self .metin .value .strip ()
+        info [self .field ]=self .input_text .value .strip ()
         _save_info (self .guild_id ,info )
         await interaction .response .send_message (
         f'✅ **{self.title}** сохранено!',ephemeral =True 
@@ -119,7 +119,7 @@ class ServerInfoView (discord .ui .View ):
             await interaction .response .send_message ('Информация еще не введена.',ephemeral =True )
             return 
 
-        embed =discord .Embed (title =' Server Информация',color =0x5865F2 )
+        embed =discord .Embed (title =' Информация о сервере',color =0x5865F2 )
         if interaction .guild .icon :
             embed .set_thumbnail (url =interaction .guild .icon .url )
 
@@ -148,28 +148,28 @@ class OzelBilgiModal (discord .ui .Modal ,title ='Добавлено инфор�
     def __init__ (self ,guild_id :int ):
         super ().__init__ ()
         self .guild_id =guild_id 
-        self .baslik =discord .ui .TextInput (
+        self .heading =discord .ui .TextInput (
         label ='Заголовок',
-        placeholder ='напр.: Discord Linki, Событие День...',
+        placeholder ='напр.: Ссылка Discord, День событий...',
         max_length =50 
         )
-        self .icerik =discord .ui .TextInput (
+        self .body =discord .ui .TextInput (
         label ='Содержимое',
         style =discord .TextStyle .paragraph ,
-        placeholder ='Информация содержимое...',
+        placeholder ='Содержимое информации...',
         max_length =500 
         )
-        self .add_item (self .baslik )
-        self .add_item (self .icerik )
+        self .add_item (self .heading )
+        self .add_item (self .body )
 
     async def on_submit (self ,interaction :discord .Interaction ):
         info =_load_info (self .guild_id )
         if 'приватные_данные'not in info :
             info ['приватные_данные']={}
-        info ['приватные_данные'][self .baslik .value .strip ()]=self .icerik .value .strip ()
+        info ['приватные_данные'][self .heading .value .strip ()]=self .body .value .strip ()
         _save_info (self .guild_id ,info )
         await interaction .response .send_message (
-        f' **{self.baslik.value}** сохранено!',ephemeral =True 
+        f' **{self.heading.value}** сохранено!',ephemeral =True 
         )
 
 
@@ -199,7 +199,7 @@ class ServerInfo (commands .Cog ):
         if ctx .guild .banner :
             embed .set_image (url =ctx .guild .banner .url )
         embed .set_footer (
-        text =f'{ctx.guild.name} · Server Информация Система',
+        text =f'{ctx.guild.name} · Система информации о сервере',
         icon_url =ctx .guild .icon .url if ctx .guild .icon else None 
         )
         await ctx .send (embed =embed ,view =ServerInfoView (ctx .guild .id ))
