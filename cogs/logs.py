@@ -234,7 +234,7 @@ class Logs (commands .Cog ):
         if created :
             result_lines .append (f" **Создало ({len(created)}):**\n"+"\n".join (f"• {c}"for c in created ))
         if already :
-            result_lines .append (f" **Zaten susestvuyut ({len(already)}):**\n"+"\n".join (f"• {a}"for a in already ))
+            result_lines .append (f" **Уже имеют ({len(already)}):**\n"+"\n".join (f"• {a}"for a in already ))
 
         e =discord .Embed (
         title ="✅ Система логов настроена",

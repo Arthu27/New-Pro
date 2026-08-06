@@ -532,7 +532,7 @@ def login ():
     # Geчici проверка kodlarы {discord_id: {code, data}}
 PENDING_VERIFICATIONS ={}
 
-# 2FA baddyen oturumlar {session_token: {username, roles, expires}}
+# 2FA — ожидающие сессии {session_token: {username, roles, expires}}
 PENDING_2FA ={}
 
 def _require_2fa (username ,roles ):
@@ -1925,7 +1925,7 @@ def api_public_apply ():
     required =['discord_id','discord_name','guild_id','yas','tecrube','почему','активен']
     for field in required :
         if not data .get (field ):
-            return jsonify ({'error':f'{field} zorunlu'}),400 
+            return jsonify ({'error':f'Поле {field} обязательно'}),400 
 
     apps_file ='data/staff_apps.json'
     os .makedirs ('data',exist_ok =True )
@@ -1934,11 +1934,11 @@ def api_public_apply ():
         with open (apps_file ,'r',encoding ='utf-8')as f :
             apps =json .load (f )
 
-            # Baddyen заявка контроль
+            # Проверка ожидающей заявки
     uid =str (data ['discord_id'])
     for app_data in apps .values ():
         if app_data .get ('user_id')==uid and app_data .get ('status')=='pending':
-            return jsonify ({'error':'Zaten baddyen bir заявка есть!'}),400 
+            return jsonify ({'error':'У вас уже есть заявка на рассмотрении!'}),400 
 
     app_id =str (int (datetime .utcnow ().timestamp ()))
     guild_id =str (data ['guild_id'])
@@ -1992,7 +1992,7 @@ def api_public_apply ():
                 embed .add_field (name =" Опыт",value =f"```{data['tecrube']}```",inline =False )
                 embed .add_field (name =" Почему Администратор?",value =f"```{data['почему']}```",inline =False )
                 if data .get ('ekstra'):
-                    embed .add_field (name =" Ekstra",value =f"```{data['ekstra']}```",inline =False )
+                    embed .add_field (name =" Дополнительно",value =f"```{data['ekstra']}```",inline =False )
                 embed .set_footer (text =f"Заявка ID: {app_id} • {guild.name}")
                 view =StaffReviewView ()
                 msg =await channel .send (embed =embed ,view =view )

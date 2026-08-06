@@ -5593,13 +5593,15 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     @role_required ('mod')
     def api_create_task ():
         data =request .get_json (silent =True )or {}
+        title =(data .get ('title')or '').strip ()
+        if not title :return jsonify ({'error':'Укажите название задачи'}),400 
         f ='data/tasks.json'
         os .makedirs ('data',exist_ok =True )
         tasks ={}
         if os .path .exists (f ):
             with open (f )as fp :tasks =json .load (fp )
         task_id =str (int (datetime .utcnow ().timestamp ()))
-        tasks [task_id ]={'id':task_id ,'title':data ['title'],'assigned_to':data .get ('assigned_to',''),
+        tasks [task_id ]={'id':task_id ,'title':title ,'assigned_to':data .get ('assigned_to',''),
         'priority':data .get ('priority','medium'),'status':'pending',
         'created_by':session .get ('username'),'created_at':datetime .utcnow ().isoformat ()}
         with open (f ,'w')as fp :json .dump (tasks ,fp ,indent =2 ,ensure_ascii =False )
@@ -5613,7 +5615,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         if not os .path .exists (f ):return jsonify ({'error':'Не найдено'})
         with open (f )as fp :tasks =json .load (fp )
         if task_id in tasks :
-            tasks [task_id ].update (request .get_json (silent =True ))
+            tasks [task_id ].update (request .get_json (silent =True )or {})
             with open (f ,'w')as fp :json .dump (tasks ,fp ,indent =2 )
         return jsonify ({'success':True })
 

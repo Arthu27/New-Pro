@@ -38,7 +38,7 @@ _active_tasks =_load_tasks ()
 # Owner ID — пересылает неизвестные вопросы сюда
 OWNER_ID =int (os .getenv ('OWNER_ID')or '0')
 
-# Baddyen sorular — owner ответитьince userya iletilir
+# Ожидающие вопросы — передаются пользователю, когда owner отвечает
 # {owner_dm_message_id: {'user_id': int, 'channel_id': int, 'question': str, 'is_dm': bool}}
 _pending_questions :dict ={}
 
@@ -823,7 +823,7 @@ class AIChat (commands .Cog ):
 
             if not hedef_vc or hedef_vc .id ==current_vc .id :
                 if hedef_vc and hedef_vc .id ==current_vc .id :
-                    results .append (f'ℹ Zaten o channelda: **{current_vc.name}**')
+                    results .append (f'ℹ Уже в этом канале: **{current_vc.name}**')
                 else :
                     results .append (
                     f' Цель channel не найдено. Текущий: **{current_vc.name}**\n'
@@ -1199,7 +1199,7 @@ class AIChat (commands .Cog ):
 
         #  Owner'ыn DM cevabыnы yakala 
         if is_dm and OWNER_ID and message .author .id ==OWNER_ID :
-        # Owner bir messagea reply attыysa, o message baddyen soru mu?
+        # Если owner ответил реплаем на сообщение — это ответ на ожидающий вопрос?
             if message .reference and message .reference .message_id in _pending_questions :
                 ref_id =message .reference .message_id 
                 pending =_pending_questions .pop (ref_id )
