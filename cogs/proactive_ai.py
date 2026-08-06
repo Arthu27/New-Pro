@@ -14,7 +14,7 @@ DATA_FILE ='data/proactive_ai.json'
 
 # Предупреждение eшikleri
 LEAVE_ALERT_THRESHOLD =3 # 1 времяte bu kadar человек ayrыlыrsa uyar
-JOIN_ALERT_THRESHOLD =10 # 1 времяte bu kadar человек katыlыrsa uyar (raid?)
+JOIN_ALERT_THRESHOLD =10 # алерт, если за 1 минуту присоединится столько людей (рейд?)
 WARN_ALERT_THRESHOLD =3 # 1 времяte bu kadar предупреждение verilirse uyar
 
 
@@ -148,7 +148,7 @@ class ProactiveAI (commands .Cog ):
             alerts .append (f'🚪 За последний час сервер покинули **{len(leave_log)} человек**!')
             data ['leave_log']=[]# сброс — не предупреждать повторно
 
-            # В конец 1 времяteki katыlыmlarы контроль et
+            # Проверить присоединения за последнюю минуту
         join_log =[t for t in data .get ('join_log',[])if t >one_hour_ago ]
         if len (join_log )>=JOIN_ALERT_THRESHOLD :
             alerts .append (f'🚨 За последний час присоединились **{len(join_log)} участников** — похоже на рейд!')

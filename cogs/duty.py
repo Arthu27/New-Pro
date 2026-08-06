@@ -220,7 +220,7 @@ class DutyPanelView (discord .ui .View ):
                     # voice_tracker собратьm длительность tutuyor, задача baшыndaki значение sakladыk
                 voice_at_start =active .get ("voice_seconds_at_start",0 )
                 voice_now =vdata .get ('users',{}).get (uid ,{}).get ('total_seconds',0 )
-                # Шu an ses channelыndaysa активен session'ы da add
+                # Если сейчас в голосовом канале — добавить и текущую сессию
                 from cogs .voice_tracker import VoiceTracker 
                 vt_cog =self .bot .get_cog ('VoiceTracker')
                 if vt_cog :

@@ -169,7 +169,7 @@ class Companion (commands .Cog ):
             _save (data )
             return 
 
-            # Planlы vakitlarы загрузить (restart sonrasы)
+            # Загрузить запланированные тайминги (после рестарта)
         if not self ._scheduled_sends and data .get ('plan'):
             self ._scheduled_sends =data ['plan']
 

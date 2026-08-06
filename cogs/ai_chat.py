@@ -187,7 +187,7 @@ def _detect_instruction (message :str ,answer :str )->dict :
     """
     m =message .lower ().strip ()
 
-    # Talimat kalыplarы
+    # Шаблоны инструкций
     patterns =[
     # "bu soruyu кто кто бы ни написал X ответить"
     r'bu soruyu кто (кто бы ни написал|кто бы ни спросил|sorsa)',
@@ -315,7 +315,7 @@ async def _get_recent_user_messages (user_id :int ,guild ,limit :int =15 )->list
     cutoff_time =datetime .datetime .now (datetime .timezone .utc )-datetime .timedelta (hours =12 )
 
     try :
-    # Только активен channellarы сканировать (son 2 времяte message который является)
+    # Сканировать только активные каналы (с недавними сообщениями)
         active_channels =[]
         for channel in guild .text_channels :
             if not channel .permissions_for (guild .me ).read_message_history :
@@ -328,7 +328,7 @@ async def _get_recent_user_messages (user_id :int ,guild ,limit :int =15 )->list
             except Exception :
                 continue 
 
-                # Активен channellarы сканировать — 15 message найден ca dur
+                # Сканируем активные каналы — собираем до 15 сообщений
         for channel in active_channels [:15 ]:# Max 15 channel
             try :
                 async for msg in channel .history (limit =30 ,after =cutoff_time ):
@@ -365,7 +365,7 @@ async def _get_channel_context (channel ,limit :int =12 )->list :
         context_messages =[]
         async for msg in channel .history (limit =limit ):
             if msg .author .bot :
-                continue # Bot messagelarыnы dahil etme
+                continue # сообщения бота не включаем
             context_messages .append ({
             'author':msg .author .display_name ,
             'content':msg .content [:200 ],# 150 → 200 karakter
@@ -433,12 +433,12 @@ def _call_ai (question :str ,user_id :int ,guild =None ,recent_messages :list =N
                     for m in vc .members :
                         if not m .bot :
                             in_voice .append (m .display_name )
-                            # В конец katыlanlar (son 24 часов)
+                            # Недавно присоединившиеся (за 24 часа)
                 import datetime as _dt 
                 cutoff =_dt .datetime .now (_dt .timezone .utc )-_dt .timedelta (hours =24 )
                 recent_joins =[m .display_name for m in guild .members 
                 if not m .bot and m .joined_at and m .joined_at >cutoff ]
-                # Открыт ticket channellarы
+                # Открытые ticket-каналы
                 ticket_channels =[c for c in guild .text_channels if c .name .startswith ('ticket-')]
                 context ['server_status']={
                 'online_count':len (online ),
@@ -460,7 +460,7 @@ def _call_ai (question :str ,user_id :int ,guild =None ,recent_messages :list =N
             except Exception :
                 pass 
 
-                # Пользователь son Discord messagelarыnы context'e add (только на сервере)
+                # Добавить последние Discord-сообщения пользователя в контекст (только на сервере)
         if recent_messages :
             context ['recent_user_messages']=recent_messages 
 
@@ -468,7 +468,7 @@ def _call_ai (question :str ,user_id :int ,guild =None ,recent_messages :list =N
         if channel_context :
             context ['channel_context']=channel_context 
 
-            # Сервер info tabanыndan ilgili информация add
+            # Добавить релевантную информацию из базы сервера
         if guild_id and str (guild_id )in _knowledge_base :
             guild_knowledge =_knowledge_base [str (guild_id )]
             relevant_knowledge =[]
@@ -663,7 +663,7 @@ class AIChat (commands .Cog ):
             if id_match :
                 target_id =int (id_match .group (1 ))
 
-                # "benimle одинаковый seste который является" → owner'ыn ses channelыndaki diгer участник
+                # «в том же голосовом канале, что и я» → другой участник в канале owner'а
         cl =text .lower ()
         if not target_id and any (t in cl for t in ['одинаковый seste','одинаковый seste','ses channelыndaki','ses channelindaki',
         'benimle который является','yanыmdaki','yanimdaki']):
@@ -671,7 +671,7 @@ class AIChat (commands .Cog ):
                 owner =guild .get_member (OWNER_ID )
                 if not owner or not owner .voice :
                     continue 
-                    # Одинаковый ses channelыndaki bot olmayan diгer участники
+                    # Другие участники в том же голосовом канале (без ботов)
                 others =[m for m in owner .voice .channel .members 
                 if m .id !=OWNER_ID and not m .bot ]
                 if others :
@@ -684,7 +684,7 @@ class AIChat (commands .Cog ):
             # Отправл сообщение удалить
             # "X'e особый шunu yaz: ..." или "X'e dm at как"
         dm_content =None 
-        # "yaz:" или "yaz " sonrasыnы al
+        # взять всё после "yaz:" или "yaz "
         yaz_match =re .search (r'(?:yaz[:\s]+|at[:\s]+|отправить[:\s]+)(.+)',text ,re .IGNORECASE )
         if yaz_match :
             dm_content =yaz_match .group (1 ).strip ()
@@ -804,7 +804,7 @@ class AIChat (commands .Cog ):
                 results .append (' Текущий channel listede не найдено.')
                 continue 
 
-                #  Isimыm 1: Taшы 
+                #  ШАГ 1: Переместить участника
             hedef_vc =None 
             if yon !=0 :
                 new_idx =max (0 ,min (len (voice_channels )-1 ,current_idx -yon ))
@@ -835,7 +835,7 @@ class AIChat (commands .Cog ):
                 await member .move_to (hedef_vc )
                 msg =f' **{member.display_name}** → **{hedef_vc.name}** — переместил.'
 
-                #  Isimыm 2: До getir 
+                #  ШАГ 2: Притянуть участника к себе
                 if geri_var :
                 # "bu voice geri getir" = orijinal channela (current_vc) geri al
                     geri_hedef =current_vc 
@@ -923,8 +923,8 @@ class AIChat (commands .Cog ):
         cl =text .lower ()
         cn =self ._norm (text )
 
-        #  MЮZИK 
-        # Ses в канал gir (музыкаsiz)
+        #  МУЗЫКА 
+        # Зайти в голосовой канал (без музыки)
         ses_gir_triggers =['voice gir','voice katыl','voice gel','channela gir','benim voice gir',
         'voice gir','ses в канал gir','ses в канал gir','yanima gel']
         if any (t in cn for t in [self ._norm (x )for x in ses_gir_triggers ]):
