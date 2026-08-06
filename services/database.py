@@ -246,7 +246,7 @@ class Database:
         return None
     
     def get_all_tickets(self, status: str = None, user_id: int = None) -> List[Dict]:
-        """Все ticket'larы al"""
+        """Получить все тикеты"""
         conn = self.get_connection()
         cursor = conn.cursor()
         

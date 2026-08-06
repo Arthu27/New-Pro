@@ -127,7 +127,7 @@ class ModelSelector :
         self ._save_stats ()
 
     def get_model_info (self ,model_name :str )->Dict :
-        """Alыyor информация о modelleri"""
+        """Получает информацию о моделях"""
         for model_type ,model_data in self .MODELS .items ():
             if model_data ['name']==model_name :
                 stats =self .model_stats .get (model_name ,{})
@@ -143,7 +143,7 @@ class ModelSelector :
         return {}
 
     def _load_stats (self ):
-        """Загруз istatistiгi из dosyaya"""
+        """Загружает статистику из файла"""
         stats_file ='data/model_stats.json'
         if os .path .exists (stats_file ):
             try :
@@ -155,7 +155,7 @@ class ModelSelector :
                 pass 
 
     def _save_stats (self ):
-        """Сохран istatistiгi в dosya"""
+        """Сохраняет статистику в файл"""
         try :
             os .makedirs ('data',exist_ok =True )
             stats_file ='data/model_stats.json'
@@ -172,7 +172,7 @@ class ModelSelector :
 _model_selector =None 
 
 def get_model_selector ()->ModelSelector :
-    """Alыyor kюresel пример ModelSelector"""
+    """Получает глобальный экземпляр ModelSelector"""
     global _model_selector 
     if _model_selector is None :
         _model_selector =ModelSelector ()

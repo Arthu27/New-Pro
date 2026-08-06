@@ -115,12 +115,12 @@ class BadgeSystem:
         return self.user_badges.get(user_id, [])
     
     def get_total_points(self, user_id: str) -> int:
-        """Всего очкиlarы al"""
+        """Получить общие очки"""
         badges = self.user_badges.get(user_id, [])
         return sum(badge.get('points', 0) for badge in badges)
     
     def check_and_award_badges(self, user_id: str, stats: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Статистикаe по rozetleri проверить et ve ver"""
+        """Проверить и выдать значки по статистике"""
         awarded = []
         
         # Иlk ticket
@@ -227,11 +227,11 @@ class PointsSystem:
         }
     
     def get_points(self, user_id: str) -> int:
-        """Очкиlarы al"""
+        """Получить очки"""
         return self.user_points.get(user_id, {}).get('total_points', 0)
     
     def get_points_history(self, user_id: str, limit: int = 50) -> List[Dict[str, Any]]:
-        """Очки geчmiшini al"""
+        """Получить историю очков"""
         history = self.user_points.get(user_id, {}).get('history', [])
         return history[-limit:]
     
@@ -267,7 +267,7 @@ class LevelSystem:
         self.points_system = points_system
     
     def get_level(self, user_id: str) -> Dict[str, Any]:
-        """Уровеньyi al"""
+        """Получить уровень"""
         points = self.points_system.get_points(user_id)
         
         current_level = 1
@@ -302,7 +302,7 @@ class LevelSystem:
         }
     
     def get_all_levels(self) -> Dict[int, Dict[str, Any]]:
-        """Все уровеньleri al"""
+        """Получить все уровни"""
         return self.LEVELS.copy()
 
 
@@ -338,13 +338,13 @@ class Leaderboard:
         return self.get_overall_leaderboard(limit)
     
     def get_monthly_leaderboard(self, limit: int = 20) -> List[Dict[str, Any]]:
-        """Aylыk lider tablosunu al"""
+        """Получить месячную таблицу лидеров"""
         # Basit implementasyon - gerчek uygulamada aylыk очки hesaplanacak
         return self.get_overall_leaderboard(limit)
 
 
 class StreakTracker:
-    """Seri takipчisi"""
+    """Трекер серий"""
     
     def __init__(self):
         self.streaks_file = 'data/user_streaks.json'
@@ -368,7 +368,7 @@ class StreakTracker:
             json.dump(self.streaks, f, ensure_ascii=False, indent=2)
     
     def update_streak(self, user_id: str) -> Dict[str, Any]:
-        """Serхорошо обновить"""
+        """Обновить серию"""
         today = datetime.now().date()
         
         if user_id not in self.streaks:
@@ -412,7 +412,7 @@ class StreakTracker:
         }
     
     def get_streak(self, user_id: str) -> Dict[str, Any]:
-        """Serхорошо al"""
+        """Получить серию"""
         if user_id not in self.streaks:
             return {
                 'current_streak': 0,

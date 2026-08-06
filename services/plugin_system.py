@@ -11,7 +11,7 @@ from datetime import datetime
 
 
 class Plugin:
-    """Plugin sыnыfы"""
+    """Класс плагина"""
     
     def __init__(self, name: str, version: str = '1.0.0', author: str = 'Unknown',
                  description: str = '', enabled: bool = True):
@@ -24,7 +24,7 @@ class Plugin:
         self.module = None
     
     def to_dict(self) -> Dict:
-        """Dict'e чevir"""
+        """Преобразовать в dict"""
         return {
             'name': self.name,
             'version': self.version,
@@ -49,7 +49,7 @@ class Plugin:
 
 
 class PluginManager:
-    """Plugin yёneticisi"""
+    """Менеджер плагинов"""
     
     def __init__(self, plugins_dir: str = 'plugins'):
         self.plugins_dir = plugins_dir
@@ -69,7 +69,7 @@ class PluginManager:
                         plugin = Plugin.from_dict(plugin_data)
                         self.plugins[plugin.name] = plugin
             except Exception as e:
-                print(f" Plugin config yюklenemedi: {e}")
+                print(f" Не удалось загрузить конфиг плагина: {e}")
     
     def save_config(self):
         """Config сохранить"""
@@ -113,10 +113,10 @@ class PluginManager:
             if hasattr(module, 'setup'):
                 module.setup()
             
-            print(f" Plugin yюklendi: {plugin_name}")
+            print(f" Плагин загружен: {plugin_name}")
             return True
         except Exception as e:
-            print(f" Plugin yюklenemedi: {plugin_name} - {e}")
+            print(f" Не удалось загрузить плагин: {plugin_name} - {e}")
             return False
     
     def unload_plugin(self, plugin_name: str) -> bool:
@@ -149,14 +149,14 @@ class PluginManager:
         return True
     
     def disable_plugin(self, plugin_name: str) -> bool:
-        """Plugin devre dышы bыrak"""
+        """Отключить плагин"""
         if plugin_name not in self.plugins:
             return False
         
         self.plugins[plugin_name].enabled = False
         self.save_config()
         
-        print(f" Plugin devre dышы bыrakыldы: {plugin_name}")
+        print(f" Плагин отключен: {plugin_name}")
         return True
     
     def get_plugin(self, plugin_name: str) -> Optional[Plugin]:
@@ -190,11 +190,11 @@ class PluginManager:
     def update_plugin(self, plugin_name: str) -> bool:
         """Plugin обновить (placeholder)"""
         # Gerчek uygulamada git pull yapыlacak
-        print(f"⏰ Plugin деньcelleme: {plugin_name}")
+        print(f"⏰ Обновление плагина: {plugin_name}")
         return True
     
     def get_plugin_info(self, plugin_name: str) -> Optional[Dict]:
-        """Plugin информацияlerini al"""
+        """Получить информацию о плагине"""
         plugin = self.get_plugin(plugin_name)
         
         if not plugin:
@@ -210,7 +210,7 @@ class PluginManager:
         }
     
     def get_stats(self) -> Dict:
-        """Plugin статистикаini al"""
+        """Получить статистику плагинов"""
         total_plugins = len(self.plugins)
         enabled_plugins = len(self.get_enabled_plugins())
         
@@ -222,5 +222,5 @@ class PluginManager:
 
 
 def create_plugin_manager(plugins_dir: str = 'plugins') -> PluginManager:
-    """Plugin yёneticisi создать"""
+    """Создать менеджер плагинов"""
     return PluginManager(plugins_dir)

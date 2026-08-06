@@ -145,7 +145,7 @@ class FeatureFlag:
         return enabled_variants[variant_index]
     
     def to_dict(self) -> Dict[str, Any]:
-        """Dict'e чevir"""
+        """Преобразовать в dict"""
         return {
             'flag_key': self.flag_key,
             'name': self.name,
@@ -294,7 +294,7 @@ class FeatureFlagManager:
         return flag.enabled
     
     def get_variant(self, flag_key: str, user_id: str) -> Optional[str]:
-        """Varyantы al"""
+        """Получить вариант"""
         flag = self.flags.get(flag_key)
         
         if not flag:
@@ -394,7 +394,7 @@ class FeatureFlagAnalytics:
         self.analytics = self._load_analytics()
     
     def _load_analytics(self) -> Dict[str, Any]:
-        """Analitiгi загрузить"""
+        """Загрузить аналитику"""
         if os.path.exists(self.analytics_file):
             try:
                 with open(self.analytics_file, 'r', encoding='utf-8') as f:
@@ -405,7 +405,7 @@ class FeatureFlagAnalytics:
         return {}
     
     def _save_analytics(self):
-        """Analitiгi сохранить"""
+        """Сохранить аналитику"""
         os.makedirs('data', exist_ok=True)
         with open(self.analytics_file, 'w', encoding='utf-8') as f:
             json.dump(self.analytics, f, ensure_ascii=False, indent=2)
@@ -451,7 +451,7 @@ class FeatureFlagAnalytics:
         }
     
     def get_all_analytics(self) -> Dict[str, Dict[str, Any]]:
-        """Все analitiгi al"""
+        """Получить всю аналитику"""
         result = {}
         
         for flag_key in self.analytics:

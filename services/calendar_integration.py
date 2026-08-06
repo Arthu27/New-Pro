@@ -27,7 +27,7 @@ class CalendarEvent:
         self.recurring = None
     
     def to_dict(self) -> Dict[str, Any]:
-        """Dict'e чevir"""
+        """Преобразовать в dict"""
         return {
             'event_id': self.event_id,
             'title': self.title,
@@ -58,7 +58,7 @@ class CalendarEvent:
 
 
 class CalendarManager:
-    """Takvim yёneticisi"""
+    """Менеджер календаря"""
     
     def __init__(self):
         self.events_file = 'data/calendar_events.json'
@@ -353,7 +353,7 @@ class AppointmentScheduler:
 
 
 class ReminderManager:
-    """Напоминание yёneticisi"""
+    """Менеджер напоминаний"""
     
     def __init__(self, calendar_manager: CalendarManager):
         self.calendar_manager = calendar_manager

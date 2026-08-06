@@ -331,7 +331,7 @@ class APIDocumentation:
             lines.append(f"{endpoint['description']}\n")
             
             if endpoint['parameters']:
-                lines.append('### Деньгиmeters\n')
+                lines.append('### Parameters\n')
                 for param in endpoint['parameters']:
                     lines.append(f"- **{param['name']}** ({param['type']}): {param['description']}")
                 lines.append('')

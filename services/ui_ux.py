@@ -24,7 +24,7 @@ class ThemeManager:
                 'background': '#1a1a1a',
                 'surface': '#2d2d2d',
                 'text': '#ffffff',
-                'text-мутd': '#888888'
+                'text-muted': '#888888'
             }
         },
         'light': {
@@ -38,7 +38,7 @@ class ThemeManager:
                 'background': '#ffffff',
                 'surface': '#f5f5f5',
                 'text': '#000000',
-                'text-мутd': '#666666'
+                'text-muted': '#666666'
             }
         },
         'blue': {
@@ -52,7 +52,7 @@ class ThemeManager:
                 'background': '#1a2332',
                 'surface': '#2c3e50',
                 'text': '#ecf0f1',
-                'text-мутd': '#95a5a6'
+                'text-muted': '#95a5a6'
             }
         },
         'green': {
@@ -66,7 +66,7 @@ class ThemeManager:
                 'background': '#1a2e1a',
                 'surface': '#2d4a2d',
                 'text': '#ecf0f1',
-                'text-мутd': '#95a5a6'
+                'text-muted': '#95a5a6'
             }
         }
     }

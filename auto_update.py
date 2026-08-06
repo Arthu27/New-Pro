@@ -97,7 +97,7 @@ def kill_bot():
 
 
 def start_bot():
-    """Botu arka planda baslatir, лог dosyasina написатьar"""
+    """Запускает бота в фоне, пишет в лог-файл"""
     try:
         os.makedirs(BOT_DIR, exist_ok=True)
         
@@ -134,7 +134,7 @@ def start_bot():
             env=env,
             creationflags=subprocess.CREATE_NEW_PROCESS_GROUP  # Signal izolasyonu
         )
-        лог(f"[AUTO-UPDATE] Bot работатьtыrыldы! PID: {proc.pid} | Лог: {BOT_LOG}")
+        лог(f"[AUTO-UPDATE] Бот запущен! PID: {proc.pid} | Лог: {BOT_LOG}")
         
         # 3 saniye badd ve process'in hala работатьtыгыnы контроль et
         time.sleep(3)
@@ -213,7 +213,7 @@ def download_and_extract():
                     with zf.open(member) as src, open(target_path, 'wb') as dst:
                         dst.write(src.read())
                 except Exception as e:
-                    лог(f"[AUTO-UPDATE] Dosya написатьma ошибки ({target}): {e}")
+                    лог(f"[AUTO-UPDATE] Ошибка записи файла ({target}): {e}")
 
     os.remove(zip_path)
     лог("[AUTO-UPDATE] Файлы обновлены (ZIP)")
@@ -246,7 +246,7 @@ def update_bot():
 
 
 def main():
-    лог(f"[AUTO-UPDATE] Работатьtыrыldы (PID: {MY_PID})")
+    лог(f"[AUTO-UPDATE] Запущен (PID: {MY_PID})")
     лог(f"[AUTO-UPDATE] Директория скрипта: {SCRIPT_DIR}")
     лог(f"[AUTO-UPDATE] Директория бота: {BOT_DIR}")
     лог(f"[AUTO-UPDATE] Python: {sys.executable}")
@@ -258,7 +258,7 @@ def main():
         лог("[AUTO-UPDATE] Запустите скрипт в директории бота!")
         return
     
-    лог("[AUTO-UPDATE] GitHub polling работатьtыrыldы (5 saniye)...")
+    лог("[AUTO-UPDATE] GitHub-опрос запущен (5 сек)...")
 
     # Первая проверка: если бот не работает — запустить сразу
     if not is_bot_running():

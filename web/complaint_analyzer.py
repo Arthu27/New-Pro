@@ -11,7 +11,7 @@ from typing import Dict ,List ,Optional ,Tuple
 
 
 class ComplaintAnalyzer :
-    """Prodvinutiy analizёr жалоба"""
+    """Продвинутый анализатор жалоб"""
 
     def __init__ (self ,bot :discord .Client ):
         self .bot =bot 
@@ -132,7 +132,7 @@ class ComplaintAnalyzer :
         return messages [-limit :]
 
     async def _get_reputation (self ,guild :discord .Guild ,user_id :int )->Dict :
-        """Получить itibarы пользователь"""
+        """Получить репутацию пользователя"""
         from cogs .warnings import load_warnings 
 
         warnings_data =load_warnings ()
@@ -176,14 +176,14 @@ class ComplaintAnalyzer :
                 pass 
 
         bans =sum (1 for case in mod_history if case .get ('action')=='бан')
-        мутs =sum (1 for case in mod_history if case .get ('action')in ['timeout','мут'])
+        mutes =sum (1 for case in mod_history if case .get ('action')in ['timeout','мут'])
 
         return {
         'warnings_total':warnings_total ,
         'warnings_7d':warnings_7d ,
         'warnings_30d':warnings_30d ,
         'bans':bans ,
-        'мутs':мутs ,
+        'mutes':mutes ,
         'recent_warnings':guild_warnings [-5 :]if guild_warnings else [],
         }
 

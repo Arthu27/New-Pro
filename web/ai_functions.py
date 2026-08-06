@@ -29,7 +29,7 @@ class AIFunctions :
         }
 
     def get_available_functions (self )->str :
-        """Vozvrasaet описание eriшadlerin fonksiyonlarыn для AI"""
+        """Возвращает описание доступных функций для AI"""
         return """
 ДОСТУПНЫЕ ФУНКЦИИ (вызывай при необходимости):
 
@@ -168,11 +168,11 @@ class AIFunctions :
 
             return (
             f"Информация о <@{user_id}>:\n"
-            f"Isim: {member.display_name}\n"
+            f"Имя: {member.display_name}\n"
             f"ID: {user_id}\n"
-            f"Кубикegistrirovan: {created}\n"
-            f"На на сервере: {joined} ({days_on_server} день)\n"
-            f"Роль: {len(member.roles)}"
+            f"Зарегистрирован: {created}\n"
+            f"На сервере с: {joined} ({days_on_server} дн.)\n"
+            f"Ролей: {len(member.roles)}"
             )
         except Exception as e :
             return f"Ошибка: {str(e)}"

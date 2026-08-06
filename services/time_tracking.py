@@ -10,7 +10,7 @@ from typing import Dict, List, Any, Optional
 
 
 class TimeEntry:
-    """Zaman записейi"""
+    """Запись времени"""
     
     def __init__(self, entry_id: str, ticket_id: str, user_id: str,
                  start_time: datetime, end_time: Optional[datetime] = None,
@@ -25,17 +25,17 @@ class TimeEntry:
         self.tags = []
     
     def get_duration(self) -> timedelta:
-        """Длительностьyi al"""
+        """Получить длительность"""
         if self.end_time:
             return self.end_time - self.start_time
         return datetime.now() - self.start_time
     
     def get_duration_hours(self) -> float:
-        """Saat cinsinden длительностьyi al"""
+        """Получить длительность в часах"""
         return self.get_duration().total_seconds() / 3600
     
     def to_dict(self) -> Dict[str, Any]:
-        """Dict'e чevir"""
+        """Преобразовать в dict"""
         return {
             'entry_id': self.entry_id,
             'ticket_id': self.ticket_id,
@@ -64,7 +64,7 @@ class TimeEntry:
 
 
 class TimeTracker:
-    """Zaman takipчisi"""
+    """Трекер времени"""
     
     def __init__(self):
         self.entries_file = 'data/time_entries.json'
@@ -100,7 +100,7 @@ class TimeTracker:
     
     def start_timer(self, ticket_id: str, user_id: str,
                     description: str = '') -> TimeEntry:
-        """Zamanlayыcыyы запустить"""
+        """Запустить таймер"""
         # Ёnceki zamanlayыcыyы остановить
         if user_id in self.active_timers:
             self.stop_timer(user_id)
@@ -122,7 +122,7 @@ class TimeTracker:
         return entry
     
     def stop_timer(self, user_id: str) -> Optional[TimeEntry]:
-        """Zamanlayыcыyы остановить"""
+        """Остановить таймер"""
         if user_id not in self.active_timers:
             return None
         
@@ -158,7 +158,7 @@ class TimeTracker:
         return entry
     
     def get_active_timer(self, user_id: str) -> Optional[TimeEntry]:
-        """Aktif zamanlayыcыyы al"""
+        """Получить активный таймер"""
         if user_id not in self.active_timers:
             return None
         
@@ -167,7 +167,7 @@ class TimeTracker:
     
     def get_user_entries(self, user_id: str, start_date: Optional[datetime] = None,
                          end_date: Optional[datetime] = None) -> List[TimeEntry]:
-        """Пользователь записейlerini al"""
+        """Получить записи пользователя"""
         entries = [e for e in self.entries.values() if e.user_id == user_id]
         
         if start_date:
@@ -181,7 +181,7 @@ class TimeTracker:
         return entries
     
     def get_ticket_entries(self, ticket_id: str) -> List[TimeEntry]:
-        """Ticket записейlerini al"""
+        """Получить записи тикета"""
         entries = [e for e in self.entries.values() if e.ticket_id == ticket_id]
         entries.sort(key=lambda e: e.start_time)
         return entries
@@ -191,7 +191,7 @@ class TimeTracker:
                        start_date: Optional[datetime] = None,
                        end_date: Optional[datetime] = None,
                        billable_only: bool = False) -> float:
-        """Всего длительностьyi al (saat)"""
+        """Получить общую длительность (часы)"""
         entries = list(self.entries.values())
         
         if user_id:
@@ -214,7 +214,7 @@ class TimeTracker:
         return round(total_hours, 2)
     
     def delete_entry(self, entry_id: str) -> bool:
-        """Входi удалить"""
+        """Удалить запись"""
         if entry_id in self.entries:
             del self.entries[entry_id]
             self._save_entries()
@@ -224,7 +224,7 @@ class TimeTracker:
 
 
 class PomodoroTimer:
-    """Pomodoro zamanlayыcы"""
+    """Таймер Pomodoro"""
     
     def __init__(self):
         self.sessions_file = 'data/pomodoro_sessions.json'
@@ -232,7 +232,7 @@ class PomodoroTimer:
         self.active_sessions = {}  # user_id -> session
     
     def _load_sessions(self) -> Dict[str, Any]:
-        """Oturumlarы загрузить"""
+        """Загрузить сессии"""
         if os.path.exists(self.sessions_file):
             try:
                 with open(self.sessions_file, 'r', encoding='utf-8') as f:
@@ -243,7 +243,7 @@ class PomodoroTimer:
         return {}
     
     def _save_sessions(self):
-        """Oturumlarы сохранить"""
+        """Сохранить сессии"""
         os.makedirs('data', exist_ok=True)
         with open(self.sessions_file, 'w', encoding='utf-8') as f:
             json.dump(self.sessions, f, ensure_ascii=False, indent=2)
@@ -286,7 +286,7 @@ class PomodoroTimer:
         return session
     
     def end_session(self, user_id: str) -> Optional[Dict[str, Any]]:
-        """Oturumu sonlandыr"""
+        """Завершить сессию"""
         if user_id not in self.active_sessions:
             return None
         
@@ -300,7 +300,7 @@ class PomodoroTimer:
         return self.active_sessions.get(user_id)
     
     def get_user_stats(self, user_id: str, days: int = 7) -> Dict[str, Any]:
-        """Пользователь статистикаini al"""
+        """Получить статистику пользователя"""
         if user_id not in self.sessions:
             return {
                 'total_pomodoros': 0,
@@ -371,7 +371,7 @@ class TimeEstimator:
         return self.estimates.get(ticket_id)
     
     def get_actual_vs_estimate(self, ticket_id: str) -> Dict[str, Any]:
-        """Gerчek vs tahmin karшыlaшtыrmasы"""
+        """Сравнение фактического и прогнозируемого"""
         estimate = self.estimates.get(ticket_id)
         
         if not estimate:

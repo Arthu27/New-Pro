@@ -1,10 +1,10 @@
 """
-Центрk performans yardimcisi.
-- atomic_write_json: gecici dosya + os.replace ile atomik написатьma (yaris статусu нет, indent нет).
-- read_json: dosya yoksa None; JSON bozuksa None (uyarхорошо bir key написатьdirir).
-- ttl_cache: basit TTL onbellegi; sыk okunan JSON dosyalari icin.
-- PeriodicFlush: лог написатьimini toplu (batch) ve periyodik yapar; onyuzde bloklama нет.
-- make_etag: JSON dump etmeden быстрый (weak) ETag uretir.
+Центральный помощник производительности.
+- atomic_write_json: временный файл + os.replace — атомарная запись (без гонок, без обрывов).
+- read_json: None, если файла нет; None, если JSON повреждён (предупреждение пишется в лог).
+- ttl_cache: простой TTL-кэш; для часто читаемых JSON-файлов.
+- PeriodicFlush: делает запись логов пакетной (batch) и периодической; не блокирует основной поток.
+- make_etag: быстрый (weak) ETag без JSON-сериализации.
 """
 import json 
 import os 
@@ -16,7 +16,7 @@ from collections import OrderedDict
 
 # ── Atomic file I/O ───────────────────────────────────────────────────────────
 def atomic_write_json (path ,data ,ensure_ascii =False ):
-    """Написатьarken once gecici dosyaya написать, после os.replace ile atomik tasi."""
+    """Сначала записать во временный файл, затем атомарно перенести через os.replace."""
     tmp =f"{path}.tmp.{os.getpid()}.{threading.get_ident()}"
     try :
         os .makedirs (os .path .dirname (path )or '.',exist_ok =True )
@@ -38,7 +38,7 @@ def atomic_write_json (path ,data ,ensure_ascii =False ):
 
 
 def read_json (path ,default =None ):
-    """Guvenli okuma. Ошибка статусunda default dondurur."""
+    """Безопасное чтение. В случае ошибки возвращает default."""
     if not os .path .exists (path ):
         return default 
     try :
@@ -88,7 +88,7 @@ _cache =_TTLCache (maxsize =512 )
 
 
 def cached_read_json (path ,ttl =5.0 ,default =None ):
-    """Dosyayi TTL onbellдобавить. Длительность doldugunda новыйden okur."""
+    """Кэшировать файл по TTL. При истечении срока читает заново."""
     if ttl <=0 :
         return read_json (path ,default )
     key =('json',os .path .abspath (path ),os .path .getmtime (path )if os .path .exists (path )else 0 )

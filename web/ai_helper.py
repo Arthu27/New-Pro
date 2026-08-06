@@ -353,7 +353,7 @@ async def ai_ticket_response (user_message :str ,history :List [Dict ],guild_con
             user_info .append (f"На на сервере: {days} dn.")
     if guild_context .get ('previous_tickets'):
         prev =guild_context ['previous_tickets']
-        user_info .append (f"Predidusih ticketlarыn: {len(prev)}")
+        user_info .append (f"Предыдущих тикетов: {len(prev)}")
         if prev :
             last =prev [-1 ]
             user_info .append (f"В конец ticket: {last.get('category', '?')} ({last.get('status', '?')})")
@@ -400,7 +400,7 @@ async def ai_ticket_response (user_message :str ,history :List [Dict ],guild_con
             'content':f"КОНТЕКСТ ОБУЧЕНИЯ (используй для улучшения ответа):\n{learning_context}"
             })
     except Exception as e :
-        print (f"[AI] Ошибка zagruzki контекстn eгitimi: {e}")
+        print (f"[AI] Ошибка загрузки контекста обучения: {e}")
 
         # 6. История разговор (son 20 сообщение)
     if history :
@@ -501,7 +501,7 @@ async def ai_ticket_response (user_message :str ,history :List [Dict ],guild_con
             success_type ='detailed_response'
             )
     except Exception as e :
-        print (f"[AI] Ошибка запись для eгitimi: {e}")
+        print (f"[AI] Ошибка записи для обучения: {e}")
 
     return response ,should_escalate ,category ,updated_history ,category 
 
@@ -619,7 +619,7 @@ def learn_from_staff (staff_message :str ,user_question :str ,guild_id :int ):
             json .dump (faqs ,f ,ensure_ascii =False ,indent =2 )
 
     except Exception as e :
-        print (f"[AI LEARN] Ошибка eгitimi: {e}")
+        print (f"[AI LEARN] Ошибка обучения: {e}")
 
 
 def get_learned_faqs (guild_id :int )->List [Dict ]:
@@ -730,7 +730,7 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
         # 3. Кто ты / Расскажи о себе
     if any (k in q_lower for k in ["кто ты","что ты такое","расскажи о себе","ты кто","что за бот","кто ты такой"]):
         return (
-        "Я Aether (Moebius) — многофункциональный AI-ассистент и защитник этого Discord-serverа! 🤖\n"
+        "Я Aether (Moebius) — многофункциональный AI-ассистент и защитник этого Discord-сервера! 🤖\n"
         "• Моя задача — охранять сервер от спама и рейдов, помогать участникам в тикетах поддержки и управлять ролями.\n"
         "• Чтобы узнать все мои возможности, просто напиши «команды» или «помощь»!",
         "moebius-offline-ai",

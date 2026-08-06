@@ -67,7 +67,7 @@ class CustomMenu:
         content: str,
         inline: bool = False
     ):
-        """Bёlюm ekle (эмодзи yok)"""
+        """Добавить раздел (без эмодзи)"""
         self.sections.append({
             'title': title,
             'content': content,
@@ -81,14 +81,14 @@ class CustomMenu:
         layout: str = 'grid'
     ):
         """
-        Статистика ekle (эмодзи yok)
+        Добавить статистику (без эмодзи)
         
         Args:
             stats: [{'label': 'Всего', 'value': 150}, ...]
-            layout: 'grid' (3'lю) veya 'list' (tek sюtun)
+            layout: 'grid' (по 3) или 'list' (одна колонка)
         """
         if layout == 'grid':
-            # 3'lю grid
+            # grid по 3
             for i in range(0, len(stats), 3):
                 row = stats[i:i+3]
                 for stat in row:
@@ -104,7 +104,7 @@ class CustomMenu:
                 lines.append(f"**{stat['label']}:** `{stat['value']}`")
             
             self.add_section(
-                title="Иstatistikler",
+                title="Статистика",
                 content="\n".join(lines)
             )
         
@@ -116,7 +116,7 @@ class CustomMenu:
         current: int,
         maximum: int
     ):
-        """Иlerleme чubuгu ekle (эмодзи yok)"""
+        """Добавить полосу прогресса (без эмодзи)"""
         percentage = (current / maximum) * 100 if maximum > 0 else 0
         filled = int(percentage / 5)
         bar = "" * filled + "" * (20 - filled)
@@ -151,13 +151,13 @@ class CustomMenu:
         code: str,
         language: str = ''
     ):
-        """Kod bloгu ekle (эмодзи yok)"""
+        """Добавить блок кода (без эмодзи)"""
         content = f"```{language}\n{code}\n```"
         self.add_section(title=title, content=content)
         return self
     
     def add_separator(self, style: str = 'single'):
-        """Ayыrыcы ekle"""
+        """Добавить разделитель"""
         separator = self.BORDERS.get(style, self.border)
         self.sections.append({
             'title': None,
@@ -214,11 +214,11 @@ class CustomMenu:
 
 
 class TicketMenu:
-    """Ticket sistemi для ёzel menю (эмодзи yok)"""
+    """Кастомное меню для системы тикетов (без эмодзи)"""
     
     @classmethod
     def welcome(cls, user, guild, channel):
-        """Ticket добро пожаловать menюsю"""
+        """Приветственное меню тикета"""
         menu = CustomMenu(
             title="Тикет открыт",
             description=f"Добро пожаловать, {user.mention}!\n\nОпишите вашу проблему, и мы поможем вам как можно скорее.",
@@ -242,7 +242,7 @@ class TicketMenu:
     
     @classmethod
     def closed(cls, user, closed_by):
-        """Ticket закрытьma menюsю"""
+        """Меню закрытия тикета"""
         menu = CustomMenu(
             title="Тикет закрыт",
             description="Ваш тикет был успешно закрыт.",
@@ -264,11 +264,11 @@ class TicketMenu:
 
 
 class StatsMenu:
-    """Статистика menюsю (эмодзи yok)"""
+    """Меню статистики (без эмодзи)"""
     
     @classmethod
     def ticket_stats(cls, total, ai_handled, escalated):
-        """Ticket статистикаi"""
+        """Статистика тикетов"""
         menu = CustomMenu(
             title="Статистика тикетов",
             description="Общая статистика системы тикетов",
@@ -293,7 +293,7 @@ class StatsMenu:
     
     @classmethod
     def feedback_stats(cls, total, positive, negative, avg_rating, recent_comments):
-        """Feedback статистикаi"""
+        """Статистика отзывов"""
         menu = CustomMenu(
             title="Статистика отзывов",
             description="Отзывы пользователей о качестве поддержки",
@@ -325,11 +325,11 @@ class StatsMenu:
 
 
 class HelpMenu:
-    """Помощь menюsю (эмодзи yok)"""
+    """Меню помощи (без эмодзи)"""
     
     @classmethod
     def ticket_help(cls):
-        """Ticket помощь menюsю"""
+        """Меню помощи тикетов"""
         menu = CustomMenu(
             title="Справка по тикетам",
             description="Как использовать систему тикетов",

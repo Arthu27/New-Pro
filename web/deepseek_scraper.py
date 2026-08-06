@@ -23,7 +23,7 @@ _logged_in =False
 
 
 async def _ensure_login ():
-    """Tarayыcыyы запустить ve вход yap (bir kez)."""
+    """Запустить браузер и войти (один раз)."""
     global _browser ,_page ,_logged_in 
 
     from playwright .async_api import async_playwright 
@@ -85,7 +85,7 @@ async def _ensure_login ():
 
 
 async def _ask_deepseek_async (prompt :str ,timeout :int =60 )->str :
-    """DeepSeek'e soru sor, cevabы вернуть."""
+    """Задать вопрос DeepSeek, вернуть ответ."""
     global _logged_in 
 
     if not DEEPSEEK_EMAIL or not DEEPSEEK_PASSWORD :

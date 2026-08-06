@@ -27,7 +27,7 @@ class LanguageManager:
         'no': 'Norsk',
         'da': 'Dansk',
         'fi': 'Suomi',
-        'tr': 'Типkчe',
+        'tr': 'Türkçe',
         'ar': 'العربية',
         'he': 'עברית',
         'zh': '',

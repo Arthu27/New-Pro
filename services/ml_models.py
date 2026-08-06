@@ -42,9 +42,9 @@ class TicketPredictor:
             json.dump(self.model, f, ensure_ascii=False, indent=2)
     
     def train(self, tickets: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Modeli eгit"""
+        """Обучить модель"""
         if not tickets:
-            return {'error': 'Eгitim verisi yok'}
+            return {'error': 'Нет обучающих данных'}
         
         # Kategori весlarы
         category_patterns = defaultdict(lambda: defaultdict(int))
@@ -142,7 +142,7 @@ class TicketPredictor:
         return best_category, confidence
     
     def predict_priority(self, text: str) -> Tuple[str, float]:
-        """Ёncelik tahmin et"""
+        """Предсказать приоритет"""
         text_lower = text.lower()
         words = self._extract_keywords(text_lower)
         
@@ -163,7 +163,7 @@ class TicketPredictor:
         return best_priority, confidence
     
     def predict_resolution_time(self, category: str, priority: str) -> float:
-        """Чёzюm длительность tahmin et"""
+        """Предсказать длительность решения"""
         base_time = self.model.get('resolution_patterns', {}).get('avg_resolution_time', 24)
         
         # Kategori чarpanы
@@ -189,7 +189,7 @@ class TicketPredictor:
         return round(predicted_time, 2)
     
     def _extract_keywords(self, text: str) -> List[str]:
-        """Anahtar словоleri удалить"""
+        """Извлечь ключевые слова"""
         # Basit слово выйтиarыcы
         words = re.findall(r'\b\w+\b', text.lower())
         
@@ -200,7 +200,7 @@ class TicketPredictor:
 
 
 class ChurnPredictor:
-    """Mюшteri kaybы tahmin modeli"""
+    """Модель прогнозирования оттока клиентов"""
     
     def __init__(self):
         self.model_file = 'data/ml_models/churn_predictor.json'
@@ -227,7 +227,7 @@ class ChurnPredictor:
             json.dump(self.model, f, ensure_ascii=False, indent=2)
     
     def predict_churn_risk(self, user_id: str, tickets: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Kayыp riskini tahmin et"""
+        """Предсказать риск оттока"""
         if not tickets:
             return {
                 'risk_score': 0.0,
@@ -246,7 +246,7 @@ class ChurnPredictor:
             risk_score += 0.3
             factors.append({
                 'factor': 'high_negative_sentiment',
-                'description': 'Yюksek negatif duygu соотношение',
+                'description': 'Высокая доля негативных эмоций',
                 'value': negative_ratio,
                 'impact': 0.3
             })
@@ -259,7 +259,7 @@ class ChurnPredictor:
             risk_score += 0.2
             factors.append({
                 'factor': 'many_open_tickets',
-                'description': 'Чok числоda открытый ticket',
+                'description': 'Много открытых тикетов',
                 'value': open_ratio,
                 'impact': 0.2
             })
@@ -285,7 +285,7 @@ class ChurnPredictor:
             risk_score += 0.25
             factors.append({
                 'factor': 'long_resolution_times',
-                'description': 'Uzun чёzюm длительностьleri',
+                'description': 'Долгое время решения',
                 'value': long_resolution_ratio,
                 'impact': 0.25
             })
@@ -298,7 +298,7 @@ class ChurnPredictor:
             risk_score += 0.25
             factors.append({
                 'factor': 'low_ratings',
-                'description': 'Dюшюk очки',
+                'description': 'Низкие очки',
                 'value': low_rating_ratio,
                 'impact': 0.25
             })
@@ -423,7 +423,7 @@ class AnomalyDetector:
             if z_score > 2:
                 anomalies.append({
                     'type': 'resolution_time',
-                    'description': 'Anormal чёzюm длительность',
+                    'description': 'Аномальная длительность решения',
                     'current': avg_resolution_today,
                     'expected': baseline_resolution,
                     'z_score': round(z_score, 2),

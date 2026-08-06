@@ -6,9 +6,9 @@ FAQ / Система обучения — основана на файлах
   data/unknown_questions.json — вопросы без ответа (проверяешь ты)
 
 Управление:
-  - learned_faq.json'u верно redaktirovatyebilirsin
-  - unknown_questions.json'daki вопросы inceleyip learned_faq.json'a addyebilirsin
-  - Bir FAQ'ы devre dышы bыrakmak для "active": false yap
+  - learned_faq.json можно редактировать вручную
+  - вопросы из unknown_questions.json можно просмотреть и добавить в learned_faq.json
+  - чтобы отключить FAQ, установите "active": false
 """
 import os 
 import json 
@@ -118,12 +118,12 @@ def learn_from_staff (question :str ,answer :str ,guild_id :int ,staff_name :str
     })
     _save (FAQ_FILE ,faq )
     _mark_unknown_learned (question )
-    print (f"[FAQ] Новый ёгrenildi: {question[:60]}")
+    print (f"[FAQ] Изучен новый вопрос: {question[:60]}")
     return new_id 
 
 
 def _mark_unknown_learned (question :str ):
-    """unknown_questions'da benzer soruyu 'learned' как iшaretle."""
+    """В unknown_questions пометить похожий вопрос как 'learned'."""
     items =_load (UNKNOWN_FILE )
     changed =False 
     for item in items :

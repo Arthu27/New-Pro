@@ -370,7 +370,7 @@ class ErrorGrouping:
         return dict(groups)
     
     def get_top_errors(self, hours: int = 24, limit: int = 10) -> List[Error]:
-        """En sыk hatalarы al"""
+        """Получить самые частые ошибки"""
         start_time = datetime.now() - timedelta(hours=hours)
         errors = self.error_tracker.get_all_errors(start_time=start_time)
         
@@ -403,7 +403,7 @@ class ErrorNotification:
         self.notification_rules = self._load_notification_rules()
     
     def _load_notification_rules(self) -> Dict[str, Any]:
-        """Уведомление kurallarыnы загрузить"""
+        """Загрузить правила уведомлений"""
         if os.path.exists(self.notification_rules_file):
             try:
                 with open(self.notification_rules_file, 'r', encoding='utf-8') as f:
@@ -414,14 +414,14 @@ class ErrorNotification:
         return {}
     
     def _save_notification_rules(self):
-        """Уведомление kurallarыnы сохранить"""
+        """Сохранить правила уведомлений"""
         os.makedirs('data', exist_ok=True)
         with open(self.notification_rules_file, 'w', encoding='utf-8') as f:
             json.dump(self.notification_rules, f, ensure_ascii=False, indent=2)
     
     def add_notification_rule(self, rule_id: str, severity: str,
                               channels: List[str], recipients: List[str]):
-        """Уведомление kuralы добавить"""
+        """Добавить правило уведомления"""
         self.notification_rules[rule_id] = {
             'severity': severity,
             'channels': channels,
@@ -432,7 +432,7 @@ class ErrorNotification:
         self._save_notification_rules()
     
     def should_notify(self, error: Error) -> bool:
-        """Уведомление gёnderilip gёnderilmeyeceгini проверить et"""
+        """Проверить, нужно ли отправить уведомление"""
         for rule in self.notification_rules.values():
             if not rule.get('enabled', True):
                 continue
@@ -456,7 +456,7 @@ class ErrorNotification:
         return list(set(recipients))
     
     def enable_rule(self, rule_id: str) -> bool:
-        """Kuralы включить"""
+        """Включить правило"""
         if rule_id in self.notification_rules:
             self.notification_rules[rule_id]['enabled'] = True
             self._save_notification_rules()
@@ -465,7 +465,7 @@ class ErrorNotification:
         return False
     
     def disable_rule(self, rule_id: str) -> bool:
-        """Kuralы devre dышы bыrak"""
+        """Отключить правило"""
         if rule_id in self.notification_rules:
             self.notification_rules[rule_id]['enabled'] = False
             self._save_notification_rules()
@@ -475,7 +475,7 @@ class ErrorNotification:
 
 
 class ErrorAnalytics:
-    """Ошибка analitiгi"""
+    """Аналитика ошибок"""
     
     def __init__(self, error_tracker: ErrorTracker):
         self.error_tracker = error_tracker
@@ -505,7 +505,7 @@ class ErrorAnalytics:
         }
     
     def get_error_rate(self, hours: int = 1) -> float:
-        """Ошибка соотношениеnы al (ошибка/dakika)"""
+        """Получить частоту ошибок (ошибок/мин)"""
         start_time = datetime.now() - timedelta(hours=hours)
         errors = self.error_tracker.get_all_errors(start_time=start_time)
         
@@ -514,7 +514,7 @@ class ErrorAnalytics:
         return total_occurrences / (hours * 60)  # Ошибка/dakika
     
     def get_mean_time_to_resolution(self, hours: int = 24) -> Optional[float]:
-        """Ortalama чёzюm длительностьni al (saat)"""
+        """Получить среднее время решения (часы)"""
         start_time = datetime.now() - timedelta(hours=hours)
         errors = self.error_tracker.get_all_errors(start_time=start_time)
         

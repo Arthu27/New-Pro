@@ -1,6 +1,6 @@
 """
 Web Dashboard
-Flask web arayюzю
+Веб-интерфейс на Flask
 """
 
 from flask import Flask, render_template, jsonify, request, redirect, url_for

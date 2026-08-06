@@ -29,7 +29,7 @@ class ExternalAPIs :
         return {}
 
     async def _get_session (self )->aiohttp .ClientSession :
-        """Alыyor aiohttp sessiyu"""
+        """Получает aiohttp-сессию"""
         if self .session is None or self .session .closed :
             self .session =aiohttp .ClientSession ()
         return self .session 
@@ -42,7 +42,7 @@ class ExternalAPIs :
             # ─── КОНТРОЛЬ REPUTACII ─────────────────────────────────────────────
 
     async def check_user_reputation (self ,user_id :int ,username :str )->Dict :
-        """Контроль ediyor itibarы пользователь с vnesnie servisi"""
+        """Проверяет репутацию пользователя по внешним сервисам"""
         results ={
         'user_id':user_id ,
         'username':username ,
@@ -70,7 +70,7 @@ class ExternalAPIs :
         return results 
 
     async def _check_discordrep (self ,user_id :int )->Optional [Dict ]:
-        """Контроль ediyor itibarы с DiscordRep API"""
+        """Проверяет репутацию через DiscordRep API"""
         try :
             session =await self ._get_session ()
             url =f"https://discordrep.com/api/v4/user/{user_id}"
@@ -329,7 +329,7 @@ class ExternalAPIs :
 _external_apis =None 
 
 async def get_external_apis ()->ExternalAPIs :
-    """Alыyor kюresel пример ExternalAPIs"""
+    """Получает глобальный экземпляр ExternalAPIs"""
     global _external_apis 
     if _external_apis is None :
         _external_apis =ExternalAPIs ()

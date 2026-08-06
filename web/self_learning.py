@@ -1,6 +1,6 @@
 """
-Samoobucenie — AI ucitsya на svoih ошибка ve uspehah
-Analiz geri ссылки, korrektirovka povedeniya
+Самообучение — AI учится на своих ошибках и успехах
+Анализ обратной связи, корректировка поведения
 """
 import json 
 import os 
@@ -10,7 +10,7 @@ from collections import defaultdict
 
 
 class SelfLearning :
-    """Система samoeгitimi AI"""
+    """Система самообучения AI"""
 
     def __init__ (self ):
         self .feedback_log =[]# Loglar geri ссылки
@@ -186,7 +186,7 @@ class SelfLearning :
             self .learned_patterns [pattern_key ]=self .learned_patterns [pattern_key ][-100 :]
 
     def _extract_keywords (self ,text :str )->List [str ]:
-        """Izvlekaet anahtar словоler из metina"""
+        """Извлекает ключевые слова из текста"""
         import re 
 
         # Удален stop-словоler
@@ -205,7 +205,7 @@ class SelfLearning :
         return list (set (keywords ))
 
     def get_learning_context (self ,user_message :str )->str :
-        """Alыyor baгlam eгitimi для prompta"""
+        """Получает контекст обучения для промпта"""
         user_msg_lower =user_message .lower ()
         keywords =self ._extract_keywords (user_msg_lower )
 
@@ -231,7 +231,7 @@ class SelfLearning :
                 if pattern_type .startswith ('avoid_'):
                 # Kalыplar kotorih необходимо izbegat
                     context_parts .append (
-                    "\n⚠️ IZBEGAY podobnih cevaplarыn (idi ошибки):\n"
+                    "\n⚠️ ИЗБЕГАЙ похожих ответов (прежние ошибки):\n"
                     )
                     for p in matching_patterns [:3 ]:# Maksimum 3
                         if p .get ('wrong_response'):
@@ -251,7 +251,7 @@ class SelfLearning :
         return ''.join (context_parts )
 
     def get_learning_stats (self )->Dict :
-        """Alыyor istatistiгi eгitimi"""
+        """Получает статистику обучения"""
         return {
         'total_feedback':len (self .feedback_log ),
         'total_mistakes':len (self .mistakes ),
@@ -296,7 +296,7 @@ class SelfLearning :
 _self_learning =None 
 
 def get_self_learning ()->SelfLearning :
-    """Alыyor kюresel пример SelfLearning"""
+    """Получает глобальный экземпляр SelfLearning"""
     global _self_learning 
     if _self_learning is None :
         _self_learning =SelfLearning ()

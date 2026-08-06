@@ -31,7 +31,7 @@ class PerformanceMetric:
         self.unit = unit
     
     def to_dict(self) -> Dict[str, Any]:
-        """Dict'e чevir"""
+        """Преобразовать в dict"""
         return {
             'metric_name': self.metric_name,
             'value': self.value,
@@ -185,7 +185,7 @@ class ResponseTimeTracker:
         )
     
     def get_endpoint_stats(self, endpoint: str, hours: int = 1) -> Dict[str, Any]:
-        """Endpoint статистикаini al"""
+        """Получить статистику endpoint'а"""
         start_time = datetime.now() - timedelta(hours=hours)
         metrics = self.metrics_collector.get_metrics('response_time', start_time=start_time)
         
@@ -281,7 +281,7 @@ class ErrorRateTracker:
         )
     
     def get_error_rate(self, hours: int = 1) -> Dict[str, Any]:
-        """Ошибка соотношениеnы al"""
+        """Получить частоту ошибок"""
         start_time = datetime.now() - timedelta(hours=hours)
         error_metrics = self.metrics_collector.get_metrics('error', start_time=start_time)
         response_metrics = self.metrics_collector.get_metrics('response_time', start_time=start_time)
@@ -305,7 +305,7 @@ class ErrorRateTracker:
         }
     
     def get_top_errors(self, hours: int = 1, limit: int = 10) -> List[Dict[str, Any]]:
-        """En sыk hatalarы al"""
+        """Получить самые частые ошибки"""
         start_time = datetime.now() - timedelta(hours=hours)
         error_metrics = self.metrics_collector.get_metrics('error_message', start_time=start_time)
         
@@ -382,7 +382,7 @@ class UptimeMonitor:
         self._save_uptime_records()
     
     def _calculate_uptime_percentage(self):
-        """Uptime yюzdesini hesapla"""
+        """Вычислить процент аптайма"""
         checks = self.uptime_records['checks']
         
         if not checks:
@@ -395,7 +395,7 @@ class UptimeMonitor:
         self.uptime_records['uptime_percentage'] = (up_count / total_count * 100)
     
     def get_uptime_percentage(self, hours: int = 24) -> float:
-        """Uptime yюzdesini al"""
+        """Получить процент аптайма"""
         start_time = datetime.now() - timedelta(hours=hours)
         
         checks = [
@@ -469,7 +469,7 @@ class DatabasePerformanceMonitor:
         )
     
     def get_query_stats(self, hours: int = 1) -> Dict[str, Any]:
-        """Sorgu статистикаini al"""
+        """Получить статистику запросов"""
         start_time = datetime.now() - timedelta(hours=hours)
         metrics = self.metrics_collector.get_metrics('db_query_time', start_time=start_time)
         
@@ -492,7 +492,7 @@ class DatabasePerformanceMonitor:
     
     def get_slow_queries(self, threshold_ms: float = 1000,
                          hours: int = 1) -> List[Dict[str, Any]]:
-        """Медленный sorgularы al"""
+        """Получить медленные запросы"""
         start_time = datetime.now() - timedelta(hours=hours)
         metrics = self.metrics_collector.get_metrics('db_query_time', start_time=start_time)
         
@@ -541,7 +541,7 @@ class PerformanceAlert:
     def add_alert_rule(self, metric_name: str, threshold: float,
                        operator: str = 'greater_than',
                        severity: str = 'warning'):
-        """Предупреждение kuralы добавить"""
+        """Добавить правило предупреждения"""
         if metric_name not in self.alerts['rules']:
             self.alerts['rules'][metric_name] = []
         

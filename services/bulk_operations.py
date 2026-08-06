@@ -72,7 +72,7 @@ class BulkOperation:
         self.progress = int((completed / total) * 100) if total > 0 else 0
     
     def to_dict(self) -> Dict[str, Any]:
-        """Dict'e чevir"""
+        """Преобразовать в dict"""
         return {
             'operation_id': self.operation_id,
             'operation_type': self.operation_type,
@@ -105,7 +105,7 @@ class BulkOperation:
 
 
 class BulkOperationManager:
-    """Массовая операция yёneticisi"""
+    """Менеджер массовых операций"""
     
     def __init__(self):
         self.operations_file = 'data/bulk_operations.json'

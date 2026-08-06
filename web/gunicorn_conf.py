@@ -1,13 +1,13 @@
 """
-Gunicorn konfigurasyonu.
-Env degiskenleri (hepsi opsiyonel):
-  WEB_WORKERS      : worker sayisi (default: 2 veya CPU sayisi)
-  WEB_TIMEOUT      : request timeout (default: 60)
-  WEB_GRACEFUL     : graceful timeout (default: 30)
-  WEB_BIND         : bind (default: 0.0.0.0:5001)
-  WEB_LOG_LEVEL    : лог уровеньsi (default: warning)
-  WEB_PRELOAD      : 1 ise preload_app, default: 1
-  WEB_KEEPALIVE    : keep-alive sn (default: 5)
+Конфигурация Gunicorn.
+Переменные окружения (все опциональны):
+  WEB_WORKERS      : количество воркеров (по умолчанию: 2 или число CPU)
+  WEB_TIMEOUT      : таймаут запроса (по умолчанию: 60)
+  WEB_GRACEFUL     : graceful-таймаут (по умолчанию: 30)
+  WEB_BIND         : bind (по умолчанию: 0.0.0.0:5001)
+  WEB_LOG_LEVEL    : уровень логов (по умолчанию: warning)
+  WEB_PRELOAD      : 1 — preload_app, по умолчанию: 1
+  WEB_KEEPALIVE    : keep-alive, сек (по умолчанию: 5)
 """
 import os 
 import multiprocessing 

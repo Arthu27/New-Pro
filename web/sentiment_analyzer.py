@@ -12,7 +12,7 @@ import re
 
 
 class SentimentAnalyzer :
-    """Analizёr duygu сервер"""
+    """Анализатор настроения сервера"""
 
     # Kalыplar для opredeleniya duygular
     EMOTION_PATTERNS ={
@@ -107,7 +107,7 @@ class SentimentAnalyzer :
         return emotions 
 
     def get_channel_sentiment (self ,channel_id :int ,window_minutes :int =60 )->Dict :
-        """Alыyor duygu канал для son N dakika"""
+        """Получает настроение канала за последние N минут"""
         messages =self .message_buffer .get (channel_id ,[])
 
         # Filtreliyoruz по время
@@ -165,7 +165,7 @@ class SentimentAnalyzer :
         return result 
 
     def get_server_sentiment (self ,guild :discord .Guild ,window_minutes :int =60 )->Dict :
-        """Alыyor общий duygu сервер"""
+        """Получает общее настроение сервера"""
         channel_sentiments =[]
 
         for channel in guild .text_channels :
@@ -253,7 +253,7 @@ class SentimentAnalyzer :
                     'channel_id':channel .id ,
                     'channel_name':channel .name ,
                     'negative_messages':recent_10min ['emotion_breakdown']['negative'],
-                    'message':f"🔥 Vozmojniy чakышma в #{channel.name} ({recent_10min['emotion_breakdown']['negative']} negativnih сообщение)"
+                    'message':f"🔥 Возможный конфликт в #{channel.name} ({recent_10min['emotion_breakdown']['negative']} негативных сообщений)"
                     })
                     self .alerts_sent .add (alert_key )
                     asyncio .create_task (self ._reset_alert (alert_key ,delay =300 ))
@@ -300,7 +300,7 @@ class SentimentAnalyzer :
 _sentiment_analyzer =None 
 
 def get_sentiment_analyzer ()->SentimentAnalyzer :
-    """Alыyor kюresel пример SentimentAnalyzer"""
+    """Получает глобальный экземпляр SentimentAnalyzer"""
     global _sentiment_analyzer 
     if _sentiment_analyzer is None :
         _sentiment_analyzer =SentimentAnalyzer ()

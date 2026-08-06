@@ -1,5 +1,5 @@
 """
-Имяvanced AI Features
+Advanced AI Features
 Расширенные AI функции для системы тикетов
 """
 
