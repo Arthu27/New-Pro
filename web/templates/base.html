@@ -214,19 +214,6 @@
 {% endblock %}
     </main>
 
-<!-- Idle indicator (top pulse when user is idle) -->
-<div class="idle-indicator" id="idleIndicator"></div>
-
-<!-- Session timeout warning -->
-<div class="session-warning" id="sessionWarning" role="alert">
-  <div class="session-warning-icon"><i class="fas fa-hourglass-half"></i></div>
-  <div class="session-warning-content">
-    <div class="session-warning-title">Сессия истекает</div>
-    <div class="session-warning-msg">Вы будете автоматически вылогинены через <strong id="sessionCountdown">60</strong> сек.</div>
-  </div>
-  <button class="session-warning-btn" id="sessionStay">Остаться</button>
-</div>
-
 <!-- Activity Feed Drawer -->
 <div class="drawer-backdrop" id="drawerBackdrop"></div>
 <aside class="activity-drawer" id="activityDrawer" aria-label="Лента активности">
@@ -1305,85 +1292,6 @@ window.addEventListener('pageshow', function (e) {
       }
     }
   });
-})();
-
-// ============================================================
-// SESSION TIMEOUT & IDLE DETECTION
-// ============================================================
-(function () {
-  // Settings
-  var IDLE_TIMEOUT_MS = 5 * 60 * 1000;   // 5 min idle → show warning
-  var WARNING_DURATION = 60;             // 60 sec to respond
-  var ACTIVITY_EVENTS = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
-
-  var idleTimer = null;
-  var warningTimer = null;
-  var countdownInterval = null;
-  var isWarningShown = false;
-
-  var warningEl  = document.getElementById('sessionWarning');
-  var countdownEl = document.getElementById('sessionCountdown');
-  var stayBtn     = document.getElementById('sessionStay');
-  var idleInd     = document.getElementById('idleIndicator');
-  if (!warningEl) return;
-
-  function resetIdle() {
-    clearTimeout(idleTimer);
-    clearTimeout(warningTimer);
-    if (countdownInterval) { clearInterval(countdownInterval); countdownInterval = null; }
-    if (isWarningShown) {
-      warningEl.classList.remove('show');
-      isWarningShown = false;
-    }
-    if (idleInd) idleInd.classList.remove('show');
-    // Schedule next idle check
-    idleTimer = setTimeout(showIdleIndicator, IDLE_TIMEOUT_MS);
-  }
-
-  function showIdleIndicator() {
-    if (isWarningShown) return;
-    if (idleInd) idleInd.classList.add('show');
-    // After 30s more, show full warning
-    warningTimer = setTimeout(showSessionWarning, 30000);
-  }
-
-  function showSessionWarning() {
-    if (isWarningShown) return;
-    isWarningShown = true;
-    warningEl.classList.add('show');
-    var remaining = WARNING_DURATION;
-    if (countdownEl) countdownEl.textContent = remaining;
-    countdownInterval = setInterval(function () {
-      remaining--;
-      if (countdownEl) countdownEl.textContent = remaining;
-      if (remaining <= 0) {
-        clearInterval(countdownInterval);
-        // "Logout"
-        showToast('Сессия истекла', false);
-        setTimeout(function () { window.location.href = '/logout'; }, 800);
-      }
-    }, 1000);
-  }
-
-  function hideWarning() {
-    if (!isWarningShown) return;
-    isWarningShown = false;
-    warningEl.classList.remove('show');
-    if (countdownInterval) { clearInterval(countdownInterval); countdownInterval = null; }
-    resetIdle();
-    // Ping server to extend session
-    fetch('/api/notifications/poll', { method: 'GET' }).catch(function(){});
-  }
-
-  if (stayBtn) stayBtn.addEventListener('click', hideWarning);
-
-  // Listen to activity
-  ACTIVITY_EVENTS.forEach(function (ev) {
-    document.addEventListener(ev, resetIdle, { passive: true });
-  });
-
-  // Start
-  resetIdle();
 })();
 
 // ============================================================
