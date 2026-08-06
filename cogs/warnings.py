@@ -182,7 +182,8 @@ class warnings(commands.Cog):
     async def apply_warn_punishment(self, guild, member, warn_count):
         """Автоматическое наказание по количеству предупреждений"""
         cfg = load_warn_config(str(guild.id))
-        steps = cfg.get('steps', [])
+        # Панель сохраняет ключ 'thresholds', старые данные — 'steps'; принимаем оба
+        steps = cfg.get('steps') or cfg.get('thresholds') or []
         if not steps:
             return None
 
@@ -203,7 +204,7 @@ class warnings(commands.Cog):
             if action in ('mute', 'timeout'):
                 until = discord.utils.utcnow() + timedelta(minutes=minutes)
                 await member.timeout(until, reason=f'Авто-наказание: {warn_count} предупреждений')
-                return f'Мьют {duration} {unit}'
+                return f'Мут {minutes} мин'
             elif action == 'kick':
                 await member.kick(reason=f'Авто-наказание: {warn_count} предупреждений')
                 return 'Кик'
