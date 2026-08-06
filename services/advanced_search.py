@@ -102,7 +102,7 @@ class SearchEngine:
             items = self.index.get(search_type, {})
             
             for item_id, item_data in items.items():
-                # Filtreleri uygula
+                # Применить фильтры
                 if filters and not self._apply_filters(item_data, filters):
                     continue
                 
@@ -123,7 +123,7 @@ class SearchEngine:
         return results[:limit]
     
     def _apply_filters(self, item_data: Dict[str, Any], filters: Dict[str, Any]) -> bool:
-        """Filtreleri uygula"""
+        """Применить фильтры"""
         for key, value in filters.items():
             if key not in item_data:
                 return False

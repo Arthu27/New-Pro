@@ -34,7 +34,7 @@ errorlog =os .getenv ('WEB_ERROR_LOG','-')# stdout
 # Gunicorn 26+ ile uyumlu, basit access лог formati
 access_log_format ='%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"'
 
-# Process adleri (ps/top'ta gorunur)
+# Имена процессов (видно в ps/top)
 proc_name ='moebius-web'
 
 # Maksimum istek sayisi sonrasi worker'i новыйle (memory leak korunmasi)

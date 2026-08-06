@@ -57,7 +57,7 @@ from collections import defaultdict
 import time as _time 
 
 _rate_limits =defaultdict (list )# ip: [timestamps]
-RATE_LIMIT_WINDOW =60 # saniye
+RATE_LIMIT_WINDOW =60 # секунды
 RATE_LIMIT_MAX =600 # на pencere max желание
 
 def _check_rate_limit (ip ):
@@ -448,7 +448,7 @@ def member_apply_page ():
 
 @app .route ('/login',methods =['GET','POST'])
 def login ():
-# Token ile otomatik giriş — GÜVENLİK: varsayılan KAPALI.
+# Автоматический вход по токену — БЕЗОПАСНОСТЬ: по умолчанию ВЫКЛЮЧЕНО.
     # За Cloudflare Tunnel/локальным прокси каждый запрос выглядит
     # как 127.0.0.1, поэтому проверка IP сама по себе не защищает.
     # Включить через .env: ENABLE_TOKEN_LOGIN=1
@@ -460,7 +460,7 @@ def login ():
                 tokens =json .load (f )
             if token in tokens :
                 t =tokens [token ]
-                # 14 günlük geçerlilik — eski kalıcı token'lar artık giriş yapamaz
+                # срок действия 14 дней — старые постоянные токены больше не впускают
                 _token_ok =True 
                 try :
                     _created =datetime .fromisoformat (t .get ('created_at')or '')
@@ -661,7 +661,7 @@ def register ():
             with open (members_file ,'r',encoding ='utf-8')as f :
                 members =json .load (f )
             if discord_id in members :
-                return render_template ('register.html',error ='Bu Discord ID zaten запись!',step =1 )
+                return render_template ('register.html',error ='Этот Discord ID уже зарегистрирован!',step =1 )
 
                 # DM с проверка kodu отправить
         code =''.join (random .choices (string .digits ,k =6 ))
@@ -678,7 +678,7 @@ def register ():
                 e .description =(
                 "```ansi\n\u001b[1;33m ТРЕБУЕТСЯ ПРОВЕРКА КОДА \u001b[0m\n```\n"
                 "\n\n"
-                f"Merhaba **{member_info['display_name']}**! \n\n"
+                f"Привет **{member_info['display_name']}**! \n\n"
                 "Чтобы зарегистрироваться в **Aether Panel**,\n"
                 "введите код проверки на странице регистрации:\n\n"
                 f"```fix\n{code}\n```\n\n"
@@ -777,7 +777,7 @@ def api_add_member ():
             members =json .load (f )
 
     if discord_id in members :
-        return jsonify ({'error':'Bu ID zaten запись!'})
+        return jsonify ({'error':'Этот ID уже зарегистрирован!'})
 
     members [discord_id ]={
     'password':password ,
@@ -1308,7 +1308,7 @@ def api_warn ():
     user_id =data .get ('user_id')
     reason =(data .get ('reason')or 'Предупреждение через веб-панель').strip ()or 'Причина не указана'
 
-    # Validasyon: guild_id ve user_id numeric ve dolu olmalы
+    # Валидация: guild_id и user_id должны быть числовыми и непустыми
     if not guild_id or not str (guild_id ).strip ():
         return jsonify ({'error':'guild_id необходимо'}),400 
     if not user_id or not str (user_id ).strip ():
@@ -1850,7 +1850,7 @@ def api_change_password ():
     target =data .get ('target','').strip ()# какой hesabыn parolasi deгiшecek
     new_pass =data .get ('new_password','').strip ()
     if not target or not new_pass or len (new_pass )<4 :
-        return jsonify ({'error':'Неверный veriler'})
+        return jsonify ({'error':'Неверные данные'})
     if target in USERS :
         USERS [target ]['password_hash']=_hash_pw (new_pass )
         try :
@@ -2047,7 +2047,7 @@ def api_set_role_map ():
     role_id =str (data .get ('role_id','')).strip ()
     panel_role =data .get ('panel_role','').strip ()
     if not role_id or panel_role not in ('mod','admin','owner','uye'):
-        return jsonify ({'error':'Неверный veriler'}),400 
+        return jsonify ({'error':'Неверные данные'}),400 
     if panel_role =='uye':
         DISCORD_ROLE_MAP .pop (role_id ,None )
     else :

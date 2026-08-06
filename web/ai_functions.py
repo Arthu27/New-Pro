@@ -305,7 +305,7 @@ class AIFunctions :
                 and (cid_filter is None or str (m .get ('channel_id',''))==cid_filter )]
 
                 # ── 3) BИRLEШTИR + SIRALA ─────────────────────────────────
-                # Ёnce Discord API sonuчlarы (en новый), sonra log-only olanlar
+                # Сначала результаты Discord API (самые новые), потом только из логов
             api_keys ={(m .get ('channel_id',''),m .get ('timestamp',''),m .get ('content','')[:100 ])
             for m in api_msgs }
             merged =list (api_msgs )

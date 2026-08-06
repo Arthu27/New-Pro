@@ -136,7 +136,7 @@ def start_bot():
         )
         лог(f"[AUTO-UPDATE] Бот запущен! PID: {proc.pid} | Лог: {BOT_LOG}")
         
-        # 3 saniye badd ve process'in hala работатьtыгыnы контроль et
+        # ждём 3 секунды и проверяем, что процесс всё ещё работает
         time.sleep(3)
         if proc.poll() is not None:
             лог(f"[AUTO-UPDATE] ПРЕДУПРЕЖДЕНИЕ: Бот сразу завершился! Код выхода: {proc.returncode}")
@@ -185,7 +185,7 @@ def git_pull():
 
 
 def download_and_extract():
-    """GitHub'dan ZIP indir ve BOT_DIR'e ac (fallback)"""
+    """Скачать ZIP с GitHub и распаковать в BOT_DIR (fallback)"""
     лог("[AUTO-UPDATE] Файлы загружаются...")
     headers = {"Authorization": f"token {GITHUB_TOKEN}"}
     r = requests.get(ZIP_URL, headers=headers, timeout=60)

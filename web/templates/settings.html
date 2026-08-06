@@ -124,7 +124,7 @@
       var d = await fetch('/api/security/threat-index').then(function (r) { return r.json(); });
       if (!d || !d.success) return;
       $('threat-val').textContent = d.threat_score || 15;
-      $('lockdown-state').textContent = d.lockdown_active ? 'АКТИВЕН' : 'Kapali';
+      $('lockdown-state').textContent = d.lockdown_active ? 'АКТИВЕН' : 'ВЫКЛЮЧЕН';
       $('lockdown-state').style.color = d.lockdown_active ? '#ef4444' : '#4ade80';
     } catch (e) { /* тихо */ }
   }
@@ -140,7 +140,7 @@
         w.textContent = d.url;
         w.dataset.url = d.url;
       } else {
-        $('tunnel-status').textContent = 'Kapali';
+        $('tunnel-status').textContent = 'Выключен';
         $('tunnel-dot').className = 'dot status-off';
       }
     } catch (e) { /* тихо */ }

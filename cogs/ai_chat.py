@@ -559,7 +559,7 @@ def _call_ai (question :str ,user_id :int ,guild =None ,recent_messages :list =N
         _histories [user_id ]=new_history [-40 :]
         # Dosyaya сохранить
         _save_histories (_histories )
-        return answer or 'Hmm, bir sorun oldu. Tekrar dener misin? '
+        return answer or 'Хм, что-то пошло не так. Попробуете ещё раз? '
     except Exception as e :
         log .info (f'[AI] Ошибка: {e}')
         return 'Сейчас не могу ответить, попробуйте позже. '
@@ -778,7 +778,7 @@ class AIChat (commands .Cog ):
             elif any (w in cl_norm for w in asagi_words ):
                 yon =-1 
 
-                #  "bu voice / bu channela geri getir" — hedef channel имя 
+                #  "вернуть в этот голосовой / в этот канал" — имя целевого канала 
                 # "geri getir bu voice" → "bu ses" = особый bir channel имя не, orijinal channel demek
                 # Ama "X в канал geri getir" gibi bir channel имя geчiyorsa onu yakala
         hedef_channel_adi =None 
@@ -1072,7 +1072,7 @@ class AIChat (commands .Cog ):
                 if not member :
                     continue 
                 if not member .voice :
-                    results .append (f' **{member.display_name}** zaten seste не.')
+                    results .append (f' **{member.display_name}** уже не в голосовом канале.')
                     continue 
                 try :
                     await member .move_to (None )
@@ -1301,7 +1301,7 @@ class AIChat (commands .Cog ):
                 '/moderate kick @user причина\n'
                 '/moderate timeout @user minutes причина\n'
                 '/роли @user @роли\n'
-                '/utility clear adet\n'
+                '/utility clear количество\n'
                 '/utility lock\n'
                 '/utility unlock\n'
                 'Канал создан для: Discord\'da Сервер Настройкиы → Каналы'

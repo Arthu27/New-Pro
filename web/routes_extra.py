@@ -803,7 +803,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                 tickets_list .append ({
                 'channel_id':channel_id ,
                 'channel_name':channel .name if channel else f"ticket-{channel_id}",
-                'user_name':user .display_name if user else 'Bilinmiyor',
+                'user_name':user .display_name if user else 'Неизвестно',
                 'user_id':ticket .get ('user_id'),
                 'status':ticket .get ('status','unknown'),
                 'category':ticket .get ('category','общий'),
@@ -1828,46 +1828,46 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                     elif tip =='UST_SESE'and len (parts )>1 :
                     # Юst ses в канал move
                         m =resolve_member (parts [1 ])
-                        adim =int (parts [2 ])if len (parts )>2 and parts [2 ].isdigit ()else 1 
-                        geri =parts [3 ].lower ()=='geri'if len (parts )>3 else False 
+                        steps =int (parts [2 ])if len (parts )>2 and parts [2 ].isdigit ()else 1 
+                        move_back =parts [3 ].lower ()=='geri'if len (parts )>3 else False 
                         if not m or not m .voice :
                             return '❌ Участник не в голосе'
                         vcs =sorted (guild .voice_channels ,key =lambda c :c .position )
                         idx =next ((i for i ,c in enumerate (vcs )if c .id ==m .voice .channel .id ),None )
                         if idx is None :return '❌ Канал не найден'
-                        orijinal =m .voice .channel 
-                        hedef_idx =max (0 ,idx -adim )
-                        hedef =vcs [hedef_idx ]
-                        _run_async (m .move_to (hedef ))
-                        if geri :
+                        original_ch =m .voice .channel 
+                        target_idx =max (0 ,idx -steps )
+                        target_ch =vcs [target_idx ]
+                        _run_async (m .move_to (target_ch ))
+                        if move_back :
                             import asyncio as _as2 
                             _run_async (_as2 .sleep (3 ))
                             fresh =guild .get_member (m .id )
                             if fresh and fresh .voice :
-                                _run_async (fresh .move_to (orijinal ))
-                            return f'✅ {m.display_name} → перемещён в {hedef.name}, через 3с возвращён в {orijinal.name}'
-                        return f'✅ {m.display_name} → перемещён в {hedef.name}'
+                                _run_async (fresh .move_to (original_ch ))
+                            return f'✅ {m.display_name} → перемещён в {target_ch.name}, через 3с возвращён в {original_ch.name}'
+                        return f'✅ {m.display_name} → перемещён в {target_ch.name}'
                     elif tip =='ALT_SESE'and len (parts )>1 :
                         m =resolve_member (parts [1 ])
-                        adim =int (parts [2 ])if len (parts )>2 and parts [2 ].isdigit ()else 1 
-                        geri =parts [3 ].lower ()=='geri'if len (parts )>3 else False 
+                        steps =int (parts [2 ])if len (parts )>2 and parts [2 ].isdigit ()else 1 
+                        move_back =parts [3 ].lower ()=='geri'if len (parts )>3 else False 
                         if not m or not m .voice :
                             return '❌ Участник не в голосе'
                         vcs =sorted (guild .voice_channels ,key =lambda c :c .position )
                         idx =next ((i for i ,c in enumerate (vcs )if c .id ==m .voice .channel .id ),None )
                         if idx is None :return '❌ Канал не найден'
-                        orijinal =m .voice .channel 
-                        hedef_idx =min (len (vcs )-1 ,idx +adim )
-                        hedef =vcs [hedef_idx ]
-                        _run_async (m .move_to (hedef ))
-                        if geri :
+                        original_ch =m .voice .channel 
+                        target_idx =min (len (vcs )-1 ,idx +steps )
+                        target_ch =vcs [target_idx ]
+                        _run_async (m .move_to (target_ch ))
+                        if move_back :
                             import asyncio as _as2 
                             _run_async (_as2 .sleep (3 ))
                             fresh =guild .get_member (m .id )
                             if fresh and fresh .voice :
-                                _run_async (fresh .move_to (orijinal ))
-                            return f'✅ {m.display_name} → перемещён в {hedef.name}, через 3с возвращён в {orijinal.name}'
-                        return f'✅ {m.display_name} → перемещён в {hedef.name}'
+                                _run_async (fresh .move_to (original_ch ))
+                            return f'✅ {m.display_name} → перемещён в {target_ch.name}, через 3с возвращён в {original_ch.name}'
+                        return f'✅ {m.display_name} → перемещён в {target_ch.name}'
                     elif tip =='SUSTUR'and len (parts )>1 :
                         m =resolve_member (parts [1 ])
                         if m :
@@ -3173,7 +3173,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         name =(data .get ('name')or '').strip ()
         if not name :
             return jsonify ({'error':'Требуется название роли'}),400 
-            # Bot'un sahip olduгu guild'lerden biri mi проверка et
+            # Проверка: один из серверов, где состоит бот
         try :
             gid =int (guild_id )
         except (TypeError ,ValueError ):
@@ -3791,7 +3791,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
             guild =bot .get_guild (int (guild_id ))
             ch =guild .get_channel (int (channel_id ))
             if not ch :
-                raise ValueError ('Kanal bulunamadi')
+                raise ValueError ('Канал не найден')
             # Yeniden adlandir
             if 'name' in data and data ['name']:
                 _run_async (ch .edit (name =str (data ['name'])[:100 ]))
@@ -3915,7 +3915,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         new_value =data .get ('roles',data .get ('role',[]))
         if not isinstance (new_value ,list ):
             new_value =[]
-            # Sadece string id'leri tut
+            # Оставить только строковые id
         new_value =[str (x )for x in new_value if x ]
         settings [key ]=new_value 
         os .makedirs ('data',exist_ok =True )
@@ -4084,7 +4084,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         if gw .get ('status')!='active':return jsonify ({'error':'Giveaway активен не'})
         participants =gw .setdefault ('participants',[])
         username =session .get ('username','')
-        if username in participants :return jsonify ({'error':'Zaten присоединился!'})
+        if username in participants :return jsonify ({'error':'Ты уже присоединился!'})
         participants .append (username )
         with open (f ,'w')as fp :json .dump (gws ,fp ,indent =2 )
         return jsonify ({'success':True })
@@ -4109,7 +4109,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         poll =polls [poll_id ]
         voters =poll .setdefault ('voters',[])
         username =session .get ('username','')
-        if username in voters :return jsonify ({'error':'Zaten oy verdin!'})
+        if username in voters :return jsonify ({'error':'Ты уже голосовал!'})
         if 0 <=option_index <len (poll ['options']):
             poll ['options'][option_index ]['votes']=poll ['options'][option_index ].get ('votes',0 )+1 
             voters .append (username )
@@ -4349,7 +4349,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
             guild =bot .get_guild (int (guild_id ))
             role =guild .get_role (int (data ['role_id']))
             if not role :return 
-            embed =discord .Embed (title ="📢 Duyuru",description =data ['message'],color =0xdc143c )
+            embed =discord .Embed (title ="📢 Объявление",description =data ['message'],color =0xdc143c )
             embed .set_footer (text ="Aether Panel",icon_url =bot .user .display_avatar .url )
             for member in role .members :
                 try :
@@ -5110,7 +5110,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                 _run_async (ch .send (embed =embed ,view =TicketView ()))
             try :
                 future =asyncio .run_coroutine_threadsafe (send_panel (),bot .loop )
-                future .result (timeout =10 )# 10 saniye badd, Ошибка varsa yakala
+                future .result (timeout =10 )# ждём 10 секунд, ловим ошибку
                 panel_sent =True 
             except Exception as ex :
                 panel_error =str (ex )
@@ -5513,7 +5513,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         result .sort (key =lambda x :x .get ('timestamp',''),reverse =True )
         return jsonify (result [:300 ])
 
-        # ── KULLANICI MESAJ ARAMA (AI iчin) ──────────────────────────────
+        # ── ПОИСК СООБЩЕНИЙ ПОЛЬЗОВАТЕЛЯ (для AI) ──────────────────────────────
     @app .route ('/api/guild/<guild_id>/user-messages',methods =['GET'])
     @login_required 
     @role_required ('mod')
@@ -5709,14 +5709,14 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
             # recent_events: если есть в payload — использовать, иначе сохранить с диска
         if 'recent_events'not in data :
             data ['recent_events']=existing .get ('recent_events',[])
-            # whitelist: sadece geчerli 17-22 haneli sayыsal user_id'leri принять et
+            # whitelist: принимать только валидные числовые user_id из 17-22 цифр
         wl =data .get ('whitelist')
         if not isinstance (wl ,list ):
             wl =existing .get ('whitelist',[])
         else :
             wl =[str (x )for x in wl if isinstance (x ,(str ,int ))
             and str (x ).isdigit ()and 17 <=len (str (x ))<=22 ]
-            # Tekrar'leri kaldыr ve sыrayы koru
+            # Убрать повторы, сохранить порядок
         seen =set ()
         wl_clean =[]
         for x in wl :
@@ -5765,7 +5765,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
 
         data =request .get_json (silent =True )or {}
         enabled =bool (data .get ('enabled',False ))
-        # tracked_role_ids: sadece sayыsal string'leri принять et, max 50
+        # tracked_role_ids: принимать только числовые строки, макс 50
         raw_ids =data .get ('tracked_role_ids',[])
         if not isinstance (raw_ids ,list ):
             raw_ids =[]
@@ -5819,7 +5819,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
             json .dump (result ,fp ,indent =2 ,ensure_ascii =False )
         return jsonify ({'success':True ,'tracked_count':len (valid_ids )})
 
-        # ── ROZET API ────────────────────────────────────────────────────────────
+        # ── API ЗНАЧКОВ ────────────────────────────────────────────────────────────
 
     @app .route ('/api/guild/<guild_id>/badges')
     @login_required 
@@ -7713,9 +7713,9 @@ def calculate_ai_ticket_stats (guild_id :int )->dict :
     for user_penalties in guild_penalties .values ():
         if isinstance (user_penalties ,list ):
             for p in user_penalties :
-                reasons .append (p .get ('reason','bilinmiyor'))
+                reasons .append (p .get ('reason','неизвестно'))
         else :
-            reasons .append (user_penalties .get ('reason','bilinmiyor'))
+            reasons .append (user_penalties .get ('reason','неизвестно'))
 
     reason_counter =Counter (reasons )
 
@@ -7737,19 +7737,19 @@ def calculate_ai_ticket_stats (guild_id :int )->dict :
         if isinstance (user_penalties ,list ):
             count =len (user_penalties )
             total_duration =sum (p .get ('duration',0 )for p in user_penalties )
-            last_penalty =user_penalties [-1 ].get ('date','bilinmiyor')if user_penalties else 'bilinmiyor'
+            last_penalty =user_penalties [-1 ].get ('date','неизвестно')if user_penalties else 'неизвестно'
             name =user_penalties [-1 ].get ('name',user_id )if user_penalties else user_id 
         else :
             count =1 
             total_duration =user_penalties .get ('duration',0 )
-            last_penalty =user_penalties .get ('date','bilinmiyor')
+            last_penalty =user_penalties .get ('date','неизвестно')
             name =user_penalties .get ('name',user_id )
 
         top_offenders .append ({
         'name':name ,
         'count':count ,
         'total_duration':total_duration ,
-        'last_penalty':last_penalty [:10 ]if isinstance (last_penalty ,str )else 'bilinmiyor'
+        'last_penalty':last_penalty [:10 ]if isinstance (last_penalty ,str )else 'неизвестно'
         })
 
     top_offenders .sort (key =lambda x :x ['count'],reverse =True )

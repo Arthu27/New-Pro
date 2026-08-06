@@ -60,7 +60,7 @@ class ReportBuilder:
         
         report_config = self.reports[report_id]
         
-        # Verileri topla
+        # Данныеi topla
         data = self._collect_data(report_config['metrics'], 
                                   report_config['filters'],
                                   start_date, end_date)
@@ -146,14 +146,14 @@ class ReportBuilder:
             
             ticket_date = datetime.fromisoformat(created_at)
             if start_date <= ticket_date <= end_date:
-                # Другой filtreleri uygula
+                # Применить остальные фильтры
                 if self._apply_filters(ticket, filters):
                     filtered.append(ticket)
         
         return filtered
     
     def _apply_filters(self, ticket: Dict[str, Any], filters: Dict[str, Any]) -> bool:
-        """Filtreleri uygula"""
+        """Применить фильтры"""
         for key, value in filters.items():
             if key == 'status' and ticket.get('status') != value:
                 return False
@@ -381,7 +381,7 @@ class ReportExporter:
                 # Заголовок
                 writer.writerow(['Metric', 'Value'])
                 
-                # Veriler
+                # Данные
                 for key, value in report.get('data', {}).items():
                     if isinstance(value, dict):
                         for sub_key, sub_value in value.items():

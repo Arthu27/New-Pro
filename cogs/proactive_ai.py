@@ -146,7 +146,7 @@ class ProactiveAI (commands .Cog ):
         leave_log =[t for t in data .get ('leave_log',[])if t >one_hour_ago ]
         if len (leave_log )>=LEAVE_ALERT_THRESHOLD :
             alerts .append (f'🚪 За последний час сервер покинули **{len(leave_log)} человек**!')
-            data ['leave_log']=[]# Sыfыrla, tekrar uyarma
+            data ['leave_log']=[]# сброс — не предупреждать повторно
 
             # В конец 1 времяteki katыlыmlarы контроль et
         join_log =[t for t in data .get ('join_log',[])if t >one_hour_ago ]

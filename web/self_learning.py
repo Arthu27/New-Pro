@@ -18,7 +18,7 @@ class SelfLearning :
         self .mistakes =[]# Ошибки AI
         self .successes =[]# Uspesnie cevaplar
 
-        # Загруз veriler
+        # Загрузить данные
         self ._load_data ()
 
     def record_feedback (
@@ -263,7 +263,7 @@ class SelfLearning :
         }
 
     def _load_data (self ):
-        """Загруз veriler из dosyaya"""
+        """Загрузить данные из файла"""
         data_file ='data/ai_learning.json'
         if os .path .exists (data_file ):
             try :
@@ -277,7 +277,7 @@ class SelfLearning :
                 pass 
 
     def _save_data (self ):
-        """Сохран veriler в dosya"""
+        """Сохранить данные в файл"""
         try :
             os .makedirs ('data',exist_ok =True )
             data_file ='data/ai_learning.json'

@@ -181,7 +181,7 @@ class GuildData:
 
 class UserData:
     """
-    Kullanici bazli veri saklama.
+    Хранение данных по пользователям.
     
     Kullanim:
         db = UserData("economy")

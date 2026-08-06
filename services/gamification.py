@@ -91,7 +91,7 @@ class BadgeSystem:
         if user_id not in self.user_badges:
             self.user_badges[user_id] = []
         
-        # Zaten varsa verme
+        # Не выдавать, если уже есть
         if any(b['badge_id'] == badge_id for b in self.user_badges[user_id]):
             return None
         
@@ -327,7 +327,7 @@ class Leaderboard:
                 'user_id': user_id,
                 'total_points': entry['total_points'],
                 'badge_count': len(badges),
-                'badges': badges[:3]  # Иlk 3 rozet
+                'badges': badges[:3]  # первые 3 значка
             })
         
         return leaderboard

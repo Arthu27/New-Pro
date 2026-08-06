@@ -31,7 +31,7 @@ class CustomMenu:
         'dark': 0x2C2F33,         # Koyu gri
     }
     
-    # Dekorasyonlar (эмодзи yok, sadece чizgiler)
+    # Декорации (без эмодзи, только линии)
     BORDERS = {
         'single': '' * 40,
         'double': '' * 40,

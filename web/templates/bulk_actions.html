@@ -202,7 +202,7 @@
   }
 
   function bind() {
-    // Her guild secim degisikliginde ayni karttaki роль sel'lerini doldur
+    // При смене сервера заполнить select'ы ролей в той же карточке
     document.querySelectorAll('.ba-guild').forEach(function (sel) {
       sel.addEventListener('change', function () { loadRoles(sel); });
     });

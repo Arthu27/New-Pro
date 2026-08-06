@@ -253,7 +253,7 @@ class BulkUpdater:
     
     async def bulk_add_tags(self, ticket_ids: List[str], tags: List[str],
                             added_by: str, tickets: Dict[str, Dict[str, Any]]) -> BulkOperation:
-        """Массовая упоминание ekleme"""
+        """Массовое добавление упоминаний"""
         operation = self.operation_manager.create_operation(
             operation_type='add_tags',
             ticket_ids=ticket_ids,
@@ -348,7 +348,7 @@ class BulkCloser:
                     continue
                 
                 if ticket.get('status') == 'closed':
-                    operation.add_failure(ticket_id, 'Ticket zaten закрытый')
+                    operation.add_failure(ticket_id, 'Тикет уже закрыт')
                     continue
                 
                 ticket['status'] = 'closed'

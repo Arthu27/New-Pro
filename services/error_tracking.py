@@ -511,7 +511,7 @@ class ErrorAnalytics:
         
         total_occurrences = sum(e.occurrences for e in errors)
         
-        return total_occurrences / (hours * 60)  # Ошибка/dakika
+        return total_occurrences / (hours * 60)  # ошибок/минута
     
     def get_mean_time_to_resolution(self, hours: int = 24) -> Optional[float]:
         """Получить среднее время решения (часы)"""

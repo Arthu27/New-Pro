@@ -52,12 +52,12 @@ class CustomField:
         """Проверить значение"""
         errors = []
         
-        # Zorunlu проверка
+        # Обязательная проверка
         if self.required and (value is None or value == ''):
             errors.append('Bu alan zorunludur')
             return {'valid': False, 'errors': errors}
         
-        # Boшsa ve zorunlu deгilse geчerli
+        # пусто и не обязательно — валидно
         if value is None or value == '':
             return {'valid': True, 'errors': []}
         
@@ -456,24 +456,24 @@ class CustomFieldPermissions:
     def can_view_field(self, field_id: str, user_role: str) -> bool:
         """Проверить, можно ли показать поле"""
         if field_id not in self.permissions:
-            return True  # Varчислоlan: herkes gёrebilir
+            return True  # по умолчанию: видят все
         
         can_view = self.permissions[field_id].get('can_view', [])
         
         if not can_view:
-            return True  # Boшsa herkes gёrebilir
+            return True  # пусто — видят все
         
         return user_role in can_view
     
     def can_edit_field(self, field_id: str, user_role: str) -> bool:
         """Проверить, можно ли редактировать поле"""
         if field_id not in self.permissions:
-            return True  # Varчислоlan: herkes dюzenleyebilir
+            return True  # по умолчанию: редактируют все
         
         can_edit = self.permissions[field_id].get('can_edit', [])
         
         if not can_edit:
-            return True  # Boшsa herkes dюzenleyebilir
+            return True  # пусто — редактируют все
         
         return user_role in can_edit
     

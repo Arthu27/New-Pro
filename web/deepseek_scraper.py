@@ -15,7 +15,7 @@ from datetime import datetime
 DEEPSEEK_EMAIL =os .getenv ('DEEPSEEK_EMAIL','')
 DEEPSEEK_PASSWORD =os .getenv ('DEEPSEEK_PASSWORD','')
 
-# Oturum statusu (tek seferlik login, после новыйden ispolzuetsya)
+# Статус сессии (логин один раз, потом переиспользуется)
 _browser =None 
 _page =None 
 _lock =threading .Lock ()
@@ -116,7 +116,7 @@ async def _ask_deepseek_async (prompt :str ,timeout :int =60 )->str :
         # Cevabыn gelmesini badd — "dюшюnюyor" animasyonu bitene kadar
         await _page .wait_for_timeout (2000 )
 
-        # Cevap elementini badd
+        # Ждём появления элемента ответа
         start =datetime .utcnow ()
         last_text =''
         stable_count =0 
@@ -130,7 +130,7 @@ async def _ask_deepseek_async (prompt :str ,timeout :int =60 )->str :
                 current_text =await msgs [-1 ].inner_text ()
                 if current_text ==last_text and current_text .strip ():
                     stable_count +=1 
-                    if stable_count >=3 :# 3 saniye deгiшmezse готовоdыr
+                    if stable_count >=3 :# 3 секунды не меняется — готово
                         return current_text .strip ()
                 else :
                     stable_count =0 

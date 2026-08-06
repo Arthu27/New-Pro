@@ -451,7 +451,7 @@ async def ai_ticket_response (user_message :str ,history :List [Dict ],guild_con
         response =response .replace ('ACTION:ESCALATE','').strip ()
 
         # Удален chain-of-thought bloki если есть
-        # (re global import edildiгi для burada tekrar import gerekmiyor)
+        # (re уже импортирован глобально, повторный импорт не нужен)
 
     if not response :
         response ="Обрабатываю ваш запрос..."
@@ -480,7 +480,7 @@ async def ai_ticket_response (user_message :str ,history :List [Dict ],guild_con
         except Exception as e :
             print (f"[AI] Ошибка извлечения фактов: {e}")
 
-            # 12. Сохран cevap для samoeгitimi (olacak proanalizirovan после)
+            # 12. Сохраняем ответ для самообучения (проанализируется позже)
     try :
         from web .self_learning import get_self_learning 
         self_learning =get_self_learning ()
@@ -493,7 +493,7 @@ async def ai_ticket_response (user_message :str ,history :List [Dict ],guild_con
             correct_response ='',
             mistake_type ='too_short_response'
             )
-            # Если cevap dlinniy ve podrobniy — vozmюmkюn uspeh
+            # Если ответ длинный и подробный — возможен успех
         elif len (response )>200 and category in ['question','technical']:
             self_learning .record_success (
             user_message =user_message ,
@@ -604,7 +604,7 @@ def learn_from_staff (staff_message :str ,user_question :str ,guild_id :int ):
         if guild_key not in faqs :
             faqs [guild_key ]=[]
 
-            # Ekliyoruz soru-cevap
+            # Добавляем вопрос-ответ
         faqs [guild_key ].append ({
         'question':user_question ,
         'answer':staff_message ,
@@ -994,7 +994,7 @@ def _call (messages :List [Dict ],max_tokens :int =2048 ,temperature :float =0.7
     model_name =model or os .getenv ("AI_MODEL","mistral-large-latest")
     ollama_url =os .getenv ("OLLAMA_URL","http://127.0.0.1:11434")
 
-    # 1. Ollama (Yerel LLM) denemesi — sadece работатьыyorsa чok hыzlы
+    # 1. Попытка Ollama (локальная LLM) — очень быстро, если работает
     try :
         payload =json .dumps ({
         "model":model_name ,

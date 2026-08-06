@@ -166,7 +166,7 @@ class TicketCloner:
         cloned_ticket['created_at'] = datetime.now().isoformat()
         cloned_ticket['status'] = 'open'
         
-        # Изменениеleri uygula
+        # Применить изменения
         if modifications:
             cloned_ticket.update(modifications)
         

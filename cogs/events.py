@@ -95,7 +95,7 @@ class Events (commands .Cog ):
     description ='Событие описание',
     date ='Дата (GG/AA/YYYY)',
     часов ='Время (SS:DD)',
-    channel ='Duyuru канал'
+    channel ='Канал объявлений'
     )
     @app_commands .checks .has_permissions (manage_events =True )
     async def create_event (self ,interaction :discord .Interaction ,

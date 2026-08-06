@@ -58,7 +58,7 @@ def save_unknown_question (question :str ,guild_id :int ,channel_id :int ,histor
     """Escalate olan soruyu unknown_questions.json'a add."""
     items =_load (UNKNOWN_FILE )
 
-    # Zaten benzer bir soru есть ли? Sayacы artыr
+    # Уже есть похожий вопрос? Увеличить счётчик
     for item in items :
         if _similarity (question ,item .get ('question',''))>0.7 :
             item ['count']=item .get ('count',1 )+1 

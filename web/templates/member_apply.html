@@ -130,7 +130,7 @@ function selectGuild(id, name, icon) {
   selectedGuild = {id, name};
   document.querySelectorAll('.server-card').forEach(function(c){c.classList.remove('selected');});
   document.getElementById('sc-'+id).classList.add('selected');
-  // ID varsa tekrar контроль et
+  // Если ID есть — проверить ещё раз
   if (document.getElementById('discord_id').value.trim().length >= 17) onIdInput();
 }
 

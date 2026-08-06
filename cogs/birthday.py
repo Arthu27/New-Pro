@@ -55,7 +55,7 @@ class Birthday (commands .Cog ):
             for user_id ,info in data .items ():
                 if info .get ('date')!=today :
                     continue 
-                    # Сегодня zaten kutlandы mы?
+                    # Сегодня уже поздравляли?
                 if info .get ('celebrated')==str (now .year ):
                     continue 
                 member =guild .get_member (int (user_id ))

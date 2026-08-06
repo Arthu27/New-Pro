@@ -239,7 +239,7 @@ class SentimentAnalyzer :
                     })
                     self .alerts_sent .add (alert_key )
 
-                    # Sbrasivaem предупреждение с 10 dakika
+                    # Сбрасываем предупреждения старше 10 минут
                     import asyncio 
                     asyncio .create_task (self ._reset_alert (alert_key ,delay =600 ))
 
@@ -261,7 +261,7 @@ class SentimentAnalyzer :
         return alerts 
 
     async def _reset_alert (self ,alert_key :str ,delay :int ):
-        """Sbrasivaet предупреждение с N saniye"""
+        """Сбрасывает предупреждения старше N секунд"""
         import asyncio 
         await asyncio .sleep (delay )
         self .alerts_sent .discard (alert_key )

@@ -49,7 +49,7 @@ class Verification (commands .Cog ):
     @commands .Cog .listener ()
     async def on_member_join (self ,member :discord .Member ):
         state =_load_global_state ()
-        # KAPALI ise hiчbir шey yapma
+        # если ВЫКЛЮЧЕНО — ничего не делаем
         if not state .get ("enabled",False ):
             return 
         if member .bot :

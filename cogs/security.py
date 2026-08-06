@@ -140,11 +140,11 @@ class Security (commands .Cog ):
         else :
             sim_score =0.0 
 
-            # 3. Tekrar sinyali: одинаковый содержимое сколько kez?
+            # 3. Сигнал повтора: одинаковое содержимое сколько раз?
         repeat_count =sum (1 for _ ,c in history if c .lower ()==content .lower ())
         repeat_score =min (repeat_count /3 ,1.0 )
         if repeat_score >0.5 :
-            signals .append (f"tekrar ({repeat_count}x)")
+            signals .append (f"повтор ({repeat_count}x)")
 
             # 4. Длинныйluk anomalisi: очень краткий + очень быстрый
         length_score =0.3 if len (content )<5 and speed_score >0.4 else 0.0 

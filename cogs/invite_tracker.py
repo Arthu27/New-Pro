@@ -68,7 +68,7 @@ class InviteTracker (commands .Cog ):
         joins .append ({
         'user_id':str (member .id ),'user_name':member .display_name ,
         'inviter_id':str (inviter .id )if inviter else None ,
-        'inviter':inviter .display_name if inviter else 'Bilinmiyor',
+        'inviter':inviter .display_name if inviter else 'Неизвестно',
         'code':code ,'joined_at':datetime .utcnow ().isoformat ()
         })
         with open (f ,'w',encoding ='utf-8')as fp :

@@ -1452,8 +1452,8 @@ class Ticket (commands .Cog ):
 
             # Функция выполнения наказания
             async def execute_punishment (target ,p_type ,dur ,p_reason ,p_quote ,label_ru ):
-                # ÇİFTE CEZA KORUMASI: aynı suç (quote) bu kullanıcı için son günlerde zaten
-                # cezalandırıldıysa tekrar ceza verme — sadece bilgilendir ve dur.
+                # ЗАЩИТА ОТ ДВОЙНОГО НАКАЗАНИЯ: если то же нарушение (quote) у этого пользователя за последние дни уже
+                # наказывалось — не наказывать снова, только уведомить и остановиться.
                 if self ._already_punished_for_quote (message .guild .id ,target .id ,p_quote ):
                     await message .channel .send (
                     f"⚖️ **{target.display_name}** для этого нарушения уже было вынесено наказание ранее. "
