@@ -36,6 +36,9 @@ EVENTS = {
     'ticket_close': ('event_ticket_close', 'Тикет закрыт', '🔒'),
     'priority_change': ('event_priority_change', 'Изменение приоритета', '⚡'),
     'assignment': ('event_assignment', 'Назначение тикета', '👤'),
+    'warn': ('event_warn', 'Выдано предупреждение', '⚠️'),
+    'mod_action': ('event_mod_action', 'Действие модерации', '🔨'),
+    'staff_apply': ('event_staff_apply', 'Новая заявка в персонал', '📝'),
     'test': (None, 'Тестовое уведомление', '🧪'),
 }
 
@@ -48,6 +51,9 @@ DEFAULT_SETTINGS = {
     'event_ticket_close': True,
     'event_priority_change': False,
     'event_assignment': False,
+    'event_warn': True,
+    'event_mod_action': True,
+    'event_staff_apply': True,
     'discord_channel': '',
     'webhook_url': '',
     'smtp_server': '',

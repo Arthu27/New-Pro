@@ -813,26 +813,58 @@ def api_my_applications ():
 @login_required 
 def api_my_notifications ():
     import time as _t 
+    # Запоминаем предыдущую отметку просмотра — по ней считаем «непрочитанное»
+    try :
+        prev_seen =float (session .get ('notif_seen_ts',0 )or 0 )
+    except (TypeError ,ValueError ):
+        prev_seen =0 
     # Открытие списка означает «всё просмотрено» — сбрасываем бейдж опроса
-    session ['notif_seen_ts']=int (_t .time ())
+    # (float — как ts событий, иначе событие в ту же секунду выглядело бы непрочитанным)
+    session ['notif_seen_ts']=_t .time ()
+
+    result =[]
+    # 1) Личные уведомления (notifications.json по discord_id)
     discord_id =session .get ('discord_id')
-    if not discord_id :
-        return jsonify ([])
     notif_file ='data/notifications.json'
-    if not os .path .exists (notif_file ):
-        return jsonify ([])
-    with open (notif_file ,'r',encoding ='utf-8')as f :
-        notifs =json .load (f )
-    my =notifs .get (discord_id ,[])
-    # Снимок с исходными флагами — клиент должен увидеть, что было непрочитанным
-    snapshot =[dict (n )for n in my ]
-    # Отмечаем прочитанными
-    for n in my :
-        n ['read']=True 
-    notifs [discord_id ]=my 
-    with open (notif_file ,'w',encoding ='utf-8')as f :
-        json .dump (notifs ,f ,indent =2 ,ensure_ascii =False )
-    return jsonify (list (reversed (snapshot )))
+    if discord_id and os .path .exists (notif_file ):
+        with open (notif_file ,'r',encoding ='utf-8')as f :
+            notifs =json .load (f )
+        my =notifs .get (discord_id ,[])
+        # Снимок с исходными флагами — клиент должен увидеть, что было непрочитанным
+        for n in my :
+            item =dict (n )
+            item ['system']=False
+            result .append (item )
+        # Отмечаем прочитанными
+        for n in my :
+            n ['read']=True
+        notifs [discord_id ]=my
+        with open (notif_file ,'w',encoding ='utf-8')as f :
+            json .dump (notifs ,f ,indent =2 ,ensure_ascii =False )
+
+    # 2) Системные уведомления всему персоналу (broadcast в panel_logs.json)
+    try :
+        logs_file ='data/panel_logs.json'
+        if os .path .exists (logs_file ):
+            with open (logs_file ,'r',encoding ='utf-8')as fp :
+                raw =json .load (fp )
+            for entry in raw [-80 :]:
+                if not entry .get ('broadcast'):
+                    continue
+                ts =entry .get ('ts',0 )or 0
+                result .append ({
+                'title':entry .get ('action','Уведомление'),
+                'message':entry .get ('detail',''),
+                'from':'Система',
+                'created_at':entry .get ('timestamp',''),
+                'read':ts <=prev_seen ,
+                'system':True,
+                })
+    except Exception :
+        pass
+
+    result .sort (key =lambda x :x .get ('created_at',''),reverse =True )
+    return jsonify (result [:30 ])
 
 @app .route ('/api/announcements')
 @login_required 
@@ -1202,6 +1234,19 @@ def _warn_db_append (guild_id :str ,user_id :str ,reason :str ,moderator :str ):
     except Exception as _e :
         print (f"Ошибка записи предупреждения в SQLite: {_e}")
 
+def _panel_notify (event ,title ,body ):
+    """Отправить событие в диспетчер уведомлений панели (fail-safe)."""
+    try :
+        from services .notification_dispatcher import notify_event
+        sender =None
+        try :
+            from web .routes_extra import _notify_discord_sender as sender
+        except Exception :
+            sender =None
+        return notify_event (event ,title ,body ,discord_sender =sender )
+    except Exception :
+        return {}
+
 @app .route ('/api/warnings')
 @login_required 
 @role_required ('mod')
@@ -1378,6 +1423,9 @@ def api_warn ():
     _store .atomic_write_json (warns_file ,warns )
     _store .invalidate_path (warns_file )
     _warn_db_append (guild_id ,user_id ,reason ,session .get ('username'))
+    # Уведомление персонала по настроенным каналам (веб/Discord/email)
+    _panel_notify ('warn',f"Предупреждение выдано (ID {user_id })",
+    f"Модератор: {session .get ('username')} · Причина: {reason }")
 
     return jsonify ({'success':True ,'message':'Предупреждение добавлено'})
 
@@ -1476,6 +1524,9 @@ def api_execute_command ():
                     json .dump (warns ,wf ,ensure_ascii =False )
                 _store .invalidate_path (warns_file )
                 _warn_db_append (gid_str ,uid_str ,data .get ('reason','Предупреждение через веб-панель'),session .get ('username'))
+                # Уведомление персонала по настроенным каналам (веб/Discord/email)
+                _panel_notify ('warn',f"Предупреждение выдано (ID {uid_str })",
+                f"Модератор: {session .get ('username')} · Причина: {data .get ('reason','Предупреждение через веб-панель')}")
                 # Отправить DM о предупреждении
                 member =guild .get_member (int (data .get ('user_id')))
                 if member :
@@ -2030,6 +2081,11 @@ def api_public_apply ():
 
     with open (apps_file ,'w',encoding ='utf-8')as f :
         json .dump (apps ,f ,indent =2 ,ensure_ascii =False )
+
+    # Уведомление персонала о новой заявке (веб/Discord/email)
+    _panel_notify ('staff_apply',
+    f"Новая заявка в персонал: {data ['discord_name']}",
+    f"ID: {uid } · возраст: {data ['yas']} · опыт: {str (data ['tecrube'])[:120 ]}")
 
         # Discord в канал отправить
     if bot_instance :
@@ -2732,7 +2788,7 @@ def api_notifications_poll ():
     except (TypeError ,ValueError ):
         cutoff_ts =0 
     try :
-        seen_ts =int (session .get ('notif_seen_ts',0 )or 0 )
+        seen_ts =float (session .get ('notif_seen_ts',0 )or 0 )
     except (TypeError ,ValueError ):
         seen_ts =0 
     notifs =[]

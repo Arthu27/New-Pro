@@ -268,6 +268,15 @@ class warnings(commands.Cog):
         self._save_warns(guild.id, user.id, warns)
         total = len(warns)
 
+        # Уведомление панели о варне (веб/Discord/email — в фоне)
+        try:
+            from cogs.ticket import _notify_panel_ticket_event as _np
+            _np(interaction, 'warn',
+                f"Предупреждение: {user.display_name}",
+                f"Модератор: {interaction.user.display_name} · Всего: {total} · Причина: {reason or 'Не указана'}")
+        except Exception:
+            pass
+
         # DM пользователю
         import json, os
         dm_file = f'data/warn_dm_{guild.id}.json'
@@ -420,6 +429,17 @@ class warnings(commands.Cog):
         })
         self._save_warns(guild.id, user.id, warns)
         total = len(warns)
+
+        # Уведомление панели о варне от AI-модератора (веб/webhook/email — в фоне)
+        try:
+            import asyncio as _asyncio
+            from services.notification_dispatcher import notify_event as _ne
+            _loop = _asyncio.get_running_loop()
+            _loop.run_in_executor(None, lambda: _ne('warn',
+                f"Предупреждение: {user.display_name}",
+                f"Модератор: {moderator.display_name} · Всего: {total} · Причина: {reason or 'Не указана'}"))
+        except Exception:
+            pass
 
         # DM
         try:

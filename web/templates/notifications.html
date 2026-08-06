@@ -67,6 +67,19 @@
           <input type="checkbox" id="event-assignment" style="width: 20px; height: 20px;">
           <span>Назначение тикета</span>
         </label>
+        <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-top: 6px; letter-spacing: 1px; text-transform: uppercase;">Модерация и заявки</div>
+        <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
+          <input type="checkbox" id="event-warn" checked style="width: 20px; height: 20px;">
+          <span>Выдано предупреждение (варн)</span>
+        </label>
+        <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
+          <input type="checkbox" id="event-mod-action" checked style="width: 20px; height: 20px;">
+          <span>Действие модерации (бан/кик/мут)</span>
+        </label>
+        <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
+          <input type="checkbox" id="event-staff-apply" checked style="width: 20px; height: 20px;">
+          <span>Новая заявка в персонал</span>
+        </label>
       </div>
     </div>
   </div>
@@ -159,6 +172,9 @@ async function loadNotificationSettings() {
       document.getElementById('event-ticket-close').checked = settings.event_ticket_close || false;
       document.getElementById('event-priority-change').checked = settings.event_priority_change || false;
       document.getElementById('event-assignment').checked = settings.event_assignment || false;
+      document.getElementById('event-warn').checked = settings.event_warn !== false;
+      document.getElementById('event-mod-action').checked = settings.event_mod_action !== false;
+      document.getElementById('event-staff-apply').checked = settings.event_staff_apply !== false;
 
       // Discord
       window._savedNotifChannel = settings.discord_channel || '';
@@ -264,6 +280,9 @@ async function saveNotificationSettings() {
     event_ticket_close: document.getElementById('event-ticket-close').checked,
     event_priority_change: document.getElementById('event-priority-change').checked,
     event_assignment: document.getElementById('event-assignment').checked,
+    event_warn: document.getElementById('event-warn').checked,
+    event_mod_action: document.getElementById('event-mod-action').checked,
+    event_staff_apply: document.getElementById('event-staff-apply').checked,
     discord_channel: document.getElementById('discord-channel').value,
     webhook_url: document.getElementById('webhook-url').value,
     smtp_server: document.getElementById('smtp-server').value,

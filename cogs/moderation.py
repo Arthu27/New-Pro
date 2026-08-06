@@ -514,6 +514,16 @@ class Moderation (commands .Cog ):
                 log =mod_log_embed (action ,{"ban":"🔨 Бан","kick":"👢 Кик","timeout":"🔇 Мут","mute_chat":"🔇 Мут чата","vmute":"🎙️ Войс-мут","vunmute":"🎙️ Войс-мут снят","untimeout":"🔊 Мут снят"}.get (action ,action ),0x3498DB ,user ,interaction .user ,guild ,reason ,case_id )
                 await self .send_log (guild ,log )
 
+                # Уведомление панели о действии модерации (веб/Discord/email — в фоне)
+                try :
+                    from cogs .ticket import _notify_panel_ticket_event as _np
+                    _label ={"ban":"Бан","kick":"Кик","timeout":"Таймаут","mute_chat":"Мут чата","vmute":"Войс-мут","vunmute":"Войс-мут снят","untimeout":"Мут снят"}.get (action ,action )
+                    _np (interaction ,'mod_action',
+                    f"{_label }: {user .display_name }",
+                    f"Модератор: {interaction .user .display_name } · Причина: {reason } · Дело #{case_id}")
+                except Exception :
+                    pass
+
                 confirm =success_embed (
                 "Действие выполнено",
                 f"**{user.display_name}** · `{user.id}`\n{msg}\n**Причина:** {reason}\n**Дело:** #{case_id}",
@@ -540,6 +550,14 @@ class Moderation (commands .Cog ):
                 f"**{fetched.name}** · `{fetched.id}`\nПользователь разбанен.\n**Дело:** #{case_id}",
                 guild =guild )
                 await self .send_log (guild ,confirm )
+                # Уведомление панели о разбане (веб/Discord/email — в фоне)
+                try :
+                    from cogs .ticket import _notify_panel_ticket_event as _np
+                    _np (interaction ,'mod_action',
+                    f"Разбан: {fetched .name }",
+                    f"Модератор: {interaction .user .display_name } · Дело #{case_id}")
+                except Exception :
+                    pass
                 await interaction .response .send_message (embed =confirm ,ephemeral =True )
             except Exception as ex :
                 await interaction .response .send_message (embed =error_embed (str (ex )),ephemeral =True )
