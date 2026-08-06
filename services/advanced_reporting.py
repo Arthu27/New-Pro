@@ -54,13 +54,13 @@ class ReportBuilder:
     
     def generate_report(self, report_id: str, start_date: datetime, 
                        end_date: datetime) -> Dict[str, Any]:
-        """Rapor создать"""
+        """Создать отчёт"""
         if report_id not in self.reports:
             return {'error': 'Rapor не найден'}
         
         report_config = self.reports[report_id]
         
-        # Данныеi topla
+        # Собрать данные
         data = self._collect_data(report_config['metrics'], 
                                   report_config['filters'],
                                   start_date, end_date)
@@ -77,7 +77,7 @@ class ReportBuilder:
             'data': data
         }
         
-        # Son создатьma zamanыnы деньcelle
+        # Обновить время последней генерации
         self.reports[report_id]['last_generated'] = datetime.now().isoformat()
         self._save_reports()
         
@@ -85,10 +85,10 @@ class ReportBuilder:
     
     def _collect_data(self, metrics: List[str], filters: Dict[str, Any],
                      start_date: datetime, end_date: datetime) -> Dict[str, Any]:
-        """Verileri topla"""
+        """Собрать данные"""
         data = {}
         
-        # Ticket verilerini yюkle
+        # Загрузить данные тикетов
         tickets = self._load_tickets(start_date, end_date, filters)
         
         for metric in metrics:
@@ -137,7 +137,7 @@ class ReportBuilder:
         except Exception:
             return []
         
-        # Tarih filtresi
+        # Фильтр по дате
         filtered = []
         for ticket in tickets:
             created_at = ticket.get('created_at')
@@ -177,6 +177,46 @@ class ReportBuilder:
         
         return (closed - created).total_seconds() / 3600
     
+    def generate_daily_report(self) -> Dict[str, Any]:
+        """Ежедневный отчёт за сегодня."""
+        today = datetime.now().date()
+        start = datetime.combine(today, datetime.min.time())
+        end = datetime.now()
+        tickets = self._load_tickets(start, end, {})
+        report = {'date': today.isoformat()}
+        report.update(_period_stats(tickets))
+        return report
+
+    def generate_weekly_report(self) -> Dict[str, Any]:
+        """Еженедельный отчёт за последние 7 дней."""
+        end = datetime.now()
+        start = end - timedelta(days=7)
+        tickets = self._load_tickets(start, end, {})
+        report = {'week_start': start.date().isoformat(), 'week_end': end.date().isoformat()}
+        report.update(_period_stats(tickets))
+        report['daily_breakdown'] = self._group_by_day(tickets)
+        return report
+
+    def generate_custom_report(self, days: int = 30, report_type: str = 'tickets') -> Dict[str, Any]:
+        """Специальный отчёт за N дней: tickets/sla/performance."""
+        end = datetime.now()
+        start = end - timedelta(days=days)
+        tickets = self._load_tickets(start, end, {})
+        stats_all = _period_stats(tickets)
+        if report_type == 'sla':
+            keys = ('total_tickets', 'closed_tickets', 'sla_compliance', 'avg_resolution_time')
+        elif report_type == 'performance':
+            keys = ('closed_tickets', 'avg_resolution_time', 'customer_satisfaction')
+        else:
+            keys = ('total_tickets', 'open_tickets', 'closed_tickets')
+        return {
+            'period_start': start.date().isoformat(),
+            'period_end': end.date().isoformat(),
+            'period_days': days,
+            'report_type': report_type,
+            'stats': {k: stats_all[k] for k in keys},
+        }
+
     def _group_by_day(self, tickets: List[Dict[str, Any]]) -> Dict[str, int]:
         """Сгруппировать по дням"""
         by_day = defaultdict(int)
@@ -228,8 +268,39 @@ class ReportBuilder:
         ]
 
 
+# ═══ Готовые отчёты для /report-* команд ═══
+def _resolution_hours(ticket) -> float:
+    """Длительность решения тикета в часах (модульный помощник)."""
+    ca, cl = ticket.get('created_at'), ticket.get('closed_at')
+    if not ca or not cl:
+        return 0.0
+    try:
+        return (datetime.fromisoformat(cl) - datetime.fromisoformat(ca)).total_seconds() / 3600
+    except Exception:
+        return 0.0
+
+
+def _period_stats(tickets):
+    """Общая статистика по списку тикетов."""
+    closed = [t for t in tickets if t.get('status') == 'closed']
+    open_ = [t for t in tickets if t.get('status') != 'closed']
+    resolution = [r for r in (_resolution_hours(t) for t in closed) if r > 0]
+    avg_res = statistics.mean(resolution) if resolution else 0.0
+    sla = (sum(1 for r in resolution if r <= 24) / len(resolution) * 100) if resolution else 100.0
+    ratings = [t.get('rating') for t in closed if isinstance(t.get('rating'), (int, float))]
+    cs = statistics.mean(ratings) if ratings else 0.0
+    return {
+        'total_tickets': len(tickets),
+        'open_tickets': len(open_),
+        'closed_tickets': len(closed),
+        'avg_resolution_time': round(avg_res, 2),
+        'sla_compliance': round(sla, 2),
+        'customer_satisfaction': round(cs, 2),
+    }
+
+
 class AnalyticsEngine:
-    """Analitik motoru"""
+    """Аналитический движок"""
     
     def __init__(self):
         self.tickets_file = 'data/customer_tickets.json'
@@ -243,7 +314,7 @@ class AnalyticsEngine:
         open_tickets = sum(1 for t in tickets if t.get('status') == 'open')
         closed_tickets = sum(1 for t in tickets if t.get('status') == 'closed')
         
-        # Чёzюm длительность
+        # Длительность решения
         resolution_times = [
             self._calculate_resolution_time(t)
             for t in tickets
@@ -252,10 +323,10 @@ class AnalyticsEngine:
         
         avg_resolution = statistics.mean(resolution_times) if resolution_times else 0
         
-        # Kategoriler
+        # Категории
         categories = Counter(t.get('category', 'unknown') for t in tickets)
         
-        # Ёncelikler
+        # Приоритеты
         priorities = Counter(t.get('priority', 'medium') for t in tickets)
         
         return {
@@ -269,7 +340,7 @@ class AnalyticsEngine:
         }
     
     def get_trends(self, days: int = 30) -> Dict[str, Any]:
-        """Trendleri al"""
+        """Получить тренды"""
         start_date = datetime.now() - timedelta(days=days)
         tickets = self._load_tickets_since(start_date)
         
@@ -295,7 +366,7 @@ class AnalyticsEngine:
         }
     
     def get_performance_metrics(self, days: int = 30) -> Dict[str, Any]:
-        """Performans metrikleri"""
+        """Метрики производительности"""
         start_date = datetime.now() - timedelta(days=days)
         tickets = self._load_tickets_since(start_date)
         
@@ -323,6 +394,27 @@ class AnalyticsEngine:
             'resolution_rate': round(len(closed_tickets) / len(tickets) * 100, 2) if tickets else 0
         }
     
+    def get_dashboard_analytics(self, days: int = 30) -> Dict[str, Any]:
+        """Сводка для дашборда: обзор + SLA + топы категорий и сотрудников."""
+        overview = self.get_overview(days)
+        start_date = datetime.now() - timedelta(days=days)
+        tickets = self._load_tickets_since(start_date)
+        closed = [t for t in tickets if t.get('status') == 'closed']
+        resolution = [r for r in (self._calculate_resolution_time(t) for t in closed) if r > 0]
+        sla = (sum(1 for r in resolution if r <= 24) / len(resolution) * 100) if resolution else 100.0
+        ratings = [t.get('rating') for t in closed if isinstance(t.get('rating'), (int, float))]
+        categories = Counter(t.get('category', 'unknown') for t in tickets)
+        performers = Counter(
+            t.get('claimed_by_name') or t.get('assigned_name') or t.get('staff_name') or '\u2014'
+            for t in closed)
+        overview.update({
+            'sla_compliance': round(sla, 2),
+            'customer_satisfaction': round(statistics.mean(ratings), 2) if ratings else 0.0,
+            'top_categories': [{'category': c, 'count': n} for c, n in categories.most_common(5)],
+            'top_performers': [{'user_name': u, 'closed_tickets': n} for u, n in performers.most_common(5) if u != '\u2014'],
+        })
+        return overview
+
     def _load_tickets_since(self, start_date: datetime) -> List[Dict[str, Any]]:
         """Загрузить тикеты начиная с даты"""
         if not os.path.exists(self.tickets_file):

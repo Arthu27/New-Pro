@@ -1,6 +1,6 @@
 """
 Time Tracking Cog
-Отслеживание времени cog'u
+Ког отслеживания времени
 """
 import discord 
 from discord .ext import commands 
@@ -14,7 +14,7 @@ log =get_logger ("time_tracking_cog")
 
 
 class TimeTrackingCog (commands .Cog ):
-    """Отслеживание времени cog'u"""
+    """Ког отслеживания времени"""
 
     def __init__ (self ,bot ):
         self .bot =bot 
@@ -25,25 +25,26 @@ class TimeTrackingCog (commands .Cog ):
     description :str ='Работа'):
         """Запустить таймер"""
         # Проверить, есть ли уже активный таймер
-        active_entry =time_tracker .get_active_entry (interaction .user .id )
+        active_entry =time_tracker .get_active_entry (str (interaction .user .id ))
 
         if active_entry :
             await interaction .response .send_message (
-            f"⏱ У вас уже есть активный таймер! Начат: {active_entry['start_time'][:16]}",
+            f"⏱ У вас уже есть активный таймер! Начат: {active_entry.start_time.isoformat()[:16]}",
             ephemeral =True 
             )
             return 
 
             # Запустить таймер
         entry =time_tracker .start_timer (
-        user_id =interaction .user .id ,
+        ticket_id ='',
+        user_id =str (interaction .user .id ),
         description =description 
         )
 
         # Embed создать
         embed =discord .Embed (
         title ="⏱ Таймер запущен",
-        description =f"**Описание:** {description}\n**Начало:** {entry['start_time'][:16]}",
+        description =f"**Описание:** {description}\n**Начало:** {entry.start_time.isoformat()[:16]}",
         color =discord .Color .green (),
         timestamp =datetime .now ()
         )
@@ -53,8 +54,8 @@ class TimeTrackingCog (commands .Cog ):
     @app_commands .command (name ='time-stop',description ='Остановить таймер')
     async def time_stop (self ,interaction :discord .Interaction ):
         """Остановить таймер"""
-        # Zamanlayыcы остановить
-        entry =time_tracker .stop_timer (interaction .user .id )
+        # Остановить таймер
+        entry =time_tracker .stop_timer (str (interaction .user .id ))
 
         if not entry :
             await interaction .response .send_message (
@@ -63,15 +64,15 @@ class TimeTrackingCog (commands .Cog ):
             )
             return 
 
-            # Sюre hesapla
-        duration =datetime .fromisoformat (entry ['end_time'])-datetime .fromisoformat (entry ['start_time'])
+            # Посчитать длительность
+        duration =entry .get_duration ()
         hours =int (duration .total_seconds ()/3600 )
         minutes =int ((duration .total_seconds ()%3600 )/60 )
 
         # Embed создать
         embed =discord .Embed (
         title ="⏱ Таймер остановлен",
-        description =f"**Описание:** {entry['description']}\n**Длительность:** {hours} ч {minutes} мин",
+        description =f"**Описание:** {entry.description}\n**Длительность:** {hours} ч {minutes} мин",
         color =discord .Color .red (),
         timestamp =datetime .now ()
         )
@@ -82,8 +83,8 @@ class TimeTrackingCog (commands .Cog ):
     @app_commands .describe (days ='Количество дней (по умолч.: 7)')
     async def time_report (self ,interaction :discord .Interaction ,days :int =7 ):
         """Показать ваш отчёт по времени"""
-        # Rapor al
-        report =time_tracker .get_user_report (interaction .user .id ,days =days )
+        # Получить отчёт
+        report =time_tracker .get_user_report (str (interaction .user .id ),days =days )
 
         # Embed создать
         embed =discord .Embed (
@@ -92,14 +93,14 @@ class TimeTrackingCog (commands .Cog ):
         timestamp =datetime .now ()
         )
 
-        embed .add_field (name ="⏱ Общее время",value =f"{report['total_hours']:.2f} время",inline =True )
+        embed .add_field (name ="⏱ Общее время",value =f"{report['total_hours']:.2f} ч",inline =True )
         embed .add_field (name ="📥 Всего записей",value =str (report ['total_entries']),inline =True )
         embed .add_field (name ="📈 Среднее в день",value =f"{report['avg_hours_per_day']:.2f}  ч/день",inline =True )
 
-        # Gюnlюk breakdown
+        # Разбивка по дням
         if report ['daily_breakdown']:
             daily_text ="\n".join ([
-            f"• {day}: {hours:.2f} время"
+            f"• {day}: {hours:.2f} ч"
             for day ,hours in list (report ['daily_breakdown'].items ())[:7 ]
             ])
             embed .add_field (name ="📅 По дням",value =daily_text ,inline =False )

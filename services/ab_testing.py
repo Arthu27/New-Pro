@@ -287,6 +287,10 @@ class ABTestManager:
         
         return False
     
+    def stop_test(self, test_id: str) -> bool:
+        """Остановить тест (синоним complete_test)."""
+        return self.complete_test(test_id)
+
     def complete_test(self, test_id: str) -> bool:
         """Testi tamamla"""
         test = self.tests.get(test_id)

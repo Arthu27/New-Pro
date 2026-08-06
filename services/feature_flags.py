@@ -215,6 +215,14 @@ class FeatureFlagManager:
         with open(self.flags_file, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
     
+    def save_flag(self, flag: 'FeatureFlag') -> bool:
+        """Сохранить изменения флага (после set_rollout_percentage и т.п.)."""
+        if not flag or not getattr(flag, 'flag_key', None):
+            return False
+        self.flags[flag.flag_key] = flag
+        self._save_flags()
+        return True
+
     def create_flag(self, flag_key: str, name: str, description: str = '',
                     created_by: str = None) -> FeatureFlag:
         """Создать флаг"""

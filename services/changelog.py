@@ -209,6 +209,10 @@ class ChangelogManager:
         """Получить ломающие изменения"""
         return [e for e in self.entries.values() if e.breaking_change]
     
+    def get_latest_entries(self, limit: int = 5) -> List[ChangelogEntry]:
+        """Последние записи (синоним get_recent_entries)."""
+        return self.get_recent_entries(limit)
+
     def get_recent_entries(self, limit: int = 10) -> List[ChangelogEntry]:
         """Получить последние записи"""
         entries = list(self.entries.values())

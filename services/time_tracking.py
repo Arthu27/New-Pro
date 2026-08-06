@@ -101,7 +101,7 @@ class TimeTracker:
     def start_timer(self, ticket_id: str, user_id: str,
                     description: str = '') -> TimeEntry:
         """Запустить таймер"""
-        # Ёnceki zamanlayыcыyы остановить
+        # Остановить предыдущий таймер
         if user_id in self.active_timers:
             self.stop_timer(user_id)
         
@@ -139,7 +139,7 @@ class TimeTracker:
     def add_manual_entry(self, ticket_id: str, user_id: str,
                          start_time: datetime, end_time: datetime,
                          description: str = '', billable: bool = True) -> TimeEntry:
-        """Manuel записей добавить"""
+        """Добавить запись вручную"""
         entry_id = f"time_{len(self.entries) + 1}"
         
         entry = TimeEntry(
@@ -157,6 +157,10 @@ class TimeTracker:
         
         return entry
     
+    def get_active_entry(self, user_id: str) -> Optional[TimeEntry]:
+        """Активный таймер пользователя (синоним get_active_timer; id приводится к str)."""
+        return self.get_active_timer(str(user_id))
+
     def get_active_timer(self, user_id: str) -> Optional[TimeEntry]:
         """Получить активный таймер"""
         if user_id not in self.active_timers:
@@ -165,6 +169,27 @@ class TimeTracker:
         entry_id = self.active_timers[user_id]
         return self.entries.get(entry_id)
     
+    def get_user_report(self, user_id: str, days: int = 7) -> Dict[str, Any]:
+        """Сводный отчёт по времени за N дней."""
+        user_id = str(user_id)
+        start = datetime.now() - timedelta(days=days)
+        entries = self.get_user_entries(user_id, start_date=start)
+        total_seconds = 0.0
+        per_day = {}
+        for e in entries:
+            end = e.end_time or datetime.now()
+            dur = max(0.0, (end - e.start_time).total_seconds())
+            total_seconds += dur
+            day = e.start_time.date().isoformat()
+            per_day[day] = per_day.get(day, 0.0) + dur
+        total_hours = total_seconds / 3600
+        return {
+            'total_hours': total_hours,
+            'total_entries': len(entries),
+            'avg_hours_per_day': total_hours / max(1, days),
+            'daily_breakdown': {d: h / 3600 for d, h in sorted(per_day.items(), reverse=True)},
+        }
+
     def get_user_entries(self, user_id: str, start_date: Optional[datetime] = None,
                          end_date: Optional[datetime] = None) -> List[TimeEntry]:
         """Получить записи пользователя"""

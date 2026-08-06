@@ -65,9 +65,12 @@ class CustomMenu:
         self,
         title: str,
         content: str,
-        inline: bool = False
+        inline: bool = False,
+        emoji: str = None
     ):
-        """Добавить раздел (без эмодзи)"""
+        """Добавить раздел (emoji необязателен)"""
+        if emoji:
+            title = f"{emoji} {title}"
         self.sections.append({
             'title': title,
             'content': content,
@@ -130,9 +133,12 @@ class CustomMenu:
         self,
         title: str,
         items: List[str],
-        numbered: bool = True
+        numbered: bool = True,
+        emoji: str = None
     ):
-        """Liste ekle (эмодзи yok)"""
+        """Добавить список (emoji необязателен)"""
+        if emoji:
+            title = f"{emoji} {title}"
         if numbered:
             lines = [f"**{i+1}.** {item}" for i, item in enumerate(items)]
         else:
