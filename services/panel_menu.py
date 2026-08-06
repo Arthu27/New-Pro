@@ -60,6 +60,7 @@ MENU = [
         {'path': '/commands', 'label': 'Команды', 'icon': 'fa-terminal'},
         {'path': '/custom-commands', 'label': 'Свои команды', 'icon': 'fa-code'},
         {'path': '/send-command', 'label': 'Отправить', 'icon': 'fa-paper-plane'},
+        {'path': '/schedule', 'label': 'Расписание', 'icon': 'fa-calendar-alt'},
         {'path': '/bot-settings', 'label': 'Настройки', 'icon': 'fa-sliders-h'},
         {'path': '/anticrash', 'label': 'Анти-краш', 'icon': 'fa-life-ring'},
         {'path': '/konsol', 'label': 'Консоль', 'icon': 'fa-terminal'},
