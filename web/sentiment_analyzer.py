@@ -1,6 +1,6 @@
 """
-Analiz duygu сервер в realnom время
-Otslejivanie duygular, tona, чakышmaov
+Анализ настроения сервера в реальном времени
+Отслеживание эмоций, тона, конфликтов
 """
 import discord 
 import json 

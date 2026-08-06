@@ -1,6 +1,6 @@
 """
 AutoModeration Cog
-Otomatik moderasyon cog'u
+Ког автоматической модерации
 """
 
 import discord 

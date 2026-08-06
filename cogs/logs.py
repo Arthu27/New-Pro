@@ -16,23 +16,23 @@ log =get_logger ("logs")
 AUDIT_FILE ="data/audit_log.json"
 
 CATEGORIES ={
-'mod':{'label':'Модерация','emoji':'','color':0xE74C3C ,'channel':'moderasyon'},
+'mod':{'label':'Модерация','emoji':'','color':0xE74C3C ,'channel':'модерация'},
 'member':{'label':'Участники','emoji':'','color':0x2ECC71 ,'channel':'участники'},
 'message':{'label':'Сообщения','emoji':'','color':0x3498DB ,'channel':'сообщения'},
 'role':{'label':'Роли','emoji':'','color':0x9B59B6 ,'channel':'сервер'},
 'channel':{'label':'Каналы','emoji':'','color':0xF39C12 ,'channel':'сервер'},
 'voice':{'label':'Голос','emoji':'','color':0x1ABC9C ,'channel':'ses'},
 'сервер':{'label':'Сервер','emoji':'','color':0xE67E22 ,'channel':'сервер'},
-'automod':{'label':'Автоматически','emoji':'','color':0xE74C3C ,'channel':'moderasyon'},
+'automod':{'label':'Автоматически','emoji':'','color':0xE74C3C ,'channel':'модерация'},
 'invite':{'label':'Приглашения','emoji':'','color':0x95A5A6 ,'channel':'сервер'},
 }
 
 DIV =""
 
-# Ёnbellek сообщение — для znat soderjanie удален
+# Кэш сообщений — чтобы знать содержимое удалённых
 _msg_cache :dict ={}
 
-# Queue-based zapis — bir potok, нет race condition
+# Запись через очередь — один поток, нет race condition
 _audit_queue :queue .Queue =queue .Queue ()
 _audit_worker_thread :threading .Thread =None 
 
@@ -119,15 +119,16 @@ def save_event (guild_id ,category ,action ,details :dict ):
     })
 
 
-    # Imena log-каналы
+    # Имена лог-каналов
 LOG_CHANNELS ={
-'moderasyon':'-модерация',
+'модерация':'-модерация',
+'moderasyon':'-модерация',  # legacy alias (старые серверы)
 'участники':'-участники',
 'сообщения':'-сообщения',
 'ses':'-ses',
 'сервер':'-сервер',
 }
-LOG_CATEGORY_NAME =' Loglar'
+LOG_CATEGORY_NAME =' Логи'
 
 
 class Logs (commands .Cog ):
@@ -143,17 +144,17 @@ class Logs (commands .Cog ):
         ch_name =CATEGORIES .get (category ,{}).get ('channel','сервер')
         target =LOG_CHANNELS .get (ch_name ,LOG_CHANNELS ['сервер'])
 
-        # Arыyoruz по tocnomu isme
+        # Ищем по точному имени
         ch =discord .utils .get (guild .text_channels ,name =target )
         if ch :
             return ch 
 
-            # Fallback: arыyoruz старый server-log
+            # Fallback: ищем старый server-log
         ch =discord .utils .get (guild .text_channels ,name ="server-log")
         if ch :
             return ch 
 
-            # Fallback: arыyoruz aether-logs
+            # Fallback: ищем aether-logs
         ch =discord .utils .get (guild .text_channels ,name ="aether-logs")
         return ch 
 
@@ -182,7 +183,7 @@ class Logs (commands .Cog ):
             read_message_history =True ,
             ),
             }
-            # Daem eriшim модератор (роли с администрации kick/ban)
+            # Даём доступ модераторам (роли с правами kick/ban/admin)
             for role in guild .roles :
                 if role .permissions .kick_members or role .permissions .ban_members or role .permissions .administrator :
                     overwrites [role ]=discord .PermissionOverwrite (

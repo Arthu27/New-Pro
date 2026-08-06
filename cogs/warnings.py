@@ -219,8 +219,8 @@ class warnings(commands.Cog):
         """Ortak warn çekirdeği: kayıt + DM + otomatik ceza.
 
         /warn komutu VE sağ-tık context menüleri (mod_tools) bunu kullanır.
-        Yanıt GÖNDERMEZ — çağıran taraf yanıtlar.
-        Döner: (warn_id, total, punishment_result)
+        Ответ НЕ отправляет — отвечает вызывающая сторона.
+        Возвращает: (warn_id, total, punishment_result)
         """
         guild = interaction.guild
         warns = self._get_warns(guild.id, user.id)

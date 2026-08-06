@@ -1,6 +1,6 @@
 """
 Social Features
-Sosyal ёzellikler (yorumlar, beгeniler, mentions)
+Социальные функции (комментарии, лайки, упоминания)
 """
 
 import json
@@ -36,7 +36,7 @@ class CommentSystem:
     
     def add_comment(self, ticket_id: str, user_id: str, content: str,
                     parent_id: Optional[str] = None) -> Dict[str, Any]:
-        """Комментарий добавить"""
+        """Добавить комментарий"""
         if ticket_id not in self.comments:
             self.comments[ticket_id] = []
         
@@ -63,7 +63,7 @@ class CommentSystem:
     
     def edit_comment(self, ticket_id: str, comment_id: str, 
                      new_content: str) -> Optional[Dict[str, Any]]:
-        """Yorumu dюzenle"""
+        """Редактировать комментарий"""
         if ticket_id not in self.comments:
             return None
         
@@ -78,7 +78,7 @@ class CommentSystem:
         return None
     
     def delete_comment(self, ticket_id: str, comment_id: str) -> bool:
-        """Yorumu удалить"""
+        """Удалить комментарий"""
         if ticket_id not in self.comments:
             return False
         
@@ -92,22 +92,22 @@ class CommentSystem:
         return False
     
     def get_comments(self, ticket_id: str) -> List[Dict[str, Any]]:
-        """Yorumlarы al"""
+        """Получить комментарии"""
         return self.comments.get(ticket_id, [])
     
     def get_replies(self, ticket_id: str, comment_id: str) -> List[Dict[str, Any]]:
-        """Yanыtlarы al"""
+        """Получить ответы"""
         comments = self.comments.get(ticket_id, [])
         return [c for c in comments if c.get('parent_id') == comment_id]
     
     def _extract_mentions(self, content: str) -> List[str]:
-        """Mentions удалить (@user)"""
+        """Удалить упоминания (@user)"""
         pattern = r'@(\w+)'
         return re.findall(pattern, content)
 
 
 class ReactionSystem:
-    """Reaksiyon система"""
+    """Система реакций"""
     
     AVAILABLE_REACTIONS = ['', '', '', '', '', '', '', '']
     
@@ -116,7 +116,7 @@ class ReactionSystem:
     
     def add_reaction(self, ticket_id: str, comment_id: str, 
                      user_id: str, reaction: str) -> bool:
-        """Reaksiyon добавить"""
+        """Добавить реакцию"""
         if reaction not in self.AVAILABLE_REACTIONS:
             return False
         
@@ -136,7 +136,7 @@ class ReactionSystem:
     
     def remove_reaction(self, ticket_id: str, comment_id: str,
                         user_id: str, reaction: str) -> bool:
-        """Reaksiyonu удалить"""
+        """Удалить реакцию"""
         comments = self.comment_system.comments.get(ticket_id, [])
         
         for comment in comments:
@@ -155,7 +155,7 @@ class ReactionSystem:
         return False
     
     def get_reactions(self, ticket_id: str, comment_id: str) -> Dict[str, List[str]]:
-        """Reaksiyonlarы al"""
+        """Получить реакции"""
         comments = self.comment_system.comments.get(ticket_id, [])
         
         for comment in comments:
@@ -166,14 +166,14 @@ class ReactionSystem:
 
 
 class MentionSystem:
-    """Упоминание система"""
+    """Система упоминаний"""
     
     def __init__(self):
         self.mentions_file = 'data/mentions.json'
         self.mentions = self._load_mentions()
     
     def _load_mentions(self) -> Dict[str, Any]:
-        """Mentions'larы загрузить"""
+        """Загрузить упоминания"""
         if os.path.exists(self.mentions_file):
             try:
                 with open(self.mentions_file, 'r', encoding='utf-8') as f:
@@ -184,14 +184,14 @@ class MentionSystem:
         return {}
     
     def _save_mentions(self):
-        """Mentions'larы сохранить"""
+        """Сохранить упоминания"""
         os.makedirs('data', exist_ok=True)
         with open(self.mentions_file, 'w', encoding='utf-8') as f:
             json.dump(self.mentions, f, ensure_ascii=False, indent=2)
     
     def record_mention(self, mentioned_user_id: str, mentioning_user_id: str,
                        ticket_id: str, comment_id: str) -> Dict[str, Any]:
-        """Упоминание'ы сохранить"""
+        """Сохранить упоминание"""
         if mentioned_user_id not in self.mentions:
             self.mentions[mentioned_user_id] = []
         
@@ -209,7 +209,7 @@ class MentionSystem:
         return упоминание
     
     def get_user_mentions(self, user_id: str, unread_only: bool = False) -> List[Dict[str, Any]]:
-        """Пользователь mentions'larыnы al"""
+        """Получить упоминания пользователя"""
         mentions = self.mentions.get(user_id, [])
         
         if unread_only:
@@ -218,7 +218,7 @@ class MentionSystem:
         return mentions
     
     def mark_mention_read(self, user_id: str, comment_id: str) -> bool:
-        """Упоминание'ы прочитано как iшaretle"""
+        """Отметить упоминания прочитанными"""
         if user_id not in self.mentions:
             return False
         
@@ -247,20 +247,20 @@ class MentionSystem:
         return count
     
     def get_unread_count(self, user_id: str) -> int:
-        """Okunmaлиш mentions количествоnы al"""
+        """Получить количество непрочитанных упоминаний"""
         mentions = self.mentions.get(user_id, [])
         return sum(1 for m in mentions if not m.get('read', False))
 
 
 class VotingSystem:
-    """Oylama система"""
+    """Система голосования"""
     
     def __init__(self):
         self.votes_file = 'data/votes.json'
         self.votes = self._load_votes()
     
     def _load_votes(self) -> Dict[str, Any]:
-        """Oylarы загрузить"""
+        """Загрузить голоса"""
         if os.path.exists(self.votes_file):
             try:
                 with open(self.votes_file, 'r', encoding='utf-8') as f:
@@ -271,13 +271,13 @@ class VotingSystem:
         return {}
     
     def _save_votes(self):
-        """Oylarы сохранить"""
+        """Сохранить голоса"""
         os.makedirs('data', exist_ok=True)
         with open(self.votes_file, 'w', encoding='utf-8') as f:
             json.dump(self.votes, f, ensure_ascii=False, indent=2)
     
     def vote(self, item_id: str, user_id: str, vote_type: str) -> Dict[str, Any]:
-        """Oy ver (upvote/downvote)"""
+        """Проголосовать (upvote/downvote)"""
         if vote_type not in ['upvote', 'downvote']:
             return {'error': 'Invalid vote type'}
         
@@ -305,7 +305,7 @@ class VotingSystem:
         }
     
     def get_votes(self, item_id: str) -> Dict[str, Any]:
-        """Oylarы al"""
+        """Получить голоса"""
         if item_id not in self.votes:
             return {
                 'upvotes': 0,
@@ -321,7 +321,7 @@ class VotingSystem:
         }
     
     def get_user_vote(self, item_id: str, user_id: str) -> Optional[str]:
-        """Пользовательnыn играu al"""
+        """Получить голос пользователя"""
         if item_id not in self.votes:
             return None
         
@@ -336,14 +336,14 @@ class VotingSystem:
 
 
 class SharingSystem:
-    """Paylaшыm система"""
+    """Система публикаций"""
     
     def __init__(self):
         self.shares_file = 'data/shares.json'
         self.shares = self._load_shares()
     
     def _load_shares(self) -> Dict[str, Any]:
-        """Paylaшыmlarы загрузить"""
+        """Загрузить публикации"""
         if os.path.exists(self.shares_file):
             try:
                 with open(self.shares_file, 'r', encoding='utf-8') as f:
@@ -354,14 +354,14 @@ class SharingSystem:
         return {}
     
     def _save_shares(self):
-        """Paylaшыmlarы сохранить"""
+        """Сохранить публикации"""
         os.makedirs('data', exist_ok=True)
         with open(self.shares_file, 'w', encoding='utf-8') as f:
             json.dump(self.shares, f, ensure_ascii=False, indent=2)
     
     def share(self, item_id: str, user_id: str, 
               platform: str, message: Optional[str] = None) -> Dict[str, Any]:
-        """Paylaш"""
+        """Поделиться"""
         if item_id not in self.shares:
             self.shares[item_id] = []
         
@@ -378,15 +378,15 @@ class SharingSystem:
         return share
     
     def get_shares(self, item_id: str) -> List[Dict[str, Any]]:
-        """Paylaшыmlarы al"""
+        """Получить публикации"""
         return self.shares.get(item_id, [])
     
     def get_share_count(self, item_id: str) -> int:
-        """Paylaшыm количествоnы al"""
+        """Получить количество публикаций"""
         return len(self.shares.get(item_id, []))
     
     def get_popular_items(self, limit: int = 10) -> List[Dict[str, Any]]:
-        """Popюler ёгeleri al"""
+        """Получить популярные элементы"""
         popular = [
             {
                 'item_id': item_id,
@@ -401,14 +401,14 @@ class SharingSystem:
 
 
 class FollowingSystem:
-    """Отслеживание система"""
+    """Система подписок"""
     
     def __init__(self):
         self.following_file = 'data/following.json'
         self.following = self._load_following()
     
     def _load_following(self) -> Dict[str, Any]:
-        """Takipleri загрузить"""
+        """Загрузить подписки"""
         if os.path.exists(self.following_file):
             try:
                 with open(self.following_file, 'r', encoding='utf-8') as f:
@@ -419,13 +419,13 @@ class FollowingSystem:
         return {}
     
     def _save_following(self):
-        """Takipleri сохранить"""
+        """Сохранить подписки"""
         os.makedirs('data', exist_ok=True)
         with open(self.following_file, 'w', encoding='utf-8') as f:
             json.dump(self.following, f, ensure_ascii=False, indent=2)
     
     def follow(self, user_id: str, target_user_id: str) -> bool:
-        """Отслеживание et"""
+        """Подписаться"""
         if user_id == target_user_id:
             return False
         
@@ -440,7 +440,7 @@ class FollowingSystem:
         return False
     
     def unfollow(self, user_id: str, target_user_id: str) -> bool:
-        """Takipten выйти"""
+        """Отписаться"""
         if user_id not in self.following:
             return False
         
@@ -452,15 +452,15 @@ class FollowingSystem:
         return False
     
     def is_following(self, user_id: str, target_user_id: str) -> bool:
-        """Отслеживание edip etmediгini проверить et"""
+        """Проверить, подписан ли"""
         return target_user_id in self.following.get(user_id, [])
     
     def get_following(self, user_id: str) -> List[str]:
-        """Отслеживание edilenleri al"""
+        """Получить подписки"""
         return self.following.get(user_id, [])
     
     def get_followers(self, user_id: str) -> List[str]:
-        """Takipчileri al"""
+        """Получить подписчиков"""
         followers = []
         
         for follower_id, following_list in self.following.items():
@@ -470,11 +470,11 @@ class FollowingSystem:
         return followers
     
     def get_following_count(self, user_id: str) -> int:
-        """Отслеживание edilen количествоnы al"""
+        """Получить количество подписок"""
         return len(self.following.get(user_id, []))
     
     def get_followers_count(self, user_id: str) -> int:
-        """Takipчi количествоnы al"""
+        """Получить количество подписчиков"""
         return len(self.get_followers(user_id))
 
 

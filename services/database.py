@@ -175,7 +175,7 @@ class Database:
         return None
     
     def get_all_users(self) -> List[Dict]:
-        """Все пользовательlarы al"""
+        """Получить всех пользователей"""
         conn = self.get_connection()
         cursor = conn.cursor()
         
@@ -295,7 +295,7 @@ class Database:
         conn.close()
     
     def get_ticket_messages(self, ticket_id: str) -> List[Dict]:
-        """Ticket сообщенияыnы al"""
+        """Получить сообщения тикета"""
         conn = self.get_connection()
         cursor = conn.cursor()
         
@@ -349,7 +349,7 @@ class Database:
         return self.get_economy(user_id)
     
     def update_balance(self, user_id: int, amount: int):
-        """Bakiye деньcelle"""
+        """Обновить баланс"""
         conn = self.get_connection()
         cursor = conn.cursor()
         
@@ -362,7 +362,7 @@ class Database:
         conn.close()
     
     def update_bank(self, user_id: int, amount: int):
-        """Banka деньcelle"""
+        """Обновить банк"""
         conn = self.get_connection()
         cursor = conn.cursor()
         
@@ -375,7 +375,7 @@ class Database:
         conn.close()
     
     def update_daily(self, user_id: int):
-        """Daily деньcelle"""
+        """Обновить ежедневную награду"""
         conn = self.get_connection()
         cursor = conn.cursor()
         
@@ -495,7 +495,7 @@ class Database:
         conn.close()
     
     def get_warnings(self, user_id: int) -> List[Dict]:
-        """Предупреждениеlarы al"""
+        """Получить предупреждения"""
         conn = self.get_connection()
         cursor = conn.cursor()
         
@@ -527,7 +527,7 @@ class Database:
         conn.close()
     
     def get_logs(self, event_type: str = None, limit: int = 100) -> List[Dict]:
-        """Loglarы al"""
+        """Получить логи"""
         conn = self.get_connection()
         cursor = conn.cursor()
         
@@ -551,7 +551,7 @@ class Database:
     
     # Statistics
     def get_stats(self) -> Dict:
-        """Статистикаi al"""
+        """Получить статистику"""
         conn = self.get_connection()
         cursor = conn.cursor()
         
@@ -581,7 +581,7 @@ class Database:
         print(f" Database backed up to: {backup_path}")
     
     def restore(self, backup_path: str):
-        """Database geri yюkle"""
+        """Восстановить базу данных"""
         import shutil
         shutil.copy2(backup_path, self.db_path)
         print(f" Database restored from: {backup_path}")

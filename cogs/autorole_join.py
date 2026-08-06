@@ -1,13 +1,13 @@
 """
-AutoRole Join — panel ayarlarındaki otomatik rolleri uygular.
+AutoRole Join — применяет автоматические роли из настроек панели.
 
-Panelden (/autorole sayfası) data/autorole_{gid}.json dosyasına kaydedilen
-roller artık gerçekten veriliyor:
-  • member_roles → her yeni üyeye
-  • bot_roles    → sunucuya giren her bota
+Роли, сохранённые из панели (страница /autorole) в data/autorole_{gid}.json,
+теперь действительно выдаются:
+  • member_roles → каждому новому участнику
+  • bot_roles    → каждому боту, зашедшему на сервер
 
-(girl_roles / boy_roles — cinsiyet otomatik tespit edilemediği için
-bota bağlanamaz; panelde referans olarak tutulur.)
+(girl_roles / boy_roles — пол автоматически определить нельзя,
+поэтому к боту не привязаны; хранятся в панели для справки.)
 """
 import json
 from discord.ext import commands

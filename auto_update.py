@@ -9,13 +9,13 @@ GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
 REPO_API = "https://api.github.com/repos/Arthu27/moebius-bot/commits/main"
 ZIP_URL = "https://github.com/Arthu27/moebius-bot/archive/refs/heads/main.zip"
 
-# Script'in найден dizini автоматически определить (VSCode workspace)
+# Автоматически определить директорию скрипта (VSCode workspace)
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-BOT_DIR = SCRIPT_DIR  # VSCode workspace'ini использовать
+BOT_DIR = SCRIPT_DIR  # использовать workspace VSCode
 LAST_COMMIT_FILE = os.path.join(BOT_DIR, "last_commit.txt")
 BOT_LOG = os.path.join(BOT_DIR, "bot_output.log")
 
-# .env содержимое теперь .env файлndan okunur, здесь hardcoded deгildir
+# содержимое .env теперь читается из файла .env, здесь не задано жёстко
 ENV_CONTENT = """TOKEN=YOUR_BOT_TOKEN_HERE
 GROQ_API_KEY=YOUR_GROQ_API_KEY
 MISTRAL_API_KEY=YOUR_MISTRAL_API_KEY
@@ -36,7 +36,7 @@ def get_remote_commit():
         if r.status_code == 200:
             return r.json()["sha"]
     except Exception as e:
-        лог(f"[AUTO-UPDATE] Commit alma ошибки: {e}")
+        лог(f"[AUTO-UPDATE] Ошибка получения коммита: {e}")
     return None
 
 
@@ -55,12 +55,12 @@ def get_local_commit():
 
 
 def get_last_commit():
-    """Для geri sovmestimosti"""
+    """Для обратной совместимости"""
     return get_remote_commit()
 
 
 def is_bot_running():
-    """main.py process'i работает mu контроль et"""
+    """Проверить, работает ли процесс main.py"""
     try:
         result = subprocess.run(
             'wmic process where "commandline like \'%main.py%\'" get processid',
@@ -76,7 +76,7 @@ def is_bot_running():
 
 
 def kill_bot():
-    """Только main.py process'lerini oldur"""
+    """Завершить только процессы main.py"""
     try:
         result = subprocess.run(
             'wmic process where "commandline like \'%main.py%\'" get processid',
@@ -107,18 +107,18 @@ def start_bot():
             лог(f"[AUTO-UPDATE] ОШИБКА: main.py не найдено: {main_py}")
             return False
         
-        # data/ klasёrюnю контроль et
+        # проверить папку data/
         data_dir = os.path.join(BOT_DIR, "data")
         os.makedirs(data_dir, exist_ok=True)
         
-        # .env файл контроль et
+        # проверить файл .env
         env_file = os.path.join(BOT_DIR, ".env")
         if not os.path.exists(env_file):
-            лог("[AUTO-UPDATE] .env не найдено, olusturuluyor...")
+            лог("[AUTO-UPDATE] .env не найден, создаётся...")
             with open(env_file, "w", encoding="utf-8") as f:
                 f.write(ENV_CONTENT)
         
-        лог(f"[AUTO-UPDATE] Bot dizini: {BOT_DIR}")
+        лог(f"[AUTO-UPDATE] Директория бота: {BOT_DIR}")
         лог(f"[AUTO-UPDATE] Python: {sys.executable}")
         лог(f"[AUTO-UPDATE] main.py: {main_py}")
         
@@ -139,21 +139,21 @@ def start_bot():
         # 3 saniye badd ve process'in hala работатьtыгыnы контроль et
         time.sleep(3)
         if proc.poll() is not None:
-            лог(f"[AUTO-UPDATE] ПРЕДУПРЕЖДЕНИЕ: Bot hemen kapandi! Exit code: {proc.returncode}")
-            лог(f"[AUTO-UPDATE] Лог dosyasini контроль et: {BOT_LOG}")
+            лог(f"[AUTO-UPDATE] ПРЕДУПРЕЖДЕНИЕ: Бот сразу завершился! Код выхода: {proc.returncode}")
+            лог(f"[AUTO-UPDATE] Проверьте лог-файл: {BOT_LOG}")
             return False
         
         return True
     except Exception as e:
-        лог(f"[AUTO-UPDATE] Bot baslatma ОШИБКА: {e}")
+        лог(f"[AUTO-UPDATE] ОШИБКА запуска бота: {e}")
         import traceback
         лог(traceback.format_exc())
         return False
 
 
 def git_pull():
-    """git pull с repoyu guncelle"""
-    лог("[AUTO-UPDATE] git pull yapiliyor...")
+    """Обновить репозиторий через git pull"""
+    лог("[AUTO-UPDATE] Выполняется git pull...")
     try:
         result = subprocess.run(
             ["git", "pull", "origin", "main"],
@@ -166,14 +166,14 @@ def git_pull():
         if result.returncode != 0:
             лог(f"[AUTO-UPDATE] git pull stderr: {result.stderr.strip()}")
             # Conflict varsa force reset yap
-            лог("[AUTO-UPDATE] Conflict algilandi, force reset yapiliyor...")
+            лог("[AUTO-UPDATE] Обнаружен конфликт, выполняется force reset...")
             subprocess.run(["git", "fetch", "origin"], cwd=BOT_DIR, capture_output=True, timeout=30)
             subprocess.run(["git", "reset", "--hard", "origin/main"], cwd=BOT_DIR, capture_output=True, timeout=30)
             лог("[AUTO-UPDATE] Force reset завершено")
         else:
-            лог("[AUTO-UPDATE] Dosyalar обновлено")
+            лог("[AUTO-UPDATE] Файлы обновлены")
 
-        # .env yoksa olustur
+        # создать .env, если отсутствует
         env_path = os.path.join(BOT_DIR, ".env")
         if not os.path.exists(env_path):
             with open(env_path, "w", encoding="utf-8") as f:
@@ -186,16 +186,16 @@ def git_pull():
 
 def download_and_extract():
     """GitHub'dan ZIP indir ve BOT_DIR'e ac (fallback)"""
-    лог("[AUTO-UPDATE] Dosyalar indiriliyor...")
+    лог("[AUTO-UPDATE] Файлы загружаются...")
     headers = {"Authorization": f"token {GITHUB_TOKEN}"}
     r = requests.get(ZIP_URL, headers=headers, timeout=60)
     if r.status_code != 200:
-        raise Exception(f"Indirme ошибки HTTP {r.status_code}")
+        raise Exception(f"Ошибка загрузки HTTP {r.status_code}")
 
     zip_path = os.path.join(BOT_DIR, "aether-update.zip")
     with open(zip_path, "wb") as f:
         f.write(r.content)
-    лог(f"[AUTO-UPDATE] ZIP indirildi ({len(r.content)//1024} KB)")
+    лог(f"[AUTO-UPDATE] ZIP загружен ({len(r.content)//1024} KB)")
 
     with zipfile.ZipFile(zip_path, 'r') as zf:
         for member in zf.infolist():
@@ -216,7 +216,7 @@ def download_and_extract():
                     лог(f"[AUTO-UPDATE] Dosya написатьma ошибки ({target}): {e}")
 
     os.remove(zip_path)
-    лог("[AUTO-UPDATE] Dosyalar обновлено (ZIP)")
+    лог("[AUTO-UPDATE] Файлы обновлены (ZIP)")
 
     env_path = os.path.join(BOT_DIR, ".env")
     if not os.path.exists(env_path):
@@ -226,7 +226,7 @@ def download_and_extract():
 
 
 def update_bot():
-    лог("[AUTO-UPDATE] === GUNCELLEME BASLADI ===")
+    лог("[AUTO-UPDATE] === ОБНОВЛЕНИЕ НАЧАТО ===")
     try:
         kill_bot()
         # До git pull dene, git repo deгilse ZIP fallback
@@ -238,33 +238,33 @@ def update_bot():
             download_and_extract()
         time.sleep(2)
         start_bot()
-        лог("[AUTO-UPDATE] === GUNCELLEME ЗАВЕРШЕНО ===")
+        лог("[AUTO-UPDATE] === ОБНОВЛЕНИЕ ЗАВЕРШЕНО ===")
     except Exception as e:
-        лог(f"[AUTO-UPDATE] Guncelleme ошибки: {e}")
-        лог("[AUTO-UPDATE] Ошибка oldu, bot yeniden baslatiliyor...")
+        лог(f"[AUTO-UPDATE] Ошибка обновления: {e}")
+        лог("[AUTO-UPDATE] Произошла ошибка, бот перезапускается...")
         start_bot()
 
 
 def main():
     лог(f"[AUTO-UPDATE] Работатьtыrыldы (PID: {MY_PID})")
-    лог(f"[AUTO-UPDATE] Script dizini: {SCRIPT_DIR}")
-    лог(f"[AUTO-UPDATE] Bot dizini: {BOT_DIR}")
+    лог(f"[AUTO-UPDATE] Директория скрипта: {SCRIPT_DIR}")
+    лог(f"[AUTO-UPDATE] Директория бота: {BOT_DIR}")
     лог(f"[AUTO-UPDATE] Python: {sys.executable}")
     
     # Проверка необходимых файлов
     main_py = os.path.join(BOT_DIR, "main.py")
     if not os.path.exists(main_py):
         лог(f"[AUTO-UPDATE] KRITIK ОШИБКА: main.py не найдено: {main_py}")
-        лог("[AUTO-UPDATE] Lutfen script'i bot dizininde calistirin!")
+        лог("[AUTO-UPDATE] Запустите скрипт в директории бота!")
         return
     
     лог("[AUTO-UPDATE] GitHub polling работатьtыrыldы (5 saniye)...")
 
-    # Ilk контроль bot calismiyorsa hemen baslatir
+    # Первая проверка: если бот не работает — запустить сразу
     if not is_bot_running():
-        лог("[AUTO-UPDATE] Bot не работает, zapuskaetsya...")
+        лог("[AUTO-UPDATE] Бот не работает, запускается...")
         if not start_bot():
-            лог("[AUTO-UPDATE] Bot baslatma неудачно! Лог dosyasini контроль edin:")
+            лог("[AUTO-UPDATE] Не удалось запустить бота! Проверьте лог-файл:")
             лог(f"[AUTO-UPDATE] {BOT_LOG}")
             return
         time.sleep(5)
@@ -284,23 +284,23 @@ def main():
             if remote_hash:
                 local_hash = get_local_commit() or ""
                 if remote_hash != local_hash:
-                    лог(f"[AUTO-UPDATE] Новый commit algilandi: {remote_hash[:8]} (local: {local_hash[:8]})")
+                    лог(f"[AUTO-UPDATE] Обнаружен новый коммит: {remote_hash[:8]} (local: {local_hash[:8]})")
                     update_bot()
 
-            # Bot calismiyor mu контроль et
+            # Проверить, не остановился ли бот
             if not is_bot_running():
-                лог("[AUTO-UPDATE] Bot durdu! Yeniden baslatiliyor...")
+                лог("[AUTO-UPDATE] Бот остановлен! Перезапуск...")
                 if not start_bot():
-                    лог("[AUTO-UPDATE] Bot yeniden baslatma неудачно!")
+                    лог("[AUTO-UPDATE] Не удалось перезапустить бота!")
                 time.sleep(10)
 
             time.sleep(30)
 
         except KeyboardInterrupt:
-            лог("[AUTO-UPDATE] Пользователь scanfindan остановлено")
+            лог("[AUTO-UPDATE] Остановлено пользователем")
             break
         except Exception as e:
-            лог(f"[AUTO-UPDATE] Ana dongu ошибки: {e}")
+            лог(f"[AUTO-UPDATE] Ошибка главного цикла: {e}")
             import traceback
             лог(traceback.format_exc())
             time.sleep(10)

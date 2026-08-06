@@ -11,7 +11,7 @@ import hashlib
 
 
 class CalendarEvent:
-    """Takvim etkinliгi"""
+    """Событие календаря"""
     
     def __init__(self, event_id: str, title: str, start_time: datetime,
                  end_time: datetime, description: str = '',
@@ -113,7 +113,7 @@ class CalendarManager:
         return event
     
     def update_event(self, event_id: str, **kwargs) -> Optional[CalendarEvent]:
-        """Etkinliгi обновить"""
+        """Обновить событие"""
         if event_id not in self.events:
             return None
         
@@ -128,7 +128,7 @@ class CalendarManager:
         return event
     
     def delete_event(self, event_id: str) -> bool:
-        """Etkinliгi удалить"""
+        """Удалить событие"""
         if event_id in self.events:
             del self.events[event_id]
             self._save_events()
@@ -137,12 +137,12 @@ class CalendarManager:
         return False
     
     def get_event(self, event_id: str) -> Optional[CalendarEvent]:
-        """Etkinliгi al"""
+        """Получить событие"""
         return self.events.get(event_id)
     
     def get_events(self, start_date: Optional[datetime] = None,
                    end_date: Optional[datetime] = None) -> List[CalendarEvent]:
-        """Событиеleri al"""
+        """Получить события"""
         events = list(self.events.values())
         
         if start_date:
@@ -156,7 +156,7 @@ class CalendarManager:
         return events
     
     def get_upcoming_events(self, limit: int = 10) -> List[CalendarEvent]:
-        """Yaklaшan событиеleri al"""
+        """Получить предстоящие события"""
         now = datetime.now()
         events = [e for e in self.events.values() if e.start_time > now]
         events.sort(key=lambda e: e.start_time)
@@ -206,7 +206,7 @@ class GoogleCalendarIntegration:
         return f"https://accounts.google.com/o/oauth2/auth?client_id={self.config.get('client_id', '')}"
     
     def sync_event(self, event: CalendarEvent) -> Dict[str, Any]:
-        """Etkinliгi senkronize et"""
+        """Синхронизировать событие"""
         # Placeholder - gerчek uygulamada Google Calendar API чaгrыsы
         return {
             'success': True,
@@ -215,7 +215,7 @@ class GoogleCalendarIntegration:
         }
     
     def delete_event(self, google_event_id: str) -> bool:
-        """Etkinliгi удалить"""
+        """Удалить событие"""
         # Placeholder
         return True
 
@@ -257,7 +257,7 @@ class OutlookCalendarIntegration:
         self._save_config()
     
     def sync_event(self, event: CalendarEvent) -> Dict[str, Any]:
-        """Etkinliгi senkronize et"""
+        """Синхронизировать событие"""
         # Placeholder - gerчek uygulamada Microsoft Graph API чaгrыsы
         return {
             'success': True,
@@ -266,13 +266,13 @@ class OutlookCalendarIntegration:
         }
     
     def delete_event(self, outlook_event_id: str) -> bool:
-        """Etkinliгi удалить"""
+        """Удалить событие"""
         # Placeholder
         return True
 
 
 class AppointmentScheduler:
-    """Randevu planlayыcы"""
+    """Планировщик встреч"""
     
     def __init__(self, calendar_manager: CalendarManager):
         self.calendar_manager = calendar_manager
@@ -280,7 +280,7 @@ class AppointmentScheduler:
         self.availability = self._load_availability()
     
     def _load_availability(self) -> Dict[str, Any]:
-        """Mюsaitlik durumunu загрузить"""
+        """Загрузить доступность"""
         if os.path.exists(self.availability_file):
             try:
                 with open(self.availability_file, 'r', encoding='utf-8') as f:
@@ -291,14 +291,14 @@ class AppointmentScheduler:
         return {}
     
     def _save_availability(self):
-        """Mюsaitlik durumunu сохранить"""
+        """Сохранить доступность"""
         os.makedirs('data', exist_ok=True)
         with open(self.availability_file, 'w', encoding='utf-8') as f:
             json.dump(self.availability, f, ensure_ascii=False, indent=2)
     
     def set_availability(self, user_id: str, day_of_week: int,
                          start_time: str, end_time: str):
-        """Mюsaitlik настроить"""
+        """Настроить доступность"""
         if user_id not in self.availability:
             self.availability[user_id] = {}
         
@@ -311,7 +311,7 @@ class AppointmentScheduler:
     
     def get_available_slots(self, user_id: str, date: datetime,
                             duration_minutes: int = 60) -> List[Dict[str, str]]:
-        """Mюsait zaman dilimlerini al"""
+        """Получить доступные временные слоты"""
         day_of_week = date.weekday()
         
         if user_id not in self.availability:
@@ -361,7 +361,7 @@ class ReminderManager:
         self.reminders = self._load_reminders()
     
     def _load_reminders(self) -> Dict[str, Any]:
-        """Напоминаниеlarы загрузить"""
+        """Загрузить напоминания"""
         if os.path.exists(self.reminders_file):
             try:
                 with open(self.reminders_file, 'r', encoding='utf-8') as f:
@@ -372,7 +372,7 @@ class ReminderManager:
         return {}
     
     def _save_reminders(self):
-        """Напоминаниеlarы сохранить"""
+        """Сохранить напоминания"""
         os.makedirs('data', exist_ok=True)
         with open(self.reminders_file, 'w', encoding='utf-8') as f:
             json.dump(self.reminders, f, ensure_ascii=False, indent=2)
@@ -395,7 +395,7 @@ class ReminderManager:
         return reminder
     
     def get_pending_reminders(self) -> List[Dict[str, Any]]:
-        """Bekleyen напоминаниеlarы al"""
+        """Получить ожидающие напоминания"""
         now = datetime.now()
         pending = []
         
@@ -421,7 +421,7 @@ class ReminderManager:
         return pending
     
     def mark_reminder_sent(self, event_id: str, reminder_index: int):
-        """Напоминаниеyы отправлено как iшaretle"""
+        """Отметить напоминание отправленным"""
         if event_id in self.reminders and reminder_index < len(self.reminders[event_id]):
             self.reminders[event_id][reminder_index]['sent'] = True
             self._save_reminders()

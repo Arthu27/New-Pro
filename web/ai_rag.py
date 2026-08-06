@@ -1,6 +1,6 @@
 """
-RAG (Retrieval Augmented Generation) — arama по tabanda информация сервер
-AI olabilir iskat в правил, FAQ, logah ticketlarыn, dokumentacii
+RAG (Retrieval Augmented Generation) — поиск по базе информации сервера
+AI может искать в правилах, FAQ, логах тикетов, документации
 """
 import os 
 import json 
@@ -196,7 +196,7 @@ class ConversationAnalyzer :
 
     @staticmethod 
     def detect_sentiment (messages :List [Dict ])->str :
-        """Opredelyaet duygu разговор"""
+        """Определяет настроение разговора"""
         positive_words =['teшekkюrler','отлично','kruto','супер','klass','pomog','reудалить']
         negative_words =['besit','zlyus','nenaviju','aptal','aptal','не работает','ошибка']
 

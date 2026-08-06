@@ -54,7 +54,7 @@ class PerformanceMetric:
 
 
 class MetricsCollector:
-    """Metrik toplayыcы"""
+    """Сборщик метрик"""
     
     def __init__(self):
         self.metrics_file = 'data/performance_metrics.json'
@@ -124,7 +124,7 @@ class MetricsCollector:
         return metrics
     
     def get_latest_metric(self, metric_name: str) -> Optional[PerformanceMetric]:
-        """Son metriгi al"""
+        """Получить последнюю метрику"""
         metrics = self.metrics.get(metric_name, [])
         
         if not metrics:
@@ -133,7 +133,7 @@ class MetricsCollector:
         return metrics[-1]
     
     def get_average(self, metric_name: str, hours: int = 1) -> Optional[float]:
-        """Ortalama deгeri al"""
+        """Получить среднее значение"""
         start_time = datetime.now() - timedelta(hours=hours)
         metrics = self.get_metrics(metric_name, start_time=start_time)
         
@@ -145,7 +145,7 @@ class MetricsCollector:
     
     def get_percentile(self, metric_name: str, percentile: float,
                        hours: int = 1) -> Optional[float]:
-        """Yюzdelik deгeri al"""
+        """Получить перцентиль"""
         start_time = datetime.now() - timedelta(hours=hours)
         metrics = self.get_metrics(metric_name, start_time=start_time)
         
@@ -163,14 +163,14 @@ class MetricsCollector:
 
 
 class ResponseTimeTracker:
-    """Yanыt длительность takipчisi"""
+    """Трекер времени ответа"""
     
     def __init__(self, metrics_collector: MetricsCollector):
         self.metrics_collector = metrics_collector
     
     def track_response_time(self, endpoint: str, response_time_ms: float,
                             status_code: int = 200, method: str = 'GET'):
-        """Yanыt длительностьni takip et"""
+        """Отслеживать время ответа"""
         tags = {
             'endpoint': endpoint,
             'status_code': str(status_code),
@@ -217,7 +217,7 @@ class ResponseTimeTracker:
         }
     
     def _percentile(self, values: List[float], percentile: float) -> float:
-        """Yюzdelik hesapla"""
+        """Вычислить перцентиль"""
         sorted_values = sorted(values)
         index = int(len(sorted_values) * percentile / 100)
         return sorted_values[index]
@@ -251,14 +251,14 @@ class ResponseTimeTracker:
 
 
 class ErrorRateTracker:
-    """Ошибка соотношение takipчisi"""
+    """Трекер доли ошибок"""
     
     def __init__(self, metrics_collector: MetricsCollector):
         self.metrics_collector = metrics_collector
     
     def track_error(self, error_type: str, error_message: str,
                     endpoint: str = None, severity: str = 'error'):
-        """Hatayы takip et"""
+        """Отслеживать ошибку"""
         tags = {
             'error_type': error_type,
             'severity': severity
@@ -334,7 +334,7 @@ class UptimeMonitor:
         self.uptime_records = self._load_uptime_records()
     
     def _load_uptime_records(self) -> Dict[str, Any]:
-        """Uptime kayыtlarыnы загрузить"""
+        """Загрузить записи uptime"""
         if os.path.exists(self.uptime_file):
             try:
                 with open(self.uptime_file, 'r', encoding='utf-8') as f:
@@ -349,7 +349,7 @@ class UptimeMonitor:
         }
     
     def _save_uptime_records(self):
-        """Uptime kayыtlarыnы сохранить"""
+        """Сохранить записи uptime"""
         os.makedirs('data', exist_ok=True)
         with open(self.uptime_file, 'w', encoding='utf-8') as f:
             json.dump(self.uptime_records, f, ensure_ascii=False, indent=2)
@@ -410,7 +410,7 @@ class UptimeMonitor:
         return (up_count / len(checks) * 100)
     
     def get_downtime_periods(self, hours: int = 24) -> List[Dict[str, Any]]:
-        """Downtime dёnemlerini al"""
+        """Получить периоды простоя"""
         start_time = datetime.now() - timedelta(hours=hours)
         
         checks = [
@@ -443,14 +443,14 @@ class UptimeMonitor:
 
 
 class DatabasePerformanceMonitor:
-    """Veritabanы performans izleyici"""
+    """Монитор производительности базы данных"""
     
     def __init__(self, metrics_collector: MetricsCollector):
         self.metrics_collector = metrics_collector
     
     def track_query_time(self, query_type: str, query_time_ms: float,
                          table: str = None, rows_affected: int = None):
-        """Sorgu длительностьni takip et"""
+        """Отслеживать длительность запроса"""
         tags = {
             'query_type': query_type
         }
@@ -513,7 +513,7 @@ class DatabasePerformanceMonitor:
 
 
 class PerformanceAlert:
-    """Производительность предупреждениеsы"""
+    """Предупреждения производительности"""
     
     def __init__(self, metrics_collector: MetricsCollector):
         self.metrics_collector = metrics_collector
@@ -522,7 +522,7 @@ class PerformanceAlert:
         self.alert_rules = {}
     
     def _load_alerts(self) -> Dict[str, Any]:
-        """Предупреждениеlarы загрузить"""
+        """Загрузить предупреждения"""
         if os.path.exists(self.alerts_file):
             try:
                 with open(self.alerts_file, 'r', encoding='utf-8') as f:
@@ -533,7 +533,7 @@ class PerformanceAlert:
         return {'alerts': [], 'rules': {}}
     
     def _save_alerts(self):
-        """Предупреждениеlarы сохранить"""
+        """Сохранить предупреждения"""
         os.makedirs('data', exist_ok=True)
         with open(self.alerts_file, 'w', encoding='utf-8') as f:
             json.dump(self.alerts, f, ensure_ascii=False, indent=2)
@@ -555,7 +555,7 @@ class PerformanceAlert:
         self._save_alerts()
     
     def check_alerts(self) -> List[Dict[str, Any]]:
-        """Предупреждениеlarы проверить et"""
+        """Проверить предупреждения"""
         triggered_alerts = []
         
         for metric_name, rules in self.alerts['rules'].items():
@@ -601,7 +601,7 @@ class PerformanceAlert:
         return triggered_alerts
     
     def get_recent_alerts(self, hours: int = 24) -> List[Dict[str, Any]]:
-        """Son предупреждениеlarы al"""
+        """Получить последние предупреждения"""
         start_time = datetime.now() - timedelta(hours=hours)
         
         return [
@@ -610,7 +610,7 @@ class PerformanceAlert:
         ]
     
     def dismiss_alert(self, alert_index: int) -> bool:
-        """Предупреждениеyы закрыть"""
+        """Закрыть предупреждение"""
         if alert_index < len(self.alerts['alerts']):
             self.alerts['alerts'][alert_index]['dismissed'] = True
             self._save_alerts()
