@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "Moebius Panel",
   "short_name": "Moebius",
   "description": "Moebius Discord Bot Панель управления",
@@ -14,5 +14,8 @@
       "type": "image/svg+xml"
     }
   ],
-  "categories": ["utilities", "productivity"]
+  "categories": [
+    "utilities",
+    "productivity"
+  ]
 }

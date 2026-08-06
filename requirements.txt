@@ -16,3 +16,5 @@ requests>=2.31.0
 yt-dlp>=2023.12.30
 websockets>=11.0
 Pillow>=10.0.0
+pyotp>=2.9.0
+qrcode>=7.4.0
