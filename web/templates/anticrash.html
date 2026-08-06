@@ -261,19 +261,19 @@ async function loadConfig(){
       if(meta.type === 'bool'){
         input = `<label class="ac-switch"><input type="checkbox" data-cfg="${esc(k)}" ${v?'checked':''}><span></span></label>`;
       } else if(meta.type === 'float'){
-        input = `<input type="number" step="0.5" min="0" data-cfg="${esc(k)}" value="${esc(v)}">`;
+        input = `<input type="number" step="0.5" min="0" data-cfg="${esc(k)}" value="${esc(v)}" aria-label="Параметр настройки">`;
       } else if(meta.type === 'int'){
-        input = `<input type="number" step="1" min="0" data-cfg="${esc(k)}" value="${esc(v)}">`;
+        input = `<input type="number" step="1" min="0" data-cfg="${esc(k)}" value="${esc(v)}" aria-label="Параметр настройки">`;
       } else if(meta.type === 'list'){
         input = '';
-        const ta = `<textarea data-cfg="${esc(k)}" rows="3" style="width:100%;margin-top:8px;background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.12);color:var(--text-1,#fff);border-radius:8px;padding:8px 10px;font-size:12.5px;font-family:inherit;resize:vertical;">${esc((v||[]).join('\n'))}</textarea>`;
+        const ta = `<textarea data-cfg="${esc(k)}" rows="3" style="width:100%;margin-top:8px;background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.12);color:var(--text-1,#fff);border-radius:8px;padding:8px 10px;font-size:12.5px;font-family:inherit;resize:vertical;" aria-label="Параметр настройки">${esc((v||[]).join('\n'))}</textarea>`;
         return `<div class="ac-field">
           <div class="ac-field-top"><div class="ac-field-label">${esc(meta.label)}</div></div>
           ${ta}
           <div class="ac-field-desc">${esc(meta.desc)} <code style="opacity:.6">${esc(k)}</code></div>
         </div>`;
       } else {
-        input = `<input type="text" style="width:170px;text-align:left" data-cfg="${esc(k)}" value="${esc(v)}">`;
+        input = `<input type="text" style="width:170px;text-align:left" data-cfg="${esc(k)}" value="${esc(v)}" aria-label="Параметр настройки">`;
       }
       return `<div class="ac-field">
         <div class="ac-field-top"><div class="ac-field-label">${esc(meta.label)}</div>${input}</div>

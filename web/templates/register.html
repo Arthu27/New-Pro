@@ -282,7 +282,7 @@
             <input type="hidden" name="password" value="{{ password }}">
             <div class="form-group">
                 <label class="form-label">Код подтверждения</label>
-                <input type="text" name="code" class="code-input" placeholder="______" maxlength="6" inputmode="numeric" autocomplete="one-time-code" autofocus required>
+                <input type="text" name="code" class="code-input" placeholder="______" maxlength="6" inputmode="numeric" autocomplete="one-time-code" autofocus required aria-label="______">
                 <div class="hint"><i class="fas fa-info-circle"></i> Введите 6-значный код из личных сообщений Discord</div>
             </div>
             <button type="submit" class="btn-submit"><i class="fas fa-check"></i> Подтвердить и зарегистрироваться</button>
@@ -313,7 +313,7 @@
                 <label class="form-label">Discord ID</label>
                 <div class="input-wrap">
                     <i class="lead fab fa-discord"></i>
-                    <input type="text" name="discord_id" class="form-input" placeholder="123456789012345678" inputmode="numeric" autocomplete="off" required>
+                    <input type="text" name="discord_id" class="form-input" placeholder="123456789012345678" inputmode="numeric" autocomplete="off" required aria-label="123456789012345678">
                 </div>
                 <div class="hint"><i class="fas fa-info-circle"></i> Discord → Режим разработчика → правый клик по профилю → «Скопировать ID»</div>
             </div>
@@ -321,7 +321,7 @@
                 <label class="form-label">Придумайте пароль</label>
                 <div class="input-wrap">
                     <i class="lead fas fa-lock"></i>
-                    <input type="password" name="password" id="pass1" class="form-input" placeholder="Минимум 6 символов" autocomplete="new-password" required>
+                    <input type="password" name="password" id="pass1" class="form-input" placeholder="Минимум 6 символов" autocomplete="new-password" required aria-label="Минимум 6 символов">
                     <button type="button" class="eye" onclick="togglePass('pass1',this)" title="Показать пароль"><i class="fas fa-eye"></i></button>
                 </div>
             </div>
@@ -329,7 +329,7 @@
                 <label class="form-label">Повторите пароль</label>
                 <div class="input-wrap">
                     <i class="lead fas fa-lock"></i>
-                    <input type="password" name="password2" id="pass2" class="form-input" placeholder="Повторите пароль" autocomplete="new-password" required>
+                    <input type="password" name="password2" id="pass2" class="form-input" placeholder="Повторите пароль" autocomplete="new-password" required aria-label="Повторите пароль">
                     <button type="button" class="eye" onclick="togglePass('pass2',this)" title="Показать пароль"><i class="fas fa-eye"></i></button>
                 </div>
                 <div class="hint" id="matchHint" style="display:none;"></div>

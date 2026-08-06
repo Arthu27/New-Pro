@@ -104,7 +104,7 @@
   </div>
 
   <div class="sm-bar">
-    <select id="guild-select" class="guild-sel" onchange="loadMessages()">
+    <select id="guild-select" class="guild-sel" onchange="loadMessages()" aria-label="Выбор сервера">
       <option value="">🏠 Выберите сервер...</option>
     </select>
     <button class="sm-btn sm-btn-green" onclick="openModal()"><i class="fas fa-plus"></i> Новое сообщение</button>
@@ -119,20 +119,20 @@
     <div class="sm-modal-title"><i class="fas fa-clock"></i> Запланированное сообщение</div>
     <div class="form-group">
       <label class="form-label">Канал</label>
-      <select id="sm-channel" class="sm-channel"></select>
+      <select id="sm-channel" class="sm-channel" aria-label="Канал"></select>
     </div>
     <div class="form-group">
       <label class="form-label">Текст сообщения</label>
-      <textarea id="sm-content" class="form-input sm-textarea" placeholder="Введите сообщение..."></textarea>
+      <textarea id="sm-content" class="form-input sm-textarea" placeholder="Введите сообщение..." aria-label="Введите сообщение..."></textarea>
     </div>
     <div class="row2">
       <div class="form-group">
         <label class="form-label">Периодичность (мин)</label>
-        <input type="number" id="sm-interval" class="form-input" value="60" min="1">
+        <input type="number" id="sm-interval" class="form-input" value="60" min="1" aria-label="Интервал (мин)">
       </div>
       <div class="form-group">
         <label class="form-label">Начало</label>
-        <input type="datetime-local" id="sm-start" class="form-input">
+        <input type="datetime-local" id="sm-start" class="form-input" aria-label="Время начала">
       </div>
     </div>
     <div class="sm-modal-actions">

@@ -283,7 +283,7 @@
     <div class="dash-box-body" >
       <div class="aimod-slider-wrap">
         <label>Чувствительность детекции: <span class="aimod-slider-value" id="sensValue">70%</span></label>
-        <input type="range" min="0" max="100" value="70" class="aimod-slider" id="sensSlider" oninput="updateSens(this.value)">
+        <input type="range" min="0" max="100" value="70" class="aimod-slider" id="sensSlider" oninput="updateSens(this.value)" aria-label="Чувствительность ИИ">
         <p   style="0 0;">
           <b>Низкая (0-50%):</b> только severe и discrimination<br>
           <b>Средняя (50-70%):</b> + moderate<br>
@@ -310,11 +310,11 @@
       <div class="grid-2" >
         <div>
           <label >Окно (часы)</label>
-          <input type="number" id="escWindow" value="24" min="1" max="168"  >
+          <input type="number" id="escWindow" value="24" min="1" max="168" aria-label="Окно эскалации (часы)">
         </div>
         <div>
           <label >Warns → Мут</label>
-          <input type="number" id="escWarns" value="3" min="1" max="20"  >
+          <input type="number" id="escWarns" value="3" min="1" max="20" aria-label="Предупреждений до эскалации">
         </div>
       </div>
     </div>
@@ -329,7 +329,7 @@
   <div class="dash-box-body" >
     <p >Введите текст, чтобы проверить, как AI его оценит (без реальных действий):</p>
     <div  >
-      <input type="text" id="testInput" placeholder="Например: ты тупой идиот"  >
+      <input type="text" id="testInput" placeholder="Например: ты тупой идиот" aria-label="Например: ты тупой идиот">
       <button class="form-btn" onclick="runTest()"><i class="fas fa-play"></i> Проверить</button>
     </div>
     <div id="testResult"   style="16px;"></div>

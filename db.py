@@ -56,7 +56,7 @@ class GuildData:
         conn.close()
     
     def get(self, guild_id: int, key: str, default: Any = None) -> Any:
-        """Veri oku"""
+        """Чтение значения"""
         conn = self._conn()
         row = conn.execute(
             'SELECT value FROM guild_data WHERE namespace = ? AND guild_id = ? AND key = ?',
@@ -71,7 +71,7 @@ class GuildData:
         return default
     
     def set(self, guild_id: int, key: str, value: Any) -> bool:
-        """Veri yaz"""
+        """Запись значения"""
         conn = self._conn()
         try:
             conn.execute(
@@ -88,7 +88,7 @@ class GuildData:
             conn.close()
     
     def delete(self, guild_id: int, key: str) -> bool:
-        """Veri sil"""
+        """Удаление значения"""
         conn = self._conn()
         try:
             conn.execute(
@@ -104,7 +104,7 @@ class GuildData:
             conn.close()
     
     def get_all(self, guild_id: int) -> Dict[str, Any]:
-        """Guild'in tum verilerini al"""
+        """Все данные гильдии"""
         conn = self._conn()
         rows = conn.execute(
             'SELECT key, value FROM guild_data WHERE namespace = ? AND guild_id = ?',
@@ -120,7 +120,7 @@ class GuildData:
         return result
     
     def get_all_keys(self, guild_id: int) -> List[str]:
-        """Guild'in tum key'lerini al"""
+        """Все ключи гильдии"""
         conn = self._conn()
         rows = conn.execute(
             'SELECT key FROM guild_data WHERE namespace = ? AND guild_id = ?',
@@ -144,7 +144,7 @@ class GuildData:
         return self.get(guild_id, key) is not None
     
     def clear(self, guild_id: int) -> bool:
-        """Guild'in tum verilerini sil"""
+        """Удалить все данные гильдии"""
         conn = self._conn()
         try:
             conn.execute(
@@ -260,7 +260,7 @@ class UserData:
             conn.close()
     
     def get_all(self) -> Dict[int, Any]:
-        """Tum kullanicilari al"""
+        """Все пользователи"""
         conn = self._conn()
         rows = conn.execute(
             'SELECT user_id, value FROM user_data WHERE namespace = ?',

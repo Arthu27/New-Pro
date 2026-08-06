@@ -1176,6 +1176,26 @@ def api_logs ():
         print (f"Ошибка чтения логов: {e}")
         return jsonify ([])
 
+def _warn_db_append (guild_id :str ,user_id :str ,reason :str ,moderator :str ):
+    """Дублирует предупреждение в SQLite (GuildData) — основное хранилище,
+    которое читают Discord-команды бота (/warnings, пороги авто-наказаний)."""
+    try :
+        from db import GuildData
+        wdb =GuildData ('warnings')
+        warns =wdb .get (int (guild_id ),str (user_id ),[])
+        if not isinstance (warns ,list ):
+            warns =[]
+        warns .append ({
+        'id':len (warns )+1 ,
+        'reason':reason or 'Не указана',
+        'mod':moderator or '?',
+        'mod_id':'',
+        'timestamp':datetime .utcnow ().isoformat ()
+        })
+        wdb .set (int (guild_id ),str (user_id ),warns )
+    except Exception as _e :
+        print (f"Ошибка записи предупреждения в SQLite: {_e}")
+
 @app .route ('/api/warnings')
 @login_required 
 @role_required ('mod')
@@ -1189,7 +1209,7 @@ def api_warnings ():
         if isinstance (data ,dict ):
 
                 for guild_id ,guild_warns in data .items ():
-                # None / "null" / boш / numeric olmayan / kыsa-длинный ID'leri atla
+                # Пропускаем мусор: None / "null" / пустые / нечисловые / ID неверной длины
                     if (not isinstance (guild_id ,str )or not guild_id 
                     or not guild_id .isdigit ()or not (17 <=len (guild_id )<=22 )):
                         continue 
@@ -1209,7 +1229,7 @@ def api_warnings ():
                             all_warnings .append ({
                             'guild_id':guild_id ,
                             'user_id':user_id ,
-                            'reason':warn .get ('reason','Не belirtildi'),
+                            'reason':warn .get ('reason','Не указана'),
                             'moderator':warn .get ('moderator',warn .get ('mod','?')),
                             'timestamp':warn .get ('timestamp','')
                             })
@@ -1320,7 +1340,7 @@ def api_warn ():
     if not (17 <=len (guild_id )<=22 and 17 <=len (user_id )<=22 ):
         return jsonify ({'error':'guild_id и user_id недействительны (Discord ID — 17–22 цифры)'}),400 
     if len (reason )>500 :
-        return jsonify ({'error':'reason много длинный (max 500 karakter)'}),400 
+        return jsonify ({'error':'Причина слишком длинная (макс. 500 символов)'}),400 
 
     warns_file ='data/warnings.json'
     os .makedirs ('data',exist_ok =True )
@@ -1334,7 +1354,7 @@ def api_warn ():
     else :
         warns ={}
 
-        # Bozuk/istenmeyen anahtarlarы (None, "null", boш dict olmayan) atla
+        # Отбрасываем битые данные (None, "null", не-словари)
     if not isinstance (warns ,dict ):
         warns ={}
 
@@ -1351,8 +1371,9 @@ def api_warn ():
 
     _store .atomic_write_json (warns_file ,warns )
     _store .invalidate_path (warns_file )
+    _warn_db_append (guild_id ,user_id ,reason ,session .get ('username'))
 
-    return jsonify ({'success':True ,'message':'Warning добавлено'})
+    return jsonify ({'success':True ,'message':'Предупреждение добавлено'})
 
 @app .route ('/api/modstats')
 @login_required 
@@ -1448,7 +1469,8 @@ def api_execute_command ():
                 with open (warns_file ,'w',encoding ='utf-8')as wf :
                     json .dump (warns ,wf ,ensure_ascii =False )
                 _store .invalidate_path (warns_file )
-                # Warning DM отправить
+                _warn_db_append (gid_str ,uid_str ,data .get ('reason','Предупреждение через веб-панель'),session .get ('username'))
+                # Отправить DM о предупреждении
                 member =guild .get_member (int (data .get ('user_id')))
                 if member :
                     dm_file =f'data/warn_dm_{guild.id}.json'

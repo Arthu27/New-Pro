@@ -51,27 +51,27 @@ textarea.emb-input{resize:vertical;min-height:100px}
     <div class="emb-title"><i class="fas fa-cogs"></i> Настройки</div>
 
     <label class="emb-label">Автор (имя)</label>
-    <input class="emb-input" id="author" placeholder="Автор embed...">
+    <input class="emb-input" id="author" placeholder="Автор embed..." aria-label="Автор embed...">
     <div class="emb-row" style="margin-top:12px">
-      <div><label class="emb-label">Заголовок</label><input class="emb-input" id="embed-title" placeholder="Заголовок..."></div>
+      <div><label class="emb-label">Заголовок</label><input class="emb-input" id="embed-title" placeholder="Заголовок..." aria-label="Заголовок..."></div>
       <div><label class="emb-label">Цвет</label>
         <div style="display:flex;gap:8px;align-items:center">
-          <input type="color" id="custom-color" value="#e0b04a" style="width:46px;height:38px;border:none;background:none;cursor:pointer">
-          <input class="emb-input" id="color-hex" value="#e0b04a" maxlength="7" style="flex:1">
+          <input type="color" id="custom-color" value="#e0b04a" style="width:46px;height:38px;border:none;background:none;cursor:pointer" aria-label="Свой цвет">
+          <input class="emb-input" id="color-hex" value="#e0b04a" maxlength="7" style="flex:1" aria-label="Цвет (HEX)">
         </div>
       </div>
     </div>
 
     <label class="emb-label">Описание</label>
-    <textarea class="emb-input" id="description" placeholder="Описание embed..."></textarea>
+    <textarea class="emb-input" id="description" placeholder="Описание embed..." aria-label="Описание embed..."></textarea>
 
     <div class="emb-row" style="margin-top:12px">
-      <div><label class="emb-label">Футер</label><input class="emb-input" id="footer" placeholder="Текст футера..."></div>
-      <div><label class="emb-label">URL изображения</label><input class="emb-input" id="image-url" placeholder="https://.../image.jpg"></div>
+      <div><label class="emb-label">Футер</label><input class="emb-input" id="footer" placeholder="Текст футера..." aria-label="Текст футера..."></div>
+      <div><label class="emb-label">URL изображения</label><input class="emb-input" id="image-url" placeholder="https://.../image.jpg" aria-label="https://.../image.jpg"></div>
     </div>
     <div class="emb-row">
-      <div><label class="emb-label">URL миниатюры</label><input class="emb-input" id="thumbnail-url" placeholder="https://.../thumb.jpg"></div>
-      <div><label class="emb-label">Автор-иконка (URL)</label><input class="emb-input" id="author-icon" placeholder="https://.../icon.png"></div>
+      <div><label class="emb-label">URL миниатюры</label><input class="emb-input" id="thumbnail-url" placeholder="https://.../thumb.jpg" aria-label="https://.../thumb.jpg"></div>
+      <div><label class="emb-label">Автор-иконка (URL)</label><input class="emb-input" id="author-icon" placeholder="https://.../icon.png" aria-label="https://.../icon.png"></div>
     </div>
 
     <div class="emb-title" style="margin-top:6px"><i class="fas fa-list"></i> Поля (Fields)</div>
@@ -93,9 +93,9 @@ textarea.emb-input{resize:vertical;min-height:100px}
 
     <div class="emb-title" style="margin-top:18px"><i class="fas fa-paper-plane"></i> Отправка</div>
     <label class="emb-label">Сервер</label>
-    <select id="guild-select" class="emb-input" onchange="onGuildChange()"></select>
+    <select id="guild-select" class="emb-input" onchange="onGuildChange()" aria-label="Выбор сервера"></select>
     <label class="emb-label" style="margin-top:12px">Канал отправки</label>
-    <select id="target-channel" class="emb-input"></select>
+    <select id="target-channel" class="emb-input" aria-label="Канал отправки"></select>
     <button class="control-btn primary" onclick="sendEmbed()" style="width:100%;padding:12px;margin-top:14px">
       <i class="fas fa-paper-plane"></i> Отправить Embed
     </button>

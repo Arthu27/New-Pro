@@ -58,7 +58,7 @@
   </div>
   <div style="margin-top: 16px;">
     <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Пользовательский цвет</label>
-    <input type="color" id="customColor" value="#e0b04a" style="width: 100px; height: 40px; border: none; cursor: pointer;">
+    <input type="color" id="customColor" value="#e0b04a" style="width: 100px; height: 40px; border: none; cursor: pointer;" aria-label="Свой цвет">
     <button class="control-btn primary" onclick="setAccentColor(document.getElementById('customColor').value)" style="margin-left: 12px;">
       Применить
     </button>
@@ -68,7 +68,7 @@
 <div class="section">
   <div class="bs-title"><i class="fas fa-text-height"></i> Размер шрифта</div>
   <div style="display: flex; gap: 12px; align-items: center;">
-    <input type="range" id="fontSize" min="12" max="20" value="14" style="flex: 1;">
+    <input type="range" id="fontSize" min="12" max="20" value="14" style="flex: 1;" aria-label="Размер шрифта">
     <span id="fontSizeValue" style="font-weight: 600; min-width: 50px;">14px</span>
   </div>
   <div style="margin-top: 12px;">

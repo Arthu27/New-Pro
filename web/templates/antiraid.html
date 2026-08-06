@@ -48,8 +48,8 @@
     </div>
     <div class="row"><label>Человек / время (сек)</label>
       <div style="display:flex; gap:6px;">
-        <input type="number" id="join_threshold" data-key="join_threshold" min="2" max="50" value="5">
-        <input type="number" id="join_window" data-key="join_window" min="5" max="120" value="10">
+        <input type="number" id="join_threshold" data-key="join_threshold" min="2" max="50" value="5" aria-label="Порог входов">
+        <input type="number" id="join_window" data-key="join_window" min="5" max="120" value="10" aria-label="Окно входов (сек)">
       </div>
     </div>
     <div class="row"><label>Исключения из белого списка</label>
@@ -65,7 +65,7 @@
       <div class="toggle" id="tog-age" data-key="age_filter"></div>
     </div>
     <div class="row"><label>Мин. возраст (дни)</label>
-      <input type="number" id="min_age" data-key="min_age" min="0" max="365" value="5">
+      <input type="number" id="min_age" data-key="min_age" min="0" max="365" value="5" aria-label="Мин. возраст аккаунта (дни)">
     </div>
     <div class="row"><label>Описание</label>
       <span class="muted">Аккаунты ниже этого порога создают оповещение</span>
@@ -105,11 +105,11 @@
     <div class="row">
       <label>ID канала</label>
       <input type="text" id="alert_channel_id" data-key="alert_channel_id"
-             placeholder="Если оставить пустым, используется канал 'мод-лог'">
+             placeholder="Если оставить пустым, используется канал 'мод-лог'" aria-label="Если оставить пустым, используется канал 'мод-лог'">
     </div>
     <div class="row">
       <label>Действие при рейде</label>
-      <select id="raid_action" data-key="raid_action">
+      <select id="raid_action" data-key="raid_action" aria-label="Действие при рейде">
         <option value="alert">Только оповещение (рекомендуется)</option>
       </select>
       <span class="muted" style="margin-left:8px;">Другие действия отключены в целях безопасности.</span>
@@ -127,7 +127,7 @@
     </div>
     <div class="row">
       <label>ID пользователя</label>
-      <input type="text" id="wl-input" placeholder="ID пользователя Discord (17-20 цифр)">
+      <input type="text" id="wl-input" placeholder="ID пользователя Discord (17-20 цифр)" aria-label="ID пользователя Discord (17-20 цифр)">
     </div>
     <ul class="wl-list" id="wl-list"></ul>
   </div>

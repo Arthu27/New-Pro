@@ -101,11 +101,11 @@
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1);">
         <div>
           <label style="font-size: 12px; color: #888; display: block; margin-bottom: 4px;">Порог уверенности (%)</label>
-          <input type="number" id="ai-confidence" value="50" min="0" max="100" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white;">
+          <input type="number" id="ai-confidence" value="50" min="0" max="100" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white;" aria-label="Порог уверенности ИИ">
         </div>
         <div>
           <label style="font-size: 12px; color: #888; display: block; margin-bottom: 4px;">Максимум сообщений</label>
-          <input type="number" id="ai-max-messages" value="10" min="1" max="50" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white;">
+          <input type="number" id="ai-max-messages" value="10" min="1" max="50" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white;" aria-label="Макс. сообщений ИИ">
         </div>
       </div>
     </div>
@@ -136,15 +136,15 @@
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1);">
         <div>
           <label style="font-size: 12px; color: #888; display: block; margin-bottom: 4px;">Тикетов за 24 часа</label>
-          <input type="number" id="rate-24h" value="3" min="1" max="50" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white;">
+          <input type="number" id="rate-24h" value="3" min="1" max="50" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white;" aria-label="Лимит за 24 часа">
         </div>
         <div>
           <label style="font-size: 12px; color: #888; display: block; margin-bottom: 4px;">Кулдаун (секунды)</label>
-          <input type="number" id="rate-cooldown" value="60" min="0" max="3600" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white;">
+          <input type="number" id="rate-cooldown" value="60" min="0" max="3600" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white;" aria-label="Перерыв (сек)">
         </div>
         <div>
           <label style="font-size: 12px; color: #888; display: block; margin-bottom: 4px;">Тикетов за неделю</label>
-          <input type="number" id="rate-week" value="10" min="1" max="100" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white;">
+          <input type="number" id="rate-week" value="10" min="1" max="100" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white;" aria-label="Лимит за неделю">
         </div>
       </div>
     </div>
@@ -175,11 +175,11 @@
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1);">
         <div>
           <label style="font-size: 12px; color: #888; display: block; margin-bottom: 4px;">Часов неактивности</label>
-          <input type="number" id="autoclose-hours" value="24" min="1" max="168" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white;">
+          <input type="number" id="autoclose-hours" value="24" min="1" max="168" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white;" aria-label="Автозакрытие (часы)">
         </div>
         <div>
           <label style="font-size: 12px; color: #888; display: block; margin-bottom: 4px;">Интервал проверки (мин)</label>
-          <input type="number" id="autoclose-interval" value="60" min="5" max="1440" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white;">
+          <input type="number" id="autoclose-interval" value="60" min="5" max="1440" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white;" aria-label="Интервал автозакрытия">
         </div>
       </div>
     </div>
@@ -210,7 +210,7 @@
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1);">
         <div>
           <label style="font-size: 12px; color: #888; display: block; margin-bottom: 4px;">Время на отзыв (сек)</label>
-          <input type="number" id="feedback-timeout" value="30" min="10" max="300" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white;">
+          <input type="number" id="feedback-timeout" value="30" min="10" max="300" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white;" aria-label="Таймаут оценки">
         </div>
         <div style="display: flex; align-items: center; gap: 8px;">
           <input type="checkbox" id="feedback-require-comment" style="width: 18px; height: 18px;">
@@ -245,7 +245,7 @@
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1);">
         <div>
           <label style="font-size: 12px; color: #888; display: block; margin-bottom: 4px;">Обновлять каждые (сообщений)</label>
-          <input type="number" id="progress-update" value="100" min="10" max="500" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white;">
+          <input type="number" id="progress-update" value="100" min="10" max="500" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white;" aria-label="Обновление прогресса">
         </div>
       </div>
     </div>
@@ -276,7 +276,7 @@
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1);">
         <div>
           <label style="font-size: 12px; color: #888; display: block; margin-bottom: 4px;">Максимум сообщений для сканирования</label>
-          <input type="number" id="complaint-max-scan" value="1000" min="100" max="5000" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white;">
+          <input type="number" id="complaint-max-scan" value="1000" min="100" max="5000" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white;" aria-label="Макс. объём сканирования жалоб">
         </div>
         <div style="display: flex; align-items: center; gap: 8px;">
           <input type="checkbox" id="complaint-appeal" checked style="width: 18px; height: 18px;">
@@ -331,7 +331,7 @@
         <label style="font-size: 12px; color: #888; display: block; margin-bottom: 8px;">
           Выберите роли модераторов:
         </label>
-        <select id="mod-roles" multiple size="8" style="width: 100%; min-height: 200px; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white;">
+        <select id="mod-roles" multiple size="8" style="width: 100%; min-height: 200px; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white;" aria-label="Роли модераторов">
           <option value="">Загрузка ролей...</option>
         </select>
         <div style="font-size: 11px; color: #666; margin-top: 8px;">
@@ -367,7 +367,7 @@
         <label style="font-size: 12px; color: #888; display: block; margin-bottom: 8px;">
           Выберите роли владельцев:
         </label>
-        <select id="owner-roles" multiple size="8" style="width: 100%; min-height: 200px; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white;">
+        <select id="owner-roles" multiple size="8" style="width: 100%; min-height: 200px; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white;" aria-label="Роли владельцев">
           <option value="">Загрузка ролей...</option>
         </select>
         <div style="font-size: 11px; color: #666; margin-top: 8px;">
@@ -409,21 +409,21 @@
     </div>
     <div class="form-group">
       <label>Категория</label>
-      <select id="category"><option value="">Не выбрано</option></select>
+      <select id="category" aria-label="Категория тикетов"><option value="">Не выбрано</option></select>
       <div class="hint-pill amber"><i class="fas fa-info-circle"></i> Тикеты создаются в выбранной категории</div>
     </div>
     <div class="form-group">
       <label>Канал для логов</label>
-      <select id="channel"><option value="">Не выбрано</option></select>
+      <select id="channel" aria-label="Канал"><option value="">Не выбрано</option></select>
     </div>
     <div class="form-row-2">
       <div class="form-group">
         <label>Лимит на юзер</label>
-        <input type="number" id="limit" value="1" min="1" max="10">
+        <input type="number" id="limit" value="1" min="1" max="10" aria-label="Лимит">
       </div>
       <div class="form-group">
         <label>Авто-закрытие (мин)</label>
-        <input type="number" id="autoclose" value="0" min="0">
+        <input type="number" id="autoclose" value="0" min="0" aria-label="Автозакрытие">
       </div>
     </div>
   </div>
@@ -435,15 +435,15 @@
     </div>
     <div class="form-group">
       <label>Заголовок</label>
-      <input type="text" id="title" value="🎫 ПОДДЕРЖКА">
+      <input type="text" id="title" value="🎫 ПОДДЕРЖКА" aria-label="Заголовок">
     </div>
     <div class="form-group">
       <label>Описание</label>
-      <textarea id="description" rows="3">Нажмите кнопку ниже чтобы открыть тикет</textarea>
+      <textarea id="description" rows="3" aria-label="Описание">Нажмите кнопку ниже чтобы открыть тикет</textarea>
     </div>
     <div class="form-group">
       <label>Цвет embed</label>
-      <input type="color" id="color" value="var(--ac)" class="color-picker">
+      <input type="color" id="color" value="var(--ac)" class="color-picker" aria-label="Цвет">
     </div>
   </div>
 
@@ -454,15 +454,15 @@
     </div>
     <div class="form-group">
       <label>Лог-канал</label>
-      <select id="log-channel"><option value="">Не выбрано</option></select>
+      <select id="log-channel" aria-label="Канал логов"><option value="">Не выбрано</option></select>
     </div>
     <div class="form-group">
       <label>Транскрипт канал</label>
-      <select id="transcript-channel"><option value="">Не выбрано</option></select>
+      <select id="transcript-channel" aria-label="Канал транскриптов"><option value="">Не выбрано</option></select>
     </div>
     <div class="form-group">
       <label>Какие события логировать</label>
-      <select id="log-actions">
+      <select id="log-actions" aria-label="Логируемые действия">
         <option value="all">Все</option>
         <option value="open">Только открытия</option>
         <option value="close">Только закрытия</option>
@@ -478,11 +478,11 @@
     </div>
     <div class="form-group">
       <label>DM при открытии</label>
-      <select id="dm-open"><option value="0">Нет</option><option value="1" selected>Да</option></select>
+      <select id="dm-open" aria-label="DM при открытии"><option value="0">Нет</option><option value="1" selected>Да</option></select>
     </div>
     <div class="form-group">
       <label>DM при закрытии</label>
-      <select id="dm-close"><option value="0">Нет</option><option value="1" selected>Да</option></select>
+      <select id="dm-close" aria-label="DM при закрытии"><option value="0">Нет</option><option value="1" selected>Да</option></select>
     </div>
   </div>
 
@@ -500,31 +500,31 @@
     <div class="form-row-2">
       <div class="form-group">
         <label>Сервер</label>
-        <select id="notify-guild"><option value="">Загрузка…</option></select>
+        <select id="notify-guild" aria-label="Сервер уведомлений"><option value="">Загрузка…</option></select>
       </div>
       <div class="form-group">
         <label>Канал уведомлений (логов)</label>
-        <input type="text" id="notify-channel-id" placeholder="ID канала (например: 123456789012345678)">
+        <input type="text" id="notify-channel-id" placeholder="ID канала (например: 123456789012345678)" aria-label="ID канала (например: 123456789012345678)">
       </div>
     </div>
     <div class="form-row-2" style="margin-top: 12px;">
       <div class="form-group">
         <label>Канал правил (Rules Channel)</label>
-        <input type="text" id="rules-channel-id" placeholder="ID канала с правилами сервера">
+        <input type="text" id="rules-channel-id" placeholder="ID канала с правилами сервера" aria-label="ID канала с правилами сервера">
       </div>
       <div class="form-group">
         <label>Роль владельца (Owner Role)</label>
-        <input type="text" id="owner-role-id" placeholder="ID роли владельца">
+        <input type="text" id="owner-role-id" placeholder="ID роли владельца" aria-label="ID роли владельца">
       </div>
     </div>
     <div class="form-row-2" style="margin-top: 12px; margin-bottom: 12px;">
       <div class="form-group">
         <label>Роль администраторов</label>
-        <input type="text" id="admin-role-id" placeholder="ID роли администраторов">
+        <input type="text" id="admin-role-id" placeholder="ID роли администраторов" aria-label="ID роли администраторов">
       </div>
       <div class="form-group">
         <label>Роль модераторов</label>
-        <input type="text" id="mod-role-id" placeholder="ID роли модераторов">
+        <input type="text" id="mod-role-id" placeholder="ID роли модераторов" aria-label="ID роли модераторов">
       </div>
     </div>
     <div style="display:flex; gap:8px; align-items:center; flex-wrap: wrap;">

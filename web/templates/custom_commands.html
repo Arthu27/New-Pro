@@ -31,7 +31,7 @@
 
 {% if role == 'owner' %}<button class="btn-add" onclick="openModal()"><i class="fas fa-plus"></i> Создать новую команду</button>{% endif %}
 
-<select  id="guild-select" class="guild-select" onchange="loadCommands()">
+<select  id="guild-select" class="guild-select" onchange="loadCommands()" aria-label="Выбор сервера">
   <option value="">Выберите сервер...</option>
 </select>
 
@@ -45,11 +45,11 @@
     <div class="modal-title"><i class="fas fa-terminal"></i> Пользователь Создать команду</div>
     <div class="vars-box">Переменные: <span>{user}</span> <span>{сервер}</span> <span>{channel}</span> <span>{count}</span></div>
     <label   style="margin-bottom: 6px;">Tetikleyici (prefix olmadan)</label>
-    <input type="text" id="cmd-trigger" placeholder="напр.: привет, правила" class="modal-input" >
+    <input type="text" id="cmd-trigger" placeholder="напр.: привет, правила" class="modal-input" aria-label="напр.: привет, правила">
     <label   style="margin-bottom: 6px;">Ответ</label>
-    <textarea id="cmd-response" placeholder="Ответ команды..." class="modal-textarea"></textarea>
+    <textarea id="cmd-response" placeholder="Ответ команды..." class="modal-textarea" aria-label="Ответ команды..."></textarea>
     <label   style="margin-bottom: 6px;">Ответ Tipi</label>
-    <select id="cmd-type" class="modal-input">
+    <select id="cmd-type" class="modal-input" aria-label="Тип команды">
       <option value="text">Прямой текст</option>
       <option value="embed">Эмбед</option>
     </select>

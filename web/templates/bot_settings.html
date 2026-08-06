@@ -34,12 +34,12 @@
       <div class="bs-title">Статус и активность</div>
     </div>
     <div class="row"><label>Статус</label>
-      <select id="bot-status"><option value="online">🟢 Online</option><option value="idle" selected>🟡 Idle</option><option value="dnd">🔴 DND</option><option value="invisible">⚫ Invisible</option></select>
+      <select id="bot-status" aria-label="Статус бота"><option value="online">🟢 Online</option><option value="idle" selected>🟡 Idle</option><option value="dnd">🔴 DND</option><option value="invisible">⚫ Invisible</option></select>
     </div>
     <div class="row"><label>Активность</label>
-      <select id="bot-activity"><option value="listening" selected>Слушает</option><option value="playing">Играет</option><option value="watching">Смотрит</option><option value="competing">Соревнуется</option></select>
+      <select id="bot-activity" aria-label="Активность бота"><option value="listening" selected>Слушает</option><option value="playing">Играет</option><option value="watching">Смотрит</option><option value="competing">Соревнуется</option></select>
     </div>
-    <div class="row"><label>Текст</label><input type="text" id="bot-text" value=".gg/Aether"></div>
+    <div class="row"><label>Текст</label><input type="text" id="bot-text" value=".gg/Aether" aria-label="Текст активности бота"></div>
   </div>
 
   <div class="bs-card">
@@ -47,9 +47,9 @@
       <div class="bs-icon"><i class="fas fa-terminal"></i></div>
       <div class="bs-title">Префикс команд</div>
     </div>
-    <div class="row"><label>Префикс</label><input type="text" id="bot-prefix" value="!"></div>
+    <div class="row"><label>Префикс</label><input type="text" id="bot-prefix" value="!" aria-label="Префикс команд"></div>
     <div class="row"><label>Slash</label>
-      <select id="slash-enabled"><option value="1">Включены</option><option value="0">Выключены</option></select>
+      <select id="slash-enabled" aria-label="Слэш-команды"><option value="1">Включены</option><option value="0">Выключены</option></select>
     </div>
     <button class="btn btn-primary" id="sync-slash" type="button"   style="margin-top: 6px;"><i class="fas fa-sync"></i> Sync команд</button>
   </div>
@@ -68,7 +68,7 @@
       <div class="toggle on" id="tog-dm"></div>
     </div>
     <div class="row"><label>Модель</label>
-      <select id="ai-model"><option>Mistral</option><option>GPT-4</option><option>Claude</option></select>
+      <select id="ai-model" aria-label="Модель ИИ"><option>Mistral</option><option>GPT-4</option><option>Claude</option></select>
     </div>
   </div>
 
@@ -80,7 +80,7 @@
     <div class="row with-toggle"><label>Мод-логи</label><div class="toggle on" id="tog-modlog"></div></div>
     <div class="row with-toggle"><label>Сообщения</label><div class="toggle on" id="tog-msglog"></div></div>
     <div class="row with-toggle"><label>Голос</label><div class="toggle" id="tog-voicelog"></div></div>
-    <div class="row"><label>Канал</label><input type="text" id="log-channel" placeholder="ID канала"></div>
+    <div class="row"><label>Канал</label><input type="text" id="log-channel" placeholder="ID канала" aria-label="ID канала"></div>
   </div>
 
   <div class="bs-card">
@@ -90,9 +90,9 @@
     </div>
     <div class="row with-toggle"><label>Авто-бэкап</label><div class="toggle on" id="tog-backup"></div></div>
     <div class="row"><label>Интервал</label>
-      <select id="backup-interval"><option>Каждый час</option><option>Каждые 6ч</option><option selected>Каждый день</option><option>Каждую неделю</option></select>
+      <select id="backup-interval" aria-label="Интервал бэкапов"><option>Каждый час</option><option>Каждые 6ч</option><option selected>Каждый день</option><option>Каждую неделю</option></select>
     </div>
-    <div class="row"><label>Копий</label><input type="number" id="backup-keep" value="10" min="1"></div>
+    <div class="row"><label>Копий</label><input type="number" id="backup-keep" value="10" min="1" aria-label="Хранить бэкапов"></div>
   </div>
 </div>
 

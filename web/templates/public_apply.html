@@ -58,15 +58,14 @@
       <div class="form-row">
         <div class="form-group">
           <label>Имя пользователя Discord</label>
-          <input type="text" id="discord_name" placeholder="Заполнится автоматически..." readonly
-             >
+          <input type="text" id="discord_name" placeholder="Заполнится автоматически..." readonly aria-label="Заполнится автоматически...">
           <span class="hint">После ввода ID найдётся автоматически</span>
         </div>
         <div class="form-group">
           <label>Discord ID</label>
           <div   style="position: relative;">
             <input type="text" id="discord_id" placeholder="например: 123456789012345678"
-              oninput="onIdInput()" >
+              oninput="onIdInput()" aria-label="например: 123456789012345678">
             <span id="id-status"   style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%);"></span>
           </div>
           <span class="hint">Включите режим разработчика → правый клик → скопировать ID</span>
@@ -83,11 +82,11 @@
       <div class="form-row">
         <div class="form-group">
           <label>Возраст</label>
-          <input type="number" id="yas" placeholder="например: 18" min="13" max="99">
+          <input type="number" id="yas" placeholder="например: 18" min="13" max="99" aria-label="например: 18">
         </div>
         <div class="form-group">
           <label>Ежедневная активность</label>
-          <input type="text" id="activity" placeholder="например: 3-4 часа">
+          <input type="text" id="activity" placeholder="например: 3-4 часа" aria-label="например: 3-4 часа">
         </div>
       </div>
 
@@ -95,19 +94,19 @@
       <div class="form-row full">
         <div class="form-group">
           <label>Опыт модерации</label>
-          <textarea id="tecrube" placeholder="В каких серверах вы модерировали раньше? Как долго? Какие задачи выполняли?"></textarea>
+          <textarea id="tecrube" placeholder="В каких серверах вы модерировали раньше? Как долго? Какие задачи выполняли?" aria-label="В каких серверах вы модерировали раньше? Как долго? Какие задачи выполняли?"></textarea>
         </div>
       </div>
       <div class="form-row full">
         <div class="form-group">
           <label>Почему хотите стать модератором?</label>
-          <textarea id="why" placeholder="Расскажите о своей мотивации, вкладе в сервер и целях..."></textarea>
+          <textarea id="why" placeholder="Расскажите о своей мотивации, вкладе в сервер и целях..." aria-label="Расскажите о своей мотивации, вкладе в сервер и целях..."></textarea>
         </div>
       </div>
       <div class="form-row full">
         <div class="form-group">
           <label>Почему хотите вступить? <span>(необязательно)</span></label>
-          <textarea id="ekstra" placeholder="Расскажите о себе: опыт, навыки, рекомендации..."   style="min-height: 80px;"></textarea>
+          <textarea id="ekstra" placeholder="Расскажите о себе: опыт, навыки, рекомендации..."   style="min-height: 80px;" aria-label="Расскажите о себе: опыт, навыки, рекомендации..."></textarea>
         </div>
       </div>
 

@@ -17,7 +17,7 @@
 
 
 
-<select  id="guild-select" class="guild-select" onchange="loadRules()">
+<select  id="guild-select" class="guild-select" onchange="loadRules()" aria-label="Выбор сервера">
   <option value="">Выберите сервер...</option>
 </select>
 
@@ -35,7 +35,7 @@
     <div class="re-title"><i class="fas fa-eye"></i> Предпросмотр & Опубликовать</div>
     <div id="preview"   style="min-height: 150px; margin-bottom: 15px;"></div>
     <label class="field-label">Канал публикации</label>
-    <select id="rules-channel" class="field-sel" ></select>
+    <select id="rules-channel" class="field-sel" aria-label="Канал правил"></select>
     <button class="publish-btn" onclick="publishRules()">
       <i class="fas fa-paper-plane"></i> Discord'a Опубликовать
     </button>

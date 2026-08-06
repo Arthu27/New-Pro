@@ -72,7 +72,7 @@
 <div class="section">
   <div class="bs-title">
     <i class="fas fa-ticket-alt"></i> Мои тикеты
-    <select id="ticketFilter" class="form-input" onchange="loadTickets()" style="margin-left: auto; width: 200px;">
+    <select id="ticketFilter" class="form-input" onchange="loadTickets()" style="margin-left: auto; width: 200px;" aria-label="Фильтр тикетов">
       <option value="all">Все тикеты</option>
       <option value="open">Открытые</option>
       <option value="closed">Закрытые</option>
@@ -107,11 +107,11 @@
     </div>
     <div style="margin-bottom: 16px;">
       <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Тема</label>
-      <input type="text" id="ticketSubject" class="form-input" placeholder="Кратко опишите проблему">
+      <input type="text" id="ticketSubject" class="form-input" placeholder="Кратко опишите проблему" aria-label="Кратко опишите проблему">
     </div>
     <div style="margin-bottom: 16px;">
       <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Категория</label>
-      <select id="ticketCategory" class="form-input">
+      <select id="ticketCategory" class="form-input" aria-label="Категория">
         <option value="Вопрос">Вопрос</option>
         <option value="Техническая проблема">Техническая проблема</option>
         <option value="Жалоба">Жалоба</option>
@@ -121,7 +121,7 @@
     </div>
     <div style="margin-bottom: 16px;">
       <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Приоритет</label>
-      <select id="ticketPriority" class="form-input">
+      <select id="ticketPriority" class="form-input" aria-label="Приоритет">
         <option value="low">Низкий</option>
         <option value="medium" selected>Средний</option>
         <option value="high">Высокий</option>
@@ -129,11 +129,11 @@
     </div>
     <div style="margin-bottom: 16px;">
       <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Описание</label>
-      <textarea id="ticketDescription" class="form-input" rows="8" placeholder="Подробно опишите вашу проблему..."></textarea>
+      <textarea id="ticketDescription" class="form-input" rows="8" placeholder="Подробно опишите вашу проблему..." aria-label="Подробно опишите вашу проблему..."></textarea>
     </div>
     <div style="margin-bottom: 16px;">
       <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Прикрепить файлы</label>
-      <input type="file" id="ticketFiles" class="form-input" multiple>
+      <input type="file" id="ticketFiles" class="form-input" multiple aria-label="Вложения">
     </div>
     <div style="display: flex; gap: 12px;">
       <button class="control-btn primary" onclick="createTicket()" style="flex: 1;">
@@ -157,11 +157,11 @@
     </div>
     <div style="margin-bottom: 16px;">
       <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Имя</label>
-      <input type="text" id="editName" class="form-input">
+      <input type="text" id="editName" class="form-input" aria-label="Имя">
     </div>
     <div style="margin-bottom: 16px;">
       <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Email</label>
-      <input type="email" id="editEmail" class="form-input">
+      <input type="email" id="editEmail" class="form-input" aria-label="Email">
     </div>
     <div style="display: flex; gap: 12px;">
       <button class="control-btn primary" onclick="updateProfile()" style="flex: 1;">

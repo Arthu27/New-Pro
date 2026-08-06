@@ -110,34 +110,34 @@
       <h5  >Text XP</h5>
       <div class="lvl-input-group"   style="margin-bottom: 8px;">
         <label>Мин XP</label>
-        <input type="number" id="textMin" value="15" min="1" max="100">
+        <input type="number" id="textMin" value="15" min="1" max="100" aria-label="Мин. XP за сообщение">
       </div>
       <div class="lvl-input-group"   style="margin-bottom: 8px;">
         <label>Макс XP</label>
-        <input type="number" id="textMax" value="25" min="1" max="100">
+        <input type="number" id="textMax" value="25" min="1" max="100" aria-label="Макс. XP за сообщение">
       </div>
       <div class="lvl-input-group" >
         <label>Cooldown (s)</label>
-        <input type="number" id="textCooldown" value="60" min="5" max="600">
+        <input type="number" id="textCooldown" value="60" min="5" max="600" aria-label="Перерыв XP (сек)">
       </div>
       <h5  >Voice XP</h5>
       <div class="lvl-input-group" >
         <label>XP / минута</label>
-        <input type="number" id="voicePerMin" value="5" min="1" max="50">
+        <input type="number" id="voicePerMin" value="5" min="1" max="50" aria-label="XP за минуту в войсе">
       </div>
       <h5  >Streak Bonus</h5>
       <div   style="grid-template-columns: 1fr 1fr 1fr;">
         <div>
           <label   style="margin-bottom: 4px;">7 дней</label>
-          <input type="number" id="streak7" value="2" step="0.5" min="1" max="10"  >
+          <input type="number" id="streak7" value="2" step="0.5" min="1" max="10" aria-label="Множитель серии">
         </div>
         <div>
           <label   style="margin-bottom: 4px;">14 дней</label>
-          <input type="number" id="streak14" value="3" step="0.5" min="1" max="10"  >
+          <input type="number" id="streak14" value="3" step="0.5" min="1" max="10" aria-label="Множитель серии 14 дней">
         </div>
         <div>
           <label   style="margin-bottom: 4px;">30 дней</label>
-          <input type="number" id="streak30" value="5" step="0.5" min="1" max="10"  >
+          <input type="number" id="streak30" value="5" step="0.5" min="1" max="10" aria-label="Множитель серии 30 дней">
         </div>
       </div>
       <button class="form-btn" onclick="saveSettings()"  ><i class="fas fa-save"></i> Сохранить настройки</button>

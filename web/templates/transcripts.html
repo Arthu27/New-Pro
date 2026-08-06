@@ -20,11 +20,11 @@
   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
     <div>
       <label style="display: block; margin-bottom: 6px; font-size: 13px; color: var(--text-muted);">Поиск</label>
-      <input type="text" id="searchInput" class="form-input" placeholder="ID, пользователь, текст...">
+      <input type="text" id="searchInput" class="form-input" placeholder="ID, пользователь, текст..." aria-label="ID, пользователь, текст...">
     </div>
     <div>
       <label style="display: block; margin-bottom: 6px; font-size: 13px; color: var(--text-muted);">Период</label>
-      <select id="dateFilter" class="form-input">
+      <select id="dateFilter" class="form-input" aria-label="Дата">
         <option value="">Все время</option>
         <option value="1">Последние 24 часа</option>
         <option value="7">Последние 7 дней</option>
@@ -34,7 +34,7 @@
     </div>
     <div>
       <label style="display: block; margin-bottom: 6px; font-size: 13px; color: var(--text-muted);">Категория</label>
-      <select id="categoryFilter" class="form-input">
+      <select id="categoryFilter" class="form-input" aria-label="Категория">
         <option value="">Все</option>
         <option value="Жалоба">Жалобы</option>
         <option value="Вопрос">Вопросы</option>

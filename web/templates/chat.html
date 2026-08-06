@@ -335,7 +335,7 @@
         <span>Личные сообщения</span>
       </div>
       <div class="dm-search-wrap">
-        <input class="dm-search" id="dm-search" placeholder="Участник поиск..." oninput="searchDmUser(this.value)">
+        <input class="dm-search" id="dm-search" placeholder="Участник поиск..." oninput="searchDmUser(this.value)" aria-label="Участник поиск...">
       </div>
       <div id="dm-search-results"></div>
       <div id="dm-list"></div>
@@ -373,7 +373,7 @@
             rows="1"
             onkeydown="handleKey(event)"
             oninput="handleInput(this)"
-            disabled></textarea>
+            disabled aria-label="Сообщение напишите..."></textarea>
           <div class="input-actions">
             <button class="dm-btn" id="dm-open-btn" onclick="openDmFromInput()" title="DM отправить" >
               <i class="fas fa-user"></i> DM
@@ -411,7 +411,7 @@
     <div class="profs-divider"></div>
     <div class="profs-section-title">Takma Isim</div>
     <div class="profs-nick-row">
-      <input class="profs-nick-input" id="pp-nick-input" placeholder="Takma ad yok">
+      <input class="profs-nick-input" id="pp-nick-input" placeholder="Ник не задан" aria-label="Ник не задан">
       <button class="profs-nick-btn" onclick="saveNick()">Сохранить</button>
     </div>
     <div class="profs-action-row">

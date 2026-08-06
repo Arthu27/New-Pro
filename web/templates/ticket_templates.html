@@ -20,11 +20,11 @@
   <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
     <div>
       <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Название шаблона</label>
-      <input type="text" id="templateName" class="form-input" placeholder="Например: Сообщение о баге">
+      <input type="text" id="templateName" class="form-input" placeholder="Например: Сообщение о баге" aria-label="Например: Сообщение о баге">
     </div>
     <div>
       <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Категория</label>
-      <select id="templateCategory" class="form-input">
+      <select id="templateCategory" class="form-input" aria-label="Категория шаблона">
         <option value="Жалоба">Жалоба</option>
         <option value="Вопрос">Вопрос</option>
         <option value="Техническая проблема">Техническая проблема</option>
@@ -36,12 +36,17 @@
   
   <div style="margin-top: 16px;">
     <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Описание шаблона</label>
-    <textarea id="templateDescription" class="form-input" rows="3" placeholder="Краткое описание шаблона..."></textarea>
+    <textarea id="templateDescription" class="form-input" rows="3" placeholder="Краткое описание шаблона..." aria-label="Краткое описание шаблона..."></textarea>
   </div>
   
   <div style="margin-top: 16px;">
     <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Сообщение шаблона</label>
     <textarea id="templateMessage" class="form-input" rows="8" placeholder="Текст сообщения, который будет автоматически вставлен при создании тикета...
+
+Вы можете использовать переменные:
+{user} - имя пользователя
+{date} - текущая дата
+{time} - текущее время" aria-label="Текст сообщения, который будет автоматически вставлен при создании тикета...
 
 Вы можете использовать переменные:
 {user} - имя пользователя

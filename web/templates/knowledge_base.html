@@ -18,7 +18,7 @@
 <div class="section">
   <div class="bs-title"><i class="fas fa-search"></i> Поиск по базе знаний</div>
   <div style="display: flex; gap: 12px;">
-    <input type="text" id="searchInput" class="form-input" placeholder="Введите ключевые слова..." style="flex: 1;">
+    <input type="text" id="searchInput" class="form-input" placeholder="Введите ключевые слова..." style="flex: 1;" aria-label="Введите ключевые слова...">
     <button class="control-btn primary" onclick="searchArticles()">
       <i class="fas fa-search"></i> Искать
     </button>
@@ -91,15 +91,15 @@
     </div>
     <div style="margin-bottom: 16px;">
       <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Название категории</label>
-      <input type="text" id="categoryName" class="form-input" placeholder="Например: Общие вопросы">
+      <input type="text" id="categoryName" class="form-input" placeholder="Например: Общие вопросы" aria-label="Например: Общие вопросы">
     </div>
     <div style="margin-bottom: 16px;">
       <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Описание</label>
-      <textarea id="categoryDescription" class="form-input" rows="3" placeholder="Краткое описание категории..."></textarea>
+      <textarea id="categoryDescription" class="form-input" rows="3" placeholder="Краткое описание категории..." aria-label="Краткое описание категории..."></textarea>
     </div>
     <div style="margin-bottom: 16px;">
       <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Иконка (Font Awesome)</label>
-      <input type="text" id="categoryIcon" class="form-input" placeholder="fa-question-circle" value="fa-folder">
+      <input type="text" id="categoryIcon" class="form-input" placeholder="fa-question-circle" value="fa-folder" aria-label="fa-question-circle">
     </div>
     <div style="display: flex; gap: 12px;">
       <button class="control-btn primary" onclick="createCategory()" style="flex: 1;">
@@ -124,26 +124,26 @@
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
       <div>
         <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Заголовок</label>
-        <input type="text" id="articleTitle" class="form-input" placeholder="Заголовок статьи">
+        <input type="text" id="articleTitle" class="form-input" placeholder="Заголовок статьи" aria-label="Заголовок статьи">
       </div>
       <div>
         <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Категория</label>
-        <select id="articleCategory" class="form-input">
+        <select id="articleCategory" class="form-input" aria-label="Категория статьи">
           <option value="">Выберите категорию...</option>
         </select>
       </div>
     </div>
     <div style="margin-bottom: 16px;">
       <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Краткое описание</label>
-      <textarea id="articleSummary" class="form-input" rows="2" placeholder="Краткое описание статьи..."></textarea>
+      <textarea id="articleSummary" class="form-input" rows="2" placeholder="Краткое описание статьи..." aria-label="Краткое описание статьи..."></textarea>
     </div>
     <div style="margin-bottom: 16px;">
       <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Содержание</label>
-      <textarea id="articleContent" class="form-input" rows="15" placeholder="Полное содержание статьи..."></textarea>
+      <textarea id="articleContent" class="form-input" rows="15" placeholder="Полное содержание статьи..." aria-label="Полное содержание статьи..."></textarea>
     </div>
     <div style="margin-bottom: 16px;">
       <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Теги (через запятую)</label>
-      <input type="text" id="articleTags" class="form-input" placeholder="faq, помощь, инструкция">
+      <input type="text" id="articleTags" class="form-input" placeholder="faq, помощь, инструкция" aria-label="faq, помощь, инструкция">
     </div>
     <div style="display: flex; gap: 12px;">
       <button class="control-btn primary" onclick="createArticle()" style="flex: 1;">

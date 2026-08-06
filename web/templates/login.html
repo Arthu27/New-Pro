@@ -513,7 +513,7 @@
                 <label class="form-label">Логин или Discord ID</label>
                 <div class="form-input-wrap">
                     <i class="fas fa-user"></i>
-                    <input type="text" name="username" id="passUsername" class="form-input" placeholder="owner, @username или ID" required autocomplete="off" oninput="showSuggest(this, 'passPopup')" onfocus="showSuggest(this, 'passPopup')">
+                    <input type="text" name="username" id="passUsername" class="form-input" placeholder="owner, @username или ID" required autocomplete="off" oninput="showSuggest(this, 'passPopup')" onfocus="showSuggest(this, 'passPopup')" aria-label="owner, @username или ID">
                 </div>
                 <div class="autocomplete-popup" id="passPopup"></div>
             </div>
@@ -522,7 +522,7 @@
                 <label class="form-label">Пароль</label>
                 <div class="form-input-wrap">
                     <i class="fas fa-lock"></i>
-                    <input type="password" name="password" class="form-input" placeholder="••••••••" required>
+                    <input type="password" name="password" class="form-input" placeholder="••••••••" required aria-label="••••••••">
                 </div>
             </div>
 
@@ -540,7 +540,7 @@
                     <label class="form-label">Discord ID или @имя</label>
                     <div class="form-input-wrap">
                         <i class="fab fa-discord"></i>
-                        <input type="text" id="discordQuery" class="form-input" placeholder="123456789012345678 или @username" autocomplete="off" oninput="showSuggest(this, 'pinPopup')" onfocus="showSuggest(this, 'pinPopup')">
+                        <input type="text" id="discordQuery" class="form-input" placeholder="123456789012345678 или @username" autocomplete="off" oninput="showSuggest(this, 'pinPopup')" onfocus="showSuggest(this, 'pinPopup')" aria-label="123456789012345678 или @username">
                     </div>
                     <div class="autocomplete-popup" id="pinPopup"></div>
                 </div>
@@ -560,7 +560,7 @@
                     <label class="form-label">6-значный PIN-код из ЛС</label>
                     <div class="form-input-wrap">
                         <i class="fas fa-shield-alt"></i>
-                        <input type="text" id="pinInput" class="form-input" placeholder="000000" maxlength="6" autocomplete="one-time-code">
+                        <input type="text" id="pinInput" class="form-input" placeholder="000000" maxlength="6" autocomplete="one-time-code" aria-label="000000">
                     </div>
                 </div>
                 <div id="step3-error"></div>

@@ -61,7 +61,7 @@
   <div class="kn-toolbar" data-reveal="up">
     <button class="kn-btn" id="btn-pause" onclick="togglePause()"><i class="fas fa-pause"></i> Пауза</button>
     <button class="kn-btn ghost" onclick="clearView()"><i class="fas fa-broom"></i> Очистить вид</button>
-    <select class="kn-select" id="lvl-filter" onchange="renderAll()">
+    <select class="kn-select" id="lvl-filter" onchange="renderAll()" aria-label="Фильтр уровня">
       <option value="">Все уровни</option>
       <option value="INFO">INFO и выше</option>
       <option value="WARNING">WARNING и выше</option>

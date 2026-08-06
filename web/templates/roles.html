@@ -19,7 +19,7 @@
   <h3><i class="fas fa-server"></i> Сервер</h3>
   <div class="form-group">
     <label>Выберите сервер для просмотра ролей</label>
-    <select id="guild-select" class="field-input">
+    <select id="guild-select" class="field-input" aria-label="Выбор сервера">
       <option value="">Выберите сервер...</option>
     </select>
   </div>
@@ -51,11 +51,11 @@
     <h3><i class="fas fa-plus-circle"></i> Создать роль</h3>
     <div class="form-group">
       <label>Название роли</label>
-      <input type="text" id="role-name" class="field-input" placeholder="Название роли">
+      <input type="text" id="role-name" class="field-input" placeholder="Название роли" aria-label="Название роли">
     </div>
     <div class="form-group">
       <label>Цвет роли</label>
-      <input type="color" id="role-color" class="color-picker" value="#d4a843">
+      <input type="color" id="role-color" class="color-picker" value="#d4a843" aria-label="Цвет роли">
     </div>
     <div class="modal-actions">
       <button onclick="createRole()" class="btn-exec"><i class="fas fa-check"></i> Создать</button>

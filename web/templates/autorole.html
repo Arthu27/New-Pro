@@ -33,7 +33,7 @@
   <div class="hero-sub">Автоматически выдавать роли новым участникам</div>
 </div>
 
-<select id="guild-select"  class="guild-sel" onchange="loadSettings()">
+<select id="guild-select"  class="guild-sel" onchange="loadSettings()" aria-label="Выбор сервера">
   <option value="">🏠 Выберите сервер...</option>
 </select>
 
@@ -43,7 +43,7 @@
     <div class="ar-desc">Входящим на сервер участникам автоматически выдаётся роли:</div>
     <div id="member-roles-list"></div>
     <div class="add-row">
-      <select id="member-role-add"></select>
+      <select id="member-role-add" aria-label="Роль для участников"></select>
       <button onclick="addRole('member')"><i class="fas fa-plus"></i> Добавить</button>
     </div>
     <button class="save-btn" onclick="saveSettings('member')"><i class="fas fa-save"></i> Сохранить</button>
@@ -53,7 +53,7 @@
     <div class="ar-desc">Роль для новых участниц (женская) — выдаётся автоматически:</div>
     <div id="girl-roles-list"></div>
     <div class="add-row">
-      <select id="girl-role-add"></select>
+      <select id="girl-role-add" aria-label="Роль для девушек"></select>
       <button onclick="addRole('girl')"><i class="fas fa-plus"></i> Добавить</button>
     </div>
     <button class="save-btn" onclick="saveSettings('girl')"><i class="fas fa-save"></i> Сохранить</button>
@@ -63,7 +63,7 @@
     <div class="ar-desc">Роль для новых участников (парней) — выдаётся автоматически:</div>
     <div id="boy-roles-list"></div>
     <div class="add-row">
-      <select id="boy-role-add"></select>
+      <select id="boy-role-add" aria-label="Роль для парней"></select>
       <button onclick="addRole('boy')"><i class="fas fa-plus"></i> Добавить</button>
     </div>
     <button class="save-btn" onclick="saveSettings('boy')"><i class="fas fa-save"></i> Сохранить</button>
@@ -73,7 +73,7 @@
     <div class="ar-desc">Ботам, добавленным на сервер, автоматически выдаётся роль:</div>
     <div id="bot-roles-list"></div>
     <div class="add-row">
-      <select id="bot-role-add"></select>
+      <select id="bot-role-add" aria-label="Роль для ботов"></select>
       <button onclick="addRole('bot')"><i class="fas fa-plus"></i> Добавить</button>
     </div>
     <button class="save-btn" onclick="saveSettings('bot')"><i class="fas fa-save"></i> Сохранить</button>

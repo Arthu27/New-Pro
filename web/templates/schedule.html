@@ -55,24 +55,24 @@
     <div class="sc-head"><i class="fas fa-plus-circle"></i> Новый анонс <span class="right">время по указанному часовому поясу</span></div>
     <div class="sc-body">
       <div class="sc-grid">
-        <div class="sc-field"><label>Канал</label><select id="f-channel"></select></div>
+        <div class="sc-field"><label>Канал</label><select id="f-channel" aria-label="Канал"></select></div>
         <div class="sc-field"><label>Повтор</label>
-          <select id="f-repeat" onchange="document.getElementById('w-weekday').style.display = this.value==='weekly' ? 'block':'none'">
+          <select id="f-repeat" onchange="document.getElementById('w-weekday').style.display = this.value==='weekly' ? 'block':'none'" aria-label="Повтор">
             <option value="once">Один раз</option>
             <option value="daily">Каждый день</option>
             <option value="weekly">Каждую неделю</option>
           </select></div>
-        <div class="sc-field"><label>Время (ЧЧ:ММ)</label><input id="f-time" type="text" placeholder="20:00" maxlength="5"></div>
+        <div class="sc-field"><label>Время (ЧЧ:ММ)</label><input id="f-time" type="text" placeholder="20:00" maxlength="5" aria-label="20:00"></div>
         <div class="sc-field" id="w-weekday" style="display:none"><label>День недели</label>
-          <select id="f-weekday">
+          <select id="f-weekday" aria-label="День недели">
             <option value="0">Понедельник</option><option value="1">Вторник</option>
             <option value="2">Среда</option><option value="3">Четверг</option>
             <option value="4" selected>Пятница</option><option value="5">Суббота</option>
             <option value="6">Воскресенье</option>
           </select></div>
-        <div class="sc-field"><label>Часовой пояс (UTC±)</label><input id="f-tz" type="number" value="3" min="-12" max="14"></div>
+        <div class="sc-field"><label>Часовой пояс (UTC±)</label><input id="f-tz" type="number" value="3" min="-12" max="14" aria-label="Часовой пояс"></div>
         <div class="sc-field"><label>Цвет embed</label>
-          <select id="f-color">
+          <select id="f-color" aria-label="Цвет">
             <option value="0xD4AF37" selected>Золото</option>
             <option value="0x3498DB">Синий</option>
             <option value="0x2ECC71">Зелёный</option>
@@ -81,10 +81,10 @@
           </select></div>
       </div>
       <div class="sc-field" style="margin-top:12px"><label>Текст сообщения</label>
-        <textarea id="f-content" rows="3" placeholder="Текст анонса (можно оставить пустым, если заполнен embed)"></textarea></div>
+        <textarea id="f-content" rows="3" placeholder="Текст анонса (можно оставить пустым, если заполнен embed)" aria-label="Текст анонса (можно оставить пустым, если заполнен embed)"></textarea></div>
       <div class="sc-grid" style="margin-top:12px">
-        <div class="sc-field"><label>Заголовок embed (не обязательно)</label><input id="f-etitle" type="text" placeholder="Например: 🎮 Еженедельный ивент"></div>
-        <div class="sc-field"><label>Текст embed (не обязательно)</label><input id="f-edesc" type="text" placeholder="Подробности события…"></div>
+        <div class="sc-field"><label>Заголовок embed (не обязательно)</label><input id="f-etitle" type="text" placeholder="Например: 🎮 Еженедельный ивент" aria-label="Например: 🎮 Еженедельный ивент"></div>
+        <div class="sc-field"><label>Текст embed (не обязательно)</label><input id="f-edesc" type="text" placeholder="Подробности события…" aria-label="Подробности события…"></div>
       </div>
       <div class="sc-actions">
         <button class="sc-btn" onclick="saveItem()"><i class="fas fa-calendar-plus"></i> Запланировать</button>

@@ -22,19 +22,19 @@
     <h2><i class="fas fa-paper-plane"></i> Новое сообщение</h2>
     <div class="form-group">
       <label>Сервер</label>
-      <select id="guild-select" class="field-input" onchange="loadChannels()">
+      <select id="guild-select" class="field-input" onchange="loadChannels()" aria-label="Выбор сервера">
         <option value="">Загрузка...</option>
       </select>
     </div>
     <div class="form-group">
       <label>Канал</label>
-      <select id="channel-select" class="field-input" disabled>
+      <select id="channel-select" class="field-input" disabled aria-label="Канал">
         <option value="">Сначала выберите сервер</option>
       </select>
     </div>
     <div class="form-group">
       <label>Сообщение</label>
-      <textarea id="message-input" class="field-input" rows="5" placeholder="Напишите сообщение..." ></textarea>
+      <textarea id="message-input" class="field-input" rows="5" placeholder="Напишите сообщение..." aria-label="Напишите сообщение..."></textarea>
     </div>
     <button id="send-btn" class="send-btn" onclick="sendMessage()">
       <i class="fas fa-paper-plane"></i> Отправить

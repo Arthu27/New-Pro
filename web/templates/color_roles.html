@@ -17,7 +17,7 @@
 
 
 
-<select  id="guild-select" class="guild-select" onchange="loadColorRoles()">
+<select  id="guild-select" class="guild-select" onchange="loadColorRoles()" aria-label="Выбор сервера">
   <option value="">Выберите сервер...</option>
 </select>
 
@@ -26,18 +26,18 @@
   <div class="grid3" >
     <div>
       <label class="field-label">Цвет</label>
-      <input type="text" id="color-name" placeholder="напр.: Красный" class="field-input">
+      <input type="text" id="color-name" placeholder="напр.: Красный" class="field-input" aria-label="напр.: Красный">
     </div>
     <div>
       <label class="field-label">Код цвета</label>
       <div  >
-        <input type="color" id="color-picker" value="#c8922a"   style="width: 42px; height: 38px;">
-        <input type="text" id="color-hex" placeholder="#c8922a" class="field-input"  oninput="syncColor(this.value)">
+        <input type="color" id="color-picker" value="#c8922a"   style="width: 42px; height: 38px;" aria-label="Цвет">
+        <input type="text" id="color-hex" placeholder="#c8922a" class="field-input"  oninput="syncColor(this.value)" aria-label="#c8922a">
       </div>
     </div>
     <div>
       <label class="field-label">Emoji</label>
-      <input type="text" id="color-emoji" placeholder="🎨" class="field-input">
+      <input type="text" id="color-emoji" placeholder="🎨" class="field-input" aria-label="🎨">
     </div>
   </div>
   <button onclick="addColor()" class="save-btn"><i class="fas fa-plus"   style="margin-right: 6px;"></i>Добавить</button>
@@ -55,7 +55,7 @@
   <div  >
     <div   style="min-width: 200px;">
       <label class="field-label">Канал панели</label>
-      <select id="panel-channel" class="field-input"></select>
+      <select id="panel-channel" class="field-input" aria-label="Канал панели"></select>
     </div>
     <button onclick="publishPanel()" class="save-btn" >
       <i class="fas fa-paper-plane"   style="margin-right: 6px;"></i>Опубликовать

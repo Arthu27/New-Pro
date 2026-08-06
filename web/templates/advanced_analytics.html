@@ -26,7 +26,7 @@
   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
     <div>
       <label style="display: block; margin-bottom: 6px; font-size: 13px; color: var(--text-muted);">Период</label>
-      <select id="periodFilter" class="form-input" onchange="loadAnalytics()">
+      <select id="periodFilter" class="form-input" onchange="loadAnalytics()" aria-label="Период">
         <option value="7">Последние 7 дней</option>
         <option value="30" selected>Последние 30 дней</option>
         <option value="90">Последние 90 дней</option>
@@ -36,7 +36,7 @@
     </div>
     <div>
       <label style="display: block; margin-bottom: 6px; font-size: 13px; color: var(--text-muted);">Категория</label>
-      <select id="categoryFilter" class="form-input" onchange="loadAnalytics()">
+      <select id="categoryFilter" class="form-input" onchange="loadAnalytics()" aria-label="Категория">
         <option value="">Все категории</option>
         <option value="Жалоба">Жалобы</option>
         <option value="Вопрос">Вопросы</option>
@@ -46,7 +46,7 @@
     </div>
     <div>
       <label style="display: block; margin-bottom: 6px; font-size: 13px; color: var(--text-muted);">Модератор</label>
-      <select id="moderatorFilter" class="form-input" onchange="loadAnalytics()">
+      <select id="moderatorFilter" class="form-input" onchange="loadAnalytics()" aria-label="Модератор">
         <option value="">Все модераторы</option>
       </select>
     </div>
@@ -54,11 +54,11 @@
   <div id="customDateRange" style="display: none; margin-top: 12px; grid-template-columns: 1fr 1fr; gap: 12px;">
     <div>
       <label style="display: block; margin-bottom: 6px; font-size: 13px; color: var(--text-muted);">Дата начала</label>
-      <input type="date" id="startDate" class="form-input">
+      <input type="date" id="startDate" class="form-input" aria-label="Дата начала">
     </div>
     <div>
       <label style="display: block; margin-bottom: 6px; font-size: 13px; color: var(--text-muted);">Дата окончания</label>
-      <input type="date" id="endDate" class="form-input">
+      <input type="date" id="endDate" class="form-input" aria-label="Дата окончания">
     </div>
   </div>
 </div>

@@ -48,10 +48,10 @@
 <div class="editor-grid">
   <div class="editor-box">
     <div class="section-title"><i class="fas fa-door-open"></i> Приветственное сообщение</div>
-    <div class="form-group"><label>Канал</label><select id="welcome-channel"><option value="">Выберите канал...</option></select></div>
-    <div class="form-group"><label>Заголовок</label><input type="text" id="welcome-title" placeholder="Добро пожаловать, {user}!"></div>
-    <div class="form-group"><label>Сообщение</label><textarea id="welcome-msg" placeholder="{сервер} сервер приветствует тебя!"></textarea></div>
-    <div class="form-group"><label>Цвет эмбеда</label><input type="color" id="welcome-color" value="#c8922a"   style="height: 40px;"></div>
+    <div class="form-group"><label>Канал</label><select id="welcome-channel" aria-label="Канал приветствий"><option value="">Выберите канал...</option></select></div>
+    <div class="form-group"><label>Заголовок</label><input type="text" id="welcome-title" placeholder="Добро пожаловать, {user}!" aria-label="Добро пожаловать, {user}!"></div>
+    <div class="form-group"><label>Сообщение</label><textarea id="welcome-msg" placeholder="{сервер} сервер приветствует тебя!" aria-label="{сервер} сервер приветствует тебя!"></textarea></div>
+    <div class="form-group"><label>Цвет эмбеда</label><input type="color" id="welcome-color" value="#c8922a"   style="height: 40px;" aria-label="Цвет"></div>
     <div class="preview-box">
       <div   style="margin-bottom: 8px;">Предпросмотр</div>
       <div class="preview-embed" id="welcome-preview" >
@@ -64,10 +64,10 @@
 
   <div class="editor-box" >
     <div class="section-title" ><i class="fas fa-door-closed" ></i> Пока Пока Сообщение</div>
-    <div class="form-group"><label>Канал</label><select id="leave-channel"><option value="">Выберите канал...</option></select></div>
-    <div class="form-group"><label>Заголовок</label><input type="text" id="leave-title" placeholder="Пока Пока, {user}!"></div>
-    <div class="form-group"><label>Сообщение</label><textarea id="leave-msg" placeholder="{user} с сервера покинул."></textarea></div>
-    <div class="form-group"><label>Цвет эмбеда</label><input type="color" id="leave-color" value="#f87171"   style="height: 40px;"></div>
+    <div class="form-group"><label>Канал</label><select id="leave-channel" aria-label="Канал прощаний"><option value="">Выберите канал...</option></select></div>
+    <div class="form-group"><label>Заголовок</label><input type="text" id="leave-title" placeholder="Пока Пока, {user}!" aria-label="Пока Пока, {user}!"></div>
+    <div class="form-group"><label>Сообщение</label><textarea id="leave-msg" placeholder="{user} с сервера покинул." aria-label="{user} с сервера покинул."></textarea></div>
+    <div class="form-group"><label>Цвет эмбеда</label><input type="color" id="leave-color" value="#f87171"   style="height: 40px;" aria-label="Цвет прощания"></div>
     <div class="preview-box">
       <div   style="margin-bottom: 8px;">Предпросмотр</div>
       <div class="preview-embed" id="leave-preview" >

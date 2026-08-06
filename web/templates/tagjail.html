@@ -88,7 +88,7 @@
     <div class="tj-body">
       <div id="tag-chips"><span style="opacity:.55;font-size:13px">Загрузка…</span></div>
       <div class="tj-add-row">
-        <input class="tj-input" id="new-tag" placeholder="Тег чужого сервера, .gg/, discord.gg …" maxlength="50">
+        <input class="tj-input" id="new-tag" placeholder="Тег чужого сервера, .gg/, discord.gg …" maxlength="50" aria-label="Тег чужого сервера, .gg/, discord.gg …">
         <button class="tj-btn" onclick="addTag()"><i class="fas fa-plus"></i> Добавить</button>
       </div>
     </div>
@@ -194,10 +194,10 @@ function renderForm(){
     if(f.t === 'bool'){
       input = `<label class="tj-switch"><input type="checkbox" data-cfg="${f.k}" ${v?'checked':''}><span></span></label>`;
     } else if(f.t === 'select'){
-      input = `<select data-cfg="${f.k}">` + f.opts.map(([val,lbl]) =>
+      input = `<select data-cfg="${f.k}" aria-label="Параметр настройки">` + f.opts.map(([val,lbl]) =>
         `<option value="${val}" ${v===val?'selected':''}>${lbl}</option>`).join('') + `</select>`;
     } else {
-      input = `<input type="number" min="0" data-cfg="${f.k}" value="${esc(v ?? 0)}">`;
+      input = `<input type="number" min="0" data-cfg="${f.k}" value="${esc(v ?? 0)}" aria-label="Параметр настройки">`;
     }
     return `<div class="tj-field">
       <div class="tj-field-top"><div class="tj-field-label">${f.l}</div>${input}</div>

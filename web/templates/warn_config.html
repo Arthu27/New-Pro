@@ -50,11 +50,11 @@
   <div class="rule-grid">
     <div class="form-group">
       <label>Кол-во варнов</label>
-      <input type="number" id="new-count" value="3" min="1" max="20">
+      <input type="number" id="new-count" value="3" min="1" max="20" aria-label="Количество предупреждений">
     </div>
     <div class="form-group">
       <label>Действие</label>
-      <select id="new-action">
+      <select id="new-action" aria-label="Наказание">
         <option value="timeout">⏳ Мут</option>
         <option value="kick">👢 Кик</option>
         <option value="ban">🔨 Бан</option>
@@ -62,7 +62,7 @@
     </div>
     <div class="form-group">
       <label>Длительность (мин)</label>
-      <input type="number" id="new-duration" value="10" min="1" max="10080">
+      <input type="number" id="new-duration" value="10" min="1" max="10080" aria-label="Длительность (мин)">
     </div>
     <div></div>
   </div>

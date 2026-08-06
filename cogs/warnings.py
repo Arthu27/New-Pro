@@ -169,9 +169,41 @@ class warnings(commands.Cog):
 
     def _save_warns(self, guild_id: int, user_id: int, warns: list):
         self.db.set(guild_id, str(user_id), warns)
+        self._mirror_warns_json(guild_id, user_id, warns)
 
     def _clear_warns(self, guild_id: int, user_id: int):
         self.db.set(guild_id, str(user_id), [])
+        self._mirror_warns_json(guild_id, user_id, [])
+
+    def _mirror_warns_json(self, guild_id: int, user_id: int, warns: list):
+        """Зеркалирует предупреждения в data/warnings.json — этот файл читает веб-панель.
+        SQLite (GuildData) остаётся основным хранилищем; сбой зеркала не ломает модерацию."""
+        try:
+            path = 'data/warnings.json'
+            os.makedirs('data', exist_ok=True)
+            data = {}
+            if os.path.exists(path):
+                try:
+                    with open(path, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                except Exception:
+                    data = {}
+            if not isinstance(data, dict):
+                data = {}
+            gid, uid = str(guild_id), str(user_id)
+            if warns:
+                if not isinstance(data.get(gid), dict):
+                    data[gid] = {}
+                data[gid][uid] = warns[-25:]
+            else:
+                if isinstance(data.get(gid), dict):
+                    data[gid].pop(uid, None)
+            tmp = path + '.tmp'
+            with open(tmp, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            os.replace(tmp, path)
+        except Exception as e:
+            log.error(f"Зеркалирование предупреждений в JSON: {e}")
 
     async def send_dm(self, user, embed):
         try:

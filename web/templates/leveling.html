@@ -51,7 +51,7 @@
 </div>
 
 <div class="controls-bar">
-  <select  id="guild-select" class="guild-sel" onchange="loadLeveling()">
+  <select  id="guild-select" class="guild-sel" onchange="loadLeveling()" aria-label="Выбор сервера">
     <option value="">🏠 Выберите сервер...</option>
   </select>
 </div>
@@ -72,26 +72,26 @@
 
     <div class="form-group" >
       <label class="form-label">📢 Уведомление Канал</label>
-      <select id="lv-channel" class="form-input">
+      <select id="lv-channel" class="form-input" aria-label="Канал уведомлений об уровне">
         <option value="">Выберите канал (пусто = сообщение канал)</option>
       </select>
     </div>
 
     <div class="form-group">
       <label class="form-label">Мин. опыта (за сообщение)</label>
-      <input type="number" id="lv-xp-min" class="form-input" value="15" min="1">
+      <input type="number" id="lv-xp-min" class="form-input" value="15" min="1" aria-label="Мин. XP">
     </div>
     <div class="form-group">
       <label class="form-label">Макс. опыта (за сообщение)</label>
-      <input type="number" id="lv-xp-max" class="form-input" value="25" min="1">
+      <input type="number" id="lv-xp-max" class="form-input" value="25" min="1" aria-label="Макс. XP">
     </div>
     <div class="form-group">
       <label class="form-label">Задержка (сек.)</label>
-      <input type="number" id="lv-cooldown" class="form-input" value="60" min="0">
+      <input type="number" id="lv-cooldown" class="form-input" value="60" min="0" aria-label="Перерыв (сек)">
     </div>
     <div class="form-group">
       <label class="form-label">Сообщение о повышении уровня</label>
-      <input type="text" id="lv-msg" class="form-input" placeholder="{user} достиг уровня {level}! 🎉">
+      <input type="text" id="lv-msg" class="form-input" placeholder="{user} достиг уровня {level}! 🎉" aria-label="{user} достиг уровня {level}! 🎉">
     </div>
 
     <button class="btn-save" onclick="saveLeveling()">💾 СОХРАНИТЬ</button>

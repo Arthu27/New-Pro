@@ -69,12 +69,12 @@
     <select id="guild-select" onchange="loadLogs()" class="field-input" aria-label="Сервер">
       <option value="{{ main_guild_id }}">Текущий сервер</option>
     </select>
-    <select id="log-type" onchange="loadLogs()" class="field-input">
+    <select id="log-type" onchange="loadLogs()" class="field-input" aria-label="Тип журнала">
       <option value="all">📋 Все</option>
       <option value="deleted">🗑 Удалённые</option>
       <option value="edited">✏️ Изменённые</option>
     </select>
-    <input type="text" id="user-filter" placeholder="🔍 Поиск пользователя..." class="field-input" style="min-width:160px" oninput="filterLogs()">
+    <input type="text" id="user-filter" placeholder="🔍 Поиск пользователя..." class="field-input" style="min-width:160px" oninput="filterLogs()" aria-label="🔍 Поиск пользователя...">
   </div>
 </div>
 

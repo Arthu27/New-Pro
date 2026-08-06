@@ -68,32 +68,32 @@
     currentCmd = cmd;
     var fields = '';
     if (cmd === 'ban' || cmd === 'kick' || cmd === 'warn' || cmd === 'timeout' || cmd === 'untimeout' || cmd === 'jail' || cmd === 'unjail' || cmd === 'role') {
-      fields += '<div class="form-group"><label>Сервер</label><select id="guild-id">' +
+      fields += '<div class="form-group"><label>Сервер</label><select id="guild-id" aria-label="ID сервера">' +
         '<option value="">Выберите...</option></select></div>';
-      fields += '<div class="form-group"><label>Пользователь ID</label><input type="text" id="user-id" placeholder="123456789012345678"></div>';
+      fields += '<div class="form-group"><label>Пользователь ID</label><input type="text" id="user-id" placeholder="123456789012345678" aria-label="123456789012345678"></div>';
     }
     if (cmd === 'timeout') {
-      fields += '<div class="form-group"><label>Длительность (минуты)</label><input type="number" id="duration" value="60" min="1"></div>';
+      fields += '<div class="form-group"><label>Длительность (минуты)</label><input type="number" id="duration" value="60" min="1" aria-label="Длительность (мин)"></div>';
     }
     if (cmd === 'role') {
-      fields += '<div class="form-group"><label>ID роли</label><input type="text" id="role-id" placeholder="ID роли"></div>';
-      fields += '<div class="form-group"><label>Действие</label><select id="role-action"><option value="add">Выдать</option><option value="remove">Забрать</option></select></div>';
+      fields += '<div class="form-group"><label>ID роли</label><input type="text" id="role-id" placeholder="ID роли" aria-label="ID роли"></div>';
+      fields += '<div class="form-group"><label>Действие</label><select id="role-action" aria-label="Действие с ролью"><option value="add">Выдать</option><option value="remove">Забрать</option></select></div>';
     }
     if (cmd === 'ban' || cmd === 'kick' || cmd === 'warn' || cmd === 'jail' || cmd === 'role' || cmd === 'clear') {
-      fields += '<div class="form-group"><label>Причина</label><textarea id="reason" rows="2"></textarea></div>';
+      fields += '<div class="form-group"><label>Причина</label><textarea id="reason" rows="2" aria-label="Причина"></textarea></div>';
     }
     if (cmd === 'clear' || cmd === 'lock' || cmd === 'unlock' || cmd === 'ticket_panel') {
-      fields += '<div class="form-group"><label>Сервер</label><select id="guild-id">' +
+      fields += '<div class="form-group"><label>Сервер</label><select id="guild-id" aria-label="ID сервера">' +
         '<option value="">Выберите...</option></select></div>';
     }
     if (cmd === 'clear' || cmd === 'lock' || cmd === 'unlock' || cmd === 'ticket_panel') {
-      fields += '<div class="form-group"><label>ID канала</label><input type="text" id="channel-id" placeholder="ID канала"></div>';
+      fields += '<div class="form-group"><label>ID канала</label><input type="text" id="channel-id" placeholder="ID канала" aria-label="ID канала"></div>';
     }
     if (cmd === 'unban') {
-      fields += '<div class="form-group"><label>Сервер</label><select id="guild-id">' +
+      fields += '<div class="form-group"><label>Сервер</label><select id="guild-id" aria-label="ID сервера">' +
         '<option value="">Выберите...</option></select></div>';
-      fields += '<div class="form-group"><label>Пользователь ID</label><input type="text" id="user-id"></div>';
-      fields += '<div class="form-group"><label>Причина</label><textarea id="reason" rows="2"></textarea></div>';
+      fields += '<div class="form-group"><label>Пользователь ID</label><input type="text" id="user-id" aria-label="ID пользователя"></div>';
+      fields += '<div class="form-group"><label>Причина</label><textarea id="reason" rows="2" aria-label="Причина"></textarea></div>';
     }
 
     $('cmd-modal-content').innerHTML =

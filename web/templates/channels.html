@@ -20,13 +20,13 @@
   <div class="ch-toolbar-left">
     <div class="ch-sel-wrap">
       <i class="fas fa-server"></i>
-      <select id="ch-guild-select" class="ch-select">
+      <select id="ch-guild-select" class="ch-select" aria-label="Выбор сервера">
         <option value="">Выберите сервер...</option>
       </select>
     </div>
     <div class="ch-search">
       <i class="fas fa-search"></i>
-      <input type="text" id="ch-search" placeholder="Поиск каналов...">
+      <input type="text" id="ch-search" placeholder="Поиск каналов..." aria-label="Поиск каналов...">
       <button id="ch-search-clear" title="Очистить" class="ch-search-clear"><i class="fas fa-times"></i></button>
     </div>
   </div>
@@ -145,32 +145,32 @@
     <input type="hidden" id="create-type" value="text">
 
     <label class="field-label">Название канала</label>
-    <input type="text" id="create-name" placeholder="например: общий-чат" class="field-input">
+    <input type="text" id="create-name" placeholder="например: общий-чат" class="field-input" aria-label="например: общий-чат">
 
     <div id="create-extra">
       <div id="create-cat-row">
         <label class="field-label">Категория</label>
-        <select id="create-category" class="field-input">
+        <select id="create-category" class="field-input" aria-label="Категория канала">
           <option value="">Без категории</option>
         </select>
       </div>
       <div id="create-topic-row">
         <label class="field-label">Описание</label>
-        <textarea id="create-topic" rows="2" placeholder="Описание канала..." class="field-input"></textarea>
+        <textarea id="create-topic" rows="2" placeholder="Описание канала..." class="field-input" aria-label="Описание канала..."></textarea>
       </div>
       <div class="form-row-2">
         <div>
           <label class="field-label">Медленный режим (сек)</label>
-          <input type="number" id="create-slowmode" min="0" max="21600" value="0" class="field-input">
+          <input type="number" id="create-slowmode" min="0" max="21600" value="0" class="field-input" aria-label="Медленный режим (сек)">
         </div>
         <div id="create-voice-bitrate">
           <label class="field-label">Битрейт (kbps)</label>
-          <input type="number" id="create-bitrate" min="8" value="64" class="field-input">
+          <input type="number" id="create-bitrate" min="8" value="64" class="field-input" aria-label="Битрейт (кбит/с)">
         </div>
       </div>
       <div id="create-voice-limit">
         <label class="field-label">Лимит участников (0 = без лимита)</label>
-        <input type="number" id="create-user-limit" min="0" value="0" class="field-input">
+        <input type="number" id="create-user-limit" min="0" value="0" class="field-input" aria-label="Лимит пользователей">
       </div>
       <div class="toggle-row">
         <label class="toggle-label" for="create-nsfw"><i class="fas fa-eye-slash"></i> NSFW (18+) канал</label>
@@ -194,35 +194,35 @@
     </div>
 
     <label class="field-label">Название канала</label>
-    <input type="text" id="edit-name" class="field-input">
+    <input type="text" id="edit-name" class="field-input" aria-label="Название канала">
 
     <div id="edit-cat-row">
       <label class="field-label">Категория</label>
-      <select id="edit-category" class="field-input">
+      <select id="edit-category" class="field-input" aria-label="Категория канала">
         <option value="">Без категории</option>
       </select>
     </div>
     <div id="edit-position-row">
       <label class="field-label">Позиция (порядок)</label>
-      <input type="number" id="edit-position" min="0" class="field-input">
+      <input type="number" id="edit-position" min="0" class="field-input" aria-label="Позиция канала">
     </div>
     <div id="edit-topic-row">
       <label class="field-label">Описание</label>
-      <textarea id="edit-topic" rows="2" class="field-input"></textarea>
+      <textarea id="edit-topic" rows="2" class="field-input" aria-label="Тема канала"></textarea>
     </div>
     <div class="form-row-2">
       <div>
         <label class="field-label">Медленный режим (сек)</label>
-        <input type="number" id="edit-slowmode" min="0" max="21600" class="field-input">
+        <input type="number" id="edit-slowmode" min="0" max="21600" class="field-input" aria-label="Медленный режим (сек)">
       </div>
       <div id="edit-voice-bitrate">
         <label class="field-label">Битрейт (kbps)</label>
-        <input type="number" id="edit-bitrate" min="8" class="field-input">
+        <input type="number" id="edit-bitrate" min="8" class="field-input" aria-label="Битрейт (кбит/с)">
       </div>
     </div>
     <div id="edit-voice-limit">
       <label class="field-label">Лимит участников (0 = без лимита)</label>
-      <input type="number" id="edit-user-limit" min="0" class="field-input">
+      <input type="number" id="edit-user-limit" min="0" class="field-input" aria-label="Лимит пользователей">
     </div>
     <div class="toggle-row">
       <label class="toggle-label" for="edit-nsfw"><i class="fas fa-eye-slash"></i> NSFW (18+) канал</label>

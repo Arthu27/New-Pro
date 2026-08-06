@@ -25,9 +25,9 @@
       <div class="ba-title">Рассылка сообщений</div>
     </div>
     <div class="warning-box"><i class="fas fa-info-circle"></i> Сообщение будет отправлено всем участникам с выбранной ролью в личные сообщения.</div>
-    <div class="row"><label>Сервер</label><select id="dm-guild" class="ba-guild"></select></div>
-    <div class="row"><label>Роль</label><select id="dm-role" class="ba-roles" data-from="dm-guild"></select></div>
-    <div class="row"><label>Сообщение</label><textarea id="dm-msg" rows="3" placeholder="Текст сообщения..."></textarea></div>
+    <div class="row"><label>Сервер</label><select id="dm-guild" class="ba-guild" aria-label="Выбор сервера"></select></div>
+    <div class="row"><label>Роль</label><select id="dm-role" class="ba-roles" data-from="dm-guild" aria-label="Фильтр по роли"></select></div>
+    <div class="row"><label>Сообщение</label><textarea id="dm-msg" rows="3" placeholder="Текст сообщения..." aria-label="Текст сообщения..."></textarea></div>
     <button class="btn btn-primary" id="btn-dm" type="button"><i class="fas fa-paper-plane"></i> Отправить всем</button>
     <div class="result" id="dm-result"></div>
   </div>
@@ -39,11 +39,11 @@
       <div class="ba-title">Массовые роли</div>
     </div>
     <div class="warning-box"><i class="fas fa-info-circle"></i> Действие будет применено ко всем участникам с целевой ролью.</div>
-    <div class="row"><label>Сервер</label><select id="role-guild" class="ba-guild"></select></div>
-    <div class="row"><label>Целевая роль</label><select id="role-target" class="ba-roles" data-from="role-guild"></select></div>
-    <div class="row"><label>Назначаемая роль</label><select id="role-action-sel" class="ba-roles" data-from="role-guild"></select></div>
+    <div class="row"><label>Сервер</label><select id="role-guild" class="ba-guild" aria-label="Выбор сервера"></select></div>
+    <div class="row"><label>Целевая роль</label><select id="role-target" class="ba-roles" data-from="role-guild" aria-label="Целевая роль"></select></div>
+    <div class="row"><label>Назначаемая роль</label><select id="role-action-sel" class="ba-roles" data-from="role-guild" aria-label="Действие с ролью"></select></div>
     <div class="row"><label>Действие</label>
-      <select id="role-op"><option value="add">Добавить</option><option value="remove">Убрать</option></select>
+      <select id="role-op" aria-label="Операция с ролью"><option value="add">Добавить</option><option value="remove">Убрать</option></select>
     </div>
     <button class="btn btn-warn" id="btn-role" type="button"><i class="fas fa-user-plus"></i> Применить</button>
     <div class="result" id="role-result"></div>
@@ -56,11 +56,11 @@
       <div class="ba-title">Массовое наказание</div>
     </div>
     <div class="warning-box danger"><i class="fas fa-exclamation-triangle"></i> Действие необратимо!</div>
-    <div class="row"><label>Сервер</label><select id="punish-guild" class="ba-guild"></select></div>
-    <div class="row"><label>Целевая роль</label><select id="punish-role" class="ba-roles" data-from="punish-guild"></select></div>
-    <div class="row"><label>Длительность (мин)</label><input type="number" id="punish-duration" value="60" min="1"></div>
+    <div class="row"><label>Сервер</label><select id="punish-guild" class="ba-guild" aria-label="Выбор сервера"></select></div>
+    <div class="row"><label>Целевая роль</label><select id="punish-role" class="ba-roles" data-from="punish-guild" aria-label="Фильтр по роли"></select></div>
+    <div class="row"><label>Длительность (мин)</label><input type="number" id="punish-duration" value="60" min="1" aria-label="Длительность (мин)"></div>
     <div class="row"><label>Действие</label>
-      <select id="punish-op"><option value="mute">Мут (заглушить)</option><option value="kick">Кик (исключить)</option><option value="ban">Бан (забанить)</option></select>
+      <select id="punish-op" aria-label="Наказание"><option value="mute">Мут (заглушить)</option><option value="kick">Кик (исключить)</option><option value="ban">Бан (забанить)</option></select>
     </div>
     <button class="btn btn-danger" id="btn-punish" type="button"><i class="fas fa-gavel"></i> Применить</button>
     <div class="result" id="punish-result"></div>
