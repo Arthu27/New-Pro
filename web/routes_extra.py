@@ -87,7 +87,7 @@ def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
             if not uid :
                 return '❌ Пользователь ID не найден'
                 # AI asistan никогда автоматически warn не может отправить — только predlojenie предлагает
-            return f'⚠️ AI warn предложение: {uid} usersыna "{reason}" причина warn. Подтвердите командой /moderate.'
+            return f'⚠️ AI предлагает warn: выдать {uid} предупреждение за «{reason}». Подтвердите командой /moderate.'
 
         elif action_type =='ban':
             reason =action_data .get ('reason','AI ban')
@@ -1217,9 +1217,9 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                     f"  Имя пользователя: {member.name}\n"
                     f"  Состояние: {str(member.status)}\n"
                     f"  Mute: {timed_out}\n"
-                    f"  Katыlma: {joined}\n"
-                    f"  Hesap создан: {created}\n"
-                    f"  Роли: {', '.join(member_roles) or 'Yok'}\n"
+                    f"  Вступил: {joined}\n"
+                    f"  Аккаунт создан: {created}\n"
+                    f"  Роли: {', '.join(member_roles) or 'Нет'}\n"
                     f"  Warning количество: {warn_count}\n"
                     f"  Warninglar: {'; '.join([w.get('reason','?') for w in warn_list[-5:]]) or 'Yok'}\n"
                     f"  Mod история ({len(mod_history)} запись):\n"
@@ -1347,7 +1347,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                         health_lines .append (f"{g.name}: {score}/100 ({label})")
                     except :pass 
         if health_lines :
-            health_info ='Сервер состояние skorlarы:\n'+'\n'.join (f'  {l}'for l in health_lines )
+            health_info ='Оценки состояния сервера:\n'+'\n'.join (f'  {l}'for l in health_lines )
         else :
         # Fallback: API'den hesapla
             try :
@@ -1414,7 +1414,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
             )
 
         system =(
-        "Ты Aether — ИИ-ассистент Discord-serverа Aether и веб-панели.\n"
+        "Ты Aether — ИИ-ассистент Discord-сервера Aether и веб-панели.\n"
         f"Пользователь: {session.get('username')}, Роль: {user_role}\n"
         f"Время: {now.strftime('%H:%M')}, Дата: {now.strftime('%d %B %Y, %A')}\n\n"
         "=== СОСТОЯНИЕ СЕРВЕРА ===\n"
@@ -1512,7 +1512,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                 _pred_id_m =_re .search (r'\b(\d{17,20})\b',question )
                 _pred_keywords =['покажи сообщ','найди сообщ','выведи сообщ',
                 'историю сообщ','последние сообщ','что писал',
-                'где писал','искать сообщ','son сообщениеlar']
+                'где писал','искать сообщ','последние сообщения']
                 if _pred_id_m and any (kw in question .lower ()for kw in _pred_keywords ):
                     asked_search_user_messages =True 
                     asked_user_id =_pred_id_m .group (1 )
@@ -1734,7 +1734,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                         )
 
                     def resolve_member (val ):
-                        """ID или isimden участник вернуть — kыsmi eшleшme поддержка"""
+                        """Вернуть участника по ID или имени — поддержка частичного совпадения"""
                         if val .isdigit ():
                             return guild .get_member (int (val ))
                         val_lower =val .lower ()
@@ -1767,26 +1767,26 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                         ch =resolve_channel (parts [1 ])
                         if ch :
                             _run_async (ch .set_permissions (guild .default_role ,send_messages =None ))
-                            return f'✅ #{ch.name} aчыldы'
+                            return f'✅ #{ch.name} открыт'
                     elif tip =='BAN'and len (parts )>1 :
                         m =resolve_member (parts [1 ])
                         if m :
                             reason =':'.join (parts [2 :])or 'Panel AI'
                             _run_async (m .ban (reason =reason ))
-                            return f'✅ {m.display_name} banlandы'
+                            return f'✅ {m.display_name} забанен'
                     elif tip =='KICK'and len (parts )>1 :
                         m =resolve_member (parts [1 ])
                         if m :
                             reason =':'.join (parts [2 :])or 'Panel AI'
                             _run_async (m .kick (reason =reason ))
-                            return f'✅ {m.display_name} atыldы'
+                            return f'✅ {m.display_name} кикнут'
                     elif tip =='TIMEOUT'and len (parts )>2 :
                         m =resolve_member (parts [1 ])
                         if m and m .id !=_owner_id :
                             mins =int (parts [2 ])if parts [2 ].isdigit ()else 10 
                             until =_discord .utils .utcnow ()+_dt .timedelta (minutes =mins )
                             _run_async (m .timeout (until ))
-                            return f'✅ {m.display_name} {mins} dk timeout'
+                            return f'✅ {m.display_name} — мут на {mins} мин'
                     elif tip =='СООБЩЕНИЕ'and len (parts )>2 :
                         ch =resolve_channel (parts [1 ])
                         if ch :
@@ -1800,7 +1800,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                         if ch :
                             secs =int (parts [2 ])if parts [2 ].isdigit ()else 5 
                             _run_async (ch .edit (slowmode_delay =secs ))
-                            return f'✅ #{ch.name} yavaш mod: {secs}s'
+                            return f'✅ #{ch.name} медленный режим: {secs}с'
                     elif tip =='DM'and len (parts )>2 :
                         m =resolve_member (parts [1 ])
                         if m :
@@ -1808,30 +1808,30 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                             if metin :
                                 try :
                                     _run_async (m .send (metin ))
-                                    return f'✅ {m.display_name} usersыna DM отправлено'
+                                    return f'✅ DM отправлено пользователю {m.display_name}'
                                 except discord .Forbidden :
-                                    return f'❌ {m.display_name} DM\'lere закрыт'
+                                    return f'❌ ЛС у {m.display_name} закрыты'
                         return '❌ Участник не найден'
                     elif tip =='SESTEN_AT'and len (parts )>1 :
                         m =resolve_member (parts [1 ])
                         if m and m .voice :
                             _run_async (m .move_to (None ))
-                            return f'✅ {m.display_name} sesten atыldы'
-                        return '❌ Участник seste не или не найдено'
+                            return f'✅ {m.display_name} kicked из голоса'
+                        return '❌ Участник не в голосе или не найден'
                     elif tip =='SESE_TAS'and len (parts )>2 :
                         m =resolve_member (parts [1 ])
                         ch =discord .utils .find (lambda c :parts [2 ].lower ()in c .name .lower (),guild .voice_channels )
                         if m and ch :
                             _run_async (m .move_to (ch ))
-                            return f'✅ {m.display_name} → {ch.name} movendы'
-                        return '❌ Участник или channel не найдено'
+                            return f'✅ {m.display_name} → перемещён в {ch.name}'
+                        return '❌ Участник или канал не найден'
                     elif tip =='UST_SESE'and len (parts )>1 :
                     # Юst ses в канал move
                         m =resolve_member (parts [1 ])
                         adim =int (parts [2 ])if len (parts )>2 and parts [2 ].isdigit ()else 1 
                         geri =parts [3 ].lower ()=='geri'if len (parts )>3 else False 
                         if not m or not m .voice :
-                            return '❌ Участник seste не'
+                            return '❌ Участник не в голосе'
                         vcs =sorted (guild .voice_channels ,key =lambda c :c .position )
                         idx =next ((i for i ,c in enumerate (vcs )if c .id ==m .voice .channel .id ),None )
                         if idx is None :return '❌ Канал не найден'
@@ -1845,14 +1845,14 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                             fresh =guild .get_member (m .id )
                             if fresh and fresh .voice :
                                 _run_async (fresh .move_to (orijinal ))
-                            return f'✅ {m.display_name} → {hedef.name} movendы, 3sn после {orijinal.name} geri getirildi'
-                        return f'✅ {m.display_name} → {hedef.name} movendы'
+                            return f'✅ {m.display_name} → перемещён в {hedef.name}, через 3с возвращён в {orijinal.name}'
+                        return f'✅ {m.display_name} → перемещён в {hedef.name}'
                     elif tip =='ALT_SESE'and len (parts )>1 :
                         m =resolve_member (parts [1 ])
                         adim =int (parts [2 ])if len (parts )>2 and parts [2 ].isdigit ()else 1 
                         geri =parts [3 ].lower ()=='geri'if len (parts )>3 else False 
                         if not m or not m .voice :
-                            return '❌ Участник seste не'
+                            return '❌ Участник не в голосе'
                         vcs =sorted (guild .voice_channels ,key =lambda c :c .position )
                         idx =next ((i for i ,c in enumerate (vcs )if c .id ==m .voice .channel .id ),None )
                         if idx is None :return '❌ Канал не найден'
@@ -1866,34 +1866,34 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                             fresh =guild .get_member (m .id )
                             if fresh and fresh .voice :
                                 _run_async (fresh .move_to (orijinal ))
-                            return f'✅ {m.display_name} → {hedef.name} movendы, 3sn после {orijinal.name} geri getirildi'
-                        return f'✅ {m.display_name} → {hedef.name} movendы'
+                            return f'✅ {m.display_name} → перемещён в {hedef.name}, через 3с возвращён в {orijinal.name}'
+                        return f'✅ {m.display_name} → перемещён в {hedef.name}'
                     elif tip =='SUSTUR'and len (parts )>1 :
                         m =resolve_member (parts [1 ])
                         if m :
                             if not m .voice :
-                                return f'❌ {m.display_name} шu an ses в канале не, susturulamaz'
+                                return f'❌ {m.display_name} сейчас не в голосовом канале, нельзя заглушить'
                             _run_async (m .edit (mute =True ))
-                            return f'✅ {m.display_name} susturuldu'
+                            return f'✅ {m.display_name} заглушен'
                         return '❌ Участник не найден'
                     elif tip =='SUSTUR_KALDIR'and len (parts )>1 :
                         m =resolve_member (parts [1 ])
                         if m :
                             if not m .voice :
-                                return f'❌ {m.display_name} шu an ses в канале не'
+                                return f'❌ {m.display_name} сейчас не в голосовом канале'
                             _run_async (m .edit (mute =False ))
-                            return f'✅ {m.display_name} susturma удалено'
+                            return f'✅ с {m.display_name} снято заглушение'
                         return '❌ Участник не найден'
                     elif tip =='KULAKLIK_KAPAT'and len (parts )>1 :
                         m =resolve_member (parts [1 ])
                         if m :
                             _run_async (m .edit (deafen =True ))
-                            return f'✅ {m.display_name} kulaklыгы закрыто'
+                            return f'✅ {m.display_name} — звук отключён (deafen)'
                     elif tip =='KULAKLIK_AC'and len (parts )>1 :
                         m =resolve_member (parts [1 ])
                         if m :
                             _run_async (m .edit (deafen =False ))
-                            return f'✅ {m.display_name} kulaklыгы aчыldы'
+                            return f'✅ {m.display_name} — звук включён'
                     elif tip =='TIMEOUT_KALDIR'and len (parts )>1 :
                         m =resolve_member (parts [1 ])
                         if m :
@@ -1963,7 +1963,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                         r =resolve_role (parts [2 ])
                         if m and r :
                             _run_async (m .remove_roles (r ))
-                            return f'✅ {m.display_name} → {r.name} роль alыndы'
+                            return f'✅ у {m.display_name} снята роль {r.name}'
                     elif tip =='NICK'and len (parts )>2 :
                         m =resolve_member (parts [1 ])
                         if m :
@@ -2892,18 +2892,18 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
 
         def _send ():
             embed =discord .Embed (
-            title ="🎉  РОЗЫГРЫШ BAШLADI!",
+            title ="🎉  РОЗЫГРЫШ НАЧАЛСЯ!",
             color =0x2ECC71 ,
             timestamp =ends_at 
             )
             embed .description =(
             f"**🏆 Награда:** `{prize}`\n\n"
-            "Katыlmak для **🎉 Katыl** butonuna bas!\n"
+            "Чтобы участвовать, нажми кнопку **🎉 Участвовать**!\n"
             f"Giveaway <t:{int(ends_at.timestamp())}:R> sona eriyor."
             )
-            embed .add_field (name ="👥 Katыlыmcы",value =f"0/{winners}",inline =True )
-            embed .add_field (name ="🏆 Kazanan",value =str (winners ),inline =True )
-            embed .add_field (name ="⏰ Bitiш",value =f"<t:{int(ends_at.timestamp())}:F>",inline =True )
+            embed .add_field (name ="👥 Участники",value =f"0/{winners}",inline =True )
+            embed .add_field (name ="🏆 Победителей",value =str (winners ),inline =True )
+            embed .add_field (name ="⏰ Завершение",value =f"<t:{int(ends_at.timestamp())}:F>",inline =True )
             embed .set_footer (text =f"{guild.name} • Giveaway Система")
 
             from cogs .giveaway import GiveawayView 
@@ -3194,14 +3194,14 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                 color =discord .Color (int (color_hex ,16 ))
             except ValueError :
                 color =discord .Color .default ()
-            _run_async (guild .create_role (name =name ,color =color ,reason ='Aether panel tarafыndan oluшturuldu'))
+            _run_async (guild .create_role (name =name ,color =color ,reason ='Создано через панель Aether'))
         try :
             asyncio .run_coroutine_threadsafe (do (),bot .loop ).result (timeout =10 )
             return jsonify ({'success':True })
         except discord .Forbidden :
             return jsonify ({'error':'У меня нет прав создавать роли на этом сервере'}),403 
         except discord .HTTPException as e :
-            return jsonify ({'error':f'Discord hatasы: {e}'}),500 
+            return jsonify ({'error':f'Ошибка Discord: {e}'}),500 
         except Exception as e :
             return jsonify ({'error':str (e )}),500 
 
@@ -3486,9 +3486,12 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         d =request .get_json (silent =True )or {}
         topic =d .get ('topic','Общий duyuru')
         tone =d .get ('tone','resmi')
-        prompt =f"'{topic}' о {tone} bir dille, profesyonel bir Discord сервер duyurusu yaz. Заголовок ve emoji использовать, net ve anlaшыlыr olsun."
+        prompt = (
+            f"Напиши профессиональное объявление для Discord-сервера на тему '{topic}', "
+            f"официальным тоном. Добавь заголовок и эмодзи. До 200 слов."
+        )
         messages =[
-        {"role":"system","content":"Sen Aether Discord сервер для etkileyici duyurular yazan bir asistansыn. Только duyuru metnini yaz."},
+        {"role":"system","content":"Ты — ассистент, пишущий эффектные объявления для Discord-сервера Aether. Пиши только текст объявления, без пояснений."},
         {"role":"user","content":prompt }
         ]
         announcement =_call_text (messages ,max_tokens =600 )
@@ -3516,9 +3519,14 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                 mod_count =sum (len (v )for v in md .get ('case',{}).values ())
             except :
                 pass 
-        prompt =f"Сервер Moderasyon Сводка Информация:\n- Всего запись предупреждение количество: {warn_count}\n- Всего moderasyon vaka (ban/kick/mute vb.) количество: {mod_count}\nLюtfen yёneticiler для краткий, profesyonel ve tavsiye niteliгinde bir неделяlыk moderasyon значение raporu yaz."
+        prompt =(
+        f"Сводная информация о модерации сервера:\n"
+        f"- Всего записанных предупреждений: {warn_count}\n"
+        f"- Всего случаев модерации (ban/kick/mute и т.д.): {mod_count}\n"
+        f"Напиши краткую, профессиональную недельную оценку модерации с рекомендациями для администраторов."
+        )
         messages =[
-        {"role":"system","content":"Sen profesyonel bir moderasyon analistisin. Краткий ve информация raporlar юretirsin."},
+        {"role":"system","content":"Ты — профессиональный аналитик модерации. Составляешь краткие информативные отчёты."},
         {"role":"user","content":prompt }
         ]
         report =_call_text (messages ,max_tokens =700 )
@@ -4027,22 +4035,22 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
             if ch :
                 end_ts =int (datetime .utcnow ().timestamp ())+int (data ['duration'])*60 
                 embed =discord .Embed (
-                title ='🎉 ✨ HARIKA BИR РОЗЫГРЫШ BAШLADI! ✨ 🎉',
+                title ='🎉 ✨ НАЧАЛСЯ ЗАМЕЧАТЕЛЬНЫЙ РОЗЫГРЫШ! ✨ 🎉',
                 description =(
                 f"\n🏆 **НАГРАДА:** `{data['prize']}`\n"
                 "\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                "🎟️ **Katыlmak Для:** aшaгыdaki 🎉 **`Katыl`** Butonuna Клик\n"
+                "🎟️ **Чтобы участвовать:** нажми кнопку 🎉 **«Участвовать»** ниже\n"
                 "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                f"\n⏳ **Bitiш Время:** <t:{end_ts}:R>\n"
-                f"📅 **Tam Время:** <t:{end_ts}:f>\n"
-                "\n✅ Katыlmak OKen **ЮCRETSИZ** ve **ОТКРЫТ**!\n"
-                "🍀 Шanslы ol ve **KAZAN**! 🍀\n"
+                f"\n⏳ **Время завершения:** <t:{end_ts}:R>\n"
+                f"📅 **Точное время:** <t:{end_ts}:f>\n"
+                "\n✅ Участие абсолютно **БЕСПЛАТНО** и **ОТКРЫТО**!\n"
+                "🍀 Испытай удачу и **ВЫИГРАЙ**! 🍀\n"
                 ),
                 color =0xFFD700 
                 )
-                embed .add_field (name ='🏅 Kazanan Количество',value =f'**{data["winners"]} ЧЕЛОВЕК KAZANACAK!** 👑',inline =False )
-                embed .add_field (name ='👥 Шimdiki Katыlыmcы',value =f'**0/{data["winners"]}** 🔥',inline =True )
-                embed .add_field (name ='📊 Oranы',value ='Aчыlыyor...',inline =True )
+                embed .add_field (name ='🏅 Количество победителей',value =f'**{data["winners"]} ЧЕЛОВЕК ВЫИГРАЕТ!** 👑',inline =False )
+                embed .add_field (name ='👥 Текущие участники',value =f'**0/{data["winners"]}** 🔥',inline =True )
+                embed .add_field (name ='📊 Статистика',value ='Открывается...',inline =True )
                 embed .set_thumbnail (url ='https://media.discordapp.net/attachments/1107038411895881788/1110305847399120916/gifty.gif')
                 embed .set_image (url ='https://media.discordapp.net/attachments/1107038411895881788/1110305847399120916/gifty.gif')
                 embed .set_footer (text =f'🎯 Giveaway ID: {gw_id} | Система: Bot Giveaway v2')
@@ -4597,7 +4605,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                 if 'spam'in a or 'automod'in a :
                     spam_count +=1 
 
-                    # Очкиlama hesapla (100'den dюш)
+                    # Расчёт оценки (вычитать из 100)
         score =100 
         score -=min (ban_count *3 ,30 )
         score -=min (kick_count *2 ,20 )
@@ -4606,13 +4614,13 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         score =max (0 ,score )
 
         if score >=80 :
-            label ='Mюkemmel'
+            label ='Отлично'
         elif score >=60 :
-            label ='Иyi'
+            label ='Хорошо'
         elif score >=40 :
-            label ='Центр'
+            label ='Средне'
         else :
-            label ='Kёtю'
+            label ='Плохо'
 
         return jsonify ({
         'score':score ,
@@ -5086,12 +5094,12 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                 title =data .get ('title','🎫  ПОДДЕРЖКА СИСТЕМА'),
                 description =(
                 data .get ('description',
-                "Сервер bir sorunla mы приветствие?\n"
-                "Bir что-то mi sormak istiyorsun?\n\n"
-                "**Клик butona aшaгыdнастройкаak** особый bir поддержка канал создан.\n"
-                "🤖 **AI Asistan** ilk как sana помощник olacak!\n"
-                "Gerekirse ekibimiz devralacak. 💙\n\n"
-                "```yaml\n🤖 AI Поддержка  •  ⚡ Быстрый yanыt  •  🔒 Sekretniy channel\n```"
+                "Возникла проблема на сервере?\n"
+                "Хочешь что-то спросить?\n\n"
+                "**Нажми кнопку ниже** — будет создан твой личный канал поддержки.\n"
+                "🤖 **AI-ассистент** сначала поможет тебе!\n"
+                "При необходимости наша команда подключится. 💙\n\n"
+                "```yaml\n🤖 AI Поддержка  •  ⚡ Быстрый ответ  •  🔒 Приватный канал\n```"
                 )
                 ),
                 color =0x5865F2 
@@ -5377,7 +5385,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         try :
             with open (f ,encoding ='utf-8')as fp :backups =json .load (fp )
         except (json .JSONDecodeError ,ValueError ):
-            return jsonify ({'error':'Backup dosyasы bozuk'})
+            return jsonify ({'error':'Файл бэкапа повреждён'})
         backup =next ((b for b in backups if b .get ('id')==backup_id ),None )
         if not backup :return jsonify ({'error':'Не найдено'})
         buf =io .BytesIO (json .dumps (backup ,indent =2 ,ensure_ascii =False ).encode ())
@@ -5406,17 +5414,17 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         import asyncio ,discord 
         if not bot :return jsonify ({'error':'Bot offline'})
         guild =bot .get_guild (int (guild_id ))
-        if not guild :return jsonify ({'error':'Hedef сервер не найдено'})
+        if not guild :return jsonify ({'error':'Целевой сервер не найден'})
 
-        # JSON dosyasы upload mu yoksa backup_id mi?
+        # Загрузка JSON-файла или backup_id?
         backup_data =None 
         if request .content_type and 'multipart'in request .content_type :
             f =request .files .get ('file')
-            if not f :return jsonify ({'error':'Dosya не найдено'})
+            if not f :return jsonify ({'error':'Файл не найден'})
             try :
                 backup_data =json .loads (f .read ().decode ('utf-8'))
             except Exception :
-                return jsonify ({'error':'Неверный JSON dosyasы'})
+                return jsonify ({'error':'Неверный JSON-файл'})
         else :
             data =request .get_json (silent =True )or {}
             backup_id =data .get ('backup_id')
@@ -5425,7 +5433,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
             try :
                 with open (bf ,encoding ='utf-8')as fp :backups =json .load (fp )
             except Exception :
-                return jsonify ({'error':'Yedek dosyasы bozuk'})
+                return jsonify ({'error':'Файл резервной копии повреждён'})
             backup_data =next ((b for b in backups if b .get ('id')==backup_id ),None )
             if not backup_data :return jsonify ({'error':'Yedek не найдено'})
 
@@ -5511,17 +5519,17 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     @login_required 
     @role_required ('mod')
     def api_user_messages (guild_id ):
-        """Kullanыcыnыn yazdыгы сообщениеlarы message_log dosyasыndan ara.
+        """Поиск сообщений пользователя в файле message_log.
 
         Query params:
-          user_id (zorunlu) — Discord user ID
-          channel_id (opsiyonel) — belirli канал
-          limit (opsiyonel, default 50, max 200) — kaч sonuч
+          user_id (обязательно) — Discord user ID
+          channel_id (опционально) — конкретный канал
+          limit (опционально, default 50, max 200) — число результатов
         """
         try :
             user_id =str (request .args .get ('user_id','')).strip ()
             if not user_id .isdigit ()or not (17 <=len (user_id )<=22 ):
-                return jsonify ({'error':'Geчersiz user_id'}),400 
+                return jsonify ({'error':'Неверный user_id'}),400 
             channel_id =str (request .args .get ('channel_id','')).strip ()or None 
             try :
                 limit =int (request .args .get ('limit',50 ))
@@ -5557,9 +5565,9 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     @login_required 
     @role_required ('admin')
     def api_restore_upload ():
-        """Upload edilen JSON'dan backup_data вернуть (ёnizleme для)"""
+        """Вернуть backup_data из загруженного JSON (для предпросмотра)"""
         f =request .files .get ('file')
-        if not f :return jsonify ({'error':'Dosya yok'})
+        if not f :return jsonify ({'error':'Файл отсутствует'})
         try :
             data =json .loads (f .read ().decode ('utf-8'))
             return jsonify ({
