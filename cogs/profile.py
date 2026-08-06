@@ -252,15 +252,19 @@ rank_messages ,rank_voice ,rank_balance ):
     PAD =30 
 
     # ─── Top brand strip ─────────────────────────────────────────────
-    f_brand =_f (bold =True ,sz =13 )
+    f_brand =_f (bold =True ,sz =14 )
     f_brand_sub =_f (bold =False ,sz =11 )
-    d .text ((PAD ,22 ),"AETHER",font =f_brand ,fill =BLACK )
-    bb =d .textbbox ((PAD ,22 ),"AETHER",font =f_brand )
-    d .text ((bb [2 ]+8 ,25 ),"PROFILE",font =f_brand_sub ,fill =GRAY )
+    d .text ((PAD ,18 ),"AETHER",font =f_brand ,fill =BLACK )
+    bb =d .textbbox ((PAD ,18 ),"AETHER",font =f_brand )
+    # подпись справа от логотипа на ОДНОЙ базовой линии — чтобы ничего не наезжало
+    pbb =d .textbbox ((0 ,0 ),"PROFILE",font =f_brand_sub )
+    sub_y =bb [3 ]-(pbb [3 ]-pbb [1 ])-pbb [1 ]
+    d .text ((bb [2 ]+8 ,sub_y ),"PROFILE",font =f_brand_sub ,fill =GRAY )
     tag =f"AVG RANK #{avg_rank}"
     tb =d .textbbox ((0 ,0 ),tag ,font =f_brand_sub )
-    d .text ((W -PAD -(tb [2 ]-tb [0 ]),26 ),tag ,font =f_brand_sub ,fill =_rank_color (avg_rank )[:3 ])
-    d .line ([(PAD ,50 ),(W -PAD ,50 )],fill =BLACK ,width =2 )
+    d .text ((W -PAD -(tb [2 ]-tb [0 ])-tb [0 ],sub_y ),tag ,font =f_brand_sub ,fill =_rank_color (avg_rank )[:3 ])
+    line_y =bb [3 ]+12 
+    d .line ([(PAD ,line_y ),(W -PAD ,line_y )],fill =BLACK ,width =2 )
 
     # ─── LEFT COLUMN — avatar card ───────────────────────────────────
     lx =PAD 
@@ -279,15 +283,24 @@ rank_messages ,rank_voice ,rank_balance ):
     img .alpha_composite (bl .transpose (Image .ROTATE_180 ),(lx +av_size -bsz +10 ,ly +av_size -bsz +10 ))
     d =ImageDraw .Draw (img )
 
-    # Nickname
-    f_nick =_f (bold =True ,sz =22 )
+    # Ник: ужимаем по шрифту, при нехватке места — обрезаем с «…»,
+    # чтобы не уползал под правые панели и за край карточки
     name_y =ly +av_size +26 
+    max_nw =av_size +20 
+    f_nick =_f (bold =True ,sz =22 )
     nick_up =nickname .upper ()
     nb =d .textbbox ((0 ,0 ),nick_up ,font =f_nick )
-    while nb [2 ]-nb [0 ]>av_size +20 and f_nick .size >13 :
+    while nb [2 ]-nb [0 ]>max_nw and f_nick .size >11 :
         f_nick =_f (bold =True ,sz =f_nick .size -1 )
         nb =d .textbbox ((0 ,0 ),nick_up ,font =f_nick )
-    nx =lx +(av_size -(nb [2 ]-nb [0 ]))/2 -nb [0 ]
+    cut =nick_up 
+    while nb [2 ]-nb [0 ]>max_nw and len (cut )>4 :
+        cut =cut [:-1 ]
+        nb =d .textbbox ((0 ,0 ),cut .rstrip ()+'…',font =f_nick )
+    if len (cut )<len (nick_up ):
+        nick_up =cut .rstrip ()+'…'
+    nx =int (lx +(av_size -(nb [2 ]-nb [0 ]))/2 -nb [0 ])
+    nx =max (lx ,min (nx ,lx +av_size +20 -(nb [2 ]-nb [0 ])))
     d .text ((nx ,name_y ),nick_up ,font =f_nick ,fill =BLACK )
 
     # red underline accent
@@ -355,7 +368,7 @@ rank_messages ,rank_voice ,rank_balance ):
         px =bar_x +fill_px -pct_w -10 
         pct_color =WHITE 
     else :
-    # заметок enough room — draw just to the right of the bar in black
+    # места внутри полоски мало — рисуем процент справа от неё, чёрным
         px =bar_x +barw +10 
         pct_color =BLACK 
     d .text ((px -pb [0 ],bar_y +(barh -(pb [3 ]-pb [1 ]))/2 -pb [1 ]),pct_txt ,font =f_pct ,fill =pct_color )
