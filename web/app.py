@@ -332,7 +332,7 @@ def _get_role_from_discord (discord_id :str )->str :
         if not member :
             return 'uye'
 
-            # 1. Rucnoy eшleme den role_map.json
+            # 1. Ручное сопоставление из role_map.json
         best_mapped ='uye'
         for discord_role in member .roles :
             mapped =DISCORD_ROLE_MAP .get (str (discord_role .id ))
@@ -561,7 +561,7 @@ def _require_2fa (username ,roles ):
                     user =await bot_instance .fetch_user (int (discord_id ))
                     embed =discord .Embed (
                     title =' Panel Вход Проверка',
-                    description =f'Проверка kodun: **`{code}`**\n\nBu kod 5 minutes geчerlidir.\nEгer sen вход yapmadыysan bu сообщение dikkate alma.',
+                    description =f'Ваш код проверки: **`{code}`**\n\nКод действует 5 минут.\nЕсли вы не входили в панель — проигнорируйте это сообщение.',
                     color =0xDC143C 
                     )
                     await user .send (embed =embed )
@@ -654,7 +654,7 @@ def register ():
         member_info =asyncio .run_coroutine_threadsafe (find_member (),bot_instance .loop ).result (timeout =15 )
 
         if not member_info :
-            return render_template ('register.html',error ='Bu Discord ID не найдено! Discord ID\'nin верно olduгundan emin ol.',step =1 )
+            return render_template ('register.html',error ='Этот Discord ID не найден! Убедитесь, что Discord ID верный.',step =1 )
 
         members_file ='data/members.json'
         if os .path .exists (members_file ):
@@ -676,19 +676,19 @@ def register ():
                 timestamp =datetime .utcnow ()
                 )
                 e .description =(
-                "```ansi\n\u001b[1;33m КТО ПРОВЕРКА GEREKLИ \u001b[0m\n```\n"
+                "```ansi\n\u001b[1;33m ТРЕБУЕТСЯ ПРОВЕРКА КОДА \u001b[0m\n```\n"
                 "\n\n"
                 f"Merhaba **{member_info['display_name']}**! \n\n"
-                "**Aether Panel**'e запись olmak для aшaгыdaki\n"
-                "проверка kodunu запись sayfasыna gir:\n\n"
+                "Чтобы зарегистрироваться в **Aether Panel**,\n"
+                "введите код проверки на странице регистрации:\n\n"
                 f"```fix\n{code}\n```\n\n"
                 ""
                 )
-                e .add_field (name ="⏱ Geчerlilik",value ="```10 minutes```",inline =True )
+                e .add_field (name ="⏱ Действительность",value ="```10 минут```",inline =True )
                 e .add_field (name =" Безопасность",value ="```Tek использовать```",inline =True )
                 e .add_field (
                 name =" Warning",
-                value ="*Если sen запись olmadыysan bu сообщение dikkate alma ve кто paylaшma.*",
+                value ="*Если вы не регистрировались — игнорируйте это сообщение и никому не передавайте код.*",
                 inline =False 
                 )
                 e .set_footer (text ="Aether Panel • Доверие Запись Система")
@@ -699,7 +699,7 @@ def register ():
         asyncio .run_coroutine_threadsafe (send_dm (),bot_instance .loop )
 
         return render_template ('register.html',step =2 ,discord_id =discord_id ,password =password ,
-        info =f'{member_info["display_name"]} adыna Discord DM с 6 haneli kod отправлено.')
+        info =f'На Discord DM пользователя {member_info["display_name"]} отправлен 6-значный код.')
 
     return render_template ('register.html',step =1 )
 
@@ -767,7 +767,7 @@ def api_add_member ():
     avatar =data .get ('avatar','')
 
     if not discord_id or not password or len (password )<6 :
-        return jsonify ({'error':'Неверный veriler'})
+        return jsonify ({'error':'Неверные данные'})
 
     members_file ='data/members.json'
     os .makedirs ('data',exist_ok =True )
@@ -1266,7 +1266,7 @@ def api_ban ():
             return user .name 
 
         name =asyncio .run_coroutine_threadsafe (do (),bot_instance .loop ).result (timeout =10 )
-        return jsonify ({'success':True ,'message':f'{name} banlandы'})
+        return jsonify ({'success':True ,'message':f'{name} забанен'})
     except Exception as e :
         return jsonify ({'error':str (e )})
 
@@ -1295,7 +1295,7 @@ def api_kick ():
             return member .name 
 
         name =asyncio .run_coroutine_threadsafe (do (),bot_instance .loop ).result (timeout =10 )
-        return jsonify ({'success':True ,'message':f'{name} atыldы'})
+        return jsonify ({'success':True ,'message':f'{name} кикнут'})
     except Exception as e :
         return jsonify ({'error':str (e )})
 
@@ -1410,20 +1410,20 @@ def api_execute_command ():
             elif command =='kick':
                 member =guild .get_member (int (data .get ('user_id')))
                 if not member :
-                    raise Exception ('Участник на сервере не найдено')
+                    raise Exception ('Участник не найден на сервере')
                 if not guild .me .guild_permissions .kick_members :
-                    raise Exception ('Botun Kick администратор нет')
+                    raise Exception ('У бота нет права Kick')
                 if member .top_role >=guild .me .top_role :
-                    raise Exception ('Hedef usernыn роль bottan высокий')
-                await member .kick (reason =data .get ('reason','Kick с web-panel'))
+                    raise Exception ('Роль целевого пользователя выше роли бота')
+                await member .kick (reason =data .get ('reason','Кик через веб-панель'))
             elif command =='timeout':
                 member =guild .get_member (int (data .get ('user_id')))
                 if not member :
-                    raise Exception ('Участник на сервере не найдено')
+                    raise Exception ('Участник не найден на сервере')
                 if not guild .me .guild_permissions .moderate_members :
-                    raise Exception ('Botun Mute (Moderate Members) администратор нет')
+                    raise Exception ('У бота нет права Mute (Moderate Members)')
                 if member .top_role >=guild .me .top_role :
-                    raise Exception ('Hedef usernыn роль bottan высокий')
+                    raise Exception ('Роль целевого пользователя выше роли бота')
                 duration =int (data .get ('duration',60 ))
                 from datetime import timedelta as _td 
                 await member .timeout (discord .utils .utcnow ()+_td (minutes =duration ),reason =data .get ('reason'))
@@ -1463,7 +1463,7 @@ def api_execute_command ():
                         dm_msg =dm_msg .replace ('{mod}',session .get ('username','?'))
                         dm_msg =dm_msg .replace ('{сервер}',guild .name )
                         try :
-                            e_dm =discord .Embed (title =' Siz aldыnыz предупреждение',description =dm_msg ,color =0xc8922a )
+                            e_dm =discord .Embed (title =' Вы получили предупреждение',description =dm_msg ,color =0xc8922a )
                             e_dm .set_footer (text =guild .name )
                             await member .send (embed =e_dm )
                         except Exception :
@@ -1471,12 +1471,12 @@ def api_execute_command ():
             elif command =='jail':
                 member =guild .get_member (int (data .get ('user_id')))
                 if not member :
-                    raise Exception ('Участник на сервере не найдено')
+                    raise Exception ('Участник не найден на сервере')
                     # Jail роли найти
                 jail_role =discord .utils .get (guild .roles ,name ='Jail')
                 if not jail_role :
-                    raise Exception ('Jail роль не найдено. До "Jail Kur" команду чalышtыr.')
-                    # Текущий роли сохранить, jail роль ver
+                    raise Exception ('Роль Jail не найдена. Сначала создайте роль Jail или настройте /jail-setup.')
+                    # Сохранить текущие роли, выдать jail-роль
                 jail_data_file =f'data/jail_{guild.id}.json'
                 jail_data ={}
                 if os .path .exists (jail_data_file ):
@@ -1497,14 +1497,14 @@ def api_execute_command ():
                 await member .add_roles (jail_role ,reason =data .get ('reason','Djeyl с web-panel'))
                 # DM отправить
                 try :
-                    e_dm =discord .Embed (title =' Jail Наказание',description =f'**{guild.name}** сервер jail наказание aldыnыz.\n**Причина:** {data.get("reason", "Не belirtildi")}',color =0xe74c3c )
+                    e_dm =discord .Embed (title =' Jail-наказание',description =f'Вы получили jail-наказание на сервере **{guild.name}**.\n**Причина:** {data.get("reason", "Не указана")}',color =0xe74c3c )
                     await member .send (embed =e_dm )
                 except Exception :
                     pass 
             elif command =='unjail':
                 member =guild .get_member (int (data .get ('user_id')))
                 if not member :
-                    raise Exception ('Участник на сервере не найдено')
+                    raise Exception ('Участник не найден на сервере')
                 jail_role =discord .utils .get (guild .roles ,name ='Jail')
                 jail_data_file =f'data/jail_{guild.id}.json'
                 if os .path .exists (jail_data_file ):
@@ -1526,7 +1526,7 @@ def api_execute_command ():
             elif command =='untimeout':
                 member =guild .get_member (int (data .get ('user_id')))
                 if not member :
-                    raise Exception ('Участник на сервере не найдено')
+                    raise Exception ('Участник не найден на сервере')
                 await member .timeout (None ,reason ='Razmut с web-panel')
             elif command =='unban':
                 uid =data .get ('user_id')
@@ -1562,7 +1562,7 @@ def api_execute_command ():
                 e .description =(
                 "```ansi\n\u001b[1;34m Aether ПОДДЕРЖКА СИСТЕМА \u001b[0m\n```\n"
                 f"{_divider()}\n\n"
-                "Bir sorunla mы приветствие? Клик butona aшaгыda!\n\n"
+                "Возникла проблема? Нажми кнопку ниже!\n\n"
                 f"{_divider()}"
                 )
                 e .set_footer (text =f"{guild.name} • Поддержка Система",icon_url =guild .icon .url if guild .icon else None )
@@ -1623,7 +1623,7 @@ def api_execute_command ():
             return jsonify ({'success':True ,'message':'Jail система kuruldu! Kategori, channel ve роли создано.'})
         return jsonify ({'success':True ,'message':'Действие успешно применено.'})
     except Exception as e :
-        print (f"Команда чalышtыrma Ошибки: {e}")
+        print (f"Ошибка выполнения команды: {e}")
         import traceback 
         traceback .print_exc ()
         return jsonify ({'error':str (e )})
@@ -1743,28 +1743,28 @@ def api_review_staff_app (app_id ):
                 user =await bot_instance .fetch_user (int (app_data ['user_id']))
                 if action =='approve':
                     embed =discord .Embed (
-                    title =" Заявка подтвердитьndы!",
-                    description ="Tebrikler! Администратор заявка incelendi ve **подтвердитьndы**.\nEn краткий длительность с администрацией iletiшime geчilecek.",
+                    title =" Заявка одобрена!",
+                    description ="Поздравляем! Ваша заявка в администрацию рассмотрена и **одобрена**.\nАдминистрация свяжется с вами в ближайшее время.",
                     color =0x2ecc71 
                     )
-                    embed .add_field (name =" Иnceleyen",value =session .get ('username','?'),inline =True )
+                    embed .add_field (name =" Рассмотрел",value =session .get ('username','?'),inline =True )
                     embed .add_field (name =" Заявка ID",value =f"`{app_id}`",inline =True )
                     if note :
                         embed .add_field (name =" Not",value =note ,inline =False )
                     embed .set_thumbnail (url =bot_instance .user .display_avatar .url )
-                    embed .set_footer (text ="Aether Panel • Заявка Система",icon_url =bot_instance .user .display_avatar .url )
+                    embed .set_footer (text ="Aether Panel • Система заявок",icon_url =bot_instance .user .display_avatar .url )
                     embed .timestamp =datetime .utcnow ()
                 else :
                     embed =discord .Embed (
-                    title =" Заявка отклонено",
-                    description ="Юzgюnюz, администратор заявка bu sefer принять edilmedi.\nDaha после tekrar baшvurabilirsin.",
+                    title =" Заявка отклонена",
+                    description ="К сожалению, ваша заявка в администрацию на этот раз не принята.\nВы можете подать её снова позже.",
                     color =0xe74c3c 
                     )
-                    embed .add_field (name =" Иnceleyen",value =session .get ('username','?'),inline =True )
+                    embed .add_field (name =" Рассмотрел",value =session .get ('username','?'),inline =True )
                     embed .add_field (name =" Заявка ID",value =f"`{app_id}`",inline =True )
                     embed .add_field (name =" Red Причина",value =note if note else "Не belirtildi",inline =False )
                     embed .set_thumbnail (url =bot_instance .user .display_avatar .url )
-                    embed .set_footer (text ="Aether Panel • Заявка Система",icon_url =bot_instance .user .display_avatar .url )
+                    embed .set_footer (text ="Aether Panel • Система заявок",icon_url =bot_instance .user .display_avatar .url )
                     embed .timestamp =datetime .utcnow ()
                 await user .send (embed =embed )
             except Exception as e :
@@ -1857,9 +1857,9 @@ def api_change_password ():
             os .makedirs ('data',exist_ok =True )
             _store .atomic_write_json (_OWNER_CRED_PATH ,{'user':target ,'password_hash':USERS [target ]['password_hash']})
         except Exception as e :
-            print (f'[UYARI] Owner parolası kalıcı kaydedilemedi: {e}')
-        return jsonify ({'success':True ,'message':f'{target} parolasi обновлено (kalıcı olarak kaydedildi)'})
-        # members.json'da ara
+            print (f'[ВНИМАНИЕ] Не удалось сохранить пароль владельца постоянно: {e}')
+        return jsonify ({'success':True ,'message':f'Пароль {target} обновлён (сохранён постоянно)'})
+        # поиск в members.json
     members_file ='data/members.json'
     if os .path .exists (members_file ):
         with open (members_file ,'r',encoding ='utf-8')as f :
@@ -1897,7 +1897,7 @@ def api_check_member ():
             return jsonify ({'error':'Сервер не найдено'}),404 
         member =guild .get_member (int (user_id ))
         if not member :
-            return jsonify ({'found':False ,'error':'Bu на сервере участник deгilsin! Заявка yapamazsыn.'})
+            return jsonify ({'found':False ,'error':'Вы не участник этого сервера! Не можете подать заявку.'})
         return jsonify ({
         'found':True ,
         'id':str (member .id ),
@@ -1987,9 +1987,9 @@ def api_public_apply ():
                 timestamp =datetime .utcnow ()
                 )
                 embed .add_field (name =" Пользователь",value =f"`{data['discord_name']}` (ID: `{uid}`)",inline =True )
-                embed .add_field (name =" Yaш",value =data ['yas'],inline =True )
+                embed .add_field (name =" Возраст",value =data ['yas'],inline =True )
                 embed .add_field (name ="⏰ Активен",value =data ['активен'],inline =True )
-                embed .add_field (name =" Tecrюbe",value =f"```{data['tecrube']}```",inline =False )
+                embed .add_field (name =" Опыт",value =f"```{data['tecrube']}```",inline =False )
                 embed .add_field (name =" Почему Администратор?",value =f"```{data['почему']}```",inline =False )
                 if data .get ('ekstra'):
                     embed .add_field (name =" Ekstra",value =f"```{data['ekstra']}```",inline =False )
@@ -2014,7 +2014,7 @@ register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD_ID 
 @login_required 
 @role_required ('admin')
 def api_get_role_map ():
-    """Al eшleme роль + liste роль сервер"""
+    """Получить сопоставление ролей + список ролей сервера"""
     guild_roles =[]
     if bot_instance :
         gid =MAIN_GUILD_ID or (str (bot_instance .guilds [0 ].id )if bot_instance .guilds else None )
@@ -2040,8 +2040,8 @@ def api_get_role_map ():
 @login_required 
 @role_required ('admin')
 def api_set_role_map ():
-    """Добавить/izmenit eшleme роли.
-    panel_role: 'uye' | 'mod' | 'admin' | 'owner'  (uye = снять eшleme, авто-определение)
+    """Добавить/изменить сопоставление роли.
+    panel_role: 'uye' | 'mod' | 'admin' | 'owner'  (uye = снять сопоставление, авто-определение)
     """
     data =request .get_json (silent =True )or {}
     role_id =str (data .get ('role_id','')).strip ()
@@ -2060,7 +2060,7 @@ def api_set_role_map ():
 @login_required 
 @role_required ('admin')
 def api_delete_role_map (role_id ):
-    """Удалить eшleme роли"""
+    """Удалить сопоставление роли"""
     if role_id in DISCORD_ROLE_MAP :
         del DISCORD_ROLE_MAP [role_id ]
         _save_role_map ()
@@ -2250,7 +2250,7 @@ def api_discord_check ():
         async def send_pin ():
             u =await bot_instance .fetch_user (int (discord_id ))
             embed =discord .Embed (title ='Aether — Код авторизации',color =0xc8922a ,timestamp =datetime .utcnow ())
-            embed .description =f"Hello **{member_info['display_name']}**!\n\nВаш PIN-код для входа в панель:\n\n```fix\n{code}\n```\nДействителен в течение 5 минут."
+            embed .description =f"Здравствуйте, **{member_info['display_name']}**!\n\nВаш PIN-код для входа в панель:\n\n```fix\n{code}\n```\nДействителен в течение 5 минут."
             embed .set_footer (text ="Aether Panel")
             await u .send (embed =embed )
         asyncio .run_coroutine_threadsafe (send_pin (),bot_instance .loop ).result (timeout =10 )
@@ -2526,7 +2526,7 @@ VOICE_SECRET =os .getenv ('VOICE_SECRET','Aether-voice-2024')
 
 @app .route ('/api/voice-command',methods =['POST'])
 def api_voice_command ():
-    """voice_listener.py'den gelen sesli команды iшle"""
+    """Обработать голосовые команды от voice_listener.py"""
     data =request .get_json (silent =True )or {}
     if not data or data .get ('secret')!=VOICE_SECRET :
         return jsonify ({'error':'Unauthorized'}),401 
@@ -2596,14 +2596,14 @@ def api_forgot_password ():
 
     # Bot с DM отправить
     if not bot_instance :
-        return jsonify ({'error':'Bot шu an offline, более после tekrar dene'})
+        return jsonify ({'error':'Сейчас бот офлайн, попробуйте позже'})
 
     async def send_dm ():
         user =await bot_instance .fetch_user (int (discord_id ))
         await user .send (
-        f" **Parola Sыfыrlama Kodun:** `{code}`\n"
-        "Bu kod 5 minutes geчerlidir. Panelde bu kodu girerek parolani sыfыrlayabilirsin.\n"
-        "Если bu желание sen yapmadыysan bu сообщение игнорировать."
+        f" **Ваш код сброса пароля:** `{code}`\n"
+        "Этот код действует 5 минут. Введите его в панели, чтобы сбросить пароль.\n"
+        "Если вы не запрашивали сброс — проигнорируйте это сообщение."
         )
     try :
         asyncio .run_coroutine_threadsafe (send_dm (),bot_instance .loop ).result (timeout =10 )
@@ -2630,7 +2630,7 @@ def api_reset_password ():
         return jsonify ({'error':'Сначала запросите код'})
     if _time .time ()>entry ['expires']:
         del _reset_codes [discord_id ]
-        return jsonify ({'error':'Kodun длительность dolmuш, tekrar talep et'})
+        return jsonify ({'error':'Срок действия кода истёк, запросите новый'})
     if entry ['code']!=code :
         return jsonify ({'error':'Неверный код'})
 
