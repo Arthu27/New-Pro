@@ -534,10 +534,11 @@ async def on_ready():
 
 async def load_cogs():
     SKIP_COGS = {
-        # Cog değil, yardımcı modüller (başka dosyalardan import edilir)
+        # Не коги, а вспомогательные модули (импортируются другими файлами)
         "embed_utils.py", "__init__.py",
         "_card_style.py",
         "leveling_engagement.py",
+        "icons.py",
     }
     
     try:
