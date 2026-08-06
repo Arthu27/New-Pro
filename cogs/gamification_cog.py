@@ -1,6 +1,6 @@
 """
 Gamification Cog
-Gamification система cog'u
+Ког системы геймификации
 """
 import discord 
 from discord .ext import commands 
@@ -14,7 +14,7 @@ log =get_logger ("gamification_cog")
 
 
 class GamificationCog (commands .Cog ):
-    """Gamification система cog'u"""
+    """Ког системы геймификации"""
 
     def __init__ (self ,bot ):
         self .bot =bot 
@@ -27,17 +27,17 @@ class GamificationCog (commands .Cog ):
         target_user =user or interaction .user 
 
         # Получить очки
-        points =points_system .get_points (target_user .id )
+        points =points_system .get_points (str (target_user .id ))
 
         # Получить уровень
-        level =level_system .get_level (target_user .id )
+        level =level_system .get_level (str (target_user .id ))
 
         # Получить значки
-        badges =badge_system .get_user_badges (target_user .id )
+        badges =badge_system .get_user_badges (str (target_user .id ))
 
-        # Embed создать
+        # Создать embed
         embed =discord .Embed (
-        title =f" {target_user.display_name}'s Profile",
+        title =f"Профиль — {target_user.display_name}",
         color =discord .Color .gold (),
         timestamp =datetime .now ()
         )
@@ -48,7 +48,7 @@ class GamificationCog (commands .Cog ):
         embed .add_field (name =" Уровень",value =f"{level['level']} - {level['name']}",inline =True )
         embed .add_field (name =" Значки",value =str (len (badges )),inline =True )
 
-        # Значок listesi
+        # Список значков
         if badges :
             badge_list ="\n".join ([f"• {badge['name']}"for badge in badges [:5 ]])
             embed .add_field (name ="Значки",value =badge_list ,inline =False )
@@ -77,14 +77,14 @@ class GamificationCog (commands .Cog ):
             )
             return 
 
-            # Embed создать
+            # Создать embed
         embed =discord .Embed (
         title =title ,
         color =discord .Color .gold (),
         timestamp =datetime .now ()
         )
 
-        # Lider listesi
+        # Список лидеров
         for i ,leader in enumerate (leaders ,1 ):
             medal =""if i ==1 else ""if i ==2 else ""if i ==3 else f"{i}."
 
@@ -92,7 +92,7 @@ class GamificationCog (commands .Cog ):
             user_name =user .display_name if user else f"User {leader['user_id']}"
 
             if type =='points':
-                value =f"{leader['points']:,} очки"
+                value =f"{leader['points']:,} очков"
             elif type =='badges':
                 value =f"Значков: {leader['badges']}"
             else :
@@ -114,7 +114,7 @@ class GamificationCog (commands .Cog ):
         target_user =user or interaction .user 
 
         # Получить значки
-        badges =badge_system .get_user_badges (target_user .id )
+        badges =badge_system .get_user_badges (str (target_user .id ))
 
         if not badges :
             await interaction .response .send_message (
@@ -123,15 +123,15 @@ class GamificationCog (commands .Cog ):
             )
             return 
 
-            # Embed создать
+            # Создать embed
         embed =discord .Embed (
-        title =f" {target_user.display_name}'s Badges",
+        title =f"Значки — {target_user.display_name}",
         description =f"Всего значков: {len(badges)}",
         color =discord .Color .gold (),
         timestamp =datetime .now ()
         )
 
-        # Значок listesi
+        # Список значков
         for badge in badges [:10 ]:
             embed .add_field (
             name =f"{badge['name']}",
@@ -144,8 +144,8 @@ class GamificationCog (commands .Cog ):
     @app_commands .command (name ='daily',description ='Получить ежедневную награду')
     async def daily (self ,interaction :discord .Interaction ):
         """Получить ежедневную награду"""
-        # Gюnlюk ёdюl проверкаю
-        can_claim ,time_left =points_system .can_claim_daily (interaction .user .id )
+        # Проверка ежедневной награды
+        can_claim ,time_left =points_system .can_claim_daily (str (interaction .user .id ))
 
         if not can_claim :
             hours =int (time_left .total_seconds ()/3600 )
@@ -157,10 +157,10 @@ class GamificationCog (commands .Cog ):
             )
             return 
 
-            # Gюnlюk ёdюl ver
-        points =points_system .claim_daily (interaction .user .id )
+            # Выдать ежедневную награду
+        points =points_system .claim_daily (str (interaction .user .id ))
 
-        # Embed создать
+        # Создать embed
         embed =discord .Embed (
         title =" 🎁 Ежедневная награда",
         description =f"**Получено очков:** {points}\n\nВозвращайтесь завтра!",
@@ -176,17 +176,17 @@ class GamificationCog (commands .Cog ):
         from services .gamification import streak_system 
 
         # Информация о серии
-        streak_info =streak_system .get_streak (interaction .user .id )
+        streak_info =streak_system .get_streak (str (interaction .user .id ))
 
-        # Embed создать
+        # Создать embed
         embed =discord .Embed (
-        title =" Seri Bilgileri",
+        title ="Информация о серии",
         color =discord .Color .orange (),
         timestamp =datetime .now ()
         )
 
-        embed .add_field (name =" Mevcut Seri",value =f"{streak_info['current_streak']} дн.",inline =True )
-        embed .add_field (name =" En Длинный Seri",value =f"{streak_info['longest_streak']} дн.",inline =True )
+        embed .add_field (name ="Текущая серия",value =f"{streak_info['current_streak']} дн.",inline =True )
+        embed .add_field (name ="Самая длинная серия",value =f"{streak_info['longest_streak']} дн.",inline =True )
 
         await interaction .response .send_message (embed =embed )
 
@@ -196,12 +196,14 @@ class GamificationCog (commands .Cog ):
         if message .author .bot :
             return 
 
-            # XP ver
-        xp_gained =points_system .add_xp (message .author .id ,1 )
+            # Начислить очки за сообщение
+        uid =str (message .author .id )
+        old_level =level_system .get_level (uid )['level']
+        points_system .add_points (uid ,1 ,'message')
+        level =level_system .get_level (uid )
 
         # Проверка повышения уровня
-        if xp_gained :
-            level =level_system .get_level (message .author .id )
+        if level ['level']>old_level :
 
             # Уведомление о повышении уровня
             embed =discord .Embed (
@@ -217,7 +219,7 @@ class GamificationCog (commands .Cog ):
     @commands .Cog .listener ()
     async def on_ready (self ):
         """Бот готов"""
-        log .info ("GamificationCog loaded")
+        log .info ("Ког геймификации загружен")
 
 
 async def setup (bot ):
