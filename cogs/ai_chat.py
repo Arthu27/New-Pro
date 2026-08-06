@@ -1000,10 +1000,10 @@ class AIChat (commands .Cog ):
             return True 
 
             # AFK удалить — до контроль et (закрыть/удалить varsa AFK aчma)
-        afk_kapat_triggers =['dёndюm','geldim','uyandыm','afk удалить','afk закрыть',
+        afk_off_triggers =['dёndюm','geldim','uyandыm','afk удалить','afk закрыть',
         'afk удалить','afk закрыть','afk modunu закрыть','afk modu закрыть',
         'afk bitir','afk удалить','afk отмена']
-        if any (t in cl for t in afk_kapat_triggers ):
+        if any (t in cl for t in afk_off_triggers ):
             afk_cog =self .bot .get_cog ('AFK')
             for guild in self .bot .guilds :
                 member =guild .get_member (OWNER_ID )
@@ -1027,9 +1027,9 @@ class AIChat (commands .Cog ):
             return True 
 
             # AFK aч — "закрыть" или "удалить" geчiyorsa tetikleme
-        afk_ac_triggers =['afk','uykum есть','uyuyacaгыm','gidiyorum','yokum']
+        afk_on_triggers =['afk','uykum есть','uyuyacaгыm','gidiyorum','yokum']
         afk_block =['закрыть','удалить','удалить','bitir','удалить','отмена','modunu','modu']
-        if any (t in cl for t in afk_ac_triggers )and not any (e in cl for e in afk_block ):
+        if any (t in cl for t in afk_on_triggers )and not any (e in cl for e in afk_block ):
             reason =text 
             for t in ['afk at','afk ol','afk yap','afk','beni']:
                 reason =reason .replace (t ,'').strip ()
@@ -1099,9 +1099,9 @@ class AIChat (commands .Cog ):
 
             #  ЗАДАЧА ZИNCИRИ 
             # "X kiшiyi izle, мат ederse ban at" gibi условный задачи
-        gorev_add =['задача add','gorevi add','izle ve','takip et','задача kur','gorev kur',
+        task_add_words =['задача add','gorevi add','izle ve','takip et','задача kur','gorev kur',
         'ederse ban','ederse kick','ederse timeout','yaparsa ban','yaparsa kick']
-        if any (t in cn for t in [self ._norm (x )for x in gorev_add ]):
+        if any (t in cn for t in [self ._norm (x )for x in task_add_words ]):
             target_id =self ._extract_target (text )
             desc =text .strip ()
             task ={'id':len (_active_tasks )+1 ,'desc':desc ,
@@ -1114,9 +1114,9 @@ class AIChat (commands .Cog ):
             )
             return True 
 
-        gorev_listele =['задача показать','gorevi показать','активен задачи','активен gorevler',
+        task_list_words =['задача показать','gorevi показать','активен задачи','активен gorevler',
         'задача список','gorev список']
-        if any (t in cn for t in [self ._norm (x )for x in gorev_listele ]):
+        if any (t in cn for t in [self ._norm (x )for x in task_list_words ]):
             if not _active_tasks :
                 await message .channel .send (' Активен задача нет.')
             else :
@@ -1124,8 +1124,8 @@ class AIChat (commands .Cog ):
                 await message .channel .send (' **Активен Задачи:**\n'+'\n'.join (lines ))
             return True 
 
-        gorev_sil =['задача удалить','gorevi удалить','задача удалить','gorevi удалить','задача отмена']
-        if any (t in cn for t in [self ._norm (x )for x in gorev_sil ]):
+        task_delete_words =['задача удалить','gorevi удалить','задача удалить','gorevi удалить','задача отмена']
+        if any (t in cn for t in [self ._norm (x )for x in task_delete_words ]):
             import re as _re 
             num =_re .search (r'\d+',text )
             if num :
@@ -1171,7 +1171,7 @@ class AIChat (commands .Cog ):
             # Вкл/выкл уведомлений модерации
         mod_notify_ac =['mod уведомление aч','mod уведомление открыть','наказание уведомление aч','наказание уведомление открыть',
         'mod notify aч','mod notify открыть','уведомление aч','уведомление открыть']
-        mod_notify_kapat =['mod уведомление закрыть','наказание уведомление закрыть','mod notify закрыть','уведомление закрыть']
+        mod_notify_off =['mod уведомление закрыть','наказание уведомление закрыть','mod notify закрыть','уведомление закрыть']
         if any (t in cn for t in [self ._norm (x )for x in mod_notify_ac ]):
             import json as _j 
             os .makedirs ('data',exist_ok =True )
@@ -1179,7 +1179,7 @@ class AIChat (commands .Cog ):
                 _j .dump ({'enabled':True },f )
             await message .channel .send (' Уведомления модератора включены. Вы будете получать ЛС о действиях.n.')
             return True 
-        if any (t in cn for t in [self ._norm (x )for x in mod_notify_kapat ]):
+        if any (t in cn for t in [self ._norm (x )for x in mod_notify_off ]):
             import json as _j 
             os .makedirs ('data',exist_ok =True )
             with open ('data/mod_notify.json','w',encoding ='utf-8')as f :

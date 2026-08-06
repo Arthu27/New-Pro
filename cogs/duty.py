@@ -377,7 +377,7 @@ class Duty (commands .Cog ):
 
     @app_commands .command (name ="duty-stats",description ="Таблица очков задач")
     @app_commands .checks .has_permissions (moderate_members =True )
-    async def duty_stats (self ,interaction :discord .Interaction ,uye :discord .Member =None ):
+    async def duty_stats (self ,interaction :discord .Interaction ,member :discord .Member =None ):
         pts =load_points ()
         gid =str (interaction .guild .id )
         gpts =pts .get (gid ,{})
@@ -385,11 +385,11 @@ class Duty (commands .Cog ):
             await interaction .response .send_message ("Пока нет записей очков.",ephemeral =True )
             return 
         embed =discord .Embed (title ="⭐ Таблица очков дежурства",color =0xDC143C )
-        if uye :
-            uid =str (uye .id )
+        if member :
+            uid =str (member .id )
             total =gpts .get (uid ,{}).get ("total",0 )
-            embed .set_thumbnail (url =uye .display_avatar .url )
-            embed .add_field (name =uye .display_name ,value =f"**{total} **",inline =False )
+            embed .set_thumbnail (url =member .display_avatar .url )
+            embed .add_field (name =member .display_name ,value =f"**{total} **",inline =False )
         else :
             top =sorted (gpts .items (),key =lambda x :x [1 ].get ("total",0 ),reverse =True )[:10 ]
             medals =["🥇","🥈","🥉"]
@@ -406,25 +406,25 @@ class Duty (commands .Cog ):
     @app_commands .command (name ="duty-add",description ="Ручное добавление прогресса (приглашения/модер)")
     @app_commands .checks .has_permissions (moderate_members =True )
     async def duty_add (self ,interaction :discord .Interaction ,
-    uye :discord .Member ,gorev :str ,miktar :int =1 ):
-        if gorev not in TASK_DEFS :
+    member :discord .Member ,task :str ,amount :int =1 ):
+        if task not in TASK_DEFS :
             await interaction .response .send_message (
             f"❌ Неверная задача. Выберите: {', '.join(TASK_DEFS)}",ephemeral =True )
             return 
         data =load_duty ()
-        uid ,gid =str (uye .id ),str (interaction .guild .id )
+        uid ,gid =str (member .id ),str (interaction .guild .id )
         active =data .get (gid ,{}).get (uid ,{}).get ("active")
-        if not active or gorev not in active .get ("tasks",[]):
+        if not active or task not in active .get ("tasks",[]):
             await interaction .response .send_message (
-            f"У {uye.display_name} нет активных задач.",ephemeral =True )
+            f"У {member.display_name} нет активных задач.",ephemeral =True )
             return 
-        active ["progress"][gorev ]=active ["progress"].get (gorev ,0 )+miktar 
+        active ["progress"][task ]=active ["progress"].get (task ,0 )+amount 
         data [gid ][uid ]["active"]=active 
         save_duty (data )
-        td =TASK_DEFS [gorev ]
-        cur =active ["progress"][gorev ]
+        td =TASK_DEFS [task ]
+        cur =active ["progress"][task ]
         await interaction .response .send_message (
-        f" {uye.display_name} → {td['label']}: `{progress_bar(cur, td['target'])}` ({cur}/{td['target']})",
+        f" {member.display_name} → {td['label']}: `{progress_bar(cur, td['target'])}` ({cur}/{td['target']})",
         ephemeral =True )
 
 

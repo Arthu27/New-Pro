@@ -38,23 +38,23 @@ def _save (data :dict ):
         json .dump (data ,f ,ensure_ascii =False ,indent =2 )
 
 
-class CeviriButonu (discord .ui .View ):
+class TranslateButton (discord .ui .View ):
     def __init__ (self ,summary :str ):
         super ().__init__ (timeout =None )
         self .summary =summary 
 
     @discord .ui .button (label ='  Перевести на русский',style =discord .ButtonStyle .primary )
-    async def cevir (self ,interaction :discord .Interaction ,button :discord .ui .Button ):
+    async def translate_it (self ,interaction :discord .Interaction ,button :discord .ui .Button ):
         await interaction .response .defer (ephemeral =True )
         try :
             from deep_translator import GoogleTranslator 
             if not self .summary or self .summary =='Сводка не найдена.':
                 await interaction .followup .send (' Нет текста для перевода.',ephemeral =True )
                 return 
-            ceviri =GoogleTranslator (source ='en',target ='ru').translate (self .summary )
-            if len (ceviri )>1900 :
-                ceviri =ceviri [:1900 ]+'...'
-            await interaction .followup .send (f' **Краткое содержание:**\n\n{ceviri}',ephemeral =True )
+            translated =GoogleTranslator (source ='en',target ='ru').translate (self .summary )
+            if len (translated )>1900 :
+                translated =translated [:1900 ]+'...'
+            await interaction .followup .send (f' **Краткое содержание:**\n\n{translated}',ephemeral =True )
         except Exception :
             await interaction .followup .send (' Не удалось выполнить перевод.',ephemeral =True )
 
@@ -138,7 +138,7 @@ class AnimeDaily (commands .Cog ):
                 embed ,summary =_embed_build (guild ,anime ,category )
                 role_id =gcfg .get ('role_id')
                 content =f'<@&{role_id}>'if role_id else None 
-                await channel .send (content =content ,embed =embed ,view =CeviriButonu (summary ))
+                await channel .send (content =content ,embed =embed ,view =TranslateButton (summary ))
             except Exception as e :
                 log .info (f'[AnimeDaily] {guild.name} Ошибка: {e}')
 
@@ -217,7 +217,7 @@ class AnimeDaily (commands .Cog ):
             await interaction .followup .send (' Аниме не найдено, попробуйте ещё раз.')
             return 
         embed ,summary =_embed_build (interaction .guild ,anime ,category )
-        await interaction .followup .send (embed =embed ,view =CeviriButonu (summary ))
+        await interaction .followup .send (embed =embed ,view =TranslateButton (summary ))
 
     @app_commands .command (name ='anime-suggest',description ="Случайное или категорийное предложение аниме")
     @app_commands .describe (kategori ='Категория аниме (пусто = случайная)')
@@ -233,7 +233,7 @@ class AnimeDaily (commands .Cog ):
             await interaction .followup .send (' Аниме не найдено, попробуйте ещё раз.')
             return 
         embed ,summary =_embed_build (interaction .guild ,anime ,category )
-        await interaction .followup .send (embed =embed ,view =CeviriButonu (summary ))
+        await interaction .followup .send (embed =embed ,view =TranslateButton (summary ))
 
 
 async def setup (bot ):
