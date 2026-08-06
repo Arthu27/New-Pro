@@ -3181,7 +3181,7 @@ class Ticket (commands .Cog ):
         )
         await interaction .response .send_message (embed =e )
 
-    @app_commands .command (name ="ticket-cikar",description ="Удалить пользователя из тикета")
+    @app_commands .command (name ="ticket-remove",description ="Удалить пользователя из тикета")
     @app_commands .checks .has_permissions (manage_channels =True )
     async def ticket_cikar (self ,interaction :discord .Interaction ,user :discord .Member ):
         await interaction .channel .set_permissions (user ,read_messages =False )

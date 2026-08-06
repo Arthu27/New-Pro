@@ -76,7 +76,7 @@ class InfoTools(commands.Cog):
             e.add_field(name="Тема", value=f"```{ch.topic[:100]}```", inline=False)
         await ctx.send(embed=e)
 
-    @commands.command(name="emojiler")
+    @commands.command(name="emojis", aliases=["emojiler"])
     async def emoji_listesi(self, ctx):
         emojis = ctx.guild.emojis
         if not emojis:
@@ -86,7 +86,7 @@ class InfoTools(commands.Cog):
         e.description = f"Всего **{len(emojis)}** эмодзи\n" + ' '.join(str(em) for em in emojis[:40])
         await ctx.send(embed=e)
 
-    @commands.command(name="davet")
+    @commands.command(name="invite", aliases=["davet"])
     async def davet_link(self, ctx):
         url = discord.utils.oauth_url(self.bot.user.id, permissions=discord.Permissions(8))
         e = self._embed("ПРИГЛАШЕНИЕ БОТА", "🔗")
@@ -110,7 +110,7 @@ class InfoTools(commands.Cog):
         e.add_field(name="Предпросмотр", value="```█```", inline=True)
         await ctx.send(embed=e)
 
-    @commands.command(name="vakit")
+    @commands.command(name="time", aliases=["vakit"])
     async def vakit(self, ctx):
         ts = int(datetime.utcnow().timestamp())
         e = self._embed("ТЕКУЩЕЕ ВРЕМЯ", "🕐")
@@ -119,7 +119,7 @@ class InfoTools(commands.Cog):
         e.add_field(name="Относительно", value=f"<t:{ts}:R>", inline=True)
         await ctx.send(embed=e)
 
-    @commands.command(name="hesap")
+    @commands.command(name="account", aliases=["hesap"])
     async def hesap(self, ctx, *, islem: str):
         if not _re.match(r'^[\d\s\+\-\*\/\.\(\)]+$', islem):
             await ctx.send("Используйте только цифры и операторы!")
@@ -171,7 +171,7 @@ class InfoTools(commands.Cog):
         e.description = liste
         await ctx.send(embed=e)
 
-    @commands.command(name="ilkmessage")
+    @commands.command(name="firstmessage", aliases=["ilkmessage"])
     async def ilk_message(self, ctx, channel: discord.TextChannel = None):
         ch = channel or ctx.channel
         async for msg in ch.history(limit=1, oldest_first=True):

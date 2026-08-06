@@ -258,7 +258,7 @@ class Moderation (commands .Cog ):
     app_commands .Choice (name ="блокировка",value ="lock"),
     app_commands .Choice (name ="разблокировка",value ="unlock"),
     app_commands .Choice (name ="пользователь",value ="userinfo"),
-    app_commands .Choice (name ="сервер",value ="сервер")
+    app_commands .Choice (name ="сервер",value ="server")
     ])
     @app_commands .describe (action ="Что сделать",количество ="Сколько сообщений удалить (очистка)",секунд ="Задержка слоумода в секундах (0-21600)",user ="Участник для инфо")
     @app_commands .checks .has_permissions (manage_messages =True )
@@ -349,7 +349,7 @@ class Moderation (commands .Cog ):
             e .set_footer (text =f"{guild.name}")
             await interaction .response .send_message (embed =e )
 
-        elif action =="сервер":
+        elif action =="server":
             g =guild 
             bots =sum (1 for m in g .members if m .bot )
             humans =g .member_count -bots 

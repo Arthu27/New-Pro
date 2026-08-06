@@ -148,7 +148,7 @@ class AutoRoleLevel (commands .Cog ):
                         pass 
 
                         # Команды 
-    @commands .command (name ='level-rol-add')
+    @commands .command (name ='level-role-add',aliases =['level-rol-add'])
     @commands .has_permissions (administrator =True )
     async def add_level_role (self ,ctx ,level :int ,role :discord .Role ):
         """Назначить роль за уровень. Использование: !level-rol-add 5 @Роль"""
@@ -166,7 +166,7 @@ class AutoRoleLevel (commands .Cog ):
 
         await ctx .send (f'✅ Роль {role.mention} назначена для уровня **{level}**!')
 
-    @commands .command (name ='level-rol-remove')
+    @commands .command (name ='level-role-remove',aliases =['level-rol-remove'])
     @commands .has_permissions (administrator =True )
     async def remove_level_role (self ,ctx ,level :int ):
         """Удалить роль за уровень"""
@@ -188,7 +188,7 @@ class AutoRoleLevel (commands .Cog ):
         else :
             await ctx .send (f'❌ Уровень **{level}** не найден!')
 
-    @commands .command (name ='level-rol')
+    @commands .command (name ='level-role',aliases =['level-rol'])
     async def list_level_roles (self ,ctx ):
         """Список ролей за уровни"""
         data =self ._get_level_roles (ctx .guild .id )

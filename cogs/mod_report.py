@@ -512,7 +512,7 @@ class ModReport (commands .Cog ):
     async def before_loop (self ):
         await self .bot .wait_until_ready ()
 
-    @commands .command (name ='mod-panel')
+    @commands .command (name ='report-panel',aliases =['mod-panel'])
     @commands .has_permissions (manage_messages =True )
     async def mod_panel (self ,ctx ):
         """Отправить панель отчётов модерации: !mod-panel"""
@@ -538,7 +538,7 @@ class ModReport (commands .Cog ):
         )
         await ctx .send (embed =embed ,view =ModReportView ())
 
-    @commands .command (name ='haftalik-rapor',aliases =['rapor','report'])
+    @commands .command (name ='weekly-report',aliases =['haftalik-rapor','rapor','report'])
     @commands .has_permissions (manage_messages =True )
     async def weekly_report (self ,ctx ,gun :int =7 ):
         """Показать недельный отчёт: !haftalik-rapor [дней]"""
@@ -547,7 +547,7 @@ class ModReport (commands .Cog ):
             for i in range (0 ,len (embeds ),10 ):
                 await ctx .send (embeds =embeds [i :i +10 ])
 
-    @commands .command (name ='rapor-ayar')
+    @commands .command (name ='report-setup',aliases =['rapor-ayar'])
     @commands .has_permissions (administrator =True )
     async def setup_report (self ,ctx ,channel :discord .TextChannel ,gun :int =0 ,часов :int =9 ):
         """Настроить автоматический еженедельный отчёт: !rapor-ayar #канал [день] [час]"""
@@ -565,7 +565,7 @@ class ModReport (commands .Cog ):
         )
         await ctx .send (embed =embed )
 
-    @commands .command (name ='rapor-rol-add')
+    @commands .command (name ='report-role-add',aliases =['rapor-rol-add'])
     @commands .has_permissions (administrator =True )
     async def add_staff_role (self ,ctx ,role :discord .Role ):
         """Добавить роль администратора в отчёт: !rapor-rol-add @Роль"""
@@ -575,7 +575,7 @@ class ModReport (commands .Cog ):
             _save_cfg (ctx .guild .id ,cfg )
         await ctx .send (f'✅ Роль **{role.name}** добавлена в отчёт.')
 
-    @commands .command (name ='rapor-rol-cikar')
+    @commands .command (name ='report-role-remove',aliases =['rapor-rol-cikar'])
     @commands .has_permissions (administrator =True )
     async def remove_staff_role (self ,ctx ,role :discord .Role ):
         """Удалить роль из отчёта: !rapor-rol-cikar @Роль"""
@@ -585,7 +585,7 @@ class ModReport (commands .Cog ):
             _save_cfg (ctx .guild .id ,cfg )
         await ctx .send (f'🗑️ Роль **{role.name}** удалена из отчёта.')
 
-    @commands .command (name ='собрание-старт',aliases =['toplanti-baslat','sobranie-start'])
+    @commands .command (name ='meeting-start',aliases =['собрание-старт','toplanti-baslat','sobranie-start'])
     @commands .has_permissions (administrator =True )
     async def start_meeting (self ,ctx ,date :str =None ):
         """Запустить собрание: !собрание-старт [ДД.ММ.ГГГГ]"""
@@ -616,7 +616,7 @@ class ModReport (commands .Cog ):
         ts =int (meeting_time .timestamp ())
         await ctx .send (f'📅 Дата собрания установлена: <t:{ts}:F>\nСледующий отчёт будет считать с этой даты.')
 
-    @commands .command (name ='собрание-счёт',aliases =['toplanti-sayac','sobranie-sayac'])
+    @commands .command (name ='meeting-count',aliases =['собрание-счёт','toplanti-sayac','sobranie-sayac'])
     async def meeting_counter (self ,ctx ):
         """Сколько дней прошло с последнего собрания: !собрание-счёт"""
         cfg =_load_cfg (ctx .guild .id )

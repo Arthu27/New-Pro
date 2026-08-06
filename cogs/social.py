@@ -239,7 +239,7 @@ class Social (commands .Cog ):
         self .event_reminder .cancel ()
 
         #  ANKET 
-    @app_commands .command (name ="anket",description ="Создать новый опрос")
+    @app_commands .command (name ="poll",description ="Создать новый опрос")
     @app_commands .describe (
     вопрос ="Вопрос опроса",
     варианты ="Варианты через запятую (макс. 10)",
@@ -299,7 +299,7 @@ class Social (commands .Cog ):
         data [poll_id ]['message_id']=str (msg .id )
         _save (path ,data )
 
-    @app_commands .command (name ="anket-bitir",description ="Завершить опрос")
+    @app_commands .command (name ="poll-end",description ="Завершить опрос")
     @app_commands .describe (anket_id ="Anket ID")
     @app_commands .checks .has_permissions (moderate_members =True )
     async def poll_end (self ,interaction :discord .Interaction ,anket_id :str ):
@@ -363,7 +363,7 @@ class Social (commands .Cog ):
         await self .bot .wait_until_ready ()
 
         #  ETKИNLИK 
-    @app_commands .command (name ="etkinlik",description ="Создать новое событие")
+    @app_commands .command (name ="activity",description ="Создать новое событие")
     @app_commands .describe (
     название ="Название события",
     описание ="Описание события",
@@ -420,7 +420,7 @@ class Social (commands .Cog ):
         data [event_id ]['message_id']=str (msg .id )
         _save (path ,data )
 
-    @app_commands .command (name ="etkinlik-liste",description ="Показать предстоящие события")
+    @app_commands .command (name ="activity-list",description ="Показать предстоящие события")
     async def event_list (self ,interaction :discord .Interaction ):
         guild_id =str (interaction .guild .id )
         path =EVENT_FILE .format (guild_id =guild_id )
@@ -479,7 +479,7 @@ class Social (commands .Cog ):
         await self .bot .wait_until_ready ()
 
         #  MATCHMAKING 
-    @app_commands .command (name ="oyun-ara",description ="Поиск напарников для игры")
+    @app_commands .command (name ="game-find",description ="Поиск напарников для игры")
     @app_commands .describe (
     oyun ="Игра имя",
     max_oyuncu ="Размер команды?",
@@ -525,7 +525,7 @@ class Social (commands .Cog ):
         view =MatchView (match_id ,guild_id ,max_oyuncu )
         await interaction .response .send_message (embed =e ,view =view )
 
-    @app_commands .command (name ="oyun-liste",description ="Показать активные поиски игроков")
+    @app_commands .command (name ="game-list",description ="Показать активные поиски игроков")
     async def matchmaking_list (self ,interaction :discord .Interaction ):
         guild_id =str (interaction .guild .id )
         path =MATCH_FILE .format (guild_id =guild_id )

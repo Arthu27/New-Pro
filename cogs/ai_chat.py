@@ -385,7 +385,7 @@ def _call_ai (question :str ,user_id :int ,guild =None ,recent_messages :list =N
         history =_histories .get (user_id ,[])
 
         # Пользователь infosi
-        user_name ='arkadaш'
+        user_name ='друг'
         guild_id =0 
         if guild :
             member =guild .get_member (user_id )
@@ -590,7 +590,7 @@ class AIChat (commands .Cog ):
         else :
             await ctx .send ('История чата уже пуста. ',ephemeral =True )
 
-    @commands .hybrid_command (name ='ai-sifirla',description ="Sbrosit история AI cata")
+    @commands .hybrid_command (name ='ai-reset',description ="Сбросить историю AI-чата")
     @commands .has_permissions (administrator =True )
     async def ai_add_knowledge (self ,ctx ,konu :str ,*,info :str ):
         """
@@ -624,7 +624,7 @@ class AIChat (commands .Cog ):
         _save_knowledge_base (_knowledge_base )
         await ctx .send (f' Информация о **{konu}** сохранена! Теперь я буду знать правильный ответ.',ephemeral =True )
 
-    @commands .hybrid_command (name ='ai-info-listele',description ="Liste zaregistrirovannih AI информация (Менеджер)")
+    @commands .hybrid_command (name ='ai-info-list',description ="Список зарегистрированной AI-информации (менеджер)")
     @commands .has_permissions (administrator =True )
     async def ai_list_knowledge (self ,ctx ):
         """На сервер запись AI информация listele"""

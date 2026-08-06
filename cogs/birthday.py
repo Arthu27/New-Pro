@@ -211,7 +211,7 @@ class Birthday (commands .Cog ):
         e .set_footer (text =f"Aether • {interaction.guild.name}",icon_url =interaction .guild .icon .url if interaction .guild .icon else None )
         await interaction .response .send_message (embed =e )
 
-    @app_commands .command (name ='dogumgunu-sil',description ='Удалить запись о дне рождения')
+    @app_commands .command (name ='birthday-delete',description ='Удалить запись о дне рождения')
     async def delete_birthday (self ,interaction :discord .Interaction ):
         data =self .get_data (interaction .guild_id )
         uid =str (interaction .user .id )
@@ -222,7 +222,7 @@ class Birthday (commands .Cog ):
         self .save_data (interaction .guild_id ,data )
         await interaction .response .send_message ('🗑️ Ваша дата рождения удалена из базы.',ephemeral =True )
 
-    @commands .command (name ='dogumgunu-kur')
+    @commands .command (name ='birthday-set',aliases =['dogumgunu-kur'])
     @commands .has_permissions (administrator =True )
     async def setup_birthday (self ,ctx ,channel :discord .TextChannel ,role :discord .Role =None ):
         settings =self .get_settings (ctx .guild .id )
@@ -240,7 +240,7 @@ class Birthday (commands .Cog ):
         e .set_footer (text =f"Aether • {ctx.guild.name}",icon_url =ctx .guild .icon .url if ctx .guild .icon else None )
         await ctx .send (embed =e )
 
-    @app_commands .command (name ='dogumgunu-ayar',description ="Настройка системы дней рождения (менеджер)")
+    @app_commands .command (name ='birthday-setup',description ="Настройка системы дней рождения (менеджер)")
     @app_commands .describe (
     channel ='Канал для поздравлений',
     role ='Роль на день рождения (необязательно)',

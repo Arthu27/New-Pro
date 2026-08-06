@@ -1,71 +1,71 @@
-"""Cog controli - panelden/команда cog открыть/закрыть"""
-import discord 
-from discord .ext import commands 
-from discord import app_commands 
-import os 
+"""Управление модулями (cog) — загрузка/выгрузка/перезагрузка из панели или командой"""
+import discord
+from discord .ext import commands
+from discord import app_commands
+import os
 
 class CogManager (commands .Cog ):
     def __init__ (self ,bot ):
-        self .bot =bot 
+        self .bot =bot
 
-    @commands .group (name ='modul',invoke_without_command =True )
+    @commands .group (name ='module',aliases =['modul'],invoke_without_command =True )
     @commands .is_owner ()
-    async def modul_group (self ,ctx ):
-        """Cog control команды"""
+    async def module_group (self ,ctx ):
+        """Показать список загруженных/незагруженных модулей"""
         loaded =[ext .split ('.')[-1 ]for ext in self .bot .extensions ]
         all_cogs =[f [:-3 ]for f in os .listdir ('./cogs')if f .endswith ('.py')]
         unloaded =[c for c in all_cogs if c not in loaded ]
 
-        embed =discord .Embed (title =' Modюl Управление',color =0x3498DB )
+        embed =discord .Embed (title =' Управление модулями',color =0x3498DB )
         embed .add_field (
-        name =f' Загруз ({len(loaded)})',
+        name =f' Загружено ({len(loaded)})',
         value ='\n'.join (f'`{c}`'for c in sorted (loaded ))or 'Нет',
-        inline =True 
+        inline =True
         )
         embed .add_field (
-        name =f' Загруз Не ({len(unloaded)})',
+        name =f' Не загружено ({len(unloaded)})',
         value ='\n'.join (f'`{c}`'for c in sorted (unloaded ))or 'Нет',
-        inline =True 
+        inline =True
         )
         await ctx .send (embed =embed )
 
-    @modul_group .command (name ='yukle')
+    @module_group .command (name ='load',aliases =['yukle'])
     @commands .is_owner ()
     async def load_cog (self ,ctx ,cog_name :str ):
-        """Cog загрузить"""
+        """Загрузить модуль"""
         try :
             await self .bot .load_extension (f'cogs.{cog_name}')
             await ctx .send (f' Модуль `{cog_name}` загружен!')
         except Exception as e :
             await ctx .send (f' Ошибка: `{e}`')
 
-    @modul_group .command (name ='kaldir')
+    @module_group .command (name ='unload',aliases =['kaldir'])
     @commands .is_owner ()
     async def unload_cog (self ,ctx ,cog_name :str ):
-        """Cog удалить"""
+        """Выгрузить модуль"""
         if cog_name =='cog_manager':
             await ctx .send (' Этот модуль не может быть выгружен!')
-            return 
+            return
         try :
             await self .bot .unload_extension (f'cogs.{cog_name}')
-            await ctx .send (f' `{cog_name}` удалена!')
+            await ctx .send (f' `{cog_name}` выгружен!')
         except Exception as e :
             await ctx .send (f' Ошибка: `{e}`')
 
-    @modul_group .command (name ='yenile')
+    @module_group .command (name ='reload',aliases =['yenile'])
     @commands .is_owner ()
     async def reload_cog (self ,ctx ,cog_name :str ):
-        """Cog обновить"""
+        """Перезагрузить модуль"""
         try :
             await self .bot .reload_extension (f'cogs.{cog_name}')
             await ctx .send (f' Модуль `{cog_name}` перезагружен!')
         except Exception as e :
             await ctx .send (f' Ошибка: `{e}`')
 
-    @modul_group .command (name ='hepsini-обновить')
+    @module_group .command (name ='reload-all',aliases =['hepsini-обновить'])
     @commands .is_owner ()
     async def reload_all (self ,ctx ):
-        """Все cog'larы обновить"""
+        """Перезагрузить все модули"""
         results =[]
         for ext in list (self .bot .extensions ):
             try :

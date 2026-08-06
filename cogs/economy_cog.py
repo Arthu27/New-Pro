@@ -458,7 +458,7 @@ class _EconomyExtra (commands .Cog ):
     'легендарный':{'price':25000 ,'pool':['эпический','легендарный']},
     }
 
-    @commands .command (name ='kasa',aliases =['кейс'])
+    @commands .command (name ='vault',aliases =['kasa','кейс'])
     async def case (self ,ctx ,case :str ='обычный'):
         """Открыть кейс"""
         key =case .lower ().strip ()
@@ -558,7 +558,7 @@ class _EconomyExtra (commands .Cog ):
         await ctx .send (embed =e )
 
     # ── ИСТОРИЯ ─────────────────────────────────────────────
-    @commands .command (name ='eko-gecmis',aliases =['история'])
+    @commands .command (name ='eco-history',aliases =['eko-gecmis','история'])
     async def history (self ,ctx ):
         """История операций"""
         data =self ._migrate (ctx .author .id ,self ._get (ctx .author .id ))

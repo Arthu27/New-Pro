@@ -528,7 +528,7 @@ class Meeting (commands .Cog ):
     def __init__ (self ,bot ):
         self .bot =bot 
 
-    @commands .command (name ='sobranie',aliases =['toplanti'])
+    @commands .command (name ='meeting',aliases =['sobranie','toplanti'])
     @commands .has_permissions (administrator =True )
     async def meeting_panel (self ,ctx ):
         """Отправить панель собрания: !sobranie"""
@@ -558,7 +558,7 @@ class Meeting (commands .Cog ):
         cfg ['panel_message']=msg .id 
         _save_cfg (ctx .guild .id ,cfg )
 
-    @commands .command (name ='sobranie-rol-add',aliases =['toplanti-rol-add'])
+    @commands .command (name ='meeting-role-add',aliases =['sobranie-rol-add','toplanti-rol-add'])
     @commands .has_permissions (administrator =True )
     async def add_role (self ,ctx ,role :discord .Role ):
         """Добавить роль администратора в отчёт: !sobranie-rol-add @Роль"""
@@ -568,10 +568,10 @@ class Meeting (commands .Cog ):
             _save_cfg (ctx .guild .id ,cfg )
         await ctx .send (f'✅ Роль **{role.name}** добавлена в отчёт собрания.')
 
-    @commands .command (name ='sobranie-rol-remove',aliases =['toplanti-rol-cikar'])
+    @commands .command (name ='meeting-role-remove',aliases =['sobranie-rol-remove','toplanti-rol-cikar'])
     @commands .has_permissions (administrator =True )
     async def remove_role (self ,ctx ,role :discord .Role ):
-        """Удалить роль из отчёта: !sobranie-rol-remove @Роль"""
+        """Удалить роль из отчёта: !meeting-role-remove @Роль"""
         cfg =_load_cfg (ctx .guild .id )
         if role .id in cfg .get ('staff_roles',[]):
             cfg ['staff_roles'].remove (role .id )

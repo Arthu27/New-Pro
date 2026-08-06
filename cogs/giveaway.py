@@ -271,7 +271,7 @@ class GiveawayCog(commands.Cog):
 
         log.info(f"Розыгрыш создан: {gw_id} — {prize}")
 
-    @commands.command(name="rerolel", aliases=["reroll"])
+    @commands.command(name="reroll", aliases=["rerolel"])
     @commands.has_permissions(administrator=True)
     async def reroll(self, ctx, gw_id: str):
         """Перевыбрать победителя"""

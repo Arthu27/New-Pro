@@ -374,14 +374,14 @@ class AdvancedMod (commands .Cog ):
     @app_commands .command (name ="massrole",description ="Массовая выдача/снятие роли")
     @app_commands .describe (role ="Роль, которую нужно выдать или снять",action ="Действие: выдать или снять роль у всех участников")
     @app_commands .choices (action =[
-    app_commands .Choice (name ="выдать",value ="ver"),
-    app_commands .Choice (name ="снять",value ="al")
+    app_commands .Choice (name ="выдать",value ="give"),
+    app_commands .Choice (name ="снять",value ="remove")
     ])
     @app_commands .checks .has_permissions (administrator =True )
     async def massrole (self ,interaction :discord .Interaction ,role :discord .Role ,action :str ):
         await interaction .response .defer (ephemeral =True )
         count =0 
-        if action .lower ()=="ver":
+        if action .lower ()=="give":
             for member in interaction .guild .members :
                 if role not in member .roles and not member .bot :
                     try :
