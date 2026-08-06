@@ -191,7 +191,10 @@
         if (res.error) {
           showToast('Ошибка при сохранении: ' + res.error, false);
         } else {
-          showToast(action === 'approve' ? 'Заявка кандидата одобрена!' : 'Заявка кандидата отклонена!');
+          var okMsg = action === 'approve' ? 'Заявка кандидата одобрена!' : 'Заявка кандидата отклонена!';
+          if (res.role_assigned) okMsg += ' Роль выдана: ' + res.role_assigned;
+          else if (res.role_note === 'no_mapped_role') okMsg += ' (Роль не выдана — настройте маппинг ролей в "Доступе к панели")';
+          showToast(okMsg);
           $('app-modal').style.display = 'none';
           loadApps();
         }

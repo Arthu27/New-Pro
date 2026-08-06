@@ -1721,7 +1721,7 @@ def api_staff_apps ():
 def api_review_staff_app (app_id ):
     apps_file ='data/staff_apps.json'
     if not os .path .exists (apps_file ):
-        return jsonify ({'error':'Dosya нет'})
+        return jsonify ({'error':'Файл заявок отсутствует'})
     with open (apps_file ,'r',encoding ='utf-8')as f :
         data =json .load (f )
     if app_id not in data :
@@ -1735,11 +1735,34 @@ def api_review_staff_app (app_id ):
     with open (apps_file ,'w',encoding ='utf-8')as f :
         json .dump (data ,f ,indent =2 ,ensure_ascii =False )
 
-        # Discord DM отправить
+        # При одобрении выдать Discord-роль + отправить DM
+    role_info ={'assigned':None ,'error':None }
     if bot_instance :
         app_data =data [app_id ]
         async def send_dm ():
             try :
+                if action =='approve':
+                    # Маппинг: первая Discord-роль из role_map.json, привязанная к 'mod'/'admin'
+                    try :
+                        gid =str (app_data .get ('guild_id')or MAIN_GUILD_ID or '')
+                        guild =bot_instance .get_guild (int (gid ))if gid .isdigit ()else None
+                        if not guild and bot_instance .guilds :guild =bot_instance .guilds [0 ]
+                        if guild :
+                            member =guild .get_member (int (app_data ['user_id']))
+                            if not member :
+                                try :member =await guild .fetch_member (int (app_data ['user_id']))
+                                except Exception :member =None
+                            target =None
+                            for rid ,prole in DISCORD_ROLE_MAP .items ():
+                                if prole in ('mod','admin')and guild .get_role (int (rid )):
+                                    target =guild .get_role (int (rid ));break
+                            if member and target :
+                                await member .add_roles (target ,reason ='Заявка одобрена (Aether Panel)')
+                                role_info ['assigned']=target .name
+                            elif not target :
+                                role_info ['error']='not_mapped'
+                    except Exception as _role_err :
+                        role_info ['error']=str (_role_err )[:120 ]
                 user =await bot_instance .fetch_user (int (app_data ['user_id']))
                 if action =='approve':
                     embed =discord .Embed (
@@ -1749,6 +1772,8 @@ def api_review_staff_app (app_id ):
                     )
                     embed .add_field (name =" Рассмотрел",value =session .get ('username','?'),inline =True )
                     embed .add_field (name =" Заявка ID",value =f"`{app_id}`",inline =True )
+                    if role_info ['assigned']:
+                        embed .add_field (name =" Выдана роль",value =role_info ['assigned'],inline =True )
                     if note :
                         embed .add_field (name =" Not",value =note ,inline =False )
                     embed .set_thumbnail (url =bot_instance .user .display_avatar .url )
@@ -1769,9 +1794,17 @@ def api_review_staff_app (app_id ):
                 await user .send (embed =embed )
             except Exception as e :
                 print (f"DM отправл: {e}")
-        asyncio .run_coroutine_threadsafe (send_dm (),bot_instance .loop )
+        try :
+            asyncio .run_coroutine_threadsafe (send_dm (),bot_instance .loop ).result (timeout =15 )
+        except Exception :
+            pass
 
-    return jsonify ({'success':True })
+    resp ={'success':True }
+    if action =='approve':
+        resp ['role_assigned']=role_info ['assigned']
+        if role_info ['error']=='not_mapped':
+            resp ['role_note']='no_mapped_role'
+    return jsonify (resp )
 
 @app .route ('/api/tunnel-url')
 @login_required 
