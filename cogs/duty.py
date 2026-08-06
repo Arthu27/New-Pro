@@ -267,7 +267,7 @@ class DutyPanelView (discord .ui .View ):
         icon_url =interaction .user .display_avatar .url )
         embed .set_thumbnail (url =GIF_END )
         embed .description =(
-        "```ansi\n\u001b[1;31m ЗАДАЧА BИTTИ\u001b[0m\n```\n"
+        "```ansi\n\u001b[1;31m ЗАДАЧА ЗАВЕРШЕНА\u001b[0m\n```\n"
         ""
         )
         embed .add_field (name ="⏱ Длительность",value =f"**{fmt_dur(elapsed)}**",inline =True )
@@ -354,7 +354,7 @@ class Duty (commands .Cog ):
         "\u001b[1;31m\u001b[0m\n"
         "```\n"
         "\n"
-        "Задача baшla, hedefine ulaш, **очки kazan!**\n"
+        "Начни задание, достигни цели — **заработай очки!**\n"
         "\n\n"
         " **Seste Kal**  **50 **\n"
         " *3 часов ses в канале активен kal*\n\n"

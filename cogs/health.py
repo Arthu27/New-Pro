@@ -52,9 +52,9 @@ def _calc_score (data ,guild :discord .Guild ):
 
 def _score_label (score ):
     if score >=80 :return "🟢 Отлично",0x2ecc71 
-    if score >=60 :return "🟡 Иyi",0xf1c40f 
+    if score >=60 :return "🟡 Хорошо",0xf1c40f 
     if score >=40 :return "🟠 Центр",0xe67e22 
-    return " Kёtю",0xe74c3c 
+    return " Плохо",0xe74c3c 
 
 
 class Health (commands .Cog ):

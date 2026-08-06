@@ -347,7 +347,7 @@ class TagJail(commands.Cog):
                 "Нет прав!", f"{member.mention} — не могу кикнуть новый аккаунт (нужно право Kick Members)."))
             return
         except Exception as e:
-            log.error(f"[TAGJAIL] age-kick hatası: {e}")
+            log.error(f"[TAGJAIL] ошибка age-kick: {e}")
             return
         e = discord.Embed(color=RED, timestamp=datetime.now(timezone.utc))
         e.description = (

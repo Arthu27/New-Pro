@@ -409,7 +409,7 @@ _CARD_BYTES_CACHE = {}
 
 def generate_help_card_bytes(category_id: str = None) -> io.BytesIO:
     """Карта уже рисуется в 2x (R=2) — без размытия.
-    PNG-baytlar önbellekten geliyorsa sıfırdan render yapılmaz (anlık sayfa geçişi)."""
+    Если PNG-байты есть в кэше — повторный рендер не выполняется (мгновенное переключение страниц)."""
     key = category_id or "overview"
     data = _CARD_BYTES_CACHE.get(key)
     if data is None:

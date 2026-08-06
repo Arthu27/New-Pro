@@ -1,6 +1,6 @@
 """
 Welcome Cog
-Hoш geldin системаi cog'u
+Ког системы приветствий
 """
 
 import discord 
@@ -147,7 +147,7 @@ class WelcomeCog (commands .Cog ):
 
     @commands .Cog .listener ()
     async def on_ready (self ):
-        """Bot hazыr olduгunda"""
+        """Бот готов"""
         log .info ("WelcomeCog loaded")
 
 

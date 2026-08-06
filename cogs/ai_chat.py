@@ -121,7 +121,7 @@ def _update_profile (user_id :int ,question :str ,answer :str ,profiles :dict ):
     'oyun':['oyun','game','lol','valorant','minecraft','cs2'],
     'anime':['anime','manga','naruto','attack on titan','one piece'],
     'spor':['футбол','баскетбол','матч','гол','команда'],
-    'teknoloji':['kod','python','infosнастройка','написано','ai'],
+    'teknoloji':['kod','python','программирование','написано','ai'],
     }
     q_lower =question .lower ()
     for interest ,keywords in interest_keywords .items ():
@@ -594,8 +594,8 @@ class AIChat (commands .Cog ):
     @commands .has_permissions (administrator =True )
     async def ai_add_knowledge (self ,ctx ,konu :str ,*,info :str ):
         """
-        Bot'a постоянный info ёгret.
-        Использование: /ai-info-add armoon Armoon, Valorant ve CS2 oynayan Tюrk bir esporcu.
+        Научить бота постоянной информации.
+        Использование: /ai-info-add armoon Armoon — турецкий киберспортсмен, играющий в Valorant и CS2.
         """
         guild_key =str (ctx .guild .id )
         if guild_key not in _knowledge_base :
@@ -643,7 +643,7 @@ class AIChat (commands .Cog ):
             lines .append (f'{conf} **{name}** ({src})')
 
         embed =discord .Embed (
-        title =' AI Информация Tabanы',
+        title =' AI База знаний',
         description ='\n'.join (lines [:20 ]),
         color =0x00D9FF 
         )
@@ -679,7 +679,7 @@ class AIChat (commands .Cog ):
                     break 
 
         if not target_id :
-            return ' Кто DM atacaгыmы anlayamadыm. ID, mention или "benimle одинаковый seste" de.'
+            return ' Не понял, кому отправить DM. Укажи ID, упоминание или "benimle одинаковый seste".'
 
             # Отправл сообщение удалить
             # "X'e особый шunu yaz: ..." или "X'e dm at как"
@@ -705,7 +705,7 @@ class AIChat (commands .Cog ):
             dm_content =clean or None 
 
         if not dm_content :
-            return ' Ne yazacaгыmы anlayamadыm. "особый yaz: <message>" formatыnы использовать.'
+            return ' Не понял, что написать. Используй формат "особый yaz: <сообщение>".'
 
             # Участника bul ve DM at
         for guild in self .bot .guilds :
@@ -729,7 +729,7 @@ class AIChat (commands .Cog ):
             return f' Пользователь не найден или DM отправл: {e}'
 
     async def _handle_voice_move (self ,text :str ,message :discord .Message )->str :
-        """Ses канал movema — tek/чift adыm, geri getir, channel имя desteгi"""
+        """Перемещение по голосовым каналам — один/два шага, вернуть назад, поддержка имени канала"""
         import re 
         import asyncio 
 
@@ -755,7 +755,7 @@ class AIChat (commands .Cog ):
         if not target_id and any (t in cl for t in ['beni','bana','benim']):
             target_id =OWNER_ID 
         if not target_id :
-            return ' Кто moveyacaгыmы anlayamadыm. ID или mention ver.'
+            return ' Не понял, кого переместить. Укажи ID или упоминание.'
 
             #  "geri getir" / "geri al" talebi есть mы? 
         geri_var =any (t in cl_norm for t in ['geri getir','geri al','geri don','geri gёtюr','geri gotur'])
@@ -794,7 +794,7 @@ class AIChat (commands .Cog ):
             if not member :
                 continue 
             if not member .voice or not member .voice .channel :
-                results .append (f' {member.display_name} шu an bir ses в канале не.')
+                results .append (f' {member.display_name} сейчас не в голосовом канале.')
                 continue 
 
             current_vc =member .voice .channel 
@@ -827,13 +827,13 @@ class AIChat (commands .Cog ):
                 else :
                     results .append (
                     f' Цель channel не найдено. Текущий: **{current_vc.name}**\n'
-                    f'Ses channellarы: {", ".join(vc.name for vc in voice_channels)}'
+                    f'Голосовые каналы: {", ".join(vc.name for vc in voice_channels)}'
                     )
                 continue 
 
             try :
                 await member .move_to (hedef_vc )
-                msg =f' **{member.display_name}** → **{hedef_vc.name}** movendы.'
+                msg =f' **{member.display_name}** → **{hedef_vc.name}** — переместил.'
 
                 #  Isimыm 2: До getir 
                 if geri_var :
@@ -918,7 +918,7 @@ class AIChat (commands .Cog ):
         return 10 # varчислоlan
 
     async def _detect_owner_intent (self ,text :str ,message :discord .Message )->bool :
-        """Owner DM команды — anahtar kelime основанный на, неверно yazsan da чalышыr"""
+        """Owner DM команды — на ключевых словах, работает даже при опечатках"""
         import re 
         cl =text .lower ()
         cn =self ._norm (text )
@@ -928,7 +928,7 @@ class AIChat (commands .Cog ):
         ses_gir_triggers =['voice gir','voice katыl','voice gel','channela gir','benim voice gir',
         'voice gir','ses в канал gir','ses в канал gir','yanima gel']
         if any (t in cn for t in [self ._norm (x )for x in ses_gir_triggers ]):
-            result_msg =' Ses в канале deгilsin.'
+            result_msg =' Ты не в голосовом канале.'
             for guild in self .bot .guilds :
                 member =guild .get_member (OWNER_ID )
                 if not member or not member .voice :
@@ -950,7 +950,7 @@ class AIChat (commands .Cog ):
         ses_cik_triggers =['sesten чыk','sesten cik','channeldan чыk','channeldan cik',
         'чыk sesten','cik sesten','botu удалить','botu cikar']
         if any (t in cn for t in [self ._norm (x )for x in ses_cik_triggers ]):
-            result_msg =' Zaten ses в канале deгilim.'
+            result_msg =' Я уже не в голосовом канале.'
             for guild in self .bot .guilds :
                 vc =guild .voice_client 
                 if vc :
@@ -966,7 +966,7 @@ class AIChat (commands .Cog ):
             for t in ['чal','cal','музыка чal','muzik cal','песня чal','sarki cal','oynat','bana']:
                 query =query .replace (t ,'').strip ()
             query =query .strip ()or 'lofi'
-            result_msg =' Ses в канале deгilsin.'
+            result_msg =' Ты не в голосовом канале.'
             for guild in self .bot .guilds :
                 member =guild .get_member (OWNER_ID )
                 if not member or not member .voice :
@@ -988,14 +988,14 @@ class AIChat (commands .Cog ):
                     q =get_queue (guild .id )
                     if vc .is_playing ()or vc .is_paused ():
                         q .append (item )
-                        result_msg =f' Kuyruгa addndi: **{title}**'
+                        result_msg =f' Добавлено в очередь: **{title}**'
                     else :
                         q .insert (0 ,item )
                         await play_next (guild ,text_channel )
-                        result_msg =f' Чalыnыyor: **{title}**'
+                        result_msg =f' Играет: **{title}**'
                     break 
                 except Exception as e :
-                    result_msg =f' Mюzik Ошибки: {e}'
+                    result_msg =f' Ошибка музыки: {e}'
             await message .channel .send (result_msg )
             return True 
 
@@ -1076,7 +1076,7 @@ class AIChat (commands .Cog ):
                     continue 
                 try :
                     await member .move_to (None )
-                    results .append (f' **{member.display_name}** sesten atыldы.')
+                    results .append (f' **{member.display_name}** выкинут из голосового канала.')
                 except discord .Forbidden :
                     results .append (' Администратор нет.')
                 except Exception as e :
@@ -1159,16 +1159,16 @@ class AIChat (commands .Cog ):
                 lines .append (f'**{guild.name}**')
                 lines .append (f'• Online: {len(online)} человек')
                 if in_voice :
-                    lines .append ('• Ses channellarы:\n  '+'\n  '.join (in_voice ))
+                    lines .append ('• Голосовые каналы:\n  '+'\n  '.join (in_voice ))
                 else :
-                    lines .append ('• Ses channellarыnda кто нет')
+                    lines .append ('• В голосовых каналах никого нет')
                 ticket_chs =[c for c in guild .text_channels if c .name .startswith ('ticket-')]
                 if ticket_chs :
-                    lines .append (f'• Открыт ticket: {len(ticket_chs)}')
+                    lines .append (f'• Открытых тикетов: {len(ticket_chs)}')
             await message .channel .send ('\n'.join (lines )or ' Не удалось получить информацию о сервере.')
             return True 
 
-            # Mod уведомление aч/закрыть
+            # Вкл/выкл уведомлений модерации
         mod_notify_ac =['mod уведомление aч','mod уведомление открыть','наказание уведомление aч','наказание уведомление открыть',
         'mod notify aч','mod notify открыть','уведомление aч','уведомление открыть']
         mod_notify_kapat =['mod уведомление закрыть','наказание уведомление закрыть','mod notify закрыть','уведомление закрыть']
@@ -1242,7 +1242,7 @@ class AIChat (commands .Cog ):
             content_lower =message .content .lower ().strip ()
             content_raw =message .content .strip ()
 
-            # Tercih/правило сохран — "bunu bana yazma", "bunu каждый vakit yap" vb.
+            # Сохранение предпочтений/правил — "bunu bana yazma", "bunu каждый vakit yap" и т.п.
             pref_triggers =['bunu bana yazma','bunu сказатьme','bunu yapma',
             'каждый vakit yap','каждый vakit сказать','hatыrla',
             'unutma','bunu bil','теперь biliyorsun']
@@ -1251,7 +1251,7 @@ class AIChat (commands .Cog ):
                 if len (_owner_prefs ['rules'])>50 :
                     _owner_prefs ['rules']=_owner_prefs ['rules'][-50 :]
                 _save_owner_prefs (_owner_prefs )
-                await message .channel .send (f' Сохранитьtim: **{content_raw[:100]}**')
+                await message .channel .send (f' Сохранил: **{content_raw[:100]}**')
                 return 
 
                 # AI с intent определить
@@ -1324,9 +1324,9 @@ class AIChat (commands .Cog ):
             )
 
         if _kufur_var_mi (answer ):
-            answer ="Bunu сказатьyemem. "
+            answer ="Я не могу это сказать. "
 
-            # Ответ "bilmiyorum" содержимое owner'a sor
+            # Ответы "не знаю" — спросить у владельца
         bilmiyorum_triggers =['bilmiyorum','emin deгilim','info bulamadыm','о infom нет']
         if OWNER_ID and any (t in answer .lower ()for t in bilmiyorum_triggers ):
             try :
@@ -1338,7 +1338,7 @@ class AIChat (commands .Cog ):
                 color =0xf59e0b ,
                 description =f'**Спросил:** {user_name} (`{message.author.id}`)\n'
                 f'**Вопрос:** {content}\n\n'
-                '**Ответlamak для bu messagea reply at.**'
+                '**Чтобы ответить, сделай reply на это сообщение.**'
                 )
                 embed .set_footer (text =f'Сервер: {message.guild.name if message.guild else "DM"}')
                 dm_msg =await owner .send (embed =embed )

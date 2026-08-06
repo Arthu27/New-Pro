@@ -1,7 +1,7 @@
 from typing import Dict 
 """
 Проактивная модерация — AI сам замечает проблемы в чате
-Toksisite, spam, шюpheli ссылка, povtoryayusiesya sorular
+Токсичность, спам, подозрительные ссылки, повторяющиеся вопросы
 """
 import discord 
 from discord .ext import commands ,tasks 
@@ -233,7 +233,7 @@ class ProactiveModeration (commands .Cog ):
         channels_monitored =len (self .message_buffer )
 
         e =discord .Embed (
-        title ="Статистика proактивныйy moderasyonu",
+        title ="Статистика проактивной модерации",
         color =0x5865F2 
         )
         e .description =(

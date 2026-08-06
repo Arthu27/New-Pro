@@ -952,8 +952,8 @@ class Ticket (commands .Cog ):
             log .info (f'[TICKET] Ошибка записи наказания: {_pe}')
 
     def _already_punished_for_quote (self ,guild_id :int ,user_id :int ,quote :str ,days :int =14 )->bool :
-        """Aynı suç (quote) için bu kullanıcının son days gün içinde cezalandırılıp
-        cezalandırılmadığını kontrol et — tekrar ceza (çifte ceza) önlemek için."""
+        """Проверить, наказывался ли пользователь за то же нарушение (quote) за последние days дней —
+        чтобы предотвратить повторное наказание (двойное)."""
         try :
             if not quote or not quote .strip ():
                 return False 
@@ -1969,7 +1969,7 @@ class Ticket (commands .Cog ):
                 'channel_id':message .channel .id ,
                 'user_roles':[r .name for r in message .author .roles if r .name !='@everyone'],
                 'channels':{
-                'запись':find_channel (message .guild ,'запись','запись','register','проверка','правильноlama','verification'),
+                'запись':find_channel (message .guild ,'запись','запись','register','проверка','dogrulama','verification'),
                 'правила':find_channel (message .guild ,'правило','rules'),
                 'announcelar':find_channel (message .guild ,'announce','announce'),
                 'ticket':find_channel (message .guild ,'ticket','поддержка','support'),
@@ -2105,7 +2105,7 @@ class Ticket (commands .Cog ):
                 self ._save_ticket_state (guild_id ,channel_id ,state )
 
             except Exception as e :
-                log .info (f"Ошибка AI-modератора: {e}")
+                log .info (f"Ошибка AI-модератора: {e}")
                 import traceback 
                 traceback .print_exc ()
                 await self ._escalate_ticket (message .channel ,state ,'ai_error')
@@ -2117,27 +2117,27 @@ class Ticket (commands .Cog ):
 
         appeal_reason =state .get ('appeal_reason','')
 
-        prompt =f"""Пользователь подаёт апелляцию на решение AI-modератора.
+        prompt =f"""Пользователь подаёт апелляцию на решение AI-модератора.
 
-=== НАКАЗАНИЕ ИНФОРМАЦИЯ ===
+=== ИНФОРМАЦИЯ О НАКАЗАНИИ ===
 Наказание: {penalty['reason']}
-Длительность: {penalty['duration']} minutes
+Длительность: {penalty['duration']} мин
 Дата: {penalty['date']}
 
 === АПЕЛЛЯЦИЯ ===
 {appeal_reason}
 
 === ЗАДАЧА ===
-Апелляция значение. Пользователь haklы ?
+Оцени апелляцию. Прав ли пользователь?
 
-КОНТРОЛЬ ET:
+ПРОВЕРЬ:
 1. Содержит ли апелляция обоснованную причину?
 2. Было ли наказание несправедливым?
 3. Было ли неверное понимание?
 
 ФОРМАТ ОТВЕТА:
-[Значение]: (обоснованность апелляции — 2-3 предложения)
-[Karar]: KABUL или RED или BELIRSIZ"""
+[Оценка]: (обоснованность апелляции — 2-3 предложения)
+[Решение]: KABUL или RED или BELIRSIZ"""
 
         async with channel .typing ():
             verdict =_call_text ([
@@ -2754,7 +2754,7 @@ class Ticket (commands .Cog ):
         self ._save_ticket_state (channel .guild .id ,channel .id ,state )
 
     async def _apply_jail (self ,channel :discord .TextChannel ,user_id :int ,duration :int ,reason :str ,complainant :discord .Member ):
-        """Применить наказание Jail от AI-modератора"""
+        """Применить наказание Jail от AI-модератора"""
         try :
             guild =channel .guild 
             target_user =guild .get_member (user_id )
@@ -3131,7 +3131,7 @@ class Ticket (commands .Cog ):
 
             summary =f"В канале #{target_channel.name} найдено сообщений ({len(messages)}):\n"
             for msg in messages [:20 ]:
-                edited_tag =' [EDИTLENMИШ]'if msg ['edited']else ''
+                edited_tag =' [ИЗМЕНЕНО]'if msg ['edited']else ''
                 summary +=f"[{msg['timestamp']}] {msg['author']}: {msg['content']}{edited_tag}\n"
 
             return summary 

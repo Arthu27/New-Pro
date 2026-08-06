@@ -20,7 +20,7 @@ class ChangelogCog (commands .Cog ):
     def __init__ (self ,bot ):
         self .bot =bot 
 
-    @app_commands .command (name ='changelog',description ='Changelog\'u gёrюntюle')
+    @app_commands .command (name ='changelog',description ='Просмотр changelog')
     @app_commands .describe (version ='Версия (необязательно)')
     async def changelog (self ,interaction :discord .Interaction ,version :str =None ):
         """Показать журнал изменений"""

@@ -7,7 +7,7 @@ Aether — Верификация — режим наблюдателя / opt-in
   * Кик по тайм-ауту не производится
   * Пока владелец сервера не включит в панели — система молчит
 
-Aчmak iчin: `/verify-toggle enabled:true` ya da panelden.
+Включить: `/verify-toggle enabled:true` или через панель.
 """
 
 import discord 
@@ -21,7 +21,7 @@ VERIFY_CONFIG_FILE ="data/verification_config.json"
 
 
 def _load_global_state ()->dict :
-    """Global olarak verification системаi aчыk mы kapalы mы?"""
+    """Включена ли система верификации глобально?"""
     if not os .path .exists (VERIFY_CONFIG_FILE ):
         return {"enabled":False ,"kick_timeout_minutes":0 }# 0 = kick нет
     try :
@@ -41,7 +41,7 @@ def _save_global_state (state :dict ):
 
 
 class Verification (commands .Cog ):
-    """Иsteгe baгlы captcha/Rol системаi. Varsayыlan KAPALI."""
+    """Опциональная система captcha/ролей. По умолчанию ВЫКЛ."""
 
     def __init__ (self ,bot ):
         self .bot =bot 
@@ -89,7 +89,7 @@ class Verification (commands .Cog ):
         )
         e .add_field (name ="Система",value ="✅ Вкл"if state .get ("enabled")else "⛔ Выкл",inline =True )
         e .add_field (name ="Otomatik aksiyon",value ="🚫 Нет (режим наблюдателя)",inline =True )
-        e .add_field (name ="Son gюncelleme",value =state .get ("updated_by","—"),inline =True )
+        e .add_field (name ="Последнее обновление",value =state .get ("updated_by","—"),inline =True )
         e .description =(
         "Этот модуль работает в режиме наблюдателя: бот НЕ применяет автоматическую капчу/роль/кик. "
         "Он лишь отправляет информационное DM, если включёно через `/verify-toggle enabled:true`."

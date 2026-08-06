@@ -89,10 +89,10 @@ class SLACog (commands .Cog ):
 
             await interaction .response .send_message (embed =embed )
 
-    @app_commands .command (name ='sla-status',description ='Ticket SLA статусunu gёrюntюle')
+    @app_commands .command (name ='sla-status',description ='Просмотр статуса SLA тикетов')
     @app_commands .describe (ticket_id ='Ticket ID')
     async def sla_status (self ,interaction :discord .Interaction ,ticket_id :str ):
-        """Ticket SLA статусunu gёrюntюle"""
+        """Просмотр статуса SLA тикетов"""
         from services .ticket_system import ticket_manager 
 
         # Ticket al
@@ -130,9 +130,9 @@ class SLACog (commands .Cog ):
 
         await interaction .response .send_message (embed =embed )
 
-    @app_commands .command (name ='sla-breaches',description ='SLA ihlallerini gёrюntюle')
+    @app_commands .command (name ='sla-breaches',description ='Просмотр нарушений SLA')
     async def sla_breaches (self ,interaction :discord .Interaction ):
-        """SLA ihlallerini gёrюntюle"""
+        """Просмотр нарушений SLA"""
         # Иhlaller al
         breaches =sla_breach_detector .get_all_breaches ()
 
@@ -162,7 +162,7 @@ class SLACog (commands .Cog ):
         await interaction .response .send_message (embed =embed )
 
     @app_commands .command (name ='sla-create',description ='Создать SLA политику')
-    @app_commands .describe (name ='Policy adы',description ='Policy aчыklamasы')
+    @app_commands .describe (name ='Название политики',description ='Описание политики')
     @app_commands .checks .has_permissions (administrator =True )
     async def sla_create (self ,interaction :discord .Interaction ,
     name :str ,description :str ):
@@ -182,7 +182,7 @@ class SLACog (commands .Cog ):
 
     @commands .Cog .listener ()
     async def on_ready (self ):
-        """Bot hazыr olduгunda"""
+        """Бот готов"""
         log .info (" SLACog loaded")
 
 

@@ -81,7 +81,7 @@ class ReportCog (commands .Cog ):
         await interaction .response .send_message (embed =embed )
 
     @app_commands .command (name ='report-custom',description ='Создать специальный отчёт')
-    @app_commands .describe (days ='Gюn sayыsы (varsayыlan: 30)',
+    @app_commands .describe (days ='Количество дней (по умолчанию: 30)',
     report_type ='Rapor tipi (tickets/sla/performance)')
     @app_commands .checks .has_permissions (manage_guild =True )
     async def report_custom (self ,interaction :discord .Interaction ,
@@ -96,7 +96,7 @@ class ReportCog (commands .Cog ):
             report =report_builder .generate_custom_report (days =days ,report_type ='performance')
         else :
             await interaction .response .send_message (
-            " Geчersiz rapor tipi! (tickets/sla/performance)",
+            " Неверный тип отчёта! (tickets/sla/performance)",
             ephemeral =True 
             )
             return 
@@ -116,9 +116,9 @@ class ReportCog (commands .Cog ):
 
         await interaction .response .send_message (embed =embed )
 
-    @app_commands .command (name ='report-analytics',description ='Analytics raporunu gёrюntюle')
+    @app_commands .command (name ='report-analytics',description ='Просмотр аналитического отчёта')
     async def report_analytics (self ,interaction :discord .Interaction ):
-        """Analytics raporunu gёrюntюle"""
+        """Просмотр аналитического отчёта"""
         # Analytics al
         analytics =analytics_engine .get_dashboard_analytics ()
 
@@ -158,7 +158,7 @@ class ReportCog (commands .Cog ):
 
     @commands .Cog .listener ()
     async def on_ready (self ):
-        """Bot hazыr olduгunda"""
+        """Бот готов"""
         log .info (" ReportCog loaded")
 
 

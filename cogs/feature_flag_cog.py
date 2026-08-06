@@ -123,11 +123,11 @@ class FeatureFlagCog (commands .Cog ):
 
         await interaction .response .send_message (embed =embed )
 
-    @app_commands .command (name ='flag-disable',description ='Feature flag devre dышы bыrak')
+    @app_commands .command (name ='flag-disable',description ='Отключить feature flag')
     @app_commands .describe (flag_key ='Flag key')
     @app_commands .checks .has_permissions (administrator =True )
     async def flag_disable (self ,interaction :discord .Interaction ,flag_key :str ):
-        """Feature flag devre dышы bыrak"""
+        """Отключить feature flag"""
         # Flag devre dышы bыrak
         success =feature_flag_manager .disable_flag (flag_key )
 
@@ -166,7 +166,7 @@ class FeatureFlagCog (commands .Cog ):
 
         if not flag :
             await interaction .response .send_message (
-            " Flag bulunamadы!",
+            " Флаг не найден!",
             ephemeral =True 
             )
             return 

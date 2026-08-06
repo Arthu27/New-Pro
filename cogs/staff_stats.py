@@ -87,7 +87,7 @@ def collect_actions(guild_id: int) -> list:
                     if ts and mod_id:
                         acts.append((str(mod_id), 'warn', ts))
     except Exception as e:
-        log.info(f"[STAFF] sqlite okunamadı: {e}")
+        log.info(f"[STAFF] не удалось прочитать sqlite: {e}")
     return acts
 
 

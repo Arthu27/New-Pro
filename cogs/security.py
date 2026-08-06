@@ -370,7 +370,7 @@ class Security (commands .Cog ):
         await interaction .response .send_message (embed =e ,ephemeral =True )
 
     @app_commands .command (name ="security-toggle",description ="Включить/отключить функцию безопасности")
-    @app_commands .describe (feature ="Особенность",enabled ="Aч/Закрыть")
+    @app_commands .describe (feature ="Функция",enabled ="Вкл/Выкл")
     @app_commands .choices (feature =[
     app_commands .Choice (name ="AI Антиспам Tespiti",value ="ai_spam"),
     app_commands .Choice (name ="Фейковые аккаунты Tespiti",value ="fake_account"),
@@ -400,7 +400,7 @@ class Security (commands .Cog ):
         cfg ['new_account_action']=action 
         _save_cfg (str (interaction .guild .id ),cfg )
         await interaction .response .send_message (
-        f" Новый hesap eшiгi: **{days} день** | Действие: **{action}**",ephemeral =True 
+        f" Порог возраста нового аккаунта: **{days} дн.** | Действие: **{action}**",ephemeral =True 
         )
 
     @app_commands .command (name ="scan-link",description ="Проверить ссылку сканером безопасности")

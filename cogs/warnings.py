@@ -216,9 +216,9 @@ class warnings(commands.Cog):
 
     # ── /warn ────────────────────────────────────────────────────────────
     async def add_warn(self, interaction, user: discord.Member, reason: str = None):
-        """Ortak warn çekirdeği: kayıt + DM + otomatik ceza.
+        """Общее ядро warn: запись + DM + автоматическое наказание.
 
-        /warn komutu VE sağ-tık context menüleri (mod_tools) bunu kullanır.
+        Команду /warn И контекстные меню правого клика (mod_tools) используют её.
         Ответ НЕ отправляет — отвечает вызывающая сторона.
         Возвращает: (warn_id, total, punishment_result)
         """

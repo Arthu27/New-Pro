@@ -11,7 +11,7 @@ OWNER_ID =int (os .getenv ('OWNER_ID')or '0')
 AFK_ICON =os .path .join (os .path .dirname (os .path .dirname (__file__ )),'assets','afk_icon.png')
 
 def _afk_file ():
-    """AFK simgesi — embed thumbnail'ı için dosya."""
+    """Иконка AFK — файл для thumbnail эмбеда."""
     if os .path .exists (AFK_ICON ):
         return discord .File (AFK_ICON ,filename ='afk_icon.png')
     return None

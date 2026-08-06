@@ -6,9 +6,9 @@ ICONS_DIR =os .path .join (os .path .dirname (os .path .dirname (__file__ )),'as
 
 # Имя файла, к которому привяжется иконка в embed (256px — баланс видимости/скорости)
 def icon_attach (name :str ):
-    """Embed'e bağlanacak (dosya adı, discord.File) döndürür. Yoksa (None, None).
+    """Возвращает (имя файла, discord.File) для вложения в embed. Иначе (None, None).
 
-    Kullanım:
+    Использование:
         fname, f = icon_attach('welcome')
         if f:
             embed.set_thumbnail(url=f'attachment://{fname}')
@@ -24,7 +24,7 @@ def icon_attach (name :str ):
 
 
 async def send_with_icon (target ,embed ,name :str ,**kwargs ):
-    """embed'i simgesiyle (varsa) gönderir. target: .send(...) metodu olan nesne."""
+    """Отправляет embed с иконкой (если есть). target: объект с методом .send(...)."""
     if os .path .isdir (ICONS_DIR ):
         fname ,f =icon_attach (name )
         if f :
@@ -34,7 +34,7 @@ async def send_with_icon (target ,embed ,name :str ,**kwargs ):
 
 
 async def respond_with_icon (interaction ,embed ,name :str ,**kwargs ):
-    """interaction.response.send_message için simgeli gönderim."""
+    """Отправка с иконкой для interaction.response.send_message."""
     if os .path .isdir (ICONS_DIR ):
         fname ,f =icon_attach (name )
         if f :

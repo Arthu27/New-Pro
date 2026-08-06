@@ -414,7 +414,7 @@ class ModReportView (discord .ui .View ):
             embed .set_footer (text =interaction .guild .name ,icon_url =interaction .guild .icon .url )
         embed .add_field (
         name =' Aktivite',
-        value =f'```yaml\nСообщений  : {msg:,}\nВойс      : {h}ч {mn}мин\nПриглашений  : {inv.get(uid, 0)}\n```',
+        value =f'```yaml\nСообщений  : {msg:,}\nГолос     : {h}ч {mn}мин\nПриглашений  : {inv.get(uid, 0)}\n```',
         inline =True 
         )
         embed .add_field (
@@ -669,7 +669,7 @@ class ModReport (commands .Cog ):
         embed .set_thumbnail (url =target .display_avatar .url )
         embed .add_field (
         name =' Aktivite',
-        value =f'```yaml\nСообщений  : {msg:,}\nВойс      : {h}ч {mn}мин\nПриглашений  : {invites_cnt}\n```',
+        value =f'```yaml\nСообщений  : {msg:,}\nГолос     : {h}ч {mn}мин\nПриглашений  : {invites_cnt}\n```',
         inline =True 
         )
         embed .add_field (

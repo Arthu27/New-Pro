@@ -1,8 +1,8 @@
 """
 Aether Social Cog
 - Расширенная система опросов (множественный выбор, по времени, анонимно, с графиком)
-- Event planlayыcыsы (etkinlik takvimi, katыlыmcы список, hatыrlatmalar)
-- Matchmaking система (oyun arkadaшы bulma, команда создан)
+- Планировщик событий (календарь событий, список участников, напоминания)
+- Система matchmaking (поиск напарника по игре, создание команды)
 """
 import discord 
 from discord .ext import commands ,tasks 

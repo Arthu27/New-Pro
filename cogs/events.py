@@ -91,7 +91,7 @@ class Events (commands .Cog ):
 
     @app_commands .command (name ='event-create',description ='Создать новое событие')
     @app_commands .describe (
-    baslik ='Событие baшlыгы',
+    baslik ='Название события',
     aciklama ='Событие описание',
     date ='Дата (GG/AA/YYYY)',
     часов ='Время (SS:DD)',
