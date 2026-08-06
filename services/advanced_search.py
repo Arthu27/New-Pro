@@ -1,5 +1,5 @@
 """
-Имяvanced Search
+Advanced Search
 Расширенная система поиска (Elasticsearch entegrasyonu)
 """
 
@@ -70,7 +70,7 @@ class SearchEngine:
         self._save_index()
     
     def index_user(self, user_id: str, user_data: Dict[str, Any]):
-        """Пользовательyы index'le"""
+        """Индексировать пользователя"""
         self.index['users'][user_id] = {
             'username': user_data.get('username', ''),
             'email': user_data.get('email', ''),
@@ -168,7 +168,7 @@ class SearchEngine:
         return score
     
     def suggest(self, query: str, limit: int = 10) -> List[str]:
-        """Предложениеler"""
+        """Предложения"""
         suggestions = set()
         query_lower = query.lower()
         
@@ -254,7 +254,7 @@ class FuzzySearch:
         return results[:limit]
     
     def _calculate_similarity(self, s1: str, s2: str) -> float:
-        """Benzerlik hesapla (Levenshtein distance basitleшtirilmiш)"""
+        """Вычислить схожесть (упрощённое расстояние Левенштейна)"""
         s1_lower = s1.lower()
         s2_lower = s2.lower()
         
@@ -278,14 +278,14 @@ class FuzzySearch:
 
 
 class SavedSearch:
-    """Kaydedilmiш aramalar"""
+    """Сохранённые поиски"""
     
     def __init__(self):
         self.saved_searches_file = 'data/saved_searches.json'
         self.saved_searches = self._load_saved_searches()
     
     def _load_saved_searches(self) -> Dict[str, Any]:
-        """Kaydedilmiш aramalarы загрузить"""
+        """Загрузить сохранённые поиски"""
         if os.path.exists(self.saved_searches_file):
             try:
                 with open(self.saved_searches_file, 'r', encoding='utf-8') as f:
@@ -296,14 +296,14 @@ class SavedSearch:
         return {}
     
     def _save_saved_searches(self):
-        """Kaydedilmiш aramalarы сохранить"""
+        """Записать сохранённые поиски"""
         os.makedirs('data', exist_ok=True)
         with open(self.saved_searches_file, 'w', encoding='utf-8') as f:
             json.dump(self.saved_searches, f, ensure_ascii=False, indent=2)
     
     def save_search(self, user_id: str, name: str, query: str,
                     filters: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """Aramayы сохранить"""
+        """Сохранить поиск"""
         if user_id not in self.saved_searches:
             self.saved_searches[user_id] = []
         
@@ -323,11 +323,11 @@ class SavedSearch:
         return saved_search
     
     def get_saved_searches(self, user_id: str) -> List[Dict[str, Any]]:
-        """Kaydedilmiш aramalarы al"""
+        """Получить сохранённые поиски"""
         return self.saved_searches.get(user_id, [])
     
     def delete_saved_search(self, user_id: str, search_id: str) -> bool:
-        """Kaydedilmiш aramayы удалить"""
+        """Удалить сохранённый поиск"""
         if user_id not in self.saved_searches:
             return False
         
@@ -342,14 +342,14 @@ class SavedSearch:
 
 
 class SearchAnalytics:
-    """Arama analitiгi"""
+    """Аналитика поиска"""
     
     def __init__(self):
         self.analytics_file = 'data/search_analytics.json'
         self.analytics = self._load_analytics()
     
     def _load_analytics(self) -> Dict[str, Any]:
-        """Analitiгi загрузить"""
+        """Загрузить аналитику"""
         if os.path.exists(self.analytics_file):
             try:
                 with open(self.analytics_file, 'r', encoding='utf-8') as f:
@@ -364,7 +364,7 @@ class SearchAnalytics:
         }
     
     def _save_analytics(self):
-        """Analitiгi сохранить"""
+        """Сохранить аналитику"""
         os.makedirs('data', exist_ok=True)
         
         # defaultdict'larы normal dict'lere чevir
@@ -378,7 +378,7 @@ class SearchAnalytics:
             json.dump(analytics_dict, f, ensure_ascii=False, indent=2)
     
     def record_search(self, query: str, result_count: int):
-        """Aramayы сохранить"""
+        """Сохранить поиск"""
         self.analytics['queries'][query] += 1
         
         if result_count == 0:
@@ -387,7 +387,7 @@ class SearchAnalytics:
         self._save_analytics()
     
     def get_popular_queries(self, limit: int = 20) -> List[Dict[str, Any]]:
-        """Popюler sorgularы al"""
+        """Получить популярные запросы"""
         queries = [
             {'query': query, 'count': count}
             for query, count in self.analytics['queries'].items()
@@ -398,7 +398,7 @@ class SearchAnalytics:
         return queries[:limit]
     
     def get_no_results_queries(self, limit: int = 20) -> List[Dict[str, Any]]:
-        """Sonuчsuz sorgularы al"""
+        """Получить запросы без результатов"""
         queries = [
             {'query': query, 'count': count}
             for query, count in self.analytics['no_results'].items()

@@ -1,5 +1,5 @@
 """
-Имяvanced Ticket Features
+Advanced Ticket Features
 Расширенные функции тикетов (merging, splitting, cloning, dependencies, sub-tickets)
 """
 
@@ -11,7 +11,7 @@ import hashlib
 
 
 class TicketMerger:
-    """Ticket объединитьici"""
+    """Объединение тикетов"""
     
     def __init__(self):
         self.merge_history_file = 'data/ticket_merge_history.json'
@@ -37,7 +37,7 @@ class TicketMerger:
     def merge_tickets(self, primary_ticket_id: str,
                       secondary_ticket_ids: List[str],
                       merged_by: str) -> Dict[str, Any]:
-        """Ticket'larы объединить"""
+        """Объединить тикеты"""
         merge_id = hashlib.md5(f"{primary_ticket_id}{''.join(secondary_ticket_ids)}{datetime.now().isoformat()}".encode()).hexdigest()[:12]
         
         merge_record = {
@@ -54,7 +54,7 @@ class TicketMerger:
         return merge_record
     
     def get_merge_history(self, ticket_id: str) -> List[Dict[str, Any]]:
-        """Объединитьme geчmiшini al"""
+        """Получить историю объединений"""
         history = []
         
         for merge_id, record in self.merge_history.items():
@@ -64,7 +64,7 @@ class TicketMerger:
         return history
     
     def get_merged_tickets(self, primary_ticket_id: str) -> List[str]:
-        """Объединитьilmiш ticket'larы al"""
+        """Получить объединённые тикеты"""
         for record in self.merge_history.values():
             if record['primary_ticket_id'] == primary_ticket_id:
                 return record['secondary_ticket_ids']
@@ -73,14 +73,14 @@ class TicketMerger:
 
 
 class TicketSplitter:
-    """Ticket bёlюcю"""
+    """Разделитель тикетов"""
     
     def __init__(self):
         self.split_history_file = 'data/ticket_split_history.json'
         self.split_history = self._load_split_history()
     
     def _load_split_history(self) -> Dict[str, Any]:
-        """Bёlme geчmiшini загрузить"""
+        """Загрузить историю разделений"""
         if os.path.exists(self.split_history_file):
             try:
                 with open(self.split_history_file, 'r', encoding='utf-8') as f:
@@ -91,7 +91,7 @@ class TicketSplitter:
         return {}
     
     def _save_split_history(self):
-        """Bёlme geчmiшini сохранить"""
+        """Сохранить историю разделений"""
         os.makedirs('data', exist_ok=True)
         with open(self.split_history_file, 'w', encoding='utf-8') as f:
             json.dump(self.split_history, f, ensure_ascii=False, indent=2)
@@ -99,7 +99,7 @@ class TicketSplitter:
     def split_ticket(self, original_ticket_id: str,
                      new_tickets: List[Dict[str, Any]],
                      split_by: str) -> Dict[str, Any]:
-        """Ticket'ы bёl"""
+        """Разделить тикет"""
         split_id = hashlib.md5(f"{original_ticket_id}{datetime.now().isoformat()}".encode()).hexdigest()[:12]
         
         split_record = {
@@ -117,7 +117,7 @@ class TicketSplitter:
         return split_record
     
     def get_split_history(self, ticket_id: str) -> List[Dict[str, Any]]:
-        """Bёlme geчmiшini al"""
+        """Получить историю разделений"""
         history = []
         
         for split_id, record in self.split_history.items():
@@ -128,14 +128,14 @@ class TicketSplitter:
 
 
 class TicketCloner:
-    """Ticket klonlayыcы"""
+    """Клонирование тикетов"""
     
     def __init__(self):
         self.clone_history_file = 'data/ticket_clone_history.json'
         self.clone_history = self._load_clone_history()
     
     def _load_clone_history(self) -> Dict[str, Any]:
-        """Klonlama geчmiшini загрузить"""
+        """Загрузить историю клонирований"""
         if os.path.exists(self.clone_history_file):
             try:
                 with open(self.clone_history_file, 'r', encoding='utf-8') as f:
@@ -146,7 +146,7 @@ class TicketCloner:
         return {}
     
     def _save_clone_history(self):
-        """Klonlama geчmiшini сохранить"""
+        """Сохранить историю клонирований"""
         os.makedirs('data', exist_ok=True)
         with open(self.clone_history_file, 'w', encoding='utf-8') as f:
             json.dump(self.clone_history, f, ensure_ascii=False, indent=2)
@@ -183,7 +183,7 @@ class TicketCloner:
         return cloned_ticket
     
     def get_clone_history(self, ticket_id: str) -> List[Dict[str, Any]]:
-        """Klonlama geчmiшini al"""
+        """Получить историю клонирований"""
         history = []
         
         for clone_id, record in self.clone_history.items():
@@ -194,14 +194,14 @@ class TicketCloner:
 
 
 class TicketDependencies:
-    """Ticket baгыmlыlыklarы"""
+    """Зависимости тикетов"""
     
     def __init__(self):
         self.dependencies_file = 'data/ticket_dependencies.json'
         self.dependencies = self._load_dependencies()
     
     def _load_dependencies(self) -> Dict[str, Any]:
-        """Baгыmlыlыklarы загрузить"""
+        """Загрузить зависимости"""
         if os.path.exists(self.dependencies_file):
             try:
                 with open(self.dependencies_file, 'r', encoding='utf-8') as f:
@@ -212,13 +212,13 @@ class TicketDependencies:
         return {'depends_on': {}, 'blocks': {}}
     
     def _save_dependencies(self):
-        """Baгыmlыlыklarы сохранить"""
+        """Сохранить зависимости"""
         os.makedirs('data', exist_ok=True)
         with open(self.dependencies_file, 'w', encoding='utf-8') as f:
             json.dump(self.dependencies, f, ensure_ascii=False, indent=2)
     
     def add_dependency(self, ticket_id: str, depends_on_ticket_id: str) -> bool:
-        """Baгыmlыlыk добавить"""
+        """Добавить зависимость"""
         # Dёngю проверка
         if self._would_create_cycle(ticket_id, depends_on_ticket_id):
             return False
@@ -241,7 +241,7 @@ class TicketDependencies:
         return True
     
     def remove_dependency(self, ticket_id: str, depends_on_ticket_id: str) -> bool:
-        """Baгыmlыlыгы удалить"""
+        """Удалить зависимость"""
         removed = False
         
         if ticket_id in self.dependencies['depends_on']:
@@ -260,7 +260,7 @@ class TicketDependencies:
         return removed
     
     def _would_create_cycle(self, ticket_id: str, depends_on_ticket_id: str) -> bool:
-        """Dёngю создатьup создатьmayacaгыnы проверить et"""
+        """Проверить, не создаст ли цикл"""
         # Basit dёngю проверка
         visited = set()
         
@@ -282,15 +282,15 @@ class TicketDependencies:
         return has_path(depends_on_ticket_id, ticket_id)
     
     def get_dependencies(self, ticket_id: str) -> List[str]:
-        """Baгыmlыlыklarы al"""
+        """Получить зависимости"""
         return self.dependencies['depends_on'].get(ticket_id, [])
     
     def get_blocked_tickets(self, ticket_id: str) -> List[str]:
-        """Блокlediгi ticket'larы al"""
+        """Получить блокируемые тикеты"""
         return self.dependencies['blocks'].get(ticket_id, [])
     
     def can_close(self, ticket_id: str, tickets: Dict[str, Dict[str, Any]]) -> bool:
-        """Закрытьыlыp закрытьыlamayacaгыnы проверить et"""
+        """Проверить, можно ли закрыть"""
         dependencies = self.get_dependencies(ticket_id)
         
         for dep_id in dependencies:
@@ -303,14 +303,14 @@ class TicketDependencies:
 
 
 class SubTicketManager:
-    """Alt ticket yёneticisi"""
+    """Менеджер подтикетов"""
     
     def __init__(self):
         self.subtickets_file = 'data/subtickets.json'
         self.subtickets = self._load_subtickets()
     
     def _load_subtickets(self) -> Dict[str, Any]:
-        """Alt ticket'larы загрузить"""
+        """Загрузить подтикеты"""
         if os.path.exists(self.subtickets_file):
             try:
                 with open(self.subtickets_file, 'r', encoding='utf-8') as f:
@@ -321,7 +321,7 @@ class SubTicketManager:
         return {}
     
     def _save_subtickets(self):
-        """Alt ticket'larы сохранить"""
+        """Сохранить подтикеты"""
         os.makedirs('data', exist_ok=True)
         with open(self.subtickets_file, 'w', encoding='utf-8') as f:
             json.dump(self.subtickets, f, ensure_ascii=False, indent=2)
@@ -342,7 +342,7 @@ class SubTicketManager:
         return subticket
     
     def get_subtickets(self, parent_ticket_id: str) -> List[Dict[str, Any]]:
-        """Alt ticket'larы al"""
+        """Получить подтикеты"""
         return self.subtickets.get(parent_ticket_id, [])
     
     def delete_subticket(self, parent_ticket_id: str, subticket_id: str) -> bool:
@@ -361,7 +361,7 @@ class SubTicketManager:
         return False
     
     def get_parent_ticket(self, subticket_id: str) -> Optional[str]:
-        """Юst ticket'ы al"""
+        """Получить родительский тикет"""
         for parent_id, subtickets in self.subtickets.items():
             for subticket in subtickets:
                 if subticket.get('id') == subticket_id:
@@ -371,7 +371,7 @@ class SubTicketManager:
     
     def get_completion_percentage(self, parent_ticket_id: str,
                                   tickets: Dict[str, Dict[str, Any]]) -> float:
-        """Tamamlanma yюzdesini al"""
+        """Получить процент выполнения"""
         subtickets = self.get_subtickets(parent_ticket_id)
         
         if not subtickets:
@@ -386,14 +386,14 @@ class SubTicketManager:
 
 
 class CustomWorkflow:
-    """Особый iш akышы"""
+    """Настраиваемый рабочий процесс"""
     
     def __init__(self):
         self.workflows_file = 'data/custom_workflows.json'
         self.workflows = self._load_workflows()
     
     def _load_workflows(self) -> Dict[str, Any]:
-        """Иш akышlarыnы загрузить"""
+        """Загрузить рабочие процессы"""
         if os.path.exists(self.workflows_file):
             try:
                 with open(self.workflows_file, 'r', encoding='utf-8') as f:
@@ -404,14 +404,14 @@ class CustomWorkflow:
         return {}
     
     def _save_workflows(self):
-        """Иш akышlarыnы сохранить"""
+        """Сохранить рабочие процессы"""
         os.makedirs('data', exist_ok=True)
         with open(self.workflows_file, 'w', encoding='utf-8') as f:
             json.dump(self.workflows, f, ensure_ascii=False, indent=2)
     
     def create_workflow(self, name: str, category: str,
                         steps: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Иш akышы создать"""
+        """Создать рабочий процесс"""
         workflow_id = hashlib.md5(f"{name}{category}{datetime.now().isoformat()}".encode()).hexdigest()[:12]
         
         workflow = {
@@ -428,18 +428,18 @@ class CustomWorkflow:
         return workflow
     
     def get_workflow(self, workflow_id: str) -> Optional[Dict[str, Any]]:
-        """Иш akышыnы al"""
+        """Получить рабочий процесс"""
         return self.workflows.get(workflow_id)
     
     def get_workflows_by_category(self, category: str) -> List[Dict[str, Any]]:
-        """Kategoriye по iш akышlarыnы al"""
+        """Получить рабочие процессы по категории"""
         return [
             wf for wf in self.workflows.values()
             if wf.get('category') == category
         ]
     
     def delete_workflow(self, workflow_id: str) -> bool:
-        """Иш akышыnы удалить"""
+        """Удалить рабочий процесс"""
         if workflow_id in self.workflows:
             del self.workflows[workflow_id]
             self._save_workflows()

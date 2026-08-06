@@ -53,7 +53,7 @@ class BackupService:
         return backup_file
     
     def backup_config(self) -> str:
-        """Config dosyalarыnы yedekle"""
+        """Резервное копирование файлов конфигурации"""
         config_files = [
             'config.json',
             'config/settings.json',
@@ -82,10 +82,10 @@ class BackupService:
         
         shutil.copy2(backup_file, db_path)
         
-        print(f" Database geri yюklendi: {backup_file}")
+        print(f" База данных восстановлена: {backup_file}")
     
     def restore_all_data(self, backup_file: str):
-        """Все data'yы geri загрузить"""
+        """Восстановить все данные"""
         if not os.path.exists(backup_file):
             raise FileNotFoundError(f"Резервная копия не найдена: {backup_file}")
         
@@ -98,7 +98,7 @@ class BackupService:
         with zipfile.ZipFile(backup_file, 'r') as zipf:
             zipf.extractall(data_dir)
         
-        print(f" Все data geri yюklendi: {backup_file}")
+        print(f" Все данные восстановлены: {backup_file}")
     
     def restore_config(self, backup_file: str):
         """Config geri загрузить"""
@@ -108,7 +108,7 @@ class BackupService:
         with zipfile.ZipFile(backup_file, 'r') as zipf:
             zipf.extractall('.')
         
-        print(f" Config geri yюklendi: {backup_file}")
+        print(f" Конфигурация восстановлена: {backup_file}")
     
     def list_backups(self, backup_type: str = None) -> List[Dict]:
         """Список резервных копий"""
@@ -155,7 +155,7 @@ class BackupService:
                 print(f" Eski yedek удалено: {backup_file}")
     
     def get_backup_info(self, backup_file: str) -> Dict:
-        """Yedek информацияlerini al"""
+        """Получить информацию о резервных копиях"""
         if not os.path.exists(backup_file):
             raise FileNotFoundError(f"Резервная копия не найдена: {backup_file}")
         
@@ -172,10 +172,10 @@ class BackupService:
     def schedule_backup(self, interval_hours: int = 24):
         """Otomatik yedekleme planla (placeholder)"""
         # Gerчek uygulamada scheduler kullanыlacak
-        print(f"⏰ Otomatik yedekleme planlandы: Her {interval_hours} saatte bir")
+        print(f"⏰ Автоматическое резервное копирование запланировано: каждые {interval_hours} ч")
     
     def export_stats(self) -> Dict:
-        """Резвное копирование статистикаini al"""
+        """Получить статистику резервного копирования"""
         backups = self.list_backups()
         
         total_size = sum(b['size'] for b in backups)

@@ -22,14 +22,14 @@ class ChangeType(Enum):
 
 
 class ChangeSeverity(Enum):
-    """Изменение ёnemi"""
+    """Важность изменения"""
     MAJOR = 'major'
     MINOR = 'minor'
     PATCH = 'patch'
 
 
 class ChangelogEntry:
-    """Журнал изменений записейi"""
+    """Запись журнала изменений"""
     
     def __init__(self, entry_id: str, version: str, change_type: ChangeType,
                  title: str, description: str = ''):
@@ -49,11 +49,11 @@ class ChangelogEntry:
         self.metadata = {}
     
     def set_severity(self, severity: ChangeSeverity):
-        """Ёnem derecesi настроить"""
+        """Установить важность"""
         self.severity = severity
     
     def set_author(self, author: str):
-        """Написатьar настроить"""
+        """Установить автора"""
         self.author = author
     
     def add_tag(self, tag: str):
@@ -62,18 +62,18 @@ class ChangelogEntry:
             self.tags.append(tag)
     
     def add_affected_component(self, component: str):
-        """Etkilenen bileшen добавить"""
+        """Добавить затронутый компонент"""
         if component not in self.affected_components:
             self.affected_components.append(component)
     
     def mark_breaking_change(self, migration_guide: str = None):
-        """Kыrыlma deгiшikliгi как iшaretle"""
+        """Пометить как ломающее изменение"""
         self.breaking_change = True
         self.migration_guide = migration_guide
         self.severity = ChangeSeverity.MAJOR
     
     def add_related_issue(self, issue_id: str):
-        """Иlgili sorun добавить"""
+        """Добавить связанную проблему"""
         if issue_id not in self.related_issues:
             self.related_issues.append(issue_id)
     
@@ -82,7 +82,7 @@ class ChangelogEntry:
         self.metadata[key] = value
     
     def to_dict(self) -> Dict[str, Any]:
-        """Dict'e чevir"""
+        """Преобразовать в dict"""
         return {
             'entry_id': self.entry_id,
             'version': self.version,
@@ -123,7 +123,7 @@ class ChangelogEntry:
 
 
 class ChangelogManager:
-    """Журнал изменений yёneticisi"""
+    """Менеджер журнала изменений"""
     
     def __init__(self):
         self.changelog_file = 'data/changelog.json'
@@ -176,12 +176,12 @@ class ChangelogManager:
         return entry
     
     def get_entry(self, entry_id: str) -> Optional[ChangelogEntry]:
-        """Входi al"""
+        """Получить запись"""
         return self.entries.get(entry_id)
     
     def get_all_entries(self, version: str = None, change_type: ChangeType = None,
                         severity: ChangeSeverity = None) -> List[ChangelogEntry]:
-        """Все записейleri al"""
+        """Получить все записи"""
         entries = list(self.entries.values())
         
         if version:
@@ -198,25 +198,25 @@ class ChangelogManager:
         return entries
     
     def get_entries_by_version(self, version: str) -> List[ChangelogEntry]:
-        """Versiyona по записейleri al"""
+        """Получить записи по версии"""
         return self.get_all_entries(version=version)
     
     def get_entries_by_type(self, change_type: ChangeType) -> List[ChangelogEntry]:
-        """Tip'e по записейleri al"""
+        """Получить записи по типу"""
         return self.get_all_entries(change_type=change_type)
     
     def get_breaking_changes(self) -> List[ChangelogEntry]:
-        """Kыrыlma изменениеlerini al"""
+        """Получить ломающие изменения"""
         return [e for e in self.entries.values() if e.breaking_change]
     
     def get_recent_entries(self, limit: int = 10) -> List[ChangelogEntry]:
-        """Son записейleri al"""
+        """Получить последние записи"""
         entries = list(self.entries.values())
         entries.sort(key=lambda e: e.timestamp, reverse=True)
         return entries[:limit]
     
     def delete_entry(self, entry_id: str) -> bool:
-        """Входi удалить"""
+        """Удалить запись"""
         if entry_id in self.entries:
             del self.entries[entry_id]
             self._save_entries()
@@ -225,13 +225,13 @@ class ChangelogManager:
         return False
     
     def get_all_versions(self) -> List[str]:
-        """Все версийlarы al"""
+        """Получить все версии"""
         versions = set(entry.version for entry in self.entries.values())
         return sorted(list(versions), reverse=True)
 
 
 class ChangelogGenerator:
-    """Журнал изменений создатьucu"""
+    """Генератор журнала изменений"""
     
     def __init__(self, changelog_manager: ChangelogManager):
         self.changelog_manager = changelog_manager
@@ -263,9 +263,9 @@ class ChangelogGenerator:
             for entry in version_entries:
                 by_type[entry.change_type].append(entry)
             
-            # Имяded
+            # Added
             if ChangeType.ADDED in by_type:
-                markdown += "### Имяded\n\n"
+                markdown += "### Added\n\n"
                 for entry in by_type[ChangeType.ADDED]:
                     markdown += f"- {entry.title}"
                     if entry.description:
@@ -380,7 +380,7 @@ class ChangelogGenerator:
 
 
 class ChangelogNotification:
-    """Журнал изменений уведомлениеi"""
+    """Уведомление журнала изменений"""
     
     def __init__(self, changelog_manager: ChangelogManager):
         self.changelog_manager = changelog_manager
@@ -435,7 +435,7 @@ class ChangelogNotification:
         return subscribers
     
     def should_notify(self, entry: ChangelogEntry, user_id: str) -> bool:
-        """Уведомление gёnderilip gёnderilmeyeceгini проверить et"""
+        """Проверить, нужно ли отправить уведомление"""
         if user_id not in self.subscriptions:
             return False
         

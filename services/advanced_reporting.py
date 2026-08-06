@@ -1,6 +1,6 @@
 """
-Имяvanced Reporting & Analytics
-Geliшmiш raporlama ve analitik sistemi
+Advanced Reporting & Analytics
+Расширенная система отчётности и аналитики
 """
 
 import json
@@ -12,14 +12,14 @@ import statistics
 
 
 class ReportBuilder:
-    """Ёzel rapor создатьucu"""
+    """Конструктор пользовательских отчётов"""
     
     def __init__(self):
         self.reports_file = 'data/custom_reports.json'
         self.reports = self._load_reports()
     
     def _load_reports(self) -> Dict[str, Any]:
-        """Raporlarы yюkle"""
+        """Загрузить отчёты"""
         if os.path.exists(self.reports_file):
             try:
                 with open(self.reports_file, 'r', encoding='utf-8') as f:
@@ -30,7 +30,7 @@ class ReportBuilder:
         return {}
     
     def _save_reports(self):
-        """Raporlarы kaydet"""
+        """Сохранить отчёты"""
         os.makedirs('data', exist_ok=True)
         with open(self.reports_file, 'w', encoding='utf-8') as f:
             json.dump(self.reports, f, ensure_ascii=False, indent=2)
@@ -38,7 +38,7 @@ class ReportBuilder:
     def create_report(self, report_id: str, name: str, 
                       metrics: List[str], filters: Dict[str, Any],
                       schedule: Optional[str] = None) -> Dict[str, Any]:
-        """Ёzel rapor создать"""
+        """Создать пользовательский отчёт"""
         self.reports[report_id] = {
             'name': name,
             'metrics': metrics,
@@ -125,7 +125,7 @@ class ReportBuilder:
     
     def _load_tickets(self, start_date: datetime, end_date: datetime,
                      filters: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Ticket'larы yюkle"""
+        """Загрузить тикеты"""
         tickets_file = 'data/customer_tickets.json'
         
         if not os.path.exists(tickets_file):
@@ -165,7 +165,7 @@ class ReportBuilder:
         return True
     
     def _calculate_resolution_time(self, ticket: Dict[str, Any]) -> float:
-        """Чёzюm длительностьni hesapla (saat)"""
+        """Вычислить длительность решения (часы)"""
         created_at = ticket.get('created_at')
         closed_at = ticket.get('closed_at')
         
@@ -178,7 +178,7 @@ class ReportBuilder:
         return (closed - created).total_seconds() / 3600
     
     def _group_by_day(self, tickets: List[Dict[str, Any]]) -> Dict[str, int]:
-        """Деньlere gёre grupla"""
+        """Сгруппировать по дням"""
         by_day = defaultdict(int)
         
         for ticket in tickets:
@@ -190,7 +190,7 @@ class ReportBuilder:
         return dict(by_day)
     
     def _group_by_hour(self, tickets: List[Dict[str, Any]]) -> Dict[int, int]:
-        """Saatlere gёre grupla"""
+        """Сгруппировать по часам"""
         by_hour = defaultdict(int)
         
         for ticket in tickets:
@@ -235,7 +235,7 @@ class AnalyticsEngine:
         self.tickets_file = 'data/customer_tickets.json'
     
     def get_overview(self, days: int = 30) -> Dict[str, Any]:
-        """Genel bakыш"""
+        """Общий обзор"""
         start_date = datetime.now() - timedelta(days=days)
         tickets = self._load_tickets_since(start_date)
         
@@ -324,7 +324,7 @@ class AnalyticsEngine:
         }
     
     def _load_tickets_since(self, start_date: datetime) -> List[Dict[str, Any]]:
-        """Belirli tarihten itibaren ticket'larы yюkle"""
+        """Загрузить тикеты начиная с даты"""
         if not os.path.exists(self.tickets_file):
             return []
         
@@ -345,7 +345,7 @@ class AnalyticsEngine:
         return filtered
     
     def _calculate_resolution_time(self, ticket: Dict[str, Any]) -> float:
-        """Чёzюm длительностьni hesapla (saat)"""
+        """Вычислить длительность решения (часы)"""
         created_at = ticket.get('created_at')
         closed_at = ticket.get('closed_at')
         
@@ -359,10 +359,10 @@ class AnalyticsEngine:
 
 
 class ReportExporter:
-    """Rapor dышa aktarыcы"""
+    """Экспорт отчётов"""
     
     def export_to_json(self, report: Dict[str, Any], filepath: str) -> bool:
-        """JSON olarak dышa aktar"""
+        """Экспортировать в JSON"""
         try:
             with open(filepath, 'w', encoding='utf-8') as f:
                 json.dump(report, f, ensure_ascii=False, indent=2)
@@ -371,7 +371,7 @@ class ReportExporter:
             return False
     
     def export_to_csv(self, report: Dict[str, Any], filepath: str) -> bool:
-        """CSV olarak dышa aktar"""
+        """Экспортировать в CSV"""
         try:
             import csv
             
@@ -397,7 +397,7 @@ class ReportExporter:
             return False
     
     def export_to_html(self, report: Dict[str, Any], filepath: str) -> bool:
-        """HTML olarak dышa aktar"""
+        """Экспортировать в HTML"""
         try:
             html = f"""
 <!DOCTYPE html>
