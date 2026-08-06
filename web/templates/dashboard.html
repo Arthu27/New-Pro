@@ -239,7 +239,7 @@
 .hero-welcome-msg{ display:flex; align-items:flex-start; gap:11px; padding:13px 16px; background:linear-gradient(90deg,var(--ac-soft),transparent); border:1px solid var(--ac-line); border-radius:13px; font-size:13.5px; color:var(--text-2); line-height:1.6; margin-top:4px; }
 .hero-welcome-msg i{ color:var(--ac); margin-top:2px; }
 
-/* Yeni welcome tasarımıyla uyumlu dokunuşlar */
+/* Штрихи в стиле нового дизайна welcome */
 #heroTitle{
   background:linear-gradient(120deg,var(--ac-2) 10%,#fff3d6 35%,var(--ac) 55%,var(--ac-3) 90%);
   background-size:200% 100%;
@@ -520,7 +520,7 @@
 
   // ── Load main guild info into hero (name, icon, welcome msg) ──
   async function loadGuildInfo() {
-    // Sunucu adı sabit: Hakumo
+    // Название сервера фиксировано: Hakumo
     var gName = 'Hakumo';
     try {
       var guilds = await window.fetchCachedJSON('/api/guilds');
@@ -645,10 +645,10 @@
         box.innerHTML = '<div class="empty-state"><i class="fas fa-user-clock"></i><p>Пока входов нет</p></div>';
         return;
       }
-      var roleColors = { owner: 'var(--err)', админ: 'var(--ac)', мод: 'var(--ok)', uye: 'var(--text-3)' };
+      var roleColors = { owner: 'var(--err)', admin: 'var(--ac)', mod: 'var(--ok)', uye: 'var(--text-3)' };
       box.innerHTML = logs.slice(0, 15).map(function (l) {
         var t = fmtDate(l.timestamp);
-        var rc = roleColors[l.roles] || 'var(--text-3)';
+        var rc = roleColors[l.roles || l.role] || 'var(--text-3)';
         var avatar = l.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png';
         return '<div class="login-item">' +
           '<img src="' + esc(avatar) + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' +
@@ -656,7 +656,7 @@
             '<div class="login-item-name">' + esc(l.username) + '</div>' +
             '<div class="login-item-time">' + esc(t) + '</div>' +
           '</div>' +
-          '<span class="role-chip" >' + esc((l.roles || '').toUpperCase()) + '</span>' +
+          '<span class="role-chip" >' + esc(((l.roles || l.role) || '').toUpperCase()) + '</span>' +
         '</div>';
       }).join('');
     } catch (e) { /* skip */ }

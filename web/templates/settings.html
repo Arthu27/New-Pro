@@ -84,13 +84,13 @@
   <div class="set-card" >
     <div class="set-head">
       <div class="set-icon"><i class="fas fa-globe"></i></div>
-      <div class="set-title">Tюnel</div>
+      <div class="set-title">Туннель</div>
     </div>
     <div class="status-row">
       <span class="dot" id="tunnel-dot"></span>
       <span id="tunnel-status">Загрузка...</span>
     </div>
-    <div id="tunnel-url-wrap"   style="margin-top: 8px;" onclick="navigator.clipboard.writeText(this.textContent);this.textContent='✓ Kopyalandи';setTimeout(()=>this.textContent=this.dataset.url,1500)" data-url=""></div>
+    <div id="tunnel-url-wrap"   style="margin-top: 8px;" onclick="navigator.clipboard.writeText(this.textContent);this.textContent='✓ Скопировано';setTimeout(()=>this.textContent=this.dataset.url,1500)" data-url=""></div>
   </div>
 </div>
 
@@ -126,7 +126,7 @@
       $('threat-val').textContent = d.threat_score || 15;
       $('lockdown-state').textContent = d.lockdown_active ? 'АКТИВЕН' : 'Kapali';
       $('lockdown-state').style.color = d.lockdown_active ? '#ef4444' : '#4ade80';
-    } catch (e) { /* sessiz */ }
+    } catch (e) { /* тихо */ }
   }
 
   async function loadTunnel() {
@@ -143,7 +143,7 @@
         $('tunnel-status').textContent = 'Kapali';
         $('tunnel-dot').className = 'dot status-off';
       }
-    } catch (e) { /* sessiz */ }
+    } catch (e) { /* тихо */ }
   }
 
   async function doSync() {
@@ -155,13 +155,13 @@
         btn.textContent = '✓ Synced';
         setTimeout(function () { btn.innerHTML = '<i class="fas fa-sync"></i> Sync'; }, 2000);
       }
-    } catch (e) { /* sessiz */ }
+    } catch (e) { /* тихо */ }
     btn.disabled = false;
   }
 
   async function doRestart() {
     window.askConfirm('Перезапустить бота', 'Перезапустить бота? Это прервёт работу на несколько секунд.', function () {
-      fetch('/api/bot/restart', { method: 'POST' }).catch(function (e) { /* sessiz */ });
+      fetch('/api/bot/restart', { method: 'POST' }).catch(function (e) { /* тихо */ });
     }, { icon: '🔄', okText: 'Перезапустить', danger: true });
   }
 
@@ -169,7 +169,7 @@
     try {
       await fetch('/api/security/toggle-lockdown', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
       loadThreat();
-    } catch (e) { /* sessiz */ }
+    } catch (e) { /* тихо */ }
   }
 
   function doLogout() {

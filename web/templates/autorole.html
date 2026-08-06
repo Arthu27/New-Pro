@@ -106,7 +106,7 @@ async function loadSettings(gid) {
     var setRes = await fetch('/api/guild/' + selectedGuild + '/autorole');
     var settings = await setRes.json();
 
-    // Not: allRoles dizisini override etmiyoruz (старый kodda "roles" diye override ediliyordu ve bug выходил)
+    // Внимание: массив allRoles не переопределяем (в старом коде он переопределялся в "roles" и был баг)
     var memberSel = settings.member_roles || [];
     var girlSel   = settings.girl_roles   || [];
     var boySel    = settings.boy_roles    || [];

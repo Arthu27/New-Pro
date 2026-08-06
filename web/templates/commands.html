@@ -33,22 +33,22 @@
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
   var commands = [
-    { cmd: 'ban', icon: 'fa-gavel', name: 'Бан', desc: 'Участника banla', tag: 'admin' },
-    { cmd: 'kick', icon: 'fa-user-times', name: 'Кик', desc: 'Участника at', tag: 'admin' },
-    { cmd: 'warn', icon: 'fa-exclamation-triangle', name: 'Варн', desc: 'Предупреждение ver', tag: 'mod' },
-    { cmd: 'mut', icon: 'fa-volume-mut', name: 'Мьют', desc: 'Мьют (timeout)', tag: 'mod' },
-    { cmd: 'unmut', icon: 'fa-volume-up', name: 'Unmut', desc: 'Susturmayi kaldir', tag: 'mod' },
-    { cmd: 'unban', icon: 'fa-user-plus', name: 'Unban', desc: 'Бан kaldir', tag: 'admin' },
-    { cmd: 'jail', icon: 'fa-lock', name: 'Jail', desc: 'Hapishane at', tag: 'admin' },
-    { cmd: 'unjail', icon: 'fa-unlock', name: 'Unjail', desc: 'Jail kaldir', tag: 'admin' },
-    { cmd: 'clear', icon: 'fa-broom', name: 'Clear', desc: 'Сообщение temizle', tag: 'mod' },
-    { cmd: 'lock', icon: 'fa-lock', name: 'Lock', desc: 'Канал kilitle', tag: 'mod' },
+    { cmd: 'ban', icon: 'fa-gavel', name: 'Бан', desc: 'Забанить участника', tag: 'admin' },
+    { cmd: 'kick', icon: 'fa-user-times', name: 'Кик', desc: 'Кикнуть участника', tag: 'admin' },
+    { cmd: 'warn', icon: 'fa-exclamation-triangle', name: 'Варн', desc: 'Выдать предупреждение', tag: 'mod' },
+    { cmd: 'timeout', icon: 'fa-volume-mute', name: 'Мут', desc: 'Мут (тайм-аут)', tag: 'mod' },
+    { cmd: 'untimeout', icon: 'fa-volume-up', name: 'Снять мут', desc: 'Снять мут с участника', tag: 'mod' },
+    { cmd: 'unban', icon: 'fa-user-plus', name: 'Снять бан', desc: 'Снять бан с пользователя', tag: 'admin' },
+    { cmd: 'jail', icon: 'fa-lock', name: 'Jail', desc: 'Отправить в джейл', tag: 'admin' },
+    { cmd: 'unjail', icon: 'fa-unlock', name: 'Снять jail', desc: 'Снять наказание jail', tag: 'admin' },
+    { cmd: 'clear', icon: 'fa-broom', name: 'Clear', desc: 'Очистить сообщения', tag: 'mod' },
+    { cmd: 'lock', icon: 'fa-lock', name: 'Lock', desc: 'Заблокировать канал', tag: 'mod' },
     { cmd: 'unlock', icon: 'fa-unlock', name: 'Unlock', desc: 'Открыть канал', tag: 'mod' },
     { cmd: 'role', icon: 'fa-user-tag', name: 'Role', desc: 'Выдать/забрать роль', tag: 'mod' },
-    { cmd: 'ticket_panel', icon: 'fa-ticket-alt', name: 'Ticket Panel', desc: 'Панель тикетовёnder', tag: 'admin' }
+    { cmd: 'ticket_panel', icon: 'fa-ticket-alt', name: 'Ticket Panel', desc: 'Отправить панель тикетов', tag: 'admin' }
   ];
 
-  var roleColors = { мод: '#4ade80', админ: '#d4a843' };
+  var roleColors = { mod: '#4ade80', admin: '#d4a843' };
   var currentCmd = null;  // The currently open command (set by openModal, used by Execute)
 
   function renderGrid() {
@@ -67,12 +67,12 @@
   function openModal(cmd) {
     currentCmd = cmd;
     var fields = '';
-    if (cmd === 'ban' || cmd === 'kick' || cmd === 'warn' || cmd === 'mut' || cmd === 'unmut' || cmd === 'jail' || cmd === 'unjail' || cmd === 'role') {
+    if (cmd === 'ban' || cmd === 'kick' || cmd === 'warn' || cmd === 'timeout' || cmd === 'untimeout' || cmd === 'jail' || cmd === 'unjail' || cmd === 'role') {
       fields += '<div class="form-group"><label>Сервер</label><select id="guild-id">' +
         '<option value="">Выберите...</option></select></div>';
       fields += '<div class="form-group"><label>Пользователь ID</label><input type="text" id="user-id" placeholder="123456789012345678"></div>';
     }
-    if (cmd === 'mut') {
+    if (cmd === 'timeout') {
       fields += '<div class="form-group"><label>Длительность (минуты)</label><input type="number" id="duration" value="60" min="1"></div>';
     }
     if (cmd === 'role') {
@@ -100,12 +100,12 @@
       '<h3 >' + esc(commands.find(function (c) { return c.cmd === cmd; }).name) + '</h3>' +
       fields +
       '<div   style="margin-top: 14px;">' +
-        '<button class="btn-exec" id="btnExec" type="button">Чalишtиr</button>' +
+        '<button class="btn-exec" id="btnExec" type="button">Выполнить</button>' +
         '<button class="btn-cancel" id="btnCancel" type="button">Отмена</button>' +
       '</div>' +
       '<div id="result-msg"></div>';
 
-    // Guild dropdown doldur
+    // Заполнить список серверов
     var guildSelect = $('guild-id');
     if (guildSelect) {
       fetch('/api/guilds').then(function (r) { return r.json(); }).then(function (guilds) {

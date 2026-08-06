@@ -786,7 +786,7 @@ async function openDmFromInput() {
     toast('Пользователь с таким ID не найден', false);
     return;
   }
-  // İsim ara
+  // Поиск по имени
   try {
     var members = await fetch('/api/guild/' + _activeGuildId + '/members').then(function(r){ return r.json(); });
     var q = val.toLowerCase();
@@ -937,7 +937,7 @@ document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeLigh
 
 // ── INIT ──────────────────────────────────────────────────────────────────
 
-// ── UYE LISTESI ──────────────────────────────────────────────────────────
+// ── СПИСОК УЧАСТНИКОВ ────────────────────────────────────────────────────
 var _allMembers = [];
 var _profsMember = null;
 
@@ -958,7 +958,7 @@ function renderMemberList(members) {
   if (online.length) { html += '<div class="member-section">В сети - ' + online.length + '</div>'; html += online.map(renderMemberItem).join(''); }
   if (bots.length) { html += '<div class="member-section">Botlar - ' + bots.length + '</div>'; html += bots.map(renderMemberItem).join(''); }
   if (offline.length) { html += '<div class="member-section">Не в сети - ' + offline.length + '</div>'; html += offline.map(renderMemberItem).join(''); }
-  document.getElementById('members-scroll').innerHTML = html || '<div >Uye yok</div>';
+  document.getElementById('members-scroll').innerHTML = html || '<div >Нет участников</div>';
 }
 
 function renderMemberItem(m) {

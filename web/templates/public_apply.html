@@ -58,14 +58,14 @@
       <div class="form-row">
         <div class="form-group">
           <label>Имя пользователя Discord</label>
-          <input type="text" id="discord_name" placeholder="Автоматически doldurulacak..." readonly
+          <input type="text" id="discord_name" placeholder="Заполнится автоматически..." readonly
              >
           <span class="hint">После ввода ID найдётся автоматически</span>
         </div>
         <div class="form-group">
-          <label>Discord ID'n</label>
+          <label>Discord ID</label>
           <div   style="position: relative;">
-            <input type="text" id="discord_id" placeholder="напр.: 123456789012345678"
+            <input type="text" id="discord_id" placeholder="например: 123456789012345678"
               oninput="onIdInput()" >
             <span id="id-status"   style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%);"></span>
           </div>
@@ -77,42 +77,42 @@
         <img id="member-avatar" src=""   style="width: 44px; height: 44px;">
         <div>
           <div id="member-name" ></div>
-          <div >✅ Сервер участников как podtverjdeno</div>
+          <div >✅ Подтверждено как участник сервера</div>
         </div>
       </div>
       <div class="form-row">
         <div class="form-group">
           <label>Возраст</label>
-          <input type="number" id="yas" placeholder="напр.: 18" min="13" max="99">
+          <input type="number" id="yas" placeholder="например: 18" min="13" max="99">
         </div>
         <div class="form-group">
-          <label>Ежедневный Активен</label>
-          <input type="text" id="activity" placeholder="напр.: 3-4 время">
+          <label>Ежедневная активность</label>
+          <input type="text" id="activity" placeholder="например: 3-4 часа">
         </div>
       </div>
 
-      <div class="section-title"   style="margin-top: 25px;"><i class="fas fa-shield-alt"></i> Moderasyon</div>
+      <div class="section-title"   style="margin-top: 25px;"><i class="fas fa-shield-alt"></i> Модерация</div>
       <div class="form-row full">
         <div class="form-group">
           <label>Опыт модерации</label>
-          <textarea id="tecrube" placeholder="Более до какой сервер администратор oldun? Ne kadar длительность? Какой задача взял?"></textarea>
+          <textarea id="tecrube" placeholder="В каких серверах вы модерировали раньше? Как долго? Какие задачи выполняли?"></textarea>
         </div>
       </div>
       <div class="form-row full">
         <div class="form-group">
-          <label>Почему Как стать модератором Хочешь?</label>
+          <label>Почему хотите стать модератором?</label>
           <textarea id="why" placeholder="Расскажите о своей мотивации, вкладе в сервер и целях..."></textarea>
         </div>
       </div>
       <div class="form-row full">
         <div class="form-group">
           <label>Почему хотите вступить? <span>(необязательно)</span></label>
-          <textarea id="ekstra" placeholder="Расскажите о себе: опыт, навыки, рекомендации…eransыn..."   style="min-height: 80px;"></textarea>
+          <textarea id="ekstra" placeholder="Расскажите о себе: опыт, навыки, рекомендации..."   style="min-height: 80px;"></textarea>
         </div>
       </div>
 
       <button class="submit-btn" id="submit-btn" onclick="submitForm()">
-        <i class="fas fa-paper-plane"></i> &nbsp; ЗАЯВКА ОТПРАВИТЬ
+        <i class="fas fa-paper-plane"></i> &nbsp; ОТПРАВИТЬ ЗАЯВКУ
       </button>
     </div>
   </div>
@@ -120,24 +120,24 @@
   <!-- Success -->
   <div class="success-screen" id="success-screen">
     <div class="check">✅</div>
-    <h2>Заявка Получено!</h2>
-    <p>Заявку рассмотрят администраторы.<br>Результат придёт вам в ЛС Discord.cek.</p>
+    <h2>Заявка получена!</h2>
+    <p>Заявку рассмотрят администраторы.<br>Результат придёт вам в ЛС Discord.</p>
     <div class="app-id-box" id="app-id-display"></div>
-    <p   style="margin-top: 20px;">Это страница закрыт.</p>
+    <p   style="margin-top: 20px;">Эту страницу можно закрыть.</p>
   </div>
 </div>
 
 <script>
 var selectedGuild = '{{ main_guild_id }}';
-var memberDatafied = false;
+var memberVerified = false;
 var idCheckTimer = null;
 
-// ID girilince участников контроль
+// Проверка участника при вводе ID
 function onIdInput() {
   var id = document.getElementById('discord_id').value.trim();
   var status = document.getElementById('id-status');
   var card = document.getElementById('member-card');
-  memberDatafied = false;
+  memberVerified = false;
   card.style.display = 'none';
   document.getElementById('discord_name').value = '';
 
@@ -147,12 +147,12 @@ function onIdInput() {
   }
   if (!selectedGuild) {
     status.textContent = '⚠️';
-    showAlert('error', '⚠️ До сервер выбрать!');
+    showAlert('error', '⚠️ Сначала выберите сервер!');
     return;
   }
 
   status.textContent = '⏳';
-  clearMute(idCheckTimer);
+  clearTimeout(idCheckTimer);
   idCheckTimer = setTimeout(async function() {
     try {
       var r = await fetch('/api/public/check-member', {
@@ -167,13 +167,13 @@ function onIdInput() {
         document.getElementById('member-avatar').src = res.avatar;
         document.getElementById('member-name').textContent = res.display_name + ' (' + res.name + ')';
         card.style.display = 'flex';
-        memberDatafied = true;
+        memberVerified = true;
         hideAlert();
       } else {
         status.textContent = '❌';
         card.style.display = 'none';
-        memberDatafied = false;
-        showAlert('error', '❌ ' + (res.error || 'Это на сервере участников не найдётсяо.'));
+        memberVerified = false;
+        showAlert('error', '❌ ' + (res.error || 'На этом сервере участник не найден.'));
       }
     } catch(e) {
       status.textContent = '❌';
@@ -202,10 +202,10 @@ async function loadServers() {
     var guilds = await r.json();
     var grid = document.getElementById('server-grid');
     if (!guilds.length) {
-      grid.innerHTML = '<p >Сервер не найдётсяо.</p>';
+      grid.innerHTML = '<p >Сервер не найден.</p>';
       return;
     }
-    // Bot logosunu первый с сервера al
+    // Взять логотип бота с первого сервера
     grid.innerHTML = guilds.map(function(g) {
       var icon = g.icon || 'https://cdn.discordapp.com/embed/avatars/0.png';
       return '<div class="server-card" onclick="selectGuild(\''+g.id+'\',\''+g.name.replace(/'/g,"\\'")+'\')" id="sc-'+g.id+'">' +
@@ -246,8 +246,8 @@ async function submitForm() {
   var why        = document.getElementById('why').value.trim();
   var ekstra       = document.getElementById('ekstra').value.trim();
 
-  if (!memberDatafied) {
-    showAlert('error', '❌ Discord ID\'ni gir ve сервер участник проверка!');
+  if (!memberVerified) {
+    showAlert('error', '❌ Введите Discord ID и подтвердите участие в сервере!');
     return;
   }
   if (!yas || !activity || !tecrube || !why) {
@@ -256,7 +256,7 @@ async function submitForm() {
   }
 
   btn.disabled = true;
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> &nbsp; ОТПРАВЛ...';
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> &nbsp; ОТПРАВКА...';
 
   try {
     var r = await fetch('/api/public/apply', {
@@ -278,14 +278,14 @@ async function submitForm() {
       document.getElementById('app-id-display').textContent = 'Заявка ID: ' + res.app_id;
       window.scrollTo({top:0,behavior:'smooth'});
     } else {
-      showAlert('error', '❌ ' + (res.error || ' ошибка произошла.'));
+      showAlert('error', '❌ ' + (res.error || ' Произошла ошибка.'));
       btn.disabled = false;
-      btn.innerHTML = '<i class="fas fa-paper-plane"></i> &nbsp; ЗАЯВКА ОТПРАВИТЬ';
+      btn.innerHTML = '<i class="fas fa-paper-plane"></i> &nbsp; ОТПРАВИТЬ ЗАЯВКУ';
     }
   } catch(e) {
     showAlert('error', '❌ Ошибка соединения: ' + e.message);
     btn.disabled = false;
-    btn.innerHTML = '<i class="fas fa-paper-plane"></i> &nbsp; ЗАЯВКА ОТПРАВИТЬ';
+    btn.innerHTML = '<i class="fas fa-paper-plane"></i> &nbsp; ОТПРАВИТЬ ЗАЯВКУ';
   }
 }
 

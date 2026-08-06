@@ -1295,7 +1295,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
             if not actions :
                 return '  Нет'
             return '\n'.join (
-            f"  {a['time']} {a['action']} — Hedef: {a['target']} — Mod: {a['mod']}"
+            f"  {a['time']} {a['action']} — Цель: {a['target']} — Мод: {a['mod']}"
             +(f" — Причина: {a['reason']}"if a ['reason']else '')
             for a in actions 
             )
@@ -1304,7 +1304,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         t_kick =sum (1 for c in today_actions if c ['action']=='Kick')
         t_to =sum (1 for c in today_actions if c ['action']=='Mute')
 
-        # Сегодня предупреждения warnings.json'dan oku
+        # Сегодняшние предупреждения — прочитать из warnings.json
         today_warns =[]
         warns_f2 ='data/warnings.json'
         if os .path .exists (warns_f2 ):

@@ -60,7 +60,7 @@
     <div class="row"><label>Целевая роль</label><select id="punish-role" class="ba-roles" data-from="punish-guild"></select></div>
     <div class="row"><label>Длительность (мин)</label><input type="number" id="punish-duration" value="60" min="1"></div>
     <div class="row"><label>Действие</label>
-      <select id="punish-op"><option value="mut">Мьют (заглушить)</option><option value="kick">Кик (исключить)</option><option value="ban">Бан (забанить)</option></select>
+      <select id="punish-op"><option value="mute">Мут (заглушить)</option><option value="kick">Кик (исключить)</option><option value="ban">Бан (забанить)</option></select>
     </div>
     <button class="btn btn-danger" id="btn-punish" type="button"><i class="fas fa-gavel"></i> Применить</button>
     <div class="result" id="punish-result"></div>
@@ -187,7 +187,7 @@
       btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Выполнение...';
       var endpoint = '/api/guild/' + gid + '/bulk-' + op;
       var body = { role_id: rid };
-      if (op === 'mut') body.duration = dur;
+      if (op === 'mute') body.duration = dur;
       fetch(endpoint, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
