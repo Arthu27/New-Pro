@@ -999,57 +999,6 @@ class AIChat (commands .Cog ):
             await message .channel .send (result_msg )
             return True 
 
-            # AFK удалить — до контроль et (закрыть/удалить varsa AFK aчma)
-        afk_off_triggers =['dёndюm','geldim','uyandыm','afk удалить','afk закрыть',
-        'afk удалить','afk закрыть','afk modunu закрыть','afk modu закрыть',
-        'afk bitir','afk удалить','afk отмена']
-        if any (t in cl for t in afk_off_triggers ):
-            afk_cog =self .bot .get_cog ('AFK')
-            for guild in self .bot .guilds :
-                member =guild .get_member (OWNER_ID )
-                if not member :
-                    continue 
-                if afk_cog :
-                    afk_cog ._remove (guild .id ,OWNER_ID )
-                try :
-                    nick =member .display_name 
-                    if nick .startswith (' '):
-                        await member .edit (nick =nick [2 :].strip ()or None )
-                except Exception :
-                    pass 
-            from cogs .afk import _pending_mentions 
-            pending =_pending_mentions .pop (OWNER_ID ,[])
-            if pending :
-                lines =[f"• **{p['from']}**: {p['msg'][:60]}"for p in pending [-5 :]]
-                await message .channel .send (f' Добро пожаловать geldin! {len(pending)} человек etiketledi:\n'+'\n'.join (lines ))
-            else :
-                await message .channel .send (' AFK modu закрыто.')
-            return True 
-
-            # AFK aч — "закрыть" или "удалить" geчiyorsa tetikleme
-        afk_on_triggers =['afk','uykum есть','uyuyacaгыm','gidiyorum','yokum']
-        afk_block =['закрыть','удалить','удалить','bitir','удалить','отмена','modunu','modu']
-        if any (t in cl for t in afk_on_triggers )and not any (e in cl for e in afk_block ):
-            reason =text 
-            for t in ['afk at','afk ol','afk yap','afk','beni']:
-                reason =reason .replace (t ,'').strip ()
-            reason =reason or 'AFK'
-            afk_cog =self .bot .get_cog ('AFK')
-            for guild in self .bot .guilds :
-                member =guild .get_member (OWNER_ID )
-                if not member :
-                    continue 
-                if afk_cog :
-                    afk_cog ._set (guild .id ,OWNER_ID ,reason ,owner_mode =True )
-                try :
-                    nick =member .display_name 
-                    if not nick .startswith (''):
-                        await member .edit (nick =f' {nick[:28]}')
-                except Exception :
-                    pass 
-            await message .channel .send (f' AFK modu активен! Причина: **{reason}**')
-            return True 
-
             # Ses канал movema
         ses_tasi_triggers =[
         'ses в канал','voice move','voice тянуть','voice al',

@@ -52,7 +52,7 @@ COMMAND_CATEGORIES = {
                 "changelog", "changelog-add", "changelog-latest", "summary", "welcome",
                 "medialock", "j2c", "vc", "crown", "antifake", "emojis", "time", "account",
                 "firstmessage", "invite"],
-    "Приглашения/Участники": ["invites", "invite-ranking", "afk", "afk-remove", "birthday",
+    "Приглашения/Участники": ["invites", "invite-ranking", "birthday",
                                 "birthday-delete", "birthday-setup", "birthdays", "staff-panel",
                                 "help", "userinfo", "report", "report-analytics", "report-custom",
                                 "report-daily", "report-weekly"],

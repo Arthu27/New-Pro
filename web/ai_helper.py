@@ -783,17 +783,7 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
         {"provider":"fallback","latency_ms":12 }
         )
 
-        # 9. AFK статус
-    if any (k in q_lower for k in ["афк","afk"]):
-        return (
-        "🌙 **Режим AFK:**\n"
-        "• Чтобы включить статус «нет на месте», используйте команду `/afk [причина]`.\n"
-        "• Когда кто-то упомянет вас в чате, бот автоматически сообщит, что вы сейчас заняты!",
-        "moebius-offline-ai",
-        {"provider":"fallback","latency_ms":11 }
-        )
-
-        # 10. Изученный FAQ (Self-Learned FAQ)
+        # 9. Изученный FAQ (Self-Learned FAQ)
     faq_match =re .search (r'ВОПРОС:\s*([^\n]+)\nОТВЕТ АДМИНИСТРАЦИИ:\s*([^\n]+)',sys_prompt ,re .IGNORECASE )
     if faq_match :
         q_matched =faq_match .group (1 ).strip ()

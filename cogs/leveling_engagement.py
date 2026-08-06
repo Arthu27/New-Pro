@@ -84,7 +84,6 @@ ACHIEVEMENTS ={
 "giveaway_winner":{"name":"Счастливчик","desc":"Выиграть розыгрыш","icon":"","rarity":"uncommon"},
 "economy_rich":{"name":"Богач","desc":"Заработать 10,000 монет","icon":"","rarity":"rare"},
 "ticket_creator":{"name":"Инициатор","desc":"Открыть первый тикет","icon":"","rarity":"common"},
-"afk_artist":{"name":"Творец AFK","desc":"Побывать в AFK 10 раз","icon":"","rarity":"common"},
 
 # Event achievements
 "event_attendee":{"name":"Участник события","desc":"Принять участие в ивенте","icon":"","rarity":"common"},
