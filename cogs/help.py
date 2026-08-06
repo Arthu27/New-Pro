@@ -82,7 +82,7 @@ def _panel(w, h, radius=16, fill=PANEL, border=PANEL_BR, bw=2):
 
 
 def _panel_shadowed(w, h, radius=16, border=PANEL_BR):
-    """Gölgeli panel — derinlik hissi verir"""
+    """Shadow-panel — придаёт глубину"""
     img = Image.new('RGBA', (w + 12, h + 12), (0, 0, 0, 0))
     sh = Image.new('RGBA', (w, h), (0, 0, 0, 0))
     ImageDraw.Draw(sh).rounded_rectangle((0, 0, w - 1, h - 1), radius=radius, fill=(0, 0, 0, 130))
@@ -409,7 +409,7 @@ _CARD_BYTES_CACHE = {}
 
 
 def generate_help_card_bytes(category_id: str = None) -> io.BytesIO:
-    """Kart zaten 2x native çiziliyor (R=2) — upscale bulanıklığı yok.
+    """Карта уже рисуется в 2x (R=2) — без размытия.
     PNG-baytlar önbellekten geliyorsa sıfırdan render yapılmaz (anlık sayfa geçişi)."""
     key = category_id or "overview"
     data = _CARD_BYTES_CACHE.get(key)
@@ -423,7 +423,7 @@ def generate_help_card_bytes(category_id: str = None) -> io.BytesIO:
 
 
 def prewarm_help_cards():
-    """Bot açılırken tüm sayfaları arka planda bir kez çiz — ilk seçim bile anında."""
+    """Прогрев при старте: отрисовать все страницы в фоне — выбор мгновенный."""
     for cid in [None] + [c["id"] for c in CATEGORIES]:
         try:
             generate_help_card_bytes(cid)
@@ -435,10 +435,8 @@ CUSTOM_EMOJIS: dict = {}
 
 
 def load_custom_help_emojis(bot):
-    """Sunucudaki ozel emojileri tara; isimleri aether_<ikon> olanlari help menusune bagla.
-
-    Ikony yuklemek icin: !upload-emoji (assets/icons altindaki PNG'leri sunucuya ozel emoji olarak ekler).
-    """
+    """Сканировать кастом-эмодзи сервера; aether_<icon> привязать к меню help.
+    Загрузка иконок: !upload-emoji (PNG из assets/icons станут эмодзи сервера)."""
     CUSTOM_EMOJIS.clear()
     for g in bot.guilds:
         for e in g.emojis:
@@ -498,7 +496,7 @@ class Help(commands.Cog):
         self.bot = bot
 
     async def cog_load(self):
-        """12 sayfanin tamamini hazirda bekletmek icin arka planda on-isitma."""
+        """Фоновый прогрев: держать все 12 страниц готовыми."""
         async def _warm():
             await self.bot.wait_until_ready()
             await self.bot.loop.run_in_executor(None, prewarm_help_cards)
@@ -544,7 +542,7 @@ class Help(commands.Cog):
 
 
 class HelpEmojiUpload(commands.Cog):
-    """Ozel help simgelerini sunucuya ozel emoji olarak yukleme yardimcisi (tek seferlik)."""
+    """Загрузить help-иконки на сервер как кастом-эмодзи (разово)."""
 
     def __init__(self, bot):
         self.bot = bot
@@ -552,10 +550,8 @@ class HelpEmojiUpload(commands.Cog):
     @commands.command(name='upload-emoji')
     @commands.has_permissions(administrator=True)
     async def upload_emoji(self, ctx, mode: str = None):
-        """assets/icons altindaki simgeleri sunucuya 'aether_<isim>' ozel emojisi olarak yukler.
-
-        'force' verilirse mevcut aether_* emojileri silinip yenileri yuklenir (ikon seti degistiginde).
-        """
+        """Загружает иконки из assets/icons на сервер как эмодзи 'aether_<name>'.
+        С 'force' старые aether_* эмодзи заливаются заново (после смены набора)."""
         import os as _os
         icons_dir = _os.path.join(ROOT, 'assets', 'icons')
         done, skipped, failed = [], [], []

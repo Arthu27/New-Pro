@@ -23,7 +23,7 @@ class GamificationCog (commands .Cog ):
     @app_commands .describe (user ='Пользователь (необязательно)')
     async def profile (self ,interaction :discord .Interaction ,
     user :discord .Member =None ):
-        """Profilinizi gёrюntюleyin"""
+        """Показать ваш профиль"""
         target_user =user or interaction .user 
 
         # Очки al
@@ -141,9 +141,9 @@ class GamificationCog (commands .Cog ):
 
         await interaction .response .send_message (embed =embed )
 
-    @app_commands .command (name ='daily',description ='Gюnlюk ёdюlюnюzю alыn')
+    @app_commands .command (name ='daily',description ='Получить ежедневную награду')
     async def daily (self ,interaction :discord .Interaction ):
-        """Gюnlюk ёdюlюnюzю alыn"""
+        """Получить ежедневную награду"""
         # Gюnlюk ёdюl проверкаю
         can_claim ,time_left =points_system .can_claim_daily (interaction .user .id )
 
@@ -162,7 +162,7 @@ class GamificationCog (commands .Cog ):
 
         # Embed создать
         embed =discord .Embed (
-        title =" Gюnlюk Ёdюl",
+        title =" 🎁 Ежедневная награда",
         description =f"**Получено очков:** {points}\n\nВозвращайтесь завтра!",
         color =discord .Color .green (),
         timestamp =datetime .now ()
@@ -170,9 +170,9 @@ class GamificationCog (commands .Cog ):
 
         await interaction .response .send_message (embed =embed )
 
-    @app_commands .command (name ='streak',description ='Seri bilgilerinizi gёrюntюleyin')
+    @app_commands .command (name ='streak',description ='Ваша серия дней')
     async def streak (self ,interaction :discord .Interaction ):
-        """Seri bilgilerinizi gёrюntюleyin"""
+        """Ваша серия дней"""
         from services .gamification import streak_system 
 
         # Seri информация al
@@ -185,8 +185,8 @@ class GamificationCog (commands .Cog ):
         timestamp =datetime .now ()
         )
 
-        embed .add_field (name =" Mevcut Seri",value =f"{streak_info['current_streak']} gюn",inline =True )
-        embed .add_field (name =" En Длинный Seri",value =f"{streak_info['longest_streak']} gюn",inline =True )
+        embed .add_field (name =" Mevcut Seri",value =f"{streak_info['current_streak']} дн.",inline =True )
+        embed .add_field (name =" En Длинный Seri",value =f"{streak_info['longest_streak']} дн.",inline =True )
 
         await interaction .response .send_message (embed =embed )
 
@@ -217,7 +217,7 @@ class GamificationCog (commands .Cog ):
     @commands .Cog .listener ()
     async def on_ready (self ):
         """Бот готов"""
-        log .info (f" GamificationCog loaded")
+        log .info ("GamificationCog loaded")
 
 
 async def setup (bot ):

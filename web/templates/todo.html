@@ -35,13 +35,13 @@
 </div>
 
 <div class="todo-add">
-  <input type="text" id="new-todo" class="todo-input" placeholder="Новый gёrev... (Enter)">
+  <input type="text" id="new-todo" class="todo-input" placeholder="Новая задача… (Enter)">
   <button class="btn btn-primary" id="btn-add" type="button"><i class="fas fa-plus"></i> Добавить</button>
 </div>
 
 <div class="todo-box">
   <div class="todo-head">
-    <div class="todo-title"><i class="fas fa-check-square"></i> Gёrevler</div>
+    <div class="todo-title"><i class="fas fa-check-square"></i> Задачи</div>
     <span class="todo-count" id="todo-count">-</span>
   </div>
   <div class="todo-body" id="todo-body">
@@ -95,7 +95,7 @@
     todos.unshift({ text: t, done: false });
     input.value = '';
     render();
-    showToast('Задача добавитьndi', true);
+    showToast('Задача добавлена', true);
   }
 
   function bind() {

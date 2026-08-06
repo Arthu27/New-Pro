@@ -308,7 +308,7 @@ async def _build_weekly_report (guild :discord .Guild ,days :int =7 ,force_cutof
             mod_counts [c ['mod_id']]+=1 
 
         mod_embed =discord .Embed (
-        title ='  Moderasyon Сводка',
+        title ='  Сводка модерации',
         color =0xED4245 ,
         timestamp =now 
         )
@@ -359,7 +359,7 @@ async def _build_weekly_report (guild :discord .Guild ,days :int =7 ,force_cutof
 
 
 class ModReportView (discord .ui .View ):
-    """Mod rapor paneli кнопки"""
+    """Кнопки панели мод-отчёта"""
 
     def __init__ (self ):
         super ().__init__ (timeout =None )
@@ -418,7 +418,7 @@ class ModReportView (discord .ui .View ):
         inline =True 
         )
         embed .add_field (
-        name =' Moderasyon',
+        name ='🛡 Модерация',
         value =(
         f'```yaml\n'
         f'Всего : {len(mod_case)}\n'
@@ -674,7 +674,7 @@ class ModReport (commands .Cog ):
         inline =True 
         )
         embed .add_field (
-        name =' Moderasyon',
+        name ='🛡 Модерация',
         value =(
         f'```yaml\n'
         f'Всего : {len(mod_case)}\n'

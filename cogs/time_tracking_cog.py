@@ -22,14 +22,14 @@ class TimeTrackingCog (commands .Cog ):
     @app_commands .command (name ='time-start',description ='Запустить таймер')
     @app_commands .describe (description ='Описание таймера')
     async def time_start (self ,interaction :discord .Interaction ,
-    description :str ='Чalышma'):
+    description :str ='Работа'):
         """Запустить таймер"""
         # Проверить, есть ли уже активный таймер
         active_entry =time_tracker .get_active_entry (interaction .user .id )
 
         if active_entry :
             await interaction .response .send_message (
-            f"⏱ Zaten активный bir zamanlayыcыnыz есть! Начат: {active_entry['start_time'][:16]}",
+            f"⏱ У вас уже есть активный таймер! Начат: {active_entry['start_time'][:16]}",
             ephemeral =True 
             )
             return 
@@ -52,7 +52,7 @@ class TimeTrackingCog (commands .Cog ):
 
     @app_commands .command (name ='time-stop',description ='Остановить таймер')
     async def time_stop (self ,interaction :discord .Interaction ):
-        """Zamanlayыcы остановить"""
+        """Остановить таймер"""
         # Zamanlayыcы остановить
         entry =time_tracker .stop_timer (interaction .user .id )
 
@@ -79,9 +79,9 @@ class TimeTrackingCog (commands .Cog ):
         await interaction .response .send_message (embed =embed )
 
     @app_commands .command (name ='time-report',description ='Показать ваш отчёт по времени')
-    @app_commands .describe (days ='Gюn sayыsы (varsayыlan: 7)')
+    @app_commands .describe (days ='Количество дней (по умолч.: 7)')
     async def time_report (self ,interaction :discord .Interaction ,days :int =7 ):
-        """Zaman raporunuzu gёrюntюleyin"""
+        """Показать ваш отчёт по времени"""
         # Rapor al
         report =time_tracker .get_user_report (interaction .user .id ,days =days )
 
@@ -93,7 +93,7 @@ class TimeTrackingCog (commands .Cog ):
         )
 
         embed .add_field (name ="⏱ Общее время",value =f"{report['total_hours']:.2f} время",inline =True )
-        embed .add_field (name =" Всего Giriш",value =str (report ['total_entries']),inline =True )
+        embed .add_field (name ="📥 Всего записей",value =str (report ['total_entries']),inline =True )
         embed .add_field (name ="📈 Среднее в день",value =f"{report['avg_hours_per_day']:.2f}  ч/день",inline =True )
 
         # Gюnlюk breakdown
@@ -102,13 +102,13 @@ class TimeTrackingCog (commands .Cog ):
             f"• {day}: {hours:.2f} время"
             for day ,hours in list (report ['daily_breakdown'].items ())[:7 ]
             ])
-            embed .add_field (name ="Gюnlюk Breakdown",value =daily_text ,inline =False )
+            embed .add_field (name ="📅 По дням",value =daily_text ,inline =False )
 
         await interaction .response .send_message (embed =embed )
 
     @app_commands .command (name ='pomodoro',description ='Pomodoro timer запустить')
-    @app_commands .describe (work_minutes ='Чalышma sюresi (varsayыlan: 25)',
-    break_minutes ='Mola sюresi (varsayыlan: 5)')
+    @app_commands .describe (work_minutes ='Рабочее время в минутах (по умолч.: 25)',
+    break_minutes ='Перерыв в минутах (по умолч.: 5)')
     async def pomodoro (self ,interaction :discord .Interaction ,
     work_minutes :int =25 ,break_minutes :int =5 ):
         """Pomodoro timer запустить"""
@@ -121,17 +121,17 @@ class TimeTrackingCog (commands .Cog ):
 
         # Embed создать
         embed =discord .Embed (
-        title =" Pomodoro Baшlatыldы",
-        description =f"**Чalышma Sюresi:** {work_minutes} dakika\n**Mola Sюresi:** {break_minutes} dakika\n\nЧalышmaya baшlayыn!",
+        title ="🍅 Pomodoro запущен",
+        description =f"**Работа:** {work_minutes} мин\n**Перерыв:** {break_minutes} мин\n\nЗа работу!",
         color =discord .Color .red (),
         timestamp =datetime .now ()
         )
 
         await interaction .response .send_message (embed =embed )
 
-    @app_commands .command (name ='pomodoro-complete',description ='Pomodoro\'yu готовоla')
+    @app_commands .command (name ='pomodoro-complete',description ='Завершить Pomodoro')
     async def pomodoro_complete (self ,interaction :discord .Interaction ):
-        """Pomodoro'yu готовоla"""
+        """Завершить Pomodoro"""
         # Pomodoro готовоla
         session =pomodoro_timer .complete_pomodoro (interaction .user .id )
 
@@ -147,40 +147,40 @@ class TimeTrackingCog (commands .Cog ):
 
         # Embed создать
         embed =discord .Embed (
-        title =" Pomodoro Готовоlandы!",
-        description =f"**Tebrikler!** Bir pomodoro более готовоladыnыz!",
+        title =" 🎉 Pomodoro завершён!",
+        description ="🎉 **Отлично!** Ещё один помодоро позади!",
         color =discord .Color .green (),
         timestamp =datetime .now ()
         )
 
         embed .add_field (name =" Всего Pomodoro",value =str (stats ['total_pomodoros']),inline =True )
-        embed .add_field (name ="⏱ Всего Sюre",value =f"{stats['total_hours']:.2f} время",inline =True )
+        embed .add_field (name ="⏱ Всего времени",value =f"{stats['total_hours']:.2f} время",inline =True )
 
         await interaction .response .send_message (embed =embed )
 
-    @app_commands .command (name ='pomodoro-stats',description ='Pomodoro статистикаlerinizi gёrюntюleyin')
+    @app_commands .command (name ='pomodoro-stats',description ='Ваша статистика Pomodoro')
     async def pomodoro_stats (self ,interaction :discord .Interaction ):
-        """Pomodoro статистикаlerinizi gёrюntюleyin"""
+        """Ваша статистика Pomodoro"""
         # Иstatistikler al
         stats =pomodoro_timer .get_user_stats (interaction .user .id )
 
         # Embed создать
         embed =discord .Embed (
-        title =" Pomodoro Иstatistikleri",
+        title =" 📊 Статистика Pomodoro",
         color =discord .Color .red (),
         timestamp =datetime .now ()
         )
 
         embed .add_field (name =" Всего Pomodoro",value =str (stats ['total_pomodoros']),inline =True )
-        embed .add_field (name ="⏱ Всего Sюre",value =f"{stats['total_hours']:.2f} время",inline =True )
-        embed .add_field (name =" Gюnlюk Центрlama",value =f"{stats['avg_per_day']:.2f}",inline =True )
+        embed .add_field (name ="⏱ Всего времени",value =f"{stats['total_hours']:.2f} время",inline =True )
+        embed .add_field (name =" 🎯 Фокус по дням",value =f"{stats['avg_per_day']:.2f}",inline =True )
 
         await interaction .response .send_message (embed =embed )
 
     @commands .Cog .listener ()
     async def on_ready (self ):
-        """Bot hazыr olduгunda"""
-        log .info (f" TimeTrackingCog loaded")
+        """Когда бот готов"""
+        log .info ("TimeTrackingCog loaded")
 
 
 async def setup (bot ):

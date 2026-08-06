@@ -1,4 +1,4 @@
-"""Server Информация Система — Bot'a сервер о каждый что-тоi ёгret"""
+"""Server Info — обученные ответы о сервере (FAQ-система)"""
 import discord 
 from discord .ext import commands 
 from discord import app_commands 
@@ -43,8 +43,8 @@ def get_sunucu_context (guild_id :int )->str :
         lines .append (f'Правила: {info["правила"]}')
     if info .get ('yetkili_olmak'):
         lines .append (f'Как стать модератором: {info["yetkili_olmak"]}')
-    if info .get ('приватный_infoler'):
-        for k ,v in info ['приватный_infoler'].items ():
+    if info .get ('приватные_данные'):
+        for k ,v in info ['приватные_данные'].items ():
             lines .append (f'{k}: {v}')
 
     return '\n'.join (lines )
@@ -129,8 +129,8 @@ class ServerInfoView (discord .ui .View ):
             embed .add_field (name =' Правила',value =info ['правила'][:500 ],inline =False )
         if info .get ('yetkili_olmak'):
             embed .add_field (name ='🛡 Как стать модератором',value =info ['yetkili_olmak'][:500 ],inline =False )
-        if info .get ('приватный_infoler'):
-            for k ,v in list (info ['приватный_infoler'].items ())[:5 ]:
+        if info .get ('приватные_данные'):
+            for k ,v in list (info ['приватные_данные'].items ())[:5 ]:
                 embed .add_field (name =k ,value =str (v )[:200 ],inline =True )
 
         await interaction .response .send_message (embed =embed ,ephemeral =True )
@@ -164,9 +164,9 @@ class OzelBilgiModal (discord .ui .Modal ,title ='Добавлено инфор�
 
     async def on_submit (self ,interaction :discord .Interaction ):
         info =_load_info (self .guild_id )
-        if 'приватный_infoler'not in info :
-            info ['приватный_infoler']={}
-        info ['приватный_infoler'][self .baslik .value .strip ()]=self .icerik .value .strip ()
+        if 'приватные_данные'not in info :
+            info ['приватные_данные']={}
+        info ['приватные_данные'][self .baslik .value .strip ()]=self .icerik .value .strip ()
         _save_info (self .guild_id ,info )
         await interaction .response .send_message (
         f' **{self.baslik.value}** сохранено!',ephemeral =True 

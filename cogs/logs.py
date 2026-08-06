@@ -24,7 +24,7 @@ CATEGORIES ={
 'voice':{'label':'Голос','emoji':'','color':0x1ABC9C ,'channel':'ses'},
 'сервер':{'label':'Сервер','emoji':'','color':0xE67E22 ,'channel':'сервер'},
 'automod':{'label':'Автоматически','emoji':'','color':0xE74C3C ,'channel':'moderasyon'},
-'invite':{'label':'Priglaseniya','emoji':'','color':0x95A5A6 ,'channel':'сервер'},
+'invite':{'label':'Приглашения','emoji':'','color':0x95A5A6 ,'channel':'сервер'},
 }
 
 DIV =""
@@ -136,6 +136,10 @@ class Logs (commands .Cog ):
 
     async def get_log_channel (self ,guild ,category :str ='сервер'):
         """Найти канал для конкретной категории логов"""
+        # Алиасы: 'модерация'/'moderasyon' → 'mod' и т.д.
+        category ={'модерация':'mod','moderasyon':'mod','участники':'member',
+        'сообщения':'message','голос':'voice','ses':'voice','роли':'role',
+        'каналы':'channel'}.get (category ,category )
         ch_name =CATEGORIES .get (category ,{}).get ('channel','сервер')
         target =LOG_CHANNELS .get (ch_name ,LOG_CHANNELS ['сервер'])
 
@@ -240,12 +244,12 @@ class Logs (commands .Cog ):
         e .add_field (
         name =" Каналы",
         value =(
-        " **-moderasyon** — bani, kiki, muti, предупреждения\n"
+        "🛡 **-модерация** — баны, кики, мьюты, предупреждения\n"
         " **-участники** — вход, выход, смена ника\n"
-        " **-сообщения** — удалить, redaktirovanie\n"
+        "💬 **-сообщения** — удаление, редактирование\n"
         " **-ses** — вход/выход из войса\n"
-        " **-сервер** — каналы, roles, invayti, сервер\n"
-        " **-приветствие** — приветствие ve prosaniya"
+        "🌐 **-сервер** — каналы, роли, инвайты, сервер\n"
+        "👋 **-приветствие** — приветствия и прощания"
         ),
         inline =False 
         )
@@ -257,7 +261,7 @@ class Logs (commands .Cog ):
     @commands .Cog .listener ()
     async def on_member_join (self ,member ):
         age_days =(discord .utils .utcnow ()-member .created_at ).days 
-        save_event (member .guild .id ,'member','Участник vosel',{
+        save_event (member .guild .id ,'member','Участник вошёл',{
         'user_id':str (member .id ),
         'user_name':str (member ),
         'avatar':str (member .display_avatar .url ),
@@ -335,7 +339,7 @@ class Logs (commands .Cog ):
 
     @commands .Cog .listener ()
     async def on_member_remove (self ,member ):
-        save_event (member .guild .id ,'member','Участник visel',{
+        save_event (member .guild .id ,'member','Участник вышел',{
         'user_id':str (member .id ),
         'user_name':str (member ),
         'avatar':str (member .display_avatar .url ),
@@ -503,8 +507,8 @@ class Logs (commands .Cog ):
                 e .description =(
                 f"## Псевдоним изменён\n"
                 f"**{before.display_name}** · `{before.id}`\n\n"
-                f"Bilo: `{before.nick or before.name}`\n"
-                f"Stalo: `{after.nick or after.name}`"
+                f"Было: `{before.nick or before.name}`\n"
+                f"Стало: `{after.nick or after.name}`"
                 )
                 e .set_footer (text =f"{before.guild.name}")
                 await ch .send (embed =e )
@@ -700,7 +704,7 @@ class Logs (commands .Cog ):
         e .description =(
         f"## Канал создано\n"
         f"**{channel.name}** · `{channel.id}`\n\n"
-        f"Tюr: {str(channel.type)}"
+        f"Тип: {str(channel.type)}"
         )
         e .set_footer (text =f"{channel.guild.name}")
         await ch .send (embed =e )
@@ -799,7 +803,7 @@ class Logs (commands .Cog ):
     @commands .Cog .listener ()
     async def on_guild_channel_update (self ,before ,after ):
         if before .name !=after .name :
-            save_event (before .guild .id ,'channel','Канал pereimenovan',{
+            save_event (before .guild .id ,'channel','Канал переименован',{
             'channel_id':str (before .id ),
             'old_name':before .name ,
             'new_name':after .name ,
@@ -854,7 +858,7 @@ class Logs (commands .Cog ):
     @commands .Cog .listener ()
     async def on_guild_update (self ,before ,after ):
         if before .name !=after .name :
-            save_event (before .id ,'сервер','Сервер pereimenovan',{
+            save_event (before .id ,'сервер','Сервер переименован',{
             'old_name':before .name ,
             'new_name':after .name ,
             })

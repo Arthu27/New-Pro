@@ -1,6 +1,6 @@
 """
 SLA Cog
-SLA yёnetimi cog'u
+Менеджер SLA-политик
 """
 
 import discord 
@@ -15,15 +15,15 @@ log =get_logger ("sla_cog")
 
 
 class SLACog (commands .Cog ):
-    """SLA yёnetimi cog'u"""
+    """Менеджер SLA-политик"""
 
     def __init__ (self ,bot ):
         self .bot =bot 
 
-    @app_commands .command (name ='sla-info',description ='SLA bilgilerini gёrюntюle')
+    @app_commands .command (name ='sla-info',description ='Показать информацию об SLA')
     @app_commands .describe (policy_id ='SLA policy ID (opsiyonel)')
     async def sla_info (self ,interaction :discord .Interaction ,policy_id :str =None ):
-        """SLA bilgilerini gёrюntюle"""
+        """Показать информацию об SLA"""
         if policy_id :
         # Belirli policy
             policy =sla_manager .get_policy (policy_id )
@@ -46,7 +46,7 @@ class SLACog (commands .Cog ):
             # Response time'lar
             if policy .response_times :
                 response_text ="\n".join ([
-                f"• {priority}: {time} dakika"
+                f"• {priority}: {time} мин"
                 for priority ,time in policy .response_times .items ()
                 ])
                 embed .add_field (name ="Response Time",value =response_text ,inline =False )
@@ -54,14 +54,14 @@ class SLACog (commands .Cog ):
                 # Resolution time'lar
             if policy .resolution_times :
                 resolution_text ="\n".join ([
-                f"• {priority}: {time} dakika"
+                f"• {priority}: {time} мин"
                 for priority ,time in policy .resolution_times .items ()
                 ])
                 embed .add_field (name ="⏱ Время решения",value =resolution_text ,inline =False )
 
             await interaction .response .send_message (embed =embed )
         else :
-        # Tюm policy'ler
+        # Все политики
             policies =sla_manager .get_all_policies ()
 
             if not policies :

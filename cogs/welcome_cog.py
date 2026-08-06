@@ -13,17 +13,17 @@ log =get_logger ("welcome_cog")
 
 
 class WelcomeCog (commands .Cog ):
-    """Hoш geldin системаi cog'u"""
+    """Система приветствий (legacy + панель)"""
 
     def __init__ (self ,bot ):
         self .bot =bot 
-        self .welcome_message ="Hoш geldin {user}! Серверmuza katыldыгыn iчin teшekkюrler!"
+        self .welcome_message ="👋 Добро пожаловать, {user}! Рады видеть тебя на сервере!"
         self .welcome_channel_id =None 
 
-    @commands .command (name ='setwelcome',aliases =['hoшgeldinнастройкаla'])
+    @commands .command (name ='setwelcome',aliases =['настройкаприветствия'])
     @commands .has_permissions (administrator =True )
     async def setwelcome (self ,ctx ,*,message :str ):
-        """Hoш geldin сообщениеыnы настройкаla"""
+        """Настроить текст приветствия"""
         self .welcome_message =message 
 
         embed =discord .Embed (
@@ -35,10 +35,10 @@ class WelcomeCog (commands .Cog ):
 
         await ctx .send (embed =embed )
 
-    @commands .command (name ='setwelcomechannel',aliases =['hoшgeldinканалы'])
+    @commands .command (name ='setwelcomechannel',aliases =['каналприветствий'])
     @commands .has_permissions (administrator =True )
     async def setwelcomechannel (self ,ctx ,channel :discord .TextChannel ):
-        """Hoш geldin каналыnы настройкаla"""
+        """Настроить канал приветствий"""
         self .welcome_channel_id =channel .id 
 
         embed =discord .Embed (
@@ -50,9 +50,9 @@ class WelcomeCog (commands .Cog ):
 
         await ctx .send (embed =embed )
 
-    @commands .command (name ='testwelcome',aliases =['hoшgeldintest'])
+    @commands .command (name ='testwelcome',aliases =['тестприветствия'])
     async def testwelcome (self ,ctx ):
-        """Hoш geldin сообщениеыnы test et"""
+        """Проверить текст приветствия"""
         message =self .welcome_message .replace ("{user}",ctx .author .mention )
 
         embed =discord .Embed (

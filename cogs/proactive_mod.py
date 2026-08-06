@@ -76,7 +76,7 @@ class ProactiveModeration (commands .Cog ):
             await self ._send_sentiment_alert (message .guild ,alert )
 
     async def _send_sentiment_alert (self ,guild :discord .Guild ,alert :Dict ):
-        """Denhaklarыnlyaet предупреждение о nastroenii"""
+        """Тихо фиксирует предупреждения о настроении"""
         try :
         # Arыyoruz канал для uvedomleniy
             alert_channel =discord .utils .get (guild .text_channels ,name ="ai-alerts")
@@ -115,7 +115,7 @@ class ProactiveModeration (commands .Cog ):
             await alert_channel .send (embed =e )
 
         except Exception as e :
-            log .info (f"[SENTIMENT] Ошибка denhaklarыnki предупреждение: {e}")
+            log .info (f"[SENTIMENT] Ошибка фоновой проверки настроения: {e}")
 
     async def _check_toxicity (self ,message :discord .Message ):
         """Контроль ediyor на toksisite"""
@@ -155,7 +155,7 @@ class ProactiveModeration (commands .Cog ):
             )
 
     async def _check_suspicious_links (self ,message :discord .Message ):
-        """Контроль ediyor шюpheli ссылка"""
+        """Проверяет подозрительные ссылки"""
         # Propuskaem модератор
         if message .author .guild_permissions .kick_members :
             return 
@@ -176,7 +176,7 @@ class ProactiveModeration (commands .Cog ):
                         break 
 
     async def _alert_moderators (self ,guild :discord .Guild ,alert_type :str ,description :str ,message :discord .Message ):
-        """Denhaklarыnlyaet уведомление модератор"""
+        """Уведомляет модераторов о настроении"""
         try :
         # Arыyoruz канал для uvedomleniy
             alert_channel =discord .utils .get (guild .text_channels ,name ="ai-alerts")
@@ -195,7 +195,7 @@ class ProactiveModeration (commands .Cog ):
                 alert_channel =await guild .create_text_channel (
                 'ai-alerts',
                 overwrites =overwrites ,
-                reason ="AI proактивныйya moderasyon"
+                reason ="AI-проактивная модерация"
                 )
 
                 # Создал embed
@@ -215,10 +215,10 @@ class ProactiveModeration (commands .Cog ):
             f"{description}\n\n"
             f"**Канал:** {message.channel.mention}\n"
             f"**Сообщение:** {message.content[:200]}\n"
-            f"**Ссылка:** [Pereyti]({message.jump_url})"
+            f"**Ссылка:** [Перейти]({message.jump_url})"
             )
 
-            e .set_footer (text =f"{guild.name} · Proактивныйya moderasyon")
+            e .set_footer (text =f"{guild.name} · Проактивная модерация")
 
             await alert_channel .send (embed =e )
 
@@ -228,7 +228,7 @@ class ProactiveModeration (commands .Cog ):
     @commands .command (name ="proactive-stats")
     @commands .has_permissions (kick_members =True )
     async def proactive_stats (self ,ctx ):
-        """Статистика proактивныйy moderasyonu"""
+        """Статистика проактивной модерации"""
         total_messages =sum (len (msgs )for msgs in self .message_buffer .values ())
         channels_monitored =len (self .message_buffer )
 

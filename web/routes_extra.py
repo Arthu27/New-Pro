@@ -185,7 +185,7 @@ def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
             description =action_data .get ('description','')
             color =int (action_data .get ('color',0xc8922a ))
             if not (bot and channel_id ):
-                return '❌ Kanal ID eksik'
+                return '❌ Не указан ID канала'
             channel =bot .get_channel (int (channel_id ))
             if not channel :
                 return '❌ Канал не найден'
@@ -229,7 +229,7 @@ def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
         elif action_type =='delete_channel':
             channel_id =str (action_data .get ('channel_id',''))
             if not (bot and channel_id ):
-                return '❌ Kanal ID eksik'
+                return '❌ Не указан ID канала'
             channel =bot .get_channel (int (channel_id ))
             if not channel :
                 return '❌ Канал не найден'
@@ -266,7 +266,7 @@ def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
             if not member :
                 return '❌ Участник не найден'
             _asyncio .run_coroutine_threadsafe (member .edit (nick =nick or None ),bot .loop ).result (timeout =10 )
-            return f'✅ Nickname изменено → {nick or "(sыfыrlandы)"}'
+            return f'✅ Nickname изменено → {nick or "(сброшен)"}'
 
         elif action_type =='unban':
             if not (guild and uid ):

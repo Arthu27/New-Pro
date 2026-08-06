@@ -411,12 +411,12 @@ class _EconomyExtra (commands .Cog ):
             await ctx .send ("Неверная ставка.")
             return 
         choice =choice .lower ()
-        if choice not in ('орел','решка','орёл','орeл'):
+        if choice not in ('орел','решка','орёл','орёл'):
             await ctx .send ("Выберите орел или решка.")
             return 
         result =random .choice (['орел','решка'])
         data ['balance']-=bet 
-        win =choice in ('орел','орёл','орeл')and result =='орел'or choice =='решка'and result =='решка'
+        win =choice in ('орел','орёл','орёл')and result =='орел'or choice =='решка'and result =='решка'
         if win :
             data ['balance']+=bet *2 
             self ._log_tx (ctx .author .id ,data ,'Coinflip',bet )

@@ -77,7 +77,7 @@
       </div>
       <div class="form-row full">
         <div class="form-group">
-          <label>Moderasyon Опытn</label>
+          <label>Опыт модерации</label>
           <textarea id="tecrube" placeholder="Более до какой сервер администратор oldun?"></textarea>
         </div>
       </div>
@@ -89,7 +89,7 @@
       </div>
       <div class="form-row full">
         <div class="form-group">
-          <label>Добавитьmek Желание <span >(opsiyonel)</span></label>
+          <label>Почему хотите вступить? <span>(необязательно)</span></label>
           <textarea id="ekstra" placeholder="Kendin о ekstra информация..."   style="min-height: 70px;"></textarea>
         </div>
       </div>
@@ -103,7 +103,7 @@
   <div class="success-screen" id="success-screen">
     <div class="check">✅</div>
     <h2>Заявка Получено!</h2>
-    <p>Администраторы inceleyecek, результат Discord DM'еn bildirсcek.</p>
+    <p>Администраторы рассмотрят, результат придёт в ЛС Discord.</p>
     <div class="app-id-box" id="app-id-display"></div>
   </div>
 </div>
@@ -178,7 +178,7 @@ async function submitForm() {
   var tecrube = document.getElementById('tecrube').value.trim();
   var why = document.getElementById('why').value.trim();
   var ekstra = document.getElementById('ekstra').value.trim();
-  if (!yas || !activity || !tecrube || !why) { showAlert('error','❌ Все сложныйunlu alanы doldur!'); return; }
+  if (!yas || !activity || !tecrube || !why) { showAlert('error','❌ Заполните все обязательные поля!ldur!'); return; }
   btn.disabled = true;
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ОТПРАВЛ...';
   try {

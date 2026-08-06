@@ -37,11 +37,11 @@ class CustomField:
         self.default_value = value
     
     def add_validation_rule(self, rule_type: str, value: Any):
-        """Doгrulama kuralы добавить"""
+        """Добавить правило валидации"""
         self.validation_rules[rule_type] = value
     
     def add_condition(self, field_id: str, operator: str, value: Any):
-        """Koэтотl добавить (bu alan ne zaman gёrюnюr)"""
+        """Добавить условие (когда поле видно)"""
         self.conditions.append({
             'field_id': field_id,
             'operator': operator,
@@ -49,7 +49,7 @@ class CustomField:
         })
     
     def validate(self, value: Any) -> Dict[str, Any]:
-        """Deгeri doгrula"""
+        """Проверить значение"""
         errors = []
         
         # Zorunlu проверка
@@ -68,12 +68,12 @@ class CustomField:
                 
                 # Min/max проверка
                 if 'min' in self.validation_rules and num_value < self.validation_rules['min']:
-                    errors.append(f"Deгer en az {self.validation_rules['min']} должен бытьdыr")
+                    errors.append(f"Значение должно быть не меньше {self.validation_rules['min']}")
                 
                 if 'max' in self.validation_rules and num_value > self.validation_rules['max']:
-                    errors.append(f"Deгer en fazla {self.validation_rules['max']} должен бытьdыr")
+                    errors.append(f"Значение должно быть не больше {self.validation_rules['max']}")
             except (ValueError, TypeError):
-                errors.append('Geчerli bir число giriniz')
+                errors.append('Введите корректное число')
         
         elif self.field_type == 'email':
             email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'

@@ -76,7 +76,7 @@ def before_request ():
 
     # Panel Log 
 def _log_login (username ,role ,avatar ,discord_id ):
-    """Вход yapan useryы сохранить."""
+    """Запоминает пользователей, вошедших в панель."""
     try :
         os .makedirs ('data',exist_ok =True )
         f ='data/login_log.json'
@@ -242,8 +242,8 @@ def _load_owner_credentials ():
     env_pw =(os .environ .get ('PANEL_PASSWORD','')or '').strip ()
     if env_pw :
         return user ,_hash_pw (env_pw ),False 
-    print ('[GÜVENLİK] PANEL_PASSWORD tanımlı değil — varsayılan panel parolası "123" kullanılıyor! '
-          '.env dosyanıza PANEL_PASSWORD ekleyin.')
+    print ('[БЕЗОПАСНОСТЬ] PANEL_PASSWORD не задан — используется небезопасный пароль по умолчанию "123"! '
+          'Добавьте PANEL_PASSWORD в ваш .env файл.')
     return user ,_hash_pw ('123'),True 
 
 _owner_user ,_owner_pw_hash ,_owner_using_default_pw =_load_owner_credentials ()
@@ -258,7 +258,7 @@ def _pw_is_hash (value ):
     return isinstance (value ,str )and len (value )==64 and all (c in '0123456789abcdef'for c in value )
 
 def _pw_matches (stored ,plain ):
-    """Üye parolası kontrolü — hash'li kayıtları ve eski düz metin kayıtları destekler."""
+    """Проверка пароля участника — хэш-записи и старые открытые пароли."""
     stored =(stored or '')
     if _pw_is_hash (stored ):
         return stored ==_hash_pw (plain )

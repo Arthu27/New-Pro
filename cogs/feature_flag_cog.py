@@ -20,20 +20,20 @@ class FeatureFlagCog (commands .Cog ):
     def __init__ (self ,bot ):
         self .bot =bot 
 
-    @app_commands .command (name ='flag-list',description ='Tюm feature flag\'leri gёrюntюle')
+    @app_commands .command (name ='flag-list',description ='Показать все feature-флаги')
     async def flag_list (self ,interaction :discord .Interaction ):
-        """Tюm feature flag'leri gёrюntюle"""
+        """Показать все feature-флаги"""
         # Flag'ler al
         flags =feature_flag_manager .get_all_flags ()
 
         if not flags :
             await interaction .response .send_message (
-            " Feature flag bulunamadы!",
+            "🚩 Feature-флаг не найден!",
             ephemeral =True 
             )
             return 
 
-            # Embed oluшtur
+            # Собрать embed
         embed =discord .Embed (
         title =" Feature Flags",
         description =f"Всего {len(flags)} flag",
@@ -54,21 +54,21 @@ class FeatureFlagCog (commands .Cog ):
 
         await interaction .response .send_message (embed =embed )
 
-    @app_commands .command (name ='flag-info',description ='Feature flag bilgilerini gёrюntюle')
+    @app_commands .command (name ='flag-info',description ='Информация о feature-флаге')
     @app_commands .describe (flag_key ='Flag key')
     async def flag_info (self ,interaction :discord .Interaction ,flag_key :str ):
-        """Feature flag bilgilerini gёrюntюle"""
+        """Информация о feature-флаге"""
         # Flag al
         flag =feature_flag_manager .get_flag (flag_key )
 
         if not flag :
             await interaction .response .send_message (
-            " Feature flag bulunamadы!",
+            "🚩 Feature-флаг не найден!",
             ephemeral =True 
             )
             return 
 
-            # Embed oluшtur
+            # Собрать embed
         embed =discord .Embed (
         title =f" Feature Flag: {flag.flag_key}",
         description =flag .name ,
@@ -80,7 +80,7 @@ class FeatureFlagCog (commands .Cog ):
         embed .add_field (name ="Status",value =enabled_text ,inline =True )
         embed .add_field (name ="Rollout",value =f"{flag.rollout_percentage}%",inline =True )
 
-        # Hedefleme kurallarы
+        # Правила таргетинга
         if flag .targeting_rules :
             rules_text ="\n".join ([
             f"• {rule['type']}: {rule['value']}"
@@ -113,7 +113,7 @@ class FeatureFlagCog (commands .Cog ):
             )
             return 
 
-            # Embed oluшtur
+            # Собрать embed
         embed =discord .Embed (
         title ="✅ Флаг включён",
         description =f"Flag: {flag_key}",
@@ -138,7 +138,7 @@ class FeatureFlagCog (commands .Cog ):
             )
             return 
 
-            # Embed oluшtur
+            # Собрать embed
         embed =discord .Embed (
         title ="⛔ Флаг отключён",
         description =f"Flag: {flag_key}",

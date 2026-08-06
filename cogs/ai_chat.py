@@ -295,7 +295,7 @@ _cache_timeout =300 # 5 minutes
 
 
 async def _get_recent_user_messages (user_id :int ,guild ,limit :int =15 )->list :
-    """Пользователь son Discord messagelarыnы собрать (son 12 часов, max 15 message)"""
+    """Собрать последние сообщения пользователя на сервере (за 12 часов, макс. 15)"""
     if not guild :
         return []
 
@@ -354,12 +354,12 @@ async def _get_recent_user_messages (user_id :int ,guild ,limit :int =15 )->list
         _message_cache [cache_key ]=(result ,now )
         return result 
     except Exception as e :
-        log .info (f'[AI] Сообщение собратьma Ошибки: {e}')
+        log .info (f'[AI] Ошибка сбора сообщений: {e}')
         return []
 
 
 async def _get_channel_context (channel ,limit :int =12 )->list :
-    """Текущий channelыn son messagelarыnы собрать (sohbet контекст для)"""
+    """Собрать последние сообщения текущего канала (для контекста беседы)"""
     try :
         context_messages =[]
         async for msg in channel .history (limit =limit ):
@@ -480,7 +480,7 @@ def _call_ai (question :str ,user_id :int ,guild =None ,recent_messages :list =N
 
                     # Вопрос benzerliгi контроль et
                 if any (word in item .get ('question','').lower ()for word in q_lower .split ()if len (word )>2 ):
-                    relevant_knowledge .append (f"заранее ёгrenilen: {item.get('question', '')} → {item.get('info', '')}")
+                    relevant_knowledge .append (f"заранее выученное: {item.get('question', '')} → {item.get('info', '')}")
                     # Isim/konu benzerliгi контроль et
                 elif 'name'in item and any (word in item ['name'].lower ()for word in q_lower .split ()if len (word )>2 ):
                     relevant_knowledge .append (f"Bilinen человек: {item['name']} → {item.get('info', '')}")
@@ -568,7 +568,7 @@ class AIChat (commands .Cog ):
     def __init__ (self ,bot ):
         self .bot =bot 
 
-    @commands .hybrid_command (name ='ai-info-clear',description ="Temizle veriбазу информация AI на сервер (Менеджер)")
+    @commands .hybrid_command (name ='ai-info-clear',description ="Очистить базу AI-инфо на сервере (Менеджер)")
     @commands .has_permissions (administrator =True )
     async def ai_clear_knowledge (self ,ctx ):
         """Сервер AI info базу clear (только adminler)"""
@@ -580,7 +580,7 @@ class AIChat (commands .Cog ):
         else :
             await ctx .send ('База знаний уже пуста. ',ephemeral =True )
     async def ai_reset (self ,ctx ):
-        """Kendi AI sohbet историю sыfыrla"""
+        """Сбросить свою историю AI-чата"""
         user_id =ctx .author .id 
         if user_id in _histories :
             del _histories [user_id ]

@@ -1,4 +1,4 @@
-"""Proактивный AI — Bot kendi kendine dюшюnюr ve Arthur'a DM atar"""
+"""Проактивный AI — бот сам размышляет и пишет Артуру в ЛС"""
 import discord 
 from discord .ext import commands ,tasks 
 import datetime 
@@ -54,7 +54,7 @@ class ProactiveAI (commands .Cog ):
             log .info (f'[ProactiveAI] DM Ошибки: {e}')
 
     async def _think_and_ask (self ):
-        """Bot dюшюnюr ve gerekirse Arthur'a soru sorar"""
+        """Бот размышляет и при нужде спрашивает Артура"""
         if not OWNER_ID :
             return 
 
@@ -79,7 +79,7 @@ class ProactiveAI (commands .Cog ):
 
             #     morning_msg = _call_text([
             #         {'role': 'system', 'content': (
-            #             'Sen Aether, Arthur\'ыn Discord botusun. '
+            #             'Sen Aether, Артуров Discord-бот. '
             #             'Sabah Arthur\'a краткий, samimi bir день сообщение yaz. '
             #             'Сервер statusunu belirt, сегодня для bir что-то sormak istiyorsan sor. '
             #             'Maksimum 3 cюmle. Emoji использовать.'
@@ -104,10 +104,10 @@ class ProactiveAI (commands .Cog ):
 
             evening_msg =_call_text ([
             {'role':'system','content':(
-            'Sen Aether, Arthur\'ыn Discord botusun. '
-            'Akшam Arthur\'a краткий bir сводка сообщение yaz. '
-            'Сегодня как geчti diye sor, завтра для bir что-то есть mы diye merak et. '
-            'Maksimum 3 cюmle. Samimi ve doгal ol.'
+            'Sen Aether, Артуров Discord-бот. '
+            'Вечером напиши Артуру короткую сводку. '
+            'Спроси, как прошёл день, и поинтересуйся планами на завтра. '
+            'Максимум 3 предложения. Тепло и естественно.'
             )},
             {'role':'user','content':f'Сервера: {", ".join(stats)}. Akшam сводка yaz.'}
             ],max_tokens =150 )
@@ -145,17 +145,17 @@ class ProactiveAI (commands .Cog ):
         # В конец 1 времяteki ayrыlmalarы контроль et
         leave_log =[t for t in data .get ('leave_log',[])if t >one_hour_ago ]
         if len (leave_log )>=LEAVE_ALERT_THRESHOLD :
-            alerts .append (f' В конец 1 времяte **{len(leave_log)} человек** с сервера покинул!')
+            alerts .append (f'🚪 За последний час сервер покинули **{len(leave_log)} человек**!')
             data ['leave_log']=[]# Sыfыrla, tekrar uyarma
 
             # В конец 1 времяteki katыlыmlarы контроль et
         join_log =[t for t in data .get ('join_log',[])if t >one_hour_ago ]
         if len (join_log )>=JOIN_ALERT_THRESHOLD :
-            alerts .append (f' В конец 1 времяte **{len(join_log)} новый участник** присоединился — olasы raid!')
+            alerts .append (f'🚨 За последний час присоединились **{len(join_log)} участников** — похоже на рейд!')
             data ['join_log']=[]
 
         if alerts :
-            msg ='** J.A.R.V.I.S. Предупреждениеsы**\n'+'\n'.join (alerts )
+            msg ='**🤖 J.A.R.V.I.S. — тревога**\n'+'\n'.join (alerts )
             await self ._send_to_owner (msg )
 
         data ['leave_log']=[t for t in data .get ('leave_log',[])if t >one_hour_ago ]
@@ -164,7 +164,7 @@ class ProactiveAI (commands .Cog ):
 
     @commands .Cog .listener ()
     async def on_member_join (self ,member :discord .Member ):
-        """Katыlыmlarы logla"""
+        """Логировать входы"""
         data =_load ()
         data .setdefault ('join_log',[]).append (datetime .datetime .now ().timestamp ())
         data ['join_log']=data ['join_log'][-50 :]
@@ -172,7 +172,7 @@ class ProactiveAI (commands .Cog ):
 
     @commands .Cog .listener ()
     async def on_member_remove (self ,member :discord .Member ):
-        """Ayrыlmalarы logla ve Arthur'a bildir"""
+        """Логировать выходы и сообщить Артуру"""
         data =_load ()
         data .setdefault ('leave_log',[]).append (datetime .datetime .now ().timestamp ())
         data ['leave_log']=data ['leave_log'][-50 :]

@@ -76,7 +76,7 @@ class PollView (discord .ui .View ):
                 votes [uid ]=idx 
                 opt_name =poll ['options'][idx ]
                 await interaction .response .send_message (
-                f"🗳 **{opt_name}** — голос принят!"+(" (anonim)"if self .anonymous else ""),
+                f"🗳 **{opt_name}** — голос принят!"+(" (анонимно)"if self .anonymous else ""),
                 ephemeral =True 
                 )
 
@@ -120,7 +120,7 @@ class EventJoinView (discord .ui .View ):
         self .event_id =event_id 
         self .guild_id =guild_id 
 
-    @discord .ui .button (label ="Katыl",emoji ="",style =discord .ButtonStyle .success ,custom_id ="event_join")
+    @discord .ui .button (label ="Участвовать",emoji ="",style =discord .ButtonStyle .success ,custom_id ="event_join")
     async def join (self ,interaction :discord .Interaction ,button :discord .ui .Button ):
         path =EVENT_FILE .format (guild_id =self .guild_id )
         data =_load (path )
@@ -132,7 +132,7 @@ class EventJoinView (discord .ui .View ):
         participants =event .setdefault ('participants',[])
         if uid in participants :
             participants .remove (uid )
-            msg =" Событиеten покинул."
+            msg ="🚪 Вы покинули событие."
         else :
             participants .append (uid )
             msg =f" **{event['title']}** — ты присоединился к событию!"
@@ -181,7 +181,7 @@ class MatchView (discord .ui .View ):
         self .guild_id =guild_id 
         self .max_players =max_players 
 
-    @discord .ui .button (label ="Katыl",emoji ="",style =discord .ButtonStyle .success ,custom_id ="match_join")
+    @discord .ui .button (label ="Участвовать",emoji ="",style =discord .ButtonStyle .success ,custom_id ="match_join")
     async def join (self ,interaction :discord .Interaction ,button :discord .ui .Button ):
         path =MATCH_FILE .format (guild_id =self .guild_id )
         data =_load (path )
@@ -208,7 +208,7 @@ class MatchView (discord .ui .View ):
             await interaction .channel .send (
             f" **{match['game']}** — команда набрана! "
             +" ".join (f"<@{p}>"for p in players )
-            +"\nHaydi oynayыn! "
+            +"\nВперёд, играем! "
             )
 
 
@@ -241,16 +241,16 @@ class Social (commands .Cog ):
         #  ANKET 
     @app_commands .command (name ="anket",description ="Создать новый опрос")
     @app_commands .describe (
-    soru ="Anket sorusu",
-    secenaddr ="Выбрать (virgюlle ayыr, max 10)",
-    sure ="Длительность minutes cinsinden (0 = длительностьz)",
-    anonim ="Anonim oylama?"
+    вопрос ="Вопрос опроса",
+    варианты ="Варианты через запятую (макс. 10)",
+    длительность ="Длительность в минутах (0 = бессрочно)",
+    анонимно ="Анонимное голосование?"
     )
     @app_commands .checks .has_permissions (moderate_members =True )
     async def poll_create (self ,interaction :discord .Interaction ,
-    soru :str ,secenaddr :str ,
-    sure :int =0 ,anonim :bool =False ):
-        options =[o .strip ()for o in secenaddr .split (',')if o .strip ()][:10 ]
+    вопрос :str ,варианты :str ,
+    длительность :int =0 ,анонимно :bool =False ):
+        options =[o .strip ()for o in варианты .split (',')if o .strip ()][:10 ]
         if len (options )<2 :
             await interaction .response .send_message (" En az 2 выбрать gir!",ephemeral =True )
             return 
@@ -260,14 +260,14 @@ class Social (commands .Cog ):
         data =_load (path )
 
         poll_id =str (int (datetime .now ().timestamp ()))
-        ends_at =(datetime .now (timezone .utc )+timedelta (minutes =sure )).isoformat ()if sure >0 else None 
+        ends_at =(datetime .now (timezone .utc )+timedelta (minutes =длительность )).isoformat ()if длительность >0 else None 
 
         poll ={
         'id':poll_id ,
-        'question':soru ,
+        'question':вопрос ,
         'options':options ,
         'votes':{},
-        'anonymous':anonim ,
+        'anonymous':анонимно ,
         'created_by':str (interaction .user .id ),
         'ends_at':ends_at ,
         'ended':False ,
@@ -279,19 +279,19 @@ class Social (commands .Cog ):
 
         emojis =['1','2','3','4','5','6','7','8','9','']
         e =discord .Embed (
-        title =f" {soru}",
+        title =f"📊 {вопрос}",
         color =0x3498db ,
         timestamp =datetime .now (timezone .utc )
         )
-        e .description =f"{' Anonim oylama' if anonim else ' Открыт oylama'}"
+        e .description =f"{'🔒 Анонимное голосование' if анонимно else '🔓 Открытое голосование'}"
         for i ,opt in enumerate (options ):
             e .add_field (name =f"{emojis[i]} {opt}",value =f"`{''*12}` **0%** (0 oy)",inline =False )
         if ends_at :
             e .add_field (name ="⏰ Окончание",value =f"<t:{int(datetime.fromisoformat(ends_at).timestamp())}:R>",inline =True )
-        e .set_footer (text =f" Всего 0 oy • Одинаковый butona клик oyunu geri alabilirsin")
+        e .set_footer (text ="🗳 Всего 0 голосов • Повторный клик по той же кнопке отзывает голос")
         e .set_author (name =interaction .user .display_name ,icon_url =interaction .user .display_avatar .url )
 
-        view =PollView (poll_id ,options ,anonim ,guild_id )
+        view =PollView (poll_id ,options ,анонимно ,guild_id )
         await interaction .response .send_message (embed =e ,view =view )
         msg =await interaction .original_response ()
 
@@ -365,17 +365,17 @@ class Social (commands .Cog ):
         #  ETKИNLИK 
     @app_commands .command (name ="etkinlik",description ="Создать новое событие")
     @app_commands .describe (
-    baslik ="Событие baшlыгы",
-    aciklama ="Событие описание",
-    date ="Дата (GG.AA.YYYY SS:DD formatыnda)",
-    max_katilimci ="Maksimum katыlыmcы количество (0 = лимит)"
+    название ="Название события",
+    описание ="Описание события",
+    дата ="Дата (ДД.ММ.ГГГГ ЧЧ:ММ)",
+    макс_участников ="Макс. участников (0 = без лимита)"
     )
     @app_commands .checks .has_permissions (moderate_members =True )
     async def event_create (self ,interaction :discord .Interaction ,
-    baslik :str ,aciklama :str ,
-    date :str ,max_katilimci :int =0 ):
+    название :str ,описание :str ,
+    дата :str ,макс_участников :int =0 ):
         try :
-            event_dt =datetime .strptime (date ,'%d.%m.%Y %H:%M').replace (tzinfo =timezone .utc )
+            event_dt =datetime .strptime (дата ,'%d.%m.%Y %H:%M').replace (tzinfo =timezone .utc )
         except ValueError :
             await interaction .response .send_message (
             " Неверный формат даты! Пример: `25.12.2025 20:00`",ephemeral =True 
@@ -389,10 +389,10 @@ class Social (commands .Cog ):
         event_id =str (int (datetime .now ().timestamp ()))
         event ={
         'id':event_id ,
-        'title':baslik ,
-        'description':aciklama ,
+        'title':название ,
+        'description':описание ,
         'date':event_dt .isoformat (),
-        'max_participants':max_katilimci ,
+        'max_participants':макс_участников ,
         'participants':[],
         'created_by':str (interaction .user .id ),
         'channel_id':str (interaction .channel .id ),
@@ -403,14 +403,14 @@ class Social (commands .Cog ):
         _save (path ,data )
 
         e =discord .Embed (
-        title =f" {baslik}",
-        description =aciklama ,
+        title =f"🎉 {название}",
+        description =описание ,
         color =0x9b59b6 ,
         timestamp =datetime .now (timezone .utc )
         )
         e .add_field (name =" Дата",value =f"<t:{int(event_dt.timestamp())}:F>",inline =True )
         e .add_field (name ="⏰ Когда",value =f"<t:{int(event_dt.timestamp())}:R>",inline =True )
-        e .add_field (name =" Участники",value ="`0 человек`"+(f" / {max_katilimci}"if max_katilimci else ""),inline =True )
+        e .add_field (name =" Участники",value ="`0 человек`"+(f" / {макс_участников}"if макс_участников else ""),inline =True )
         e .set_author (name =interaction .user .display_name ,icon_url =interaction .user .display_avatar .url )
         e .set_footer (text =f" Aether Event Система • ID: {event_id}")
 
@@ -432,22 +432,22 @@ class Social (commands .Cog ):
         key =lambda x :x ['date']
         )
 
-        e =discord .Embed (title =" Yaklaшan Событиеler",color =0x9b59b6 ,timestamp =now )
+        e =discord .Embed (title ="📅 Ближайшие события",color =0x9b59b6 ,timestamp =now )
         if not upcoming :
-            e .description ="Yaklaшan etkinlik нет."
+            e .description ="Ближайших событий нет."
         else :
             for ev in upcoming [:8 ]:
                 dt =datetime .fromisoformat (ev ['date'])
                 e .add_field (
                 name =f" {ev['title']}",
-                value =f"<t:{int(dt.timestamp())}:F> • {len(ev.get('participants', []))} katыlыmcы",
+                value =f"<t:{int(dt.timestamp())}:F> • {len(ev.get('participants', []))} участников",
                 inline =False 
                 )
         await interaction .response .send_message (embed =e ,ephemeral =True )
 
     @tasks .loop (minutes =10 )
     async def event_reminder (self ):
-        """Событиеten 30 minutes до hatыrlatma отправить."""
+        """Отправить напоминание за 30 минут до события."""
         now =datetime .now (timezone .utc )
         for guild in self .bot .guilds :
             path =EVENT_FILE .format (guild_id =str (guild .id ))
@@ -467,7 +467,7 @@ class Social (commands .Cog ):
                             participants =event .get ('participants',[])
                             mentions =" ".join (f"<@{uid}>"for uid in participants )if participants else "@каждый"
                             await ch .send (
-                            f"⏰ **{event['title']}** etkinliгi **30 minutes** после baшlыyor!\n{mentions}"
+                            f"⏰ **{event['title']}** начинается через **30 минут**!\n{mentions}"
                             )
                     except Exception :
                         pass 
@@ -482,7 +482,7 @@ class Social (commands .Cog ):
     @app_commands .command (name ="oyun-ara",description ="Поиск напарников для игры")
     @app_commands .describe (
     oyun ="Игра имя",
-    max_oyuncu ="Сколько kiшilik команда?",
+    max_oyuncu ="Размер команды?",
     not_ ="Ek заметок (rank, mod, vb.)"
     )
     async def matchmaking_create (self ,interaction :discord .Interaction ,
@@ -510,7 +510,7 @@ class Social (commands .Cog ):
         _save (path ,data )
 
         e =discord .Embed (
-        title =f" {oyun} — Играcu Aramanыyor",
+        title =f" {oyun} — Ищем игрока",
         color =0x1abc9c ,
         timestamp =datetime .now (timezone .utc )
         )
@@ -519,7 +519,7 @@ class Social (commands .Cog ):
         if not_ :
             e .add_field (name =" Not",value =f"`{not_}`",inline =True )
         e .add_field (name =" Создал",value =interaction .user .mention ,inline =True )
-        e .set_footer (text =f" Aether Matchmaking • Takыm dolunca уведомление gelir")
+        e .set_footer (text ="Aether Matchmaking • Когда состав соберётся — придёт уведомление")
         e .set_thumbnail (url =interaction .user .display_avatar .url )
 
         view =MatchView (match_id ,guild_id ,max_oyuncu )
@@ -539,9 +539,9 @@ class Social (commands .Cog ):
         and len (m .get ('players',[]))<m ['max_players']
         ]
 
-        e =discord .Embed (title =" Активен Игра Aramamalarы",color =0x1abc9c ,timestamp =now )
+        e =discord .Embed (title ="🎮 Активные поиски игроков",color =0x1abc9c ,timestamp =now )
         if not active :
-            e .description ="Шu an активен oyun поиск нет.\n`/oyun-ara` с новый arama запустить!"
+            e .description ="Сейчас нет активных поисков.\n`/oyun-ara` — запустить новый!"
         else :
             for m in active [:8 ]:
                 players =m .get ('players',[])
