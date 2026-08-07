@@ -834,6 +834,7 @@ def api_my_notifications ():
         for n in my :
             item =dict (n )
             item ['system']=False
+            item .setdefault ('link','')
             result .append (item )
         # Отмечаем прочитанными
         for n in my :
@@ -859,6 +860,8 @@ def api_my_notifications ():
                 'created_at':entry .get ('timestamp',''),
                 'read':ts <=prev_seen ,
                 'system':True,
+                'link':entry .get ('link',''),
+                'event':entry .get ('event',''),
                 })
     except Exception :
         pass
@@ -2862,11 +2865,12 @@ def api_activity_feed ():
 
     items = []
 
-    def push(icon, title, user, detail, ts, evtype='system', color=None):
+    def push(icon, title, user, detail, ts, evtype='system', color=None, link=''):
         if not ts: return
         items.append({
             'icon': icon, 'title': title, 'user': user or '—',
             'detail': detail or '', 'ts': ts, 'type': evtype, 'color': color,
+            'link': link,
         })
 
     # 1) Логи входа в панель
@@ -2882,7 +2886,7 @@ def api_activity_feed ():
                         ts = int(datetime.fromisoformat(e.get('timestamp','')).timestamp())
                     except Exception:
                         ts = 0
-                push('🔐', 'Вход в панель', e.get('username'), f"Роль: {e.get('role','?')}", ts, 'auth')
+                push('🔐', 'Вход в панель', e.get('username'), f"Роль: {e.get('role','?')}", ts, 'auth', link='/logs')
     except Exception:
         pass
 
@@ -2910,7 +2914,7 @@ def api_activity_feed ():
                     elif 'сообщ' in act or 'message' in act: icon = '💬'
                     elif 'голос' in act or 'voice' in act: icon = '🎙'
                     push(icon, ev.get('action','Действие'), ev.get('user_name') or ev.get('mod_name'),
-                         ev.get('reason',''), ts, evtype)
+                         ev.get('reason',''), ts, evtype, link='/logs')
     except Exception:
         pass
 
@@ -2929,7 +2933,7 @@ def api_activity_feed ():
                         except Exception:
                             ts = 0
                         push('⚠️', 'Предупреждение', w.get('moderator') or w.get('mod') or uid,
-                             w.get('reason',''), ts, 'warn')
+                             w.get('reason',''), ts, 'warn', link='/warnings')
     except Exception:
         pass
 
@@ -2946,18 +2950,42 @@ def api_activity_feed ():
                     except Exception:
                         ts = 0
                     push('🎫', 'Тикет: '+ (tk.get('category') or 'общий'),
-                         tk.get('user_name'), tk.get('description','')[:80], ts, 'ticket')
+                         tk.get('user_name'), tk.get('description','')[:80], ts, 'ticket', link='/ticket-search')
     except Exception:
         pass
 
-    # 5) Панель-логи (POST-действия)
+    # 5) Панель-логи (POST-действия) — broadcast-события пропускаем:
+    # они уже попадают из истории уведомлений (источник 6) с иконками и ссылками
     try:
         f = 'data/panel_logs.json'
         if os.path.exists(f):
             with open(f, 'r', encoding='utf-8') as fp:
                 raw = json.load(fp)
             for e in raw[-40:]:
-                push('🖥', e.get('action','Действие'), e.get('username'), e.get('detail',''), e.get('ts',0), 'panel')
+                if e.get('broadcast'):
+                    continue
+                push('🖥', e.get('action','Действие'), e.get('username'), e.get('detail',''), e.get('ts',0), 'panel', link='/logs')
+    except Exception:
+        pass
+
+    # 6) События диспетчера уведомлений (история с иконками и ссылками)
+    try:
+        f = 'data/notification_history.json'
+        _ev_type = {'ticket_open':'ticket','ticket_message':'ticket','ticket_close':'ticket',
+                    'priority_change':'ticket','assignment':'ticket','warn':'warn',
+                    'mod_action':'mod','staff_apply':'panel','test':'system'}
+        if os.path.exists(f):
+            with open(f, 'r', encoding='utf-8') as fp:
+                hist = json.load(fp)
+            for h in hist[-30:]:
+                ts = 0
+                try:
+                    ts = int(datetime.fromisoformat(h.get('created_at','')).timestamp())
+                except Exception:
+                    ts = 0
+                push(h.get('icon','🔔'), h.get('title','Уведомление'), 'Система',
+                     h.get('body',''), ts, _ev_type.get(h.get('event',''),'system'),
+                     link=h.get('link',''))
     except Exception:
         pass
 

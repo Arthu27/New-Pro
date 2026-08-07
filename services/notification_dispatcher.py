@@ -42,6 +42,19 @@ EVENTS = {
     'test': (None, 'Тестовое уведомление', '🧪'),
 }
 
+# event_key -> страница панели, куда ведёт клик по уведомлению
+EVENT_LINKS = {
+    'ticket_open': '/ticket-search',
+    'ticket_message': '/ticket-search',
+    'ticket_close': '/ticket-search',
+    'priority_change': '/ticket-search',
+    'assignment': '/ticket-search',
+    'warn': '/warnings',
+    'mod_action': '/logs',
+    'staff_apply': '/staff-apps',
+    'test': '/notifications',
+}
+
 DEFAULT_SETTINGS = {
     'web_enabled': True,
     'discord_enabled': True,
@@ -102,7 +115,7 @@ def _append_json_list(path, item, limit=None):
         return False
 
 
-def _record_history(event, title, body, channels):
+def _record_history(event, title, body, channels, link=''):
     """Записать событие в историю уведомлений (максимум 200 записей)."""
     _, label, icon = EVENTS.get(event, (None, event, '🔔'))
     with _history_lock:
@@ -112,12 +125,13 @@ def _record_history(event, title, body, channels):
             'icon': icon,
             'title': title,
             'body': body,
+            'link': link,
             'channels': channels,
             'created_at': datetime.utcnow().isoformat(),
         }, limit=200)
 
 
-def _broadcast_web(title, body, icon):
+def _broadcast_web(title, body, icon, event='', link=''):
     """Веб-канал: broadcast-запись в panel_logs.json для всех онлайн-сотрудников."""
     entry = {
         'username': '',
@@ -129,6 +143,8 @@ def _broadcast_web(title, body, icon):
         'ts': time.time(),  # float — чтобы бейдж ловил события в ту же секунду, что и просмотр
         'broadcast': True,
         'kind': 'notify',
+        'event': event,
+        'link': link,
     }
     return _append_json_list(PANEL_LOGS_FILE, entry, limit=1000)
 
@@ -204,10 +220,11 @@ def notify_event(event, title, body, link='', discord_sender=None):
             return channels
 
         full_title = title or label
+        link = link or EVENT_LINKS.get(event, '')
 
         # ── Веб (панель) ────────────────────────────────────────────────
         if settings.get('web_enabled', True):
-            channels['web'] = _broadcast_web(full_title, body, icon)
+            channels['web'] = _broadcast_web(full_title, body, icon, event=event, link=link)
 
         # ── Discord ─────────────────────────────────────────────────────
         if settings.get('discord_enabled', True):
@@ -237,7 +254,7 @@ def notify_event(event, title, body, link='', discord_sender=None):
             else:
                 channels['email'] = False
 
-        _record_history(event, full_title, body, channels)
+        _record_history(event, full_title, body, channels, link=link)
     except Exception:
         pass
     return channels

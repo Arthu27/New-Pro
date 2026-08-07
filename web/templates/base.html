@@ -573,14 +573,19 @@ document.addEventListener('DOMContentLoaded', function () {
         body.innerHTML = notifs.slice(0, 8).map(function (n) {
           var d = new Date(n.created_at);
           var unread = !n.read;
-          return '<div class="notif-dropdown-item' + (unread ? ' unread' : '') + '">' +
-            '<div class="notif-dropdown-icon"><i class="fas fa-bell"></i></div>' +
+          var link = n.link || '';
+          var inner =
+            '<div class="notif-dropdown-icon"><i class="fas ' + (n.system ? 'fa-bullhorn' : 'fa-bell') + '"></i></div>' +
             '<div style="flex: 1; min-width: 0">' +
               '<div class="notif-dropdown-title">' + esc(n.title) + '</div>' +
               '<div class="notif-dropdown-msg">' + esc(n.message) + '</div>' +
-              '<div class="notif-dropdown-time">' + d.toLocaleString('ru-RU') + '</div>' +
+              '<div class="notif-dropdown-time">' + (n.from ? esc(n.from) + ' · ' : '') + d.toLocaleString('ru-RU') + '</div>' +
             '</div>' +
-          '</div>';
+            (link ? '<div style="align-self:center;color:var(--text-muted)"><i class="fas fa-chevron-right"></i></div>' : '');
+          if (link) {
+            return '<a href="' + esc(link) + '" class="notif-dropdown-item notif-link' + (unread ? ' unread' : '') + '">' + inner + '</a>';
+          }
+          return '<div class="notif-dropdown-item' + (unread ? ' unread' : '') + '">' + inner + '</div>';
         }).join('');
         var badge = btn.querySelector('.nav-badge');
         if (badge) {
@@ -1144,7 +1149,7 @@ window.addEventListener('pageshow', function (e) {
     } else {
       iconHtml = '<i class="fas ' + esc(ev.icon && ev.icon.startsWith('fa-') ? ev.icon : t.icon) + '"></i>';
     }
-    var html = '<div class="activity-event ' + t.cls + live + '">' +
+    var innerEv =
       '<div class="activity-event-icon">' + iconHtml + '</div>' +
       '<div class="activity-event-content">' +
         '<div class="activity-event-head">' +
@@ -1157,7 +1162,10 @@ window.addEventListener('pageshow', function (e) {
         '</div>' +
         (ev.detail ? '<div class="activity-event-detail">' + esc(ev.detail) + '</div>' : '') +
       '</div>' +
-    '</div>';
+      (ev.link ? '<div class="activity-event-go"><i class="fas fa-chevron-right"></i></div>' : '');
+    var html = ev.link
+      ? '<a href="' + esc(ev.link) + '" class="activity-event activity-link ' + t.cls + live + '">' + innerEv + '</a>'
+      : '<div class="activity-event ' + t.cls + live + '">' + innerEv + '</div>';
     if (prepend && body.firstChild) {
       body.insertAdjacentHTML('afterbegin', html);
     } else {
