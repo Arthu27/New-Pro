@@ -297,7 +297,7 @@ class PomodoroTimer:
         session['completed_pomodoros'] += 1
         session['status'] = 'break'
         
-        # Kaydet
+        # Сохранить
         if user_id not in self.sessions:
             self.sessions[user_id] = []
         

@@ -170,7 +170,7 @@ class TicketCloner:
         if modifications:
             cloned_ticket.update(modifications)
         
-        # Kaydet
+        # Сохранить
         self.clone_history[clone_id] = {
             'clone_id': clone_id,
             'original_ticket_id': original_ticket.get('id'),

@@ -696,7 +696,7 @@ async function sendMessage() {
   _sending = true;
   var btn = document.getElementById('send-btn');
   btn.disabled = true;
-  // Input'u hemen temizle — пользователь deneyimi для
+  // Сразу очистить поле ввода — для удобства пользователя
   inp.value = ''; inp.style.height = 'auto';
   var finalContent = _replyTo ? '> **' + _replyTo.author + ':** ' + _replyTo.content + '\n' + content : content;
   cancelReply();
@@ -775,7 +775,7 @@ async function openDmFromInput() {
   }
   if (!val) { toast('Введите ID или имя пользователя для DM', false); return; }
   if (/^\d{17,20}$/.test(val)) {
-    // Birebir Discord ID — member listesinde ara
+    // Ищем по точному Discord ID в списке участников
     var m = _allMembers.find(function(x){ return x.id === val; });
     if (m) { openDm(m.id, m.nick || m.display_name || m.name); return; }
     try {

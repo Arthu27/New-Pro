@@ -34,9 +34,9 @@ class FunCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    # NOT: 8ball / coinflip / dice bu dosyadan kaldırıldı —
+    # ПРИМЕЧАНИЕ: 8ball / coinflip / dice убраны из этого файла —
     # slash-команды с теми же именами конфликтовали с cogs/minigames.py и
-    # minigames cog'unun tamamen yüklenmemesine yol açıyordu.
+    # они мешали полной загрузке minigames-кога.
 
     async def _fetch_json(self, url):
         """Безопасно получает данные из API"""

@@ -110,7 +110,7 @@ async def _ask_deepseek_async (prompt :str ,timeout :int =60 )->str :
         await textarea .click (timeout =5000 )
         await textarea .fill (prompt ,timeout =5000 )
 
-        # Отправить (Enter или buton)
+        # Отправить (Enter или кнопка)
         await textarea .press ('Enter')
 
         # Cevabыn gelmesini badd — "dюшюnюyor" animasyonu bitene kadar

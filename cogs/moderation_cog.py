@@ -43,8 +43,8 @@ class ModerationCog(commands.Cog):
                 continue
         return mute_role
 
-    # NOT: !warn komutu buradan kaldırıldı — cogs/warnings.py içindeki
-    # /warn ile çakışıyordu ve warnings cog'unun yüklenmesini engelliyordu.
+    # ПРИМЕЧАНИЕ: команда !warn убрана отсюда — она конфликтовала
+    # с /warn из cogs/warnings.py и мешала загрузке warnings-кога.
 
     @commands.command(name='mute', aliases=['замьютить'])
     @commands.has_permissions(manage_messages=True)

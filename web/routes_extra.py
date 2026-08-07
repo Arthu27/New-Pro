@@ -2036,10 +2036,10 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         import web .app as _app ;bot =_app .bot_instance 
         from cogs .leveling_engagement import LevelingEngagement 
         if not bot :
-            return jsonify ({'error':'Bot offline'}),503 
+            return jsonify ({'error':'Бот офлайн'}),503 
         cog =bot .get_cog ('LevelingEngagement')
         if not cog :
-            return jsonify ({'error':'Cog не загружен'}),404 
+            return jsonify ({'error':'Модуль не загружен'}),404 
         guild_id =str (session .get ('selected_guild')or MAIN_GUILD_ID )
         if request .method =='POST':
             cfg =cog .load_config (guild_id )
@@ -2056,10 +2056,10 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         import web .app as _app ;bot =_app .bot_instance 
         from cogs .leveling_engagement import LevelingEngagement ,level_from_xp 
         if not bot :
-            return jsonify ({'error':'Bot offline'}),503 
+            return jsonify ({'error':'Бот офлайн'}),503 
         cog =bot .get_cog ('LevelingEngagement')
         if not cog :
-            return jsonify ({'error':'Cog не загружен'}),404 
+            return jsonify ({'error':'Модуль не загружен'}),404 
         guild_id =str (session .get ('selected_guild')or MAIN_GUILD_ID )
         data =cog .load_xp (guild_id )
         users =data .get ('users',{})
@@ -2094,10 +2094,10 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         import web .app as _app ;bot =_app .bot_instance 
         from cogs .leveling_engagement import LevelingEngagement 
         if not bot :
-            return jsonify ({'error':'Bot offline'}),503 
+            return jsonify ({'error':'Бот офлайн'}),503 
         cog =bot .get_cog ('LevelingEngagement')
         if not cog :
-            return jsonify ({'error':'Cog не загружен'}),404 
+            return jsonify ({'error':'Модуль не загружен'}),404 
         guild_id =str (session .get ('selected_guild')or MAIN_GUILD_ID )
         data =cog .load_xp (guild_id )
         username =session .get ('username','')
@@ -2121,10 +2121,10 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         import web .app as _app ;bot =_app .bot_instance 
         from cogs .leveling_engagement import LevelingEngagement 
         if not bot :
-            return jsonify ({'error':'Bot offline'}),503 
+            return jsonify ({'error':'Бот офлайн'}),503 
         cog =bot .get_cog ('LevelingEngagement')
         if not cog :
-            return jsonify ({'error':'Cog не загружен'}),404 
+            return jsonify ({'error':'Модуль не загружен'}),404 
         guild_id =str (session .get ('selected_guild')or MAIN_GUILD_ID )
         cfg =cog .load_config (guild_id )
         return jsonify ({'rewards':cfg .get ('level_rewards',{})})
@@ -2137,10 +2137,10 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         import web .app as _app ;bot =_app .bot_instance 
         from cogs .ai_moderation import AIModeration 
         if not bot :
-            return jsonify ({'error':'Bot offline'}),503 
+            return jsonify ({'error':'Бот офлайн'}),503 
         cog =bot .get_cog ('AIModeration')
         if not cog :
-            return jsonify ({'error':'Cog не загружен'}),404 
+            return jsonify ({'error':'Модуль не загружен'}),404 
         guild_id =str (session .get ('selected_guild')or MAIN_GUILD_ID )
         if request .method =='POST':
             cfg =cog .load_config (guild_id )
@@ -2160,10 +2160,10 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         import web .app as _app ;bot =_app .bot_instance 
         from cogs .ai_moderation import AIModeration 
         if not bot :
-            return jsonify ({'error':'Bot offline'}),503 
+            return jsonify ({'error':'Бот офлайн'}),503 
         cog =bot .get_cog ('AIModeration')
         if not cog :
-            return jsonify ({'error':'Cog не загружен'}),404 
+            return jsonify ({'error':'Модуль не загружен'}),404 
         guild_id =str (session .get ('selected_guild')or MAIN_GUILD_ID )
         history =cog .load_history (guild_id )
         from collections import Counter 
@@ -2186,10 +2186,10 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         import web .app as _app ;bot =_app .bot_instance 
         from cogs .ai_moderation import AIModeration 
         if not bot :
-            return jsonify ({'error':'Bot offline'}),503 
+            return jsonify ({'error':'Бот офлайн'}),503 
         cog =bot .get_cog ('AIModeration')
         if not cog :
-            return jsonify ({'error':'Cog не загружен'}),404 
+            return jsonify ({'error':'Модуль не загружен'}),404 
         guild_id =str (session .get ('selected_guild')or MAIN_GUILD_ID )
         cfg =cog .load_config (guild_id )
         d =request .get_json (silent =True )or {}
@@ -2213,10 +2213,10 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         import web .app as _app ;bot =_app .bot_instance 
         from cogs .diagnostics import Diagnostics 
         if not bot :
-            return jsonify ({'error':'Bot offline'}),503 
+            return jsonify ({'error':'Бот офлайн'}),503 
         cog =bot .get_cog ('Diagnostics')
         if not cog :
-            return jsonify ({'error':'Cog не загружен'}),404 
+            return jsonify ({'error':'Модуль не загружен'}),404 
         health =cog .get_health_snapshot ()
         # Try to load from file
         import json as _json 
@@ -2245,12 +2245,12 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     def api_bot_hot_reload ():
         import web .app as _app ;bot =_app .bot_instance 
         if not bot :
-            return jsonify ({'error':'Bot offline'}),503 
+            return jsonify ({'error':'Бот офлайн'}),503 
             # Trigger via discord bot
         from cogs .diagnostics import Diagnostics 
         cog =bot .get_cog ('Diagnostics')
         if not cog :
-            return jsonify ({'error':'Cog не загружен'}),404 
+            return jsonify ({'error':'Модуль не загружен'}),404 
             # Re-check files
         import asyncio 
         reloaded =[]
@@ -2287,10 +2287,10 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         import web .app as _app ;bot =_app .bot_instance 
         from cogs .temp_moderation import TempModeration 
         if not bot :
-            return jsonify ({'error':'Bot offline'}),503 
+            return jsonify ({'error':'Бот офлайн'}),503 
         cog =bot .get_cog ('TempModeration')
         if not cog :
-            return jsonify ({'error':'Cog не загружен'}),404 
+            return jsonify ({'error':'Модуль не загружен'}),404 
         guild_id =str (session .get ('selected_guild')or MAIN_GUILD_ID )
         # Defensive: mutes/bans/kicks dict-of-dicts may be missing or shaped differently.
         mutes =(getattr (cog ,'_mutes',{})or {}).get (guild_id ,{})or {}
@@ -2315,10 +2315,10 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         import web .app as _app ;bot =_app .bot_instance 
         from cogs .temp_moderation import TempModeration ,parse_duration 
         if not bot :
-            return jsonify ({'error':'Bot offline'}),503 
+            return jsonify ({'error':'Бот офлайн'}),503 
         cog =bot .get_cog ('TempModeration')
         if not cog :
-            return jsonify ({'error':'Cog не загружен'}),404 
+            return jsonify ({'error':'Модуль не загружен'}),404 
         d =request .get_json (silent =True )or {}
         sec =parse_duration (d .get ('duration','1h'))
         if not sec :
@@ -2354,10 +2354,10 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         import web .app as _app ;bot =_app .bot_instance 
         from cogs .temp_moderation import TempModeration ,parse_duration 
         if not bot :
-            return jsonify ({'error':'Bot offline'}),503 
+            return jsonify ({'error':'Бот офлайн'}),503 
         cog =bot .get_cog ('TempModeration')
         if not cog :
-            return jsonify ({'error':'Cog не загружен'}),404 
+            return jsonify ({'error':'Модуль не загружен'}),404 
         d =request .get_json (silent =True )or {}
         sec =parse_duration (d .get ('duration','1d'))
         if not sec :
@@ -2389,10 +2389,10 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         import web .app as _app ;bot =_app .bot_instance 
         from cogs .temp_moderation import TempModeration ,parse_duration 
         if not bot :
-            return jsonify ({'error':'Bot offline'}),503 
+            return jsonify ({'error':'Бот офлайн'}),503 
         cog =bot .get_cog ('TempModeration')
         if not cog :
-            return jsonify ({'error':'Cog не загружен'}),404 
+            return jsonify ({'error':'Модуль не загружен'}),404 
         d =request .get_json (silent =True )or {}
         sec =parse_duration (d .get ('duration','5m'))
         if not sec :
@@ -2423,11 +2423,11 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     def api_temp_mod_unmute ():
         import web .app as _app ;bot =_app .bot_instance 
         if not bot :
-            return jsonify ({'error':'Bot offline'}),503 
+            return jsonify ({'error':'Бот офлайн'}),503 
         from cogs .temp_moderation import TempModeration 
         cog =bot .get_cog ('TempModeration')
         if not cog :
-            return jsonify ({'error':'Cog не загружен'}),404 
+            return jsonify ({'error':'Модуль не загружен'}),404 
         d =request .get_json (silent =True )or {}
         user_id =d .get ('user_id','').strip ('<@!>')
         guild =bot .get_guild (int (session .get ('selected_guild')or MAIN_GUILD_ID ))
@@ -2447,11 +2447,11 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     def api_temp_mod_unban ():
         import web .app as _app ;bot =_app .bot_instance 
         if not bot :
-            return jsonify ({'error':'Bot offline'}),503 
+            return jsonify ({'error':'Бот офлайн'}),503 
         from cogs .temp_moderation import TempModeration 
         cog =bot .get_cog ('TempModeration')
         if not cog :
-            return jsonify ({'error':'Cog не загружен'}),404 
+            return jsonify ({'error':'Модуль не загружен'}),404 
         d =request .get_json (silent =True )or {}
         user_id =d .get ('user_id','').strip ('<@!>')
         guild =bot .get_guild (int (session .get ('selected_guild')or MAIN_GUILD_ID ))
@@ -2470,11 +2470,11 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     def api_temp_mod_unschedule ():
         import web .app as _app ;bot =_app .bot_instance 
         if not bot :
-            return jsonify ({'error':'Bot offline'}),503 
+            return jsonify ({'error':'Бот офлайн'}),503 
         from cogs .temp_moderation import TempModeration 
         cog =bot .get_cog ('TempModeration')
         if not cog :
-            return jsonify ({'error':'Cog не загружен'}),404 
+            return jsonify ({'error':'Модуль не загружен'}),404 
         d =request .get_json (silent =True )or {}
         eid =d .get ('id','')
         cog ._scheduled =[s for s in cog ._scheduled if s ['id']!=eid ]
@@ -2491,7 +2491,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     def api_bot_status ():
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio 
-        if not bot :return jsonify ({'error':'Bot offline'}),503 
+        if not bot :return jsonify ({'error':'Бот офлайн'}),503 
         d =request .get_json (silent =True )or {}
         status_map ={'online':discord .Status .online ,'idle':discord .Status .idle ,'dnd':discord .Status .dnd ,'invisible':discord .Status .invisible }
         type_map ={'listening':discord .ActivityType .listening ,'playing':discord .ActivityType .playing ,'watching':discord .ActivityType .watching ,'competing':discord .ActivityType .competing }
@@ -2547,7 +2547,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     def api_cog_load ():
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio 
-        if not bot :return jsonify ({'error':'Bot offline'}),503 
+        if not bot :return jsonify ({'error':'Бот офлайн'}),503 
         d =request .get_json (silent =True )or {}
         name =(d .get ('name')or d .get ('cog')or '').strip ()
         if not name :
@@ -2577,7 +2577,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     def api_cog_unload ():
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio 
-        if not bot :return jsonify ({'error':'Bot offline'}),503 
+        if not bot :return jsonify ({'error':'Бот офлайн'}),503 
         d =request .get_json (silent =True )or {}
         name =(d .get ('name')or d .get ('cog')or '').strip ()
         if not name :
@@ -2599,7 +2599,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     def api_cog_reload ():
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio 
-        if not bot :return jsonify ({'error':'Bot offline'}),503 
+        if not bot :return jsonify ({'error':'Бот офлайн'}),503 
         d =request .get_json (silent =True )or {}
         name =(d .get ('name')or d .get ('cog')or '').strip ()
         if not name :
@@ -2619,7 +2619,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     def api_cog_reload_all ():
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio 
-        if not bot :return jsonify ({'error':'Bot offline'}),503 
+        if not bot :return jsonify ({'error':'Бот офлайн'}),503 
         results =[]
         for ext in list (bot .extensions .keys ()):
             try :
@@ -2901,10 +2901,10 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         minutes =int (data_req .get ('minutes',60 ))
         channel_id =data_req .get ('channel_id','')
         if not prize or not channel_id :
-            return jsonify ({'error':'Eksik alan'}),400 
+            return jsonify ({'error':'Не заполнено поле'}),400 
 
         if not bot :
-            return jsonify ({'error':'Bot offline'}),503 
+            return jsonify ({'error':'Бот офлайн'}),503 
 
         guild =bot .get_guild (int (guild_id ))
         if not guild :
@@ -2993,7 +2993,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     def api_guild_info (guild_id ):
         import web .app as _app ;bot =_app .bot_instance 
         if not bot :
-            return jsonify ({'error':'Bot offline'})
+            return jsonify ({'error':'Бот офлайн'})
         guild =bot .get_guild (int (guild_id ))
         if not guild :
             return jsonify ({'error':'Сервер не найден'})
@@ -3024,7 +3024,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         import time 
         import web .app as _app ;bot =_app .bot_instance 
         if not bot :
-            return jsonify ({'error':'Bot offline'})
+            return jsonify ({'error':'Бот офлайн'})
         try :
             try :
                 import psutil 
@@ -3196,7 +3196,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     def api_create_role (guild_id ):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio ,discord 
-        if not bot :return jsonify ({'error':'Bot offline'}),503 
+        if not bot :return jsonify ({'error':'Бот офлайн'}),503 
         data =request .get_json (silent =True )or {}
         name =(data .get ('name')or '').strip ()
         if not name :
@@ -3238,7 +3238,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     def api_delete_role (guild_id ,role_id ):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio 
-        if not bot :return jsonify ({'error':'Bot offline'})
+        if not bot :return jsonify ({'error':'Бот офлайн'})
         async def do ():
             guild =bot .get_guild (int (guild_id ))
             role =guild .get_role (int (role_id ))
@@ -3253,7 +3253,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         import discord as _discord 
         if not bot :
             print ('[WEB][WARN] /channels: bot is None')
-            return jsonify ({'error':'Bot offline','channels':[]})
+            return jsonify ({'error':'Бот офлайн','channels':[]})
 
         guild =bot .get_guild (int (guild_id ))
         if not guild :
@@ -3586,7 +3586,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     def api_chat_messages (guild_id ,channel_id ):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio 
-        if not bot :return jsonify ({'error':'Bot offline'}),503 
+        if not bot :return jsonify ({'error':'Бот офлайн'}),503 
         channel =bot .get_channel (int (channel_id ))
         if not channel :return jsonify ({'error':'Канал не найден'}),404 
         async def _fetch ():
@@ -3617,7 +3617,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     def api_chat_send (guild_id ,channel_id ):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio 
-        if not bot :return jsonify ({'error':'Bot offline'}),503 
+        if not bot :return jsonify ({'error':'Бот офлайн'}),503 
         channel =bot .get_channel (int (channel_id ))
         if not channel :return jsonify ({'error':'Канал не найден'}),404 
         d =request .get_json (silent =True )or {}
@@ -3637,7 +3637,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     def api_chat_delete (guild_id ,channel_id ,message_id ):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio 
-        if not bot :return jsonify ({'error':'Bot offline'}),503 
+        if not bot :return jsonify ({'error':'Бот офлайн'}),503 
         channel =bot .get_channel (int (channel_id ))
         if not channel :return jsonify ({'error':'Канал не найден'}),404 
         def _delete ():
@@ -3728,7 +3728,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     def api_dm_send (guild_id ,user_id ):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio as _asyncio ,datetime as _dt2 
-        if not bot :return jsonify ({'error':'Bot offline'}),503 
+        if not bot :return jsonify ({'error':'Бот офлайн'}),503 
         data =request .get_json (silent =True )or {}
         content =data .get ('content','').strip ()
         if not content :return jsonify ({'error':'Сообщение пусто'}),400 
@@ -3760,7 +3760,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     def api_create_channel (guild_id ):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio ,discord 
-        if not bot :return jsonify ({'error':'Bot offline'})
+        if not bot :return jsonify ({'error':'Бот офлайн'})
         data =request .get_json (silent =True )or {}
         async def do ():
             guild =bot .get_guild (int (guild_id ))
@@ -3813,7 +3813,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     def api_update_channel (guild_id ,channel_id ):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio ,discord 
-        if not bot :return jsonify ({'error':'Bot offline'})
+        if not bot :return jsonify ({'error':'Бот офлайн'})
         data =request .get_json (silent =True )or {}
         async def do ():
             guild =bot .get_guild (int (guild_id ))
@@ -3869,7 +3869,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     def api_delete_channel (guild_id ,channel_id ):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio 
-        if not bot :return jsonify ({'error':'Bot offline'})
+        if not bot :return jsonify ({'error':'Бот офлайн'})
         async def do ():
             ch =bot .get_channel (int (channel_id ))
             if ch :await (ch .delete ())
@@ -3897,7 +3897,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         try :
             data =request .get_json (silent =True )or {}
             if not data :
-                return jsonify ({'error':'No data provided'})
+                return jsonify ({'error':'Данные не переданы'})
 
             settings ={}
             if os .path .exists (f ):
@@ -3906,7 +3906,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
 
             t =data .pop ('type',None )
             if not t :
-                return jsonify ({'error':'Type заметок specified'})
+                return jsonify ({'error':'Тип заметок не указан'})
 
             settings [t ]=data 
             with open (f ,'w',encoding ='utf-8')as fp :
@@ -4036,7 +4036,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     def api_create_giveaway (guild_id ):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio ,discord 
-        if not bot :return jsonify ({'error':'Bot offline'})
+        if not bot :return jsonify ({'error':'Бот офлайн'})
         data =request .get_json (silent =True )or {}
         gw_id =str (int (datetime .utcnow ().timestamp ()))
         from datetime import timedelta 
@@ -4103,11 +4103,11 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     @login_required 
     def api_join_giveaway (guild_id ,gw_id ):
         f =f'data/giveaways_{guild_id}.json'
-        if not os .path .exists (f ):return jsonify ({'error':'Giveaway не найдено'})
+        if not os .path .exists (f ):return jsonify ({'error':'Розыгрыш не найден'})
         with open (f )as fp :gws =json .load (fp )
-        if gw_id not in gws :return jsonify ({'error':'Giveaway не найдено'})
+        if gw_id not in gws :return jsonify ({'error':'Розыгрыш не найден'})
         gw =gws [gw_id ]
-        if gw .get ('status')!='active':return jsonify ({'error':'Giveaway активен не'})
+        if gw .get ('status')!='active':return jsonify ({'error':'Розыгрыш не активен'})
         participants =gw .setdefault ('participants',[])
         username =session .get ('username','')
         if username in participants :return jsonify ({'error':'Ты уже присоединился!'})
@@ -4127,9 +4127,9 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     @role_required ('mod')
     def api_vote_poll (guild_id ,poll_id ):
         f =f'data/polls_{guild_id}.json'
-        if not os .path .exists (f ):return jsonify ({'error':'Anket не найдено'})
+        if not os .path .exists (f ):return jsonify ({'error':'Опрос не найден'})
         with open (f ,encoding ='utf-8')as fp :polls =json .load (fp )
-        if poll_id not in polls :return jsonify ({'error':'Anket не найдено'})
+        if poll_id not in polls :return jsonify ({'error':'Опрос не найден'})
         data =request .get_json (silent =True )or {}
         option_index =data .get ('option_index',0 )
         poll =polls [poll_id ]
@@ -4149,7 +4149,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     def api_create_poll (guild_id ):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio ,discord 
-        if not bot :return jsonify ({'error':'Bot offline'})
+        if not bot :return jsonify ({'error':'Бот офлайн'})
         data =request .get_json (silent =True )or {}
         poll_id =str (int (datetime .utcnow ().timestamp ()))
         f =f'data/polls_{guild_id}.json'
@@ -4328,7 +4328,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     def api_purge (guild_id ):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio 
-        if not bot :return jsonify ({'error':'Bot offline'})
+        if not bot :return jsonify ({'error':'Бот офлайн'})
         data =request .get_json (silent =True )or {}
         result ={'count':0 }
         async def do ():
@@ -4345,7 +4345,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     def api_bulk_role (guild_id ):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio ,discord 
-        if not bot :return jsonify ({'error':'Bot offline'})
+        if not bot :return jsonify ({'error':'Бот офлайн'})
         data =request .get_json (silent =True )or {}
         result ={'count':0 }
         async def do ():
@@ -4368,7 +4368,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     def api_bulk_dm (guild_id ):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio ,discord 
-        if not bot :return jsonify ({'error':'Bot offline'})
+        if not bot :return jsonify ({'error':'Бот офлайн'})
         data =request .get_json (silent =True )or {}
         result ={'count':0 }
         async def do ():
@@ -4392,7 +4392,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio ,discord 
         from datetime import timedelta 
-        if not bot :return jsonify ({'error':'Bot offline'})
+        if not bot :return jsonify ({'error':'Бот офлайн'})
         data =request .get_json (silent =True )or {}
         result ={'count':0 }
         async def do ():
@@ -4414,7 +4414,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     def api_bulk_kick (guild_id ):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio ,discord 
-        if not bot :return jsonify ({'error':'Bot offline'})
+        if not bot :return jsonify ({'error':'Бот офлайн'})
         data =request .get_json (silent =True )or {}
         result ={'count':0 }
         async def do ():
@@ -4435,7 +4435,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     def api_bulk_ban (guild_id ):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio ,discord 
-        if not bot :return jsonify ({'error':'Bot offline'})
+        if not bot :return jsonify ({'error':'Бот офлайн'})
         data =request .get_json (silent =True )or {}
         result ={'count':0 }
         async def do ():
@@ -4973,7 +4973,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     def api_create_reaction_role (guild_id ):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio ,discord 
-        if not bot :return jsonify ({'error':'Bot offline'})
+        if not bot :return jsonify ({'error':'Бот офлайн'})
         data =request .get_json (silent =True )or {}
         rr_id =str (int (datetime .utcnow ().timestamp ()))
         f =f'data/rr_{guild_id}.json'
@@ -5363,7 +5363,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     @role_required ('admin')
     def api_create_backup (guild_id ):
         import web .app as _app ;bot =_app .bot_instance 
-        if not bot :return jsonify ({'error':'Bot offline'})
+        if not bot :return jsonify ({'error':'Бот офлайн'})
         guild =bot .get_guild (int (guild_id ))
         if not guild :return jsonify ({'error':'Сервер не найден'})
         data =request .get_json (silent =True )or {}
@@ -5443,7 +5443,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     def api_restore_backup (guild_id ):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio ,discord 
-        if not bot :return jsonify ({'error':'Bot offline'})
+        if not bot :return jsonify ({'error':'Бот офлайн'})
         guild =bot .get_guild (int (guild_id ))
         if not guild :return jsonify ({'error':'Целевой сервер не найден'})
 
@@ -5460,13 +5460,13 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
             data =request .get_json (silent =True )or {}
             backup_id =data .get ('backup_id')
             bf ='data/backups.json'
-            if not os .path .exists (bf ):return jsonify ({'error':'Yedek не найдено'})
+            if not os .path .exists (bf ):return jsonify ({'error':'Резервная копия не найдена'})
             try :
                 with open (bf ,encoding ='utf-8')as fp :backups =json .load (fp )
             except Exception :
                 return jsonify ({'error':'Файл резервной копии повреждён'})
             backup_data =next ((b for b in backups if b .get ('id')==backup_id ),None )
-            if not backup_data :return jsonify ({'error':'Yedek не найдено'})
+            if not backup_data :return jsonify ({'error':'Резервная копия не найдена'})
 
         result ={'roles_created':0 ,'channels_created':0 ,'errors':[]}
 
@@ -5682,7 +5682,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     def api_publish_rules (guild_id ):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio ,discord 
-        if not bot :return jsonify ({'error':'Bot offline'})
+        if not bot :return jsonify ({'error':'Бот офлайн'})
         data =request .get_json (silent =True )or {}
         def send ():
             ch =bot .get_channel (int (data ['channel_id']))
@@ -5707,7 +5707,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     def api_publish_color_roles (guild_id ):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio ,discord 
-        if not bot :return jsonify ({'error':'Bot offline'})
+        if not bot :return jsonify ({'error':'Бот офлайн'})
         data =request .get_json (silent =True )or {}
         f =f'data/color_roles_{guild_id}.json'
         with open (f ,'w')as fp :json .dump (data .get ('colors',[]),fp ,indent =2 )
@@ -5899,7 +5899,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     def api_reload_cog (cog_name ):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio 
-        if not bot :return jsonify ({'error':'Bot offline'})
+        if not bot :return jsonify ({'error':'Бот офлайн'})
         async def do ():
             if f'cogs.{cog_name}'in bot .extensions :
                 await (bot .reload_extension (f'cogs.{cog_name}'))
@@ -5917,9 +5917,9 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     def api_unload_cog (cog_name ):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio 
-        if not bot :return jsonify ({'error':'Bot offline'})
+        if not bot :return jsonify ({'error':'Бот офлайн'})
         if cog_name =='cog_manager':
-            return jsonify ({'error':'Bu cog удален!'})
+            return jsonify ({'error':'Модуль удалён!'})
         async def do ():
             await (bot .unload_extension (f'cogs.{cog_name}'))
         try :
@@ -5935,7 +5935,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     @role_required ('mod')
     def api_guild_info2 (guild_id ):
         import web .app as _app ;bot =_app .bot_instance 
-        if not bot :return jsonify ({'error':'Bot offline'})
+        if not bot :return jsonify ({'error':'Бот офлайн'})
         guild =bot .get_guild (int (guild_id ))
         if not guild :return jsonify ({'error':'Сервер не найден'})
         return jsonify ({
@@ -6011,15 +6011,15 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     def api_send_webhook_v2 (guild_id ):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio ,discord as _discord 
-        if not bot :return jsonify ({'error':'Bot offline'})
+        if not bot :return jsonify ({'error':'Бот офлайн'})
         data =request .get_json (silent =True )or {}
         wh_id =data .get ('webhook_id')
         message =data .get ('message','')
         username =data .get ('username','Aether')
         f =f'data/webhooks_{guild_id}.json'
-        if not os .path .exists (f ):return jsonify ({'error':'Webhook не найдено'})
+        if not os .path .exists (f ):return jsonify ({'error':'Вебхук не найден'})
         with open (f ,'r',encoding ='utf-8')as fp :whs =json .load (fp )
-        if wh_id not in whs :return jsonify ({'error':'Webhook не найдено'})
+        if wh_id not in whs :return jsonify ({'error':'Вебхук не найден'})
         wh_data =whs [wh_id ]
         async def do ():
             channel =bot .get_channel (int (wh_data ['channel_id']))

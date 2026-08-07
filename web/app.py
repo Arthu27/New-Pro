@@ -972,7 +972,7 @@ def api_send_announcement ():
     title =data .get ('title','').strip ()
     message =data .get ('message','').strip ()
     if not title or not message :
-        return jsonify ({'error':'Yetersiz verilerin'})
+        return jsonify ({'error':'Недостаточно данных'})
 
     ann_file ='data/announcements.json'
     os .makedirs ('data',exist_ok =True )
@@ -1096,7 +1096,7 @@ def api_leave_guild ():
     data =request .get_json (silent =True )or {}
     guild_id =data .get ('guild_id')
     if not guild_id :
-        return jsonify ({'error':'Neobhodim guild_id'}),400 
+        return jsonify ({'error':'Требуется guild_id'}),400 
     try :
         guild =discord .utils .get (bot_instance .guilds ,id =int (guild_id ))
         if not guild :
@@ -2068,7 +2068,7 @@ def api_check_member ():
     guild_id =str (data .get ('guild_id',''))
     user_id =str (data .get ('user_id',''))
     if not guild_id or not user_id :
-        return jsonify ({'error':'Yetersiz parametrov'}),400 
+        return jsonify ({'error':'Недостаточно параметров'}),400 
     try :
         guild =discord .utils .get (bot_instance .guilds ,id =int (guild_id ))
         if not guild :
@@ -2713,7 +2713,7 @@ def api_voice_command ():
     """Обработать голосовые команды от voice_listener.py"""
     data =request .get_json (silent =True )or {}
     if not data or data .get ('secret')!=VOICE_SECRET :
-        return jsonify ({'error':'Unauthorized'}),401 
+        return jsonify ({'error':'Не авторизован'}),401 
     command =data .get ('command','').strip ()
     if not command :
         return jsonify ({'error':'Команда пусто'}),400 
@@ -2762,7 +2762,7 @@ def api_forgot_password ():
     data =request .get_json (silent =True )or {}
     discord_id =str (data .get ('discord_id','')).strip ()
     if not discord_id :
-        return jsonify ({'error':'Neobhodim Discord ID'})
+        return jsonify ({'error':'Требуется Discord ID'})
 
         # Проверяем запись участника
     members_file ='data/members.json'
@@ -2805,7 +2805,7 @@ def api_reset_password ():
     new_pass =str (data .get ('new_password','')).strip ()
 
     if not discord_id or not code or not new_pass :
-        return jsonify ({'error':'Yetersiz informacii'})
+        return jsonify ({'error':'Недостаточно информации'})
     if len (new_pass )<6 :
         return jsonify ({'error':'Пароль должен быть не короче 6 символов'})
 

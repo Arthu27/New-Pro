@@ -68,7 +68,7 @@ var selectedGuild = '{{ main_guild_id }}';
 var colors = [];
 
 async function loadGuilds() {
-  // Sabit сервер ID
+  // Фиксированный ID сервера
   var gid = '{{ main_guild_id }}';
   if (typeof selectedGuild !== 'undefined') selectedGuild = gid;
   if (document.getElementById('guild-select')) document.getElementById('guild-select').value = gid;

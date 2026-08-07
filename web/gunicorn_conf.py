@@ -49,7 +49,7 @@ if _worker_class_env =='gevent':
     try :
         import gevent # noqa: F401
         worker_class ='gevent'
-        # gevent ile connection basina thread olmadigindan worker basina daha
+        # с gevent нет потока на каждое соединение, поэтому один worker обслуживает больше
         # fazla eszamanli istek kaldirir.
         if int (os .getenv ('WEB_WORKERS','0')or 0 )<=1 :
             workers =int (os .getenv ('WEB_THREADS','2'))# threads yerine worker

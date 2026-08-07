@@ -578,7 +578,7 @@ class HelpEmojiUpload(commands.Cog):
                 done.append(fn)
             except Exception as exc:
                 failed.append(f'{fn}: {exc}')
-        # Afk ikonu (kök assets altinda)
+        # AFK-иконка (в корневой папке assets)
         afk_p = _os.path.join(ROOT, 'assets', 'afk_icon.png')
         if _os.path.exists(afk_p) and 'aether_afk_icon' not in existing:
             try:

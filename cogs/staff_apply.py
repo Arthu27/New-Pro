@@ -453,7 +453,7 @@ class StaffApply(commands.Cog):
         except (aiohttp.ClientError, OSError) as exc:
             log.warning("Не удалось загрузить удалённый баннер STAFF: %s", exc)
 
-        # URL erişilemezse mevcut yerel banner dosyalarını kullan.
+        # Если URL недоступен — использовать локальные файлы баннеров.
         if not file:
             for p in custom_paths:
                 if os.path.exists(p):
