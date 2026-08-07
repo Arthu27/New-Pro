@@ -400,7 +400,7 @@ class AdvancedMod (commands .Cog ):
             e .description =f"```ansi\n\u001b[1;32m МАССОВАЯ ВЫДАЧА РОЛИ\u001b[0m\n```\n{_divider()}"
             e .add_field (name ="🎭 Роль",value =role .mention ,inline =True )
             e .add_field (name ="👥 Затронуто",value =f"```{count} человек```",inline =True )
-        elif action .lower ()=="al":
+        elif action .lower ()in ("remove","al"):
             for member in interaction .guild .members :
                 if role in member .roles :
                     try :

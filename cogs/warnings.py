@@ -232,9 +232,10 @@ class warnings(commands.Cog):
             log.error(f"Зеркалирование предупреждений в JSON: {e}")
 
     async def send_dm(self, user, embed):
+        # DM — best-effort: закрытые ЛС/сетевой сбой не роняют команду
         try:
             await user.send(embed=embed)
-        except discord.Forbidden:
+        except Exception:
             pass
 
     async def apply_warn_punishment(self, guild, member, warn_count):
@@ -332,8 +333,13 @@ class warnings(commands.Cog):
         else:
             await self.send_dm(user, mod_dm_embed("warn", guild, interaction.user, reason))
 
-        # Авто-наказание
-        punishment_result = await self.apply_warn_punishment(guild, user, total)
+        # Авто-наказание: его сбой не должен ломать сам варн —
+        # предупреждение уже записано и модератор ждёт подтверждение
+        try:
+            punishment_result = await self.apply_warn_punishment(guild, user, total)
+        except Exception as _pun_e:
+            log.warning(f"[WARN] Авто-наказание не применено: {_pun_e}")
+            punishment_result = None
         return warn_id, total, punishment_result
 
     @app_commands.command(name="warn", description="Выдать предупреждение")
@@ -357,7 +363,10 @@ class warnings(commands.Cog):
         desc += f"\n\n{DIVIDER}"
         e.description = desc
         e.set_footer(text=f"{guild.name}")
-        await interaction.response.send_message(embed=e, ephemeral=True)
+        try:
+            await interaction.response.send_message(embed=e, ephemeral=True)
+        except Exception:
+            await interaction.followup.send(embed=e, ephemeral=True)
 
     # ── /warnings ────────────────────────────────────────────────────────
     @app_commands.command(name="warnings", description="Предупреждения пользователя")
@@ -489,7 +498,10 @@ class warnings(commands.Cog):
         except Exception:
             pass
 
-        await self.apply_warn_punishment(guild, user, total)
+        try:
+            await self.apply_warn_punishment(guild, user, total)
+        except Exception as _pun_e:
+            log.warning(f"[WARN] Авто-наказание не применено: {_pun_e}")
         return warn_id, total
 
     # ── !pw — полное досье пользователя ────────────────────────────────

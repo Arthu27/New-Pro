@@ -42,7 +42,30 @@ class ReasonModal(discord.ui.Modal):
         self._handler = handler
 
     async def on_submit(self, interaction: discord.Interaction):
+        # Быстрый ack: DM + наказание может занять больше 3 секунд
+        try:
+            await interaction.response.defer(ephemeral=True)
+        except Exception:
+            pass
         await self._handler(interaction, str(self.reason.value).strip() or None)
+
+
+async def _respond(interaction, **kwargs):
+    """Ответ без «Приложение не отвечает»: response → followup по обстоятельствам.
+
+    Отправка не роняет контекстное действие: наказание уже могло быть
+    применено — модератор обязан получить подтверждение.
+    """
+    try:
+        if interaction.response.is_done():
+            await interaction.followup.send(**kwargs)
+        else:
+            await _respond(interaction, **kwargs)
+    except Exception:
+        try:
+            await interaction.followup.send(**kwargs)
+        except Exception:
+            pass
 
 
 def _fmt_ts(ts: int, style: str = 'R') -> str:
@@ -90,9 +113,9 @@ class ModTools(commands.Cog):
     # ────────────────────────────────────────────────────────────
     async def _warn_user_ctx(self, interaction: discord.Interaction, member: discord.Member):
         if interaction.guild is None:
-            return await interaction.response.send_message("Работает только на сервере.", ephemeral=True)
+            return await _respond(interaction, content="Работает только на сервере.", ephemeral=True)
         if member.bot:
-            return await interaction.response.send_message("Ботов предупреждать нельзя.", ephemeral=True)
+            return await _respond(interaction, content="Ботов предупреждать нельзя.", ephemeral=True)
 
         async def _do(inter: discord.Interaction, reason):
             await self._apply_warn(inter, member, reason, origin="ПКМ")
@@ -104,10 +127,10 @@ class ModTools(commands.Cog):
     # ────────────────────────────────────────────────────────────
     async def _warn_msg_ctx(self, interaction: discord.Interaction, message: discord.Message):
         if interaction.guild is None:
-            return await interaction.response.send_message("Работает только на сервере.", ephemeral=True)
+            return await _respond(interaction, content="Работает только на сервере.", ephemeral=True)
         member = message.author
         if not isinstance(member, discord.Member) or member.bot:
-            return await interaction.response.send_message("Нельзя: автор — бот или покинул сервер.", ephemeral=True)
+            return await _respond(interaction, content="Нельзя: автор — бот или покинул сервер.", ephemeral=True)
 
         async def _do(inter: discord.Interaction, reason):
             preview = (message.content or "[вложение]")[:100]
@@ -120,12 +143,12 @@ class ModTools(commands.Cog):
         """Общий путь выдачи варна через ядро warnings-cog."""
         wcog = self.bot.get_cog("warnings")
         if wcog is None:
-            return await inter.response.send_message("Модуль предупреждений не загружен.", ephemeral=True)
+            return await _respond(inter, content="Модуль предупреждений не загружен.", ephemeral=True)
         try:
             warn_id, total, punishment = await wcog.add_warn(inter, member, reason)
         except Exception as e:
             log.error(f"[MOD_TOOLS] ошибка warn ctx: {e}")
-            return await inter.response.send_message(f"Не удалось выдать варн: {e}", ephemeral=True)
+            return await _respond(inter, content=f"Не удалось выдать варн: {e}", ephemeral=True)
 
         # В дела модерации тоже — для /cases
         mcog = self.bot.get_cog("Moderation")
@@ -150,18 +173,18 @@ class ModTools(commands.Cog):
         desc += f"\n\n{DIVIDER}"
         e.description = desc
         e.set_footer(text=inter.guild.name)
-        await inter.response.send_message(embed=e, ephemeral=True)
+        await _respond(inter, embed=e, ephemeral=True)
 
     # ────────────────────────────────────────────────────────────
     # ПКМ → Забанить (user)
     # ────────────────────────────────────────────────────────────
     async def _ban_user_ctx(self, interaction: discord.Interaction, member: discord.Member):
         if interaction.guild is None:
-            return await interaction.response.send_message("Работает только на сервере.", ephemeral=True)
+            return await _respond(interaction, content="Работает только на сервере.", ephemeral=True)
         if member.bot:
-            return await interaction.response.send_message("Ботов банить через ПКМ нельзя.", ephemeral=True)
+            return await _respond(interaction, content="Ботов банить через ПКМ нельзя.", ephemeral=True)
         if member == interaction.user:
-            return await interaction.response.send_message("Себя банить не нужно.", ephemeral=True)
+            return await _respond(interaction, content="Себя банить не нужно.", ephemeral=True)
 
         async def _do(inter: discord.Interaction, reason):
             reason_txt = reason or "Без причины"
@@ -189,10 +212,10 @@ class ModTools(commands.Cog):
                     delete_message_seconds=0,
                 )
             except discord.Forbidden:
-                return await inter.response.send_message(
+                return await _respond(inter, 
                     "❌ Не могу забанить: роль бота ниже роли пользователя или нет прав.", ephemeral=True)
             except Exception as e:
-                return await inter.response.send_message(f"❌ Ошибка бана: {e}", ephemeral=True)
+                return await _respond(inter, content=f"❌ Ошибка бана: {e}", ephemeral=True)
 
             case_id = 0
             if mcog:
@@ -210,7 +233,7 @@ class ModTools(commands.Cog):
                 f"Дело: **#{case_id}**\n\n{DIVIDER}"
             )
             e.set_footer(text=inter.guild.name)
-            await inter.response.send_message(embed=e, ephemeral=True)
+            await _respond(inter, embed=e, ephemeral=True)
             if mcog:
                 try:
                     await mcog.send_log(inter.guild, e)
@@ -300,7 +323,7 @@ class ModTools(commands.Cog):
             e.description += "\nЧисто ✨ Нарушений не найдено."
 
         e.set_footer(text=f"{interaction.guild.name} · /userinfo для общей карточки")
-        await interaction.response.send_message(embed=e, ephemeral=True)
+        await _respond(interaction, embed=e, ephemeral=True)
 
     # ────────────────────────────────────────────────────────────
     # /userinfo — карточка участника
@@ -309,10 +332,10 @@ class ModTools(commands.Cog):
     @app_commands.describe(user="Участник (по умолчанию — вы)")
     async def userinfo(self, interaction: discord.Interaction, user: discord.Member = None):
         if interaction.guild is None:
-            return await interaction.response.send_message("Работает только на сервере.", ephemeral=True)
+            return await _respond(interaction, content="Работает только на сервере.", ephemeral=True)
         user = user or interaction.user
         if not isinstance(user, discord.Member):
-            return await interaction.response.send_message("Этот пользователь не на сервере.", ephemeral=True)
+            return await _respond(interaction, content="Этот пользователь не на сервере.", ephemeral=True)
 
         e = discord.Embed(color=GOLD, timestamp=datetime.now(timezone.utc))
         e.set_author(name=f"{user.display_name} (@{user.name})", icon_url=user.display_avatar.url)
@@ -365,11 +388,11 @@ class ModTools(commands.Cog):
             ephemeral = True
 
         e.set_footer(text=f"{interaction.guild.name}")
-        await interaction.response.send_message(embed=e, ephemeral=ephemeral)
+        await _respond(interaction, embed=e, ephemeral=ephemeral)
 
     @cases.error
     async def cases_error(self, interaction, error):
-        await interaction.response.send_message("🚫 Нужны права модератора.", ephemeral=True)
+        await _respond(interaction, content="🚫 Нужны права модератора.", ephemeral=True)
 
 
 async def setup(bot):

@@ -26,7 +26,7 @@ async def _respond (interaction ,**kw ):
         if interaction .response .is_done ():
             await interaction .followup .send (**kw )
         else :
-            await interaction .response .send_message (**kw )
+            await _respond (interaction ,**kw )
     except Exception as _e :
         log .info (f'[MODPANEL] Ответ не доставлен: {_e}')
         try :
@@ -110,9 +110,11 @@ class Moderation (commands .Cog ):
             pass 
 
     async def send_dm (self ,user ,embed ):
+        # DM — шаг best-effort: закрытые ЛС/сетевые сбои НЕ должны
+        # отменять наказание или превращать его в «ошибку» для модератора
         try :
             await user .send (embed =embed )
-        except discord .Forbidden :
+        except Exception :
             pass 
 
     def _confirm_embed (self ,action ,user ,guild ,reason ,case_id ,extra ="" ,moderator =None ):
@@ -170,10 +172,16 @@ class Moderation (commands .Cog ):
     user :discord .Member =None ,user_id :str =None ,
     minutes :int =None ,reason :str =None ):
         guild =interaction .guild 
+        # Быстрый ack: цепочка DM → наказание → дело → лог может занять
+        # больше 3 секунд, без defer токен interaction сгорает посередине
+        try :
+            await interaction .response .defer (ephemeral =True )
+        except Exception :
+            pass
 
         if action =="ban":
             if not user :
-                await interaction .response .send_message (embed =error_embed ("Укажите пользователя для бана."),ephemeral =True )
+                await _respond (interaction ,embed =error_embed ("Укажите пользователя для бана."),ephemeral =True )
                 return 
             try :
                 dm =mod_dm_embed ("ban",guild ,interaction .user ,reason )
@@ -183,16 +191,16 @@ class Moderation (commands .Cog ):
                 log =mod_log_embed ("ban","🔨 Бан",0xE74C3C ,user ,interaction .user ,guild ,reason ,case_id )
                 await self .send_log (guild ,log )
                 confirm =self ._confirm_embed ("ban",user ,guild ,reason ,case_id ,moderator =interaction .user )
-                await interaction .response .send_message (embed =confirm ,ephemeral =True )
+                await _respond (interaction ,embed =confirm ,ephemeral =True )
                 await self ._notify_owner ('ban',user ,interaction .user ,reason )
             except discord .Forbidden :
-                await interaction .response .send_message (embed =error_embed ("Роль пользователя выше или равна роли бота."),ephemeral =True )
+                await _respond (interaction ,embed =error_embed ("Роль пользователя выше или равна роли бота."),ephemeral =True )
             except Exception as ex :
-                await interaction .response .send_message (embed =error_embed (str (ex )),ephemeral =True )
+                await _respond (interaction ,embed =error_embed (str (ex )),ephemeral =True )
 
         elif action =="kick":
             if not user :
-                await interaction .response .send_message (embed =error_embed ("Укажите пользователя для кика."),ephemeral =True )
+                await _respond (interaction ,embed =error_embed ("Укажите пользователя для кика."),ephemeral =True )
                 return 
             try :
                 dm =mod_dm_embed ("kick",guild ,interaction .user ,reason )
@@ -202,16 +210,16 @@ class Moderation (commands .Cog ):
                 log =mod_log_embed ("kick","👢 Кик",0xE67E22 ,user ,interaction .user ,guild ,reason ,case_id )
                 await self .send_log (guild ,log )
                 confirm =self ._confirm_embed ("kick",user ,guild ,reason ,case_id ,moderator =interaction .user )
-                await interaction .response .send_message (embed =confirm ,ephemeral =True )
+                await _respond (interaction ,embed =confirm ,ephemeral =True )
                 await self ._notify_owner ('kick',user ,interaction .user ,reason )
             except discord .Forbidden :
-                await interaction .response .send_message (embed =error_embed ("Роль пользователя выше или равна роли бота."),ephemeral =True )
+                await _respond (interaction ,embed =error_embed ("Роль пользователя выше или равна роли бота."),ephemeral =True )
             except Exception as ex :
-                await interaction .response .send_message (embed =error_embed (str (ex )),ephemeral =True )
+                await _respond (interaction ,embed =error_embed (str (ex )),ephemeral =True )
 
         elif action =="timeout":
             if not user :
-                await interaction .response .send_message (embed =error_embed ("Укажите пользователя для мута."),ephemeral =True )
+                await _respond (interaction ,embed =error_embed ("Укажите пользователя для мута."),ephemeral =True )
                 return 
             sure =minutes if minutes is not None else 5 
             try :
@@ -227,16 +235,16 @@ class Moderation (commands .Cog ):
                 confirm =self ._confirm_embed ("timeout",user ,guild ,reason ,case_id ,
                 extra =f"Длительность: **{sure} мин.** · Снимется: <t:{int(until.timestamp())}:R>",
                 moderator =interaction .user )
-                await interaction .response .send_message (embed =confirm ,ephemeral =True )
+                await _respond (interaction ,embed =confirm ,ephemeral =True )
                 await self ._notify_owner ('timeout',user ,interaction .user ,reason )
             except discord .Forbidden :
-                await interaction .response .send_message (embed =error_embed ("У вас нет прав для выполнения этого действия."),ephemeral =True )
+                await _respond (interaction ,embed =error_embed ("У вас нет прав для выполнения этого действия."),ephemeral =True )
             except Exception as ex :
-                await interaction .response .send_message (embed =error_embed (str (ex )),ephemeral =True )
+                await _respond (interaction ,embed =error_embed (str (ex )),ephemeral =True )
 
         elif action =="untimeout":
             if not user :
-                await interaction .response .send_message (embed =error_embed ("Укажите пользователя."),ephemeral =True )
+                await _respond (interaction ,embed =error_embed ("Укажите пользователя."),ephemeral =True )
                 return 
             try :
                 await user .timeout (None )
@@ -245,13 +253,13 @@ class Moderation (commands .Cog ):
                 log =mod_log_embed ("untimeout","🔊 Мут снят",0x2ECC71 ,user ,interaction .user ,guild )
                 await self .send_log (guild ,log )
                 confirm =self ._confirm_embed ("untimeout",user ,guild ,reason ,0 ,moderator =interaction .user )
-                await interaction .response .send_message (embed =confirm ,ephemeral =True )
+                await _respond (interaction ,embed =confirm ,ephemeral =True )
             except Exception as ex :
-                await interaction .response .send_message (embed =error_embed (str (ex )),ephemeral =True )
+                await _respond (interaction ,embed =error_embed (str (ex )),ephemeral =True )
 
         elif action =="unban":
             if not user_id :
-                await interaction .response .send_message (embed =error_embed ("Укажите ID пользователя в поле `user_id`."),ephemeral =True )
+                await _respond (interaction ,embed =error_embed ("Укажите ID пользователя в поле `user_id`."),ephemeral =True )
                 return 
             try :
                 fetched =await self .bot .fetch_user (int (user_id ))
@@ -267,19 +275,19 @@ class Moderation (commands .Cog ):
                 )
                 e .set_footer (text =f"{guild.name}")
                 await self .send_log (guild ,e )
-                await interaction .response .send_message (embed =e ,ephemeral =True )
+                await _respond (interaction ,embed =e ,ephemeral =True )
             except Exception as ex :
-                await interaction .response .send_message (embed =error_embed (str (ex )),ephemeral =True )
+                await _respond (interaction ,embed =error_embed (str (ex )),ephemeral =True )
 
     @moderate_user .error 
     async def moderate_user_error (self ,interaction ,error ):
         if isinstance (error ,app_commands .MissingPermissions ):
-            await interaction .response .send_message (
+            await _respond (interaction ,
             embed =error_embed ("Недостаточно прав. Требуется: **Бан участников**."),
             ephemeral =True 
             )
         else :
-            await interaction .response .send_message (embed =error_embed (str (error )),ephemeral =True )
+            await _respond (interaction ,embed =error_embed (str (error )),ephemeral =True )
 
             # /utility 
 
@@ -314,7 +322,7 @@ class Moderation (commands .Cog ):
 
         elif action =="slowmode":
             if секунд <0 or секунд >21600 :
-                await interaction .response .send_message (embed =error_embed ("Значение от 0 до 21600 секунд."),ephemeral =True )
+                await _respond (interaction ,embed =error_embed ("Значение от 0 до 21600 секунд."),ephemeral =True )
                 return 
             await interaction .channel .edit (slowmode_delay =секунд )
             e =discord .Embed (color =0xF39C12 ,timestamp =datetime .now (timezone .utc ))
@@ -326,7 +334,7 @@ class Moderation (commands .Cog ):
             f"{DIVIDER}"
             )
             e .set_footer (text =f"{guild.name}")
-            await interaction .response .send_message (embed =e ,ephemeral =True )
+            await _respond (interaction ,embed =e ,ephemeral =True )
 
         elif action =="lock":
             await interaction .channel .set_permissions (guild .default_role ,send_messages =False )
@@ -339,8 +347,13 @@ class Moderation (commands .Cog ):
             f"{DIVIDER}"
             )
             e .set_footer (text =f"{guild.name}")
-            await interaction .channel .send (embed =e )
-            await interaction .response .send_message ("🔒 Канал заблокирован.",ephemeral =True )
+            # Канал УЖЕ заблокирован — если анонс не отправился (нет прав view/send),
+            # модератор всё равно получает подтверждение, а не «ошибку»
+            try :
+                await interaction .channel .send (embed =e )
+            except Exception as _an_e :
+                log .info (f'[UTILITY] Анонс блокировки не отправлен: {_an_e}')
+            await _respond (interaction ,content ="🔒 Канал заблокирован.",ephemeral =True )
 
         elif action =="unlock":
             await interaction .channel .set_permissions (guild .default_role ,send_messages =True )
@@ -353,8 +366,11 @@ class Moderation (commands .Cog ):
             f"{DIVIDER}"
             )
             e .set_footer (text =f"{guild.name}")
-            await interaction .channel .send (embed =e )
-            await interaction .response .send_message ("🔓 Канал разблокирован.",ephemeral =True )
+            try :
+                await interaction .channel .send (embed =e )
+            except Exception as _an_e :
+                log .info (f'[UTILITY] Анонс разблокировки не отправлен: {_an_e}')
+            await _respond (interaction ,content ="🔓 Канал разблокирован.",ephemeral =True )
 
         elif action =="userinfo":
             u =user or interaction .user 
@@ -379,7 +395,7 @@ class Moderation (commands .Cog ):
             )
             e .set_thumbnail (url =u .display_avatar .url )
             e .set_footer (text =f"{guild.name}")
-            await interaction .response .send_message (embed =e )
+            await _respond (interaction ,embed =e )
 
         elif action =="server":
             g =guild 
@@ -405,7 +421,7 @@ class Moderation (commands .Cog ):
             if g .banner :
                 e .set_image (url =g .banner .url )
             e .set_footer (text =f"{g.name}")
-            await interaction .response .send_message (embed =e )
+            await _respond (interaction ,embed =e )
 
             # /роли 
 
@@ -433,7 +449,7 @@ class Moderation (commands .Cog ):
         )
         e .set_thumbnail (url =user .display_avatar .url )
         e .set_footer (text =f"{guild.name} · Управление ролями")
-        await interaction .response .send_message (embed =e ,ephemeral =True )
+        await _respond (interaction ,embed =e ,ephemeral =True )
 
         # /leaveguild 
 
@@ -456,7 +472,7 @@ class Moderation (commands .Cog ):
             embed .set_footer (text =f"{interaction.guild.name} · Модерация",icon_url =interaction .guild .icon .url )
         else :
             embed .set_footer (text =f"{interaction.guild.name} · Модерация")
-        await interaction .response .send_message (embed =embed ,view =ModPanelView (self ))
+        await _respond (interaction ,embed =embed ,view =ModPanelView (self ))
 
     # ═══════════════════════════════════════════════════════════════════
     #  !moderate — та же панель, но префиксной командой (без slash-синхронизации)
@@ -675,7 +691,7 @@ class Moderation (commands .Cog ):
     async def leave_guild (self ,interaction ,guild_id :str ):
         app_info =await self .bot .application_info ()
         if interaction .user .id !=app_info .owner .id :
-            await interaction .response .send_message (
+            await _respond (interaction ,
             embed =error_embed ("Эта команда доступна только владельцу бота."),
             ephemeral =True 
             )
@@ -683,17 +699,17 @@ class Moderation (commands .Cog ):
         try :
             target =self .bot .get_guild (int (guild_id ))
             if not target :
-                await interaction .response .send_message (embed =error_embed ("Сервер не найден."),ephemeral =True )
+                await _respond (interaction ,embed =error_embed ("Сервер не найден."),ephemeral =True )
                 return 
             name =target .name 
             await target .leave ()
             e =discord .Embed (color =0x2ECC71 ,timestamp =datetime .now (timezone .utc ))
             e .description =f"## Сервер покинут\n**{name}** · `{guild_id}`"
-            await interaction .response .send_message (embed =e ,ephemeral =True )
+            await _respond (interaction ,embed =e ,ephemeral =True )
         except ValueError :
-            await interaction .response .send_message (embed =error_embed ("Неверный ID сервера."),ephemeral =True )
+            await _respond (interaction ,embed =error_embed ("Неверный ID сервера."),ephemeral =True )
         except Exception as ex :
-            await interaction .response .send_message (embed =error_embed (str (ex )),ephemeral =True )
+            await _respond (interaction ,embed =error_embed (str (ex )),ephemeral =True )
 
 
 # ═══════════════════════════════════════════════════════════════════
