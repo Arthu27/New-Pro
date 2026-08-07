@@ -273,6 +273,359 @@ def ensure_log_permissions (guild ,category =None ):
         return category ,False
 
 
+# ═══════════════════════════════════════════════════════════════════════
+#  СТИЛЬ ЛОГ-ЭМБЕДОВ — единый премиальный вид для всех категорий
+# ═══════════════════════════════════════════════════════════════════════
+_LOG_META = {
+    'mod':     ('🛡️', 0xE74C3C, 'Модерация'),
+    'member':  ('👋', 0xC8922A, 'Участники'),
+    'message': ('💬', 0x3498DB, 'Сообщения'),
+    'voice':   ('🔊', 0x1ABC9C, 'Войс'),
+    'channel': ('🗂️', 0xE67E22, 'Каналы'),
+    'role':    ('🎭', 0x9B59B6, 'Роли'),
+    'invite':  ('🔗', 0x16A085, 'Приглашения'),
+    'guild':   ('🏠', 0xC8922A, 'Сервер'),
+    'ticket':  ('🎫', 0xF39C12, 'Тикеты'),
+    'ai':      ('🤖', 0xE91E63, 'AI-алерты'),
+    'welcome': ('🎉', 0x2ECC71, 'Приветствие'),
+}
+
+
+def _cat_meta(category):
+    """(эмодзи, цвет, русское имя) категории логов."""
+    m = _LOG_META.get(category)
+    if m:
+        return m
+    return ('🏠', 0xC8922A, 'Сервер')
+
+
+def _styled_log_embed(guild, category, title, fields=(), color=None,
+                      thumbnail=None, image=None, note=None):
+    """Единый стиль лог-эмбеда: заголовок с иконкой категории, строки
+    «Имя — значение», футер «Aether Log · Категория · Сервер» с иконкой сервера.
+
+    fields: список кортежей (имя, значение); пустые значения пропускаются.
+    note: свободный текст после полей (предупреждения и т.п.).
+    """
+    icon, base_color, cat_name = _cat_meta(category)
+    e = discord.Embed(color=color if color is not None else base_color,
+                      timestamp=datetime.datetime.utcnow())
+    desc = f"## {icon} {title}\n\n"
+    for name, value in fields:
+        if value in (None, ''):
+            continue
+        desc += f"**{name}** — {value}\n"
+    if note:
+        desc += f"\n{note}"
+    e.description = desc
+    footer_text = f"Aether Log · {cat_name} · {getattr(guild, 'name', '')}"
+    gicon = getattr(guild, 'icon', None)
+    try:
+        gicon = gicon.url if gicon else None
+    except Exception:
+        gicon = None
+    if gicon:
+        e.set_footer(text=footer_text, icon_url=gicon)
+    else:
+        e.set_footer(text=footer_text)
+    if thumbnail:
+        e.set_thumbnail(url=thumbnail)
+    if image:
+        e.set_image(url=image)
+    return e
+
+
+_CH_TYPE_RU = {
+    'text': ('💬', 'текстовый'),
+    'voice': ('🔊', 'голосовой'),
+    'category': ('📁', 'категория'),
+    'news': ('📢', 'объявления'),
+    'stage_voice': ('🎙️', 'сцена'),
+    'forum': ('💭', 'форум'),
+    'media': ('🖼️', 'медиа'),
+    'private_thread': ('🧵', 'приватная ветка'),
+    'public_thread': ('🧵', 'ветка'),
+}
+
+
+def _ch_type_label(ch_type):
+    """Понятное имя типа канала: «💬 текстовый» (вместо ChannelType.text)."""
+    name = getattr(ch_type, 'name', None) or str(ch_type or '?')
+    icon, ru = _CH_TYPE_RU.get(name, ('📄', name))
+    return f"{icon} {ru}"
+
+
+# ═══════════════════════════════════════════════════════════════════════
+#  AUDIT-ПОДПИСЬ: кто выполнил действие (модератор + причина)
+# ═══════════════════════════════════════════════════════════════════════
+_audit_used = {}
+
+
+async def _audit_actor(guild, action, target_id=None, window=20, retries=2):
+    """Найти в audit log, КТО выполнил действие над целью.
+
+    Возвращает (имя, id, причина, is_bot) или None (нет права view_audit_log
+    или запись не появилась). Каждая запись audit log используется один раз,
+    чтобы вчерашний бан не «подписывался» под сегодняшний разбан.
+    """
+    try:
+        me = getattr(guild, 'me', None)
+        if me is not None:
+            try:
+                if not me.guild_permissions.view_audit_log:
+                    return None
+            except Exception:
+                pass
+        import asyncio as _ai
+        key = (str(guild.id), action, str(target_id) if target_id is not None else '0')
+        used = _audit_used.setdefault(key, set())
+        now = discord.utils.utcnow()
+        for _attempt in range(max(1, retries)):
+            try:
+                async for entry in guild.audit_logs(limit=8, action=action):
+                    if entry.id in used:
+                        continue
+                    if target_id is not None:
+                        if getattr(entry.target, 'id', None) != target_id:
+                            continue
+                    try:
+                        age = (now - entry.created_at).total_seconds()
+                    except Exception:
+                        age = 0
+                    if age > window:
+                        continue
+                    used.add(entry.id)
+                    u = entry.user
+                    if u is None:
+                        return ('—', 0, getattr(entry, 'reason', None), False)
+                    return (getattr(u, 'display_name', None) or str(u),
+                            u.id, getattr(entry, 'reason', None),
+                            bool(getattr(u, 'bot', False)))
+            except discord.Forbidden:
+                return None
+            except Exception:
+                pass
+            await _ai.sleep(0.8)
+    except Exception:
+        pass
+    return None
+
+
+def _actor_line(who):
+    """Строка «Имя `id`» по результату _audit_actor (или тире)."""
+    if not who:
+        return '—'
+    name, uid, _reason, _bot = who
+    return f"{name} `{uid or ''}`"
+
+
+# ═══════════════════════════════════════════════════════════════════════
+#  ЦЕНТР ЛОГОВ (Select-меню для администратора)
+# ═══════════════════════════════════════════════════════════════════════
+LOG_CENTER_ITEMS = [
+    ('mod',        '🛡️', 'Модерация',   'баны, кики, мьюты, таймауты, варны'),
+    ('member',     '👋', 'Участники',  'вход и выход, смена псевдонима'),
+    ('message',    '💬', 'Сообщения',  'удаления, правки, ghost-ping'),
+    ('voice',      '🔊', 'Войс',       'входы, выходы и переходы в голосовых'),
+    ('channel',    '🗂️', 'Каналы',     'создание, удаление и изменения каналов'),
+    ('role',       '🎭', 'Роли',       'создание/удаление ролей, выдача ролей'),
+    ('invite',     '🔗', 'Приглашения', 'создание и удаление инвайтов'),
+    ('guild',      '🏠', 'Сервер',     'переименование и настройки сервера'),
+    ('ticket-log', '🎫', 'Тикеты',     'открытие и закрытие обращений'),
+    ('ai-alerts',  '🤖', 'AI-алерты',  'сигналы проактивной модерации'),
+    ('welcome',    '🎉', 'Приветствие', 'приветствия и прощания (публичный)'),
+]
+
+# Канал, где живут логи каждой категории центра
+LOG_CENTER_CHANNELS = {
+    'mod': '-модерация',
+    'member': '-участники',
+    'message': '-сообщения',
+    'voice': '-ses',
+    'channel': '-сервер',
+    'role': '-сервер',
+    'invite': '-сервер',
+    'guild': '-сервер',
+    'ticket-log': 'ticket-log',
+    'ai-alerts': 'ai-alerts',
+    'welcome': '-приветствие',
+}
+
+
+def _lc_find_channel(guild, key):
+    """Найти канал категории центра логов (без создания)."""
+    name = LOG_CENTER_CHANNELS.get(key)
+    if not name:
+        return None
+    want = _norm_ch_name(name)
+    for c in guild.text_channels:
+        if _norm_ch_name(c.name) == want:
+            return c
+    return discord.utils.get(guild.text_channels, name=name)
+
+
+async def _lc_ensure_channel(guild, key):
+    """Найти или СОЗДАТЬ канал категории (использует общее самолечение логов)."""
+    if key == 'welcome':
+        ch = _lc_find_channel(guild, 'welcome')
+        if ch:
+            return ch
+        try:
+            return await guild.create_text_channel(
+                '-приветствие', reason='Aether: канал приветствий',
+                topic='Приветствие и прощание участников')
+        except Exception:
+            return None
+    cat_map = {'mod': 'mod', 'member': 'member', 'message': 'message',
+               'voice': 'voice', 'channel': 'сервер', 'role': 'сервер',
+               'invite': 'сервер', 'guild': 'сервер',
+               'ticket-log': 'ticket-log', 'ai-alerts': 'ai-alerts'}
+    return await ensure_log_channel(guild, cat_map.get(key, 'сервер'))
+
+
+class LogsCenterSelect(discord.ui.Select):
+    """Выпадающее меню категорий логов."""
+
+    def __init__(self):
+        options = [
+            discord.SelectOption(label=title, value=key, emoji=icon,
+                                 description=desc[:95])
+            for key, icon, title, desc in LOG_CENTER_ITEMS
+        ]
+        super().__init__(placeholder='Выберите категорию логов…',
+                         min_values=1, max_values=1, options=options,
+                         custom_id='lc:select')
+
+    async def callback(self, interaction):
+        view = self.view
+        view.selected = self.values[0]
+        view.notice = ''
+        await interaction.response.edit_message(embed=view.status_embed(), view=view)
+
+
+class LogsCenterView(discord.ui.View):
+    """Центр логов: выберите категорию в меню — статус, тест, починка."""
+
+    def __init__(self, guild, requester_id, timeout_v=600):
+        super().__init__(timeout=timeout_v)
+        self.guild = guild
+        self.requester_id = requester_id
+        self.selected = 'mod'
+        self.notice = ''
+        self.add_item(LogsCenterSelect())
+
+    async def interaction_check(self, interaction):
+        try:
+            if not interaction.user.guild_permissions.administrator:
+                await interaction.response.send_message(
+                    '🚫 Центр логов доступен только администраторам.', ephemeral=True)
+                return False
+        except Exception:
+            pass
+        return True
+
+    # ── эмбеды ─────────────────────────────────────────────────────────
+    def overview_embed(self):
+        e = discord.Embed(
+            color=0xC8922A,
+            timestamp=datetime.datetime.utcnow())
+        e.description = (
+            "## 📋 Центр логов\n"
+            "Выберите категорию в меню ниже — покажу её канал, "
+            "что туда пишется, и проверю доставку.\n")
+        lines = []
+        for key, icon, title, desc in LOG_CENTER_ITEMS:
+            ch = _lc_find_channel(self.guild, key)
+            mark = ch.mention if ch else '❌ не создан'
+            lines.append(f"{icon} **{title}** — {mark}")
+        e.add_field(name=f"Каналы ({len(LOG_CENTER_ITEMS)} категорий)",
+                    value='\n'.join(lines)[:1024], inline=False)
+        e.add_field(name="Управление",
+                    value=("📨 **Тест** — отправить пробное сообщение\n"
+                           "🔧 **Создать/починить** — создать канал или восстановить права бота\n"
+                           "🔄 **Обновить** — перечитать статус"),
+                    inline=False)
+        gicon = getattr(self.guild, 'icon', None)
+        gicon = gicon.url if gicon else None
+        if gicon:
+            e.set_footer(text=f"Aether Log · {self.guild.name}", icon_url=gicon)
+        else:
+            e.set_footer(text=f"Aether Log · {self.guild.name}")
+        return e
+
+    def status_embed(self):
+        meta = {k: (i, t, d) for k, i, t, d in LOG_CENTER_ITEMS}
+        icon, title, desc = meta.get(self.selected, ('📋', self.selected, ''))
+        ch = _lc_find_channel(self.guild, self.selected)
+        color = 0x2ECC71 if ch else 0xE74C3C
+        e = discord.Embed(color=color, timestamp=datetime.datetime.utcnow())
+        e.description = (
+            f"## {icon} {title}\n\n"
+            f"**Что логируется** — {desc}\n"
+            f"**Канал** — {ch.mention if ch else '❌ не создан'}\n")
+        if ch:
+            topic = getattr(ch, 'topic', None) or '—'
+            e.description += f"**Тема канала** — {topic[:80]}\n"
+        if self.selected == 'welcome':
+            e.description += "\n🎉 Этот канал **публичный** — его видят все участники."
+        if self.notice:
+            e.description += f"\n\n{self.notice}"
+        e.set_footer(text=f"Aether Log · Центр логов · {self.guild.name}")
+        return e
+
+    # ── кнопки ─────────────────────────────────────────────────────────
+    @discord.ui.button(label='Тест', style=discord.ButtonStyle.success,
+                       emoji='📨', custom_id='lc:test')
+    async def lc_test(self, interaction, button):
+        ch = _lc_find_channel(self.guild, self.selected)
+        if not ch:
+            self.notice = '⚠️ Канал не создан — нажмите «🔧 Создать/починить».'
+        else:
+            cat_map = {'mod': 'mod', 'member': 'member', 'message': 'message',
+                       'voice': 'voice', 'channel': 'channel', 'role': 'role',
+                       'invite': 'invite', 'guild': 'guild',
+                       'ticket-log': 'ticket', 'ai-alerts': 'ai', 'welcome': 'welcome'}
+            te = _styled_log_embed(
+                self.guild, cat_map.get(self.selected, 'guild'),
+                'Тест доставки логов',
+                fields=[('Проверяющий', f"{interaction.user.mention} · `{interaction.user.id}`"),
+                        ('Категория', self.selected)],
+                note='✅ Если вы видите это сообщение — логи в этот канал доставляются.')
+            ok = await _safe_send(ch, embed=te)
+            self.notice = ('✅ Тест отправлен — посмотрите в канал.'
+                           if ok else
+                           '⚠️ Не удалось отправить — проверьте права бота на категорию « Логи».')
+        try:
+            await interaction.response.edit_message(embed=self.status_embed(), view=self)
+        except Exception:
+            pass
+
+    @discord.ui.button(label='Создать/починить', style=discord.ButtonStyle.primary,
+                       emoji='🔧', custom_id='lc:fix')
+    async def lc_fix(self, interaction, button):
+        ch = await _lc_ensure_channel(self.guild, self.selected)
+        if ch:
+            self.notice = f'🔧 Готово: канал {ch.mention} существует, права проверены.'
+        else:
+            self.notice = ('⚠️ Не удалось создать канал. '
+                           'Дайте боту права «Управление каналами» и повторите.')
+        try:
+            await interaction.response.edit_message(embed=self.status_embed(), view=self)
+        except Exception:
+            pass
+
+    @discord.ui.button(label='Обновить', style=discord.ButtonStyle.secondary,
+                       emoji='🔄', custom_id='lc:refresh')
+    async def lc_refresh(self, interaction, button):
+        self.notice = ''
+        try:
+            await interaction.response.edit_message(embed=self.status_embed(), view=self)
+        except Exception:
+            pass
+
+
+
+
 class Logs (commands .Cog ):
     def __init__ (self ,bot ):
         self .bot =bot 
@@ -644,20 +997,80 @@ class Logs (commands .Cog ):
 
         await _safe_send (ch ,embed =e )
 
+        # КИК: выход мог быть киком — проверяем audit log и логируем в -модерация
+        try :
+            kwho =await _audit_actor (member .guild ,discord .AuditLogAction .kick ,target_id =member .id ,window =12 ,retries =1 )
+            if kwho :
+                kreason =(kwho [2 ]or '—')
+                save_event (member .guild .id ,'mod','Кик',{
+                'user_id':str (member .id ),
+                'user_name':str (member ),
+                'mod_name':_actor_line (kwho ),
+                'reason':kreason ,
+                })
+                kch =await self .get_log_channel (member .guild ,'модерация')
+                if kch :
+                    ke =_styled_log_embed (member .guild ,'mod','Участник кикнут',
+                    fields =[
+                    ('Пользователь',f"**{member.display_name}** · {member.mention} · `{member.id}`"),
+                    ('Модератор',_actor_line (kwho )),
+                    ('Причина',kreason ),
+                    ],
+                    color =0xE67E22 ,thumbnail =str (member .display_avatar .url ))
+                    await _safe_send (kch ,embed =ke )
+        except Exception as _kick_err :
+            log .info (f'[LOGS] kick-detect: {_kick_err}')
+
     @commands .Cog .listener ()
     async def on_member_ban (self ,guild ,user ):
+        # Кто забанил и почему — из журнала аудита
+        who =await _audit_actor (guild ,discord .AuditLogAction .ban ,target_id =user .id ,window =25 ,retries =3 )
+        reason =(who [2 ]if who else None )or '—'
         save_event (guild .id ,'mod','Бан',{
         'user_id':str (user .id ),
         'user_name':str (user ),
         'avatar':str (user .display_avatar .url ),
+        'mod_name':_actor_line (who ),
+        'reason':reason ,
         })
+        ch =await self .get_log_channel (guild ,'модерация')
+        if not ch :
+            return
+        try :
+            av =str (user .display_avatar .url )
+        except Exception :
+            av =None
+        e =_styled_log_embed (guild ,'mod','Пользователь заблокирован',
+        fields =[
+        ('Пользователь',f"**{getattr(user,'display_name',str(user))}** · {user.mention} · `{user.id}`"),
+        ('Модератор',_actor_line (who )),
+        ('Причина',reason ),
+        ],
+        color =0xC0392B ,thumbnail =av )
+        await _safe_send (ch ,embed =e )
 
     @commands .Cog .listener ()
     async def on_member_unban (self ,guild ,user ):
+        who =await _audit_actor (guild ,discord .AuditLogAction .unban ,target_id =user .id ,window =25 ,retries =2 )
         save_event (guild .id ,'mod','Бан снят',{
         'user_id':str (user .id ),
         'user_name':str (user ),
+        'mod_name':_actor_line (who ),
         })
+        ch =await self .get_log_channel (guild ,'модерация')
+        if not ch :
+            return
+        try :
+            av =str (user .display_avatar .url )
+        except Exception :
+            av =None
+        e =_styled_log_embed (guild ,'mod','Блокировка снята',
+        fields =[
+        ('Пользователь',f"**{getattr(user,'display_name',str(user))}** · {user.mention} · `{user.id}`"),
+        ('Модератор',_actor_line (who )),
+        ],
+        color =0x2ECC71 ,thumbnail =av )
+        await _safe_send (ch ,embed =e )
 
     @commands .Cog .listener ()
     async def on_member_update (self ,before ,after ):
@@ -674,14 +1087,13 @@ class Logs (commands .Cog ):
                 })
                 ch =await self .get_log_channel (before .guild ,'role')
                 if ch :
-                    e =discord .Embed (color =0x9B59B6 ,timestamp =datetime .datetime .utcnow ())
-                    desc =f"## Изменение ролей\n**{before.display_name}** · `{before.id}`\n\n"
+                    _rf =[('Участник',f"**{before.display_name}** · `{before.id}`")]
                     if added :
-                        desc +=f"Добавлены: {', '.join(r.mention for r in added)}\n"
+                        _rf .append (('Добавлены',", ".join (r .mention for r in added )))
                     if removed :
-                        desc +=f"Удалены: {', '.join(r.mention for r in removed)}"
-                    e .description =desc 
-                    e .set_footer (text =f"{before.guild.name}")
+                        _rf .append (('Сняты',", ".join (r .mention for r in removed )))
+                    e =_styled_log_embed (before .guild ,'role','Изменение ролей участника',
+                    fields =_rf ,thumbnail =str (before .display_avatar .url ))
                     await _safe_send (ch ,embed =e )
 
                     # Mute
@@ -721,12 +1133,43 @@ class Logs (commands .Cog ):
                         json .dump (_d ,fp ,indent =2 ,ensure_ascii =False )
                 except Exception as _e :
                     log .info (f'[LOGS] Ошибка запись mute: {_e}')
+                # Эмбед мута в -модерация: кто, причина, до какого времени
+                try :
+                    _to_mod =await _audit_actor (before .guild ,discord .AuditLogAction .member_update ,target_id =after .id ,window =15 ,retries =1 )
+                    _to_reason =(_to_mod [2 ]if _to_mod else None )or '—'
+                    _tch =await self .get_log_channel (before .guild ,'модерация')
+                    if _tch :
+                        _until_ts =int (after_to .timestamp ())if after_to else None
+                        _te =_styled_log_embed (before .guild ,'mod','Участник замьючен (таймаут)',
+                        fields =[
+                        ('Пользователь',f"**{after.display_name}** · {after.mention} · `{after.id}`"),
+                        ('Модератор',_actor_line (_to_mod )),
+                        ('Причина',_to_reason ),
+                        ('Действует до',f"<t:{_until_ts}:f> · <t:{_until_ts}:R>"if _until_ts else '—'),
+                        ],
+                        color =0xE67E22 ,thumbnail =str (after .display_avatar .url ))
+                        await _safe_send (_tch ,embed =_te )
+                except Exception as _to_err :
+                    log .info (f'[LOGS] timeout-embed: {_to_err}')
             else :
                 save_event (before .guild .id ,'mod','Мут снят',{
                 'user_id':str (after .id ),
                 'user_name':after .display_name ,
                 'action':'untimeout',
                 })
+                try :
+                    _uto_mod =await _audit_actor (before .guild ,discord .AuditLogAction .member_update ,target_id =after .id ,window =15 ,retries =1 )
+                    _utch =await self .get_log_channel (before .guild ,'модерация')
+                    if _utch :
+                        _ue =_styled_log_embed (before .guild ,'mod','Таймаут снят',
+                        fields =[
+                        ('Пользователь',f"**{after.display_name}** · {after.mention} · `{after.id}`"),
+                        ('Модератор',_actor_line (_uto_mod )),
+                        ],
+                        color =0x2ECC71 ,thumbnail =str (after .display_avatar .url ))
+                        await _safe_send (_utch ,embed =_ue )
+                except Exception as _uto_err :
+                    log .info (f'[LOGS] untimeout-embed: {_uto_err}')
 
                 # Смена ника
         if before .nick !=after .nick :
@@ -738,14 +1181,13 @@ class Logs (commands .Cog ):
             })
             ch =await self .get_log_channel (before .guild ,'member')
             if ch :
-                e =discord .Embed (color =0x3498DB ,timestamp =datetime .datetime .utcnow ())
-                e .description =(
-                "## Псевдоним изменён\n"
-                f"**{before.display_name}** · `{before.id}`\n\n"
-                f"Было: `{before.nick or before.name}`\n"
-                f"Стало: `{after.nick or after.name}`"
-                )
-                e .set_footer (text =f"{before.guild.name}")
+                e =_styled_log_embed (before .guild ,'member','Псевдоним изменён',
+                fields =[
+                ('Участник',f"**{before.display_name}** · `{before.id}`"),
+                ('Было',f"`{before.nick or before.name}`"),
+                ('Стало',f"`{after.nick or after.name}`"),
+                ],
+                color =0x3498DB ,thumbnail =str (before .display_avatar .url ))
                 await _safe_send (ch ,embed =e )
 
                 # СООБЩЕНИЯ 
@@ -824,14 +1266,25 @@ class Logs (commands .Cog ):
         ch =await self .get_log_channel (message .guild ,'message')
         if not ch :
             return 
-        e =discord .Embed (color =0xE74C3C ,timestamp =datetime .datetime .utcnow ())
-        e .description =(
-        "## Сообщение удалено\n"
-        f"**{author_name}** · `{author_id}`\n"
-        f"Канал: {message.channel.mention}\n\n"
-        f"> {content[:500] or '[Вложение]'}"
-        )
-        e .set_footer (text =f"{message.guild.name}")
+        _atts =getattr (message ,'attachments',None )or []
+        _fields =[
+        ('Автор',f"**{author_name}** · `{author_id}`"),
+        ('Канал',message .channel .mention ),
+        ('Текст',f"> {content[:450] or '[Вложение]'}"),
+        ]
+        try :
+            _fields .append (('Отправлено',f"<t:{int(message.created_at.timestamp())}:R>"))
+        except Exception :
+            pass
+        if _atts :
+            _fields .append (('Вложений удалено',f"**{len(_atts)}**"))
+        _th =None
+        try :
+            _th =str (message .author .display_avatar .url )if message .author else None
+        except Exception :
+            pass
+        e =_styled_log_embed (message .guild ,'message','Сообщение удалено',
+        fields =_fields ,color =0xE74C3C ,thumbnail =_th )
         try :
             await _safe_send (ch ,embed =e )
         except Exception as _se :
@@ -841,16 +1294,15 @@ class Logs (commands .Cog ):
         _mentioned =[m for m in message .mentions if not m .bot ]+list (message .role_mentions or [])
         if _mentioned :
             _targets =", ".join (m .mention for m in _mentioned [:8 ])
-            ge =discord .Embed (color =0x9B59B6 ,timestamp =datetime .datetime .utcnow ())
-            ge .description =(
-            "## 👻 Ghost Ping\n"
-            f"**{author_name}** · `{author_id}`\n"
-            "тегнул и сразу удалил сообщение\n\n"
-            f"Упомянуты: {_targets}\n"
-            f"Канал: {message.channel.mention}\n\n"
-            f"> {content[:300] or '[Вложение]'}"
-            )
-            ge .set_footer (text =f"{message.guild.name} · ghost-ping detector")
+            ge =_styled_log_embed (message .guild ,'message','👻 Ghost Ping',
+            fields =[
+            ('Виновник',f"**{author_name}** · `{author_id}`"),
+            ('Что сделал','тегнул и сразу удалил сообщение'),
+            ('Упомянуты',_targets ),
+            ('Канал',message .channel .mention ),
+            ('Текст',f"> {content[:300] or '[Вложение]'}"),
+            ],
+            color =0x9B59B6 ,thumbnail =_th )
             try:
                 await ch .send (embed =ge )
             except Exception :
@@ -883,15 +1335,19 @@ class Logs (commands .Cog ):
         ch =await self .get_log_channel (before .guild ,'message')
         if not ch :
             return 
-        e =discord .Embed (color =0x3498DB ,timestamp =datetime .datetime .utcnow ())
-        e .description =(
-        "## Сообщение изменено\n"
-        f"**{_ename}** · `{_eid}`\n"
-        f"Канал: {before.channel.mention} · [Перейти]({after.jump_url})\n\n"
-        f"**Было:**\n> {before.content[:400] or '[Пусто]'}\n\n"
-        f"**Стало:**\n> {after.content[:400] or '[Пусто]'}"
-        )
-        e .set_footer (text =f"{before.guild.name}")
+        _eth =None
+        try :
+            _eth =str (_eauthor .display_avatar .url )if _eauthor else None
+        except Exception :
+            pass
+        e =_styled_log_embed (before .guild ,'message','Сообщение изменено',
+        fields =[
+        ('Автор',f"**{_ename}** · `{_eid}`"),
+        ('Канал',f"{before.channel.mention} · [Перейти к сообщению]({after.jump_url})"),
+        ('Было',f"> {before.content[:400] or '[Пусто]'}"),
+        ('Стало',f"> {after.content[:400] or '[Пусто]'}"),
+        ],
+        color =0x3498DB ,thumbnail =_eth )
         await _safe_send (ch ,embed =e )
 
         # SES КАНАЛЫ 
@@ -928,13 +1384,23 @@ class Logs (commands .Cog ):
         ch =await self .get_log_channel (member .guild ,'voice')
         if not ch :
             return
-        e =discord .Embed (color =color ,timestamp =datetime .datetime .utcnow ())
-        e .description =(
-        f"## {action}\n"
-        f"**{member.display_name}** · `{member.id}`\n\n"
-        f"{line}"
-        )
-        e .set_footer (text =f"{member.guild.name}")
+        _vfields =[
+        ('Участник',f"**{member.display_name}** · `{member.id}`"),
+        ('Канал',line .replace ('**','')if False else line ),
+        ]
+        try :
+            _in =a if a is not None else b
+            if _in is not None :
+                _vfields .append (('В канале сейчас',f"**{len(_in.members)}** чел."))
+        except Exception :
+            pass
+        _vth =None
+        try :
+            _vth =str (member .display_avatar .url )
+        except Exception :
+            pass
+        e =_styled_log_embed (member .guild ,'voice',action ,
+        fields =_vfields ,color =color ,thumbnail =_vth )
         await _safe_send (ch ,embed =e )
 
         # КАНАЛЫ 
@@ -949,13 +1415,13 @@ class Logs (commands .Cog ):
         ch =await self .get_log_channel (channel .guild ,'channel')
         if not ch :
             return 
-        e =discord .Embed (color =0x2ECC71 ,timestamp =datetime .datetime .utcnow ())
-        e .description =(
-        "## Канал создан\n"
-        f"**{channel.name}** · `{channel.id}`\n\n"
-        f"Тип: {str(channel.type)}"
-        )
-        e .set_footer (text =f"{channel.guild.name}")
+        e =_styled_log_embed (channel .guild ,'channel','Канал создан',
+        fields =[
+        ('Канал',f"{getattr(channel,'mention','#'+channel.name)} · `{channel.id}`"),
+        ('Тип',_ch_type_label (getattr (channel ,'type','?'))),
+        ('Категория',getattr (getattr (channel ,'category',None ),'name',None )or '—'),
+        ],
+        color =0x2ECC71 )
         await _safe_send (ch ,embed =e )
 
     @commands .Cog .listener ()
@@ -1036,14 +1502,15 @@ class Logs (commands .Cog ):
         ch =await self .get_log_channel (channel .guild ,'channel')
         if not ch :
             return 
-        e =discord .Embed (color =0xE74C3C ,timestamp =datetime .datetime .utcnow ())
-        e .description =(
-        "## Канал удален\n"
-        f"**{getattr(channel, 'name', '?')}** · `{channel.id}`\n\n"
-        f"Тип: {str(getattr(channel, 'type', '?'))}\n"
-        f"Удалил: **{mod_name or '—'}** `{mod_id or ''}`\n"
-        f"Это бот: {'Да' if mod_is_bot else 'Нет'}"
-        )
+        e =_styled_log_embed (channel .guild ,'channel','Канал удалён',
+        fields =[
+        ('Канал',f"**#{getattr(channel, 'name', '?')}** · `{channel.id}`"),
+        ('Тип',_ch_type_label (getattr (channel ,'type','?'))),
+        ('Категория',getattr (getattr (channel ,'category',None ),'name',None )or '—'),
+        ('Удалил',f"**{mod_name or '—'}** `{mod_id or ''}`"),
+        ('Через бота','⚠️ Да'if mod_is_bot else 'Нет'),
+        ],
+        color =0xE74C3C )
         if extra_warning :
             e .description +=f"\n\n{extra_warning}"
         e .set_footer (text =f"{channel.guild.name}")
@@ -1051,12 +1518,34 @@ class Logs (commands .Cog ):
 
     @commands .Cog .listener ()
     async def on_guild_channel_update (self ,before ,after ):
+        # Собираем diff изменений: имя, тема, слоумод, NSFW
+        diffs =[]
         if before .name !=after .name :
-            save_event (before .guild .id ,'channel','Канал переименован',{
-            'channel_id':str (before .id ),
-            'old_name':before .name ,
-            'new_name':after .name ,
-            })
+            diffs .append (('Название',f"`{before.name}` → `{after.name}`"))
+        if getattr (before ,'topic',None )!=getattr (after ,'topic',None ):
+            bt =(getattr (before ,'topic',None )or '—')[:80 ]
+            at =(getattr (after ,'topic',None )or '—')[:80 ]
+            diffs .append (('Тема',f"`{bt}` → `{at}`"))
+        if getattr (before ,'slowmode_delay',0 )!=getattr (after ,'slowmode_delay',0 ):
+            diffs .append (('Слоумод',f"{getattr(before,'slowmode_delay',0)}с → {getattr(after,'slowmode_delay',0)}с"))
+        if getattr (before ,'nsfw',False )!=getattr (after ,'nsfw',False ):
+            diffs .append (('NSFW',f"{getattr(before,'nsfw',False)} → {getattr(after,'nsfw',False)}"))
+        if not diffs :
+            return
+        save_event (before .guild .id ,'channel','Канал изменён',{
+        'channel_id':str (before .id ),
+        'changes':[{'what':n ,'diff':v }for n ,v in diffs ],
+        })
+        ch =await self .get_log_channel (before .guild ,'channel')
+        if not ch :
+            return
+        who =await _audit_actor (before .guild ,discord .AuditLogAction .channel_update ,target_id =before .id ,window =15 ,retries =1 )
+        fields =[('Канал',f"{getattr(after,'mention','#'+after.name)} · `{before.id}`")]+diffs
+        if who :
+            fields .append (('Изменил',_actor_line (who )))
+        e =_styled_log_embed (before .guild ,'channel','Канал изменён',
+        fields =fields )
+        await _safe_send (ch ,embed =e )
 
             # ROLES 
 
@@ -1066,6 +1555,32 @@ class Logs (commands .Cog ):
         'role_id':str (role .id ),
         'role_name':role .name ,
         })
+        ch =await self .get_log_channel (role .guild ,'role')
+        if not ch :
+            return
+        try :
+            color_hex =f"#{role.color.value:06x}"
+        except Exception :
+            color_hex ='—'
+        _perms =role .permissions 
+        _key_perms =[]
+        if _perms .administrator :_key_perms .append ('Администратор')
+        if _perms .manage_guild :_key_perms .append ('Управление сервером')
+        if _perms .manage_channels :_key_perms .append ('Управление каналами')
+        if _perms .manage_roles :_key_perms .append ('Управление ролями')
+        if _perms .kick_members :_key_perms .append ('Кик')
+        if _perms .ban_members :_key_perms .append ('Бан')
+        if _perms .moderate_members :_key_perms .append ('Таймаут')
+        e =_styled_log_embed (role .guild ,'role','Роль создана',
+        fields =[
+        ('Роль',f"{role.mention} **{role.name}** · `{role.id}`"),
+        ('Цвет',f"`{color_hex}`"),
+        ('Отдельный список','Да'if role .hoist else 'Нет'),
+        ('Упоминаемая','Да'if role .mentionable else 'Нет'),
+        ('Ключевые права',", ".join (_key_perms )if _key_perms else 'обычные'),
+        ],
+        color =getattr (role .color ,'value',0 )or 0x9B59B6 )
+        await _safe_send (ch ,embed =e )
 
     @commands .Cog .listener ()
     async def on_guild_role_delete (self ,role ):
@@ -1073,15 +1588,56 @@ class Logs (commands .Cog ):
         'role_id':str (role .id ),
         'role_name':role .name ,
         })
+        ch =await self .get_log_channel (role .guild ,'role')
+        if not ch :
+            return
+        try :
+            _mcount =len (role .members )
+        except Exception :
+            _mcount ='?'
+        who =await _audit_actor (role .guild ,discord .AuditLogAction .role_delete ,target_id =role .id ,window =20 ,retries =2 )
+        e =_styled_log_embed (role .guild ,'role','Роль удалена',
+        fields =[
+        ('Роль',f"**{role.name}** · `{role.id}`"),
+        ('Участников с ролью было',f"**{_mcount}**"),
+        ('Удалил',_actor_line (who )),
+        ],
+        color =0xE74C3C )
+        await _safe_send (ch ,embed =e )
 
     @commands .Cog .listener ()
     async def on_guild_role_update (self ,before ,after ):
+        diffs =[]
         if before .name !=after .name :
-            save_event (before .guild .id ,'role','Роль переименована',{
-            'role_id':str (before .id ),
-            'old_name':before .name ,
-            'new_name':after .name ,
-            })
+            diffs .append (('Название',f"`{before.name}` → `{after.name}`"))
+        try :
+            if before .color !=after .color :
+                diffs .append (('Цвет',f"`#{before.color.value:06x}` → `#{after.color.value:06x}`"))
+        except Exception :
+            pass
+        if getattr (before ,'hoist',None )!=getattr (after ,'hoist',None ):
+            diffs .append (('Отдельный список',f"{getattr(before,'hoist',False)} → {getattr(after,'hoist',False)}"))
+        if getattr (before ,'mentionable',None )!=getattr (after ,'mentionable',None ):
+            diffs .append (('Упоминаемая',f"{getattr(before,'mentionable',False)} → {getattr(after,'mentionable',False)}"))
+        try :
+            if before .permissions .value !=after .permissions .value :
+                diffs .append (('Права','набор прав изменён'))
+        except Exception :
+            pass
+        if not diffs :
+            return
+        save_event (before .guild .id ,'role','Роль изменена',{
+        'role_id':str (before .id ),
+        'old_name':before .name ,
+        'new_name':after .name ,
+        'changes':[{'what':n ,'diff':v }for n ,v in diffs ],
+        })
+        ch =await self .get_log_channel (before .guild ,'role')
+        if not ch :
+            return
+        e =_styled_log_embed (before .guild ,'role','Роль изменена',
+        fields =[('Роль',f"{after.mention} **{after.name}** · `{after.id}`")]+diffs )
+        await _safe_send (ch ,embed =e )
 
             # PRIGLASENIYa 
 
@@ -1094,6 +1650,26 @@ class Logs (commands .Cog ):
         'channel':invite .channel .name if invite .channel else '?',
         'max_uses':invite .max_uses or '∞',
         })
+        ch =await self .get_log_channel (invite .guild ,'invite')
+        if not ch :
+            return
+        _inv =invite .inviter 
+        try :
+            _max_age =getattr (invite ,'max_age',0 )or 0
+            _age_txt ='∞'if _max_age ==0 else (f"{_max_age//3600} ч."if _max_age %86400 else f"{_max_age//86400} дн.")
+        except Exception :
+            _age_txt ='—'
+        e =_styled_log_embed (invite .guild ,'invite','Приглашение создано',
+        fields =[
+        ('Код',f"`discord.gg/{invite.code}`"),
+        ('Создал',f"**{getattr(_inv,'display_name',_inv)}** · `{getattr(_inv,'id','?')}`"if _inv else '—'),
+        ('Канал',invite .channel .mention if invite .channel else '—'),
+        ('Лимит использований',invite .max_uses or '∞'),
+        ('Действует',_age_txt ),
+        ('Временное','Да'if getattr (invite ,'temporary',False )else 'Нет'),
+        ],
+        color =0x16A085 ,thumbnail =(str (_inv .display_avatar .url )if _inv else None ))
+        await _safe_send (ch ,embed =e )
 
     @commands .Cog .listener ()
     async def on_invite_delete (self ,invite ):
@@ -1101,16 +1677,58 @@ class Logs (commands .Cog ):
         'code':invite .code ,
         'channel':invite .channel .name if invite .channel else '?',
         })
+        ch =await self .get_log_channel (invite .guild ,'invite')
+        if not ch :
+            return
+        e =_styled_log_embed (invite .guild ,'invite','Приглашение удалено',
+        fields =[
+        ('Код',f"`discord.gg/{invite.code}`"),
+        ('Канал',invite .channel .mention if invite .channel else '—'),
+        ('Использований было',getattr (invite ,'uses',0 )or 0 ),
+        ],
+        color =0x95A5A6 )
+        await _safe_send (ch ,embed =e )
 
         # СЕРВЕР 
 
     @commands .Cog .listener ()
     async def on_guild_update (self ,before ,after ):
+        diffs =[]
         if before .name !=after .name :
-            save_event (before .id ,'сервер','Сервер переименован',{
-            'old_name':before .name ,
-            'new_name':after .name ,
-            })
+            diffs .append (('Название',f"`{before.name}` → `{after.name}`"))
+        if getattr (before ,'afk_channel',None )!=getattr (after ,'afk_channel',None ):
+            bc =getattr (getattr (before ,'afk_channel',None ),'name',None )or '—'
+            ac =getattr (getattr (after ,'afk_channel',None ),'name',None )or '—'
+            diffs .append (('AFK-канал',f"`{bc}` → `{ac}`"))
+        if getattr (before ,'afk_timeout',None )!=getattr (after ,'afk_timeout',None ):
+            diffs .append (('AFK-таймаут',f"{getattr(before,'afk_timeout','?')}с → {getattr(after,'afk_timeout','?')}с"))
+        if getattr (before ,'verification_level',None )!=getattr (after ,'verification_level',None ):
+            diffs .append (('Проверка участников',f"`{getattr(before,'verification_level','?')}` → `{getattr(after,'verification_level','?')}`"))
+        if getattr (getattr (before ,'icon',None ),'key',None )!=getattr (getattr (after ,'icon',None ),'key',None ):
+            diffs .append (('Аватар сервера','изменён'))
+        if not diffs :
+            return
+        save_event (before .id ,'сервер','Сервер изменён',{
+        'changes':[{'what':n ,'diff':v }for n ,v in diffs ],
+        })
+        ch =await self .get_log_channel (after ,'сервер')
+        if not ch :
+            return
+        who =await _audit_actor (after ,discord .AuditLogAction .guild_update ,window =15 ,retries =1 )
+        fields =diffs [:]
+        if who :
+            fields .append (('Изменил',_actor_line (who )))
+        e =_styled_log_embed (after ,'guild','Сервер изменён',fields =fields )
+        await _safe_send (ch ,embed =e )
+
+            # ЦЕНТР ЛОГОВ: select-меню — статус категорий, тест, починка
+
+    @app_commands .command (name ="logs-center",description ="Центр логов: выбор категории в меню — статус, тест доставки, починка каналов")
+    @app_commands .checks .has_permissions (administrator =True )
+    async def logs_center (self ,interaction :discord .Interaction ):
+        view =LogsCenterView (interaction .guild ,interaction .user .id )
+        await interaction .response .send_message (
+        embed =view .overview_embed (),view =view ,ephemeral =True )
 
             # DISCORD AUDIT LOG SYNC 
 

@@ -66,7 +66,7 @@ COMMAND_CATEGORIES = {
                      "giveaway", "reroll", "pomodoro", "pomodoro-complete", "pomodoro-stats",
                      "anime", "anime-suggest", "anime-setup", "anime-off",
                      "cat", "dog", "meme", "joke", "quote", "base64"],
-    "Сервер": ["setup-logs", "logs-setup", "antiraid", "antiraid-reload", "announce", "stats",
+    "Сервер": ["setup-logs", "logs-setup", "logs-center", "antiraid", "antiraid-reload", "announce", "stats",
                 "server-info", "botinfo", "uptime", "health", "avatar", "banner", "channelinfo",
                 "roleinfo", "rolemembers", "color", "say", "embed_builder", "embed_history",
                 "duty-panel", "duty-add", "duty-stats", "backup", "backup-channel", "backup-list",
