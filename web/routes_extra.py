@@ -6743,6 +6743,14 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
             # Сортировка по дате (новые первые)
         history .sort (key =lambda x :x .get ('created_at',''),reverse =True )
 
+        # Чистим markdown из видимых полей — панель разметку не рендерит
+        try :
+            import web .app as _app
+            for _h in history :
+                _app ._clean_md_fields (_h )
+        except Exception :
+            pass
+
         return jsonify ({'success':True ,'notifications':history [:50 ]})# Максимум 50
 
     @app .route ('/notifications')

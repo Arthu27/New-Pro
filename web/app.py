@@ -108,15 +108,48 @@ def _log_login (username ,role ,avatar ,discord_id ):
     except Exception :
         pass 
 
-        # Массовая (batch) panel log flusher — POST/DELETE yolunu bloklamaz
+        # Массовая (batch) запись логов панели — не блокирует POST/DELETE запросы
 _panel_log_flusher =_store .PeriodicFlush (
 'data/panel_logs.json',
 flush_interval =5.0 ,
-max_entries =500 ,# 1000 -> 500: dosya шiшmesin
+max_entries =500 ,
 batch_threshold =50 ,
 )
 atexit .register (_panel_log_flusher .shutdown )
 
+
+import re as _re
+
+def _clean_md (value ):
+    """Убрать markdown-разметку из строк, отображаемых в панели.
+
+    Панель не рендерит Discord-markdown — иначе **жирный**, `код` и
+    ## заголовки видны пользователю сырыми символами.
+    """
+    if not isinstance (value ,str )or not value :
+        return value
+    s =_re .sub (r'\*\*(.+?)\*\*',r'\1',value )
+    s =_re .sub (r'__(.+?)__',r'\1',s )
+    s =_re .sub (r'`{1,3}([^`]*)`{1,3}',r'\1',s )
+    s =s .replace ('**','').replace ('__','')
+    # Заголовки Discord (## и длиннее) — и в начале строк, и в середине текста;
+    # одиночный # (хештеги) не трогаем
+    s =_re .sub (r'#{2,6}\s*','',s )
+    return s
+
+_MD_FIELDS =('action','user_name','mod_name','target_name','reason','detail',
+'content','title','body','message','user','moderator','mod','label')
+
+def _clean_md_fields (obj ):
+    """Очистить текстовые поля словаря от markdown (in place) и вернуть его."""
+    try :
+        for k in _MD_FIELDS :
+            v =obj .get (k )
+            if isinstance (v ,str )and ('**' in v or '__' in v or '`' in v or '#' in v ):
+                obj [k ]=_clean_md (v )
+    except Exception :
+        pass
+    return obj
 
 def _log_panel_action (action ,detail =''):
     try :
@@ -835,6 +868,8 @@ def api_my_notifications ():
             item =dict (n )
             item ['system']=False
             item .setdefault ('link','')
+            item ['title']=_clean_md (item .get ('title',''))
+            item ['message']=_clean_md (item .get ('message',''))
             result .append (item )
         # Отмечаем прочитанными
         for n in my :
@@ -854,8 +889,8 @@ def api_my_notifications ():
                     continue
                 ts =entry .get ('ts',0 )or 0
                 result .append ({
-                'title':entry .get ('action','Уведомление'),
-                'message':entry .get ('detail',''),
+                'title':_clean_md (entry .get ('action','Уведомление')),
+                'message':_clean_md (entry .get ('detail','')),
                 'from':'Система',
                 'created_at':entry .get ('timestamp',''),
                 'read':ts <=prev_seen ,
@@ -1195,7 +1230,7 @@ def api_logs ():
                     'timestamp':case .get ('timestamp',''),
                     })
 
-                    # Discord audit cache'den oku (bot 30sn'de bir обновл — быстрый)
+                    # Читаем кэш Discord-аудита (бот обновляет его раз в 30 сек — данные свежие)
         cache_file ='data/discord_audit_cache.json'
         cache =_store .cached_read_json (cache_file ,ttl =3.0 ,default ={})
         if isinstance (cache ,dict )and cache :
@@ -1212,6 +1247,9 @@ def api_logs ():
                         all_events .append (ev_copy )
 
         all_events .sort (key =lambda x :x .get ('timestamp',''),reverse =True )
+        # Чистим markdown из видимых полей — панель разметку не рендерит
+        for _ev in all_events :
+            _clean_md_fields (_ev )
         return jsonify (all_events [:1000 ])
     except Exception as e :
         print (f"Ошибка чтения логов: {e}")
@@ -1283,8 +1321,8 @@ def api_warnings ():
                             all_warnings .append ({
                             'guild_id':guild_id ,
                             'user_id':user_id ,
-                            'reason':warn .get ('reason','Не указана'),
-                            'moderator':warn .get ('moderator',warn .get ('mod','?')),
+                            'reason':_clean_md (warn .get ('reason','Не указана')),
+                            'moderator':_clean_md (warn .get ('moderator',warn .get ('mod','?'))),
                             'timestamp':warn .get ('timestamp','')
                             })
 
@@ -2810,8 +2848,8 @@ def api_notifications_poll ():
                 if is_mine or is_broadcast :
                     notifs .append ({
                     'id':f"pl-{ts}-{len(notifs)}",
-                    'title':entry .get ('action','Действие'),
-                    'body':entry .get ('detail',''),
+                    'title':_clean_md (entry .get ('action','Действие')),
+                    'body':_clean_md (entry .get ('detail','')),
                     'icon':'',
                     'ts':ts ,
                     'kind':'notify' if is_broadcast else 'mod',
@@ -2829,8 +2867,8 @@ def api_notifications_poll ():
                 if ts >cutoff_ts and entry .get ('mod')==username :
                     notifs .append ({
                     'id':f"tm-{ts}-{entry.get('user_id', '')}",
-                    'title':f"Временное {entry.get('action', 'действие')}",
-                    'body':entry .get ('reason',''),
+                    'title':f"Временное {_clean_md(entry.get('action', 'действие'))}",
+                    'body':_clean_md (entry .get ('reason','')),
                     'icon':'⏱',
                     'ts':ts ,
                     'kind':'temp',
@@ -2868,8 +2906,8 @@ def api_activity_feed ():
     def push(icon, title, user, detail, ts, evtype='system', color=None, link=''):
         if not ts: return
         items.append({
-            'icon': icon, 'title': title, 'user': user or '—',
-            'detail': detail or '', 'ts': ts, 'type': evtype, 'color': color,
+            'icon': icon, 'title': _clean_md(title), 'user': _clean_md(user) or '—',
+            'detail': _clean_md(detail) or '', 'ts': ts, 'type': evtype, 'color': color,
             'link': link,
         })
 
