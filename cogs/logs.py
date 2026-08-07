@@ -629,6 +629,8 @@ class LogsCenterView(discord.ui.View):
 class Logs (commands .Cog ):
     def __init__ (self ,bot ):
         self .bot =bot 
+        self ._audit_sync_started =False   # защита от дубля цикла при reconnect
+        self ._audit_forbidden_notified =set ()  # о чём уже предупредили однажды
 
     async def get_log_channel (self ,guild ,category :str ='сервер'):
         # Найти канал категории логов; отсутствующий — создать автоматически
@@ -1772,6 +1774,7 @@ class Logs (commands .Cog ):
             except Exception :
                 pass 
 
+        audit_errors =[]
         for guild in self .bot .guilds :
             gid =str (guild .id )
             last_id =seen .get (gid )
@@ -1789,9 +1792,14 @@ class Logs (commands .Cog ):
                             break 
                         new_entries .append (entry )
             except discord .Forbidden :
+                if gid not in self ._audit_forbidden_notified :
+                    self ._audit_forbidden_notified .add (gid )
+                    log .info (f'[LOGS] Нет права "Просмотр журнала аудита" — аудит-синк пропускается ({guild.name})')
                 continue 
             except Exception as e :
-                log .info (f'[LOGS] Ошибка audit log ({guild.name}): {e}')
+                # Сбоит сам Discord (503/нагрузка) — НЕ логируем здесь каждые 30 сек:
+                # цикл сам решит, когда и что писать (экспоненциальная пауза)
+                audit_errors .append ((guild .name ,e ))
                 continue 
 
             if not new_entries :
@@ -1861,11 +1869,17 @@ class Logs (commands .Cog ):
         except Exception :
             pass 
 
+        return audit_errors 
+
     @commands .Cog .listener ()
     async def on_ready (self ):
         import asyncio 
         await asyncio .sleep (5 )
-        asyncio .get_event_loop ().create_task (self ._audit_sync_loop ())
+        # on_ready может сработать повторно после переподключения шлюза —
+        # цикл аудита запускаем только ОДИН раз, иначе будут дубли опросов
+        if not self ._audit_sync_started :
+            self ._audit_sync_started =True 
+            asyncio .get_event_loop ().create_task (self ._audit_sync_loop ())
         # Тихий саморемонт: если категория логов осталась от старого кода без
         # доступа для бота — восстанавливаем права (частая причина «логи не идут»)
         for _g in self .bot .guilds :
@@ -1879,17 +1893,26 @@ class Logs (commands .Cog ):
 
     async def _audit_sync_loop (self ):
         import asyncio 
-        fail_count =0 
+        fail_streak =0 
         while True :
             try :
-                await self ._sync_discord_audit_log ()
-                fail_count =0 
-                await asyncio .sleep (30 )
+                errs =await self ._sync_discord_audit_log ()
             except Exception as e :
-                fail_count +=1 
-                wait =min (60 *fail_count ,300 )
-                log .info (f'[LOGS] Ошибка sync ({fail_count}): {e} — ждём {wait}с')
+                errs =[('sync',e )]
+            if errs :
+                # Discord отвечает 5xx/недоступен: растущая пауза 1→2→4→8→15 мин (кап 15),
+                # в журнал — одна строка при начале сбоя, каждая 10-я и при восстановлении
+                fail_streak +=1 
+                wait =min (30 *(2 ** min (fail_streak ,5 )),900 )
+                gname ,err =errs [0 ]
+                if fail_streak ==1 or fail_streak %10 ==0 :
+                    log .info (f'[LOGS] Аудит API Discord недоступен ({fail_streak} подряд; {gname}): {err} — пауза {wait}с')
                 await asyncio .sleep (wait )
+            else :
+                if fail_streak :
+                    log .info (f'[LOGS] Аудит API Discord восстановился после {fail_streak} сбоев')
+                fail_streak =0 
+                await asyncio .sleep (30 )
 
 
 async def setup (bot ):

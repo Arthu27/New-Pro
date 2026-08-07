@@ -83,7 +83,7 @@ class FakeGuild:
     def text_channels(self):
         return [c for c in self.channels.values() if not isinstance(getattr(c.type, 'name', ''), type(None)) and c.type.name == 'text']
     def get_channel(self, cid): return self.channels.get(cid)
-    def audit_logs(self, limit=8, action=None):
+    def audit_logs(self, limit=8, action=None, oldest_first=False, **kw):
         class _Iter:
             def __init__(self, items): self._it = iter(items)
             def __aiter__(self): return self
@@ -266,6 +266,32 @@ inter3 = FakeInter(guild, simple)
 ok = run(view.interaction_check(inter3))
 check(ok is False and inter3.response.sent and 'администраторам' in inter3.response.sent[0],
       'чужак: отказ с эфемерным ответом')
+
+print('== анти-спам аудит-синка (503 Discord) ==')
+class _BotWithGuilds:
+    def __init__(self, g): self.guilds = [g]
+sync_cog = Logs(_BotWithGuilds(guild))
+guild.audit_entries = []
+errs = run(sync_cog._sync_discord_audit_log())
+check(errs == [], 'здоровый сервер -> список ошибок пуст')
+
+class FailAuditGuild(FakeGuild):
+    def audit_logs(self, limit=8, action=None, oldest_first=False, **kw):
+        raise RuntimeError('503 Service Unavailable: upstream connect error')
+bad_guild = FailAuditGuild()
+sync_cog2 = Logs(_BotWithGuilds(bad_guild))
+errs2 = run(sync_cog2._sync_discord_audit_log())
+check(len(errs2) == 1 and '503' in str(errs2[0][1]),
+      'падающий audit API -> ошибка ВОЗВРАЩАЕТСЯ циклу (а не спамится в лог)')
+
+print('== цикл аудита запускается один раз (reconnect-safe) ==')
+once_cog = Logs(_BotWithGuilds(guild))
+run(once_cog.on_ready())
+check(once_cog._audit_sync_started is True, 'после первого on_ready цикл отмечен запущенным')
+tasks_before = len(asyncio.all_tasks(loop)) if hasattr(asyncio, 'all_tasks') else 0
+run(once_cog.on_ready())
+tasks_after = len(asyncio.all_tasks(loop)) if hasattr(asyncio, 'all_tasks') else 0
+check(tasks_after <= tasks_before + 1, 'второй on_ready НЕ плодит дубли цикла')
 
 loop.close()
 print(f'=== PASS {PASS} / FAIL {FAIL} ===')
