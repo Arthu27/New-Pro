@@ -143,3 +143,6 @@ help_overview_animated.gif
 *_bg_style.png
 anime_boy.png
 assets/ai_gojo/
+
+# Локальные симуляционные тесты Arena (не для продакшена)
+.arena_tests/

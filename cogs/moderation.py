@@ -14,6 +14,27 @@ log =get_logger ("moderation")
 DIVIDER ="✦ ───────────────────── ✦"
 
 
+async def _respond (interaction ,**kw ):
+    """Ответить на interaction максимально надёжно.
+
+    Первый ответ — response.send_message; если уже был defer/ответ —
+    followup. Ошибки самой отправки глушим с записью в журнал: модератор
+    НИКОГДА не должен видеть «Приложение не отвечает» при выполненном
+    наказании.
+    """
+    try :
+        if interaction .response .is_done ():
+            await interaction .followup .send (**kw )
+        else :
+            await interaction .response .send_message (**kw )
+    except Exception as _e :
+        log .info (f'[MODPANEL] Ответ не доставлен: {_e}')
+        try :
+            await interaction .followup .send (**kw )
+        except Exception as _e2 :
+            log .warning (f'[MODPANEL] Ответ не доставлен и через followup: {_e2}')
+
+
 class Moderation (commands .Cog ):
     def __init__ (self ,bot ):
         self .bot =bot 
@@ -482,7 +503,7 @@ class Moderation (commands .Cog ):
                 except Exception :
                     user =None
             if not user :
-                await interaction .response .send_message (
+                await _respond (interaction ,
                 embed =error_embed ("Пользователь не найден. Укажите корректный ID или упоминание."),
                 ephemeral =True )
                 return
@@ -495,7 +516,10 @@ class Moderation (commands .Cog ):
                     await user .kick (reason =reason )
                     msg ="👢 пользователь кикнут"
                 elif action in ("timeout","mute_chat"):
-                    minutes =max (1 ,int (amount )or 5 )
+                    try :
+                        minutes =max (1 ,int (amount )if str (amount ).strip () else 5 )
+                    except (TypeError ,ValueError ):
+                        minutes =5
                     until =discord .utils .utcnow ()+timedelta (minutes =minutes )
                     await user .timeout (until ,reason =reason )
                     if action =="mute_chat":
@@ -506,7 +530,7 @@ class Moderation (commands .Cog ):
                     await self._maybe_watchlist_after_mute (interaction ,user ,reason )
                 elif action =="vmute":
                     if not user .voice or not user .voice .channel :
-                        await interaction .response .send_message (
+                        await _respond (interaction ,
                         embed =error_embed ("Участник не в голосовом канале. Голосовой мьют невозможен."),
                         ephemeral =True )
                         return
@@ -519,11 +543,28 @@ class Moderation (commands .Cog ):
                     await user .timeout (None )
                     msg ="🔊 мут снят (чат и голос открыты)"
 
-                case_id =self .save_case (guild .id ,action ,user .id ,interaction .user .id ,reason )
-                dm =mod_dm_embed (action ,guild ,interaction .user ,reason )
-                await self .send_dm (user ,dm )
-                log =mod_log_embed (action ,{"ban":"🔨 Бан","kick":"👢 Кик","timeout":"🔇 Мут","mute_chat":"🔇 Мут чата","vmute":"🎙️ Войс-мут","vunmute":"🎙️ Войс-мут снят","untimeout":"🔊 Мут снят"}.get (action ,action ),0x3498DB ,user ,interaction .user ,guild ,reason ,case_id )
-                await self .send_log (guild ,log )
+                # Вспомогательные шаги: дело, DM, лог, уведомление панели.
+                # Каждый — в своём try: сбой побочного шага НЕ должен превращать
+                # выполненное наказание в «ошибку» для модератора.
+                aux_errors =[]
+                try :
+                    case_id =self .save_case (guild .id ,action ,user .id ,interaction .user .id ,reason )
+                except Exception as _case_e :
+                    case_id =0
+                    aux_errors .append ("дело не записано")
+                    log .warning (f'[MODPANEL] save_case: {_case_e}')
+                try :
+                    dm =mod_dm_embed (action ,guild ,interaction .user ,reason )
+                    await self .send_dm (user ,dm )
+                except Exception as _dm_e :
+                    aux_errors .append ("DM не доставлен")
+                    log .info (f'[MODPANEL] DM: {_dm_e}')
+                try :
+                    log_ch_embed =mod_log_embed (action ,{"ban":"🔨 Бан","kick":"👢 Кик","timeout":"🔇 Мут","mute_chat":"🔇 Мут чата","vmute":"🎙️ Войс-мут","vunmute":"🎙️ Войс-мут снят","untimeout":"🔊 Мут снят"}.get (action ,action ),0x3498DB ,user ,interaction .user ,guild ,reason ,case_id )
+                    await self .send_log (guild ,log_ch_embed )
+                except Exception as _log_e :
+                    aux_errors .append ("лог-канал недоступен")
+                    log .warning (f'[MODPANEL] send_log: {_log_e}')
 
                 # Уведомление панели о действии модерации (веб/Discord/email — в фоне)
                 try :
@@ -539,17 +580,21 @@ class Moderation (commands .Cog ):
                 "Действие выполнено",
                 f"**{user.display_name}** · `{user.id}`\n{msg}\n**Причина:** {reason}\n**Дело:** #{case_id}",
                 guild =guild )
-                await interaction .response .send_message (embed =confirm ,ephemeral =True )
+                if aux_errors :
+                    confirm .description +=f"\n\n⚠️ {' · '.join (aux_errors )}"
+                await _respond (interaction ,embed =confirm ,ephemeral =True )
             except discord .Forbidden :
-                await interaction .response .send_message (
+                await _respond (interaction ,
                 embed =error_embed ("Недостаточно прав для этого действия."),ephemeral =True )
             except Exception as ex :
-                await interaction .response .send_message (embed =error_embed (str (ex )),ephemeral =True )
+                import traceback as _tb
+                log .warning (f"[MODPANEL] Сбой действия: {_tb.format_exc()}")
+                await _respond (interaction ,embed =error_embed (str (ex )),ephemeral =True )
 
         elif action =="unban":
             uid =self ._parse_target_id (target )
             if not uid :
-                await interaction .response .send_message (
+                await _respond (interaction ,
                 embed =error_embed ("Укажите ID пользователя для разбана."),ephemeral =True )
                 return
             try :
@@ -569,9 +614,9 @@ class Moderation (commands .Cog ):
                     f"Модератор: {interaction .user .display_name } · Дело #{case_id}")
                 except Exception :
                     pass
-                await interaction .response .send_message (embed =confirm ,ephemeral =True )
+                await _respond (interaction ,embed =confirm ,ephemeral =True )
             except Exception as ex :
-                await interaction .response .send_message (embed =error_embed (str (ex )),ephemeral =True )
+                await _respond (interaction ,embed =error_embed (str (ex )),ephemeral =True )
 
         elif action =="clear":
             try :
@@ -583,7 +628,7 @@ class Moderation (commands .Cog ):
             "Сообщения удалены",
             f"Удалено **{len(deleted)}** сообщений в {interaction.channel.mention}",
             guild =guild )
-            await interaction .response .send_message (embed =confirm ,ephemeral =True )
+            await _respond (interaction ,embed =confirm ,ephemeral =True )
 
     async def _maybe_watchlist_after_mute (self ,interaction ,user ,reason ):
         """Если пользователь получил 2+ мьюта — добавить в watchlist на 1 неделю.
@@ -719,6 +764,13 @@ class ModActionModal(discord.ui.Modal):
         self.add_item(self.amount)
 
     async def on_submit(self, interaction: discord.Interaction):
+        # Быстрый ack — дальше цепочка (таймаут → дело → DM → лог) может
+        # занять больше 3 секунд, без defer токен умирал и Discord рисовал
+        # «Приложение не отвечает», хотя наказание уже применено.
+        try:
+            await interaction.response.defer(ephemeral=True)
+        except Exception:
+            pass
         await self.cog._execute_mod_action(
             interaction,
             self.action,
