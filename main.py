@@ -101,10 +101,14 @@ bot = commands.Bot(command_prefix=Config.COMMAND_PREFIX, intents=intents, help_c
 
 # ─── Ролевой контроль доступа к командам (Command ACL) ────────────────
 async def _acl_check(ctx):
-    """Prefix-команды: проверить ролевой доступ."""
+    """Prefix-команды: проверить ролевой доступ (учитывая сабкоманды групп)."""
     try:
         from services.permission_acl import has_access
-        cmd = ctx.command.name if ctx.command else None
+        # qualified_name даёт "group sub" для сабкоманд — правила на группу
+        # и на сабкоманду ("j2c", "j2c-lobby") срабатывают корректно.
+        cmd = None
+        if ctx.command:
+            cmd = getattr(ctx.command, "qualified_name", None) or ctx.command.name
         if cmd:
             if not has_access(ctx.guild.id if ctx.guild else 0, cmd, ctx.author):
                 await ctx.send("🚫 У вас нет доступа к этой команде.", delete_after=8)
@@ -117,11 +121,15 @@ bot.check(_acl_check)
 
 
 async def _acl_slash_check(interaction):
-    """Slash-команды: проверить ролевой доступ."""
+    """Slash-команды: проверить ролевой доступ (учитывая сабкоманды групп)."""
     try:
         from services.permission_acl import has_access
-        cmd = getattr(interaction.command, "name", None) or \
-              (interaction.data.get("name") if interaction.data else None)
+        cmd = None
+        if getattr(interaction, "command", None) is not None:
+            cmd = getattr(interaction.command, "qualified_name", None) or \
+                  getattr(interaction.command, "name", None)
+        if not cmd:
+            cmd = (interaction.data.get("name") if interaction.data else None)
         guild = interaction.guild
         if cmd and guild:
             if not has_access(guild.id, cmd, interaction.user):
