@@ -1579,7 +1579,7 @@ def api_execute_command ():
                         dm_msg =dm_cfg .get ('message')
                     if dm_msg :
                         dm_msg =dm_msg .replace ('{user}',member .display_name )
-                        dm_msg =dm_msg .replace ('{reason}',data .get ('reason','Не belirtildi'))
+                        dm_msg =dm_msg .replace ('{reason}',data .get ('reason','Не указана'))
                         dm_msg =dm_msg .replace ('{mod}',session .get ('username','?'))
                         dm_msg =dm_msg .replace ('{сервер}',guild .name )
                         try :
