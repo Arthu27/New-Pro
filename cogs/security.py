@@ -103,8 +103,8 @@ class Security (commands .Cog ):
         if not ch :
             # Единый резолвер: -модерация → mod-log → moderasyon → …
             try :
-                from cogs .logs import find_log_channel
-                ch =find_log_channel (guild ,'модерация')
+                from cogs .logs import ensure_log_channel
+                ch =await ensure_log_channel (guild ,'модерация')
             except Exception :
                 ch =None 
         if not ch :

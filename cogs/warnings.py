@@ -167,8 +167,8 @@ async def _log_warn_to_channel (guild ,user ,moderator ,reason ,warn_id ,total )
     Fail-safe: любые ошибки глушим, варн уже сохранён.
     """
     try :
-        from cogs .logs import find_log_channel ,_safe_send
-        ch =find_log_channel (guild ,'модерация')
+        from cogs .logs import ensure_log_channel ,_safe_send
+        ch =await ensure_log_channel (guild ,'модерация')
         if not ch :
             return
         e =discord .Embed (color =0xE74C3C ,timestamp =datetime .now (timezone .utc ))

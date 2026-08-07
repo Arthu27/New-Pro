@@ -155,15 +155,82 @@ def find_log_channel (guild ,category :str ='сервер'):
     target =LOG_CHANNELS .get (ch_name ,LOG_CHANNELS ['сервер'])
 
     candidates =[target ]+LEGACY_CHANNEL_NAMES .get (target ,[])+['server-log','aether-logs']
+    # Нормализованная карта каналов: эмодзи/прочерки/регистр не мешают
+    # (-mod-log, -moderasyon, -Модерация  — всё находится)
+    norm_map ={}
+    for _c in guild .text_channels :
+        norm_map .setdefault (_norm_ch_name (_c .name ),_c )
     seen =set ()
     for name in candidates :
-        if name in seen :
+        nname =_norm_ch_name (name )
+        if nname in seen :
             continue
-        seen .add (name )
-        ch =discord .utils .get (guild .text_channels ,name =name )
+        seen .add (nname )
+        ch =norm_map .get (nname )or discord .utils .get (guild .text_channels ,name =name )
         if ch :
             return ch
     return None
+
+
+def _norm_ch_name (name ):
+    # -mod-log = modlog, -Moderasyon = moderasyon: сравнение без эмодзи и регистра
+    import re as _re ,unicodedata as _ud
+    try :
+        _s =_ud .normalize ('NFKD',str (name or ''))
+        return _re .sub (r'[^a-zа-яё0-9]+','',_s .lower ())
+    except Exception :
+        return str (name or '').lower ()
+
+
+# Автосоздание: не давим на API — одна попытка на канал за 10 минут
+_auto_create_state :dict ={}
+
+async def ensure_log_channel (guild ,category :str ='сервер'):
+    # Найти лог-канал, а если его нет — СОЗДАТЬ (самолечение системы).
+    # Раньше отсутствующий канал означал тихую потерю логов навсегда.
+    # Канал и скрытая категория (с правами бота) создаются на лету; троттлинг
+    # 10 минут на случай отсутствия прав Manage Channels. None = не удалось.
+    ch =find_log_channel (guild ,category )
+    if ch :
+        return ch
+    category ={'модерация':'mod','moderasyon':'mod','участники':'member',
+    'сообщения':'message','голос':'voice','ses':'voice','роли':'role',
+    'каналы':'channel'}.get (category ,category )
+    ch_name =CATEGORIES .get (category ,{}).get ('channel','сервер')
+    target =LOG_CHANNELS .get (ch_name ,None )
+    # Сервисные каналы других модулей задаются напрямую по имени
+    if target is None and category in ('ticket-log','ai-alerts'):
+        target =category
+    if target is None :
+        return None
+    key =(str (guild .id ),target )
+    now =time .time ()
+    if now -_auto_create_state .get (key ,0 )<600 :
+        return None
+    _auto_create_state [key ]=now
+    try :
+        cat =discord .utils .get (guild .categories ,name =LOG_CATEGORY_NAME )
+        if cat is None :
+            overwrites ={
+            guild .default_role :discord .PermissionOverwrite (read_messages =False ),
+            guild .me :discord .PermissionOverwrite (
+            read_messages =True ,send_messages =True ,embed_links =True ,
+            attach_files =True ,read_message_history =True ),
+            }
+            cat =await guild .create_category (LOG_CATEGORY_NAME ,overwrites =overwrites ,
+            reason ="Aether: автосоздание категории логов")
+        else :
+            _c ,_ow =ensure_log_permissions (guild ,cat )
+            if _ow :
+                await cat .edit (overwrites =_ow ,reason ="Aether: автопочинка прав на логи")
+        ch =await guild .create_text_channel (target ,category =cat ,
+        reason ="Aether: автосоздание лог-канала",
+        topic =f"Логи «{target}» — события каждый день")
+        log .info (f'[LOGS] Автосоздан канал #{target} ({getattr (guild ,"name","?")})')
+        return ch
+    except Exception as _e :
+        log .info (f'[LOGS] Автосоздание #{target} не удалось: {_e}')
+        return None
 
 
 async def _safe_send (ch ,**kw ):
@@ -211,8 +278,8 @@ class Logs (commands .Cog ):
         self .bot =bot 
 
     async def get_log_channel (self ,guild ,category :str ='сервер'):
-        """Найти канал для конкретной категории логов (общий резолвер)."""
-        return find_log_channel (guild ,category )
+        # Найти канал категории логов; отсутствующий — создать автоматически
+        return await ensure_log_channel (guild ,category )
 
         # КОМАНДА: СОЗДАТЬ LOG-КАНАЛЫ 
 

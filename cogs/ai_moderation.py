@@ -324,8 +324,8 @@ class AIModeration (commands .Cog ):
             # Канал не настроен — падаем обратно в единый лог-канал модерации,
             # иначе AI-инциденты вообще нигде не видны
             try :
-                from cogs .logs import find_log_channel
-                channel =find_log_channel (guild ,'модерация')
+                from cogs .logs import ensure_log_channel
+                channel =await ensure_log_channel (guild ,'модерация')
             except Exception :
                 channel =None 
         if channel is None :

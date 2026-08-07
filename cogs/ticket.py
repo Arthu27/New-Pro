@@ -3034,10 +3034,10 @@ class Ticket (commands .Cog ):
         if target_ch is None :
         # Единый резолвер лог-каналов (-модерация и все legacy-имена)
             try :
-                from cogs .logs import find_log_channel
-                target_ch =find_log_channel (guild ,'модерация')
+                from cogs .logs import ensure_log_channel
+                target_ch =await ensure_log_channel (guild ,'модерация')
                 if target_ch :
-                    log .info (f'[TICKET-NOTIFY] Канал через find_log_channel: #{target_ch.name} → {target_ch.id}')
+                    log .info (f'[TICKET-NOTIFY] Канал через ensure_log_channel: #{target_ch.name} -> {target_ch.id}')
             except Exception :
                 target_ch =None 
         if target_ch is None :

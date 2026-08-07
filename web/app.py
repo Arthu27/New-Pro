@@ -2822,7 +2822,6 @@ def api_notifications_poll ():
     (/api/my-notifications) через session['notif_seen_ts'].
     """
     import os ,json ,time as _t 
-    username =session .get ('username','anon')
     cutoff_ts =request .args .get ('since',0 )
     try :
         cutoff_ts =int (cutoff_ts )
@@ -2833,48 +2832,34 @@ def api_notifications_poll ():
     except (TypeError ,ValueError ):
         seen_ts =0 
     notifs =[]
-    # 1) panel_logs.json -> действия пользователя + broadcast-уведомления всему персоналу
+    # 1) ТОЛЬКО системные broadcast-уведомления — ровно тот же набор, что
+    # показывает выпадающий список (/api/my-notifications). Действия самого
+    # пользователя сюда НЕ входят: иначе бейдж кричал «есть сообщение», а
+    # список был пуст («Нет уведомлений») — классическая рассинхронизация.
     try :
         f ='data/panel_logs.json'
         if os .path .exists (f ):
             with open (f ,'r',encoding ='utf-8')as fp :
                 raw =json .load (fp )
-            for entry in raw [-50 :]:
+            for entry in raw [-80 :]:
+                if not entry .get ('broadcast'):
+                    continue
                 ts =entry .get ('ts',0 )or 0 
                 if ts <=cutoff_ts :
                     continue 
-                is_mine =(entry .get ('username')or entry .get ('user')or '')==username 
-                is_broadcast =bool (entry .get ('broadcast'))
-                if is_mine or is_broadcast :
-                    notifs .append ({
-                    'id':f"pl-{ts}-{len(notifs)}",
-                    'title':_clean_md (entry .get ('action','Действие')),
-                    'body':_clean_md (entry .get ('detail','')),
-                    'icon':'',
-                    'ts':ts ,
-                    'kind':'notify' if is_broadcast else 'mod',
-                    })
+                notifs .append ({
+                'id':f"pl-{ts}-{len(notifs)}",
+                'title':_clean_md (entry .get ('action','Уведомление')),
+                'body':_clean_md (entry .get ('detail','')),
+                'icon':'🔔',
+                'ts':ts ,
+                'kind':'notify',
+                'link':entry .get ('link',''),
+                })
     except Exception :
         pass 
-        # 2) temp moderation activity
-    try :
-        f ='data/temp_mod_log.json'
-        if os .path .exists (f ):
-            with open (f ,'r',encoding ='utf-8')as fp :
-                raw =json .load (fp )
-            for entry in raw [-30 :]:
-                ts =entry .get ('ts',0 )or 0 
-                if ts >cutoff_ts and entry .get ('mod')==username :
-                    notifs .append ({
-                    'id':f"tm-{ts}-{entry.get('user_id', '')}",
-                    'title':f"Временное {_clean_md(entry.get('action', 'действие'))}",
-                    'body':_clean_md (entry .get ('reason','')),
-                    'icon':'⏱',
-                    'ts':ts ,
-                    'kind':'temp',
-                    })
-    except Exception :
-        pass 
+    # 2) (убрано) temp-действия самого пользователя: себе уведомления не нужны,
+    # они и есть в ленте активности
     # 3) личные уведомления (notifications.json по discord_id)
     personal_unread =0 
     try :

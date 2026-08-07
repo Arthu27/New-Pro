@@ -151,8 +151,8 @@ class AntiRaid(commands.Cog):
         if target is None:
             # Единый резолвер лог-каналов (-модерация → mod-log → …)
             try:
-                from cogs.logs import find_log_channel
-                target = find_log_channel(guild, 'модерация')
+                from cogs.logs import ensure_log_channel
+                target = await ensure_log_channel(guild, 'модерация')
             except Exception:
                 target = None
         if target is None:
