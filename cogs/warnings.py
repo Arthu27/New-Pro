@@ -159,6 +159,32 @@ def duration_to_minutes(duration, unit):
     return duration
 
 
+async def _log_warn_to_channel (guild ,user ,moderator ,reason ,warn_id ,total ):
+    """Записать варн в Discord-канал логов (-модерация → mod-log → …).
+
+    Раньше варн уходил только пользователю в DM и в файл — в лог-канале
+    сервера его не было видно вообще («логи не работают»).
+    Fail-safe: любые ошибки глушим, варн уже сохранён.
+    """
+    try :
+        from cogs .logs import find_log_channel ,_safe_send
+        ch =find_log_channel (guild ,'модерация')
+        if not ch :
+            return
+        e =discord .Embed (color =0xE74C3C ,timestamp =datetime .now (timezone .utc ))
+        e .description =(
+        "## Предупреждение\n"
+        f"**{user.display_name}** · `{user.id}`\n\n"
+        f"Варн: **#{warn_id}** · Всего: **{total}**\n"
+        f"Модератор: **{moderator.display_name}**\n"
+        f"Причина: {reason or 'Не указана'}"
+        )
+        e .set_footer (text =f"{guild.name}")
+        await _safe_send (ch ,embed =e )
+    except Exception :
+        pass
+
+
 class warnings(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -276,6 +302,9 @@ class warnings(commands.Cog):
                 f"Модератор: {interaction.user.display_name} · Всего: {total} · Причина: {reason or 'Не указана'}")
         except Exception:
             pass
+
+        # Лог в Discord-канал (-модерация) — чтобы варн был виден персоналу
+        await _log_warn_to_channel (guild ,user ,interaction .user ,reason ,warn_id ,total )
 
         # DM пользователю
         import json, os
@@ -440,6 +469,9 @@ class warnings(commands.Cog):
                 f"Модератор: {moderator.display_name} · Всего: {total} · Причина: {reason or 'Не указана'}"))
         except Exception:
             pass
+
+        # Лог в Discord-канал (-модерация)
+        await _log_warn_to_channel (guild ,user ,moderator ,reason ,warn_id ,total )
 
         # DM
         try:

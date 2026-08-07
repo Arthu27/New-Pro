@@ -101,6 +101,13 @@ class Security (commands .Cog ):
         ch_id =cfg .get ('log_channel')
         ch =guild .get_channel (int (ch_id ))if ch_id else None 
         if not ch :
+            # Единый резолвер: -модерация → mod-log → moderasyon → …
+            try :
+                from cogs .logs import find_log_channel
+                ch =find_log_channel (guild ,'модерация')
+            except Exception :
+                ch =None 
+        if not ch :
             ch =discord .utils .get (guild .text_channels ,name ='mod-log')
         if ch :
             try :

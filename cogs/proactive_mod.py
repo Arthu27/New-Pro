@@ -80,6 +80,12 @@ class ProactiveModeration (commands .Cog ):
         try :
         # Arыyoruz канал для uvedomleniy
             alert_channel =discord .utils .get (guild .text_channels ,name ="ai-alerts")
+            if alert_channel is None :
+                try :
+                    from cogs .logs import find_log_channel
+                    alert_channel =find_log_channel (guild ,'модерация')
+                except Exception :
+                    pass
             if not alert_channel :
                 return 
 
@@ -180,6 +186,12 @@ class ProactiveModeration (commands .Cog ):
         try :
         # Arыyoruz канал для uvedomleniy
             alert_channel =discord .utils .get (guild .text_channels ,name ="ai-alerts")
+            if alert_channel is None :
+                try :
+                    from cogs .logs import find_log_channel
+                    alert_channel =find_log_channel (guild ,'модерация')
+                except Exception :
+                    pass
             if not alert_channel :
             # Создал канал если нет
                 overwrites ={

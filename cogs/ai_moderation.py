@@ -317,10 +317,20 @@ class AIModeration (commands .Cog ):
 
     async def _log_to_channel (self ,guild ,config ,embed ,member ,severity ):
         log_ch_id =config .get ("log_channel_id")
-        if not log_ch_id :
+        channel =None 
+        if log_ch_id :
+            channel =guild .get_channel (int (log_ch_id ))
+        if channel is None :
+            # Канал не настроен — падаем обратно в единый лог-канал модерации,
+            # иначе AI-инциденты вообще нигде не видны
+            try :
+                from cogs .logs import find_log_channel
+                channel =find_log_channel (guild ,'модерация')
+            except Exception :
+                channel =None 
+        if channel is None :
             return 
         try :
-            channel =guild .get_channel (int (log_ch_id ))
             if channel :
                 embed .timestamp =datetime .utcnow ()
                 embed .set_footer (text =f"AI Moderation · {severity}")

@@ -166,6 +166,46 @@ def find_log_channel (guild ,category :str ='сервер'):
     return None
 
 
+async def _safe_send (ch ,**kw ):
+    """Отправка в лог-канал, не роняющая слушатель. Возвращает True/False.
+
+    Частый боевой сценарий: категория « Логи» создана старым кодом без
+    доступа для бота → Forbidden на каждом send → «логи не работают».
+    Ошибка пишется в журнал, слушатель живёт дальше.
+    """
+    try :
+        await ch .send (**kw )
+        return True
+    except Exception as _e :
+        log .info (f'[LOGS] Отправка не удалась (#{getattr (ch ,"name","?")}): {_e}')
+        return False
+
+
+def ensure_log_permissions (guild ,category =None ):
+    """Гарантировать боту доступ к категории логов (самолечение прав).
+
+    Возвращает (category, fixed: bool). Ничего не создаёт — только чинит
+    права существующей категории. Вызывается из /setup-logs и on_ready.
+    """
+    try :
+        if category is None :
+            category =discord .utils .get (guild .categories ,name =LOG_CATEGORY_NAME )
+        if category is None :
+            return None ,False
+        overwrites =dict (category .overwrites )
+        me_ow =overwrites .get (guild .me )
+        need =me_ow is None or not (me_ow .read_messages and me_ow .send_messages )
+        if not need :
+            return category ,False
+        overwrites [guild .me ]=discord .PermissionOverwrite (
+        read_messages =True ,send_messages =True ,embed_links =True ,
+        attach_files =True ,read_message_history =True )
+        return category ,overwrites
+    except Exception as _e :
+        log .info (f'[LOGS] ensure_log_permissions: {_e}')
+        return category ,False
+
+
 class Logs (commands .Cog ):
     def __init__ (self ,bot ):
         self .bot =bot 
@@ -219,6 +259,16 @@ class Logs (commands .Cog ):
         created =[]
         migrated =[]
         already =[]
+
+        # 1б) Категория могла остаться от старого кода без доступа для бота —
+        # тогда каждый send падает с Forbidden и «логи не работают». Чиним.
+        try :
+            _cat ,_ow =ensure_log_permissions (guild ,existing_cat )
+            if _ow :
+                await existing_cat .edit (overwrites =_ow ,reason ="Aether: починка прав бота на категорию логов")
+                migrated .append ("права категории « Логи» восстановлены")
+        except Exception as _pe :
+            log .info (f'[SETUP-LOGS] починка прав: {_pe}')
 
         # 2) Канонические каналы + миграция legacy-имён (mod-log → -модерация и т.д.)
         canonical =list (dict .fromkeys (LOG_CHANNELS .values ()))
@@ -303,6 +353,21 @@ class Logs (commands .Cog ):
         except Exception as _wc_err :
             log .info (f'[SETUP-LOGS] welcome-config: {_wc_err}')
 
+        # 4в) Проверка доставки — шлём тестовый embed в каждый лог-канал
+        delivery_ok =[]
+        delivery_fail =[]
+        for ch_name in canonical +list (extra_channels .keys ()):
+            ch =discord .utils .get (guild .text_channels ,name =ch_name )
+            if not ch :
+                continue
+            te =discord .Embed (
+            description =f"✅ Тест: логи в этот канал работают · #{ch_name}",
+            color =0xC8922A )
+            if await _safe_send (ch ,embed =te ):
+                delivery_ok .append (ch_name )
+            else :
+                delivery_fail .append (ch_name )
+
         # 5) Отчёт
         result_lines =[]
         if created :
@@ -336,6 +401,16 @@ class Logs (commands .Cog ):
         value ="Мод-панель, варны, тикеты и AI-модерация автоматически находят эти каналы — ничего больше настраивать не нужно.",
         inline =False
         )
+        if delivery_ok :
+            _dv ="Тестовые сообщения отправлены в: "+" ".join (f"`{c}`"for c in delivery_ok )
+            if delivery_fail :
+                _dv +="\n\n⚠️ **Не удалось отправить в:** "+" ".join (f"`{c}`"for c in delivery_fail )
+                _dv +="\nПроверьте права бота (Administrator или доступ к категории « Логи»)."
+            e .add_field (
+            name =f" Проверка доставки: {len(delivery_ok)}/{len(delivery_ok)+len(delivery_fail)}",
+            value =_dv ,
+            inline =False
+            )
         e .set_footer (text =f"Aether • {guild.name}",icon_url =guild .icon .url if guild .icon else None )
         await interaction .followup .send (embed =e ,ephemeral =True )
 
@@ -428,7 +503,7 @@ class Logs (commands .Cog ):
         else :
             e .set_footer (text =footer_text )
 
-        await ch .send (embed =e )
+        await _safe_send (ch ,embed =e )
 
     @commands .Cog .listener ()
     async def on_member_remove (self ,member ):
@@ -500,7 +575,7 @@ class Logs (commands .Cog ):
         else :
             e .set_footer (text =footer_text )
 
-        await ch .send (embed =e )
+        await _safe_send (ch ,embed =e )
 
     @commands .Cog .listener ()
     async def on_member_ban (self ,guild ,user ):
@@ -540,7 +615,7 @@ class Logs (commands .Cog ):
                         desc +=f"Удалены: {', '.join(r.mention for r in removed)}"
                     e .description =desc 
                     e .set_footer (text =f"{before.guild.name}")
-                    await ch .send (embed =e )
+                    await _safe_send (ch ,embed =e )
 
                     # Mute
         before_to =getattr (before ,'timed_out_until',None )
@@ -604,7 +679,7 @@ class Logs (commands .Cog ):
                 f"Стало: `{after.nick or after.name}`"
                 )
                 e .set_footer (text =f"{before.guild.name}")
-                await ch .send (embed =e )
+                await _safe_send (ch ,embed =e )
 
                 # СООБЩЕНИЯ 
 
@@ -691,7 +766,7 @@ class Logs (commands .Cog ):
         )
         e .set_footer (text =f"{message.guild.name}")
         try :
-            await ch .send (embed =e )
+            await _safe_send (ch ,embed =e )
         except Exception as _se :
             log .info (f'[LOGS] Не удалось отправить лог удаления: {_se}')
 
@@ -750,7 +825,7 @@ class Logs (commands .Cog ):
         f"**Стало:**\n> {after.content[:400] or '[Пусто]'}"
         )
         e .set_footer (text =f"{before.guild.name}")
-        await ch .send (embed =e )
+        await _safe_send (ch ,embed =e )
 
         # SES КАНАЛЫ 
 
@@ -793,7 +868,7 @@ class Logs (commands .Cog ):
         f"{line}"
         )
         e .set_footer (text =f"{member.guild.name}")
-        await ch .send (embed =e )
+        await _safe_send (ch ,embed =e )
 
         # КАНАЛЫ 
 
@@ -814,7 +889,7 @@ class Logs (commands .Cog ):
         f"Тип: {str(channel.type)}"
         )
         e .set_footer (text =f"{channel.guild.name}")
-        await ch .send (embed =e )
+        await _safe_send (ch ,embed =e )
 
     @commands .Cog .listener ()
     async def on_guild_channel_delete (self ,channel ):
@@ -852,7 +927,7 @@ class Logs (commands .Cog ):
                     "Дайте боту это право в настройках сервера."
                     )
                     e .set_footer (text =f"{guild.name}")
-                    await ch .send (embed =e )
+                    await _safe_send (ch ,embed =e )
                 return
             # Retry-цикл: audit log может прийти с задержкой
             for attempt in range (6 ):
@@ -905,7 +980,7 @@ class Logs (commands .Cog ):
         if extra_warning :
             e .description +=f"\n\n{extra_warning}"
         e .set_footer (text =f"{channel.guild.name}")
-        await ch .send (embed =e )
+        await _safe_send (ch ,embed =e )
 
     @commands .Cog .listener ()
     async def on_guild_channel_update (self ,before ,after ):
@@ -1106,6 +1181,16 @@ class Logs (commands .Cog ):
         import asyncio 
         await asyncio .sleep (5 )
         asyncio .get_event_loop ().create_task (self ._audit_sync_loop ())
+        # Тихий саморемонт: если категория логов осталась от старого кода без
+        # доступа для бота — восстанавливаем права (частая причина «логи не идут»)
+        for _g in self .bot .guilds :
+            try :
+                _cat ,_ow =ensure_log_permissions (_g )
+                if _ow :
+                    await _cat .edit (overwrites =_ow ,reason ="Aether: автопочинка прав на логи")
+                    log .info (f'[LOGS] Права категории логов восстановлены: {_g.name}')
+            except Exception as _he :
+                log .info (f'[LOGS] self-heal ({getattr (_g ,"name","?")}): {_he}')
 
     async def _audit_sync_loop (self ):
         import asyncio 
