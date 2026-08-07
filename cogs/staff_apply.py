@@ -204,6 +204,7 @@ class StaffApplyModal(discord.ui.Modal, title="Заявка в команду"):
         # Сохраняем заявку
         apps = load_apps()
         user_id = str(interaction.user.id)
+        submitted_ts = datetime.now(timezone.utc).isoformat()
         apps[user_id] = {
             "user_id": user_id,
             "username": str(interaction.user),
@@ -215,17 +216,19 @@ class StaffApplyModal(discord.ui.Modal, title="Заявка в команду"):
             "reason": str(self.reason),
             "activity": str(self.activity),
             "status": "pending",
-            "submitted_at": datetime.now(timezone.utc).isoformat(),
+            "submitted_at": submitted_ts,
+            "timestamp": submitted_ts,
+            "message_id": None,
             "guild_id": interaction.guild.id if interaction.guild else None,
         }
-        save_apps(apps)
 
         # Подтверждение пользователю
         embed = discord.Embed(
             title="Заявка отправлена",
             description=(
                 f"Ваша заявка на роль **{self.role_name}** успешно отправлена.\n"
-                "Ожидайте рассмотрения администрацией."
+                "Ожидайте рассмотрения администрацией.\n"
+                "Статус можно проверить командой `/my-application`."
             ),
             color=discord.Color.dark_grey(),
             timestamp=datetime.now()
@@ -254,8 +257,12 @@ class StaffApplyModal(discord.ui.Modal, title="Заявка в команду"):
                 )
                 notify.add_field(name="Опыт", value=str(self.experience)[:500], inline=False)
                 notify.add_field(name="Причина", value=str(self.reason)[:500], inline=False)
-                await ch.send(embed=notify)
+                notify.set_footer(text=f"ID заявителя: {user_id}")
+                msg = await ch.send(embed=notify, view=StaffReviewView())
+                apps[user_id]["message_id"] = str(msg.id)
+                save_apps(apps)
 
+        save_apps(apps)
         log.info(f"Заявка от {interaction.user} на роль {self.role_name}")
 
 
@@ -292,6 +299,103 @@ class RoleSelect(discord.ui.Select):
         role_name = self.values[0]
         modal = StaffApplyModal(role_name=role_name)
         await interaction.response.send_modal(modal)
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Кнопки рассмотрения заявки (persistent) — Одобрить / Отклонить
+# ═══════════════════════════════════════════════════════════════════
+
+class StaffReviewView(discord.ui.View):
+    """Кнопки под сообщением заявки: решение модератора + DM заявителю."""
+
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @staticmethod
+    def _find_app_by_message(message_id):
+        apps = load_apps()
+        for key, app in apps.items():
+            if str(app.get("message_id") or "") == str(message_id):
+                return key, app, apps
+        return None, None, apps
+
+    async def _review(self, interaction: discord.Interaction, action: str):
+        if not (interaction.user.guild_permissions.manage_guild
+                or interaction.user.guild_permissions.administrator):
+            return await interaction.response.send_message(
+                "Рассматривать заявки может только администрация.", ephemeral=True)
+        await interaction.response.defer(ephemeral=True)
+
+        key, app, apps = self._find_app_by_message(interaction.message.id)
+        if not app:
+            return await interaction.followup.send(
+                "Заявка не найдена (возможно, данные удалены).", ephemeral=True)
+        if app.get("status") != "pending":
+            label = {"approved": "одобрена", "rejected": "отклонена"}.get(
+                app.get("status"), app.get("status", "?"))
+            return await interaction.followup.send(
+                f"Эта заявка уже {label}.", ephemeral=True)
+
+        app["status"] = "approved" if action == "approve" else "rejected"
+        app["reviewed_by"] = str(interaction.user)
+        if not app.get("timestamp"):
+            app["timestamp"] = app.get("submitted_at")
+        save_apps(apps)
+
+        # DM заявителю — именно этого уведомления не хватало
+        dm_ok = False
+        try:
+            user = await interaction.client.fetch_user(int(app["user_id"]))
+            if action == "approve":
+                emb = discord.Embed(
+                    title=" Заявка одобрена!",
+                    description=("Поздравляем! Ваша заявка в команду сервера **одобрена**.\n"
+                                 "Администрация свяжется с вами в ближайшее время."),
+                    color=0x2ECC71)
+            else:
+                emb = discord.Embed(
+                    title=" Заявка отклонена",
+                    description=("К сожалению, ваша заявка в команду сервера на этот раз "
+                                 "**отклонена**.\nВы можете подать её снова позже."),
+                    color=0xE74C3C)
+            emb.add_field(name=" Должность", value=app.get("role", "—"), inline=True)
+            emb.add_field(name=" Рассмотрел", value=interaction.user.display_name, inline=True)
+            emb.set_footer(text="Статус всегда можно проверить: /my-application")
+            emb.timestamp = datetime.now(timezone.utc)
+            await user.send(embed=emb)
+            dm_ok = True
+        except Exception as e:
+            log.info(f"[STAFF] DM заявителю не доставлен: {e}")
+
+        # Снять кнопки и отметить решение на исходном сообщении
+        try:
+            src = interaction.message
+            if src and src.embeds:
+                e0 = discord.Embed.from_dict(src.embeds[0].to_dict())
+                e0.color = 0x2ECC71 if action == "approve" else 0xE74C3C
+                e0.add_field(
+                    name=" Решение: одобрена" if action == "approve" else " Решение: отклонена",
+                    value=f"Модератор: {interaction.user.display_name}",
+                    inline=False)
+                await src.edit(embed=e0, view=None)
+        except Exception:
+            pass
+
+        verdict = "одобрена" if action == "approve" else "отклонена"
+        await interaction.followup.send(
+            f"Заявка **{verdict}**. Уведомление пользователю: "
+            f"{'отправлено в ЛС' if dm_ok else 'НЕ доставлено (у пользователя закрыты ЛС)'}",
+            ephemeral=True)
+
+    @discord.ui.button(label="Одобрить", style=discord.ButtonStyle.success,
+                       custom_id="staff_review_approve_v1")
+    async def approve_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self._review(interaction, "approve")
+
+    @discord.ui.button(label="Отклонить", style=discord.ButtonStyle.danger,
+                       custom_id="staff_review_reject_v1")
+    async def reject_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self._review(interaction, "reject")
 
 
 class StaffApplyView(discord.ui.View):
@@ -370,10 +474,45 @@ class StaffApply(commands.Cog):
         await interaction.channel.send(file=file, view=view)
         await interaction.followup.send("✅ Панель STAFF HAKUMO успешно создана!", ephemeral=True)
 
+    @app_commands.command(name="my-application", description="Проверить статус моей заявки в персонал")
+    async def my_application(self, interaction: discord.Interaction):
+        """Пользователь видит, где его заявка: на рассмотрении / одобрена / отклонена."""
+        apps = load_apps()
+        uid = str(interaction.user.id)
+        mine = [a for a in apps.values() if str(a.get("user_id")) == uid]
+        if not mine:
+            return await interaction.response.send_message(
+                "У вас пока нет заявок. Подать можно через панель набора в команду сервера.",
+                ephemeral=True)
+        mine.sort(key=lambda a: a.get("timestamp") or a.get("submitted_at") or "", reverse=True)
+        a = mine[0]
+        status_map = {"pending": " На рассмотрении",
+                      "approved": " Одобрена",
+                      "rejected": " Отклонена"}
+        st = status_map.get(a.get("status"), a.get("status", "?"))
+        color = {"pending": 0xC8922A, "approved": 0x2ECC71, "rejected": 0xE74C3C}.get(
+            a.get("status"), 0xC8922A)
+        e = discord.Embed(title=" Моя заявка в команду", color=color,
+                          timestamp=datetime.now(timezone.utc))
+        total = len(mine)
+        desc = (f"Статус: **{st}**\n"
+                f"Должность: **{a.get('role', '—')}**\n"
+                f"Подана: {(a.get('timestamp') or a.get('submitted_at') or '?')[:10]}\n")
+        if total > 1:
+            desc += f"Всего заявок: {total} (показана последняя)\n"
+        if a.get("reviewed_by"):
+            desc += f"Рассмотрел: **{a['reviewed_by']}**\n"
+        if a.get("review_note"):
+            desc += f"Комментарий: {a['review_note']}\n"
+        e.description = desc
+        e.set_footer(text="Решение также приходит в личные сообщения")
+        await interaction.response.send_message(embed=e, ephemeral=True)
+
     @commands.Cog.listener()
     async def on_ready(self):
-        # Регистрируем persistent view
+        # Регистрируем persistent views
         self.bot.add_view(StaffApplyView())
+        self.bot.add_view(StaffReviewView())
 
 
 async def setup(bot):

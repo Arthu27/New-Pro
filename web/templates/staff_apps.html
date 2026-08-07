@@ -192,6 +192,8 @@
           showToast('Ошибка при сохранении: ' + res.error, false);
         } else {
           var okMsg = action === 'approve' ? 'Заявка кандидата одобрена!' : 'Заявка кандидата отклонена!';
+          if (res.dm_sent === true) okMsg += ' Уведомление отправлено пользователю в ЛС.';
+          else if (res.dm_sent === false) okMsg += ' ⚠️ ЛС не доставлено — у пользователя закрыты личные сообщения.';
           if (res.role_assigned) okMsg += ' Роль выдана: ' + res.role_assigned;
           else if (res.role_note === 'no_mapped_role') okMsg += ' (Роль не выдана — настройте маппинг ролей в "Доступе к панели")';
           showToast(okMsg);

@@ -1857,6 +1857,7 @@ def api_review_staff_app (app_id ):
 
         # При одобрении выдать Discord-роль + отправить DM
     role_info ={'assigned':None ,'error':None }
+    dm_info ={'sent':None }
     if bot_instance :
         app_data =data [app_id ]
         async def send_dm ():
@@ -1895,7 +1896,7 @@ def api_review_staff_app (app_id ):
                     if role_info ['assigned']:
                         embed .add_field (name =" Выдана роль",value =role_info ['assigned'],inline =True )
                     if note :
-                        embed .add_field (name =" Not",value =note ,inline =False )
+                        embed .add_field (name =" Заметка",value =note ,inline =False )
                     embed .set_thumbnail (url =bot_instance .user .display_avatar .url )
                     embed .set_footer (text ="Aether Panel • Система заявок",icon_url =bot_instance .user .display_avatar .url )
                     embed .timestamp =datetime .utcnow ()
@@ -1907,19 +1908,43 @@ def api_review_staff_app (app_id ):
                     )
                     embed .add_field (name =" Рассмотрел",value =session .get ('username','?'),inline =True )
                     embed .add_field (name =" Заявка ID",value =f"`{app_id}`",inline =True )
-                    embed .add_field (name =" Red Причина",value =note if note else "Не belirtildi",inline =False )
+                    embed .add_field (name =" Причина отказа",value =note if note else "Не указана",inline =False )
                     embed .set_thumbnail (url =bot_instance .user .display_avatar .url )
                     embed .set_footer (text ="Aether Panel • Система заявок",icon_url =bot_instance .user .display_avatar .url )
                     embed .timestamp =datetime .utcnow ()
                 await user .send (embed =embed )
+                dm_info ['sent']=True
             except Exception as e :
-                print (f"DM отправл: {e}")
+                dm_info ['sent']=False
+                print (f"DM отправка: {e}")
+            # Отметить решение на сообщении заявки в Discord (снять кнопки)
+            try :
+                mid =app_data .get ('message_id')
+                if mid :
+                    from cogs .staff_apply import APPLY_CHANNEL_ID as _APPLY_CH
+                    _gid =str (app_data .get ('guild_id')or MAIN_GUILD_ID or '')
+                    _g2 =bot_instance .get_guild (int (_gid ))if _gid .isdigit ()else (bot_instance .guilds [0 ]if bot_instance .guilds else None )
+                    _ch2 =_g2 .get_channel (_APPLY_CH )if _g2 else None
+                    if _ch2 :
+                        _msg =await _ch2 .fetch_message (int (mid ))
+                        if _msg and _msg .embeds :
+                            _e2 =discord .Embed .from_dict (_msg .embeds [0 ].to_dict ())
+                            _e2 .color =0x2ECC71 if action =='approve' else 0xE74C3C
+                            _e2 .add_field (
+                            name =' Решение: одобрена' if action =='approve' else ' Решение: отклонена',
+                            value =f"Модератор: {session.get('username', '?')}",
+                            inline =False )
+                            await _msg .edit (embed =_e2 ,view =None)
+            except Exception as _ee :
+                print (f"Отметка решения в Discord: {_ee}")
         try :
             asyncio .run_coroutine_threadsafe (send_dm (),bot_instance .loop ).result (timeout =15 )
         except Exception :
             pass
 
     resp ={'success':True }
+    if dm_info ['sent'] is not None :
+        resp ['dm_sent']=dm_info ['sent']
     if action =='approve':
         resp ['role_assigned']=role_info ['assigned']
         if role_info ['error']=='not_mapped':
@@ -2140,15 +2165,15 @@ def api_public_apply ():
                 if not channel :
                     return 
                 embed =discord .Embed (
-                title =" НОВЫЙ АДМИНИСТРАТОР ЗАЯВКА • Web",
-                color =0xDC143C ,
+                title =" НОВАЯ ЗАЯВКА В ПЕРСОНАЛ • Web",
+                color =0xC8922A ,
                 timestamp =datetime .utcnow ()
                 )
                 embed .add_field (name =" Пользователь",value =f"`{data['discord_name']}` (ID: `{uid}`)",inline =True )
                 embed .add_field (name =" Возраст",value =data ['yas'],inline =True )
-                embed .add_field (name ="⏰ Активен",value =data ['активен'],inline =True )
+                embed .add_field (name =" Активность",value =data ['активен'],inline =True )
                 embed .add_field (name =" Опыт",value =f"```{data['tecrube']}```",inline =False )
-                embed .add_field (name =" Почему Администратор?",value =f"```{data['почему']}```",inline =False )
+                embed .add_field (name =" Почему именно мы?",value =f"```{data['почему']}```",inline =False )
                 if data .get ('ekstra'):
                     embed .add_field (name =" Дополнительно",value =f"```{data['ekstra']}```",inline =False )
                 embed .set_footer (text =f"Заявка ID: {app_id} • {guild.name}")
@@ -2162,7 +2187,8 @@ def api_public_apply ():
         import asyncio 
         asyncio .run_coroutine_threadsafe (send_to_discord (),bot_instance .loop )
 
-    return jsonify ({'success':True ,'app_id':app_id })
+    return jsonify ({'success':True ,'app_id':app_id ,
+    'hint':'Решение придёт в личные сообщения бота. На сервере статус виден командой /my-application'})
 
 from web .routes_extra import register_extra_routes 
 register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD_ID )
