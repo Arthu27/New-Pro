@@ -50,11 +50,22 @@ class Moderation (commands .Cog ):
             return 0 
 
     async def send_log (self ,guild ,embed ):
-        ch =discord .utils .get (guild .text_channels ,name ="mod-log")
+        # Общий резолвер: -модерация → legacy (mod-log, moderasyon) → server-log …
+        ch =None
+        try :
+            from cogs .logs import find_log_channel
+            ch =find_log_channel (guild ,'модерация')
+        except Exception :
+            ch =None
+        if not ch :
+            ch =discord .utils .get (guild .text_channels ,name ="mod-log")
         if not ch :
             ch =discord .utils .get (guild .text_channels ,name ="moderasyon")
         if ch :
-            await ch .send (embed =embed )
+            try :
+                await ch .send (embed =embed )
+            except Exception :
+                pass
 
     async def _notify_owner (self ,action ,user ,mod ,reason =None ):
         owner_id =int (os .getenv ('OWNER_ID','0'))

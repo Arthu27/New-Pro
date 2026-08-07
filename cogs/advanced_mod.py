@@ -34,7 +34,14 @@ class AdvancedMod (commands .Cog ):
         self .data =loaded
 
     async def _mod_log_channel (self ,guild ):
-        """Найти канал модерации (mod-log или moderasyon)."""
+        """Найти канал модерации (общий резолвер → legacy)."""
+        try :
+            from cogs .logs import find_log_channel
+            ch =find_log_channel (guild ,'модерация')
+            if ch :
+                return ch
+        except Exception :
+            pass
         ch =discord .utils .get (guild .text_channels ,name ="mod-log")
         if not ch :
             ch =discord .utils .get (guild .text_channels ,name ="moderasyon")
