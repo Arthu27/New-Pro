@@ -189,7 +189,7 @@
 <div id="modal-edit" class="modal-overlay">
   <div class="modal-card">
     <div class="modal-head">
-      <h3><i class="fas fa-pen"></i>Редактировать канал</h3>
+      <h3><i class="fas fa-pen"></i>Редактировать&nbsp;<i class="fas" id="edit-title-icon" style="color:var(--text-3)"></i><span id="edit-title-name" style="color:var(--ac-2)"></span>&nbsp;<span id="edit-title-badge" class="ch-badge"></span></h3>
       <button class="modal-close" id="btnCloseEdit" type="button"><i class="fas fa-times"></i></button>
     </div>
 
@@ -230,7 +230,7 @@
     </div>
 
     <div class="modal-actions">
-      <button class="btn-confirm" id="btnSaveEdit" type="button">Сохранить</button>
+      <button class="btn-confirm" id="btnSaveEdit" type="button"><i class="fas fa-check"></i> Сохранить</button>
       <button class="btn-cancel" id="btnCancelEdit" type="button">Отмена</button>
     </div>
   </div>
@@ -368,6 +368,14 @@
 .type-opt.selected .type-opt-icon{color:var(--ac-2)}
 .type-opt-lbl{font-size:12.5px;font-weight:700;color:var(--text-2)}
 textarea.field-input{resize:vertical;min-height:52px}
+/* Модалки: не выше экрана, аккуратный скролл, плавное появление */
+#modal-create .modal-card,#modal-edit .modal-card{max-height:88vh;overflow-y:auto;overscroll-behavior:contain}
+#modal-create .modal-card::-webkit-scrollbar,#modal-edit .modal-card::-webkit-scrollbar{width:8px}
+#modal-create .modal-card::-webkit-scrollbar-thumb,#modal-edit .modal-card::-webkit-scrollbar-thumb{background:var(--line-2);border-radius:8px}
+#modal-create .modal-card::-webkit-scrollbar-thumb:hover,#modal-edit .modal-card::-webkit-scrollbar-thumb:hover{background:var(--ac-line)}
+.modal-overlay.open .modal-card{animation:modalPop .22s var(--ease)}
+@keyframes modalPop{from{opacity:0;transform:translateY(14px) scale(.985)}to{opacity:1;transform:none}}
+#btnSaveEdit:disabled{opacity:.7;cursor:wait}
 @media(max-width:600px){.form-row-2{grid-template-columns:1fr}.ch-search{min-width:0;width:100%}.ch-select{width:100%}}
 </style>
 
@@ -681,6 +689,13 @@ textarea.field-input{resize:vertical;min-height:52px}
     $('edit-bitrate').value = c.bitrate || 64;
     $('edit-user-limit').value = c.user_limit || 0;
     $('edit-nsfw').checked = !!c.nsfw;
+    $('edit-topic').value = c.topic || '';
+    // Шапка модалки: тип и текущее имя канала — сразу видно, что редактируем
+    var etm = typeMeta(channelType(c));
+    $('edit-title-icon').className = 'fas ' + etm.icon;
+    $('edit-title-name').textContent = c.name || '';
+    $('edit-title-badge').className = 'ch-badge ' + etm.badge;
+    $('edit-title-badge').textContent = etm.label;
     var t = channelType(c);
     var isVoice = t === 'voice' || t === 'stage';
     var isCat = t === 'category';
@@ -698,6 +713,10 @@ textarea.field-input{resize:vertical;min-height:52px}
 
   async function saveEdit() {
     if (!editingId) return;
+    var btn = $('btnSaveEdit');
+    if (btn.disabled) return;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Сохранение...';
     var ch = null;
     for (var i = 0; i < allChannels.length; i++) { if (allChannels[i].id === editingId) { ch = allChannels[i]; break; } }
     var t = ch ? channelType(ch) : 'text';
@@ -723,7 +742,17 @@ textarea.field-input{resize:vertical;min-height:52px}
       if (d.success) { closeEdit(); loadChannels(); showToast('Канал обновлён!', true); }
       else showToast('Ошибка: ' + (d.error || 'Неизвестно'), false);
     } catch (e) { showToast('Ошибка запроса: ' + e.message, false); }
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-check"></i> Сохранить';
   }
+
+  // Esc закрывает любую открытую модалку страницы
+  document.addEventListener('keydown', function (ev) {
+    if (ev.key === 'Escape') {
+      if ($('modal-edit').classList.contains('open')) closeEdit();
+      if ($('modal-create').classList.contains('open')) closeCreate();
+    }
+  });
 
   // ── Удаление (глобальный confirmAction) ──
   function doDelete(id) {

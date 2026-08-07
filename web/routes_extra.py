@@ -3208,20 +3208,20 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
             return jsonify ({'error':'Неверный ID сервера'}),400 
         guild =bot .get_guild (gid )if bot else None 
         if guild is None and bot is not None :
-        # Fallback: id'yi string olarak karшыlaшtыr
+        # Запасной вариант: сравнение ID строкой
             for g in bot .guilds :
                 if str (g .id )==str (guild_id ):
                     guild =g 
                     break 
         if guild is None :
-            return jsonify ({'error':f'Bot bu serverda bulunmuyor (id={guild_id}). Bot guilds: {[str(g.id) for g in bot.guilds]}'}),404 
-        def do ():
+            return jsonify ({'error':f'Бот не состоит на этом сервере (id={guild_id})'}),404 
+        async def do ():
             color_hex =(data .get ('color')or '#dc143c').lstrip ('#')or 'dc143c'
             try :
                 color =discord .Color (int (color_hex ,16 ))
             except ValueError :
                 color =discord .Color .default ()
-            _run_async (guild .create_role (name =name ,color =color ,reason ='Создано через панель Aether'))
+            await (guild .create_role (name =name ,color =color ,reason ='Создано через панель Aether'))
         try :
             asyncio .run_coroutine_threadsafe (do (),bot .loop ).result (timeout =10 )
             return jsonify ({'success':True })
@@ -3239,10 +3239,10 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio 
         if not bot :return jsonify ({'error':'Bot offline'})
-        def do ():
+        async def do ():
             guild =bot .get_guild (int (guild_id ))
             role =guild .get_role (int (role_id ))
-            if role :_run_async (role .delete ())
+            if role :await (role .delete ())
         asyncio .run_coroutine_threadsafe (do (),bot .loop ).result (timeout =10 )
         return jsonify ({'success':True })
 
@@ -3733,14 +3733,14 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         content =data .get ('content','').strip ()
         if not content :return jsonify ({'error':'Сообщение пусто'}),400 
 
-        def do ():
-            user =_run_async (bot .fetch_user (int (user_id )))
-            _run_async (user .send (content ))
+        async def do ():
+            user =await (bot .fetch_user (int (user_id )))
+            await (user .send (content ))
             return str (user )
 
         try :
             _asyncio .run_coroutine_threadsafe (do (),bot .loop ).result (timeout =10 )
-            # Loгa сохранить
+            # Сохранить в лог
             log =_load_dm_log ()
             if user_id not in log :log [user_id ]=[]
             log [user_id ].append ({
@@ -3762,12 +3762,12 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         import asyncio ,discord 
         if not bot :return jsonify ({'error':'Bot offline'})
         data =request .get_json (silent =True )or {}
-        def do ():
+        async def do ():
             guild =bot .get_guild (int (guild_id ))
             t =data .get ('type','text')
             name =str (data .get ('name','') or '').strip ()
             if not name :
-                raise ValueError ('Kanal adi bos olamaz')
+                raise ValueError ('Название канала обязательно')
             kwargs ={}
             cat_name =data .get ('category','')
             if cat_name :
@@ -3777,7 +3777,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                         cat =c 
                         break 
                 if cat is None :
-                    cat =_run_async (guild .create_category (cat_name ))
+                    cat =await (guild .create_category (cat_name ))
                 kwargs ['category']=cat 
             topic =data .get ('topic','')
             if topic :
@@ -3789,7 +3789,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
             if nsfw :
                 kwargs ['nsfw']=True 
             if t =='text':
-                _run_async (guild .create_text_channel (name ,**kwargs ))
+                await (guild .create_text_channel (name ,**kwargs ))
             elif t =='voice':
                 vkw =dict (kwargs )
                 bitrate =data .get ('bitrate',0 )
@@ -3798,9 +3798,9 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                 ulimit =data .get ('user_limit',0 )
                 if ulimit :
                     vkw ['user_limit']=int (ulimit )
-                _run_async (guild .create_voice_channel (name ,**vkw ))
+                await (guild .create_voice_channel (name ,**vkw ))
             elif t =='category':
-                _run_async (guild .create_category (name ))
+                await (guild .create_category (name ))
         try :
             asyncio .run_coroutine_threadsafe (do (),bot .loop ).result (timeout =10 )
             return jsonify ({'success':True })
@@ -3815,31 +3815,31 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         import asyncio ,discord 
         if not bot :return jsonify ({'error':'Bot offline'})
         data =request .get_json (silent =True )or {}
-        def do ():
+        async def do ():
             guild =bot .get_guild (int (guild_id ))
             ch =guild .get_channel (int (channel_id ))
             if not ch :
                 raise ValueError ('Канал не найден')
-            # Yeniden adlandir
+            # Переименование
             if 'name' in data and data ['name']:
-                _run_async (ch .edit (name =str (data ['name'])[:100 ]))
+                await (ch .edit (name =str (data ['name'])[:100 ]))
             # Тема / topic (текстовые каналы)
             if 'topic' in data :
-                _run_async (ch .edit (topic =str (data ['topic'] or '')[:1024 ]))
+                await (ch .edit (topic =str (data ['topic'] or '')[:1024 ]))
             # NSFW
             if 'nsfw' in data :
-                _run_async (ch .edit (nsfw =bool (data ['nsfw'])))
+                await (ch .edit (nsfw =bool (data ['nsfw'])))
             # Slowmode (текстовые каналы)
             if 'slowmode' in data :
-                _run_async (ch .edit (slowmode_delay =int (data ['slowmode'] or 0 )))
-            # Bitrate (ses kanallari)
+                await (ch .edit (slowmode_delay =int (data ['slowmode'] or 0 )))
+            # Битрейт (голосовые каналы)
             if 'bitrate' in data :
                 br =min (int (data ['bitrate'] or 0 )* 1000 ,guild .bitrate_limit )
-                _run_async (ch .edit (bitrate =br ))
-            # Kullanicilimit (ses kanallari)
+                await (ch .edit (bitrate =br ))
+            # Лимит участников (голосовые каналы)
             if 'user_limit' in data :
-                _run_async (ch .edit (user_limit =int (data ['user_limit'] or 0 )))
-            # Kategoriye tasi
+                await (ch .edit (user_limit =int (data ['user_limit'] or 0 )))
+            # Перенос в категорию
             if 'category' in data :
                 cat_name =data ['category']
                 if cat_name :
@@ -3849,13 +3849,13 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                             cat =c 
                             break 
                     if cat is None :
-                        cat =_run_async (guild .create_category (cat_name ))
-                    _run_async (ch .edit (category =cat ))
+                        cat =await (guild .create_category (cat_name ))
+                    await (ch .edit (category =cat ))
                 else :
-                    _run_async (ch .edit (category =None ))
-            # Konum (position)
+                    await (ch .edit (category =None ))
+            # Позиция
             if 'position' in data :
-                _run_async (ch .edit (position =int (data ['position'])))
+                await (ch .edit (position =int (data ['position'])))
         try :
             asyncio .run_coroutine_threadsafe (do (),bot .loop ).result (timeout =10 )
             return jsonify ({'success':True })
@@ -3870,9 +3870,9 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio 
         if not bot :return jsonify ({'error':'Bot offline'})
-        def do ():
+        async def do ():
             ch =bot .get_channel (int (channel_id ))
-            if ch :_run_async (ch .delete ())
+            if ch :await (ch .delete ())
         asyncio .run_coroutine_threadsafe (do (),bot .loop ).result (timeout =10 )
         return jsonify ({'success':True })
 
@@ -4331,10 +4331,10 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         if not bot :return jsonify ({'error':'Bot offline'})
         data =request .get_json (silent =True )or {}
         result ={'count':0 }
-        def do ():
+        async def do ():
             ch =bot .get_channel (int (data ['channel_id']))
             if ch :
-                deleted =_run_async (ch .purge (limit =int (data .get ('count',10 ))))
+                deleted =await (ch .purge (limit =int (data .get ('count',10 ))))
                 result ['count']=len (deleted )
         asyncio .run_coroutine_threadsafe (do (),bot .loop ).result (timeout =30 )
         return jsonify ({'success':True ,'count':result ['count']})
@@ -4348,15 +4348,15 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         if not bot :return jsonify ({'error':'Bot offline'})
         data =request .get_json (silent =True )or {}
         result ={'count':0 }
-        def do ():
+        async def do ():
             guild =bot .get_guild (int (guild_id ))
             target_role =guild .get_role (int (data ['target_role']))
             action_role =guild .get_role (int (data ['action_role']))
             if not target_role or not action_role :return 
             for member in target_role .members :
                 try :
-                    if data ['action']=='add':_run_async (member .add_roles (action_role ))
-                    else :_run_async (member .remove_roles (action_role ))
+                    if data ['action']=='add':await (member .add_roles (action_role ))
+                    else :await (member .remove_roles (action_role ))
                     result ['count']+=1 
                 except :pass 
         asyncio .run_coroutine_threadsafe (do (),bot .loop ).result (timeout =60 )
@@ -4371,7 +4371,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         if not bot :return jsonify ({'error':'Bot offline'})
         data =request .get_json (silent =True )or {}
         result ={'count':0 }
-        def do ():
+        async def do ():
             guild =bot .get_guild (int (guild_id ))
             role =guild .get_role (int (data ['role_id']))
             if not role :return 
@@ -4379,7 +4379,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
             embed .set_footer (text ="Aether Panel",icon_url =bot .user .display_avatar .url )
             for member in role .members :
                 try :
-                    _run_async (member .send (embed =embed ))
+                    await (member .send (embed =embed ))
                     result ['count']+=1 
                 except :pass 
         asyncio .run_coroutine_threadsafe (do (),bot .loop ).result (timeout =120 )
@@ -4395,14 +4395,14 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         if not bot :return jsonify ({'error':'Bot offline'})
         data =request .get_json (silent =True )or {}
         result ={'count':0 }
-        def do ():
+        async def do ():
             guild =bot .get_guild (int (guild_id ))
             role =guild .get_role (int (data ['role_id']))
             if not role :return 
             duration =int (data .get ('duration',60 ))
             for member in role .members :
                 try :
-                    _run_async (member .timeout (discord .utils .utcnow ()+timedelta (minutes =duration ),reason ='Bulk mute'))
+                    await (member .timeout (discord .utils .utcnow ()+timedelta (minutes =duration ),reason ='Bulk mute'))
                     result ['count']+=1 
                 except :pass 
         asyncio .run_coroutine_threadsafe (do (),bot .loop ).result (timeout =120 )
@@ -4417,13 +4417,13 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         if not bot :return jsonify ({'error':'Bot offline'})
         data =request .get_json (silent =True )or {}
         result ={'count':0 }
-        def do ():
+        async def do ():
             guild =bot .get_guild (int (guild_id ))
             role =guild .get_role (int (data ['role_id']))
             if not role :return 
             for member in role .members :
                 try :
-                    _run_async (member .kick (reason ='Bulk kick'))
+                    await (member .kick (reason ='Bulk kick'))
                     result ['count']+=1 
                 except :pass 
         asyncio .run_coroutine_threadsafe (do (),bot .loop ).result (timeout =120 )
@@ -4438,13 +4438,13 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         if not bot :return jsonify ({'error':'Bot offline'})
         data =request .get_json (silent =True )or {}
         result ={'count':0 }
-        def do ():
+        async def do ():
             guild =bot .get_guild (int (guild_id ))
             role =guild .get_role (int (data ['role_id']))
             if not role :return 
             for member in role .members :
                 try :
-                    _run_async (guild .ban (member ,reason ='Bulk ban'))
+                    await (guild .ban (member ,reason ='Bulk ban'))
                     result ['count']+=1 
                 except :pass 
         asyncio .run_coroutine_threadsafe (do (),bot .loop ).result (timeout =180 )
@@ -5900,11 +5900,11 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio 
         if not bot :return jsonify ({'error':'Bot offline'})
-        def do ():
+        async def do ():
             if f'cogs.{cog_name}'in bot .extensions :
-                _run_async (bot .reload_extension (f'cogs.{cog_name}'))
+                await (bot .reload_extension (f'cogs.{cog_name}'))
             else :
-                _run_async (bot .load_extension (f'cogs.{cog_name}'))
+                await (bot .load_extension (f'cogs.{cog_name}'))
         try :
             asyncio .run_coroutine_threadsafe (do (),bot .loop ).result (timeout =10 )
             return jsonify ({'success':True })
@@ -5920,8 +5920,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         if not bot :return jsonify ({'error':'Bot offline'})
         if cog_name =='cog_manager':
             return jsonify ({'error':'Bu cog удален!'})
-        def do ():
-            _run_async (bot .unload_extension (f'cogs.{cog_name}'))
+        async def do ():
+            await (bot .unload_extension (f'cogs.{cog_name}'))
         try :
             asyncio .run_coroutine_threadsafe (do (),bot .loop ).result (timeout =10 )
             return jsonify ({'success':True })
@@ -6021,13 +6021,13 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         with open (f ,'r',encoding ='utf-8')as fp :whs =json .load (fp )
         if wh_id not in whs :return jsonify ({'error':'Webhook не найдено'})
         wh_data =whs [wh_id ]
-        def do ():
+        async def do ():
             channel =bot .get_channel (int (wh_data ['channel_id']))
             if channel :
-                webhooks =_run_async (channel .webhooks ())
+                webhooks =await (channel .webhooks ())
                 wh =_discord .utils .get (webhooks ,id =int (wh_id ))
                 if wh :
-                    _run_async (wh .send (content =message ,username =username ))
+                    await (wh .send (content =message ,username =username ))
         try :
             asyncio .run_coroutine_threadsafe (do (),bot .loop ).result (timeout =10 )
             return jsonify ({'success':True })

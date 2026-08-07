@@ -425,7 +425,7 @@ def role_required (min_role ):
         @wraps (f )
         def decorated_function (*args ,**kwargs ):
             if 'role'not in session :
-                return jsonify ({'error':'Не автоматически'}),403 
+                return jsonify ({'error':'Не авторизован'}),403 
             if ROLES .get (session ['role'],-1 )<ROLES .get (min_role ,999 ):
                 return jsonify ({'error':'Нет доступа'}),403 
             return f (*args ,**kwargs )
