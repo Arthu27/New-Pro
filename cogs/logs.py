@@ -241,6 +241,21 @@ async def _safe_send (ch ,**kw ):
     Ошибка пишется в журнал, слушатель живёт дальше.
     """
     try :
+        _e =kw .get ('embed')
+        _m =getattr (_e ,'_aether_log_meta',None )if _e is not None else None 
+        if _m and 'file'not in kw and 'files'not in kw :
+            try :
+                from services .log_card import render_log_card 
+                import io as _io 
+                _png =render_log_card (_m ['cat'],_m ['title'],_m ['rows'],
+                color =_m ['color'],cat_name =_cat_meta (_m ['cat'])[2 ],
+                guild_name =_m ['guild'],
+                time_str =datetime .datetime .utcnow ().strftime ('%H:%M UTC'))
+                if _png :
+                    kw ['file']=discord .File (_io .BytesIO (_png ),filename ='aether_log_card.png')
+                    _e .set_image (url ='attachment://aether_log_card.png')
+            except Exception :
+                pass 
         await ch .send (**kw )
         return True
     except Exception as _e :
@@ -299,8 +314,13 @@ def _cat_meta(category):
     return ('🏠', 0xC8922A, 'Сервер')
 
 
+class _LogEmbed(discord.Embed):
+    # Embed с метаданными карточки лога (читает _safe_send).
+    pass
+
+
 def _styled_log_embed(guild, category, title, fields=(), color=None,
-                      thumbnail=None, image=None, note=None):
+                      thumbnail=None, image=None, note=None, card_rows=None):
     """Единый стиль лог-эмбеда: заголовок с иконкой категории, строки
     «Имя — значение», футер «Aether Log · Категория · Сервер» с иконкой сервера.
 
@@ -308,8 +328,8 @@ def _styled_log_embed(guild, category, title, fields=(), color=None,
     note: свободный текст после полей (предупреждения и т.п.).
     """
     icon, base_color, cat_name = _cat_meta(category)
-    e = discord.Embed(color=color if color is not None else base_color,
-                      timestamp=datetime.datetime.utcnow())
+    e = _LogEmbed(color=color if color is not None else base_color,
+                  timestamp=datetime.datetime.utcnow())
     desc = f"## {icon} {title}\n\n"
     for name, value in fields:
         if value in (None, ''):
@@ -332,6 +352,15 @@ def _styled_log_embed(guild, category, title, fields=(), color=None,
         e.set_thumbnail(url=thumbnail)
     if image:
         e.set_image(url=image)
+    # Метаданные для карточки лога (рисует services/log_card.py при отправке)
+    e._aether_log_meta = {
+        'cat': category,
+        'title': title,
+        'rows': [(n, v) for n, v in (card_rows if card_rows is not None else fields)
+                 if v not in (None, '')][:8],
+        'color': color if color is not None else base_color,
+        'guild': getattr(guild, 'name', ''),
+    }
     return e
 
 
@@ -1081,11 +1110,13 @@ class Logs (commands .Cog ):
             added =[r for r in after .roles if r not in before .roles ]
             removed =[r for r in before .roles if r not in after .roles ]
             if added or removed :
+                who =await _audit_actor (before .guild ,discord .AuditLogAction .member_role_update ,target_id =before .id ,window =20 ,retries =2 )
                 save_event (before .guild .id ,'role','Изменение ролей',{
                 'user_id':str (before .id ),
                 'user_name':str (before ),
                 'added_roles':[r .name for r in added ],
                 'removed_roles':[r .name for r in removed ],
+                'mod_name':_actor_line (who ),
                 })
                 ch =await self .get_log_channel (before .guild ,'role')
                 if ch :
@@ -1094,8 +1125,19 @@ class Logs (commands .Cog ):
                         _rf .append (('Добавлены',", ".join (r .mention for r in added )))
                     if removed :
                         _rf .append (('Сняты',", ".join (r .mention for r in removed )))
+                    _rf .append (('Модератор',_actor_line (who )))
+                    if who and who [2 ]:
+                        _rf .append (('Причина',who [2 ]))
+                    # Для картинки — читаемые имена ролей вместо сырых упоминаний
+                    _crf =[]
+                    for _n ,_v in _rf :
+                        if _n =='Добавлены':
+                            _v ='+ '+", ".join (r .name for r in added )
+                        elif _n =='Сняты':
+                            _v ='- '+", ".join (r .name for r in removed )
+                        _crf .append ((_n ,_v ))
                     e =_styled_log_embed (before .guild ,'role','Изменение ролей участника',
-                    fields =_rf ,thumbnail =str (before .display_avatar .url ))
+                    fields =_rf ,card_rows =_crf ,thumbnail =str (before .display_avatar .url ))
                     await _safe_send (ch ,embed =e )
 
                     # Mute
@@ -1305,10 +1347,7 @@ class Logs (commands .Cog ):
             ('Текст',f"> {content[:300] or '[Вложение]'}"),
             ],
             color =0x9B59B6 ,thumbnail =_th )
-            try:
-                await ch .send (embed =ge )
-            except Exception :
-                pass
+            await _safe_send (ch ,embed =ge )
             save_event (message .guild .id ,'message','Ghost Ping',{
             'author_id':str (author_id ),
             'author':author_name ,
