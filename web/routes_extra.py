@@ -2730,7 +2730,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
             if guild :
                 m =guild .get_member (int (user_id ))
                 if m :
-                    result .update ({'name':m .name ,'display_name':m .display_name ,'avatar':str (m .display_avatar .url ),'joined_at':m .joined_at .isoformat ()if m .joined_at else None ,'created_at':m .created_at .isoformat (),'role':[r .name for r in m .roles [1 :]]})
+                    result .update ({'name':m .name ,'display_name':m .display_name ,'avatar':str (m .display_avatar .url ),'joined_at':m .joined_at .isoformat ()if m .joined_at else None ,'created_at':m .created_at .isoformat (),'role':[r .name for r in m .roles [1 :]],'roles':[{'name':r .name ,'color':str (r .color )}for r in m .roles [1 :]]})
                     # Предупреждения
         wf ='data/warnings.json'
         if os .path .exists (wf ):
@@ -2744,6 +2744,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
             with open (mf ,encoding ='utf-8')as f :mdata =json .load (f )
             case =[c for c in mdata .get ('case',{}).get (guild_id ,[])if str (c .get ('user_id'))==str (user_id )]
             result ['case']=case 
+            result ['cases']=case 
             result ['case_count']=len (case )
         return jsonify (result )
 

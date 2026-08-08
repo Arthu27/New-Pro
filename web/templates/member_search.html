@@ -23,6 +23,16 @@
 .ms-key { color: #8a8374; }
 .ms-val.ok { color: var(--ok); font-weight: var(--fw-semibold); }
 .ms-val.danger { color: var(--err); font-weight: var(--fw-bold); }
+.ms-val { color: var(--text); font-weight: var(--fw-semibold); }
+.ms-val.id { font-family: 'JetBrains Mono',monospace; font-size: 11.5px; }
+.ms-head { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.ms-head img { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; border: 2px solid var(--ac-line); }
+.ms-head .nm { font-weight: 700; font-size: 15.5px; color: var(--text); }
+.ms-head .un { font-size: 12px; color: var(--text-3); font-family: 'JetBrains Mono',monospace; }
+.ms-meta { color: var(--text-3); font-size: 11.5px; }
+.ms-note { padding: 22px; text-align: center; color: var(--text-3); font-size: 13px; background: var(--surface); border: 1px dashed var(--line); border-radius: var(--r-md); }
+.ms-av-fb { display: flex; align-items: center; justify-content: center; background: var(--ac-soft); border-radius: 50%; color: var(--ac); flex-shrink: 0; }
+.ms-roles { display: flex; flex-wrap: wrap; gap: 2px; justify-content: flex-end; }
 .warn-item, .case-item { font-size: 12.5px; padding: 7px 0; border-bottom: 1px solid var(--line); }
 .warn-item:last-child, .case-item:last-child { border-bottom: none; }
 @media (max-width: 720px) { .ms-profile { grid-template-columns: 1fr; } }
@@ -54,26 +64,39 @@
 var GUILD_ID = '{{ guild_id }}';
 function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
+function roleChips(roles) {
+  roles = roles || [];
+  if (!roles.length) return '—';
+  return roles.map(function (r) {
+    var name = (typeof r === 'string') ? r : (r && r.name) || '';
+    var c = (typeof r === 'object' && r) ? String(r.color || '') : '';
+    if (c && c.charAt(0) !== '#') c = '#' + c;
+    if (!/^#[0-9a-fA-F]{6}$/.test(c) || c.toLowerCase() === '#000000') c = '';
+    var acc = c ? ' style="border-color:' + c + ';color:' + c + ';"' : '';
+    return '<span class="role-chip"' + acc + '>' + esc(name) + '</span>';
+  }).join('');
+}
+
 async function search() {
   var q = document.getElementById('ms-query').value.trim();
   if (!q) return;
-  document.getElementById('ms-results').innerHTML = '<div >Поиск...</div>';
+  document.getElementById('ms-results').innerHTML = '<div class="ms-note">Поиск...</div>';
   document.getElementById('ms-profile').style.display = 'none';
   try {
     var d = await fetch('/api/member-search/' + GUILD_ID + '?q=' + encodeURIComponent(q)).then(r => r.json());
     if (!d.length) {
-      document.getElementById('ms-results').innerHTML = '<div >Ничего не найдено</div>';
+      document.getElementById('ms-results').innerHTML = '<div class="ms-note">Ничего не найдено</div>';
       return;
     }
     document.getElementById('ms-results').innerHTML = d.map(function(m) {
-      return '<div class="ms-result-card" onclick="loadProfile(' + m.id + ')">' +
-        (m.avatar ? '<img src="' + esc(m.avatar) + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' : '<div   style="width: 32px; height: 32px;">👤</div>') +
+      return '<div class="ms-result-card" onclick="loadProfile(\'' + esc(m.id) + '\')">' +
+        (m.avatar ? '<img src="' + esc(m.avatar) + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' : '<div class="ms-av-fb" style="width:40px;height:40px;font-size:17px;">👤</div>') +
         '<div><div class="name">' + esc(m.display_name) + '</div>' +
         '<div class="id">' + esc(m.id) + '</div></div>' +
       '</div>';
     }).join('');
   } catch(e) {
-    document.getElementById('ms-results').innerHTML = '<div >Ошибка: ' + esc(e.message) + '</div>';
+    document.getElementById('ms-results').innerHTML = '<div class="ms-note">Ошибка: ' + esc(e.message) + '</div>';
   }
 }
 
@@ -85,19 +108,19 @@ async function loadProfile(userId) {
     el.style.display = 'grid';
 
     var warns = d.warnings || [];
-    var cases = d.cases || [];
+    var cases = d.cases || d.case || [];
 
     var leftHtml = '<div>' +
       '<div class="ms-card">' +
-        '<div  >' +
-          (d.avatar ? '<img src="' + esc(d.avatar) + '"   style="width: 64px; height: 64px;" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' : '<div   style="width: 64px; height: 64px;">👤</div>') +
-          '<div><div >' + esc(d.display_name||d.name||userId) + '</div>' +
-          '<div >@' + esc(d.name||userId) + '</div></div>' +
+        '<div class="ms-head">' +
+          (d.avatar ? '<img src="' + esc(d.avatar) + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' : '<div class="ms-av-fb" style="width:64px;height:64px;font-size:26px;">👤</div>') +
+          '<div><div class="nm">' + esc(d.display_name||d.name||userId) + '</div>' +
+          '<div class="un">@' + esc(d.name||userId) + '</div></div>' +
         '</div>' +
         '<div class="ms-row"><span class="ms-key">ID</span><span class="ms-val id">' + esc(d.id) + '</span></div>' +
         (d.joined_at ? '<div class="ms-row"><span class="ms-key">Дата входа</span><span class="ms-val">' + new Date(d.joined_at).toLocaleDateString('ru-RU') + '</span></div>' : '') +
         (d.created_at ? '<div class="ms-row"><span class="ms-key">Аккаунт создан</span><span class="ms-val">' + new Date(d.created_at).toLocaleDateString('ru-RU') + '</span></div>' : '') +
-        '<div class="ms-row"><span class="ms-key">Роли</span><span class="ms-val">' + esc((d.roles||[]).slice(0,4).join(', ') || '—') + '</span></div>' +
+        '<div class="ms-row"><span class="ms-key">Роли</span><span class="ms-val ms-roles">' + roleChips(d.roles) + '</span></div>' +
         '<div class="ms-row"><span class="ms-key">Предупреждения</span><span class="ms-val ' + (warns.length>0?'danger':'ok') + '">' + warns.length + '</span></div>' +
         '<div class="ms-row"><span class="ms-key">Записей модерации</span><span class="ms-val">' + cases.length + '</span></div>' +
       '</div>' +
@@ -106,21 +129,21 @@ async function loadProfile(userId) {
     var rightHtml = '<div>' +
       '<div class="ms-card">' +
         '<h2><i class="fas fa-exclamation-triangle"></i> Предупреждения (' + warns.length + ')</h2>' +
-        (warns.length ? warns.slice(-5).map(function(w){
-          return '<div class="warn-item"><div >#' + esc(w.id) + ' — ' + esc((w.timestamp||'').slice(0,10)) + '</div><div   style="margin-top: 3px;">' + esc(w.reason||'?') + '</div></div>';
+        (warns.length ? warns.slice(-5).map(function(w, wi){
+          return '<div class="warn-item"><div class="ms-meta">#' + esc(w.id == null ? wi + 1 : w.id) + ' — ' + esc((w.timestamp||'').slice(0,10)) + '</div><div style="margin-top: 3px;">' + esc(w.reason||'?') + '</div></div>';
         }).join('') : '<div >✓ Предупреждений нет</div>') +
       '</div>' +
       '<div class="ms-card">' +
         '<h2><i class="fas fa-clipboard-list"></i> История модерации (' + cases.length + ')</h2>' +
-        (cases.length ? cases.slice(-5).map(function(c){
-          return '<div class="case-item"><div >#' + esc(c.id) + ' ' + esc((c.action||'').toUpperCase()) + ' — ' + esc((c.timestamp||'').slice(0,10)) + '</div><div   style="margin-top: 3px;">' + esc(c.reason||'?') + '</div></div>';
+        (cases.length ? cases.slice(-5).map(function(c, ci){
+          return '<div class="case-item"><div class="ms-meta">#' + esc(c.id == null ? ci + 1 : c.id) + ' ' + esc((c.action||'').toUpperCase()) + ' — ' + esc((c.timestamp||'').slice(0,10)) + '</div><div style="margin-top: 3px;">' + esc(c.reason||'?') + '</div></div>';
         }).join('') : '<div >✓ Записей нет</div>') +
       '</div>' +
     '</div>';
 
     el.innerHTML = leftHtml + rightHtml;
   } catch(e) {
-    document.getElementById('ms-profile').innerHTML = '<div >Ошибка загрузки: ' + esc(e.message) + '</div>';
+    document.getElementById('ms-profile').innerHTML = '<div class="ms-note">Ошибка загрузки: ' + esc(e.message) + '</div>';
     document.getElementById('ms-profile').style.display = 'block';
   }
 }
