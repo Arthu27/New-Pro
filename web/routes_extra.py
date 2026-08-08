@@ -814,9 +814,12 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     @login_required 
     @role_required ('mod')
     def ai_tickets_page ():
-        """AI ticket konusmalarini показать"""
-        guild_id =session .get ('guild_id',MAIN_GUILD_ID )
-        tickets_data =_load_ai_tickets (int (guild_id ))
+        """Показать диалоги AI-тикетов"""
+        try :
+            guild_id =int (session .get ('guild_id',MAIN_GUILD_ID )or 0 )
+        except (TypeError ,ValueError ):
+            guild_id =0 
+        tickets_data =_load_ai_tickets (guild_id )if guild_id else {}
 
         # Bot instance'dan channel информация al
         import web .app as _app ;bot =_app .bot_instance 
@@ -1021,7 +1024,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         with open (members_file ,'r',encoding ='utf-8')as f :
             members =_json .load (f )
 
-            # discord_id с bul, yoksa display_name с dene
+            # ищем по discord_id, если нет — пробуем по display_name
         member_key =None 
         if discord_id and discord_id in members :
             member_key =discord_id 
@@ -1168,7 +1171,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                         continue 
                         # Роли
                     member_roles =[r .name for r in member .roles if r .name !='@everyone']
-                    # Warninglar
+                    # Предупреждения
                     warn_count =0 
                     warns_file ='data/warnings.json'
                     warn_list =[]
@@ -1179,7 +1182,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                             warn_list =wd .get (str (g .id ),{}).get (uid_str ,[])
                             warn_count =len (warn_list )
                         except :pass 
-                        # Mod история — hem mod_data.json hem discord_audit_cache'den
+                        # История модерации — из mod_data.json и кэша аудита Discord
                     mod_history =[]
                     mod_file ='data/mod_data.json'
                     if os .path .exists (mod_file ):
@@ -1194,7 +1197,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                                     f"Mod: {c.get('mod_id','?')} — {c.get('reason','?')}"
                                     )
                         except :pass 
-                        # Discord audit cache'den de тянуть
+                        # Также подтягиваем из кэша аудита Discord
                     cache_f ='data/discord_audit_cache.json'
                     if os .path .exists (cache_f ):
                         try :
@@ -1206,10 +1209,10 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                                         ts =ev .get ('timestamp','')[:16 ].replace ('T',' ')
                                         mod_history .append (
                                         f"{ts} {ev.get('action','?')} — "
-                                        f"Mod: {ev.get('mod_name','?')} — {ev.get('reason','') or 'Причина yok'}"
+                                        f"Mod: {ev.get('mod_name','?')} — {ev.get('reason','') or 'Причины нет'}"
                                         )
                         except :pass 
-                        # Роли история — audit cache'den кто роли verdi/aldы
+                        # История ролей — из кэша аудита: кто выдал/снял ролей
                     role_gecmisi =[]
                     if os .path .exists (cache_f ):
                         try :
@@ -1224,7 +1227,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                                         )
                         except :pass 
                     role_gecmisi .sort ()
-                    # Davet eden
+                    # Кто пригласил
                     inviter ='?'
                     invite_file =f'data/invite_joins_{g.id}.json'
                     if os .path .exists (invite_file ):
@@ -1233,31 +1236,31 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                                 inv =json .load (fp )
                             inviter =inv .get (uid_str ,{}).get ('inviter_name','?')
                         except :pass 
-                        # Katыlma дата
+                        # Дата присоединения
                     joined =member .joined_at .strftime ('%d.%m.%Y %H:%M')if member .joined_at else '?'
                     created =member .created_at .strftime ('%d.%m.%Y')if member .created_at else '?'
-                    # Mute statusu
-                    timed_out ='Evet'if member .is_timed_out ()else 'Нет'
+                    # Статус мута
+                    timed_out ='Да'if member .is_timed_out ()else 'Нет'
 
                     user_info_block +=(
-                    f"\n=== ПОЛЬЗОВАТЕЛЬ ИНФОРМАЦИЯ: {member.display_name} (ID: {uid_str}) ===\n"
+                    f"\n=== ИНФОРМАЦИЯ О ПОЛЬЗОВАТЕЛЕ: {member.display_name} (ID: {uid_str}) ===\n"
                     f"  Сервер: {g.name}\n"
                     f"  Имя пользователя: {member.name}\n"
                     f"  Состояние: {str(member.status)}\n"
-                    f"  Mute: {timed_out}\n"
+                    f"  Мут: {timed_out}\n"
                     f"  Вступил: {joined}\n"
                     f"  Аккаунт создан: {created}\n"
                     f"  Роли: {', '.join(member_roles) or 'Нет'}\n"
-                    f"  Warning количество: {warn_count}\n"
-                    f"  Warninglar: {'; '.join([w.get('reason','?') for w in warn_list[-5:]]) or 'Нет'}\n"
-                    f"  Mod история ({len(mod_history)} запись):\n"
+                    f"  Предупреждений: {warn_count}\n"
+                    f"  Предупреждения: {'; '.join([w.get('reason','?') for w in warn_list[-5:]]) or 'Нет'}\n"
+                    f"  История модерации ({len(mod_history)} записей):\n"
                     )
-                    user_info_block +=('\n'.join (f'    {h}'for h in mod_history )if mod_history else '    Temiz')+'\n'
-                    user_info_block +=(f"  Роли история ({len(role_gecmisi)} запись):\n"+'\n'.join (f'    {r}'for r in role_gecmisi )+'\n')if role_gecmisi else '  Роли история: Запись нет\n'
-                    user_info_block +=f"  Davet eden: {inviter}\n"
+                    user_info_block +=('\n'.join (f'    {h}'for h in mod_history )if mod_history else '    чисто')+'\n'
+                    user_info_block +=(f"  История ролей ({len(role_gecmisi)} записей):\n"+'\n'.join (f'    {r}'for r in role_gecmisi )+'\n')if role_gecmisi else '  История ролей: записей нет\n'
+                    user_info_block +=f"  Пригласил: {inviter}\n"
                     break 
 
-                    # ── КАНАЛ СООБЩЕНИЕ ИСТОРИЯ (soruda channel имя geчiyorsa) ────────────────
+                    # ── ИСТОРИЯ СООБЩЕНИЙ КАНАЛА (если в вопросе упоминается канал) ──────
         channel_messages_block =''
         import re as _re3 
         channel_mentions =_re3 .findall (r'#([\w\-]+)',question )
@@ -1286,7 +1289,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                         )
             except :pass 
 
-            # Mod статистика — cache'den oku (bot 30sn'de bir обновл)
+            # Статистика модерации — читаем из кэша (бот обновляет каждые 30 сек)
         mod_stats =''
         today =_dt .datetime .utcnow ().date ()
         yesterday =today -_dt .timedelta (days =1 )
@@ -1738,7 +1741,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         if action_match and bot and user_role =='owner':
             parts =action_match .group (1 ).split (':')
             tip =parts [0 ]if parts else ''
-            # "channel_id=123" или "user_id=123" gibi prefix'leri clear
+            # убираем префиксы вида "channel_id=123" или "user_id=123"
             import re as _re3 
             clean_parts =[parts [0 ]]
             for p in parts [1 :]:
@@ -2728,14 +2731,14 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                 m =guild .get_member (int (user_id ))
                 if m :
                     result .update ({'name':m .name ,'display_name':m .display_name ,'avatar':str (m .display_avatar .url ),'joined_at':m .joined_at .isoformat ()if m .joined_at else None ,'created_at':m .created_at .isoformat (),'role':[r .name for r in m .roles [1 :]]})
-                    # Warninglar
+                    # Предупреждения
         wf ='data/warnings.json'
         if os .path .exists (wf ):
             with open (wf ,encoding ='utf-8')as f :wdata =json .load (f )
             warns =wdata .get (guild_id ,{}).get (user_id ,[])
             result ['warnings']=warns 
             result ['warn_count']=len (warns )
-            # Mod история
+            # История модерации
         mf ='data/mod_data.json'
         if os .path .exists (mf ):
             with open (mf ,encoding ='utf-8')as f :mdata =json .load (f )
@@ -2750,7 +2753,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         import web .app as _app ;bot =_app .bot_instance 
         username =session .get ('username')
         result ={'username':username ,'display_name':username }
-        # Участник verisi
+        # Данные участника
         mf ='data/members.json'
         if os .path .exists (mf ):
             with open (mf ,encoding ='utf-8')as f :members =json .load (f )
@@ -2760,7 +2763,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                     result ['avatar']=m .get ('avatar')
                     result ['display_name']=m .get ('display_name',username )
                     break 
-                    # Warninglar (все сервер)
+                    # Предупреждения (все серверы)
         wf ='data/warnings.json'
         all_warns =[]
         if os .path .exists (wf )and result .get ('discord_id'):
@@ -2768,7 +2771,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
             for gid ,users in wdata .items ():
                 all_warns .extend (users .get (result ['discord_id'],[]))
         result ['warnings']=all_warns 
-        # Bakiye (ilk сервер)
+        # Баланс (первый сервер)
         if bot and result .get ('discord_id'):
             for guild in bot .guilds :
                 bf =f'data/balance_{guild.id}.json'
@@ -2776,7 +2779,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                     with open (bf ,encoding ='utf-8')as f :bdata =json .load (f )
                     result ['balance']=bdata .get (result ['discord_id'],{}).get ('balance',0 )
                     break 
-                    # Ses длительность
+                    # Время в голосовых каналах
         if bot and result .get ('discord_id'):
             for guild in bot .guilds :
                 vf =f'data/voice_stats_{guild.id}.json'
@@ -2784,7 +2787,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                     with open (vf ,encoding ='utf-8')as f :vdata =json .load (f )
                     result ['voice_seconds']=vdata .get ('users',{}).get (result ['discord_id'],{}).get ('total_seconds',0 )
                     break 
-                    # Davet количество
+                    # Количество приглашений
         if bot and result .get ('discord_id'):
             for guild in bot .guilds :
                 inf =f'data/invite_counts_{guild.id}.json'
@@ -3157,7 +3160,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                             'source':'bot',
                             })
             except Exception as _e :
-                print (f'[MOD-HISTORY] Warnings Ошибки: {_e}')
+                print (f'[MOD-HISTORY] Ошибка чтения предупреждений: {_e}')
 
         all_events .sort (key =lambda x :x .get ('created_at',''),reverse =True )
         return jsonify (all_events [:500 ])
@@ -3165,16 +3168,22 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     @app .route ('/api/roles')
     @login_required 
     def api_roles_default ():
+        if not MAIN_GUILD_ID :
+            return jsonify ({'error':'Сервер не выбран (задайте MAIN_GUILD_ID в .env)'}),503 
         return api_guild_roles (str (MAIN_GUILD_ID ))
 
     @app .route ('/api/channels')
     @login_required 
     def api_channels_default ():
+        if not MAIN_GUILD_ID :
+            return jsonify ({'error':'Сервер не выбран (задайте MAIN_GUILD_ID в .env)'}),503 
         return api_guild_channels (str (MAIN_GUILD_ID ))
 
     @app .route ('/api/members')
     @login_required 
     def api_members_default ():
+        if not MAIN_GUILD_ID :
+            return jsonify ({'error':'Сервер не выбран (задайте MAIN_GUILD_ID в .env)'}),503 
         from web .app import api_guild_members 
         return api_guild_members (str (MAIN_GUILD_ID ))
 
@@ -4165,7 +4174,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
             if ch :
                 desc ='\n'.join ([f"{o['emoji']} **{o['text']}**"for o in data ['options']])
                 embed =discord .Embed (title =f"📊 {data['question']}",description =desc ,color =0xdc143c )
-                embed .set_footer (text =f"Anket ID: {poll_id}")
+                embed .set_footer (text =f"ID опроса: {poll_id}")
                 msg =_run_async (ch .send (embed =embed ))
                 for o in data ['options']:
                     try :_run_async (msg .add_reaction (o ['emoji']))
@@ -4546,36 +4555,36 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                     except Exception :
                         pass 
 
-                        # Bot'tan gerчek vakitlы участник количество история
+                        # Берём у бота свежие данные по участникам
         if bot :
             guild =bot .get_guild (int (guild_id ))
             if guild :
-            # Если hiч message verisi yoksa, en azыndan участник listesini показать
+            # Если данных о сообщениях нет, показываем хотя бы активных участников
                 if not member_msg_counts :
-                # Участник роли число по очередь (proxy как)
+                # Участники сортируются по количеству ролей (приблизительный показатель активности)
                     for m in list (guild .members )[:10 ]:
                         if not m .bot :
                             member_msg_counts [m .display_name ]=len (m .roles )
 
-                            # В конец 7 день etiketleri
+                            # Метки последних 7 дней
         today =dt .date .today ()
         labels =[(today -dt .timedelta (days =i )).isoformat ()for i in range (6 ,-1 ,-1 )]
-        result ['daily_labels']=[l [5 :]for l in labels ]# MM-DD formatы
+        result ['daily_labels']=[l [5 :]for l in labels ]# формат ММ-ДД
         result ['daily_messages']=[daily_counts .get (l ,0 )for l in labels ]
 
-        # Top участники
+        # Топ участников
         result ['top_members']=[
         {'name':name ,'messages':count }
         for name ,count in member_msg_counts .most_common (10 )
         ]
 
-        # Top channellar
+        # Топ каналов
         result ['top_channels']=[
         {'name':ch ,'messages':count }
         for ch ,count in channel_msg_counts .most_common (10 )
         ]
 
-        # Участник bюyюmesi (son 7 день — statik veri, gerчek vakitlы не)
+        # Рост участников (последние 7 дней — приблизительные данные, не реального времени)
         result ['member_labels']=result ['daily_labels']
         if bot :
             guild =bot .get_guild (int (guild_id ))
@@ -4795,7 +4804,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         'total_invites':0 ,'total_joins':0 ,'total_leaves':0 ,
         'active_invites':0 ,'leaderboard':[],'recent_joins':[],'invite_list':[]
         }
-        # Bot'tan canlы davet verisi тянуть
+        # Подтягиваем живые данные приглашений от бота
         if bot :
             import asyncio 
             guild =bot .get_guild (int (guild_id ))
@@ -4905,7 +4914,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         with open (f ,encoding ='utf-8')as fp :
             data =json .load (fp )
 
-            # Bot'tan message детали тянуть
+            # Подтягиваем детали сообщений от бота
         result =[]
         if bot :
             guild =bot .get_guild (int (guild_id ))
@@ -5142,7 +5151,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                 panel_error =str (ex )
         return jsonify ({'success':True ,'panel_sent':panel_sent ,'error':panel_error })
 
-        # ── TICKET ADMIN BИLDИRИM KANALI ────────────────────────────────────
+        # ── КАНАЛ УВЕДОМЛЕНИЙ АДМИНОВ О ТИКЕТАХ ─────────────────────────────
     @app .route ('/api/guild/<guild_id>/ticket-notify-channel',methods =['GET','POST'])
     @login_required 
     @role_required ('admin')
@@ -5348,7 +5357,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
             if not os .path .exists (f ):return jsonify ({'banned_words':[]})
             with open (f )as fp :return jsonify (json .load (fp ))
         data =request .get_json (silent =True )or {}
-        # Текущий config'i oku ve merge et (hiчbir alan kaybolmasыn)
+        # Читаем текущий конфиг и объединяем (чтобы ни одно поле не потерялось)
         existing ={}
         if os .path .exists (f ):
             try :
@@ -5810,7 +5819,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                 clean_ids .append (s )
             if len (clean_ids )>=50 :
                 break 
-                # Bot'un роль listesiyle чapraz проверка — listede olmayan roller сервер tarafыndan silinmiш olabilir
+                # Кросс-проверка со списком ролей бота — отсутствующие роли могли быть удалены на сервереr
         import web .app as _app 
         bot =_app .bot_instance 
         guild =None 
@@ -5881,7 +5890,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         #  - NON_COG — модули-помощники на диске, загружаемые через import, а не как cog
         NON_COG ={'embed_utils','leveling_engagement'}
         all_cogs =[]
-        for f in os .listdir ('./cogs'):
+        _cogs_dir =os .path .join (os .path .dirname (os .path .dirname (os .path .abspath (__file__ ))),'cogs')
+        for f in os .listdir (_cogs_dir ):
             if not f .endswith ('.py'):continue 
             name =f [:-3 ]
             if name .startswith ('_')or name in NON_COG :

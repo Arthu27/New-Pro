@@ -79,7 +79,7 @@ class SLACog (commands .Cog ):
             timestamp =datetime .now ()
             )
 
-            # Policy listesi
+            # Список политик
             for policy in policies [:10 ]:
                 embed .add_field (
                 name =f"{policy.name}",
@@ -151,7 +151,7 @@ class SLACog (commands .Cog ):
         timestamp =datetime .now ()
         )
 
-        # Иhlal listesi
+        # Список нарушений
         for breach in breaches [:10 ]:
             embed .add_field (
             name =f"{breach['ticket_id']} - {breach['type']}",

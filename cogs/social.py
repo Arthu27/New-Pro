@@ -59,10 +59,10 @@ class PollView (discord .ui .View ):
             data =_load (path )
             poll =data .get (self .poll_id )
             if not poll :
-                await interaction .response .send_message (" Anket не найдено.",ephemeral =True )
+                await interaction .response .send_message (" Опрос не найден.",ephemeral =True )
                 return 
             if poll .get ('ended'):
-                await interaction .response .send_message (" Bu anket sona erdi.",ephemeral =True )
+                await interaction .response .send_message (" Этот опрос уже завершён.",ephemeral =True )
                 return 
 
             uid =str (interaction .user .id )
@@ -238,7 +238,7 @@ class Social (commands .Cog ):
         self .poll_checker .cancel ()
         self .event_reminder .cancel ()
 
-        #  ANKET 
+        #  ОПРОСЫ 
     @app_commands .command (name ="poll",description ="Создать новый опрос")
     @app_commands .describe (
     вопрос ="Вопрос опроса",
@@ -295,28 +295,28 @@ class Social (commands .Cog ):
         await interaction .response .send_message (embed =e ,view =view )
         msg =await interaction .original_response ()
 
-        # Сообщение ID'sini сохранить
+        # Сохраняем ID сообщения
         data [poll_id ]['message_id']=str (msg .id )
         _save (path ,data )
 
     @app_commands .command (name ="poll-end",description ="Завершить опрос")
-    @app_commands .describe (anket_id ="Anket ID")
+    @app_commands .describe (poll_id ="ID опроса")
     @app_commands .checks .has_permissions (moderate_members =True )
-    async def poll_end (self ,interaction :discord .Interaction ,anket_id :str ):
+    async def poll_end (self ,interaction :discord .Interaction ,poll_id :str ):
         guild_id =str (interaction .guild .id )
         path =POLL_FILE .format (guild_id =guild_id )
         data =_load (path )
-        poll =data .get (anket_id )
+        poll =data .get (poll_id )
         if not poll :
-            await interaction .response .send_message (" Anket не найдено.",ephemeral =True )
+            await interaction .response .send_message (" Опрос не найден.",ephemeral =True )
             return 
         poll ['ended']=True 
         _save (path ,data )
-        await interaction .response .send_message (f" Anket `{anket_id}` заверш.",ephemeral =True )
+        await interaction .response .send_message (f" Опрос `{poll_id}` завершён.",ephemeral =True )
 
     @tasks .loop (minutes =1 )
     async def poll_checker (self ):
-        """Длительность dolan anketleri автоматически закрыть."""
+        """Автоматически завершает опросы с истёкшим сроком."""
         now =datetime .now (timezone .utc )
         for guild in self .bot .guilds :
             path =POLL_FILE .format (guild_id =str (guild .id ))
@@ -329,7 +329,7 @@ class Social (commands .Cog ):
                 if now >=ends_at :
                     poll ['ended']=True 
                     changed =True 
-                    # результат сообщение отправить
+                    # отправляем сообщение с результатами
                     try :
                         ch =guild .get_channel (int (poll ['channel_id']))
                         if ch :
@@ -339,7 +339,7 @@ class Social (commands .Cog ):
                             counts =[sum (1 for v in votes .values ()if v ==i )for i in range (len (options ))]
                             winner_idx =counts .index (max (counts ))if counts else 0 
                             e =discord .Embed (
-                            title =f" Anket результат: {poll['question']}",
+                            title =f" Результаты опроса: {poll['question']}",
                             color =0x2ecc71 
                             )
                             emojis =['1','2','3','4','5','6','7','8','9','']

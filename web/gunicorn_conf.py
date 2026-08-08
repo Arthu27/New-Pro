@@ -37,7 +37,7 @@ access_log_format ='%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"'
 # Имена процессов (видно в ps/top)
 proc_name ='moebius-web'
 
-# Maksimum istek sayisi sonrasi worker'i новыйle (memory leak korunmasi)
+# Перезапуск воркера после максимального числа запросов (защита от утечек памяти)
 max_requests =int (os .getenv ('WEB_MAX_REQUESTS','1000'))
 max_requests_jitter =int (os .getenv ('WEB_MAX_REQUESTS_JITTER','100'))
 

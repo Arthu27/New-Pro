@@ -187,7 +187,7 @@ class DutyPanelView (discord .ui .View ):
         data =load_duty ()
         uid ,gid =str (interaction .user .id ),str (interaction .guild .id )
 
-        # Данные yoksa или bozuksa dюzelt
+        # Если данных нет или они повреждены — восстанавливаем
         if gid not in data or uid not in data [gid ]:
             await interaction .response .send_message (" Активен задача нет.",ephemeral =True )
             return 

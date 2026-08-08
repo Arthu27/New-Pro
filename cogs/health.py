@@ -60,7 +60,7 @@ def _score_label (score ):
 class Health (commands .Cog ):
     def __init__ (self ,bot ):
         self .bot =bot 
-        # Spam tespiti для son message vakitlarы {guild_id: {user_id: [timestamps]}}
+        # Определение спама: время последних сообщений {guild_id: {user_id: [timestamps]}}
         self ._msg_times =defaultdict (lambda :defaultdict (list ))
 
     @commands .Cog .listener ()
@@ -146,7 +146,7 @@ class Health (commands .Cog ):
         e .add_field (name =" Kick",value =str (data .get ('kick_count',0 )),inline =True )
         e .add_field (name =" Spam",value =str (data .get ('spam_count',0 )),inline =True )
 
-        # En активен channellar
+        # Самые активные каналы
         ch_msgs =data .get ('channel_messages',{})
         top =sorted (ch_msgs .values (),key =lambda x :x .get ('total',0 ),reverse =True )[:3 ]
         if top :

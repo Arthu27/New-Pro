@@ -20,7 +20,7 @@ class BackupService:
         os.makedirs(backup_dir, exist_ok=True)
     
     def backup_database(self, db_path: str = 'data/bot.db') -> str:
-        """Database yedekle"""
+        """Создать резервную копию базы данных"""
         if not os.path.exists(db_path):
             raise FileNotFoundError(f"База данных не найдена: {db_path}")
         
@@ -29,7 +29,7 @@ class BackupService:
         
         shutil.copy2(db_path, backup_file)
         
-        print(f" Database yedeklendi: {backup_file}")
+        print(f" Резервная копия базы данных создана: {backup_file}")
         return backup_file
     
     def backup_all_data(self) -> str:
@@ -49,7 +49,7 @@ class BackupService:
                     arcname = os.path.relpath(file_path, data_dir)
                     zipf.write(file_path, arcname)
         
-        print(f" Все data yedeklendi: {backup_file}")
+        print(f" Резервная копия всех данных создана: {backup_file}")
         return backup_file
     
     def backup_config(self) -> str:
@@ -68,15 +68,15 @@ class BackupService:
                 if os.path.exists(config_file):
                     zipf.write(config_file, os.path.basename(config_file))
         
-        print(f" Config yedeklendi: {backup_file}")
+        print(f" Резервная копия конфига создана: {backup_file}")
         return backup_file
     
     def restore_database(self, backup_file: str, db_path: str = 'data/bot.db'):
-        """Database geri загрузить"""
+        """Восстановить базу данных из копии"""
         if not os.path.exists(backup_file):
             raise FileNotFoundError(f"Резервная копия не найдена: {backup_file}")
         
-        # Текущий database'i yedekle
+        # Сохраняем текущую базу данных
         if os.path.exists(db_path):
             self.backup_database(db_path)
         
@@ -91,7 +91,7 @@ class BackupService:
         
         data_dir = 'data'
         
-        # Текущий data'yы yedekle
+        # Сохраняем все данные
         if os.path.exists(data_dir):
             self.backup_all_data()
         
@@ -101,7 +101,7 @@ class BackupService:
         print(f" Все данные восстановлены: {backup_file}")
     
     def restore_config(self, backup_file: str):
-        """Config geri загрузить"""
+        """Восстановить конфиг из копии"""
         if not os.path.exists(backup_file):
             raise FileNotFoundError(f"Резервная копия не найдена: {backup_file}")
         
@@ -129,21 +129,21 @@ class BackupService:
                 'type': 'database' if backup_file.endswith('.db') else 'zip'
             })
         
-        # Tarihe по очередьla
+        # Сортируем по дате
         backups.sort(key=lambda x: x['created_at'], reverse=True)
         
         return backups
     
     def delete_backup(self, backup_file: str):
-        """Yedek удалить"""
+        """Удалить резервную копию"""
         if not os.path.exists(backup_file):
             raise FileNotFoundError(f"Резервная копия не найдена: {backup_file}")
         
         os.remove(backup_file)
-        print(f" Yedek удалено: {backup_file}")
+        print(f" Резервная копия удалена: {backup_file}")
     
     def cleanup_old_backups(self, days: int = 30):
-        """Eski yedekleri удалить"""
+        """Удалить старые резервные копии"""
         cutoff = datetime.now() - timedelta(days=days)
         
         for backup_file in glob.glob(os.path.join(self.backup_dir, '*')):
@@ -152,7 +152,7 @@ class BackupService:
             
             if file_time < cutoff:
                 os.remove(backup_file)
-                print(f" Eski yedek удалено: {backup_file}")
+                print(f" Старая копия удалена: {backup_file}")
     
     def get_backup_info(self, backup_file: str) -> Dict:
         """Получить информацию о резервных копиях"""
@@ -170,7 +170,7 @@ class BackupService:
         }
     
     def schedule_backup(self, interval_hours: int = 24):
-        """Otomatik yedekleme planla (placeholder)"""
+        """Запланировать автоматическое резервное копирование (заглушка)"""
         # Gerчek uygulamada scheduler kullanыlacak
         print(f"⏰ Автоматическое резервное копирование запланировано: каждые {interval_hours} ч")
     

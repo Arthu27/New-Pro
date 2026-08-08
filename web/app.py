@@ -83,7 +83,7 @@ def _log_login (username ,role ,avatar ,discord_id ):
         logs =_store .read_json (f ,default =[])
         if not isinstance (logs ,list ):
             logs =[]
-            # Сервер infosini bot'tan al
+            # Берём информацию о сервере от бота
         guild_name =None 
         guild_icon =None 
         if bot_instance and discord_id and discord_id .isdigit ():
@@ -444,7 +444,7 @@ def favicon ():
 def health_check ():
     """Health check endpoint для Docker и мониторинга"""
     try :
-        bot_instance =getattr (app ,'_bot_instance',None )
+        global bot_instance 
         if bot_instance and bot_instance .is_ready ():
             return jsonify ({
             'status':'healthy',
@@ -657,16 +657,16 @@ def register ():
         if not bot_instance :
             return render_template ('register.html',error ='Бот сейчас офлайн, попробуйте позже.',step =1 )
 
-            # До cache'den ara, bulamazsa fetch_member с Discord API'den тянуть
+            # Сначала ищем в кэше, если нет — тянем fetch_member через Discord API
         member_info =None 
 
         async def find_member ():
-        # До все сервер cache'den ara
+        # Сначала ищем в кэше всех серверов
             for guild in bot_instance .guilds :
                 m =guild .get_member (int (discord_id ))
                 if m :
                     return {'display_name':m .display_name ,'name':str (m ),'avatar':str (m .display_avatar .url )}
-                    # Cache'de yoksa fetch_member с API'den тянуть (каждый сервер для)
+                    # Если в кэше нет — тянем через API (по каждому серверу)
             for guild in bot_instance .guilds :
                 try :
                     m =await guild .fetch_member (int (discord_id ))
@@ -674,7 +674,7 @@ def register ():
                         return {'display_name':m .display_name ,'name':str (m ),'avatar':str (m .display_avatar .url )}
                 except Exception :
                     continue 
-                    # Hiчbir на сервере найден fetch_user с Discord usersыnы al
+                    # Если ни на одном сервере не найден — fetch_user через Discord
             try :
                 user =await bot_instance .fetch_user (int (discord_id ))
                 if user :
@@ -2665,7 +2665,7 @@ def api_global_search ():
                     if len (results )>=5 :
                         break 
 
-                        # Warninglar
+                        # Предупреждения
     warns_file ='data/warnings.json'
     if os .path .exists (warns_file ):
         with open (warns_file ,'r',encoding ='utf-8')as f :
@@ -2739,7 +2739,7 @@ def api_voice_command ():
             # Handler eшleшmedi, normal AI'ya отправить
                 await dm .send (command )
             return 'OK'
-            # История message yoksa direkt DM at
+            # Если истории сообщений нет — шлём сразу в ЛС
         await dm .send (command )
         return 'OK (DM sent)'
 

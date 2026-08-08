@@ -65,7 +65,7 @@ class Verification (commands .Cog ):
             )
         except Exception :
             pass 
-            # Not: kick/Rol-atama/Канал-oluшturma gibi hiчbir otomatik aksiyon YOK.
+            # Примечание: никаких автоматических действий (кик, выдача ролей, создание каналов) не выполняется.
 
     @app_commands .command (name ="verify-toggle",description ="Включить/отключить систему верификации (режим наблюдателя)")
     @app_commands .checks .has_permissions (administrator =True )
@@ -88,7 +88,7 @@ class Verification (commands .Cog ):
         color =0x2ECC71 if state .get ("enabled")else 0x95A5A6 ,
         )
         e .add_field (name ="Система",value ="✅ Вкл"if state .get ("enabled")else "⛔ Выкл",inline =True )
-        e .add_field (name ="Otomatik aksiyon",value ="🚫 Нет (режим наблюдателя)",inline =True )
+        e .add_field (name ="Автоматические действия",value ="🚫 Нет (режим наблюдателя)",inline =True )
         e .add_field (name ="Последнее обновление",value =state .get ("updated_by","—"),inline =True )
         e .description =(
         "Этот модуль работает в режиме наблюдателя: бот НЕ применяет автоматическую капчу/роль/кик. "

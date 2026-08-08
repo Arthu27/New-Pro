@@ -391,7 +391,7 @@ class AnomalyDetector:
         self._save_baseline()
     
     def detect_anomalies(self, current_metrics: Dict[str, float]) -> List[Dict[str, Any]]:
-        """Anomalileri tespit et"""
+        """Обнаружить аномалии"""
         anomalies = []
         
         # Ticket количество anomalisi

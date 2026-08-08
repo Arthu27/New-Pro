@@ -321,7 +321,7 @@ class PomodoroTimer:
         return session
     
     def get_active_session(self, user_id: str) -> Optional[Dict[str, Any]]:
-        """Aktif oturumu al"""
+        """Получить активную сессию"""
         return self.active_sessions.get(user_id)
     
     def get_user_stats(self, user_id: str, days: int = 7) -> Dict[str, Any]:
@@ -421,7 +421,7 @@ class TimeEstimator:
     
     def get_average_by_category(self) -> Dict[str, float]:
         """Kategoriye по ortalama длительность"""
-        # Basit implementasyon - gerчek uygulamada ticket kategorileri ile объединитьilecek
+        # Простая реализация — в будущем будет объединена с категориями тикетов
         category_times = {}
         
         for entry in self.time_tracker.entries.values():

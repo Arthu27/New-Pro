@@ -553,7 +553,7 @@ class Meeting (commands .Cog ):
 
         msg =await ctx .send (embed =embed ,view =view )
 
-        # Panel message ID'sini сохранить
+        # Сохраняем ID сообщения панели
         cfg ['panel_channel']=ctx .channel .id 
         cfg ['panel_message']=msg .id 
         _save_cfg (ctx .guild .id ,cfg )

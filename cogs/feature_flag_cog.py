@@ -41,7 +41,7 @@ class FeatureFlagCog (commands .Cog ):
         timestamp =datetime .now ()
         )
 
-        # Flag listesi
+        # Список флагов
         for flag in flags [:15 ]:
             enabled_text =" Enabled"if flag .enabled else " Disabled"
             rollout_text =f"{flag.rollout_percentage}%"if flag .rollout_percentage <100 else "Full"
@@ -175,7 +175,7 @@ class FeatureFlagCog (commands .Cog ):
         flag .set_rollout_percentage (percentage )
         feature_flag_manager .save_flag (flag )
 
-        # Embed oluшtur
+        # Создаём эмбед
         embed =discord .Embed (
         title ="✅ Rollout обновлён",
         description =f"**Flag:** {flag_key}\n**Rollout:** {percentage}%",
@@ -191,10 +191,10 @@ class FeatureFlagCog (commands .Cog ):
     async def flag_create (self ,interaction :discord .Interaction ,
     flag_key :str ,name :str ):
         """Создать feature flag"""
-        # Flag oluшtur
+        # Создаём флаг
         feature_flag_manager .create_flag (flag_key ,name )
 
-        # Embed oluшtur
+        # Создаём эмбед
         embed =discord .Embed (
         title ="✅ Feature flag создан",
         description =f"**Key:** {flag_key}\n**Название:** {name}",

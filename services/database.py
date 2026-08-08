@@ -338,7 +338,7 @@ class Database:
                 'beg_last': row[6]
             }
         
-        # Пользователь yoksa создать
+        # Если пользователя нет — создаём
         conn = self.get_connection()
         cursor = conn.cursor()
         
@@ -439,7 +439,7 @@ class Database:
                 'total_xp': row[4]
             }
         
-        # Пользователь yoksa создать
+        # Если пользователя нет — создаём
         conn = self.get_connection()
         cursor = conn.cursor()
         
@@ -575,7 +575,7 @@ class Database:
     
     # Backup/Restore
     def backup(self, backup_path: str):
-        """Database yedekle"""
+        """Создать резервную копию базы данных"""
         import shutil
         shutil.copy2(self.db_path, backup_path)
         print(f" Database backed up to: {backup_path}")

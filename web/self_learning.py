@@ -13,7 +13,7 @@ class SelfLearning :
     """Система самообучения AI"""
 
     def __init__ (self ):
-        self .feedback_log =[]# Loglar geri ссылки
+        self .feedback_log =[]# журнал обратной связи
         self .learned_patterns ={}# Viucennie kalыplar
         self .mistakes =[]# Ошибки AI
         self .successes =[]# Uspesnie cevaplar

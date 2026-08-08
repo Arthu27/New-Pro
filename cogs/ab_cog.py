@@ -71,7 +71,7 @@ class ABCog (commands .Cog ):
         timestamp =datetime .now ()
         )
 
-        # Varyant listesi
+        # Список вариантов
         for variant in variants :
             enabled_text =" Enabled"if variant .enabled else " Disabled"
             embed .add_field (

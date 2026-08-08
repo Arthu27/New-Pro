@@ -373,7 +373,7 @@ class FeatureFlagRollout:
         return True
     
     def get_rollout_status(self, flag_key: str) -> Optional[Dict[str, Any]]:
-        """Rollout durumunu al"""
+        """Получить состояние rollout'а"""
         if flag_key not in self.rollout_plans:
             return None
         

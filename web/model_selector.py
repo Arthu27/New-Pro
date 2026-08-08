@@ -67,17 +67,17 @@ class ModelSelector :
     def select_model (self ,task_type :str ,context :Dict =None )->str :
         """Vibiraet lucsuyu model для задачи"""
 
-        # Alыyoruz rekomenduemiy тип modelleri
+        # Берём рекомендуемый тип модели
         recommended_type =self .TASK_MODEL_MAP .get (task_type ,'balanced')
         recommended_model =self .MODELS [recommended_type ]
 
-        # Контроль ediyoruz istatistiгi — если model sыk sыk padaet, ispolzuem yedek
+        # Проверяем статистику — если модель часто падает, используем запасную
         model_name =recommended_model ['name']
         stats =self .model_stats .get (model_name ,{})
 
         failure_rate =stats .get ('failures',0 )/max (stats .get ('total',1 ),1 )
 
-        # Если failure rate > 20%, pereanahсканироватьemsya на yedek model
+        # Если доля сбоев > 20% — переключаемся на запасную модель
         if failure_rate >0.2 :
             if recommended_type =='powerful':
                 model_name =self .MODELS ['balanced']['name']
@@ -226,7 +226,7 @@ def smart_call (messages :List [Dict ],task_type :str ,max_tokens :int =2048 ,te
     # Сохраняем неудачу
         selector .record_failure (model_name )
 
-        # Probuem yedek model
+        # Пробуем запасную модель
         if task_type in ['complaint_analysis','moderation_decision','complex_reasoning']:
             fallback_model =ModelSelector .MODELS ['balanced']['name']
         else :

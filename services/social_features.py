@@ -145,7 +145,7 @@ class ReactionSystem:
                     if user_id in comment['reactions'][reaction]:
                         comment['reactions'][reaction].remove(user_id)
                         
-                        # Boшsa reaksiyonu удалить
+                        # Если пусто — удаляем реакцию
                         if not comment['reactions'][reaction]:
                             del comment['reactions'][reaction]
                         

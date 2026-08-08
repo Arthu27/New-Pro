@@ -384,7 +384,7 @@
           </div>
         </div>
       </div>
-      <div class="input-hint">Enter = отправить &nbsp;•&nbsp; Shift+Enter = новый строка &nbsp;•&nbsp; @ = etiket</div>
+      <div class="input-hint">Enter = отправить &nbsp;•&nbsp; Shift+Enter = новая строка &nbsp;•&nbsp; @ = упоминание</div>
     </div>
   </div>
 
@@ -415,8 +415,8 @@
       <button class="profs-nick-btn" onclick="saveNick()">Сохранить</button>
     </div>
     <div class="profs-action-row">
-      <button class="profs-action-btn dm" onclick="dmFromprofile()"><i class="fas fa-envelope"></i> DM</button>
-      <button class="profs-action-btn" onclick="etiketFromprofile()"><i class="fas fa-at"></i> Mention</button>
+      <button class="profs-action-btn dm" onclick="dmFromprofile()"><i class="fas fa-envelope"></i> ЛС</button>
+      <button class="profs-action-btn" onclick="etiketFromprofile()"><i class="fas fa-at"></i> Упомянуть</button>
     </div>
   </div>
 </div>
@@ -709,7 +709,7 @@ async function sendMessage() {
     await loadMessages();
     document.getElementById('chat-messages').scrollTop = 999999;
   } catch(e) {
-    // Ошибка olursa сообщение geri koy
+    // При ошибке возвращаем сообщение обратно
     inp.value = content;
   }
   btn.disabled = false;

@@ -77,7 +77,7 @@ class InfoTools(commands.Cog):
         await ctx.send(embed=e)
 
     @commands.command(name="emojis", aliases=["emojiler"])
-    async def emoji_listesi(self, ctx):
+    async def emoji_list_cmd(self, ctx):
         emojis = ctx.guild.emojis
         if not emojis:
             await ctx.send("На этом сервере нет особых эмодзи!")

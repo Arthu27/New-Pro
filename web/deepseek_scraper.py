@@ -154,7 +154,7 @@ def ask_deepseek (prompt :str ,timeout :int =60 )->str :
         return ''
 
     try :
-    # Текущий event loop varsa использовать, yoksa новый создать
+    # Используем текущий event loop, если его нет — создаём новый
         try :
             loop =asyncio .get_event_loop ()
             if loop .is_running ():

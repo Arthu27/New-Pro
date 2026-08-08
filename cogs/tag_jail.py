@@ -462,7 +462,7 @@ class TagJail(commands.Cog):
 
     @tagjail.command(name="off", description="Выключить tag jail")
     @app_commands.checks.has_permissions(administrator=True)
-    async def tj_kapat(self, interaction: discord.Interaction):
+    async def tj_off(self, interaction: discord.Interaction):
         self.set_cfg(interaction.guild.id, 'enabled', False)
         await interaction.response.send_message(
             "🔴 **Tag Jail выключен.** Текущие заключённые не тронуты.", ephemeral=True)

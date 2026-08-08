@@ -151,7 +151,7 @@ async function loadLeveling() {
   document.getElementById('lv-cooldown').value = settings.cooldown || 60;
   document.getElementById('lv-msg').value = settings.level_message || '';
 
-  // Канал listesi
+  // Список каналов
   var channels = Array.isArray(chRes) ? chRes : (chRes.channels || []);
   var chSel = document.getElementById('lv-channel');
   chSel.innerHTML = '<option value="">Выберите канал (пусто = сообщение канал)</option>';

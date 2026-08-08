@@ -1,15 +1,15 @@
 {% extends "base.html" %}
 {% block title %}Приветствие Редактор - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-handshake" ></i> Приветствие / Пока Пока{% endblock %}
+{% block page_title %}<i class="fas fa-handshake" ></i> Приветствие / Прощание{% endblock %}
 {% block content %}
 {% block page_hero %}
 <div class="page-hero compact">
   <div class="page-hero-content">
     <div class="page-hero-greeting">
       <span class="dot"></span>
-      <span>Приветствие / Пока Пока</span>
+      <span>Приветствие / Прощание</span>
     </div>
-    <h1>Приветствие / Пока Пока</h1>
+    <h1>Приветствие / Прощание</h1>
     <p>Настройка приветственных сообщений для новых участников.</p>
   </div>
 </div>
@@ -42,7 +42,7 @@
 <div class="vars-box">
   <i class="fas fa-code" style="margin-right:6px;"></i>
   Использовать переменные:
-  <span>{user}</span> <span>{сервер}</span> <span>{count}</span> <span>{etiket}</span>
+  <span>{user}</span> <span>{username}</span> <span>{count}</span> <span>{server}</span>
 </div>
 
 <div class="editor-grid">
@@ -50,29 +50,29 @@
     <div class="section-title"><i class="fas fa-door-open"></i> Приветственное сообщение</div>
     <div class="form-group"><label>Канал</label><select id="welcome-channel" aria-label="Канал приветствий"><option value="">Выберите канал...</option></select></div>
     <div class="form-group"><label>Заголовок</label><input type="text" id="welcome-title" placeholder="Добро пожаловать, {user}!" aria-label="Добро пожаловать, {user}!"></div>
-    <div class="form-group"><label>Сообщение</label><textarea id="welcome-msg" placeholder="{сервер} сервер приветствует тебя!" aria-label="{сервер} сервер приветствует тебя!"></textarea></div>
+    <div class="form-group"><label>Сообщение</label><textarea id="welcome-msg" placeholder="{server} приветствует тебя!" aria-label="{server} приветствует тебя!"></textarea></div>
     <div class="form-group"><label>Цвет эмбеда</label><input type="color" id="welcome-color" value="#c8922a"   style="height: 40px;" aria-label="Цвет"></div>
     <div class="preview-box">
       <div   style="margin-bottom: 8px;">Предпросмотр</div>
       <div class="preview-embed" id="welcome-preview" >
-        <div class="preview-title">Добро пожаловать приветствуем!</div>
-        <div class="preview-desc">Предпросмотр здесь видеть...</div>
+        <div class="preview-title">Добро пожаловать!</div>
+        <div class="preview-desc">Здесь будет предпросмотр...</div>
       </div>
     </div>
     <button class="save-btn" onclick="saveWelcome()"><i class="fas fa-save"   style="margin-right: 6px;"></i>Сохранить</button>
   </div>
 
   <div class="editor-box" >
-    <div class="section-title" ><i class="fas fa-door-closed" ></i> Пока Пока Сообщение</div>
+    <div class="section-title" ><i class="fas fa-door-closed" ></i> Прощальное сообщение</div>
     <div class="form-group"><label>Канал</label><select id="leave-channel" aria-label="Канал прощаний"><option value="">Выберите канал...</option></select></div>
-    <div class="form-group"><label>Заголовок</label><input type="text" id="leave-title" placeholder="Пока Пока, {user}!" aria-label="Пока Пока, {user}!"></div>
-    <div class="form-group"><label>Сообщение</label><textarea id="leave-msg" placeholder="{user} с сервера покинул." aria-label="{user} с сервера покинул."></textarea></div>
+    <div class="form-group"><label>Заголовок</label><input type="text" id="leave-title" placeholder="До свидания, {user}!" aria-label="До свидания, {user}!"></div>
+    <div class="form-group"><label>Сообщение</label><textarea id="leave-msg" placeholder="{user} покинул сервер." aria-label="{user} покинул сервер."></textarea></div>
     <div class="form-group"><label>Цвет эмбеда</label><input type="color" id="leave-color" value="#f87171"   style="height: 40px;" aria-label="Цвет прощания"></div>
     <div class="preview-box">
       <div   style="margin-bottom: 8px;">Предпросмотр</div>
       <div class="preview-embed" id="leave-preview" >
-        <div class="preview-title">Пока Пока!</div>
-        <div class="preview-desc">Предпросмотр здесь видеть...</div>
+        <div class="preview-title">До свидания!</div>
+        <div class="preview-desc">Здесь будет предпросмотр...</div>
       </div>
     </div>
     <button class="save-btn" onclick="saveLeave()" ><i class="fas fa-save"   style="margin-right: 6px;"></i>Сохранить</button>
@@ -97,7 +97,7 @@ async function loadSettings() {
     var chData = await r.json();
     console.log('Channels data:', chData);
     
-    // API'den gelen veri формат контроль et
+    // Проверяем формат данных, пришедших от API
     var channels = [];
     if (Array.isArray(chData)) {
       channels = chData.filter(function(c) { return c.type === 'text'; });
@@ -151,14 +151,14 @@ async function loadSettings() {
 }
 
 function updatePreviews() {
-  var wt = document.getElementById('welcome-title').value || 'Добро пожаловать приветствуем!';
-  var wm = document.getElementById('welcome-msg').value || 'Предпросмотр здесь видеть...';
+  var wt = document.getElementById('welcome-title').value || 'Добро пожаловать!';
+  var wm = document.getElementById('welcome-msg').value || 'Здесь будет предпросмотр...';
   var wc = document.getElementById('welcome-color').value;
   document.getElementById('welcome-preview').style.borderLeftColor = wc;
   document.getElementById('welcome-preview').innerHTML = '<div class="preview-title">'+wt+'</div><div class="preview-desc">'+wm+'</div>';
   
-  var lt = document.getElementById('leave-title').value || 'Пока Пока!';
-  var lm = document.getElementById('leave-msg').value || 'Предпросмотр здесь видеть...';
+  var lt = document.getElementById('leave-title').value || 'До свидания!';
+  var lm = document.getElementById('leave-msg').value || 'Здесь будет предпросмотр...';
   var lc = document.getElementById('leave-color').value;
   document.getElementById('leave-preview').style.borderLeftColor = lc;
   document.getElementById('leave-preview').innerHTML = '<div class="preview-title">'+lt+'</div><div class="preview-desc">'+lm+'</div>';
