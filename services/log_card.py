@@ -26,7 +26,7 @@ except Exception:  # Pillow отсутствует — карточки прос
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FONT_B = os.path.join(ROOT, 'assets', 'fonts', 'Bold.ttf')
 FONT_R = os.path.join(ROOT, 'assets', 'fonts', 'Regular.ttf')
-ICONS_DIR = os.path.join(ROOT, 'assets', 'icons', 'logs')
+ICONS_DIR = os.path.join(ROOT, 'assets', 'icons', 'logcards')
 
 _fonts = {}
 
