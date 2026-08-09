@@ -13,6 +13,7 @@ from discord .ext import commands ,tasks
 import json 
 import os 
 import time 
+import math 
 import asyncio 
 import sys 
 import traceback 
@@ -131,28 +132,40 @@ class Diagnostics (commands .Cog ):
         # HEALTH SNAPSHOT 
     def get_health_snapshot (self ):
         """Take a snapshot of current bot health"""
+        lat = getattr(self.bot, "latency", None)
+        lat_ms = 0.0
+        if lat is not None:
+            try:
+                if math.isfinite(lat):
+                    lat_ms = round(lat * 1000, 1)
+            except Exception:
+                lat_ms = 0.0
+
+        is_connected = False
+        try:
+            if hasattr(self.bot, "is_ready"):
+                is_connected = bool(self.bot.is_ready() and getattr(self.bot, "ws", None) and not self.bot.ws.closed)
+            elif hasattr(self.bot, "is_ws_ready"):
+                is_connected = bool(self.bot.is_ws_ready())
+        except Exception:
+            is_connected = False
+
         snapshot ={
         "timestamp":time .time (),
         "uptime_sec":time .time ()-self .start_time ,
-        "guilds":len (self .bot .guilds ),
-        "users":sum (g .member_count for g in self .bot .guilds ),
-        "cogs_loaded":len (self .bot .cogs ),
-        "commands":len (self .bot .commands ),
-        "latency_ms":round (self .bot .latency *1000 ,1 ),
+        "guilds":len (self .bot .guilds ) if self.bot else 0,
+        "users":sum (g .member_count or 0 for g in self .bot .guilds ) if self.bot else 0,
+        "cogs_loaded":len (self .bot .cogs ) if self.bot else 0,
+        "commands":len (self .bot .commands ) if self.bot else 0,
+        "latency_ms":lat_ms ,
         "errors_last_min":sum (1 for e in self .error_log if time .time ()-e ["ts"]<60 ),
-        # discord.py renamed is_ws_ready() to is_ready() in v2 — keep
-        # a fallback so the diagnostics work on both old and new.
-        "is_ws_connected":(
-        self .bot .is_ready ()if hasattr (self .bot ,"is_ready")
-        else self .bot .is_ws_ready ()if hasattr (self .bot ,"is_ws_ready")
-        else False 
-        ),
+        "is_ws_connected":is_connected ,
         }
         # System resources
         try :
             process =psutil .Process ()
             snapshot ["memory_mb"]=round (process .memory_info ().rss /1024 /1024 ,1 )
-            snapshot ["cpu_percent"]=round (process .cpu_percent (interval =0.1 ),1 )
+            snapshot ["cpu_percent"]=round (process .cpu_percent (interval =None ),1 )
             snapshot ["threads"]=process .num_threads ()
             snapshot ["open_files"]=len (process .open_files ())
         except Exception :
@@ -168,9 +181,10 @@ class Diagnostics (commands .Cog ):
             await self ._trigger_repair ("high_memory","critical")
         elif health ["memory_mb"]>THRESHOLDS ["memory_mb"]["warn"]:
             await self ._trigger_repair ("high_memory","warn")
-            # High latency
-        if health ["latency_ms"]>THRESHOLDS ["latency_ms"]["critical"]:
-            await self ._trigger_repair ("high_latency","critical")
+            # High latency (проверяем только при активном WebSocket соединении)
+        if health.get("is_ws_connected") and health.get("latency_ms", 0) > 0:
+            if health ["latency_ms"]>THRESHOLDS ["latency_ms"]["critical"]:
+                await self ._trigger_repair ("high_latency","critical")
             # High error rate
         if health ["errors_last_min"]>THRESHOLDS ["error_rate_per_min"]["critical"]:
             await self ._trigger_repair ("high_error_rate","critical")
@@ -213,6 +227,8 @@ class Diagnostics (commands .Cog ):
         owner_id =os .getenv ("OWNER_ID")
         if not owner_id :
             return 
+        if not (self .bot .is_ready () and hasattr (self .bot ,"fetch_user")):
+            return 
         try :
             owner =await self .bot .fetch_user (int (owner_id ))
             if owner :
@@ -223,7 +239,7 @@ class Diagnostics (commands .Cog ):
                 )
                 embed .timestamp =datetime .utcnow ()
                 await owner .send (embed =embed )
-        except (discord .Forbidden ,discord .HTTPException ):
+        except Exception :
             pass 
 
             # HOT-RELOAD 

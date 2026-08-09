@@ -214,14 +214,19 @@ def cleanup_on_exit():
     try:
         print("[ОЧИСТКА] Бот закрывается...")
         _stop_web_server()
-        if hasattr(bot, 'voice_clients'):
-            for vc in bot.voice_clients:
-                try:
-                    asyncio.run_coroutine_threadsafe(vc.disconnect(), bot.loop)
-                except Exception:
-                    pass
-        if not bot.is_closed():
-            asyncio.run_coroutine_threadsafe(bot.close(), bot.loop)
+        try:
+            loop = getattr(bot, 'loop', None)
+            if loop and loop.is_running():
+                if hasattr(bot, 'voice_clients'):
+                    for vc in bot.voice_clients:
+                        try:
+                            asyncio.run_coroutine_threadsafe(vc.disconnect(), loop)
+                        except Exception:
+                            pass
+                if not bot.is_closed():
+                    asyncio.run_coroutine_threadsafe(bot.close(), loop)
+        except Exception:
+            pass
     except Exception as e:
         print(f"[ОЧИСТКА] Ошибка очистки: {e}")
 

@@ -18,6 +18,7 @@ import asyncio
 import os
 import json
 import time
+import math
 import warnings as _warnings
 import queue as _queue
 import aiohttp
@@ -769,6 +770,8 @@ class ErrorHandler:
         await self.bot.wait_until_ready()
         await asyncio.sleep(30)
         last_alert = 0.0
+        # Если пауза между тиками > 180с — это сон/гибернация ОС или заморозка контейнера, а не зависание event loop кодом
+        MAX_SLEEP_DRIFT = 180.0
         while not self.bot.is_closed():
             if not self.config.get('loop_watchdog', True):
                 await asyncio.sleep(5)
@@ -778,6 +781,16 @@ class ErrorHandler:
             await asyncio.sleep(iv)
             drift = (time.monotonic() - t0) - iv
             self._lag_recent = drift
+
+            # Проверяем, не спала ли система (сон ноутбука / ПК / приостановка виртуалки)
+            if drift > MAX_SLEEP_DRIFT:
+                log.info(
+                    f"[WATCHDOG] Система возобновила работу после сна / приостановки (~{drift:.1f} сек). "
+                    "Пауза сна не считается зависанием event-loop."
+                )
+                await asyncio.sleep(2)
+                continue
+
             if drift > float(self.config.get('loop_lag_threshold', 5.0)):
                 if drift > self.stats.get('loop_lag_max', 0.0):
                     self.stats['loop_lag_max'] = round(drift, 2)
@@ -834,6 +847,13 @@ class ErrorHandler:
         top_types = sorted(self.stats['by_type'].items(), key=lambda x: -x[1])[:5]
         top_cogs = sorted(self.stats['by_cog'].items(), key=lambda x: -x[1])[:5]
         latency = getattr(self.bot, 'latency', None)
+        lat_ms = 0
+        if latency is not None:
+            try:
+                if math.isfinite(latency):
+                    lat_ms = round(latency * 1000)
+            except Exception:
+                lat_ms = 0
         dc = sum(1 for ts in self._disconnects if now - ts <= 3600)
         # График за последние 7 дней (с нулевым заполнением пропусков)
         daily_src = self.stats.get('daily') or {}
@@ -873,7 +893,7 @@ class ErrorHandler:
             'last_errors': list(reversed(self.stats['last_errors'][-15:])),
             'daily7': daily7,
             'guilds': len(self.bot.guilds) if self.bot else 0,
-            'latency_ms': round(latency * 1000) if latency is not None else 0,
+            'latency_ms': lat_ms,
             'channel_configured': bool(int(self.config.get('log_channel_id', 0) or 0)),
             'watchdog_on': self.config.get('loop_watchdog', True),
             'breaker_on': self.config.get('cog_breaker', True),

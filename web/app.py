@@ -1,6 +1,7 @@
 import random 
 import string 
 import hashlib 
+import math 
 from flask import Flask ,render_template ,request ,jsonify ,session ,redirect ,url_for ,send_from_directory 
 import discord 
 from discord .ext import commands 
@@ -446,11 +447,18 @@ def health_check ():
     try :
         global bot_instance 
         if bot_instance and bot_instance .is_ready ():
+            lat_val = 0.0
+            if bot_instance.latency is not None:
+                try:
+                    if math.isfinite(bot_instance.latency):
+                        lat_val = round(bot_instance.latency * 1000, 2)
+                except Exception:
+                    lat_val = 0.0
             return jsonify ({
             'status':'healthy',
             'bot':'ready',
             'guilds':len (bot_instance .guilds ),
-            'latency':round (bot_instance .latency *1000 ,2 ),
+            'latency':lat_val ,
             'timestamp':datetime .now ().isoformat ()
             }),200 
         else :
@@ -1054,12 +1062,19 @@ def api_stats ():
     guilds =len (bot_instance .guilds )
     users =sum (g .member_count or 0 for g in bot_instance .guilds )
     online =sum (1 for g in bot_instance .guilds for m in g .members if not m .bot and m .status !=discord .Status .offline )
+    lat_val = 0.0
+    if bot_instance.latency is not None:
+        try:
+            if math.isfinite(bot_instance.latency):
+                lat_val = round(bot_instance.latency * 1000, 2)
+        except Exception:
+            lat_val = 0.0
 
     return jsonify ({
     'guilds':guilds ,
     'users':users ,
     'online':online ,
-    'latency':round (bot_instance .latency *1000 ,2 ),
+    'latency':lat_val ,
     'status':'online'
     })
 
@@ -2579,9 +2594,10 @@ def api_bot_diagnose ():
                 pass 
                 # Latency check
             try :
-                lat =bot_instance .latency *1000 
-                if lat >800 :
-                    issues .append (f'Высокий Discord latency: {round(lat, 0)}ms')
+                if bot_instance.latency is not None and math.isfinite(bot_instance.latency):
+                    lat = bot_instance.latency * 1000 
+                    if lat > 800:
+                        issues.append(f'Высокий Discord latency: {round(lat, 0)}ms')
             except Exception :
                 pass 
                 # Guild count

@@ -4,6 +4,7 @@
 import discord
 from discord.ext import commands
 import time
+import math
 import re as _re
 import base64 as _b64
 import ast as _ast
@@ -39,7 +40,14 @@ class InfoTools(commands.Cog):
         e.set_thumbnail(url=b.user.display_avatar.url)
         e.add_field(name="Серверы", value=f"```{len(b.guilds)}```", inline=True)
         e.add_field(name="Пользователи", value=f"```{sum(g.member_count for g in b.guilds)}```", inline=True)
-        e.add_field(name="Пинг", value=f"```{round(b.latency*1000)}мс```", inline=True)
+        lat_val = 0
+        if b.latency is not None:
+            try:
+                if math.isfinite(b.latency):
+                    lat_val = round(b.latency * 1000)
+            except Exception:
+                lat_val = 0
+        e.add_field(name="Пинг", value=f"```{lat_val}мс```", inline=True)
         e.set_footer(text=f"Просил: {ctx.author}")
         await ctx.send(embed=e)
 

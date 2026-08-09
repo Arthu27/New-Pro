@@ -2,6 +2,7 @@
 from flask import render_template ,session ,redirect ,url_for ,request ,jsonify ,Response 
 import os ,json 
 import time 
+import math 
 import discord 
 from datetime import datetime 
 
@@ -3203,15 +3204,22 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                     json .dump (history ,f )
             except Exception :
                 pass 
+            lat_val = 0
+            if bot and bot.latency is not None:
+                try:
+                    if math.isfinite(bot.latency):
+                        lat_val = round(bot.latency * 1000)
+                except Exception:
+                    lat_val = 0
             return jsonify ({
-            'guilds':len (bot .guilds ),
-            'users':sum (g .member_count for g in bot .guilds ),
-            'latency':round (bot .latency *1000 ),
+            'guilds':len (bot .guilds ) if bot else 0,
+            'users':sum (g .member_count for g in bot .guilds ) if bot else 0,
+            'latency':lat_val ,
             'uptime':uptime ,
             'cpu':cpu ,
             'ram':ram ,
             'history':history ,
-            'guild_list':[{'name':g .name ,'members':g .member_count }for g in bot .guilds ]
+            'guild_list':[{'name':g .name ,'members':g .member_count }for g in bot .guilds ] if bot else []
             })
         except Exception as e :
             return jsonify ({'error':str (e ),'guilds':len (bot .guilds )if bot else 0 ,'history':[]}),200

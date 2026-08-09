@@ -328,23 +328,23 @@ class NightSummary(commands.Cog):
         return ch
 
     async def send_summary(self, guild: discord.Guild, day: datetime, channel=None) -> bool:
-        cfg = self.cfg(guild.id)
-        stats = self.collect_day(guild.id, day, int(cfg.get('tz_offset', 3)))
-        ch = channel or await self._channel(guild)
-        if ch is None:
-            return False
-        buf = self.render_card(guild, day, stats)
-        file = discord.File(buf, filename=f"svodka_{day.strftime('%Y-%m-%d')}.png")
-        e = discord.Embed(color=GOLD, timestamp=datetime.now(timezone.utc))
-        e.description = (
-            f"## 🌙 Ночная сводка — {day.strftime('%d.%m.%Y')}\n"
-            f"Варнов **{stats['warns']}** · банов **{stats['bans']}** · киков **{stats['kicks']}** · "
-            f"мьютов **{stats['mutes']}**\n"
-            f"Tag Jail: **{stats['tagjail']}** · ghost-ping: **{stats['ghost']}** · "
-            f"ошибок бота: **{stats['errors']}**\n{DIVIDER}")
-        e.set_image(url=f"attachment://svodka_{day.strftime('%Y-%m-%d')}.png")
-        e.set_footer(text=f"{guild.name} · ежедневная сводка")
         try:
+            cfg = self.cfg(guild.id)
+            stats = await asyncio.to_thread(self.collect_day, guild.id, day, int(cfg.get('tz_offset', 3)))
+            ch = channel or await self._channel(guild)
+            if ch is None:
+                return False
+            buf = await asyncio.to_thread(self.render_card, guild, day, stats)
+            file = discord.File(buf, filename=f"svodka_{day.strftime('%Y-%m-%d')}.png")
+            e = discord.Embed(color=GOLD, timestamp=datetime.now(timezone.utc))
+            e.description = (
+                f"## 🌙 Ночная сводка — {day.strftime('%d.%m.%Y')}\n"
+                f"Варнов **{stats['warns']}** · банов **{stats['bans']}** · киков **{stats['kicks']}** · "
+                f"мьютов **{stats['mutes']}**\n"
+                f"Tag Jail: **{stats['tagjail']}** · ghost-ping: **{stats['ghost']}** · "
+                f"ошибок бота: **{stats['errors']}**\n{DIVIDER}")
+            e.set_image(url=f"attachment://svodka_{day.strftime('%Y-%m-%d')}.png")
+            e.set_footer(text=f"{guild.name} · ежедневная сводка")
             await ch.send(embed=e, file=file)
             return True
         except Exception as ex:
@@ -389,8 +389,8 @@ class NightSummary(commands.Cog):
         cfg = self.cfg(interaction.guild.id)
         off = int(cfg.get('tz_offset', 3))
         today = (datetime.now(timezone.utc) + timedelta(hours=off)).replace(tzinfo=None)
-        stats = self.collect_day(interaction.guild.id, today, off)
-        buf = self.render_card(interaction.guild, today, stats)
+        stats = await asyncio.to_thread(self.collect_day, interaction.guild.id, today, off)
+        buf = await asyncio.to_thread(self.render_card, interaction.guild, today, stats)
         file = discord.File(buf, filename="svodka_preview.png")
         e = discord.Embed(color=GOLD, timestamp=datetime.now(timezone.utc))
         e.description = (
