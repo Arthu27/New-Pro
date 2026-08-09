@@ -36,7 +36,8 @@ def _save_tasks (tasks :list ):
 _active_tasks =_load_tasks ()
 
 # Owner ID — пересылает неизвестные вопросы сюда
-OWNER_ID =int (os .getenv ('OWNER_ID')or '0')
+from config import clean_number
+OWNER_ID = clean_number(os.getenv('OWNER_ID')) or 0
 
 # Ожидающие вопросы — передаются пользователю, когда owner отвечает
 # {owner_dm_message_id: {'user_id': int, 'channel_id': int, 'question': str, 'is_dm': bool}}

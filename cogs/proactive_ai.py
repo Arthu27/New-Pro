@@ -9,7 +9,8 @@ from logger import get_logger
 log =get_logger ("proactive_ai")
 
 
-OWNER_ID =int (os .getenv ('OWNER_ID')or '0')
+from config import clean_number
+OWNER_ID = clean_number(os.getenv('OWNER_ID')) or 0
 DATA_FILE ='data/proactive_ai.json'
 
 # Предупреждение eшikleri

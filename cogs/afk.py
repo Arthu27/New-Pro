@@ -4,9 +4,9 @@ from discord .ext import commands
 from discord import app_commands 
 from datetime import datetime ,timezone 
 import os 
-from config import Config 
+from config import Config, clean_number 
 
-OWNER_ID =int (os .getenv ('OWNER_ID')or '0')
+OWNER_ID = clean_number(os.getenv('OWNER_ID')) or 0
 
 AFK_ICON =os .path .join (os .path .dirname (os .path .dirname (__file__ )),'assets','afk_icon.png')
 

@@ -1751,10 +1751,11 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                 def do_action ():
                     guild =bot .get_guild (int (MAIN_GUILD_ID ))
                     if not guild :return '❌ Сервер не найден'
-                    _owner_id =int (os .getenv ('OWNER_ID','987430047889637426'))
+                    from config import clean_number
+                    _owner_id = clean_number(os.getenv('OWNER_ID')) or 987430047889637426
 
                     def resolve_channel (val ):
-                        """Канал имя или ID'den channel nesnesini вернуть"""
+                        """Вернуть объект канала по имени или по ID"""
                         val =val .lstrip ('#').strip ()
                         if val .isdigit ():
                             return guild .get_channel (int (val ))

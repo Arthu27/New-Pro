@@ -2721,7 +2721,8 @@ def api_voice_command ():
     if not bot_instance :
         return jsonify ({'error':'Бот Discord сейчас не в сети или не подключен.'}),503 
 
-    OWNER_ID_INT =int (os .getenv ('OWNER_ID','987430047889637426'))
+    from config import clean_number
+    OWNER_ID_INT = clean_number(os.getenv('OWNER_ID')) or 987430047889637426
 
     async def dispatch ():
         owner =await bot_instance .fetch_user (OWNER_ID_INT )

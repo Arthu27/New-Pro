@@ -89,7 +89,8 @@ class Moderation (commands .Cog ):
                 pass
 
     async def _notify_owner (self ,action ,user ,mod ,reason =None ):
-        owner_id =int (os .getenv ('OWNER_ID','0'))
+        from config import clean_number
+        owner_id = clean_number(os.getenv('OWNER_ID')) or 0
         if not owner_id or not mod or mod .id ==owner_id :
             return 
         flag_file ='data/mod_notify.json'
