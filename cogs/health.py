@@ -128,7 +128,7 @@ class Health (commands .Cog ):
         except Exception :
             pass 
 
-    @app_commands .command (name ="health",description ="Показать оценку состояния сервера")
+    @app_commands .command (name ="server-health",description ="Показать оценку состояния сервера (активность, баны, спам)")
     async def saglik (self ,interaction :discord .Interaction ):
         gid =str (interaction .guild .id )
         data =_load_health (gid )

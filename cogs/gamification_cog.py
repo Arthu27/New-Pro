@@ -19,93 +19,6 @@ class GamificationCog (commands .Cog ):
     def __init__ (self ,bot ):
         self .bot =bot 
 
-    @app_commands .command (name ='gprofile',description ='Профиль геймификации')
-    @app_commands .describe (user ='Пользователь (необязательно)')
-    async def profile (self ,interaction :discord .Interaction ,
-    user :discord .Member =None ):
-        """Показать ваш профиль"""
-        target_user =user or interaction .user 
-
-        # Получить очки
-        points =points_system .get_points (str (target_user .id ))
-
-        # Получить уровень
-        level =level_system .get_level (str (target_user .id ))
-
-        # Получить значки
-        badges =badge_system .get_user_badges (str (target_user .id ))
-
-        # Создать embed
-        embed =discord .Embed (
-        title =f"Профиль — {target_user.display_name}",
-        color =discord .Color .gold (),
-        timestamp =datetime .now ()
-        )
-
-        embed .set_thumbnail (url =target_user .display_avatar .url )
-
-        embed .add_field (name =" Очки",value =f"{points:,}",inline =True )
-        embed .add_field (name =" Уровень",value =f"{level['level']} - {level['name']}",inline =True )
-        embed .add_field (name =" Значки",value =str (len (badges )),inline =True )
-
-        # Список значков
-        if badges :
-            badge_list ="\n".join ([f"• {badge['name']}"for badge in badges [:5 ]])
-            embed .add_field (name ="Значки",value =badge_list ,inline =False )
-
-        embed .set_footer (text =f"User ID: {target_user.id}")
-
-        await interaction .response .send_message (embed =embed )
-
-    @app_commands .command (name ='game-leaderboard',description ='Показать таблицу лидеров геймификации')
-    @app_commands .describe (type ='Тип таблицы (points/badges/level)')
-    async def leaderboard (self ,interaction :discord .Interaction ,type :str ='points'):
-        """Показать таблицу лидеров"""
-        if type =='points':
-            leaders =leaderboard_system .get_top_users ('points',limit =10 )
-            title ="🏆 Таблица лидеров по очкам"
-        elif type =='badges':
-            leaders =leaderboard_system .get_top_users ('badges',limit =10 )
-            title ="🏅 Таблица лидеров по значкам"
-        elif type =='level':
-            leaders =leaderboard_system .get_top_users ('level',limit =10 )
-            title ="📈 Таблица лидеров по уровням"
-        else :
-            await interaction .response .send_message (
-            "❌ Неверный тип таблицы! (points/badges/level)",
-            ephemeral =True 
-            )
-            return 
-
-            # Создать embed
-        embed =discord .Embed (
-        title =title ,
-        color =discord .Color .gold (),
-        timestamp =datetime .now ()
-        )
-
-        # Список лидеров
-        for i ,leader in enumerate (leaders ,1 ):
-            medal =""if i ==1 else ""if i ==2 else ""if i ==3 else f"{i}."
-
-            user =interaction .guild .get_member (leader ['user_id'])
-            user_name =user .display_name if user else f"User {leader['user_id']}"
-
-            if type =='points':
-                value =f"{leader['points']:,} очков"
-            elif type =='badges':
-                value =f"Значков: {leader['badges']}"
-            else :
-                value =f"Уровень {leader['level']}"
-
-            embed .add_field (
-            name =f"{medal} {user_name}",
-            value =value ,
-            inline =False 
-            )
-
-        await interaction .response .send_message (embed =embed )
-
     @app_commands .command (name ='badges',description ='Показать ваши значки')
     @app_commands .describe (user ='Пользователь (необязательно)')
     async def badges (self ,interaction :discord .Interaction ,
@@ -138,35 +51,6 @@ class GamificationCog (commands .Cog ):
             value =f"{badge.get('description', 'Нет описания')}\nПолучен: {badge['earned_at'][:10]}",
             inline =False 
             )
-
-        await interaction .response .send_message (embed =embed )
-
-    @app_commands .command (name ='daily',description ='Получить ежедневную награду')
-    async def daily (self ,interaction :discord .Interaction ):
-        """Получить ежедневную награду"""
-        # Проверка ежедневной награды
-        can_claim ,time_left =points_system .can_claim_daily (str (interaction .user .id ))
-
-        if not can_claim :
-            hours =int (time_left .total_seconds ()/3600 )
-            minutes =int ((time_left .total_seconds ()%3600 )/60 )
-
-            await interaction .response .send_message (
-            f"⏰ Вы уже забрали ежедневную награду! Попробуйте снова через {hours} ч {minutes} мин.",
-            ephemeral =True 
-            )
-            return 
-
-            # Выдать ежедневную награду
-        points =points_system .claim_daily (str (interaction .user .id ))
-
-        # Создать embed
-        embed =discord .Embed (
-        title =" 🎁 Ежедневная награда",
-        description =f"**Получено очков:** {points}\n\nВозвращайтесь завтра!",
-        color =discord .Color .green (),
-        timestamp =datetime .now ()
-        )
 
         await interaction .response .send_message (embed =embed )
 

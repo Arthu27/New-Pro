@@ -642,7 +642,7 @@ class ModReport (commands .Cog ):
         except Exception as e :
             await ctx .send (f' Ошибка: {e}')
 
-    @commands .command (name ='mod-stats',aliases =['modstats'])
+    @commands .command (name ='mod-stats',aliases =['мод-стата'])
     @commands .has_permissions (manage_messages =True )
     async def mod_stats (self ,ctx ,moderator :discord .Member =None ):
         """Модератор статистика: !mod-stats [@человек]"""

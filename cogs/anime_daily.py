@@ -219,22 +219,6 @@ class AnimeDaily (commands .Cog ):
         embed ,summary =_embed_build (interaction .guild ,anime ,category )
         await interaction .followup .send (embed =embed ,view =TranslateButton (summary ))
 
-    @app_commands .command (name ='anime-suggest',description ="Случайное или категорийное предложение аниме")
-    @app_commands .describe (kategori ='Категория аниме (пусто = случайная)')
-    @app_commands .choices (kategori =[
-    app_commands .Choice (name =k ,value =str (v ))for k ,v in KATEGORILER .items ()
-    ]+[app_commands .Choice (name ='Случайно',value ='0')])
-    async def anime_oner2 (self ,interaction :discord .Interaction ,kategori :str ='0'):
-        await interaction .response .defer ()
-        tur_id =int (kategori )if kategori !='0'else None 
-        category =next ((k for k ,v in KATEGORILER .items ()if v ==tur_id ),'Случайно')
-        anime =await _anime_getir (tur_id )
-        if not anime :
-            await interaction .followup .send (' Аниме не найдено, попробуйте ещё раз.')
-            return 
-        embed ,summary =_embed_build (interaction .guild ,anime ,category )
-        await interaction .followup .send (embed =embed ,view =TranslateButton (summary ))
-
 
 async def setup (bot ):
     await bot .add_cog (AnimeDaily (bot ),guilds =Config .guild_objects ())
