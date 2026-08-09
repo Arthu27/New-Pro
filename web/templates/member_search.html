@@ -1,40 +1,58 @@
 {% extends "base.html" %}
 {% block title %}Поиск участников — Aether{% endblock %}
-{% block page_title %}<i class="fas fa-search" ></i> Поиск участников{% endblock %}
+{% block page_title %}<i class="fas fa-search"></i> Поиск участников{% endblock %}
 {% block content %}
 <style>
-.ms-bar { display: flex; gap: 8px; margin-bottom: 16px; max-width: 560px; }
+.ms-bar { display: flex; gap: 8px; margin-bottom: 6px; max-width: 640px; }
 .ms-bar input[type="text"] { flex: 1; background: rgba(0,0,0,0.3); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 10px 14px; color: var(--text); font-size: 13px; outline: none; }
 .ms-bar input[type="text"]:focus { border-color: var(--ac); box-shadow: 0 0 0 3px var(--ac-soft); }
 .ms-bar .btn { background: linear-gradient(135deg, var(--ac), #c8972f); color: #1a1405; border: none; border-radius: var(--r-sm); padding: 0 18px; font-weight: var(--fw-bold); cursor: pointer; }
-.ms-results { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
-.ms-result-card { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); cursor: pointer; transition: all .15s var(--ease); }
+.ms-hint { max-width: 640px; font-size: 11px; color: var(--text-3); margin-bottom: 14px; }
+.ms-results { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; max-width: 640px; }
+.ms-result-card { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); cursor: pointer; transition: all .15s var(--ease); }
 .ms-result-card:hover { border-color: var(--ac); background: rgba(224,176,74,0.05); }
-.ms-result-card img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: var(--ac-soft); }
-.ms-result-card .name { font-weight: var(--fw-semibold); font-size: 14px; }
-.ms-result-card .id { font-size: 11px; color: #8a8374; margin-top: 2px; }
+.ms-result-card.active { border-color: var(--ac); background: rgba(224,176,74,0.08); }
+.ms-av-wrap { position: relative; flex-shrink: 0; }
+.ms-av-wrap img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: var(--ac-soft); display: block; }
+.ms-status { position: absolute; right: -1px; bottom: -1px; width: 11px; height: 11px; border-radius: 50%; border: 2px solid var(--surface); }
+.ms-status.big { width: 15px; height: 15px; border-width: 3px; }
+.ms-status.online { background: var(--ok); }
+.ms-status.idle { background: #e0b04a; }
+.ms-status.dnd { background: var(--err); }
+.ms-status.offline { background: #6b665e; }
+.ms-rc-body { min-width: 0; flex: 1; }
+.ms-rc-line1 { display: flex; align-items: center; gap: 6px; }
+.ms-rc-name { font-weight: var(--fw-semibold); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bot-badge { font-size: 9px; font-weight: var(--fw-bold); letter-spacing: .4px; background: var(--ac-soft); color: var(--ac); border: 1px solid var(--ac-line); padding: 1px 5px; border-radius: 4px; flex-shrink: 0; }
+.ms-rc-line2 { font-size: 11px; color: var(--text-3); margin-top: 2px; font-family: 'JetBrains Mono', monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ms-profile { display: none; grid-template-columns: 1fr 1fr; gap: 12px; }
 .ms-profile > div { display: flex; flex-direction: column; gap: 12px; }
 .ms-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 16px; }
 .ms-card h2 { font-size: 13px; font-weight: var(--fw-bold); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
 .ms-card h2 i { color: var(--ac); }
-.ms-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 12.5px; }
+.ms-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 12.5px; }
 .ms-row:last-child { border-bottom: none; }
-.ms-key { color: #8a8374; }
-.ms-val.ok { color: var(--ok); font-weight: var(--fw-semibold); }
+.ms-key { color: var(--text-3); flex-shrink: 0; }
+.ms-val { color: var(--text); font-weight: var(--fw-semibold); text-align: right; }
+.ms-val.ok { color: var(--ok); }
 .ms-val.danger { color: var(--err); font-weight: var(--fw-bold); }
-.ms-val { color: var(--text); font-weight: var(--fw-semibold); }
-.ms-val.id { font-family: 'JetBrains Mono',monospace; font-size: 11.5px; }
+.ms-val.id { font-family: 'JetBrains Mono', monospace; font-size: 11.5px; cursor: pointer; border-bottom: 1px dotted var(--text-3); }
+.ms-val.id:hover { color: var(--ac); }
 .ms-head { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
-.ms-head img { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; border: 2px solid var(--ac-line); }
+.ms-head .ms-av-wrap img { width: 64px; height: 64px; border: 2px solid var(--ac-line); }
 .ms-head .nm { font-weight: 700; font-size: 15.5px; color: var(--text); }
-.ms-head .un { font-size: 12px; color: var(--text-3); font-family: 'JetBrains Mono',monospace; }
+.ms-head .un { font-size: 12px; color: var(--text-3); font-family: 'JetBrains Mono', monospace; }
+.ms-head .status-ru { font-size: 11px; color: var(--text-3); margin-top: 3px; display: flex; align-items: center; gap: 6px; }
+.ms-head .status-ru .ms-status { position: static; border: none; width: 8px; height: 8px; }
 .ms-meta { color: var(--text-3); font-size: 11.5px; }
 .ms-note { padding: 22px; text-align: center; color: var(--text-3); font-size: 13px; background: var(--surface); border: 1px dashed var(--line); border-radius: var(--r-md); }
+.ms-note.error { border-color: var(--err); color: var(--err); border-style: solid; }
 .ms-av-fb { display: flex; align-items: center; justify-content: center; background: var(--ac-soft); border-radius: 50%; color: var(--ac); flex-shrink: 0; }
-.ms-roles { display: flex; flex-wrap: wrap; gap: 2px; justify-content: flex-end; }
+.ms-roles { display: flex; flex-wrap: wrap; gap: 3px; justify-content: flex-end; }
 .warn-item, .case-item { font-size: 12.5px; padding: 7px 0; border-bottom: 1px solid var(--line); }
 .warn-item:last-child, .case-item:last-child { border-bottom: none; }
+.warn-mod { color: var(--text-3); }
+.empty-ok { color: var(--ok); font-size: 12.5px; }
 @media (max-width: 720px) { .ms-profile { grid-template-columns: 1fr; } }
 </style>
 {% block page_hero %}
@@ -45,24 +63,30 @@
       <span>Поиск участников</span>
     </div>
     <h1>Поиск участников</h1>
-    <p>Быстрый поиск участников по имени или ID.</p>
+    <p>Быстрый поиск участников по имени, никнейму или ID.</p>
   </div>
 </div>
 {% endblock %}
 
-
-
 <div class="ms-bar">
-  <input type="text" id="ms-query" placeholder="Имя пользователя или ID..." onkeydown="if(event.key==='Enter')search()" aria-label="Имя пользователя или ID...">
-  <button class="btn btn-primary" onclick="search()"><i class="fas fa-search"></i> Поиск</button>
+  <input type="text" id="ms-query" placeholder="Имя, никнейм, @упоминание или ID..." oninput="onQueryInput()" onkeydown="if(event.key==='Enter')searchNow()" aria-label="Имя, никнейм или ID участника" autocomplete="off" spellcheck="false">
+  <button class="btn" onclick="searchNow()"><i class="fas fa-search"></i> Поиск</button>
 </div>
+<div class="ms-hint">Ищется и по части ID. Результаты появляются сами, пока вы печатаете.</div>
 
 <div id="ms-results" class="ms-results"></div>
-<div id="ms-profile" class="ms-profile"  ></div>
+<div id="ms-profile" class="ms-profile"></div>
 
 <script>
 var GUILD_ID = '{{ guild_id }}';
+var SEARCH_SEQ = 0;
+var SEARCH_TIMER = null;
+
 function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+function statusRu(s) {
+  return { online: 'В сети', idle: 'Не активен', dnd: 'Не беспокоить', invisible: 'Невидимый', offline: 'Не в сети' }[s] || 'Не в сети';
+}
 
 function roleChips(roles) {
   roles = roles || [];
@@ -77,75 +101,159 @@ function roleChips(roles) {
   }).join('');
 }
 
-async function search() {
+function noteHtml(text, isError) {
+  return '<div class="ms-note' + (isError ? ' error' : '') + '">' + esc(text) + '</div>';
+}
+
+function onQueryInput() {
+  if (SEARCH_TIMER) clearTimeout(SEARCH_TIMER);
   var q = document.getElementById('ms-query').value.trim();
+  if (!q) {
+    document.getElementById('ms-results').innerHTML = '';
+    document.getElementById('ms-profile').style.display = 'none';
+    return;
+  }
+  SEARCH_TIMER = setTimeout(function () { doSearch(q); }, 300);
+}
+
+function searchNow() {
+  if (SEARCH_TIMER) clearTimeout(SEARCH_TIMER);
+  doSearch(document.getElementById('ms-query').value.trim());
+}
+
+async function doSearch(q) {
   if (!q) return;
-  document.getElementById('ms-results').innerHTML = '<div class="ms-note">Поиск...</div>';
+  if (!GUILD_ID || GUILD_ID === 'None' || GUILD_ID === '0' || GUILD_ID === '') {
+    document.getElementById('ms-results').innerHTML = noteHtml('Сервер не выбран на панели — поиск недоступен.', true);
+    return;
+  }
+  var seq = ++SEARCH_SEQ;
+  document.getElementById('ms-results').innerHTML = noteHtml('Поиск...');
   document.getElementById('ms-profile').style.display = 'none';
   try {
-    var d = await fetch('/api/member-search/' + GUILD_ID + '?q=' + encodeURIComponent(q)).then(r => r.json());
-    if (!d.length) {
-      document.getElementById('ms-results').innerHTML = '<div class="ms-note">Ничего не найдено</div>';
+    var resp = await fetch('/api/member-search/' + GUILD_ID + '?q=' + encodeURIComponent(q));
+    var d = await resp.json();
+    if (seq !== SEARCH_SEQ) return; // пока ждали, ввели новый запрос
+    if (!Array.isArray(d)) {
+      document.getElementById('ms-results').innerHTML = noteHtml(d && d.error ? d.error : 'Ошибка поиска.', true);
       return;
     }
-    document.getElementById('ms-results').innerHTML = d.map(function(m) {
-      return '<div class="ms-result-card" onclick="loadProfile(\'' + esc(m.id) + '\')">' +
-        (m.avatar ? '<img src="' + esc(m.avatar) + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' : '<div class="ms-av-fb" style="width:40px;height:40px;font-size:17px;">👤</div>') +
-        '<div><div class="name">' + esc(m.display_name) + '</div>' +
-        '<div class="id">' + esc(m.id) + '</div></div>' +
+    if (!d.length) {
+      document.getElementById('ms-results').innerHTML = noteHtml('Ничего не найдено по запросу "' + q + '".');
+      return;
+    }
+    document.getElementById('ms-results').innerHTML = d.map(function (m) {
+      var av = m.avatar
+        ? '<img src="' + esc(m.avatar) + '" alt="" onerror="this.style.display=\'none\'">'
+        : '<div class="ms-av-fb" style="width:40px;height:40px;font-size:17px;">👤</div>';
+      var sub = m.nickname ? ('@' + m.name + ' • ник: ' + m.nickname) : ('@' + m.name);
+      return '<div class="ms-result-card" id="msrc-' + esc(m.id) + '" onclick="selectMember(\'' + esc(m.id) + '\')">' +
+        '<div class="ms-av-wrap">' + av + '<span class="ms-status ' + esc(m.status || 'offline') + '"></span></div>' +
+        '<div class="ms-rc-body">' +
+          '<div class="ms-rc-line1"><span class="ms-rc-name">' + esc(m.display_name) + '</span>' + (m.is_bot ? '<span class="bot-badge">БОТ</span>' : '') + '</div>' +
+          '<div class="ms-rc-line2">' + esc(sub) + '</div>' +
+          '<div class="ms-rc-line2">' + esc(m.id) + '</div>' +
+        '</div>' +
+        '<i class="fas fa-chevron-right" style="color:var(--text-3);font-size:11px;"></i>' +
       '</div>';
     }).join('');
-  } catch(e) {
-    document.getElementById('ms-results').innerHTML = '<div class="ms-note">Ошибка: ' + esc(e.message) + '</div>';
+  } catch (e) {
+    if (seq !== SEARCH_SEQ) return;
+    document.getElementById('ms-results').innerHTML = noteHtml('Ошибка: ' + (e && e.message ? e.message : e), true);
   }
 }
 
-async function loadProfile(userId) {
-  document.getElementById('ms-profile').style.display = 'none';
+async function selectMember(userId) {
+  var cards = document.querySelectorAll('.ms-result-card');
+  for (var i = 0; i < cards.length; i++) cards[i].classList.toggle('active', cards[i].id === 'msrc-' + userId);
+  var el = document.getElementById('ms-profile');
+  el.style.display = 'none';
   try {
-    var d = await fetch('/api/member-profile/' + GUILD_ID + '/' + userId).then(r => r.json());
-    var el = document.getElementById('ms-profile');
+    var resp = await fetch('/api/member-profile/' + GUILD_ID + '/' + encodeURIComponent(userId));
+    var d = await resp.json();
+    if (d && d.error && !d.warnings) {
+      el.innerHTML = noteHtml(d.error, true);
+      el.style.display = 'block';
+      return;
+    }
     el.style.display = 'grid';
 
     var warns = d.warnings || [];
     var cases = d.cases || d.case || [];
+    var statusKey = (d.status || 'offline');
+
+    var avBlock = d.avatar
+      ? '<img src="' + esc(d.avatar) + '" alt="" onerror="this.style.display=\'none\'">'
+      : '<div class="ms-av-fb" style="width:64px;height:64px;font-size:26px;">👤</div>';
+
+    var notFoundRow = (d.member_found === false)
+      ? '<div class="ms-row"><span class="ms-key">На сервере</span><span class="ms-val danger">Не найден — показаны только локальные записи</span></div>'
+      : '';
 
     var leftHtml = '<div>' +
       '<div class="ms-card">' +
         '<div class="ms-head">' +
-          (d.avatar ? '<img src="' + esc(d.avatar) + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' : '<div class="ms-av-fb" style="width:64px;height:64px;font-size:26px;">👤</div>') +
-          '<div><div class="nm">' + esc(d.display_name||d.name||userId) + '</div>' +
-          '<div class="un">@' + esc(d.name||userId) + '</div></div>' +
+          '<div class="ms-av-wrap">' + avBlock + '<span class="ms-status big ' + esc(statusKey) + '"></span></div>' +
+          '<div><div class="nm">' + esc(d.display_name || d.name || userId) + (d.is_bot ? ' <span class="bot-badge">БОТ</span>' : '') + '</div>' +
+          '<div class="un">@' + esc(d.name || userId) + '</div>' +
+          '<div class="status-ru"><span class="ms-status ' + esc(statusKey) + '"></span>' + statusRu(statusKey) + '</div></div>' +
         '</div>' +
-        '<div class="ms-row"><span class="ms-key">ID</span><span class="ms-val id">' + esc(d.id) + '</span></div>' +
-        (d.joined_at ? '<div class="ms-row"><span class="ms-key">Дата входа</span><span class="ms-val">' + new Date(d.joined_at).toLocaleDateString('ru-RU') + '</span></div>' : '') +
-        (d.created_at ? '<div class="ms-row"><span class="ms-key">Аккаунт создан</span><span class="ms-val">' + new Date(d.created_at).toLocaleDateString('ru-RU') + '</span></div>' : '') +
+        '<div class="ms-row"><span class="ms-key">ID</span><span class="ms-val id" title="Нажмите, чтобы скопировать" onclick="copyId(this, \'' + esc(d.id || userId) + '\')">' + esc(d.id || userId) + '</span></div>' +
+        (d.nickname ? '<div class="ms-row"><span class="ms-key">Никнейм</span><span class="ms-val">' + esc(d.nickname) + '</span></div>' : '') +
+        (d.joined_at ? '<div class="ms-row"><span class="ms-key">Дата входа</span><span class="ms-val">' + new Date(d.joined_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }) + '</span></div>' : '') +
+        (d.created_at ? '<div class="ms-row"><span class="ms-key">Аккаунт создан</span><span class="ms-val">' + new Date(d.created_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }) + '</span></div>' : '') +
         '<div class="ms-row"><span class="ms-key">Роли</span><span class="ms-val ms-roles">' + roleChips(d.roles) + '</span></div>' +
-        '<div class="ms-row"><span class="ms-key">Предупреждения</span><span class="ms-val ' + (warns.length>0?'danger':'ok') + '">' + warns.length + '</span></div>' +
+        notFoundRow +
+        '<div class="ms-row"><span class="ms-key">Предупреждения</span><span class="ms-val ' + (warns.length > 0 ? 'danger' : 'ok') + '">' + warns.length + '</span></div>' +
         '<div class="ms-row"><span class="ms-key">Записей модерации</span><span class="ms-val">' + cases.length + '</span></div>' +
       '</div>' +
     '</div>';
 
+    var warnsHtml = warns.length
+      ? warns.slice(-5).map(function (w, wi) {
+          return '<div class="warn-item"><div class="ms-meta">#' + esc(w.id == null ? warns.length - 4 + wi : w.id) +
+            (w.timestamp ? ' — ' + esc(String(w.timestamp).slice(0, 10)) : '') +
+            (w.mod ? ' <span class="warn-mod">• ' + esc(w.mod) + '</span>' : '') + '</div>' +
+            '<div style="margin-top:3px;">' + esc(w.reason || '—') + '</div></div>';
+        }).join('') + (warns.length > 5 ? '<div class="ms-meta" style="margin-top:6px;">…и ещё ' + (warns.length - 5) + '</div>' : '')
+      : '<div class="empty-ok">✓ Предупреждений нет</div>';
+
+    var casesHtml = cases.length
+      ? cases.slice(-5).map(function (c, ci) {
+          return '<div class="case-item"><div class="ms-meta">#' + esc(c.id == null ? cases.length - 4 + ci : c.id) +
+            ' ' + esc(String(c.action || '?').toUpperCase()) +
+            (c.timestamp ? ' — ' + esc(String(c.timestamp).slice(0, 10)) : '') +
+            (c.mod ? ' <span class="warn-mod">• ' + esc(c.mod) + '</span>' : '') + '</div>' +
+            '<div style="margin-top:3px;">' + esc(c.reason || '—') + '</div></div>';
+        }).join('') + (cases.length > 5 ? '<div class="ms-meta" style="margin-top:6px;">…и ещё ' + (cases.length - 5) + '</div>' : '')
+      : '<div class="empty-ok">✓ Записей нет</div>';
+
     var rightHtml = '<div>' +
       '<div class="ms-card">' +
         '<h2><i class="fas fa-exclamation-triangle"></i> Предупреждения (' + warns.length + ')</h2>' +
-        (warns.length ? warns.slice(-5).map(function(w, wi){
-          return '<div class="warn-item"><div class="ms-meta">#' + esc(w.id == null ? wi + 1 : w.id) + ' — ' + esc((w.timestamp||'').slice(0,10)) + '</div><div style="margin-top: 3px;">' + esc(w.reason||'?') + '</div></div>';
-        }).join('') : '<div >✓ Предупреждений нет</div>') +
+        warnsHtml +
       '</div>' +
       '<div class="ms-card">' +
         '<h2><i class="fas fa-clipboard-list"></i> История модерации (' + cases.length + ')</h2>' +
-        (cases.length ? cases.slice(-5).map(function(c, ci){
-          return '<div class="case-item"><div class="ms-meta">#' + esc(c.id == null ? ci + 1 : c.id) + ' ' + esc((c.action||'').toUpperCase()) + ' — ' + esc((c.timestamp||'').slice(0,10)) + '</div><div style="margin-top: 3px;">' + esc(c.reason||'?') + '</div></div>';
-        }).join('') : '<div >✓ Записей нет</div>') +
+        casesHtml +
       '</div>' +
     '</div>';
 
     el.innerHTML = leftHtml + rightHtml;
-  } catch(e) {
-    document.getElementById('ms-profile').innerHTML = '<div class="ms-note">Ошибка загрузки: ' + esc(e.message) + '</div>';
-    document.getElementById('ms-profile').style.display = 'block';
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  } catch (e) {
+    el.innerHTML = noteHtml('Ошибка загрузки профиля: ' + (e && e.message ? e.message : e), true);
+    el.style.display = 'block';
   }
 }
+
+function copyId(node, id) {
+  var done = function () { node.textContent = 'Скопировано!'; setTimeout(function () { node.textContent = id; }, 900); };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(id).then(done, function () {});
+  }
+}
+
+document.getElementById('ms-query').focus();
 </script>
 {% endblock %}

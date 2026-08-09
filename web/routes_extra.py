@@ -329,6 +329,127 @@ def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
         return f'⚠️ Ошибка действия: {e}'
 
 
+import re as _ms_re
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Поиск участников: нормализация запроса, релевантный скоринг, безопасные
+# нормализаторы записей. Чистые функции — покрыты тестами (tests/test_member_search).
+# ═══════════════════════════════════════════════════════════════════════════
+
+def ms_normalize_query(raw) -> str:
+    """Почистить поисковый запрос: пробелы, регистр, '@', упоминание <@123>."""
+    q = (raw or '')
+    if not isinstance(q, str):
+        q = str(q)
+    q = q.strip().lower()
+    if len(q) > 64:
+        q = q[:64]
+    m = _ms_re.fullmatch(r'<@!?(\d+)>', q)
+    if m:
+        return m.group(1)
+    if q.startswith('@'):
+        q = q[1:]
+    return q.strip()
+
+
+def ms_member_match(q: str, member) -> int:
+    """Очки совпадения запроса с участником (0 = не подходит).
+
+    Точный ID/имя — высший балл, начало имени — средний, вхождение — базовый.
+    Чисто цифровой запрос ищет и по началу ID (можно ввести часть ID).
+    """
+    if not q:
+        return 0
+    try:
+        uid = str(member.id)
+    except Exception:
+        return 0
+    if q == uid:
+        return 500
+    if q.isdigit() and uid.startswith(q):
+        return 200
+    best = 0
+    for n in (
+        getattr(member, 'display_name', None),
+        getattr(member, 'name', None),
+        getattr(member, 'global_name', None),
+        getattr(member, 'nick', None),
+    ):
+        if not n:
+            continue
+        n = str(n).strip().lower()
+        if not n:
+            continue
+        if n == q:
+            best = max(best, 400)
+        elif n.startswith(q):
+            best = max(best, 150)
+        elif q in n:
+            best = max(best, 100)
+    return best
+
+
+def ms_search_members(members, query, limit=25):
+    """Найти участников по запросу; результат отсортирован по релевантности."""
+    q = ms_normalize_query(query)
+    if not q:
+        return []
+    try:
+        limit = max(1, min(50, int(limit)))
+    except (TypeError, ValueError):
+        limit = 25
+    scored = []
+    for m in members or []:
+        s = ms_member_match(q, m)
+        if s > 0:
+            scored.append((s, str(getattr(m, 'display_name', '') or '').lower(), m))
+    scored.sort(key=lambda x: (-x[0], x[1]))
+    return [m for _, _, m in scored[:limit]]
+
+
+def ms_member_payload(m) -> dict:
+    """Карточка участника для API: безопасно вытаскивает поля."""
+    try:
+        avatar = str(m.display_avatar.url) if getattr(m, 'display_avatar', None) else None
+    except Exception:
+        avatar = None
+    return {
+        'id': str(m.id),
+        'name': str(getattr(m, 'name', '') or ''),
+        'display_name': str(getattr(m, 'display_name', '') or getattr(m, 'name', '') or str(m.id)),
+        'nickname': getattr(m, 'nick', None),
+        'avatar': avatar,
+        'status': str(getattr(m, 'status', 'offline') or 'offline'),
+        'is_bot': bool(getattr(m, 'bot', False)),
+    }
+
+
+def ms_normalize_warn(w, idx: int) -> dict:
+    """Привести запись предупреждения к единому виду для панели."""
+    if not isinstance(w, dict):
+        return {'id': idx, 'reason': str(w) or '—', 'mod': '', 'timestamp': ''}
+    return {
+        'id': w.get('id', idx),
+        'reason': str(w.get('reason') or '—'),
+        'mod': str(w.get('mod') or w.get('moderator') or w.get('mod_id') or ''),
+        'timestamp': str(w.get('timestamp') or w.get('date') or ''),
+    }
+
+
+def ms_normalize_case(c, idx: int) -> dict:
+    """Привести запись модерационной истории к единому виду для панели."""
+    if not isinstance(c, dict):
+        return {'id': idx, 'action': '?', 'reason': str(c) or '—', 'mod': '', 'timestamp': ''}
+    return {
+        'id': c.get('id', idx),
+        'action': str(c.get('action') or c.get('type') or '?'),
+        'reason': str(c.get('reason') or '—'),
+        'mod': str(c.get('mod_name') or c.get('mod') or c.get('mod_id') or ''),
+        'timestamp': str(c.get('timestamp') or ''),
+    }
+
+
 def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD_ID ='1384282749317152878'):
 
     def active_guild_id ():
@@ -2707,46 +2828,67 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     @login_required 
     @role_required ('admin')
     def api_member_search (guild_id ):
+        # Поиск участников: по имени, нику, упоминанию или (части) ID,
+        # с релевантной сортировкой и понятными ошибками вместо молчаливых [].
         import web .app as _app ;bot =_app .bot_instance 
-        if not bot :return jsonify ([])
-        q =request .args .get ('q','').lower ().strip ()
-        if not q :return jsonify ([])
-        guild =bot .get_guild (int (guild_id ))
-        if not guild :return jsonify ([])
-        results =[]
-        for m in guild .members :
-            if q in m .name .lower ()or q in m .display_name .lower ()or q ==str (m .id ):
-                results .append ({'id':str (m .id ),'name':m .name ,'display_name':m .display_name ,'avatar':str (m .display_avatar .url )})
-            if len (results )>=20 :break 
-        return jsonify (results )
+        if not bot :
+            return jsonify ({'error':'Бот сейчас не в сети — поиск участников недоступен.'}),503 
+        guild =bot .get_guild (int (guild_id )if str (guild_id ).isdigit ()else 0 )
+        if not guild :
+            return jsonify ({'error':'Сервер не найден: проверьте выбор сервера на панели.'}),404 
+        q =ms_normalize_query (request .args .get ('q',''))
+        if not q :
+            return jsonify ({'error':'Введите имя, никнейм или ID участника.'}),400 
+        matches =ms_search_members (guild .members ,q ,limit =25 )
+        return jsonify ([ms_member_payload (m )for m in matches ])
 
     @app .route ('/api/member-profile/<guild_id>/<user_id>',methods =['GET'])
     @login_required 
     @role_required ('admin')
     def api_member_profile (guild_id ,user_id ):
+        # Профиль участника: данные Discord + предупреждения + история модерации.
+        if not str (user_id ).isdigit ():
+            return jsonify ({'error':'Некорректный ID участника.'}),400 
         import web .app as _app ;bot =_app .bot_instance 
-        result ={'id':user_id }
+        result ={'id':user_id ,'warnings':[],'warn_count':0 ,'case':[],'cases':[],'case_count':0 }
         if bot :
-            guild =bot .get_guild (int (guild_id ))
+            guild =bot .get_guild (int (guild_id )if str (guild_id ).isdigit ()else 0 )
             if guild :
                 m =guild .get_member (int (user_id ))
                 if m :
-                    result .update ({'name':m .name ,'display_name':m .display_name ,'avatar':str (m .display_avatar .url ),'joined_at':m .joined_at .isoformat ()if m .joined_at else None ,'created_at':m .created_at .isoformat (),'role':[r .name for r in m .roles [1 :]],'roles':[{'name':r .name ,'color':str (r .color )}for r in m .roles [1 :]]})
-                    # Предупреждения
+                    result .update (ms_member_payload (m ))
+                    result ['joined_at']=m .joined_at .isoformat ()if m .joined_at else None 
+                    result ['created_at']=m .created_at .isoformat ()if m .created_at else None 
+                    result ['role']=[r .name for r in m .roles [1 :]]
+                    result ['roles']=[{'name':r .name ,'color':str (r .color )}for r in m .roles [1 :]]
+                    result ['member_found']=True 
+                else :
+                    result ['member_found']=False 
+        # Предупреждения (работают и когда бот не в сети — читаются с диска)
+        warns =[]
         wf ='data/warnings.json'
         if os .path .exists (wf ):
-            with open (wf ,encoding ='utf-8')as f :wdata =json .load (f )
-            warns =wdata .get (guild_id ,{}).get (user_id ,[])
-            result ['warnings']=warns 
-            result ['warn_count']=len (warns )
-            # История модерации
+            try :
+                with open (wf ,encoding ='utf-8')as f :wdata =json .load (f )
+                warns =wdata .get (str (guild_id ),{}).get (str (user_id ),[])
+            except Exception :
+                warns =[]
+        warns =[ms_normalize_warn (w ,i +1 )for i ,w in enumerate (warns )]
+        result ['warnings']=warns 
+        result ['warn_count']=len (warns )
+        # История модерации
+        case =[]
         mf ='data/mod_data.json'
         if os .path .exists (mf ):
-            with open (mf ,encoding ='utf-8')as f :mdata =json .load (f )
-            case =[c for c in mdata .get ('case',{}).get (guild_id ,[])if str (c .get ('user_id'))==str (user_id )]
-            result ['case']=case 
-            result ['cases']=case 
-            result ['case_count']=len (case )
+            try :
+                with open (mf ,encoding ='utf-8')as f :mdata =json .load (f )
+                case =[c for c in mdata .get ('case',{}).get (str (guild_id ),[])if str (c .get ('user_id'))==str (user_id )]
+            except Exception :
+                case =[]
+        case =[ms_normalize_case (c ,i +1 )for i ,c in enumerate (case )]
+        result ['case']=case 
+        result ['cases']=case 
+        result ['case_count']=len (case )
         return jsonify (result )
 
     @app .route ('/api/my-profile',methods =['GET'])
