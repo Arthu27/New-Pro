@@ -1,27 +1,25 @@
 """
 Aether — профессиональный генератор карточек логов (Pillow).
 
-Для каждой категории событий создаётся уникальный дизайн:
-  • MOD / AUTOMOD   — глубокий обсидиановый фон, магма-красные акценты, знаки предупреждения, плашки причин
-  • MESSAGE         — кибер-сапфировый/неоновый циановый стиль, чат-бабблы, diff-блоки сообщений, хэштеги каналов
-  • MEMBER          — аврора-мятный/изумрудный градиент, портал входа/выхода, статус-чипы и карточки участников
-  • VOICE           — аквамариновый/морской стиль с визуальным звуковым эквалайзером и стрелками перемещения
-  • ROLE            — королевский аметистовый/пурпурный стиль, бейджи иерархии, чипы +/− ролей
-  • CHANNEL         — архитектурный янтарно-золотой стиль, чертёжная сетка, индикаторы типов каналов
-  • GUILD / СЕРВЕР  — имперское обсидиановое золото, двойная рамка, герб сервера, премиум-типографика
-  • INVITE          — индиго-фиолетовый портальный стиль, моноширинный чип ссылки discord.gg/
-  • TICKET          — высокотехнологичный индиго-голубой саппорт-стиль с ID-бейджем тикета
-
-Использование:
-    from services.log_card import render_log_card, LOG_CARD_OK
-    png = render_log_card('mod', 'Бан участника',
-                          [('Участник', 'Ivan `123`'), ('Модератор', 'Admin `456`'), ('Причина', 'Спам')],
-                          color=0xE74C3C, cat_name='Модерация', guild_name='AETHER')
+Фирменная эстетика AETHER:
+  • Глубокий звёздно-космический фон Midnight Navy (10, 16, 30) → (16, 26, 48)
+  • Премиальное имперское золото Imperial Gold (212, 175, 55) и мерцающая золотая пыль
+  • Индивидуальные золотые иконки и уникальные виджеты для каждой категории:
+      - MOD: Рубиново-золотые щиты, скобки, плашки причин с кавычками
+      - MESSAGE: Золото-циановая цифровая сетка, цитаты сообщений, хэштеги каналов
+      - MEMBER / WELCOME: Аврора-изумрудные звёздные кольца, карточки профилей участников
+      - VOICE: Золотой аудио-эквалайзер (звуковые волны), индикаторы переходов
+      - ROLE: Королевский аметистово-золотой шевронный узор, бейджи +/- ролей
+      - CHANNEL: Архитектурные золотые чертёжные направляющие и типы каналов
+      - GUILD: Имперская двойная золотая рамка с алмазными углами и замком
+      - INVITE: Портальные фиолетово-золотые лучи, чипы ссылок discord.gg/
+      - TICKET: Золото-сапфировые плашки службы поддержки
 """
 import io
 import os
 import re
 import math
+import random
 
 try:
     from PIL import Image, ImageDraw, ImageFilter, ImageFont
@@ -34,6 +32,20 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FONT_B = os.path.join(ROOT, 'assets', 'fonts', 'Bold.ttf')
 FONT_R = os.path.join(ROOT, 'assets', 'fonts', 'Regular.ttf')
 ICONS_DIR = os.path.join(ROOT, 'assets', 'icons', 'logcards')
+
+# ═══════════════════════════════════════════════════════════════════════
+# Золотая палитра AETHER
+# ═══════════════════════════════════════════════════════════════════════
+C_BG_TOP      = (10, 16, 30)
+C_BG_BOT      = (16, 26, 48)
+C_GOLD        = (212, 175, 55)
+C_GOLD_BRIGHT = (245, 215, 110)
+C_GOLD_SOFT   = (160, 130, 50)
+C_GOLD_DIM    = (110, 90, 40)
+C_TEXT_WHITE  = (242, 245, 252)
+C_TEXT_DIM    = (140, 155, 185)
+C_CELL_BG     = (255, 255, 255, 9)
+C_CELL_BORDER = (212, 175, 55, 65)
 
 _fonts = {}
 
@@ -51,13 +63,18 @@ def _font(size, bold=False):
 
 
 def _clean(text):
-    """Очистка текста для рендеринга на изображении."""
+    """Очистка текста от эмодзи, markdown и сырых упоминаний."""
     t = str(text or '')
     t = re.sub(r'<@&(\d+)>', r'@роль·\1', t)
     t = re.sub(r'<@!?(\d+)>', r'@\1', t)
     t = re.sub(r'<#(\d+)>', r'#\1', t)
     t = re.sub(r'<a?:(\w+):\d+>', r'\1', t)
-    return t.replace('**', '').replace('`', '').strip()
+    # Удаляем не отображаемые TTF шрифтом эмодзи
+    t = re.sub(r'[\U00010000-\U0010ffff]', '', t)
+    t = re.sub(r'[\u2600-\u27bf]', '', t)
+    t = re.sub(r'[\ufe00-\ufe0f]', '', t)
+    t = t.replace('**', '').replace('`', '').replace('__', '').strip()
+    return re.sub(r'\s+', ' ', t)
 
 
 def _ellipsize(draw, text, font_obj, max_w):
@@ -70,7 +87,7 @@ def _ellipsize(draw, text, font_obj, max_w):
     return text + '…'
 
 
-def _rgb(color_int, default=(200, 146, 42)):
+def _rgb(color_int, default=C_GOLD):
     """Преобразование int/hex цвета в RGB кортеж."""
     try:
         c = int(color_int)
@@ -79,8 +96,8 @@ def _rgb(color_int, default=(200, 146, 42)):
         return default
 
 
-def _load_icon(category, size=160):
-    """Загрузить и подготовить скруглённую иконку категории."""
+def _load_icon(category, size=156):
+    """Загрузить фирменную золотую иконку категории."""
     if not LOG_CARD_OK:
         return None
     aliases = {
@@ -100,7 +117,7 @@ def _load_icon(category, size=160):
         im = Image.open(path).convert('RGBA').resize((size, size), Image.Resampling.LANCZOS)
         mask = Image.new('L', (size, size), 0)
         md = ImageDraw.Draw(mask)
-        md.rounded_rectangle((0, 0, size, size), radius=26, fill=255)
+        md.rounded_rectangle((0, 0, size, size), radius=28, fill=255)
         out = Image.new('RGBA', (size, size), (0, 0, 0, 0))
         out.paste(im, (0, 0), mask)
         return out
@@ -109,290 +126,242 @@ def _load_icon(category, size=160):
 
 
 # ═══════════════════════════════════════════════════════════════════════
-# Темы категорий: уникальные палитры, эффекты и декоративные элементы
+# Категории AETHER: золотой стиль + индивидуальные виджеты
 # ═══════════════════════════════════════════════════════════════════════
-THEMES = {
+CATEGORY_STYLES = {
     'mod': {
-        'bg_top': (16, 12, 18),
-        'bg_bot': (26, 14, 20),
-        'accent': (235, 65, 85),
-        'accent_sec': (250, 130, 49),
-        'pill_bg': (38, 18, 24, 210),
-        'pill_border': (235, 65, 85, 140),
-        'tag_text': '🛡️ SECURITY / MODERATION',
-        'tag_color': (255, 107, 129),
-        'style': 'mod',
+        'tag': '✦ AETHER · МОДЕРАЦИЯ',
+        'glow_color': (235, 65, 85),
+        'type': 'mod',
     },
     'automod': {
-        'bg_top': (18, 12, 14),
-        'bg_bot': (28, 16, 20),
-        'accent': (255, 75, 43),
-        'accent_sec': (255, 180, 0),
-        'pill_bg': (40, 18, 22, 210),
-        'pill_border': (255, 75, 43, 140),
-        'tag_text': '⚡ AUTOMOD / SYSTEM',
-        'tag_color': (255, 120, 90),
-        'style': 'mod',
+        'tag': '✦ AETHER · АВТОМОДЕРАЦИЯ',
+        'glow_color': (255, 90, 45),
+        'type': 'mod',
     },
     'message': {
-        'bg_top': (10, 18, 30),
-        'bg_bot': (16, 26, 44),
-        'accent': (0, 200, 255),
-        'accent_sec': (70, 130, 250),
-        'pill_bg': (18, 32, 54, 200),
-        'pill_border': (0, 200, 255, 130),
-        'tag_text': '💬 MESSAGE AUDIT',
-        'tag_color': (90, 220, 255),
-        'style': 'message',
+        'tag': '✦ AETHER · АУДИТ СООБЩЕНИЙ',
+        'glow_color': (0, 195, 255),
+        'type': 'message',
     },
     'member': {
-        'bg_top': (10, 22, 18),
-        'bg_bot': (16, 36, 28),
-        'accent': (46, 213, 115),
-        'accent_sec': (0, 230, 118),
-        'pill_bg': (18, 42, 32, 200),
-        'pill_border': (46, 213, 115, 130),
-        'tag_text': '👤 MEMBER EVENT',
-        'tag_color': (120, 240, 170),
-        'style': 'member',
+        'tag': '✦ AETHER · УЧАСТНИКИ СЕРВЕРА',
+        'glow_color': (46, 213, 115),
+        'type': 'member',
     },
     'welcome': {
-        'bg_top': (10, 24, 22),
-        'bg_bot': (16, 38, 34),
-        'accent': (32, 227, 178),
-        'accent_sec': (255, 215, 0),
-        'pill_bg': (18, 44, 40, 200),
-        'pill_border': (32, 227, 178, 140),
-        'tag_text': '✨ WELCOME / GATEWAY',
-        'tag_color': (80, 245, 205),
-        'style': 'member',
+        'tag': '✦ AETHER · ВРАТА СЕРВЕРА',
+        'glow_color': (32, 227, 178),
+        'type': 'member',
     },
     'voice': {
-        'bg_top': (8, 20, 28),
-        'bg_bot': (12, 32, 44),
-        'accent': (26, 188, 156),
-        'accent_sec': (0, 210, 255),
-        'pill_bg': (16, 38, 50, 200),
-        'pill_border': (26, 188, 156, 140),
-        'tag_text': '🎙️ VOICE ACTIVITY',
-        'tag_color': (80, 230, 210),
-        'style': 'voice',
+        'tag': '✦ AETHER · ГОЛОСОВАЯ АКТИВНОСТЬ',
+        'glow_color': (26, 188, 156),
+        'type': 'voice',
     },
     'role': {
-        'bg_top': (18, 12, 28),
-        'bg_bot': (28, 16, 44),
-        'accent': (155, 89, 182),
-        'accent_sec': (235, 77, 150),
-        'pill_bg': (36, 22, 54, 200),
-        'pill_border': (155, 89, 182, 130),
-        'tag_text': '🎭 ROLE MANAGEMENT',
-        'tag_color': (205, 155, 230),
-        'style': 'role',
+        'tag': '✦ AETHER · ИЕРАРХИЯ РОЛЕЙ',
+        'glow_color': (165, 94, 234),
+        'type': 'role',
     },
     'channel': {
-        'bg_top': (24, 18, 10),
-        'bg_bot': (38, 26, 14),
-        'accent': (243, 156, 18),
-        'accent_sec': (230, 126, 34),
-        'pill_bg': (48, 34, 18, 200),
-        'pill_border': (243, 156, 18, 130),
-        'tag_text': '📁 CHANNEL STRUCTURE',
-        'tag_color': (255, 195, 90),
-        'style': 'channel',
+        'tag': '✦ AETHER · СТРУКТУРА КАНАЛОВ',
+        'glow_color': (243, 156, 18),
+        'type': 'channel',
     },
     'guild': {
-        'bg_top': (15, 16, 24),
-        'bg_bot': (24, 26, 38),
-        'accent': (212, 175, 55),
-        'accent_sec': (241, 196, 15),
-        'pill_bg': (38, 34, 24, 210),
-        'pill_border': (212, 175, 55, 150),
-        'tag_text': '👑 SERVER UPDATE',
-        'tag_color': (245, 215, 110),
-        'style': 'guild',
+        'tag': '✦ AETHER · НАСТРОЙКИ СЕРВЕРА',
+        'glow_color': (212, 175, 55),
+        'type': 'guild',
     },
     'сервер': {
-        'bg_top': (15, 16, 24),
-        'bg_bot': (24, 26, 38),
-        'accent': (212, 175, 55),
-        'accent_sec': (241, 196, 15),
-        'pill_bg': (38, 34, 24, 210),
-        'pill_border': (212, 175, 55, 150),
-        'tag_text': '👑 SERVER UPDATE',
-        'tag_color': (245, 215, 110),
-        'style': 'guild',
+        'tag': '✦ AETHER · НАСТРОЙКИ СЕРВЕРА',
+        'glow_color': (212, 175, 55),
+        'type': 'guild',
     },
     'invite': {
-        'bg_top': (15, 14, 28),
-        'bg_bot': (24, 22, 44),
-        'accent': (108, 92, 231),
-        'accent_sec': (162, 155, 254),
-        'pill_bg': (32, 26, 56, 200),
-        'pill_border': (108, 92, 231, 130),
-        'tag_text': '🔗 INVITE PORTAL',
-        'tag_color': (180, 165, 255),
-        'style': 'invite',
+        'tag': '✦ AETHER · ПРИГЛАШЕНИЯ',
+        'glow_color': (108, 92, 231),
+        'type': 'invite',
     },
     'ticket': {
-        'bg_top': (14, 18, 32),
-        'bg_bot': (20, 28, 48),
-        'accent': (84, 160, 255),
-        'accent_sec': (95, 39, 205),
-        'pill_bg': (24, 34, 60, 200),
-        'pill_border': (84, 160, 255, 140),
-        'tag_text': '🎫 SUPPORT TICKET',
-        'tag_color': (140, 200, 255),
-        'style': 'message',
+        'tag': '✦ AETHER · СЛУЖБА ПОДДЕРЖКИ',
+        'glow_color': (84, 160, 255),
+        'type': 'ticket',
     },
 }
 
 
-def _draw_decorations(d, theme, W, H, PAD):
-    """Нарисовать индивидуальные графические декорации для стиля категории."""
-    st = theme['style']
-    acc = theme['accent']
-    sec = theme['accent_sec']
+def _draw_stardust(img, W, H):
+    """Нарисовать мерцающие золотые звёзды и частицы на фоне."""
+    overlay = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+    od = ImageDraw.Draw(overlay)
 
-    if st == 'mod':
-        # Диагональные предупреждающие насечки в правом верхнем углу
-        for i in range(7):
-            x = W - PAD - 260 + i * 36
-            d.line([(x, 34), (x + 22, 70)], fill=acc + (60,), width=3)
-        # Технические угловые скобки [ ]
-        d.line([(PAD - 16, 32), (PAD + 24, 32)], fill=acc + (180,), width=2)
-        d.line([(PAD - 16, 32), (PAD - 16, 72)], fill=acc + (180,), width=2)
-        d.line([(W - PAD + 16, H - 32), (W - PAD - 24, H - 32)], fill=acc + (180,), width=2)
-        d.line([(W - PAD + 16, H - 32), (W - PAD + 16, H - 72)], fill=acc + (180,), width=2)
+    rnd = random.Random(42)
+    for _ in range(65):
+        sx = rnd.randint(18, W - 18)
+        sy = rnd.randint(18, H - 18)
+        size = rnd.choice([1, 1, 2, 2, 3])
+        alpha = rnd.randint(50, 170)
+        gold_tint = rnd.choice([C_GOLD, C_GOLD_BRIGHT, (255, 255, 255)])
+        od.ellipse((sx, sy, sx + size, sy + size), fill=gold_tint + (alpha,))
 
-    elif st == 'voice':
-        # Аудио-эквалайзер / звуковые волны в шапке
-        eq_x = W - PAD - 280
-        eq_y = 74
-        heights = [18, 32, 48, 22, 54, 38, 26, 44, 58, 30, 42, 52, 24, 36, 20]
+    # 4-конечные звёздочки
+    for _ in range(7):
+        cx = rnd.randint(60, W - 60)
+        cy = rnd.randint(30, min(240, H - 30))
+        r = rnd.randint(3, 5)
+        od.line([(cx - r, cy), (cx + r, cy)], fill=C_GOLD_BRIGHT + (180,), width=1)
+        od.line([(cx, cy - r), (cx, cy + r)], fill=C_GOLD_BRIGHT + (180,), width=1)
+
+    return Image.alpha_composite(img, overlay)
+
+
+def _draw_category_widget(d, ctype, W, H, PAD, right_bound):
+    """Нарисовать уникальный графический виджет в шапке карточки."""
+    right_bound = int(right_bound)
+    if ctype == 'voice':
+        # Золотой эквалайзер
+        eq_x = right_bound - 190
+        eq_y = 66
+        heights = [14, 26, 42, 20, 48, 34, 22, 40, 52, 28, 36, 44]
         for i, h in enumerate(heights):
-            x = eq_x + i * 18
-            d.line([(x, eq_y - h // 2), (x, eq_y + h // 2)], fill=acc + (160,), width=4)
+            x = eq_x + i * 15
+            d.line([(x, eq_y - h // 2), (x, eq_y + h // 2)], fill=C_GOLD + (180,), width=3)
+            d.ellipse((x - 1, eq_y - h // 2 - 2, x + 1, eq_y - h // 2), fill=C_GOLD_BRIGHT + (230,))
 
-    elif st == 'message':
-        # Точечная сетка кибер-терминала
-        for gx in range(W - PAD - 240, W - PAD - 20, 24):
-            for gy in range(40, 96, 18):
-                d.rectangle((gx, gy, gx + 2, gy + 2), fill=acc + (80,))
+    elif ctype == 'mod':
+        # Предупреждающие диагональные насечки
+        for i in range(6):
+            x = right_bound - 190 + i * 30
+            d.line([(x, 48), (x + 18, 76)], fill=C_GOLD + (140,), width=3)
 
-    elif st == 'guild':
-        # Двойная золотая рамка с декоративными углами
-        d.rectangle((18, 18, W - 18, H - 18), outline=acc + (110,), width=2)
-        d.rectangle((26, 26, W - 26, H - 26), outline=acc + (50,), width=1)
-        # Угловые алмазные акценты
-        for cx, cy in [(26, 26), (W - 26, 26), (26, H - 26), (W - 26, H - 26)]:
-            d.polygon([(cx, cy - 6), (cx + 6, cy), (cx, cy + 6), (cx - 6, cy)], fill=acc + (220,))
+    elif ctype == 'guild':
+        # Алмазные декоративные угловые кристаллы
+        for cx, cy in [(24, 24), (W - 24, 24), (24, H - 24), (W - 24, H - 24)]:
+            d.polygon([(cx, cy - 6), (cx + 6, cy), (cx, cy + 6), (cx - 6, cy)], fill=C_GOLD_BRIGHT + (230,))
 
-    elif st == 'role':
-        # Иерархические шевроны
-        rx = W - PAD - 220
+    elif ctype == 'message':
+        # Цифровая точечная матрица
+        for gx in range(right_bound - 180, right_bound - 10, 20):
+            for gy in range(48, 88, 14):
+                d.rectangle((gx, gy, gx + 2, gy + 2), fill=C_GOLD + (110,))
+
+    elif ctype == 'member':
+        # Звёздные арки авроры
+        d.arc((right_bound - 180, 20, right_bound - 10, 120), start=180, end=360, fill=C_GOLD + (90,), width=2)
+        d.arc((right_bound - 150, 36, right_bound - 40, 110), start=180, end=360, fill=C_GOLD_BRIGHT + (130,), width=2)
+
+    elif ctype == 'role':
+        # Шевроны иерархии
+        rx = right_bound - 180
         for i in range(4):
-            x = rx + i * 42
-            d.line([(x, 46), (x + 16, 62), (x, 78)], fill=acc + (120,), width=3)
+            x = rx + i * 36
+            d.line([(x, 48), (x + 12, 62), (x, 76)], fill=C_GOLD + (140,), width=3)
 
-    elif st == 'channel':
-        # Архитектурные направляющие и хэш-паттерн
-        d.line([(W - PAD - 240, 48), (W - PAD, 48)], fill=acc + (80,), width=1)
-        d.line([(W - PAD - 240, 78), (W - PAD, 78)], fill=acc + (80,), width=1)
+    elif ctype == 'channel':
+        # Архитектурные направляющие
+        d.line([(right_bound - 180, 50), (right_bound - 10, 50)], fill=C_GOLD + (100,), width=1)
+        d.line([(right_bound - 180, 74), (right_bound - 10, 74)], fill=C_GOLD + (100,), width=1)
         for i in range(5):
-            x = W - PAD - 220 + i * 45
-            d.line([(x, 40), (x, 86)], fill=acc + (50,), width=1)
-
-    elif st == 'member':
-        # Радиальные кольца авроры
-        d.arc((W - PAD - 260, 20, W - PAD + 20, 180), start=180, end=360, fill=acc + (70,), width=2)
-        d.arc((W - PAD - 220, 40, W - PAD - 20, 160), start=180, end=360, fill=sec + (90,), width=2)
+            x = right_bound - 165 + i * 34
+            d.line([(x, 44), (x, 80)], fill=C_GOLD + (70,), width=1)
 
 
 def render_log_card(category, title, rows, color=0xC8922A, cat_name='',
                     guild_name='', time_str=''):
-    """Нарисовать премиальную уникальную карточку лога в зависимости от категории."""
+    """Нарисовать премиальную золотую карточку лога в единой стилистике AETHER."""
     if not LOG_CARD_OK:
         return None
     try:
         W = 1440
         PAD = 52
         cat_key = str(category or 'guild').lower().strip()
-        theme = THEMES.get(cat_key, THEMES.get('guild')).copy()
-        if color and color != 0xC8922A:
-            theme['accent'] = _rgb(color, theme['accent'])
+        cstyle = CATEGORY_STYLES.get(cat_key, CATEGORY_STYLES.get('guild'))
 
         clean_rows = [(n, v) for n, v in (rows or []) if v not in (None, '')][:7]
         header_h = 248
         row_h = 72
-        footer_h = 80
+        footer_h = 82
         H = header_h + max(1, len(clean_rows)) * row_h + footer_h
 
-        accent = theme['accent']
-        accent_sec = theme['accent_sec']
-        top, bot = theme['bg_top'], theme['bg_bot']
-
-        # 1. Градиентная основа фона
+        # 1. Тёмно-синий градиент Midnight Navy (как в night_summary и help_bg)
         grad = Image.new('RGB', (1, H))
         for y in range(H):
             t = y / max(1, H - 1)
-            grad.putpixel((0, y), tuple(int(top[i] + (bot[i] - top[i]) * t) for i in range(3)))
-        img = grad.resize((W, H))
+            grad.putpixel((0, y), tuple(int(C_BG_TOP[i] + (C_BG_BOT[i] - C_BG_TOP[i]) * t) for i in range(3)))
+        img = grad.resize((W, H)).convert('RGBA')
 
-        # 2. Мягкое неоновое свечение в шапке
+        # 2. Золотое и акцентное неоновое свечение в шапке
         glow = Image.new('RGBA', (W, H), (0, 0, 0, 0))
         gd = ImageDraw.Draw(glow)
-        gd.ellipse((-120, -160, 680, 420), fill=accent + (32,))
-        gd.ellipse((W - 500, -200, W + 200, 360), fill=accent_sec + (18,))
-        glow = glow.filter(ImageFilter.GaussianBlur(80))
-        img = Image.alpha_composite(img.convert('RGBA'), glow)
+        gd.ellipse((-140, -160, 650, 420), fill=C_GOLD + (34,))
+        cat_glow = cstyle['glow_color']
+        gd.ellipse((W - 550, -200, W + 180, 360), fill=cat_glow + (22,))
+        glow = glow.filter(ImageFilter.GaussianBlur(85))
+        img = Image.alpha_composite(img, glow)
+
+        # 3. Звёздная космическая пыль
+        img = _draw_stardust(img, W, H)
         d = ImageDraw.Draw(img)
 
-        # 3. Акцентная боковая неоновая полоса слева
-        d.rectangle((0, 0, 12, H), fill=accent + (255,))
-        d.rectangle((12, 0, 16, H), fill=accent + (90,))
+        # 4. Двойная золотая рамка по контуру карточки
+        d.rectangle((10, 10, W - 10, H - 10), outline=C_GOLD + (90,), width=2)
+        d.rectangle((16, 16, W - 16, H - 16), outline=C_GOLD_SOFT + (40,), width=1)
 
-        # 4. Уникальные графические декорации категории
-        _draw_decorations(d, theme, W, H, PAD)
+        # Левая золотая неоновая полоса
+        d.rectangle((0, 0, 10, H), fill=C_GOLD + (255,))
+        d.rectangle((10, 0, 14, H), fill=C_GOLD_BRIGHT + (140,))
 
-        # 5. Иконка категории
+        # 5. Время (в правом верхнем углу шапки)
+        time_clean = _clean(time_str)
+        t_font = _font(22, True)
+        time_w = d.textlength(time_clean, font=t_font) if time_clean else 0
+        right_limit = W - PAD
+
+        if time_clean:
+            t_pad_w = time_w + 24
+            t_box_x = W - PAD - t_pad_w
+            d.rounded_rectangle((t_box_x, 48, W - PAD, 48 + 36), radius=10,
+                                fill=(20, 28, 48, 220), outline=C_GOLD + (100,), width=1)
+            d.text((t_box_x + 12, 54), time_clean, font=t_font, fill=C_GOLD_BRIGHT)
+            right_limit = t_box_x - 18
+
+        # 6. Графический виджет категории в шапке (слева от плашки времени)
+        _draw_category_widget(d, cstyle['type'], W, H, PAD, right_limit)
+
+        # 7. Фирменная золотая иконка категории
         icon = _load_icon(cat_key, size=154)
         tx = PAD
         if icon is not None:
             # Тень под иконкой
             d.rounded_rectangle((PAD + 4, 46 + 4, PAD + 154 + 4, 46 + 154 + 4), radius=26,
-                                fill=(0, 0, 0, 90))
+                                fill=(0, 0, 0, 110))
             img.paste(icon, (PAD, 46), icon)
             d.rounded_rectangle((PAD, 46, PAD + 154, 46 + 154), radius=26,
-                                outline=accent + (230,), width=3)
+                                outline=C_GOLD + (210,), width=3)
             tx = PAD + 154 + 32
 
-        # 6. Бейдж категории в шапке
-        cat_badge = theme.get('tag_text') or f'● {str(cat_name or cat_key).upper()}'
+        # 8. Бейдж категории в шапке (Золото + мягкий фон)
+        cat_badge = cstyle.get('tag') or f'✦ AETHER · {str(cat_name or cat_key).upper()}'
         badge_font = _font(22, True)
         bw = d.textlength(cat_badge, font=badge_font) + 28
         bh = 38
         d.rounded_rectangle((tx, 48, tx + bw, 48 + bh), radius=12,
-                            fill=theme['pill_bg'], outline=theme['pill_border'], width=1)
-        d.text((tx + 14, 55), cat_badge, font=badge_font, fill=theme['tag_color'])
+                            fill=(20, 28, 48, 220), outline=C_GOLD + (120,), width=1)
+        d.text((tx + 14, 55), cat_badge, font=badge_font, fill=C_GOLD_BRIGHT)
 
-        # Время (в правом углу шапки)
-        if time_str:
-            t_font = _font(24, False)
-            t_txt = f"⏱ {_clean(time_str)}"
-            t_w = d.textlength(t_txt, font=t_font)
-            d.text((W - PAD - t_w, 48), t_txt, font=t_font, fill=(140, 155, 185, 255))
-
-        # Заголовок события
+        # Заголовок события (крупный золотой / бело-золотой)
         title_font = _font(44, True)
         title_txt = _ellipsize(d, _clean(title), title_font, W - tx - PAD - 20)
-        d.text((tx, 98), title_txt, font=title_font, fill=(244, 248, 255, 255))
+        d.text((tx, 98), title_txt, font=title_font, fill=C_TEXT_WHITE)
 
-        # Разделитель шапки (тонкий градиентный)
+        # Золотой разделитель шапки с градиентным золотым штрихом
         sep_y = header_h - 22
-        d.line([(PAD, sep_y), (W - PAD, sep_y)], fill=accent + (100,), width=2)
-        d.line([(PAD, sep_y), (PAD + 220, sep_y)], fill=accent + (255,), width=2)
+        d.line([(PAD, sep_y), (W - PAD, sep_y)], fill=C_GOLD + (80,), width=1)
+        d.line([(PAD, sep_y), (PAD + 240, sep_y)], fill=C_GOLD_BRIGHT + (230,), width=2)
 
-        # 7. Индивидуальные строки данных в виде премиум-карточек
+        # 9. Строки данных — полупрозрачные плашки в золотых рамках
         y = header_h
         card_w = W - PAD * 2
         name_col_w = 280
@@ -401,54 +370,53 @@ def render_log_card(category, title, rows, color=0xC8922A, cat_name='',
             clean_n = _clean(name).upper()
             clean_v = _clean(value)
             is_reason = clean_n in ('ПРИЧИНА', 'REASON', 'ПРИЧИНА НАКАЗАНИЯ')
-            is_diff = clean_n in ('БЫЛО', 'СТАЛО', 'ТЕКСТ', 'СООБЩЕНИЕ', 'CONTENT')
 
-            # Фоновая плашка строки
-            box_fill = (44, 20, 24, 210) if is_reason else theme['pill_bg']
-            box_outline = (255, 80, 90, 160) if is_reason else theme['pill_border']
+            # Плашка строки
+            box_fill = (45, 22, 28, 220) if is_reason else (18, 26, 44, 210)
+            box_outline = (235, 75, 85, 160) if is_reason else C_CELL_BORDER
 
             d.rounded_rectangle((PAD, y + 4, PAD + card_w, y + row_h - 8), radius=14,
                                 fill=box_fill, outline=box_outline, width=1)
 
-            # Левый акцентный штрих плашки
-            bar_color = (255, 75, 85, 255) if is_reason else accent + (255,)
+            # Левый акцентный штрих плашки (золотой или рубиновый для причины)
+            bar_color = (255, 80, 90, 255) if is_reason else C_GOLD + (255,)
             d.rounded_rectangle((PAD + 3, y + 10, PAD + 8, y + row_h - 14), radius=3,
                                 fill=bar_color)
 
             # Название поля
             n_font = _font(22, True)
             d.text((PAD + 24, y + 20), _ellipsize(d, clean_n, n_font, name_col_w - 30),
-                   font=n_font, fill=theme['tag_color'] if not is_reason else (255, 140, 150, 255))
+                   font=n_font, fill=C_GOLD_BRIGHT if not is_reason else (255, 145, 155, 255))
 
-            # Разделительная точка
-            d.text((PAD + name_col_w, y + 18), '›', font=_font(26, True), fill=(120, 135, 165, 180))
+            # Золотой разделитель
+            d.text((PAD + name_col_w, y + 18), '›', font=_font(26, True), fill=C_GOLD + (170,))
 
             # Значение поля
             v_font = _font(26, False) if not is_reason else _font(26, True)
             val_x = PAD + name_col_w + 24
             max_val_w = W - PAD - val_x - 20
             val_txt = _ellipsize(d, clean_v, v_font, max_val_w)
-            val_color = (248, 250, 255, 255) if not is_reason else (255, 235, 235, 255)
+            val_color = C_TEXT_WHITE if not is_reason else (255, 235, 235, 255)
             d.text((val_x, y + 19), val_txt, font=v_font, fill=val_color)
 
             y += row_h
 
         if not clean_rows:
-            d.text((PAD + 24, y + 18), 'Нет дополнительных параметров', font=_font(26), fill=(140, 155, 180, 255))
+            d.text((PAD + 24, y + 18), 'Нет дополнительных параметров', font=_font(26), fill=C_TEXT_DIM)
 
-        # 8. Фирменный футер
+        # 10. Фирменный футер с золотым разделителем
         fy = H - footer_h + 16
-        d.line([(PAD, fy), (W - PAD, fy)], fill=accent + (90,), width=1)
+        d.line([(PAD, fy), (W - PAD, fy)], fill=C_GOLD + (80,), width=1)
 
         f_txt = f"AETHER LOG · {str(cat_name or cat_key).upper()}"
         if guild_name:
             f_txt += f" · {_clean(guild_name)}"
         d.text((PAD, fy + 18), _ellipsize(d, f_txt, _font(22), W - PAD * 2 - 200),
-               font=_font(22), fill=(130, 148, 180, 255))
+               font=_font(22), fill=C_TEXT_DIM)
 
         brand = "✦ AETHER"
         bw = d.textlength(brand, font=_font(24, True))
-        d.text((W - PAD - bw, fy + 16), brand, font=_font(24, True), fill=accent + (255,))
+        d.text((W - PAD - bw, fy + 16), brand, font=_font(24, True), fill=C_GOLD_BRIGHT)
 
         buf = io.BytesIO()
         img.convert('RGB').save(buf, 'PNG', optimize=True)
