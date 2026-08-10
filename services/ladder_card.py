@@ -1,13 +1,14 @@
 """
 Aether — визуальная лестница наказаний (Pillow).
 
-Ступени слева направо: «N предупреждений → действие». Рисует бот.
+Ступени слева направо: «N предупреждений → действие». Рисуется ботом на фоне Midnight Navy.
 
     from services.ladder_card import render_ladder_card, LADDER_CARD_OK
-    png = render_ladder_card(steps, guild_name='MOEBIUS')
+    png = render_ladder_card(steps, guild_name='AETHER')
 """
 import io
 import os
+import random
 
 try:
     from PIL import Image, ImageDraw, ImageFilter, ImageFont
@@ -21,11 +22,14 @@ FONT_B = os.path.join(ROOT, 'assets', 'fonts', 'Bold.ttf')
 FONT_R = os.path.join(ROOT, 'assets', 'fonts', 'Regular.ttf')
 ICONS_DIR = os.path.join(ROOT, 'assets', 'icons', 'logcards')
 
-GOLD = (212, 175, 55, 255)
-GOLD_SOFT = (212, 175, 55, 90)
-TEXT = (240, 244, 252, 255)
-MUTED = (143, 163, 200, 255)
-DIM = (124, 141, 176, 255)
+C_BG_TOP       = (10, 16, 30)
+C_BG_BOT       = (16, 26, 48)
+GOLD           = (212, 175, 55, 255)
+GOLD_BRIGHT    = (245, 215, 110, 255)
+GOLD_SOFT      = (212, 175, 55, 90)
+TEXT           = (240, 244, 252, 255)
+MUTED          = (143, 163, 200, 255)
+DIM            = (124, 141, 176, 255)
 
 ACTIONS = {
     'mute':    ('МУТ', (230, 126, 34), 'log_mod_256.png'),
@@ -50,6 +54,7 @@ def _font(size, bold=False):
 
 
 def _ellipsize(draw, text, font, max_w):
+    text = str(text or '')
     if draw.textlength(text, font=font) <= max_w:
         return text
     while text and draw.textlength(text + '…', font=font) > max_w:
@@ -64,7 +69,7 @@ def _icon(fn, size=64):
     if not os.path.exists(p):
         return None
     try:
-        im = Image.open(p).convert('RGB').resize((size, size), Image.LANCZOS)
+        im = Image.open(p).convert('RGBA').resize((size, size), Image.Resampling.LANCZOS)
         mask = Image.new('L', (size, size), 0)
         ImageDraw.Draw(mask).rounded_rectangle((0, 0, size, size), radius=14, fill=255)
         out = Image.new('RGBA', (size, size), (0, 0, 0, 0))
@@ -106,24 +111,32 @@ def render_ladder_card(steps, guild_name=''):
     try:
         steps = sorted(steps or [], key=lambda s: int(s.get('count', 0)))[:6]
         W, H, PAD = 1440, 780, 56
-        top_c, bot_c = (13, 20, 32), (24, 34, 54)
         grad = Image.new('RGB', (1, H))
         for y in range(H):
             k = y / max(1, H - 1)
-            grad.putpixel((0, y), tuple(int(top_c[i] + (bot_c[i] - top_c[i]) * k) for i in range(3)))
+            grad.putpixel((0, y), tuple(int(C_BG_TOP[i] + (C_BG_BOT[i] - C_BG_TOP[i]) * k) for i in range(3)))
         img = grad.resize((W, H)).convert('RGBA')
+
         glow = Image.new('RGBA', (W, H), (0, 0, 0, 0))
-        ImageDraw.Draw(glow).ellipse((-240, -280, 620, 460), fill=(212, 175, 55, 26))
-        img = Image.alpha_composite(img, glow.filter(ImageFilter.GaussianBlur(100)))
+        ImageDraw.Draw(glow).ellipse((-240, -280, 620, 460), fill=(212, 175, 55, 30))
+        img = Image.alpha_composite(img, glow.filter(ImageFilter.GaussianBlur(90)))
         d = ImageDraw.Draw(img)
-        d.rounded_rectangle((8, 8, W - 8, H - 8), radius=26, outline=GOLD_SOFT, width=3)
+
+        # Двойная золотая рамка
+        d.rectangle((10, 10, W - 10, H - 10), outline=GOLD_SOFT, width=2)
+        d.rectangle((16, 16, W - 16, H - 16), outline=(212, 175, 55, 40), width=1)
 
         # Шапка
-        d.text((PAD, 58), 'ЛЕСТНИЦА НАКАЗАНИЙ', font=_font(26, True), fill=GOLD)
-        d.text((PAD, 100), _ellipsize(d, guild_name or 'Сервер', _font(52, True), W - PAD * 2),
-               font=_font(52, True), fill=TEXT)
-        d.text((PAD, 170), 'Автоматические меры по количеству предупреждений', font=_font(26), fill=DIM)
-        d.rectangle((PAD, 224, W - PAD, 226), fill=GOLD_SOFT)
+        badge_txt = "✦ AETHER · ЛЕСТНИЦА НАКАЗАНИЙ"
+        bw = d.textlength(badge_txt, font=_font(20, True)) + 24
+        d.rounded_rectangle((PAD, 48, PAD + bw, 48 + 34), radius=10,
+                            fill=(20, 28, 48, 220), outline=(212, 175, 55, 120), width=1)
+        d.text((PAD + 12, 54), badge_txt, font=_font(20, True), fill=GOLD_BRIGHT)
+
+        d.text((PAD, 96), _ellipsize(d, guild_name or 'Сервер', _font(48, True), W - PAD * 2),
+               font=_font(48, True), fill=TEXT)
+        d.text((PAD, 156), 'Автоматическая эскалация мер по количеству предупреждений', font=_font(24), fill=DIM)
+        d.line([(PAD, 204), (W - PAD, 204)], fill=GOLD_SOFT, width=1)
 
         # Ступени
         floor = 640
@@ -138,30 +151,35 @@ def render_ladder_card(steps, guild_name=''):
                 label, col_rgb, icon_fn = ACTIONS.get(act, (act.upper(), (230, 126, 34), 'log_mod_256.png'))
                 step_h = 150 + int(230 * (i + 1) / n)
                 top = floor - step_h
-                # Ступень: тёмное тело с оттенком цвета действия (без прозрачности)
-                body = _blend((24, 34, 54), col_rgb, 0.16)
+
+                # Ступень: градиентная плашка
+                body = _blend((20, 28, 46), col_rgb, 0.22)
                 d.rounded_rectangle((x, top, x + col, floor), radius=16,
-                                    fill=body + (255,), outline=col_rgb + (255,), width=3)
+                                    fill=body + (240,), outline=col_rgb + (255,), width=2)
+
                 # Бейдж количества
                 bx, by = x + col // 2, top - 34
                 d.ellipse((bx - 34, by - 34, bx + 34, by + 34), fill=col_rgb + (255,),
-                          outline=GOLD, width=3)
+                          outline=GOLD, width=2)
                 num = str(cnt)
                 nf = _font(34, True)
                 d.text((bx - d.textlength(num, font=nf) / 2, by - 24), num, font=nf, fill=(255, 255, 255, 255))
+
                 # Иконка действия
                 ic = _icon(icon_fn)
                 if ic is not None:
                     img.paste(ic, (x + col // 2 - 32, top + 26), ic)
-                # Действие
-                lf = _font(32, True)
+
+                # Название действия
+                lf = _font(30, True)
                 d.text((x + col // 2 - d.textlength(label, font=lf) / 2, top + 104), label,
                        font=lf, fill=col_rgb + (255,))
                 dur = _duration_text(st)
                 if dur:
-                    df = _font(26, True)
-                    d.text((x + col // 2 - d.textlength(dur, font=df) / 2, top + 148), dur,
+                    df = _font(24, True)
+                    d.text((x + col // 2 - d.textlength(dur, font=df) / 2, top + 146), dur,
                            font=df, fill=TEXT)
+
                 # Подпись под ступенью
                 cap = f'{cnt} предупреждений' if cnt >= 5 else (
                       f'{cnt} предупреждения' if 2 <= cnt <= 4 else 'первое')
@@ -169,7 +187,7 @@ def render_ladder_card(steps, guild_name=''):
                 d.text((x + col // 2 - d.textlength(cap, font=cf) / 2, floor + 20), cap,
                        font=cf, fill=MUTED)
                 x += col + int((zone_w - col * n) / max(1, n - 1)) if n > 1 else 0
-            d.rectangle((PAD - 6, floor, W - PAD + 6, floor + 3), fill=GOLD_SOFT)
+            d.line([(PAD - 6, floor), (W - PAD + 6, floor)], fill=GOLD_SOFT, width=2)
         else:
             d.text((PAD, 340), 'Лестница пока не настроена.', font=_font(32, True), fill=TEXT)
             d.text((PAD, 394), 'Добавьте ступени в панели (Предупреждения) или командой /ladder-add',
@@ -177,11 +195,11 @@ def render_ladder_card(steps, guild_name=''):
 
         # Футер
         fy = H - 66
-        d.rectangle((PAD, fy, W - PAD, fy + 2), fill=GOLD_SOFT)
-        d.text((PAD, fy + 14), 'AETHER MODERATION', font=_font(24, True), fill=GOLD)
-        brand = 'Авто-наказание по варнам'
-        d.text((W - PAD - d.textlength(brand, font=_font(22)), fy + 16),
-               brand, font=_font(22), fill=DIM)
+        d.line([(PAD, fy), (W - PAD, fy)], fill=GOLD_SOFT, width=1)
+        d.text((PAD, fy + 14), 'AETHER MODERATION · АВТО-НАКАЗАНИЯ', font=_font(22), fill=GOLD)
+        brand = '✦ AETHER'
+        d.text((W - PAD - d.textlength(brand, font=_font(24, True)), fy + 12),
+               brand, font=_font(24, True), fill=GOLD_BRIGHT)
 
         buf = io.BytesIO()
         img.convert('RGB').save(buf, 'PNG', optimize=True)
