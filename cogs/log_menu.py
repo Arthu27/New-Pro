@@ -142,6 +142,41 @@ def _format_event_detail(ev: dict) -> str:
     return ' · '.join(parts)[:110] or '—'
 
 
+def _load_celestial_bg(w, h, cat_tint=None):
+    """Загружает реальный звёздно-космический фон assets/help_bg.png с золотой аурой."""
+    bg_path = os.path.join(ROOT, 'assets', 'help_bg.png')
+    try:
+        bg_im = Image.open(bg_path).convert('RGBA')
+        bw, bh = bg_im.size
+        target_ratio = w / h
+        src_ratio = bw / bh
+        if src_ratio > target_ratio:
+            nw = int(bh * target_ratio)
+            x0 = (bw - nw) // 2
+            bg_im = bg_im.crop((x0, 0, x0 + nw, bh))
+        else:
+            nh = int(bw / target_ratio)
+            y0 = (bh - nh) // 2
+            bg_im = bg_im.crop((0, y0, bw, y0 + nh))
+        base = bg_im.resize((w, h), Image.Resampling.LANCZOS)
+    except Exception:
+        grad = Image.new('RGB', (1, h))
+        for y in range(h):
+            t = y / max(1, h - 1)
+            grad.putpixel((0, y), tuple(int(C_BG_TOP[i] + (C_BG_BOT[i] - C_BG_TOP[i]) * t) for i in range(3)))
+        base = grad.resize((w, h)).convert('RGBA')
+
+    if cat_tint:
+        glow = Image.new('RGBA', (w, h), (0, 0, 0, 0))
+        gd = ImageDraw.Draw(glow)
+        gd.ellipse((-100, -120, 560, 300), fill=C_GOLD + (34,))
+        gd.ellipse((w - 440, -140, w + 100, 280), fill=cat_tint + (25,))
+        glow = glow.filter(ImageFilter.GaussianBlur(75))
+        base = Image.alpha_composite(base, glow)
+
+    return base
+
+
 def generate_log_browser_card(guild_name: str, category: str, events: list, page: int, total_pages: int, search_q: str = '') -> Image.Image:
     """Генерирует графическую Pillow-таблицу для интерактивного меню логов."""
     W = 1180
@@ -156,33 +191,8 @@ def generate_log_browser_card(guild_name: str, category: str, events: list, page
     display_events = events[:6]
     H = header_h + max(1, len(display_events)) * (row_h + gap_y) + footer_h
 
-    # 1. Тёмно-синий градиент
-    grad = Image.new('RGB', (1, H))
-    for y in range(H):
-        t = y / max(1, H - 1)
-        grad.putpixel((0, y), tuple(int(C_BG_TOP[i] + (C_BG_BOT[i] - C_BG_TOP[i]) * t) for i in range(3)))
-    img = grad.resize((W, H)).convert('RGBA')
-
-    # 2. Неоновое свечение в шапке
-    glow = Image.new('RGBA', (W, H), (0, 0, 0, 0))
-    gd = ImageDraw.Draw(glow)
-    gd.ellipse((-100, -120, 560, 300), fill=C_GOLD + (34,))
-    gd.ellipse((W - 440, -140, W + 100, 280), fill=acc + (25,))
-    glow = glow.filter(ImageFilter.GaussianBlur(75))
-    img = Image.alpha_composite(img, glow)
-
-    # 3. Звёздные частицы
-    rnd = random.Random(88)
-    stardust = Image.new('RGBA', (W, H), (0, 0, 0, 0))
-    sd = ImageDraw.Draw(stardust)
-    for _ in range(50):
-        sx = rnd.randint(18, W - 18)
-        sy = rnd.randint(18, H - 18)
-        size = rnd.choice([1, 1, 2, 2, 3])
-        alpha = rnd.randint(40, 160)
-        sd.ellipse((sx, sy, sx + size, sy + size), fill=C_GOLD + (alpha,))
-    img = Image.alpha_composite(img, stardust)
-
+    # 1. Полноценная звёздная иллюстрация с неоновым свечением
+    img = _load_celestial_bg(W, H, cat_tint=acc)
     d = ImageDraw.Draw(img)
 
     # 4. Двойная золотая рамка

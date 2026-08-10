@@ -154,6 +154,38 @@ def _get_lb_data(guild: discord.Guild, category: str):
     return top
 
 
+def _load_celestial_bg(w, h):
+    """Загружает реальный звёздно-космический фон assets/help_bg.png с золотой аурой."""
+    bg_path = os.path.join(ROOT, 'assets', 'help_bg.png')
+    try:
+        bg_im = Image.open(bg_path).convert('RGBA')
+        bw, bh = bg_im.size
+        target_ratio = w / h
+        src_ratio = bw / bh
+        if src_ratio > target_ratio:
+            nw = int(bh * target_ratio)
+            x0 = (bw - nw) // 2
+            bg_im = bg_im.crop((x0, 0, x0 + nw, bh))
+        else:
+            nh = int(bw / target_ratio)
+            y0 = (bh - nh) // 2
+            bg_im = bg_im.crop((0, y0, bw, y0 + nh))
+        base = bg_im.resize((w, h), Image.Resampling.LANCZOS)
+    except Exception:
+        grad = Image.new('RGB', (1, h))
+        for y in range(h):
+            t = y / max(1, h - 1)
+            grad.putpixel((0, y), tuple(int(C_BG_TOP[i] + (C_BG_BOT[i] - C_BG_TOP[i]) * t) for i in range(3)))
+        base = grad.resize((w, h)).convert('RGBA')
+
+    glow = Image.new('RGBA', (w, h), (0, 0, 0, 0))
+    gd = ImageDraw.Draw(glow)
+    gd.ellipse((-100, -120, 500, 280), fill=C_GOLD + (35,))
+    gd.ellipse((w - 400, -140, w + 100, 260), fill=C_GOLD_BRIGHT + (20,))
+    glow = glow.filter(ImageFilter.GaussianBlur(70))
+    return Image.alpha_composite(base, glow)
+
+
 def generate_leaderboard_card(guild: discord.Guild, category: str = "messages") -> Image.Image:
     W = 1040
     PAD = 40
@@ -164,23 +196,8 @@ def generate_leaderboard_card(guild: discord.Guild, category: str = "messages") 
     footer_h = 70
     H = header_h + len(top) * (row_h + gap_y) + footer_h
 
-    # 1. Градиентный фон Midnight Navy
-    grad = Image.new('RGB', (1, H))
-    for y in range(H):
-        t = y / max(1, H - 1)
-        grad.putpixel((0, y), tuple(int(C_BG_TOP[i] + (C_BG_BOT[i] - C_BG_TOP[i]) * t) for i in range(3)))
-    img = grad.resize((W, H)).convert('RGBA')
-
-    # 2. Золотое неоновое свечение в шапке
-    glow = Image.new('RGBA', (W, H), (0, 0, 0, 0))
-    gd = ImageDraw.Draw(glow)
-    gd.ellipse((-100, -120, 500, 280), fill=C_GOLD + (35,))
-    gd.ellipse((W - 400, -140, W + 100, 260), fill=C_GOLD_BRIGHT + (20,))
-    glow = glow.filter(ImageFilter.GaussianBlur(70))
-    img = Image.alpha_composite(img, glow)
-
-    # 3. Звёздная космическая пыль
-    img = _draw_stardust(img, W, H)
+    # 1. Полноценная звёздная иллюстрация с неоновым свечением
+    img = _load_celestial_bg(W, H)
     d = ImageDraw.Draw(img)
 
     # 4. Двойная золотая рамка

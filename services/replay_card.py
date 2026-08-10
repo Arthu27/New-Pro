@@ -100,6 +100,35 @@ def _draw_stardust(img, W, H):
     return Image.alpha_composite(img, overlay)
 
 
+def _load_celestial_bg(w, h):
+    """Загружает реальный звёздно-космический фон assets/help_bg.png с золотой аурой."""
+    bg_path = os.path.join(ROOT, 'assets', 'help_bg.png')
+    try:
+        bg_im = Image.open(bg_path).convert('RGBA')
+        bw, bh = bg_im.size
+        target_ratio = w / h
+        src_ratio = bw / bh
+        if src_ratio > target_ratio:
+            nw = int(bh * target_ratio)
+            x0 = (bw - nw) // 2
+            bg_im = bg_im.crop((x0, 0, x0 + nw, bh))
+        else:
+            nh = int(bw / target_ratio)
+            y0 = (bh - nh) // 2
+            bg_im = bg_im.crop((0, y0, bw, y0 + nh))
+        base = bg_im.resize((w, h), Image.Resampling.LANCZOS)
+    except Exception:
+        grad = Image.new('RGB', (1, h))
+        for y in range(h):
+            t = y / max(1, h - 1)
+            grad.putpixel((0, y), tuple(int(C_BG_TOP[i] + (C_BG_BOT[i] - C_BG_TOP[i]) * t) for i in range(3)))
+        base = grad.resize((w, h)).convert('RGBA')
+
+    glow = Image.new('RGBA', (w, h), (0, 0, 0, 0))
+    ImageDraw.Draw(glow).ellipse((-240, -280, 620, 460), fill=(212, 175, 55, 30))
+    return Image.alpha_composite(base, glow.filter(ImageFilter.GaussianBlur(90)))
+
+
 def render_replay_card(title, subtitle, events, now_str=''):
     """events: [{'time':'12:40','cat':'role','label':'Изменение ролей','detail':'...'}]
     Возвращает PNG-байты или None."""
@@ -120,16 +149,7 @@ def render_replay_card(title, subtitle, events, now_str=''):
         body_h = max(1, len(events)) * ROW_H + (56 if overflow else 0)
         H = header_h + body_h + footer_h
 
-        grad = Image.new('RGB', (1, H))
-        for y in range(H):
-            k = y / max(1, H - 1)
-            grad.putpixel((0, y), tuple(int(C_BG_TOP[i] + (C_BG_BOT[i] - C_BG_TOP[i]) * k) for i in range(3)))
-        img = grad.resize((W, H)).convert('RGBA')
-
-        glow = Image.new('RGBA', (W, H), (0, 0, 0, 0))
-        ImageDraw.Draw(glow).ellipse((-240, -280, 620, 460), fill=(212, 175, 55, 30))
-        img = Image.alpha_composite(img, glow.filter(ImageFilter.GaussianBlur(90)))
-        img = _draw_stardust(img, W, H)
+        img = _load_celestial_bg(W, H)
         d = ImageDraw.Draw(img)
 
         # Двойная золотая рамка
