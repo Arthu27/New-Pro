@@ -977,38 +977,25 @@ class Logs (commands .Cog ):
             months =(age_days %365 )//30 
             age_text =f"{years} г. {months} мес."
 
-        member_count =member .guild .member_count 
-        join_ts =int (datetime .datetime .utcnow ().timestamp ())
+        member_count = member.guild.member_count 
+        join_ts = int(datetime.datetime.utcnow().timestamp())
 
-        e =discord .Embed (color =0xC8922A ,timestamp =datetime .datetime .utcnow ())
-        e .description =(
-        "## Добро пожаловать!\n"
-        f"### {member.mention} присоединился к серверу\n"
-        "\n\n"
-        f"**Пользователь** — {member.display_name}\n"
-        f"**ID** — `{member.id}`\n"
-        f"**Аккаунт** — {age_text}\n"
-        f"**Участник** — {member_count}-й на сервере\n"
-        f"**Присоединился** — <t:{join_ts}:R>\n\n"
-        ""
-        )
-        e .set_thumbnail (url =member .display_avatar .url )
+        fields = [
+            ('Пользователь', f"**{member.display_name}** · {member.mention} · `{member.id}`"),
+            ('Аккаунт создан', age_text),
+            ('Участник на сервере', f"#{member_count}"),
+            ('Присоединился', f"<t:{join_ts}:R>"),
+        ]
+        card_rows = [
+            ('Участник', f"{member.display_name} ({member.id})"),
+            ('Аккаунт', age_text),
+            ('Всего участников', str(member_count)),
+        ]
+        e = _styled_log_embed(member.guild, 'member', 'Новый участник на сервере',
+                              fields=fields, card_rows=card_rows,
+                              color=0x2ECC71, thumbnail=str(member.display_avatar.url))
 
-        # Banner или welcome GIF
-        if member .guild .banner :
-            e .set_image (url =member .guild .banner .url )
-        else :
-        # Welcome GIF
-            e .set_image (url ="https://media.tenor.com/ZBDpMFBMFpkAAAAC/celebration-party.gif")
-
-            # Footer с иконкой сервера
-        footer_text =f"{member.guild.name} · {member_count} участников"
-        if member .guild .icon :
-            e .set_footer (text =footer_text ,icon_url =member .guild .icon .url )
-        else :
-            e .set_footer (text =footer_text )
-
-        await _safe_send (ch ,embed =e )
+        await _safe_send(ch, embed=e)
 
     @commands .Cog .listener ()
     async def on_member_remove (self ,member ):
@@ -1059,28 +1046,22 @@ class Logs (commands .Cog ):
             else :
                 joined_ago =f"{days_on_server // 365} г. {days_on_server % 365 // 30} мес."
 
-        e =discord .Embed (color =0xE74C3C ,timestamp =datetime .datetime .utcnow ())
-        e .description =(
-        "🚪 Участник вышел\n"
-        f"### {member.display_name} покинул сервер\n"
-        "\n\n"
-        f"**Пользователь** — {member.display_name}\n"
-        f"**ID** — `{member.id}`\n"
-        f"**Был на сервере** — {joined_ago}\n"
-        f"**Роли** — {roles_str[:200]}\n"
-        f"**Участников** — {member_count}\n\n"
-        ""
-        )
-        e .set_thumbnail (url =member .display_avatar .url )
+        fields = [
+            ('Пользователь', f"**{member.display_name}** · `{member.id}`"),
+            ('Был на сервере', joined_ago or "менее дня"),
+            ('Роли', roles_str[:200]),
+            ('Осталось участников', str(member_count)),
+        ]
+        card_rows = [
+            ('Участник', f"{member.display_name} ({member.id})"),
+            ('Был на сервере', joined_ago or "менее дня"),
+            ('Роли', roles_str[:90]),
+        ]
+        e = _styled_log_embed(member.guild, 'member', 'Участник покинул сервер',
+                              fields=fields, card_rows=card_rows,
+                              color=0xE74C3C, thumbnail=str(member.display_avatar.url))
 
-        # Footer с иконкой сервера
-        footer_text =f"{member.guild.name} · {member_count} участников"
-        if member .guild .icon :
-            e .set_footer (text =footer_text ,icon_url =member .guild .icon .url )
-        else :
-            e .set_footer (text =footer_text )
-
-        await _safe_send (ch ,embed =e )
+        await _safe_send(ch, embed=e)
 
         # КИК: выход мог быть киком — проверяем audit log и логируем в -модерация
         try :
