@@ -602,6 +602,42 @@ class LogsCenterView(discord.ui.View):
         e.set_footer(text=f"Aether Log · Центр логов · {self.guild.name}")
         return e
 
+    def events_embed(self):
+        meta = {k: (i, t, d) for k, i, t, d in LOG_CENTER_ITEMS}
+        icon, title, desc = meta.get(self.selected, ('📋', self.selected, ''))
+        ch = _lc_find_channel(self.guild, self.selected)
+        e = discord.Embed(color=0xD4AF37, timestamp=datetime.datetime.utcnow())
+        e.description = (
+            f"## {icon} {title} — Недавние события\n"
+            f"Канал: {ch.mention if ch else '❌ не создан'}\n\n"
+        )
+        try:
+            with open(AUDIT_FILE, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            events = data.get(str(self.guild.id), [])
+            cat_map = {'mod': ('mod', 'automod'), 'member': ('member',), 'message': ('message',),
+                       'voice': ('voice',), 'channel': ('channel', 'сервер'), 'role': ('role', 'сервер'),
+                       'invite': ('invite', 'сервер'), 'guild': ('guild', 'сервер'),
+                       'ticket-log': ('ticket-log',), 'ai-alerts': ('ai-alerts',), 'welcome': ('member',)}
+            target_cats = cat_map.get(self.selected, (self.selected,))
+            matches = [ev for ev in reversed(events) if str(ev.get('category', '')).lower() in target_cats][:5]
+            if matches:
+                lines = []
+                for ev in matches:
+                    ts = str(ev.get('timestamp', ''))[:16].replace('T', ' ')
+                    act = ev.get('action', 'Событие')
+                    det = ev.get('user_name') or ev.get('channel') or ev.get('content') or ev.get('reason') or ''
+                    lines.append(f"• `{ts}` **{act}**" + (f" — {str(det)[:60]}" if det else ''))
+                e.add_field(name="Последние записи аудита", value="\n".join(lines)[:1020], inline=False)
+            else:
+                e.add_field(name="Последние записи аудита", value="*Записей пока нет (летопись пишется при активности).*", inline=False)
+        except Exception:
+            e.add_field(name="Последние записи аудита", value="*Нет сохранённых записей.*", inline=False)
+        if self.notice:
+            e.description += f"\n\n{self.notice}"
+        e.set_footer(text=f"Aether Log · {self.guild.name}")
+        return e
+
     # ── кнопки ─────────────────────────────────────────────────────────
     @discord.ui.button(label='Тест', style=discord.ButtonStyle.success,
                        emoji='📨', custom_id='lc:test')
@@ -629,6 +665,15 @@ class LogsCenterView(discord.ui.View):
         except Exception:
             pass
 
+    @discord.ui.button(label='События', style=discord.ButtonStyle.primary,
+                       emoji='📜', custom_id='lc:events')
+    async def lc_events(self, interaction, button):
+        self.notice = ''
+        try:
+            await interaction.response.edit_message(embed=self.events_embed(), view=self)
+        except Exception:
+            pass
+
     @discord.ui.button(label='Создать/починить', style=discord.ButtonStyle.primary,
                        emoji='🔧', custom_id='lc:fix')
     async def lc_fix(self, interaction, button):
@@ -640,6 +685,15 @@ class LogsCenterView(discord.ui.View):
                            'Дайте боту права «Управление каналами» и повторите.')
         try:
             await interaction.response.edit_message(embed=self.status_embed(), view=self)
+        except Exception:
+            pass
+
+    @discord.ui.button(label='Обзор', style=discord.ButtonStyle.secondary,
+                       emoji='🏠', custom_id='lc:overview')
+    async def lc_overview(self, interaction, button):
+        self.notice = ''
+        try:
+            await interaction.response.edit_message(embed=self.overview_embed(), view=self)
         except Exception:
             pass
 
@@ -1764,12 +1818,36 @@ class Logs (commands .Cog ):
 
             # ЦЕНТР ЛОГОВ: select-меню — статус категорий, тест, починка
 
-    @app_commands .command (name ="logs-center",description ="Центр логов: выбор категории в меню — статус, тест доставки, починка каналов")
-    @app_commands .checks .has_permissions (administrator =True )
-    async def logs_center (self ,interaction :discord .Interaction ):
-        view =LogsCenterView (interaction .guild ,interaction .user .id )
-        await interaction .response .send_message (
-        embed =view .overview_embed (),view =view ,ephemeral =True )
+    @commands.command(name="logs", aliases=["modlogs", "логи", "модлоги", "loghelp", "logs-help"])
+    async def logs_cmd(self, ctx):
+        """Интерактивное руководство и Центр логов для модераторов/админов"""
+        if not (ctx.author.guild_permissions.administrator or ctx.author.guild_permissions.moderate_members or ctx.author.guild_permissions.manage_messages):
+            await ctx.send("🚫 Центр логов доступен только модераторам и администраторам.", delete_after=6)
+            return
+        view = LogsCenterView(ctx.guild, ctx.author.id)
+        await ctx.send(embed=view.overview_embed(), view=view)
+
+    @app_commands.command(name="logs", description="Интерактивный центр логов: руководство, каналы, статус доставки и аудит")
+    @app_commands.checks.has_permissions(moderate_members=True)
+    async def logs_slash(self, interaction: discord.Interaction):
+        view = LogsCenterView(interaction.guild, interaction.user.id)
+        await interaction.response.send_message(
+            embed=view.overview_embed(), view=view, ephemeral=True)
+
+    @app_commands.command(name="modlogs", description="Логи модерации: проверка каналов, последние действия и статус доставки")
+    @app_commands.checks.has_permissions(moderate_members=True)
+    async def modlogs_slash(self, interaction: discord.Interaction):
+        view = LogsCenterView(interaction.guild, interaction.user.id)
+        view.selected = 'mod'
+        await interaction.response.send_message(
+            embed=view.status_embed(), view=view, ephemeral=True)
+
+    @app_commands.command(name="logs-center", description="Центр логов: выбор категории в меню — статус, тест доставки, починка каналов")
+    @app_commands.checks.has_permissions(administrator=True)
+    async def logs_center(self, interaction: discord.Interaction):
+        view = LogsCenterView(interaction.guild, interaction.user.id)
+        await interaction.response.send_message(
+            embed=view.overview_embed(), view=view, ephemeral=True)
 
             # DISCORD AUDIT LOG SYNC 
 
