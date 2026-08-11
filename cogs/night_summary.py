@@ -15,7 +15,9 @@ Night Summary — автоматическая ежедневная сводка
 import os
 import io
 import json
+import asyncio
 import sqlite3
+import time
 import discord
 from discord import app_commands
 from discord.ext import commands, tasks
@@ -97,6 +99,7 @@ class NightSummary(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self._state = _load_state()
+        self._fails = {}   # gid -> (попыток, monotonic-ts) — анти-спам ретраев
 
     def cfg(self, guild_id: int) -> dict:
         c = {'enabled': True, 'channel_id': 0, 'tz_offset': 3, 'last_date': ''}
@@ -354,22 +357,47 @@ class NightSummary(commands.Cog):
     # ────────────────────────────────────────────────────────────
     # Ночной цикл
     # ────────────────────────────────────────────────────────────
+    RETRY_EVERY_SEC = 300   # неудачную сводку повторяем не чаще раза в 5 минут
+    MAX_ATTEMPTS = 5        # после 5 неудач за ночь сдаёмся до завтра
+
+    async def _loop_once(self, guild, now_local=None):
+        """Одна попытка сводки для гильдии (вынесено ради тестов).
+
+        Антиспам: раньше при постоянной ошибке отправки last_date не
+        обновлялся и цикл долбил повтор КАЖДУЮ минуту всю ночь — в логах
+        сплошной warning каждые 60 секунд. Теперь ретрай редкий и его
+        количество ограничено.
+        """
+        cfg = self.cfg(guild.id)
+        if not cfg.get('enabled'):
+            return
+        off = int(cfg.get('tz_offset', 3))
+        now_local = now_local or (datetime.now(timezone.utc) + timedelta(hours=off))
+        today = now_local.strftime('%Y-%m-%d')
+        if now_local.hour != 0 or cfg.get('last_date') == today:
+            return
+        fails, last_try = self._fails.get(guild.id, (0, 0.0))
+        if fails >= self.MAX_ATTEMPTS:
+            return
+        if fails and time.monotonic() - last_try < self.RETRY_EVERY_SEC:
+            return
+        yesterday = (now_local - timedelta(days=1)).replace(tzinfo=None)
+        if await self.send_summary(guild, yesterday):
+            self.set_cfg(guild.id, 'last_date', today)
+            self._fails.pop(guild.id, None)
+            log.info(f"[SVODKA] {guild.name}: сводка за {yesterday.strftime('%d.%m.%Y')} отправлена")
+        else:
+            fails += 1
+            self._fails[guild.id] = (fails, time.monotonic())
+            if fails >= self.MAX_ATTEMPTS:
+                log.warning(f"[SVODKA] {guild.name}: {self.MAX_ATTEMPTS} неудач за ночь — "
+                            f"сдаюсь до завтра (проверьте канал/права и /summary now)")
+
     @tasks.loop(seconds=60)
     async def _loop(self):
         for guild in list(self.bot.guilds):
             try:
-                cfg = self.cfg(guild.id)
-                if not cfg.get('enabled'):
-                    continue
-                off = int(cfg.get('tz_offset', 3))
-                now_local = datetime.now(timezone.utc) + timedelta(hours=off)
-                today = now_local.strftime('%Y-%m-%d')
-                if now_local.hour != 0 or cfg.get('last_date') == today:
-                    continue
-                yesterday = (now_local - timedelta(days=1)).replace(tzinfo=None)
-                if await self.send_summary(guild, yesterday):
-                    self.set_cfg(guild.id, 'last_date', today)
-                    log.info(f"[SVODKA] {guild.name}: сводка за {yesterday.strftime('%d.%m.%Y')} отправлена")
+                await self._loop_once(guild)
             except Exception as e:
                 log.error(f"[SVODKA] ошибка цикла {guild}: {e}")
 
