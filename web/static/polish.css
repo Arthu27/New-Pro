@@ -1,0 +1,195 @@
+/* ============================================================
+   AETHER PANEL — POLISH LAYER (глобальный визуальный полироль)
+   Подключается ПОСЛЕ style.css. Только доработка, ничего не
+   переписывает: глубина фона, «дорогие» мелочи, микро-интеракции.
+   Всё через токены/color-mix — работает в обеих темах и с
+   любым выбранным акцентом (--ac).
+   ============================================================ */
+
+/* ── 1. Базовые мелочи ─────────────────────────────────────── */
+::selection { background: var(--ac-glow); color: var(--text); }
+
+:focus-visible {
+  outline: 2px solid var(--ac) !important;
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--ac) 22%, transparent);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover { background: color-mix(in srgb, var(--ac) 45%, transparent); background-clip: padding-box; }
+
+/* ── 2. Глубина фона: тёплый акцент сверху + виньетка ─────── */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 70% 38% at 50% -6%, var(--ac-soft), transparent 70%),
+    radial-gradient(ellipse 120% 90% at 50% 115%, color-mix(in srgb, var(--bg) 55%, transparent), transparent 60%);
+}
+
+/* ── 3. Сайдбар ────────────────────────────────────────────── */
+/* золотая волосная линия по правой кромке */
+.sidebar::after {
+  content: '';
+  position: absolute;
+  top: 0; right: -1px; bottom: 0;
+  width: 1px;
+  background: linear-gradient(180deg, var(--ac-line), transparent 45%, transparent 70%, var(--ac-line));
+  opacity: .55;
+  pointer-events: none;
+}
+
+/* бренд: живая иконка */
+.brand-icon { transition: transform .25s var(--ease-spring), box-shadow .25s var(--ease); }
+.brand:hover .brand-icon { transform: scale(1.06) rotate(-6deg); box-shadow: 0 8px 26px var(--ac-glow), inset 0 1px 0 rgba(255,255,255,.25); }
+
+/* активный пункт меню — люкс: иконка в чипе + сильное свечение */
+.nav-link { transition: all .18s var(--ease) !important; }
+.nav-link.active {
+  box-shadow: 0 2px 16px var(--ac-glow), inset 0 1px 0 rgba(255,255,255,.06) !important;
+}
+.nav-link.active i {
+  background: linear-gradient(135deg, var(--ac), var(--ac-3));
+  color: var(--bg) !important;
+  border-radius: 7px;
+  width: 24px; height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: -4px;
+  box-shadow: 0 3px 10px var(--ac-glow);
+}
+.nav-link.active::before {
+  width: 4px !important;
+  height: 24px !important;
+  left: -11px !important;
+}
+.nav-link:hover { transform: translateX(3px); }
+.nav-link:active { transform: translateX(3px) scale(.985); }
+
+/* заголовок группы: при наведении шеврон загорается */
+.nav-group-title:hover .nav-caret { color: var(--ac) !important; }
+
+/* ── 4. Верхняя панель ─────────────────────────────────────── */
+.navbar {
+  border-bottom: 1px solid color-mix(in srgb, var(--text) 6%, transparent);
+  padding-bottom: 14px;
+}
+.navbar h1 { text-shadow: 0 2px 18px rgba(0,0,0,.25); }
+.nav-icon-btn:active, .activity-btn:active, .theme-toggle:active { transform: scale(.92); }
+
+/* пользователь-пилюля и её меню */
+.user-pill { transition: all .2s var(--ease); }
+.user-pill:hover { box-shadow: 0 6px 20px rgba(0,0,0,.35); transform: translateY(-1px); }
+.user-menu {
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: var(--shadow-lg) !important;
+  border-radius: 14px !important;
+}
+.user-menu a { border-radius: 8px; transition: all .15s var(--ease); }
+.user-menu a:hover { transform: translateX(3px); }
+.user-menu a:hover i { color: var(--ac) !important; }
+
+/* ── 5. Появление страницы: каскад сверху вниз ─────────────── */
+.main-content > * { animation: fadeUp .5s var(--ease-out) both; }
+.main-content > *:nth-child(2) { animation-delay: .06s; }
+.main-content > *:nth-child(3) { animation-delay: .12s; }
+.main-content > *:nth-child(4) { animation-delay: .18s; }
+.main-content > *:nth-child(n+5) { animation-delay: .24s; }
+
+/* ── 6. Герой страницы: пробегающий блик + золотой угол ────── */
+.page-hero { overflow: hidden; isolation: isolate; }
+.page-hero::after {
+  content: '';
+  position: absolute;
+  top: -60%; left: -30%;
+  width: 45%; height: 220%;
+  background: linear-gradient(100deg, transparent, color-mix(in srgb, var(--ac) 9%, transparent), transparent);
+  transform: rotate(8deg);
+  animation: acSheen 7s var(--ease) infinite;
+  pointer-events: none;
+}
+@keyframes acSheen {
+  0%, 55% { left: -45%; }
+  85%, 100% { left: 130%; }
+}
+.page-hero h1 {
+  background: linear-gradient(120deg, var(--text) 30%, var(--ac-2) 55%, var(--text) 80%);
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: acTitleShine 9s ease-in-out infinite;
+}
+@keyframes acTitleShine {
+  0%, 100% { background-position: 0% 0; }
+  50% { background-position: 100% 0; }
+}
+
+/* ── 7. Карточки: живее поверхность, заметный подъём ───────── */
+.section, .box, .panel, .card, .dash-box, .ch-box, .logs-box, .warn-box, .stat-card {
+  background: linear-gradient(165deg, var(--surface-2), var(--surface)) !important;
+  box-shadow: var(--shadow-sm), inset 0 1px 0 color-mix(in srgb, var(--text) 6%, transparent) !important;
+}
+.section:hover, .box:hover, .panel:hover, .card:hover,
+.dash-box:hover, .ch-box:hover, .logs-box:hover, .warn-box:hover {
+  transform: translateY(-2px);
+}
+
+/* ── 8. Кнопки и поля: тактильность ────────────────────────── */
+button:active, .btn:active, [class*="btn-"]:active, input[type="submit"]:active {
+  transform: translateY(0) scale(.965) !important;
+}
+input:hover:not(:focus), select:hover:not(:focus), textarea:hover:not(:focus) {
+  border-color: color-mix(in srgb, var(--ac) 40%, transparent) !important;
+}
+textarea { resize: vertical; }
+
+/* ── 9. Таблицы: липкая шапка и дорогие подчёркивания ──────── */
+thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: color-mix(in srgb, var(--bg-2) 92%, transparent) !important;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 1px 0 var(--ac-line) !important;
+}
+tbody tr { transition: background .15s var(--ease); }
+
+/* ── 10. Типографика: код, kbd, hr ─────────────────────────── */
+code { border-color: color-mix(in srgb, var(--ac) 22%, transparent) !important; }
+pre { border-left: 2px solid var(--ac) !important; }
+hr {
+  border: none !important;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--ac-line), transparent);
+}
+kbd {
+  background: var(--ac-soft);
+  border: 1px solid var(--ac-line);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  padding: 1px 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+}
+
+/* ── 11. Тосты: воздух ─────────────────────────────────────── */
+.toast { border-radius: 13px !important; box-shadow: var(--shadow-lg) !important; backdrop-filter: blur(10px); }
+
+/* ── 12. Уважение к reduced motion ─────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .main-content > * { animation: none !important; }
+  .page-hero::after, .page-hero h1 { animation: none !important; }
+  .brand:hover .brand-icon { transform: none; }
+}
