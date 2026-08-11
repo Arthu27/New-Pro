@@ -254,6 +254,21 @@ async def _safe_send (ch ,**kw ):
                 if _png :
                     kw ['file']=discord .File (_io .BytesIO (_png ),filename ='aether_log_card.png')
                     _e .set_image (url ='attachment://aether_log_card.png')
+                    # В лог-канале — ТОЛЬКО картинка: весь текст уже отрисован
+                    # внутри карточки, дублирующий markdown-текст убираем.
+                    # Если рендер карточки не удался, текстовый эмбед остаётся
+                    # как запасной вариант (ничего не теряется).
+                    # Оригинальный текст/футер сохраняем на самом объекте —
+                    # для отладки и тестов (в Discord они не видны).
+                    _e ._aether_log_desc =(_e .description or '')
+                    _ft =_e .footer .text if _e .footer else ''
+                    _e ._aether_log_footer =(_ft or '')
+                    _e .description =None
+                    _e .title =None
+                    try :
+                        _e .remove_footer ()
+                    except Exception :
+                        pass
             except Exception :
                 pass 
         await ch .send (**kw )
@@ -353,11 +368,16 @@ def _styled_log_embed(guild, category, title, fields=(), color=None,
     if image:
         e.set_image(url=image)
     # Метаданные для карточки лога (рисует services/log_card.py при отправке)
+    # note тоже передаём строкой на карточку — в Discord уходит только картинка,
+    # текст эмбеда скрывается (_safe_send), поэтому информацию не теряем.
+    _rows = [(n, v) for n, v in (card_rows if card_rows is not None else fields)
+             if v not in (None, '')]
+    if note and len(_rows) < 8:
+        _rows.append(('Инфо', note))
     e._aether_log_meta = {
         'cat': category,
         'title': title,
-        'rows': [(n, v) for n, v in (card_rows if card_rows is not None else fields)
-                 if v not in (None, '')][:8],
+        'rows': _rows[:8],
         'color': color if color is not None else base_color,
         'guild': getattr(guild, 'name', ''),
     }

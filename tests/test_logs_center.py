@@ -133,30 +133,43 @@ def last_embed(chname):
     ch = guild.text_channels and [c for c in guild.channels.values() if c.name == chname][0]
     return ch.sent[-1] if ch and ch.sent else None
 
+def desc_of(e):
+    """Текст лог-эмбеда для проверок.
+
+    В канале Discord логи уходят как "только картинка" (_safe_send очищает
+    description), но исходный текст сохраняется в e._aether_log_desc.
+    Если карточка не отрендерилась (fallback) — возвращаем description как есть.
+    """
+    if not e:
+        return ''
+    return getattr(e, '_aether_log_desc', None) or e.description or ''
+
 print('== бан / кик / разбан с модератором и причиной ==')
 mod = FakeUser(50, 'TestMod')
 victim = FakeUser(77, 'Spamer')
 guild.audit_entries = [FakeAuditEntry(77, mod, 'Флуд и реклама')]
 run(cog.on_member_ban(guild, victim))
 e = last_embed('-модерация')
-check(e and 'Пользователь заблокирован' in e.description and 'TestMod' in e.description
-      and 'Флуд и реклама' in e.description and 'Причина' in e.description,
+check(e and 'Пользователь заблокирован' in desc_of(e) and 'TestMod' in desc_of(e)
+      and 'Флуд и реклама' in desc_of(e) and 'Причина' in desc_of(e),
       f'бан: модератор + причина в эмбеде')
-check(e.footer and 'Aether Log' in e.footer.text, 'футер «Aether Log · …»')
+check('Aether Log' in getattr(e, '_aether_log_footer', ''), 'футер «Aether Log · …» сохранён (в канале — только картинка)')
+check(e.description is None and e.image and e.image.url == 'attachment://aether_log_card.png',
+      'в канал уходит ТОЛЬКО карточка-картинка (description очищен)')
 
 guild.audit_entries = [FakeAuditEntry(77, mod, None)]
 run(cog.on_member_unban(guild, victim))
 e = last_embed('-модерация')
-check(e and 'Блокировка снята' in e.description and 'TestMod' in e.description, 'разбан: эмбед с модератором')
+check(e and 'Блокировка снята' in desc_of(e) and 'TestMod' in desc_of(e), 'разбан: эмбед с модератором')
 
 mem = FakeMember(88, 'Kicked', guild)
 guild.audit_entries = [FakeAuditEntry(88, mod, 'Нарушение правил')]
 run(cog.on_member_remove(mem))
 e_mod = last_embed('-модерация')
 e_mem = last_embed('-участники')
-check(e_mem and 'покинул сервер' in e_mem.description, 'выход: эмбед в -участники')
-check(e_mod and 'Участник кикнут' in e_mod.description and 'Нарушение правил' in e_mod.description
-      and 'TestMod' in e_mod.description, 'кик: отдельный эмбед в -модерация с причиной')
+check(e_mem and 'покинул сервер' in desc_of(e_mem), 'выход: эмбед в -участники')
+check(e_mod and 'Участник кикнут' in desc_of(e_mod) and 'Нарушение правил' in desc_of(e_mod)
+      and 'TestMod' in desc_of(e_mod), 'кик: отдельный эмбед в -модерация с причиной')
 
 print('== детальные эмбеды сообщений ==')
 author = FakeMember(90, 'Author', guild)
@@ -164,8 +177,8 @@ msg = FakeMessage(1001, 'удалённый текст', author, guild.channels[
 msg.attachments = [object(), object()]
 run(cog.on_message_delete(msg))
 e = last_embed('-сообщения')
-check(e and 'Сообщение удалено' in e.description and 'удалённый текст' in e.description
-      and 'Вложений удалено' in e.description and 'Отправлено' in e.description,
+check(e and 'Сообщение удалено' in desc_of(e) and 'удалённый текст' in desc_of(e)
+      and 'Вложений удалено' in desc_of(e) and 'Отправлено' in desc_of(e),
       'удаление: текст + вложения + дата')
 check(e.thumbnail and e.thumbnail.url, 'удаление: аватарка автора')
 
@@ -173,7 +186,7 @@ before = FakeMessage(1002, 'было это', author, guild.channels[108], guild
 after = FakeMessage(1002, 'стало другое', author, guild.channels[108], guild)
 run(cog.on_message_edit(before, after))
 e = last_embed('-сообщения')
-check(e and 'Было' in e.description and 'Стало' in e.description and 'Перейти к сообщению' in e.description,
+check(e and 'Было' in desc_of(e) and 'Стало' in desc_of(e) and 'Перейти к сообщению' in desc_of(e),
       'правка: было/стало + ссылка')
 
 print('== таймаут ==')
@@ -183,13 +196,13 @@ m_after.timed_out_until = NOW + datetime.timedelta(minutes=30)
 guild.audit_entries = [FakeAuditEntry(91, mod, 'оскорбления')]
 run(cog.on_member_update(m_before, m_after))
 e = last_embed('-модерация')
-check(e and 'замьючен' in e.description and 'Действует до' in e.description and 'оскорбления' in e.description,
+check(e and 'замьючен' in desc_of(e) and 'Действует до' in desc_of(e) and 'оскорбления' in desc_of(e),
       'таймаут: эмбед с модератором, причиной и сроком')
 
 print('== каналы / роли / инвайты / сервер ==')
 run(cog.on_guild_channel_create(guild.channels[108]))
 e = last_embed('-сервер')
-check(e and 'Канал создан' in e.description and 'текстовый' in e.description, 'создание канала: тип по-русски')
+check(e and 'Канал создан' in desc_of(e) and 'текстовый' in desc_of(e), 'создание канала: тип по-русски')
 
 class _Ch(FakeChannel):
     def __init__(self, cid, name):
@@ -200,14 +213,14 @@ b_ch.guild = guild; a_ch.guild = guild
 guild.audit_entries = [FakeAuditEntry(108, mod, None)]
 run(cog.on_guild_channel_update(b_ch, a_ch))
 e = last_embed('-сервер')
-check(e and 'Канал изменён' in e.description and 'старое-имя' in e.description and 'новое-имя' in e.description,
+check(e and 'Канал изменён' in desc_of(e) and 'старое-имя' in desc_of(e) and 'новое-имя' in desc_of(e),
       'изменение канала: diff названия')
 
 role = FakeRole(300, 'НоваяРоль', perms=['kick_members', 'ban_members'], color=0xFF8800)
 role.guild = guild
 run(cog.on_guild_role_create(role))
 e = last_embed('-сервер')
-check(e and 'Роль создана' in e.description and '#ff8800' in e.description and 'Бан' in e.description,
+check(e and 'Роль создана' in desc_of(e) and '#ff8800' in desc_of(e) and 'Бан' in desc_of(e),
       'роль создана: цвет + ключевые права')
 
 inviter = FakeUser(60, 'Inviter')
@@ -216,7 +229,7 @@ invite = type('I', (), {'guild': guild, 'code': 'ABC123', 'inviter': inviter,
                         'temporary': False})()
 run(cog.on_invite_create(invite))
 e = last_embed('-сервер')
-check(e and 'discord.gg/ABC123' in e.description and 'Inviter' in e.description and '1 дн.' in e.description,
+check(e and 'discord.gg/ABC123' in desc_of(e) and 'Inviter' in desc_of(e) and '1 дн.' in desc_of(e),
       'инвайт: код, создатель, срок')
 
 print('== Центр логов (select-меню) ==')

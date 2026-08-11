@@ -269,23 +269,35 @@ def _draw_category_widget(d, ctype, W, H, PAD, right_bound):
 
 
 def _load_celestial_bg(w, h, cat_tint=None):
-    """Загружает реальный звёздно-космический фон assets/help_bg.png с золотой аурой."""
-    bg_path = os.path.join(ROOT, 'assets', 'help_bg.png')
-    try:
-        bg_im = Image.open(bg_path).convert('RGBA')
-        bw, bh = bg_im.size
-        target_ratio = w / h
-        src_ratio = bw / bh
-        if src_ratio > target_ratio:
-            nw = int(bh * target_ratio)
-            x0 = (bw - nw) // 2
-            bg_im = bg_im.crop((x0, 0, x0 + nw, bh))
-        else:
-            nh = int(bw / target_ratio)
-            y0 = (bh - nh) // 2
-            bg_im = bg_im.crop((0, y0, bw, y0 + nh))
-        base = bg_im.resize((w, h), Image.Resampling.LANCZOS)
-    except Exception:
+    """Загружает фирменный звёздно-космический фон карточки логов.
+
+    Приоритет: assets/aether_log_bg.png (фирменный тёмный фон с золотой
+    туманностью по краям и чистым центром под текст) -> assets/help_bg.png
+    (старый фон) -> процедурный градиент (совсем запасной вариант).
+    """
+    base = None
+    for bg_name in ('aether_log_bg.png', 'help_bg.png'):
+        bg_path = os.path.join(ROOT, 'assets', bg_name)
+        if not os.path.exists(bg_path):
+            continue
+        try:
+            bg_im = Image.open(bg_path).convert('RGBA')
+            bw, bh = bg_im.size
+            target_ratio = w / h
+            src_ratio = bw / bh
+            if src_ratio > target_ratio:
+                nw = int(bh * target_ratio)
+                x0 = (bw - nw) // 2
+                bg_im = bg_im.crop((x0, 0, x0 + nw, bh))
+            else:
+                nh = int(bw / target_ratio)
+                y0 = (bh - nh) // 2
+                bg_im = bg_im.crop((0, y0, bw, y0 + nh))
+            base = bg_im.resize((w, h), Image.Resampling.LANCZOS)
+            break
+        except Exception:
+            continue
+    if base is None:
         grad = Image.new('RGB', (1, h))
         for y in range(h):
             t = y / max(1, h - 1)
