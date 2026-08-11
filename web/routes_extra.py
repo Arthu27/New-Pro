@@ -1212,6 +1212,88 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                 pass
         return jsonify ({'success':True })
 
+    # ── Тихий мут (ghost mute) ────────────────────────────────────────────
+    @app .route ('/api/ghost',methods =['GET'])
+    @login_required
+    @role_required ('mod')
+    def api_ghost_list ():
+        from cogs .mod_plus import ghost_entries
+        guild =_active_guild ()
+        data =ghost_entries (guild .id )if guild else {}
+        items =[]
+        for uid ,e in data .items ():
+            m =guild .get_member (int (uid ))if guild else None
+            items .append ({
+                'user_id':str (uid ),
+                'name':str (m )if m else f'ID {uid}',
+                'reason':e .get ('reason',''),
+                'by':e .get ('by',''),
+                'until':e .get ('until'),
+                'suppressed':e .get ('suppressed')or 0 ,
+                'set_at':e .get ('set_at',''),
+            })
+        items .sort (key =lambda x :x ['set_at'],reverse =True )
+        return jsonify ({'success':True ,'items':items })
+
+    @app .route ('/api/ghost',methods =['POST'])
+    @login_required
+    @role_required ('mod')
+    def api_ghost_add ():
+        from cogs .mod_plus import ghost_add ,parse_ghost_duration
+        data =request .get_json (silent =True )or {}
+        uid =str (data .get ('user_id','')).strip ()
+        reason =(data .get ('reason')or 'Через панель')[:300 ]
+        if not uid .isdigit ():
+            return jsonify ({'success':False ,'error':'Нужен числовой ID участника'}),400
+        guild =_active_guild ()
+        if not guild :
+            return jsonify ({'success':False ,'error':'Бот офлайн'}),503
+        member =guild .get_member (int (uid ))
+        if not member :
+            try :
+                member =_run_async (guild .fetch_member (int (uid )))
+            except Exception :
+                member =None
+        if not member :
+            return jsonify ({'success':False ,'error':'Участник не найден на сервере'}),404
+        if getattr (member ,'bot',False ):
+            return jsonify ({'success':False ,'error':'Ботов призраками не делаем'}),400
+        if getattr (guild ,'owner_id',None )and int (uid )==guild .owner_id :
+            return jsonify ({'success':False ,'error':'Владельца мутить нельзя'}),400
+        perms =getattr (member ,'guild_permissions',None )
+        if perms is not None and perms .manage_messages :
+            return jsonify ({'success':False ,'error':'У него права модератора — на состав не работает'}),400
+        sec ,err =parse_ghost_duration (data .get ('duration'))
+        if err :
+            return jsonify ({'success':False ,'error':err }),400
+        until =None
+        if sec :
+            from datetime import datetime as _dt ,timedelta as _td ,timezone as _tz
+            until =(_dt .now (_tz .utc )+_td (seconds =sec )).isoformat ()
+        ghost_add (guild .id ,int (uid ),reason ,
+        by =f"панель:{session.get('username','?')}",until =until )
+        _fire_panel_notification ('ghost',f"👻 Тихий мут: {member}",
+        f"{session.get('username')}: {reason}")
+        return jsonify ({'success':True })
+
+    @app .route ('/api/ghost',methods =['DELETE'])
+    @login_required
+    @role_required ('mod')
+    def api_ghost_remove ():
+        from cogs .mod_plus import ghost_remove
+        data =request .get_json (silent =True )or {}
+        uid =str (data .get ('user_id','')).strip ()
+        if not uid .isdigit ():
+            return jsonify ({'success':False ,'error':'Нужен user_id'}),400
+        guild =_active_guild ()
+        if not guild :
+            return jsonify ({'success':False ,'error':'Бот офлайн'}),503
+        entry =ghost_remove (guild .id ,int (uid ))
+        if not entry :
+            return jsonify ({'success':False ,'error':'Он и не был призраком'}),404
+        _fire_panel_notification ('ghost',f"👻 Тихий мут снят: {uid}",session .get ('username','?'))
+        return jsonify ({'success':True ,'suppressed':entry .get ('suppressed')or 0 })
+
     @app .route ('/api/panic',methods =['GET'])
     @login_required 
     @role_required ('mod')

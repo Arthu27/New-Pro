@@ -12,14 +12,20 @@ Mod Plus — набор «быстрых» инструментов модера
                         писать во ВСЕХ текстовых каналах (с сохранением и
                         точным восстановлением прежних прав), опционально
                         поднимает уровень проверки сервера.
+• /ghostmute <юзер> [время] [причина] — «тихий мут»: сообщения нарушителя
+                        мгновенно и НЕЗАМЕТНО исчезают — он думает, что его
+                        видно, а чат чист. Без таймаута и лишнего шума.
+• /ghostunmute <юзер> — снять тихий мут.
+• /ghostlist          — все «призраки» сервера.
 
-Хранение: data/modplus_sticky_{gid}.json, data/modplus_panic_{gid}.json.
+Хранение: data/modplus_sticky_{gid}.json, data/modplus_panic_{gid}.json,
+data/modplus_ghost_{gid}.json.
 Snipe-буфер — только в памяти (перезапуск очищает, это ок: свежие события).
 """
 import json
 import os
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import discord
 from discord import app_commands
@@ -34,11 +40,14 @@ RED = 0xE74C3C
 GREEN = 0x2ECC71
 
 STICKY_REPOST_COOLDOWN = 3.0   # сек между пересылками липкого сообщения
+GHOST_LOG_INTERVAL = 60.0      # сек между отчётами о призраке в мод-лог
+GHOST_MAX_DAYS = 90            # максимальная длительность тихого мута
 _SNYPE_EMPTY = '*(текста не было — только вложение)*'
 
 
 def _sticky_path(gid): return f'data/modplus_sticky_{gid}.json'
 def _panic_path(gid): return f'data/modplus_panic_{gid}.json'
+def _ghost_path(gid): return f'data/modplus_ghost_{gid}.json'
 
 
 def _load_json(path, default):
@@ -66,6 +75,71 @@ def _now():
     return datetime.now(timezone.utc)
 
 
+# ════════════════════════ GHOST MUTE (тихий мут) ════════════════════════
+def ghost_entry_active(entry) -> bool:
+    """Запись ещё действует? until=None — бессрочно."""
+    until = (entry or {}).get('until')
+    if not until:
+        return True
+    try:
+        return datetime.fromisoformat(until) > _now()
+    except (TypeError, ValueError):
+        return True  # кривая дата ≠ повод отпустить — считаем активной
+
+
+def ghost_entries(gid) -> dict:
+    """Загрузить призраков сервера, попутно сняв истёкшие сроки (лениво)."""
+    path = _ghost_path(gid)
+    data = _load_json(path, {})
+    expired = [uid for uid, e in data.items() if not ghost_entry_active(e)]
+    if expired:
+        for uid in expired:
+            data.pop(uid, None)
+        _save_json(path, data)
+    return data
+
+
+def ghost_add(gid, uid, reason='', by='', until=None) -> dict:
+    """Добавить/обновить призрака. until — ISO-строка или None (бессрочно)."""
+    path = _ghost_path(gid)
+    data = _load_json(path, {})
+    entry = {
+        'user_id': int(uid),
+        'reason': (reason or '')[:300],
+        'by': by or '',
+        'set_at': _now().isoformat(),
+        'until': until,
+        'suppressed': 0,
+    }
+    data[str(uid)] = entry
+    _save_json(path, data)
+    return entry
+
+
+def ghost_remove(gid, uid):
+    """Снять призрака. Возвращает запись или None, если его не было."""
+    path = _ghost_path(gid)
+    data = _load_json(path, {})
+    entry = data.pop(str(uid), None)
+    if entry is not None:
+        _save_json(path, data)
+    return entry
+
+
+def parse_ghost_duration(text):
+    """'30м', '2ч', '1д 12ч' → секунды. None/пусто — бессрочно.
+    Возвращает (seconds|None, error|None)."""
+    if not (text or '').strip():
+        return None, None
+    from cogs.temp_moderation import parse_duration
+    sec = parse_duration(text)
+    if not sec:
+        return None, 'Не понял время. Формат: `30м`, `2ч`, `1д 12ч`, `1 нед`'
+    if sec > GHOST_MAX_DAYS * 86400:
+        return None, f'Слишком надолго — максимум {GHOST_MAX_DAYS} дней'
+    return sec, None
+
+
 class ModPlus(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -73,6 +147,8 @@ class ModPlus(commands.Cog):
         self._snipe_deleted = {}
         self._snipe_edited = {}
         self._last_sticky_repost = {}   # channel_id -> ts (анти-баунс)
+        self._ghost_last_log = {}       # (gid, uid) -> ts последнего отчёта в мод-лог
+        self._ghost_perm_warn = {}      # ('perm', gid) -> ts (троттлинг варнингов о правах)
 
     # ════════════════════════ SNIPE ════════════════════════
     @commands.Cog.listener()
@@ -203,6 +279,9 @@ class ModPlus(commands.Cog):
         try:
             if not message.guild or message.author.bot:
                 return
+            # сначала призраки: их сообщения исчезают, липкое на них не реагируем
+            if await self._handle_ghost_message(message):
+                return
             entry = self._stickies(message.guild.id).get(str(message.channel.id))
             if not entry:
                 return
@@ -301,6 +380,177 @@ class ModPlus(commands.Cog):
             return True
         except Exception:
             return False
+
+    # ════════════════════════ GHOST MUTE ════════════════════════
+    def _warn_no_delete_perm(self, message):
+        """Прав на удаление нет — предупредить в консоль, но не чаще раза в 5 мин."""
+        key = message.guild.id
+        now = time.monotonic()
+        if now - self._ghost_perm_warn.get(key, -1e9) < 300:
+            return
+        self._ghost_perm_warn[key] = now
+        log.warning(f'[MOD+] ghost: нет прав «Управление сообщениями» на сервере '
+                    f'{message.guild.id} — дайте боту право, иначе тихий мут не работает')
+
+    async def _handle_ghost_message(self, message) -> bool:
+        """Если автор — призрак: тихо убрать сообщение, посчитать, доложить в мод-лог.
+
+        Возвращает True, если сообщение поглощено (дальше его не обрабатываем).
+        """
+        gid = message.guild.id
+        data = _load_json(_ghost_path(gid), {})
+        entry = data.get(str(message.author.id))
+        if entry is None:
+            return False
+        if not ghost_entry_active(entry):
+            # срок вышел — ленивый авто-съём, это сообщение пропускаем
+            data.pop(str(message.author.id), None)
+            _save_json(_ghost_path(gid), data)
+            return False
+        try:
+            await message.delete()
+        except discord.NotFound:
+            return True   # уже удалено — считаем поглощённым
+        except discord.Forbidden:
+            self._warn_no_delete_perm(message)
+            return True   # sticky/прочее на это сообщение всё равно не реагируют
+        except Exception as e:
+            log.warning(f'[MOD+] ghost delete: {e}')
+            return True
+        entry['suppressed'] = int(entry.get('suppressed') or 0) + 1
+        # счётчик на диск порциями — не переписывать файл на каждое сообщение
+        if entry['suppressed'] == 1 or entry['suppressed'] % 10 == 0:
+            data[str(message.author.id)] = entry
+            _save_json(_ghost_path(gid), data)
+        await self._ghost_modlog(message, entry)
+        return True
+
+    async def _ghost_modlog(self, message, entry):
+        """Отчёт в мод-лог: что призрак пытался написать.
+
+        С троттлингом GHOST_LOG_INTERVAL на юзера — флуд призрака не ДДоСит лог,
+        но модеры видят его активность (первое сообщение после паузы + счётчик).
+        """
+        key = (message.guild.id, message.author.id)
+        now = time.monotonic()
+        if now - self._ghost_last_log.get(key, -1e9) < GHOST_LOG_INTERVAL:
+            return
+        self._ghost_last_log[key] = now
+        try:
+            from cogs import logs as _logs
+            ch = await _logs.ensure_log_channel(message.guild, 'mod')
+            if not ch:
+                return
+            content = (message.content or '').strip()
+            if not content and getattr(message, 'attachments', None):
+                content = f'[вложений: {len(message.attachments)}]'
+            e = _logs._styled_log_embed(
+                message.guild, 'mod', '👻 Тихий мут: сообщение скрыто',
+                fields=[
+                    ('Призрак', f'{message.author.mention} (`{message.author.id}`)'),
+                    ('Канал', message.channel.mention),
+                    ('Скрытое сообщение', (content or _SNYPE_EMPTY)[:900]),
+                    ('Подавлено всего', str(entry.get('suppressed', 1))),
+                ],
+                color=0x9B59B6,
+                note='Снять: /ghostunmute — он ничего не заметил.')
+            await _logs._safe_send(ch, embed=e)
+        except Exception as e:
+            log.warning(f'[MOD+] ghost modlog: {e}')
+
+    def _ghost_refusal(self, interaction, user):
+        """Причина отказа в тихом муте или None, если всё чисто."""
+        if getattr(user, 'bot', False):
+            return '🤖 Ботов призраками не делаем — у них и так всё честно.'
+        if user.id == interaction.user.id:
+            return 'Себя замутить нельзя 🙂'
+        owner_id = getattr(interaction.guild, 'owner_id', None)
+        if owner_id and user.id == owner_id:
+            return 'Владельца сервера тихо мутить нельзя.'
+        perms = getattr(user, 'guild_permissions', None)
+        if perms is not None and perms.manage_messages:
+            return ('У него права модератора — тихий мут на состав не работает '
+                    '(бот не удалит сообщения модераторов).')
+        return None
+
+    @app_commands.command(name='ghostmute',
+                          description='Тихий мут: сообщения юзера мгновенно и незаметно исчезают')
+    @app_commands.checks.has_permissions(manage_messages=True)
+    @app_commands.describe(user='Кого прячем',
+                           duration='Время: 30м, 2ч, 1д 12ч (пусто — бессрочно)',
+                           reason='Причина (видна только составу)')
+    async def ghostmute(self, interaction: discord.Interaction, user: discord.Member,
+                        duration: str = None, reason: str = None):
+        refusal = self._ghost_refusal(interaction, user)
+        if refusal:
+            await interaction.response.send_message(f'⚠️ {refusal}', ephemeral=True)
+            return
+        sec, err = parse_ghost_duration(duration)
+        if err:
+            await interaction.response.send_message(f'⚠️ {err}', ephemeral=True)
+            return
+        until = (_now() + timedelta(seconds=sec)).isoformat() if sec else None
+        ghost_add(interaction.guild.id, user.id, reason or '—',
+                  by=str(interaction.user), until=until)
+        if until:
+            from cogs.temp_moderation import format_duration
+            term_txt = f'{format_duration(sec)} (до {until[:16].replace("T", " ")})'
+        else:
+            term_txt = 'бессрочно'
+        e = discord.Embed(title='👻 Тихий мут включён', color=0x9B59B6, timestamp=_now())
+        e.add_field(name='Кто', value=f'{user.mention} (`{user.id}`)', inline=True)
+        e.add_field(name='Срок', value=term_txt, inline=True)
+        e.add_field(name='Причина', value=reason or '—', inline=False)
+        e.set_footer(text='Его сообщения теперь исчезают мгновенно — он не узнает')
+        await interaction.response.send_message(embed=e, ephemeral=True)
+        log_e = discord.Embed(title='👻 Тихий мут включён', color=0x9B59B6, timestamp=_now())
+        log_e.add_field(name='Кто', value=f'{user.mention} (`{user.id}`)', inline=True)
+        log_e.add_field(name='Модератор', value=str(interaction.user), inline=True)
+        log_e.add_field(name='Срок', value=term_txt, inline=True)
+        log_e.add_field(name='Причина', value=reason or '—', inline=False)
+        await self._notify_mod_log(interaction.guild, log_e)
+
+    @app_commands.command(name='ghostunmute', description='Снять тихий мут')
+    @app_commands.checks.has_permissions(manage_messages=True)
+    @app_commands.describe(user='Кого возвращаем')
+    async def ghostunmute(self, interaction: discord.Interaction, user: discord.Member):
+        entry = ghost_remove(interaction.guild.id, user.id)
+        if not entry:
+            await interaction.response.send_message(
+                'Он не был призраком — проверь `/ghostlist`.', ephemeral=True)
+            return
+        e = discord.Embed(title='👻 Тихий мут снят', color=GREEN, timestamp=_now())
+        e.add_field(name='Кто', value=f'{user.mention} (`{user.id}`)', inline=True)
+        e.add_field(name='Было скрыто сообщений',
+                    value=str(entry.get('suppressed') or 0), inline=True)
+        e.add_field(name='Причина мута была', value=(entry.get('reason') or '—')[:300],
+                    inline=False)
+        await interaction.response.send_message(embed=e, ephemeral=True)
+        log_e = discord.Embed(title='👻 Тихий мут снят', color=GREEN, timestamp=_now())
+        log_e.add_field(name='Кто', value=f'{user.mention} (`{user.id}`)', inline=True)
+        log_e.add_field(name='Модератор', value=str(interaction.user), inline=True)
+        await self._notify_mod_log(interaction.guild, log_e)
+
+    @app_commands.command(name='ghostlist', description='Все «призраки» сервера (тихий мут)')
+    @app_commands.checks.has_permissions(manage_messages=True)
+    async def ghostlist(self, interaction: discord.Interaction):
+        data = ghost_entries(interaction.guild.id)
+        e = discord.Embed(title='👻 Призраки сервера', color=GOLD, timestamp=_now())
+        if not data:
+            e.description = 'Призраков нет — все видят, что пишут 😌'
+        else:
+            lines = []
+            for uid, entry in list(data.items())[:15]:
+                member = interaction.guild.get_member(int(uid))
+                name = str(member) if member else f'ID `{uid}`'
+                until = entry.get('until')
+                term = f'до {until[:16].replace("T", " ")}' if until else 'бессрочно'
+                lines.append(f'• **{name}** — {term} · скрыто: '
+                             f'{entry.get("suppressed") or 0} · {entry.get("reason") or "—"}')
+            e.description = '\n'.join(lines)
+            if len(data) > 15:
+                e.set_footer(text=f'…и ещё {len(data) - 15}')
+        await interaction.response.send_message(embed=e, ephemeral=True)
 
     # ════════════════════════ PANIC ════════════════════════
     panic = app_commands.Group(name='panic', description='Паника-кнопка локдауна сервера')
@@ -475,4 +725,4 @@ class ModPlus(commands.Cog):
 
 async def setup(bot):
     await bot.add_cog(ModPlus(bot))
-    log.info("[MOD+] Ког загружен (snipe / sticky / panic)")
+    log.info("[MOD+] Ког загружен (snipe / sticky / ghost / panic)")

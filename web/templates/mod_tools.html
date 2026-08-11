@@ -63,6 +63,33 @@
     <hr style="opacity:.15;margin:18px 0">
     <div id="sticky-list"><i>Загружаю…</i></div>
   </div>
+
+  <div class="pw-card">
+    <h2><i class="fas fa-ghost"></i> Тихий мут (призрак)</h2>
+    <div class="pw-hint" style="margin-bottom:12px"><i class="fas fa-info-circle"></i>
+      Сообщения участника исчезают мгновенно и <b>незаметно</b> — он думает, что его видно.
+      Модераторам всё, что он пытался написать, приходит в мод-лог.
+    </div>
+    <div class="form-group">
+      <label>Участник (начните вводить имя — подскажет)</label>
+      <input type="text" id="ghost-user" list="ghost-users" placeholder="ID или ник участника">
+      <datalist id="ghost-users"></datalist>
+    </div>
+    <div class="form-group">
+      <label>Время (пусто — бессрочно)</label>
+      <input type="text" id="ghost-duration" placeholder="30м, 2ч, 1д 12ч">
+    </div>
+    <div class="form-group">
+      <label>Причина</label>
+      <input type="text" id="ghost-reason" placeholder="За что (видно только составу)" maxlength="300">
+    </div>
+    <button class="btn-save" style="background:#8e44ad" onclick="ghostAdd()">
+      <i class="fas fa-ghost"></i> Сделать призраком</button>
+    <div class="msg" id="ghost-msg"></div>
+
+    <hr style="opacity:.15;margin:18px 0">
+    <div id="ghost-list"><i>Загружаю…</i></div>
+  </div>
 </div>
 
 <script>
@@ -178,6 +205,88 @@ async function panicToggle(action) {
   panicLoad();
 }
 
-loadChannels(); stickyLoad(); panicLoad();
+/* ── Тихий мут ── */
+const GHOST_GUILD_ID = '{{ guild_id }}';
+const esc = s => String(s).replace(/[<>&"]/g, c =>
+  ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+
+const ghostUserInput = document.getElementById('ghost-user');
+let ghostSearchTimer = null;
+ghostUserInput.addEventListener('input', () => {
+  clearTimeout(ghostSearchTimer);
+  const q = ghostUserInput.value.trim();
+  if (q.length < 2 || /^\d+$/.test(q)) return;
+  ghostSearchTimer = setTimeout(async () => {
+    try {
+      const r = await fetch('/api/member-search/' + GHOST_GUILD_ID + '?q=' + encodeURIComponent(q));
+      const d = await r.json();
+      const dl = document.getElementById('ghost-users');
+      dl.innerHTML = '';
+      for (const m of (Array.isArray(d) ? d : []).slice(0, 10)) {
+        if (m.is_bot) continue;
+        const o = document.createElement('option');
+        o.value = m.id;
+        o.label = m.display_name + ' (@' + m.name + ')';
+        dl.appendChild(o);
+      }
+    } catch(e) {}
+  }, 300);
+});
+
+async function ghostLoad() {
+  const box = document.getElementById('ghost-list');
+  const r = await fetch('/api/ghost');
+  const d = await r.json();
+  if (!d.success) { box.innerHTML = '<i>Ошибка загрузки.</i>'; return; }
+  if (!d.items.length) { box.innerHTML = '<i>Призраков нет — все видят, что пишут.</i>'; return; }
+  box.innerHTML = '';
+  for (const it of d.items) {
+    const term = it.until ? ('до ' + it.until.slice(0, 16).replace('T', ' ')) : 'бессрочно';
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;gap:10px;align-items:center;justify-content:space-between;' +
+      'padding:10px;border:1px solid rgba(255,255,255,.08);border-radius:10px;margin-bottom:8px';
+    row.innerHTML =
+      '<div style="min-width:0;overflow:hidden">' +
+        '<b>👻 ' + esc(it.name) + '</b>' +
+        '<div style="opacity:.85">' + esc(term) + ' · скрыто: ' + it.suppressed +
+          (it.reason ? ' · ' + esc(it.reason) : '') +
+          (it.by ? ' · от ' + esc(it.by) : '') + '</div>' +
+      '</div>' +
+      '<button class="btn-save" style="background:#2ecc71;padding:8px 14px;flex:none" ' +
+        'onclick="ghostDel(\'' + it.user_id + '\')"><i class="fas fa-eye"></i> Снять</button>';
+    box.appendChild(row);
+  }
+}
+
+async function ghostAdd() {
+  const user_id = ghostUserInput.value.trim();
+  const duration = document.getElementById('ghost-duration').value.trim();
+  const reason = document.getElementById('ghost-reason').value.trim();
+  const r = await fetch('/api/ghost', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({user_id, duration, reason})
+  });
+  const d = await r.json();
+  if (d.success) {
+    msg('ghost-msg', '✓ Теперь он призрак — сообщения исчезают незаметно.', 'ok');
+    ghostUserInput.value = ''; document.getElementById('ghost-reason').value = '';
+    ghostLoad();
+  } else msg('ghost-msg', '✗ ' + (d.error || 'Ошибка.'), 'err');
+}
+
+async function ghostDel(uid) {
+  if (!confirm('Снять тихий мут? Участник снова будет виден.')) return;
+  const r = await fetch('/api/ghost', {
+    method: 'DELETE', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({user_id: uid})
+  });
+  const d = await r.json();
+  if (d.success) {
+    msg('ghost-msg', '✓ Тихий мут снят (было скрыто сообщений: ' + d.suppressed + ').', 'ok');
+    ghostLoad();
+  } else msg('ghost-msg', '✗ ' + (d.error || 'Ошибка.'), 'err');
+}
+
+loadChannels(); stickyLoad(); panicLoad(); ghostLoad();
 </script>
 {% endblock %}
