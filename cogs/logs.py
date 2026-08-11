@@ -25,6 +25,7 @@ CATEGORIES ={
 'сервер':{'label':'Сервер','emoji':'','color':0xE67E22 ,'channel':'сервер'},
 'automod':{'label':'Автоматически','emoji':'','color':0xE74C3C ,'channel':'модерация'},
 'invite':{'label':'Приглашения','emoji':'','color':0x95A5A6 ,'channel':'сервер'},
+'proof':{'label':'Доказательства','emoji':'','color':0x9B59B6 ,'channel':'доказательства'},
 }
 
 DIV =""
@@ -127,6 +128,7 @@ LOG_CHANNELS ={
 'сообщения':'-сообщения',
 'ses':'-ses',
 'сервер':'-сервер',
+'доказательства':'-доказательства',
 }
 LOG_CATEGORY_NAME =' Логи'
 
@@ -138,6 +140,7 @@ LEGACY_CHANNEL_NAMES ={
 '-участники':['member-log','uye-log'],
 '-ses':['voice-log','ses-log'],
 '-сервер':['server-log','aether-logs','sunucu-log'],
+'-доказательства':['proof-log','proofs','demki','демки'],
 }
 
 
@@ -318,6 +321,7 @@ _LOG_META = {
     'ticket':  ('🎫', 0xF39C12, 'Тикеты'),
     'ai':      ('🤖', 0xE91E63, 'AI-алерты'),
     'welcome': ('🎉', 0x2ECC71, 'Приветствие'),
+    'proof':   ('📁', 0x9B59B6, 'Доказательства'),
 }
 
 
