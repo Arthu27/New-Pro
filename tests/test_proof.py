@@ -300,6 +300,215 @@ inter = FakeInter(GUILD, MOD)
 run(ProofCog.proofdel.callback(cog, inter, number=4242))
 check('4242' in (inter.response.sent[-1][0] or ''), 'proofdel: нет такого номера → внятно')
 
+# ═══ 5. ИНТЕГРАЦИЯ: демка прямо в наказании ═══════════════════════════════
+print('== интеграция: try_deliver_proof из других когов ==')
+from cogs.proof_cog import try_deliver_proof  # noqa: E402
+
+GUILD.icon = None
+
+
+class FakeBotX:
+    def __init__(self, proof_cog=None):
+        self._proof = proof_cog
+        self.guilds = [GUILD]
+
+    def get_cog(self, name):
+        return self._proof if name == 'ProofCog' else None
+
+    def get_guild(self, gid):
+        return GUILD if gid == GUILD.id else None
+
+
+botx = FakeBotX(cog)
+
+# ни файла, ни ссылки → None (ничего не надо делать)
+check(run(try_deliver_proof(botx, GUILD, MOD, BADGUY, 'кик', 'просто так')) is None,
+      'try_deliver_proof: без демки → None')
+
+# с вложением → запись + постинг + строка-статус
+before = len(proof_list(GUILD.id))
+txt = run(try_deliver_proof(botx, GUILD, MOD, BADGUY, 'кик', 'токсик в войсе',
+                            attachment=FakeAttachment('proof-voice.png')))
+check(txt is not None and 'Демка #' in (txt or ''), 'try_deliver_proof: статус-текст с номером')
+check(len(proof_list(GUILD.id)) == before + 1, 'try_deliver_proof: запись создана')
+check(GUILD.proof_ch.sent[-1][2] is not None, 'try_deliver_proof: файл запощен в канал')
+
+
+class _NoCogBot:
+    def get_cog(self, name):
+        return None
+
+
+check(run(try_deliver_proof(_NoCogBot(), GUILD, MOD, BADGUY, 'бан', 'x',
+                            link='https://x.y/z')) is None,
+      'try_deliver_proof: нет ProofCog → None, не падает')
+
+
+class _BoomBot:
+    def get_cog(self, name):
+        raise RuntimeError('всё сломалось')
+
+
+check(run(try_deliver_proof(_BoomBot(), GUILD, MOD, BADGUY, 'бан', 'x',
+                            link='https://x.y/z')) is None,
+      'try_deliver_proof: исключения проглочены — наказание не роняет')
+
+print('== интеграция: /moderate бан + демка одной командой ==')
+from cogs.moderation import Moderation  # noqa: E402
+
+
+class FakeBanUser:
+    def __init__(self, uid, name):
+        self.id = uid
+        self.name = name
+        self.display_name = name
+        self.mention = f'<@{uid}>'
+        self.banned = False
+
+    class _Av:
+        url = 'http://x/av.png'
+
+    display_avatar = _Av()
+
+    def __str__(self):
+        return self.name
+
+    async def ban(self, reason=None):
+        self.banned = reason or True
+
+
+FakeResp.is_done = lambda self: bool(self.deferred or self.sent)
+
+
+async def _noop(*a, **k):
+    return None
+
+
+mod_cog = Moderation(botx)
+mod_cog.send_dm = _noop
+mod_cog.send_log = _noop
+mod_cog._notify_owner = _noop
+
+BANUSER = FakeBanUser(9090, 'Griefer#3')
+proofs_before = len(proof_list(GUILD.id))
+inter = FakeInter(GUILD, MOD)
+run(Moderation.moderate_user.callback(
+    mod_cog, inter, action='ban', user=BANUSER, reason='массовый рейд',
+    демка=FakeAttachment('raid.png')))
+check(BANUSER.banned == 'массовый рейд', 'moderate: бан реально применён')
+check(len(proof_list(GUILD.id)) == proofs_before + 1, 'moderate: демка записана автоматически')
+rec = proof_list(GUILD.id)[0]
+check(rec['action'] == 'бан' and rec['user_id'] == 9090, 'moderate: действие=бан, юзер верный')
+check(any('Демка #' in str(c or '') for c, _ in inter.followup.sent),
+      'moderate: мод получил подтверждение про демку')
+
+# без демки — бан проходит, демка не создаётся, лишних сообщений нет
+BANUSER2 = FakeBanUser(9091, 'Griefer#4')
+proofs_before = len(proof_list(GUILD.id))
+followups_before = len(inter.followup.sent)
+inter = FakeInter(GUILD, MOD)
+run(Moderation.moderate_user.callback(
+    mod_cog, inter, action='ban', user=BANUSER2, reason='без демки'))
+check(BANUSER2.banned == 'без демки', 'moderate: бан без демки тоже работает')
+check(len(proof_list(GUILD.id)) == proofs_before, 'moderate: без вложения демка не создаётся')
+check(not any('Демка #' in str(c or '') for c, _ in inter.followup.sent),
+      'moderate: без демки мод не получает лишнего шума')
+
+print('== интеграция: /warn + демка ==')
+from cogs.warnings import warnings as WarningsCog  # noqa: E402
+
+warn_cog = WarningsCog(botx)
+
+
+async def _fake_add_warn(self, interaction, user, reason):
+    return (1, 1, None)
+
+
+import types as _types
+warn_cog.add_warn = _types.MethodType(_fake_add_warn, warn_cog)
+
+proofs_before = len(proof_list(GUILD.id))
+inter = FakeInter(GUILD, MOD)
+run(WarningsCog.warn.callback(warn_cog, inter, user=BANUSER, reason='спам-ссылки',
+                              демка=FakeAttachment('spam.png')))
+check(len(proof_list(GUILD.id)) == proofs_before + 1, 'warn: демка записана')
+check(proof_list(GUILD.id)[0]['action'] == 'варн', 'warn: действие=варн')
+emb = inter.response.sent[-1][1] or inter.followup.sent[-1][1]
+check('Демка #' in (emb.description or ''), 'warn: про демку сказано в самом ответе о варне')
+
+# warn БЕЗ демки — ничего лишнего
+proofs_before = len(proof_list(GUILD.id))
+inter = FakeInter(GUILD, MOD)
+run(WarningsCog.warn.callback(warn_cog, inter, user=BANUSER, reason='просто варн'))
+emb = inter.response.sent[-1][1] or inter.followup.sent[-1][1]
+check(len(proof_list(GUILD.id)) == proofs_before
+      and 'Демка #' not in (emb.description or ''), 'warn без демки: чисто')
+
+# ═══ 6. ПАНЕЛЬ: /proofs ═══════════════════════════════════════════════════
+print('== панель: страница и API демок ==')
+from web.app import app as _flask_app2, set_bot_instance  # noqa: E402
+set_bot_instance(botx)
+client = _flask_app2.test_client()
+
+
+def login_as2(role):
+    # discord_id специально НЕ ставим: login_required перечитывал бы роль
+    with client.session_transaction() as s:
+        s.clear()
+        s['logged_in'] = True
+        s['username'] = 'PanelProof'
+        s['role'] = role
+
+
+r = client.get('/api/proofs')
+check(r.status_code in (302, 401, 403), f'API без логина закрыто ({r.status_code})')
+
+login_as2('uye')
+r = client.get('/api/proofs')
+check(r.status_code == 403, f'uye не пускают ({r.status_code})')
+
+login_as2('mod')
+r = client.get('/api/proofs')
+d = r.get_json()
+check(r.status_code == 200 and d.get('success') is True and d.get('total', 0) > 0,
+      'mod: список демок отдаётся')
+check(all(set(['id', 'action', 'user_name', 'reason', 'set_at']) <= set(i) for i in d['items']),
+      'mod: у записей полный набор полей')
+check(any(i.get('jump', None) for i in d['items']),
+      'mod: есть jump-ссылки на сообщения в Discord')
+
+r = client.get(f'/api/proofs?user_id={BANUSER.id}')
+check(all(i['user_id'] == str(BANUSER.id) for i in r.get_json()['items']),
+      'фильтр по юзеру работает')
+r = client.get('/api/proofs?action=варн')
+check(all(i['action'] == 'варн' for i in r.get_json()['items']),
+      'фильтр по наказанию работает')
+
+victim = d['items'][0]
+r = client.delete(f"/api/proofs/{victim['id']}")
+check(r.status_code == 403, f'mod удалять демки не может ({r.status_code})')
+
+login_as2('admin')
+# делимся: у admin роль выше — удаление должно удаться
+r = client.delete(f"/api/proofs/{victim['id']}")
+dd = r.get_json()
+check(dd.get('success') is True and proof_get(GUILD.id, victim['id']) is None,
+      'admin: демка удалена из панели')
+r = client.delete(f"/api/proofs/{victim['id']}")
+check(r.status_code == 404, 'admin: повторное удаление → 404')
+
+r = client.get('/proofs')
+page = r.get_data(as_text=True)
+check(r.status_code == 200 and 'Демк' in page and '/api/proofs' in page,
+      'страница /proofs рендерится')
+login_as2('uye')
+r = client.get('/proofs')
+check(r.status_code in (302, 403), f'uye на /proofs не пускают ({r.status_code})')
+
+from services.panel_menu import MENU as _MENU2  # noqa: E402
+check(any(p['path'] == '/proofs' for g in _MENU2 for p in g['pages']),
+      'в меню панели есть пункт «Демки»')
+
 # ─── финал ───────────────────────────────────────────────────────────────
 import shutil  # noqa: E402
 shutil.rmtree(_TMP, ignore_errors=True)

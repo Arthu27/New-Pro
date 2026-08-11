@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}Демки — Aether{% endblock %}
+{% block page_title %}<i class="fas fa-folder-open"></i> Доказательства к наказаниям{% endblock %}
+{% block content %}
+{% block page_hero %}
+<div class="page-hero compact">
+  <div class="page-hero-content">
+    <div class="page-hero-greeting">
+      <span class="dot"></span>
+      <span>История наказаний</span>
+    </div>
+    <h1>Демки</h1>
+    <p>Все доказательства к наказаниям: кто, кого, за что — со скринами и ссылками.</p>
+  </div>
+</div>
+{% endblock %}
+
+<div class="pw-wrap">
+  <div class="pw-card">
+    <h2><i class="fas fa-folder-open"></i> Демки</h2>
+    <div class="pw-hint" style="margin-bottom:12px"><i class="fas fa-info-circle"></i>
+      Источник истины — канал <code>#-доказательства</code> в Discord. Здесь — удобный
+      просмотр и поиск. Добавляются через <code>/proof</code> или прямо в наказании
+      (параметр «демка» у <code>/warn</code> и <code>/moderate</code>).
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+      <input type="text" id="pf-user" placeholder="ID юзера" style="max-width:220px">
+      <select id="pf-action" style="max-width:180px">
+        <option value="">Любое наказание</option>
+        <option>варн</option><option>мут</option><option>таймаут</option>
+        <option>кик</option><option>бан</option><option>разбан</option><option>тихий мут</option>
+      </select>
+      <button class="btn-save" onclick="pfLoad()"><i class="fas fa-filter"></i> Фильтр</button>
+    </div>
+    <div id="pf-stats" style="margin-bottom:12px;font-weight:600"></div>
+    <div class="msg" id="pf-msg"></div>
+    <div id="pf-list"><i>Загружаю…</i></div>
+  </div>
+</div>
+
+<script>
+function msg(id, text, type) {
+  const el = document.getElementById(id);
+  el.textContent = text; el.className = 'msg ' + type; el.style.display = 'inline-block';
+}
+const esc = s => String(s ?? '').replace(/[<>&"]/g, c =>
+  ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+const IS_IMG = u => /\.(png|jpe?g|gif|webp|bmp)(\?|$)/i.test(u || '');
+
+async function pfLoad() {
+  const box = document.getElementById('pf-list');
+  const uid = document.getElementById('pf-user').value.trim();
+  const act = document.getElementById('pf-action').value;
+  const qs = new URLSearchParams();
+  if (uid) qs.set('user_id', uid);
+  if (act) qs.set('action', act);
+  const r = await fetch('/api/proofs?' + qs.toString());
+  const d = await r.json();
+  if (!d.success) { box.innerHTML = '<i>Ошибка загрузки.</i>'; return; }
+  document.getElementById('pf-stats').textContent =
+    `Найдено: ${d.total}${d.total > d.items.length ? ` · показаны первые ${d.items.length}` : ''}`;
+  if (!d.items.length) { box.innerHTML = '<i>Демок нет — добавляются через /proof.</i>'; return; }
+  box.innerHTML = '';
+  for (const it of d.items) {
+    const card = document.createElement('div');
+    card.style.cssText = 'padding:12px;border:1px solid rgba(255,255,255,.08);' +
+      'border-radius:12px;margin-bottom:10px';
+    const media = (it.url && IS_IMG(it.url))
+      ? `<a href="${esc(it.url)}" target="_blank"><img src="${esc(it.url)}" loading="lazy"
+           style="max-width:280px;max-height:160px;border-radius:8px;display:block;margin-top:8px"></a>`
+      : '';
+    const linkBtn = it.url
+      ? `<a class="btn-save" style="padding:6px 12px;text-decoration:none;font-size:13px"
+           href="${esc(it.url)}" target="_blank"><i class="fas fa-image"></i> Файл</a>` : '';
+    const extBtn = it.link
+      ? `<a class="btn-save" style="padding:6px 12px;text-decoration:none;font-size:13px;background:#8e44ad"
+           href="${esc(it.link)}" target="_blank"><i class="fas fa-link"></i> Ссылка</a>` : '';
+    const jumpBtn = it.jump
+      ? `<a class="btn-save" style="padding:6px 12px;text-decoration:none;font-size:13px;background:#2c3e50"
+           href="${esc(it.jump)}" target="_blank"><i class="fas fa-arrow-up-right-from-square"></i> В Discord</a>` : '';
+    card.innerHTML =
+      `<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <div style="min-width:0">
+          <b>#${it.id} · ${esc(it.action)}</b> — <b>${esc(it.user_name)}</b>
+          <span style="opacity:.6">(\`${it.user_id}\`)</span>
+          <div style="opacity:.85;margin-top:4px">${esc(it.reason || '—')}</div>
+          <div style="opacity:.55;font-size:12px;margin-top:4px">
+            мод: ${esc(it.mod_name)} · ${esc((it.set_at || '').slice(0, 16).replace('T', ' '))}</div>
+          ${media}
+        </div>
+        <div style="display:flex;gap:6px;align-items:flex-start;flex:none">${linkBtn}${extBtn}${jumpBtn}
+          {% if role in ['admin', 'owner'] %}
+          <button class="btn-save" style="background:#c0392b;padding:6px 12px;font-size:13px"
+            onclick="pfDel(${it.id})"><i class="fas fa-trash"></i></button>
+          {% endif %}
+        </div>
+      </div>`;
+    box.appendChild(card);
+  }
+}
+
+async function pfDel(pid) {
+  if (!confirm('Удалить демку #' + pid + ' (запись и сообщение в канале)?')) return;
+  const r = await fetch('/api/proofs/' + pid, {method: 'DELETE'});
+  const d = await r.json();
+  if (d.success) {
+    msg('pf-msg', '✓ Демка удалена' + (d.msg_deleted ? ' вместе с сообщением в канале.' : '.'), 'ok');
+    pfLoad();
+  } else msg('pf-msg', '✗ ' + (d.error || 'Ошибка.'), 'err');
+}
+
+pfLoad();
+</script>
+{% endblock %}

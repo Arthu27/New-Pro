@@ -26,7 +26,7 @@ async def _respond (interaction ,**kw ):
         if interaction .response .is_done ():
             await interaction .followup .send (**kw )
         else :
-            await _respond (interaction ,**kw )
+            await interaction .response .send_message (**kw )
     except Exception as _e :
         log .info (f'[MODPANEL] Ответ не доставлен: {_e}')
         try :
@@ -157,6 +157,23 @@ class Moderation (commands .Cog ):
 
         return e 
 
+    async def _maybe_proof (self ,interaction ,user ,action_ru ,reason ,демка ):
+        """Мод приложил вложение — сохраняем демку в канал доказательств.
+        Сбой демки НЕ должен влиять на уже выданное наказание."""
+        if демка is None :
+            return
+        try :
+            from cogs .proof_cog import try_deliver_proof
+            note =await try_deliver_proof (self .bot ,interaction .guild ,interaction .user ,
+            user ,action_ru ,reason ,attachment =демка )
+            if note :
+                try :
+                    await interaction .followup .send (note ,ephemeral =True )
+                except Exception :
+                    pass
+        except Exception as _pe :
+            print (f'[PROOF] после {action_ru}: {_pe}')
+
         # /moderate 
 
     @app_commands .command (name ="moderate",description ="Модерация: бан, кик, мут, размут, разбан")
@@ -167,12 +184,12 @@ class Moderation (commands .Cog ):
     app_commands .Choice (name ="размут",value ="untimeout"),
     app_commands .Choice (name ="разбан",value ="unban")
     ])
-    @app_commands .describe (action ="Действие модерации",user ="Участник (для бана/кика/мута)",user_id ="ID пользователя (для разбана)",minutes ="Длительность мута в минутах",reason ="Причина")
+    @app_commands .describe (action ="Действие модерации",user ="Участник (для бана/кика/мута)",user_id ="ID пользователя (для разбана)",minutes ="Длительность мута в минутах",reason ="Причина",демка ="Скрин/видео нарушения — сразу в канал доказательств")
     @app_commands .checks .has_permissions (ban_members =True )
     async def moderate_user (self ,interaction ,action :str ,
     user :discord .Member =None ,user_id :str =None ,
-    minutes :int =None ,reason :str =None ):
-        guild =interaction .guild 
+    minutes :int =None ,reason :str =None ,демка :discord .Attachment =None ):
+        guild =interaction .guild
         # Быстрый ack: цепочка DM → наказание → дело → лог может занять
         # больше 3 секунд, без defer токен interaction сгорает посередине
         try :
@@ -194,6 +211,7 @@ class Moderation (commands .Cog ):
                 confirm =self ._confirm_embed ("ban",user ,guild ,reason ,case_id ,moderator =interaction .user )
                 await _respond (interaction ,embed =confirm ,ephemeral =True )
                 await self ._notify_owner ('ban',user ,interaction .user ,reason )
+                await self ._maybe_proof (interaction ,user ,'бан',reason ,демка )
             except discord .Forbidden :
                 await _respond (interaction ,embed =error_embed ("Роль пользователя выше или равна роли бота."),ephemeral =True )
             except Exception as ex :
@@ -213,6 +231,7 @@ class Moderation (commands .Cog ):
                 confirm =self ._confirm_embed ("kick",user ,guild ,reason ,case_id ,moderator =interaction .user )
                 await _respond (interaction ,embed =confirm ,ephemeral =True )
                 await self ._notify_owner ('kick',user ,interaction .user ,reason )
+                await self ._maybe_proof (interaction ,user ,'кик',reason ,демка )
             except discord .Forbidden :
                 await _respond (interaction ,embed =error_embed ("Роль пользователя выше или равна роли бота."),ephemeral =True )
             except Exception as ex :
@@ -238,6 +257,7 @@ class Moderation (commands .Cog ):
                 moderator =interaction .user )
                 await _respond (interaction ,embed =confirm ,ephemeral =True )
                 await self ._notify_owner ('timeout',user ,interaction .user ,reason )
+                await self ._maybe_proof (interaction ,user ,'мут',reason ,демка )
             except discord .Forbidden :
                 await _respond (interaction ,embed =error_embed ("У вас нет прав для выполнения этого действия."),ephemeral =True )
             except Exception as ex :

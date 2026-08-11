@@ -201,6 +201,39 @@ class ProofCog(commands.Cog):
         return True
 
     # ── /proof ────────────────────────────────────────────────────────────
+    async def _create_and_post(self, guild, moderator, user, action, reason,
+                               attachment=None, link=None):
+        """Ядро: запись → (перезалив вложения) → постинг в канал доказательств.
+
+        Возвращает (ok, entry, note). Общая точка для /proof и для
+        «демка прямо в /warn|/moderate» — одна логика, ноль дубляжа.
+        """
+        entry = proof_add(guild.id, user.id, str(user),
+                          moderator.id, str(moderator), action, reason,
+                          link=link or None)
+        file = None
+        image_inline = False
+        note = None
+        if attachment is not None:
+            if attachment.size and attachment.size > MAX_REUPLOAD_BYTES:
+                # файл тяжёлый — не перезаливаем, оставляем исходную ссылку
+                note = (f'Файл большой ({attachment.size // 1024 // 1024} МБ) — не перезалит, '
+                        f'ссылка может протухнуть: {attachment.url}')
+                entry['link'] = entry['link'] or attachment.url
+            else:
+                try:
+                    raw = await attachment.read()
+                    file = discord.File(io.BytesIO(raw), filename=attachment.filename)
+                    image_inline = _is_image_name(attachment.filename)
+                except Exception as ex:
+                    note = f'Не смог перезалить вложение ({str(ex)[:120]}) — оставил ссылку.'
+                    entry['link'] = entry['link'] or getattr(attachment, 'url', None)
+        if note:
+            proof_update(guild.id, entry['id'], link=entry.get('link'), note=note)
+        ok = await self._post_proof(guild, entry, file=file,
+                                    image_inline=image_inline, note=note)
+        return ok, entry, note
+
     @app_commands.command(name='proof', description='Прикрепить «демку» к наказанию (скрин/видео/ссылка)')
     @app_commands.checks.has_permissions(manage_messages=True)
     @app_commands.describe(user='Кто наказан',
@@ -225,33 +258,9 @@ class ProofCog(commands.Cog):
             return
         await interaction.response.defer(ephemeral=True)
 
-        entry = proof_add(interaction.guild.id, user.id, str(user),
-                          interaction.user.id, str(interaction.user),
-                          action, reason, link=link or None)
-
-        file = None
-        image_inline = False
-        note = None
-        if attachment is not None:
-            if attachment.size and attachment.size > MAX_REUPLOAD_BYTES:
-                # файл тяжёлый — не перезаливаем, оставляем исходную ссылку
-                note = (f'Файл большой ({attachment.size // 1024 // 1024} МБ) — не перезалит, '
-                        f'ссылка может протухнуть: {attachment.url}')
-                entry['link'] = entry['link'] or attachment.url
-            else:
-                try:
-                    raw = await attachment.read()
-                    file = discord.File(io.BytesIO(raw), filename=attachment.filename)
-                    image_inline = _is_image_name(attachment.filename)
-                except Exception as ex:
-                    note = f'Не смог перезалить вложение ({str(ex)[:120]}) — оставил ссылку.'
-                    entry['link'] = entry['link'] or getattr(attachment, 'url', None)
-        if note:
-            proof_update(interaction.guild.id, entry['id'],
-                         link=entry.get('link'), note=note)
-
-        ok = await self._post_proof(interaction.guild, entry, file=file,
-                                    image_inline=image_inline, note=note)
+        ok, entry, note = await self._create_and_post(
+            interaction.guild, interaction.user, user, action, reason,
+            attachment=attachment, link=link or None)
         if not ok:
             await interaction.followup.send(
                 '⚠️ Демку записал, но канал доказательств недоступен '
@@ -329,6 +338,34 @@ class ProofCog(commands.Cog):
                      if msg_deleted else 'Запись удалена (сообщение в канале уже не найти)')
         await interaction.response.send_message(embed=e, ephemeral=True)
         log.info(f'[PROOF] #{number} удалена ({interaction.user})')
+
+
+async def try_deliver_proof(bot, guild, moderator, user, action, reason,
+                            attachment=None, link=None):
+    """Вход из ДРУГИХ когов: /warn, /moderate, prefix-команды — после наказания.
+
+    Возвращает короткую строку-статус для эфемерного ответа модератору
+    (или None, если демки не было). Никогда не бросает исключений —
+    наказание уже состоялось, демка не должна его ронять.
+    """
+    if attachment is None and not (link or '').strip():
+        return None
+    try:
+        cog = getattr(bot, 'get_cog', lambda name: None)('ProofCog') if bot else None
+        if cog is None:
+            return None
+        ok, entry, note = await cog._create_and_post(
+            guild, moderator, user, action, reason,
+            attachment=attachment, link=(link or None))
+        if not ok:
+            return '⚠️ Демку записал, но канал доказательств недоступен (права бота?).'
+        txt = f'📁 Демка #{entry["id"]} — в канале доказательств.'
+        if note:
+            txt += f'\n⚠️ {note[:200]}'
+        return txt
+    except Exception as e:
+        log.warning(f'[PROOF] интеграция с наказанием ({action}): {e}')
+        return None
 
 
 async def setup(bot):

@@ -343,10 +343,25 @@ class warnings(commands.Cog):
         return warn_id, total, punishment_result
 
     @app_commands.command(name="warn", description="Выдать предупреждение")
+    @app_commands.describe(user="Кого предупреждаем", reason="Причина",
+                           демка="Скрин/видео нарушения — сразу в канал доказательств")
     @app_commands.checks.has_permissions(moderate_members=True)
-    async def warn(self, interaction, user: discord.Member, reason: str = None):
+    async def warn(self, interaction, user: discord.Member, reason: str = None,
+                   демка: discord.Attachment = None):
         guild = interaction.guild
         warn_id, total, punishment_result = await self.add_warn(interaction, user, reason)
+
+        # Демка к варну — если мод приложил скрин/видео.
+        # Её сбой не должен ронять уже выданное предупреждение.
+        proof_note = None
+        if демка is not None:
+            try:
+                from cogs.proof_cog import try_deliver_proof
+                proof_note = await try_deliver_proof(
+                    self.bot, guild, interaction.user, user, 'варн', reason,
+                    attachment=демка)
+            except Exception as _pe:
+                log.warning(f'[WARN] демка: {_pe}')
 
         # Ответ модератору
         e = discord.Embed(color=discord.Color.dark_grey(), timestamp=datetime.now(timezone.utc))
@@ -360,6 +375,8 @@ class warnings(commands.Cog):
         )
         if punishment_result:
             desc += f"\nАвто-наказание: **{punishment_result}**"
+        if proof_note:
+            desc += f"\n{proof_note}"
         desc += f"\n\n{DIVIDER}"
         e.description = desc
         e.set_footer(text=f"{guild.name}")
