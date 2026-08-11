@@ -74,6 +74,8 @@ from config import Config  # noqa: E402
 check(Config.SECRET_KEY not in KNOWN_LEAKED, 'config.py: нет захардкоженного SECRET_KEY')
 
 os.environ.pop('SECRET_KEY', None)  # имитируем .env без ключа
+# пароль владельца задаём известным из env — иначе он сгенерируется случайный
+os.environ['PANEL_PASSWORD'] = 'SecTest!2026'
 from web.app import app as _flask_app  # noqa: E402
 check(isinstance(_flask_app.secret_key, str) and len(_flask_app.secret_key) >= 32
       and _flask_app.secret_key not in KNOWN_LEAKED,
@@ -113,6 +115,94 @@ check(not _zip_target_ok(root, os.path.join(root, '..', 'evil.py')), '../../ з�
 check(not _zip_target_ok(root, os.path.join(root, '..', '..', 'etc', 'passwd')), 'выход за два уровня запрещён')
 check(not _zip_target_ok(root, '/etc/passwd'), 'абсолютный путь запрещён')
 check(not _zip_target_ok(root, root + '_sneaky' + os.sep + 'x.py'), 'похожая директория-обманка запрещена')
+
+# ─── 6. Пароли: scrypt вместо sha256, совместимость ─────────────────────────
+print('== пароли: солёный scrypt, апгрейд старых форматов ==')
+from web.app import _hash_pw, _pw_matches, _pw_is_strong, _sha256_legacy  # noqa: E402
+
+h = _hash_pw('MyPass123')
+check(_pw_is_strong(h), f'новый хэш солёный ({h.split(":")[0]}), не голый sha256')
+check(_pw_matches(h, 'MyPass123'), 'scrypt: верный пароль принят')
+check(not _pw_matches(h, 'MyPass124'), 'scrypt: неверный пароль отклонён')
+check(h != _hash_pw('MyPass123'), 'соль случайная: хэши одного пароля различаются')
+_legacy = _sha256_legacy('oldpass')
+check(_pw_matches(_legacy, 'oldpass'), 'старый sha256 принят (обратная совместимость)')
+check(_pw_matches('plainpass', 'plainpass'), 'древний plaintext принят (мигрирует при логине)')
+check(not _pw_matches('', ''), 'пустой пароль никогда не пускает')
+check(not _pw_matches('garbage', None), 'None пароль отклонён')
+
+# ─── 7. TOTP 2FA полный цикл ─────────────────────────────────────────────────
+print('== TOTP 2FA: подключение, вход, отключение ==')
+import json as _json
+from urllib.parse import urlparse, parse_qs
+
+import pyotp
+
+c = _flask_app.test_client()
+with c.session_transaction() as s:
+    s['logged_in'] = True
+    s['username'] = 'owner'
+    s['role'] = 'owner'
+
+check(c.get('/api/2fa/totp/status').get_json().get('enabled') is False,
+      'TOTP изначально выключен')
+
+begin = c.post('/api/2fa/totp/begin').get_json()
+check(begin.get('success') is True and begin.get('qr', '').startswith('data:image/png'),
+      'begin: выдан секрет + QR-картинка')
+secret = begin['secret']
+
+
+def wrong_code(real):
+    """Код, гарантированно отличающийся от текущего TOTP."""
+    return f'{(int(real) + 1) % 1000000:06d}'
+
+
+r = c.post('/api/2fa/totp/enable', json={'code': wrong_code(pyotp.TOTP(secret).now())})
+check(r.get_json().get('success') is not True, 'enable: неверный код отклонён')
+
+r = c.post('/api/2fa/totp/enable', json={'code': pyotp.TOTP(secret).now()})
+check(r.get_json().get('success') is True, 'enable: верный код — 2FA включена')
+check(c.get('/api/2fa/totp/status').get_json().get('enabled') is True, 'status: включена отражается')
+
+rec = _json.load(open('data/panel_credentials.json', encoding='utf-8'))
+check(rec.get('totp_secret') == secret and rec.get('password_hash'),
+      'panel_credentials.json: секрет И хэш пароля сохранены вместе')
+
+# Вход теперь требует код
+c2 = _flask_app.test_client()
+r = c2.post('/login', data={'username': 'owner', 'password': 'SecTest!2026'})
+loc = r.headers.get('Location', '')
+check(r.status_code == 302 and '/2fa' in loc,
+      'логин с включённой 2FA -> редирект на /2fa (пароля мало)')
+tok = parse_qs(urlparse(loc).query).get('token', [''])[0]
+check(bool(tok), 'токен 2FA выдан')
+
+r = c2.post('/2fa', data={'token': tok, 'code': wrong_code(pyotp.TOTP(secret).now())})
+with c2.session_transaction() as s:
+    check(not s.get('logged_in'), '2FA: неверный код — сессия НЕ создана')
+
+r = c2.post('/2fa', data={'token': tok, 'code': pyotp.TOTP(secret).now()})
+with c2.session_transaction() as s:
+    _logged = s.get('logged_in')
+check(_logged is True and r.status_code == 302 and '2fa' not in r.headers.get('Location', ''),
+      '2FA: верный код — вход выполнен, редирект в панель')
+
+# Смена пароля владельца НЕ должна стирать 2FA (регресс ontoфикса)
+r = c.post('/api/change-password', json={'target': 'owner', 'new_password': 'NewPass789'})
+check(r.get_json().get('success') is True, 'смена пароля owner — успех')
+rec2 = _json.load(open('data/panel_credentials.json', encoding='utf-8'))
+check(rec2.get('totp_secret') == secret and _pw_matches(rec2.get('password_hash'), 'NewPass789'),
+      'после смены пароля TOTP-секрет сохранился')
+
+# Отключение 2FA валидным кодом
+r = c2.post('/api/2fa/totp/disable', json={'code': pyotp.TOTP(secret).now()})
+check(r.get_json().get('success') is True, 'disable: с валидным кодом 2FA отключается')
+
+c3 = _flask_app.test_client()
+r = c3.post('/login', data={'username': 'owner', 'password': 'NewPass789'})
+check(r.status_code == 302 and '/2fa' not in r.headers.get('Location', ''),
+      'после отключения 2FA логин идёт сразу в панель')
 
 shutil.rmtree(_TMP, ignore_errors=True)
 print(f'=== PASS {PASS} / FAIL {FAIL} ===')
