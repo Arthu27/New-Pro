@@ -10,151 +10,323 @@
       <span>ЗАЩИТА ОТ ПАДЕНИЙ • МОНИТОРИНГ В РЕАЛЬНОМ ВРЕМЕНИ</span>
     </div>
     <h1>Анти-краш центр</h1>
-    <p>Watchdog event-loop, circuit breaker модулей, критические алерты и статистика ошибок — обновление каждые 5 секунд.</p>
+    <p>Watchdog event-loop, circuit breaker модулей, критические алерты и статистика ошибок. Обновление — каждые 5 секунд.</p>
   </div>
 </div>
 {% endblock %}
 
 <style>
-  .ac-wrap { padding:6px 2px 34px; max-width: 1080px; }
-  .ac-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:14px; margin-bottom:20px; }
-  .ac-card { background:linear-gradient(160deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015)); border:1px solid rgba(255,255,255,0.09); border-radius:16px; padding:18px; position:relative; overflow:hidden; transition:.18s; }
-  .ac-card:hover { border-color:var(--ac-line); transform:translateY(-2px); box-shadow:0 10px 28px rgba(0,0,0,0.3); }
-  .ac-card::after { content:''; position:absolute; top:0; right:0; width:100px; height:100px; background:radial-gradient(circle at top right,var(--ac-soft),transparent 70%); pointer-events:none; }
-  .ac-icon { width:38px; height:38px; border-radius:11px; background:var(--ac-soft); color:var(--ac); border:1px solid var(--ac-line); display:flex; align-items:center; justify-content:center; font-size:15px; margin-bottom:10px; position:relative; z-index:1; }
-  .ac-val { font-size:24px; font-weight:800; letter-spacing:-.02em; font-variant-numeric:tabular-nums; position:relative; z-index:1; }
-  .ac-val small { font-size:12px; color:var(--text-3); font-weight:600; }
-  .ac-lbl { font-size:10.5px; opacity:.6; text-transform:uppercase; letter-spacing:.08em; margin-top:3px; position:relative; z-index:1; }
+  .ac-wrap { padding:6px 2px 42px; max-width:1080px; --ok:#2ecc71; --bad:#e74c3c; --mid:#f39c12; }
 
-  .ac-box { background:linear-gradient(160deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015)); border:1px solid rgba(255,255,255,0.09); border-radius:16px; margin-bottom:16px; overflow:hidden; }
-  .ac-head { padding:14px 18px; font-weight:700; font-size:14px; display:flex; align-items:center; gap:9px; background:rgba(255,255,255,0.03); border-bottom:1px solid rgba(255,255,255,0.06); }
-  .ac-head i { color:var(--ac, #e0b04a); }
-  .ac-head .ac-head-right { margin-left:auto; font-size:11px; opacity:.65; font-weight:600; }
-  .ac-body { padding:14px 18px; }
+  /* ── герой статуса ─────────────────────────────────────────── */
+  .ac-hero { display:flex; align-items:center; gap:18px; flex-wrap:wrap; padding:20px 22px; border-radius:20px;
+    border:1px solid color-mix(in srgb, var(--text) 9%, transparent); position:relative; overflow:hidden;
+    background:linear-gradient(160deg, color-mix(in srgb, var(--text) 4.5%, transparent), color-mix(in srgb, var(--text) 1.5%, transparent)); }
+  .ac-hero::before { content:''; position:absolute; top:-70px; left:-70px; width:260px; height:260px; border-radius:50%;
+    background:radial-gradient(circle, rgba(46,204,113,.12), transparent 65%); pointer-events:none; transition:.3s; }
+  .ac-hero[data-state="off"]::before  { background:radial-gradient(circle, rgba(231,76,60,.13), transparent 65%); }
+  .ac-hero[data-state="dead"]::before { background:radial-gradient(circle, color-mix(in srgb, var(--text) 8%, transparent), transparent 65%); }
+  .ac-shield { width:64px; height:64px; border-radius:20px; display:grid; place-items:center; font-size:26px;
+    position:relative; flex:none; border:1px solid transparent; transition:.25s; z-index:1; }
+  .ac-hero[data-state="on"]   .ac-shield { color:var(--ok);  background:rgba(46,204,113,.10);  border-color:rgba(46,204,113,.35); }
+  .ac-hero[data-state="off"]  .ac-shield { color:var(--bad); background:rgba(231,76,60,.10);   border-color:rgba(231,76,60,.35); }
+  .ac-hero[data-state="dead"] .ac-shield { color:var(--text-3); background:color-mix(in srgb, var(--text) 6%, transparent);
+    border-color:color-mix(in srgb, var(--text) 12%, transparent); animation:pulse 2.2s infinite; }
+  .ac-ring, .ac-ring::after { content:''; position:absolute; inset:-7px; border-radius:26px; pointer-events:none;
+    border:1px solid rgba(46,204,113,.45); animation:ac-ring 2.6s ease-out infinite; }
+  .ac-ring::after { inset:0; animation-delay:1.3s; }
+  .ac-hero[data-state="off"] .ac-ring, .ac-hero[data-state="dead"] .ac-ring { display:none; }
+  @keyframes ac-ring { 0% { transform:scale(.82); opacity:0; } 25% { opacity:.8; } 100% { transform:scale(1.18); opacity:0; } }
+  .ac-hero-title { font-size:19px; font-weight:800; letter-spacing:-.01em; }
+  .ac-hero[data-state="on"]  .ac-hero-title { color:var(--ok); }
+  .ac-hero[data-state="off"] .ac-hero-title { color:var(--bad); }
+  .ac-hero-sub { font-size:12.5px; color:var(--text-3); margin-top:3px; font-weight:600; }
+  .ac-hero-right { margin-left:auto; display:flex; align-items:center; gap:8px; font-size:11.5px; color:var(--text-3);
+    font-weight:700; font-variant-numeric:tabular-nums; }
+  .ac-live-dot { width:8px; height:8px; border-radius:50%; background:var(--ok); box-shadow:0 0 0 0 rgba(46,204,113,.5);
+    animation:ac-live 2s infinite; }
+  .ac-hero[data-state="dead"] .ac-live-dot { background:var(--text-4); animation:none; box-shadow:none; }
+  @keyframes ac-live { 0% { box-shadow:0 0 0 0 rgba(46,204,113,.45); } 100% { box-shadow:0 0 0 9px rgba(46,204,113,0); } }
+  .ac-chips { display:flex; flex-wrap:wrap; gap:8px; flex-basis:100%; position:relative; z-index:1; }
+  .ac-chip { display:inline-flex; align-items:center; gap:7px; padding:5px 12px; border-radius:20px; font-size:11.5px;
+    font-weight:700; border:1px solid color-mix(in srgb, var(--text) 8%, transparent);
+    background:color-mix(in srgb, var(--text) 3%, transparent); color:var(--text-3); }
+  .ac-chip i { font-size:10px; }
+  .ac-chip.on { color:var(--ok); border-color:rgba(46,204,113,.28); background:rgba(46,204,113,.08); }
 
-  .ac-pill { display:inline-flex; align-items:center; gap:7px; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:700; }
-  .ac-pill-on { background:rgba(46,204,113,0.14); color:#2ecc71; border:1px solid rgba(46,204,113,0.3); }
-  .ac-pill-off { background:rgba(231,76,60,0.14); color:#e74c3c; border:1px solid rgba(231,76,60,0.3); }
-  .ac-pill-mid { background:rgba(243,156,18,0.14); color:#f39c12; border:1px solid rgba(243,156,18,0.3); }
+  /* ── группы метрик ─────────────────────────────────────────── */
+  .ac-group-label { display:flex; align-items:center; gap:10px; font-size:11px; font-weight:800; letter-spacing:.12em;
+    text-transform:uppercase; color:var(--text-3); margin:24px 0 10px; }
+  .ac-group-label i { color:var(--ac); font-size:11px; }
+  .ac-group-label::after { content:''; flex:1; height:1px; background:color-mix(in srgb, var(--text) 8%, transparent); }
+  .ac-metrics { display:grid; grid-template-columns:repeat(auto-fit, minmax(165px, 1fr)); gap:12px; }
+  .ac-m { display:flex; align-items:center; gap:12px; padding:13px 16px; border-radius:16px; cursor:default;
+    border:1px solid color-mix(in srgb, var(--text) 9%, transparent);
+    background:color-mix(in srgb, var(--text) 3%, transparent); transition:.18s; }
+  .ac-m:hover { transform:translateY(-2px); border-color:var(--ac-line); box-shadow:0 10px 26px rgba(0,0,0,.25); }
+  .ac-m-icon { width:36px; height:36px; border-radius:11px; display:grid; place-items:center; flex:none; font-size:14px;
+    background:var(--ac-soft); color:var(--ac); border:1px solid var(--ac-line); }
+  .ac-m-val { font-size:19px; font-weight:800; letter-spacing:-.02em; font-variant-numeric:tabular-nums; line-height:1.15; }
+  .ac-m-val small { font-size:11px; color:var(--text-3); font-weight:700; }
+  .ac-m-lbl { font-size:10.5px; color:var(--text-3); text-transform:uppercase; letter-spacing:.07em; margin-top:2px; }
+  .ac-m.danger { border-color:rgba(231,76,60,.3); background:rgba(231,76,60,.05); }
+  .ac-m.danger .ac-m-icon { background:rgba(231,76,60,.12); color:var(--bad); border-color:rgba(231,76,60,.32); }
+  .ac-m.danger .ac-m-val { color:var(--bad); }
 
-  .ac-row { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.04); font-size:13px; }
+  /* ── блоки ─────────────────────────────────────────────────── */
+  .ac-box { border:1px solid color-mix(in srgb, var(--text) 9%, transparent); border-radius:18px; overflow:hidden;
+    background:color-mix(in srgb, var(--text) 3%, transparent); margin-bottom:16px; }
+  .ac-box-head { display:flex; align-items:center; gap:10px; padding:13px 18px; font-size:14px; font-weight:800;
+    border-bottom:1px solid color-mix(in srgb, var(--text) 7%, transparent);
+    background:color-mix(in srgb, var(--text) 2%, transparent); }
+  .ac-box-head > i { color:var(--ac); }
+  .ac-box-note { margin-left:auto; font-size:11.5px; color:var(--text-3); font-weight:600; }
+  .ac-box-body { padding:16px 18px; }
+  .ac-empty { display:flex; align-items:center; gap:9px; color:var(--text-3); font-size:13px; font-weight:600; }
+  .ac-empty i { color:var(--ok); }
+
+  /* ── график 7 дней ─────────────────────────────────────────── */
+  .ac-chart { display:flex; align-items:flex-end; gap:14px; height:150px; padding-top:4px;
+    border-bottom:1px solid color-mix(in srgb, var(--text) 8%, transparent); }
+  .ac-chart .bar-wrap { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end;
+    gap:5px; height:100%; min-width:0; }
+  .ac-chart .bar-val { font-size:12px; font-weight:800; color:var(--ac-2); min-height:15px; font-variant-numeric:tabular-nums; }
+  .ac-chart .bar { width:100%; max-width:46px; border-radius:8px 8px 2px 2px; min-height:3px; position:relative;
+    background:linear-gradient(180deg, rgba(212,175,55,.95), rgba(212,175,55,.30));
+    box-shadow:0 0 14px rgba(212,175,55,.22); transition:height .5s ease; }
+  .ac-chart .bar.zero { background:color-mix(in srgb, var(--text) 8%, transparent); box-shadow:none; }
+  .ac-chart .bar-lbl { font-size:11px; color:var(--text-3); letter-spacing:.4px; white-space:nowrap; }
+  .ac-chart .bar-wrap.today .bar-lbl { color:var(--ac-2); font-weight:800; }
+  .ac-chart .bar-wrap.today .bar { box-shadow:0 0 18px rgba(212,175,55,.45); }
+
+  /* ── строки топов / breaker ────────────────────────────────── */
+  .ac-cols { display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:16px; }
+  .ac-row { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 2px;
+    border-bottom:1px solid color-mix(in srgb, var(--text) 6%, transparent); font-size:13px; }
   .ac-row:last-child { border-bottom:none; }
-  .ac-key { color:var(--text-3); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .ac-val2 { font-weight:700; font-variant-numeric:tabular-nums; flex-shrink:0; }
+  .ac-key { color:var(--text-2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+  .ac-key i { color:var(--mid); margin-right:6px; }
+  .ac-count { flex:none; min-width:32px; text-align:center; padding:2px 10px; border-radius:8px; font-size:12.5px;
+    font-weight:800; font-variant-numeric:tabular-nums; background:var(--ac-soft); color:var(--ac-2);
+    border:1px solid var(--ac-line); }
+  .ac-count.hot { background:rgba(231,76,60,.12); color:var(--bad); border-color:rgba(231,76,60,.3); }
+  .ac-when { flex:none; font-size:11px; color:var(--text-3); font-variant-numeric:tabular-nums; }
 
-  .ac-err { display:flex; gap:10px; padding:8px 10px; border-radius:10px; font-size:12.5px; border:1px solid transparent; margin-bottom:6px; background:rgba(255,255,255,0.02); }
-  .ac-err.crit { border-color:rgba(231,76,60,0.25); background:rgba(231,76,60,0.06); }
-  .ac-err-time { color:var(--text-3); font-variant-numeric:tabular-nums; flex-shrink:0; }
-  .ac-err-type { font-weight:800; color:#f39c12; flex-shrink:0; }
-  .ac-err.crit .ac-err-type { color:#e74c3c; }
-  .ac-err-msg { opacity:.8; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  /* ── последние ошибки ──────────────────────────────────────── */
+  .ac-errors { max-height:330px; overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding-right:4px; }
+  .ac-errors::-webkit-scrollbar { width:8px; }
+  .ac-errors::-webkit-scrollbar-thumb { background:color-mix(in srgb, var(--text) 14%, transparent); border-radius:8px; }
+  .ac-err { display:grid; grid-template-columns:auto auto minmax(0, 1fr); gap:12px; align-items:center;
+    padding:10px 14px; border-radius:12px; font-size:12.5px;
+    border:1px solid color-mix(in srgb, var(--text) 7%, transparent);
+    background:color-mix(in srgb, var(--text) 2.5%, transparent); }
+  .ac-err.crit { border-color:rgba(231,76,60,.25); background:rgba(231,76,60,.05); }
+  .ac-err-time { color:var(--text-3); font-size:11.5px; font-variant-numeric:tabular-nums; }
+  .ac-badge { padding:3px 10px; border-radius:8px; font-size:11px; font-weight:800; white-space:nowrap;
+    max-width:180px; overflow:hidden; text-overflow:ellipsis;
+    background:rgba(243,156,18,.12); color:var(--mid); border:1px solid rgba(243,156,18,.28); }
+  .ac-err.crit .ac-badge { background:rgba(231,76,60,.12); color:var(--bad); border-color:rgba(231,76,60,.3); }
+  .ac-err-msg { min-width:0; color:var(--text-2); display:-webkit-box; -webkit-line-clamp:2;
+    -webkit-box-orient:vertical; overflow:hidden; }
+  .ac-err-msg code { background:color-mix(in srgb, var(--text) 7%, transparent); padding:1px 6px;
+    border-radius:6px; font-size:11px; }
 
-  .ac-cols { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
-  @media (max-width: 800px){ .ac-cols { grid-template-columns:1fr; } }
-  .ac-chart { display:flex; align-items:flex-end; gap:14px; height:150px; padding:6px 4px 0; }
-  .ac-chart .bar-wrap { flex:1; display:flex; flex-direction:column; align-items:center; gap:6px; height:100%; justify-content:flex-end; }
-  .ac-chart .bar-val { font-size:12px; font-weight:700; color:var(--ac-gold,#D4AF37); opacity:.9; min-height:14px; }
-  .ac-chart .bar { width:100%; max-width:44px; border-radius:8px 8px 3px 3px; background:linear-gradient(180deg, rgba(212,175,55,.95), rgba(212,175,55,.35)); box-shadow:0 0 14px rgba(212,175,55,.25); transition:height .5s ease; min-height:3px; position:relative; }
-  .ac-chart .bar.zero { background:rgba(255,255,255,.07); box-shadow:none; }
-  .ac-chart .bar-lbl { font-size:11px; opacity:.6; letter-spacing:.4px; }
+  /* ── настройки (группы) ────────────────────────────────────── */
+  .ac-cfg-group + .ac-cfg-group { border-top:1px solid color-mix(in srgb, var(--text) 7%, transparent); }
+  .ac-cfg-head { display:flex; align-items:center; gap:12px; padding:14px 18px; cursor:pointer; user-select:none;
+    transition:background .15s; }
+  .ac-cfg-head:hover { background:color-mix(in srgb, var(--text) 2.5%, transparent); }
+  .ac-cfg-ico { width:32px; height:32px; border-radius:10px; display:grid; place-items:center; flex:none; font-size:13px;
+    background:var(--ac-soft); color:var(--ac); border:1px solid var(--ac-line); }
+  .ac-cfg-title { font-size:13.5px; font-weight:800; }
+  .ac-cfg-sum { font-size:11.5px; color:var(--text-3); margin-top:1px; font-weight:600; }
+  .ac-cfg-chev { margin-left:auto; color:var(--text-3); transition:transform .2s; font-size:12px; }
+  .ac-cfg-group.open .ac-cfg-chev { transform:rotate(180deg); }
+  .ac-cfg-body { display:none; padding:6px 18px 18px; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:12px; }
+  .ac-cfg-group.open .ac-cfg-body { display:grid; }
 
-  .ac-form-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:12px; }
-  .ac-field { background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.07); border-radius:12px; padding:12px 14px; }
-  .ac-field-top { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .ac-field { padding:12px 14px; border-radius:12px; transition:border-color .2s;
+    border:1px solid color-mix(in srgb, var(--text) 8%, transparent);
+    background:color-mix(in srgb, var(--text) 2%, transparent); }
+  .ac-field.invalid { border-color:rgba(231,76,60,.55); }
+  .ac-field-top { display:flex; align-items:center; justify-content:space-between; gap:12px; }
   .ac-field-label { font-size:13px; font-weight:700; }
-  .ac-field-desc { font-size:11.5px; color:var(--text-3); margin-top:5px; line-height:1.35; }
-  .ac-field input[type=number], .ac-field input[type=text] { width:110px; background:rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.12); color:var(--text-1,#fff); border-radius:8px; padding:6px 10px; font-size:13px; font-weight:700; text-align:right; }
-  .ac-field input[type=number]:focus, .ac-field input[type=text]:focus { outline:none; border-color:var(--ac); }
-  .ac-switch { position:relative; width:46px; height:24px; flex-shrink:0; }
+  .ac-field-desc { font-size:11.5px; color:var(--text-3); margin-top:6px; line-height:1.45; }
+  .ac-field-desc code { font-size:10.5px; padding:1px 6px; border-radius:5px; color:var(--text-2);
+    background:color-mix(in srgb, var(--text) 8%, transparent); }
+  .ac-field input[type=number], .ac-field input[type=text] { width:120px; background:rgba(0,0,0,.25);
+    border:1px solid color-mix(in srgb, var(--text) 14%, transparent); color:var(--text); border-radius:8px;
+    padding:6px 10px; font-size:13px; font-weight:700; text-align:right; font-family:inherit; }
+  .ac-field input[type=text] { width:190px; text-align:left; }
+  .ac-field textarea { width:100%; margin-top:8px; background:rgba(0,0,0,.25); font-family:inherit; resize:vertical;
+    border:1px solid color-mix(in srgb, var(--text) 14%, transparent); color:var(--text); border-radius:8px;
+    padding:8px 10px; font-size:12.5px; }
+  .ac-field input:focus, .ac-field textarea:focus { outline:none; border-color:var(--ac); }
+
+  .ac-switch { position:relative; width:46px; height:24px; flex:none; }
   .ac-switch input { display:none; }
-  .ac-switch span { position:absolute; inset:0; background:rgba(255,255,255,0.12); border-radius:20px; transition:.2s; cursor:pointer; }
-  .ac-switch span:before { content:''; position:absolute; width:18px; height:18px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.2s; }
-  .ac-switch input:checked + span { background:var(--ac, #e0b04a); }
-  .ac-switch input:checked + span:before { transform:translateX(22px); }
+  .ac-switch span { position:absolute; inset:0; border-radius:20px; cursor:pointer; transition:.2s;
+    background:color-mix(in srgb, var(--text) 14%, transparent); }
+  .ac-switch span::before { content:''; position:absolute; width:18px; height:18px; left:3px; top:3px;
+    background:#fff; border-radius:50%; transition:.2s; }
+  .ac-switch input:checked + span { background:var(--ac); }
+  .ac-switch input:checked + span::before { transform:translateX(22px); }
 
-  .ac-actions { display:flex; gap:10px; margin-top:16px; flex-wrap:wrap; }
-  .ac-btn { padding:10px 22px; border-radius:11px; border:1px solid var(--ac-line); background:linear-gradient(160deg,var(--ac,#e0b04a),#c8922a); color:#1a1206; font-weight:800; font-size:13px; cursor:pointer; transition:.15s; }
-  .ac-btn:hover { transform:translateY(-1px); box-shadow:0 8px 20px rgba(200,146,42,0.35); }
-  .ac-btn.danger { background:linear-gradient(160deg,#e74c3c,#c0392b); color:#fff; }
-  .ac-btn.ghost { background:rgba(255,255,255,0.05); color:var(--text-1,#fff); border-color:rgba(255,255,255,0.14); }
+  .ac-savebar { position:sticky; bottom:0; display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    padding:14px 18px; border-top:1px solid color-mix(in srgb, var(--text) 8%, transparent);
+    background:color-mix(in srgb, var(--bg-2) 90%, transparent); backdrop-filter:blur(10px); }
+  .ac-savebar-note { font-size:11.5px; color:var(--text-3); font-weight:600; margin-left:auto; }
 
-  .ac-toast { position:fixed; bottom:24px; right:24px; padding:13px 20px; border-radius:12px; font-size:13px; font-weight:700; z-index:9999; opacity:0; transform:translateY(12px); transition:.25s; pointer-events:none; }
+  .ac-btn { padding:10px 20px; border-radius:11px; border:1px solid var(--ac-line); cursor:pointer; font-size:13px;
+    font-weight:800; font-family:inherit; color:#1a1206; transition:.15s;
+    background:linear-gradient(160deg, var(--ac), var(--ac-3)); }
+  .ac-btn:hover { transform:translateY(-1px); box-shadow:0 8px 20px var(--ac-glow); }
+  .ac-btn i { margin-right:6px; }
+  .ac-btn.ghost { background:color-mix(in srgb, var(--text) 6%, transparent); color:var(--text);
+    border-color:color-mix(in srgb, var(--text) 14%, transparent); }
+  .ac-btn.danger { background:linear-gradient(160deg, #e74c3c, #c0392b); color:#fff; border-color:rgba(231,76,60,.4); }
+
+  .ac-toast { position:fixed; bottom:24px; right:24px; padding:13px 20px; border-radius:12px; font-size:13px;
+    font-weight:700; z-index:9999; opacity:0; transform:translateY(12px); transition:.25s; pointer-events:none; }
   .ac-toast.show { opacity:1; transform:translateY(0); }
-  .ac-toast.ok { background:rgba(46,204,113,0.95); color:#08130c; }
-  .ac-toast.bad { background:rgba(231,76,60,0.95); color:#fff; }
+  .ac-toast.ok { background:rgba(46,204,113,.95); color:#08130c; }
+  .ac-toast.bad { background:rgba(231,76,60,.95); color:#fff; }
 
-  .ac-master-banner { display:flex; align-items:center; gap:14px; padding:14px 18px; border-radius:14px; margin-bottom:18px; border:1px solid; font-size:14px; font-weight:700; }
-  .ac-master-banner.on { background:rgba(46,204,113,0.08); border-color:rgba(46,204,113,0.25); color:#2ecc71; }
-  .ac-master-banner.off { background:rgba(231,76,60,0.08); border-color:rgba(231,76,60,0.3); color:#e74c3c; }
-  .ac-master-banner i { font-size:20px; }
+  @media (max-width: 640px) {
+    .ac-hero { gap:14px; }
+    .ac-shield { width:52px; height:52px; font-size:21px; border-radius:16px; }
+    .ac-hero-right { width:100%; margin-left:0; }
+    .ac-err { grid-template-columns:auto minmax(0, 1fr); }
+    .ac-err-msg { grid-column:1 / -1; }
+  }
 </style>
 
 <div class="ac-wrap">
-  <div class="ac-master-banner on" id="master-banner">
-    <i class="fas fa-shield-halved"></i>
-    <span id="master-text">Загрузка…</span>
-    <span style="margin-left:auto;font-size:12px;opacity:.7" id="master-sub"></span>
-  </div>
 
-  <div class="ac-grid" data-reveal="up">
-    <div class="ac-card"><div class="ac-icon"><i class="fas fa-clock"></i></div><div class="ac-val" id="v-uptime">—</div><div class="ac-lbl">Аптайм</div></div>
-    <div class="ac-card"><div class="ac-icon"><i class="fas fa-bug"></i></div><div class="ac-val" id="v-total">—</div><div class="ac-lbl">Всего ошибок</div></div>
-    <div class="ac-card"><div class="ac-icon"><i class="fas fa-chart-line"></i></div><div class="ac-val" id="v-hour">—</div><div class="ac-lbl">Ошибок / час</div></div>
-    <div class="ac-card"><div class="ac-icon"><i class="fas fa-skull"></i></div><div class="ac-val" id="v-crit">—</div><div class="ac-lbl">Критических</div></div>
-    <div class="ac-card"><div class="ac-icon"><i class="fas fa-gauge-high"></i></div><div class="ac-val" id="v-lag">—</div><div class="ac-lbl">Макс. лаг цикла</div></div>
-    <div class="ac-card"><div class="ac-icon"><i class="fas fa-bell"></i></div><div class="ac-val" id="v-alerts">—</div><div class="ac-lbl">Алертов отправлено</div></div>
-    <div class="ac-card"><div class="ac-icon"><i class="fas fa-signal"></i></div><div class="ac-val" id="v-ping">—</div><div class="ac-lbl">Discord пинг</div></div>
-    <div class="ac-card"><div class="ac-icon"><i class="fas fa-filter"></i></div><div class="ac-val" id="v-filtered">—</div><div class="ac-lbl">Фильтр / повторы</div></div>
-    <div class="ac-card"><div class="ac-icon"><i class="fas fa-triangle-exclamation"></i></div><div class="ac-val" id="v-warnings">—</div><div class="ac-lbl">Warning'ов библиотек</div></div>
-    <div class="ac-card"><div class="ac-icon"><i class="fas fa-plug-circle-xmark"></i></div><div class="ac-val" id="v-disconnects">—</div><div class="ac-lbl">Обрывов WebSocket</div></div>
-    <div class="ac-card"><div class="ac-icon"><i class="fas fa-satellite-dish"></i></div><div class="ac-val" id="v-webhook">—</div><div class="ac-lbl">Webhook доставок</div></div>
-  </div>
+  <!-- статус-герой -->
+  <section class="ac-hero" id="ac-hero" data-state="dead" data-reveal="up">
+    <div class="ac-shield"><i class="fas fa-shield-halved"></i><span class="ac-ring"></span></div>
+    <div style="min-width:0">
+      <div class="ac-hero-title" id="hero-title">Подключаемся…</div>
+      <div class="ac-hero-sub" id="hero-sub">загрузка телеметрии</div>
+    </div>
+    <div class="ac-hero-right"><span class="ac-live-dot"></span><span id="hero-updated">—</span></div>
+    <div class="ac-chips" id="hero-chips"></div>
+  </section>
 
-  <div class="ac-box" data-reveal="up">
-    <div class="ac-head"><i class="fas fa-chart-column"></i> Ошибки за 7 дней <span class="ac-head-right" id="daily-total"></span></div>
-    <div class="ac-body">
-      <div class="ac-chart" id="daily-chart">
-        <div style="opacity:.55;font-size:13px">Загрузка графика…</div>
-      </div>
+  <!-- метрики: ошибки -->
+  <div class="ac-group-label" data-reveal="up"><i class="fas fa-bug"></i> Ошибки</div>
+  <div class="ac-metrics" data-reveal="up">
+    <div class="ac-m" title="Все ошибки за всё время наблюдения">
+      <div class="ac-m-icon"><i class="fas fa-bug"></i></div>
+      <div><div class="ac-m-val" id="v-total">—</div><div class="ac-m-lbl">Всего ошибок</div></div>
+    </div>
+    <div class="ac-m" title="Ошибки за последний час">
+      <div class="ac-m-icon"><i class="fas fa-chart-line"></i></div>
+      <div><div class="ac-m-val" id="v-hour">—</div><div class="ac-m-lbl">За час</div></div>
+    </div>
+    <div class="ac-m" id="m-crit" title="Критические: event-loop, потоки, команды">
+      <div class="ac-m-icon"><i class="fas fa-skull"></i></div>
+      <div><div class="ac-m-val" id="v-crit">—</div><div class="ac-m-lbl">Критических</div></div>
+    </div>
+    <div class="ac-m" title="Предупреждения библиотек (DeprecationWarning и др.)">
+      <div class="ac-m-icon"><i class="fas fa-triangle-exclamation"></i></div>
+      <div><div class="ac-m-val" id="v-warnings">—</div><div class="ac-m-lbl">Warning'ов</div></div>
     </div>
   </div>
 
-  <div class="ac-box" data-reveal="up">
-    <div class="ac-head"><i class="fas fa-bolt"></i> Circuit breaker <span class="ac-head-right" id="br-state"></span></div>
-    <div class="ac-body" id="breaker-list"><div style="opacity:.55;font-size:13px">Тишина — ни одного срабатывания ✨</div></div>
+  <!-- метрики: здоровье -->
+  <div class="ac-group-label" data-reveal="up"><i class="fas fa-heart-pulse"></i> Здоровье и связь</div>
+  <div class="ac-metrics" data-reveal="up">
+    <div class="ac-m" title="Время непрерывной работы бота">
+      <div class="ac-m-icon"><i class="fas fa-clock"></i></div>
+      <div><div class="ac-m-val" id="v-uptime">—</div><div class="ac-m-lbl">Аптайм</div></div>
+    </div>
+    <div class="ac-m" title="Пинг до шлюза Discord">
+      <div class="ac-m-icon"><i class="fas fa-signal"></i></div>
+      <div><div class="ac-m-val" id="v-ping">—</div><div class="ac-m-lbl">Discord пинг</div></div>
+    </div>
+    <div class="ac-m" title="Максимальное зафиксированное зависание event-loop / текущий лаг">
+      <div class="ac-m-icon"><i class="fas fa-gauge-high"></i></div>
+      <div><div class="ac-m-val" id="v-lag">—</div><div class="ac-m-lbl">Макс. лаг цикла</div></div>
+    </div>
+    <div class="ac-m" id="m-dc" title="Обрывы WebSocket-соединения / за последний час">
+      <div class="ac-m-icon"><i class="fas fa-plug-circle-xmark"></i></div>
+      <div><div class="ac-m-val" id="v-disconnects">—</div><div class="ac-m-lbl">Обрывов WS</div></div>
+    </div>
   </div>
+
+  <!-- метрики: фильтр и доставка -->
+  <div class="ac-group-label" data-reveal="up"><i class="fas fa-filter"></i> Фильтр и доставка</div>
+  <div class="ac-metrics" data-reveal="up">
+    <div class="ac-m" title="Шумные ошибки, поглощённые фильтром / скрытые повторы">
+      <div class="ac-m-icon"><i class="fas fa-filter"></i></div>
+      <div><div class="ac-m-val" id="v-filtered">—</div><div class="ac-m-lbl">Фильтр / повторы</div></div>
+    </div>
+    <div class="ac-m" id="m-alerts" title="Отправлено сводок в канал алертов / сейчас в очереди">
+      <div class="ac-m-icon"><i class="fas fa-bell"></i></div>
+      <div><div class="ac-m-val" id="v-alerts">—</div><div class="ac-m-lbl">Алертов</div></div>
+    </div>
+    <div class="ac-m" title="Мгновенные webhook-уведомления: доставлено / отсеяно дедупом">
+      <div class="ac-m-icon"><i class="fas fa-satellite-dish"></i></div>
+      <div><div class="ac-m-val" id="v-webhook">—</div><div class="ac-m-lbl">Webhook</div></div>
+    </div>
+  </div>
+
+  <!-- график -->
+  <section class="ac-box" data-reveal="up" style="margin-top:24px">
+    <div class="ac-box-head"><i class="fas fa-chart-column"></i> Ошибки за 7 дней
+      <span class="ac-box-note" id="daily-total"></span></div>
+    <div class="ac-box-body">
+      <div class="ac-chart" id="daily-chart"><div class="ac-empty">Загрузка графика…</div></div>
+    </div>
+  </section>
+
+  <!-- breaker + топы -->
+  <section class="ac-box" data-reveal="up">
+    <div class="ac-box-head"><i class="fas fa-bolt"></i> Circuit breaker
+      <span class="ac-box-note" id="br-state"></span></div>
+    <div class="ac-box-body" id="breaker-list">
+      <div class="ac-empty"><i class="fas fa-circle-check"></i> Тишина — ни одного срабатывания</div>
+    </div>
+  </section>
 
   <div class="ac-cols">
-    <div class="ac-box" data-reveal="up">
-      <div class="ac-head"><i class="fas fa-ranking-star"></i> Топ типов ошибок</div>
-      <div class="ac-body" id="top-types"><div style="opacity:.55;font-size:13px">—</div></div>
-    </div>
-    <div class="ac-box" data-reveal="up">
-      <div class="ac-head"><i class="fas fa-cubes"></i> Топ модулей по ошибкам</div>
-      <div class="ac-body" id="top-cogs"><div style="opacity:.55;font-size:13px">—</div></div>
-    </div>
-    <div class="ac-box" data-reveal="up">
-      <div class="ac-head"><i class="fas fa-triangle-exclamation"></i> Типы warning'ов</div>
-      <div class="ac-body" id="top-warnings"><div style="opacity:.55;font-size:13px">—</div></div>
-    </div>
+    <section class="ac-box" data-reveal="up">
+      <div class="ac-box-head"><i class="fas fa-ranking-star"></i> Топ типов ошибок</div>
+      <div class="ac-box-body" id="top-types"><div class="ac-empty">—</div></div>
+    </section>
+    <section class="ac-box" data-reveal="up">
+      <div class="ac-box-head"><i class="fas fa-cubes"></i> Топ модулей</div>
+      <div class="ac-box-body" id="top-cogs"><div class="ac-empty">—</div></div>
+    </section>
+    <section class="ac-box" data-reveal="up">
+      <div class="ac-box-head"><i class="fas fa-triangle-exclamation"></i> Типы warning'ов</div>
+      <div class="ac-box-body" id="top-warnings"><div class="ac-empty">—</div></div>
+    </section>
   </div>
 
-  <div class="ac-box" data-reveal="up">
-    <div class="ac-head"><i class="fas fa-list-ul"></i> Последние ошибки <span class="ac-head-right">последние 15 записей</span></div>
-    <div class="ac-body" id="last-errors"><div style="opacity:.55;font-size:13px">Ошибок пока нет</div></div>
-  </div>
-
-  <div class="ac-box" data-reveal="up">
-    <div class="ac-head"><i class="fas fa-sliders"></i> Настройки защиты <span class="ac-head-right">сохраняются в data/anticrash_config.json</span></div>
-    <div class="ac-body">
-      <div class="ac-form-grid" id="cfg-grid"><div style="opacity:.55;font-size:13px">Загрузка настроек…</div></div>
-      <div class="ac-actions">
-        <button class="ac-btn" onclick="saveConfig()"><i class="fas fa-save"></i> Сохранить настройки</button>
-        <button class="ac-btn ghost" onclick="loadConfig()"><i class="fas fa-rotate"></i> Обновить</button>
-        <button class="ac-btn danger" onclick="resetStats()"><i class="fas fa-trash"></i> Сбросить статистику</button>
-      </div>
+  <!-- последние ошибки -->
+  <section class="ac-box" data-reveal="up">
+    <div class="ac-box-head"><i class="fas fa-list-ul"></i> Последние ошибки
+      <span class="ac-box-note">последние 15 записей</span></div>
+    <div class="ac-box-body">
+      <div class="ac-errors" id="last-errors"><div class="ac-empty">Ошибок пока нет</div></div>
     </div>
-  </div>
+  </section>
+
+  <!-- настройки -->
+  <section class="ac-box" data-reveal="up">
+    <div class="ac-box-head"><i class="fas fa-sliders"></i> Настройки защиты
+      <span class="ac-box-note">сохраняются в data/anticrash_config.json</span></div>
+    <div id="cfg-groups"><div class="ac-empty" style="padding:16px 18px">Загрузка настроек…</div></div>
+    <div class="ac-savebar">
+      <button class="ac-btn" onclick="saveConfig()"><i class="fas fa-save"></i>Сохранить</button>
+      <button class="ac-btn ghost" onclick="loadConfig(true)"><i class="fas fa-rotate"></i>Отменить изменения</button>
+      <span class="ac-savebar-note" id="cfg-note"></span>
+      <button class="ac-btn danger" onclick="resetStats()"><i class="fas fa-trash"></i>Сбросить статистику</button>
+    </div>
+  </section>
 </div>
 
 <div class="ac-toast" id="ac-toast"></div>
@@ -162,148 +334,268 @@
 <script>
 let CFG_META = {}, CFG_ORDER = [];
 
+/* группировка параметров по смыслу (ключи приходят с сервера) */
+const CFG_GROUPS = [
+  {id:'core',    icon:'fa-sliders',              title:'Ядро и алерты в Discord',
+   keys:['master_enabled','log_channel_id','alerts_enabled','max_alerts_per_hour','alert_flush_sec']},
+  {id:'watchdog',icon:'fa-heart-pulse',          title:'Watchdog event-loop',
+   keys:['loop_watchdog','loop_lag_threshold','loop_check_interval']},
+  {id:'breaker', icon:'fa-bolt',                 title:'Circuit breaker модулей',
+   keys:['cog_breaker','cog_error_threshold','cog_window_sec','cog_auto_reload']},
+  {id:'filter',  icon:'fa-filter',               title:'Фильтр шумных ошибок',
+   keys:['filter_enabled','filter_substrings','filter_suppress_repeat_sec']},
+  {id:'warn',    icon:'fa-triangle-exclamation', title:'Warning-монитор библиотек',
+   keys:['warning_monitor','warning_dedup_sec']},
+  {id:'conn',    icon:'fa-wifi',                 title:'Монитор соединения',
+   keys:['connection_watch','disconnect_alert_threshold','disconnect_window_sec']},
+  {id:'webhook', icon:'fa-satellite-dish',       title:'Webhook мгновенных ошибок',
+   keys:['webhook_enabled','webhook_url','webhook_dedup_sec','webhook_max_per_hour']},
+  {id:'stats',   icon:'fa-database',             title:'Статистика и логирование',
+   keys:['health_log_interval','error_rate_alert','stats_persist','stats_save_sec','details_log_enabled']},
+];
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g,
+  c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtN = n => (n ?? 0).toLocaleString('ru-RU');
+const fmtT = ts => new Date(ts*1000).toLocaleTimeString('ru-RU',
+  {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+
 function toast(msg, ok=true){
-  const t = document.getElementById('ac-toast');
+  const t = $('ac-toast');
   t.textContent = msg;
   t.className = 'ac-toast show ' + (ok ? 'ok' : 'bad');
-  setTimeout(() => t.classList.remove('show'), 3000);
+  setTimeout(() => t.classList.remove('show'), 3200);
 }
-function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-function fmtTs(ts){ const d = new Date(ts*1000); return d.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit',second:'2-digit'}); }
+
+/* ── статус-герой ─────────────────────────────────────────── */
+function renderHero(d){
+  const hero = $('ac-hero');
+  const on = !!d.master_enabled;
+  hero.dataset.state = on ? 'on' : 'off';
+  const todayCount = (d.daily7 && d.daily7.length) ? d.daily7[d.daily7.length-1].count : 0;
+  $('hero-title').textContent = on ? 'Бот под защитой' : 'Анти-краш отключён';
+  $('hero-sub').textContent = on
+    ? `аптайм ${d.uptime_human} • серверов ${fmtN(d.guilds)} • ошибок сегодня ${fmtN(todayCount)}`
+    : 'мониторинг и алерты остановлены (master_enabled = выкл)';
+  const chips = [
+    ['watchdog_on',        'Watchdog',          'fa-heart-pulse'],
+    ['breaker_on',         'Circuit breaker',   'fa-bolt'],
+    ['filter_on',          'Фильтр шума',       'fa-filter'],
+    ['warning_monitor_on', 'Warning-монитор',   'fa-triangle-exclamation'],
+    ['connection_watch_on','Соединение',        'fa-wifi'],
+    ['webhook_on',         'Webhook',           'fa-satellite-dish'],
+  ];
+  $('hero-chips').innerHTML = chips.map(([k, name, ic]) =>
+    `<span class="ac-chip ${d[k] ? 'on' : ''}"><i class="fas ${ic}"></i>${name}` +
+    `<i class="fas fa-circle" style="font-size:6px;color:${d[k] ? 'var(--ok)' : 'var(--text-4)'}"></i></span>`
+  ).join('');
+}
+function heroOffline(msg){
+  $('ac-hero').dataset.state = 'dead';
+  $('hero-title').textContent = 'Обработчик офлайн';
+  $('hero-sub').textContent = msg || 'бот не запущен — телеметрия недоступна';
+  $('hero-chips').innerHTML = '';
+}
+
+/* ── метрики ──────────────────────────────────────────────── */
+function renderMetrics(d){
+  $('v-total').textContent = fmtN(d.total_errors);
+  $('v-hour').textContent = fmtN(d.errors_last_hour);
+  $('v-crit').textContent = fmtN(d.critical);
+  $('m-crit').classList.toggle('danger', (d.critical || 0) > 0);
+  $('v-warnings').textContent = fmtN(d.warnings_total);
+  $('v-uptime').textContent = d.uptime_human;
+  $('v-ping').innerHTML = `${fmtN(d.latency_ms)} <small>мс</small>`;
+  $('v-lag').innerHTML = `${d.loop_lag_max} <small>с · сейчас ${d.loop_lag_recent}</small>`;
+  $('v-disconnects').innerHTML = `${fmtN(d.disconnects)} <small>/ час ${fmtN(d.disconnects_hour)}</small>`;
+  $('m-dc').classList.toggle('danger', (d.disconnects_hour || 0) > 2);
+  $('v-filtered').innerHTML = `${fmtN(d.filtered)} <small>/ скрыто ${fmtN(d.repeats_hidden)}</small>`;
+  $('v-alerts').innerHTML = `${fmtN(d.alerts_sent)} <small>/ очередь ${fmtN(d.alerts_queued)}</small>`;
+  $('m-alerts').title = d.channel_configured
+    ? 'Отправлено сводок в канал алертов / сейчас в очереди'
+    : 'Канал алертов не задан: !anticrash kanal или log_channel_id в настройках';
+  $('v-webhook').innerHTML = `${fmtN(d.webhook_sent)} <small>/ дедуп ${fmtN(d.webhook_dropped)}</small>`;
+}
+
+/* ── график ───────────────────────────────────────────────── */
+function renderChart(d){
+  const box = $('daily-chart');
+  if(!d.daily7 || !d.daily7.length) return;
+  const mx = Math.max(1, ...d.daily7.map(x => x.count));
+  const total = d.daily7.reduce((a, x) => a + x.count, 0);
+  const DOW = ['ВС','ПН','ВТ','СР','ЧТ','ПТ','СБ'];
+  box.innerHTML = d.daily7.map((x, i) => {
+    const dt = new Date(x.day + 'T12:00:00');
+    const h = Math.max(2, Math.round(x.count / mx * 100));
+    const today = i === d.daily7.length - 1 ? ' today' : '';
+    return `<div class="bar-wrap${today}"><div class="bar-val">${x.count || ''}</div>` +
+           `<div class="bar ${x.count ? '' : 'zero'}" style="height:${h}%" title="${x.day}: ${x.count}"></div>` +
+           `<div class="bar-lbl">${DOW[dt.getDay()]} ${dt.getDate()}</div></div>`;
+  }).join('');
+  $('daily-total').textContent = 'всего за неделю: ' + fmtN(total);
+}
+
+/* ── breaker / топы / ошибки ──────────────────────────────── */
+function renderBreaker(d){
+  const bl = $('breaker-list');
+  if(d.breakers && d.breakers.length){
+    bl.innerHTML = d.breakers.map(b =>
+      `<div class="ac-row"><span class="ac-key"><i class="fas fa-bolt"></i>${esc(b.module)}</span>
+       <span style="display:flex;gap:8px;align-items:center;flex:none">
+         ${b.tripped_at ? `<span class="ac-when">${fmtT(b.tripped_at)}</span>` : ''}
+         <span class="ac-count hot">${b.count}×</span></span></div>`).join('');
+    $('br-state').textContent = 'Срабатываний: ' + d.breakers.length;
+  } else {
+    bl.innerHTML = '<div class="ac-empty"><i class="fas fa-circle-check"></i> Тишина — ни одного срабатывания</div>';
+    $('br-state').textContent = '';
+  }
+}
+function renderTops(d){
+  const rows = arr => (arr && arr.length)
+    ? arr.map(t => `<div class="ac-row"><span class="ac-key">${esc(t.name)}</span>` +
+                   `<span class="ac-count">${fmtN(t.count)}</span></div>`).join('')
+    : '<div class="ac-empty">—</div>';
+  $('top-types').innerHTML = rows(d.top_types);
+  $('top-cogs').innerHTML = rows(d.top_cogs);
+  const w = d.warnings ? Object.entries(d.warnings).map(([name, count]) => ({name, count})) : [];
+  $('top-warnings').innerHTML = rows(w);
+}
+function renderErrors(d){
+  const le = $('last-errors');
+  if(d.last_errors && d.last_errors.length){
+    le.innerHTML = d.last_errors.map(e =>
+      `<div class="ac-err ${e.critical ? 'crit' : ''}">
+         <span class="ac-err-time">${fmtT(e.ts)}</span>
+         <span class="ac-badge" title="${esc(e.type)}">${esc(e.type)}</span>
+         <span class="ac-err-msg"><b>${esc(e.where)}</b>${e.loc ? ' · <code>'+esc(e.loc)+'</code>' : ''} — ${esc(e.msg)}</span>
+       </div>`).join('');
+  } else {
+    le.innerHTML = '<div class="ac-empty"><i class="fas fa-circle-check"></i> Ошибок пока нет</div>';
+  }
+}
 
 async function loadOverview(){
+  if(document.hidden) return;
   try{
     const r = await fetch('/api/anticrash/overview');
     const d = await r.json();
-    if(!d.ok){ document.getElementById('master-text').textContent = d.error || 'Обработчик офлайн'; return; }
-    const banner = document.getElementById('master-banner');
-    banner.className = 'ac-master-banner ' + (d.master_enabled ? 'on' : 'off');
-    document.getElementById('master-text').textContent = d.master_enabled
-      ? 'Анти-краш активен — бот под защитой'
-      : 'Анти-краш ОТКЛЮЧЕН (master_enabled) — мониторинг и алерты остановлены';
-    document.getElementById('master-sub').textContent =
-      `watchdog ${d.watchdog_on?'ON':'OFF'} • breaker ${d.breaker_on?'ON':'OFF'} • фильтр ${d.filter_on?'ON':'OFF'} • warning-монитор ${d.warning_monitor_on?'ON':'OFF'} • connect-watch ${d.connection_watch_on?'ON':'OFF'} • webhook ${d.webhook_on?'ON':'OFF'}`;
+    if(!d.ok){ heroOffline(d.error); return; }
+    renderHero(d); renderMetrics(d); renderChart(d);
+    renderBreaker(d); renderTops(d); renderErrors(d);
+    $('hero-updated').textContent = 'обновлено ' + new Date().toLocaleTimeString('ru-RU');
+  }catch(e){ heroOffline('нет связи с панелью'); }
+}
+document.addEventListener('visibilitychange', () => { if(!document.hidden) loadOverview(); });
 
-    document.getElementById('v-uptime').textContent = d.uptime_human;
-    document.getElementById('v-total').innerHTML = d.total_errors;
-    document.getElementById('v-hour').innerHTML = d.errors_last_hour;
-    document.getElementById('v-crit').innerHTML = d.critical;
-    document.getElementById('v-lag').innerHTML = d.loop_lag_max + ' <small>с (сейчас '+d.loop_lag_recent+')</small>';
-    document.getElementById('v-alerts').innerHTML = d.alerts_sent + ' <small>/ очередь '+d.alerts_queued+'</small>';
-    document.getElementById('v-ping').innerHTML = d.latency_ms + ' <small>мс</small>';
-    document.getElementById('v-filtered').innerHTML = d.filtered + ' <small>/ скрыто '+d.repeats_hidden+'</small>';
-    document.getElementById('v-warnings').innerHTML = d.warnings_total;
-    document.getElementById('v-disconnects').innerHTML = d.disconnects + ' <small>/ час '+d.disconnects_hour+'</small>';
-    document.getElementById('v-webhook').innerHTML = d.webhook_sent + ' <small>/ дедуп '+d.webhook_dropped+'</small>';
-
-    // График за 7 дней
-    const dchart = document.getElementById('daily-chart');
-    if(d.daily7 && d.daily7.length){
-      const mx = Math.max(1, ...d.daily7.map(x => x.count));
-      const total7 = d.daily7.reduce((a, x) => a + x.count, 0);
-      const DOW = ['ВС','ПН','ВТ','СР','ЧТ','ПТ','СБ'];
-      dchart.innerHTML = d.daily7.map(x => {
-        const dt = new Date(x.day + 'T12:00:00');
-        const h = Math.max(3, Math.round(x.count / mx * 105));
-        return `<div class="bar-wrap"><div class="bar-val">${x.count || ''}</div>` +
-               `<div class="bar ${x.count ? '' : 'zero'}" style="height:${h}px" title="${x.day}: ${x.count}"></div>` +
-               `<div class="bar-lbl">${DOW[dt.getDay()]} ${dt.getDate()}</div></div>`;
-      }).join('');
-      document.getElementById('daily-total').textContent = 'всего за неделю: ' + total7;
-    }
-
-    const bl = document.getElementById('breaker-list');
-    if(d.breakers && d.breakers.length){
-      bl.innerHTML = d.breakers.map(b =>
-        `<div class="ac-row"><span class="ac-key"><i class="fas fa-bolt" style="color:#f39c12"></i> ${esc(b.module)}</span>
-         <span class="ac-val2">${b.count}× ${b.tripped_at ? '· '+fmtTs(b.tripped_at) : ''}</span></div>`).join('');
-      document.getElementById('br-state').textContent = 'Срабатываний: ' + d.breakers.length;
-    } else {
-      bl.innerHTML = '<div style="opacity:.55;font-size:13px">Тишина — ни одного срабатывания ✨</div>';
-      document.getElementById('br-state').textContent = '';
-    }
-
-    const renderTop = (arr) => arr && arr.length
-      ? arr.map(t => `<div class="ac-row"><span class="ac-key">${esc(t.name)}</span><span class="ac-val2">${t.count}</span></div>`).join('')
-      : '<div style="opacity:.55;font-size:13px">—</div>';
-    document.getElementById('top-types').innerHTML = renderTop(d.top_types);
-    document.getElementById('top-cogs').innerHTML = renderTop(d.top_cogs);
-    const wArr = d.warnings ? Object.entries(d.warnings).map(([name,count]) => ({name,count})) : [];
-    document.getElementById('top-warnings').innerHTML = wArr.length
-      ? wArr.map(t => `<div class="ac-row"><span class="ac-key">${esc(t.name)}</span><span class="ac-val2">${t.count}</span></div>`).join('')
-      : '<div style="opacity:.55;font-size:13px">—</div>';
-
-    const le = document.getElementById('last-errors');
-    if(d.last_errors && d.last_errors.length){
-      le.innerHTML = d.last_errors.map(e =>
-        `<div class="ac-err ${e.critical?'crit':''}">
-           <span class="ac-err-time">${fmtTs(e.ts)}</span>
-           <span class="ac-err-type">${esc(e.type)}</span>
-           <span class="ac-err-msg">${esc(e.where)}${e.loc ? ' · <code>'+esc(e.loc)+'</code>' : ''} — ${esc(e.msg)}</span>
-         </div>`).join('');
-    } else {
-      le.innerHTML = '<div style="opacity:.55;font-size:13px">Ошибок пока нет</div>';
-    }
-  }catch(e){ /* тихо — следующая итерация */ }
+/* ── настройки ────────────────────────────────────────────── */
+function fieldHtml(k, meta, v){
+  let input;
+  if(meta.type === 'bool'){
+    input = `<label class="ac-switch"><input type="checkbox" data-cfg="${esc(k)}" ${v ? 'checked' : ''}><span></span></label>`;
+  } else if(meta.type === 'float'){
+    input = `<input type="number" step="0.5" min="0" data-cfg="${esc(k)}" value="${esc(v)}" aria-label="${esc(meta.label)}">`;
+  } else if(meta.type === 'int'){
+    input = `<input type="number" step="1" min="0" data-cfg="${esc(k)}" value="${esc(v)}" aria-label="${esc(meta.label)}">`;
+  } else if(meta.type === 'list'){
+    return `<div class="ac-field" data-field="${esc(k)}">
+      <div class="ac-field-top"><div class="ac-field-label">${esc(meta.label)}</div></div>
+      <textarea data-cfg="${esc(k)}" rows="3" aria-label="${esc(meta.label)}">${esc((v || []).join('\n'))}</textarea>
+      <div class="ac-field-desc">${esc(meta.desc)} <code>${esc(k)}</code></div></div>`;
+  } else {
+    input = `<input type="text" data-cfg="${esc(k)}" value="${esc(v)}" aria-label="${esc(meta.label)}">`;
+  }
+  return `<div class="ac-field" data-field="${esc(k)}">
+    <div class="ac-field-top"><div class="ac-field-label">${esc(meta.label)}</div>${input}</div>
+    <div class="ac-field-desc">${esc(meta.desc)} <code>${esc(k)}</code></div></div>`;
 }
 
-async function loadConfig(){
+function groupSummary(g){
+  const bools = g.keys.filter(k => (CFG_META[k] || {}).type === 'bool');
+  const total = g.keys.length;
+  if(bools.length){
+    const onN = bools.filter(k => {
+      const el = document.querySelector(`[data-cfg="${k}"]`);
+      return el && el.checked;
+    }).length;
+    return `${total} параметров • вкл ${onN}/${bools.length}`;
+  }
+  return `${total} параметров`;
+}
+
+async function loadConfig(scrollNote){
   try{
     const r = await fetch('/api/anticrash/config');
     const d = await r.json();
     if(!d.ok) return;
     CFG_META = d.meta; CFG_ORDER = d.order;
-    const grid = document.getElementById('cfg-grid');
-    grid.innerHTML = CFG_ORDER.map(k => {
-      const meta = CFG_META[k] || {label:k, desc:'', type:'text'};
-      const v = d.config[k];
-      let input;
-      if(meta.type === 'bool'){
-        input = `<label class="ac-switch"><input type="checkbox" name="cfg-${esc(k)}" data-cfg="${esc(k)}" ${v?'checked':''}><span></span></label>`;
-      } else if(meta.type === 'float'){
-        input = `<input type="number" step="0.5" min="0" name="cfg-${esc(k)}" data-cfg="${esc(k)}" value="${esc(v)}" aria-label="Параметр настройки">`;
-      } else if(meta.type === 'int'){
-        input = `<input type="number" step="1" min="0" name="cfg-${esc(k)}" data-cfg="${esc(k)}" value="${esc(v)}" aria-label="Параметр настройки">`;
-      } else if(meta.type === 'list'){
-        input = '';
-        const ta = `<textarea name="cfg-${esc(k)}" data-cfg="${esc(k)}" rows="3" style="width:100%;margin-top:8px;background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.12);color:var(--text-1,#fff);border-radius:8px;padding:8px 10px;font-size:12.5px;font-family:inherit;resize:vertical;" aria-label="Параметр настройки">${esc((v||[]).join('\n'))}</textarea>`;
-        return `<div class="ac-field">
-          <div class="ac-field-top"><div class="ac-field-label">${esc(meta.label)}</div></div>
-          ${ta}
-          <div class="ac-field-desc">${esc(meta.desc)} <code style="opacity:.6">${esc(k)}</code></div>
-        </div>`;
-      } else {
-        input = `<input type="text" style="width:170px;text-align:left" name="cfg-${esc(k)}" data-cfg="${esc(k)}" value="${esc(v)}" aria-label="Параметр настройки">`;
-      }
-      return `<div class="ac-field">
-        <div class="ac-field-top"><div class="ac-field-label">${esc(meta.label)}</div>${input}</div>
-        <div class="ac-field-desc">${esc(meta.desc)} <code style="opacity:.6">${esc(k)}</code></div>
-      </div>`;
-    }).join('');
+    const grouped = new Set(CFG_GROUPS.flatMap(g => g.keys));
+    const extra = CFG_ORDER.filter(k => !grouped.has(k));
+    const groups = extra.length
+      ? CFG_GROUPS.concat([{id:'extra', icon:'fa-ellipsis', title:'Прочее', keys:extra}])
+      : CFG_GROUPS;
+    $('cfg-groups').innerHTML = groups.map((g, i) => `
+      <div class="ac-cfg-group ${i === 0 ? 'open' : ''}" data-group="${esc(g.id)}">
+        <div class="ac-cfg-head" onclick="toggleGroup(this)">
+          <div class="ac-cfg-ico"><i class="fas ${esc(g.icon)}"></i></div>
+          <div style="min-width:0">
+            <div class="ac-cfg-title">${esc(g.title)}</div>
+            <div class="ac-cfg-sum" data-sum="${esc(g.id)}"></div>
+          </div>
+          <i class="fas fa-chevron-down ac-cfg-chev"></i>
+        </div>
+        <div class="ac-cfg-body">
+          ${g.keys.map(k => fieldHtml(k, CFG_META[k] || {label:k, desc:'', type:'str'}, d.config[k])).join('')}
+        </div>
+      </div>`).join('');
+    groups.forEach(g => { const el = document.querySelector(`[data-sum="${g.id}"]`);
+      if(el) el.textContent = groupSummary(g); });
+    $('cfg-note').textContent = `всего параметров: ${CFG_ORDER.length}`;
+    if(scrollNote) toast('Изменения отменены — показаны сохранённые значения');
   }catch(e){ toast('Не удалось загрузить настройки', false); }
 }
+function toggleGroup(headEl){
+  headEl.closest('.ac-cfg-group').classList.toggle('open');
+}
+document.addEventListener('change', e => {
+  if(!e.target.matches('[data-cfg]')) return;
+  const gEl = e.target.closest('.ac-cfg-group');
+  if(!gEl) return;
+  const g = CFG_GROUPS.find(x => x.id === gEl.dataset.group) || {keys:[...gEl.querySelectorAll('[data-cfg]')].map(x => x.dataset.cfg)};
+  const sum = gEl.querySelector('[data-sum]');
+  if(sum) sum.textContent = groupSummary(g);
+});
 
 async function saveConfig(){
   const payload = {};
   document.querySelectorAll('[data-cfg]').forEach(el => {
     const k = el.getAttribute('data-cfg');
     const meta = CFG_META[k] || {};
-    if(meta.type === 'bool') payload[k] = el.checked;
+    if(meta.type === 'bool')       payload[k] = el.checked;
     else if(meta.type === 'float') payload[k] = parseFloat(el.value || '0');
-    else if(meta.type === 'int') payload[k] = parseInt(el.value || '0', 10);
-    else if(meta.type === 'list') payload[k] = el.value.split('\n').map(s => s.trim()).filter(Boolean);
-    else payload[k] = el.value;
+    else if(meta.type === 'int')   payload[k] = parseInt(el.value || '0', 10);
+    else if(meta.type === 'list')  payload[k] = el.value.split('\n').map(s => s.trim()).filter(Boolean);
+    else                           payload[k] = el.value;
   });
   try{
     const r = await fetch('/api/anticrash/config', {
       method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)
     });
     const d = await r.json();
-    if(d.ok){ toast('Настройки сохранены ✓'); }
-    else {
-      const errs = Object.entries(d.errors||{}).map(([k,v])=>k+': '+v).join('; ');
-      toast('Часть полей не принята: ' + errs, false);
-      loadConfig();
+    document.querySelectorAll('.ac-field.invalid').forEach(f => f.classList.remove('invalid'));
+    if(d.ok){
+      $('cfg-note').textContent = 'сохранено ' + new Date().toLocaleTimeString('ru-RU');
+      toast('Настройки сохранены ✓');
+    } else {
+      const keys = Object.keys(d.errors || {});
+      keys.forEach(k => {
+        const f = document.querySelector(`[data-field="${k}"]`);
+        if(f){ f.classList.add('invalid');
+               const g = f.closest('.ac-cfg-group'); if(g) g.classList.add('open'); }
+      });
+      toast('Не принято: ' + keys.map(k => k + ': ' + d.errors[k]).join('; '), false);
+      if(keys.length){ const f = document.querySelector(`[data-field="${keys[0]}"]`);
+        if(f) f.scrollIntoView({behavior:'smooth', block:'center'}); }
     }
   }catch(e){ toast('Ошибка сохранения', false); }
 }
@@ -314,7 +606,7 @@ async function resetStats(){
     const r = await fetch('/api/anticrash/reset', {method:'POST'});
     const d = await r.json();
     if(d.ok){ toast('Статистика сброшена ✓'); loadOverview(); }
-    else toast('Ошибка: ' + (d.error||''), false);
+    else toast('Ошибка: ' + (d.error || ''), false);
   }catch(e){ toast('Ошибка сброса', false); }
 }
 
