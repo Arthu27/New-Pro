@@ -1116,6 +1116,141 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
     def change_password_page ():
         return render_template ('change_password.html',role =session .get ('role'),username =session .get ('username'))
 
+    # ── Липкие сообщения + Panic-локдаун (модуль cogs/mod_plus.py) ──────
+    @app .route ('/mod-tools')
+    @login_required 
+    @role_required ('mod')
+    def mod_tools_page ():
+        return render_template ('mod_tools.html',role =session .get ('role'),username =session .get ('username'),guild_id =active_guild_id ())
+
+    def _modplus_cog ():
+        import web .app as _app 
+        bot =_app .bot_instance 
+        return (bot .get_cog ('ModPlus')if bot else None ),bot 
+
+    def _active_guild ():
+        import web .app as _app 
+        gid =active_guild_id ()
+        _c ,bot =_modplus_cog ()
+        return bot .get_guild (int (gid ))if bot and gid else None 
+
+    @app .route ('/api/sticky',methods =['GET'])
+    @login_required 
+    @role_required ('mod')
+    def api_sticky_list ():
+        from cogs .mod_plus import _sticky_path ,_load_json 
+        guild =_active_guild ()
+        data =_load_json (_sticky_path (guild .id ),{})if guild else {}
+        items =[]
+        for cid ,entry in data .items ():
+            ch =guild .get_channel (int (cid ))if guild else None 
+            items .append ({
+                'channel_id':str (cid ),
+                'channel_name':getattr (ch ,'name',str (cid )),
+                'text':(entry .get ('text')or '')[:400 ],
+                'set_at':entry .get ('set_at',''),
+            })
+        return jsonify ({'success':True ,'items':items })
+
+    @app .route ('/api/sticky',methods =['POST'])
+    @login_required 
+    @role_required ('mod')
+    def api_sticky_create ():
+        from cogs .mod_plus import _sticky_path ,_load_json ,_save_json 
+        data =request .get_json (silent =True )or {}
+        cid =str (data .get ('channel_id','')).strip ()
+        text =(data .get ('text')or '').strip ()
+        if not cid .isdigit ()or not text or len (text )>1900 :
+            return jsonify ({'success':False ,'error':'Канал или текст неверные (текст до 1900 символов)'}),400 
+        guild =_active_guild ()
+        if not guild :
+            return jsonify ({'success':False ,'error':'Бот офлайн'}),503 
+        if not guild .get_channel (int (cid )):
+            return jsonify ({'success':False ,'error':'Канал не найден на сервере'}),404 
+        sdata =_load_json (_sticky_path (guild .id ),{})
+        old =sdata .get (cid )
+        sdata [cid ]={'text':text ,'msg_id':None ,'author_id':0,
+        'set_at':datetime .utcnow ().isoformat (),
+        'by_panel':session .get ('username')}
+        _save_json (_sticky_path (guild .id ),sdata )
+
+        cog ,bot =_modplus_cog ()
+        reposted =None 
+        if cog :
+            try :
+                if old and old .get ('msg_id'):
+                    _run_async (cog .delete_sticky_message_remote (guild ,cid ,old ['msg_id']))
+                reposted =_run_async (cog .repost_remote (guild ,cid ))
+            except Exception as e :
+                reposted =False 
+                print (f'[MOD+] sticky repost из панели: {e}')
+        _fire_panel_notification ('sticky',f"📌 Липкое в #{cid}",f"{session.get('username')}: {text[:120]}")
+        return jsonify ({'success':True ,'reposted':bool (reposted )})
+
+    @app .route ('/api/sticky',methods =['DELETE'])
+    @login_required 
+    @role_required ('mod')
+    def api_sticky_delete ():
+        from cogs .mod_plus import _sticky_path ,_load_json ,_save_json 
+        data =request .get_json (silent =True )or {}
+        cid =str (data .get ('channel_id','')).strip ()
+        if not cid .isdigit ():
+            return jsonify ({'success':False ,'error':'Нужен channel_id'}),400 
+        guild =_active_guild ()
+        if not guild :
+            return jsonify ({'success':False ,'error':'Бот офлайн'}),503 
+        sdata =_load_json (_sticky_path (guild .id ),{})
+        entry =sdata .pop (cid ,None )
+        if not entry :
+            return jsonify ({'success':False ,'error':'В этом канале липкого нет'}),404 
+        _save_json (_sticky_path (guild .id ),sdata )
+        cog ,bot =_modplus_cog ()
+        if cog and entry .get ('msg_id'):
+            try :
+                _run_async (cog .delete_sticky_message_remote (guild ,cid ,entry ['msg_id']))
+            except Exception :
+                pass
+        return jsonify ({'success':True })
+
+    @app .route ('/api/panic',methods =['GET'])
+    @login_required 
+    @role_required ('mod')
+    def api_panic_status_panel ():
+        from cogs .mod_plus import _panic_path ,_load_json 
+        guild =_active_guild ()
+        st =_load_json (_panic_path (guild .id ),None )if guild else None 
+        return jsonify ({'success':True ,'active':bool (st ),'state':st or {}})
+
+    @app .route ('/api/panic',methods =['POST'])
+    @login_required 
+    @role_required ('admin')
+    def api_panic_toggle ():
+        # ВНИМАНИЕ: только admin+ — это локдаун всего сервера
+        data =request .get_json (silent =True )or {}
+        action =str (data .get ('action','')).lower ()
+        reason =(data .get ('reason')or 'Через панель')[:300 ]
+        boost =bool (data .get ('boost_verification'))
+        guild =_active_guild ()
+        cog ,bot =_modplus_cog ()
+        if not cog or not guild :
+            return jsonify ({'success':False ,'error':'Бот офлайн или модуль mod_plus не загружен'}),503 
+        who =f'панель:{session.get("username","?")}'
+        try :
+            if action =='on':
+                state ,done ,failed =_run_async (cog .panic_enable_core (guild ,reason ,boost_verification =boost ,by =who ),timeout =90 )
+                if state is None :
+                    return jsonify ({'success':False ,'error':'Локдаун уже активен'}),409 
+            elif action =='off':
+                state ,done ,failed =_run_async (cog .panic_disable_core (guild ,by =who ),timeout =90 )
+                if state is None :
+                    return jsonify ({'success':False ,'error':'Локдаун не активен'}),409 
+            else :
+                return jsonify ({'success':False ,'error':'action: on или off'}),400 
+        except Exception as e :
+            return jsonify ({'success':False ,'error':str (e )[:200 ]}),500 
+        _fire_panel_notification ('panic',f"🚨 Локдаун: {action}",f'{who}: {reason}')
+        return jsonify ({'success':True ,'action':action ,'done':done ,'failed':failed })
+
     @app .route ('/api/user/change-password',methods =['POST'])
     @login_required 
     @role_required ('uye')

@@ -280,6 +280,28 @@ class ModPlus(commands.Cog):
                           color=GOLD)
         await interaction.response.send_message(embed=e, ephemeral=True)
 
+    # ── Управление из веб-панели (вызывается через bot.loop) ───────────
+    async def repost_remote(self, guild, channel_id):
+        """Панель создала/обновила липкое — мгновенно переслать его в канал."""
+        ch = guild.get_channel(int(channel_id))
+        entry = self._stickies(guild.id).get(str(channel_id))
+        if not ch or not entry:
+            return False
+        await self._repost_sticky(guild, ch, dict(entry))
+        return True
+
+    async def delete_sticky_message_remote(self, guild, channel_id, msg_id):
+        """Панель удалила липкое — убрать последнее сообщение бота из канала."""
+        ch = guild.get_channel(int(channel_id))
+        if not ch or not msg_id:
+            return False
+        try:
+            msg = await ch.fetch_message(int(msg_id))
+            await msg.delete()
+            return True
+        except Exception:
+            return False
+
     # ════════════════════════ PANIC ════════════════════════
     panic = app_commands.Group(name='panic', description='Паника-кнопка локдауна сервера')
 
@@ -293,29 +315,15 @@ class ModPlus(commands.Cog):
         except Exception as e:
             log.warning(f"[MOD+] panic: не удалось написать в лог: {e}")
 
-    @panic.command(name='on', description='ЛОКДАУН: запретить @everyone писать во всех текстовых каналах')
-    @app_commands.checks.has_permissions(administrator=True)
-    @app_commands.describe(reason='Причина локдауна',
-                           confirm='Подтверждение (True) — защита от случайного запуска',
-                           boost_verification='Также поднять уровень проверки сервера до High')
-    async def panic_on(self, interaction: discord.Interaction, reason: str = 'Антирейд-локдаун',
-                       confirm: bool = False, boost_verification: bool = False):
-        if not confirm:
-            await interaction.response.send_message(
-                '⚠️ **Локдаун ВСЕХ текстовых каналов.** Запустите снова с параметром '
-                '`confirm: True`. Откат — `/panic off`.', ephemeral=True)
-            return
-        state_path = _panic_path(interaction.guild.id)
+    async def panic_enable_core(self, guild, reason, boost_verification=False, by=''):
+        """Ядро локдауна: закрыть каналы, сохранить прежние права, отчитаться.
+        Возвращает (state, done, failed) или (None, 0, 0), если уже активен.
+        Используется и slash-командой, и веб-панелью."""
+        state_path = _panic_path(guild.id)
         if os.path.exists(state_path):
-            await interaction.response.send_message(
-                '🚨 Локдаун уже активен. Сначала `/panic off`, если хотите перезапустить.',
-                ephemeral=True)
-            return
-        await interaction.response.defer(ephemeral=True)
-
-        guild = interaction.guild
+            return None, 0, 0
         state = {'active': True, 'reason': (reason or '')[:300],
-                 'by': interaction.user.id, 'started_at': _now().isoformat(),
+                 'by': by, 'started_at': _now().isoformat(),
                  'channels': {}, 'verification': None}
 
         done, failed = 0, 0
@@ -349,25 +357,21 @@ class ModPlus(commands.Cog):
         e.add_field(name='Закрыто каналов', value=f'`{done}`', inline=True)
         e.add_field(name='Не удалось', value=f'`{failed}`', inline=True)
         e.add_field(name='Проверка сервера',
-                    value='`поднята до High`' if state['verification'] else '`не менялась`',
+                    value='`поднята до High`' if state['verification'] is not None else '`не менялась`',
                     inline=True)
-        e.add_field(name='Откат', value='`/panic off` — вернёт всем прежние права.', inline=False)
-        e.set_footer(text=f'Включил: {interaction.user}')
+        e.add_field(name='Откат', value='`/panic off` или кнопка в панели — вернёт прежние права.',
+                    inline=False)
+        e.set_footer(text=f'Включил: {by or "?"}')
         await self._notify_mod_log(guild, e)
-        await interaction.followup.send(embed=e, ephemeral=True)
-        log.warning(f"[MOD+] PANIC ON ({guild.name}): {done} каналов, by {interaction.user}")
+        log.warning(f"[MOD+] PANIC ON ({guild.name}): {done} каналов, by {by}")
+        return state, done, failed
 
-    @panic.command(name='off', description='Откатить локдаун — вернуть прежние права каналам')
-    @app_commands.checks.has_permissions(administrator=True)
-    async def panic_off(self, interaction: discord.Interaction):
-        await interaction.response.defer(ephemeral=True)
-        guild = interaction.guild
+    async def panic_disable_core(self, guild, by=''):
+        """Ядро отката локдауна. (state, done, failed) или (None, 0, 0)."""
         state_path = _panic_path(guild.id)
         state = _load_json(state_path, None)
         if not state:
-            await interaction.followup.send('ℹ️ Локдаун не активен — нечего откатывать.',
-                                            ephemeral=True)
-            return
+            return None, 0, 0
 
         done, failed = 0, 0
         everyone = guild.default_role
@@ -399,10 +403,57 @@ class ModPlus(commands.Cog):
         e.description = f"Длился с: `{state.get('started_at', '?')}`\nПричина была: {state.get('reason', '—')}"
         e.add_field(name='Восстановлено каналов', value=f'`{done}`', inline=True)
         e.add_field(name='Не удалось', value=f'`{failed}`', inline=True)
-        e.set_footer(text=f'Снял: {interaction.user}')
+        e.set_footer(text=f'Снял: {by or "?"}')
         await self._notify_mod_log(guild, e)
+        log.warning(f"[MOD+] PANIC OFF ({guild.name}): восстановлено {done}, by {by}")
+        return state, done, failed
+
+    @panic.command(name='on', description='ЛОКДАУН: запретить @everyone писать во всех текстовых каналах')
+    @app_commands.checks.has_permissions(administrator=True)
+    @app_commands.describe(reason='Причина локдауна',
+                           confirm='Подтверждение (True) — защита от случайного запуска',
+                           boost_verification='Также поднять уровень проверки сервера до High')
+    async def panic_on(self, interaction: discord.Interaction, reason: str = 'Антирейд-локдаун',
+                       confirm: bool = False, boost_verification: bool = False):
+        if not confirm:
+            await interaction.response.send_message(
+                '⚠️ **Локдаун ВСЕХ текстовых каналов.** Запустите снова с параметром '
+                '`confirm: True`. Откат — `/panic off`.', ephemeral=True)
+            return
+        if os.path.exists(_panic_path(interaction.guild.id)):
+            await interaction.response.send_message(
+                '🚨 Локдаун уже активен. Сначала `/panic off`, если хотите перезапустить.',
+                ephemeral=True)
+            return
+        await interaction.response.defer(ephemeral=True)
+
+        state, done, failed = await self.panic_enable_core(
+            interaction.guild, reason, boost_verification=boost_verification,
+            by=str(interaction.user))
+
+        e = discord.Embed(title='🚨 PANIC: локдаун включён', color=RED, timestamp=_now())
+        e.description = f"**Причина:** {reason}"
+        e.add_field(name='Закрыто каналов', value=f'`{done}`', inline=True)
+        e.add_field(name='Не удалось', value=f'`{failed}`', inline=True)
+        e.add_field(name='Откат', value='`/panic off`', inline=True)
         await interaction.followup.send(embed=e, ephemeral=True)
-        log.warning(f"[MOD+] PANIC OFF ({guild.name}): восстановлено {done}, by {interaction.user}")
+
+    @panic.command(name='off', description='Откатить локдаун — вернуть прежние права каналам')
+    @app_commands.checks.has_permissions(administrator=True)
+    async def panic_off(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+        state, done, failed = await self.panic_disable_core(interaction.guild,
+                                                            by=str(interaction.user))
+        if state is None:
+            await interaction.followup.send('ℹ️ Локдаун не активен — нечего откатывать.',
+                                            ephemeral=True)
+            return
+
+        e = discord.Embed(title='✅ PANIC: локдаун снят', color=GREEN, timestamp=_now())
+        e.description = f"Длился с: `{state.get('started_at', '?')}`\nПричина была: {state.get('reason', '—')}"
+        e.add_field(name='Восстановлено каналов', value=f'`{done}`', inline=True)
+        e.add_field(name='Не удалось', value=f'`{failed}`', inline=True)
+        await interaction.followup.send(embed=e, ephemeral=True)
 
     @panic.command(name='status', description='Активен ли локдаун и когда включён')
     @app_commands.checks.has_permissions(manage_guild=True)
@@ -412,8 +463,10 @@ class ModPlus(commands.Cog):
             await interaction.response.send_message('🟢 Локдаун не активен.', ephemeral=True)
             return
         e = discord.Embed(title='🚨 Локдаун АКТИВЕН', color=RED, timestamp=_now())
+        _by = state.get('by')
+        _by_txt = f'<@{_by}>' if str(_by or '').isdigit() else f'`{_by or "?"}'
         e.add_field(name='Включён', value=f"`{state.get('started_at', '?')}`", inline=True)
-        e.add_field(name='Кем', value=f"<@{state.get('by', 0)}>", inline=True)
+        e.add_field(name='Кем', value=_by_txt, inline=True)
         e.add_field(name='Каналов под замком', value=f"`{len(state.get('channels') or {})}`",
                     inline=True)
         e.add_field(name='Причина', value=state.get('reason', '—'), inline=False)

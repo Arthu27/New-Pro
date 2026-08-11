@@ -295,6 +295,101 @@ run(ModPlus.panic_off.callback(cog, inter_off2))
 check(inter_off2.followup.sent and 'не активен' in inter_off2.followup.sent[0].lower(),
       'panic off без локдауна — вежливый отказ')
 
+# ═══ веб-панель: API липких и паники ═════════════════════════════════════
+print('== панель: /api/sticky и /api/panic ==')
+import threading as _threading
+
+
+class FakeBotPanel:
+    """Бот для панели: живой loop в потоке + наш ког."""
+
+    def __init__(self, g):
+        self.guilds = [g]
+        self.loop = asyncio.new_event_loop()
+        _threading.Thread(target=self.loop.run_forever, daemon=True).start()
+        self._cog = ModPlus(bot=self)
+
+    def get_cog(self, name):
+        return self._cog if name == 'ModPlus' else None
+
+    def get_guild(self, gid):
+        return self.guilds[0] if gid == self.guilds[0].id else None
+
+
+bot_panel = FakeBotPanel(guild)
+from web.app import app as _flask_app, set_bot_instance  # noqa: E402
+set_bot_instance(bot_panel)
+client = _flask_app.test_client()
+
+# без логина — редирект/отказ
+r = client.get('/api/sticky')
+check(r.status_code in (302, 401, 403), f'API без логина закрыто ({r.status_code})')
+
+
+def login_as(role):
+    # discord_id специально НЕ ставим: login_required раз в 5 минут перечитывает
+    # роль из Discord по discord_id и понизил бы тестовую роль до 'uye'.
+    with client.session_transaction() as s:
+        s.clear()
+        s['logged_in'] = True
+        s['username'] = 'PanelMod'
+        s['role'] = role
+
+
+login_as('mod')
+r = client.get('/api/sticky')
+check(r.status_code == 200 and r.get_json().get('items') == [], 'sticky list: пусто')
+
+r = client.post('/api/sticky', json={'channel_id': '100', 'text': 'Правила читать обязательно!'})
+d = r.get_json()
+check(d.get('success') is True and d.get('reposted') is True,
+      'sticky POST: создано и СРАЗУ репостнуто через бота')
+sdata = json.load(open(_sticky_path(guild.id), encoding='utf-8'))
+check(sdata.get('100', {}).get('text', '').startswith('Правила'), 'sticky: запись в json от панели')
+check(ch.sent and 'Правила' in (ch.sent[-1].content or ''), 'sticky: бот отправил её в канал')
+
+r = client.post('/api/sticky', json={'channel_id': '100', 'text': ''})
+check(r.status_code == 400, 'sticky POST: пустой текст отклонён (400)')
+r = client.post('/api/sticky', json={'channel_id': '999999', 'text': 'тест'})
+check(r.status_code == 404, 'sticky POST: несуществующий канал (404)')
+
+r = client.delete('/api/sticky', json={'channel_id': '100'})
+check(r.get_json().get('success') is True, 'sticky DELETE: отклеено')
+check(json.load(open(_sticky_path(guild.id), encoding='utf-8')).get('100') is None,
+      'sticky: запись удалена из json')
+
+# panic: mod роли мало — нужна admin+
+r = client.post('/api/panic', json={'action': 'on', 'reason': 'тест-рейд'})
+check(r.status_code == 403, f'panic POST для mod запрещён ({r.status_code})')
+login_as('admin')
+r = client.post('/api/panic', json={'action': 'on', 'reason': 'тест-рейд', 'boost_verification': True})
+d = r.get_json()
+check(d.get('success') is True and d.get('done') == 3, 'panic из панели: включён, 3 канала')
+check(all(c.overwrites_for(guild.default_role).send_messages is False
+          for c in guild.text_channels), 'panic из панели: каналы реально закрыты')
+r = client.get('/api/panic')
+check(r.get_json().get('active') is True, 'panic status из панели: активен')
+check(r.get_json()['state'].get('by') == 'панель:PanelMod', 'panic: виновник записан (панель:…)')
+
+r = client.post('/api/panic', json={'action': 'on'})
+check(r.status_code == 409, 'panic: повторный on → 409 уже активен')
+r = client.post('/api/panic', json={'action': 'nope'})
+check(r.status_code == 400, 'panic: неизвестный action → 400')
+
+r = client.post('/api/panic', json={'action': 'off'})
+d = r.get_json()
+check(d.get('success') is True and d.get('done') == 3, 'panic из панели: снят, 3 канала')
+check(not os.path.exists(_panic_path(guild.id)), 'panic из панели: state-файл подчищен')
+
+# страница рендерится
+r = client.get('/mod-tools')
+check(r.status_code == 200 and 'sticky' in r.get_data(as_text=True).lower()
+      and 'panic' in r.get_data(as_text=True).lower(), 'страница /mod-tools рендерится')
+
+login_as('uye')
+r = client.get('/mod-tools')
+check(r.status_code in (302, 403), f'uye на /mod-tools не пускают ({r.status_code})')
+
 import shutil
 shutil.rmtree(_TMP, ignore_errors=True)
 loop.close()

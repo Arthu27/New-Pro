@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% block title %}Липкие и Паника — Aether{% endblock %}
+{% block page_title %}<i class="fas fa-thumbtack"></i> Липкие сообщения и паника{% endblock %}
+{% block content %}
+{% block page_hero %}
+<div class="page-hero compact">
+  <div class="page-hero-content">
+    <div class="page-hero-greeting">
+      <span class="dot"></span>
+      <span>Инструменты модератора</span>
+    </div>
+    <h1>Липкие сообщения · Паника</h1>
+    <p>Липкие баннеры каналов и экстренный локдаун — прямо из браузера.</p>
+  </div>
+</div>
+{% endblock %}
+
+<div class="pw-wrap">
+  {% if role in ['admin', 'owner'] %}
+  <div class="pw-card" id="panic-card">
+    <h2><i class="fas fa-radiation"></i> Panic-локдаун сервера</h2>
+    <div class="pw-hint" style="margin-bottom:12px"><i class="fas fa-info-circle"></i>
+      Одной кнопкой запрещает @everyone писать во всех текстовых каналах.
+      «Снять» возвращает прежние права каждому каналу.
+    </div>
+    <div id="panic-status" style="margin-bottom:12px;font-weight:600"></div>
+    <div id="panic-form">
+      <div class="form-group">
+        <label>Причина</label>
+        <input type="text" id="panic-reason" placeholder="Например: рейдят" maxlength="300">
+      </div>
+      <div class="form-group">
+        <label style="display:flex;gap:8px;align-items:center;cursor:pointer">
+          <input type="checkbox" id="panic-boost"> Поднять проверку сервера до High
+        </label>
+      </div>
+      <button class="btn-save" style="background:#c0392b" id="panic-on-btn" onclick="panicToggle('on')">
+        <i class="fas fa-lock"></i> ВКЛЮЧИТЬ ЛОКДАУН</button>
+      <button class="btn-save" style="background:#2ecc71" id="panic-off-btn" onclick="panicToggle('off')">
+        <i class="fas fa-unlock"></i> СНЯТЬ ЛОКДАУН</button>
+    </div>
+    <div class="msg" id="panic-msg"></div>
+  </div>
+  {% endif %}
+
+  <div class="pw-card">
+    <h2><i class="fas fa-thumbtack"></i> Липкие сообщения</h2>
+    <div class="pw-hint" style="margin-bottom:12px"><i class="fas fa-info-circle"></i>
+      Липкое всегда остаётся последней строкой канала: бот пересылает его после
+      каждого сообщения участников (не чаще раза в 3 секунды).
+    </div>
+    <div class="form-group">
+      <label>Канал</label>
+      <select id="sticky-channel" style="width:100%"></select>
+    </div>
+    <div class="form-group">
+      <label>Текст</label>
+      <input type="text" id="sticky-text" placeholder="Например: 📜 Сначала прочитайте правила!" maxlength="1900">
+    </div>
+    <button class="btn-save" onclick="stickySave()"><i class="fas fa-thumbtack"></i> Закрепить</button>
+    <div class="msg" id="sticky-msg"></div>
+
+    <hr style="opacity:.15;margin:18px 0">
+    <div id="sticky-list"><i>Загружаю…</i></div>
+  </div>
+</div>
+
+<script>
+function msg(id, text, type) {
+  const el = document.getElementById(id);
+  el.textContent = text; el.className = 'msg ' + type; el.style.display = 'block';
+}
+
+/* ── Каналы ── */
+async function loadChannels() {
+  const sel = document.getElementById('sticky-channel');
+  try {
+    const r = await fetch('/api/channels');
+    const d = await r.json();
+    const channels = d.channels || d || [];
+    sel.innerHTML = '';
+    for (const c of channels) {
+      if (c.type !== undefined && c.type !== 0 && c.type !== 'text') continue;
+      const o = document.createElement('option');
+      o.value = c.id; o.textContent = '#' + (c.name || c.id);
+      sel.appendChild(o);
+    }
+    if (!sel.options.length) sel.innerHTML = '<option value="">— каналы недоступны —</option>';
+  } catch(e) { sel.innerHTML = '<option value="">— ошибка загрузки —</option>'; }
+}
+
+/* ── Липкие ── */
+async function stickyLoad() {
+  const box = document.getElementById('sticky-list');
+  const r = await fetch('/api/sticky');
+  const d = await r.json();
+  if (!d.success) { box.innerHTML = '<i>Ошибка загрузки.</i>'; return; }
+  if (!d.items.length) { box.innerHTML = '<i>Липких нет — добавьте первое выше.</i>'; return; }
+  box.innerHTML = '';
+  for (const it of d.items) {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;gap:10px;align-items:center;justify-content:space-between;padding:10px;border:1px solid rgba(255,255,255,.08);border-radius:10px;margin-bottom:8px';
+    row.innerHTML =
+      '<div style="min-width:0;overflow:hidden">' +
+        '<b>#' + (it.channel_name || it.channel_id) + '</b>' +
+        '<div style="opacity:.85;text-overflow:ellipsis;overflow:hidden;white-space:nowrap">' +
+          (it.text || '').replace(/[<>&"]/g, s => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[s])) +
+        '</div></div>' +
+      '<button class="btn-save" style="background:#c0392b;padding:8px 14px;flex:none" ' +
+      'onclick="stickyDel(\'' + it.channel_id + '\')"><i class="fas fa-trash"></i></button>';
+    box.appendChild(row);
+  }
+}
+
+async function stickySave() {
+  const channel_id = document.getElementById('sticky-channel').value;
+  const text = document.getElementById('sticky-text').value.trim();
+  const r = await fetch('/api/sticky', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({channel_id, text})
+  });
+  const d = await r.json();
+  if (d.success) {
+    msg('sticky-msg', d.reposted ? '✓ Закреплено и отправлено в канал!' : '✓ Закреплено (появится при следующем сообщении).', 'ok');
+    document.getElementById('sticky-text').value = '';
+    stickyLoad();
+  } else msg('sticky-msg', '✗ ' + (d.error || 'Ошибка.'), 'err');
+}
+
+async function stickyDel(channel_id) {
+  if (!confirm('Отклеить липкое из этого канала?')) return;
+  const r = await fetch('/api/sticky', {
+    method: 'DELETE', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({channel_id})
+  });
+  const d = await r.json();
+  if (d.success) { msg('sticky-msg', '✓ Отклеено.', 'ok'); stickyLoad(); }
+  else msg('sticky-msg', '✗ ' + (d.error || 'Ошибка.'), 'err');
+}
+
+/* ── Паника ── */
+async function panicLoad() {
+  const el = document.getElementById('panic-status');
+  if (!el) return;
+  const r = await fetch('/api/panic');
+  const d = await r.json();
+  const onBtn = document.getElementById('panic-on-btn');
+  const offBtn = document.getElementById('panic-off-btn');
+  if (d.active) {
+    const st = d.state || {};
+    el.innerHTML = '🔴 <span style="color:#e74c3c">ЛОКДАУН АКТИВЕН</span> — включён: ' +
+      (st.started_at || '?') + ' · причина: ' + (st.reason || '—') +
+      ' · каналов: ' + Object.keys(st.channels || {}).length;
+    onBtn.style.display = 'none'; offBtn.style.display = 'inline-block';
+  } else {
+    el.innerHTML = '🟢 <span style="color:#3ddc84">Локдаун не активен</span>';
+    onBtn.style.display = 'inline-block'; offBtn.style.display = 'none';
+  }
+}
+
+async function panicToggle(action) {
+  if (action === 'on' && !confirm('ЛОКДАУН: запретить @everyone писать во ВСЕХ каналах?')) return;
+  if (action === 'off' && !confirm('Снять локдаун и вернуть всем прежние права?')) return;
+  const body = action === 'on'
+    ? {action, reason: document.getElementById('panic-reason').value || 'Через панель',
+       boost_verification: document.getElementById('panic-boost').checked}
+    : {action};
+  const r = await fetch('/api/panic', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(body)
+  });
+  const d = await r.json();
+  if (d.success && action === 'on')
+    msg('panic-msg', `🚨 Локдаун включён: закрыто каналов ${d.done}, ошибок ${d.failed}.`, 'ok');
+  else if (d.success)
+    msg('panic-msg', `✅ Локдаун снят: восстановлено каналов ${d.done}, ошибок ${d.failed}.`, 'ok');
+  else msg('panic-msg', '✗ ' + (d.error || 'Ошибка.'), 'err');
+  panicLoad();
+}
+
+loadChannels(); stickyLoad(); panicLoad();
+</script>
+{% endblock %}
