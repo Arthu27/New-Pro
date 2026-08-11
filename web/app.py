@@ -68,6 +68,13 @@ def _load_secret_key ():
         return _secrets .token_urlsafe (48)
 
 app .secret_key =_load_secret_key ()
+# Усиление защиты сессии (cookie) панели
+app .config ['SESSION_COOKIE_HTTPONLY']=True   # JS не может прочитать cookie (anti-XSS кражи)
+app .config ['SESSION_COOKIE_SAMESITE']='Lax'  # cookie не уходит с cross-site формами (anti-CSRF)
+# Secure-cookie имеет смысл только за HTTPS-туннелем; на голом http://localhost
+# включение сломало бы вход (браузер не отправил бы cookie).
+if _os .getenv ('PANEL_HTTPS','0')=='1':
+    app .config ['SESSION_COOKIE_SECURE']=True 
 app .config ['TEMPLATES_AUTO_RELOAD']=True 
 app .config ['SESSION_PERMANENT']=True 
 app .config ['PERMANENT_SESSION_LIFETIME']=timedelta (days =30 )
@@ -122,7 +129,22 @@ def _throttle_failed_login (username ):
 
 @app .before_request 
 def before_request ():
-    pass # Rate limit удалено
+    # CSRF-защита без токенов во всех шаблонах: запросы на запись (POST/PUT/
+    # DELETE/PATCH) с чужим Origin/Referer отклоняются. Браузер всегда шлёт
+    # Origin на cross-site POST, а панель же работает same-origin, поэтому
+    # легитимные формы не страдают. Клиенты без Origin (curl/скрипты)
+    # не блокируем — их и так не волнует содержимое cookie.
+    if request .method in ('POST','PUT','DELETE','PATCH'):
+        _src =request .headers .get ('Origin')or request .headers .get ('Referer')
+        if _src :
+            try :
+                from urllib.parse import urlparse 
+                _netloc =urlparse (_src ).netloc 
+                if _netloc and _netloc !=request .host :
+                    _log_panel_action ('CSRF_BLOCK',f'{request .path} origin={_netloc}')
+                    return jsonify ({'success':False ,'error':'Запрос с другого origin запрещён'}),403 
+            except Exception :
+                pass 
 
     # Panel Log 
 def _log_login (username ,role ,avatar ,discord_id ):

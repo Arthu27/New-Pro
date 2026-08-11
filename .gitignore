@@ -146,3 +146,10 @@ assets/ai_gojo/
 
 # Локальные симуляционные тесты Arena (не для продакшена)
 .arena_tests/
+
+# Runtime-артефакты автообновления и туннеля (не для репозитория)
+last_commit.txt
+bot_output.log
+aether-update.zip
+cloudflared
+cloudflared_new.exe

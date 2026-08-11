@@ -40,12 +40,20 @@ def _install_requirements():
         for pkg in missing:
             print(f" -> {pkg}")
         try:
-            subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--pre'] + missing)
-            print("[УСТАНОВКА] Все пакеты установлены!")
-        except subprocess.CalledProcessError as e:
-            print(f"[ОШИБКА] Ошибка установки пакетов: {e}")
-            print("[ИНФО] Ручная установка: pip install -r requirements.txt")
-            sys.exit(1)
+            # Сначала СТАБИЛЬНЫЕ версии. Раньше ставилось всё с --pre —
+            # так в бота могли приехать нестабильные альфа-билды всех пакетов.
+            subprocess.check_call([sys.executable, '-m', 'pip', 'install'] + missing)
+        except subprocess.CalledProcessError:
+            # Запасной путь: часть пакетов (discord-ext-voice-recv) есть
+            # только в виде pre-release — тогда повторяем с --pre.
+            print("[УСТАНОВКА] Повтор с --pre (нужны pre-release версии)...")
+            try:
+                subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--pre'] + missing)
+            except subprocess.CalledProcessError as e:
+                print(f"[ОШИБКА] Ошибка установки пакетов: {e}")
+                print("[ИНФО] Ручная установка: pip install -r requirements.txt")
+                sys.exit(1)
+        print("[УСТАНОВКА] Все пакеты установлены!")
     else:
         print("[ОК] Все зависимости актуальны")
 

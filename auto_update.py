@@ -222,6 +222,17 @@ def git_pull():
         raise Exception(f"git pull ошибки: {e}")
 
 
+def _zip_target_ok(bot_dir, target_path):
+    """Безопасен ли путь из ZIP-архива (защита от Zip Slip).
+
+    Разрешены только пути внутри bot_dir. Функция вынесена отдельно,
+    чтобы её покрывали тесты (tests/test_security.py).
+    """
+    bot_dir_abs = os.path.abspath(bot_dir)
+    _abs = os.path.abspath(target_path)
+    return _abs == bot_dir_abs or _abs.startswith(bot_dir_abs + os.sep)
+
+
 def download_and_extract():
     """Скачать ZIP с GitHub и распаковать в BOT_DIR (fallback)"""
     лог("[AUTO-UPDATE] Файлы загружаются...")
@@ -236,7 +247,6 @@ def download_and_extract():
     лог(f"[AUTO-UPDATE] ZIP загружен ({len(r.content)//1024} KB)")
 
     with zipfile.ZipFile(zip_path, 'r') as zf:
-        bot_dir_abs = os.path.abspath(BOT_DIR)
         for member in zf.infolist():
             target = member.filename.replace("moebius-bot-main/", "", 1).replace("aether-bot-main/", "", 1)
             if not target:
@@ -244,8 +254,7 @@ def download_and_extract():
             # Защита от Zip Slip: путь в архиве не должен выводить за
             # пределы BOT_DIR (../../ и абсолютные пути запрещены).
             target_path = os.path.join(BOT_DIR, target)
-            _abs = os.path.abspath(target_path)
-            if _abs != bot_dir_abs and not _abs.startswith(bot_dir_abs + os.sep):
+            if not _zip_target_ok(BOT_DIR, target_path):
                 лог(f"[AUTO-UPDATE] Пропущен небезопасный путь в архиве: {member.filename}")
                 continue
             if target.startswith("data/"):

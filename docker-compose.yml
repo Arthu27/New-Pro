@@ -3,10 +3,10 @@
 # ============================================================
 # Запуск:  docker compose up -d
 # Логи:    docker compose logs -f
-# Останов: docker compose down
+# Останов:  docker compose down
 # ============================================================
-
-version: "3.8"
+# Поле "version:" специально убрано — в Docker Compose v2 оно объявлено
+# устаревшим и каждый раз печатает warning.
 
 services:
   bot:
