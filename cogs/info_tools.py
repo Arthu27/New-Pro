@@ -13,6 +13,55 @@ from datetime import datetime
 START_TIME = time.time()
 ACCENT = 0xdc143c
 
+# ─── Безопасный калькулятор ───────────────────────────────────────────────
+# Никакого eval(): выражение разбирается в AST и вычисляется вручную со
+# строгими лимитами. Иначе любой пользователь мог «заморозить» бота командой
+#   !account 9**9**9**9**9**9
+# — возведение в степень гигантских чисел грузит CPU/память бесконечно.
+_CALC_BINOPS = (_ast.Add, _ast.Sub, _ast.Mult, _ast.Div, _ast.FloorDiv, _ast.Mod, _ast.Pow)
+_CALC_UNOPS = (_ast.UAdd, _ast.USub)
+_CALC_MAX_ABS = 10 ** 18      # потолок величины промежуточных/конечных чисел
+_CALC_MAX_POW_EXP = 999       # максимальный показатель степени
+
+
+def _calc_eval(node, depth=0):
+    """Рекурсивно вычислить математический AST с жёсткими лимитами."""
+    if depth > 25:
+        raise ValueError("слишком вложенное выражение")
+    if isinstance(node, _ast.Expression):
+        return _calc_eval(node.body, depth + 1)
+    if isinstance(node, _ast.Constant):
+        if isinstance(node.value, bool) or not isinstance(node.value, (int, float)):
+            raise ValueError("только числа")
+        return node.value
+    if isinstance(node, _ast.UnaryOp) and isinstance(node.op, _CALC_UNOPS):
+        v = _calc_eval(node.operand, depth + 1)
+        return +v if isinstance(node.op, _ast.UAdd) else -v
+    if isinstance(node, _ast.BinOp) and isinstance(node.op, _CALC_BINOPS):
+        left = _calc_eval(node.left, depth + 1)
+        right = _calc_eval(node.right, depth + 1)
+        oper = node.op
+        if isinstance(oper, _ast.Pow):
+            if abs(right) > _CALC_MAX_POW_EXP or abs(left) > 10 ** 6:
+                raise ValueError("степень слишком большая")
+            result = left ** right
+        elif isinstance(oper, _ast.FloorDiv):
+            result = left // right
+        elif isinstance(oper, _ast.Mod):
+            result = left % right
+        elif isinstance(oper, _ast.Div):
+            result = left / right
+        elif isinstance(oper, _ast.Mult):
+            result = left * right
+        elif isinstance(oper, _ast.Sub):
+            result = left - right
+        else:
+            result = left + right
+        if abs(result) > _CALC_MAX_ABS:
+            raise OverflowError("число слишком большое")
+        return result
+    raise ValueError("недопустимая операция")
+
 
 class InfoTools(commands.Cog):
     def __init__(self, bot):
@@ -134,7 +183,8 @@ class InfoTools(commands.Cog):
             return
         try:
             tree = _ast.parse(op, mode='eval')
-            result = eval(compile(tree, '<string>', 'eval'), {"__builtins__": {}}, {})
+            # Безопасное вычисление без eval() — см. _calc_eval выше.
+            result = _calc_eval(tree)
             e = self._embed("ВЫЧИСЛЕНИЕ", "🧮")
             e.add_field(name="Действие", value=f"`{op}`")
             e.add_field(name="Результат", value=f"`{result}`")

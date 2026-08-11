@@ -32,7 +32,42 @@ static_folder =_os .path .join (_BASE ,'static'))
 from web import _store # noqa: E402
 import atexit # noqa: E402
 
-app .secret_key ="ultra-secret-key-change-this-in-production"
+# Секретный ключ сессий. Приоритет:
+#  1) SECRET_KEY из .env
+#  2) случайный ключ, сгенерированный один раз и сохранённый в data/flask_secret.key
+# Хардкодить ключ в коде НЕЛЬЗЯ — зная его, любой может подделать cookie
+# сессии и войти в панель как owner (панель публикуется через Cloudflare Tunnel).
+def _load_secret_key ():
+    env_key =( _os .environ .get ('SECRET_KEY','')or '').strip ()
+    if env_key :
+        return env_key
+    # если ключ не задан — сгенерировать и сохранить, чтобы сессии жили между рестартами
+    key_path =_os .path .abspath (_os .path .join (_BASE ,'..','data','flask_secret.key'))
+    try :
+        _os .makedirs (_os .path .dirname (key_path ),exist_ok =True )
+        if _os .path .exists (key_path ):
+            with open (key_path ,'r',encoding ='utf-8')as f :
+                saved =f .read ().strip ()
+            if len (saved )>=32 :
+                return saved
+        import secrets as _secrets
+        new_key =_secrets .token_urlsafe (48)
+        with open (key_path ,'w',encoding ='utf-8')as f :
+            f .write (new_key)
+        try :
+            _os .chmod (key_path ,0o600)
+        except OSError :
+            pass
+        print ('[БЕЗОПАСНОСТЬ] Сгенерирован новый SECRET_KEY -> data/flask_secret.key')
+        return new_key
+    except Exception as _e :
+        # последний резерв — случайный ключ на время запуска
+        # (все сессии сбросятся при рестарте, но это безопасно)
+        print (f'[БЕЗОПАСНОСТЬ] Не удалось сохранить SECRET_KEY ({_e}), используется временный')
+        import secrets as _secrets
+        return _secrets .token_urlsafe (48)
+
+app .secret_key =_load_secret_key ()
 app .config ['TEMPLATES_AUTO_RELOAD']=True 
 app .config ['SESSION_PERMANENT']=True 
 app .config ['PERMANENT_SESSION_LIFETIME']=timedelta (days =30 )
@@ -70,6 +105,20 @@ def _check_rate_limit (ip ):
         return False 
     _rate_limits [ip ].append (now )
     return True 
+
+# Защита от перебора паролей: нарастающая пауза после неверных попыток входа
+# (ключ: IP + логин). Полной блокировки нет намеренно — за туннелем Cloudflare
+# у всех пользователей один remote_addr, и агрессивный lockout выключил бы
+# панель для всех.
+_login_fails =defaultdict (list )# (ip, username) -> [timestamps]
+
+def _throttle_failed_login (username ):
+    key =(request .remote_addr or '?',(username or '').lower ())
+    now =_time .time ()
+    fails =[t for t in _login_fails [key ]if now -t <900 ]
+    fails .append (now )
+    _login_fails [key ]=fails
+    _time .sleep (min (3.0 ,0.5 *len (fails )))
 
 @app .before_request 
 def before_request ():
@@ -567,6 +616,7 @@ def login ():
                 )
                 return redirect (url_for ('index'))
 
+        _throttle_failed_login (username )
         return render_template ('login.html',error ='Неверное имя пользователя или пароль!')
     return render_template ('login.html')
 
@@ -787,6 +837,7 @@ def two_factor ():
             del PENDING_2FA [token ]
             _log_panel_action ('2FA_LOGIN',pending ['username'])
             return redirect (url_for ('index'))
+        _throttle_failed_login (pending .get ('username'))
         return render_template ('login.html',two_fa =True ,token =token ,error ='Неверный код!')
 
     return render_template ('login.html',two_fa =True ,token =token )

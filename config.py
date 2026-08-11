@@ -103,7 +103,10 @@ class Config:
     
     # === Web Panel ===
     PORT: int = _env_int("PORT", 5001)
-    SECRET_KEY: str = os.getenv("SECRET_KEY", "aether-super-secret-key-2026")
+    # Хардкод-дефолт убран: зная ключ из исходников, любой мог подделать
+    # cookie сессии панели. Если в .env пусто, web/app.py сам сгенерирует
+    # случайный ключ и сохранит его в data/flask_secret.key
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "")
     DISABLE_TUNNEL: bool = os.getenv("DISABLE_TUNNEL", "0") == "1"
     
     # === AI ===

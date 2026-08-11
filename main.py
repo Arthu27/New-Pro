@@ -336,10 +336,13 @@ def _get_cloudflared_binary():
             return False
         try:
             with open(path, 'rb') as f:
-                magic = f.read(2)
-                if magic != b'MZ':
-                    return False
-            return True
+                magic = f.read(4)
+            # ВАЖНО: сигнатура зависит от платформы! Раньше проверяли только
+            # Windows 'MZ' — из-за этого на Linux валидный ELF-бинарь
+            # cloudflared удалялся как «битый», и туннель не работал никогда.
+            if is_win:
+                return magic[:2] == b'MZ'          # PE-файл Windows
+            return magic[:4] == b'\x7fELF'          # ELF-файл Linux/macOS
         except Exception:
             return False
 
