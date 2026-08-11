@@ -64,6 +64,7 @@ MENU = [
         {'path': '/schedule', 'label': 'Расписание', 'icon': 'fa-calendar-alt'},
         {'path': '/bot-settings', 'label': 'Настройки', 'icon': 'fa-sliders-h'},
         {'path': '/anticrash', 'label': 'Анти-краш', 'icon': 'fa-life-ring'},
+        {'path': '/backups', 'label': 'Бэкапы', 'icon': 'fa-save'},
         {'path': '/konsol', 'label': 'Консоль', 'icon': 'fa-terminal'},
         {'path': '/cog-manager', 'label': 'Модули', 'icon': 'fa-cubes'},
         {'path': '/settings', 'label': 'Сервер', 'icon': 'fa-cog'},

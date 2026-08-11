@@ -150,6 +150,7 @@ assets/ai_gojo/
 # Runtime-артефакты автообновления и туннеля (не для репозитория)
 last_commit.txt
 bot_output.log
+backups/
 aether-update.zip
 cloudflared
 cloudflared_new.exe
