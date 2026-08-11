@@ -5,7 +5,7 @@
 
 import discord
 from typing import List, Dict, Optional, Union
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class CustomMenu:
@@ -176,7 +176,7 @@ class CustomMenu:
         """Embed создать"""
         embed = discord.Embed(
             color=self.color,
-            timestamp=datetime.utcnow() if self.show_timestamp else None
+            timestamp=datetime.now(timezone.utc).replace(tzinfo=None) if self.show_timestamp else None
         )
         
         # Заголовок ve описание

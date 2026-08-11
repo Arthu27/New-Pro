@@ -2,7 +2,7 @@ import discord
 from discord .ext import commands 
 from discord import app_commands 
 import io 
-from datetime import datetime 
+from datetime import datetime, timezone
 from config import Config 
 
 class Archive (commands .Cog ):
@@ -22,7 +22,7 @@ class Archive (commands .Cog ):
 
         file =discord .File (
         fp =io .BytesIO (html .encode ('utf-8')),
-        filename =f"archive_{interaction.channel.name}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.html"
+        filename =f"archive_{interaction.channel.name}_{datetime.now(timezone.utc).replace(tzinfo=None).strftime('%Y%m%d_%H%M%S')}.html"
         )
 
         await interaction .followup .send (f" {len(messages)} сообщений заархивировано.",file =file ,ephemeral =True )
@@ -87,7 +87,7 @@ class Archive (commands .Cog ):
         content ="\n".join (messages )
         file =discord .File (
         fp =io .BytesIO (content .encode ('utf-8')),
-        filename =f"backup_{interaction.channel.name}_{datetime.utcnow().strftime('%Y%m%d')}.txt"
+        filename =f"backup_{interaction.channel.name}_{datetime.now(timezone.utc).replace(tzinfo=None).strftime('%Y%m%d')}.txt"
         )
 
         await interaction .followup .send (f" {len(messages)} message yedaddndi.",file =file ,ephemeral =True )

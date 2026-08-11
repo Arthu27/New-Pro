@@ -469,7 +469,7 @@ class TicketView (discord .ui .View ):
             )
             rl_embed =discord .Embed (
             color =0xE74C3C ,
-            timestamp =datetime .datetime .utcnow ()
+            timestamp =datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
             )
             rl_embed .description =(
             "## Ограничение на создание тикетов\n"
@@ -522,7 +522,7 @@ class TicketView (discord .ui .View ):
         f"Новый тикет: {channel .name }",
         f"{interaction .user .display_name } · категория: {category }")
 
-        ts =int (datetime .datetime .utcnow ().timestamp ())
+        ts =int (datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None).timestamp ())
 
         # Встроенное приветствие в канале — стиль карточки (Custom Menu)
         e =TicketMenu .welcome (
@@ -570,7 +570,7 @@ class TicketView (discord .ui .View ):
                 greeting =ai_ticket_greeting ()
                 ai_embed =discord .Embed (
                 color =0x00D9FF ,
-                timestamp =datetime .datetime .utcnow ()
+                timestamp =datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
                 )
                 ai_embed .description =greeting 
                 ai_embed .set_author (
@@ -588,7 +588,7 @@ class TicketView (discord .ui .View ):
 
                 # Отправить DM пользователю
         try :
-            dm_e =discord .Embed (color =0x5865F2 ,timestamp =datetime .datetime .utcnow ())
+            dm_e =discord .Embed (color =0x5865F2 ,timestamp =datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None))
             dm_e .description =(
             "## Тикет создан\n"
             "### Ваш запрос принят\n"
@@ -870,11 +870,11 @@ class CloseTicketView (discord .ui .View ):
             except Exception :
                 pass 
 
-        ts =int (datetime .datetime .utcnow ().timestamp ())
+        ts =int (datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None).timestamp ())
 
         log_ch =discord .utils .get (interaction .guild .text_channels ,name ="ticket-log")
         if log_ch :
-            log_e =discord .Embed (color =0xE74C3C ,timestamp =datetime .datetime .utcnow ())
+            log_e =discord .Embed (color =0xE74C3C ,timestamp =datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None))
             log_e .description =(
             "## Тикет закрыт\n"
             f"### {channel.name}\n"
@@ -894,7 +894,7 @@ class CloseTicketView (discord .ui .View ):
         if owner_id :
             try :
                 owner =await interaction .guild .fetch_member (owner_id )
-                dm_e =discord .Embed (color =0xE74C3C ,timestamp =datetime .datetime .utcnow ())
+                dm_e =discord .Embed (color =0xE74C3C ,timestamp =datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None))
                 dm_e .description =(
                 "## Тикет закрыт\n"
                 "### Ваш запрос завершён\n"
@@ -921,7 +921,7 @@ class CloseTicketView (discord .ui .View ):
         title ="Оцените качество поддержки",
         description ="Понравилась ли вам наша услуга?\nПожалуйста, нажмите кнопку ниже для оценки нашего сервиса.",
         color =0xF39C12 ,
-        timestamp =datetime .datetime .utcnow ()
+        timestamp =datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
         )
 
         await interaction .response .send_message (
@@ -979,7 +979,7 @@ class Ticket (commands .Cog ):
             _penalties [guild_str ][user_str ].append ({
             'name':user_name ,
             'reason':reason ,
-            'date':datetime .datetime .utcnow ().isoformat (),
+            'date':datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None).isoformat (),
             'duration':duration ,
             'quote':quote [:300 ],
             })
@@ -1005,7 +1005,7 @@ class Ticket (commands .Cog ):
             user_str =str (user_id )
             if guild_str not in _penalties or user_str not in _penalties [guild_str ]:
                 return False 
-            cutoff =datetime .datetime .utcnow ()-datetime .timedelta (days =days )
+            cutoff =datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)-datetime .timedelta (days =days )
             target =quote .strip ().lower ()
             for p in _penalties [guild_str ][user_str ]:
                 p_quote =str (p .get ('quote','')or '').strip ().lower ()
@@ -1039,7 +1039,7 @@ class Ticket (commands .Cog ):
                 return []
 
             user_penalties =_penalties [guild_str ][user_str ]
-            cutoff =datetime .datetime .utcnow ()-datetime .timedelta (days =days )
+            cutoff =datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)-datetime .timedelta (days =days )
 
             recent =[]
             for p in user_penalties :
@@ -1267,7 +1267,7 @@ class Ticket (commands .Cog ):
                 "❌ **Результат:** В истории чата этого канала **не обнаружено** сообщений от указанных участников."
                 ),
                 color =0xE74C3C ,
-                timestamp =datetime .datetime .utcnow ()
+                timestamp =datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
                 )
                 await message .channel .send (embed =embed )
                 return True 
@@ -1525,7 +1525,7 @@ class Ticket (commands .Cog ):
                 "**Вердикт ИИ-судьи:** ВИНОВЕН (Уверенность: 100% по результатам анализа)."
                 ),
                 color =0x2ECC71 ,
-                timestamp =datetime .datetime .utcnow ()
+                timestamp =datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
                 )
 
                 if p_type in ('BAN','KICK'):
@@ -1654,7 +1654,7 @@ class Ticket (commands .Cog ):
                 "⚠️ *ИИ-судья принимает решения исключительно на основе фактической истории сообщений сервера. Утверждения без подтверждения в логах не являются основанием для наказания.*"
                 ),
                 color =0xE74C3C ,
-                timestamp =datetime .datetime .utcnow ()
+                timestamp =datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
                 )
                 await message .channel .send (embed =embed )
 
@@ -2701,7 +2701,7 @@ class Ticket (commands .Cog ):
                     "🔒 *Решение передано администрации для одобрения. Использовать кнопки ниже.*"
                     ),
                     color =0xE74C3C ,
-                    timestamp =datetime .datetime .utcnow ()
+                    timestamp =datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
                     )
                     view =AdminApprovalView (target .id ,action_type ,punishment_reason ,guild_id ,quote_key )
                     await channel .send (embed =embed ,view =view )
@@ -2750,11 +2750,11 @@ class Ticket (commands .Cog ):
             return # уже передан
 
         state ['status']='escalated'
-        state ['escalated_at']=datetime .datetime .utcnow ().isoformat ()
+        state ['escalated_at']=datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None).isoformat ()
         state ['staff_notified']=True 
 
         # Сообщение о передаче модераторам
-        e =discord .Embed (color =0xF39C12 ,timestamp =datetime .datetime .utcnow ())
+        e =discord .Embed (color =0xF39C12 ,timestamp =datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None))
 
         reason_text ={
         'sikayet':'Жалоба должна быть рассмотрена модератором',
@@ -2828,7 +2828,7 @@ class Ticket (commands .Cog ):
 
             # Отправляем DM пользователю
             try :
-                dm_embed =discord .Embed (color =0xE74C3C ,timestamp =datetime .datetime .utcnow ())
+                dm_embed =discord .Embed (color =0xE74C3C ,timestamp =datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None))
                 dm_embed .description =(
                 "## Наказание: Заключение\n"
                 "### Вы получили заключение\n"
@@ -2849,7 +2849,7 @@ class Ticket (commands .Cog ):
                 pass 
 
                 # Канал bildir
-            jail_embed =discord .Embed (color =0x2ECC71 ,timestamp =datetime .datetime .utcnow ())
+            jail_embed =discord .Embed (color =0x2ECC71 ,timestamp =datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None))
             jail_embed .description =(
             "## Заключение применено\n"
             "### Наказание назначено\n"
@@ -2883,7 +2883,7 @@ class Ticket (commands .Cog ):
             'reason':reason ,
             'complainant':str (complainant ),
             'complainant_id':complainant .id ,
-            'timestamp':datetime .datetime .utcnow ().isoformat ()
+            'timestamp':datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None).isoformat ()
             }
             )
 
@@ -2931,7 +2931,7 @@ class Ticket (commands .Cog ):
             if fresh_role in fresh_member .roles :
                 await fresh_member .remove_roles (fresh_role ,reason ="Срок заключения истёк (AI Moderator)")
                 try :
-                    dm_embed =discord .Embed (color =0x2ECC71 ,timestamp =datetime .datetime .utcnow ())
+                    dm_embed =discord .Embed (color =0x2ECC71 ,timestamp =datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None))
                     dm_embed .description =(
                     "## Заключение снято\n"
                     "### Наказание завершено\n"
@@ -3072,7 +3072,7 @@ class Ticket (commands .Cog ):
         embed =discord .Embed (
         title =f"{type_emoji} AI Модератор: {type_label}",
         color =0x2ECC71 if penalty_type =='check_clean'else (0xE74C3C if penalty_type in ('ban','jail')else 0xF1C40F ),
-        timestamp =datetime .datetime .utcnow (),
+        timestamp =datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None),
         )
         embed .add_field (name ="Пользователь",value =f"{target.mention} (`{target.id}`)",inline =False )
         embed .add_field (name ="Причина",value =reason [:500 ]if reason else "—",inline =False )

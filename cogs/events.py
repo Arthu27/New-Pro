@@ -3,7 +3,7 @@ import discord
 from discord .ext import commands ,tasks 
 from discord import app_commands 
 import json ,os 
-from datetime import datetime ,timedelta 
+from datetime import datetime ,timedelta, timezone
 from config import Config 
 
 class Events (commands .Cog ):
@@ -29,7 +29,7 @@ class Events (commands .Cog ):
 
     @tasks .loop (minutes =5 )
     async def check_events (self ):
-        now =datetime .utcnow ()
+        now =datetime.now(timezone.utc).replace(tzinfo=None)
         for guild in self .bot .guilds :
             events =self ._load (guild .id )
             changed =False 
@@ -108,7 +108,7 @@ class Events (commands .Cog ):
             await interaction .response .send_message ('Неверный формат даты/времени. Пример: 25/12/2025 20:00',ephemeral =True )
             return 
 
-        if dt <datetime .utcnow ():
+        if dt <datetime.now(timezone.utc).replace(tzinfo=None):
             await interaction .response .send_message ('Нельзя создать событие в прошлом',ephemeral =True )
             return 
 
@@ -133,7 +133,7 @@ class Events (commands .Cog ):
         events =self ._load (interaction .guild_id )
         upcoming =[(eid ,ev )for eid ,ev in events .items ()
         if not ev .get ('notified')and 
-        datetime .fromisoformat (ev ['time'])>datetime .utcnow ()]
+        datetime .fromisoformat (ev ['time'])>datetime.now(timezone.utc).replace(tzinfo=None)]
         upcoming .sort (key =lambda x :x [1 ]['time'])
 
         if not upcoming :

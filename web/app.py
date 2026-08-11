@@ -10,7 +10,7 @@ import json
 import os 
 from functools import wraps 
 import threading 
-from datetime import datetime 
+from datetime import datetime, timezone
 
 from datetime import timedelta 
 
@@ -173,7 +173,7 @@ def _log_login (username ,role ,avatar ,discord_id ):
         'guild_name':guild_name ,
         'guild_icon':guild_icon ,
         'ip':request .remote_addr ,
-        'timestamp':datetime .utcnow ().isoformat ()
+        'timestamp':datetime.now(timezone.utc).replace(tzinfo=None).isoformat ()
         })
         _store .atomic_write_json (f ,logs [-200 :])
         _store .invalidate_path (f )
@@ -232,7 +232,7 @@ def _log_panel_action (action ,detail =''):
         'action':action ,
         'detail':detail ,
         'ip':request .remote_addr ,
-        'timestamp':datetime .utcnow ().isoformat (),
+        'timestamp':datetime.now(timezone.utc).replace(tzinfo=None).isoformat (),
         'ts':int (_t .time ()),
         })
     except Exception :
@@ -517,7 +517,7 @@ def _load_role_map ():
             DISCORD_ROLE_MAP =data if isinstance (data ,dict )else {}
         else :
             DISCORD_ROLE_MAP ={}
-    except :
+    except Exception:
         DISCORD_ROLE_MAP ={}
 
 def _save_role_map ():
@@ -525,7 +525,7 @@ def _save_role_map ():
         os .makedirs ('data',exist_ok =True )
         _store .atomic_write_json (_ROLE_MAP_PATH ,DISCORD_ROLE_MAP )
         _store .invalidate_path (_ROLE_MAP_PATH )
-    except :
+    except Exception:
         pass 
 
 _load_role_map ()
@@ -684,7 +684,7 @@ def login ():
                 _token_ok =True 
                 try :
                     _created =datetime .fromisoformat (t .get ('created_at')or '')
-                    if (datetime .utcnow ()-_created ).days >14 :
+                    if (datetime.now(timezone.utc).replace(tzinfo=None)-_created ).days >14 :
                         _token_ok =False 
                 except Exception :
                     _token_ok =True 
@@ -711,7 +711,7 @@ def login ():
                 _tok =_secrets .token_hex (16 )
                 PENDING_2FA [_tok ]={'username':username ,'role':USERS [username ]['role'],
                 'code':None ,'totp_secret':_totp ,'discord_id':None ,
-                'expires':datetime .utcnow ().timestamp ()+300 }
+                'expires':datetime.now(timezone.utc).replace(tzinfo=None).timestamp ()+300 }
                 return redirect (url_for ('two_factor',token =_tok ))
             session .permanent =True 
             session ['logged_in']=True 
@@ -750,7 +750,7 @@ def login ():
                     _tok =_secrets .token_hex (16 )
                     PENDING_2FA [_tok ]={'username':members [discord_id ]['display_name'],'role':live_role ,
                     'code':None ,'totp_secret':_totp ,'discord_id':discord_id ,
-                    'expires':datetime .utcnow ().timestamp ()+300 }
+                    'expires':datetime.now(timezone.utc).replace(tzinfo=None).timestamp ()+300 }
                     return redirect (url_for ('two_factor',token =_tok ))
                 session .permanent =True 
                 session ['logged_in']=True 
@@ -781,7 +781,7 @@ def _require_2fa (username ,roles ):
     import secrets 
     token =secrets .token_hex (16 )
     code =''.join ([str (random .randint (0 ,9 ))for _ in range (6 )])
-    expires =datetime .utcnow ().timestamp ()+300 # 5 minutes
+    expires =datetime.now(timezone.utc).replace(tzinfo=None).timestamp ()+300 # 5 minutes
     PENDING_2FA [token ]={'username':username ,'role':roles ,'code':code ,'expires':expires }
 
     # Discord DM отправить
@@ -806,7 +806,7 @@ def _require_2fa (username ,roles ):
                     color =0xDC143C 
                     )
                     await user .send (embed =embed )
-                except :
+                except Exception:
                     pass 
             asyncio .run_coroutine_threadsafe (send_2fa (),bot_instance .loop )
 
@@ -845,7 +845,7 @@ def register ():
             'name':member_info ['name'],
             'avatar':member_info ['avatar'],
             'role':live_role ,
-            'registered_at':datetime .utcnow ().isoformat ()
+            'registered_at':datetime.now(timezone.utc).replace(tzinfo=None).isoformat ()
             }
             with open (members_file ,'w',encoding ='utf-8')as f :
                 json .dump (members ,f ,indent =2 ,ensure_ascii =False )
@@ -914,7 +914,7 @@ def register ():
                 e =discord .Embed (
                 title =" Aether Panel — Запись Проверка",
                 color =0xc8922a ,
-                timestamp =datetime .utcnow ()
+                timestamp =datetime.now(timezone.utc).replace(tzinfo=None)
                 )
                 e .description =(
                 "```ansi\n\u001b[1;33m ТРЕБУЕТСЯ ПРОВЕРКА КОДА \u001b[0m\n```\n"
@@ -973,7 +973,7 @@ def two_factor ():
         return redirect (url_for ('login'))
 
     pending =PENDING_2FA [token ]
-    if datetime .utcnow ().timestamp ()>pending ['expires']:
+    if datetime.now(timezone.utc).replace(tzinfo=None).timestamp ()>pending ['expires']:
         del PENDING_2FA [token ]
         return render_template ('login.html',error ='Время проверки истекло, выполните вход заново.')
 
@@ -1028,7 +1028,7 @@ def api_totp_begin ():
     import secrets as _secrets
     secret =pyotp .random_base32 ()
     session ['totp_pending_secret']=secret 
-    session ['totp_pending_ts']=datetime .utcnow ().timestamp ()
+    session ['totp_pending_ts']=datetime.now(timezone.utc).replace(tzinfo=None).timestamp ()
     uri =pyotp .totp .TOTP (secret ).provisioning_uri (
     name =str (session .get ('username')or 'aether'),issuer_name ='Aether Panel')
     qr_data =''
@@ -1049,7 +1049,7 @@ def api_totp_enable ():
     secret =session .get ('totp_pending_secret')
     ts =session .get ('totp_pending_ts')or 0 
     code =((request .get_json (silent =True )or {}).get ('code')or '').strip ()
-    if not secret or datetime .utcnow ().timestamp ()-ts >600 :
+    if not secret or datetime.now(timezone.utc).replace(tzinfo=None).timestamp ()-ts >600 :
         return jsonify ({'success':False ,'error':'Секрет устарел — нажмите «Подключить» заново'}),400 
     import pyotp 
     if not code or not pyotp .TOTP (secret ).verify (code ,valid_window =1):
@@ -1110,7 +1110,7 @@ def api_add_member ():
     'display_name':display_name ,
     'name':name ,
     'avatar':avatar ,
-    'registered_at':datetime .utcnow ().isoformat ()
+    'registered_at':datetime.now(timezone.utc).replace(tzinfo=None).isoformat ()
     }
     with open (members_file ,'w',encoding ='utf-8')as f :
         json .dump (members ,f ,indent =2 ,ensure_ascii =False )
@@ -1230,7 +1230,7 @@ def api_send_notification ():
     'title':title ,
     'message':message ,
     'from':session .get ('username'),
-    'created_at':datetime .utcnow ().isoformat (),
+    'created_at':datetime.now(timezone.utc).replace(tzinfo=None).isoformat (),
     'read':False 
     })
     with open (notif_file ,'w',encoding ='utf-8')as f :
@@ -1247,7 +1247,7 @@ def api_send_notification ():
                 color =0xdc143c 
                 )
                 embed .set_footer (text ="Aether Panel • Уведомление",icon_url =bot_instance .user .display_avatar .url )
-                embed .timestamp =datetime .utcnow ()
+                embed .timestamp =datetime.now(timezone.utc).replace(tzinfo=None)
                 await user .send (embed =embed )
             except Exception as e :
                 print (f"DM отправл: {e}")
@@ -1276,7 +1276,7 @@ def api_send_announcement ():
     'title':title ,
     'message':message ,
     'from':session .get ('username'),
-    'created_at':datetime .utcnow ().isoformat ()
+    'created_at':datetime.now(timezone.utc).replace(tzinfo=None).isoformat ()
     })
     with open (ann_file ,'w',encoding ='utf-8')as f :
         json .dump (anns ,f ,indent =2 ,ensure_ascii =False )
@@ -1568,7 +1568,7 @@ def _warn_db_append (guild_id :str ,user_id :str ,reason :str ,moderator :str ):
         'reason':reason or 'Не указана',
         'mod':moderator or '?',
         'mod_id':'',
-        'timestamp':datetime .utcnow ().isoformat ()
+        'timestamp':datetime.now(timezone.utc).replace(tzinfo=None).isoformat ()
         })
         wdb .set (int (guild_id ),str (user_id ),warns )
     except Exception as _e :
@@ -1651,7 +1651,7 @@ def api_user_info (user_id ):
         'created_at':user .created_at .isoformat (),
         'bot':user .bot 
         })
-    except :
+    except Exception:
         return jsonify ({'error':'Пользователь не найден'})
 
 @app .route ('/api/command/ban',methods =['POST'])
@@ -1757,7 +1757,7 @@ def api_warn ():
     warns [guild_id ][user_id ].append ({
     'reason':reason ,
     'moderator':session .get ('username'),
-    'timestamp':datetime .utcnow ().isoformat ()
+    'timestamp':datetime.now(timezone.utc).replace(tzinfo=None).isoformat ()
     })
 
     _store .atomic_write_json (warns_file ,warns )
@@ -1858,7 +1858,7 @@ def api_execute_command ():
                 warns [gid_str ][uid_str ].append ({
                 'reason':data .get ('reason','Предупреждение через веб-панель'),
                 'moderator':session .get ('username'),
-                'timestamp':datetime .utcnow ().isoformat ()
+                'timestamp':datetime.now(timezone.utc).replace(tzinfo=None).isoformat ()
                 })
                 with open (warns_file ,'w',encoding ='utf-8')as wf :
                     json .dump (warns ,wf ,ensure_ascii =False )
@@ -1906,7 +1906,7 @@ def api_execute_command ():
                 'role':[str (r .id )for r in member .roles [1 :]],
                 'reason':data .get ('reason','Jail через веб-панель'),
                 'mod':session .get ('username'),
-                'timestamp':datetime .utcnow ().isoformat ()
+                'timestamp':datetime.now(timezone.utc).replace(tzinfo=None).isoformat ()
                 }
                 with open (jail_data_file ,'w',encoding ='utf-8')as jf :
                     json .dump (jail_data ,jf ,indent =2 ,ensure_ascii =False )
@@ -2198,7 +2198,7 @@ def api_review_staff_app (app_id ):
                         embed .add_field (name =" Заметка",value =note ,inline =False )
                     embed .set_thumbnail (url =bot_instance .user .display_avatar .url )
                     embed .set_footer (text ="Aether Panel • Система заявок",icon_url =bot_instance .user .display_avatar .url )
-                    embed .timestamp =datetime .utcnow ()
+                    embed .timestamp =datetime.now(timezone.utc).replace(tzinfo=None)
                 else :
                     embed =discord .Embed (
                     title =" Заявка отклонена",
@@ -2210,7 +2210,7 @@ def api_review_staff_app (app_id ):
                     embed .add_field (name =" Причина отказа",value =note if note else "Не указана",inline =False )
                     embed .set_thumbnail (url =bot_instance .user .display_avatar .url )
                     embed .set_footer (text ="Aether Panel • Система заявок",icon_url =bot_instance .user .display_avatar .url )
-                    embed .timestamp =datetime .utcnow ()
+                    embed .timestamp =datetime.now(timezone.utc).replace(tzinfo=None)
                 await user .send (embed =embed )
                 dm_info ['sent']=True
             except Exception as e :
@@ -2261,7 +2261,7 @@ def api_tunnel_url ():
                 url =f .read ().strip ()
             if url :
                 return jsonify ({'url':url })
-    except :
+    except Exception:
         pass 
     return jsonify ({'url':None })
 
@@ -2277,7 +2277,7 @@ def _save_login_token (username ,roles ):
     existing =next ((t for t ,v in tokens .items ()if v .get ('username')==username ),None )
     if not existing :
         existing =''.join (random .choices (string .ascii_letters +string .digits ,k =48 ))
-    tokens [existing ]={'username':username ,'role':roles ,'created_at':datetime .utcnow ().isoformat ()}
+    tokens [existing ]={'username':username ,'role':roles ,'created_at':datetime.now(timezone.utc).replace(tzinfo=None).isoformat ()}
     with open (tokens_file ,'w',encoding ='utf-8')as f :
         json .dump (tokens ,f ,indent =2 ,ensure_ascii =False )
     return existing 
@@ -2423,7 +2423,7 @@ def api_public_apply ():
         if app_data .get ('user_id')==uid and app_data .get ('status')=='pending':
             return jsonify ({'error':'У вас уже есть заявка на рассмотрении!'}),400 
 
-    app_id =str (int (datetime .utcnow ().timestamp ()))
+    app_id =str (int (datetime.now(timezone.utc).replace(tzinfo=None).timestamp ()))
     guild_id =str (data ['guild_id'])
 
     app_entry ={
@@ -2434,7 +2434,7 @@ def api_public_apply ():
     'avatar':f"https://cdn.discordapp.com/embed/avatars/{int(uid) % 6}.png",
     'guild_id':guild_id ,
     'guild_name':data .get ('guild_name',''),
-    'timestamp':datetime .utcnow ().isoformat (),
+    'timestamp':datetime.now(timezone.utc).replace(tzinfo=None).isoformat (),
     'status':'pending',
     'source':'web',
     'answers':{
@@ -2472,7 +2472,7 @@ def api_public_apply ():
                 embed =discord .Embed (
                 title =" НОВАЯ ЗАЯВКА В ПЕРСОНАЛ • Web",
                 color =0xC8922A ,
-                timestamp =datetime .utcnow ()
+                timestamp =datetime.now(timezone.utc).replace(tzinfo=None)
                 )
                 embed .add_field (name =" Пользователь",value =f"`{data['discord_name']}` (ID: `{uid}`)",inline =True )
                 embed .add_field (name =" Возраст",value =data ['yas'],inline =True )
@@ -2636,7 +2636,7 @@ def api_login_suggest ():
                     'avatar':_safe_avatar_url (minfo .get ('avatar'))
                     })
                     if len (suggestions )>=12 :break 
-        except :
+        except Exception:
             pass 
 
             # 3. Always provide demo/known members if empty so dropdown is never blank
@@ -2678,7 +2678,7 @@ def api_discord_check ():
             if not user :
                 try :
                     user =asyncio .run_coroutine_threadsafe (bot_instance .fetch_user (int (discord_id )),bot_instance .loop ).result (timeout =10 )
-                except :
+                except Exception:
                     pass 
         else :
             uname =query .lstrip ('@').lower ()
@@ -2711,7 +2711,7 @@ def api_discord_check ():
             tests .append ({'name':'Участник сервера','status':'ok','detail':guild_name })
         else :
             tests .append ({'name':'Участник сервера','status':'warn','detail':'Не найден на сервере'})
-    except :
+    except Exception:
         tests .append ({'name':'Участник сервера','status':'warn','detail':'Ошибка проверки'})
     try :
         is_bot =getattr (user ,'bot',False )
@@ -2720,17 +2720,17 @@ def api_discord_check ():
             return jsonify ({'success':False ,'tests':tests ,'error':'Боты не могут авторизоваться.'})
         else :
             tests .append ({'name':'Проверка на бота','status':'ok','detail':'Пользователь'})
-    except :
+    except Exception:
         tests .append ({'name':'Проверка на бота','status':'warn','detail':'Ошибка проверки'})
     try :
         created =discord .utils .snowflake_time (int (discord_id ))
-        age_days =(datetime .utcnow ()-created ).days 
+        age_days =(datetime.now(timezone.utc).replace(tzinfo=None)-created ).days 
         if age_days <7 :
             tests .append ({'name':'Возраст аккаунта','status':'fail','detail':f'{age_days}d (too new)'})
             return jsonify ({'success':False ,'tests':tests ,'error':'Вход запрещен: аккаунт зарегистрирован менее 7 дней назад.'})
         else :
             tests .append ({'name':'Возраст аккаунта','status':'ok','detail':f'{age_days}d'})
-    except :
+    except Exception:
         tests .append ({'name':'Возраст аккаунта','status':'warn','detail':'Неизвестно'})
     try :
         code =''.join (random .choices (string .digits ,k =6 ))
@@ -2738,7 +2738,7 @@ def api_discord_check ():
         _login_pins [discord_id ]={'code':code ,'expires':_t .time ()+300 ,'member_info':member_info }
         async def send_pin ():
             u =await bot_instance .fetch_user (int (discord_id ))
-            embed =discord .Embed (title ='Aether — Код авторизации',color =0xc8922a ,timestamp =datetime .utcnow ())
+            embed =discord .Embed (title ='Aether — Код авторизации',color =0xc8922a ,timestamp =datetime.now(timezone.utc).replace(tzinfo=None))
             embed .description =f"Здравствуйте, **{member_info['display_name']}**!\n\nВаш PIN-код для входа в панель:\n\n```fix\n{code}\n```\nДействителен в течение 5 минут."
             embed .set_footer (text ="Aether Panel")
             await u .send (embed =embed )
@@ -2775,7 +2775,7 @@ def api_discord_login ():
             members =json .load (f )
     if discord_id not in members :
         live_role =_get_role_from_discord (discord_id )
-        members [discord_id ]={'display_name':member_info ['display_name'],'name':member_info ['name'],'avatar':member_info ['avatar'],'role':live_role ,'password':'','registered_at':datetime .utcnow ().isoformat ()}
+        members [discord_id ]={'display_name':member_info ['display_name'],'name':member_info ['name'],'avatar':member_info ['avatar'],'role':live_role ,'password':'','registered_at':datetime.now(timezone.utc).replace(tzinfo=None).isoformat ()}
         with open (members_file ,'w',encoding ='utf-8')as f :
             json .dump (members ,f ,indent =2 ,ensure_ascii =False )
     stored_role =members [discord_id ].get ('role','uye')
@@ -2822,7 +2822,7 @@ def api_send_embed ():
     if not channel :return jsonify ({'error':'Канал не найден'})
     async def send_it ():
         try :color =discord .Color (int (color_hex ,16 ))
-        except :color =discord .Color (0xdc143c )
+        except Exception:color =discord .Color (0xdc143c )
         embed =discord .Embed (color =color )
         if title :embed .title =title
         if description :embed .description =description

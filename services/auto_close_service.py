@@ -3,7 +3,7 @@
 """
 
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 import logging
 import discord
@@ -53,7 +53,7 @@ class AutoCloseService:
     
     async def _check_inactive_tickets(self):
         """Проверить все тикеты на неактивность"""
-        cutoff_time = datetime.utcnow() - timedelta(hours=self.inactive_hours)
+        cutoff_time = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=self.inactive_hours)
         closed_count = 0
         
         for guild in self.bot.guilds:
@@ -113,7 +113,7 @@ class AutoCloseService:
                     "Если ваша проблема не решена, создайте новый тикет."
                 ),
                 color=0xF39C12,
-                timestamp=datetime.utcnow()
+                timestamp=datetime.now(timezone.utc).replace(tzinfo=None)
             )
             
             await channel.send(embed=embed)
@@ -138,7 +138,7 @@ class AutoCloseService:
                             "Если проблема не решена, создайте новый тикет."
                         ),
                         color=0xF39C12,
-                        timestamp=datetime.utcnow()
+                        timestamp=datetime.now(timezone.utc).replace(tzinfo=None)
                     )
                     await owner.send(embed=dm_embed)
                 except Exception as e:
@@ -162,7 +162,7 @@ class AutoCloseService:
                     title=" Тикет закрыт автоматически (неактивность)",
                     description=f"**Канал:** {channel.name}\n**Сообщений:** {len(messages)}",
                     color=0xF39C12,
-                    timestamp=datetime.utcnow()
+                    timestamp=datetime.now(timezone.utc).replace(tzinfo=None)
                 )
                 file = discord.File(
                     fp=io.StringIO(transcript),

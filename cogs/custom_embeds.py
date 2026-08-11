@@ -4,7 +4,7 @@ from discord.ext import commands
 from discord import app_commands
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from config import Config 
 
 class CustomEmbeds(commands.Cog):
@@ -125,7 +125,7 @@ class CustomEmbeds(commands.Cog):
         embed = discord.Embed(
             title=" Recent Embeds",
             color=0x7289DA,
-            timestamp=datetime.utcnow()
+            timestamp=datetime.now(timezone.utc).replace(tzinfo=None)
         )
         
         for idx, item in enumerate(recent, 1):

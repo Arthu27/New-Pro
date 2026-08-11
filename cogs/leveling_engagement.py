@@ -15,7 +15,7 @@ import json
 import os 
 import random 
 import time 
-from datetime import datetime ,timedelta 
+from datetime import datetime ,timedelta, timezone
 from collections import defaultdict 
 
 from logger import get_logger 
@@ -208,13 +208,13 @@ class LevelingEngagement (commands .Cog ):
         """Update daily streak for a user. Returns current streak count and multiplier."""
         data =self .load_streaks ()
         key =f"{guild_id}_{user_id}"
-        today =datetime .utcnow ().date ().isoformat ()
+        today =datetime.now(timezone.utc).replace(tzinfo=None).date ().isoformat ()
         info =data .get (key ,{"last_day":"","count":0 })
 
         if info ["last_day"]==today :
             return info ["count"],1.0 # already counted today
 
-        yesterday =(datetime .utcnow ().date ()-timedelta (days =1 )).isoformat ()
+        yesterday =(datetime.now(timezone.utc).replace(tzinfo=None).date ()-timedelta (days =1 )).isoformat ()
         if info ["last_day"]==yesterday :
             info ["count"]+=1 
         else :
@@ -379,7 +379,7 @@ class LevelingEngagement (commands .Cog ):
         if streak_count ==100 :await self .grant_achievement (guild_id ,user_id ,"streak_100")
 
         # Time-based
-        hour =datetime .utcnow ().hour 
+        hour =datetime.now(timezone.utc).replace(tzinfo=None).hour 
         if 3 <=hour <6 :await self .grant_achievement (guild_id ,user_id ,"night_owl")
         if hour <6 :await self .grant_achievement (guild_id ,user_id ,"early_bird")
 

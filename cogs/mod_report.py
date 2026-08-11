@@ -350,7 +350,7 @@ async def _build_weekly_report (guild :discord .Guild ,days :int =7 ,force_cutof
     close .description =(
     '```ansi\n\u001b[1;32m КОНЕЦ ОТЧЁТА \u001b[0m\n```\n'
     f'> Этот отчёт содержит данные за **{period}**.\n'
-    f'> Bir следующий rapor: <t:{ts_now + (7 - datetime.datetime.utcnow().weekday()) * 86400}:D>\n\n'
+    f'> Bir следующий rapor: <t:{ts_now + (7 - datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None).weekday()) * 86400}:D>\n\n'
     '-# Aether Bot • Автоматический еженедельный отчёт'
     )
     embeds .append (close )
@@ -486,7 +486,7 @@ class ModReport (commands .Cog ):
 
     @tasks .loop (minutes =30 )
     async def weekly_report_loop (self ):
-        now =datetime .datetime .utcnow ()
+        now =datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
         for guild in self .bot .guilds :
             cfg =_load_cfg (guild .id )
             if not cfg .get ('enabled')or not cfg .get ('channel_id'):

@@ -362,7 +362,7 @@ class Leaderboard(commands.Cog):
         if member.bot:
             return
         uid = member.id
-        now = datetime.datetime.utcnow()
+        now = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
         if not before.channel and after.channel:
             self._voice_join[uid] = now
         elif before.channel and not after.channel:

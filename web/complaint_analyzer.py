@@ -172,7 +172,7 @@ class ComplaintAnalyzer :
                     case for case in guild_mods 
                     if case .get ('user_id')==str (user_id )
                     ]
-            except :
+            except Exception:
                 pass 
 
         bans =sum (1 for case in mod_history if case .get ('action')=='бан')

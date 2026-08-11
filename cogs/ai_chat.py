@@ -1368,7 +1368,7 @@ class AIChat (commands .Cog ):
                 _d [uid ].append ({
                 'author':'Aether',
                 'content':answer ,
-                'timestamp':_dt3 .datetime .utcnow ().isoformat (),
+                'timestamp':_dt3 .datetime.now(_dt3 .timezone.utc).replace(tzinfo=None).isoformat (),
                 'from_bot':True ,
                 })
                 # Max 200 message tut

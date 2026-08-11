@@ -180,7 +180,7 @@ def _detect_category_ai (message :str ,history :List [Dict ])->str :
         result =result .strip ().lower ()
         if result in ('complaint','question','technical','other'):
             return result 
-    except :
+    except Exception:
         pass 
 
         # Fallback на keyword-based
@@ -613,7 +613,7 @@ def learn_from_staff (staff_message :str ,user_question :str ,guild_id :int ):
         faqs [guild_key ].append ({
         'question':user_question ,
         'answer':staff_message ,
-        'timestamp':datetime .datetime .utcnow ().isoformat ()
+        'timestamp':datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None).isoformat ()
         })
 
         # Ограничиваем 100 записьyami
@@ -635,7 +635,7 @@ def get_learned_faqs (guild_id :int )->List [Dict ]:
             with open (faq_file ,'r',encoding ='utf-8')as f :
                 faqs =json .load (f )
             return faqs .get (str (guild_id ),[])
-    except :
+    except Exception:
         pass 
     return []
 
@@ -829,7 +829,7 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
                         if _uid ==target or target .lower ()in str (_uid ).lower ():
                             w_count +=len (_ws )
                             w_reasons .extend ([_w .get ('reason','?')for _w in _ws ])
-            except :
+            except Exception:
                 pass 
         m_count =0 
         if os .path .exists ('data/mod_data.json'):
@@ -840,7 +840,7 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
                     for _c in _case :
                         if str (_c .get ('user_id',''))==target :
                             m_count +=1 
-            except :
+            except Exception:
                 pass 
         return (
         f"👤 **Анализ безопасности пользователя ({target}):**\n"
@@ -871,7 +871,7 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
                                     rule_lines .append (f"• {rtext}")
                             if rule_lines :
                                 break 
-                    except :
+                    except Exception:
                         pass 
         if not rule_lines :
             rule_lines =[

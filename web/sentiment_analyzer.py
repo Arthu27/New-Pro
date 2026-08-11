@@ -5,7 +5,7 @@
 import discord 
 import json 
 import os 
-from datetime import datetime ,timedelta 
+from datetime import datetime ,timedelta, timezone
 from typing import Dict ,List ,Optional ,Tuple 
 from collections import defaultdict 
 import re 
@@ -78,7 +78,7 @@ class SentimentAnalyzer :
         'emotions':emotions ,
         'dominant_emotion':dominant ,
         'sentiment_score':score ,
-        'timestamp':datetime .utcnow ().isoformat (),
+        'timestamp':datetime.now(timezone.utc).replace(tzinfo=None).isoformat (),
         }
 
         # Ekliyoruz в pano
@@ -111,7 +111,7 @@ class SentimentAnalyzer :
         messages =self .message_buffer .get (channel_id ,[])
 
         # Filtreliyoruz по время
-        cutoff =datetime .utcnow ()-timedelta (minutes =window_minutes )
+        cutoff =datetime.now(timezone.utc).replace(tzinfo=None)-timedelta (minutes =window_minutes )
         recent =[
         msg for msg in messages 
         if datetime .fromisoformat (msg ['timestamp'])>cutoff 
@@ -275,7 +275,7 @@ class SentimentAnalyzer :
                     data =json .load (f )
                     for channel_id ,messages in data .items ():
                         self .message_buffer [int (channel_id )]=messages 
-            except :
+            except Exception:
                 pass 
 
     def _save_history (self ):
@@ -292,7 +292,7 @@ class SentimentAnalyzer :
 
             with open (history_file ,'w',encoding ='utf-8')as f :
                 json .dump (data ,f ,indent =2 ,ensure_ascii =False )
-        except :
+        except Exception:
             pass 
 
 

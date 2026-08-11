@@ -19,7 +19,7 @@ import sys
 import traceback 
 import hashlib 
 import subprocess 
-from datetime import datetime ,timedelta 
+from datetime import datetime ,timedelta, timezone
 from collections import defaultdict ,deque 
 import psutil 
 
@@ -237,7 +237,7 @@ class Diagnostics (commands .Cog ):
                 description =f"**Severity:** {severity}\n**Action:** {action}",
                 color =0xFBBF24 if severity =="warn"else 0xEF4444 
                 )
-                embed .timestamp =datetime .utcnow ()
+                embed .timestamp =datetime.now(timezone.utc).replace(tzinfo=None)
                 await owner .send (embed =embed )
         except Exception :
             pass 
@@ -306,7 +306,7 @@ class Diagnostics (commands .Cog ):
         embed .add_field (name =" Ошибок/мин",value =h ["errors_last_min"],inline =True )
         embed .add_field (name =" Потоки",value =h ["threads"],inline =True )
         embed .add_field (name =" Открытых файлов",value =h ["open_files"],inline =True )
-        embed .timestamp =datetime .utcnow ()
+        embed .timestamp =datetime.now(timezone.utc).replace(tzinfo=None)
         await ctx .send (embed =embed )
 
     @commands .command (name ="diagnose",aliases =["repair"])

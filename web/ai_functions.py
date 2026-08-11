@@ -4,7 +4,7 @@ AI Function Calling — AI olabilir vizivat fonksiyonlar для poluceniya veril
 import json 
 import os 
 import discord 
-from datetime import datetime ,timedelta 
+from datetime import datetime ,timedelta, timezone
 from typing import Dict ,List ,Optional ,Any 
 
 
@@ -164,7 +164,7 @@ class AIFunctions :
 
             created =member .created_at .strftime ("%d.%m.%Y")
             joined =member .joined_at .strftime ("%d.%m.%Y")if member .joined_at else "?"
-            days_on_server =(datetime .utcnow ()-member .joined_at ).days if member .joined_at else 0 
+            days_on_server =(datetime.now(timezone.utc).replace(tzinfo=None)-member .joined_at ).days if member .joined_at else 0 
 
             return (
             f"Информация о <@{user_id}>:\n"
@@ -462,7 +462,7 @@ class AIFunctions :
 
             memory [user_key ].append ({
             'fact':fact ,
-            'timestamp':datetime .utcnow ().isoformat ()
+            'timestamp':datetime.now(timezone.utc).replace(tzinfo=None).isoformat ()
             })
 
             # Ограничиваем 50 faktami

@@ -4,7 +4,7 @@
 """
 import json 
 import os 
-from datetime import datetime ,timedelta 
+from datetime import datetime ,timedelta, timezone
 from typing import Dict ,List ,Optional 
 from collections import defaultdict 
 
@@ -30,7 +30,7 @@ class SelfLearning :
     ):
         """Сохран obratnuyu ссылка"""
         entry ={
-        'timestamp':datetime .utcnow ().isoformat (),
+        'timestamp':datetime.now(timezone.utc).replace(tzinfo=None).isoformat (),
         'user_message':user_message ,
         'ai_response':ai_response ,
         'feedback_type':feedback_type ,# 'positive', 'negative', 'correction'
@@ -58,7 +58,7 @@ class SelfLearning :
     ):
         """Сохран ошибка AI"""
         mistake ={
-        'timestamp':datetime .utcnow ().isoformat (),
+        'timestamp':datetime.now(timezone.utc).replace(tzinfo=None).isoformat (),
         'user_message':user_message ,
         'wrong_response':ai_response ,
         'correct_response':correct_response ,
@@ -85,7 +85,7 @@ class SelfLearning :
     ):
         """Сохран uspesniy ответ"""
         success ={
-        'timestamp':datetime .utcnow ().isoformat (),
+        'timestamp':datetime.now(timezone.utc).replace(tzinfo=None).isoformat (),
         'user_message':user_message ,
         'ai_response':ai_response ,
         'success_type':success_type # 'helpful', 'accurate', 'empathetic'
@@ -273,7 +273,7 @@ class SelfLearning :
                     self .learned_patterns =data .get ('learned_patterns',{})
                     self .mistakes =data .get ('mistakes',[])
                     self .successes =data .get ('successes',[])
-            except :
+            except Exception:
                 pass 
 
     def _save_data (self ):

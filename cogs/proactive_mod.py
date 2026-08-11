@@ -8,7 +8,7 @@ from discord .ext import commands ,tasks
 import re 
 import json 
 import os 
-from datetime import datetime ,timedelta 
+from datetime import datetime ,timedelta, timezone
 from typing import Dict ,List ,Optional 
 import asyncio 
 
@@ -57,7 +57,7 @@ class ProactiveModeration (commands .Cog ):
         'author_id':message .author .id ,
         'author_name':str (message .author ),
         'content':message .content ,
-        'timestamp':datetime .utcnow (),
+        'timestamp':datetime.now(timezone.utc).replace(tzinfo=None),
         'message_id':message .id ,
         })
 
@@ -99,7 +99,7 @@ class ProactiveModeration (commands .Cog ):
 
             e =discord .Embed (
             color =color_map .get (alert ['type'],0xFF0000 ),
-            timestamp =datetime .utcnow ()
+            timestamp =datetime.now(timezone.utc).replace(tzinfo=None)
             )
 
             e .description =(
@@ -146,7 +146,7 @@ class ProactiveModeration (commands .Cog ):
         author_id =message .author .id 
 
         # Scitaem сообщения den bunun yazarыn для son N секунд
-        now =datetime .utcnow ()
+        now =datetime.now(timezone.utc).replace(tzinfo=None)
         recent_messages =[
         msg for msg in self .message_buffer .get (channel_id ,[])
         if msg ['author_id']==author_id 
@@ -223,7 +223,7 @@ class ProactiveModeration (commands .Cog ):
 
             e =discord .Embed (
             color =color_map .get (alert_type ,0xFF0000 ),
-            timestamp =datetime .utcnow ()
+            timestamp =datetime.now(timezone.utc).replace(tzinfo=None)
             )
 
             e .description =(

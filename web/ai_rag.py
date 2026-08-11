@@ -35,7 +35,7 @@ class KnowledgeBase :
                             rules_loaded =True 
                     if rules_loaded :
                         break 
-                except :
+                except Exception:
                     pass 
         if not rules_loaded :
             default_rules =[
@@ -66,7 +66,7 @@ class KnowledgeBase :
                             'content':f"ВОПРОС: {faq.get('question', '')}\nОТВЕТ АДМИНИСТРАЦИИ: {faq.get('answer', '')}",
                             'metadata':{'id':faq .get ('id',''),'score':1.0 }
                             })
-                except :
+                except Exception:
                     pass 
 
                     # 3. Loglar ticketlarыn (son 50)
@@ -89,7 +89,7 @@ class KnowledgeBase :
                         'created_at':ticket .get ('created_at','')
                         }
                         })
-            except :
+            except Exception:
                 pass 
 
                 # 4. Пользователь notlar (из data/notes.json если есть)
@@ -110,7 +110,7 @@ class KnowledgeBase :
                             'timestamp':note .get ('timestamp','')
                             }
                             })
-            except :
+            except Exception:
                 pass 
 
     def search (self ,query :str ,max_results :int =5 )->List [Dict ]:

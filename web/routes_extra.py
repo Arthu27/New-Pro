@@ -4,7 +4,7 @@ import os ,json
 import time 
 import math 
 import discord 
-from datetime import datetime 
+from datetime import datetime, timezone
 
 
 def _load_ai_tickets (guild_id :int )->dict :
@@ -14,7 +14,7 @@ def _load_ai_tickets (guild_id :int )->dict :
         try :
             with open (path ,'r',encoding ='utf-8')as f :
                 return json .load (f )
-        except :
+        except Exception:
             pass 
     return {}
 
@@ -965,7 +965,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                 'escalated_at':ticket .get ('escalated_at'),
                 'staff_notified':ticket .get ('staff_notified',False )
                 })
-            except :
+            except Exception:
                 pass 
 
         return render_template (
@@ -1170,7 +1170,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         sdata =_load_json (_sticky_path (guild .id ),{})
         old =sdata .get (cid )
         sdata [cid ]={'text':text ,'msg_id':None ,'author_id':0,
-        'set_at':datetime .utcnow ().isoformat (),
+        'set_at':datetime.now(timezone.utc).replace(tzinfo=None).isoformat (),
         'by_panel':session .get ('username')}
         _save_json (_sticky_path (guild .id ),sdata )
 
@@ -1293,6 +1293,65 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
             return jsonify ({'success':False ,'error':'Он и не был призраком'}),404
         _fire_panel_notification ('ghost',f"👻 Тихий мут снят: {uid}",session .get ('username','?'))
         return jsonify ({'success':True ,'suppressed':entry .get ('suppressed')or 0 })
+
+    # ── Демки к наказаниям (cogs/proof_cog.py) ────────────────────────────
+    @app .route ('/proofs')
+    @login_required
+    @role_required ('mod')
+    def proofs_page ():
+        return render_template ('proofs.html',role =session .get ('role'),username =session .get ('username'))
+
+    @app .route ('/api/proofs',methods =['GET'])
+    @login_required
+    @role_required ('mod')
+    def api_proofs_list ():
+        from cogs .proof_cog import proof_list
+        guild =_active_guild ()
+        gid =guild .id if guild else int (active_guild_id ()or 0 )
+        uid =str (request .args .get ('user_id','')).strip ()
+        action =str (request .args .get ('action','')).strip ()
+        items =proof_list (gid ,user_id =int (uid ))if uid .isdigit ()else proof_list (gid )
+        if action :
+            items =[e for e in items if e .get ('action')==action ]
+        out =[]
+        for e in items [:50 ]:
+            ch_id =e .get ('channel_id')
+            jump =None
+            if ch_id and e .get ('msg_id'):
+                jump =f"https://discord.com/channels/{gid}/{ch_id}/{e['msg_id']}"
+            out .append ({'id':e .get ('id'),'user_id':str (e .get ('user_id')),
+            'user_name':e .get ('user_name'),'mod_name':e .get ('mod_name'),
+            'action':e .get ('action'),'reason':e .get ('reason'),
+            'link':e .get ('link'),'url':e .get ('url'),
+            'set_at':e .get ('set_at'),'jump':jump })
+        return jsonify ({'success':True ,'items':out ,'total':len (items )})
+
+    @app .route ('/api/proofs/<int:pid>',methods =['DELETE'])
+    @login_required
+    @role_required ('admin')
+    def api_proofs_delete (pid ):
+        # удаление демки — только admin+ (история наказаний = серьёзно)
+        from cogs .proof_cog import proof_remove
+        guild =_active_guild ()
+        if not guild :
+            return jsonify ({'success':False ,'error':'Бот офлайн'}),503
+        entry =proof_remove (guild .id ,pid )
+        if not entry :
+            return jsonify ({'success':False ,'error':'Демка не найдена'}),404
+        # заодно попробуем убрать сообщение из канала доказательств
+        msg_deleted =False
+        try :
+            if entry .get ('channel_id')and entry .get ('msg_id'):
+                ch =guild .get_channel (int (entry ['channel_id']))
+                if ch :
+                    msg =_run_async (ch .fetch_message (int (entry ['msg_id'])))
+                    _run_async (msg .delete ())
+                    msg_deleted =True
+        except Exception :
+            pass
+        _fire_panel_notification ('proof',f'🗑️ Демка #{pid} удалена',
+        f"{session.get('username')}: {entry.get('user_name')}")
+        return jsonify ({'success':True ,'msg_deleted':msg_deleted })
 
     @app .route ('/api/panic',methods =['GET'])
     @login_required 
@@ -1542,7 +1601,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                                 server_configs .append (f"{flabel}: {thresholds}")
                             else :
                                 server_configs .append (f"{flabel}: текущий")
-                        except :pass 
+                        except Exception:pass 
 
                         # Warning число
                 warn_summary =''
@@ -1560,7 +1619,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                             name =m .display_name if m else uid 
                             top_names .append (f"{name}({len(ws)})")
                         warn_summary =f"Всего предупреждение: {total_warns}, En очень: {', '.join(top_names)}"
-                    except :pass 
+                    except Exception:pass 
 
                 guild_data .append (
                 f"Сервер: {g.name} (id={g.id})\n"
@@ -1608,7 +1667,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                                 wd =json .load (fp )
                             warn_list =wd .get (str (g .id ),{}).get (uid_str ,[])
                             warn_count =len (warn_list )
-                        except :pass 
+                        except Exception:pass 
                         # История модерации — из mod_data.json и кэша аудита Discord
                     mod_history =[]
                     mod_file ='data/mod_data.json'
@@ -1623,7 +1682,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                                     f"{c.get('timestamp','')[:10]} {c.get('action','?').upper()} — "
                                     f"Mod: {c.get('mod_id','?')} — {c.get('reason','?')}"
                                     )
-                        except :pass 
+                        except Exception:pass 
                         # Также подтягиваем из кэша аудита Discord
                     cache_f ='data/discord_audit_cache.json'
                     if os .path .exists (cache_f ):
@@ -1638,7 +1697,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                                         f"{ts} {ev.get('action','?')} — "
                                         f"Mod: {ev.get('mod_name','?')} — {ev.get('reason','') or 'Причины нет'}"
                                         )
-                        except :pass 
+                        except Exception:pass 
                         # История ролей — из кэша аудита: кто выдал/снял ролей
                     role_gecmisi =[]
                     if os .path .exists (cache_f ):
@@ -1652,7 +1711,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                                         role_gecmisi .append (
                                         f"{ts} Изменение ролей — Мод: {ev.get('mod_name','?')} — {ev.get('reason','') or ev.get('before','') or ''}"
                                         )
-                        except :pass 
+                        except Exception:pass 
                     role_gecmisi .sort ()
                     # Кто пригласил
                     inviter ='?'
@@ -1662,7 +1721,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                             with open (invite_file ,'r',encoding ='utf-8')as fp :
                                 inv =json .load (fp )
                             inviter =inv .get (uid_str ,{}).get ('inviter_name','?')
-                        except :pass 
+                        except Exception:pass 
                         # Дата присоединения
                     joined =member .joined_at .strftime ('%d.%m.%Y %H:%M')if member .joined_at else '?'
                     created =member .created_at .strftime ('%d.%m.%Y')if member .created_at else '?'
@@ -1700,7 +1759,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                 ).result (timeout =8 )
                 if ch_lines :
                     channel_messages_block ="\n=== КАНАЛ СООБЩЕНИЯ ===\n"+'\n'.join (ch_lines [:30 ])
-            except :pass 
+            except Exception:pass 
         recent_logs =[]
         cache_file_logs ='data/discord_audit_cache.json'
         if os .path .exists (cache_file_logs ):
@@ -1714,11 +1773,11 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                         f"{ev.get('target_name', ev.get('user_name','?'))} — "
                         f"Mod: {ev.get('mod_name','?')} — {ev.get('reason','')}"
                         )
-            except :pass 
+            except Exception:pass 
 
             # Статистика модерации — читаем из кэша (бот обновляет каждые 30 сек)
         mod_stats =''
-        today =_dt .datetime .utcnow ().date ()
+        today =_dt .datetime.now(timezone.utc).replace(tzinfo=None).date ()
         yesterday =today -_dt .timedelta (days =1 )
         today_actions =[]
         yesterday_actions =[]
@@ -1781,7 +1840,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                                 'reason':w .get ('reason',''),
                                 'time':ts2 [11 :16 ],
                                 })
-            except :pass 
+            except Exception:pass 
 
         mod_stats =(
         f"Сегодня ({today}) — Ban: {t_ban}, Kick: {t_kick}, Mute: {t_to}, Warning: {len(today_warns)}\n"
@@ -1803,7 +1862,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                         score =hd .get ('score',hd .get ('health_score','?'))
                         label =hd .get ('label',hd .get ('status','?'))
                         health_lines .append (f"{g.name}: {score}/100 ({label})")
-                    except :pass 
+                    except Exception:pass 
         if health_lines :
             health_info ='Оценки состояния сервера:\n'+'\n'.join (f'  {l}'for l in health_lines )
         else :
@@ -1819,7 +1878,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                         hd =r .json ()
                         health_info =f"{g.name} состояние skoru: {hd.get('score','?')}/100 ({hd.get('label','?')})"
                         break 
-            except :pass 
+            except Exception:pass 
 
             # ── СИСТЕМА PROMPT ────────────────────────────────────────────────────
         is_owner =user_role =='owner'
@@ -2363,7 +2422,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                             u =_run_async (bot .fetch_user (int (parts [1 ])))
                             _run_async (guild .unban (u ))
                             return f'✅ {u.name} unban edildi'
-                        except :return '❌ Пользователь не найден'
+                        except Exception:return '❌ Пользователь не найден'
                     elif tip =='ПРЕДУПРЕЖДЕНИЕ'and len (parts )>1 :
                         m =resolve_member (parts [1 ])
                         if m :
@@ -2375,7 +2434,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                             wd .setdefault (gid ,{}).setdefault (uid ,[])
                             reason =':'.join (parts [2 :])or 'Panel AI'
                             import datetime as _dt2 
-                            wd [gid ][uid ].append ({'reason':reason ,'mod':'Arthur','timestamp':_dt2 .datetime .utcnow ().isoformat ()})
+                            wd [gid ][uid ].append ({'reason':reason ,'mod':'Arthur','timestamp':_dt2 .datetime.now(timezone.utc).replace(tzinfo=None).isoformat ()})
                             with open (wf ,'w',encoding ='utf-8')as fp :_j2 .dump (wd ,fp ,ensure_ascii =False ,indent =2 )
                             return f'✅ {m.display_name} предупреждение: {reason}'
                     elif tip =='UYARI_TEMIZLE'and len (parts )>1 :
@@ -2542,7 +2601,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                     if m and m .display_name ==username :
                         unlocked =achs 
                         break 
-            except :pass 
+            except Exception:pass 
         from cogs .leveling_engagement import ACHIEVEMENTS 
         return jsonify ({'unlocked':unlocked ,'catalog':ACHIEVEMENTS })
 
@@ -2766,7 +2825,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         if not member :
             return jsonify ({'error':'Пользователь не найден'}),404 
         from datetime import datetime ,timedelta 
-        until =datetime .utcnow ()+timedelta (seconds =sec )
+        until =datetime.now(timezone.utc).replace(tzinfo=None)+timedelta (seconds =sec )
         try :
             _run_async (member .timeout (until ,reason =f"[Panel] {session.get('username')}: {d.get('reason', '')}"))
         except Exception as e :
@@ -3314,7 +3373,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                         member =guild .get_member (int (uid ))
                         if member :name =member .display_name 
                 result .append ({'name':name ,'date':info ['date'],'diff':diff })
-            except :pass 
+            except Exception:pass 
         result .sort (key =lambda x :x ['diff'])
         return jsonify (result )
 
@@ -3367,7 +3426,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         if not channel :
             return jsonify ({'error':'Канал не найден'}),404 
 
-        ends_at =datetime .utcnow ()+timedelta (minutes =minutes )
+        ends_at =datetime.now(timezone.utc).replace(tzinfo=None)+timedelta (minutes =minutes )
         gw_id =str (int (ends_at .timestamp ()))
 
         def _send ():
@@ -3501,7 +3560,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                         history =json .load (f )
                 except Exception :
                     history =[]
-            now =datetime .utcnow ().strftime ('%H:%M')
+            now =datetime.now(timezone.utc).replace(tzinfo=None).strftime ('%H:%M')
             history .append ({'time':now ,'cpu':cpu ,'ram':ram })
             history =history [-20 :]
             try :
@@ -3820,7 +3879,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                     _wd =_json .load (_fp )
                 for _uid ,_ws in _wd .get (str (guild_id ),{}).items ():
                     warn_count +=len (_ws )
-            except :
+            except Exception:
                 pass 
 
                 # 2. Check mod cases
@@ -3830,7 +3889,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                 with open ('data/mod_data.json','r',encoding ='utf-8')as _fp :
                     _md =_json .load (_fp )
                 mod_count =len (_md .get ('case',{}).get (str (guild_id ),[]))
-            except :
+            except Exception:
                 pass 
 
                 # 3. Check lockdown status
@@ -3841,7 +3900,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                 with open (lockdown_file ,'r',encoding ='utf-8')as _fp :
                     _ld =_json .load (_fp )
                 lockdown_active =bool (_ld .get ('active',False ))
-            except :
+            except Exception:
                 pass 
 
                 # Calculate score (0-100)
@@ -3897,7 +3956,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
             try :
                 with open (lockdown_file ,'r',encoding ='utf-8')as _fp :
                     current =bool (_json .load (_fp ).get ('active',False ))
-            except :
+            except Exception:
                 pass 
 
         new_status =not current 
@@ -4002,7 +4061,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                 with open ('data/warnings.json','r',encoding ='utf-8')as fp :
                     wd =json .load (fp )
                 warn_count =sum (len (v )for gw in wd .values ()for v in gw .values ())
-            except :
+            except Exception:
                 pass 
         mod_count =0 
         if os .path .exists ('data/mod_data.json'):
@@ -4010,7 +4069,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                 with open ('data/mod_data.json','r',encoding ='utf-8')as fp :
                     md =json .load (fp )
                 mod_count =sum (len (v )for v in md .get ('case',{}).values ())
-            except :
+            except Exception:
                 pass 
         prompt =(
         f"Сводная информация о модерации сервера:\n"
@@ -4139,7 +4198,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
             try :
                 with open (DM_LOG_FILE ,'r',encoding ='utf-8')as f :
                     return json .load (f )
-            except :pass 
+            except Exception:pass 
         return {}
 
     def _save_dm_log (data ):
@@ -4168,7 +4227,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                             name =m .display_name 
                             avatar =str (m .display_avatar .url )if m .display_avatar else ''
                             break 
-                    except :pass 
+                    except Exception:pass 
             result .append ({
             'id':uid ,
             'name':name ,
@@ -4212,7 +4271,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
             log [user_id ].append ({
             'author':session .get ('username','Panel'),
             'content':content ,
-            'timestamp':_dt2 .datetime .utcnow ().isoformat (),
+            'timestamp':_dt2 .datetime.now(timezone.utc).replace(tzinfo=None).isoformat (),
             'from_bot':True ,
             })
             _save_dm_log (log )
@@ -4465,7 +4524,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         if os .path .exists (f ):
             with open (f )as fp :items =json .load (fp )
         data =request .get_json (silent =True )or {}
-        data ['id']=str (int (datetime .utcnow ().timestamp ()))
+        data ['id']=str (int (datetime.now(timezone.utc).replace(tzinfo=None).timestamp ()))
         items .append (data )
         with open (f ,'w')as fp :json .dump (items ,fp ,indent =2 )
         return jsonify ({'success':True })
@@ -4504,9 +4563,9 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         import asyncio ,discord 
         if not bot :return jsonify ({'error':'Бот офлайн'})
         data =request .get_json (silent =True )or {}
-        gw_id =str (int (datetime .utcnow ().timestamp ()))
+        gw_id =str (int (datetime.now(timezone.utc).replace(tzinfo=None).timestamp ()))
         from datetime import timedelta 
-        ends_at =(datetime .utcnow ()+timedelta (minutes =data ['duration'])).isoformat ()
+        ends_at =(datetime.now(timezone.utc).replace(tzinfo=None)+timedelta (minutes =data ['duration'])).isoformat ()
         f =f'data/giveaways_{guild_id}.json'
         gws ={}
         if os .path .exists (f ):
@@ -4526,7 +4585,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
             from cogs .giveaway import GiveawayView 
             ch =bot .get_channel (int (data ['channel_id']))
             if ch :
-                end_ts =int (datetime .utcnow ().timestamp ())+int (data ['duration'])*60 
+                end_ts =int (datetime.now(timezone.utc).replace(tzinfo=None).timestamp ())+int (data ['duration'])*60 
                 embed =discord .Embed (
                 title ='🎉 ✨ НАЧАЛСЯ ЗАМЕЧАТЕЛЬНЫЙ РОЗЫГРЫШ! ✨ 🎉',
                 description =(
@@ -4617,12 +4676,12 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         import asyncio ,discord 
         if not bot :return jsonify ({'error':'Бот офлайн'})
         data =request .get_json (silent =True )or {}
-        poll_id =str (int (datetime .utcnow ().timestamp ()))
+        poll_id =str (int (datetime.now(timezone.utc).replace(tzinfo=None).timestamp ()))
         f =f'data/polls_{guild_id}.json'
         polls ={}
         if os .path .exists (f ):
             with open (f )as fp :polls =json .load (fp )
-        entry ={'id':poll_id ,'question':data ['question'],'created_at':datetime .utcnow ().isoformat (),
+        entry ={'id':poll_id ,'question':data ['question'],'created_at':datetime.now(timezone.utc).replace(tzinfo=None).isoformat (),
         'options':[{'emoji':o ['emoji'],'text':o ['text'],'votes':0 }for o in data ['options']]}
         polls [poll_id ]=entry 
         with open (f ,'w')as fp :json .dump (polls ,fp ,indent =2 )
@@ -4635,7 +4694,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                 msg =_run_async (ch .send (embed =embed ))
                 for o in data ['options']:
                     try :_run_async (msg .add_reaction (o ['emoji']))
-                    except :pass 
+                    except Exception:pass 
         asyncio .run_coroutine_threadsafe (send (),bot .loop )
         return jsonify ({'success':True })
 
@@ -4655,9 +4714,9 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         cmds ={}
         if os .path .exists (f ):
             with open (f )as fp :cmds =json .load (fp )
-        cmd_id =str (int (datetime .utcnow ().timestamp ()))
+        cmd_id =str (int (datetime.now(timezone.utc).replace(tzinfo=None).timestamp ()))
         cmds [cmd_id ]={'id':cmd_id ,'trigger':data ['trigger'],'response':data ['response'],
-        'type':data .get ('type','text'),'uses':0 ,'created_at':datetime .utcnow ().isoformat ()}
+        'type':data .get ('type','text'),'uses':0 ,'created_at':datetime.now(timezone.utc).replace(tzinfo=None).isoformat ()}
         with open (f ,'w')as fp :json .dump (cmds ,fp ,indent =2 )
         return jsonify ({'success':True })
 
@@ -4688,11 +4747,11 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         msgs ={}
         if os .path .exists (f ):
             with open (f )as fp :msgs =json .load (fp )
-        msg_id =str (int (datetime .utcnow ().timestamp ()))
+        msg_id =str (int (datetime.now(timezone.utc).replace(tzinfo=None).timestamp ()))
         msgs [msg_id ]={'id':msg_id ,'channel_id':data ['channel_id'],'channel_name':'',
         'content':data ['content'],'interval':data ['interval'],
-        'next_run':data .get ('start_time',datetime .utcnow ().isoformat ()),
-        'active':True ,'created_at':datetime .utcnow ().isoformat ()}
+        'next_run':data .get ('start_time',datetime.now(timezone.utc).replace(tzinfo=None).isoformat ()),
+        'active':True ,'created_at':datetime.now(timezone.utc).replace(tzinfo=None).isoformat ()}
         with open (f ,'w')as fp :json .dump (msgs ,fp ,indent =2 )
         return jsonify ({'success':True })
 
@@ -4767,8 +4826,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                         avatar =str (m .display_avatar .url )
                         break 
             data [member_id ]={'name':name ,'avatar':avatar ,'notes':[]}
-        note ={'id':str (int (datetime .utcnow ().timestamp ())),'text':request .get_json (silent =True ).get ('text',''),
-        'author':session .get ('username'),'created_at':datetime .utcnow ().isoformat ()}
+        note ={'id':str (int (datetime.now(timezone.utc).replace(tzinfo=None).timestamp ())),'text':request .get_json (silent =True ).get ('text',''),
+        'author':session .get ('username'),'created_at':datetime.now(timezone.utc).replace(tzinfo=None).isoformat ()}
         data [member_id ]['notes'].append (note )
         with open (f ,'w',encoding ='utf-8')as fp :json .dump (data ,fp ,indent =2 ,ensure_ascii =False )
         return jsonify ({'success':True })
@@ -4824,7 +4883,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                     if data ['action']=='add':await (member .add_roles (action_role ))
                     else :await (member .remove_roles (action_role ))
                     result ['count']+=1 
-                except :pass 
+                except Exception:pass 
         asyncio .run_coroutine_threadsafe (do (),bot .loop ).result (timeout =60 )
         return jsonify ({'success':True ,'count':result ['count']})
 
@@ -4847,7 +4906,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                 try :
                     await (member .send (embed =embed ))
                     result ['count']+=1 
-                except :pass 
+                except Exception:pass 
         asyncio .run_coroutine_threadsafe (do (),bot .loop ).result (timeout =120 )
         return jsonify ({'success':True ,'count':result ['count']})
 
@@ -4870,7 +4929,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                 try :
                     await (member .timeout (discord .utils .utcnow ()+timedelta (minutes =duration ),reason ='Bulk mute'))
                     result ['count']+=1 
-                except :pass 
+                except Exception:pass 
         asyncio .run_coroutine_threadsafe (do (),bot .loop ).result (timeout =120 )
         return jsonify ({'success':True ,'count':result ['count']})
 
@@ -4891,7 +4950,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                 try :
                     await (member .kick (reason ='Bulk kick'))
                     result ['count']+=1 
-                except :pass 
+                except Exception:pass 
         asyncio .run_coroutine_threadsafe (do (),bot .loop ).result (timeout =120 )
         return jsonify ({'success':True ,'count':result ['count']})
 
@@ -4912,7 +4971,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                 try :
                     await (guild .ban (member ,reason ='Bulk ban'))
                     result ['count']+=1 
-                except :pass 
+                except Exception:pass 
         asyncio .run_coroutine_threadsafe (do (),bot .loop ).result (timeout =180 )
         return jsonify ({'success':True ,'count':result ['count']})
 
@@ -5397,9 +5456,9 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                                 'created_at':entry .get ('created_at','')
                                 })
                                 break 
-                            except :
+                            except Exception:
                                 continue 
-                    except :
+                    except Exception:
                     # Сообщение не найдено, только запись veriyi показать
                         result .append ({
                         'id':msg_id ,
@@ -5441,7 +5500,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         import asyncio ,discord 
         if not bot :return jsonify ({'error':'Бот офлайн'})
         data =request .get_json (silent =True )or {}
-        rr_id =str (int (datetime .utcnow ().timestamp ()))
+        rr_id =str (int (datetime.now(timezone.utc).replace(tzinfo=None).timestamp ()))
         f =f'data/rr_{guild_id}.json'
         rrs ={}
         if os .path .exists (f ):
@@ -5473,7 +5532,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                     for e in entries_with_names :
                         if e ['emoji']:
                             try :_run_async (msg .add_reaction (e ['emoji']))
-                            except :pass 
+                            except Exception:pass 
                 rrs [rr_id ]['message_id']=str (msg .id )
                 with open (f ,'w')as fp2 :json .dump (rrs ,fp2 ,indent =2 )
         asyncio .run_coroutine_threadsafe (send (),bot .loop )
@@ -5834,7 +5893,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         if not guild :return jsonify ({'error':'Сервер не найден'})
         data =request .get_json (silent =True )or {}
         backup ={'guild_name':guild .name ,'guild_id':str (guild .id ),
-        'created_at':datetime .utcnow ().strftime ('%Y-%m-%d %H:%M'),'size':'0 KB'}
+        'created_at':datetime.now(timezone.utc).replace(tzinfo=None).strftime ('%Y-%m-%d %H:%M'),'size':'0 KB'}
         if data .get ('role'):
             backup ['role']=[{'name':r .name ,'color':str (r .color ),'permissions':r .permissions .value ,
             'hoist':r .hoist ,'mentionable':r .mentionable }for r in guild .roles if r .name !='@everyone']
@@ -5844,7 +5903,7 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         if data .get ('settings'):
             backup ['settings']={'name':guild .name ,'description':guild .description ,
             'verification_level':str (guild .verification_level )}
-        backup_id =str (int (datetime .utcnow ().timestamp ()))
+        backup_id =str (int (datetime.now(timezone.utc).replace(tzinfo=None).timestamp ()))
         backup ['id']=backup_id 
         import sys 
         backup ['size']=f"{round(sys.getsizeof(json.dumps(backup)) / 1024, 1)} KB"
@@ -6098,10 +6157,10 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         tasks ={}
         if os .path .exists (f ):
             with open (f )as fp :tasks =json .load (fp )
-        task_id =str (int (datetime .utcnow ().timestamp ()))
+        task_id =str (int (datetime.now(timezone.utc).replace(tzinfo=None).timestamp ()))
         tasks [task_id ]={'id':task_id ,'title':title ,'assigned_to':data .get ('assigned_to',''),
         'priority':data .get ('priority','medium'),'status':'pending',
-        'created_by':session .get ('username'),'created_at':datetime .utcnow ().isoformat ()}
+        'created_by':session .get ('username'),'created_at':datetime.now(timezone.utc).replace(tzinfo=None).isoformat ()}
         with open (f ,'w')as fp :json .dump (tasks ,fp ,indent =2 ,ensure_ascii =False )
         return jsonify ({'success':True })
 
@@ -8229,7 +8288,7 @@ def calculate_ai_ticket_stats (guild_id :int )->dict :
         try :
             with open (penalty_file ,'r',encoding ='utf-8')as f :
                 penalties =json .load (f )
-        except :
+        except Exception:
             pass 
 
     guild_penalties =penalties .get (str (guild_id ),{})

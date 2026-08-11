@@ -10,7 +10,7 @@ import os
 import json 
 import asyncio 
 import threading 
-from datetime import datetime 
+from datetime import datetime, timezone
 
 DEEPSEEK_EMAIL =os .getenv ('DEEPSEEK_EMAIL','')
 DEEPSEEK_PASSWORD =os .getenv ('DEEPSEEK_PASSWORD','')
@@ -117,11 +117,11 @@ async def _ask_deepseek_async (prompt :str ,timeout :int =60 )->str :
         await _page .wait_for_timeout (2000 )
 
         # Ждём появления элемента ответа
-        start =datetime .utcnow ()
+        start =datetime.now(timezone.utc).replace(tzinfo=None)
         last_text =''
         stable_count =0 
 
-        while (datetime .utcnow ()-start ).seconds <timeout :
+        while (datetime.now(timezone.utc).replace(tzinfo=None)-start ).seconds <timeout :
             await _page .wait_for_timeout (1000 )
 
             # В конец message bloгunu получить

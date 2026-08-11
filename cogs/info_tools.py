@@ -8,7 +8,7 @@ import math
 import re as _re
 import base64 as _b64
 import ast as _ast
-from datetime import datetime
+from datetime import datetime, timezone
 
 START_TIME = time.time()
 ACCENT = 0xdc143c
@@ -68,7 +68,7 @@ class InfoTools(commands.Cog):
         self.bot = bot
 
     def _embed(self, title, icon=None):
-        e = discord.Embed(title=f"{icon or ''} {title}".strip(), color=ACCENT, timestamp=datetime.utcnow())
+        e = discord.Embed(title=f"{icon or ''} {title}".strip(), color=ACCENT, timestamp=datetime.now(timezone.utc).replace(tzinfo=None))
         return e
 
     @commands.command(name="uptime")
@@ -169,7 +169,7 @@ class InfoTools(commands.Cog):
 
     @commands.command(name="time", aliases=["vakit"])
     async def vakit(self, ctx):
-        ts = int(datetime.utcnow().timestamp())
+        ts = int(datetime.now(timezone.utc).replace(tzinfo=None).timestamp())
         e = self._embed("ТЕКУЩЕЕ ВРЕМЯ", "🕐")
         e.add_field(name="Коротко", value=f"<t:{ts}:t>", inline=True)
         e.add_field(name="Полно", value=f"<t:{ts}:F>", inline=True)
@@ -244,7 +244,7 @@ class InfoTools(commands.Cog):
     async def announce(self, ctx, channel: discord.TextChannel, title: str, *, content: str):
         e = discord.Embed(title=title, description=content, color=ACCENT)
         e.set_footer(text=f"Объявил: {ctx.author.display_name}", icon_url=ctx.author.display_avatar.url)
-        e.timestamp = datetime.utcnow()
+        e.timestamp = datetime.now(timezone.utc).replace(tzinfo=None)
         await channel.send(embed=e)
         await ctx.message.delete()
 

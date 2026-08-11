@@ -449,13 +449,13 @@ def _lb (gid ):
     p =os .path .join ('data',f'leaderboard_{gid}.json')
     try :
         with open (p ,'r',encoding ='utf-8')as f :return json .load (f )
-    except :return {'messages':{},'voice_minutes':{}}
+    except Exception:return {'messages':{},'voice_minutes':{}}
 
 def _vs (gid ):
     p =os .path .join ('data',f'voice_stats_{gid}.json')
     try :
         with open (p ,'r',encoding ='utf-8')as f :return json .load (f )
-    except :return {'users':{}}
+    except Exception:return {'users':{}}
 
 def _rank (sl ,uid ):
     for i ,(u ,_ )in enumerate (sl ):
@@ -494,7 +494,7 @@ class ProfileCog (commands .Cog ):
             lvl =ld .get ('level',1 )if isinstance (ld ,dict )else (ld if isinstance (ld ,int )else 1 )
             xp =points_system .get_points (uid )
             xp_need =100 +(lvl **2 )*50 
-        except :
+        except Exception:
             xp_need =100 +(lvl **2 )*50 
 
         ms =sorted (lb .get ('messages',{}).items (),key =lambda x :x [1 ],reverse =True )

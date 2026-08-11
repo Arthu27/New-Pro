@@ -15,7 +15,7 @@ import os
 import re 
 import time 
 import asyncio 
-from datetime import datetime ,timedelta 
+from datetime import datetime ,timedelta, timezone
 from collections import defaultdict ,Counter 
 
 from logger import get_logger 
@@ -275,7 +275,7 @@ class AIModeration (commands .Cog ):
                         # Log to channel
                 await self ._log_to_channel (guild ,config ,embed ,member ,severity )
             elif action =="mute"and mute_minutes >0 :
-                until =datetime .utcnow ()+timedelta (minutes =mute_minutes )
+                until =datetime.now(timezone.utc).replace(tzinfo=None)+timedelta (minutes =mute_minutes )
                 await member .timeout (until ,reason =f"AI Mod: {reason}")
                 embed =discord .Embed (
                 title =" Временный мут",
@@ -332,7 +332,7 @@ class AIModeration (commands .Cog ):
             return 
         try :
             if channel :
-                embed .timestamp =datetime .utcnow ()
+                embed .timestamp =datetime.now(timezone.utc).replace(tzinfo=None)
                 embed .set_footer (text =f"AI Moderation · {severity}")
                 await channel .send (embed =embed )
         except (discord .Forbidden ,discord .HTTPException ):

@@ -360,7 +360,7 @@ def _get_cloudflared_binary():
             return p
         elif os.path.exists(p):
             try: os.remove(p)
-            except: pass
+            except Exception: pass
 
     sys_cf = shutil.which("cloudflared") or shutil.which("cloudflared.exe")
     if sys_cf and is_valid_exe(sys_cf):
@@ -384,7 +384,7 @@ def _get_cloudflared_binary():
         else:
             print(f"[CLOUDFLARE] Загруженный файл невалиден. Удален: {dest_path}")
             try: os.remove(dest_path)
-            except: pass
+            except Exception: pass
             return None
     except Exception as _e:
         print(f"[CLOUDFLARE] Ошибка автоматической загрузки cloudflared: {_e}")

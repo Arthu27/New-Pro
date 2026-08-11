@@ -21,7 +21,7 @@ import os
 import smtplib
 import threading
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from email.header import Header
 from email.mime.text import MIMEText
 
@@ -127,7 +127,7 @@ def _record_history(event, title, body, channels, link=''):
             'body': body,
             'link': link,
             'channels': channels,
-            'created_at': datetime.utcnow().isoformat(),
+            'created_at': datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
         }, limit=200)
 
 
@@ -139,7 +139,7 @@ def _broadcast_web(title, body, icon, event='', link=''):
         'action': f'{icon} {title}',
         'detail': body,
         'ip': '',
-        'timestamp': datetime.utcnow().isoformat(),
+        'timestamp': datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
         'ts': time.time(),  # float — чтобы бейдж ловил события в ту же секунду, что и просмотр
         'broadcast': True,
         'kind': 'notify',
@@ -160,7 +160,7 @@ def _send_webhook(url, title, body, icon):
                 'description': body[:4000],
                 'color': 0xC8922A,
                 'footer': {'text': 'Aether · Уведомления панели'},
-                'timestamp': datetime.utcnow().isoformat(),
+                'timestamp': datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
             }],
         }
         r = requests.post(url, json=payload, timeout=8)

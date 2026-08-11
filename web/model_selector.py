@@ -5,7 +5,7 @@ import os
 import json 
 import time 
 from typing import Dict ,List ,Optional ,Tuple 
-from datetime import datetime ,timedelta 
+from datetime import datetime ,timedelta, timezone
 
 
 class ModelSelector :
@@ -89,7 +89,7 @@ class ModelSelector :
         'task_type':task_type ,
         'recommended_type':recommended_type ,
         'selected_model':model_name ,
-        'timestamp':datetime .utcnow ().isoformat ()
+        'timestamp':datetime.now(timezone.utc).replace(tzinfo=None).isoformat ()
         })
 
         # Ограничиваем история
@@ -151,7 +151,7 @@ class ModelSelector :
                     data =json .load (f )
                     self .model_stats =data .get ('model_stats',{})
                     self .task_history =data .get ('task_history',[])
-            except :
+            except Exception:
                 pass 
 
     def _save_stats (self ):
@@ -164,7 +164,7 @@ class ModelSelector :
                 'model_stats':self .model_stats ,
                 'task_history':self .task_history [-100 :]# Сохран только son 100
                 },f ,indent =2 )
-        except :
+        except Exception:
             pass 
 
 
