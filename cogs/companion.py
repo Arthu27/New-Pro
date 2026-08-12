@@ -144,7 +144,7 @@ class Companion (commands .Cog ):
             await user .send (message )
             log .info (f'[Companion] DM отправлено → {user.name}')
         except discord .Forbidden :
-            log .info ('[Companion] DM отправл — user DM\'leri закрыт.')
+            log .info ('[Companion] DM не доставлено — личные сообщения пользователя закрыты.')
         except Exception as e :
             log .info (f'[Companion] Ошибка: {e}')
 

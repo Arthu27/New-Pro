@@ -38,14 +38,14 @@ class ProactiveAI (commands .Cog ):
         self .proactive_loop .cancel ()
 
     async def _send_to_owner (self ,message :str ):
-        """Arthur'a DM at"""
+        """Отправить DM владельцу (Arthur)."""
         if not OWNER_ID :
             return 
         try :
             owner =await self .bot .fetch_user (OWNER_ID )
             await owner .send (message )
         except Exception as e :
-            log .info (f'[ProactiveAI] DM Ошибки: {e}')
+            log .info (f'[ProactiveAI] Ошибка DM: {e}')
 
     async def _think_and_ask (self ):
         """Бот размышляет и при нужде спрашивает Артура"""
@@ -74,7 +74,7 @@ class ProactiveAI (commands .Cog ):
             #     morning_msg = _call_text([
             #         {'role': 'system', 'content': (
             #             'Sen Aether, Артуров Discord-бот. '
-            #             'Sabah Arthur\'a краткий, samimi bir день сообщение yaz. '
+            #             'Утром — короткое дружелюбное сообщение дня для Arthur. '
             #             'Сервер statusunu belirt, сегодня для bir что-то sormak istiyorsan sor. '
             #             'Maksimum 3 cюmle. Emoji использовать.'
             #         )},

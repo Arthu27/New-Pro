@@ -664,19 +664,19 @@ class AIChat (commands .Cog ):
                 continue 
             try :
                 await member .send (dm_content )
-                return f' **{member.display_name}**\'e DM отправлено: *{dm_content[:100]}*'
+                return f' DM отправлено → **{member.display_name}**: *{dm_content[:100]}*'
             except discord .Forbidden :
-                return f' **{member.display_name}** DM\'lere закрыт.'
+                return f' **{member.display_name}** — личные сообщения закрыты.'
             except Exception as e :
-                return f' DM отправл: {e}'
+                return f' DM не отправлено: {e}'
 
                 # Участник guild'de найден direkt fetch dene
         try :
             user =await self .bot .fetch_user (target_id )
             await user .send (dm_content )
-            return f' **{user.name}**\'e DM отправлено: *{dm_content[:100]}*'
+            return f' DM отправлено → **{user.name}**: *{dm_content[:100]}*'
         except Exception as e :
-            return f' Пользователь не найден или DM отправл: {e}'
+            return f' Пользователь не найден или DM не отправлено: {e}'
 
     async def _handle_voice_move (self ,text :str ,message :discord .Message )->str :
         """Перемещение по голосовым каналам — один/два шага, вернуть назад, поддержка имени канала"""

@@ -851,7 +851,7 @@ def register ():
                 e .set_footer (text ="Aether Panel • Доверие Запись Система")
                 await user .send (embed =e )
             except Exception as ex :
-                print (f"DM отправл: {ex}")
+                print (f"DM не отправлено: {ex}")
 
         asyncio .run_coroutine_threadsafe (send_dm (),bot_instance .loop )
 
@@ -1058,7 +1058,7 @@ def api_send_notification ():
                 embed .timestamp =datetime.now(timezone.utc).replace(tzinfo=None)
                 await user .send (embed =embed )
             except Exception as e :
-                print (f"DM отправл: {e}")
+                print (f"DM не отправлено: {e}")
         asyncio .run_coroutine_threadsafe (send_dm (),bot_instance .loop )
 
     return jsonify ({'success':True })
@@ -2908,7 +2908,7 @@ def api_forgot_password ():
         asyncio .run_coroutine_threadsafe (send_dm (),bot_instance .loop ).result (timeout =10 )
         return jsonify ({'success':True })
     except Exception as e :
-        return jsonify ({'error':f'DM отправл: {e}'})
+        return jsonify ({'error':f'DM не отправлено: {e}'})
 
 
 @app .route ('/api/reset-password',methods =['POST'])

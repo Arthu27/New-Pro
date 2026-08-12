@@ -185,5 +185,29 @@ archived = len([f for f in os.listdir(os.path.join(ROOT, 'docs', 'devnotes'))
                 if os.path.splitext(f)[1].lower() in ('.md', '.txt')])
 check(archived >= 20, f'в архиве заметок {archived} файлов (19 исторических + README-индекс)')
 
+# ═══ 6. Русские сообщения без обрубков и турецких склонений ═════════════
+# Регресс продакшн-логов: '[Companion] DM отправл — user DM\'leri закрыт.'
+print('== сообщения: никаких «отправл» и турецких вкраплений ==')
+_msg_files = (glob.glob(os.path.join(ROOT, 'cogs/*.py'))
+              + glob.glob(os.path.join(ROOT, 'services/*.py'))
+              + glob.glob(os.path.join(ROOT, 'web/**/*.py'), recursive=True)
+              + glob.glob(os.path.join(ROOT, '*.py')))
+# «отправл» законно только с продолжением е/ё/я/ю (отправлено, отправляет,
+# отправлю…); иначе это обрубленное слово.
+_TRUNCATED = []
+_TURKISH = []
+_TURK_NEEDLES = ("\\'e DM", "\\'a DM", "DM'lere", "DM'leri")
+for f in _msg_files:
+    src = open(f, encoding='utf-8').read()
+    for m in re.finditer('отправл', src):
+        nxt = src[m.end():m.end() + 1]
+        if nxt not in 'еёяюЕЁЯЮ':
+            _TRUNCATED.append(f'{os.path.basename(f)}:{src[:m.start()].count(chr(10)) + 1}')
+    for _n in _TURK_NEEDLES:
+        if _n in src:
+            _TURKISH.append(f'{os.path.basename(f)}:{_n!r}')
+check(not _TRUNCATED, f'нет обрубленных «отправл» ({_TRUNCATED[:3] or "чисто"})')
+check(not _TURKISH, f'нет турецких склонений в русских строках ({_TURKISH[:3] or "чисто"})')
+
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(0 if FAIL == 0 else 1)
