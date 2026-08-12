@@ -234,7 +234,50 @@ kbd {
 }
 .wn-link:hover::after { width: 100%; }
 
-/* ── 15. Уважение к reduced motion ─────────────────────────── */
+/* ── 15. Мобильный проход ──────────────────────────────────── */
+/* затемнение под выезжающим меню + лок прокрутки фона */
+.sidebar-backdrop {
+  position: fixed; inset: 0; z-index: 95;
+  background: rgba(0, 0, 0, .45);
+  backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
+  opacity: 0; pointer-events: none; transition: opacity .25s var(--ease);
+}
+.sidebar-backdrop.show { opacity: 1; pointer-events: auto; }
+body.sb-open { overflow: hidden; }
+
+@media (max-width: 900px) {
+  .mobile-menu { backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); box-shadow: var(--shadow-md); }
+  .navbar-clock { display: none; }                 /* место дороже чем секунды */
+  .navbar h1 i { font-size: 15px; }
+  .page-hero.compact { padding: 14px 16px; }
+  .toast, .ac-toast { left: 14px; right: 14px; bottom: 14px; text-align: center; }
+  /* iOS: поля <16px зумятся при фокусе — отключаем зум крупным шрифтом */
+  input, select, textarea { font-size: 16px !important; }
+  /* место под нижнюю «бровь» браузера */
+  .main-content { padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px)); }
+  .ac-savebar { padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px)); }
+  table th, table td { padding: 9px 10px !important; }
+}
+
+@media (pointer: coarse) {
+  /* зоны касания по гайдлайнам (≈40px+) */
+  .nav-link { padding: 11px 12px; }
+  .nav-group-title { padding: 11px 12px; }
+  .nav-icon-btn, .theme-toggle, .activity-btn { min-width: 40px; min-height: 40px; }
+  .user-pill { min-height: 42px; }
+  .ac-switch { width: 50px; height: 28px; }
+  .ac-switch span::before { width: 22px; height: 22px; }
+  .ac-switch input:checked + span::before { transform: translateX(22px); }
+}
+
+@media (max-width: 520px) {
+  .navbar { gap: 10px; }
+  .navbar h1 { font-size: 15px !important; }
+  .navbar h1::before { height: 18px !important; }
+  .ac-metrics { grid-template-columns: 1fr 1fr; }
+}
+
+/* ── 16. Уважение к reduced motion ─────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   .main-content > * { animation: none !important; }
   .page-hero::after, .page-hero h1 { animation: none !important; }

@@ -137,7 +137,24 @@ check(r.status_code == 200 and 'Login polish' in r.get_data(as_text=True),
 check('.msg.ok' in css and '.msg.err' in css and '.msg.info' in css,
       'polish.css: глобальные .msg-оповещения (ok/err/info)')
 base_now = open(os.path.join(ROOT, 'web', 'templates', 'base.html'), encoding='utf-8').read()
-check('v=3' in base_now, 'base.html: кэш polish.css сброшен (v=3)')
+check('v=4' in base_now, 'base.html: кэш polish.css сброшен (v=4)')
+
+# ═══ 6. Мобильный проход (v4) ═════════════════════════════════════════════
+print('== v4: мобильный проход ==')
+check('.sidebar-backdrop' in css and 'body.sb-open' in css,
+      'v4: бэкдроп + лок скрола под меню')
+check('pointer: coarse' in css, 'v4: увеличенные тач-зоны для пальцев')
+check('font-size: 16px !important' in css, 'v4: анти-зум iOS у полей ввода')
+check('safe-area-inset-bottom' in css, 'v4: учтена бровь-безопасная зона')
+check('.navbar-clock' in css and 'display: none' in css, 'v4: часы прячутся на мобиле')
+check('.ac-metrics' in css, 'v4: мелкая сетка метрик на телефоне')
+
+check("id = 'sidebarBackdrop'" in base_now or "id='sidebarBackdrop'" in base_now
+      or "bd.id = 'sidebarBackdrop'" in base_now, 'v4: JS создаёт бэкдроп')
+check("e.key === 'Escape'" in base_now, 'v4: Esc закрывает меню')
+check("sb.querySelectorAll('.nav-link')" in base_now, 'v4: тап по ссылке закрывает меню')
+check('fa-xmark' in base_now, 'v4: кнопка меню превращается в крестик')
+check('sb-open' in base_now, 'v4: JS ставит класс лок-скролла')
 
 # ═══ 5. Общие компоненты + лендинг (v3) ═══════════════════════════════════
 print('== v3: компоненты и лендинг ==')

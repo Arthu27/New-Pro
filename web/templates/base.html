@@ -6,7 +6,7 @@
     <title>{% block title %}Панель Aether{% endblock %}</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/static/style.css?v=12">
-    <link rel="stylesheet" href="/static/polish.css?v=3">
+    <link rel="stylesheet" href="/static/polish.css?v=4">
     <script>
       // Apply theme + accent before render to prevent FOUC
       (function(){
@@ -374,14 +374,35 @@ window.renderSafe = function (renderFn) {
   document.addEventListener('keydown', onKey);
 })();
 
-// Mobile menu
+// Mobile menu (с бэкдропом, лок-скроллом и Esc)
 document.addEventListener('DOMContentLoaded', function () {
   var btn = document.getElementById('mobileMenu');
   var sb  = document.getElementById('sidebar');
   if (btn && sb) {
-    btn.addEventListener('click', function (e) { e.stopPropagation(); sb.classList.toggle('open'); });
+    var bd = document.createElement('div');
+    bd.className = 'sidebar-backdrop';
+    bd.id = 'sidebarBackdrop';
+    document.body.appendChild(bd);
+    function setOpen(open) {
+      sb.classList.toggle('open', open);
+      bd.classList.toggle('show', open);
+      document.body.classList.toggle('sb-open', open);
+      var ic = btn.querySelector('i');
+      if (ic) ic.className = open ? 'fas fa-xmark' : 'fas fa-bars';
+    }
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      setOpen(!sb.classList.contains('open'));
+    });
+    bd.addEventListener('click', function () { setOpen(false); });
     document.addEventListener('click', function (e) {
-      if (sb.classList.contains('open') && !sb.contains(e.target) && e.target !== btn) sb.classList.remove('open');
+      if (sb.classList.contains('open') && !sb.contains(e.target) && e.target !== btn) setOpen(false);
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && sb.classList.contains('open')) setOpen(false);
+    });
+    sb.querySelectorAll('.nav-link').forEach(function (a) {
+      a.addEventListener('click', function () { setOpen(false); });
     });
   }
 });
