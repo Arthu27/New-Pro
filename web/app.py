@@ -464,17 +464,19 @@ def _load_owner_credentials ():
     except Exception :
         saved =None 
     if isinstance (saved ,dict )and saved .get ('user')==user and saved .get ('password_hash'):
-        return user ,saved ['password_hash'],False 
+        return user ,saved ['password_hash'],bool (saved .get ('must_change_password'))
     env_pw =(os .environ .get ('PANEL_PASSWORD','')or '').strip ()
     if env_pw :
         return user ,_hash_pw (env_pw ),False 
     # Ничего не задано — генерируем надёжный случайный пароль и сохраняем его
     # (раньше здесь был небезопасный пароль по умолчанию "123").
+    # must_change_password=True: первый вход = принудительная смена пароля.
     import secrets as _secrets 
     gen =_secrets .token_urlsafe (12 )
     pw_hash =_hash_pw (gen )
     try :
-        _store .atomic_write_json (_OWNER_CRED_PATH ,{'user':user ,'password_hash':pw_hash })
+        _store .atomic_write_json (_OWNER_CRED_PATH ,{'user':user ,'password_hash':pw_hash ,
+                                                      'must_change_password':True })
         _store .invalidate_path (_OWNER_CRED_PATH )
         os .makedirs ('data',exist_ok =True )
         with open ('data/panel_credentials.txt','w',encoding ='utf-8')as f :
@@ -491,8 +493,9 @@ def _load_owner_credentials ():
     print (f'[БЕЗОПАСНОСТЬ]   Пользователь: {user}')
     print (f'[БЕЗОПАСНОСТЬ]   Пароль: {gen}')
     print ('[БЕЗОПАСНОСТЬ] Он также записан в data/panel_credentials.txt')
+    print ('[БЕЗОПАСНОСТЬ] При первом входе панель потребует сменить пароль.')
     print ('='*70 )
-    return user ,pw_hash ,False 
+    return user ,pw_hash ,True 
 
 _owner_user ,_owner_pw_hash ,_owner_using_default_pw =_load_owner_credentials ()
 
@@ -500,6 +503,43 @@ _owner_user ,_owner_pw_hash ,_owner_using_default_pw =_load_owner_credentials ()
 USERS ={
 _owner_user :{'password_hash':_owner_pw_hash ,'role':'owner'},
 }
+
+# ── Принудительная смена пароля при первом входе ────────────────────────────
+# При автогенерации пароля в panel_credentials.json пишется
+# must_change_password=true — пока owner не сменит пароль, панель впускает
+# только на /change-password (+logout/сама смена). Флаг живёт в json-записи,
+# читается динамически: тесты и живые правки подхватываются без рестарта.
+def owner_must_change_password ():
+    """Надо ли owner'у принудительно сменить пароль (первый вход)."""
+    rec =_read_owner_record ()
+    return bool (rec .get ('must_change_password'))
+
+def set_must_change_password (flag :bool ):
+    """Выставить/сбросить флаг форс-смены, остальные поля записи сохраняются."""
+    rec =_read_owner_record ()
+    if not rec :
+        return False 
+    rec ['must_change_password']=bool (flag )
+    _store .atomic_write_json (_OWNER_CRED_PATH ,rec )
+    _store .invalidate_path (_OWNER_CRED_PATH )
+    return True 
+
+def complete_owner_password_change (new_password ):
+    """Смена пароля owner'а: свежий scrypt-хэш в json + USERS, флаг снят,
+    txt-подсказка с протухшим сгенерированным паролем удаляется."""
+    rec =_read_owner_record ()
+    rec ['user']=_owner_user 
+    rec ['password_hash']=_hash_pw (new_password )
+    rec ['must_change_password']=False 
+    _store .atomic_write_json (_OWNER_CRED_PATH ,rec )
+    _store .invalidate_path (_OWNER_CRED_PATH )
+    USERS [_owner_user ]['password_hash']=rec ['password_hash']
+    try :
+        if os .path .exists ('data/panel_credentials.txt'):
+            os .remove ('data/panel_credentials.txt')
+    except OSError as _e :
+        _log .debug ('complete_owner_password_change: txt cleanup: %s',_e )
+    return True 
 
 # Примечание: _pw_is_hash / _pw_matches / _hash_pw определены выше,
 # рядом с загрузкой учётных данных (см. блок «Хэширование паролей»).
@@ -581,6 +621,16 @@ def login_required (f ):
     def decorated_function (*args ,**kwargs ):
         if 'logged_in'not in session :
             return redirect (url_for ('login'))
+            # Форс-смена пароля owner'а при первом входе: впускаем только
+            # на страницу смены пароля и служебные эндпоинты.
+        if session .get ('role')=='owner'and owner_must_change_password ():
+            _ep =request .endpoint or ''
+            _allowed ={'change_password_page','api_user_change_password','logout','favicon'}
+            if _ep not in _allowed :
+                if request .path .startswith ('/api/'):
+                    return jsonify ({'error':'Сначала смените пароль',
+                                     'must_change_password':True }),403 
+                return redirect (url_for ('change_password_page'))
             # Каждые 5 минут обновлять роль из Discord (кроме владельца)
         discord_id =session .get ('discord_id')
         if discord_id and session .get ('role')!='owner':
@@ -662,6 +712,8 @@ def health_check ():
 def index ():
     if 'logged_in'not in session :
         return render_template ('welcome.html')
+    if session .get ('role')=='owner'and owner_must_change_password ():
+        return redirect (url_for ('change_password_page'))
     if session .get ('role')=='uye':
         return render_template ('member_dashboard.html',role =session .get ('role'),username =session .get ('username'))
     return render_template ('dashboard.html',role =session .get ('role'),username =session .get ('username'))
@@ -724,6 +776,8 @@ def login ():
             session ['role']=USERS [username ]['role']
             _save_login_token (username ,USERS [username ]['role'])
             _log_login (username ,'owner',None ,None )
+            if owner_must_change_password ():
+                return redirect (url_for ('change_password_page'))
             return redirect (url_for ('index'))
 
             # Вход участника (по Discord ID) — роль определяется автоматически из Discord

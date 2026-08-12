@@ -55,6 +55,8 @@ check(json.load(open(todo.PATH, encoding='utf-8')), 'todo: файл на дис�
 # ═══ 2. Панель: доступы ══════════════════════════════════════════════════
 print('== панель: доступы страниц ==')
 from web.app import app as _flask_app, set_bot_instance  # noqa: E402
+import web.app as _wa  # noqa: E402
+_wa.set_must_change_password(False)  # стенд: форс-смена пароля первого входа выкл.
 
 
 class FakeGuild:

@@ -128,12 +128,14 @@ def register(ctx):
         if not old_pass or not new_pass or len (new_pass )<6 :
             return jsonify ({'error':'Неверные данные'})
 
-            # Owner контроль (USERS dict'inden)
+            # Owner контроль (USERS dict'inden) — по солёному хэшу,
+            # запись уходит в panel_credentials.json (переживает рестарт)
         username =session .get ('username')
         if username in USERS :
-            if USERS [username ]['password']!=old_pass :
+            from web .app import _pw_matches ,complete_owner_password_change 
+            if not _pw_matches (USERS [username ].get ('password_hash'),old_pass ):
                 return jsonify ({'error':'Текущий пароль неверен'})
-            USERS [username ]['password']=new_pass 
+            complete_owner_password_change (new_pass )
             return jsonify ({'success':True })
 
             # Normal участник — По Discord ID ara
@@ -157,10 +159,11 @@ def register(ctx):
 
         if not member_key :
             return jsonify ({'error':'Пользователь не найден'})
-        if members [member_key ].get ('password')!=old_pass :
+        from web .app import _pw_matches ,_hash_pw 
+        if not _pw_matches (members [member_key ].get ('password'),old_pass ):
             return jsonify ({'error':'Текущий пароль неверен'})
 
-        members [member_key ]['password']=new_pass 
+        members [member_key ]['password']=_hash_pw (new_pass )
         with open (members_file ,'w',encoding ='utf-8')as f :
             _json .dump (members ,f ,indent =2 ,ensure_ascii =False )
         return jsonify ({'success':True })
