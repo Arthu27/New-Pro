@@ -366,79 +366,13 @@ def _pw_is_strong (value ):
     """Современный солёный хэш werkzeug (scrypt:/pbkdf2:)?"""
     return isinstance (value ,str )and value .startswith (('scrypt:','pbkdf2:'))
 
-# ── TOTP 2FA (Google Authenticator и т.п.) ──────────────────────────────────
-# Секрет хранится: у owner — в data/panel_credentials.json (totp_secret),
-# у участника — в его записи data/members.json. Пароль меняется — секрет живёт.
 def _read_owner_record ():
-    """Вся запись владельца (не только пароль): user, password_hash, totp_secret..."""
+    """Вся запись владельца (не только пароль): user, password_hash и т.д."""
     try :
         rec =_store .read_json (_OWNER_CRED_PATH ,default ={})
         return rec if isinstance (rec ,dict )else {}
     except Exception :
         return {}
-
-def _totp_identity ():
-    """(kind, key) текущего вошедшего: 'owner' + имя в USERS или 'member' + discord_id."""
-    uname =session .get ('username')
-    if session .get ('role')=='owner'and uname in USERS :
-        return 'owner',uname
-    did =session .get ('discord_id')
-    if did :
-        return 'member',str (did )
-    return 'member',uname 
-
-def _get_totp_secret (kind ,key ):
-    """Секрет TOTP или пустая строка."""
-    if not key :
-        return ''
-    try :
-        if kind =='owner':
-            rec =_read_owner_record ()
-            if rec .get ('user')==key :
-                return rec .get ('totp_secret')or ''
-            return ''
-        mf ='data/members.json'
-        if os .path .exists (mf ):
-            with open (mf ,'r',encoding ='utf-8')as f :
-                members =json .load (f )
-            rec =members .get (str (key ))
-            if isinstance (rec ,dict ):
-                return rec .get ('totp_secret')or ''
-    except Exception as _ex:
-        _log.debug("_get_totp_secret(): подавлено: %s", _ex)
-    return ''
-
-def _set_totp_secret (kind ,key ,secret ):
-    """Включить (secret) или выключить (None) TOTP. Прочие поля записи
-    (пароль и т.д.) сохраняются нетронутыми."""
-    if kind =='owner':
-        rec =_read_owner_record ()
-        rec ['user']=key 
-        # если записи ещё не было — подложим текущий пароль, иначе при
-        # следующем запуске пароль owner сбросится на сгенерированный!
-        if 'password_hash' not in rec and key in USERS :
-            rec ['password_hash']=USERS [key ].get ('password_hash')
-        if secret :
-            rec ['totp_secret']=secret 
-        else :
-            rec .pop ('totp_secret',None )
-        _store .atomic_write_json (_OWNER_CRED_PATH ,rec )
-        _store .invalidate_path (_OWNER_CRED_PATH )
-        return True
-    mf ='data/members.json'
-    if not os .path .exists (mf ):
-        return False
-    with open (mf ,'r',encoding ='utf-8')as f :
-        members =json .load (f )
-    if str (key )not in members :
-        return False
-    if secret :
-        members [str (key )]['totp_secret']=secret 
-    else :
-        members [str (key )].pop ('totp_secret',None )
-    with open (mf ,'w',encoding ='utf-8')as f :
-        json .dump (members ,f ,indent =2 ,ensure_ascii =False )
-    return True
 
 def _pw_matches (stored ,plain ):
     """Проверка пароля: новые солёные хэши + старые sha256 + древний plaintext.
@@ -457,6 +391,10 @@ def _pw_matches (stored ,plain ):
         return stored ==_sha256_legacy (plain )
     return stored ==plain 
 
+# Поля-реликты удалённых механик (форс-смена пароля, TOTP 2FA) — при первом
+# же старте стираем их из сохранённой записи, чтобы файл не тащил хвосты.
+_OWNER_RECORD_LEGACY_KEYS =('must_change_password','totp_secret')
+
 def _load_owner_credentials ():
     user =(os .environ .get ('PANEL_USER','owner')or 'owner').strip ()or 'owner'
     try :
@@ -464,24 +402,31 @@ def _load_owner_credentials ():
     except Exception :
         saved =None 
     if isinstance (saved ,dict )and saved .get ('user')==user and saved .get ('password_hash'):
-        return user ,saved ['password_hash'],bool (saved .get ('must_change_password'))
+        if any (k in saved for k in _OWNER_RECORD_LEGACY_KEYS ):
+            for _k in _OWNER_RECORD_LEGACY_KEYS :
+                saved .pop (_k ,None )
+            try :
+                _store .atomic_write_json (_OWNER_CRED_PATH ,saved )
+                _store .invalidate_path (_OWNER_CRED_PATH )
+            except Exception as _ex:
+                _log.debug("_load_owner_credentials(): подавлено: %s", _ex)
+        return user ,saved ['password_hash']
     env_pw =(os .environ .get ('PANEL_PASSWORD','')or '').strip ()
     if env_pw :
-        return user ,_hash_pw (env_pw ),False 
+        return user ,_hash_pw (env_pw )
     # Ничего не задано — генерируем надёжный случайный пароль и сохраняем его
     # (раньше здесь был небезопасный пароль по умолчанию "123").
-    # must_change_password=True: первый вход = принудительная смена пароля.
     import secrets as _secrets 
     gen =_secrets .token_urlsafe (12 )
     pw_hash =_hash_pw (gen )
     try :
-        _store .atomic_write_json (_OWNER_CRED_PATH ,{'user':user ,'password_hash':pw_hash ,
-                                                      'must_change_password':True })
+        _store .atomic_write_json (_OWNER_CRED_PATH ,{'user':user ,'password_hash':pw_hash })
         _store .invalidate_path (_OWNER_CRED_PATH )
         os .makedirs ('data',exist_ok =True )
         with open ('data/panel_credentials.txt','w',encoding ='utf-8')as f :
             f .write (f'Aether Panel — первый вход\nПользователь: {user}\nПароль: {gen}\n'
-                      'После входа смените пароль в панели или задайте PANEL_PASSWORD в .env\n')
+                      'Пароль можно сменить в панели (Профиль → Сменить пароль) '
+                      'или задать PANEL_PASSWORD в .env\n')
         try :
             os .chmod ('data/panel_credentials.txt',0o600 )
         except OSError as _ex:
@@ -493,44 +438,26 @@ def _load_owner_credentials ():
     print (f'[БЕЗОПАСНОСТЬ]   Пользователь: {user}')
     print (f'[БЕЗОПАСНОСТЬ]   Пароль: {gen}')
     print ('[БЕЗОПАСНОСТЬ] Он также записан в data/panel_credentials.txt')
-    print ('[БЕЗОПАСНОСТЬ] При первом входе панель потребует сменить пароль.')
+    print ('[БЕЗОПАСНОСТЬ] Сменить пароль можно в любой момент: Профиль → Сменить пароль.')
     print ('='*70 )
-    return user ,pw_hash ,True 
+    return user ,pw_hash 
 
-_owner_user ,_owner_pw_hash ,_owner_using_default_pw =_load_owner_credentials ()
+_owner_user ,_owner_pw_hash =_load_owner_credentials ()
 
 # Единственный зафиксированный пользователь-владелец
 USERS ={
 _owner_user :{'password_hash':_owner_pw_hash ,'role':'owner'},
 }
 
-# ── Принудительная смена пароля при первом входе ────────────────────────────
-# При автогенерации пароля в panel_credentials.json пишется
-# must_change_password=true — пока owner не сменит пароль, панель впускает
-# только на /change-password (+logout/сама смена). Флаг живёт в json-записи,
-# читается динамически: тесты и живые правки подхватываются без рестарта.
-def owner_must_change_password ():
-    """Надо ли owner'у принудительно сменить пароль (первый вход)."""
-    rec =_read_owner_record ()
-    return bool (rec .get ('must_change_password'))
-
-def set_must_change_password (flag :bool ):
-    """Выставить/сбросить флаг форс-смены, остальные поля записи сохраняются."""
-    rec =_read_owner_record ()
-    if not rec :
-        return False 
-    rec ['must_change_password']=bool (flag )
-    _store .atomic_write_json (_OWNER_CRED_PATH ,rec )
-    _store .invalidate_path (_OWNER_CRED_PATH )
-    return True 
-
+# ── Смена пароля владельца (только по желанию, из панели) ──────────────────
 def complete_owner_password_change (new_password ):
-    """Смена пароля owner'а: свежий scrypt-хэш в json + USERS, флаг снят,
-    txt-подсказка с протухшим сгенерированным паролем удаляется."""
+    """Смена пароля owner'а: свежий scrypt-хэш в json + USERS (работает без
+    рестарта), txt-подсказка с протухшим сгенерированным паролем удаляется."""
     rec =_read_owner_record ()
     rec ['user']=_owner_user 
     rec ['password_hash']=_hash_pw (new_password )
-    rec ['must_change_password']=False 
+    for _k in _OWNER_RECORD_LEGACY_KEYS :
+        rec .pop (_k ,None )
     _store .atomic_write_json (_OWNER_CRED_PATH ,rec )
     _store .invalidate_path (_OWNER_CRED_PATH )
     USERS [_owner_user ]['password_hash']=rec ['password_hash']
@@ -621,16 +548,6 @@ def login_required (f ):
     def decorated_function (*args ,**kwargs ):
         if 'logged_in'not in session :
             return redirect (url_for ('login'))
-            # Форс-смена пароля owner'а при первом входе: впускаем только
-            # на страницу смены пароля и служебные эндпоинты.
-        if session .get ('role')=='owner'and owner_must_change_password ():
-            _ep =request .endpoint or ''
-            _allowed ={'change_password_page','api_user_change_password','logout','favicon'}
-            if _ep not in _allowed :
-                if request .path .startswith ('/api/'):
-                    return jsonify ({'error':'Сначала смените пароль',
-                                     'must_change_password':True }),403 
-                return redirect (url_for ('change_password_page'))
             # Каждые 5 минут обновлять роль из Discord (кроме владельца)
         discord_id =session .get ('discord_id')
         if discord_id and session .get ('role')!='owner':
@@ -712,8 +629,6 @@ def health_check ():
 def index ():
     if 'logged_in'not in session :
         return render_template ('welcome.html')
-    if session .get ('role')=='owner'and owner_must_change_password ():
-        return redirect (url_for ('change_password_page'))
     if session .get ('role')=='uye':
         return render_template ('member_dashboard.html',role =session .get ('role'),username =session .get ('username'))
     return render_template ('dashboard.html',role =session .get ('role'),username =session .get ('username'))
@@ -761,23 +676,12 @@ def login ():
         # Только зафиксированный пользователь-владелец
         # Сравнение через _pw_matches: хэш солёный (scrypt), == не подходит
         if username in USERS and _pw_matches (USERS [username ].get ('password_hash'),password ):
-            _totp =_get_totp_secret ('owner',username )
-            if _totp :
-                # Включена TOTP 2FA — после пароля требуем код из приложения
-                import secrets as _secrets
-                _tok =_secrets .token_hex (16 )
-                PENDING_2FA [_tok ]={'username':username ,'role':USERS [username ]['role'],
-                'code':None ,'totp_secret':_totp ,'discord_id':None ,
-                'expires':datetime.now(timezone.utc).replace(tzinfo=None).timestamp ()+300 }
-                return redirect (url_for ('two_factor',token =_tok ))
             session .permanent =True 
             session ['logged_in']=True 
             session ['username']=username 
             session ['role']=USERS [username ]['role']
             _save_login_token (username ,USERS [username ]['role'])
             _log_login (username ,'owner',None ,None )
-            if owner_must_change_password ():
-                return redirect (url_for ('change_password_page'))
             return redirect (url_for ('index'))
 
             # Вход участника (по Discord ID) — роль определяется автоматически из Discord
@@ -802,15 +706,6 @@ def login ():
                     members [discord_id ]['role']=live_role 
                     with open (members_file ,'w',encoding ='utf-8')as f :
                         json .dump (members ,f ,indent =2 ,ensure_ascii =False )
-                _totp =_get_totp_secret ('member',discord_id )
-                if _totp :
-                    # Включена TOTP 2FA — код из приложения вместо сессии
-                    import secrets as _secrets
-                    _tok =_secrets .token_hex (16 )
-                    PENDING_2FA [_tok ]={'username':members [discord_id ]['display_name'],'role':live_role ,
-                    'code':None ,'totp_secret':_totp ,'discord_id':discord_id ,
-                    'expires':datetime.now(timezone.utc).replace(tzinfo=None).timestamp ()+300 }
-                    return redirect (url_for ('two_factor',token =_tok ))
                 session .permanent =True 
                 session ['logged_in']=True 
                 session ['username']=members [discord_id ]['display_name']
@@ -831,45 +726,6 @@ def login ():
 
     # Geчici проверка kodlarы {discord_id: {code, data}}
 PENDING_VERIFICATIONS ={}
-
-# 2FA — ожидающие сессии {session_token: {username, roles, expires}}
-PENDING_2FA ={}
-
-def _require_2fa (username ,roles ):
-    """2FA kodu создать ve DM отправить, token вернуть"""
-    import secrets 
-    token =secrets .token_hex (16 )
-    code =''.join ([str (random .randint (0 ,9 ))for _ in range (6 )])
-    expires =datetime.now(timezone.utc).replace(tzinfo=None).timestamp ()+300 # 5 minutes
-    PENDING_2FA [token ]={'username':username ,'role':roles ,'code':code ,'expires':expires }
-
-    # Discord DM отправить
-    if bot_instance :
-        members_file ='data/members.json'
-        discord_id =None 
-        if os .path .exists (members_file ):
-            with open (members_file ,'r',encoding ='utf-8')as f :
-                members =json .load (f )
-            for did ,m in members .items ():
-                if m .get ('name')==username or m .get ('display_name')==username :
-                    discord_id =did 
-                    break 
-
-        if discord_id :
-            async def send_2fa ():
-                try :
-                    user =await bot_instance .fetch_user (int (discord_id ))
-                    embed =discord .Embed (
-                    title =' Panel Вход Проверка',
-                    description =f'Ваш код проверки: **`{code}`**\n\nКод действует 5 минут.\nЕсли вы не входили в панель — проигнорируйте это сообщение.',
-                    color =0xDC143C 
-                    )
-                    await user .send (embed =embed )
-                except Exception as _ex:
-                    _log.debug("send_2fa(): подавлено: %s", _ex)
-            asyncio .run_coroutine_threadsafe (send_2fa (),bot_instance .loop )
-
-    return token ,code 
 
 @app .route ('/register',methods =['GET','POST'])
 def register ():
@@ -1026,118 +882,10 @@ def announcements ():
         return redirect (url_for ('index'))
     return render_template ('announcements.html',role =session .get ('role'),username =session .get ('username'))
 
-@app .route ('/2fa',methods =['GET','POST'])
-def two_factor ():
-    token =request .args .get ('token')or request .form .get ('token')
-    if not token or token not in PENDING_2FA :
-        return redirect (url_for ('login'))
-
-    pending =PENDING_2FA [token ]
-    if datetime.now(timezone.utc).replace(tzinfo=None).timestamp ()>pending ['expires']:
-        del PENDING_2FA [token ]
-        return render_template ('login.html',error ='Время проверки истекло, выполните вход заново.')
-
-    if request .method =='POST':
-        code =request .form .get ('code','').strip ()
-        _secret =pending .get ('totp_secret')
-        if _secret :
-            # TOTP 2FA: код из приложения (Google Authenticator и т.п.)
-            try :
-                import pyotp 
-                _ok =pyotp .TOTP (_secret ).verify (code ,valid_window =1)
-            except Exception :
-                _ok =False 
-        else :
-            _ok =(code ==pending .get ('code'))
-        if _ok :
-            session .permanent =True 
-            session ['logged_in']=True 
-            session ['username']=pending ['username']
-            session ['role']=pending ['role']
-            if pending .get ('discord_id'):
-                session ['discord_id']=pending ['discord_id']
-            del PENDING_2FA [token ]
-            _log_panel_action ('2FA_LOGIN',pending ['username'])
-            return redirect (url_for ('index'))
-        _throttle_failed_login (pending .get ('username'))
-        return render_template ('login.html',two_fa =True ,token =token ,error ='Неверный код!')
-
-    return render_template ('login.html',two_fa =True ,token =token )
-
 @app .route ('/logout')
 def logout ():
     session .clear ()
     return redirect (url_for ('login'))
-
-# ── TOTP 2FA: настройка из панели (QR + подтверждение кодом) ───────────────
-@app .route ('/api/2fa/totp/status')
-@login_required 
-def api_totp_status ():
-    kind ,key =_totp_identity ()
-    return jsonify ({'success':True ,'enabled':bool (_get_totp_secret (kind ,key ))})
-
-@app .route ('/api/2fa/totp/begin',methods =['POST'])
-@login_required 
-def api_totp_begin ():
-    """Создать новый секрет и QR-код (2FA ещё НЕ включена — только после
-    подтверждения кодом в /enable)."""
-    try :
-        import pyotp 
-    except ImportError :
-        return jsonify ({'success':False ,'error':'pyotp не установлен (pip install pyotp)'}),500 
-    import secrets as _secrets
-    secret =pyotp .random_base32 ()
-    session ['totp_pending_secret']=secret 
-    session ['totp_pending_ts']=datetime.now(timezone.utc).replace(tzinfo=None).timestamp ()
-    uri =pyotp .totp .TOTP (secret ).provisioning_uri (
-    name =str (session .get ('username')or 'aether'),issuer_name ='Aether Panel')
-    qr_data =''
-    try :
-        import qrcode ,base64 ,io as _io
-        img =qrcode .make (uri )
-        buf =_io .BytesIO ()
-        img .save (buf ,format ='PNG')
-        qr_data ='data:image/png;base64,'+base64 .b64encode (buf .getvalue ()).decode ('ascii')
-    except Exception as e :
-        print (f'[TOTP] QR не сгенерирован: {e}')
-    return jsonify ({'success':True ,'secret':secret ,'uri':uri ,'qr':qr_data })
-
-@app .route ('/api/2fa/totp/enable',methods =['POST'])
-@login_required 
-def api_totp_enable ():
-    """Включить 2FA: подтверждение кодом из приложения (секрет ещё не доверен)."""
-    secret =session .get ('totp_pending_secret')
-    ts =session .get ('totp_pending_ts')or 0 
-    code =((request .get_json (silent =True )or {}).get ('code')or '').strip ()
-    if not secret or datetime.now(timezone.utc).replace(tzinfo=None).timestamp ()-ts >600 :
-        return jsonify ({'success':False ,'error':'Секрет устарел — нажмите «Подключить» заново'}),400 
-    import pyotp 
-    if not code or not pyotp .TOTP (secret ).verify (code ,valid_window =1):
-        return jsonify ({'success':False ,'error':'Код не подошёл. Проверьте время на телефоне.'}),400 
-    kind ,key =_totp_identity ()
-    _set_totp_secret (kind ,key ,secret )
-    session .pop ('totp_pending_secret',None )
-    session .pop ('totp_pending_ts',None )
-    _log_panel_action ('TOTP_ENABLE',str (key ))
-    return jsonify ({'success':True })
-
-@app .route ('/api/2fa/totp/disable',methods =['POST'])
-@login_required 
-def api_totp_disable ():
-    """Выключить 2FA — только с валидным текущим кодом (защита от случайного
-    отключения угнанной сессией)."""
-    data =request .get_json (silent =True )or {}
-    code =(data .get ('code')or '').strip ()
-    kind ,key =_totp_identity ()
-    sec =_get_totp_secret (kind ,key )
-    if not sec :
-        return jsonify ({'success':False ,'error':'2FA не включена'}),400 
-    import pyotp 
-    if not pyotp .TOTP (sec ).verify (code ,valid_window =1):
-        return jsonify ({'success':False ,'error':'Неверный код'}),400 
-    _set_totp_secret (kind ,key ,None )
-    _log_panel_action ('TOTP_DISABLE',str (key ))
-    return jsonify ({'success':True })
 
 @app .route ('/api/add-member',methods =['POST'])
 @login_required 
@@ -2392,8 +2140,8 @@ def api_change_password ():
         USERS [target ]['password_hash']=_hash_pw (new_pass )
         try :
             os .makedirs ('data',exist_ok =True )
-            # Читаем всю запись и меняем только пароль — иначе смена пароля
-            # стирала бы totp_secret (2FA) владельца!
+            # Читаем всю запись и меняем только пароль — прочие поля записи
+            # владельца остаются нетронутыми.
             rec =_read_owner_record ()
             rec ['user']=target 
             rec ['password_hash']=USERS [target ]['password_hash']

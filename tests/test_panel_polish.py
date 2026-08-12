@@ -74,8 +74,6 @@ check(i_style != -1 and i_style < i_polish, 'слой подключён ПОС�
 # ═══ 3. Страницы рендерятся со слоем ═════════════════════════════════════
 print('== страницы ==')
 from web.app import app as _flask_app  # noqa: E402
-import web.app as _wa  # noqa: E402
-_wa.set_must_change_password(False)  # стенд: форс-смена пароля первого входа выкл.
 
 client = _flask_app.test_client()
 

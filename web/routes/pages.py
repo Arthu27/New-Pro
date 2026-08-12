@@ -291,10 +291,8 @@ def register(ctx):
     @login_required 
     @role_required ('uye')
     def change_password_page ():
-        from web .app import owner_must_change_password 
-        _must =session .get ('role')=='owner'and owner_must_change_password ()
         return render_template ('change_password.html',role =session .get ('role'),
-                                username =session .get ('username'),must_change =_must )
+                                username =session .get ('username'))
 
 
     # ── Липкие сообщения + Panic-локдаун (модуль cogs/mod_plus.py) ──────

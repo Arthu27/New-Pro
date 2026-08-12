@@ -69,7 +69,7 @@ check(len(DECOS) >= 370, f'распарсено {len(DECOS)} эндпоинто�
 # быть ОСОЗНАННО публичным (auth-флоу, статус, заявка). Новый эндпоинт без
 # декоратора уронит этот тест → решение принимает человек.
 PUBLIC = {
-    'index', 'login', 'logout', 'two_factor', 'register',
+    'index', 'login', 'logout', 'register',
     'api_forgot_password', 'api_reset_password', 'api_discord_login',
     'api_discord_check', 'api_check_member', 'api_login_suggest',
     'api_public_apply', 'api_public_guilds', 'public_apply',
@@ -85,7 +85,6 @@ check(public_actual == PUBLIC,
 # ═══ 2. Стенд: фейк-бот + сессии ролей ══════════════════════════════════
 import web.app as wa  # noqa: E402
 
-wa.set_must_change_password(False)  # форс-смена пароля выкл. — меряем матрицу ролей
 ROLES = wa.ROLES
 check(ROLES.get('uye', 0) < ROLES['mod'] < ROLES['admin'] < ROLES['owner'],
       f'лестница ролей uye<mod<admin<owner ({ROLES})')
@@ -155,10 +154,10 @@ def make_client(role):
     return c
 
 
-# /logout и /2fa — flow-страницы: редиректят по своей логике вне зависимости
+# /logout, /login, /register — flow-страницы: редиректят по своей логике
 # от роли (logout ещё и убивает сессию). Отдельно: клиент НЕ переиспользуем,
 # чтобы проба /logout не разлогинивала остальные замеры.
-FLOW_PATHS = {'/logout', '/2fa', '/login', '/register'}
+FLOW_PATHS = {'/logout', '/login', '/register'}
 
 
 def probe(role, path):
