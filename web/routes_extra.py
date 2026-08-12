@@ -630,6 +630,187 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         return jsonify({'ok': True,
                         'violations': classify_message(load_config(gid), text)})
 
+    # ── TODO: общие задачи команды (страница /todo) ─────────────
+    @app.route('/api/todo')
+    @login_required
+    @role_required('owner')
+    def api_todo_list():
+        from services.panel_todo import list_tasks
+        return jsonify({'ok': True, 'tasks': list_tasks()})
+
+    @app.route('/api/todo/add', methods=['POST'])
+    @login_required
+    @role_required('owner')
+    def api_todo_add():
+        from services.panel_todo import add_task
+        data = request.get_json(silent=True) or {}
+        try:
+            task = add_task(data.get('text'), session.get('username'))
+        except ValueError as e:
+            return jsonify({'ok': False, 'error': str(e)}), 400
+        return jsonify({'ok': True, 'task': task})
+
+    @app.route('/api/todo/toggle', methods=['POST'])
+    @login_required
+    @role_required('owner')
+    def api_todo_toggle():
+        from services.panel_todo import toggle_task
+        data = request.get_json(silent=True) or {}
+        if not toggle_task(data.get('id')):
+            return jsonify({'ok': False, 'error': 'Задача не найдена'}), 404
+        return jsonify({'ok': True})
+
+    @app.route('/api/todo/delete', methods=['POST'])
+    @login_required
+    @role_required('owner')
+    def api_todo_delete():
+        from services.panel_todo import delete_task
+        data = request.get_json(silent=True) or {}
+        if not delete_task(data.get('id')):
+            return jsonify({'ok': False, 'error': 'Задача не найдена'}), 404
+        return jsonify({'ok': True})
+
+    # ── ECONOMY: живой обзор (страница /economy) ───────────────
+    @app.route('/api/economy/overview')
+    @login_required
+    @role_required('admin')
+    def api_economy_overview():
+        import web.app as _app
+        from db import UserData
+        from cogs.economy_cog import ITEM_DETAILS
+        try:
+            all_users = UserData('economy').get_all() or {}
+        except Exception:
+            all_users = {}
+        bot = _app.bot_instance
+
+        def _name(uid):
+            try:
+                u = bot.get_user(int(uid)) if bot else None
+                return getattr(u, 'display_name', None) or getattr(u, 'name', None)
+            except Exception:
+                return None
+
+        rows = []
+        for uid, d in all_users.items():
+            if not isinstance(d, dict):
+                continue
+            bal = int(d.get('balance', 0) or 0)
+            bank = int(d.get('bank', 0) or 0)
+            rows.append({'id': str(uid), 'name': _name(uid) or f'ID {uid}',
+                         'balance': bal, 'bank': bank,
+                         'vault': int(d.get('vault', 0) or 0), 'total': bal + bank})
+        lb = sorted(rows, key=lambda r: -r['total'])
+        richest = sorted(rows, key=lambda r: -r['bank'])
+        catalog = [{'name': name,
+                    'price': int(v.get('price', 0)), 'rarity': v.get('rarity', ''),
+                    'category': v.get('category', ''), 'desc': v.get('desc', ''),
+                    'pet_bonus': v.get('pet_bonus', 0)}
+                   for name, v in ITEM_DETAILS.items()]
+        catalog.sort(key=lambda x: x['price'])
+        return jsonify({'ok': True, 'users': len(rows),
+                        'in_circulation': sum(r['total'] for r in rows),
+                        'gems_total': sum(r['vault'] for r in rows),
+                        'leaderboard': lb[:20], 'richest': richest[:10],
+                        'catalog': catalog})
+
+    # ── BOT SETTINGS: презенс + синк команд (страница /bot-settings) ──
+    BOT_CFG_PATH = 'data/bot_config.json'   # тот же файл читает main.py on_ready
+
+    def _bot_cfg_load() -> dict:
+        if os.path.exists(BOT_CFG_PATH):
+            try:
+                with open(BOT_CFG_PATH, encoding='utf-8') as f:
+                    d = json.load(f)
+                return d if isinstance(d, dict) else {}
+            except Exception:
+                return {}
+        return {}
+
+    @app.route('/api/bot-settings')
+    @login_required
+    @role_required('owner')
+    def api_bot_settings_get():
+        import web.app as _app
+        import discord as _discord
+        from config import Config
+        bot = _app.bot_instance
+        cfg = _bot_cfg_load()
+        online = False
+        if bot is not None:
+            try:
+                online = not bot.is_closed()
+            except Exception:
+                online = False
+        return jsonify({'ok': True, 'bot_online': online,
+                        'guilds': len(getattr(bot, 'guilds', []) or []),
+                        'discord_version': _discord.__version__,
+                        'prefix': Config.COMMAND_PREFIX,
+                        'presence': {'status': cfg.get('status', 'idle'),
+                                     'activity_type': cfg.get('activity_type', 'listening'),
+                                     'activity_text': cfg.get('activity_text', '.gg/Aether')}})
+
+    @app.route('/api/bot-settings/presence', methods=['POST'])
+    @login_required
+    @role_required('owner')
+    def api_bot_settings_presence():
+        import web.app as _app
+        import discord as _discord
+        data = request.get_json(silent=True) or {}
+        status = str(data.get('status', ''))
+        activity_type = str(data.get('activity_type', ''))
+        activity_text = ' '.join(str(data.get('activity_text', '') or '').split())[:80]
+        errors = []
+        status_map = {'online': _discord.Status.online, 'idle': _discord.Status.idle,
+                      'dnd': _discord.Status.dnd, 'invisible': _discord.Status.invisible}
+        type_map = {'listening': _discord.ActivityType.listening,
+                    'playing': _discord.ActivityType.playing,
+                    'watching': _discord.ActivityType.watching,
+                    'competing': _discord.ActivityType.competing}
+        if status not in status_map:
+            errors.append(f'status: допустимо {"/".join(status_map)}')
+        if activity_type not in type_map:
+            errors.append(f'activity_type: допустимо {"/".join(type_map)}')
+        if not activity_text:
+            errors.append('activity_text: пустой текст')
+        if errors:
+            return jsonify({'ok': False, 'errors': errors}), 400
+        cfg = _bot_cfg_load()
+        cfg.update({'status': status, 'activity_type': activity_type,
+                    'activity_text': activity_text})
+        os.makedirs('data', exist_ok=True)
+        with open(BOT_CFG_PATH, 'w', encoding='utf-8') as f:
+            json.dump(cfg, f, ensure_ascii=False, indent=2)
+        applied = False
+        bot = _app.bot_instance
+        if bot is not None and hasattr(bot, 'change_presence'):
+            try:
+                _run_async(bot.change_presence(
+                    activity=_discord.Activity(type=type_map[activity_type], name=activity_text),
+                    status=status_map[status]))
+                applied = True
+            except Exception:
+                applied = False
+        return jsonify({'ok': True, 'applied_live': applied,
+                        'presence': {'status': status, 'activity_type': activity_type,
+                                     'activity_text': activity_text}})
+
+    @app.route('/api/bot-settings/sync', methods=['POST'])
+    @login_required
+    @role_required('owner')
+    def api_bot_settings_sync():
+        import web.app as _app
+        bot = _app.bot_instance
+        tree = getattr(bot, 'tree', None) if bot is not None else None
+        if tree is None:
+            return jsonify({'ok': False, 'error': 'Бот офлайн — синхронизировать некому'}), 503
+        try:
+            synced = _run_async(tree.sync())
+            n = len(synced) if isinstance(synced, (list, tuple)) else 0
+            return jsonify({'ok': True, 'synced': n})
+        except Exception as e:
+            return jsonify({'ok': False, 'error': f'Синк упал: {e}'}), 500
+
     # ── Публичная статус-страница (без логина) ───────────────────────────
     @app.route('/status')
     def status_public_page():

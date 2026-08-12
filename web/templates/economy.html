@@ -10,152 +10,175 @@
       <span>Экономика сервера</span>
     </div>
     <h1>Экономика сервера</h1>
-    <p>Настройки экономики: валюта, магазин, ежедневные награды.</p>
+    <p>Живые данные из базы экономики: оборот валюты, лидерборд, гемы и каталог магазина.</p>
   </div>
 </div>
 {% endblock %}
 
 <style>
-
-.eco-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
-.eco-card{background:linear-gradient(165deg,rgba(224,176,74,.03),rgba(20,18,14,.6));border:1px solid var(--line-2);border-radius:14px;padding:18px}
-.shop-price{display:inline-block;background:var(--ac-soft);color:var(--ac-2);border:1px solid var(--ac-line);padding:3px 10px;border-radius:99px;font-weight:700;font-size:12.5px}
-
+.eco-tabs{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.eco-tab{padding:9px 16px;border-radius:11px;border:1px solid var(--line-2);background:transparent;color:var(--text-2);font-weight:700;font-size:12.5px;cursor:pointer;transition:.15s}
+.eco-tab.active{background:var(--ac-soft);color:var(--ac);border-color:var(--ac-line)}
+.eco-tab:hover:not(.active){border-color:color-mix(in srgb, var(--ac) 30%, transparent)}
+.tab-content{display:none}
+.eco-stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:14px}
+.eco-card{background:linear-gradient(165deg,rgba(224,176,74,.03),rgba(20,18,14,.6));border:1px solid var(--line-2);border-radius:14px;padding:18px;text-align:center;transition:.2s}
+.eco-card:hover{transform:translateY(-2px);border-color:color-mix(in srgb, var(--ac) 30%, transparent)}
+.eco-icon{color:var(--ac);font-size:18px;margin-bottom:6px}
+.eco-val{font-size:20px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums}
+.eco-lbl{font-size:11px;color:var(--text-3);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
+.eco-box{background:linear-gradient(165deg,rgba(224,176,74,.03),rgba(20,18,14,.6));border:1px solid var(--line-2);border-radius:14px;padding:16px}
+.eco-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.eco-title{font-weight:800;color:var(--text);font-size:14px}
+.eco-count{font-size:11.5px;color:var(--text-3);font-weight:700}
+.eco-row{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;font-size:13px}
+.eco-row:nth-child(odd){background:color-mix(in srgb, var(--text) 3%, transparent)}
+.eco-rank{width:26px;text-align:center;font-weight:800;color:var(--text-3);font-size:12px;flex:none}
+.eco-rank.top{color:var(--ac)}
+.eco-name{flex:1;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.eco-coins{font-weight:800;color:var(--ac);font-variant-numeric:tabular-nums}
+.eco-sub{font-size:11px;color:var(--text-3);font-weight:600}
+.shop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.cat-card{background:color-mix(in srgb, var(--text) 3%, transparent);border:1px solid var(--line-2);border-radius:12px;padding:13px 14px;transition:.15s}
+.cat-card:hover{transform:translateY(-2px);border-color:color-mix(in srgb, var(--ac) 28%, transparent)}
+.cat-name{font-size:13px;font-weight:700;color:var(--text);text-transform:capitalize}
+.cat-desc{font-size:11px;color:var(--text-3);margin-top:2px;font-weight:600}
+.cat-meta{display:flex;align-items:center;gap:7px;margin-top:8px;flex-wrap:wrap}
+.shop-price{display:inline-block;background:var(--ac-soft);color:var(--ac-2);border:1px solid var(--ac-line);padding:2px 9px;border-radius:99px;font-weight:700;font-size:11.5px}
+.cat-rar{font-size:10px;font-weight:800;padding:2px 8px;border-radius:99px;text-transform:uppercase;letter-spacing:.04em}
+.cat-cat{font-size:10px;color:var(--text-4);font-weight:700}
+.eco-empty{padding:30px;text-align:center;color:var(--text-3);font-weight:600;grid-column:1/-1}
+.eco-note{font-size:11.5px;color:var(--text-3);font-weight:600;margin-top:12px;padding:10px 14px;border-radius:10px;background:color-mix(in srgb, var(--violet,#a78bfa) 8%, transparent);border:1px solid color-mix(in srgb, var(--violet,#a78bfa) 22%, transparent)}
 </style>
 
+<div class="eco-stats" data-reveal>
+  <div class="eco-card"><div class="eco-icon"><i class="fas fa-coins"></i></div><div class="eco-val" id="stat-total">-</div><div class="eco-lbl">В обращении</div></div>
+  <div class="eco-card"><div class="eco-icon"><i class="fas fa-users"></i></div><div class="eco-val" id="stat-users">-</div><div class="eco-lbl">Участников</div></div>
+  <div class="eco-card"><div class="eco-icon"><i class="fas fa-gem"></i></div><div class="eco-val" id="stat-gems">-</div><div class="eco-lbl">Гемов суммарно</div></div>
+  <div class="eco-card"><div class="eco-icon"><i class="fas fa-crown"></i></div><div class="eco-val" id="stat-richest">-</div><div class="eco-lbl">Богач №1</div></div>
+</div>
 
-
-<div class="eco-tabs">
-  <button class="eco-tab active" data-tab="leaderboard"><i class="fas fa-trophy"></i> Топ</button>
-  <button class="eco-tab" data-tab="shop"><i class="fas fa-shopping-cart"></i> Магазин</button>
-  <button class="eco-tab" data-tab="rich"><i class="fas fa-gem"></i> Богатые</button>
+<div class="eco-tabs" data-reveal>
+  <button class="eco-tab active" data-tab="leaderboard"><i class="fas fa-trophy"></i> Топ кошельков</button>
+  <button class="eco-tab" data-tab="shop"><i class="fas fa-shopping-cart"></i> Каталог магазина</button>
+  <button class="eco-tab" data-tab="rich"><i class="fas fa-building-columns"></i> Топ по банку</button>
 </div>
 
 <div id="tab-leaderboard" class="tab-content">
-  <div class="eco-grid">
-    <div class="eco-card"><div class="eco-icon"><i class="fas fa-coins"></i></div><div class="eco-val" id="stat-total">-</div><div class="eco-lbl">В обращении</div></div>
-    <div class="eco-card"><div class="eco-icon"><i class="fas fa-users"></i></div><div class="eco-val" id="stat-users">-</div><div class="eco-lbl">Участников</div></div>
-    <div class="eco-card"><div class="eco-icon"><i class="fas fa-crown"></i></div><div class="eco-val" id="stat-richest" >-</div><div class="eco-lbl">Топ 1</div></div>
-  </div>
-
-  <div class="eco-box">
+  <div class="eco-box" data-reveal>
     <div class="eco-head">
-      <div class="eco-title"><i class="fas fa-trophy"></i> Таблица лидеров</div>
+      <span class="eco-title"><i class="fas fa-trophy" style="color:var(--ac)"></i> Лидерборд (наличные + банк)</span>
       <span class="eco-count" id="lb-count">-</span>
     </div>
-    <div class="eco-body" id="lb-body">
-      <p ><i class="fas fa-spinner fa-spin"></i></p>
-    </div>
+    <div id="lb-body"><div class="eco-empty">Загружаем…</div></div>
   </div>
 </div>
 
-<div id="tab-shop" class="tab-content"  >
-  <div class="eco-box">
+<div id="tab-shop" class="tab-content">
+  <div class="eco-box" data-reveal>
     <div class="eco-head">
-      <div class="eco-title"><i class="fas fa-shopping-cart"></i> Магазин</div>
-      <button class="btn btn-primary" id="add-item"><i class="fas fa-plus"></i> Добавить</button>
+      <span class="eco-title"><i class="fas fa-shopping-cart" style="color:var(--ac)"></i> Каталог магазина</span>
+      <span class="eco-count" id="shop-count">-</span>
     </div>
-    <div class="shop-grid" id="shop-grid">
-      <p >Магазин не найден</p>
-    </div>
+    <div class="shop-grid" id="shop-grid"><div class="eco-empty">Загружаем…</div></div>
+    <div class="eco-note"><i class="fas fa-circle-info"></i> Каталог централизованный (зашит в экономике бота): цены и редкость одинаковы для всех. Покупки — командой <code>/shop</code>.</div>
   </div>
 </div>
 
-<div id="tab-rich" class="tab-content"  >
-  <div class="eco-box">
+<div id="tab-rich" class="tab-content">
+  <div class="eco-box" data-reveal>
     <div class="eco-head">
-      <div class="eco-title"><i class="fas fa-gem"></i> Богатые участники</div>
+      <span class="eco-title"><i class="fas fa-building-columns" style="color:var(--ac)"></i> Самые большие банки</span>
+      <span class="eco-count" id="rich-count">-</span>
     </div>
-    <div class="eco-body" id="rich-body">
-      <p ><i class="fas fa-spinner fa-spin"></i></p>
-    </div>
+    <div id="rich-body"><div class="eco-empty">Загружаем…</div></div>
   </div>
 </div>
 
 <script>
 (function () {
   'use strict';
-  function $(id) { return document.getElementById(id); }
-  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  var $ = function (id) { return document.getElementById(id); };
+  var RARITY = {
+    'обычный':      ['#9ca3af', 'rgba(156,163,175,.12)'],
+    'необычный':    ['#4ade80', 'rgba(74,222,128,.12)'],
+    'редкий':       ['#67e8f9', 'rgba(103,232,249,.12)'],
+    'эпический':    ['#a78bfa', 'rgba(167,139,250,.12)'],
+    'легендарный':  ['#f59e0b', 'rgba(245,158,11,.12)'],
+    'мифический':   ['#f472b6', 'rgba(244,114,182,.12)'],
+    'божественный': ['#ffd700', 'rgba(255,215,0,.14)']
+  };
+  function esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+  function fmt(n) { return (n || 0).toLocaleString('ru-RU'); }
 
-  // Tabs
-  document.querySelectorAll('.eco-tab').forEach(function (t) {
-    t.addEventListener('click', function () {
+  // вкладки
+  document.querySelectorAll('.eco-tab').forEach(function (b) {
+    b.addEventListener('click', function () {
       document.querySelectorAll('.eco-tab').forEach(function (x) { x.classList.remove('active'); });
-      t.classList.add('active');
-      var tab = t.getAttribute('data-tab');
-      document.querySelectorAll('.tab-content').forEach(function (c) { c.style.display = 'none'; });
-      $('tab-' + tab).style.display = 'block';
+      b.classList.add('active');
+      document.querySelectorAll('.tab-content').forEach(function (t) { t.style.display = 'none'; });
+      $('tab-' + b.getAttribute('data-tab')).style.display = 'block';
     });
   });
 
-  // Мок-данные (можно добавить реальные API)
-  var lbData = [
-    { rank: 1, name: 'TopUser', coins: 50000 },
-    { rank: 2, name: 'ProGamer', coins: 35000 },
-    { rank: 3, name: 'Newbie', coins: 12000 }
-  ];
-  var shopItems = [
-    { icon: 'fa-crown', name: 'VIP Роль', price: 5000 },
-    { icon: 'fa-palette', name: 'Цвет ник', price: 1500 },
-    { icon: 'fa-gift', name: 'Подарок', price: 800 }
-  ];
+  function renderLb(rows) {
+    $('lb-count').textContent = 'участников: ' + rows.length;
+    if (!rows.length) { $('lb-body').innerHTML = '<div class="eco-empty">Экономика пуста — никто ещё не заработал монет 🌱</div>'; return; }
+    $('lb-body').innerHTML = rows.map(function (r, i) {
+      return '<div class="eco-row">' +
+        '<span class="eco-rank' + (i < 3 ? ' top' : '') + '">' + (i + 1) + '</span>' +
+        '<span class="eco-name">' + esc(r.name) + '</span>' +
+        '<span class="eco-sub">банк: ' + fmt(r.bank) + '</span>' +
+        '<span class="eco-coins">💰 ' + fmt(r.total) + '</span></div>';
+    }).join('');
+  }
 
-  function renderLeaderboard() {
-    $('lb-count').textContent = lbData.length;
-    var html = '<table><thead><tr><th>#</th><th>Участник</th><th>Баланс</th><th>Уровень</th></tr></thead><tbody>';
-    var max = lbData[0] ? lbData[0].coins : 1;
-    lbData.forEach(function (u) {
-      var pct = Math.round(u.coins / max * 100);
-      html += '<tr><td><span >#' + u.rank + '</span></td>' +
-        '<td >' + esc(u.name) + '</td>' +
-        '<td><span class="coin">' + u.coins.toLocaleString() + '</span><div class="bar"><div class="bar-fill"   style="width: ' + pct + '%;"></div></div></td>' +
-        '<td >' + Math.floor(u.coins / 1000) + '</td></tr>';
+  function renderRich(rows) {
+    $('rich-count').textContent = 'участников: ' + rows.length;
+    if (!rows.length) { $('rich-body').innerHTML = '<div class="eco-empty">Пусто</div>'; return; }
+    $('rich-body').innerHTML = rows.map(function (r, i) {
+      return '<div class="eco-row">' +
+        '<span class="eco-rank' + (i < 3 ? ' top' : '') + '">' + (i + 1) + '</span>' +
+        '<span class="eco-name">' + esc(r.name) + '</span>' +
+        '<span class="eco-sub">гемы: ' + fmt(r.vault) + '</span>' +
+        '<span class="eco-coins">🏦 ' + fmt(r.bank) + '</span></div>';
+    }).join('');
+  }
+
+  function renderCatalog(items) {
+    $('shop-count').textContent = 'позиций: ' + items.length;
+    if (!items.length) { $('shop-grid').innerHTML = '<div class="eco-empty">Каталог пуст</div>'; return; }
+    $('shop-grid').innerHTML = items.map(function (it) {
+      var rc = RARITY[it.rarity] || ['#9ca3af', 'rgba(156,163,175,.12)'];
+      return '<div class="cat-card">' +
+        '<div class="cat-name">' + esc(it.name) + '</div>' +
+        '<div class="cat-desc">' + esc(it.desc || '') + (it.pet_bonus ? ' · +' + it.pet_bonus + '% к доходу' : '') + '</div>' +
+        '<div class="cat-meta"><span class="shop-price">' + fmt(it.price) + ' 💰</span>' +
+        '<span class="cat-rar" style="color:' + rc[0] + ';background:' + rc[1] + '">' + esc(it.rarity) + '</span>' +
+        '<span class="cat-cat">' + esc(it.category) + '</span></div></div>';
+    }).join('');
+  }
+
+  function load() {
+    fetch('/api/economy/overview').then(function (r) { return r.json(); }).then(function (d) {
+      if (!d || !d.ok) throw new Error('api');
+      $('stat-total').textContent = fmt(d.in_circulation);
+      $('stat-users').textContent = fmt(d.users);
+      $('stat-gems').textContent = fmt(d.gems_total);
+      var top = (d.leaderboard || [])[0];
+      $('stat-richest').textContent = top ? top.name : '—';
+      renderLb(d.leaderboard || []);
+      renderRich(d.richest || []);
+      renderCatalog(d.catalog || []);
+    }).catch(function () {
+      ['lb-body', 'rich-body', 'shop-grid'].forEach(function (id) {
+        $(id).innerHTML = '<div class="eco-empty">Не удалось загрузить данные экономики</div>';
+      });
     });
-    html += '</tbody></table>';
-    $('lb-body').innerHTML = html;
-    $('stat-total').textContent = lbData.reduce(function (a, b) { return a + b.coins; }, 0).toLocaleString();
-    $('stat-users').textContent = lbData.length;
-    $('stat-richest').textContent = lbData[0] ? lbData[0].coins.toLocaleString() : '-';
   }
 
-  function renderShop() {
-    if (!shopItems.length) {
-      $('shop-grid').innerHTML = '<p >Магазин не найден</p>';
-      return;
-    }
-    var html = '';
-    shopItems.forEach(function (i) {
-      html += '<div class="shop-item">' +
-        '<div class="shop-icon"><i class="fas ' + i.icon + '"></i></div>' +
-        '<div class="shop-name">' + esc(i.name) + '</div>' +
-        '<div class="shop-price">' + i.price.toLocaleString() + ' <i class="fas fa-coins" ></i></div>' +
-      '</div>';
-    });
-    $('shop-grid').innerHTML = html;
-  }
-
-  function renderRich() {
-    var html = '<table><thead><tr><th>#</th><th>Участник</th><th>Баланс</th><th>% от total</th></tr></thead><tbody>';
-    var total = lbData.reduce(function (a, b) { return a + b.coins; }, 0);
-    lbData.forEach(function (u, i) {
-      var pct = total ? Math.round(u.coins / total * 100) : 0;
-      html += '<tr><td>' + (i + 1) + '</td><td >' + esc(u.name) + '</td>' +
-        '<td><span class="coin">' + u.coins.toLocaleString() + '</span></td>' +
-        '<td><div  ><div class="bar" ><div class="bar-fill"   style="width: ' + pct + '%;"></div></div><span >' + pct + '%</span></div></td></tr>';
-    });
-    html += '</tbody></table>';
-    $('rich-body').innerHTML = html;
-  }
-
-  function init() {
-    renderLeaderboard();
-    renderShop();
-    renderRich();
-  }
-
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
-  else init();
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', load);
+  else load();
 })();
 </script>
 {% endblock %}
