@@ -9,6 +9,7 @@ import asyncio
 
 from logger import get_logger 
 log =get_logger ("meeting")
+from json_store import load_json ,save_json 
 
 
 DATA_DIR ='data'
@@ -20,7 +21,7 @@ def _cfg_file (guild_id :int )->str :
 
 def _load_cfg (guild_id :int )->dict :
     path =_cfg_file (guild_id )
-    # До meeting config'i загрузить
+    # До meeting config'i загрузить (через кеш json_store)
     cfg ={
     'last_meeting':None ,
     'active':False ,
@@ -28,31 +29,20 @@ def _load_cfg (guild_id :int )->dict :
     'panel_message':None ,
     'staff_roles':[],
     }
-    if os .path .exists (path ):
-        try :
-            with open (path ,'r',encoding ='utf-8')as f :
-                cfg .update (json .load (f ))
-        except Exception as _ex:
-            log.debug("_load_cfg(): подавлено: %s", _ex)
+    cfg .update (load_json (path ,{},log =log ))
 
-            # mod_report_config'den staff_roles'u da al (birleшtir)
+    # mod_report_config'den staff_roles'u da al (birleшtir)
     mod_cfg_path =f'{DATA_DIR}/mod_report_config_{guild_id}.json'
-    if os .path .exists (mod_cfg_path )and not cfg .get ('staff_roles'):
-        try :
-            with open (mod_cfg_path ,'r',encoding ='utf-8')as f :
-                mod_cfg =json .load (f )
-            if mod_cfg .get ('staff_roles'):
-                cfg ['staff_roles']=mod_cfg ['staff_roles']
-        except Exception as _ex:
-            log.debug("_load_cfg(): подавлено: %s", _ex)
+    if not cfg .get ('staff_roles'):
+        mod_cfg =load_json (mod_cfg_path ,{},log =log )
+        if mod_cfg .get ('staff_roles'):
+            cfg ['staff_roles']=mod_cfg ['staff_roles']
 
     return cfg 
 
 
 def _save_cfg (guild_id :int ,cfg :dict ):
-    os .makedirs (DATA_DIR ,exist_ok =True )
-    with open (_cfg_file (guild_id ),'w',encoding ='utf-8')as f :
-        json .dump (cfg ,f ,ensure_ascii =False ,indent =2 )
+    save_json (_cfg_file (guild_id ),cfg ,log =log )
 
 
 def _guild_embed_base (guild :discord .Guild ,title :str ,color :int )->discord .Embed :
@@ -156,20 +146,18 @@ def _save_voice_snapshot (guild_id :int ):
 
 def _load_invites (guild_id :int )->dict :
     path =f'{DATA_DIR}/invite_counts_{guild_id}.json'
-    if os .path .exists (path ):
-        try :
-            with open (path ,'r',encoding ='utf-8')as f :
-                data =json .load (f )
-            result ={}
-            for uid ,val in data .items ():
-                if isinstance (val ,dict ):
-                    result [uid ]=val .get ('total',val .get ('count',val .get ('uses',0 )))
-                else :
-                    result [uid ]=int (val )
-            return result 
-        except Exception as _ex:
-            log.debug("_load_invites(): подавлено: %s", _ex)
-    return {}
+    data =load_json (path ,{},log =log )
+    result ={}
+    try :
+        for uid ,val in data .items ():
+            if isinstance (val ,dict ):
+                result [uid ]=val .get ('total',val .get ('count',val .get ('uses',0 )))
+            else :
+                result [uid ]=int (val )
+    except Exception as _ex:
+        log.debug("_load_invites(): подавлено: %s", _ex)
+        return {}
+    return result 
 
 
 def _bar (value :int ,max_val :int ,length :int =10 )->str :

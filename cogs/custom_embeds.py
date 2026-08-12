@@ -6,6 +6,7 @@ import json
 import os
 from datetime import datetime, timezone
 from config import Config 
+from json_store import load_json as _js_load, save_json as _js_save
 
 class CustomEmbeds(commands.Cog):
     def __init__(self, bot):
@@ -15,18 +16,10 @@ class CustomEmbeds(commands.Cog):
         return f'data/custom_embeds_{guild_id}.json'
 
     def _load(self, guild_id):
-        f = self._file(guild_id)
-        if not os.path.exists(f): return {}
-        try:
-            with open(f, 'r', encoding='utf-8') as fp:
-                return json.load(fp)
-        except Exception:
-            return {}
+        return _js_load(self._file(guild_id), {})
 
     def _save(self, guild_id, data):
-        os.makedirs('data', exist_ok=True)
-        with open(self._file(guild_id), 'w', encoding='utf-8') as fp:
-            json.dump(data, fp, indent=2, ensure_ascii=False)
+        _js_save(self._file(guild_id), data)
 
     @app_commands.command(name="embed_builder", description="Create a custom embed message")
     @app_commands.describe(

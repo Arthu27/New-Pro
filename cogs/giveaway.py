@@ -17,20 +17,15 @@ from typing import Dict
 
 from logger import get_logger
 log = get_logger("giveaway")
+from json_store import load_json as _js_load, save_json as _js_save
 
 
 def _save_giveaways(guild_id: int, data: dict):
-    os.makedirs("data", exist_ok=True)
-    with open(f'data/giveaways_{guild_id}.json', 'w', encoding='utf-8') as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
+    _js_save(f'data/giveaways_{guild_id}.json', data, log=log)
 
 
 def _load_giveaways(guild_id: int) -> dict:
-    path = f'data/giveaways_{guild_id}.json'
-    if os.path.exists(path):
-        with open(path, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    return {}
+    return _js_load(f'data/giveaways_{guild_id}.json', {}, log=log)
 
 
 # ═══════════════════════════════════════════════════════════════════

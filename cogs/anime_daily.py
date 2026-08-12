@@ -11,6 +11,7 @@ from config import Config
 
 from logger import get_logger 
 log =get_logger ("anime_daily")
+from json_store import load_json ,save_json 
 
 
 DATA_FILE ='data/anime_daily_config.json'
@@ -23,19 +24,11 @@ KATEGORILER ={
 
 
 def _load ()->dict :
-    if os .path .exists (DATA_FILE ):
-        try :
-            with open (DATA_FILE ,'r',encoding ='utf-8')as f :
-                return json .load (f )
-        except Exception as _ex:
-            log.debug("_load(): подавлено: %s", _ex)
-    return {}
+    return load_json (DATA_FILE ,{},log =log )
 
 
 def _save (data :dict ):
-    os .makedirs ('data',exist_ok =True )
-    with open (DATA_FILE ,'w',encoding ='utf-8')as f :
-        json .dump (data ,f ,ensure_ascii =False ,indent =2 )
+    save_json (DATA_FILE ,data ,log =log )
 
 
 class TranslateButton (discord .ui .View ):

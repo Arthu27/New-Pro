@@ -26,6 +26,7 @@ from discord.ext import commands
 from logger import get_logger
 
 log = get_logger("mod_kit")
+from json_store import load_json as _js_load, save_json as _js_save
 
 REACT_EMOJIS = ('⚠️', '⚠')
 REACT_PATH = 'data/modkit_reactwarn.json'
@@ -86,23 +87,11 @@ def raid_candidates(members, now_ts: float, minutes: int):
 
 
 def _load_json(path, default):
-    try:
-        if os.path.exists(path):
-            with open(path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-            if isinstance(data, type(default)):
-                return data
-    except Exception as _ex:
-        _log.debug("_load_json(): подавлено: %s", _ex)
-    return default
+    return _js_load(path, default, log=_log)
 
 
 def _save_json(path, data):
-    os.makedirs(os.path.dirname(path) or '.', exist_ok=True)
-    tmp = path + '.tmp'
-    with open(tmp, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False)
-    os.replace(tmp, path)
+    _js_save(path, data, indent=None, log=_log)
 
 
 def react_done(gid, mid) -> bool:

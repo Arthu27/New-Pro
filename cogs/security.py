@@ -10,6 +10,8 @@ from logger import get_logger
 
 _log = get_logger("security")
 
+from json_store import load_json as _js_load, save_json as _js_save
+
 import discord 
 from discord .ext import commands ,tasks 
 from discord import app_commands 
@@ -40,24 +42,20 @@ r'giveaway',r'free.*gift',r'claim.*reward',
 DATA_FILE ='data/security_{guild_id}.json'
 BACKUP_DIR ='data/backups'
 
+_CFG_DEFAULT ={
+'ai_spam':True ,
+'fake_account':True ,
+'link_scanner':True ,
+'new_account_days':7 ,
+'new_account_action':'warn',# warn | kick | ban
+'log_channel':None ,
+}
+
 def _load_cfg (guild_id ):
-    f =DATA_FILE .format (guild_id =guild_id )
-    if os .path .exists (f ):
-        with open (f ,'r',encoding ='utf-8')as fp :
-            return json .load (fp )
-    return {
-    'ai_spam':True ,
-    'fake_account':True ,
-    'link_scanner':True ,
-    'new_account_days':7 ,
-    'new_account_action':'warn',# warn | kick | ban
-    'log_channel':None ,
-    }
+    return _js_load (DATA_FILE .format (guild_id =guild_id ),_CFG_DEFAULT ,log =_log )
 
 def _save_cfg (guild_id ,data ):
-    os .makedirs ('data',exist_ok =True )
-    with open (DATA_FILE .format (guild_id =guild_id ),'w',encoding ='utf-8')as fp :
-        json .dump (data ,fp ,indent =2 ,ensure_ascii =False )
+    _js_save (DATA_FILE .format (guild_id =guild_id ),data ,log =_log )
 
 def _similarity (a :str ,b :str )->float :
     """Схожесть двух строк (0-1). По расстоянию Левенштейна."""

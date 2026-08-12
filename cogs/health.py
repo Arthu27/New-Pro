@@ -4,6 +4,8 @@ from logger import get_logger
 
 _log = get_logger("health")
 
+from json_store import load_json as _js_load, save_json as _js_save
+
 import discord 
 from discord .ext import commands 
 from discord import app_commands 
@@ -16,17 +18,14 @@ from config import Config
 def _health_file (guild_id ):
     return f'data/health_{guild_id}.json'
 
+_HEALTH_DEFAULT ={'channel_messages':{},'hourly':{},'daily':{},'spam_count':0 ,'ban_count':0 ,'kick_count':0 }
+
 def _load_health (guild_id ):
-    f =_health_file (guild_id )
-    if os .path .exists (f ):
-        with open (f ,'r',encoding ='utf-8')as fp :
-            return json .load (fp )
-    return {'channel_messages':{},'hourly':{},'daily':{},'spam_count':0 ,'ban_count':0 ,'kick_count':0 }
+    # горячий путь (каждое сообщение) — читаем через кеш, диск не трогаем
+    return _js_load (_health_file (guild_id ),_HEALTH_DEFAULT ,log =_log )
 
 def _save_health (guild_id ,data ):
-    os .makedirs ('data',exist_ok =True )
-    with open (_health_file (guild_id ),'w',encoding ='utf-8')as fp :
-        json .dump (data ,fp ,indent =2 ,ensure_ascii =False )
+    _js_save (_health_file (guild_id ),data ,log =_log )
 
 def _calc_score (data ,guild :discord .Guild ):
     """Расчёт оценки состояния сервера (0-100)"""

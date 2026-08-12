@@ -34,6 +34,8 @@ from logger import get_logger
 
 log = get_logger("night_summary")
 
+from json_store import load_json as _js_load, save_json as _js_save
+
 STATE_PATH = 'data/night_summary.json'
 
 GOLD = 0xD4AF37
@@ -69,24 +71,12 @@ def _font(bold: bool, size: int):
 
 
 def _load_state():
-    try:
-        if os.path.exists(STATE_PATH):
-            with open(STATE_PATH, 'r', encoding='utf-8') as f:
-                return json.load(f)
-    except Exception as _ex:
-        _log.debug("_load_state(): подавлено: %s", _ex)
-    return {}
+    return _js_load(STATE_PATH, {}, log=_log)
 
 
 def _save_state(data):
-    try:
-        os.makedirs('data', exist_ok=True)
-        tmp = STATE_PATH + '.tmp'
-        with open(tmp, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-        os.replace(tmp, STATE_PATH)
-    except Exception as e:
-        log.error(f"[SVODKA] ошибка записи: {e}")
+    if not _js_save(STATE_PATH, data, log=_log):
+        log.error("[SVODKA] ошибка записи — см. json_store warning")
 
 
 def _parse_ts(v) -> float:

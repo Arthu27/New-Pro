@@ -3,6 +3,8 @@ from logger import get_logger
 
 _log = get_logger("autorole_level")
 
+from json_store import load_json as _js_load, save_json as _js_save
+
 import discord 
 from discord .ext import commands 
 import json 
@@ -24,29 +26,14 @@ class AutoRoleLevel (commands .Cog ):
         return f'data/level_roles_{guild_id}.json'
 
     def _load_xp (self ,guild_id ):
-        f =self ._xp_file (guild_id )
-        if not os .path .exists (f ):
-            return {}
-        try :
-            with open (f ,'r',encoding ='utf-8')as fp :
-                return json .load (fp )
-        except Exception :
-            return {}
+        # вызывается на каждое сообщение — читаем из кеша, не с диска
+        return _js_load (self ._xp_file (guild_id ),{},log =_log )
 
     def _save_xp (self ,guild_id ,data ):
-        os .makedirs ('data',exist_ok =True )
-        with open (self ._xp_file (guild_id ),'w',encoding ='utf-8')as fp :
-            json .dump (data ,fp ,indent =2 )
+        _js_save (self ._xp_file (guild_id ),data ,log =_log )
 
     def _get_level_roles (self ,guild_id ):
-        f =self ._level_roles_file (guild_id )
-        if not os .path .exists (f ):
-            return {}
-        try :
-            with open (f ,'r',encoding ='utf-8')as fp :
-                return json .load (fp )
-        except Exception :
-            return {}
+        return _js_load (self ._level_roles_file (guild_id ),{},log =_log )
 
     @staticmethod 
     def _level_from_xp (xp ):

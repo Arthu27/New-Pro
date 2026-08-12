@@ -26,6 +26,8 @@ from logger import get_logger
 
 _log = get_logger("rejoin_roles")
 
+from json_store import load_json as _js_load, save_json as _js_save
+
 import discord 
 from discord .ext import commands 
 from discord import app_commands 
@@ -40,33 +42,22 @@ def _config_path (guild_id :int )->str :
 
 
 def _load (guild_id :int )->dict :
-    p =_config_path (guild_id )
-    if not os .path .exists (p ):
-        return {"enabled":False ,"tracked_role_ids":[],"leave_log":[]}
-    try :
-        with open (p ,"r",encoding ="utf-8")as f :
-            d =json .load (f )
-        if not isinstance (d ,dict ):
-            return {"enabled":False ,"tracked_role_ids":[],"leave_log":[]}
-        d .setdefault ("enabled",False )
-        d .setdefault ("tracked_role_ids",[])
-        d .setdefault ("leave_log",[])
-        if not isinstance (d ["tracked_role_ids"],list ):
-            d ["tracked_role_ids"]=[]
-        if not isinstance (d ["leave_log"],list ):
-            d ["leave_log"]=[]
-        return d 
-    except Exception :
-        return {"enabled":False ,"tracked_role_ids":[],"leave_log":[]}
+    d =_js_load (_config_path (guild_id ),{"enabled":False ,"tracked_role_ids":[],"leave_log":[]},log =_log )
+    d .setdefault ("enabled",False )
+    d .setdefault ("tracked_role_ids",[])
+    d .setdefault ("leave_log",[])
+    if not isinstance (d ["tracked_role_ids"],list ):
+        d ["tracked_role_ids"]=[]
+    if not isinstance (d ["leave_log"],list ):
+        d ["leave_log"]=[]
+    return d 
 
 
 def _save (guild_id :int ,data :dict ):
-    os .makedirs ("data",exist_ok =True )
     # leave_log'u 200 kayыtla sыnыrla
     if len (data .get ("leave_log",[]))>200 :
         data ["leave_log"]=data ["leave_log"][-200 :]
-    with open (_config_path (guild_id ),"w",encoding ="utf-8")as f :
-        json .dump (data ,f ,indent =2 ,ensure_ascii =False )
+    _js_save (_config_path (guild_id ),data ,log =_log )
 
 
 class ReJoinRoles (commands .Cog ):

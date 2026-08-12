@@ -12,6 +12,8 @@ from logger import get_logger
 
 _log = get_logger("mod_case")
 
+from json_store import load_json as _js_load, save_json as _js_save
+
 import io
 import json
 import os
@@ -60,15 +62,7 @@ BOX_LINE = (224, 176, 74, 55)
 # Данные (чистые функции — тестируются без discord)
 # ─────────────────────────────────────────────────────────────
 def _load_adv_data() -> dict:
-    try:
-        if os.path.exists(ADV_DATA_PATH):
-            with open(ADV_DATA_PATH, 'r', encoding='utf-8') as f:
-                d = json.load(f)
-            if isinstance(d, dict):
-                return d
-    except Exception as _ex:
-        _log.debug("_load_adv_data(): подавлено: %s", _ex)
-    return {}
+    return _js_load(ADV_DATA_PATH, {}, log=_log)
 
 
 def _fmt_dt(iso_or_dt) -> str:
@@ -277,10 +271,8 @@ class ModCase(commands.Cog):
             except Exception as _ex:
                 _log.debug("_get_warns(): подавлено: %s", _ex)
         try:  # фолбэк на JSON-зеркало
-            path = 'data/warnings.json'
-            if os.path.exists(path):
-                with open(path, 'r', encoding='utf-8') as f:
-                    return (json.load(f).get(str(gid), {}) or {}).get(str(uid), []) or []
+            mirror = _js_load('data/warnings.json', {}, log=_log)
+            return (mirror.get(str(gid), {}) or {}).get(str(uid), []) or []
         except Exception as _ex:
             _log.debug("_get_warns(): подавлено: %s", _ex)
         return []

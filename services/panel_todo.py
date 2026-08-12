@@ -12,26 +12,19 @@ import os
 import time
 from datetime import datetime
 
+from json_store import load_json, save_json
+
 PATH = 'data/panel_todo.json'
 MAX_TASKS = 200
 MAX_TEXT = 140
 
 
 def _load() -> list:
-    if not os.path.exists(PATH):
-        return []
-    try:
-        with open(PATH, encoding='utf-8') as f:
-            data = json.load(f)
-        return data if isinstance(data, list) else []
-    except Exception:
-        return []
+    return load_json(PATH, [])
 
 
 def _save(tasks: list):
-    os.makedirs(os.path.dirname(PATH), exist_ok=True)
-    with open(PATH, 'w', encoding='utf-8') as f:
-        json.dump(tasks[:MAX_TASKS], f, ensure_ascii=False, indent=2)
+    save_json(PATH, tasks[:MAX_TASKS])
 
 
 def list_tasks() -> list:

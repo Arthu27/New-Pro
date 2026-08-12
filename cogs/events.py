@@ -4,6 +4,8 @@ from logger import get_logger
 
 _log = get_logger("events")
 
+from json_store import load_json as _js_load, save_json as _js_save
+
 import discord 
 from discord .ext import commands ,tasks 
 from discord import app_commands 
@@ -23,14 +25,10 @@ class Events (commands .Cog ):
         return f'data/events_{guild_id}.json'
 
     def _load (self ,guild_id ):
-        f =self ._file (guild_id )
-        if not os .path .exists (f ):return {}
-        with open (f ,'r',encoding ='utf-8')as fp :return json .load (fp )
+        return _js_load (self ._file (guild_id ),{},log =_log )
 
     def _save (self ,guild_id ,data ):
-        os .makedirs ('data',exist_ok =True )
-        with open (self ._file (guild_id ),'w',encoding ='utf-8')as fp :
-            json .dump (data ,fp ,indent =2 ,ensure_ascii =False )
+        _js_save (self ._file (guild_id ),data ,log =_log )
 
     @tasks .loop (minutes =5 )
     async def check_events (self ):

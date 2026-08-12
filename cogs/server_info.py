@@ -4,6 +4,8 @@ from logger import get_logger
 
 _log = get_logger("server_info")
 
+from json_store import load_json as _js_load, save_json as _js_save
+
 import discord 
 from discord .ext import commands 
 from discord import app_commands 
@@ -18,20 +20,11 @@ def _info_file (guild_id :int )->str :
 
 
 def _load_info (guild_id :int )->dict :
-    path =_info_file (guild_id )
-    if os .path .exists (path ):
-        try :
-            with open (path ,'r',encoding ='utf-8')as f :
-                return json .load (f )
-        except Exception as _ex:
-            _log.debug("_load_info(): подавлено: %s", _ex)
-    return {}
+    return _js_load (_info_file (guild_id ),{},log =_log )
 
 
 def _save_info (guild_id :int ,data :dict ):
-    os .makedirs (DATA_DIR ,exist_ok =True )
-    with open (_info_file (guild_id ),'w',encoding ='utf-8')as f :
-        json .dump (data ,f ,ensure_ascii =False ,indent =2 )
+    _js_save (_info_file (guild_id ),data ,log =_log )
 
 
 def get_sunucu_context (guild_id :int )->str :

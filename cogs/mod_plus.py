@@ -39,6 +39,7 @@ from discord.ext import commands
 from logger import get_logger
 
 log = get_logger("mod_plus")
+from json_store import load_json as _js_load, save_json as _js_save
 
 GOLD = 0xD4AF37
 RED = 0xE74C3C
@@ -56,24 +57,15 @@ def _ghost_path(gid): return f'data/modplus_ghost_{gid}.json'
 
 
 def _load_json(path, default):
-    try:
-        with open(path, 'r', encoding='utf-8') as f:
-            return json.load(f) or default
-    except Exception:
-        return default
+    return _js_load(path, default, log=_log)
 
 
 def _save_json(path, data):
-    try:
-        os.makedirs('data', exist_ok=True)
-        tmp = path + '.tmp'
-        with open(tmp, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-        os.replace(tmp, path)  # атомарно: ни одного полу-записанного файла
-        return True
-    except Exception as e:
-        log.warning(f"[MOD+] запись {path}: {e}")
-        return False
+    # атомарно + кеш — дальше читаем уже не с диска
+    ok = _js_save(path, data, log=_log)
+    if not ok:
+        log.warning(f"[MOD+] запись {path}: см. json_store warning")
+    return ok
 
 
 def _now():

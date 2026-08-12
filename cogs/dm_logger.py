@@ -9,6 +9,8 @@ from logger import get_logger
 
 _log = get_logger("dm_logger")
 
+from json_store import load_json as _js_load, save_json as _js_save
+
 import discord
 from discord.ext import commands
 
@@ -25,42 +27,25 @@ MAX_PER_USER = 200
 
 
 def _load_dm_log():
-    try:
-        if os.path.exists(DM_LOG_FILE):
-            with open(DM_LOG_FILE, 'r', encoding='utf-8') as f:
-                d = json.load(f)
-            return d if isinstance(d, dict) else {}
-    except Exception as _ex:
-        _log.debug("_load_dm_log(): подавлено: %s", _ex)
-    return {}
+    return _js_load(DM_LOG_FILE, {}, log=_log)
 
 
 def _load_dm_whitelist():
     """Разрешённые пользователи, которым можно писать боту в ЛС.
     Формат: список объектов {'id': '...', 'note': '...'} или список строк-ID."""
-    try:
-        if os.path.exists(DM_WHITELIST_FILE):
-            with open(DM_WHITELIST_FILE, 'r', encoding='utf-8') as f:
-                d = json.load(f)
-            ids = []
-            for item in d if isinstance(d, list) else []:
-                if isinstance(item, dict):
-                    ids.append(str(item.get('id', '')))
-                elif isinstance(item, (str, int)):
-                    ids.append(str(item))
-            return set(x for x in ids if x)
-    except Exception as _ex:
-        _log.debug("_load_dm_whitelist(): подавлено: %s", _ex)
-    return set()
+    d = _js_load(DM_WHITELIST_FILE, [], log=_log)
+    ids = []
+    for item in d if isinstance(d, list) else []:
+        if isinstance(item, dict):
+            ids.append(str(item.get('id', '')))
+        elif isinstance(item, (str, int)):
+            ids.append(str(item))
+    return set(x for x in ids if x)
 
 
 def _save_dm_log(data):
-    try:
-        os.makedirs('data', exist_ok=True)
-        with open(DM_LOG_FILE, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-    except Exception as e:
-        log.info(f'[DM] save error: {e}')
+    if not _js_save(DM_LOG_FILE, data, log=_log):
+        log.info('[DM] save error — см. json_store warning')
 
 
 class DMLogger(commands.Cog):

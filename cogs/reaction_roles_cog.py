@@ -20,6 +20,8 @@ from logger import get_logger
 
 log = get_logger("reaction_roles_cog")
 
+from json_store import load_json as _js_load, save_json as _js_save
+
 DATA_DIR = "data"
 PREFIX = "rr_"
 
@@ -30,13 +32,10 @@ def _load_panels():
     for path in glob.glob(os.path.join(DATA_DIR, PREFIX + "*.json")):
         try:
             guild_id = os.path.basename(path)[len(PREFIX):-len(".json")]
-            with open(path, encoding="utf-8") as f:
-                data = json.load(f)
-            if isinstance(data, dict):
-                for panel in data.values():
-                    if isinstance(panel, dict):
-                        panel.setdefault("guild_id", guild_id)
-                        panels.append(panel)
+            for panel in _js_load(path, {}, log=log).values():
+                if isinstance(panel, dict):
+                    panel.setdefault("guild_id", guild_id)
+                    panels.append(panel)
         except Exception as e:
             log.warning("rr load error %s: %s", path, e)
     return panels

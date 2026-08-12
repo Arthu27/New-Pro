@@ -36,6 +36,8 @@ from logger import get_logger
 
 log = get_logger('auto_filter')
 
+from json_store import load_json as _js_load, save_json as _js_save
+
 GOLD = 0xD4AF37
 
 FILTER_NAMES = {'words': 'Запрещённые слова', 'links': 'Ссылки',
@@ -231,10 +233,8 @@ def is_ignored_channel(cfg: dict, channel_id, parent_id=None) -> bool:
 
 
 # ─────────────────────────────────────────────────────────────
-# Конфиг: файл, кеш по mtime, валидация
+# Конфиг: файл, кеш через json_store, валидация
 # ─────────────────────────────────────────────────────────────
-_CFG_CACHE = {}   # gid -> (mtime, cfg)
-
 
 def cfg_path(gid) -> str:
     return os.path.join('data', f'autofilter_{int(gid)}.json')
@@ -325,35 +325,12 @@ def validate_config(data: dict):
 
 
 def load_config(gid) -> dict:
-    """Конфиг сервера (живой пересчёт по mtime — правки панели подхватываются)."""
-    gid = int(gid)
-    p = cfg_path(gid)
-    try:
-        st = os.stat(p)
-        mt = (st.st_mtime_ns, st.st_size)
-    except OSError:
-        mt = None
-    cached = _CFG_CACHE.get(gid)
-    if cached and cached[0] == mt:
-        return deepcopy(cached[1])
-    saved = {}
-    if mt is not None:
-        try:
-            with open(p, encoding='utf-8') as fp:
-                saved = json.load(fp)
-        except Exception as e:
-            log.warning(f'AutoFilter: битый конфиг {p}: {e} — берём дефолты')
-    cfg = merge_config(saved)
-    _CFG_CACHE[gid] = (mt, cfg)
-    return deepcopy(cfg)
+    """Конфиг сервера (кеш json_store по mtime/size — правки панели подхватываются)."""
+    return merge_config(_js_load(cfg_path(int(gid)), {}, log=log))
 
 
 def save_config(gid, cfg: dict):
-    os.makedirs('data', exist_ok=True)
-    p = cfg_path(int(gid))
-    with open(p, 'w', encoding='utf-8') as fp:
-        json.dump(merge_config(cfg), fp, indent=2, ensure_ascii=False)
-    _CFG_CACHE.pop(int(gid), None)
+    _js_save(cfg_path(int(gid)), merge_config(cfg), log=log)
 
 
 # ─────────────────────────────────────────────────────────────

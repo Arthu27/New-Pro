@@ -14,6 +14,7 @@ import asyncio
 
 from logger import get_logger 
 log =get_logger ("companion")
+from json_store import load_json ,save_json 
 
 
 # Цель user ID
@@ -88,19 +89,11 @@ MESSAGES_RANDOM ,
 #  State 
 
 def _load ()->dict :
-    if os .path .exists (DATA_FILE ):
-        try :
-            with open (DATA_FILE ,'r',encoding ='utf-8')as f :
-                return json .load (f )
-        except Exception as _ex:
-            log.debug("_load(): подавлено: %s", _ex)
-    return {'last_date':None ,'sent_today':0 ,'used_messages':[]}
+    return load_json (DATA_FILE ,{'last_date':None ,'sent_today':0 ,'used_messages':[]},log =log )
 
 
 def _save (data :dict ):
-    os .makedirs ('data',exist_ok =True )
-    with open (DATA_FILE ,'w',encoding ='utf-8')as f :
-        json .dump (data ,f ,ensure_ascii =False ,indent =2 )
+    save_json (DATA_FILE ,data ,log =log )
 
 
         #  Cog 

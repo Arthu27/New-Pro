@@ -9,6 +9,8 @@ from logger import get_logger
 
 _log = get_logger("social")
 
+from json_store import load_json as _js_load, save_json as _js_save
+
 import discord 
 from discord .ext import commands ,tasks 
 from discord import app_commands 
@@ -30,12 +32,10 @@ def _bar (ratio :float ,length :int =12 )->str :
     return BAR_FULL *filled +BAR_EMPTY *(length -filled )
 
 def _load (path ):
-    return json .load (open (path ,'r',encoding ='utf-8'))if os .path .exists (path )else {}
+    return _js_load (path ,{},log =_log )
 
 def _save (path ,data ):
-    os .makedirs ('data',exist_ok =True )
-    with open (path ,'w',encoding ='utf-8')as f :
-        json .dump (data ,f ,indent =2 ,ensure_ascii =False )
+    _js_save (path ,data ,log =_log )
 
 
         # 

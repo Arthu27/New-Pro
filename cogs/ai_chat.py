@@ -8,6 +8,7 @@ import datetime
 
 from logger import get_logger 
 log =get_logger ("ai_chat")
+from json_store import load_json ,save_json 
 
 
 AI_CHANNELS =set ()# Пусто — dinamik как addnir
@@ -19,19 +20,10 @@ _active_tasks :list =[]# [{'id': int, 'desc': str, 'condition': str, 'action': s
 _task_counter :int =0 
 
 def _load_tasks ()->list :
-    f ='data/jarvis_tasks.json'
-    if os .path .exists (f ):
-        try :
-            with open (f ,'r',encoding ='utf-8')as fp :
-                return json .load (fp )
-        except Exception as _ex:
-            log.debug("_load_tasks(): подавлено: %s", _ex)
-    return []
+    return load_json ('data/jarvis_tasks.json',[],log =log )
 
 def _save_tasks (tasks :list ):
-    os .makedirs ('data',exist_ok =True )
-    with open ('data/jarvis_tasks.json','w',encoding ='utf-8')as f :
-        json .dump (tasks ,f ,ensure_ascii =False ,indent =2 )
+    save_json ('data/jarvis_tasks.json',tasks ,log =log )
 
 _active_tasks =_load_tasks ()
 
@@ -66,41 +58,23 @@ _save_counter =0
 
 
 def _load_owner_prefs ()->dict :
-    if os .path .exists (OWNER_PREFS_FILE ):
-        try :
-            with open (OWNER_PREFS_FILE ,'r',encoding ='utf-8')as f :
-                return json .load (f )
-        except Exception as _ex:
-            log.debug("_load_owner_prefs(): подавлено: %s", _ex)
-    return {'rules':[],'memory':{},'disabled_notifications':[]}
+    return load_json (OWNER_PREFS_FILE ,{'rules':[],'memory':{},'disabled_notifications':[]},log =log )
 
 
 def _save_owner_prefs (prefs :dict ):
-    os .makedirs ('data',exist_ok =True )
-    with open (OWNER_PREFS_FILE ,'w',encoding ='utf-8')as f :
-        json .dump (prefs ,f ,ensure_ascii =False ,indent =2 )
+    save_json (OWNER_PREFS_FILE ,prefs ,log =log )
 
 
 _owner_prefs =_load_owner_prefs ()
 
 
 def _load_profiles ()->dict :
-    if os .path .exists (PROFILES_FILE ):
-        try :
-            with open (PROFILES_FILE ,'r',encoding ='utf-8')as f :
-                return json .load (f )
-        except Exception as _ex:
-            log.debug("_load_profiles(): подавлено: %s", _ex)
-    return {}
+    return load_json (PROFILES_FILE ,{},log =log )
 
 
 def _save_profiles (profiles :dict ):
-    try :
-        os .makedirs ('data',exist_ok =True )
-        with open (PROFILES_FILE ,'w',encoding ='utf-8')as f :
-            json .dump (profiles ,f ,ensure_ascii =False ,indent =2 )
-    except Exception as e :
-        log .info (f'[AI] Profil сохран Ошибки: {e}')
+    if not save_json (PROFILES_FILE ,profiles ,log =log ):
+        log .info ('[AI] Profil сохран Ошибки — см. json_store warning')
 
 
 def _update_profile (user_id :int ,question :str ,answer :str ,profiles :dict ):
@@ -141,45 +115,26 @@ def _update_profile (user_id :int ,question :str ,answer :str ,profiles :dict ):
 _profiles =_load_profiles ()
 
 def _load_histories ()->dict :
-    """Разговор история dosyadan загрузить"""
-    if os .path .exists (HISTORY_FILE ):
-        try :
-            with open (HISTORY_FILE ,'r',encoding ='utf-8')as f :
-                data =json .load (f )
-                # String key'leri int'e преобразовать
-                return {int (k ):v for k ,v in data .items ()}
-        except Exception as e :
-            log .info (f'[AI] History загруз Ошибки: {e}')
-    return {}
+    """Разговор история dosyadan загрузить (через общий кеш json_store)."""
+    try :
+        # String key'leri int'e преобразовать
+        return {int (k ):v for k ,v in load_json (HISTORY_FILE ,{},log =log ).items ()}
+    except Exception as e :
+        log .info (f'[AI] History загруз Ошибки: {e}')
+        return {}
 
 def _load_knowledge_base ()->dict :
     """Сервер основанный на info базу загрузить"""
-    if os .path .exists (KNOWLEDGE_FILE ):
-        try :
-            with open (KNOWLEDGE_FILE ,'r',encoding ='utf-8')as f :
-                return json .load (f )
-        except Exception as e :
-            log .info (f'[AI] Knowledge base загруз Ошибки: {e}')
-    return {}
+    return load_json (KNOWLEDGE_FILE ,{},log =log )
 
 def _load_instructions ()->dict :
     """Сервер основанный на постоянный инструкции загрузить"""
-    if os .path .exists (INSTRUCTIONS_FILE ):
-        try :
-            with open (INSTRUCTIONS_FILE ,'r',encoding ='utf-8')as f :
-                return json .load (f )
-        except Exception as e :
-            log .info (f'[AI] Instructions загруз Ошибки: {e}')
-    return {}
+    return load_json (INSTRUCTIONS_FILE ,{},log =log )
 
 def _save_instructions (instructions :dict ):
     """Постоянный инструкции сохранить"""
-    try :
-        os .makedirs ('data',exist_ok =True )
-        with open (INSTRUCTIONS_FILE ,'w',encoding ='utf-8')as f :
-            json .dump (instructions ,f ,ensure_ascii =False ,indent =2 )
-    except Exception as e :
-        log .info (f'[AI] Ошибка сохранения инструкций: {e}')
+    if not save_json (INSTRUCTIONS_FILE ,instructions ,log =log ):
+        log .info ('[AI] Ошибка сохранения инструкций — см. json_store warning')
 
 def _detect_instruction (message :str ,answer :str )->dict :
     """
@@ -220,21 +175,13 @@ def _save_histories (histories :dict ,force :bool =False ):
     # Каждый 5 messageda bir или force=True ise сохранить
     if not force and _save_counter %5 !=0 :
         return 
-    try :
-        os .makedirs ('data',exist_ok =True )
-        with open (HISTORY_FILE ,'w',encoding ='utf-8')as f :
-            json .dump (histories ,f ,ensure_ascii =False ,indent =2 )
-    except Exception as e :
-        log .info (f'[AI] Ошибка сохранения истории: {e}')
+    if not save_json (HISTORY_FILE ,histories ,log =log ):
+        log .info ('[AI] Ошибка сохранения истории — см. json_store warning')
 
 def _save_knowledge_base (knowledge :dict ):
     """Информация базу сохранить"""
-    try :
-        os .makedirs ('data',exist_ok =True )
-        with open (KNOWLEDGE_FILE ,'w',encoding ='utf-8')as f :
-            json .dump (knowledge ,f ,ensure_ascii =False ,indent =2 )
-    except Exception as e :
-        log .info (f'[AI] Ошибка сохранения базы знаний: {e}')
+    if not save_json (KNOWLEDGE_FILE ,knowledge ,log =log ):
+        log .info ('[AI] Ошибка сохранения базы знаний — см. json_store warning')
 
 def _extract_learned_info (question :str ,answer :str )->dict :
     """Удалить обученную информацию из вопроса-ответа"""

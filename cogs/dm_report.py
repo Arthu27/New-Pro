@@ -17,6 +17,8 @@ from logger import get_logger
 
 _log = get_logger("dm_report")
 
+from json_store import load_json as _js_load, save_json as _js_save
+
 import os
 import json
 import time
@@ -50,24 +52,12 @@ STATUS_LABEL = {
 
 
 def _load(path, default):
-    try:
-        if os.path.exists(path):
-            with open(path, 'r', encoding='utf-8') as f:
-                return json.load(f)
-    except Exception as _ex:
-        _log.debug("_load(): подавлено: %s", _ex)
-    return default
+    return _js_load(path, default, log=_log)
 
 
 def _save(path, data):
-    try:
-        os.makedirs('data', exist_ok=True)
-        tmp = path + '.tmp'
-        with open(tmp, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-        os.replace(tmp, path)
-    except Exception as e:
-        log.error(f"[ZHALOBA] ошибка записи: {e}")
+    if not _js_save(path, data, log=_log):
+        log.error("[ZHALOBA] ошибка записи — см. json_store warning")
 
 
 class DMReport(commands.Cog):
