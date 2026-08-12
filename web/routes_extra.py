@@ -572,6 +572,64 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         eh.reset_stats()
         return jsonify({'ok': True})
 
+    # ── АВТОФИЛЬТР чата ───────────────────────────────────────────
+    def _autofilter_gid() -> str:
+        """MAIN_GUILD_ID, иначе первый сервер бота (как в остальных API)."""
+        if MAIN_GUILD_ID:
+            return str(MAIN_GUILD_ID)
+        import web.app as _app
+        bot = _app.bot_instance
+        try:
+            guilds = getattr(bot, 'guilds', None) or []
+            return str(guilds[0].id) if guilds else ''
+        except Exception:
+            return ''
+
+    @app.route('/autofilter')
+    @login_required
+    @role_required('mod')
+    def autofilter_page():
+        return render_template('autofilter.html', role=session.get('role'),
+                               username=session.get('username'))
+
+    @app.route('/api/autofilter')
+    @login_required
+    @role_required('mod')
+    def api_autofilter_get():
+        from cogs.auto_filter import load_config
+        gid = _autofilter_gid()
+        if not gid:
+            return jsonify({'ok': False, 'error': 'Сервер не выбран (MAIN_GUILD_ID / бот офлайн)'}), 503
+        return jsonify({'ok': True, 'guild_id': gid, 'config': load_config(gid)})
+
+    @app.route('/api/autofilter/save', methods=['POST'])
+    @login_required
+    @role_required('admin')
+    def api_autofilter_save():
+        from cogs.auto_filter import validate_config, save_config
+        gid = _autofilter_gid()
+        if not gid:
+            return jsonify({'ok': False, 'error': 'Сервер не выбран'}), 503
+        data = request.get_json(silent=True) or {}
+        cfg, errors = validate_config(data)
+        if errors:
+            return jsonify({'ok': False, 'errors': errors}), 400
+        save_config(gid, cfg)
+        return jsonify({'ok': True, 'config': cfg})
+
+    @app.route('/api/autofilter/test', methods=['POST'])
+    @login_required
+    @role_required('mod')
+    def api_autofilter_test():
+        from cogs.auto_filter import load_config, classify_message
+        gid = _autofilter_gid()
+        if not gid:
+            return jsonify({'ok': False, 'error': 'Сервер не выбран'}), 503
+        data = request.get_json(silent=True) or {}
+        text = str(data.get('text') or '')[:500]
+        return jsonify({'ok': True,
+                        'violations': classify_message(load_config(gid), text)})
+
     # ── Публичная статус-страница (без логина) ───────────────────────────
     @app.route('/status')
     def status_public_page():

@@ -25,7 +25,7 @@ MENU = [
         {'path': '/temp-moderation', 'label': 'Временная модерация', 'icon': 'fa-clock'},
         {'path': '/warnings', 'label': 'Предупреждения', 'icon': 'fa-exclamation-triangle'},
         {'path': '/mod-history', 'label': 'История', 'icon': 'fa-history'},
-        {'path': '/automod-settings', 'label': 'Автомодерация', 'icon': 'fa-shield-alt'},
+        {'path': '/autofilter', 'label': 'Автофильтр чата', 'icon': 'fa-filter'},
         {'path': '/antiraid', 'label': 'Анти-рейд', 'icon': 'fa-shield-virus'},
         {'path': '/tagjail', 'label': 'Tag Jail', 'icon': 'fa-lock'},
         {'path': '/mod-tools', 'label': 'Липкие & Паника', 'icon': 'fa-thumbtack'},
