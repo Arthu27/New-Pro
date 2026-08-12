@@ -829,4 +829,39 @@
   window.toggleLockdown = toggleLockdown;
 })();
 </script>
+
+<style>
+/* ── Dashboard polish (аддитивный слой, JS не тронут) ─────────────── */
+.welcome-hero { border: 1px solid var(--ac-line) !important; box-shadow: var(--shadow-md), inset 0 1px 0 rgba(255,255,255,.06) !important; }
+.hero-chips .chip { backdrop-filter: blur(8px); border-color: var(--ac-line) !important; transition: all .18s var(--ease); }
+.hero-chips .chip:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,.3); background: var(--ac-soft) !important; }
+.hero-guild-av { box-shadow: 0 6px 22px var(--ac-glow); transition: transform .25s var(--ease-spring); }
+.welcome-hero:hover .hero-guild-av { transform: scale(1.05) rotate(-4deg); }
+
+.dash-summary .sum-item { transition: all .18s var(--ease); }
+.dash-summary .sum-item:hover { transform: translateY(-2px); border-color: var(--ac-line) !important; }
+.sum-ico { box-shadow: inset 0 1px 0 rgba(255,255,255,.10), 0 4px 14px rgba(0,0,0,.25); }
+
+.stat-card-big:hover { transform: translateY(-3px) !important; box-shadow: var(--shadow-md), 0 0 0 1px var(--ac-line) !important; }
+.stat-card-big.purple::after { background: radial-gradient(circle at top right, color-mix(in srgb, var(--violet) 20%, transparent) 0%, transparent 70%); }
+.stat-card-big.pink::after   { background: radial-gradient(circle at top right, color-mix(in srgb, var(--pink) 20%, transparent) 0%, transparent 70%); }
+.stat-card-big.cyan::after   { background: radial-gradient(circle at top right, color-mix(in srgb, var(--cyan) 20%, transparent) 0%, transparent 70%); }
+.stat-card-big.green::after  { background: radial-gradient(circle at top right, color-mix(in srgb, var(--ok) 20%, transparent) 0%, transparent 70%); }
+.stat-card-big .stat-value { text-shadow: 0 2px 16px rgba(0,0,0,.30); }
+
+.donut-card { transition: all .18s var(--ease); }
+.donut-card:hover { transform: translateY(-2px); border-color: var(--ac-line) !important; }
+.donut-card:hover .donut { filter: drop-shadow(0 0 10px var(--ac-glow)); }
+.threat-card:hover { border-color: var(--ac-line) !important; }
+.threat-bar-fill { transition: width .6s var(--ease); }
+
+.dash-box-head { border-bottom: 1px solid transparent !important; border-image: linear-gradient(90deg, var(--ac-line), transparent 70%) 1 !important; }
+.quick-grid > *, .dash-card.quick-action { transition: all .18s var(--ease); }
+.quick-grid > *:hover, .dash-card.quick-action:hover { transform: translateY(-2px); border-color: var(--ac-line) !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  .welcome-hero:hover .hero-guild-av { transform: none; }
+  .dash-summary .sum-item:hover, .stat-card-big:hover { transform: none !important; }
+}
+</style>
 {% endblock %}

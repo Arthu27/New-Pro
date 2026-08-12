@@ -471,6 +471,56 @@
             .hero-title { font-size: 38px; letter-spacing: 5px; }
             .hero-sub br { display: none; }
         }
+
+        /* ── Login polish (аддитивный слой) ─────────────────────────── */
+        .hero-title {
+            background: linear-gradient(120deg, #f0e6d0 25%, #e9c766 48%, #f0e6d0 72%);
+            background-size: 220% 100%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: loginTitleShine 9s ease-in-out infinite;
+            filter: drop-shadow(0 4px 26px rgba(224,176,74,.25));
+        }
+        @keyframes loginTitleShine {
+            0%, 100% { background-position: 0% 0; }
+            50% { background-position: 100% 0; }
+        }
+        .hero-tag, .hero-eyebrow { backdrop-filter: blur(8px); }
+        .auth-card {
+            animation: loginCardIn .7s cubic-bezier(0.16, 1, 0.3, 1) both .12s;
+            box-shadow: 0 30px 80px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.07);
+        }
+        @keyframes loginCardIn {
+            from { opacity: 0; transform: translateY(26px) scale(.985); }
+            to   { opacity: 1; transform: none; }
+        }
+        .tab-btn { transition: all .2s ease; }
+        .tab-btn.active { box-shadow: 0 6px 20px rgba(224,176,74,.28); }
+        .form-input { transition: border-color .2s ease, box-shadow .2s ease, background .2s ease; }
+        .form-input:focus {
+            border-color: #e0b04a !important;
+            box-shadow: 0 0 0 4px rgba(224,176,74,.14) !important;
+        }
+        .form-input:hover:not(:focus) { border-color: rgba(224,176,74,.4); }
+        .btn-submit { position: relative; overflow: hidden; transition: transform .18s ease, box-shadow .18s ease; }
+        .btn-submit:hover { box-shadow: 0 10px 30px rgba(224,176,74,.35); }
+        .btn-submit:active { transform: translateY(0) scale(.97); }
+        .btn-submit::after {
+            content: '';
+            position: absolute; top: 0; left: -90%;
+            width: 60%; height: 100%;
+            background: linear-gradient(100deg, transparent, rgba(255,255,255,.30), transparent);
+            transform: skewX(-18deg);
+            transition: left .55s ease;
+        }
+        .btn-submit:hover::after { left: 130%; }
+        .alert { animation: loginAlertIn .35s ease both; }
+        @keyframes loginAlertIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+        @media (prefers-reduced-motion: reduce) {
+            .hero-title, .auth-card { animation: none !important; }
+            .btn-submit::after { display: none; }
+        }
     </style>
 </head>
 <body>

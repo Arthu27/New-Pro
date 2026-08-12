@@ -187,7 +187,13 @@ kbd {
 /* ── 11. Тосты: воздух ─────────────────────────────────────── */
 .toast { border-radius: 13px !important; box-shadow: var(--shadow-lg) !important; backdrop-filter: blur(10px); }
 
-/* ── 12. Уважение к reduced motion ─────────────────────────── */
+/* ── 12. Инлайн-оповещения .msg (используют многие страницы) ── */
+.msg { display: none; padding: 10px 14px; border-radius: 11px; font-size: 13px; font-weight: 600; border: 1px solid transparent; margin: 8px 0; }
+.msg.ok, .msg.success { display: inline-block; background: rgba(74,222,128,.10); color: var(--ok); border-color: rgba(74,222,128,.30); }
+.msg.err, .msg.error { display: inline-block; background: rgba(248,113,113,.10); color: var(--err); border-color: rgba(248,113,113,.30); }
+.msg.info { display: inline-block; background: var(--ac-soft); color: var(--ac-2); border-color: var(--ac-line); }
+
+/* ── 13. Уважение к reduced motion ─────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   .main-content > * { animation: none !important; }
   .page-hero::after, .page-hero h1 { animation: none !important; }

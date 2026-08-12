@@ -106,5 +106,38 @@ for path in ('/anticrash', '/proofs', '/backups', '/mod-tools', '/commands'):
     check(ok, f'{path}: 200, оба стиля подключены')
 check(rendered == 5, 'все контрольные страницы отрендерились со слоем')
 
+# ═══ 4. Дашборд / логин: локальные слои ══════════════════════════════════
+print('== дашборд и логин ==')
+dash = open(os.path.join(ROOT, 'web', 'templates', 'dashboard.html'), encoding='utf-8').read()
+check('Dashboard polish' in dash, 'дашборд: слой полироли подключён')
+check('.stat-card-big.purple::after' in dash and 'var(--violet)' in dash,
+      'дашборд: цветные углы у стат-карточек')
+check('.hero-chips .chip:hover' in dash and '.donut-card:hover' in dash,
+      'дашборд: hover-подъёмы чипов и донатов')
+check('prefers-reduced-motion' in dash, 'дашборд: reduced motion учтён')
+
+login_as('owner')
+r = client.get('/')
+check(r.status_code == 200 and 'Dashboard polish' in r.get_data(as_text=True),
+      'дашборд рендерится со слоем (owner, /)')
+
+loginf = open(os.path.join(ROOT, 'web', 'templates', 'login.html'), encoding='utf-8').read()
+check('Login polish' in loginf and 'loginTitleShine' in loginf and 'loginCardIn' in loginf,
+      'логин: перелив заголовка + появление карточки')
+check('btn-submit::after' in loginf and 'loginAlertIn' in loginf,
+      'логин: блик кнопки и своя анимация алерта (без зависимости от style.css)')
+check('animation: msgIn' not in loginf, 'логин: нет ссылки на чужой msgIn (его нет в файле)')
+
+with client.session_transaction() as s:
+    s.clear()
+r = client.get('/login')
+check(r.status_code == 200 and 'Login polish' in r.get_data(as_text=True),
+      'страница /login рендерится со слоем без логина')
+
+check('.msg.ok' in css and '.msg.err' in css and '.msg.info' in css,
+      'polish.css: глобальные .msg-оповещения (ok/err/info)')
+check('v=2' in open(os.path.join(ROOT, 'web', 'templates', 'base.html'), encoding='utf-8').read(),
+      'base.html: кэш polish.css сброшен (v=2)')
+
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(1 if FAIL else 0)
