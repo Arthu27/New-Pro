@@ -169,6 +169,9 @@ print('== API: economy ==')
 from db import UserData  # noqa: E402
 
 ec = UserData('economy')
+# DB_PATH абсолютен (корень репо) — чистим неймспейс, чтобы тест был изолирован
+for _uid in list(ec.get_all()):
+    ec.delete(_uid)
 ec.set(11111, {'balance': 500, 'bank': 1500, 'vault': 3})
 ec.set(22222, {'balance': 9000, 'bank': 100, 'vault': 1})
 ec.set(33333, {'balance': 50, 'bank': 50, 'vault': 0})

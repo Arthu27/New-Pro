@@ -38,7 +38,8 @@ class GuildData:
     
     def _ensure_table(self):
         conn = self._conn()
-        conn.execute('''
+        try:
+            conn.execute('''
             CREATE TABLE IF NOT EXISTS guild_data (
                 namespace TEXT NOT NULL,
                 guild_id INTEGER NOT NULL,
@@ -48,21 +49,24 @@ class GuildData:
                 PRIMARY KEY (namespace, guild_id, key)
             )
         ''')
-        conn.execute('''
+            conn.execute('''
             CREATE INDEX IF NOT EXISTS idx_guild_data_ns_guild 
             ON guild_data(namespace, guild_id)
         ''')
-        conn.commit()
-        conn.close()
+            conn.commit()
+        finally:
+            conn.close()
     
     def get(self, guild_id: int, key: str, default: Any = None) -> Any:
         """Чтение значения"""
         conn = self._conn()
-        row = conn.execute(
-            'SELECT value FROM guild_data WHERE namespace = ? AND guild_id = ? AND key = ?',
-            (self.namespace, guild_id, str(key))
-        ).fetchone()
-        conn.close()
+        try:
+            row = conn.execute(
+                'SELECT value FROM guild_data WHERE namespace = ? AND guild_id = ? AND key = ?',
+                (self.namespace, guild_id, str(key))
+            ).fetchone()
+        finally:
+            conn.close()
         if row:
             try:
                 return json.loads(row['value'])
@@ -106,11 +110,13 @@ class GuildData:
     def get_all(self, guild_id: int) -> Dict[str, Any]:
         """Все данные гильдии"""
         conn = self._conn()
-        rows = conn.execute(
-            'SELECT key, value FROM guild_data WHERE namespace = ? AND guild_id = ?',
-            (self.namespace, guild_id)
-        ).fetchall()
-        conn.close()
+        try:
+            rows = conn.execute(
+                'SELECT key, value FROM guild_data WHERE namespace = ? AND guild_id = ?',
+                (self.namespace, guild_id)
+            ).fetchall()
+        finally:
+            conn.close()
         result = {}
         for row in rows:
             try:
@@ -122,21 +128,25 @@ class GuildData:
     def get_all_keys(self, guild_id: int) -> List[str]:
         """Все ключи гильдии"""
         conn = self._conn()
-        rows = conn.execute(
-            'SELECT key FROM guild_data WHERE namespace = ? AND guild_id = ?',
-            (self.namespace, guild_id)
-        ).fetchall()
-        conn.close()
+        try:
+            rows = conn.execute(
+                'SELECT key FROM guild_data WHERE namespace = ? AND guild_id = ?',
+                (self.namespace, guild_id)
+            ).fetchall()
+        finally:
+            conn.close()
         return [row['key'] for row in rows]
     
     def count(self, guild_id: int) -> int:
         """Kayit sayisi"""
         conn = self._conn()
-        row = conn.execute(
-            'SELECT COUNT(*) as cnt FROM guild_data WHERE namespace = ? AND guild_id = ?',
-            (self.namespace, guild_id)
-        ).fetchone()
-        conn.close()
+        try:
+            row = conn.execute(
+                'SELECT COUNT(*) as cnt FROM guild_data WHERE namespace = ? AND guild_id = ?',
+                (self.namespace, guild_id)
+            ).fetchone()
+        finally:
+            conn.close()
         return row['cnt'] if row else 0
     
     def exists(self, guild_id: int, key: str) -> bool:
@@ -202,7 +212,8 @@ class UserData:
     
     def _ensure_table(self):
         conn = self._conn()
-        conn.execute('''
+        try:
+            conn.execute('''
             CREATE TABLE IF NOT EXISTS user_data (
                 namespace TEXT NOT NULL,
                 user_id INTEGER NOT NULL,
@@ -211,16 +222,19 @@ class UserData:
                 PRIMARY KEY (namespace, user_id)
             )
         ''')
-        conn.commit()
-        conn.close()
+            conn.commit()
+        finally:
+            conn.close()
     
     def get(self, user_id: int, default: Any = None) -> Any:
         conn = self._conn()
-        row = conn.execute(
-            'SELECT value FROM user_data WHERE namespace = ? AND user_id = ?',
-            (self.namespace, user_id)
-        ).fetchone()
-        conn.close()
+        try:
+            row = conn.execute(
+                'SELECT value FROM user_data WHERE namespace = ? AND user_id = ?',
+                (self.namespace, user_id)
+            ).fetchone()
+        finally:
+            conn.close()
         if row:
             try:
                 return json.loads(row['value'])
@@ -262,11 +276,13 @@ class UserData:
     def get_all(self) -> Dict[int, Any]:
         """Все пользователи"""
         conn = self._conn()
-        rows = conn.execute(
-            'SELECT user_id, value FROM user_data WHERE namespace = ?',
-            (self.namespace,)
-        ).fetchall()
-        conn.close()
+        try:
+            rows = conn.execute(
+                'SELECT user_id, value FROM user_data WHERE namespace = ?',
+                (self.namespace,)
+            ).fetchall()
+        finally:
+            conn.close()
         result = {}
         for row in rows:
             try:

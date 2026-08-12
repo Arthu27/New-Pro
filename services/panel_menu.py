@@ -17,6 +17,7 @@ MENU = [
         {'path': '/', 'label': 'Обзор сервера', 'icon': 'fa-home'},
         {'path': '/guilds', 'label': 'Серверы', 'icon': 'fa-server'},
         {'path': '/analytics', 'label': 'Аналитика', 'icon': 'fa-chart-line'},
+        {'path': '/advanced-analytics', 'label': 'Про-аналитика', 'icon': 'fa-chart-pie'},
         {'path': '/bot-stats', 'label': 'Статистика бота', 'icon': 'fa-robot'},
         {'path': '/server-health', 'label': 'Состояние', 'icon': 'fa-heartbeat'},
     ]},
@@ -55,6 +56,7 @@ MENU = [
     {'group': 'Тикеты', 'key': 'tickets', 'icon': 'fa-ticket-alt', 'pages': [
         {'path': '/ai-tickets', 'label': 'AI Тикеты', 'icon': 'fa-ticket-alt'},
         {'path': '/ai_ticket_stats', 'label': 'Статистика', 'icon': 'fa-chart-pie'},
+        {'path': '/ticket-search', 'label': 'Поиск тикетов', 'icon': 'fa-magnifying-glass'},
         {'path': '/ticket-settings', 'label': 'Настройки', 'icon': 'fa-cogs'},
         {'path': '/staff-apps', 'label': 'Заявки', 'icon': 'fa-file-signature'},
     ]},
@@ -64,6 +66,7 @@ MENU = [
         {'path': '/send-command', 'label': 'Отправить', 'icon': 'fa-paper-plane'},
         {'path': '/schedule', 'label': 'Расписание', 'icon': 'fa-calendar-alt'},
         {'path': '/bot-settings', 'label': 'Настройки', 'icon': 'fa-sliders-h'},
+        {'path': '/theme-settings', 'label': 'Тема панели', 'icon': 'fa-palette'},
         {'path': '/anticrash', 'label': 'Анти-краш', 'icon': 'fa-life-ring'},
         {'path': '/backups', 'label': 'Бэкапы', 'icon': 'fa-save'},
         {'path': '/konsol', 'label': 'Консоль', 'icon': 'fa-terminal'},
