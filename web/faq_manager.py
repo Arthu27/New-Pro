@@ -10,6 +10,11 @@ FAQ / Система обучения — основана на файлах
   - вопросы из unknown_questions.json можно просмотреть и добавить в learned_faq.json
   - чтобы отключить FAQ, установите "active": false
 """
+
+from logger import get_logger
+
+_log = get_logger("faq_manager")
+
 import os 
 import json 
 import re 
@@ -27,8 +32,8 @@ def _load (path :str )->list :
         try :
             with open (path ,'r',encoding ='utf-8')as f :
                 return json .load (f )
-        except Exception :
-            pass 
+        except Exception as _ex:
+            _log.debug("_load(): подавлено: %s", _ex)
     return []
 
 

@@ -4,6 +4,11 @@
 историю DM и позволить ответить. Этот ког ловит каждое входящее DM независимо от
 других когов, поэтому разговор никогда не теряется.
 """
+
+from logger import get_logger
+
+_log = get_logger("dm_logger")
+
 import discord
 from discord.ext import commands
 
@@ -25,8 +30,8 @@ def _load_dm_log():
             with open(DM_LOG_FILE, 'r', encoding='utf-8') as f:
                 d = json.load(f)
             return d if isinstance(d, dict) else {}
-    except Exception:
-        pass
+    except Exception as _ex:
+        _log.debug("_load_dm_log(): подавлено: %s", _ex)
     return {}
 
 
@@ -44,8 +49,8 @@ def _load_dm_whitelist():
                 elif isinstance(item, (str, int)):
                     ids.append(str(item))
             return set(x for x in ids if x)
-    except Exception:
-        pass
+    except Exception as _ex:
+        _log.debug("_load_dm_whitelist(): подавлено: %s", _ex)
     return set()
 
 
@@ -91,8 +96,8 @@ class DMLogger(commands.Cog):
                         t_new = message.created_at.replace(tzinfo=t_prev.tzinfo)
                         if abs((t_new - t_prev).total_seconds()) < 2:
                             return
-                    except Exception:
-                        pass
+                    except Exception as _ex:
+                        _log.debug("on_message(): подавлено: %s", _ex)
             data[uid].append({
                 'author': message.author.display_name,
                 'content': content,

@@ -8,6 +8,11 @@ Bot Diagnostic & Auto-Repair Cog
 - Auto-restart on critical failure
 - Memory leak detection
 """
+
+from logger import get_logger
+
+_log = get_logger("diagnostics")
+
 import discord 
 from discord .ext import commands ,tasks 
 import json 
@@ -97,8 +102,8 @@ class Diagnostics (commands .Cog ):
             log =log [-1000 :]
             with open (f ,"w",encoding ="utf-8")as fp :
                 json .dump (log ,fp ,ensure_ascii =False ,indent =2 )
-        except Exception :
-            pass 
+        except Exception as _ex:
+            _log.debug("on_command_error(): подавлено: %s", _ex)
 
             # HEALTH MONITORING TASK 
     @tasks .loop (minutes =1 )
@@ -118,8 +123,8 @@ class Diagnostics (commands .Cog ):
                     "repair_count":dict (self .repair_count ),
                     "uptime_sec":time .time ()-self .start_time ,
                     },fp ,ensure_ascii =False ,indent =2 )
-            except Exception :
-                pass 
+            except Exception as _ex:
+                _log.debug("health_monitor(): подавлено: %s", _ex)
                 # Auto-repair
             await self ._auto_repair (health )
         except Exception as e :
@@ -239,8 +244,8 @@ class Diagnostics (commands .Cog ):
                 )
                 embed .timestamp =datetime.now(timezone.utc).replace(tzinfo=None)
                 await owner .send (embed =embed )
-        except Exception :
-            pass 
+        except Exception as _ex:
+            _log.debug("_notify_admin(): подавлено: %s", _ex)
 
             # HOT-RELOAD 
     @commands .command (name ="hotreload")

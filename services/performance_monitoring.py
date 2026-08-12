@@ -3,6 +3,10 @@ Performance Monitoring
 Система мониторинга производительности
 """
 
+from logger import get_logger
+
+_log = get_logger("performance_monitoring")
+
 import json
 import os
 import time
@@ -70,8 +74,8 @@ class MetricsCollector:
                         metric_name: [PerformanceMetric.from_dict(m) for m in metrics]
                         for metric_name, metrics in data.items()
                     }
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_metrics(): подавлено: %s", _ex)
         
         return defaultdict(list)
     
@@ -339,8 +343,8 @@ class UptimeMonitor:
             try:
                 with open(self.uptime_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_uptime_records(): подавлено: %s", _ex)
         
         return {
             'checks': [],
@@ -527,8 +531,8 @@ class PerformanceAlert:
             try:
                 with open(self.alerts_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_alerts(): подавлено: %s", _ex)
         
         return {'alerts': [], 'rules': {}}
     

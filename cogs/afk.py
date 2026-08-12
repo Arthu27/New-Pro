@@ -1,4 +1,9 @@
 """AFK-система — /afk с причиной, уведомляет при упоминании"""
+
+from logger import get_logger
+
+_log = get_logger("afk")
+
 import discord 
 from discord .ext import commands 
 from discord import app_commands 
@@ -97,8 +102,8 @@ class AFK (commands .Cog ):
             nick =interaction .user .display_name 
             if nick .startswith ("💤"):
                 await interaction .user .edit (nick =nick [2 :].strip ()or None )
-        except Exception :
-            pass 
+        except Exception as _ex:
+            _log.debug("afk_remove(): подавлено: %s", _ex)
         # Показать накопившиеся упоминания
         uid =interaction .user .id 
         pending =_pending_mentions .pop (uid ,[])
@@ -143,8 +148,8 @@ class AFK (commands .Cog ):
                 nick =message .author .display_name 
                 if nick .startswith ("💤"):
                     await message .author .edit (nick =nick [2 :].strip ()or None )
-            except Exception :
-                pass 
+            except Exception as _ex:
+                _log.debug("on_message(): подавлено: %s", _ex)
             return 
 
         # Упомянутый пользователь в AFK?
@@ -222,8 +227,8 @@ class AFK (commands .Cog ):
                     )
                     # Добавить в ожидающие
                     _pending_mentions [OWNER_ID ][-1 ]['follow_msg']=follow .content 
-                except Exception :
-                    pass 
+                except Exception as _ex:
+                    _log.debug("on_message(): подавлено: %s", _ex)
 
             else :
                 # Обычное AFK-уведомление
@@ -261,8 +266,8 @@ class AFK (commands .Cog ):
                         icon_url =message .author .display_avatar .url 
                         )
                         await owner .send (embed =dm_embed )
-                    except Exception :
-                        pass 
+                    except Exception as _ex:
+                        _log.debug("on_message(): подавлено: %s", _ex)
 
 
 async def setup (bot ):

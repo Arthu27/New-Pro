@@ -39,7 +39,8 @@ class ModerationCog(commands.Cog):
         for channel in guild.channels:
             try:
                 await channel.set_permissions(mute_role, send_messages=False, speak=False)
-            except Exception:
+            except Exception as _ex:
+                log.debug("_get_mute_role(): подавлено: %s", _ex)
                 continue
         return mute_role
 
@@ -135,8 +136,8 @@ class ModerationCog(commands.Cog):
                                description=f"**Сервер:** {ctx.guild.name}\n**Причина:** {reason}",
                                color=discord.Color.red(), timestamp=datetime.now())
             await member.send(embed=dm)
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug("ban(): подавлено: %s", _ex)
 
     @commands.command(name='unban', aliases=['разбанить'])
     @commands.has_permissions(ban_members=True)

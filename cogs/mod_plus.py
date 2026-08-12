@@ -22,6 +22,11 @@ Mod Plus — набор «быстрых» инструментов модера
 data/modplus_ghost_{gid}.json.
 Snipe-буфер — только в памяти (перезапуск очищает, это ок: свежие события).
 """
+
+from logger import get_logger
+
+_log = get_logger("mod_plus")
+
 import json
 import os
 import time
@@ -166,8 +171,8 @@ class ModPlus(commands.Cog):
                 'channel_id': message.channel.id,
                 'channel_name': getattr(message.channel, 'name', '?'),
             }
-        except Exception:
-            pass
+        except Exception as _ex:
+            _log.debug("on_message_delete(): подавлено: %s", _ex)
 
     @commands.Cog.listener()
     async def on_message_edit(self, before, after):
@@ -187,8 +192,8 @@ class ModPlus(commands.Cog):
                 'channel_name': getattr(before.channel, 'name', '?'),
                 'jump_url': getattr(after, 'jump_url', ''),
             }
-        except Exception:
-            pass
+        except Exception as _ex:
+            _log.debug("on_message_edit(): подавлено: %s", _ex)
 
     def _snipe_embed(self, entry, kind):
         e = discord.Embed(color=GOLD if kind == 'del' else 0x3498DB,
@@ -216,8 +221,8 @@ class ModPlus(commands.Cog):
             try:
                 t = int(datetime.fromisoformat(ts).timestamp())
                 e.description = (e.description or '') + f"\n\n*🕐 поймано <t:{t}:R>*"
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_snipe_embed(): подавлено: %s", _ex)
         return e
 
     @app_commands.command(name='snipe', description='Показать последнее удалённое сообщение канала')
@@ -260,8 +265,8 @@ class ModPlus(commands.Cog):
             try:
                 old = await channel.fetch_message(int(old_id))
                 await old.delete()
-            except Exception:
-                pass  # уже удалено/нет доступа — просто шлём новое
+            except Exception as _ex:
+                _log.debug("_repost_sticky(): подавлено: %s", _ex)
         e = discord.Embed(description=f"📌 {entry['text']}", color=GOLD)
         e.set_footer(text='Липкое сообщение · /unstick чтобы отклеить')
         msg = await channel.send(embed=e)
@@ -291,8 +296,8 @@ class ModPlus(commands.Cog):
                 return  # анти-баунс при флуде: липкое не чаще раза в 3 сек
             self._last_sticky_repost[message.channel.id] = now
             await self._repost_sticky(message.guild, message.channel, dict(entry))
-        except discord.Forbidden:
-            pass  # нет прав писать/удалять в канале — молчим
+        except discord.Forbidden as _ex:
+            _log.debug("on_message(): подавлено: %s", _ex)
         except Exception as e:
             log.warning(f"[MOD+] sticky repost: {e}")
 
@@ -314,8 +319,8 @@ class ModPlus(commands.Cog):
             try:
                 msg = await ch.fetch_message(int(old['msg_id']))
                 await msg.delete()
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("stick(): подавлено: %s", _ex)
         entry = {'text': text, 'msg_id': None,
                  'author_id': interaction.user.id, 'set_at': _now().isoformat()}
         data[str(ch.id)] = entry
@@ -339,8 +344,8 @@ class ModPlus(commands.Cog):
             try:
                 msg = await ch.fetch_message(int(entry['msg_id']))
                 await msg.delete()
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("unstick(): подавлено: %s", _ex)
         self._save_stickies(interaction.guild.id, data)
         await interaction.response.send_message(f"🗑️ Липкое убрано из {ch.mention}.", ephemeral=True)
 
@@ -646,8 +651,8 @@ class ModPlus(commands.Cog):
 
         try:
             os.remove(state_path)
-        except Exception:
-            pass
+        except Exception as _ex:
+            _log.debug("panic_disable_core(): подавлено: %s", _ex)
 
         e = discord.Embed(title='✅ PANIC: локдаун снят', color=GREEN, timestamp=_now())
         e.description = f"Длился с: `{state.get('started_at', '?')}`\nПричина была: {state.get('reason', '—')}"

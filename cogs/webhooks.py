@@ -1,4 +1,9 @@
 """Webhook controli"""
+
+from logger import get_logger
+
+_log = get_logger("webhooks")
+
 import discord 
 from discord .ext import commands 
 from discord import app_commands 
@@ -123,8 +128,8 @@ class Webhooks (commands .Cog ):
                     wh =discord .utils .get (webhooks ,id =int (webhook_id ))
                     if wh :
                         await wh .delete ()
-            except Exception :
-                pass 
+            except Exception as _ex:
+                _log.debug("webhook_action(): подавлено: %s", _ex)
 
             name =data [webhook_id ]['name']
             del data [webhook_id ]

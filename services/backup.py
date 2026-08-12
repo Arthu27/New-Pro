@@ -15,6 +15,10 @@ Backup Servisi
 Ниже класс BackupService оставлен для обратной совместимости.
 """
 
+from logger import get_logger
+
+_log = get_logger("backup")
+
 import os
 import re
 import shutil
@@ -136,8 +140,8 @@ def create_backup(data_dir: str = DATA_DIR_DEFAULT,
     except Exception:
         try:
             os.remove(tmp_path)
-        except OSError:
-            pass
+        except OSError as _ex:
+            _log.debug("create_backup(): подавлено: %s", _ex)
         raise
 
     final_path = os.path.join(backup_dir, name)
@@ -163,7 +167,8 @@ def list_backups(backup_dir: str = BACKUP_DIR_DEFAULT) -> List[Dict]:
             continue  # чужеродные backup_*.zip не показываем и не трогаем
         try:
             st = os.stat(path)
-        except OSError:
+        except OSError as _ex:
+            _log.debug("list_backups(): подавлено: %s", _ex)
             continue
         items.append({
             'name': name,
@@ -192,8 +197,8 @@ def rotate_backups(backup_dir: str = BACKUP_DIR_DEFAULT,
         try:
             os.remove(path)
             removed.append(it['name'])
-        except OSError:
-            pass
+        except OSError as _ex:
+            _log.debug("rotate_backups(): подавлено: %s", _ex)
     return removed
 
 

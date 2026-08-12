@@ -1,4 +1,9 @@
 """Сервер состояние skoru + channel основанный на статистика"""
+
+from logger import get_logger
+
+_log = get_logger("health")
+
 import discord 
 from discord .ext import commands 
 from discord import app_commands 
@@ -125,8 +130,8 @@ class Health (commands .Cog ):
                     data =_load_health (str (member .guild .id ))
                     data ['kick_count']=data .get ('kick_count',0 )+1 
                     _save_health (str (member .guild .id ),data )
-        except Exception :
-            pass 
+        except Exception as _ex:
+            _log.debug("on_member_remove(): подавлено: %s", _ex)
 
     @app_commands .command (name ="server-health",description ="Показать оценку состояния сервера (активность, баны, спам)")
     async def saglik (self ,interaction :discord .Interaction ):

@@ -9,6 +9,11 @@ Scheduler — запланированные анонсы.
 Панель: /schedule (страница панели управления).
 Хранилище: data/schedules.json
 """
+
+from logger import get_logger
+
+_log = get_logger("scheduler")
+
 import os
 import json
 import time
@@ -39,8 +44,8 @@ def _load():
         if os.path.exists(DATA_PATH):
             with open(DATA_PATH, 'r', encoding='utf-8') as f:
                 return json.load(f)
-    except Exception:
-        pass
+    except Exception as _ex:
+        _log.debug("_load(): подавлено: %s", _ex)
     return {}
 
 
@@ -62,8 +67,8 @@ def parse_time_hhmm(text: str):
         h, m = int(h), int(m)
         if 0 <= h <= 23 and 0 <= m <= 59:
             return h, m
-    except Exception:
-        pass
+    except Exception as _ex:
+        _log.debug("parse_time_hhmm(): подавлено: %s", _ex)
     return None
 
 

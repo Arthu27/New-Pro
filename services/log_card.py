@@ -15,6 +15,11 @@ Aether — профессиональный генератор карточек 
       - INVITE: Портальные фиолетово-золотые лучи, чипы ссылок discord.gg/
       - TICKET: Золото-сапфировые плашки службы поддержки
 """
+
+from logger import get_logger
+
+_log = get_logger("log_card")
+
 import io
 import os
 import re
@@ -295,7 +300,8 @@ def _load_celestial_bg(w, h, cat_tint=None):
                 bg_im = bg_im.crop((0, y0, bw, y0 + nh))
             base = bg_im.resize((w, h), Image.Resampling.LANCZOS)
             break
-        except Exception:
+        except Exception as _ex:
+            _log.debug("_load_celestial_bg(): подавлено: %s", _ex)
             continue
     if base is None:
         grad = Image.new('RGB', (1, h))

@@ -1,6 +1,11 @@
 """
 Multi-modelnaya система — автоматически выбор lucsey modelleri для каждый задачи
 """
+
+from logger import get_logger
+
+_log = get_logger("model_selector")
+
 import os 
 import json 
 import time 
@@ -151,8 +156,8 @@ class ModelSelector :
                     data =json .load (f )
                     self .model_stats =data .get ('model_stats',{})
                     self .task_history =data .get ('task_history',[])
-            except Exception:
-                pass 
+            except Exception as _ex:
+                _log.debug("_load_stats(): подавлено: %s", _ex)
 
     def _save_stats (self ):
         """Сохраняет статистику в файл"""
@@ -164,8 +169,8 @@ class ModelSelector :
                 'model_stats':self .model_stats ,
                 'task_history':self .task_history [-100 :]# Сохран только son 100
                 },f ,indent =2 )
-        except Exception:
-            pass 
+        except Exception as _ex:
+            _log.debug("_save_stats(): подавлено: %s", _ex)
 
 
             # Kюresel пример

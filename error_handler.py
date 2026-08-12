@@ -14,6 +14,11 @@ AETHER ANTI-CRASH — централизованная защита от пад�
   сводка алертов в канал, персистентная статистика, конфиг в JSON,
   команда !anticrash и API для веб-панели.
 """
+
+from logger import get_logger
+
+_log = get_logger("error_handler")
+
 import asyncio
 import os
 import json
@@ -142,8 +147,8 @@ def _cast_like(default, raw):
             v = json.loads(s)
             if isinstance(v, list):
                 return [str(x) for x in v if str(x).strip()]
-        except Exception:
-            pass
+        except Exception as _ex:
+            _log.debug("_cast_like(): подавлено: %s", _ex)
         return [x.strip() for x in s.split('\n') if x.strip()]
     if isinstance(default, int):
         v = int(float(str(raw).strip()))
@@ -212,8 +217,8 @@ class ErrorHandler:
                     if k in user_cfg:
                         try:
                             cfg[k] = _cast_like(DEFAULT_CONFIG[k], user_cfg[k])
-                        except Exception:
-                            pass
+                        except Exception as _ex:
+                            _log.debug("_load_config(): подавлено: %s", _ex)
         except Exception as e:
             log.error(f"Anti-crash: не удалось прочитать конфиг, используются значения по умолчанию: {e}")
         return cfg
@@ -270,8 +275,8 @@ class ErrorHandler:
                         continue
                     if k in st and isinstance(st[k], type(v)):
                         st[k] = v
-        except Exception:
-            pass
+        except Exception as _ex:
+            _log.debug("_load_stats(): подавлено: %s", _ex)
         if not isinstance(st.get('last_errors'), list):
             st['last_errors'] = []
         return st
@@ -285,8 +290,8 @@ class ErrorHandler:
             with open(tmp, 'w', encoding='utf-8') as f:
                 json.dump(self.stats, f, ensure_ascii=False, indent=1)
             os.replace(tmp, STATS_PATH)
-        except Exception:
-            pass
+        except Exception as _ex:
+            _log.debug("save_stats(): подавлено: %s", _ex)
 
     def reset_stats(self):
         self.stats = self._fresh_stats()
@@ -350,8 +355,8 @@ class ErrorHandler:
                 loop.create_task(self._persist_task()),
                 loop.create_task(self._webhook_task()),
             ]
-        except RuntimeError:
-            pass
+        except RuntimeError as _ex:
+            _log.debug("setup(): подавлено: %s", _ex)
 
         log.info("Anti-crash PRO активирован (watchdog, breaker, фильтр, webhook, warnings, shards)")
 
@@ -365,8 +370,8 @@ class ErrorHandler:
         """Uncaught Exception: asyncio-задачи, потоки, главный поток"""
         try:
             asyncio.get_running_loop().set_exception_handler(self._loop_exception_handler)
-        except RuntimeError:
-            pass
+        except RuntimeError as _ex:
+            _log.debug("_setup_anticrash(): подавлено: %s", _ex)
 
         def _sys_hook(exc_type, exc, tb):
             if issubclass(exc_type, (KeyboardInterrupt, SystemExit)):
@@ -411,12 +416,12 @@ class ErrorHandler:
             try:
                 if self.config.get('warning_monitor', True):
                     self._on_warning(category.__name__, str(message), filename, lineno)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_hook(): подавлено: %s", _ex)
             try:
                 orig(message, category, filename, lineno, file=file, line=line)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_hook(): подавлено: %s", _ex)
 
         _warnings.showwarning = _hook
         self._orig_showwarning = orig
@@ -471,8 +476,8 @@ class ErrorHandler:
             if len(daily) > 14:
                 for old_day in sorted(daily.keys())[:-14]:
                     daily.pop(old_day, None)
-        except Exception:
-            pass
+        except Exception as _ex:
+            _log.debug("_record(): подавлено: %s", _ex)
         self._rate.append(time.time())
         s['last_errors'].append({
             'ts': time.time(), 'type': err_type, 'where': where,
@@ -496,8 +501,8 @@ class ErrorHandler:
                 os.replace(DETAILS_PATH, DETAILS_PATH + '.old')
             with open(DETAILS_PATH, 'a', encoding='utf-8') as f:
                 f.write(json.dumps(rec, ensure_ascii=False) + '\n')
-        except Exception:
-            pass
+        except Exception as _ex:
+            _log.debug("_write_details(): подавлено: %s", _ex)
 
     def _record_and_publish(self, err_type, where, message, *, critical=False, tb_text="", loc=""):
         """Единый конвейер: статистика + JSONL + webhook."""
@@ -608,8 +613,8 @@ class ErrorHandler:
             try:
                 if self._webhook_session and not self._webhook_session.closed:
                     await self._webhook_session.close()
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_webhook_task(): подавлено: %s", _ex)
 
     async def _send_webhook(self, rec: dict):
         url = (self.config.get('webhook_url') or '').strip()
@@ -909,8 +914,8 @@ class ErrorHandler:
     async def _safe_send(self, ctx: commands.Context, **kwargs):
         try:
             await ctx.send(**kwargs)
-        except Exception:
-            pass
+        except Exception as _ex:
+            _log.debug("_safe_send(): подавлено: %s", _ex)
 
     async def handle_command_error(self, ctx: commands.Context, error: commands.CommandError):
         """Обработка ошибок prefix-команд"""
@@ -1003,8 +1008,8 @@ class ErrorHandler:
         try:
             if interaction.command and getattr(interaction.command, 'binding', None) is not None:
                 module = type(interaction.command.binding).__module__
-        except Exception:
-            pass
+        except Exception as _ex:
+            _log.debug("handle_app_command_error(): подавлено: %s", _ex)
         self.stats['by_command'][cmd_name] = self.stats['by_command'].get(cmd_name, 0) + 1
         if module:
             self.stats['by_cog'][module] = self.stats['by_cog'].get(module, 0) + 1
@@ -1031,8 +1036,8 @@ class ErrorHandler:
                 await interaction.followup.send(embed=embed, ephemeral=True)
             else:
                 await interaction.response.send_message(embed=embed, ephemeral=True)
-        except Exception:
-            pass
+        except Exception as _ex:
+            _log.debug("_respond(): подавлено: %s", _ex)
 
     def get_error_stats(self) -> dict:
         return dict(self.stats['by_type'])

@@ -3,6 +3,10 @@ Advanced Ticket Features
 Расширенные функции тикетов (merging, splitting, cloning, dependencies, sub-tickets)
 """
 
+from logger import get_logger
+
+_log = get_logger("advanced_ticket_features")
+
 import json
 import os
 from datetime import datetime
@@ -23,8 +27,8 @@ class TicketMerger:
             try:
                 with open(self.merge_history_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_merge_history(): подавлено: %s", _ex)
         
         return {}
     
@@ -85,8 +89,8 @@ class TicketSplitter:
             try:
                 with open(self.split_history_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_split_history(): подавлено: %s", _ex)
         
         return {}
     
@@ -140,8 +144,8 @@ class TicketCloner:
             try:
                 with open(self.clone_history_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_clone_history(): подавлено: %s", _ex)
         
         return {}
     
@@ -206,8 +210,8 @@ class TicketDependencies:
             try:
                 with open(self.dependencies_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_dependencies(): подавлено: %s", _ex)
         
         return {'depends_on': {}, 'blocks': {}}
     
@@ -315,8 +319,8 @@ class SubTicketManager:
             try:
                 with open(self.subtickets_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_subtickets(): подавлено: %s", _ex)
         
         return {}
     
@@ -398,8 +402,8 @@ class CustomWorkflow:
             try:
                 with open(self.workflows_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_workflows(): подавлено: %s", _ex)
         
         return {}
     

@@ -6,6 +6,10 @@ are shown for each panel role (mod / admin / owner).
 - member (uye) panel is managed separately by the user later.
 """
 
+from logger import get_logger
+
+_log = get_logger("panel_menu")
+
 import os
 import json
 
@@ -128,8 +132,8 @@ def _load():
             with open(_PATH, 'r', encoding='utf-8') as f:
                 d = json.load(f)
             return d if isinstance(d, dict) else {}
-    except Exception:
-        pass
+    except Exception as _ex:
+        _log.debug("_load(): подавлено: %s", _ex)
     return {}
 
 
@@ -138,8 +142,8 @@ def _save(cfg):
         os.makedirs('data', exist_ok=True)
         with open(_PATH, 'w', encoding='utf-8') as f:
             json.dump(cfg, f, ensure_ascii=False, indent=2)
-    except Exception:
-        pass
+    except Exception as _ex:
+        _log.debug("_save(): подавлено: %s", _ex)
 
 
 def get_config():

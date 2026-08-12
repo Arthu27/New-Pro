@@ -2,6 +2,11 @@
 Vnesnie API — integraciya с servisami контроль
 Reputaciya, NSFW, vredonosnie ссылка, avatari
 """
+
+from logger import get_logger
+
+_log = get_logger("external_apis")
+
 import aiohttp 
 import json 
 import os 
@@ -24,8 +29,8 @@ class ExternalAPIs :
             try :
                 with open (config_file ,'r',encoding ='utf-8')as f :
                     return json .load (f )
-            except Exception:
-                pass 
+            except Exception as _ex:
+                _log.debug("_load_api_keys(): подавлено: %s", _ex)
         return {}
 
     async def _get_session (self )->aiohttp .ClientSession :

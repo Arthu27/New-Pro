@@ -86,8 +86,8 @@ class ProactiveModeration (commands .Cog ):
                     alert_channel =await ensure_log_channel (guild ,'ai-alerts')
                     if alert_channel is None :
                         alert_channel =await ensure_log_channel (guild ,'модерация')
-                except Exception :
-                    pass
+                except Exception as _ex:
+                    log.debug("_send_sentiment_alert(): подавлено: %s", _ex)
             if not alert_channel :
                 return 
 
@@ -194,8 +194,8 @@ class ProactiveModeration (commands .Cog ):
                     alert_channel =await ensure_log_channel (guild ,'ai-alerts')
                     if alert_channel is None :
                         alert_channel =await ensure_log_channel (guild ,'модерация')
-                except Exception :
-                    pass
+                except Exception as _ex:
+                    log.debug("_alert_moderators(): подавлено: %s", _ex)
             if not alert_channel :
             # Создал канал если нет
                 overwrites ={

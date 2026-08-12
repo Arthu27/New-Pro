@@ -252,8 +252,8 @@ def _notify_panel_ticket_event (interaction ,event ,title ,body ):
                 return False
 
         loop .run_in_executor (None ,lambda :_notify_event (event ,title ,body ,discord_sender =_sender ))
-    except Exception :
-        pass
+    except Exception as _ex:
+        log.debug("_notify_panel_ticket_event(): подавлено: %s", _ex)
 
 
 class AdminApprovalView (discord .ui .View ):
@@ -282,8 +282,8 @@ class AdminApprovalView (discord .ui .View ):
         if not target :
             try :
                 target =await guild .fetch_member (self .target_id )
-            except Exception :
-                pass 
+            except Exception as _ex:
+                log.debug("approve(): подавлено: %s", _ex)
 
         if not target :
             await interaction .channel .send ("❌ Нарушитель не найден на сервере.")
@@ -305,8 +305,8 @@ class AdminApprovalView (discord .ui .View ):
                     int (self .guild_id ),int (self .target_id ),target .name ,
                     self .reason ,0 ,self .quote
                     )
-            except Exception :
-                pass 
+            except Exception as _ex:
+                log.debug("approve(): подавлено: %s", _ex)
 
                 # Disable buttons
             for child in self .children :
@@ -604,8 +604,8 @@ class TicketView (discord .ui .View ):
             else :
                 dm_e .set_footer (text =f"{guild.name} · Поддержка")
             await interaction .user .send (embed =dm_e )
-        except discord .Forbidden :
-            pass 
+        except discord .Forbidden as _ex:
+            log.debug("category_select(): подавлено: %s", _ex)
 
             # RATE LIMIT: Записать создание тикета 
         try :
@@ -771,8 +771,8 @@ class InteractiveFeedbackView (discord .ui .View ):
         if not self .clicked and self .channel :
             try :
                 await self .channel .delete ()
-            except Exception :
-                pass 
+            except Exception as _ex:
+                log.debug("on_timeout(): подавлено: %s", _ex)
 
     @discord .ui .button (label ="Да (Yes)",style =discord .ButtonStyle .green ,custom_id ="feedback_yes")
     async def positive_feedback (self ,interaction :discord .Interaction ,button :discord .ui .Button ):
@@ -867,8 +867,8 @@ class CloseTicketView (discord .ui .View ):
         if channel .topic and "Ticket sahibi:"in channel .topic :
             try :
                 owner_id =int (channel .topic .split ("Ticket sahibi:")[-1 ].strip ())
-            except Exception :
-                pass 
+            except Exception as _ex:
+                log.debug("close_ticket(): подавлено: %s", _ex)
 
         ts =int (datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None).timestamp ())
 
@@ -912,8 +912,8 @@ class CloseTicketView (discord .ui .View ):
                 else :
                     dm_e .set_footer (text =f"{interaction.guild.name} · Поддержка")
                 await owner .send (embed =dm_e )
-            except Exception :
-                pass 
+            except Exception as _ex:
+                log.debug("close_ticket(): подавлено: %s", _ex)
 
                 #  FEEDBACK СИСТЕМА 
                 # Показать форму обратной связи перед удалением канала
@@ -1047,8 +1047,8 @@ class Ticket (commands .Cog ):
                     p_date =datetime .datetime .fromisoformat (p ['date'])
                     if p_date >cutoff :
                         recent .append (p )
-                except Exception :
-                    pass 
+                except Exception as _ex:
+                    log.debug("_get_penalty_history(): подавлено: %s", _ex)
 
             return recent 
         except Exception as e :
@@ -1179,8 +1179,8 @@ class Ticket (commands .Cog ):
                 if not m :
                     try :
                         m =await message .guild .fetch_member (int (id_str ))
-                    except Exception :
-                        pass 
+                    except Exception as _ex:
+                        log.debug("_verify_insult_claim(): подавлено: %s", _ex)
                 if m and m .id !=message .author .id :
                     accused =m 
                     break 
@@ -1191,8 +1191,8 @@ class Ticket (commands .Cog ):
             if not accused :
                 try :
                     accused =await message .guild .fetch_member (int (stored_accused_id ))
-                except Exception :
-                    pass 
+                except Exception as _ex:
+                    log.debug("_verify_insult_claim(): подавлено: %s", _ex)
 
         if accused :
             state ['insult_claim_accused_id']=str (accused .id )
@@ -1506,8 +1506,8 @@ class Ticket (commands .Cog ):
                     warnings_data =load_warnings ()
                     user_warnings =warnings_data .get (str (message .guild .id ),{}).get (str (target .id ),[])
                     warn_count =len (user_warnings )
-                except Exception :
-                    pass 
+                except Exception as _ex:
+                    log.debug("execute_punishment(): подавлено: %s", _ex)
 
                 if p_type =='MUTE'and warn_count >=2 :
                     p_type ='BAN'
@@ -1953,8 +1953,8 @@ class Ticket (commands .Cog ):
                         admin_role_id =cfg .get ('admin_role_id')
                         mod_role_id =cfg .get ('mod_role_id')
                         owner_role_id =cfg .get ('owner_role_id')
-            except Exception :
-                pass 
+            except Exception as _ex:
+                log.debug("on_message(): подавлено: %s", _ex)
 
             ping_mentions =[]
             if owner_role_id :
@@ -2036,8 +2036,8 @@ class Ticket (commands .Cog ):
                                 past_tickets .append (f"Назад ticket: {' | '.join(last_msgs[:2])}")
                     if past_tickets :
                         guild_context ['past_tickets']=past_tickets [-3 :]# Последние 3 тикета
-                except Exception :
-                    pass 
+                except Exception as _ex:
+                    log.debug("on_message(): подавлено: %s", _ex)
 
                 full_message =message .content 
                 response ,should_escalate ,escalation_category ,updated_history ,detected_category =await ai_ticket_response (
@@ -2103,8 +2103,8 @@ class Ticket (commands .Cog ):
                             'duration':60 ,
                             'reason':'Повторное нарушение'
                             })
-                    except Exception :
-                        pass 
+                    except Exception as _ex:
+                        log.debug("on_message(): подавлено: %s", _ex)
 
                         # Отправляем очищенный ответ
                 clean_response =actions .get ('cleaned_response',response )
@@ -2371,8 +2371,8 @@ class Ticket (commands .Cog ):
                                     f"Обработано: {total_scanned} сообщений"
                                     )
                                     )
-                                except Exception :
-                                    pass 
+                                except Exception as _ex:
+                                    log.debug("_handle_complaint_flow(): подавлено: %s", _ex)
                                     #  END PROGRESS UPDATE 
 
                                     # От старых к новым
@@ -2434,8 +2434,8 @@ class Ticket (commands .Cog ):
                             )
                             await asyncio .sleep (1 )# Показать результат
                             await progress_msg .delete ()
-                        except Exception :
-                            pass 
+                        except Exception as _ex:
+                            log.debug("_handle_complaint_flow(): подавлено: %s", _ex)
                             #  END PROGRESS COMPLETE 
 
                         log .info (f"[TICKET] Сканирование: {len(accused_msgs_set)} сообщений обвиняемого, "
@@ -2677,8 +2677,8 @@ class Ticket (commands .Cog ):
             try :
                 if complaint .get ('messages'):
                     quote_key =str (complaint ['messages'][0 ])[:200 ]
-            except Exception :
-                pass 
+            except Exception as _ex:
+                log.debug("apply_punishment(): подавлено: %s", _ex)
             if self ._already_punished_for_quote (guild_id ,target .id ,quote_key ):
                 await channel .send (
                 f"⚖️ Для **{target.display_name}** по этому нарушению уже было вынесено наказание ранее. "
@@ -2820,8 +2820,8 @@ class Ticket (commands .Cog ):
             for channel_obj in guild .channels :
                 try :
                     await channel_obj .set_permissions (jail_role ,send_messages =False ,speak =False )
-                except Exception :
-                    pass 
+                except Exception as _ex:
+                    log.debug("_apply_jail(): подавлено: %s", _ex)
 
                     # Выдаём роль Jail
             await target_user .add_roles (jail_role ,reason =f"AI Moderator: {reason}")
@@ -2845,8 +2845,8 @@ class Ticket (commands .Cog ):
                 else :
                     dm_embed .set_footer (text =f"{guild.name} · Модерация")
                 await target_user .send (embed =dm_embed )
-            except Exception :
-                pass 
+            except Exception as _ex:
+                log.debug("_apply_jail(): подавлено: %s", _ex)
 
                 # Канал bildir
             jail_embed =discord .Embed (color =0x2ECC71 ,timestamp =datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None))
@@ -2946,8 +2946,8 @@ class Ticket (commands .Cog ):
                     else :
                         dm_embed .set_footer (text =f"{guild.name} · Модерация")
                     await fresh_member .send (embed =dm_embed )
-                except Exception :
-                    pass 
+                except Exception as _ex:
+                    log.debug("_schedule_unjail(): подавлено: %s", _ex)
         except Exception as e :
             log .info (f'[TICKET] Unjail — ошибка: {e}')
 

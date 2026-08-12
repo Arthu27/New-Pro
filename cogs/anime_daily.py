@@ -27,8 +27,8 @@ def _load ()->dict :
         try :
             with open (DATA_FILE ,'r',encoding ='utf-8')as f :
                 return json .load (f )
-        except Exception :
-            pass 
+        except Exception as _ex:
+            log.debug("_load(): подавлено: %s", _ex)
     return {}
 
 
@@ -74,8 +74,8 @@ async def _anime_getir (tur_id :int =None )->dict :
                     animeler =Данные .get ('data',[])
                     if animeler :
                         return random .choice (animeler )
-    except Exception :
-        pass 
+    except Exception as _ex:
+        log.debug("_anime_getir(): подавлено: %s", _ex)
     return None 
 
 

@@ -12,6 +12,11 @@ Night Summary — автоматическая ежедневная сводка
 
 Предпросмотр: /summary now (админ).
 """
+
+from logger import get_logger
+
+_log = get_logger("night_summary")
+
 import os
 import io
 import json
@@ -68,8 +73,8 @@ def _load_state():
         if os.path.exists(STATE_PATH):
             with open(STATE_PATH, 'r', encoding='utf-8') as f:
                 return json.load(f)
-    except Exception:
-        pass
+    except Exception as _ex:
+        _log.debug("_load_state(): подавлено: %s", _ex)
     return {}
 
 
@@ -157,8 +162,8 @@ class NightSummary(commands.Cog):
                 mid = str(c.get('mod_id') or '')
                 if mid and mid not in ('0', 'None'):
                     mod_counter[mid] = mod_counter.get(mid, 0) + 1
-        except Exception:
-            pass
+        except Exception as _ex:
+            _log.debug("collect_day(): подавлено: %s", _ex)
 
         # 2) Варны из SQLite
         try:
@@ -170,7 +175,8 @@ class NightSummary(commands.Cog):
             for (val,) in cur.fetchall():
                 try:
                     warns = json.loads(val)
-                except Exception:
+                except Exception as _ex:
+                    _log.debug("collect_day(): подавлено: %s", _ex)
                     continue
                 for w in (warns if isinstance(warns, list) else []):
                     ts = _parse_ts(w.get('timestamp'))
@@ -180,8 +186,8 @@ class NightSummary(commands.Cog):
                         if mid and mid not in ('0', 'None'):
                             mod_counter[mid] = mod_counter.get(mid, 0) + 1
             conn.close()
-        except Exception:
-            pass
+        except Exception as _ex:
+            _log.debug("collect_day(): подавлено: %s", _ex)
 
         # 3) Временные наказания
         try:
@@ -196,8 +202,8 @@ class NightSummary(commands.Cog):
                     mid = str(h.get('mod_id') or '')
                     if mid and mid not in ('0', 'None'):
                         mod_counter[mid] = mod_counter.get(mid, 0) + 1
-        except Exception:
-            pass
+        except Exception as _ex:
+            _log.debug("collect_day(): подавлено: %s", _ex)
 
         # 4) Tag Jail
         try:
@@ -206,8 +212,8 @@ class NightSummary(commands.Cog):
             for rec in jailed.get(str(guild_id), {}).values():
                 if in_day(_parse_ts(rec.get('since'))):
                     stats['tagjail'] += 1
-        except Exception:
-            pass
+        except Exception as _ex:
+            _log.debug("collect_day(): подавлено: %s", _ex)
 
         # 5) Ghost-ping'и из аудит-лога
         try:
@@ -216,8 +222,8 @@ class NightSummary(commands.Cog):
             for ev in audit.get(str(guild_id), []):
                 if ev.get('action') == 'Ghost Ping' and in_day(_parse_ts(ev.get('timestamp'))):
                     stats['ghost'] += 1
-        except Exception:
-            pass
+        except Exception as _ex:
+            _log.debug("collect_day(): подавлено: %s", _ex)
 
         # 6) Ошибки бота за день (anti-crash, глобально)
         try:

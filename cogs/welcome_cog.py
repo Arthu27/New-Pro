@@ -78,8 +78,8 @@ class WelcomeCog (commands .Cog ):
                 sec =(json .load (fp )or {}).get (kind )
             if isinstance (sec ,dict )and (sec .get ('channel_id')or sec .get ('message')):
                 return sec 
-        except Exception :
-            pass
+        except Exception as _ex:
+            log.debug("_panel_section(): подавлено: %s", _ex)
         return None
 
     def _fmt_panel_text (self ,text ,member ):

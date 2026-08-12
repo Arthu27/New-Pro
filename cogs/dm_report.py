@@ -12,6 +12,11 @@ Zhaloba — линия жалоб на DM-рекламу / скаутинг.
 
 Хранилище: data/dm_reports.json
 """
+
+from logger import get_logger
+
+_log = get_logger("dm_report")
+
 import os
 import json
 import time
@@ -49,8 +54,8 @@ def _load(path, default):
         if os.path.exists(path):
             with open(path, 'r', encoding='utf-8') as f:
                 return json.load(f)
-    except Exception:
-        pass
+    except Exception as _ex:
+        _log.debug("_load(): подавлено: %s", _ex)
     return default
 
 
@@ -130,8 +135,8 @@ class DMReport(commands.Cog):
         if logs_cog:
             try:
                 return await logs_cog.get_log_channel(guild, 'модерация')
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_log_channel(): подавлено: %s", _ex)
         return None
 
     async def _log(self, guild: discord.Guild, embed: discord.Embed):
@@ -139,8 +144,8 @@ class DMReport(commands.Cog):
         if ch:
             try:
                 await ch.send(embed=embed)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_log(): подавлено: %s", _ex)
 
     # ────────────────────────────────────────────────────────────
     # /report — подать жалобу (все игроки)
@@ -269,8 +274,8 @@ class DMReport(commands.Cog):
                     f"Нарушитель наказан{warn_txt}. Спасибо за бдительность!")
                 dm.set_footer(text=guild.name)
                 await reporter.send(embed=dm)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("report_ok(): подавлено: %s", _ex)
 
         await interaction.response.send_message(
             f"🟢 Жалоба **#{номер}** подтверждена{warn_txt}.", ephemeral=True)

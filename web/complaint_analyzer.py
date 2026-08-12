@@ -2,6 +2,11 @@
 Супер-умный анализ жалоб на оскорбления
 Глубокий анализ истории, репутации, контекста, доказательств
 """
+
+from logger import get_logger
+
+_log = get_logger("complaint_analyzer")
+
 import discord 
 import json 
 import os 
@@ -148,7 +153,8 @@ class ComplaintAnalyzer :
             warn_date_raw =варн .get ('timestamp',now .isoformat ())
             try :
                 warn_date =datetime .fromisoformat (warn_date_raw )
-            except (ValueError ,TypeError ):
+            except (ValueError ,TypeError ) as _ex:
+                _log.debug("_get_reputation(): подавлено: %s", _ex)
                 continue 
                 # Если naive — делаем aware (UTC)
             if warn_date .tzinfo is None :
@@ -172,8 +178,8 @@ class ComplaintAnalyzer :
                     case for case in guild_mods 
                     if case .get ('user_id')==str (user_id )
                     ]
-            except Exception:
-                pass 
+            except Exception as _ex:
+                _log.debug("_get_reputation(): подавлено: %s", _ex)
 
         bans =sum (1 for case in mod_history if case .get ('action')=='бан')
         mutes =sum (1 for case in mod_history if case .get ('action')in ['timeout','мут'])

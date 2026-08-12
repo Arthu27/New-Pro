@@ -16,6 +16,10 @@
 и из когов бота (в фоне, через executor).
 """
 
+from logger import get_logger
+
+_log = get_logger("notification_dispatcher")
+
 import json
 import os
 import smtplib
@@ -87,8 +91,8 @@ def load_settings():
                 data = json.load(f)
             if isinstance(data, dict):
                 settings.update(data)
-    except Exception:
-        pass
+    except Exception as _ex:
+        _log.debug("load_settings(): подавлено: %s", _ex)
     return settings
 
 
@@ -190,8 +194,8 @@ def _send_email_sync(settings, title, body, result_box):
             try:
                 smtp.starttls()
                 smtp.ehlo()
-            except Exception:
-                pass  # сервер без TLS — пробуем как есть
+            except Exception as _ex:
+                _log.debug("_send_email_sync(): подавлено: %s", _ex)
             if password:
                 smtp.login(login, password)
             smtp.sendmail(login, [login], msg.as_string())
@@ -255,8 +259,8 @@ def notify_event(event, title, body, link='', discord_sender=None):
                 channels['email'] = False
 
         _record_history(event, full_title, body, channels, link=link)
-    except Exception:
-        pass
+    except Exception as _ex:
+        _log.debug("notify_event(): подавлено: %s", _ex)
     return channels
 
 

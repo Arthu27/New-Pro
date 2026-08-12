@@ -1,6 +1,11 @@
 """
 AI Function Calling — AI olabilir vizivat fonksiyonlar для poluceniya verilerin ve заверш действие
 """
+
+from logger import get_logger
+
+_log = get_logger("ai_functions")
+
 import json 
 import os 
 import discord 
@@ -283,7 +288,8 @@ class AIFunctions :
                                         break 
                             if len (api_msgs )>=limit *3 :
                                 break 
-                        except (discord .Forbidden ,discord .HTTPException ):
+                        except (discord .Forbidden ,discord .HTTPException ) as _ex:
+                            _log.debug("search_user_messages(): подавлено: %s", _ex)
                             continue 
             except Exception as e :
                 api_error =str (e )

@@ -3,6 +3,10 @@ Multi-language Support
 Поддержка нескольких языков для системы тикетов
 """
 
+from logger import get_logger
+
+_log = get_logger("multi_language")
+
 import json
 import os
 from typing import Dict, Any, Optional
@@ -103,8 +107,8 @@ class LanguageManager:
         if kwargs:
             try:
                 translation = translation.format(**kwargs)
-            except (KeyError, IndexError):
-                pass
+            except (KeyError, IndexError) as _ex:
+                _log.debug("translate(): подавлено: %s", _ex)
         
         return translation
     

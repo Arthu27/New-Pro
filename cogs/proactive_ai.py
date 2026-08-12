@@ -24,8 +24,8 @@ def _load ()->dict :
         try :
             with open (DATA_FILE ,'r',encoding ='utf-8')as f :
                 return json .load (f )
-        except Exception :
-            pass 
+        except Exception as _ex:
+            log.debug("_load(): подавлено: %s", _ex)
     return {'last_morning':None ,'last_check':None ,'asked_today':[],
     'leave_log':[],'join_log':[],'warn_log':[]}
 
@@ -185,8 +185,8 @@ class ProactiveAI (commands .Cog ):
                 await owner .send (
                 f' **{member.display_name}** `{member.guild.name}` сервер покинул.'
                 )
-            except Exception :
-                pass 
+            except Exception as _ex:
+                log.debug("on_member_remove(): подавлено: %s", _ex)
 
 
 async def setup (bot ):

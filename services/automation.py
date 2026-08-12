@@ -3,6 +3,10 @@ Automation & Workflows Engine
 Движок автоматизации и рабочих процессов
 """
 
+from logger import get_logger
+
+_log = get_logger("automation")
+
 import json
 import os
 import asyncio
@@ -139,8 +143,8 @@ class AutomationEngine:
                         wf_id: Workflow.from_dict(wf_data)
                         for wf_id, wf_data in data.items()
                     }
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_workflows(): подавлено: %s", _ex)
         
         return {}
     

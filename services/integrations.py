@@ -3,6 +3,10 @@
 Jira, Slack, Telegram, Payment (Stripe/PayPal)
 """
 
+from logger import get_logger
+
+_log = get_logger("integrations")
+
 import json
 import os
 import requests
@@ -23,8 +27,8 @@ class IntegrationManager:
             try:
                 with open(self.config_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_config(): подавлено: %s", _ex)
         
         return {
             'jira': {'enabled': False, 'url': '', 'username': '', 'api_token': ''},

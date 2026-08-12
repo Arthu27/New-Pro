@@ -3,6 +3,10 @@ Advanced AI Features
 Расширенные AI функции для системы тикетов
 """
 
+from logger import get_logger
+
+_log = get_logger("ai_features")
+
 import json
 import os
 import re
@@ -25,8 +29,8 @@ class AICategorizer:
             try:
                 with open(self.categories_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_categories(): подавлено: %s", _ex)
         
         return {
             'Вопрос': {
@@ -210,8 +214,8 @@ class AIAutoResponder:
             try:
                 with open(self.responses_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_responses(): подавлено: %s", _ex)
         
         return {
             'password_reset': {

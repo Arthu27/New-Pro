@@ -14,6 +14,11 @@ AntiFake — защита от подделок (impersonation guard).
 
 Команды: /antifake ... (админ).
 """
+
+from logger import get_logger
+
+_log = get_logger("impersonation")
+
 import os
 import re
 import json
@@ -124,8 +129,8 @@ def _load_json(path, default):
         if os.path.exists(path):
             with open(path, 'r', encoding='utf-8') as f:
                 return json.load(f)
-    except Exception:
-        pass
+    except Exception as _ex:
+        _log.debug("_load_json(): подавлено: %s", _ex)
     return default
 
 
@@ -230,8 +235,8 @@ class AntiFake(commands.Cog):
                     continue
                 if m.avatar.key == member.avatar.key:
                     return m
-        except Exception:
-            pass
+        except Exception as _ex:
+            _log.debug("find_stolen_avatar(): подавлено: %s", _ex)
         return None
 
     # ────────────────────────────────────────────────────────────
@@ -262,16 +267,16 @@ class AntiFake(commands.Cog):
         if ch:
             try:
                 await ch.send(embed=embed)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_log(): подавлено: %s", _ex)
 
     async def _dm(self, member: discord.Member, embed: discord.Embed):
         if not self.cfg(member.guild.id).get('dm_notify'):
             return
         try:
             await member.send(embed=embed)
-        except Exception:
-            pass
+        except Exception as _ex:
+            _log.debug("_dm(): подавлено: %s", _ex)
 
     # ────────────────────────────────────────────────────────────
     # Реакция на подделку

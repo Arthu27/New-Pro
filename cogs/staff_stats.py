@@ -9,6 +9,11 @@ Staff Stats — таблица активности модераторов.
 - data/temp_history.json — временные наказания
 - sqlite guild_data      — предупреждения (namespace 'warnings')
 """
+
+from logger import get_logger
+
+_log = get_logger("staff_stats")
+
 import json
 import time
 import sqlite3
@@ -52,8 +57,8 @@ def collect_actions(guild_id: int) -> list:
             ts = _parse_ts(c.get('timestamp'))
             if ts and c.get('mod_id'):
                 acts.append((str(c['mod_id']), str(c.get('action', 'mod')), ts))
-    except Exception:
-        pass
+    except Exception as _ex:
+        _log.debug("collect_actions(): подавлено: %s", _ex)
     # 2) Временные наказания
     try:
         with open('data/temp_history.json', 'r', encoding='utf-8') as f:
@@ -64,8 +69,8 @@ def collect_actions(guild_id: int) -> list:
                     ts = float(h.get('ts', 0) or 0)
                     if ts:
                         acts.append((str(h['mod_id']), str(h.get('action', 'temp')), ts))
-    except Exception:
-        pass
+    except Exception as _ex:
+        _log.debug("collect_actions(): подавлено: %s", _ex)
     # 3) Варны из sqlite
     try:
         from config import Config
@@ -78,7 +83,8 @@ def collect_actions(guild_id: int) -> list:
         for (val,) in rows:
             try:
                 warns = json.loads(val)
-            except Exception:
+            except Exception as _ex:
+                _log.debug("collect_actions(): подавлено: %s", _ex)
                 continue
             if isinstance(warns, list):
                 for w in warns:
@@ -183,8 +189,8 @@ class StaffStats(commands.Cog):
     async def staff_stats_error(self, interaction, error):
         try:
             await interaction.response.send_message("🚫 Нужны права модератора.", ephemeral=True)
-        except Exception:
-            pass
+        except Exception as _ex:
+            _log.debug("staff_stats_error(): подавлено: %s", _ex)
 
 
 async def setup(bot):

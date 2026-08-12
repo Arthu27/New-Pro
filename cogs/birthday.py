@@ -1,3 +1,8 @@
+
+from logger import get_logger
+
+_log = get_logger("birthday")
+
 import discord 
 from discord .ext import commands ,tasks 
 from discord import app_commands 
@@ -94,8 +99,8 @@ class Birthday (commands .Cog ):
                     if role :
                         try :
                             await member .add_roles (role ,reason ="Роль именинника")
-                        except Exception :
-                            pass 
+                        except Exception as _ex:
+                            _log.debug("check_birthdays(): подавлено: %s", _ex)
 
                             # Economy hediyesi ver
                 if settings .get ('gift_coins',0 )>0 :
@@ -125,8 +130,8 @@ class Birthday (commands .Cog ):
                 if member and role in member .roles :
                     try :
                         await member .remove_roles (role ,reason ="День рождения закончился")
-                    except Exception :
-                        pass 
+                    except Exception as _ex:
+                        _log.debug("remove_birthday_roles(): подавлено: %s", _ex)
 
     async def _give_birthday_coins (self ,guild_id ,user_id ,amount ):
         """Добавить подарок ко дню рождения в экономику."""
@@ -139,8 +144,8 @@ class Birthday (commands .Cog ):
             econ .setdefault (str (user_id ),{})['balance']=econ .get (str (user_id ),{}).get ('balance',0 )+amount 
             with open (f ,'w',encoding ='utf-8')as fp :
                 json .dump (econ ,fp ,indent =2 ,ensure_ascii =False )
-        except Exception :
-            pass 
+        except Exception as _ex:
+            _log.debug("_give_birthday_coins(): подавлено: %s", _ex)
 
     @check_birthdays .before_loop 
     async def before_check (self ):
@@ -194,7 +199,8 @@ class Birthday (commands .Cog ):
                 member =interaction .guild .get_member (int (uid ))
                 name =member .display_name if member else info .get ('name',uid )
                 entries .append ((diff ,d ,m ,name ,uid ))
-            except Exception :
+            except Exception as _ex:
+                _log.debug("list_birthdays(): подавлено: %s", _ex)
                 continue 
         entries .sort ()
 

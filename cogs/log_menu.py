@@ -8,6 +8,11 @@ Aether — Интерактивное графическое меню логов
   • Поиск по участнику или ключевому слову через Discord Modal
   • Отправка тестовых логов с проверкой доставки
 """
+
+from logger import get_logger
+
+_log = get_logger("log_menu")
+
 import io
 import os
 import re
@@ -439,8 +444,8 @@ class LogMenu(commands.Cog):
         """Открыть интерактивное графическое меню логов сервера"""
         try:
             await ctx.message.delete()
-        except Exception:
-            pass
+        except Exception as _ex:
+            _log.debug("logmenu_prefix(): подавлено: %s", _ex)
         cat = category.lower().strip()
         if cat not in CAT_META:
             cat = "all"

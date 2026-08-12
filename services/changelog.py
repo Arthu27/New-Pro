@@ -3,6 +3,10 @@ Changelog
 Система журнала изменений
 """
 
+from logger import get_logger
+
+_log = get_logger("changelog")
+
 import json
 import os
 from datetime import datetime
@@ -139,8 +143,8 @@ class ChangelogManager:
                         entry_id: ChangelogEntry.from_dict(entry_data)
                         for entry_id, entry_data in data.items()
                     }
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_entries(): подавлено: %s", _ex)
         
         return {}
     
@@ -397,8 +401,8 @@ class ChangelogNotification:
             try:
                 with open(self.subscriptions_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_subscriptions(): подавлено: %s", _ex)
         
         return {}
     

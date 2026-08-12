@@ -14,6 +14,11 @@
 и читают один и тот же файл. Иммунитет: manage_messages, админы,
 «иммунные роли» и каналы-исключения из конфига.
 """
+
+from logger import get_logger
+
+_log = get_logger("auto_filter")
+
 import json
 import os
 import re
@@ -287,8 +292,8 @@ def merge_config(saved: dict) -> dict:
                 continue
             try:
                 dst[key[1]] = max(lo, min(hi, int(src.get(key[1], dst[key[1]]))))
-            except (TypeError, ValueError):
-                pass
+            except (TypeError, ValueError) as _ex:
+                _log.debug("merge_config(): подавлено: %s", _ex)
     cfg['words']['list'] = sanitize_words((saved.get('words') or {}).get('list'))
     cfg['links']['whitelist'] = [w.lower() for w in
                                  sanitize_words((saved.get('links') or {}).get('whitelist'), limit=50)]
@@ -444,19 +449,19 @@ class AutoFilter(commands.Cog):
 
         try:
             await message.delete()
-        except Exception:
-            pass
+        except Exception as _ex:
+            _log.debug("_punish(): подавлено: %s", _ex)
         try:
             await message.channel.send(f'{author.mention} {NOTICE_TEXT[fname]}', delete_after=6)
-        except Exception:
-            pass
+        except Exception as _ex:
+            _log.debug("_punish(): подавлено: %s", _ex)
 
         if flood_kind and action == 'timeout':
             try:  # зачистка последних сообщений автора в этом канале
                 await message.channel.purge(limit=60, check=lambda m: m.author == author,
                                             bulk=True)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_punish(): подавлено: %s", _ex)
             try:
                 await author.timeout(timedelta(minutes=cfg['flood']['timeout_minutes']),
                                      reason=f'Автофильтр: флуд ({detail})')

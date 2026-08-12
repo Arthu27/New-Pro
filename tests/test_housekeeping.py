@@ -146,5 +146,28 @@ check(not missing, f'.env.example покрывает все {len(code_keys)} к�
 for group in ('5. AI-ПРОВАЙДЕРЫ', '6. ЛОГИРОВАНИЕ', '7. ВЕБ-ПАНЕЛЬ', '8. КАНАЛЫ', '9. ПРОЧЕЕ'):
     check(group in example, f'.env.example: секция «{group}» на месте')
 
+# ═══ 4. Линт: ноль молчаливых except в проекте ═══════════════════════════
+print('== гигиена: silent except lint ==')
+import ast  # noqa: E402
+
+silent_left = []
+for f in (glob.glob(os.path.join(ROOT, 'cogs/*.py')) + glob.glob(os.path.join(ROOT, 'services/*.py'))
+          + glob.glob(os.path.join(ROOT, 'web/*.py')) + [os.path.join(ROOT, 'error_handler.py'),
+                                                          os.path.join(ROOT, 'main.py')]):
+    try:
+        tree = ast.parse(open(f, encoding='utf-8').read())
+    except SyntaxError:
+        continue
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.ExceptHandler):
+            continue
+        body = [b for b in node.body
+                if not (isinstance(b, ast.Expr) and isinstance(b.value, ast.Constant)
+                        and isinstance(b.value.value, str))]
+        if len(body) == 1 and isinstance(body[0], (ast.Pass, ast.Continue)):
+            silent_left.append(f'{os.path.basename(f)}:{node.lineno}')
+check(not silent_left, f'ни одного молчаливого except (pass/continue) в коде '
+                       f'({silent_left[:3] if silent_left else "все подписаны логом"})')
+
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(0 if FAIL == 0 else 1)

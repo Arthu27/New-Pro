@@ -12,6 +12,11 @@ Aether — Анти-рейд / Защита от рейдов
 
 Все решения принимаются в панели на странице /antiraid; этот ког — только "движок правил".
 """
+
+from logger import get_logger
+
+_log = get_logger("antiraid")
+
 import discord
 from discord.ext import commands, tasks
 from discord import app_commands
@@ -99,8 +104,8 @@ class AntiRaid(commands.Cog):
     def cog_unload(self):
         try:
             self.config_watcher.cancel()
-        except Exception:
-            pass
+        except Exception as _ex:
+            _log.debug("cog_unload(): подавлено: %s", _ex)
 
     def get_config(self, guild_id: int) -> GuildAntiraidConfig:
         cfg = self.configs.get(guild_id)
@@ -126,12 +131,13 @@ class AntiRaid(commands.Cog):
                     continue
                 try:
                     gid = int(name[len("antiraid_"):-len(".json")])
-                except ValueError:
+                except ValueError as _ex:
+                    _log.debug("config_watcher(): подавлено: %s", _ex)
                     continue
                 if gid not in self.configs:
                     self.configs[gid] = GuildAntiraidConfig(gid)
-        except Exception:
-            pass
+        except Exception as _ex:
+            _log.debug("config_watcher(): подавлено: %s", _ex)
 
     @config_watcher.before_loop
     async def before_config_watcher(self):
@@ -161,8 +167,8 @@ class AntiRaid(commands.Cog):
             try:
                 if guild.owner:
                     await guild.owner.send(f"⚠️ **Алерт анти-рейда** (канал mod-log не найден): {title}\n{description}")
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_send_alert(): подавлено: %s", _ex)
             return
 
         embed = discord.Embed(title=title, description=description, color=color,

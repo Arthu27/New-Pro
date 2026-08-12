@@ -2,6 +2,10 @@
 Сервис автоматического закрытия неактивных тикетов
 """
 
+from logger import get_logger
+
+_log = get_logger("auto_close_service")
+
 import asyncio
 from datetime import datetime, timedelta, timezone
 from typing import Optional
@@ -32,8 +36,8 @@ class AutoCloseService:
             self.task.cancel()
             try:
                 await self.task
-            except asyncio.CancelledError:
-                pass
+            except asyncio.CancelledError as _ex:
+                _log.debug("stop(): подавлено: %s", _ex)
             logger.info("[AutoClose] Фоновая задача остановлена")
     
     async def _auto_close_loop(self):
@@ -123,8 +127,8 @@ class AutoCloseService:
             if channel.topic and "Ticket sahibi:" in channel.topic:
                 try:
                     owner_id = int(channel.topic.split("Ticket sahibi:")[-1].strip())
-                except Exception:
-                    pass
+                except Exception as _ex:
+                    _log.debug("_close_inactive_ticket(): подавлено: %s", _ex)
             
             # Отправить DM владельцу
             if owner_id:

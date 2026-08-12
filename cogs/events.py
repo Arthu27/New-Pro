@@ -1,4 +1,9 @@
 """Система событий — назначить дату, отправить напоминание"""
+
+from logger import get_logger
+
+_log = get_logger("events")
+
 import discord 
 from discord .ext import commands ,tasks 
 from discord import app_commands 
@@ -37,7 +42,8 @@ class Events (commands .Cog ):
                 if ev .get ('notified'):continue 
                 try :
                     event_time =datetime .fromisoformat (ev ['time'])
-                except Exception :continue 
+                except Exception as _ex:
+                    _log.debug("check_events(): подавлено: %s", _ex)
 
                 diff_min =(event_time -now ).total_seconds ()/60 
 

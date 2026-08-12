@@ -6,6 +6,11 @@
 - PeriodicFlush: делает запись логов пакетной (batch) и периодической; не блокирует основной поток.
 - make_etag: быстрый (weak) ETag без JSON-сериализации.
 """
+
+from logger import get_logger
+
+_log = get_logger("_store")
+
 import json 
 import os 
 import time 
@@ -25,15 +30,15 @@ def atomic_write_json (path ,data ,ensure_ascii =False ):
             fp .flush ()
             try :
                 os .fsync (fp .fileno ())
-            except OSError :
-                pass 
+            except OSError as _ex:
+                _log.debug("atomic_write_json(): подавлено: %s", _ex)
         os .replace (tmp ,path )
     except Exception :
         try :
             if os .path .exists (tmp ):
                 os .remove (tmp )
-        except OSError :
-            pass 
+        except OSError as _ex:
+            _log.debug("atomic_write_json(): подавлено: %s", _ex)
         raise 
 
 
@@ -189,9 +194,9 @@ class PeriodicFlush :
             existing =existing [-self ._max :]
             atomic_write_json (self ._path ,existing )
             invalidate_path (self ._path )
-        except Exception :
+        except Exception as _ex:
         # Молча проглотить; логгер не должен ломать панель
-            pass 
+            _log.debug("_flush(): подавлено: %s", _ex)
 
     def shutdown (self ):
         with self ._lock :
@@ -199,6 +204,6 @@ class PeriodicFlush :
             self ._cv .notify_all ()
         try :
             self ._thread .join (timeout =2 )
-        except Exception :
-            pass 
+        except Exception as _ex:
+            _log.debug("shutdown(): подавлено: %s", _ex)
         self .flush_now ()

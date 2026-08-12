@@ -3,6 +3,10 @@ Developer Tools
 Инструменты для разработчиков
 """
 
+from logger import get_logger
+
+_log = get_logger("developer_tools")
+
 import json
 import os
 import hashlib
@@ -25,8 +29,8 @@ class APIKeyManager:
             try:
                 with open(self.keys_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_keys(): подавлено: %s", _ex)
         
         return {}
     
@@ -129,8 +133,8 @@ class WebhookManager:
             try:
                 with open(self.webhooks_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_webhooks(): подавлено: %s", _ex)
         
         return {}
     

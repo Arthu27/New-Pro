@@ -125,8 +125,8 @@ class GiveawayView(View):
             embed = interaction.message.embeds[0]
             embed.set_field_at(0, name="Участников", value=str(count), inline=True)
             await interaction.message.edit(embed=embed)
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug("join(): подавлено: %s", _ex)
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -190,10 +190,10 @@ class GiveawayCog(commands.Cog):
                             winner_mentions.append(user.mention)
                             try:
                                 await user.send(embed=_win_dm_embed(prize, guild.name, icon_url))
-                            except discord.Forbidden:
-                                pass
-                    except (discord.NotFound, ValueError):
-                        pass
+                            except discord.Forbidden as _ex:
+                                log.debug("check_giveaways(): подавлено: %s", _ex)
+                    except (discord.NotFound, ValueError) as _ex:
+                        log.debug("check_giveaways(): подавлено: %s", _ex)
 
                 await channel.send(embed=_ended_embed(prize, winner_mentions, guild))
 
@@ -266,8 +266,8 @@ class GiveawayCog(commands.Cog):
 
         try:
             await ctx.message.delete()
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug("create_giveaway(): подавлено: %s", _ex)
 
         log.info(f"Розыгрыш создан: {gw_id} — {prize}")
 
@@ -295,8 +295,8 @@ class GiveawayCog(commands.Cog):
                 user = await ctx.guild.fetch_member(int(uid))
                 if user:
                     winner_mentions.append(user.mention)
-            except (discord.NotFound, ValueError):
-                pass
+            except (discord.NotFound, ValueError) as _ex:
+                log.debug("reroll(): подавлено: %s", _ex)
 
         await ctx.send(embed=_ended_embed(gw.get("prize", ""), winner_mentions, ctx.guild))
 

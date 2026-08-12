@@ -3,6 +3,10 @@ Error Tracking
 Система отслеживания ошибок
 """
 
+from logger import get_logger
+
+_log = get_logger("error_tracking")
+
 import json
 import os
 import traceback
@@ -129,8 +133,8 @@ class ErrorTracker:
                         error_id: Error.from_dict(error_data)
                         for error_id, error_data in data.items()
                     }
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_errors(): подавлено: %s", _ex)
         
         return {}
     
@@ -408,8 +412,8 @@ class ErrorNotification:
             try:
                 with open(self.notification_rules_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_notification_rules(): подавлено: %s", _ex)
         
         return {}
     

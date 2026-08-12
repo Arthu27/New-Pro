@@ -41,7 +41,8 @@ def _audit_worker ():
     while True :
         try :
             event_data =_audit_queue .get (timeout =2.0 )
-        except queue .Empty :
+        except queue .Empty as _ex:
+            log.debug("_audit_worker(): подавлено: %s", _ex)
             continue 
         if event_data is None :
             break 
@@ -99,8 +100,8 @@ def _write_audit_event (event_data :Dict [str ,Any ]):
         try :
             if os .path .exists (tmp ):
                 os .remove (tmp )
-        except Exception :
-            pass 
+        except Exception as _ex:
+            log.debug("_write_audit_event(): подавлено: %s", _ex)
 
 def _ensure_worker ():
     global _audit_worker_thread 
@@ -270,10 +271,10 @@ async def _safe_send (ch ,**kw ):
                     _e .title =None
                     try :
                         _e .remove_footer ()
-                    except Exception :
-                        pass
-            except Exception :
-                pass 
+                    except Exception as _ex:
+                        log.debug("_safe_send(): подавлено: %s", _ex)
+            except Exception as _ex:
+                log.debug("_safe_send(): подавлено: %s", _ex)
         await ch .send (**kw )
         return True
     except Exception as _e :
@@ -427,8 +428,8 @@ async def _audit_actor(guild, action, target_id=None, window=20, retries=2):
             try:
                 if not me.guild_permissions.view_audit_log:
                     return None
-            except Exception:
-                pass
+            except Exception as _ex:
+                log.debug("_audit_actor(): подавлено: %s", _ex)
         import asyncio as _ai
         key = (str(guild.id), action, str(target_id) if target_id is not None else '0')
         used = _audit_used.setdefault(key, set())
@@ -456,11 +457,11 @@ async def _audit_actor(guild, action, target_id=None, window=20, retries=2):
                             bool(getattr(u, 'bot', False)))
             except discord.Forbidden:
                 return None
-            except Exception:
-                pass
+            except Exception as _ex:
+                log.debug("_audit_actor(): подавлено: %s", _ex)
             await _ai.sleep(0.8)
-    except Exception:
-        pass
+    except Exception as _ex:
+        log.debug("_audit_actor(): подавлено: %s", _ex)
     return None
 
 
@@ -573,8 +574,8 @@ class LogsCenterView(discord.ui.View):
                 await interaction.response.send_message(
                     '🚫 Центр логов доступен только администраторам.', ephemeral=True)
                 return False
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug("interaction_check(): подавлено: %s", _ex)
         return True
 
     # ── эмбеды ─────────────────────────────────────────────────────────
@@ -686,8 +687,8 @@ class LogsCenterView(discord.ui.View):
                            '⚠️ Не удалось отправить — проверьте права бота на категорию « Логи».')
         try:
             await interaction.response.edit_message(embed=self.status_embed(), view=self)
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug("lc_test(): подавлено: %s", _ex)
 
     @discord.ui.button(label='События', style=discord.ButtonStyle.primary,
                        emoji='📜', custom_id='lc:events')
@@ -695,8 +696,8 @@ class LogsCenterView(discord.ui.View):
         self.notice = ''
         try:
             await interaction.response.edit_message(embed=self.events_embed(), view=self)
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug("lc_events(): подавлено: %s", _ex)
 
     @discord.ui.button(label='Создать/починить', style=discord.ButtonStyle.primary,
                        emoji='🔧', custom_id='lc:fix')
@@ -709,8 +710,8 @@ class LogsCenterView(discord.ui.View):
                            'Дайте боту права «Управление каналами» и повторите.')
         try:
             await interaction.response.edit_message(embed=self.status_embed(), view=self)
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug("lc_fix(): подавлено: %s", _ex)
 
     @discord.ui.button(label='Обзор', style=discord.ButtonStyle.secondary,
                        emoji='🏠', custom_id='lc:overview')
@@ -718,8 +719,8 @@ class LogsCenterView(discord.ui.View):
         self.notice = ''
         try:
             await interaction.response.edit_message(embed=self.overview_embed(), view=self)
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug("lc_overview(): подавлено: %s", _ex)
 
     @discord.ui.button(label='Обновить', style=discord.ButtonStyle.secondary,
                        emoji='🔄', custom_id='lc:refresh')
@@ -727,8 +728,8 @@ class LogsCenterView(discord.ui.View):
         self.notice = ''
         try:
             await interaction.response.edit_message(embed=self.status_embed(), view=self)
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug("lc_refresh(): подавлено: %s", _ex)
 
 
 
@@ -1377,15 +1378,15 @@ class Logs (commands .Cog ):
         ]
         try :
             _fields .append (('Отправлено',f"<t:{int(message.created_at.timestamp())}:R>"))
-        except Exception :
-            pass
+        except Exception as _ex:
+            log.debug("on_message_delete(): подавлено: %s", _ex)
         if _atts :
             _fields .append (('Вложений удалено',f"**{len(_atts)}**"))
         _th =None
         try :
             _th =str (message .author .display_avatar .url )if message .author else None
-        except Exception :
-            pass
+        except Exception as _ex:
+            log.debug("on_message_delete(): подавлено: %s", _ex)
         e =_styled_log_embed (message .guild ,'message','Сообщение удалено',
         fields =_fields ,color =0xE74C3C ,thumbnail =_th )
         try :
@@ -1438,8 +1439,8 @@ class Logs (commands .Cog ):
         _eth =None
         try :
             _eth =str (_eauthor .display_avatar .url )if _eauthor else None
-        except Exception :
-            pass
+        except Exception as _ex:
+            log.debug("on_message_edit(): подавлено: %s", _ex)
         e =_styled_log_embed (before .guild ,'message','Сообщение изменено',
         fields =[
         ('Автор',f"**{_ename}** · `{_eid}`"),
@@ -1492,13 +1493,13 @@ class Logs (commands .Cog ):
             _in =a if a is not None else b
             if _in is not None :
                 _vfields .append (('В канале сейчас',f"**{len(_in.members)}** чел."))
-        except Exception :
-            pass
+        except Exception as _ex:
+            log.debug("on_voice_state_update(): подавлено: %s", _ex)
         _vth =None
         try :
             _vth =str (member .display_avatar .url )
-        except Exception :
-            pass
+        except Exception as _ex:
+            log.debug("on_voice_state_update(): подавлено: %s", _ex)
         e =_styled_log_embed (member .guild ,'voice',action ,
         fields =_vfields ,color =color ,thumbnail =_vth )
         await _safe_send (ch ,embed =e )
@@ -1538,8 +1539,8 @@ class Logs (commands .Cog ):
             try :
                 me =guild .me 
                 can_view =bool (me .guild_permissions .view_audit_log )
-            except Exception :
-                pass
+            except Exception as _ex:
+                log.debug("on_guild_channel_delete(): подавлено: %s", _ex)
             if not can_view :
                 save_event (guild .id ,'channel','Канал удалён',{
                 'channel_id':str (channel .id ),
@@ -1576,13 +1577,13 @@ class Logs (commands .Cog ):
                             break 
                 except discord .Forbidden :
                     break 
-                except Exception :
-                    pass
+                except Exception as _ex:
+                    log.debug("on_guild_channel_delete(): подавлено: %s", _ex)
                 if mod_id is not None :
                     break 
                 await _ai .sleep (1.0 )  # ждём появления записи в audit log
-        except Exception :
-            pass
+        except Exception as _ex:
+            log.debug("on_guild_channel_delete(): подавлено: %s", _ex)
 
         extra_warning =''
         if mod_id is not None and mod_is_bot :
@@ -1713,8 +1714,8 @@ class Logs (commands .Cog ):
         try :
             if before .color !=after .color :
                 diffs .append (('Цвет',f"`#{before.color.value:06x}` → `#{after.color.value:06x}`"))
-        except Exception :
-            pass
+        except Exception as _ex:
+            log.debug("on_guild_role_update(): подавлено: %s", _ex)
         if getattr (before ,'hoist',None )!=getattr (after ,'hoist',None ):
             diffs .append (('Отдельный список',f"{getattr(before,'hoist',False)} → {getattr(after,'hoist',False)}"))
         if getattr (before ,'mentionable',None )!=getattr (after ,'mentionable',None ):
@@ -1722,8 +1723,8 @@ class Logs (commands .Cog ):
         try :
             if before .permissions .value !=after .permissions .value :
                 diffs .append (('Права','набор прав изменён'))
-        except Exception :
-            pass
+        except Exception as _ex:
+            log.debug("on_guild_role_update(): подавлено: %s", _ex)
         if not diffs :
             return
         save_event (before .guild .id ,'role','Роль изменена',{
@@ -1863,8 +1864,8 @@ class Logs (commands .Cog ):
             try :
                 with open (seen_file ,'r',encoding ='utf-8')as f :
                     seen =json .load (f )
-            except Exception :
-                pass 
+            except Exception as _ex:
+                log.debug("_sync_discord_audit_log(): подавлено: %s", _ex)
 
         action_map ={
         discord .AuditLogAction .ban :('mod','Бан'),
@@ -1893,8 +1894,8 @@ class Logs (commands .Cog ):
             try :
                 with open (cache_file ,'r',encoding ='utf-8')as f :
                     cache =json .load (f )
-            except Exception :
-                pass 
+            except Exception as _ex:
+                log.debug("_sync_discord_audit_log(): подавлено: %s", _ex)
 
         audit_errors =[]
         for guild in self .bot .guilds :
@@ -1988,8 +1989,8 @@ class Logs (commands .Cog ):
         try :
             with open (seen_file ,'w',encoding ='utf-8')as f :
                 json .dump (seen ,f )
-        except Exception :
-            pass 
+        except Exception as _ex:
+            log.debug("_sync_discord_audit_log(): подавлено: %s", _ex)
 
         return audit_errors 
 

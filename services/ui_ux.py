@@ -3,6 +3,10 @@ UI/UX Improvements
 Улучшения пользовательского интерфейса
 """
 
+from logger import get_logger
+
+_log = get_logger("ui_ux")
+
 import json
 import os
 from datetime import datetime
@@ -83,8 +87,8 @@ class ThemeManager:
             try:
                 with open(self.custom_themes_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_custom_themes(): подавлено: %s", _ex)
         
         return {}
     
@@ -100,8 +104,8 @@ class ThemeManager:
             try:
                 with open(self.user_preferences_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_user_preferences(): подавлено: %s", _ex)
         
         return {}
     
@@ -271,8 +275,8 @@ class WidgetManager:
             try:
                 with open(self.widgets_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_widgets(): подавлено: %s", _ex)
         
         return self._get_default_widgets()
     
@@ -321,8 +325,8 @@ class WidgetManager:
             try:
                 with open(self.user_layouts_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_user_layouts(): подавлено: %s", _ex)
         
         return {}
     
@@ -372,8 +376,8 @@ class AccessibilityManager:
             try:
                 with open(self.preferences_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_preferences(): подавлено: %s", _ex)
         
         return {}
     

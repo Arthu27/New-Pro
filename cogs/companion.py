@@ -92,8 +92,8 @@ def _load ()->dict :
         try :
             with open (DATA_FILE ,'r',encoding ='utf-8')as f :
                 return json .load (f )
-        except Exception :
-            pass 
+        except Exception as _ex:
+            log.debug("_load(): подавлено: %s", _ex)
     return {'last_date':None ,'sent_today':0 ,'used_messages':[]}
 
 

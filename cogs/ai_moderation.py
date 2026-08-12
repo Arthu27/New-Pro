@@ -189,8 +189,8 @@ class AIModeration (commands .Cog ):
                 try :
                     if re .search (pattern ,text_lower ,re .IGNORECASE ):
                         matches .append ((severity ,pattern ))
-                except re .error :
-                    pass 
+                except re .error as _ex:
+                    log.debug("detect_toxic(): подавлено: %s", _ex)
                     # Sensitivity filtering (for low severity)
         if sensitivity <0.5 and matches :
             matches =[m for m in matches if m [0 ]in ("severe","discrimination")]
@@ -270,8 +270,8 @@ class AIModeration (commands .Cog ):
                 if config .get ("dm_on_action"):
                     try :
                         await member .send (embed =embed )
-                    except discord .Forbidden :
-                        pass 
+                    except discord .Forbidden as _ex:
+                        log.debug("take_action(): подавлено: %s", _ex)
                         # Log to channel
                 await self ._log_to_channel (guild ,config ,embed ,member ,severity )
             elif action =="mute"and mute_minutes >0 :
@@ -285,8 +285,8 @@ class AIModeration (commands .Cog ):
                 if config .get ("dm_on_action"):
                     try :
                         await member .send (embed =embed )
-                    except discord .Forbidden :
-                        pass 
+                    except discord .Forbidden as _ex:
+                        log.debug("take_action(): подавлено: %s", _ex)
                 await self ._log_to_channel (guild ,config ,embed ,member ,severity )
             elif action =="kick":
                 await member .kick (reason =f"AI Mod: {reason}")
@@ -304,8 +304,8 @@ class AIModeration (commands .Cog ):
                 color =0xDC2626 
                 )
                 await self ._log_to_channel (guild ,config ,embed ,member ,severity )
-        except discord .Forbidden :
-            pass 
+        except discord .Forbidden as _ex:
+            log.debug("take_action(): подавлено: %s", _ex)
         except discord .HTTPException as e :
             log .info (f"[ai_mod] action error: {e}")
 
@@ -335,8 +335,8 @@ class AIModeration (commands .Cog ):
                 embed .timestamp =datetime.now(timezone.utc).replace(tzinfo=None)
                 embed .set_footer (text =f"AI Moderation · {severity}")
                 await channel .send (embed =embed )
-        except (discord .Forbidden ,discord .HTTPException ):
-            pass 
+        except (discord .Forbidden ,discord .HTTPException ) as _ex:
+            log.debug("_log_to_channel(): подавлено: %s", _ex)
 
             # MESSAGE LISTENER 
     @commands .Cog .listener ()
@@ -379,8 +379,8 @@ class AIModeration (commands .Cog ):
         # Delete the message
         try :
             await message .delete ()
-        except (discord .Forbidden ,discord .NotFound ):
-            pass 
+        except (discord .Forbidden ,discord .NotFound ) as _ex:
+            log.debug("on_message(): подавлено: %s", _ex)
 
             # COMMANDS 
     @commands .command (name ="aimod")

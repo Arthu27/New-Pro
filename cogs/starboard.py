@@ -7,6 +7,11 @@ Starboard — зал славы (звёздная доска).
 Сообщение, набравшее нужное число реакций-звёзд, публикуется в канал
 зала славы; при изменении числа звёзд счётчик обновляется.
 """
+
+from logger import get_logger
+
+_log = get_logger("starboard")
+
 import os
 import json
 import discord
@@ -36,8 +41,8 @@ class Starboard(commands.Cog):
         try:
             with open(_settings_path(guild_id), 'r', encoding='utf-8') as f:
                 cfg.update(json.load(f) or {})
-        except Exception:
-            pass
+        except Exception as _ex:
+            _log.debug("_settings(): подавлено: %s", _ex)
         try:
             cfg['min_stars'] = max(1, int(cfg.get('min_stars', 3)))
         except Exception:
@@ -72,8 +77,8 @@ class Starboard(commands.Cog):
                 async for u in r.users():
                     if u.bot or u.id == message.author.id:
                         cnt -= 1
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_star_count(): подавлено: %s", _ex)
             total += max(0, cnt)
         return total
 

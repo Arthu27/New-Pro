@@ -6,6 +6,11 @@ Gereksinim: pip install playwright && python -m playwright install chromium
   DEEPSEEK_EMAIL=email@gmail.com
   DEEPSEEK_PASSWORD=sifren
 """
+
+from logger import get_logger
+
+_log = get_logger("deepseek_scraper")
+
 import os 
 import json 
 import asyncio 
@@ -55,8 +60,8 @@ async def _ensure_login ():
             login_btn =_page .locator ('text=Лог in').first 
             await login_btn .click (timeout =5000 )
             await _page .wait_for_timeout (1000 )
-        except Exception :
-            pass 
+        except Exception as _ex:
+            _log.debug("_ensure_login(): подавлено: %s", _ex)
 
             # Email
         email_input =_page .locator ('input[type="email"], input[name="email"], input[placeholder*="email" i]').first 
@@ -102,8 +107,8 @@ async def _ask_deepseek_async (prompt :str ,timeout :int =60 )->str :
             new_chat =_page .locator ('text=New Chat, text=Новый Sohbet, [aria-label*="new" i]').first 
             await new_chat .click (timeout =3000 )
             await _page .wait_for_timeout (500 )
-        except Exception :
-            pass 
+        except Exception as _ex:
+            _log.debug("_ask_deepseek_async(): подавлено: %s", _ex)
 
             # Сообщение kutusunu bul ve написать
         textarea =_page .locator ('textarea, [contenteditable="true"]').first 

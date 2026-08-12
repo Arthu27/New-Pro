@@ -1,4 +1,9 @@
 """Server Info — обученные ответы о сервере (FAQ-система)"""
+
+from logger import get_logger
+
+_log = get_logger("server_info")
+
 import discord 
 from discord .ext import commands 
 from discord import app_commands 
@@ -18,8 +23,8 @@ def _load_info (guild_id :int )->dict :
         try :
             with open (path ,'r',encoding ='utf-8')as f :
                 return json .load (f )
-        except Exception :
-            pass 
+        except Exception as _ex:
+            _log.debug("_load_info(): подавлено: %s", _ex)
     return {}
 
 

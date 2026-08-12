@@ -13,6 +13,11 @@ Weekly Crown — еженедельная коронация.
 Команды: /crown ... (админ).
 Хранилище: data/weekly_crown.json
 """
+
+from logger import get_logger
+
+_log = get_logger("weekly_crown")
+
 import os
 import json
 import discord
@@ -36,8 +41,8 @@ def _load():
         if os.path.exists(STATE_PATH):
             with open(STATE_PATH, 'r', encoding='utf-8') as f:
                 return json.load(f)
-    except Exception:
-        pass
+    except Exception as _ex:
+        _log.debug("_load(): подавлено: %s", _ex)
     return {}
 
 
@@ -62,8 +67,8 @@ def _read_activity(guild_id: int):
                 msgs = json.load(f).get('messages', {})
             for uid, cnt in msgs.items():
                 out.setdefault(str(uid), [0, 0])[0] = int(cnt)
-    except Exception:
-        pass
+    except Exception as _ex:
+        _log.debug("_read_activity(): подавлено: %s", _ex)
     try:
         path = f'data/voice_stats_{guild_id}.json'
         if os.path.exists(path):
@@ -72,8 +77,8 @@ def _read_activity(guild_id: int):
             for uid, d in users.items():
                 secs = d.get('total_seconds', 0) if isinstance(d, dict) else int(d or 0)
                 out.setdefault(str(uid), [0, 0])[1] = int(secs) // 60
-    except Exception:
-        pass
+    except Exception as _ex:
+        _log.debug("_read_activity(): подавлено: %s", _ex)
     return out
 
 

@@ -3,6 +3,10 @@ Time Tracking
 Система отслеживания времени
 """
 
+from logger import get_logger
+
+_log = get_logger("time_tracking")
+
 import json
 import os
 from datetime import datetime, timedelta
@@ -81,8 +85,8 @@ class TimeTracker:
                         entry_id: TimeEntry.from_dict(entry_data)
                         for entry_id, entry_data in data.items()
                     }
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_entries(): подавлено: %s", _ex)
         
         return {}
     
@@ -262,8 +266,8 @@ class PomodoroTimer:
             try:
                 with open(self.sessions_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_sessions(): подавлено: %s", _ex)
         
         return {}
     
@@ -365,8 +369,8 @@ class TimeEstimator:
             try:
                 with open(self.estimates_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_estimates(): подавлено: %s", _ex)
         
         return {}
     

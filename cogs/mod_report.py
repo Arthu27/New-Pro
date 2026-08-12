@@ -25,8 +25,8 @@ def _load_cfg (guild_id :int )->dict :
         try :
             with open (path ,'r',encoding ='utf-8')as f :
                 return json .load (f )
-        except Exception :
-            pass 
+        except Exception as _ex:
+            log.debug("_load_cfg(): подавлено: %s", _ex)
     return {
     'enabled':False ,
     'channel_id':None ,
@@ -48,8 +48,8 @@ def _load_mod_data ()->dict :
         try :
             with open (MOD_DATA_FILE ,'r',encoding ='utf-8')as f :
                 return json .load (f )
-        except Exception :
-            pass 
+        except Exception as _ex:
+            log.debug("_load_mod_data(): подавлено: %s", _ex)
     return {'case':{}}
 
 
@@ -67,8 +67,8 @@ def _load_lb (guild_id :int )->dict :
             # leaderboard'da voice_minutes varsa al
             for uid ,mins in lb .get ('voice_minutes',{}).items ():
                 result ['voice_minutes'][uid ]=result ['voice_minutes'].get (uid ,0 )+mins 
-        except Exception :
-            pass 
+        except Exception as _ex:
+            log.debug("_load_lb(): подавлено: %s", _ex)
 
             # Ses данные — voice_stats_GUILDID.json (секунд cinsinden)
     vs_path =f'{DATA_DIR}/voice_stats_{guild_id}.json'
@@ -80,8 +80,8 @@ def _load_lb (guild_id :int )->dict :
                 seconds =udata .get ('total_seconds',0 )if isinstance (udata ,dict )else int (udata )
                 minutes =seconds //60 
                 result ['voice_minutes'][uid ]=result ['voice_minutes'].get (uid ,0 )+minutes 
-        except Exception :
-            pass 
+        except Exception as _ex:
+            log.debug("_load_lb(): подавлено: %s", _ex)
 
     return result 
 
@@ -100,8 +100,8 @@ def _load_invites (guild_id :int )->dict :
                 elif isinstance (val ,(int ,float )):
                     result [uid ]=int (val )
             return result 
-        except Exception :
-            pass 
+        except Exception as _ex:
+            log.debug("_load_invites(): подавлено: %s", _ex)
     return {}
 
 
@@ -168,8 +168,8 @@ async def _build_weekly_report (guild :discord .Guild ,days :int =7 ,force_cutof
                 ts =ts .replace (tzinfo =datetime .timezone .utc )
             if ts >=cutoff :
                 period_case .append (c )
-        except Exception :
-            pass 
+        except Exception as _ex:
+            log.debug("_build_weekly_report(): подавлено: %s", _ex)
 
     embeds =[]
 

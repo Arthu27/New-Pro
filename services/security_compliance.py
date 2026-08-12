@@ -3,6 +3,10 @@ Security & Compliance
 Безопасность и соответствие требованиям
 """
 
+from logger import get_logger
+
+_log = get_logger("security_compliance")
+
 import json
 import os
 import hashlib
@@ -28,8 +32,8 @@ class TwoFactorAuth:
             try:
                 with open(self.secrets_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_secrets(): подавлено: %s", _ex)
         
         return {}
     
@@ -139,8 +143,8 @@ class SessionManager:
             try:
                 with open(self.sessions_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_sessions(): подавлено: %s", _ex)
         
         return {}
     
@@ -257,8 +261,8 @@ class AuditLogger:
             try:
                 with open(self.log_file, 'r', encoding='utf-8') as f:
                     logs = json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("лог(): подавлено: %s", _ex)
         
         # Добавить новую запись
         logs.append(log_entry)
@@ -334,8 +338,8 @@ class GDPRCompliance:
             try:
                 with open(self.consents_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_consents(): подавлено: %s", _ex)
         
         return {}
     
@@ -417,8 +421,8 @@ class GDPRCompliance:
                 
                 with open(tickets_file, 'w', encoding='utf-8') as f:
                     json.dump(tickets, f, ensure_ascii=False, indent=2)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("delete_user_data(): подавлено: %s", _ex)
         
         # Удалить согласия
         if user_id in self.consents:
@@ -441,8 +445,8 @@ class IPWhitelist:
             try:
                 with open(self.whitelist_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_whitelist(): подавлено: %s", _ex)
         
         return []
     

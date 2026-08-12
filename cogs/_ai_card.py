@@ -4,6 +4,10 @@ AI Visual Novel Dialogue Card Generator — ИИ пишет текст прям�
 где слева стоит соответствующий VTuber-аватар, а справа в диалоговом окне написан ответ ИИ.
 """
 
+from logger import get_logger
+
+_log = get_logger("_ai_card")
+
 import os 
 import io 
 import math 
@@ -95,8 +99,8 @@ def generate_ai_dialogue_card (ai_text :str ,question :str ="",character_state :
                 target_h =int (sh *(target_w /sw ))
             sprite =sprite .resize ((target_w ,target_h ),Image .Resampling .LANCZOS )
             bg .alpha_composite (sprite ,(10 ,H -target_h ))
-        except Exception :
-            pass 
+        except Exception as _ex:
+            _log.debug("generate_ai_dialogue_card(): подавлено: %s", _ex)
 
             # 2. Диалоговое окно визуальной новеллы справа (x=360, w=536)
     box_w =536 

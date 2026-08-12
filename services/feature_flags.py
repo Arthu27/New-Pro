@@ -3,6 +3,10 @@ Feature Flags
 Система флагов функций
 """
 
+from logger import get_logger
+
+_log = get_logger("feature_flags")
+
 import json
 import os
 from datetime import datetime, timedelta
@@ -198,8 +202,8 @@ class FeatureFlagManager:
                         flag_key: FeatureFlag.from_dict(flag_data)
                         for flag_key, flag_data in data.items()
                     }
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_flags(): подавлено: %s", _ex)
         
         return {}
     
@@ -325,8 +329,8 @@ class FeatureFlagRollout:
             try:
                 with open(self.rollout_plans_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_rollout_plans(): подавлено: %s", _ex)
         
         return {}
     
@@ -407,8 +411,8 @@ class FeatureFlagAnalytics:
             try:
                 with open(self.analytics_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_analytics(): подавлено: %s", _ex)
         
         return {}
     

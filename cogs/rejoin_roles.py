@@ -21,6 +21,11 @@ Aether — Re-Join Roles (автоматическое восстановлен�
  * При возвращении участника: находится последняя запись в leave_log, возвращаются отслеживаемые роли.
  * Если не удалось вернуть роли (нет прав у бота / роль удалена) — отправляется уведомление в канал оповещений.
 """
+
+from logger import get_logger
+
+_log = get_logger("rejoin_roles")
+
 import discord 
 from discord .ext import commands 
 from discord import app_commands 
@@ -165,8 +170,8 @@ class ReJoinRoles (commands .Cog ):
                 )
                 try :
                     await ch .send (embed =e )
-                except Exception :
-                    pass 
+                except Exception as _ex:
+                    _log.debug("on_member_join(): подавлено: %s", _ex)
 
                     # Slash команды 
     @app_commands .command (name ="rejoin-toggle",description ="Включить/отключить систему Re-Join ролей")

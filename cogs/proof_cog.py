@@ -18,6 +18,11 @@
 Хранение: data/modproof_{gid}.json — номер, кто/кого/за что, ссылка на
 сообщение в канале доказательств.
 """
+
+from logger import get_logger
+
+_log = get_logger("proof_cog")
+
 import io
 import json
 import os
@@ -327,8 +332,8 @@ class ProofCog(commands.Cog):
                     msg = await ch.fetch_message(int(entry['msg_id']))
                     await msg.delete()
                     msg_deleted = True
-                except Exception:
-                    pass
+                except Exception as _ex:
+                    _log.debug("proofdel(): подавлено: %s", _ex)
         e = discord.Embed(title=f'🗑️ Демка #{number} удалена', color=RED, timestamp=_now())
         e.add_field(name='Была на', value=f"<@{entry['user_id']}> (`{entry['user_name']}`)",
                     inline=True)

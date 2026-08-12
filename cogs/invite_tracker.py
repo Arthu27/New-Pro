@@ -1,3 +1,8 @@
+
+from logger import get_logger
+
+_log = get_logger("invite_tracker")
+
 import discord 
 from discord .ext import commands 
 from discord import app_commands 
@@ -16,8 +21,8 @@ class InviteTracker (commands .Cog ):
         try :
             invites =await guild .invites ()
             self .invite_cache [guild .id ]={inv .code :inv .uses for inv in invites }
-        except Exception :
-            pass 
+        except Exception as _ex:
+            _log.debug("cache_invites(): подавлено: %s", _ex)
 
     @commands .Cog .listener ()
     async def on_ready (self ):

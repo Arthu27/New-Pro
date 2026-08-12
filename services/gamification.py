@@ -2,6 +2,11 @@
 Gamification
 Система геймификации (значки, очки, уровни)
 """
+
+from logger import get_logger
+
+_log = get_logger("gamification")
+
 import json
 import os
 from datetime import datetime, timedelta
@@ -72,8 +77,8 @@ class BadgeSystem:
             try:
                 with open(self.user_badges_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_user_badges(): подавлено: %s", _ex)
         
         return {}
     
@@ -192,8 +197,8 @@ class PointsSystem:
             try:
                 with open(self.user_points_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_user_points(): подавлено: %s", _ex)
         
         return {}
     
@@ -413,8 +418,8 @@ class StreakTracker:
             try:
                 with open(self.streaks_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_streaks(): подавлено: %s", _ex)
         
         return {}
     

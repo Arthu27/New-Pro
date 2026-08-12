@@ -8,6 +8,11 @@ data/custom_cmds_{gid}.json: {id: {trigger, response, type, uses, created_at}}
 type: text — обычный текст | embed — золотое embed-окно.
 Счётчик использований (uses) обновляется и виден в панели.
 """
+
+from logger import get_logger
+
+_log = get_logger("custom_commands")
+
 import os
 import json
 import discord
@@ -50,8 +55,8 @@ class CustomCommands(commands.Cog):
                 trig = str(rec.get('trigger', '') or '').strip().lstrip('!').casefold()
                 if trig:
                     out[trig] = {**rec, 'id': cid, 'trigger': trig}
-        except Exception:
-            pass
+        except Exception as _ex:
+            _log.debug("_commands(): подавлено: %s", _ex)
         self._cache[guild_id] = (mtime, out)
         return out
 
@@ -67,8 +72,8 @@ class CustomCommands(commands.Cog):
                     json.dump(data, f, ensure_ascii=False, indent=2)
                 os.replace(tmp, p)
                 self._cache.pop(guild_id, None)
-        except Exception:
-            pass
+        except Exception as _ex:
+            _log.debug("_bump_uses(): подавлено: %s", _ex)
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):

@@ -32,8 +32,8 @@ def _load_cfg (guild_id :int )->dict :
         try :
             with open (path ,'r',encoding ='utf-8')as f :
                 cfg .update (json .load (f ))
-        except Exception :
-            pass 
+        except Exception as _ex:
+            log.debug("_load_cfg(): подавлено: %s", _ex)
 
             # mod_report_config'den staff_roles'u da al (birleшtir)
     mod_cfg_path =f'{DATA_DIR}/mod_report_config_{guild_id}.json'
@@ -43,8 +43,8 @@ def _load_cfg (guild_id :int )->dict :
                 mod_cfg =json .load (f )
             if mod_cfg .get ('staff_roles'):
                 cfg ['staff_roles']=mod_cfg ['staff_roles']
-        except Exception :
-            pass 
+        except Exception as _ex:
+            log.debug("_load_cfg(): подавлено: %s", _ex)
 
     return cfg 
 
@@ -87,7 +87,8 @@ async def _scan_messages (guild :discord .Guild ,since :datetime .datetime )->di
                 uid =str (msg .author .id )
                 msg_counts [uid ]=msg_counts .get (uid ,0 )+1 
                 scanned +=1 
-        except Exception :
+        except Exception as _ex:
+            log.debug("_scan_messages(): подавлено: %s", _ex)
             continue 
 
     log .info (f'[Meeting] {guild.name}: отсканировано {scanned} сообщений, {len(msg_counts)} участников')
@@ -111,8 +112,8 @@ async def _scan_voice (guild :discord .Guild ,since :datetime .datetime )->dict 
             for uid ,d in vs .get ('users',{}).items ():
                 secs =d .get ('total_seconds',0 )if isinstance (d ,dict )else int (d )
                 current [uid ]=secs 
-        except Exception :
-            pass 
+        except Exception as _ex:
+            log.debug("_scan_voice(): подавлено: %s", _ex)
 
             # Снимок — значение на начало собрания
     snapshot ={}
@@ -120,8 +121,8 @@ async def _scan_voice (guild :discord .Guild ,since :datetime .datetime )->dict 
         try :
             with open (snapshot_path ,'r',encoding ='utf-8')as f :
                 snapshot =json .load (f )
-        except Exception :
-            pass 
+        except Exception as _ex:
+            log.debug("_scan_voice(): подавлено: %s", _ex)
 
             # Разница = длительность, набранная за это собрание
     result ={}
@@ -149,8 +150,8 @@ def _save_voice_snapshot (guild_id :int ):
                 snapshot [uid ]=secs 
             with open (snapshot_path ,'w',encoding ='utf-8')as f :
                 json .dump (snapshot ,f )
-        except Exception :
-            pass 
+        except Exception as _ex:
+            log.debug("_save_voice_snapshot(): подавлено: %s", _ex)
 
 
 def _load_invites (guild_id :int )->dict :
@@ -166,8 +167,8 @@ def _load_invites (guild_id :int )->dict :
                 else :
                     result [uid ]=int (val )
             return result 
-        except Exception :
-            pass 
+        except Exception as _ex:
+            log.debug("_load_invites(): подавлено: %s", _ex)
     return {}
 
 
@@ -352,8 +353,8 @@ class MeetingStartModal (discord .ui .Modal ,title ='Собрание Запус
                 if hasattr (item ,'custom_id')and item .custom_id =='meeting_start':
                     item .disabled =True 
             await interaction .message .edit (view =view )
-        except Exception :
-            pass 
+        except Exception as _ex:
+            log.debug("on_submit(): подавлено: %s", _ex)
 
         ts =int (meeting_time .timestamp ())
         embed =_guild_embed_base (interaction .guild ,'📢 Собрание началось',0x57F287 )

@@ -4,6 +4,10 @@ Leaderboard Cog — Luxury Dark-Gold Dashboard & Leaderboard Table via Pillow
 премиальные плашки участников #1, #2, #3 с медалями и интерактивное Select-меню.
 """
 
+from logger import get_logger
+
+_log = get_logger("leaderboard")
+
 import os
 import io
 import json
@@ -106,8 +110,8 @@ def _get_lb_data(guild: discord.Guild, category: str):
                     m = guild.get_member(int(uid)) if guild else None
                     name = m.display_name if m else f"ID {uid[:6]}"
                     top.append((name, f"{int(count):,} СООБЩЕНИЙ".replace(",", " ")))
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_get_lb_data(): подавлено: %s", _ex)
     elif category == "voice":
         path = os.path.join(DATA_DIR, f'voice_stats_{gid}.json')
         if os.path.exists(path):
@@ -124,8 +128,8 @@ def _get_lb_data(guild: discord.Guild, category: str):
                     name = d.get('name', f"ID {uid[:6]}") if isinstance(d, dict) else f"ID {uid[:6]}"
                     h, m = divmod(secs // 60, 60)
                     top.append((name, f"{h}ч {m}м В ВОЙСЕ" if h else f"{m}м В ВОЙСЕ"))
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_get_lb_data(): подавлено: %s", _ex)
     elif category == "balance":
         path = os.path.join(DATA_DIR, f'economy_{gid}.json')
         if os.path.exists(path):
@@ -140,8 +144,8 @@ def _get_lb_data(guild: discord.Guild, category: str):
                     m = guild.get_member(int(uid)) if guild else None
                     name = m.display_name if m else f"ID {uid[:6]}"
                     top.append((name, f"{d:,} МОНЕТ".replace(",", " ")))
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_get_lb_data(): подавлено: %s", _ex)
 
     if not top:
         top = [
@@ -349,8 +353,8 @@ class Leaderboard(commands.Cog):
             try:
                 with open(path, 'r', encoding='utf-8') as f:
                     data = json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("on_message(): подавлено: %s", _ex)
         uid = str(message.author.id)
         data['messages'][uid] = data['messages'].get(uid, 0) + 1
         os.makedirs(DATA_DIR, exist_ok=True)
@@ -375,8 +379,8 @@ class Leaderboard(commands.Cog):
                         try:
                             with open(path, 'r', encoding='utf-8') as f:
                                 vs = json.load(f)
-                        except Exception:
-                            pass
+                        except Exception as _ex:
+                            _log.debug("on_voice_state_update(): подавлено: %s", _ex)
                     suid = str(uid)
                     d = vs['users'].get(suid, {'total_seconds': 0, 'name': member.display_name})
                     d['total_seconds'] = d.get('total_seconds', 0) + minutes * 60
@@ -389,8 +393,8 @@ class Leaderboard(commands.Cog):
     async def leaderboard_cmd(self, ctx, category: str = "messages"):
         try:
             await ctx.message.delete()
-        except Exception:
-            pass
+        except Exception as _ex:
+            _log.debug("leaderboard_cmd(): подавлено: %s", _ex)
         cat = category.lower()
         if cat not in ("messages", "voice", "balance"):
             cat = "messages"

@@ -10,6 +10,10 @@ Aether — Верификация — режим наблюдателя / opt-in
 Включить: `/verify-toggle enabled:true` или через панель.
 """
 
+from logger import get_logger
+
+_log = get_logger("verification")
+
 import discord 
 from discord .ext import commands 
 from discord import app_commands 
@@ -63,8 +67,8 @@ class Verification (commands .Cog ):
             f"👋 Добро пожаловать на сервер {guild.name}!\n"
             "Если требуется проверка, следуйте инструкциям на сервере."
             )
-        except Exception :
-            pass 
+        except Exception as _ex:
+            _log.debug("on_member_join(): подавлено: %s", _ex)
             # Примечание: никаких автоматических действий (кик, выдача ролей, создание каналов) не выполняется.
 
     @app_commands .command (name ="verify-toggle",description ="Включить/отключить систему верификации (режим наблюдателя)")

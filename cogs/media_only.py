@@ -10,6 +10,11 @@ Medialock — режим каналов (медиа-только / текст-т
 Команды: /medialock set|remove|list (manage_guild).
 Хранилище: data/media_only.json
 """
+
+from logger import get_logger
+
+_log = get_logger("media_only")
+
 import os
 import re
 import json
@@ -49,8 +54,8 @@ def _load():
         if os.path.exists(DATA_PATH):
             with open(DATA_PATH, 'r', encoding='utf-8') as f:
                 return json.load(f)
-    except Exception:
-        pass
+    except Exception as _ex:
+        _log.debug("_load(): подавлено: %s", _ex)
     return {}
 
 
@@ -142,8 +147,8 @@ class MediaLock(commands.Cog):
                     f"{meta['hint']} Ваше сообщение удалено.")
                 e.set_footer(text=message.guild.name)
                 await member.send(embed=e)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("on_message(): подавлено: %s", _ex)
 
     # ────────────────────────────────────────────────────────────
     # Slash: /medialock

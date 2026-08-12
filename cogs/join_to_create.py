@@ -10,6 +10,11 @@ Join-to-Create — личные голосовые комнаты.
 
 Реестр комнат переживает рестарт бота: data/j2c_rooms.json.
 """
+
+from logger import get_logger
+
+_log = get_logger("join_to_create")
+
 import os
 import json
 import discord
@@ -43,8 +48,8 @@ def _load(path, default):
         if os.path.exists(path):
             with open(path, 'r', encoding='utf-8') as f:
                 return json.load(f)
-    except Exception:
-        pass
+    except Exception as _ex:
+        _log.debug("_load(): подавлено: %s", _ex)
     return default
 
 

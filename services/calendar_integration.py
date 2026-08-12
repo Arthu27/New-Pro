@@ -3,6 +3,10 @@ Calendar Integration
 Takvim entegrasyonu (Google Calendar, Outlook)
 """
 
+from logger import get_logger
+
+_log = get_logger("calendar_integration")
+
 import json
 import os
 from datetime import datetime, timedelta
@@ -74,8 +78,8 @@ class CalendarManager:
                         event_id: CalendarEvent.from_dict(event_data)
                         for event_id, event_data in data.items()
                     }
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_events(): подавлено: %s", _ex)
         
         return {}
     
@@ -176,8 +180,8 @@ class GoogleCalendarIntegration:
             try:
                 with open(self.config_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_config(): подавлено: %s", _ex)
         
         return {
             'client_id': None,
@@ -233,8 +237,8 @@ class OutlookCalendarIntegration:
             try:
                 with open(self.config_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_config(): подавлено: %s", _ex)
         
         return {
             'client_id': None,
@@ -285,8 +289,8 @@ class AppointmentScheduler:
             try:
                 with open(self.availability_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_availability(): подавлено: %s", _ex)
         
         return {}
     
@@ -366,8 +370,8 @@ class ReminderManager:
             try:
                 with open(self.reminders_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_reminders(): подавлено: %s", _ex)
         
         return {}
     

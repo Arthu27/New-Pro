@@ -3,6 +3,10 @@ Bulk Operations
 Система массовых операций
 """
 
+from logger import get_logger
+
+_log = get_logger("bulk_operations")
+
 import json
 import os
 from datetime import datetime
@@ -121,8 +125,8 @@ class BulkOperationManager:
                         op_id: BulkOperation.from_dict(op_data)
                         for op_id, op_data in data.items()
                     }
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_operations(): подавлено: %s", _ex)
         
         return {}
     

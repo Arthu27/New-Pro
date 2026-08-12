@@ -1,3 +1,8 @@
+
+from logger import get_logger
+
+_log = get_logger("autorole_level")
+
 import discord 
 from discord .ext import commands 
 import json 
@@ -69,8 +74,8 @@ class AutoRoleLevel (commands .Cog ):
                 return 
             _xp_min =int (_cfg .get ('xp_min',15 )or 15 )
             _xp_max =max (_xp_min ,int (_cfg .get ('xp_max',25 )or 25 ))
-        except Exception :
-            pass
+        except Exception as _ex:
+            _log.debug("on_message(): подавлено: %s", _ex)
 
         uid =str (message .author .id )
         now =time .time ()
@@ -104,8 +109,8 @@ class AutoRoleLevel (commands .Cog ):
                 f'🎉 {message.author.mention}, достигнут **уровень {new_level}**!',
                 delete_after =10 
                 )
-            except Exception :
-                pass 
+            except Exception as _ex:
+                _log.debug("on_message(): подавлено: %s", _ex)
 
                 # Автоматически роли контроль
         level_roles =self ._get_level_roles (message .guild .id )
@@ -119,8 +124,8 @@ class AutoRoleLevel (commands .Cog ):
                 if role and role not in member .roles :
                     try :
                         await member .add_roles (role ,reason =f'Уровень {required_level} — автороль')
-                    except Exception :
-                        pass 
+                    except Exception as _ex:
+                        _log.debug("on_message(): подавлено: %s", _ex)
 
                         # На сервер вход роли контроль 
     @commands .Cog .listener ()
@@ -144,8 +149,8 @@ class AutoRoleLevel (commands .Cog ):
                 if role :
                     try :
                         await member .add_roles (role ,reason =f'Уровень {required_level} — автороль при входе')
-                    except Exception :
-                        pass 
+                    except Exception as _ex:
+                        _log.debug("on_member_join(): подавлено: %s", _ex)
 
                         # Команды 
     @commands .command (name ='level-role-add',aliases =['level-rol-add'])

@@ -1,6 +1,11 @@
 """
 Информация и инструменты — префиксные команды (!uptime, !botinfo, !avatar, и т.д.)
 """
+
+from logger import get_logger
+
+_log = get_logger("info_tools")
+
 import discord
 from discord.ext import commands
 import time
@@ -255,8 +260,8 @@ class InfoTools(commands.Cog):
         await ch.send(message)
         try:
             await ctx.message.delete()
-        except Exception:
-            pass
+        except Exception as _ex:
+            _log.debug("say(): подавлено: %s", _ex)
 
 
 async def setup(bot):

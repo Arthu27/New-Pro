@@ -10,6 +10,11 @@ Tag Jail — система «запрещённый тег».
 
 Команды: /tagjail ... (админ), /jail, /unjail, /jailed (модераторы).
 """
+
+from logger import get_logger
+
+_log = get_logger("tag_jail")
+
 import os
 import json
 import time
@@ -60,8 +65,8 @@ def _load_json(path, default):
         if os.path.exists(path):
             with open(path, 'r', encoding='utf-8') as f:
                 return json.load(f)
-    except Exception:
-        pass
+    except Exception as _ex:
+        _log.debug("_load_json(): подавлено: %s", _ex)
     return default
 
 
@@ -153,14 +158,14 @@ class TagJail(commands.Cog):
         if ch:
             try:
                 await ch.send(embed=embed)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_log(): подавлено: %s", _ex)
 
     async def _dm(self, member: discord.Member, embed: discord.Embed):
         try:
             await member.send(embed=embed)
-        except Exception:
-            pass
+        except Exception as _ex:
+            _log.debug("_dm(): подавлено: %s", _ex)
 
     def _jail_role(self, guild: discord.Guild):
         rid = int(self.cfg(guild.id).get('jail_role_id', 0) or 0)
@@ -250,8 +255,8 @@ class TagJail(commands.Cog):
         if role and role in member.roles:
             try:
                 await member.remove_roles(role, reason=f"[TagJail] {reason}")
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("release(): подавлено: %s", _ex)
 
         restored = 0
         if rec:
@@ -667,8 +672,8 @@ class TagJail(commands.Cog):
             if role and role in пользователь.roles:
                 try:
                     await пользователь.remove_roles(role, reason=f"[TagJail] unjail {interaction.user}")
-                except Exception:
-                    pass
+                except Exception as _ex:
+                    _log.debug("unjail_cmd(): подавлено: %s", _ex)
                 return await interaction.response.send_message(
                     f"✅ Jail-роль снята с **{пользователь.display_name}** (записи в джейле не было).", ephemeral=True)
             return await interaction.response.send_message("⚠ Он не в джейле.", ephemeral=True)

@@ -8,6 +8,11 @@
 - 🧹 /raidcleanup — кик/бан всех, кто зашёл за последние N минут (антирейд).
 - 🧽 /dehoist — чистка ников, «выпирающих» вверх списка (! " # …) и залго.
 """
+
+from logger import get_logger
+
+_log = get_logger("mod_kit")
+
 import json
 import os
 import time
@@ -68,7 +73,8 @@ def raid_candidates(members, now_ts: float, minutes: int):
             continue
         try:
             ts = ja.replace(tzinfo=timezone.utc if ja.tzinfo is None else ja.tzinfo).timestamp()
-        except Exception:
+        except Exception as _ex:
+            _log.debug("raid_candidates(): подавлено: %s", _ex)
             continue
         if ts >= border:
             gp = getattr(m, 'guild_permissions', None)
@@ -86,8 +92,8 @@ def _load_json(path, default):
                 data = json.load(f)
             if isinstance(data, type(default)):
                 return data
-    except Exception:
-        pass
+    except Exception as _ex:
+        _log.debug("_load_json(): подавлено: %s", _ex)
     return default
 
 
@@ -188,8 +194,8 @@ class ModKit(commands.Cog):
             react_mark(guild.id, payload.message_id)
             try:
                 await message.add_reaction('✅')      # метка «варн зафиксирован»
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("on_raw_reaction_add(): подавлено: %s", _ex)
             log.info(f'ModKit: ⚡-варн {target} от {member} (сообщение {payload.message_id})')
         except Exception as e:
             log.error(f'ModKit: ошибка ⚡-варна: {e}')
@@ -214,8 +220,8 @@ class ModKit(commands.Cog):
             new_ch = await ch.clone(reason=f'Nuke: {interaction.user}')
             try:
                 await new_ch.edit(position=ch.position)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("nuke(): подавлено: %s", _ex)
             old_name = ch.name
             await ch.delete(reason=f'Nuke: {interaction.user}')
             card = self._card('☢️ Канал пересоздан',

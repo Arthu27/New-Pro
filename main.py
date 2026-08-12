@@ -1,3 +1,8 @@
+
+from logger import get_logger
+
+_log = get_logger("main")
+
 # Автоматическая установка зависимостей
 import sys
 import os
@@ -121,8 +126,8 @@ async def _acl_check(ctx):
             if not has_access(ctx.guild.id if ctx.guild else 0, cmd, ctx.author):
                 await ctx.send("🚫 У вас нет доступа к этой команде.", delete_after=8)
                 return False
-    except Exception:
-        pass
+    except Exception as _ex:
+        _log.debug("_acl_check(): подавлено: %s", _ex)
     return True
 
 bot.check(_acl_check)
@@ -144,8 +149,8 @@ async def _acl_slash_check(interaction):
                 await interaction.response.send_message(
                     "🚫 У вас нет доступа к этой команде.", ephemeral=True)
                 return False
-    except Exception:
-        pass
+    except Exception as _ex:
+        _log.debug("_acl_slash_check(): подавлено: %s", _ex)
     return True
 
 bot.tree.interaction_check = _acl_slash_check
@@ -229,12 +234,12 @@ def cleanup_on_exit():
                     for vc in bot.voice_clients:
                         try:
                             asyncio.run_coroutine_threadsafe(vc.disconnect(), loop)
-                        except Exception:
-                            pass
+                        except Exception as _ex:
+                            _log.debug("cleanup_on_exit(): подавлено: %s", _ex)
                 if not bot.is_closed():
                     asyncio.run_coroutine_threadsafe(bot.close(), loop)
-        except Exception:
-            pass
+        except Exception as _ex:
+            _log.debug("cleanup_on_exit(): подавлено: %s", _ex)
     except Exception as e:
         print(f"[ОЧИСТКА] Ошибка очистки: {e}")
 
@@ -360,7 +365,8 @@ def _get_cloudflared_binary():
             return p
         elif os.path.exists(p):
             try: os.remove(p)
-            except Exception: pass
+            except Exception as _ex:
+                _log.debug("_get_cloudflared_binary(): подавлено: %s", _ex)
 
     sys_cf = shutil.which("cloudflared") or shutil.which("cloudflared.exe")
     if sys_cf and is_valid_exe(sys_cf):
@@ -384,7 +390,8 @@ def _get_cloudflared_binary():
         else:
             print(f"[CLOUDFLARE] Загруженный файл невалиден. Удален: {dest_path}")
             try: os.remove(dest_path)
-            except Exception: pass
+            except Exception as _ex:
+                _log.debug("_get_cloudflared_binary(): подавлено: %s", _ex)
             return None
     except Exception as _e:
         print(f"[CLOUDFLARE] Ошибка автоматической загрузки cloudflared: {_e}")
@@ -481,8 +488,8 @@ async def _monitor_voice():
             try:
                 vc = await channel.connect(self_deaf=False)
                 last_ping = time.time()
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_monitor_voice(): подавлено: %s", _ex)
         elif time.time() - last_ping > 240:
             try:
                 if not vc.is_playing():
@@ -491,8 +498,8 @@ async def _monitor_voice():
                     source = discord.PCMAudio(delete)
                     vc.play(source)
                 last_ping = time.time()
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_monitor_voice(): подавлено: %s", _ex)
 
 @bot.event
 async def on_ready():
@@ -523,8 +530,8 @@ async def on_ready():
             _status = _status_map.get(_cfg.get('status', 'idle'), discord.Status.idle)
             _activity_type = _type_map.get(_cfg.get('activity_type', 'listening'), discord.ActivityType.listening)
             _activity_text = _cfg.get('activity_text', '.gg/Aether')
-        except Exception:
-            pass
+        except Exception as _ex:
+            _log.debug("on_ready(): подавлено: %s", _ex)
 
     await bot.change_presence(
         activity=discord.Activity(type=_activity_type, name=_activity_text),

@@ -3,6 +3,11 @@ Warnings Cog
 Система предупреждений — database (SQLite)
 Тёмная тема, русский язык
 """
+
+from logger import get_logger
+
+_log = get_logger("warnings")
+
 import discord
 from discord.ext import commands
 from discord import app_commands
@@ -181,8 +186,8 @@ async def _log_warn_to_channel (guild ,user ,moderator ,reason ,warn_id ,total )
         )
         e .set_footer (text =f"{guild.name}")
         await _safe_send (ch ,embed =e )
-    except Exception :
-        pass
+    except Exception as _ex:
+        _log.debug("_log_warn_to_channel(): подавлено: %s", _ex)
 
 
 class warnings(commands.Cog):
@@ -235,8 +240,8 @@ class warnings(commands.Cog):
         # DM — best-effort: закрытые ЛС/сетевой сбой не роняют команду
         try:
             await user.send(embed=embed)
-        except Exception:
-            pass
+        except Exception as _ex:
+            _log.debug("send_dm(): подавлено: %s", _ex)
 
     async def apply_warn_punishment(self, guild, member, warn_count):
         """Автоматическое наказание по количеству предупреждений"""
@@ -301,8 +306,8 @@ class warnings(commands.Cog):
             _np(interaction, 'warn',
                 f"Предупреждение: {user.display_name}",
                 f"Модератор: {interaction.user.display_name} · Всего: {total} · Причина: {reason or 'Не указана'}")
-        except Exception:
-            pass
+        except Exception as _ex:
+            _log.debug("add_warn(): подавлено: %s", _ex)
 
         # Лог в Discord-канал (-модерация) — чтобы варн был виден персоналу
         await _log_warn_to_channel (guild ,user ,interaction .user ,reason ,warn_id ,total )
@@ -493,8 +498,8 @@ class warnings(commands.Cog):
             _loop.run_in_executor(None, lambda: _ne('warn',
                 f"Предупреждение: {user.display_name}",
                 f"Модератор: {moderator.display_name} · Всего: {total} · Причина: {reason or 'Не указана'}"))
-        except Exception:
-            pass
+        except Exception as _ex:
+            _log.debug("add_warning(): подавлено: %s", _ex)
 
         # Лог в Discord-канал (-модерация)
         await _log_warn_to_channel (guild ,user ,moderator ,reason ,warn_id ,total )
@@ -512,8 +517,8 @@ class warnings(commands.Cog):
             if guild.icon:
                 dm_embed.set_footer(text=f"{guild.name}", icon_url=guild.icon.url)
             await user.send(embed=dm_embed)
-        except Exception:
-            pass
+        except Exception as _ex:
+            _log.debug("add_warning(): подавлено: %s", _ex)
 
         try:
             await self.apply_warn_punishment(guild, user, total)
@@ -536,8 +541,8 @@ class warnings(commands.Cog):
             for c in md.get("cases", {}).get(str(guild_id), []):
                 if str(c.get("user_id", "")) == str(user_id):
                     cases.append(c)
-        except Exception:
-            pass
+        except Exception as _ex:
+            _log.debug("_collect_mod_data(): подавлено: %s", _ex)
         # mod_advanced_data.json (case + notes от advanced_mod)
         try:
             ad = {}
@@ -549,8 +554,8 @@ class warnings(commands.Cog):
                     cases.append(c)
             for n in ad.get("notes", {}).get(str(guild_id), {}).get(str(user_id), []):
                 notes.append(n)
-        except Exception:
-            pass
+        except Exception as _ex:
+            _log.debug("_collect_mod_data(): подавлено: %s", _ex)
         return warns, cases, notes
 
     @commands.command(name="pw", aliases=["player", "dossier", "dosye"])

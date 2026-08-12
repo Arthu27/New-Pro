@@ -3,6 +3,10 @@ SLA Management
 Управление Service Level Agreement
 """
 
+from logger import get_logger
+
+_log = get_logger("sla_management")
+
 import json
 import os
 from datetime import datetime, timedelta
@@ -113,8 +117,8 @@ class SLAManager:
                         policy_id: SLAPolicy.from_dict(policy_data)
                         for policy_id, policy_data in data.items()
                     }
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_policies(): подавлено: %s", _ex)
         
         return {}
     
@@ -313,8 +317,8 @@ class SLABreachDetector:
             try:
                 with open(self.breaches_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_breaches(): подавлено: %s", _ex)
         
         return {}
     

@@ -1,4 +1,9 @@
 """Extra panel routes - pages"""
+
+from logger import get_logger
+
+_log = get_logger("routes_extra")
+
 from flask import render_template ,session ,redirect ,url_for ,request ,jsonify ,Response 
 import os ,json 
 import time 
@@ -14,8 +19,8 @@ def _load_ai_tickets (guild_id :int )->dict :
         try :
             with open (path ,'r',encoding ='utf-8')as f :
                 return json .load (f )
-        except Exception:
-            pass 
+        except Exception as _ex:
+            _log.debug("_load_ai_tickets(): подавлено: %s", _ex)
     return {}
 
 
@@ -33,8 +38,8 @@ async def _fetch_channel_msgs_async (bot ,channel_mentions ):
                 msgs =[m async for m in ch .history (limit =10 )]
                 for m in reversed (msgs ):
                     lines .append (f"  [{ch.name}] {m.author.display_name}: {m.content[:100]}")
-            except Exception :
-                pass 
+            except Exception as _ex:
+                _log.debug("_fetch_channel_msgs_async(): подавлено: %s", _ex)
     return lines 
 
 
@@ -237,8 +242,8 @@ def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
                         try :
                             _run_async (m .send (message ))
                             count +=1 
-                        except Exception :
-                            pass 
+                        except Exception as _ex:
+                            _log.debug("_bulk(): подавлено: %s", _ex)
                 return count 
             count =_asyncio .run_coroutine_threadsafe (_bulk (),bot .loop ).result (timeout =60 )
             return f'✅ {count} пользователям DM отправлено'
@@ -318,8 +323,8 @@ def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
                 try :
                     w =json .load (open (warns_file ,encoding ='utf-8'))
                     warn_count =len (w .get (str (guild_id ),{}).get (uid ,[]))
-                except Exception :
-                    pass 
+                except Exception as _ex:
+                    _log.debug("_process_action(): подавлено: %s", _ex)
             return (f'👤 {member.display_name} ({member.name})\n'
             f'📅 Вход: {member.joined_at.strftime("%d.%m.%Y") if member.joined_at else "?"}\n'
             f'⚠️ Warning: {warn_count}\n'
@@ -1261,8 +1266,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                 'escalated_at':ticket .get ('escalated_at'),
                 'staff_notified':ticket .get ('staff_notified',False )
                 })
-            except Exception:
-                pass 
+            except Exception as _ex:
+                _log.debug("ai_tickets_page(): подавлено: %s", _ex)
 
         return render_template (
         'ai_tickets.html',
@@ -1504,8 +1509,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         if cog and entry .get ('msg_id'):
             try :
                 _run_async (cog .delete_sticky_message_remote (guild ,cid ,entry ['msg_id']))
-            except Exception :
-                pass
+            except Exception as _ex:
+                _log.debug("api_sticky_delete(): подавлено: %s", _ex)
         return jsonify ({'success':True })
 
     # ── Тихий мут (ghost mute) ────────────────────────────────────────────
@@ -1643,8 +1648,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                     msg =_run_async (ch .fetch_message (int (entry ['msg_id'])))
                     _run_async (msg .delete ())
                     msg_deleted =True
-        except Exception :
-            pass
+        except Exception as _ex:
+            _log.debug("api_proofs_delete(): подавлено: %s", _ex)
         _fire_panel_notification ('proof',f'🗑️ Демка #{pid} удалена',
         f"{session.get('username')}: {entry.get('user_name')}")
         return jsonify ({'success':True ,'msg_deleted':msg_deleted })
@@ -1739,8 +1744,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
             cog =bot .get_cog ('Backup')if bot else None
             if cog :
                 _run_async (cog ._notify (info ,removed ),timeout =20 )
-        except Exception :
-            pass
+        except Exception as _ex:
+            _log.debug("api_backups_create(): подавлено: %s", _ex)
         info ['size_h']=_bk .format_size (info ['size'])
         _fire_panel_notification ('backup','💾 Бэкап создан',
         f"{session.get('username')}: {info['name']} ({info['size_h']})")
@@ -1897,7 +1902,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                                 server_configs .append (f"{flabel}: {thresholds}")
                             else :
                                 server_configs .append (f"{flabel}: текущий")
-                        except Exception:pass 
+                        except Exception as _ex:
+                            _log.debug("api_ai_chat(): подавлено: %s", _ex)
 
                         # Warning число
                 warn_summary =''
@@ -1915,7 +1921,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                             name =m .display_name if m else uid 
                             top_names .append (f"{name}({len(ws)})")
                         warn_summary =f"Всего предупреждение: {total_warns}, En очень: {', '.join(top_names)}"
-                    except Exception:pass 
+                    except Exception as _ex:
+                        _log.debug("api_ai_chat(): подавлено: %s", _ex)
 
                 guild_data .append (
                 f"Сервер: {g.name} (id={g.id})\n"
@@ -1963,7 +1970,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                                 wd =json .load (fp )
                             warn_list =wd .get (str (g .id ),{}).get (uid_str ,[])
                             warn_count =len (warn_list )
-                        except Exception:pass 
+                        except Exception as _ex:
+                            _log.debug("api_ai_chat(): подавлено: %s", _ex)
                         # История модерации — из mod_data.json и кэша аудита Discord
                     mod_history =[]
                     mod_file ='data/mod_data.json'
@@ -1978,7 +1986,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                                     f"{c.get('timestamp','')[:10]} {c.get('action','?').upper()} — "
                                     f"Mod: {c.get('mod_id','?')} — {c.get('reason','?')}"
                                     )
-                        except Exception:pass 
+                        except Exception as _ex:
+                            _log.debug("api_ai_chat(): подавлено: %s", _ex)
                         # Также подтягиваем из кэша аудита Discord
                     cache_f ='data/discord_audit_cache.json'
                     if os .path .exists (cache_f ):
@@ -1993,7 +2002,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                                         f"{ts} {ev.get('action','?')} — "
                                         f"Mod: {ev.get('mod_name','?')} — {ev.get('reason','') or 'Причины нет'}"
                                         )
-                        except Exception:pass 
+                        except Exception as _ex:
+                            _log.debug("api_ai_chat(): подавлено: %s", _ex)
                         # История ролей — из кэша аудита: кто выдал/снял ролей
                     role_gecmisi =[]
                     if os .path .exists (cache_f ):
@@ -2007,7 +2017,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                                         role_gecmisi .append (
                                         f"{ts} Изменение ролей — Мод: {ev.get('mod_name','?')} — {ev.get('reason','') or ev.get('before','') or ''}"
                                         )
-                        except Exception:pass 
+                        except Exception as _ex:
+                            _log.debug("api_ai_chat(): подавлено: %s", _ex)
                     role_gecmisi .sort ()
                     # Кто пригласил
                     inviter ='?'
@@ -2017,7 +2028,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                             with open (invite_file ,'r',encoding ='utf-8')as fp :
                                 inv =json .load (fp )
                             inviter =inv .get (uid_str ,{}).get ('inviter_name','?')
-                        except Exception:pass 
+                        except Exception as _ex:
+                            _log.debug("api_ai_chat(): подавлено: %s", _ex)
                         # Дата присоединения
                     joined =member .joined_at .strftime ('%d.%m.%Y %H:%M')if member .joined_at else '?'
                     created =member .created_at .strftime ('%d.%m.%Y')if member .created_at else '?'
@@ -2055,7 +2067,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                 ).result (timeout =8 )
                 if ch_lines :
                     channel_messages_block ="\n=== КАНАЛ СООБЩЕНИЯ ===\n"+'\n'.join (ch_lines [:30 ])
-            except Exception:pass 
+            except Exception as _ex:
+                _log.debug("api_ai_chat(): подавлено: %s", _ex)
         recent_logs =[]
         cache_file_logs ='data/discord_audit_cache.json'
         if os .path .exists (cache_file_logs ):
@@ -2069,7 +2082,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                         f"{ev.get('target_name', ev.get('user_name','?'))} — "
                         f"Mod: {ev.get('mod_name','?')} — {ev.get('reason','')}"
                         )
-            except Exception:pass 
+            except Exception as _ex:
+                _log.debug("api_ai_chat(): подавлено: %s", _ex)
 
             # Статистика модерации — читаем из кэша (бот обновляет каждые 30 сек)
         mod_stats =''
@@ -2136,7 +2150,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                                 'reason':w .get ('reason',''),
                                 'time':ts2 [11 :16 ],
                                 })
-            except Exception:pass 
+            except Exception as _ex:
+                _log.debug("api_ai_chat(): подавлено: %s", _ex)
 
         mod_stats =(
         f"Сегодня ({today}) — Ban: {t_ban}, Kick: {t_kick}, Mute: {t_to}, Warning: {len(today_warns)}\n"
@@ -2158,7 +2173,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                         score =hd .get ('score',hd .get ('health_score','?'))
                         label =hd .get ('label',hd .get ('status','?'))
                         health_lines .append (f"{g.name}: {score}/100 ({label})")
-                    except Exception:pass 
+                    except Exception as _ex:
+                        _log.debug("api_ai_chat(): подавлено: %s", _ex)
         if health_lines :
             health_info ='Оценки состояния сервера:\n'+'\n'.join (f'  {l}'for l in health_lines )
         else :
@@ -2174,7 +2190,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                         hd =r .json ()
                         health_info =f"{g.name} состояние skoru: {hd.get('score','?')}/100 ({hd.get('label','?')})"
                         break 
-            except Exception:pass 
+            except Exception as _ex:
+                _log.debug("api_ai_chat(): подавлено: %s", _ex)
 
             # ── СИСТЕМА PROMPT ────────────────────────────────────────────────────
         is_owner =user_role =='owner'
@@ -2312,8 +2329,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                             _mention_name in _m .name .lower ()):
                                 _question_id =str (_m .id )
                                 break 
-                except Exception :
-                    pass 
+                except Exception as _ex:
+                    _log.debug("api_ai_chat(): подавлено: %s", _ex)
         asked_user_id =_question_id or asked_user_id_from_ai 
 
         # ── ПРЕДИКТИВНЫЙ ВЫЗОВ: если AI НЕ вызвал [FUNC:search_user_messages] ──
@@ -2343,8 +2360,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                                 func_calls_in_answer .append (_fc2 )
                     except Exception as _pfe :
                         print (f"[AI-CHAT] predictive func exec error: {_pfe}")
-            except Exception :
-                pass 
+            except Exception as _ex:
+                _log.debug("api_ai_chat(): подавлено: %s", _ex)
 
         if func_calls_in_answer and bot :
             try :
@@ -2396,8 +2413,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                 _log_path =f'data/message_log_{_gid_check}.json'
                 if os .path .exists (_log_path ):
                     _log_status ="существует, но функция поиска сейчас недоступна (бот offline?)"
-            except Exception :
-                pass 
+            except Exception as _ex:
+                _log.debug("api_ai_chat(): подавлено: %s", _ex)
             answer =_re .sub (r'\[FUNC:[^\]]+\]','',answer ).strip ()
             answer =(
             f"🔍 Поиск сообщений {_tgt_str}:\n\n"
@@ -2897,7 +2914,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                     if m and m .display_name ==username :
                         unlocked =achs 
                         break 
-            except Exception:pass 
+            except Exception as _ex:
+                _log.debug("api_leveling_achievements(): подавлено: %s", _ex)
         from cogs .leveling_engagement import ACHIEVEMENTS 
         return jsonify ({'unlocked':unlocked ,'catalog':ACHIEVEMENTS })
 
@@ -3056,8 +3074,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                         else :
                             asyncio .run_coroutine_threadsafe (bot .load_extension (ext ),bot .loop ).result (timeout =10 )
                         reloaded .append (cog_name )
-                    except Exception :
-                        pass 
+                    except Exception as _ex:
+                        _log.debug("api_bot_hot_reload(): подавлено: %s", _ex)
                 cog .cog_hash_cache [cog_name ]=h 
         return jsonify ({'reloaded':reloaded })
 
@@ -3221,8 +3239,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         if member and member .is_timed_out ():
             try :
                 _run_async (member .timeout (None ))
-            except Exception :
-                pass 
+            except Exception as _ex:
+                _log.debug("api_temp_mod_unmute(): подавлено: %s", _ex)
         cog ._mutes .get (str (guild .id ),{}).pop (user_id ,None )
         cog ._save ('_mutes',cog ._mutes_file ())
         return jsonify ({'ok':True })
@@ -3294,7 +3312,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         if os .path .exists (cfg_file ):
             try :
                 with open (cfg_file ,encoding ='utf-8')as f :cfg =json .load (f )
-            except Exception :pass 
+            except Exception as _ex:
+                _log.debug("api_bot_status(): подавлено: %s", _ex)
         cfg ['status']=d .get ('status','online')
         cfg ['activity_type']=d .get ('activity_type','listening')
         cfg ['activity_text']=atext 
@@ -3317,8 +3336,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
             try :
                 with open (cfg_file ,'r',encoding ='utf-8')as f :
                     cfg =json .load (f )or {}
-            except Exception :
-                pass 
+            except Exception as _ex:
+                _log.debug("api_bot_prefix(): подавлено: %s", _ex)
         if not isinstance (cfg ,dict ):
             cfg ={}
             # Mevcut status/activity alanlarыnы KORU
@@ -3669,7 +3688,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                         member =guild .get_member (int (uid ))
                         if member :name =member .display_name 
                 result .append ({'name':name ,'date':info ['date'],'diff':diff })
-            except Exception:pass 
+            except Exception as _ex:
+                _log.debug("api_birthdays_list(): подавлено: %s", _ex)
         result .sort (key =lambda x :x ['diff'])
         return jsonify (result )
 
@@ -3862,8 +3882,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
             try :
                 with open (history_file ,'w')as f :
                     json .dump (history ,f )
-            except Exception :
-                pass 
+            except Exception as _ex:
+                _log.debug("api_bot_stats(): подавлено: %s", _ex)
             lat_val = 0
             if bot and bot.latency is not None:
                 try:
@@ -4175,8 +4195,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                     _wd =_json .load (_fp )
                 for _uid ,_ws in _wd .get (str (guild_id ),{}).items ():
                     warn_count +=len (_ws )
-            except Exception:
-                pass 
+            except Exception as _ex:
+                _log.debug("api_threat_index(): подавлено: %s", _ex)
 
                 # 2. Check mod cases
         mod_count =0 
@@ -4185,8 +4205,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                 with open ('data/mod_data.json','r',encoding ='utf-8')as _fp :
                     _md =_json .load (_fp )
                 mod_count =len (_md .get ('case',{}).get (str (guild_id ),[]))
-            except Exception:
-                pass 
+            except Exception as _ex:
+                _log.debug("api_threat_index(): подавлено: %s", _ex)
 
                 # 3. Check lockdown status
         lockdown_active =False 
@@ -4196,8 +4216,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                 with open (lockdown_file ,'r',encoding ='utf-8')as _fp :
                     _ld =_json .load (_fp )
                 lockdown_active =bool (_ld .get ('active',False ))
-            except Exception:
-                pass 
+            except Exception as _ex:
+                _log.debug("api_threat_index(): подавлено: %s", _ex)
 
                 # Calculate score (0-100)
         base_score =5 +min (warn_count *4 ,45 )+min (mod_count *5 ,40 )
@@ -4252,8 +4272,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
             try :
                 with open (lockdown_file ,'r',encoding ='utf-8')as _fp :
                     current =bool (_json .load (_fp ).get ('active',False ))
-            except Exception:
-                pass 
+            except Exception as _ex:
+                _log.debug("api_toggle_lockdown(): подавлено: %s", _ex)
 
         new_status =not current 
         with open (lockdown_file ,'w',encoding ='utf-8')as _fp :
@@ -4357,16 +4377,16 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                 with open ('data/warnings.json','r',encoding ='utf-8')as fp :
                     wd =json .load (fp )
                 warn_count =sum (len (v )for gw in wd .values ()for v in gw .values ())
-            except Exception:
-                pass 
+            except Exception as _ex:
+                _log.debug("api_ai_mod_report(): подавлено: %s", _ex)
         mod_count =0 
         if os .path .exists ('data/mod_data.json'):
             try :
                 with open ('data/mod_data.json','r',encoding ='utf-8')as fp :
                     md =json .load (fp )
                 mod_count =sum (len (v )for v in md .get ('case',{}).values ())
-            except Exception:
-                pass 
+            except Exception as _ex:
+                _log.debug("api_ai_mod_report(): подавлено: %s", _ex)
         prompt =(
         f"Сводная информация о модерации сервера:\n"
         f"- Всего записанных предупреждений: {warn_count}\n"
@@ -4494,7 +4514,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
             try :
                 with open (DM_LOG_FILE ,'r',encoding ='utf-8')as f :
                     return json .load (f )
-            except Exception:pass 
+            except Exception as _ex:
+                _log.debug("_load_dm_log(): подавлено: %s", _ex)
         return {}
 
     def _save_dm_log (data ):
@@ -4523,7 +4544,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                             name =m .display_name 
                             avatar =str (m .display_avatar .url )if m .display_avatar else ''
                             break 
-                    except Exception:pass 
+                    except Exception as _ex:
+                        _log.debug("api_dm_recent(): подавлено: %s", _ex)
             result .append ({
             'id':uid ,
             'name':name ,
@@ -4990,7 +5012,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                 msg =_run_async (ch .send (embed =embed ))
                 for o in data ['options']:
                     try :_run_async (msg .add_reaction (o ['emoji']))
-                    except Exception:pass 
+                    except Exception as _ex:
+                        _log.debug("send(): подавлено: %s", _ex)
         asyncio .run_coroutine_threadsafe (send (),bot .loop )
         return jsonify ({'success':True })
 
@@ -5179,7 +5202,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                     if data ['action']=='add':await (member .add_roles (action_role ))
                     else :await (member .remove_roles (action_role ))
                     result ['count']+=1 
-                except Exception:pass 
+                except Exception as _ex:
+                    _log.debug("do(): подавлено: %s", _ex)
         asyncio .run_coroutine_threadsafe (do (),bot .loop ).result (timeout =60 )
         return jsonify ({'success':True ,'count':result ['count']})
 
@@ -5202,7 +5226,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                 try :
                     await (member .send (embed =embed ))
                     result ['count']+=1 
-                except Exception:pass 
+                except Exception as _ex:
+                    _log.debug("do(): подавлено: %s", _ex)
         asyncio .run_coroutine_threadsafe (do (),bot .loop ).result (timeout =120 )
         return jsonify ({'success':True ,'count':result ['count']})
 
@@ -5225,7 +5250,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                 try :
                     await (member .timeout (discord .utils .utcnow ()+timedelta (minutes =duration ),reason ='Bulk mute'))
                     result ['count']+=1 
-                except Exception:pass 
+                except Exception as _ex:
+                    _log.debug("do(): подавлено: %s", _ex)
         asyncio .run_coroutine_threadsafe (do (),bot .loop ).result (timeout =120 )
         return jsonify ({'success':True ,'count':result ['count']})
 
@@ -5246,7 +5272,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                 try :
                     await (member .kick (reason ='Bulk kick'))
                     result ['count']+=1 
-                except Exception:pass 
+                except Exception as _ex:
+                    _log.debug("do(): подавлено: %s", _ex)
         asyncio .run_coroutine_threadsafe (do (),bot .loop ).result (timeout =120 )
         return jsonify ({'success':True ,'count':result ['count']})
 
@@ -5267,7 +5294,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                 try :
                     await (guild .ban (member ,reason ='Bulk ban'))
                     result ['count']+=1 
-                except Exception:pass 
+                except Exception as _ex:
+                    _log.debug("do(): подавлено: %s", _ex)
         asyncio .run_coroutine_threadsafe (do (),bot .loop ).result (timeout =180 )
         return jsonify ({'success':True ,'count':result ['count']})
 
@@ -5347,8 +5375,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                         try :
                             day =ts [:10 ]
                             daily_counts [day ]+=1 
-                        except Exception :
-                            pass 
+                        except Exception as _ex:
+                            _log.debug("api_guild_analytics(): подавлено: %s", _ex)
 
                             # Если в audit_log нет сообщений — смотреть файл message_logs
         msg_log_file =f'data/message_logs_{guild_id}.json'
@@ -5364,8 +5392,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                 if ts :
                     try :
                         daily_counts [ts [:10 ]]+=1 
-                    except Exception :
-                        pass 
+                    except Exception as _ex:
+                        _log.debug("api_guild_analytics(): подавлено: %s", _ex)
 
                         # Берём у бота свежие данные по участникам
         if bot :
@@ -5541,8 +5569,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                             name =m .display_name 
                             avatar =str (m .display_avatar .url )
                             break 
-                    except Exception :
-                        pass 
+                    except Exception as _ex:
+                        _log.debug("api_voice_stats(): подавлено: %s", _ex)
 
             h ,rem =divmod (int (secs ),3600 )
             m_val ,s_val =divmod (rem ,60 )
@@ -5647,8 +5675,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                             lb_map [uid ]['total']+=inv .uses or 0 
                             lb_map [uid ]['joins']+=inv .uses or 0 
                     result ['leaderboard']=sorted (lb_map .values (),key =lambda x :x ['total'],reverse =True )[:20 ]
-                except Exception :
-                    pass 
+                except Exception as _ex:
+                    _log.debug("api_invite_tracker_full(): подавлено: %s", _ex)
                     # JSON dosyasыndan Вход история oku
         joins_file =f'data/invite_joins_{guild_id}.json'
         if os .path .exists (joins_file ):
@@ -5752,7 +5780,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                                 'created_at':entry .get ('created_at','')
                                 })
                                 break 
-                            except Exception:
+                            except Exception as _ex:
+                                _log.debug("api_starboard(): подавлено: %s", _ex)
                                 continue 
                     except Exception:
                     # Сообщение не найдено, только запись veriyi показать
@@ -5821,14 +5850,15 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                         cog =bot .get_cog ('ReactionRolesCog')
                         if cog and hasattr (cog ,'register_select_panel'):
                             _run_async (cog .register_select_panel (int (msg .id ),rrs [rr_id ]))
-                    except Exception :
-                        pass 
+                    except Exception as _ex:
+                        _log.debug("send(): подавлено: %s", _ex)
                 else :
                     msg =_run_async (ch .send (embed =embed ))
                     for e in entries_with_names :
                         if e ['emoji']:
                             try :_run_async (msg .add_reaction (e ['emoji']))
-                            except Exception:pass 
+                            except Exception as _ex:
+                                _log.debug("send(): подавлено: %s", _ex)
                 rrs [rr_id ]['message_id']=str (msg .id )
                 with open (f ,'w')as fp2 :json .dump (rrs ,fp2 ,indent =2 )
         asyncio .run_coroutine_threadsafe (send (),bot .loop )
@@ -6095,8 +6125,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
             admin_role =discord .utils .get (guild .roles ,permissions =discord .Permissions (administrator =True ))
             if admin_role :
                 result ['admin_role_found']={'name':admin_role .name ,'id':str (admin_role .id )}
-        except Exception :
-            pass 
+        except Exception as _ex:
+            _log.debug("api_ticket_notify_diagnose(): подавлено: %s", _ex)
 
             # 7. Владелец для DM
         if guild .owner :
@@ -6174,7 +6204,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
         if os .path .exists (f ):
             try :
                 with open (f ,encoding ='utf-8')as fp :existing =json .load (fp )
-            except Exception :pass 
+            except Exception as _ex:
+                _log.debug("api_automod_settings(): подавлено: %s", _ex)
         existing .update (data )
         with open (f ,'w',encoding ='utf-8')as fp :json .dump (existing ,fp ,indent =2 ,ensure_ascii =False )
         return jsonify ({'success':True })
@@ -7119,8 +7150,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                                 closed_by =ticket .get ('closed_by')
                                 if closed_by :
                                     moderators [closed_by ]+=1 
-                    except Exception :
-                        pass 
+                    except Exception as _ex:
+                        _log.debug("api_dashboard_stats(): подавлено: %s", _ex)
 
                         # Тренд за последние 30 дней
         trend_labels =[]
@@ -7227,8 +7258,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                                 'created_at':ticket .get ('created_at',''),
                                 'closed_by':ticket .get ('closed_by','')
                                 })
-                    except Exception :
-                        pass 
+                    except Exception as _ex:
+                        _log.debug("api_ticket_search(): подавлено: %s", _ex)
 
                         # Сортировка по дате (новые первые)
         tickets .sort (key =lambda x :x .get ('created_at',''),reverse =True )
@@ -7281,8 +7312,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                                     tag_usage [tag ]+=1 
                                 if ticket .get ('priority')=='high':
                                     high_priority_count +=1 
-                    except Exception :
-                        pass 
+                    except Exception as _ex:
+                        _log.debug("api_ticket_tags_get(): подавлено: %s", _ex)
 
         popular_tag =tag_usage .most_common (1 )[0 ][0 ]if tag_usage else '-'
 
@@ -7427,8 +7458,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                                     'created_at':ticket .get ('created_at',''),
                                     'description':ticket .get ('description','')
                                     })
-                    except Exception :
-                        pass 
+                    except Exception as _ex:
+                        _log.debug("api_user_profile(): подавлено: %s", _ex)
 
         if not user_info :
             return jsonify ({'success':False ,'error':'Пользователь не найден'}),404 
@@ -7447,8 +7478,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                     all_warnings =json .load (f )
                     user_warnings =all_warnings .get (str (user_info ['id']),[])
                     warnings =user_warnings 
-            except Exception :
-                pass 
+            except Exception as _ex:
+                _log.debug("api_user_profile(): подавлено: %s", _ex)
 
         return jsonify ({
         'success':True ,
@@ -7570,8 +7601,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
             import web .app as _app
             for _h in history :
                 _app ._clean_md_fields (_h )
-        except Exception :
-            pass
+        except Exception as _ex:
+            _log.debug("api_notifications_history(): подавлено: %s", _ex)
 
         return jsonify ({'success':True ,'notifications':history [:50 ]})# Максимум 50
 
@@ -8000,8 +8031,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                             for ticket_id ,ticket in tickets .items ():
                                 ticket ['id']=ticket_id 
                                 all_tickets .append (ticket )
-                    except Exception :
-                        pass 
+                    except Exception as _ex:
+                        _log.debug("api_analytics_advanced(): подавлено: %s", _ex)
 
                         # Фильтрация по периоду
         cutoff_date =datetime .now ()-timedelta (days =period )
@@ -8020,8 +8051,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                         if moderator_filter and ticket .get ('closed_by','')!=moderator_filter :
                             continue 
                         filtered_tickets .append (ticket )
-                except Exception :
-                    pass 
+                except Exception as _ex:
+                    _log.debug("api_analytics_advanced(): подавлено: %s", _ex)
 
                     # Расчет статистики
         total_tickets =len (filtered_tickets )
@@ -8037,8 +8068,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                     closed =datetime .fromisoformat (ticket ['closed_at'].replace ('Z','+00:00'))
                     hours =(closed -created ).total_seconds ()/3600 
                     resolution_times .append (hours )
-                except Exception :
-                    pass 
+                except Exception as _ex:
+                    _log.debug("api_analytics_advanced(): подавлено: %s", _ex)
 
         avg_resolution_time =round (sum (resolution_times )/len (resolution_times ),1 )if resolution_times else 0 
 
@@ -8060,8 +8091,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                 try :
                     date =datetime .fromisoformat (created_at .replace ('Z','+00:00')).date ()
                     tickets_by_day [date ]+=1 
-                except Exception :
-                    pass 
+                except Exception as _ex:
+                    _log.debug("api_analytics_advanced(): подавлено: %s", _ex)
 
         trend_labels =[]
         trend_data =[]
@@ -8090,8 +8121,8 @@ def register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD
                     hours =(closed -created ).total_seconds ()/3600 
                     category =ticket .get ('category','Другое')
                     resolution_by_category [category ].append (hours )
-                except Exception :
-                    pass 
+                except Exception as _ex:
+                    _log.debug("api_analytics_advanced(): подавлено: %s", _ex)
 
         resolution_time_labels =list (resolution_by_category .keys ())
         resolution_time_data =[
@@ -8584,8 +8615,8 @@ def calculate_ai_ticket_stats (guild_id :int )->dict :
         try :
             with open (penalty_file ,'r',encoding ='utf-8')as f :
                 penalties =json .load (f )
-        except Exception:
-            pass 
+        except Exception as _ex:
+            _log.debug("calculate_ai_ticket_stats(): подавлено: %s", _ex)
 
     guild_penalties =penalties .get (str (guild_id ),{})
 

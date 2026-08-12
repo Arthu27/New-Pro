@@ -5,6 +5,11 @@ Aether Security Cog
 - Сканер безопасности ссылок (список вредоносных доменов + URL-сокращатели)
 - Система автоматических бэкапов (резервная копия настроек сервера)
 """
+
+from logger import get_logger
+
+_log = get_logger("security")
+
 import discord 
 from discord .ext import commands ,tasks 
 from discord import app_commands 
@@ -112,8 +117,8 @@ class Security (commands .Cog ):
         if ch :
             try :
                 await ch .send (embed =embed )
-            except Exception :
-                pass 
+            except Exception as _ex:
+                _log.debug("_log(): подавлено: %s", _ex)
 
                 #  AI Антиспам Analizi 
     def _ai_spam_score (self ,uid :int ,content :str )->tuple [float ,str ]:
@@ -239,8 +244,8 @@ class Security (commands .Cog ):
             if has_bad :
                 try :
                     await message .delete ()
-                except Exception :
-                    pass 
+                except Exception as _ex:
+                    _log.debug("on_message(): подавлено: %s", _ex)
                 e =discord .Embed (
                 title ="🛡️ Вредоносная ссылка заблокирована",
                 color =0xe74c3c ,
@@ -259,8 +264,8 @@ class Security (commands .Cog ):
                     f" {member.mention} вредоносный link engellendi!",
                     delete_after =5 
                     )
-                except Exception :
-                    pass 
+                except Exception as _ex:
+                    _log.debug("on_message(): подавлено: %s", _ex)
                 return 
 
                 #  AI Антиспам Tespiti 
@@ -271,15 +276,15 @@ class Security (commands .Cog ):
             # Высокий доверие → удалить + timeout
                 try :
                     await message .delete ()
-                except Exception :
-                    pass 
+                except Exception as _ex:
+                    _log.debug("on_message(): подавлено: %s", _ex)
                 try :
                     await member .timeout (
                     discord .utils .utcnow ()+timedelta (minutes =5 ),
                     reason =f"AI Антиспам Tespiti: {reason}"
                     )
-                except Exception :
-                    pass 
+                except Exception as _ex:
+                    _log.debug("on_message(): подавлено: %s", _ex)
                 e =discord .Embed (
                 title =" AI Антиспам Tespiti — Высокий Risk",
                 color =0xe74c3c ,
@@ -296,15 +301,15 @@ class Security (commands .Cog ):
             # Центр доверие → только удалить + uyar
                 try :
                     await message .delete ()
-                except Exception :
-                    pass 
+                except Exception as _ex:
+                    _log.debug("on_message(): подавлено: %s", _ex)
                 try :
                     await message .channel .send (
                     f" {member.mention} spam yapma!",
                     delete_after =5 
                     )
-                except Exception :
-                    pass 
+                except Exception as _ex:
+                    _log.debug("on_message(): подавлено: %s", _ex)
                 e =discord .Embed (
                 title =" AI Антиспам Tespiti — Центр Risk",
                 color =0xf39c12 ,
@@ -344,14 +349,14 @@ class Security (commands .Cog ):
             try :
                 await member .kick (reason ="Fake hesap tespiti")
                 e .add_field (name =" Действие",value ="```Kick применено```",inline =False )
-            except Exception :
-                pass 
+            except Exception as _ex:
+                _log.debug("on_member_join(): подавлено: %s", _ex)
         elif score >=0.8 and action =='ban':
             try :
                 await member .ban (reason ="Fake hesap tespiti")
                 e .add_field (name =" Действие",value ="```Ban применено```",inline =False )
-            except Exception :
-                pass 
+            except Exception as _ex:
+                _log.debug("on_member_join(): подавлено: %s", _ex)
         else :
             e .add_field (name =" Действие",value ="```Модератор уведомление отправлено```",inline =False )
 
@@ -478,8 +483,8 @@ class Security (commands .Cog ):
         for old in all_backups [:-7 ]:
             try :
                 os .remove (os .path .join (BACKUP_DIR ,old ))
-            except Exception :
-                pass 
+            except Exception as _ex:
+                _log.debug("_backup_guild(): подавлено: %s", _ex)
 
     @app_commands .command (name ="backup",description ="Создать резервную копию настроек сервера")
     @app_commands .checks .has_permissions (administrator =True )

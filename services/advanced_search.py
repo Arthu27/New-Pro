@@ -3,6 +3,10 @@ Advanced Search
 Расширенная система поиска (Elasticsearch entegrasyonu)
 """
 
+from logger import get_logger
+
+_log = get_logger("advanced_search")
+
 import json
 import os
 import re
@@ -24,8 +28,8 @@ class SearchEngine:
             try:
                 with open(self.index_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_index(): подавлено: %s", _ex)
         
         return {
             'tickets': {},
@@ -290,8 +294,8 @@ class SavedSearch:
             try:
                 with open(self.saved_searches_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_saved_searches(): подавлено: %s", _ex)
         
         return {}
     
@@ -354,8 +358,8 @@ class SearchAnalytics:
             try:
                 with open(self.analytics_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_analytics(): подавлено: %s", _ex)
         
         return {
             'queries': defaultdict(int),

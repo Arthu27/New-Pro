@@ -2,6 +2,11 @@
 RAG (Retrieval Augmented Generation) — поиск по базе информации сервера
 AI может искать в правилах, FAQ, логах тикетов, документации
 """
+
+from logger import get_logger
+
+_log = get_logger("ai_rag")
+
 import os 
 import json 
 import re 
@@ -35,8 +40,8 @@ class KnowledgeBase :
                             rules_loaded =True 
                     if rules_loaded :
                         break 
-                except Exception:
-                    pass 
+                except Exception as _ex:
+                    _log.debug("_load_documents(): подавлено: %s", _ex)
         if not rules_loaded :
             default_rules =[
             "Правило #1: Уважение и вежливость — Запрещены оскорбления, мат, унижения и язык вражды.",
@@ -66,8 +71,8 @@ class KnowledgeBase :
                             'content':f"ВОПРОС: {faq.get('question', '')}\nОТВЕТ АДМИНИСТРАЦИИ: {faq.get('answer', '')}",
                             'metadata':{'id':faq .get ('id',''),'score':1.0 }
                             })
-                except Exception:
-                    pass 
+                except Exception as _ex:
+                    _log.debug("_load_documents(): подавлено: %s", _ex)
 
                     # 3. Loglar ticketlarыn (son 50)
         tickets_file =f"data/tickets_{self.guild_id}.json"
@@ -89,8 +94,8 @@ class KnowledgeBase :
                         'created_at':ticket .get ('created_at','')
                         }
                         })
-            except Exception:
-                pass 
+            except Exception as _ex:
+                _log.debug("_load_documents(): подавлено: %s", _ex)
 
                 # 4. Пользователь notlar (из data/notes.json если есть)
         notes_file ='data/notes.json'
@@ -110,8 +115,8 @@ class KnowledgeBase :
                             'timestamp':note .get ('timestamp','')
                             }
                             })
-            except Exception:
-                pass 
+            except Exception as _ex:
+                _log.debug("_load_documents(): подавлено: %s", _ex)
 
     def search (self ,query :str ,max_results :int =5 )->List [Dict ]:
         """Arama по tabanda информация (prostoy keyword-based)"""

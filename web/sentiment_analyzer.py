@@ -2,6 +2,11 @@
 Анализ настроения сервера в реальном времени
 Отслеживание эмоций, тона, конфликтов
 """
+
+from logger import get_logger
+
+_log = get_logger("sentiment_analyzer")
+
 import discord 
 import json 
 import os 
@@ -275,8 +280,8 @@ class SentimentAnalyzer :
                     data =json .load (f )
                     for channel_id ,messages in data .items ():
                         self .message_buffer [int (channel_id )]=messages 
-            except Exception:
-                pass 
+            except Exception as _ex:
+                _log.debug("_load_history(): подавлено: %s", _ex)
 
     def _save_history (self ):
         """Сохран история в dosya"""
@@ -292,8 +297,8 @@ class SentimentAnalyzer :
 
             with open (history_file ,'w',encoding ='utf-8')as f :
                 json .dump (data ,f ,indent =2 ,ensure_ascii =False )
-        except Exception:
-            pass 
+        except Exception as _ex:
+            _log.debug("_save_history(): подавлено: %s", _ex)
 
 
             # Kюresel пример

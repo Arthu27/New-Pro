@@ -278,8 +278,8 @@ class LevelingEngagement (commands .Cog ):
             if role and role not in member .roles :
                 try :
                     await member .add_roles (role ,reason =f"Награда за уровень {new_level}")
-                except discord .Forbidden :
-                    pass 
+                except discord .Forbidden as _ex:
+                    log.debug("_handle_level_up(): подавлено: %s", _ex)
 
                     # Level-up message
         try :
@@ -291,9 +291,9 @@ class LevelingEngagement (commands .Cog ):
                 )
                 embed .set_author (name =member .display_name ,icon_url =member .display_avatar .url )
                 await member .send (embed =embed )
-        except discord .Forbidden :
+        except discord .Forbidden as _ex:
         # DM closed — try system channel
-            pass 
+            log.debug("_handle_level_up(): подавлено: %s", _ex)
 
             # Check level achievements
         achievement_map ={5 :"level_5",10 :"level_10",25 :"level_25",50 :"level_50",75 :"level_75",100 :"level_100"}
@@ -330,8 +330,8 @@ class LevelingEngagement (commands .Cog ):
             color =0xFFD700 
             )
             await member .send (embed =embed )
-        except discord .Forbidden :
-            pass 
+        except discord .Forbidden as _ex:
+            log.debug("grant_achievement(): подавлено: %s", _ex)
         return True 
 
         # TEXT XP 

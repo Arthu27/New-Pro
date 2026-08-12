@@ -1,3 +1,8 @@
+
+from logger import get_logger
+
+_log = get_logger("app")
+
 import random 
 import string 
 import hashlib 
@@ -56,8 +61,8 @@ def _load_secret_key ():
             f .write (new_key)
         try :
             _os .chmod (key_path ,0o600)
-        except OSError :
-            pass
+        except OSError as _ex:
+            _log.debug("_load_secret_key(): подавлено: %s", _ex)
         print ('[БЕЗОПАСНОСТЬ] Сгенерирован новый SECRET_KEY -> data/flask_secret.key')
         return new_key
     except Exception as _e :
@@ -143,8 +148,8 @@ def before_request ():
                 if _netloc and _netloc !=request .host :
                     _log_panel_action ('CSRF_BLOCK',f'{request .path} origin={_netloc}')
                     return jsonify ({'success':False ,'error':'Запрос с другого origin запрещён'}),403 
-            except Exception :
-                pass 
+            except Exception as _ex:
+                _log.debug("before_request(): подавлено: %s", _ex)
 
     # Panel Log 
 def _log_login (username ,role ,avatar ,discord_id ):
@@ -177,8 +182,8 @@ def _log_login (username ,role ,avatar ,discord_id ):
         })
         _store .atomic_write_json (f ,logs [-200 :])
         _store .invalidate_path (f )
-    except Exception :
-        pass 
+    except Exception as _ex:
+        _log.debug("_log_login(): подавлено: %s", _ex)
 
         # Массовая (batch) запись логов панели — не блокирует POST/DELETE запросы
 _panel_log_flusher =_store .PeriodicFlush (
@@ -219,8 +224,8 @@ def _clean_md_fields (obj ):
             v =obj .get (k )
             if isinstance (v ,str )and ('**' in v or '__' in v or '`' in v or '#' in v ):
                 obj [k ]=_clean_md (v )
-    except Exception :
-        pass
+    except Exception as _ex:
+        _log.debug("_clean_md_fields(): подавлено: %s", _ex)
     return obj
 
 def _log_panel_action (action ,detail =''):
@@ -235,8 +240,8 @@ def _log_panel_action (action ,detail =''):
         'timestamp':datetime.now(timezone.utc).replace(tzinfo=None).isoformat (),
         'ts':int (_t .time ()),
         })
-    except Exception :
-        pass 
+    except Exception as _ex:
+        _log.debug("_log_panel_action(): подавлено: %s", _ex)
 
         # ETag: GET + JSON + whitelist path'lerde tarayici/bot уровеньsinde cache
 _ETAG_PATHS =(
@@ -312,8 +317,8 @@ def _handle_unexpected_error (e ):
         import traceback 
         print ("[WEB][ERR] Unhandled exception:",repr (e ),flush =True )
         traceback .print_exc ()
-    except Exception :
-        pass 
+    except Exception as _ex:
+        _log.debug("_handle_unexpected_error(): подавлено: %s", _ex)
     return ("Internal Сервер Error",500 )
 
     # Фиксированный ID сервера — используется первый найденный ботом сервер; меняется в панели
@@ -399,8 +404,8 @@ def _get_totp_secret (kind ,key ):
             rec =members .get (str (key ))
             if isinstance (rec ,dict ):
                 return rec .get ('totp_secret')or ''
-    except Exception :
-        pass
+    except Exception as _ex:
+        _log.debug("_get_totp_secret(): подавлено: %s", _ex)
     return ''
 
 def _set_totp_secret (kind ,key ,secret ):
@@ -477,8 +482,8 @@ def _load_owner_credentials ():
                       'После входа смените пароль в панели или задайте PANEL_PASSWORD в .env\n')
         try :
             os .chmod ('data/panel_credentials.txt',0o600 )
-        except OSError :
-            pass 
+        except OSError as _ex:
+            _log.debug("_load_owner_credentials(): подавлено: %s", _ex)
     except Exception as _e :
         print (f'[БЕЗОПАСНОСТЬ] Не удалось сохранить сгенерированный пароль: {_e}')
     print ('='*70 )
@@ -525,8 +530,8 @@ def _save_role_map ():
         os .makedirs ('data',exist_ok =True )
         _store .atomic_write_json (_ROLE_MAP_PATH ,DISCORD_ROLE_MAP )
         _store .invalidate_path (_ROLE_MAP_PATH )
-    except Exception:
-        pass 
+    except Exception as _ex:
+        _log.debug("_save_role_map(): подавлено: %s", _ex)
 
 _load_role_map ()
 
@@ -595,8 +600,8 @@ def login_required (f ):
                             members [discord_id ]['role']=live_role 
                             with open (members_file ,'w',encoding ='utf-8')as fp :
                                 json .dump (members ,fp ,indent =2 ,ensure_ascii =False )
-                    except Exception :
-                        pass 
+                    except Exception as _ex:
+                        _log.debug("decorated_function(): подавлено: %s", _ex)
         return f (*args ,**kwargs )
     return decorated_function 
 
@@ -806,8 +811,8 @@ def _require_2fa (username ,roles ):
                     color =0xDC143C 
                     )
                     await user .send (embed =embed )
-                except Exception:
-                    pass 
+                except Exception as _ex:
+                    _log.debug("send_2fa(): подавлено: %s", _ex)
             asyncio .run_coroutine_threadsafe (send_2fa (),bot_instance .loop )
 
     return token ,code 
@@ -880,15 +885,16 @@ def register ():
                     m =await guild .fetch_member (int (discord_id ))
                     if m :
                         return {'display_name':m .display_name ,'name':str (m ),'avatar':str (m .display_avatar .url )}
-                except Exception :
+                except Exception as _ex:
+                    _log.debug("find_member(): подавлено: %s", _ex)
                     continue 
                     # Если ни на одном сервере не найден — fetch_user через Discord
             try :
                 user =await bot_instance .fetch_user (int (discord_id ))
                 if user :
                     return {'display_name':user .display_name ,'name':str (user ),'avatar':str (user .display_avatar .url )}
-            except Exception :
-                pass 
+            except Exception as _ex:
+                _log.debug("find_member(): подавлено: %s", _ex)
             return None 
 
         import asyncio 
@@ -1190,8 +1196,8 @@ def api_my_notifications ():
                 'link':entry .get ('link',''),
                 'event':entry .get ('event',''),
                 })
-    except Exception :
-        pass
+    except Exception as _ex:
+        _log.debug("api_my_notifications(): подавлено: %s", _ex)
 
     result .sort (key =lambda x :x .get ('created_at',''),reverse =True )
     return jsonify (result [:30 ])
@@ -1885,8 +1891,8 @@ def api_execute_command ():
                             e_dm =discord .Embed (title =' Вы получили предупреждение',description =dm_msg ,color =0xc8922a )
                             e_dm .set_footer (text =guild .name )
                             await member .send (embed =e_dm )
-                        except Exception :
-                            pass 
+                        except Exception as _ex:
+                            _log.debug("execute(): подавлено: %s", _ex)
             elif command =='jail':
                 member =guild .get_member (int (data .get ('user_id')))
                 if not member :
@@ -1918,8 +1924,8 @@ def api_execute_command ():
                 try :
                     e_dm =discord .Embed (title =' Jail-наказание',description =f'Вы получили jail-наказание на сервере **{guild.name}**.\n**Причина:** {data.get("reason", "Не указана")}',color =0xe74c3c )
                     await member .send (embed =e_dm )
-                except Exception :
-                    pass 
+                except Exception as _ex:
+                    _log.debug("execute(): подавлено: %s", _ex)
             elif command =='unjail':
                 member =guild .get_member (int (data .get ('user_id')))
                 if not member :
@@ -1999,8 +2005,8 @@ def api_execute_command ():
                 for ch in guild .channels :
                     try :
                         await ch .set_permissions (jail_role ,send_messages =False ,read_messages =False )
-                    except Exception :
-                        pass 
+                    except Exception as _ex:
+                        _log.debug("execute(): подавлено: %s", _ex)
                         # Jail канал создать
                 jail_ch =discord .utils .get (guild .text_channels ,name ='jail')
                 if not jail_ch :
@@ -2238,8 +2244,8 @@ def api_review_staff_app (app_id ):
                 print (f"Отметка решения в Discord: {_ee}")
         try :
             asyncio .run_coroutine_threadsafe (send_dm (),bot_instance .loop ).result (timeout =15 )
-        except Exception :
-            pass
+        except Exception as _ex:
+            _log.debug("api_review_staff_app(): подавлено: %s", _ex)
 
     resp ={'success':True }
     if dm_info ['sent'] is not None :
@@ -2261,8 +2267,8 @@ def api_tunnel_url ():
                 url =f .read ().strip ()
             if url :
                 return jsonify ({'url':url })
-    except Exception:
-        pass 
+    except Exception as _ex:
+        _log.debug("api_tunnel_url(): подавлено: %s", _ex)
     return jsonify ({'url':None })
 
 def _save_login_token (username ,roles ):
@@ -2636,8 +2642,8 @@ def api_login_suggest ():
                     'avatar':_safe_avatar_url (minfo .get ('avatar'))
                     })
                     if len (suggestions )>=12 :break 
-        except Exception:
-            pass 
+        except Exception as _ex:
+            _log.debug("api_login_suggest(): подавлено: %s", _ex)
 
             # 3. Always provide demo/known members if empty so dropdown is never blank
     if not suggestions :
@@ -2678,8 +2684,8 @@ def api_discord_check ():
             if not user :
                 try :
                     user =asyncio .run_coroutine_threadsafe (bot_instance .fetch_user (int (discord_id )),bot_instance .loop ).result (timeout =10 )
-                except Exception:
-                    pass 
+                except Exception as _ex:
+                    _log.debug("api_discord_check(): подавлено: %s", _ex)
         else :
             uname =query .lstrip ('@').lower ()
             for guild in bot_instance .guilds :
@@ -2880,16 +2886,16 @@ def api_bot_diagnose ():
                 mem_mb =proc .memory_info ().rss /1024 /1024 
                 if mem_mb >700 :
                     issues .append (f'Высокое потребление памяти: {round(mem_mb, 1)}MB')
-            except Exception :
-                pass 
+            except Exception as _ex:
+                _log.debug("api_bot_diagnose(): подавлено: %s", _ex)
                 # Latency check
             try :
                 if bot_instance.latency is not None and math.isfinite(bot_instance.latency):
                     lat = bot_instance.latency * 1000 
                     if lat > 800:
                         issues.append(f'Высокий Discord latency: {round(lat, 0)}ms')
-            except Exception :
-                pass 
+            except Exception as _ex:
+                _log.debug("api_bot_diagnose(): подавлено: %s", _ex)
                 # Guild count
             try :
                 guilds =list (bot_instance .guilds )
@@ -2934,8 +2940,8 @@ def api_bot_sync ():
             try :
                 await bot_instance .tree .sync (guild =guild )
                 synced_guilds .append (guild .name )
-            except Exception :
-                pass 
+            except Exception as _ex:
+                _log.debug("do(): подавлено: %s", _ex)
         await bot_instance .tree .sync ()
         return synced_guilds 
     try :
@@ -3189,8 +3195,8 @@ def api_notifications_poll ():
                 'kind':'notify',
                 'link':entry .get ('link',''),
                 })
-    except Exception :
-        pass 
+    except Exception as _ex:
+        _log.debug("api_notifications_poll(): подавлено: %s", _ex)
     # 2) (убрано) temp-действия самого пользователя: себе уведомления не нужны,
     # они и есть в ленте активности
     # 3) личные уведомления (notifications.json по discord_id)
@@ -3202,8 +3208,8 @@ def api_notifications_poll ():
             with open (nf ,'r',encoding ='utf-8')as fp :
                 pers =json .load (fp ).get (discord_id ,[])
             personal_unread =len ([n for n in pers if not n .get ('read')])
-    except Exception :
-        pass 
+    except Exception as _ex:
+        _log.debug("api_notifications_poll(): подавлено: %s", _ex)
     notifs .sort (key =lambda x :x .get ('ts',0 ),reverse =True )
     unread =len ([n for n in notifs if n .get ('ts',0 )>seen_ts ])+personal_unread 
     return jsonify ({'notifications':notifs [:20 ],'unread':unread ,'ts':int (_t .time ()*1000 )})
@@ -3243,8 +3249,8 @@ def api_activity_feed ():
                     except Exception:
                         ts = 0
                 push('🔐', 'Вход в панель', e.get('username'), f"Роль: {e.get('role','?')}", ts, 'auth', link='/logs')
-    except Exception:
-        pass
+    except Exception as _ex:
+        _log.debug("api_activity_feed(): подавлено: %s", _ex)
 
     # 2) Действия модерации (audit + mod_data)
     try:
@@ -3271,8 +3277,8 @@ def api_activity_feed ():
                     elif 'голос' in act or 'voice' in act: icon = '🎙'
                     push(icon, ev.get('action','Действие'), ev.get('user_name') or ev.get('mod_name'),
                          ev.get('reason',''), ts, evtype, link='/logs')
-    except Exception:
-        pass
+    except Exception as _ex:
+        _log.debug("api_activity_feed(): подавлено: %s", _ex)
 
     # 3) Предупреждения (warnings.json)
     try:
@@ -3290,8 +3296,8 @@ def api_activity_feed ():
                             ts = 0
                         push('⚠️', 'Предупреждение', w.get('moderator') or w.get('mod') or uid,
                              w.get('reason',''), ts, 'warn', link='/warnings')
-    except Exception:
-        pass
+    except Exception as _ex:
+        _log.debug("api_activity_feed(): подавлено: %s", _ex)
 
     # 4) Тикеты (ai_tickets_*.json)
     try:
@@ -3307,8 +3313,8 @@ def api_activity_feed ():
                         ts = 0
                     push('🎫', 'Тикет: '+ (tk.get('category') or 'общий'),
                          tk.get('user_name'), tk.get('description','')[:80], ts, 'ticket', link='/ticket-search')
-    except Exception:
-        pass
+    except Exception as _ex:
+        _log.debug("api_activity_feed(): подавлено: %s", _ex)
 
     # 5) Панель-логи (POST-действия) — broadcast-события пропускаем:
     # они уже попадают из истории уведомлений (источник 6) с иконками и ссылками
@@ -3321,8 +3327,8 @@ def api_activity_feed ():
                 if e.get('broadcast'):
                     continue
                 push('🖥', e.get('action','Действие'), e.get('username'), e.get('detail',''), e.get('ts',0), 'panel', link='/logs')
-    except Exception:
-        pass
+    except Exception as _ex:
+        _log.debug("api_activity_feed(): подавлено: %s", _ex)
 
     # 6) События диспетчера уведомлений (история с иконками и ссылками)
     try:
@@ -3342,8 +3348,8 @@ def api_activity_feed ():
                 push(h.get('icon','🔔'), h.get('title','Уведомление'), 'Система',
                      h.get('body',''), ts, _ev_type.get(h.get('event',''),'system'),
                      link=h.get('link',''))
-    except Exception:
-        pass
+    except Exception as _ex:
+        _log.debug("api_activity_feed(): подавлено: %s", _ex)
 
     # Сортировка — новые сверху
     items.sort(key=lambda x: x.get('ts') or 0, reverse=True)

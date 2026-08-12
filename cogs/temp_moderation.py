@@ -271,8 +271,8 @@ class TempModeration(commands.Cog):
             embed.add_field(name="Модератор", value=ctx.author.display_name, inline=True)
             embed.add_field(name="Истекает", value=f"<t:{int(until_ts)}:R>", inline=True)
             await member.send(embed=embed)
-        except discord.Forbidden:
-            pass
+        except discord.Forbidden as _ex:
+            log.debug("mute_cmd(): подавлено: %s", _ex)
         # Confirmation
         embed = discord.Embed(
             title=" Временный мьют",
@@ -365,8 +365,8 @@ class TempModeration(commands.Cog):
             embed.add_field(name="Модератор", value=ctx.author.display_name, inline=True)
             embed.add_field(name="Истекает", value=f"<t:{int(until_ts)}:R>", inline=True)
             await member.send(embed=embed)
-        except discord.Forbidden:
-            pass
+        except discord.Forbidden as _ex:
+            log.debug("vmute_cmd(): подавлено: %s", _ex)
         # Confirmation
         embed = discord.Embed(
             title=" Голосовой мьют",
@@ -391,8 +391,8 @@ class TempModeration(commands.Cog):
         except discord.Forbidden:
             await ctx.send(" Нет прав")
             return
-        except discord.HTTPException:
-            pass
+        except discord.HTTPException as _ex:
+            log.debug("vunmute_cmd(): подавлено: %s", _ex)
         del guild_vmutes[str(member.id)]
         self._save("_vmutes", self._vmutes_file())
         embed = discord.Embed(
@@ -436,8 +436,8 @@ class TempModeration(commands.Cog):
             embed.add_field(name="Модератор", value=ctx.author.display_name, inline=True)
             embed.add_field(name="Истекает", value=f"<t:{int(until_ts)}:R>", inline=True)
             await member.send(embed=embed)
-        except discord.Forbidden:
-            pass
+        except discord.Forbidden as _ex:
+            log.debug("tempban_cmd(): подавлено: %s", _ex)
         # Ban
         try:
             await ctx.guild.ban(member, reason=f"[TempMod] {ctx.author}: {reason} ({format_duration(sec)})")
@@ -515,8 +515,8 @@ class TempModeration(commands.Cog):
             )
             embed.add_field(name="Причина", value=reason, inline=False)
             await member.send(embed=embed)
-        except discord.Forbidden:
-            pass
+        except discord.Forbidden as _ex:
+            log.debug("tempkick_cmd(): подавлено: %s", _ex)
         try:
             await member.kick(reason=f"[TempMod] {ctx.author}: {reason} ({format_duration(sec)})")
         except discord.Forbidden:
@@ -557,8 +557,8 @@ class TempModeration(commands.Cog):
                     if member and member.is_timed_out():
                         try:
                             await member.timeout(None, reason="[TempMod] Срок мьюта истёк")
-                        except (discord.Forbidden, discord.HTTPException):
-                            pass
+                        except (discord.Forbidden, discord.HTTPException) as _ex:
+                            log.debug("check_expirations(): подавлено: %s", _ex)
                     del mutes[user_id]
                     # History update
                     self._update_history_status(guild_id, user_id, "mute", "expired")
@@ -572,8 +572,8 @@ class TempModeration(commands.Cog):
                     try:
                         user = await self.bot.fetch_user(int(user_id))
                         await guild.unban(user, reason="[TempMod] Срок бана истёк")
-                    except (discord.NotFound, discord.Forbidden, discord.HTTPException):
-                        pass
+                    except (discord.NotFound, discord.Forbidden, discord.HTTPException) as _ex:
+                        log.debug("check_expirations(): подавлено: %s", _ex)
                     del bans[user_id]
                     self._update_history_status(guild_id, user_id, "tempban", "expired")
         # Voice mutes
@@ -587,8 +587,8 @@ class TempModeration(commands.Cog):
                     if member and member.voice and member.voice.mute:
                         try:
                             await member.edit(mute=False)
-                        except (discord.Forbidden, discord.HTTPException):
-                            pass
+                        except (discord.Forbidden, discord.HTTPException) as _ex:
+                            log.debug("check_expirations(): подавлено: %s", _ex)
                     del vmutes[user_id]
                     self._update_history_status(guild_id, user_id, "vmute", "expired")
         # Save
@@ -613,8 +613,8 @@ class TempModeration(commands.Cog):
                     break
             with open(self._history_file(), "w", encoding="utf-8") as f:
                 json.dump(history, f, ensure_ascii=False, indent=2)
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug("_update_history_status(): подавлено: %s", _ex)
 
     #  SCHEDULER 
     @commands.command(name="schedule", aliases=["запланировать"])
@@ -731,8 +731,8 @@ class TempModeration(commands.Cog):
         try:
             with open(self._whitelist_file(), "r", encoding="utf-8") as f:
                 data = json.load(f)
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug("whitelist_cmd(): подавлено: %s", _ex)
         guild_list = data.setdefault(str(ctx.guild.id), [])
         if action == "list":
             if not guild_list:

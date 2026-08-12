@@ -6,6 +6,11 @@
 - /userinfo — карточка участника (+ досье warns/cases для модераторов)
 - /cases — полная история нарушений (дела модерации + предупреждения + temp-история)
 """
+
+from logger import get_logger
+
+_log = get_logger("mod_tools")
+
 import json
 import discord
 from discord import app_commands
@@ -45,8 +50,8 @@ class ReasonModal(discord.ui.Modal):
         # Быстрый ack: DM + наказание может занять больше 3 секунд
         try:
             await interaction.response.defer(ephemeral=True)
-        except Exception:
-            pass
+        except Exception as _ex:
+            _log.debug("on_submit(): подавлено: %s", _ex)
         await self._handler(interaction, str(self.reason.value).strip() or None)
 
 
@@ -64,8 +69,8 @@ async def _respond(interaction, **kwargs):
     except Exception:
         try:
             await interaction.followup.send(**kwargs)
-        except Exception:
-            pass
+        except Exception as _ex:
+            _log.debug("_respond(): подавлено: %s", _ex)
 
 
 def _fmt_ts(ts: int, style: str = 'R') -> str:
@@ -105,8 +110,8 @@ class ModTools(commands.Cog):
         for cmd in self.ctx_items:
             try:
                 self.bot.tree.remove_command(cmd.name, type=cmd.type)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("cog_unload(): подавлено: %s", _ex)
 
     # ────────────────────────────────────────────────────────────
     # ПКМ → Предупредить (user)
@@ -155,8 +160,8 @@ class ModTools(commands.Cog):
         if mcog:
             try:
                 mcog.save_case(inter.guild.id, 'warn', member.id, inter.user.id, reason)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_apply_warn(): подавлено: %s", _ex)
 
         e = discord.Embed(color=discord.Color.dark_grey(), timestamp=datetime.now(timezone.utc))
         desc = (
@@ -202,8 +207,8 @@ class ModTools(commands.Cog):
                     await mcog.send_dm(member, dm)
                 else:
                     await member.send(embed=dm)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_do(): подавлено: %s", _ex)
 
             try:
                 await inter.guild.ban(
@@ -221,8 +226,8 @@ class ModTools(commands.Cog):
             if mcog:
                 try:
                     case_id = mcog.save_case(inter.guild.id, 'ban', member.id, inter.user.id, reason_txt)
-                except Exception:
-                    pass
+                except Exception as _ex:
+                    _log.debug("_do(): подавлено: %s", _ex)
 
             e = discord.Embed(color=0xE74C3C, timestamp=datetime.now(timezone.utc))
             e.description = (
@@ -237,8 +242,8 @@ class ModTools(commands.Cog):
             if mcog:
                 try:
                     await mcog.send_log(inter.guild, e)
-                except Exception:
-                    pass
+                except Exception as _ex:
+                    _log.debug("_do(): подавлено: %s", _ex)
 
         await interaction.response.send_modal(ReasonModal(f"Бан: {member.display_name}", _do))
 
@@ -264,8 +269,8 @@ class ModTools(commands.Cog):
             if isinstance(data, dict):
                 return [h for h in data.get(str(guild_id), [])
                         if str(h.get('user_id')) == str(user_id)]
-        except Exception:
-            pass
+        except Exception as _ex:
+            _log.debug("_load_temp_history(): подавлено: %s", _ex)
         return []
 
     @app_commands.command(name="cases", description="Полная история нарушений пользователя (для модераторов)")
@@ -279,8 +284,8 @@ class ModTools(commands.Cog):
         if wcog:
             try:
                 warns = wcog._get_warns(gid, user.id)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("cases(): подавлено: %s", _ex)
         temp_hist = self._load_temp_history(gid, user.id)
         total = len(cases) + len(warns) + len(temp_hist)
 
@@ -378,8 +383,8 @@ class ModTools(commands.Cog):
             if wcog:
                 try:
                     warns = wcog._get_warns(interaction.guild.id, user.id)
-                except Exception:
-                    pass
+                except Exception as _ex:
+                    _log.debug("userinfo(): подавлено: %s", _ex)
             e.add_field(
                 name="🛡 Досье (только модераторам)",
                 value=(f"Дел: **{len(cases)}** · Предупреждений: **{len(warns)}**\n"

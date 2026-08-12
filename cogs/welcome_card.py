@@ -8,6 +8,11 @@ Welcome Card — роскошная карточка приветствия (т�
 Команды: /welcome ... (админ).
 Хранилище: data/welcome_card.json
 """
+
+from logger import get_logger
+
+_log = get_logger("welcome_card")
+
 import os
 import io
 import json
@@ -66,8 +71,8 @@ def _load_cfg():
         if os.path.exists(CFG_PATH):
             with open(CFG_PATH, 'r', encoding='utf-8') as f:
                 return json.load(f)
-    except Exception:
-        pass
+    except Exception as _ex:
+        _log.debug("_load_cfg(): подавлено: %s", _ex)
     return {}
 
 

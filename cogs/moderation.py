@@ -1,3 +1,8 @@
+
+from logger import get_logger
+
+_log = get_logger("moderation")
+
 import discord 
 from discord .ext import commands 
 from discord import app_commands 
@@ -85,8 +90,8 @@ class Moderation (commands .Cog ):
         if ch :
             try :
                 await ch .send (embed =embed )
-            except Exception :
-                pass
+            except Exception as _ex:
+                _log.debug("send_log(): подавлено: %s", _ex)
 
     async def _notify_owner (self ,action ,user ,mod ,reason =None ):
         from config import clean_number
@@ -107,16 +112,16 @@ class Moderation (commands .Cog ):
             if reason :
                 msg +=f" | Причина: {reason}"
             await owner .send (msg )
-        except Exception :
-            pass 
+        except Exception as _ex:
+            _log.debug("_notify_owner(): подавлено: %s", _ex)
 
     async def send_dm (self ,user ,embed ):
         # DM — шаг best-effort: закрытые ЛС/сетевые сбои НЕ должны
         # отменять наказание или превращать его в «ошибку» для модератора
         try :
             await user .send (embed =embed )
-        except Exception :
-            pass 
+        except Exception as _ex:
+            _log.debug("send_dm(): подавлено: %s", _ex)
 
     def _confirm_embed (self ,action ,user ,guild ,reason ,case_id ,extra ="" ,moderator =None ):
         """Embed подтверждения для модератора — профессиональный стиль"""
@@ -169,8 +174,8 @@ class Moderation (commands .Cog ):
             if note :
                 try :
                     await interaction .followup .send (note ,ephemeral =True )
-                except Exception :
-                    pass
+                except Exception as _ex:
+                    _log.debug("_maybe_proof(): подавлено: %s", _ex)
         except Exception as _pe :
             print (f'[PROOF] после {action_ru}: {_pe}')
 
@@ -194,8 +199,8 @@ class Moderation (commands .Cog ):
         # больше 3 секунд, без defer токен interaction сгорает посередине
         try :
             await interaction .response .defer (ephemeral =True )
-        except Exception :
-            pass
+        except Exception as _ex:
+            _log.debug("moderate_user(): подавлено: %s", _ex)
 
         if action =="ban":
             if not user :
@@ -610,8 +615,8 @@ class Moderation (commands .Cog ):
                     _np (interaction ,'mod_action',
                     f"{_label }: {user .display_name }",
                     f"Модератор: {interaction .user .display_name } · Причина: {reason } · Дело #{case_id}")
-                except Exception :
-                    pass
+                except Exception as _ex:
+                    _log.debug("_execute_mod_action(): подавлено: %s", _ex)
 
                 confirm =success_embed (
                 "Действие выполнено",
@@ -649,8 +654,8 @@ class Moderation (commands .Cog ):
                     _np (interaction ,'mod_action',
                     f"Разбан: {fetched .name }",
                     f"Модератор: {interaction .user .display_name } · Дело #{case_id}")
-                except Exception :
-                    pass
+                except Exception as _ex:
+                    _log.debug("_execute_mod_action(): подавлено: %s", _ex)
                 await _respond (interaction ,embed =confirm ,ephemeral =True )
             except Exception as ex :
                 await _respond (interaction ,embed =error_embed (str (ex )),ephemeral =True )
@@ -806,8 +811,8 @@ class ModActionModal(discord.ui.Modal):
         # «Приложение не отвечает», хотя наказание уже применено.
         try:
             await interaction.response.defer(ephemeral=True)
-        except Exception:
-            pass
+        except Exception as _ex:
+            _log.debug("on_submit(): подавлено: %s", _ex)
         await self.cog._execute_mod_action(
             interaction,
             self.action,

@@ -24,8 +24,8 @@ def _load_tasks ()->list :
         try :
             with open (f ,'r',encoding ='utf-8')as fp :
                 return json .load (fp )
-        except Exception :
-            pass 
+        except Exception as _ex:
+            log.debug("_load_tasks(): подавлено: %s", _ex)
     return []
 
 def _save_tasks (tasks :list ):
@@ -70,8 +70,8 @@ def _load_owner_prefs ()->dict :
         try :
             with open (OWNER_PREFS_FILE ,'r',encoding ='utf-8')as f :
                 return json .load (f )
-        except Exception :
-            pass 
+        except Exception as _ex:
+            log.debug("_load_owner_prefs(): подавлено: %s", _ex)
     return {'rules':[],'memory':{},'disabled_notifications':[]}
 
 
@@ -89,8 +89,8 @@ def _load_profiles ()->dict :
         try :
             with open (PROFILES_FILE ,'r',encoding ='utf-8')as f :
                 return json .load (f )
-        except Exception :
-            pass 
+        except Exception as _ex:
+            log.debug("_load_profiles(): подавлено: %s", _ex)
     return {}
 
 
@@ -326,7 +326,8 @@ async def _get_recent_user_messages (user_id :int ,guild ,limit :int =15 )->list
                 last_msg =await channel .history (limit =1 ).flatten ()
                 if last_msg and (datetime .datetime .now (datetime .timezone .utc )-last_msg [0 ].created_at ).seconds <7200 :
                     active_channels .append (channel )
-            except Exception :
+            except Exception as _ex:
+                log.debug("_get_recent_user_messages(): подавлено: %s", _ex)
                 continue 
 
                 # Сканируем активные каналы — собираем до 15 сообщений
@@ -342,7 +343,8 @@ async def _get_recent_user_messages (user_id :int ,guild ,limit :int =15 )->list
                         })
                         if len (recent )>=limit :# 15 message найден ca dur
                             break 
-            except Exception :
+            except Exception as _ex:
+                log.debug("_get_recent_user_messages(): подавлено: %s", _ex)
                 continue 
 
             if len (recent )>=limit :
@@ -458,8 +460,8 @@ def _call_ai (question :str ,user_id :int ,guild =None ,recent_messages :list =N
                 from cogs .ai_chat import _active_tasks 
                 if _active_tasks :
                     context ['active_tasks']=[t ['desc']for t in _active_tasks [:5 ]]
-            except Exception :
-                pass 
+            except Exception as _ex:
+                log.debug("_call_ai(): подавлено: %s", _ex)
 
                 # Добавить последние Discord-сообщения пользователя в контекст (только на сервере)
         if recent_messages :
@@ -1016,8 +1018,8 @@ class AIChat (commands .Cog ):
                     nick =member .display_name 
                     if nick .startswith (' '):
                         await member .edit (nick =nick [2 :].strip ()or None )
-                except Exception :
-                    pass 
+                except Exception as _ex:
+                    log.debug("_detect_owner_intent(): подавлено: %s", _ex)
             from cogs .afk import _pending_mentions 
             pending =_pending_mentions .pop (OWNER_ID ,[])
             if pending :
@@ -1046,8 +1048,8 @@ class AIChat (commands .Cog ):
                     nick =member .display_name 
                     if not nick .startswith (''):
                         await member .edit (nick =f' {nick[:28]}')
-                except Exception :
-                    pass 
+                except Exception as _ex:
+                    log.debug("_detect_owner_intent(): подавлено: %s", _ex)
             await message .channel .send (f' AFK modu активен! Причина: **{reason}**')
             return True 
 

@@ -3,6 +3,10 @@ A/B Testing
 Система A/B тестирования
 """
 
+from logger import get_logger
+
+_log = get_logger("ab_testing")
+
 import json
 import os
 import random
@@ -212,8 +216,8 @@ class ABTestManager:
                         test_id: ABTest.from_dict(test_data)
                         for test_id, test_data in data.items()
                     }
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_tests(): подавлено: %s", _ex)
         
         return {}
     
@@ -335,8 +339,8 @@ class ABTestTracking:
             try:
                 with open(self.events_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_events(): подавлено: %s", _ex)
         
         return {}
     

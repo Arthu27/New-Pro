@@ -3,6 +3,10 @@ Help Cog — Luxury Dark-Gold Dashboard (Pillow)
 Тёмно-синий фон с золотыми звёздами, золотые панели, фирменные иконки категорий.
 """
 
+from logger import get_logger
+
+_log = get_logger("help")
+
 import os
 import io
 import discord
@@ -452,8 +456,8 @@ def prewarm_help_cards():
     for cid in [None] + [c["id"] for c in CATEGORIES]:
         try:
             generate_help_card_bytes(cid)
-        except Exception:
-            pass
+        except Exception as _ex:
+            _log.debug("prewarm_help_cards(): подавлено: %s", _ex)
 
 
 CUSTOM_EMOJIS: dict = {}
@@ -531,8 +535,8 @@ class Help(commands.Cog):
     async def help_prefix(self, ctx, category: str = None):
         try:
             await ctx.message.delete()
-        except Exception:
-            pass
+        except Exception as _ex:
+            _log.debug("help_prefix(): подавлено: %s", _ex)
 
         cat_id = None
         if category:
@@ -587,8 +591,8 @@ class HelpEmojiUpload(commands.Cog):
                     try:
                         await e.delete()
                         await ctx.send(f'🗑 Старый эмодзи удалён: `{e.name}`')
-                    except Exception:
-                        pass
+                    except Exception as _ex:
+                        _log.debug("upload_emoji(): подавлено: %s", _ex)
         existing = {e.name for e in ctx.guild.emojis}
         for fn in sorted(_os.listdir(icons_dir)):
             if not fn.endswith('_256.png'):

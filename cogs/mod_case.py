@@ -7,6 +7,11 @@
 - риск-скор по формуле warnings (-12/-18/-25)
 и рисует премиум PNG-досье в фирменном золотом стиле.
 """
+
+from logger import get_logger
+
+_log = get_logger("mod_case")
+
 import io
 import json
 import os
@@ -61,8 +66,8 @@ def _load_adv_data() -> dict:
                 d = json.load(f)
             if isinstance(d, dict):
                 return d
-    except Exception:
-        pass
+    except Exception as _ex:
+        _log.debug("_load_adv_data(): подавлено: %s", _ex)
     return {}
 
 
@@ -132,8 +137,8 @@ def _font(bold: bool, size: int):
     if CS is not None:
         try:
             return CS.font(bold, size)
-        except Exception:
-            pass
+        except Exception as _ex:
+            _log.debug("_font(): подавлено: %s", _ex)
     return ImageFont.load_default() if _PIL_OK else None
 
 
@@ -269,15 +274,15 @@ class ModCase(commands.Cog):
         if wc is not None and hasattr(wc, '_get_warns'):
             try:
                 return wc._get_warns(gid, uid)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_get_warns(): подавлено: %s", _ex)
         try:  # фолбэк на JSON-зеркало
             path = 'data/warnings.json'
             if os.path.exists(path):
                 with open(path, 'r', encoding='utf-8') as f:
                     return (json.load(f).get(str(gid), {}) or {}).get(str(uid), []) or []
-        except Exception:
-            pass
+        except Exception as _ex:
+            _log.debug("_get_warns(): подавлено: %s", _ex)
         return []
 
     @app_commands.command(name='case',
@@ -303,8 +308,8 @@ class ModCase(commands.Cog):
         try:
             from cogs.mod_plus import ghost_entries
             ghost = ghost_entries(gid).get(str(uid))
-        except Exception:
-            pass
+        except Exception as _ex:
+            _log.debug("case(): подавлено: %s", _ex)
 
         timed = getattr(user, 'timed_out_until', None)
         if timed is not None and timed < datetime.now(timezone.utc):

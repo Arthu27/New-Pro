@@ -378,8 +378,8 @@ class StaffReviewView(discord.ui.View):
                     value=f"Модератор: {interaction.user.display_name}",
                     inline=False)
                 await src.edit(embed=e0, view=None)
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug("_review(): подавлено: %s", _ex)
 
         verdict = "одобрена" if action == "approve" else "отклонена"
         await interaction.followup.send(

@@ -3,6 +3,10 @@ Custom Fields
 Система пользовательских полей
 """
 
+from logger import get_logger
+
+_log = get_logger("custom_fields")
+
 import json
 import os
 from datetime import datetime
@@ -184,8 +188,8 @@ class CustomFieldManager:
                         field_id: CustomField.from_dict(field_data)
                         for field_id, field_data in data.items()
                     }
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_fields(): подавлено: %s", _ex)
         
         return {}
     
@@ -297,8 +301,8 @@ class CustomFieldValueStorage:
             try:
                 with open(self.values_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_values(): подавлено: %s", _ex)
         
         return {}
     
@@ -353,8 +357,8 @@ class CustomFieldTemplate:
             try:
                 with open(self.templates_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_templates(): подавлено: %s", _ex)
         
         return {}
     
@@ -431,8 +435,8 @@ class CustomFieldPermissions:
             try:
                 with open(self.permissions_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_permissions(): подавлено: %s", _ex)
         
         return {}
     

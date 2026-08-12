@@ -3,6 +3,10 @@ Advanced Notifications
 Расширенная система уведомлений
 """
 
+from logger import get_logger
+
+_log = get_logger("advanced_notifications")
+
 import json
 import os
 from datetime import datetime, timedelta
@@ -191,8 +195,8 @@ class NotificationManager:
                         notif_id: Notification.from_dict(notif_data)
                         for notif_id, notif_data in data.items()
                     }
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_notifications(): подавлено: %s", _ex)
         
         return {}
     
@@ -309,8 +313,8 @@ class NotificationRuleManager:
                         rule_id: NotificationRule.from_dict(rule_data)
                         for rule_id, rule_data in data.items()
                     }
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_rules(): подавлено: %s", _ex)
         
         return {}
     
@@ -420,8 +424,8 @@ class NotificationTemplate:
             try:
                 with open(self.templates_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_templates(): подавлено: %s", _ex)
         
         return {}
     
@@ -492,8 +496,8 @@ class NotificationScheduler:
             try:
                 with open(self.scheduled_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_scheduled(): подавлено: %s", _ex)
         
         return {}
     
@@ -570,8 +574,8 @@ class DigestNotification:
             try:
                 with open(self.digest_config_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_digest_config(): подавлено: %s", _ex)
         
         return {}
     

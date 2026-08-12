@@ -3,6 +3,10 @@ Advanced Reporting & Analytics
 Расширенная система отчётности и аналитики
 """
 
+from logger import get_logger
+
+_log = get_logger("advanced_reporting")
+
 import json
 import os
 from datetime import datetime, timedelta
@@ -24,8 +28,8 @@ class ReportBuilder:
             try:
                 with open(self.reports_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_reports(): подавлено: %s", _ex)
         
         return {}
     

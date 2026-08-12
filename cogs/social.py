@@ -4,6 +4,11 @@ Aether Social Cog
 - Планировщик событий (календарь событий, список участников, напоминания)
 - Система matchmaking (поиск напарника по игре, создание команды)
 """
+
+from logger import get_logger
+
+_log = get_logger("social")
+
 import discord 
 from discord .ext import commands ,tasks 
 from discord import app_commands 
@@ -107,8 +112,8 @@ async def _update_poll_embed (message :discord .Message ,poll :dict ):
     e .set_footer (text =f"🗳 Всего голосов: {total} • Повторный клик по той же кнопке отзывает голос")
     try :
         await message .edit (embed =e )
-    except Exception :
-        pass 
+    except Exception as _ex:
+        _log.debug("_update_poll_embed(): подавлено: %s", _ex)
 
 
         # 
@@ -167,8 +172,8 @@ async def _update_event_embed (message :discord .Message ,event :dict ):
             break 
     try :
         await message .edit (embed =e )
-    except Exception :
-        pass 
+    except Exception as _ex:
+        _log.debug("_update_event_embed(): подавлено: %s", _ex)
 
 
         # 
@@ -221,8 +226,8 @@ async def _update_match_embed (message :discord .Message ,match :dict ,max_playe
             break 
     try :
         await message .edit (embed =e )
-    except Exception :
-        pass 
+    except Exception as _ex:
+        _log.debug("_update_match_embed(): подавлено: %s", _ex)
 
 
         # 
@@ -353,8 +358,8 @@ class Social (commands .Cog ):
                                 )
                             e .set_footer (text =f"Всего {total} oy")
                             await ch .send (embed =e )
-                    except Exception :
-                        pass 
+                    except Exception as _ex:
+                        _log.debug("poll_checker(): подавлено: %s", _ex)
             if changed :
                 _save (path ,data )
 
@@ -469,8 +474,8 @@ class Social (commands .Cog ):
                             await ch .send (
                             f"⏰ **{event['title']}** начинается через **30 минут**!\n{mentions}"
                             )
-                    except Exception :
-                        pass 
+                    except Exception as _ex:
+                        _log.debug("event_reminder(): подавлено: %s", _ex)
             if changed :
                 _save (path ,data )
 

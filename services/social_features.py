@@ -3,6 +3,10 @@ Social Features
 Социальные функции (комментарии, лайки, упоминания)
 """
 
+from logger import get_logger
+
+_log = get_logger("social_features")
+
 import json
 import os
 import re
@@ -23,8 +27,8 @@ class CommentSystem:
             try:
                 with open(self.comments_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_comments(): подавлено: %s", _ex)
         
         return {}
     
@@ -178,8 +182,8 @@ class MentionSystem:
             try:
                 with open(self.mentions_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_mentions(): подавлено: %s", _ex)
         
         return {}
     
@@ -265,8 +269,8 @@ class VotingSystem:
             try:
                 with open(self.votes_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_votes(): подавлено: %s", _ex)
         
         return {}
     
@@ -348,8 +352,8 @@ class SharingSystem:
             try:
                 with open(self.shares_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_shares(): подавлено: %s", _ex)
         
         return {}
     
@@ -413,8 +417,8 @@ class FollowingSystem:
             try:
                 with open(self.following_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_following(): подавлено: %s", _ex)
         
         return {}
     

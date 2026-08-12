@@ -1,3 +1,8 @@
+
+from logger import get_logger
+
+_log = get_logger("advanced_mod")
+
 import discord 
 from discord .ext import commands 
 from discord import app_commands 
@@ -40,8 +45,8 @@ class AdvancedMod (commands .Cog ):
             ch =find_log_channel (guild ,'модерация')
             if ch :
                 return ch
-        except Exception :
-            pass
+        except Exception as _ex:
+            _log.debug("_mod_log_channel(): подавлено: %s", _ex)
         ch =discord .utils .get (guild .text_channels ,name ="mod-log")
         if not ch :
             ch =discord .utils .get (guild .text_channels ,name ="moderasyon")
@@ -302,8 +307,8 @@ class AdvancedMod (commands .Cog ):
                     try :
                         await member .add_roles (role )
                         count +=1 
-                    except Exception :
-                        pass 
+                    except Exception as _ex:
+                        _log.debug("massrole(): подавлено: %s", _ex)
             e =discord .Embed (title ="✅ Роли выданы массово",color =0x2ECC71 ,timestamp =datetime.now(timezone.utc).replace(tzinfo=None))
             e .description =f"```ansi\n\u001b[1;32m МАССОВАЯ ВЫДАЧА РОЛИ\u001b[0m\n```\n{_divider()}"
             e .add_field (name ="🎭 Роль",value =role .mention ,inline =True )
@@ -314,8 +319,8 @@ class AdvancedMod (commands .Cog ):
                     try :
                         await member .remove_roles (role )
                         count +=1 
-                    except Exception :
-                        pass 
+                    except Exception as _ex:
+                        _log.debug("massrole(): подавлено: %s", _ex)
             e =discord .Embed (title ="✅ Роли массово сняты",color =0xE74C3C ,timestamp =datetime.now(timezone.utc).replace(tzinfo=None))
             e .description =f"```ansi\n\u001b[1;31m МАССОВОЕ СНЯТИЕ РОЛИ\u001b[0m\n```\n{_divider()}"
             e .add_field (name ="🎭 Роль",value =role .mention ,inline =True )

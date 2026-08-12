@@ -2,6 +2,11 @@
 Самообучение — AI учится на своих ошибках и успехах
 Анализ обратной связи, корректировка поведения
 """
+
+from logger import get_logger
+
+_log = get_logger("self_learning")
+
 import json 
 import os 
 from datetime import datetime ,timedelta, timezone
@@ -273,8 +278,8 @@ class SelfLearning :
                     self .learned_patterns =data .get ('learned_patterns',{})
                     self .mistakes =data .get ('mistakes',[])
                     self .successes =data .get ('successes',[])
-            except Exception:
-                pass 
+            except Exception as _ex:
+                _log.debug("_load_data(): подавлено: %s", _ex)
 
     def _save_data (self ):
         """Сохранить данные в файл"""

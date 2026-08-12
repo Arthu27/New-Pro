@@ -2,6 +2,11 @@
 Ticket AI — продвинутая система поддержки
 Chain-of-thought reasoning, персонализация, проактивное поведение, function calling
 """
+
+from logger import get_logger
+
+_log = get_logger("ai_helper")
+
 import os 
 import json 
 import re 
@@ -180,8 +185,8 @@ def _detect_category_ai (message :str ,history :List [Dict ])->str :
         result =result .strip ().lower ()
         if result in ('complaint','question','technical','other'):
             return result 
-    except Exception:
-        pass 
+    except Exception as _ex:
+        _log.debug("_detect_category_ai(): подавлено: %s", _ex)
 
         # Fallback на keyword-based
     return _detect_category_fallback (message )
@@ -635,8 +640,8 @@ def get_learned_faqs (guild_id :int )->List [Dict ]:
             with open (faq_file ,'r',encoding ='utf-8')as f :
                 faqs =json .load (f )
             return faqs .get (str (guild_id ),[])
-    except Exception:
-        pass 
+    except Exception as _ex:
+        _log.debug("get_learned_faqs(): подавлено: %s", _ex)
     return []
 
 
@@ -704,8 +709,8 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
                     log_status =f"существует, содержит {len(_ldata)} сообщений (но я не могу их отфильтровать в офлайн-режиме)"
                 except Exception :
                     log_status ="повреждён или недоступен"
-        except Exception :
-            pass 
+        except Exception as _ex:
+            _log.debug("_local_moebius_fallback(): подавлено: %s", _ex)
 
         return (
         f"🔍 **Поиск сообщений {target_str}:**\n\n"
@@ -829,8 +834,8 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
                         if _uid ==target or target .lower ()in str (_uid ).lower ():
                             w_count +=len (_ws )
                             w_reasons .extend ([_w .get ('reason','?')for _w in _ws ])
-            except Exception:
-                pass 
+            except Exception as _ex:
+                _log.debug("_local_moebius_fallback(): подавлено: %s", _ex)
         m_count =0 
         if os .path .exists ('data/mod_data.json'):
             try :
@@ -840,8 +845,8 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
                     for _c in _case :
                         if str (_c .get ('user_id',''))==target :
                             m_count +=1 
-            except Exception:
-                pass 
+            except Exception as _ex:
+                _log.debug("_local_moebius_fallback(): подавлено: %s", _ex)
         return (
         f"👤 **Анализ безопасности пользователя ({target}):**\n"
         f"• **Количество предупреждений:** {w_count} шт."+(f" (*Последние причины: {', '.join(w_reasons[:3])}*)"if w_reasons else "")+"\n"
@@ -871,8 +876,8 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
                                     rule_lines .append (f"• {rtext}")
                             if rule_lines :
                                 break 
-                    except Exception:
-                        pass 
+                    except Exception as _ex:
+                        _log.debug("_local_moebius_fallback(): подавлено: %s", _ex)
         if not rule_lines :
             rule_lines =[
             "• Правило #1: Уважение и вежливость — Запрещены оскорбления, мат, унижения и язык вражды.",
@@ -1021,8 +1026,8 @@ def _call (messages :List [Dict ],max_tokens :int =2048 ,temperature :float =0.7
             text =data .get ("message",{}).get ("content","").strip ()
             if text :
                 return text ,model_name ,{"provider":"ollama"}
-    except Exception :
-        pass 
+    except Exception as _ex:
+        _log.debug("_call(): подавлено: %s", _ex)
 
         # 2. Mistral AI API — Автоматическая ротация нескольких ключей (Key Rotation)
     mistral_env =os .getenv ("MISTRAL_API_KEY","")
@@ -1136,8 +1141,8 @@ def ai_assistant (question :str ,context :Dict =None ,history :List [Dict ]=None
         rag_ctx =get_knowledge_base (gid_val ).get_context_for_query (question )
         if rag_ctx :
             sys_lines .append (rag_ctx )
-    except Exception :
-        pass 
+    except Exception as _ex:
+        _log.debug("ai_assistant(): подавлено: %s", _ex)
 
     if context .get ('learned_knowledge'):
         sys_lines .append ("Изученная информация о сервере:\n  "+"\n  ".join (str (k )for k in context ['learned_knowledge']))
@@ -1159,8 +1164,8 @@ def ai_assistant (question :str ,context :Dict =None ,history :List [Dict ]=None
         if relevant_faqs :
             faq_texts =[f"ВОПРОС: {fitem['question']}\nОТВЕТ АДМИНИСТРАЦИИ: {fitem['answer']}"for fitem in relevant_faqs ]
             sys_lines .append ("💡 ИЗУЧЕННЫЕ РЕШЕНИЯ ИЗ БАЗЫ ЗНАНИЙ СЕРВЕРА:\n  "+"\n  ".join (faq_texts ))
-    except Exception :
-        pass 
+    except Exception as _ex:
+        _log.debug("ai_assistant(): подавлено: %s", _ex)
 
     messages =[{"role":"system","content":"\n".join (sys_lines )}]
     for h in history [-16 :]:

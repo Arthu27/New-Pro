@@ -3,6 +3,11 @@
 Распознавание голосовых сообщений и преобразование в текст
 Использует Whisper API или локальную модель
 """
+
+from logger import get_logger
+
+_log = get_logger("voice_commands")
+
 import discord
 from discord.ext import commands
 import os
@@ -27,7 +32,8 @@ class VoiceCommands(commands.Cog):
             try:
                 __import__(lib)
                 return True
-            except ImportError:
+            except ImportError as _ex:
+                _log.debug("_check_whisper(): подавлено: %s", _ex)
                 continue
         return False
 
@@ -82,16 +88,16 @@ class VoiceCommands(commands.Cog):
             finally:
                 try:
                     os.unlink(tmp_path)
-                except Exception:
-                    pass
+                except Exception as _ex:
+                    _log.debug("_process_voice_message(): подавлено: %s", _ex)
 
         except Exception as e:
             log.error(f"Ошибка обработки голоса: {e}")
             if status_msg:
                 try:
                     await status_msg.edit(content="Ошибка при обработке голосового сообщения.")
-                except Exception:
-                    pass
+                except Exception as _ex:
+                    _log.debug("_process_voice_message(): подавлено: %s", _ex)
 
     async def _transcribe_with_whisper(self, audio_path: str) -> Optional[str]:
         """Распознавание речи через Whisper (faster-whisper или openai-whisper)"""
