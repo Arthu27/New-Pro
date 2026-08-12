@@ -152,8 +152,10 @@ import ast  # noqa: E402
 
 silent_left = []
 for f in (glob.glob(os.path.join(ROOT, 'cogs/*.py')) + glob.glob(os.path.join(ROOT, 'services/*.py'))
-          + glob.glob(os.path.join(ROOT, 'web/*.py')) + [os.path.join(ROOT, 'error_handler.py'),
-                                                          os.path.join(ROOT, 'main.py')]):
+          + glob.glob(os.path.join(ROOT, 'web/**/*.py'), recursive=True)
+          + [os.path.join(ROOT, 'error_handler.py'),
+             os.path.join(ROOT, 'json_store.py'),
+             os.path.join(ROOT, 'main.py')]):
     try:
         tree = ast.parse(open(f, encoding='utf-8').read())
     except SyntaxError:
@@ -168,6 +170,20 @@ for f in (glob.glob(os.path.join(ROOT, 'cogs/*.py')) + glob.glob(os.path.join(RO
             silent_left.append(f'{os.path.basename(f)}:{node.lineno}')
 check(not silent_left, f'ни одного молчаливого except (pass/continue) в коде '
                        f'({silent_left[:3] if silent_left else "все подписаны логом"})')
+
+# ═══ 5. Гигиена корня: никаких мусорных txt/md (архив в docs/devnotes) ═══
+print('== гигиена корня ==')
+_ROOT_ALLOWED_DOCS = {'README.md', 'requirements.txt', 'requirements-test.txt'}
+junk = sorted(f for f in os.listdir(ROOT)
+              if os.path.isfile(os.path.join(ROOT, f))
+              and os.path.splitext(f)[1].lower() in ('.md', '.txt')
+              and f not in _ROOT_ALLOWED_DOCS)
+check(not junk, f'корень чист: только README.md и requirements*.txt '
+                f'({junk[:3] if junk else "мусор в docs/devnotes/"})')
+check(os.path.isdir(os.path.join(ROOT, 'docs', 'devnotes')), 'docs/devnotes/ существует')
+archived = len([f for f in os.listdir(os.path.join(ROOT, 'docs', 'devnotes'))
+                if os.path.splitext(f)[1].lower() in ('.md', '.txt')])
+check(archived >= 20, f'в архиве заметок {archived} файлов (19 исторических + README-индекс)')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(0 if FAIL == 0 else 1)
