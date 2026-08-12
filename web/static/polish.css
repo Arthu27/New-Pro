@@ -193,9 +193,52 @@ kbd {
 .msg.err, .msg.error { display: inline-block; background: rgba(248,113,113,.10); color: var(--err); border-color: rgba(248,113,113,.30); }
 .msg.info { display: inline-block; background: var(--ac-soft); color: var(--ac-2); border-color: var(--ac-line); }
 
-/* ── 13. Уважение к reduced motion ─────────────────────────── */
+/* ── 13. Общие компоненты страниц (stat-box, premium-card, pills) ── */
+.stat-box, .log-stat, .premium-card { transition: all .18s var(--ease); }
+.stat-box:hover, .log-stat:hover, .premium-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--ac-line) !important;
+  box-shadow: var(--shadow-md);
+}
+.stat-icon { transition: transform .25s var(--ease-spring), box-shadow .25s var(--ease); }
+.stat-box:hover .stat-icon { transform: scale(1.08) rotate(-4deg); box-shadow: 0 6px 18px var(--ac-glow); }
+.stat-val, .stat-value, .log-stat-num { font-variant-numeric: tabular-nums; }
+.premium-card { box-shadow: var(--shadow-sm), inset 0 1px 0 color-mix(in srgb, var(--text) 6%, transparent) !important; }
+
+.info-pill { border: 1px solid var(--ac-line) !important; background: var(--ac-soft) !important; }
+.action-bar {
+  position: sticky; top: 74px; z-index: 15;
+  background: color-mix(in srgb, var(--bg) 80%, transparent);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  padding: 8px 10px; border-radius: 14px;
+}
+
+/* ── 14. Лендинг (welcome-экран) ───────────────────────────── */
+.welcome-title {
+  background: linear-gradient(120deg, var(--text) 25%, var(--ac-2) 48%, var(--text) 72%);
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: acTitleShine 9s ease-in-out infinite;
+}
+.wf-item { transition: all .2s var(--ease); }
+.wf-item:hover { transform: translateY(-3px); }
+.wf-item:hover i { color: var(--ac-2); }
+.wn-link { position: relative; }
+.wn-link::after {
+  content: ''; position: absolute; left: 0; bottom: -3px;
+  width: 0; height: 2px; border-radius: 2px;
+  background: linear-gradient(90deg, var(--ac-2), var(--ac-3));
+  transition: width .25s var(--ease);
+}
+.wn-link:hover::after { width: 100%; }
+
+/* ── 15. Уважение к reduced motion ─────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   .main-content > * { animation: none !important; }
   .page-hero::after, .page-hero h1 { animation: none !important; }
-  .brand:hover .brand-icon { transform: none; }
+  .welcome-title { animation: none !important; }
+  .brand:hover .brand-icon, .stat-box:hover, .log-stat:hover,
+  .premium-card:hover, .wf-item:hover { transform: none !important; }
 }

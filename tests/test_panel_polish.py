@@ -136,8 +136,32 @@ check(r.status_code == 200 and 'Login polish' in r.get_data(as_text=True),
 
 check('.msg.ok' in css and '.msg.err' in css and '.msg.info' in css,
       'polish.css: глобальные .msg-оповещения (ok/err/info)')
-check('v=2' in open(os.path.join(ROOT, 'web', 'templates', 'base.html'), encoding='utf-8').read(),
-      'base.html: кэш polish.css сброшен (v=2)')
+base_now = open(os.path.join(ROOT, 'web', 'templates', 'base.html'), encoding='utf-8').read()
+check('v=3' in base_now, 'base.html: кэш polish.css сброшен (v=3)')
+
+# ═══ 5. Общие компоненты + лендинг (v3) ═══════════════════════════════════
+print('== v3: компоненты и лендинг ==')
+check('.stat-box:hover' in css and '.log-stat:hover' in css and '.premium-card:hover' in css,
+      'v3: подъём stat-карточек многих страниц')
+check('.stat-box:hover .stat-icon' in css, 'v3: иконка стат-карточки оживает')
+check('.action-bar' in css and 'sticky' in css, 'v3: липкие панели действий')
+check('.welcome-title' in css and 'acTitleShine' in css, 'v3: перелив заголовка лендинга')
+check('.wf-item:hover' in css and '.wn-link::after' in css, 'v3: фичи и ссылки лендинга оживают')
+check('border-color: var(--ac-line) !important' in css, 'v3: единая акцентная рамка при наведении')
+
+logs_html = open(os.path.join(ROOT, 'web', 'templates', 'logs.html'), encoding='utf-8').read()
+check('Logs polish' in logs_html and 'position:sticky' in logs_html.replace(' ', ''),
+      'логи: липкая панель фильтров')
+check('.action-badge' in logs_html and 'uppercase' in logs_html,
+      'логи: аккуратные бейджи действий')
+
+login_as('owner')
+r = client.get('/logs')
+check(r.status_code == 200 and 'Logs polish' in r.get_data(as_text=True),
+      'страница /logs рендерится со слоем')
+r = client.get('/roles')
+check(r.status_code == 200 and 'polish.css' in r.get_data(as_text=True),
+      'страница /roles рендерится со слоем')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(1 if FAIL else 0)
