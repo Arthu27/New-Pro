@@ -242,7 +242,7 @@ class Diagnostics (commands .Cog ):
                 description =f"**Severity:** {severity}\n**Action:** {action}",
                 color =0xFBBF24 if severity =="warn"else 0xEF4444 
                 )
-                embed .timestamp =datetime.now(timezone.utc).replace(tzinfo=None)
+                embed .timestamp =datetime.now(timezone.utc)
                 await owner .send (embed =embed )
         except Exception as _ex:
             _log.debug("_notify_admin(): подавлено: %s", _ex)
@@ -311,7 +311,7 @@ class Diagnostics (commands .Cog ):
         embed .add_field (name =" Ошибок/мин",value =h ["errors_last_min"],inline =True )
         embed .add_field (name =" Потоки",value =h ["threads"],inline =True )
         embed .add_field (name =" Открытых файлов",value =h ["open_files"],inline =True )
-        embed .timestamp =datetime.now(timezone.utc).replace(tzinfo=None)
+        embed .timestamp =datetime.now(timezone.utc)
         await ctx .send (embed =embed )
 
     @commands .command (name ="diagnose",aliases =["repair"])

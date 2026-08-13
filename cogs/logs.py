@@ -75,7 +75,7 @@ def _write_audit_event (event_data :Dict [str ,Any ]):
     data [gid ].append ({
     'category':category ,
     'action':action ,
-    'timestamp':datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None).isoformat (),
+    'timestamp':datetime.datetime.now(datetime.timezone.utc).isoformat (),
     **details 
     })
     if len (data [gid ])>2000 :
@@ -349,7 +349,7 @@ def _styled_log_embed(guild, category, title, fields=(), color=None,
     """
     icon, base_color, cat_name = _cat_meta(category)
     e = _LogEmbed(color=color if color is not None else base_color,
-                  timestamp=datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None))
+                  timestamp=datetime.datetime.now(datetime.timezone.utc))
     desc = f"## {(icon + ' ') if icon else ''}{title}\n\n"
     for name, value in fields:
         if value in (None, ''):
@@ -433,7 +433,7 @@ async def _audit_actor(guild, action, target_id=None, window=20, retries=2):
         import asyncio as _ai
         key = (str(guild.id), action, str(target_id) if target_id is not None else '0')
         used = _audit_used.setdefault(key, set())
-        now = discord.utils.utcnow()
+        now = datetime.datetime.now(datetime.timezone.utc)
         for _attempt in range(max(1, retries)):
             try:
                 async for entry in guild.audit_logs(limit=8, action=action):
@@ -582,7 +582,7 @@ class LogsCenterView(discord.ui.View):
     def overview_embed(self):
         e = discord.Embed(
             color=0xC8922A,
-            timestamp=datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None))
+            timestamp=datetime.datetime.now(datetime.timezone.utc))
         e.description = (
             "## 📋 Центр логов\n"
             "Выберите категорию в меню ниже — покажу её канал, "
@@ -612,7 +612,7 @@ class LogsCenterView(discord.ui.View):
         icon, title, desc = meta.get(self.selected, ('📋', self.selected, ''))
         ch = _lc_find_channel(self.guild, self.selected)
         color = 0x2ECC71 if ch else 0xE74C3C
-        e = discord.Embed(color=color, timestamp=datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None))
+        e = discord.Embed(color=color, timestamp=datetime.datetime.now(datetime.timezone.utc))
         e.description = (
             f"## {icon} {title}\n\n"
             f"**Что логируется** — {desc}\n"
@@ -631,7 +631,7 @@ class LogsCenterView(discord.ui.View):
         meta = {k: (i, t, d) for k, i, t, d in LOG_CENTER_ITEMS}
         icon, title, desc = meta.get(self.selected, ('📋', self.selected, ''))
         ch = _lc_find_channel(self.guild, self.selected)
-        e = discord.Embed(color=0xD4AF37, timestamp=datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None))
+        e = discord.Embed(color=0xD4AF37, timestamp=datetime.datetime.now(datetime.timezone.utc))
         e.description = (
             f"## {icon} {title} — Недавние события\n"
             f"Канал: {ch.mention if ch else '❌ не создан'}\n\n"
@@ -911,7 +911,7 @@ class Logs (commands .Cog ):
         title ="✅ Система логов настроена",
         description ="\n\n".join (result_lines ),
         color =0x2ECC71 ,
-        timestamp =datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+        timestamp =datetime.datetime.now(datetime.timezone.utc)
         )
         e .add_field (
         name =" Каналы",
@@ -958,7 +958,7 @@ class Logs (commands .Cog ):
 
     @commands .Cog .listener ()
     async def on_member_join (self ,member ):
-        age_days =(discord .utils .utcnow ()-member .created_at ).days 
+        age_days =(datetime.datetime.now(datetime.timezone.utc)-member .created_at ).days 
         save_event (member .guild .id ,'member','Участник вошёл',{
         'user_id':str (member .id ),
         'user_name':str (member ),
@@ -1003,7 +1003,7 @@ class Logs (commands .Cog ):
             age_text =f"{years} г. {months} мес."
 
         member_count = member.guild.member_count 
-        join_ts = int(datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None).timestamp())
+        join_ts = int(datetime.datetime.now(datetime.timezone.utc).timestamp())
 
         fields = [
             ('Пользователь', f"**{member.display_name}** · {member.mention} · `{member.id}`"),
@@ -1552,7 +1552,7 @@ class Logs (commands .Cog ):
                 })
                 ch =await self .get_log_channel (guild ,'channel')
                 if ch :
-                    e =discord .Embed (color =0xE74C3C ,timestamp =datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None))
+                    e =discord .Embed (color =0xE74C3C ,timestamp =datetime.datetime.now(datetime.timezone.utc))
                     e .description =(
                     "## Канал удален\n"
                     f"**{getattr(channel, 'name', '?')}** · `{channel.id}`\n\n"

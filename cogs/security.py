@@ -180,7 +180,7 @@ class Security (commands .Cog ):
         score =0.0 
 
         # Hesap yaшы
-        age_days =(discord .utils .utcnow ()-member .created_at ).days 
+        age_days =(datetime.now(timezone.utc)-member .created_at ).days 
         threshold =cfg .get ('new_account_days',7 )
         if age_days <1 :
             score +=0.5 
@@ -278,7 +278,7 @@ class Security (commands .Cog ):
                     _log.debug("on_message(): подавлено: %s", _ex)
                 try :
                     await member .timeout (
-                    discord .utils .utcnow ()+timedelta (minutes =5 ),
+                    datetime.now(timezone.utc)+timedelta (minutes =5 ),
                     reason =f"AI Антиспам Tespiti: {reason}"
                     )
                 except Exception as _ex:
@@ -340,7 +340,7 @@ class Security (commands .Cog ):
         e .set_thumbnail (url =member .display_avatar .url )
         e .description ="\n".join (warnings )
         e .add_field (name =" Пользователь",value =f"{member.mention}\n`{member.id}`",inline =True )
-        e .add_field (name =" Возраст аккаунта",value =f"`{(discord.utils.utcnow() - member.created_at).days} день`",inline =True )
+        e .add_field (name =" Возраст аккаунта",value =f"`{(datetime.now(timezone.utc) - member.created_at).days} день`",inline =True )
         e .add_field (name =" Уровень риска",value =f"`{score:.0%}`",inline =True )
 
         if score >=0.6 and action =='kick':

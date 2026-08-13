@@ -71,7 +71,7 @@ def register(ctx):
         sdata =_load_json (_sticky_path (guild .id ),{})
         old =sdata .get (cid )
         sdata [cid ]={'text':text ,'msg_id':None ,'author_id':0,
-        'set_at':datetime.now(timezone.utc).replace(tzinfo=None).isoformat (),
+        'set_at':datetime.now(timezone.utc).isoformat (),
         'by_panel':session .get ('username')}
         _save_json (_sticky_path (guild .id ),sdata )
 

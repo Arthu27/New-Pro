@@ -67,11 +67,11 @@ def save_unknown_question (question :str ,guild_id :int ,channel_id :int ,histor
     for item in items :
         if _similarity (question ,item .get ('question',''))>0.7 :
             item ['count']=item .get ('count',1 )+1 
-            item ['last_seen']=datetime.now(timezone.utc).replace(tzinfo=None).isoformat ()
+            item ['last_seen']=datetime.now(timezone.utc).isoformat ()
             _save (UNKNOWN_FILE ,items )
             return item ['id']
 
-    new_id =f"uq_{int(datetime.now(timezone.utc).replace(tzinfo=None).timestamp())}_{guild_id}"
+    new_id =f"uq_{int(datetime.now(timezone.utc).timestamp())}_{guild_id}"
     items .append ({
     'id':new_id ,
     'question':question ,
@@ -79,8 +79,8 @@ def save_unknown_question (question :str ,guild_id :int ,channel_id :int ,histor
     'channel_id':channel_id ,
     'history_snapshot':history [-6 :],# В конец 6 message baгlam для
     'count':1 ,
-    'created_at':datetime.now(timezone.utc).replace(tzinfo=None).isoformat (),
-    'last_seen':datetime.now(timezone.utc).replace(tzinfo=None).isoformat (),
+    'created_at':datetime.now(timezone.utc).isoformat (),
+    'last_seen':datetime.now(timezone.utc).isoformat (),
     # status: pending | learned | ignored
     'status':'pending'
     })
@@ -101,7 +101,7 @@ def learn_from_staff (question :str ,answer :str ,guild_id :int ,staff_name :str
     for item in faq :
         if _similarity (question ,item .get ('question',''))>0.75 :
             item ['answer']=answer 
-            item ['updated_at']=datetime.now(timezone.utc).replace(tzinfo=None).isoformat ()
+            item ['updated_at']=datetime.now(timezone.utc).isoformat ()
             item ['updated_by']=staff_name 
             _save (FAQ_FILE ,faq )
             # unknown_questions'da iшaretle
@@ -109,15 +109,15 @@ def learn_from_staff (question :str ,answer :str ,guild_id :int ,staff_name :str
             print (f"[FAQ] Обновлено: {question[:60]}")
             return item ['id']
 
-    new_id =f"faq_{int(datetime.now(timezone.utc).replace(tzinfo=None).timestamp())}_{guild_id}"
+    new_id =f"faq_{int(datetime.now(timezone.utc).timestamp())}_{guild_id}"
     faq .append ({
     'id':new_id ,
     'question':question ,
     'answer':answer ,
     'guild_id':guild_id ,
     'created_by':staff_name ,
-    'created_at':datetime.now(timezone.utc).replace(tzinfo=None).isoformat (),
-    'updated_at':datetime.now(timezone.utc).replace(tzinfo=None).isoformat (),
+    'created_at':datetime.now(timezone.utc).isoformat (),
+    'updated_at':datetime.now(timezone.utc).isoformat (),
     'use_count':0 ,
     'active':True 
     })

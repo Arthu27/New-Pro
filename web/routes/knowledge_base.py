@@ -127,7 +127,7 @@ def register(ctx):
         'name':name ,
         'description':description ,
         'icon':icon ,
-        'created_at':datetime .now ().isoformat ()
+        'created_at':datetime .now (timezone.utc).isoformat ()
         }
 
         kb_data ['categories'].append (new_category )
@@ -178,8 +178,8 @@ def register(ctx):
         'views':0 ,
         'helpful_yes':0 ,
         'helpful_no':0 ,
-        'created_at':datetime .now ().isoformat (),
-        'updated_at':datetime .now ().isoformat ()
+        'created_at':datetime .now (timezone.utc).isoformat (),
+        'updated_at':datetime .now (timezone.utc).isoformat ()
         }
 
         kb_data ['articles'].append (new_article )

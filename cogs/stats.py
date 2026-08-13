@@ -41,7 +41,7 @@ class Stats (commands .Cog ):
         e = discord.Embed(
             title=f"📊 {g.name} — Статистика сервера",
             color=0x5865F2,
-            timestamp=datetime.now(timezone.utc).replace(tzinfo=None)
+            timestamp=datetime.now(timezone.utc)
         )
         if g.icon:
             e.set_thumbnail(url=g.icon.url)

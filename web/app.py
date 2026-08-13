@@ -178,7 +178,7 @@ def _log_login (username ,role ,avatar ,discord_id ):
         'guild_name':guild_name ,
         'guild_icon':guild_icon ,
         'ip':request .remote_addr ,
-        'timestamp':datetime.now(timezone.utc).replace(tzinfo=None).isoformat ()
+        'timestamp':datetime.now(timezone.utc).isoformat ()
         })
         _store .atomic_write_json (f ,logs [-200 :])
         _store .invalidate_path (f )
@@ -237,7 +237,7 @@ def _log_panel_action (action ,detail =''):
         'action':action ,
         'detail':detail ,
         'ip':request .remote_addr ,
-        'timestamp':datetime.now(timezone.utc).replace(tzinfo=None).isoformat (),
+        'timestamp':datetime.now(timezone.utc).isoformat (),
         'ts':int (_t .time ()),
         })
     except Exception as _ex:
@@ -610,19 +610,19 @@ def health_check ():
             'bot':'ready',
             'guilds':len (bot_instance .guilds ),
             'latency':lat_val ,
-            'timestamp':datetime .now ().isoformat ()
+            'timestamp':datetime .now (timezone.utc).isoformat ()
             }),200 
         else :
             return jsonify ({
             'status':'degraded',
             'bot':'connecting',
-            'timestamp':datetime .now ().isoformat ()
+            'timestamp':datetime .now (timezone.utc).isoformat ()
             }),503 
     except Exception as e :
         return jsonify ({
         'status':'error',
         'error':str (e ),
-        'timestamp':datetime .now ().isoformat ()
+        'timestamp':datetime .now (timezone.utc).isoformat ()
         }),500 
 
 @app .route ('/')
@@ -760,7 +760,7 @@ def register ():
             'name':member_info ['name'],
             'avatar':member_info ['avatar'],
             'role':live_role ,
-            'registered_at':datetime.now(timezone.utc).replace(tzinfo=None).isoformat ()
+            'registered_at':datetime.now(timezone.utc).isoformat ()
             }
             with open (members_file ,'w',encoding ='utf-8')as f :
                 json .dump (members ,f ,indent =2 ,ensure_ascii =False )
@@ -830,7 +830,7 @@ def register ():
                 e =discord .Embed (
                 title =" Aether Panel — Запись Проверка",
                 color =0xc8922a ,
-                timestamp =datetime.now(timezone.utc).replace(tzinfo=None)
+                timestamp =datetime.now(timezone.utc)
                 )
                 e .description =(
                 "```ansi\n\u001b[1;33m ТРЕБУЕТСЯ ПРОВЕРКА КОДА \u001b[0m\n```\n"
@@ -918,7 +918,7 @@ def api_add_member ():
     'display_name':display_name ,
     'name':name ,
     'avatar':avatar ,
-    'registered_at':datetime.now(timezone.utc).replace(tzinfo=None).isoformat ()
+    'registered_at':datetime.now(timezone.utc).isoformat ()
     }
     with open (members_file ,'w',encoding ='utf-8')as f :
         json .dump (members ,f ,indent =2 ,ensure_ascii =False )
@@ -1038,7 +1038,7 @@ def api_send_notification ():
     'title':title ,
     'message':message ,
     'from':session .get ('username'),
-    'created_at':datetime.now(timezone.utc).replace(tzinfo=None).isoformat (),
+    'created_at':datetime.now(timezone.utc).isoformat (),
     'read':False 
     })
     with open (notif_file ,'w',encoding ='utf-8')as f :
@@ -1055,7 +1055,7 @@ def api_send_notification ():
                 color =0xdc143c 
                 )
                 embed .set_footer (text ="Aether Panel • Уведомление",icon_url =bot_instance .user .display_avatar .url )
-                embed .timestamp =datetime.now(timezone.utc).replace(tzinfo=None)
+                embed .timestamp =datetime.now(timezone.utc)
                 await user .send (embed =embed )
             except Exception as e :
                 print (f"DM не отправлено: {e}")
@@ -1084,7 +1084,7 @@ def api_send_announcement ():
     'title':title ,
     'message':message ,
     'from':session .get ('username'),
-    'created_at':datetime.now(timezone.utc).replace(tzinfo=None).isoformat ()
+    'created_at':datetime.now(timezone.utc).isoformat ()
     })
     with open (ann_file ,'w',encoding ='utf-8')as f :
         json .dump (anns ,f ,indent =2 ,ensure_ascii =False )
@@ -1404,7 +1404,7 @@ def _warn_db_append (guild_id :str ,user_id :str ,reason :str ,moderator :str ):
         'reason':reason or 'Не указана',
         'mod':moderator or '?',
         'mod_id':'',
-        'timestamp':datetime.now(timezone.utc).replace(tzinfo=None).isoformat ()
+        'timestamp':datetime.now(timezone.utc).isoformat ()
         })
         wdb .set (int (guild_id ),str (user_id ),warns )
     except Exception as _e :
@@ -1593,7 +1593,7 @@ def api_warn ():
     warns [guild_id ][user_id ].append ({
     'reason':reason ,
     'moderator':session .get ('username'),
-    'timestamp':datetime.now(timezone.utc).replace(tzinfo=None).isoformat ()
+    'timestamp':datetime.now(timezone.utc).isoformat ()
     })
 
     _store .atomic_write_json (warns_file ,warns )
@@ -1677,7 +1677,7 @@ def api_execute_command ():
                     raise Exception ('Роль целевого пользователя выше роли бота')
                 duration =int (data .get ('duration',60 ))
                 from datetime import timedelta as _td 
-                await member .timeout (discord .utils .utcnow ()+_td (minutes =duration ),reason =data .get ('reason'))
+                await member .timeout (datetime.now(timezone.utc)+_td (minutes =duration ),reason =data .get ('reason'))
             elif command =='warn':
                 warns_file ='data/warnings.json'
                 os .makedirs ('data',exist_ok =True )
@@ -1694,7 +1694,7 @@ def api_execute_command ():
                 warns [gid_str ][uid_str ].append ({
                 'reason':data .get ('reason','Предупреждение через веб-панель'),
                 'moderator':session .get ('username'),
-                'timestamp':datetime.now(timezone.utc).replace(tzinfo=None).isoformat ()
+                'timestamp':datetime.now(timezone.utc).isoformat ()
                 })
                 with open (warns_file ,'w',encoding ='utf-8')as wf :
                     json .dump (warns ,wf ,ensure_ascii =False )
@@ -1742,7 +1742,7 @@ def api_execute_command ():
                 'role':[str (r .id )for r in member .roles [1 :]],
                 'reason':data .get ('reason','Jail через веб-панель'),
                 'mod':session .get ('username'),
-                'timestamp':datetime.now(timezone.utc).replace(tzinfo=None).isoformat ()
+                'timestamp':datetime.now(timezone.utc).isoformat ()
                 }
                 with open (jail_data_file ,'w',encoding ='utf-8')as jf :
                     json .dump (jail_data ,jf ,indent =2 ,ensure_ascii =False )
@@ -2034,7 +2034,7 @@ def api_review_staff_app (app_id ):
                         embed .add_field (name =" Заметка",value =note ,inline =False )
                     embed .set_thumbnail (url =bot_instance .user .display_avatar .url )
                     embed .set_footer (text ="Aether Panel • Система заявок",icon_url =bot_instance .user .display_avatar .url )
-                    embed .timestamp =datetime.now(timezone.utc).replace(tzinfo=None)
+                    embed .timestamp =datetime.now(timezone.utc)
                 else :
                     embed =discord .Embed (
                     title =" Заявка отклонена",
@@ -2046,7 +2046,7 @@ def api_review_staff_app (app_id ):
                     embed .add_field (name =" Причина отказа",value =note if note else "Не указана",inline =False )
                     embed .set_thumbnail (url =bot_instance .user .display_avatar .url )
                     embed .set_footer (text ="Aether Panel • Система заявок",icon_url =bot_instance .user .display_avatar .url )
-                    embed .timestamp =datetime.now(timezone.utc).replace(tzinfo=None)
+                    embed .timestamp =datetime.now(timezone.utc)
                 await user .send (embed =embed )
                 dm_info ['sent']=True
             except Exception as e :
@@ -2113,7 +2113,7 @@ def _save_login_token (username ,roles ):
     existing =next ((t for t ,v in tokens .items ()if v .get ('username')==username ),None )
     if not existing :
         existing =''.join (random .choices (string .ascii_letters +string .digits ,k =48 ))
-    tokens [existing ]={'username':username ,'role':roles ,'created_at':datetime.now(timezone.utc).replace(tzinfo=None).isoformat ()}
+    tokens [existing ]={'username':username ,'role':roles ,'created_at':datetime.now(timezone.utc).isoformat ()}
     with open (tokens_file ,'w',encoding ='utf-8')as f :
         json .dump (tokens ,f ,indent =2 ,ensure_ascii =False )
     return existing 
@@ -2259,7 +2259,7 @@ def api_public_apply ():
         if app_data .get ('user_id')==uid and app_data .get ('status')=='pending':
             return jsonify ({'error':'У вас уже есть заявка на рассмотрении!'}),400 
 
-    app_id =str (int (datetime.now(timezone.utc).replace(tzinfo=None).timestamp ()))
+    app_id =str (int (datetime.now(timezone.utc).timestamp ()))
     guild_id =str (data ['guild_id'])
 
     app_entry ={
@@ -2270,7 +2270,7 @@ def api_public_apply ():
     'avatar':f"https://cdn.discordapp.com/embed/avatars/{int(uid) % 6}.png",
     'guild_id':guild_id ,
     'guild_name':data .get ('guild_name',''),
-    'timestamp':datetime.now(timezone.utc).replace(tzinfo=None).isoformat (),
+    'timestamp':datetime.now(timezone.utc).isoformat (),
     'status':'pending',
     'source':'web',
     'answers':{
@@ -2308,7 +2308,7 @@ def api_public_apply ():
                 embed =discord .Embed (
                 title =" НОВАЯ ЗАЯВКА В ПЕРСОНАЛ • Web",
                 color =0xC8922A ,
-                timestamp =datetime.now(timezone.utc).replace(tzinfo=None)
+                timestamp =datetime.now(timezone.utc)
                 )
                 embed .add_field (name =" Пользователь",value =f"`{data['discord_name']}` (ID: `{uid}`)",inline =True )
                 embed .add_field (name =" Возраст",value =data ['yas'],inline =True )
@@ -2574,7 +2574,7 @@ def api_discord_check ():
         _login_pins [discord_id ]={'code':code ,'expires':_t .time ()+300 ,'member_info':member_info }
         async def send_pin ():
             u =await bot_instance .fetch_user (int (discord_id ))
-            embed =discord .Embed (title ='Aether — Код авторизации',color =0xc8922a ,timestamp =datetime.now(timezone.utc).replace(tzinfo=None))
+            embed =discord .Embed (title ='Aether — Код авторизации',color =0xc8922a ,timestamp =datetime.now(timezone.utc))
             embed .description =f"Здравствуйте, **{member_info['display_name']}**!\n\nВаш PIN-код для входа в панель:\n\n```fix\n{code}\n```\nДействителен в течение 5 минут."
             embed .set_footer (text ="Aether Panel")
             await u .send (embed =embed )
@@ -2611,7 +2611,7 @@ def api_discord_login ():
             members =json .load (f )
     if discord_id not in members :
         live_role =_get_role_from_discord (discord_id )
-        members [discord_id ]={'display_name':member_info ['display_name'],'name':member_info ['name'],'avatar':member_info ['avatar'],'role':live_role ,'password':'','registered_at':datetime.now(timezone.utc).replace(tzinfo=None).isoformat ()}
+        members [discord_id ]={'display_name':member_info ['display_name'],'name':member_info ['name'],'avatar':member_info ['avatar'],'role':live_role ,'password':'','registered_at':datetime.now(timezone.utc).isoformat ()}
         with open (members_file ,'w',encoding ='utf-8')as f :
             json .dump (members ,f ,indent =2 ,ensure_ascii =False )
     stored_role =members [discord_id ].get ('role','uye')

@@ -5,7 +5,7 @@ Fun Cog
 
 import discord
 from discord.ext import commands
-from datetime import datetime
+from datetime import datetime, timezone
 import random
 import aiohttp
 
@@ -19,7 +19,7 @@ def _embed(title, desc, color=discord.Color.dark_grey(), footer=None, author=Non
         title=title,
         description=desc,
         color=color,
-        timestamp=datetime.now()
+        timestamp=datetime.now(timezone.utc)
     )
     if author:
         e.set_author(name=author.display_name, icon_url=author.display_avatar.url)

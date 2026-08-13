@@ -5,6 +5,7 @@ Level Cog
 теперь карточка, топ, награды и !setlevel работают на живом хранилище.
 """
 import discord
+from datetime import datetime, timezone
 from discord.ext import commands
 
 from logger import get_logger
@@ -77,7 +78,7 @@ class LevelCog(commands.Cog):
         embed = discord.Embed(
             title=f"📊 Уровень — {member.display_name}",
             color=discord.Color.dark_grey(),
-            timestamp=discord.utils.utcnow(),
+            timestamp=datetime.now(timezone.utc),
         )
         try:
             embed.set_thumbnail(url=member.display_avatar.url)
@@ -114,7 +115,7 @@ class LevelCog(commands.Cog):
         embed = discord.Embed(
             title="🏆 Таблица лидеров по уровням",
             color=discord.Color.dark_grey(),
-            timestamp=discord.utils.utcnow(),
+            timestamp=datetime.now(timezone.utc),
         )
         if not rows:
             embed.description = ('Пока пусто — опыт начисляется за сообщения.\n'
@@ -140,7 +141,7 @@ class LevelCog(commands.Cog):
         embed = discord.Embed(
             title="🎁 Награды за уровни",
             color=discord.Color.dark_grey(),
-            timestamp=discord.utils.utcnow(),
+            timestamp=datetime.now(timezone.utc),
         )
         if not lvl_roles:
             embed.description = ('Награды не настроены.\nМодератор может задать их '
@@ -179,7 +180,7 @@ class LevelCog(commands.Cog):
             description=(f"**{member.mention}:** уровень {level}\n"
                          f"Суммарный опыт выставлен на {total:,} XP"),
             color=discord.Color.dark_grey(),
-            timestamp=discord.utils.utcnow(),
+            timestamp=datetime.now(timezone.utc),
         )
         await ctx.send(embed=embed)
 

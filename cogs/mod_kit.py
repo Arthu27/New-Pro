@@ -124,7 +124,7 @@ class ModKit(commands.Cog):
     def _card(self, title: str, desc: str, color=None) -> discord.Embed:
         e = discord.Embed(title=title, description=desc,
                           color=color if color is not None else self.GOLD,
-                          timestamp=datetime.now(timezone.utc).replace(tzinfo=None))
+                          timestamp=datetime.now(timezone.utc))
         e.set_footer(text='Aether ModKit')
         return e
 

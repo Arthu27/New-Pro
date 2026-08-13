@@ -6,7 +6,7 @@ Economy Cog
 
 import discord 
 from discord .ext import commands 
-from datetime import datetime ,timedelta 
+from datetime import datetime ,timedelta ,timezone 
 import random 
 
 from logger import get_logger 
@@ -100,7 +100,7 @@ class _EconomyExtra (commands .Cog ):
             data ['history']=[]
         data ['history'].append ({
         'label':label ,'amount':amount ,'meta':meta ,
-        'ts':datetime .now ().isoformat ()})
+        'ts':datetime .now (timezone.utc).isoformat ()})
         data ['history']=data ['history'][-50 :]
         self ._save (user_id ,data )
 

@@ -618,7 +618,7 @@ def learn_from_staff (staff_message :str ,user_question :str ,guild_id :int ):
         faqs [guild_key ].append ({
         'question':user_question ,
         'answer':staff_message ,
-        'timestamp':datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None).isoformat ()
+        'timestamp':datetime.datetime.now(datetime.timezone.utc).isoformat ()
         })
 
         # Ограничиваем 100 записьyami

@@ -2,7 +2,7 @@
 import asyncio
 import json
 import websockets
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Set
 import threading
 
@@ -82,7 +82,7 @@ class WebSocketServer:
             'ticket_id': ticket_id,
             'update_type': update_type,
             'data': data,
-            'timestamp': datetime.now().isoformat()
+            'timestamp': datetime.now(timezone.utc).isoformat()
         }
         
         # Отправить в комнату тикета
@@ -97,7 +97,7 @@ class WebSocketServer:
         message = {
             'type': 'new_ticket',
             'data': ticket_data,
-            'timestamp': datetime.now().isoformat()
+            'timestamp': datetime.now(timezone.utc).isoformat()
         }
         
         # Отправить всем администраторам
@@ -109,7 +109,7 @@ class WebSocketServer:
         message = {
             'type': 'stats_update',
             'data': stats,
-            'timestamp': datetime.now().isoformat()
+            'timestamp': datetime.now(timezone.utc).isoformat()
         }
         
         await self.broadcast_to_room('dashboard', message)
@@ -119,7 +119,7 @@ class WebSocketServer:
         message = {
             'type': 'notification',
             'data': notification,
-            'timestamp': datetime.now().isoformat()
+            'timestamp': datetime.now(timezone.utc).isoformat()
         }
         
         await self.send_to_user(user_id, message)
@@ -152,7 +152,7 @@ class WebSocketServer:
                 'type': 'connected',
                 'room_id': room_id,
                 'user_id': user_id,
-                'timestamp': datetime.now().isoformat()
+                'timestamp': datetime.now(timezone.utc).isoformat()
             }))
             
             # Ожидание сообщений от клиента
@@ -183,7 +183,7 @@ class WebSocketServer:
         if message_type == 'ping':
             await websocket.send(json.dumps({
                 'type': 'pong',
-                'timestamp': datetime.now().isoformat()
+                'timestamp': datetime.now(timezone.utc).isoformat()
             }))
         
         elif message_type == 'typing':
@@ -192,7 +192,7 @@ class WebSocketServer:
                 'type': 'typing',
                 'user_id': data.get('user_id'),
                 'is_typing': data.get('is_typing', True),
-                'timestamp': datetime.now().isoformat()
+                'timestamp': datetime.now(timezone.utc).isoformat()
             })
         
         elif message_type == 'presence':
@@ -201,7 +201,7 @@ class WebSocketServer:
                 'type': 'presence',
                 'user_id': data.get('user_id'),
                 'status': data.get('status', 'online'),
-                'timestamp': datetime.now().isoformat()
+                'timestamp': datetime.now(timezone.utc).isoformat()
             })
 
 

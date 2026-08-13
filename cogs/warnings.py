@@ -266,7 +266,7 @@ class warnings(commands.Cog):
 
         try:
             if action in ('mute', 'timeout'):
-                until = discord.utils.utcnow() + timedelta(minutes=minutes)
+                until = datetime.now(timezone.utc) + timedelta(minutes=minutes)
                 await member.timeout(until, reason=f'Авто-наказание: {warn_count} предупреждений')
                 return f'Мут {minutes} мин'
             elif action == 'kick':

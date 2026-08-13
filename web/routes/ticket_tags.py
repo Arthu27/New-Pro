@@ -107,7 +107,7 @@ def register(ctx):
         'id':str (uuid .uuid4 ())[:8 ],
         'name':name ,
         'color':color ,
-        'created_at':datetime .now ().isoformat ()
+        'created_at':datetime .now (timezone.utc).isoformat ()
         }
 
         tags .append (new_tag )

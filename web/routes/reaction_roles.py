@@ -37,7 +37,7 @@ def register(ctx):
         import asyncio ,discord 
         if not bot :return jsonify ({'error':'Бот офлайн'})
         data =request .get_json (silent =True )or {}
-        rr_id =str (int (datetime.now(timezone.utc).replace(tzinfo=None).timestamp ()))
+        rr_id =str (int (datetime.now(timezone.utc).timestamp ()))
         f =f'data/rr_{guild_id}.json'
         rrs ={}
         if os .path .exists (f ):

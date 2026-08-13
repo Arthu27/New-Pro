@@ -332,7 +332,7 @@ class AIModeration (commands .Cog ):
             return 
         try :
             if channel :
-                embed .timestamp =datetime.now(timezone.utc).replace(tzinfo=None)
+                embed .timestamp =datetime.now(timezone.utc)
                 embed .set_footer (text =f"AI Moderation · {severity}")
                 await channel .send (embed =embed )
         except (discord .Forbidden ,discord .HTTPException ) as _ex:

@@ -176,7 +176,7 @@ class CustomMenu:
         """Embed создать"""
         embed = discord.Embed(
             color=self.color,
-            timestamp=datetime.now(timezone.utc).replace(tzinfo=None) if self.show_timestamp else None
+            timestamp=datetime.now(timezone.utc) if self.show_timestamp else None
         )
         
         # Заголовок ve описание
@@ -233,7 +233,7 @@ class TicketMenu:
         
         menu.add_section("Пользователь", user.mention, inline=True)
         menu.add_section("Канал", channel.mention, inline=True)
-        menu.add_section("Создан", discord.utils.format_dt(discord.utils.utcnow(), style='R'), inline=True)
+        menu.add_section("Создан", discord.utils.format_dt(datetime.now(timezone.utc), style='R'), inline=True)
         
         menu.add_separator()
         
@@ -257,7 +257,7 @@ class TicketMenu:
         
         menu.add_section("Пользователь", user.mention, inline=True)
         menu.add_section("Закрыл", closed_by.mention, inline=True)
-        menu.add_section("Время", discord.utils.format_dt(discord.utils.utcnow(), style='R'), inline=True)
+        menu.add_section("Время", discord.utils.format_dt(datetime.now(timezone.utc), style='R'), inline=True)
         
         menu.add_separator()
         

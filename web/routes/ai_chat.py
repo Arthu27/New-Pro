@@ -807,7 +807,7 @@ def register(ctx):
                         m =resolve_member (parts [1 ])
                         if m and m .id !=_owner_id :
                             mins =int (parts [2 ])if parts [2 ].isdigit ()else 10 
-                            until =_discord .utils .utcnow ()+_dt .timedelta (minutes =mins )
+                            until =_dt.datetime.now(_dt.timezone.utc)+_dt .timedelta (minutes =mins )
                             _run_async (m .timeout (until ))
                             return f'✅ {m.display_name} — мут на {mins} мин'
                     elif tip =='СООБЩЕНИЕ'and len (parts )>2 :
@@ -939,7 +939,7 @@ def register(ctx):
                             wd .setdefault (gid ,{}).setdefault (uid ,[])
                             reason =':'.join (parts [2 :])or 'Panel AI'
                             import datetime as _dt2 
-                            wd [gid ][uid ].append ({'reason':reason ,'mod':'Arthur','timestamp':_dt2 .datetime.now(timezone.utc).replace(tzinfo=None).isoformat ()})
+                            wd [gid ][uid ].append ({'reason':reason ,'mod':'Arthur','timestamp':_dt2 .datetime.now(timezone.utc).isoformat ()})
                             with open (wf ,'w',encoding ='utf-8')as fp :_j2 .dump (wd ,fp ,ensure_ascii =False ,indent =2 )
                             return f'✅ {m.display_name} предупреждение: {reason}'
                     elif tip =='UYARI_TEMIZLE'and len (parts )>1 :

@@ -7,9 +7,7 @@ from collections import defaultdict
 import hashlib
 import json
 import os
-from datetime import datetime
-
-
+from datetime import datetime, timezone
 # ── PERMISSION VALIDATION ───────────────────────────────────────────────────
 def require_permission(permission):
     """Декоратор для проверки прав доступа"""
@@ -123,7 +121,7 @@ class AuditLogger:
     def лог(self, user_id, username, action, details=None, ip_address=None):
         """Записать действие в аудит лог"""
         log_entry = {
-            'timestamp': datetime.now().isoformat(),
+            'timestamp': datetime.now(timezone.utc).isoformat(),
             'user_id': user_id,
             'username': username,
             'action': action,

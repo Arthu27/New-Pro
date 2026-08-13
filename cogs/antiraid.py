@@ -19,6 +19,7 @@ _log = get_logger("antiraid")
 
 import discord
 from discord.ext import commands, tasks
+from datetime import datetime, timezone
 from discord import app_commands
 from collections import defaultdict
 import json
@@ -172,7 +173,7 @@ class AntiRaid(commands.Cog):
             return
 
         embed = discord.Embed(title=title, description=description, color=color,
-                              timestamp=discord.utils.utcnow())
+                              timestamp=datetime.now(timezone.utc))
         embed.set_footer(text="Aether AntiRaid — Режим наблюдения (без авто-действий)")
         for name, value in (fields or []):
             embed.add_field(name=name, value=value, inline=False)
@@ -202,7 +203,7 @@ class AntiRaid(commands.Cog):
         ]
         self.join_tracker[guild_id].append((now, member.id))
 
-        account_age_days = (discord.utils.utcnow() - member.created_at).days
+        account_age_days = (datetime.now(timezone.utc) - member.created_at).days
         min_age = int(cfg.data.get("min_age", 5) or 0)
         if cfg.data.get("age_filter") and min_age > 0 and account_age_days < min_age:
             await self._send_alert(
@@ -221,7 +222,7 @@ class AntiRaid(commands.Cog):
                 "user_id": str(member.id),
                 "user_tag": str(member),
                 "account_age_days": account_age_days,
-                "timestamp": discord.utils.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             })
 
         if cfg.data.get("join_raid"):
@@ -247,7 +248,7 @@ class AntiRaid(commands.Cog):
                     "window": window,
                     "threshold": threshold,
                     "last_user": str(member),
-                    "timestamp": discord.utils.utcnow().isoformat(),
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
                 })
 
     @commands.Cog.listener()
@@ -275,7 +276,7 @@ class AntiRaid(commands.Cog):
             "type": "bot_join",
             "user_id": str(after.id),
             "user_tag": str(after),
-            "timestamp": discord.utils.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         })
 
     @commands.Cog.listener()
@@ -305,7 +306,7 @@ class AntiRaid(commands.Cog):
             "type": "bulk_delete",
             "channel_id": str(ch.id),
             "count": len(messages),
-            "timestamp": discord.utils.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         })
 
     @app_commands.command(name="antiraid", description="Показать текущий статус системы анти-рейда")

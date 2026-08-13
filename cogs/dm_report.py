@@ -163,7 +163,7 @@ class DMReport(commands.Cog):
             if member and guild.me.guild_permissions.moderate_members:
                 try:
                     await member.timeout(
-                        discord.utils.utcnow() + timedelta(minutes=AUTO_TIMEOUT_MIN),
+                        datetime.now(timezone.utc) + timedelta(minutes=AUTO_TIMEOUT_MIN),
                         reason=f"[DMREPORT] {total} жалоб на DM-рекламу")
                     self._set_status(guild.id, rec['id'], 'auto', self.bot.user.id if self.bot.user else 0)
                     auto_txt = f"\n🟠 **{total} жалобы от разных людей → автоматический таймаут {AUTO_TIMEOUT_MIN} мин**"

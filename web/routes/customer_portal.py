@@ -128,8 +128,8 @@ def register(ctx):
         'description':description ,
         'status':'open',
         'message_count':1 ,
-        'created_at':datetime .now ().isoformat (),
-        'updated_at':datetime .now ().isoformat ()
+        'created_at':datetime .now (timezone.utc).isoformat (),
+        'updated_at':datetime .now (timezone.utc).isoformat ()
         }
 
         tickets .append (new_ticket )

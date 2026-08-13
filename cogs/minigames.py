@@ -1,5 +1,6 @@
 """Мини-игры"""
 import discord
+from datetime import datetime, timezone
 from discord.ext import commands
 from discord import app_commands
 import random
@@ -21,7 +22,7 @@ class MiniGames(commands.Cog):
     async def coin_flip(self, interaction: discord.Interaction, выбор: str = None):
         """Подбросить монету — угадаешь, победишь"""
         result = random.choice(['Орёл', 'Решка'])
-        e = discord.Embed(title="🪙 Монетка", color=0xF1C40F, timestamp=discord.utils.utcnow())
+        e = discord.Embed(title="🪙 Монетка", color=0xF1C40F, timestamp=datetime.now(timezone.utc))
         e.description = (
             f"```ansi\n\u001b[1;33m МОНЕТА ПОДБРОШЕНА\u001b[0m\n```\n{_divider()}\n\n"
             f"# {'🟡 Орёл' if result == 'Орёл' else '🟠 Решка'}\n\n{_divider()}"
@@ -43,7 +44,7 @@ class MiniGames(commands.Cog):
         """Бросить кость — от 1 до 5 костей"""
         n = max(1, min(5, количество))
         results = [random.randint(1, 6) for _ in range(n)]
-        e = discord.Embed(title="🎲 Бросок кости!", color=0x9B59B6, timestamp=discord.utils.utcnow())
+        e = discord.Embed(title="🎲 Бросок кости!", color=0x9B59B6, timestamp=datetime.now(timezone.utc))
         e.description = (
             f"```ansi\n\u001b[1;35m РЕЗУЛЬТАТ КОСТИ\u001b[0m\n```\n{_divider()}\n\n"
             f"# {' '.join(_DICE[r] for r in results)}\n\n{_divider()}"
@@ -73,7 +74,7 @@ class MiniGames(commands.Cog):
             result, color, badge, ansi = 'Победа!', 0x2ECC71, "ПОБЕДА", "\u001b[1;32m"
         else:
             result, color, badge, ansi = 'Поражение!', 0xE74C3C, "ПОРАЖЕНИЕ", "\u001b[1;31m"
-        e = discord.Embed(title="🪨📄✂️ Камень-ножницы-бумага", color=color, timestamp=discord.utils.utcnow())
+        e = discord.Embed(title="🪨📄✂️ Камень-ножницы-бумага", color=color, timestamp=datetime.now(timezone.utc))
         e.description = f"```ansi\n{ansi}{badge}\u001b[0m\n```\n{_divider()}"
         e.add_field(name="Твой выбор", value=f"# {emojis[выбор]} {names[выбор]}", inline=True)
         e.add_field(name="Выбор бота", value=f"# {emojis[bot_choice]} {names[bot_choice]}", inline=True)
@@ -90,7 +91,7 @@ class MiniGames(commands.Cog):
             return
         number = random.randint(1, 100)
         self.active_guesses[gid] = {'number': number, 'attempts': 0, 'started_by': interaction.user.id}
-        e = discord.Embed(title="🔢 Игра «Угадай число» началась!", color=0x3498DB, timestamp=discord.utils.utcnow())
+        e = discord.Embed(title="🔢 Игра «Угадай число» началась!", color=0x3498DB, timestamp=datetime.now(timezone.utc))
         e.description = (
             f"```ansi\n\u001b[1;34m ИГРА НАЧАЛАСЬ\u001b[0m\n```\n{_divider()}\n\n"
             "Я загадал число от 1 до 100!\n"
@@ -116,7 +117,7 @@ class MiniGames(commands.Cog):
         number = game['number']
         if число == number:
             del self.active_guesses[gid]
-            e = discord.Embed(title="🎉 ВЕРНАЯ ДОГАДКА!", color=0x2ECC71, timestamp=discord.utils.utcnow())
+            e = discord.Embed(title="🎉 ВЕРНАЯ ДОГАДКА!", color=0x2ECC71, timestamp=datetime.now(timezone.utc))
             e.description = (
                 f"```ansi\n\u001b[1;32m ПОБЕДА!\u001b[0m\n```\n{_divider()}\n\n"
                 f"{interaction.user.mention} угадал число! 🎯\n\n{_divider()}"
@@ -124,13 +125,13 @@ class MiniGames(commands.Cog):
             e.add_field(name="Число", value=f"```{number}```", inline=True)
             e.add_field(name="Попытки", value=f"```{game['attempts']} попыток```", inline=True)
         elif число < number:
-            e = discord.Embed(title="📈 Больше!", color=0xF39C12, timestamp=discord.utils.utcnow())
+            e = discord.Embed(title="📈 Больше!", color=0xF39C12, timestamp=datetime.now(timezone.utc))
             e.description = f"```ansi\n\u001b[1;33m БОЛЬШЕ\u001b[0m\n```\n{_divider()}"
             e.add_field(name="Твоя догадка", value=f"```{число}```", inline=True)
             e.add_field(name="Попытка", value=f"```{game['attempts']}. попытка```", inline=True)
             e.add_field(name="Подсказка", value="*Число больше, иди вверх!*", inline=False)
         else:
-            e = discord.Embed(title="📉 Меньше!", color=0xF39C12, timestamp=discord.utils.utcnow())
+            e = discord.Embed(title="📉 Меньше!", color=0xF39C12, timestamp=datetime.now(timezone.utc))
             e.description = f"```ansi\n\u001b[1;33m МЕНЬШЕ\u001b[0m\n```\n{_divider()}"
             e.add_field(name="Твоя догадка", value=f"```{число}```", inline=True)
             e.add_field(name="Попытка", value=f"```{game['attempts']}. попытка```", inline=True)
@@ -157,7 +158,7 @@ class MiniGames(commands.Cog):
             ('Судя по всему, нет.', 0xE74C3C),
         ]
         answer, color = random.choice(responses)
-        e = discord.Embed(title="🎱 Магический шар", color=color, timestamp=discord.utils.utcnow())
+        e = discord.Embed(title="🎱 Магический шар", color=color, timestamp=datetime.now(timezone.utc))
         e.description = f"```ansi\n\u001b[1;35m ОТВЕТ ПОЯВЛЯЕТСЯ...\u001b[0m\n```\n{_divider()}"
         e.add_field(name="Вопрос", value=f"*{вопрос}*", inline=False)
         e.add_field(name="Ответ", value=f"```{answer}```", inline=False)
@@ -174,7 +175,7 @@ class MiniGames(commands.Cog):
             await interaction.response.send_message('Подходящих участников не найдено!', ephemeral=True)
             return
         выбранный = random.choice(members)
-        e = discord.Embed(title="🎯 Случайный участник выбран!", color=0xDC143C, timestamp=discord.utils.utcnow())
+        e = discord.Embed(title="🎯 Случайный участник выбран!", color=0xDC143C, timestamp=datetime.now(timezone.utc))
         e.description = (
             f"```ansi\n\u001b[1;31m ВЫБОР СДЕЛАН\u001b[0m\n```\n{_divider()}\n\n"
             f"Жребий брошен и победитель определён! 🎉\n\n{_divider()}"

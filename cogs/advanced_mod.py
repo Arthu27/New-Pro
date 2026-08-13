@@ -96,7 +96,7 @@ class AdvancedMod (commands .Cog ):
         e =discord .Embed (
         title ="👁 Извещение из списка наблюдения",
         color =0xF39C12 ,
-        timestamp =datetime.now(timezone.utc).replace(tzinfo=None)
+        timestamp =datetime.now(timezone.utc)
         )
         e .set_author (name =message .author .display_name ,icon_url =message .author .display_avatar .url )
         e .add_field (name ="Пользователь",value =f"{message.author.mention}\n`{message.author.id}`",inline =True )
@@ -122,7 +122,7 @@ class AdvancedMod (commands .Cog ):
         self .data ["case"][guild_id ].append ({
         "id":case_id ,"user_id":user_id ,"mod_id":mod_id ,
         "action":action ,"reason":reason ,
-        "timestamp":datetime.now(timezone.utc).replace(tzinfo=None).isoformat ()
+        "timestamp":datetime.now(timezone.utc).isoformat ()
         })
         self .save_data ()
         return case_id 
@@ -138,11 +138,11 @@ class AdvancedMod (commands .Cog ):
             self .data ["notes"][guild_id ][user_id ]=[]
         self .data ["notes"][guild_id ][user_id ].append ({
         "note":note ,"mod":str (interaction .user ),
-        "timestamp":datetime.now(timezone.utc).replace(tzinfo=None).isoformat ()
+        "timestamp":datetime.now(timezone.utc).isoformat ()
         })
         self .save_data ()
 
-        e =discord .Embed (title ="📝 Заметка добавлена",color =0xF1C40F ,timestamp =datetime.now(timezone.utc).replace(tzinfo=None))
+        e =discord .Embed (title ="📝 Заметка добавлена",color =0xF1C40F ,timestamp =datetime.now(timezone.utc))
         e .description =(
         f"```ansi\n\u001b[1;33m ЗАМЕТКА СОХРАНЕНА\u001b[0m\n```\n{_divider()}"
         )
@@ -168,7 +168,7 @@ class AdvancedMod (commands .Cog ):
             )
             return 
 
-        e =discord .Embed (title =f" {user.display_name} — заметки",color =0xF1C40F ,timestamp =datetime.now(timezone.utc).replace(tzinfo=None))
+        e =discord .Embed (title =f" {user.display_name} — заметки",color =0xF1C40F ,timestamp =datetime.now(timezone.utc))
         e .description =f"```ansi\n\u001b[1;33m ЗАМЕТКИ\u001b[0m\n```\n{_divider()}"
         e .set_thumbnail (url =user .display_avatar .url )
         for i ,n in enumerate (notes ,1 ):
@@ -191,7 +191,7 @@ class AdvancedMod (commands .Cog ):
         if user_id in self .data ["watchlist"][guild_id ]:
             del self .data ["watchlist"][guild_id ][user_id ]
             self .save_data ()
-            e =discord .Embed (title ="👁 Удалён из списка наблюдения",color =0x2ECC71 ,timestamp =datetime.now(timezone.utc).replace(tzinfo=None))
+            e =discord .Embed (title ="👁 Удалён из списка наблюдения",color =0x2ECC71 ,timestamp =datetime.now(timezone.utc))
             e .description =f"```ansi\n\u001b[1;32m УДАЛЁН ИЗ СПИСКА\u001b[0m\n```\n{_divider()}"
             e .set_thumbnail (url =user .display_avatar .url )
             e .add_field (name =" Пользователь",value =f"{user.mention}\n`{user.id}`",inline =True )
@@ -201,10 +201,10 @@ class AdvancedMod (commands .Cog ):
             self .data ["watchlist"][guild_id ][user_id ]={
             "reason":reason or "Не указана",
             "added_by":str (interaction .user ),
-            "timestamp":datetime.now(timezone.utc).replace(tzinfo=None).isoformat ()
+            "timestamp":datetime.now(timezone.utc).isoformat ()
             }
             self .save_data ()
-            e =discord .Embed (title =" Добавлено в список наблюдения",color =0xF39C12 ,timestamp =datetime.now(timezone.utc).replace(tzinfo=None))
+            e =discord .Embed (title =" Добавлено в список наблюдения",color =0xF39C12 ,timestamp =datetime.now(timezone.utc))
             e .description =(
             f"```ansi\n\u001b[1;33m ВНЕСЕНО В СПИСОК НАБЛЮДЕНИЯ\u001b[0m\n```\n{_divider()}\n\n"
             f"{user.mention} теперь в списке наблюдения. Действия будут отслеживаться.\n\n{_divider()}"
@@ -233,7 +233,7 @@ class AdvancedMod (commands .Cog ):
 
         import time as _t
         now =_t .time ()
-        e =discord .Embed (title ="👁 Список наблюдения",color =0xF39C12 ,timestamp =datetime.now(timezone.utc).replace(tzinfo=None))
+        e =discord .Embed (title ="👁 Список наблюдения",color =0xF39C12 ,timestamp =datetime.now(timezone.utc))
         e .description =(
         f"```ansi\n\u001b[1;33m ПОЛЬЗОВАТЕЛИ ПОД НАБЛЮДЕНИЕМ\u001b[0m\n```\n{_divider()}"
         )
@@ -275,7 +275,7 @@ class AdvancedMod (commands .Cog ):
             )
             return 
 
-        e =discord .Embed (title ="🔨 Список банов",color =0xE74C3C ,timestamp =datetime.now(timezone.utc).replace(tzinfo=None))
+        e =discord .Embed (title ="🔨 Список банов",color =0xE74C3C ,timestamp =datetime.now(timezone.utc))
         e .description =(
         f"```ansi\n\u001b[1;31m ЗАБАНЕННЫЕ ПОЛЬЗОВАТЕЛИ\u001b[0m\n```\n{_divider()}"
         )
@@ -309,7 +309,7 @@ class AdvancedMod (commands .Cog ):
                         count +=1 
                     except Exception as _ex:
                         _log.debug("massrole(): подавлено: %s", _ex)
-            e =discord .Embed (title ="✅ Роли выданы массово",color =0x2ECC71 ,timestamp =datetime.now(timezone.utc).replace(tzinfo=None))
+            e =discord .Embed (title ="✅ Роли выданы массово",color =0x2ECC71 ,timestamp =datetime.now(timezone.utc))
             e .description =f"```ansi\n\u001b[1;32m МАССОВАЯ ВЫДАЧА РОЛИ\u001b[0m\n```\n{_divider()}"
             e .add_field (name ="🎭 Роль",value =role .mention ,inline =True )
             e .add_field (name ="👥 Затронуто",value =f"```{count} человек```",inline =True )
@@ -321,7 +321,7 @@ class AdvancedMod (commands .Cog ):
                         count +=1 
                     except Exception as _ex:
                         _log.debug("massrole(): подавлено: %s", _ex)
-            e =discord .Embed (title ="✅ Роли массово сняты",color =0xE74C3C ,timestamp =datetime.now(timezone.utc).replace(tzinfo=None))
+            e =discord .Embed (title ="✅ Роли массово сняты",color =0xE74C3C ,timestamp =datetime.now(timezone.utc))
             e .description =f"```ansi\n\u001b[1;31m МАССОВОЕ СНЯТИЕ РОЛИ\u001b[0m\n```\n{_divider()}"
             e .add_field (name ="🎭 Роль",value =role .mention ,inline =True )
             e .add_field (name ="👥 Затронуто",value =f"```{count} человек```",inline =True )

@@ -117,7 +117,7 @@ class AutoCloseService:
                     "Если ваша проблема не решена, создайте новый тикет."
                 ),
                 color=0xF39C12,
-                timestamp=datetime.now(timezone.utc).replace(tzinfo=None)
+                timestamp=datetime.now(timezone.utc)
             )
             
             await channel.send(embed=embed)
@@ -142,7 +142,7 @@ class AutoCloseService:
                             "Если проблема не решена, создайте новый тикет."
                         ),
                         color=0xF39C12,
-                        timestamp=datetime.now(timezone.utc).replace(tzinfo=None)
+                        timestamp=datetime.now(timezone.utc)
                     )
                     await owner.send(embed=dm_embed)
                 except Exception as e:
@@ -166,7 +166,7 @@ class AutoCloseService:
                     title=" Тикет закрыт автоматически (неактивность)",
                     description=f"**Канал:** {channel.name}\n**Сообщений:** {len(messages)}",
                     color=0xF39C12,
-                    timestamp=datetime.now(timezone.utc).replace(tzinfo=None)
+                    timestamp=datetime.now(timezone.utc)
                 )
                 file = discord.File(
                     fp=io.StringIO(transcript),

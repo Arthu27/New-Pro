@@ -136,5 +136,67 @@ delta = abs((datetime.datetime.now(UTC)
              - datetime.datetime.fromisoformat(w['timestamp'])).total_seconds())
 check(delta < 10, f'варн свежий по мгновению ({delta:.1f}с), без 4-часового сдвига')
 
+# ═══ 4. Вечный линт: naive-метки не возвращаются ═══════════════════════
+# Продакшн-баг: now(timezone.utc).replace(tzinfo=None) — метка «голым» UTC.
+# Браузер и <t:> Discord трактовали её как локальную → +4 часа у владельца.
+print('== линт: генерация меток только с поясом ==')
+import glob as _glob
+import re as _re
+
+_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_scan_files = (_glob.glob(os.path.join(_ROOT, 'cogs/*.py'))
+               + _glob.glob(os.path.join(_ROOT, 'web/**/*.py'), recursive=True)
+               + _glob.glob(os.path.join(_ROOT, 'services/*.py')))
+
+# Писатели меток обязаны сохранять пояс: naive-строки (UTC «голым» —
+# подача +4ч в браузере) и naive-epoch (сдвиг в <t:> тегах Discord) запрещены.
+_p_naive_str = _re.compile(r"replace\s*\(\s*tzinfo\s*=\s*None\s*\)\s*\.\s*isoformat")
+_p_naive_epoch = _re.compile(r"replace\s*\(\s*tzinfo\s*=\s*None\s*\)\s*\.\s*timestamp")
+hits = []
+hits_e = []
+for f in _scan_files:
+    src = open(f, encoding='utf-8').read()
+    if _p_naive_str.search(src):
+        hits.append(os.path.basename(f))
+    if _p_naive_epoch.search(src):
+        hits_e.append(os.path.basename(f))
+check(not hits, f'все метки-строки с поясом ({hits[:3] or "чисто"})')
+check(not hits_e, f'все epoch из .timestamp() настоящие ({hits_e[:3] or "чисто"})')
+
+# «локально-наивные» метки не улетают в браузер (кулдаун economy и A/B —
+# внутренние самосогласованные, им можно). _now() — aware-хелпер mod_plus, ок.
+_p_naive_local = _re.compile(r"datetime\s*\.\s*now\s*\(\s*\)\s*\.\s*isoformat")
+hits2 = []
+for f in _glob.glob(os.path.join(_ROOT, 'cogs/*.py')) \
+         + _glob.glob(os.path.join(_ROOT, 'web/**/*.py'), recursive=True):
+    if 'ab_testing' in f:
+        continue
+    for _ln in open(f, encoding='utf-8'):
+        if _p_naive_local.search(_ln) and 'beg_last' not in _ln:
+            hits2.append(f'{os.path.basename(f)}')
+            break
+check(not hits2, f'ни одного локально-naive isoformat в браузерных данных ({hits2[:3] or "чисто"})')
+
+# utcnow() запрещён: возвращает naive-UTC → ломал возраст аккаунтов
+# (naive − aware = TypeError, анти-рейд фильтр молча умирал) и слал +4ч метки.
+# members.py: день/месяц дня рождения считаются в локали сервера (у владельца
+# сервер и живёт в его поясе) — тот utcnow() осознанно оставлен.
+hits3 = []
+for f in _scan_files:
+    if 'routes/members.py' in f.replace('\\', '/'):
+        continue
+    if _re.search(r"\butcnow\s*\(", open(f, encoding='utf-8').read()):
+        hits3.append(os.path.basename(f))
+check(not hits3, f'ни одного utcnow() в проекте ({hits3[:3] or "чисто"})')
+
+# epoch для <t:> Discord-тегов обязан быть настоящим (±2с к time.time())
+import time as _time
+_epoch = int(datetime.datetime.now(UTC).timestamp())
+check(abs(_epoch - _time.time()) < 2, 'aware-epoch == настоящее время (для <t:> тегов)')
+_naive_epoch = int(datetime.datetime.now(UTC).replace(tzinfo=None).timestamp())
+_skew = _naive_epoch - _epoch
+_local_off = -_time.timezone if _time.daylight == 0 else -_time.altzone
+check(_skew in (0, _local_off), f'контроль линта: naive-epoch даёт сдвиг пояса ({_skew}с)')
+
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(0 if FAIL == 0 else 1)

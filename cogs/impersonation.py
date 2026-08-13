@@ -419,7 +419,7 @@ class AntiFake(commands.Cog):
         punished = ""
         if cfg.get('strike_timeout') and total >= STRIKE_LIMIT:
             try:
-                await member.timeout(discord.utils.utcnow() + timedelta(minutes=60),
+                await member.timeout(datetime.now(timezone.utc) + timedelta(minutes=60),
                                      reason="[AntiFake] замаскированная реклама (3 страйка)")
                 punished = " · получен таймаут 60 мин"
             except Exception:

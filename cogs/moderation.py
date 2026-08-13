@@ -248,7 +248,7 @@ class Moderation (commands .Cog ):
                 return 
             sure =minutes if minutes is not None else 5 
             try :
-                until =discord .utils .utcnow ()+timedelta (minutes =sure )
+                until =datetime.now(timezone.utc)+timedelta (minutes =sure )
                 dm =mod_dm_embed ("timeout",guild ,interaction .user ,reason ,
                 extra_fields =[("Длительность",f"**{sure} мин.**",True )])
                 await self .send_dm (user ,dm )
@@ -562,7 +562,7 @@ class Moderation (commands .Cog ):
                         minutes =max (1 ,int (amount )if str (amount ).strip () else 5 )
                     except (TypeError ,ValueError ):
                         minutes =5
-                    until =discord .utils .utcnow ()+timedelta (minutes =minutes )
+                    until =datetime.now(timezone.utc)+timedelta (minutes =minutes )
                     await user .timeout (until ,reason =reason )
                     if action =="mute_chat":
                         msg =f"🔇 чат закрыт на {minutes} мин"

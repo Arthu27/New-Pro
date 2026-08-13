@@ -80,7 +80,7 @@ class CustomEmbeds(commands.Cog):
                 'thumbnail_url': thumbnail_url or '',
                 'channel_id': str(target_channel.id),
                 'author_id': str(interaction.user.id),
-                'timestamp': datetime.now().isoformat()
+                'timestamp': datetime.now(timezone.utc).isoformat()
             }
             
             embeds_data = self._load(interaction.guild_id)
@@ -118,7 +118,7 @@ class CustomEmbeds(commands.Cog):
         embed = discord.Embed(
             title=" Recent Embeds",
             color=0x7289DA,
-            timestamp=datetime.now(timezone.utc).replace(tzinfo=None)
+            timestamp=datetime.now(timezone.utc)
         )
         
         for idx, item in enumerate(recent, 1):

@@ -323,7 +323,7 @@ class ModCase(commands.Cog):
 
         if not _PIL_OK:
             e = discord.Embed(title=f"🧾 {d['user_name']} — досье", color=0xD4AF37,
-                              timestamp=datetime.now(timezone.utc).replace(tzinfo=None))
+                              timestamp=datetime.now(timezone.utc))
             e.description = (f"Риск: **{d['score']}/100** ({d['score_text']})\n"
                              f"Варны **{d['warns_n']}** · наказания **{d['cases_n']}** · "
                              f"заметки **{d['notes_n']}** · демки **{d['proofs_n']}**\n"

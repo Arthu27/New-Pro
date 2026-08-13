@@ -42,10 +42,10 @@ def register(ctx):
         tasks ={}
         if os .path .exists (f ):
             with open (f )as fp :tasks =json .load (fp )
-        task_id =str (int (datetime.now(timezone.utc).replace(tzinfo=None).timestamp ()))
+        task_id =str (int (datetime.now(timezone.utc).timestamp ()))
         tasks [task_id ]={'id':task_id ,'title':title ,'assigned_to':data .get ('assigned_to',''),
         'priority':data .get ('priority','medium'),'status':'pending',
-        'created_by':session .get ('username'),'created_at':datetime.now(timezone.utc).replace(tzinfo=None).isoformat ()}
+        'created_by':session .get ('username'),'created_at':datetime.now(timezone.utc).isoformat ()}
         with open (f ,'w')as fp :json .dump (tasks ,fp ,indent =2 ,ensure_ascii =False )
         return jsonify ({'success':True })
 

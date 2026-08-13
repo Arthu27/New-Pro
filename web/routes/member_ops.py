@@ -70,8 +70,8 @@ def register(ctx):
                         avatar =str (m .display_avatar .url )
                         break 
             data [member_id ]={'name':name ,'avatar':avatar ,'notes':[]}
-        note ={'id':str (int (datetime.now(timezone.utc).replace(tzinfo=None).timestamp ())),'text':request .get_json (silent =True ).get ('text',''),
-        'author':session .get ('username'),'created_at':datetime.now(timezone.utc).replace(tzinfo=None).isoformat ()}
+        note ={'id':str (int (datetime.now(timezone.utc).timestamp ())),'text':request .get_json (silent =True ).get ('text',''),
+        'author':session .get ('username'),'created_at':datetime.now(timezone.utc).isoformat ()}
         data [member_id ]['notes'].append (note )
         with open (f ,'w',encoding ='utf-8')as fp :json .dump (data ,fp ,indent =2 ,ensure_ascii =False )
         return jsonify ({'success':True })
@@ -178,7 +178,7 @@ def register(ctx):
             duration =int (data .get ('duration',60 ))
             for member in role .members :
                 try :
-                    await (member .timeout (discord .utils .utcnow ()+timedelta (minutes =duration ),reason ='Bulk mute'))
+                    await (member .timeout (datetime.now(timezone.utc)+timedelta (minutes =duration ),reason ='Bulk mute'))
                     result ['count']+=1 
                 except Exception as _ex:
                     _log.debug("do(): подавлено: %s", _ex)

@@ -74,7 +74,7 @@ class InviteTracker (commands .Cog ):
         'user_id':str (member .id ),'user_name':member .display_name ,
         'inviter_id':str (inviter .id )if inviter else None ,
         'inviter':inviter .display_name if inviter else 'Неизвестно',
-        'code':code ,'joined_at':datetime.now(timezone.utc).replace(tzinfo=None).isoformat ()
+        'code':code ,'joined_at':datetime.now(timezone.utc).isoformat ()
         })
         with open (f ,'w',encoding ='utf-8')as fp :
             json .dump (joins [-500 :],fp ,indent =2 ,ensure_ascii =False )
@@ -90,7 +90,7 @@ class InviteTracker (commands .Cog ):
                 leaves =json .load (fp )
         leaves .append ({
         'user_id':str (member .id ),'user_name':member .display_name ,
-        'left_at':datetime.now(timezone.utc).replace(tzinfo=None).isoformat ()
+        'left_at':datetime.now(timezone.utc).isoformat ()
         })
         with open (f ,'w',encoding ='utf-8')as fp :
             json .dump (leaves [-500 :],fp ,indent =2 ,ensure_ascii =False )
@@ -121,7 +121,7 @@ class InviteTracker (commands .Cog ):
         info =counts .get (uid ,{'total':0 })
         total =info .get ('total',0 )
 
-        e =discord .Embed (title =" Статистика приглашений",color =0x3498DB ,timestamp =datetime.now(timezone.utc).replace(tzinfo=None))
+        e =discord .Embed (title =" Статистика приглашений",color =0x3498DB ,timestamp =datetime.now(timezone.utc))
         e .description =(
         f"```ansi\n\u001b[1;34m DAVET RAPORU\u001b[0m\n```\n{_divider()}"
         )
@@ -151,7 +151,7 @@ class InviteTracker (commands .Cog ):
             counts =json .load (fp )
         sorted_counts =sorted (counts .items (),key =lambda x :x [1 ].get ('total',0 ),reverse =True )[:10 ]
 
-        e =discord .Embed (title =" Рейтинг приглашений",color =0x3498DB ,timestamp =datetime.now(timezone.utc).replace(tzinfo=None))
+        e =discord .Embed (title =" Рейтинг приглашений",color =0x3498DB ,timestamp =datetime.now(timezone.utc))
         e .description =(
         f"```ansi\n\u001b[1;34m ЛУЧШИЕ ПРИГЛАШАЮЩИЕ\u001b[0m\n```\n{_divider()}"
         )

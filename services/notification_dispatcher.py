@@ -131,7 +131,7 @@ def _record_history(event, title, body, channels, link=''):
             'body': body,
             'link': link,
             'channels': channels,
-            'created_at': datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
+            'created_at': datetime.now(timezone.utc).isoformat(),
         }, limit=200)
 
 
@@ -143,7 +143,7 @@ def _broadcast_web(title, body, icon, event='', link=''):
         'action': f'{icon} {title}',
         'detail': body,
         'ip': '',
-        'timestamp': datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
+        'timestamp': datetime.now(timezone.utc).isoformat(),
         'ts': time.time(),  # float — чтобы бейдж ловил события в ту же секунду, что и просмотр
         'broadcast': True,
         'kind': 'notify',
@@ -164,7 +164,7 @@ def _send_webhook(url, title, body, icon):
                 'description': body[:4000],
                 'color': 0xC8922A,
                 'footer': {'text': 'Aether · Уведомления панели'},
-                'timestamp': datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
+                'timestamp': datetime.now(timezone.utc).isoformat(),
             }],
         }
         r = requests.post(url, json=payload, timeout=8)

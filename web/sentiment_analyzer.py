@@ -83,7 +83,7 @@ class SentimentAnalyzer :
         'emotions':emotions ,
         'dominant_emotion':dominant ,
         'sentiment_score':score ,
-        'timestamp':datetime.now(timezone.utc).replace(tzinfo=None).isoformat (),
+        'timestamp':datetime.now(timezone.utc).isoformat (),
         }
 
         # Ekliyoruz в pano

@@ -77,7 +77,7 @@ def register(ctx):
         'category':category ,
         'description':description ,
         'message':message ,
-        'created_at':datetime .now ().isoformat (),
+        'created_at':datetime .now (timezone.utc).isoformat (),
         'usage_count':0 
         }
 

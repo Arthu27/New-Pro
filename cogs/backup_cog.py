@@ -21,7 +21,7 @@ ENV: BACKUP_ENABLED=1|0, BACKUP_HOUR=0..23, BACKUP_KEEP=1..90,
 """
 import asyncio
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 
 import discord
 from discord import app_commands
@@ -181,7 +181,7 @@ class Backup(commands.Cog):
                 f'⚠️ Бэкап не удался: `{str(e)[:300]}`', ephemeral=True)
             return
         e = discord.Embed(title='💾 Резервная копия создана', color=GREEN,
-                          timestamp=discord.utils.utcnow())
+                          timestamp=datetime.now(timezone.utc))
         e.add_field(name='Архив', value=f"`{info['name']}`", inline=False)
         e.add_field(name='Размер', value=bk.format_size(info['size']), inline=True)
         e.add_field(name='Файлов', value=str(info['files']), inline=True)
@@ -195,7 +195,7 @@ class Backup(commands.Cog):
     async def backup_list(self, interaction: discord.Interaction):
         items = await asyncio.to_thread(bk.list_backups, backup_dir())
         e = discord.Embed(title='💾 Резервные копии', color=GOLD,
-                          timestamp=discord.utils.utcnow())
+                          timestamp=datetime.now(timezone.utc))
         if not items:
             e.description = ('Архивов пока нет. Первый появится по расписанию '
                              f'(в {backup_hour():02d}:00) или после /backup now.')
@@ -215,7 +215,7 @@ class Backup(commands.Cog):
     @app_commands.checks.has_permissions(administrator=True)
     async def backup_status(self, interaction: discord.Interaction):
         e = discord.Embed(title='💾 Статус резервного копирования', color=GOLD,
-                          timestamp=discord.utils.utcnow())
+                          timestamp=datetime.now(timezone.utc))
         if backup_enabled():
             last = (self._last_run_date.isoformat()
                     if self._last_run_date else 'ещё не было')

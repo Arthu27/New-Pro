@@ -10,6 +10,7 @@ import json
 import os
 
 import discord
+from datetime import datetime, timezone
 from discord import app_commands
 from discord.ext import commands
 
@@ -60,7 +61,7 @@ class Ladder(commands.Cog):
         await interaction.response.defer()
         cfg = load_warn_config(str(interaction.guild.id))
         steps = _steps(cfg)
-        e = discord.Embed(color=0xC8922A, timestamp=discord.utils.utcnow())
+        e = discord.Embed(color=0xC8922A, timestamp=datetime.now(timezone.utc))
         if steps:
             lines = []
             for st in sorted(steps, key=lambda s: int(s.get('count', 0))):
@@ -146,7 +147,7 @@ class Ladder(commands.Cog):
             if total >= int(st.get('count', 0)):
                 matched = st
         nxt = next((s for s in steps if total < int(s.get('count', 0))), None)
-        e = discord.Embed(color=0xC8922A, timestamp=discord.utils.utcnow())
+        e = discord.Embed(color=0xC8922A, timestamp=datetime.now(timezone.utc))
         desc = (f'## 🪜 Проверка: {member.display_name}\n'
                 f'Сейчас предупреждений: **{total}**\n')
         desc += f'Активная мера: **{_fmt_step(matched)}**\n' if matched else 'Активной меры нет — участник ниже первой ступени.\n'

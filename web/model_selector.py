@@ -94,7 +94,7 @@ class ModelSelector :
         'task_type':task_type ,
         'recommended_type':recommended_type ,
         'selected_model':model_name ,
-        'timestamp':datetime.now(timezone.utc).replace(tzinfo=None).isoformat ()
+        'timestamp':datetime.now(timezone.utc).isoformat ()
         })
 
         # Ограничиваем история

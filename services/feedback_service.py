@@ -64,7 +64,7 @@ class FeedbackService:
             'rating': rating,
             'comment': comment,
             'closed_by': closed_by,
-            'timestamp': datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
+            'timestamp': datetime.now(timezone.utc).isoformat()
         }
         
         self._data['feedbacks'].append(feedback)

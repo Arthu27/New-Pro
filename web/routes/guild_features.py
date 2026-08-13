@@ -150,7 +150,7 @@ def register(ctx):
         if os .path .exists (f ):
             with open (f )as fp :items =json .load (fp )
         data =request .get_json (silent =True )or {}
-        data ['id']=str (int (datetime.now(timezone.utc).replace(tzinfo=None).timestamp ()))
+        data ['id']=str (int (datetime.now(timezone.utc).timestamp ()))
         items .append (data )
         with open (f ,'w')as fp :json .dump (items ,fp ,indent =2 )
         return jsonify ({'success':True })
@@ -193,9 +193,9 @@ def register(ctx):
         import asyncio ,discord 
         if not bot :return jsonify ({'error':'Бот офлайн'})
         data =request .get_json (silent =True )or {}
-        gw_id =str (int (datetime.now(timezone.utc).replace(tzinfo=None).timestamp ()))
+        gw_id =str (int (datetime.now(timezone.utc).timestamp ()))
         from datetime import timedelta 
-        ends_at =(datetime.now(timezone.utc).replace(tzinfo=None)+timedelta (minutes =data ['duration'])).isoformat ()
+        ends_at =(datetime.now(timezone.utc)+timedelta (minutes =data ['duration'])).isoformat ()
         f =f'data/giveaways_{guild_id}.json'
         gws ={}
         if os .path .exists (f ):
@@ -215,7 +215,7 @@ def register(ctx):
             from cogs .giveaway import GiveawayView 
             ch =bot .get_channel (int (data ['channel_id']))
             if ch :
-                end_ts =int (datetime.now(timezone.utc).replace(tzinfo=None).timestamp ())+int (data ['duration'])*60 
+                end_ts =int (datetime.now(timezone.utc).timestamp ())+int (data ['duration'])*60 
                 embed =discord .Embed (
                 title ='🎉 ✨ НАЧАЛСЯ ЗАМЕЧАТЕЛЬНЫЙ РОЗЫГРЫШ! ✨ 🎉',
                 description =(
@@ -311,12 +311,12 @@ def register(ctx):
         import asyncio ,discord 
         if not bot :return jsonify ({'error':'Бот офлайн'})
         data =request .get_json (silent =True )or {}
-        poll_id =str (int (datetime.now(timezone.utc).replace(tzinfo=None).timestamp ()))
+        poll_id =str (int (datetime.now(timezone.utc).timestamp ()))
         f =f'data/polls_{guild_id}.json'
         polls ={}
         if os .path .exists (f ):
             with open (f )as fp :polls =json .load (fp )
-        entry ={'id':poll_id ,'question':data ['question'],'created_at':datetime.now(timezone.utc).replace(tzinfo=None).isoformat (),
+        entry ={'id':poll_id ,'question':data ['question'],'created_at':datetime.now(timezone.utc).isoformat (),
         'options':[{'emoji':o ['emoji'],'text':o ['text'],'votes':0 }for o in data ['options']]}
         polls [poll_id ]=entry 
         with open (f ,'w')as fp :json .dump (polls ,fp ,indent =2 )
@@ -352,9 +352,9 @@ def register(ctx):
         cmds ={}
         if os .path .exists (f ):
             with open (f )as fp :cmds =json .load (fp )
-        cmd_id =str (int (datetime.now(timezone.utc).replace(tzinfo=None).timestamp ()))
+        cmd_id =str (int (datetime.now(timezone.utc).timestamp ()))
         cmds [cmd_id ]={'id':cmd_id ,'trigger':data ['trigger'],'response':data ['response'],
-        'type':data .get ('type','text'),'uses':0 ,'created_at':datetime.now(timezone.utc).replace(tzinfo=None).isoformat ()}
+        'type':data .get ('type','text'),'uses':0 ,'created_at':datetime.now(timezone.utc).isoformat ()}
         with open (f ,'w')as fp :json .dump (cmds ,fp ,indent =2 )
         return jsonify ({'success':True })
 
@@ -388,11 +388,11 @@ def register(ctx):
         msgs ={}
         if os .path .exists (f ):
             with open (f )as fp :msgs =json .load (fp )
-        msg_id =str (int (datetime.now(timezone.utc).replace(tzinfo=None).timestamp ()))
+        msg_id =str (int (datetime.now(timezone.utc).timestamp ()))
         msgs [msg_id ]={'id':msg_id ,'channel_id':data ['channel_id'],'channel_name':'',
         'content':data ['content'],'interval':data ['interval'],
-        'next_run':data .get ('start_time',datetime.now(timezone.utc).replace(tzinfo=None).isoformat ()),
-        'active':True ,'created_at':datetime.now(timezone.utc).replace(tzinfo=None).isoformat ()}
+        'next_run':data .get ('start_time',datetime.now(timezone.utc).isoformat ()),
+        'active':True ,'created_at':datetime.now(timezone.utc).isoformat ()}
         with open (f ,'w')as fp :json .dump (msgs ,fp ,indent =2 )
         return jsonify ({'success':True })
 

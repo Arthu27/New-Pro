@@ -10,7 +10,7 @@ from discord.ext import commands, tasks
 from discord.ui import View, Button
 import json
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import asyncio
 import random
 from typing import Dict
@@ -37,7 +37,7 @@ def _giveaway_embed(title: str, description: str) -> discord.Embed:
         title=title,
         description=description,
         color=discord.Color.dark_grey(),
-        timestamp=datetime.now()
+        timestamp=datetime.now(timezone.utc)
     )
 
 
@@ -51,7 +51,7 @@ def _win_dm_embed(prize: str, guild_name: str, guild_icon_url: str) -> discord.E
             "Свяжитесь с администрацией для получения приза."
         ),
         color=discord.Color.dark_grey(),
-        timestamp=datetime.now()
+        timestamp=datetime.now(timezone.utc)
     )
     if guild_icon_url:
         e.set_footer(text=f"{guild_name} | Розыгрыши", icon_url=guild_icon_url)
@@ -248,7 +248,7 @@ class GiveawayCog(commands.Cog):
                 "Нажмите кнопку ниже для участия."
             ),
             color=discord.Color.dark_grey(),
-            timestamp=datetime.now()
+            timestamp=datetime.now(timezone.utc)
         )
         embed.add_field(name="Участников", value="0", inline=True)
         embed.set_footer(text=f"ID: {gw_id}")

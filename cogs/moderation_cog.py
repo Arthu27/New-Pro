@@ -5,7 +5,7 @@ Moderation Cog
 
 import discord
 from discord.ext import commands
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import asyncio
 
 from logger import get_logger
@@ -25,7 +25,7 @@ class ModerationCog(commands.Cog):
             title=f"{icon} {title}".strip(),
             description=desc,
             color=color,
-            timestamp=datetime.now()
+            timestamp=datetime.now(timezone.utc)
         )
         return e
 
@@ -134,7 +134,7 @@ class ModerationCog(commands.Cog):
         try:
             dm = discord.Embed(title="🔨 Вы забанены",
                                description=f"**Сервер:** {ctx.guild.name}\n**Причина:** {reason}",
-                               color=discord.Color.red(), timestamp=datetime.now())
+                               color=discord.Color.red(), timestamp=datetime.now(timezone.utc))
             await member.send(embed=dm)
         except Exception as _ex:
             log.debug("ban(): подавлено: %s", _ex)

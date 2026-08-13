@@ -57,7 +57,7 @@ class ProactiveModeration (commands .Cog ):
         'author_id':message .author .id ,
         'author_name':str (message .author ),
         'content':message .content ,
-        'timestamp':datetime.now(timezone.utc).replace(tzinfo=None),
+        'timestamp':datetime.now(timezone.utc),
         'message_id':message .id ,
         })
 
@@ -99,7 +99,7 @@ class ProactiveModeration (commands .Cog ):
 
             e =discord .Embed (
             color =color_map .get (alert ['type'],0xFF0000 ),
-            timestamp =datetime.now(timezone.utc).replace(tzinfo=None)
+            timestamp =datetime.now(timezone.utc)
             )
 
             e .description =(
@@ -223,7 +223,7 @@ class ProactiveModeration (commands .Cog ):
 
             e =discord .Embed (
             color =color_map .get (alert_type ,0xFF0000 ),
-            timestamp =datetime.now(timezone.utc).replace(tzinfo=None)
+            timestamp =datetime.now(timezone.utc)
             )
 
             e .description =(

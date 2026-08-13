@@ -41,7 +41,7 @@ def register(ctx):
         if data .get ('settings'):
             backup ['settings']={'name':guild .name ,'description':guild .description ,
             'verification_level':str (guild .verification_level )}
-        backup_id =str (int (datetime.now(timezone.utc).replace(tzinfo=None).timestamp ()))
+        backup_id =str (int (datetime.now(timezone.utc).timestamp ()))
         backup ['id']=backup_id 
         import sys 
         backup ['size']=f"{round(sys.getsizeof(json.dumps(backup)) / 1024, 1)} KB"

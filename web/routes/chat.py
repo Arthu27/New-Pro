@@ -200,7 +200,7 @@ def register(ctx):
             log [user_id ].append ({
             'author':session .get ('username','Panel'),
             'content':content ,
-            'timestamp':_dt2 .datetime.now(timezone.utc).replace(tzinfo=None).isoformat (),
+            'timestamp':_dt2 .datetime.now(timezone.utc).isoformat (),
             'from_bot':True ,
             })
             _save_dm_log (log )

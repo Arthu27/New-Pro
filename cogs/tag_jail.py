@@ -325,7 +325,7 @@ class TagJail(commands.Cog):
         if limit <= 0 or self.is_exempt(member, cfg):
             return
         try:
-            age_days = (discord.utils.utcnow() - member.created_at).days
+            age_days = (datetime.now(timezone.utc) - member.created_at).days
         except Exception:
             return
         if age_days >= limit:
