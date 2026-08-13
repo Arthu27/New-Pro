@@ -567,6 +567,10 @@ async def load_cogs():
     # Какие модули грузить — решает cogs_policy (MOD_ONLY / DISABLED_COGS /
     # EXTRA_COGS из .env). Хелперы (__init__, embed_utils…) там же.
     from cogs_policy import select_from_environment
+    # Слеш-бюджет: Discord ограничивает глобальное меню 100 командами —
+    # после каждого модуля дерево чистится, всё лишнее живёт на префиксе.
+    import slash_budget
+    from slash_budget import apply_slash_budget
 
     try:
         import error_handler
@@ -587,6 +591,7 @@ async def load_cogs():
         log.info(f"Загрузка: {filename}")
         try:
             await asyncio.wait_for(bot.load_extension(ext), timeout=20)
+            apply_slash_budget(bot.tree)
             log.info(f"Загружено: {filename}")
         except asyncio.TimeoutError:
             log.error(f"Таймаут кога (20с): {filename}")
@@ -594,6 +599,14 @@ async def load_cogs():
             import traceback
             log.error(f"Ошибка загрузки кога ({filename}): {e}")
             traceback.print_exc()
+
+    _kept, _pruned = apply_slash_budget(bot.tree)
+    log.info(
+        f"Слеш-меню: {len(_kept)} команд (лимит Discord — 100; "
+        f"ещё {len(_pruned)} команд доступны через префикс)"
+    )
+    if len(_kept) >= slash_budget.WARN_AT:
+        log.warning(f"Слеш-меню почти полное ({len(_kept)}/100) — пора пересмотреть KEEP_SLASH")
 
 async def main():
     from web.app import app, set_bot_instance
