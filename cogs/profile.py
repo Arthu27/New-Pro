@@ -452,9 +452,9 @@ def _lb (gid ):
     except Exception:return {'messages':{},'voice_minutes':{}}
 
 def _vs (gid ):
-    p =os .path .join ('data',f'voice_stats_{gid}.json')
     try :
-        with open (p ,'r',encoding ='utf-8')as f :return json .load (f )
+        from . import voice_tracker as _vt
+        return _vt .voice_view (gid )
     except Exception:return {'users':{}}
 
 def _rank (sl ,uid ):

@@ -14,6 +14,197 @@ from db import GuildData
 
 log = get_logger("voice_tracker")
 
+import json
+import os
+
+
+# ═════════════════════ единый доступ к голосовой статистике ═════════════════
+# Данные живут в SQLite — GuildData("voice_stats") {uid: {name, avatar,
+# total_seconds, daily{YYYY-MM-DD: sec}}}. Легаси-файлы data/voice_stats_*.json
+# мёртвы с миграции на SQLite; при первом чтении они переносятся в базу
+# (_migrate_legacy_json) и переименовываются в *.json.legacy.
+
+def fmt_duration(seconds):
+    # Секунды -> короткая русская строка: '2 д 3 ч', '3 ч 5 мин',
+    # '5 мин 12 сек', '12 сек' (0 -> '0 мин').
+    try:
+        secs = max(0, int(seconds or 0))
+    except (TypeError, ValueError):
+        secs = 0
+    if secs == 0:
+        return '0 мин'
+    d, rem = divmod(secs, 86400)
+    h, rem = divmod(rem, 3600)
+    m, s = divmod(rem, 60)
+    if d:
+        return f'{d} д {h} ч'
+    if h:
+        return f'{h} ч {m} мин'
+    if m:
+        return f'{m} мин {s} сек' if s else f'{m} мин'
+    return f'{s} сек'
+
+
+def _voice_db():
+    return GuildData('voice_stats')
+
+
+_migrated_guilds = set()
+
+
+def _migrate_legacy_json(guild_id):
+    # Одноразовый перенос data/voice_stats_GID.json -> SQLite (за процесс).
+    # Если база по серверу уже непустая -- файл просто архивируется (.legacy).
+    gid = int(guild_id)
+    if gid in _migrated_guilds:
+        return
+    _migrated_guilds.add(gid)
+    path = os.path.join('data', f'voice_stats_{gid}.json')
+    if not os.path.exists(path):
+        return
+    try:
+        if _voice_db().count(gid):
+            os.replace(path, path + '.legacy')
+            log.info('voice_stats: legacy JSON %s заархивирован (база уже непустая)', path)
+            return
+        try:
+            with open(path, 'r', encoding='utf-8') as fp:
+                data = json.load(fp)
+        except Exception:
+            # битый JSON — архивируем с дороги и живём дальше на пустой базе
+            try:
+                os.replace(path, path + '.legacy')
+            except OSError as _ex:
+                log.debug('voice_stats: не удалось заархивировать %s: %s', path, _ex)
+            log.warning('voice_stats: битый legacy JSON %s заархивирован', path)
+            return
+        users = data.get('users', data) if isinstance(data, dict) else {}
+        today = str(date.today())
+        moved = 0
+        for uid, entry in users.items():
+            if isinstance(entry, dict):
+                secs = entry.get('total_seconds', entry.get('seconds', 0))
+                if not secs:
+                    try:
+                        secs = float(entry.get('minutes', 0) or 0) * 60
+                    except (TypeError, ValueError):
+                        secs = 0
+                daily = entry.get('daily', {}) if isinstance(entry.get('daily'), dict) else {}
+                rec = {
+                    'name': entry.get('name', uid),
+                    'avatar': entry.get('avatar', ''),
+                    'total_seconds': int(secs or 0),
+                    'daily': daily,
+                }
+            else:
+                try:
+                    secs = int(entry or 0)
+                except (TypeError, ValueError):
+                    secs = 0
+                rec = {'name': str(uid), 'avatar': '', 'total_seconds': secs,
+                       'daily': {today: secs} if secs else {}}
+            _voice_db().set(gid, str(uid), rec)
+            moved += 1
+        os.replace(path, path + '.legacy')
+        log.info('voice_stats: мигрировано %s записей из %s в SQLite', moved, path)
+    except Exception as _ex:
+        log.warning('voice_stats: миграция %s не удалась: %s', path, _ex)
+
+
+def voice_all(guild_id):
+    # Все записи голосовой статистики сервера: {uid: {...}} (с автомиграцией).
+    _migrate_legacy_json(guild_id)
+    try:
+        data = _voice_db().get_all(int(guild_id)) or {}
+    except Exception as _ex:
+        log.debug('voice_all(): подавлено: %s', _ex)
+        return {}
+    return {str(uid): rec for uid, rec in data.items() if isinstance(rec, dict)}
+
+
+def voice_seconds(guild_id, user_id):
+    # Суммарные секунды пользователя в голосовых каналах сервера.
+    rec = voice_all(guild_id).get(str(user_id))
+    if not rec:
+        return 0
+    try:
+        return max(0, int(rec.get('total_seconds', 0) or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
+def voice_today_seconds(guild_id, user_id=None):
+    # Секунды за сегодня: одного пользователя или сумма по серверу.
+    today = str(date.today())
+    if user_id is not None:
+        rec = voice_all(guild_id).get(str(user_id)) or {}
+        try:
+            return max(0, int((rec.get('daily') or {}).get(today, 0) or 0))
+        except (TypeError, ValueError):
+            return 0
+    total = 0
+    for rec in voice_all(guild_id).values():
+        try:
+            total += max(0, int((rec.get('daily') or {}).get(today, 0) or 0))
+        except (TypeError, ValueError) as _ex:
+            log.debug('voice_today_seconds(): подавлено: %s', _ex)
+    return total
+
+
+def voice_today_users(guild_id):
+    # Сколько разных людей сегодня побывали в голосовых каналах.
+    today = str(date.today())
+    n = 0
+    for rec in voice_all(guild_id).values():
+        try:
+            if int((rec.get('daily') or {}).get(today, 0) or 0) > 0:
+                n += 1
+        except (TypeError, ValueError) as _ex:
+            log.debug('voice_today_users(): подавлено: %s', _ex)
+    return n
+
+
+def voice_leaderboard(guild_id, limit=20):
+    # Топ по суммарному времени: [{'user_id','name','avatar','seconds','daily'}].
+    rows = []
+    for uid, rec in voice_all(guild_id).items():
+        try:
+            secs = max(0, int(rec.get('total_seconds', 0) or 0))
+        except (TypeError, ValueError):
+            secs = 0
+        if secs <= 0:
+            continue
+        rows.append({
+            'user_id': uid,
+            'name': rec.get('name') or uid,
+            'avatar': rec.get('avatar') or '',
+            'seconds': secs,
+            'daily': rec.get('daily') or {},
+        })
+    rows.sort(key=lambda r: r['seconds'], reverse=True)
+    return rows[:limit] if limit else rows
+
+
+def voice_view(guild_id):
+    # Легаси-совместимый вид {'users': {uid: {...}}} для старых читателей.
+    # Дублирует поля seconds/minutes, чтобы код, написанный под старый JSON,
+    # продолжал работать без правок полей.
+    users = {}
+    for uid, rec in voice_all(guild_id).items():
+        try:
+            secs = max(0, int(rec.get('total_seconds', 0) or 0))
+        except (TypeError, ValueError):
+            secs = 0
+        users[uid] = {
+            'name': rec.get('name') or uid,
+            'avatar': rec.get('avatar') or '',
+            'total_seconds': secs,
+            'seconds': secs,
+            'minutes': secs // 60,
+            'daily': rec.get('daily') or {},
+        }
+    return {'users': users}
+
 
 class VoiceTracker(commands.Cog):
     """Отслеживание времени в голосовых каналах"""
@@ -132,7 +323,7 @@ class VoiceTracker(commands.Cog):
         embed = discord.Embed(
             title=f"Голосовая статистика — {member.display_name}",
             color=discord.Color.dark_grey(),
-            timestamp=datetime.now()
+            timestamp=datetime.now(timezone.utc)
         )
         embed.set_thumbnail(url=member.display_avatar.url)
 
@@ -186,7 +377,7 @@ class VoiceTracker(commands.Cog):
         embed = discord.Embed(
             title="Голосовой рейтинг — Топ 10",
             color=discord.Color.dark_grey(),
-            timestamp=datetime.now()
+            timestamp=datetime.now(timezone.utc)
         )
 
         for i, (uid, data) in enumerate(sorted_users, 1):
@@ -221,7 +412,7 @@ class VoiceTracker(commands.Cog):
         embed = discord.Embed(
             title=f"Голосовые каналы — {len(voice_members)} участников",
             color=discord.Color.dark_grey(),
-            timestamp=datetime.now()
+            timestamp=datetime.now(timezone.utc)
         )
 
         # Группировка по каналам

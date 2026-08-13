@@ -70,13 +70,10 @@ def _read_activity(guild_id: int):
     except Exception as _ex:
         _log.debug("_read_activity(): подавлено: %s", _ex)
     try:
-        path = f'data/voice_stats_{guild_id}.json'
-        if os.path.exists(path):
-            with open(path, 'r', encoding='utf-8') as f:
-                users = json.load(f).get('users', {})
-            for uid, d in users.items():
-                secs = d.get('total_seconds', 0) if isinstance(d, dict) else int(d or 0)
-                out.setdefault(str(uid), [0, 0])[1] = int(secs) // 60
+        from cogs.voice_tracker import voice_view
+        for uid, d in voice_view(guild_id).get('users', {}).items():
+            secs = d.get('total_seconds', 0) if isinstance(d, dict) else int(d or 0)
+            out.setdefault(str(uid), [0, 0])[1] = int(secs) // 60
     except Exception as _ex:
         _log.debug("_read_activity(): подавлено: %s", _ex)
     return out

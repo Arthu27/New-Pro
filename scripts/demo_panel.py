@@ -86,6 +86,23 @@ def seed():
         with open(proof_path, 'w', encoding='utf-8') as f:
             json.dump({'next': 4, 'items': items}, f, ensure_ascii=False, indent=1)
 
+    # голосовая статистика (legacy JSON — при первом чтении автомигрирует
+    # в SQLite, ровно как у живых пользователей после обновления)
+    voice_path = f'data/voice_stats_{GID}.json'
+    if not os.path.exists(voice_path) and not os.path.exists(voice_path + '.legacy'):
+        from datetime import date as _date
+        _today = str(_date.today())
+        vusers = {
+            '2001': {'name': 'Meloman',  'avatar': '', 'total_seconds': 2*86400 + 3*3600 + 1200,
+                     'daily': {_today: 5400}},
+            '2002': {'name': 'Zhulik',   'avatar': '', 'total_seconds': 5*3600 + 25*60,
+                     'daily': {_today: 1500}},
+            '2003': {'name': 'Novichok', 'avatar': '', 'total_seconds': 47*60 + 13,
+                     'daily': {}},
+        }
+        with open(voice_path, 'w', encoding='utf-8') as f:
+            json.dump({'users': vusers}, f, ensure_ascii=False, indent=1)
+
 
 seed()
 

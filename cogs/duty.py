@@ -64,7 +64,7 @@ def progress_bar (current ,total ,length =14 ):
 
 def fmt_dur (sec ):
     h ,m ,s =int (sec //3600 ),int ((sec %3600 )//60 ),int (sec %60 )
-    return f"{h}s {m}d"if h else f"{m}d {s}sn"
+    return f"{h} ч {m} мин"if h else f"{m} мин {s} сек"
 
 def now_iso ():
     return datetime .now (timezone .utc ).isoformat ()
@@ -126,15 +126,10 @@ class TaskPickView (discord .ui .View ):
         "progress":{t :0 for t in tasks },
         "user_name":interaction .user .display_name 
         }
-        # Ses задача varsa baшlangыч значение сохранить
+        # Голосовая задача — запомнить стартовое значение из трекера (SQLite)
         if "ses"in tasks :
-            vf =f'data/voice_stats_{self.gid}.json'
-            voice_at_start =0 
-            if os .path .exists (vf ):
-                import json as _j 
-                with open (vf ,encoding ='utf-8')as fp :
-                    vdata =_j .load (fp )
-                voice_at_start =vdata .get ('users',{}).get (self .uid ,{}).get ('total_seconds',0 )
+            from cogs .voice_tracker import voice_seconds as _vs_secs
+            voice_at_start =_vs_secs (self .gid ,self .uid )
             data [self .gid ][self .uid ]["active"]["voice_seconds_at_start"]=voice_at_start 
         save_duty (data )
 
@@ -209,24 +204,17 @@ class DutyPanelView (discord .ui .View ):
         end_dt =datetime .now (timezone .utc )
         elapsed =(end_dt -start_dt ).total_seconds ()
 
-        # Ses длительностьni voice_tracker'dan al (более верно)
+        # Длительность в голосе — из voice_tracker (SQLite) + живая сессия сверху
         if "ses"in active .get ("tasks",[]):
-            vf =f'data/voice_stats_{gid}.json'
-            if os .path .exists (vf ):
-                import json as _j 
-                with open (vf ,encoding ='utf-8')as fp :
-                    vdata =_j .load (fp )
-                    # Задача baшlangыcыndan bu yana geчen ses длительность
-                    # voice_tracker собратьm длительность tutuyor, задача baшыndaki значение sakladыk
-                voice_at_start =active .get ("voice_seconds_at_start",0 )
-                voice_now =vdata .get ('users',{}).get (uid ,{}).get ('total_seconds',0 )
-                # Если сейчас в голосовом канале — добавить и текущую сессию
-                from cogs .voice_tracker import VoiceTracker 
+            from cogs .voice_tracker import voice_seconds as _vs_secs
+            voice_at_start =active .get ("voice_seconds_at_start",0 )
+            if voice_at_start :
+                voice_now =_vs_secs (gid ,uid )
                 vt_cog =self .bot .get_cog ('VoiceTracker')
                 if vt_cog :
                     session_start =vt_cog .sessions .get (gid ,{}).get (uid )
                     if session_start :
-                        import time as _t 
+                        import time as _t
                         voice_now +=int (_t .time ()-session_start )
                 active ["progress"]["ses"]=max (0 ,voice_now -voice_at_start )
             else :

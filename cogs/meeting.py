@@ -5,7 +5,8 @@ from discord import app_commands
 import json 
 import os 
 import datetime 
-import asyncio 
+import asyncio
+from . import voice_tracker as _vt 
 
 from logger import get_logger 
 log =get_logger ("meeting")
@@ -91,17 +92,13 @@ async def _scan_voice (guild :discord .Guild ,since :datetime .datetime )->dict 
     Примечание: voice_tracker показывает мгновенное число, собрание основано на снимке.
     Returns: {user_id: seconds}
     """
-    vs_path =f'{DATA_DIR}/voice_stats_{guild.id}.json'
     snapshot_path =f'{DATA_DIR}/meeting_snapshot_{guild.id}.json'
 
     current ={}
-    if os .path .exists (vs_path ):
+    for _uid ,_d in _vt .voice_view (guild .id ).get ('users',{}).items ():
         try :
-            with open (vs_path ,'r',encoding ='utf-8')as f :
-                vs =json .load (f )
-            for uid ,d in vs .get ('users',{}).items ():
-                secs =d .get ('total_seconds',0 )if isinstance (d ,dict )else int (d )
-                current [uid ]=secs 
+            secs =_d .get ('total_seconds',0 )if isinstance (_d ,dict )else int (_d )
+            current [_uid ]=secs
         except Exception as _ex:
             log.debug("_scan_voice(): подавлено: %s", _ex)
 
@@ -126,22 +123,17 @@ async def _scan_voice (guild :discord .Guild ,since :datetime .datetime )->dict 
 
 
 def _save_voice_snapshot (guild_id :int ):
-    """Текущий ses данные snapshot как сохранить"""
-    vs_path =f'{DATA_DIR}/voice_stats_{guild_id}.json'
+    # Текущие голосовые данные (SQLite) -> снимок на начало собрания
     snapshot_path =f'{DATA_DIR}/meeting_snapshot_{guild_id}.json'
-
-    if os .path .exists (vs_path ):
-        try :
-            with open (vs_path ,'r',encoding ='utf-8')as f :
-                vs =json .load (f )
-            snapshot ={}
-            for uid ,d in vs .get ('users',{}).items ():
-                secs =d .get ('total_seconds',0 )if isinstance (d ,dict )else int (d )
-                snapshot [uid ]=secs 
-            with open (snapshot_path ,'w',encoding ='utf-8')as f :
-                json .dump (snapshot ,f )
-        except Exception as _ex:
-            log.debug("_save_voice_snapshot(): подавлено: %s", _ex)
+    try :
+        snapshot ={}
+        for uid ,d in _vt .voice_view (guild_id ).get ('users',{}).items ():
+            secs =d .get ('total_seconds',0 )if isinstance (d ,dict )else int (d )
+            snapshot [uid ]=secs
+        with open (snapshot_path ,'w',encoding ='utf-8')as f :
+            json .dump (snapshot ,f )
+    except Exception as _ex:
+        log.debug("_save_voice_snapshot(): подавлено: %s", _ex)
 
 
 def _load_invites (guild_id :int )->dict :
@@ -232,11 +224,11 @@ async def _build_meeting_report (guild :discord .Guild ,since :datetime .datetim
         m =guild .get_member (int (uid ))
         name =m .display_name if m else f'<@{uid}>'
         bar =_bar (s ['score'],max_score )
-        h ,mn =divmod (s ['voice']//60 ,60 )
+        _vtxt =_vt .fmt_duration (s ['voice'])
         lines .append (
         f'{medals[i]} **{name}**\n'
         f' {bar} `{s["score"]:,} очков`\n'
-        f'  {s["msg"]:,}   {h}s{mn}dk   {s["inv"]}'
+        f'  {s["msg"]:,}   {_vtxt}   {s["inv"]}'
         )
     overall .description ='\n\n'.join (lines )or 'Данные нет.'
     overall .set_footer (text ='Очки: Сообщение×1 + Звук мин×2 + Приглашение×5',icon_url =guild .icon .url if guild .icon else None )
@@ -278,11 +270,11 @@ async def _build_meeting_report (guild :discord .Guild ,since :datetime .datetim
         lines =[]
         for i ,(member ,msg ,voice_secs ,inv ,score )in enumerate (top4 ):
             bar =_bar (score ,max_s )
-            h ,mn =divmod (voice_secs //60 ,60 )
+            _vtxt =_vt .fmt_duration (voice_secs )
             lines .append (
             f'{rank_emojis[i]} **{member.display_name}**\n'
             f' {bar} `{score:,} очки`\n'
-            f'  {msg:,}   {h}s{mn}dk   {inv}'
+            f'  {msg:,}   {_vtxt}   {inv}'
             )
         role_embed .description ='\n\n'.join (lines )
         role_embed .set_footer (text =f'{role.name} • {len(role_members)} участник',icon_url =guild .icon .url if guild .icon else None )

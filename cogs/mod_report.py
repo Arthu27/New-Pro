@@ -70,18 +70,18 @@ def _load_lb (guild_id :int )->dict :
         except Exception as _ex:
             log.debug("_load_lb(): подавлено: %s", _ex)
 
-            # Ses данные — voice_stats_GUILDID.json (секунд cinsinden)
-    vs_path =f'{DATA_DIR}/voice_stats_{guild_id}.json'
-    if os .path .exists (vs_path ):
-        try :
-            with open (vs_path ,'r',encoding ='utf-8')as f :
-                vs =json .load (f )
-            for uid ,udata in vs .get ('users',{}).items ():
+            # Данные голосовых — из SQLite через voice_tracker (секунды)
+    try :
+        from . import voice_tracker as _vt
+        for uid ,udata in _vt .voice_view (guild_id ).get ('users',{}).items ():
+            try :
                 seconds =udata .get ('total_seconds',0 )if isinstance (udata ,dict )else int (udata )
-                minutes =seconds //60 
-                result ['voice_minutes'][uid ]=result ['voice_minutes'].get (uid ,0 )+minutes 
-        except Exception as _ex:
-            log.debug("_load_lb(): подавлено: %s", _ex)
+                minutes =seconds //60
+                result ['voice_minutes'][uid ]=result ['voice_minutes'].get (uid ,0 )+minutes
+            except Exception as _ex:
+                log.debug("_load_lb(): подавлено: %s", _ex)
+    except Exception as _ex:
+        log.debug("_load_lb(): подавлено: %s", _ex)
 
     return result 
 
@@ -115,8 +115,8 @@ def _action_emoji (action :str )->str :
 def _fmt_time (minutes :int )->str :
     h ,m =divmod (minutes ,60 )
     if h :
-        return f'{h}s {m}dk'
-    return f'{m}dk'
+        return f'{h} ч {m} мин'
+    return f'{m} мин'
 
 
 def _bar (value :int ,max_val :int ,length :int =12 )->str :

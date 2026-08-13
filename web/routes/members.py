@@ -199,12 +199,12 @@ def register(ctx):
                     break 
                     # Время в голосовых каналах
         if bot and result .get ('discord_id'):
+            from cogs .voice_tracker import voice_seconds as _vs_secs
             for guild in bot .guilds :
-                vf =f'data/voice_stats_{guild.id}.json'
-                if os .path .exists (vf ):
-                    with open (vf ,encoding ='utf-8')as f :vdata =json .load (f )
-                    result ['voice_seconds']=vdata .get ('users',{}).get (result ['discord_id'],{}).get ('total_seconds',0 )
-                    break 
+                secs =_vs_secs (guild .id ,result ['discord_id'])
+                if secs :
+                    result ['voice_seconds']=secs
+                    break
                     # Количество приглашений
         if bot and result .get ('discord_id'):
             for guild in bot .guilds :

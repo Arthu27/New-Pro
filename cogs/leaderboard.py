@@ -113,12 +113,10 @@ def _get_lb_data(guild: discord.Guild, category: str):
             except Exception as _ex:
                 _log.debug("_get_lb_data(): подавлено: %s", _ex)
     elif category == "voice":
-        path = os.path.join(DATA_DIR, f'voice_stats_{gid}.json')
-        if os.path.exists(path):
+        from cogs.voice_tracker import voice_view
+        users = voice_view(gid).get('users', {})
+        if True:
             try:
-                with open(path, 'r', encoding='utf-8') as f:
-                    vs = json.load(f)
-                users = vs.get('users', {})
                 for uid, d in sorted(
                     users.items(),
                     key=lambda x: x[1].get('total_seconds', 0) if isinstance(x[1], dict) else int(x[1]),
@@ -370,24 +368,10 @@ class Leaderboard(commands.Cog):
         if not before.channel and after.channel:
             self._voice_join[uid] = now
         elif before.channel and not after.channel:
-            if uid in self._voice_join:
-                minutes = int((now - self._voice_join.pop(uid)).total_seconds() / 60)
-                if minutes > 0:
-                    path = os.path.join(DATA_DIR, f'voice_stats_{member.guild.id}.json')
-                    vs = {'users': {}}
-                    if os.path.exists(path):
-                        try:
-                            with open(path, 'r', encoding='utf-8') as f:
-                                vs = json.load(f)
-                        except Exception as _ex:
-                            _log.debug("on_voice_state_update(): подавлено: %s", _ex)
-                    suid = str(uid)
-                    d = vs['users'].get(suid, {'total_seconds': 0, 'name': member.display_name})
-                    d['total_seconds'] = d.get('total_seconds', 0) + minutes * 60
-                    vs['users'][suid] = d
-                    os.makedirs(DATA_DIR, exist_ok=True)
-                    with open(path, 'w', encoding='utf-8') as f:
-                        json.dump(vs, f, ensure_ascii=False, indent=2)
+            # Время в голосовых пишет VoiceTracker (SQLite, точность до секунды).
+            # Здесь только освобождаем слот сессии — легаси-JSON больше не пишем,
+            # иначе был двойной учёт с потерей точности (минутная усечка).
+            self._voice_join.pop(uid, None)
 
     @commands.command(name="leaderboard", aliases=["rank", "лб", "рейтинг"])
     async def leaderboard_cmd(self, ctx, category: str = "messages"):

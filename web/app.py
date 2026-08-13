@@ -2570,10 +2570,10 @@ def api_discord_check ():
         created =discord .utils .snowflake_time (int (discord_id ))
         age_days =(datetime.now(timezone.utc).replace(tzinfo=None)-created ).days 
         if age_days <7 :
-            tests .append ({'name':'Возраст аккаунта','status':'fail','detail':f'{age_days}d (too new)'})
+            tests .append ({'name':'Возраст аккаунта','status':'fail','detail':f'{age_days} дн. (слишком новый)'})
             return jsonify ({'success':False ,'tests':tests ,'error':'Вход запрещен: аккаунт зарегистрирован менее 7 дней назад.'})
         else :
-            tests .append ({'name':'Возраст аккаунта','status':'ok','detail':f'{age_days}d'})
+            tests .append ({'name':'Возраст аккаунта','status':'ok','detail':f'{age_days} дн.'})
     except Exception:
         tests .append ({'name':'Возраст аккаунта','status':'warn','detail':'Неизвестно'})
     try :

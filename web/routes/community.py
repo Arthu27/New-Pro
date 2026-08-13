@@ -200,27 +200,14 @@ def register(ctx):
     def api_voice_stats (guild_id ):
         import web .app as _app ;bot =_app .bot_instance 
 
-        # Defaults are defined before touching the optional statistics file.
-        # This keeps the endpoint JSON-safe when no file exists yet.
         leaderboard =[]
-        total_seconds =0 
-        today_data ={}
+        total_seconds =0
 
-        # Read persisted voice statistics.  This endpoint must always return JSON:
-        # a malformed/old statistics file should заметок turn into an HTML 500 response.
-        vs_file =f'data/voice_stats_{guild_id}.json'
-        data ={}
-        if os .path .exists (vs_file ):
-            try :
-                with open (vs_file ,'r',encoding ='utf-8')as fp :
-                    data =json .load (fp )
-            except (OSError ,json .JSONDecodeError ):
-                data ={}
-
-        users_dict =data .get ('users',data )if isinstance (data ,dict )else {}
-        today_data =data .get ('today',{})if isinstance (data ,dict )else {}
-        if not isinstance (users_dict ,dict ):
-            users_dict ={}
+        from cogs .voice_tracker import voice_view ,voice_today_users ,fmt_duration
+        # Данные — из SQLite через единый модуль (cogs/voice_tracker.py).
+        # Легаси-JSON (data/voice_stats_*.json) мёртв: читателей не было
+        # ни одного писателя; файл автомигрирует в базу при первом чтении.
+        users_dict =voice_view (guild_id ).get ('users',{})
 
         for uid ,entry in users_dict .items ():
             if not isinstance (entry ,dict ):
@@ -260,14 +247,7 @@ def register(ctx):
                     except Exception as _ex:
                         _log.debug("api_voice_stats(): подавлено: %s", _ex)
 
-            h ,rem =divmod (int (secs ),3600 )
-            m_val ,s_val =divmod (rem ,60 )
-            if h >0 :
-                time_str =f'{h}s {m_val}dk'
-            elif m_val >0 :
-                time_str =f'{m_val}dk {s_val}sn'
-            else :
-                time_str =f'{s_val}sn'
+            time_str =fmt_duration (secs )
 
             leaderboard .append ({
             'name':name ,
@@ -277,18 +257,13 @@ def register(ctx):
             })
         leaderboard .sort (key =lambda x :x ['seconds'],reverse =True )
 
-        # Всего длительность formatla
-        th ,trem =divmod (total_seconds ,3600 )
-        tm ,_ =divmod (trem ,60 )
-        total_str =f'{th}s {tm}dk'if th >0 else f'{tm}dk'
+        total_str =fmt_duration (total_seconds )
 
-        # Сегодня VC использовать (basit tahmin)
-        today_users =len (today_data )if isinstance (today_data ,dict )else sum (1 for u in leaderboard if u ['seconds']>0 )
+        # «Сегодня в голосе» — люди с ненулевым временем за текущую дату
+        today_users =voice_today_users (guild_id )
 
-        avg_secs =(total_seconds //len (leaderboard ))if leaderboard else 0 
-        ah ,arem =divmod (avg_secs ,3600 )
-        am ,_ =divmod (arem ,60 )
-        avg_str =f'{ah}s {am}dk'if ah >0 else f'{am}dk'
+        avg_secs =(total_seconds //len (leaderboard ))if leaderboard else 0
+        avg_str =fmt_duration (avg_secs )
 
         return jsonify ({
         'leaderboard':leaderboard [:20 ],

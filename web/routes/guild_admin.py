@@ -72,7 +72,7 @@ def register(ctx):
                 uptime_sec =0 
             h =uptime_sec //3600 
             m =(uptime_sec %3600 )//60 
-            uptime =f"{h}sa {m}dk"
+            uptime =f"{h} ч {m} мин"
             history_file ='data/sys_history.json'
             os .makedirs ('data',exist_ok =True )
             history =[]
