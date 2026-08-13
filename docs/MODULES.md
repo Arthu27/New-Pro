@@ -50,7 +50,7 @@
 | `verification` | Aether — Верификация — режим наблюдателя / opt-in |
 | `warnings` | Warnings Cog |
 
-## Комьюнити и развлечения — 60
+## Комьюнити и развлечения — 63
 
 | Модуль | Что делает |
 | --- | --- |
@@ -72,6 +72,7 @@
 | `custom_commands` | Custom Commands — исполнитель своих команд из панели. |
 | `custom_embeds` | Custom Embed Builder - Allows сервер admins to create custom embeds |
 | `dm_logger` | DM Logger — надёжно записывает ВСЕ входящие личные сообщения (DM) в data/dm_log.json. |
+| `duels` | Дуэли (Duels Cog) |
 | `duty` | duty |
 | `economy_cog` | Economy Cog |
 | `events` | Система событий — назначить дату, отправить напоминание |
@@ -98,10 +99,12 @@
 | `scheduler` | Scheduler — запланированные анонсы. |
 | `search_cog` | Search Cog |
 | `server_info` | Server Info — обученные ответы о сервере (FAQ-система) |
+| `server_stats` | Каналы-счётчики (Server Stats Cog) |
 | `server_template` | Шаблон сервера (Server Template Cog) |
 | `sla_cog` | SLA Cog |
 | `social` | Aether Social Cog |
 | `staff_apply` | Staff Apply — Набор в команду сервера |
+| `staff_rating` | Рейтинг стаффа (Staff Rating Cog) |
 | `staff_stats` | Staff Stats — таблица активности модераторов. |
 | `starboard` | Starboard — зал славы (звёздная доска). |
 | `stats` | stats |
@@ -125,4 +128,4 @@
 | `icons` | Aether — фирменные иконки (assets/icons/) — помощник embed-миниатюр |
 | `leveling_engagement` | Leveling & Engagement System |
 
-**Всего:** 102 файлов в `cogs/`.
+**Всего:** 105 файлов в `cogs/`.
