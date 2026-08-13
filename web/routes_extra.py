@@ -63,6 +63,7 @@ from web.routes import (
     adv_analytics,
     knowledge_base,
     customer_portal,
+    automation,
 )
 
 _MODULES = (
@@ -111,6 +112,7 @@ _MODULES = (
     adv_analytics,
     knowledge_base,
     customer_portal,
+    automation,
 )
 
 

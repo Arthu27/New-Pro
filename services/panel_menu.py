@@ -75,6 +75,7 @@ MENU = [
         {'path': '/backups', 'label': 'Бэкапы', 'icon': 'fa-save'},
         {'path': '/konsol', 'label': 'Консоль', 'icon': 'fa-terminal'},
         {'path': '/cog-manager', 'label': 'Модули', 'icon': 'fa-cubes'},
+        {'path': '/automation', 'label': 'Автоматика', 'icon': 'fa-wand-magic-sparkles'},
         {'path': '/settings', 'label': 'Сервер', 'icon': 'fa-cog'},
         {'path': '/rules-editor', 'label': 'Правила', 'icon': 'fa-gavel'},
         {'path': '/welcome-editor', 'label': 'Приветствие', 'icon': 'fa-handshake'},
@@ -150,6 +151,9 @@ PAGE_COGS = {
     '/custom-embeds': ('custom_embeds',),
     '/welcome-editor': ('welcome_cog',),
     '/staff-apps': ('staff_apply',),
+    # Автоматика живёт, пока жив хотя бы один её модуль (анти-альт/ночной
+    # режим в MOD_ONLY, приветствия и дайджест — в полном режиме).
+    '/automation': ('anti_alt', 'night_mode', 'welcome_pro', 'mod_digest'),
 }
 
 

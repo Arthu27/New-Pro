@@ -48,6 +48,8 @@ MODERATION_COGS = frozenset({
     # анти-рейд / безопасность / верификация
     'antiraid.py', 'security.py', 'verification.py', 'tag_jail.py',
     'impersonation.py',
+    # анти-альт / локдаун / ночной режим — аварийный арсенал
+    'anti_alt.py', 'lockdown.py', 'night_mode.py',
     # модераторская разведка
     'invite_tracker.py',
     # контент-ограничения и анти-эвейд
@@ -58,6 +60,8 @@ MODERATION_COGS = frozenset({
     'logs.py', 'log_menu.py',
     # обращения к модерам + отчёт по модерации
     'ticket.py', 'mod_report.py',
+    # апелляции на баны + еженедельный мод-дайджест
+    'appeals.py', 'mod_digest.py',
 })
 
 # итоговый список MOD_ONLY

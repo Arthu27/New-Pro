@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block title %}Автоматика — Aether{% endblock %}
+{% block page_title %}<i class="fas fa-wand-magic-sparkles"></i> Автоматика{% endblock %}
+{% block content %}
+{% block page_hero %}
+<div class="page-hero compact">
+  <div class="page-hero-content">
+    <div class="page-hero-greeting">
+      <span class="dot"></span>
+      <span>АВТОМАТИКА СЕРВЕРА</span>
+    </div>
+    <h1>Автоматика</h1>
+    <p>Ночной режим, анти-альт, приветствия PRO и мод-дайджест. Настройки пишутся в ту же базу, что читают модули бота — применяется сразу, без перезапуска.</p>
+  </div>
+</div>
+{% endblock %}
+
+<style>
+  .au-wrap { padding: 6px 2px 34px; max-width: 1080px; }
+  .au-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(460px, 1fr)); gap: 16px; }
+  .au-card { background: linear-gradient(160deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015)); border: 1px solid rgba(255,255,255,0.09); border-radius: 14px; padding: 18px 20px; display: flex; flex-direction: column; gap: 14px; }
+  .au-card-head { display: flex; align-items: center; gap: 12px; }
+  .au-ico { width: 40px; height: 40px; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-size: 16px; background: rgba(224,176,74,0.15); color: var(--ac-2); border: 1px solid rgba(224,176,74,0.3); flex-shrink: 0; }
+  .au-title { font-size: 15px; font-weight: 700; }
+  .au-desc { font-size: 12px; opacity: .62; line-height: 1.45; }
+  .au-row { display: flex; align-items: center; gap: 12px; font-size: 13px; }
+  .au-row label { flex: 1; opacity: .85; }
+  .au-row input[type=number], .au-row input[type=text], .au-row select {
+    width: 190px; background: var(--surface-2); color: #e6e6e6; border: 1px solid rgba(255,255,255,0.16);
+    border-radius: 9px; padding: 8px 10px; font-size: 13px; outline: none;
+  }
+  .au-row input:focus, .au-row select:focus, .au-row textarea:focus { border-color: var(--ac); }
+  .au-row textarea {
+    width: 100%; min-height: 96px; background: var(--surface-2); color: #e6e6e6;
+    border: 1px solid rgba(255,255,255,0.16); border-radius: 9px; padding: 9px 11px;
+    font-size: 12.5px; font-family: inherit; outline: none; resize: vertical;
+  }
+  .au-switch { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
+  .au-switch input { opacity: 0; width: 0; height: 0; }
+  .au-slider { position: absolute; inset: 0; border-radius: 24px; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.18); cursor: pointer; transition: .2s; }
+  .au-slider::before { content: ''; position: absolute; width: 16px; height: 16px; border-radius: 50%; background: #fff; top: 3px; left: 3px; transition: .2s; }
+  .au-switch input:checked + .au-slider { background: var(--ac); border-color: var(--ac); }
+  .au-switch input:checked + .au-slider::before { transform: translateX(20px); }
+  .au-foot { display: flex; align-items: center; gap: 10px; margin-top: 2px; }
+  .au-save { padding: 9px 18px; border-radius: 10px; border: 1px solid rgba(46,204,113,0.4); background: rgba(46,204,113,0.12); color: #2ecc71; font-size: 13px; font-weight: 700; cursor: pointer; transition: .15s; display: inline-flex; align-items: center; gap: 8px; }
+  .au-save:hover { background: #2ecc71; color: #fff; }
+  .au-msg { font-size: 12px; opacity: 0; transition: .25s; }
+  .au-msg.show { opacity: 1; }
+  .au-msg.ok { color: #2ecc71; }
+  .au-msg.err { color: #ff6b6b; }
+  @media (max-width: 1000px) { .au-grid { grid-template-columns: 1fr; } }
+</style>
+
+<div class="au-wrap">
+  <div class="au-grid" id="au-grid">
+    <div style="opacity:.55;padding:30px;text-align:center;grid-column:1/-1;">
+      <i class="fas fa-circle-notch fa-spin"></i> Загружаем настройки модулей…
+    </div>
+  </div>
+</div>
+
+<script>
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+async function loadAutomation(){
+  var grid = document.getElementById('au-grid');
+  try {
+    var d = await fetch('/api/automation').then(function(r){ return r.json(); });
+    if(!d.success){ throw new Error(d.error || 'ошибка загрузки'); }
+    grid.innerHTML = Object.keys(d.modules).map(function(key){
+      var m = d.modules[key];
+      var rows = m.fields.map(function(f){ return fieldRow(key, f, m.values[f.key]); }).join('');
+      return '<div class="au-card" data-module="'+esc(key)+'">'
+        + '<div class="au-card-head"><div class="au-ico"><i class="fas '+esc(m.icon)+'"></i></div>'
+        + '<div><div class="au-title">'+esc(m.title)+'</div><div class="au-desc">'+esc(m.desc)+'</div></div></div>'
+        + rows
+        + '<div class="au-foot"><button class="au-save" onclick="saveModule(\''+esc(key)+'\')"><i class="fas fa-check"></i> Сохранить</button>'
+        + '<span class="au-msg" id="au-msg-'+esc(key)+'"></span></div>'
+        + '</div>';
+    }).join('');
+  } catch(e){
+    grid.innerHTML = '<div style="opacity:.6;padding:30px;grid-column:1/-1;">Не удалось загрузить настройки: '+esc(e.message)+'</div>';
+  }
+}
+
+function fieldRow(modKey, f, val){
+  var id = 'au-'+modKey+'-'+f.key;
+  if(f.kind === 'bool'){
+    return '<div class="au-row"><label for="'+id+'">'+esc(f.label)+'</label>'
+      + '<span class="au-switch"><input type="checkbox" id="'+id+'" data-kind="bool"'+(val?' checked':'')+'><span class="au-slider" onclick="document.getElementById(\''+id+'\').click()"></span></span></div>';
+  }
+  if(f.kind === 'int'){
+    var mm = '';
+    if(f.min !== undefined){ mm += ' min="'+f.min+'"'; }
+    if(f.max !== undefined){ mm += ' max="'+f.max+'"'; }
+    return '<div class="au-row"><label for="'+id+'">'+esc(f.label)+'</label>'
+      + '<input type="number" id="'+id+'" data-kind="int" value="'+esc(val===undefined||val===null?'':val)+'"'+mm+'></div>';
+  }
+  if(f.kind === 'select'){
+    var opts = (f.options||[]).map(function(o){
+      return '<option value="'+esc(o[0])+'"'+(val===o[0]?' selected':'')+'>'+esc(o[1])+'</option>';
+    }).join('');
+    return '<div class="au-row"><label for="'+id+'">'+esc(f.label)+'</label>'
+      + '<select id="'+id+'" data-kind="select">'+opts+'</select></div>';
+  }
+  if(f.kind === 'templates'){
+    return '<div class="au-row" style="flex-direction:column;align-items:stretch;gap:7px;">'
+      + '<label for="'+id+'">'+esc(f.label)+'</label>'
+      + '<textarea id="'+id+'" data-kind="templates">'+esc(val||'')+'</textarea></div>';
+  }
+  return '<div class="au-row"><label for="'+id+'">'+esc(f.label)+'</label>'
+    + '<input type="text" id="'+id+'" data-kind="text" value="'+esc(val||'')+'"></div>';
+}
+
+async function saveModule(key){
+  var card = document.querySelector('.au-card[data-module="'+key+'"]');
+  var msg = document.getElementById('au-msg-'+key);
+  var payload = {};
+  card.querySelectorAll('input, select, textarea').forEach(function(el){
+    if(!el.id || el.id.indexOf('au-'+key+'-') !== 0){ return; }
+    var kind = el.getAttribute('data-kind');
+    var k = el.id.substring(('au-'+key+'-').length);
+    if(kind === 'bool'){ payload[k] = el.checked; }
+    else if(kind === 'int'){ payload[k] = el.value === '' ? 0 : parseInt(el.value, 10); }
+    else { payload[k] = el.value; }
+  });
+  msg.className = 'au-msg show'; msg.textContent = 'Сохраняем…';
+  try {
+    var r = await fetch('/api/automation/'+key, {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    }).then(function(x){ return x.json(); });
+    if(r.success){
+      msg.className = 'au-msg show ok';
+      msg.innerHTML = '<i class="fas fa-check"></i> Сохранено — бот подхватит сам';
+    } else {
+      msg.className = 'au-msg show err';
+      msg.textContent = r.error || 'Ошибка сохранения';
+    }
+  } catch(e){
+    msg.className = 'au-msg show err';
+    msg.textContent = 'Сеть: ' + e.message;
+  }
+  setTimeout(function(){ msg.classList.remove('show'); }, 4000);
+}
+
+loadAutomation();
+</script>
+{% endblock %}

@@ -103,6 +103,33 @@ def seed():
         with open(voice_path, 'w', encoding='utf-8') as f:
             json.dump({'users': vusers}, f, ensure_ascii=False, indent=1)
 
+    # автоматика: ненулевые настройки, чтобы страница «Автоматика» была живой
+    # (панель и коги делят эти неймспейсы; засев — только если пусто)
+    from db import GuildData
+    for ns, demo_settings in (
+        ('night_mode', {'enabled': True, 'start_hour': 23, 'end_hour': 7,
+                        'slowmode_seconds': 10, 'lock_channels': False,
+                        'exempt_channels': [], 'report_channel_id': 0}),
+        ('anti_alt', {'enabled': True, 'min_age_days': 7, 'action': 'alert',
+                      'log_channel_id': 0, 'whitelist': []}),
+        ('mod_digest', {'enabled': True, 'channel_id': 777001, 'hour_utc': 18,
+                        'last_sent': None}),
+        ('welcome_pro', {'enabled': True, 'channel_id': 777002,
+                         'templates': None, 'rotate_index': 0,
+                         'dm_enabled': False,
+                         'dm_text': 'Привет, {user}! Добро пожаловать на {server}.'}),
+    ):
+        store = GuildData(ns)
+        if store.get(GID, 'settings', None) is None:
+            if ns == 'welcome_pro':
+                demo_settings.pop('templates', None)
+                demo_settings['templates'] = [
+                    'Добро пожаловать, {mention}! Ты — {count}-й житель **{server}**.',
+                    '{mention} приземлился на **{server}**. Устраивайся поудобнее!',
+                    'Поприветствуем {mention}! Участник №{count}.',
+                ]
+            store.set(GID, 'settings', demo_settings)
+
 
 seed()
 
