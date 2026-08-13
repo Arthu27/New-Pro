@@ -564,24 +564,24 @@ async def on_ready():
             print(f"[ОШИБКА] Отправка ссылки панели: {_e}")
 
 async def load_cogs():
-    SKIP_COGS = {
-        # Не коги, а вспомогательные модули (импортируются другими файлами)
-        "embed_utils.py", "__init__.py",
-        "_card_style.py",
-        "leveling_engagement.py",
-        "icons.py",
-    }
-    
+    # Какие модули грузить — решает cogs_policy (MOD_ONLY / DISABLED_COGS /
+    # EXTRA_COGS из .env). Хелперы (__init__, embed_utils…) там же.
+    from cogs_policy import select_from_environment
+
     try:
         import error_handler
         await error_handler.setup(bot)
         log.info("Централизованный обработчик ошибок загружен")
     except Exception as e:
         log.error(f"Ошибка загрузки обработчика ошибок: {e}")
-    
+
     bot.remove_command('help')
 
-    cog_files = sorted([f for f in os.listdir("./cogs") if f.endswith(".py") and f not in SKIP_COGS])
+    all_files = [f for f in os.listdir("./cogs") if f.endswith(".py")]
+    cog_files, disabled_files = select_from_environment(all_files)
+    if disabled_files:
+        log.info(f"Модули отключены ({len(disabled_files)}): {', '.join(disabled_files)}")
+    log.info(f"Загружаю {len(cog_files)} из {len(all_files)} модулей cogs/")
     for filename in cog_files:
         ext = f"cogs.{filename[:-3]}"
         log.info(f"Загрузка: {filename}")
