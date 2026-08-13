@@ -317,8 +317,8 @@ def register(ctx):
                     guild =g 
                     break 
         if not guild :
-            print (f'[WEB][WARN] /channels: guild {guild_id} заметок found. Bot guilds: {[str(g.id) for g in bot.guilds]}')
-            return jsonify ({'error':f'Guild {guild_id} заметок found','channels':[]})
+            print (f'[WEB][WARN] /channels: guild {guild_id} не найден. Bot guilds: {[str(g.id) for g in bot.guilds]}')
+            return jsonify ({'error':f'Сервер {guild_id} не найден — бот не состоит на нём','channels':[]})
 
         type_map ={
         _discord .ChannelType .text :'text',

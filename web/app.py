@@ -1619,10 +1619,13 @@ def api_modstats ():
 @login_required 
 @role_required ('admin')
 def send_command_page ():
+    # Без MAIN_GUILD_ID в .env страница не должна быть мёртвой — берём
+    # первый сервер бота (как делают остальные страницы панели).
+    _gid =MAIN_GUILD_ID or (str (bot_instance .guilds [0 ].id )if bot_instance and bot_instance .guilds else '')
     return render_template ('send_command.html',
     role =session .get ('role'),
     username =session .get ('username'),
-    main_guild_id =MAIN_GUILD_ID )
+    main_guild_id =_gid )
 
 @app .route ('/execute-command')
 @login_required 
@@ -1918,7 +1921,13 @@ def api_send_message ():
     data =request .get_json (silent =True )or {}
     guild_id =data .get ('guild_id')
     channel_id =data .get ('channel_id')
-    message =data .get ('message')
+    message =(data .get ('message')or '').strip ()
+
+    # Валидация до похода в Discord — честные ответы панели
+    if not message :
+        return jsonify ({'error':'Пустое сообщение'}),400
+    if len (message )>2000 :
+        return jsonify ({'error':'Сообщение длиннее 2000 символов — Discord такое не примет. Сократите или разбейте на части.'}),400
 
     try :
     # Поиск сервера
@@ -1942,14 +1951,15 @@ def api_send_message ():
             await channel .send (message )
 
         import asyncio 
-        asyncio .run_coroutine_threadsafe (send (),bot_instance .loop )
+        # Ждём РЕАЛЬНОГО результата доставки: если Discord отказал
+        # (нет прав, упал канал) — ошибка уйдёт в панель, а не в никуда.
+        future =asyncio .run_coroutine_threadsafe (send (),bot_instance .loop )
+        future .result (timeout =10 )
 
         return jsonify ({'success':True ,'message':'Сообщение отправлено'})
     except Exception as e :
         print (f"Ошибка отправки сообщения: {e}")
-        import traceback 
-        traceback .print_exc ()
-        return jsonify ({'error':str (e )})
+        return jsonify ({'error':f'Не доставлено: {e}'})
 
 @app .route ('/staff-apps')
 @login_required 
