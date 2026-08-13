@@ -66,7 +66,12 @@ html = r.get_data(as_text=True)
 check(r.status_code == 200, 'GET /automation -> 200')
 check('{%' not in html, 'чистый Jinja (нет нерешённых блоков)')
 check('/api/automation' in html, 'страница ходит в API настроек')
-EMOJI = re.compile('[\U0001F000-\U0001FAFF⺀-⻿\u2B00-\u2BFF\uFE0F]|[☀-➿]')
+# v2-каркас: сводная планка + бейджи + акценты
+for marker in ('au-strip', 'au-total', 'au-on', 'au-off', 'au-badge',
+               'AU_ACCENTS', 'refreshStrip', 'is-on'):
+    assert marker in html, marker
+check(True, 'v2: сводная планка, бейджи и акцентные стили подключены')
+EMOJI = re.compile('[\U0001F000-\U0001FAFF⺀-⻿⺀-⻿\u2B00-\u2BFF\uFE0F]|[☀-➿]')
 junk = [l.strip()[:60] for l in html.splitlines() if EMOJI.search(l)]
 check(not junk, f'эмодзи на странице нет (FA-иконки вместо них) {junk[:2]}')
 
