@@ -50,7 +50,7 @@
 | `verification` | Aether — Верификация — режим наблюдателя / opt-in |
 | `warnings` | Warnings Cog |
 
-## Комьюнити и развлечения — 57
+## Комьюнити и развлечения — 60
 
 | Модуль | Что делает |
 | --- | --- |
@@ -68,6 +68,7 @@
 | `birthday` | birthday |
 | `changelog_cog` | Changelog Cog |
 | `companion` | Companion Cog — Bot, belirli bir userya ara очередь kendi желание DM atar. |
+| `counting` | Считалка (Counting Cog) |
 | `custom_commands` | Custom Commands — исполнитель своих команд из панели. |
 | `custom_embeds` | Custom Embed Builder - Allows сервер admins to create custom embeds |
 | `dm_logger` | DM Logger — надёжно записывает ВСЕ входящие личные сообщения (DM) в data/dm_log.json. |
@@ -79,6 +80,7 @@
 | `giveaway` | Giveaway Cog |
 | `info_tools` | Информация и инструменты — префиксные команды (!uptime, !botinfo, !avatar, и т.д.) |
 | `join_to_create` | Join-to-Create — личные голосовые комнаты. |
+| `karma` | Карма (Karma Cog) |
 | `ladder` | Aether — /ladder: визуальная лестница авто-наказаний. |
 | `leaderboard` | Leaderboard Cog — Luxury Dark-Gold Dashboard & Leaderboard Table via Pillow |
 | `level_cog` | Level Cog |
@@ -104,6 +106,7 @@
 | `starboard` | Starboard — зал славы (звёздная доска). |
 | `stats` | stats |
 | `time_tracking_cog` | Time Tracking Cog |
+| `triggers` | Автоответы по триггерам (Triggers Cog) |
 | `voice_commands` | Голосовые команды |
 | `voice_tracker` | Отслеживание голосовых каналов |
 | `webhooks` | Webhook controli |
@@ -122,4 +125,4 @@
 | `icons` | Aether — фирменные иконки (assets/icons/) — помощник embed-миниатюр |
 | `leveling_engagement` | Leveling & Engagement System |
 
-**Всего:** 99 файлов в `cogs/`.
+**Всего:** 102 файлов в `cogs/`.
