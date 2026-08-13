@@ -275,7 +275,7 @@ class AIModeration (commands .Cog ):
                         # Log to channel
                 await self ._log_to_channel (guild ,config ,embed ,member ,severity )
             elif action =="mute"and mute_minutes >0 :
-                until =datetime.now(timezone.utc).replace(tzinfo=None)+timedelta (minutes =mute_minutes )
+                until =datetime.now(timezone.utc)+timedelta (minutes =mute_minutes )
                 await member .timeout (until ,reason =f"AI Mod: {reason}")
                 embed =discord .Embed (
                 title =" Временный мут",

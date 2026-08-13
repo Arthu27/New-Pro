@@ -16,6 +16,18 @@ from logger import get_logger
 log =get_logger ("proactive_mod")
 
 
+def _as_utc (dt ):
+    """К aware-UTC: naive-метки считаем UTC (единый мир сравнения в окне спама).
+
+    Буфер пишет datetime.now(timezone.utc) — aware; но легаси/сторонние
+    write'ы могли положить naive. TypeError на вычитании naive/aware
+    клал весь on_message — нормализуем на чтении.
+    """
+    if dt .tzinfo is None :
+        return dt .replace (tzinfo =timezone .utc )
+    return dt 
+
+
 
 class ProactiveModeration (commands .Cog ):
     """AI kotoriy kendi sledit для catom"""
@@ -146,11 +158,11 @@ class ProactiveModeration (commands .Cog ):
         author_id =message .author .id 
 
         # Scitaem сообщения den bunun yazarыn для son N секунд
-        now =datetime.now(timezone.utc).replace(tzinfo=None)
+        now =datetime.now(timezone.utc)
         recent_messages =[
         msg for msg in self .message_buffer .get (channel_id ,[])
         if msg ['author_id']==author_id 
-        and (now -msg ['timestamp']).total_seconds ()<=self .spam_window 
+        and (now -_as_utc (msg ['timestamp'])).total_seconds ()<=self .spam_window 
         ]
 
         if len (recent_messages )>=self .spam_threshold :

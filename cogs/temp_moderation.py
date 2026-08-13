@@ -241,7 +241,7 @@ class TempModeration(commands.Cog):
             await ctx.send(f"⏳ Подождите {cd}с перед повторным мьютом этого пользователя")
             return
         until_ts = time.time() + sec
-        until_dt = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(seconds=sec)
+        until_dt = datetime.now(timezone.utc) + timedelta(seconds=sec)
         try:
             await member.timeout(until_dt, reason=f"[TempMod] {ctx.author}: {reason}")
         except discord.Forbidden:
@@ -690,7 +690,7 @@ class TempModeration(commands.Cog):
                 try:
                     if action == "mute":
                         if member:
-                            until = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(seconds=duration)
+                            until = datetime.now(timezone.utc) + timedelta(seconds=duration)
                             await member.timeout(until, reason=reason)
                             self._mutes.setdefault(entry["guild_id"], {})[entry["user_id"]] = {
                                 "until": now + duration, "reason": reason,
