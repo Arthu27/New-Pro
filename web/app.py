@@ -1297,6 +1297,32 @@ def api_guild_members (guild_id ):
         print (f"Ошибка списка участников: {e}")
         return jsonify ([])
 
+def _ts_to_utc_iso (ts ):
+    """Метку события → ISO со смещением (UTC).
+
+    Продюсеры пишут UTC двумя способами: naive (logs.py:
+    now(timezone.utc).replace(tzinfo=None)) и aware ('+00:00'). Браузер
+    naive-строку читает как ЛОКАЛЬНОЕ время — свежему событию накидывался
+    сдвиг на размер пояса (у владельца +4 часа). Наивное трактуем как UTC.
+    """
+    s =(ts or '').strip ()
+    if not s :
+        return ''
+    try :
+        dt =datetime .fromisoformat (s .replace ('Z','+00:00'))
+    except (ValueError ,TypeError ):
+        return s 
+    if dt .tzinfo is None :
+        dt =dt .replace (tzinfo =timezone .utc )
+    return dt .astimezone (timezone .utc ).isoformat ()
+
+def _ts_sort_key (ev ):
+    """Ключ сортировки по мгновению: непарсящиеся метки — в самый низ."""
+    try :
+        return datetime .fromisoformat (ev .get ('timestamp')or '')
+    except (ValueError ,TypeError ):
+        return datetime .min .replace (tzinfo =timezone .utc )
+
 @app .route ('/api/logs')
 @login_required 
 @role_required ('mod')
@@ -1353,10 +1379,12 @@ def api_logs ():
                     if ev_copy ['timestamp']not in existing_ts :
                         all_events .append (ev_copy )
 
-        all_events .sort (key =lambda x :x .get ('timestamp',''),reverse =True )
-        # Чистим markdown из видимых полей — панель разметку не рендерит
+        # Нормализуем метки к UTC со смещением — иначе браузер считает
+        # naive-метку локальным временем и сдвигает на размер пояса (+4 ч).
         for _ev in all_events :
+            _ev ['timestamp']=_ts_to_utc_iso (_ev .get ('timestamp'))
             _clean_md_fields (_ev )
+        all_events .sort (key =_ts_sort_key ,reverse =True )
         return jsonify (all_events [:1000 ])
     except Exception as e :
         print (f"Ошибка чтения логов: {e}")
@@ -1430,10 +1458,10 @@ def api_warnings ():
                             'user_id':user_id ,
                             'reason':_clean_md (warn .get ('reason','Не указана')),
                             'moderator':_clean_md (warn .get ('moderator',warn .get ('mod','?'))),
-                            'timestamp':warn .get ('timestamp','')
+                            'timestamp':_ts_to_utc_iso (warn .get ('timestamp'))
                             })
 
-        all_warnings .sort (key =lambda x :x .get ('timestamp',''),reverse =True )
+        all_warnings .sort (key =_ts_sort_key ,reverse =True )
         return jsonify (all_warnings [:200 ])
     except Exception as e :
         print (f"Ошибка предупреждений: {e}")
