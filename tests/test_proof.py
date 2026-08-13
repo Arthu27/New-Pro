@@ -159,7 +159,7 @@ check(_logs_mod.LOG_CHANNELS.get('доказательства') == '-доказ
       'LOG_CHANNELS: доказательства → -доказательства')
 check(_logs_mod.CATEGORIES.get('proof', {}).get('channel') == 'доказательства',
       'CATEGORIES: proof → канал доказательства')
-check(_logs_mod._LOG_META.get('proof', (None,))[0] == '📁', '_LOG_META: иконка 📁')
+check(_logs_mod._LOG_META.get('proof', (None,))[0] == '', '_LOG_META: без эмоджи-иконки (владелец просил убрать)')
 ch = _logs_mod.find_log_channel(GUILD, 'proof')
 check(ch is GUILD.proof_ch, 'find_log_channel: находит #-доказательства по имени')
 
@@ -196,10 +196,18 @@ check(_is_link('https://x') and not _is_link('просто текст'), 'link c
 print('== /proof ==')
 cog = ProofCog(bot=object())
 
-# без вложения и ссылки — отказ
+# без вложения и ссылки — теперь РАЗРЕШЕНО (фото не обязательно, владелец просил)
+before0 = len(proof_list(GUILD.id))
 inter = FakeInter(GUILD, MOD)
 run(ProofCog.proof.callback(cog, inter, user=BADGUY, action='варн', reason='токсик'))
-check('обязательно' in (inter.response.sent[-1][0] or ''), 'proof: ни файла, ни ссылки → отказ')
+items0 = proof_list(GUILD.id)
+check(len(items0) == before0 + 1, 'proof: без файла и ссылки карточка создаётся')
+check(items0[0]['link'] is None and items0[0]['reason'] == 'токсик',
+      'proof: запись без медиа честная (нет выдуманной ссылки)')
+_ok_embed = inter.followup.sent[-1][1]
+check('сохранена' in (_ok_embed.title or ''), 'proof: мод получил подтверждение без медиа')
+check(any((f.name or '') == 'Без медиа' for f in _ok_embed.fields),
+      'proof: подсказка «добавь фото позже через /proof» есть')
 
 # кривая ссылка — отказ
 inter = FakeInter(GUILD, MOD)
@@ -227,7 +235,7 @@ check(last['msg_id'] is not None and last['channel_id'] == 300,
 check(inter.followup.sent and 'сохранена' in (inter.followup.sent[-1][1].title or ''),
       'proof: мод получил подтверждение')
 # ссылка демки подсвечена в канале
-check(any(f.name.startswith('🔗') for f in emb_ch.fields), 'proof: поле-ссылка в канале есть')
+check(any('Ссылка' in (f.name or '') for f in emb_ch.fields), 'proof: поле-ссылка в канале есть (без эмоджи)')
 
 # картинка-вложение → перезалив + инлайн в эмбед
 att = FakeAttachment('proof.png')

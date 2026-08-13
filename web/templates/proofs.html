@@ -15,100 +15,244 @@
 </div>
 {% endblock %}
 
-<div class="pw-wrap">
-  <div class="pw-card">
-    <h2><i class="fas fa-folder-open"></i> Демки</h2>
-    <div class="pw-hint" style="margin-bottom:12px"><i class="fas fa-info-circle"></i>
-      Источник истины — канал <code>#-доказательства</code> в Discord. Здесь — удобный
-      просмотр и поиск. Добавляются через <code>/proof</code> или прямо в наказании
-      (параметр «демка» у <code>/warn</code> и <code>/moderate</code>).
-    </div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
-      <input type="text" id="pf-user" placeholder="ID юзера" style="max-width:220px">
-      <select id="pf-action" style="max-width:180px">
-        <option value="">Любое наказание</option>
-        <option>варн</option><option>мут</option><option>таймаут</option>
-        <option>кик</option><option>бан</option><option>разбан</option><option>тихий мут</option>
-      </select>
-      <button class="btn-save" onclick="pfLoad()"><i class="fas fa-filter"></i> Фильтр</button>
-    </div>
-    <div id="pf-stats" style="margin-bottom:12px;font-weight:600"></div>
-    <div class="msg" id="pf-msg"></div>
-    <div id="pf-list"><i>Загружаю…</i></div>
-  </div>
+<style>
+/* ── Галерея демок ─────────────────────────────────────────── */
+.pf-toolbar{
+  position:sticky;top:74px;z-index:25;
+  display:flex;gap:10px;flex-wrap:wrap;align-items:center;
+  background:color-mix(in srgb, var(--bg) 84%, transparent);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  padding:10px 12px;border-radius:14px;border:1px solid var(--line);
+  box-shadow:var(--shadow-sm);margin-bottom:12px;
+}
+.pf-search{flex:1;min-width:220px}
+.pf-count{background:var(--ac-soft);color:var(--ac-2);border:1px solid var(--ac-line);
+  padding:5px 14px;border-radius:99px;font-size:13px;font-weight:700;
+  font-variant-numeric:tabular-nums;white-space:nowrap}
+.pf-chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.pf-chip{padding:6px 14px;border-radius:99px;font-size:12.5px;font-weight:600;
+  border:1px solid var(--line-2);background:rgba(255,255,255,.03);color:var(--text-2);
+  cursor:pointer;transition:all .16s var(--ease);user-select:none}
+.pf-chip:hover{border-color:var(--ac-line);color:var(--text)}
+.pf-chip.on{background:var(--ac-soft);border-color:var(--ac-line);color:var(--ac-2)}
+.pf-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px}
+.pf-card{background:linear-gradient(165deg,rgba(224,176,74,.04),rgba(20,18,14,.55));
+  border:1px solid var(--line-2);border-radius:16px;overflow:hidden;
+  display:flex;flex-direction:column;transition:all .16s var(--ease);
+  animation:fadeUp .3s var(--ease-out) both}
+.pf-card:hover{transform:translateY(-3px);border-color:var(--ac-line);box-shadow:var(--shadow-md)}
+.pf-thumb{position:relative;height:168px;background:rgba(0,0,0,.28);
+  display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:zoom-in}
+.pf-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.pf-thumb .pf-nomedia{width:100%;height:100%;display:flex;flex-direction:column;gap:6px;
+  align-items:center;justify-content:center;color:var(--text-3);font-size:12px;cursor:default}
+.pf-thumb .pf-nomedia i{font-size:26px;opacity:.6}
+.pf-body{padding:12px 14px 13px;display:flex;flex-direction:column;gap:8px;flex:1}
+.pf-row1{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pf-badge{border-radius:8px;letter-spacing:.05em;text-transform:uppercase;
+  font-size:10px;font-weight:800;padding:3px 9px}
+.pf-id{color:var(--text-3);font-size:12px;font-weight:700}
+.pf-user{font-weight:800;font-size:14.5px;cursor:pointer;word-break:break-word}
+.pf-user:hover{color:var(--ac-2)}
+.pf-uid{color:var(--text-3);font-size:11.5px}
+.pf-reason{color:var(--text-2);font-size:13px;line-height:1.45;
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;
+  word-break:break-word}
+.pf-meta{display:flex;justify-content:space-between;gap:8px;align-items:center;
+  margin-top:auto;padding-top:8px;border-top:1px solid var(--line);
+  color:var(--text-3);font-size:12px}
+.pf-actions{display:flex;gap:6px;flex-wrap:wrap;padding:0 14px 13px}
+.pf-btn{padding:6px 11px;border-radius:9px;font-size:12px;font-weight:700;
+  border:1px solid var(--line-2);background:rgba(255,255,255,.04);color:var(--text-2);
+  text-decoration:none;cursor:pointer;display:inline-flex;gap:6px;align-items:center;
+  transition:all .15s var(--ease)}
+.pf-btn:hover{border-color:var(--ac-line);color:var(--text)}
+.pf-btn.danger:hover{border-color:var(--err);color:var(--err)}
+.pf-empty{padding:38px 16px;text-align:center;color:var(--text-3)}
+.pf-empty i{font-size:30px;display:block;margin-bottom:10px;opacity:.5}
+/* лайтбокс */
+.pf-modal{position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.82);
+  display:none;align-items:center;justify-content:center;padding:3vh 3vw;
+  backdrop-filter:blur(6px)}
+.pf-modal.open{display:flex}
+.pf-modal img{max-width:92vw;max-height:82vh;border-radius:12px;
+  box-shadow:0 24px 80px rgba(0,0,0,.6)}
+.pf-modal .pf-cap{position:absolute;bottom:3.5vh;left:50%;transform:translateX(-50%);
+  background:rgba(0,0,0,.65);border:1px solid var(--line-2);border-radius:12px;
+  padding:8px 16px;font-size:13px;max-width:90vw;text-align:center}
+.pf-modal .pf-x{position:absolute;top:18px;right:22px;font-size:26px;color:#fff;
+  cursor:pointer;opacity:.75;transition:opacity .15s}
+.pf-modal .pf-x:hover{opacity:1}
+</style>
+
+<div class="pf-toolbar" data-reveal="up">
+  <input type="text" id="pf-q" class="search-input pf-search"
+         placeholder="Поиск по нику, модератору, причине или ID — без /proofs и поиска по человеку"
+         aria-label="Поиск по демкам">
+  <span id="pf-count" class="pf-count">0</span>
+  <button class="pf-btn" onclick="pfReload()" title="Обновить"><i class="fas fa-rotate"></i></button>
+</div>
+
+<div class="pf-chips" id="pf-chips" data-reveal="up"></div>
+<div class="msg" id="pf-msg"></div>
+<div class="pf-grid" id="pf-grid">
+  <div class="pf-empty"><i class="fas fa-spinner fa-spin"></i>Загружаю…</div>
+</div>
+
+<div class="pf-modal" id="pf-modal" onclick="if (event.target === this || event.target.classList.contains('pf-x')) pfClose()">
+  <span class="pf-x" title="Закрыть"><i class="fas fa-xmark"></i></span>
+  <img id="pf-modal-img" alt="Демка">
+  <div class="pf-cap" id="pf-modal-cap"></div>
 </div>
 
 <script>
-function msg(id, text, type) {
-  const el = document.getElementById(id);
-  el.textContent = text; el.className = 'msg ' + type; el.style.display = 'inline-block';
-}
-const esc = s => String(s ?? '').replace(/[<>&"]/g, c =>
-  ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
-const IS_IMG = u => /\.(png|jpe?g|gif|webp|bmp)(\?|$)/i.test(u || '');
+(function () {
+  'use strict';
+  const esc = s => String(s ?? '').replace(/[<>&"]/g, c =>
+    ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+  const IS_IMG = u => /\.(png|jpe?g|gif|webp|bmp)(\?|&|$)/i.test(u || '')
+                    || /media\.discordapp\.|cdn\.discordapp\.com\/attachments/i.test(u || '');
+  const COLORS = {'варн':'var(--warn)','мут':'#e67e22','тихий мут':'#a78bfa',
+                  'таймаут':'#e67e22','кик':'#f97316','бан':'var(--err)',
+                  'разбан':'var(--ok)'};
+  const CAN_DEL = {{ 'true' if role in ['admin', 'owner'] else 'false' }};
 
-async function pfLoad() {
-  const box = document.getElementById('pf-list');
-  const uid = document.getElementById('pf-user').value.trim();
-  const act = document.getElementById('pf-action').value;
-  const qs = new URLSearchParams();
-  if (uid) qs.set('user_id', uid);
-  if (act) qs.set('action', act);
-  const r = await fetch('/api/proofs?' + qs.toString());
-  const d = await r.json();
-  if (!d.success) { box.innerHTML = '<i>Ошибка загрузки.</i>'; return; }
-  document.getElementById('pf-stats').textContent =
-    `Найдено: ${d.total}${d.total > d.items.length ? ` · показаны первые ${d.items.length}` : ''}`;
-  if (!d.items.length) { box.innerHTML = '<i>Демок нет — добавляются через /proof.</i>'; return; }
-  box.innerHTML = '';
-  for (const it of d.items) {
-    const card = document.createElement('div');
-    card.style.cssText = 'padding:12px;border:1px solid rgba(255,255,255,.08);' +
-      'border-radius:12px;margin-bottom:10px';
-    const media = (it.url && IS_IMG(it.url))
-      ? `<a href="${esc(it.url)}" target="_blank"><img src="${esc(it.url)}" loading="lazy"
-           style="max-width:280px;max-height:160px;border-radius:8px;display:block;margin-top:8px"></a>`
-      : '';
-    const linkBtn = it.url
-      ? `<a class="btn-save" style="padding:6px 12px;text-decoration:none;font-size:13px"
-           href="${esc(it.url)}" target="_blank"><i class="fas fa-image"></i> Файл</a>` : '';
-    const extBtn = it.link
-      ? `<a class="btn-save" style="padding:6px 12px;text-decoration:none;font-size:13px;background:#8e44ad"
-           href="${esc(it.link)}" target="_blank"><i class="fas fa-link"></i> Ссылка</a>` : '';
-    const jumpBtn = it.jump
-      ? `<a class="btn-save" style="padding:6px 12px;text-decoration:none;font-size:13px;background:#2c3e50"
-           href="${esc(it.jump)}" target="_blank"><i class="fas fa-arrow-up-right-from-square"></i> В Discord</a>` : '';
-    card.innerHTML =
-      `<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap">
-        <div style="min-width:0">
-          <b>#${it.id} · ${esc(it.action)}</b> — <b>${esc(it.user_name)}</b>
-          <span style="opacity:.6">(\`${it.user_id}\`)</span>
-          <div style="opacity:.85;margin-top:4px">${esc(it.reason || '—')}</div>
-          <div style="opacity:.55;font-size:12px;margin-top:4px">
-            мод: ${esc(it.mod_name)} · ${esc((it.set_at || '').slice(0, 16).replace('T', ' '))}</div>
-          ${media}
-        </div>
-        <div style="display:flex;gap:6px;align-items:flex-start;flex:none">${linkBtn}${extBtn}${jumpBtn}
-          {% if role in ['admin', 'owner'] %}
-          <button class="btn-save" style="background:#c0392b;padding:6px 12px;font-size:13px"
-            onclick="pfDel(${it.id})"><i class="fas fa-trash"></i></button>
-          {% endif %}
-        </div>
-      </div>`;
-    box.appendChild(card);
+  let all = [];
+  let chip = '';
+
+  function msg(text, type) {
+    const el = document.getElementById('pf-msg');
+    el.textContent = text; el.className = 'msg ' + type; el.style.display = 'inline-block';
+    if (type === 'ok') setTimeout(() => { el.style.display = 'none'; }, 3000);
   }
-}
 
-async function pfDel(pid) {
-  if (!confirm('Удалить демку #' + pid + ' (запись и сообщение в канале)?')) return;
-  const r = await fetch('/api/proofs/' + pid, {method: 'DELETE'});
-  const d = await r.json();
-  if (d.success) {
-    msg('pf-msg', '✓ Демка удалена' + (d.msg_deleted ? ' вместе с сообщением в канале.' : '.'), 'ok');
-    pfLoad();
-  } else msg('pf-msg', '✗ ' + (d.error || 'Ошибка.'), 'err');
-}
+  function fmt(ts) {
+    if (!ts) return '—';
+    const d = new Date(ts);
+    if (isNaN(d)) return String(ts).slice(0, 16).replace('T', ' ');
+    const diff = Date.now() - d.getTime();
+    if (diff >= 0 && diff < 3600e3)  return Math.max(1, Math.round(diff / 60e3)) + ' мин назад';
+    if (diff >= 0 && diff < 86400e3) return Math.round(diff / 3600e3) + ' ч назад';
+    return d.toLocaleString('ru-RU', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'});
+  }
 
-pfLoad();
+  function matches(it, q) {
+    if (!q) return true;
+    const h = [it.user_name, it.mod_name, it.reason, it.action,
+               String(it.user_id || ''), '#' + it.id].join(' ').toLowerCase();
+    return q.toLowerCase().split(/\s+/).every(w => h.includes(w));
+  }
+
+  function renderChips() {
+    const acts = [];
+    for (const it of all) {
+      const a = (it.action || '').toLowerCase();
+      if (a && !acts.includes(a)) acts.push(a);
+    }
+    const box = document.getElementById('pf-chips');
+    box.innerHTML = '';
+    const mk = (label, val) => {
+      const b = document.createElement('button');
+      b.className = 'pf-chip' + (chip === val ? ' on' : '');
+      b.textContent = label;
+      b.onclick = () => { chip = (chip === val ? '' : val); renderChips(); render(); };
+      box.appendChild(b);
+    };
+    mk('Все', '');
+    acts.forEach(a => mk(a, a));
+  }
+
+  function openModal(it) {
+    document.getElementById('pf-modal-img').src = it.url;
+    document.getElementById('pf-modal-cap').textContent =
+      `#${it.id} · ${it.action} · ${it.user_name} — ${it.reason || '—'}`;
+    document.getElementById('pf-modal').classList.add('open');
+  }
+  window.pfClose = () => document.getElementById('pf-modal').classList.remove('open');
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') pfClose(); });
+
+  function render() {
+    const q = document.getElementById('pf-q').value.trim();
+    const items = all.filter(it => matches(it, q) &&
+      (!chip || (it.action || '').toLowerCase() === chip));
+    document.getElementById('pf-count').textContent =
+      items.length === all.length ? `${all.length}` : `${items.length} из ${all.length}`;
+    const grid = document.getElementById('pf-grid');
+    grid.innerHTML = '';
+    if (!items.length) {
+      grid.innerHTML = '<div class="pf-empty"><i class="fas fa-folder-open"></i>' +
+        (all.length ? 'Ничего не подходит под фильтр.' :
+         'Демок пока нет. Демка добавляется через /proof или прямо в наказании ' +
+         '(параметр «демка» у /warn и /moderate). Фото не обязательно.') + '</div>';
+      return;
+    }
+    for (const it of items) {
+      const card = document.createElement('div');
+      card.className = 'pf-card';
+      const col = COLORS[(it.action || '').toLowerCase()] || 'var(--ac)';
+      const hasImg = it.url && IS_IMG(it.url);
+      const thumb = hasImg
+        ? `<div class="pf-thumb" data-full="1"><img src="${esc(it.url)}" loading="lazy" alt="демка #${it.id}"></div>`
+        : `<div class="pf-thumb"><div class="pf-nomedia"><i class="fas fa-file-lines"></i>без медиа</div></div>`;
+      card.innerHTML =
+        thumb +
+        `<div class="pf-body">
+           <div class="pf-row1">
+             <span class="pf-badge" style="background:${col}22;color:${col};border:1px solid ${col}55">${esc(it.action || '—')}</span>
+             <span class="pf-id">#${it.id}</span>
+           </div>
+           <div><span class="pf-user" data-q="${esc(it.user_name)}" title="Показать все демки этого юзера">${esc(it.user_name)}</span>
+             <span class="pf-uid"> ${esc(it.user_id)}</span></div>
+           <div class="pf-reason" title="${esc(it.reason || '')}">${esc(it.reason || '—')}</div>
+           <div class="pf-meta"><span><i class="fas fa-user-shield"></i> ${esc(it.mod_name)}</span>
+             <span title="${esc(it.set_at || '')}">${fmt(it.set_at)}</span></div>
+         </div>
+         <div class="pf-actions">
+           ${it.url ? `<a class="pf-btn" href="${esc(it.url)}" target="_blank"><i class="fas fa-image"></i>Файл</a>` : ''}
+           ${it.link ? `<a class="pf-btn" href="${esc(it.link)}" target="_blank"><i class="fas fa-link"></i>Ссылка</a>` : ''}
+           ${it.jump ? `<a class="pf-btn" href="${esc(it.jump)}" target="_blank"><i class="fas fa-arrow-up-right-from-square"></i>В Discord</a>` : ''}
+           ${CAN_DEL ? `<button class="pf-btn danger" data-del="${it.id}"><i class="fas fa-trash"></i></button>` : ''}
+         </div>`;
+      if (hasImg) card.querySelector('.pf-thumb').addEventListener('click', () => openModal(it));
+      card.querySelectorAll('.pf-user').forEach(el =>
+        el.addEventListener('click', () => {
+          document.getElementById('pf-q').value = it.user_name; render();
+        }));
+      card.querySelectorAll('[data-del]').forEach(el =>
+        el.addEventListener('click', () => pfDel(it.id)));
+      grid.appendChild(card);
+    }
+  }
+
+  async function load() {
+    const grid = document.getElementById('pf-grid');
+    grid.innerHTML = '<div class="pf-empty"><i class="fas fa-spinner fa-spin"></i>Загружаю…</div>';
+    try {
+      const r = await fetch('/api/proofs');
+      const d = await r.json();
+      if (!d.success) throw new Error(d.error || 'err');
+      all = d.items || [];
+      renderChips();
+      render();
+    } catch (e) {
+      grid.innerHTML = '<div class="pf-empty"><i class="fas fa-exclamation-triangle"></i>Не удалось загрузить демки.</div>';
+    }
+  }
+  window.pfReload = load;
+
+  async function pfDel(pid) {
+    if (!confirm('Удалить демку #' + pid + ' (запись и сообщение в канале)?')) return;
+    const r = await fetch('/api/proofs/' + pid, {method: 'DELETE'});
+    const d = await r.json();
+    if (d.success) {
+      msg('Демка #' + pid + ' удалена' + (d.msg_deleted ? ' вместе с сообщением в канале.' : '.'), 'ok');
+      all = all.filter(x => x.id !== pid);
+      renderChips(); render();
+    } else msg('Ошибка: ' + (d.error || 'не вышло'), 'err');
+  }
+
+  document.getElementById('pf-q').addEventListener('input', render);
+  load();
+})();
 </script>
 {% endblock %}

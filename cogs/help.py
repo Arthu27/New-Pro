@@ -303,12 +303,9 @@ CAT_ICONS = {
     "profile": "afk_icon",
     "navigation": "navigation",
 }
-# Эмодзи-заглушки для select-меню, если на сервере нет кастомных aether_*
-CAT_EMOJIS_FALLBACK = {
-    "moderation": "🛡", "warnings": "⚠", "tickets": "🎫", "economy": "🪙",
-    "music": "🎵", "levels": "⭐", "utility": "⚙", "voice": "🎙",
-    "fun": "🎲", "giveaway": "🎁", "profile": "👤",
-}
+# Без эмоджи-заглушек (пожелание владельца): если кастомных aether_* нет,
+# пункт меню выводится просто без иконки.
+CAT_EMOJIS_FALLBACK = {}
 
 
 R = 2  # рендер-масштаб: Discord-превью ~400px, рендерим вдвое больше — текст родной и чёткий
@@ -491,7 +488,7 @@ class HelpSelect(discord.ui.Select):
                     label=c["title"],
                     value=c["id"],
                     description=f"{len(c['commands'])} команд в категории",
-                    emoji=CUSTOM_EMOJIS.get(c["id"]) or CAT_EMOJIS_FALLBACK.get(c["id"], "▪"),
+                    emoji=CUSTOM_EMOJIS.get(c["id"]) or CAT_EMOJIS_FALLBACK.get(c["id"]),
                     default=(c["id"] == current_cat)
                 )
             )

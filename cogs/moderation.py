@@ -141,7 +141,7 @@ class Moderation (commands .Cog ):
         desc +=f"### **{user.display_name}** — {action_text}\n"
         desc +=f"`{user.id}`\n"
         desc +="\n\n"
-        desc +=f"📁 **Дело:** #{case_id}\n"
+        desc +=f"**Дело:** #{case_id}\n"
         desc +=f"📝 **Причина:** {reason or 'Не указана'}\n"
         desc +=f"🛡️ **Модератор:** {moderator.mention if moderator else chr(8212)}\n"
 

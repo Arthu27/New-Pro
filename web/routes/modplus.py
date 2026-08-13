@@ -220,8 +220,9 @@ def register(ctx):
         items =proof_list (gid ,user_id =int (uid ))if uid .isdigit ()else proof_list (gid )
         if action :
             items =[e for e in items if e .get ('action')==action ]
+        from web .app import _ts_to_utc_iso 
         out =[]
-        for e in items [:50 ]:
+        for e in items [:500 ]:
             ch_id =e .get ('channel_id')
             jump =None
             if ch_id and e .get ('msg_id'):
@@ -230,7 +231,7 @@ def register(ctx):
             'user_name':e .get ('user_name'),'mod_name':e .get ('mod_name'),
             'action':e .get ('action'),'reason':e .get ('reason'),
             'link':e .get ('link'),'url':e .get ('url'),
-            'set_at':e .get ('set_at'),'jump':jump })
+            'set_at':_ts_to_utc_iso (e .get ('set_at'))or e .get ('set_at')or '','jump':jump })
         return jsonify ({'success':True ,'items':out ,'total':len (items )})
 
 
@@ -257,7 +258,7 @@ def register(ctx):
                     msg_deleted =True
         except Exception as _ex:
             _log.debug("api_proofs_delete(): подавлено: %s", _ex)
-        _fire_panel_notification ('proof',f'🗑️ Демка #{pid} удалена',
+        _fire_panel_notification ('proof',f'Демка #{pid} удалена',
         f"{session.get('username')}: {entry.get('user_name')}")
         return jsonify ({'success':True ,'msg_deleted':msg_deleted })
 

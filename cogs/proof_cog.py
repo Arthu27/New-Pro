@@ -159,7 +159,7 @@ class ProofCog(commands.Cog):
     def _proof_embed(self, user, entry, extra_note=None):
         color = ACTION_COLORS.get(entry['action'].lower(), PURPLE)
         e = discord.Embed(
-            title=f"📁 Демка #{entry['id']} · {entry['action']}",
+            title=f"Демка #{entry['id']} · {entry['action']}",
             color=color,
             timestamp=_now())
         e.add_field(name='Нарушитель', value=f'{user} (`{entry["user_id"]}`)', inline=True)
@@ -167,9 +167,9 @@ class ProofCog(commands.Cog):
         e.add_field(name='Наказание', value=entry['action'], inline=True)
         e.add_field(name='Причина', value=entry['reason'] or '—', inline=False)
         if entry.get('link'):
-            e.add_field(name='🔗 Ссылка на демку', value=entry['link'][:900], inline=False)
+            e.add_field(name='Ссылка на демку', value=entry['link'][:900], inline=False)
         if extra_note:
-            e.add_field(name='⚠️ Внимание', value=extra_note, inline=False)
+            e.add_field(name='Внимание', value=extra_note, inline=False)
         e.set_footer(text='Aether · Доказательства · листай канал — тут все демки')
         return e
 
@@ -252,14 +252,11 @@ class ProofCog(commands.Cog):
                     action: str, reason: str,
                     attachment: discord.Attachment = None, link: str = None):
         link = (link or '').strip()
-        if attachment is None and not link:
-            await interaction.response.send_message(
-                '⚠️ Демка нужна обязательно: прикрепи **вложение** или дай **ссылку**.',
-                ephemeral=True)
-            return
+        # Фото/ссылка больше НЕ обязательны (пожелание владельца): демку можно
+        # приложить позже отдельной /proof — карточка фиксируется сразу.
         if link and not _is_link(link):
             await interaction.response.send_message(
-                '⚠️ Ссылка должна начинаться с http:// или https://', ephemeral=True)
+                'Ссылка должна начинаться с http:// или https://', ephemeral=True)
             return
         await interaction.response.defer(ephemeral=True)
 
@@ -268,12 +265,12 @@ class ProofCog(commands.Cog):
             attachment=attachment, link=link or None)
         if not ok:
             await interaction.followup.send(
-                '⚠️ Демку записал, но канал доказательств недоступен '
+                'Демку записал, но канал доказательств недоступен '
                 '(нет прав на создание каналов?). Дай боту «Управление каналами».',
                 ephemeral=True)
             return
 
-        e = discord.Embed(title=f"📁 Демка #{entry['id']} сохранена", color=GREEN,
+        e = discord.Embed(title=f"Демка #{entry['id']} сохранена", color=GREEN,
                           timestamp=_now())
         e.add_field(name='Кто', value=f'{user.mention} (`{user.id}`)', inline=True)
         e.add_field(name='Наказание', value=entry['action'], inline=True)
@@ -281,6 +278,10 @@ class ProofCog(commands.Cog):
                     inline=True)
         if note:
             e.add_field(name='Внимание', value=note, inline=False)
+        if attachment is None and not link:
+            e.add_field(name='Без медиа',
+                        value='Записал без фото — скрин можно приложить позже: /proof',
+                        inline=False)
         await interaction.followup.send(embed=e, ephemeral=True)
         log.info(f"[PROOF] #{entry['id']} {interaction.user} → {user}: {action}")
 
@@ -294,7 +295,7 @@ class ProofCog(commands.Cog):
         total = len(proof_list(interaction.guild.id,
                                user_id=user.id if user else None))
         e = discord.Embed(
-            title=f'📁 Демки — {user.display_name}' if user else '📁 Демки сервера',
+            title=f'Демки — {user.display_name}' if user else 'Демки сервера',
             color=PURPLE, timestamp=_now())
         if not items:
             e.description = 'Пока пусто. Первая демка появится после /proof.'
@@ -320,7 +321,7 @@ class ProofCog(commands.Cog):
         entry = proof_remove(interaction.guild.id, number)
         if not entry:
             await interaction.response.send_message(
-                f'⚠️ Демки #{number} нет — проверь номер в /proofs.', ephemeral=True)
+                f'Демки #{number} нет — проверь номер в /proofs.', ephemeral=True)
             return
         # попробуем заодно убрать сообщение из канала доказательств
         msg_deleted = False
@@ -334,7 +335,7 @@ class ProofCog(commands.Cog):
                     msg_deleted = True
                 except Exception as _ex:
                     _log.debug("proofdel(): подавлено: %s", _ex)
-        e = discord.Embed(title=f'🗑️ Демка #{number} удалена', color=RED, timestamp=_now())
+        e = discord.Embed(title=f'Демка #{number} удалена', color=RED, timestamp=_now())
         e.add_field(name='Была на', value=f"<@{entry['user_id']}> (`{entry['user_name']}`)",
                     inline=True)
         e.add_field(name='Наказание', value=entry['action'], inline=True)
@@ -363,10 +364,10 @@ async def try_deliver_proof(bot, guild, moderator, user, action, reason,
             guild, moderator, user, action, reason,
             attachment=attachment, link=(link or None))
         if not ok:
-            return '⚠️ Демку записал, но канал доказательств недоступен (права бота?).'
-        txt = f'📁 Демка #{entry["id"]} — в канале доказательств.'
+            return 'Демку записал, но канал доказательств недоступен (права бота?).'
+        txt = f'Демка #{entry["id"]} — в канале доказательств.'
         if note:
-            txt += f'\n⚠️ {note[:200]}'
+            txt += f'\nВнимание: {note[:200]}'
         return txt
     except Exception as e:
         log.warning(f'[PROOF] интеграция с наказанием ({action}): {e}')

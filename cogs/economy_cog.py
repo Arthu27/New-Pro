@@ -365,7 +365,7 @@ class _EconomyExtra (commands .Cog ):
             return 
         lines =[]
         for p in my_pets :
-            mark ="⭐"if p ==equipped else "•"
+            mark ="▸"if p ==equipped else "•"
             lines .append ((f"{mark} {p.capitalize()}",f"+{ITEM_DETAILS[p].get('pet_bonus',0)}% к работе"))
         if not lines :
             lines =[("Питомцы","Нет")]
@@ -647,7 +647,7 @@ class _EconomyExtra (commands .Cog ):
         if 'inventory' not in data : data ['inventory']=[]
         data ['inventory'].append (key )
         self ._log_tx (ctx .author .id ,data ,'Покупка',-price ,key )
-        e =discord .Embed (title ="🛒 Покупка",color =_rarity_color (det ['rarity']),
+        e =discord .Embed (title ="Покупка",color =_rarity_color (det ['rarity']),
         description =f"**{key.capitalize()}**\nЦена: ${price:,}\nРедкость: {det['rarity']}")
         await ctx .send (embed =e )
 
@@ -1145,26 +1145,23 @@ class EconomySelect (discord .ui .Select ):
         label ="Магазин сервера",
         value ="shop",
         description ="Просмотр и покупка ролей и предметов",
-        emoji ="🛍️",
         default =(current_cat =="shop")
         ),
         discord .SelectOption (
         label ="Инвентарь пользователя",
         value ="inventory",
         description ="Список купленных предметов в инвентаре",
-        emoji ="🎒",
         default =(current_cat =="inventory")
         ),
         discord .SelectOption (
         label ="Баланс и банковский счёт",
         value ="balance",
         description ="Текущее финансовое состояние",
-        emoji ="💰",
         default =(current_cat =="balance")
         )
         ]
         super ().__init__ (
-        placeholder ="📂 Выберите раздел экономики...",
+        placeholder ="Выберите раздел экономики…",
         options =options ,
         custom_id ="economy_select_v4_pro"
         )

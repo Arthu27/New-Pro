@@ -390,6 +390,39 @@ login_as('uye')
 r = client.get('/mod-tools')
 check(r.status_code in (302, 403), f'uye на /mod-tools не пускают ({r.status_code})')
 
+# ═══ веб-панель: галерея демок /api/proofs ═════════════════════════════
+print('== панель: /api/proofs + страница галереи ==')
+from cogs.proof_cog import proof_add, proof_update_delivery  # noqa: E402
+
+login_as('mod')
+_pe1 = proof_add(guild.id, 5050, 'Cheater#7', 5001, 'Warden#1', 'мут', 'флуд стикерами')
+proof_update_delivery(guild.id, _pe1['id'], msg_id=777001, channel_id=777002,
+                      url='https://cdn.aether/proof1.png')
+_pe2 = proof_add(guild.id, 5051, 'Raider#1', 5001, 'Warden#1', 'бан', 'рейд')  # без медиа
+
+r = client.get('/api/proofs')
+d = r.get_json()
+check(r.status_code == 200 and d.get('success') is True and len(d.get('items') or []) >= 2,
+      'proofs API: демки отдаются списком')
+_it_mute = next((x for x in d['items'] if x['action'] == 'мут'), None)
+check(_it_mute and str(_it_mute['set_at']).endswith('+00:00'),
+      'proofs API: метка со смещением +00:00 (браузер не сдвинет на +4ч)')
+check(_it_mute and _it_mute.get('jump')
+      == f"https://discord.com/channels/{guild.id}/777002/777001",
+      'proofs API: jump-ссылка на сообщение в канале собрана')
+check(_it_mute and _it_mute.get('url') == 'https://cdn.aether/proof1.png',
+      'proofs API: живой url файла доехал (не протухающий)')
+_it_ban = next((x for x in d['items'] if x['action'] == 'бан'), None)
+check(_it_ban and _it_ban.get('url') in (None, '') and _it_ban.get('reason') == 'рейд',
+      'proofs API: демка без медиа тоже в списке (фото не обязательно)')
+
+r = client.get('/proofs')
+page = r.get_data(as_text=True)
+check(r.status_code == 200 and 'pf-grid' in page and 'pf-modal' in page and 'pf-chips' in page,
+      'галерея /proofs: сетка карточек, лайтбокс и чипсы фильтров на месте')
+check(r.status_code == 200 and 'id="pf-user"' not in page and 'ID юзера' not in page,
+      'галерея /proofs: поле «ID юзера» убрано — всё видно сразу, искать не надо')
+
 import shutil
 shutil.rmtree(_TMP, ignore_errors=True)
 loop.close()

@@ -322,7 +322,7 @@ _LOG_META = {
     'ticket':  ('🎫', 0xF39C12, 'Тикеты'),
     'ai':      ('🤖', 0xE91E63, 'AI-алерты'),
     'welcome': ('🎉', 0x2ECC71, 'Приветствие'),
-    'proof':   ('📁', 0x9B59B6, 'Доказательства'),
+    'proof':   ('', 0x9B59B6, 'Доказательства'),
 }
 
 
@@ -350,7 +350,7 @@ def _styled_log_embed(guild, category, title, fields=(), color=None,
     icon, base_color, cat_name = _cat_meta(category)
     e = _LogEmbed(color=color if color is not None else base_color,
                   timestamp=datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None))
-    desc = f"## {icon} {title}\n\n"
+    desc = f"## {(icon + ' ') if icon else ''}{title}\n\n"
     for name, value in fields:
         if value in (None, ''):
             continue
