@@ -157,7 +157,7 @@
     <div class="diag-action danger">
       <div class="icon"><i class="fas fa-power-off"></i></div>
       <div class="text">Перезагрузить весь бот
-        <small>⚠️ Прервёт работу бота на ~5-15 секунд. Только для критических случаев.</small>
+        <small><i class="fas fa-triangle-exclamation"></i> Прервёт работу бота на ~5-15 секунд. Только для критических случаев.</small>
       </div>
       <button onclick="confirmRestart()">Restart</button>
     </div>
@@ -241,23 +241,23 @@
   window.hotReload = function() {
     showToast('Hot reload...', true);
     fetch('/api/bot/hot-reload', {method:'POST'}).then(r => r.json()).then(d => {
-      if (d.reloaded && d.reloaded.length) showToast('✅ Перезагружено: ' + d.reloaded.join(', '), true);
+      if (d.reloaded && d.reloaded.length) showToast('Перезагружено: ' + d.reloaded.join(', '), true);
       else showToast('Нет изменений', true);
       load();
     });
   };
   window.gc = function() {
     fetch('/api/bot/gc', {method:'POST'}).then(r => r.json()).then(d => {
-      showToast('🧹 GC: собрано ' + d.collected + ' объектов', true);
+      showToast('GC: собрано ' + d.collected + ' объектов', true);
       load();
     });
   };
   window.diagnose = function() {
     fetch('/api/bot/diagnose', {method:'POST'}).then(r => r.json()).then(d => {
       if (d.issues && d.issues.length) {
-        showToast('⚠️ ' + d.issues.length + ' проблем обнаружено', false);
+        showToast('' + d.issues.length + ' проблем обнаружено', false);
       } else {
-        showToast('✅ Всё в порядке', true);
+        showToast('Всё в порядке', true);
       }
       load();
     });
@@ -265,9 +265,9 @@
   window.confirmRestart = function() {
     window.askConfirm('Перезагрузка бота', 'Точно перезагрузить весь бот? Это прервёт работу на 5–15 секунд.', function () {
       fetch('/api/bot/restart', {method:'POST'}).then(r => r.json()).then(d => {
-        showToast('🔄 Бот перезагружается...', true);
+        showToast('Бот перезагружается...', true);
       });
-    }, { icon: '🔄', okText: 'Перезапустить', danger: true });
+    }, { icon_fa: 'fa-arrows-rotate', okText: 'Перезапустить', danger: true });
   };
   function loadErrors() {
     fetch('/api/bot/errors').then(r => r.json()).then(errs => {

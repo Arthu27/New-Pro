@@ -140,12 +140,12 @@
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ role_id: rid, message: msg })
       }).then(function (r) { return r.json(); }).then(function (d) {
-        if (d.success) showResult('dm-result', '✓ Отправлено ' + d.count + ' участникам', true);
-        else showResult('dm-result', '✗ ' + (d.error || 'Ошибка'), false);
-      }).catch(function (e) { showResult('dm-result', '✗ ' + e.message, false); })
+        if (d.success) showResult('dm-result', 'Отправлено ' + d.count + ' участникам', true);
+        else showResult('dm-result', '' + (d.error || 'Ошибка'), false);
+      }).catch(function (e) { showResult('dm-result', '' + e.message, false); })
         .finally(function () { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Отправить всем'; });
     };
-    if (window.confirmAction) window.confirmAction('Рассылка DM', 'Отправить сообщение всем участникам с этой ролью?', doSend, { okText: 'Отправить', icon: '📨' });
+    if (window.confirmAction) window.confirmAction('Рассылка DM', 'Отправить сообщение всем участникам с этой ролью?', doSend, { okText: 'Отправить', icon_fa: 'fa-envelope' });
     else if (confirm('Отправить сообщение всем участникам с этой ролью?')) doSend();
   }
 
@@ -165,12 +165,12 @@
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ target_role: target, action_role: action, action: op })
       }).then(function (r) { return r.json(); }).then(function (d) {
-        if (d.success) showResult('role-result', '✓ Применено к ' + d.count + ' участникам', true);
-        else showResult('role-result', '✗ ' + (d.error || 'Ошибка'), false);
-      }).catch(function (e) { showResult('role-result', '✗ ' + e.message, false); })
+        if (d.success) showResult('role-result', 'Применено к ' + d.count + ' участникам', true);
+        else showResult('role-result', '' + (d.error || 'Ошибка'), false);
+      }).catch(function (e) { showResult('role-result', '' + e.message, false); })
         .finally(function () { btn.disabled = false; btn.innerHTML = '<i class="fas fa-user-plus"></i> Применить'; });
     };
-    if (window.confirmAction) window.confirmAction('Массовая операция', 'Применить массовую операцию к роли?', doApply, { okText: 'Применить', icon: '⚙️' });
+    if (window.confirmAction) window.confirmAction('Массовая операция', 'Применить массовую операцию к роли?', doApply, { okText: 'Применить', icon_fa: 'fa-gears' });
     else if (confirm('Применить массовую операцию к роли?')) doApply();
   }
 
@@ -192,13 +192,13 @@
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
       }).then(function (r) { return r.json(); }).then(function (d) {
-        if (d.success) showResult('punish-result', '✓ ' + op.toUpperCase() + ' применено к ' + d.count + ' участникам', true);
-        else showResult('punish-result', '✗ ' + (d.error || 'Ошибка'), false);
-      }).catch(function (e) { showResult('punish-result', '✗ ' + e.message, false); })
+        if (d.success) showResult('punish-result', '' + op.toUpperCase() + ' применено к ' + d.count + ' участникам', true);
+        else showResult('punish-result', '' + (d.error || 'Ошибка'), false);
+      }).catch(function (e) { showResult('punish-result', '' + e.message, false); })
         .finally(function () { btn.disabled = false; btn.innerHTML = '<i class="fas fa-gavel"></i> Применить'; });
     };
-    if (window.confirmAction) window.confirmAction(op.toUpperCase(), op.toUpperCase() + ' — необратимое действие! Продолжить?', doPunish, { okText: 'Выполнить', icon: '⚠️', danger: true });
-    else if (confirm('⚠️ ' + op.toUpperCase() + ' — необратимое действие! Продолжить?')) doPunish();
+    if (window.confirmAction) window.confirmAction(op.toUpperCase(), op.toUpperCase() + ' — необратимое действие! Продолжить?', doPunish, { okText: 'Выполнить', danger: true });
+    else if (confirm('' + op.toUpperCase() + ' — необратимое действие! Продолжить?')) doPunish();
   }
 
   function bind() {

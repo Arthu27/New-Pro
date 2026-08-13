@@ -46,7 +46,7 @@ async function init() {
       var el = document.getElementById('bd-current');
       el.style.display = 'block';
       var parts = d.date.split('-');
-      el.innerHTML = '🎂 Запись: <strong>' + parts[1] + '/' + parts[0] + (d.year ? '/' + d.year : '') + '</strong>';
+      el.innerHTML = 'Запись: <strong>' + parts[1] + '/' + parts[0] + (d.year ? '/' + d.year : '') + '</strong>';
       document.getElementById('bd-month').value = parseInt(parts[0]);
       document.getElementById('bd-day').value = parseInt(parts[1]);
       if (d.year) document.getElementById('bd-year').value = d.year;
@@ -63,7 +63,7 @@ async function loadUpcoming() {
     el.innerHTML = d.slice(0,10).map(function(b) {
       var isToday = b.diff === 0;
       return '<div class="bd-item">' +
-        '<span class="bd-item-name">' + (isToday?'🎉 ':'🎂 ') + b.name + '</span>' +
+        '<span class="bd-item-name">' + b.name + '</span>' +
         '<span class="bd-item-time ' + (isToday?'today':'') + '">' + (isToday ? 'СЕГОДНЯ!' : b.diff + ' дн.') + '</span>' +
       '</div>';
     }).join('');
@@ -75,17 +75,17 @@ async function saveBirthday() {
   var day   = parseInt(document.getElementById('bd-day').value);
   var month = parseInt(document.getElementById('bd-month').value);
   var year  = parseInt(document.getElementById('bd-year').value) || null;
-  if (!day || !month) { msg.innerHTML = '<span >❌ День и месяц обязательны</span>'; return; }
-  if (day < 1 || day > 31 || month < 1 || month > 12) { msg.innerHTML = '<span >❌ Неверная дата</span>'; return; }
+  if (!day || !month) { msg.innerHTML = '<span ><i class="fas fa-xmark" style="color:#e74c3c"></i> День и месяц обязательны</span>'; return; }
+  if (day < 1 || day > 31 || month < 1 || month > 12) { msg.innerHTML = '<span ><i class="fas fa-xmark" style="color:#e74c3c"></i> Неверная дата</span>'; return; }
   try {
     var r = await fetch('/api/my-birthday/' + GUILD_ID, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({day, month, year})
     }).then(r => r.json());
-    if (r.ok) { msg.innerHTML = '<span >✅ Сохранено!</span>'; init(); }
-    else msg.innerHTML = '<span >❌ ' + (r.error || 'Ошибка') + '</span>';
-  } catch(e) { msg.innerHTML = '<span >❌ Ошибка соединения</span>'; }
+    if (r.ok) { msg.innerHTML = '<span ><i class="fas fa-check" style="color:#2ecc71"></i> Сохранено!</span>'; init(); }
+    else msg.innerHTML = '<span ><i class="fas fa-xmark" style="color:#e74c3c"></i> ' + (r.error || 'Ошибка') + '</span>';
+  } catch(e) { msg.innerHTML = '<span ><i class="fas fa-xmark" style="color:#e74c3c"></i> Ошибка соединения</span>'; }
 }
 
 init();

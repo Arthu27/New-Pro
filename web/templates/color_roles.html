@@ -157,8 +157,8 @@ async function publishPanel() {
   });
   var d = await r.json();
   var btn = event.target;
-  if(d.success) { btn.textContent='✅ Опубликовано!'; setTimeout(function(){btn.innerHTML='<i class="fas fa-paper-plane"></i> Опубликовать';},2000); }
-  else alert('❌ '+(d.error||'Ошибка'));
+  if(d.success) { btn.textContent='Опубликовано!'; setTimeout(function(){btn.innerHTML='<i class="fas fa-paper-plane"></i> Опубликовать';},2000); }
+  else alert(''+(d.error||'Ошибка'));
 }
 
 loadGuilds();

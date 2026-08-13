@@ -48,8 +48,8 @@ async function bkLoad() {
   if (!d.success) { list.innerHTML = '<i>Ошибка загрузки.</i>'; return; }
   const s = d.settings || {};
   const mode = s.enabled
-    ? `🟢 Автобэкап включён: ежедневно в <b>${String(s.hour).padStart(2,'0')}:00</b>, храним последние <b>${s.keep}</b>`
-    : '🔴 Автобэкап выключен (BACKUP_ENABLED=0)';
+    ? `<i class="fas fa-circle" style="color:#2ecc71"></i> Автобэкап включён: ежедневно в <b>${String(s.hour).padStart(2,'0')}:00</b>, храним последние <b>${s.keep}</b>`
+    : '<i class="fas fa-circle" style="color:#e74c3c"></i> Автобэкап выключен (BACKUP_ENABLED=0)';
   stats.innerHTML = mode + ` &nbsp;·&nbsp; Всего: <b>${d.stats.total}</b> шт, <b>${d.stats.total_size_h}</b>`;
   if (!d.items.length) {
     list.innerHTML = '<i>Архивов пока нет — создайте первый кнопкой выше.</i>';
@@ -84,11 +84,11 @@ async function bkCreate() {
     const r = await fetch('/api/backups', {method: 'POST'});
     const d = await r.json();
     if (d.success) {
-      msg('bk-msg', `✓ Готово: ${d.item.name} (${d.item.size_h}, файлов ${d.item.files})` +
+      msg('bk-msg', `Готово: ${d.item.name} (${d.item.size_h}, файлов ${d.item.files})` +
         (d.removed ? ` · удалено старых: ${d.removed}` : ''), 'ok');
       bkLoad();
-    } else msg('bk-msg', '✗ ' + (d.error || 'Ошибка.'), 'err');
-  } catch(e) { msg('bk-msg', '✗ Ошибка сети.', 'err'); }
+    } else msg('bk-msg', '' + (d.error || 'Ошибка.'), 'err');
+  } catch(e) { msg('bk-msg', 'Ошибка сети.', 'err'); }
   btn.disabled = false;
 }
 
@@ -96,8 +96,8 @@ async function bkDel(name) {
   if (!confirm('Удалить архив ' + name + '?')) return;
   const r = await fetch('/api/backups/' + encodeURIComponent(name), {method: 'DELETE'});
   const d = await r.json();
-  if (d.success) { msg('bk-msg', '✓ Архив удалён.', 'ok'); bkLoad(); }
-  else msg('bk-msg', '✗ ' + (d.error || 'Ошибка.'), 'err');
+  if (d.success) { msg('bk-msg', 'Архив удалён.', 'ok'); bkLoad(); }
+  else msg('bk-msg', '' + (d.error || 'Ошибка.'), 'err');
 }
 
 bkLoad();

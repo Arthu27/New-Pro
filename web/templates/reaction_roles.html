@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Роли по реакциям - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-smile"></i> 🎭 РОЛИ ПО РЕАКЦИЯМ{% endblock %}
+{% block page_title %}<i class="fas fa-smile"></i> РОЛИ ПО РЕАКЦИЯМ{% endblock %}
 {% block content %}
 <style>
 .rr-type-hint { background: rgba(224,176,74,0.07); border: 1px solid var(--ac-line); border-radius: var(--r-sm); padding: 10px 14px; font-size: 12.5px; color: #d8d0bb; margin: 10px 0 16px; }
@@ -33,9 +33,9 @@
   <div class="page-hero-content">
     <div class="page-hero-greeting">
       <span class="dot"></span>
-      <span>🎭 РОЛИ ПО РЕАКЦИЯМ</span>
+      <span>РОЛИ ПО РЕАКЦИЯМ</span>
     </div>
-    <h1>🎭 РОЛИ ПО РЕАКЦИЯМ</h1>
+    <h1>РОЛИ ПО РЕАКЦИЯМ</h1>
     <p>Создание ролей по реакциям: нажал — получил роль.</p>
   </div>
 </div>
@@ -44,20 +44,20 @@
 
 
 <div class="rr-hero" data-reveal="up">
-  <div   style="margin-bottom: 10px;">🎭</div>
-  <div class="hero-title">🎭 Роли по реакциям</div>
+  <div style="margin-bottom: 10px; color: var(--ac); font-size: 30px;"><i class="fas fa-face-smile"></i></div>
+  <div class="hero-title">Роли по реакциям</div>
   <div class="hero-sub">Автоматически выдавать роль по клику на эмодзи</div>
 </div>
 
 <div class="controls-bar">
   <select  id="guild-select" class="guild-sel" onchange="loadRR()" aria-label="Выбор сервера">
-    <option value="">🏠 Выберите сервер...</option>
+    <option value="">Выберите сервер...</option>
   </select>
-  <button class="btn-new" onclick="openModal()"><span>➕</span> Новая панель</button>
+  <button class="btn-new" onclick="openModal()"><i class="fas fa-plus"></i> Новая панель</button>
 </div>
 
 <div class="rr-type-hint">
-  💡 Панель можно создать как <b>emoji-реакции</b> (нажал на реакцию — получил роль) или как
+  <i class="fas fa-lightbulb"></i> Панель можно создать как <b>emoji-реакции</b> (нажал на реакцию — получил роль) или как
   <b>select-menu</b> (выпадающий список, в котором выбирают роль).
 </div>
 
@@ -65,28 +65,28 @@
 
 <div id="modal" class="modal-overlay">
   <div class="modal-box">
-    <div class="modal-title">🎭 Создать панель ролей</div>
+    <div class="modal-title">Создать панель ролей</div>
     <div class="form-group">
-      <label class="form-label">📺 Канал</label>
+      <label class="form-label">Канал</label>
       <select id="rr-channel" class="form-input" aria-label="Канал"></select>
     </div>
     <div class="form-group">
-      <label class="form-label">📝 Заголовок</label>
+      <label class="form-label">Заголовок</label>
       <input type="text" id="rr-title" class="form-input" placeholder="Заголовок сообщения..." aria-label="Заголовок сообщения...">
     </div>
     <div class="form-group">
-      <label class="form-label">🔘 Тип панели</label>
+      <label class="form-label">Тип панели</label>
       <select id="rr-type" class="form-input" onchange="setType(this.value)" aria-label="Тип реакционных ролей">
         <option value="emoji">😀 Emoji-реакции</option>
         <option value="select">📋 Select-menu (выпадающий список)</option>
       </select>
     </div>
-    <div id="rr-emoji-label" class="form-label" style="margin-bottom: 10px;">🎭 Emoji → Роль</div>
-    <div id="rr-select-label" class="form-label" style="margin-bottom: 10px; display:none;">📋 Роль (для select-menu)</div>
+    <div id="rr-emoji-label" class="form-label" style="margin-bottom: 10px;">Emoji → Роль</div>
+    <div id="rr-select-label" class="form-label" style="margin-bottom: 10px; display:none;">Роль (для select-menu)</div>
     <div id="rr-entries"></div>
-    <button class="btn-add-entry" onclick="addEntry()">➕ Добавить роль</button>
+    <button class="btn-add-entry" onclick="addEntry()"><i class="fas fa-plus"></i> Добавить роль</button>
     <div class="modal-actions">
-      <button class="btn-submit" onclick="createRR()">🎭 Создать и отправить</button>
+      <button class="btn-submit" onclick="createRR()">Создать и отправить</button>
       <button class="btn-cancel" onclick="closeModal()">Отмена</button>
     </div>
   </div>
@@ -220,7 +220,7 @@ async function deleteRR(id) {
     fetch('/api/guild/'+selectedGuild+'/reaction-roles/'+id+'/delete', {method:'POST'})
       .then(r => r.json()).then(d => { if(d.success) loadRR(); })
       .catch(e => showToast('Ошибка: '+e.message, false));
-  }, { okText: 'Удалить', danger: true, icon: '🗑️' });
+  }, { okText: 'Удалить', danger: true, icon_fa: 'fa-trash' });
 }
 
 loadGuilds();

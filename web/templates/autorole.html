@@ -28,13 +28,13 @@
 
 
 <div class="ar-hero">
-  <span class="hero-icon">🎭</span>
+  <span class="hero-icon"><i class="fas fa-id-badge"></i></span>
   <div class="hero-title">НАСТРОЙКИ АВТО-РОЛИ</div>
   <div class="hero-sub">Автоматически выдавать роли новым участникам</div>
 </div>
 
 <select id="guild-select"  class="guild-sel" onchange="loadSettings()" aria-label="Выбор сервера">
-  <option value="">🏠 Выберите сервер...</option>
+  <option value="">Выберите сервер...</option>
 </select>
 
 <div class="ar-grid">
@@ -184,9 +184,9 @@ async function saveSettings(type) {
     });
     var d = await r.json();
     if (d.success) {
-      toast('✅ Сохранено!', true);
+      toast('Сохранено!', true);
     } else {
-      toast('❌ ' + (d.error || 'Ошибка'), false);
+      toast('' + (d.error || 'Ошибка'), false);
     }
   } catch (e) {
     toast('Запрос ошибка: ' + e.message, false);

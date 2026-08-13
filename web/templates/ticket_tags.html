@@ -191,7 +191,7 @@ async function deleteTag(tagId) {
     } catch (e) {
       showToast('Ошибка соединения', false);
     }
-  }, { okText: 'Удалить', danger: true, icon: '🗑️' });
+  }, { okText: 'Удалить', danger: true, icon_fa: 'fa-trash' });
 }
 
 document.addEventListener('DOMContentLoaded', loadTags);

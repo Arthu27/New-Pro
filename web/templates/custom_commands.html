@@ -134,7 +134,7 @@ async function deleteCmd(id) {
     fetch('/api/guild/'+selectedGuild+'/custom-commands/'+id+'/delete', {method:'POST'})
       .then(r => r.json()).then(d => { if(d.success) { loadCommands(); showToast('Команда удалена', true); } })
       .catch(e => showToast('Ошибка: '+e.message, false));
-  }, { okText: 'Удалить', danger: true, icon: '🗑️' });
+  }, { okText: 'Удалить', danger: true, icon_fa: 'fa-trash' });
 }
 
 document.getElementById('modal').addEventListener('click', function(e){ if(e.target===this) closeModal(); });

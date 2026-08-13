@@ -2133,11 +2133,19 @@ def inject_guild_id ():
 
 @app .context_processor
 def inject_panel_menu ():
-    """Expose the visible sidebar menu for the current panel role."""
-    from services .panel_menu import panel_groups_for
+    """Expose the visible sidebar menu for the current panel role.
+
+    Также пробрасывает состояние режима модулей (cogs_policy):
+    panel_mod_only — включён ли «MOD_ONLY», panel_off_paths — страницы,
+    чьи коги выключены (приглушаются в меню с чипом «выкл»).
+    """
+    from services .panel_menu import panel_groups_for, module_mode_active, module_off_paths
     role =session .get ('role','uye')
     menu =panel_groups_for (role )if role in ('owner','admin','mod')else []
-    return {'panel_menu':menu ,'panel_role':role }
+    off_paths =module_off_paths ()
+    return {'panel_menu':menu ,'panel_role':role ,
+            'panel_mod_only':module_mode_active (),
+            'panel_off_paths':off_paths }
 
 def set_bot_instance (bot ):
     global bot_instance 

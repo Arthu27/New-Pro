@@ -174,7 +174,7 @@ async function addTag(){
   const r = await fetch('/api/tagjail/tag', {method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({action:'add', tag})});
   const d = await r.json();
-  if(d.ok){ inp.value=''; toast('Тег добавлен ✓'); loadState(); }
+  if(d.ok){ inp.value=''; toast('Тег добавлен'); loadState(); }
   else toast('Ошибка: ' + (d.error||''), false);
 }
 async function delTag(enc){
@@ -183,7 +183,7 @@ async function delTag(enc){
   const r = await fetch('/api/tagjail/tag', {method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({action:'del', tag})});
   const d = await r.json();
-  if(d.ok){ toast('Тег удалён ✓'); loadState(); }
+  if(d.ok){ toast('Тег удалён'); loadState(); }
   else toast('Ошибка: ' + (d.error||''), false);
 }
 
@@ -217,7 +217,7 @@ async function saveConfig(){
   const r = await fetch('/api/tagjail/config', {method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify(payload)});
   const d = await r.json();
-  if(d.ok) toast('Настройки сохранены ✓');
+  if(d.ok) toast('Настройки сохранены');
   else toast('Ошибка: ' + Object.values(d.errors||{e:d.error}).join('; '), false);
   loadState();
 }
@@ -235,14 +235,14 @@ function renderJail(){
         </div>
         <button class="tj-btn small ghost" onclick="unjail('${j.user_id}')"><i class="fas fa-door-open"></i> Выпустить</button>
       </div>`).join('')
-    : '<div style="opacity:.55;font-size:13px">Джейл пуст — чисто ✨</div>';
+    : '<div style="opacity:.55;font-size:13px">Джейл пуст — чисто</div>';
 }
 
 async function unjail(uid){
   const r = await fetch('/api/tagjail/unjail', {method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({user_id: uid})});
   const d = await r.json();
-  if(d.ok){ toast('Освобождён ✓'); loadState(); }
+  if(d.ok){ toast('Освобождён'); loadState(); }
   else toast('Ошибка: ' + (d.error||''), false);
 }
 

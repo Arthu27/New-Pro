@@ -125,6 +125,70 @@ DEFAULT_GROUPS = {
 # Panels that can be configured (owner is always full and not stored).
 CONFIGURABLE = ('mod', 'admin')
 
+# ── Режим модулей: какие страницы обслуживаются какими когами ─────────────
+# Если все коги страницы выключены (MOD_ONLY / DISABLED_COGS), пункт меню
+# приглушается и получает чип «выкл» — видно, что модуль спит, а не сломан.
+# Страницы, работающие через Discord API напрямую (роли, каналы, бэкапы...),
+# в карту НЕ входят: они живы и без когов.
+PAGE_COGS = {
+    '/economy': ('economy_cog',),
+    '/leveling': ('level_cog',),
+    '/leveling-admin': ('level_cog',),
+    '/giveaway': ('giveaway',),
+    '/polls': ('social',),
+    '/suggestions': ('social',),
+    '/starboard': ('starboard',),
+    '/voice-stats': ('voice_tracker',),
+    '/duty-panel-web': ('duty',),
+    '/scheduled-messages': ('scheduler',),
+    '/schedule': ('scheduler',),
+    '/afk-list': ('afk',),
+    '/reaction-roles': ('reaction_roles_cog',),
+    '/autorole': ('autorole_join', 'autorole_level'),
+    '/ai-chat': ('ai_chat',),
+    '/custom-commands': ('custom_commands',),
+    '/custom-embeds': ('custom_embeds',),
+    '/welcome-editor': ('welcome_cog',),
+    '/staff-apps': ('staff_apply',),
+}
+
+
+def _off_cog_names():
+    """Множество имён когов, отключённых политикой cogs_policy из окружения."""
+    try:
+        import sys
+        repo = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        if repo not in sys.path:
+            sys.path.insert(0, repo)
+        import cogs_policy
+        files = [f for f in os.listdir(os.path.join(repo, 'cogs')) if f.endswith('.py')]
+        _on, off = cogs_policy.select_from_environment(files)
+        return frozenset(cogs_policy._norm_name(f) for f in off)
+    except Exception as _ex:
+        _log.debug("_off_cog_names(): подавлено: %s", _ex)
+        return frozenset()
+
+
+def module_mode_active():
+    """True, если включён режим «только модерация» (MOD_ONLY из окружения)."""
+    try:
+        import sys
+        repo = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        if repo not in sys.path:
+            sys.path.insert(0, repo)
+        import cogs_policy
+        return cogs_policy.env_flag(cogs_policy.ENV_MOD_ONLY)
+    except Exception:
+        return str(os.environ.get('MOD_ONLY', '')).strip().lower() in ('1', 'true', 'yes', 'on')
+
+
+def module_off_paths():
+    """Пути страниц, чьи коги полностью выключены режимом модулей."""
+    off = _off_cog_names()
+    if not off:
+        return frozenset()
+    return frozenset(p for p, cogs in PAGE_COGS.items() if all(c in off for c in cogs))
+
 
 def _load():
     try:

@@ -75,11 +75,11 @@ async function sendMessage() {
     });
     var d = await r.json();
     btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Отправить';
-    if (d.success) { showResult('✓ Сообщение отправлено!', true); document.getElementById('message-input').value = ''; }
-    else showResult('✗ ' + (d.error || 'Неизвестная ошибка'), false);
+    if (d.success) { showResult('Сообщение отправлено!', true); document.getElementById('message-input').value = ''; }
+    else showResult('' + (d.error || 'Неизвестная ошибка'), false);
   } catch(e) {
     btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Отправить';
-    showResult('✗ Ошибка соединения', false);
+    showResult('Ошибка соединения', false);
   }
 }
 

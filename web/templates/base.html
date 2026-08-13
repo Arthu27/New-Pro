@@ -6,7 +6,7 @@
     <title>{% block title %}Панель Aether{% endblock %}</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/static/style.css?v=12">
-    <link rel="stylesheet" href="/static/polish.css?v=4">
+    <link rel="stylesheet" href="/static/polish.css?v=5">
     <script>
       // Apply theme + accent before render to prevent FOUC
       (function(){
@@ -110,6 +110,14 @@
             </div>
         </a>
 
+        {% if panel_mod_only %}
+        <a href="/cog-manager" class="mode-banner" title="Режим «только модерация»: часть модулей выключена (MOD_ONLY=1). Открыть менеджер модулей">
+            <i class="fas fa-shield-halved"></i>
+            <span>Только модерация</span>
+            <i class="fas fa-chevron-right mode-banner-arrow"></i>
+        </a>
+        {% endif %}
+
         <div class="sidebar-search">
             <i class="fas fa-search"></i>
             <input type="text" id="sidebarSearch" placeholder="Быстрый поиск..." aria-label="Быстрый поиск...">
@@ -138,7 +146,7 @@
                     <div class="nav-group-items">
                         <div class="nav-group-inner">
                         {% for it in grp.pages %}
-                        <a href="{{ it.path }}" class="nav-link {% if request.path == it.path %}active{% endif %}"><i class="fas {{ it.icon }}"></i> <span>{{ it.label }}</span></a>
+                        <a href="{{ it.path }}" class="nav-link {% if request.path == it.path %}active{% endif %}{% if it.path in panel_off_paths %} is-off{% endif %}"{% if it.path in panel_off_paths %} title="Модуль выключен (MOD_ONLY / DISABLED_COGS)"{% endif %}><i class="fas {{ it.icon }}"></i> <span>{{ it.label }}</span>{% if it.path in panel_off_paths %}<span class="nav-off-chip">выкл</span>{% endif %}</a>
                         {% endfor %}
                         </div>
                     </div>
@@ -648,7 +656,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     var next = current === 'dark' ? 'light' : 'dark';
     document.documentElement.setAttribute('data-theme', next);
     try { localStorage.setItem('aether_theme', next); } catch (e) {}
-    showToast(next === 'light' ? '☀️ Светлая тема' : '🌙 Тёмная тема', true);
+    showToast(next === 'light' ? 'Светлая тема' : 'Тёмная тема', true);
   });
 })();
 
@@ -871,7 +879,7 @@ window.askConfirm = function (title, desc, onOk, opts) {
       var tag = (document.activeElement && document.activeElement.tagName) || '';
       if (tag !== 'INPUT' && tag !== 'TEXTAREA') {
         e.preventDefault();
-        showToast('⌨️ Ctrl+K: Поиск · T: Тема · G+D: Главная · G+A: Аналитика', true);
+        showToast('Ctrl+K: Поиск · T: Тема · G+D: Главная · G+A: Аналитика', true);
       }
     }
   });
@@ -1305,7 +1313,7 @@ window.addEventListener('pageshow', function (e) {
           var items = d.notifications || [];
           if (items.length && typeof window.showToast === 'function') {
             try {
-              var t = items[0].title || '🔔 Уведомление';
+              var t = items[0].title || 'Уведомление';
               window.showToast(t + (items[0].body ? ' — ' + items[0].body : ''), true);
             } catch (e2) { /* ignore */ }
           }
@@ -1416,7 +1424,7 @@ window.addEventListener('pageshow', function (e) {
   // Обработка подключения
   window.wsClient.on('connected', function(data) {
     console.log('[WebSocket] Подключено к серверу');
-    showToast('🔌 Real-time соединения установлено', true);
+    showToast('Real-time соединение установлено', true);
   });
   
   // Обработка отключения
@@ -1441,7 +1449,7 @@ window.addEventListener('pageshow', function (e) {
   // Обработка новых тикетов
   window.wsClient.on('new_ticket', function(data) {
     console.log('[WebSocket] Новый тикет:', data);
-    showToast('🎫 Новый тикет создан', true);
+    showToast('Новый тикет создан', true);
     // Вызов пользовательского обработчика если есть
     if (typeof window.handleNewTicket === 'function') {
       window.handleNewTicket(data);
@@ -1461,7 +1469,7 @@ window.addEventListener('pageshow', function (e) {
   window.wsClient.on('notification', function(data) {
     console.log('[WebSocket] Уведомление:', data);
     if (data.data && data.data.title) {
-      showToast('🔔 ' + data.data.title, true);
+      showToast(data.data.title, true);
     }
     // Вызов пользовательского обработчика если есть
     if (typeof window.handleNotification === 'function') {
@@ -1508,7 +1516,7 @@ window.addEventListener('pageshow', function (e) {
 <!-- Global confirm modal -->
 <div id="aetherConfirm" style="position:fixed;inset:0;background:rgba(0,0,0,0.65);display:none;align-items:center;justify-content:center;z-index:100000;padding:20px;">
   <div style="background:linear-gradient(165deg,#1f1f26,#141419);border:1px solid rgba(255,255,255,0.12);border-radius:18px;padding:26px 28px;max-width:360px;width:100%;text-align:center;box-shadow:0 24px 70px rgba(0,0,0,0.65);">
-    <div id="acIcon" style="font-size:34px;margin-bottom:10px;">⚠️</div>
+    <div id="acIcon" style="font-size:32px;margin-bottom:10px;color:var(--ac,#e0b04a);"><i class="fas fa-triangle-exclamation"></i></div>
     <div id="acTitle" style="font-size:16px;font-weight:700;margin-bottom:8px;">Подтверждение</div>
     <div id="acDesc" style="font-size:13px;opacity:.7;margin-bottom:20px;line-height:1.5;"></div>
     <div style="display:flex;gap:10px;justify-content:center;">
@@ -1526,7 +1534,8 @@ window.addEventListener('pageshow', function (e) {
   var cb = null;
   window.confirmAction = function (title, desc, onOk, opts) {
     opts = opts || {};
-    document.getElementById('acIcon').textContent = opts.icon || '⚠️';
+    var _fa = String(opts.icon_fa || 'fa-triangle-exclamation').replace(/[^a-z0-9\- ]/gi, '');
+    document.getElementById('acIcon').innerHTML = '<i class="fas ' + _fa + '"></i>';
     document.getElementById('acTitle').textContent = title || 'Подтверждение';
     document.getElementById('acDesc').textContent = desc || '';
     ok.textContent = opts.okText || 'Подтвердить';

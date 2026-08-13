@@ -74,7 +74,7 @@
       <option value="deleted">🗑 Удалённые</option>
       <option value="edited">✏️ Изменённые</option>
     </select>
-    <input type="text" id="user-filter" placeholder="🔍 Поиск пользователя..." class="field-input" style="min-width:160px" oninput="filterLogs()" aria-label="🔍 Поиск пользователя...">
+    <input type="text" id="user-filter" placeholder="Поиск пользователя..." class="field-input" style="min-width:160px" oninput="filterLogs()" aria-label="Поиск пользователя...">
   </div>
 </div>
 
@@ -129,8 +129,8 @@ function renderLogs(logs) {
     var del = isDeleted(l);
     var cls = del ? 'log-deleted' : 'log-edited';
     var badge = del
-      ? '<span class="type-badge badge-del">🗑 Удалено</span>'
-      : '<span class="type-badge badge-edit">✏️ Изменено</span>';
+      ? '<span class="type-badge badge-del"><i class="fas fa-trash"></i> Удалено</span>'
+      : '<span class="type-badge badge-edit"><i class="fas fa-pen"></i> Изменено</span>';
     var content = del
       ? '<div class="log-content">' + esc(l.content || '') + '</div>'
       : '<div class="log-before">До: ' + esc(l.before || '') + '</div><div class="log-after">После: ' + esc(l.after || '') + '</div>';

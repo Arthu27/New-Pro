@@ -172,11 +172,11 @@
       if (d.success) {
         msg.style.background = 'rgba(74,222,128,0.1)';
         msg.style.color = '#4ade80';
-        msg.textContent = '✓ ' + (d.message || 'Успешно');
+        msg.textContent = '' + (d.message || 'Успешно');
       } else {
         msg.style.background = 'rgba(239,68,68,0.1)';
         msg.style.color = '#ef4444';
-        msg.textContent = '✗ ' + (d.error || 'Ошибка');
+        msg.textContent = '' + (d.error || 'Ошибка');
       }
     } catch (e) {
       var msg = $('result-msg');

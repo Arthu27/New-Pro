@@ -399,7 +399,7 @@
       var d = await r.json();
       removeTyping();
       if (d.error) {
-        addMsg('⚠ ' + d.error, 'bot');
+        addMsg(d.error, 'bot');
       } else {
         addMsg(d.answer || '(пустой ответ)', 'bot', d.model);
         if (d.model) {
@@ -409,7 +409,7 @@
       }
     } catch (e) {
       removeTyping();
-      addMsg('✗ Ошибка соединения: ' + (e.message || 'unknown'), 'bot');
+      addMsg('Ошибка соединения: ' + (e.message || 'unknown'), 'bot');
     }
 
     isTyping = false;

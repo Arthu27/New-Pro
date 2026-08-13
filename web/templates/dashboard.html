@@ -269,15 +269,15 @@
       <span id="heroGreeting">Добро пожаловать, {{ username }}</span>
     </div>
     <div class="hero-guild-row">
-      <div class="hero-guild-av" id="heroGuildAv">⚡</div>
+      <div class="hero-guild-av" id="heroGuildAv"><i class="fas fa-bolt"></i></div>
       <div>
-        <h1 id="heroTitle">Добро пожаловать в Hakumo</h1>
-        <p id="heroDesc">Уютное и дружелюбное сообщество — здесь каждый найдёт себе друзей, интересное общение и помощь.</p>
+        <h1 id="heroTitle">Добро пожаловать</h1>
+        <p id="heroDesc">Обзор сервера: активность, модерация и быстрые действия — всё под рукой.</p>
       </div>
     </div>
     <div class="hero-welcome-msg">
       <i class="fas fa-heart"></i>
-      <span id="heroWelcomeMsg">Добро пожаловать в Hakumo! Это по-настоящему уютное и дружелюбное место, где каждый найдёт себе друзей и интересное общение. Мы рады, что ты с нами!</span>
+      <span id="heroWelcomeMsg">Логи, демки, тикеты и быстрые действия собраны в одном месте — управляй сервером без лишних кликов.</span>
     </div>
     <div class="hero-chips">
       <span class="chip"><span class="chip-dot"></span> Панель онлайн 24/7</span>
@@ -520,25 +520,23 @@
 
   // ── Load main guild info into hero (name, icon, welcome msg) ──
   async function loadGuildInfo() {
-    // Название сервера фиксировано: Hakumo
-    var gName = 'Hakumo';
     try {
       var guilds = await window.fetchCachedJSON('/api/guilds');
-      if (Array.isArray(guilds) && guilds.length) {
-        var main = '{{ main_guild_id }}';
-        var g = null;
-        for (var i = 0; i < guilds.length; i++) {
-          if (String(guilds[i].id) === String(main)) { g = guilds[i]; break; }
-        }
-        if (!g) g = guilds[0];
-        var av = $('heroGuildAv');
-        if (av && g.icon) av.innerHTML = '<img src="' + esc(g.icon) + '" onerror="this.parentNode.textContent=\'⚡\'">';
+      if (!Array.isArray(guilds) || !guilds.length) return;
+      var main = '{{ main_guild_id }}';
+      var g = null;
+      for (var i = 0; i < guilds.length; i++) {
+        if (String(guilds[i].id) === String(main)) { g = guilds[i]; break; }
       }
+      if (!g) g = guilds[0];
+      if (!g || !g.name) return;
+      var av = $('heroGuildAv');
+      if (av && g.icon) av.innerHTML = '<img src="' + esc(g.icon) + '" alt="" onerror="this.parentNode.innerHTML=\'<i class=&quot;fas fa-bolt&quot;></i>\'">';
+      var t = $('heroTitle');
+      if (t) t.textContent = 'Добро пожаловать в ' + g.name;
+      var m = $('heroWelcomeMsg');
+      if (m) m.textContent = 'Добро пожаловать в ' + g.name + '! Логи, демки, тикеты и быстрые действия — в одном месте. Управляй сервером без лишних кликов.';
     } catch (e) { /* keep defaults */ }
-    var t = $('heroTitle');
-    if (t) t.textContent = 'Добро пожаловать в ' + gName;
-    var m = $('heroWelcomeMsg');
-    if (m) m.textContent = 'Добро пожаловать в ' + gName + '! Это по-настоящему уютное и дружелюбное место, где каждый найдёт себе друзей и интересное общение. Мы рады, что ты с нами!';
   }
 
   // ── Main stats ──
@@ -602,7 +600,7 @@
         '<div class="quick-item"><h3>' + bans + '</h3><p>Банов</p></div>' +
         '<div class="quick-item"><h3>' + kicks + '</h3><p>Киков</p></div>' +
         '<div class="quick-item"><h3>' + muts + '</h3><p>Мутов</p></div>' +
-        '<div class="quick-item"><h3 >✓</h3><p>Активен</p></div>';
+        '<div class="quick-item"><h3><i class="fas fa-check"></i></h3><p>Активен</p></div>';
     } catch (e) {
       $('quick-stats').innerHTML = '<div class="quick-grid-empty" >Не удалось загрузить</div>';
     }
@@ -692,7 +690,7 @@
       var btnText = $('btnLockdownText');
       if (active) {
         btn.classList.add('danger');
-        btnText.textContent = 'Активен ✓';
+        btnText.textContent = 'Активен';
       } else {
         btn.classList.remove('danger');
         btnText.textContent = 'Lockdown';
@@ -768,7 +766,7 @@
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ discord_id: id, title: title, message: msg })
       }).then(function (r) { return r.json(); });
-      setResult(el, d.success, d.success ? '✓ Уведомление отправлено!' : ('✗ ' + (d.error || 'Ошибка')));
+      setResult(el, d.success, d.success ? 'Уведомление отправлено!' : ((d.error || 'Ошибка')));
     } catch (e) { showToast('Ошибка: ' + e.message, false); }
   }
 
@@ -782,7 +780,7 @@
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: title, message: msg })
       }).then(function (r) { return r.json(); });
-      setResult(el, d.success, d.success ? '✓ Объявление опубликовано!' : ('✗ ' + (d.error || 'Ошибка')));
+      setResult(el, d.success, d.success ? 'Объявление опубликовано!' : ((d.error || 'Ошибка')));
     } catch (e) { showToast('Ошибка: ' + e.message, false); }
   }
 

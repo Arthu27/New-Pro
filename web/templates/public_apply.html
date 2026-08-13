@@ -76,7 +76,7 @@
         <img id="member-avatar" src=""   style="width: 44px; height: 44px;">
         <div>
           <div id="member-name" ></div>
-          <div >✅ Подтверждено как участник сервера</div>
+          <div><i class="fas fa-check" style="color:#2ecc71"></i> Подтверждено как участник сервера</div>
         </div>
       </div>
       <div class="form-row">
@@ -118,7 +118,7 @@
 
   <!-- Success -->
   <div class="success-screen" id="success-screen">
-    <div class="check">✅</div>
+    <div class="check"><i class="fas fa-check"></i></div>
     <h2>Заявка получена!</h2>
     <p>Заявку рассмотрят администраторы.<br>Результат придёт вам в ЛС Discord.</p>
     <div class="app-id-box" id="app-id-display"></div>
@@ -146,7 +146,7 @@ function onIdInput() {
   }
   if (!selectedGuild) {
     status.textContent = '⚠️';
-    showAlert('error', '⚠️ Сначала выберите сервер!');
+    showAlert('error', 'Сначала выберите сервер!');
     return;
   }
 
@@ -172,7 +172,7 @@ function onIdInput() {
         status.textContent = '❌';
         card.style.display = 'none';
         memberVerified = false;
-        showAlert('error', '❌ ' + (res.error || 'На этом сервере участник не найден.'));
+        showAlert('error', '' + (res.error || 'На этом сервере участник не найден.'));
       }
     } catch(e) {
       status.textContent = '❌';
@@ -246,11 +246,11 @@ async function submitForm() {
   var ekstra       = document.getElementById('ekstra').value.trim();
 
   if (!memberVerified) {
-    showAlert('error', '❌ Введите Discord ID и подтвердите участие в сервере!');
+    showAlert('error', 'Введите Discord ID и подтвердите участие в сервере!');
     return;
   }
   if (!yas || !activity || !tecrube || !why) {
-    showAlert('error', '❌ Заполните все обязательные поля!');
+    showAlert('error', 'Заполните все обязательные поля!');
     return;
   }
 
@@ -277,12 +277,12 @@ async function submitForm() {
       document.getElementById('app-id-display').textContent = 'Заявка ID: ' + res.app_id;
       window.scrollTo({top:0,behavior:'smooth'});
     } else {
-      showAlert('error', '❌ ' + (res.error || ' Произошла ошибка.'));
+      showAlert('error', '' + (res.error || ' Произошла ошибка.'));
       btn.disabled = false;
       btn.innerHTML = '<i class="fas fa-paper-plane"></i> &nbsp; ОТПРАВИТЬ ЗАЯВКУ';
     }
   } catch(e) {
-    showAlert('error', '❌ Ошибка соединения: ' + e.message);
+    showAlert('error', 'Ошибка соединения: ' + e.message);
     btn.disabled = false;
     btn.innerHTML = '<i class="fas fa-paper-plane"></i> &nbsp; ОТПРАВИТЬ ЗАЯВКУ';
   }

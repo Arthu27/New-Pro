@@ -125,12 +125,12 @@ function showStatus(msg, ok) {
   el.style.background = ok ? 'rgba(52,211,153,0.10)' : 'rgba(248,113,113,0.10)';
   el.style.border = '1px solid ' + (ok ? 'rgba(52,211,153,0.30)' : 'rgba(248,113,113,0.30)');
   el.style.color = ok ? '#6ee7b7' : '#fca5a5';
-  el.innerHTML = (ok ? '✓ ' : '✗ ') + msg;
+  el.innerHTML = (ok ? '' : '') + msg;
 }
 
 async function restartBot() {
   if (window.confirmAction) {
-    window.confirmAction('Перезапустить бота?', 'Бот перезапустится на 10-15 секунд. Все системы временно отключатся.', function(){ doRestart(); }, {icon:'🔄', danger:true, okText:'Перезапустить'});
+    window.confirmAction('Перезапустить бота?', 'Бот перезапустится на 10-15 секунд. Все системы временно отключатся.', function(){ doRestart(); }, {icon_fa:'fa-arrows-rotate', danger:true, okText:'Перезапустить'});
   } else {
     doRestart();
   }

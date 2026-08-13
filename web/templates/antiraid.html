@@ -380,7 +380,7 @@
       })
         .then(function (r) { return r.json(); })
         .then(function (data) {
-          if (data && data.success) setSaveStatus('✓ Сохранено');
+          if (data && data.success) setSaveStatus('Сохранено');
           else setSaveStatus('Ошибка: ' + (data && data.error || 'неизвестно'), true);
         })
         .catch(function (e) { setSaveStatus('Ошибка: ' + e.message, true); });
@@ -400,7 +400,7 @@
       if (!currentGuildId) return;
       fetch('/api/cogs/antiraid/reload', { method: 'POST', credentials: 'same-origin' })
         .then(function (r) { return r.json(); })
-        .then(function (d) { setSaveStatus(d && d.success ? '✓ Обновлено' : 'Ошибка', !(d && d.success)); })
+        .then(function (d) { setSaveStatus(d && d.success ? 'Обновлено' : 'Ошибка', !(d && d.success)); })
         .catch(function (e) { setSaveStatus('Ошибка: ' + e.message, true); });
     });
 

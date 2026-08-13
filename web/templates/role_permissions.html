@@ -126,7 +126,7 @@
 
 <div class="modal-overlay" id="confirm-modal">
   <div class="modal-box">
-    <div class="m-icon" id="m-icon">🌐</div>
+    <div class="m-icon" id="m-icon" style="color:var(--ac,#e0b04a);"><i class="fas fa-globe"></i></div>
     <div class="m-title" id="m-title">Подтверждение</div>
     <div class="m-desc" id="m-desc">Вы уверены?</div>
     <div class="m-btns">
@@ -169,7 +169,7 @@ function refresh(renderFn){
 function showConfirm(title, desc, icon, cb){
   document.getElementById('m-title').textContent = title;
   document.getElementById('m-desc').textContent = desc;
-  document.getElementById('m-icon').textContent = icon || '❓';
+  document.getElementById('m-icon').innerHTML = '<i class="fas ' + String(icon || 'fa-circle-question').replace(/[^a-z0-9\- ]/gi, '') + '"></i>';
   _confirmCb = cb;
   document.getElementById('confirm-modal').classList.add('show');
 }
@@ -344,7 +344,7 @@ function toggleCommand(cat, cmd){
 function categoryEveryone(cat){
   showConfirm('Открыть категорию для всех?',
     'Категория «'+cat+'» станет доступна ВСЕМ. Все ограничения на её команды будут сняты.',
-    '🌐', function(){
+    'fa-globe', function(){
       fetch('/api/role-permissions/'+('{{ guild_id }}')+'/category/everyone',{
         method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({category:cat})
@@ -369,7 +369,7 @@ function categoryAssign(cat){
 function resetAll(){
   showConfirm('Сбросить все ограничения?',
     'Все категории и команды станут доступны ВСЕМ. Это действие нельзя отменить.',
-    '🔄', function(){
+    'fa-rotate-right', function(){
       fetch('/api/role-permissions/'+('{{ guild_id }}')+'/clear',{method:'POST'})
         .then(function(){ toast('Все ограничения сброшены', true); refresh(function(){ ACL={}; renderCategories(); }); });
     });

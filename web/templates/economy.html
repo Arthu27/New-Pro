@@ -123,13 +123,13 @@
 
   function renderLb(rows) {
     $('lb-count').textContent = 'участников: ' + rows.length;
-    if (!rows.length) { $('lb-body').innerHTML = '<div class="eco-empty">Экономика пуста — никто ещё не заработал монет 🌱</div>'; return; }
+    if (!rows.length) { $('lb-body').innerHTML = '<div class="eco-empty">Экономика пуста — никто ещё не заработал монет</div>'; return; }
     $('lb-body').innerHTML = rows.map(function (r, i) {
       return '<div class="eco-row">' +
         '<span class="eco-rank' + (i < 3 ? ' top' : '') + '">' + (i + 1) + '</span>' +
         '<span class="eco-name">' + esc(r.name) + '</span>' +
         '<span class="eco-sub">банк: ' + fmt(r.bank) + '</span>' +
-        '<span class="eco-coins">💰 ' + fmt(r.total) + '</span></div>';
+        '<span class="eco-coins"><i class="fas fa-coins"></i> ' + fmt(r.total) + '</span></div>';
     }).join('');
   }
 
@@ -141,7 +141,7 @@
         '<span class="eco-rank' + (i < 3 ? ' top' : '') + '">' + (i + 1) + '</span>' +
         '<span class="eco-name">' + esc(r.name) + '</span>' +
         '<span class="eco-sub">гемы: ' + fmt(r.vault) + '</span>' +
-        '<span class="eco-coins">🏦 ' + fmt(r.bank) + '</span></div>';
+        '<span class="eco-coins"><i class="fas fa-piggy-bank"></i> ' + fmt(r.bank) + '</span></div>';
     }).join('');
   }
 
@@ -153,7 +153,7 @@
       return '<div class="cat-card">' +
         '<div class="cat-name">' + esc(it.name) + '</div>' +
         '<div class="cat-desc">' + esc(it.desc || '') + (it.pet_bonus ? ' · +' + it.pet_bonus + '% к доходу' : '') + '</div>' +
-        '<div class="cat-meta"><span class="shop-price">' + fmt(it.price) + ' 💰</span>' +
+        '<div class="cat-meta"><span class="shop-price">' + fmt(it.price) + '</span>' +
         '<span class="cat-rar" style="color:' + rc[0] + ';background:' + rc[1] + '">' + esc(it.rarity) + '</span>' +
         '<span class="cat-cat">' + esc(it.category) + '</span></div></div>';
     }).join('');

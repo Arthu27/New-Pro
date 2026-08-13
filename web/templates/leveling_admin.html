@@ -66,35 +66,35 @@
       <div class="lvl-toggle-card" id="textCard" onclick="toggle('text_xp', 'enabled')">
         <div class="switch" id="textSwitch"></div>
         <div class="info">
-          <h4>💬 Text XP</h4>
+          <h4><i class="fas fa-comment"></i> Text XP</h4>
           <p>Начисление XP за сообщения в чате</p>
         </div>
       </div>
       <div class="lvl-toggle-card" id="voiceCard" onclick="toggle('voice_xp', 'enabled')">
         <div class="switch" id="voiceSwitch"></div>
         <div class="info">
-          <h4>🎙️ Voice XP</h4>
+          <h4><i class="fas fa-microphone"></i> Voice XP</h4>
           <p>Начисление XP за время в голосовых каналах (без мьют/афк)</p>
         </div>
       </div>
       <div class="lvl-toggle-card" id="streakCard" onclick="toggle('streak_bonus', 'enabled')">
         <div class="switch" id="streakSwitch"></div>
         <div class="info">
-          <h4>🔥 Streak Bonus</h4>
+          <h4><i class="fas fa-fire"></i> Streak Bonus</h4>
           <p>Бонус-множитель за ежедневную активность (7д=x2, 14д=x3, 30д=x5)</p>
         </div>
       </div>
       <div class="lvl-toggle-card" id="achCard" onclick="toggle('achievements_enabled', null)">
         <div class="switch" id="achSwitch"></div>
         <div class="info">
-          <h4>🏆 Достижения</h4>
+          <h4><i class="fas fa-trophy"></i> Достижения</h4>
           <p>50+ достижений за активность, разблокировка + DM-уведомление</p>
         </div>
       </div>
       <div class="lvl-toggle-card" id="dmCard" onclick="toggle('engagement_dm', 'enabled')">
         <div class="switch" id="dmSwitch"></div>
         <div class="info">
-          <h4>📨 Auto-Engagement DM</h4>
+          <h4><i class="fas fa-envelope"></i> Auto-Engagement DM</h4>
           <p>Автоматическое DM неактивным пользователям (48ч по умолчанию)</p>
         </div>
       </div>
@@ -229,7 +229,7 @@
       document.getElementById('statAchs').textContent = s.total_achievements + ' / ' + s.total_ach_available;
       document.getElementById('achCount').textContent = s.total_ach_available + ' доступно';
       // Leaderboard
-      const medals = ['🥇', '🥈', '🥉'];
+      const medals = ['<i class="fas fa-medal" style="color:#ffd700"></i>','<i class="fas fa-medal" style="color:#c0c7d1"></i>','<i class="fas fa-medal" style="color:#cd7f32"></i>'];
       document.getElementById('leaderboardList').innerHTML = s.top.map((u, i) => {
         const medal = i < 3 ? medals[i] : '<span >' + (i+1) + '</span>';
         return `<div class="kv"   style="20px;">
@@ -243,7 +243,7 @@
     // Achievements
     fetch('/api/leveling/achievements').then(r => r.json()).then(d => {
       const grid = document.getElementById('achGrid');
-      const rarityEmoji = {common: '⚪', uncommon: '🟢', rare: '🔵', epic: '🟣', legendary: '🟡'};
+      const rarityEmoji = {common: '<i class="fas fa-circle" style="color:#aab"></i>', uncommon: '<i class="fas fa-circle" style="color:#2ecc71"></i>', rare: '<i class="fas fa-circle" style="color:#3498db"></i>', epic: '<i class="fas fa-circle" style="color:#9b59b6"></i>', legendary: '🟡'};
       grid.innerHTML = Object.entries(d.catalog).map(([id, info]) => {
         const unlocked = d.unlocked.includes(id);
         return `<div class="lvl-ach ${unlocked ? 'unlocked' : ''}">
@@ -277,7 +277,7 @@
       else cfg[key] = !cfg[key];
       return fetch('/api/leveling/config', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(cfg)});
     }).then(r => r.json()).then(d => {
-      showToast('✅ Сохранено', true);
+      showToast('Сохранено', true);
       load();
     });
   }
@@ -293,7 +293,7 @@
       cfg.streak_bonus['30_days'] = parseFloat(document.getElementById('streak30').value);
       return fetch('/api/leveling/config', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(cfg)});
     }).then(r => r.json()).then(d => {
-      showToast('✅ Настройки сохранены', true);
+      showToast('Настройки сохранены', true);
     });
   };
   function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }

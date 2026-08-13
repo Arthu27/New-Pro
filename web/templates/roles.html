@@ -147,7 +147,7 @@ async function deleteRole(id, name) {
       if (d.success) { loadRoles(); showToast('Роль удалена', true); }
       else showToast('Ошибка: ' + (d.error || 'Неизвестно'), false);
     } catch (e) { showToast('Ошибка запроса: ' + e.message, false); }
-  }, { okText: 'Удалить', danger: true, icon: '🗑️' });
+  }, { okText: 'Удалить', danger: true, icon_fa: 'fa-trash' });
 }
 
 function start() {

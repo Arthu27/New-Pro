@@ -62,7 +62,7 @@ async function loadWatchlist(gid) {
     }
     tbody.innerHTML = d.map(function(u) {
       return '<tr>' +
-        '<td><div >👤 ' + esc(u.name) + '</div><div class="wl-meta">' + esc(u.id) + '</div></td>' +
+        '<td><div ><i class="fas fa-user" style="opacity:.55"></i> ' + esc(u.name) + '</div><div class="wl-meta">' + esc(u.id) + '</div></td>' +
         '<td >' + esc(u.reason||'—') + '</td>' +
         '<td >' + esc(u.added_by||'—') + '</td>' +
         '<td >' + esc((u.timestamp||'').slice(0,10)) + '</td>' +

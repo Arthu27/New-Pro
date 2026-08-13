@@ -52,7 +52,7 @@ async function loadApps() {
   }
   box.innerHTML = apps.map(function(app) {
     var sc = app.status==='approved'?'status-approved':app.status==='rejected'?'status-rejected':'status-pending';
-    var st = app.status==='approved'?'✓ Подтверждено':app.status==='rejected'?'✗ Отклонено':'⏳ Ожидание';
+    var st = app.status==='approved'?'Подтверждено':app.status==='rejected'?'Отклонено':'⏳ Ожидание';
     var cc = app.status==='approved'?'approved':app.status==='rejected'?'rejected':'';
     var ans = app.answers||{};
     var reviewBox = '';

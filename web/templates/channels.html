@@ -766,7 +766,7 @@ textarea.field-input{resize:vertical;min-height:52px}
   }
   function askDelete(id, name) {
     if (window.confirmAction) {
-      window.confirmAction('Удалить канал', '«' + name + '» будет удалён безвозвратно. Продолжить?', function () { doDelete(id); }, { danger: true, okText: 'Удалить', icon: '🗑️' });
+      window.confirmAction('Удалить канал', '«' + name + '» будет удалён безвозвратно. Продолжить?', function () { doDelete(id); }, { danger: true, okText: 'Удалить', icon_fa: 'fa-trash' });
     } else {
       if (confirm('Удалить канал «' + name + '»?')) doDelete(id);
     }

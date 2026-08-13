@@ -121,7 +121,7 @@ async function loadState(){
     const list = document.getElementById('items-list');
     document.getElementById('list-count').textContent = d.items.length ? ('всего: ' + d.items.length) : '';
     if(!d.items.length){
-      list.innerHTML = '<div style="opacity:.55;font-size:13px">Пока пусто — создайте первый анонс выше ✨</div>';
+      list.innerHTML = '<div style="opacity:.55;font-size:13px">Пока пусто — создайте первый анонс выше</div>';
       return;
     }
     list.innerHTML = d.items.map(it => `
@@ -130,7 +130,7 @@ async function loadState(){
         <div class="sc-main">
           <div class="sc-meta">${esc(it.time)}${it.weekday_label ? ' · '+esc(it.weekday_label) : ''} · ${esc(it.repeat_label)}
             <span class="pill ${it.enabled?'sc-pill-on':'sc-pill-off'}">${it.enabled?'активен':'пауза'}</span></div>
-          <div class="sc-text">${esc(it.embed_title ? '📌 '+it.embed_title+' — ' : '')}${esc(it.content || '(embed)')}</div>
+          <div class="sc-text">${esc(it.embed_title ? it.embed_title+' — ' : '')}${esc(it.content || '(embed)')}</div>
           <div class="sc-next">Следующая отправка: <b>${esc(it.next)}</b></div>
         </div>
         <div class="sc-item-actions">

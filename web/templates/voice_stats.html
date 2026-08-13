@@ -84,7 +84,7 @@ async function loadVoiceStats(gid) {
       lb.innerHTML = '<div class="empty-state"><i class="fas fa-microphone-slash"></i><p>Нет данных. Бот отслеживает голосовые каналы?</p></div>';
       return;
     }
-    var medals = ['🥇','🥈','🥉'];
+    var medals = ['<i class="fas fa-medal" style="color:#ffd700"></i>','<i class="fas fa-medal" style="color:#c0c7d1"></i>','<i class="fas fa-medal" style="color:#cd7f32"></i>'];
     var maxSecs = users[0] ? (users[0].seconds||1) : 1;
     lb.innerHTML = users.map(function(u,i){
       var pct = Math.round(((u.seconds||0)/maxSecs)*100);

@@ -60,7 +60,7 @@
         <img id="member-avatar" src="">
         <div>
           <div id="member-name" ></div>
-          <div >✅ Подтверждено как участник сервера</div>
+          <div><i class="fas fa-check" style="color:#2ecc71"></i> Подтверждено как участник сервера</div>
         </div>
       </div>
 
@@ -101,7 +101,7 @@
   </div>
 
   <div class="success-screen" id="success-screen">
-    <div class="check">✅</div>
+    <div class="check"><i class="fas fa-check"></i></div>
     <h2>Заявка получена!</h2>
     <p>Администраторы рассмотрят, результат придёт в ЛС Discord.</p>
     <div class="app-id-box" id="app-id-display"></div>
@@ -142,7 +142,7 @@ function onIdInput() {
   card.style.display = 'none';
   document.getElementById('discord_name').value = '';
   if (!/^\d{17,19}$/.test(id)) { status.textContent = id.length > 0 ? '❌' : ''; return; }
-  if (!selectedGuild) { status.textContent = '⚠️'; showAlert('error','⚠️ Сначала выберите сервер!'); return; }
+  if (!selectedGuild) { status.textContent = '⚠️'; showAlert('error','Сначала выберите сервер!'); return; }
   status.textContent = '⏳';
   clearTimeout(idCheckTimer);
   idCheckTimer = setTimeout(async function() {
@@ -163,7 +163,7 @@ function onIdInput() {
       } else {
         status.textContent = '❌';
         memberVerified = false;
-        showAlert('error', '❌ ' + (res.error || 'На этом сервере участник не найден.'));
+        showAlert('error', '' + (res.error || 'На этом сервере участник не найден.'));
       }
     } catch(e) { status.textContent = '❌'; }
   }, 600);
@@ -171,14 +171,14 @@ function onIdInput() {
 
 async function submitForm() {
   var btn = document.getElementById('submit-btn');
-  if (!selectedGuild) { showAlert('error','❌ Выберите сервер!'); return; }
-  if (!memberVerified) { showAlert('error','❌ Введите Discord ID и подтвердите участие!'); return; }
+  if (!selectedGuild) { showAlert('error','Выберите сервер!'); return; }
+  if (!memberVerified) { showAlert('error','Введите Discord ID и подтвердите участие!'); return; }
   var yas = document.getElementById('yas').value.trim();
   var activity = document.getElementById('activity').value.trim();
   var tecrube = document.getElementById('tecrube').value.trim();
   var why = document.getElementById('why').value.trim();
   var ekstra = document.getElementById('ekstra').value.trim();
-  if (!yas || !activity || !tecrube || !why) { showAlert('error','❌ Заполните все обязательные поля!'); return; }
+  if (!yas || !activity || !tecrube || !why) { showAlert('error','Заполните все обязательные поля!'); return; }
   btn.disabled = true;
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ОТПРАВЛ...';
   try {
@@ -197,12 +197,12 @@ async function submitForm() {
       document.getElementById('success-screen').style.display = 'block';
       document.getElementById('app-id-display').textContent = 'Заявка ID: ' + res.app_id;
     } else {
-      showAlert('error','❌ ' + (res.error || 'Ошибка произошла.'));
+      showAlert('error','' + (res.error || 'Ошибка произошла.'));
       btn.disabled = false;
       btn.innerHTML = '<i class="fas fa-paper-plane"></i> ОТПРАВИТЬ ЗАЯВКУ';
     }
   } catch(e) {
-    showAlert('error','❌ Ошибка соединения.');
+    showAlert('error','Ошибка соединения.');
     btn.disabled = false;
     btn.innerHTML = '<i class="fas fa-paper-plane"></i> ОТПРАВИТЬ ЗАЯВКУ';
   }

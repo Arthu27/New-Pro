@@ -420,10 +420,10 @@
       .then(function (res) {
         if (res.s === 200 && res.d.ok) {
           CFG = res.d.config; DIRTY = false; render();
-          toast('✓ Сохранено — бот уже применяет', true);
+          toast('Сохранено — бот уже применяет', true);
           $('af-note').textContent = 'применено мгновенно, перезапуск не нужен';
         } else {
-          toast('✗ ' + ((res.d.errors || ['ошибка сохранения']).join(' · ')), false);
+          toast('' + ((res.d.errors || ['ошибка сохранения']).join(' · ')), false);
         }
       }).catch(function () { toast('Сеть недоступна', false); });
   }

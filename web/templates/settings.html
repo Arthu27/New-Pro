@@ -90,7 +90,7 @@
       <span class="dot" id="tunnel-dot"></span>
       <span id="tunnel-status">Загрузка...</span>
     </div>
-    <div id="tunnel-url-wrap"   style="margin-top: 8px;" onclick="navigator.clipboard.writeText(this.textContent);this.textContent='✓ Скопировано';setTimeout(()=>this.textContent=this.dataset.url,1500)" data-url=""></div>
+    <div id="tunnel-url-wrap"   style="margin-top: 8px;" onclick="navigator.clipboard.writeText(this.textContent);this.textContent='Скопировано';setTimeout(()=>this.textContent=this.dataset.url,1500)" data-url=""></div>
   </div>
 </div>
 
@@ -152,7 +152,7 @@
     try {
       var d = await fetch('/api/bot/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).then(function (r) { return r.json(); });
       if (d.success) {
-        btn.textContent = '✓ Synced';
+        btn.textContent = 'Synced';
         setTimeout(function () { btn.innerHTML = '<i class="fas fa-sync"></i> Sync'; }, 2000);
       }
     } catch (e) { /* тихо */ }
@@ -162,7 +162,7 @@
   async function doRestart() {
     window.askConfirm('Перезапустить бота', 'Перезапустить бота? Это прервёт работу на несколько секунд.', function () {
       fetch('/api/bot/restart', { method: 'POST' }).catch(function (e) { /* тихо */ });
-    }, { icon: '🔄', okText: 'Перезапустить', danger: true });
+    }, { icon_fa: 'fa-arrows-rotate', okText: 'Перезапустить', danger: true });
   }
 
   async function doLockdown() {
@@ -173,7 +173,7 @@
   }
 
   function doLogout() {
-    window.askConfirm('Выход', 'Вы уверены, что хотите выйти из панели?', function () { window.location.href = '/logout'; }, { okText: 'Выйти', icon: '🚪' });
+    window.askConfirm('Выход', 'Вы уверены, что хотите выйти из панели?', function () { window.location.href = '/logout'; }, { okText: 'Выйти', icon_fa: 'fa-right-from-bracket' });
   }
 
   function bind() {

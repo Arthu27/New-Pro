@@ -285,3 +285,43 @@ body.sb-open { overflow: hidden; }
   .brand:hover .brand-icon, .stat-box:hover, .log-stat:hover,
   .premium-card:hover, .wf-item:hover { transform: none !important; }
 }
+
+/* ── 17. Режим «только модерация»: бейдж + выключенные пункты ── */
+.mode-banner {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 10px 12px 4px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--ac-line);
+  background: linear-gradient(135deg, var(--ac-soft), transparent 80%);
+  color: var(--ac);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: box-shadow .18s var(--ease, ease), transform .18s var(--ease, ease);
+}
+.mode-banner:hover {
+  box-shadow: 0 4px 18px var(--ac-glow);
+  transform: translateY(-1px);
+}
+.mode-banner .mode-banner-arrow { margin-left: auto; font-size: 10px; opacity: .7; }
+
+/* пункт меню, чей модуль спит: гасим и поясняем чипом */
+.nav-link.is-off { opacity: .48; filter: saturate(.55); }
+.nav-link.is-off:hover { opacity: .82; }
+.nav-off-chip {
+  margin-left: auto;
+  padding: 1px 8px;
+  border-radius: 99px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: var(--text-2, #9aa);
+  border: 1px solid var(--line-2, rgba(255,255,255,.14));
+  background: color-mix(in srgb, var(--text-2, #9aa) 10%, transparent);
+}

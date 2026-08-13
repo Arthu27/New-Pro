@@ -131,7 +131,7 @@ async function saveRules() {
   });
   var d = await r.json();
   var btn = event.target;
-  if(d.success) { btn.textContent='✅ Сохранено!'; setTimeout(function(){btn.innerHTML='<i class="fas fa-save"></i> Сохранить';},2000); }
+  if(d.success) { btn.textContent='Сохранено!'; setTimeout(function(){btn.innerHTML='<i class="fas fa-save"></i> Сохранить';},2000); }
 }
 
 async function publishRules() {
@@ -145,8 +145,8 @@ async function publishRules() {
   });
   var d = await r.json();
   var btn = event.target;
-  if(d.success) { btn.textContent='✅ Опубликовано!'; setTimeout(function(){btn.innerHTML='<i class="fas fa-paper-plane"></i> Discord\'a Опубликовать';},2000); }
-  else alert('❌ '+(d.error||'Ошибка'));
+  if(d.success) { btn.textContent='Опубликовано!'; setTimeout(function(){btn.innerHTML='<i class="fas fa-paper-plane"></i> Discord\'a Опубликовать';},2000); }
+  else alert(''+(d.error||'Ошибка'));
 }
 
 loadGuilds();

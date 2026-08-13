@@ -195,16 +195,16 @@ async function saveWelcome() {
     var btn = document.querySelector('button[onclick="saveWelcome()"]');
     
     if (d.success) { 
-      btn.textContent='✅ Сохранено!'; 
+      btn.textContent='Сохранено!'; 
       setTimeout(function(){
         btn.innerHTML='<i class="fas fa-save"   style="margin-right: 6px;"></i>Сохранить';
       }, 2000); 
     } else {
-      alert('❌ '+(d.error||'Ошибка'));
+      alert(''+(d.error||'Ошибка'));
     }
   } catch(e) {
     console.error('saveWelcome error:', e);
-    showToast('❌ Ошибка сохранения', false);
+    showToast('Ошибка сохранения', false);
   }
 }
 
@@ -231,16 +231,16 @@ async function saveLeave() {
     var btn = document.querySelector('button[onclick="saveLeave()"]');
     
     if (d.success) { 
-      btn.textContent='✅ Сохранено!'; 
+      btn.textContent='Сохранено!'; 
       setTimeout(function(){
         btn.innerHTML='<i class="fas fa-save"   style="margin-right: 6px;"></i>Сохранить';
       }, 2000); 
     } else {
-      alert('❌ '+(d.error||'Ошибка'));
+      alert(''+(d.error||'Ошибка'));
     }
   } catch(e) {
     console.error('saveLeave error:', e);
-    showToast('❌ Ошибка сохранения', false);
+    showToast('Ошибка сохранения', false);
   }
 }
 </script>

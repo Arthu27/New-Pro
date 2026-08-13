@@ -56,8 +56,8 @@
       <label>Действие</label>
       <select id="new-action" aria-label="Наказание">
         <option value="timeout">⏳ Мут</option>
-        <option value="kick">👢 Кик</option>
-        <option value="ban">🔨 Бан</option>
+        <option value="kick">Кик</option>
+        <option value="ban">Бан</option>
       </select>
     </div>
     <div class="form-group">
@@ -74,7 +74,7 @@
 var GUILD_ID = '{{ guild_id }}';
 var _rules = [];
 
-var ACTION_LABEL = {timeout: '⏳ Мут', ban: '🔨 Бан', kick: '👢 Кик'};
+var ACTION_LABEL = {timeout: 'Мут', ban: 'Бан', kick: 'Кик'};
 var ACTION_CLASS = {timeout: 'ab-timeout', ban: 'ab-ban', kick: 'ab-kick'};
 function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
@@ -114,13 +114,13 @@ async function addRule() {
   var count    = parseInt(document.getElementById('new-count').value);
   var action   = document.getElementById('new-action').value;
   var duration = parseInt(document.getElementById('new-duration').value) || 10;
-  if (!count || count < 1) { msg.innerHTML = '<span >✗ Неверное число</span>'; return; }
+  if (!count || count < 1) { msg.innerHTML = '<span >Неверное число</span>'; return; }
   var existing = _rules.findIndex(function(r){ return r.count === count; });
   if (existing >= 0) _rules.splice(existing, 1);
   _rules.push({count, action, duration});
   _rules.sort(function(a,b){ return a.count - b.count; });
   await saveConfig();
-  msg.innerHTML = '<span >✓ Сохранено</span>';
+  msg.innerHTML = '<span >Сохранено</span>';
   setTimeout(function(){ msg.textContent = ''; }, 2000);
   renderRules();
 }

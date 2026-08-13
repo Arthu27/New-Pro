@@ -146,10 +146,10 @@
     }).then(function (r) { return r.json().then(function (d) { return { s: r.status, d: d }; }); })
       .then(function (res) {
         if (res.s === 200 && res.d.ok) {
-          $('bs-live').textContent = res.d.applied_live ? '✓ применено мгновенно' : '✓ сохранено, применится после рестарта';
-          toast('✓ Присутствие обновлено', true);
+          $('bs-live').textContent = res.d.applied_live ? 'применено мгновенно' : 'сохранено, применится после рестарта';
+          toast('Присутствие обновлено', true);
         } else {
-          toast('✗ ' + ((res.d.errors || [res.d.error] || ['ошибка']).join(' · ')), false);
+          toast('' + ((res.d.errors || [res.d.error] || ['ошибка']).join(' · ')), false);
         }
       }).catch(function () { toast('Сеть недоступна', false); });
   }
@@ -163,14 +163,14 @@
       .then(function (res) {
         if (res.s === 200 && res.d.ok) {
           out.className = 'bs-out show ok';
-          out.textContent = '✓ Готово: синхронизировано команд — ' + res.d.synced;
+          out.textContent = 'Готово: синхронизировано команд — ' + res.d.synced;
         } else {
           out.className = 'bs-out show err';
-          out.textContent = '✗ ' + (res.d.error || 'ошибка');
+          out.textContent = '' + (res.d.error || 'ошибка');
         }
       }).catch(function () {
         out.className = 'bs-out show err';
-        out.textContent = '✗ Сеть недоступна';
+        out.textContent = 'Сеть недоступна';
       });
   }
 

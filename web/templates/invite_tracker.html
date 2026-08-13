@@ -66,9 +66,9 @@
 </div>
 
 <div class="inv-tabs" data-reveal="up">
-  <button class="tab-btn active" onclick="showTab('leaderboard',this)">🏆 Лидеры</button>
-  <button class="tab-btn" onclick="showTab('joins',this)">👋 Использованные</button>
-  <button class="tab-btn" onclick="showTab('invites',this)">🔗 Активные</button>
+  <button class="tab-btn active" onclick="showTab('leaderboard',this)"><i class="fas fa-trophy"></i> Лидеры</button>
+  <button class="tab-btn" onclick="showTab('joins',this)"><i class="fas fa-user-plus"></i> Использованные</button>
+  <button class="tab-btn" onclick="showTab('invites',this)"><i class="fas fa-link"></i> Активные</button>
 </div>
 
 <div class="inv-box" id="tab-leaderboard" data-reveal="up">
@@ -108,7 +108,7 @@ async function loadInvites() {
     '<div class="stat-box"><div class="stat-icon cyan"><i class="fas fa-bolt"></i></div><div class="stat-body"><div class="stat-val">'+(d.active_invites||0)+'</div><div class="stat-lbl">Активных</div></div></div>';
 
   var lb = d.leaderboard||[];
-  var medals = ['🥇','🥈','🥉'];
+  var medals = ['<i class="fas fa-medal" style="color:#ffd700"></i>','<i class="fas fa-medal" style="color:#c0c7d1"></i>','<i class="fas fa-medal" style="color:#cd7f32"></i>'];
   document.getElementById('leaderboard-list').innerHTML = lb.length ? lb.map(function(u,i){
     return '<div class="inv-card">'+
       '<div class="inv-rank">'+(medals[i]||'#'+(i+1))+'</div>'+

@@ -44,7 +44,7 @@
 
 
 <div class="search-box">
-  <input type="text" id="search-id" class="search-input" placeholder="🔍 Discord ID или имя..." aria-label="🔍 Discord ID или имя...">
+  <input type="text" id="search-id" class="search-input" placeholder="Discord ID или имя..." aria-label="Discord ID или имя...">
   <button onclick="searchMember()" class="search-btn"><i class="fas fa-search"></i> Поиск</button>
 </div>
 
@@ -113,7 +113,7 @@ async function addNote() {
   });
   var d = await r.json();
   if(d.success) { document.getElementById('new-note').value=''; loadNotes(currentMemberId); loadAllNotes(); }
-  else showToast('❌ '+(d.error||'Ошибка'), false);
+  else showToast(''+(d.error||'Ошибка'), false);
 }
 
 async function deleteNote(noteId, memberId) {

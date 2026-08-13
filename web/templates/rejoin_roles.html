@@ -398,7 +398,7 @@
       })
         .then(function (r) { return r.json(); })
         .then(function (data) {
-          if (data && data.success) setSaveStatus('✓ Сохранено');
+          if (data && data.success) setSaveStatus('Сохранено');
           else setSaveStatus('Ошибка: ' + (data && data.error || 'неизвестно'), true);
         })
         .catch(function (e) { setSaveStatus('Ошибка: ' + e.message, true); });
@@ -430,7 +430,7 @@
         trackedIds = [];
         saveConfig();
         renderAll();
-      }, { okText: 'Удалить', danger: true, icon: '🗑️' });
+      }, { okText: 'Удалить', danger: true, icon_fa: 'fa-trash' });
     });
 
     $('btn-clear-log').addEventListener('click', function () {
@@ -439,7 +439,7 @@
         currentConfig.leave_log = [];
         saveConfig();
         renderAll();
-      }, { okText: 'Очистить', danger: true, icon: '🧹' });
+      }, { okText: 'Очистить', danger: true, icon_fa: 'fa-broom' });
     });
   }
 

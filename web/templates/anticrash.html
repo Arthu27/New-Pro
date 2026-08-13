@@ -585,7 +585,7 @@ async function saveConfig(){
     document.querySelectorAll('.ac-field.invalid').forEach(f => f.classList.remove('invalid'));
     if(d.ok){
       $('cfg-note').textContent = 'сохранено ' + new Date().toLocaleTimeString('ru-RU');
-      toast('Настройки сохранены ✓');
+      toast('Настройки сохранены');
     } else {
       const keys = Object.keys(d.errors || {});
       keys.forEach(k => {
@@ -605,7 +605,7 @@ async function resetStats(){
   try{
     const r = await fetch('/api/anticrash/reset', {method:'POST'});
     const d = await r.json();
-    if(d.ok){ toast('Статистика сброшена ✓'); loadOverview(); }
+    if(d.ok){ toast('Статистика сброшена'); loadOverview(); }
     else toast('Ошибка: ' + (d.error || ''), false);
   }catch(e){ toast('Ошибка сброса', false); }
 }

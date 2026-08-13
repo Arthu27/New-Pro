@@ -108,7 +108,7 @@
     $('search').addEventListener('input', render);
     $('filter').addEventListener('change', render);
     $('btn-clear').addEventListener('click', function () {
-      window.askConfirm('Очистить логи', 'Очистить все логи панели? Действие необратимо.', function () { logs = []; render(); }, { okText: 'Очистить', danger: true, icon: '🧹' });
+      window.askConfirm('Очистить логи', 'Очистить все логи панели? Действие необратимо.', function () { logs = []; render(); }, { okText: 'Очистить', danger: true, icon_fa: 'fa-broom' });
     });
   }
 

@@ -137,7 +137,7 @@ check(r.status_code == 200 and 'Login polish' in r.get_data(as_text=True),
 check('.msg.ok' in css and '.msg.err' in css and '.msg.info' in css,
       'polish.css: глобальные .msg-оповещения (ok/err/info)')
 base_now = open(os.path.join(ROOT, 'web', 'templates', 'base.html'), encoding='utf-8').read()
-check('v=4' in base_now, 'base.html: кэш polish.css сброшен (v=4)')
+check('v=5' in base_now, 'base.html: кэш polish.css сброшен (v=5)')
 
 # ═══ 6. Мобильный проход (v4) ═════════════════════════════════════════════
 print('== v4: мобильный проход ==')

@@ -147,7 +147,7 @@ async function doSearch(q) {
     document.getElementById('ms-results').innerHTML = d.map(function (m) {
       var av = m.avatar
         ? '<img src="' + esc(m.avatar) + '" alt="" onerror="this.style.display=\'none\'">'
-        : '<div class="ms-av-fb" style="width:52px;height:52px;font-size:22px;">👤</div>';
+        : '<div class="ms-av-fb" style="width:52px;height:52px;font-size:22px;"><i class="fas fa-user"></i></div>';
       var sub = m.nickname ? ('@' + m.name + ' • ник: ' + m.nickname) : ('@' + m.name);
       return '<div class="ms-result-card" id="msrc-' + esc(m.id) + '" onclick="selectMember(\'' + esc(m.id) + '\')">' +
         '<div class="ms-av-wrap">' + av + '<span class="ms-status ' + esc(m.status || 'offline') + '"></span></div>' +
@@ -186,7 +186,7 @@ async function selectMember(userId) {
 
     var avBlock = d.avatar
       ? '<img src="' + esc(d.avatar) + '" alt="" onerror="this.style.display=\'none\'">'
-      : '<div class="ms-av-fb" style="width:80px;height:80px;font-size:32px;">👤</div>';
+      : '<div class="ms-av-fb" style="width:80px;height:80px;font-size:32px;"><i class="fas fa-user"></i></div>';
 
     var notFoundRow = (d.member_found === false)
       ? '<div class="ms-row"><span class="ms-key">На сервере</span><span class="ms-val danger">Не найден — показаны только локальные записи</span></div>'
@@ -218,7 +218,7 @@ async function selectMember(userId) {
             (w.mod ? ' <span class="warn-mod">• ' + esc(w.mod) + '</span>' : '') + '</div>' +
             '<div style="margin-top:3px;">' + esc(w.reason || '—') + '</div></div>';
         }).join('') + (warns.length > 5 ? '<div class="ms-meta" style="margin-top:6px;">…и ещё ' + (warns.length - 5) + '</div>' : '')
-      : '<div class="empty-ok">✓ Предупреждений нет</div>';
+      : '<div class="empty-ok">Предупреждений нет</div>';
 
     var casesHtml = cases.length
       ? cases.slice(-5).map(function (c, ci) {
@@ -228,7 +228,7 @@ async function selectMember(userId) {
             (c.mod ? ' <span class="warn-mod">• ' + esc(c.mod) + '</span>' : '') + '</div>' +
             '<div style="margin-top:3px;">' + esc(c.reason || '—') + '</div></div>';
         }).join('') + (cases.length > 5 ? '<div class="ms-meta" style="margin-top:6px;">…и ещё ' + (cases.length - 5) + '</div>' : '')
-      : '<div class="empty-ok">✓ Записей нет</div>';
+      : '<div class="empty-ok">Записей нет</div>';
 
     var rightHtml = '<div>' +
       '<div class="ms-card">' +

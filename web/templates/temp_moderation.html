@@ -123,11 +123,11 @@
 
 <!-- Tabs -->
 <div class="tm-tabs">
-  <button class="tm-tab active" data-tab="muts" onclick="switchTab('muts')">🔇 Мьюты <span class="count" id="cntMuts">0</span></button>
-  <button class="tm-tab" data-tab="bans" onclick="switchTab('bans')">🔨 Баны <span class="count" id="cntBans">0</span></button>
-  <button class="tm-tab" data-tab="kicks" onclick="switchTab('kicks')">👢 Кики <span class="count" id="cntKicks">0</span></button>
-  <button class="tm-tab" data-tab="scheduled" onclick="switchTab('scheduled')">⏰ Запланировано <span class="count" id="cntScheduled">0</span></button>
-  <button class="tm-tab" data-tab="new" onclick="switchTab('new')">➕ Новое</button>
+  <button class="tm-tab active" data-tab="muts" onclick="switchTab('muts')"><i class="fas fa-comment-slash"></i> Мьюты <span class="count" id="cntMuts">0</span></button>
+  <button class="tm-tab" data-tab="bans" onclick="switchTab('bans')"><i class="fas fa-ban"></i> Баны <span class="count" id="cntBans">0</span></button>
+  <button class="tm-tab" data-tab="kicks" onclick="switchTab('kicks')"><i class="fas fa-user-minus"></i> Кики <span class="count" id="cntKicks">0</span></button>
+  <button class="tm-tab" data-tab="scheduled" onclick="switchTab('scheduled')"><i class="fas fa-clock"></i> Запланировано <span class="count" id="cntScheduled">0</span></button>
+  <button class="tm-tab" data-tab="new" onclick="switchTab('new')"><i class="fas fa-plus"></i> Новое</button>
 </div>
 
 <!-- Muts list -->
@@ -158,11 +158,11 @@
     </div>
     <div class="dash-box-body" >
       <!-- Type selector -->
-      <label   style="!important; font-weight: 700 !important; !important; !important; margin-bottom: 8px !important;">Тип действия</label>
-      <div  >
-        <button class="tm-preset" data-type="mut" onclick="setActionType('mut')"  >🔇 Мьют</button>
-        <button class="tm-preset" data-type="ban" onclick="setActionType('ban')"  >🔨 Бан</button>
-        <button class="tm-preset" data-type="kick" onclick="setActionType('kick')"  >👢 Кик</button>
+      <label style="display:block !important; font-weight:700 !important; margin-bottom:8px !important;">Тип действия</label>
+      <div class="tm-presets">
+        <button class="tm-preset" data-type="mut" onclick="setActionType('mut')"><i class="fas fa-comment-slash"></i> Мьют</button>
+        <button class="tm-preset" data-type="ban" onclick="setActionType('ban')"><i class="fas fa-ban"></i> Бан</button>
+        <button class="tm-preset" data-type="kick" onclick="setActionType('kick')"><i class="fas fa-user-minus"></i> Кик</button>
       </div>
 
       <div class="tm-input-group">
@@ -171,7 +171,7 @@
       </div>
 
       <!-- Duration presets -->
-      <label   style="!important; font-weight: 700 !important; !important; !important; 8px 0 !important;">Длительность</label>
+      <label style="display:block !important; font-weight:700 !important; margin:8px 0 !important;">Длительность</label>
       <div class="tm-presets" id="durationPresets">
         <button class="tm-preset" data-dur="30s" onclick="setDuration('30s', this)">30с</button>
         <button class="tm-preset" data-dur="1m" onclick="setDuration('1m', this)">1м</button>
@@ -354,7 +354,7 @@
     }).then(r => r.json()).then(d => {
       if (d.error) showToast(d.error, false);
       else {
-        showToast('✅ Применено', true);
+        showToast('Применено', true);
         resetForm();
         switchTab(actionType + 's');
         load();
@@ -368,7 +368,7 @@
       body: JSON.stringify({user_id: userId})
     }).then(r => r.json()).then(d => {
       if (d.error) showToast(d.error, false);
-      else { showToast('✅ Снято', true); load(); }
+      else { showToast('Снято', true); load(); }
     });
   };
   window.cancelScheduled = function(id) {
@@ -377,7 +377,7 @@
       body: JSON.stringify({id: id})
     }).then(r => r.json()).then(d => {
       if (d.error) showToast(d.error, false);
-      else { showToast('✅ Отменено', true); load(); }
+      else { showToast('Отменено', true); load(); }
     });
   };
   function showToast(msg, ok) {

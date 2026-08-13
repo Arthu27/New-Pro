@@ -18,12 +18,12 @@
 
 
 <div class="cmd-grid">
-  <div class="cmd-card" onclick="openCmd('ban')"><div class="cmd-icon">🔨</div><h3><i class="fas fa-ban"></i> Бан</h3><p>Окончательно заблокировать пользователя</p></div>
-  <div class="cmd-card" onclick="openCmd('kick')"><div class="cmd-icon">👢</div><h3><i class="fas fa-user-slash"></i> Кик</h3><p>Исключить пользователя с сервера</p></div>
-  <div class="cmd-card" onclick="openCmd('timeout')"><div class="cmd-icon">⏱️</div><h3><i class="fas fa-clock"></i> Мьют</h3><p>Временно заглушить</p></div>
-  <div class="cmd-card" onclick="openCmd('warn')"><div class="cmd-icon">⚠️</div><h3><i class="fas fa-exclamation-triangle"></i> Warning</h3><p>Warning ver</p></div>
-  <div class="cmd-card" onclick="openCmd('clear')"><div class="cmd-icon">🗑️</div><h3><i class="fas fa-trash"></i> Очистить</h3><p>Удалить сообщения оптом</p></div>
-  <div class="cmd-card" onclick="openCmd('role')"><div class="cmd-icon">🏷️</div><h3><i class="fas fa-user-tag"></i> Выдать/снять роли</h3><p>Выдать или снять роли</p></div>
+  <div class="cmd-card" onclick="openCmd('ban')"><div class="cmd-icon"><i class="fas fa-ban"></i></div><h3>Бан</h3><p>Окончательно заблокировать пользователя</p></div>
+  <div class="cmd-card" onclick="openCmd('kick')"><div class="cmd-icon"><i class="fas fa-user-slash"></i></div><h3>Кик</h3><p>Исключить пользователя с сервера</p></div>
+  <div class="cmd-card" onclick="openCmd('timeout')"><div class="cmd-icon"><i class="fas fa-clock"></i></div><h3>Мьют</h3><p>Временно заглушить</p></div>
+  <div class="cmd-card" onclick="openCmd('warn')"><div class="cmd-icon"><i class="fas fa-exclamation-triangle"></i></div><h3>Варн</h3><p>Warning ver</p></div>
+  <div class="cmd-card" onclick="openCmd('clear')"><div class="cmd-icon"><i class="fas fa-trash"></i></div><h3>Очистить</h3><p>Удалить сообщения оптом</p></div>
+  <div class="cmd-card" onclick="openCmd('role')"><div class="cmd-icon"><i class="fas fa-user-tag"></i></div><h3>Выдать/снять роли</h3><p>Выдать или снять роли</p></div>
 </div>
 
 <div id="execModal" class="modal-overlay">
@@ -103,11 +103,11 @@ async function execCmd() {
   msg.style.display = 'block';
   if (res.success) {
     msg.style.cssText = 'display:block;background:rgba(46,204,113,0.2);border:1px solid var(--ok);color:var(--ok);padding:12px;border-radius:8px;margin-top:15px;';
-    msg.textContent = '✅ Команда успешно calistirildi!';
+    msg.textContent = 'Команда успешно calistirildi!';
     setTimeout(closeCmd, 2000);
   } else {
     msg.style.cssText = 'display:block;background:rgba(220,20,60,0.2);border:1px solid var(--ac);color:#ff6b6b;padding:12px;border-radius:8px;margin-top:15px;';
-    msg.textContent = '❌ Ошибка: ' + res.error;
+    msg.textContent = 'Ошибка: ' + res.error;
   }
 }
 

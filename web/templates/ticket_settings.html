@@ -435,7 +435,7 @@
     </div>
     <div class="form-group">
       <label>Заголовок</label>
-      <input type="text" id="title" value="🎫 ПОДДЕРЖКА" aria-label="Заголовок">
+      <input type="text" id="title" value="ПОДДЕРЖКА" aria-label="Заголовок">
     </div>
     <div class="form-group">
       <label>Описание</label>
@@ -535,7 +535,7 @@
         <i class="fas fa-times"></i> Очистить
       </button>
       <button class="btn-secondary" id="btn-notify-diagnose" type="button" style="background:#3498db;">
-        <i class="fas fa-stethoscope"></i> 🔍 Диагностика
+        <i class="fas fa-stethoscope"></i> Диагностика
       </button>
       <span class="muted" style="font-size: 12px;">
         * Бот автоматически оповещает указанные роли при вызове модераторов
@@ -677,7 +677,7 @@
       })
         .then(function (r) { return r.json(); })
         .then(function (d) {
-          if (d.success) setNotifyStatus('✓ Сохранено');
+          if (d.success) setNotifyStatus('Сохранено');
           else setNotifyStatus('Ошибка: ' + (d.error || 'неизвестно'), true);
         })
         .catch(function (e) { setNotifyStatus('Ошибка: ' + e.message, true); });
@@ -705,42 +705,42 @@
         .then(function (r) { return r.json(); })
         .then(function (d) {
           var html = '<div style="padding:14px; background:var(--surface-2); border:1px solid var(--line); border-radius:8px; margin-top:8px;">';
-          html += '<h4 style="margin-top:0;">🔍 Диагностика уведомлений о наказаниях</h4>';
-          html += '<p><b>Бот онлайн:</b> ' + (d.bot_online ? '✅ да' : '❌ нет') + '</p>';
+          html += '<h4 style="margin-top:0;"><i class="fas fa-magnifying-glass"></i> Диагностика уведомлений о наказаниях</h4>';
+          html += '<p><b>Бот онлайн:</b> ' + (d.bot_online ? 'да' : 'нет') + '</p>';
           if (d.guild_name) {
             html += '<p><b>Сервер:</b> ' + d.guild_name + ' (' + d.guild_id + ')</p>';
           }
-          html += '<p><b>Конфиг-файл:</b> ' + (d.config_file_exists ? '✅ существует' : '❌ НЕ найден') + '</p>';
+          html += '<p><b>Конфиг-файл:</b> ' + (d.config_file_exists ? 'существует' : 'НЕ найден') + '</p>';
           html += '<p><b>notify_channel_id в конфиге:</b> ' + (d.config_notify_channel_id || '(пусто)') + '</p>';
           if (d.config_target_channel) {
-            html += '<p style="color:green;"><b>✅ Канал из конфига:</b> #' + d.config_target_channel_name + ' (' + d.config_target_channel + ')</p>';
+            html += '<p style="color:green;"><b><i class="fas fa-check"></i> Канал из конфига:</b> #' + d.config_target_channel_name + ' (' + d.config_target_channel + ')</p>';
           } else if (d.config_notify_channel_id) {
-            html += '<p style="color:red;"><b>❌ Канал из конфига не найден на сервере!</b> ' + (d.config_target_channel_error || '') + '</p>';
+            html += '<p style="color:red;"><b><i class="fas fa-xmark"></i> Канал из конфига не найден на сервере!</b> ' + (d.config_target_channel_error || '') + '</p>';
           }
           if (d.fallback_channels_found && d.fallback_channels_found.length) {
             html += '<p><b>Fallback-каналы (по имени):</b><ul>';
             d.fallback_channels_found.forEach(function (c) {
-              html += '<li>✅ #' + c.name + ' (' + c.id + ')</li>';
+              html += '<li><i class="fas fa-check" style="color:#2ecc71"></i> #' + c.name + ' (' + c.id + ')</li>';
             });
             html += '</ul></p>';
           } else {
-            html += '<p style="color:orange;"><b>⚠️ Fallback-каналы (админ-лог/мод-лог/...) не найдены</b></p>';
+            html += '<p style="color:orange;"><b><i class="fas fa-triangle-exclamation"></i> Fallback-каналы (админ-лог/мод-лог/...) не найдены</b></p>';
           }
           if (d.admin_role_found) {
             html += '<p><b>Роль с правами админ (для пинга):</b> ' + d.admin_role_found.name + ' (' + d.admin_role_found.id + ')</p>';
           } else {
-            html += '<p style="color:orange;"><b>⚠️ Нет роли с правами админ</b> — пинг не будет отправлен</p>';
+            html += '<p style="color:orange;"><b><i class="fas fa-triangle-exclamation"></i> Нет роли с правами админ</b> — пинг не будет отправлен</p>';
           }
           if (d.guild_owner_can_dm) {
             html += '<p><b>Владелец сервера (для DM fallback):</b> ' + d.guild_owner_can_dm.name + ' (' + d.guild_owner_can_dm.id + ')</p>';
           }
-          html += '<hr><p style="background:var(--ac-soft); padding:10px; border-radius:6px;"><b>💡 Рекомендация:</b><br>' + d.recommendation + '</p>';
+          html += '<hr><p style="background:var(--ac-soft); padding:10px; border-radius:6px;"><b><i class="fas fa-lightbulb"></i> Рекомендация:</b><br>' + d.recommendation + '</p>';
           html += '<p style="font-size:12px; color:var(--text-3); margin-top:8px;">Для подробностей ищите в логах бота строки <code>[TICKET-NOTIFY]</code></p>';
           html += '</div>';
           box.innerHTML = html;
         })
         .catch(function (e) {
-          box.innerHTML = '<div style="padding:12px; background:rgba(248,113,113,0.10); border:1px solid rgba(248,113,113,0.30); border-radius:6px;">❌ Ошибка запроса: ' + e + '</div>';
+          box.innerHTML = '<div style="padding:12px; background:rgba(248,113,113,0.10); border:1px solid rgba(248,113,113,0.30); border-radius:6px;"><i class="fas fa-xmark"></i> Ошибка запроса: ' + e + '</div>';
         });
     });
 
@@ -824,7 +824,7 @@
           $('autoclose').value = settings.autoclose_mins || 0;
 
           // Контент панели
-          $('title').value = settings.panel_title || '🎫 ПОДДЕРЖКА';
+          $('title').value = settings.panel_title || 'ПОДДЕРЖКА';
           $('description').value = settings.panel_description || 'Нажмите кнопку ниже чтобы открыть тикет';
           $('color').value = settings.panel_color || 'var(--ac)';
 
@@ -1007,14 +1007,14 @@
 
     $('btn-perm-save').addEventListener('click', function () {
       saveAllConfig(
-        function () { setPermStatus('✓ Системы и параметры сохранены'); },
+        function () { setPermStatus('Системы и параметры сохранены'); },
         function (err) { setPermStatus('Ошибка: ' + err, true); }
       );
     });
 
     $('btn-roles-save').addEventListener('click', function () {
       saveAllConfig(
-        function () { setRolesStatus('✓ Роли сохранены'); },
+        function () { setRolesStatus('Роли сохранены'); },
         function (err) { setRolesStatus('Ошибка: ' + err, true); }
       );
     });

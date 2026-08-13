@@ -432,7 +432,7 @@
 <!-- Confirm modal -->
 <div class="chat-modal" id="chat-confirm">
   <div class="chat-modal-box">
-    <div class="cm-icon" id="cm-icon">🗑️</div>
+    <div class="cm-icon" id="cm-icon" style="color:var(--ac,#e0b04a);"><i class="fas fa-trash"></i></div>
     <div class="cm-title" id="cm-title">Подтверждение</div>
     <div class="cm-desc" id="cm-desc"></div>
     <div class="chat-modal-actions">
@@ -452,7 +452,7 @@ function toast(msg, ok){
   t._t = setTimeout(function(){ t.className='chat-toast'; }, 2600);
 }
 function confirmModal(icon, title, desc, cb){
-  document.getElementById('cm-icon').textContent = icon || '❓';
+  document.getElementById('cm-icon').innerHTML = '<i class="fas ' + String(icon || 'fa-circle-question').replace(/[^a-z0-9\- ]/gi, '') + '"></i>';
   document.getElementById('cm-title').textContent = title;
   document.getElementById('cm-desc').textContent = desc;
   _confirmCb = cb;
@@ -603,8 +603,8 @@ function renderMsg(m, continued) {
 
   var avatarHtml = m.avatar
     ? '<img class="msg-avatar" src="' + m.avatar + '" onerror="this.outerHTML=\'<div class=msg-avatar-placeholder>👤</div>\'">'
-    : (m.bot ? '<div class="msg-avatar-placeholder" >🤖</div>'
-             : '<div class="msg-avatar-placeholder">👤</div>');
+    : (m.bot ? '<div class="msg-avatar-placeholder" ><i class="fas fa-robot"></i></div>'
+             : '<div class="msg-avatar-placeholder"><i class="fas fa-user"></i></div>');
 
   var replyHtml = m.reply_to
     ? '<div class="msg-reply-ref"><span class="msg-reply-author">' + escHtml(m.reply_to.author||'') + '</span> ' + escHtml((m.reply_to.content||'').substring(0,80)) + '</div>'
@@ -718,7 +718,7 @@ async function sendMessage() {
 }
 
 async function deleteMsg(msgId) {
-  confirmModal('🗑️', 'Удалить сообщение?', 'Это действие нельзя отменить.', function(){
+  confirmModal('fa-trash', 'Удалить сообщение?', 'Это действие нельзя отменить.', function(){
     doDeleteMsg(msgId);
   });
 }
@@ -833,8 +833,8 @@ async function loadDmMessages() {
       var d = new Date(m.timestamp);
       var time = d.toLocaleTimeString('tr-TR', {hour:'2-digit',minute:'2-digit'});
       var isBot = m.from_bot;
-      var av = isBot ? '<div class="msg-avatar-placeholder" >🤖</div>'
-                     : '<div class="msg-avatar-placeholder">👤</div>';
+      var av = isBot ? '<div class="msg-avatar-placeholder" ><i class="fas fa-robot"></i></div>'
+                     : '<div class="msg-avatar-placeholder"><i class="fas fa-user"></i></div>';
       var urlMatch = (m.content||'').match(/https?:\/\/\S+\.(gif|jpg|jpeg|png|webp)(\?\S*)?/i);
       var inlineMedia = urlMatch ? '<div class="msg-attachments"><div   style="position: relative;">' +
         '<img class="msg-img" src="' + urlMatch[0] + '" loading="lazy" onclick="openLightbox(\'' + urlMatch[0] + '\')">' +

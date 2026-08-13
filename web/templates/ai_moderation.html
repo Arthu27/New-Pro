@@ -215,21 +215,21 @@
       <div class="aimod-toggle-card" data-lang="ru" onclick="toggleLang('ru')">
         <div class="switch" data-switch="ru"></div>
         <div class="info">
-          <h4>🇷🇺 Русский</h4>
+          <h4>Русский</h4>
           <p>Детекция токсичности, спама и дискриминации на русском</p>
         </div>
       </div>
       <div class="aimod-toggle-card" data-lang="tr" onclick="toggleLang('tr')">
         <div class="switch" data-switch="tr"></div>
         <div class="info">
-          <h4>🇹🇷 Türkçe</h4>
+          <h4>Türkçe</h4>
           <p>Детекция токсичности, спама и дискриминации на турецком</p>
         </div>
       </div>
       <div class="aimod-toggle-card" data-lang="en" onclick="toggleLang('en')">
         <div class="switch" data-switch="en"></div>
         <div class="info">
-          <h4>🇬🇧 English</h4>
+          <h4>English</h4>
           <p>Детекция токсичности, спама и дискриминации на английском</p>
         </div>
       </div>
@@ -246,22 +246,22 @@
     <p >Выберите, какие типы нарушений обрабатывать автоматически:</p>
     <div class="aimod-severity-grid">
       <div class="severity-card" data-sev="mild" onclick="toggleSev('mild')">
-        <div class="sev-icon">⚠️</div>
+        <div class="sev-icon"><i class="fas fa-triangle-exclamation"></i></div>
         <div class="sev-name">Mild</div>
         <div class="sev-desc">Варн · Оскорбления</div>
       </div>
       <div class="severity-card" data-sev="moderate" onclick="toggleSev('moderate')">
-        <div class="sev-icon">🔇</div>
+        <div class="sev-icon"><i class="fas fa-comment-slash"></i></div>
         <div class="sev-name">Moderate</div>
         <div class="sev-desc">Мут 10м · Угрозы</div>
       </div>
       <div class="severity-card" data-sev="severe" onclick="toggleSev('severe')">
-        <div class="sev-icon">🔨</div>
+        <div class="sev-icon"><i class="fas fa-ban"></i></div>
         <div class="sev-name">Severe</div>
         <div class="sev-desc">Бан · Терроризм</div>
       </div>
       <div class="severity-card" data-sev="spam" onclick="toggleSev('spam')">
-        <div class="sev-icon">📢</div>
+        <div class="sev-icon"><i class="fas fa-bullhorn"></i></div>
         <div class="sev-name">Spam</div>
         <div class="sev-desc">Варн · Спам</div>
       </div>
@@ -426,11 +426,11 @@
         if (data.clean) {
           res.style.background = 'rgba(74,222,128,0.10)';
           res.style.borderColor = 'rgba(74,222,128,0.30)';
-          res.innerHTML = '<b  >✅ Чистый текст</b><br><span >Нарушений не обнаружено.</span>';
+          res.innerHTML = '<b  ><i class="fas fa-check" style="color:#2ecc71"></i> Чистый текст</b><br><span >Нарушений не обнаружено.</span>';
         } else {
           res.style.background = 'rgba(248,113,113,0.10)';
           res.style.borderColor = 'rgba(248,113,113,0.30)';
-          res.innerHTML = '<b  >⚠️ Обнаружено: ' + data.severity + '</b><br>' +
+          res.innerHTML = '<b  ><i class="fas fa-triangle-exclamation"></i> Обнаружено: ' + data.severity + '</b><br>' +
             '<span >Паттернов: ' + data.matches + '</span><br>' +
             '<code   style="margin-top: 6px;">' + data.patterns.join('<br>') + '</code>';
         }

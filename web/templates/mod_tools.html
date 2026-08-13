@@ -55,7 +55,7 @@
     </div>
     <div class="form-group">
       <label>Текст</label>
-      <input type="text" id="sticky-text" placeholder="Например: 📜 Сначала прочитайте правила!" maxlength="1900">
+      <input type="text" id="sticky-text" placeholder="Например: Сначала прочитайте правила!" maxlength="1900">
     </div>
     <button class="btn-save" onclick="stickySave()"><i class="fas fa-thumbtack"></i> Закрепить</button>
     <div class="msg" id="sticky-msg"></div>
@@ -148,10 +148,10 @@ async function stickySave() {
   });
   const d = await r.json();
   if (d.success) {
-    msg('sticky-msg', d.reposted ? '✓ Закреплено и отправлено в канал!' : '✓ Закреплено (появится при следующем сообщении).', 'ok');
+    msg('sticky-msg', d.reposted ? 'Закреплено и отправлено в канал!' : 'Закреплено (появится при следующем сообщении).', 'ok');
     document.getElementById('sticky-text').value = '';
     stickyLoad();
-  } else msg('sticky-msg', '✗ ' + (d.error || 'Ошибка.'), 'err');
+  } else msg('sticky-msg', '' + (d.error || 'Ошибка.'), 'err');
 }
 
 async function stickyDel(channel_id) {
@@ -161,8 +161,8 @@ async function stickyDel(channel_id) {
     body: JSON.stringify({channel_id})
   });
   const d = await r.json();
-  if (d.success) { msg('sticky-msg', '✓ Отклеено.', 'ok'); stickyLoad(); }
-  else msg('sticky-msg', '✗ ' + (d.error || 'Ошибка.'), 'err');
+  if (d.success) { msg('sticky-msg', 'Отклеено.', 'ok'); stickyLoad(); }
+  else msg('sticky-msg', '' + (d.error || 'Ошибка.'), 'err');
 }
 
 /* ── Паника ── */
@@ -175,12 +175,12 @@ async function panicLoad() {
   const offBtn = document.getElementById('panic-off-btn');
   if (d.active) {
     const st = d.state || {};
-    el.innerHTML = '🔴 <span style="color:#e74c3c">ЛОКДАУН АКТИВЕН</span> — включён: ' +
+    el.innerHTML = '<i class="fas fa-circle" style="color:#e74c3c"></i> <span style="color:#e74c3c">ЛОКДАУН АКТИВЕН</span> — включён: ' +
       (st.started_at || '?') + ' · причина: ' + (st.reason || '—') +
       ' · каналов: ' + Object.keys(st.channels || {}).length;
     onBtn.style.display = 'none'; offBtn.style.display = 'inline-block';
   } else {
-    el.innerHTML = '🟢 <span style="color:#3ddc84">Локдаун не активен</span>';
+    el.innerHTML = '<i class="fas fa-circle" style="color:#3ddc84"></i> <span style="color:#3ddc84">Локдаун не активен</span>';
     onBtn.style.display = 'inline-block'; offBtn.style.display = 'none';
   }
 }
@@ -198,10 +198,10 @@ async function panicToggle(action) {
   });
   const d = await r.json();
   if (d.success && action === 'on')
-    msg('panic-msg', `🚨 Локдаун включён: закрыто каналов ${d.done}, ошибок ${d.failed}.`, 'ok');
+    msg('panic-msg', `Локдаун включён: закрыто каналов ${d.done}, ошибок ${d.failed}.`, 'ok');
   else if (d.success)
-    msg('panic-msg', `✅ Локдаун снят: восстановлено каналов ${d.done}, ошибок ${d.failed}.`, 'ok');
-  else msg('panic-msg', '✗ ' + (d.error || 'Ошибка.'), 'err');
+    msg('panic-msg', `Локдаун снят: восстановлено каналов ${d.done}, ошибок ${d.failed}.`, 'ok');
+  else msg('panic-msg', '' + (d.error || 'Ошибка.'), 'err');
   panicLoad();
 }
 
@@ -247,7 +247,7 @@ async function ghostLoad() {
       'padding:10px;border:1px solid rgba(255,255,255,.08);border-radius:10px;margin-bottom:8px';
     row.innerHTML =
       '<div style="min-width:0;overflow:hidden">' +
-        '<b>👻 ' + esc(it.name) + '</b>' +
+        '<b><i class="fas fa-ghost" style="opacity:.6"></i> ' + esc(it.name) + '</b>' +
         '<div style="opacity:.85">' + esc(term) + ' · скрыто: ' + it.suppressed +
           (it.reason ? ' · ' + esc(it.reason) : '') +
           (it.by ? ' · от ' + esc(it.by) : '') + '</div>' +
@@ -268,10 +268,10 @@ async function ghostAdd() {
   });
   const d = await r.json();
   if (d.success) {
-    msg('ghost-msg', '✓ Теперь он призрак — сообщения исчезают незаметно.', 'ok');
+    msg('ghost-msg', 'Теперь он призрак — сообщения исчезают незаметно.', 'ok');
     ghostUserInput.value = ''; document.getElementById('ghost-reason').value = '';
     ghostLoad();
-  } else msg('ghost-msg', '✗ ' + (d.error || 'Ошибка.'), 'err');
+  } else msg('ghost-msg', '' + (d.error || 'Ошибка.'), 'err');
 }
 
 async function ghostDel(uid) {
@@ -282,9 +282,9 @@ async function ghostDel(uid) {
   });
   const d = await r.json();
   if (d.success) {
-    msg('ghost-msg', '✓ Тихий мут снят (было скрыто сообщений: ' + d.suppressed + ').', 'ok');
+    msg('ghost-msg', 'Тихий мут снят (было скрыто сообщений: ' + d.suppressed + ').', 'ok');
     ghostLoad();
-  } else msg('ghost-msg', '✗ ' + (d.error || 'Ошибка.'), 'err');
+  } else msg('ghost-msg', '' + (d.error || 'Ошибка.'), 'err');
 }
 
 loadChannels(); stickyLoad(); panicLoad(); ghostLoad();
