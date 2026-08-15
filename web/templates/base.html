@@ -1396,6 +1396,8 @@ window.addEventListener('pageshow', function (e) {
 
 <!-- WebSocket Client для real-time обновлений -->
 <script src="/static/websocket-client.js"></script>
+<!-- API Guard: тост на любой не-OK ответ fetch — причина видна без консоли -->
+<script src="/static/api-guard.js?v=1"></script>
 <script>
 // Инициализация WebSocket клиента
 (function() {
