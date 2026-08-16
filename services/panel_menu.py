@@ -101,6 +101,7 @@ MENU = [
     {'group': 'Контент', 'key': 'content', 'icon': 'fa-palette', 'pages': [
         {'path': '/custom-embeds', 'label': 'Embed-ы', 'icon': 'fa-palette'},
         {'path': '/channels', 'label': 'Каналы', 'icon': 'fa-hashtag'},
+        {'path': '/announcements', 'label': 'Объявления', 'icon': 'fa-bullhorn'},
         {'path': '/execute-command', 'label': 'Команда', 'icon': 'fa-bolt'},
     ]},
     {'group': 'AI', 'key': 'ai', 'icon': 'fa-brain', 'pages': [

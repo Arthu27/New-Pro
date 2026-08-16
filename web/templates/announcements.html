@@ -32,42 +32,93 @@
 {% endblock %}
 
 <style>
-
 .ann-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
 .ann-card{background:linear-gradient(165deg,rgba(224,176,74,.04),rgba(20,18,14,.7));border:1px solid var(--line-2);border-radius:14px;padding:18px;backdrop-filter:blur(14px)}
 .ann-header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
-.ann-icon{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,var(--ac-2),var(--ac-3));display:flex;align-items:center;justify-content:center;font-size:18px;color:#1a1a1a}
+.ann-icon{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,var(--ac-2),var(--ac-3));display:flex;align-items:center;justify-content:center;font-size:18px;color:#1a1a1a;flex:0 0 auto}
 .ann-meta{font-size:12px;color:var(--text-3)}
 .ann-body{font-size:13.5px;color:var(--text-2);line-height:1.6}
-
+.ann-foot{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:12px;padding-top:10px;border-top:1px dashed var(--line-2)}
+.ann-chip{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;padding:3px 10px;border-radius:999px;border:1px solid var(--line-2);color:var(--text-3)}
+.ann-chip.ok{color:#8fd6a0;border-color:rgba(143,214,160,.35);background:rgba(143,214,160,.08)}
+.ann-chip.err{color:#ff9a9f;border-color:rgba(255,154,159,.35);background:rgba(255,154,159,.08);cursor:help}
+.ann-retry{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;padding:3px 10px;border-radius:999px;border:1px solid rgba(242,179,61,.45);background:rgba(242,179,61,.08);color:var(--ac-2);cursor:pointer;transition:filter .15s ease,transform .15s ease}
+.ann-retry:hover:not(:disabled){filter:brightness(1.15);transform:translateY(-1px)}
+.ann-retry:disabled{opacity:.45;cursor:not-allowed}
+.ann-retry.busy i{animation:annSpin 1s linear infinite}
+@keyframes annSpin{to{transform:rotate(360deg)}}
 </style>
-
-
 
 <div id="ann-list"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Загрузка...</p></div></div>
 
 <script>
+var CAN_MANAGE = {{ 'true' if can_manage else 'false' }};
+
 function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+function chipHtml(a) {
+  if (!CAN_MANAGE) return '';
+  if (!a.channel_id) {
+    return '<span class="ann-chip"><i class="fas fa-desktop"></i> Только в панели</span>';
+  }
+  if (a.delivered) {
+    var where = a.channel_name ? ' &middot; #' + esc(a.channel_name) : '';
+    var extra = a.redelivered_at ? ' &middot; дослал ' + esc(a.redelivered_by || '') : '';
+    return '<span class="ann-chip ok"><i class="fas fa-check-circle"></i> В Discord' + where + extra + '</span>';
+  }
+  var err = a.deliver_error ? ' title="' + esc(a.deliver_error) + '"' : '';
+  var retry = a.id
+    ? '<button type="button" class="ann-retry" data-retry="' + esc(a.id) + '"><i class="fas fa-rotate-right"></i> Дослать</button>'
+    : '';
+  return '<span class="ann-chip err"' + err + '><i class="fas fa-exclamation-circle"></i> Не доставлено</span>' + retry;
+}
+
+function cardHtml(a) {
+  var d = new Date(a.created_at);
+  var foot = chipHtml(a);
+  return '<div class="ann-card">' +
+    '<div class="ann-header">' +
+      '<div class="ann-icon"><i class="fas fa-bullhorn"></i></div>' +
+      '<div><div class="ann-title">' + esc(a.title) + '</div><div class="ann-meta"><i class="fas fa-user"></i> ' + esc(a.from) + ' <span>&middot;</span> <i class="fas fa-clock"></i> ' + d.toLocaleString('ru-RU') + '</div></div>' +
+    '</div>' +
+    '<div class="ann-body">' + esc(a.message).replace(/\n/g, '<br>') + '</div>' +
+    (foot ? '<div class="ann-foot">' + foot + '</div>' : '') +
+  '</div>';
+}
 
 async function loadAnns() {
   var r = await fetch('/api/announcements');
   var anns = await r.json();
   var box = document.getElementById('ann-list');
   if (!anns.length) {
+    box.className = '';
     box.innerHTML = '<div class="empty-state"><i class="fas fa-bullhorn"></i><p>Пока объявлений нет</p></div>';
     return;
   }
-  box.innerHTML = anns.map(function(a) {
-    var d = new Date(a.created_at);
-    return '<div class="ann-card">' +
-      '<div class="ann-header">' +
-        '<div class="ann-icon"><i class="fas fa-bullhorn"></i></div>' +
-        '<div><div class="ann-title">'+esc(a.title)+'</div><div class="ann-meta"><i class="fas fa-user"></i> '+esc(a.from)+' <span >•</span> <i class="fas fa-clock"></i> '+d.toLocaleString('ru-RU')+'</div></div>' +
-      '</div>' +
-      '<div class="ann-body">'+esc(a.message).replace(/\n/g,'<br>')+'</div>' +
-    '</div>';
-  }).join('');
+  box.className = 'ann-grid';
+  box.innerHTML = anns.map(cardHtml).join('');
 }
+
+async function retryAnn(id, btn) {
+  btn.disabled = true;
+  btn.classList.add('busy');
+  try {
+    await fetch('/api/announcements/retry', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: id })
+    });
+  } finally {
+    await loadAnns();
+  }
+}
+
+document.addEventListener('click', function (e) {
+  var b = e.target.closest('[data-retry]');
+  if (b && b.dataset.retry) retryAnn(b.dataset.retry, b);
+});
+
 loadAnns();
+setInterval(function () { if (!document.hidden) loadAnns(); }, 30000);
 </script>
 {% endblock %}

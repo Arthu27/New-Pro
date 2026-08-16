@@ -878,9 +878,10 @@ def notifications ():
 @app .route ('/announcements')
 @login_required 
 def announcements ():
-    if session .get ('role')!='uye':
-        return redirect (url_for ('index'))
-    return render_template ('announcements.html',role =session .get ('role'),username =session .get ('username'))
+    # История объявлений: участнику — чистая лента, персоналу (mod+)
+    # дополнительно статусы доставки в Discord и кнопка «Дослать».
+    return render_template ('announcements.html',role =session .get ('role'),username =session .get ('username'),
+    can_manage =(ROLES .get (session .get ('role'),-1 )>=ROLES .get ('mod',999 )))
 
 @app .route ('/logout')
 def logout ():
@@ -1004,15 +1005,74 @@ def api_my_notifications ():
     result .sort (key =lambda x :x .get ('created_at',''),reverse =True )
     return jsonify (result [:30 ])
 
+# ── Объявления: хранилище и честная доставка в Discord ────────────────────
+_ANN_FILE ='data/announcements.json'
+
+def _new_announcement_id ():
+    return 'ann-%d-%s'%(int (_time .time ()*1000 ),
+    ''.join (random .choices (string .ascii_lowercase +string .digits ,k =4 )))
+
+def _load_announcements ():
+    """Читает ленту объявлений. Битый/не-список JSON — как пусто.
+    Старые записи без id (до кнопки «Дослать») получают id один раз —
+    иначе неудачную доставку из старой ленты уже не переадресовать."""
+    if not os .path .exists (_ANN_FILE ):
+        return []
+    try :
+        with open (_ANN_FILE ,'r',encoding ='utf-8')as f :
+            data =json .load (f )
+    except Exception as _ex :
+        _log .debug ("_load_announcements(): битый файл, считаем пустым: %s",_ex )
+        return []
+    if not isinstance (data ,list ):
+        return []
+    if any (isinstance (a ,dict )and a .get ('channel_id')and not a .get ('id')for a in data ):
+        seen ={str (a .get ('id'))for a in data if isinstance (a ,dict )and a .get ('id')}
+        for a in data :
+            if not (isinstance (a ,dict )and a .get ('channel_id')and not a .get ('id')):
+                continue
+            nid =_new_announcement_id ()
+            while nid in seen :
+                nid =_new_announcement_id ()
+            seen .add (nid )
+            a ['id']=nid
+        _save_announcements (data )
+        _log .debug ("_load_announcements(): старым записям выданы id (миграция «Дослать»)")
+    return [a for a in data if isinstance (a ,dict )]
+
+def _save_announcements (anns ):
+    os .makedirs ('data',exist_ok =True )
+    tmp =_ANN_FILE +'.tmp'
+    with open (tmp ,'w',encoding ='utf-8')as f :
+        json .dump (anns ,f ,indent =2 ,ensure_ascii =False )
+    os .replace (tmp ,_ANN_FILE )
+
+def _deliver_announcement_embed (guild_id ,channel_id ,title ,message ,author ):
+    """Отправляет эмбед объявления в канал и ЖДЁТ результата (а не в никуда).
+    Возвращает (ok, error, channel_name)."""
+    if not bot_instance :
+        return False ,'Бот Discord не в сети',None
+    try :
+        guild =next ((g for g in bot_instance .guilds if str (g .id )==str (guild_id )),None )
+        channel =guild .get_channel (int (channel_id ))if guild else None
+        if not channel :
+            return False ,'Канал не найден',None
+        embed =discord .Embed (title =title ,description =message ,color =0xF2B33D ,
+        timestamp =datetime .now (timezone .utc ))
+        embed .set_footer (text =f"Объявление · {author}")
+
+        async def _send_ann ():
+            await channel .send (embed =embed )
+
+        asyncio .run_coroutine_threadsafe (_send_ann (),bot_instance .loop ).result (timeout =10 )
+        return True ,None ,getattr (channel ,'name',None )
+    except Exception as e :
+        return False ,str (e ),None
+
 @app .route ('/api/announcements')
 @login_required 
 def api_announcements ():
-    ann_file ='data/announcements.json'
-    if not os .path .exists (ann_file ):
-        return jsonify ([])
-    with open (ann_file ,'r',encoding ='utf-8')as f :
-        anns =json .load (f )
-    return jsonify (list (reversed (anns )))
+    return jsonify (list (reversed (_load_announcements ())))
 
 @app .route ('/api/send-notification',methods =['POST'])
 @login_required 
@@ -1080,46 +1140,25 @@ def api_send_announcement ():
     channel_id =str (data .get ('channel_id')or '')
     delivered =False
     deliver_error =None
+    channel_name =None
     if channel_id :
-        if not bot_instance :
-            deliver_error ='Бот Discord не в сети'
-        else :
-            try :
-                guild =next ((g for g in bot_instance .guilds if str (g .id )==guild_id ),None )
-                channel =guild .get_channel (int (channel_id ))if guild else None
-                if not channel :
-                    deliver_error ='Канал не найден'
-                else :
-                    embed =discord .Embed (title =title ,description =message ,color =0xF2B33D ,
-                    timestamp =datetime .now (timezone .utc ))
-                    embed .set_footer (text =f"Объявление · {session .get ('username','панель')}")
+        delivered ,deliver_error ,channel_name =_deliver_announcement_embed (
+        guild_id ,channel_id ,title ,message ,session .get ('username','панель'))
 
-                    async def _send_ann ():
-                        await channel .send (embed =embed )
-
-                    import asyncio 
-                    asyncio .run_coroutine_threadsafe (_send_ann (),bot_instance .loop ).result (timeout =10 )
-                    delivered =True
-            except Exception as e :
-                deliver_error =str (e )
-
-    ann_file ='data/announcements.json'
-    os .makedirs ('data',exist_ok =True )
-    anns =[]
-    if os .path .exists (ann_file ):
-        with open (ann_file ,'r',encoding ='utf-8')as f :
-            anns =json .load (f )
+    anns =_load_announcements ()
     anns .append ({
+    'id':_new_announcement_id (),
     'title':title ,
     'message':message ,
     'from':session .get ('username'),
+    'guild_id':guild_id or None ,
     'channel_id':channel_id or None ,
+    'channel_name':channel_name ,
     'delivered':delivered ,
     'deliver_error':deliver_error ,
     'created_at':datetime.now(timezone.utc).isoformat ()
     })
-    with open (ann_file ,'w',encoding ='utf-8')as f :
-        json .dump (anns ,f ,indent =2 ,ensure_ascii =False )
+    _save_announcements (anns )
     if not channel_id :
         text ='Объявление опубликовано в ленте панели'
     elif delivered :
@@ -1127,6 +1166,42 @@ def api_send_announcement ():
     else :
         text =f'Опубликовано в ленте, но в Discord не ушло: {deliver_error}'
     return jsonify ({'success':True ,'delivered':delivered ,'deliver_error':deliver_error ,'message':text })
+
+@app .route ('/api/announcements/retry',methods =['POST'])
+@login_required 
+def api_announcements_retry ():
+    """«Дослать»: повторная доставка объявления, которое не дошло до Discord.
+    Ошибка снова честно возвращается (нест-200) — API Guard сам покажет тост."""
+    if ROLES .get (session .get ('role'),-1 )<ROLES .get ('mod',999 ):
+        return jsonify ({'error':'Нет доступа'}),403
+    data =request .get_json (silent =True )or {}
+    ann_id =str (data .get ('id')or '').strip ()
+    if not ann_id :
+        return jsonify ({'error':'Не указан id объявления'}),400
+    anns =_load_announcements ()
+    rec =next ((a for a in anns if str (a .get ('id')or '')==ann_id ),None )
+    if rec is None :
+        return jsonify ({'error':'Объявление не найдено'}),404
+    if not rec .get ('channel_id'):
+        return jsonify ({'error':'Объявление публиковалось только в ленте панели — доставлять некуда'}),400
+    if rec .get ('delivered'):
+        return jsonify ({'error':'Объявление уже доставлено'}),400
+    ok ,err ,ch_name =_deliver_announcement_embed (
+    rec .get ('guild_id')or '',str (rec .get ('channel_id')),
+    str (rec .get ('title','')),str (rec .get ('message','')),
+    str (rec .get ('from')or session .get ('username','панель')))
+    rec ['delivered']=ok
+    rec ['deliver_error']=err
+    if ch_name :
+        rec ['channel_name']=ch_name
+    if ok :
+        rec ['redelivered_at']=datetime .now (timezone .utc ).isoformat ()
+        rec ['redelivered_by']=session .get ('username')
+    _save_announcements (anns )
+    if not ok :
+        return jsonify ({'delivered':False ,'error':f'Снова не ушло: {err}'}),502
+    return jsonify ({'success':True ,'delivered':True ,
+    'message':f'Доставлено в #{ch_name}'if ch_name else 'Доставлено в Discord'})
 
 @app .route ('/users')
 @login_required 
