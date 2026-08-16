@@ -388,6 +388,36 @@
   </div>
 </div>
 
+{% if role != 'uye' %}
+<!-- Дежурства персонала (зеркало расписания /дежурства из Discord) -->
+<style>
+.shift-now-row{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid var(--line-2)}
+.shift-dot{width:10px;height:10px;border-radius:50%;background:#5a5346;flex:0 0 auto}
+.shift-dot.on{background:#7bd88f;box-shadow:0 0 0 0 rgba(123,216,143,.5);animation:shiftPulse 2s ease-out infinite}
+@keyframes shiftPulse{0%{box-shadow:0 0 0 0 rgba(123,216,143,.45)}70%{box-shadow:0 0 0 9px rgba(123,216,143,0)}100%{box-shadow:0 0 0 0 rgba(123,216,143,0)}}
+.shift-now-txt{font-size:13.5px;color:var(--text-2)}
+.shift-now-txt b{color:var(--text-1)}
+.shift-now-sub{font-size:11.5px;color:var(--text-3);margin-top:2px}
+.shift-today-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.shift-chip{display:inline-flex;align-items:center;gap:7px;font-size:12px;padding:4px 11px;border-radius:999px;border:1px solid var(--line-2);color:var(--text-2)}
+.shift-chip .t{color:var(--text-3);font-variant-numeric:tabular-nums}
+.shift-chip.on{border-color:rgba(123,216,143,.4);background:rgba(123,216,143,.08)}
+</style>
+<div class="dash-box" id="shiftBox" data-reveal="up">
+  <div class="dash-box-head">
+    <div class="dash-box-title"><i class="fas fa-user-clock"></i> Дежурства</div>
+    <span class="text-mut text-xs fw-700" id="shiftTz"></span>
+  </div>
+  <div class="dash-box-body">
+    <div class="shift-now-row" id="shiftNow">
+      <span class="shift-dot"></span>
+      <div class="shift-now-txt"><i class="fas fa-spinner fa-spin"></i></div>
+    </div>
+    <div class="shift-today-row" id="shiftToday"></div>
+  </div>
+</div>
+{% endif %}
+
 <!-- Two columns: Recent activity + Login лог -->
 <div class="dash-cols">
   <div class="dash-box">
@@ -829,6 +859,51 @@
     if (ba) ba.addEventListener('click', sendAnnouncement);
   }
 
+  async function loadShifts() {
+    var nowBox = $('shiftNow');
+    var todayBox = $('shiftToday');
+    if (!nowBox || !todayBox) return;  // uye — виджета нет в DOM
+    try {
+      var guilds = await window.fetchCachedJSON('/api/guilds');
+      if (!Array.isArray(guilds) || !guilds.length) return;
+      var main = '{{ main_guild_id }}';
+      var g = null;
+      for (var i = 0; i < guilds.length; i++) {
+        if (String(guilds[i].id) === String(main)) { g = guilds[i]; break; }
+      }
+      if (!g) g = guilds[0];
+      if (!g) return;
+      var d = await fetch('/api/guild/' + g.id + '/staff-shifts').then(function (r) { return r.json(); });
+      if (!d.success) throw new Error(d.error || 'API');
+      var tzEl = $('shiftTz');
+      if (tzEl) tzEl.textContent = 'UTC+' + d.tz_offset + ' · ' + (d.weekday || '');
+      if (d.current) {
+        nowBox.innerHTML = '<span class="shift-dot on"></span>' +
+          '<div><div class="shift-now-txt">Сейчас на смене: <b>' + esc(d.current.name) + '</b></div>' +
+          '<div class="shift-now-sub">' + esc(d.current.start) + '–' + esc(d.current.end) + ' · до конца смены <span class="mono">' + fmtLeft(d.current.ends_at) + '</span></div></div>';
+      } else {
+        nowBox.innerHTML = '<span class="shift-dot"></span>' +
+          '<div><div class="shift-now-txt">Сейчас никто не дежурит</div>' +
+          (d.next ? '<div class="shift-now-sub">Ближайшая: ' + esc(d.next.weekday) + ' ' + esc(d.next.start) + ' — ' + esc(d.next.name) + '</div>'
+                  : '<div class="shift-now-sub">Расписание пусто — задайте смены командой /дежурства</div>') +
+          '</div>';
+      }
+      todayBox.innerHTML = (d.today || []).map(function (s) {
+        return '<span class="shift-chip' + (s.active ? ' on' : '') + '">' +
+          '<span class="t">' + esc(s.start) + '–' + esc(s.end) + '</span> ' + esc(s.name) + '</span>';
+      }).join('');
+    } catch (e) {
+      nowBox.innerHTML = '<span class="shift-dot"></span><div class="shift-now-txt">Не удалось загрузить дежурства</div>';
+    }
+  }
+
+  function fmtLeft(iso) {
+    var ms = new Date(iso).getTime() - Date.now();
+    if (ms <= 0) return '0 мин';
+    var h = Math.floor(ms / 3600000), m = Math.floor(ms % 3600000 / 60000);
+    return h ? h + ' ч ' + m + ' мин' : m + ' мин';
+  }
+
   function init() {
     setGreeting();
     bindButtons();
@@ -840,6 +915,7 @@
     loadThreatIndex();
     loadHealth();
     loadAnnChannels();
+    loadShifts();
     if (window.setLiveRefresh) {
       window.setLiveRefresh(loadStats, 2500);
       window.setLiveRefresh(loadQuickStats, 5000);
@@ -847,6 +923,7 @@
       window.setLiveRefresh(loadLoginLog, 2500);
       window.setLiveRefresh(loadThreatIndex, 5000);
       window.setLiveRefresh(loadHealth, 3000);
+      window.setLiveRefresh(loadShifts, 30000);
     } else {
       setInterval(loadStats, 2500);
       setInterval(loadQuickStats, 5000);
@@ -854,6 +931,7 @@
       setInterval(loadLoginLog, 2500);
       setInterval(loadThreatIndex, 5000);
       setInterval(loadHealth, 3000);
+      setInterval(loadShifts, 30000);
     }
     setInterval(setGreeting, 60000);
   }

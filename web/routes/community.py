@@ -481,3 +481,79 @@ def register(ctx):
             with open (f )as fp :return jsonify (json .load (fp ))
         with open (f ,'w')as fp :json .dump (request .get_json (silent =True ),fp )
         return jsonify ({'success':True })
+
+        # ── STAFF SHIFTS (виджет дежурств на дашборде) ────────────────────────────
+    @app .route ('/api/guild/<guild_id>/staff-shifts')
+    @login_required
+    def api_staff_shifts (guild_id ):
+        """Дежурства для виджета на дашборде: кто сейчас, кто следующий, смены сегодня.
+
+        Читает то же хранилище (GuildData 'staff_shifts'), что и ког /дежурства —
+        поэтому в панели видно расписание, заданное из Discord. Доступ: mod+.
+        """
+        if ROLES .get (session .get ('role'),-1 )<ROLES .get ('mod',999 ):
+            return jsonify ({'success':False ,'error':'Нет доступа'}),403
+        try :
+            gid =int (guild_id )
+        except (TypeError ,ValueError ):
+            return jsonify ({'success':False ,'error':'Некорректный сервер'}),400
+
+        from datetime import timedelta
+        from db import GuildData
+        from cogs .staff_shifts import active_shift ,next_shift ,iter_windows ,WEEKDAYS_RU
+        import web .app as _app
+
+        db =GuildData ('staff_shifts')
+        shifts_map =db .get (gid ,'shifts',{})or {}
+        raw_settings =db .get (gid ,'settings',{})or {}
+        try :
+            tz_offset =int (raw_settings .get ('tz_offset',3))
+        except (TypeError ,ValueError ):
+            tz_offset =3
+        tz =timezone (timedelta (hours =tz_offset ))
+        shifts =list (shifts_map .values ())
+
+        # Имена из кэша бота; бот офлайн — честный фолбэк на ID.
+        def _name (uid ):
+            bot =_app .bot_instance
+            if bot is not None :
+                try :
+                    g =bot .get_guild (gid )
+                    m =g .get_member (int (uid ))if g else None
+                    if m is not None :
+                        return m .display_name
+                except Exception as _ex :
+                    _log .debug ("api_staff_shifts(): имя не резолвится: %s",_ex )
+            return f'ID {uid}'
+
+        now =datetime .now (timezone .utc )
+
+        current =None
+        found =active_shift (shifts ,now ,tz_offset )
+        if found :
+            sh ,w_start ,w_end =found
+            current ={'user_id':sh .get ('user_id'),'name':_name (sh .get ('user_id')),
+            'start':sh .get ('start'),'end':sh .get ('end'),'ends_at':w_end .isoformat ()}
+
+        nxt =None
+        found_next =next_shift (shifts ,now ,tz_offset )
+        if found_next :
+            sh ,w_start =found_next
+            nxt ={'user_id':sh .get ('user_id'),'name':_name (sh .get ('user_id')),
+            'start':sh .get ('start'),'end':sh .get ('end'),
+            'weekday':WEEKDAYS_RU [w_start .astimezone (tz ).weekday ()],
+            'starts_at':w_start .isoformat ()}
+
+        today =[]
+        for sh ,w_start ,w_end in sorted (iter_windows (shifts ,now .astimezone (tz ).date (),tz_offset ),
+        key =lambda t :t [1 ]):
+            today .append ({'user_id':sh .get ('user_id'),'name':_name (sh .get ('user_id')),
+            'start':sh .get ('start'),'end':sh .get ('end'),'active':w_start <=now <w_end })
+        # активная смена, перенесённая с вчера через полночь, — первой строкой
+        if current and not any (t ['active']for t in today ):
+            today .insert (0 ,{'user_id':current ['user_id'],'name':current ['name'],
+            'start':current ['start'],'end':current ['end'],'active':True })
+
+        return jsonify ({'success':True ,'tz_offset':tz_offset ,
+        'current':current ,'next':nxt ,'today':today ,
+        'weekday':WEEKDAYS_RU [now .astimezone (tz ).weekday ()]})
