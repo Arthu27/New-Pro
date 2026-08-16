@@ -59,6 +59,7 @@ MENU = [
     ]},
     {'group': 'Тикеты', 'key': 'tickets', 'icon': 'fa-ticket-alt', 'pages': [
         {'path': '/ai-tickets', 'label': 'AI Тикеты', 'icon': 'fa-ticket-alt'},
+        {'path': '/tickets-ops', 'label': 'OPS-центр', 'icon': 'fa-gauge-high'},
         {'path': '/ai_ticket_stats', 'label': 'Статистика', 'icon': 'fa-chart-pie'},
         {'path': '/ticket-search', 'label': 'Поиск тикетов', 'icon': 'fa-magnifying-glass'},
         {'path': '/transcripts', 'label': 'Транскрипты', 'icon': 'fa-file-lines'},
@@ -144,6 +145,7 @@ CONFIGURABLE = ('mod', 'admin')
 # Страницы, работающие через Discord API напрямую (роли, каналы, бэкапы...),
 # в карту НЕ входят: они живы и без когов.
 PAGE_COGS = {
+    '/tickets-ops': ('ticket',),
     '/economy': ('economy_cog',),
     '/shop': ('economy_cog',),
     '/music': ('music_cog',),

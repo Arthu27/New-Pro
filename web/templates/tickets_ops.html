@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+{% block title %}Тикеты OPS — Панель Aether{% endblock %}
+{% block page_title %}OPS-центр тикетов{% endblock %}
+{% block content %}
+<style>
+.tp-kpis{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 18px;align-items:center}
+.tp-kpi{display:flex;align-items:center;gap:10px;background:var(--surface-2,rgba(255,255,255,.04));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:12px;padding:10px 16px}
+.tp-kpi i{color:var(--ac,#e0b04a);font-size:16px}
+.tp-kpi b{font-size:18px;color:var(--text-1,#fff)}
+.tp-kpi span{font-size:11.5px;color:var(--text-3,rgba(255,255,255,.45))}
+.tp-kpi.hot{border-color:rgba(231,76,60,.4)}
+.tp-kpi.hot i,.tp-kpi.hot b{color:#ff8a7a}
+.tp-sla{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-3,rgba(255,255,255,.45))}
+.tp-select{background:rgba(0,0,0,.25);border:1px solid var(--line-2,rgba(255,255,255,.1));border-radius:10px;padding:7px 12px;color:var(--text-1,#fff);font-size:13px;outline:none}
+.tp-select option{background:#1c1f27;color:#e8e8e8}
+.tp-panel{background:var(--surface-2,rgba(255,255,255,.03));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:14px;padding:16px 18px;margin-bottom:16px}
+.tp-panel h3{margin:0 0 4px;font-size:15px;color:var(--text-1,#fff);display:flex;align-items:center;gap:9px}
+.tp-panel h3 i{color:var(--ac,#e0b04a)}
+.tp-sub{font-size:12px;color:var(--text-3,rgba(255,255,255,.45));margin-bottom:12px;line-height:1.5}
+.tp-bulkbar{display:none;align-items:center;gap:10px;margin-bottom:10px;font-size:12.5px;color:var(--text-2,rgba(255,255,255,.75))}
+.tp-btn{display:inline-flex;align-items:center;gap:7px;background:var(--ac,#e0b04a);color:#1a1a1a;border:none;border-radius:10px;padding:8px 15px;font-size:12.5px;font-weight:700;cursor:pointer;transition:filter .15s}
+.tp-btn:hover{filter:brightness(1.1)}
+.tp-btn.danger{background:rgba(231,76,60,.12);color:#ff8a7a;border:1px solid rgba(231,76,60,.35)}
+.tp-tb{width:100%;border-collapse:collapse}
+.tp-tb td,.tp-tb th{padding:8px 6px;border-bottom:1px dashed rgba(255,255,255,.07);font-size:13px;color:var(--text-2,rgba(255,255,255,.8));text-align:left;vertical-align:middle}
+.tp-tb th{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-3,rgba(255,255,255,.4));font-weight:700}
+.tp-tb tr:last-child td{border-bottom:none}
+.tp-tb tr.sel td{background:var(--ac-soft,rgba(224,176,74,.05))}
+.tp-id{font-family:ui-monospace,monospace;font-size:11.5px;color:var(--text-3,rgba(255,255,255,.5))}
+.tp-age{font-variant-numeric:tabular-nums;white-space:nowrap}
+.tp-age.over{color:#ff8a7a;font-weight:700}
+.tp-chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--text-2,rgba(255,255,255,.7));background:rgba(255,255,255,.05);border:1px solid var(--line-2,rgba(255,255,255,.1));border-radius:999px;padding:2px 9px;white-space:nowrap}
+.tp-act{background:none;border:1px solid var(--line-2,rgba(255,255,255,.12));border-radius:8px;color:var(--text-3,rgba(255,255,255,.5));cursor:pointer;padding:4px 9px;font-size:11.5px;transition:all .15s;margin-right:4px}
+.tp-act:hover{color:var(--ac,#e0b04a);border-color:var(--ac-line,rgba(224,176,74,.35))}
+.tp-note{background:rgba(0,0,0,.2);border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:10px;padding:9px 12px;margin-bottom:7px}
+.tp-note .t{font-size:12.5px;color:var(--text-2,rgba(255,255,255,.85));line-height:1.45}
+.tp-note .m{font-size:11px;color:var(--text-3,rgba(255,255,255,.4));margin-top:4px}
+.tp-ta{width:100%;background:rgba(0,0,0,.25);border:1px solid var(--line-2,rgba(255,255,255,.1));border-radius:10px;padding:9px 12px;color:var(--text-1,#fff);font-size:13px;outline:none;resize:vertical;min-height:56px}
+.tp-ta:focus{border-color:var(--ac,#e0b04a);box-shadow:0 0 0 3px var(--ac-soft,rgba(224,176,74,.12))}
+.tp-err{display:none;font-size:12.5px;color:#ff8a7a;background:rgba(231,76,60,.1);border:1px solid rgba(231,76,60,.3);border-radius:10px;padding:8px 12px;margin-bottom:10px}
+.tp-detail{display:none}
+[data-theme="light"] .tp-tb td,[data-theme="light"] .tp-tb th{border-bottom-color:rgba(0,0,0,.08)}
+[data-theme="light"] .tp-select,[data-theme="light"] .tp-ta{background:rgba(0,0,0,.04)}
+[data-theme="light"] .tp-select option{background:#fff;color:#2a2d35}
+[data-theme="light"] .tp-note{background:rgba(0,0,0,.03)}
+</style>
+
+<div class="tp-err" id="tpErr"></div>
+<div class="tp-kpis" id="tpKpis">
+  <div class="sk-card" style="width:170px;height:56px"></div>
+  <div class="sk-card" style="width:170px;height:56px"></div>
+  <div class="sk-card" style="width:170px;height:56px"></div>
+</div>
+
+<div class="tp-panel">
+  <h3><i class="fas fa-inbox"></i> Открытые тикеты</h3>
+  <div class="tp-sub">Всё, что не в статусе «closed». Просрочка — старше выбранного SLA.
+    Клик по тикету — карточка с заметками и назначением.</div>
+  <div class="tp-bulkbar" id="tpBulk">
+    <span id="tpBulkCount"></span>
+    <button class="tp-btn danger" onclick="tpBulkClose()"><i class="fas fa-lock"></i> Закрыть выбранные</button>
+  </div>
+  <div id="tpList">
+    <div class="sk-row"></div>
+    <div class="sk-row" style="width:80%"></div>
+    <div class="sk-row" style="width:60%"></div>
+  </div>
+</div>
+
+<div class="tp-panel tp-detail" id="tpDetailWrap">
+  <h3><i class="fas fa-address-card"></i> Тикет <span class="tp-id" id="tpCardId"></span></h3>
+  <div class="tp-sub" id="tpCardMeta"></div>
+  <div id="tpNotes"></div>
+  <textarea class="tp-ta" id="tpNoteText" placeholder="Заметка для команды (видна только модераторам)..." maxlength="300" aria-label="Заметка"></textarea>
+  <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+    <button class="tp-btn" onclick="tpSaveNote()"><i class="fas fa-note-sticky"></i> Сохранить заметку</button>
+    <button class="tp-act" id="tpAssignBtn" onclick="tpToggleAssign()"></button>
+    <button class="tp-act" id="tpCloseBtn" onclick="tpCloseOne()"><i class="fas fa-lock"></i> Закрыть тикет</button>
+  </div>
+</div>
+
+<script>
+var CAN_EDIT = {% if role == 'admin' or role == 'owner' %}true{% else %}false{% endif %};
+var ME = {{ username | tojson }};
+var STATE = null;
+var SLA_H = 24;
+var SELECTED = {};
+var CURRENT = null;
+
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function tpErr(msg) { var el = document.getElementById('tpErr'); el.textContent = msg || ''; el.style.display = msg ? '' : 'none'; }
+
+function renderKpis(d) {
+  var hot = d.overdue_count > 0;
+  document.getElementById('tpKpis').innerHTML =
+    '<div class="tp-kpi"><i class="fas fa-inbox"></i><div><b>' + d.open_count + '</b> <span>открыто</span></div></div>' +
+    '<div class="tp-kpi' + (hot ? ' hot' : '') + '"><i class="fas fa-fire"></i><div><b>' + d.overdue_count + '</b> <span>просрочено</span></div></div>' +
+    '<div class="tp-kpi"><i class="fas fa-hourglass-half"></i><div><b>' + (d.avg_close_hours == null ? '—' : d.avg_close_hours + ' ч') + '</b> <span>среднее закрытие · закрыто ' + d.closed_total + '</span></div></div>' +
+    '<div class="tp-sla">SLA: <select class="tp-select" id="tpSlaSel" onchange="SLA_H=this.value;loadState()">' +
+      d.sla_choices.map(function (h) { return '<option value="' + h + '"' + (h == d.sla_hours ? ' selected' : '') + '>' + h + ' ч</option>'; }).join('') +
+    '</select></div>';
+}
+
+function renderList(d) {
+  var box = document.getElementById('tpList');
+  if (!d.items.length) {
+    SELECTED = {};
+    document.getElementById('tpBulk').style.display = 'none';
+    document.getElementById('tpDetailWrap').style.display = 'none';
+    box.innerHTML = '<div class="empty-state"><i class="fas fa-circle-check"></i><p>Открытых тикетов нет</p>' +
+      '<p class="empty-tip">Очередь чиста — пришло спокойное время.</p></div>';
+    return;
+  }
+  var rows = d.items.map(function (t) {
+    var checked = SELECTED[t.id] ? ' checked' : '';
+    var cb = CAN_EDIT ? '<input type="checkbox"' + checked + ' onchange="tpToggleSel(\x27' + esc(t.id) + '\x27,this.checked)" aria-label="Выбрать">' : '';
+    var age = t.age_h == null ? '—' : t.age_h + ' ч';
+    var assign = t.assigned_to
+      ? '<span class="tp-chip"><i class="fas fa-user-check"></i> ' + esc(t.assigned_to.replace(/^panel:/, '')) + '</span>'
+      : '<span class="tp-chip">никто</span>';
+    var notes = t.notes_count ? '<span class="tp-chip"><i class="fas fa-note-sticky"></i> ' + t.notes_count + '</span>' : '';
+    return '<tr class="' + (SELECTED[t.id] ? 'sel' : '') + '">' +
+      '<td>' + cb + '</td>' +
+      '<td class="tp-id">' + esc(t.id.slice(0, 10)) + '</td>' +
+      '<td>' + esc(t.category) + '</td>' +
+      '<td class="tp-id">' + esc(t.user_id || '—') + '</td>' +
+      '<td class="tp-age' + (t.overdue ? ' over' : '') + '">' + age + (t.overdue ? ' просрочен' : '') + '</td>' +
+      '<td>' + assign + ' ' + notes + '</td>' +
+      '<td><button class="tp-act" onclick="tpOpen(\x27' + esc(t.id) + '\x27)"><i class="fas fa-arrow-right"></i> Карточка</button></td></tr>';
+  }).join('');
+  box.innerHTML = '<table class="tp-tb"><thead><tr><th></th><th>ID</th><th>Категория</th><th>Автор</th><th>Возраст</th><th>Ответственный</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>';
+  renderBulk();
+}
+
+function renderBulk() {
+  var n = Object.keys(SELECTED).length;
+  var bar = document.getElementById('tpBulk');
+  bar.style.display = (CAN_EDIT && n > 0) ? 'flex' : 'none';
+  document.getElementById('tpBulkCount').textContent = 'Выбрано: ' + n;
+}
+
+function tpToggleSel(id, on) {
+  if (on) SELECTED[id] = true; else delete SELECTED[id];
+  renderList(STATE);
+}
+
+async function tpOpen(id) {
+  var r = await fetch('/api/tickets-ops/' + encodeURIComponent(id));
+  var d = await r.json();
+  if (!d.success) { tpErr(d.error || 'Тикет не найден.'); return; }
+  tpErr('');
+  CURRENT = d;
+  document.getElementById('tpDetailWrap').style.display = '';
+  document.getElementById('tpCardId').textContent = d.id;
+  document.getElementById('tpCardMeta').textContent =
+    d.category + ' · автор ' + (d.user_id || '—') + ' · создан ' + String(d.created_at).slice(0, 16).replace('T', ' ');
+  document.getElementById('tpNotes').innerHTML = d.notes.length
+    ? d.notes.map(function (n) {
+        return '<div class="tp-note"><div class="t">' + esc(n.text) + '</div>' +
+          '<div class="m">' + esc(n.by.replace(/^panel:/, '')) + ' · ' + String(n.at).slice(0, 16).replace('T', ' ') + '</div></div>';
+      }).join('')
+    : '<div class="empty-state" style="padding:12px"><i class="fas fa-note-sticky"></i><p>Заметок нет</p></div>';
+  document.getElementById('tpAssignBtn').innerHTML = d.assigned_to === 'panel:' + ME
+    ? '<i class="fas fa-user-minus"></i> Снять себя'
+    : '<i class="fas fa-user-check"></i> Взять себе';
+  document.getElementById('tpDetailWrap').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+async function tpSaveNote() {
+  if (!CURRENT) return;
+  var r = await fetch('/api/tickets-ops/' + encodeURIComponent(CURRENT.id) + '/note', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text: document.getElementById('tpNoteText').value })
+  });
+  var d = await r.json();
+  if (!r.ok || !d.success) { tpErr(d.error || 'Заметка не сохранилась.'); return; }
+  tpErr('');
+  document.getElementById('tpNoteText').value = '';
+  tpOpen(CURRENT.id);
+  loadState();
+}
+
+async function tpToggleAssign() {
+  if (!CURRENT) return;
+  var un = CURRENT.assigned_to === 'panel:' + ME;
+  var r = await fetch('/api/tickets-ops/' + encodeURIComponent(CURRENT.id) + '/assign', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: un ? '' : 'panel:' + ME })
+  });
+  if (r.ok) { tpOpen(CURRENT.id); loadState(); }
+}
+
+function tpCloseOne() {
+  if (!CURRENT) return;
+  bulkByIds([CURRENT.id]);
+}
+
+function bulkByIds(ids) {
+  window.askConfirm('Закрыть ' + ids.length + ' ' + (ids.length === 1 ? 'тикет' : 'тикетов') + '?',
+    'Статус станет «closed» — как после кнопки закрытия в Discord. Вернуть в работу можно с карточки.', async function () {
+      var r = await fetch('/api/tickets-ops/bulk-close', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: ids })
+      });
+      var d = await r.json();
+      if (!r.ok || !d.success) { tpErr(d.error || 'Не закрылось.'); return; }
+      tpErr('');
+      SELECTED = {};
+      document.getElementById('tpDetailWrap').style.display = 'none';
+      loadState();
+      if (typeof window.uxUndo === 'function' && d.closed && d.closed.length) {
+        window.uxUndo('Закрыто тикетов: ' + d.closed.length, async function () {
+          for (var i = 0; i < d.closed.length; i++) {
+            await fetch('/api/tickets-ops/' + encodeURIComponent(d.closed[i]) + '/reopen', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}'
+            });
+          }
+          loadState();
+        });
+      }
+    }, { danger: true, okText: 'Закрыть', icon_fa: 'fas fa-lock' });
+}
+
+function tpBulkClose() { bulkByIds(Object.keys(SELECTED)); }
+
+async function loadState() {
+  var r = await fetch('/api/tickets-ops/sla?h=' + encodeURIComponent(SLA_H));
+  var d = await r.json();
+  if (!d.success) return;
+  SLA_H = d.sla_hours;
+  STATE = d;
+  if (window.renderSafe) window.renderSafe(function () { renderKpis(d); renderList(d); });
+  else { renderKpis(d); renderList(d); }
+}
+
+loadState();
+if (typeof window.setLiveRefresh === 'function') window.setLiveRefresh(loadState, 20000);
+</script>
+{% endblock %}
