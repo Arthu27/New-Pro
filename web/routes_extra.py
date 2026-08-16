@@ -64,6 +64,7 @@ from web.routes import (
     knowledge_base,
     customer_portal,
     automation,
+    ux,
 )
 
 _MODULES = (
@@ -113,6 +114,7 @@ _MODULES = (
     knowledge_base,
     customer_portal,
     automation,
+    ux,
 )
 
 

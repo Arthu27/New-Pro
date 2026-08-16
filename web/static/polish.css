@@ -325,3 +325,71 @@ body.sb-open { overflow: hidden; }
   border: 1px solid var(--line-2, rgba(255,255,255,.14));
   background: color-mix(in srgb, var(--text-2, #9aa) 10%, transparent);
 }
+
+/* ═══ UX-kit: крошки, палитра, справка, избранное, плотность, undo ═══ */
+
+/* Хлебные крошки над заголовком страницы */
+.crumbs{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--text-3,rgba(255,255,255,.45));margin-bottom:4px;min-height:14px}
+.crumb-home{color:var(--text-3,rgba(255,255,255,.45));transition:color .15s}
+.crumb-home:hover{color:var(--ac-2,#f0cd7a)}
+.crumb-sep{font-size:8px;opacity:.5}
+.crumb-group{color:var(--text-3,rgba(255,255,255,.45))}
+.crumb-here{color:var(--text-2,rgba(255,255,255,.8));font-weight:600}
+.crumb-here i{color:var(--ac,#e0b04a);margin-right:4px}
+[data-theme="light"] .crumbs{color:rgba(20,20,30,.5)}
+[data-theme="light"] .crumb-home,[data-theme="light"] .crumb-group{color:rgba(20,20,30,.5)}
+[data-theme="light"] .crumb-here{color:rgba(20,20,30,.85)}
+
+/* Палитра: секции и подписи глубокого поиска */
+.palette-sec{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3,rgba(255,255,255,.4));padding:10px 14px 4px;user-select:none}
+.kbd-palette-go{margin-left:auto;color:var(--text-3,rgba(255,255,255,.35));font-size:11px}
+.kbd-palette-item.active .kbd-palette-go{color:var(--ac,#e0b04a)}
+[data-theme="light"] .palette-sec{color:rgba(20,20,30,.45)}
+
+/* Справка по горячим клавишам */
+.hk-modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:99998;padding:20px}
+.hk-modal.open{display:flex}
+.hk-panel{background:linear-gradient(165deg,#1f1f26,#141419);border:1px solid rgba(255,255,255,.12);border-radius:16px;max-width:460px;width:100%;max-height:80vh;overflow-y:auto;box-shadow:0 24px 70px rgba(0,0,0,.6)}
+.hk-head{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:700;padding:16px 20px;border-bottom:1px solid rgba(255,255,255,.08)}
+.hk-head i{color:var(--ac,#e0b04a)}
+.hk-close{margin-left:auto;background:none;border:none;color:rgba(255,255,255,.6);cursor:pointer;font-size:14px;padding:4px 8px;border-radius:8px}
+.hk-close:hover{background:rgba(255,255,255,.08);color:#fff}
+.hk-body{padding:12px 20px}
+.hk-row{display:flex;align-items:center;gap:12px;padding:7px 0;font-size:13px;border-bottom:1px dashed rgba(255,255,255,.06)}
+.hk-row:last-child{border-bottom:none}
+.hk-keys{display:flex;gap:4px;min-width:96px}
+.hk-keys kbd{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);border-bottom-width:2px;border-radius:6px;padding:2px 8px;font-size:11px;font-family:inherit;font-weight:700;min-width:24px;text-align:center}
+.hk-foot{padding:10px 20px 16px;font-size:11.5px;color:rgba(255,255,255,.4)}
+[data-theme="light"] .hk-panel{background:#fff;border-color:rgba(0,0,0,.1)}
+[data-theme="light"] .hk-head{color:#1a1a24;border-bottom-color:rgba(0,0,0,.08)}
+[data-theme="light"] .hk-row{color:#2a2a38;border-bottom-color:rgba(0,0,0,.06)}
+[data-theme="light"] .hk-keys kbd{background:rgba(0,0,0,.06);border-color:rgba(0,0,0,.18);color:#1a1a24}
+[data-theme="light"] .hk-close{color:rgba(0,0,0,.5)}
+[data-theme="light"] .hk-close:hover{background:rgba(0,0,0,.06);color:#000}
+[data-theme="light"] .hk-foot{color:rgba(0,0,0,.45)}
+
+/* Избранное в сайдбаре */
+.fav-star{opacity:0;margin-left:auto;font-size:10px;color:var(--text-3,rgba(255,255,255,.35));padding:4px;cursor:pointer;transition:opacity .15s,color .15s;flex:0 0 auto}
+.nav-link:hover .fav-star{opacity:.7}
+.fav-star:hover{opacity:1 !important;color:var(--ac,#e0b04a)}
+.fav-star.on{opacity:1;color:var(--ac,#e0b04a)}
+.nav-favs{margin-bottom:6px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,.08)}
+.nav-favs-title{cursor:default;pointer-events:none}
+.nav-favs-title .nav-group-icon i{color:var(--ac,#e0b04a)}
+.nav-favs-items{display:flex;flex-direction:column;gap:1px}
+[data-theme="light"] .nav-favs{border-bottom-color:rgba(0,0,0,.08)}
+
+/* Плотные таблицы (переключатель в навбаре) */
+#compactToggle.active{color:var(--ac,#e0b04a)}
+body.compact table td,body.compact table th{padding:5px 9px !important;font-size:12.5px !important}
+body.compact .trx-row,body.compact .shift-edit-row,body.compact .ann-row{padding-top:6px !important;padding-bottom:6px !important}
+body.compact .stat-card,body.compact .kpi-card{padding:12px 14px !important}
+
+/* Undo-тост с кнопкой отмены */
+.ux-undo{position:relative;display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,#26262e,#1a1a20);color:#f0f0f4;border:1px solid rgba(255,255,255,.14);padding:11px 16px;border-radius:10px;font-size:13.5px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.4);min-width:260px;max-width:400px;pointer-events:auto;animation:toastIn .25s ease;overflow:hidden}
+.ux-undo-btn{background:var(--ac-soft,rgba(224,176,74,.12));border:1px solid var(--ac-line,rgba(224,176,74,.22));color:var(--ac-2,#f0cd7a);border-radius:8px;padding:6px 12px;font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap;transition:background .15s}
+.ux-undo-btn:hover{background:var(--ac-glow,rgba(224,176,74,.3))}
+.ux-undo-bar{position:absolute;left:0;bottom:0;height:2px;background:var(--ac,#e0b04a);animation:uxUndoBar 6.5s linear forwards}
+.ux-undo.out{opacity:0;transform:translateX(20px);transition:opacity .3s,transform .3s}
+@keyframes uxUndoBar{from{width:100%}to{width:0}}
+[data-theme="light"] .ux-undo{background:#fff;color:#1a1a24;border-color:rgba(0,0,0,.12)}

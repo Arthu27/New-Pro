@@ -120,8 +120,7 @@
 
         <div class="sidebar-search">
             <i class="fas fa-search"></i>
-            <input type="text" id="sidebarSearch" placeholder="Быстрый поиск..." aria-label="Быстрый поиск...">
-            <kbd>⌘K</kbd>
+            <input type="text" id="sidebarSearch" placeholder="Фильтр меню..." aria-label="Фильтр меню">
         </div>
 
         <nav class="sidebar-nav" id="sidebarNav">
@@ -184,6 +183,25 @@
     <main id="main-content" class="main-content">
         <div class="navbar">
             <div class="navbar-left">
+                <nav class="crumbs" aria-label="Хлебные крошки">
+                    <a class="crumb-home" href="/" title="Обзор сервера"><i class="fas fa-house"></i></a>
+                    {% set ns = namespace(c_group='', c_label='', c_icon='') %}
+                    {% for grp in panel_menu|default([], true) %}
+                        {% for it in grp.pages %}
+                            {% if it.path == request.path %}
+                                {% set ns.c_group = grp.group %}
+                                {% set ns.c_label = it.label %}
+                                {% set ns.c_icon = it.icon %}
+                            {% endif %}
+                        {% endfor %}
+                    {% endfor %}
+                    {% if ns.c_label %}
+                    <span class="crumb-sep"><i class="fas fa-chevron-right"></i></span>
+                    <span class="crumb-group">{{ ns.c_group }}</span>
+                    <span class="crumb-sep"><i class="fas fa-chevron-right"></i></span>
+                    <span class="crumb-here"><i class="fas {{ ns.c_icon }}"></i> {{ ns.c_label }}</span>
+                    {% endif %}
+                </nav>
                 <h1>{% block page_title %}Панель управления{% endblock %}</h1>
             </div>
             <div class="navbar-right">
@@ -259,6 +277,7 @@
       <div><span class="kbd-hint">↑↓</span> Навигация</div>
       <div><span class="kbd-hint">↵</span> Открыть</div>
       <div><span class="kbd-hint">Ctrl K</span> Вызов</div>
+      <div><span class="kbd-hint">?</span> Справка</div>
     </div>
   </div>
 </div>
@@ -520,11 +539,6 @@ document.addEventListener('DOMContentLoaded', function () {
       if (e.key === 'Enter') { e.preventDefault(); applySidebarFilter(); }
     });
     document.addEventListener('keydown', function (e) {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        search.focus();
-        search.select();
-      }
       if (e.key === 'Escape' && document.activeElement === search) {
         search.value = '';
         applySidebarFilter();
@@ -714,176 +728,6 @@ window.askConfirm = function (title, desc, onOk, opts) {
     if (typeof onOk === 'function') onOk();
   }
 };
-
-(function () {
-  var palette = document.getElementById('kbdPalette');
-  var input   = document.getElementById('kbdPaletteInput');
-  var results = document.getElementById('kbdPaletteResults');
-  if (!palette || !input || !results) return;
-
-  // Build list of pages from sidebar links
-  function getPages() {
-    var items = [];
-    document.querySelectorAll('.sidebar-nav .nav-link').forEach(function (a) {
-      var href = a.getAttribute('href');
-      if (!href || href === '#' || href.startsWith('javascript')) return;
-      var span = a.querySelector('span');
-      var title = span ? span.textContent.trim() : a.textContent.trim();
-      var icon = a.querySelector('i');
-      var iconClass = icon ? icon.className : 'fas fa-circle';
-      // Find group
-      var groupEl = a.closest('.nav-group');
-      var groupTitle = '';
-      if (groupEl) {
-        var gt = groupEl.querySelector('.nav-group-title .nav-group-label');
-        if (gt) groupTitle = gt.textContent.trim();
-      }
-      items.push({ href: href, title: title, group: groupTitle, icon: iconClass });
-    });
-    return items;
-  }
-
-  var pages = getPages();
-  var filtered = pages.slice();
-  var activeIdx = 0;
-
-  function render() {
-    if (!filtered.length) {
-      results.innerHTML = '<div class="empty-state"><i class="fas fa-search"></i><p>Ничего не найдено</p></div>';
-      return;
-    }
-    results.innerHTML = filtered.map(function (p, i) {
-      return '<div class="kbd-palette-item' + (i === activeIdx ? ' active' : '') + '" data-href="' + p.href + '">' +
-        '<div class="kbd-palette-icon"><i class="' + p.icon + '"></i></div>' +
-        '<div class="kbd-palette-text">' +
-          '<div class="kbd-palette-title">' + p.title + '</div>' +
-          '<div class="kbd-palette-group">' + (p.group || 'Страница') + '</div>' +
-        '</div>' +
-      '</div>';
-    }).join('');
-    // Click handlers
-    results.querySelectorAll('.kbd-palette-item').forEach(function (el) {
-      el.addEventListener('click', function () {
-        window.location.href = el.getAttribute('data-href');
-      });
-    });
-    // Scroll active into view
-    var active = results.querySelector('.kbd-palette-item.active');
-    if (active) active.scrollIntoView({ block: 'nearest' });
-  }
-
-  function open() {
-    palette.classList.add('open');
-    input.value = '';
-    input.focus();
-    filtered = pages.slice();
-    activeIdx = 0;
-    render();
-  }
-  function close() {
-    palette.classList.remove('open');
-    input.blur();
-  }
-
-  input.addEventListener('input', function () {
-    var q = input.value.toLowerCase().trim();
-    if (!q) {
-      filtered = pages.slice();
-    } else {
-      filtered = pages.filter(function (p) {
-        return p.title.toLowerCase().indexOf(q) !== -1 ||
-               p.group.toLowerCase().indexOf(q) !== -1 ||
-               p.href.toLowerCase().indexOf(q) !== -1;
-      });
-    }
-    activeIdx = 0;
-    render();
-  });
-
-  input.addEventListener('keydown', function (e) {
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      activeIdx = Math.min(activeIdx + 1, filtered.length - 1);
-      render();
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      activeIdx = Math.max(activeIdx - 1, 0);
-      render();
-    } else if (e.key === 'Enter') {
-      e.preventDefault();
-      var target = filtered[activeIdx];
-      if (target) window.location.href = target.href;
-    } else if (e.key === 'Escape') {
-      e.preventDefault();
-      close();
-    }
-  });
-
-  // Click outside to close
-  palette.addEventListener('click', function (e) {
-    if (e.target === palette) close();
-  });
-
-  // Global shortcuts
-  document.addEventListener('keydown', function (e) {
-    // Ctrl/Cmd + K — open palette
-    if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {
-      e.preventDefault();
-      if (palette.classList.contains('open')) close(); else open();
-      return;
-    }
-    // "/" — open palette (when not in input)
-    if (e.key === '/' && !palette.classList.contains('open')) {
-      var tag = (document.activeElement && document.activeElement.tagName) || '';
-      if (tag !== 'INPUT' && tag !== 'TEXTAREA' && !e.metaKey && !e.ctrlKey) {
-        e.preventDefault();
-        open();
-      }
-    }
-    // G + key navigation (vim-style): gd= dashboard, ga=analytics, etc.
-    // Only when not typing
-    if (window.__aetherGPressed) {
-      var tag2 = (document.activeElement && document.activeElement.tagName) || '';
-      if (tag2 !== 'INPUT' && tag2 !== 'TEXTAREA') {
-        var map = { 'd': '/', 'g': '/guilds', 'a': '/analytics', 's': '/bot-stats',
-                    'l': '/logs', 'w': '/warnings', 'u': '/users', 'm': '/mod-history',
-                    'c': '/commands', 't': '/ticket-settings', 'e': '/economy', 'p': '/polls' };
-        if (map[e.key.toLowerCase()]) {
-          e.preventDefault();
-          window.location.href = map[e.key.toLowerCase()];
-        }
-      }
-      window.__aetherGPressed = false;
-    } else if (e.key === 'g' && !palette.classList.contains('open')) {
-      var tag3 = (document.activeElement && document.activeElement.tagName) || '';
-      if (tag3 !== 'INPUT' && tag3 !== 'TEXTAREA') {
-        window.__aetherGPressed = true;
-        setTimeout(function() { window.__aetherGPressed = false; }, 1200);
-      }
-    }
-    // ? — show help (only when not typing)
-    if (e.key === '?' && !e.shiftKey === false) {
-      var tag4 = (document.activeElement && document.activeElement.tagName) || '';
-      if (tag4 !== 'INPUT' && tag4 !== 'TEXTAREA' && !palette.classList.contains('open')) {
-        // optional: show shortcut help
-      }
-    }
-  });
-})();
-
-// Global keyboard shortcut: ? to show help toast
-(function () {
-  document.addEventListener('keydown', function (e) {
-    if (e.key === '?' && !e.shiftKey) return;
-    if (e.key === '?' && e.shiftKey) {
-      var tag = (document.activeElement && document.activeElement.tagName) || '';
-      if (tag !== 'INPUT' && tag !== 'TEXTAREA') {
-        e.preventDefault();
-        showToast('Ctrl+K: Поиск · T: Тема · G+D: Главная · G+A: Аналитика', true);
-      }
-    }
-  });
-})();
 
 // ============================================================
 // VISUAL POLISH — button ripple + count-up + donut gauges
@@ -1398,6 +1242,8 @@ window.addEventListener('pageshow', function (e) {
 <script src="/static/websocket-client.js"></script>
 <!-- API Guard: тост на любой не-OK ответ fetch — причина видна без консоли -->
 <script src="/static/api-guard.js?v=1"></script>
+<!-- UX-kit: глобальный поиск, хоткеи, избранное, плотные таблицы, undo-тосты -->
+<script src="/static/ux-kit.js?v=1"></script>
 <script>
 // Инициализация WebSocket клиента
 (function() {

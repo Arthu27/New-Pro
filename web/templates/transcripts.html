@@ -316,6 +316,14 @@ var debounceTimer = null;
   });
 });
 
+// Глубокая ссылка из глобального поиска (?text=...): входим сразу с фильтром.
+(function () {
+  try {
+    var q = new URLSearchParams(location.search).get('text');
+    if (q) document.getElementById('searchInput').value = q;
+  } catch (e) { /* старый браузер — просто без префилла */ }
+})();
+
 loadTrxStats();
 searchTranscripts();
 </script>

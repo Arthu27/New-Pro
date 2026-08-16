@@ -123,6 +123,17 @@ function searchNow() {
   doSearch(document.getElementById('ms-query').value.trim());
 }
 
+// Глубокая ссылка из глобального поиска (?q=...): запрос уже набран и выполнен.
+(function () {
+  try {
+    var q = new URLSearchParams(location.search).get('q');
+    if (q) {
+      document.getElementById('ms-query').value = q;
+      searchNow();
+    }
+  } catch (e) { /* старый браузер — просто без префилла */ }
+})();
+
 async function doSearch(q) {
   if (!q) return;
   if (!GUILD_ID || GUILD_ID === 'None' || GUILD_ID === '0' || GUILD_ID === '') {
