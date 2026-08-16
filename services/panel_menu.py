@@ -38,6 +38,7 @@ MENU = [
         {'path': '/bulk-actions', 'label': 'Массовые действия', 'icon': 'fa-layer-group'},
         {'path': '/mod-report', 'label': 'Отчёт модерации', 'icon': 'fa-chart-simple'},
         {'path': '/mod-control', 'label': 'Мод-контроль', 'icon': 'fa-clipboard-check'},
+        {'path': '/mod-insights', 'label': 'Мод-анализ', 'icon': 'fa-user-shield'},
     ]},
     {'group': 'Участники', 'key': 'members', 'icon': 'fa-users', 'pages': [
         {'path': '/users', 'label': 'Пользователи', 'icon': 'fa-users'},

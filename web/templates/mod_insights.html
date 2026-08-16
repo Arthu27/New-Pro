@@ -1,0 +1,318 @@
+{% extends "base.html" %}
+{% block title %}Мод-анализ — Панель Aether{% endblock %}
+{% block page_title %}Мод-анализ{% endblock %}
+{% block content %}
+<style>
+.mi-kpis{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 18px;align-items:center}
+.mi-kpi{display:flex;align-items:center;gap:10px;background:var(--surface-2,rgba(255,255,255,.04));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:12px;padding:10px 16px}
+.mi-kpi i{color:var(--ac,#e0b04a);font-size:16px}
+.mi-kpi b{font-size:18px;color:var(--text-1,#fff)}
+.mi-kpi span{font-size:11.5px;color:var(--text-3,rgba(255,255,255,.45))}
+.mi-kpi.hot{border-color:rgba(231,76,60,.4)}
+.mi-kpi.hot i,.mi-kpi.hot b{color:#ff8a7a}
+.mi-grid{display:grid;grid-template-columns:1.35fr 1fr;gap:16px;align-items:start}
+@media (max-width:960px){.mi-grid{grid-template-columns:1fr}}
+.mi-panel{background:var(--surface-2,rgba(255,255,255,.03));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:14px;padding:16px 18px;margin-bottom:16px}
+.mi-panel h3{margin:0 0 4px;font-size:15px;color:var(--text-1,#fff);display:flex;align-items:center;gap:9px}
+.mi-panel h3 i{color:var(--ac,#e0b04a)}
+.mi-panel h3 .mi-off{margin-left:auto;font-size:11px;font-weight:500;color:var(--text-3,rgba(255,255,255,.4))}
+.mi-sub{font-size:12px;color:var(--text-3,rgba(255,255,255,.45));margin-bottom:12px;line-height:1.5}
+.mi-row{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center;padding:9px 6px;border-bottom:1px dashed rgba(255,255,255,.07);cursor:pointer;border-radius:8px}
+.mi-row:last-child{border-bottom:none}
+.mi-row:hover{background:rgba(255,255,255,.04)}
+.mi-row.on{background:var(--ac-soft,rgba(224,176,74,.1));outline:1px solid var(--ac-line,rgba(224,176,74,.35))}
+.mi-who{min-width:0}
+.mi-who b{display:block;font-size:13px;color:var(--text-2,rgba(255,255,255,.85));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mi-who small{display:block;font-size:11px;color:var(--text-3,rgba(255,255,255,.45));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.mi-chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--text-2,rgba(255,255,255,.7));background:rgba(255,255,255,.05);border:1px solid var(--line-2,rgba(255,255,255,.1));border-radius:999px;padding:3px 10px;white-space:nowrap}
+.mi-chip.hot{color:#ff8a7a;border-color:rgba(231,76,60,.3);background:rgba(231,76,60,.08)}
+.mi-chip.ok{color:#4ade80;border-color:rgba(74,222,128,.3);background:rgba(74,222,128,.07)}
+.mi-badge{display:inline-flex;align-items:center;justify-content:center;min-width:64px;font-size:10.5px;font-weight:700;border-radius:8px;padding:4px 8px;text-transform:uppercase;letter-spacing:.04em}
+.mi-badge.k-mute{color:#fbbf24;background:rgba(251,191,36,.10);border:1px solid rgba(251,191,36,.3)}
+.mi-badge.k-ban{color:#f87171;background:rgba(248,113,113,.10);border:1px solid rgba(248,113,113,.3)}
+.mi-badge.k-vmute{color:#60a5fa;background:rgba(96,165,250,.10);border:1px solid rgba(96,165,250,.3)}
+.mi-badge.k-kick{color:#f97316;background:rgba(249,115,22,.10);border:1px solid rgba(249,115,22,.3)}
+.mi-badge.k-lift{color:#4ade80;background:rgba(74,222,128,.10);border:1px solid rgba(74,222,128,.3)}
+.mi-line{display:grid;grid-template-columns:auto 1fr auto;gap:4px 10px;align-items:center;padding:9px 6px;border-bottom:1px dashed rgba(255,255,255,.07)}
+.mi-line:last-child{border-bottom:none}
+.mi-date{font-size:11.5px;font-weight:700;color:var(--ac-2,#f0cd7a);font-variant-numeric:tabular-nums;white-space:nowrap}
+.mi-tabs{display:inline-flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.mi-tab{background:rgba(255,255,255,.05);border:1px solid var(--line-2,rgba(255,255,255,.12));border-radius:10px;color:var(--text-3,rgba(255,255,255,.5));padding:7px 13px;font-size:12px;font-weight:600;cursor:pointer}
+.mi-tab.on{background:var(--ac,#e0b04a);border-color:transparent;color:#1a1a1a}
+.mi-form{display:flex;gap:8px;margin-bottom:12px}
+.mi-form .inp{flex:1;min-width:0}
+.mi-eff{display:grid;grid-template-columns:1fr repeat(3,auto);gap:6px 12px;align-items:center;padding:9px 6px;border-bottom:1px dashed rgba(255,255,255,.07)}
+.mi-eff:last-child{border-bottom:none}
+.mi-eff.head{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3,rgba(255,255,255,.4));padding-bottom:4px}
+.mi-eff .v{font-size:12.5px;font-weight:700;color:var(--text-2,rgba(255,255,255,.85));font-variant-numeric:tabular-nums;text-align:right;min-width:44px}
+.mi-eff .v.dim{color:var(--text-3,rgba(255,255,255,.4));font-weight:500}
+.mi-eff.total{background:rgba(255,255,255,.03);border-radius:8px}
+.mi-check{display:grid;grid-template-columns:auto 1fr auto;gap:4px 12px;align-items:center;padding:9px 6px;border-bottom:1px dashed rgba(255,255,255,.07)}
+.mi-check:last-child{border-bottom:none}
+.mi-dot{width:10px;height:10px;border-radius:50%}
+.mi-dot.ok{background:#4ade80;box-shadow:0 0 8px rgba(74,222,128,.5)}
+.mi-dot.warn{background:#fbbf24;box-shadow:0 0 8px rgba(251,191,36,.5)}
+.mi-dot.missing{background:#f87171;box-shadow:0 0 8px rgba(248,113,113,.5)}
+.mi-link-chip{font-size:11px;color:var(--ac,#e0b04a);text-decoration:none;border:1px solid var(--ac-line,rgba(224,176,74,.3));border-radius:8px;padding:4px 9px;white-space:nowrap}
+.mi-link-chip:hover{background:var(--ac-soft,rgba(224,176,74,.12))}
+.mi-dhead{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.mi-sect{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3,rgba(255,255,255,.4));margin:14px 0 4px}
+.mi-note{padding:8px 6px;border-bottom:1px dashed rgba(255,255,255,.07);font-size:12.5px;color:var(--text-2,rgba(255,255,255,.85))}
+.mi-note:last-child{border-bottom:none}
+.mi-note small{display:block;font-size:11px;color:var(--text-3,rgba(255,255,255,.45));margin-top:2px}
+[data-theme="light"] .mi-row,[data-theme="light"] .mi-line,[data-theme="light"] .mi-eff,[data-theme="light"] .mi-check,[data-theme="light"] .mi-note{border-bottom-color:rgba(0,0,0,.08)}
+[data-theme="light"] .mi-row:hover{background:rgba(0,0,0,.04)}
+[data-theme="light"] .mi-eff.total{background:rgba(0,0,0,.03)}
+</style>
+
+<div class="mi-kpis" id="miKpis">
+  <div class="sk-card" style="width:190px;height:56px"></div>
+  <div class="sk-card" style="width:190px;height:56px"></div>
+  <div class="sk-card" style="width:190px;height:56px"></div>
+  <div class="sk-card" style="width:190px;height:56px"></div>
+</div>
+
+<div class="mi-grid">
+  <div>
+    <div class="mi-panel">
+      <h3><i class="fas fa-users-viewfinder"></i> Кто чаще наказывается <span class="mi-off" id="miSubjectsOff"></span></h3>
+      <div class="mi-sub">Участники с варнами или наказаниями в журнале, по тяжести следа. Клик по строке открывает досье ниже.</div>
+      <div id="miSubjects"><div class="sk-row"></div><div class="sk-row" style="width:75%"></div></div>
+    </div>
+
+    <div class="mi-panel">
+      <h3><i class="fas fa-id-card"></i> Досье участника</h3>
+      <div class="mi-sub">Всё о человеке в одном месте: варны и ближайший порог, наказания таймлайном, активные временные статусы, амнистии и заметки команды.</div>
+      <div class="mi-form">
+        <input class="inp" id="miDossierId" maxlength="24" placeholder="ID участника или @упоминание">
+        <button class="btn" onclick="miDossierAsk()"><i class="fas fa-search"></i> Найти</button>
+      </div>
+      <div id="miDossier">
+        <div class="empty-state"><i class="fas fa-folder-open"></i><p>Досье пока не открыто</p><p class="empty-tip">Выберите участника из списка выше или введите ID вручную.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="mi-panel">
+      <h3><i class="fas fa-rotate"></i> Эффективность наказаний</h3>
+      <div class="mi-sub" id="miEffectSub">Помогает ли кара: доля участников, получивших новое наказание после первого за окно.</div>
+      <div class="mi-tabs" id="miDaysTabs"></div>
+      <div id="miEffect"><div class="sk-row"></div><div class="sk-row" style="width:70%"></div></div>
+    </div>
+
+    <div class="mi-panel">
+      <h3><i class="fas fa-list-check"></i> Чек-лист готовности <span class="mi-off" id="miCheckOff"></span></h3>
+      <div class="mi-sub">Что уже настроено в защите сервера, а что стоит докрутить. Проверки читают те же файлы, что и бот.</div>
+      <div id="miCheck"><div class="sk-row" style="width:80%"></div><div class="sk-row" style="width:60%"></div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+var GID = '{{ guild_id }}';
+var API = '/api/guild/' + GID + '/mod-insights';
+var DAYS = 90;
+var PICKED = null;
+var OV = null;
+var BADGE = {'Мут': 'k-mute', 'Кик': 'k-kick', 'Бан': 'k-ban', 'Мут снят': 'k-lift', 'Бан снят': 'k-lift'};
+
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+function plural(n, one, few, many) {
+  var m10 = n % 10, m100 = n % 100;
+  if (m100 >= 11 && m100 <= 19) return many;
+  if (m10 === 1) return one;
+  if (m10 >= 2 && m10 <= 4) return few;
+  return many;
+}
+
+function fmtDate(iso) {
+  var d = new Date(iso);
+  if (isNaN(d)) return '';
+  var p = function (v) { return String(v).padStart(2, '0'); };
+  return p(d.getDate()) + '.' + p(d.getMonth() + 1) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+}
+
+function fmtLeft(sec) {
+  var s = Math.abs(sec);
+  var d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60);
+  var t = d > 0 ? d + 'д ' + h + 'ч' : (h > 0 ? h + 'ч ' + m + 'м' : Math.max(m, 1) + 'м');
+  return sec < 0 ? 'просрочено ' + t : 'осталось ' + t;
+}
+
+function pct(v) { return v == null ? '—' : v + '%'; }
+
+function kpi(icon, num, label, hot) {
+  return '<div class="mi-kpi' + (hot ? ' hot' : '') + '"><i class="fas ' + icon + '"></i><div><b>' + num + '</b> <span>' + esc(label) + '</span></div></div>';
+}
+
+function renderKpis(d) {
+  var eff = d.effectiveness.overall;
+  document.getElementById('miKpis').innerHTML =
+    kpi('fa-users-viewfinder', d.subjects.total, plural(d.subjects.total, 'участник со следами', 'участника со следами', 'участников со следами'), false) +
+    kpi('fa-triangle-exclamation', d.subjects.warns_open, plural(d.subjects.warns_open, 'открытый варн', 'открытых варна', 'открытых варнов'), d.subjects.warns_open > 0) +
+    kpi('fa-gavel', eff.count, plural(eff.count, 'первое наказание за ' + d.effectiveness.days + ' дн.', 'первых наказания за ' + d.effectiveness.days + ' дн.', 'первых наказаний за ' + d.effectiveness.days + ' дн.'), false) +
+    kpi('fa-list-check', d.checklist.ok + '/' + d.checklist.total, 'проверок готовности пройдено', d.checklist.missing > 0);
+}
+
+function renderDaysTabs() {
+  document.getElementById('miDaysTabs').innerHTML = [30, 90, 180].map(function (n) {
+    return '<button class="mi-tab' + (n === DAYS ? ' on' : '') + '" onclick="miDays(' + n + ')">' + n + ' дней</button>';
+  }).join('');
+}
+
+function renderSubjects(d) {
+  var box = document.getElementById('miSubjects');
+  document.getElementById('miSubjectsOff').textContent = d.subjects.total
+    ? 'показаны ' + d.subjects.items.length + ' из ' + d.subjects.total : '';
+  if (!d.subjects.items.length) {
+    box.innerHTML = '<div class="empty-state"><i class="fas fa-face-smile"></i><p>Ни варнов, ни наказаний</p><p class="empty-tip">Когда бот запишет первую кару, здесь появится список.</p></div>';
+    return;
+  }
+  box.innerHTML = d.subjects.items.map(function (r) {
+    var label = r.name || ('ID ' + r.user_id);
+    var bits = [];
+    if (r.warns) bits.push(r.warns + ' ' + plural(r.warns, 'варн', 'варна', 'варнов'));
+    if (r.punishments) bits.push(r.punishments + ' ' + plural(r.punishments, 'наказание', 'наказания', 'наказаний'));
+    if (r.last_at) bits.push('последнее: ' + fmtDate(r.last_at));
+    return '<div class="mi-row' + (PICKED === r.user_id ? ' on' : '') + '" onclick="miPick(\'' + esc(r.user_id) + '\')">' +
+      '<div class="mi-who"><b>' + esc(label) + ' <small style="color:var(--text-3)">#' + esc(r.user_id) + '</small></b>' +
+      '<small>' + esc(bits.join(' · ')) + '</small></div>' +
+      '<span class="mi-chip' + (r.weight >= 5 ? ' hot' : '') + '">вес ' + r.weight + '</span></div>';
+  }).join('');
+}
+
+function renderEffect(d) {
+  var eff = d.effectiveness;
+  var box = document.getElementById('miEffect');
+  if (!eff.overall.count) {
+    box.innerHTML = '<div class="empty-state"><i class="fas fa-rotate"></i><p>За ' + eff.days + ' дн. наказаний нет</p><p class="empty-tip">Как только появятся первые кары, здесь будет статистика рецидива.</p></div>';
+    return;
+  }
+  var rows = eff.types.concat([eff.overall]);
+  var html = '<div class="mi-eff head"><span>Тип первого</span><span style="text-align:right">за 7 дн.</span><span style="text-align:right">за 30 дн.</span><span style="text-align:right">медиана</span></div>';
+  html += rows.map(function (r) {
+    var name = r.action === 'all' ? 'Любое наказание' : r.action;
+    var who = r.count + ' ' + plural(r.count, 'человек', 'человека', 'человек');
+    var dim = r.thin;
+    return '<div class="mi-eff' + (r.action === 'all' ? ' total' : '') + '">' +
+      '<span style="font-size:12.5px;color:var(--text-2,rgba(255,255,255,.85))"><b>' + esc(name) + '</b> <small style="color:var(--text-3)">' + who + (dim ? ' · мало данных' : '') + '</small></span>' +
+      '<span class="v' + (dim ? ' dim' : '') + '">' + pct(r.repeat7) + '</span>' +
+      '<span class="v' + (dim ? ' dim' : '') + '">' + pct(r.repeat30) + '</span>' +
+      '<span class="v' + (dim ? ' dim' : '') + '">' + (r.median_days == null ? '—' : r.median_days + ' дн.') + '</span></div>';
+  }).join('');
+  box.innerHTML = html;
+}
+
+function renderCheck(d) {
+  var c = d.checklist;
+  document.getElementById('miCheckOff').textContent =
+    c.ok + ' из ' + c.total + ' в порядке' + (c.warn ? ', ' + c.warn + ' с заметками' : '') + (c.missing ? ', ' + c.missing + ' не настроено' : '');
+  document.getElementById('miCheck').innerHTML = c.items.map(function (it) {
+    return '<div class="mi-check">' +
+      '<span class="mi-dot ' + esc(it.status) + '" title="' + esc(it.status) + '"></span>' +
+      '<div class="mi-who"><b>' + esc(it.title) + ' <small style="color:var(--text-3)">' + esc(it.detail) + '</small></b>' +
+      '<small>' + esc(it.hint) + '</small></div>' +
+      '<a class="mi-link-chip" href="' + esc(it.link) + '">' + esc(it.link_label) + '</a></div>';
+  }).join('');
+}
+
+function badge(action) {
+  var cls = BADGE[action] || 'k-mute';
+  return '<span class="mi-badge ' + cls + '">' + esc(action) + '</span>';
+}
+
+function renderDossier(ds) {
+  var box = document.getElementById('miDossier');
+  if (!ds.known) {
+    box.innerHTML = '<div class="empty-state"><i class="fas fa-ghost"></i><p>Следов не найдено</p><p class="empty-tip">Ни варнов, ни наказаний, ни заметок по ID ' + esc(ds.user_id) + ' — чистый человек или не с этого сервера.</p></div>';
+    return;
+  }
+  var name = ds.name || ('ID ' + ds.user_id);
+  var html = '<div class="mi-dhead">';
+  html += '<span class="mi-chip ok"><i class="fas fa-user"></i> ' + esc(name) + ' <small style="opacity:.65">#' + esc(ds.user_id) + '</small></span>';
+  html += '<span class="mi-chip' + (ds.warns.count ? ' hot' : '') + '">' + ds.warns.count + ' ' + plural(ds.warns.count, 'варн', 'варна', 'варнов') + '</span>';
+  if (ds.warns.gap != null) {
+    html += '<span class="mi-chip' + (ds.warns.gap === 1 ? ' hot' : '') + '">ещё ' + ds.warns.gap + ' до ' + esc(ds.warns.action_name.toLowerCase()) + 'а</span>';
+  }
+  html += '<span class="mi-chip">' + ds.stats.punishments + ' ' + plural(ds.stats.punishments, 'наказание', 'наказания', 'наказаний') + '</span>';
+  if (ds.stats.days_since != null) {
+    html += '<span class="mi-chip">последнее: ' + ds.stats.days_since + ' ' + plural(ds.stats.days_since, 'день', 'дня', 'дней') + ' назад</span>';
+  }
+  html += '</div>';
+
+  if (ds.temp_active.length) {
+    html += '<div class="mi-sect">Активные временные статусы</div>' + ds.temp_active.map(function (r) {
+      return '<div class="mi-line">' + badge(r.kind_name) +
+        '<div class="mi-who"><b>' + esc(fmtLeft(r.remaining_s)) + '</b>' + (r.reason ? '<small>' + esc(r.reason) + '</small>' : '') + '</div>' +
+        '<span class="mi-date">' + fmtDate(r.until * 1000) + '</span></div>';
+    }).join('');
+  }
+  if (ds.warns.items.length) {
+    html += '<div class="mi-sect">Последние варны' + (ds.warns.next_count ? ' · порог ' + ds.warns.next_count : '') + '</div>' + ds.warns.items.map(function (w) {
+      return '<div class="mi-note">' + esc(w.reason) + '<small>' + esc(w.at) + (w.mod ? ' · ' + esc(w.mod) : '') + '</small></div>';
+    }).join('');
+  }
+  if (ds.amnesty.length) {
+    html += '<div class="mi-sect">Амнистии</div>' + ds.amnesty.map(function (a) {
+      return '<div class="mi-note">Списано ' + a.count + ' ' + plural(a.count, 'варн', 'варна', 'варнов') +
+        '<small>' + esc(a.at) + (a.by ? ' · ' + esc(a.by) : '') + (a.restored_at ? ' · откачена' : '') + '</small></div>';
+    }).join('');
+  }
+  if (ds.timeline.length) {
+    html += '<div class="mi-sect">Таймлайн наказаний (' + ds.timeline_total + ')</div>' + ds.timeline.map(function (t) {
+      return '<div class="mi-line">' + badge(t.action) +
+        '<div class="mi-who"><b>' + esc(t.reason || 'Без причины') + '</b>' + (t.mod_name ? '<small>' + esc(t.mod_name) + '</small>' : '') + '</div>' +
+        '<span class="mi-date">' + fmtDate(t.at) + '</span></div>';
+    }).join('');
+  }
+  if (ds.notes.length) {
+    html += '<div class="mi-sect">Заметки команды</div>' + ds.notes.map(function (n) {
+      return '<div class="mi-note">' + esc(n.note) + '<small>' + esc(n.at) + (n.mod ? ' · ' + esc(n.mod) : '') + '</small></div>';
+    }).join('');
+  }
+  box.innerHTML = html;
+}
+
+function load() {
+  fetch(API + '/overview?days=' + DAYS).then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) { return; }
+    OV = d;
+    renderKpis(d); renderSubjects(d); renderEffect(d); renderCheck(d);
+  }).catch(function () {});
+}
+
+function miDays(n) { DAYS = n; renderDaysTabs(); load(); }
+
+function miPick(uid) {
+  PICKED = uid;
+  document.getElementById('miDossierId').value = uid;
+  if (OV) { renderSubjects(OV); }
+  miDossier(uid);
+}
+
+function miDossierAsk() {
+  miDossier(document.getElementById('miDossierId').value);
+}
+
+function miDossier(uid) {
+  var box = document.getElementById('miDossier');
+  box.innerHTML = '<div class="sk-row"></div><div class="sk-row" style="width:60%"></div>';
+  fetch(API + '/dossier?user_id=' + encodeURIComponent(uid)).then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) {
+      box.innerHTML = '<div class="empty-state"><i class="fas fa-circle-exclamation"></i><p>' + esc(d.error || 'Ошибка') + '</p><p class="empty-tip">Подойдёт чистый ID или упоминание вида @участник.</p></div>';
+      return;
+    }
+    PICKED = d.dossier.user_id;
+    if (OV) { renderSubjects(OV); }
+    renderDossier(d.dossier);
+  }).catch(function () {
+    box.innerHTML = '<div class="empty-state"><i class="fas fa-plug-circle-xmark"></i><p>Не удалось загрузить досье</p></div>';
+  });
+}
+
+renderDaysTabs();
+load();
+</script>
+{% endblock %}
