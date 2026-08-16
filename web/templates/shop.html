@@ -1,0 +1,295 @@
+{% extends "base.html" %}
+{% block title %}Магазин — Панель Aether{% endblock %}
+{% block page_title %}Менеджер магазина{% endblock %}
+{% block content %}
+<style>
+.sh-kpis{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 18px}
+.sh-kpi{display:flex;align-items:center;gap:10px;background:var(--surface-2,rgba(255,255,255,.04));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:12px;padding:10px 16px}
+.sh-kpi i{color:var(--ac,#e0b04a);font-size:16px}
+.sh-kpi b{font-size:18px;color:var(--text-1,#fff)}
+.sh-kpi span{font-size:11.5px;color:var(--text-3,rgba(255,255,255,.45))}
+.sh-grid{display:grid;grid-template-columns:1.15fr 1fr;gap:16px;align-items:start}
+@media (max-width:960px){.sh-grid{grid-template-columns:1fr}}
+.sh-panel{background:var(--surface-2,rgba(255,255,255,.03));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:14px;padding:16px 18px}
+.sh-panel h3{margin:0 0 4px;font-size:15px;color:var(--text-1,#fff);display:flex;align-items:center;gap:9px}
+.sh-panel h3 i{color:var(--ac,#e0b04a)}
+.sh-sub{font-size:12px;color:var(--text-3,rgba(255,255,255,.45));margin-bottom:14px;line-height:1.5}
+.sh-form{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.sh-form .wide{grid-column:1/-1}
+.sh-input,.sh-select{background:rgba(0,0,0,.25);border:1px solid var(--line-2,rgba(255,255,255,.1));border-radius:10px;padding:10px 14px;color:var(--text-1,#fff);font-size:13.5px;outline:none;transition:border-color .15s,box-shadow .15s}
+.sh-input:focus,.sh-select:focus{border-color:var(--ac,#e0b04a);box-shadow:0 0 0 3px var(--ac-soft,rgba(224,176,74,.12))}
+.sh-select option{background:#1c1f27;color:#e8e8e8}
+.sh-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--ac,#e0b04a);color:#1a1a1a;border:none;border-radius:10px;padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;transition:filter .15s}
+.sh-btn:hover{filter:brightness(1.1)}
+.sh-btn.ghost{background:rgba(255,255,255,.06);color:var(--text-2,rgba(255,255,255,.8));border:1px solid var(--line-2,rgba(255,255,255,.14))}
+.sh-err{display:none;font-size:12.5px;color:#ff8a7a;background:rgba(231,76,60,.1);border:1px solid rgba(231,76,60,.3);border-radius:10px;padding:8px 12px;grid-column:1/-1}
+.sh-toolbar{display:flex;gap:8px;margin-bottom:12px}
+.sh-toolbar .sh-input{flex:1;padding:8px 12px;font-size:13px}
+.sh-item{display:grid;grid-template-columns:1fr auto;gap:4px 10px;padding:10px 8px;border-bottom:1px dashed rgba(255,255,255,.07)}
+.sh-item:last-child{border-bottom:none}
+.sh-name{font-size:13.5px;font-weight:600;color:var(--text-2,rgba(255,255,255,.85));display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.sh-desc{font-size:12px;color:var(--text-3,rgba(255,255,255,.45));grid-column:1/-1;line-height:1.45}
+.sh-price{font-size:13px;color:var(--ac-2,#f0cd7a);font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.sh-sell{font-size:11px;color:var(--text-3,rgba(255,255,255,.4));text-align:right;font-variant-numeric:tabular-nums}
+.sh-chip{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;border-radius:999px;padding:2px 9px;border:1px solid}
+.sh-cat{font-size:10.5px;color:var(--text-3,rgba(255,255,255,.5));background:rgba(255,255,255,.05);border-radius:999px;padding:2px 9px}
+.sh-pet{font-size:10.5px;color:#7bd88f;background:rgba(123,216,143,.08);border:1px solid rgba(123,216,143,.25);border-radius:999px;padding:2px 9px}
+.sh-meta{font-size:11px;color:var(--text-3,rgba(255,255,255,.35));grid-column:1/-1}
+.sh-actions{display:flex;gap:2px;align-items:start}
+.sh-act{background:none;border:none;color:var(--text-3,rgba(255,255,255,.35));cursor:pointer;padding:6px;border-radius:8px;transition:color .15s,background .15s}
+.sh-act:hover{color:var(--ac,#e0b04a);background:var(--ac-soft,rgba(224,176,74,.1))}
+.sh-act.del:hover{color:#ff6b6b;background:rgba(231,76,60,.12)}
+[data-theme="light"] .sh-input,[data-theme="light"] .sh-select{background:rgba(0,0,0,.04)}
+[data-theme="light"] .sh-select option{background:#fff;color:#2a2d35}
+[data-theme="light"] .sh-item{border-bottom-color:rgba(0,0,0,.08)}
+</style>
+
+<div class="sh-kpis" id="shKpis">
+  <div class="sk-card" style="width:180px;height:56px"></div>
+  <div class="sk-card" style="width:180px;height:56px"></div>
+  <div class="sk-card" style="width:180px;height:56px"></div>
+</div>
+
+<div class="sh-grid">
+  <div class="sh-panel">
+    <h3><i class="fas fa-store"></i> Кастомные предметы сервера</h3>
+    <div class="sh-sub">Свои товары в том же магазине: бот сразу видит их в <code>!buy</code>,
+      кейсах редкости и бонусах питомцев. Лимит — <span id="shLimit">50</span> шт.</div>
+    {% if role == 'admin' or role == 'owner' %}
+    <div class="sh-form" id="shForm">
+      <input type="text" class="sh-input wide" id="shName" placeholder="Название: амулет луны" maxlength="40" aria-label="Название">
+      <select class="sh-select" id="shCat" aria-label="Категория" onchange="shTogglePet()"></select>
+      <select class="sh-select" id="shRarity" aria-label="Редкость"></select>
+      <input type="number" class="sh-input" id="shPrice" placeholder="Цена покупки, $" min="1" max="1000000" aria-label="Цена">
+      <input type="number" class="sh-input" id="shSell" placeholder="Продажа: пусто = 50% цены" min="0" aria-label="Цена продажи">
+      <input type="number" class="sh-input wide" id="shPet" placeholder="Бонус питомца к работе, % (1-100)" min="1" max="100" style="display:none" aria-label="Бонус питомца">
+      <input type="text" class="sh-input wide" id="shDesc" placeholder="Описание (необязательно)" maxlength="100" aria-label="Описание">
+      <div class="sh-err" id="shErr"></div>
+      <div style="display:flex;gap:8px;grid-column:1/-1">
+        <button class="sh-btn" id="shSubmit" onclick="shSubmit()"><i class="fas fa-plus"></i> Добавить предмет</button>
+        <button class="sh-btn ghost" id="shCancel" onclick="shResetForm()" style="display:none"><i class="fas fa-xmark"></i> Отмена</button>
+      </div>
+    </div>
+    {% endif %}
+    <div id="shCustom">
+      <div class="sk-row"></div>
+      <div class="sk-row" style="width:75%"></div>
+    </div>
+  </div>
+
+  <div class="sh-panel">
+    <h3><i class="fas fa-boxes-stacked"></i> Базовый каталог</h3>
+    <div class="sh-sub">Встроенные товары бота — только просмотр. Поиск и фильтр работают по обоим спискам.</div>
+    <div class="sh-toolbar">
+      <input type="text" class="sh-input" id="shSearch" placeholder="Поиск по названию..." aria-label="Поиск" oninput="shApplyFilter()">
+      <select class="sh-select" id="shFilterCat" aria-label="Фильтр по категории" onchange="shApplyFilter()"></select>
+    </div>
+    <div id="shBuiltin">
+      <div class="sk-row"></div>
+      <div class="sk-row"></div>
+      <div class="sk-row" style="width:65%"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+var CAN_EDIT = {% if role == 'admin' or role == 'owner' %}true{% else %}false{% endif %};
+var RARITY_COLORS = {
+  'обычный': '#95a5a6', 'необычный': '#2ecc71', 'редкий': '#3498db',
+  'эпический': '#9b59b6', 'легендарный': '#f1c40f', 'мифический': '#e74c3c',
+  'божественный': '#8e44ad'
+};
+var STATE = null;
+var EDITING = null;
+
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function fmt(n) { return Number(n || 0).toLocaleString('ru-RU'); }
+function shPlural(n, one, few, many) {
+  var m10 = n % 10, m100 = n % 100;
+  if (m100 >= 11 && m100 <= 19) return many;
+  if (m10 === 1) return one;
+  if (m10 >= 2 && m10 <= 4) return few;
+  return many;
+}
+function rarityChip(r) {
+  var c = RARITY_COLORS[r] || '#95a5a6';
+  return '<span class="sh-chip" style="color:' + c + ';border-color:' + c + '55;background:' + c + '14">' + esc(r) + '</span>';
+}
+
+function fillSelects(d) {
+  var cat = document.getElementById('shCat');
+  var rar = document.getElementById('shRarity');
+  var flt = document.getElementById('shFilterCat');
+  if (cat && !cat.options.length) {
+    cat.innerHTML = d.categories.map(function (c) { return '<option value="' + esc(c) + '">' + esc(c) + '</option>'; }).join('');
+    rar.innerHTML = d.rarities.map(function (r) { return '<option value="' + esc(r) + '">' + esc(r) + '</option>'; }).join('');
+  }
+  if (!flt.options.length) {
+    flt.innerHTML = '<option value="">Все категории</option>' +
+      d.categories.map(function (c) { return '<option value="' + esc(c) + '">' + esc(c) + '</option>'; }).join('');
+  }
+}
+
+function renderKpis(d) {
+  var lim = '<div class="sh-kpi"><i class="fas fa-layer-group"></i><div><b>' + d.custom_count + ' / ' + d.max_custom + '</b> <span>' + shPlural(d.custom_count, 'кастомный предмет', 'кастомных предмета', 'кастомных предметов') + '</span></div></div>';
+  document.getElementById('shKpis').innerHTML =
+    '<div class="sh-kpi"><i class="fas fa-store"></i><div><b>' + d.items.length + '</b> <span>' + shPlural(d.items.length, 'предмет', 'предмета', 'предметов') + ' в магазине</span></div></div>' +
+    '<div class="sh-kpi"><i class="fas fa-cube"></i><div><b>' + d.builtin_count + '</b> <span>базовых от бота</span></div></div>' + lim;
+  document.getElementById('shLimit').textContent = d.max_custom;
+}
+
+function matchesF(it, q, cat) {
+  if (cat && it.category !== cat) return false;
+  if (q && it.name.toLowerCase().indexOf(q) === -1) return false;
+  return true;
+}
+
+function renderCustom() {
+  var d = STATE, box = document.getElementById('shCustom');
+  var q = (document.getElementById('shSearch').value || '').trim().toLowerCase();
+  var cat = document.getElementById('shFilterCat').value;
+  var list = d.items.filter(function (i) { return i.source === 'custom'; }).filter(function (i) { return matchesF(i, q, cat); });
+  if (!list.length) {
+    var hasAny = d.custom_count > 0;
+    box.innerHTML = '<div class="empty-state"><i class="fas fa-store"></i><p>' +
+      (hasAny ? 'Ничего не найдено по фильтру' : 'Своих предметов пока нет') + '</p>' +
+      '<p class="empty-tip">' + (CAN_EDIT
+        ? 'Добавьте первый предмет формой выше — он сразу появится в магазине бота.'
+        : 'Добавить предмет может admin — спросите его в Discord.') + '</p></div>';
+    return;
+  }
+  box.innerHTML = list.map(function (it) {
+    var pet = it.pet_bonus ? '<span class="sh-pet"><i class="fas fa-paw"></i> +' + it.pet_bonus + '% к работе</span>' : '';
+    var meta = [];
+    if (it.by) meta.push(esc(String(it.by).replace(/^panel:/, '')));
+    if (it.updated_at) meta.push(esc(String(it.updated_at).slice(0, 10)));
+    var acts = CAN_EDIT
+      ? '<div class="sh-actions"><button class="sh-act" onclick="shEdit(\x27' + esc(it.name) + '\x27)" title="Изменить" aria-label="Изменить"><i class="fas fa-pen"></i></button>' +
+        '<button class="sh-act del" onclick="shRemove(\x27' + esc(it.name) + '\x27)" title="Удалить" aria-label="Удалить"><i class="fas fa-trash-can"></i></button></div>'
+      : '';
+    return '<div class="sh-item"><div><div class="sh-name">' + esc(it.name) + ' ' + rarityChip(it.rarity) +
+      ' <span class="sh-cat">' + esc(it.category) + '</span> ' + pet + '</div>' +
+      (it.desc ? '<div class="sh-desc">' + esc(it.desc) + '</div>' : '') +
+      (meta.length ? '<div class="sh-meta">' + meta.join(' · ') + '</div>' : '') + '</div>' +
+      '<div><div class="sh-price">' + fmt(it.price) + ' $</div><div class="sh-sell">продажа ' + fmt(it.sell) + ' $</div></div>' +
+      '<div style="grid-column:1/-1;display:flex;justify-content:flex-end">' + acts + '</div></div>';
+  }).join('');
+}
+
+function renderBuiltin() {
+  var d = STATE, box = document.getElementById('shBuiltin');
+  var q = (document.getElementById('shSearch').value || '').trim().toLowerCase();
+  var cat = document.getElementById('shFilterCat').value;
+  var list = d.items.filter(function (i) { return i.source === 'builtin'; }).filter(function (i) { return matchesF(i, q, cat); });
+  if (!list.length) {
+    box.innerHTML = '<div class="empty-state"><i class="fas fa-magnifying-glass"></i><p>Ничего не найдено</p>' +
+      '<p class="empty-tip">Попробуйте другое название или сбросьте фильтр категории.</p></div>';
+    return;
+  }
+  box.innerHTML = list.map(function (it) {
+    var pet = it.pet_bonus ? ' <span class="sh-pet"><i class="fas fa-paw"></i> +' + it.pet_bonus + '%</span>' : '';
+    return '<div class="sh-item"><div><div class="sh-name">' + esc(it.name) + ' ' + rarityChip(it.rarity) +
+      ' <span class="sh-cat">' + esc(it.category) + '</span>' + pet + '</div>' +
+      (it.desc ? '<div class="sh-desc">' + esc(it.desc) + '</div>' : '') + '</div>' +
+      '<div><div class="sh-price">' + fmt(it.price) + ' $</div><div class="sh-sell">продажа ' + fmt(it.sell) + ' $</div></div></div>';
+  }).join('');
+}
+
+function renderAll() { renderCustom(); renderBuiltin(); }
+
+function shApplyFilter() { if (STATE) renderAll(); }
+
+function shTogglePet() {
+  var inp = document.getElementById('shPet');
+  if (inp) inp.style.display = (document.getElementById('shCat').value === 'питомцы') ? '' : 'none';
+}
+
+function shResetForm() {
+  EDITING = null;
+  ['shName', 'shPrice', 'shSell', 'shDesc', 'shPet'].forEach(function (id) { document.getElementById(id).value = ''; });
+  document.getElementById('shName').disabled = false;
+  document.getElementById('shSubmit').innerHTML = '<i class="fas fa-plus"></i> Добавить предмет';
+  document.getElementById('shCancel').style.display = 'none';
+  document.getElementById('shErr').style.display = 'none';
+  shTogglePet();
+}
+
+function shEdit(name) {
+  var it = STATE.items.find(function (i) { return i.source === 'custom' && i.name === name; });
+  if (!it) return;
+  EDITING = name;
+  document.getElementById('shName').value = it.name;
+  document.getElementById('shName').disabled = true;
+  document.getElementById('shCat').value = it.category;
+  document.getElementById('shRarity').value = it.rarity;
+  document.getElementById('shPrice').value = it.price;
+  document.getElementById('shSell').value = it.sell;
+  document.getElementById('shDesc').value = it.desc || '';
+  document.getElementById('shPet').value = it.pet_bonus || '';
+  document.getElementById('shSubmit').innerHTML = '<i class="fas fa-check"></i> Сохранить';
+  document.getElementById('shCancel').style.display = '';
+  shTogglePet();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function shErr(msg) {
+  var el = document.getElementById('shErr');
+  if (el) { el.textContent = msg; el.style.display = msg ? '' : 'none'; }
+}
+
+async function shSubmit() {
+  shErr('');
+  var payload = {
+    name: document.getElementById('shName').value,
+    category: document.getElementById('shCat').value,
+    rarity: document.getElementById('shRarity').value,
+    price: document.getElementById('shPrice').value,
+    sell: document.getElementById('shSell').value || null,
+    desc: document.getElementById('shDesc').value,
+    pet_bonus: document.getElementById('shPet').value || null
+  };
+  var r = await fetch('/api/shop/upsert', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+  });
+  var d = await r.json();
+  if (!r.ok || !d.success) { shErr(d.error || 'Не сохранилось — попробуйте ещё раз.'); return; }
+  STATE = d;
+  renderKpis(d); renderAll(); shResetForm();
+}
+
+async function shRemove(name) {
+  window.askConfirm('Удалить предмет?', '"' + name + '" исчезнет из магазина бота. У игроков, кто уже купил, предмет останется в инвентаре.', async function () {
+    var r = await fetch('/api/shop/remove', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name })
+    });
+    var d = await r.json();
+    if (!r.ok || !d.success) return;
+    STATE = d;
+    renderKpis(d); renderAll();
+    var gone = d.removed;
+    if (gone && typeof window.uxUndo === 'function') {
+      window.uxUndo('Предмет "' + name + '" удалён', async function () {
+        var rr = await fetch('/api/shop/upsert', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(gone)
+        });
+        var dd = await rr.json();
+        if (rr.ok && dd.success) { STATE = dd; renderKpis(dd); renderAll(); }
+      });
+    }
+  }, { danger: true, okText: 'Удалить', icon_fa: 'fas fa-trash-can' });
+}
+
+async function shLoad() {
+  var r = await fetch('/api/shop/state');
+  var d = await r.json();
+  if (!d.success) return;
+  STATE = d;
+  fillSelects(d);
+  renderKpis(d);
+  if (window.renderSafe) window.renderSafe(renderAll); else renderAll();
+}
+
+shLoad();
+if (typeof window.setLiveRefresh === 'function') window.setLiveRefresh(shLoad, 30000);
+</script>
+{% endblock %}

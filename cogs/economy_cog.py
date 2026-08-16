@@ -10,7 +10,8 @@ from datetime import datetime ,timedelta ,timezone
 import random 
 
 from logger import get_logger 
-from db import UserData 
+from db import UserData
+from cogs import economy_shop as _shop 
 
 log =get_logger ("economy_cog")
 
@@ -90,6 +91,11 @@ CASINO_GAMES =['coinflip','slots','blackjack','roulette','dice','crash']
 
 def _rarity_color (rarity :str )->int :
     return RARITY_COLORS .get (rarity ,0x95A5A6 )
+
+
+def _items_for (guild_id ):
+    """Каталог магазина: базовые предметы + кастомные предметы сервера."""
+    return _shop .effective_items (guild_id ,ITEM_DETAILS )
 
 class _EconomyExtra (commands .Cog ):
     """Профессиональная экономическая система"""
@@ -224,7 +230,7 @@ class _EconomyExtra (commands .Cog ):
         ("Опыт",f"{data['job_xp']}/100"),
         ("Зарплата",f"${j['pay'][0]}-{j['pay'][1]}"),
         ("Крит. шанс",f"{j['crit_chance']*100:.0f}%"),
-        ("Бонус питомца",f"+{ITEM_DETAILS.get(data.get('equipped_pet'),{}).get('pet_bonus',0)}%"),
+        ("Бонус питомца",f"+{_items_for(ctx.guild.id if ctx.guild else None).get(data.get('equipped_pet'),{}).get('pet_bonus',0)}%"),
         ]
         img =await self .bot .loop .run_in_executor (
         None ,generate_eco_bytes ,"Работа",f"{data['job'].capitalize()} • {ctx.author.display_name}",rows ,(52 ,211 ,153 )
@@ -254,8 +260,9 @@ class _EconomyExtra (commands .Cog ):
         # бонус питомца
         pet_bonus =1.0 
         equipped =data .get ('equipped_pet')
-        if equipped and equipped in ITEM_DETAILS :
-            pet_bonus =1 +(ITEM_DETAILS [equipped ].get ('pet_bonus',0 )/100 )
+        _items_map =_items_for (ctx .guild .id if ctx .guild else None )
+        if equipped and equipped in _items_map :
+            pet_bonus =1 +(_items_map [equipped ].get ('pet_bonus',0 )/100 )
 
         if not data ['job']:
             # случайная подработка
@@ -321,7 +328,7 @@ class _EconomyExtra (commands .Cog ):
         if key not in inv :
             await ctx .send ("У вас нет такого предмета.")
             return 
-        det =ITEM_DETAILS .get (key ,{})
+        det =_items_for (ctx .guild .id if ctx .guild else None ).get (key ,{})
         price =det .get ('sell',det .get ('price',100 ))
         inv .remove (key )
         data ['inventory']=inv 
@@ -340,15 +347,16 @@ class _EconomyExtra (commands .Cog ):
         if key not in inv :
             await ctx .send ("У вас нет такого предмета.")
             return 
-        if key not in ITEM_DETAILS :
+        _items_map =_items_for (ctx .guild .id if ctx .guild else None )
+        if key not in _items_map :
             await ctx .send ("Этот предмет нельзя использовать.")
             return 
-        cat =ITEM_DETAILS [key ].get ('category')
+        cat =_items_map [key ].get ('category')
         if cat =='питомцы':
             data ['equipped_pet']=key 
             self ._save (ctx .author .id ,data )
             e =discord .Embed (title ="🐾 Питомец выбран",color =0x2ECC71 ,
-            description =f"**{key.capitalize()}** активен! Бонус к работе: +{ITEM_DETAILS[key].get('pet_bonus',0)}%")
+            description =f"**{key.capitalize()}** активен! Бонус к работе: +{_items_map[key].get('pet_bonus',0)}%")
             await ctx .send (embed =e )
         else :
             await ctx .send ("Этот предмет нельзя использовать.")
@@ -358,7 +366,8 @@ class _EconomyExtra (commands .Cog ):
         """Ваши питомцы"""
         data =self ._migrate (ctx .author .id ,self ._get (ctx .author .id ))
         inv =data .get ('inventory',[])
-        my_pets =[p for p in inv if p in ITEM_DETAILS and ITEM_DETAILS [p ].get ('category')=='питомцы']
+        _items_map =_items_for (ctx .guild .id if ctx .guild else None )
+        my_pets =[p for p in inv if p in _items_map and _items_map [p ].get ('category')=='питомцы']
         equipped =data .get ('equipped_pet')
         if not my_pets :
             await ctx .send ("У вас нет питомцев. Купите в магазине: `!buy кошка`")
@@ -366,7 +375,7 @@ class _EconomyExtra (commands .Cog ):
         lines =[]
         for p in my_pets :
             mark ="▸"if p ==equipped else "•"
-            lines .append ((f"{mark} {p.capitalize()}",f"+{ITEM_DETAILS[p].get('pet_bonus',0)}% к работе"))
+            lines .append ((f"{mark} {p.capitalize()}",f"+{_items_map[p].get('pet_bonus',0)}% к работе"))
         if not lines :
             lines =[("Питомцы","Нет")]
         img =await self .bot .loop .run_in_executor (
@@ -473,15 +482,16 @@ class _EconomyExtra (commands .Cog ):
         data ['balance']-=price 
         # шанс получить предмет
         pool =self .CASES [key ]['pool']
+        _items_map =_items_for (ctx .guild .id if ctx .guild else None )
         if random .random ()<0.4 :
             # предмет
-            candidates =[i for i ,d in ITEM_DETAILS .items ()if d ['rarity']in pool ]
+            candidates =[i for i ,d in _items_map .items ()if d ['rarity']in pool ]
             if candidates :
                 item =random .choice (candidates )
                 data ['inventory'].append (item )
                 self ._log_tx (ctx .author .id ,data ,'Кейс',-price ,f'+{item}' )
-                e =discord .Embed (title =f"📦 Кейс: {key}",color =_rarity_color (ITEM_DETAILS [item]['rarity']) ,
-                description =f"Вы получили предмет: **{item.capitalize()}** ({ITEM_DETAILS[item]['rarity']})")
+                e =discord .Embed (title =f"📦 Кейс: {key}",color =_rarity_color (_items_map [item]['rarity']) ,
+                description =f"Вы получили предмет: **{item.capitalize()}** ({_items_map[item]['rarity']})")
             else :
                 win =random .randint (100 ,500 )
                 data ['balance']+=win 
@@ -634,9 +644,10 @@ class _EconomyExtra (commands .Cog ):
     async def buy (self ,ctx ,*,item :str ):
         """Купить предмет из магазина"""
         key =item .lower ()
-        det =ITEM_DETAILS .get (key )
+        _items_map =_items_for (ctx .guild .id if ctx .guild else None )
+        det =_items_map .get (key )
         if not det :
-            await ctx .send (f"Предмет не найден. Доступно: {', '.join(ITEM_DETAILS.keys())}")
+            await ctx .send (f"Предмет не найден. Доступно: {', '.join(_items_map.keys())}")
             return 
         price =det ['price']
         data =self ._migrate (ctx .author .id ,self ._get (ctx .author .id ))
@@ -1007,7 +1018,7 @@ def _rounded_panel (w ,h ,radius ,fill =WHITE ,outline =BLACK ,ow =3 ):
 def generate_economy_card (cog ,member :discord .Member ,category :str ="shop")->Image .Image :
     W =920 
     data =cog ._get (member .id )
-    items =list (ITEM_DETAILS .items ())if category =="shop"else []
+    items =list (_items_for (getattr (getattr (member ,"guild",None ),"id",None )).items ())if category =="shop"else []
     if category =="inventory":
         items =[(itm ,0 )for itm in data .get ('inventory',[])]
 
