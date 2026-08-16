@@ -62,6 +62,8 @@ MODERATION_COGS = frozenset({
     'ticket.py', 'mod_report.py',
     # апелляции на баны + еженедельный мод-дайджест
     'appeals.py', 'mod_digest.py',
+    # расписание дежурств стаффа с автонапоминаниями
+    'staff_shifts.py',
 })
 
 # итоговый список MOD_ONLY
