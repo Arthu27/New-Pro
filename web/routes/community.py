@@ -484,15 +484,14 @@ def register(ctx):
 
         # ── STAFF SHIFTS (виджет дежурств на дашборде) ────────────────────────────
     @app .route ('/api/guild/<guild_id>/staff-shifts')
-    @login_required
+    @login_required 
+    @role_required ('mod')
     def api_staff_shifts (guild_id ):
         """Дежурства для виджета на дашборде: кто сейчас, кто следующий, смены сегодня.
 
         Читает то же хранилище (GuildData 'staff_shifts'), что и ког /дежурства —
         поэтому в панели видно расписание, заданное из Discord. Доступ: mod+.
         """
-        if ROLES .get (session .get ('role'),-1 )<ROLES .get ('mod',999 ):
-            return jsonify ({'success':False ,'error':'Нет доступа'}),403
         try :
             gid =int (guild_id )
         except (TypeError ,ValueError ):

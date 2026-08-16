@@ -13,20 +13,22 @@ from services import transcript_store as _ts
 
 def register(ctx):
     app = ctx.app
-    ROLES = ctx.ROLES
     login_required = ctx.login_required
     role_required = ctx.role_required
 
-    def _staff_only():
-        return ROLES.get(session.get('role'), -1) >= ROLES.get('mod', 999)
-
     # ── TRANSCRIPTS API ──────────────────────────────────────────────────
+    @app.route('/api/transcripts/stats', methods=['GET'])
+    @login_required
+    @role_required('mod')
+    def api_transcripts_stats():
+        """Сводная статистика транскриптов (секция «Сводка» на странице)."""
+        return jsonify({'success': True, 'stats': _ts.stats(_ts.load())})
+
     @app.route('/api/transcripts/search', methods=['POST'])
     @login_required
+    @role_required('mod')
     def api_transcripts_search():
         """Поиск транскриптов (фильтры: search/days/category)."""
-        if not _staff_only():
-            return jsonify({'success': False, 'error': 'Нет доступа'}), 403
         data = request.get_json(silent=True) or {}
         query = str(data.get('search', '') or '')
         records = _ts.filter_records(
@@ -51,10 +53,9 @@ def register(ctx):
 
     @app.route('/api/transcripts/<transcript_id>', methods=['GET'])
     @login_required
+    @role_required('mod')
     def api_transcript_get(transcript_id):
         """Полный транскрипт по ID."""
-        if not _staff_only():
-            return jsonify({'success': False, 'error': 'Нет доступа'}), 403
         t = _ts.find(_ts.load(), transcript_id)
         if t is None:
             return jsonify({'success': False, 'error': 'Транскрипт не найден'}), 404
@@ -62,10 +63,9 @@ def register(ctx):
 
     @app.route('/api/transcripts/<transcript_id>/export', methods=['GET'])
     @login_required
+    @role_required('mod')
     def api_transcript_export(transcript_id):
         """Экспорт: ?format=txt|html — автономные файлы; контент экранирован."""
-        if not _staff_only():
-            return jsonify({'success': False, 'error': 'Нет доступа'}), 403
         t = _ts.find(_ts.load(), transcript_id)
         if t is None:
             return jsonify({'success': False, 'error': 'Транскрипт не найден'}), 404

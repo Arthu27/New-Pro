@@ -42,7 +42,43 @@
 .trx-snip{font-size:12px;color:var(--text-3);line-height:1.5;border-left:2px solid rgba(242,179,61,.45);padding:3px 0 3px 10px;background:rgba(242,179,61,.04);border-radius:0 6px 6px 0}
 .trx-snip-author{color:var(--text-2);font-weight:600}
 .trx-snip mark{background:rgba(242,179,61,.3);color:#ffe1a1;border-radius:3px;padding:0 2px}
+.trx-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px}
+.trx-kpi{background:rgba(255,255,255,.03);border:1px solid var(--line-2);border-radius:10px;padding:12px 14px}
+.trx-kpi-val{font-size:20px;font-weight:700;color:var(--text-1);font-variant-numeric:tabular-nums}
+.trx-kpi-lbl{font-size:11.5px;color:var(--text-3);margin-top:2px}
+.trx-cols{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:900px){.trx-cols{grid-template-columns:1fr}}
+.trx-panel-box{background:rgba(255,255,255,.03);border:1px solid var(--line-2);border-radius:10px;padding:14px}
+.trx-panel-t{font-size:12px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px}
+.trx-bar-row{display:flex;align-items:center;gap:10px;margin-bottom:7px;font-size:12px}
+.trx-bar-name{flex:0 0 130px;color:var(--text-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.trx-bar-track{flex:1;height:8px;border-radius:4px;background:rgba(255,255,255,.06)}
+.trx-bar-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--ac-3),var(--ac-2))}
+.trx-bar-num{flex:0 0 auto;color:var(--text-3);font-variant-numeric:tabular-nums}
+.trx-chart{display:flex;align-items:flex-end;gap:4px;height:64px;margin-top:6px}
+.trx-col{flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%}
+.trx-col-bar{border-radius:3px 3px 0 0;background:linear-gradient(180deg,var(--ac-2),var(--ac-3));min-height:3px}
+.trx-col.today .trx-col-bar{background:linear-gradient(180deg,#ffe1a1,var(--ac-2))}
+.trx-closer{display:flex;justify-content:space-between;font-size:12.5px;padding:5px 0;border-bottom:1px dashed var(--line-2)}
+.trx-closer:last-child{border-bottom:none}
 </style>
+
+<div class="section" id="trxStatsSection" style="display:none">
+  <div class="bs-title"><i class="fas fa-chart-pie"></i> Сводка</div>
+  <div class="trx-kpis" id="trxKpis"></div>
+  <div class="trx-cols">
+    <div class="trx-panel-box">
+      <div class="trx-panel-t">Топ категорий</div>
+      <div id="trxCats"></div>
+    </div>
+    <div class="trx-panel-box">
+      <div class="trx-panel-t">Закрытия по дням · <span id="trxDaysTotal">0</span> за 14 дней</div>
+      <div class="trx-chart" id="trxChart"></div>
+      <div class="trx-panel-t" style="margin-top:14px">Кто закрывает</div>
+      <div id="trxClosers"></div>
+    </div>
+  </div>
+</div>
 
 <div class="section">
   <div class="bs-title"><i class="fas fa-filter"></i> Фильтры</div>
@@ -232,6 +268,46 @@ document.addEventListener('keydown', function (e) {
   if (e.key === 'Escape') closeTranscriptModal();
 });
 
+function loadTrxStats() {
+  fetch('/api/transcripts/stats')
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (!d.success || !d.stats || !d.stats.total) return;  // пусто — сводку не показываем
+      var st = d.stats;
+      document.getElementById('trxStatsSection').style.display = 'block';
+      document.getElementById('trxKpis').innerHTML = [
+        [st.total, 'всего транскриптов'],
+        [st.last7, 'за 7 дней'],
+        [st.last30, 'за 30 дней'],
+        [st.avg_duration, 'средняя длительность'],
+        [st.median_duration, 'медианная длительность'],
+        [st.avg_messages, 'сообщений в тикете']
+      ].map(function (kv) {
+        return '<div class="trx-kpi"><div class="trx-kpi-val">' + esc(kv[0]) + '</div><div class="trx-kpi-lbl">' + esc(kv[1]) + '</div></div>';
+      }).join('');
+      var maxCat = Math.max.apply(null, st.categories.map(function (c) { return c.count; }).concat([1]));
+      document.getElementById('trxCats').innerHTML = st.categories.map(function (c) {
+        var pct = Math.max(4, Math.round(100 * c.count / maxCat));
+        return '<div class="trx-bar-row"><span class="trx-bar-name" title="' + esc(c.name) + '">' + esc(c.name) + '</span>' +
+          '<span class="trx-bar-track"><span class="trx-bar-fill" style="display:block;width:' + pct + '%"></span></span>' +
+          '<span class="trx-bar-num">' + c.count + ' · ' + c.share + '%</span></div>';
+      }).join('') || '<div class="ann-meta">Категорий пока нет</div>';
+      var maxDay = Math.max.apply(null, st.days.map(function (x) { return x.count; }).concat([1]));
+      var daySum = st.days.reduce(function (a, x) { return a + x.count; }, 0);
+      document.getElementById('trxDaysTotal').textContent = daySum;
+      document.getElementById('trxChart').innerHTML = st.days.map(function (x, i) {
+        var h = Math.max(5, Math.round(100 * x.count / maxDay));
+        var today = i === st.days.length - 1;
+        return '<div class="trx-col' + (today ? ' today' : '') + '" title="' + esc(x.label) + ': ' + x.count + '">' +
+          '<div class="trx-col-bar" style="height:' + h + '%"></div></div>';
+      }).join('');
+      document.getElementById('trxClosers').innerHTML = st.closers.map(function (c) {
+        return '<div class="trx-closer"><span>' + esc(c.name) + '</span><span class="trx-bar-num">' + c.count + '</span></div>';
+      }).join('') || '<div class="ann-meta">Пока никто</div>';
+    })
+    .catch(function () { /* сводка опциональна — страница живёт и без неё */ });
+}
+
 var debounceTimer = null;
 ['searchInput', 'dateFilter', 'categoryFilter'].forEach(function (id) {
   document.getElementById(id).addEventListener('input', function () {
@@ -240,6 +316,7 @@ var debounceTimer = null;
   });
 });
 
+loadTrxStats();
 searchTranscripts();
 </script>
 {% endblock %}

@@ -31,6 +31,8 @@ import html as _html
 import json
 import os
 import re
+import statistics
+from collections import Counter
 from datetime import datetime, timedelta, timezone
 
 from logger import get_logger
@@ -269,6 +271,73 @@ def find(records, transcript_id):
         if str(t.get('id')) == tid:
             return t
     return None
+
+
+# ── Сводная статистика для панели ─────────────────────────────────────────
+
+STATS_DAYS = 14
+MAX_DURATION_SEC = 30 * 86400  # «висячие» дольше месяца — выбросы, в средние не берём
+
+
+def stats(records, now=None):
+    """Считает сводку по транскриптам: объёмы, категории, длительности,
+    закрытия по дням (последние STATS_DAYS, бакеты по UTC-датам), топ закрывающих.
+    Записи без closed_at пропускаются; длительность — только где есть opened_at."""
+    now = now or datetime.now(timezone.utc)
+
+    day_labels = [(now - timedelta(days=back)).date().strftime('%d.%m')
+                  for back in range(STATS_DAYS - 1, -1, -1)]
+    per_day = {label: 0 for label in day_labels}
+
+    last7 = last30 = 0
+    categories = Counter()
+    closers = Counter()
+    durations = []
+    msg_counts = []
+
+    for t in records:
+        closed = _parse_ts(t.get('closed_at'))
+        if not closed:
+            continue
+        age = (now - closed).total_seconds()
+        if age <= 7 * 86400:
+            last7 += 1
+        if age <= 30 * 86400:
+            last30 += 1
+        bucket = closed.date().strftime('%d.%m')
+        if bucket in per_day:
+            per_day[bucket] += 1
+        categories[str(t.get('category') or 'Без категории')] += 1
+        if t.get('closed_by'):
+            closers[str(t['closed_by'])] += 1
+        opened = _parse_ts(t.get('opened_at'))
+        if opened:
+            dur = (closed - opened).total_seconds()
+            if 0 <= dur <= MAX_DURATION_SEC:
+                durations.append(dur)
+        msg_counts.append(len(t.get('messages') or []))
+
+    total = sum(categories.values())
+    avg_dur = int(sum(durations) / len(durations)) if durations else 0
+    med_dur = int(statistics.median(durations)) if durations else 0
+    avg_msgs = round(sum(msg_counts) / len(msg_counts), 1) if msg_counts else 0.0
+
+    return {
+        'total': total,
+        'last7': last7,
+        'last30': last30,
+        'avg_duration_sec': avg_dur,
+        'median_duration_sec': med_dur,
+        'avg_duration': human_duration(avg_dur),
+        'median_duration': human_duration(med_dur),
+        'avg_messages': avg_msgs,
+        'with_duration': len(durations),
+        'categories': [{'name': name, 'count': cnt,
+                        'share': round(100.0 * cnt / total, 1) if total else 0.0}
+                       for name, cnt in categories.most_common(6)],
+        'closers': [{'name': name, 'count': cnt} for name, cnt in closers.most_common(5)],
+        'days': [{'label': label, 'count': per_day[label]} for label in day_labels],
+    }
 
 
 # ── Экспорт ───────────────────────────────────────────────────────────────
