@@ -160,6 +160,65 @@ emoji = re.compile('[\\U0001F000-\\U0001FAFF\\u2B00-\\u2BFF\\uFE0F]|[☀-➿]')
 check(not emoji.search(tpl), 'в шаблоне нет эмодзи')
 check(tpl.count('an-rowl') >= 2, 'стили теплокарты на месте')
 
+print('== 6. Приходы/уходы и неделя к неделе (#13, #14) ==')
+# докидываем member-события относительно сегодня — тест не зависит от часов
+from datetime import datetime as _dt  # noqa: E402
+today = date.today()
+d_y = (today - timedelta(days=1)).isoformat()
+d_t = today.isoformat()
+with open('data/audit_log.json', encoding='utf-8') as fh:
+    audit2 = json.load(fh)
+audit2['777'].extend([
+    {'category': 'member', 'action': 'Участник вошёл', 'timestamp': d_y + 'T10:00:00'},
+    {'category': 'member', 'action': 'Участник вошёл', 'timestamp': d_y + 'T12:00:00'},
+    {'category': 'member', 'action': 'Участник вошёл', 'timestamp': d_t + 'T09:00:00'},
+    {'category': 'member', 'action': 'Участник вышел', 'timestamp': d_y + 'T20:00:00'},
+    {'category': 'member', 'action': 'Псевдоним изменён', 'timestamp': d_t + 'T09:30:00'},
+    {'category': 'member', 'action': 'Участник вошёл', 'timestamp': 'не дата'},
+])
+with open('data/audit_log.json', 'w', encoding='utf-8') as fh:
+    json.dump(audit2, fh)
+
+flow = AP.member_flow(777, days=14)
+check(flow['joined_total'] == 3 and flow['left_total'] == 1 and flow['net'] == 2,
+      'итоги потока: 3+/1-/Δ2')
+check(flow['joins'][-2] == 2 and flow['joins'][-1] == 1, 'по дням: вчера 2, сегодня 1')
+check(flow['leaves'][-2] == 1, 'уходы по дням')
+check(len(flow['labels']) == 14 and len(flow['joins']) == 14, 'окно 14 дней')
+check(AP.member_flow(424242)['net'] == 0 and AP.member_flow(424242)['joined_total'] == 0,
+      'пустой сервер — нули')
+
+now = _dt(2026, 8, 16, 12, 0, 0)
+events = [
+    ('Аня', 'общий', now - timedelta(days=1)),
+    ('Боря', 'общий', now - timedelta(days=2)),
+    ('Аня', 'общий', now - timedelta(days=8)),   # прошлая неделя
+    ('Аня', 'общий', now - timedelta(days=20)),  # вне окон
+    ('Ветераный', 'общий', None),                 # без метки
+]
+ws = AP.week_summary(events, now=now)
+check(ws['week_msgs'] == 2 and ws['prev_week_msgs'] == 1, 'окна 7+7 суток')
+check(ws['msgs_delta'] == 100, 'дельта сообщений +100%')
+check(ws['week_users'] == 2 and ws['prev_week_users'] == 1 and ws['users_delta'] == 100,
+      'дельта авторов +100%')
+ws0 = AP.week_summary([], now=now)
+check(ws0['msgs_delta'] is None and ws0['users_delta'] is None and ws0['week_msgs'] == 0,
+      'без прошлой недели — честный прочерк, а не деление на ноль')
+
+r = client.get('/api/guild/777/analytics/member-flow')
+check(r.status_code == 200 and r.get_json()['net'] == 2, 'mod читает member-flow')
+r = client.get('/api/guild/777/analytics/week-summary')
+check(r.status_code == 200 and 'week_msgs' in r.get_json(), 'mod читает week-summary')
+login('uye')
+check(client.get('/api/guild/777/analytics/member-flow').status_code == 403, 'uye нельзя flow')
+check(client.get('/api/guild/777/analytics/week-summary').status_code == 403, 'uye нельзя сводку')
+login('mod')
+
+tpl = open(os.path.join(ROOT, 'web/templates/analytics.html'), encoding='utf-8').read()
+check('flowChart' in tpl and 'member-flow' in tpl, 'график потока смонтирован')
+check('anWeekSum' in tpl and 'week-summary' in tpl, 'чипы недели смонтированы')
+check(not emoji.search(tpl), 'всё ещё без эмодзи')
+
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)
 sys.exit(1 if FAIL else 0)

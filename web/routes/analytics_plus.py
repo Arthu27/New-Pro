@@ -126,6 +126,88 @@ def top_counter(events, idx, limit=20):
     return cnt.most_common(limit)
 
 
+def load_member_events(guild_id):
+    """Приходы/уходы участников из audit_log: [(действие, datetime|None)]."""
+    gid = str(guild_id)
+    out = []
+    if not os.path.exists(_AUDIT_FILE):
+        return out
+    try:
+        with open(_AUDIT_FILE, 'r', encoding='utf-8') as fh:
+            data = json.load(fh)
+    except (OSError, json.JSONDecodeError) as _ex:
+        _log.debug("analytics_plus: audit для member-flow не прочитан: %s", _ex)
+        return out
+    for ev in data.get(gid, []) or []:
+        if not isinstance(ev, dict) or ev.get('category') != 'member':
+            continue
+        action = ev.get('action')
+        if action not in ('Участник вошёл', 'Участник вышел'):
+            continue
+        out.append((action, _parse_ts(ev.get('timestamp'))))
+    return out
+
+
+def member_flow(guild_id, days=14):
+    """Приходы/уходы по дням + итоги: {labels, joins, leaves, joined, left, net}."""
+    joins = Counter()
+    leaves = Counter()
+    for action, dt in load_member_events(guild_id):
+        if dt is None:
+            continue
+        key = dt.date().isoformat()
+        if action == 'Участник вошёл':
+            joins[key] += 1
+        else:
+            leaves[key] += 1
+    today = date.today()
+    labels = [(today - timedelta(days=i)).isoformat() for i in range(days - 1, -1, -1)]
+    joined_total = sum(joins.values())
+    left_total = sum(leaves.values())
+    return {
+        'labels': [lb[5:] for lb in labels],
+        'joins': [joins.get(lb, 0) for lb in labels],
+        'leaves': [leaves.get(lb, 0) for lb in labels],
+        'joined_total': joined_total,
+        'left_total': left_total,
+        'net': joined_total - left_total,
+    }
+
+
+def week_summary(events, now=None):
+    """Эта неделя vs прошлая: сообщения и активные авторы (7 суток × 2 окна)."""
+    now = now or datetime.now()
+    week_start = now - timedelta(days=7)
+    prev_start = now - timedelta(days=14)
+    cur_msgs = 0
+    prev_msgs = 0
+    cur_users = set()
+    prev_users = set()
+    for author, _channel, dt in events:
+        if dt is None:
+            continue
+        if dt >= week_start:
+            cur_msgs += 1
+            cur_users.add(str(author))
+        elif dt >= prev_start:
+            prev_msgs += 1
+            prev_users.add(str(author))
+
+    def _delta(cur, prev):
+        if prev == 0:
+            return None  # честно: сравнивать не с чем
+        return round(100 * (cur - prev) / prev)
+
+    return {
+        'week_msgs': cur_msgs,
+        'prev_week_msgs': prev_msgs,
+        'msgs_delta': _delta(cur_msgs, prev_msgs),
+        'week_users': len(cur_users),
+        'prev_week_users': len(prev_users),
+        'users_delta': _delta(len(cur_users), len(prev_users)),
+    }
+
+
 def analytics_csv(guild_id, days=30):
     """CSV одним файлом: дни, топ участников, топ каналов (utf-8-sig для Excel)."""
     events = load_message_events(guild_id)
@@ -168,3 +250,19 @@ def register(ctx):
             mimetype='text/csv; charset=utf-8',
             headers={'Content-Disposition': f'attachment; filename="{filename}"'},
         )
+
+    @app.route('/api/guild/<guild_id>/analytics/member-flow')
+    @login_required
+    @role_required('mod')
+    def api_guild_member_flow(guild_id):
+        body = member_flow(guild_id)
+        body['success'] = True
+        return jsonify(body)
+
+    @app.route('/api/guild/<guild_id>/analytics/week-summary')
+    @login_required
+    @role_required('mod')
+    def api_guild_week_summary(guild_id):
+        body = week_summary(load_message_events(guild_id))
+        body['success'] = True
+        return jsonify(body)
