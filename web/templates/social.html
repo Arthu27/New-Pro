@@ -43,6 +43,7 @@
   <div>
     <div class="so-panel">
       <h3><i class="fas fa-calendar-days"></i> Афиша событий</h3>
+      <span class="fresh-chip" id="soFresh"></span>
       <div class="so-sub">Предстоящие — по дате, минувшие приглушены. Запись идёт кнопкой «Участвую» в Discord, здесь — составы и уборка. Создание события — командой /activity, там оно сразу получает кнопку записи.</div>
       <input class="inp" id="soEventSearch" placeholder="Поиск по событиям" style="margin-bottom:10px">
       <div id="soEvents"><div class="sk-row"></div><div class="sk-row" style="width:70%"></div></div>
@@ -59,7 +60,7 @@
   </div>
 </div>
 
-<script src="/static/pickers.js?v=1"></script>
+<script src="/static/pickers.js?v=2"></script>
 <script>
 var GID = '{{ guild_id }}';
 var API = '/api/guild/' + GID + '/social';
@@ -112,8 +113,8 @@ function eventRow(e) {
     : '<span class="so-count">' + e.count + '</span><span class="so-chip">без лимита</span>';
   var flags = (e.reminded ? '<span class="so-chip done" title="Напоминание за 30 минут уже ушло"><i class="fas fa-bell"></i></span>' : '') +
     (e.past ? '<span class="so-chip">прошло</span>' : '');
-  var acts = '<a class="so-mini csv" title="Состав в CSV" href="' + API + '/events/' + encodeURIComponent(e.id) + '/participants.csv"><i class="fas fa-file-csv"></i></a>' +
-    (CAN_EDIT ? ' <button class="so-mini" title="Удалить событие" onclick="soDelEvent(\'' + esc(e.id) + '\')"><i class="fas fa-trash"></i></button>' : '');
+  var acts = '<a class="so-mini csv" title="Состав в CSV" aria-label="Состав в CSV" href="' + API + '/events/' + encodeURIComponent(e.id) + '/participants.csv"><i class="fas fa-file-csv"></i></a>' +
+    (CAN_EDIT ? ' <button class="so-mini" title="Удалить событие" aria-label="Удалить событие" onclick="soDelEvent(\'' + esc(e.id) + '\')"><i class="fas fa-trash"></i></button>' : '');
   var sub = when + (e.description ? ' · ' + e.description : '');
   return '<div class="so-row' + (e.past ? ' past' : '') + '"><div class="so-who"><b>' + esc(e.title) + '</b>' +
     '<small>' + esc(sub) + '</small></div>' +
@@ -140,7 +141,7 @@ function matchRow(m) {
   var stale = (!m.active && !m.full) ? '<span class="so-chip">истёк</span>' : '';
   var note = m.note ? ' · ' + m.note : '';
   var sub = agoText(m.age_min) + note + (m.created_by_name ? ' · от ' + m.created_by_name : '');
-  var acts = CAN_EDIT ? ' <button class="so-mini" title="Закрыть поиск" onclick="soCloseMatch(\'' + esc(m.id) + '\')"><i class="fas fa-xmark"></i></button>' : '';
+  var acts = CAN_EDIT ? ' <button class="so-mini" title="Закрыть поиск" aria-label="Закрыть поиск" onclick="soCloseMatch(\'' + esc(m.id) + '\')"><i class="fas fa-xmark"></i></button>' : '';
   var names = (m.players_named || []).map(function (p) { return p.name || ('ID ' + p.user_id); }).join(', ');
   return '<div class="so-row' + (m.active ? '' : ' past') + '"><div class="so-who"><b>' + esc(m.game) + '</b>' +
     '<small>' + esc(sub) + '</small>' + (names ? '<small><i class="fas fa-users"></i> ' + esc(names) + '</small>' : '') + '</div>' +
@@ -161,6 +162,7 @@ function render(d) {
   renderKpis(d.stats);
   renderEvents(d.events);
   renderMatches(d.matches);
+  freshStamp(document.getElementById('soFresh'));
 }
 
 function soLoad() {
@@ -190,7 +192,9 @@ function soCloseMatch(id) {
 }
 
 attachListFilter(document.getElementById('soEventSearch'), 'soEvents', '.so-row');
+bindSlashFocus(document.getElementById('soEventSearch'));
 attachListFilter(document.getElementById('soMatchSearch'), 'soMatches', '.so-row');
+bindSlashFocus(document.getElementById('soMatchSearch'));
 bindCopyId(document);
 
 soLoad();

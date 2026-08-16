@@ -53,11 +53,12 @@
 
     <div class="j2-panel">
       <h3><i class="fas fa-door-open"></i> Реестр комнат</h3>
+      <span class="fresh-chip" id="j2Fresh"></span>
       <div class="j2-sub">Комнаты, которые бот создал и помнит (реестр переживает рестарт). Сироты — записи, чьих каналов на сервере уже нет.</div>
       <input class="inp" id="j2RoomSearch" placeholder="Поиск по комнатам — канал или владелец" style="margin-bottom:10px">
       <div id="j2Rooms"><div class="sk-row"></div><div class="sk-row" style="width:60%"></div></div>
       <div style="margin-top:10px;display:none" id="j2PruneWrap">
-        <button class="btn btn-ghost" id="j2Prune" onclick="j2PruneNow()"><i class="fas fa-broom"></i> Вычистить сирот</button>
+        <button class="btn btn-ghost" id="j2Prune" aria-label="Вычистить сирот из реестра" onclick="j2PruneNow()"><i class="fas fa-broom"></i> Вычистить сирот</button>
       </div>
     </div>
   </div>
@@ -91,7 +92,7 @@
   </div>
 </div>
 
-<script src="/static/pickers.js?v=1"></script>
+<script src="/static/pickers.js?v=2"></script>
 <script>
 var GID = '{{ guild_id }}';
 var API = '/api/guild/' + GID + '/j2c';
@@ -176,12 +177,14 @@ function render(d) {
       attachIdPicker(document.getElementById('j2Lobby'), {gid: GID, kind: 'voice', statusEl: document.getElementById('j2LobbyStatus')});
       attachIdPicker(document.getElementById('j2Category'), {gid: GID, kind: 'category', statusEl: document.getElementById('j2CategoryStatus')});
       bindCtrlS(j2Save);
+      window._j2Dirty = dirtyTrack(['j2Enabled', 'j2Lobby', 'j2Category', 'j2Limit', 'j2Template'].map(function (id) { return document.getElementById(id); }));
     }
   }
   renderKpis(d);
   renderStatus(d);
   renderRooms(d);
   document.getElementById('j2PreviewBox').textContent = d.preview;
+  freshStamp(document.getElementById('j2Fresh'));
 }
 
 function j2Load() {
@@ -205,6 +208,7 @@ function j2Save() {
         return;
       }
       msg.innerHTML = '<i class="fas fa-check" style="color:#4ade80"></i> Сохранено' + (d.live ? '' : ' (бот офлайн — на диск, ког подхватит при старте)');
+      if (window._j2Dirty) window._j2Dirty.reset();
       j2Load();
     }).catch(function () {
       msg.textContent = 'Сеть моргнула — попробуйте ещё раз';
@@ -221,6 +225,7 @@ function j2PruneNow() {
 }
 
 attachListFilter(document.getElementById('j2RoomSearch'), 'j2Rooms', '.j2-row');
+bindSlashFocus(document.getElementById('j2RoomSearch'));
 bindCopyId(document);
 
 j2Load();

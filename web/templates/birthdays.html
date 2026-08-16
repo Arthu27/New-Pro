@@ -59,11 +59,12 @@
   <div>
     <div class="bd-panel">
       <h3><i class="fas fa-cake-candles"></i> Ближайшие дни рождения</h3>
+      <span class="fresh-chip" id="bdFresh"></span>
       <div class="bd-sub">Порядок и числа дней — ровно как у команды /birthdays в Discord. Сегодняшние именинники подсвечены, значок торта — уже поздравлены в этом году.</div>
       <input class="inp" id="bdSearch" placeholder="Поиск по календарю — имя или дата" style="margin-bottom:10px">
       <div id="bdList"><div class="sk-row"></div><div class="sk-row" style="width:70%"></div></div>
       <div style="margin-top:10px">
-        <a class="bd-link" id="bdCsv" href="#"><i class="fas fa-file-csv"></i> Выгрузить календарь (CSV)</a>
+        <a class="bd-link" id="bdCsv" href="#" aria-label="Выгрузить календарь в CSV"><i class="fas fa-file-csv"></i> Выгрузить календарь (CSV)</a>
       </div>
     </div>
 
@@ -110,7 +111,7 @@
   </div>
 </div>
 
-<script src="/static/pickers.js?v=1"></script>
+<script src="/static/pickers.js?v=2"></script>
 <script>
 var GID = '{{ guild_id }}';
 var API = '/api/guild/' + GID + '/birthdays';
@@ -160,7 +161,7 @@ function renderList(entries) {
     var badges = e.celebrated_this_year
       ? '<span class="bd-chip cake" title="Поздравлен в этом году"><i class="fas fa-cake-candles"></i> ' + esc(e.celebrated) + '</span> ' : '';
     var del = CAN_EDIT
-      ? ' <button class="bd-mini" title="Удалить запись" onclick="bdDelete(\'' + esc(e.user_id) + '\')"><i class="fas fa-trash"></i></button>' : '';
+      ? ' <button class="bd-mini" title="Удалить запись" aria-label="Удалить запись" onclick="bdDelete(\'' + esc(e.user_id) + '\')"><i class="fas fa-trash"></i></button>' : '';
     return '<div class="bd-row' + (e.today ? ' today' : '') + '"><div class="bd-who"><b>' + esc(e.name) +
       '</b><small>' + esc(sub) + '</small></div>' +
       '<span class="bd-when ' + w.cls + '">' + esc(w.text) + '</span>' +
@@ -186,11 +187,13 @@ function render(d) {
       attachIdPicker(document.getElementById('bdSetChannel'), {gid: GID, kind: 'text', statusEl: document.getElementById('bdSetChannelStatus')});
       attachIdPicker(document.getElementById('bdSetRole'), {gid: GID, kind: 'role', statusEl: document.getElementById('bdSetRoleStatus')});
       bindCtrlS(bdSaveSettings);
+      window._bdDirty = dirtyTrack(['bdSetChannel', 'bdSetRole', 'bdSetGift', 'bdSetMsg'].map(function (id) { return document.getElementById(id); }));
     }
   }
   LAST_ENTRIES = d.entries;
   renderKpis(d.stats);
   renderList(d.entries);
+  freshStamp(document.getElementById('bdFresh'));
 }
 
 function bdLoad() {
@@ -258,6 +261,7 @@ function bdSaveSettings() {
         return;
       }
       msg.innerHTML = '<i class="fas fa-check" style="color:#4ade80"></i> Настройки сохранены';
+      if (window._bdDirty) window._bdDirty.reset();
       bdPreviewLoad();
       bdLoad();
     }).catch(function () {
@@ -288,6 +292,7 @@ function bdPreviewLoad() {
 }
 
 attachListFilter(document.getElementById('bdSearch'), 'bdList', '.bd-row');
+bindSlashFocus(document.getElementById('bdSearch'));
 
 bdLoad();
 bdPreviewLoad();

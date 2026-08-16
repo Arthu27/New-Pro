@@ -45,6 +45,7 @@
   <div>
     <div class="an-panel">
       <h3><i class="fas fa-stethoscope"></i> Готовность рассылки</h3>
+      <span class="fresh-chip" id="anFresh"></span>
       <div class="an-sub">Ког шлёт предложение раз в день в 10:00 по времени сервера. Здесь видно, что мешает отправке, и жив ли канал с ролью (если бот онлайн).</div>
       <div id="anStatus"><div class="sk-row"></div><div class="sk-row" style="width:65%"></div></div>
     </div>
@@ -77,7 +78,7 @@
   </div>
 </div>
 
-<script src="/static/pickers.js?v=1"></script>
+<script src="/static/pickers.js?v=2"></script>
 <script>
 var GID = '{{ guild_id }}';
 var API = '/api/guild/' + GID + '/anime-daily';
@@ -158,11 +159,13 @@ function render(d) {
       attachIdPicker(document.getElementById('anChannel'), {gid: GID, kind: 'text', statusEl: document.getElementById('anChannelStatus')});
       attachIdPicker(document.getElementById('anRole'), {gid: GID, kind: 'role', statusEl: document.getElementById('anRoleStatus')});
       bindCtrlS(function () { anSave(false); });
+      window._anDirty = dirtyTrack(['anChannel', 'anCategory', 'anRole'].map(function (id) { return document.getElementById(id); }));
     }
   }
   renderKpis(d);
   renderStatus(d);
   renderPreview(d.preview);
+  freshStamp(document.getElementById('anFresh'));
 }
 
 function anLoad() {
@@ -199,6 +202,7 @@ function anSave(flip) {
         return;
       }
       msg.innerHTML = '<i class="fas fa-check" style="color:#4ade80"></i> Сохранено';
+      if (window._anDirty) window._anDirty.reset();
       anLoad();
     }).catch(function () {
       msg.textContent = 'Сеть моргнула — попробуйте ещё раз';

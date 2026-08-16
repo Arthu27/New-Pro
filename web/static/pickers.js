@@ -120,6 +120,12 @@
       }
     }
     input.addEventListener('input', apply);
+    input._pkApply = apply;
+    /* строки подгружаются заново — перефильтровываем по текущему запросу */
+    var mo = new MutationObserver(function () {
+      if (String(input.value || '').trim()) apply();
+    });
+    mo.observe(box, {childList: true});
   };
 
   /* Клик по элементу с data-copy-id копирует ID в буфер. */
@@ -154,4 +160,78 @@
       }
     });
   };
+})();
+
+/* ── #96-100: фокус, черновики, свежесть, «наверх» ──────────────
+ * bindSlashFocus — клавиша «/» фокусирует поиск списка (как GitHub).
+ * dirtyTrack — сторож незакрытых черновиков: beforeunload + reset после
+ *   удачного сохранения.
+ * freshStamp — чип «обновлено HH:MM:SS» у списка после каждой загрузки.
+ * initScrollTop — плавающая кнопка «наверх» на длинных страницах.
+ */
+(function () {
+  'use strict';
+
+  window.bindSlashFocus = function (input) {
+    if (!input) return;
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return;
+      var t = e.target;
+      var tag = (t && t.tagName) ? t.tagName.toLowerCase() : '';
+      if (tag === 'input' || tag === 'textarea' || tag === 'select'
+          || (t && t.isContentEditable)) return;
+      e.preventDefault();
+      input.focus();
+      input.select();
+    });
+  };
+
+  /* fields — список полей формы; возвращает {is(), reset()}. */
+  window.dirtyTrack = function (fields) {
+    var dirty = false;
+    function mark() { dirty = true; }
+    fields.forEach(function (el) {
+      if (!el) return;
+      el.addEventListener('input', mark);
+      el.addEventListener('change', mark);
+    });
+    window.addEventListener('beforeunload', function (e) {
+      if (dirty) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    });
+    return {
+      is: function () { return dirty; },
+      reset: function () { dirty = false; }
+    };
+  };
+
+  window.freshStamp = function (el) {
+    if (!el) return;
+    var d = new Date();
+    var p = function (v) { return String(v).padStart(2, '0'); };
+    el.innerHTML = '<i class="fas fa-rotate"></i> обновлено ' +
+      p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+  };
+
+  document.addEventListener('DOMContentLoaded', function () {
+    if (document.getElementById('scrollTopBtn')) return;
+    var btn = document.createElement('button');
+    btn.id = 'scrollTopBtn';
+    btn.type = 'button';
+    btn.className = 'scroll-top-btn';
+    btn.title = 'Наверх';
+    btn.setAttribute('aria-label', 'Наверх');
+    btn.innerHTML = '<i class="fas fa-arrow-up"></i>';
+    document.body.appendChild(btn);
+    function paint() {
+      btn.classList.toggle('show', window.scrollY > 600);
+    }
+    window.addEventListener('scroll', paint, {passive: true});
+    btn.addEventListener('click', function () {
+      window.scrollTo({top: 0, behavior: 'smooth'});
+    });
+    paint();
+  });
 })();
