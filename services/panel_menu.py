@@ -104,6 +104,7 @@ MENU = [
         {'path': '/crown', 'label': 'Зал корон', 'icon': 'fa-crown'},
         {'path': '/karma', 'label': 'Карма', 'icon': 'fa-hand-holding-heart'},
         {'path': '/birthdays', 'label': 'Дни рождения', 'icon': 'fa-cake-candles'},
+        {'path': '/social', 'label': 'События', 'icon': 'fa-calendar-days'},
         {'path': '/scheduled-messages', 'label': 'Расписание', 'icon': 'fa-clock'},
     ]},
     {'group': 'Логи', 'key': 'logs', 'icon': 'fa-file-lines', 'pages': [
@@ -185,6 +186,7 @@ PAGE_COGS = {
                     'server_stats', 'media_only', 'night_summary'),
     '/karma': ('karma',),
     '/birthdays': ('birthday',),
+    '/social': ('social',),
 }
 
 
