@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block title %}Ачивки — Панель Aether{% endblock %}
+{% block page_title %}Витрина достижений{% endblock %}
+{% block content %}
+<style>
+.ach-kpis{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 18px}
+.ach-kpi{display:flex;align-items:center;gap:10px;background:var(--surface-2,rgba(255,255,255,.04));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:12px;padding:10px 16px}
+.ach-kpi i{color:var(--ac,#e0b04a);font-size:16px}
+.ach-kpi b{font-size:18px;color:var(--text-1,#fff)}
+.ach-kpi span{font-size:11.5px;color:var(--text-3,rgba(255,255,255,.45))}
+.ach-grid{display:grid;grid-template-columns:1.5fr 1fr;gap:16px;align-items:start}
+@media (max-width:960px){.ach-grid{grid-template-columns:1fr}}
+.ach-panel{background:var(--surface-2,rgba(255,255,255,.03));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:14px;padding:16px 18px;margin-bottom:16px}
+.ach-panel h3{margin:0 0 4px;font-size:15px;color:var(--text-1,#fff);display:flex;align-items:center;gap:9px}
+.ach-panel h3 i{color:var(--ac,#e0b04a)}
+.ach-sub{font-size:12px;color:var(--text-3,rgba(255,255,255,.45));margin-bottom:12px;line-height:1.5}
+.ach-row{display:grid;grid-template-columns:1fr auto;gap:4px 12px;padding:10px 8px;border-bottom:1px dashed rgba(255,255,255,.07)}
+.ach-row:last-child{border-bottom:none}
+.ach-name{font-size:13.5px;font-weight:600;color:var(--text-2,rgba(255,255,255,.85));display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ach-desc{font-size:12px;color:var(--text-3,rgba(255,255,255,.45));grid-column:1/-1;line-height:1.45}
+.ach-pts{font-size:11px;font-weight:700;color:var(--ac-2,#f0cd7a);background:var(--ac-soft,rgba(224,176,74,.1));border:1px solid var(--ac-line,rgba(224,176,74,.22));border-radius:999px;padding:2px 9px;white-space:nowrap}
+.ach-own{font-size:12px;color:var(--text-3,rgba(255,255,255,.5));text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.ach-bar{grid-column:1/-1;height:5px;border-radius:3px;background:rgba(255,255,255,.06);overflow:hidden}
+.ach-bar i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,var(--ac,#e0b04a),var(--ac-2,#f0cd7a));transition:width .4s}
+.ach-tb{width:100%;border-collapse:collapse}
+.ach-tb td{padding:8px 6px;border-bottom:1px dashed rgba(255,255,255,.07);font-size:13px;color:var(--text-2,rgba(255,255,255,.8))}
+.ach-tb tr:last-child td{border-bottom:none}
+.ach-pos{font-weight:700;color:var(--ac,#e0b04a);width:30px;font-variant-numeric:tabular-nums}
+.ach-stat{color:var(--text-3,rgba(255,255,255,.45));font-size:12px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.ach-feed{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:8px 6px;border-bottom:1px dashed rgba(255,255,255,.07)}
+.ach-feed:last-child{border-bottom:none}
+.ach-feed i{color:#f1c40f;font-size:13px}
+.ach-feed .who{font-size:13px;color:var(--text-2,rgba(255,255,255,.85));line-height:1.4}
+.ach-feed .who small{display:block;font-size:11px;color:var(--text-3,rgba(255,255,255,.4))}
+.ach-feed .when{font-size:11px;color:var(--text-3,rgba(255,255,255,.4));white-space:nowrap;font-variant-numeric:tabular-nums}
+[data-theme="light"] .ach-row,[data-theme="light"] .ach-tb td,[data-theme="light"] .ach-feed{border-bottom-color:rgba(0,0,0,.08)}
+[data-theme="light"] .ach-bar{background:rgba(0,0,0,.08)}
+</style>
+
+<div class="ach-kpis" id="achKpis">
+  <div class="sk-card" style="width:180px;height:56px"></div>
+  <div class="sk-card" style="width:180px;height:56px"></div>
+  <div class="sk-card" style="width:180px;height:56px"></div>
+</div>
+
+<div class="ach-grid">
+  <div class="ach-panel">
+    <h3><i class="fas fa-medal"></i> Каталог достижений</h3>
+    <div class="ach-sub">Охват — сколько игроков уже открыли ачивку (от всех, у кого есть хоть одна).
+      Выдача автоматическая: сообщения, голосовое время и стаж на сервере.</div>
+    <div id="achCatalog">
+      <div class="sk-row"></div>
+      <div class="sk-row"></div>
+      <div class="sk-row" style="width:70%"></div>
+    </div>
+  </div>
+
+  <div>
+    <div class="ach-panel">
+      <h3><i class="fas fa-crown"></i> Топ по очкам</h3>
+      <div class="ach-sub">Как команда <code>/ачивлидеры</code> — десятка лучших.</div>
+      <div id="achTop">
+        <div class="sk-row" style="height:36px"></div>
+        <div class="sk-row" style="height:36px;width:80%"></div>
+      </div>
+    </div>
+    <div class="ach-panel">
+      <h3><i class="fas fa-clock-rotate-left"></i> Свежие открытия</h3>
+      <div class="ach-sub">Последние выданные ачивки на сервере.</div>
+      <div id="achRecent">
+        <div class="sk-row" style="height:36px"></div>
+        <div class="sk-row" style="height:36px;width:65%"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function fmt(n) { return Number(n || 0).toLocaleString('ru-RU'); }
+function achPlural(n, one, few, many) {
+  var m10 = n % 10, m100 = n % 100;
+  if (m100 >= 11 && m100 <= 19) return many;
+  if (m10 === 1) return one;
+  if (m10 >= 2 && m10 <= 4) return few;
+  return many;
+}
+
+function renderKpis(d) {
+  var rare = d.rarest
+    ? '<div class="ach-kpi"><i class="fas fa-gem"></i><div><b>' + esc(d.rarest.name) + '</b> <span>редчайшая: ' + d.rarest.owners + ' ' + achPlural(d.rarest.owners, 'владелец', 'владельца', 'владельцев') + '</span></div></div>'
+    : '';
+  document.getElementById('achKpis').innerHTML =
+    '<div class="ach-kpi"><i class="fas fa-users"></i><div><b>' + d.players + '</b> <span>' + achPlural(d.players, 'игрок', 'игрока', 'игроков') + ' с ачивками</span></div></div>' +
+    '<div class="ach-kpi"><i class="fas fa-medal"></i><div><b>' + fmt(d.sum_grants) + '</b> <span>открытий из ' + (d.players * d.catalog_size) + ' возможных</span></div></div>' +
+    '<div class="ach-kpi"><i class="fas fa-star"></i><div><b>' + fmt(d.sum_points) + '</b> <span>' + achPlural(d.sum_points, 'очко', 'очка', 'очков') + ' роздано</span></div></div>' + rare;
+}
+
+function renderCatalog(d) {
+  var box = document.getElementById('achCatalog');
+  box.innerHTML = d.catalog.map(function (c) {
+    var ownersTxt = d.players
+      ? c.owners + ' ' + achPlural(c.owners, 'игрок', 'игрока', 'игроков') + ' · ' + c.coverage + '%'
+      : 'пока никто';
+    return '<div class="ach-row"><div><div class="ach-name">' + esc(c.name) +
+      ' <span class="ach-pts">+' + c.points + '</span></div>' +
+      '<div class="ach-desc">' + esc(c.desc) + '</div></div>' +
+      '<div class="ach-own">' + ownersTxt + '</div>' +
+      '<div class="ach-bar"><i style="width:' + (d.players ? c.coverage : 0) + '%"></i></div></div>';
+  }).join('');
+}
+
+function renderTop(d) {
+  var box = document.getElementById('achTop');
+  if (!d.top.length) {
+    box.innerHTML = '<div class="empty-state"><i class="fas fa-crown"></i><p>Пока пусто</p>' +
+      '<p class="empty-tip">Первые очки появятся после активности участников — бот выдаёт ачивки автоматически.</p></div>';
+    return;
+  }
+  box.innerHTML = '<table class="ach-tb">' + d.top.map(function (r, i) {
+    return '<tr><td class="ach-pos">' + (i + 1) + '</td><td>' + esc(r.name) + '</td>' +
+      '<td class="ach-stat">' + r.points + ' очк. · ' + r.count + ' ' + achPlural(r.count, 'ачивка', 'ачивки', 'ачивок') + '</td></tr>';
+  }).join('') + '</table>';
+}
+
+function renderRecent(d) {
+  var box = document.getElementById('achRecent');
+  if (!d.recent.length) {
+    box.innerHTML = '<div class="empty-state"><i class="fas fa-clock-rotate-left"></i><p>Открытий пока не было</p>' +
+      '<p class="empty-tip">Как только участник выполнит условие, запись появится здесь, а бот анонсирует её на сервере.</p></div>';
+    return;
+  }
+  box.innerHTML = d.recent.map(function (r) {
+    var when = String(r.ts || '').slice(0, 16).replace('T', ' ');
+    return '<div class="ach-feed"><i class="fas fa-trophy"></i>' +
+      '<div class="who">' + esc(r.name) + '<small>' + esc(r.ach_name) + ' (+' + r.points + ')</small></div>' +
+      '<span class="when">' + esc(when) + '</span></div>';
+  }).join('');
+}
+
+async function achLoad() {
+  var r = await fetch('/api/achievements/state');
+  var d = await r.json();
+  if (!d.success) return;
+  var render = function () { renderKpis(d); renderCatalog(d); renderTop(d); renderRecent(d); };
+  if (window.renderSafe) window.renderSafe(render); else render();
+}
+
+achLoad();
+if (typeof window.setLiveRefresh === 'function') window.setLiveRefresh(achLoad, 30000);
+</script>
+{% endblock %}
