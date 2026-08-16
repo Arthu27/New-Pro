@@ -93,6 +93,7 @@ MENU = [
         {'path': '/duty-panel-web', 'label': 'Дежурства', 'icon': 'fa-user-clock'},
         {'path': '/quiz', 'label': 'Квиз', 'icon': 'fa-brain'},
         {'path': '/counting', 'label': 'Счёт', 'icon': 'fa-list-ol'},
+        {'path': '/crown', 'label': 'Зал корон', 'icon': 'fa-crown'},
         {'path': '/scheduled-messages', 'label': 'Расписание', 'icon': 'fa-clock'},
     ]},
     {'group': 'Логи', 'key': 'logs', 'icon': 'fa-file-lines', 'pages': [
@@ -149,6 +150,7 @@ PAGE_COGS = {
     '/quiz': ('quiz',),
     '/reminders': ('reminders',),
     '/counting': ('counting',),
+    '/crown': ('weekly_crown',),
     '/scheduled-messages': ('scheduler',),
     '/schedule': ('scheduler',),
     '/afk-list': ('afk',),

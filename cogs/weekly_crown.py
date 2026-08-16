@@ -79,6 +79,60 @@ def _read_activity(guild_id: int):
     return out
 
 
+HISTORY_CAP = 52  # год еженедельных записей — дальше старость отрезаем
+
+
+def crown_history(cfg, uid, dm, dv, score, tz_offset=3, cap=HISTORY_CAP):
+    """Вернуть историю cfg с добавленной коронацией (без мутации cfg).
+
+    Неделя — ISO-ключ в поясе гильдии («2026-W33»), ts — поясной момент.
+    """
+    from datetime import datetime, timezone, timedelta
+    try:
+        off = int(tz_offset or 3)
+    except (TypeError, ValueError):
+        off = 3
+    now = datetime.now(timezone.utc) + timedelta(hours=off)
+    iso = now.isocalendar()
+    hist = [h for h in (cfg.get('history') or []) if isinstance(h, dict)]
+    hist.append({
+        'week': f"{iso[0]}-W{iso[1]:02d}",
+        'uid': int(uid),
+        'dm': int(dm),
+        'dv': int(dv),
+        'score': int(score),
+        'ts': now.isoformat(),
+    })
+    try:
+        cap = max(1, int(cap))
+    except (TypeError, ValueError):
+        cap = HISTORY_CAP
+    return hist[-cap:]
+
+
+def crown_streaks(history):
+    """Серии чемпионов: текущая (у последней записи) и лучшая за всё время.
+
+    {'current_uid','current','best_uid','best'}; пустая история — нули.
+    """
+    best_uid = cur_uid = None
+    best = cur = 0
+    for e in history or []:
+        try:
+            uid = int(e.get('uid'))
+        except (TypeError, ValueError, AttributeError) as _ex:
+            log.debug("crown_streaks(): битая запись истории пропущена: %s", _ex)
+            continue
+        if uid == cur_uid:
+            cur += 1
+        else:
+            cur_uid, cur = uid, 1
+        if cur > best:
+            best, best_uid = cur, cur_uid
+    return {'current_uid': cur_uid, 'current': cur,
+            'best_uid': best_uid, 'best': best}
+
+
 class WeeklyCrown(commands.Cog):
     """Коронация чемпиона недели (сообщения + войс)."""
 
@@ -188,6 +242,13 @@ class WeeklyCrown(commands.Cog):
                 except Exception as e:
                     log.warning(f"[CROWN] выдача роли: {e}")
         self.set_cfg(guild.id, 'holder_id', member.id)
+        try:
+            cfg = self.cfg(guild.id)
+            self.set_cfg(guild.id, 'history',
+                         crown_history(cfg, member.id, dm, dv, score,
+                                       tz_offset=cfg.get('tz_offset', 3)))
+        except Exception as _ex:
+            log.debug("[CROWN] история не записалась: %s", _ex)
 
         ch = await self._announce_channel(guild)
         if ch:

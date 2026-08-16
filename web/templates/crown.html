@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Зал корон — Панель Aether{% endblock %}
+{% block page_title %}Зал корон{% endblock %}
+{% block content %}
+<style>
+.cr-hero{display:flex;flex-wrap:wrap;gap:16px;align-items:stretch;margin:14px 0 18px}
+.cr-champ{flex:1;min-width:260px;background:linear-gradient(135deg,var(--ac-soft,rgba(224,176,74,.14)),transparent);border:1px solid var(--ac-line,rgba(224,176,74,.28));border-radius:16px;padding:20px 24px;display:flex;align-items:center;gap:16px}
+.cr-crown-i{width:52px;height:52px;border-radius:14px;background:var(--ac-soft,rgba(224,176,74,.15));border:1px solid var(--ac-line,rgba(224,176,74,.3));display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--ac,#e0b04a);flex:0 0 auto}
+.cr-champ-name{font-size:20px;font-weight:800;color:var(--text-1,#fff)}
+.cr-champ-sub{font-size:12.5px;color:var(--text-3,rgba(255,255,255,.5));margin-top:3px}
+.cr-streak{display:flex;align-items:center;gap:10px;background:var(--surface-2,rgba(255,255,255,.04));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:12px;padding:10px 16px}
+.cr-streak i{color:var(--ac,#e0b04a)}
+.cr-streak b{font-size:18px;color:var(--text-1,#fff)}
+.cr-streak span{font-size:11.5px;color:var(--text-3,rgba(255,255,255,.45))}
+.cr-panel{background:var(--surface-2,rgba(255,255,255,.03));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:14px;padding:16px 18px}
+.cr-panel h3{margin:0 0 4px;font-size:15px;color:var(--text-1,#fff);display:flex;align-items:center;gap:9px}
+.cr-panel h3 i{color:var(--ac,#e0b04a)}
+.cr-sub{font-size:12px;color:var(--text-3,rgba(255,255,255,.45));margin-bottom:12px;line-height:1.5}
+.cr-table{width:100%;border-collapse:collapse}
+.cr-table th{font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--text-3,rgba(255,255,255,.4));text-align:left;padding:6px 8px;border-bottom:1px solid var(--line-2,rgba(255,255,255,.1))}
+.cr-table td{padding:9px 8px;border-bottom:1px dashed rgba(255,255,255,.07);font-size:13px;color:var(--text-2,rgba(255,255,255,.85))}
+.cr-table tr:last-child td{border-bottom:none}
+.cr-week{font-weight:700;color:var(--text-3,rgba(255,255,255,.5));font-variant-numeric:tabular-nums;white-space:nowrap}
+.cr-score{color:var(--ac-2,#f0cd7a);font-weight:700;font-variant-numeric:tabular-nums}
+.cr-detail{color:var(--text-3,rgba(255,255,255,.45));font-size:12px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+[data-theme="light"] .cr-table td{border-bottom-color:rgba(0,0,0,.08)}
+</style>
+
+<div class="cr-hero" id="crHero">
+  <div class="sk-card" style="flex:1;min-width:260px;height:92px"></div>
+  <div class="sk-card" style="width:220px;height:92px"></div>
+</div>
+
+<div class="cr-panel">
+  <h3><i class="fas fa-clock-rotate-left"></i> История коронаций</h3>
+  <div class="cr-sub">Записывает сам бот в момент коронации (роль «Чемпион недели», каждый понедельник).
+    Панель здесь только смотрит — настройки (роль, канал, вкл/выкл) у команды <code>/crown</code> в Discord.</div>
+  <div id="crList">
+    <div class="sk-row" style="height:38px"></div>
+    <div class="sk-row" style="height:38px;width:80%"></div>
+    <div class="sk-row" style="height:38px;width:60%"></div>
+  </div>
+</div>
+
+<script>
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+function render(d) {
+  var hero = document.getElementById('crHero');
+  var champ = d.holder_name
+    ? '<div class="cr-champ"><div class="cr-crown-i"><i class="fas fa-crown"></i></div>' +
+      '<div><div class="cr-champ-name">' + esc(d.holder_name) + '</div>' +
+      '<div class="cr-champ-sub">носит корону сейчас · ' + (d.enabled ? 'коронация включена' : 'коронация на паузе (выкл)') + ' · UTC+' + d.tz_offset + '</div></div></div>'
+    : '<div class="cr-champ"><div class="cr-crown-i"><i class="fas fa-crown"></i></div>' +
+      '<div><div class="cr-champ-name">Трон пуст</div>' +
+      '<div class="cr-champ-sub">коронации ещё не было — первая в ближайший понедельник 00:00 (UTC+' + d.tz_offset + ')</div></div></div>';
+  hero.innerHTML = champ +
+    (d.current_streak.n
+      ? '<div class="cr-streak"><i class="fas fa-fire"></i><div><b>' + d.current_streak.n + '</b> <span>подряд у ' + esc(d.current_streak.name) + '</span></div></div>' +
+        '<div class="cr-streak"><i class="fas fa-medal"></i><div><b>' + d.best_streak.n + '</b> <span>лучшая серия — ' + esc(d.best_streak.name) + '</span></div></div>'
+      : '');
+  var box = document.getElementById('crList');
+  if (!d.history.length) {
+    box.innerHTML = '<div class="empty-state"><i class="fas fa-crown"></i><p>История пуста</p>' +
+      '<p class="empty-tip">Записи появятся после первой коронации: бот сам подводит итоги недели ' +
+      '(прирост сообщений + минуты в войсе). Поторопить можно командой /crown now.</p></div>';
+    return;
+  }
+  box.innerHTML = '<table class="cr-table"><thead><tr><th>Неделя</th><th>Чемпион</th><th>Очки</th><th style="text-align:right">За неделю</th></tr></thead><tbody>' +
+    d.history.map(function (h) {
+      return '<tr><td class="cr-week">' + esc(h.week) + '</td><td>' + esc(h.name) + '</td>' +
+        '<td><span class="cr-score">' + h.score + '</span></td>' +
+        '<td class="cr-detail">' + h.dm + ' сообщ · ' + h.dv + ' мин войса</td></tr>';
+    }).join('') + '</tbody></table>';
+}
+
+async function crLoad() {
+  try {
+    var d = await fetch('/api/crown/state').then(function (r) { return r.json(); });
+    if (d.success) window.renderSafe ? window.renderSafe(function () { render(d); }) : render(d);
+  } catch (e) { /* API Guard показал причину */ }
+}
+
+crLoad();
+if (typeof window.setLiveRefresh === 'function') window.setLiveRefresh(crLoad, 60000);
+</script>
+{% endblock %}
