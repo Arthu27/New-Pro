@@ -178,7 +178,7 @@
   </div>
 
   <div class="section">
-    <h2><i class="fas fa-chart-bar"></i> Сообщений в день (последние 7 дней)</h2>
+    <h2 style="display:flex;align-items:center;gap:10px"><i class="fas fa-chart-bar"></i> Сообщений в день (последние 7 дней)<a id="anCsvBtn" class="an-csv" href="#" download><i class="fas fa-file-csv"></i> CSV · 30 дней</a></h2>
     <div   style="height: 240px; position: relative;">
       <canvas id="msgChart"></canvas>
     </div>
@@ -190,8 +190,26 @@
       <canvas id="memberChart"></canvas>
     </div>
   </div>
+
+  <div class="section">
+    <h2 style="display:flex;align-items:center;gap:10px"><i class="fas fa-fire"></i> Теплокарта активности<span id="anHeatPeak" class="an-peak"></span></h2>
+    <div id="anHeatmap"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Загрузка...</p></div></div>
+  </div>
 </div>
 
+<style>
+.an-rowl{display:grid;grid-template-columns:34px 1fr;gap:6px;align-items:center;margin-bottom:3px}
+.an-wd{font-size:10.5px;color:var(--text-3,rgba(255,255,255,.4));text-align:right;font-weight:700}
+.an-cells{display:grid;grid-template-columns:repeat(24,1fr);gap:2px}
+.an-cell{aspect-ratio:1/1;border-radius:3px;min-height:12px;transition:transform .1s}
+.an-cell:hover{transform:scale(1.35);outline:1px solid var(--ac,#e0b04a)}
+.an-h{font-size:9px;color:var(--text-3,rgba(255,255,255,.3));text-align:center;line-height:1.4}
+.an-legend{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--text-3,rgba(255,255,255,.4));margin-top:8px;justify-content:flex-end}
+.an-legend i{width:14px;height:10px;border-radius:2px;display:inline-block}
+.an-peak{font-size:11px;color:var(--ac-2,#f0cd7a);font-weight:600;margin-left:auto}
+.an-csv{font-size:11.5px;font-weight:600;color:var(--ac,#e0b04a);text-decoration:none;border:1px solid var(--ac-line,rgba(224,176,74,.3));border-radius:8px;padding:4px 10px;margin-left:auto;white-space:nowrap;transition:background .15s}
+.an-csv:hover{background:var(--ac-soft,rgba(224,176,74,.12))}
+</style>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 (function () {
@@ -366,6 +384,44 @@
     }
   }
 
+  function renderHeatmap(d) {
+    var box = $id('anHeatmap');
+    if (!d || !d.matrix) return;
+    var peak = $id('anHeatPeak');
+    if (peak) peak.textContent = d.peak ? ('пик: ' + d.peak.weekday + ' ' + String(d.peak.hour).padStart(2, '0') + ':00 · ' + d.peak.count) : '';
+    if (!d.total) {
+      box.innerHTML = '<div class="empty-state"><i class="fas fa-fire"></i><p>Пока нет сообщений с метками времени</p>' +
+        '<p class="empty-tip">Теплокарта заполнится по мере активности чата.</p></div>';
+      return;
+    }
+    var hours = '';
+    for (var h = 0; h < 24; h++) hours += '<div class="an-h">' + h + '</div>';
+    var rows = d.matrix.map(function (row, wd) {
+      var cells = row.map(function (c, h) {
+        var a = d.max ? (c / d.max) : 0;
+        var bg = c ? ('rgba(224,176,74,' + (0.12 + 0.88 * a).toFixed(2) + ')') : 'rgba(255,255,255,.045)';
+        return '<div class="an-cell" style="background:' + bg + '" title="' + d.weekdays[wd] + ' ' +
+          String(h).padStart(2, '0') + ':00-' + String(h).padStart(2, '0') + ':59 · ' + c + ' сообщ."></div>';
+      }).join('');
+      return '<div class="an-rowl"><span class="an-wd">' + d.weekdays[wd] + '</span><div class="an-cells">' + cells + '</div></div>';
+    }).join('');
+    box.innerHTML = '<div class="an-rowl"><span class="an-wd"></span><div class="an-cells">' + hours + '</div></div>' + rows +
+      '<div class="an-legend"><span>тише</span><i style="background:rgba(224,176,74,.12)"></i><i style="background:rgba(224,176,74,.4)"></i>' +
+      '<i style="background:rgba(224,176,74,.7)"></i><i style="background:rgba(224,176,74,1)"></i><span>жарче</span></div>';
+  }
+
+  async function loadHeatmap(gid) {
+    try {
+      var r = await fetch('/api/guild/' + gid + '/analytics/heatmap');
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      var d = await r.json();
+      if (window.renderSafe) window.renderSafe(function () { renderHeatmap(d); }); else renderHeatmap(d);
+    } catch (e) {
+      var box = $id('anHeatmap');
+      if (box) box.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Теплокарта не загрузилась</p></div>';
+    }
+  }
+
   async function load() {
     var sel = $id('guild-select');
     var gid = (sel && sel.value) || MAIN_GID;
@@ -377,6 +433,9 @@
       renderMembers(d.top_members || []);
       renderChannels(d.top_channels || []);
       renderCharts(d);
+      loadHeatmap(gid);
+      var csvBtn = $id('anCsvBtn');
+      if (csvBtn) csvBtn.href = '/api/guild/' + gid + '/analytics.csv';
       _loaded = true;
     } catch (e) {
       var mb = $id('top-members'); if (mb) mb.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"  ></i><p  >Не удалось загрузить</p></div>';
