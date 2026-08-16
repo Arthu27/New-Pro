@@ -42,6 +42,7 @@ MENU = [
         {'path': '/mod-insights', 'label': 'Мод-анализ', 'icon': 'fa-user-shield'},
         {'path': '/appeals', 'label': 'Апелляции', 'icon': 'fa-scale-balanced'},
         {'path': '/lockdown', 'label': 'Локдаун', 'icon': 'fa-house-lock'},
+        {'path': '/security', 'label': 'Безопасность', 'icon': 'fa-shield-virus'},
     ]},
     {'group': 'Участники', 'key': 'members', 'icon': 'fa-users', 'pages': [
         {'path': '/users', 'label': 'Пользователи', 'icon': 'fa-users'},
@@ -207,6 +208,7 @@ PAGE_COGS = {
     '/appeals': ('appeals',),
     '/lockdown': ('lockdown',),
     '/staff-shifts': ('staff_shifts',),
+    '/security': ('security',),
     '/gamification': ('gamification_cog',),
 }
 
