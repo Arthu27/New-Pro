@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block title %}Отчёт модерации — Панель Aether{% endblock %}
+{% block page_title %}Отчёт модерации{% endblock %}
+{% block content %}
+<style>
+.mr-kpis{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 18px;align-items:center}
+.mr-kpi{display:flex;align-items:center;gap:10px;background:var(--surface-2,rgba(255,255,255,.04));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:12px;padding:10px 16px}
+.mr-kpi i{color:var(--ac,#e0b04a);font-size:16px}
+.mr-kpi b{font-size:18px;color:var(--text-1,#fff)}
+.mr-kpi span{font-size:11.5px;color:var(--text-3,rgba(255,255,255,.45))}
+.mr-kpi.hot{border-color:rgba(231,76,60,.4)}
+.mr-kpi.hot i,.mr-kpi.hot b{color:#ff8a7a}
+.mr-ctl{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.mr-seg{display:inline-flex;border:1px solid var(--line-2,rgba(255,255,255,.12));border-radius:10px;overflow:hidden}
+.mr-seg button{background:none;border:none;color:var(--text-3,rgba(255,255,255,.5));padding:8px 14px;font-size:12.5px;font-weight:600;cursor:pointer}
+.mr-seg button.on{background:var(--ac,#e0b04a);color:#1a1a1a}
+.mr-exp{font-size:11.5px;font-weight:600;color:var(--ac,#e0b04a);text-decoration:none;border:1px solid var(--ac-line,rgba(224,176,74,.3));border-radius:8px;padding:7px 12px;white-space:nowrap;transition:background .15s}
+.mr-exp:hover{background:var(--ac-soft,rgba(224,176,74,.12))}
+.mr-grid{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;align-items:start}
+@media (max-width:960px){.mr-grid{grid-template-columns:1fr}}
+.mr-panel{background:var(--surface-2,rgba(255,255,255,.03));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:14px;padding:16px 18px;margin-bottom:16px}
+.mr-panel h3{margin:0 0 4px;font-size:15px;color:var(--text-1,#fff);display:flex;align-items:center;gap:9px}
+.mr-panel h3 i{color:var(--ac,#e0b04a)}
+.mr-sub{font-size:12px;color:var(--text-3,rgba(255,255,255,.45));margin-bottom:12px;line-height:1.5}
+.mr-row{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:8px 6px;border-bottom:1px dashed rgba(255,255,255,.07)}
+.mr-row:last-child{border-bottom:none}
+.mr-pos{font-weight:700;color:var(--ac,#e0b04a);width:26px;font-size:12px;font-variant-numeric:tabular-nums}
+.mr-name{font-size:13px;color:var(--text-2,rgba(255,255,255,.85))}
+.mr-cnt{font-size:12.5px;font-weight:700;color:var(--text-2,rgba(255,255,255,.8));font-variant-numeric:tabular-nums}
+.mr-cnt small{color:var(--text-3,rgba(255,255,255,.4));font-weight:500}
+.mr-chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--text-2,rgba(255,255,255,.7));background:rgba(255,255,255,.05);border:1px solid var(--line-2,rgba(255,255,255,.1));border-radius:999px;padding:2px 9px;margin:2px 4px 2px 0;white-space:nowrap}
+.mr-chip.hot{color:#ff8a7a;border-color:rgba(231,76,60,.3);background:rgba(231,76,60,.08)}
+.mr-bars{display:flex;align-items:flex-end;gap:2px;height:70px;padding-top:4px}
+.mr-bar{flex:1;background:linear-gradient(180deg,var(--ac-2,#f0cd7a),var(--ac,#e0b04a));border-radius:2px 2px 0 0;min-height:2px;opacity:.85}
+.mr-bar:hover{opacity:1}
+[data-theme="light"] .mr-row{border-bottom-color:rgba(0,0,0,.08)}
+</style>
+
+<div class="mr-kpis" id="mrKpis">
+  <div class="sk-card" style="width:170px;height:56px"></div>
+  <div class="sk-card" style="width:170px;height:56px"></div>
+  <div class="sk-card" style="width:170px;height:56px"></div>
+</div>
+
+<div class="mr-grid">
+  <div class="mr-panel">
+    <h3><i class="fas fa-user-shield"></i> Команда модераторов</h3>
+    <div class="mr-sub">Действий по журналу за выбранный период. Безымянные действия (без mod_name) не попадают в таблицу, но идут в общий зачёт.</div>
+    <div id="mrMods">
+      <div class="sk-row"></div>
+      <div class="sk-row" style="width:75%"></div>
+    </div>
+    <h3 style="margin-top:18px"><i class="fas fa-chart-column"></i> По дням</h3>
+    <div class="mr-bars" id="mrBars"></div>
+  </div>
+
+  <div>
+    <div class="mr-panel">
+      <h3><i class="fas fa-list-ol"></i> По типам</h3>
+      <div id="mrActions"><div class="sk-row" style="width:70%"></div></div>
+    </div>
+    <div class="mr-panel">
+      <h3><i class="fas fa-triangle-exclamation"></i> Рецидивисты</h3>
+      <div class="mr-sub">Участники с 3+ мод-действиями за период — на них стоит посмотреть внимательнее.</div>
+      <div id="mrRec"><div class="sk-row" style="width:65%"></div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+var DAYS = 7;
+var STATE = null;
+
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+function mrPlural(n, one, few, many) {
+  var m10 = n % 10, m100 = n % 100;
+  if (m100 >= 11 && m100 <= 19) return many;
+  if (m10 === 1) return one;
+  if (m10 >= 2 && m10 <= 4) return few;
+  return many;
+}
+
+function renderKpis(d) {
+  var hot = d.recidivists_total > 0;
+  document.getElementById('mrKpis').innerHTML =
+    '<div class="mr-kpi"><i class="fas fa-gavel"></i><div><b>' + d.total + '</b> <span>' + mrPlural(d.total, 'действие', 'действия', 'действий') + '</span></div></div>' +
+    '<div class="mr-kpi"><i class="fas fa-user-shield"></i><div><b>' + d.mods_total + '</b> <span>' + mrPlural(d.mods_total, 'модератор', 'модератора', 'модераторов') + '</span></div></div>' +
+    '<div class="mr-kpi' + (hot ? ' hot' : '') + '"><i class="fas fa-triangle-exclamation"></i><div><b>' + d.recidivists_total + '</b> <span>рецидивистов (3+)</span></div></div>' +
+    '<div class="mr-ctl"><div class="mr-seg">' +
+      [7, 14, 30].map(function (n) {
+        return '<button class="' + (n === d.days ? 'on' : '') + '" onclick="mrSetDays(' + n + ')">' + n + ' дн</button>';
+      }).join('') + '</div>' +
+      '<a class="mr-exp" id="mrCsv" href="/api/mod-report.csv?days=' + d.days + '" download><i class="fas fa-file-csv"></i> CSV</a></div>';
+}
+
+function renderMods(d) {
+  var box = document.getElementById('mrMods');
+  if (!d.per_mod.length) {
+    box.innerHTML = '<div class="empty-state"><i class="fas fa-user-shield"></i><p>Записей с именем модератора нет</p>' +
+      '<p class="empty-tip">События появятся, когда бот запишет мод-действия в журнал.</p></div>';
+  } else {
+    var share = d.per_mod.map(function (m) {
+      var pct = d.total ? Math.round(100 * m[1] / d.total) : 0;
+      return { name: m[0], cnt: m[1], pct: pct };
+    });
+    box.innerHTML = share.map(function (m, i) {
+      return '<div class="mr-row"><span class="mr-pos">' + (i + 1) + '</span>' +
+        '<span class="mr-name">' + esc(m.name) + '</span>' +
+        '<span class="mr-cnt">' + m.cnt + ' <small>· ' + m.pct + '%</small></span></div>';
+    }).join('');
+  }
+  var max = Math.max.apply(null, d.per_day.counts.concat([1]));
+  document.getElementById('mrBars').innerHTML = d.per_day.counts.map(function (c, i) {
+    var h = Math.round((c / max) * 62);
+    return '<div class="mr-bar" style="height:' + Math.max(h, c ? 3 : 2) + 'px" title="' +
+      esc(d.per_day.labels[i].slice(5).split('-').reverse().join('.')) + ' · ' + c + '"></div>';
+  }).join('');
+}
+
+function renderActions(d) {
+  document.getElementById('mrActions').innerHTML = d.by_action.length
+    ? d.by_action.map(function (a) { return '<span class="mr-chip">' + esc(a[0]) + ' · ' + a[1] + '</span>'; }).join('')
+    : '<div class="empty-state"><i class="fas fa-list-ol"></i><p>Типов нет</p></div>';
+}
+
+function renderRec(d) {
+  document.getElementById('mrRec').innerHTML = d.recidivists.length
+    ? d.recidivists.map(function (r) {
+        return '<span class="mr-chip hot"><i class="fas fa-repeat"></i> ' + esc(r.name) + ' · ' + r.count + '</span>';
+      }).join('')
+    : '<div class="empty-state"><i class="fas fa-face-smile"></i><p>Рецидивистов нет</p>' +
+      '<p class="empty-tip">За период ни у кого не набралось трёх действий.</p></div>';
+}
+
+function mrSetDays(n) {
+  DAYS = n;
+  mrLoad();
+}
+
+async function mrLoad() {
+  var r = await fetch('/api/mod-report?days=' + DAYS);
+  var d = await r.json();
+  if (!d.success) return;
+  STATE = d;
+  var render = function () { renderKpis(d); renderMods(d); renderActions(d); renderRec(d); };
+  if (window.renderSafe) window.renderSafe(render); else render();
+}
+
+mrLoad();
+if (typeof window.setLiveRefresh === 'function') window.setLiveRefresh(mrLoad, 30000);
+</script>
+{% endblock %}
