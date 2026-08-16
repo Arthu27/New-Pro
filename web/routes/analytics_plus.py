@@ -37,6 +37,20 @@ def _parse_ts(ts):
     return dt
 
 
+def _read_audit(guild_id):
+    """Сырые события сервера из audit_log.json; битый/отсутствующий файл -> []."""
+    gid = str(guild_id)
+    if not os.path.exists(_AUDIT_FILE):
+        return []
+    try:
+        with open(_AUDIT_FILE, 'r', encoding='utf-8') as fh:
+            data = json.load(fh)
+    except (OSError, json.JSONDecodeError) as _ex:
+        _log.debug("analytics_plus: audit прочитать не удалось: %s", _ex)
+        return []
+    return [ev for ev in (data.get(gid, []) or []) if isinstance(ev, dict)]
+
+
 def load_message_events(guild_id):
     """События сообщений сервера: [(автор, канал, datetime|None)].
 
@@ -45,25 +59,16 @@ def load_message_events(guild_id):
     """
     gid = str(guild_id)
     events = []
-    if os.path.exists(_AUDIT_FILE):
-        try:
-            with open(_AUDIT_FILE, 'r', encoding='utf-8') as fh:
-                data = json.load(fh)
-        except (OSError, json.JSONDecodeError) as _ex:
-            _log.debug("analytics_plus: audit прочитать не удалось: %s", _ex)
-            data = {}
-        for ev in data.get(gid, []) or []:
-            if not isinstance(ev, dict):
-                continue
-            if (ev.get('category') or '').lower() != 'message':
-                continue
-            if (ev.get('action') or '').lower() != 'message написано':
-                continue
-            events.append((
-                ev.get('user_name') or ev.get('user_id', '?'),
-                ev.get('channel') or ev.get('channel_name', '?'),
-                _parse_ts(ev.get('timestamp')),
-            ))
+    for ev in _read_audit(gid):
+        if (ev.get('category') or '').lower() != 'message':
+            continue
+        if (ev.get('action') or '').lower() != 'message написано':
+            continue
+        events.append((
+            ev.get('user_name') or ev.get('user_id', '?'),
+            ev.get('channel') or ev.get('channel_name', '?'),
+            _parse_ts(ev.get('timestamp')),
+        ))
     if not events:
         log_file = f'data/message_logs_{gid}.json'
         if os.path.exists(log_file):
@@ -128,24 +133,117 @@ def top_counter(events, idx, limit=20):
 
 def load_member_events(guild_id):
     """Приходы/уходы участников из audit_log: [(действие, datetime|None)]."""
-    gid = str(guild_id)
     out = []
-    if not os.path.exists(_AUDIT_FILE):
-        return out
-    try:
-        with open(_AUDIT_FILE, 'r', encoding='utf-8') as fh:
-            data = json.load(fh)
-    except (OSError, json.JSONDecodeError) as _ex:
-        _log.debug("analytics_plus: audit для member-flow не прочитан: %s", _ex)
-        return out
-    for ev in data.get(gid, []) or []:
-        if not isinstance(ev, dict) or ev.get('category') != 'member':
-            continue
+    for ev in _read_audit(guild_id):
         action = ev.get('action')
+        if ev.get('category') != 'member':
+            continue
         if action not in ('Участник вошёл', 'Участник вышел'):
             continue
         out.append((action, _parse_ts(ev.get('timestamp'))))
     return out
+
+
+def mod_load(guild_id, days=30):
+    """Мод-нагрузка: действия по дням, по модераторам и по типам."""
+    per_day = Counter()
+    by_mod = Counter()
+    by_action = Counter()
+    for ev in _read_audit(guild_id):
+        if ev.get('category') != 'mod':
+            continue
+        dt = _parse_ts(ev.get('timestamp'))
+        if dt is not None:
+            per_day[dt.date().isoformat()] += 1
+        mod_name = str(ev.get('mod_name') or '?')
+        if mod_name != '?':
+            by_mod[mod_name] += 1
+        by_action[str(ev.get('action') or '?')] += 1
+    today = date.today()
+    labels = [(today - timedelta(days=i)).isoformat() for i in range(days - 1, -1, -1)]
+    return {
+        'labels': labels,
+        'counts': [per_day.get(lb, 0) for lb in labels],
+        'mods': by_mod.most_common(6),
+        'actions': by_action.most_common(8),
+        'total': sum(by_action.values()),
+    }
+
+
+def voice_pulse(guild_id):
+    """Пульс войса: входы по дням недели, топы каналов. Честно: события, не минуты."""
+    per_wd = [0] * 7
+    channels = Counter()
+    users = set()
+    total = 0
+    for ev in _read_audit(guild_id):
+        if ev.get('category') != 'voice' or ev.get('action') != 'Зашёл в голосовой':
+            continue
+        total += 1
+        dt = _parse_ts(ev.get('timestamp'))
+        if dt is not None:
+            per_wd[dt.weekday()] += 1
+        ch = str(ev.get('channel') or '?')
+        if ch != '?':
+            channels[ch] += 1
+        user = str(ev.get('user_name') or '')
+        if user:
+            users.add(user)
+    return {
+        'weekdays': per_wd,
+        'weekday_labels': list(_WEEKDAYS),
+        'top_channels': channels.most_common(6),
+        'total_joins': total,
+        'unique_users': len(users),
+    }
+
+
+def invite_leaders(guild_id, limit=6):
+    """Лидеры по созданным инвайтам (аудит-события 'Приглашение создано')."""
+    leaders = Counter()
+    total = 0
+    for ev in _read_audit(guild_id):
+        if ev.get('category') != 'invite' or ev.get('action') != 'Приглашение создано':
+            continue
+        total += 1
+        name = str(ev.get('user_name') or '?')
+        if name != '?':
+            leaders[name] += 1
+    return {'leaders': leaders.most_common(limit), 'total': total}
+
+
+def analytics_full_csv(guild_id, days=30):
+    """Полный отчёт одним файлом: сообщения, участники, каналы, поток, модерация."""
+    events = load_message_events(guild_id)
+    buf = io.StringIO()
+    w = csv.writer(buf, delimiter=';')
+    w.writerow(['Дата', 'Сообщений'])
+    for day, cnt in daily_series(events, days=days):
+        w.writerow([day, cnt])
+    w.writerow([])
+    w.writerow(['Участник', 'Сообщений'])
+    for name, cnt in top_counter(events, 0):
+        w.writerow([name, cnt])
+    w.writerow([])
+    w.writerow(['Канал', 'Сообщений'])
+    for name, cnt in top_counter(events, 1):
+        w.writerow([name, cnt])
+    w.writerow([])
+    w.writerow(['Дата', 'Пришло', 'Ушло'])
+    flow = member_flow(guild_id, days=days)
+    today = date.today()
+    iso_labels = [(today - timedelta(days=i)).isoformat() for i in range(days - 1, -1, -1)]
+    for i, lb in enumerate(iso_labels):
+        w.writerow([lb, flow['joins'][i], flow['leaves'][i]])
+    w.writerow([])
+    w.writerow(['Мод-действие', 'Кол-во'])
+    for action, cnt in mod_load(guild_id, days=days)['actions']:
+        w.writerow([action, cnt])
+    w.writerow([])
+    w.writerow(['Инвайтер', 'Создано ссылок'])
+    for name, cnt in invite_leaders(guild_id)['leaders']:
+        w.writerow([name, cnt])
+    return buf.getvalue()
 
 
 def member_flow(guild_id, days=14):
@@ -323,3 +421,38 @@ def register(ctx):
             'today_count': counts_ser.get(today_iso, 0),
             'today_rank': rank,
         })
+
+    @app.route('/api/guild/<guild_id>/analytics/mod-load')
+    @login_required
+    @role_required('mod')
+    def api_guild_mod_load(guild_id):
+        body = mod_load(guild_id)
+        body['success'] = True
+        return jsonify(body)
+
+    @app.route('/api/guild/<guild_id>/analytics/voice-pulse')
+    @login_required
+    @role_required('mod')
+    def api_guild_voice_pulse(guild_id):
+        body = voice_pulse(guild_id)
+        body['success'] = True
+        return jsonify(body)
+
+    @app.route('/api/guild/<guild_id>/analytics/invite-leaders')
+    @login_required
+    @role_required('mod')
+    def api_guild_invite_leaders(guild_id):
+        body = invite_leaders(guild_id)
+        body['success'] = True
+        return jsonify(body)
+
+    @app.route('/api/guild/<guild_id>/analytics_full.csv')
+    @login_required
+    @role_required('mod')
+    def api_guild_analytics_full_csv(guild_id):
+        filename = f'analytics_full_{guild_id}_{date.today().isoformat()}.csv'
+        return Response(
+            '﻿' + analytics_full_csv(guild_id),
+            mimetype='text/csv; charset=utf-8',
+            headers={'Content-Disposition': f'attachment; filename="{filename}"'},
+        )

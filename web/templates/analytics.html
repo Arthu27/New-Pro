@@ -186,7 +186,7 @@
   </div>
 
   <div class="section">
-    <h2 style="display:flex;align-items:center;gap:10px"><i class="fas fa-chart-bar"></i> Сообщений в день (последние 7 дней)<a id="anCsvBtn" class="an-csv" href="#" download><i class="fas fa-file-csv"></i> CSV · 30 дней</a></h2>
+    <h2 style="display:flex;align-items:center;gap:10px"><i class="fas fa-chart-bar"></i> Сообщений в день (последние 7 дней)<a id="anCsvBtn" class="an-csv" href="#" download><i class="fas fa-file-csv"></i> CSV · 30 дней</a><a id="anCsvFullBtn" class="an-csv" href="#" download style="margin-left:8px"><i class="fas fa-file-lines"></i> Полный отчёт</a></h2>
     <div   style="height: 240px; position: relative;">
       <canvas id="msgChart"></canvas>
     </div>
@@ -201,6 +201,7 @@
 
   <div class="section">
     <h2 style="display:flex;align-items:center;gap:10px"><i class="fas fa-right-left"></i> Приходы и уходы (14 дней)<span id="anFlowNet" class="an-peak"></span></h2>
+    <div class="an-recs" id="anInvites" style="margin:0 0 10px"></div>
     <div   style="height: 220px; position: relative;">
       <canvas id="flowChart"></canvas>
     </div>
@@ -210,6 +211,18 @@
     <h2 style="display:flex;align-items:center;gap:10px"><i class="fas fa-fire"></i> Теплокарта активности<span id="anHeatPeak" class="an-peak"></span></h2>
     <div id="anHeatmap"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Загрузка...</p></div></div>
   </div>
+  <div class="an-pair">
+    <div class="section">
+      <h2><i class="fas fa-gavel"></i> Модерация за 30 дней</h2>
+      <div id="anModLoad"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Загрузка...</p></div></div>
+    </div>
+    <div class="section">
+      <h2><i class="fas fa-microphone-lines"></i> Голосовой пульс</h2>
+      <div class="an-subnote">Считаются входы в войс (события), не минуты — минуты есть на странице «Голосовая».</div>
+      <div id="anVoicePulse"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Загрузка...</p></div></div>
+    </div>
+  </div>
+
   <div class="section">
     <h2><i class="fas fa-magnifying-glass-chart"></i> Детализация по каналу</h2>
     <div class="an-drillbar">
@@ -243,6 +256,9 @@
 .an-rechip{font-size:11.5px;color:var(--text-2,rgba(255,255,255,.75));background:rgba(255,255,255,.05);border:1px solid var(--line-2,rgba(255,255,255,.1));border-radius:999px;padding:3px 11px;font-variant-numeric:tabular-nums}
 .an-rechip i{color:var(--ac,#e0b04a)}
 .an-rechip.today{color:var(--ac-2,#f0cd7a);border-color:var(--ac-line,rgba(224,176,74,.3))}
+.an-pair{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:960px){.an-pair{grid-template-columns:1fr}}
+.an-subnote{font-size:11.5px;color:var(--text-3,rgba(255,255,255,.4));margin:-4px 0 10px}
 .an-drillbar{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
 .an-select{background:rgba(0,0,0,.25);border:1px solid var(--line-2,rgba(255,255,255,.1));border-radius:10px;padding:8px 12px;color:var(--text-1,#fff);font-size:13px;outline:none}
 .an-select option{background:#1c1f27;color:#e8e8e8}
@@ -528,6 +544,72 @@
     } catch (e) { /* чипы недели не критичны */ }
   }
 
+  function barsRow(pairs, max) {
+    return '<div class="an-bars">' + pairs.map(function (x) {
+      var h = Math.round((x[1] / max) * 90);
+      return '<div class="an-bar" style="height:' + Math.max(h, x[1] ? 3 : 2) + 'px" title="' + esc(x[0]) + ' · ' + x[1] + '"></div>';
+    }).join('') + '</div>';
+  }
+
+  function renderModLoad(d) {
+    var box = $id('anModLoad');
+    if (!d) return;
+    if (!d.total) {
+      box.innerHTML = '<div class="empty-state"><i class="fas fa-gavel"></i><p>Мод-действий не было</p></div>';
+      return;
+    }
+    var max = Math.max.apply(null, d.counts.concat([1]));
+    var pairs = d.labels.map(function (lb, i) { return [lb.slice(5).split('-').reverse().join('.'), d.counts[i]]; });
+    var mods = d.mods.map(function (m) {
+      return '<span class="an-rechip"><i class="fas fa-user-shield"></i> ' + esc(m[0]) + ' · ' + m[1] + '</span>';
+    }).join('');
+    var acts = d.actions.map(function (a) {
+      return '<span class="an-rechip">' + esc(a[0]) + ' · ' + a[1] + '</span>';
+    }).join('');
+    box.innerHTML = '<div class="an-drillmeta" style="margin-bottom:6px">всего ' + d.total + '</div>' +
+      barsRow(pairs, max) +
+      (mods ? '<div class="an-recs">' + mods + '</div>' : '') +
+      '<div class="an-recs">' + acts + '</div>';
+  }
+
+  function renderVoicePulse(d) {
+    var box = $id('anVoicePulse');
+    if (!d) return;
+    if (!d.total_joins) {
+      box.innerHTML = '<div class="empty-state"><i class="fas fa-microphone-lines"></i><p>Войс-событий не записано</p></div>';
+      return;
+    }
+    var max = Math.max.apply(null, d.weekdays.concat([1]));
+    var pairs = d.weekdays.map(function (c, i) { return [d.weekday_labels[i], c]; });
+    var chans = d.top_channels.map(function (c) {
+      return '<span class="an-rechip"><i class="fas fa-volume-high"></i> ' + esc(c[0]) + ' · ' + c[1] + '</span>';
+    }).join('');
+    box.innerHTML = '<div class="an-drillmeta" style="margin-bottom:6px">' + d.total_joins +
+      ' входов · ' + d.unique_users + ' участников</div>' + barsRow(pairs, max) +
+      '<div class="an-recs">' + chans + '</div>';
+  }
+
+  function renderInvites(d) {
+    var box = $id('anInvites');
+    if (!box) return;
+    if (!d || !d.leaders || !d.leaders.length) { box.innerHTML = ''; return; }
+    box.innerHTML = '<span class="an-rechip today"><i class="fas fa-link"></i> инвайты: ' + d.total + '</span>' +
+      d.leaders.map(function (l) {
+        return '<span class="an-rechip">' + esc(l[0]) + ' · ' + l[1] + '</span>';
+      }).join('');
+  }
+
+  async function loadExtras(gid) {
+    try {
+      var r1 = await fetch('/api/guild/' + gid + '/analytics/mod-load');
+      if (r1.ok) { var d1 = await r1.json(); window.renderSafe ? window.renderSafe(function () { renderModLoad(d1); }) : renderModLoad(d1); }
+      var r2 = await fetch('/api/guild/' + gid + '/analytics/voice-pulse');
+      if (r2.ok) { var d2 = await r2.json(); window.renderSafe ? window.renderSafe(function () { renderVoicePulse(d2); }) : renderVoicePulse(d2); }
+      var r3 = await fetch('/api/guild/' + gid + '/analytics/invite-leaders');
+      if (r3.ok) { var d3 = await r3.json(); window.renderSafe ? window.renderSafe(function () { renderInvites(d3); }) : renderInvites(d3); }
+    } catch (e) { /* доп. блоки не критичны */ }
+  }
+
   function renderRecords(d) {
     var box = $id('anRecords');
     if (!box) return;
@@ -617,6 +699,9 @@
       }
       var csvBtn = $id('anCsvBtn');
       if (csvBtn) csvBtn.href = '/api/guild/' + gid + '/analytics.csv';
+      var csvFull = $id('anCsvFullBtn');
+      if (csvFull) csvFull.href = '/api/guild/' + gid + '/analytics_full.csv';
+      loadExtras(gid);
       _loaded = true;
     } catch (e) {
       var mb = $id('top-members'); if (mb) mb.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"  ></i><p  >Не удалось загрузить</p></div>';

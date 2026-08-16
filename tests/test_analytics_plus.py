@@ -249,6 +249,74 @@ tpl = open(os.path.join(ROOT, 'web/templates/analytics.html'), encoding='utf-8')
 check('anDrillSel' in tpl and 'channel-drill' in tpl, 'дрилл смонтирован')
 check('anRecords' in tpl and 'analytics/records' in tpl, 'рекорды смонтированы')
 
+print('== 8. Мод-нагрузка, войс-пульс, инвайты, полный CSV (#17-#20) ==')
+with open('data/audit_log.json', encoding='utf-8') as fh:
+    audit3 = json.load(fh)
+audit3['777'].extend([
+    {'category': 'mod', 'action': 'Бан', 'mod_name': 'Старший Мод',
+     'timestamp': (today - timedelta(days=2)).isoformat() + 'T10:00:00'},
+    {'category': 'mod', 'action': 'Бан', 'mod_name': 'Старший Мод',
+     'timestamp': (today - timedelta(days=5)).isoformat() + 'T11:00:00'},
+    {'category': 'mod', 'action': 'Кик', 'mod_name': 'Старший Мод',
+     'timestamp': d_t + 'T12:00:00'},
+    {'category': 'mod', 'action': 'Мут', 'mod_name': None, 'timestamp': d_t + 'T13:00:00'},
+    {'category': 'voice', 'action': 'Зашёл в голосовой', 'user_name': 'Мира',
+     'channel': 'Общий войс', 'timestamp': d_t + 'T20:00:00'},
+    {'category': 'voice', 'action': 'Зашёл в голосовой', 'user_name': 'Гром',
+     'channel': 'Игровой', 'timestamp': d_y + 'T21:00:00'},
+    {'category': 'voice', 'action': 'Вышел из голосового', 'user_name': 'Мира',
+     'channel': 'Общий войс', 'timestamp': d_t + 'T22:00:00'},
+    {'category': 'invite', 'action': 'Приглашение создано', 'user_name': 'Мира', 'code': 'aa'},
+    {'category': 'invite', 'action': 'Приглашение создано', 'user_name': 'Мира', 'code': 'bb'},
+    {'category': 'invite', 'action': 'Приглашение создано', 'user_name': 'Гром', 'code': 'cc'},
+])
+with open('data/audit_log.json', 'w', encoding='utf-8') as fh:
+    json.dump(audit3, fh)
+
+ml = AP.mod_load(777, days=30)
+check(ml['total'] == 4, 'мод-действий всего = 4')
+check(ml['mods'][0] == ('Старший Мод', 3), 'топ модератора (безымянное не считается)')
+acts = dict(ml['actions'])
+check(acts.get('Бан') == 2 and acts.get('Кик') == 1 and acts.get('Мут') == 1, 'по типам действий')
+check(len(ml['labels']) == 30 and ml['counts'][-1] == 2, 'ряд по дням (сегодня 2)')
+check(AP.mod_load(424242)['total'] == 0 and AP.mod_load(424242)['mods'] == [], 'пустой сервер модов')
+
+vp = AP.voice_pulse(777)
+check(vp['total_joins'] == 2 and vp['unique_users'] == 2, 'войс: только входы, 2 участника')
+check(sum(vp['weekdays']) == 2, 'все входы попали в дни недели')
+check({c for c, _n in vp['top_channels']} == {'Общий войс', 'Игровой'}, 'топ каналов войса')
+check(AP.voice_pulse(424242)['total_joins'] == 0, 'пустой сервер войса')
+
+il = AP.invite_leaders(777)
+check(il['total'] == 3 and il['leaders'][0] == ('Мира', 2), 'инвайт-лидеры')
+check(AP.invite_leaders(424242)['leaders'] == [], 'пустой сервер инвайтов')
+
+full = AP.analytics_full_csv(777, days=30)
+check('Мод-действие;Кол-во' in full and 'Бан;2' in full, 'полный CSV: секция модерации')
+check('Инвайтер;Создано ссылок' in full and 'Мира;2' in full, 'полный CSV: инвайты')
+check('Дата;Пришло;Ушло' in full, 'полный CSV: поток участников')
+check('Участник;Сообщений' in full and 'Канал;Сообщений' in full, 'полный CSV: базовые секции')
+
+for path in ('/api/guild/777/analytics/mod-load', '/api/guild/777/analytics/voice-pulse',
+             '/api/guild/777/analytics/invite-leaders', '/api/guild/777/analytics_full.csv'):
+    login('uye')
+    check(client.get(path).status_code == 403, 'uye нельзя ' + path.split('/')[-1])
+login('mod')
+check(client.get('/api/guild/777/analytics/mod-load').get_json()['total'] == 4, 'mod читает мод-нагрузку')
+check(client.get('/api/guild/777/analytics/voice-pulse').get_json()['total_joins'] == 2,
+      'mod читает войс-пульс')
+check(client.get('/api/guild/777/analytics/invite-leaders').get_json()['total'] == 3,
+      'mod читает инвайты')
+r = client.get('/api/guild/777/analytics_full.csv')
+check(r.status_code == 200 and 'analytics_full_777_' in r.headers.get('Content-Disposition', ''),
+      'полный CSV скачивается')
+
+tpl = open(os.path.join(ROOT, 'web/templates/analytics.html'), encoding='utf-8').read()
+check('anModLoad' in tpl and '/analytics/mod-load' in tpl, 'мод-нагрузка смонтирована')
+check('anVoicePulse' in tpl and 'voice-pulse' in tpl, 'войс-пульс смонтирован')
+check('anInvites' in tpl and 'invite-leaders' in tpl, 'инвайт-лидеры смонтированы')
+check('anCsvFullBtn' in tpl and 'analytics_full.csv' in tpl, 'кнопка полного отчёта смонтирована')
+
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)
 sys.exit(1 if FAIL else 0)
