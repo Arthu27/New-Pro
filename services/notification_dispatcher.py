@@ -48,6 +48,7 @@ EVENTS = {
     'social': ('event_social', 'События и поиски: уборка из панели', '🎉'),
     'anime_daily': ('event_anime_daily', 'Аниме дня: настройки рассылки', '📺'),
     'j2c': ('event_j2c', 'Комнаты J2C: настройки и уборка', '🔊'),
+    'gamification': ('event_gamification', 'Геймификация: корректировка очков', '🏆'),
     'test': (None, 'Тестовое уведомление', '🧪'),
 }
 
@@ -66,6 +67,7 @@ EVENT_LINKS = {
     'social': '/social',
     'anime_daily': '/anime-daily',
     'j2c': '/join-to-create',
+    'gamification': '/gamification',
     'test': '/notifications',
 }
 
@@ -86,6 +88,7 @@ DEFAULT_SETTINGS = {
     'event_social': True,
     'event_anime_daily': True,
     'event_j2c': True,
+    'event_gamification': True,
     'discord_channel': '',
     'webhook_url': '',
     'smtp_server': '',

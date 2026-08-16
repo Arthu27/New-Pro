@@ -101,6 +101,10 @@
           <input type="checkbox" id="event-j2c" checked style="width: 20px; height: 20px;">
           <span>Комнаты J2C: настройки и уборка</span>
         </label>
+        <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
+          <input type="checkbox" id="event-gamification" checked style="width: 20px; height: 20px;">
+          <span>Геймификация: корректировка очков</span>
+        </label>
       </div>
     </div>
   </div>
@@ -214,6 +218,7 @@ async function loadNotificationSettings() {
       document.getElementById('event-social').checked = settings.event_social !== false;
       document.getElementById('event-anime-daily').checked = settings.event_anime_daily !== false;
       document.getElementById('event-j2c').checked = settings.event_j2c !== false;
+  document.getElementById('event-gamification').checked = settings.event_gamification !== false;
 
       // Discord
       window._savedNotifChannel = settings.discord_channel || '';
@@ -355,6 +360,7 @@ async function saveNotificationSettings() {
     event_social: document.getElementById('event-social').checked,
     event_anime_daily: document.getElementById('event-anime-daily').checked,
     event_j2c: document.getElementById('event-j2c').checked,
+    event_gamification: document.getElementById('event-gamification').checked,
     discord_channel: document.getElementById('discord-channel').value,
     webhook_url: document.getElementById('webhook-url').value,
     smtp_server: document.getElementById('smtp-server').value,
