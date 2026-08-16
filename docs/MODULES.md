@@ -13,7 +13,7 @@
 | `health` | Сервер состояние skoru + channel основанный на статистика |
 | `help` | Help Cog — Luxury Dark-Gold Dashboard (Pillow) |
 
-## Модерация (MOD_ONLY) — 32
+## Модерация (MOD_ONLY) — 33
 
 | Модуль | Что делает |
 | --- | --- |
@@ -44,13 +44,14 @@
 | `rejoin_roles` | Aether — Re-Join Roles (автоматическое восстановление ролей при повторном входе) |
 | `report_cog` | Report Cog |
 | `security` | Aether Security Cog |
+| `staff_shifts` | Стафф-смены (Staff Shifts) |
 | `tag_jail` | Tag Jail — система «запрещённый тег». |
 | `temp_moderation` | Временная Модерация Cog |
 | `ticket` | ticket |
 | `verification` | Aether — Верификация — режим наблюдателя / opt-in |
 | `warnings` | Warnings Cog |
 
-## Комьюнити и развлечения — 65
+## Комьюнити и развлечения — 64
 
 | Модуль | Что делает |
 | --- | --- |
@@ -106,7 +107,6 @@
 | `social` | Aether Social Cog |
 | `staff_apply` | Staff Apply — Набор в команду сервера |
 | `staff_rating` | Рейтинг стаффа (Staff Rating Cog) |
-| `staff_shifts` | Стафф-смены (Staff Shifts) |
 | `staff_stats` | Staff Stats — таблица активности модераторов. |
 | `starboard` | Starboard — зал славы (звёздная доска). |
 | `stats` | stats |
