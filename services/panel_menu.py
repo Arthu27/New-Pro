@@ -114,6 +114,7 @@ MENU = [
         {'path': '/tops', 'label': 'Топ сервера', 'icon': 'fa-ranking-star'},
         {'path': '/join-to-create', 'label': 'Комнаты J2C', 'icon': 'fa-door-open'},
         {'path': '/staff-rating', 'label': 'Оценки персонала', 'icon': 'fa-star-half-stroke'},
+        {'path': '/staff-shifts', 'label': 'Смены персонала', 'icon': 'fa-calendar-week'},
         {'path': '/gamification', 'label': 'Геймификация', 'icon': 'fa-trophy'},
         {'path': '/scheduled-messages', 'label': 'Расписание', 'icon': 'fa-clock'},
     ]},
@@ -205,6 +206,7 @@ PAGE_COGS = {
     '/recap': ('recap',),
     '/appeals': ('appeals',),
     '/lockdown': ('lockdown',),
+    '/staff-shifts': ('staff_shifts',),
     '/gamification': ('gamification_cog',),
 }
 

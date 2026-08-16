@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+{% block title %}Смены персонала — Панель Aether{% endblock %}
+{% block page_title %}Смены персонала{% endblock %}
+{% block content %}
+<style>
+.ss-kpis{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 16px}
+.ss-kpi{display:flex;align-items:center;gap:10px;background:var(--surface-2,rgba(255,255,255,.04));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:12px;padding:10px 16px}
+.ss-kpi i{color:var(--ac,#e0b04a);font-size:16px}
+.ss-kpi b{font-size:17px;color:var(--text-1,#fff)}
+.ss-kpi span{font-size:11.5px;color:var(--text-3,rgba(255,255,255,.45))}
+.ss-week{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin-bottom:16px}
+@media (max-width:1100px){.ss-week{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:640px){.ss-week{grid-template-columns:1fr}}
+.ss-day{background:var(--surface-2,rgba(255,255,255,.03));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:12px;padding:11px 12px;min-height:90px}
+.ss-day h4{margin:0 0 8px;font-size:12px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--text-3,rgba(255,255,255,.5))}
+.ss-day.today h4{color:var(--ac,#e0b04a)}
+.ss-slot{border:1px solid var(--line-2,rgba(255,255,255,.1));border-left:3px solid var(--ac,#e0b04a);border-radius:9px;padding:7px 9px;margin-bottom:7px;font-size:12px}
+.ss-slot .t{font-weight:800;color:var(--text-1,#fff);font-variant-numeric:tabular-nums}
+.ss-slot .w{color:var(--text-2,rgba(255,255,255,.8));margin-top:2px;word-break:break-word}
+.ss-slot .x{float:right;border:none;background:transparent;color:var(--text-3,rgba(255,255,255,.4));cursor:pointer;font-size:11px;padding:0 2px}
+.ss-slot .x:hover{color:#ff8a7a}
+.ss-empty{font-size:11px;color:var(--text-3,rgba(255,255,255,.35))}
+.ss-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+@media (max-width:960px){.ss-grid{grid-template-columns:1fr}}
+.ss-panel{background:var(--surface-2,rgba(255,255,255,.03));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:14px;padding:16px 18px;margin-bottom:16px}
+.ss-panel h3{margin:0 0 4px;font-size:15px;color:var(--text-1,#fff);display:flex;align-items:center;gap:9px}
+.ss-panel h3 i{color:var(--ac,#e0b04a)}
+.ss-sub{font-size:12px;color:var(--text-3,rgba(255,255,255,.45));margin-bottom:12px;line-height:1.5}
+.ss-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+.ss-inp{flex:1;min-width:130px;background:var(--surface-2,rgba(255,255,255,.05));border:1px solid var(--line-2,rgba(255,255,255,.12));border-radius:10px;padding:9px 12px;color:var(--text-1,#fff);font-size:13px;outline:none}
+.ss-inp:focus{border-color:var(--ac,#e0b04a)}
+.ss-sel{background:var(--surface-2,rgba(255,255,255,.05));border:1px solid var(--line-2,rgba(255,255,255,.12));border-radius:10px;padding:9px 12px;color:var(--text-1,#fff);font-size:13px;outline:none}
+.ss-btn{display:inline-flex;align-items:center;gap:7px;background:var(--ac,#e0b04a);color:#1a1a1a;border:none;border-radius:10px;padding:9px 15px;font-size:12.5px;font-weight:700;cursor:pointer}
+.ss-btn:hover{filter:brightness(1.08)}
+.ss-btn.ghost{background:transparent;color:var(--ac,#e0b04a);border:1px solid var(--ac-line,rgba(224,176,74,.35))}
+.ss-msg{font-size:12px;padding:4px 2px;display:none}
+.ss-msg.ok{color:#4ade80}
+.ss-msg.err{color:#ff8a7a}
+.ss-duty{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.ss-du{flex:1;min-width:200px;border:1px solid var(--line-2,rgba(255,255,255,.1));border-radius:12px;padding:11px 14px}
+.ss-du.live{border-color:rgba(74,222,128,.4);background:rgba(74,222,128,.06)}
+.ss-du .lab{font-size:10.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--text-3,rgba(255,255,255,.45));margin-bottom:5px}
+.ss-du .v{font-size:14px;font-weight:800;color:var(--text-1,#fff)}
+.ss-du small{font-size:11.5px;color:var(--text-3,rgba(255,255,255,.5))}
+.ss-wl{display:flex;justify-content:space-between;gap:8px;padding:8px 4px;border-bottom:1px dashed rgba(255,255,255,.07);font-size:12.5px;color:var(--text-2,rgba(255,255,255,.85))}
+.ss-wl:last-child{border-bottom:none}
+.ss-wl b{color:var(--ac,#e0b04a);font-variant-numeric:tabular-nums}
+.ss-raw{font-family:monospace;font-size:11.5px;color:var(--text-3,rgba(255,255,255,.55));white-space:pre-wrap;word-break:break-word;background:rgba(255,255,255,.03);border-radius:10px;padding:10px 12px;line-height:1.6}
+[data-theme="light"] .ss-wl{border-bottom-color:rgba(0,0,0,.08)}
+</style>
+
+<div class="ss-kpis" id="ssKpis">
+  <div class="sk-card" style="width:160px;height:56px"></div>
+  <div class="sk-card" style="width:160px;height:56px"></div>
+  <div class="sk-card" style="width:160px;height:56px"></div>
+  <div class="sk-card" style="width:160px;height:56px"></div>
+</div>
+
+<div class="ss-duty" id="ssDuty"></div>
+
+<div class="ss-week" id="ssWeek"></div>
+
+<div class="ss-grid">
+  <div>
+    <div class="ss-panel" id="ssAddPanel" style="display:none">
+      <h3><i class="fas fa-user-plus"></i> Назначить смену</h3>
+      <div class="ss-sub">Как «/дежурства назначить»: ID участника, день, промежуток ЧЧ:ММ-ЧЧ:ММ (можно через полночь — 22:00-02:00).</div>
+      <div class="ss-row">
+        <input class="ss-inp" id="ssUid" placeholder="ID участника">
+        <select class="ss-sel" id="ssDay">
+          {% for d in days %}<option value="{{ loop.index0 }}">{{ d }}</option>{% endfor %}
+        </select>
+        <input class="ss-inp" id="ssTime" placeholder="18:00-22:00" style="max-width:150px">
+      </div>
+      <button class="ss-btn" id="ssAdd"><i class="fas fa-plus"></i> Назначить</button>
+      <div class="ss-msg" id="ssAddMsg"></div>
+    </div>
+    <div class="ss-panel" id="ssSetPanel" style="display:none">
+      <h3><i class="fas fa-gear"></i> Напоминания</h3>
+      <div class="ss-sub">Канал анонсов и пояс (правило кога: от -12 до +14, МСК = 3). Пустой канал — расписание работает молча.</div>
+      <div class="ss-row">
+        <input class="ss-inp" id="ssChan" placeholder="ID канала (пусто — молча)">
+        <input class="ss-inp" id="ssTz" placeholder="пояс, напр. 3" style="max-width:110px">
+        <button class="ss-btn ghost" id="ssSave"><i class="fas fa-floppy-disk"></i> Сохранить</button>
+      </div>
+      <div class="ss-msg" id="ssSetMsg"></div>
+    </div>
+  </div>
+  <div>
+    <div class="ss-panel">
+      <h3><i class="fas fa-scale-balanced"></i> Нагрузка недели</h3>
+      <div class="ss-sub">Часов дежурства на человека — честно посчитано из смен (перенос через полночь учтён).</div>
+      <div id="ssWork"></div>
+      <div style="margin-top:10px"><button class="ss-btn ghost" id="ssCsv"><i class="fas fa-file-csv"></i> Выгрузить расписание</button></div>
+    </div>
+    <div class="ss-panel">
+      <h3><i class="fas fa-terminal"></i> Как отвечает бот</h3>
+      <div class="ss-sub">Строка недели из самой команды /дежурства — с дискордовскими упоминаниями, как есть.</div>
+      <div class="ss-raw" id="ssRaw"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+var GID = '{{ guild_id }}';
+var API = '/api/guild/' + GID + '/shiftboard';
+var CAN_EDIT = {{ 'true' if can_edit else 'false' }};
+var NAMES = {};
+
+function kpi(icon, num, label) {
+  return '<div class="ss-kpi"><i class="fas ' + icon + '"></i><div><b>' + num + '</b> <span>' + esc(label) + '</span></div></div>';
+}
+
+function fmtLeft(sec) {
+  var h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60);
+  if (h >= 24) { var d = Math.floor(h / 24); return d + ' д ' + (h % 24) + ' ч'; }
+  return h ? h + ' ч ' + m + ' м' : m + ' мин';
+}
+
+function who(row) { return row.name ? esc(row.name) : 'ID ' + esc(row.user_id); }
+
+function load() {
+  fetch(API + '/overview').then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) { return; }
+    var s = d.stats;
+    document.getElementById('ssKpis').innerHTML =
+      kpi('fa-calendar-week', s.shifts_total, 'смен в расписании') +
+      kpi('fa-clock', (s.minutes_week / 60).toFixed(1).replace('.0', '') + ' ч', 'дежурства в неделю') +
+      kpi('fa-user-shield', s.people, 'дежурных задействовано') +
+      kpi('fa-earth-europe', 'UTC' + (s.tz_offset >= 0 ? '+' : '') + s.tz_offset, 'пояс расписания');
+
+    var duty = d.duty, dh = '';
+    if (duty.active) {
+      dh += '<div class="ss-du live"><div class="lab">сейчас дежурит</div><div class="v">' + who(duty.active) + '</div>' +
+        '<small>до конца смены ' + fmtLeft(duty.active.left_s) + '</small></div>';
+    } else {
+      dh += '<div class="ss-du"><div class="lab">сейчас</div><div class="v" style="color:var(--text-3)">никто не дежурит</div><small>экипаж отдыхает</small></div>';
+    }
+    if (duty.next) {
+      dh += '<div class="ss-du"><div class="lab">следующая смена</div><div class="v">' + who(duty.next) + '</div>' +
+        '<small>' + esc(duty.next.wd_label) + ' ' + esc(duty.next.start) + '–' + esc(duty.next.end) + ', через ' + fmtLeft(duty.next.wait_s) + '</small></div>';
+    }
+    document.getElementById('ssDuty').innerHTML = dh;
+
+    var today = (new Date().getDay() + 6) % 7;
+    document.getElementById('ssWeek').innerHTML = d.week.map(function (day) {
+      var slots = day.slots.length ? day.slots.map(function (sl) {
+        var x = CAN_EDIT ? '<button class="x" title="Снять смену" onclick="ssRemove(\'' + esc(sl.id) + '\')"><i class="fas fa-xmark"></i></button>' : '';
+        return '<div class="ss-slot">' + x + '<span class="t">' + esc(sl.start) + '–' + esc(sl.end) + '</span>' +
+          '<div class="w">' + who(sl) + '</div></div>';
+      }).join('') : '<div class="ss-empty">—</div>';
+      return '<div class="ss-day' + (day.weekday === today ? ' today' : '') + '"><h4>' + esc(day.label) + '</h4>' + slots + '</div>';
+    }).join('');
+
+    NAMES = {};
+    d.workload.forEach(function (w) { NAMES[w.user_id] = w.name; });
+    document.getElementById('ssWork').innerHTML = d.workload.length ? d.workload.map(function (w) {
+      return '<div class="ss-wl"><span>' + (w.name ? esc(w.name) : 'ID ' + esc(w.user_id)) +
+        ' <small style="color:var(--text-3)">· ' + w.shifts + ' см.</small></span><b>' + w.hours + ' ч</b></div>';
+    }).join('') : '<div class="ss-sub" style="margin:4px 0">пока пусто</div>';
+
+    document.getElementById('ssRaw').textContent = d.week_table_text || '—';
+    if (CAN_EDIT) {
+      document.getElementById('ssAddPanel').style.display = '';
+      document.getElementById('ssSetPanel').style.display = '';
+      var st = d.settings;
+      document.getElementById('ssTz').value = st.tz_offset;
+      document.getElementById('ssChan').value = st.channel_id || '';
+    }
+  }).catch(function () {});
+}
+
+function msg(id, t, ok) {
+  var m = document.getElementById(id);
+  m.textContent = t || ''; m.className = 'ss-msg ' + (ok ? 'ok' : 'err');
+  m.style.display = t ? 'block' : 'none';
+}
+
+document.getElementById('ssAdd').onclick = function () {
+  msg('ssAddMsg', '');
+  fetch(API + '/add', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({user_id: document.getElementById('ssUid').value,
+                          weekday: document.getElementById('ssDay').value,
+                          time: document.getElementById('ssTime').value})
+  }).then(function (r) { return r.json(); }).then(function (d) {
+    if (d.success) { msg('ssAddMsg', d.message, true); load(); }
+    else { msg('ssAddMsg', d.error || 'Ошибка', false); }
+  }).catch(function () { msg('ssAddMsg', 'Сеть моргнула — попробуйте ещё раз', false); });
+};
+
+function ssRemove(sid) {
+  askConfirm('Снять смену?', 'Смена ' + sid + ' уйдёт из расписания вместе с метками напоминаний.',
+    function () {
+      fetch(API + '/remove', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({shift_id: sid})
+      }).then(function (r) { return r.json(); }).then(function (d) {
+        if (d.success) { load(); } else { alert(d.error || 'Ошибка'); }
+      }).catch(function () { alert('Сеть моргнула — попробуйте ещё раз'); });
+    }, {danger: true, okText: 'Снять', icon_fa: 'fa-xmark'});
+}
+
+document.getElementById('ssSave').onclick = function () {
+  msg('ssSetMsg', '');
+  fetch(API + '/settings', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({channel_id: document.getElementById('ssChan').value,
+                          tz_offset: document.getElementById('ssTz').value})
+  }).then(function (r) { return r.json(); }).then(function (d) {
+    if (d.success) { msg('ssSetMsg', 'Сохранено — бот уже видит', true); load(); }
+    else { msg('ssSetMsg', d.error || 'Ошибка', false); }
+  }).catch(function () { msg('ssSetMsg', 'Сеть моргнула — попробуйте ещё раз', false); });
+};
+
+document.getElementById('ssCsv').onclick = function () { location.href = API + '/export.csv'; };
+
+load();
+ssTimer = setInterval(load, 60000);
+</script>
+{% endblock %}
