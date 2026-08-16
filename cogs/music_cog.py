@@ -13,6 +13,27 @@ from logger import get_logger
 log =get_logger ("music_cog")
 
 
+def shuffle_queue (queue :list )->list :
+    """Перемешать очередь, сохранив играющий трек первым (1:1 с командой !shuffle)."""
+    if len (queue )<2 :
+        return list (queue )
+    current =queue [0 ]
+    rest =queue [1 :]
+    random .shuffle (rest )
+    return [current ]+rest
+
+
+def remove_track (queue :list ,index ):
+    """Убрать трек по номеру (1-based, как в !queue). Возвращает (ok, ошибка, удалённый трек)."""
+    try :
+        i =int (index )
+    except (TypeError ,ValueError ):
+        return False ,'Номер трека должен быть целым числом.',None
+    if i <1 or i >len (queue ):
+        return False ,'Нет трека с таким номером.',None
+    return True ,'',queue .pop (i -1 )
+
+
 
 class MusicCog (commands .Cog ):
     """Музыкальные команды"""
@@ -246,13 +267,7 @@ class MusicCog (commands .Cog ):
             await ctx .send ("⚠️ В очереди должно быть минимум 2 трека!")
             return 
 
-            # Сохранить первый трек
-        current =queue [0 ]
-        rest =queue [1 :]
-
-        random .shuffle (rest )
-
-        self .queues [ctx .guild .id ]=[current ]+rest 
+        self .queues [ctx .guild .id ]=shuffle_queue (queue )
 
         embed =discord .Embed (
         title ="🔀 Очередь перемешана",

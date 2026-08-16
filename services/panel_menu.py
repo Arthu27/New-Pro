@@ -85,6 +85,7 @@ MENU = [
     {'group': 'Сообщество', 'key': 'community', 'icon': 'fa-gamepad', 'pages': [
         {'path': '/economy', 'label': 'Экономика', 'icon': 'fa-coins'},
         {'path': '/shop', 'label': 'Магазин', 'icon': 'fa-store'},
+        {'path': '/music', 'label': 'Музыка', 'icon': 'fa-music'},
         {'path': '/leveling', 'label': 'Уровни', 'icon': 'fa-star'},
         {'path': '/giveaway', 'label': 'Розыгрыши', 'icon': 'fa-gift'},
         {'path': '/polls', 'label': 'Опросы', 'icon': 'fa-poll-h'},
@@ -142,6 +143,7 @@ CONFIGURABLE = ('mod', 'admin')
 PAGE_COGS = {
     '/economy': ('economy_cog',),
     '/shop': ('economy_cog',),
+    '/music': ('music_cog',),
     '/leveling': ('level_cog',),
     '/leveling-admin': ('level_cog',),
     '/giveaway': ('giveaway',),

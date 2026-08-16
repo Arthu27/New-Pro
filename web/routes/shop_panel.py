@@ -10,6 +10,8 @@ remove_item / effective_items из cogs.economy_shop. Тексты ошибок
 команды кога: создать/обновить предмет, удалить предмет.
 """
 
+from flask import has_request_context
+
 from web.routes._common import (
     _log,
     render_template, session, request, jsonify,
@@ -58,7 +60,7 @@ def shop_payload(gid):
         "max_custom": _shop.MAX_CUSTOM_ITEMS,
         "rarities": list(RARITY_ORDER),
         "categories": _categories(),
-        "can_edit": session.get("role") in ("admin", "owner"),
+        "can_edit": has_request_context() and session.get("role") in ("admin", "owner"),
     }
 
 
