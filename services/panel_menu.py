@@ -107,6 +107,7 @@ MENU = [
         {'path': '/birthdays', 'label': 'Дни рождения', 'icon': 'fa-cake-candles'},
         {'path': '/social', 'label': 'События', 'icon': 'fa-calendar-days'},
         {'path': '/anime-daily', 'label': 'Аниме дня', 'icon': 'fa-tv'},
+        {'path': '/tops', 'label': 'Топ сервера', 'icon': 'fa-ranking-star'},
         {'path': '/join-to-create', 'label': 'Комнаты J2C', 'icon': 'fa-door-open'},
         {'path': '/scheduled-messages', 'label': 'Расписание', 'icon': 'fa-clock'},
     ]},
@@ -191,6 +192,7 @@ PAGE_COGS = {
     '/birthdays': ('birthday',),
     '/social': ('social',),
     '/anime-daily': ('anime_daily',),
+    '/tops': ('leaderboard',),
     '/join-to-create': ('join_to_create',),
 }
 
