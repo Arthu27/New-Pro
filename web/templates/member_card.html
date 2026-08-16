@@ -1,0 +1,269 @@
+{% extends "base.html" %}
+{% block title %}Карточка 360° — Панель Aether{% endblock %}
+{% block page_title %}Карточка участника 360°{% endblock %}
+{% block content %}
+<style>
+.mc-search{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 16px;align-items:center;position:relative}
+.mc-input{flex:1;min-width:260px;background:var(--surface-2,rgba(255,255,255,.04));border:1px solid var(--line-2,rgba(255,255,255,.1));border-radius:12px;padding:11px 14px;color:var(--text-1,#fff);font-size:14px;outline:none}
+.mc-input:focus{border-color:var(--ac,#e0b04a)}
+.mc-btn{display:inline-flex;align-items:center;gap:8px;background:var(--ac,#e0b04a);color:#1a1a1a;border:none;border-radius:12px;padding:11px 18px;font-size:13.5px;font-weight:700;cursor:pointer}
+.mc-btn:hover{filter:brightness(1.08)}
+.mc-btn.ghost{background:transparent;color:var(--ac,#e0b04a);border:1px solid var(--ac-line,rgba(224,176,74,.35))}
+.mc-sug{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surface-1,#1d1f26);border:1px solid var(--line-2,rgba(255,255,255,.12));border-radius:12px;overflow:hidden;z-index:40;display:none;box-shadow:0 12px 32px rgba(0,0,0,.4)}
+.mc-sug button{display:flex;justify-content:space-between;gap:10px;width:100%;text-align:left;background:none;border:none;border-bottom:1px dashed rgba(255,255,255,.07);padding:10px 14px;color:var(--text-2,rgba(255,255,255,.85));font-size:13px;cursor:pointer}
+.mc-sug button:last-child{border-bottom:none}
+.mc-sug button:hover{background:var(--ac-soft,rgba(224,176,74,.1))}
+.mc-sug small{color:var(--text-3,rgba(255,255,255,.45))}
+.mc-kpis{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px}
+.mc-kpi{display:flex;align-items:center;gap:10px;background:var(--surface-2,rgba(255,255,255,.04));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:12px;padding:10px 16px}
+.mc-kpi i{color:var(--ac,#e0b04a);font-size:16px}
+.mc-kpi b{font-size:17px;color:var(--text-1,#fff)}
+.mc-kpi span{font-size:11.5px;color:var(--text-3,rgba(255,255,255,.45))}
+.mc-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+@media (max-width:960px){.mc-grid{grid-template-columns:1fr}}
+.mc-panel{background:var(--surface-2,rgba(255,255,255,.03));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:14px;padding:16px 18px;margin-bottom:16px}
+.mc-panel h3{margin:0 0 4px;font-size:15px;color:var(--text-1,#fff);display:flex;align-items:center;gap:9px}
+.mc-panel h3 i{color:var(--ac,#e0b04a)}
+.mc-sub{font-size:12px;color:var(--text-3,rgba(255,255,255,.45));margin-bottom:12px;line-height:1.5}
+.mc-head{display:flex;align-items:center;gap:14px;margin-bottom:12px}
+.mc-ava{width:56px;height:56px;border-radius:14px;background:var(--ac-soft,rgba(224,176,74,.12));color:var(--ac,#e0b04a);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;overflow:hidden;flex-shrink:0}
+.mc-ava img{width:100%;height:100%;object-fit:cover}
+.mc-head b{display:block;font-size:16px;color:var(--text-1,#fff)}
+.mc-head small{font-size:11.5px;color:var(--text-3,rgba(255,255,255,.5))}
+.mc-boost{margin-left:auto;font-size:10.5px;color:#f47fff;border:1px solid rgba(244,127,255,.35);border-radius:8px;padding:4px 8px;display:inline-flex;align-items:center;gap:5px}
+.mc-track{height:10px;border-radius:6px;background:rgba(255,255,255,.07);overflow:hidden;margin:6px 0 4px}
+.mc-fill{height:100%;background:linear-gradient(90deg,var(--ac,#e0b04a),var(--ac-2,#f0cd7a));transition:width .4s}
+.mc-xp{font-size:11.5px;color:var(--text-3,rgba(255,255,255,.5))}
+.mc-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.mc-chip{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--text-2,rgba(255,255,255,.8));border:1px solid var(--line-2,rgba(255,255,255,.12));border-radius:9px;padding:5px 10px}
+.mc-chip i{color:var(--ac,#e0b04a);font-size:11px}
+.mc-chip b{color:var(--ac-2,#f0cd7a)}
+.mc-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px dashed rgba(255,255,255,.07);font-size:12.5px;color:var(--text-2,rgba(255,255,255,.85))}
+.mc-row:last-child{border-bottom:none}
+.mc-row small{display:block;font-size:11px;color:var(--text-3,rgba(255,255,255,.5));margin-top:2px}
+.mc-row .num{font-weight:800;color:var(--ac,#e0b04a);font-variant-numeric:tabular-nums}
+.mc-tag{font-size:10px;border-radius:7px;padding:2px 7px;font-weight:700}
+.mc-tag.ok{color:#4ade80;border:1px solid rgba(74,222,128,.35)}
+.mc-tag.warn{color:#f0cd7a;border:1px solid rgba(240,205,122,.35)}
+.mc-links{display:flex;flex-wrap:wrap;gap:8px}
+.mc-link{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--ac,#e0b04a);text-decoration:none;border:1px solid var(--ac-line,rgba(224,176,74,.3));border-radius:9px;padding:7px 12px}
+.mc-link:hover{background:var(--ac-soft,rgba(224,176,74,.12))}
+.mc-err{font-size:12.5px;color:#ff8a7a;padding:8px 2px;display:none}
+[data-theme="light"] .mc-row{border-bottom-color:rgba(0,0,0,.08)}
+[data-theme="light"] .mc-track{background:rgba(0,0,0,.09)}
+[data-theme="light"] .mc-sug{box-shadow:0 12px 28px rgba(0,0,0,.18)}
+[data-theme="light"] .mc-sug button{border-bottom-color:rgba(0,0,0,.07)}
+</style>
+
+<div class="mc-search">
+  <input class="mc-input" id="mcQ" placeholder="ID участника или упоминание — например 123456789012345678" autocomplete="off">
+  <button class="mc-btn" id="mcGo"><i class="fas fa-magnifying-glass"></i> Показать</button>
+  <button class="mc-btn ghost" id="mcCsv" style="display:none"><i class="fas fa-file-csv"></i> CSV</button>
+  <div class="mc-sug" id="mcSug"></div>
+</div>
+<div class="mc-err" id="mcErr"></div>
+
+<div id="mcBody" style="display:none">
+  <div class="mc-kpis" id="mcKpis"></div>
+  <div class="mc-grid">
+    <div>
+      <div class="mc-panel">
+        <h3><i class="fas fa-id-card-clip"></i> Профиль</h3>
+        <div class="mc-sub">Уровень и опыт — те же числа, что рисует /profile бота.</div>
+        <div id="mcProfile"></div>
+      </div>
+      <div class="mc-panel">
+        <h3><i class="fas fa-chart-line"></i> Активность и ранги</h3>
+        <div class="mc-sub">Места в топах — по формуле бота: вне списка = позиция за последним.</div>
+        <div id="mcActivity"></div>
+      </div>
+    </div>
+    <div>
+      <div class="mc-panel">
+        <h3><i class="fas fa-hand-holding-heart"></i> Репутация</h3>
+        <div class="mc-sub">Карма и журнал благодарностей (бот хранит последние 200 записей).</div>
+        <div id="mcKarma"></div>
+      </div>
+      <div class="mc-panel">
+        <h3><i class="fas fa-triangle-exclamation"></i> Предупреждения</h3>
+        <div class="mc-sub">Свежие варны из зеркала модерации (новые сверху).</div>
+        <div id="mcWarns"></div>
+      </div>
+      <div class="mc-panel">
+        <h3><i class="fas fa-cake-candles"></i> События</h3>
+        <div class="mc-sub">День рождения по грубой формуле бота и дата входа, если бот онлайн.</div>
+        <div id="mcEvents"></div>
+      </div>
+      <div class="mc-panel">
+        <h3><i class="fas fa-arrow-up-right-from-square"></i> Быстрые переходы</h3>
+        <div class="mc-sub">Профильные разделы панели для этого участника.</div>
+        <div class="mc-links" id="mcLinks"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="empty-state" id="mcEmpty">
+  <i class="fas fa-id-card"></i>
+  <div>Введите ID участника — соберём досье из всех подсистем разом.<div class="empty-tip">Подсказки появляются по именам из журнала аудита и календаря дней рождения.</div></div>
+</div>
+
+<script>
+var GID = '{{ guild_id }}';
+var API = '/api/guild/' + GID + '/member-card';
+
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+function plural(n, one, few, many) {
+  var m10 = n % 10, m100 = n % 100;
+  if (m100 >= 11 && m100 <= 19) return many;
+  if (m10 === 1) return one;
+  if (m10 >= 2 && m10 <= 4) return few;
+  return many;
+}
+
+function fmtNum(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
+
+function fmtVoice(s) {  // 1:1 с _fmt_t карточки бота
+  var h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+  return h ? h + 'ч ' + m + 'м' : m + 'м';
+}
+
+function kpi(icon, num, label) {
+  return '<div class="mc-kpi"><i class="fas ' + icon + '"></i><div><b>' + num + '</b> <span>' + esc(label) + '</span></div></div>';
+}
+
+var SRC_LABELS = {discord: 'ник с сервера', audit: 'из журнала аудита', birthday: 'из календаря ДР'};
+
+function renderCard(c) {
+  var a = c.activity, eco = c.economy, km = c.karma;
+  document.getElementById('mcKpis').innerHTML =
+    kpi('fa-arrow-trend-up', a.level, 'уровень') +
+    kpi('fa-comments', fmtNum(a.messages), plural(a.messages, 'сообщение', 'сообщения', 'сообщений')) +
+    kpi('fa-microphone', fmtVoice(a.voice_seconds), 'в голосовых') +
+    kpi('fa-coins', fmtNum(eco.total), 'монет всего') +
+    kpi('fa-hand-holding-heart', fmtNum(km.score), plural(km.score, 'очко кармы', 'очка кармы', 'очков кармы')) +
+    kpi('fa-triangle-exclamation', c.warns.count, plural(c.warns.count, 'варн', 'варна', 'варнов'));
+
+  var m = c.member;
+  var ava = m && m.avatar_url
+    ? '<img src="' + esc(m.avatar_url) + '" alt="">'
+    : (c.name ? esc(c.name.charAt(0).toUpperCase()) : '?');
+  document.getElementById('mcProfile').innerHTML =
+    '<div class="mc-head">' +
+      '<div class="mc-ava">' + ava + '</div>' +
+      '<div><b>' + (c.name ? esc(c.name) : 'ID ' + esc(c.user_id)) + '</b>' +
+      '<small>ID ' + esc(c.user_id) + (c.name_source ? ' · имя ' + (SRC_LABELS[c.name_source] || '') : '') + '</small></div>' +
+      (m && m.booster ? '<span class="mc-boost"><i class="fas fa-gem"></i> бустер</span>' : '') +
+    '</div>' +
+    '<div class="mc-row"><span>Уровень ' + a.level + '</span><span class="num">' + fmtNum(a.xp) + ' XP</span></div>' +
+    '<div class="mc-track"><div class="mc-fill" style="width:' + Math.min(100, Math.round(a.xp * 100 / (a.xp_needed || 1))) + '%"></div></div>' +
+    '<div class="mc-xp">' + fmtNum(a.xp) + ' из ' + fmtNum(a.xp_needed) + ' XP до следующего уровня</div>' +
+    (m ? '<div class="mc-chips">' +
+      (m.joined_at ? '<span class="mc-chip"><i class="fas fa-door-open"></i> на сервере с ' + esc(m.joined_at) + '</span>' : '') +
+      '<span class="mc-chip"><i class="fas fa-user-tag"></i> ' + m.roles + ' ' + plural(m.roles, 'роль', 'роли', 'ролей') + '</span>' +
+      (m.top_role && m.top_role !== '@everyone' ? '<span class="mc-chip"><i class="fas fa-crown"></i> ' + esc(m.top_role) + '</span>' : '') +
+    '</div>' : '<div class="mc-xp" style="margin-top:8px">Бот офлайн — дата входа и роли недоступны.</div>');
+
+  document.getElementById('mcActivity').innerHTML =
+    '<div class="mc-row"><span>Сообщения<small>за всё время по таблице лидеров</small></span><span class="num">' + fmtNum(a.messages) + '</span></div>' +
+    '<div class="mc-row"><span>Голосовые<small>суммарно, трекер + наследие</small></span><span class="num">' + fmtVoice(a.voice_seconds) + '</span></div>' +
+    '<div class="mc-row"><span>Баланс экономики<small>кошелёк ' + fmtNum(eco.balance) + ' + банк ' + fmtNum(eco.bank) + '</small></span><span class="num">' + fmtNum(eco.total) + '</span></div>' +
+    '<div class="mc-chips">' +
+      '<span class="mc-chip"><i class="fas fa-comments"></i> по сообщениям <b>#' + a.rank_messages + '</b></span>' +
+      '<span class="mc-chip"><i class="fas fa-microphone"></i> по голосу <b>#' + a.rank_voice + '</b></span>' +
+      '<span class="mc-chip"><i class="fas fa-coins"></i> по богатству <b>#' + a.rank_balance + '</b></span>' +
+    '</div>';
+
+  document.getElementById('mcKarma').innerHTML =
+    '<div class="mc-row"><span>Очки кармы<small>место в топе: ' + (km.rank ? '#' + km.rank : 'вне топа (0 очков)') + '</small></span><span class="num">' + fmtNum(km.score) + '</span></div>' +
+    '<div class="mc-row"><span>Благодарностей получено<small>по журналу (хвост 200 записей)</small></span><span class="num">' + km.received + '</span></div>' +
+    '<div class="mc-row"><span>Благодарностей отправлено<small>по журналу</small></span><span class="num">' + km.given + '</span></div>';
+
+  var w = c.warns;
+  var wh = '<div class="mc-row"><span>Всего предупреждений</span><span class="num">' + w.count + '</span></div>';
+  if (!w.recent.length) {
+    wh += '<div class="mc-row"><span style="color:var(--text-3)">Чисто — варнов нет.</span></div>';
+  }
+  w.recent.forEach(function (it) {
+    wh += '<div class="mc-row"><span>#' + esc(it.id) + ' ' + esc(it.reason) +
+      '<small>' + esc(it.date) + ' · ' + esc(it.mod) + '</small></span></div>';
+  });
+  document.getElementById('mcWarns').innerHTML = wh;
+
+  var b = c.birthday;
+  var eh = '';
+  if (b) {
+    eh += '<div class="mc-row"><span>День рождения<small>' + esc(b.date) + (b.age != null ? ' · исполнится ' + b.age : '') + '</small></span>' +
+      '<span class="mc-tag ' + (b.today ? 'ok' : 'warn') + '">' + (b.today ? 'сегодня' : 'через ' + b.days_until + ' ' + plural(b.days_until, 'день', 'дня', 'дней')) + '</span></div>';
+  } else {
+    eh += '<div class="mc-row"><span style="color:var(--text-3)">День рождения не записан в календаре.</span></div>';
+  }
+  if (c.member && c.member.joined_at) {
+    eh += '<div class="mc-row"><span>На сервере с</span><span class="num" style="font-size:12px">' + esc(c.member.joined_at) + '</span></div>';
+  }
+  document.getElementById('mcEvents').innerHTML = eh;
+
+  document.getElementById('mcLinks').innerHTML = c.links.map(function (l) {
+    return '<a class="mc-link" href="' + esc(l.path) + '"><i class="fas ' + esc(l.icon) + '"></i> ' + esc(l.label) + '</a>';
+  }).join('');
+}
+
+function mcLookup(q) {
+  var err = document.getElementById('mcErr');
+  err.style.display = 'none';
+  fetch(API + '/lookup?user=' + encodeURIComponent(q)).then(function (r) {
+    return r.json().then(function (d) { return {status: r.status, d: d}; });
+  }).then(function (res) {
+    if (!res.d.success) {
+      document.getElementById('mcBody').style.display = 'none';
+      document.getElementById('mcEmpty').style.display = '';
+      err.textContent = res.d.error || 'Ошибка';
+      err.style.display = '';
+      return;
+    }
+    document.getElementById('mcEmpty').style.display = 'none';
+    document.getElementById('mcBody').style.display = '';
+    document.getElementById('mcCsv').style.display = '';
+    document.getElementById('mcCsv').onclick = function () {
+      location.href = API + '/export?user=' + encodeURIComponent(q);
+    };
+    renderCard(res.d.card);
+  }).catch(function () {
+    err.textContent = 'Сеть моргнула — попробуйте ещё раз';
+    err.style.display = '';
+  });
+}
+
+var q = document.getElementById('mcQ'), sug = document.getElementById('mcSug'), sugTimer = null;
+document.getElementById('mcGo').onclick = function () { sug.style.display = 'none'; mcLookup(q.value); };
+q.addEventListener('keydown', function (e) {
+  if (e.key === 'Enter') { sug.style.display = 'none'; mcLookup(q.value); }
+});
+q.addEventListener('input', function () {
+  clearTimeout(sugTimer);
+  var v = q.value.trim();
+  if (v.length < 2) { sug.style.display = 'none'; return; }
+  sugTimer = setTimeout(function () {
+    fetch(API + '/suggest?q=' + encodeURIComponent(v)).then(function (r) { return r.json(); }).then(function (d) {
+      if (!d.success || !d.items.length) { sug.style.display = 'none'; return; }
+      sug.innerHTML = d.items.map(function (it) {
+        return '<button type="button" data-id="' + esc(it.user_id) + '"><span>' + esc(it.name || 'Без имени') + '</span><small>' + esc(it.user_id) + '</small></button>';
+      }).join('');
+      sug.style.display = '';
+      Array.prototype.forEach.call(sug.querySelectorAll('button'), function (b) {
+        b.onclick = function () { q.value = b.getAttribute('data-id'); sug.style.display = 'none'; mcLookup(q.value); };
+      });
+    }).catch(function () {});
+  }, 220);
+});
+document.addEventListener('click', function (e) {
+  if (!sug.contains(e.target) && e.target !== q) { sug.style.display = 'none'; }
+});
+
+(function () {
+  var pre = new URLSearchParams(location.search).get('user') || '';
+  if (pre) { q.value = pre; mcLookup(pre); }
+})();
+</script>
+{% endblock %}

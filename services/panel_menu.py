@@ -42,6 +42,7 @@ MENU = [
     ]},
     {'group': 'Участники', 'key': 'members', 'icon': 'fa-users', 'pages': [
         {'path': '/users', 'label': 'Пользователи', 'icon': 'fa-users'},
+        {'path': '/member-card', 'label': 'Карточка 360°', 'icon': 'fa-id-card-clip'},
         {'path': '/member-search', 'label': 'Поиск', 'icon': 'fa-search'},
         {'path': '/member-notes', 'label': 'Заметки', 'icon': 'fa-sticky-note'},
         {'path': '/watchlist-panel', 'label': 'Наблюдение', 'icon': 'fa-eye'},
@@ -197,6 +198,7 @@ PAGE_COGS = {
     '/tops': ('leaderboard',),
     '/join-to-create': ('join_to_create',),
     '/staff-rating': ('staff_rating',),
+    '/member-card': ('profile', 'karma', 'birthday'),
     '/gamification': ('gamification_cog',),
 }
 

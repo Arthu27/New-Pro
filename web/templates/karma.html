@@ -224,6 +224,10 @@ function kmAdjust() {
   });
 }
 
-kmLoad('');
+(function () {
+  var pre = new URLSearchParams(location.search).get('user') || '';
+  if (pre) { document.getElementById('kmFilter').value = pre; }
+  kmLoad(pre);
+})();
 </script>
 {% endblock %}
