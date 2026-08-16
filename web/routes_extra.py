@@ -67,6 +67,7 @@ from web.routes import (
     ux,
     quiz_panel,
     reminders_panel,
+    counting_panel,
 )
 
 _MODULES = (
@@ -119,6 +120,7 @@ _MODULES = (
     ux,
     quiz_panel,
     reminders_panel,
+    counting_panel,
 )
 
 

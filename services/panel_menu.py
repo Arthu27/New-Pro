@@ -92,6 +92,7 @@ MENU = [
         {'path': '/voice-stats', 'label': 'Голосовая', 'icon': 'fa-microphone'},
         {'path': '/duty-panel-web', 'label': 'Дежурства', 'icon': 'fa-user-clock'},
         {'path': '/quiz', 'label': 'Квиз', 'icon': 'fa-brain'},
+        {'path': '/counting', 'label': 'Счёт', 'icon': 'fa-list-ol'},
         {'path': '/scheduled-messages', 'label': 'Расписание', 'icon': 'fa-clock'},
     ]},
     {'group': 'Логи', 'key': 'logs', 'icon': 'fa-file-lines', 'pages': [
@@ -147,6 +148,7 @@ PAGE_COGS = {
     '/duty-panel-web': ('duty',),
     '/quiz': ('quiz',),
     '/reminders': ('reminders',),
+    '/counting': ('counting',),
     '/scheduled-messages': ('scheduler',),
     '/schedule': ('scheduler',),
     '/afk-list': ('afk',),

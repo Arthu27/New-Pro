@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block title %}Счёт — Панель Aether{% endblock %}
+{% block page_title %}Комната счёта{% endblock %}
+{% block content %}
+<style>
+.cnt-hero{display:flex;flex-wrap:wrap;gap:16px;align-items:stretch;margin:14px 0 18px}
+.cnt-big{flex:1;min-width:240px;background:linear-gradient(135deg,var(--ac-soft,rgba(224,176,74,.12)),transparent);border:1px solid var(--ac-line,rgba(224,176,74,.25));border-radius:16px;padding:22px 26px;display:flex;align-items:center;gap:18px}
+.cnt-num{font-size:52px;font-weight:800;color:var(--ac,#e0b04a);font-variant-numeric:tabular-nums;line-height:1}
+.cnt-big-lbl{font-size:12px;color:var(--text-3,rgba(255,255,255,.5));text-transform:uppercase;letter-spacing:.08em}
+.cnt-big-sub{font-size:12.5px;color:var(--text-2,rgba(255,255,255,.7));margin-top:4px}
+.cnt-chip-col{display:flex;flex-direction:column;gap:10px}
+.cnt-chip{display:flex;align-items:center;gap:10px;background:var(--surface-2,rgba(255,255,255,.04));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:12px;padding:10px 16px}
+.cnt-chip i{color:var(--ac,#e0b04a)}
+.cnt-chip b{font-size:16px;color:var(--text-1,#fff)}
+.cnt-chip span{font-size:11.5px;color:var(--text-3,rgba(255,255,255,.45))}
+.cnt-chip.bad i{color:#ff8a7a}
+.cnt-panel{background:var(--surface-2,rgba(255,255,255,.03));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:14px;padding:16px 18px;margin-bottom:16px}
+.cnt-panel h3{margin:0 0 4px;font-size:15px;color:var(--text-1,#fff);display:flex;align-items:center;gap:9px}
+.cnt-panel h3 i{color:var(--ac,#e0b04a)}
+.cnt-sub{font-size:12px;color:var(--text-3,rgba(255,255,255,.45));margin-bottom:12px;line-height:1.5}
+.cnt-quote{font-size:13px;color:var(--text-2,rgba(255,255,255,.8));border-left:3px solid var(--ac-line,rgba(224,176,74,.3));padding:8px 12px;background:rgba(255,255,255,.02);border-radius:0 10px 10px 0;line-height:1.7}
+.cnt-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.cnt-select{background:rgba(0,0,0,.25);border:1px solid var(--line-2,rgba(255,255,255,.1));border-radius:10px;padding:9px 12px;color:var(--text-1,#fff);font-size:13px;min-width:220px;outline:none}
+.cnt-select:focus{border-color:var(--ac,#e0b04a)}
+.cnt-btn{display:inline-flex;align-items:center;gap:8px;background:var(--ac,#e0b04a);color:#1a1a1a;border:none;border-radius:10px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;transition:filter .15s}
+.cnt-btn:hover{filter:brightness(1.1)}
+.cnt-btn.danger{background:rgba(231,76,60,.12);color:#ff8a7a;border:1px solid rgba(231,76,60,.35)}
+.cnt-status-off{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:#ff8a7a}
+.cnt-status-on{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:#7bd88f}
+[data-theme="light"] .cnt-select{background:rgba(0,0,0,.04)}
+[data-theme="light"] .cnt-quote{background:rgba(0,0,0,.02)}
+</style>
+
+<div id="cntWrap">
+  <div class="cnt-hero" id="cntHero">
+    <div class="sk-card" style="flex:1;min-width:240px;height:96px"></div>
+    <div class="sk-card" style="width:220px;height:96px"></div>
+  </div>
+
+  <div class="cnt-panel">
+    <h3><i class="fas fa-quote-left"></i> Как видит бот</h3>
+    <div class="cnt-sub">Строки ровно те, что выдаёт команда <code>/счёт статус</code> в Discord — один источник правды.</div>
+    <div class="cnt-quote" id="cntQuote"><div class="sk-line" style="width:60%"></div><div class="sk-line" style="width:40%"></div></div>
+  </div>
+
+  {% if role == 'admin' or role == 'owner' %}
+  <div class="cnt-panel">
+    <h3><i class="fas fa-sliders"></i> Настройка канала</h3>
+    <div class="cnt-sub">Эффект тот же, что у команд <code>/счёт канал</code> (свежий старт с 1) и <code>/счёт выкл</code> (рекорд сохраняется).</div>
+    <div class="cnt-row">
+      <select class="cnt-select" id="cntChannel" aria-label="Канал считалки"><option value="">— загрузка каналов… —</option></select>
+      <button class="cnt-btn" onclick="cntEnable()"><i class="fas fa-play"></i> Включить здесь</button>
+      <button class="cnt-btn danger" onclick="cntOff()"><i class="fas fa-stop"></i> Выключить</button>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+var CAN_EDIT = {% if role == 'admin' or role == 'owner' %}true{% else %}false{% endif %};
+var GID = null;
+
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+var FAIL_RU = { 'same_user': 'один написал дважды подряд', 'wrong_number': 'назвали не то число' };
+
+function render(d) {
+  var status = d.active
+    ? '<span class="cnt-status-on"><i class="fas fa-circle" style="font-size:8px"></i> считаем в #' + esc(d.channel_name || d.channel_id) + '</span>'
+    : '<span class="cnt-status-off"><i class="fas fa-circle" style="font-size:8px"></i> выключена</span>';
+  document.getElementById('cntHero').innerHTML =
+    '<div class="cnt-big"><div class="cnt-num" data-countup>' + d.current + '</div>' +
+      '<div><div class="cnt-big-lbl">досчитали до</div>' +
+      '<div class="cnt-big-sub">ждём число <b>' + d.next + '</b> · ' + status + '</div></div></div>' +
+    '<div class="cnt-chip-col">' +
+      '<div class="cnt-chip"><i class="fas fa-trophy"></i><div><b>' + d.best + '</b> <span>рекорд сервера</span></div></div>' +
+      '<div class="cnt-chip' + (d.fails ? ' bad' : '') + '"><i class="fas fa-arrow-trend-down"></i><div><b>' + d.fails + '</b> <span>падений счёта</span></div></div>' +
+    '</div>';
+  var extra = [];
+  if (d.last_user_name) extra.push('Последнее назвал: <b>' + esc(d.last_user_name) + '</b>');
+  if (d.fail_reason && FAIL_RU[d.fail_reason]) {
+    var det = d.fail_reason === 'wrong_number' && d.fail_expected != null
+      ? ' (ждали ' + d.fail_expected + ', пришло ' + d.fail_got + ')' : '';
+    extra.push('Последнее падение: ' + FAIL_RU[d.fail_reason] + det);
+  }
+  document.getElementById('cntQuote').innerHTML =
+    (d.status_lines || []).map(esc).join('<br>') +
+    (extra.length ? '<br><span style="opacity:.65">' + extra.join(' · ') + '</span>' : '');
+}
+
+async function cntLoad() {
+  try {
+    var d = await fetch('/api/counting/state').then(function (r) { return r.json(); });
+    if (d.success) window.renderSafe ? window.renderSafe(function () { render(d); }) : render(d);
+  } catch (e) { /* API Guard показал причину */ }
+}
+
+async function ensureGuild() {
+  if (GID) return GID;
+  var guilds = await window.fetchCachedJSON('/api/guilds');
+  if (!Array.isArray(guilds) || !guilds.length) return null;
+  var main = '{{ main_guild_id }}';
+  GID = guilds.filter(function (g) { return String(g.id) === String(main); })[0] || guilds[0];
+  return GID;
+}
+
+async function cntChannels() {
+  if (!CAN_EDIT) return;
+  var g = await ensureGuild();
+  if (!g) return;
+  try {
+    var chans = await fetch('/api/guild/' + g.id + '/channels').then(function (r) { return r.json(); });
+    var sel = document.getElementById('cntChannel');
+    var list = (Array.isArray(chans) ? chans : []).filter(function (c) { return c.type === 'text' || c.type === 0 || c.type === undefined; });
+    if (!list.length) { sel.innerHTML = '<option value="">— нет доступных каналов —</option>'; return; }
+    sel.innerHTML = '<option value="">— выберите канал —</option>' + list.map(function (c) {
+      return '<option value="' + esc(c.id) + '">#' + esc(c.name) + '</option>';
+    }).join('');
+  } catch (e) { /* список опционален */ }
+}
+
+async function cntEnable() {
+  var sel = document.getElementById('cntChannel');
+  var ch = sel.value;
+  if (!ch) { if (typeof window.showToast === 'function') window.showToast('Сначала выберите канал', false); return; }
+  var r = await fetch('/api/counting/channel', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ channel_id: ch })
+  });
+  var d = await r.json();
+  if (r.ok && d.success) {
+    render(d);
+    if (typeof window.showToast === 'function') window.showToast('Считалка включена — старт с 1', true);
+  }
+}
+
+function cntOff() {
+  window.askConfirm('Выключить считалку?', 'Рекорд и статистика падений сохранятся — выключается только приём чисел.', async function () {
+    var r = await fetch('/api/counting/off', { method: 'POST' });
+    var d = await r.json();
+    if (r.ok && d.success) {
+      render(d);
+      if (typeof window.showToast === 'function') window.showToast('Считалка выключена', true);
+    }
+  }, { danger: true, okText: 'Выключить' });
+}
+
+cntLoad();
+cntChannels();
+if (typeof window.setLiveRefresh === 'function') window.setLiveRefresh(cntLoad, 15000);
+</script>
+{% endblock %}
