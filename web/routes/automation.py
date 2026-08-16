@@ -200,3 +200,112 @@ def register(ctx):
             _log.debug('automation: уведомление не ушло: %s', _ex)
         return jsonify({'success': True,
                         'values': _serialize(module_key, merged)})
+
+    # ── Автоматика v3: предпросмотр мод-дайджеста ────────────────────────────
+    @app.route('/api/automation/digest-preview')
+    @login_required
+    @role_required('admin')
+    def api_digest_preview():
+        """Живой предпросмотр дайджеста: та же агрегация и те же строки эмбеда,
+        что ког шлёт в Discord — настройки крутятся не вслепую."""
+        from cogs import mod_digest as _md
+        gid = active_guild_id()
+        try:
+            days = max(1, min(90, int(request.args.get('days', 7))))
+        except (TypeError, ValueError):
+            days = 7
+        events = _md.load_events(gid)
+        summary = _md.aggregate_digest(events, days=days)
+        guild_name = 'сервер'
+        import web.app as _app
+        bot = _app.bot_instance
+        if bot is not None:
+            try:
+                g = bot.get_guild(int(gid))
+                if g is not None:
+                    guild_name = g.name
+            except Exception as _ex:
+                _log.debug('digest-preview: имя гильдии не резолвится: %s', _ex)
+        return jsonify({'success': True, 'days': days,
+                        'summary': {'total': summary['total'],
+                                    'per_category': summary['per_category'],
+                                    'top_mods': summary['top_mods'],
+                                    'busiest_day': summary['busiest_day']},
+                        'embed': _md.digest_embed_dict(summary, days, guild_name)})
+
+    # ── Автоматика v3: редактор триггеров (автоответы) ───────────────────────
+    def _trigger_state(gid):
+        from cogs.triggers import empty_state
+        return _db('triggers').get(gid, 'state', empty_state()) or empty_state()
+
+    def _save_trigger_state(gid, state, action_label):
+        _db('triggers').set(gid, 'state', state)
+        try:
+            _fire_panel_notification(
+                'automation', f'Триггеры: {action_label}',
+                f'Через панель ({session.get("username", "?")}), сервер {gid}')
+        except Exception as _ex:
+            _log.debug('triggers: уведомление не ушло: %s', _ex)
+        return jsonify({'success': True, 'state': state,
+                        'max': _triggers_max()})
+
+    def _triggers_max():
+        from cogs.triggers import MAX_TRIGGERS
+        return MAX_TRIGGERS
+
+    @app.route('/api/automation/triggers/state')
+    @login_required
+    @role_required('admin')
+    def api_triggers_state():
+        """Список триггеров с кулдауном (редактор на странице автоматики)."""
+        return jsonify({'success': True,
+                        'state': _trigger_state(active_guild_id()),
+                        'max': _triggers_max()})
+
+    @app.route('/api/automation/triggers/add', methods=['POST'])
+    @login_required
+    @role_required('admin')
+    def api_triggers_add():
+        """Добавить триггер. Валидация — та самая из кога (add_trigger):
+        те же ошибки, тот же лимит, та же защита от дублей."""
+        from cogs.triggers import add_trigger
+        data = request.get_json(silent=True) or {}
+        gid = active_guild_id()
+        state = _trigger_state(gid)
+        _item, err = add_trigger(state, data.get('trigger'),
+                                 data.get('response'), data.get('exact'))
+        if err:
+            return jsonify({'success': False, 'error': err}), 400
+        return _save_trigger_state(gid, state, f'добавлен «{state["items"][-1]["trigger"]}»')
+
+    @app.route('/api/automation/triggers/remove', methods=['POST'])
+    @login_required
+    @role_required('admin')
+    def api_triggers_remove():
+        from cogs.triggers import remove_trigger
+        data = request.get_json(silent=True) or {}
+        try:
+            item_id = int(data.get('id'))
+        except (TypeError, ValueError):
+            return jsonify({'success': False, 'error': 'id триггера — число'}), 400
+        gid = active_guild_id()
+        state = _trigger_state(gid)
+        if not remove_trigger(state, item_id):
+            return jsonify({'success': False, 'error': f'триггер №{item_id} не найден'}), 404
+        return _save_trigger_state(gid, state, f'удалён №{item_id}')
+
+    @app.route('/api/automation/triggers/cooldown', methods=['POST'])
+    @login_required
+    @role_required('admin')
+    def api_triggers_cooldown():
+        data = request.get_json(silent=True) or {}
+        try:
+            secs = int(data.get('seconds'))
+        except (TypeError, ValueError):
+            return jsonify({'success': False, 'error': 'кулдаун — число секунд'}), 400
+        if not 0 <= secs <= 3600:
+            return jsonify({'success': False, 'error': 'кулдаун: 0–3600 сек'}), 400
+        gid = active_guild_id()
+        state = _trigger_state(gid)
+        state['cooldown'] = secs
+        return _save_trigger_state(gid, state, f'кулдаун {secs} с')

@@ -50,6 +50,41 @@ CATEGORY_NAMES = {
 
 # ─── чистые функции (покрыты тестом) ────────────────────────────────────────
 
+_BAR_FULL, _BAR_EMPTY, _BAR_W = '▓', '░', 10
+_SPARKS = '▁▂▃▄▅▆▇█'
+RHYTHM_DAYS = 14  # шире — эмбед поплывёт
+
+
+def mini_bar(share, width=_BAR_W):
+    """Доля 0..1 -> '▓▓▓░░░░░░░' (фикс-ширина; все поля эмбеда остаются monospace-ровными)."""
+    try:
+        share = max(0.0, min(1.0, float(share)))
+    except (TypeError, ValueError):
+        share = 0.0
+    full = int(round(share * width))
+    return _BAR_FULL * full + _BAR_EMPTY * (width - full)
+
+
+def sparkline(counts):
+    """Список чисел -> '▁▃█▂…' относительно максимума; пусто/одни нули -> ''."""
+    vals = [int(c or 0) for c in counts or []]
+    if not vals or max(vals) <= 0:
+        return ''
+    top = max(vals)
+    return ''.join(_SPARKS[min(len(_SPARKS) - 1, int(c * (len(_SPARKS) - 1) / top))] for c in vals)
+
+
+def rhythm_series(per_day, days, now=None):
+    """Ряд событий по дням за последние min(days, RHYTHM_DAYS) суток (слева старое)."""
+    now = now or datetime.now(UTC)
+    window = max(1, min(int(days or 7), RHYTHM_DAYS))
+    counts = []
+    for back in range(window - 1, -1, -1):
+        key = (now - timedelta(days=back)).date().isoformat()
+        counts.append(int((per_day or {}).get(key, 0)))
+    return counts
+
+
 def merge_settings(raw):
     out = dict(DEFAULT_SETTINGS)
     if isinstance(raw, dict):
@@ -119,23 +154,27 @@ def aggregate_digest(events, days=7, now=None):
     }
 
 
-def digest_embed_dict(summary, days, guild_name='сервер'):
+def digest_embed_dict(summary, days, guild_name='сервер', now=None):
     """Готовый payload для эмбеда (строки собраны — удобно тестировать)."""
+    total = summary['total'] or 0
     cat_lines = []
     for cat, n in summary['per_category']:
         name = CATEGORY_NAMES.get(cat, cat)
-        cat_lines.append(f'• {name}: **{n}**')
+        share = (n / total) if total else 0.0
+        cat_lines.append(f'• {name}: **{n}** `{mini_bar(share)}` {round(share * 100)}%')
     mod_lines = [f'• {name} — {tf.spell(n, "действие", "действия", "действий")}'
                  for name, n in summary['top_mods']]
     busiest = summary['busiest_day']
     busiest_txt = f"{busiest[0]} ({busiest[1]})" if busiest[0] else '—'
+    spark = sparkline(rhythm_series(summary.get('per_day'), days, now))
     return {
         'title': f'Мод-дайджест · {guild_name} · {tf.spell(days, "день", "дня", "дней")}',
         'fields': [
-            ('Всего событий', str(summary['total'])),
+            ('Всего событий', str(total)),
             ('По категориям', '\n'.join(cat_lines) or '—'),
             ('Активные модераторы', '\n'.join(mod_lines) or '—'),
             ('Самый горячий день', busiest_txt),
+            ('Ритм по дням', spark or '—'),
         ],
     }
 

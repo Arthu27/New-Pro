@@ -76,6 +76,35 @@
   .au-loading i { font-size: 22px; display: block; margin-bottom: 12px; }
 
   @media (max-width: 1000px) { .au-grid { grid-template-columns: 1fr; } }
+
+  /* ── v3: триггеры и предпросмотр дайджеста ── */
+  .au-sec { margin-top: 26px; }
+  .au-sec-title { font-size: 16px; font-weight: 800; margin-bottom: 4px; display: flex; align-items: center; gap: 9px; }
+  .au-sec-sub { font-size: 12.5px; opacity: .62; margin-bottom: 14px; }
+  .au-panel { background: linear-gradient(160deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015)); border: 1px solid rgba(255,255,255,0.09); border-radius: 14px; padding: 16px; }
+  .trg-head-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+  .trg-count { font-size: 11.5px; font-weight: 700; padding: 3px 10px; border-radius: 999px; border: 1px solid rgba(224,176,74,.35); color: var(--ac-2); background: rgba(224,176,74,.08); }
+  .trg-row { display: grid; grid-template-columns: minmax(110px,1fr) 2fr auto auto; gap: 10px; align-items: center; padding: 8px 10px; border-bottom: 1px dashed rgba(255,255,255,.08); font-size: 13px; }
+  .trg-row:last-child { border-bottom: none; }
+  .trg-trig { font-weight: 700; color: var(--text-1); word-break: break-word; }
+  .trg-resp { color: var(--text-3); white-space: pre-wrap; word-break: break-word; }
+  .trg-uses { font-size: 11px; opacity: .55; white-space: nowrap; }
+  .trg-exact { font-size: 10px; font-weight: 700; border: 1px solid rgba(95,208,138,.4); color: #7bd88f; border-radius: 4px; padding: 1px 5px; margin-left: 6px; }
+  .trg-del { background: none; border: 1px solid rgba(255,138,138,.35); color: #ff8a8a; border-radius: 8px; width: 28px; height: 28px; cursor: pointer; }
+  .trg-del:hover { background: rgba(255,138,138,.12); }
+  .trg-form { display: grid; grid-template-columns: 1fr 2fr auto auto; gap: 8px; margin-top: 14px; }
+  .au-input { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.12); border-radius: 9px; color: var(--text-1); padding: 9px 11px; font-size: 13px; font-family: inherit; }
+  .au-input:focus { outline: none; border-color: rgba(224,176,74,.5); }
+  .trg-cool { display: flex; align-items: center; gap: 8px; font-size: 12.5px; opacity: .85; }
+  .trg-cool input { width: 76px; }
+  .trg-exact-lbl { display: flex; align-items: center; gap: 6px; font-size: 12.5px; white-space: nowrap; cursor: pointer; }
+  .dg-embed { border-left: 4px solid #5865F2; background: rgba(88,101,242,.07); border-radius: 0 10px 10px 0; padding: 14px 16px; }
+  .dg-title { font-weight: 800; font-size: 14.5px; margin-bottom: 10px; }
+  .dg-field { margin-bottom: 10px; }
+  .dg-field-name { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; opacity: .55; margin-bottom: 3px; }
+  .dg-field-val { font-size: 13px; line-height: 1.55; white-space: pre-wrap; }
+  .dg-controls { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+  @media (max-width: 760px) { .trg-form { grid-template-columns: 1fr; } .trg-row { grid-template-columns: 1fr auto; } }
 </style>
 
 <div class="au-wrap">
@@ -88,6 +117,45 @@
   <div class="au-grid" id="au-grid">
     <div class="au-loading">
       <i class="fas fa-circle-notch fa-spin"></i> Загружаем настройки модулей…
+    </div>
+  </div>
+
+  <!-- v3: автоответы по триггерам -->
+  <div class="au-sec" id="triggers-sec">
+    <div class="au-sec-title"><i class="fas fa-bolt"></i> Автоответы по триггерам</div>
+    <div class="au-sec-sub">Бот сам отвечает на ключевые слова в чате («правила», «ip»). Те же правила, что и у команды /триг — одно хранилище на двоих.</div>
+    <div class="au-panel">
+      <div class="trg-head-row">
+        <span class="trg-count" id="trg-count">—</span>
+        <span class="trg-cool">Кулдаун:
+          <input type="number" class="au-input" id="trg-cooldown" min="0" max="3600" value="30" aria-label="Кулдаун в секундах"> сек
+          <button class="au-save" onclick="trgCooldown()"><i class="fas fa-check"></i></button>
+        </span>
+      </div>
+      <div id="trg-list"><div class="au-loading"><i class="fas fa-circle-notch fa-spin"></i> Загружаем…</div></div>
+      <div class="trg-form">
+        <input type="text" class="au-input" id="trg-new-trigger" placeholder="Триггер: правила" aria-label="Триггер">
+        <input type="text" class="au-input" id="trg-new-response" placeholder="Ответ: ссылка на правила…" aria-label="Ответ">
+        <label class="trg-exact-lbl" title="Срабатывать только на слово целиком, а не на подстроку"><input type="checkbox" id="trg-new-exact"> точное слово</label>
+        <button class="au-save" onclick="trgAdd()"><i class="fas fa-plus"></i> Добавить</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- v3: предпросмотр мод-дайджеста -->
+  <div class="au-sec" id="digest-sec">
+    <div class="au-sec-title"><i class="fas fa-newspaper"></i> Мод-дайджест · предпросмотр</div>
+    <div class="au-sec-sub">Та же сводка, которую бот шлёт в Discord, — смотрите до включения рассылки.</div>
+    <div class="au-panel">
+      <div class="dg-controls">
+        <select class="au-input" id="dg-days" aria-label="Период">
+          <option value="7">за 7 дней</option>
+          <option value="14">за 14 дней</option>
+          <option value="30">за 30 дней</option>
+        </select>
+        <button class="au-save" onclick="loadDigestPreview()"><i class="fas fa-rotate"></i> Обновить</button>
+      </div>
+      <div class="dg-grid" id="dg-grid"><div class="au-loading"><i class="fas fa-circle-notch fa-spin"></i> Считаем сводку…</div></div>
     </div>
   </div>
 </div>
@@ -217,6 +285,89 @@ async function refreshStrip(){
   } catch(e) { /* стрип останется с прошлыми числами — не критично */ }
 }
 
+/* ── v3: триггеры ── */
+async function loadTriggers(){
+  var box = document.getElementById('trg-list');
+  if(!box) return;
+  try {
+    var d = await fetch('/api/automation/triggers/state').then(function(r){ return r.json(); });
+    if(!d.success){ throw new Error(d.error || 'ошибка'); }
+    var items = (d.state && d.state.items) || [];
+    document.getElementById('trg-count').textContent = items.length + ' / ' + d.max;
+    document.getElementById('trg-cooldown').value = (d.state && d.state.cooldown) || 30;
+    box.innerHTML = items.length ? items.map(function(t){
+      return '<div class="trg-row">'
+        + '<div class="trg-trig">№'+t.id+' · '+esc(t.trigger)+(t.exact?'<span class="trg-exact">ТОЧНО</span>':'')+'</div>'
+        + '<div class="trg-resp">'+esc(t.response)+'</div>'
+        + '<div class="trg-uses">'+esc(t.uses)+' сраб.</div>'
+        + '<button class="trg-del" onclick="trgRemove('+t.id+')" title="Удалить №'+t.id+'" aria-label="Удалить"><i class="fas fa-trash-can"></i></button>'
+        + '</div>';
+    }).join('') : '<div class="au-sec-sub" style="margin:6px 0 2px">Триггеров пока нет — добавьте первый ниже.</div>';
+  } catch(e){
+    box.innerHTML = '<div class="au-error">Не удалось загрузить триггеры: '+esc(e.message)+'</div>';
+  }
+}
+
+async function trgAdd(){
+  var trig = document.getElementById('trg-new-trigger').value;
+  var resp = document.getElementById('trg-new-response').value;
+  var exact = document.getElementById('trg-new-exact').checked;
+  var r = await fetch('/api/automation/triggers/add', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({trigger: trig, response: resp, exact: exact})
+  });
+  var d = await r.json();
+  if(r.ok && d.success){
+    document.getElementById('trg-new-trigger').value = '';
+    document.getElementById('trg-new-response').value = '';
+    document.getElementById('trg-new-exact').checked = false;
+  }
+  loadTriggers();
+}
+
+async function trgRemove(id){
+  var r = await fetch('/api/automation/triggers/remove', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({id: id})
+  });
+  await r.json();
+  loadTriggers();
+}
+
+async function trgCooldown(){
+  var secs = parseInt(document.getElementById('trg-cooldown').value, 10);
+  var r = await fetch('/api/automation/triggers/cooldown', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({seconds: secs})
+  });
+  await r.json();
+  loadTriggers();
+}
+
+/* ── v3: предпросмотр дайджеста ── */
+async function loadDigestPreview(){
+  var grid = document.getElementById('dg-grid');
+  if(!grid) return;
+  var days = document.getElementById('dg-days').value;
+  try {
+    var d = await fetch('/api/automation/digest-preview?days='+encodeURIComponent(days)).then(function(r){ return r.json(); });
+    if(!d.success){ throw new Error(d.error || 'ошибка'); }
+    var e = d.embed;
+    var fields = (e.fields || []).map(function(fv){
+      return '<div class="dg-field"><div class="dg-field-name">'+esc(fv[0])+'</div>'
+        + '<div class="dg-field-val">'+esc(fv[1])+'</div></div>';
+    }).join('');
+    grid.innerHTML = '<div class="dg-embed"><div class="dg-title">'+esc(e.title)+'</div>'+fields+'</div>';
+    if(d.summary && d.summary.total === 0){
+      grid.innerHTML += '<div class="au-sec-sub" style="margin-top:10px">Событий за период нет — дайджест читает audit_log (журнал модерации).</div>';
+    }
+  } catch(e2){
+    grid.innerHTML = '<div class="au-error">Не удалось собрать предпросмотр: '+esc(e2.message)+'</div>';
+  }
+}
+
 loadAutomation();
+loadTriggers();
+loadDigestPreview();
 </script>
 {% endblock %}
