@@ -140,6 +140,28 @@ def parse_counters(text):
     return channels, issues
 
 
+def night_phase(settings, now=None):
+    """Фаза ночного режима: сейчас ночь?, когда перелом, что настроено.
+
+    Вся логика окна — чистые функции кога (is_night/window_text /
+    plan_settings_lines), панель только досчитывает секунды до границы.
+    """
+    s = night_mode.merge_settings(settings)
+    now = now or datetime.now(timezone.utc)
+    night = night_mode.is_night(now, s['start_hour'], s['end_hour'])
+    if s['start_hour'] == s['end_hour']:
+        next_in = None
+        next_label = None
+    else:
+        target = s['end_hour'] if night else s['start_hour']
+        next_in = ((target - now.hour) % 24) * 3600 - now.minute * 60 - now.second
+        next_label = 'утро' if night else 'ночь'
+    return {'enabled': bool(s['enabled']), 'is_night': night,
+            'window': night_mode.window_text(s),
+            'next_change_in_s': next_in, 'next_change': next_label,
+            'lines': night_mode.plan_settings_lines(s)}
+
+
 MEDIALOCK_PATH = 'data/media_only.json'
 # Панельные подписи режимов — без эмодзи (в Discord-боках они есть в MODES кога)
 MEDIALOCK_MODES = {
@@ -323,6 +345,24 @@ def register(ctx):
         from cogs.triggers import MAX_TRIGGERS
         return MAX_TRIGGERS
 
+    def _apply_trigger_items(state, items):
+        """Строки импорта через add_trigger кога: лимит/дубли/валидация 1:1."""
+        from cogs.triggers import add_trigger
+        added = 0
+        skipped = []
+        for idx, raw in enumerate(items, 1):
+            if not isinstance(raw, dict):
+                skipped.append({'trigger': '#%d' % idx, 'reason': 'не объект'})
+                continue
+            _item, err = add_trigger(state, raw.get('trigger'),
+                                     raw.get('response'), raw.get('exact'))
+            if err:
+                skipped.append({'trigger': str(raw.get('trigger') or ('#%d' % idx))[:60],
+                                'reason': err})
+            else:
+                added += 1
+        return added, skipped
+
     @app.route('/api/automation/triggers/state')
     @login_required
     @role_required('admin')
@@ -489,7 +529,7 @@ def register(ctx):
         """Импорт экспорта: merge — доливаем к текущим, replace — начисто.
         Каждая строка проходит add_trigger кога: те же лимиты и защита
         от дублей, поэтому повторный merge того же файла ничего не дублирует."""
-        from cogs.triggers import add_trigger, empty_state
+        from cogs.triggers import empty_state
         data = request.get_json(silent=True) or {}
         mode = data.get('mode')
         if mode not in ('merge', 'replace'):
@@ -501,19 +541,7 @@ def register(ctx):
                             'error': 'Файл не похож на экспорт триггеров'}), 400
         gid = active_guild_id()
         state = _trigger_state(gid) if mode == 'merge' else empty_state()
-        added = 0
-        skipped = []
-        for idx, raw in enumerate(items, 1):
-            if not isinstance(raw, dict):
-                skipped.append({'trigger': '#%d' % idx, 'reason': 'не объект'})
-                continue
-            _item, err = add_trigger(state, raw.get('trigger'),
-                                     raw.get('response'), raw.get('exact'))
-            if err:
-                skipped.append({'trigger': str(raw.get('trigger') or ('#%d' % idx))[:60],
-                                'reason': err})
-            else:
-                added += 1
+        added, skipped = _apply_trigger_items(state, items)
         cd = data.get('cooldown')
         if cd is not None:
             try:
@@ -661,6 +689,39 @@ def register(ctx):
                 'today': _night_today(int(cfg.get('tz_offset') or 0)),
                 'last_sent': last_sent or None}
 
+    def _night_validate(data):
+        """Правки настроек сводки -> (updates, err). Те же тексты, что раньше."""
+        updates = {}
+        if 'enabled' in data:
+            updates['enabled'] = bool(data['enabled'])
+        if 'channel_id' in data:
+            try:
+                cid = int(data['channel_id'])
+            except (TypeError, ValueError):
+                return None, 'ID канала — число (0 — авто)'
+            if cid < 0:
+                return None, 'ID канала — число (0 — авто)'
+            updates['channel_id'] = cid
+        if 'tz_offset' in data:
+            try:
+                tz = int(data['tz_offset'])
+            except (TypeError, ValueError):
+                return None, 'Смещение — число часов'
+            if not NIGHT_TZ_MIN <= tz <= NIGHT_TZ_MAX:
+                return None, 'Смещение: от -12 до +14 часов'
+            updates['tz_offset'] = tz
+        if not updates:
+            return None, 'Нечего сохранять'
+        return updates, ''
+
+    def _night_apply(gid, updates):
+        state = _night_state()
+        saved = state.get(str(gid))
+        cur = dict(saved) if isinstance(saved, dict) else {}
+        cur.update(updates)
+        state[str(gid)] = cur
+        _js_save(NIGHT_SUMMARY_PATH, state)
+
     @app.route('/api/automation/night-summary')
     @login_required
     @role_required('admin')
@@ -672,38 +733,11 @@ def register(ctx):
     @role_required('admin')
     def api_night_summary_save():
         data = request.get_json(silent=True) or {}
-        updates = {}
-        if 'enabled' in data:
-            updates['enabled'] = bool(data['enabled'])
-        if 'channel_id' in data:
-            try:
-                cid = int(data['channel_id'])
-            except (TypeError, ValueError):
-                return jsonify({'success': False,
-                                'error': 'ID канала — число (0 — авто)'}), 400
-            if cid < 0:
-                return jsonify({'success': False,
-                                'error': 'ID канала — число (0 — авто)'}), 400
-            updates['channel_id'] = cid
-        if 'tz_offset' in data:
-            try:
-                tz = int(data['tz_offset'])
-            except (TypeError, ValueError):
-                return jsonify({'success': False,
-                                'error': 'Смещение — число часов'}), 400
-            if not NIGHT_TZ_MIN <= tz <= NIGHT_TZ_MAX:
-                return jsonify({'success': False,
-                                'error': 'Смещение: от -12 до +14 часов'}), 400
-            updates['tz_offset'] = tz
-        if not updates:
-            return jsonify({'success': False, 'error': 'Нечего сохранять'}), 400
+        updates, err = _night_validate(data)
+        if err:
+            return jsonify({'success': False, 'error': err}), 400
         gid = active_guild_id()
-        state = _night_state()
-        saved = state.get(str(gid))
-        cur = dict(saved) if isinstance(saved, dict) else {}
-        cur.update(updates)
-        state[str(gid)] = cur
-        _js_save(NIGHT_SUMMARY_PATH, state)
+        _night_apply(gid, updates)
         try:
             _fire_panel_notification(
                 'automation', 'Ночная сводка: настройки обновлены',
@@ -733,3 +767,188 @@ def register(ctx):
                         'date': day.strftime('%Y-%m-%d'), 'tz_offset': tz,
                         'enabled': bool(cfg['enabled']),
                         'stats': stats})
+
+    # ── #48: фаза ночного режима ─────────────────────────────────────────
+    @app.route('/api/automation/night-phase')
+    @login_required
+    @role_required('admin')
+    def api_night_phase():
+        """Сейчас ночь или до неё сколько? — window/is_night кога 1:1."""
+        gid = active_guild_id()
+        settings = _db('night_mode').get(gid, 'settings', {})
+        return jsonify(dict(night_phase(settings), success=True))
+
+    # ── #49: предпросмотр приветствий PRO ────────────────────────────────
+    @app.route('/api/automation/welcome-preview')
+    @login_required
+    @role_required('admin')
+    def api_welcome_preview():
+        """Каждый шаблон, отрендеренный тем render_welcome, что шлёт ког.
+        Живые имя сервера и номер — при онлайн-боте, иначе пометка sample."""
+        gid = active_guild_id()
+        s = welcome_pro.merge_settings(_db('welcome_pro').get(gid, 'settings', {}))
+        import web.app as _app
+        bot = _app.bot_instance
+        guild = None
+        if bot is not None:
+            try:
+                guild = bot.get_guild(int(gid))
+            except (TypeError, ValueError) as _ex:
+                _log.debug('welcome-preview: битый gid %r: %s', gid, _ex)
+        server = str(getattr(guild, 'name', '') or '') if guild else ''
+        count = int(getattr(guild, 'member_count', 0) or 0) + 1 if guild else 128
+        if not server:
+            server = 'Сервер'
+        items = [{'index': idx, 'source': tpl,
+                  'rendered': welcome_pro.render_welcome(tpl, 'Новенький',
+                                                         '@Новенький', server, count)}
+                 for idx, tpl in enumerate(s['templates'], 1)]
+        return jsonify({'success': True,
+                        'enabled': bool(s['enabled']),
+                        'templates': items,
+                        'dm_enabled': bool(s.get('dm_enabled')),
+                        'dm_rendered': welcome_pro.render_welcome(
+                            s.get('dm_text') or '', 'Новенький', '@Новенький',
+                            server, count),
+                        'server': server, 'count': count,
+                        'sample': guild is not None})
+
+    # ── #50: перенос автоматики (экспорт/импорт одним файлом) ────────────
+    def _export_bundle(gid):
+        gid_s = str(gid)
+        from cogs.triggers import DEFAULT_COOLDOWN
+        state = _trigger_state(gid_s)
+        channels = {}
+        gmap = _medialock_all().get(gid_s)
+        for cid, rec in (gmap if isinstance(gmap, dict) else {}).items():
+            if not isinstance(rec, dict):
+                continue
+            mode = str(rec.get('mode') or 'media')
+            if mode not in MEDIALOCK_MODES:
+                continue
+            channels[str(cid)] = {'mode': mode,
+                                  'exempt_mods': bool(rec.get('exempt_mods', True))}
+        ns_cfg = _night_cfg(gid_s)
+        return {
+            'app': 'aether-automation',
+            'version': 1,
+            'guild_id': gid_s,
+            'modules': {key: _serialize(key, spec['merge'](_db(spec['ns']).get(gid, 'settings', {})))
+                        for key, spec in MODULE_EDITORS.items()},
+            'triggers': {'cooldown': state.get('cooldown', DEFAULT_COOLDOWN),
+                         'items': [{'trigger': it.get('trigger'),
+                                    'response': it.get('response'),
+                                    'exact': bool(it.get('exact'))}
+                                   for it in (state.get('items') or [])]},
+            'medialock': {'channels': channels},
+            'night_summary': {'enabled': bool(ns_cfg['enabled']),
+                              'channel_id': int(ns_cfg.get('channel_id') or 0),
+                              'tz_offset': int(ns_cfg.get('tz_offset') or 0)},
+        }
+
+    @app.route('/api/automation/export-all')
+    @login_required
+    @role_required('admin')
+    def api_automation_export_all():
+        gid = active_guild_id()
+        bundle = _export_bundle(gid)
+        return Response(json.dumps(bundle, ensure_ascii=False, indent=2),
+                        mimetype='application/json; charset=utf-8',
+                        headers={'Content-Disposition':
+                                 'attachment; filename="automation_%s.json"' % gid})
+
+    @app.route('/api/automation/import-all', methods=['POST'])
+    @login_required
+    @role_required('admin')
+    def api_automation_import_all():
+        """Мягкий перенос: merge по всем секциям. Модули проходят тот же
+        _clean_payload + merge_settings, что и их карточки; триггеры —
+        add_trigger кога; замки и сводка — те же проверки, что у их POST."""
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict) or data.get('app') != 'aether-automation':
+            return jsonify({'success': False,
+                            'error': 'Файл не похож на экспорт автоматики'}), 400
+        gid = active_guild_id()
+        applied = {'modules': [], 'triggers': 0, 'medialock': 0, 'night_summary': False}
+        skipped = []
+        issues = []
+
+        modules = data.get('modules')
+        if isinstance(modules, dict):
+            for key, values in modules.items():
+                spec = MODULE_EDITORS.get(key)
+                if spec is None:
+                    skipped.append({'section': 'modules', 'what': str(key),
+                                    'reason': 'неизвестный модуль'})
+                    continue
+                if not isinstance(values, dict):
+                    skipped.append({'section': 'modules', 'what': str(key),
+                                    'reason': 'не объект'})
+                    continue
+                store = _db(spec['ns'])
+                current = spec['merge'](store.get(gid, 'settings', {}))
+                current.update(_clean_payload(key, values))
+                store.set(gid, 'settings', spec['merge'](current))
+                for field in spec['fields']:
+                    if field['kind'] == 'counters' and field['key'] in values:
+                        issues.extend(parse_counters(values[field['key']])[1])
+                applied['modules'].append(key)
+
+        trg = data.get('triggers')
+        if isinstance(trg, dict):
+            items = trg.get('items')
+            if isinstance(items, list):
+                state = _trigger_state(gid)
+                added, trg_skipped = _apply_trigger_items(state, items)
+                for row in trg_skipped:
+                    skipped.append({'section': 'triggers', 'what': row['trigger'],
+                                    'reason': row['reason']})
+                cd = trg.get('cooldown')
+                if cd is not None:
+                    try:
+                        secs = int(cd)
+                        if 0 <= secs <= 3600:
+                            state['cooldown'] = secs
+                    except (TypeError, ValueError) as _ex:
+                        _log.debug('import-all: битый кулдаун %r: %s', cd, _ex)
+                _db('triggers').set(gid, 'state', state)
+                applied['triggers'] = added
+
+        ml = data.get('medialock')
+        if isinstance(ml, dict) and isinstance(ml.get('channels'), dict):
+            store = _medialock_all()
+            gmap = store.setdefault(str(gid), {})
+            for cid, rec in ml['channels'].items():
+                cid = str(cid)
+                mode = rec.get('mode') if isinstance(rec, dict) else None
+                if not cid.isdigit() or mode not in MEDIALOCK_MODES:
+                    skipped.append({'section': 'medialock', 'what': cid,
+                                    'reason': 'битый канал или режим'})
+                    continue
+                gmap[cid] = {'mode': mode,
+                             'exempt_mods': bool(rec.get('exempt_mods', True))}
+                applied['medialock'] += 1
+            _medialock_save(store)
+
+        ns = data.get('night_summary')
+        if isinstance(ns, dict):
+            updates, err = _night_validate({
+                k: ns[k] for k in ('enabled', 'channel_id', 'tz_offset') if k in ns})
+            if err:
+                skipped.append({'section': 'night_summary', 'what': 'настройки',
+                                'reason': err})
+            else:
+                _night_apply(gid, updates)
+                applied['night_summary'] = True
+
+        try:
+            _fire_panel_notification(
+                'automation',
+                'Импорт автоматики: модулей %d, триггеров %d, замков %d' % (
+                    len(applied['modules']), applied['triggers'], applied['medialock']),
+                f'Через панель ({session.get("username", "?")}), сервер {gid}')
+        except Exception as _ex:
+            _log.debug('import-all: уведомление не ушло: %s', _ex)
+        return jsonify({'success': True, 'applied': applied,
+                        'skipped': skipped[:20], 'skipped_total': len(skipped),
+                        'issues': issues})

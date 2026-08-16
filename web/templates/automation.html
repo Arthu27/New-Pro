@@ -116,6 +116,12 @@
   .cnt-meta { color: var(--text-3); font-size: 11.5px; white-space: nowrap; }
   .cnt-missing { color: #ff8a7a; }
   .au-link-btn { text-decoration: none; display: inline-flex; align-items: center; gap: 7px; }
+  .au-night { display: flex; align-items: center; gap: 9px; margin: 10px 0 0; font-size: 12.5px; color: var(--text-3); padding: 8px 12px; border: 1px dashed rgba(255,255,255,.12); border-radius: 10px; }
+  .au-night i { color: #7f8ce0; }
+  .au-night b { color: var(--text-2); }
+  .wp-tpl { border-left: 3px solid #5fd08a; background: rgba(95,208,138,.06); border-radius: 0 8px 8px 0; padding: 10px 12px; margin-bottom: 8px; }
+  .wp-src { font-size: 11px; color: var(--text-3); margin-top: 4px; }
+
   @media (max-width: 760px) { .trg-form { grid-template-columns: 1fr; } .trg-row { grid-template-columns: 1fr auto; } }
 </style>
 
@@ -125,6 +131,7 @@
     <div class="cell"><div class="ico i-green"><i class="fas fa-check-circle"></i></div><div><div class="num" id="au-on">—</div><div class="lbl">Активно</div></div></div>
     <div class="cell"><div class="ico i-red"><i class="fas fa-power-off"></i></div><div><div class="num" id="au-off">—</div><div class="lbl">На паузе</div></div></div>
   </div>
+  <div class="au-night" id="au-night-phase" style="display:none"></div>
 
   <div class="au-grid" id="au-grid">
     <div class="au-loading">
@@ -211,6 +218,19 @@
     </div>
   </div>
 
+  <!-- #49: предпросмотр приветствий PRO -->
+  <div class="au-sec" id="welcome-sec">
+    <div class="au-sec-title"><i class="fas fa-hand-sparkles"></i> Приветствия PRO · предпросмотр</div>
+    <div class="au-sec-sub">Каждый шаблон, подставленный тем же рендером, что шлёт бот новичку. Пример — участник «Новенький».</div>
+    <div class="au-panel">
+      <div class="dg-controls">
+        <button class="au-save" onclick="welcomePreview()"><i class="fas fa-rotate"></i> Обновить</button>
+        <span class="au-sec-sub" id="wp-note" style="margin:0"></span>
+      </div>
+      <div id="wp-list"><div class="au-loading"><i class="fas fa-circle-notch fa-spin"></i> Рендерим…</div></div>
+    </div>
+  </div>
+
   <!-- v3: предпросмотр мод-дайджеста -->
   <div class="au-sec" id="digest-sec">
     <div class="au-sec-title"><i class="fas fa-newspaper"></i> Мод-дайджест · предпросмотр</div>
@@ -225,6 +245,22 @@
         <button class="au-save" onclick="loadDigestPreview()"><i class="fas fa-rotate"></i> Обновить</button>
       </div>
       <div class="dg-grid" id="dg-grid"><div class="au-loading"><i class="fas fa-circle-notch fa-spin"></i> Считаем сводку…</div></div>
+    </div>
+  </div>
+  <!-- #50: перенос автоматики -->
+  <div class="au-sec" id="transfer-sec">
+    <div class="au-sec-title"><i class="fas fa-box-open"></i> Перенос автоматики</div>
+    <div class="au-sec-sub">Все модули, триггеры, замки каналов и ночная сводка одним JSON — удобно переехать на другой сервер или откатиться после экспериментов. Импорт мягкий: доливает к текущему, ничего не удаляет.</div>
+    <div class="au-panel">
+      <div class="trg-io" style="margin-top:0">
+        <a class="au-save au-link-btn" href="/api/automation/export-all" download><i class="fas fa-download"></i> Экспорт всего</a>
+        <button class="au-save" onclick="trImportToggle()"><i class="fas fa-upload"></i> Импорт</button>
+      </div>
+      <div class="trg-io-box" id="tr-import-box" style="display:none;margin-top:10px">
+        <textarea class="au-input" id="tr-import-text" rows="6" placeholder='Вставьте JSON из «Экспорт всего»' aria-label="JSON переноса автоматики"></textarea>
+        <button class="au-save" onclick="trImportDo()"><i class="fas fa-check"></i> Применить перенос</button>
+        <div class="au-sec-sub" id="tr-import-result" style="margin:0"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -673,10 +709,76 @@ async function nsPreview(){
   box.innerHTML = html;
 }
 
+/* ── #48: фаза ночного режима ── */
+async function nightPhase(){
+  var box = document.getElementById('au-night-phase');
+  var d = await fetch('/api/automation/night-phase').then(function(r){ return r.json(); });
+  if(!d.success){ return; }
+  var when;
+  if(d.next_change_in_s == null){
+    when = 'окно не задано (начало = конец)';
+  } else {
+    var s = d.next_change_in_s, h = Math.floor(s / 3600), m = Math.round(s % 3600 / 60);
+    when = (d.next_change === 'утро' ? 'утро через ' : 'ночь через ') + (h ? h + 'ч ' : '') + m + 'м';
+  }
+  box.style.display = 'flex';
+  box.innerHTML = '<i class="fas fa-moon"></i><span>Ночной режим: <b>' + (d.is_night ? 'сейчас ночь' : 'сейчас день') + '</b>'
+    + ' · ' + esc(d.window) + ' · ' + esc(when) + (d.enabled ? '' : ' · режим на паузе') + '</span>';
+}
+
+/* ── #49: предпросмотр приветствий ── */
+async function welcomePreview(){
+  var box = document.getElementById('wp-list');
+  var d = await fetch('/api/automation/welcome-preview').then(function(r){ return r.json(); });
+  if(!d.success){ box.innerHTML = '<div class="au-error">Не удалось отрендерить.</div>'; return; }
+  document.getElementById('wp-note').textContent = d.sample
+    ? ('Пример: @Новенький, сервер «' + d.server + '», №' + d.count)
+    : 'Бот офлайн — пример с примерными данными (128-й житель)';
+  var html = d.templates.map(function(tpl){
+    return '<div class="wp-tpl"><div>' + esc(tpl.rendered) + '</div>'
+      + '<div class="wp-src">Шаблон №' + tpl.index + ': ' + esc(tpl.source) + '</div></div>';
+  }).join('');
+  if(d.dm_enabled && d.dm_rendered){
+    html += '<div class="wp-tpl" style="border-left-color:#e0b04a;background:rgba(224,176,74,.06)"><div><i class="fas fa-envelope"></i> ЛС новичку: ' + esc(d.dm_rendered) + '</div></div>';
+  }
+  box.innerHTML = html || '<div class="au-sec-sub" style="margin:0">Шаблонов нет — добавьте их в карточке «Приветствия PRO».</div>';
+}
+
+/* ── #50: перенос автоматики ── */
+function trImportToggle(){
+  var box = document.getElementById('tr-import-box');
+  box.style.display = (box.style.display === 'none' || !box.style.display) ? 'grid' : 'none';
+}
+
+async function trImportDo(){
+  var res = document.getElementById('tr-import-result');
+  var raw;
+  try {
+    raw = JSON.parse(document.getElementById('tr-import-text').value || '{}');
+  } catch(e){
+    res.textContent = 'Это не JSON: ' + e.message;
+    return;
+  }
+  var d = await fetch('/api/automation/import-all', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(raw)
+  }).then(function(x){ return x.json(); });
+  if(!d.success){ res.textContent = d.error || 'Ошибка переноса'; return; }
+  var a = d.applied;
+  var txt = 'Применено: модулей ' + a.modules.length + ' · триггеров ' + a.triggers + ' · замков ' + a.medialock + (a.night_summary ? ' · сводка' : '');
+  if(d.skipped_total){ txt += ' · пропущено: ' + d.skipped_total; }
+  if(d.issues && d.issues.length){ txt += ' · замечания: ' + d.issues[0]; }
+  res.textContent = txt;
+  document.getElementById('tr-import-text').value = '';
+  loadAutomation(); loadTriggers(); mlLoad(); nsLoad(); nightPhase();
+}
+
 loadAutomation();
 loadTriggers();
 loadDigestPreview();
 mlLoad();
 nsLoad();
+nightPhase();
+welcomePreview();
 </script>
 {% endblock %}

@@ -374,12 +374,158 @@ check(s['warns'] == 1 and s['bans'] == 0 and s['top_mod_id'] == 42
       and s['top_mod_count'] == 1,
       'collect_day кога: варн сегодня учтён, старый бан за днём, модератор дня')
 
-print('== 9. Шаблон, меню, коги страницы ==')
+print('== 9. #48: фаза ночного режима ==')
+from datetime import timezone as _tz  # noqa: E402
+
+U = _tz.utc
+ph = AU.night_phase({}, now=datetime(2026, 8, 16, 23, 30, tzinfo=U))
+check(ph['is_night'] is True and ph['next_change'] == 'утро'
+      and ph['next_change_in_s'] == 27000, '23:30 в окне 23–7: до утра 7ч30м')
+ph = AU.night_phase({}, now=datetime(2026, 8, 16, 12, 15, 30, tzinfo=U))
+check(ph['is_night'] is False and ph['next_change'] == 'ночь'
+      and ph['next_change_in_s'] == 38670, '12:15 днём: до ночи 10ч44м30с')
+ph = AU.night_phase({'start_hour': 7, 'end_hour': 7},
+                    now=datetime(2026, 8, 16, 3, 0, tzinfo=U))
+check(ph['is_night'] is False and ph['next_change_in_s'] is None
+      and ph['next_change'] is None, 'пустое окно (start==end) — ночи нет, перелома нет')
+ph = AU.night_phase({})
+check(ph['window'] == '23:00–07:00 UTC' and len(ph['lines']) == 5
+      and ph['enabled'] is False, 'окно и строки плана — самим когом (window_text/plan_lines)')
+
+with client.session_transaction() as s:
+    s.clear()
+check(client.get('/api/automation/night-phase').status_code in (302, 401, 403),
+      'гостю фаза закрыта')
+login('mod')
+check(client.get('/api/automation/night-phase').status_code == 403, 'моду фаза закрыта')
+login('owner')
+d = client.get('/api/automation/night-phase').get_json()
+check(d['success'] and isinstance(d['is_night'], bool) and d['window'] == '23:00–07:00 UTC',
+      'эндпоинт отвечает фазой по умолчанию')
+
+print('== 10. #49: предпросмотр приветствий PRO ==')
+with client.session_transaction() as s:
+    s.clear()
+check(client.get('/api/automation/welcome-preview').status_code in (302, 401, 403),
+      'гостю предпросмотр закрыт')
+login('mod')
+check(client.get('/api/automation/welcome-preview').status_code == 403,
+      'моду предпросмотр закрыт')
+login('owner')
+appmod.set_bot_instance(None)
+d = client.get('/api/automation/welcome-preview').get_json()
+check(d['success'] and d['sample'] is False and d['server'] == 'Сервер'
+      and d['count'] == 128, 'без бота — честный флаг sample и муляжи помечены')
+check(len(d['templates']) == 3 and '@Новенький' in d['templates'][0]['rendered']
+      and d['templates'][0]['source'].startswith('Добро пожаловать'),
+      'дефолтные шаблоны кога отрендерены')
+check(d['enabled'] is False and d['dm_enabled'] is False, 'дефолты выключателей 1:1')
+
+appmod.set_bot_instance(FakeBot())
+d = client.get('/api/automation/welcome-preview').get_json()
+check(d['sample'] is True and d['server'] == 'TestGuild' and d['count'] == 13,
+      'с ботом — живые имя сервера и следующий номер')
+check('TestGuild' in d['templates'][1]['rendered'], 'имя сервера подставлено рендером кога')
+
+r = client.post('/api/automation/welcome_pro', json={
+    'dm_enabled': True, 'dm_text': 'Салют, {user} на {server}!',
+    'templates': 'Первая {mention}\nБитая {переменная}'})
+check(r.get_json()['success'], 'шаблоны и ЛС сохранены через карточку')
+d = client.get('/api/automation/welcome-preview').get_json()
+check(len(d['templates']) == 2 and d['templates'][1]['rendered'] == 'Битая {переменная}',
+      'неизвестная переменная не роняет рендер (SafeDict кога)')
+check(d['dm_rendered'] == 'Салют, Новенький на TestGuild!', 'ЛС отрендерено 1:1')
+
+print('== 11. #50: перенос автоматики ==')
+client.post('/api/automation/triggers/import', json={'mode': 'replace', 'cooldown': 30,
+                                                     'items': [{'trigger': 'имп-база',
+                                                                'response': 'ответ базы'}]})
+with client.session_transaction() as s:
+    s.clear()
+check(client.get('/api/automation/export-all').status_code in (302, 401, 403),
+      'гостю экспорт закрыт')
+check(client.post('/api/automation/import-all', json={}).status_code in (302, 401, 403),
+      'гостю импорт закрыт')
+login('owner')
+ex = client.get('/api/automation/export-all')
+check('automation_777.json' in ex.headers.get('Content-Disposition', ''),
+      'имя файла с сервером')
+bundle = json.loads(ex.get_data(as_text=True))
+check(bundle['app'] == 'aether-automation' and bundle['version'] == 1
+      and bundle['guild_id'] == '777', 'шапка бандла')
+check(set(bundle['modules']) == set(AU.MODULE_EDITORS)
+      and bundle['modules']['server_stats']['channels'] ==
+      '11 | Участники: {members}\n12 | Голос: {voice}',
+      'модули сериализованы формой (счётчики построчно)')
+check(all('uses' not in it and 'id' not in it for it in bundle['triggers']['items']),
+      'триггеры без служебных полей')
+check(bundle['night_summary'] == {'enabled': False, 'channel_id': 123, 'tz_offset': 0}
+      and bundle['medialock']['channels'] == {}, 'сводка и замки в чистом виде')
+
+r = client.post('/api/automation/import-all', json={'app': 'nope'})
+check(r.status_code == 400 and r.get_json()['error'] == 'Файл не похож на экспорт автоматики',
+      'чужой файл — 400')
+r = client.post('/api/automation/import-all', json={'app': 'aether-automation'})
+d = r.get_json()
+check(d['success'] and d['applied']['modules'] == [] and d['applied']['triggers'] == 0,
+      'пустой бандл — ничего не применилось, не упало')
+
+payload = {
+    'app': 'aether-automation', 'version': 1,
+    'modules': {
+        'night_mode': {'enabled': True, 'start_hour': 22, 'end_hour': 6,
+                       'slowmode_seconds': 30},
+        'server_stats': {'enabled': True, 'channels': '77 | Онлайн: {online}\nбитая'},
+        'unknown_mod': {'enabled': True},
+    },
+    'triggers': {'cooldown': 15, 'items': [
+        {'trigger': 'имп-база', 'response': 'ещё раз'},
+        {'trigger': 'имп-новая', 'response': 'свежая'}]},
+    'medialock': {'channels': {
+        '88': {'mode': 'link', 'exempt_mods': False},
+        'битый': {'mode': 'media'},
+        '89': {'mode': 'недопустимый'}}},
+    'night_summary': {'enabled': False, 'channel_id': 5, 'tz_offset': 7},
+}
+r = client.post('/api/automation/import-all', json=payload)
+d = r.get_json()
+check(d['success'] and d['applied']['modules'] == ['night_mode', 'server_stats'],
+      'модули применены по порядку реестра')
+check(d['applied']['triggers'] == 1 and d['applied']['medialock'] == 1
+      and d['applied']['night_summary'] is True, 'триггер/замок/сводка применены')
+check(d['skipped_total'] == 4, 'четыре пропуска: левый модуль, битый канал, левый режим, дубль')
+reasons = {(s['section'], s['reason']) for s in d['skipped']}
+check(('modules', 'неизвестный модуль') in reasons
+      and ('medialock', 'битый канал или режим') in reasons,
+      'причины пропусков читаемые')
+check(d['issues'] == ['строка 2: нет разделителя «|»'], 'замечания счётчиков всплыли')
+nm = GuildData('night_mode').get(777, 'settings')
+check(nm['enabled'] is True and nm['start_hour'] == 22 and nm['slowmode_seconds'] == 30,
+      'ночной режим записан (merge кога)')
+st = GuildData('triggers').get(777, 'state')
+check(len(st['items']) == 2 and st['cooldown'] == 15, 'триггеры долиты, кулдаун приянят')
+ml_stored = json.load(open('data/media_only.json', encoding='utf-8'))
+check(ml_stored['777']['88'] == {'mode': 'link', 'exempt_mods': False}
+      and '89' not in ml_stored['777'], 'медиа-лок долит мягко')
+ns = json.load(open('data/night_summary.json', encoding='utf-8'))
+check(ns['777']['tz_offset'] == 7 and ns['777'].get('last_date') == '2026-08-15',
+      'сводка перенесена, last_date цел')
+r = client.post('/api/automation/import-all', json={'app': 'aether-automation',
+                                                    'night_summary': {'tz_offset': 99}})
+d = r.get_json()
+check(d['applied']['night_summary'] is False
+      and d['skipped'][0]['reason'] == 'Смещение: от -12 до +14 часов',
+      'битое смещение отклонено словами валидатора')
+
+print('== 12. Шаблон, меню, коги страницы ==')
 tpl = open(os.path.join(ROOT, 'web/templates/automation.html'), encoding='utf-8').read()
 check(not EMOJI_RE.search(tpl), 'в шаблоне нет эмодзи')
 for needle in ("id=\"trg-test-text\"", "id=\"trg-import-box\"", "id=\"trg-import-mode\"",
                'triggers/test', 'triggers/export', 'triggers/import', 'counters-preview',
                'askConfirm', "data-kind=\"counters\"", 'server_stats',
+               "id=\"au-night-phase\"", "id=\"welcome-sec\"", "id=\"transfer-sec\"",
+               "id=\"tr-import-box\"", 'export-all', 'import-all', 'welcome-preview',
+               'night-phase',
                "id=\"medialock-sec\"", "id=\"nightsum-sec\"", "id=\"ml-mode\"", "id=\"ns-tz\"",
                'medialock/set', 'medialock/remove', 'night-summary/preview', 'uxUndo'):
     check(needle in tpl, f'в шаблоне есть {needle}')
