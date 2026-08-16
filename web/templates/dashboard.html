@@ -402,6 +402,26 @@
 .shift-chip{display:inline-flex;align-items:center;gap:7px;font-size:12px;padding:4px 11px;border-radius:999px;border:1px solid var(--line-2);color:var(--text-2)}
 .shift-chip .t{color:var(--text-3);font-variant-numeric:tabular-nums}
 .shift-chip.on{border-color:rgba(123,216,143,.4);background:rgba(123,216,143,.08)}
+.shift-manage{margin-top:10px}
+.shift-manage summary{cursor:pointer;font-size:12px;font-weight:700;color:var(--text-3);user-select:none;list-style:none;display:flex;align-items:center;gap:7px}
+.shift-manage summary::-webkit-details-marker{display:none}
+.shift-manage summary:hover{color:var(--ac-2)}
+.shift-manage[open] summary{color:var(--ac-2);margin-bottom:10px}
+.shift-edit-row{display:grid;grid-template-columns:auto minmax(80px,1fr) auto auto;gap:8px;align-items:center;padding:6px 8px;border-bottom:1px dashed rgba(255,255,255,.08);font-size:12.5px}
+.shift-edit-row:last-child{border-bottom:none}
+.shift-edit-day{font-weight:700;color:var(--text-2);width:28px}
+.shift-edit-name{color:var(--text-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.shift-edit-time{color:var(--text-3);font-variant-numeric:tabular-nums;white-space:nowrap}
+.shift-del{background:none;border:1px solid rgba(255,138,138,.35);color:#ff8a8a;border-radius:7px;width:24px;height:24px;cursor:pointer;font-size:11px}
+.shift-del:hover{background:rgba(255,138,138,.12)}
+.shift-add-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:10px}
+.sh-input{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:var(--text-1);padding:6px 9px;font-size:12.5px;font-family:inherit}
+.sh-input:focus{outline:none;border-color:rgba(242,179,61,.5)}
+.sh-member{width:170px}.sh-time{width:58px;text-align:center}
+.sh-btn{background:rgba(242,179,61,.12);border:1px solid rgba(242,179,61,.45);color:var(--ac-2);border-radius:8px;min-width:28px;height:28px;padding:0 10px;cursor:pointer;font-size:12px;font-weight:700}
+.sh-btn:hover{filter:brightness(1.15)}
+.shift-tz-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px;font-size:12px;color:var(--text-3)}
+.shift-msg{font-size:12px;color:var(--ac-2);margin-left:6px}
 </style>
 <div class="dash-box" id="shiftBox" data-reveal="up">
   <div class="dash-box-head">
@@ -414,6 +434,29 @@
       <div class="shift-now-txt"><i class="fas fa-spinner fa-spin"></i></div>
     </div>
     <div class="shift-today-row" id="shiftToday"></div>
+    {% if role == 'admin' or role == 'owner' %}
+    <details class="shift-manage" id="shiftManage">
+      <summary><i class="fas fa-pen-to-square"></i> Управлять расписанием</summary>
+      <div id="shiftEditList"></div>
+      <div class="shift-add-row">
+        <input type="text" class="sh-input sh-member" id="shMember" list="shMemberList" placeholder="Модератор (поиск)…" autocomplete="off" aria-label="Модератор">
+        <datalist id="shMemberList"></datalist>
+        <select class="sh-input" id="shWeekday" aria-label="День недели">
+          <option value="0">пн</option><option value="1">вт</option><option value="2">ср</option>
+          <option value="3">чт</option><option value="4">пт</option><option value="5" selected>сб</option><option value="6">вс</option>
+        </select>
+        <input type="text" class="sh-input sh-time" id="shStart" placeholder="18:00" aria-label="Начало">
+        <span style="color:var(--text-3)">–</span>
+        <input type="text" class="sh-input sh-time" id="shEnd" placeholder="22:00" aria-label="Конец">
+        <button class="sh-btn" onclick="shiftAdd()" title="Добавить смену"><i class="fas fa-plus"></i></button>
+      </div>
+      <div class="shift-tz-row">Пояс расписания:
+        <select class="sh-input" id="shTz" aria-label="Часовой пояс"></select>
+        <button class="sh-btn" onclick="shiftTzSave()" title="Сохранить пояс"><i class="fas fa-check"></i></button>
+        <span class="shift-msg" id="shiftMsg"></span>
+      </div>
+    </details>
+    {% endif %}
   </div>
 </div>
 {% endif %}
@@ -873,6 +916,7 @@
       }
       if (!g) g = guilds[0];
       if (!g) return;
+      window._shiftGid = g.id;
       var d = await fetch('/api/guild/' + g.id + '/staff-shifts').then(function (r) { return r.json(); });
       if (!d.success) throw new Error(d.error || 'API');
       var tzEl = $('shiftTz');
@@ -892,9 +936,92 @@
         return '<span class="shift-chip' + (s.active ? ' on' : '') + '">' +
           '<span class="t">' + esc(s.start) + '–' + esc(s.end) + '</span> ' + esc(s.name) + '</span>';
       }).join('');
+      renderShiftEditor(d);
     } catch (e) {
       nowBox.innerHTML = '<span class="shift-dot"></span><div class="shift-now-txt">Не удалось загрузить дежурства</div>';
     }
+  }
+
+  function renderShiftEditor(d) {
+    var list = $('shiftEditList');
+    if (!list) return;  // только admin/owner
+    list.innerHTML = (d.all || []).map(function (s) {
+      return '<div class="shift-edit-row"><span class="shift-edit-day">' + esc(s.weekday_ru) + '</span>' +
+        '<span class="shift-edit-name">' + esc(s.name) + '</span>' +
+        '<span class="shift-edit-time">' + esc(s.start) + '–' + esc(s.end) + '</span>' +
+        '<button class="shift-del" onclick="shiftRemove(\'' + esc(s.id) + '\')" title="Убрать смену"><i class="fas fa-xmark"></i></button></div>';
+    }).join('') || '<div class="shift-now-sub" style="padding:4px 8px">Смен пока нет — добавьте первую ниже.</div>';
+    var tzSel = $('shTz');
+    if (tzSel && !tzSel.dataset.ready) {
+      var opts = '';
+      for (var off = -12; off <= 14; off++) opts += '<option value="' + off + '">UTC' + (off >= 0 ? '+' : '') + off + '</option>';
+      tzSel.innerHTML = opts;
+      tzSel.dataset.ready = '1';
+    }
+    if (tzSel) tzSel.value = String(d.tz_offset);
+  }
+
+  var shiftMemberTimer = null;
+  function bindShiftEditor() {
+    var inp = $('shMember');
+    if (!inp) return;
+    inp.addEventListener('input', function () {
+      clearTimeout(shiftMemberTimer);
+      shiftMemberTimer = setTimeout(async function () {
+        var q = inp.value.trim();
+        var dl = $('shMemberList');
+        if (q.length < 2 || !dl || !window._shiftGid) return;
+        try {
+          var r = await fetch('/api/member-search/' + window._shiftGid + '?q=' + encodeURIComponent(q));
+          var arr = await r.json();
+          if (!Array.isArray(arr)) return;
+          dl.innerHTML = arr.map(function (m) {
+            return '<option value="' + esc(m.display_name) + ' · ' + esc(m.id) + '"></option>';
+          }).join('');
+        } catch (e) { /* подсказки опциональны */ }
+      }, 250);
+    });
+  }
+
+  function shiftMsgOk(text) {
+    var el = $('shiftMsg');
+    if (!el) return;
+    el.textContent = text || '';
+    if (text) setTimeout(function () { el.textContent = ''; }, 3000);
+  }
+
+  async function shiftAdd() {
+    var raw = $('shMember').value.trim();
+    var m = /·\s*(\d+)\s*$/.exec(raw);
+    if (!m) { shiftMsgOk('Выберите модератора из подсказок'); return; }
+    var r = await fetch('/api/guild/' + window._shiftGid + '/staff-shifts/add', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: m[1], weekday: $('shWeekday').value, start: $('shStart').value, end: $('shEnd').value })
+    });
+    var d = await r.json();
+    if (r.ok && d.success) {
+      $('shMember').value = ''; $('shStart').value = ''; $('shEnd').value = '';
+      shiftMsgOk('Смена добавлена');
+      loadShifts();
+    }
+  }
+
+  async function shiftRemove(sid) {
+    var r = await fetch('/api/guild/' + window._shiftGid + '/staff-shifts/remove', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ shift_id: sid })
+    });
+    var d = await r.json();
+    if (r.ok && d.success) { shiftMsgOk('Убрано'); loadShifts(); }
+  }
+
+  async function shiftTzSave() {
+    var r = await fetch('/api/guild/' + window._shiftGid + '/staff-shifts/settings', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tz_offset: $('shTz').value })
+    });
+    var d = await r.json();
+    if (r.ok && d.success) { shiftMsgOk('Пояс сохранён'); loadShifts(); }
   }
 
   function fmtLeft(iso) {
@@ -916,6 +1043,7 @@
     loadHealth();
     loadAnnChannels();
     loadShifts();
+    bindShiftEditor();
     if (window.setLiveRefresh) {
       window.setLiveRefresh(loadStats, 2500);
       window.setLiveRefresh(loadQuickStats, 5000);

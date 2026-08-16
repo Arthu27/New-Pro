@@ -152,6 +152,30 @@ def new_shift_id(existing):
     return ''.join(random.choices(string.ascii_lowercase, k=8))
 
 
+def try_add_shift(shifts, user_id, weekday, time_range, added_by=None):
+    """Добавить смену с валидацией — общая для команды /дежурства назначить
+    и редактора в панели. Возвращает (sid, ошибка): при ошибке sid=None,
+    словарь не тронут. Дубль: тот же мод, тот же день и то же время начала."""
+    rng = parse_time_range(time_range)
+    if rng is None:
+        return None, 'Формат времени: `ЧЧ:ММ-ЧЧ:ММ` (например `18:00-22:00`; можно через полночь).'
+    if not isinstance(weekday, int) or not 0 <= weekday <= 6:
+        return None, 'День недели — число от 0 (пн) до 6 (вс).'
+    for s in shifts.values():
+        if s.get('user_id') == user_id and s.get('weekday') == weekday and s.get('start') == fmt_time(rng[0]):
+            return None, 'Такая смена уже назначена (смотри `/дежурства`).'
+    sid = new_shift_id(shifts)
+    shifts[sid] = {
+        'user_id': user_id,
+        'weekday': weekday,
+        'start': fmt_time(rng[0]),
+        'end': fmt_time(rng[1]),
+        'added_by': str(added_by or 'panel'),
+        'added_at': datetime.now(UTC).isoformat(),
+    }
+    return sid, None
+
+
 class StaffShifts(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -291,26 +315,14 @@ class StaffShifts(commands.Cog):
         if wd is None:
             days = ', '.join(WEEKDAYS_RU)
             return await ctx.send(f'Не понял день «{weekday}». Пиши: {days} (или полностью).')
-        rng = parse_time_range(time_range)
-        if rng is None:
-            return await ctx.send('Формат времени: `ЧЧ:ММ-ЧЧ:ММ` (например `18:00-22:00`; можно через полночь).')
         shifts = self._shifts(ctx.guild.id)
-        # защита от дублей: тот же мод, тот же день и время — и так есть
-        for s in shifts.values():
-            if s['user_id'] == user.id and s['weekday'] == wd and s['start'] == fmt_time(rng[0]):
-                return await ctx.send('Такая смена уже назначена (смотри `/дежурства`).')
-        sid = new_shift_id(shifts)
-        shifts[sid] = {
-            'user_id': user.id,
-            'weekday': wd,
-            'start': fmt_time(rng[0]),
-            'end': fmt_time(rng[1]),
-            'added_by': str(ctx.author.id),
-            'added_at': datetime.now(UTC).isoformat(),
-        }
+        sid, err = try_add_shift(shifts, user.id, wd, time_range, added_by=ctx.author.id)
+        if err:
+            return await ctx.send(err)
         self._save_shifts(ctx.guild.id, shifts)
+        sh = shifts[sid]
         await ctx.send(
-            f'Смена добавлена: <@{user.id}> — **{WEEKDAYS_RU[wd]}** `{fmt_time(rng[0])}–{fmt_time(rng[1])}` (id `{sid}`).'
+            f'Смена добавлена: <@{user.id}> — **{WEEKDAYS_RU[wd]}** `{sh["start"]}–{sh["end"]}` (id `{sid}`).'
         )
 
     @grp.command(name='снять', aliases=['del'], description='Убрать смену по id')
