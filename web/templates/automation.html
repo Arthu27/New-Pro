@@ -104,6 +104,18 @@
   .dg-field-name { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; opacity: .55; margin-bottom: 3px; }
   .dg-field-val { font-size: 13px; line-height: 1.55; white-space: pre-wrap; }
   .dg-controls { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+  .trg-test { display: flex; gap: 8px; margin-top: 14px; }
+  .trg-io { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; align-items: center; }
+  .trg-res { margin-top: 10px; border-left: 3px solid var(--ac,#e0b04a); background: rgba(224,176,74,.06); border-radius: 0 8px 8px 0; padding: 10px 12px; font-size: 13px; color: var(--text-1); }
+  .trg-res.warn { border-left-color: #e74c3c; background: rgba(231,76,60,.07); }
+  .trg-res .rr { color: var(--text-2); white-space: pre-wrap; word-break: break-word; margin-top: 4px; }
+  .trg-res small { display: block; color: var(--text-3); margin-top: 6px; font-size: 11.5px; }
+  .cnt-row { display: flex; justify-content: space-between; gap: 10px; padding: 7px 2px; border-bottom: 1px dashed rgba(255,255,255,.08); font-size: 13px; }
+  .cnt-row:last-child { border-bottom: none; }
+  .cnt-render { font-weight: 700; color: var(--text-1); }
+  .cnt-meta { color: var(--text-3); font-size: 11.5px; white-space: nowrap; }
+  .cnt-missing { color: #ff8a7a; }
+  .au-link-btn { text-decoration: none; display: inline-flex; align-items: center; gap: 7px; }
   @media (max-width: 760px) { .trg-form { grid-template-columns: 1fr; } .trg-row { grid-template-columns: 1fr auto; } }
 </style>
 
@@ -139,6 +151,24 @@
         <label class="trg-exact-lbl" title="Срабатывать только на слово целиком, а не на подстроку"><input type="checkbox" id="trg-new-exact"> точное слово</label>
         <button class="au-save" onclick="trgAdd()"><i class="fas fa-plus"></i> Добавить</button>
       </div>
+      <div class="trg-test">
+        <input type="text" class="au-input" id="trg-test-text" placeholder="Сухой прогон: напишите сообщение, напр. «скиньте правила»" aria-label="Тестовое сообщение">
+        <button class="au-save" onclick="trgTest()"><i class="fas fa-flask"></i> Прогнать</button>
+      </div>
+      <div id="trg-test-result"></div>
+      <div class="trg-io">
+        <a class="au-save au-link-btn" href="/api/automation/triggers/export" download><i class="fas fa-download"></i> Экспорт JSON</a>
+        <button class="au-save" onclick="trgImportToggle()"><i class="fas fa-upload"></i> Импорт</button>
+      </div>
+      <div class="trg-io-box" id="trg-import-box" style="display:none">
+        <textarea class="au-input" id="trg-import-text" rows="5" placeholder='Вставьте JSON экспорта: {"items": [{"trigger": ..., "response": ...}]}' aria-label="JSON импорта"></textarea>
+        <select class="au-input" id="trg-import-mode" aria-label="Режим импорта">
+          <option value="merge">Объединить с текущими</option>
+          <option value="replace">Заменить все триггеры</option>
+        </select>
+        <button class="au-save" onclick="trgImportRun()"><i class="fas fa-check"></i> Импортировать</button>
+        <div class="au-sec-sub" id="trg-import-result" style="margin:0"></div>
+      </div>
     </div>
   </div>
 
@@ -165,7 +195,8 @@ var AU_ACCENTS = {
   night_mode:   '#7f8ce0',
   anti_alt:     '#ff8a80',
   welcome_pro:  '#5fd08a',
-  mod_digest:   '#e0b04a'
+  mod_digest:   '#e0b04a',
+  server_stats: '#1abc9c'
 };
 
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -227,6 +258,14 @@ function fieldRow(modKey, f, val){
       + '<label for="'+id+'">'+esc(f.label)+'</label>'
       + '<textarea id="'+id+'" data-kind="templates">'+esc(val||'')+'</textarea></div>';
   }
+  if(f.kind === 'counters'){
+    return '<div class="au-row" style="flex-direction:column;align-items:stretch;gap:7px;">'
+      + '<label for="'+id+'">'+esc(f.label)+'</label>'
+      + '<textarea id="'+id+'" data-kind="counters" placeholder="123456789012345678 | Участники: {members}">'+esc(val||'')+'</textarea>'
+      + '<div class="au-sec-sub" style="margin:0">Каждая строка: ID голосового канала, «|», шаблон с переменной — {members} {channels} {online} {boosts} и др.</div>'
+      + '<div><button type="button" class="au-save" onclick="countersPreview(\''+esc(modKey)+'\')"><i class="fas fa-eye"></i> Живой предпросмотр</button></div>'
+      + '<div id="'+id+'-preview" style="margin-top:4px"></div></div>';
+  }
   return '<div class="au-row"><label for="'+id+'">'+esc(f.label)+'</label>'
     + '<input type="text" id="'+id+'" data-kind="text" value="'+esc(val||'')+'"></div>';
 }
@@ -254,6 +293,9 @@ async function saveModule(key){
     if(r.success){
       msg.className = 'au-msg show ok';
       msg.innerHTML = '<i class="fas fa-check"></i> Сохранено — бот подхватит сам';
+      if(r.issues && r.issues.length){
+        msg.innerHTML += ' · пропущено строк: ' + r.issues.length + ' (' + esc(r.issues[0]) + (r.issues.length > 1 ? ', …' : '') + ')';
+      }
       // обновляем сводную планку и бейдж карточки, не пересобирая форму
       refreshStrip();
       var badge = card.querySelector('.au-badge');
@@ -375,6 +417,112 @@ async function loadDigestPreview(){
   } catch(e2){
     grid.innerHTML = '<div class="au-error">Не удалось собрать предпросмотр: '+esc(e2.message)+'</div>';
   }
+}
+
+/* ── #42: сухой прогон триггера ── */
+async function trgTest(){
+  var text = document.getElementById('trg-test-text').value.trim();
+  var box = document.getElementById('trg-test-result');
+  if(!text){
+    box.innerHTML = '<div class="trg-res warn">Введите текст сообщения для прогона.</div>';
+    return;
+  }
+  var r = await fetch('/api/automation/triggers/test', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({text: text})
+  }).then(function(x){ return x.json(); });
+  if(!r.success){
+    box.innerHTML = '<div class="trg-res warn">'+esc(r.error || 'Ошибка прогона')+'</div>';
+    return;
+  }
+  var html;
+  if(r.matched){
+    html = '<div class="trg-res"><i class="fas fa-bolt"></i> Ответит триггер №'+r.winner.id+(r.winner.exact?' <span class="trg-exact">ТОЧНО</span>':'')+': «'+esc(r.winner.trigger)+'»'
+      + '<div class="rr">'+esc(r.winner.response)+'</div>';
+    if(r.hits_total > 1){
+      var rest = r.hits.filter(function(h){ return h.id !== r.winner.id; })
+        .map(function(h){ return '№'+h.id+' «'+esc(h.trigger)+'»'; }).join(', ');
+      html += '<small>Совпали бы, но ждут своей очереди (срабатывает самое длинное слово): '+rest+'</small>';
+    }
+  } else if(r.on_cooldown){
+    html = '<div class="trg-res warn"><i class="fas fa-hourglass-half"></i> Совпадение есть, но триггер на кулдауне ('+r.cooldown+' сек) — бот промолчит.';
+  } else {
+    html = '<div class="trg-res warn"><i class="fas fa-minus-circle"></i> Ни один триггер не совпал с сообщением.';
+  }
+  if(!r.cooldown_known){
+    html += '<small>Бот офлайн — живые кулдауны недоступны, прогон считался без их учёта.</small>';
+  }
+  box.innerHTML = html + '</div>';
+}
+
+/* ── #44: экспорт / импорт ── */
+function trgImportToggle(){
+  var box = document.getElementById('trg-import-box');
+  box.style.display = (box.style.display === 'none' || !box.style.display) ? 'grid' : 'none';
+}
+
+async function trgImportRun(){
+  var mode = document.getElementById('trg-import-mode').value;
+  if(mode === 'replace' && window.askConfirm){
+    window.askConfirm('Заменить все триггеры?',
+      'Текущие правила будут удалены и заменены содержимым файла.',
+      function(){ trgImportDo(mode); },
+      {danger: true, okText: 'Заменить', icon_fa: 'fa-upload'});
+    return;
+  }
+  await trgImportDo(mode);
+}
+
+async function trgImportDo(mode){
+  var res = document.getElementById('trg-import-result');
+  var raw;
+  try {
+    raw = JSON.parse(document.getElementById('trg-import-text').value || '{}');
+  } catch(e){
+    res.textContent = 'Это не JSON: ' + e.message;
+    return;
+  }
+  var r = await fetch('/api/automation/triggers/import', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({mode: mode, items: raw.items, cooldown: raw.cooldown})
+  }).then(function(x){ return x.json(); });
+  if(!r.success){
+    res.textContent = r.error || 'Ошибка импорта';
+    return;
+  }
+  var txt = 'Добавлено: ' + r.added + (r.skipped_total ? ' · пропущено: ' + r.skipped_total : '');
+  if(r.skipped && r.skipped.length){
+    txt += ' (' + r.skipped.slice(0, 3).map(function(s){ return '«' + s.trigger + '»: ' + s.reason; }).join('; ') + (r.skipped_total > 3 ? '…' : '') + ')';
+  }
+  res.textContent = txt;
+  document.getElementById('trg-import-text').value = '';
+  loadTriggers();
+}
+
+/* ── #43: живой предпросмотр счётчиков ── */
+async function countersPreview(modKey){
+  var box = document.getElementById('au-' + modKey + '-channels-preview');
+  if(!box){ return; }
+  box.innerHTML = '<div class="au-sec-sub" style="margin:0"><i class="fas fa-circle-notch fa-spin"></i> Считаем по живому серверу…</div>';
+  var x = await fetch('/api/automation/counters-preview');
+  var d = await x.json();
+  if(!x.ok || !d.success){
+    box.innerHTML = '<div class="au-sec-sub" style="margin:0">' + esc(d.error || 'Предпросмотр недоступен') + '</div>';
+    return;
+  }
+  if(!d.rows.length){
+    box.innerHTML = '<div class="au-sec-sub" style="margin:0">Счётчики не заданы — добавьте строки выше и сохраните.</div>';
+    return;
+  }
+  var html = d.rows.map(function(row){
+    var meta = row.channel_name ? '#' + esc(row.channel_name) : 'ID ' + esc(row.channel_id);
+    if(row.missing){ meta += ' — <span class="cnt-missing">канала нет на сервере</span>'; }
+    return '<div class="cnt-row"><span class="cnt-render">'+esc(row.rendered)+'</span><span class="cnt-meta">'+meta+'</span></div>';
+  }).join('');
+  if(!d.enabled){
+    html += '<div class="au-sec-sub" style="margin:6px 0 0">Модуль выключен — сейчас бот имена не обновляет.</div>';
+  }
+  box.innerHTML = html;
 }
 
 loadAutomation();

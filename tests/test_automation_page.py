@@ -79,8 +79,9 @@ print('== 2. API: индекс и сохранение ==')
 r = client.get('/api/automation')
 data = r.get_json()
 check(data['success'] and set(data['modules']) == {'night_mode', 'anti_alt',
-                                                   'welcome_pro', 'mod_digest'},
-      'индекс отдаёт 4 модуля')
+                                                   'welcome_pro', 'mod_digest',
+                                                   'server_stats'},
+      'индекс отдаёт 5 модулей (с каналами-счётчиками)')
 nm = data['modules']['night_mode']
 check(nm['values']['enabled'] is False and nm['values']['start_hour'] == 23,
       'дефолты ночного режима на месте')

@@ -18,7 +18,7 @@ from web.routes._common import (
     os, json, time, math, discord, datetime, timezone,
 )
 
-from cogs import anti_alt, night_mode, welcome_pro, mod_digest
+from cogs import anti_alt, night_mode, welcome_pro, mod_digest, server_stats
 
 # Реестр редактируемых модулей. kind: bool|int|select|text|channels|templates
 MODULE_EDITORS = {
@@ -89,7 +89,51 @@ MODULE_EDITORS = {
              'min': 0, 'max': 23},
         ],
     },
+    'server_stats': {
+        'title': 'Каналы-счётчики',
+        'icon': 'fa-chart-simple',
+        'desc': 'Имена каналов с живой статистикой («Участники: {members}»). '
+                'Переменные: {members} {bots} {people} {channels} {text} '
+                '{voice} {roles} {boosts} {online}.',
+        'ns': 'server_stats',
+        'merge': staticmethod(server_stats.merge_settings),
+        'fields': [
+            {'key': 'enabled', 'label': 'Включены', 'kind': 'bool'},
+            {'key': 'channels', 'label': 'Счётчики (каждый с новой строки)',
+             'kind': 'counters'},
+        ],
+    },
 }
+
+
+def parse_counters(text):
+    """Текст 'ID | шаблон' построчно -> (каналы {cid: шаблон}, замечания [str]).
+
+    Правила 1:1 с cmd_add кога server_stats: шаблон обязан содержать
+    переменную ('{'), режется до 80 символов, ID канала — только цифры.
+    Текст — это ПОЛНОЕ желаемое состояние (как textarea у шаблонов).
+    """
+    channels = {}
+    issues = []
+    for ln, raw in enumerate(str(text or '').splitlines(), 1):
+        line = raw.strip()
+        if not line:
+            continue
+        if '|' not in line:
+            issues.append('строка %d: нет разделителя «|»' % ln)
+            continue
+        cid, tpl = (p.strip() for p in line.split('|', 1))
+        if not cid.isdigit():
+            issues.append('строка %d: ID канала должен быть числом' % ln)
+            continue
+        if not tpl:
+            issues.append('строка %d: пустой шаблон' % ln)
+            continue
+        if '{' not in tpl:
+            issues.append('строка %d: шаблону нужна переменная, напр. {members}' % ln)
+            continue
+        channels[cid] = tpl[:80]
+    return channels, issues
 
 
 def _db(ns):
@@ -105,6 +149,9 @@ def _serialize(module_key, settings):
         value = settings.get(key)
         if field['kind'] == 'templates':
             value = '\n'.join(value or [])
+        elif field['kind'] == 'counters':
+            value = '\n'.join('%s | %s' % (cid, tpl)
+                               for cid, tpl in (value or {}).items())
         out[key] = value
     return out
 
@@ -138,6 +185,8 @@ def _clean_payload(module_key, payload):
         elif kind == 'templates':
             rows = [t.strip()[:500] for t in str(value or '').splitlines()]
             raw[key] = [t for t in rows if t][:15]
+        elif kind == 'counters':
+            raw[key] = parse_counters(value)[0]
         else:  # text
             raw[key] = str(value or '')[:500]
     return raw
@@ -198,8 +247,13 @@ def register(ctx):
                 f'Через панель ({session.get("username", "?")}), сервер {gid}')
         except Exception as _ex:
             _log.debug('automation: уведомление не ушло: %s', _ex)
+        issues = []
+        for field in spec['fields']:
+            if field['kind'] == 'counters' and field['key'] in payload:
+                issues.extend(parse_counters(payload[field['key']])[1])
         return jsonify({'success': True,
-                        'values': _serialize(module_key, merged)})
+                        'values': _serialize(module_key, merged),
+                        'issues': issues})
 
     # ── Автоматика v3: предпросмотр мод-дайджеста ────────────────────────────
     @app.route('/api/automation/digest-preview')
@@ -309,3 +363,157 @@ def register(ctx):
         state = _trigger_state(gid)
         state['cooldown'] = secs
         return _save_trigger_state(gid, state, f'кулдаун {secs} с')
+
+    # ── #42: сухой прогон триггеров ──────────────────────────────────────
+    @app.route('/api/automation/triggers/test', methods=['POST'])
+    @login_required
+    @role_required('admin')
+    def api_triggers_test():
+        """Какой триггер ответит на сообщение — матчинг 1:1 с когом
+        (find_match: самое длинное слово, кулдаун). Живая карта кулдаунов
+        есть только у запущенного бота; без неё — честный флаг."""
+        from cogs.triggers import find_match, matches, DEFAULT_COOLDOWN
+        data = request.get_json(silent=True) or {}
+        text = str(data.get('text') or '').strip()
+        if not text:
+            return jsonify({'success': False,
+                            'error': 'Введите текст сообщения'}), 400
+        gid = active_guild_id()
+        state = _trigger_state(gid)
+        items = state.get('items') or []
+        cooldowns = None
+        import web.app as _app
+        bot = _app.bot_instance
+        if bot is not None:
+            cog = bot.get_cog('Triggers')
+            cds = getattr(cog, '_cooldowns', None)
+            if isinstance(cds, dict):
+                try:
+                    cooldowns = cds.get(int(gid)) or {}
+                except (TypeError, ValueError) as _ex:
+                    _log.debug('triggers-test: битый gid %r: %s', gid, _ex)
+        now = datetime.now(timezone.utc)
+        winner = find_match(items, text, cooldowns or {}, now,
+                            state.get('cooldown', DEFAULT_COOLDOWN))
+        hits = [it for it in items if matches(it, text)]
+        return jsonify({
+            'success': True,
+            'matched': winner is not None,
+            'winner': ({'id': winner.get('id'), 'trigger': winner.get('trigger'),
+                        'response': winner.get('response'),
+                        'exact': bool(winner.get('exact'))} if winner else None),
+            'hits': [{'id': it.get('id'), 'trigger': it.get('trigger'),
+                      'exact': bool(it.get('exact'))} for it in hits[:6]],
+            'hits_total': len(hits),
+            'cooldown': state.get('cooldown', DEFAULT_COOLDOWN),
+            'cooldown_known': cooldowns is not None,
+            'on_cooldown': bool(cooldowns is not None and hits and winner is None),
+        })
+
+    # ── #43: живой предпросмотр каналов-счётчиков ────────────────────────
+    @app.route('/api/automation/counters-preview')
+    @login_required
+    @role_required('admin')
+    def api_counters_preview():
+        """Текущие имена счётчиков глазами Discord: те же render_counter /
+        gather_stats, что у кога. Без живого бота чисел нет — честный 503."""
+        gid = active_guild_id()
+        import web.app as _app
+        bot = _app.bot_instance
+        guild = None
+        if bot is not None:
+            try:
+                guild = bot.get_guild(int(gid))
+            except (TypeError, ValueError) as _ex:
+                _log.debug('counters-preview: битый gid %r: %s', gid, _ex)
+        if guild is None:
+            return jsonify({'success': False,
+                            'error': 'Бот офлайн — живые числа недоступны'}), 503
+        settings = server_stats.merge_settings(
+            _db('server_stats').get(gid, 'settings', {}))
+        stats = server_stats.gather_stats(guild)
+        rows = []
+        for cid, tpl in settings['channels'].items():
+            ch = guild.get_channel(int(cid)) if str(cid).isdigit() else None
+            rows.append({'channel_id': str(cid),
+                         'channel_name': getattr(ch, 'name', None),
+                         'template': tpl,
+                         'rendered': server_stats.render_counter(tpl, stats),
+                         'missing': ch is None})
+        return jsonify({'success': True,
+                        'enabled': bool(settings.get('enabled')), 'rows': rows})
+
+    # ── #44: экспорт/импорт триггеров ────────────────────────────────────
+    @app.route('/api/automation/triggers/export')
+    @login_required
+    @role_required('admin')
+    def api_triggers_export():
+        gid = active_guild_id()
+        state = _trigger_state(gid)
+        from cogs.triggers import DEFAULT_COOLDOWN
+        payload = {
+            'app': 'aether-triggers',
+            'version': 1,
+            'guild_id': str(gid),
+            'cooldown': state.get('cooldown', DEFAULT_COOLDOWN),
+            'items': [{'trigger': it.get('trigger'),
+                       'response': it.get('response'),
+                       'exact': bool(it.get('exact'))}
+                      for it in (state.get('items') or [])],
+        }
+        return Response(json.dumps(payload, ensure_ascii=False, indent=2),
+                        mimetype='application/json; charset=utf-8',
+                        headers={'Content-Disposition':
+                                 'attachment; filename="triggers_%s.json"' % gid})
+
+    @app.route('/api/automation/triggers/import', methods=['POST'])
+    @login_required
+    @role_required('admin')
+    def api_triggers_import():
+        """Импорт экспорта: merge — доливаем к текущим, replace — начисто.
+        Каждая строка проходит add_trigger кога: те же лимиты и защита
+        от дублей, поэтому повторный merge того же файла ничего не дублирует."""
+        from cogs.triggers import add_trigger, empty_state
+        data = request.get_json(silent=True) or {}
+        mode = data.get('mode')
+        if mode not in ('merge', 'replace'):
+            return jsonify({'success': False,
+                            'error': 'Неизвестный режим импорта'}), 400
+        items = data.get('items')
+        if not isinstance(items, list):
+            return jsonify({'success': False,
+                            'error': 'Файл не похож на экспорт триггеров'}), 400
+        gid = active_guild_id()
+        state = _trigger_state(gid) if mode == 'merge' else empty_state()
+        added = 0
+        skipped = []
+        for idx, raw in enumerate(items, 1):
+            if not isinstance(raw, dict):
+                skipped.append({'trigger': '#%d' % idx, 'reason': 'не объект'})
+                continue
+            _item, err = add_trigger(state, raw.get('trigger'),
+                                     raw.get('response'), raw.get('exact'))
+            if err:
+                skipped.append({'trigger': str(raw.get('trigger') or ('#%d' % idx))[:60],
+                                'reason': err})
+            else:
+                added += 1
+        cd = data.get('cooldown')
+        if cd is not None:
+            try:
+                secs = int(cd)
+                if 0 <= secs <= 3600:
+                    state['cooldown'] = secs
+            except (TypeError, ValueError) as _ex:
+                _log.debug('triggers-import: битый кулдаун %r: %s', cd, _ex)
+        _db('triggers').set(gid, 'state', state)
+        try:
+            _fire_panel_notification(
+                'automation',
+                'Триггеры: импорт (%s): %d добавлено, %d пропущено' % (mode, added, len(skipped)),
+                f'Через панель ({session.get("username", "?")}), сервер {gid}')
+        except Exception as _ex:
+            _log.debug('triggers-import: уведомление не ушло: %s', _ex)
+        return jsonify({'success': True, 'state': state, 'max': _triggers_max(),
+                        'added': added, 'skipped': skipped[:20],
+                        'skipped_total': len(skipped), 'mode': mode})
