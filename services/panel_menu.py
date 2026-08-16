@@ -37,6 +37,7 @@ MENU = [
         {'path': '/proofs', 'label': 'Демки', 'icon': 'fa-folder-open'},
         {'path': '/bulk-actions', 'label': 'Массовые действия', 'icon': 'fa-layer-group'},
         {'path': '/mod-report', 'label': 'Отчёт модерации', 'icon': 'fa-chart-simple'},
+        {'path': '/mod-control', 'label': 'Мод-контроль', 'icon': 'fa-clipboard-check'},
     ]},
     {'group': 'Участники', 'key': 'members', 'icon': 'fa-users', 'pages': [
         {'path': '/users', 'label': 'Пользователи', 'icon': 'fa-users'},
