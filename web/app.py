@@ -1146,6 +1146,32 @@ def guilds_page ():
 def logs_page ():
     return render_template ('logs.html',role =session .get ('role'),username =session .get ('username'))
 
+@app .route ('/logs/export')
+@login_required 
+@role_required ('mod')
+def logs_export_download ():
+    """Журнал модерации автономным HTML-файлом: /logs/export?days=7&category=&mod="""
+    from services import log_export as _lx
+    gid =request .args .get ('guild_id')or MAIN_GUILD_ID or (str (bot_instance .guilds [0 ].id )if bot_instance and bot_instance .guilds else '')
+    days =request .args .get ('days','7')
+    category =request .args .get ('category')or None
+    mod =request .args .get ('mod')or None
+    guild =None
+    if bot_instance and gid :
+        guild =bot_instance .get_guild (int (gid ))
+    guild_name =guild .name if guild else 'Сервер'
+    events =_lx .load_events (gid or 0 )
+    filtered =_lx .filter_events (events ,days =days ,category =category ,mod =mod )
+    parts =[f'период: {days} дн.']
+    if category :parts .append (f'категория: {category}')
+    if mod :parts .append (f'модератор: {mod}')
+    html_doc =_lx .render_html (filtered ,guild_name =guild_name ,filters_desc =', '.join (parts ))
+    headers ={
+    'Content-Disposition':f'attachment; filename="{_lx.export_filename(guild_name)}"',
+    'Cache-Control':'no-store',
+    }
+    return html_doc ,200 ,headers 
+
 @app .route ('/warnings')
 @login_required 
 @role_required ('mod')

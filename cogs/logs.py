@@ -1855,6 +1855,28 @@ class Logs (commands .Cog ):
         await interaction.response.send_message(
             embed=view.overview_embed(), view=view, ephemeral=True)
 
+    @commands.hybrid_command(name='логи-экспорт', aliases=['logexport', 'экспорт-логов'],
+                             description='Выгрузить журнал модерации автономным HTML-файлом')
+    @commands.has_permissions(moderate_members=True)
+    async def logs_export(self, ctx, days: int = 7, category: str = None, mod: str = None):
+        """Портативный HTML-отчёт по audit_log: /логи-экспорт [дни] [категория] [модератор]."""
+        import io as _io
+        from services import log_export as _lx
+        events = _lx.load_events(ctx.guild.id)
+        filtered = _lx.filter_events(events, days=days, category=category, mod=mod)
+        parts = [f'период: {days} дн.']
+        if category:
+            parts.append(f'категория: {category}')
+        if mod:
+            parts.append(f'модератор: {mod}')
+        html_doc = _lx.render_html(filtered, guild_name=ctx.guild.name, filters_desc=', '.join(parts))
+        filename = _lx.export_filename(ctx.guild.name)
+        payload = _io.BytesIO(html_doc.encode('utf-8'))
+        await ctx.send(
+            f'Журнал модерации: **{len(filtered)}** событий ({", ".join(parts)}). Файл автономный.',
+            file=discord.File(payload, filename=filename)
+        )
+
             # DISCORD AUDIT LOG SYNC 
 
     async def _sync_discord_audit_log (self ):

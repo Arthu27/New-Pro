@@ -12,11 +12,19 @@
     <h1>Логи модерации</h1>
     <p>Журнал всех действий модерации и бота.</p>
   </div>
+  <div class="page-hero-actions">
+    <a class="logs-export-btn" href="/logs/export?days=7" title="Скачать автономный HTML-отчёт за 7 дней"><i class="fas fa-file-arrow-down"></i> HTML-отчёт</a>
+    <a class="logs-export-btn" href="/logs/export?days=30" title="Скачать автономный HTML-отчёт за 30 дней"><i class="fas fa-file-arrow-down"></i> 30 дней</a>
+  </div>
 </div>
 {% endblock %}
 
 <style>
 /* Логи модерации — premium gold */
+.page-hero.compact{position:relative}
+.page-hero-actions{position:absolute;right:24px;top:50%;transform:translateY(-50%);display:flex;gap:8px;flex-wrap:wrap}
+.logs-export-btn{display:inline-flex;align-items:center;gap:8px;background:var(--ac-soft);color:var(--ac-2);border:1px solid var(--ac-line);padding:8px 16px;border-radius:10px;font-weight:700;font-size:13px;text-decoration:none;transition:filter .15s}
+.logs-export-btn:hover{filter:brightness(1.15)}
 .logs-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
 .logs-toolbar .filter-select{flex:1;min-width:150px}
 .logs-count{background:var(--ac-soft);color:var(--ac-2);border:1px solid var(--ac-line);padding:5px 14px;border-radius:99px;font-size:13px;font-weight:700;margin-left:auto;font-variant-numeric:tabular-nums}
