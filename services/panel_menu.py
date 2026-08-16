@@ -123,6 +123,7 @@ MENU = [
         {'path': '/chat', 'label': 'Чат', 'icon': 'fa-comments'},
         {'path': '/message-logs', 'label': 'Сообщения', 'icon': 'fa-comment-alt'},
         {'path': '/panel-logs', 'label': 'Панель', 'icon': 'fa-list'},
+        {'path': '/replay', 'label': 'Инцидент-лента', 'icon': 'fa-film'},
         {'path': '/backup', 'label': 'Бэкапы', 'icon': 'fa-database'},
     ]},
     {'group': 'Контент', 'key': 'content', 'icon': 'fa-palette', 'pages': [
@@ -209,6 +210,7 @@ PAGE_COGS = {
     '/lockdown': ('lockdown',),
     '/staff-shifts': ('staff_shifts',),
     '/security': ('security',),
+    '/replay': ('replay',),
     '/gamification': ('gamification_cog',),
 }
 

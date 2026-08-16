@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+{% block title %}Инцидент-лента — Панель Aether{% endblock %}
+{% block page_title %}Лента инцидентов{% endblock %}
+{% block content %}
+<style>
+.rp-kpis{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 16px}
+.rp-kpi{flex:1;min-width:150px;background:var(--surface-2,rgba(255,255,255,.03));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:14px;padding:13px 16px}
+.rp-kpi .lab{font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--text-3,rgba(255,255,255,.45));margin-bottom:5px;display:flex;align-items:center;gap:7px}
+.rp-kpi .lab i{color:var(--ac,#e0b04a)}
+.rp-kpi .v{font-size:19px;font-weight:800;color:var(--text-1,#fff)}
+.rp-kpi .v small{font-size:11px;font-weight:600;color:var(--text-3,rgba(255,255,255,.5))}
+.rp-panel{background:var(--surface-2,rgba(255,255,255,.03));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:14px;padding:15px 17px;margin-bottom:16px}
+.rp-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.rp-sel,.rp-inp{background:var(--surface-2,rgba(255,255,255,.05));border:1px solid var(--line-2,rgba(255,255,255,.12));border-radius:10px;padding:9px 12px;color:var(--text-1,#fff);font-size:13px;outline:none}
+.rp-inp{min-width:110px}
+.rp-inp.uid{flex:1;min-width:170px}
+.rp-sel:focus,.rp-inp:focus{border-color:var(--ac,#e0b04a)}
+.rp-btn{display:inline-flex;align-items:center;gap:7px;background:var(--ac,#e0b04a);color:#1a1a1a;border:none;border-radius:10px;padding:9px 15px;font-size:12.5px;font-weight:700;cursor:pointer}
+.rp-btn:hover{filter:brightness(1.08)}
+.rp-btn.ghost{background:transparent;color:var(--ac,#e0b04a);border:1px solid var(--ac-line,rgba(224,176,74,.35))}
+.rp-grid{display:grid;grid-template-columns:1.7fr 1fr;gap:16px;align-items:start}
+@media (max-width:1000px){.rp-grid{grid-template-columns:1fr}}
+.rp-chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px}
+.rp-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line-2,rgba(255,255,255,.14));border-radius:999px;padding:5px 12px;font-size:11.5px;font-weight:700;color:var(--text-2,rgba(255,255,255,.8));cursor:pointer;background:transparent}
+.rp-chip:hover{border-color:var(--ac,#e0b04a)}
+.rp-chip.on{background:var(--ac,#e0b04a);color:#1a1a1a;border-color:var(--ac,#e0b04a)}
+.rp-chip .n{opacity:.75;font-weight:600}
+.rp-item{display:flex;gap:12px;padding:9px 2px;border-bottom:1px dashed rgba(255,255,255,.07)}
+.rp-item:last-child{border-bottom:none}
+.rp-time{flex:0 0 46px;font-family:monospace;font-size:12.5px;font-weight:700;color:var(--ac,#e0b04a);padding-top:2px;text-align:right}
+.rp-dot{flex:0 0 auto;width:9px;height:9px;border-radius:50%;margin-top:5px;background:var(--ac,#e0b04a);box-shadow:0 0 8px currentColor}
+.rp-body{flex:1;min-width:0}
+.rp-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;font-weight:700;color:var(--text-1,#fff)}
+.rp-badge{display:inline-block;border:1px solid;border-radius:7px;padding:1px 8px;font-size:10.5px;font-weight:800;letter-spacing:.3px;opacity:.95}
+.rp-det{font-size:12px;color:var(--text-2,rgba(255,255,255,.75));margin-top:3px;line-height:1.5;word-break:break-word}
+.rp-top-item{display:flex;justify-content:space-between;gap:10px;padding:7px 4px;border-bottom:1px dashed rgba(255,255,255,.07);font-size:12.5px;color:var(--text-2,rgba(255,255,255,.85))}
+.rp-top-item:last-child{border-bottom:none}
+.rp-top-item b{color:var(--text-1,#fff);font-weight:600}
+.rp-top-item .n{font-weight:800;color:var(--ac,#e0b04a);white-space:nowrap}
+.rp-hint{font-size:11.5px;color:var(--text-3,rgba(255,255,255,.45));line-height:1.55;margin-top:10px}
+[data-theme="light"] .rp-item{border-bottom-color:rgba(0,0,0,.08)}
+[data-theme="light"] .rp-top-item{border-bottom-color:rgba(0,0,0,.08)}
+</style>
+
+<div class="rp-kpis" id="rpPulse">
+  <div class="sk-card" style="width:168px;height:72px"></div>
+  <div class="sk-card" style="width:168px;height:72px"></div>
+  <div class="sk-card" style="width:168px;height:72px"></div>
+  <div class="sk-card" style="width:168px;height:72px"></div>
+</div>
+
+<div class="rp-panel">
+  <div class="rp-row">
+    <select class="rp-sel" id="rpPreset" title="Окно, как у команды /replay">
+      <option value="30" selected>за 30 минут</option>
+      <option value="60">за час</option>
+      <option value="180">за 3 часа</option>
+      <option value="720">за 12 часов</option>
+      <option value="1440">за сутки</option>
+    </select>
+    <input class="rp-inp" id="rpMin" type="number" min="5" max="1440" placeholder="своё окно, мин">
+    <input class="rp-inp uid" id="rpUser" placeholder="ID участника — только его след (необязательно)">
+    <button class="rp-btn" id="rpGo"><i class="fas fa-play"></i> Показать</button>
+    <button class="rp-btn ghost" id="rpCsv"><i class="fas fa-file-csv"></i> CSV</button>
+  </div>
+  <div class="rp-hint">Окно клампится как в команде: минимум 5, максимум 1440. Фильтр по участнику ищет его ID в любом поле события — как фильтр /replay в боте.</div>
+</div>
+
+<div class="rp-grid">
+  <div class="rp-panel">
+    <div class="rp-chips" id="rpChips"></div>
+    <div id="rpFeed">
+      <div class="sk-card" style="height:64px;margin-bottom:8px"></div>
+      <div class="sk-card" style="height:64px;margin-bottom:8px"></div>
+      <div class="sk-card" style="height:64px"></div>
+    </div>
+  </div>
+  <div>
+    <div class="rp-panel">
+      <div class="rp-kpi" style="border:none;padding:0;background:transparent;margin-bottom:8px">
+        <div class="lab"><i class="fas fa-bolt"></i> Чаще всего за окно</div>
+      </div>
+      <div id="rpTop"></div>
+    </div>
+    <div class="rp-panel">
+      <div class="rp-hint" style="margin-top:0">
+        <i class="fas fa-circle-info" style="color:var(--ac,#e0b04a)"></i>
+        Источник — та же летопись, что читает /replay: audit_log.json, до 2000 последних событий. Команда рисует карточку-картинку; здесь — текстовая лента для быстрого разбора. Цвета меток — палитра категорий из модулей логов бота.
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var GID = '{{ guild_id }}';
+var API = '/api/guild/' + GID + '/replay';
+var CAT_COLORS = {mod:'#e74c3c', member:'#2ecc71', message:'#3498db', role:'#9b59b6',
+                  channel:'#f39c12', voice:'#1abc9c', 'сервер':'#e67e22', automod:'#e74c3c',
+                  invite:'#95a5a6', proof:'#9b59b6'};
+var FEED = [];
+var FILTER_CAT = null;
+
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+function qs() {
+  var p = [];
+  var custom = document.getElementById('rpMin').value.trim();
+  var minutes = custom || document.getElementById('rpPreset').value;
+  p.push('minutes=' + encodeURIComponent(minutes));
+  var uid = document.getElementById('rpUser').value.trim();
+  if (uid) { p.push('user=' + encodeURIComponent(uid)); }
+  return p.join('&');
+}
+
+function catColor(cat) {
+  return CAT_COLORS[cat] || getComputedStyle(document.documentElement).getPropertyValue('--ac').trim() || '#e0b04a';
+}
+
+function renderKpis(d) {
+  document.getElementById('rpPulse').innerHTML =
+    '<div class="rp-kpi"><div class="lab"><i class="fas fa-list-check"></i> событий за окно</div><div class="v">' + d.pulse.total + '</div></div>' +
+    '<div class="rp-kpi"><div class="lab"><i class="fas fa-gauge-high"></i> темп</div><div class="v">' + d.pulse.per_hour + ' <small>в час</small></div></div>' +
+    '<div class="rp-kpi"><div class="lab"><i class="fas fa-clock"></i> окно</div><div class="v">' + d.minutes + ' <small>мин</small></div></div>' +
+    '<div class="rp-kpi"><div class="lab"><i class="fas fa-film"></i> в ленте</div><div class="v">' + d.feed.length + ' <small>из 14 возможных</small></div></div>';
+}
+
+function renderChips() {
+  var html = '<button class="rp-chip' + (FILTER_CAT ? '' : ' on') + '" onclick="setCat(null)">Все <span class="n">' + LAST_TOTAL + '</span></button>';
+  html += LAST_CATS.map(function (c) {
+    return '<button class="rp-chip' + (FILTER_CAT === c.cat ? ' on' : '') + '" onclick="setCat(\'' + encodeURIComponent(c.cat) + '\')">' +
+      esc(c.label) + ' <span class="n">' + c.count + '</span></button>';
+  }).join('');
+  document.getElementById('rpChips').innerHTML = html;
+}
+
+function renderTop(d) {
+  var box = document.getElementById('rpTop');
+  if (!d.pulse.top_actions.length) {
+    box.innerHTML = '<div class="rp-hint" style="margin-top:0">Тишина — ни одного действия за окно.</div>';
+    return;
+  }
+  box.innerHTML = d.pulse.top_actions.map(function (a) {
+    return '<div class="rp-top-item"><b>' + esc(a.action) + '</b><span class="n">' + a.count + '</span></div>';
+  }).join('');
+}
+
+function renderFeed() {
+  var box = document.getElementById('rpFeed');
+  var rows = FILTER_CAT ? FEED.filter(function (e) { return e.cat === FILTER_CAT; }) : FEED;
+  if (!rows.length) {
+    box.innerHTML = '<div class="empty-state" style="margin:6px 0"><i class="fas fa-film"></i><div>' +
+      esc(FILTER_CAT ? 'В ленте нет событий этой категории — лента показывает хвост из 14.' : LAST_QUIET_TEXT) + '</div></div>';
+    return;
+  }
+  box.innerHTML = rows.map(function (e) {
+    var col = catColor(e.cat);
+    return '<div class="rp-item">' +
+      '<div class="rp-time">' + esc(e.time) + '</div>' +
+      '<div class="rp-dot" style="background:' + col + ';color:' + col + '"></div>' +
+      '<div class="rp-body"><div class="rp-head">' +
+      '<span class="rp-badge" style="border-color:' + col + ';color:' + col + '">' + esc(e.cat_label) + '</span>' +
+      esc(e.label) + '</div>' +
+      (e.detail ? '<div class="rp-det">' + esc(e.detail) + '</div>' : '') + '</div></div>';
+  }).join('');
+}
+
+var LAST_CATS = [];
+var LAST_TOTAL = 0;
+var LAST_QUIET_TEXT = '';
+
+function setCat(enc) {
+  FILTER_CAT = enc ? decodeURIComponent(enc) : null;
+  renderChips();
+  renderFeed();
+}
+
+function load() {
+  fetch(API + '/feed?' + qs()).then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) { return; }
+    FEED = d.feed;
+    LAST_CATS = d.pulse.by_category;
+    LAST_TOTAL = d.pulse.total;
+    LAST_QUIET_TEXT = d.quiet_text;
+    if (FILTER_CAT && !LAST_CATS.some(function (c) { return c.cat === FILTER_CAT; })) { FILTER_CAT = null; }
+    renderKpis(d);
+    renderChips();
+    renderTop(d);
+    renderFeed();
+  }).catch(function () {});
+}
+
+document.getElementById('rpPreset').onchange = function () {
+  document.getElementById('rpMin').value = '';
+  load();
+};
+document.getElementById('rpGo').onclick = function () {
+  FILTER_CAT = null;
+  load();
+};
+document.getElementById('rpUser').onkeydown = function (e) { if (e.key === 'Enter') { FILTER_CAT = null; load(); } };
+document.getElementById('rpMin').onkeydown = function (e) { if (e.key === 'Enter') { FILTER_CAT = null; load(); } };
+document.getElementById('rpCsv').onclick = function () { location.href = API + '/export.csv?' + qs(); };
+
+load();
+</script>
+{% endblock %}
