@@ -50,7 +50,7 @@
 | `verification` | Aether — Верификация — режим наблюдателя / opt-in |
 | `warnings` | Warnings Cog |
 
-## Комьюнити и развлечения — 63
+## Комьюнити и развлечения — 64
 
 | Модуль | Что делает |
 | --- | --- |
@@ -92,6 +92,7 @@
 | `night_summary` | Night Summary — автоматическая ежедневная сводка. |
 | `proactive_ai` | Проактивный AI — бот сам размышляет и пишет Артуру в ЛС |
 | `profile` | Profile Cog — Professional dashboard/ID-card style generation via Pillow |
+| `quiz` | Квиз-машина (Quiz) |
 | `reaction_roles_cog` | Reaction / Select Roles Cog |
 | `recap` | Рекап канала (Recap Cog) |
 | `reminders` | Напоминания (Reminders Cog) |
@@ -128,4 +129,4 @@
 | `icons` | Aether — фирменные иконки (assets/icons/) — помощник embed-миниатюр |
 | `leveling_engagement` | Leveling & Engagement System |
 
-**Всего:** 105 файлов в `cogs/`.
+**Всего:** 106 файлов в `cogs/`.

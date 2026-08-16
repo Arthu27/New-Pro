@@ -31,7 +31,7 @@ KEEP_SLASH = frozenset({
     'afk', 'invites', 'birthday', 'changelog',
     # социалка и быстрые игры
     'спасибо', 'карма', 'дуэль', 'coinflip', 'rps', '8ball', 'dice',
-    'poll', 'events', 'ачивки', 'счёт', 'crown', 'recap', 'оценить',
+    'poll', 'events', 'ачивки', 'счёт', 'crown', 'recap', 'оценить', 'квиз',
     # быт участника
     'напомни', 'report', 'my-application',
     # модерация — ежедневное
