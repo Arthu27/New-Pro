@@ -117,6 +117,7 @@ MENU = [
         {'path': '/staff-rating', 'label': 'Оценки персонала', 'icon': 'fa-star-half-stroke'},
         {'path': '/staff-shifts', 'label': 'Смены персонала', 'icon': 'fa-calendar-week'},
         {'path': '/meetings', 'label': 'Собрания', 'icon': 'fa-people-group'},
+        {'path': '/leaderboards', 'label': 'Рейтинги', 'icon': 'fa-medal'},
         {'path': '/gamification', 'label': 'Геймификация', 'icon': 'fa-trophy'},
         {'path': '/scheduled-messages', 'label': 'Расписание', 'icon': 'fa-clock'},
     ]},
@@ -213,6 +214,7 @@ PAGE_COGS = {
     '/security': ('security',),
     '/replay': ('replay',),
     '/meetings': ('meeting',),
+    '/leaderboards': ('leaderboard',),
     '/gamification': ('gamification_cog',),
 }
 

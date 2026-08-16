@@ -1,18 +1,22 @@
 # -*- coding: utf-8 -*-
 """Рекап канала (идеи #111-115).
 
-Период 1..720 словами кога, оба окна через build_recap (текущее + сдвинутое
-на период — дельты), эмбед 1:1 с _do_recap (заголовок, «тихо», inline-флаги),
-CSV без markdown-звёзд, офлайн — честный 409, права, шаблон, меню.
+Валидация периода 1..720 текстом команды; оба окна через build_recap кога
+(предыдущему — честный срез [N-2H, N-H), боты и старьё отсечены его же
+кодом); поля эмбеда его recap_embed_fields; дельты окон; CSV; права;
+живой прогон через фейк-бота с настоящим event loop: build, send, export.
 
 Запуск: python3 tests/test_recap_panel.py
 """
+import asyncio
 import importlib
+import json
 import os
 import re
 import shutil
 import sys
 import tempfile
+import threading
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
@@ -40,91 +44,92 @@ def check(ok, msg):
         print(f'  FAIL: {msg}')
 
 
+from cogs import recap as RC  # noqa: E402
 from web.routes import recap_panel as RP  # noqa: E402
 
 EMOJI_RE = re.compile('[\\U0001F000-\\U0001FAFF\\u2B00-\\u2BFF\\uFE0F]|[☀-➿]')
+UTC = timezone.utc
+NOW = datetime.now(UTC)
 
-NOW = datetime(2026, 8, 16, 12, 0, tzinfo=timezone.utc)
+print('== 1. Период — правило кога ==')
+check(RP.HOURS_RULE_TEXT == 'Период — от 1 до 720 часов (30 дней).',
+      'текст правила 1:1 с командой')
+for raw in (0, -1, 721, 'мусор', None, ''):
+    ok, err, _h = RP.validate_hours(raw)
+    check(not ok and err == RP.HOURS_RULE_TEXT, f'отказ для {raw!r}')
+ok, err, h = RP.validate_hours('24')
+check(ok and h == 24, '24 принято')
+ok, err, h = RP.validate_hours(720)
+check(ok and h == 720, 'граница 720 принята')
 
-
-def mk(author, content, hours_ago, count=0, bot=False):
-    return {'author': author, 'author_id': 1, 'content': content, 'bot': bot,
-            'created_at': NOW - timedelta(hours=hours_ago),
-            'reactions': [{'count': count}] if count else []}
-
-
-POOL = [
-    mk('Анна', 'привет https://x.dev смотрите', 1, count=3),
-    mk('Борис', 'смотрите новости', 2, count=1),
-    mk('Анна', 'новости классные', 23),
-    mk('Вера', 'старое сообщение', 25),
-    mk('Гоша', '', 3),
-    mk('Анна', 'кот http://a.ru и пёс', 30),
-    mk('Бот', 'служебное', 1, bot=True),
-    mk('Динозавр', 'очень старое', 100),
+print('== 2. Оба окна через build_recap кога ==')
+pool = [
+    {'author': 'Катя', 'content': 'раз два три',
+     'created_at': NOW - timedelta(hours=2), 'reactions': [{'count': 2}]},
+    {'author': 'Иван', 'content': 'четыре пять',
+     'created_at': NOW - timedelta(hours=3), 'reactions': []},
+    {'author': 'Катя', 'content': 'старое окно',
+     'created_at': NOW - timedelta(hours=26), 'reactions': []},
+    {'author': 'Бот', 'content': 'спам ссылка',
+     'created_at': NOW - timedelta(hours=1), 'bot': True, 'reactions': []},
+    {'author': 'Иван', 'content': 'совсем старое',
+     'created_at': NOW - timedelta(hours=50), 'reactions': []},
 ]
+pack = RP.pack_recap(pool, 24, NOW)
+cur, prev, cmp = pack['cur'], pack['prev'], pack['compare']
+check(cur['total'] == 2 and cur['unique_authors'] == 2,
+      f"текущее: 2 сообщения, 2 автора (боты и старьё отсечены — {cur['total']})")
+check(prev['total'] == 1 and prev['unique_authors'] == 1,
+      'предыдущему — честный срез [N-2H, N-H): одно «старое окно»')
+check(pack['scanned'] == 5, 'пул общий, scanned — весь пул')
+check(cmp == {'cur_total': 2, 'prev_total': 1, 'delta_total': 1,
+              'cur_authors': 2, 'prev_authors': 1, 'delta_authors': 1},
+      f'дельты окон: {cmp}')
+empty_pack = RP.pack_recap([], 24, NOW)
+check(empty_pack['cur']['total'] == 0 and empty_pack['compare']['delta_total'] == 0,
+      'пустой пул — нули')
 
-print('== 1. Период и канал ==')
-check(RP.validate_hours('24') == (True, '', 24), '24 часа ок')
-check(RP.validate_hours(720) == (True, '', 720), 'граница 720 ок')
-for raw in ('0', '721', '-5', 'abc', '', None):
-    ok, err, _ = RP.validate_hours(raw)
-    check(not ok and err == 'Период — от 1 до 720 часов (30 дней).',
-          f'{raw!r} — текст кога')
-
-chan = SimpleNamespace(id=5, name='general', history=object())
-guild = SimpleNamespace(get_channel=lambda cid: chan if cid == 5 else None)
-check(RP.find_channel(guild, '5') is chan, 'канал найден')
-check(RP.find_channel(guild, '6') is None, 'чужой ID — None')
-check(RP.find_channel(guild, 'qq') is None, 'буквы — None')
-check(RP.find_channel(SimpleNamespace(get_channel=lambda cid: SimpleNamespace(id=1)),
-                      '1') is None, 'голосовой без history не подходит')
-check(RP.find_channel(None, '5') is None, 'нет гильдии — None')
-
-print('== 2. Сборка 1:1 с build_recap ==')
-pack = RP.pack_recap(POOL, 24, NOW)
-cur, prev = pack['cur'], pack['prev']
-check(cur['total'] == 4 and cur['unique_authors'] == 3, 'окно: 4 сообщения, 3 автора')
-check(cur['top_authors'][0] == ('Анна', 2), 'Анна первой')
-words = dict(cur['top_words'])
-check(words.get('смотрите') == 2 and words.get('новости') == 2
-      and 'https' not in words and 'и' not in words, 'слова без ссылок и стоп-слов')
-check(cur['links'] == 1 and cur['avg_per_hour'] == 0.2, 'ссылка и темп')
-check(cur['hottest']['author'] == 'Анна' and cur['hottest']['reactions'] == 3,
-      'самая реактивная реплика')
-check(cur['busy_hour'] == (NOW - timedelta(hours=1)).hour, 'пик — час первой вставки')
-check(prev['total'] == 2 and prev['unique_authors'] == 2, 'предыдущее окно: Вера + Анна')
-cmp = pack['compare']
-check(cmp['delta_total'] == 2 and cmp['delta_authors'] == 1, 'дельты +2/+1')
-check(pack['scanned'] == 8, 'пул — все 8 записей')
-
-quiet = RP.pack_recap([mk('Кто', 'раньше', 100)], 24, NOW)
-check(quiet['cur']['total'] == 0 and quiet['compare']['delta_total'] == 0,
-      'пустое окно — нули')
-
-print('== 3. Эмбед и CSV ==')
+print('== 3. Эмбед-предпросмотр 1:1 ==')
 spec = RP.embed_spec('general', cur, 24)
-check(spec['title'] == 'Рекап #general · 24 часа', 'заголовок кога')
-check(len(spec['fields']) == 7, 'семь полей')
+check(spec['title'] == 'Рекап #general · 24 часа', 'заголовок как у команды')
+check(spec['description'] == '' and len(spec['fields']) == 7,
+      '7 полей заполненного рекапа')
+fnames = [f['name'] for f in spec['fields']]
+check(fnames == ['Сообщений', 'Участников', 'Активные авторы', 'Слова периода',
+                 'Пик активности', 'Самая заметная реплика', 'Ссылок скинуто'],
+      'имена и порядок полей — как в коге')
+fmap = dict((f['name'], f['value']) for f in spec['fields'])
+check(fmap['Сообщений'] == '**2** за 24 часа (среднее 0.1/час)',
+      'строка сообщений со средним темпом')
+check(fmap['Активные авторы'] == '**Катя** (1) · **Иван** (1)',
+      'авторы со счётчиками')
+check(fmap['Самая заметная реплика'] == '**Катя**: раз два три (2 реакции)',
+      'самая заметная — по реакциям кога')
 inl = {f['name']: f['inline'] for f in spec['fields']}
-check(inl['Сообщений'] is True and inl['Участников'] is True
-      and inl['Пик активности'] is True and inl['Активные авторы'] is False,
-      'inline-флаги как в _do_recap')
-check('**Анна** (2)' in spec['fields'][2]['value'], 'markdown бота сохранён')
-qspec = RP.embed_spec('general', quiet['cur'], 24)
-check(qspec['description'] == 'За период тихо — сообщений не было.'
-      and qspec['fields'] == [], 'тихо — словами бота')
+check(inl['Сообщений'] and inl['Участников'] and inl['Пик активности']
+      and not inl['Активные авторы'], 'inline-флаги как в команде')
+quiet = RP.embed_spec('general', empty_pack['cur'], 24)
+check(quiet['description'] == 'За период тихо — сообщений не было.'
+      and quiet['fields'] == [], 'тихое окно — его подпись')
 
+print('== 4. Поиск канала и CSV ==')
+g = SimpleNamespace(get_channel=lambda cid: SimpleNamespace(
+    id=cid, name='x', history=True) if cid == 5 else None)
+check(RP.find_channel(g, '5') is not None, 'канал по ID найден')
+check(RP.find_channel(g, '6') is None and RP.find_channel(g, 'мусор') is None,
+      'чужой/битый ID -> None')
+no_hist = SimpleNamespace(get_channel=lambda cid: SimpleNamespace(id=cid))
+check(RP.find_channel(no_hist, '5') is None, 'без history -> None')
 rows = RP.recap_csv_rows('general', pack, 24)
-d = dict(rows)
-check(rows[0] == ('Канал', '#general') and d['Период (часов)'] == '24', 'шапка данных')
-check(d['Просмотрено сообщений в истории'] == '8', 'скан в выгрузке')
-check(d['Сообщений'].startswith('4 за 24 часа'), 'поле без звёзд')
-check(all('**' not in v for _k, v in rows), 'markdown вычищен везде')
-check(d['Сравнение: разница'] == '+2' and d['Сравнение: сообщений окном раньше'] == '2',
-      'сравнение в выгрузке')
+check(rows[0] == ('Канал', '#general') and rows[1] == ('Период (часов)', '24'),
+      'шапка контекста')
+check(('Сообщений', '2 за 24 часа (среднее 0.1/час)') in rows,
+      'поле эмбеда без markdown-звёзд')
+check(('Сравнение: сообщений окном раньше', '1') in rows
+      and ('Сравнение: разница', '+1') in rows, 'сравнение окон в выгрузке')
+check(RP._csv_cell('а;б\nв') == 'а,б в', 'ячейки чистятся')
 
-print('== 4. API: права и офлайн ==')
+print('== 5. API и права (офлайн) ==')
 appmod = importlib.import_module('web.app')
 appmod.app.config['TESTING'] = True
 client = appmod.app.test_client()
@@ -138,50 +143,142 @@ def login(role='owner'):
         sess['role'] = role
 
 
-BLD = '/api/guild/777/recap/build'
+BD = '/api/guild/777/recap/build'
 check(client.get('/recap').status_code in (302, 401, 403), 'гостю страница закрыта')
+check(client.post(BD, json={}).status_code in (302, 401, 403), 'гостю API закрыто')
 login('uye')
-check(client.post(BLD, json={'channel_id': '5', 'hours': '24'}).status_code == 403,
-      'uye не собирает')
+check(client.get('/recap').status_code == 403, 'uye не видит страницу')
+check(client.post(BD, json={}).status_code == 403, 'uye не собирает')
 login('mod')
 page = client.get('/recap')
 check(page.status_code == 200 and 'Рекап канала' in page.get_data(as_text=True),
       'mod открывает страницу')
-check('rcSend' in page.get_data(as_text=True), 'кнопка отправки в разметке')
-r = client.post(BLD, json={'channel_id': '5', 'hours': 'abc'})
-check(r.status_code == 400
-      and r.get_json()['error'] == 'Период — от 1 до 720 часов (30 дней).',
-      'битый период — текст кога')
-r = client.post(BLD, json={'channel_id': '5', 'hours': '24'})
-check(r.status_code == 409
-      and r.get_json()['error'] == 'Бот офлайн — рекап собирается через живого бота',
-      'офлайн — честный 409, не фальшивые нули')
-r = client.get('/api/guild/777/recap/export.csv?channel=5&hours=721')
-check(r.status_code == 400, 'выгрузка с кривым периодом — 400')
-r = client.get('/api/guild/777/recap/export.csv?channel=5&hours=24')
-check(r.status_code == 409, 'выгрузка офлайн — 409')
+r = client.post(BD, json={'channel_id': '1', 'hours': 9999})
+check(r.status_code == 400 and r.get_json()['error'] == RP.HOURS_RULE_TEXT,
+      'мусорный период — 400 с текстом команды')
+r = client.post(BD, json={'channel_id': '1', 'hours': 24})
+check(r.status_code == 409 and 'Бот офлайн' in r.get_json()['error'],
+      'офлайн — честный 409')
 check(client.post('/api/guild/777/recap/send',
-                  json={'channel_id': '5', 'hours': '24'}).status_code == 403,
-      'mod не отправляет в канал')
+                  json={'channel_id': '1', 'hours': 24}).status_code == 403,
+      'mod не отправляет')
 login('admin')
-r = client.post('/api/guild/777/recap/send', json={'channel_id': '5', 'hours': '24'})
-check(r.status_code == 409, 'admin офлайн — тот же 409')
-r = client.post('/api/guild/777/recap/send', json={'channel_id': '5', 'hours': '0'})
-check(r.status_code == 400, 'валидация идёт до проверки живости')
+r = client.post('/api/guild/777/recap/send', json={'channel_id': '1', 'hours': 24})
+check(r.status_code == 409, 'отправка офлайн — 409')
+check(client.get('/api/guild/777/recap/export.csv?channel=1&hours=24').status_code == 409,
+      'CSV офлайн — 409')
+check(client.get('/api/guild/777/recap/export.csv?channel=1').status_code == 400,
+      'CSV без периода — 400 с правилом')
 
-print('== 5. Шаблон, меню, регистрация ==')
+print('== 6. Живой прогон (фейк-бот, настоящий loop) ==')
+loop = asyncio.new_event_loop()
+threading.Thread(target=loop.run_forever, daemon=True).start()
+
+
+class FakeAuthor:
+    def __init__(self, name):
+        self.name = name
+        self.bot = False
+        self.id = abs(hash(name)) % 100000
+
+    def __str__(self):
+        return self.name
+
+
+LIVE_MSGS = [
+    SimpleNamespace(created_at=datetime.now(UTC) - timedelta(minutes=50),
+                    author=FakeAuthor('Катя'), content='привет как дела',
+                    reactions=[]),
+    SimpleNamespace(created_at=datetime.now(UTC) - timedelta(minutes=40),
+                    author=FakeAuthor('Иван'), content='всё хорошо го играть',
+                    reactions=[]),
+    SimpleNamespace(created_at=datetime.now(UTC) - timedelta(minutes=30),
+                    author=FakeAuthor('Катя'), content='го го',
+                    reactions=[]),
+]
+
+
+class FakeChannel:
+    def __init__(self):
+        self.id = 555
+        self.name = 'general'
+        self.sent = []
+        self.last_limit = None
+        self.last_after = None
+
+    async def history(self, limit=None, after=None, oldest_first=None):
+        self.last_limit = limit
+        self.last_after = after
+        for m in LIVE_MSGS:
+            yield m
+
+    async def send(self, embed=None):
+        self.sent.append(embed)
+
+
+CH = FakeChannel()
+
+
+class FakeBot:
+    def __init__(self):
+        self.loop = loop
+
+    def get_guild(self, gid):
+        return SimpleNamespace(id=int(gid),
+                               get_channel=lambda cid: CH if cid == 555 else None)
+
+
+appmod.bot_instance = FakeBot()
+try:
+    r = client.post(BD, json={'channel_id': '555', 'hours': 24})
+    d = r.get_json()
+    check(r.status_code == 200 and d['success'], 'живой build собрался')
+    check(CH.last_limit == RP.HISTORY_LIMIT, 'выборка с лимитом команды (1000)')
+    check(d['channel'] == {'id': '555', 'name': 'general'} and d['hours'] == 24
+          and d['scanned'] == 3 and not d['quiet'], 'конверт ответа build')
+    check(d['recap']['total'] == 3 and d['recap']['unique_authors'] == 2,
+          'живые счётчики (str(author) — его правило имён)')
+    check(d['recap']['top_authors'][0] == ['Катя', 2]
+          and d['recap']['top_words'][0] == ['привет', 1],
+          'живые топы: Катя x2; «го» короче 3 букв — его фильтр слов')
+    check(d['embed']['title'] == 'Рекап #general · 24 часа'
+          and len(d['embed']['fields']) == 7, 'живой эмбед-спек')
+    r = client.post('/api/guild/777/recap/send',
+                    json={'channel_id': '555', 'hours': 24})
+    check(r.status_code == 200 and r.get_json()['success'], 'отправка подтверждена')
+    check(len(CH.sent) == 1 and CH.sent[0].title == 'Рекап #general · 24 часа'
+          and CH.sent[0].color.value == RC.COLOR,
+          'в канал ушёл эмбед того же вида и цвета')
+    r = client.get('/api/guild/777/recap/export.csv?channel=555&hours=24')
+    body = r.get_data(as_text=True)
+    check(r.status_code == 200 and
+          r.headers['Content-Disposition'].endswith('recap_555_777.csv'),
+          'CSV: имя файла')
+    check(body.startswith('\ufeffПоказатель;Значение'), 'CSV: BOM и шапка')
+    check('Сообщений;3 за 24 часа (среднее 0.1/час)' in body
+          and 'Активные авторы;Катя (2) · Иван (1)' in body
+          and 'Сравнение: разница;+3' in body,
+          'CSV: поля без звёзд + дельта')
+finally:
+    appmod.bot_instance = None
+    loop.call_soon_threadsafe(loop.stop)
+
+print('== 7. Шаблон, меню, регистрация ==')
 tpl = open(os.path.join(ROOT, 'web/templates/recap.html'), encoding='utf-8').read()
 check(not EMOJI_RE.search(tpl), 'в шаблоне нет эмодзи')
+src = open(os.path.join(ROOT, 'web/routes/recap_panel.py'), encoding='utf-8').read()
+check(not EMOJI_RE.search(src), 'в модуле нет эмодзи')
 check('[data-theme="light"]' in tpl, 'светлая тема учтена')
-for fid in ('rcChan', 'rcHours', 'rcGo', 'rcSend', 'rcCsv', 'rcEmbed', 'rcCmp'):
+for fid in ('rcChan', 'rcHours', 'rcGo', 'rcSend', 'rcCsv', 'rcErr',
+            'rcBody', 'rcKpis', 'rcEmbed', 'rcCmp', 'rcTops'):
     check(('id="' + fid + '"') in tpl, f'блок {fid} на месте')
-check("'/build'" in tpl and "'/send'" in tpl and '/export.csv?channel=' in tpl,
+check("'/build'" in tpl and "'/send'" in tpl and "'/export.csv?channel='" in tpl,
       'API-пути в шаблоне')
 check('localhost' not in tpl and '127.0.0.1' not in tpl, 'без локальных адресов')
 import services.panel_menu as PM
 main_pages = [pg['path'] for g in PM.MENU if g['key'] == 'main' for pg in g['pages']]
 check('/recap' in main_pages, 'пункт меню «Рекап канала» в «Основном»')
-check(PM.PAGE_COGS.get('/recap') == ('recap',), 'recap-ког привязан к странице')
+check(PM.PAGE_COGS.get('/recap') == ('recap',), 'recap-ког привязан')
 ext = open(os.path.join(ROOT, 'web/routes_extra.py'), encoding='utf-8').read()
 check(ext.count('recap_panel') >= 2, 'модуль зарегистрирован в routes_extra')
 

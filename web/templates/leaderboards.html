@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% block title %}Рейтинги — Панель Aether{% endblock %}
+{% block page_title %}Рейтинги сервера{% endblock %}
+{% block content %}
+<style>
+.lb-tabs{display:inline-flex;gap:6px;background:var(--surface-2,rgba(255,255,255,.04));border:1px solid var(--line-2,rgba(255,255,255,.1));border-radius:12px;padding:5px;margin:14px 0 16px;flex-wrap:wrap}
+.lb-tab{border:none;background:transparent;color:var(--text-2,rgba(255,255,255,.75));border-radius:9px;padding:8px 16px;font-size:12.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:7px}
+.lb-tab:hover{color:var(--text-1,#fff)}
+.lb-tab.on{background:var(--ac,#e0b04a);color:#1a1a1a}
+.lb-grid{display:grid;grid-template-columns:1.2fr 1fr;gap:16px;align-items:start}
+@media (max-width:1050px){.lb-grid{grid-template-columns:1fr}}
+.lb-panel{background:var(--surface-2,rgba(255,255,255,.03));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:14px;padding:15px 17px;margin-bottom:16px}
+.lb-panel h3{margin:0 0 4px;font-size:15px;color:var(--text-1,#fff);display:flex;align-items:center;gap:9px}
+.lb-panel h3 i{color:var(--ac,#e0b04a)}
+.lb-sub{font-size:12px;color:var(--text-3,rgba(255,255,255,.45));margin-bottom:12px;line-height:1.55}
+.lb-demo{display:none;border:1px dashed var(--ac-line,rgba(224,176,74,.4));border-radius:10px;padding:8px 12px;font-size:11.5px;color:var(--text-2,rgba(255,255,255,.7));margin-bottom:12px;line-height:1.5}
+.lb-row{display:flex;align-items:center;gap:12px;padding:8px 10px;border-bottom:1px dashed rgba(255,255,255,.07);border-radius:10px}
+.lb-row:last-child{border-bottom:none}
+.lb-row.top1{background:rgba(245,215,110,.07)}
+.lb-row.top2{background:rgba(200,210,225,.05)}
+.lb-row.top3{background:rgba(210,140,80,.06)}
+.lb-rank{flex:0 0 52px;text-align:center;font-weight:800;font-size:12px;border-radius:9px;padding:5px 4px;border:1px solid var(--line-2,rgba(255,255,255,.14));color:var(--text-2,rgba(255,255,255,.7))}
+.lb-row.top1 .lb-rank{color:#f5d56e;border-color:rgba(245,215,110,.5)}
+.lb-row.top2 .lb-rank{color:#d5dbe7;border-color:rgba(200,210,225,.4)}
+.lb-row.top3 .lb-rank{color:#eba769;border-color:rgba(210,140,80,.45)}
+.lb-name{flex:1;min-width:0;font-size:13px;font-weight:600;color:var(--text-1,#fff);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lb-val{font-size:11.5px;font-weight:800;color:var(--ac,#e0b04a);white-space:nowrap;letter-spacing:.4px}
+.lb-card{width:100%;border-radius:12px;border:1px solid var(--line-2,rgba(255,255,255,.1));display:block}
+.lb-rowline{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+.lb-inp{flex:1;min-width:150px;background:var(--surface-2,rgba(255,255,255,.05));border:1px solid var(--line-2,rgba(255,255,255,.12));border-radius:10px;padding:9px 12px;color:var(--text-1,#fff);font-size:13px;outline:none}
+.lb-inp:focus{border-color:var(--ac,#e0b04a)}
+.lb-btn{display:inline-flex;align-items:center;gap:7px;background:var(--ac,#e0b04a);color:#1a1a1a;border:none;border-radius:10px;padding:9px 15px;font-size:12.5px;font-weight:700;cursor:pointer;text-decoration:none}
+.lb-btn:hover{filter:brightness(1.08)}
+.lb-btn.ghost{background:transparent;color:var(--ac,#e0b04a);border:1px solid var(--ac-line,rgba(224,176,74,.35))}
+.lb-msg{font-size:12px;padding:4px 2px;display:none}
+.lb-msg.ok{color:#4ade80}
+.lb-msg.err{color:#ff8a7a}
+.lb-rankres{display:flex;flex-direction:column;gap:7px;margin-top:8px}
+.lb-rr{display:flex;align-items:center;gap:10px;border:1px solid var(--line-2,rgba(255,255,255,.1));border-radius:10px;padding:8px 12px;font-size:12.5px;color:var(--text-2,rgba(255,255,255,.85))}
+.lb-rr b{color:var(--ac,#e0b04a);font-weight:800;min-width:74px;display:inline-block}
+[data-theme="light"] .lb-row{border-bottom-color:rgba(0,0,0,.08)}
+</style>
+
+<div class="lb-tabs" id="lbTabs">
+  <button class="lb-tab on" data-cat="messages" onclick="setCat('messages', this)"><i class="fas fa-comments"></i> Сообщения</button>
+  <button class="lb-tab" data-cat="voice" onclick="setCat('voice', this)"><i class="fas fa-microphone"></i> Голос</button>
+  <button class="lb-tab" data-cat="balance" onclick="setCat('balance', this)"><i class="fas fa-coins"></i> Баланс</button>
+</div>
+
+<div class="lb-grid">
+  <div>
+    <div class="lb-panel">
+      <h3><i class="fas fa-medal"></i> <span id="lbTitle">Топ по сообщениям</span></h3>
+      <div class="lb-sub">Семёрка ровно в наряде бота: те же тексты значений, что рисует карточка.</div>
+      <div class="lb-demo" id="lbDemo">Сырых данных пока нет — бот в такой ситуации рисует демонстрационные строки. Они и показаны, как есть; своя семёрка появится, когда статистика накопится.</div>
+      <div id="lbTable">
+        <div class="sk-card" style="height:44px;margin-bottom:8px"></div>
+        <div class="sk-card" style="height:44px;margin-bottom:8px"></div>
+        <div class="sk-card" style="height:44px"></div>
+      </div>
+    </div>
+    <div class="lb-panel">
+      <h3><i class="fas fa-location-crosshairs"></i> Позиция участника</h3>
+      <div class="lb-sub">Место по полным спискам — не только в семёрке. Значения теми мерками, что у бота: сообщения, время войса, сумма кошелька и банка.</div>
+      <div class="lb-rowline" style="margin-top:0">
+        <input class="lb-inp" id="lbRankInp" placeholder="ID участника">
+        <button class="lb-btn" id="lbRankGo"><i class="fas fa-magnifying-glass"></i> Найти</button>
+      </div>
+      <div class="lb-rankres" id="lbRankRes"></div>
+      <div class="lb-msg" id="lbRankMsg"></div>
+    </div>
+  </div>
+  <div>
+    <div class="lb-panel">
+      <h3><i class="fas fa-image"></i> Карточка кога</h3>
+      <div class="lb-sub">PNG рисует тот самый Pillow-рендер бота — одна картинка на двоих.</div>
+      <img class="lb-card" id="lbCard" alt="Карточка рейтинга">
+      <div class="lb-rowline">
+        <a class="lb-btn ghost" id="lbDl" download="leaderboard_card.png"><i class="fas fa-download"></i> Скачать PNG</a>
+        <button class="lb-btn ghost" id="lbCsv"><i class="fas fa-file-csv"></i> Весь рейтинг в CSV</button>
+      </div>
+    </div>
+    <div class="lb-panel" id="lbSendPanel" style="display:none">
+      <h3><i class="fas fa-share"></i> Отправить в канал</h3>
+      <div class="lb-sub">Как команда !leaderboard: файл карточки + селектор категорий под ним.</div>
+      <div class="lb-rowline" style="margin-top:0">
+        <input class="lb-inp" id="lbSendCh" placeholder="ID текстового канала">
+        <button class="lb-btn" id="lbSend"><i class="fas fa-paper-plane"></i> Отправить</button>
+      </div>
+      <div class="lb-msg" id="lbSendMsg"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+var GID = '{{ guild_id }}';
+var API = '/api/guild/' + GID + '/leaderboards';
+var CAN_EDIT = {{ 'true' if can_edit else 'false' }};
+var CAT = 'messages';
+
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+function setCat(cat, btn) {
+  CAT = cat;
+  var tabs = document.querySelectorAll('#lbTabs .lb-tab');
+  for (var i = 0; i < tabs.length; i++) { tabs[i].className = 'lb-tab' + (tabs[i].dataset.cat === cat ? ' on' : ''); }
+  loadTable();
+  loadCard();
+}
+
+function loadTable() {
+  fetch(API + '/table?cat=' + CAT).then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) { return; }
+    document.getElementById('lbTitle').textContent = d.table.title;
+    document.getElementById('lbDemo').style.display = d.table.demo ? 'block' : 'none';
+    document.getElementById('lbTable').innerHTML = d.table.rows.map(function (row) {
+      var cls = row.rank <= 3 ? ' top' + row.rank : '';
+      return '<div class="lb-row' + cls + '"><div class="lb-rank">#' + row.rank + '</div>' +
+        '<div class="lb-name">' + esc(row.name) + '</div><div class="lb-val">' + esc(row.value) + '</div></div>';
+    }).join('');
+  }).catch(function () {});
+}
+
+function loadCard() {
+  var url = API + '/card.png?cat=' + CAT + '&t=' + Date.now();
+  document.getElementById('lbCard').src = url;
+  document.getElementById('lbDl').href = url;
+}
+
+document.getElementById('lbRankGo').onclick = function () {
+  var res = document.getElementById('lbRankRes');
+  var msg = document.getElementById('lbRankMsg');
+  msg.style.display = 'none';
+  fetch(API + '/rank?user=' + encodeURIComponent(document.getElementById('lbRankInp').value.trim()))
+    .then(function (r) { return r.json().then(function (d) { return {status: r.status, d: d}; }); })
+    .then(function (x) {
+      if (!x.d.success) {
+        res.innerHTML = '';
+        msg.style.display = 'block'; msg.className = 'lb-msg err';
+        msg.textContent = x.d.error || 'Ошибка';
+        return;
+      }
+      res.innerHTML = x.d.rows.map(function (row) {
+        var place = row.rank ? ('#' + row.rank + ' из ' + row.total) : 'пока вне списка';
+        return '<div class="lb-rr"><b>' + esc(row.title) + '</b> ' + esc(place) +
+               (row.rank ? ' · ' + esc(row.pretty) : '') + '</div>';
+      }).join('');
+    })
+    .catch(function () { msg.style.display = 'block'; msg.className = 'lb-msg err'; msg.textContent = 'Сеть моргнула — попробуйте ещё раз'; });
+};
+
+document.getElementById('lbCsv').onclick = function () {
+  location.href = API + '/export.csv?cat=' + CAT;
+};
+
+if (CAN_EDIT) {
+  document.getElementById('lbSendPanel').style.display = '';
+}
+document.getElementById('lbSend').onclick = function () {
+  var msg = document.getElementById('lbSendMsg');
+  fetch(API + '/send', {method: 'POST', headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({cat: CAT, channel: document.getElementById('lbSendCh').value})})
+    .then(function (r) { return r.json().then(function (d) { return {status: r.status, d: d}; }); })
+    .then(function (x) {
+      msg.style.display = 'block';
+      msg.className = 'lb-msg ' + (x.d.success ? 'ok' : 'err');
+      msg.textContent = x.d.success ? x.d.message : (x.d.error || 'Ошибка');
+    })
+    .catch(function () { msg.style.display = 'block'; msg.className = 'lb-msg err'; msg.textContent = 'Сеть моргнула — попробуйте ещё раз'; });
+};
+
+loadTable();
+loadCard();
+</script>
+{% endblock %}
