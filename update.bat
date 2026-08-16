@@ -1,0 +1,95 @@
+@echo off
+rem ═══════════════════════════════════════════════════════════════════
+rem  Aether Updater — обновление бота в один двойной клик.
+rem
+rem  Что делает:
+rem    1. Скачивает свежую сборку ветки arena/019fee4a-new-pro с GitHub
+rem    2. Распаковывает во временную папку
+rem    3. Аккуратно докладывает код поверх текущей папки.
+rem       НЕ ТРОГАЕТ: .env, data\ (база, настройки, логи), .venv, .git —
+rem       твои данные в безопасности, чистится только код.
+rem    4. Ставит зависимости из requirements.txt (если изменились).
+rem    5. Перезапускает бота (старую копию main.py гасит точечно).
+rem
+rem  Запуск: двойной клик по update.bat
+rem  Без перезапуска: update.bat /norestart
+rem ═══════════════════════════════════════════════════════════════════
+chcp 65001 >nul
+setlocal EnableDelayedExpansion
+title Aether Updater
+cd /d "%~dp0"
+
+set "REPO=Arthu27/New-Pro"
+set "BRANCH=arena/019fee4a-new-pro"
+set "URL=https://codeload.github.com/%REPO%/zip/refs/heads/%BRANCH%"
+set "TMPZ=%TEMP%\aether_update.zip"
+set "TMPSRC=%TEMP%\aether_update_src"
+set "SRC=%TMPSRC%\New-Pro-arena-019fee4a-new-pro"
+
+echo ════════════════════════════════════════════════════════════
+echo   Aether Updater
+echo   Ветка: %BRANCH%
+echo   Папка бота: %CD%
+echo ════════════════════════════════════════════════════════════
+echo.
+
+if not exist main.py (
+    echo [ОШИБКА] main.py не найден — запусти update.bat из папки бота.
+    goto :end
+)
+
+echo [1/5] Скачиваю свежую сборку с GitHub...
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$ProgressPreference='SilentlyContinue'; try { Invoke-WebRequest -Uri '%URL%' -OutFile '%TMPZ%' -UseBasicParsing; exit 0 } catch { Write-Host $_.Exception.Message; exit 1 }"
+if errorlevel 1 goto :fail_download
+
+echo [2/5] Распаковываю...
+powershell -NoProfile -ExecutionPolicy Bypass -Command "if (Test-Path '%TMPSRC%') { Remove-Item -Recurse -Force '%TMPSRC%' }; Expand-Archive -Path '%TMPZ%' -DestinationPath '%TMPSRC%' -Force"
+if errorlevel 1 goto :fail_download
+if not exist "%SRC%" (
+    echo [ОШИБКА] В архиве нет ожидаемой папки — отмена.
+    goto :fail_download
+)
+
+echo [3/5] Обновляю код (данные, .env и логи не трогаю)...
+robocopy "%SRC%" "." /E /XD data .git .venv __pycache__ logs /XF .env update.bat /NFL /NDL /NJH /R:2 /W:2 >nul
+if errorlevel 8 goto :fail_copy
+
+echo [4/5] Проверяю зависимости...
+if exist requirements.txt (
+    python -m pip install -r requirements.txt --quiet --disable-pip-version-check
+    if errorlevel 1 echo [ПРЕДУПРЕЖДЕНИЕ] pip завершился с ошибкой — смотри вывод выше.
+)
+
+if /i "%~1"=="/norestart" (
+    echo [5/5] Готово. Перезапуск пропущен (передан /norestart).
+    goto :ok
+)
+
+echo [5/5] Перезапускаю бота...
+powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-CimInstance Win32_Process -Filter \"Name='python.exe' or Name='pythonw.exe'\" | Where-Object { $_.CommandLine -match 'main\.py' } | ForEach-Object { Write-Host ('  Останавливаю PID ' + $_.ProcessId); Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }"
+timeout /t 2 /nobreak >nul
+start "Aether Bot" cmd /k python main.py
+
+:ok
+echo.
+echo ════════════════════════════════════════════════════════════
+echo   Обновление завершено. Маркер свежего кода при старте:
+echo   «Слеш-меню: NN команд (лимит Discord — 100...)»
+echo ════════════════════════════════════════════════════════════
+goto :end
+
+:fail_download
+echo.
+echo [ОШИБКА] Не удалось скачать/распаковать сборку.
+echo Проверь интернет и что GitHub доступен. Локальные файлы не тронуты.
+goto :end
+
+:fail_copy
+echo.
+echo [ОШИБКА] Robocopy вернул ошибку при копировании файлов.
+echo Твои .env и data\ не пострадали. Повтори запуск от имени пользователя с правами на эту папку.
+
+:end
+echo.
+pause
+endlocal
