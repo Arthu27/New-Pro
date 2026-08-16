@@ -91,6 +91,7 @@ MENU = [
         {'path': '/starboard', 'label': 'Starboard', 'icon': 'fa-star'},
         {'path': '/voice-stats', 'label': 'Голосовая', 'icon': 'fa-microphone'},
         {'path': '/duty-panel-web', 'label': 'Дежурства', 'icon': 'fa-user-clock'},
+        {'path': '/quiz', 'label': 'Квиз', 'icon': 'fa-brain'},
         {'path': '/scheduled-messages', 'label': 'Расписание', 'icon': 'fa-clock'},
     ]},
     {'group': 'Логи', 'key': 'logs', 'icon': 'fa-file-lines', 'pages': [
@@ -143,6 +144,7 @@ PAGE_COGS = {
     '/starboard': ('starboard',),
     '/voice-stats': ('voice_tracker',),
     '/duty-panel-web': ('duty',),
+    '/quiz': ('quiz',),
     '/scheduled-messages': ('scheduler',),
     '/schedule': ('scheduler',),
     '/afk-list': ('afk',),

@@ -110,6 +110,39 @@ def format_leader_lines(rows, limit=10):
     return lines
 
 
+def try_add_question(questions, spec, added_by=''):
+    """Общая проверка добавления вопроса для команды /квиз и панели.
+
+    spec — 'Вопрос? | ответ1 ; ответ2' (тот же формат, что у команды).
+    Мутирует переданный список questions и возвращает (item, None) либо
+    (None, текст ошибки ровно такой, как отвечает бот в чате).
+    """
+    q, answers = split_spec(spec)
+    if not q:
+        return None, 'Формат: `/квиз добавить Вопрос? | ответ` (варианты через «;»).'
+    if any(normalize_answer(item.get('q')) == normalize_answer(q) for item in questions):
+        return None, 'Такой вопрос уже есть в библиотеке.'
+    item = {
+        'q': q,
+        'answers': answers,
+        'added_by': str(added_by or ''),
+        'added_at': datetime.now(UTC).isoformat(),
+    }
+    questions.append(item)
+    return item, None
+
+
+def try_remove_question(questions, index):
+    """Общее удаление по номеру (как в «/квиз вопросы»). (removed, error)."""
+    try:
+        index = int(index)
+    except (TypeError, ValueError):
+        return None, 'Номер вопроса — целое число из «/квиз вопросы».'
+    if not (1 <= index <= len(questions)):
+        return None, f'Нет вопроса с номером {index}. Смотри `/квиз вопросы`.'
+    return questions.pop(index - 1), None
+
+
 class Quiz(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -292,28 +325,20 @@ class Quiz(commands.Cog):
     @grp.command(name='добавить', aliases=['add'], description='Добавить вопрос: <вопрос> | <ответы через ;>')
     @commands.has_permissions(manage_guild=True)
     async def add(self, ctx, *, spec: str):
-        q, answers = split_spec(spec)
-        if not q:
-            return await ctx.send('Формат: `/квиз добавить Вопрос? | ответ` (варианты через «;»).')
         questions = self._questions(ctx.guild.id)
-        if any(normalize_answer(item.get('q')) == normalize_answer(q) for item in questions):
-            return await ctx.send('Такой вопрос уже есть в библиотеке.')
-        questions.append({
-            'q': q,
-            'answers': answers,
-            'added_by': str(ctx.author.id),
-            'added_at': datetime.now(UTC).isoformat(),
-        })
+        item, err = try_add_question(questions, spec, added_by=str(ctx.author.id))
+        if err:
+            return await ctx.send(err)
         self._save_questions(ctx.guild.id, questions)
-        await ctx.send(f'Вопрос добавлен (**{len(questions)}** в библиотеке): {q} → {", ".join(answers)}')
+        await ctx.send(f'Вопрос добавлен (**{len(questions)}** в библиотеке): {item["q"]} → {", ".join(item["answers"])}')
 
     @grp.command(name='удалить', aliases=['del'], description='Удалить вопрос по номеру из «/квиз вопросы»')
     @commands.has_permissions(manage_guild=True)
     async def remove(self, ctx, index: int):
         questions = self._questions(ctx.guild.id)
-        if not (1 <= index <= len(questions)):
-            return await ctx.send(f'Нет вопроса с номером {index}. Смотри `/квиз вопросы`.')
-        removed = questions.pop(index - 1)
+        removed, err = try_remove_question(questions, index)
+        if err:
+            return await ctx.send(err)
         self._save_questions(ctx.guild.id, questions)
         await ctx.send(f'Удалён вопрос: {removed["q"]}')
 

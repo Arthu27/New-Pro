@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+{% block title %}Квиз — Панель Aether{% endblock %}
+{% block page_title %}Квиз-машина{% endblock %}
+{% block content %}
+<style>
+.qz-kpis{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 18px}
+.qz-kpi{display:flex;align-items:center;gap:10px;background:var(--surface-2,rgba(255,255,255,.04));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:12px;padding:10px 16px}
+.qz-kpi i{color:var(--ac,#e0b04a);font-size:16px}
+.qz-kpi b{font-size:18px;color:var(--text-1,#fff)}
+.qz-kpi span{font-size:11.5px;color:var(--text-3,rgba(255,255,255,.45))}
+.qz-grid{display:grid;grid-template-columns:1.6fr 1fr;gap:16px;align-items:start}
+@media (max-width:960px){.qz-grid{grid-template-columns:1fr}}
+.qz-panel{background:var(--surface-2,rgba(255,255,255,.03));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:14px;padding:16px 18px}
+.qz-panel h3{margin:0 0 4px;font-size:15px;color:var(--text-1,#fff);display:flex;align-items:center;gap:9px}
+.qz-panel h3 i{color:var(--ac,#e0b04a)}
+.qz-sub{font-size:12px;color:var(--text-3,rgba(255,255,255,.45));margin-bottom:14px;line-height:1.5}
+.qz-row{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:start;padding:10px 8px;border-bottom:1px dashed rgba(255,255,255,.07)}
+.qz-row:last-child{border-bottom:none}
+.qz-num{font-size:12px;font-weight:700;color:var(--text-3,rgba(255,255,255,.4));width:26px;padding-top:2px;font-variant-numeric:tabular-nums}
+.qz-q{font-size:13.5px;color:var(--text-2,rgba(255,255,255,.85));line-height:1.45}
+.qz-a{display:inline-block;font-size:11.5px;color:var(--ac-2,#f0cd7a);background:var(--ac-soft,rgba(224,176,74,.1));border:1px solid var(--ac-line,rgba(224,176,74,.22));border-radius:999px;padding:2px 10px;margin:5px 6px 0 0}
+.qz-by{font-size:11px;color:var(--text-3,rgba(255,255,255,.35));margin-top:5px}
+.qz-del{background:none;border:none;color:var(--text-3,rgba(255,255,255,.35));cursor:pointer;padding:6px;border-radius:8px;transition:color .15s,background .15s}
+.qz-del:hover{color:#ff6b6b;background:rgba(231,76,60,.12)}
+.qz-form{display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:14px}
+.qz-input{background:rgba(0,0,0,.25);border:1px solid var(--line-2,rgba(255,255,255,.1));border-radius:10px;padding:10px 14px;color:var(--text-1,#fff);font-size:13.5px;outline:none;transition:border-color .15s,box-shadow .15s}
+.qz-input:focus{border-color:var(--ac,#e0b04a);box-shadow:0 0 0 3px var(--ac-soft,rgba(224,176,74,.12))}
+.qz-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--ac,#e0b04a);color:#1a1a1a;border:none;border-radius:10px;padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;transition:filter .15s}
+.qz-btn:hover{filter:brightness(1.1)}
+.qz-btn.ghost{background:rgba(255,255,255,.06);color:var(--text-2,rgba(255,255,255,.8));border:1px solid var(--line-2,rgba(255,255,255,.14))}
+.qz-btn.danger{background:rgba(231,76,60,.12);color:#ff8a7a;border:1px solid rgba(231,76,60,.35)}
+.qz-tbin{width:100%;border-collapse:collapse}
+.qz-tbin td{padding:8px 6px;border-bottom:1px dashed rgba(255,255,255,.07);font-size:13px;color:var(--text-2,rgba(255,255,255,.8))}
+.qz-tbin tr:last-child td{border-bottom:none}
+.qz-pos{font-weight:700;color:var(--ac,#e0b04a);width:30px;font-variant-numeric:tabular-nums}
+.qz-stat{color:var(--text-3,rgba(255,255,255,.45));font-size:12px;text-align:right;font-variant-numeric:tabular-nums}
+.qz-live-dot{width:8px;height:8px;border-radius:50%;background:#7bd88f;box-shadow:0 0 0 0 rgba(123,216,143,.5);animation:shiftPulse 2s ease-out infinite}
+@keyframes shiftPulse{0%{box-shadow:0 0 0 0 rgba(123,216,143,.5)}70%{box-shadow:0 0 0 8px rgba(123,216,143,0)}100%{box-shadow:0 0 0 0 rgba(123,216,143,0)}}
+[data-theme="light"] .qz-input{background:rgba(0,0,0,.04)}
+[data-theme="light"] .qz-row{border-bottom-color:rgba(0,0,0,.08)}
+[data-theme="light"] .qz-tbin td{border-bottom-color:rgba(0,0,0,.08)}
+</style>
+
+<div class="qz-kpis" id="qzKpis">
+  <div class="sk-card" style="width:180px;height:56px"></div>
+  <div class="sk-card" style="width:180px;height:56px"></div>
+  <div class="sk-card" style="width:180px;height:56px"></div>
+</div>
+
+<div class="qz-grid">
+  <div class="qz-panel">
+    <h3><i class="fas fa-book-open"></i> Библиотека вопросов</h3>
+    <div class="qz-sub">Те же вопросы, что и в игре: панель пишет прямо в хранилище кога.
+      Если библиотека пуста — играется встроенный набор.</div>
+    {% if role == 'admin' or role == 'owner' %}
+    <div class="qz-form">
+      <input type="text" class="qz-input" id="qzNewQ" placeholder="Вопрос: Столица Франции?" aria-label="Вопрос">
+      <input type="text" class="qz-input" id="qzNewA" placeholder="Ответы через «;»: париж ; city of paris" aria-label="Ответы">
+      <button class="qz-btn" onclick="qzAdd()"><i class="fas fa-plus"></i> Добавить вопрос</button>
+    </div>
+    {% endif %}
+    <div id="qzList">
+      <div class="sk-row"></div>
+      <div class="sk-row"></div>
+      <div class="sk-row" style="width:70%"></div>
+    </div>
+  </div>
+
+  <div class="qz-panel">
+    <h3><i class="fas fa-trophy"></i> Сезонный топ</h3>
+    <div class="qz-sub">Очки за первые верные ответы — как в <code>/квиз топ</code>.</div>
+    <div id="qzTop">
+      <div class="sk-row" style="height:38px"></div>
+      <div class="sk-row" style="height:38px;width:80%"></div>
+    </div>
+    {% if role == 'admin' or role == 'owner' %}
+    <div style="margin-top:14px">
+      <button class="qz-btn danger" onclick="qzReset()"><i class="fas fa-rotate-left"></i> Обнулить зачёт</button>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+var CAN_EDIT = {% if role == 'admin' or role == 'owner' %}true{% else %}false{% endif %};
+
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+function qzPlural(n, one, few, many) {
+  var m10 = n % 10, m100 = n % 100;
+  if (m100 >= 11 && m100 <= 19) return many;
+  if (m10 === 1) return one;
+  if (m10 >= 2 && m10 <= 4) return few;
+  return many;
+}
+
+function renderKpis(d) {
+  var src = d.custom_count > 0
+    ? '<div class="qz-kpi"><i class="fas fa-book-open"></i><div><b>' + d.custom_count + '</b> <span>' + qzPlural(d.custom_count, 'свой вопрос', 'своих вопроса', 'своих вопросов') + '</span></div></div>'
+    : '<div class="qz-kpi"><i class="fas fa-cube"></i><div><b>' + d.builtin_count + '</b> <span>встроенных вопросов в игре</span></div></div>';
+  var live = d.sessions_active > 0
+    ? '<div class="qz-kpi"><span class="qz-live-dot"></span><div><b>' + d.sessions_active + '</b> <span>игра идёт прямо сейчас</span></div></div>'
+    : '';
+  document.getElementById('qzKpis').innerHTML = src + live +
+    '<div class="qz-kpi"><i class="fas fa-users"></i><div><b>' + d.scores_total + '</b> <span>' + qzPlural(d.scores_total, 'игрок', 'игрока', 'игроков') + ' в зачёте</span></div></div>';
+}
+
+function renderList(d) {
+  var box = document.getElementById('qzList');
+  if (!d.questions.length) {
+    box.innerHTML = '<div class="empty-state"><i class="fas fa-book-open"></i><p>Своих вопросов пока нет</p>' +
+      '<p class="empty-tip">Играется встроенный набор (' + d.builtin_count + ' шт.). ' +
+      (CAN_EDIT ? 'Добавьте первый вопрос формой выше — он сразу попадёт в игру.'
+                : 'Пополнить библиотеку может admin или из Discord: /квиз добавить.') + '</p></div>';
+    return;
+  }
+  box.innerHTML = d.questions.map(function (q) {
+    var del = CAN_EDIT ? '<button class="qz-del" onclick="qzRemove(' + q.n + ')" title="Удалить №' + q.n + '" aria-label="Удалить"><i class="fas fa-trash-can"></i></button>' : '';
+    var by = q.added_by ? '<div class="qz-by">добавил ' + esc(q.added_by) + '</div>' : '';
+    return '<div class="qz-row"><span class="qz-num">' + q.n + '</span>' +
+      '<div><div class="qz-q">' + esc(q.q) + '</div>' +
+      q.answers.map(function (a) { return '<span class="qz-a">' + esc(a) + '</span>'; }).join('') + by + '</div>' + del + '</div>';
+  }).join('');
+}
+
+function renderTop(d) {
+  var box = document.getElementById('qzTop');
+  if (!d.scores_top.length) {
+    box.innerHTML = '<div class="empty-state"><i class="fas fa-trophy"></i><p>Зачёт пуст</p>' +
+      '<p class="empty-tip">Очки появятся после первой викторины: /квиз старт в любом канале.</p></div>';
+    return;
+  }
+  box.innerHTML = '<table class="qz-tbin">' + d.scores_top.map(function (r, i) {
+    return '<tr><td class="qz-pos">' + (i + 1) + '</td><td>' + esc(r.name) + '</td>' +
+      '<td class="qz-stat"><b style="color:var(--ac-2,#f0cd7a)">' + r.points + '</b> ' + qzPlural(r.points, 'очко', 'очка', 'очков') +
+      ' · верных ' + r.correct + ' · побед ' + r.wins + '</td></tr>';
+  }).join('') + '</table>';
+}
+
+function renderAll(d) {
+  renderKpis(d);
+  window.renderSafe ? window.renderSafe(function(){ renderList(d); renderTop(d); }) : (renderList(d), renderTop(d));
+}
+
+async function qzLoad() {
+  try {
+    var d = await fetch('/api/quiz/state').then(function (r) { return r.json(); });
+    if (d.success) renderAll(d);
+  } catch (e) { /* сеть моргнула — API Guard уже показал */ }
+}
+
+async function qzAdd() {
+  var q = document.getElementById('qzNewQ').value;
+  var a = document.getElementById('qzNewA').value;
+  var r = await fetch('/api/quiz/questions/add', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ question: q, answers: a })
+  });
+  var d = await r.json();
+  if (r.ok && d.success) {
+    document.getElementById('qzNewQ').value = '';
+    document.getElementById('qzNewA').value = '';
+    renderAll(d);
+    if (typeof window.showToast === 'function') window.showToast('Вопрос добавлен', true);
+  }
+}
+
+async function qzRemove(n) {
+  var r = await fetch('/api/quiz/questions/remove', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ index: n })
+  });
+  var d = await r.json();
+  if (r.ok && d.success) {
+    renderAll(d);
+    var gone = d.removed;
+    if (gone && typeof window.uxUndo === 'function') {
+      window.uxUndo('Вопрос №' + n + ' удалён', async function () {
+        var spec = gone.q + ' | ' + (gone.answers || []).join(' ; ');
+        var rr = await fetch('/api/quiz/questions/add', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ spec: spec })
+        });
+        var dd = await rr.json();
+        if (rr.ok && dd.success) renderAll(dd);
+      });
+    }
+  }
+}
+
+function qzReset() {
+  window.askConfirm('Обнулить сезонный зачёт?', 'Очки, правильные ответы и победы всех игроков будут стёрты. Библиотека вопросов останется.', async function () {
+    var r = await fetch('/api/quiz/scores/reset', { method: 'POST' });
+    var d = await r.json();
+    if (r.ok && d.success) {
+      renderAll(d);
+      if (typeof window.showToast === 'function') window.showToast('Зачёт обнулён', true);
+    }
+  }, { danger: true, okText: 'Обнулить' });
+}
+
+qzLoad();
+if (typeof window.setLiveRefresh === 'function') window.setLiveRefresh(qzLoad, 30000);
+</script>
+{% endblock %}
