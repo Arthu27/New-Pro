@@ -47,6 +47,7 @@ EVENTS = {
     'birthdays': ('event_birthdays', 'Дни рождения: записи и настройки', '🎂'),
     'social': ('event_social', 'События и поиски: уборка из панели', '🎉'),
     'anime_daily': ('event_anime_daily', 'Аниме дня: настройки рассылки', '📺'),
+    'j2c': ('event_j2c', 'Комнаты J2C: настройки и уборка', '🔊'),
     'test': (None, 'Тестовое уведомление', '🧪'),
 }
 
@@ -64,6 +65,7 @@ EVENT_LINKS = {
     'birthdays': '/birthdays',
     'social': '/social',
     'anime_daily': '/anime-daily',
+    'j2c': '/join-to-create',
     'test': '/notifications',
 }
 
@@ -83,6 +85,7 @@ DEFAULT_SETTINGS = {
     'event_birthdays': True,
     'event_social': True,
     'event_anime_daily': True,
+    'event_j2c': True,
     'discord_channel': '',
     'webhook_url': '',
     'smtp_server': '',
