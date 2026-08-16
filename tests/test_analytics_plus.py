@@ -219,6 +219,36 @@ check('flowChart' in tpl and 'member-flow' in tpl, 'график потока с
 check('anWeekSum' in tpl and 'week-summary' in tpl, 'чипы недели смонтированы')
 check(not emoji.search(tpl), 'всё ещё без эмодзи')
 
+print('== 7. Детализация по каналу и рекорды (#15, #16) ==')
+drill = AP.channel_drill(AP.load_message_events(777), 'общий', days=30)
+check(drill['total'] == 3 and drill['unique_authors'] == 2, 'дрилл: всего/авторы')
+check(len(drill['days']) == 30 and sum(c for _d, c in drill['days']) == 2,
+      'ряд 30 дней сходится (событие без метки вне сетки)')
+check(drill['top_authors'][0][1] == 2, 'топ авторов канала')  # у Миры и Грома в «общем» поровну — берём счёт
+drill_empty = AP.channel_drill(AP.load_message_events(777), 'неттакого')
+check(drill_empty['total'] == 0 and drill_empty['top_authors'] == [], 'неизвестный канал — честные нули')
+
+recs = AP.record_days(AP.load_message_events(777))
+check(recs and recs[0][1] == 2 and recs[0][0] == '2026-08-10', 'рекордный день — 10.08 (2 сообщ.)')
+check(len(recs) <= 3, 'не больше трёх рекордов')
+check(AP.record_days([]) == [], 'без событий — без рекордов')
+
+r = client.get('/api/guild/777/analytics/channel-drill?name=общий')
+check(r.status_code == 200 and r.get_json()['total'] == 3, 'mod читает дрилл канала')
+r = client.get('/api/guild/777/analytics/records')
+d = r.get_json()
+check(r.status_code == 200 and d['records'] and 'today_count' in d and 'today_rank' in d,
+      'mod читает рекорды')
+check(d['records'][0]['count'] == 2, 'эндпоинт рекордов согласован с чистой функцией')
+login('uye')
+check(client.get('/api/guild/777/analytics/channel-drill?name=x').status_code == 403, 'uye нельзя дрилл')
+check(client.get('/api/guild/777/analytics/records').status_code == 403, 'uye нельзя рекорды')
+login('mod')
+
+tpl = open(os.path.join(ROOT, 'web/templates/analytics.html'), encoding='utf-8').read()
+check('anDrillSel' in tpl and 'channel-drill' in tpl, 'дрилл смонтирован')
+check('anRecords' in tpl and 'analytics/records' in tpl, 'рекорды смонтированы')
+
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)
 sys.exit(1 if FAIL else 0)

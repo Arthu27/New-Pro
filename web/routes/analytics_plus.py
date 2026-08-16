@@ -174,6 +174,31 @@ def member_flow(guild_id, days=14):
     }
 
 
+def channel_drill(events, name, days=30):
+    """Детализация по каналу: ряд по дням, топ авторов, всего сообщений."""
+    name = (name or '').strip()
+    own = [ev for ev in events if str(ev[1]) == name]
+    days_row = []
+    counts = Counter(dt.date().isoformat() for _a, _c, dt in own if dt is not None)
+    today = date.today()
+    for i in range(days - 1, -1, -1):
+        day = (today - timedelta(days=i)).isoformat()
+        days_row.append((day, counts.get(day, 0)))
+    return {
+        'name': name,
+        'total': len(own),
+        'days': days_row,
+        'top_authors': top_counter(own, 0, limit=5),
+        'unique_authors': len({str(a) for a, _c, _dt in own}),
+    }
+
+
+def record_days(events, limit=3):
+    """Рекордные дни сервера по сообщениям: [(дата, кол-во)] по убыванию."""
+    counts = Counter(dt.date().isoformat() for _a, _c, dt in events if dt is not None)
+    return sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))[:limit]
+
+
 def week_summary(events, now=None):
     """Эта неделя vs прошлая: сообщения и активные авторы (7 суток × 2 окна)."""
     now = now or datetime.now()
@@ -266,3 +291,35 @@ def register(ctx):
         body = week_summary(load_message_events(guild_id))
         body['success'] = True
         return jsonify(body)
+
+    @app.route('/api/guild/<guild_id>/analytics/channel-drill')
+    @login_required
+    @role_required('mod')
+    def api_guild_channel_drill(guild_id):
+        from flask import request as _req
+        name = _req.args.get('name', '')
+        body = channel_drill(load_message_events(guild_id), name)
+        body['success'] = True
+        return jsonify(body)
+
+    @app.route('/api/guild/<guild_id>/analytics/records')
+    @login_required
+    @role_required('mod')
+    def api_guild_records(guild_id):
+        events = load_message_events(guild_id)
+        recs = record_days(events)
+        today_iso = date.today().isoformat()
+        counts_ser = Counter(
+            dt.date().isoformat() for _a, _c, dt in events if dt is not None
+        )
+        rank = None
+        if counts_ser.get(today_iso):
+            ordered = sorted(counts_ser.items(), key=lambda kv: (-kv[1], kv[0]))
+            rank = next((i for i, (day, _c) in enumerate(ordered, 1)
+                         if day == today_iso), None)
+        return jsonify({
+            'success': True,
+            'records': [{'date': d, 'count': c} for d, c in recs],
+            'today_count': counts_ser.get(today_iso, 0),
+            'today_rank': rank,
+        })

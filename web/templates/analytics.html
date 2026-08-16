@@ -182,6 +182,7 @@
     <div class="an-sumgrid" id="anWeekSum">
       <div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Загрузка...</p></div>
     </div>
+    <div class="an-recs" id="anRecords"></div>
   </div>
 
   <div class="section">
@@ -209,6 +210,14 @@
     <h2 style="display:flex;align-items:center;gap:10px"><i class="fas fa-fire"></i> Теплокарта активности<span id="anHeatPeak" class="an-peak"></span></h2>
     <div id="anHeatmap"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Загрузка...</p></div></div>
   </div>
+  <div class="section">
+    <h2><i class="fas fa-magnifying-glass-chart"></i> Детализация по каналу</h2>
+    <div class="an-drillbar">
+      <select id="anDrillSel" class="an-select" onchange="onDrillChange()"></select>
+      <span id="anDrillMeta" class="an-drillmeta"></span>
+    </div>
+    <div id="anDrill"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Загрузка...</p></div></div>
+  </div>
 </div>
 
 <style>
@@ -230,6 +239,19 @@
 .an-sumd{font-size:11px;font-weight:700;margin-top:4px;color:var(--text-3,rgba(255,255,255,.4))}
 .an-sumd.up{color:#7bd88f}
 .an-sumd.down{color:#ff8a7a}
+.an-recs{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.an-rechip{font-size:11.5px;color:var(--text-2,rgba(255,255,255,.75));background:rgba(255,255,255,.05);border:1px solid var(--line-2,rgba(255,255,255,.1));border-radius:999px;padding:3px 11px;font-variant-numeric:tabular-nums}
+.an-rechip i{color:var(--ac,#e0b04a)}
+.an-rechip.today{color:var(--ac-2,#f0cd7a);border-color:var(--ac-line,rgba(224,176,74,.3))}
+.an-drillbar{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.an-select{background:rgba(0,0,0,.25);border:1px solid var(--line-2,rgba(255,255,255,.1));border-radius:10px;padding:8px 12px;color:var(--text-1,#fff);font-size:13px;outline:none}
+.an-select option{background:#1c1f27;color:#e8e8e8}
+.an-drillmeta{font-size:12px;color:var(--text-3,rgba(255,255,255,.45))}
+.an-bars{display:flex;align-items:flex-end;gap:2px;height:96px;padding-top:6px}
+.an-bar{flex:1;background:linear-gradient(180deg,var(--ac-2,#f0cd7a),var(--ac,#e0b04a));border-radius:2px 2px 0 0;min-height:2px;opacity:.85}
+.an-bar:hover{opacity:1}
+[data-theme="light"] .an-select{background:rgba(0,0,0,.04)}
+[data-theme="light"] .an-select option{background:#fff;color:#2a2d35}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
@@ -506,6 +528,69 @@
     } catch (e) { /* чипы недели не критичны */ }
   }
 
+  function renderRecords(d) {
+    var box = $id('anRecords');
+    if (!box) return;
+    if (!d || !d.records || !d.records.length) { box.innerHTML = ''; return; }
+    var today = '<span class="an-rechip today">сегодня: ' + d.today_count +
+      (d.today_rank ? ' · место №' + d.today_rank : '') + '</span>';
+    box.innerHTML = today + d.records.map(function (r) {
+      return '<span class="an-rechip"><i class="fas fa-bolt"></i> ' + esc(r.date.slice(5).split('-').reverse().join('.')) +
+        ' · ' + r.count + ' сообщ.</span>';
+    }).join('');
+  }
+
+  async function loadRecords(gid) {
+    try {
+      var r = await fetch('/api/guild/' + gid + '/analytics/records');
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      var d = await r.json();
+      if (window.renderSafe) window.renderSafe(function () { renderRecords(d); }); else renderRecords(d);
+    } catch (e) { /* рекорды не критичны */ }
+  }
+
+  function renderDrill(d) {
+    var box = $id('anDrill');
+    var meta = $id('anDrillMeta');
+    if (!d || !d.name) {
+      box.innerHTML = '<div class="empty-state"><i class="fas fa-magnifying-glass-chart"></i><p>Канал не выбран</p></div>';
+      return;
+    }
+    if (meta) meta.textContent = fmtNum(d.total) + ' сообщ. · ' + d.unique_authors +
+      ' авторов · 30 дней';
+    if (!d.total) {
+      box.innerHTML = '<div class="empty-state"><i class="fas fa-hashtag"></i><p>В канале тихо</p></div>';
+      return;
+    }
+    var max = Math.max.apply(null, d.days.map(function (x) { return x[1]; }).concat([1]));
+    var bars = d.days.map(function (x) {
+      var h = Math.round((x[1] / max) * 90);
+      return '<div class="an-bar" style="height:' + Math.max(h, x[1] ? 3 : 2) + 'px" title="' +
+        esc(x[0].slice(5).split('-').reverse().join('.')) + ' · ' + x[1] + ' сообщ."></div>';
+    }).join('');
+    var authors = d.top_authors.map(function (a) {
+      return '<span class="an-rechip">' + esc(a[0]) + ' · ' + a[1] + '</span>';
+    }).join('');
+    box.innerHTML = '<div class="an-bars">' + bars + '</div>' +
+      '<div class="an-recs" style="margin-top:10px">' + authors + '</div>';
+  }
+
+  async function loadDrill(gid, name) {
+    if (!name) { renderDrill(null); return; }
+    try {
+      var r = await fetch('/api/guild/' + gid + '/analytics/channel-drill?name=' + encodeURIComponent(name));
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      var d = await r.json();
+      if (window.renderSafe) window.renderSafe(function () { renderDrill(d); }); else renderDrill(d);
+    } catch (e) { /* детализация не критична */ }
+  }
+
+  function onDrillChange() {
+    var sel = $id('guild-select');
+    var gid = (sel && sel.value) || MAIN_GID;
+    loadDrill(gid, $id('anDrillSel').value);
+  }
+
   async function load() {
     var sel = $id('guild-select');
     var gid = (sel && sel.value) || MAIN_GID;
@@ -520,6 +605,16 @@
       loadHeatmap(gid);
       loadFlow(gid);
       loadSummary(gid);
+      loadRecords(gid);
+      var dsel = $id('anDrillSel');
+      if (dsel && (d.top_channels || []).length !== undefined) {
+        var prev = dsel.value;
+        dsel.innerHTML = (d.top_channels || []).map(function (c) {
+          return '<option value="' + esc(c.name) + '">#' + esc(c.name) + '</option>';
+        }).join('');
+        if (prev && Array.from(dsel.options).some(function (o) { return o.value === prev; })) dsel.value = prev;
+        loadDrill(gid, dsel.value);
+      }
       var csvBtn = $id('anCsvBtn');
       if (csvBtn) csvBtn.href = '/api/guild/' + gid + '/analytics.csv';
       _loaded = true;
