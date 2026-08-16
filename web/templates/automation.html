@@ -292,7 +292,8 @@ async function loadTriggers(){
   try {
     var d = await fetch('/api/automation/triggers/state').then(function(r){ return r.json(); });
     if(!d.success){ throw new Error(d.error || 'ошибка'); }
-    var items = (d.state && d.state.items) || [];
+    window._trgItems = (d.state && d.state.items) || [];
+    var items = window._trgItems; = (d.state && d.state.items) || [];
     document.getElementById('trg-count').textContent = items.length + ' / ' + d.max;
     document.getElementById('trg-cooldown').value = (d.state && d.state.cooldown) || 30;
     box.innerHTML = items.length ? items.map(function(t){
@@ -326,12 +327,22 @@ async function trgAdd(){
 }
 
 async function trgRemove(id){
+  var gone = (window._trgItems || []).find(function(t){ return t.id === id; });
   var r = await fetch('/api/automation/triggers/remove', {
     method: 'POST', headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({id: id})
   });
   await r.json();
   loadTriggers();
+  if (gone && typeof window.uxUndo === 'function') {
+    window.uxUndo('Триггер «' + gone.trigger + '» удалён', async function () {
+      await fetch('/api/automation/triggers/add', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({trigger: gone.trigger, response: gone.response, exact: !!gone.exact})
+      });
+      loadTriggers();
+    });
+  }
 }
 
 async function trgCooldown(){

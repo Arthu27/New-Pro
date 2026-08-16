@@ -381,9 +381,10 @@
   </div>
   <div class="dash-box-body" >
     <div class="quick-grid" id="quick-stats">
-      <div class="quick-grid-loading">
-        <i class="fas fa-spinner fa-spin"></i>
-      </div>
+      <div class="sk-card"></div>
+      <div class="sk-card"></div>
+      <div class="sk-card"></div>
+      <div class="sk-card"></div>
     </div>
   </div>
 </div>
@@ -431,9 +432,9 @@
   <div class="dash-box-body">
     <div class="shift-now-row" id="shiftNow">
       <span class="shift-dot"></span>
-      <div class="shift-now-txt"><i class="fas fa-spinner fa-spin"></i></div>
+      <div style="flex:1;min-width:0"><div class="sk-line" style="width:52%"></div><div class="sk-line" style="width:34%"></div></div>
     </div>
-    <div class="shift-today-row" id="shiftToday"></div>
+    <div class="shift-today-row" id="shiftToday"><span class="sk-chip"></span><span class="sk-chip"></span><span class="sk-chip" style="width:72px"></span></div>
     {% if role == 'admin' or role == 'owner' %}
     <details class="shift-manage" id="shiftManage">
       <summary><i class="fas fa-pen-to-square"></i> Управлять расписанием</summary>
@@ -902,6 +903,8 @@
     if (ba) ba.addEventListener('click', sendAnnouncement);
   }
 
+  var SHIFT_EMPTY_HINT = {% if role == 'admin' or role == 'owner' %}'добавьте первую смену в редакторе ниже'{% else %}'задайте смены командой /дежурства'{% endif %};
+
   async function loadShifts() {
     var nowBox = $('shiftNow');
     var todayBox = $('shiftToday');
@@ -929,13 +932,14 @@
         nowBox.innerHTML = '<span class="shift-dot"></span>' +
           '<div><div class="shift-now-txt">Сейчас никто не дежурит</div>' +
           (d.next ? '<div class="shift-now-sub">Ближайшая: ' + esc(d.next.weekday) + ' ' + esc(d.next.start) + ' — ' + esc(d.next.name) + '</div>'
-                  : '<div class="shift-now-sub">Расписание пусто — задайте смены командой /дежурства</div>') +
+                  : '<div class="shift-now-sub">Расписание пусто — ' + SHIFT_EMPTY_HINT + '</div>') +
           '</div>';
       }
       todayBox.innerHTML = (d.today || []).map(function (s) {
         return '<span class="shift-chip' + (s.active ? ' on' : '') + '">' +
           '<span class="t">' + esc(s.start) + '–' + esc(s.end) + '</span> ' + esc(s.name) + '</span>';
       }).join('');
+      window._shiftData = d;
       renderShiftEditor(d);
     } catch (e) {
       nowBox.innerHTML = '<span class="shift-dot"></span><div class="shift-now-txt">Не удалось загрузить дежурства</div>';
@@ -1007,12 +1011,25 @@
   }
 
   async function shiftRemove(sid) {
+    var gone = ((window._shiftData && window._shiftData.all) || []).filter(function (x) { return x.id === sid; })[0];
     var r = await fetch('/api/guild/' + window._shiftGid + '/staff-shifts/remove', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ shift_id: sid })
     });
     var d = await r.json();
-    if (r.ok && d.success) { shiftMsgOk('Убрано'); loadShifts(); }
+    if (r.ok && d.success) {
+      shiftMsgOk('Убрано');
+      loadShifts();
+      if (gone && typeof window.uxUndo === 'function') {
+        window.uxUndo('Смена ' + (gone.name || '') + ' (' + gone.weekday_ru + ' ' + gone.start + '–' + gone.end + ') убрана', async function () {
+          await fetch('/api/guild/' + window._shiftGid + '/staff-shifts/add', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: String(gone.user_id), weekday: gone.weekday, start: gone.start, end: gone.end })
+          });
+          loadShifts();
+        });
+      }
+    }
   }
 
   async function shiftTzSave() {

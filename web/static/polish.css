@@ -393,3 +393,39 @@ body.compact .stat-card,body.compact .kpi-card{padding:12px 14px !important}
 .ux-undo.out{opacity:0;transform:translateX(20px);transition:opacity .3s,transform .3s}
 @keyframes uxUndoBar{from{width:100%}to{width:0}}
 [data-theme="light"] .ux-undo{background:#fff;color:#1a1a24;border-color:rgba(0,0,0,.12)}
+
+/* ═══ UX-kit, часть 2: скелетоны, пустые состояния с CTA, мобильный ═══ */
+
+/* Скелетоны загрузки — сияние вместо спиннеров */
+@keyframes skShine{0%{background-position:100% 0}100%{background-position:-100% 0}}
+.sk-line,.sk-row,.sk-card,.sk-chip{
+  background:linear-gradient(90deg,rgba(255,255,255,.05) 25%,rgba(255,255,255,.13) 50%,rgba(255,255,255,.05) 75%);
+  background-size:200% 100%;animation:skShine 1.4s ease infinite;border-radius:8px}
+.sk-line{height:11px;margin:4px 0}
+.sk-row{height:52px}
+.sk-card{height:74px}
+.sk-chip{height:26px;width:96px;border-radius:999px}
+[data-theme="light"] .sk-line,[data-theme="light"] .sk-row,[data-theme="light"] .sk-card,[data-theme="light"] .sk-chip{
+  background:linear-gradient(90deg,rgba(0,0,0,.06) 25%,rgba(0,0,0,.12) 50%,rgba(0,0,0,.06) 75%);background-size:200% 100%}
+
+/* Пустые состояния с подсказкой-CTA */
+.empty-tip{font-size:12px;color:var(--text-3,rgba(255,255,255,.45));max-width:440px;margin:6px auto 0;line-height:1.55}
+.empty-tip a{color:var(--ac,#e0b04a);text-decoration:none;border-bottom:1px dashed var(--ac-line,rgba(224,176,74,.4))}
+.empty-tip a:hover{color:var(--ac-2,#f0cd7a)}
+[data-theme="light"] .empty-tip{color:rgba(20,20,30,.5)}
+
+/* Мобильный режим: одна колонка, крупные мишени, компактный навбар */
+@media (max-width: 860px){
+  .stat-grid,.donut-grid,.quick-grid{grid-template-columns:1fr !important}
+  .navbar{flex-wrap:wrap;gap:8px;padding:10px 12px}
+  .navbar-left h1{font-size:18px}
+  .navbar-right{gap:4px;flex-wrap:wrap}
+  .navbar-right .nav-icon-btn,.navbar-right .theme-toggle{min-width:42px;min-height:42px;display:inline-flex;align-items:center;justify-content:center}
+  .navbar-clock{display:none}
+  .crumb-group{display:none}
+  .ux-undo{min-width:0;max-width:92vw;font-size:12.5px}
+  .shift-edit-row{grid-template-columns:auto 1fr auto !important}
+  .shift-edit-row .shift-del{grid-column:3}
+  .hk-panel{max-height:86vh}
+  .hk-keys{min-width:70px}
+}

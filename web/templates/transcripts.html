@@ -112,7 +112,10 @@
     <span id="resultCount" style="color:var(--text-muted);font-size:13px;margin-left:12px"></span>
   </div>
   <div id="transcriptList" style="max-height:600px;overflow-y:auto">
-    <div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Загрузка...</p></div>
+    <div class="sk-row"></div>
+    <div class="sk-row"></div>
+    <div class="sk-row" style="width:72%"></div>
+    <div class="sk-row" style="width:55%"></div>
   </div>
 </div>
 
@@ -197,7 +200,7 @@ function displayTranscripts(items, total) {
   countEl.textContent = total + ' ' + pluralize(total, 'транскрипт', 'транскрипта', 'транскриптов') +
     (total > items.length ? ' · показаны первые ' + items.length : '');
   if (!items.length) {
-    container.innerHTML = '<div class="empty-state"><i class="fas fa-file-alt"></i><p>Транскрипты не найдены — они появятся после закрытия тикетов</p></div>';
+    container.innerHTML = '<div class="empty-state"><i class="fas fa-file-alt"></i><p>Транскрипты не найдены</p><p class="empty-tip">Транскрипт создаётся автоматически при закрытии тикета. Если поиск пуст — попробуйте мягче фильтры или загляните в <a href="/ticket-settings">настройки тикетов</a></p></div>';
     return;
   }
   container.innerHTML = items.map(function (t, i) {
